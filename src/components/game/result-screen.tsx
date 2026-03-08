@@ -23,10 +23,10 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
   ]
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 p-4 md:gap-4 md:p-6 xl:gap-5 xl:p-8">
       {/* Rank */}
       <div
-        className="animate-rankReveal font-display text-[120px] font-black leading-none"
+        className="animate-rankReveal font-display text-[80px] font-black leading-none md:text-[120px] xl:text-[150px] 2xl:text-[180px]"
         style={{
           color: config.color,
           textShadow: `0 0 30px color-mix(in srgb, ${config.color} 53%, transparent), 0 0 80px color-mix(in srgb, ${config.color} 27%, transparent)`,
@@ -36,22 +36,22 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
       </div>
 
       {/* Mesaj */}
-      <div className="animate-fadeUp font-display text-[22px] font-bold" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+      <div className="animate-fadeUp font-display text-lg font-bold md:text-[22px] xl:text-2xl 2xl:text-3xl" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
         {config.message}
       </div>
 
       {/* Stat kartlari */}
-      <div className="grid w-full max-w-[420px] grid-cols-3 gap-3 animate-fadeUp" style={{ animationDelay: '0.5s', animationFillMode: 'both' }}>
+      <div className="grid w-full max-w-[360px] grid-cols-3 gap-2 animate-fadeUp md:max-w-[420px] md:gap-3 xl:max-w-[520px] xl:gap-4 2xl:max-w-[600px]" style={{ animationDelay: '0.5s', animationFillMode: 'both' }}>
         {stats.map((s, i) => (
           <div
             key={i}
-            className="rounded-xl border p-3.5 text-center"
+            className="rounded-lg border p-2.5 text-center md:rounded-xl md:p-3.5 xl:p-4 2xl:p-5"
             style={{
               background: 'var(--card-bg)',
               borderColor: `color-mix(in srgb, ${s.color} 20%, transparent)`,
             }}
           >
-            <div className="font-display text-2xl font-black" style={{ color: s.color }}>
+            <div className="font-display text-xl font-black md:text-2xl xl:text-3xl 2xl:text-4xl" style={{ color: s.color }}>
               {s.value}
             </div>
             <div className="mt-1 text-[9px] font-extrabold tracking-wider text-[var(--text-sub)]">
@@ -82,13 +82,13 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
       <div className="flex gap-3 animate-fadeUp" style={{ animationDelay: '1.1s', animationFillMode: 'both' }}>
         <button
           onClick={onRestart}
-          className="btn-primary rounded-[10px] px-9 py-[13px] font-display text-sm font-bold tracking-wider shadow-lg transition-transform hover:scale-[1.03]"
+          className="btn-primary rounded-[10px] px-6 py-3 font-display text-xs font-bold tracking-wider shadow-lg transition-transform hover:scale-[1.03] md:px-9 md:py-[13px] md:text-sm xl:text-base xl:px-10 xl:py-4"
         >
           Tekrar Oyna →
         </button>
         <button
           onClick={onExit}
-          className="btn-ghost rounded-[10px] px-6 py-[13px] text-sm font-bold"
+          className="btn-ghost rounded-[10px] px-4 py-3 text-xs font-bold md:px-6 md:py-[13px] md:text-sm xl:text-base xl:py-4"
         >
           Lobiye Don
         </button>
