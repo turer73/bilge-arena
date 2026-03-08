@@ -3,7 +3,6 @@
 import { Zap, ArrowRight, Flame, Trophy, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ArenaBackground } from './arena-background'
-import { Logo } from '@/components/layout/logo'
 
 /** Orbit etrafında süzen mini kart — viewport'a göre ölçeklenir */
 function FloatCard({
@@ -119,7 +118,12 @@ export function HeroSection() {
                   '0 0 60px #2563EB30, inset 0 0 40px #2563EB10',
               }}
             >
-              <Logo size={80} showText={false} />
+              <img
+                src="/logo/icon-512-transparent.png"
+                alt="Bilge Arena"
+                className="h-24 w-24 lg:h-36 lg:w-36"
+                draggable={false}
+              />
             </div>
 
             {/* Orbit kartlar */}
