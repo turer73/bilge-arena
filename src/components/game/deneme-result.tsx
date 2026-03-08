@@ -1,0 +1,223 @@
+'use client'
+
+import { useQuizStore } from '@/stores/quiz-store'
+import { calculateRank, RANK_CONFIG } from '@/lib/utils/xp'
+import { ShareButtons } from '@/components/social/share-buttons'
+
+interface DenemeResultProps {
+  gameName: string
+  totalTime: number      // toplam sure (saniye)
+  elapsedTime: number    // gecen sure (saniye)
+  onRestart: () => void
+  onExit: () => void
+}
+
+interface CategoryStat {
+  category: string
+  correct: number
+  total: number
+  pct: number
+}
+
+export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onExit }: DenemeResultProps) {
+  const { score, questions, xpEarned, answers } = useQuizStore()
+  const totalQuestions = questions.length
+  const pct = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0
+  const rank = calculateRank(score, totalQuestions)
+  const config = RANK_CONFIG[rank]
+
+  // Konu bazli analiz
+  const categoryStats: CategoryStat[] = []
+  const catMap = new Map<string, { correct: number; total: number }>()
+
+  questions.forEach((q, i) => {
+    const cat = (q.content as { category?: string })?.category || q.category || 'diger'
+    const entry = catMap.get(cat) || { correct: 0, total: 0 }
+    entry.total++
+    if (answers[i]?.isCorrect) entry.correct++
+    catMap.set(cat, entry)
+  })
+
+  catMap.forEach((val, key) => {
+    categoryStats.push({
+      category: key,
+      correct: val.correct,
+      total: val.total,
+      pct: Math.round((val.correct / val.total) * 100),
+    })
+  })
+  categoryStats.sort((a, b) => b.pct - a.pct)
+
+  // Sure formatlama
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${m}dk ${sec}sn`
+  }
+
+  // TYT Net hesaplama: dogru - (yanlis / 4)
+  const wrongCount = totalQuestions - score
+  const net = (score - wrongCount / 4).toFixed(1)
+
+  // Konu bazli renk
+  const getPctColor = (p: number) => {
+    if (p >= 80) return 'var(--growth)'
+    if (p >= 60) return 'var(--focus)'
+    if (p >= 40) return 'var(--reward)'
+    return 'var(--urgency)'
+  }
+
+  // Konu ismi guzellestirme
+  const formatCategory = (cat: string) => {
+    const map: Record<string, string> = {
+      sayilar: 'Sayilar', problemler: 'Problemler', geometri: 'Geometri',
+      denklemler: 'Denklemler', fonksiyonlar: 'Fonksiyonlar', olasilik: 'Olasilik',
+      paragraf: 'Paragraf', dil_bilgisi: 'Dil Bilgisi', sozcuk: 'Sozcuk Anlami',
+      anlam_bilgisi: 'Anlam Bilgisi', yazim_kurallari: 'Yazim Kurallari',
+      ses_bilgisi: 'Ses Bilgisi',
+      fizik: 'Fizik', kimya: 'Kimya', biyoloji: 'Biyoloji',
+      tarih: 'Tarih', cografya: 'Cografya', felsefe: 'Felsefe',
+      vocabulary: 'Vocabulary', grammar: 'Grammar', cloze_test: 'Cloze Test',
+      dialogue: 'Dialogue', restatement: 'Restatement',
+      sentence_completion: 'Sentence Completion', phrasal_verbs: 'Phrasal Verbs',
+    }
+    return map[cat] || cat.charAt(0).toUpperCase() + cat.slice(1)
+  }
+
+  return (
+    <div className="mx-auto flex max-w-lg flex-col gap-5 p-6">
+      {/* Baslik */}
+      <div className="text-center animate-fadeUp">
+        <div className="mb-1 text-[10px] font-bold tracking-widest text-[var(--text-sub)]">
+          DENEME SINAVI SONUCU
+        </div>
+        <h1 className="font-display text-2xl font-black">{gameName}</h1>
+      </div>
+
+      {/* Rank */}
+      <div className="flex justify-center animate-fadeUp" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
+        <div
+          className="font-display text-[80px] font-black leading-none"
+          style={{
+            color: config.color,
+            textShadow: `0 0 20px color-mix(in srgb, ${config.color} 40%, transparent)`,
+          }}
+        >
+          {rank}
+        </div>
+      </div>
+
+      {/* Genel istatistikler */}
+      <div className="grid grid-cols-4 gap-2 animate-fadeUp" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+        {[
+          { label: 'DOGRU', value: String(score), color: 'var(--growth)' },
+          { label: 'YANLIS', value: String(wrongCount), color: 'var(--urgency)' },
+          { label: 'NET', value: net, color: 'var(--focus)' },
+          { label: 'SURE', value: formatTime(elapsedTime), color: 'var(--wisdom)' },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-2.5 text-center"
+          >
+            <div className="font-display text-lg font-black" style={{ color: s.color }}>
+              {s.value}
+            </div>
+            <div className="text-[8px] font-bold tracking-wider text-[var(--text-sub)]">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Basari cubugu */}
+      <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+        <div className="mb-1 flex justify-between text-[10px] text-[var(--text-sub)]">
+          <span>Genel Basari</span>
+          <span className="font-bold" style={{ color: config.color }}>%{pct}</span>
+        </div>
+        <div className="h-3 overflow-hidden rounded-full bg-[var(--card-bg)]">
+          <div
+            className="h-full rounded-full transition-all duration-1000"
+            style={{
+              width: `${pct}%`,
+              background: `linear-gradient(90deg, ${config.color}, color-mix(in srgb, ${config.color} 70%, white))`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Konu bazli analiz */}
+      <div className="animate-fadeUp" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+        <h2 className="mb-3 text-[10px] font-bold tracking-widest text-[var(--text-sub)]">
+          KONU BAZLI ANALIZ
+        </h2>
+        <div className="space-y-2">
+          {categoryStats.map((cat) => (
+            <div key={cat.category} className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-3">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-xs font-bold">{formatCategory(cat.category)}</span>
+                <span className="text-xs" style={{ color: getPctColor(cat.pct) }}>
+                  {cat.correct}/{cat.total} (%{cat.pct})
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface)]">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${cat.pct}%`,
+                    backgroundColor: getPctColor(cat.pct),
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Yorum */}
+      <div className="animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4" style={{ animationDelay: '0.5s', animationFillMode: 'both' }}>
+        <div className="mb-1 text-[10px] font-bold text-[var(--text-sub)]">DEGERLENDIRME</div>
+        <p className="text-xs leading-relaxed text-[var(--text)]">
+          {pct >= 80
+            ? 'Mukemmel performans! Bu seviyeyi koruyarak sinava hazirlanmaya devam et.'
+            : pct >= 60
+              ? 'Iyi gidiyorsun! Zayif konularini tekrar ederek daha da iyilesebilirsin.'
+              : pct >= 40
+                ? 'Gelistirmeye ihtiyacin var. Asagidaki zayif konulara odaklan.'
+                : 'Temel konulari tekrar etmen gerekiyor. Konu anlatimlarindan faydalanabilirsin.'}
+        </p>
+        {categoryStats.filter(c => c.pct < 50).length > 0 && (
+          <div className="mt-2 text-[10px] text-[var(--urgency)]">
+            Zayif konular: {categoryStats.filter(c => c.pct < 50).map(c => formatCategory(c.category)).join(', ')}
+          </div>
+        )}
+      </div>
+
+      {/* XP */}
+      <div className="animate-fadeUp text-center" style={{ animationDelay: '0.6s', animationFillMode: 'both' }}>
+        <span className="rounded-full bg-[var(--reward-bg)] px-4 py-1.5 text-sm font-bold text-[var(--reward)]">
+          +{xpEarned} XP Kazanildi
+        </span>
+      </div>
+
+      {/* Paylasim */}
+      <div className="animate-fadeUp" style={{ animationDelay: '0.7s', animationFillMode: 'both' }}>
+        <ShareButtons rank={rank} score={score} total={totalQuestions} xp={xpEarned} gameName={gameName} />
+      </div>
+
+      {/* Butonlar */}
+      <div className="flex gap-3 animate-fadeUp" style={{ animationDelay: '0.8s', animationFillMode: 'both' }}>
+        <button
+          onClick={onRestart}
+          className="btn-primary flex-1 rounded-[10px] py-3 font-display text-sm font-bold tracking-wider"
+        >
+          Yeni Deneme
+        </button>
+        <button
+          onClick={onExit}
+          className="btn-ghost flex-1 rounded-[10px] py-3 text-sm font-bold"
+        >
+          Lobiye Don
+        </button>
+      </div>
+    </div>
+  )
+}

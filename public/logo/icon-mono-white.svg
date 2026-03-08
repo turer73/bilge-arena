@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Sadece beyaz, arka plan yok — overlay için -->
+  <path d="M50 12 L78 22 L78 48 C78 65 65 78 50 84 C35 78 22 65 22 48 L22 22 Z"
+        fill="white" opacity="0.9"/>
+  <path d="M50 18 L72 27 L72 48 C72 62 61 73 50 78 C39 73 28 62 28 48 L28 27 Z"
+        fill="none" stroke="white" stroke-opacity="0.3" stroke-width="0.8"/>
+  <text x="50" y="68" text-anchor="middle" font-size="36" font-weight="900"
+        font-family="Georgia, serif" fill="#070D1A">B</text>
+  <path d="M38 14 L38 8 L44 12 L50 6 L56 12 L62 8 L62 14 L38 14 Z" fill="white" opacity="0.8"/>
+  <circle cx="44" cy="10.5" r="1.5" fill="white"/>
+  <circle cx="50" cy="8"    r="2"   fill="white"/>
+  <circle cx="56" cy="10.5" r="1.5" fill="white"/>
+</svg>
