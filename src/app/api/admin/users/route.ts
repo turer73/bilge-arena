@@ -1,18 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { checkAdmin } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
-
-async function checkAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  return (profile as { role?: string } | null)?.role === 'admin' ? user : null
-}
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -23,14 +11,20 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') ?? '1')
+  const search = searchParams.get('search') ?? ''
   const limit = 20
   const offset = (page - 1) * limit
 
-  const { data: users, count } = await supabase
+  let query = supabase
     .from('profiles')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1)
+
+  if (search) {
+    query = query.or(`display_name.ilike.%${search}%,username.ilike.%${search}%`)
+  }
+
+  const { data: users, count } = await query.range(offset, offset + limit - 1)
 
   return NextResponse.json({ users, total: count, page, limit })
 }
@@ -50,13 +44,13 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (action === 'promote') {
-    await (supabase as any).from('profiles').update({ role: 'admin' }).eq('id', userId)
+    await supabase.from('profiles').update({ role: 'admin' }).eq('id', userId)
   } else if (action === 'demote') {
-    await (supabase as any).from('profiles').update({ role: 'user' }).eq('id', userId)
+    await supabase.from('profiles').update({ role: 'user' }).eq('id', userId)
   }
 
   // Admin log kaydet
-  await (supabase as any).from('admin_logs').insert({
+  await supabase.from('admin_logs').insert({
     admin_id: admin.id,
     action,
     target_type: 'user',

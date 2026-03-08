@@ -1,22 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-
-type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'rejected'
-type ReportType = 'wrong_answer' | 'typo' | 'unclear' | 'duplicate' | 'offensive' | 'other'
-
-interface MockReport {
-  id: string
-  userName: string
-  userAvatar: string
-  questionPreview: string
-  questionGame: string
-  reportType: ReportType
-  description: string
-  status: ReportStatus
-  createdAt: string
-  adminNote: string
-}
+import { useCallback, useEffect, useState } from 'react'
+import type { ErrorReport, ReportType, ReportStatus } from '@/types/database'
 
 const REPORT_TYPE_LABELS: Record<ReportType, { label: string; icon: string }> = {
   wrong_answer: { label: 'Yanlis cevap', icon: '❌' },
@@ -34,30 +19,53 @@ const STATUS_CONFIG: Record<ReportStatus, { label: string; color: string; bg: st
   rejected: { label: 'Reddedildi', color: 'var(--text-sub)', bg: 'var(--surface)' },
 }
 
-const MOCK_REPORTS: MockReport[] = [
-  { id: 'r1', userName: 'Emre T.', userAvatar: '🐉', questionPreview: 'Bir isi Ahmet 6 gunde...', questionGame: 'matematik', reportType: 'wrong_answer', description: 'Dogru cevap 4 gun degil 3 gun olmali', status: 'pending', createdAt: '2sa once', adminNote: '' },
-  { id: 'r2', userName: 'Zeynep K.', userAvatar: '🦊', questionPreview: 'Asagidakilerden hangisi...', questionGame: 'turkce', reportType: 'typo', description: 'B sikkinda yazim hatasi var', status: 'pending', createdAt: '5sa once', adminNote: '' },
-  { id: 'r3', userName: 'Selin M.', userAvatar: '🌟', questionPreview: 'Newton ikinci yasasi...', questionGame: 'fen', reportType: 'unclear', description: 'Soru metni cok karisik', status: 'reviewed', createdAt: '1g once', adminNote: 'Soru metni guncellendi' },
-  { id: 'r4', userName: 'Kaan O.', userAvatar: '⚔️', questionPreview: 'Malazgirt Savasi...', questionGame: 'sosyal', reportType: 'duplicate', description: 'Bu soru zaten var', status: 'resolved', createdAt: '2g once', adminNote: 'Tekrar eden soru deaktif edildi' },
-  { id: 'r5', userName: 'Deniz A.', userAvatar: '🦉', questionPreview: 'What is abundant?', questionGame: 'wordquest', reportType: 'wrong_answer', description: 'Cevap yanlis isaretlenmis', status: 'rejected', createdAt: '3g once', adminNote: 'Cevap dogru, rapor gecersiz' },
-]
-
 export default function AdminReportsPage() {
-  const [reports, setReports] = useState(MOCK_REPORTS)
+  const [reports, setReports] = useState<ErrorReport[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState<ReportStatus | 'all'>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [adminNoteInput, setAdminNoteInput] = useState('')
 
-  const filtered = reports.filter((r) => {
-    if (filterStatus !== 'all' && r.status !== filterStatus) return false
-    return true
-  })
+  const fetchReports = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (filterStatus !== 'all') params.set('status', filterStatus)
+      const res = await fetch(`/api/admin/reports?${params}`)
+      if (!res.ok) throw new Error('Raporlar yuklenemedi')
+      const data = await res.json()
+      setReports(data.reports ?? [])
+      setTotal(data.total ?? 0)
+    } catch (err) {
+      console.error('Rapor yukleme hatasi:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [filterStatus])
+
+  useEffect(() => {
+    fetchReports()
+  }, [fetchReports])
 
   const pendingCount = reports.filter((r) => r.status === 'pending').length
 
-  const updateStatus = (id: string, status: ReportStatus) => {
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    )
+  const updateStatus = async (id: string, status: ReportStatus) => {
+    try {
+      const res = await fetch('/api/admin/reports', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId: id, status, adminNote: adminNoteInput || undefined }),
+      })
+      if (res.ok) {
+        setReports((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status, admin_note: adminNoteInput || r.admin_note } : r))
+        )
+        setAdminNoteInput('')
+      }
+    } catch (err) {
+      console.error('Durum guncelleme hatasi:', err)
+    }
   }
 
   return (
@@ -83,100 +91,121 @@ export default function AdminReportsPage() {
                 : 'bg-[var(--surface)] text-[var(--text-sub)] hover:bg-[var(--card)]'
             }`}
           >
-            {status === 'all' ? `Tumu (${reports.length})` : `${STATUS_CONFIG[status].label} (${reports.filter((r) => r.status === status).length})`}
+            {status === 'all'
+              ? `Tumu (${total})`
+              : STATUS_CONFIG[status].label}
           </button>
         ))}
       </div>
 
       {/* Rapor listesi */}
-      <div className="flex flex-col gap-3">
-        {filtered.map((report) => {
-          const typeInfo = REPORT_TYPE_LABELS[report.reportType]
-          const statusInfo = STATUS_CONFIG[report.status]
-          const isExpanded = expandedId === report.id
+      {loading ? (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-[var(--border)]" />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {reports.map((report) => {
+            const typeInfo = REPORT_TYPE_LABELS[report.report_type] || REPORT_TYPE_LABELS.other
+            const statusInfo = STATUS_CONFIG[report.status]
+            const isExpanded = expandedId === report.id
 
-          return (
-            <div
-              key={report.id}
-              className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] transition-all"
-            >
-              {/* Ana satir */}
-              <button
-                onClick={() => setExpandedId(isExpanded ? null : report.id)}
-                className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--surface)]"
+            return (
+              <div
+                key={report.id}
+                className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] transition-all"
               >
-                <span className="text-lg">{typeInfo.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold">{typeInfo.label}</span>
-                    <span className="text-[10px] text-[var(--text-sub)]">·</span>
-                    <span className="text-[10px] text-[var(--text-sub)]">{report.questionGame}</span>
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-[var(--text-sub)] truncate">
-                    {report.questionPreview}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-[var(--text-sub)]">{report.createdAt}</span>
-                  <span
-                    className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                    style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}
-                  >
-                    {statusInfo.label}
-                  </span>
-                </div>
-                <span className={`text-xs text-[var(--text-sub)] transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                  ▼
-                </span>
-              </button>
-
-              {/* Detay */}
-              {isExpanded && (
-                <div className="border-t border-[var(--border)] px-4 py-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <span className="text-sm">{report.userAvatar}</span>
-                    <span className="text-xs font-bold">{report.userName}</span>
-                  </div>
-                  <div className="mb-3 rounded-lg bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-sub)]">
-                    {report.description || 'Aciklama yok'}
-                  </div>
-                  {report.adminNote && (
-                    <div className="mb-3 rounded-lg border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-2 text-xs text-[var(--focus)]">
-                      Admin: {report.adminNote}
+                <button
+                  onClick={() => {
+                    setExpandedId(isExpanded ? null : report.id)
+                    setAdminNoteInput('')
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--surface)]"
+                >
+                  <span className="text-lg">{typeInfo.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold">{typeInfo.label}</span>
                     </div>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => updateStatus(report.id, 'resolved')}
-                      className="rounded-lg bg-[var(--growth)] px-3 py-1.5 text-[10px] font-bold text-white transition-opacity hover:opacity-90"
-                    >
-                      Coz
-                    </button>
-                    <button
-                      onClick={() => updateStatus(report.id, 'rejected')}
-                      className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)]"
-                    >
-                      Reddet
-                    </button>
-                    <button
-                      onClick={() => updateStatus(report.id, 'reviewed')}
-                      className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
-                    >
-                      Incelendi
-                    </button>
+                    <div className="mt-0.5 text-[11px] text-[var(--text-sub)] truncate">
+                      {report.description || 'Aciklama yok'}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-[var(--text-sub)]">
+                      {new Date(report.created_at).toLocaleDateString('tr-TR')}
+                    </span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                      style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}
+                    >
+                      {statusInfo.label}
+                    </span>
+                  </div>
+                  <span className={`text-xs text-[var(--text-sub)] transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                    ▼
+                  </span>
+                </button>
 
-        {filtered.length === 0 && (
-          <div className="py-12 text-center text-sm text-[var(--text-sub)]">
-            Sonuc bulunamadi
-          </div>
-        )}
-      </div>
+                {isExpanded && (
+                  <div className="border-t border-[var(--border)] px-4 py-4">
+                    <div className="mb-3 rounded-lg bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-sub)]">
+                      {report.description || 'Aciklama yok'}
+                    </div>
+
+                    {report.admin_note && (
+                      <div className="mb-3 rounded-lg border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-2 text-xs text-[var(--focus)]">
+                        Admin: {report.admin_note}
+                      </div>
+                    )}
+
+                    {report.status === 'pending' && (
+                      <div className="mb-3">
+                        <input
+                          type="text"
+                          value={adminNoteInput}
+                          onChange={(e) => setAdminNoteInput(e.target.value)}
+                          placeholder="Admin notu (opsiyonel)..."
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => updateStatus(report.id, 'resolved')}
+                        className="rounded-lg bg-[var(--growth)] px-3 py-1.5 text-[10px] font-bold text-white transition-opacity hover:opacity-90"
+                      >
+                        Coz
+                      </button>
+                      <button
+                        onClick={() => updateStatus(report.id, 'rejected')}
+                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)]"
+                      >
+                        Reddet
+                      </button>
+                      <button
+                        onClick={() => updateStatus(report.id, 'reviewed')}
+                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
+                      >
+                        Incelendi
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {reports.length === 0 && (
+            <div className="py-12 text-center text-sm text-[var(--text-sub)]">
+              Sonuc bulunamadi
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

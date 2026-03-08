@@ -1,35 +1,28 @@
 import { createClient } from '@/lib/supabase/server'
+import { checkAdmin } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   const supabase = await createClient()
-
-  // Admin kontrolu
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if ((profile as { role?: string } | null)?.role !== 'admin') {
+  const admin = await checkAdmin(supabase)
+  if (!admin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Istatistikleri topla
-  const [usersResult, questionsResult, sessionsResult] = await Promise.all([
+  // Istatistikleri paralel topla
+  const [usersResult, questionsResult, sessionsResult, answersResult, reportsResult] = await Promise.all([
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('questions').select('id', { count: 'exact', head: true }),
     supabase.from('game_sessions').select('id', { count: 'exact', head: true }),
+    supabase.from('session_answers').select('id', { count: 'exact', head: true }),
+    supabase.from('error_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
   ])
 
   return NextResponse.json({
     totalUsers: usersResult.count ?? 0,
     totalQuestions: questionsResult.count ?? 0,
     totalSessions: sessionsResult.count ?? 0,
+    totalAnswers: answersResult.count ?? 0,
+    pendingReports: reportsResult.count ?? 0,
   })
 }
