@@ -1,25 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Zap, Menu, X } from 'lucide-react'
+import { Zap, Menu, X, User, LogOut, Trophy, Settings } from 'lucide-react'
 import { Logo } from './logo'
 import { ThemeToggle } from './theme-toggle'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/lib/hooks/use-auth'
 
 const NAV_LINKS = [
   { href: '/', label: 'Ana Sayfa' },
   { href: '/arena', label: 'Oyunlar' },
-  { href: '/arena/siralama', label: 'Siralama' },
-  { href: '/nasil-calisir', label: 'Nasil Calisir' },
-  { href: '/hakkinda', label: 'Hakkinda' },
+  { href: '/arena/siralama', label: 'Sıralama' },
+  { href: '/nasil-calisir', label: 'Nasıl Çalışır' },
+  { href: '/hakkinda', label: 'Hakkında' },
 ]
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
+  const { user, profile, signOut } = useAuth()
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40)
@@ -30,7 +34,19 @@ export function Navbar() {
   // Route degisince mobile menuyu kapat
   useEffect(() => {
     setMobileOpen(false)
+    setDropdownOpen(false)
   }, [pathname])
+
+  // Dropdown disina tiklaninca kapat
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   return (
     <nav
@@ -64,17 +80,83 @@ export function Navbar() {
         {/* Actions */}
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <Link href="/giris" className="hidden sm:inline-flex">
-            <Button variant="ghost" size="sm">
-              Giris Yap
-            </Button>
-          </Link>
-          <Link href="/arena" className="hidden sm:inline-flex">
-            <Button variant="primary" size="sm">
-              <Zap size={14} />
-              Oyna
-            </Button>
-          </Link>
+
+          {user ? (
+            <>
+              <Link href="/arena" className="hidden sm:inline-flex">
+                <Button variant="primary" size="sm">
+                  <Zap size={14} />
+                  Oyna
+                </Button>
+              </Link>
+              {/* User dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--card)]"
+                >
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt=""
+                      className="h-8 w-8 rounded-full"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus)] text-sm font-bold text-white">
+                      {(profile?.display_name || user.email || '?')[0].toUpperCase()}
+                    </div>
+                  )}
+                </button>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-xl">
+                    <div className="mb-1.5 border-b border-[var(--border)] px-3 py-2">
+                      <p className="text-sm font-medium text-[var(--text)]">
+                        {profile?.display_name || 'Kullanıcı'}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">{user.email}</p>
+                    </div>
+                    <Link
+                      href="/arena/profil"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]"
+                    >
+                      <User size={14} />
+                      Profil
+                    </Link>
+                    <Link
+                      href="/arena/siralama"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]"
+                    >
+                      <Trophy size={14} />
+                      Sıralama
+                    </Link>
+                    <button
+                      onClick={signOut}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10"
+                    >
+                      <LogOut size={14} />
+                      Çıkış Yap
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <Link href="/giris" className="hidden sm:inline-flex">
+                <Button variant="ghost" size="sm">
+                  Giriş Yap
+                </Button>
+              </Link>
+              <Link href="/arena" className="hidden sm:inline-flex">
+                <Button variant="primary" size="sm">
+                  <Zap size={14} />
+                  Oyna
+                </Button>
+              </Link>
+            </>
+          )}
 
           {/* Mobile hamburger */}
           <button
@@ -105,17 +187,34 @@ export function Navbar() {
               </Link>
             ))}
             <div className="mt-2 flex gap-2">
-              <Link href="/giris" className="flex-1">
-                <Button variant="ghost" size="sm" className="w-full">
-                  Giris Yap
-                </Button>
-              </Link>
-              <Link href="/arena" className="flex-1">
-                <Button variant="primary" size="sm" className="w-full">
-                  <Zap size={14} />
-                  Oyna
-                </Button>
-              </Link>
+              {user ? (
+                <>
+                  <Link href="/arena/profil" className="flex-1">
+                    <Button variant="ghost" size="sm" className="w-full">
+                      <User size={14} />
+                      Profil
+                    </Button>
+                  </Link>
+                  <Button variant="ghost" size="sm" className="flex-1 text-red-400" onClick={signOut}>
+                    <LogOut size={14} />
+                    Çıkış
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link href="/giris" className="flex-1">
+                    <Button variant="ghost" size="sm" className="w-full">
+                      Giriş Yap
+                    </Button>
+                  </Link>
+                  <Link href="/arena" className="flex-1">
+                    <Button variant="primary" size="sm" className="w-full">
+                      <Zap size={14} />
+                      Oyna
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -25,7 +25,7 @@ export function LeaderboardPreview() {
             <span className="text-[var(--reward-light)]">Bilgeler</span>
           </h2>
           <p className="mt-4 text-[var(--text-sub)] leading-relaxed lg:text-lg">
-            Her hafta sifirlanan haftalik turnuva. En cok XP kazanan ogrenci zirvede yer alir.
+            Her hafta sıfırlanan haftalık turnuva. En çok XP kazanan öğrenci zirvede yer alır.
           </p>
           <Button
             variant="gold"
@@ -33,7 +33,7 @@ export function LeaderboardPreview() {
             className="mt-8"
           >
             <Trophy size={16} />
-            Siralamayı Gor
+            Sıralamayı Gör
           </Button>
         </div>
 
@@ -41,9 +41,9 @@ export function LeaderboardPreview() {
         <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)]">
           {/* Baslik */}
           <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
-            <span className="text-sm font-bold">Bu Haftanin Liderleri</span>
+            <span className="text-sm font-bold">Bu Haftanın Liderleri</span>
             <span className="rounded-full bg-[var(--focus-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--focus-light)]">
-              Canli
+              Canlı
             </span>
           </div>
 
@@ -85,7 +85,7 @@ export function LeaderboardPreview() {
           {/* Tum listeyi gor */}
           <div className="py-3.5 text-center">
             <span className="cursor-pointer text-sm font-semibold text-[var(--focus-light)] hover:underline">
-              Tum listeyi gor &rarr;
+              Tüm listeyi gör &rarr;
             </span>
           </div>
         </div>

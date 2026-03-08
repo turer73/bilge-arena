@@ -1,59 +1,59 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Hakkinda',
+  title: 'Hakkında',
   description:
-    'Bilge Arena, YKS\'ye hazirlanan ogrenciler icin oyunlastirilmis ucretsiz bir alistirma platformudur. Misyonumuz, vizyonumuz ve takim bilgileri.',
+    'Bilge Arena, YKS\'ye hazırlanan öğrenciler için oyunlaştırılmış ücretsiz bir alıştırma platformudur. Misyonumuz, vizyonumuz ve takım bilgileri.',
   openGraph: {
-    title: 'Hakkinda | Bilge Arena',
-    description: 'Bilge Arena\'nin hikayesi, misyonu ve vizyonu.',
+    title: 'Hakkında | Bilge Arena',
+    description: 'Bilge Arena\'nın hikayesi, misyonu ve vizyonu.',
   },
 }
 
 const VALUES = [
   {
     icon: '🎯',
-    title: 'Hedefe Odakli',
-    desc: 'Her ozelligimiz ogrencinin basari oranini artirmaya yoneliktir.',
+    title: 'Hedefe Odaklı',
+    desc: 'Her özelliğimiz öğrencinin başarı oranını artırmaya yöneliktir.',
   },
   {
     icon: '🎮',
-    title: 'Oyunlastirma',
-    desc: 'Calismayi eglenceye donusturuyoruz. XP, rozetler ve siralama ile motivasyonu artiriyoruz.',
+    title: 'Oyunlaştırma',
+    desc: 'Çalışmayı eğlenceye dönüştürüyoruz. XP, rozetler ve sıralama ile motivasyonu artırıyoruz.',
   },
   {
     icon: '🤝',
-    title: 'Erisebilirlik',
-    desc: 'Platform tamamen ucretsiz. Her ogrenci, her yerden erisebilir.',
+    title: 'Erişebilirlik',
+    desc: 'Platform tamamen ücretsiz. Her öğrenci, her yerden erişebilir.',
   },
   {
     icon: '📊',
-    title: 'Veri Odakli',
-    desc: 'Konu bazli ilerleme, zayif nokta analizi ve kisisellestirilmis oneriler sunuyoruz.',
+    title: 'Veri Odaklı',
+    desc: 'Konu bazlı ilerleme, zayıf nokta analizi ve kişiselleştirilmiş öneriler sunuyoruz.',
   },
 ]
 
 const TIMELINE = [
-  { year: '2024', event: 'Fikir asamasi — YKS hazirligi neden sikici olmak zorunda?' },
-  { year: '2025 Q1', event: 'Prototip ve soru bankasi olusturma' },
-  { year: '2025 Q2', event: 'Beta lansman — ilk 100 ogrenci' },
-  { year: '2025 Q3', event: 'AYT modulleri ve yapay zeka asistan' },
-  { year: '2026', event: 'Tam suru — 5 oyun, 5000+ soru, topluluk ozellikleri' },
+  { year: '2024', event: 'Fikir aşaması — YKS hazırlığı neden sıkıcı olmak zorunda?' },
+  { year: '2025 Q1', event: 'Prototip ve soru bankası oluşturma' },
+  { year: '2025 Q2', event: 'Beta lansman — ilk 100 öğrenci' },
+  { year: '2025 Q3', event: 'AYT modülleri ve yapay zeka asistan' },
+  { year: '2026', event: 'Tam sürüm — 5 oyun, 5000+ soru, topluluk özellikleri' },
 ]
 
 export default function HakkindaPage() {
   return (
     <div className="mx-auto max-w-[800px] px-6 py-12 lg:px-8">
-      {/* Baslik */}
+      {/* Başlık */}
       <section className="mb-16 text-center">
         <div className="mb-4 text-5xl">🦉</div>
         <h1 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
-          Bilge Arena Hakkinda
+          Bilge Arena Hakkında
         </h1>
         <p className="mx-auto max-w-[560px] text-base leading-relaxed text-[var(--text-sub)]">
-          YKS&#39;ye hazirlanan ogrenciler icin oyun tabanli, ucretsiz bir alistirma platformu.
-          Amacimiz calismayi sikici olmaktan cikarip, ogrenciyi motive eden bir deneyime
-          donusturmek.
+          YKS&#39;ye hazırlanan öğrenciler için oyun tabanlı, ücretsiz bir alıştırma platformu.
+          Amacımız çalışmayı sıkıcı olmaktan çıkarıp, öğrenciyi motive eden bir deneyime
+          dönüştürmek.
         </p>
       </section>
 
@@ -62,22 +62,22 @@ export default function HakkindaPage() {
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="mb-3 text-lg font-bold">Misyonumuz</h2>
           <p className="text-sm leading-relaxed text-[var(--text-sub)]">
-            Her Turk ogrenciye esit, eglenceli ve etkili bir sinav hazirlık deneyimi sunmak.
-            Sosyo-ekonomik farkliliklari en aza indirerek egitimde firsat esitligi saglamak.
+            Her Türk öğrenciye eşit, eğlenceli ve etkili bir sınav hazırlık deneyimi sunmak.
+            Sosyo-ekonomik farklılıkları en aza indirerek eğitimde fırsat eşitliği sağlamak.
           </p>
         </div>
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 className="mb-3 text-lg font-bold">Vizyonumuz</h2>
           <p className="text-sm leading-relaxed text-[var(--text-sub)]">
-            Turkiye&#39;nin en buyuk oyunlastirilmis egitim platformu olmak.
-            Her ogrencinin potansiyelini kesfettigi, olctuguvu ve gelistirdigi bir arena yaratmak.
+            Türkiye&#39;nin en büyük oyunlaştırılmış eğitim platformu olmak.
+            Her öğrencinin potansiyelini keşfettiği, ölçtüğü ve geliştirdiği bir arena yaratmak.
           </p>
         </div>
       </section>
 
-      {/* Degerlerimiz */}
+      {/* Değerlerimiz */}
       <section className="mb-16">
-        <h2 className="mb-8 text-center text-2xl font-bold">Degerlerimiz</h2>
+        <h2 className="mb-8 text-center text-2xl font-bold">Değerlerimiz</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {VALUES.map((v) => (
             <div
@@ -94,9 +94,9 @@ export default function HakkindaPage() {
         </div>
       </section>
 
-      {/* Yol Haritasi */}
+      {/* Yol Haritası */}
       <section className="mb-16">
-        <h2 className="mb-8 text-center text-2xl font-bold">Yol Haritamiz</h2>
+        <h2 className="mb-8 text-center text-2xl font-bold">Yol Haritamız</h2>
         <div className="relative ml-4 border-l-2 border-[var(--border)] pl-8">
           {TIMELINE.map((t, i) => (
             <div key={i} className="relative mb-8 last:mb-0">
@@ -108,11 +108,11 @@ export default function HakkindaPage() {
         </div>
       </section>
 
-      {/* Iletisim */}
+      {/* İletişim */}
       <section className="text-center">
-        <h2 className="mb-4 text-2xl font-bold">Iletisim</h2>
+        <h2 className="mb-4 text-2xl font-bold">İletişim</h2>
         <p className="text-sm text-[var(--text-sub)]">
-          Sorulariniz, onerileriniz veya is birlikleriniz icin bize ulasin.
+          Sorularınız, önerileriniz veya iş birlikleriniz için bize ulaşın.
         </p>
         <p className="mt-2 text-sm font-medium text-[var(--focus)]">iletisim@bilgearena.com</p>
       </section>

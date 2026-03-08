@@ -4,61 +4,75 @@
 
 /* ============================================================
    Bilge Arena — Design System CSS Variables
-   Source: theme-system.jsx + style-guide.jsx
+   Source: bilge-arena-template.jsx (birebir eşleme)
    ============================================================ */
 
-/* Dark Theme (default) */
+/* Dark Theme (default) — Template T object */
 [data-theme="dark"] {
-  /* Backgrounds */
-  --bg: #080C14;
-  --surface: #0F1623;
-  --card: #141D2B;
-  --cardHover: #1A2535;
+  /* Backgrounds — T.bg0, bg1, bg2, bg3 */
+  --bg: #070D1A;
+  --surface: #0C1527;
+  --card: #111E38;
+  --cardHover: #172548;
 
-  /* Borders */
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.12);
+  /* Borders — T.border, T.borderGlow */
+  --border: #1B3260;
+  --border-strong: #1B3260;
+  --border-glow: #2563EB40;
 
-  /* Text */
-  --text: #F1F5F9;
+  /* Text — T.text1, text2, text3 */
+  --text: #EFF6FF;
   --text-sub: #94A3B8;
   --text-muted: #475569;
 
-  /* Focus — Bilissel Mavi */
+  /* Focus — T.blue (d, m, l, xl) */
+  --focus-dark: #1D4ED8;
   --focus: #2563EB;
   --focus-light: #3B82F6;
+  --focus-xl: #93C5FD;
+  --focus-glow: #2563EB;
   --focus-bg: rgba(37, 99, 235, 0.12);
   --focus-border: rgba(37, 99, 235, 0.3);
 
-  /* Reward — Odul Altini */
+  /* Reward — T.gold (d, m, l, xl) */
+  --reward-dark: #92400E;
   --reward: #D97706;
   --reward-light: #F59E0B;
+  --reward-xl: #FCD34D;
+  --reward-glow: #D97706;
   --reward-bg: rgba(217, 119, 6, 0.12);
   --reward-border: rgba(217, 119, 6, 0.3);
 
-  /* Growth — Ilerleme Yesili */
+  /* Growth — T.green (d, m, l, xl) */
+  --growth-dark: #065F46;
   --growth: #059669;
   --growth-light: #10B981;
+  --growth-xl: #6EE7B7;
+  --growth-glow: #059669;
   --growth-bg: rgba(5, 150, 105, 0.12);
   --growth-border: rgba(5, 150, 105, 0.3);
 
-  /* Wisdom — Bilgelik Moru */
+  /* Wisdom — T.purple (d, m, l, xl) */
+  --wisdom-dark: #4C1D95;
   --wisdom: #7C3AED;
-  --wisdom-light: #A78BFA;
+  --wisdom-light: #8B5CF6;
+  --wisdom-xl: #C4B5FD;
+  --wisdom-glow: #7C3AED;
   --wisdom-bg: rgba(124, 58, 237, 0.12);
   --wisdom-border: rgba(124, 58, 237, 0.3);
 
-  /* Urgency — Acil Kirmizi */
+  /* Urgency — T.red (d, m, l, xl) */
+  --urgency-dark: #991B1B;
   --urgency: #DC2626;
   --urgency-light: #EF4444;
+  --urgency-xl: #FCA5A5;
+  --urgency-glow: #DC2626;
   --urgency-bg: rgba(220, 38, 38, 0.12);
   --urgency-border: rgba(220, 38, 38, 0.3);
 
-  /* Aliases for component compatibility */
+  /* Aliases */
   --bg-secondary: var(--surface);
   --card-bg: var(--card);
-  --focus-dark: #1D4ED8;
-  --reward-dark: #92400E;
 }
 
 /* Light Theme */
@@ -72,51 +86,65 @@
   /* Borders */
   --border: rgba(0, 0, 0, 0.07);
   --border-strong: rgba(0, 0, 0, 0.12);
+  --border-glow: rgba(37, 99, 235, 0.15);
 
   /* Text */
   --text: #0F172A;
   --text-sub: #475569;
   --text-muted: #94A3B8;
 
-  /* Focus — 15-20% darker for light theme */
+  /* Focus */
+  --focus-dark: #1E40AF;
   --focus: #1D4ED8;
   --focus-light: #2563EB;
+  --focus-xl: #93C5FD;
+  --focus-glow: #1D4ED8;
   --focus-bg: rgba(29, 78, 216, 0.08);
   --focus-border: rgba(29, 78, 216, 0.2);
 
   /* Reward */
+  --reward-dark: #78350F;
   --reward: #B45309;
   --reward-light: #D97706;
+  --reward-xl: #FCD34D;
+  --reward-glow: #B45309;
   --reward-bg: rgba(180, 83, 9, 0.08);
   --reward-border: rgba(180, 83, 9, 0.2);
 
   /* Growth */
+  --growth-dark: #064E3B;
   --growth: #047857;
   --growth-light: #059669;
+  --growth-xl: #6EE7B7;
+  --growth-glow: #047857;
   --growth-bg: rgba(4, 120, 87, 0.08);
   --growth-border: rgba(4, 120, 87, 0.2);
 
   /* Wisdom */
+  --wisdom-dark: #5B21B6;
   --wisdom: #6D28D9;
   --wisdom-light: #7C3AED;
+  --wisdom-xl: #C4B5FD;
+  --wisdom-glow: #6D28D9;
   --wisdom-bg: rgba(109, 40, 217, 0.08);
   --wisdom-border: rgba(109, 40, 217, 0.2);
 
   /* Urgency */
+  --urgency-dark: #7F1D1D;
   --urgency: #B91C1C;
   --urgency-light: #DC2626;
+  --urgency-xl: #FCA5A5;
+  --urgency-glow: #B91C1C;
   --urgency-bg: rgba(185, 28, 28, 0.08);
   --urgency-border: rgba(185, 28, 28, 0.2);
 
   /* Aliases */
   --bg-secondary: var(--surface);
   --card-bg: var(--card);
-  --focus-dark: #1E40AF;
-  --reward-dark: #78350F;
 }
 
 /* ============================================================
-   Base Styles
+   Base Styles — Template birebir
    ============================================================ */
 
 @layer base {
@@ -124,10 +152,14 @@
     border-color: var(--border);
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background-color: var(--bg);
     color: var(--text);
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -137,10 +169,10 @@
     transition: background-color 200ms ease, color 200ms ease;
   }
 
-  /* Scrollbar */
+  /* Scrollbar — Template: 5px, blue thumb */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 5px;
+    height: 5px;
   }
 
   ::-webkit-scrollbar-track {
@@ -148,75 +180,217 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
-    border-radius: 4px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
+    background: var(--focus);
+    border-radius: 99px;
   }
 }
 
 /* ============================================================
-   Component Utilities
+   Animations — Template birebir
+   ============================================================ */
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.95); opacity: 0.8; }
+  50%  { transform: scale(1.05); opacity: 0.4; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-12px); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px #2563EB40; }
+  50%      { box-shadow: 0 0 40px #2563EB80, 0 0 80px #2563EB30; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes counter {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scaleIn {
+  0% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes timerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes timerShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes xpFloat {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-40px); }
+}
+
+@keyframes flame {
+  0%, 100% { transform: scaleY(1) rotate(-2deg); }
+  50% { transform: scaleY(1.2) rotate(2deg); }
+}
+
+@keyframes particle {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--px), var(--py)) scale(0); }
+}
+
+@keyframes rankReveal {
+  0% { transform: scale(0.2) rotate(-15deg); opacity: 0; }
+  60% { transform: scale(1.1) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes bounceOnce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.05); }
+  70% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slideR {
+  0% { opacity: 0; transform: translateX(-20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* ============================================================
+   Animation Utility Classes — Template birebir
+   ============================================================ */
+
+.fade-up { animation: fadeUp 0.6s ease forwards; }
+.fade-up-1 { animation: fadeUp 0.6s 0.1s ease both; }
+.fade-up-2 { animation: fadeUp 0.6s 0.2s ease both; }
+.fade-up-3 { animation: fadeUp 0.6s 0.3s ease both; }
+.fade-up-4 { animation: fadeUp 0.6s 0.4s ease both; }
+
+/* ============================================================
+   Component Utilities — Template birebir
    ============================================================ */
 
 @layer components {
-  /* Primary button */
+  /* Primary button — Template: blue.m → blue.d gradient */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           rounded-xl px-6 py-3 font-semibold text-white
+           rounded-xl px-7 py-3.5 font-bold text-white
            transition-all duration-200 ease-out;
-    background: linear-gradient(135deg, var(--focus) 0%, var(--focus-light) 100%);
-    box-shadow: 0 4px 14px var(--focus-bg);
+    background: linear-gradient(135deg, var(--focus) 0%, var(--focus-dark) 100%);
+    box-shadow: 0 4px 20px #2563EB50;
+    font-family: 'DM Sans', sans-serif;
+    position: relative;
+    overflow: hidden;
   }
 
   .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px var(--focus-border);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px #2563EB70;
   }
 
   .btn-primary:active {
     transform: translateY(0);
   }
 
-  /* Ghost button */
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-primary:hover::after {
+    opacity: 1;
+  }
+
+  /* Ghost button — Template birebir */
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2
            rounded-xl px-6 py-3 font-semibold
            transition-all duration-200 ease-out;
-    color: var(--text);
-    border: 1px solid var(--border-strong);
+    color: var(--text-sub);
+    border: 1px solid var(--border);
     background: transparent;
+    font-family: 'DM Sans', sans-serif;
   }
 
   .btn-ghost:hover {
-    background: var(--focus-bg);
-    border-color: var(--focus-border);
-    color: var(--focus-light);
+    background: var(--card);
+    border-color: var(--focus);
+    color: var(--text);
   }
 
-  /* Card with hover */
+  /* Card with hover — Template: -4px lift */
   .card-hover {
     @apply rounded-2xl p-6 transition-all duration-300;
     background: var(--card);
     border: 1px solid var(--border);
+    cursor: pointer;
   }
 
   .card-hover:hover {
-    background: var(--cardHover);
-    border-color: var(--border-strong);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
+    border-color: #2563EB60;
+    box-shadow: 0 12px 40px #2563EB20;
   }
 
-  /* Shimmer text effect */
+  /* Nav link — Template birebir */
+  .nav-link {
+    color: var(--text-sub);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 8px;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+
+  .nav-link:hover {
+    color: var(--text);
+    background: var(--card);
+  }
+
+  /* Shimmer text — Template: GOLD-white gradient (not blue!) */
   .shimmer-text {
     background: linear-gradient(
       90deg,
-      var(--text) 0%,
-      var(--focus-light) 50%,
-      var(--text) 100%
+      var(--reward-light) 0%,
+      #fff 40%,
+      var(--reward-light) 80%
     );
     background-size: 200% auto;
     -webkit-background-clip: text;
@@ -225,9 +399,20 @@
     animation: shimmer 3s linear infinite;
   }
 
-  /* XP bar fill */
+  /* Game card icon scale */
+  .game-card:hover .game-icon {
+    transform: scale(1.15) rotate(-5deg);
+  }
+
+  .game-icon {
+    transition: transform 0.3s ease;
+  }
+
+  /* XP bar fill — Template: blue to purple */
   .xp-bar-fill {
-    background: linear-gradient(90deg, var(--focus) 0%, var(--wisdom) 100%);
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--focus), var(--wisdom));
     position: relative;
     overflow: hidden;
   }
@@ -239,11 +424,11 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0.3) 50%,
       transparent 100%
     );
-    background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
+    background-size: 200% auto;
   }
 
   /* Gradient backgrounds */

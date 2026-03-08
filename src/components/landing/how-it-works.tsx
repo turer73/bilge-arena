@@ -5,29 +5,29 @@ const STEPS = [
     n: '01',
     icon: Shield,
     color: { m: 'var(--focus)', l: 'var(--focus-light)', bg: 'var(--focus-bg)' },
-    title: 'Ucretsiz Kaydol',
-    desc: 'Google ile saniyeler icinde hesap olustur.',
+    title: 'Ücretsiz Kaydol',
+    desc: 'Google ile saniyeler içinde hesap oluştur.',
   },
   {
     n: '02',
     icon: Target,
     color: { m: 'var(--reward)', l: 'var(--reward-light)', bg: 'var(--reward-bg)' },
-    title: 'Oyunu Sec',
-    desc: 'Hangi dersten alistirma yapmak istedigini sec.',
+    title: 'Oyunu Seç',
+    desc: 'Hangi dersten alıştırma yapmak istediğini seç.',
   },
   {
     n: '03',
     icon: Zap,
     color: { m: 'var(--growth)', l: 'var(--growth-light)', bg: 'var(--growth-bg)' },
-    title: 'Sorulari Coz',
-    desc: 'Zamanli sorular, 5 sik, aninda geri bildirim.',
+    title: 'Soruları Çöz',
+    desc: 'Zamanlı sorular, 5 şık, anında geri bildirim.',
   },
   {
     n: '04',
     icon: Trophy,
     color: { m: 'var(--wisdom)', l: 'var(--wisdom-light)', bg: 'var(--wisdom-bg)' },
-    title: 'XP Kazan & Yuksel',
-    desc: 'Her dogru cevap XP kazandirir, seviye atla, listeye gir.',
+    title: 'XP Kazan & Yüksel',
+    desc: 'Her doğru cevap XP kazandırır, seviye atla, listeye gir.',
   },
 ]
 
@@ -38,10 +38,10 @@ export function HowItWorks() {
         {/* Baslik */}
         <div className="mb-14 text-center">
           <div className="mb-3 text-sm font-bold uppercase tracking-widest text-[var(--reward-light)]">
-            Nasil Calisir
+            Nasıl Çalışır
           </div>
           <h2 className="font-display text-4xl font-black lg:text-[42px]">
-            <span className="text-[var(--text)]">4 Adimda </span>
+            <span className="text-[var(--text)]">4 Adımda </span>
             <span className="text-[var(--focus-light)]">Arena&apos;ya Gir</span>
           </h2>
         </div>

@@ -13,42 +13,53 @@ const config: Config = {
         'card-hover': 'var(--cardHover)',
         border: 'var(--border)',
         'border-strong': 'var(--border-strong)',
+        'border-glow': 'var(--border-glow)',
 
-        // Semantic colors
+        // Semantic colors — with xl variants from template
         focus: {
           DEFAULT: 'var(--focus)',
+          dark: 'var(--focus-dark)',
           light: 'var(--focus-light)',
+          xl: 'var(--focus-xl)',
           bg: 'var(--focus-bg)',
           border: 'var(--focus-border)',
         },
         reward: {
           DEFAULT: 'var(--reward)',
+          dark: 'var(--reward-dark)',
           light: 'var(--reward-light)',
+          xl: 'var(--reward-xl)',
           bg: 'var(--reward-bg)',
           border: 'var(--reward-border)',
         },
         growth: {
           DEFAULT: 'var(--growth)',
+          dark: 'var(--growth-dark)',
           light: 'var(--growth-light)',
+          xl: 'var(--growth-xl)',
           bg: 'var(--growth-bg)',
           border: 'var(--growth-border)',
         },
         wisdom: {
           DEFAULT: 'var(--wisdom)',
+          dark: 'var(--wisdom-dark)',
           light: 'var(--wisdom-light)',
+          xl: 'var(--wisdom-xl)',
           bg: 'var(--wisdom-bg)',
           border: 'var(--wisdom-border)',
         },
         urgency: {
           DEFAULT: 'var(--urgency)',
+          dark: 'var(--urgency-dark)',
           light: 'var(--urgency-light)',
+          xl: 'var(--urgency-xl)',
           bg: 'var(--urgency-bg)',
           border: 'var(--urgency-border)',
         },
       },
       fontFamily: {
-        display: ['Georgia', 'Times New Roman', 'serif'],
-        body: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        display: ['var(--font-cinzel)', "'Cinzel'", 'Georgia', 'serif'],
+        body: ['var(--font-dm-sans)', "'DM Sans'", 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       fontSize: {
         'display': ['48px', { lineHeight: '1.1', fontWeight: '800' }],
@@ -62,25 +73,33 @@ const config: Config = {
       },
       keyframes: {
         fadeUp: {
-          '0%': { opacity: '0', transform: 'translateY(20px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
+          'from': { opacity: '0', transform: 'translateY(24px)' },
+          'to': { opacity: '1', transform: 'translateY(0)' },
         },
         scaleIn: {
           '0%': { opacity: '0', transform: 'scale(0.9)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
         shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
+          '0%': { backgroundPosition: '-200% center' },
+          '100%': { backgroundPosition: '200% center' },
         },
         'pulse-ring': {
-          '0%': { transform: 'scale(0.95)', opacity: '0.5' },
-          '50%': { transform: 'scale(1)', opacity: '0.3' },
-          '100%': { transform: 'scale(0.95)', opacity: '0.5' },
+          '0%': { transform: 'scale(0.95)', opacity: '0.8' },
+          '50%': { transform: 'scale(1.05)', opacity: '0.4' },
+          '100%': { transform: 'scale(0.95)', opacity: '0.8' },
         },
         'glow-pulse': {
-          '0%, 100%': { opacity: '0.4' },
-          '50%': { opacity: '0.8' },
+          '0%, 100%': { boxShadow: '0 0 20px #2563EB40' },
+          '50%': { boxShadow: '0 0 40px #2563EB80, 0 0 80px #2563EB30' },
+        },
+        'spin-slow': {
+          'from': { transform: 'rotate(0deg)' },
+          'to': { transform: 'rotate(360deg)' },
+        },
+        counter: {
+          'from': { opacity: '0', transform: 'scale(0.5)' },
+          'to': { opacity: '1', transform: 'scale(1)' },
         },
         timerPulse: {
           '0%, 100%': { transform: 'scale(1)' },
@@ -140,7 +159,9 @@ const config: Config = {
         'scale-in': 'scaleIn 0.3s ease-out',
         'shimmer': 'shimmer 2s linear infinite',
         'pulse-ring': 'pulse-ring 3s ease-in-out infinite',
-        'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
+        'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
+        'spin-slow': 'spin-slow 30s linear infinite',
+        'counter': 'counter 0.4s ease both',
         'timer-pulse': 'timerPulse 1s ease-in-out infinite',
         'timer-shake': 'timerShake 0.3s ease-in-out infinite',
         'bounce-in': 'bounce 0.4s ease-out',

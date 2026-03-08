@@ -1,16 +1,32 @@
 import type { Metadata, Viewport } from 'next'
+import { Cinzel, DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 
+/* ─── Google Fonts — Template birebir ─── */
+const cinzel = Cinzel({
+  subsets: ['latin'],
+  weight: ['700', '900'],
+  variable: '--font-cinzel',
+  display: 'swap',
+})
+
+const dmSans = DM_Sans({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-dm-sans',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: {
-    default: 'Bilge Arena — YKS Hazirlık Platformu',
+    default: 'Bilge Arena — YKS Hazırlık Platformu',
     template: '%s | Bilge Arena',
   },
   description:
-    'Oyunlastirilmis YKS hazirlık platformu. Matematik, Turkce, Fen, Sosyal ve Ingilizce sorularıyla ogren, kazan, yuksel!',
-  keywords: ['YKS', 'TYT', 'AYT', 'universite sinavi', 'hazirlık', 'test', 'quiz', 'oyun'],
+    'Oyunlaştırılmış YKS hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularıyla öğren, kazan, yüksel!',
+  keywords: ['YKS', 'TYT', 'AYT', 'üniversite sınavı', 'hazırlık', 'test', 'quiz', 'oyun'],
   authors: [{ name: 'Bilge Arena' }],
   creator: 'Bilge Arena',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
@@ -18,14 +34,14 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'tr_TR',
     siteName: 'Bilge Arena',
-    title: 'Bilge Arena — YKS Hazirlık Platformu',
-    description: 'Oyunlastirilmis YKS hazirlık platformu. Ogren, kazan, yuksel!',
+    title: 'Bilge Arena — YKS Hazırlık Platformu',
+    description: 'Oyunlaştırılmış YKS hazırlık platformu. Öğren, kazan, yüksel!',
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bilge Arena — YKS Hazirlık Platformu',
-    description: 'Oyunlastirilmis YKS hazirlık platformu. Ogren, kazan, yuksel!',
+    title: 'Bilge Arena — YKS Hazırlık Platformu',
+    description: 'Oyunlaştırılmış YKS hazırlık platformu. Öğren, kazan, yüksel!',
     images: ['/og-image.png'],
   },
   icons: {
@@ -48,7 +64,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
   name: 'Bilge Arena',
-  description: 'Oyunlastirilmis YKS hazirlık platformu',
+  description: 'Oyunlaştırılmış YKS hazırlık platformu',
   url: process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com',
   applicationCategory: 'EducationalApplication',
   operatingSystem: 'Web',
@@ -70,8 +86,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="tr" data-theme="dark" suppressHydrationWarning>
-      <body className="min-h-screen bg-[var(--bg)] text-[var(--text)] antialiased">
+    <html
+      lang="tr"
+      data-theme="dark"
+      className={`${cinzel.variable} ${dmSans.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen bg-[var(--bg)] font-body text-[var(--text)] antialiased">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -22,13 +22,13 @@ export function Logo({ size = 36, showText = true }: LogoProps) {
             style={{ fontSize: size * 0.42, fontWeight: 900 }}
           >
             <span className="text-[var(--focus-light)]">Bilge</span>
-            <span className="text-[var(--reward)]"> Arena</span>
+            <span className="text-[var(--reward-light)]"> Arena</span>
           </div>
           <div
             className="font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]"
             style={{ fontSize: size * 0.18 }}
           >
-            YKS Hazirlik
+            YKS Hazırlık
           </div>
         </div>
       )}
