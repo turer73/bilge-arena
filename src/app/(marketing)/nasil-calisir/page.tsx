@@ -3,12 +3,12 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
 export const metadata: Metadata = {
-  title: 'Nasil Calisir',
+  title: 'Nasıl Çalışır',
   description:
-    'Bilge Arena nasil calisir? Kayit ol, oyun sec, sorulari coz, XP kazan ve siralamalarda yuksel!',
+    'Bilge Arena nasıl çalışır? Kayıt ol, oyun seç, soruları çöz, XP kazan ve sıralamalarda yüksel!',
   openGraph: {
-    title: 'Nasil Calisir | Bilge Arena',
-    description: 'Bilge Arena\'da YKS hazirlik sureci adim adim.',
+    title: 'Nasıl Çalışır | Bilge Arena',
+    description: 'Bilge Arena\'da YKS hazırlık süreci adım adım.',
   },
 }
 
@@ -16,52 +16,52 @@ const STEPS = [
   {
     num: '01',
     icon: '🚀',
-    title: 'Hesap Olustur',
-    desc: 'Google hesabinla tek tikla kayit ol. Misafir olarak da oynayabilirsin — ama ilerlemen kaydedilmez.',
-    detail: 'Google OAuth ile guvenli giris. Ek bilgi istenmez.',
+    title: 'Hesap Oluştur',
+    desc: 'Google hesabınla tek tıkla kayıt ol. Misafir olarak da oynayabilirsin — ama ilerlemen kaydedilmez.',
+    detail: 'Google OAuth ile güvenli giriş. Ek bilgi istenmez.',
   },
   {
     num: '02',
     icon: '🎮',
-    title: 'Oyun Sec',
-    desc: '5 farkli oyun konsolundan birini sec: Matematik, Turkce, Fen, Sosyal veya Ingilizce (WordQuest).',
+    title: 'Oyun Seç',
+    desc: '5 farklı oyun konsolundan birini seç: Matematik, Türkçe, Fen, Sosyal veya İngilizce (WordQuest).',
     detail: 'Her konsol kendi tema rengine, kategorilerine ve liderboard\'una sahiptir.',
   },
   {
     num: '03',
     icon: '⚡',
     title: 'Mod Belirle',
-    desc: 'Klasik, Blitz, Maraton, Boss ve Pratik modlarindan seviyene uygun olani sec.',
+    desc: 'Klasik, Blitz, Maraton, Boss ve Pratik modlarından seviyene uygun olanı seç.',
     detail: 'Klasik: 10 soru / 30sn. Blitz: 5 soru / 15sn. Boss: 5 zor soru / 45sn.',
   },
   {
     num: '04',
     icon: '🧠',
-    title: 'Sorulari Coz',
-    desc: 'Zamanli sorulari coz, dogru cevaplarla seri olustur ve bonus XP kazan.',
+    title: 'Soruları Çöz',
+    desc: 'Zamanlı soruları çöz, doğru cevaplarla seri oluştur ve bonus XP kazan.',
     detail: '3+ seri: +5 XP bonus. 5+ seri: +10 XP bonus. 10+ seri: "YANGIN!" modu!',
   },
   {
     num: '05',
     icon: '📊',
-    title: 'Sonuclari Incele',
-    desc: 'Her oturum sonunda rank (S/A/B/C/D), toplam XP ve detayli cozum analizini gor.',
-    detail: '%90+ = S rank. Her soru icin detayli aciklama + yorum + hata raporlama.',
+    title: 'Sonuçları İncele',
+    desc: 'Her oturum sonunda rank (S/A/B/C/D), toplam XP ve detaylı çözüm analizini gör.',
+    detail: '%90+ = S rank. Her soru için detaylı açıklama + yorum + hata raporlama.',
   },
   {
     num: '06',
     icon: '🏆',
-    title: 'Yuksel & Rekabet Et',
-    desc: 'XP biriktir, seviye atla, rozetler topla ve haftalik siralama listesinde yerinizi alin.',
-    detail: '5 seviye: Acemi → Cirak → Bilge → Usta → Efsane. 14 rozet kazanilabilir.',
+    title: 'Yüksel & Rekabet Et',
+    desc: 'XP biriktir, seviye atla, rozetler topla ve haftalık sıralama listesinde yerinizi alın.',
+    detail: '5 seviye: Acemi → Çırak → Bilge → Usta → Efsane. 14 rozet kazanılabilir.',
   },
 ]
 
 const FEATURES = [
-  { icon: '🦉', title: 'Bilge Asistan', desc: 'AI destekli soru cozumu ve konu anlatimi' },
-  { icon: '💬', title: 'Soru Yorumlari', desc: 'Sorular hakkinda yorum yap, tartis, ogren' },
-  { icon: '📱', title: 'Her Cihazda', desc: 'Telefon, tablet ve bilgisayarda calısır' },
-  { icon: '🆓', title: 'Tamamen Ucretsiz', desc: 'Sinav bankasi dahil her sey ucretsiz' },
+  { icon: '🦉', title: 'Bilge Asistan', desc: 'AI destekli soru çözümü ve konu anlatımı' },
+  { icon: '💬', title: 'Soru Yorumları', desc: 'Sorular hakkında yorum yap, tartış, öğren' },
+  { icon: '📱', title: 'Her Cihazda', desc: 'Telefon, tablet ve bilgisayarda çalışır' },
+  { icon: '🆓', title: 'Tamamen Ücretsiz', desc: 'Sınav bankası dahil her şey ücretsiz' },
 ]
 
 export default function NasilCalisirPage() {
@@ -70,14 +70,14 @@ export default function NasilCalisirPage() {
       {/* Hero */}
       <section className="mb-16 text-center">
         <h1 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
-          Nasil Calisir?
+          Nasıl Çalışır?
         </h1>
         <p className="mx-auto max-w-[520px] text-base text-[var(--text-sub)]">
-          6 adimda YKS hazirligini oyuna donustur. Kayit ol, oyna, ogren, yuksel!
+          6 adımda YKS hazırlığını oyuna dönüştür. Kayıt ol, oyna, öğren, yüksel!
         </p>
       </section>
 
-      {/* Adimlar */}
+      {/* Adımlar */}
       <section className="mb-16 space-y-6">
         {STEPS.map((s) => (
           <div
@@ -99,9 +99,9 @@ export default function NasilCalisirPage() {
         ))}
       </section>
 
-      {/* Ekstra Ozellikler */}
+      {/* Ekstra Özellikler */}
       <section className="mb-16">
-        <h2 className="mb-8 text-center text-2xl font-bold">Ekstra Ozellikler</h2>
+        <h2 className="mb-8 text-center text-2xl font-bold">Ekstra Özellikler</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {FEATURES.map((f) => (
             <div
@@ -120,13 +120,13 @@ export default function NasilCalisirPage() {
 
       {/* CTA */}
       <section className="text-center">
-        <h2 className="mb-4 text-2xl font-bold">Hazir misin?</h2>
+        <h2 className="mb-4 text-2xl font-bold">Hazır mısın?</h2>
         <p className="mb-6 text-sm text-[var(--text-sub)]">
-          Hemen kaydol ve ilk oyununu oynamaya basla!
+          Hemen kaydol ve ilk oyununu oynamaya başla!
         </p>
         <Link href="/arena">
           <Button variant="primary" size="lg">
-            Oynamaya Basla
+            Oynamaya Başla
           </Button>
         </Link>
       </section>

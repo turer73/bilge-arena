@@ -45,7 +45,7 @@ export default function GirisPage() {
               fill="#EA4335"
             />
           </svg>
-          Google ile Giris Yap
+          Google ile Giriş Yap
         </Button>
 
         {/* Misafir olarak devam */}
@@ -57,7 +57,7 @@ export default function GirisPage() {
         </div>
 
         <p className="mt-6 text-xs text-[var(--text-muted)]">
-          Giris yaparak kullanim sartlarini kabul etmis olursun.
+          Giriş yaparak kullanım şartlarını kabul etmiş olursun.
         </p>
       </div>
     </main>

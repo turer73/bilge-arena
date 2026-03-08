@@ -24,7 +24,7 @@ export function CTASection() {
 
       <div className="relative mx-auto max-w-[680px] text-center">
         <div className="mb-4 text-sm font-bold uppercase tracking-widest text-[var(--growth-light)]">
-          Ucretsiz &bull; Reklamsiz &bull; Sinirsiz
+          Ücretsiz &bull; Reklamsız &bull; Sınırsız
         </div>
 
         <h2 className="font-display text-4xl font-black leading-tight lg:text-5xl">
@@ -33,7 +33,7 @@ export function CTASection() {
         </h2>
 
         <p className="mx-auto mt-5 max-w-[500px] text-lg leading-relaxed text-[var(--text-sub)]">
-          Bugun basla. Kredi karti yok, sure siniri yok. Sadece ogren ve kazan.
+          Bugün başla. Kredi kartı yok, süre sınırı yok. Sadece öğren ve kazan.
         </p>
 
         <div className="mt-10 flex justify-center">
@@ -43,12 +43,12 @@ export function CTASection() {
             className="animate-glow-pulse text-lg"
           >
             <Zap size={20} />
-            Simdi Basla — Ucretsiz
+            Şimdi Başla — Ücretsiz
           </Button>
         </div>
 
         <div className="mt-5 flex justify-center gap-6">
-          {['Kayit ucretsiz', 'Kredi karti gerekmez', 'Istedigin zaman birak'].map(
+          {['Kayıt ücretsiz', 'Kredi kartı gerekmez', 'İstediğin zaman bırak'].map(
             (t) => (
               <div
                 key={t}

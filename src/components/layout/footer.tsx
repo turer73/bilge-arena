@@ -6,26 +6,26 @@ const FOOTER_LINKS = [
     title: 'Platform',
     links: [
       { label: 'Oyunlar', href: '/arena' },
-      { label: 'Siralama', href: '/arena/siralama' },
+      { label: 'Sıralama', href: '/arena/siralama' },
       { label: 'Profil', href: '/arena/profil' },
-      { label: 'Nasil Calisir', href: '/nasil-calisir' },
+      { label: 'Nasıl Çalışır', href: '/nasil-calisir' },
     ],
   },
   {
     title: 'Dersler',
     links: [
       { label: 'Matematik', href: '/arena/matematik' },
-      { label: 'Turkce', href: '/arena/turkce' },
+      { label: 'Türkçe', href: '/arena/turkce' },
       { label: 'Fen', href: '/arena/fen' },
       { label: 'Sosyal', href: '/arena/sosyal' },
-      { label: 'Ingilizce', href: '/arena/wordquest' },
+      { label: 'İngilizce', href: '/arena/wordquest' },
     ],
   },
   {
     title: 'Destek',
     links: [
-      { label: 'Hakkinda', href: '/hakkinda' },
-      { label: 'Nasil Calisir', href: '/nasil-calisir' },
+      { label: 'Hakkında', href: '/hakkinda' },
+      { label: 'Nasıl Çalışır', href: '/nasil-calisir' },
     ],
   },
 ]
@@ -40,7 +40,7 @@ export function Footer() {
           <div>
             <Logo size={36} />
             <p className="mt-4 max-w-[280px] text-sm leading-relaxed text-[var(--text-muted)]">
-              YKS&#39;ye hazirlanan ogrenciler icin oyun tabanli ucretsiz alistirma platformu.
+              YKS&#39;ye hazırlanan öğrenciler için oyun tabanlı ücretsiz alıştırma platformu.
             </p>
           </div>
 
@@ -66,7 +66,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-6 sm:flex-row">
           <div className="text-sm text-[var(--text-muted)]">
-            &copy; 2026 Bilge Arena. Tum haklari saklidir.
+            &copy; 2026 Bilge Arena. Tüm hakları saklıdır.
           </div>
           <div className="flex gap-2">
             {['Twitter', 'Instagram', 'Discord'].map((s) => (

@@ -8,14 +8,14 @@ export function GuestBanner() {
       <div className="flex items-center gap-2">
         <span className="text-sm">👤</span>
         <span className="text-xs text-[var(--reward)]">
-          Misafir olarak oynuyorsun — ilerlemenin kaydedilmesi icin giris yap
+          Misafir olarak oynuyorsun — ilerlemenin kaydedilmesi için giriş yap
         </span>
       </div>
       <Link
         href="/giris"
         className="rounded-lg bg-[var(--reward)] px-3 py-1 text-[10px] font-bold text-white transition-opacity hover:opacity-90"
       >
-        Giris Yap
+        Giriş Yap
       </Link>
     </div>
   )
