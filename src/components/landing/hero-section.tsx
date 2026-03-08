@@ -121,7 +121,7 @@ export function HeroSection() {
               <img
                 src="/logo/icon-512-transparent.png"
                 alt="Bilge Arena"
-                className="h-[120px] w-[120px] lg:h-[180px] lg:w-[180px]"
+                className="h-[160px] w-[160px] lg:h-[220px] lg:w-[220px]"
                 draggable={false}
               />
             </div>
