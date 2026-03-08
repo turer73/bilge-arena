@@ -119,7 +119,7 @@ export function HeroSection() {
                   '0 0 60px #2563EB30, inset 0 0 40px #2563EB10',
               }}
             >
-              <Logo size={60} showText={false} />
+              <Logo size={80} showText={false} />
             </div>
 
             {/* Orbit kartlar */}
