@@ -4,18 +4,19 @@
 // Gereksinim: SUPABASE_URL ve SUPABASE_SERVICE_KEY .env'de tanımlı olmalı
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js'
-import { readFileSync } from 'fs'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+const { createClient } = require('@supabase/supabase-js')
+const { readFileSync } = require('fs')
+const { join } = require('path')
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
 
-// Supabase bağlantısı (service key — sadece sunucu tarafında!)
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-)
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('SUPABASE_URL ve SUPABASE_SERVICE_KEY env degiskenleri gerekli!')
+  process.exit(1)
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 // Zorluk haritası
 const DIFFICULTY_MAP = {
