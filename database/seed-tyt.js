@@ -42,7 +42,7 @@ function loadQuestions(filePath, game) {
       questions.push({
         game,
         category: q.category || cat,
-        sub_category: q.topic || null,
+        subcategory: q.topic || null,
         difficulty: q.difficulty || 2,
         content: {
           question: q.question,
