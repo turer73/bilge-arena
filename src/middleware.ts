@@ -25,12 +25,11 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Oturumu yenile (cookie'leri gunceller)
-  await supabase.auth.getUser()
+  // Oturumu yenile + kullanici bilgisini al (tek cagri)
+  const { data: { user } } = await supabase.auth.getUser()
 
   // Admin koruması
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.redirect(new URL('/giris', request.url))
     }

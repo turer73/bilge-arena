@@ -115,19 +115,111 @@ export interface XPLog {
   created_at: string
 }
 
+// ============================================================
+// Sosyal tablolar (Migration 002)
+// ============================================================
+
+export interface Comment {
+  id: string
+  user_id: string
+  question_id: string
+  content: string
+  parent_id: string | null
+  is_deleted: boolean
+  likes_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CommentLike {
+  id: string
+  user_id: string
+  comment_id: string
+  created_at: string
+}
+
+export interface QuestionLike {
+  id: string
+  user_id: string
+  question_id: string
+  created_at: string
+}
+
+// ============================================================
+// Hata raporlama (Migration 003)
+// ============================================================
+
+export type ReportType = 'wrong_answer' | 'typo' | 'unclear' | 'duplicate' | 'offensive' | 'other'
+export type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'rejected'
+
+export interface ErrorReport {
+  id: string
+  user_id: string
+  question_id: string
+  report_type: ReportType
+  description: string | null
+  status: ReportStatus
+  admin_note: string | null
+  resolved_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+// ============================================================
+// Admin tablolari (Migration 004)
+// ============================================================
+
+export interface AdminLog {
+  id: string
+  admin_id: string
+  action: string
+  target_type: string
+  target_id: string | null
+  details: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface SiteSetting {
+  key: string
+  value: unknown
+  updated_at: string
+  updated_by: string | null
+}
+
+// ============================================================
 // Supabase client tip entegrasyonu
+// ============================================================
+
+// Supabase tipi icin helper — her tablo Row/Insert/Update/Relationships ister
+type TableDef<R> = {
+  Row: R
+  Insert: Partial<R>
+  Update: Partial<R>
+  Relationships: []
+}
+
 export interface Database {
   public: {
     Tables: {
-      profiles: { Row: Profile; Insert: Partial<Profile>; Update: Partial<Profile> }
-      questions: { Row: Question; Insert: Partial<Question>; Update: Partial<Question> }
-      game_sessions: { Row: GameSession; Insert: Partial<GameSession>; Update: Partial<GameSession> }
-      session_answers: { Row: SessionAnswer; Insert: Partial<SessionAnswer>; Update: Partial<SessionAnswer> }
-      achievements: { Row: Achievement; Insert: Partial<Achievement>; Update: Partial<Achievement> }
-      user_achievements: { Row: UserAchievement; Insert: Partial<UserAchievement>; Update: Partial<UserAchievement> }
-      daily_quests: { Row: DailyQuest; Insert: Partial<DailyQuest>; Update: Partial<DailyQuest> }
-      leaderboard: { Row: LeaderboardEntry; Insert: Partial<LeaderboardEntry>; Update: Partial<LeaderboardEntry> }
-      xp_log: { Row: XPLog; Insert: Partial<XPLog>; Update: Partial<XPLog> }
+      profiles: TableDef<Profile>
+      questions: TableDef<Question>
+      game_sessions: TableDef<GameSession>
+      session_answers: TableDef<SessionAnswer>
+      achievements: TableDef<Achievement>
+      user_achievements: TableDef<UserAchievement>
+      daily_quests: TableDef<DailyQuest>
+      leaderboard: TableDef<LeaderboardEntry>
+      xp_log: TableDef<XPLog>
+      comments: TableDef<Comment>
+      comment_likes: TableDef<CommentLike>
+      question_likes: TableDef<QuestionLike>
+      error_reports: TableDef<ErrorReport>
+      admin_logs: TableDef<AdminLog>
+      site_settings: TableDef<SiteSetting>
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
   }
 }

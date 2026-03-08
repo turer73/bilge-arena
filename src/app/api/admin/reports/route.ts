@@ -4,34 +4,33 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
-  const { searchParams } = new URL(request.url)
+  const admin = await checkAdmin(supabase)
+  if (!admin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
-  const game = searchParams.get('game')
-  const category = searchParams.get('category')
-  const difficulty = searchParams.get('difficulty')
-  const active = searchParams.get('active')
+  const { searchParams } = new URL(request.url)
+  const status = searchParams.get('status')
   const page = parseInt(searchParams.get('page') ?? '1')
-  const limit = parseInt(searchParams.get('limit') ?? '20')
+  const limit = 20
   const offset = (page - 1) * limit
 
   let query = supabase
-    .from('questions')
+    .from('error_reports')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
 
-  if (game) query = query.eq('game', game)
-  if (category) query = query.eq('category', category)
-  if (difficulty) query = query.eq('difficulty', parseInt(difficulty))
-  if (active === 'true') query = query.eq('is_active', true)
-  if (active === 'false') query = query.eq('is_active', false)
+  if (status && status !== 'all') {
+    query = query.eq('status', status)
+  }
 
-  const { data, count, error } = await query.range(offset, offset + limit - 1)
+  const { data: reports, count, error } = await query.range(offset, offset + limit - 1)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ questions: data, total: count, page, limit })
+  return NextResponse.json({ reports, total: count, page, limit })
 }
 
 export async function PATCH(request: NextRequest) {
@@ -42,16 +41,20 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { questionId, updates } = body
+  const { reportId, status, adminNote } = body
 
-  if (!questionId) {
-    return NextResponse.json({ error: 'Missing questionId' }, { status: 400 })
+  if (!reportId || !status) {
+    return NextResponse.json({ error: 'Missing reportId or status' }, { status: 400 })
   }
 
+  const updates: Record<string, unknown> = { status }
+  if (adminNote !== undefined) updates.admin_note = adminNote
+  if (status === 'resolved') updates.resolved_by = admin.id
+
   const { error } = await supabase
-    .from('questions')
+    .from('error_reports')
     .update(updates)
-    .eq('id', questionId)
+    .eq('id', reportId)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -60,10 +63,10 @@ export async function PATCH(request: NextRequest) {
   // Admin log
   await supabase.from('admin_logs').insert({
     admin_id: admin.id,
-    action: 'update_question',
-    target_type: 'question',
-    target_id: questionId,
-    details: updates,
+    action: `report_${status}`,
+    target_type: 'report',
+    target_id: reportId,
+    details: { status, adminNote },
   })
 
   return NextResponse.json({ success: true })
