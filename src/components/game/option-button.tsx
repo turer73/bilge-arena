@@ -63,8 +63,8 @@ export function OptionButton({ index, text, state, onClick, delay = 0 }: OptionB
       onClick={onClick}
       disabled={state !== 'idle'}
       className={cn(
-        'relative w-full overflow-hidden rounded-xl border-[1.5px] px-4 py-[13px]',
-        'flex items-center gap-3 text-left',
+        'relative w-full overflow-hidden rounded-lg border-[1.5px] px-3 py-2.5 md:rounded-xl md:px-4 md:py-[13px] xl:px-5 xl:py-4 2xl:py-5',
+        'flex items-center gap-2 text-left md:gap-3 xl:gap-4',
         'transition-all duration-150',
         state === 'idle' && 'hover:translate-x-2 active:translate-x-[5px] active:scale-[0.99] cursor-pointer',
         state === 'correct' && 'animate-bounce-once',
@@ -76,8 +76,8 @@ export function OptionButton({ index, text, state, onClick, delay = 0 }: OptionB
       {/* Harf badge */}
       <span
         className={cn(
-          'flex h-7 min-w-[28px] shrink-0 items-center justify-center rounded-lg',
-          'font-display text-[11px] font-black',
+          'flex h-6 min-w-[24px] shrink-0 items-center justify-center rounded-md md:h-7 md:min-w-[28px] md:rounded-lg xl:h-8 xl:min-w-[32px] 2xl:h-9 2xl:min-w-[36px]',
+          'font-display text-[10px] font-black md:text-[11px] xl:text-xs 2xl:text-sm',
           'border-[1.5px]',
           s.badgeBg, s.badgeText, s.border,
         )}
@@ -86,7 +86,7 @@ export function OptionButton({ index, text, state, onClick, delay = 0 }: OptionB
       </span>
 
       {/* Metin */}
-      <span className={cn('text-[13.5px] font-medium leading-[1.45]', s.text)}>
+      <span className={cn('text-[12px] font-medium leading-[1.45] md:text-[13.5px] xl:text-[15px] 2xl:text-base', s.text)}>
         {text}
       </span>
 

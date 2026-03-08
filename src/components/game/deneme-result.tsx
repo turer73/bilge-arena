@@ -85,19 +85,19 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
   }
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-5 p-6">
+    <div className="mx-auto flex max-w-md flex-col gap-4 p-4 md:max-w-lg md:gap-5 md:p-6 xl:max-w-xl xl:gap-6 xl:p-8 2xl:max-w-2xl">
       {/* Baslik */}
       <div className="text-center animate-fadeUp">
         <div className="mb-1 text-[10px] font-bold tracking-widest text-[var(--text-sub)]">
           DENEME SINAVI SONUCU
         </div>
-        <h1 className="font-display text-2xl font-black">{gameName}</h1>
+        <h1 className="font-display text-xl font-black md:text-2xl xl:text-3xl 2xl:text-4xl">{gameName}</h1>
       </div>
 
       {/* Rank */}
       <div className="flex justify-center animate-fadeUp" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
         <div
-          className="font-display text-[80px] font-black leading-none"
+          className="font-display text-[60px] font-black leading-none md:text-[80px] xl:text-[100px] 2xl:text-[120px]"
           style={{
             color: config.color,
             textShadow: `0 0 20px color-mix(in srgb, ${config.color} 40%, transparent)`,
@@ -108,7 +108,7 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
       </div>
 
       {/* Genel istatistikler */}
-      <div className="grid grid-cols-4 gap-2 animate-fadeUp" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+      <div className="grid grid-cols-4 gap-1.5 animate-fadeUp md:gap-2 xl:gap-3" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
         {[
           { label: 'DOGRU', value: String(score), color: 'var(--growth)' },
           { label: 'YANLIS', value: String(wrongCount), color: 'var(--urgency)' },
@@ -117,9 +117,9 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
         ].map((s) => (
           <div
             key={s.label}
-            className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-2.5 text-center"
+            className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-2 text-center md:rounded-xl md:p-2.5 xl:p-3.5"
           >
-            <div className="font-display text-lg font-black" style={{ color: s.color }}>
+            <div className="font-display text-sm font-black md:text-lg xl:text-xl 2xl:text-2xl" style={{ color: s.color }}>
               {s.value}
             </div>
             <div className="text-[8px] font-bold tracking-wider text-[var(--text-sub)]">{s.label}</div>

@@ -29,20 +29,20 @@ export function Lobby({
   const mode = MODES.find(m => m.id === selectedMode) || MODES[0]
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-4 p-6 animate-scaleIn">
+    <div className="mx-auto flex max-w-md flex-col gap-3 p-4 animate-scaleIn md:max-w-lg md:gap-4 md:p-6 xl:max-w-xl xl:gap-5 xl:p-8 2xl:max-w-2xl">
       {/* Baslik */}
       <div className="text-center">
-        <h1 className="font-display text-3xl font-black" style={{ color: gameDef.colorHex }}>
+        <h1 className="font-display text-2xl font-black md:text-3xl xl:text-4xl 2xl:text-5xl" style={{ color: gameDef.colorHex }}>
           {gameDef.name}
         </h1>
-        <p className="mt-1 text-sm text-[var(--text-sub)]">{gameDef.description}</p>
+        <p className="mt-1 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">{gameDef.description}</p>
       </div>
 
       {/* Kullanici bilgi */}
-      <div className="animate-fadeUp rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+      <div className="animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3 md:rounded-2xl md:p-4 xl:p-5 2xl:p-6" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
         <div className="mb-3 flex items-center gap-3">
           <div
-            className="flex h-[46px] w-[46px] items-center justify-center rounded-full border-[2.5px] text-[22px]"
+            className="flex h-10 w-10 items-center justify-center rounded-full border-[2.5px] text-lg md:h-[46px] md:w-[46px] md:text-[22px] xl:h-14 xl:w-14 xl:text-2xl"
             style={{
               background: `linear-gradient(135deg, ${gameDef.colorHex}44, ${gameDef.colorHex})`,
               borderColor: `${gameDef.colorHex}55`,
@@ -51,8 +51,8 @@ export function Lobby({
             {level.badge}
           </div>
           <div>
-            <div className="text-sm font-bold">{level.name}</div>
-            <div className="text-[10px] text-[var(--text-sub)]">{userXP.toLocaleString()} XP</div>
+            <div className="text-xs font-bold md:text-sm xl:text-base">{level.name}</div>
+            <div className="text-[9px] text-[var(--text-sub)] md:text-[10px] xl:text-xs">{userXP.toLocaleString()} XP</div>
           </div>
           <div className="flex-1" />
           <StreakBadge streak={userStreak} />
@@ -103,7 +103,7 @@ export function Lobby({
       {/* Basla butonu */}
       <button
         onClick={onStart}
-        className="btn-primary mt-2 w-full rounded-[10px] py-3 font-display text-sm font-bold tracking-wider shadow-lg transition-transform hover:scale-[1.02] animate-fadeUp"
+        className="btn-primary mt-2 w-full rounded-[10px] py-2.5 font-display text-xs font-bold tracking-wider shadow-lg transition-transform hover:scale-[1.02] animate-fadeUp md:py-3 md:text-sm xl:py-3.5 xl:text-base xl:rounded-xl"
         style={{ animationDelay: '0.55s', animationFillMode: 'both' }}
       >
         {mode.isDeneme ? '📋' : '⚔️'} {mode.name} Baslat — {mode.questionCount} Soru

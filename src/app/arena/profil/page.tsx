@@ -61,12 +61,12 @@ export default function ProfilePage() {
   ]
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-2xl px-4 py-6 md:max-w-3xl md:py-8 xl:max-w-4xl xl:px-6 xl:py-10 2xl:max-w-5xl">
       {/* Profil basligi */}
-      <div className="mb-6 animate-fadeUp rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6">
-        <div className="flex items-center gap-4">
+      <div className="mb-4 animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 md:mb-6 md:rounded-2xl md:p-6 xl:p-7 2xl:p-8">
+        <div className="flex items-center gap-3 md:gap-4">
           <div
-            className="flex h-16 w-16 items-center justify-center rounded-full border-[3px] text-3xl"
+            className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] text-2xl md:h-16 md:w-16 md:text-3xl xl:h-20 xl:w-20 xl:text-4xl"
             style={{
               background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))',
               borderColor: 'var(--focus-border)',
@@ -75,8 +75,8 @@ export default function ProfilePage() {
             {p.avatarEmoji}
           </div>
           <div className="flex-1">
-            <h1 className="text-xl font-bold">{p.displayName}</h1>
-            <div className="flex items-center gap-2 text-sm text-[var(--text-sub)]">
+            <h1 className="text-base font-bold md:text-xl xl:text-2xl">{p.displayName}</h1>
+            <div className="flex items-center gap-2 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">
               <span>{level.badge} {level.name}</span>
               <span>·</span>
               <span>{p.totalXP.toLocaleString()} XP</span>
@@ -108,7 +108,7 @@ export default function ProfilePage() {
         <h3 className="mb-3 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
           KONU ILERLEMESI
         </h3>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2 md:gap-3 xl:gap-4">
           {(Object.entries(MOCK_PROGRESS) as [GameSlug, typeof MOCK_PROGRESS.matematik][]).map(
             ([game, cats]) => (
               <ProgressChart key={game} game={game} categories={cats} />

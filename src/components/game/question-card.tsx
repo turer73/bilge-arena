@@ -38,7 +38,7 @@ export function QuestionCard({
   const progress = ((currentIndex + 1) / totalQuestions) * 100
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border-[1.5px] border-[var(--border)] bg-gradient-to-br from-[var(--card-bg)] to-[var(--bg-secondary)] p-5 animate-fadeUp">
+    <div className="relative overflow-hidden rounded-xl border-[1.5px] border-[var(--border)] bg-gradient-to-br from-[var(--card-bg)] to-[var(--bg-secondary)] p-3.5 animate-fadeUp md:rounded-2xl md:p-5 xl:p-6 2xl:p-7">
       {/* Glow */}
       <div className="pointer-events-none absolute -right-[50px] -top-[50px] h-[180px] w-[180px] rounded-full bg-[radial-gradient(circle,var(--focus-bg)_0%,transparent_70%)]" />
 
@@ -87,7 +87,7 @@ export function QuestionCard({
       </div>
 
       {/* Soru metni */}
-      <p className="text-[15px] font-medium leading-[1.72]">
+      <p className="text-[13px] font-medium leading-[1.72] md:text-[15px] xl:text-base 2xl:text-lg">
         {question.content.question}
       </p>
 

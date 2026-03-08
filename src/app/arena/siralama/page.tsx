@@ -18,14 +18,14 @@ const MOCK_ENTRIES = [
 
 export default function GlobalLeaderboardPage() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <div className="mb-6 text-center">
-        <h1 className="font-display text-2xl font-black">
+    <div className="mx-auto max-w-xl px-4 py-6 md:max-w-2xl md:py-8 xl:max-w-3xl xl:px-6 xl:py-10 2xl:max-w-4xl">
+      <div className="mb-4 text-center md:mb-6 xl:mb-8">
+        <h1 className="font-display text-xl font-black md:text-2xl xl:text-3xl 2xl:text-4xl">
           <span className="bg-gradient-to-r from-[var(--reward)] to-[var(--reward-light)] bg-clip-text text-transparent">
             🏆 Haftalik Siralama
           </span>
         </h1>
-        <p className="mt-1 text-sm text-[var(--text-sub)]">
+        <p className="mt-1 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">
           Bu haftanin en basarili arenacilari
         </p>
       </div>

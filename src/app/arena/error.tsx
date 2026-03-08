@@ -11,10 +11,10 @@ export default function ArenaError({
   reset: () => void
 }) {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-6 text-center">
-      <div className="text-5xl">🎮</div>
-      <h1 className="text-2xl font-bold">Oyun Hatasi</h1>
-      <p className="max-w-[400px] text-sm leading-relaxed text-[var(--text-sub)]">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center md:gap-6 md:px-6">
+      <div className="text-4xl md:text-5xl xl:text-6xl">🎮</div>
+      <h1 className="text-xl font-bold md:text-2xl xl:text-3xl">Oyun Hatasi</h1>
+      <p className="max-w-[360px] text-xs leading-relaxed text-[var(--text-sub)] md:max-w-[400px] md:text-sm xl:text-base">
         Oyun sirasinda bir hata olustu. Lutfen tekrar deneyin.
       </p>
       {error.digest && (
