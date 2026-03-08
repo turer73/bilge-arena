@@ -1,0 +1,284 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Bilge Arena — Design System CSS Variables
+   Source: theme-system.jsx + style-guide.jsx
+   ============================================================ */
+
+/* Dark Theme (default) */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg: #080C14;
+  --surface: #0F1623;
+  --card: #141D2B;
+  --cardHover: #1A2535;
+
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --text: #F1F5F9;
+  --text-sub: #94A3B8;
+  --text-muted: #475569;
+
+  /* Focus — Bilissel Mavi */
+  --focus: #2563EB;
+  --focus-light: #3B82F6;
+  --focus-bg: rgba(37, 99, 235, 0.12);
+  --focus-border: rgba(37, 99, 235, 0.3);
+
+  /* Reward — Odul Altini */
+  --reward: #D97706;
+  --reward-light: #F59E0B;
+  --reward-bg: rgba(217, 119, 6, 0.12);
+  --reward-border: rgba(217, 119, 6, 0.3);
+
+  /* Growth — Ilerleme Yesili */
+  --growth: #059669;
+  --growth-light: #10B981;
+  --growth-bg: rgba(5, 150, 105, 0.12);
+  --growth-border: rgba(5, 150, 105, 0.3);
+
+  /* Wisdom — Bilgelik Moru */
+  --wisdom: #7C3AED;
+  --wisdom-light: #A78BFA;
+  --wisdom-bg: rgba(124, 58, 237, 0.12);
+  --wisdom-border: rgba(124, 58, 237, 0.3);
+
+  /* Urgency — Acil Kirmizi */
+  --urgency: #DC2626;
+  --urgency-light: #EF4444;
+  --urgency-bg: rgba(220, 38, 38, 0.12);
+  --urgency-border: rgba(220, 38, 38, 0.3);
+
+  /* Aliases for component compatibility */
+  --bg-secondary: var(--surface);
+  --card-bg: var(--card);
+  --focus-dark: #1D4ED8;
+  --reward-dark: #92400E;
+}
+
+/* Light Theme */
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg: #F0F4FA;
+  --surface: #FFFFFF;
+  --card: #FFFFFF;
+  --cardHover: #F8FAFC;
+
+  /* Borders */
+  --border: rgba(0, 0, 0, 0.07);
+  --border-strong: rgba(0, 0, 0, 0.12);
+
+  /* Text */
+  --text: #0F172A;
+  --text-sub: #475569;
+  --text-muted: #94A3B8;
+
+  /* Focus — 15-20% darker for light theme */
+  --focus: #1D4ED8;
+  --focus-light: #2563EB;
+  --focus-bg: rgba(29, 78, 216, 0.08);
+  --focus-border: rgba(29, 78, 216, 0.2);
+
+  /* Reward */
+  --reward: #B45309;
+  --reward-light: #D97706;
+  --reward-bg: rgba(180, 83, 9, 0.08);
+  --reward-border: rgba(180, 83, 9, 0.2);
+
+  /* Growth */
+  --growth: #047857;
+  --growth-light: #059669;
+  --growth-bg: rgba(4, 120, 87, 0.08);
+  --growth-border: rgba(4, 120, 87, 0.2);
+
+  /* Wisdom */
+  --wisdom: #6D28D9;
+  --wisdom-light: #7C3AED;
+  --wisdom-bg: rgba(109, 40, 217, 0.08);
+  --wisdom-border: rgba(109, 40, 217, 0.2);
+
+  /* Urgency */
+  --urgency: #B91C1C;
+  --urgency-light: #DC2626;
+  --urgency-bg: rgba(185, 28, 28, 0.08);
+  --urgency-border: rgba(185, 28, 28, 0.2);
+
+  /* Aliases */
+  --bg-secondary: var(--surface);
+  --card-bg: var(--card);
+  --focus-dark: #1E40AF;
+  --reward-dark: #78350F;
+}
+
+/* ============================================================
+   Base Styles
+   ============================================================ */
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Theme transition */
+  [data-theme] {
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--surface);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
+}
+
+/* ============================================================
+   Component Utilities
+   ============================================================ */
+
+@layer components {
+  /* Primary button */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           rounded-xl px-6 py-3 font-semibold text-white
+           transition-all duration-200 ease-out;
+    background: linear-gradient(135deg, var(--focus) 0%, var(--focus-light) 100%);
+    box-shadow: 0 4px 14px var(--focus-bg);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px var(--focus-border);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           rounded-xl px-6 py-3 font-semibold
+           transition-all duration-200 ease-out;
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    background: transparent;
+  }
+
+  .btn-ghost:hover {
+    background: var(--focus-bg);
+    border-color: var(--focus-border);
+    color: var(--focus-light);
+  }
+
+  /* Card with hover */
+  .card-hover {
+    @apply rounded-2xl p-6 transition-all duration-300;
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+
+  .card-hover:hover {
+    background: var(--cardHover);
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Shimmer text effect */
+  .shimmer-text {
+    background: linear-gradient(
+      90deg,
+      var(--text) 0%,
+      var(--focus-light) 50%,
+      var(--text) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+  }
+
+  /* XP bar fill */
+  .xp-bar-fill {
+    background: linear-gradient(90deg, var(--focus) 0%, var(--wisdom) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .xp-bar-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* Gradient backgrounds */
+  .bg-hero-gradient {
+    background: linear-gradient(135deg, #0B1120 0%, #1E3A8A 100%);
+  }
+
+  .bg-gold-badge {
+    background: linear-gradient(135deg, #B45309 0%, #F59E0B 50%, #B45309 100%);
+  }
+
+  .bg-success-gradient {
+    background: linear-gradient(135deg, #064E3B 0%, #059669 100%);
+  }
+}
+
+/* ============================================================
+   Utility helpers
+   ============================================================ */
+
+@layer utilities {
+  .text-primary {
+    color: var(--text);
+  }
+
+  .text-secondary {
+    color: var(--text-sub);
+  }
+
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  /* Tabular numbers for XP/scores */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
