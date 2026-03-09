@@ -28,11 +28,17 @@ export function ChatWidget() {
       })
 
       if (!res.ok) {
-        const errorMsg = res.status === 401
-          ? 'Bu ozelligi kullanmak icin giris yapmaniz gerekiyor. 🔑'
-          : res.status === 429
-          ? 'Cok fazla mesaj gonderdiniz. Biraz bekleyip tekrar deneyin. ⏳'
-          : 'Uzgunum, bir hata olustu. Lutfen tekrar deneyin.'
+        let errorMsg = 'Uzgunum, bir hata olustu. Lutfen tekrar deneyin.'
+        if (res.status === 401) {
+          errorMsg = 'Bu ozelligi kullanmak icin giris yapmaniz gerekiyor. 🔑'
+        } else if (res.status === 429) {
+          errorMsg = 'Cok fazla mesaj gonderdiniz. Biraz bekleyip tekrar deneyin. ⏳'
+        } else {
+          try {
+            const errBody = await res.json()
+            errorMsg = errBody.error || errorMsg
+          } catch { /* JSON parse hatasi — varsayilan mesaji kullan */ }
+        }
         updateLastAssistant(errorMsg)
         setLoading(false)
         return
