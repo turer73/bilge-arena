@@ -23,6 +23,12 @@ export function MiniLeaderboard({ players, myRank = 0 }: MiniLeaderboardProps) {
         </span>
       </div>
 
+      {players.length === 0 && (
+        <div className="px-3 py-4 text-center text-[10px] text-[var(--text-muted)]">
+          Henuz veri yok
+        </div>
+      )}
+
       {players.map((player, i) => {
         const isMe = i + 1 === myRank
         const medal = MEDALS[i] || null

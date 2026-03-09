@@ -11,6 +11,7 @@ import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { fetchQuizQuestions } from '@/lib/supabase/questions'
 import { saveGameSession } from '@/lib/supabase/sessions'
 import { refreshProfile } from '@/lib/hooks/use-auth'
+import { fetchSidebarLeaderboard, fetchTopicStrengths, type SidebarPlayer, type TopicStrength } from '@/lib/supabase/sidebar-data'
 import type { Question, Difficulty } from '@/types/database'
 import type { OptionState } from './option-button'
 
@@ -89,6 +90,28 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // Kullanicinin gercek XP ve streak degerleri
   const userXP = profile?.total_xp ?? 0
   const userStreak = profile?.current_streak ?? 0
+
+  // Sidebar verileri — Supabase'den cekilir
+  const [sidebarLeaderboard, setSidebarLeaderboard] = useState<SidebarPlayer[]>([])
+  const [sidebarMyRank, setSidebarMyRank] = useState(0)
+  const [sidebarTopicData, setSidebarTopicData] = useState<TopicStrength[]>([])
+
+  useEffect(() => {
+    // Leaderboard verisini cek
+    fetchSidebarLeaderboard(user?.id)
+      .then(({ players, myRank }) => {
+        setSidebarLeaderboard(players)
+        setSidebarMyRank(myRank)
+      })
+      .catch((err) => console.error('[Sidebar] Leaderboard hatasi:', err))
+
+    // Konu gucu verisini cek (giris yapilmissa)
+    if (user) {
+      fetchTopicStrengths(user.id, game)
+        .then(setSidebarTopicData)
+        .catch((err) => console.error('[Sidebar] Topics hatasi:', err))
+    }
+  }, [user, game])
 
   // Deneme: sure dolunca tum sinavi bitir
   const handleDenemeTimeUp = useCallback(() => {
@@ -344,25 +367,20 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const lastAnswer = quizStore.answers[quizStore.answers.length - 1]
   const level = getLevelFromXP(quizStore.xpEarned)
 
-  // Sidebar data (mock — ileride gercek veriyle degistirilecek)
-  const sidebarPlayers = [
-    { name: 'Zeynep', avatar: '🦊', xp: '1.820' },
-    { name: 'Emre', avatar: '🐉', xp: '1.720' },
-    { name: 'Oyuncu', avatar: '🦉', xp: '1.640' },
-    { name: 'Selin', avatar: '🌟', xp: '1.410' },
-    { name: 'Kaan', avatar: '⚔️', xp: '1.190' },
-  ]
-
+  // Sidebar verileri — gercek Supabase verisi + dinamik quiz verisi
   const sidebarQuests = [
     { label: '10 soru coz', done: quizStore.currentIndex + 1, total: 10, color: 'var(--focus)' },
     { label: '3 seri yap', done: Math.min(quizStore.maxStreak, 3), total: 3, color: 'var(--reward)' },
     { label: `${gameDef.name} oyna`, done: 1, total: 1, color: 'var(--growth)' },
   ]
 
-  const sidebarTopics = gameDef.categories.map((cat, i) => ({
-    label: cat.charAt(0).toUpperCase() + cat.slice(1),
-    percentage: [78, 54, 91, 31][i % 4],
-  }))
+  // Konu gucu: gercek veri varsa onu kullan, yoksa kategorileri %0 goster
+  const sidebarTopics = sidebarTopicData.length > 0
+    ? sidebarTopicData
+    : gameDef.categories.map((cat) => ({
+        label: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' '),
+        percentage: 0,
+      }))
 
   return (
     <div className="mx-auto max-w-[940px] p-3 md:p-4 lg:p-5 xl:max-w-[1100px] xl:p-6 2xl:max-w-[1280px] 2xl:p-8">
@@ -496,7 +514,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
       {/* Sag sidebar */}
       {!isDeneme && (
         <div className="hidden flex-col gap-3 lg:flex">
-          <MiniLeaderboard players={sidebarPlayers} myRank={3} />
+          <MiniLeaderboard players={sidebarLeaderboard} myRank={sidebarMyRank} />
           <DailyQuests quests={sidebarQuests} />
           <TopicsPanel topics={sidebarTopics} />
         </div>
