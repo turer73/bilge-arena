@@ -1,5 +1,5 @@
 import { google } from '@ai-sdk/google'
-import { streamText } from 'ai'
+import { generateText } from 'ai'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     : SYSTEM_PROMPT
 
   try {
-    const result = streamText({
+    const { text } = await generateText({
       model: google('gemini-2.0-flash'),
       system: systemMessages,
       messages: messages.map((m) => ({
@@ -83,11 +83,22 @@ export async function POST(request: Request) {
       maxOutputTokens: 500,
     })
 
-    return result.toTextStreamResponse()
+    // Non-streaming: metin olarak gonder (ReadableStream ile uyumlu)
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(text))
+        controller.close()
+      },
+    })
+
+    return new Response(stream, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })
   } catch (err) {
     console.error('[Chat API] Gemini error:', err)
     return NextResponse.json(
-      { error: 'Yapay zeka servisi su anda kullanilamiyor.' },
+      { error: `AI servisi hatasi: ${err instanceof Error ? err.message : 'Bilinmeyen hata'}` },
       { status: 502 }
     )
   }
