@@ -57,13 +57,46 @@ export function useAuth() {
   }, [])
 
   async function fetchProfile(userId: string) {
+    // 1) Profili cek
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single()
 
-    if (data) setProfile(data as unknown as import('@/types/database').Profile)
+    if (!data) return
+
+    // 2) Google hesap bilgilerini senkronize et
+    // Her giriste Google'dan gelen ad/avatar farkli olabilir
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const meta = authUser?.user_metadata
+    if (meta) {
+      const googleName = meta.full_name || meta.name || null
+      const googleAvatar = meta.avatar_url || meta.picture || null
+      const needsUpdate =
+        (googleName && googleName !== data.display_name) ||
+        (googleAvatar && googleAvatar !== data.avatar_url)
+
+      if (needsUpdate) {
+        const updates: Record<string, string> = {}
+        if (googleName && googleName !== data.display_name) updates.display_name = googleName
+        if (googleAvatar && googleAvatar !== data.avatar_url) updates.avatar_url = googleAvatar
+
+        const { data: updated } = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', userId)
+          .select('*')
+          .single()
+
+        if (updated) {
+          setProfile(updated as unknown as Profile)
+          return
+        }
+      }
+    }
+
+    setProfile(data as unknown as Profile)
   }
 
   async function signInWithGoogle() {
