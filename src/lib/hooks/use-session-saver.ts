@@ -6,6 +6,14 @@ import { saveGameSession } from '@/lib/supabase/sessions'
 import { refreshProfile } from '@/lib/hooks/use-auth'
 import type { GameSlug } from '@/lib/constants/games'
 
+interface SessionResult {
+  correctAnswers: number
+  totalQuestions: number
+  maxStreak: number
+  accuracy: number
+  game: string
+}
+
 interface UseSessionSaverOptions {
   screen: string
   userId?: string
@@ -13,6 +21,7 @@ interface UseSessionSaverOptions {
   selectedMode: string
   selectedCategory?: string | null
   selectedDifficulty?: number | null
+  onSessionSaved?: (data: SessionResult) => void
 }
 
 /**
@@ -27,6 +36,7 @@ export function useSessionSaver({
   selectedMode,
   selectedCategory,
   selectedDifficulty,
+  onSessionSaved,
 }: UseSessionSaverOptions) {
   const [saving, setSaving] = useState(false)
   const savedRef = useRef(false)
@@ -62,8 +72,18 @@ export function useSessionSaver({
       .then(async (sessionId) => {
         if (sessionId) {
           console.log('[SessionSaver] Oturum kaydedildi:', sessionId)
-          // DB trigger'lari XP/level/streak guncelledi → profil verisini yenile
           await refreshProfile()
+
+          // Günlük görevleri güncelle
+          const correctCount = answers.filter((a) => a.isCorrect).length
+          const totalCount = answers.length
+          onSessionSaved?.({
+            correctAnswers: correctCount,
+            totalQuestions: totalCount,
+            maxStreak,
+            accuracy: totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0,
+            game,
+          })
         }
       })
       .catch((err) => console.error('[SessionSaver] Kaydetme hatasi:', err))
