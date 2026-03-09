@@ -28,7 +28,12 @@ export function ChatWidget() {
       })
 
       if (!res.ok) {
-        updateLastAssistant('Uzgunum, bir hata olustu. Lutfen tekrar deneyin.')
+        const errorMsg = res.status === 401
+          ? 'Bu ozelligi kullanmak icin giris yapmaniz gerekiyor. 🔑'
+          : res.status === 429
+          ? 'Cok fazla mesaj gonderdiniz. Biraz bekleyip tekrar deneyin. ⏳'
+          : 'Uzgunum, bir hata olustu. Lutfen tekrar deneyin.'
+        updateLastAssistant(errorMsg)
         setLoading(false)
         return
       }
