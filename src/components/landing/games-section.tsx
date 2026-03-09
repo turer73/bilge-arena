@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Calculator, BookOpen, FlaskConical, Globe, Languages } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -88,9 +89,10 @@ export function GamesSection() {
         {/* Oyun kartlari — 5'li grid: ust 3, alt 2 */}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {GAMES.map((g) => (
-            <div
+            <Link
               key={g.slug}
-              className="card-hover group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8"
+              href={`/arena/${g.slug}`}
+              className="card-hover group relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 block"
             >
               {/* Arka plan efekti */}
               <div
@@ -151,7 +153,7 @@ export function GamesSection() {
                   </Button>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

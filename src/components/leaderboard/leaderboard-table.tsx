@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 interface LeaderboardEntry {
   rank: number
   name: string
@@ -53,7 +55,19 @@ export function LeaderboardTable({ entries, title = 'Haftalik Siralama' }: Leade
 
           {/* Player */}
           <div className="flex items-center gap-2">
-            <span className="text-lg">{entry.avatar}</span>
+            {entry.avatar.startsWith('http') ? (
+              <Image
+                src={entry.avatar}
+                alt={entry.name}
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)] text-lg">
+                {entry.avatar}
+              </span>
+            )}
             <span
               className="text-sm"
               style={{

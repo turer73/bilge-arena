@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Zap, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -37,14 +38,16 @@ export function CTASection() {
         </p>
 
         <div className="mt-10 flex justify-center">
-          <Button
-            variant="primary"
-            size="lg"
-            className="animate-glow-pulse text-lg"
-          >
-            <Zap size={20} />
-            Şimdi Başla — Ücretsiz
-          </Button>
+          <Link href="/arena">
+            <Button
+              variant="primary"
+              size="lg"
+              className="animate-glow-pulse text-lg"
+            >
+              <Zap size={20} />
+              Şimdi Başla — Ücretsiz
+            </Button>
+          </Link>
         </div>
 
         <div className="mt-5 flex justify-center gap-6">

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Zap, ArrowRight, Flame, Trophy, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ArenaBackground } from './arena-background'
@@ -206,14 +207,18 @@ export function HeroSection() {
             <div className="animate-fadeUp mt-7 flex justify-center gap-3 [animation-delay:300ms]
               md:mt-9
               lg:justify-start">
-              <Button variant="primary" size="lg">
-                <Zap size={18} />
-                Ücretsiz Başla
-              </Button>
-              <Button variant="ghost" size="lg">
-                Nasıl Çalışır?
-                <ArrowRight size={16} />
-              </Button>
+              <Link href="/arena">
+                <Button variant="primary" size="lg">
+                  <Zap size={18} />
+                  Ücretsiz Başla
+                </Button>
+              </Link>
+              <Link href="/nasil-calisir">
+                <Button variant="ghost" size="lg">
+                  Nasıl Çalışır?
+                  <ArrowRight size={16} />
+                </Button>
+              </Link>
             </div>
 
             {/* Mini istatistikler */}
