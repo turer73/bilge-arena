@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -27,14 +28,16 @@ export function LeaderboardPreview() {
           <p className="mt-4 text-[var(--text-sub)] leading-relaxed lg:text-lg">
             Her hafta sıfırlanan haftalık turnuva. En çok XP kazanan öğrenci zirvede yer alır.
           </p>
-          <Button
-            variant="gold"
-            size="md"
-            className="mt-8"
-          >
-            <Trophy size={16} />
-            Sıralamayı Gör
-          </Button>
+          <Link href="/arena/siralama">
+            <Button
+              variant="gold"
+              size="md"
+              className="mt-8"
+            >
+              <Trophy size={16} />
+              Sıralamayı Gör
+            </Button>
+          </Link>
         </div>
 
         {/* Sag — Tablo */}
@@ -84,9 +87,9 @@ export function LeaderboardPreview() {
 
           {/* Tum listeyi gor */}
           <div className="py-3.5 text-center">
-            <span className="cursor-pointer text-sm font-semibold text-[var(--focus-light)] hover:underline">
+            <Link href="/arena/siralama" className="text-sm font-semibold text-[var(--focus-light)] hover:underline">
               Tüm listeyi gör &rarr;
-            </span>
+            </Link>
           </div>
         </div>
       </div>
