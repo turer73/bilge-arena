@@ -72,15 +72,23 @@ export async function POST(request: Request) {
     ? `${SYSTEM_PROMPT}\n\nOgrencinin su anda calistigi soru:\n${questionContext}`
     : SYSTEM_PROMPT
 
-  const result = streamText({
-    model: google('gemini-2.0-flash'),
-    system: systemMessages,
-    messages: messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-    maxOutputTokens: 500,
-  })
+  try {
+    const result = streamText({
+      model: google('gemini-2.0-flash'),
+      system: systemMessages,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      maxOutputTokens: 500,
+    })
 
-  return result.toTextStreamResponse()
+    return result.toTextStreamResponse()
+  } catch (err) {
+    console.error('[Chat API] Gemini error:', err)
+    return NextResponse.json(
+      { error: 'Yapay zeka servisi su anda kullanilamiyor.' },
+      { status: 502 }
+    )
+  }
 }
