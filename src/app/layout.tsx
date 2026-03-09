@@ -61,25 +61,48 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'WebApplication',
-  name: 'Bilge Arena',
-  description: 'Oyunlaştırılmış YKS hazırlık platformu',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com',
-  applicationCategory: 'EducationalApplication',
-  operatingSystem: 'Web',
-  offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'TRY',
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com'
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Bilge Arena',
+    description: 'Oyunlastirilmis YKS hazirlık platformu',
+    url: siteUrl,
+    applicationCategory: 'EducationalApplication',
+    operatingSystem: 'Web',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'TRY',
+    },
+    inLanguage: 'tr',
+    author: { '@type': 'Organization', name: 'Bilge Arena' },
   },
-  inLanguage: 'tr',
-  author: {
+  {
+    '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Bilge Arena',
+    url: siteUrl,
+    logo: `${siteUrl}/logo-horizontal.png`,
+    description: 'YKS\'ye hazirlanan ogrenciler icin oyunlastirilmis ogrenme platformu.',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'iletisim@bilgearena.com',
+      contactType: 'customer service',
+      availableLanguage: 'Turkish',
+    },
   },
-}
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: siteUrl },
+      { '@type': 'ListItem', position: 2, name: 'Arena', item: `${siteUrl}/arena` },
+    ],
+  },
+]
 
 export default function RootLayout({
   children,
