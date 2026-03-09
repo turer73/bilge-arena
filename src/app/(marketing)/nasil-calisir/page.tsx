@@ -64,9 +64,52 @@ const FEATURES = [
   { icon: '🆓', title: 'Tamamen Ücretsiz', desc: 'Sınav bankası dahil her şey ücretsiz' },
 ]
 
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Bilge Arena nedir?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Bilge Arena, YKS\'ye hazirlanan ogrenciler icin oyunlastirilmis bir ogrenme platformudur. Matematik, Turkce, Fen, Sosyal ve Ingilizce sorulari cozerek XP kazanir, seviye atlar ve siralamada yukselirsiniz.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Bilge Arena ucretli mi?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Hayir, Bilge Arena tamamen ucretsizdir. Soru bankasi, AI asistan ve tum ozellikler ucretsiz olarak sunulmaktadir.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Nasil kayit olabilirim?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Google hesabinizla tek tikla giris yapabilirsiniz. Ek bilgi istenmez. Misafir olarak da oynayabilirsiniz ancak ilerlemeniz kaydedilmez.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Hangi dersler mevcut?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Matematik, Turkce, Fen Bilimleri (Fizik, Kimya, Biyoloji), Sosyal Bilimler (Tarih, Cografya, Felsefe) ve Ingilizce (WordQuest) oyun konsollari mevcuttur.',
+      },
+    },
+  ],
+}
+
 export default function NasilCalisirPage() {
   return (
     <div className="mx-auto max-w-[900px] px-6 py-12 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       {/* Hero */}
       <section className="mb-16 text-center">
         <h1 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
