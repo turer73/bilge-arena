@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
   try {
     const result = streamText({
-      model: google('gemini-2.0-flash-lite'),
+      model: google('gemini-1.5-flash'),
       system: systemMessages,
       messages: messages.map((m) => ({
         role: m.role,
