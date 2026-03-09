@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
-  const page = parseInt(searchParams.get('page') ?? '1')
+  const rawPage = parseInt(searchParams.get('page') ?? '1')
+  const page = isNaN(rawPage) || rawPage < 1 ? 1 : Math.min(rawPage, 1000)
   const limit = 20
   const offset = (page - 1) * limit
 

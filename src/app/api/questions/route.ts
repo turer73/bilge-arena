@@ -1,8 +1,28 @@
 import { createClient } from '@/lib/supabase/server'
 import { checkAdmin } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+const questionsLimiter = createRateLimiter('questions', 60, 60_000) // 60 req/dk
+
+/** parseInt ile boundary kontrolu: min <= val <= max */
+function safeInt(value: string | null, fallback: number, min: number, max: number): number {
+  const n = parseInt(value ?? String(fallback))
+  if (isNaN(n) || n < min) return fallback
+  return Math.min(n, max)
+}
 
 export async function GET(request: NextRequest) {
+  // Rate limiting (IP bazli — GET public endpoint)
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const rl = questionsLimiter.check(ip)
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek. Lutfen bekleyin.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+    )
+  }
+
   const supabase = await createClient()
   const { searchParams } = new URL(request.url)
 
@@ -10,8 +30,8 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category')
   const difficulty = searchParams.get('difficulty')
   const active = searchParams.get('active')
-  const page = parseInt(searchParams.get('page') ?? '1')
-  const limit = parseInt(searchParams.get('limit') ?? '20')
+  const page = safeInt(searchParams.get('page'), 1, 1, 1000)
+  const limit = safeInt(searchParams.get('limit'), 20, 1, 100)
   const offset = (page - 1) * limit
 
   let query = supabase

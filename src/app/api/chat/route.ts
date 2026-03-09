@@ -1,5 +1,10 @@
 import { anthropic } from '@ai-sdk/anthropic'
 import { streamText } from 'ai'
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+const chatLimiter = createRateLimiter('chat', 30, 60_000) // 30 req/dk
 
 const SYSTEM_PROMPT = `Sen Bilge Arena'nin yapay zeka asistani "Bilge Asistan"sin.
 
@@ -28,10 +33,35 @@ Konu alanlarin:
 Su anki ogrencinin sorusu veya konusu hakkinda yardimci ol.`
 
 export async function POST(request: Request) {
+  // 1) Auth kontrolu
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: 'Bu ozelligi kullanmak icin giris yapmaniz gerekiyor.' },
+      { status: 401 }
+    )
+  }
+
+  // 2) Rate limiting
+  const rl = chatLimiter.check(user.id)
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+    )
+  }
+
+  // 3) Request body
   const { messages, questionContext } = await request.json()
 
-  // Rate limiting (basit — production'da Redis kullan)
-  // Simdilik unlimited
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return NextResponse.json(
+      { error: 'Gecersiz mesaj formati.' },
+      { status: 400 }
+    )
+  }
 
   const systemMessages = questionContext
     ? `${SYSTEM_PROMPT}\n\nOgrencinin su anda calistigi soru:\n${questionContext}`
