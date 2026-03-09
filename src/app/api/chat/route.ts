@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { chatRequestSchema } from '@/lib/validations/schemas'
 
-const chatLimiter = createRateLimiter('chat', 30, 60_000) // 30 req/dk
+const chatLimiter = createRateLimiter('chat', 30, 60_000)
 
 const SYSTEM_PROMPT = `Sen Bilge Arena'nin yapay zeka asistani "Bilge Asistan"sin.
 
