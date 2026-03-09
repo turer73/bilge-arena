@@ -8,14 +8,22 @@ export interface Profile {
   username: string | null
   display_name: string | null
   avatar_url: string | null
-  role: 'user' | 'admin'
+  role?: 'user' | 'admin'
+  // XP & Seviye
   total_xp: number
   level: number
+  level_name: string
+  // Streak
   current_streak: number
-  best_streak: number
-  games_played: number
+  longest_streak: number
+  last_played_at: string | null
+  // İstatistik (DB kolon adlariyla uyumlu)
+  total_questions: number
   correct_answers: number
-  total_answers: number
+  total_sessions: number
+  // Tercihler
+  preferred_theme: 'dark' | 'light'
+  notifications: boolean
   created_at: string
   updated_at: string
 }

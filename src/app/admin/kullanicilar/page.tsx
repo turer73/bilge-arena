@@ -129,7 +129,7 @@ export default function AdminUsersPage() {
                     {u.total_xp.toLocaleString()}
                   </td>
                   <td className="px-3 py-3 text-right font-mono text-[var(--text-sub)]">
-                    {u.correct_answers}/{u.total_answers}
+                    {u.correct_answers}/{u.total_questions}
                   </td>
                   <td className="px-3 py-3 text-[var(--text-sub)]">
                     {new Date(u.created_at).toLocaleDateString('tr-TR')}
@@ -137,7 +137,7 @@ export default function AdminUsersPage() {
                   <td className="px-3 py-3">
                     <div className="flex items-center justify-center gap-1.5">
                       <button
-                        onClick={() => handleRoleChange(u.id, u.role)}
+                        onClick={() => handleRoleChange(u.id, u.role ?? 'user')}
                         disabled={actionLoading === u.id}
                         className="rounded-lg px-2 py-1 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)] disabled:opacity-40"
                         title={u.role === 'admin' ? 'Kullaniciya dondur' : 'Admin yap'}
