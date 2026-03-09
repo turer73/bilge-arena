@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -15,4 +17,13 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Source map'leri Sentry'ye yukle ama client bundle'dan sil (guvenlik)
+  hideSourceMaps: true,
+
+  // Webpack plugin sessiz kalsin
+  silent: true,
+
+  // Build sirasinda telemetri gonderme
+  telemetry: false,
+})
