@@ -74,7 +74,7 @@ export function ChatWidget() {
       {/* FAB butonu */}
       <button
         onClick={toggleOpen}
-        className={`fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 ${
+        className={`fixed bottom-4 right-3 sm:bottom-5 sm:right-5 z-50 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 ${
           isOpen
             ? 'bg-[var(--surface)] text-[var(--text-sub)] border border-[var(--border)]'
             : 'bg-[var(--focus)] text-white'
@@ -93,7 +93,7 @@ export function ChatWidget() {
 
       {/* Chat paneli */}
       {isOpen && (
-        <div className="fixed bottom-20 right-5 z-50 flex h-[460px] w-[340px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg)] shadow-2xl animate-fadeUp">
+        <div className="fixed bottom-20 right-2 sm:right-5 z-50 flex h-[calc(100dvh-120px)] max-h-[460px] w-[calc(100vw-16px)] sm:w-[340px] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg)] shadow-2xl animate-fadeUp">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-4 py-3">
             <div className="flex items-center gap-2">
