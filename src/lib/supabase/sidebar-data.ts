@@ -5,6 +5,12 @@ import type { GameSlug } from '@/lib/constants/games'
 
 // ---------- Tip tanimlari ----------
 
+/** session_answers + questions JOIN satir tipi */
+interface AnswerWithQuestion {
+  is_correct: boolean
+  questions: { game: string; category: string }
+}
+
 export interface SidebarPlayer {
   name: string
   avatar: string
@@ -103,6 +109,7 @@ export async function fetchTopicStrengths(
     .select('is_correct, questions!inner(game, category)')
     .eq('user_id', userId)
     .eq('questions.game', game)
+    .returns<AnswerWithQuestion[]>()
 
   if (!data || data.length === 0) return []
 
@@ -110,7 +117,7 @@ export async function fetchTopicStrengths(
   const catMap = new Map<string, { total: number; correct: number }>()
 
   for (const row of data) {
-    const q = row.questions as unknown as { game: string; category: string }
+    const q = row.questions
     if (!q?.category) continue
 
     if (!catMap.has(q.category)) catMap.set(q.category, { total: 0, correct: 0 })

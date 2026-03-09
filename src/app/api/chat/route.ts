@@ -3,6 +3,7 @@ import { streamText } from 'ai'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { chatRequestSchema } from '@/lib/validations/schemas'
 
 const chatLimiter = createRateLimiter('chat', 30, 60_000) // 30 req/dk
 
@@ -53,15 +54,19 @@ export async function POST(request: Request) {
     )
   }
 
-  // 3) Request body
-  const { messages, questionContext } = await request.json()
+  // 3) Request body — Zod ile dogrula
+  const body = await request.json()
+  const parsed = chatRequestSchema.safeParse(body)
 
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0]?.message || 'Gecersiz istek'
     return NextResponse.json(
-      { error: 'Gecersiz mesaj formati.' },
+      { error: `Gecersiz mesaj formati: ${firstError}` },
       { status: 400 }
     )
   }
+
+  const { messages, questionContext } = parsed.data
 
   const systemMessages = questionContext
     ? `${SYSTEM_PROMPT}\n\nOgrencinin su anda calistigi soru:\n${questionContext}`
@@ -70,8 +75,8 @@ export async function POST(request: Request) {
   const result = streamText({
     model: anthropic('claude-haiku-4-5-20251001'),
     system: systemMessages,
-    messages: messages.map((m: { role: string; content: string }) => ({
-      role: m.role as 'user' | 'assistant',
+    messages: messages.map((m) => ({
+      role: m.role,
       content: m.content,
     })),
     maxOutputTokens: 500,
