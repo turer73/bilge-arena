@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { createClient } from '@/lib/supabase/client'
 import { CommentItem } from './comment-item'
+import { commentContentSchema, LIMITS } from '@/lib/validations/schemas'
 
 interface Comment {
   id: string
@@ -15,6 +16,20 @@ interface Comment {
   likes: number
   isLiked: boolean
   isOwn: boolean
+}
+
+/** comments + profiles JOIN satir tipi */
+interface CommentRow {
+  id: string
+  content: string
+  likes_count: number
+  created_at: string
+  user_id: string
+  profiles: {
+    display_name: string | null
+    avatar_url: string | null
+    level_name: string | null
+  }
 }
 
 interface CommentSectionProps {
@@ -59,6 +74,9 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
 
     const supabase = createClient()
 
+    // Supabase !inner JOIN: profiles many-to-one oldugu icin
+    // runtime'da tek obje doner, ama TS array cikarir.
+    // returns<CommentRow[]>() ile sorgu seviyesinde tipi belirle.
     const { data: commentsData, error } = await supabase
       .from('comments')
       .select('id, content, likes_count, created_at, user_id, profiles!inner(display_name, avatar_url, level_name)')
@@ -66,6 +84,7 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
       .limit(50)
+      .returns<CommentRow[]>()
 
     if (error) {
       console.error('[Comments] Yorum cekme hatasi:', error)
@@ -88,7 +107,7 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
 
     // UI formatina cevir
     const mapped: Comment[] = (commentsData || []).map((c) => {
-      const p = c.profiles as unknown as { display_name: string | null; avatar_url: string | null; level_name: string | null }
+      const p = c.profiles
       return {
         id: c.id,
         avatar: p?.avatar_url ? '👤' : '🦉',
@@ -112,8 +131,14 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
 
   // Yeni yorum gonder
   const handleSubmit = async () => {
-    if (!newComment.trim() || !user || submitting) return
+    if (!user || submitting) return
+
+    // Zod ile dogrula + trim
+    const parsed = commentContentSchema.safeParse(newComment)
+    if (!parsed.success) return
+
     setSubmitting(true)
+    const cleanContent = parsed.data
 
     const supabase = createClient()
     const { data, error } = await supabase
@@ -121,7 +146,7 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
       .insert({
         user_id: user.id,
         question_id: questionId,
-        content: newComment.trim(),
+        content: cleanContent,
       })
       .select('id, created_at')
       .single()
@@ -138,7 +163,7 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
       avatar: profile?.avatar_url ? '👤' : '🦉',
       name: profile?.display_name || 'Sen',
       levelBadge: LEVEL_BADGES[profile?.level_name || 'Acemi'] || '🌱 Acemi',
-      content: newComment.trim(),
+      content: cleanContent,
       timeAgo: 'simdi',
       likes: 0,
       isLiked: false,
@@ -228,7 +253,7 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
                 placeholder="Yorumunu yaz..."
-                maxLength={500}
+                maxLength={LIMITS.COMMENT_MAX_LENGTH}
                 className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text)] placeholder:text-[var(--text-sub)] focus:border-[var(--focus)] focus:outline-none"
               />
               <button

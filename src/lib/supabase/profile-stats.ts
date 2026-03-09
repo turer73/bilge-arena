@@ -5,6 +5,12 @@ import type { GameSlug } from '@/lib/constants/games'
 
 // ---------- Tip tanimlari ----------
 
+/** session_answers + questions JOIN satir tipi */
+interface AnswerWithQuestion {
+  is_correct: boolean
+  questions: { game: string; category: string }
+}
+
 export interface CategoryStat {
   category: string
   total: number
@@ -52,7 +58,8 @@ export async function fetchProfileStats(userId: string): Promise<ProfileStats> {
     supabase
       .from('session_answers')
       .select('is_correct, questions!inner(game, category)')
-      .eq('user_id', userId),
+      .eq('user_id', userId)
+      .returns<AnswerWithQuestion[]>(),
 
     // 2) Son 10 oyun oturumu
     supabase
@@ -69,7 +76,7 @@ export async function fetchProfileStats(userId: string): Promise<ProfileStats> {
 
   if (answersResult.data) {
     for (const row of answersResult.data) {
-      const q = row.questions as unknown as { game: string; category: string }
+      const q = row.questions
       if (!q?.game || !q?.category) continue
 
       if (!gameMap.has(q.game)) gameMap.set(q.game, new Map())

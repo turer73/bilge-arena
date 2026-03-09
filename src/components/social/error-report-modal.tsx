@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { errorReportSchema, LIMITS } from '@/lib/validations/schemas'
 
 const REPORT_TYPES = [
   { value: 'wrong_answer', label: 'Yanlis cevap', icon: '❌' },
@@ -35,7 +36,14 @@ export function ErrorReportModal({
   const handleSubmit = () => {
     if (!selectedType) return
 
-    onSubmit?.({ type: selectedType, description: description.trim() })
+    // Zod ile dogrula
+    const parsed = errorReportSchema.safeParse({
+      report_type: selectedType,
+      description,
+    })
+    if (!parsed.success) return
+
+    onSubmit?.({ type: selectedType, description: parsed.data.description ?? '' })
     setSubmitted(true)
 
     // 2 saniye sonra kapat
@@ -114,12 +122,12 @@ export function ErrorReportModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Hatanin detaylarini aciklayabilirsin..."
-                maxLength={1000}
+                maxLength={LIMITS.REPORT_DESCRIPTION_MAX_LENGTH}
                 rows={3}
                 className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text)] placeholder:text-[var(--text-sub)] focus:border-[var(--focus)] focus:outline-none"
               />
               <div className="mt-1 text-right text-[9px] text-[var(--text-sub)]">
-                {description.length}/1000
+                {description.length}/{LIMITS.REPORT_DESCRIPTION_MAX_LENGTH}
               </div>
             </div>
 

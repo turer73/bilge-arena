@@ -22,7 +22,7 @@ export async function refreshProfile(): Promise<void> {
     .single()
 
   if (data) {
-    useAuthStore.getState().setProfile(data as unknown as Profile)
+    useAuthStore.getState().setProfile(data as Profile)
   }
 }
 
@@ -90,13 +90,13 @@ export function useAuth() {
           .single()
 
         if (updated) {
-          setProfile(updated as unknown as Profile)
+          setProfile(updated as Profile)
           return
         }
       }
     }
 
-    setProfile(data as unknown as Profile)
+    setProfile(data as Profile)
   }
 
   async function signInWithGoogle() {
