@@ -22,10 +22,13 @@ const FOOTER_LINKS = [
     ],
   },
   {
-    title: 'Destek',
+    title: 'Yasal',
     links: [
+      { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
+      { label: 'Kullanım Koşulları', href: '/kullanim-kosullari' },
+      { label: 'KVKK Aydınlatma', href: '/kvkk' },
+      { label: 'Çerez Politikası', href: '/cerez-politikasi' },
       { label: 'Hakkında', href: '/hakkinda' },
-      { label: 'Nasıl Çalışır', href: '/nasil-calisir' },
     ],
   },
 ]
@@ -68,15 +71,18 @@ export function Footer() {
           <div className="text-sm text-[var(--text-muted)]">
             &copy; 2026 Bilge Arena. Tüm hakları saklıdır.
           </div>
-          <div className="flex gap-2">
-            {['Twitter', 'Instagram', 'Discord'].map((s) => (
-              <button
-                key={s}
-                className="btn-ghost px-3 py-1.5 text-xs"
-              >
-                {s}
-              </button>
-            ))}
+          <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+            <Link href="/gizlilik-politikasi" className="transition-colors hover:text-[var(--text)]">
+              Gizlilik
+            </Link>
+            <span>·</span>
+            <Link href="/kullanim-kosullari" className="transition-colors hover:text-[var(--text)]">
+              Koşullar
+            </Link>
+            <span>·</span>
+            <Link href="/kvkk" className="transition-colors hover:text-[var(--text)]">
+              KVKK
+            </Link>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Cinzel, DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { CookieBanner } from '@/components/cookie-banner'
 import './globals.css'
 
 /* ─── Google Fonts — Template birebir ─── */
@@ -98,6 +99,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         {children}
+        <CookieBanner />
         <Analytics />
         <SpeedInsights />
       </body>
