@@ -1,4 +1,5 @@
 import { withSentryConfig } from '@sentry/nextjs'
+import withPWA from '@ducanh2912/next-pwa'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -38,7 +39,19 @@ const nextConfig = {
   },
 }
 
-export default withSentryConfig(nextConfig, {
+const pwaConfig = withPWA({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  cacheOnFrontEndNav: true,
+  reloadOnOnline: true,
+  fallbacks: {
+    document: '/offline',
+  },
+})
+
+export default withSentryConfig(pwaConfig(nextConfig), {
   // Source map'leri Sentry'ye yukle ama client bundle'dan sil (guvenlik)
   hideSourceMaps: true,
 
