@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
   try {
     const { text } = await generateText({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.0-flash-lite'),
       system: systemMessages,
       messages: messages.map((m) => ({
         role: m.role,
