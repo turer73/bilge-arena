@@ -9,6 +9,8 @@ import { useSidebarData } from '@/lib/hooks/use-sidebar-data'
 import { useSessionSaver } from '@/lib/hooks/use-session-saver'
 import { getLevelFromXP } from '@/lib/constants/levels'
 
+import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
+
 import { Lobby } from './lobby'
 import { Timer } from './timer'
 import { DenemeTimer } from './deneme-timer'
@@ -39,6 +41,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // --- Custom hooks ---
   const quiz = useQuizGame(game)
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
+  const dailyQuests = useDailyQuests()
   useSessionSaver({
     screen: quiz.screen,
     userId: user?.id,
@@ -46,6 +49,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     selectedMode: gameStore.selectedMode,
     selectedCategory: gameStore.selectedCategory,
     selectedDifficulty: gameStore.selectedDifficulty,
+    onSessionSaved: dailyQuests.updateProgress,
   })
 
   // Kullanicinin gercek XP ve streak degerleri
@@ -104,9 +108,9 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const lastAnswer = quizStore.answers[quizStore.answers.length - 1]
   const level = getLevelFromXP(quizStore.xpEarned)
 
-  // Sidebar gorev verileri (quiz state'inden turetilir)
-  const sidebarQuests = [
-    { label: '10 soru coz', done: quizStore.currentIndex + 1, total: 10, color: 'var(--focus)' },
+  // Sidebar görev verileri — gerçek günlük görevler varsa onları kullan
+  const fallbackQuests = [
+    { label: '10 soru çöz', done: quizStore.currentIndex + 1, total: 10, color: 'var(--focus)' },
     { label: '3 seri yap', done: Math.min(quizStore.maxStreak, 3), total: 3, color: 'var(--reward)' },
     { label: `${gameDef.name} oyna`, done: 1, total: 1, color: 'var(--growth)' },
   ]
@@ -252,7 +256,11 @@ export function QuizEngine({ game }: QuizEngineProps) {
       {!quiz.isDeneme && (
         <div className="hidden flex-col gap-3 lg:flex">
           <MiniLeaderboard players={sidebar.leaderboard} myRank={sidebar.myRank} />
-          <DailyQuests quests={sidebarQuests} />
+          <DailyQuests
+            quests={dailyQuests.quests.length === 0 ? fallbackQuests : undefined}
+            userQuests={dailyQuests.quests.length > 0 ? dailyQuests.quests : undefined}
+            onClaimXP={dailyQuests.claimXP}
+          />
           <TopicsPanel topics={sidebarTopics} />
         </div>
       )}

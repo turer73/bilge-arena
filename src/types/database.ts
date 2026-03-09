@@ -93,15 +93,32 @@ export interface UserAchievement {
   earned_at: string
 }
 
-export interface DailyQuest {
+// Görev tanımı (daily_quests tablosu)
+export interface DailyQuestDef {
+  id: string
+  slug: string
+  title: string
+  description: string
+  icon: string
+  quest_type: 'play_sessions' | 'correct_answers' | 'streak_maintain' | 'accuracy' | 'specific_game'
+  target_value: number
+  target_game: string | null
+  xp_reward: number
+  is_active: boolean
+}
+
+// Kullanıcının günlük görev ilerlemesi (user_daily_quests + join)
+export interface UserDailyQuest {
   id: string
   user_id: string
-  quest_type: string
-  target_value: number
+  quest_id: string
+  date: string
   current_value: number
-  xp_reward: number
   is_completed: boolean
-  quest_date: string
+  completed_at: string | null
+  xp_claimed: boolean
+  // Join ile gelen görev tanımı
+  quest: DailyQuestDef
 }
 
 export interface LeaderboardEntry {
@@ -215,7 +232,7 @@ export interface Database {
       session_answers: TableDef<SessionAnswer>
       achievements: TableDef<Achievement>
       user_achievements: TableDef<UserAchievement>
-      daily_quests: TableDef<DailyQuest>
+      daily_quests: TableDef<DailyQuestDef>
       leaderboard: TableDef<LeaderboardEntry>
       xp_log: TableDef<XPLog>
       comments: TableDef<Comment>
