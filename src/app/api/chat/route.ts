@@ -1,4 +1,4 @@
-import { anthropic } from '@ai-sdk/anthropic'
+import { google } from '@ai-sdk/google'
 import { streamText } from 'ai'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     : SYSTEM_PROMPT
 
   const result = streamText({
-    model: anthropic('claude-haiku-4-5-20251001'),
+    model: google('gemini-2.0-flash'),
     system: systemMessages,
     messages: messages.map((m) => ({
       role: m.role,
