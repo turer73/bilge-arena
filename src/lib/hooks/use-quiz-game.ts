@@ -265,7 +265,8 @@ export function useQuizGame(game: GameSlug): UseQuizGameReturn {
     if (index === question.content.answer) return 'correct'
     if (index === lastAnswer.selectedOption) return 'wrong'
     return 'dim'
-  }, [quizStore.state, quizStore.answers, quizStore])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizStore])
 
   return {
     screen,
