@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useGameStore } from '@/stores/game-store'
 import { useAuthStore } from '@/stores/auth-store'
@@ -7,6 +8,7 @@ import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { useQuizGame } from '@/lib/hooks/use-quiz-game'
 import { useSidebarData } from '@/lib/hooks/use-sidebar-data'
 import { useSessionSaver } from '@/lib/hooks/use-session-saver'
+import { useQuizLimit } from '@/lib/hooks/use-quiz-limit'
 import { getLevelFromXP } from '@/lib/constants/levels'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
@@ -17,6 +19,7 @@ import { DenemeTimer } from './deneme-timer'
 import { QuestionCard } from './question-card'
 import { OptionButton } from './option-button'
 import { StreakBadge } from './streak-badge'
+import { SoundToggle } from './sound-toggle'
 import { XPPopup } from './xp-popup'
 import { BurstParticles } from './burst-particles'
 import { ExplanationPanel } from './explanation-panel'
@@ -25,6 +28,9 @@ import { DenemeResult } from './deneme-result'
 import { MiniLeaderboard } from './mini-leaderboard'
 import { DailyQuests } from './daily-quests'
 import { TopicsPanel } from './topics-panel'
+import { LifeLostOverlay } from './life-lost-overlay'
+import { PremiumGateModal } from '@/components/premium/premium-gate-modal'
+import { AdBanner } from '@/components/ads/ad-banner'
 import { CommentSection } from '@/components/social/comment-section'
 import { ErrorReportModal } from '@/components/social/error-report-modal'
 
@@ -37,8 +43,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const quizStore = useQuizStore()
   const gameStore = useGameStore()
   const { user, profile } = useAuthStore()
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
 
   // --- Custom hooks ---
+  const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game)
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
   const dailyQuests = useDailyQuests()
@@ -59,14 +67,28 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // --- LOBBY ---
   if (quiz.screen === 'lobby') {
     return (
-      <Lobby
-        game={game}
-        selectedMode={gameStore.selectedMode}
-        onSelectMode={(m) => gameStore.setMode(m.id)}
-        onStart={quiz.handleStart}
-        userXP={userXP}
-        userStreak={userStreak}
-      />
+      <>
+        <Lobby
+          game={game}
+          selectedMode={gameStore.selectedMode}
+          onSelectMode={(m) => gameStore.setMode(m.id)}
+          onStart={quiz.handleStart}
+          onLimitReached={() => setShowPremiumModal(true)}
+          userXP={userXP}
+          userStreak={userStreak}
+          quizLimit={{
+            canPlay: quizLimit.canPlay,
+            remaining: quizLimit.remaining,
+            isPremium: quizLimit.isPremium,
+            isGuest: quizLimit.isGuest,
+          }}
+        />
+        <PremiumGateModal
+          isOpen={showPremiumModal}
+          onClose={() => setShowPremiumModal(false)}
+          reason="quiz_limit"
+        />
+      </>
     )
   }
 
@@ -98,7 +120,14 @@ export function QuizEngine({ game }: QuizEngineProps) {
         />
       )
     }
-    return <ResultScreen onRestart={quiz.handleRestart} onExit={quiz.handleRestart} />
+    return (
+      <>
+        <ResultScreen onRestart={quiz.handleRestart} onExit={quiz.handleRestart} />
+        <div className="mx-auto max-w-[728px] px-4 pb-6">
+          <AdBanner slot="result" />
+        </div>
+      </>
+    )
   }
 
   // --- GAME ---
@@ -124,6 +153,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
       }))
 
   return (
+    <>
+    {/* Can kaybi kirmizi flash */}
+    {quiz.showLifeLost && <LifeLostOverlay />}
+
     <div className="mx-auto max-w-[940px] p-3 md:p-4 lg:p-5 xl:max-w-[1100px] xl:p-6 2xl:max-w-[1280px] 2xl:p-8">
       <div className="grid grid-cols-1 gap-3 md:gap-4 lg:grid-cols-[1fr_190px] xl:grid-cols-[1fr_220px] xl:gap-5 2xl:grid-cols-[1fr_260px]">
       {/* Sol sutun */}
@@ -167,6 +200,36 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 </div>
               </div>
               <div className="flex-1" />
+
+              {/* Can gösterimi — son can pulse, kayıp can heartbreak */}
+              {quizStore.livesEnabled && (
+                <div className="flex items-center gap-0.5" title={`${quizStore.lives}/${quizStore.maxLives} can`}>
+                  {Array.from({ length: quizStore.maxLives }).map((_, i) => {
+                    const isAlive = i < quizStore.lives
+                    const isLastLife = isAlive && quizStore.lives === 1 && i === 0
+                    const justLost = !isAlive && i === quizStore.lives && quiz.showLifeLost
+
+                    return (
+                      <span
+                        key={i}
+                        className={`text-sm ${
+                          justLost
+                            ? 'animate-heart-break'
+                            : isLastLife
+                              ? 'animate-last-life-pulse'
+                              : isAlive
+                                ? 'scale-100 opacity-100 transition-all duration-300'
+                                : 'scale-75 opacity-30 grayscale transition-all duration-300'
+                        }`}
+                      >
+                        {isAlive ? '❤️' : '🖤'}
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+
+              <SoundToggle />
               <StreakBadge streak={quizStore.streak} />
               <div className="text-right">
                 <div className="text-[9px] tracking-wider text-[var(--text-sub)]">OTURUM</div>
@@ -266,5 +329,6 @@ export function QuizEngine({ game }: QuizEngineProps) {
       )}
       </div>
     </div>
+    </>
   )
 }

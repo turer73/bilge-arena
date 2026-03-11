@@ -3,6 +3,7 @@
 import type { Question } from '@/types/database'
 import { getOptionLetter } from '@/lib/utils/question'
 import { LikeButton } from '@/components/social/like-button'
+import { useChatStore } from '@/stores/chat-store'
 
 interface ExplanationPanelProps {
   question: Question
@@ -25,6 +26,60 @@ export function ExplanationPanel({
 }: ExplanationPanelProps) {
   const correctAnswer = question.content.answer
   const correctText = question.content.options[correctAnswer]
+
+  const handleTopicExplain = async () => {
+    const topic = question.sub_category || question.category
+    const opts = question.content.options
+      .map((o, i) => `${'ABCDE'[i]}) ${o}`)
+      .join('\n')
+    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.sub_category ? ' / ' + question.sub_category : ''}]\n\nSoru: ${question.content.question}\n\n${opts}\n\nDoğru cevap: ${getOptionLetter(correctAnswer)}) ${correctText}${question.content.solution ? '\nÇözüm: ' + question.content.solution : ''}`
+
+    const userMsg = `"${topic}" konusunu kısaca anlat. Bu soruyla ilgili temel kavramları ve formülleri özetle.`
+
+    const store = useChatStore.getState()
+    store.setQuestionContext(ctx)
+    store.clearMessages()
+    store.addMessage('user', userMsg)
+    store.addMessage('assistant', '')
+    store.setLoading(true)
+    store.setOpen(true)
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: userMsg }],
+          questionContext: ctx,
+        }),
+      })
+
+      if (!res.ok) {
+        useChatStore.getState().updateLastAssistant('Bir hata oluştu. Lütfen tekrar deneyin.')
+        useChatStore.getState().setLoading(false)
+        return
+      }
+
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullText = ''
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          fullText += decoder.decode(value, { stream: true })
+          useChatStore.getState().updateLastAssistant(fullText)
+        }
+      }
+      if (!fullText) {
+        useChatStore.getState().updateLastAssistant('Cevap alınamadı.')
+      }
+    } catch {
+      useChatStore.getState().updateLastAssistant('Bağlantı hatası.')
+    } finally {
+      useChatStore.getState().setLoading(false)
+    }
+  }
 
   return (
     <div
@@ -64,8 +119,23 @@ export function ExplanationPanel({
           {isLastQuestion ? 'Sonucu Gor →' : 'Sonraki Soru →'}
         </button>
 
-        {/* Sosyal ikonlar */}
-        <div className="flex items-center gap-1">
+        {/* Aksiyon ikonları */}
+        <div className="flex items-center gap-1.5">
+          {/* Konu Anlatımı — belirgin buton */}
+          <button
+            onClick={handleTopicExplain}
+            className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all hover:scale-[1.03] active:scale-95"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--wisdom) 35%, transparent)',
+              background: 'color-mix(in srgb, var(--wisdom) 10%, transparent)',
+              color: 'var(--wisdom)',
+            }}
+            title="Bu konunun anlatımını Bilge Asistan'dan iste"
+          >
+            <span className="text-sm">📖</span>
+            Konu Anlatımı
+          </button>
+
           <LikeButton initialCount={0} size="sm" />
 
           {onOpenComments && (

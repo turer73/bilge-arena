@@ -4,16 +4,27 @@ import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { MODES, type QuizMode, DENEME_CONFIGS } from '@/lib/constants/modes'
 import { ModeSelector } from './mode-selector'
 import { StreakBadge } from './streak-badge'
+import { SoundToggle } from './sound-toggle'
 import { XPBar } from './xp-bar'
 import { getLevelFromXP, getLevelProgress } from '@/lib/constants/levels'
+import { QuizLimitBanner } from '@/components/premium/quiz-limit-banner'
+import { AdBanner } from '@/components/ads/ad-banner'
 
 interface LobbyProps {
   game: GameSlug
   selectedMode: string
   onSelectMode: (mode: QuizMode) => void
   onStart: () => void
+  onLimitReached?: () => void
   userXP?: number
   userStreak?: number
+  /** Quiz limit bilgileri (use-quiz-limit hook'undan) */
+  quizLimit?: {
+    canPlay: boolean
+    remaining: number
+    isPremium: boolean
+    isGuest: boolean
+  }
 }
 
 export function Lobby({
@@ -21,8 +32,10 @@ export function Lobby({
   selectedMode,
   onSelectMode,
   onStart,
+  onLimitReached,
   userXP = 0,
   userStreak = 0,
+  quizLimit,
 }: LobbyProps) {
   const gameDef = GAMES[game]
   const level = getLevelFromXP(userXP)
@@ -55,6 +68,7 @@ export function Lobby({
             <div className="text-[9px] text-[var(--text-sub)] md:text-[10px] xl:text-xs">{userXP.toLocaleString()} XP</div>
           </div>
           <div className="flex-1" />
+          <SoundToggle />
           <StreakBadge streak={userStreak} />
         </div>
         <XPBar
@@ -100,14 +114,37 @@ export function Lobby({
         </div>
       )}
 
+      {/* Quiz limit banner */}
+      {quizLimit && (
+        <div className="animate-fadeUp" style={{ animationDelay: '0.5s', animationFillMode: 'both' }}>
+          <QuizLimitBanner
+            remaining={quizLimit.remaining}
+            isPremium={quizLimit.isPremium}
+            isGuest={quizLimit.isGuest}
+          />
+        </div>
+      )}
+
       {/* Basla butonu */}
       <button
-        onClick={onStart}
-        className="btn-primary mt-2 w-full rounded-[10px] py-2.5 font-display text-xs font-bold tracking-wider shadow-lg transition-transform hover:scale-[1.02] animate-fadeUp md:py-3 md:text-sm xl:py-3.5 xl:text-base xl:rounded-xl"
+        onClick={quizLimit && !quizLimit.canPlay ? onLimitReached : onStart}
+        disabled={quizLimit && !quizLimit.canPlay}
+        className={`mt-2 w-full rounded-[10px] py-2.5 font-display text-xs font-bold tracking-wider shadow-lg transition-transform animate-fadeUp md:py-3 md:text-sm xl:py-3.5 xl:text-base xl:rounded-xl ${
+          quizLimit && !quizLimit.canPlay
+            ? 'cursor-not-allowed bg-[var(--surface)] text-[var(--text-muted)] opacity-60'
+            : 'btn-primary hover:scale-[1.02]'
+        }`}
         style={{ animationDelay: '0.55s', animationFillMode: 'both' }}
       >
-        {mode.isDeneme ? '📋' : '⚔️'} {mode.name} Baslat — {mode.questionCount} Soru
+        {quizLimit && !quizLimit.canPlay
+          ? '⏳ Limit Doldu — Premium\'a Geç'
+          : `${mode.isDeneme ? '📋' : '⚔️'} ${mode.name} Baslat — ${mode.questionCount} Soru`}
       </button>
+
+      {/* Reklam alani */}
+      <div className="animate-fadeUp" style={{ animationDelay: '0.65s', animationFillMode: 'both' }}>
+        <AdBanner slot="lobby" className="mx-auto mt-2" />
+      </div>
     </div>
   )
 }

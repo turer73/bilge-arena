@@ -6,40 +6,45 @@ export interface QuizMode {
   timePerQuestion: number   // saniye, 0 = sinirsiz
   icon: string
   isDeneme?: boolean        // deneme sinavi modu mu
+  lives?: number            // can sayisi, undefined = sinirsiz
 }
 
 export const MODES: QuizMode[] = [
   {
     id: 'classic',
     name: 'Klasik',
-    description: '10 soru, 30 saniye',
+    description: '10 soru, 30 saniye, 3 can',
     questionCount: 10,
     timePerQuestion: 30,
     icon: '⚔️',
+    lives: 3,
   },
   {
     id: 'blitz',
     name: 'Blitz',
-    description: '5 soru, 15 saniye',
+    description: '5 soru, 15 saniye, 2 can',
     questionCount: 5,
     timePerQuestion: 15,
     icon: '⚡',
+    lives: 2,
   },
   {
     id: 'marathon',
     name: 'Maraton',
-    description: '20 soru, 30 saniye',
+    description: '20 soru, 30 saniye, 3 can',
     questionCount: 20,
     timePerQuestion: 30,
     icon: '🏃',
+    lives: 3,
   },
   {
     id: 'boss',
     name: 'Boss',
-    description: '5 zor soru, 45 saniye',
+    description: '5 zor soru, 45 saniye, 2 can',
     questionCount: 5,
     timePerQuestion: 45,
     icon: '👹',
+    lives: 2,
   },
   {
     id: 'deneme',

@@ -27,8 +27,13 @@ interface QuizStore {
   sessionXP: number        // Oturum boyunca kazanilan toplam
   lastXPResult: XPResult | null
 
+  // Can sistemi
+  lives: number            // Kalan can sayisi
+  maxLives: number         // Baslangic can sayisi
+  livesEnabled: boolean    // Can sistemi aktif mi
+
   // Actions
-  startQuiz: (questions: Question[]) => void
+  startQuiz: (questions: Question[], lives?: number) => void
   answerQuestion: (selectedOption: number, isCorrect: boolean, timeTaken: number, xpResult: XPResult) => void
   nextQuestion: () => void
   completeQuiz: () => void
@@ -51,8 +56,11 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
   xpEarned: 0,
   sessionXP: 0,
   lastXPResult: null,
+  lives: 0,
+  maxLives: 0,
+  livesEnabled: false,
 
-  startQuiz: (questions) => set({
+  startQuiz: (questions, lives) => set({
     state: 'playing',
     questions,
     currentIndex: 0,
@@ -63,18 +71,22 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     xpEarned: 0,
     sessionXP: 0,
     lastXPResult: null,
+    lives: lives ?? 0,
+    maxLives: lives ?? 0,
+    livesEnabled: (lives ?? 0) > 0,
   }),
 
   answerQuestion: (selectedOption, isCorrect, timeTaken, xpResult) => {
-    const { questions, currentIndex, answers, score, streak, maxStreak, xpEarned } = get()
+    const { questions, currentIndex, answers, score, streak, maxStreak, xpEarned, lives, livesEnabled } = get()
     const question = questions[currentIndex]
     if (!question) return
 
     const newStreak = isCorrect ? streak + 1 : 0
     const xp = isCorrect ? xpResult.total : 0
+    const newLives = (!isCorrect && livesEnabled) ? lives - 1 : lives
 
     set({
-      state: 'answered',
+      state: newLives === 0 && livesEnabled ? 'completed' : 'answered',
       answers: [...answers, {
         questionId: question.id,
         selectedOption,
@@ -88,6 +100,7 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
       xpEarned: xpEarned + xp,
       sessionXP: xp,
       lastXPResult: isCorrect ? xpResult : null,
+      lives: newLives,
     })
   },
 
@@ -117,6 +130,9 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     xpEarned: 0,
     sessionXP: 0,
     lastXPResult: null,
+    lives: 0,
+    maxLives: 0,
+    livesEnabled: false,
   }),
 
   currentQuestion: () => {

@@ -41,7 +41,7 @@ const nextConfig = {
 
 const pwaConfig = withPWA({
   dest: 'public',
-  register: true,
+  register: false,      // Manuel register — hata yakalama ile
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
   cacheOnFrontEndNav: true,

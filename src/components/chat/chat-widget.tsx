@@ -113,7 +113,7 @@ export function ChatWidget() {
           </div>
 
           {/* Mesajlar */}
-          <ChatMessages messages={messages} isLoading={isLoading} />
+          <ChatMessages messages={messages} isLoading={isLoading} onQuickAction={handleSend} />
 
           {/* Input */}
           <ChatInput onSend={handleSend} disabled={isLoading} />

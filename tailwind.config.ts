@@ -170,9 +170,13 @@ const config: Config = {
         'flame': 'flame 0.6s ease-in-out infinite',
         'particle': 'particle 0.8s ease-out forwards',
         'slide-r': 'slideR 0.3s ease-out',
+        'slideDown': 'slideDown 0.3s cubic-bezier(0.22,1,0.36,1)',
         'float': 'float 4s ease-in-out infinite',
         'rankReveal': 'rankReveal 0.8s cubic-bezier(0.22,1,0.36,1) both',
         'bounce-once': 'bounceOnce 0.45s ease',
+        'life-lost-flash': 'lifeLostFlash 0.6s ease-out forwards',
+        'heart-break': 'heartBreak 0.7s ease-out forwards',
+        'last-life-pulse': 'lastLifePulse 1.2s ease-in-out infinite',
       },
       borderRadius: {
         '2xl': '16px',

@@ -9,6 +9,7 @@ import { getModeById, DENEME_CONFIGS, type DenemeConfig } from '@/lib/constants/
 import type { GameSlug } from '@/lib/constants/games'
 import { fetchQuizQuestions } from '@/lib/supabase/questions'
 import { useElapsedTime } from '@/components/game/deneme-timer'
+import { playSound } from '@/lib/utils/sounds'
 import type { Question } from '@/types/database'
 import type { OptionState } from '@/components/game/option-button'
 
@@ -60,6 +61,7 @@ export interface UseQuizGameReturn {
   // Visual effects
   showBurst: boolean
   showXPPopup: boolean
+  showLifeLost: boolean
   showComments: boolean
   showReportModal: boolean
   setShowComments: (v: boolean) => void
@@ -86,6 +88,7 @@ export function useQuizGame(game: GameSlug): UseQuizGameReturn {
   const [screen, setScreen] = useState<'lobby' | 'loading' | 'game' | 'result'>('lobby')
   const [showBurst, setShowBurst] = useState(false)
   const [showXPPopup, setShowXPPopup] = useState(false)
+  const [showLifeLost, setShowLifeLost] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
 
@@ -117,6 +120,14 @@ export function useQuizGame(game: GameSlug): UseQuizGameReturn {
     quizStore.completeQuiz()
     setScreen('result')
   }, [quizStore])
+
+  // --- Can bitti: oyunu bitir ---
+
+  useEffect(() => {
+    if (quizStore.state === 'completed' && screen === 'game') {
+      setScreen('result')
+    }
+  }, [quizStore.state, screen])
 
   // --- Deneme: cevap sonrasi otomatik ilerleme ---
 
@@ -174,7 +185,7 @@ export function useQuizGame(game: GameSlug): UseQuizGameReturn {
         quizStore.startQuiz(distributed.slice(0, mode.questionCount))
         elapsed.reset()
       } else {
-        quizStore.startQuiz(questions.slice(0, mode.questionCount))
+        quizStore.startQuiz(questions.slice(0, mode.questionCount), mode.lives)
       }
 
       setScreen('game')
@@ -186,7 +197,7 @@ export function useQuizGame(game: GameSlug): UseQuizGameReturn {
     } catch (err) {
       console.error('[QuizGame] Soru yukleme hatasi:', err)
       const fallback = DEMO_QUESTIONS.filter(q => q.game === game)
-      quizStore.startQuiz(fallback.length > 0 ? fallback : DEMO_QUESTIONS)
+      quizStore.startQuiz(fallback.length > 0 ? fallback : DEMO_QUESTIONS, mode.lives)
       setScreen('game')
       if (!isDeneme && mode.timePerQuestion > 0) {
         timer.reset(mode.timePerQuestion)
@@ -210,8 +221,15 @@ export function useQuizGame(game: GameSlug): UseQuizGameReturn {
       quizStore.answerQuestion(optionIndex, isCorrect, 0, xpResult)
 
       if (isCorrect) {
+        playSound(newStreak >= 3 ? 'streak' : 'correct')
         setShowBurst(true)
         setTimeout(() => setShowBurst(false), 1200)
+      } else {
+        playSound(quizStore.lives === 1 && quizStore.livesEnabled ? 'game_over' : 'wrong')
+        if (quizStore.livesEnabled) {
+          setShowLifeLost(true)
+          setTimeout(() => setShowLifeLost(false), 700)
+        }
       }
     } else {
       timer.stop()
@@ -222,9 +240,20 @@ export function useQuizGame(game: GameSlug): UseQuizGameReturn {
       quizStore.answerQuestion(optionIndex, isCorrect, timeTaken, xpResult)
 
       if (isCorrect) {
+        playSound(newStreak >= 3 ? 'streak' : 'correct')
         setShowBurst(true)
         setShowXPPopup(true)
         setTimeout(() => { setShowBurst(false); setShowXPPopup(false) }, 1600)
+      } else {
+        // Son canda game_over sesi, değilse life_lost (can varsa) veya normal wrong
+        const livesNow = quizStore.livesEnabled ? quizStore.lives - 1 : -1
+        playSound(livesNow === 0 ? 'game_over' : quizStore.livesEnabled ? 'life_lost' : 'wrong')
+
+        // Can kaybi animasyonu
+        if (quizStore.livesEnabled) {
+          setShowLifeLost(true)
+          setTimeout(() => setShowLifeLost(false), 700)
+        }
       }
     }
   }, [quizStore, timer, mode.timePerQuestion, isDeneme])
@@ -277,6 +306,7 @@ export function useQuizGame(game: GameSlug): UseQuizGameReturn {
     timer,
     showBurst,
     showXPPopup,
+    showLifeLost,
     showComments,
     showReportModal,
     setShowComments,

@@ -78,7 +78,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Tablo */}
-      <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)]">
+      <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--card-bg)]">
         {loading ? (
           <div className="flex flex-col gap-2 p-4">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -105,12 +105,21 @@ export default function AdminUsersPage() {
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus-bg)] text-sm">
-                        {u.avatar_url || '👤'}
-                      </div>
-                      <div>
-                        <div className="font-medium">{u.display_name || u.username || 'Isimsiz'}</div>
-                        <div className="text-[10px] text-[var(--text-sub)]">@{u.username || '—'}</div>
+                      {u.avatar_url ? (
+                        <img
+                          src={u.avatar_url}
+                          alt={u.display_name || u.username || ''}
+                          className="h-8 w-8 rounded-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus-bg)] text-sm">
+                          👤
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{u.display_name || u.username || 'Isimsiz'}</div>
+                        <div className="text-[10px] text-[var(--text-sub)] truncate">@{u.username || '—'}</div>
                       </div>
                     </div>
                   </td>

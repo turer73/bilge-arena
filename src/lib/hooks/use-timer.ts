@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { playSound } from '@/lib/utils/sounds'
 
 interface UseTimerOptions {
   initialTime: number      // saniye
@@ -62,6 +63,10 @@ export function useTimer({
           stop()
           onTimeUpRef.current?.()
           return 0
+        }
+        // Son 5 saniyede tik-tak sesi
+        if (prev <= 6 && prev > 1) {
+          playSound('countdown')
         }
         return prev - 1
       })
