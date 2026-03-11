@@ -2,14 +2,24 @@
 
 import { useEffect, useRef } from 'react'
 import type { ChatMessage } from '@/stores/chat-store'
+import { useChatStore } from '@/stores/chat-store'
 
 interface ChatMessagesProps {
   messages: ChatMessage[]
   isLoading: boolean
+  onQuickAction?: (message: string) => void
 }
 
-export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
+const QUICK_ACTIONS = [
+  { label: 'Bu soruyu coz', prompt: 'Bu soruyu adim adim cozer misin? Cozumu detayli acikla.' },
+  { label: 'Konu anlat', prompt: 'Bu sorunun konusunu kisa ve net bir sekilde anlatir misin? Gunluk hayattan ornek ver.' },
+  { label: 'Ornek soru sor', prompt: 'Bu konuyla ilgili bana benzer bir ornek soru sorabilir misin?' },
+  { label: 'Calisma onerisi', prompt: 'Bu konu icin etkili calisma stratejisi onerir misin? Hangi konulara oncelik vermeliyim?' },
+]
+
+export function ChatMessages({ messages, isLoading, onQuickAction }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const questionContext = useChatStore((s) => s.questionContext)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -20,17 +30,29 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
         <div className="text-3xl">🦉</div>
         <div className="text-sm font-bold">Bilge Asistan</div>
-        <div className="text-[11px] leading-relaxed text-[var(--text-sub)]">
-          Merhaba! Soru cozumu, konu anlatimi veya calisma onerileri icin buradayim.
-        </div>
+
+        {questionContext ? (
+          <div className="w-full rounded-lg border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-2 text-left">
+            <div className="mb-1 text-[9px] font-bold text-[var(--focus)]">📌 Aktif Soru</div>
+            <div className="text-[10px] leading-relaxed text-[var(--text-sub)] line-clamp-3">
+              {questionContext.split('\n').find((l) => l.startsWith('Soru:'))?.replace('Soru: ', '') || questionContext.substring(0, 100)}
+            </div>
+          </div>
+        ) : (
+          <div className="text-[11px] leading-relaxed text-[var(--text-sub)]">
+            Merhaba! Soru cozumu, konu anlatimi veya calisma onerileri icin buradayim.
+          </div>
+        )}
         <div className="flex flex-wrap justify-center gap-1.5">
-          {['Bu soruyu coz', 'Konu anlat', 'Ornek soru sor', 'Calisma onerisi'].map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full border border-[var(--border)] px-2.5 py-1 text-[10px] text-[var(--text-sub)]"
+          {QUICK_ACTIONS.map((action) => (
+            <button
+              key={action.label}
+              onClick={() => onQuickAction?.(action.prompt)}
+              disabled={isLoading}
+              className="rounded-full border border-[var(--border)] px-2.5 py-1 text-[10px] text-[var(--text-sub)] transition-all hover:border-[var(--focus-border)] hover:bg-[var(--focus-bg)] hover:text-[var(--focus)] active:scale-95 disabled:opacity-40"
             >
-              {tag}
-            </span>
+              {action.label}
+            </button>
           ))}
         </div>
       </div>

@@ -3,6 +3,8 @@ import { Cinzel, DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { CookieBanner } from '@/components/cookie-banner'
+import { ToastContainer } from '@/components/ui/toast'
+import { SWRegister } from '@/components/layout/sw-register'
 import './globals.css'
 
 /* ─── Google Fonts — Template birebir ─── */
@@ -30,7 +32,7 @@ export const metadata: Metadata = {
   keywords: ['YKS', 'TYT', 'AYT', 'üniversite sınavı', 'hazırlık', 'test', 'quiz', 'oyun'],
   authors: [{ name: 'Bilge Arena' }],
   creator: 'Bilge Arena',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL((process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').trim()),
   openGraph: {
     type: 'website',
     locale: 'tr_TR',
@@ -61,7 +63,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com'
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
 const jsonLd = [
   {
@@ -122,7 +124,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         {children}
+        <ToastContainer />
         <CookieBanner />
+        <SWRegister />
         <Analytics />
         <SpeedInsights />
       </body>

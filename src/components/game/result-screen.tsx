@@ -10,20 +10,32 @@ interface ResultScreenProps {
 }
 
 export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
-  const { score, questions, xpEarned, maxStreak } = useQuizStore()
+  const { score, questions, answers, xpEarned, maxStreak, lives, livesEnabled, maxLives } = useQuizStore()
   const totalQuestions = questions.length
-  const pct = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0
-  const rank = calculateRank(score, totalQuestions)
+  const answeredCount = answers.length
+  const pct = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0
+  const rank = calculateRank(score, answeredCount)
   const config = RANK_CONFIG[rank]
+  const gameOver = livesEnabled && lives === 0
 
   const stats = [
-    { label: 'DOGRU', value: `${score}/${totalQuestions}`, color: 'var(--growth)' },
+    { label: 'DOGRU', value: `${score}/${answeredCount}`, color: 'var(--growth)' },
     { label: 'BASARI', value: `%${pct}`, color: config.color },
     { label: 'XP +', value: String(xpEarned), color: 'var(--reward)' },
   ]
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 p-4 md:gap-4 md:p-6 xl:gap-5 xl:p-8">
+      {/* Can bitti uyarisi */}
+      {gameOver && (
+        <div className="animate-fadeUp rounded-xl border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-5 py-3 text-center">
+          <div className="text-lg font-bold text-[var(--urgency)]">💔 Canlar Bitti!</div>
+          <div className="mt-1 text-[11px] text-[var(--text-sub)]">
+            {answeredCount}/{totalQuestions} soru cevaplanabildi
+          </div>
+        </div>
+      )}
+
       {/* Rank */}
       <div
         className="animate-rankReveal font-display text-[80px] font-black leading-none md:text-[120px] xl:text-[150px] 2xl:text-[180px]"

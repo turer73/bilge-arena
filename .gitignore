@@ -17,5 +17,6 @@ Thumbs.db
 dist/
 build/
 out/
+tsconfig.tsbuildinfo
 
 .vercel

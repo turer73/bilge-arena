@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from '@/stores/toast-store'
 import type { UserDailyQuest } from '@/types/database'
 
 export function useDailyQuests() {
@@ -48,10 +49,15 @@ export function useDailyQuests() {
         )
       }
 
-      // Yeni tamamlanan görevleri döndür
+      // Yeni tamamlanan görevleri bildir
       const newlyCompleted = (data.updated ?? []).filter(
         (u: UserDailyQuest) => u.is_completed && !u.xp_claimed
       )
+      for (const q of newlyCompleted) {
+        if (q.quest?.title) {
+          toast.quest(q.quest.title)
+        }
+      }
       return newlyCompleted as UserDailyQuest[]
     } catch {
       return []
@@ -73,6 +79,10 @@ export function useDailyQuests() {
       setQuests((prev) =>
         prev.map((q) => q.id === questId ? { ...q, xp_claimed: true } : q)
       )
+
+      if (data.xp_earned) {
+        toast.success(`+${data.xp_earned} XP`, 'Gorev odulu alindi!')
+      }
 
       return data.xp_earned as number
     } catch {

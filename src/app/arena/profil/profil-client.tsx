@@ -26,14 +26,25 @@ export default function ProfilClient() {
   const { user, profile, loading } = useAuthStore()
   const [stats, setStats] = useState<ProfileStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
+  const [earnedBadgeCodes, setEarnedBadgeCodes] = useState<string[]>([])
 
-  // Kullanici giris yaptiginda istatistikleri cek
+  // Kullanici giris yaptiginda istatistikleri ve rozetleri cek
   useEffect(() => {
     if (!user) return
     setStatsLoading(true)
-    fetchProfileStats(user.id)
-      .then(setStats)
-      .catch((err) => console.error('[Profil] Stats hatasi:', err))
+
+    // Paralel olarak stats ve rozetleri cek
+    Promise.all([
+      fetchProfileStats(user.id),
+      fetch('/api/badges').then((r) => r.ok ? r.json() : null),
+    ])
+      .then(([statsData, badgesData]) => {
+        setStats(statsData)
+        if (badgesData?.earnedCodes) {
+          setEarnedBadgeCodes(badgesData.earnedCodes)
+        }
+      })
+      .catch((err) => console.error('[Profil] Stats/Badges hatasi:', err))
       .finally(() => setStatsLoading(false))
   }, [user])
 
@@ -83,17 +94,6 @@ export default function ProfilClient() {
     { label: 'BASARI', value: `%${accuracy}`, icon: '🎯', color: 'var(--growth)' },
     { label: 'EN IYI SERI', value: longestStreak, icon: '🔥', color: 'var(--reward-light)' },
   ]
-
-  // Rozet kontrolu
-  const earnedBadges: string[] = []
-  if (totalSessions >= 1) earnedBadges.push('first_game')
-  if (totalSessions >= 10) earnedBadges.push('ten_games')
-  if (totalSessions >= 50) earnedBadges.push('fifty_games')
-  if (correctAnswers >= 10) earnedBadges.push('first_correct')
-  if (correctAnswers >= 100) earnedBadges.push('hundred_correct')
-  if (currentStreak >= 3) earnedBadges.push('streak_5')
-  if (currentStreak >= 7) earnedBadges.push('streak_10')
-  if (totalXP >= 1000) earnedBadges.push('xp_1000')
 
   // Kategori ilerleme verisini hazirla (gercek veya bos)
   const gameProgressData = Object.keys(GAMES).map((slug) => {
@@ -267,7 +267,7 @@ export default function ProfilClient() {
 
       {/* Rozetler */}
       <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
-        <BadgeShowcase earnedBadgeCodes={earnedBadges} />
+        <BadgeShowcase earnedBadgeCodes={earnedBadgeCodes} />
       </div>
 
       {/* Konu ilerleme */}

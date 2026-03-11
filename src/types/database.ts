@@ -21,6 +21,9 @@ export interface Profile {
   total_questions: number
   correct_answers: number
   total_sessions: number
+  // Premium
+  is_premium: boolean
+  premium_until: string | null
   // Tercihler
   preferred_theme: 'dark' | 'light'
   notifications: boolean

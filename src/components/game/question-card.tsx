@@ -2,6 +2,7 @@
 
 import type { Question } from '@/types/database'
 import { GAMES } from '@/lib/constants/games'
+import { useChatStore } from '@/stores/chat-store'
 
 const DIFF_CONFIG: Record<number, { label: string; color: string }> = {
   1: { label: 'KOLAY', color: 'var(--growth)' },
@@ -37,6 +38,16 @@ export function QuestionCard({
   const emoji = GAME_EMOJI[question.game] || '📋'
   const progress = ((currentIndex + 1) / totalQuestions) * 100
 
+  const handleAskAssistant = () => {
+    const opts = question.content.options
+      .map((o, i) => `${'ABCDE'[i]}) ${o}`)
+      .join('\n')
+    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.sub_category ? ' / ' + question.sub_category : ''}]\n\nSoru: ${question.content.question}\n\n${opts}`
+    useChatStore.getState().setQuestionContext(ctx)
+    useChatStore.getState().clearMessages()
+    useChatStore.getState().setOpen(true)
+  }
+
   return (
     <div className="relative overflow-hidden rounded-xl border-[1.5px] border-[var(--border)] bg-gradient-to-br from-[var(--card-bg)] to-[var(--bg-secondary)] p-3.5 animate-fadeUp md:rounded-2xl md:p-5 xl:p-6 2xl:p-7">
       {/* Glow */}
@@ -71,6 +82,16 @@ export function QuestionCard({
         )}
 
         <div className="flex-1" />
+
+        <button
+          type="button"
+          onClick={handleAskAssistant}
+          className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold text-[var(--text-sub)] transition-all hover:bg-[var(--focus-bg)] hover:text-[var(--focus)] active:scale-95"
+          title="Bilge Asistan'a sor"
+        >
+          <span className="text-sm">🦉</span>
+          <span className="hidden sm:inline">Sor</span>
+        </button>
 
         <span className="text-[11px] font-semibold text-[var(--text-sub)]">
           {currentIndex + 1}

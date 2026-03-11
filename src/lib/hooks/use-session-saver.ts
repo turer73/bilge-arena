@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { saveGameSession } from '@/lib/supabase/sessions'
 import { refreshProfile } from '@/lib/hooks/use-auth'
+import { useAuthStore } from '@/stores/auth-store'
+import { getLevelFromXP } from '@/lib/constants/levels'
+import { toast } from '@/stores/toast-store'
 import type { GameSlug } from '@/lib/constants/games'
 
 interface SessionResult {
@@ -72,7 +75,19 @@ export function useSessionSaver({
       .then(async (sessionId) => {
         if (sessionId) {
           console.log('[SessionSaver] Oturum kaydedildi:', sessionId)
+
+          // Seviye atlama kontrolu icin onceki XP'yi kaydet
+          const oldXP = useAuthStore.getState().profile?.total_xp ?? 0
+          const oldLevel = getLevelFromXP(oldXP)
+
           await refreshProfile()
+
+          // Yeni profil ile seviye karsilastir
+          const newXP = useAuthStore.getState().profile?.total_xp ?? 0
+          const newLevel = getLevelFromXP(newXP)
+          if (newLevel.level > oldLevel.level) {
+            toast.levelUp(newLevel.name, newLevel.badge)
+          }
 
           // Günlük görevleri güncelle
           const correctCount = answers.filter((a) => a.isCorrect).length
@@ -84,6 +99,18 @@ export function useSessionSaver({
             accuracy: totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0,
             game,
           })
+
+          // Rozet kontrolü — yeni rozetleri toast ile bildir
+          fetch('/api/badges', { method: 'POST' })
+            .then((r) => r.ok ? r.json() : null)
+            .then((data) => {
+              if (data?.newBadges?.length > 0) {
+                for (const badge of data.newBadges) {
+                  toast.badge(badge.name, badge.icon, badge.xpReward)
+                }
+              }
+            })
+            .catch(() => {})
         }
       })
       .catch((err) => console.error('[SessionSaver] Kaydetme hatasi:', err))
