@@ -21,6 +21,13 @@ export function CookieBanner() {
   const accept = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, 'accepted')
     setVisible(false)
+
+    // Google Analytics Consent Mode — onay verildi, tam veri toplama baslat
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('consent', 'update', {
+        analytics_storage: 'granted',
+      })
+    }
   }
 
   if (!visible) return null

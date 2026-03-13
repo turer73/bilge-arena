@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/hakkinda`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/nasil-calisir`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/giris`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${BASE}/arena/premium`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     // Yasal sayfalar
     { url: `${BASE}/gizlilik-politikasi`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${BASE}/kullanim-kosullari`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },

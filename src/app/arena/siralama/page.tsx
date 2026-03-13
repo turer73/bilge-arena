@@ -1,12 +1,18 @@
 import type { Metadata } from 'next'
 import SiralamaClient from './siralama-client'
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+
 export const metadata: Metadata = {
-  title: 'Siralama',
-  description: 'Bilge Arena haftalik ve tum zamanlar siralamasi. En cok XP kazanan ogrencileri gor ve siralamada yuksel.',
+  title: 'Sıralama — Haftalık ve Genel Liderboard',
+  description: 'Bilge Arena haftalık ve tüm zamanlar sıralaması. En çok XP kazanan öğrencileri gör ve sıralamada yüksel!',
+  alternates: {
+    canonical: `${siteUrl}/arena/siralama`,
+  },
   openGraph: {
-    title: 'Siralama | Bilge Arena',
-    description: 'Haftalik ve genel siralama — en basarili arenacilari gor.',
+    title: 'Sıralama | Bilge Arena',
+    description: 'Haftalık ve genel sıralama — en başarılı arenacıları gör.',
+    url: `${siteUrl}/arena/siralama`,
   },
 }
 

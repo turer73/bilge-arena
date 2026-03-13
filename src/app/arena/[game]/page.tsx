@@ -7,26 +7,31 @@ interface GamePageProps {
   params: Promise<{ game: string }>
 }
 
-const GAME_META: Record<GameSlug, { title: string; description: string }> = {
+const GAME_META: Record<GameSlug, { title: string; description: string; keywords: string[] }> = {
   matematik: {
-    title: 'Matematik Sorulari',
-    description: 'Sayilar, problemler, geometri, denklemler ve fonksiyonlar. TYT-AYT matematik sorularini coz, XP kazan.',
+    title: 'Matematik Soruları — TYT & AYT Matematik',
+    description: 'Sayılar, problemler, geometri, denklemler ve fonksiyonlar. TYT-AYT matematik sorularını çöz, XP kazan, sıralamada yüksel!',
+    keywords: ['TYT matematik', 'AYT matematik', 'matematik soru çöz', 'geometri soruları', 'YKS matematik'],
   },
   turkce: {
-    title: 'Turkce Sorulari',
-    description: 'Paragraf, dil bilgisi, sozcuk ve anlam bilgisi. TYT Turkce sorulariyla pratik yap.',
+    title: 'Türkçe Soruları — TYT Türkçe',
+    description: 'Paragraf, dil bilgisi, sözcük ve anlam bilgisi. TYT Türkçe sorularıyla pratik yap, dil hakimiyetini geliştir!',
+    keywords: ['TYT Türkçe', 'Türkçe soru çöz', 'paragraf soruları', 'dil bilgisi soruları', 'YKS Türkçe'],
   },
   fen: {
-    title: 'Fen Bilimleri Sorulari',
-    description: 'Fizik, kimya ve biyoloji sorulari. TYT Fen Bilimleri konularina hakim ol.',
+    title: 'Fen Bilimleri Soruları — TYT Fen',
+    description: 'Fizik, kimya ve biyoloji soruları. TYT Fen Bilimleri konularına hâkim ol, bilgini test et!',
+    keywords: ['TYT Fen', 'fizik soruları', 'kimya soruları', 'biyoloji soruları', 'YKS Fen Bilimleri'],
   },
   sosyal: {
-    title: 'Sosyal Bilimler Sorulari',
-    description: 'Tarih, cografya ve felsefe sorulari. TYT Sosyal Bilimler konulariyla antreman yap.',
+    title: 'Sosyal Bilimler Soruları — TYT Sosyal',
+    description: 'Tarih, coğrafya ve felsefe soruları. TYT Sosyal Bilimler konularıyla antrenman yap, bilgini pekiştir!',
+    keywords: ['TYT Sosyal', 'tarih soruları', 'coğrafya soruları', 'felsefe soruları', 'YKS Sosyal Bilimler'],
   },
   wordquest: {
-    title: 'Ingilizce Sorulari',
-    description: 'Vocabulary, grammar ve reading. YDT Ingilizce sorulariyla kelime dagarcigini genislet.',
+    title: 'İngilizce Soruları — YDT İngilizce',
+    description: 'Vocabulary, grammar ve reading soruları. YDT İngilizce sorularıyla kelime dağarcığını genişlet!',
+    keywords: ['YDT İngilizce', 'İngilizce soru çöz', 'vocabulary', 'grammar soruları', 'YKS İngilizce'],
   },
 }
 
@@ -44,10 +49,15 @@ export async function generateMetadata({ params }: GamePageProps): Promise<Metad
   return {
     title: meta.title,
     description: meta.description,
+    keywords: meta.keywords,
+    alternates: {
+      canonical: `${siteUrl}/arena/${game}`,
+    },
     openGraph: {
       title: `${meta.title} | Bilge Arena`,
       description: meta.description,
-      images: [{ url: ogImage, width: 1200, height: 630 }],
+      url: `${siteUrl}/arena/${game}`,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: meta.title }],
     },
     twitter: {
       card: 'summary_large_image',

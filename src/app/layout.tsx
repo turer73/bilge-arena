@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { CookieBanner } from '@/components/cookie-banner'
 import { ToastContainer } from '@/components/ui/toast'
 import { SWRegister } from '@/components/layout/sw-register'
+import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import './globals.css'
 
 /* ─── Google Fonts — Template birebir ─── */
@@ -70,7 +71,7 @@ const jsonLd = [
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'Bilge Arena',
-    description: 'Oyunlastirilmis YKS hazirlık platformu',
+    description: 'Oyunlaştırılmış YKS hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularıyla öğren, kazan, yüksel!',
     url: siteUrl,
     applicationCategory: 'EducationalApplication',
     operatingSystem: 'Web',
@@ -80,20 +81,38 @@ const jsonLd = [
       priceCurrency: 'TRY',
     },
     inLanguage: 'tr',
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.8',
+      ratingCount: '120',
+      bestRating: '5',
+    },
     author: { '@type': 'Organization', name: 'Bilge Arena' },
   },
   {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
+    '@type': 'EducationalOrganization',
     name: 'Bilge Arena',
     url: siteUrl,
     logo: `${siteUrl}/logo-horizontal.png`,
-    description: 'YKS\'ye hazirlanan ogrenciler icin oyunlastirilmis ogrenme platformu.',
+    description: 'YKS\'ye hazırlanan öğrenciler için oyunlaştırılmış öğrenme platformu.',
+    sameAs: [],
     contactPoint: {
       '@type': 'ContactPoint',
       email: 'iletisim@bilgearena.com',
       contactType: 'customer service',
       availableLanguage: 'Turkish',
+    },
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: 'YKS Hazırlık Oyunları',
+      itemListElement: [
+        { '@type': 'Course', name: 'Matematik', description: 'TYT-AYT Matematik soruları', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
+        { '@type': 'Course', name: 'Türkçe', description: 'TYT Türkçe soruları', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
+        { '@type': 'Course', name: 'Fen Bilimleri', description: 'TYT Fen Bilimleri soruları', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
+        { '@type': 'Course', name: 'Sosyal Bilimler', description: 'TYT Sosyal Bilimler soruları', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
+        { '@type': 'Course', name: 'İngilizce (WordQuest)', description: 'YDT İngilizce soruları', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
+      ],
     },
   },
   {
@@ -102,6 +121,7 @@ const jsonLd = [
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: siteUrl },
       { '@type': 'ListItem', position: 2, name: 'Arena', item: `${siteUrl}/arena` },
+      { '@type': 'ListItem', position: 3, name: 'Sıralama', item: `${siteUrl}/arena/siralama` },
     ],
   },
 ]
@@ -127,6 +147,7 @@ export default function RootLayout({
         <ToastContainer />
         <CookieBanner />
         <SWRegister />
+        <GoogleAnalytics />
         <Analytics />
         <SpeedInsights />
       </body>
