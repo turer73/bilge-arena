@@ -74,8 +74,6 @@ export function useSessionSaver({
     })
       .then(async (sessionId) => {
         if (sessionId) {
-          console.log('[SessionSaver] Oturum kaydedildi:', sessionId)
-
           // Seviye atlama kontrolu icin onceki XP'yi kaydet
           const oldXP = useAuthStore.getState().profile?.total_xp ?? 0
           const oldLevel = getLevelFromXP(oldXP)

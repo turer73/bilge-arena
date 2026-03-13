@@ -19,11 +19,8 @@ export function SWRegister() {
       window.addEventListener('load', () => {
         navigator.serviceWorker
           .register('/sw.js')
-          .then((registration) => {
-            // Basarili — sessiz log
-            if (process.env.NODE_ENV !== 'production') {
-              console.log('SW registered:', registration.scope)
-            }
+          .then(() => {
+            // Basarili — sessiz devam
           })
           .catch(() => {
             // SW kaydedilemedi — kritik degil, sessizce devam et.
