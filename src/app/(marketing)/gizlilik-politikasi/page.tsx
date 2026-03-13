@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+
 export const metadata: Metadata = {
   title: 'Gizlilik Politikası',
   description: 'Bilge Arena gizlilik politikası — kişisel verilerinizin nasıl toplandığı, işlendiği ve korunduğu hakkında bilgi.',
+  alternates: { canonical: `${siteUrl}/gizlilik-politikasi` },
 }
 
 export default function GizlilikPolitikasiPage() {

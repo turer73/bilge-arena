@@ -1,12 +1,18 @@
 import type { Metadata } from 'next'
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+
 export const metadata: Metadata = {
-  title: 'Hakkında',
+  title: 'Hakkında — Bilge Arena Nedir?',
   description:
     'Bilge Arena, YKS\'ye hazırlanan öğrenciler için oyunlaştırılmış ücretsiz bir alıştırma platformudur. Misyonumuz, vizyonumuz ve takım bilgileri.',
+  alternates: {
+    canonical: `${siteUrl}/hakkinda`,
+  },
   openGraph: {
     title: 'Hakkında | Bilge Arena',
     description: 'Bilge Arena\'nın hikayesi, misyonu ve vizyonu.',
+    url: `${siteUrl}/hakkinda`,
   },
 }
 

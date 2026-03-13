@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+
 export const metadata: Metadata = {
   title: 'Kullanım Koşulları',
   description: 'Bilge Arena kullanım koşulları — platform kuralları, sorumluluklar ve hizmet şartları.',
+  alternates: { canonical: `${siteUrl}/kullanim-kosullari` },
 }
 
 export default function KullanimKosullariPage() {

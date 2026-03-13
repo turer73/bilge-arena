@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+
 export const metadata: Metadata = {
   title: 'KVKK Aydınlatma Metni',
   description: 'Bilge Arena — 6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında aydınlatma metni.',
+  alternates: { canonical: `${siteUrl}/kvkk` },
 }
 
 export default function KVKKPage() {

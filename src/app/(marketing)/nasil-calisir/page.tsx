@@ -2,13 +2,19 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+
 export const metadata: Metadata = {
-  title: 'Nasıl Çalışır',
+  title: 'Nasıl Çalışır — Adım Adım YKS Hazırlık',
   description:
     'Bilge Arena nasıl çalışır? Kayıt ol, oyun seç, soruları çöz, XP kazan ve sıralamalarda yüksel!',
+  alternates: {
+    canonical: `${siteUrl}/nasil-calisir`,
+  },
   openGraph: {
     title: 'Nasıl Çalışır | Bilge Arena',
     description: 'Bilge Arena\'da YKS hazırlık süreci adım adım.',
+    url: `${siteUrl}/nasil-calisir`,
   },
 }
 
