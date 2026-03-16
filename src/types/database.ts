@@ -215,6 +215,22 @@ export interface SiteSetting {
 }
 
 // ============================================================
+// Consent / KVKK (Migration 005)
+// ============================================================
+
+export type ConsentType = 'cookie' | 'terms' | 'kvkk'
+
+export interface ConsentLog {
+  id: string
+  user_id: string | null
+  consent_type: ConsentType
+  consent_value: Record<string, unknown>
+  ip_address: string | null
+  user_agent: string | null
+  created_at: string
+}
+
+// ============================================================
 // Supabase client tip entegrasyonu
 // ============================================================
 
@@ -244,6 +260,7 @@ export interface Database {
       error_reports: TableDef<ErrorReport>
       admin_logs: TableDef<AdminLog>
       site_settings: TableDef<SiteSetting>
+      consent_logs: TableDef<ConsentLog>
     }
     Views: Record<string, never>
     Functions: Record<string, never>

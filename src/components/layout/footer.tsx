@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Logo } from './logo'
+import { CookiePrefsButton } from './cookie-prefs-button'
 
 const FOOTER_LINKS = [
   {
@@ -83,6 +84,8 @@ export function Footer() {
             <Link href="/kvkk" className="transition-colors hover:text-[var(--text)]">
               KVKK
             </Link>
+            <span>·</span>
+            <CookiePrefsButton />
           </div>
         </div>
       </div>
