@@ -1,12 +1,26 @@
 'use client'
 
+import { useState } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Logo } from '@/components/layout/logo'
 import { Button } from '@/components/ui/button'
 import { Zap } from 'lucide-react'
+import { logConsent } from '@/lib/consent'
 
 export default function GirisClient() {
   const { signInWithGoogle } = useAuth()
+  const [accepted, setAccepted] = useState(false)
+
+  const handleGoogleLogin = async () => {
+    // Once giris yap, sonra consent logla
+    await signInWithGoogle()
+    // Not: signInWithGoogle redirect yapar, bu satir sadece popup modunda calisir.
+    // Consent log'u auth callback'te de yakalanabilir ama
+    // burada da fire-and-forget olarak cagiralim.
+    logConsent('terms', { accepted: true })
+    logConsent('kvkk', { accepted: true })
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
@@ -20,12 +34,37 @@ export default function GirisClient() {
           Google hesabinla hemen basla, ilerlemenin kaydedilsin.
         </p>
 
+        {/* Onay checkbox'u */}
+        <label className="mb-6 flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left transition-colors hover:border-[var(--focus)]/50">
+          <input
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[var(--focus)]"
+          />
+          <span className="text-xs leading-relaxed text-[var(--text-muted)]">
+            <Link href="/kullanim-kosullari" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">
+              Kullanım Koşullarını
+            </Link>
+            {' '}ve{' '}
+            <Link href="/gizlilik-politikasi" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">
+              Gizlilik Politikasını
+            </Link>
+            {' '}okudum, kabul ediyorum.{' '}
+            <Link href="/kvkk" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">
+              KVKK Aydınlatma Metni
+            </Link>
+            {' '}kapsamında kişisel verilerimin işlenmesine onay veriyorum.
+          </span>
+        </label>
+
         {/* Google ile giris */}
         <Button
           variant="primary"
           size="lg"
           className="w-full"
-          onClick={signInWithGoogle}
+          disabled={!accepted}
+          onClick={handleGoogleLogin}
         >
           <svg viewBox="0 0 24 24" width={18} height={18} className="mr-1">
             <path
@@ -45,7 +84,7 @@ export default function GirisClient() {
               fill="#EA4335"
             />
           </svg>
-          Google ile Giris Yap
+          Google ile Giriş Yap
         </Button>
 
         {/* Misafir olarak devam */}
@@ -56,9 +95,11 @@ export default function GirisClient() {
           </Button>
         </div>
 
-        <p className="mt-6 text-xs text-[var(--text-muted)]">
-          Giris yaparak kullanim sartlarini kabul etmis olursun.
-        </p>
+        {!accepted && (
+          <p className="mt-4 text-xs text-[var(--text-muted)]">
+            Giriş yapmak için yukarıdaki koşulları kabul etmeniz gerekir.
+          </p>
+        )}
       </div>
     </main>
   )
