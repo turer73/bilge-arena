@@ -1,3 +1,4 @@
+import Script from 'next/script'
 import type { Metadata, Viewport } from 'next'
 import { Cinzel, DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
@@ -149,6 +150,7 @@ export default function RootLayout({
         <SWRegister />
         <GoogleAnalytics />
         <Analytics />
+        <Script defer data-domain="bilgearena.com" src="https://analytics.panola.app/js/script.js" strategy="afterInteractive" />
         <SpeedInsights />
       </body>
     </html>
