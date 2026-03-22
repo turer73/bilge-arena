@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/layout/navbar'
-import { ChatWidget } from '@/components/chat/chat-widget'
-import { DailyLoginChecker } from '@/components/game/daily-login-checker'
+import { ArenaAuxiliaries } from '@/components/layout/arena-auxiliaries'
 
 export const metadata: Metadata = {
   title: 'Arena',
@@ -19,8 +18,7 @@ export default function ArenaLayout({
       <main className="min-h-screen pt-16">
         {children}
       </main>
-      <ChatWidget />
-      <DailyLoginChecker />
+      <ArenaAuxiliaries />
     </>
   )
 }

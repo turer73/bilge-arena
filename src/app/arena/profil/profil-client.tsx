@@ -7,6 +7,7 @@ import { StreakBadge } from '@/components/game/streak-badge'
 import { StatsGrid } from '@/components/profile/stats-grid'
 import { BadgeShowcase } from '@/components/profile/badge-showcase'
 import { ProgressChart } from '@/components/profile/progress-chart'
+import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { fetchProfileStats, type ProfileStats } from '@/lib/supabase/profile-stats'
@@ -168,9 +169,11 @@ export default function ProfilClient() {
       </div>
 
       {/* Istatistikler */}
-      <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
-        <StatsGrid stats={mainStats} />
-      </div>
+      <ComponentErrorBoundary label="İstatistikler" variant="inline">
+        <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
+          <StatsGrid stats={mainStats} />
+        </div>
+      </ComponentErrorBoundary>
 
       {/* Oyun bazli istatistikler */}
       {stats && stats.gameStats.length > 0 && (
@@ -266,30 +269,34 @@ export default function ProfilClient() {
       )}
 
       {/* Rozetler */}
-      <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
-        <BadgeShowcase earnedBadgeCodes={earnedBadgeCodes} />
-      </div>
+      <ComponentErrorBoundary label="Rozetler" variant="inline">
+        <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
+          <BadgeShowcase earnedBadgeCodes={earnedBadgeCodes} />
+        </div>
+      </ComponentErrorBoundary>
 
       {/* Konu ilerleme */}
-      <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-        <h3 className="mb-3 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
-          KONU ILERLEMESI
-          {statsLoading && (
-            <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-[var(--focus)]" />
-          )}
-        </h3>
-        <div className="grid gap-2 sm:grid-cols-2 md:gap-3 xl:gap-4">
-          {gameProgressData.map(({ game, categories, totalAnswered, accuracy: gameAcc }) => (
-            <ProgressChart
-              key={game}
-              game={game}
-              categories={categories}
-              totalAnswered={totalAnswered}
-              accuracy={gameAcc}
-            />
-          ))}
+      <ComponentErrorBoundary label="Konu İlerlemesi" variant="inline">
+        <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+          <h3 className="mb-3 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+            KONU ILERLEMESI
+            {statsLoading && (
+              <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-[var(--focus)]" />
+            )}
+          </h3>
+          <div className="grid gap-2 sm:grid-cols-2 md:gap-3 xl:gap-4">
+            {gameProgressData.map(({ game, categories, totalAnswered, accuracy: gameAcc }) => (
+              <ProgressChart
+                key={game}
+                game={game}
+                categories={categories}
+                totalAnswered={totalAnswered}
+                accuracy={gameAcc}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      </ComponentErrorBoundary>
     </div>
   )
 }
