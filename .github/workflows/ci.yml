@@ -86,20 +86,16 @@ jobs:
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         run: |
-          # Son basarili production deploy'un ID'sini al
           DEPLOY_ID=$(curl -s -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
             "https://api.vercel.com/v6/deployments?projectId=${{ secrets.VERCEL_PROJECT_ID }}&teamId=${{ secrets.VERCEL_ORG_ID }}&target=production&state=READY&limit=1" \
             | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log(j.deployments?.[0]?.uid||'')})")
 
-          if [ -z "$DEPLOY_ID" ]; then
-            echo "No ready deployment found, skipping"
-            exit 0
-          fi
+          if [ -z "$DEPLOY_ID" ]; then echo "No ready deployment found"; exit 0; fi
 
           echo "Redeploying $DEPLOY_ID..."
           RESULT=$(curl -s -X POST -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"deploymentId\":\"$DEPLOY_ID\",\"target\":\"production\"}" \
+            -d "{\"name\":\"bilge-arena\",\"deploymentId\":\"$DEPLOY_ID\",\"target\":\"production\"}" \
             "https://api.vercel.com/v13/deployments?teamId=${{ secrets.VERCEL_ORG_ID }}")
 
-          echo "$RESULT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log('Deploy URL:',j.url||'unknown');if(j.error)process.exit(1)})"
+          echo "$RESULT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);if(j.error){console.error(j.error.message);process.exit(1)}console.log('Deployed:',j.url)})"
