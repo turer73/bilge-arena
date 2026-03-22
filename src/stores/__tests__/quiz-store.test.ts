@@ -23,8 +23,8 @@ const mockQuestions: Question[] = [
   },
 ]
 
-const xpResult: XPResult = { base: 10, timeBonus: 5, streakBonus: 0, total: 15 }
-const xpResultStreak: XPResult = { base: 10, timeBonus: 5, streakBonus: 3, total: 18 }
+const xpResult: XPResult = { base: 10, timeBonus: 5, streakBonus: 0, total: 15, hasBonus: true }
+const xpResultStreak: XPResult = { base: 10, timeBonus: 5, streakBonus: 3, total: 18, hasBonus: true }
 
 describe('quiz-store', () => {
   beforeEach(() => {
