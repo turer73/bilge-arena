@@ -1,9 +1,21 @@
+import bundleAnalyzer from '@next/bundle-analyzer'
 import { withSentryConfig } from '@sentry/nextjs'
 import withPWA from '@ducanh2912/next-pwa'
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+})
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // AVIF > WebP > JPEG — en iyi sıkıştırma formatlarını tercih et
+    formats: ['image/avif', 'image/webp'],
+    // Yaygın cihaz genişlikleri — gereksiz boyut üretimini engeller
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    // Optimize edilmiş görselleri 60 gün cache'le
+    minimumCacheTTL: 5184000,
     remotePatterns: [
       {
         protocol: 'https',
@@ -16,6 +28,31 @@ const nextConfig = {
       },
     ],
   },
+
+  // Webpack optimizasyonlari
+  webpack: (config, { isServer }) => {
+    // framer-motion tree-shaking: kullanilmayan modulleri at
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'framer-motion': 'framer-motion/dist/es/index.mjs',
+      }
+    }
+    return config
+  },
+
+  // Deneysel performans bayraklari
+  experimental: {
+    // Optimize edilmiş paket importlari — tree-shaking iyilestirmesi
+    optimizePackageImports: ['lucide-react', 'framer-motion', 'zustand'],
+  },
+
+  // Powered-by header'ini kaldir (guvenlik + kucuk header boyutu)
+  poweredByHeader: false,
+
+  // Sıkıştırma: Next.js gzip/brotli
+  compress: true,
+
   // Guvenlik + performans header'lari
   async headers() {
     return [
@@ -30,7 +67,14 @@ const nextConfig = {
       },
       {
         // Statik asset'ler icin agresif caching (1 yil)
-        source: '/(.*)\\.(png|jpg|jpeg|gif|webp|svg|ico|woff|woff2)',
+        source: '/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff|woff2)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        // JS/CSS chunk'lari icin caching (Next.js zaten hash'liyor)
+        source: '/_next/static/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
@@ -51,7 +95,7 @@ const pwaConfig = withPWA({
   },
 })
 
-export default withSentryConfig(pwaConfig(nextConfig), {
+export default withSentryConfig(withBundleAnalyzer(pwaConfig(nextConfig)), {
   // Source map'leri Sentry'ye yukle ama client bundle'dan sil (guvenlik)
   hideSourceMaps: true,
 

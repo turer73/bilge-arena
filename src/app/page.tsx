@@ -48,9 +48,16 @@ export default function Home() {
         <HeroSection />
         <StatsBar />
         <GamesSection />
-        <HowItWorks />
-        <LeaderboardPreview />
-        <CTASection />
+        {/* Fold-alti bolumleri content-visibility ile ertele */}
+        <div className="cv-auto">
+          <HowItWorks />
+        </div>
+        <div className="cv-auto">
+          <LeaderboardPreview />
+        </div>
+        <div className="cv-auto">
+          <CTASection />
+        </div>
       </main>
       <Footer />
     </>

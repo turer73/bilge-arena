@@ -42,22 +42,7 @@ export async function fetchQuizQuestions({
     return []
   }
 
-  // DB kolon adlarini TS tiplerine maple
-  // DB: subcategory → TS: sub_category
-  // DB: times_answered → TS: play_count
-  // DB: times_correct → TS: success_rate
-  const questions: Question[] = data.map((row: Record<string, unknown>) => ({
-    id: row.id as string,
-    game: row.game as GameType,
-    category: row.category as string,
-    sub_category: (row.subcategory as string) || null,
-    difficulty: row.difficulty as Question['difficulty'],
-    content: row.content as Question['content'],
-    is_active: row.is_active as boolean,
-    play_count: (row.times_answered as number) || 0,
-    success_rate: (row.times_correct as number) || 0,
-    created_at: row.created_at as string,
-  }))
+  const questions = data as unknown as Question[]
 
   // Fisher-Yates shuffle
   for (let i = questions.length - 1; i > 0; i--) {

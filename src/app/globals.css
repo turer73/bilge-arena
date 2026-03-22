@@ -492,4 +492,26 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  /* content-visibility: auto — tarayici fold-alti bolumleri render etmeyi erteler */
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
+  }
+}
+
+/* ============================================================
+   Reduced Motion — Erisebilirlik
+   Animasyonlari tamamen kapat (vestibular rahatsizliklar icin)
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

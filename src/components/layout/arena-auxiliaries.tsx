@@ -1,8 +1,14 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
-import { ChatWidget } from '@/components/chat/chat-widget'
 import { DailyLoginChecker } from '@/components/game/daily-login-checker'
+
+// ChatWidget lazy-load + ssr: false — client-only, agir AI chat bundle'i ayri chunk'a
+const ChatWidget = dynamic(
+  () => import('@/components/chat/chat-widget').then(m => ({ default: m.ChatWidget })),
+  { ssr: false },
+)
 
 /**
  * Arena layout'un yardımcı bileşenlerini izole error boundary'lerle sarar.

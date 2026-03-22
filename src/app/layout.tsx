@@ -139,6 +139,12 @@ export default function RootLayout({
       className={`${cinzel.variable} ${dmSans.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Preconnect — Supabase API + Storage, Google Fonts CDN */}
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
+        <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
       <body className="min-h-screen bg-[var(--bg)] font-body text-[var(--text)] antialiased">
         <script
           type="application/ld+json"

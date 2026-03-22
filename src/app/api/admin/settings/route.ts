@@ -26,6 +26,24 @@ export async function GET() {
   return NextResponse.json({ settings: settingsMap })
 }
 
+// ─── Setting Validasyon Kuralları ──────────────────────
+const SETTING_VALIDATORS: Record<string, (v: unknown) => string | null> = {
+  maintenance_mode: (v) => typeof v === 'boolean' ? null : 'Boolean olmali',
+  registration_enabled: (v) => typeof v === 'boolean' ? null : 'Boolean olmali',
+  daily_quest_count: (v) => {
+    const n = Number(v)
+    return Number.isInteger(n) && n >= 1 && n <= 10 ? null : '1-10 arasi tam sayi olmali'
+  },
+  max_chat_messages_guest: (v) => {
+    const n = Number(v)
+    return Number.isInteger(n) && n >= 0 && n <= 100 ? null : '0-100 arasi tam sayi olmali'
+  },
+  max_chat_messages_user: (v) => {
+    const n = Number(v)
+    return Number.isInteger(n) && n >= 1 && n <= 500 ? null : '1-500 arasi tam sayi olmali'
+  },
+}
+
 export async function PATCH(request: NextRequest) {
   const supabase = await createClient()
   const admin = await checkAdmin(supabase)
@@ -38,6 +56,15 @@ export async function PATCH(request: NextRequest) {
 
   if (!key) {
     return NextResponse.json({ error: 'Missing key' }, { status: 400 })
+  }
+
+  // Validasyon
+  const validator = SETTING_VALIDATORS[key]
+  if (validator) {
+    const err = validator(value)
+    if (err) {
+      return NextResponse.json({ error: `Gecersiz deger: ${err}` }, { status: 400 })
+    }
   }
 
   const { error } = await supabase

@@ -7,19 +7,22 @@ import type { XPResult } from '@/lib/utils/xp'
 
 const mockQuestions: Question[] = [
   {
-    id: 'q1', game: 'matematik', category: 'aritmetik', sub_category: null,
-    difficulty: 2, content: { question: '2+2=?', options: ['3', '4', '5', '6'], answer: 1 },
-    is_active: true, play_count: 0, success_rate: 0, created_at: '',
+    id: 'q1', external_id: null, game: 'matematik', category: 'aritmetik', subcategory: null, topic: null,
+    difficulty: 2, level_tag: null, content: { question: '2+2=?', options: ['3', '4', '5', '6'], answer: 1 },
+    base_points: 20, is_active: true, is_boss: false, times_answered: 0, times_correct: 0,
+    source: 'original', exam_ref: null, created_at: '', updated_at: '',
   },
   {
-    id: 'q2', game: 'matematik', category: 'aritmetik', sub_category: null,
-    difficulty: 3, content: { question: '3*3=?', options: ['6', '9', '12', '15'], answer: 1 },
-    is_active: true, play_count: 0, success_rate: 0, created_at: '',
+    id: 'q2', external_id: null, game: 'matematik', category: 'aritmetik', subcategory: null, topic: null,
+    difficulty: 3, level_tag: null, content: { question: '3*3=?', options: ['6', '9', '12', '15'], answer: 1 },
+    base_points: 30, is_active: true, is_boss: false, times_answered: 0, times_correct: 0,
+    source: 'original', exam_ref: null, created_at: '', updated_at: '',
   },
   {
-    id: 'q3', game: 'matematik', category: 'geometri', sub_category: null,
-    difficulty: 1, content: { question: 'Ucgen kac kenar?', options: ['2', '3', '4', '5'], answer: 1 },
-    is_active: true, play_count: 0, success_rate: 0, created_at: '',
+    id: 'q3', external_id: null, game: 'matematik', category: 'geometri', subcategory: null, topic: null,
+    difficulty: 1, level_tag: null, content: { question: 'Ucgen kac kenar?', options: ['2', '3', '4', '5'], answer: 1 },
+    base_points: 10, is_active: true, is_boss: false, times_answered: 0, times_correct: 0,
+    source: 'original', exam_ref: null, created_at: '', updated_at: '',
   },
 ]
 

@@ -62,17 +62,25 @@ export function getOptionLetter(index: number): string {
  */
 export const EMPTY_QUESTION: Question = {
   id: '',
+  external_id: null,
   game: 'matematik',
   category: '',
-  sub_category: null,
+  subcategory: null,
+  topic: null,
   difficulty: 2,
+  level_tag: null,
   content: {
     question: 'Soru yukleniyor...',
     options: ['', '', '', ''],
     answer: 0,
   },
+  base_points: 20,
   is_active: true,
-  play_count: 0,
-  success_rate: 0,
+  is_boss: false,
+  times_answered: 0,
+  times_correct: 0,
+  source: 'original',
+  exam_ref: null,
   created_at: '',
+  updated_at: '',
 }
