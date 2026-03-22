@@ -13,6 +13,13 @@ export default function AdminQuestionsPage() {
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all')
   const [search, setSearch] = useState('')
 
+  // Edit modal state
+  const [editQ, setEditQ] = useState<Question | null>(null)
+  const [editContent, setEditContent] = useState({ question: '', options: ['', '', '', ''], answer: 0, solution: '' })
+  const [editDifficulty, setEditDifficulty] = useState<Difficulty>(2)
+  const [editCategory, setEditCategory] = useState('')
+  const [saving, setSaving] = useState(false)
+
   const fetchQuestions = useCallback(async () => {
     setLoading(true)
     try {
@@ -68,6 +75,51 @@ export default function AdminQuestionsPage() {
       setQuestions((prev) =>
         prev.map((q) => (q.id === id ? { ...q, is_active: question.is_active } : q))
       )
+    }
+  }
+
+  const openEdit = (q: Question) => {
+    setEditQ(q)
+    setEditContent({
+      question: q.content.question,
+      options: [...q.content.options],
+      answer: q.content.answer,
+      solution: q.content.solution || '',
+    })
+    setEditDifficulty(q.difficulty)
+    setEditCategory(q.category)
+  }
+
+  const saveEdit = async () => {
+    if (!editQ) return
+    setSaving(true)
+    try {
+      const updates = {
+        content: {
+          ...editQ.content,
+          question: editContent.question,
+          options: editContent.options,
+          answer: editContent.answer,
+          solution: editContent.solution || undefined,
+        },
+        difficulty: editDifficulty,
+        category: editCategory,
+      }
+      const res = await fetch('/api/questions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId: editQ.id, updates }),
+      })
+      if (res.ok) {
+        setQuestions((prev) =>
+          prev.map((q) => q.id === editQ.id ? { ...q, ...updates, content: updates.content } : q)
+        )
+        setEditQ(null)
+      }
+    } catch (err) {
+      console.error('Soru kaydetme hatasi:', err)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -144,6 +196,7 @@ export default function AdminQuestionsPage() {
                 <th className="px-3 py-3 font-bold text-[var(--text-sub)] text-right">Oynanma</th>
                 <th className="px-3 py-3 font-bold text-[var(--text-sub)] text-right">Basari</th>
                 <th className="px-3 py-3 font-bold text-[var(--text-sub)] text-center">Durum</th>
+                <th className="px-2 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -152,7 +205,7 @@ export default function AdminQuestionsPage() {
                   <td className="max-w-[300px] truncate px-4 py-3">
                     <div className="font-medium">{q.content.question}</div>
                     <div className="mt-0.5 text-[10px] text-[var(--text-sub)]">
-                      {q.category}{q.sub_category ? ` / ${q.sub_category}` : ''}
+                      {q.category}{q.subcategory ? ` / ${q.subcategory}` : ''}
                     </div>
                   </td>
                   <td className="px-3 py-3">
@@ -173,14 +226,19 @@ export default function AdminQuestionsPage() {
                       {difficultyLabel(q.difficulty)}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-right font-mono">{q.play_count}</td>
+                  <td className="px-3 py-3 text-right font-mono">{q.times_answered}</td>
                   <td className="px-3 py-3 text-right">
-                    <span
-                      className="font-bold"
-                      style={{ color: q.success_rate >= 60 ? 'var(--growth)' : q.success_rate >= 40 ? 'var(--reward)' : 'var(--urgency)' }}
-                    >
-                      %{q.success_rate}
-                    </span>
+                    {(() => {
+                      const pct = q.times_answered > 0 ? Math.round((q.times_correct / q.times_answered) * 100) : 0
+                      return (
+                        <span
+                          className="font-bold"
+                          style={{ color: pct >= 60 ? 'var(--growth)' : pct >= 40 ? 'var(--reward)' : 'var(--urgency)' }}
+                        >
+                          %{pct}
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="px-3 py-3 text-center">
                     <button
@@ -192,6 +250,14 @@ export default function AdminQuestionsPage() {
                       }`}
                     >
                       {q.is_active ? 'Aktif' : 'Pasif'}
+                    </button>
+                  </td>
+                  <td className="px-2 py-3">
+                    <button
+                      onClick={() => openEdit(q)}
+                      className="rounded-lg px-2 py-1 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
+                    >
+                      Duzenle
                     </button>
                   </td>
                 </tr>
@@ -227,6 +293,107 @@ export default function AdminQuestionsPage() {
           >
             Sonraki →
           </button>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editQ && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold">Soru Duzenle</h2>
+              <button onClick={() => setEditQ(null)} className="text-lg text-[var(--text-sub)] hover:text-[var(--text)]">
+                ✕
+              </button>
+            </div>
+
+            {/* Soru metni */}
+            <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Soru</label>
+            <textarea
+              value={editContent.question}
+              onChange={(e) => setEditContent(c => ({ ...c, question: e.target.value }))}
+              rows={3}
+              className="mb-3 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
+            />
+
+            {/* Secenekler */}
+            <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Secenekler</label>
+            {editContent.options.map((opt, i) => (
+              <div key={i} className="mb-1.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditContent(c => ({ ...c, answer: i }))}
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                    editContent.answer === i
+                      ? 'bg-[var(--growth)] text-white'
+                      : 'border border-[var(--border)] text-[var(--text-sub)]'
+                  }`}
+                  title={editContent.answer === i ? 'Dogru cevap' : 'Dogru olarak isaretle'}
+                >
+                  {'ABCDE'[i]}
+                </button>
+                <input
+                  value={opt}
+                  onChange={(e) => {
+                    const newOpts = [...editContent.options]
+                    newOpts[i] = e.target.value
+                    setEditContent(c => ({ ...c, options: newOpts }))
+                  }}
+                  className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs focus:border-[var(--focus)] focus:outline-none"
+                />
+              </div>
+            ))}
+
+            {/* Cozum */}
+            <label className="mb-1 mt-3 block text-[11px] font-bold text-[var(--text-sub)]">Cozum (opsiyonel)</label>
+            <textarea
+              value={editContent.solution}
+              onChange={(e) => setEditContent(c => ({ ...c, solution: e.target.value }))}
+              rows={2}
+              className="mb-3 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
+            />
+
+            {/* Zorluk + Kategori */}
+            <div className="mb-4 flex gap-3">
+              <div className="flex-1">
+                <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Zorluk</label>
+                <select
+                  value={editDifficulty}
+                  onChange={(e) => setEditDifficulty(Number(e.target.value) as Difficulty)}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
+                >
+                  {[1, 2, 3, 4, 5].map(d => (
+                    <option key={d} value={d}>{difficultyLabel(d as Difficulty)} ({d})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Kategori</label>
+                <input
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Butonlar */}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditQ(null)}
+                className="rounded-lg border border-[var(--border)] px-4 py-2 text-xs font-bold text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)]"
+              >
+                Iptal
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={saving || !editContent.question.trim()}
+                className="rounded-lg bg-[var(--focus)] px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {saving ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -110,8 +110,8 @@ export async function POST() {
       await supabase.from('xp_log').insert({
         user_id: user.id,
         amount: badge.xpReward,
-        source: 'badge_earned',
-        source_id: badge.code,
+        reason: 'badge_earned',
+        reference_id: badge.code,
       })
     }
   }

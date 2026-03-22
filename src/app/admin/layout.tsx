@@ -9,6 +9,7 @@ const ADMIN_NAV = [
   { href: '/admin/sorular', label: 'Sorular', icon: '📝' },
   { href: '/admin/kullanicilar', label: 'Kullanicilar', icon: '👥' },
   { href: '/admin/raporlar', label: 'Raporlar', icon: '🐛' },
+  { href: '/admin/loglar', label: 'Loglar', icon: '📜' },
   { href: '/admin/ayarlar', label: 'Ayarlar', icon: '⚙️' },
 ]
 

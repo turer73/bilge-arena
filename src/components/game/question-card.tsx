@@ -42,7 +42,7 @@ export function QuestionCard({
     const opts = question.content.options
       .map((o, i) => `${'ABCDE'[i]}) ${o}`)
       .join('\n')
-    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.sub_category ? ' / ' + question.sub_category : ''}]\n\nSoru: ${question.content.question}\n\n${opts}`
+    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${question.content.question}\n\n${opts}`
     useChatStore.getState().setQuestionContext(ctx)
     useChatStore.getState().clearMessages()
     useChatStore.getState().setOpen(true)
@@ -68,7 +68,7 @@ export function QuestionCard({
           {diff.label}
         </span>
 
-        {question.sub_category && (
+        {question.subcategory && (
           <span
             className="rounded px-[7px] py-0.5 text-[10px] font-semibold"
             style={{
@@ -77,7 +77,7 @@ export function QuestionCard({
               border: `1px solid color-mix(in srgb, ${game?.colorHex || '#3B82F6'} 20%, transparent)`,
             }}
           >
-            {question.sub_category}
+            {question.subcategory}
           </span>
         )}
 

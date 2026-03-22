@@ -1,5 +1,6 @@
 -- ============================================================
--- BILGE ARENA — Konsolide Schema + Migrations
+-- BILGE ARENA — Konsolide Schema + Migrations (011 dahil)
+-- Son guncelleme: Migration 011 — Schema Hardening
 -- ============================================================
 
 -- UUID extension
@@ -32,8 +33,19 @@ CREATE TABLE IF NOT EXISTS profiles (
   notifications   BOOLEAN DEFAULT TRUE,
   role            TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
 
+  -- Premium (Migration 009)
+  is_premium      BOOLEAN DEFAULT FALSE,
+  premium_until   TIMESTAMPTZ DEFAULT NULL,
+
   created_at      TIMESTAMPTZ DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ DEFAULT NOW()
+  updated_at      TIMESTAMPTZ DEFAULT NOW(),
+
+  -- CHECK constraints (Migration 011)
+  CONSTRAINT chk_streak_nonneg CHECK (current_streak >= 0),
+  CONSTRAINT chk_longest_streak_nonneg CHECK (longest_streak >= 0),
+  CONSTRAINT chk_total_questions_nonneg CHECK (total_questions >= 0),
+  CONSTRAINT chk_correct_answers_nonneg CHECK (correct_answers >= 0),
+  CONSTRAINT chk_total_sessions_nonneg CHECK (total_sessions >= 0)
 );
 
 -- ============================================================
@@ -66,7 +78,14 @@ CREATE TABLE IF NOT EXISTS questions (
   exam_ref        VARCHAR(20),
 
   created_at      TIMESTAMPTZ DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ DEFAULT NOW()
+  updated_at      TIMESTAMPTZ DEFAULT NOW(),
+
+  -- JSONB content validation (Migration 011)
+  CONSTRAINT chk_content_required_fields CHECK (
+    content ? 'question' AND content ? 'options' AND content ? 'answer'
+  ),
+  -- Tutarlilik: times_correct <= times_answered
+  CONSTRAINT chk_correct_lte_answered CHECK (times_correct <= times_answered)
 );
 
 -- ============================================================
@@ -102,7 +121,15 @@ CREATE TABLE IF NOT EXISTS game_sessions (
   completed_at    TIMESTAMPTZ,
 
   filter_category VARCHAR(30),
-  filter_difficulty SMALLINT
+  filter_difficulty SMALLINT,
+
+  -- CHECK constraints (Migration 011)
+  CONSTRAINT chk_session_base_xp CHECK (base_xp >= 0),
+  CONSTRAINT chk_session_bonus_xp CHECK (bonus_xp >= 0),
+  CONSTRAINT chk_session_total_xp CHECK (total_xp >= 0),
+  CONSTRAINT chk_session_correct CHECK (correct_count >= 0),
+  CONSTRAINT chk_session_wrong CHECK (wrong_count >= 0),
+  CONSTRAINT chk_session_skipped CHECK (skipped_count >= 0)
 );
 
 -- ============================================================
@@ -111,7 +138,7 @@ CREATE TABLE IF NOT EXISTS game_sessions (
 CREATE TABLE IF NOT EXISTS session_answers (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   session_id      UUID NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
-  question_id     UUID NOT NULL REFERENCES questions(id),
+  question_id     UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES profiles(id),
 
   selected_option SMALLINT,
@@ -124,7 +151,11 @@ CREATE TABLE IF NOT EXISTS session_answers (
   xp_earned       SMALLINT DEFAULT 0,
   question_order  SMALLINT,
 
-  answered_at     TIMESTAMPTZ DEFAULT NOW()
+  answered_at     TIMESTAMPTZ DEFAULT NOW(),
+
+  -- CHECK constraints (Migration 011)
+  CONSTRAINT chk_selected_option CHECK (selected_option BETWEEN 0 AND 4),
+  CONSTRAINT chk_answer_xp_nonneg CHECK (xp_earned >= 0)
 );
 
 -- ============================================================
@@ -144,7 +175,10 @@ CREATE TABLE IF NOT EXISTS leaderboard_weekly (
 
   rank            INTEGER,
 
-  UNIQUE(user_id, week_start)
+  UNIQUE(user_id, week_start),
+
+  -- CHECK constraint (Migration 011)
+  CONSTRAINT chk_week_order CHECK (week_start <= week_end)
 );
 
 -- Ranked view
@@ -188,7 +222,7 @@ CREATE TABLE IF NOT EXISTS badges (
 CREATE TABLE IF NOT EXISTS user_badges (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id         UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  badge_id        UUID NOT NULL REFERENCES badges(id),
+  badge_id        UUID NOT NULL REFERENCES badges(id) ON DELETE CASCADE,
   earned_at       TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, badge_id)
 );
@@ -213,7 +247,10 @@ CREATE TABLE IF NOT EXISTS user_topic_progress (
   last_seen_at    TIMESTAMPTZ,
   updated_at      TIMESTAMPTZ DEFAULT NOW(),
 
-  UNIQUE(user_id, game, category)
+  UNIQUE(user_id, game, category),
+
+  -- CHECK constraint (Migration 011)
+  CONSTRAINT chk_topic_correct_lte_seen CHECK (correct <= questions_seen)
 );
 
 -- ============================================================
@@ -268,7 +305,7 @@ CREATE TABLE IF NOT EXISTS xp_log (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS user_question_history (
   user_id         UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  question_id     UUID NOT NULL REFERENCES questions(id),
+  question_id     UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   times_seen      SMALLINT DEFAULT 1,
   times_correct   SMALLINT DEFAULT 0,
   last_seen_at    TIMESTAMPTZ DEFAULT NOW(),
@@ -716,3 +753,53 @@ INSERT INTO site_settings (key, value) VALUES
   ('max_chat_messages_guest', '5'::jsonb),
   ('max_chat_messages_user', '20'::jsonb)
 ON CONFLICT (key) DO NOTHING;
+
+-- ============================================================
+-- 14. CONSENT / KVKK (Migration 010)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS consent_logs (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  consent_type text NOT NULL CHECK (consent_type IN ('cookie', 'terms', 'kvkk')),
+  consent_value jsonb NOT NULL,
+  ip_address text,
+  user_agent text,
+  created_at timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_consent_logs_user_id ON consent_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_consent_logs_type ON consent_logs(consent_type);
+
+ALTER TABLE consent_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can insert consent logs" ON consent_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can read own consent logs" ON consent_logs FOR SELECT USING (auth.uid() = user_id);
+
+-- ============================================================
+-- Premium trigger (Migration 009)
+-- ============================================================
+CREATE OR REPLACE FUNCTION check_premium_status()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.premium_until IS NOT NULL AND NEW.premium_until < NOW() THEN
+    NEW.is_premium := false;
+    NEW.premium_until := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_check_premium ON profiles;
+CREATE TRIGGER trg_check_premium
+  BEFORE UPDATE ON profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION check_premium_status();
+
+-- ============================================================
+-- Migration 011: Ek indexler
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_sessions_user_game ON game_sessions(user_id, game);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_completed ON game_sessions(user_id, completed_at DESC) WHERE status = 'completed';
+CREATE INDEX IF NOT EXISTS idx_lb_user_week ON leaderboard_weekly(user_id, week_start);
+CREATE INDEX IF NOT EXISTS idx_answers_user_correct ON session_answers(user_id, is_correct) WHERE is_correct = TRUE;
+CREATE INDEX IF NOT EXISTS idx_profiles_premium ON profiles(is_premium) WHERE is_premium = TRUE;
+CREATE INDEX IF NOT EXISTS idx_questions_content_gin ON questions USING gin (content jsonb_path_ops);

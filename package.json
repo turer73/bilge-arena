@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "test:ci": "vitest run --reporter=default --reporter=junit --outputFile=test-results.xml",
     "seed:wordquest": "node database/seed.js",
-    "seed:tyt": "node database/seed-tyt.js"
+    "seed:tyt": "node database/seed-tyt.js",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
@@ -33,6 +34,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

@@ -28,11 +28,11 @@ export function ExplanationPanel({
   const correctText = question.content.options[correctAnswer]
 
   const handleTopicExplain = async () => {
-    const topic = question.sub_category || question.category
+    const topic = question.subcategory || question.category
     const opts = question.content.options
       .map((o, i) => `${'ABCDE'[i]}) ${o}`)
       .join('\n')
-    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.sub_category ? ' / ' + question.sub_category : ''}]\n\nSoru: ${question.content.question}\n\n${opts}\n\nDoğru cevap: ${getOptionLetter(correctAnswer)}) ${correctText}${question.content.solution ? '\nÇözüm: ' + question.content.solution : ''}`
+    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${question.content.question}\n\n${opts}\n\nDoğru cevap: ${getOptionLetter(correctAnswer)}) ${correctText}${question.content.solution ? '\nÇözüm: ' + question.content.solution : ''}`
 
     const userMsg = `"${topic}" konusunu kısaca anlat. Bu soruyla ilgili temel kavramları ve formülleri özetle.`
 
