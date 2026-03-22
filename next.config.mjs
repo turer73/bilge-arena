@@ -29,18 +29,6 @@ const nextConfig = {
     ],
   },
 
-  // Webpack optimizasyonlari
-  webpack: (config, { isServer }) => {
-    // framer-motion tree-shaking: kullanilmayan modulleri at
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'framer-motion': 'framer-motion/dist/es/index.mjs',
-      }
-    }
-    return config
-  },
-
   // Deneysel performans bayraklari
   experimental: {
     // Optimize edilmiş paket importlari — tree-shaking iyilestirmesi
