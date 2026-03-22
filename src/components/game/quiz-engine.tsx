@@ -33,6 +33,7 @@ import { PremiumGateModal } from '@/components/premium/premium-gate-modal'
 import { AdBanner } from '@/components/ads/ad-banner'
 import { CommentSection } from '@/components/social/comment-section'
 import { ErrorReportModal } from '@/components/social/error-report-modal'
+import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
 
 interface QuizEngineProps {
   game: GameSlug
@@ -123,9 +124,11 @@ export function QuizEngine({ game }: QuizEngineProps) {
     return (
       <>
         <ResultScreen onRestart={quiz.handleRestart} onExit={quiz.handleRestart} />
-        <div className="mx-auto max-w-[728px] px-4 pb-6">
-          <AdBanner slot="result" />
-        </div>
+        <ComponentErrorBoundary label="Reklam" variant="minimal">
+          <div className="mx-auto max-w-[728px] px-4 pb-6">
+            <AdBanner slot="result" />
+          </div>
+        </ComponentErrorBoundary>
       </>
     )
   }
@@ -303,14 +306,18 @@ export function QuizEngine({ game }: QuizEngineProps) {
             />
 
             {quiz.showComments && (
-              <CommentSection questionId={question.id} isLoggedIn={!!user} />
+              <ComponentErrorBoundary label="Yorumlar" variant="inline">
+                <CommentSection questionId={question.id} isLoggedIn={!!user} />
+              </ComponentErrorBoundary>
             )}
 
-            <ErrorReportModal
-              questionId={question.id}
-              isOpen={quiz.showReportModal}
-              onClose={() => quiz.setShowReportModal(false)}
-            />
+            <ComponentErrorBoundary label="Hata Bildirimi" variant="minimal">
+              <ErrorReportModal
+                questionId={question.id}
+                isOpen={quiz.showReportModal}
+                onClose={() => quiz.setShowReportModal(false)}
+              />
+            </ComponentErrorBoundary>
           </>
         )}
       </div>
@@ -318,13 +325,19 @@ export function QuizEngine({ game }: QuizEngineProps) {
       {/* Sag sidebar */}
       {!quiz.isDeneme && (
         <div className="hidden flex-col gap-3 lg:flex">
-          <MiniLeaderboard players={sidebar.leaderboard} myRank={sidebar.myRank} />
-          <DailyQuests
-            quests={dailyQuests.quests.length === 0 ? fallbackQuests : undefined}
-            userQuests={dailyQuests.quests.length > 0 ? dailyQuests.quests : undefined}
-            onClaimXP={dailyQuests.claimXP}
-          />
-          <TopicsPanel topics={sidebarTopics} />
+          <ComponentErrorBoundary label="Sıralama" variant="inline">
+            <MiniLeaderboard players={sidebar.leaderboard} myRank={sidebar.myRank} />
+          </ComponentErrorBoundary>
+          <ComponentErrorBoundary label="Günlük Görevler" variant="inline">
+            <DailyQuests
+              quests={dailyQuests.quests.length === 0 ? fallbackQuests : undefined}
+              userQuests={dailyQuests.quests.length > 0 ? dailyQuests.quests : undefined}
+              onClaimXP={dailyQuests.claimXP}
+            />
+          </ComponentErrorBoundary>
+          <ComponentErrorBoundary label="Konu Gücü" variant="inline">
+            <TopicsPanel topics={sidebarTopics} />
+          </ComponentErrorBoundary>
         </div>
       )}
       </div>
