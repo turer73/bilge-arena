@@ -8,6 +8,7 @@ import { calculateXP } from '@/lib/utils/xp'
 import { getModeById, DENEME_CONFIGS, type DenemeConfig } from '@/lib/constants/modes'
 import type { GameSlug } from '@/lib/constants/games'
 import { fetchQuizQuestions } from '@/lib/supabase/questions'
+import { getAdaptiveDifficulty } from '@/lib/supabase/adaptive-difficulty'
 import { useElapsedTime } from '@/components/game/deneme-timer'
 import { playSound } from '@/lib/utils/sounds'
 import type { Question } from '@/types/database'
@@ -81,7 +82,7 @@ export interface UseQuizGameReturn {
  * Screen yonetimi, soru yukleme, cevaplama, zamanlayici, visual efektleri
  * tek bir hook'ta toplar.
  */
-export function useQuizGame(game: GameSlug): UseQuizGameReturn {
+export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGameReturn {
   const quizStore = useQuizStore()
   const gameStore = useGameStore()
 
@@ -154,11 +155,24 @@ export function useQuizGame(game: GameSlug): UseQuizGameReturn {
     setScreen('loading')
 
     try {
+      // Adaptive difficulty: kullanici zorluk secmediyse ve giris yaptiysa,
+      // basari oranina gore otomatik zorluk belirle
+      let difficulty = gameStore.selectedDifficulty
+      if (!difficulty && userId && !isDeneme) {
+        try {
+          const suggested = await getAdaptiveDifficulty(userId, game, gameStore.selectedCategory)
+          if (suggested) difficulty = suggested
+        } catch {
+          // Adaptive difficulty alinamazsa varsayilan devam eder
+        }
+      }
+
       let questions = await fetchQuizQuestions({
         game,
         limit: isDeneme ? mode.questionCount * 2 : mode.questionCount * 3,
         category: gameStore.selectedCategory,
-        difficulty: gameStore.selectedDifficulty,
+        difficulty,
+        userId: isDeneme ? null : userId, // Deneme'de spaced repetition kapatilir
       })
 
       // Fallback: Supabase'de soru yoksa demo sorulari kullan

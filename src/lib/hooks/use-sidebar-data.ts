@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { fetchSidebarLeaderboard, fetchTopicStrengths, type SidebarPlayer, type TopicStrength } from '@/lib/supabase/sidebar-data'
 import type { GameSlug, GameDefinition } from '@/lib/constants/games'
 
@@ -18,21 +19,26 @@ interface UseSidebarDataReturn {
 
 /**
  * Sidebar verileri: mini liderboard + konu gucleri.
- * Sadece oyun veya kullanici degistiginde Supabase'den ceker.
+ * Leaderboard Supabase Realtime ile canli guncellenir.
+ * Konu gucleri oyun veya kullanici degistiginde cekilir.
  */
-export function useSidebarData({ userId, game, gameDef }: UseSidebarDataOptions): UseSidebarDataReturn {
+export function useSidebarData({ userId, game }: UseSidebarDataOptions): UseSidebarDataReturn {
   const [leaderboard, setLeaderboard] = useState<SidebarPlayer[]>([])
   const [myRank, setMyRank] = useState(0)
   const [topicData, setTopicData] = useState<TopicStrength[]>([])
 
-  useEffect(() => {
-    // Leaderboard verisini cek
+  const refreshLeaderboard = useCallback(() => {
     fetchSidebarLeaderboard(userId)
       .then(({ players, myRank: rank }) => {
         setLeaderboard(players)
         setMyRank(rank)
       })
       .catch((err) => console.error('[Sidebar] Leaderboard hatasi:', err))
+  }, [userId])
+
+  useEffect(() => {
+    // Ilk yukle
+    refreshLeaderboard()
 
     // Konu gucu verisini cek (giris yapilmissa)
     if (userId) {
@@ -40,7 +46,28 @@ export function useSidebarData({ userId, game, gameDef }: UseSidebarDataOptions)
         .then(setTopicData)
         .catch((err) => console.error('[Sidebar] Topics hatasi:', err))
     }
-  }, [userId, game])
+  }, [userId, game, refreshLeaderboard])
+
+  // Supabase Realtime: XP degistiginde leaderboard'u guncelle
+  useEffect(() => {
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('leaderboard-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'total_xp=neq.0' },
+        () => {
+          // Biri XP kazandiginda leaderboard'u yeniden cek
+          refreshLeaderboard()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [refreshLeaderboard])
 
   return { leaderboard, myRank, topicData }
 }

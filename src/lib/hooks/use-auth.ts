@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import type { Profile } from '@/types/database'
@@ -35,6 +36,7 @@ export function useAuth() {
     supabase.auth.getUser().then(({ data: { user: authUser } }) => {
       setUser(authUser ?? null)
       if (authUser) {
+        Sentry.setUser({ id: authUser.id, email: authUser.email })
         fetchProfile(authUser.id).catch((err) => {
           console.error('[useAuth] fetchProfile hatasi:', err)
         })
@@ -50,8 +52,10 @@ export function useAuth() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
+        Sentry.setUser({ id: session.user.id, email: session.user.email })
         fetchProfile(session.user.id)
       } else {
+        Sentry.setUser(null)
         setProfile(null)
       }
     })

@@ -9,6 +9,7 @@ interface FetchQuestionsOptions {
   limit?: number
   category?: string | null
   difficulty?: number | null
+  userId?: string | null
 }
 
 /** Fisher-Yates shuffle (in-place) */
@@ -30,6 +31,7 @@ export async function fetchQuizQuestions({
   limit = 10,
   category,
   difficulty,
+  userId,
 }: FetchQuestionsOptions): Promise<Question[]> {
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
 
@@ -72,5 +74,78 @@ export async function fetchQuizQuestions({
   // Arkaplanda cache'e kaydet (await etmeye gerek yok)
   cacheQuestions(questions).catch(() => {})
 
+  // --- Spaced Repetition: yanlis cevaplanan sorulari karistir ---
+  if (userId) {
+    try {
+      const reviewQuestions = await fetchReviewQuestions(supabase, userId, game, category, difficulty)
+      if (reviewQuestions.length > 0) {
+        const reviewCount = Math.max(1, Math.floor(limit * 0.3)) // %30 tekrar sorusu
+        const reviewSlice = shuffle([...reviewQuestions]).slice(0, reviewCount)
+        const reviewIds = new Set(reviewSlice.map(q => q.id))
+        // Yeni sorulardan tekrar sorulari cikar, sonra birlestir
+        const newQuestions = questions.filter(q => !reviewIds.has(q.id))
+        const newSlice = shuffle([...newQuestions]).slice(0, limit - reviewSlice.length)
+        return shuffle([...reviewSlice, ...newSlice])
+      }
+    } catch (err) {
+      console.warn('[fetchQuizQuestions] Review sorulari alinamadi:', err)
+    }
+  }
+
   return shuffle([...questions]).slice(0, limit)
+}
+
+/**
+ * Son 7 gunde yanlis cevaplanan ve sonrasinda dogru cevaplanmamis sorulari getirir.
+ * Spaced repetition icin "zayif sorular" havuzunu olusturur.
+ */
+async function fetchReviewQuestions(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  game: GameType,
+  category?: string | null,
+  difficulty?: number | null,
+): Promise<Question[]> {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  // 1) Son 7 gunde yanlis cevaplanan question_id'leri bul
+  const { data: wrongAnswers } = await supabase
+    .from('session_answers')
+    .select('question_id')
+    .eq('user_id', userId)
+    .eq('is_correct', false)
+    .gte('created_at', sevenDaysAgo)
+
+  if (!wrongAnswers || wrongAnswers.length === 0) return []
+
+  const wrongIds = Array.from(new Set(wrongAnswers.map(a => a.question_id)))
+
+  // 2) Bu sorulardan sonra dogru cevaplananlari cikar
+  const { data: correctAfter } = await supabase
+    .from('session_answers')
+    .select('question_id')
+    .eq('user_id', userId)
+    .eq('is_correct', true)
+    .in('question_id', wrongIds)
+    .gte('created_at', sevenDaysAgo)
+
+  const correctedIds = new Set((correctAfter || []).map(a => a.question_id))
+  const reviewIds = wrongIds.filter(id => !correctedIds.has(id))
+
+  if (reviewIds.length === 0) return []
+
+  // 3) Bu sorulari questions tablosundan cek
+  let query = supabase
+    .from('questions')
+    .select('*')
+    .in('id', reviewIds.slice(0, 20))
+    .eq('game', game)
+    .eq('is_active', true)
+
+  if (category) query = query.eq('category', category)
+  if (difficulty) query = query.eq('difficulty', difficulty)
+
+  const { data } = await query
+
+  return (data as unknown as Question[]) || []
 }
