@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   }
 
   // 2) Rate limiting
-  const rl = chatLimiter.check(user.id)
+  const rl = await chatLimiter.check(user.id)
   if (!rl.success) {
     return NextResponse.json(
       { error: 'Cok fazla istek gonderdiniz. Lutfen biraz bekleyin.' },

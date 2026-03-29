@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     // Rate limiting (IP veya userId bazli)
     // Sadece ilk IP'yi al (x-forwarded-for spoofing onleme)
     const key = user?.id || (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'anonymous'
-    const rl = logLimiter.check(key)
+    const rl = await logLimiter.check(key)
     if (!rl.success) {
       return NextResponse.json({ ok: false }, { status: 429 })
     }
