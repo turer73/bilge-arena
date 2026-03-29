@@ -159,12 +159,6 @@ export default function RootLayout({
         <SWRegister />
         <PWAInstallPrompt />
         <GoogleAnalytics />
-        <Script
-          defer
-          data-domain="bilgearena.com"
-          src="http://194.163.134.239:8888/js/script.js"
-          strategy="afterInteractive"
-        />
         <Analytics />
         <Script defer data-domain="bilgearena.com" src="https://analytics.panola.app/js/script.js" strategy="afterInteractive" />
         <SpeedInsights />
