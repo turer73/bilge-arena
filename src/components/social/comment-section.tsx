@@ -194,24 +194,12 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
     setComments((prev) => prev.filter((c) => c.id !== commentId))
   }
 
-  // Begeni toggle
+  // Begeni toggle (optimistic update + error rollback)
   const handleLikeToggle = async (commentId: string, liked: boolean) => {
     if (!user) return
     const supabase = createClient()
 
-    if (liked) {
-      await supabase
-        .from('comment_likes')
-        .insert({ user_id: user.id, comment_id: commentId })
-    } else {
-      await supabase
-        .from('comment_likes')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('comment_id', commentId)
-    }
-
-    // Optimistic update — likes_count DB trigger ile guncellenir
+    // Optimistic update — aninda UI'i guncelle
     setComments((prev) =>
       prev.map((c) =>
         c.id === commentId
@@ -219,6 +207,22 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
           : c
       )
     )
+
+    const { error } = liked
+      ? await supabase.from('comment_likes').insert({ user_id: user.id, comment_id: commentId })
+      : await supabase.from('comment_likes').delete().eq('user_id', user.id).eq('comment_id', commentId)
+
+    // Hata durumunda rollback
+    if (error) {
+      console.error('[Comments] Like hatasi:', error)
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === commentId
+            ? { ...c, isLiked: !liked, likes: liked ? Math.max(0, c.likes - 1) : c.likes + 1 }
+            : c
+        )
+      )
+    }
   }
 
   return (

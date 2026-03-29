@@ -8,7 +8,9 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placehol
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/arena'
+  // Open redirect onleme: sadece relative path kabul et, // ile baslayanları reddet
+  const rawNext = searchParams.get('next') ?? '/arena'
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/arena'
 
   if (code) {
     const cookieStore = await cookies()

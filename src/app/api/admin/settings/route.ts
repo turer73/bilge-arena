@@ -58,13 +58,14 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Missing key' }, { status: 400 })
   }
 
-  // Validasyon
+  // Validasyon — bilinmeyen key'leri reddet
   const validator = SETTING_VALIDATORS[key]
-  if (validator) {
-    const err = validator(value)
-    if (err) {
-      return NextResponse.json({ error: `Gecersiz deger: ${err}` }, { status: 400 })
-    }
+  if (!validator) {
+    return NextResponse.json({ error: `Bilinmeyen ayar: ${key}` }, { status: 400 })
+  }
+  const err = validator(value)
+  if (err) {
+    return NextResponse.json({ error: `Gecersiz deger: ${err}` }, { status: 400 })
   }
 
   const { error } = await supabase

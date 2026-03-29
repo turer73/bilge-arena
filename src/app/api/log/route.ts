@@ -12,7 +12,8 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     // Rate limiting (IP veya userId bazli)
-    const key = user?.id || request.headers.get('x-forwarded-for') || 'anonymous'
+    // Sadece ilk IP'yi al (x-forwarded-for spoofing onleme)
+    const key = user?.id || (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'anonymous'
     const rl = logLimiter.check(key)
     if (!rl.success) {
       return NextResponse.json({ ok: false }, { status: 429 })
@@ -29,6 +30,14 @@ export async function POST(request: Request) {
 
     // Console'a logla (Vercel Functions'da gorunur)
     console.error(`[${logEntry.type}] ${logEntry.message}`, logEntry.meta)
+
+    // Supabase'e kaydet (client_logs tablosu yoksa sessizce devam et)
+    await supabase
+      .from('client_logs')
+      .insert(logEntry)
+      .then(({ error }) => {
+        if (error) console.error('[Log API] DB insert hatasi:', error.message)
+      })
 
     return NextResponse.json({ ok: true })
   } catch {

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { Zap, ArrowRight, Flame, Trophy, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -90,9 +91,12 @@ export function HeroSection() {
                 boxShadow: '0 0 60px #2563EB30, inset 0 0 40px #2563EB10',
               }}
             >
-              <img
+              <Image
                 src="/logo/icon-512-transparent.png"
                 alt="Bilge Arena"
+                width={340}
+                height={340}
+                priority
                 className="h-[100px] w-[100px]
                   md:h-[150px] md:w-[150px]
                   lg:h-[220px] lg:w-[220px]

@@ -38,9 +38,13 @@ export function ShareButtons({ rank, score, total, xp, gameName }: ShareButtonsP
         // Kullanici iptal etti
       }
     } else {
-      // Fallback: panoya kopyala
-      await navigator.clipboard.writeText(`${text} ${url}`)
-      alert('Sonuc panoya kopyalandi!')
+      // Fallback: panoya kopyala (Clipboard API izin gerektirebilir)
+      try {
+        await navigator.clipboard.writeText(`${text} ${url}`)
+        alert('Sonuc panoya kopyalandi!')
+      } catch {
+        alert('Panoya kopyalanamadi. Lutfen manuel kopyalayin.')
+      }
     }
   }
 

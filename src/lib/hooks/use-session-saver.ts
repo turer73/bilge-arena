@@ -113,7 +113,8 @@ export function useSessionSaver({
       })
       .catch((err) => console.error('[SessionSaver] Kaydetme hatasi:', err))
       .finally(() => setSaving(false))
-  }, [screen, userId, game, selectedMode, selectedCategory, selectedDifficulty, saving])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, userId, game, selectedMode, selectedCategory, selectedDifficulty])
 
   return { saving }
 }

@@ -4,6 +4,7 @@ import Image from 'next/image'
 
 interface LeaderboardEntry {
   rank: number
+  user_id?: string
   name: string
   avatar: string
   xp: number
@@ -36,9 +37,9 @@ export function LeaderboardTable({ entries, title = 'Haftalik Siralama' }: Leade
       </div>
 
       {/* Entries */}
-      {entries.map((entry) => (
+      {entries.map((entry, idx) => (
         <div
-          key={entry.rank}
+          key={entry.user_id ?? `rank-${idx}`}
           className="grid grid-cols-[40px_1fr_80px_60px] items-center gap-2 px-4 py-2.5 transition-colors duration-200"
           style={{
             background: entry.isCurrentUser ? 'var(--focus-bg)' : 'transparent',

@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams, useRouter } from 'next/navigation'
 import { GAMES, type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
@@ -20,12 +21,16 @@ export default function GameClient() {
   const params = useParams()
   const router = useRouter()
   const gameSlug = params.game as string
+  const isValidSlug = GAME_SLUGS.includes(gameSlug as GameSlug)
 
-  // Gecerli oyun slugi mi kontrol et
-  if (!GAME_SLUGS.includes(gameSlug as GameSlug)) {
-    router.replace('/arena')
-    return null
-  }
+  // Gecersiz slug — render disinda side-effect yapmamak icin useEffect kullan
+  useEffect(() => {
+    if (!isValidSlug) {
+      router.replace('/arena')
+    }
+  }, [isValidSlug, router])
+
+  if (!isValidSlug) return null
 
   return <QuizEngine game={gameSlug as GameSlug} />
 }

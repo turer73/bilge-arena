@@ -14,6 +14,12 @@ export function DenemeTimer({ totalTime, onTimeUp, isPaused = false }: DenemeTim
   const onTimeUpRef = useRef(onTimeUp)
   onTimeUpRef.current = onTimeUp
 
+  // totalTime degisirse remaining'i sifirla (ornegin deneme tekrari)
+  useEffect(() => {
+    setRemaining(totalTime)
+    startTimeRef.current = Date.now()
+  }, [totalTime])
+
   useEffect(() => {
     if (isPaused) return
 

@@ -48,6 +48,12 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Missing reportId or status' }, { status: 400 })
   }
 
+  // Gecerli status degerleri
+  const VALID_STATUSES = ['pending', 'in_review', 'resolved', 'dismissed']
+  if (!VALID_STATUSES.includes(status)) {
+    return NextResponse.json({ error: 'Gecersiz status degeri' }, { status: 400 })
+  }
+
   const updates: Record<string, unknown> = { status }
   if (adminNote !== undefined) updates.admin_note = adminNote
   if (status === 'resolved') updates.resolved_by = admin.id

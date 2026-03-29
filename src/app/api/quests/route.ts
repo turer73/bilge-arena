@@ -138,6 +138,7 @@ export async function PATCH(request: Request) {
         completed_at: upd.completed_at,
       })
       .eq('id', upd.id)
+      .eq('user_id', user.id)  // defense-in-depth: sadece kendi quest'lerini guncelle
       .select('*, quest:daily_quests(*)')
       .single()
 

@@ -98,7 +98,7 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
       streak: newStreak,
       maxStreak: Math.max(maxStreak, newStreak),
       xpEarned: xpEarned + xp,
-      sessionXP: xp,
+      sessionXP: xpEarned + xp,
       lastXPResult: isCorrect ? xpResult : null,
       lives: newLives,
     })

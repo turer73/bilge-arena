@@ -31,12 +31,16 @@ export function useAuth() {
   const supabase = createClient()
 
   useEffect(() => {
-    // Mevcut oturumu kontrol et
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
+    // Mevcut oturumu kontrol et (getUser ile JWT dogrulanir, getSession guvenli degil)
+    supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+      setUser(authUser ?? null)
+      if (authUser) {
+        fetchProfile(authUser.id).catch((err) => {
+          console.error('[useAuth] fetchProfile hatasi:', err)
+        })
       }
+      setLoading(false)
+    }).catch(() => {
       setLoading(false)
     })
 
