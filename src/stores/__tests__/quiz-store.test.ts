@@ -148,6 +148,15 @@ describe('quiz-store', () => {
       expect(useQuizStore.getState().xpEarned).toBe(33) // 15 + 18
     })
 
+    it('sessionXP kumulatif olmali (son cevap degil, toplam)', () => {
+      useQuizStore.getState().answerQuestion(1, true, 5, xpResult) // +15
+      expect(useQuizStore.getState().sessionXP).toBe(15)
+
+      useQuizStore.getState().nextQuestion()
+      useQuizStore.getState().answerQuestion(1, true, 3, xpResultStreak) // +18
+      expect(useQuizStore.getState().sessionXP).toBe(33) // 15 + 18, sadece 18 degil
+    })
+
     it('cevap kaydi dogru yapilmali', () => {
       useQuizStore.getState().answerQuestion(2, false, 12, xpResult)
       const answer = useQuizStore.getState().answers[0]

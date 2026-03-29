@@ -1,11 +1,31 @@
 /**
- * Basit in-memory rate limiter.
- * Production'da Redis (Upstash) ile degistirilmeli.
+ * Hybrid rate limiter: Upstash Redis varsa kullan, yoksa in-memory fallback.
  *
- * Not: Vercel Serverless'ta her cold start Map sifirlanir,
- * ama ayni instance birden fazla request servis eder —
- * bu yuzden burst saldirilarini onler.
+ * Production'da UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN env var'lari
+ * set edilmeli. Yoksa in-memory limiter calismaya devam eder (burst korumasi).
  */
+
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+// ─── Redis-based rate limiter (production) ──────────────────
+
+const hasRedis =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+
+let redis: Redis | null = null
+
+function getRedis(): Redis {
+  if (!redis && hasRedis) {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    })
+  }
+  return redis!
+}
+
+// ─── In-memory fallback (development / Redis yoksa) ─────────
 
 interface RateLimitEntry {
   count: number
@@ -15,33 +35,25 @@ interface RateLimitEntry {
 const stores = new Map<string, Map<string, RateLimitEntry>>()
 
 // Eski kayitlari temizle (her 5 dk)
-setInterval(() => {
-  const now = Date.now()
-  stores.forEach((store) => {
-    Array.from(store.entries()).forEach(([key, val]) => {
-      if (now > val.resetAt) store.delete(key)
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now()
+    stores.forEach((store) => {
+      Array.from(store.entries()).forEach(([key, val]) => {
+        if (now > val.resetAt) store.delete(key)
+      })
     })
-  })
-}, 5 * 60_000)
+  }, 5 * 60_000)
+}
 
-/**
- * Rate limiter olusturur.
- * @param name  - Limiter adi (her route icin farkli store)
- * @param limit - Pencere basina maksimum istek
- * @param windowMs - Pencere suresi (ms), default 60 saniye
- */
-export function createRateLimiter(name: string, limit: number, windowMs = 60_000) {
+function createInMemoryLimiter(name: string, limit: number, windowMs: number) {
   if (!stores.has(name)) {
     stores.set(name, new Map())
   }
   const store = stores.get(name)!
 
   return {
-    /**
-     * Istegi kontrol eder.
-     * @returns { success: true } veya { success: false, retryAfter }
-     */
-    check(key: string): { success: boolean; retryAfter?: number } {
+    async check(key: string): Promise<{ success: boolean; retryAfter?: number }> {
       const now = Date.now()
       const entry = store.get(key)
 
@@ -59,4 +71,39 @@ export function createRateLimiter(name: string, limit: number, windowMs = 60_000
       return { success: true }
     },
   }
+}
+
+// ─── Public API ──────────────────────────────────────────────
+
+/**
+ * Rate limiter olusturur.
+ * Redis varsa Upstash sliding window, yoksa in-memory fixed window.
+ *
+ * @param name     - Limiter adi (her route icin farkli)
+ * @param limit    - Pencere basina maksimum istek
+ * @param windowMs - Pencere suresi (ms), default 60 saniye
+ */
+export function createRateLimiter(name: string, limit: number, windowMs = 60_000) {
+  if (hasRedis) {
+    const windowSec = Math.ceil(windowMs / 1000)
+    const limiter = new Ratelimit({
+      redis: getRedis(),
+      limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
+      prefix: `rl:${name}`,
+    })
+
+    return {
+      async check(key: string): Promise<{ success: boolean; retryAfter?: number }> {
+        const result = await limiter.limit(key)
+        if (result.success) {
+          return { success: true }
+        }
+        const retryAfter = Math.ceil((result.reset - Date.now()) / 1000)
+        return { success: false, retryAfter: Math.max(1, retryAfter) }
+      },
+    }
+  }
+
+  // Fallback: in-memory
+  return createInMemoryLimiter(name, limit, windowMs)
 }

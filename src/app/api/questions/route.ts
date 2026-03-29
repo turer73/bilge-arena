@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   // Rate limiting (IP bazli — GET public endpoint)
   // Sadece ilk IP'yi al (x-forwarded-for spoofing onleme)
   const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
-  const rl = questionsLimiter.check(ip)
+  const rl = await questionsLimiter.check(ip)
   if (!rl.success) {
     return NextResponse.json(
       { error: 'Cok fazla istek. Lutfen bekleyin.' },
