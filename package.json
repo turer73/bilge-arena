@@ -16,6 +16,8 @@
     "test:e2e:ui": "playwright test --ui",
     "seed:wordquest": "node database/seed.js",
     "seed:tyt": "node database/seed-tyt.js",
+    "seed:full": "node database/seed-full.js",
+    "seed:all": "node database/seed-tyt.js && node database/seed.js && node database/seed-full.js",
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
