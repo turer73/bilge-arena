@@ -48,7 +48,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
   // --- Custom hooks ---
   const quizLimit = useQuizLimit()
-  const quiz = useQuizGame(game)
+  const quiz = useQuizGame(game, user?.id)
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
   const dailyQuests = useDailyQuests()
   useSessionSaver({
