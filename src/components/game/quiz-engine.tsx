@@ -21,19 +21,37 @@ import { OptionButton } from './option-button'
 import { StreakBadge } from './streak-badge'
 import { SoundToggle } from './sound-toggle'
 import { XPPopup } from './xp-popup'
-import { BurstParticles } from './burst-particles'
 import { ExplanationPanel } from './explanation-panel'
-import { ResultScreen } from './result-screen'
-import { DenemeResult } from './deneme-result'
+
+const BurstParticles = dynamic(
+  () => import('./burst-particles').then(m => ({ default: m.BurstParticles })),
+  { ssr: false },
+)
+const ResultScreen = dynamic(
+  () => import('./result-screen').then(m => ({ default: m.ResultScreen })),
+  { ssr: false },
+)
+const DenemeResult = dynamic(
+  () => import('./deneme-result').then(m => ({ default: m.DenemeResult })),
+  { ssr: false },
+)
 import { MiniLeaderboard } from './mini-leaderboard'
 import { DailyQuests } from './daily-quests'
 import { TopicsPanel } from './topics-panel'
 import { LifeLostOverlay } from './life-lost-overlay'
 import { PremiumGateModal } from '@/components/premium/premium-gate-modal'
 import { AdBanner } from '@/components/ads/ad-banner'
-import { CommentSection } from '@/components/social/comment-section'
-import { ErrorReportModal } from '@/components/social/error-report-modal'
+import dynamic from 'next/dynamic'
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
+
+const CommentSection = dynamic(
+  () => import('@/components/social/comment-section').then(m => ({ default: m.CommentSection })),
+  { ssr: false },
+)
+const ErrorReportModal = dynamic(
+  () => import('@/components/social/error-report-modal').then(m => ({ default: m.ErrorReportModal })),
+  { ssr: false },
+)
 
 interface QuizEngineProps {
   game: GameSlug

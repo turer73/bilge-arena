@@ -72,6 +72,10 @@ const config: Config = {
         'label': ['11px', { lineHeight: '1.4', fontWeight: '600' }],
       },
       keyframes: {
+        slideUp: {
+          'from': { opacity: '0', transform: 'translateY(100%)' },
+          'to': { opacity: '1', transform: 'translateY(0)' },
+        },
         fadeUp: {
           'from': { opacity: '0', transform: 'translateY(24px)' },
           'to': { opacity: '1', transform: 'translateY(0)' },
@@ -154,6 +158,7 @@ const config: Config = {
         },
       },
       animation: {
+        'slide-up': 'slideUp 0.4s ease-out',
         fadeUp: 'fadeUp 0.6s ease both',
         'fade-up': 'fadeUp 0.5s ease-out',
         'scale-in': 'scaleIn 0.3s ease-out',

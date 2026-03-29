@@ -6,6 +6,8 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { CookieBanner } from '@/components/cookie-banner'
 import { ToastContainer } from '@/components/ui/toast'
 import { SWRegister } from '@/components/layout/sw-register'
+import { PWAInstallPrompt } from '@/components/layout/pwa-install-prompt'
+import { OfflineIndicator } from '@/components/layout/offline-indicator'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import './globals.css'
 
@@ -150,10 +152,12 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <OfflineIndicator />
         {children}
         <ToastContainer />
         <CookieBanner />
         <SWRegister />
+        <PWAInstallPrompt />
         <GoogleAnalytics />
         <Script
           defer
