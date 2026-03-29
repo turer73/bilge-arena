@@ -8,6 +8,8 @@ import { StatsGrid } from '@/components/profile/stats-grid'
 import { BadgeShowcase } from '@/components/profile/badge-showcase'
 import { ProgressChart } from '@/components/profile/progress-chart'
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
+import { NotificationSettings } from '@/components/profile/notification-settings'
+import { ReferralCard } from '@/components/profile/referral-card'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { fetchProfileStats, type ProfileStats } from '@/lib/supabase/profile-stats'
@@ -274,6 +276,12 @@ export default function ProfilClient() {
           <BadgeShowcase earnedBadgeCodes={earnedBadgeCodes} />
         </div>
       </ComponentErrorBoundary>
+
+      {/* Bildirim + Referral */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 animate-fadeUp" style={{ animationDelay: '0.28s', animationFillMode: 'both' }}>
+        <NotificationSettings />
+        <ReferralCard />
+      </div>
 
       {/* Konu ilerleme */}
       <ComponentErrorBoundary label="Konu İlerlemesi" variant="inline">
