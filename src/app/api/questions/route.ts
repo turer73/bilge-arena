@@ -2,8 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { checkAdmin } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { GAME_SLUGS } from '@/lib/constants/games'
 
 const questionsLimiter = createRateLimiter('questions', 60, 60_000) // 60 req/dk
+const VALID_GAMES = new Set(GAME_SLUGS)
 
 /** parseInt ile boundary kontrolu: min <= val <= max */
 function safeInt(value: string | null, fallback: number, min: number, max: number): number {
@@ -34,6 +36,11 @@ export async function GET(request: NextRequest) {
   const page = safeInt(searchParams.get('page'), 1, 1, 1000)
   const limit = safeInt(searchParams.get('limit'), 20, 1, 100)
   const offset = (page - 1) * limit
+
+  // Query param dogrulama
+  if (game && !VALID_GAMES.has(game as never)) {
+    return NextResponse.json({ error: 'Gecersiz oyun adi' }, { status: 400 })
+  }
 
   let query = supabase
     .from('questions')

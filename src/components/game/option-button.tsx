@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { getOptionLetter } from '@/lib/utils/question'
 
@@ -55,7 +56,7 @@ const stateStyles: Record<OptionState, {
   },
 }
 
-export function OptionButton({ index, text, state, onClick, delay = 0 }: OptionButtonProps) {
+export const OptionButton = memo(function OptionButton({ index, text, state, onClick, delay = 0 }: OptionButtonProps) {
   const s = stateStyles[state]
 
   return (
@@ -99,4 +100,4 @@ export function OptionButton({ index, text, state, onClick, delay = 0 }: OptionB
       )}
     </button>
   )
-}
+})

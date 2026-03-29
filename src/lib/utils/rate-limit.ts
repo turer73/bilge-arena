@@ -10,16 +10,22 @@ import { Redis } from '@upstash/redis'
 
 // ─── Redis-based rate limiter (production) ──────────────────
 
-const hasRedis =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+// Vercel Upstash entegrasyonu KV_REST_API_* isimleri kullanir,
+// manuel kurulumda UPSTASH_REDIS_REST_* olabilir — ikisini de destekle
+const redisUrl =
+  process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
+const redisToken =
+  process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN
+
+const hasRedis = !!(redisUrl && redisToken)
 
 let redis: Redis | null = null
 
 function getRedis(): Redis {
   if (!redis && hasRedis) {
     redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      url: redisUrl!,
+      token: redisToken!,
     })
   }
   return redis!

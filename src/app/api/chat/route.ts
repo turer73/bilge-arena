@@ -110,7 +110,13 @@ export async function POST(request: Request) {
       )
     }
 
-    const json = await res.json()
+    const json = await res.json().catch(() => null)
+    if (!json) {
+      return NextResponse.json(
+        { error: 'AI servisinden gecersiz yanit alindi.' },
+        { status: 502 }
+      )
+    }
     const text = json.candidates?.[0]?.content?.parts?.[0]?.text || 'Cevap alinamadi.'
 
     // Streaming uyumlu response
