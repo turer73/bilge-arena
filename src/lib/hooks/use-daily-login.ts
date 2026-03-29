@@ -37,6 +37,21 @@ export function useDailyLogin() {
               : `${data.streak}. gün serisi! Yarın gel +${Math.min((data.streak + 1) * 10, 70)} XP kazan`
           )
 
+          // Streak milestone kutlamasi
+          const milestones: Record<number, string> = {
+            5: '5 gun seri! Disiplin gosterdun!',
+            10: '10 gun seri! Azimli bir ogrencisin!',
+            30: '30 gun seri! Efsane! Kimse seni durduramaz!',
+            50: '50 gun seri! Gercek bir sampiyon!',
+            100: '100 gun seri! Efsaneler arasina girdin!',
+          }
+          if (milestones[data.streak]) {
+            setTimeout(() => {
+              playSound('level_up')
+              toast.success(`🏆 Seri Basarimi!`, milestones[data.streak])
+            }, 1500)
+          }
+
           if (data.status === 'streak_reset') {
             toast.info(
               'Seri sıfırlandı',
