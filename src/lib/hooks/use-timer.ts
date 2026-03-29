@@ -54,21 +54,17 @@ export function useTimer({
     setSeconds(newTime ?? initialTime)
   }, [stop, initialTime])
 
+  // Timer interval — stop() ve onTimeUp artik state updater disinda
   useEffect(() => {
     if (!isRunning) return
 
     intervalRef.current = setInterval(() => {
       setSeconds(prev => {
-        if (prev <= 1) {
-          stop()
-          onTimeUpRef.current?.()
-          return 0
-        }
         // Son 5 saniyede tik-tak sesi
         if (prev <= 6 && prev > 1) {
           playSound('countdown')
         }
-        return prev - 1
+        return prev <= 1 ? 0 : prev - 1
       })
     }, 1000)
 
@@ -77,7 +73,15 @@ export function useTimer({
         clearInterval(intervalRef.current)
       }
     }
-  }, [isRunning, stop])
+  }, [isRunning])
+
+  // seconds === 0 olunca durdur ve onTimeUp cagir (state updater disinda)
+  useEffect(() => {
+    if (seconds === 0 && isRunning) {
+      stop()
+      onTimeUpRef.current?.()
+    }
+  }, [seconds, isRunning, stop])
 
   return {
     seconds,

@@ -38,11 +38,17 @@ export async function POST(request: Request) {
 
   const xpReward = uq.quest?.xp_reward ?? 50
 
-  // 1) XP claimed olarak işaretle
-  await supabase
+  // 1) XP claimed olarak işaretle — atomic guard (race condition onleme)
+  const { data: claimed, error: claimError } = await supabase
     .from('user_daily_quests')
     .update({ xp_claimed: true })
     .eq('id', questId)
+    .eq('xp_claimed', false)  // sadece henuz claim edilmemisse guncelle
+    .select('id')
+
+  if (claimError || !claimed || claimed.length === 0) {
+    return NextResponse.json({ error: 'XP zaten alindi' }, { status: 400 })
+  }
 
   // 2) XP log'a ekle
   await supabase
@@ -54,19 +60,27 @@ export async function POST(request: Request) {
       details: { quest_slug: uq.quest?.slug },
     })
 
-  // 3) Profildeki XP'yi güncelle
-  await supabase.rpc('increment_xp', {
+  // 3) Profildeki XP'yi güncelle (atomic RPC, fallback ile)
+  const { error: rpcError } = await supabase.rpc('increment_xp', {
     p_user_id: user.id,
     p_amount: xpReward,
-  }).then(({ error }) => {
-    // RPC yoksa fallback
-    if (error) {
-      return supabase
+  })
+
+  if (rpcError) {
+    // RPC yoksa fallback: profili çek ve güncelle
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('total_xp')
+      .eq('id', user.id)
+      .single()
+
+    if (prof) {
+      await supabase
         .from('profiles')
-        .update({ total_xp: (uq as unknown as { profile_xp: number }).profile_xp + xpReward })
+        .update({ total_xp: (prof.total_xp ?? 0) + xpReward })
         .eq('id', user.id)
     }
-  })
+  }
 
   return NextResponse.json({ success: true, xp_earned: xpReward })
 }

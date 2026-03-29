@@ -44,10 +44,25 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Missing userId or action' }, { status: 400 })
   }
 
-  if (action === 'promote') {
-    await supabase.from('profiles').update({ role: 'admin' }).eq('id', userId)
-  } else if (action === 'demote') {
-    await supabase.from('profiles').update({ role: 'user' }).eq('id', userId)
+  // Gecerli action kontrolu
+  if (!['promote', 'demote'].includes(action)) {
+    return NextResponse.json({ error: 'Gecersiz action' }, { status: 400 })
+  }
+
+  // Admin kendini demote edemez
+  if (action === 'demote' && userId === admin.id) {
+    return NextResponse.json({ error: 'Kendinizi demote edemezsiniz' }, { status: 400 })
+  }
+
+  const newRole = action === 'promote' ? 'admin' : 'user'
+  const { data: affected } = await supabase
+    .from('profiles')
+    .update({ role: newRole })
+    .eq('id', userId)
+    .select('id')
+
+  if (!affected || affected.length === 0) {
+    return NextResponse.json({ error: 'Kullanici bulunamadi' }, { status: 404 })
   }
 
   // Admin log kaydet

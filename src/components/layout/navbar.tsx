@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Zap, Menu, X, User, LogOut, Trophy, Shield } from 'lucide-react'
@@ -96,9 +97,11 @@ export function Navbar() {
                   className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--card)]"
                 >
                   {profile?.avatar_url ? (
-                    <img
+                    <Image
                       src={profile.avatar_url}
                       alt=""
+                      width={32}
+                      height={32}
                       className="h-8 w-8 rounded-full"
                       referrerPolicy="no-referrer"
                     />

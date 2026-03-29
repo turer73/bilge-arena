@@ -74,8 +74,9 @@ export async function POST() {
   // XP hesapla: gün * 10, max 70
   const xpReward = Math.min(newStreak * 10, 70)
 
-  // Profili güncelle
-  const { error: updateError } = await supabase
+  // Profili güncelle — atomic guard: sadece bugun henuz claim edilmemisse
+  const todayStart = new Date(todayStr + 'T00:00:00.000Z').toISOString()
+  const { data: updated, error: updateError } = await supabase
     .from('profiles')
     .update({
       current_streak: newStreak,
@@ -83,6 +84,17 @@ export async function POST() {
       total_xp: (profile.total_xp || 0) + xpReward,
     })
     .eq('id', user.id)
+    .or(`last_played_at.is.null,last_played_at.lt.${todayStart}`)
+    .select('id')
+
+  if (!updated || updated.length === 0) {
+    // Concurrent request zaten claim etti
+    return NextResponse.json({
+      status: 'already_claimed',
+      streak: profile.current_streak,
+      xpAwarded: 0,
+    })
+  }
 
   if (updateError) {
     console.error('[DailyLogin] Güncelleme hatası:', updateError)

@@ -29,5 +29,5 @@ export function getLevelProgress(xp: number): number {
   if (current.maxXP === Infinity) return 100
   const range = current.maxXP - current.minXP + 1
   const progress = xp - current.minXP
-  return Math.min(100, Math.round((progress / range) * 100))
+  return Math.min(99, Math.floor((progress / range) * 100))
 }

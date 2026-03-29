@@ -100,20 +100,36 @@ export async function POST() {
   const totalXPEarned = newBadges.reduce((sum, b) => sum + b.xpReward, 0)
 
   if (totalXPEarned > 0) {
-    await supabase
-      .from('profiles')
-      .update({ total_xp: (profile.total_xp ?? 0) + totalXPEarned })
-      .eq('id', user.id)
+    // Atomic XP increment: RPC varsa kullan, yoksa guncel profili cek
+    const { error: rpcErr } = await supabase.rpc('increment_xp', {
+      p_user_id: user.id,
+      p_amount: totalXPEarned,
+    })
+
+    if (rpcErr) {
+      // Fallback: profili taze cek ve guncelle (race condition riski azaltildi)
+      const { data: freshProfile } = await supabase
+        .from('profiles')
+        .select('total_xp')
+        .eq('id', user.id)
+        .single()
+
+      if (freshProfile) {
+        await supabase
+          .from('profiles')
+          .update({ total_xp: (freshProfile.total_xp ?? 0) + totalXPEarned })
+          .eq('id', user.id)
+      }
+    }
 
     // XP log'a kaydet
-    for (const badge of newBadges) {
-      await supabase.from('xp_log').insert({
-        user_id: user.id,
-        amount: badge.xpReward,
-        reason: 'badge_earned',
-        reference_id: badge.code,
-      })
-    }
+    const xpLogInserts = newBadges.map((badge) => ({
+      user_id: user.id,
+      amount: badge.xpReward,
+      reason: 'badge_earned',
+      reference_id: badge.code,
+    }))
+    await supabase.from('xp_log').insert(xpLogInserts)
   }
 
   return NextResponse.json({

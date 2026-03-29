@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Logo } from '@/components/layout/logo'
@@ -9,6 +10,7 @@ import { Zap } from 'lucide-react'
 import { logConsent } from '@/lib/consent'
 
 export default function GirisClient() {
+  const router = useRouter()
   const { signInWithGoogle } = useAuth()
   const [accepted, setAccepted] = useState(false)
 
@@ -89,7 +91,7 @@ export default function GirisClient() {
 
         {/* Misafir olarak devam */}
         <div className="mt-4">
-          <Button variant="ghost" size="md" className="w-full" onClick={() => window.location.href = '/arena'}>
+          <Button variant="ghost" size="md" className="w-full" onClick={() => router.push('/arena')}>
             <Zap size={14} />
             Misafir Olarak Dene
           </Button>

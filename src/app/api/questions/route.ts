@@ -14,7 +14,8 @@ function safeInt(value: string | null, fallback: number, min: number, max: numbe
 
 export async function GET(request: NextRequest) {
   // Rate limiting (IP bazli — GET public endpoint)
-  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  // Sadece ilk IP'yi al (x-forwarded-for spoofing onleme)
+  const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
   const rl = questionsLimiter.check(ip)
   if (!rl.success) {
     return NextResponse.json(
@@ -68,9 +69,23 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Missing questionId' }, { status: 400 })
   }
 
+  // Mass assignment onleme: sadece izin verilen alanlari kabul et
+  const ALLOWED_FIELDS = [
+    'content', 'game', 'category', 'subcategory', 'topic',
+    'difficulty', 'level_tag', 'is_active', 'is_boss',
+    'source', 'exam_ref', 'external_id',
+  ]
+  const safeUpdates = Object.fromEntries(
+    Object.entries(updates ?? {}).filter(([k]) => ALLOWED_FIELDS.includes(k))
+  )
+
+  if (Object.keys(safeUpdates).length === 0) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+  }
+
   const { error } = await supabase
     .from('questions')
-    .update(updates)
+    .update(safeUpdates)
     .eq('id', questionId)
 
   if (error) {
