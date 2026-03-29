@@ -148,6 +148,88 @@ export default function NasilCalisirPage() {
         ))}
       </section>
 
+      {/* Soru Bankasi */}
+      <section className="mb-16">
+        <h2 className="mb-3 text-center text-2xl font-bold">Soru Bankasi</h2>
+        <p className="mb-8 text-center text-sm text-[var(--text-sub)]">
+          3700+ ozgun soru, 5 ders, 20+ kategori. Surekli buyuyor.
+        </p>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {[
+            { name: 'Matematik', count: 960, cats: 'Sayilar, Problemler, Geometri, Denklemler, Fonksiyonlar, Olasilik', color: '#2563EB', icon: '🧮' },
+            { name: 'Turkce', count: 920, cats: 'Paragraf, Dil Bilgisi, Sozcuk, Anlam, Yazim', color: '#D97706', icon: '📖' },
+            { name: 'Fen', count: 600, cats: 'Fizik, Kimya, Biyoloji', color: '#059669', icon: '🔬' },
+            { name: 'Sosyal', count: 604, cats: 'Tarih, Cografya, Felsefe', color: '#7C3AED', icon: '🌍' },
+            { name: 'Ingilizce', count: 635, cats: 'Vocabulary, Grammar, Cloze, Dialogue', color: '#3B82F6', icon: '🌐' },
+          ].map((d) => (
+            <div
+              key={d.name}
+              className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 text-center"
+            >
+              <div className="mb-2 text-2xl">{d.icon}</div>
+              <div className="text-sm font-bold">{d.name}</div>
+              <div className="font-display text-2xl font-black" style={{ color: d.color }}>
+                {d.count}
+              </div>
+              <div className="text-[10px] text-[var(--text-muted)]">soru</div>
+              <div className="mt-2 text-[10px] leading-relaxed text-[var(--text-sub)]">
+                {d.cats}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Zorluk Sistemi */}
+      <section className="mb-16">
+        <h2 className="mb-3 text-center text-2xl font-bold">Zorluk Sistemi</h2>
+        <p className="mb-8 text-center text-sm text-[var(--text-sub)]">
+          Her soru 5 kademeli zorluk seviyesinde. Sistem basarina gore otomatik ayarlar.
+        </p>
+
+        <div className="space-y-3">
+          {[
+            { level: 1, name: 'Kolay', color: '#22C55E', desc: 'Temel bilgi ve dogrudan hatirlatma. Konuya yeni baslayanlar icin.', xp: '10 XP', example: '"Asagidakilerden hangisi asal sayidir?"' },
+            { level: 2, name: 'Orta', color: '#3B82F6', desc: 'Basit uygulama gerektiren tek adimli sorular. Konuyu bilenler icin.', xp: '20 XP', example: '"3 basamakli 5A7 sayisi 9\'a bolunuyorsa A kactir?"' },
+            { level: 3, name: 'Zor', color: '#F59E0B', desc: 'Birden fazla adim ve islem gerektiren sorular. Pratik yapmak isteyenler icin.', xp: '30 XP', example: '"Bir isin 1/3\'u yapilmis, kalanin 2/5\'i daha yapilirsa tamamlanma orani nedir?"' },
+            { level: 4, name: 'Cok Zor', color: '#EF4444', desc: 'Analiz ve sentez gerektiren, tuzak secenekli sorular. Sinava hazirlananlar icin.', xp: '40 XP', example: '"f(x)=2x+1 ve g(x)=x²-3 ise (fog)(2) kactir?"' },
+            { level: 5, name: 'Uzman', color: '#DC2626', desc: 'Cok adimli, derin dusunce gerektiren sorular. Ustalar icin.', xp: '50 XP', example: '"Dairesel bir havuzun cevresi 62.8m ise alani kac m²?"' },
+          ].map((d) => (
+            <div
+              key={d.level}
+              className="flex items-start gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"
+            >
+              <div
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-sm font-black text-white"
+                style={{ backgroundColor: d.color }}
+              >
+                {d.level}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold" style={{ color: d.color }}>{d.name}</h3>
+                  <span className="rounded-md bg-[var(--bg-secondary)] px-2 py-0.5 text-[10px] font-bold text-[var(--reward)]">
+                    {d.xp}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-[var(--text-sub)]">{d.desc}</p>
+                <p className="mt-1.5 text-xs italic text-[var(--text-muted)]">Ornek: {d.example}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 rounded-xl border border-[var(--focus)]/20 bg-[var(--focus-bg)] p-5">
+          <h3 className="mb-2 text-sm font-bold text-[var(--focus)]">Adaptif Zorluk</h3>
+          <p className="text-xs leading-relaxed text-[var(--text-sub)]">
+            Bilge Arena, basari oranina gore zorlugu otomatik ayarlar. Cok basariliysan zorlar,
+            zorlaniyorsan kolaylastirir. Ayrica yanlis yaptigin sorulari tekrar karsilar —
+            boylece zayif noktalarini guclendirir. Zorluk secimini kendin de yapabilirsin.
+          </p>
+        </div>
+      </section>
+
       {/* Ekstra Özellikler */}
       <section className="mb-16">
         <h2 className="mb-8 text-center text-2xl font-bold">Ekstra Özellikler</h2>

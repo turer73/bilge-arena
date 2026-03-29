@@ -1,7 +1,7 @@
 import { BookOpen, Target, Shield, Zap } from 'lucide-react'
 
 const STATS = [
-  { val: '1089+', label: 'Özgün Soru', icon: BookOpen, color: 'var(--focus-light)' },
+  { val: '3700+', label: 'Özgün Soru', icon: BookOpen, color: 'var(--focus-light)' },
   { val: '5', label: 'Ders Alanı', icon: Target, color: 'var(--reward-light)' },
   { val: '%100', label: 'Ücretsiz', icon: Shield, color: 'var(--growth-light)' },
   { val: '\u221E', label: 'Tekrar Hakkı', icon: Zap, color: 'var(--wisdom-light)' },
