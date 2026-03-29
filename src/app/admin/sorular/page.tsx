@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { GAMES, GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
+import { AIQuestionGenerator } from '@/components/admin/ai-question-generator'
 import type { Question, Difficulty } from '@/types/database'
 
 export default function AdminQuestionsPage() {
@@ -143,6 +144,9 @@ export default function AdminQuestionsPage() {
           <p className="text-sm text-[var(--text-sub)]">{total} soru kayitli</p>
         </div>
       </div>
+
+      {/* AI Soru Uretici */}
+      <AIQuestionGenerator onGenerated={() => fetchQuestions()} />
 
       {/* Filtreler */}
       <div className="mb-4 flex flex-wrap items-center gap-3">

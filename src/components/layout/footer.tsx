@@ -9,6 +9,7 @@ const FOOTER_LINKS = [
       { label: 'Oyunlar', href: '/arena' },
       { label: 'Sıralama', href: '/arena/siralama' },
       { label: 'Profil', href: '/arena/profil' },
+      { label: 'Arkadaslar', href: '/arena/arkadaslar' },
       { label: 'Nasıl Çalışır', href: '/nasil-calisir' },
     ],
   },
