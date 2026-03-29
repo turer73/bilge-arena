@@ -1,5 +1,7 @@
 'use client'
 
+import { memo } from 'react'
+
 interface Player {
   name: string
   avatar: string
@@ -14,7 +16,7 @@ interface MiniLeaderboardProps {
 const MEDALS = ['🥇', '🥈', '🥉']
 const MEDAL_COLORS = ['var(--reward)', '#CBD5E1', '#CD7F32']
 
-export function MiniLeaderboard({ players, myRank = 0 }: MiniLeaderboardProps) {
+export const MiniLeaderboard = memo(function MiniLeaderboard({ players, myRank = 0 }: MiniLeaderboardProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)]">
       <div className="border-b border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2">
@@ -66,4 +68,4 @@ export function MiniLeaderboard({ players, myRank = 0 }: MiniLeaderboardProps) {
       })}
     </div>
   )
-}
+})

@@ -77,6 +77,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
           onLimitReached={() => setShowPremiumModal(true)}
           userXP={userXP}
           userStreak={userStreak}
+          selectedCategory={gameStore.selectedCategory}
+          onSelectCategory={gameStore.setCategory}
+          selectedDifficulty={gameStore.selectedDifficulty}
+          onSelectDifficulty={gameStore.setDifficulty}
           quizLimit={{
             canPlay: quizLimit.canPlay,
             remaining: quizLimit.remaining,

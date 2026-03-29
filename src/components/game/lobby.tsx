@@ -18,6 +18,12 @@ interface LobbyProps {
   onLimitReached?: () => void
   userXP?: number
   userStreak?: number
+  /** Konu filtresi */
+  selectedCategory: string | null
+  onSelectCategory: (category: string | null) => void
+  /** Zorluk filtresi */
+  selectedDifficulty: number | null
+  onSelectDifficulty: (difficulty: number | null) => void
   /** Quiz limit bilgileri (use-quiz-limit hook'undan) */
   quizLimit?: {
     canPlay: boolean
@@ -27,6 +33,15 @@ interface LobbyProps {
   }
 }
 
+const DIFFICULTY_OPTIONS = [
+  { value: null, label: 'Tumu' },
+  { value: 1, label: 'Kolay' },
+  { value: 2, label: 'Orta' },
+  { value: 3, label: 'Zor' },
+  { value: 4, label: 'Cok Zor' },
+  { value: 5, label: 'Uzman' },
+] as const
+
 export function Lobby({
   game,
   selectedMode,
@@ -35,6 +50,10 @@ export function Lobby({
   onLimitReached,
   userXP = 0,
   userStreak = 0,
+  selectedCategory,
+  onSelectCategory,
+  selectedDifficulty,
+  onSelectDifficulty,
   quizLimit,
 }: LobbyProps) {
   const gameDef = GAMES[game]
@@ -85,6 +104,68 @@ export function Lobby({
         </h2>
         <ModeSelector selectedMode={selectedMode} onSelect={onSelectMode} />
       </div>
+
+      {/* Konu & Zorluk filtresi (deneme modunda gizle — deneme kendi dagilimini kullanir) */}
+      {!mode.isDeneme && (
+        <div className="animate-fadeUp flex flex-col gap-3" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+          {/* Konu filtresi */}
+          <div>
+            <h2 className="mb-2 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+              KONU
+            </h2>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => onSelectCategory(null)}
+                className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                  selectedCategory === null
+                    ? 'text-white shadow-sm'
+                    : 'bg-[var(--surface)] text-[var(--text-sub)] hover:bg-[var(--border)]'
+                }`}
+                style={selectedCategory === null ? { backgroundColor: gameDef.colorHex } : undefined}
+              >
+                Tumu
+              </button>
+              {gameDef.categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => onSelectCategory(cat)}
+                  className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                    selectedCategory === cat
+                      ? 'text-white shadow-sm'
+                      : 'bg-[var(--surface)] text-[var(--text-sub)] hover:bg-[var(--border)]'
+                  }`}
+                  style={selectedCategory === cat ? { backgroundColor: gameDef.colorHex } : undefined}
+                >
+                  {cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Zorluk filtresi */}
+          <div>
+            <h2 className="mb-2 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+              ZORLUK
+            </h2>
+            <div className="flex flex-wrap gap-1.5">
+              {DIFFICULTY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.label}
+                  onClick={() => onSelectDifficulty(opt.value)}
+                  className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                    selectedDifficulty === opt.value
+                      ? 'text-white shadow-sm'
+                      : 'bg-[var(--surface)] text-[var(--text-sub)] hover:bg-[var(--border)]'
+                  }`}
+                  style={selectedDifficulty === opt.value ? { backgroundColor: gameDef.colorHex } : undefined}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Deneme sinavi detaylari */}
       {mode.isDeneme && DENEME_CONFIGS[game] && (

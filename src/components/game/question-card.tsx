@@ -88,6 +88,7 @@ export function QuestionCard({
           onClick={handleAskAssistant}
           className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold text-[var(--text-sub)] transition-all hover:bg-[var(--focus-bg)] hover:text-[var(--focus)] active:scale-95"
           title="Bilge Asistan'a sor"
+          aria-label="Bilge Asistan'a sor"
         >
           <span className="text-sm">🦉</span>
           <span className="hidden sm:inline">Sor</span>

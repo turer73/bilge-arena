@@ -231,6 +231,8 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-[var(--surface)]"
+        aria-expanded={isExpanded}
+        aria-label={`Yorumlar ${isExpanded ? 'gizle' : 'goster'}`}
       >
         <div className="flex items-center gap-2">
           <span className="text-sm">💬</span>

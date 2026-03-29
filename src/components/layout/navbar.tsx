@@ -95,11 +95,13 @@ export function Navbar() {
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--card)]"
+                  aria-label="Kullanici menusu"
+                  aria-expanded={dropdownOpen}
                 >
                   {profile?.avatar_url ? (
                     <Image
                       src={profile.avatar_url}
-                      alt=""
+                      alt={profile?.display_name || 'Kullanici avatari'}
                       width={32}
                       height={32}
                       className="h-8 w-8 rounded-full"

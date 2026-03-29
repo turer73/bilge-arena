@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { BADGES, checkBadgeEarned } from '@/lib/constants/badges'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+const badgesLimiter = createRateLimiter('badges', 30, 60_000) // 30 req/dk
 
 // GET: Kullanıcının kazanılmış rozetlerini getir
 export async function GET() {
@@ -9,6 +12,11 @@ export async function GET() {
 
   if (!user) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  }
+
+  const rl = await badgesLimiter.check(user.id)
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Cok fazla istek' }, { status: 429 })
   }
 
   // Kazanılmış rozetleri al
