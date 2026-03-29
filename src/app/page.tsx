@@ -12,7 +12,7 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').t
 export const metadata: Metadata = {
   title: 'Bilge Arena — YKS Hazırlık Platformu | Oyunlaştırılmış Sınav Hazırlığı',
   description:
-    'YKS, TYT ve AYT sınavlarına oyunlaştırılmış öğrenme ile hazırlan. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çöz, XP kazan, sıralamada yüksel! 1089+ soru, 5 oyun modu, tamamen ücretsiz.',
+    'YKS, TYT ve AYT sınavlarına oyunlaştırılmış öğrenme ile hazırlan. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çöz, XP kazan, sıralamada yüksel! 3700+ soru, 5 oyun modu, tamamen ücretsiz.',
   keywords: [
     'YKS hazırlık', 'TYT soru çöz', 'AYT hazırlık', 'üniversite sınavı',
     'online test çöz', 'YKS matematik', 'TYT Türkçe', 'TYT Fen',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Bilge Arena — Oyunlaştırılmış YKS Hazırlık',
-    description: 'YKS\'ye hazırlanmak artık oyun kadar eğlenceli! 1089+ soru, 5 oyun, tamamen ücretsiz.',
+    description: 'YKS\'ye hazırlanmak artık oyun kadar eğlenceli! 3700+ soru, 5 oyun, tamamen ücretsiz.',
     images: [`${siteUrl}/og-image.png`],
   },
 }

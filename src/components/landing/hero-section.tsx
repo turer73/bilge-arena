@@ -231,7 +231,7 @@ export function HeroSection() {
               lg:justify-start
               xl:gap-12">
               {[
-                { val: '1089+', label: 'Soru', color: 'var(--focus-light)' },
+                { val: '3700+', label: 'Soru', color: 'var(--focus-light)' },
                 { val: '5', label: 'Oyun', color: 'var(--reward-light)' },
                 { val: 'Ücretsiz', label: 'Sonsuza dek', color: 'var(--growth-light)' },
               ].map(({ val, label, color }) => (
