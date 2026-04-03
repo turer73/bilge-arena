@@ -1,6 +1,6 @@
 -- ============================================================
--- BILGE ARENA — Konsolide Schema + Migrations (011 dahil)
--- Son guncelleme: Migration 011 — Schema Hardening
+-- BILGE ARENA — Konsolide Schema + Migrations (015 dahil)
+-- Son guncelleme: Migration 015 — Referral System
 -- ============================================================
 
 -- UUID extension
@@ -803,3 +803,197 @@ CREATE INDEX IF NOT EXISTS idx_lb_user_week ON leaderboard_weekly(user_id, week_
 CREATE INDEX IF NOT EXISTS idx_answers_user_correct ON session_answers(user_id, is_correct) WHERE is_correct = TRUE;
 CREATE INDEX IF NOT EXISTS idx_profiles_premium ON profiles(is_premium) WHERE is_premium = TRUE;
 CREATE INDEX IF NOT EXISTS idx_questions_content_gin ON questions USING gin (content jsonb_path_ops);
+
+-- ============================================================
+-- Migration 012: client_logs tablosu + increment_xp RPC
+-- ============================================================
+
+-- ─── 1. CLIENT_LOGS TABLOSU ────────────────────────────────
+-- Frontend hata loglarini kalici olarak saklar (/api/log endpointi)
+
+CREATE TABLE IF NOT EXISTS client_logs (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  type        text NOT NULL DEFAULT 'error',
+  message     text NOT NULL,
+  user_id     uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  meta        text,
+  created_at  timestamptz DEFAULT now() NOT NULL
+);
+
+-- RLS: sadece service role yazabilir (API route server-side client kullanir)
+ALTER TABLE client_logs ENABLE ROW LEVEL SECURITY;
+
+-- Kimse okuyamaz (admin Supabase dashboard'dan okur)
+-- INSERT sadece authenticated + service_role
+CREATE POLICY "Service can insert logs"
+  ON client_logs FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+-- Index: zamana gore sorgulama
+CREATE INDEX IF NOT EXISTS idx_client_logs_created
+  ON client_logs(created_at DESC);
+
+-- Index: kullaniciya gore filtreleme
+CREATE INDEX IF NOT EXISTS idx_client_logs_user
+  ON client_logs(user_id)
+  WHERE user_id IS NOT NULL;
+
+-- ─── 2. INCREMENT_XP RPC ───────────────────────────────────
+-- Atomik XP artirma fonksiyonu. Race condition onler.
+-- Kullanim: supabase.rpc('increment_xp', { p_user_id: '...', p_amount: 50 })
+
+CREATE OR REPLACE FUNCTION increment_xp(p_user_id uuid, p_amount integer)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Negatif XP eklemeyi engelle
+  IF p_amount <= 0 THEN
+    RAISE EXCEPTION 'XP miktari pozitif olmali: %', p_amount;
+  END IF;
+
+  UPDATE profiles
+  SET total_xp = COALESCE(total_xp, 0) + p_amount
+  WHERE id = p_user_id;
+
+  -- Kullanici bulunamadiysa hata ver
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Profil bulunamadi: %', p_user_id;
+  END IF;
+END;
+$$;
+
+-- RPC'yi sadece authenticated kullanicilar cagirabilsin
+REVOKE ALL ON FUNCTION increment_xp(uuid, integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION increment_xp(uuid, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION increment_xp(uuid, integer) TO service_role;
+
+-- ============================================================
+-- 013: Push Notification Subscriptions
+-- Web Push API abonelikleri icin tablo
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  endpoint    TEXT NOT NULL,
+  p256dh      TEXT NOT NULL,
+  auth        TEXT NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+
+  UNIQUE(user_id, endpoint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_sub_user ON push_subscriptions(user_id);
+
+-- RLS
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "push_own" ON push_subscriptions;
+CREATE POLICY "push_own" ON push_subscriptions FOR ALL USING (auth.uid() = user_id);
+
+-- ============================================================
+-- 014: Friend System (Arkadas Sistemi)
+-- Kullanicilar birbirini arkadas olarak ekleyebilir.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS friendships (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  friend_id   UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  status      VARCHAR(10) NOT NULL DEFAULT 'pending'
+              CHECK (status IN ('pending', 'accepted', 'blocked')),
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+
+  -- Ayni kisi ciftine tek istek
+  UNIQUE(user_id, friend_id),
+  -- Kendine istek gonderemez
+  CHECK(user_id != friend_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_friendships_user ON friendships(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_friendships_friend ON friendships(friend_id, status);
+
+-- RLS
+ALTER TABLE friendships ENABLE ROW LEVEL SECURITY;
+
+-- Kendi arkadasliklarini gorebilir (gonderilen veya alinan)
+DROP POLICY IF EXISTS "friendships_select" ON friendships;
+CREATE POLICY "friendships_select" ON friendships
+  FOR SELECT USING (auth.uid() = user_id OR auth.uid() = friend_id);
+
+-- Istek gonderebilir (sadece kendi adina)
+DROP POLICY IF EXISTS "friendships_insert" ON friendships;
+CREATE POLICY "friendships_insert" ON friendships
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Kabul/reddet (alici taraf) veya iptal (gonderici taraf)
+DROP POLICY IF EXISTS "friendships_update" ON friendships;
+CREATE POLICY "friendships_update" ON friendships
+  FOR UPDATE USING (auth.uid() = user_id OR auth.uid() = friend_id);
+
+-- Arkadasligi sil (her iki taraf da yapabilir)
+DROP POLICY IF EXISTS "friendships_delete" ON friendships;
+CREATE POLICY "friendships_delete" ON friendships
+  FOR DELETE USING (auth.uid() = user_id OR auth.uid() = friend_id);
+
+-- Updated_at trigger
+CREATE TRIGGER trg_friendships_updated
+  BEFORE UPDATE ON friendships
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================
+-- 015: Referral System (Davet Sistemi)
+-- Her kullaniciya benzersiz davet kodu. Davet edilen kayit olunca
+-- her iki tarafa XP odulu.
+-- ============================================================
+
+-- Profiles tablosuna referral_code kolonu ekle
+ALTER TABLE profiles
+  ADD COLUMN IF NOT EXISTS referral_code VARCHAR(8) UNIQUE,
+  ADD COLUMN IF NOT EXISTS referred_by UUID REFERENCES profiles(id);
+
+-- Referral log tablosu
+CREATE TABLE IF NOT EXISTS referral_rewards (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  referrer_id   UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  referred_id   UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  xp_awarded    SMALLINT NOT NULL DEFAULT 100,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+
+  UNIQUE(referrer_id, referred_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_referral_referrer ON referral_rewards(referrer_id);
+
+-- RLS
+ALTER TABLE referral_rewards ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "referral_own" ON referral_rewards;
+CREATE POLICY "referral_own" ON referral_rewards
+  FOR SELECT USING (auth.uid() = referrer_id OR auth.uid() = referred_id);
+
+-- Mevcut kullanicilara referral_code ata (8 karakter alfanumerik)
+-- Bu bir kerelik migration — yeni kullanicilar icin trigger oluturacagiz
+UPDATE profiles
+SET referral_code = UPPER(SUBSTR(MD5(RANDOM()::TEXT || id::TEXT), 1, 8))
+WHERE referral_code IS NULL;
+
+-- Yeni kullanicilara otomatik referral_code ata
+CREATE OR REPLACE FUNCTION generate_referral_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.referral_code IS NULL THEN
+    NEW.referral_code := UPPER(SUBSTR(MD5(RANDOM()::TEXT || NEW.id::TEXT), 1, 8));
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_referral_code ON profiles;
+CREATE TRIGGER trg_referral_code
+  BEFORE INSERT ON profiles
+  FOR EACH ROW EXECUTE FUNCTION generate_referral_code();
