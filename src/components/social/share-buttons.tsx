@@ -14,7 +14,7 @@ export function ShareButtons({ rank, score, total, xp, gameName }: ShareButtonsP
     ? `Bilge Arena'da ${gameName} oyununda ${rank} rank aldim! ${score}/${total} dogru (%${pct}) - ${xp} XP kazandim! 🏆`
     : `Bilge Arena'da ${rank} rank aldim! ${score}/${total} dogru (%${pct}) - ${xp} XP kazandim! 🏆`
 
-  const url = 'https://bilgearena.com'
+  const url = 'https://www.bilgearena.com'
   const encodedText = encodeURIComponent(text)
   const encodedUrl = encodeURIComponent(url)
 

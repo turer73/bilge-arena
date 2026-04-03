@@ -67,7 +67,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bilgearena.com').trim()
 
 const jsonLd = [
   {

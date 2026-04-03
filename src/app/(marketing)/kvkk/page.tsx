@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bilgearena.com').trim()
 
 export const metadata: Metadata = {
   title: 'KVKK Aydınlatma Metni',
