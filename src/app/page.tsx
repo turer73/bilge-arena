@@ -7,7 +7,7 @@ import { StatsBar } from '@/components/landing/stats-bar'
 import { GamesSection } from '@/components/landing/games-section'
 
 /* ─── SEO: Ana sayfa metadata ─── */
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bilgearena.com').trim()
 
 export const metadata: Metadata = {
   title: 'Bilge Arena — YKS Hazırlık Platformu | Oyunlaştırılmış Sınav Hazırlığı',

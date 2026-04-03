@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  * NO database calls, NO external services — just proves the
  * Vercel function is alive and responding.
  *
- * Use this URL in Uptime Kuma: https://bilgearena.com/api/health/ping
+ * Use this URL in Uptime Kuma: https://www.bilgearena.com/api/health/ping
  */
 export async function GET() {
   return NextResponse.json(

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 
-const BASE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+const BASE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bilgearena.com').trim()
 
 const GAMES = ['matematik', 'turkce', 'fen', 'sosyal', 'wordquest']
 
