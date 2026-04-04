@@ -8,6 +8,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   images: {
     // AVIF > WebP > JPEG — en iyi sıkıştırma formatlarını tercih et
     formats: ['image/avif', 'image/webp'],

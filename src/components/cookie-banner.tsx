@@ -137,7 +137,7 @@ export function CookieBanner() {
                             Analitik Çerezler
                           </p>
                           <p className="text-xs text-[var(--text-muted)]">
-                            Google Analytics, Vercel Analytics — anonim kullanım istatistikleri
+                            Google Analytics, Plausible Analytics — anonim kullanım istatistikleri
                           </p>
                         </div>
                       </div>

@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.env.local
+.env*.local
+*.md
+Dockerfile
+docker-compose*
+.dockerignore
+.vercel
+.vscode
+coverage
+test-results*
