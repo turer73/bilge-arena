@@ -5,6 +5,11 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholde
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
 
 export async function middleware(request: NextRequest) {
+  // Health endpoint — Uptime Kuma icin auth bypass
+  if (request.nextUrl.pathname === '/api/health/ping') {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
