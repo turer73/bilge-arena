@@ -76,8 +76,6 @@ jobs:
           node-version: 22
           cache: npm
 
-      - run: npm ci
-
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
@@ -86,6 +84,8 @@ jobs:
 
       - name: Build with Vercel
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          SENTRY_AUTH_TOKEN: ""
 
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
