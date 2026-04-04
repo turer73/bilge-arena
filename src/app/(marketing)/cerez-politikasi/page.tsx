@@ -49,7 +49,7 @@ export default function CerezPolitikasiPage() {
                 </tr>
                 <tr className="border-b border-[var(--border)]">
                   <td className="py-2 pr-4 font-medium text-[var(--text)]">Analitik Çerezler</td>
-                  <td className="py-2 pr-4">Vercel Analytics — sayfa görüntüleme, performans ölçümü</td>
+                  <td className="py-2 pr-4">Plausible Analytics — anonim sayfa görüntüleme istatistikleri</td>
                   <td className="py-2">Oturum süresi</td>
                 </tr>
                 <tr>
@@ -67,8 +67,8 @@ export default function CerezPolitikasiPage() {
           <p>Platform aşağıdaki üçüncü taraf hizmetlerini kullanır:</p>
           <ul className="ml-4 mt-2 list-disc space-y-1">
             <li>
-              <strong>Vercel Analytics:</strong> Anonim kullanım istatistikleri toplar.
-              Kişisel veri içermez, GDPR uyumludur.
+              <strong>Plausible Analytics:</strong> Anonim kullanım istatistikleri toplar.
+              Çerez kullanmaz, GDPR uyumludur.
             </li>
             <li>
               <strong>Supabase Auth:</strong> Kimlik doğrulama için oturum çerezleri
