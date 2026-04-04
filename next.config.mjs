@@ -30,6 +30,9 @@ const nextConfig = {
     ],
   },
 
+  // Standalone output — Docker/Coolify icin gerekli
+  output: 'standalone',
+
   // Deneysel performans bayraklari
   experimental: {
     // Optimize edilmiş paket importlari — tree-shaking iyilestirmesi

@@ -12,3 +12,6 @@ docker-compose*
 .vscode
 coverage
 test-results*
+e2e
+playwright.config.ts
+database/seed*.js
