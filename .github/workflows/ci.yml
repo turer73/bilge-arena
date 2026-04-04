@@ -78,24 +78,15 @@ jobs:
 
       - run: npm ci
 
-      - name: Build
-        run: npm run build
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
 
-      # master push'larinda Vercel'e otomatik deploy
-      # Vercel API ile mevcut basarili deploy'u redeploy eder
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build with Vercel
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        run: |
-          DEPLOY_ID=$(curl -s -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
-            "https://api.vercel.com/v6/deployments?projectId=${{ secrets.VERCEL_PROJECT_ID }}&teamId=${{ secrets.VERCEL_ORG_ID }}&target=production&state=READY&limit=1" \
-            | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);console.log(j.deployments?.[0]?.uid||'')})")
-
-          if [ -z "$DEPLOY_ID" ]; then echo "No ready deployment found"; exit 0; fi
-
-          echo "Redeploying $DEPLOY_ID..."
-          RESULT=$(curl -s -X POST -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"name\":\"bilge-arena\",\"deploymentId\":\"$DEPLOY_ID\",\"target\":\"production\"}" \
-            "https://api.vercel.com/v13/deployments?teamId=${{ secrets.VERCEL_ORG_ID }}")
-
-          echo "$RESULT" | node -e "process.stdin.on('data',d=>{const j=JSON.parse(d);if(j.error){console.error(j.error.message);process.exit(1)}console.log('Deployed:',j.url)})"
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
