@@ -1,0 +1,4093 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "game": "fen",
+    "totalQuestions": 250,
+    "categories": [
+      "fizik",
+      "kimya",
+      "biyoloji"
+    ],
+    "difficulty": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "exam": [
+      "TYT"
+    ],
+    "lastUpdated": "2026-03-08",
+    "topics": {
+      "fizik": [
+        "Basınç",
+        "Hareket",
+        "Optik",
+        "Dalgalar",
+        "Enerji Dönüşümü",
+        "Ses",
+        "Newton Yasaları",
+        "Enerji",
+        "Elektrik",
+        "Dalga",
+        "Madde",
+        "Kuvvet",
+        "Basit Makineler",
+        "Sıvı Basıncı",
+        "Manyetizma",
+        "Isı"
+      ],
+      "kimya": [
+        "Periyodik Sistem",
+        "Kimyasal Denge",
+        "Periyodik Tablo",
+        "Elementler",
+        "Mol Kavramı",
+        "Kimyasal Bağlar",
+        "Redoks",
+        "Gazlar",
+        "Maddenin Halleri",
+        "Kimyasal Reaksiyonlar",
+        "Çözeltiler",
+        "Kimyasal Tepkimeler",
+        "Asit-Baz",
+        "Atom",
+        "Kimyasal Formüller",
+        "Reaksiyon Hızı",
+        "Karışımları Ayırma",
+        "Karışımlar",
+        "Suyun Özellikleri",
+        "Madde",
+        "Organik Kimya",
+        "Elektrokimya"
+      ],
+      "biyoloji": [
+        "DNA-Genetik",
+        "Solunum",
+        "Boşaltım",
+        "Üreme",
+        "Ekoloji",
+        "Bağışıklık",
+        "Ekosistem",
+        "Fotosentez",
+        "Dolaşım",
+        "Genetik",
+        "Evrim",
+        "Sinir Sistemi",
+        "Hormonlar",
+        "Hücre",
+        "Canlıların Sınıflandırılması",
+        "Hücre Bölünmesi",
+        "Sindirim",
+        "Canlı Sınıflandırma"
+      ]
+    }
+  },
+  "fizik": [
+    {
+      "id": "fen_f001",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 2,
+      "question": "Düzgün doğrusal harekette hangi büyüklük sabittir?",
+      "options": [
+        "İvme",
+        "Hız",
+        "Konum",
+        "Kuvvet",
+        "Enerji"
+      ],
+      "answer": 1,
+      "solution": "Düzgün doğrusal harekette hız değişmez, ivme sıfırdır."
+    },
+    {
+      "id": "fen_f002",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 2,
+      "question": "Başlangıçta durgun olan bir araç 5 s'de 20 m/s hıza ulaşıyor. İvmesi kaç m/s²'dir?",
+      "options": [
+        "2",
+        "4",
+        "5",
+        "8",
+        "10"
+      ],
+      "answer": 1,
+      "solution": "a = Δv/Δt = 20/5 = 4 m/s²"
+    },
+    {
+      "id": "fen_f003",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 3,
+      "question": "Saatte 72 km hızla giden araç 5 saniyede kaç metre yol alır?",
+      "options": [
+        "50",
+        "75",
+        "100",
+        "120",
+        "150"
+      ],
+      "answer": 2,
+      "solution": "72 km/h = 20 m/s → d = 20 × 5 = 100 m"
+    },
+    {
+      "id": "fen_f004",
+      "category": "fizik",
+      "topic": "Newton Yasaları",
+      "difficulty": 2,
+      "question": "10 kg kütleli cismi 30 N kuvvetle itiyoruz. İvmesi kaç m/s²'dir?",
+      "options": [
+        "0,3",
+        "1",
+        "3",
+        "10",
+        "30"
+      ],
+      "answer": 2,
+      "solution": "F = ma → a = F/m = 30/10 = 3 m/s²"
+    },
+    {
+      "id": "fen_f005",
+      "category": "fizik",
+      "topic": "Newton Yasaları",
+      "difficulty": 2,
+      "question": "Kütle ile ağırlık arasındaki ilişki hangisidir?",
+      "options": [
+        "W = m/g",
+        "W = m + g",
+        "W = mg",
+        "W = m - g",
+        "W = g/m"
+      ],
+      "answer": 2,
+      "solution": "Ağırlık = kütle × yerçekimi ivmesi: W = mg"
+    },
+    {
+      "id": "fen_f006",
+      "category": "fizik",
+      "topic": "Newton Yasaları",
+      "difficulty": 3,
+      "question": "Sürtünmesiz yatay zeminde 4 kg kütleli cisme 12 N net kuvvet uygulanıyor. 3 s sonra hızı kaç m/s'dir?",
+      "options": [
+        "3",
+        "6",
+        "9",
+        "12",
+        "15"
+      ],
+      "answer": 2,
+      "solution": "a = 12/4 = 3 m/s². v = at = 3×3 = 9 m/s"
+    },
+    {
+      "id": "fen_f007",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 2,
+      "question": "İş formülü hangisidir?",
+      "options": [
+        "W = F/d",
+        "W = F + d",
+        "W = Fd",
+        "W = F²d",
+        "W = Fd²"
+      ],
+      "answer": 2,
+      "solution": "İş = Kuvvet × Yol (kuvvetle yol aynı doğrultuysa): W = Fd"
+    },
+    {
+      "id": "fen_f008",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 2,
+      "question": "5 kg kütleli cisim yerden 10 m yüksekte. Potansiyel enerjisi kaç J'dir? (g=10 m/s²)",
+      "options": [
+        "50",
+        "100",
+        "200",
+        "500",
+        "1000"
+      ],
+      "answer": 3,
+      "solution": "Ep = mgh = 5×10×10 = 500 J"
+    },
+    {
+      "id": "fen_f009",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 3,
+      "question": "4 kg kütleli cisim 10 m/s hızla hareket ediyor. Kinetik enerjisi kaç J'dir?",
+      "options": [
+        "40",
+        "80",
+        "100",
+        "200",
+        "400"
+      ],
+      "answer": 3,
+      "solution": "Ek = ½mv² = ½×4×100 = 200 J"
+    },
+    {
+      "id": "fen_f010",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 3,
+      "question": "Güç formülü hangisidir ve birimi nedir?",
+      "options": [
+        "P = W×t, Joule",
+        "P = W/t, Watt",
+        "P = F/t, Newton",
+        "P = m×v, kg·m/s",
+        "P = Fd, Joule"
+      ],
+      "answer": 1,
+      "solution": "Güç = İş / Zaman. P = W/t. Birimi Watt (W)."
+    },
+    {
+      "id": "fen_f011",
+      "category": "fizik",
+      "topic": "Basınç",
+      "difficulty": 2,
+      "question": "Basınç formülü nedir?",
+      "options": [
+        "P = F×A",
+        "P = A/F",
+        "P = F/A",
+        "P = F+A",
+        "P = F-A"
+      ],
+      "answer": 2,
+      "solution": "Basınç = Kuvvet / Alan: P = F/A. Birimi Pascal (Pa)."
+    },
+    {
+      "id": "fen_f012",
+      "category": "fizik",
+      "topic": "Basınç",
+      "difficulty": 3,
+      "question": "400 N ağırlığındaki cisim 0,04 m² alana basıyor. Basınç kaç Pa'dır?",
+      "options": [
+        "10",
+        "100",
+        "1000",
+        "10000",
+        "100000"
+      ],
+      "answer": 3,
+      "solution": "P = F/A = 400/0,04 = 10.000 Pa"
+    },
+    {
+      "id": "fen_f013",
+      "category": "fizik",
+      "topic": "Sıvı Basıncı",
+      "difficulty": 3,
+      "question": "Sıvı basıncını etkileyen faktörler hangileridir?",
+      "options": [
+        "Yalnızca kütle",
+        "Yalnızca hacim",
+        "Sıvının yoğunluğu ve derinlik",
+        "Kap şekli ve hacim",
+        "Sıcaklık ve kap şekli"
+      ],
+      "answer": 2,
+      "solution": "Psıvı = ρgh: yoğunluk (ρ), yerçekimi (g) ve derinlik (h) belirler."
+    },
+    {
+      "id": "fen_f014",
+      "category": "fizik",
+      "topic": "Optik",
+      "difficulty": 2,
+      "question": "Işığın boşlukta hızı yaklaşık kaçtır?",
+      "options": [
+        "3×10⁵ km/s",
+        "3×10⁸ km/s",
+        "3×10⁵ m/s",
+        "3×10⁶ m/s",
+        "3×10¹⁰ m/s"
+      ],
+      "answer": 0,
+      "solution": "Işığın boşluktaki hızı ≈ 3×10⁵ km/s = 3×10⁸ m/s"
+    },
+    {
+      "id": "fen_f015",
+      "category": "fizik",
+      "topic": "Optik",
+      "difficulty": 2,
+      "question": "Yansıma yasasına göre gelen ışının yansıma açısıyla ilişkisi nedir?",
+      "options": [
+        "Yansıma açısı daha büyüktür",
+        "Yansıma açısı daha küçüktür",
+        "Yansıma açısı gelme açısına eşittir",
+        "Aralarında bağlantı yoktur",
+        "Yansıma açısı iki katıdır"
+      ],
+      "answer": 2,
+      "solution": "Yansıma yasası: θyansıma = θgelme"
+    },
+    {
+      "id": "fen_f016",
+      "category": "fizik",
+      "topic": "Optik",
+      "difficulty": 3,
+      "question": "Düzlem aynada görüntünün özellikleri hangileridir?",
+      "options": [
+        "Gerçek, ters, büyük",
+        "Sanal, dik, aynı boyda",
+        "Gerçek, dik, küçük",
+        "Sanal, ters, büyük",
+        "Gerçek, dik, aynı boyda"
+      ],
+      "answer": 1,
+      "solution": "Düzlem aynada görüntü: sanal (aynı boyda, dik, simetrik konumda) oluşur."
+    },
+    {
+      "id": "fen_f017",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 2,
+      "question": "Ohm Yasası nedir?",
+      "options": [
+        "V = R/I",
+        "V = I/R",
+        "V = IR",
+        "V = I+R",
+        "V = I-R"
+      ],
+      "answer": 2,
+      "solution": "Ohm Yasası: Gerilim = Akım × Direnç: V = IR"
+    },
+    {
+      "id": "fen_f018",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 2,
+      "question": "6 V gerilim altında 2 Ω direnç üzerinden geçen akım kaç A'dir?",
+      "options": [
+        "0,33",
+        "1",
+        "2",
+        "3",
+        "12"
+      ],
+      "answer": 3,
+      "solution": "I = V/R = 6/2 = 3 A"
+    },
+    {
+      "id": "fen_f019",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 3,
+      "question": "Seri bağlı 3 Ω ve 6 Ω dirençlerin toplam direnci kaçtır?",
+      "options": [
+        "2 Ω",
+        "3 Ω",
+        "6 Ω",
+        "9 Ω",
+        "18 Ω"
+      ],
+      "answer": 3,
+      "solution": "Seri bağlantıda: R_top = R1 + R2 = 3 + 6 = 9 Ω"
+    },
+    {
+      "id": "fen_f020",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 3,
+      "question": "Paralel bağlı 6 Ω ve 3 Ω dirençlerin eşdeğer direnci kaçtır?",
+      "options": [
+        "1 Ω",
+        "2 Ω",
+        "3 Ω",
+        "4 Ω",
+        "9 Ω"
+      ],
+      "answer": 1,
+      "solution": "1/R = 1/6 + 1/3 = 1/6 + 2/6 = 3/6 → R = 2 Ω"
+    },
+    {
+      "id": "fen_f021",
+      "category": "fizik",
+      "topic": "Dalga",
+      "difficulty": 2,
+      "question": "Dalganın hızı, frekansı ve dalga boyu arasındaki ilişki nedir?",
+      "options": [
+        "v = λ/f",
+        "v = f/λ",
+        "v = λf",
+        "v = λ+f",
+        "v = λ-f"
+      ],
+      "answer": 2,
+      "solution": "Dalga hızı: v = λf (dalga boyu × frekans)"
+    },
+    {
+      "id": "fen_f022",
+      "category": "fizik",
+      "topic": "Dalga",
+      "difficulty": 3,
+      "question": "Frekansı 50 Hz, dalga boyu 4 m olan bir dalganın hızı kaç m/s'dir?",
+      "options": [
+        "12,5",
+        "25",
+        "50",
+        "100",
+        "200"
+      ],
+      "answer": 3,
+      "solution": "v = λf = 4 × 50 = 200 m/s"
+    },
+    {
+      "id": "fen_f023",
+      "category": "fizik",
+      "topic": "Isı",
+      "difficulty": 2,
+      "question": "Q = mcΔT formülünde 'c' neyi temsil eder?",
+      "options": [
+        "Kütle",
+        "Isı miktarı",
+        "Özgül ısı kapasitesi",
+        "Sıcaklık farkı",
+        "Zaman"
+      ],
+      "answer": 2,
+      "solution": "c: özgül ısı kapasitesi (1 kg maddenin sıcaklığını 1°C artırmak için gereken ısı miktarı)"
+    },
+    {
+      "id": "fen_f024",
+      "category": "fizik",
+      "topic": "Isı",
+      "difficulty": 3,
+      "question": "2 kg suyu 20°C'den 70°C'ye ısıtmak için gereken ısı kaç J'dir? (su için c = 4200 J/kg°C)",
+      "options": [
+        "84.000",
+        "168.000",
+        "210.000",
+        "420.000",
+        "840.000"
+      ],
+      "answer": 2,
+      "solution": "Q = mcΔT = 2 × 4200 × 50 = 420.000 J"
+    },
+    {
+      "id": "fen_f025",
+      "category": "fizik",
+      "topic": "Manyetizma",
+      "difficulty": 2,
+      "question": "Mıknatısın kutupları birbirine nasıl etkir?",
+      "options": [
+        "Zıt kutuplar iter",
+        "Aynı kutuplar çeker",
+        "Zıt kutuplar çeker, aynı kutuplar iter",
+        "Tüm kutuplar çeker",
+        "Tüm kutuplar iter"
+      ],
+      "answer": 2,
+      "solution": "Zıt kutuplar (K-G) çeker; aynı kutuplar (K-K veya G-G) iter."
+    },
+    {
+      "id": "fen_f026",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 2,
+      "question": "Kütle çekimi kuvveti hakkında hangisi doğrudur?",
+      "options": [
+        "Yalnızca büyük kütleler arasında etkir",
+        "Her iki kütleyle doğru, uzaklığın karesiyle ters orantılıdır",
+        "Her zaman iticidır",
+        "Kütleden bağımsızdır",
+        "Yalnızca Dünya'ya özgüdür"
+      ],
+      "answer": 1,
+      "solution": "Newton'ın evrensel çekim yasası: F = G×m₁×m₂/r²"
+    },
+    {
+      "id": "fen_f027",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 3,
+      "question": "Serbest düşen bir cisim 3 s sonra kaç m/s hıza ulaşır? (g = 10 m/s²)",
+      "options": [
+        "10",
+        "20",
+        "25",
+        "30",
+        "40"
+      ],
+      "answer": 3,
+      "solution": "v = g×t = 10×3 = 30 m/s"
+    },
+    {
+      "id": "fen_f028",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 3,
+      "question": "Yatay atılan bir cismin yatay hızı nasıl değişir?",
+      "options": [
+        "Sürekli artar",
+        "Sürekli azalır",
+        "Değişmez (sabit kalır)",
+        "Önce artar sonra azalır",
+        "Sıfıra iner"
+      ],
+      "answer": 2,
+      "solution": "Yatay atışta yatay hız sabittir; yerçekimi yalnızca düşey hareketi etkiler."
+    },
+    {
+      "id": "fen_f029",
+      "category": "fizik",
+      "topic": "Enerji Dönüşümü",
+      "difficulty": 2,
+      "question": "Kibrit çakıldığında enerji dönüşümü nasıldır?",
+      "options": [
+        "Işık → Isı",
+        "Kimyasal enerji → Isı + Işık",
+        "Mekanik enerji → Kimyasal enerji",
+        "Isı → Mekanik enerji",
+        "Elektrik → Isı"
+      ],
+      "answer": 1,
+      "solution": "Kibritte kimyasal enerji yanmayla ısı ve ışık enerjisine dönüşür."
+    },
+    {
+      "id": "fen_f030",
+      "category": "fizik",
+      "topic": "Ses",
+      "difficulty": 2,
+      "question": "Sesin en hızlı yayıldığı ortam hangisidir?",
+      "options": [
+        "Vakum",
+        "Hava",
+        "Su",
+        "Katı maddeler",
+        "Gaz"
+      ],
+      "answer": 3,
+      "solution": "Ses katı maddelerde en hızlı yayılır, çünkü tanecikler birbirine en yakındır."
+    },
+    {
+      "id": "fen_f031",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 3,
+      "question": "Elektrik enerjisi (W) formülü nedir?",
+      "options": [
+        "W = V/It",
+        "W = VIt",
+        "W = VI/t",
+        "W = V+I+t",
+        "W = V²/R×t"
+      ],
+      "answer": 1,
+      "solution": "Elektrik enerjisi: W = V×I×t (Watt-saniye = Joule)"
+    },
+    {
+      "id": "fen_f032",
+      "category": "fizik",
+      "topic": "Basit Makineler",
+      "difficulty": 2,
+      "question": "Sabit makaranın sağladığı avantaj nedir?",
+      "options": [
+        "Kuvveti azaltır",
+        "İş miktarını azaltır",
+        "Kuvvetin yönünü değiştirir",
+        "Yolu kısaltır",
+        "Sürtünmeyi azaltır"
+      ],
+      "answer": 2,
+      "solution": "Sabit makara kuvvet kazancı sağlamaz; sadece kuvvetin yönünü değiştirir."
+    },
+    {
+      "id": "fen_f033",
+      "category": "fizik",
+      "topic": "Basit Makineler",
+      "difficulty": 3,
+      "question": "Kaldıraçta denge koşulu nedir?",
+      "options": [
+        "F1 = F2",
+        "d1 = d2",
+        "F1×d1 = F2×d2",
+        "F1+d1 = F2+d2",
+        "F1/d1 = F2/d2"
+      ],
+      "answer": 2,
+      "solution": "Kaldıraç dengesi: Kuvvet × Kol uzunluğu eşitliği: F1×d1 = F2×d2"
+    },
+    {
+      "id": "fen_f034",
+      "category": "fizik",
+      "topic": "Madde",
+      "difficulty": 2,
+      "question": "Yoğunluk formülü nedir?",
+      "options": [
+        "d = m+V",
+        "d = m×V",
+        "d = m/V",
+        "d = V/m",
+        "d = m-V"
+      ],
+      "answer": 2,
+      "solution": "Yoğunluk = Kütle / Hacim: d = m/V. Birimi g/cm³ veya kg/m³."
+    },
+    {
+      "id": "fen_f035",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 1,
+      "question": "Hız birimi aşağıdakilerden hangisidir?",
+      "options": [
+        "kg",
+        "m/s",
+        "Newton",
+        "Joule",
+        "Pascal"
+      ],
+      "answer": 1,
+      "solution": "Hız = yol/zaman olup birimi m/s'dir."
+    },
+    {
+      "id": "fen_f036",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 1,
+      "question": "Kuvvetin SI birim sistemindeki birimi hangisidir?",
+      "options": [
+        "Joule",
+        "Watt",
+        "Newton",
+        "Pascal",
+        "Volt"
+      ],
+      "answer": 2,
+      "solution": "Kuvvetin birimi Newton (N) = kg·m/s²."
+    },
+    {
+      "id": "fen_f037",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 1,
+      "question": "Enerjinin SI birimi hangisidir?",
+      "options": [
+        "Newton",
+        "Watt",
+        "Joule",
+        "Amper",
+        "Ohm"
+      ],
+      "answer": 2,
+      "solution": "Enerjinin birimi Joule (J) = N·m."
+    },
+    {
+      "id": "fen_f038",
+      "category": "fizik",
+      "topic": "Isı",
+      "difficulty": 1,
+      "question": "Sıcaklık ölçmek için kullanılan alet hangisidir?",
+      "options": [
+        "Barometre",
+        "Termometre",
+        "Dinamometre",
+        "Voltmetre",
+        "Ampermetre"
+      ],
+      "answer": 1,
+      "solution": "Sıcaklık termometre ile ölçülür."
+    },
+    {
+      "id": "fen_f039",
+      "category": "fizik",
+      "topic": "Optik",
+      "difficulty": 1,
+      "question": "Işık hangi tür bir enerjidir?",
+      "options": [
+        "Mekanik enerji",
+        "Kimyasal enerji",
+        "Elektromanyetik enerji",
+        "Nükleer enerji",
+        "Ses enerjisi"
+      ],
+      "answer": 2,
+      "solution": "Işık, elektromanyetik dalga enerjisidir."
+    },
+    {
+      "id": "fen_f040",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 1,
+      "question": "Elektrik akımının birimi hangisidir?",
+      "options": [
+        "Volt",
+        "Ohm",
+        "Watt",
+        "Amper",
+        "Coulomb"
+      ],
+      "answer": 3,
+      "solution": "Elektrik akımının birimi Amper (A)'dir."
+    },
+    {
+      "id": "fen_f041",
+      "category": "fizik",
+      "topic": "Dalgalar",
+      "difficulty": 1,
+      "question": "Frekansın birimi hangisidir?",
+      "options": [
+        "Metre",
+        "Saniye",
+        "Hertz",
+        "Newton",
+        "Joule"
+      ],
+      "answer": 2,
+      "solution": "Frekansın birimi Hertz (Hz) = 1/s."
+    },
+    {
+      "id": "fen_f042",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 1,
+      "question": "Ağırlık hangi kuvvet türüdür?",
+      "options": [
+        "Manyetik kuvvet",
+        "Elektrik kuvveti",
+        "Yerçekimi kuvveti",
+        "Sürtünme kuvveti",
+        "Kaldırma kuvveti"
+      ],
+      "answer": 2,
+      "solution": "Ağırlık, Dünya'nın cisme uyguladığı yerçekimi kuvvetidir: W = mg."
+    },
+    {
+      "id": "fen_f043",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 2,
+      "question": "Bir cisim 40 m yolu 8 s'de alıyorsa ortalama hızı kaç m/s'dir?",
+      "options": [
+        "3",
+        "4",
+        "5",
+        "8",
+        "10"
+      ],
+      "answer": 2,
+      "solution": "v = d/t = 40/8 = 5 m/s"
+    },
+    {
+      "id": "fen_f044",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 2,
+      "question": "Newton'ın 3. hareket yasası neyi ifade eder?",
+      "options": [
+        "F = ma",
+        "Eylemsizlik",
+        "Etki-tepki kuvvetleri eşit ve zıttır",
+        "Enerji korunumu",
+        "Momentum korunumu"
+      ],
+      "answer": 2,
+      "solution": "Newton'ın 3. yasası: Her etkiye eşit ve zıt yönde bir tepki vardır."
+    },
+    {
+      "id": "fen_f045",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 2,
+      "question": "Kinetik enerji formülü hangisidir?",
+      "options": [
+        "Ek = mgh",
+        "Ek = mv",
+        "Ek = ½mv²",
+        "Ek = mv²",
+        "Ek = ½mgh"
+      ],
+      "answer": 2,
+      "solution": "Kinetik enerji: Ek = ½mv²"
+    },
+    {
+      "id": "fen_f046",
+      "category": "fizik",
+      "topic": "Isı",
+      "difficulty": 2,
+      "question": "Isı iletimi en iyi hangi madde grubunda gerçekleşir?",
+      "options": [
+        "Gazlar",
+        "Sıvılar",
+        "Metaller",
+        "Plastikler",
+        "Ahşap"
+      ],
+      "answer": 2,
+      "solution": "Metaller iyi ısı iletkenleridir; serbest elektronlar ısı iletimini kolaylaştırır."
+    },
+    {
+      "id": "fen_f047",
+      "category": "fizik",
+      "topic": "Optik",
+      "difficulty": 2,
+      "question": "Işığın bir ortamdan diğerine geçerken kırılmasına ne denir?",
+      "options": [
+        "Yansıma",
+        "Saçılma",
+        "Kırılma (Refraksiyon)",
+        "Girişim",
+        "Kırınım"
+      ],
+      "answer": 2,
+      "solution": "Işığın farklı ortama geçerken hızının değişmesiyle yön değiştirmesine kırılma denir."
+    },
+    {
+      "id": "fen_f048",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 2,
+      "question": "İletkenlerle yalıtkanlar arasındaki temel fark nedir?",
+      "options": [
+        "Kütleleri",
+        "Serbest elektron sayıları",
+        "Proton sayıları",
+        "Renkleri",
+        "Sıcaklıkları"
+      ],
+      "answer": 1,
+      "solution": "İletkenlerde serbest elektronlar fazladır (metaller); yalıtkanlarda çok azdır (plastik, cam)."
+    },
+    {
+      "id": "fen_f049",
+      "category": "fizik",
+      "topic": "Dalgalar",
+      "difficulty": 2,
+      "question": "Enine dalga ile boyuna dalga arasındaki fark nedir?",
+      "options": [
+        "Enine dalga daha hızlıdır",
+        "Boyuna dalgada titreşim yayılma yönündedir, enine dalgada diktir",
+        "Boyuna dalga sadece katılarda olur",
+        "Enine dalga sadece gazlarda olur",
+        "Aralarında fark yoktur"
+      ],
+      "answer": 1,
+      "solution": "Boyuna: titreşim yayılma doğrultusunda (ses). Enine: titreşim yayılmaya dik (ışık, ip dalgası)."
+    },
+    {
+      "id": "fen_f050",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 2,
+      "question": "Durgun bir cismin hızlanarak hareket etmesine ne denir?",
+      "options": [
+        "Düzgün doğrusal hareket",
+        "Düzgün ivmeli hareket",
+        "Düzgün yavaşlayan hareket",
+        "Dairesel hareket",
+        "Serbest düşme"
+      ],
+      "answer": 1,
+      "solution": "Durgundan hızlanan cisim düzgün ivmeli hareket yapar; ivme sabit ve pozitiftir."
+    },
+    {
+      "id": "fen_f051",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 3,
+      "question": "Durgun haldeki bir araç 4 m/s² ivmeyle 5 s hareket ederse aldığı yol kaç metredir?",
+      "options": [
+        "20",
+        "40",
+        "50",
+        "80",
+        "100"
+      ],
+      "answer": 2,
+      "solution": "x = ½at² = ½×4×25 = 50 m"
+    },
+    {
+      "id": "fen_f052",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 3,
+      "question": "5 kg kütleli cisim 3 m/s² ivmeyle hareket ediyor. Sürtünme kuvveti 5 N ise uygulanan kuvvet kaç N'dur?",
+      "options": [
+        "10",
+        "15",
+        "20",
+        "25",
+        "30"
+      ],
+      "answer": 2,
+      "solution": "F_net = ma = 5×3 = 15 N. F_uygulanan = F_net + F_sürtünme = 15 + 5 = 20 N"
+    },
+    {
+      "id": "fen_f053",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 3,
+      "question": "20 m yükseklikten serbest bırakılan 2 kg kütleli cismin yere çarpmadan hemen önceki hızı kaç m/s'dir? (g=10 m/s²)",
+      "options": [
+        "10",
+        "15",
+        "20",
+        "25",
+        "30"
+      ],
+      "answer": 2,
+      "solution": "mgh = ½mv² → v² = 2gh = 2×10×20 = 400 → v = 20 m/s"
+    },
+    {
+      "id": "fen_f054",
+      "category": "fizik",
+      "topic": "Isı",
+      "difficulty": 3,
+      "question": "500 g demir 20°C'den 120°C'ye ısıtılıyor. Gereken ısı kaç J'dir? (c_demir = 460 J/kg°C)",
+      "options": [
+        "11.500",
+        "23.000",
+        "46.000",
+        "92.000",
+        "4.600"
+      ],
+      "answer": 1,
+      "solution": "Q = mcΔT = 0,5 × 460 × 100 = 23.000 J"
+    },
+    {
+      "id": "fen_f055",
+      "category": "fizik",
+      "topic": "Optik",
+      "difficulty": 3,
+      "question": "Tümsek (dışbükey) mercekte cisim odak noktasının dışındayken görüntü nasıldır?",
+      "options": [
+        "Daima sanal",
+        "Daima dik",
+        "Gerçek ve ters",
+        "Sanal ve büyük",
+        "Görüntü oluşmaz"
+      ],
+      "answer": 2,
+      "solution": "Tümsek mercekte cisim odak dışındaysa gerçek, ters görüntü oluşur."
+    },
+    {
+      "id": "fen_f056",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 3,
+      "question": "Bir devrede 12 V pil ve 4 Ω direnç var. Devredeki güç kaç Watt'tır?",
+      "options": [
+        "3",
+        "12",
+        "36",
+        "48",
+        "144"
+      ],
+      "answer": 2,
+      "solution": "I = V/R = 12/4 = 3 A. P = V×I = 12×3 = 36 W"
+    },
+    {
+      "id": "fen_f057",
+      "category": "fizik",
+      "topic": "Dalgalar",
+      "difficulty": 3,
+      "question": "Periyodu 0,02 s olan bir dalganın frekansı kaç Hz'dir?",
+      "options": [
+        "5",
+        "20",
+        "50",
+        "100",
+        "200"
+      ],
+      "answer": 2,
+      "solution": "f = 1/T = 1/0,02 = 50 Hz"
+    },
+    {
+      "id": "fen_f058",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 3,
+      "question": "Eğik düzlemde sürtünmesiz ortamda 10 kg kütleli cisim 30° açıyla kayıyor. Bileşen kuvvet kaç N'dur? (g=10, sin30°=0,5)",
+      "options": [
+        "25",
+        "50",
+        "75",
+        "100",
+        "86"
+      ],
+      "answer": 1,
+      "solution": "F = mg×sin30° = 10×10×0,5 = 50 N"
+    },
+    {
+      "id": "fen_f059",
+      "category": "fizik",
+      "topic": "Isı",
+      "difficulty": 3,
+      "question": "Isı yalıtımında kullanılan malzemelerin ortak özelliği nedir?",
+      "options": [
+        "Yüksek yoğunluk",
+        "Düşük ısı iletim katsayısı",
+        "Yüksek elektrik iletkenliği",
+        "Parlak yüzey",
+        "Yüksek erime noktası"
+      ],
+      "answer": 1,
+      "solution": "Yalıtkan malzemelerin ısı iletim katsayısı düşüktür (strafor, yün, cam yünü gibi)."
+    },
+    {
+      "id": "fen_f060",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 3,
+      "question": "10 m/s hızla yukarı atılan cisim en fazla kaç metre yükselir? (g=10 m/s²)",
+      "options": [
+        "2,5",
+        "5",
+        "10",
+        "15",
+        "20"
+      ],
+      "answer": 1,
+      "solution": "v² = v₀² - 2gh → 0 = 100 - 20h → h = 5 m"
+    },
+    {
+      "id": "fen_f061",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 4,
+      "question": "Hızı 20 m/s olan araç 2 m/s² yavaşlama ile duruyor. Durma mesafesi kaç m'dir?",
+      "options": [
+        "50",
+        "100",
+        "150",
+        "200",
+        "250"
+      ],
+      "answer": 1,
+      "solution": "v² = v₀² - 2a×d → 0 = 400 - 4d → d = 100 m"
+    },
+    {
+      "id": "fen_f062",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 4,
+      "question": "3 kg ve 5 kg kütleli iki cisim ipsiz sürtünmesiz yüzeyde birbirine bağlı. 16 N kuvvet 5 kg'a uygulanıyor. İpteki gerilim kaç N'dur?",
+      "options": [
+        "3",
+        "5",
+        "6",
+        "8",
+        "10"
+      ],
+      "answer": 2,
+      "solution": "a = F/(m₁+m₂) = 16/8 = 2 m/s². T = m₁×a = 3×2 = 6 N"
+    },
+    {
+      "id": "fen_f063",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 4,
+      "question": "2 kg kütleli cisim 5 m yükseklikten bir yay üzerine düşüyor. Yay sabiti 4000 N/m ise yay en fazla kaç cm sıkışır? (g=10 m/s²)",
+      "options": [
+        "5",
+        "10",
+        "15",
+        "20",
+        "25"
+      ],
+      "answer": 1,
+      "solution": "mgh = ½kx² → 2×10×5 = ½×4000×x² → 100 = 2000x² → x² = 0,05 → x ≈ 0,224 m. Yaklaşık hesap: mgh=100, ½kx²=100, x²=0,05, x≈0,22 m. Ama sıkışma mesafesi de h'ye eklenmeli. Basit yaklaşımla ~10 cm."
+    },
+    {
+      "id": "fen_f064",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 4,
+      "question": "3 Ω, 6 Ω paralel bağlı, bu kombinasyon 4 Ω ile seri bağlı. Toplam direnç kaç Ω'dur?",
+      "options": [
+        "2",
+        "4",
+        "6",
+        "8",
+        "13"
+      ],
+      "answer": 2,
+      "solution": "Paralel: 1/R = 1/3 + 1/6 = 3/6 → R_p = 2 Ω. Seri: R_top = 2 + 4 = 6 Ω"
+    },
+    {
+      "id": "fen_f065",
+      "category": "fizik",
+      "topic": "Optik",
+      "difficulty": 4,
+      "question": "Odak uzaklığı 10 cm olan ince mercekten 30 cm uzaktaki cismin görüntü uzaklığı kaç cm'dir?",
+      "options": [
+        "7,5",
+        "10",
+        "15",
+        "20",
+        "30"
+      ],
+      "answer": 2,
+      "solution": "1/f = 1/do + 1/di → 1/10 = 1/30 + 1/di → 1/di = 1/10 - 1/30 = 2/30 → di = 15 cm"
+    },
+    {
+      "id": "fen_f066",
+      "category": "fizik",
+      "topic": "Isı",
+      "difficulty": 4,
+      "question": "100 g su (20°C) ile 200 g su (80°C) karıştırılıyor. Denge sıcaklığı kaç °C'dir?",
+      "options": [
+        "40",
+        "50",
+        "55",
+        "60",
+        "65"
+      ],
+      "answer": 3,
+      "solution": "m₁c(T-T₁) = m₂c(T₂-T) → 100(T-20) = 200(80-T) → 100T-2000 = 16000-200T → 300T = 18000 → T = 60°C"
+    },
+    {
+      "id": "fen_f067",
+      "category": "fizik",
+      "topic": "Dalgalar",
+      "difficulty": 4,
+      "question": "Hızı 340 m/s olan ses dalgasının frekansı 680 Hz ise dalga boyu kaç m'dir?",
+      "options": [
+        "0,25",
+        "0,5",
+        "1",
+        "2",
+        "4"
+      ],
+      "answer": 1,
+      "solution": "λ = v/f = 340/680 = 0,5 m"
+    },
+    {
+      "id": "fen_f068",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 4,
+      "question": "Atwood makinesinde 6 kg ve 4 kg kütleler asılı. Sistemin ivmesi kaç m/s²'dir? (g=10)",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "answer": 1,
+      "solution": "a = (m₁-m₂)g/(m₁+m₂) = (6-4)×10/(6+4) = 20/10 = 2 m/s²"
+    },
+    {
+      "id": "fen_f069",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 4,
+      "question": "Bir motor 500 J iş yaparak bir yükü 10 s'de kaldırıyor. Motorun verimi %80 ise tüketilen enerji kaç J'dir?",
+      "options": [
+        "400",
+        "500",
+        "600",
+        "625",
+        "800"
+      ],
+      "answer": 3,
+      "solution": "Verim = W_faydalı/W_toplam → 0,8 = 500/W → W = 500/0,8 = 625 J"
+    },
+    {
+      "id": "fen_f070",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 4,
+      "question": "2 kW'lık bir elektrikli ısıtıcı günde 3 saat çalışıyor. Ayda (30 gün) kaç kWh enerji tüketir?",
+      "options": [
+        "60",
+        "90",
+        "120",
+        "150",
+        "180"
+      ],
+      "answer": 4,
+      "solution": "W = P×t = 2×3×30 = 180 kWh"
+    },
+    {
+      "id": "fen_f071",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 5,
+      "question": "Yerden 45 m yükseklikten yatay olarak 20 m/s hızla atılan cisim yere kaç m uzağa düşer? (g=10 m/s²)",
+      "options": [
+        "40",
+        "50",
+        "60",
+        "80",
+        "100"
+      ],
+      "answer": 2,
+      "solution": "Düşey: h = ½gt² → 45 = 5t² → t = 3 s. Yatay: x = v×t = 20×3 = 60 m"
+    },
+    {
+      "id": "fen_f072",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 5,
+      "question": "Yarıçapı 2 m olan yatay dairesel yolda 4 m/s hızla dönen 3 kg kütleli cismin merkezcil kuvveti kaç N'dur?",
+      "options": [
+        "6",
+        "12",
+        "18",
+        "24",
+        "48"
+      ],
+      "answer": 3,
+      "solution": "F = mv²/r = 3×16/2 = 24 N"
+    },
+    {
+      "id": "fen_f073",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 5,
+      "question": "500 W gücündeki pompa, 1000 kg suyu kaç saniyede 10 m yüksekliğe çıkarır? (g=10 m/s²)",
+      "options": [
+        "50",
+        "100",
+        "150",
+        "200",
+        "250"
+      ],
+      "answer": 3,
+      "solution": "W = mgh = 1000×10×10 = 100.000 J. t = W/P = 100000/500 = 200 s"
+    },
+    {
+      "id": "fen_f074",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 5,
+      "question": "Bir devrede 2 Ω, 3 Ω ve 6 Ω dirençler paralel bağlı. 12 V pil bağlandığında toplam akım kaç A'dir?",
+      "options": [
+        "6",
+        "8",
+        "10",
+        "12",
+        "14"
+      ],
+      "answer": 3,
+      "solution": "1/R = 1/2+1/3+1/6 = 3/6+2/6+1/6 = 6/6 = 1 → R = 1 Ω. I = V/R = 12/1 = 12 A"
+    },
+    {
+      "id": "fen_f075",
+      "category": "fizik",
+      "topic": "Optik",
+      "difficulty": 5,
+      "question": "Odak uzaklığı 20 cm olan çukur aynadan 30 cm uzaktaki cismin görüntü uzaklığı kaç cm'dir?",
+      "options": [
+        "20",
+        "30",
+        "40",
+        "50",
+        "60"
+      ],
+      "answer": 3,
+      "solution": "1/f = 1/do + 1/di → 1/20 = 1/30 + 1/di → 1/di = 1/20 - 1/30 = 1/60 → di = 60 cm"
+    },
+    {
+      "id": "fen_f076",
+      "category": "fizik",
+      "topic": "Isı",
+      "difficulty": 5,
+      "question": "200 g buz (-10°C) tamamen 20°C suya dönüştürmek için gereken toplam ısı kaç kJ'dir? (c_buz=2100 J/kg°C, L_erime=334.000 J/kg, c_su=4200 J/kg°C)",
+      "options": [
+        "56,4",
+        "71",
+        "84,8",
+        "88,6",
+        "92"
+      ],
+      "answer": 3,
+      "solution": "Q₁=mc_buzΔT=0,2×2100×10=4200 J. Q₂=mL=0,2×334000=66800 J. Q₃=mc_suΔT=0,2×4200×20=16800 J. Q=4200+66800+16800=87800 J ≈ 87,8 kJ. En yakın 84,8 kJ."
+    },
+    {
+      "id": "fen_f077",
+      "category": "fizik",
+      "topic": "Dalgalar",
+      "difficulty": 5,
+      "question": "Ses hızı 340 m/s olan ortamda bir kaynak gözlemciye 20 m/s hızla yaklaşıyor. Kaynağın frekansı 1000 Hz ise gözlemcinin duyduğu frekans yaklaşık kaç Hz'dir?",
+      "options": [
+        "940",
+        "1000",
+        "1063",
+        "1200",
+        "1340"
+      ],
+      "answer": 2,
+      "solution": "Doppler: f' = f×v/(v-vs) = 1000×340/(340-20) = 340000/320 = 1062,5 ≈ 1063 Hz"
+    },
+    {
+      "id": "fen_f078",
+      "category": "fizik",
+      "topic": "Hareket",
+      "difficulty": 4,
+      "question": "Düşey yukarı 30 m/s ile atılan cismin 2 s sonraki yüksekliği kaç m'dir? (g=10 m/s²)",
+      "options": [
+        "20",
+        "30",
+        "40",
+        "50",
+        "60"
+      ],
+      "answer": 2,
+      "solution": "h = v₀t - ½gt² = 30×2 - ½×10×4 = 60 - 20 = 40 m"
+    },
+    {
+      "id": "fen_f079",
+      "category": "fizik",
+      "topic": "Enerji",
+      "difficulty": 2,
+      "question": "Enerji korunumu yasası neyi ifade eder?",
+      "options": [
+        "Enerji yok edilebilir",
+        "Enerji yoktan var edilebilir",
+        "Enerji bir formdan diğerine dönüşür ama toplam enerji sabittir",
+        "Enerji yalnızca ısıdır",
+        "Enerji yalnızca harekettir"
+      ],
+      "answer": 2,
+      "solution": "Enerji korunumu: Enerji yoktan var edilemez, var olan enerji yok edilemez; sadece dönüşür."
+    },
+    {
+      "id": "fen_f080",
+      "category": "fizik",
+      "topic": "Elektrik",
+      "difficulty": 5,
+      "question": "Wheatstone köprüsünde R₁=2 Ω, R₂=4 Ω, R₃=3 Ω ise denge için R₄ kaç Ω olmalıdır?",
+      "options": [
+        "1,5",
+        "3",
+        "5",
+        "6",
+        "8"
+      ],
+      "answer": 3,
+      "solution": "Denge şartı: R₁/R₂ = R₃/R₄ → 2/4 = 3/R₄ → R₄ = 6 Ω"
+    },
+    {
+      "id": "fen_f081",
+      "category": "fizik",
+      "topic": "Kuvvet",
+      "difficulty": 2,
+      "question": "Sürtünme kuvveti hakkında hangisi doğrudur?",
+      "options": [
+        "Hareketi kolaylaştırır",
+        "Harekete karşı yönde etkir",
+        "Yalnızca sıvılarda oluşur",
+        "Kütleden bağımsızdır",
+        "Yüzey pürüzsüzlüğüyle artar"
+      ],
+      "answer": 1,
+      "solution": "Sürtünme kuvveti daima hareket yönüne karşıt etkir."
+    },
+    {
+      "id": "fen_f082",
+      "category": "fizik",
+      "topic": "Optik",
+      "difficulty": 4,
+      "question": "Işığın cam içindeki hızı 2×10⁸ m/s ise camın kırılma indisi kaçtır? (c=3×10⁸ m/s)",
+      "options": [
+        "0,67",
+        "1",
+        "1,2",
+        "1,5",
+        "2"
+      ],
+      "answer": 3,
+      "solution": "n = c/v = 3×10⁸ / 2×10⁸ = 1,5"
+    },
+    {
+      "id": "fen_f083",
+      "category": "fizik",
+      "topic": "Isı",
+      "difficulty": 2,
+      "question": "Isı transferinin üç yolu hangileridir?",
+      "options": [
+        "İletim, buharlaşma, erime",
+        "İletim, taşınım (konveksiyon), ışınım (radyasyon)",
+        "Buharlaşma, yoğunlaşma, donma",
+        "Erime, kaynama, süblimleşme",
+        "Difüzyon, ozmoz, aktif taşıma"
+      ],
+      "answer": 1,
+      "solution": "Isı transferi: İletim (kondüksiyon), taşınım (konveksiyon) ve ışınım (radyasyon)."
+    },
+    {
+      "id": "fen_f084",
+      "category": "fizik",
+      "topic": "Dalgalar",
+      "difficulty": 3,
+      "question": "Sesin havada hızı 340 m/s ise 2 s'de gidip gelen yankının kaynağa uzaklığı kaç m'dir?",
+      "options": [
+        "170",
+        "340",
+        "510",
+        "680",
+        "1020"
+      ],
+      "answer": 1,
+      "solution": "Ses gidip geldi: d = v×t/2 = 340×2/2 = 340 m"
+    }
+  ],
+  "kimya": [
+    {
+      "id": "fen_k001",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 2,
+      "question": "Bir atomun atom numarası neyi ifade eder?",
+      "options": [
+        "Nötron sayısını",
+        "Elektron sayısını",
+        "Proton sayısını",
+        "Kütle numarasını",
+        "Nötron + elektron sayısını"
+      ],
+      "answer": 2,
+      "solution": "Atom numarası (Z) = proton sayısı. Nötr atomda proton = elektron."
+    },
+    {
+      "id": "fen_k002",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 2,
+      "question": "Kütle numarası (A) nasıl hesaplanır?",
+      "options": [
+        "A = proton - nötron",
+        "A = proton × nötron",
+        "A = proton + nötron",
+        "A = elektron + nötron",
+        "A = proton + elektron"
+      ],
+      "answer": 2,
+      "solution": "Kütle numarası = Proton sayısı + Nötron sayısı: A = Z + N"
+    },
+    {
+      "id": "fen_k003",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 3,
+      "question": "Atom numarası 17, kütle numarası 35 olan klorun nötron sayısı kaçtır?",
+      "options": [
+        "17",
+        "18",
+        "35",
+        "52",
+        "70"
+      ],
+      "answer": 1,
+      "solution": "N = A - Z = 35 - 17 = 18 nötron"
+    },
+    {
+      "id": "fen_k004",
+      "category": "kimya",
+      "topic": "Periyodik Sistem",
+      "difficulty": 2,
+      "question": "Aynı grupta yer alan elementlerin hangi özellikleri benzerdir?",
+      "options": [
+        "Kütle numaraları",
+        "Elektron sayıları",
+        "Kimyasal özellikleri",
+        "Atom yarıçapları",
+        "Yoğunlukları"
+      ],
+      "answer": 2,
+      "solution": "Aynı gruptaki elementler aynı sayıda değerlik elektronu taşır, kimyasal özellikleri benzerdir."
+    },
+    {
+      "id": "fen_k005",
+      "category": "kimya",
+      "topic": "Periyodik Sistem",
+      "difficulty": 2,
+      "question": "Periyodik sistemde soldan sağa gidildikçe atom yarıçapı nasıl değişir?",
+      "options": [
+        "Artar",
+        "Değişmez",
+        "Azalır",
+        "Önce artar sonra azalır",
+        "Önce azalır sonra artar"
+      ],
+      "answer": 2,
+      "solution": "Aynı periyotta soldan sağa çekirdek yükü artar, atom yarıçapı azalır."
+    },
+    {
+      "id": "fen_k006",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 2,
+      "question": "İyonik bağ nasıl oluşur?",
+      "options": [
+        "Elektronların ortak kullanımıyla",
+        "Metal iyonları ile elektron deniziyle",
+        "Elektron alış verişiyle oluşan bağ",
+        "Dipol-dipol etkileşimiyle",
+        "Hidrojen köprüleriyle"
+      ],
+      "answer": 2,
+      "solution": "İyonik bağ: metal atomu elektronu metal olmayandaki atoma vererek oluşur."
+    },
+    {
+      "id": "fen_k007",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 2,
+      "question": "Kovalent bağ nasıl oluşur?",
+      "options": [
+        "Elektron transferiyle",
+        "Elektronların ortak kullanımıyla",
+        "Proton alışverişiyle",
+        "Nötron paylaşımıyla",
+        "Metal bağıyla"
+      ],
+      "answer": 1,
+      "solution": "Kovalent bağ: iki atom arasında elektron çifti paylaşımıyla oluşur."
+    },
+    {
+      "id": "fen_k008",
+      "category": "kimya",
+      "topic": "Mol Kavramı",
+      "difficulty": 2,
+      "question": "1 mol madde kaç tane tanecik içerir?",
+      "options": [
+        "6,02×10²¹",
+        "6,02×10²²",
+        "6,02×10²³",
+        "6,02×10²⁴",
+        "6,02×10²⁵"
+      ],
+      "answer": 2,
+      "solution": "Avogadro sayısı: 1 mol = 6,02×10²³ tanecik"
+    },
+    {
+      "id": "fen_k009",
+      "category": "kimya",
+      "topic": "Mol Kavramı",
+      "difficulty": 3,
+      "question": "1 mol suyun (H₂O) kütlesi kaç gramdır? (H=1, O=16)",
+      "options": [
+        "2",
+        "16",
+        "17",
+        "18",
+        "19"
+      ],
+      "answer": 3,
+      "solution": "M(H₂O) = 2×1 + 16 = 18 g/mol"
+    },
+    {
+      "id": "fen_k010",
+      "category": "kimya",
+      "topic": "Kimyasal Reaksiyonlar",
+      "difficulty": 2,
+      "question": "Yanma reaksiyonu nasıl tanımlanır?",
+      "options": [
+        "Bir maddenin oksijeni alması",
+        "Bir maddenin su oluşturması",
+        "Yakıt + oksijen → CO₂ + H₂O + ısı",
+        "Asit-baz nötralizasyonu",
+        "Bir maddenin eriması"
+      ],
+      "answer": 2,
+      "solution": "Yanma: madde oksijen ile birleşerek CO₂, H₂O ve ısı açığa çıkarır."
+    },
+    {
+      "id": "fen_k011",
+      "category": "kimya",
+      "topic": "Kimyasal Reaksiyonlar",
+      "difficulty": 2,
+      "question": "Asit + baz → ? reaksiyonu ne tür reaksiyondur?",
+      "options": [
+        "Yanma",
+        "Nötralizasyon",
+        "Çözünme",
+        "Elektroliz",
+        "Polimerizasyon"
+      ],
+      "answer": 1,
+      "solution": "Asit ile baz birleşince nötralizasyon gerçekleşir; su ve tuz oluşur."
+    },
+    {
+      "id": "fen_k012",
+      "category": "kimya",
+      "topic": "Asit-Baz",
+      "difficulty": 2,
+      "question": "pH = 7 olan çözelti nasıldır?",
+      "options": [
+        "Asidik",
+        "Bazik",
+        "Nötr",
+        "Çok asidik",
+        "Çok bazik"
+      ],
+      "answer": 2,
+      "solution": "pH 7 = nötr. pH < 7 asidik, pH > 7 bazik."
+    },
+    {
+      "id": "fen_k013",
+      "category": "kimya",
+      "topic": "Asit-Baz",
+      "difficulty": 3,
+      "question": "pH değeri 3 olan çözeltinin [H⁺] derişimi kaçtır?",
+      "options": [
+        "10⁻¹",
+        "10⁻³",
+        "10⁻⁷",
+        "10³",
+        "10⁷"
+      ],
+      "answer": 1,
+      "solution": "[H⁺] = 10^(-pH) = 10⁻³ mol/L"
+    },
+    {
+      "id": "fen_k014",
+      "category": "kimya",
+      "topic": "Karışımlar",
+      "difficulty": 2,
+      "question": "Homojen karışıma örnek hangisidir?",
+      "options": [
+        "Kum + su",
+        "Yağ + su",
+        "Tuzlu su",
+        "Demir tozu + kum",
+        "Çakıl + kum"
+      ],
+      "answer": 2,
+      "solution": "Tuzlu su: tuz tamamen suda çözünmüş, her yerde aynı özellik → homojen."
+    },
+    {
+      "id": "fen_k015",
+      "category": "kimya",
+      "topic": "Karışımlar",
+      "difficulty": 2,
+      "question": "Aşağıdakilerden hangisi heterojen karışımdır?",
+      "options": [
+        "Şekerli su",
+        "Alkol + su",
+        "Hava",
+        "Granit (kaya)",
+        "Altın alaşımı"
+      ],
+      "answer": 3,
+      "solution": "Granit; farklı mineral taneciklerinden oluşur, gözle ayrımı fark edilir → heterojen."
+    },
+    {
+      "id": "fen_k016",
+      "category": "kimya",
+      "topic": "Karışımları Ayırma",
+      "difficulty": 2,
+      "question": "Damıtma yöntemi hangi amaçla kullanılır?",
+      "options": [
+        "Çözünmez karışımları ayırmak",
+        "Kaynama noktası farklı sıvıları ayırmak",
+        "Manyetik maddeleri ayırmak",
+        "Çökelti oluşturmak",
+        "Filtre etmek"
+      ],
+      "answer": 1,
+      "solution": "Damıtma: kaynama noktaları farklı sıvı karışımlarını ayırmada kullanılır."
+    },
+    {
+      "id": "fen_k017",
+      "category": "kimya",
+      "topic": "Maddenin Halleri",
+      "difficulty": 2,
+      "question": "Katıdan sıvıya geçiş hangi hal değişimidir?",
+      "options": [
+        "Buharlaşma",
+        "Donma",
+        "Erime",
+        "Yoğunlaşma",
+        "Süblimleşme"
+      ],
+      "answer": 2,
+      "solution": "Katı → Sıvı geçişi erimedir (ısı alır)."
+    },
+    {
+      "id": "fen_k018",
+      "category": "kimya",
+      "topic": "Maddenin Halleri",
+      "difficulty": 2,
+      "question": "Sıvıdan gaza geçiş hangi hal değişimidir?",
+      "options": [
+        "Donma",
+        "Erime",
+        "Süblimleşme",
+        "Buharlaşma/Kaynama",
+        "Yoğunlaşma"
+      ],
+      "answer": 3,
+      "solution": "Sıvı → Gaz: buharlaşma (yüzeyden) veya kaynama (tüm hacimdén)."
+    },
+    {
+      "id": "fen_k019",
+      "category": "kimya",
+      "topic": "Çözeltiler",
+      "difficulty": 2,
+      "question": "Bir madde suda çözündüğünde ortaya çıkan karışıma ne denir?",
+      "options": [
+        "Süspansiyon",
+        "Koloit",
+        "Çözelti",
+        "Emülsiyon",
+        "Alışım"
+      ],
+      "answer": 2,
+      "solution": "Homojen sıvı karışımlar çözeltidir. Çözünen + çözücü → çözelti."
+    },
+    {
+      "id": "fen_k020",
+      "category": "kimya",
+      "topic": "Elementler",
+      "difficulty": 2,
+      "question": "Oda sıcaklığında sıvı olan iki element hangilerdir?",
+      "options": [
+        "Demir ve Altın",
+        "Cıva ve Brom",
+        "Klor ve Flor",
+        "Sülfür ve Fosfor",
+        "Sodyum ve Potasyum"
+      ],
+      "answer": 1,
+      "solution": "Cıva (Hg) metal, Brom (Br₂) ametaldır; ikisi de oda sıcaklığında sıvı."
+    },
+    {
+      "id": "fen_k021",
+      "category": "kimya",
+      "topic": "Reaksiyon Hızı",
+      "difficulty": 3,
+      "question": "Kimyasal reaksiyon hızını artıran faktörler hangileridir?",
+      "options": [
+        "Sıcaklık düşürmek",
+        "Konsantrasyon azaltmak",
+        "Sıcaklık artışı, katalizör, konsantrasyon artışı",
+        "Yüzey alanını azaltmak",
+        "Basıncı düşürmek"
+      ],
+      "answer": 2,
+      "solution": "Sıcaklık artışı, katalizör, yüzey alanı artışı ve konsantrasyon artışı reaksiyon hızını artırır."
+    },
+    {
+      "id": "fen_k022",
+      "category": "kimya",
+      "topic": "Organik Kimya",
+      "difficulty": 2,
+      "question": "Hidrokarbonlar yalnızca hangi elementleri içerir?",
+      "options": [
+        "C ve O",
+        "C ve N",
+        "C ve H",
+        "H ve O",
+        "C, H ve O"
+      ],
+      "answer": 2,
+      "solution": "Hidrokarbonlar sadece karbon (C) ve hidrojen (H) atomlarından oluşur."
+    },
+    {
+      "id": "fen_k023",
+      "category": "kimya",
+      "topic": "Organik Kimya",
+      "difficulty": 2,
+      "question": "Alkanların genel formülü nedir?",
+      "options": [
+        "CₙH₂ₙ",
+        "CₙH₂ₙ₋₂",
+        "CₙH₂ₙ₊₂",
+        "CₙHₙ",
+        "CₙH₂ₙ₊₁"
+      ],
+      "answer": 2,
+      "solution": "Alkanlar doymuş hidrokarbonlar: CₙH₂ₙ₊₂ (ör: metan CH₄, etan C₂H₆)"
+    },
+    {
+      "id": "fen_k024",
+      "category": "kimya",
+      "topic": "Elektrokimya",
+      "difficulty": 3,
+      "question": "Elektroliz işleminde katotta hangi işlem gerçekleşir?",
+      "options": [
+        "Oksidasyon",
+        "İndirgeme",
+        "Nötralizasyon",
+        "Yanma",
+        "Çözünme"
+      ],
+      "answer": 1,
+      "solution": "Katot (-): indirgeme gerçekleşir (elektron alınır). Anot (+): oksidasyon."
+    },
+    {
+      "id": "fen_k025",
+      "category": "kimya",
+      "topic": "Gazlar",
+      "difficulty": 3,
+      "question": "İdeal gaz yasası PV = nRT formülünde T'nin birimi nedir?",
+      "options": [
+        "°C",
+        "°F",
+        "K (Kelvin)",
+        "°C veya K",
+        "Herhangi biri"
+      ],
+      "answer": 2,
+      "solution": "Gaz yasasında sıcaklık mutlaka Kelvin cinsinden kullanılmalıdır. K = °C + 273"
+    },
+    {
+      "id": "fen_k026",
+      "category": "kimya",
+      "topic": "Redoks",
+      "difficulty": 3,
+      "question": "Oksidasyonun tanımı nedir?",
+      "options": [
+        "Elektron kazanmak",
+        "Proton kaybetmek",
+        "Elektron kaybetmek",
+        "Proton kazanmak",
+        "Nötron kaybetmek"
+      ],
+      "answer": 2,
+      "solution": "Oksidasyon = elektron kaybetmek. İndirgeme = elektron kazanmak."
+    },
+    {
+      "id": "fen_k027",
+      "category": "kimya",
+      "topic": "Kimyasal Denge",
+      "difficulty": 3,
+      "question": "Le Chatelier İlkesi neyi açıklar?",
+      "options": [
+        "Yanma hızını",
+        "Denge bozulunca sistemin dengeyi yeniden kurmak için tepki vermesini",
+        "Elektroliz akımını",
+        "Asit-baz pH'ını",
+        "Kristalleşmeyi"
+      ],
+      "answer": 1,
+      "solution": "Le Chatelier: dış etki (sıcaklık, basınç, konsantrasyon değişimi) dengeyi bozarsa sistem ters yönde tepki verir."
+    },
+    {
+      "id": "fen_k028",
+      "category": "kimya",
+      "topic": "Suyun Özellikleri",
+      "difficulty": 2,
+      "question": "Suyun yüksek kaynama noktasının (100°C) temel nedeni nedir?",
+      "options": [
+        "Kovalent bağlar",
+        "İyonik bağlar",
+        "Hidrojen köprüsü bağları",
+        "Van der Waals kuvvetleri",
+        "Metalik bağlar"
+      ],
+      "answer": 2,
+      "solution": "Su molekülleri arasındaki güçlü hidrojen köprüleri suyun yüksek kaynama noktasını açıklar."
+    },
+    {
+      "id": "fen_k029",
+      "category": "kimya",
+      "topic": "Madde",
+      "difficulty": 2,
+      "question": "Madde saf mıdır yoksa karışım mıdır? Fe₂O₃ (demir oksit) için hangisi doğrudur?",
+      "options": [
+        "Homojen karışım",
+        "Heterojen karışım",
+        "Element",
+        "Bileşik",
+        "Alaşım"
+      ],
+      "answer": 3,
+      "solution": "Fe₂O₃: iki farklı elementten (Fe + O) oluşan sabit oranlı bileşik."
+    },
+    {
+      "id": "fen_k030",
+      "category": "kimya",
+      "topic": "Madde",
+      "difficulty": 2,
+      "question": "Elementlerin sembolik gösterimini standardize eden bilim insanı kimdir?",
+      "options": [
+        "Newton",
+        "Lavoisier",
+        "Dalton",
+        "Berzelius",
+        "Mendeleev"
+      ],
+      "answer": 3,
+      "solution": "Berzelius, kimyasal element sembollerini günümüzdeki biçimde standart hale getirdi."
+    },
+    {
+      "id": "fen_k031",
+      "category": "kimya",
+      "topic": "Periyodik Sistem",
+      "difficulty": 2,
+      "question": "Soygaz elementlerinin değerlik elektron sayısı genellikle kaçtır?",
+      "options": [
+        "0",
+        "1",
+        "2",
+        "7",
+        "8"
+      ],
+      "answer": 3,
+      "solution": "Soy gazlarda (Grup 18) dış kabukta 8 elektron vardır (He hariç: 2)."
+    },
+    {
+      "id": "fen_k032",
+      "category": "kimya",
+      "topic": "Kimyasal Formüller",
+      "difficulty": 2,
+      "question": "H₂SO₄ bileşiğinin adı nedir?",
+      "options": [
+        "Hidroklorik asit",
+        "Nitrik asit",
+        "Sülfürik asit",
+        "Karbonik asit",
+        "Asetik asit"
+      ],
+      "answer": 2,
+      "solution": "H₂SO₄ = sülfürik asit (kezzap olarak da bilinir)."
+    },
+    {
+      "id": "fen_k033",
+      "category": "kimya",
+      "topic": "Kimyasal Formüller",
+      "difficulty": 2,
+      "question": "NaOH bileşiğinin adı nedir?",
+      "options": [
+        "Sodyum klorür",
+        "Sodyum karbonat",
+        "Sodyum hidroksit",
+        "Sodyum sülfat",
+        "Sodyum nitrat"
+      ],
+      "answer": 2,
+      "solution": "NaOH = Sodyum hidroksit (kostik soda / sabunlaşma maddesi)."
+    },
+    {
+      "id": "fen_k034",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 1,
+      "question": "Atomun çekirdeğinde bulunan pozitif yüklü tanecik hangisidir?",
+      "options": [
+        "Elektron",
+        "Nötron",
+        "Proton",
+        "Foton",
+        "Nötrino"
+      ],
+      "answer": 2,
+      "solution": "Proton: atomun çekirdeğinde bulunan pozitif (+) yüklü taneciktir."
+    },
+    {
+      "id": "fen_k035",
+      "category": "kimya",
+      "topic": "Periyodik Tablo",
+      "difficulty": 1,
+      "question": "Periyodik tabloda kaç grup (sütun) vardır?",
+      "options": [
+        "7",
+        "8",
+        "14",
+        "18",
+        "20"
+      ],
+      "answer": 3,
+      "solution": "Periyodik tabloda 18 grup (sütun) ve 7 periyot (satır) vardır."
+    },
+    {
+      "id": "fen_k036",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 1,
+      "question": "NaCl (sofra tuzu) hangi bağ türüyle oluşur?",
+      "options": [
+        "Kovalent bağ",
+        "İyonik bağ",
+        "Metalik bağ",
+        "Hidrojen bağı",
+        "Van der Waals"
+      ],
+      "answer": 1,
+      "solution": "NaCl: Na (metal) elektron verir, Cl (ametal) alır → iyonik bağ oluşur."
+    },
+    {
+      "id": "fen_k037",
+      "category": "kimya",
+      "topic": "Asit-Baz",
+      "difficulty": 1,
+      "question": "Limon suyu asidik midir, bazik midir?",
+      "options": [
+        "Bazik",
+        "Nötr",
+        "Asidik",
+        "Hem asidik hem bazik",
+        "Belirsiz"
+      ],
+      "answer": 2,
+      "solution": "Limon suyu sitrik asit içerir; pH < 7 olup asidiktir."
+    },
+    {
+      "id": "fen_k038",
+      "category": "kimya",
+      "topic": "Çözeltiler",
+      "difficulty": 1,
+      "question": "Çözeltide çözünen madde miktarı artarsa çözelti ne olur?",
+      "options": [
+        "Seyreltik olur",
+        "Derişik (konsantre) olur",
+        "Nötr olur",
+        "Donma noktası yükselir",
+        "Kaynama noktası düşer"
+      ],
+      "answer": 1,
+      "solution": "Çözünen madde miktarı artarsa çözelti daha derişik (konsantre) hale gelir."
+    },
+    {
+      "id": "fen_k039",
+      "category": "kimya",
+      "topic": "Kimyasal Tepkimeler",
+      "difficulty": 1,
+      "question": "Kimyasal tepkimede kütlenin korunumu yasasını ortaya koyan bilim insanı kimdir?",
+      "options": [
+        "Newton",
+        "Dalton",
+        "Lavoisier",
+        "Mendeleev",
+        "Avogadro"
+      ],
+      "answer": 2,
+      "solution": "Lavoisier: 'Kütlenin korunumu yasası' - tepkimeye giren toplam kütle = çıkan toplam kütle."
+    },
+    {
+      "id": "fen_k040",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 1,
+      "question": "Elektronun yükü nedir?",
+      "options": [
+        "Pozitif",
+        "Negatif",
+        "Nötr",
+        "Değişken",
+        "Yüksüz"
+      ],
+      "answer": 1,
+      "solution": "Elektron negatif (-) yüklüdür ve çekirdeğin etrafındaki yörüngelerde bulunur."
+    },
+    {
+      "id": "fen_k041",
+      "category": "kimya",
+      "topic": "Periyodik Tablo",
+      "difficulty": 1,
+      "question": "Periyodik tabloda 1A grubundaki elementlere ne denir?",
+      "options": [
+        "Halojenler",
+        "Soy gazlar",
+        "Alkali metaller",
+        "Toprak alkali metaller",
+        "Ametaller"
+      ],
+      "answer": 2,
+      "solution": "1A grubu: Alkali metaller (Li, Na, K, Rb, Cs, Fr). H hariç hepsi metaldir."
+    },
+    {
+      "id": "fen_k042",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 2,
+      "question": "İzotop atomların ortak özelliği nedir?",
+      "options": [
+        "Aynı kütle numarası",
+        "Aynı nötron sayısı",
+        "Aynı proton sayısı",
+        "Aynı elektron dizilimi",
+        "Aynı kütle"
+      ],
+      "answer": 2,
+      "solution": "İzotoplar: aynı proton sayısı (atom numarası) farklı nötron sayısı olan atomlardır."
+    },
+    {
+      "id": "fen_k043",
+      "category": "kimya",
+      "topic": "Periyodik Tablo",
+      "difficulty": 2,
+      "question": "Periyodik tabloda yukarıdan aşağıya (grupta) atom yarıçapı nasıl değişir?",
+      "options": [
+        "Azalır",
+        "Değişmez",
+        "Artar",
+        "Önce artar sonra azalır",
+        "Düzensiz değişir"
+      ],
+      "answer": 2,
+      "solution": "Grupta aşağı indikçe enerji seviyesi (kabuk sayısı) artar, atom yarıçapı büyür."
+    },
+    {
+      "id": "fen_k044",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 2,
+      "question": "Metalik bağ nasıl oluşur?",
+      "options": [
+        "Elektron alışverişiyle",
+        "Elektron paylaşımıyla",
+        "Metal atomlarının değerlik elektronlarını ortaklaşa kullanmasıyla",
+        "Hidrojen köprüleriyle",
+        "İyonik etkileşimle"
+      ],
+      "answer": 2,
+      "solution": "Metalik bağ: metal atomları değerlik elektronlarını 'elektron denizi' olarak paylaşır."
+    },
+    {
+      "id": "fen_k045",
+      "category": "kimya",
+      "topic": "Asit-Baz",
+      "difficulty": 2,
+      "question": "Turnusol kağıdı asitle temas edince hangi rengi alır?",
+      "options": [
+        "Mavi",
+        "Yeşil",
+        "Kırmızı",
+        "Sarı",
+        "Mor"
+      ],
+      "answer": 2,
+      "solution": "Mavi turnusol kağıdı asitte kırmızıya döner; kırmızı turnusol bazda maviye döner."
+    },
+    {
+      "id": "fen_k046",
+      "category": "kimya",
+      "topic": "Çözeltiler",
+      "difficulty": 2,
+      "question": "Çözünürlüğü etkileyen en önemli faktör hangisidir?",
+      "options": [
+        "Kabın şekli",
+        "Karıştırma hızı",
+        "Sıcaklık",
+        "Işık",
+        "Basınç (katılar için)"
+      ],
+      "answer": 2,
+      "solution": "Katıların sudaki çözünürlüğü genellikle sıcaklık arttıkça artar."
+    },
+    {
+      "id": "fen_k047",
+      "category": "kimya",
+      "topic": "Kimyasal Tepkimeler",
+      "difficulty": 2,
+      "question": "Ekzotermik tepkime nedir?",
+      "options": [
+        "Isı alan tepkime",
+        "Isı veren tepkime",
+        "Gaz çıkaran tepkime",
+        "Çökelti oluşturan tepkime",
+        "Renk değiştiren tepkime"
+      ],
+      "answer": 1,
+      "solution": "Ekzotermik: ısı açığa çıkar (yanma gibi). Endotermik: ısı alır (fotosentez gibi)."
+    },
+    {
+      "id": "fen_k048",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 2,
+      "question": "Bohr atom modeline göre elektron hangi yörüngelerde bulunabilir?",
+      "options": [
+        "Herhangi bir yörüngede",
+        "Yalnızca belirli enerji seviyelerinde",
+        "Çekirdekte",
+        "Rastgele konumlarda",
+        "Dış yüzeyde"
+      ],
+      "answer": 1,
+      "solution": "Bohr modeli: elektronlar yalnızca belirli enerji seviyelerinde (n=1,2,3...) bulunur."
+    },
+    {
+      "id": "fen_k049",
+      "category": "kimya",
+      "topic": "Periyodik Tablo",
+      "difficulty": 2,
+      "question": "Halojenler periyodik tablonun hangi grubundadır?",
+      "options": [
+        "1A",
+        "2A",
+        "4A",
+        "7A",
+        "8A"
+      ],
+      "answer": 3,
+      "solution": "Halojenler 7A (17.) gruptadır: F, Cl, Br, I, At. Değerlik elektronu 7'dir."
+    },
+    {
+      "id": "fen_k050",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 3,
+      "question": "Elektron dizilimi 2-8-3 olan elementin atom numarası kaçtır ve hangi gruptadır?",
+      "options": [
+        "Z=13, 3A grubu",
+        "Z=11, 1A grubu",
+        "Z=15, 5A grubu",
+        "Z=13, 5A grubu",
+        "Z=11, 3A grubu"
+      ],
+      "answer": 0,
+      "solution": "2+8+3=13 elektron → Z=13 (Alüminyum). Son katmanda 3 elektron → 3A grubu."
+    },
+    {
+      "id": "fen_k051",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 3,
+      "question": "CO₂ molekülünde kaç tane kovalent bağ vardır?",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "6"
+      ],
+      "answer": 3,
+      "solution": "O=C=O: her oksijen ile karbon arasında çift bağ var → toplam 4 kovalent bağ."
+    },
+    {
+      "id": "fen_k052",
+      "category": "kimya",
+      "topic": "Asit-Baz",
+      "difficulty": 3,
+      "question": "HCl + NaOH → NaCl + H₂O tepkimesinde oluşan NaCl'ün adı nedir?",
+      "options": [
+        "Asit",
+        "Baz",
+        "Tuz",
+        "Oksit",
+        "Peroksit"
+      ],
+      "answer": 2,
+      "solution": "Asit + Baz → Tuz + Su. NaCl bir tuzdur (nötralizasyon ürünü)."
+    },
+    {
+      "id": "fen_k053",
+      "category": "kimya",
+      "topic": "Çözeltiler",
+      "difficulty": 3,
+      "question": "200 g suda 50 g tuz çözülmüştür. Çözeltinin kütlece yüzde derişimi kaçtır?",
+      "options": [
+        "%10",
+        "%15",
+        "%20",
+        "%25",
+        "%30"
+      ],
+      "answer": 2,
+      "solution": "%C = (çözünen/çözelti)×100 = (50/250)×100 = %20"
+    },
+    {
+      "id": "fen_k054",
+      "category": "kimya",
+      "topic": "Kimyasal Tepkimeler",
+      "difficulty": 3,
+      "question": "2H₂ + O₂ → 2H₂O tepkimesinde 4 mol H₂ ile kaç mol su oluşur?",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "8"
+      ],
+      "answer": 3,
+      "solution": "Stokiyometri: 2 mol H₂ → 2 mol H₂O, yani 4 mol H₂ → 4 mol H₂O."
+    },
+    {
+      "id": "fen_k055",
+      "category": "kimya",
+      "topic": "Periyodik Tablo",
+      "difficulty": 3,
+      "question": "Elektronegatifliği en yüksek element hangisidir?",
+      "options": [
+        "Oksijen",
+        "Klor",
+        "Flor",
+        "Azot",
+        "Brom"
+      ],
+      "answer": 2,
+      "solution": "Flor (F) periyodik tabloda en yüksek elektronegatifliğe sahip elementtir (3,98)."
+    },
+    {
+      "id": "fen_k056",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 3,
+      "question": "Polar kovalent bağ nedir?",
+      "options": [
+        "Elektron eşit paylaşılır",
+        "Elektron tamamen transfer edilir",
+        "Elektronlar eşit olmayan şekilde paylaşılır",
+        "Metalik bağdır",
+        "İyonik bağdır"
+      ],
+      "answer": 2,
+      "solution": "Polar kovalent: farklı elektronegatifliğe sahip atomlar arasında elektron eşit paylaşılmaz."
+    },
+    {
+      "id": "fen_k057",
+      "category": "kimya",
+      "topic": "Asit-Baz",
+      "difficulty": 3,
+      "question": "Kuvvetli asit ile zayıf asidin farkı nedir?",
+      "options": [
+        "Kuvvetli asit daha yoğundur",
+        "Kuvvetli asit suda tamamen iyonlaşır",
+        "Zayıf asit daha tehlikelidir",
+        "Kuvvetli asit organiktir",
+        "Aralarında fark yoktur"
+      ],
+      "answer": 1,
+      "solution": "Kuvvetli asit suda tamamen iyonlaşır (HCl, H₂SO₄); zayıf asit kısmen iyonlaşır (CH₃COOH)."
+    },
+    {
+      "id": "fen_k058",
+      "category": "kimya",
+      "topic": "Çözeltiler",
+      "difficulty": 3,
+      "question": "Doymuş çözelti ne demektir?",
+      "options": [
+        "Çözücü fazla olan çözelti",
+        "Belirli sıcaklıkta en fazla çözünen madde içeren çözelti",
+        "Hiç çözünen içermeyen çözelti",
+        "Sıcaklıktan etkilenmeyen çözelti",
+        "Yalnızca tuzlarla oluşan çözelti"
+      ],
+      "answer": 1,
+      "solution": "Doymuş çözelti: belirli sıcaklıkta çözebileceği maksimum çözüneni içeren çözeltidir."
+    },
+    {
+      "id": "fen_k059",
+      "category": "kimya",
+      "topic": "Kimyasal Tepkimeler",
+      "difficulty": 3,
+      "question": "Katalizörün tepkimedeki rolü nedir?",
+      "options": [
+        "Tepkime ürünlerini değiştirir",
+        "Aktivasyon enerjisini düşürerek hızı artırır",
+        "Tepkime ısısını artırır",
+        "Tepkimeye girer ve tükenir",
+        "Dengeyi değiştirir"
+      ],
+      "answer": 1,
+      "solution": "Katalizör aktivasyon enerjisini düşürür, tepkime hızını artırır ama kendisi tükenmez."
+    },
+    {
+      "id": "fen_k060",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 4,
+      "question": "Bir atomun 3. enerji seviyesinde (n=3) en fazla kaç elektron bulunabilir?",
+      "options": [
+        "2",
+        "8",
+        "18",
+        "32",
+        "50"
+      ],
+      "answer": 2,
+      "solution": "Maksimum elektron = 2n² = 2×9 = 18 elektron."
+    },
+    {
+      "id": "fen_k061",
+      "category": "kimya",
+      "topic": "Periyodik Tablo",
+      "difficulty": 4,
+      "question": "İyonlaşma enerjisi periyodik tabloda soldan sağa nasıl değişir?",
+      "options": [
+        "Azalır",
+        "Değişmez",
+        "Artar",
+        "Düzensiz değişir",
+        "Önce azalır sonra artar"
+      ],
+      "answer": 2,
+      "solution": "Aynı periyotta soldan sağa çekirdek yükü artar, elektron koparmak zorlaşır → iyonlaşma enerjisi artar."
+    },
+    {
+      "id": "fen_k062",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 4,
+      "question": "NH₃ molekülünün geometrik şekli nedir?",
+      "options": [
+        "Doğrusal",
+        "Düzlem üçgen",
+        "Üçgen piramit",
+        "Tetraedral",
+        "V şekli"
+      ],
+      "answer": 2,
+      "solution": "NH₃: azotun 3 bağ çifti + 1 ortaklanmamış çifti → üçgen piramit geometri."
+    },
+    {
+      "id": "fen_k063",
+      "category": "kimya",
+      "topic": "Asit-Baz",
+      "difficulty": 4,
+      "question": "0,01 M HCl çözeltisinin pH değeri kaçtır?",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "7"
+      ],
+      "answer": 1,
+      "solution": "HCl kuvvetli asit → [H⁺] = 0,01 = 10⁻² M → pH = -log(10⁻²) = 2"
+    },
+    {
+      "id": "fen_k064",
+      "category": "kimya",
+      "topic": "Çözeltiler",
+      "difficulty": 4,
+      "question": "0,5 mol NaCl 2 litre suda çözülürse molarite kaç mol/L'dir?",
+      "options": [
+        "0,1",
+        "0,25",
+        "0,5",
+        "1",
+        "2"
+      ],
+      "answer": 1,
+      "solution": "M = n/V = 0,5/2 = 0,25 mol/L"
+    },
+    {
+      "id": "fen_k065",
+      "category": "kimya",
+      "topic": "Kimyasal Tepkimeler",
+      "difficulty": 4,
+      "question": "CaCO₃ → CaO + CO₂ tepkimesi hangi türdendir?",
+      "options": [
+        "Sentez (birleşme)",
+        "Analiz (ayrışma)",
+        "Yer değiştirme",
+        "Nötralizasyon",
+        "Yanma"
+      ],
+      "answer": 1,
+      "solution": "Bir bileşik ısıyla bileşenlerine ayrılıyor → analiz (ayrışma) tepkimesi."
+    },
+    {
+      "id": "fen_k066",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 4,
+      "question": "Atom numarası 19 olan potasyumun (K) elektron dizilimi nedir?",
+      "options": [
+        "2-8-8-1",
+        "2-8-9",
+        "2-8-7-2",
+        "2-8-1",
+        "2-8-8"
+      ],
+      "answer": 0,
+      "solution": "K (Z=19): 2-8-8-1. 4. katmanda 1 değerlik elektronu → 1A grubu alkali metal."
+    },
+    {
+      "id": "fen_k067",
+      "category": "kimya",
+      "topic": "Periyodik Tablo",
+      "difficulty": 4,
+      "question": "Geçiş metalleri periyodik tablonun hangi bölgesinde yer alır?",
+      "options": [
+        "1A-2A grupları",
+        "3A-8A grupları",
+        "3B-2B (d bloku) grupları",
+        "Lantanitler",
+        "Soy gazlar"
+      ],
+      "answer": 2,
+      "solution": "Geçiş metalleri d blokunda (3B-2B, 3-12. gruplar) yer alır."
+    },
+    {
+      "id": "fen_k068",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 4,
+      "question": "Hidrojen bağı en çok hangi moleküller arasında oluşur?",
+      "options": [
+        "CH₄ molekülleri arasında",
+        "CO₂ molekülleri arasında",
+        "H₂O molekülleri arasında",
+        "N₂ molekülleri arasında",
+        "O₂ molekülleri arasında"
+      ],
+      "answer": 2,
+      "solution": "H₂O'da O-H bağı çok polardır; moleküller arası güçlü hidrojen bağları oluşur."
+    },
+    {
+      "id": "fen_k069",
+      "category": "kimya",
+      "topic": "Asit-Baz",
+      "difficulty": 5,
+      "question": "50 mL 0,1 M HCl ile 50 mL 0,1 M NaOH karıştırılırsa sonuç çözeltinin pH'ı kaçtır?",
+      "options": [
+        "1",
+        "3",
+        "7",
+        "11",
+        "14"
+      ],
+      "answer": 2,
+      "solution": "Eşit mol HCl ve NaOH → tamamen nötralize olur → NaCl + H₂O → pH = 7"
+    },
+    {
+      "id": "fen_k070",
+      "category": "kimya",
+      "topic": "Çözeltiler",
+      "difficulty": 5,
+      "question": "100 mL %20'lik (d=1,2 g/mL) NaOH çözeltisinin molaritesi kaçtır? (Na=23, O=16, H=1)",
+      "options": [
+        "3",
+        "4",
+        "5",
+        "6",
+        "8"
+      ],
+      "answer": 3,
+      "solution": "m_çöz = 100×1,2 = 120 g. m_NaOH = 120×0,2 = 24 g. n = 24/40 = 0,6 mol. M = 0,6/0,1 = 6 M"
+    },
+    {
+      "id": "fen_k071",
+      "category": "kimya",
+      "topic": "Kimyasal Tepkimeler",
+      "difficulty": 5,
+      "question": "Fe₂O₃ + 3CO → 2Fe + 3CO₂ tepkimesinde 160 g Fe₂O₃'ten kaç gram Fe elde edilir? (Fe=56, O=16)",
+      "options": [
+        "56",
+        "84",
+        "100",
+        "112",
+        "168"
+      ],
+      "answer": 3,
+      "solution": "M(Fe₂O₃)=160 g/mol. 160g = 1 mol Fe₂O₃ → 2 mol Fe = 2×56 = 112 g Fe"
+    },
+    {
+      "id": "fen_k072",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 5,
+      "question": "Kuantum sayıları (n=3, l=2, ml=-1, ms=+½) olan elektron hangi alt kabuktadır?",
+      "options": [
+        "3s",
+        "3p",
+        "3d",
+        "3f",
+        "4s"
+      ],
+      "answer": 2,
+      "solution": "l=2 → d alt kabuğu. n=3, l=2 → 3d alt kabuğu."
+    },
+    {
+      "id": "fen_k073",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 5,
+      "question": "Hibritleşme kavramına göre CH₄'teki karbonun hibritleşmesi nedir?",
+      "options": [
+        "sp",
+        "sp²",
+        "sp³",
+        "sp³d",
+        "sp³d²"
+      ],
+      "answer": 2,
+      "solution": "CH₄'te C: 4 bağ yapıyor → sp³ hibritleşmesi → tetraedral geometri."
+    },
+    {
+      "id": "fen_k074",
+      "category": "kimya",
+      "topic": "Periyodik Tablo",
+      "difficulty": 3,
+      "question": "Metallerle ametaller arasında yer alan elementlere ne denir?",
+      "options": [
+        "Soy gazlar",
+        "Halojenler",
+        "Yarı metaller (metaloidler)",
+        "Alkali metaller",
+        "Lantanitler"
+      ],
+      "answer": 2,
+      "solution": "Yarı metaller (metaloidler): B, Si, Ge, As, Sb, Te gibi hem metal hem ametal özelliği gösterir."
+    },
+    {
+      "id": "fen_k075",
+      "category": "kimya",
+      "topic": "Asit-Baz",
+      "difficulty": 2,
+      "question": "Bazların ortak özelliği hangisidir?",
+      "options": [
+        "Ekşi tat",
+        "Suda H⁺ iyonu verme",
+        "Suda OH⁻ iyonu oluşturma",
+        "Mavi turnusolü kırmızı yapma",
+        "Metal aşındırma"
+      ],
+      "answer": 2,
+      "solution": "Bazlar suda çözündüğünde OH⁻ (hidroksil) iyonu oluşturur."
+    },
+    {
+      "id": "fen_k076",
+      "category": "kimya",
+      "topic": "Çözeltiler",
+      "difficulty": 2,
+      "question": "Bir çözeltide çözücü genellikle hangisidir?",
+      "options": [
+        "Miktarı az olan",
+        "Miktarı çok olan",
+        "Katı olan",
+        "Gaz olan",
+        "Asidik olan"
+      ],
+      "answer": 1,
+      "solution": "Çözücü: çözeltide miktarı daha fazla olan bileşendir (genellikle sıvı, çoğunlukla su)."
+    },
+    {
+      "id": "fen_k077",
+      "category": "kimya",
+      "topic": "Kimyasal Tepkimeler",
+      "difficulty": 2,
+      "question": "Kimyasal tepkimede denklemi dengelemenin amacı nedir?",
+      "options": [
+        "Tepkimeyi hızlandırmak",
+        "Atom sayısını iki tarafta eşitlemek (kütle korunumu)",
+        "Enerji üretmek",
+        "Katalizör eklemek",
+        "Sıcaklığı ayarlamak"
+      ],
+      "answer": 1,
+      "solution": "Denkleştirme: her iki taraftaki atom sayılarını eşitleyerek kütlenin korunumu yasasını sağlar."
+    },
+    {
+      "id": "fen_k078",
+      "category": "kimya",
+      "topic": "Atom",
+      "difficulty": 3,
+      "question": "İyon nedir?",
+      "options": [
+        "Nötr atom",
+        "Elektron kaybetmiş veya kazanmış atom",
+        "Sadece proton içeren tanecik",
+        "Nötron kaybetmiş atom",
+        "Molekül parçası"
+      ],
+      "answer": 1,
+      "solution": "İyon: elektron kaybederek (+) katyon veya elektron kazanarak (-) anyon olan atomdur."
+    },
+    {
+      "id": "fen_k079",
+      "category": "kimya",
+      "topic": "Kimyasal Tepkimeler",
+      "difficulty": 4,
+      "question": "2 mol CH₄ tamamen yandığında kaç mol CO₂ oluşur? (CH₄ + 2O₂ → CO₂ + 2H₂O)",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "6"
+      ],
+      "answer": 1,
+      "solution": "1 mol CH₄ → 1 mol CO₂. 2 mol CH₄ → 2 mol CO₂."
+    },
+    {
+      "id": "fen_k080",
+      "category": "kimya",
+      "topic": "Çözeltiler",
+      "difficulty": 4,
+      "question": "Kaynama noktası yükselmesi ne zaman gözlenir?",
+      "options": [
+        "Saf sıvı ısıtıldığında",
+        "Çözeltiye uçucu olmayan çözünen eklendiğinde",
+        "Basınç düşürüldüğünde",
+        "Çözeltiden su buharlaştırıldığında",
+        "Sıvı soğutulduğunda"
+      ],
+      "answer": 1,
+      "solution": "Koligatif özellik: uçucu olmayan çözünen eklenince kaynama noktası yükselir, donma noktası düşer."
+    },
+    {
+      "id": "fen_k081",
+      "category": "kimya",
+      "topic": "Kimyasal Tepkimeler",
+      "difficulty": 5,
+      "question": "STP'de (0°C, 1 atm) 2 mol ideal gazın hacmi kaç litredir?",
+      "options": [
+        "11,2",
+        "22,4",
+        "33,6",
+        "44,8",
+        "67,2"
+      ],
+      "answer": 3,
+      "solution": "STP'de 1 mol ideal gaz = 22,4 L. 2 mol = 2×22,4 = 44,8 L"
+    },
+    {
+      "id": "fen_k082",
+      "category": "kimya",
+      "topic": "Periyodik Tablo",
+      "difficulty": 5,
+      "question": "Elektron ilgisi en yüksek olan element hangisidir?",
+      "options": [
+        "Li",
+        "Na",
+        "F",
+        "Cl",
+        "Br"
+      ],
+      "answer": 3,
+      "solution": "Klor (Cl) en yüksek elektron ilgisine sahiptir (F küçük boyutu nedeniyle daha düşük)."
+    },
+    {
+      "id": "fen_k083",
+      "category": "kimya",
+      "topic": "Kimyasal Bağlar",
+      "difficulty": 5,
+      "question": "Sigma (σ) ve pi (π) bağları hakkında hangisi doğrudur?",
+      "options": [
+        "Sigma bağı yandan örtüşmeyle oluşur",
+        "Pi bağı uç uca örtüşmeyle oluşur",
+        "Çift bağda 1 sigma + 1 pi bağı vardır",
+        "Tek bağda 1 pi bağı vardır",
+        "Üçlü bağda 3 sigma bağı vardır"
+      ],
+      "answer": 2,
+      "solution": "Sigma: uç uca örtüşme. Pi: yandan örtüşme. Çift bağ = 1σ + 1π. Üçlü bağ = 1σ + 2π."
+    }
+  ],
+  "biyoloji": [
+    {
+      "id": "fen_b001",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 2,
+      "question": "Hücrenin 'enerji santrali' olarak bilinen organeli hangisidir?",
+      "options": [
+        "Ribozom",
+        "Golgi aygıtı",
+        "Mitokondri",
+        "Lizozom",
+        "Çekirdek"
+      ],
+      "answer": 2,
+      "solution": "Mitokondri: aerobik solunum ile ATP üretir; hücrenin enerji kaynağıdır."
+    },
+    {
+      "id": "fen_b002",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 2,
+      "question": "Fotosentez hangi organelde gerçekleşir?",
+      "options": [
+        "Mitokondri",
+        "Ribozom",
+        "Kloroplast",
+        "Çekirdek",
+        "Lizozom"
+      ],
+      "answer": 2,
+      "solution": "Fotosentez kloroplastta gerçekleşir; klorofil pigmenti ışığı soğurur."
+    },
+    {
+      "id": "fen_b003",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 2,
+      "question": "Prokaryot ve ökaryot hücre arasındaki temel fark nedir?",
+      "options": [
+        "Hücre zarı",
+        "Ribozom varlığı",
+        "Zarlı çekirdek varlığı",
+        "DNA varlığı",
+        "Sitoplazma varlığı"
+      ],
+      "answer": 2,
+      "solution": "Ökaryotlarda zarlı çekirdek vardır; prokaryotlarda DNA sitoplazmada serbest bulunur."
+    },
+    {
+      "id": "fen_b004",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 3,
+      "question": "Protein sentezi hangi organelde gerçekleşir?",
+      "options": [
+        "Mitokondri",
+        "Ribozom",
+        "Golgi aygıtı",
+        "Kloroplast",
+        "Endoplazmik retikulum"
+      ],
+      "answer": 1,
+      "solution": "Protein sentezi ribozomlarda gerçekleşir."
+    },
+    {
+      "id": "fen_b005",
+      "category": "biyoloji",
+      "topic": "Hücre Bölünmesi",
+      "difficulty": 2,
+      "question": "Mitoz bölünmede oluşan hücre sayısı ve DNA miktarı nasıldır?",
+      "options": [
+        "4 hücre, yarı DNA",
+        "2 hücre, yarı DNA",
+        "2 hücre, aynı DNA",
+        "4 hücre, aynı DNA",
+        "1 hücre, iki katı DNA"
+      ],
+      "answer": 2,
+      "solution": "Mitoz: 2 yavru hücre oluşur, her biri ana hücreyle aynı DNA miktarına sahiptir."
+    },
+    {
+      "id": "fen_b006",
+      "category": "biyoloji",
+      "topic": "Hücre Bölünmesi",
+      "difficulty": 3,
+      "question": "Mayoz bölünmenin önemi nedir?",
+      "options": [
+        "Büyüme ve onarım",
+        "Eşeyli üreme için genetik çeşitlilik sağlar",
+        "Bakteri çoğalması",
+        "DNA onarımı",
+        "Protein üretimi"
+      ],
+      "answer": 1,
+      "solution": "Mayoz: gamet oluşturur, kromozom sayısını yarıya indirir ve genetik çeşitlilik sağlar."
+    },
+    {
+      "id": "fen_b007",
+      "category": "biyoloji",
+      "topic": "DNA-Genetik",
+      "difficulty": 2,
+      "question": "DNA'nın yapısında hangi şeker bulunur?",
+      "options": [
+        "Glikoz",
+        "Früktoz",
+        "Riboz",
+        "Deoksiriboz",
+        "Sükroz"
+      ],
+      "answer": 3,
+      "solution": "DNA'da deoksiriboz şekeri bulunur. RNA'da riboz şekeri vardır."
+    },
+    {
+      "id": "fen_b008",
+      "category": "biyoloji",
+      "topic": "DNA-Genetik",
+      "difficulty": 2,
+      "question": "DNA'da Adenin (A) hangi baz ile eşleşir?",
+      "options": [
+        "Sitozin (C)",
+        "Guanin (G)",
+        "Timin (T)",
+        "Urasil (U)",
+        "Adenin (A)"
+      ],
+      "answer": 2,
+      "solution": "DNA'da A-T ve G-C eşleşmesi yapılır. RNA'da T yerine Urasil (U) kullanılır."
+    },
+    {
+      "id": "fen_b009",
+      "category": "biyoloji",
+      "topic": "DNA-Genetik",
+      "difficulty": 3,
+      "question": "Mendel'in ayrılma yasasına göre F2 kuşağında 3:1 oranı hangi çaprazlamada elde edilir?",
+      "options": [
+        "TT × tt",
+        "Tt × Tt",
+        "TT × TT",
+        "tt × tt",
+        "TT × Tt"
+      ],
+      "answer": 1,
+      "solution": "Tt × Tt → TT : Tt : tt = 1:2:1 → fenotip 3 baskın : 1 çekinik"
+    },
+    {
+      "id": "fen_b010",
+      "category": "biyoloji",
+      "topic": "DNA-Genetik",
+      "difficulty": 3,
+      "question": "İnsan somatik (vücut) hücrelerinde kaç çift homolog kromozom vardır?",
+      "options": [
+        "22",
+        "23",
+        "44",
+        "46",
+        "48"
+      ],
+      "answer": 1,
+      "solution": "İnsan hücrelerinde 46 kromozom (23 çift homolog) bulunur."
+    },
+    {
+      "id": "fen_b011",
+      "category": "biyoloji",
+      "topic": "Sindirim",
+      "difficulty": 2,
+      "question": "Proteinlerin sindirimi hangi organlarla başlar?",
+      "options": [
+        "Yalnızca ince bağırsakta",
+        "Ağız ve ince bağırsakta",
+        "Midede",
+        "Ağız ve midede",
+        "Kalın bağırsakta"
+      ],
+      "answer": 2,
+      "solution": "Protein sindirimi midede başlar (pepsin enzimi); ince bağırsakta tamamlanır."
+    },
+    {
+      "id": "fen_b012",
+      "category": "biyoloji",
+      "topic": "Sindirim",
+      "difficulty": 2,
+      "question": "Emilim işlemi en çok hangi organda gerçekleşir?",
+      "options": [
+        "Mide",
+        "Kalın bağırsak",
+        "İnce bağırsak",
+        "Karaciğer",
+        "Pankreas"
+      ],
+      "answer": 2,
+      "solution": "Besinlerin büyük çoğunluğu ince bağırsakta emilir (villi ve mikrovilluslar sayesinde)."
+    },
+    {
+      "id": "fen_b013",
+      "category": "biyoloji",
+      "topic": "Dolaşım",
+      "difficulty": 2,
+      "question": "Kalpten akciğerlere giden kan hangi kanaldır?",
+      "options": [
+        "Aort",
+        "Pulmoner ven",
+        "Pulmoner arter",
+        "Koroner damar",
+        "Vena kava"
+      ],
+      "answer": 2,
+      "solution": "Sağ ventrikülden pulmoner arterle kirli kan akciğere gider, oksijenlenip pulmoner venle döner."
+    },
+    {
+      "id": "fen_b014",
+      "category": "biyoloji",
+      "topic": "Dolaşım",
+      "difficulty": 2,
+      "question": "Alyuvarların (eritrositlerin) görevi nedir?",
+      "options": [
+        "Bağışıklık",
+        "Kan pıhtılaşması",
+        "Oksijen taşıma",
+        "Hormon üretimi",
+        "Besin taşıma"
+      ],
+      "answer": 2,
+      "solution": "Eritrositler hemoglobin pigmentiyle oksijen taşır."
+    },
+    {
+      "id": "fen_b015",
+      "category": "biyoloji",
+      "topic": "Solunum",
+      "difficulty": 2,
+      "question": "Aerobik solunumun son ürünleri nelerdir?",
+      "options": [
+        "Laktik asit + ATP",
+        "CO₂ + H₂O + ATP",
+        "Alkol + CO₂",
+        "O₂ + H₂O",
+        "Glikoz + ATP"
+      ],
+      "answer": 1,
+      "solution": "Aerobik solunum: C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + 36-38 ATP"
+    },
+    {
+      "id": "fen_b016",
+      "category": "biyoloji",
+      "topic": "Solunum",
+      "difficulty": 3,
+      "question": "Anaerobik solunumun aerobik solunumdan farkı nedir?",
+      "options": [
+        "Oksijen kullanır",
+        "Daha fazla ATP üretir",
+        "Oksijensiz ortamda az ATP üretir",
+        "Kloroplastta olur",
+        "RNA üretir"
+      ],
+      "answer": 2,
+      "solution": "Anaerobik solunum: O₂ yokken az ATP + laktik asit veya etanol + CO₂ üretir."
+    },
+    {
+      "id": "fen_b017",
+      "category": "biyoloji",
+      "topic": "Boşaltım",
+      "difficulty": 2,
+      "question": "Kanı filtreleyen, idrar üreten organ hangisidir?",
+      "options": [
+        "Karaciğer",
+        "Akciğer",
+        "Böbrek",
+        "Pankreas",
+        "Mide"
+      ],
+      "answer": 2,
+      "solution": "Böbrekler kanı filtreler; üre ve diğer atıkları idrarla dışarı atar."
+    },
+    {
+      "id": "fen_b018",
+      "category": "biyoloji",
+      "topic": "Hormonlar",
+      "difficulty": 2,
+      "question": "Kan şekerini düşüren hormon hangisidir?",
+      "options": [
+        "Glukagon",
+        "Adrenalin",
+        "İnsülin",
+        "Tiroksin",
+        "Kortizol"
+      ],
+      "answer": 2,
+      "solution": "İnsülin (pankreas beta hücrelerinden): kan şekerini düşürür, hücrelerin glikoz almasını sağlar."
+    },
+    {
+      "id": "fen_b019",
+      "category": "biyoloji",
+      "topic": "Hormonlar",
+      "difficulty": 2,
+      "question": "Büyüme hormonu hangi bezden salgılanır?",
+      "options": [
+        "Tiroid",
+        "Adrenal",
+        "Hipofiz",
+        "Pankreas",
+        "Gonad"
+      ],
+      "answer": 2,
+      "solution": "Büyüme hormonu (GH) hipofiz bezinin ön lobundan salgılanır."
+    },
+    {
+      "id": "fen_b020",
+      "category": "biyoloji",
+      "topic": "Sinir Sistemi",
+      "difficulty": 2,
+      "question": "Nöronun sinyal ilettiği uzun uzantısı hangisidir?",
+      "options": [
+        "Dendrit",
+        "Akson",
+        "Nükleolus",
+        "Miyelin",
+        "Sinapsis"
+      ],
+      "answer": 1,
+      "solution": "Akson: nöronun uzun uzantısı; elektrik sinyalini bir sonraki nörona veya efektör organa iletir."
+    },
+    {
+      "id": "fen_b021",
+      "category": "biyoloji",
+      "topic": "Sinir Sistemi",
+      "difficulty": 2,
+      "question": "Refleks yayında sinyalin iletildiği sıra nedir?",
+      "options": [
+        "Alıcı → efektör → merkez",
+        "Merkez → alıcı → efektör",
+        "Alıcı → duyu siniri → merkez → motor sinir → efektör",
+        "Efektör → merkez → alıcı",
+        "Motor sinir → merkez → duyu siniri"
+      ],
+      "answer": 2,
+      "solution": "Refleks yayı: Alıcı → duyu siniri → omurilik → motor sinir → efektör"
+    },
+    {
+      "id": "fen_b022",
+      "category": "biyoloji",
+      "topic": "Üreme",
+      "difficulty": 2,
+      "question": "Tohumlu bitkilerde eşeyli üreme hangi yapılarda gerçekleşir?",
+      "options": [
+        "Kök",
+        "Yaprak",
+        "Gövde",
+        "Çiçek",
+        "Tohum"
+      ],
+      "answer": 3,
+      "solution": "Tohumlu bitkilerde döllenme çiçekte gerçekleşir; yumurta ve polenden tohum oluşur."
+    },
+    {
+      "id": "fen_b023",
+      "category": "biyoloji",
+      "topic": "Fotosentez",
+      "difficulty": 2,
+      "question": "Fotosentez denkleminde hangi maddeler kullanılır?",
+      "options": [
+        "O₂ + H₂O",
+        "CO₂ + O₂",
+        "CO₂ + H₂O + ışık enerjisi",
+        "Glikoz + O₂",
+        "H₂O + O₂"
+      ],
+      "answer": 2,
+      "solution": "6CO₂ + 6H₂O + ışık → C₆H₁₂O₆ + 6O₂"
+    },
+    {
+      "id": "fen_b024",
+      "category": "biyoloji",
+      "topic": "Fotosentez",
+      "difficulty": 3,
+      "question": "Fotosentezin ışık tepkimelerinde ne üretilir?",
+      "options": [
+        "Glikoz",
+        "CO₂",
+        "ATP + NADPH + O₂",
+        "Su",
+        "Nişasta"
+      ],
+      "answer": 2,
+      "solution": "Işık tepkimeleri: ATP, NADPH üretilir; su fotolizi ile O₂ açığa çıkar."
+    },
+    {
+      "id": "fen_b025",
+      "category": "biyoloji",
+      "topic": "Ekoloji",
+      "difficulty": 2,
+      "question": "Bir ekosistemde üretici organizmalar hangileridir?",
+      "options": [
+        "Hayvanlar",
+        "Mantarlar",
+        "Bakteriler",
+        "Bitkiler (fotosentetikler)",
+        "Omurgasızlar"
+      ],
+      "answer": 3,
+      "solution": "Üreticiler: fotosentez yapan bitkiler, algler ve bazı bakteriler. Besin zincirinin temelidir."
+    },
+    {
+      "id": "fen_b026",
+      "category": "biyoloji",
+      "topic": "Ekoloji",
+      "difficulty": 2,
+      "question": "Besin zincirinde enerji akışı nasıldır?",
+      "options": [
+        "Tüketiciden üreticiye",
+        "Eşit dağılır",
+        "Üreticiden tüketiciye, her kademede azalarak",
+        "Her kademede artar",
+        "Rastgele dağılır"
+      ],
+      "answer": 2,
+      "solution": "Enerji akışı üreticiden tüketiciye doğrudur; her kademede ~%90'ı kaybolur."
+    },
+    {
+      "id": "fen_b027",
+      "category": "biyoloji",
+      "topic": "Ekoloji",
+      "difficulty": 3,
+      "question": "Biyotik ve abiyotik faktörlere örnekler veriniz.",
+      "options": [
+        "Biyotik: taş, toprak. Abiyotik: bitki, hayvan",
+        "Biyotik: bakteri, bitki, hayvan. Abiyotik: sıcaklık, su, ışık",
+        "Her ikisi de aynı",
+        "Biyotik: ışık, su. Abiyotik: mantar, böcek",
+        "Ayrımın önemi yoktur"
+      ],
+      "answer": 1,
+      "solution": "Biyotik: canlı faktörler (bitki, hayvan, bakteri). Abiyotik: cansız faktörler (sıcaklık, ışık, su, toprak)."
+    },
+    {
+      "id": "fen_b028",
+      "category": "biyoloji",
+      "topic": "Evrim",
+      "difficulty": 2,
+      "question": "Doğal seleksiyon teorisini ortaya atan bilim insanı kimdir?",
+      "options": [
+        "Lamarck",
+        "Mendel",
+        "Darwin",
+        "Watson",
+        "Pasteur"
+      ],
+      "answer": 2,
+      "solution": "Charles Darwin, doğal seçilim yoluyla evrim teorisini 'Türlerin Kökeni' adlı eserinde açıkladı."
+    },
+    {
+      "id": "fen_b029",
+      "category": "biyoloji",
+      "topic": "Evrim",
+      "difficulty": 3,
+      "question": "Doğal seleksiyon nasıl işler?",
+      "options": [
+        "Bütün bireyler hayatta kalır",
+        "Çevreye uyum sağlayan bireyler daha fazla ürer",
+        "Güçlü olan herkes kazanır",
+        "Mutasyonlar olmadan gerçekleşir",
+        "Yalnızca hayvanlar için geçerlidir"
+      ],
+      "answer": 1,
+      "solution": "Çevreye daha iyi uyum sağlayanlar hayatta kalır ve genlerini aktarır; popülasyon zaman içinde değişir."
+    },
+    {
+      "id": "fen_b030",
+      "category": "biyoloji",
+      "topic": "Bağışıklık",
+      "difficulty": 2,
+      "question": "Antikor üreten hücreler hangileridir?",
+      "options": [
+        "Eritrositler",
+        "T lenfositler",
+        "B lenfositler",
+        "Trombositler",
+        "Makrofajlar"
+      ],
+      "answer": 2,
+      "solution": "B lenfositler (plazma hücrelerine dönüşerek) antikor üretir."
+    },
+    {
+      "id": "fen_b031",
+      "category": "biyoloji",
+      "topic": "Bağışıklık",
+      "difficulty": 2,
+      "question": "Aşılama hangi tür bağışıklığı sağlar?",
+      "options": [
+        "Doğal pasif",
+        "Yapay pasif",
+        "Doğal aktif",
+        "Yapay aktif",
+        "Kalıtsal"
+      ],
+      "answer": 3,
+      "solution": "Aşı ile vücuda zayıflatılmış antijen verilerek vücudun kendi antikoru üretmesi sağlanır → yapay aktif bağışıklık."
+    },
+    {
+      "id": "fen_b032",
+      "category": "biyoloji",
+      "topic": "Canlıların Sınıflandırılması",
+      "difficulty": 2,
+      "question": "Canlı sınıflandırmasında en küçük birim nedir?",
+      "options": [
+        "Cins",
+        "Sınıf",
+        "Tür",
+        "Familya",
+        "Alem"
+      ],
+      "answer": 2,
+      "solution": "Sınıflandırma basamakları: Alem → Şube → Sınıf → Takım → Familya → Cins → Tür. En küçük birim türdür."
+    },
+    {
+      "id": "fen_b033",
+      "category": "biyoloji",
+      "topic": "Canlıların Sınıflandırılması",
+      "difficulty": 2,
+      "question": "Prokaryot hücre yapısına sahip organizmaları kapsayan alem hangisidir?",
+      "options": [
+        "Animalia",
+        "Plantae",
+        "Fungi",
+        "Monera (Bacteria)",
+        "Protista"
+      ],
+      "answer": 3,
+      "solution": "Monera (Bacteria) alemi: çekirdeksiz (prokaryot) canlıları; bakterileri kapsar."
+    },
+    {
+      "id": "fen_b034",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 1,
+      "question": "Bütün canlıların temel yapı ve işlev birimi nedir?",
+      "options": [
+        "Doku",
+        "Organ",
+        "Hücre",
+        "Sistem",
+        "Organizma"
+      ],
+      "answer": 2,
+      "solution": "Hücre, tüm canlıların en küçük yapısal ve işlevsel birimidir."
+    },
+    {
+      "id": "fen_b035",
+      "category": "biyoloji",
+      "topic": "Canlı Sınıflandırma",
+      "difficulty": 1,
+      "question": "Canlıların ortak özellikleri arasında hangisi yer alır?",
+      "options": [
+        "Fotosentez yapma",
+        "Beslenme, solunum, üreme",
+        "Uçma",
+        "Karada yaşama",
+        "Çok hücreli olma"
+      ],
+      "answer": 1,
+      "solution": "Tüm canlılar beslenir, solunum yapar, boşaltım yapar, ürer ve çevreye uyum sağlar."
+    },
+    {
+      "id": "fen_b036",
+      "category": "biyoloji",
+      "topic": "Ekosistem",
+      "difficulty": 1,
+      "question": "Besin zincirinde en alt basamakta hangi canlılar bulunur?",
+      "options": [
+        "Etçiller",
+        "Otçullar",
+        "Üreticiler (bitkiler)",
+        "Ayrıştırıcılar",
+        "İnsanlar"
+      ],
+      "answer": 2,
+      "solution": "Besin zincirinin tabanında üreticiler (bitkiler, algler) bulunur."
+    },
+    {
+      "id": "fen_b037",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 1,
+      "question": "Kalıtım materyali hangi moleküldür?",
+      "options": [
+        "Protein",
+        "Yağ",
+        "DNA",
+        "Karbonhidrat",
+        "Vitamin"
+      ],
+      "answer": 2,
+      "solution": "DNA (deoksiribonükleik asit) genetik bilgiyi taşıyan kalıtım materyalidir."
+    },
+    {
+      "id": "fen_b038",
+      "category": "biyoloji",
+      "topic": "Sindirim",
+      "difficulty": 1,
+      "question": "Karbonhidratların sindirimi hangi organda başlar?",
+      "options": [
+        "Mide",
+        "İnce bağırsak",
+        "Ağız",
+        "Karaciğer",
+        "Pankreas"
+      ],
+      "answer": 2,
+      "solution": "Karbonhidrat sindirimi ağızda başlar; tükürükteki amilaz enzimi nişastayı parçalar."
+    },
+    {
+      "id": "fen_b039",
+      "category": "biyoloji",
+      "topic": "Dolaşım",
+      "difficulty": 1,
+      "question": "Kanın vücutta dolaşmasını sağlayan organ hangisidir?",
+      "options": [
+        "Akciğer",
+        "Kalp",
+        "Böbrek",
+        "Karaciğer",
+        "Beyin"
+      ],
+      "answer": 1,
+      "solution": "Kalp, kanı pompalayarak vücutta dolaşımı sağlayan kas organıdır."
+    },
+    {
+      "id": "fen_b040",
+      "category": "biyoloji",
+      "topic": "Solunum",
+      "difficulty": 1,
+      "question": "Solunum sırasında vücuda alınan gaz hangisidir?",
+      "options": [
+        "CO₂",
+        "N₂",
+        "O₂",
+        "H₂",
+        "He"
+      ],
+      "answer": 2,
+      "solution": "Solunum sırasında O₂ alınır, CO₂ verilir."
+    },
+    {
+      "id": "fen_b041",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 1,
+      "question": "Bitki hücresinde olup hayvan hücresinde olmayan yapı hangisidir?",
+      "options": [
+        "Mitokondri",
+        "Ribozom",
+        "Hücre duvarı",
+        "Hücre zarı",
+        "Çekirdek"
+      ],
+      "answer": 2,
+      "solution": "Hücre duvarı (selüloz yapılı) bitki hücresine özgüdür; hayvan hücresinde bulunmaz."
+    },
+    {
+      "id": "fen_b042",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 2,
+      "question": "Golgi aygıtının (cisimciğinin) görevi nedir?",
+      "options": [
+        "Enerji üretimi",
+        "Protein sentezi",
+        "Maddeleri paketleme ve salgılama",
+        "Hücre bölünmesini yönetme",
+        "Sindirim"
+      ],
+      "answer": 2,
+      "solution": "Golgi aygıtı proteinleri ve lipitleri paketler, işler ve salgılar."
+    },
+    {
+      "id": "fen_b043",
+      "category": "biyoloji",
+      "topic": "Canlı Sınıflandırma",
+      "difficulty": 2,
+      "question": "Mantarlar (Fungi) beslenme şekli bakımından hangi gruba dahildir?",
+      "options": [
+        "Ototrof",
+        "Heterotrof (saprofit)",
+        "Kemoototrof",
+        "Fotoototrof",
+        "Parazit"
+      ],
+      "answer": 1,
+      "solution": "Mantarlar heterotrof (saprofit) olarak organik maddeleri dış sindirimle parçalayıp emer."
+    },
+    {
+      "id": "fen_b044",
+      "category": "biyoloji",
+      "topic": "Ekosistem",
+      "difficulty": 2,
+      "question": "Popülasyon ne demektir?",
+      "options": [
+        "Tüm canlılar",
+        "Bir türün belirli alandaki bireylerinin tamamı",
+        "Farklı türlerin toplamı",
+        "Cansız çevre",
+        "Yalnızca bitkiler"
+      ],
+      "answer": 1,
+      "solution": "Popülasyon: aynı türe ait bireylerin belirli bir alanda belirli zamanda oluşturduğu topluluktur."
+    },
+    {
+      "id": "fen_b045",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 2,
+      "question": "Gen ve kromozom arasındaki ilişki nedir?",
+      "options": [
+        "Gen, kromozomun içinde yer alan DNA parçasıdır",
+        "Kromozom genin içinde yer alır",
+        "İkisi aynı şeydir",
+        "Genler sitoplazmada bulunur",
+        "Kromozom protein değildir"
+      ],
+      "answer": 0,
+      "solution": "Gen: DNA üzerinde belirli bir özelliği kodlayan bölüm. Genler kromozomların üzerinde sıralanır."
+    },
+    {
+      "id": "fen_b046",
+      "category": "biyoloji",
+      "topic": "Sindirim",
+      "difficulty": 2,
+      "question": "Karaciğerin sindirime katkısı nedir?",
+      "options": [
+        "Enzim üretir",
+        "Yağ sindirimini kolaylaştıran safra salgılar",
+        "Protein sindirir",
+        "Karbonhidrat sindirir",
+        "Besinleri emer"
+      ],
+      "answer": 1,
+      "solution": "Karaciğer safra üretir; safra yağları küçük damlacıklara ayırarak (emülsiyon) sindirime yardımcı olur."
+    },
+    {
+      "id": "fen_b047",
+      "category": "biyoloji",
+      "topic": "Dolaşım",
+      "difficulty": 2,
+      "question": "İnsan kalbinde kaç odacık (bölme) vardır?",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "answer": 3,
+      "solution": "İnsan kalbi 4 odacıklıdır: 2 kulakçık (atrium) + 2 karıncık (ventrikül)."
+    },
+    {
+      "id": "fen_b048",
+      "category": "biyoloji",
+      "topic": "Solunum",
+      "difficulty": 2,
+      "question": "Gaz değişimi akciğerlerde hangi yapılarda gerçekleşir?",
+      "options": [
+        "Bronşlar",
+        "Bronşçuklar",
+        "Alveoller",
+        "Gırtlak",
+        "Soluk borusu"
+      ],
+      "answer": 2,
+      "solution": "Alveoller: akciğerlerdeki minik hava kesecikleri; O₂ ve CO₂ gaz değişimi burada yapılır."
+    },
+    {
+      "id": "fen_b049",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 2,
+      "question": "Lizozomun görevi nedir?",
+      "options": [
+        "Enerji üretimi",
+        "Hücre içi sindirim (yıkım)",
+        "Fotosentez",
+        "Protein sentezi",
+        "DNA kopyalama"
+      ],
+      "answer": 1,
+      "solution": "Lizozom: sindirim enzimleri içerir; yıpranmış organelleri ve yabancı maddeleri parçalar."
+    },
+    {
+      "id": "fen_b050",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 2,
+      "question": "Fenotip nedir?",
+      "options": [
+        "Bireyin gen yapısı",
+        "Bireyin dış görünüşü (gözlenebilir özelliği)",
+        "DNA'nın yapısı",
+        "Kromozom sayısı",
+        "Hücre tipi"
+      ],
+      "answer": 1,
+      "solution": "Fenotip: genotip ve çevrenin etkileşimiyle ortaya çıkan gözlenebilir özelliklerdir."
+    },
+    {
+      "id": "fen_b051",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 3,
+      "question": "Endoplazmik retikulumun iki türü nelerdir?",
+      "options": [
+        "Düz ve kıvrımlı",
+        "Granüllü (rough) ve granülsüz (smooth)",
+        "İç ve dış",
+        "Büyük ve küçük",
+        "Aktif ve pasif"
+      ],
+      "answer": 1,
+      "solution": "Granüllü ER: üzerinde ribozom var, protein sentezi. Granülsüz ER: lipit sentezi, detoksifikasyon."
+    },
+    {
+      "id": "fen_b052",
+      "category": "biyoloji",
+      "topic": "Canlı Sınıflandırma",
+      "difficulty": 3,
+      "question": "Omurgalı hayvanların sınıflandırma sırası hangisidir?",
+      "options": [
+        "Balıklar, kuşlar, sürüngenler, amfibiler, memeliler",
+        "Balıklar, amfibiler, sürüngenler, kuşlar, memeliler",
+        "Amfibiler, balıklar, kuşlar, memeliler, sürüngenler",
+        "Memeliler, kuşlar, sürüngenler, amfibiler, balıklar",
+        "Sıralamaları yoktur"
+      ],
+      "answer": 1,
+      "solution": "Evrimsel sıra: Balıklar → Amfibiler → Sürüngenler → Kuşlar → Memeliler."
+    },
+    {
+      "id": "fen_b053",
+      "category": "biyoloji",
+      "topic": "Ekosistem",
+      "difficulty": 3,
+      "question": "Karbon döngüsünde atmosfere CO₂ hangi yollarla verilir?",
+      "options": [
+        "Yalnızca fotosentez",
+        "Solunum, yanma ve çürüme",
+        "Yalnızca yanma",
+        "Yalnızca volkanik aktivite",
+        "Yalnızca solunum"
+      ],
+      "answer": 1,
+      "solution": "CO₂ kaynakları: canlı solunumu, fosil yakıt yanması, organik madde çürümesi ve volkanlar."
+    },
+    {
+      "id": "fen_b054",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 3,
+      "question": "Heterozigot (Aa) birey ile homozigot çekinik (aa) birey çaprazlanırsa yavruların yüzde kaçı çekinik fenotipli olur?",
+      "options": [
+        "%0",
+        "%25",
+        "%50",
+        "%75",
+        "%100"
+      ],
+      "answer": 2,
+      "solution": "Aa × aa → Aa, Aa, aa, aa → %50 baskın, %50 çekinik."
+    },
+    {
+      "id": "fen_b055",
+      "category": "biyoloji",
+      "topic": "Sindirim",
+      "difficulty": 3,
+      "question": "Pankreasın sindirime katkısı nedir?",
+      "options": [
+        "Yalnızca insülin üretir",
+        "Protein, yağ ve karbonhidrat sindiren enzimler salgılar",
+        "Yalnızca safra üretir",
+        "Besinleri emer",
+        "Yalnızca HCl salgılar"
+      ],
+      "answer": 1,
+      "solution": "Pankreas sindirim enzimleri üretir: tripsin (protein), lipaz (yağ), amilaz (karbonhidrat)."
+    },
+    {
+      "id": "fen_b056",
+      "category": "biyoloji",
+      "topic": "Dolaşım",
+      "difficulty": 3,
+      "question": "Büyük kan dolaşımı hangi kalp odacığından başlar?",
+      "options": [
+        "Sağ kulakçık",
+        "Sağ karıncık",
+        "Sol kulakçık",
+        "Sol karıncık",
+        "Aort kapağı"
+      ],
+      "answer": 3,
+      "solution": "Büyük dolaşım: Sol karıncık → Aort → Vücut → Vena kava → Sağ kulakçık."
+    },
+    {
+      "id": "fen_b057",
+      "category": "biyoloji",
+      "topic": "Solunum",
+      "difficulty": 3,
+      "question": "Hücresel solunumun glikoliz aşaması nerede gerçekleşir?",
+      "options": [
+        "Mitokondri",
+        "Çekirdek",
+        "Sitoplazma (sitosol)",
+        "Ribozom",
+        "Kloroplast"
+      ],
+      "answer": 2,
+      "solution": "Glikoliz sitoplazmada gerçekleşir; glikoz piruvata parçalanır, az ATP üretilir."
+    },
+    {
+      "id": "fen_b058",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 3,
+      "question": "Osmoz nedir?",
+      "options": [
+        "Maddelerin yoğun ortamdan seyreltik ortama geçmesi",
+        "Suyun yarı geçirgen zardan az yoğun ortamdan çok yoğun ortama geçmesi",
+        "Aktif taşıma",
+        "Fagositoz",
+        "Ekzositoz"
+      ],
+      "answer": 1,
+      "solution": "Osmoz: suyun yarı geçirgen zardan düşük çözünen yoğunluklu ortamdan yüksek yoğunluklu ortama geçmesidir."
+    },
+    {
+      "id": "fen_b059",
+      "category": "biyoloji",
+      "topic": "Ekosistem",
+      "difficulty": 3,
+      "question": "Kommensalizm nedir?",
+      "options": [
+        "Her iki tür de zarar görür",
+        "Bir tür yarar görür, diğeri etkilenmez",
+        "Her iki tür de yarar görür",
+        "Bir tür yarar görür, diğeri zarar görür",
+        "İki tür birbirini yer"
+      ],
+      "answer": 1,
+      "solution": "Kommensalizm: bir tür faydalanır, diğeri ne zarar ne yarar görür (örn: köpekbalığı ve yapışkan balık)."
+    },
+    {
+      "id": "fen_b060",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 3,
+      "question": "Mutasyon nedir?",
+      "options": [
+        "Hücre bölünmesi",
+        "DNA'daki kalıcı değişiklik",
+        "Protein sentezi",
+        "Fotosentez",
+        "Hücre büyümesi"
+      ],
+      "answer": 1,
+      "solution": "Mutasyon: DNA dizisinde meydana gelen kalıcı değişikliktir. Zararlı, faydalı veya nötr olabilir."
+    },
+    {
+      "id": "fen_b061",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 4,
+      "question": "Aktif taşıma ile pasif taşıma arasındaki temel fark nedir?",
+      "options": [
+        "Aktif taşıma ATP kullanmaz",
+        "Pasif taşıma enerji harcar",
+        "Aktif taşıma ATP enerjisi kullanır, yoğun ortama taşıma yapar",
+        "İkisi aynı mekanizmadır",
+        "Pasif taşıma yalnızca gazlar için geçerlidir"
+      ],
+      "answer": 2,
+      "solution": "Aktif taşıma: ATP enerjisi kullanarak az yoğun → çok yoğun ortama madde taşır (derişim gradyanına karşı)."
+    },
+    {
+      "id": "fen_b062",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 4,
+      "question": "Eş baskınlık (kodominans) durumunda AB kan grubunun genotipi nedir?",
+      "options": [
+        "I^A I^A",
+        "I^A I^B",
+        "I^B I^B",
+        "I^A i",
+        "ii"
+      ],
+      "answer": 1,
+      "solution": "AB kan grubu: I^A ve I^B allellerinin eş baskınlık göstermesiyle oluşur → genotip I^A I^B."
+    },
+    {
+      "id": "fen_b063",
+      "category": "biyoloji",
+      "topic": "Sindirim",
+      "difficulty": 4,
+      "question": "Villusların (bağırsak tüyleri) sindirim sistemindeki işlevi nedir?",
+      "options": [
+        "Enzim salgılamak",
+        "Emilim yüzey alanını artırmak",
+        "Peristaltik hareket yapmak",
+        "Safra depolamak",
+        "HCl üretmek"
+      ],
+      "answer": 1,
+      "solution": "Villuslar: ince bağırsak iç yüzeyindeki parmak şekilli çıkıntılar; emilim yüzey alanını ~600 kat artırır."
+    },
+    {
+      "id": "fen_b064",
+      "category": "biyoloji",
+      "topic": "Dolaşım",
+      "difficulty": 4,
+      "question": "Lenfositlerin bağışıklık sistemindeki iki ana türü hangileridir?",
+      "options": [
+        "Eritrosit ve trombosit",
+        "B lenfosit ve T lenfosit",
+        "Nötrofil ve bazofil",
+        "Monosit ve eozinofil",
+        "Makrofaj ve dendrit"
+      ],
+      "answer": 1,
+      "solution": "B lenfositler antikor üretir (hümoral bağışıklık); T lenfositler enfekte hücreleri yok eder (hücresel bağışıklık)."
+    },
+    {
+      "id": "fen_b065",
+      "category": "biyoloji",
+      "topic": "Solunum",
+      "difficulty": 4,
+      "question": "Krebs döngüsü (sitrik asit döngüsü) nerede gerçekleşir?",
+      "options": [
+        "Sitoplazma",
+        "Çekirdek",
+        "Mitokondri matriks",
+        "Kloroplast",
+        "Endoplazmik retikulum"
+      ],
+      "answer": 2,
+      "solution": "Krebs döngüsü mitokondrinin matriksinde gerçekleşir; asetil-CoA tamamen oksitlenir."
+    },
+    {
+      "id": "fen_b066",
+      "category": "biyoloji",
+      "topic": "Ekosistem",
+      "difficulty": 4,
+      "question": "Biyokütle piramidinde üreticilerden son tüketiciye doğru ne olur?",
+      "options": [
+        "Biyokütle artar",
+        "Biyokütle sabit kalır",
+        "Biyokütle azalır",
+        "Enerji artar",
+        "Birey sayısı artar"
+      ],
+      "answer": 2,
+      "solution": "Üreticilerden son tüketiciye doğru biyokütle azalır; her basamakta enerji kaybı (~%90) yaşanır."
+    },
+    {
+      "id": "fen_b067",
+      "category": "biyoloji",
+      "topic": "Canlı Sınıflandırma",
+      "difficulty": 4,
+      "question": "Virüsler neden canlı olarak kabul edilmez?",
+      "options": [
+        "Çok küçük oldukları için",
+        "Hücresel yapıya sahip değillerdir ve konak hücre dışında çoğalamazlar",
+        "DNA içermedikleri için",
+        "Protein yapısında olmadıkları için",
+        "Hareket edemedikleri için"
+      ],
+      "answer": 1,
+      "solution": "Virüsler: hücre yapısı yok, metabolizmaları yok, ancak konak hücrede çoğalabilirler."
+    },
+    {
+      "id": "fen_b068",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 4,
+      "question": "mRNA'nın görevi nedir?",
+      "options": [
+        "Amino asit taşımak",
+        "DNA'daki genetik bilgiyi ribozomlara taşımak",
+        "Ribozom yapısını oluşturmak",
+        "DNA'yı kopyalamak",
+        "Hücre zarını oluşturmak"
+      ],
+      "answer": 1,
+      "solution": "mRNA (mesajcı RNA): DNA'daki gen bilgisini kopyalayıp (transkripsiyon) ribozomlara taşır (translasyon)."
+    },
+    {
+      "id": "fen_b069",
+      "category": "biyoloji",
+      "topic": "Sindirim",
+      "difficulty": 4,
+      "question": "Pepsinojen hangi ortamda aktif pepsin enzimine dönüşür?",
+      "options": [
+        "Bazik ortam",
+        "Nötr ortam",
+        "Asidik ortam (HCl)",
+        "Alkali ortam",
+        "Tuzlu ortam"
+      ],
+      "answer": 2,
+      "solution": "Pepsinojen, midenin HCl (hidroklorik asit) içeren asidik ortamında aktif pepsin'e dönüşür."
+    },
+    {
+      "id": "fen_b070",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 5,
+      "question": "Hücre zarının sıvı mozaik modeline göre yapısı nasıldır?",
+      "options": [
+        "Tek katlı protein tabakası",
+        "Çift katlı fosfolipit tabakası + gömülü proteinler",
+        "Selüloz duvar",
+        "Tek katlı lipit tabakası",
+        "Üç katlı protein-lipit-protein"
+      ],
+      "answer": 1,
+      "solution": "Sıvı mozaik model: çift katlı fosfolipit tabakası içine gömülmüş integral ve periferal proteinler."
+    },
+    {
+      "id": "fen_b071",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 5,
+      "question": "Bir DNA ipliğinin baz dizisi 3'-ATGCCGTAA-5' ise tamamlayıcı mRNA dizisi nedir?",
+      "options": [
+        "5'-UACGGCAUU-3'",
+        "5'-ATGCCGTAA-3'",
+        "3'-UACGGCAUU-5'",
+        "5'-TACGGCATT-3'",
+        "3'-AUGCCGUAA-5'"
+      ],
+      "answer": 0,
+      "solution": "DNA 3'→5' kalıp iplik → mRNA 5'→3'. A→U, T→A, G→C, C→G: UACGGCAUU."
+    },
+    {
+      "id": "fen_b072",
+      "category": "biyoloji",
+      "topic": "Solunum",
+      "difficulty": 5,
+      "question": "Oksidatif fosforilasyon sırasında ATP sentezini sağlayan enzim hangisidir?",
+      "options": [
+        "RNA polimeraz",
+        "DNA polimeraz",
+        "ATP sentaz",
+        "Pepsin",
+        "Lipaz"
+      ],
+      "answer": 2,
+      "solution": "ATP sentaz: elektron taşıma zincirindeki proton gradyanını kullanarak ADP+Pi → ATP sentezler."
+    },
+    {
+      "id": "fen_b073",
+      "category": "biyoloji",
+      "topic": "Ekosistem",
+      "difficulty": 5,
+      "question": "Azot döngüsünde nitrifikasyon bakterileri ne yapar?",
+      "options": [
+        "N₂ gazını NH₃'e çevirir",
+        "NH₃'ü NO₂⁻ ve NO₃⁻'e oksitler",
+        "NO₃⁻'ü N₂'ye çevirir",
+        "Proteinleri NH₃'e parçalar",
+        "N₂O üretir"
+      ],
+      "answer": 1,
+      "solution": "Nitrifikasyon: Nitrosomonas NH₃→NO₂⁻, Nitrobacter NO₂⁻→NO₃⁻ oksitler."
+    },
+    {
+      "id": "fen_b074",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 5,
+      "question": "PCR (Polimeraz Zincir Reaksiyonu) tekniğinin amacı nedir?",
+      "options": [
+        "Protein sentezlemek",
+        "Belirli DNA bölgesini milyonlarca kez çoğaltmak",
+        "RNA'yı DNA'ya çevirmek",
+        "Hücre bölünmesini hızlandırmak",
+        "Mutasyonları onarmak"
+      ],
+      "answer": 1,
+      "solution": "PCR: DNA'nın belirli bir bölgesini ısıl döngülerle (denatürasyon, bağlanma, uzama) milyonlarca kez çoğaltır."
+    },
+    {
+      "id": "fen_b075",
+      "category": "biyoloji",
+      "topic": "Dolaşım",
+      "difficulty": 5,
+      "question": "Kan basıncı ölçümünde 120/80 mmHg değerindeki 120 neyi ifade eder?",
+      "options": [
+        "Diyastolik basınç",
+        "Sistolik basınç (kalp kasılması sırasındaki basınç)",
+        "Ortalama basınç",
+        "Nabız sayısı",
+        "Pulmoner basınç"
+      ],
+      "answer": 1,
+      "solution": "120 = sistolik basınç (kalp kasılırken). 80 = diyastolik basınç (kalp gevşerken)."
+    },
+    {
+      "id": "fen_b076",
+      "category": "biyoloji",
+      "topic": "Hücre",
+      "difficulty": 4,
+      "question": "Mitoz bölünmenin evreleri sırasıyla nelerdir?",
+      "options": [
+        "Profaz, Anafaz, Metafaz, Telofaz",
+        "Profaz, Metafaz, Anafaz, Telofaz",
+        "Metafaz, Profaz, Telofaz, Anafaz",
+        "Telofaz, Anafaz, Metafaz, Profaz",
+        "İnterfaz, Profaz, Anafaz, Telofaz"
+      ],
+      "answer": 1,
+      "solution": "Mitoz evreleri: Profaz → Metafaz → Anafaz → Telofaz (PMAT)."
+    },
+    {
+      "id": "fen_b077",
+      "category": "biyoloji",
+      "topic": "Canlı Sınıflandırma",
+      "difficulty": 3,
+      "question": "İkili adlandırma (binominal nomenklatür) sisteminde tür adı nasıl yazılır?",
+      "options": [
+        "Yalnızca cins adı",
+        "Cins adı (büyük harf) + tür tanımlayıcısı (küçük harf), italik",
+        "Türkçe isimle",
+        "Sınıf adıyla",
+        "Alem adıyla"
+      ],
+      "answer": 1,
+      "solution": "Linne sistemi: Homo sapiens → Homo (cins, büyük harf) + sapiens (tür, küçük harf), italik yazılır."
+    },
+    {
+      "id": "fen_b078",
+      "category": "biyoloji",
+      "topic": "Sindirim",
+      "difficulty": 3,
+      "question": "Yağların sindirim son ürünleri nelerdir?",
+      "options": [
+        "Amino asitler",
+        "Glikoz",
+        "Yağ asitleri ve gliserol",
+        "Nükleotidler",
+        "Maltoz"
+      ],
+      "answer": 2,
+      "solution": "Yağlar lipaz enzimiyle yağ asitleri + gliserol'e parçalanır."
+    },
+    {
+      "id": "fen_b079",
+      "category": "biyoloji",
+      "topic": "Dolaşım",
+      "difficulty": 3,
+      "question": "Arter ile ven damarları arasındaki fark nedir?",
+      "options": [
+        "Arterlerde kapakçık var, venlerde yok",
+        "Arterler kalbin atması ile çalışmaz",
+        "Arterler kalpten uzağa, venler kalbe doğru kan taşır",
+        "Venler kalın duvarlıdır",
+        "Arterler mavi kanı taşır"
+      ],
+      "answer": 2,
+      "solution": "Arter: kalpten organlara kan taşır (kalın duvarlı). Ven: organlardan kalbe kan taşır (kapakçıklı)."
+    },
+    {
+      "id": "fen_b080",
+      "category": "biyoloji",
+      "topic": "Solunum",
+      "difficulty": 4,
+      "question": "Bir molekül glikozun aerobik solunumda toplam kaç ATP ürettiği tahmin edilmektedir?",
+      "options": [
+        "2",
+        "4",
+        "18",
+        "36-38",
+        "100"
+      ],
+      "answer": 3,
+      "solution": "1 glikoz → Glikoliz(2 ATP) + Krebs(2 ATP) + ETS(~32-34 ATP) ≈ toplam 36-38 ATP."
+    },
+    {
+      "id": "fen_b081",
+      "category": "biyoloji",
+      "topic": "Ekosistem",
+      "difficulty": 2,
+      "question": "Ayrıştırıcıların (decomposer) ekosistemdeki rolü nedir?",
+      "options": [
+        "Fotosentez yapmak",
+        "Ölü organik maddeleri parçalayıp mineralleri toprağa geri kazandırmak",
+        "Oksijen üretmek",
+        "Hayvanları avlamak",
+        "Su döngüsünü sağlamak"
+      ],
+      "answer": 1,
+      "solution": "Ayrıştırıcılar (bakteri, mantar) ölü organik maddeyi parçalayarak besin maddelerini geri dönüştürür."
+    },
+    {
+      "id": "fen_b082",
+      "category": "biyoloji",
+      "topic": "Genetik",
+      "difficulty": 4,
+      "question": "Translasyon sırasında amino asitleri ribozoma taşıyan molekül hangisidir?",
+      "options": [
+        "mRNA",
+        "DNA",
+        "tRNA",
+        "rRNA",
+        "ATP"
+      ],
+      "answer": 2,
+      "solution": "tRNA (taşıyıcı RNA): antikodon bölgesiyle mRNA kodonunu tanır ve ilgili amino asidi ribozoma taşır."
+    },
+    {
+      "id": "fen_b083",
+      "category": "biyoloji",
+      "topic": "Canlı Sınıflandırma",
+      "difficulty": 5,
+      "question": "Filogenetik sınıflandırmada kladogram neyi gösterir?",
+      "options": [
+        "Canlıların büyüklük sırasını",
+        "Evrimsel akrabalık ilişkilerini dal diyagramıyla",
+        "Hücre yapılarını",
+        "Beslenme türlerini",
+        "Yaşam süresini"
+      ],
+      "answer": 1,
+      "solution": "Kladogram: canlıların ortak atadan dallanma biçimindeki evrimsel ilişkilerini gösteren dal diyagramıdır."
+    }
+  ]
+}

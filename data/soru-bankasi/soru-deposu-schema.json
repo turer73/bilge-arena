@@ -1,0 +1,330 @@
+{
+  "_meta": {
+    "versiyon": "1.0",
+    "aciklama": "Sınav Atölyesi — TYT Soru Deposu Şeması",
+    "toplam_soru": 12,
+    "son_guncelleme": "2026-03-07",
+    "lisans": "Özgün içerik — ÖSYM türev değil"
+  },
+
+  "schema": {
+    "id":          "string — benzersiz (ders-konu-sira: MAT-PROB-001)",
+    "ders":        "turkce | matematik | fen | sosyal | ingilizce",
+    "alt_ders":    "string — fizik / kimya / biyoloji / tarih vb.",
+    "konu":        "string — ana konu başlığı",
+    "alt_konu":    "string — alt başlık (opsiyonel)",
+    "zorluk":      "1-5 (1=kolay, 5=çok zor)",
+    "tip":         "coktan_secmeli | dogru_yanlis | eslestirme | bosluk_doldurma",
+    "soru":        "string — soru metni",
+    "secenekler":  ["A", "B", "C", "D", "E"],
+    "cevap":       "string — doğru şık",
+    "aciklama":    "string — çözüm açıklaması",
+    "kaynaklar":   ["özgün", "ygs_2015_turevi", "ornek_soru"],
+    "etiketler":   ["array", "of", "tags"],
+    "oyun_tipleri": ["hiz_yarisi", "kart_eslesme", "streak_modu"],
+    "puan":        "number — doğru yanıtın XP değeri (zorluk * 10)"
+  },
+
+  "ornekler": [
+    {
+      "id": "TR-PAR-001",
+      "ders": "turkce",
+      "alt_ders": null,
+      "konu": "Paragraf",
+      "alt_konu": "Ana Düşünce",
+      "zorluk": 2,
+      "tip": "coktan_secmeli",
+      "soru": "Aşağıdaki cümlelerden hangisi bir paragrafın ana düşüncesi olamaz?",
+      "secenekler": {
+        "A": "Paragrafın bütününü kapsayan genel yargı içeren cümle",
+        "B": "Yalnızca bir ayrıntıyı destekleyen örnek cümle",
+        "C": "Okuyucuya mesaj veren, çıkarım içeren cümle",
+        "D": "Konuyu özetleyen soyut bir yargı cümlesi",
+        "E": "Tüm düşünceleri kapsayan sonuç cümlesi"
+      },
+      "cevap": "B",
+      "aciklama": "Ana düşünce paragrafın tamamını kapsamalıdır. Yalnızca bir ayrıntıyı destekleyen cümle yardımcı düşüncedir.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["paragraf", "ana-dusunce", "yardimci-dusunce"],
+      "oyun_tipleri": ["coktan_secmeli", "streak_modu"],
+      "puan": 20
+    },
+    {
+      "id": "TR-SAN-001",
+      "ders": "turkce",
+      "alt_ders": null,
+      "konu": "Sözcükte Anlam",
+      "alt_konu": "Eş Anlamlı",
+      "zorluk": 2,
+      "tip": "coktan_secmeli",
+      "soru": "\"Mütevazı\" kelimesinin en yakın anlamlısı aşağıdakilerden hangisidir?",
+      "secenekler": {
+        "A": "Kibirli",
+        "B": "Alçakgönüllü",
+        "C": "Cömert",
+        "D": "Sabırlı",
+        "E": "Çalışkan"
+      },
+      "cevap": "B",
+      "aciklama": "Mütevazı; kendini beğenmeden uzak, alçakgönüllü demektir. Kibir ise bunun zıttıdır.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["sozcukte-anlam", "es-anlamli", "wordquest-uyumlu"],
+      "oyun_tipleri": ["hiz_yarisi", "kart_eslesme", "streak_modu"],
+      "puan": 20
+    },
+    {
+      "id": "MAT-PROB-001",
+      "ders": "matematik",
+      "alt_ders": null,
+      "konu": "Problemler",
+      "alt_konu": "Yaş Problemleri",
+      "zorluk": 2,
+      "tip": "coktan_secmeli",
+      "soru": "Ali'nin şu anki yaşı, kardeşinin yaşının 3 katıdır. 8 yıl sonra Ali'nin yaşı kardeşinin yaşının 2 katı olacaktır. Buna göre Ali şu an kaç yaşındadır?",
+      "secenekler": {
+        "A": "18",
+        "B": "20",
+        "C": "22",
+        "D": "24",
+        "E": "26"
+      },
+      "cevap": "D",
+      "aciklama": "Kardeş = x, Ali = 3x. 8 yıl sonra: 3x+8 = 2(x+8) → 3x+8 = 2x+16 → x=8. Ali = 3×8 = 24.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["problemler", "yas-problemi", "denklem"],
+      "oyun_tipleri": ["coktan_secmeli", "streak_modu"],
+      "puan": 20
+    },
+    {
+      "id": "MAT-TEMEL-001",
+      "ders": "matematik",
+      "alt_ders": null,
+      "konu": "Temel Kavramlar",
+      "alt_konu": "Sayı Basamakları",
+      "zorluk": 1,
+      "tip": "coktan_secmeli",
+      "soru": "4 basamaklı en büyük çift sayı ile 3 basamaklı en küçük tek sayının toplamı kaçtır?",
+      "secenekler": {
+        "A": "10097",
+        "B": "10098",
+        "C": "10099",
+        "D": "10100",
+        "E": "10101"
+      },
+      "cevap": "C",
+      "aciklama": "4 basamaklı en büyük çift sayı: 9998. 3 basamaklı en küçük tek sayı: 101. Toplam: 9998 + 101 = 10099.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["temel-kavramlar", "sayi-basamaklari", "hiz-sorusu"],
+      "oyun_tipleri": ["hiz_yarisi", "streak_modu"],
+      "puan": 10
+    },
+    {
+      "id": "FEN-FIZ-001",
+      "ders": "fen",
+      "alt_ders": "fizik",
+      "konu": "Hareket ve Kuvvet",
+      "alt_konu": "Kuvvet-İvme",
+      "zorluk": 3,
+      "tip": "coktan_secmeli",
+      "soru": "Kütlesi 5 kg olan bir cisme 20 N net kuvvet uygulandığında cismin ivmesi kaç m/s² olur?",
+      "secenekler": {
+        "A": "2",
+        "B": "4",
+        "C": "5",
+        "D": "10",
+        "E": "25"
+      },
+      "cevap": "B",
+      "aciklama": "Newton'un 2. Yasası: F = m × a → a = F/m = 20/5 = 4 m/s²",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["fizik", "newton-yasalari", "hareket", "formul"],
+      "oyun_tipleri": ["coktan_secmeli", "streak_modu"],
+      "puan": 30
+    },
+    {
+      "id": "FEN-KIM-001",
+      "ders": "fen",
+      "alt_ders": "kimya",
+      "konu": "Atom ve Periyodik Sistem",
+      "alt_konu": "Atom Numarası",
+      "zorluk": 2,
+      "tip": "coktan_secmeli",
+      "soru": "Atom numarası 11 olan sodyum (Na) elementinin periyot tablosundaki periyodu ve grubu hangisidir?",
+      "secenekler": {
+        "A": "2. periyot, 1A grubu",
+        "B": "3. periyot, 1A grubu",
+        "C": "3. periyot, 2A grubu",
+        "D": "2. periyot, 7A grubu",
+        "E": "4. periyot, 1A grubu"
+      },
+      "cevap": "B",
+      "aciklama": "Na'nın elektron dizilimi 2,8,1'dir. 3 enerji seviyesi → 3. periyot. 1 değerlik elektronu → 1A grubu.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["kimya", "periyodik-sistem", "atom", "elektron-dizilimi"],
+      "oyun_tipleri": ["kart_eslesme", "coktan_secmeli"],
+      "puan": 20
+    },
+    {
+      "id": "FEN-BIO-001",
+      "ders": "fen",
+      "alt_ders": "biyoloji",
+      "konu": "Hücre",
+      "alt_konu": "Hücre Organelleri",
+      "zorluk": 2,
+      "tip": "coktan_secmeli",
+      "soru": "Fotosentezin gerçekleştiği hücre organeli hangisidir?",
+      "secenekler": {
+        "A": "Mitokondri",
+        "B": "Ribozom",
+        "C": "Kloroplast",
+        "D": "Golgi aygıtı",
+        "E": "Lizozom"
+      },
+      "cevap": "C",
+      "aciklama": "Kloroplast; klorofil pigmentini içerir ve ışık enerjisini kimyasal enerjiye dönüştürerek fotosentezi gerçekleştirir.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["biyoloji", "hucre", "organeller", "fotosentez"],
+      "oyun_tipleri": ["kart_eslesme", "coktan_secmeli", "streak_modu"],
+      "puan": 20
+    },
+    {
+      "id": "SOS-COG-001",
+      "ders": "sosyal",
+      "alt_ders": "cografya",
+      "konu": "Türkiye Coğrafyası",
+      "alt_konu": "Bölgeler",
+      "zorluk": 1,
+      "tip": "coktan_secmeli",
+      "soru": "Türkiye'nin en büyük gölü hangisidir?",
+      "secenekler": {
+        "A": "Tuz Gölü",
+        "B": "Beyşehir Gölü",
+        "C": "Van Gölü",
+        "D": "Eğirdir Gölü",
+        "E": "İznik Gölü"
+      },
+      "cevap": "C",
+      "aciklama": "Van Gölü, Türkiye'nin en büyük gölüdür (3.713 km²). Aynı zamanda dünyanın en büyük sodalı göllerinden biridir.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["cografya", "turkiye", "goller", "hiz-sorusu"],
+      "oyun_tipleri": ["hiz_yarisi", "streak_modu"],
+      "puan": 10
+    },
+    {
+      "id": "SOS-TAR-001",
+      "ders": "sosyal",
+      "alt_ders": "tarih",
+      "konu": "Milli Mücadele",
+      "alt_konu": "Kurtuluş Savaşı",
+      "zorluk": 2,
+      "tip": "coktan_secmeli",
+      "soru": "Türkiye Büyük Millet Meclisi hangi tarihte açılmıştır?",
+      "secenekler": {
+        "A": "19 Mayıs 1919",
+        "B": "23 Nisan 1920",
+        "C": "30 Ağustos 1922",
+        "D": "29 Ekim 1923",
+        "E": "3 Mart 1924"
+      },
+      "cevap": "B",
+      "aciklama": "TBMM, Mustafa Kemal Atatürk öncülüğünde 23 Nisan 1920'de Ankara'da açılmıştır. Bu tarih bugün Ulusal Egemenlik ve Çocuk Bayramı olarak kutlanmaktadır.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["tarih", "milli-mucadele", "tbmm", "ataturk"],
+      "oyun_tipleri": ["hiz_yarisi", "coktan_secmeli"],
+      "puan": 20
+    },
+    {
+      "id": "SOS-FEL-001",
+      "ders": "sosyal",
+      "alt_ders": "felsefe",
+      "konu": "Felsefe Temel Kavramlar",
+      "alt_konu": "Bilgi Felsefesi",
+      "zorluk": 3,
+      "tip": "coktan_secmeli",
+      "soru": "\"Bilginin kaynağı akıldır; duyular yanıltıcıdır\" görüşünü savunan felsefi akım hangisidir?",
+      "secenekler": {
+        "A": "Empirizm",
+        "B": "Pragmatizm",
+        "C": "Rasyonalizm",
+        "D": "Skeptisizm",
+        "E": "Realizm"
+      },
+      "cevap": "C",
+      "aciklama": "Rasyonalizm; bilginin temel kaynağının akıl olduğunu savunur. Descartes, Leibniz ve Spinoza bu akımın önemli temsilcileridir.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["felsefe", "bilgi-felsefesi", "rasyonalizm", "akimlar"],
+      "oyun_tipleri": ["kart_eslesme", "coktan_secmeli"],
+      "puan": 30
+    },
+    {
+      "id": "ENG-VOC-001",
+      "ders": "ingilizce",
+      "alt_ders": null,
+      "konu": "Vocabulary",
+      "alt_konu": "YDT Kelime Listesi — B2/C1",
+      "zorluk": 3,
+      "tip": "coktan_secmeli",
+      "soru": "Choose the word closest in meaning to \"ambiguous\":",
+      "secenekler": {
+        "A": "Clear",
+        "B": "Unclear",
+        "C": "Dangerous",
+        "D": "Important",
+        "E": "Common"
+      },
+      "cevap": "B",
+      "aciklama": "\"Ambiguous\" means having more than one possible meaning; unclear or uncertain. Synonym: vague, unclear.",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["ingilizce", "vocabulary", "b2-c1", "wordquest"],
+      "oyun_tipleri": ["hiz_yarisi", "kart_eslesme", "streak_modu"],
+      "puan": 30
+    },
+    {
+      "id": "ENG-VOC-002",
+      "ders": "ingilizce",
+      "alt_ders": null,
+      "konu": "Vocabulary",
+      "alt_konu": "YDT Kelime Listesi — B1",
+      "zorluk": 2,
+      "tip": "eslestirme",
+      "soru": "\"Persistent\" kelimesinin Türkçe karşılığı nedir?",
+      "secenekler": {
+        "A": "Sabırlı",
+        "B": "Kararlı / ısrarcı",
+        "C": "Başarılı",
+        "D": "Bağımsız",
+        "E": "Güvenilir"
+      },
+      "cevap": "B",
+      "aciklama": "Persistent: bir amaca ulaşmak için ısrarla devam eden; azimli, kararlı. \"She was persistent in her studies.\"",
+      "kaynaklar": ["özgün"],
+      "etiketler": ["ingilizce", "vocabulary", "b1", "wordquest", "tyt-ingilizce"],
+      "oyun_tipleri": ["hiz_yarisi", "kart_eslesme"],
+      "puan": 20
+    }
+  ],
+
+  "depo_plani": {
+    "hedef_toplam": 500,
+    "ders_dagilimi": {
+      "turkce": 120,
+      "matematik": 150,
+      "fen": 100,
+      "sosyal": 80,
+      "ingilizce": 50
+    },
+    "zorluk_dagilimi": {
+      "1_kolay": "20%",
+      "2_orta": "45%",
+      "3_zor": "25%",
+      "4_cok_zor": "8%",
+      "5_uzman": "2%"
+    },
+    "uretim_yontemi": {
+      "ai_destekli": "Claude ile türev soru üretimi — ana yapı + açıklama otomatik",
+      "insan_editor": "Turgut veya alan uzmanı doğrulama",
+      "haftalik_hedef": "50 soru/hafta",
+      "sure": "10 haftada 500 soru"
+    }
+  }
+}

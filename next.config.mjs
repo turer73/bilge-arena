@@ -45,6 +45,13 @@ const nextConfig = {
   // Sıkıştırma: Next.js gzip/brotli
   compress: true,
 
+  // ads.txt rewrite — Next.js standalone doesn't serve public/*.txt reliably
+  async rewrites() {
+    return [
+      { source: '/ads.txt', destination: '/api/ads-txt' },
+    ]
+  },
+
   // Guvenlik + performans header'lari
   async headers() {
     return [
