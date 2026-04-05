@@ -36,8 +36,8 @@ export function AdBanner({ slot, className = '' }: AdBannerProps) {
     if (!ADSENSE_ID || pushed.current) return
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const adsbygoogle = (window as any).adsbygoogle || []
+      const w = window as Window & { adsbygoogle?: Record<string, unknown>[] }
+      const adsbygoogle = w.adsbygoogle || []
       adsbygoogle.push({})
       pushed.current = true
     } catch {
