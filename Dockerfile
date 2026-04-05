@@ -32,6 +32,10 @@ ENV SENTRY_AUTH_TOKEN=""
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# NEXT_PUBLIC_* vars must be available at build time
+ARG NEXT_PUBLIC_ADSENSE_ID
+ENV NEXT_PUBLIC_ADSENSE_ID=$NEXT_PUBLIC_ADSENSE_ID
+
 RUN npm run build
 
 # ── Stage 3: Production ──

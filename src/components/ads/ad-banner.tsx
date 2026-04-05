@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { FEATURES } from '@/lib/constants/premium'
 import { useAuthStore } from '@/stores/auth-store'
 
@@ -16,17 +17,33 @@ const SLOT_SIZES: Record<AdSlot, { width: number; height: number; label: string 
   sidebar: { width: 160, height: 600, label: 'Sidebar Banner' },
 }
 
+const ADSENSE_ID = process.env.NEXT_PUBLIC_ADSENSE_ID || ''
+
 /**
  * Reklam banner bileşeni.
  *
  * FEATURES.ADS false iken render edilmez.
  * Premium kullanicilar icin de gizlenir.
  *
- * Şu an placeholder — Google AdSense entegrasyonu icin
- * data-ad-slot ve data-ad-client prop'lari eklenir.
+ * NEXT_PUBLIC_ADSENSE_ID yoksa placeholder gosterir.
+ * Varsa gercek AdSense reklam alani render eder.
  */
 export function AdBanner({ slot, className = '' }: AdBannerProps) {
   const { profile } = useAuthStore()
+  const pushed = useRef(false)
+
+  useEffect(() => {
+    if (!ADSENSE_ID || pushed.current) return
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const adsbygoogle = (window as any).adsbygoogle || []
+      adsbygoogle.push({})
+      pushed.current = true
+    } catch {
+      // AdSense not loaded yet
+    }
+  }, [])
 
   // Feature kapali veya premium kullanici — reklam gosterme
   if (!FEATURES.ADS) return null
@@ -34,21 +51,34 @@ export function AdBanner({ slot, className = '' }: AdBannerProps) {
 
   const size = SLOT_SIZES[slot]
 
+  // AdSense ID yoksa placeholder
+  if (!ADSENSE_ID) {
+    return (
+      <div
+        className={`flex items-center justify-center overflow-hidden rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] ${className}`}
+        style={{ minHeight: size.height, maxWidth: size.width }}
+      >
+        <div className="flex flex-col items-center gap-1 py-3 text-[var(--text-muted)]">
+          <span className="text-xs">Ad Space</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Gercek AdSense reklam alani
   return (
     <div
-      className={`flex items-center justify-center overflow-hidden rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] ${className}`}
-      style={{
-        minHeight: size.height,
-        maxWidth: size.width,
-      }}
-      data-ad-slot={slot}
-      data-ad-format="auto"
+      className={`overflow-hidden ${className}`}
+      style={{ minHeight: size.height, maxWidth: size.width }}
     >
-      {/* Placeholder — AdSense aktif olunca burasi degisecek */}
-      <div className="flex flex-col items-center gap-1 py-3 text-[var(--text-muted)]">
-        <span className="text-xs">📢</span>
-        <span className="text-[9px]">Reklam Alanı ({size.label})</span>
-      </div>
+      <ins
+        className="adsbygoogle"
+        style={{ display: 'block' }}
+        data-ad-client={ADSENSE_ID}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
     </div>
   )
 }
