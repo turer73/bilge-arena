@@ -12,7 +12,7 @@ export const FEATURES = {
   QUIZ_LIMIT: false,
 
   /** Reklam banner'lari (lobby + sonuc ekrani). false iken reklamlar gizli. */
-  ADS: false,
+  ADS: true,
 
   /** Premium upsell modali (limit dolunca gosterilir). false iken gosterilmez. */
   PREMIUM_UPSELL: false,
