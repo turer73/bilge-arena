@@ -29,17 +29,19 @@ export function EditorLayout() {
         ])
 
         if (sectionsRes.ok) {
-          const sectionsData = await sectionsRes.json()
+          const { sections: sectionsArr } = await sectionsRes.json()
           const sectionsMap: Record<string, unknown> = {}
-          for (const s of sectionsData) {
-            sectionsMap[s.section_key] = s
+          if (Array.isArray(sectionsArr)) {
+            for (const s of sectionsArr) {
+              sectionsMap[s.section_key] = s
+            }
           }
           setSections(sectionsMap as Record<string, never>)
         }
 
         if (elementsRes.ok) {
-          const elementsData = await elementsRes.json()
-          setElements(elementsData)
+          const { elements: elementsArr } = await elementsRes.json()
+          setElements(Array.isArray(elementsArr) ? elementsArr : [])
         }
       } catch (err) {
         console.error('Veri yükleme hatası:', err)

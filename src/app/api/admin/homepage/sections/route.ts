@@ -17,7 +17,7 @@ export async function GET() {
     const { data: sections, error } = await supabase
       .from('homepage_sections')
       .select('*')
-      .order('sort_order', { ascending: true })
+      .order('section_key', { ascending: true })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
