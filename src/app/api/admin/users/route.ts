@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -106,4 +107,69 @@ export async function PATCH(request: NextRequest) {
   })
 
   return NextResponse.json({ success: true })
+}
+
+export async function POST(request: NextRequest) {
+  const supabase = await createClient()
+  const admin = await checkPermission(supabase, 'admin.users.manage')
+  if (!admin) {
+    return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
+  }
+
+  try {
+    const body = await request.json()
+    const { email, displayName, roleId } = body
+
+    if (!email || typeof email !== 'string') {
+      return NextResponse.json({ error: 'E-posta adresi gerekli' }, { status: 400 })
+    }
+
+    // Basit email format kontrolü
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'Geçersiz e-posta formatı' }, { status: 400 })
+    }
+
+    // Service role client ile kullanıcı davet et
+    const serviceClient = createServiceRoleClient()
+    const { data: inviteData, error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(
+      email,
+      { data: { full_name: displayName || undefined } },
+    )
+
+    if (inviteError) {
+      // Duplicate email
+      if (inviteError.message?.includes('already been registered')) {
+        return NextResponse.json({ error: 'Bu e-posta adresi zaten kayıtlı' }, { status: 409 })
+      }
+      return NextResponse.json({ error: inviteError.message || 'Davet gönderilemedi' }, { status: 400 })
+    }
+
+    const newUserId = inviteData.user?.id
+    if (!newUserId) {
+      return NextResponse.json({ error: 'Kullanıcı oluşturulamadı' }, { status: 500 })
+    }
+
+    // Opsiyonel: Rol ata
+    if (roleId) {
+      await supabase.from('user_roles').insert({
+        user_id: newUserId,
+        role_id: roleId,
+        assigned_by: admin.id,
+      })
+    }
+
+    // Admin log kaydet
+    await supabase.from('admin_logs').insert({
+      admin_id: admin.id,
+      action: 'create_user',
+      target_type: 'user',
+      target_id: newUserId,
+      details: { email, displayName, roleId },
+    })
+
+    return NextResponse.json({ success: true, userId: newUserId })
+  } catch {
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 })
+  }
 }
