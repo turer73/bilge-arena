@@ -68,7 +68,20 @@ const GAMES = [
   },
 ]
 
-export function GamesSection() {
+interface GamesSectionProps {
+  config?: Record<string, unknown>
+}
+
+export function GamesSection({ config }: GamesSectionProps = {}) {
+  const sectionTitle = (config?.title as string) || undefined
+  const sectionSubtitle = (config?.subtitle as string) || undefined
+  const gameOverrides = (config?.games as Record<string, { name?: string; desc?: string; count?: string }>) || {}
+  const games = GAMES.map(g => ({
+    ...g,
+    name: gameOverrides[g.slug]?.name || g.name,
+    desc: gameOverrides[g.slug]?.desc || g.desc,
+    count: gameOverrides[g.slug]?.count || g.count,
+  }))
   return (
     <section className="bg-gradient-to-b from-[var(--bg)] to-[var(--surface)] py-24">
       <div className="mx-auto max-w-[1200px] px-6 lg:px-8">
@@ -78,17 +91,23 @@ export function GamesSection() {
             Platform
           </div>
           <h2 className="font-display text-4xl font-black lg:text-[42px]">
-            <span className="text-[var(--text)]">Arena </span>
-            <span className="text-[var(--reward-light)]">Oyunlari</span>
+            {sectionTitle ? (
+              <span className="text-[var(--text)]">{sectionTitle}</span>
+            ) : (
+              <>
+                <span className="text-[var(--text)]">Arena </span>
+                <span className="text-[var(--reward-light)]">Oyunlari</span>
+              </>
+            )}
           </h2>
           <p className="mx-auto mt-4 max-w-[500px] text-[var(--text-sub)]">
-            Her ders kendi arenasinda. Oyna, kazan, siralamada yuksel.
+            {sectionSubtitle || 'Her ders kendi arenasinda. Oyna, kazan, siralamada yuksel.'}
           </p>
         </div>
 
         {/* Oyun kartlari — 5'li grid: ust 3, alt 2 */}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {GAMES.map((g) => (
+          {games.map((g) => (
             <Link
               key={g.slug}
               href={`/arena/${g.slug}`}

@@ -31,7 +31,17 @@ const STEPS = [
   },
 ]
 
-export function HowItWorks() {
+interface HowItWorksProps {
+  config?: Record<string, unknown>
+}
+
+export function HowItWorks({ config }: HowItWorksProps = {}) {
+  const configSteps = config?.steps as { title?: string; desc?: string }[] | undefined
+  const steps = STEPS.map((step, i) => ({
+    ...step,
+    title: configSteps?.[i]?.title || step.title,
+    desc: configSteps?.[i]?.desc || step.desc,
+  }))
   return (
     <section className="bg-[var(--surface)] py-24">
       <div className="mx-auto max-w-[1200px] px-6 lg:px-8">
@@ -57,7 +67,7 @@ export function HowItWorks() {
             }}
           />
 
-          {STEPS.map(({ n, icon: Icon, color, title, desc }) => (
+          {steps.map(({ n, icon: Icon, color, title, desc }) => (
             <div
               key={n}
               className="relative rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 text-center"

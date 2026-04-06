@@ -5,6 +5,9 @@ import { Footer } from '@/components/layout/footer'
 import { HeroSection } from '@/components/landing/hero-section'
 import { StatsBar } from '@/components/landing/stats-bar'
 import { GamesSection } from '@/components/landing/games-section'
+import { SectionWrapper } from '@/components/landing/section-wrapper'
+import { createClient } from '@/lib/supabase/server'
+import type { HomepageElement, HomepageSectionConfig } from '@/types/database'
 
 /* ─── SEO: Ana sayfa metadata ─── */
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bilgearena.com').trim()
@@ -40,26 +43,64 @@ const HowItWorks = dynamic(() => import('@/components/landing/how-it-works').the
 const LeaderboardPreview = dynamic(() => import('@/components/landing/leaderboard-preview').then(m => ({ default: m.LeaderboardPreview })))
 const CTASection = dynamic(() => import('@/components/landing/cta-section').then(m => ({ default: m.CTASection })))
 
-export default function Home() {
+// Fetch homepage content from DB
+async function getHomepageContent() {
+  try {
+    const supabase = await createClient()
+    const [{ data: sections }, { data: elements }] = await Promise.all([
+      supabase.from('homepage_sections').select('*').eq('is_published', true),
+      supabase.from('homepage_elements').select('*').eq('is_published', true).order('sort_order'),
+    ])
+
+    const sectionMap: Record<string, Record<string, unknown>> = {}
+    sections?.forEach((s: HomepageSectionConfig) => {
+      if (s.config && Object.keys(s.config).length > 0) {
+        sectionMap[s.section_key] = s.config as Record<string, unknown>
+      }
+    })
+
+    return { sections: sectionMap, elements: (elements || []) as HomepageElement[] }
+  } catch {
+    return { sections: {}, elements: [] }
+  }
+}
+
+export default async function Home() {
+  const { sections, elements } = await getHomepageContent()
+
   return (
     <>
       <Navbar />
       <main>
-        <HeroSection />
-        <StatsBar />
-        <GamesSection />
+        <SectionWrapper section="hero" elements={elements}>
+          <HeroSection config={sections.hero} />
+        </SectionWrapper>
+        <SectionWrapper section="stats" elements={elements}>
+          <StatsBar config={sections.stats} />
+        </SectionWrapper>
+        <SectionWrapper section="games" elements={elements}>
+          <GamesSection config={sections.games} />
+        </SectionWrapper>
         {/* Fold-alti bolumleri content-visibility ile ertele */}
         <div className="cv-auto">
-          <HowItWorks />
+          <SectionWrapper section="how_it_works" elements={elements}>
+            <HowItWorks config={sections.how_it_works} />
+          </SectionWrapper>
         </div>
         <div className="cv-auto">
-          <LeaderboardPreview />
+          <SectionWrapper section="leaderboard" elements={elements}>
+            <LeaderboardPreview config={sections.leaderboard} />
+          </SectionWrapper>
         </div>
         <div className="cv-auto">
-          <CTASection />
+          <SectionWrapper section="cta" elements={elements}>
+            <CTASection config={sections.cta} />
+          </SectionWrapper>
         </div>
       </main>
-      <Footer />
+      <SectionWrapper section="footer" elements={elements}>
+        <Footer config={sections.footer} />
+      </SectionWrapper>
     </>
   )
 }

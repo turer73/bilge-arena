@@ -12,7 +12,14 @@ const USERS = [
   { rank: 5, name: 'Selin T.', city: 'Antalya', xp: 7340, level: 'Azimli', streak: 9, badge: '5' },
 ]
 
-export function LeaderboardPreview() {
+interface LeaderboardPreviewProps {
+  config?: Record<string, unknown>
+}
+
+export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
+  const title = (config?.title as string) || undefined
+  const description = (config?.description as string) || 'Her hafta sıfırlanan haftalık turnuva. En çok XP kazanan öğrenci zirvede yer alır.'
+  const buttonText = (config?.button_text as string) || 'Sıralamayı Gör'
   return (
     <section className="bg-[var(--bg)] py-24">
       <div className="mx-auto grid max-w-[1200px] items-center gap-16 px-6 lg:grid-cols-2 lg:px-8">
@@ -22,11 +29,17 @@ export function LeaderboardPreview() {
             Liderboard
           </div>
           <h2 className="font-display text-4xl font-black lg:text-[42px]">
-            <span className="text-[var(--text)]">Zirvedeki </span>
-            <span className="text-[var(--reward-light)]">Bilgeler</span>
+            {title ? (
+              <span className="text-[var(--text)]">{title}</span>
+            ) : (
+              <>
+                <span className="text-[var(--text)]">Zirvedeki </span>
+                <span className="text-[var(--reward-light)]">Bilgeler</span>
+              </>
+            )}
           </h2>
           <p className="mt-4 text-[var(--text-sub)] leading-relaxed lg:text-lg">
-            Her hafta sıfırlanan haftalık turnuva. En çok XP kazanan öğrenci zirvede yer alır.
+            {description}
           </p>
           <Link href="/arena/siralama">
             <Button
@@ -35,7 +48,7 @@ export function LeaderboardPreview() {
               className="mt-8"
             >
               <Trophy size={16} />
-              Sıralamayı Gör
+              {buttonText}
             </Button>
           </Link>
         </div>

@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { checkPermission } from '@/lib/supabase/admin'
+
+const ALLOWED_FIELDS = [
+  'content',
+  'image_url',
+  'alt_text',
+  'placement',
+  'alignment',
+  'size',
+  'styles',
+  'sort_order',
+  'is_published',
+] as const
+
+/**
+ * PATCH /api/admin/homepage/elements/[id]
+ * Element alanlarini guncelle (whitelist).
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = await createClient()
+    const admin = await checkPermission(supabase, 'admin.homepage.edit')
+    if (!admin) {
+      return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
+    }
+
+    const { id } = await params
+    const body = await request.json()
+
+    // Sadece izin verilen alanlari filtrele
+    const updates: Record<string, unknown> = {}
+    for (const field of ALLOWED_FIELDS) {
+      if (body[field] !== undefined) {
+        updates[field] = body[field]
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: 'Güncellenecek geçerli alan bulunamadı' },
+        { status: 400 }
+      )
+    }
+
+    const { error } = await supabase
+      .from('homepage_elements')
+      .update(updates)
+      .eq('id', id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch {
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 })
+  }
+}
+
+/**
+ * DELETE /api/admin/homepage/elements/[id]
+ * Element sil.
+ */
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = await createClient()
+    const admin = await checkPermission(supabase, 'admin.homepage.edit')
+    if (!admin) {
+      return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
+    }
+
+    const { id } = await params
+
+    const { error } = await supabase
+      .from('homepage_elements')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Admin log
+    await supabase.from('admin_logs').insert({
+      admin_id: admin.id,
+      action: 'delete_homepage_element',
+      target_type: 'homepage_element',
+      target_id: id,
+      details: {},
+    })
+
+    return NextResponse.json({ success: true })
+  } catch {
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 })
+  }
+}

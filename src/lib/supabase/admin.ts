@@ -1,22 +1,90 @@
 import { createClient } from './server'
-import type { Profile } from '@/types/database'
+import type { Role } from '@/types/database'
+import type { User } from '@supabase/supabase-js'
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 /**
- * Admin kontrolu — tum admin API route'larinda paylasilan yardimci fonksiyon.
- * Supabase client'i alir, kullaniciyi dogrular ve admin rolunu kontrol eder.
- * Admin ise user nesnesini doner, degilse null.
+ * Kullanicinin belirli bir izne sahip olup olmadigini kontrol eder.
+ * user_roles → role_permissions join ile dogrulama yapar.
+ * Izni varsa User nesnesini doner, yoksa null.
  */
-export async function checkAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
+export async function checkPermission(
+  supabase: SupabaseClient,
+  requiredPermission: string
+): Promise<User | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
   const { data } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+    .from('role_permissions')
+    .select('permission, role_id!inner(id)')
+    .eq('permission', requiredPermission)
+    .in(
+      'role_id',
+      // Alt sorgu: kullanicinin rolleri
+      (await supabase
+        .from('user_roles')
+        .select('role_id')
+        .eq('user_id', user.id)
+      ).data?.map(ur => ur.role_id) || []
+    )
+    .limit(1)
 
-  // Supabase tip cikarimini manuel olarak cozumluyoruz
-  const profile = data as Profile | null
-  return profile?.role === 'admin' ? user : null
+  return data && data.length > 0 ? user : null
+}
+
+/**
+ * Kullanicinin tum izinlerini doner (flat string dizisi).
+ * Admin sidebar filtreleme ve client-side kontroller icin.
+ */
+export async function getUserPermissions(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string[]> {
+  // Kullanicinin rol ID'lerini al
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('role_id')
+    .eq('user_id', userId)
+
+  if (!userRoles || userRoles.length === 0) return []
+
+  const roleIds = userRoles.map(ur => ur.role_id)
+
+  // Bu rollerin tum izinlerini al
+  const { data: permissions } = await supabase
+    .from('role_permissions')
+    .select('permission')
+    .in('role_id', roleIds)
+
+  if (!permissions) return []
+
+  // Tekrarlari kaldir (birden fazla rol ayni izne sahip olabilir)
+  return Array.from(new Set(permissions.map(p => p.permission)))
+}
+
+/**
+ * Kullanicinin atanmis rollerini doner.
+ */
+export async function getUserRoles(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<Role[]> {
+  const { data } = await supabase
+    .from('user_roles')
+    .select('role_id, roles:role_id(id, slug, name, description, is_system, created_at)')
+    .eq('user_id', userId)
+
+  if (!data) return []
+  return data.map((ur: Record<string, unknown>) => ur.roles).filter(Boolean) as Role[]
+}
+
+/**
+ * Geriye uyumlu admin kontrolu.
+ * Mevcut admin API route'lari bu fonksiyonu kullanir.
+ * Artik RBAC uzerinden calisir: admin.dashboard.view izni yeterli.
+ */
+export async function checkAdmin(supabase: SupabaseClient) {
+  return checkPermission(supabase, 'admin.dashboard.view')
 }

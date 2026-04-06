@@ -36,17 +36,17 @@ export async function middleware(request: NextRequest) {
   // Oturumu yenile + kullanici bilgisini al (tek cagri)
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Admin koruması
+  // Admin koruması — RBAC: en az 1 rolü olmalı
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
       return NextResponse.redirect(new URL('/giris', request.url))
     }
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    if (profile?.role !== 'admin') {
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', user.id)
+      .limit(1)
+    if (!userRoles || userRoles.length === 0) {
       return NextResponse.redirect(new URL('/arena', request.url))
     }
   }

@@ -302,6 +302,73 @@ export interface ErrorReport {
   updated_at: string
 }
 
+// ─── RBAC Tables ────────────────────────────────────────
+
+export type RoleSlug = 'super_admin' | 'editor' | 'moderator' | 'viewer'
+
+export interface Role {
+  id: string
+  slug: RoleSlug | string
+  name: string
+  description: string | null
+  is_system: boolean
+  created_at: string
+}
+
+export interface RolePermission {
+  id: string
+  role_id: string
+  permission: string
+  created_at: string
+}
+
+export interface UserRole {
+  id: string
+  user_id: string
+  role_id: string
+  assigned_by: string | null
+  created_at: string
+  // Join ile gelen (opsiyonel)
+  role?: Role
+}
+
+// ─── Homepage Editor Tables ─────────────────────────────
+
+export type HomepageSection = 'hero' | 'stats' | 'games' | 'how_it_works' | 'cta' | 'leaderboard' | 'footer'
+export type HomepageElementType = 'logo' | 'slogan' | 'banner'
+export type HomepagePlacement = 'above' | 'below' | 'inline'
+export type HomepageAlignment = 'left' | 'center' | 'right'
+export type HomepageSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+
+export interface HomepageSectionConfig {
+  id: string
+  section_key: HomepageSection
+  config: Record<string, unknown>
+  is_published: boolean
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface HomepageElement {
+  id: string
+  section_key: HomepageSection
+  element_type: HomepageElementType
+  content: string | null
+  image_url: string | null
+  alt_text: string
+  placement: HomepagePlacement
+  alignment: HomepageAlignment
+  size: HomepageSize
+  styles: Record<string, unknown>
+  sort_order: number
+  is_published: boolean
+  created_by: string | null
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 // ─── Admin Tables ────────────────────────────────────────
 
 export interface AdminLog {
@@ -364,6 +431,11 @@ export interface Database {
       admin_logs: TableDef<AdminLog>
       site_settings: TableDef<SiteSetting>
       consent_logs: TableDef<ConsentLog>
+      roles: TableDef<Role>
+      role_permissions: TableDef<RolePermission>
+      user_roles: TableDef<UserRole>
+      homepage_sections: TableDef<HomepageSectionConfig>
+      homepage_elements: TableDef<HomepageElement>
     }
     Views: {
       leaderboard_weekly_ranked: { Row: LeaderboardWeeklyRanked }

@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { checkAdmin } from '@/lib/supabase/admin'
+import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET() {
   const supabase = await createClient()
-  const admin = await checkAdmin(supabase)
+  const admin = await checkPermission(supabase, 'admin.settings.view')
   if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
 
   const { data: settings, error } = await supabase
@@ -46,9 +46,9 @@ const SETTING_VALIDATORS: Record<string, (v: unknown) => string | null> = {
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createClient()
-  const admin = await checkAdmin(supabase)
+  const admin = await checkPermission(supabase, 'admin.settings.edit')
   if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
 
   const body = await request.json()

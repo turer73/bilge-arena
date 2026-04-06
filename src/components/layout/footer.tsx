@@ -35,7 +35,13 @@ const FOOTER_LINKS = [
   },
 ]
 
-export function Footer() {
+interface FooterProps {
+  config?: Record<string, unknown>
+}
+
+export function Footer({ config }: FooterProps = {}) {
+  const brandDescription = (config?.brand_description as string) || "YKS'ye hazırlanan öğrenciler için oyun tabanlı ücretsiz alıştırma platformu."
+  const copyright = (config?.copyright as string) || '\u00A9 2026 Bilge Arena. Tüm hakları saklıdır.'
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--surface)]">
       <div className="mx-auto max-w-[1200px] px-6 pb-8 pt-16 lg:px-8">
@@ -45,7 +51,7 @@ export function Footer() {
           <div>
             <Logo size={36} />
             <p className="mt-4 max-w-[280px] text-sm leading-relaxed text-[var(--text-muted)]">
-              YKS&#39;ye hazırlanan öğrenciler için oyun tabanlı ücretsiz alıştırma platformu.
+              {brandDescription}
             </p>
           </div>
 
@@ -71,7 +77,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="flex flex-col items-center justify-between gap-4 border-t border-[var(--border)] pt-6 sm:flex-row">
           <div className="text-sm text-[var(--text-muted)]">
-            &copy; 2026 Bilge Arena. Tüm hakları saklıdır.
+            {copyright}
           </div>
           <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
             <Link href="/gizlilik-politikasi" className="transition-colors hover:text-[var(--text)]">

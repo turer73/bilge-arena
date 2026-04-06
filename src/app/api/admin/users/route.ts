@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { checkAdmin } from '@/lib/supabase/admin'
+import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
-  const admin = await checkAdmin(supabase)
+  const admin = await checkPermission(supabase, 'admin.users.view')
   if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
 
   const { searchParams } = new URL(request.url)
@@ -27,14 +27,45 @@ export async function GET(request: NextRequest) {
 
   const { data: users, count } = await query.range(offset, offset + limit - 1)
 
-  return NextResponse.json({ users, total: count, page, limit })
+  // RBAC: Her kullanıcının atanmış rollerini de getir
+  let usersWithRoles = users || []
+  if (users && users.length > 0) {
+    const userIds = users.map(u => u.id)
+    const { data: allUserRoles } = await supabase
+      .from('user_roles')
+      .select('user_id, role_id, roles:role_id(slug, name)')
+      .in('user_id', userIds)
+
+    if (allUserRoles) {
+      const rolesByUser = new Map<string, { role_id: string; role_slug: string; role_name: string }[]>()
+      allUserRoles.forEach((ur: Record<string, unknown>) => {
+        const userId = ur.user_id as string
+        const role = ur.roles as { slug: string; name: string } | null
+        if (!role) return
+        const existing = rolesByUser.get(userId) || []
+        existing.push({
+          role_id: ur.role_id as string,
+          role_slug: role.slug,
+          role_name: role.name,
+        })
+        rolesByUser.set(userId, existing)
+      })
+
+      usersWithRoles = users.map(u => ({
+        ...u,
+        assigned_roles: rolesByUser.get(u.id) || [],
+      }))
+    }
+  }
+
+  return NextResponse.json({ users: usersWithRoles, total: count, page, limit })
 }
 
 export async function PATCH(request: NextRequest) {
   const supabase = await createClient()
-  const admin = await checkAdmin(supabase)
+  const admin = await checkPermission(supabase, 'admin.users.manage')
   if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
 
   const body = await request.json()

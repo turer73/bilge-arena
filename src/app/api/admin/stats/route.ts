@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { checkAdmin } from '@/lib/supabase/admin'
+import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   const supabase = await createClient()
-  const admin = await checkAdmin(supabase)
+  const admin = await checkPermission(supabase, 'admin.dashboard.view')
   if (!admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
 
   // Istatistikleri paralel topla
