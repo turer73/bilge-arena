@@ -20,5 +20,17 @@ Sentry.init({
     'Load failed',
     'AbortError',
     'ChunkLoadError',
+    // AdSense/reklam script hataları — bot'lar ve adblocker'lardan gelir
+    'Failed to fetch',
+    'googlesyndication',
+    'adsbygoogle',
   ],
+  // Bot/crawler'lardan gelen hataları filtrele
+  beforeSend(event) {
+    const ua = event.request?.headers?.['User-Agent'] || ''
+    if (/HeadlessChrome|bot|crawl|spider|Vercel/i.test(ua)) {
+      return null
+    }
+    return event
+  },
 })
