@@ -57,7 +57,18 @@ function FloatCard({
   )
 }
 
-export function HeroSection() {
+interface HeroSectionProps {
+  config?: Record<string, unknown>
+}
+
+export function HeroSection({ config }: HeroSectionProps = {}) {
+  const badge = (config?.badge as string) || "Türkiye'nin YKS Oyun Platformu"
+  const heading = (config?.heading as string[]) || ['Öğren.', 'Kazan.', 'Yüksel.']
+  const subheading = (config?.subheading as string) || "YKS'ye hazırlanmak artık"
+  const logoUrl = (config?.logo_url as string) || '/logo/icon-512-transparent.png'
+  const ctaPrimary = (config?.cta_primary as { text?: string; href?: string }) || {}
+  const ctaSecondary = (config?.cta_secondary as { text?: string; href?: string }) || {}
+  const miniStats = (config?.mini_stats as string[]) || null
   return (
     <section className="relative flex min-h-screen items-center overflow-hidden">
       <ArenaBackground />
@@ -92,7 +103,7 @@ export function HeroSection() {
               }}
             >
               <Image
-                src="/logo/icon-512-transparent.png"
+                src={logoUrl}
                 alt="Bilge Arena"
                 width={340}
                 height={340}
@@ -179,7 +190,7 @@ export function HeroSection() {
               xl:px-5 xl:py-2">
               <div className="h-1.5 w-1.5 rounded-full bg-[var(--growth)] shadow-[0_0_8px_var(--growth)]" />
               <span className="text-xs font-semibold text-[var(--focus-light)] md:text-sm xl:text-base">
-                Türkiye&apos;nin YKS Oyun Platformu
+                {badge}
               </span>
             </div>
 
@@ -189,11 +200,11 @@ export function HeroSection() {
               lg:text-[58px]
               xl:text-[68px]
               2xl:text-[80px]">
-              <span className="text-[var(--text)]">Öğren.</span>
+              <span className="text-[var(--text)]">{heading[0]}</span>
               <br />
-              <span className="shimmer-text">Kazan.</span>
+              <span className="shimmer-text">{heading[1]}</span>
               <br />
-              <span className="text-[var(--focus-light)]">Yüksel.</span>
+              <span className="text-[var(--focus-light)]">{heading[2]}</span>
             </h1>
 
             {/* Alt metin */}
@@ -202,7 +213,7 @@ export function HeroSection() {
               lg:mx-0
               xl:max-w-[520px] xl:text-xl
               2xl:max-w-[600px] 2xl:text-2xl">
-              YKS&apos;ye hazırlanmak artık{' '}
+              {subheading}{' '}
               <strong className="text-[var(--text)]">oyun kadar eğlenceli</strong>. Soruları çöz,
               XP kazan, zirvede yerini al.
             </p>
@@ -211,15 +222,15 @@ export function HeroSection() {
             <div className="animate-fadeUp mt-7 flex justify-center gap-3 [animation-delay:300ms]
               md:mt-9
               lg:justify-start">
-              <Link href="/arena">
+              <Link href={ctaPrimary.href || '/arena'}>
                 <Button variant="primary" size="lg">
                   <Zap size={18} />
-                  Ücretsiz Başla
+                  {ctaPrimary.text || 'Ücretsiz Başla'}
                 </Button>
               </Link>
-              <Link href="/nasil-calisir">
+              <Link href={ctaSecondary.href || '/nasil-calisir'}>
                 <Button variant="ghost" size="lg">
-                  Nasıl Çalışır?
+                  {ctaSecondary.text || 'Nasıl Çalışır?'}
                   <ArrowRight size={16} />
                 </Button>
               </Link>
@@ -230,11 +241,15 @@ export function HeroSection() {
               md:mt-12 md:gap-8
               lg:justify-start
               xl:gap-12">
-              {[
+              {(miniStats ? [
+                { val: miniStats[0], label: 'Soru', color: 'var(--focus-light)' },
+                { val: miniStats[1], label: 'Oyun', color: 'var(--reward-light)' },
+                { val: miniStats[2], label: 'Sonsuza dek', color: 'var(--growth-light)' },
+              ] : [
                 { val: '3700+', label: 'Soru', color: 'var(--focus-light)' },
                 { val: '5', label: 'Oyun', color: 'var(--reward-light)' },
                 { val: 'Ücretsiz', label: 'Sonsuza dek', color: 'var(--growth-light)' },
-              ].map(({ val, label, color }) => (
+              ]).map(({ val, label, color }) => (
                 <div key={label}>
                   <div
                     className="font-display text-xl font-extrabold md:text-2xl xl:text-3xl 2xl:text-4xl"

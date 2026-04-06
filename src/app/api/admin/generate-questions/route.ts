@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { checkPermission } from '@/lib/supabase/admin'
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -40,18 +41,9 @@ SADECE JSON dondur, baska hicbir sey yazma.`
  */
 export async function POST(req: Request) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-
-  // Admin kontrolu
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'admin') {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 })
+  const admin = await checkPermission(supabase, 'admin.questions.generate')
+  if (!admin) {
+    return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
 
   const { game, category, difficulty, count = 5 } = await req.json()
