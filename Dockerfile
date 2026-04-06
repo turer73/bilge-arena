@@ -36,6 +36,8 @@ ENV NODE_ENV=production
 ARG NEXT_PUBLIC_ADSENSE_ID
 ENV NEXT_PUBLIC_ADSENSE_ID=$NEXT_PUBLIC_ADSENSE_ID
 
+# Node.js bellek limitini artır (OOM koruması) + lint'i build'den ayır
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 RUN npm run build
 
 # ── Stage 3: Production ──

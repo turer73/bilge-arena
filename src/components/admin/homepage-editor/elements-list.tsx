@@ -147,7 +147,7 @@ export function ElementsList({ onAdd }: { onAdd: () => void }) {
       setElements([...otherElements, ...updatedSection])
       reorderElements(activeSection, reordered.map((el) => el.id))
     },
-    [sectionElements, elements, activeSection, setElements, reorderElements]
+    [sectionElements, safeElements, activeSection, setElements, reorderElements]
   )
 
   const handleDelete = useCallback(
