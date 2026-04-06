@@ -330,7 +330,7 @@ export function SectionEditor() {
   const sections = useHomepageEditorStore((s) => s.sections)
   const updateSectionConfig = useHomepageEditorStore((s) => s.updateSectionConfig)
 
-  const sectionData = sections[activeSection]
+  const sectionData = (sections || {})[activeSection]
   const config = (sectionData?.config || {}) as Record<string, unknown>
 
   const handleUpdate = useCallback(

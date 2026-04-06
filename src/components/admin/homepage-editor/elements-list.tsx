@@ -123,7 +123,8 @@ export function ElementsList({ onAdd }: { onAdd: () => void }) {
   const setElements = useHomepageEditorStore((s) => s.setElements)
   const reorderElements = useHomepageEditorStore((s) => s.reorderElements)
 
-  const sectionElements = elements
+  const safeElements = Array.isArray(elements) ? elements : []
+  const sectionElements = safeElements
     .filter((el) => el.section_key === activeSection)
     .sort((a, b) => a.sort_order - b.sort_order)
 
@@ -141,7 +142,7 @@ export function ElementsList({ onAdd }: { onAdd: () => void }) {
       const reordered = arrayMove(sectionElements, oldIndex, newIndex)
 
       // Tüm elemanları güncelle
-      const otherElements = elements.filter((el) => el.section_key !== activeSection)
+      const otherElements = safeElements.filter((el) => el.section_key !== activeSection)
       const updatedSection = reordered.map((el, i) => ({ ...el, sort_order: i }))
       setElements([...otherElements, ...updatedSection])
       reorderElements(activeSection, reordered.map((el) => el.id))

@@ -16,20 +16,21 @@ export function PublishBar() {
     setSaving(true)
     try {
       // Her bölüm konfigürasyonunu kaydet
-      const sectionEntries = Object.entries(sections)
+      const sectionEntries = Object.entries(sections || {})
       await Promise.all(
         sectionEntries.map(([key, section]) =>
           fetch(`/api/admin/homepage/sections/${key}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ config: section.config }),
+            body: JSON.stringify({ config: section?.config || {} }),
           })
         )
       )
 
       // Eleman sıralamasını güncelle
+      const safeElements = Array.isArray(elements) ? elements : []
       const sectionGroups = new Map<string, string[]>()
-      for (const el of elements) {
+      for (const el of safeElements) {
         const group = sectionGroups.get(el.section_key) || []
         group.push(el.id)
         sectionGroups.set(el.section_key, group)
