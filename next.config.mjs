@@ -76,11 +76,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://plausible.io https://analytics.panola.app https://pagead2.googlesyndication.com https://adservice.google.com https://www.google.com https://tpc.googlesyndication.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://plausible.io https://analytics.panola.app https://pagead2.googlesyndication.com https://adservice.google.com https://www.google.com https://tpc.googlesyndication.com https://static.cloudflareinsights.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.supabase.co https://pagead2.googlesyndication.com https://www.google.com https://tpc.googlesyndication.com",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://plausible.io https://analytics.panola.app https://generativelanguage.googleapis.com https://*.ingest.de.sentry.io",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://plausible.io https://analytics.panola.app https://generativelanguage.googleapis.com https://*.ingest.de.sentry.io https://pagead2.googlesyndication.com https://static.cloudflareinsights.com https://cloudflareinsights.com",
               "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
