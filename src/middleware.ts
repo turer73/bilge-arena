@@ -49,6 +49,11 @@ export async function middleware(request: NextRequest) {
     if (!userRoles || userRoles.length === 0) {
       return NextResponse.redirect(new URL('/arena', request.url))
     }
+
+    // Admin sayfaları Cloudflare'da cache'lenmemeli
+    response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate')
+    response.headers.set('CDN-Cache-Control', 'no-store')
+    response.headers.set('Cloudflare-CDN-Cache-Control', 'no-store')
   }
 
   return response
