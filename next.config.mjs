@@ -9,6 +9,11 @@ const withBundleAnalyzer = bundleAnalyzer({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+
+  // Lint'i Docker build'den ayır — VPS'te OOM önlemi
+  // Lint ayrıca CI/CD pipeline'da veya lokalde çalıştırılır
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: false },
   images: {
     // AVIF > WebP > JPEG — en iyi sıkıştırma formatlarını tercih et
     formats: ['image/avif', 'image/webp'],
