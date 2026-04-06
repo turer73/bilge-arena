@@ -27,6 +27,13 @@ export default function AdminUsersPage() {
   const [roleModalUser, setRoleModalUser] = useState<UserWithRoles | null>(null)
   const [roleModalLoading, setRoleModalLoading] = useState(false)
 
+  // Kullanıcı Ekleme
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [createForm, setCreateForm] = useState({ email: '', displayName: '', roleId: '' })
+  const [createLoading, setCreateLoading] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [createSuccess, setCreateSuccess] = useState<string | null>(null)
+
   // Rolleri yükle
   useEffect(() => {
     fetch('/api/admin/roles')
@@ -120,6 +127,40 @@ export default function AdminUsersPage() {
     }
   }
 
+  // Kullanıcı oluşturma
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCreateLoading(true)
+    setCreateError(null)
+    setCreateSuccess(null)
+
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: createForm.email,
+          displayName: createForm.displayName || undefined,
+          roleId: createForm.roleId || undefined,
+        }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setCreateError(data.error || 'Kullanıcı oluşturulamadı')
+        return
+      }
+
+      setCreateSuccess(`${createForm.email} adresine davet gönderildi`)
+      setCreateForm({ email: '', displayName: '', roleId: '' })
+      fetchUsers()
+    } catch {
+      setCreateError('Bir hata oluştu')
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
   // Rol modal açmak için kullanıcının mevcut rollerini çek
   const openRoleModal = async (user: UserWithRoles) => {
     setRoleModalUser(user)
@@ -166,6 +207,12 @@ export default function AdminUsersPage() {
           className="w-64 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
         />
         <span className="text-xs text-[var(--text-sub)]">{users.length} sonuç</span>
+        <button
+          onClick={() => { setCreateModalOpen(true); setCreateError(null); setCreateSuccess(null) }}
+          className="ml-auto rounded-lg bg-[var(--focus)] px-3 py-2 text-xs font-bold text-white transition-colors hover:opacity-90"
+        >
+          + Kullanıcı Ekle
+        </button>
       </div>
 
       {/* Tablo */}
@@ -372,6 +419,90 @@ export default function AdminUsersPage() {
                   )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Kullanıcı Ekleme Modal ─── */}
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-lg font-bold">Kullanıcı Ekle</h3>
+              <button
+                onClick={() => setCreateModalOpen(false)}
+                className="rounded-lg p-1.5 text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text)]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">
+                  E-posta Adresi *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="kullanici@ornek.com"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">
+                  Ad Soyad (opsiyonel)
+                </label>
+                <input
+                  type="text"
+                  value={createForm.displayName}
+                  onChange={(e) => setCreateForm(f => ({ ...f, displayName: e.target.value }))}
+                  placeholder="Ahmet Yılmaz"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">
+                  Rol (opsiyonel)
+                </label>
+                <select
+                  value={createForm.roleId}
+                  onChange={(e) => setCreateForm(f => ({ ...f, roleId: e.target.value }))}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
+                >
+                  <option value="">Rol seçin...</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name} — {role.description || role.slug}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {createError && (
+                <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs font-medium text-red-400">
+                  {createError}
+                </div>
+              )}
+
+              {createSuccess && (
+                <div className="rounded-lg bg-green-500/10 px-3 py-2 text-xs font-medium text-green-400">
+                  {createSuccess}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={createLoading || !createForm.email}
+                className="rounded-lg bg-[var(--focus)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:opacity-90 disabled:opacity-40"
+              >
+                {createLoading ? 'Davet gönderiliyor...' : 'Davet Gönder'}
+              </button>
+            </form>
           </div>
         </div>
       )}
