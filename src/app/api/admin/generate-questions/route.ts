@@ -126,8 +126,26 @@ Soru sayisi: ${count}`
       return NextResponse.json({ error: 'AI dizisi bekleniyor', raw: text }, { status: 502 })
     }
 
+    // AI çıktısını Zod ile doğrula — bozuk/eksik soruları filtrele
+    const { z } = await import('zod')
+    const questionSchema = z.object({
+      question: z.string().min(10).max(2000),
+      options: z.array(z.string().min(1).max(500)).length(5),
+      answer: z.number().int().min(0).max(4),
+      solution: z.string().min(5).max(3000),
+    })
+
+    const validQuestions = questions
+      .map((q: unknown) => questionSchema.safeParse(q))
+      .filter((r: { success: boolean }) => r.success)
+      .map((r: { success: true; data: z.infer<typeof questionSchema> }) => r.data)
+
+    if (validQuestions.length === 0) {
+      return NextResponse.json({ error: 'AI geçerli soru üretemedi', raw: text }, { status: 502 })
+    }
+
     // Sorulari Supabase'e kaydet
-    const insertData = questions.map((q: { question: string; options: string[]; answer: number; solution: string }) => ({
+    const insertData = validQuestions.map((q) => ({
       game,
       category,
       difficulty: Number(difficulty),

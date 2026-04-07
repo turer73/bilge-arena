@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
+import { isPngBuffer } from '@/lib/utils/security'
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 const ALLOWED_MIME = 'image/png'
@@ -24,16 +25,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 400 })
     }
 
-    if (file.type !== ALLOWED_MIME) {
+    if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'Sadece PNG dosyaları kabul edilir' },
+        { error: 'Dosya boyutu 2MB\'dan büyük olamaz' },
         { status: 400 }
       )
     }
 
-    if (file.size > MAX_FILE_SIZE) {
+    // Magic bytes kontrolü — client MIME type'ına güvenme
+    const buffer = await file.arrayBuffer()
+    if (!isPngBuffer(buffer)) {
       return NextResponse.json(
-        { error: 'Dosya boyutu 2MB\'dan büyük olamaz' },
+        { error: 'Geçersiz dosya formatı. Sadece PNG kabul edilir.' },
         { status: 400 }
       )
     }
@@ -45,8 +48,7 @@ export async function POST(request: NextRequest) {
 
     const filePath = `logos/${Date.now()}-${sanitizedFilename}.png`
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = new Uint8Array(arrayBuffer)
+    const uploadBuffer = new Uint8Array(buffer)
 
     const { error: uploadError } = await supabase.storage
       .from('homepage-assets')
