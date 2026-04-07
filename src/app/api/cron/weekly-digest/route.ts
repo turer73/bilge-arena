@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
+import { escapeHtml } from '@/lib/utils/security'
 
 const CRON_SECRET = process.env.CRON_SECRET
 const resendKey = process.env.RESEND_API_KEY
@@ -11,9 +12,12 @@ const resendKey = process.env.RESEND_API_KEY
  * Guvenlik: CRON_SECRET header'i gerekli.
  */
 export async function GET(req: Request) {
-  // Cron guvenlik kontrolu
+  // Cron guvenlik kontrolu — CRON_SECRET zorunlu
+  if (!CRON_SECRET) {
+    return NextResponse.json({ error: 'CRON_SECRET ayarlanmamis' }, { status: 500 })
+  }
   const authHeader = req.headers.get('authorization')
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
@@ -74,7 +78,7 @@ export async function GET(req: Request) {
       .gte('created_at', oneWeekAgo)
 
     const weeklyXP = xpThisWeek?.reduce((sum, row) => sum + (row.xp_amount || 0), 0) || 0
-    const name = profile?.display_name || 'Arenaci'
+    const name = escapeHtml(profile?.display_name || 'Arenaci')
 
     try {
       await resend.emails.send({

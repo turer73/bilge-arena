@@ -2,7 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { escapeForLike } from '@/lib/utils/security'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { NextResponse, type NextRequest } from 'next/server'
+
+const adminUserLimiter = createRateLimiter('admin-users-create', 10, 60_000) // 10/dk
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -116,6 +119,12 @@ export async function POST(request: NextRequest) {
   const admin = await checkPermission(supabase, 'admin.users.manage')
   if (!admin) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
+  }
+
+  // Rate limit — admin başına 10 kullanıcı/dakika
+  const rl = await adminUserLimiter.check(admin.id)
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Çok fazla istek. Lütfen bekleyin.' }, { status: 429 })
   }
 
   try {
