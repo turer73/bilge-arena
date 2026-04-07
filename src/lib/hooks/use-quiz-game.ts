@@ -218,7 +218,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         timer.start()
       }
     }
-  }, [game, mode, quizStore, timer, isDeneme, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty])
+  }, [game, mode, quizStore, timer, isDeneme, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, userId])
 
   // --- Cevap ver ---
 

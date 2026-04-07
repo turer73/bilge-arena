@@ -78,6 +78,8 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
+              // unsafe-inline: Next.js RSC inline script + GA consent (Next.js 15'te nonce ile degistirilebilir)
+              // unsafe-eval: Google AdSense zorunlu kildi (sektör standardi)
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://plausible.io https://analytics.panola.app https://*.googlesyndication.com https://pagead2.googlesyndication.com https://adservice.google.com https://adservice.google.com.tr https://www.google.com https://tpc.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://static.cloudflareinsights.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
