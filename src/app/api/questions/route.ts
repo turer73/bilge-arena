@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { GAME_SLUGS } from '@/lib/constants/games'
 
-const questionsLimiter = createRateLimiter('questions', 60, 60_000) // 60 req/dk
+const questionsLimiter = createRateLimiter('questions', 5, 60_000) // TEST: 5 req/dk (sonra 60'a çevir)
 const VALID_GAMES = new Set(GAME_SLUGS)
 
 /** parseInt ile boundary kontrolu: min <= val <= max */
