@@ -9,6 +9,9 @@ import { SectionWrapper } from '@/components/landing/section-wrapper'
 import { createClient } from '@/lib/supabase/server'
 import type { HomepageElement, HomepageSectionConfig } from '@/types/database'
 
+// ISR: Her 5 dakikada bir yeniden oluştur (Supabase sorgularını cache'le)
+export const revalidate = 300
+
 /* ─── SEO: Ana sayfa metadata ─── */
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bilgearena.com').trim()
 

@@ -2,7 +2,7 @@
 
 import { useHomepageEditorStore } from '@/stores/homepage-editor-store'
 import type { HomepageElement } from '@/types/database'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -123,10 +123,11 @@ export function ElementsList({ onAdd }: { onAdd: () => void }) {
   const setElements = useHomepageEditorStore((s) => s.setElements)
   const reorderElements = useHomepageEditorStore((s) => s.reorderElements)
 
-  const safeElements = Array.isArray(elements) ? elements : []
-  const sectionElements = safeElements
-    .filter((el) => el.section_key === activeSection)
-    .sort((a, b) => a.sort_order - b.sort_order)
+  const safeElements = useMemo(() => Array.isArray(elements) ? elements : [], [elements])
+  const sectionElements = useMemo(
+    () => safeElements.filter((el) => el.section_key === activeSection).sort((a, b) => a.sort_order - b.sort_order),
+    [safeElements, activeSection],
+  )
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
