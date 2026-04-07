@@ -15,18 +15,21 @@ function safeInt(value: string | null, fallback: number, min: number, max: numbe
 }
 
 export async function GET(request: NextRequest) {
-  // Rate limiting (IP bazli — GET public endpoint)
-  // Sadece ilk IP'yi al (x-forwarded-for spoofing onleme)
-  const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
-  const rl = await questionsLimiter.check(ip)
-  if (!rl.success) {
-    return NextResponse.json(
-      { error: 'Cok fazla istek. Lutfen bekleyin.' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
-    )
-  }
-
   const supabase = await createClient()
+
+  // Auth'lu kullanıcılar rate limit'ten muaf (gerçek öğrenci, bot değil)
+  // Auth'suz istekler IP bazlı rate limit'e tabi
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
+    const rl = await questionsLimiter.check(ip)
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Cok fazla istek. Lutfen bekleyin.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+      )
+    }
+  }
   const { searchParams } = new URL(request.url)
 
   const game = searchParams.get('game')
