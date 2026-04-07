@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import { checkPermission } from '@/lib/supabase/admin'
+import { checkPermission, logAdminAction } from '@/lib/supabase/admin'
 import { escapeForLike } from '@/lib/utils/security'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { NextResponse, type NextRequest } from 'next/server'
@@ -102,13 +102,14 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Kullanici bulunamadi' }, { status: 404 })
   }
 
-  // Admin log kaydet
-  await supabase.from('admin_logs').insert({
-    admin_id: admin.id,
+  // Admin log kaydet (IP + user-agent dahil)
+  await logAdminAction(supabase, {
+    adminId: admin.id,
     action,
-    target_type: 'user',
-    target_id: userId,
-    details: { action },
+    targetType: 'user',
+    targetId: userId,
+    details: { action, newRole },
+    request,
   })
 
   return NextResponse.json({ success: true })
@@ -172,13 +173,14 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Admin log kaydet
-    await supabase.from('admin_logs').insert({
-      admin_id: admin.id,
+    // Admin log kaydet (IP + user-agent dahil)
+    await logAdminAction(supabase, {
+      adminId: admin.id,
       action: 'create_user',
-      target_type: 'user',
-      target_id: newUserId,
+      targetType: 'user',
+      targetId: newUserId,
       details: { email: validEmail, displayName, roleId },
+      request,
     })
 
     return NextResponse.json({ success: true, userId: newUserId })

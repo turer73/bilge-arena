@@ -135,10 +135,11 @@ Soru sayisi: ${count}`
       solution: z.string().min(5).max(3000),
     })
 
-    const validQuestions = questions
-      .map((q: unknown) => questionSchema.safeParse(q))
-      .filter((r: { success: boolean }) => r.success)
-      .map((r: { success: true; data: z.infer<typeof questionSchema> }) => r.data)
+    type QuestionData = { question: string; options: string[]; answer: number; solution: string }
+    const parsed = questions.map((q: unknown) => questionSchema.safeParse(q))
+    const validQuestions: QuestionData[] = parsed
+      .filter((r) => r.success)
+      .map((r) => (r as { success: true; data: QuestionData }).data)
 
     if (validQuestions.length === 0) {
       return NextResponse.json({ error: 'AI geçerli soru üretemedi', raw: text }, { status: 502 })
