@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { escapeForLike } from '@/lib/utils/security'
 
 /**
  * GET /api/users/search?q=... — Kullanici arama (arkadas eklemek icin)
@@ -20,7 +21,7 @@ export async function GET(req: Request) {
   const { data } = await supabase
     .from('profiles')
     .select('id, display_name, avatar_url, total_xp')
-    .or(`display_name.ilike.%${query}%,username.ilike.%${query}%`)
+    .or(`display_name.ilike.%${escapeForLike(query)}%,username.ilike.%${escapeForLike(query)}%`)
     .neq('id', user.id)
     .limit(10)
 

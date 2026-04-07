@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
+import { escapeForLike } from '@/lib/utils/security'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -23,7 +24,8 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
 
   if (search) {
-    query = query.or(`display_name.ilike.%${search}%,username.ilike.%${search}%`)
+    const safe = escapeForLike(search)
+    query = query.or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%`)
   }
 
   const { data: users, count } = await query.range(offset, offset + limit - 1)
@@ -124,16 +126,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'E-posta adresi gerekli' }, { status: 400 })
     }
 
-    // Basit email format kontrolü
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    // RFC uyumlu email doğrulama + uzunluk limiti
+    const { z } = await import('zod')
+    const emailResult = z.string().email().max(254).safeParse(email.trim().toLowerCase())
+    if (!emailResult.success) {
       return NextResponse.json({ error: 'Geçersiz e-posta formatı' }, { status: 400 })
     }
+    const validEmail = emailResult.data
 
     // Service role client ile kullanıcı davet et
     const serviceClient = createServiceRoleClient()
     const { data: inviteData, error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(
-      email,
+      validEmail,
       { data: { full_name: displayName || undefined } },
     )
 
@@ -165,7 +169,7 @@ export async function POST(request: NextRequest) {
       action: 'create_user',
       target_type: 'user',
       target_id: newUserId,
-      details: { email, displayName, roleId },
+      details: { email: validEmail, displayName, roleId },
     })
 
     return NextResponse.json({ success: true, userId: newUserId })
