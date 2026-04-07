@@ -78,8 +78,9 @@ function createInMemoryLimiter(name: string, limit: number, windowMs: number) {
 
 // ─── Public API ──────────────────────────────────────────────
 
-// Limiter cache — ayni isimde birden fazla olusturmayi onle
-const limiterCache = new Map<string, ReturnType<typeof createInMemoryLimiter>>()
+// Limiter cache — Ratelimit instance'larini yeniden olusturma
+const redisLimiterCache = new Map<string, Ratelimit>()
+const memoryLimiterCache = new Map<string, ReturnType<typeof createInMemoryLimiter>>()
 
 /**
  * Rate limiter olusturur.
@@ -95,13 +96,16 @@ export function createRateLimiter(name: string, limit: number, windowMs = 60_000
       const redisClient = getRedis()
 
       if (redisClient) {
-        // Redis-based sliding window
-        const windowSec = Math.ceil(windowMs / 1000)
-        const limiter = new Ratelimit({
-          redis: redisClient,
-          limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
-          prefix: `rl:${name}`,
-        })
+        // Cache Ratelimit instance — her check()'te yeni oluşturmak counter'ı sıfırlar
+        if (!redisLimiterCache.has(name)) {
+          const windowSec = Math.ceil(windowMs / 1000)
+          redisLimiterCache.set(name, new Ratelimit({
+            redis: redisClient,
+            limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
+            prefix: `rl:${name}`,
+          }))
+        }
+        const limiter = redisLimiterCache.get(name)!
         const result = await limiter.limit(key)
         if (result.success) {
           return { success: true }
@@ -111,10 +115,10 @@ export function createRateLimiter(name: string, limit: number, windowMs = 60_000
       }
 
       // Fallback: in-memory
-      if (!limiterCache.has(name)) {
-        limiterCache.set(name, createInMemoryLimiter(name, limit, windowMs))
+      if (!memoryLimiterCache.has(name)) {
+        memoryLimiterCache.set(name, createInMemoryLimiter(name, limit, windowMs))
       }
-      return limiterCache.get(name)!.check(key)
+      return memoryLimiterCache.get(name)!.check(key)
     },
   }
 }
