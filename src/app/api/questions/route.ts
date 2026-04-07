@@ -59,7 +59,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ questions: data, total: count, page, limit })
+  return NextResponse.json(
+    { questions: data, total: count, page, limit },
+    { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } },
+  )
 }
 
 export async function PATCH(request: NextRequest) {

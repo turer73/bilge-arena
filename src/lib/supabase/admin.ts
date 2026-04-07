@@ -81,6 +81,33 @@ export async function getUserRoles(
 }
 
 /**
+ * Admin log kaydeder — IP ve user-agent bilgisi dahil.
+ * Tüm admin operasyonlarında tutarlı log formatı sağlar.
+ */
+export async function logAdminAction(
+  supabase: SupabaseClient,
+  opts: {
+    adminId: string
+    action: string
+    targetType: string
+    targetId: string
+    details?: Record<string, unknown>
+    request?: Request
+  },
+) {
+  const ip = opts.request?.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
+  const userAgent = opts.request?.headers.get('user-agent')?.slice(0, 256) || null
+
+  await supabase.from('admin_logs').insert({
+    admin_id: opts.adminId,
+    action: opts.action,
+    target_type: opts.targetType,
+    target_id: opts.targetId,
+    details: { ...opts.details, ip, user_agent: userAgent },
+  })
+}
+
+/**
  * Geriye uyumlu admin kontrolu.
  * Mevcut admin API route'lari bu fonksiyonu kullanir.
  * Artik RBAC uzerinden calisir: admin.dashboard.view izni yeterli.

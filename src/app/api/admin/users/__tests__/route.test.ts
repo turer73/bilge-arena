@@ -31,6 +31,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/supabase/admin', () => ({
   checkPermission: (...args: unknown[]) => mockCheckPermission(...args),
+  logAdminAction: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/lib/supabase/service-role', () => ({
@@ -117,8 +118,9 @@ describe('POST /api/admin/users', () => {
       { data: { full_name: 'Yeni Kullanıcı' } },
     )
 
-    // admin_logs'a kayıt edildi mi?
-    expect(mockFrom).toHaveBeenCalledWith('admin_logs')
+    // logAdminAction çağrıldı mı?
+    const { logAdminAction } = await import('@/lib/supabase/admin')
+    expect(logAdminAction).toHaveBeenCalled()
   })
 
   it('assigns role when roleId is provided', async () => {
