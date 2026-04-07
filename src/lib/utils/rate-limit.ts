@@ -1,34 +1,31 @@
 /**
  * Hybrid rate limiter: Upstash Redis varsa kullan, yoksa in-memory fallback.
  *
- * Production'da UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN env var'lari
+ * Production'da KV_REST_API_URL + KV_REST_API_TOKEN env var'lari
  * set edilmeli. Yoksa in-memory limiter calismaya devam eder (burst korumasi).
  */
 
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 
-// ─── Redis-based rate limiter (production) ──────────────────
-
-// Vercel Upstash entegrasyonu KV_REST_API_* isimleri kullanir,
-// manuel kurulumda UPSTASH_REDIS_REST_* olabilir — ikisini de destekle
-const redisUrl =
-  process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
-const redisToken =
-  process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN
-
-const hasRedis = !!(redisUrl && redisToken)
+// ─── Redis — lazy initialization ────────────────────────────
+// Env var'lar module load sirasinda erisilemeyebilir (serverless cold start)
+// Bu yuzden her erisimde kontrol ediyoruz.
 
 let redis: Redis | null = null
+let redisChecked = false
 
-function getRedis(): Redis {
-  if (!redis && hasRedis) {
-    redis = new Redis({
-      url: redisUrl!,
-      token: redisToken!,
-    })
+function getRedis(): Redis | null {
+  if (redisChecked) return redis
+
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN
+
+  if (url && token) {
+    redis = new Redis({ url, token })
   }
-  return redis!
+  redisChecked = true
+  return redis
 }
 
 // ─── In-memory fallback (development / Redis yoksa) ─────────
@@ -81,6 +78,9 @@ function createInMemoryLimiter(name: string, limit: number, windowMs: number) {
 
 // ─── Public API ──────────────────────────────────────────────
 
+// Limiter cache — ayni isimde birden fazla olusturmayi onle
+const limiterCache = new Map<string, ReturnType<typeof createInMemoryLimiter>>()
+
 /**
  * Rate limiter olusturur.
  * Redis varsa Upstash sliding window, yoksa in-memory fixed window.
@@ -90,26 +90,31 @@ function createInMemoryLimiter(name: string, limit: number, windowMs: number) {
  * @param windowMs - Pencere suresi (ms), default 60 saniye
  */
 export function createRateLimiter(name: string, limit: number, windowMs = 60_000) {
-  if (hasRedis) {
-    const windowSec = Math.ceil(windowMs / 1000)
-    const limiter = new Ratelimit({
-      redis: getRedis(),
-      limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
-      prefix: `rl:${name}`,
-    })
+  return {
+    async check(key: string): Promise<{ success: boolean; retryAfter?: number }> {
+      const redisClient = getRedis()
 
-    return {
-      async check(key: string): Promise<{ success: boolean; retryAfter?: number }> {
+      if (redisClient) {
+        // Redis-based sliding window
+        const windowSec = Math.ceil(windowMs / 1000)
+        const limiter = new Ratelimit({
+          redis: redisClient,
+          limiter: Ratelimit.slidingWindow(limit, `${windowSec} s`),
+          prefix: `rl:${name}`,
+        })
         const result = await limiter.limit(key)
         if (result.success) {
           return { success: true }
         }
         const retryAfter = Math.ceil((result.reset - Date.now()) / 1000)
         return { success: false, retryAfter: Math.max(1, retryAfter) }
-      },
-    }
-  }
+      }
 
-  // Fallback: in-memory
-  return createInMemoryLimiter(name, limit, windowMs)
+      // Fallback: in-memory
+      if (!limiterCache.has(name)) {
+        limiterCache.set(name, createInMemoryLimiter(name, limit, windowMs))
+      }
+      return limiterCache.get(name)!.check(key)
+    },
+  }
 }
