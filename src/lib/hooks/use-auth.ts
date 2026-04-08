@@ -23,7 +23,17 @@ export async function refreshProfile(): Promise<void> {
     .single()
 
   if (data) {
-    useAuthStore.getState().setProfile(data as Profile)
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', user.id)
+      .limit(1)
+
+    const profileWithRole = {
+      ...data,
+      role: (userRoles && userRoles.length > 0) ? 'admin' : (data.role || 'user'),
+    }
+    useAuthStore.getState().setProfile(profileWithRole as Profile)
   }
 }
 
@@ -98,13 +108,33 @@ export function useAuth() {
           .single()
 
         if (updated) {
-          setProfile(updated as Profile)
+          const { data: ur } = await supabase
+            .from('user_roles')
+            .select('role_id')
+            .eq('user_id', userId)
+            .limit(1)
+          setProfile({
+            ...updated,
+            role: (ur && ur.length > 0) ? 'admin' : (updated.role || 'user'),
+          } as Profile)
           return
         }
       }
     }
 
-    setProfile(data as Profile)
+    // RBAC: user_roles tablosunda rolu varsa admin erisimi var
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', userId)
+      .limit(1)
+
+    const profileWithRole = {
+      ...data,
+      role: (userRoles && userRoles.length > 0) ? 'admin' : (data.role || 'user'),
+    }
+
+    setProfile(profileWithRole as Profile)
   }
 
   async function signInWithGoogle() {
