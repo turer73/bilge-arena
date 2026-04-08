@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
   if (active === 'true') query = query.eq('is_active', true)
   if (active === 'false') query = query.eq('is_active', false)
   if (search && search.length >= 2) {
-    // JSONB icinde soru metni arama (content->question veya content->sentence)
-    query = query.or(`content->question.ilike.%${search}%,content->sentence.ilike.%${search}%`)
+    // JSONB text arama — content->>question veya content->>sentence
+    query = query.or(`content->>question.ilike.%${search}%,content->>sentence.ilike.%${search}%`)
   }
 
   const { data, count, error } = await query.range(offset, offset + limit - 1)
