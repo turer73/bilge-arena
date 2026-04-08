@@ -10,6 +10,7 @@ import { ProgressChart } from '@/components/profile/progress-chart'
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
 import { NotificationSettings } from '@/components/profile/notification-settings'
 import { ReferralCard } from '@/components/profile/referral-card'
+import { EditProfileModal } from '@/components/profile/edit-profile-modal'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { fetchProfileStats, type ProfileStats } from '@/lib/supabase/profile-stats'
@@ -30,6 +31,7 @@ export default function ProfilClient() {
   const [stats, setStats] = useState<ProfileStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(false)
   const [earnedBadgeCodes, setEarnedBadgeCodes] = useState<string[]>([])
+  const [editOpen, setEditOpen] = useState(false)
 
   // Kullanici giris yaptiginda istatistikleri ve rozetleri cek
   useEffect(() => {
@@ -140,15 +142,25 @@ export default function ProfilClient() {
       {/* Profil basligi */}
       <div className="mb-4 animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 md:mb-6 md:rounded-2xl md:p-6 xl:p-7 2xl:p-8">
         <div className="flex items-center gap-3 md:gap-4">
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] text-2xl md:h-16 md:w-16 md:text-3xl xl:h-20 xl:w-20 xl:text-4xl"
-            style={{
-              background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))',
-              borderColor: 'var(--focus-border)',
-            }}
-          >
-            {level.badge}
-          </div>
+          {profile.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={displayName}
+              className="h-12 w-12 rounded-full border-[3px] object-cover md:h-16 md:w-16 xl:h-20 xl:w-20"
+              style={{ borderColor: 'var(--focus-border)' }}
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] text-2xl md:h-16 md:w-16 md:text-3xl xl:h-20 xl:w-20 xl:text-4xl"
+              style={{
+                background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))',
+                borderColor: 'var(--focus-border)',
+              }}
+            >
+              {level.badge}
+            </div>
+          )}
           <div className="flex-1">
             <h1 className="text-base font-bold md:text-xl xl:text-2xl">{displayName}</h1>
             <div className="flex items-center gap-2 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">
@@ -166,9 +178,19 @@ export default function ProfilClient() {
               />
             </div>
           </div>
-          <StreakBadge streak={currentStreak} />
+          <div className="flex flex-col items-end gap-2">
+            <StreakBadge streak={currentStreak} />
+            <button
+              onClick={() => setEditOpen(true)}
+              className="rounded-lg border border-[var(--border)] px-3 py-1 text-[10px] font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
+            >
+              Duzenle
+            </button>
+          </div>
         </div>
       </div>
+
+      <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />
 
       {/* Istatistikler */}
       <ComponentErrorBoundary label="İstatistikler" variant="inline">
