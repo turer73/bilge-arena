@@ -43,7 +43,7 @@ export async function middleware(request: NextRequest) {
     }
     // Service key ile RLS bypass — middleware'de user session
     // cookie refresh sirasinda auth.uid() null donebilir
-    const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     let hasRole = false
     if (serviceKey) {
       const res = await fetch(
