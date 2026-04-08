@@ -85,20 +85,23 @@ export function useAuth() {
     if (!data) return
 
     // 2) Google hesap bilgilerini senkronize et
-    // Sadece profilde BOS olan alanlari doldur — kullanicinin kendi degisikliklerini ezme
+    // display_name ve avatar_url her zaman Google'dan guncellenir
+    // Kullanicinin site ici adi: username (ayri alan)
     const { data: { user: authUser } } = await supabase.auth.getUser()
     const meta = authUser?.user_metadata
     if (meta) {
       const googleName = meta.full_name || meta.name || null
       const googleAvatar = meta.avatar_url || meta.picture || null
+      // Sadece custom avatar yoksa Google avatari kullan
+      const hasCustomAvatar = data.avatar_url?.includes('/avatars/') ?? false
       const needsUpdate =
-        (googleName && !data.display_name) ||
-        (googleAvatar && !data.avatar_url)
+        (googleName && googleName !== data.display_name) ||
+        (!hasCustomAvatar && googleAvatar && googleAvatar !== data.avatar_url)
 
       if (needsUpdate) {
         const updates: Record<string, string> = {}
-        if (googleName && !data.display_name) updates.display_name = googleName
-        if (googleAvatar && !data.avatar_url) updates.avatar_url = googleAvatar
+        if (googleName && googleName !== data.display_name) updates.display_name = googleName
+        if (!hasCustomAvatar && googleAvatar && googleAvatar !== data.avatar_url) updates.avatar_url = googleAvatar
 
         const { data: updated } = await supabase
           .from('profiles')

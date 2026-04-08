@@ -101,7 +101,7 @@ export function Navbar() {
                   {profile?.avatar_url ? (
                     <Image
                       src={profile.avatar_url}
-                      alt={profile?.display_name || 'Kullanici avatari'}
+                      alt={profile?.username || profile?.display_name || 'Kullanici avatari'}
                       width={32}
                       height={32}
                       className="h-8 w-8 rounded-full"
@@ -109,7 +109,7 @@ export function Navbar() {
                     />
                   ) : (
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus)] text-sm font-bold text-white">
-                      {(profile?.display_name || user.email || '?')[0].toUpperCase()}
+                      {(profile?.username || profile?.display_name || user.email || '?')[0].toUpperCase()}
                     </div>
                   )}
                 </button>
@@ -118,7 +118,7 @@ export function Navbar() {
                   <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-xl">
                     <div className="mb-1.5 border-b border-[var(--border)] px-3 py-2">
                       <p className="text-sm font-medium text-[var(--text)]">
-                        {profile?.display_name || 'Kullanıcı'}
+                        {profile?.username || profile?.display_name || 'Kullanıcı'}
                       </p>
                       <p className="text-xs text-[var(--text-muted)]">{user.email}</p>
                     </div>
