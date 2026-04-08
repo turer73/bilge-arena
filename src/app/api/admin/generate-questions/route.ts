@@ -288,8 +288,8 @@ Soru sayisi: ${count}${fewShotText}`
       is_active: false,
     }))
 
-    const admin = createServiceRoleClient()
-    const { data: inserted, error } = await admin
+    const svc = createServiceRoleClient()
+    const { data: inserted, error } = await svc
       .from('questions')
       .insert(insertData)
       .select('id')
@@ -307,7 +307,8 @@ Soru sayisi: ${count}${fewShotText}`
     })
   } catch (err) {
     console.error('[AI Generate] Hata:', err)
-    return NextResponse.json({ error: 'Soru uretim hatasi' }, { status: 500 })
+    const msg = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: 'Soru uretim hatasi: ' + msg }, { status: 500 })
   }
 }
 
