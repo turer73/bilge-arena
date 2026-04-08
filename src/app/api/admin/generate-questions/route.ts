@@ -96,17 +96,19 @@ ZORLUK SEVIYELERI:
 4: Zor — analiz, sentez, cok adimli cozum
 5: Uzman — tuzakli, derin anlama, YKS seviyesinde
 
-CIKTI FORMATI (JSON dizisi):
+CIKTI FORMATI — JSON key isimleri INGILIZCE olmali, degistirme:
 [
   {
-    "question": "Soru metni",
-    "options": ["A", "B", "C", "D", "E"],
+    "question": "Soru metni buraya (Turkce)",
+    "options": ["A secenegi", "B secenegi", "C secenegi", "D secenegi", "E secenegi"],
     "answer": 0,
-    "solution": "Kisa cozum aciklamasi",
+    "solution": "Kisa cozum aciklamasi (Turkce)",
     "topic": "Konu adi"
   }
 ]
 
+KRITIK: JSON anahtarlari (key) MUTLAKA "question", "options", "answer", "solution", "topic" olmali.
+Turkce key KULLANMA ("soru", "secenekler", "cevap" gibi key KULLANMA).
 SADECE JSON dondur, baska hicbir sey yazma.`
 }
 
