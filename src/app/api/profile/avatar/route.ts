@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 const MAX_SIZE = 1 * 1024 * 1024 // 1MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const ALLOWED_TYPES = ['image/jpeg', 'image/png']
 const BUCKET = 'avatars'
 
 // Magic bytes kontrolu — dosya uzantisina guvenme
@@ -46,18 +47,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Gecersiz dosya formati' }, { status: 400 })
   }
 
-  const ext = detectedType.split('/')[1] === 'jpeg' ? 'jpg' : detectedType.split('/')[1]
+  const ext = detectedType.split('/')[1] === 'jpeg' ? 'jpg' : 'png'
   const filePath = `${user.id}/avatar.${ext}`
 
+  // Service role client — RLS bypass
+  const admin = createServiceRoleClient()
+
   // Eski avatari sil (farkli uzanti olabilir)
-  await supabase.storage.from(BUCKET).remove([
+  await admin.storage.from(BUCKET).remove([
     `${user.id}/avatar.jpg`,
     `${user.id}/avatar.png`,
-    `${user.id}/avatar.webp`,
   ])
 
   // Yeni avatari yukle
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await admin.storage
     .from(BUCKET)
     .upload(filePath, buffer, {
       contentType: detectedType,
@@ -66,15 +69,15 @@ export async function POST(req: NextRequest) {
 
   if (uploadError) {
     console.error('[Avatar] Upload hatasi:', uploadError)
-    return NextResponse.json({ error: 'Avatar yuklenemedi' }, { status: 500 })
+    return NextResponse.json({ error: 'Avatar yuklenemedi: ' + uploadError.message }, { status: 500 })
   }
 
   // Public URL al
-  const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(filePath)
+  const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(filePath)
   const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`
 
   // Profili guncelle
-  const { error: updateError } = await supabase
+  const { error: updateError } = await admin
     .from('profiles')
     .update({ avatar_url: avatarUrl })
     .eq('id', user.id)
@@ -97,15 +100,16 @@ export async function DELETE() {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
+  const admin = createServiceRoleClient()
+
   // Tum olasi dosyalari sil
-  await supabase.storage.from(BUCKET).remove([
+  await admin.storage.from(BUCKET).remove([
     `${user.id}/avatar.jpg`,
     `${user.id}/avatar.png`,
-    `${user.id}/avatar.webp`,
   ])
 
   // Profili guncelle
-  await supabase
+  await admin
     .from('profiles')
     .update({ avatar_url: null })
     .eq('id', user.id)
