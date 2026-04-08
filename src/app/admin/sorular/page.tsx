@@ -154,7 +154,13 @@ export default function AdminQuestionsPage() {
       </div>
 
       {/* AI Soru Uretici */}
-      <AIQuestionGenerator onGenerated={() => { setFilterActive('inactive'); setPage(1) }} />
+      <AIQuestionGenerator onGenerated={() => {
+        setFilterActive('inactive')
+        setPage(1)
+        // State guncellendikten sonra fetch tetiklenecek (useEffect dependency)
+        // Ek olarak 500ms sonra tekrar fetch yap (race condition onlemi)
+        setTimeout(() => fetchQuestions(), 500)
+      }} />
 
       {/* Filtreler */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
