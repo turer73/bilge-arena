@@ -63,9 +63,11 @@ export async function POST(request: Request) {
     const question = questionMap.get(a.questionId)
     if (!question) return null
 
-    // Dogru cevabi DB'den kontrol et (content JSONB icinde correct_option)
-    const content = question.content as { options?: string[]; correct_option?: number }
-    const isActuallyCorrect = content?.correct_option === a.selectedOption
+    // Dogru cevabi DB'den kontrol et
+    // TYT: content.answer, WordQuest: content.correct
+    const content = question.content as { answer?: number; correct?: number }
+    const correctIndex = content.answer ?? content.correct
+    const isActuallyCorrect = correctIndex === a.selectedOption
 
     if (isActuallyCorrect) {
       streak++
