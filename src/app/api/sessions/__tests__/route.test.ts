@@ -70,8 +70,8 @@ describe('POST /api/sessions', () => {
     vi.clearAllMocks()
     mockQuestionsIn.mockResolvedValue({
       data: [
-        { id: 'q1', content: { correct_option: 1 }, difficulty: 2 },
-        { id: 'q2', content: { correct_option: 2 }, difficulty: 2 },
+        { id: 'q1', content: { answer: 1 }, difficulty: 2 },
+        { id: 'q2', content: { answer: 2 }, difficulty: 2 },
       ],
       error: null,
     })
@@ -112,8 +112,8 @@ describe('POST /api/sessions', () => {
     const res = await POST(makeRequest(validBody))
     const json = await res.json()
 
-    // q1: selectedOption=1, correct_option=1 → correct
-    // q2: selectedOption=0, correct_option=2 → wrong
+    // q1: selectedOption=1, answer=1 → correct
+    // q2: selectedOption=0, answer=2 → wrong
     expect(json.correctCount).toBe(1)
     expect(json.wrongCount).toBe(1)
     expect(json.totalXP).toBeGreaterThan(0)
