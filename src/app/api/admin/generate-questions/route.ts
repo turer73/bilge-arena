@@ -216,16 +216,35 @@ Soru sayisi: ${count}${fewShotText}`
       return NextResponse.json({ error: 'AI yanit uretmedi' }, { status: 502 })
     }
 
-    // JSON parse
+    // JSON parse — bozuk JSON'i temizlemeye calis
     let questions
     try {
       questions = JSON.parse(text)
     } catch {
-      const match = text.match(/\[[\s\S]*\]/)
-      if (match) {
-        questions = JSON.parse(match[0])
-      } else {
-        return NextResponse.json({ error: 'AI yaniti JSON olarak okunamadi', raw: text }, { status: 502 })
+      try {
+        // Markdown code block icinde olabilir
+        const match = text.match(/\[[\s\S]*\]/)
+        if (match) {
+          // Bozuk karakter temizligi: trailing comma, kontrol karakterleri
+          const cleaned = match[0]
+            .replace(/,\s*([}\]])/g, '$1')           // trailing comma
+            .replace(/[\x00-\x1F\x7F]/g, ' ')       // kontrol karakterleri
+            .replace(/\n/g, ' ')                      // newline
+          questions = JSON.parse(cleaned)
+        }
+      } catch {
+        // Son care: her {...} bloğunu ayri parse et
+        try {
+          const blocks = text.match(/\{[^{}]*\}/g) || []
+          questions = blocks
+            .map((b: string) => { try { return JSON.parse(b) } catch { return null } })
+            .filter(Boolean)
+        } catch {
+          // Tamamen basarisiz
+        }
+      }
+      if (!questions || (Array.isArray(questions) && questions.length === 0)) {
+        return NextResponse.json({ error: 'AI yaniti JSON olarak okunamadi' }, { status: 502 })
       }
     }
 
