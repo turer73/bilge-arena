@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite'
@@ -287,14 +288,15 @@ Soru sayisi: ${count}${fewShotText}`
       is_active: false,
     }))
 
-    const { data: inserted, error } = await supabase
+    const admin = createServiceRoleClient()
+    const { data: inserted, error } = await admin
       .from('questions')
       .insert(insertData)
       .select('id')
 
     if (error) {
       console.error('[AI Generate] Insert hatasi:', error)
-      return NextResponse.json({ error: 'Sorular kaydedilemedi' }, { status: 500 })
+      return NextResponse.json({ error: 'Sorular kaydedilemedi: ' + error.message }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -341,7 +343,8 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'Gecersiz veri', details: result.error.flatten() }, { status: 400 })
   }
 
-  const { data: inserted, error } = await supabase
+  const svc = createServiceRoleClient()
+  const { data: inserted, error } = await svc
     .from('questions')
     .insert({
       game,
