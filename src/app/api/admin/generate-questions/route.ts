@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'game, category, difficulty gerekli' }, { status: 400 })
   }
 
-  const apiKey = process.env.GEMINI_API_KEY
+  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'GEMINI_API_KEY ayarlanmamis' }, { status: 500 })
   }
