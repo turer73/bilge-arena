@@ -154,7 +154,7 @@ export default function AdminQuestionsPage() {
       </div>
 
       {/* AI Soru Uretici */}
-      <AIQuestionGenerator onGenerated={() => fetchQuestions()} />
+      <AIQuestionGenerator onGenerated={() => { setFilterActive('inactive'); setPage(1) }} />
 
       {/* Filtreler */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
