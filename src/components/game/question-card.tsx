@@ -42,7 +42,8 @@ export function QuestionCard({
     const opts = question.content.options
       .map((o, i) => `${'ABCDE'[i]}) ${o}`)
       .join('\n')
-    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${question.content.question}\n\n${opts}`
+    const text = question.content.question || question.content.sentence
+    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${text}\n\n${opts}`
     useChatStore.getState().setQuestionContext(ctx)
     useChatStore.getState().clearMessages()
     useChatStore.getState().setOpen(true)
@@ -110,7 +111,7 @@ export function QuestionCard({
 
       {/* Soru metni */}
       <p className="text-[13px] font-medium leading-[1.72] md:text-[15px] xl:text-base 2xl:text-lg">
-        {question.content.question}
+        {question.content.question || question.content.sentence}
       </p>
 
       {/* Burst particles slot */}
