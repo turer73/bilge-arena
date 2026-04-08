@@ -71,8 +71,8 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
 
       if (res.ok) {
         const dupMsg = data.duplicateCount > 0 ? ` (${data.duplicateCount} tekrar filtrelendi)` : ''
-        toast.success(`${data.saved} soru uretildi ve kaydedildi${dupMsg}`)
-        setPreview(data.questions || [])
+        toast.success(`${data.saved} soru pasif olarak kaydedildi${dupMsg}`)
+        setPreview([])
         onGenerated?.()
       } else {
         toast.error(data.error || 'Uretim basarisiz')
