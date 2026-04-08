@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkAdmin } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
@@ -46,7 +47,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Gecersiz oyun adi' }, { status: 400 })
   }
 
-  let query = supabase
+  // Admin ise service role client kullan (pasif sorulari da gorsun)
+  const isAdmin = await checkAdmin(supabase)
+  const db = isAdmin ? createServiceRoleClient() : supabase
+
+  let query = db
     .from('questions')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
