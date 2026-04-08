@@ -14,7 +14,7 @@ interface EditProfileModalProps {
 
 export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const { profile } = useAuthStore()
-  const [displayName, setDisplayName] = useState(profile?.display_name || '')
+  const [displayName, setDisplayName] = useState(profile?.username || profile?.display_name || '')
   const [city, setCity] = useState(profile?.city || '')
   const [grade, setGrade] = useState(profile?.grade || '')
   const [saving, setSaving] = useState(false)
@@ -96,7 +96,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          display_name: displayName.trim(),
+          username: displayName.trim(),
           city: city.trim() || undefined,
           grade: grade || undefined,
         }),
@@ -171,7 +171,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
 
           {/* Isim */}
           <div>
-            <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">GORUNEN AD</label>
+            <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SITE ICI AD</label>
             <input
               type="text"
               value={displayName}

@@ -13,16 +13,19 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json()
-  const { display_name, city, grade } = body
+  const { username, display_name, city, grade } = body
 
   // Sadece izin verilen alanlari guncelle
   const updates: Record<string, unknown> = {}
-  if (typeof display_name === 'string') {
-    const trimmed = display_name.trim()
+  if (typeof username === 'string') {
+    const trimmed = username.trim()
     if (trimmed.length < 2 || trimmed.length > 30) {
       return NextResponse.json({ error: 'Isim 2-30 karakter olmali' }, { status: 400 })
     }
-    updates.display_name = trimmed
+    updates.username = trimmed
+  }
+  if (typeof display_name === 'string') {
+    updates.display_name = display_name.trim().slice(0, 50) || null
   }
   if (typeof city === 'string') {
     updates.city = city.trim().slice(0, 50) || null
