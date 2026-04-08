@@ -12,6 +12,7 @@ export default function AdminQuestionsPage() {
   const [loading, setLoading] = useState(true)
   const [filterGame, setFilterGame] = useState<GameSlug | 'all'>('all')
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all')
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
 
   // Edit modal state
@@ -28,6 +29,7 @@ export default function AdminQuestionsPage() {
       if (filterGame !== 'all') params.set('game', filterGame)
       if (filterActive === 'active') params.set('active', 'true')
       if (filterActive === 'inactive') params.set('active', 'false')
+      if (search.length >= 2) params.set('search', search)
 
       const res = await fetch(`/api/questions?${params}`)
       if (!res.ok) throw new Error('Sorular yuklenemedi')
@@ -39,17 +41,23 @@ export default function AdminQuestionsPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, filterGame, filterActive])
+  }, [page, filterGame, filterActive, search])
+
+  // Debounce arama — 500ms bekle
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput)
+      setPage(1)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
   useEffect(() => {
     fetchQuestions()
   }, [fetchQuestions])
 
-  // Client-side arama filtresi (sunucudan gelen veriler uzerinde)
-  const filtered = questions.filter((q) => {
-    if (search && !q.content.question.toLowerCase().includes(search.toLowerCase())) return false
-    return true
-  })
+  // Server-side arama — client filtreye gerek yok
+  const filtered = questions
 
   const toggleActive = async (id: string) => {
     const question = questions.find((q) => q.id === id)
@@ -152,8 +160,8 @@ export default function AdminQuestionsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <input
           type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder="Soru ara..."
           className="w-64 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
         />

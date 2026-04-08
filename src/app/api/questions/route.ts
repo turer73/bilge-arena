@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category')
   const difficulty = searchParams.get('difficulty')
   const active = searchParams.get('active')
+  const search = searchParams.get('search')
   const page = safeInt(searchParams.get('page'), 1, 1, 1000)
   const limit = safeInt(searchParams.get('limit'), 20, 1, 100)
   const offset = (page - 1) * limit
@@ -55,6 +56,10 @@ export async function GET(request: NextRequest) {
   if (difficulty) query = query.eq('difficulty', parseInt(difficulty))
   if (active === 'true') query = query.eq('is_active', true)
   if (active === 'false') query = query.eq('is_active', false)
+  if (search && search.length >= 2) {
+    // JSONB icinde soru metni arama (content->question veya content->sentence)
+    query = query.or(`content->question.ilike.%${search}%,content->sentence.ilike.%${search}%`)
+  }
 
   const { data, count, error } = await query.range(offset, offset + limit - 1)
 
