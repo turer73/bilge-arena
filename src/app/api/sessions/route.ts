@@ -141,6 +141,26 @@ export async function POST(request: Request) {
 
   await svc.from('session_answers').insert(answerRows)
 
+  // 2b. Soru bazli istatistikleri guncelle
+  // Dürüst not: Supabase JS client atomic increment desteklemiyor.
+  // questionMap'ten okunan deger + 1 ile guncelliyoruz.
+  // Race condition riski dusuk (ayni soru ayni anda cevaplanma olasiligi az).
+  try {
+    for (const a of verifiedAnswers) {
+      const q = questionMap.get(a.question_id) as { times_answered?: number; times_correct?: number } | undefined
+      if (!q) continue
+      const updates: Record<string, number> = {
+        times_answered: (q.times_answered ?? 0) + 1,
+      }
+      if (a.is_correct) {
+        updates.times_correct = (q.times_correct ?? 0) + 1
+      }
+      await svc.from('questions').update(updates).eq('id', a.question_id)
+    }
+  } catch (e) {
+    console.error('[Sessions API] Question stats hatasi:', e)
+  }
+
   // 3. UPDATE game_sessions status = 'completed'
   await svc
     .from('game_sessions')
