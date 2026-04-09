@@ -1,25 +1,51 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/client'
 
-const USERS = [
-  { rank: 1, name: 'Zeynep K.', city: 'Istanbul', xp: 12840, level: 'Efsane', streak: 28, badge: '\uD83D\uDC51' },
-  { rank: 2, name: 'Mert A.', city: 'Ankara', xp: 11200, level: 'Efsane', streak: 21, badge: '\uD83E\uDD48' },
-  { rank: 3, name: 'Elif B.', city: 'Izmir', xp: 9650, level: 'Uzman', streak: 15, badge: '\uD83E\uDD49' },
-  { rank: 4, name: 'Ahmet Y.', city: 'Bursa', xp: 8120, level: 'Uzman', streak: 12, badge: '4' },
-  { rank: 5, name: 'Selin T.', city: 'Antalya', xp: 7340, level: 'Azimli', streak: 9, badge: '5' },
-]
+interface LeaderUser {
+  rank: number
+  name: string
+  xp: number
+  streak: number
+  badge: string
+}
+
+const BADGES = ['👑', '🥈', '🥉', '4', '5']
 
 interface LeaderboardPreviewProps {
   config?: Record<string, unknown>
 }
 
 export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
+  const [users, setUsers] = useState<LeaderUser[]>([])
   const title = (config?.title as string) || undefined
   const description = (config?.description as string) || 'Her hafta sıfırlanan haftalık turnuva. En çok XP kazanan öğrenci zirvede yer alır.'
   const buttonText = (config?.button_text as string) || 'Sıralamayı Gör'
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from('profiles')
+      .select('username, display_name, total_xp, current_streak')
+      .order('total_xp', { ascending: false })
+      .gt('total_xp', 0)
+      .limit(5)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setUsers(data.map((p, i) => ({
+            rank: i + 1,
+            name: p.username || p.display_name || `Oyuncu ${i + 1}`,
+            xp: p.total_xp || 0,
+            streak: p.current_streak || 0,
+            badge: BADGES[i] || String(i + 1),
+          })))
+        }
+      })
+  }, [])
   return (
     <section className="bg-[var(--bg)] py-24">
       <div className="mx-auto grid max-w-[1200px] items-center gap-16 px-6 lg:grid-cols-2 lg:px-8">
@@ -64,7 +90,12 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
           </div>
 
           {/* Satirlar */}
-          {USERS.map((u) => (
+          {users.length === 0 && (
+            <div className="px-6 py-8 text-center text-sm text-[var(--text-muted)]">
+              Henüz oyuncu yok — ilk sen ol!
+            </div>
+          )}
+          {users.map((u) => (
             <div
               key={u.rank}
               className="flex items-center gap-4 border-b border-[var(--border)] px-6 py-3.5 transition-colors"
@@ -84,7 +115,7 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
               <div className="flex-1">
                 <div className="text-sm font-bold">{u.name}</div>
                 <div className="text-xs text-[var(--text-muted)]">
-                  {u.city} &middot; {u.streak}\uD83D\uDD25 seri
+                  {u.streak > 0 ? `${u.streak}🔥 seri` : 'Yeni oyuncu'}
                 </div>
               </div>
 

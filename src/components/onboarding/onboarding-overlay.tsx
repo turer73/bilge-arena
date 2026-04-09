@@ -40,6 +40,10 @@ export function OnboardingOverlay() {
   const router = useRouter()
   const { profile } = useAuthStore()
 
+  // Debug — canlıda kontrol sonrası kaldırılacak
+  if (typeof window !== 'undefined') {
+    console.log('[Onboarding] profile:', profile?.display_name, 'onboarding_completed:', profile?.onboarding_completed)
+  }
   if (!profile || profile.onboarding_completed) return null
 
   const handleComplete = async () => {
