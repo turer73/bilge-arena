@@ -24,6 +24,9 @@ const mockProfile = {
   premium_until: null,
   preferred_theme: 'dark' as const,
   notifications: true,
+  referral_code: null,
+  referred_by: null,
+  onboarding_completed: true,
   created_at: '2024-01-01',
   updated_at: '2024-06-01',
 }

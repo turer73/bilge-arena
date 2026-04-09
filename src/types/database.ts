@@ -47,8 +47,33 @@ export interface Profile {
   // Tercihler
   preferred_theme: 'dark' | 'light'
   notifications: boolean
+  // Referral
+  referral_code: string | null
+  referred_by: string | null
+  // Onboarding
+  onboarding_completed: boolean
   created_at: string
   updated_at: string
+}
+
+/** challenges — Asenkron duello sistemi */
+export interface Challenge {
+  id: string
+  challenger_id: string
+  opponent_id: string
+  game: GameType
+  category: string | null
+  status: 'pending' | 'accepted' | 'completed' | 'expired' | 'declined'
+  question_ids: string[]
+  challenger_score: { correct: number; total: number; time_sec: number; xp: number } | null
+  opponent_score: { correct: number; total: number; time_sec: number; xp: number } | null
+  winner_id: string | null
+  xp_reward: number
+  created_at: string
+  expires_at: string
+  // JOIN fields (optional)
+  challenger?: Pick<Profile, 'id' | 'display_name' | 'username' | 'avatar_url'>
+  opponent?: Pick<Profile, 'id' | 'display_name' | 'username' | 'avatar_url'>
 }
 
 /** questions — Tüm oyunlar için ortak soru tablosu (JSONB content) */
