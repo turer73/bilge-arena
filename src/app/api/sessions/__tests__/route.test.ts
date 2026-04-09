@@ -40,6 +40,14 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+// Service role client mock — ayni chainable mock'u kullan
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: () => ({
+    from: mockFrom,
+    rpc: vi.fn().mockResolvedValue({ error: null }),
+  }),
+}))
+
 import { POST } from '../route'
 
 // ─── Helpers ────────────────────────────────────────
