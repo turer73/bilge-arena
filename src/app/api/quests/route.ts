@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 
 const questsLimiter = createRateLimiter('quests', 30, 60_000) // 30 req/dk
@@ -18,10 +19,11 @@ export async function GET() {
     return NextResponse.json({ error: 'Cok fazla istek' }, { status: 429 })
   }
 
+  const svc = createServiceRoleClient()
   const today = new Date().toISOString().split('T')[0]
 
   // Bugünkü görevleri kontrol et
-  const { data: existing } = await supabase
+  const { data: existing } = await svc
     .from('user_daily_quests')
     .select('*, quest:daily_quests(*)')
     .eq('user_id', user.id)
@@ -32,7 +34,7 @@ export async function GET() {
   }
 
   // Bugün için görev yok — rastgele 3 görev ata
-  const { data: allQuests } = await supabase
+  const { data: allQuests } = await svc
     .from('daily_quests')
     .select('*')
     .eq('is_active', true)
@@ -54,7 +56,7 @@ export async function GET() {
     xp_claimed: false,
   }))
 
-  const { data: created, error } = await supabase
+  const { data: created, error } = await svc
     .from('user_daily_quests')
     .insert(inserts)
     .select('*, quest:daily_quests(*)')
@@ -83,10 +85,10 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Eksik veri' }, { status: 400 })
   }
 
+  const svc = createServiceRoleClient()
   const today = new Date().toISOString().split('T')[0]
 
-  // Bugünkü görevleri al
-  const { data: userQuests } = await supabase
+  const { data: userQuests } = await svc
     .from('user_daily_quests')
     .select('*, quest:daily_quests(*)')
     .eq('user_id', user.id)
@@ -97,56 +99,29 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ updated: [] })
   }
 
-  const updates: Array<{ id: string; current_value: number; is_completed: boolean; completed_at: string | null }> = []
-
+  const results = []
   for (const uq of userQuests) {
-    const quest = uq.quest
+    const quest = uq.quest as { quest_type: string; target_value: number; target_game?: string } | null
     if (!quest) continue
 
     let newValue = uq.current_value
-
     switch (quest.quest_type) {
-      case 'play_sessions':
-        newValue += 1
-        break
-      case 'correct_answers':
-        newValue += (sessionData.correctAnswers ?? 0)
-        break
-      case 'streak_maintain':
-        newValue = Math.max(newValue, sessionData.maxStreak ?? 0)
-        break
-      case 'accuracy':
-        newValue = Math.max(newValue, sessionData.accuracy ?? 0)
-        break
-      case 'specific_game':
-        if (sessionData.game === quest.target_game) {
-          newValue += 1
-        }
-        break
+      case 'play_sessions': newValue += 1; break
+      case 'correct_answers': newValue += (sessionData.correctAnswers ?? 0); break
+      case 'streak_maintain': newValue = Math.max(newValue, sessionData.maxStreak ?? 0); break
+      case 'accuracy': newValue = Math.max(newValue, sessionData.accuracy ?? 0); break
+      case 'specific_game': if (sessionData.game === quest.target_game) newValue += 1; break
     }
 
     const isCompleted = newValue >= quest.target_value
-
-    updates.push({
-      id: uq.id,
-      current_value: newValue,
-      is_completed: isCompleted,
-      completed_at: isCompleted ? new Date().toISOString() : null,
-    })
-  }
-
-  // Tüm güncellemeleri yap
-  const results = []
-  for (const upd of updates) {
-    const { data } = await supabase
+    const { data } = await svc
       .from('user_daily_quests')
       .update({
-        current_value: upd.current_value,
-        is_completed: upd.is_completed,
-        completed_at: upd.completed_at,
+        current_value: newValue,
+        is_completed: isCompleted,
+        completed_at: isCompleted ? new Date().toISOString() : null,
       })
-      .eq('id', upd.id)
-      .eq('user_id', user.id)  // defense-in-depth: sadece kendi quest'lerini guncelle
+      .eq('id', uq.id)
       .select('*, quest:daily_quests(*)')
       .single()
 

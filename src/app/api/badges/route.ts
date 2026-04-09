@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { BADGES, checkBadgeEarned } from '@/lib/constants/badges'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 
@@ -20,12 +21,13 @@ export async function GET() {
   }
 
   // Kazanılmış rozetleri al
-  const { data: earned } = await supabase
+  const svcRead = createServiceRoleClient()
+  const { data: earned } = await svcRead
     .from('user_achievements')
     .select('achievement_id, earned_at')
     .eq('user_id', user.id)
 
-  const earnedCodes = new Set((earned ?? []).map((e) => e.achievement_id))
+  const earnedCodes = new Set((earned ?? []).map((e: { achievement_id: string }) => e.achievement_id))
 
   return NextResponse.json({
     earned: earned ?? [],
@@ -42,8 +44,10 @@ export async function POST() {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
+  const svc = createServiceRoleClient()
+
   // Kullanıcı istatistiklerini al
-  const { data: profile } = await supabase
+  const { data: profile } = await svc
     .from('profiles')
     .select('total_xp, total_sessions, correct_answers, longest_streak')
     .eq('id', user.id)
@@ -54,7 +58,7 @@ export async function POST() {
   }
 
   // Tamamlanan günlük görev sayısını al
-  const { count: dailyQuestsCount } = await supabase
+  const { count: dailyQuestsCount } = await svc
     .from('user_daily_quests')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
@@ -69,7 +73,7 @@ export async function POST() {
   }
 
   // Mevcut rozetleri al
-  const { data: existingBadges } = await supabase
+  const { data: existingBadges } = await svc
     .from('user_achievements')
     .select('achievement_id')
     .eq('user_id', user.id)
@@ -92,7 +96,7 @@ export async function POST() {
     earned_at: new Date().toISOString(),
   }))
 
-  const { error } = await supabase
+  const { error } = await svc
     .from('user_achievements')
     .insert(inserts)
 
@@ -109,14 +113,14 @@ export async function POST() {
 
   if (totalXPEarned > 0) {
     // Atomic XP increment: RPC varsa kullan, yoksa guncel profili cek
-    const { error: rpcErr } = await supabase.rpc('increment_xp', {
+    const { error: rpcErr } = await svc.rpc('increment_xp', {
       p_user_id: user.id,
       p_amount: totalXPEarned,
     })
 
     if (rpcErr) {
       // Fallback: profili taze cek ve guncelle (race condition riski azaltildi)
-      const { data: freshProfile } = await supabase
+      const { data: freshProfile } = await svc
         .from('profiles')
         .select('total_xp')
         .eq('id', user.id)
@@ -137,7 +141,7 @@ export async function POST() {
       reason: 'badge_earned',
       reference_id: badge.code,
     }))
-    await supabase.from('xp_log').insert(xpLogInserts)
+    await svc.from('xp_log').insert(xpLogInserts)
   }
 
   return NextResponse.json({
