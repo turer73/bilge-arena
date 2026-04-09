@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 // XP hesaplama — client'a guvenmeden server-side recalculate
 const BASE_XP: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 50 }
@@ -98,8 +99,11 @@ export async function POST(request: Request) {
   const baseXP = Math.floor(totalXP * 0.7)
   const bonusXP = totalXP - baseXP
 
+  // Service role client — RLS bypass (tum INSERT/UPDATE islemleri icin)
+  const svc = createServiceRoleClient()
+
   // 1. INSERT game_sessions
-  const { data: session, error: sessionError } = await supabase
+  const { data: session, error: sessionError } = await svc
     .from('game_sessions')
     .insert({
       user_id: user.id,
@@ -135,22 +139,47 @@ export async function POST(request: Request) {
     session_id: sessionId,
   }))
 
-  await supabase.from('session_answers').insert(answerRows)
+  await svc.from('session_answers').insert(answerRows)
 
   // 3. UPDATE game_sessions status = 'completed'
-  await supabase
+  await svc
     .from('game_sessions')
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('id', sessionId)
 
   // 4. INSERT xp_log (trigger profili gunceller)
   if (totalXP > 0) {
-    await supabase.from('xp_log').insert({
+    await svc.from('xp_log').insert({
       user_id: user.id,
       amount: totalXP,
       reason: 'session_complete',
       reference_id: sessionId,
     })
+  }
+
+  // 5. Profil istatistiklerini guncelle — RPC ile atomik
+  const { error: xpError } = await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: totalXP })
+  if (xpError) {
+    console.error('[Sessions API] increment_xp RPC hatasi:', xpError.message)
+    // Fallback: profil total'lerini session toplamlarindan hesapla
+    const { data: sessions } = await svc
+      .from('game_sessions')
+      .select('total_xp, correct_count, total_questions')
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+    if (sessions) {
+      const totals = sessions.reduce((acc, s) => ({
+        xp: acc.xp + (s.total_xp || 0),
+        correct: acc.correct + (s.correct_count || 0),
+        total: acc.total + (s.total_questions || 0),
+      }), { xp: 0, correct: 0, total: 0 })
+      await svc.from('profiles').update({
+        total_xp: totals.xp,
+        correct_answers: totals.correct,
+        total_questions: totals.total,
+        total_sessions: sessions.length,
+      }).eq('id', user.id)
+    }
   }
 
   return NextResponse.json({
