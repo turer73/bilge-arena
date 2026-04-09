@@ -90,9 +90,9 @@ export default function AdminQuestionsPage() {
   const openEdit = (q: Question) => {
     setEditQ(q)
     setEditContent({
-      question: q.content.question,
+      question: q.content.question || q.content.sentence || '',
       options: [...q.content.options],
-      answer: q.content.answer,
+      answer: q.content.answer ?? (q.content as unknown as { correct?: number }).correct ?? 0,
       solution: q.content.solution || '',
     })
     setEditDifficulty(q.difficulty)

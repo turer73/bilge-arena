@@ -1,6 +1,22 @@
 import type { Question, QuestionContent } from '@/types/database'
 
 /**
+ * Dogru cevap indexini dondurur.
+ * TYT: content.answer, WordQuest: content.correct
+ */
+export function getCorrectIndex(content: QuestionContent): number {
+  return content.answer ?? (content as unknown as { correct?: number }).correct ?? 0
+}
+
+/**
+ * Soru metnini dondurur.
+ * TYT: content.question, WordQuest: content.sentence
+ */
+export function getQuestionText(content: QuestionContent): string {
+  return content.question || content.sentence || ''
+}
+
+/**
  * Farkli JSON formatlarini normalize eder.
  * TYT JSON: { question, options: [A,B,C,D], answer: "C", solution }
  * DB format: { question, options: [...], answer: 0, solution }
