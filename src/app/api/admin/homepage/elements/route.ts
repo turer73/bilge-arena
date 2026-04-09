@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 
 /**
@@ -70,7 +71,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: element, error } = await supabase
+    const svc = createServiceRoleClient()
+    const { data: element, error } = await svc
       .from('homepage_elements')
       .insert({
         section_key,
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Admin log
-    await supabase.from('admin_logs').insert({
+    await svc.from('admin_logs').insert({
       admin_id: admin.id,
       action: 'create_homepage_element',
       target_type: 'homepage_element',

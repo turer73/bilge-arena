@@ -38,6 +38,13 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: () => ({
+    from: mockFrom,
+    rpc: vi.fn().mockResolvedValue({ error: null }),
+  }),
+}))
+
 // ─── Import after mock ──────────────────────────────
 
 import { POST } from '../route'

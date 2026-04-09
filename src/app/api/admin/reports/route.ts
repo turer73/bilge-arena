@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -58,7 +59,8 @@ export async function PATCH(request: NextRequest) {
   if (adminNote !== undefined) updates.admin_note = adminNote
   if (status === 'resolved') updates.resolved_by = admin.id
 
-  const { error } = await supabase
+  const svc = createServiceRoleClient()
+  const { error } = await svc
     .from('error_reports')
     .update(updates)
     .eq('id', reportId)
@@ -68,7 +70,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   // Admin log
-  await supabase.from('admin_logs').insert({
+  await svc.from('admin_logs').insert({
     admin_id: admin.id,
     action: `report_${status}`,
     target_type: 'report',

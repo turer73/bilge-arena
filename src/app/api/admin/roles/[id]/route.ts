@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 
 /**
@@ -31,29 +32,30 @@ export async function PATCH(
     }
 
     // Rol bilgilerini güncelle
+    const svc = createServiceRoleClient()
     const updates: Record<string, unknown> = {}
     if (name !== undefined) updates.name = name
     if (description !== undefined) updates.description = description
 
     if (Object.keys(updates).length > 0) {
-      await supabase.from('roles').update(updates).eq('id', id)
+      await svc.from('roles').update(updates).eq('id', id)
     }
 
     // İzinleri güncelle (mevcut izinleri sil, yenileri ekle)
     if (permissions && Array.isArray(permissions)) {
-      await supabase.from('role_permissions').delete().eq('role_id', id)
+      await svc.from('role_permissions').delete().eq('role_id', id)
 
       if (permissions.length > 0) {
         const permRows = permissions.map((p: string) => ({
           role_id: id,
           permission: p,
         }))
-        await supabase.from('role_permissions').insert(permRows)
+        await svc.from('role_permissions').insert(permRows)
       }
     }
 
     // Admin log
-    await supabase.from('admin_logs').insert({
+    await svc.from('admin_logs').insert({
       admin_id: admin.id,
       action: 'update_role',
       target_type: 'role',
@@ -111,10 +113,11 @@ export async function DELETE(
     }
 
     // Sil (cascade ile izinler de silinir)
-    await supabase.from('roles').delete().eq('id', id)
+    const svc = createServiceRoleClient()
+    await svc.from('roles').delete().eq('id', id)
 
     // Admin log
-    await supabase.from('admin_logs').insert({
+    await svc.from('admin_logs').insert({
       admin_id: admin.id,
       action: 'delete_role',
       target_type: 'role',
