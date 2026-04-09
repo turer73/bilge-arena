@@ -261,6 +261,27 @@ export default function FriendsClient() {
                 </div>
               </div>
               <button
+                onClick={async () => {
+                  const game = prompt('Hangi oyun? (matematik, turkce, fen, sosyal, wordquest)', 'matematik')
+                  if (!game) return
+                  const res = await fetch('/api/challenges', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ opponentId: f.profile.id, game }),
+                  })
+                  if (res.ok) {
+                    toast.success('Meydan okuma gonderildi! ⚔️')
+                  } else {
+                    const data = await res.json()
+                    toast.error(data.error || 'Duello olusturulamadi')
+                  }
+                }}
+                className="rounded-lg bg-[var(--reward)]/15 px-2.5 py-1 text-[10px] font-bold text-[var(--reward)] hover:bg-[var(--reward)]/25"
+                title="Meydan Oku"
+              >
+                ⚔️
+              </button>
+              <button
                 onClick={() => removeFriend(f.friendshipId, 'Arkadas kaldirildi')}
                 className="text-xs text-[var(--muted)] hover:text-[var(--urgency)]"
                 title="Arkadasliktan cikar"
