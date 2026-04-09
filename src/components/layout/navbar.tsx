@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users } from 'lucide-react'
+import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords } from 'lucide-react'
 import { Logo } from './logo'
 import { ThemeToggle } from './theme-toggle'
 import { Button } from '@/components/ui/button'
@@ -142,6 +142,13 @@ export function Navbar() {
                     >
                       <Users size={14} />
                       Arkadaslar
+                    </Link>
+                    <Link
+                      href="/arena/duello"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--reward)] transition-colors hover:bg-[var(--reward-bg)]"
+                    >
+                      <Swords size={14} />
+                      Duello
                     </Link>
                     {profile?.role === 'admin' && (
                       <>

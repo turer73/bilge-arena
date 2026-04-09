@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/layout/navbar'
 import { ArenaAuxiliaries } from '@/components/layout/arena-auxiliaries'
+import { OnboardingOverlay } from '@/components/onboarding/onboarding-overlay'
 
 export const metadata: Metadata = {
   title: 'Arena',
@@ -19,6 +20,7 @@ export default function ArenaLayout({
         {children}
       </main>
       <ArenaAuxiliaries />
+      <OnboardingOverlay />
     </>
   )
 }

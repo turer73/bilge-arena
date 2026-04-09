@@ -34,6 +34,9 @@ export async function PATCH(req: Request) {
     const g = Number(grade)
     updates.grade = (g >= 9 && g <= 13) ? g : null
   }
+  if (body.onboarding_completed === true) {
+    updates.onboarding_completed = true
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'Guncellenecek alan yok' }, { status: 400 })
