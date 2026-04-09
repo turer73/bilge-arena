@@ -44,7 +44,7 @@ export default function SiralamaClient() {
         setEntries(
           rows.map((r) => ({
             rank: r.current_rank,
-            name: r.display_name || r.username || 'Arenaci',
+            name: r.username || r.display_name || 'Arenaci',
             avatar: r.avatar_url || '👤',
             xp: r.xp_earned,
             level: r.level_name || getLevelFromXP(r.xp_earned).name,
@@ -60,6 +60,7 @@ export default function SiralamaClient() {
       const { data: profilesData, error: profilesErr } = await supabase
         .from('profiles')
         .select('id, display_name, username, avatar_url, total_xp, level_name')
+        .gt('total_xp', 0)
         .order('total_xp', { ascending: false })
         .limit(50)
 
@@ -67,7 +68,7 @@ export default function SiralamaClient() {
         setEntries(
           profilesData.map((p, idx) => ({
             rank: idx + 1,
-            name: p.display_name || p.username || 'Arenaci',
+            name: p.username || p.display_name || 'Arenaci',
             avatar: p.avatar_url || '👤',
             xp: p.total_xp ?? 0,
             level: p.level_name || getLevelFromXP(p.total_xp ?? 0).name,
