@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 const REFERRAL_XP = 100 // Davet eden ve edilen icin
 
@@ -70,14 +71,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Gecersiz davet kodu' }, { status: 404 })
   }
 
+  const svc = createServiceRoleClient()
+
   // referred_by guncelle
-  await supabase
-    .from('profiles')
-    .update({ referred_by: referrer.id })
-    .eq('id', user.id)
+  await svc.from('profiles').update({ referred_by: referrer.id }).eq('id', user.id)
 
   // Odul kaydi
-  const { error } = await supabase
+  const { error } = await svc
     .from('referral_rewards')
     .insert({ referrer_id: referrer.id, referred_id: user.id, xp_awarded: REFERRAL_XP })
 
@@ -86,13 +86,13 @@ export async function POST(req: Request) {
   }
 
   // Her iki tarafa XP ver
-  await supabase.rpc('increment_xp', { user_id_input: referrer.id, amount: REFERRAL_XP })
-  await supabase.rpc('increment_xp', { user_id_input: user.id, amount: REFERRAL_XP })
+  await svc.rpc('increment_xp', { p_user_id: referrer.id, p_amount: REFERRAL_XP })
+  await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: REFERRAL_XP })
 
   // XP log kaydi
-  await supabase.from('xp_log').insert([
-    { user_id: referrer.id, xp_amount: REFERRAL_XP, source: 'referral' },
-    { user_id: user.id, xp_amount: REFERRAL_XP, source: 'referral' },
+  await svc.from('xp_log').insert([
+    { user_id: referrer.id, amount: REFERRAL_XP, reason: 'referral' },
+    { user_id: user.id, amount: REFERRAL_XP, reason: 'referral' },
   ])
 
   return NextResponse.json({ status: 'claimed', xpAwarded: REFERRAL_XP })

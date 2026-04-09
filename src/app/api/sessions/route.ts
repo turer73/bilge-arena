@@ -182,11 +182,115 @@ export async function POST(request: Request) {
     }
   }
 
+  // 6. Gunluk gorevleri guncelle
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    const accuracy = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0
+    const { data: userQuests } = await svc
+      .from('user_daily_quests')
+      .select('*, quest:daily_quests(*)')
+      .eq('user_id', user.id)
+      .eq('date', today)
+      .eq('is_completed', false)
+
+    if (userQuests && userQuests.length > 0) {
+      for (const uq of userQuests) {
+        const quest = uq.quest as { quest_type: string; target_value: number; target_game?: string } | null
+        if (!quest) continue
+
+        let newValue = uq.current_value
+        switch (quest.quest_type) {
+          case 'play_sessions': newValue += 1; break
+          case 'correct_answers': newValue += correctCount; break
+          case 'streak_maintain': newValue = Math.max(newValue, maxStreak ?? streak); break
+          case 'accuracy': newValue = Math.max(newValue, accuracy); break
+          case 'specific_game': if (game === quest.target_game) newValue += 1; break
+        }
+
+        const isCompleted = newValue >= quest.target_value
+        await svc.from('user_daily_quests').update({
+          current_value: newValue,
+          is_completed: isCompleted,
+          completed_at: isCompleted ? new Date().toISOString() : null,
+        }).eq('id', uq.id)
+      }
+    }
+  } catch (e) {
+    console.error('[Sessions API] Quest update hatasi:', e)
+  }
+
+  // 7. Topic progress guncelle (adaptif zorluk icin)
+  try {
+    const { data: existingProgress } = await svc
+      .from('user_topic_progress')
+      .select('id, questions_seen, correct')
+      .eq('user_id', user.id)
+      .eq('game', game)
+      .eq('category', category || '')
+      .maybeSingle()
+
+    if (existingProgress) {
+      const newSeen = existingProgress.questions_seen + answers.length
+      const newCorrect = existingProgress.correct + correctCount
+      await svc.from('user_topic_progress').update({
+        questions_seen: newSeen,
+        correct: newCorrect,
+        accuracy_pct: Math.round((newCorrect / newSeen) * 100),
+      }).eq('id', existingProgress.id)
+    } else if (category) {
+      await svc.from('user_topic_progress').insert({
+        user_id: user.id,
+        game,
+        category,
+        questions_seen: answers.length,
+        correct: correctCount,
+        accuracy_pct: answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0,
+      })
+    }
+  } catch (e) {
+    console.error('[Sessions API] Topic progress hatasi:', e)
+  }
+
+  // 8. Rozet kontrolu — session tamamlaninca yeni rozetleri kontrol et
+  let newBadges: string[] = []
+  try {
+    const { BADGES, checkBadgeEarned } = await import('@/lib/constants/badges')
+    const { data: prof } = await svc.from('profiles')
+      .select('total_xp, total_sessions, correct_answers, longest_streak')
+      .eq('id', user.id).single()
+    const { count: dqCount } = await svc.from('user_daily_quests')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id).eq('is_completed', true)
+    const { data: existing } = await svc.from('user_achievements')
+      .select('achievement_id').eq('user_id', user.id)
+
+    if (prof) {
+      const stats = {
+        gamesPlayed: prof.total_sessions ?? 0,
+        correctAnswers: prof.correct_answers ?? 0,
+        bestStreak: prof.longest_streak ?? 0,
+        totalXP: prof.total_xp ?? 0,
+        dailyQuestsCompleted: dqCount ?? 0,
+      }
+      const existingCodes = new Set((existing ?? []).map(b => b.achievement_id))
+      const earned = BADGES.filter(b => !existingCodes.has(b.code) && checkBadgeEarned(b, stats))
+      if (earned.length > 0) {
+        await svc.from('user_achievements').insert(
+          earned.map(b => ({ user_id: user.id, achievement_id: b.code, earned_at: new Date().toISOString() }))
+        )
+        newBadges = earned.map(b => b.code)
+      }
+    }
+  } catch (e) {
+    console.error('[Sessions API] Badge check hatasi:', e)
+  }
+
   return NextResponse.json({
     sessionId,
     totalXP,
     correctCount,
     wrongCount,
     maxStreak: maxStreak ?? streak,
+    newBadges,
   })
 }
