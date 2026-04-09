@@ -38,7 +38,7 @@ export async function fetchSidebarLeaderboard(
   // Haftalik view'i dene
   const { data: weeklyData } = await supabase
     .from('leaderboard_weekly_ranked')
-    .select('user_id, display_name, avatar_url, xp_earned, current_rank')
+    .select('user_id, display_name, username, avatar_url, xp_earned, current_rank')
     .order('current_rank', { ascending: true })
     .limit(5)
 
@@ -48,7 +48,7 @@ export async function fetchSidebarLeaderboard(
       const isMe = row.user_id === currentUserId
       if (isMe) myRank = i + 1
       return {
-        name: row.display_name || `Oyuncu ${i + 1}`,
+        name: (row as Record<string, unknown>).username as string || row.display_name || `Oyuncu ${i + 1}`,
         avatar: row.avatar_url ? '👤' : ['🦊', '🐉', '🦉', '🌟', '⚔️'][i % 5],
         xp: Number(row.xp_earned || 0).toLocaleString('tr-TR'),
         isMe,
@@ -71,7 +71,7 @@ export async function fetchSidebarLeaderboard(
   // Fallback: profiles tablosu
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, display_name, avatar_url, total_xp')
+    .select('id, username, display_name, avatar_url, total_xp')
     .order('total_xp', { ascending: false })
     .limit(5)
 
@@ -82,7 +82,7 @@ export async function fetchSidebarLeaderboard(
     const isMe = p.id === currentUserId
     if (isMe) myRank = i + 1
     return {
-      name: p.display_name || `Oyuncu ${i + 1}`,
+      name: p.username || p.display_name || `Oyuncu ${i + 1}`,
       avatar: p.avatar_url ? '👤' : ['🦊', '🐉', '🦉', '🌟', '⚔️'][i % 5],
       xp: Number(p.total_xp || 0).toLocaleString('tr-TR'),
       isMe,
