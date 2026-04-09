@@ -13,6 +13,7 @@ import { useElapsedTime } from '@/components/game/deneme-timer'
 import { playSound } from '@/lib/utils/sounds'
 import type { Question } from '@/types/database'
 import type { OptionState } from '@/components/game/option-button'
+import { getCorrectIndex } from '@/lib/utils/question'
 
 // ---------- Fallback demo sorulari ----------
 // SADECE Supabase baglantisi koparsa kullanilir — gercek soru bankasi DB'de
@@ -209,7 +210,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     if (!question) return
 
     if (isDeneme) {
-      const isCorrect = optionIndex === question.content.answer
+      const isCorrect = optionIndex === getCorrectIndex(question.content)
       const newStreak = isCorrect ? quizStore.streak + 1 : 0
       const xpResult = calculateXP(question.difficulty, 0, newStreak)
       quizStore.answerQuestion(optionIndex, isCorrect, 0, xpResult)
@@ -228,7 +229,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     } else {
       timer.stop()
       const timeTaken = mode.timePerQuestion - timer.seconds
-      const isCorrect = optionIndex === question.content.answer
+      const isCorrect = optionIndex === getCorrectIndex(question.content)
       const newStreak = isCorrect ? quizStore.streak + 1 : 0
       const xpResult = calculateXP(question.difficulty, timer.seconds, newStreak)
       quizStore.answerQuestion(optionIndex, isCorrect, timeTaken, xpResult)
@@ -285,7 +286,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     const lastAnswer = quizStore.answers[quizStore.answers.length - 1]
     if (!lastAnswer) return 'idle'
 
-    if (index === question.content.answer) return 'correct'
+    if (index === getCorrectIndex(question.content)) return 'correct'
     if (index === lastAnswer.selectedOption) return 'wrong'
     return 'dim'
   // eslint-disable-next-line react-hooks/exhaustive-deps

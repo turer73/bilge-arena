@@ -1,7 +1,7 @@
 'use client'
 
 import type { Question } from '@/types/database'
-import { getOptionLetter } from '@/lib/utils/question'
+import { getOptionLetter, getCorrectIndex } from '@/lib/utils/question'
 import { LikeButton } from '@/components/social/like-button'
 import { useChatStore } from '@/stores/chat-store'
 
@@ -24,7 +24,7 @@ export function ExplanationPanel({
   onOpenComments,
   onOpenReport,
 }: ExplanationPanelProps) {
-  const correctAnswer = question.content.answer
+  const correctAnswer = getCorrectIndex(question.content)
   const correctText = question.content.options[correctAnswer]
 
   const handleTopicExplain = async () => {
@@ -32,7 +32,8 @@ export function ExplanationPanel({
     const opts = question.content.options
       .map((o, i) => `${'ABCDE'[i]}) ${o}`)
       .join('\n')
-    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${question.content.question}\n\n${opts}\n\nDoğru cevap: ${getOptionLetter(correctAnswer)}) ${correctText}${question.content.solution ? '\nÇözüm: ' + question.content.solution : ''}`
+    const qText = question.content.question || question.content.sentence || ''
+    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${qText}\n\n${opts}\n\nDoğru cevap: ${getOptionLetter(correctAnswer)}) ${correctText}${question.content.solution ? '\nÇözüm: ' + question.content.solution : ''}`
 
     const userMsg = `"${topic}" konusunu kısaca anlat. Bu soruyla ilgili temel kavramları ve formülleri özetle.`
 
