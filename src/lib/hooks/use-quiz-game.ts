@@ -15,32 +15,12 @@ import type { Question } from '@/types/database'
 import type { OptionState } from '@/components/game/option-button'
 
 // ---------- Fallback demo sorulari ----------
-
+// SADECE Supabase baglantisi koparsa kullanilir — gercek soru bankasi DB'de
 const DEMO_QUESTIONS: Question[] = [
   {
-    id: 'd1', game: 'matematik', category: 'problemler', subcategory: 'Isci-Havuz', difficulty: 2,
-    content: { question: 'Bir isi Ahmet 6 gunde, Mehmet 12 gunde bitirebiliyor. Birlikte calisirlarsa kac gunde bitirirler?', options: ['3 gun', '4 gun', '5 gun', '6 gun'], answer: 1, solution: '1/6+1/12 = 1/4 → 4 gun' },
-    is_active: true, external_id: null, topic: null, level_tag: null, base_points: 20, is_boss: false, times_answered: 0, times_correct: 0, source: 'original', exam_ref: null, updated_at: '', created_at: '',
-  },
-  {
-    id: 'd2', game: 'turkce', category: 'anlam', subcategory: 'Anlam', difficulty: 2,
-    content: { question: 'Asagidaki cumlelerden hangisinde nesnel yargi bulunmaktadir?', options: ['Bu film cok guzeldir', 'Hava bugun oldukca sicak', "Turkiye'nin yuzolcumu 783.562 km²'dir", 'O roman cok sikiciydi'], answer: 2, solution: "Yuzolcumu olculebilir-dogrulanabilir gercektir → nesnel yargi" },
-    is_active: true, external_id: null, topic: null, level_tag: null, base_points: 20, is_boss: false, times_answered: 0, times_correct: 0, source: 'original', exam_ref: null, updated_at: '', created_at: '',
-  },
-  {
-    id: 'd3', game: 'fen', category: 'fizik', subcategory: 'Fizik', difficulty: 2,
-    content: { question: "Newton'in ikinci yasasina gore 5 kg kutleli cisme 20 N net kuvvet uygulanirsa ivmesi kactir?", options: ['2 m/s²', '4 m/s²', '10 m/s²', '25 m/s²'], answer: 1, solution: 'a = F/m = 20/5 = 4 m/s²' },
-    is_active: true, external_id: null, topic: null, level_tag: null, base_points: 20, is_boss: false, times_answered: 0, times_correct: 0, source: 'original', exam_ref: null, updated_at: '', created_at: '',
-  },
-  {
-    id: 'd4', game: 'sosyal', category: 'tarih', subcategory: 'Tarih', difficulty: 2,
-    content: { question: 'Malazgirt Savasi hangi yilda gerceklesmistir?', options: ['1048', '1071', '1096', '1204'], answer: 1, solution: '1071 — Sultan Alparslan vs Bizans; Anadolu kapisi acildi' },
-    is_active: true, external_id: null, topic: null, level_tag: null, base_points: 20, is_boss: false, times_answered: 0, times_correct: 0, source: 'original', exam_ref: null, updated_at: '', created_at: '',
-  },
-  {
-    id: 'd5', game: 'fen', category: 'kimya', subcategory: 'Kimya', difficulty: 3,
-    content: { question: 'pH = 2 olan cozeltinin [H⁺] derisimi nedir?', options: ['10⁻¹²', '10⁻⁷', '10⁻²', '10²'], answer: 2, solution: '[H⁺] = 10^(-pH) = 10⁻² mol/L' },
-    is_active: true, external_id: null, topic: null, level_tag: null, base_points: 20, is_boss: false, times_answered: 0, times_correct: 0, source: 'original', exam_ref: null, updated_at: '', created_at: '',
+    id: 'demo-1', game: 'matematik', category: 'sayilar', subcategory: null, difficulty: 1,
+    content: { question: '[Demo] 2 + 3 = ?', options: ['4', '5', '6', '7', '8'], answer: 1, solution: 'Demo soru — internet baglantisinizi kontrol edin.' },
+    is_active: true, external_id: null, topic: null, level_tag: null, base_points: 10, is_boss: false, times_answered: 0, times_correct: 0, source: 'demo', exam_ref: null, updated_at: '', created_at: '',
   },
 ]
 
