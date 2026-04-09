@@ -9,8 +9,13 @@
 const { Client } = require('pg')
 
 // Supabase PostgreSQL baglanti bilgileri
-const PROJECT_REF = 'lvnmzdowhfzmpkueurih'
-const DB_PASSWORD = '***REMOVED***'
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || ''
+const DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD || ''
+
+if (!PROJECT_REF || !DB_PASSWORD) {
+  console.error('SUPABASE_PROJECT_REF ve SUPABASE_DB_PASSWORD env var gerekli')
+  process.exit(1)
+}
 
 const client = new Client({
   host: `db.${PROJECT_REF}.supabase.co`,
