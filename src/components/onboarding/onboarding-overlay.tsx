@@ -276,7 +276,7 @@ export function OnboardingOverlay() {
   ]
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[var(--bg)]/95 px-4 py-8 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[var(--bg)]/80 px-4 py-8 backdrop-blur-md">
       {/* Progress dots */}
       <div className="absolute top-6 flex gap-2">
         {[0, 1, 2].map((i) => (
