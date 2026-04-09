@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 /**
  * Günlük giriş ödülü API'si.
@@ -74,9 +75,11 @@ export async function POST() {
   // XP hesapla: gün * 10, max 70
   const xpReward = Math.min(newStreak * 10, 70)
 
+  const svc = createServiceRoleClient()
+
   // Profili güncelle — atomic guard: sadece bugun henuz claim edilmemisse
   const todayStart = new Date(todayStr + 'T00:00:00.000Z').toISOString()
-  const { data: updated, error: updateError } = await supabase
+  const { data: updated, error: updateError } = await svc
     .from('profiles')
     .update({
       current_streak: newStreak,
@@ -88,7 +91,6 @@ export async function POST() {
     .select('id')
 
   if (!updated || updated.length === 0) {
-    // Concurrent request zaten claim etti
     return NextResponse.json({
       status: 'already_claimed',
       streak: profile.current_streak,
@@ -102,10 +104,10 @@ export async function POST() {
   }
 
   // XP log'a kaydet
-  await supabase.from('xp_log').insert({
+  await svc.from('xp_log').insert({
     user_id: user.id,
     amount: xpReward,
-    source: 'daily_login',
+    reason: 'daily_login',
   }).then(() => {})
 
   return NextResponse.json({

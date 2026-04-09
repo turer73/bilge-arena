@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -68,7 +69,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: `Gecersiz deger: ${err}` }, { status: 400 })
   }
 
-  const { error } = await supabase
+  const svc = createServiceRoleClient()
+  const { error } = await svc
     .from('site_settings')
     .upsert({
       key,
@@ -81,7 +83,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   // Admin log
-  await supabase.from('admin_logs').insert({
+  await svc.from('admin_logs').insert({
     admin_id: admin.id,
     action: 'update_setting',
     target_type: 'setting',

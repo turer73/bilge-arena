@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 
 const ALLOWED_FIELDS = [
@@ -47,7 +48,8 @@ export async function PATCH(
       )
     }
 
-    const { error } = await supabase
+    const svc = createServiceRoleClient()
+    const { error } = await svc
       .from('homepage_elements')
       .update(updates)
       .eq('id', id)
@@ -79,7 +81,8 @@ export async function DELETE(
 
     const { id } = await params
 
-    const { error } = await supabase
+    const svc = createServiceRoleClient()
+    const { error } = await svc
       .from('homepage_elements')
       .delete()
       .eq('id', id)
@@ -89,7 +92,7 @@ export async function DELETE(
     }
 
     // Admin log
-    await supabase.from('admin_logs').insert({
+    await svc.from('admin_logs').insert({
       admin_id: admin.id,
       action: 'delete_homepage_element',
       target_type: 'homepage_element',

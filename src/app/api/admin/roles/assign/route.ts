@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 
 /**
@@ -28,7 +29,8 @@ export async function POST(request: NextRequest) {
     if (!role) return NextResponse.json({ error: 'Rol bulunamadı' }, { status: 404 })
 
     // Ata
-    const { error } = await supabase
+    const svc = createServiceRoleClient()
+    const { error } = await svc
       .from('user_roles')
       .insert({ user_id: userId, role_id: roleId, assigned_by: admin.id })
 
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Admin log
-    await supabase.from('admin_logs').insert({
+    await svc.from('admin_logs').insert({
       admin_id: admin.id,
       action: 'assign_role',
       target_type: 'user',
@@ -84,7 +86,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Kaldır
-    const { error } = await supabase
+    const svc = createServiceRoleClient()
+    const { error } = await svc
       .from('user_roles')
       .delete()
       .eq('user_id', userId)
@@ -93,7 +96,7 @@ export async function DELETE(request: NextRequest) {
     if (error) throw error
 
     // Admin log
-    await supabase.from('admin_logs').insert({
+    await svc.from('admin_logs').insert({
       admin_id: admin.id,
       action: 'remove_role',
       target_type: 'user',

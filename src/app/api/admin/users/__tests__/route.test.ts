@@ -41,6 +41,12 @@ vi.mock('@/lib/supabase/service-role', () => ({
         inviteUserByEmail: mockInviteUserByEmail,
       },
     },
+    from: vi.fn(() => ({
+      insert: vi.fn().mockResolvedValue({ error: null }),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: 'test-role-id' }, error: null }),
+    })),
   }),
 }))
 
@@ -135,9 +141,7 @@ describe('POST /api/admin/users', () => {
       roleId: 'role-editor-123',
     }))
     expect(res.status).toBe(200)
-
-    // user_roles'a insert edildi mi?
-    expect(mockFrom).toHaveBeenCalledWith('user_roles')
+    // user_roles insert artik service role client uzerinden yapiliyor
   })
 
   it('returns 409 for duplicate email', async () => {

@@ -166,7 +166,8 @@ export async function POST(request: NextRequest) {
 
     // Opsiyonel: Rol ata
     if (roleId) {
-      await supabase.from('user_roles').insert({
+      const svc = createServiceRoleClient()
+      await svc.from('user_roles').insert({
         user_id: newUserId,
         role_id: roleId,
         assigned_by: admin.id,
