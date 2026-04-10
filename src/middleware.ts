@@ -82,6 +82,16 @@ export async function middleware(request: NextRequest) {
     response.headers.set('Cloudflare-CDN-Cache-Control', 'no-store')
   }
 
+  // CSP violation reporting — report-only mode (engelleme yok, sadece izleme)
+  response.headers.set(
+    "Content-Security-Policy-Report-Only",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://analytics.panola.app https://pagead2.googlesyndication.com https://www.googletagmanager.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://analytics.panola.app https://generativelanguage.googleapis.com; img-src 'self' data: blob: https://*.supabase.co; style-src 'self' 'unsafe-inline'; font-src 'self' data:; report-uri https://csp.3d-labx.com/csp-report"
+  )
+  response.headers.set(
+    "Report-To",
+    JSON.stringify({ group: "csp-endpoint", max_age: 86400, endpoints: [{ url: "https://csp.3d-labx.com/csp-report" }] })
+  )
+
   return response
 }
 
