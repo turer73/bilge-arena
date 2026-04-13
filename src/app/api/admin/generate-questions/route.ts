@@ -163,7 +163,7 @@ export async function POST(req: Request) {
   }
 
   // ── Mevcut soru metinlerini duplicate kontrolu icin cek ──
-  let existingPrefixes: Set<string> = new Set()
+  const existingPrefixes: Set<string> = new Set()
   try {
     const { data: existing } = await supabase
       .from('questions')

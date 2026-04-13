@@ -1,6 +1,5 @@
 'use client'
 
-import { forwardRef } from 'react'
 import { cn } from '@/lib/utils/cn'
 
 type Variant = 'primary' | 'ghost' | 'danger' | 'gold'
@@ -8,6 +7,7 @@ type Variant = 'primary' | 'ghost' | 'danger' | 'gold'
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
   size?: 'sm' | 'md' | 'lg'
+  ref?: React.Ref<HTMLButtonElement>
 }
 
 const variantStyles: Record<Variant, string> = {
@@ -25,8 +25,8 @@ const sizeStyles = {
   lg: 'px-8 py-4 text-lg',
 }
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', className, children, ...props }, ref) => (
+function Button({ variant = 'primary', size = 'md', className, children, ref, ...props }: ButtonProps) {
+  return (
     <button
       ref={ref}
       className={cn(variantStyles[variant], sizeStyles[size], className)}
@@ -35,7 +35,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       {children}
     </button>
   )
-)
+}
 
-Button.displayName = 'Button'
 export { Button }

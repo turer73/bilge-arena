@@ -33,6 +33,7 @@ vi.mock('next/image', () => ({
 
 // framer-motion mock — animasyonsuz render
 vi.mock('framer-motion', async () => {
+  const React = await import('react')
   const actual = await vi.importActual<typeof import('framer-motion')>('framer-motion')
   return {
     ...actual,
@@ -43,14 +44,13 @@ vi.mock('framer-motion', async () => {
         get: (_target, prop: string) => {
           // motion.div, motion.span, vb. → normal HTML element
           return ({ children, ...props }: Record<string, unknown>) => {
-            const Element = prop as keyof JSX.IntrinsicElements
             const safeProps = Object.fromEntries(
               Object.entries(props).filter(
                 ([key]) =>
                   !['initial', 'animate', 'exit', 'transition', 'variants', 'whileHover', 'whileTap', 'whileInView', 'layout', 'layoutId'].includes(key)
               )
             )
-            return <Element {...safeProps}>{children as React.ReactNode}</Element>
+            return React.createElement(prop, safeProps, children as React.ReactNode)
           }
         },
       }
