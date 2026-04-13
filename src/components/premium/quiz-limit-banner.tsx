@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { FEATURES, FREE_DAILY_LIMIT } from '@/lib/constants/premium'
 
 interface QuizLimitBannerProps {
@@ -43,12 +44,12 @@ export function QuizLimitBanner({ remaining, isPremium, isGuest }: QuizLimitBann
           <div className="mt-1 text-[11px] text-[var(--text-sub)]">
             Yarın tekrar gelebilir veya Premium&apos;a geçerek sınırsız oynayabilirsin.
           </div>
-          <a
+          <Link
             href="/arena/premium"
             className="mt-2 inline-block rounded-lg bg-[var(--reward)] px-4 py-1.5 text-[11px] font-bold text-white transition-transform hover:scale-[1.03]"
           >
             ⭐ Premium&apos;a Geç
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="flex items-center justify-center gap-2">
