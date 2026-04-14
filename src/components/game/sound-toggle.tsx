@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { toggleSound, getSoundEnabled, playSound } from '@/lib/utils/sounds'
 
 interface SoundToggleProps {
@@ -12,11 +12,9 @@ interface SoundToggleProps {
  * localStorage'dan durumu okur, tıklanınca toggle eder.
  */
 export function SoundToggle({ size = 'sm' }: SoundToggleProps) {
-  const [enabled, setEnabled] = useState(true)
-
-  useEffect(() => {
-    setEnabled(getSoundEnabled())
-  }, [])
+  const [enabled, setEnabled] = useState(() =>
+    typeof window === 'undefined' ? true : getSoundEnabled()
+  )
 
   const handleToggle = () => {
     const next = toggleSound()

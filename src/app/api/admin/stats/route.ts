@@ -11,7 +11,7 @@ export async function GET() {
 
   // Istatistikleri paralel topla
   const [usersResult, questionsResult, sessionsResult, answersResult, reportsResult] = await Promise.all([
-    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('questions').select('id', { count: 'exact', head: true }),
     supabase.from('game_sessions').select('id', { count: 'exact', head: true }),
     supabase.from('session_answers').select('id', { count: 'exact', head: true }),
