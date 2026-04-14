@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { createClient } from '@/lib/supabase/client'
@@ -28,6 +28,9 @@ export default function DuelloGamePage() {
   const [startTime, setStartTime] = useState(Date.now())
   const [submitResult, setSubmitResult] = useState<{ score: { correct: number; total: number }; result: string; winnerId?: string } | null>(null)
 
+  // Shuffle mapping: shuffledIndex → originalIndex (sunucuya orijinal index gondermek icin)
+  const shuffleMapRef = useRef<Map<string, number[]>>(new Map())
+
   // Duello ve sorulari yukle
   useEffect(() => {
     if (!user || !id) return
@@ -53,7 +56,29 @@ export default function DuelloGamePage() {
           const ordered = c.question_ids
             .map((qid: string) => qMap.get(qid))
             .filter(Boolean) as Question[]
-          setQuestions(ordered)
+
+          // Sik sirasini karistir + mapping kaydet
+          const maps = new Map<string, number[]>()
+          const shuffled = ordered.map(q => {
+            const indices = q.content.options.map((_: string, i: number) => i)
+            for (let i = indices.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1))
+              ;[indices[i], indices[j]] = [indices[j], indices[i]]
+            }
+            maps.set(q.id, indices) // indices[newIdx] = originalIdx
+            const correctIdx = getCorrectIndex(q.content)
+            return {
+              ...q,
+              content: {
+                ...q.content,
+                options: indices.map((i: number) => q.content.options[i]),
+                answer: indices.indexOf(correctIdx),
+              },
+            }
+          })
+          shuffleMapRef.current = maps
+
+          setQuestions(shuffled)
           setState('playing')
           setStartTime(Date.now())
         } else {
@@ -84,9 +109,12 @@ export default function DuelloGamePage() {
       playSound('wrong')
     }
 
+    // Sunucuya orijinal index gonder (shuffle mapping ile)
+    const originalOption = shuffleMapRef.current.get(question.id)?.[optionIndex] ?? optionIndex
+
     setAnswers(prev => [...prev, {
       questionId: question.id,
-      selectedOption: optionIndex,
+      selectedOption: originalOption,
       isCorrect,
       timeTaken,
     }])
@@ -100,7 +128,7 @@ export default function DuelloGamePage() {
         setStartTime(Date.now())
       } else {
         // Tum sorular bitti — sonuclari gonder
-        submitAnswers([...answers, { questionId: question.id, selectedOption: optionIndex, isCorrect, timeTaken }])
+        submitAnswers([...answers, { questionId: question.id, selectedOption: originalOption, isCorrect, timeTaken }])
       }
     }, 1500)
   }, [state, question, currentIndex, questions.length, answers, startTime])

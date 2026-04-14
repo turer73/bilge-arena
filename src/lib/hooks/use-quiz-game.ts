@@ -13,7 +13,7 @@ import { useElapsedTime } from '@/components/game/deneme-timer'
 import { playSound } from '@/lib/utils/sounds'
 import type { Question } from '@/types/database'
 import type { OptionState } from '@/components/game/option-button'
-import { getCorrectIndex } from '@/lib/utils/question'
+import { getCorrectIndex, shuffleOptions } from '@/lib/utils/question'
 
 // ---------- Fallback demo sorulari ----------
 // SADECE Supabase baglantisi koparsa kullanilir — gercek soru bankasi DB'de
@@ -162,6 +162,9 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         questions = DEMO_QUESTIONS.filter(q => q.game === game)
         if (questions.length === 0) questions = [...DEMO_QUESTIONS]
       }
+
+      // Sik sirasini karistir — cevap dagılımı dengesizligini onle
+      questions = questions.map(q => ({ ...q, content: shuffleOptions(q.content) }))
 
       if (isDeneme && denemeConfig) {
         // Deneme: kategori dagilimina gore sorulari sec

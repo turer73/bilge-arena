@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { GAME_SLUGS } from '@/lib/constants/games'
 
 /**
  * GET /api/challenges — Kullanicinin duelloslarini getir
@@ -38,6 +39,10 @@ export async function POST(req: Request) {
 
   if (!opponentId || !game) {
     return NextResponse.json({ error: 'opponentId ve game gerekli' }, { status: 400 })
+  }
+
+  if (!GAME_SLUGS.includes(game)) {
+    return NextResponse.json({ error: 'Gecersiz oyun secimi' }, { status: 400 })
   }
 
   if (opponentId === user.id) {

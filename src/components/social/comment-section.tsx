@@ -26,6 +26,7 @@ interface CommentRow {
   created_at: string
   user_id: string
   profiles: {
+    username: string | null
     display_name: string | null
     avatar_url: string | null
     level_name: string | null
@@ -79,7 +80,7 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
     // returns<CommentRow[]>() ile sorgu seviyesinde tipi belirle.
     const { data: commentsData, error } = await supabase
       .from('comments')
-      .select('id, content, likes_count, created_at, user_id, profiles!inner(display_name, avatar_url, level_name)')
+      .select('id, content, likes_count, created_at, user_id, profiles!inner(username, display_name, avatar_url, level_name)')
       .eq('question_id', questionId)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
@@ -111,7 +112,7 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
       return {
         id: c.id,
         avatar: p?.avatar_url ? '👤' : '🦉',
-        name: p?.display_name || 'Anonim',
+        name: p?.username || p?.display_name || 'Anonim',
         levelBadge: LEVEL_BADGES[p?.level_name || 'Acemi'] || '🌱 Acemi',
         content: c.content,
         timeAgo: getTimeAgo(c.created_at),
@@ -161,7 +162,7 @@ export function CommentSection({ questionId, isLoggedIn = false }: CommentSectio
     const optimistic: Comment = {
       id: data.id,
       avatar: profile?.avatar_url ? '👤' : '🦉',
-      name: profile?.display_name || 'Sen',
+      name: profile?.username || profile?.display_name || 'Sen',
       levelBadge: LEVEL_BADGES[profile?.level_name || 'Acemi'] || '🌱 Acemi',
       content: cleanContent,
       timeAgo: 'simdi',

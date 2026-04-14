@@ -46,6 +46,21 @@ export async function fetchQuizQuestions({
   // Cevrimici: Supabase'den cek
   const supabase = createClient()
 
+  // --- Son gorulmus sorulari disla (cooldown) ---
+  let recentIds: string[] = []
+  if (userId) {
+    const { data: recentHistory } = await supabase
+      .from('user_question_history')
+      .select('question_id')
+      .eq('user_id', userId)
+      .order('last_seen_at', { ascending: false })
+      .limit(50)
+
+    if (recentHistory && recentHistory.length > 0) {
+      recentIds = recentHistory.map(h => h.question_id)
+    }
+  }
+
   let query = supabase
     .from('questions')
     .select('*')
@@ -55,10 +70,32 @@ export async function fetchQuizQuestions({
   if (category) query = query.eq('category', category)
   if (difficulty) query = query.eq('difficulty', difficulty)
 
+  // Son 50 soruyu disla (yeterli soru kalmazsa asagida fallback var)
+  if (recentIds.length > 0) {
+    query = query.not('id', 'in', `(${recentIds.join(',')})`)
+  }
+
   // Daha iyi rastgelelik icin fazla cek
   const fetchLimit = Math.min(limit * 3, 150)
 
-  const { data, error } = await query.limit(fetchLimit)
+  let { data, error } = await query.limit(fetchLimit)
+
+  // Fallback: cooldown sonrasi yeterli soru kalmadiysa, filtreyi kaldir ve tekrar dene
+  if (!error && data && data.length < limit && recentIds.length > 0) {
+    let fallbackQuery = supabase
+      .from('questions')
+      .select('*')
+      .eq('game', game)
+      .eq('is_active', true)
+
+    if (category) fallbackQuery = fallbackQuery.eq('category', category)
+    if (difficulty) fallbackQuery = fallbackQuery.eq('difficulty', difficulty)
+
+    const { data: allData, error: fallbackError } = await fallbackQuery.limit(fetchLimit)
+    if (!fallbackError && allData && allData.length > data.length) {
+      data = allData
+    }
+  }
 
   if (error || !data || data.length === 0) {
     if (error) console.warn('[fetchQuizQuestions] Hata:', error.message)
