@@ -78,7 +78,9 @@ export async function fetchQuizQuestions({
   // Daha iyi rastgelelik icin fazla cek
   const fetchLimit = Math.min(limit * 3, 150)
 
-  let { data, error } = await query.limit(fetchLimit)
+  const queryResult = await query.limit(fetchLimit)
+  const { error } = queryResult
+  let { data } = queryResult
 
   // Fallback: cooldown sonrasi yeterli soru kalmadiysa, filtreyi kaldir ve tekrar dene
   if (!error && data && data.length < limit && recentIds.length > 0) {

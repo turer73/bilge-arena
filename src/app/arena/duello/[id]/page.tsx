@@ -131,6 +131,7 @@ export default function DuelloGamePage() {
         submitAnswers([...answers, { questionId: question.id, selectedOption: originalOption, isCorrect, timeTaken }])
       }
     }, 1500)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, question, currentIndex, questions.length, answers, startTime])
 
   const submitAnswers = async (finalAnswers: typeof answers) => {
