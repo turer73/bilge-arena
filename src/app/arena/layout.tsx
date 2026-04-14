@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/layout/navbar'
 import { ArenaAuxiliaries } from '@/components/layout/arena-auxiliaries'
-import { OnboardingOverlay } from '@/components/onboarding/onboarding-overlay'
+import dynamic from 'next/dynamic'
+
+const OnboardingOverlay = dynamic(() => import('@/components/onboarding/onboarding-overlay').then(m => m.OnboardingOverlay), { ssr: false })
 
 export const metadata: Metadata = {
   title: 'Arena',

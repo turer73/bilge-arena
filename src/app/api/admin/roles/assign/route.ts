@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { roleAssignSchema } from '@/lib/validations/schemas'
 
 const assignLimiter = createRateLimiter('admin-role-assign', 10, 60_000)
 
@@ -22,11 +23,12 @@ export async function POST(request: NextRequest) {
     const admin = await checkPermission(supabase, 'admin.roles.manage')
     if (!admin) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
 
-    const { userId, roleId } = await request.json()
-
-    if (!userId || !roleId) {
+    const body = await request.json()
+    const parsed = roleAssignSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json({ error: 'userId ve roleId zorunlu' }, { status: 400 })
     }
+    const { userId, roleId } = parsed.data
 
     // Kullanıcı ve rol kontrolü
     const [{ data: user }, { data: role }] = await Promise.all([
@@ -81,11 +83,12 @@ export async function DELETE(request: NextRequest) {
     const admin = await checkPermission(supabase, 'admin.roles.manage')
     if (!admin) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
 
-    const { userId, roleId } = await request.json()
-
-    if (!userId || !roleId) {
+    const body = await request.json()
+    const parsed = roleAssignSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json({ error: 'userId ve roleId zorunlu' }, { status: 400 })
     }
+    const { userId, roleId } = parsed.data
 
     // Kendi super_admin rolünü kaldırmayı engelle
     const { data: role } = await supabase

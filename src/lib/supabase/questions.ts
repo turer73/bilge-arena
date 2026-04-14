@@ -72,7 +72,11 @@ export async function fetchQuizQuestions({
 
   // Son 50 soruyu disla (yeterli soru kalmazsa asagida fallback var)
   if (recentIds.length > 0) {
-    query = query.not('id', 'in', `(${recentIds.join(',')})`)
+    // UUID formatini dogrula — string interpolation yerine guvenli filtre
+    const safeIds = recentIds.filter(id => /^[0-9a-f-]{36}$/i.test(id))
+    if (safeIds.length > 0) {
+      query = query.not('id', 'in', `(${safeIds.join(',')})`)
+    }
   }
 
   // Daha iyi rastgelelik icin fazla cek

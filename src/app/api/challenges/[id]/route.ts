@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { challengeActionSchema } from '@/lib/validations/schemas'
 
 /**
  * PATCH /api/challenges/[id] — Duello kabul/reddet
@@ -15,11 +16,12 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const { id } = await params
-  const { action } = await req.json()
-
-  if (!['accept', 'decline'].includes(action)) {
+  const body = await req.json()
+  const parsed = challengeActionSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Gecersiz aksiyon' }, { status: 400 })
   }
+  const { action } = parsed.data
 
   const svc = createServiceRoleClient()
 

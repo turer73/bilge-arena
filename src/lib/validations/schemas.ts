@@ -101,6 +101,64 @@ export const referralApplySchema = z.object({
 // Sabitleri export et (client tarafinda da kullanilabilir)
 // ============================================================
 
+// ============================================================
+// Challenge (duello)
+// ============================================================
+
+export const challengeCreateSchema = z.object({
+  opponentId: z.string().uuid(),
+  game: z.string().min(1).max(50),
+  category: z.string().max(50).nullish(),
+})
+
+export const challengeActionSchema = z.object({
+  action: z.enum(['accept', 'decline']),
+})
+
+export const challengeSubmitSchema = z.object({
+  answers: z.array(z.object({
+    questionId: z.string().uuid(),
+    selectedOption: z.number().int().min(0),
+    isCorrect: z.boolean(),
+    timeTaken: z.number().min(0).max(300),
+  })).min(1).max(50),
+})
+
+// ============================================================
+// Push bildirim
+// ============================================================
+
+export const pushSubscribeSchema = z.object({
+  endpoint: z.string().url().max(500),
+  p256dh: z.string().min(1).max(500),
+  auth: z.string().min(1).max(500),
+})
+
+export const pushUnsubscribeSchema = z.object({
+  endpoint: z.string().url().max(500),
+})
+
+// ============================================================
+// Quest claim
+// ============================================================
+
+export const questClaimSchema = z.object({
+  questId: z.string().min(1).max(100),
+})
+
+// ============================================================
+// Admin role assign
+// ============================================================
+
+export const roleAssignSchema = z.object({
+  userId: z.string().uuid(),
+  roleId: z.string().uuid(),
+})
+
+// ============================================================
+// Sabitleri export et (client tarafinda da kullanilabilir)
+// ============================================================
+
 export const LIMITS = {
   COMMENT_MAX_LENGTH: 500,
   CHAT_MAX_LENGTH: 2000,

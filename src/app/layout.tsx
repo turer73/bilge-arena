@@ -1,7 +1,9 @@
 import Script from 'next/script'
 import type { Metadata, Viewport } from 'next'
 import { Cinzel, DM_Sans } from 'next/font/google'
-import { CookieBanner } from '@/components/cookie-banner'
+import dynamic from 'next/dynamic'
+
+const CookieBanner = dynamic(() => import('@/components/cookie-banner').then(m => m.CookieBanner), { ssr: false })
 import { ToastContainer } from '@/components/ui/toast'
 import { SWRegister } from '@/components/layout/sw-register'
 import { PWAInstallPrompt } from '@/components/layout/pwa-install-prompt'

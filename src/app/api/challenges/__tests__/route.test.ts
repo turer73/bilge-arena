@@ -73,6 +73,11 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 
 import { GET, POST } from '../route'
 
+// ─── Constants ─────────────────────────────────────
+
+const U1 = '10000000-0000-4000-8000-000000000001'
+const U2 = '10000000-0000-4000-8000-000000000002'
+
 // ─── Helpers ────────────────────────────────────────
 
 function makeRequest(body: Record<string, unknown>) {
@@ -95,7 +100,7 @@ describe('GET /api/challenges', () => {
   })
 
   it('returns challenges list', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     mockChallengesList.mockResolvedValue({ data: [{ id: 'c1' }], error: null })
 
     const res = await GET()
@@ -105,7 +110,7 @@ describe('GET /api/challenges', () => {
   })
 
   it('returns 500 on db error', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     mockChallengesList.mockResolvedValue({ data: null, error: { message: 'DB down' } })
 
     const res = await GET()
@@ -118,68 +123,68 @@ describe('POST /api/challenges', () => {
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
-    const res = await POST(makeRequest({ opponentId: 'u2', game: 'matematik' }))
+    const res = await POST(makeRequest({ opponentId: U2, game: 'matematik' }))
     expect(res.status).toBe(401)
   })
 
   it('returns 400 if opponentId missing', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     const res = await POST(makeRequest({ game: 'matematik' }))
     expect(res.status).toBe(400)
   })
 
   it('returns 400 if game missing', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    const res = await POST(makeRequest({ opponentId: 'u2' }))
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
+    const res = await POST(makeRequest({ opponentId: U2 }))
     expect(res.status).toBe(400)
   })
 
   it('returns 400 for invalid game slug', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    const res = await POST(makeRequest({ opponentId: 'u2', game: 'invalid-game' }))
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
+    const res = await POST(makeRequest({ opponentId: U2, game: 'invalid-game' }))
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toContain('Gecersiz')
   })
 
   it('returns 400 if challenging self', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    const res = await POST(makeRequest({ opponentId: 'u1', game: 'matematik' }))
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
+    const res = await POST(makeRequest({ opponentId: U1, game: 'matematik' }))
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toContain('Kendi')
   })
 
   it('returns 400 if not friends', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     mockFriendshipLimit.mockResolvedValue({ data: [] })
 
-    const res = await POST(makeRequest({ opponentId: 'u2', game: 'matematik' }))
+    const res = await POST(makeRequest({ opponentId: U2, game: 'matematik' }))
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toContain('arkadas')
   })
 
   it('returns 400 if not enough questions', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     mockFriendshipLimit.mockResolvedValue({ data: [{ id: 'f1' }] })
     mockQuestionsLimit.mockResolvedValue({ data: [{ id: 'q1' }, { id: 'q2' }] }) // < 5
 
-    const res = await POST(makeRequest({ opponentId: 'u2', game: 'matematik' }))
+    const res = await POST(makeRequest({ opponentId: U2, game: 'matematik' }))
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toContain('soru')
   })
 
   it('creates challenge successfully', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     mockFriendshipLimit.mockResolvedValue({ data: [{ id: 'f1' }] })
     mockQuestionsLimit.mockResolvedValue({
       data: Array.from({ length: 10 }, (_, i) => ({ id: `q${i}` })),
     })
     mockInsertSingle.mockResolvedValue({ data: { id: 'c1' }, error: null })
 
-    const res = await POST(makeRequest({ opponentId: 'u2', game: 'matematik' }))
+    const res = await POST(makeRequest({ opponentId: U2, game: 'matematik' }))
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.challengeId).toBe('c1')
