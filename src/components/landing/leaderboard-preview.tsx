@@ -33,6 +33,7 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
       .select('username, display_name, total_xp, current_streak')
       .order('total_xp', { ascending: false })
       .gt('total_xp', 0)
+      .is('deleted_at', null)
       .limit(5)
       .then(({ data }) => {
         if (data && data.length > 0) {

@@ -7,14 +7,13 @@ import { useState, useEffect } from 'react'
  * Tekrar baglanti kurulunca otomatik kaybolur.
  */
 export function OfflineIndicator() {
-  const [isOffline, setIsOffline] = useState(false)
+  const [isOffline, setIsOffline] = useState(() =>
+    typeof window === 'undefined' ? false : !navigator.onLine
+  )
 
   useEffect(() => {
     const goOffline = () => setIsOffline(true)
     const goOnline = () => setIsOffline(false)
-
-    // Baslangicta kontrol
-    if (!navigator.onLine) setIsOffline(true)
 
     window.addEventListener('offline', goOffline)
     window.addEventListener('online', goOnline)

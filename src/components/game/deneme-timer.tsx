@@ -10,9 +10,12 @@ interface DenemeTimerProps {
 
 export function DenemeTimer({ totalTime, onTimeUp, isPaused = false }: DenemeTimerProps) {
   const [remaining, setRemaining] = useState(totalTime)
+  // eslint-disable-next-line react-hooks/purity
   const startTimeRef = useRef(Date.now())
   const onTimeUpRef = useRef(onTimeUp)
-  onTimeUpRef.current = onTimeUp
+  useEffect(() => {
+    onTimeUpRef.current = onTimeUp
+  })
 
   // totalTime degisirse remaining'i sifirla (ornegin deneme tekrari)
   useEffect(() => {
@@ -88,6 +91,7 @@ export function DenemeTimer({ totalTime, onTimeUp, isPaused = false }: DenemeTim
 
 // Gecen sureyi hesapla (deneme sonucu icin)
 export function useElapsedTime() {
+  // eslint-disable-next-line react-hooks/purity
   const startRef = useRef(Date.now())
 
   const getElapsed = useCallback(() => {

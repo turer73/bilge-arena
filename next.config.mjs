@@ -89,6 +89,7 @@ const nextConfig = {
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
+              "report-uri https://csp.3d-labx.com/csp-report",
             ].join('; '),
           },
         ],

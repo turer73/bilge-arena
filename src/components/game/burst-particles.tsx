@@ -1,5 +1,7 @@
 'use client'
 
+import { useMemo } from 'react'
+
 const COLORS = [
   'var(--reward)',
   'var(--growth)',
@@ -8,13 +10,13 @@ const COLORS = [
 ]
 
 export function BurstParticles() {
-  const particles = Array.from({ length: 10 }, (_, i) => {
+  const particles = useMemo(() => Array.from({ length: 10 }, (_, i) => {
     const angle = (i / 10) * 360
     const distance = 35 + Math.random() * 25
     const px = Math.cos((angle * Math.PI) / 180) * distance
     const py = Math.sin((angle * Math.PI) / 180) * distance
     return { px, py, color: COLORS[i % 4] }
-  })
+  }), [])
 
   return (
     <div className="pointer-events-none absolute left-1/2 top-1/2 z-30">

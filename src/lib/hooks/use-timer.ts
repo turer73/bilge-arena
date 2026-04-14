@@ -31,7 +31,9 @@ export function useTimer({
   const onTimeUpRef = useRef(onTimeUp)
 
   // Callback ref pattern — stale closure onleme
-  onTimeUpRef.current = onTimeUp
+  useEffect(() => {
+    onTimeUpRef.current = onTimeUp
+  })
 
   const stop = useCallback(() => {
     if (intervalRef.current) {

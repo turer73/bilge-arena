@@ -61,6 +61,7 @@ export default function SiralamaClient() {
         .from('profiles')
         .select('id, display_name, username, avatar_url, total_xp, level_name')
         .gt('total_xp', 0)
+        .is('deleted_at', null)
         .order('total_xp', { ascending: false })
         .limit(50)
 
