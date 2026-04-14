@@ -10,7 +10,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  let response = NextResponse.next({ request })
+  // Response'u bir kez olustur — setAll icinde yeniden olusturmak
+  // Next.js internal header'larini (Next-Router-State-Tree vb.) kaybettirir
+  const response = NextResponse.next({ request })
 
   const supabase = createServerClient(
     SUPABASE_URL,
@@ -24,7 +26,6 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           )
