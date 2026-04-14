@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { sessionSubmitSchema } from '@/lib/validations/schemas'
 
 // Replay korumasi: kullanici basina dk'da max 3 oturum
 const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
@@ -41,14 +42,14 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { game, mode, answers, category, difficulty: filterDifficulty, timeLimit = 30 } = body
-
-  if (!game || !mode || !Array.isArray(answers) || answers.length === 0) {
+  const parsed = sessionSubmitSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Eksik veri' }, { status: 400 })
   }
+  const { game, mode, answers, category, difficulty: filterDifficulty, timeLimit } = parsed.data
 
-  // timeLimit sinirla — client manipulasyonunu onle
-  const safeTimeLimit = Math.min(Math.max(Number(timeLimit) || 30, 5), 120)
+  // timeLimit zaten Zod ile 5-120 arasinda sinirli
+  const safeTimeLimit = timeLimit
 
   // Soru ID'lerini topla ve DB'den dogrula
   const questionIds = answers.map((a: { questionId: string }) => a.questionId)

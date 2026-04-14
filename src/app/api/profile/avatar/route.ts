@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
 
+const avatarLimiter = createRateLimiter('avatar-upload', 5, 60_000)
 const MAX_SIZE = 1 * 1024 * 1024 // 1MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png']
 const BUCKET = 'avatars'
@@ -24,6 +26,9 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
+
+  const rl = await avatarLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null

@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { GAME_SLUGS } from '@/lib/constants/games'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+const challengeLimiter = createRateLimiter('challenge-create', 5, 60_000)
 
 /**
  * GET /api/challenges — Kullanicinin duelloslarini getir
@@ -34,6 +37,9 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const rl = await challengeLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
   const { opponentId, game, category } = await req.json()
 

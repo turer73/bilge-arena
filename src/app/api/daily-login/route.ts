@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+const loginLimiter = createRateLimiter('daily-login', 5, 60_000)
 
 /**
  * Günlük giriş ödülü API'si.
@@ -20,6 +23,9 @@ export async function POST() {
   if (!user) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
+
+  const rl = await loginLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
   // Profili çek
   const { data: profile } = await supabase

@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { referralApplySchema } from '@/lib/validations/schemas'
 
 const REFERRAL_XP = 100 // Davet eden ve edilen icin
+const referralLimiter = createRateLimiter('referral-apply', 3, 60_000)
 
 /**
  * GET /api/referral — Kendi referral kodunu ve istatistiklerini al
@@ -39,10 +42,12 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const { code } = await req.json()
-  if (!code || typeof code !== 'string') {
-    return NextResponse.json({ error: 'Gecersiz kod' }, { status: 400 })
-  }
+  const rl = await referralLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+
+  const parsed = referralApplySchema.safeParse(await req.json())
+  if (!parsed.success) return NextResponse.json({ error: 'Gecersiz kod' }, { status: 400 })
+  const { code } = parsed.data
 
   // Kendi kodunu kullanamaz
   const { data: myProfile } = await supabase

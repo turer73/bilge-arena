@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+const deleteLimiter = createRateLimiter('account-delete', 1, 300_000) // 5 dk'da 1
 
 // POST: Hesap silme istegi (soft delete + anonymize)
 export async function POST() {
@@ -10,6 +13,9 @@ export async function POST() {
   if (!user) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
+
+  const rl = await deleteLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
   const svc = createServiceRoleClient()
 

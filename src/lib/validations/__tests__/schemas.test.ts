@@ -4,6 +4,11 @@ import {
   chatRequestSchema,
   commentContentSchema,
   errorReportSchema,
+  profileUpdateSchema,
+  sessionSubmitSchema,
+  friendRequestSchema,
+  friendActionSchema,
+  referralApplySchema,
   LIMITS,
 } from '../schemas'
 
@@ -118,6 +123,91 @@ describe('errorReportSchema', () => {
       const result = errorReportSchema.safeParse({ report_type: type })
       expect(result.success).toBe(true)
     })
+  })
+})
+
+describe('profileUpdateSchema', () => {
+  it('gecerli profil guncellemesini kabul eder', () => {
+    const result = profileUpdateSchema.safeParse({ display_name: 'Ali', grade: 11 })
+    expect(result.success).toBe(true)
+  })
+
+  it('bos objeyi reddeder', () => {
+    const result = profileUpdateSchema.safeParse({})
+    expect(result.success).toBe(false)
+  })
+
+  it('gecersiz grade reddeder (8 veya 14)', () => {
+    expect(profileUpdateSchema.safeParse({ grade: 8 }).success).toBe(false)
+    expect(profileUpdateSchema.safeParse({ grade: 14 }).success).toBe(false)
+  })
+
+  it('username 2-30 karakter sinirini uygular', () => {
+    expect(profileUpdateSchema.safeParse({ username: 'a' }).success).toBe(false)
+    expect(profileUpdateSchema.safeParse({ username: 'a'.repeat(31) }).success).toBe(false)
+    expect(profileUpdateSchema.safeParse({ username: 'ab' }).success).toBe(true)
+  })
+})
+
+describe('sessionSubmitSchema', () => {
+  const validSession = {
+    game: 'matematik',
+    mode: 'classic',
+    answers: [{ questionId: '10000000-0000-4000-8000-000000000001', selectedOption: 1, isCorrect: true, timeTaken: 5 }],
+  }
+
+  it('gecerli session kabul eder', () => {
+    expect(sessionSubmitSchema.safeParse(validSession).success).toBe(true)
+  })
+
+  it('bos answers reddeder', () => {
+    expect(sessionSubmitSchema.safeParse({ ...validSession, answers: [] }).success).toBe(false)
+  })
+
+  it('timeLimit default 30', () => {
+    const result = sessionSubmitSchema.safeParse(validSession)
+    if (result.success) expect(result.data.timeLimit).toBe(30)
+  })
+
+  it('timeLimit 5-120 sinirini uygular', () => {
+    expect(sessionSubmitSchema.safeParse({ ...validSession, timeLimit: 4 }).success).toBe(false)
+    expect(sessionSubmitSchema.safeParse({ ...validSession, timeLimit: 121 }).success).toBe(false)
+    expect(sessionSubmitSchema.safeParse({ ...validSession, timeLimit: 60 }).success).toBe(true)
+  })
+
+  it('gecersiz UUID questionId reddeder', () => {
+    const bad = { ...validSession, answers: [{ questionId: 'not-uuid', selectedOption: 0, isCorrect: false, timeTaken: 1 }] }
+    expect(sessionSubmitSchema.safeParse(bad).success).toBe(false)
+  })
+})
+
+describe('friendRequestSchema', () => {
+  it('gecerli UUID kabul eder', () => {
+    expect(friendRequestSchema.safeParse({ friendId: '10000000-0000-4000-8000-000000000001' }).success).toBe(true)
+  })
+
+  it('gecersiz UUID reddeder', () => {
+    expect(friendRequestSchema.safeParse({ friendId: 'abc' }).success).toBe(false)
+  })
+})
+
+describe('friendActionSchema', () => {
+  it('gecerli UUID kabul eder', () => {
+    expect(friendActionSchema.safeParse({ friendshipId: '10000000-0000-4000-8000-000000000001' }).success).toBe(true)
+  })
+})
+
+describe('referralApplySchema', () => {
+  it('gecerli kodu kabul eder', () => {
+    expect(referralApplySchema.safeParse({ code: 'ABC123' }).success).toBe(true)
+  })
+
+  it('bos kodu reddeder', () => {
+    expect(referralApplySchema.safeParse({ code: '' }).success).toBe(false)
+  })
+
+  it('20+ karakter kodu reddeder', () => {
+    expect(referralApplySchema.safeParse({ code: 'a'.repeat(21) }).success).toBe(false)
   })
 })
 
