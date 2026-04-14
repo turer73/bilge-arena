@@ -44,6 +44,60 @@ export const errorReportSchema = z.object({
 })
 
 // ============================================================
+// Profil guncelleme
+// ============================================================
+
+export const profileUpdateSchema = z.object({
+  username: z.string().trim().min(2).max(30).optional(),
+  display_name: z.string().trim().max(50).optional(),
+  city: z.string().trim().max(50).optional(),
+  grade: z.number().int().min(9).max(13).optional(),
+  onboarding_completed: z.literal(true).optional(),
+}).refine(data => Object.keys(data).length > 0, {
+  message: 'Guncellenecek alan yok',
+})
+
+// ============================================================
+// Session submit (oyun oturumu)
+// ============================================================
+
+const answerSchema = z.object({
+  questionId: z.string().uuid(),
+  selectedOption: z.number().int(),
+  isCorrect: z.boolean(),
+  timeTaken: z.number().min(0).max(300),
+})
+
+export const sessionSubmitSchema = z.object({
+  game: z.string().min(1).max(50),
+  mode: z.string().min(1).max(30),
+  answers: z.array(answerSchema).min(1).max(100),
+  category: z.string().max(50).nullish(),
+  difficulty: z.number().int().min(1).max(5).nullish(),
+  timeLimit: z.number().int().min(5).max(120).optional().default(30),
+})
+
+// ============================================================
+// Arkadas sistemi
+// ============================================================
+
+export const friendRequestSchema = z.object({
+  friendId: z.string().uuid(),
+})
+
+export const friendActionSchema = z.object({
+  friendshipId: z.string().uuid(),
+})
+
+// ============================================================
+// Referral
+// ============================================================
+
+export const referralApplySchema = z.object({
+  code: z.string().trim().min(1).max(20),
+})
+
+// ============================================================
 // Sabitleri export et (client tarafinda da kullanilabilir)
 // ============================================================
 

@@ -67,12 +67,15 @@ function makeRequest(body: Record<string, unknown>) {
   })
 }
 
+const Q1 = '10000000-0000-4000-8000-000000000001'
+const Q2 = '10000000-0000-4000-8000-000000000002'
+
 const validBody = {
   game: 'matematik',
   mode: 'classic',
   answers: [
-    { questionId: 'q1', selectedOption: 1, isCorrect: true, timeTaken: 5 },
-    { questionId: 'q2', selectedOption: 0, isCorrect: false, timeTaken: 12 },
+    { questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 5 },
+    { questionId: Q2, selectedOption: 0, isCorrect: false, timeTaken: 12 },
   ],
   maxStreak: 1,
   timeLimit: 30,
@@ -85,8 +88,8 @@ describe('POST /api/sessions', () => {
     vi.clearAllMocks()
     mockQuestionsIn.mockResolvedValue({
       data: [
-        { id: 'q1', content: { answer: 1 }, difficulty: 2 },
-        { id: 'q2', content: { answer: 2 }, difficulty: 2 },
+        { id: Q1, content: { answer: 1 }, difficulty: 2 },
+        { id: Q2, content: { answer: 2 }, difficulty: 2 },
       ],
       error: null,
     })
@@ -101,7 +104,7 @@ describe('POST /api/sessions', () => {
 
   it('returns 400 if game is missing', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    const res = await POST(makeRequest({ mode: 'classic', answers: [{ questionId: 'q1', selectedOption: 0, isCorrect: true, timeTaken: 5 }] }))
+    const res = await POST(makeRequest({ mode: 'classic', answers: [{ questionId: Q1, selectedOption: 0, isCorrect: true, timeTaken: 5 }] }))
     expect(res.status).toBe(400)
   })
 

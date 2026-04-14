@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+const claimLimiter = createRateLimiter('quest-claim', 10, 60_000)
 
 // POST: Tamamlanan görevin XP ödülünü al
 export async function POST(request: Request) {
@@ -10,6 +13,9 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
+
+  const rl = await claimLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
   const { questId } = await request.json()
 

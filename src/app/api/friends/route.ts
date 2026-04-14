@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { friendRequestSchema, friendActionSchema } from '@/lib/validations/schemas'
+
+const friendLimiter = createRateLimiter('friends-mutate', 10, 60_000)
 
 /**
  * GET /api/friends — Arkadas listesi + bekleyen istekler
@@ -49,9 +53,14 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const { friendId } = await req.json()
-  if (!friendId || friendId === user.id) {
-    return NextResponse.json({ error: 'Gecersiz kullanici' }, { status: 400 })
+  const rl = await friendLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+
+  const parsed = friendRequestSchema.safeParse(await req.json())
+  if (!parsed.success) return NextResponse.json({ error: 'Gecersiz veri' }, { status: 400 })
+  const { friendId } = parsed.data
+  if (friendId === user.id) {
+    return NextResponse.json({ error: 'Kendinize istek gonderemezsiniz' }, { status: 400 })
   }
 
   // Mevcut iliskileri kontrol et
@@ -88,10 +97,12 @@ export async function PATCH(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const { friendshipId } = await req.json()
-  if (!friendshipId) {
-    return NextResponse.json({ error: 'friendshipId gerekli' }, { status: 400 })
-  }
+  const rl = await friendLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+
+  const parsed = friendActionSchema.safeParse(await req.json())
+  if (!parsed.success) return NextResponse.json({ error: 'Gecersiz veri' }, { status: 400 })
+  const { friendshipId } = parsed.data
 
   // Sadece alici kabul edebilir
   const { data, error } = await supabase
@@ -115,10 +126,12 @@ export async function DELETE(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
-  const { friendshipId } = await req.json()
-  if (!friendshipId) {
-    return NextResponse.json({ error: 'friendshipId gerekli' }, { status: 400 })
-  }
+  const rl = await friendLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+
+  const parsed = friendActionSchema.safeParse(await req.json())
+  if (!parsed.success) return NextResponse.json({ error: 'Gecersiz veri' }, { status: 400 })
+  const { friendshipId } = parsed.data
 
   // Her iki taraf da silebilir
   const { error } = await supabase

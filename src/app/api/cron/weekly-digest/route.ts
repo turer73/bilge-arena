@@ -51,33 +51,44 @@ export async function GET(req: Request) {
     if (u.email) emailMap.set(u.id, u.email)
   })
 
+  const targetIds = userIds.slice(0, 50) // Max 50 email/cron
+
+  // Batch: tum profilleri, session sayilarini ve XP'leri tek seferde cek (N+1 onleme)
+  const [profilesResult, sessionsResult, xpResult] = await Promise.all([
+    supabase.from('profiles')
+      .select('id, display_name, total_xp, current_streak')
+      .in('id', targetIds),
+    supabase.from('game_sessions')
+      .select('user_id')
+      .in('user_id', targetIds)
+      .eq('status', 'completed')
+      .gte('created_at', oneWeekAgo),
+    supabase.from('xp_log')
+      .select('user_id, amount')
+      .in('user_id', targetIds)
+      .gte('created_at', oneWeekAgo),
+  ])
+
+  const profileMap = new Map(
+    (profilesResult.data || []).map(p => [p.id, p])
+  )
+  const sessionCounts = new Map<string, number>()
+  for (const s of sessionsResult.data || []) {
+    sessionCounts.set(s.user_id, (sessionCounts.get(s.user_id) || 0) + 1)
+  }
+  const xpTotals = new Map<string, number>()
+  for (const x of xpResult.data || []) {
+    xpTotals.set(x.user_id, (xpTotals.get(x.user_id) || 0) + (x.amount || 0))
+  }
+
   let sentCount = 0
 
-  for (const userId of userIds.slice(0, 50)) { // Max 50 email/cron
+  for (const userId of targetIds) {
     const email = emailMap.get(userId)
     if (!email) continue
 
-    // Kullanici haftalik istatistikleri
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name, total_xp, current_streak')
-      .eq('id', userId)
-      .single()
-
-    const { count: sessionsThisWeek } = await supabase
-      .from('game_sessions')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('status', 'completed')
-      .gte('created_at', oneWeekAgo)
-
-    const { data: xpThisWeek } = await supabase
-      .from('xp_log')
-      .select('xp_amount')
-      .eq('user_id', userId)
-      .gte('created_at', oneWeekAgo)
-
-    const weeklyXP = xpThisWeek?.reduce((sum, row) => sum + (row.xp_amount || 0), 0) || 0
+    const profile = profileMap.get(userId)
+    const weeklyXP = xpTotals.get(userId) || 0
     const name = escapeHtml(profile?.display_name || 'Arenaci')
 
     try {
@@ -90,7 +101,7 @@ export async function GET(req: Request) {
           weeklyXP,
           totalXP: profile?.total_xp || 0,
           streak: profile?.current_streak || 0,
-          sessions: sessionsThisWeek || 0,
+          sessions: sessionCounts.get(userId) || 0,
         }),
       })
       sentCount++

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+const pushLimiter = createRateLimiter('push-subscribe', 5, 60_000)
 
 /**
  * POST /api/push — Push bildirim aboneligi kaydet
@@ -9,6 +12,9 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const rl = await pushLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
   const body = await req.json()
   const { endpoint, p256dh, auth } = body

@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { profileUpdateSchema } from '@/lib/validations/schemas'
+
+const profileLimiter = createRateLimiter('profile-update', 10, 60_000)
 
 /**
  * PATCH /api/profile — Profil bilgilerini guncelle
@@ -12,35 +16,22 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
+  const rl = await profileLimiter.check(user.id)
+  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+
   const body = await req.json()
-  const { username, display_name, city, grade } = body
+  const parsed = profileUpdateSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Gecersiz veri' }, { status: 400 })
+  }
 
-  // Sadece izin verilen alanlari guncelle
+  const { username, display_name, city, grade, onboarding_completed } = parsed.data
   const updates: Record<string, unknown> = {}
-  if (typeof username === 'string') {
-    const trimmed = username.trim()
-    if (trimmed.length < 2 || trimmed.length > 30) {
-      return NextResponse.json({ error: 'Isim 2-30 karakter olmali' }, { status: 400 })
-    }
-    updates.username = trimmed
-  }
-  if (typeof display_name === 'string') {
-    updates.display_name = display_name.trim().slice(0, 50) || null
-  }
-  if (typeof city === 'string') {
-    updates.city = city.trim().slice(0, 50) || null
-  }
-  if (grade !== undefined) {
-    const g = Number(grade)
-    updates.grade = (g >= 9 && g <= 13) ? g : null
-  }
-  if (body.onboarding_completed === true) {
-    updates.onboarding_completed = true
-  }
-
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: 'Guncellenecek alan yok' }, { status: 400 })
-  }
+  if (username) updates.username = username
+  if (display_name !== undefined) updates.display_name = display_name || null
+  if (city !== undefined) updates.city = city || null
+  if (grade !== undefined) updates.grade = grade
+  if (onboarding_completed) updates.onboarding_completed = true
 
   const { data, error } = await supabase
     .from('profiles')
