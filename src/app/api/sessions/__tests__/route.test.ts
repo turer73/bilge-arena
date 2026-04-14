@@ -40,6 +40,13 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+// Rate limiter mock — testlerde her zaman izin ver
+vi.mock('@/lib/utils/rate-limit', () => ({
+  createRateLimiter: () => ({
+    check: vi.fn().mockResolvedValue({ success: true }),
+  }),
+}))
+
 // Service role client mock — ayni chainable mock'u kullan
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({
