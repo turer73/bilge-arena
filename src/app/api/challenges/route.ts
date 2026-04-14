@@ -49,7 +49,7 @@ export async function POST(req: Request) {
   }
   const { opponentId, game, category } = parsed.data
 
-  if (!GAME_SLUGS.includes(game)) {
+  if (!(GAME_SLUGS as readonly string[]).includes(game)) {
     return NextResponse.json({ error: 'Gecersiz oyun secimi' }, { status: 400 })
   }
 
