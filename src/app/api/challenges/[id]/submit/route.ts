@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { challengeSubmitSchema } from '@/lib/validations/schemas'
 
 const submitLimiter = createRateLimiter('challenge-submit', 5, 60_000)
 
@@ -21,11 +22,12 @@ export async function POST(
   if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
   const { id } = await params
-  const { answers } = await req.json()
-
-  if (!Array.isArray(answers) || answers.length === 0) {
+  const body = await req.json()
+  const parsed = challengeSubmitSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Cevaplar gerekli' }, { status: 400 })
   }
+  const { answers } = parsed.data
 
   const svc = createServiceRoleClient()
 

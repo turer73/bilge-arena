@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { pushSubscribeSchema, pushUnsubscribeSchema } from '@/lib/validations/schemas'
 
 const pushLimiter = createRateLimiter('push-subscribe', 5, 60_000)
 
@@ -17,11 +18,11 @@ export async function POST(req: Request) {
   if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
   const body = await req.json()
-  const { endpoint, p256dh, auth } = body
-
-  if (!endpoint || !p256dh || !auth) {
+  const parsed = pushSubscribeSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Eksik alanlar' }, { status: 400 })
   }
+  const { endpoint, p256dh, auth } = parsed.data
 
   const { error } = await supabase
     .from('push_subscriptions')
@@ -44,11 +45,11 @@ export async function DELETE(req: Request) {
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const body = await req.json()
-  const { endpoint } = body
-
-  if (!endpoint) {
+  const parsed = pushUnsubscribeSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Endpoint gerekli' }, { status: 400 })
   }
+  const { endpoint } = parsed.data
 
   await supabase
     .from('push_subscriptions')

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { challengeCreateSchema } from '@/lib/validations/schemas'
 
 const challengeLimiter = createRateLimiter('challenge-create', 5, 60_000)
 
@@ -41,11 +42,12 @@ export async function POST(req: Request) {
   const rl = await challengeLimiter.check(user.id)
   if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
-  const { opponentId, game, category } = await req.json()
-
-  if (!opponentId || !game) {
+  const body = await req.json()
+  const parsed = challengeCreateSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'opponentId ve game gerekli' }, { status: 400 })
   }
+  const { opponentId, game, category } = parsed.data
 
   if (!GAME_SLUGS.includes(game)) {
     return NextResponse.json({ error: 'Gecersiz oyun secimi' }, { status: 400 })

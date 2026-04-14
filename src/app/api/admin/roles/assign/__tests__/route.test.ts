@@ -65,6 +65,12 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 
 import { POST, DELETE } from '../route'
 
+// ─── Constants ─────────────────────────────────────
+
+const U1 = '10000000-0000-4000-8000-000000000001'
+const R1 = '20000000-0000-4000-8000-000000000001'
+const ADMIN_ID = '30000000-0000-4000-8000-000000000001'
+
 // ─── Helpers ────────────────────────────────────────
 
 function makeRequest(body: Record<string, unknown>, method = 'POST') {
@@ -82,61 +88,61 @@ describe('POST /api/admin/roles/assign', () => {
 
   it('returns 403 if no admin permission', async () => {
     mockCheckPermission.mockResolvedValue(null)
-    const res = await POST(makeRequest({ userId: 'u1', roleId: 'r1' }))
+    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
     expect(res.status).toBe(403)
   })
 
   it('returns 400 if userId missing', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    const res = await POST(makeRequest({ roleId: 'r1' }))
+    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
+    const res = await POST(makeRequest({ roleId: R1 }))
     expect(res.status).toBe(400)
   })
 
   it('returns 400 if roleId missing', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    const res = await POST(makeRequest({ userId: 'u1' }))
+    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
+    const res = await POST(makeRequest({ userId: U1 }))
     expect(res.status).toBe(400)
   })
 
   it('returns 404 if user not found', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
+    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
     mockProfileSingle.mockResolvedValue({ data: null, error: null })
-    mockRoleSingle.mockResolvedValue({ data: { id: 'r1', slug: 'editor', name: 'Editor' }, error: null })
+    mockRoleSingle.mockResolvedValue({ data: { id: R1, slug: 'editor', name: 'Editor' }, error: null })
 
-    const res = await POST(makeRequest({ userId: 'u1', roleId: 'r1' }))
+    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
     expect(res.status).toBe(404)
     const json = await res.json()
     expect(json.error).toContain('Kullan')
   })
 
   it('returns 404 if role not found', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    mockProfileSingle.mockResolvedValue({ data: { id: 'u1', username: 'test' }, error: null })
+    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
+    mockProfileSingle.mockResolvedValue({ data: { id: U1, username: 'test' }, error: null })
     mockRoleSingle.mockResolvedValue({ data: null, error: null })
 
-    const res = await POST(makeRequest({ userId: 'u1', roleId: 'r1' }))
+    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
     expect(res.status).toBe(404)
     const json = await res.json()
     expect(json.error).toContain('Rol')
   })
 
   it('returns 409 if role already assigned (duplicate key)', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    mockProfileSingle.mockResolvedValue({ data: { id: 'u1', username: 'test' }, error: null })
-    mockRoleSingle.mockResolvedValue({ data: { id: 'r1', slug: 'editor', name: 'Editor' }, error: null })
+    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
+    mockProfileSingle.mockResolvedValue({ data: { id: U1, username: 'test' }, error: null })
+    mockRoleSingle.mockResolvedValue({ data: { id: R1, slug: 'editor', name: 'Editor' }, error: null })
     mockInsert.mockResolvedValue({ error: { code: '23505', message: 'duplicate' } })
 
-    const res = await POST(makeRequest({ userId: 'u1', roleId: 'r1' }))
+    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
     expect(res.status).toBe(409)
   })
 
   it('assigns role successfully', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    mockProfileSingle.mockResolvedValue({ data: { id: 'u1', username: 'test' }, error: null })
-    mockRoleSingle.mockResolvedValue({ data: { id: 'r1', slug: 'editor', name: 'Editor' }, error: null })
+    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
+    mockProfileSingle.mockResolvedValue({ data: { id: U1, username: 'test' }, error: null })
+    mockRoleSingle.mockResolvedValue({ data: { id: R1, slug: 'editor', name: 'Editor' }, error: null })
     mockInsert.mockResolvedValue({ error: null })
 
-    const res = await POST(makeRequest({ userId: 'u1', roleId: 'r1' }))
+    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.success).toBe(true)
@@ -148,32 +154,32 @@ describe('DELETE /api/admin/roles/assign', () => {
 
   it('returns 403 if no admin permission', async () => {
     mockCheckPermission.mockResolvedValue(null)
-    const res = await DELETE(makeRequest({ userId: 'u1', roleId: 'r1' }, 'DELETE'))
+    const res = await DELETE(makeRequest({ userId: U1, roleId: R1 }, 'DELETE'))
     expect(res.status).toBe(403)
   })
 
   it('returns 400 if userId or roleId missing', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    const res = await DELETE(makeRequest({ userId: 'u1' }, 'DELETE'))
+    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
+    const res = await DELETE(makeRequest({ userId: U1 }, 'DELETE'))
     expect(res.status).toBe(400)
   })
 
   it('blocks self-removal of super_admin role', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
+    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
     mockRoleSingle.mockResolvedValue({ data: { slug: 'super_admin' }, error: null })
 
-    const res = await DELETE(makeRequest({ userId: 'admin-1', roleId: 'r1' }, 'DELETE'))
+    const res = await DELETE(makeRequest({ userId: ADMIN_ID, roleId: R1 }, 'DELETE'))
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toContain('Admin')
   })
 
   it('removes role successfully', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
+    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
     mockRoleSingle.mockResolvedValue({ data: { slug: 'editor' }, error: null })
     mockDelete.mockResolvedValue({ error: null })
 
-    const res = await DELETE(makeRequest({ userId: 'u1', roleId: 'r1' }, 'DELETE'))
+    const res = await DELETE(makeRequest({ userId: U1, roleId: R1 }, 'DELETE'))
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.success).toBe(true)
