@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+// Replay korumasi: kullanici basina dk'da max 3 oturum
+const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
 
 // XP hesaplama — client'a guvenmeden server-side recalculate
 const BASE_XP: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 50 }
@@ -25,6 +29,15 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  }
+
+  // Replay korumasi: ayni kullanicidan dakikada max 3 oturum
+  const rl = await sessionLimiter.check(user.id)
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: 'Cok hizli oturum gonderimi. Lutfen bekleyin.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 20) } },
+    )
   }
 
   const body = await request.json()
@@ -150,16 +163,12 @@ export async function POST(request: Request) {
 
   await svc.from('session_answers').insert(answerRows)
 
-  // 2b. Soru bazli istatistikleri atomic increment ile guncelle
+  // 2b. Soru bazli istatistikleri tek batch RPC ile guncelle (N istek → 1 istek)
   try {
-    const statsPromises = verifiedAnswers.map((a) =>
-      svc.rpc('increment_question_stats', {
-        q_id: a.question_id,
-        answered_inc: 1,
-        correct_inc: a.is_correct ? 1 : 0,
-      })
-    )
-    await Promise.all(statsPromises)
+    await svc.rpc('batch_increment_question_stats', {
+      q_ids: verifiedAnswers.map(a => a.question_id),
+      correct_flags: verifiedAnswers.map(a => a.is_correct),
+    })
   } catch (e) {
     console.error('[Sessions API] Question stats hatasi:', e)
   }
