@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Cinzel, DM_Sans } from 'next/font/google'
 import dynamic from 'next/dynamic'
 
-const CookieBanner = dynamic(() => import('@/components/cookie-banner').then(m => m.CookieBanner), { ssr: false })
+const CookieBanner = dynamic(() => import('@/components/cookie-banner').then(m => m.CookieBanner))
 import { ToastContainer } from '@/components/ui/toast'
 import { SWRegister } from '@/components/layout/sw-register'
 import { PWAInstallPrompt } from '@/components/layout/pwa-install-prompt'
