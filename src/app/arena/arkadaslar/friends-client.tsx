@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { toast } from '@/stores/toast-store'
 import Link from 'next/link'
+import { GAME_LIST, type GameSlug } from '@/lib/constants/games'
 
 interface FriendProfile {
   id: string
+  username?: string | null
   display_name: string | null
   avatar_url: string | null
   total_xp: number
@@ -23,9 +25,15 @@ interface FriendItem {
 
 interface SearchUser {
   id: string
+  username?: string | null
   display_name: string | null
   avatar_url: string | null
   total_xp: number
+}
+
+/** Username > display_name > fallback */
+function displayName(p: { username?: string | null; display_name?: string | null }): string {
+  return p.username || p.display_name || 'Arenaci'
 }
 
 export default function FriendsClient() {
@@ -37,6 +45,8 @@ export default function FriendsClient() {
   const [searchResults, setSearchResults] = useState<SearchUser[]>([])
   const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [challengeTarget, setChallengeTarget] = useState<string | null>(null)
+  const [sendingChallenge, setSendingChallenge] = useState(false)
 
   const fetchFriends = useCallback(async () => {
     const res = await fetch('/api/friends')
@@ -156,10 +166,10 @@ export default function FriendsClient() {
             {searchResults.map((u) => (
               <div key={u.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus)] text-xs font-bold text-white">
-                  {(u.display_name || '?').charAt(0).toUpperCase()}
+                  {displayName(u).charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold truncate">{u.display_name || 'Arenaci'}</div>
+                  <div className="text-sm font-semibold truncate">{displayName(u)}</div>
                   <div className="text-[10px] text-[var(--muted)]">{u.total_xp} XP</div>
                 </div>
                 {existingIds.has(u.id) ? (
@@ -189,7 +199,7 @@ export default function FriendsClient() {
               <div key={f.friendshipId} className="flex items-center gap-3 px-4 py-3">
                 <ProfileAvatar profile={f.profile} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold truncate">{f.profile.display_name || 'Arenaci'}</div>
+                  <div className="text-sm font-semibold truncate">{displayName(f.profile)}</div>
                   <div className="text-[10px] text-[var(--muted)]">{f.profile.total_xp} XP</div>
                 </div>
                 <div className="flex gap-2">
@@ -223,7 +233,7 @@ export default function FriendsClient() {
               <div key={f.friendshipId} className="flex items-center gap-3 px-4 py-3">
                 <ProfileAvatar profile={f.profile} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold truncate">{f.profile.display_name || 'Arenaci'}</div>
+                  <div className="text-sm font-semibold truncate">{displayName(f.profile)}</div>
                 </div>
                 <button
                   onClick={() => removeFriend(f.friendshipId, 'Istek iptal edildi')}
@@ -249,45 +259,70 @@ export default function FriendsClient() {
       ) : (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] divide-y divide-[var(--border)]">
           {friends.map((f) => (
-            <div key={f.friendshipId} className="flex items-center gap-3 px-4 py-3">
-              <ProfileAvatar profile={f.profile} />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate">{f.profile.display_name || 'Arenaci'}</div>
-                <div className="flex items-center gap-2 text-[10px] text-[var(--muted)]">
-                  <span>{f.profile.total_xp} XP</span>
-                  {f.profile.current_streak ? (
-                    <span className="text-[var(--reward)]">🔥 {f.profile.current_streak} gun</span>
-                  ) : null}
+            <div key={f.friendshipId}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <ProfileAvatar profile={f.profile} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate">{displayName(f.profile)}</div>
+                  <div className="flex items-center gap-2 text-[10px] text-[var(--muted)]">
+                    <span>{f.profile.total_xp} XP</span>
+                    {f.profile.current_streak ? (
+                      <span className="text-[var(--reward)]">🔥 {f.profile.current_streak} gun</span>
+                    ) : null}
+                  </div>
                 </div>
+                <button
+                  onClick={() => setChallengeTarget(challengeTarget === f.profile.id ? null : f.profile.id)}
+                  className={`rounded-lg px-2.5 py-1 text-[10px] font-bold transition-colors ${
+                    challengeTarget === f.profile.id
+                      ? 'bg-[var(--reward)] text-white'
+                      : 'bg-[var(--reward)]/15 text-[var(--reward)] hover:bg-[var(--reward)]/25'
+                  }`}
+                  title="Meydan Oku"
+                >
+                  ⚔️
+                </button>
+                <button
+                  onClick={() => removeFriend(f.friendshipId, 'Arkadas kaldirildi')}
+                  className="text-xs text-[var(--muted)] hover:text-[var(--urgency)]"
+                  title="Arkadasliktan cikar"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                onClick={async () => {
-                  const game = prompt('Hangi oyun? (matematik, turkce, fen, sosyal, wordquest)', 'matematik')
-                  if (!game) return
-                  const res = await fetch('/api/challenges', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ opponentId: f.profile.id, game }),
-                  })
-                  if (res.ok) {
-                    toast.success('Meydan okuma gonderildi! ⚔️')
-                  } else {
-                    const data = await res.json()
-                    toast.error(data.error || 'Duello olusturulamadi')
-                  }
-                }}
-                className="rounded-lg bg-[var(--reward)]/15 px-2.5 py-1 text-[10px] font-bold text-[var(--reward)] hover:bg-[var(--reward)]/25"
-                title="Meydan Oku"
-              >
-                ⚔️
-              </button>
-              <button
-                onClick={() => removeFriend(f.friendshipId, 'Arkadas kaldirildi')}
-                className="text-xs text-[var(--muted)] hover:text-[var(--urgency)]"
-                title="Arkadasliktan cikar"
-              >
-                ✕
-              </button>
+              {/* Oyun secim paneli */}
+              {challengeTarget === f.profile.id && (
+                <div className="grid grid-cols-5 gap-1.5 px-4 pb-3">
+                  {GAME_LIST.map((g) => (
+                    <button
+                      key={g.slug}
+                      disabled={sendingChallenge}
+                      onClick={async () => {
+                        setSendingChallenge(true)
+                        const res = await fetch('/api/challenges', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ opponentId: f.profile.id, game: g.slug }),
+                        })
+                        setSendingChallenge(false)
+                        if (res.ok) {
+                          toast.success(`${g.name} duellosu gonderildi!`)
+                          setChallengeTarget(null)
+                        } else {
+                          const data = await res.json()
+                          toast.error(data.error || 'Duello olusturulamadi')
+                        }
+                      }}
+                      className="flex flex-col items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 text-center transition-all hover:border-[var(--focus)] hover:bg-[var(--focus)]/10 disabled:opacity-50"
+                    >
+                      <span className="text-base" style={{ color: g.colorHex }}>
+                        {g.slug === 'matematik' ? '🔢' : g.slug === 'turkce' ? '📖' : g.slug === 'fen' ? '🔬' : g.slug === 'sosyal' ? '🌍' : '🇬🇧'}
+                      </span>
+                      <span className="text-[9px] font-medium leading-tight">{g.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -297,18 +332,19 @@ export default function FriendsClient() {
 }
 
 function ProfileAvatar({ profile }: { profile: FriendProfile }) {
+  const name = displayName(profile)
   if (profile.avatar_url) {
     return (
       <img
         src={profile.avatar_url}
-        alt={profile.display_name || ''}
+        alt={name}
         className="h-8 w-8 rounded-full object-cover"
       />
     )
   }
   return (
     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus)] text-xs font-bold text-white">
-      {(profile.display_name || '?').charAt(0).toUpperCase()}
+      {name.charAt(0).toUpperCase()}
     </div>
   )
 }

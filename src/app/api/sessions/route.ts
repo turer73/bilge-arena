@@ -28,11 +28,14 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { game, mode, answers, maxStreak, category, difficulty: filterDifficulty, timeLimit = 30 } = body
+  const { game, mode, answers, category, difficulty: filterDifficulty, timeLimit = 30 } = body
 
   if (!game || !mode || !Array.isArray(answers) || answers.length === 0) {
     return NextResponse.json({ error: 'Eksik veri' }, { status: 400 })
   }
+
+  // timeLimit sinirla — client manipulasyonunu onle
+  const safeTimeLimit = Math.min(Math.max(Number(timeLimit) || 30, 5), 120)
 
   // Soru ID'lerini topla ve DB'den dogrula
   const questionIds = answers.map((a: { questionId: string }) => a.questionId)
@@ -51,6 +54,7 @@ export async function POST(request: Request) {
   // Server-side XP hesaplama
   let totalXP = 0
   let streak = 0
+  let maxStreak = 0
   let correctCount = 0
   let wrongCount = 0
   let totalTime = 0
@@ -70,17 +74,22 @@ export async function POST(request: Request) {
     const correctIndex = content.answer ?? content.correct
     const isActuallyCorrect = correctIndex === a.selectedOption
 
+    // timeTaken sinirla: 0 ile timeLimit arasi (client manipulasyonunu onle)
+    const safeTimeTaken = Math.min(Math.max(Number(a.timeTaken) || 0, 0), safeTimeLimit)
+
+    let xpEarned = 0
     if (isActuallyCorrect) {
       streak++
+      if (streak > maxStreak) maxStreak = streak
       correctCount++
-      const xp = serverCalculateXP(question.difficulty, a.timeTaken, timeLimit, streak)
-      totalXP += xp
+      xpEarned = serverCalculateXP(question.difficulty, safeTimeTaken, safeTimeLimit, streak)
+      totalXP += xpEarned
     } else {
       streak = 0
       wrongCount++
     }
 
-    totalTime += a.timeTaken
+    totalTime += safeTimeTaken
 
     return {
       question_id: a.questionId,
@@ -88,9 +97,9 @@ export async function POST(request: Request) {
       selected_option: a.selectedOption >= 0 ? a.selectedOption : null,
       is_correct: isActuallyCorrect,
       is_skipped: a.selectedOption < 0,
-      time_taken_sec: Math.round(a.timeTaken * 10) / 10,
-      is_fast: a.timeTaken < 10,
-      xp_earned: isActuallyCorrect ? serverCalculateXP(question.difficulty, a.timeTaken, timeLimit, streak) : 0,
+      time_taken_sec: Math.round(safeTimeTaken * 10) / 10,
+      is_fast: safeTimeTaken < 10,
+      xp_earned: xpEarned,
       question_order: i,
     }
   }).filter((a): a is NonNullable<typeof a> => a !== null)
@@ -216,7 +225,7 @@ export async function POST(request: Request) {
         switch (quest.quest_type) {
           case 'play_sessions': newValue += 1; break
           case 'correct_answers': newValue += correctCount; break
-          case 'streak_maintain': newValue = Math.max(newValue, maxStreak ?? streak); break
+          case 'streak_maintain': newValue = Math.max(newValue, maxStreak); break
           case 'accuracy': newValue = Math.max(newValue, accuracy); break
           case 'specific_game': if (game === quest.target_game) newValue += 1; break
         }
@@ -304,7 +313,7 @@ export async function POST(request: Request) {
     totalXP,
     correctCount,
     wrongCount,
-    maxStreak: maxStreak ?? streak,
+    maxStreak,
     newBadges,
   })
 }

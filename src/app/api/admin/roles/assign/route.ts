@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+const assignLimiter = createRateLimiter('admin-role-assign', 10, 60_000)
 
 /**
  * POST /api/admin/roles/assign
@@ -9,6 +12,12 @@ import { checkPermission } from '@/lib/supabase/admin'
  */
 export async function POST(request: NextRequest) {
   try {
+    const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
+    const rl = await assignLimiter.check(ip)
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Çok fazla istek' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } })
+    }
+
     const supabase = await createClient()
     const admin = await checkPermission(supabase, 'admin.roles.manage')
     if (!admin) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
@@ -62,6 +71,12 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
+    const rl = await assignLimiter.check(ip)
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Çok fazla istek' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } })
+    }
+
     const supabase = await createClient()
     const admin = await checkPermission(supabase, 'admin.roles.manage')
     if (!admin) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })

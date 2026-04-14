@@ -20,7 +20,7 @@ export async function GET(req: Request) {
 
   const { data } = await supabase
     .from('profiles')
-    .select('id, display_name, avatar_url, total_xp')
+    .select('id, username, display_name, avatar_url, total_xp')
     .or(`display_name.ilike.%${escapeForLike(query)}%,username.ilike.%${escapeForLike(query)}%`)
     .neq('id', user.id)
     .limit(10)

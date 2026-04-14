@@ -18,8 +18,8 @@ export async function GET() {
     .from('friendships')
     .select(`
       id, status, created_at, user_id, friend_id,
-      friend:profiles!friendships_friend_id_fkey(id, display_name, avatar_url, total_xp, current_streak),
-      sender:profiles!friendships_user_id_fkey(id, display_name, avatar_url, total_xp, current_streak)
+      friend:profiles!friendships_friend_id_fkey(id, username, display_name, avatar_url, total_xp, current_streak),
+      sender:profiles!friendships_user_id_fkey(id, username, display_name, avatar_url, total_xp, current_streak)
     `)
     .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
     .in('status', ['accepted', 'pending'])

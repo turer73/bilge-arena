@@ -4,6 +4,7 @@ import { checkAdmin } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { GAME_SLUGS } from '@/lib/constants/games'
+import { escapeForLike } from '@/lib/utils/security'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // 120 req/dk (50 öğrenci × ~2 req/dk)
 const VALID_GAMES = new Set(GAME_SLUGS)
@@ -62,8 +63,8 @@ export async function GET(request: NextRequest) {
   if (active === 'true') query = query.eq('is_active', true)
   if (active === 'false') query = query.eq('is_active', false)
   if (search && search.length >= 2) {
-    // JSONB text arama — content->>question veya content->>sentence
-    query = query.or(`content->>question.ilike.%${search}%,content->>sentence.ilike.%${search}%`)
+    const escaped = escapeForLike(search)
+    query = query.or(`content->>question.ilike.%${escaped}%,content->>sentence.ilike.%${escaped}%`)
   }
 
   const { data, count, error } = await query.range(offset, offset + limit - 1)

@@ -46,6 +46,7 @@ export function normalizeTYTQuestion(raw: RawTYTQuestion): QuestionContent {
  * Practice modunda kullanilabilir.
  */
 export function shuffleOptions(content: QuestionContent): QuestionContent {
+  const correctIdx = getCorrectIndex(content)
   const indices = content.options.map((_, i) => i)
 
   // Fisher-Yates shuffle
@@ -55,7 +56,7 @@ export function shuffleOptions(content: QuestionContent): QuestionContent {
   }
 
   const newOptions = indices.map(i => content.options[i])
-  const newAnswer = indices.indexOf(content.answer)
+  const newAnswer = indices.indexOf(correctIdx)
 
   return {
     ...content,
