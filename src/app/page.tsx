@@ -13,7 +13,7 @@ import type { HomepageElement, HomepageSectionConfig } from '@/types/database'
 export const revalidate = 300
 
 /* ─── SEO: Ana sayfa metadata ─── */
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bilgearena.com').trim()
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
 export const metadata: Metadata = {
   title: 'Bilge Arena — YKS Hazırlık Platformu | Oyunlaştırılmış Sınav Hazırlığı',

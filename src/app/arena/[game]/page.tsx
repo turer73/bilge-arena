@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: GamePageProps): Promise<Metad
   }
 
   const meta = GAME_META[game as GameSlug]
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bilgearena.com').trim()
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
   const ogImage = `${siteUrl}/og?title=${encodeURIComponent(meta.title)}&subtitle=${encodeURIComponent(meta.description.slice(0, 80))}`
 
   return {
