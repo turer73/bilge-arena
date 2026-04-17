@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { calculateRank, RANK_CONFIG } from '@/lib/utils/xp'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { ShareButtons } from '@/components/social/share-buttons'
 import { trackEvent } from '@/lib/utils/plausible'
+import { SignupPromptModal } from './signup-prompt-modal'
+import { useGuestSession, computePromptLevel } from '@/lib/hooks/use-guest-session'
 
 interface ResultScreenProps {
   onRestart: () => void
@@ -15,12 +17,16 @@ interface ResultScreenProps {
 export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
   const { score, questions, answers, xpEarned, maxStreak, lives, livesEnabled, maxLives } = useQuizStore()
   const { user } = useAuthStore()
+  const { incrementQuizCount } = useGuestSession()
+  const [promptOpen, setPromptOpen] = useState(false)
+  const [promptLevel, setPromptLevel] = useState<1 | 2 | 3>(1)
   const totalQuestions = questions.length
   const answeredCount = answers.length
   const pct = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0
   const rank = calculateRank(score, answeredCount)
   const config = RANK_CONFIG[rank]
   const gameOver = livesEnabled && lives === 0
+  const isGuest = !user
 
   // Analytics: bu ekran render olunca quiz tamamlandi demek
   // useRef guard: React 19 double-mount'a karsi tek sefer gonder
@@ -28,7 +34,6 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
   useEffect(() => {
     if (tracked.current) return
     tracked.current = true
-    const isGuest = !user
     const eventName = isGuest ? 'GuestQuizComplete' : 'QuizComplete'
     trackEvent(eventName, {
       props: {
@@ -41,7 +46,21 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
         maxStreak,
       },
     })
-  }, [user, rank, pct, score, answeredCount, xpEarned, gameOver, maxStreak])
+  }, [isGuest, rank, pct, score, answeredCount, xpEarned, gameOver, maxStreak])
+
+  // Guest signup prompt escalation (Gun 2)
+  const promptInitialized = useRef(false)
+  useEffect(() => {
+    if (promptInitialized.current) return
+    if (!isGuest) return
+    promptInitialized.current = true
+
+    const nextCount = incrementQuizCount()
+    setPromptLevel(computePromptLevel(nextCount))
+    // Stat animasyonlari bitsin, rank reveal olsun, sonra modal
+    const timer = setTimeout(() => setPromptOpen(true), 1500)
+    return () => clearTimeout(timer)
+  }, [isGuest, incrementQuizCount])
 
   const stats = [
     { label: 'DOĞRU', value: `${score}/${answeredCount}`, color: 'var(--growth)' },
@@ -130,6 +149,16 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
           Lobiye Dön
         </button>
       </div>
+
+      {/* Guest signup prompt — Gun 2 escalation modal */}
+      {isGuest && (
+        <SignupPromptModal
+          level={promptLevel}
+          open={promptOpen}
+          onDismiss={() => setPromptOpen(false)}
+          onExitToLobby={onExit}
+        />
+      )}
     </div>
   )
 }

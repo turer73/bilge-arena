@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { calculateRank, RANK_CONFIG } from '@/lib/utils/xp'
 import { getCategoryLabel } from '@/lib/constants/games'
 import { ShareButtons } from '@/components/social/share-buttons'
 import { trackEvent } from '@/lib/utils/plausible'
+import { SignupPromptModal } from './signup-prompt-modal'
+import { useGuestSession, computePromptLevel } from '@/lib/hooks/use-guest-session'
 
 interface DenemeResultProps {
   gameName: string
@@ -26,10 +28,14 @@ interface CategoryStat {
 export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onExit }: DenemeResultProps) {
   const { score, questions, xpEarned, answers } = useQuizStore()
   const { user } = useAuthStore()
+  const { incrementQuizCount } = useGuestSession()
+  const [promptOpen, setPromptOpen] = useState(false)
+  const [promptLevel, setPromptLevel] = useState<1 | 2 | 3>(1)
   const totalQuestions = questions.length
   const pct = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0
   const rank = calculateRank(score, totalQuestions)
   const config = RANK_CONFIG[rank]
+  const isGuest = !user
 
   // Deneme sinavi tamamlandiginda event
   const tracked = useRef(false)
@@ -46,10 +52,24 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
         total: totalQuestions,
         time_sec: elapsedTime,
         xp: xpEarned,
-        isGuest: !user,
+        isGuest,
       },
     })
-  }, [user, gameName, rank, pct, score, totalQuestions, elapsedTime, xpEarned])
+  }, [isGuest, gameName, rank, pct, score, totalQuestions, elapsedTime, xpEarned])
+
+  // Guest signup prompt escalation (Gun 2)
+  const promptInitialized = useRef(false)
+  useEffect(() => {
+    if (promptInitialized.current) return
+    if (!isGuest) return
+    promptInitialized.current = true
+
+    const nextCount = incrementQuizCount()
+    setPromptLevel(computePromptLevel(nextCount))
+    // Animasyonlar bitsin, modal sonra
+    const timer = setTimeout(() => setPromptOpen(true), 1500)
+    return () => clearTimeout(timer)
+  }, [isGuest, incrementQuizCount])
 
   // Konu bazli analiz
   const categoryStats: CategoryStat[] = []
@@ -229,6 +249,16 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
           Lobiye Dön
         </button>
       </div>
+
+      {/* Guest signup prompt — Gun 2 escalation modal */}
+      {isGuest && (
+        <SignupPromptModal
+          level={promptLevel}
+          open={promptOpen}
+          onDismiss={() => setPromptOpen(false)}
+          onExitToLobby={onExit}
+        />
+      )}
     </div>
   )
 }
