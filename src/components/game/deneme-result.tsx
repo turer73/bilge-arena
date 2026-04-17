@@ -2,6 +2,7 @@
 
 import { useQuizStore } from '@/stores/quiz-store'
 import { calculateRank, RANK_CONFIG } from '@/lib/utils/xp'
+import { getCategoryLabel } from '@/lib/constants/games'
 import { ShareButtons } from '@/components/social/share-buttons'
 
 interface DenemeResultProps {
@@ -67,22 +68,8 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
     return 'var(--urgency)'
   }
 
-  // Konu ismi guzellestirme
-  const formatCategory = (cat: string) => {
-    const map: Record<string, string> = {
-      sayilar: 'Sayilar', problemler: 'Problemler', geometri: 'Geometri',
-      denklemler: 'Denklemler', fonksiyonlar: 'Fonksiyonlar', olasilik: 'Olasilik',
-      paragraf: 'Paragraf', dil_bilgisi: 'Dil Bilgisi', sozcuk: 'Sozcuk Anlami',
-      anlam_bilgisi: 'Anlam Bilgisi', yazim_kurallari: 'Yazim Kurallari',
-      ses_bilgisi: 'Ses Bilgisi',
-      fizik: 'Fizik', kimya: 'Kimya', biyoloji: 'Biyoloji',
-      tarih: 'Tarih', cografya: 'Cografya', felsefe: 'Felsefe',
-      vocabulary: 'Vocabulary', grammar: 'Grammar', cloze_test: 'Cloze Test',
-      dialogue: 'Dialogue', restatement: 'Restatement',
-      sentence_completion: 'Sentence Completion', phrasal_verbs: 'Phrasal Verbs',
-    }
-    return map[cat] || cat.charAt(0).toUpperCase() + cat.slice(1)
-  }
+  // Konu ismi: ortak map'ten gelsin
+  const formatCategory = (cat: string) => getCategoryLabel(cat)
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 p-4 md:max-w-lg md:gap-5 md:p-6 xl:max-w-xl xl:gap-6 xl:p-8 2xl:max-w-2xl">
@@ -110,10 +97,10 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
       {/* Genel istatistikler */}
       <div className="grid grid-cols-4 gap-1.5 animate-fadeUp md:gap-2 xl:gap-3" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
         {[
-          { label: 'DOGRU', value: String(score), color: 'var(--growth)' },
-          { label: 'YANLIS', value: String(wrongCount), color: 'var(--urgency)' },
+          { label: 'DOĞRU', value: String(score), color: 'var(--growth)' },
+          { label: 'YANLIŞ', value: String(wrongCount), color: 'var(--urgency)' },
           { label: 'NET', value: net, color: 'var(--focus)' },
-          { label: 'SURE', value: formatTime(elapsedTime), color: 'var(--wisdom)' },
+          { label: 'SÜRE', value: formatTime(elapsedTime), color: 'var(--wisdom)' },
         ].map((s) => (
           <div
             key={s.label}
@@ -130,7 +117,7 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
       {/* Basari cubugu */}
       <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
         <div className="mb-1 flex justify-between text-[10px] text-[var(--text-sub)]">
-          <span>Genel Basari</span>
+          <span>Genel Başarı</span>
           <span className="font-bold" style={{ color: config.color }}>%{pct}</span>
         </div>
         <div className="h-3 overflow-hidden rounded-full bg-[var(--card-bg)]">
@@ -147,7 +134,7 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
       {/* Konu bazli analiz */}
       <div className="animate-fadeUp" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
         <h2 className="mb-3 text-[10px] font-bold tracking-widest text-[var(--text-sub)]">
-          KONU BAZLI ANALIZ
+          KONU BAZLI ANALİZ
         </h2>
         <div className="space-y-2">
           {categoryStats.map((cat) => (
@@ -174,19 +161,19 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
 
       {/* Yorum */}
       <div className="animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4" style={{ animationDelay: '0.5s', animationFillMode: 'both' }}>
-        <div className="mb-1 text-[10px] font-bold text-[var(--text-sub)]">DEGERLENDIRME</div>
+        <div className="mb-1 text-[10px] font-bold text-[var(--text-sub)]">DEĞERLENDİRME</div>
         <p className="text-xs leading-relaxed text-[var(--text)]">
           {pct >= 80
-            ? 'Mukemmel performans! Bu seviyeyi koruyarak sinava hazirlanmaya devam et.'
+            ? 'Mükemmel performans! Bu seviyeyi koruyarak sınava hazırlanmaya devam et.'
             : pct >= 60
-              ? 'Iyi gidiyorsun! Zayif konularini tekrar ederek daha da iyilesebilirsin.'
+              ? 'İyi gidiyorsun! Zayıf konularını tekrar ederek daha da iyileşebilirsin.'
               : pct >= 40
-                ? 'Gelistirmeye ihtiyacin var. Asagidaki zayif konulara odaklan.'
-                : 'Temel konulari tekrar etmen gerekiyor. Konu anlatimlarindan faydalanabilirsin.'}
+                ? 'Geliştirmeye ihtiyacın var. Aşağıdaki zayıf konulara odaklan.'
+                : 'Temel konuları tekrar etmen gerekiyor. Konu anlatımlarından faydalanabilirsin.'}
         </p>
         {categoryStats.filter(c => c.pct < 50).length > 0 && (
           <div className="mt-2 text-[10px] text-[var(--urgency)]">
-            Zayif konular: {categoryStats.filter(c => c.pct < 50).map(c => formatCategory(c.category)).join(', ')}
+            Zayıf konular: {categoryStats.filter(c => c.pct < 50).map(c => formatCategory(c.category)).join(', ')}
           </div>
         )}
       </div>
@@ -194,7 +181,7 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
       {/* XP */}
       <div className="animate-fadeUp text-center" style={{ animationDelay: '0.6s', animationFillMode: 'both' }}>
         <span className="rounded-full bg-[var(--reward-bg)] px-4 py-1.5 text-sm font-bold text-[var(--reward)]">
-          +{xpEarned} XP Kazanildi
+          +{xpEarned} XP Kazanıldı
         </span>
       </div>
 
@@ -215,7 +202,7 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
           onClick={onExit}
           className="btn-ghost flex-1 rounded-[10px] py-3 text-sm font-bold"
         >
-          Lobiye Don
+          Lobiye Dön
         </button>
       </div>
     </div>

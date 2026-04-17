@@ -90,13 +90,13 @@ export default function SiralamaClient() {
       <div className="mb-4 text-center md:mb-6 xl:mb-8">
         <h1 className="font-display text-xl font-black md:text-2xl xl:text-3xl 2xl:text-4xl">
           <span className="bg-gradient-to-r from-[var(--reward)] to-[var(--reward-light)] bg-clip-text text-transparent">
-            🏆 {isAllTime ? 'Tum Zamanlar Siralamasi' : 'Haftalik Siralama'}
+            🏆 {isAllTime ? 'Tüm Zamanlar Sıralaması' : 'Haftalık Sıralama'}
           </span>
         </h1>
         <p className="mt-1 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">
           {isAllTime
-            ? 'En yuksek XP sahibi arenacilarin genel siralamasi'
-            : 'Bu haftanin en basarili arenacilari'}
+            ? 'En yüksek XP sahibi arenacıların genel sıralaması'
+            : 'Bu haftanın en başarılı arenacıları'}
         </p>
       </div>
 
@@ -108,20 +108,20 @@ export default function SiralamaClient() {
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] py-16 text-center">
           <div className="mb-3 text-4xl">🏟️</div>
           <p className="text-sm text-[var(--text-sub)]">
-            Henuz kimse oyun oynamadi. Ilk sen basla!
+            Henüz kimse oyun oynamadı. İlk sen başla!
           </p>
         </div>
       ) : (
         <LeaderboardTable
           entries={entries}
-          title={isAllTime ? 'Genel Siralama — Tum Zamanlar' : 'Global Siralama — Bu Hafta'}
+          title={isAllTime ? 'Genel Sıralama — Tüm Zamanlar' : 'Global Sıralama — Bu Hafta'}
         />
       )}
 
       <div className="mt-4 text-center text-xs text-[var(--text-muted)]">
         {isAllTime
-          ? 'Haftalik siralama yeterli veri olunca otomatik gosterilir'
-          : 'Siralama her Pazartesi sifirlanir'}
+          ? 'Haftalık sıralama yeterli veri olunca otomatik gösterilir'
+          : 'Sıralama her Pazartesi sıfırlanır'}
       </div>
     </div>
   )

@@ -48,8 +48,8 @@ export const MODES: QuizMode[] = [
   },
   {
     id: 'deneme',
-    name: 'Deneme Sinavi',
-    description: 'TYT formatinda deneme',
+    name: 'Deneme Sınavı',
+    description: 'TYT formatında deneme',
     questionCount: 40,
     timePerQuestion: 0,
     icon: '📋',
@@ -58,7 +58,7 @@ export const MODES: QuizMode[] = [
   {
     id: 'practice',
     name: 'Pratik',
-    description: 'Sinirsiz, zamansiz',
+    description: 'Sınırsız, zamansız',
     questionCount: 10,
     timePerQuestion: 0,
     icon: '📝',

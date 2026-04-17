@@ -19,8 +19,8 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
   const gameOver = livesEnabled && lives === 0
 
   const stats = [
-    { label: 'DOGRU', value: `${score}/${answeredCount}`, color: 'var(--growth)' },
-    { label: 'BASARI', value: `%${pct}`, color: config.color },
+    { label: 'DOĞRU', value: `${score}/${answeredCount}`, color: 'var(--growth)' },
+    { label: 'BAŞARI', value: `%${pct}`, color: config.color },
     { label: 'XP +', value: String(xpEarned), color: 'var(--reward)' },
   ]
 
@@ -80,7 +80,7 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
           style={{ animationDelay: '0.7s', animationFillMode: 'both' }}
         >
           <span className="text-[13px] font-semibold text-[var(--reward)]">
-            🔥 En yuksek serin: {maxStreak} soru dogru!
+            🔥 En yüksek seri: {maxStreak} soru doğru!
           </span>
         </div>
       )}
@@ -102,7 +102,7 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
           onClick={onExit}
           className="btn-ghost rounded-[10px] px-4 py-3 text-xs font-bold md:px-6 md:py-[13px] md:text-sm xl:text-base xl:py-4"
         >
-          Lobiye Don
+          Lobiye Dön
         </button>
       </div>
     </div>

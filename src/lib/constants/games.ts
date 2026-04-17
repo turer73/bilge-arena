@@ -14,7 +14,7 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
   matematik: {
     slug: 'matematik',
     name: 'Matematik',
-    description: 'Sayilar, problemler, geometri, denklemler ve daha fazlasi',
+    description: 'Sayılar, problemler, geometri, denklemler ve daha fazlası',
     color: 'focus',
     colorHex: '#2563EB',
     icon: 'calculator',
@@ -22,8 +22,8 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
   },
   turkce: {
     slug: 'turkce',
-    name: 'Turkce',
-    description: 'Paragraf, dil bilgisi, sozcuk ve anlam',
+    name: 'Türkçe',
+    description: 'Paragraf, dil bilgisi, sözcük ve anlam',
     color: 'reward',
     colorHex: '#D97706',
     icon: 'book-open',
@@ -41,7 +41,7 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
   sosyal: {
     slug: 'sosyal',
     name: 'Sosyal Bilimler',
-    description: 'Tarih, cografya ve felsefe',
+    description: 'Tarih, coğrafya ve felsefe',
     color: 'wisdom',
     colorHex: '#7C3AED',
     icon: 'globe',
@@ -49,7 +49,7 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
   },
   wordquest: {
     slug: 'wordquest',
-    name: 'Ingilizce',
+    name: 'İngilizce',
     description: 'Vocabulary, grammar ve reading',
     color: 'focus',
     colorHex: '#3B82F6',
@@ -61,3 +61,44 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
 export const GAME_LIST = Object.values(GAMES)
 
 export const GAME_SLUGS = Object.keys(GAMES) as GameSlug[]
+
+/**
+ * DB slug'lari ASCII (URL-safe, stable). Display icin Turkce karakterlerle map.
+ * Yeni kategori eklenirse buraya da eklenmeli — yoksa fallback ASCII gosterir.
+ */
+export const CATEGORY_LABELS: Record<string, string> = {
+  // matematik
+  sayilar: 'Sayılar',
+  problemler: 'Problemler',
+  geometri: 'Geometri',
+  denklemler: 'Denklemler',
+  fonksiyonlar: 'Fonksiyonlar',
+  olasilik: 'Olasılık',
+  // turkce
+  paragraf: 'Paragraf',
+  dil_bilgisi: 'Dil Bilgisi',
+  sozcuk: 'Sözcük',
+  anlam_bilgisi: 'Anlam Bilgisi',
+  yazim_kurallari: 'Yazım Kuralları',
+  // fen
+  fizik: 'Fizik',
+  kimya: 'Kimya',
+  biyoloji: 'Biyoloji',
+  // sosyal
+  tarih: 'Tarih',
+  cografya: 'Coğrafya',
+  felsefe: 'Felsefe',
+  // ingilizce — orijinal terimler korundu (pedagojik)
+  vocabulary: 'Vocabulary',
+  grammar: 'Grammar',
+  cloze_test: 'Cloze Test',
+  dialogue: 'Dialogue',
+  restatement: 'Restatement',
+  sentence_completion: 'Sentence Completion',
+  phrasal_verbs: 'Phrasal Verbs',
+}
+
+/** Slug'i Turkce display'e cevir. Bulamazsa eski fallback (capitalize + underscore to space). */
+export function getCategoryLabel(slug: string): string {
+  return CATEGORY_LABELS[slug] ?? (slug.charAt(0).toUpperCase() + slug.slice(1).replace(/_/g, ' '))
+}

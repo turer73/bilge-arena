@@ -1,6 +1,6 @@
 'use client'
 
-import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { GAMES, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
 import { MODES, type QuizMode, DENEME_CONFIGS } from '@/lib/constants/modes'
 import { ModeSelector } from './mode-selector'
 import { StreakBadge } from './streak-badge'
@@ -34,11 +34,11 @@ interface LobbyProps {
 }
 
 const DIFFICULTY_OPTIONS = [
-  { value: null, label: 'Tumu' },
+  { value: null, label: 'Tümü' },
   { value: 1, label: 'Kolay' },
   { value: 2, label: 'Orta' },
   { value: 3, label: 'Zor' },
-  { value: 4, label: 'Cok Zor' },
+  { value: 4, label: 'Çok Zor' },
   { value: 5, label: 'Uzman' },
 ] as const
 
@@ -123,7 +123,7 @@ export function Lobby({
                 }`}
                 style={selectedCategory === null ? { backgroundColor: gameDef.colorHex } : undefined}
               >
-                Tumu
+                Tümü
               </button>
               {gameDef.categories.map((cat) => (
                 <button
@@ -136,7 +136,7 @@ export function Lobby({
                   }`}
                   style={selectedCategory === cat ? { backgroundColor: gameDef.colorHex } : undefined}
                 >
-                  {cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' ')}
+                  {getCategoryLabel(cat)}
                 </button>
               ))}
             </div>
@@ -174,7 +174,7 @@ export function Lobby({
             DENEME SINAVI FORMATI
           </div>
           <div className="mb-2 flex items-center gap-2 text-xs text-[var(--text)]">
-            <span>Toplam Sure:</span>
+            <span>Toplam Süre:</span>
             <span className="font-bold" style={{ color: gameDef.colorHex }}>
               {Math.floor(DENEME_CONFIGS[game].totalTime / 60)} dakika
             </span>
@@ -183,14 +183,14 @@ export function Lobby({
             {Object.entries(DENEME_CONFIGS[game].questionDistribution).map(([cat, count]) => (
               <div key={cat} className="flex items-center justify-between text-[11px]">
                 <span className="text-[var(--text-sub)]">
-                  {cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' ')}
+                  {getCategoryLabel(cat)}
                 </span>
                 <span className="font-bold text-[var(--text)]">{count} soru</span>
               </div>
             ))}
           </div>
           <div className="mt-2 border-t border-[var(--border)] pt-2 text-[10px] text-[var(--text-sub)]">
-            TYT formatinda — Net: Dogru - (Yanlis / 4)
+            TYT formatında — Net: Doğru - (Yanlış / 4)
           </div>
         </div>
       )}
@@ -219,7 +219,7 @@ export function Lobby({
       >
         {quizLimit && !quizLimit.canPlay
           ? '⏳ Limit Doldu — Premium\'a Geç'
-          : `${mode.isDeneme ? '📋' : '⚔️'} ${mode.name} Baslat — ${mode.questionCount} Soru`}
+          : `${mode.isDeneme ? '📋' : '⚔️'} ${mode.name} Başlat — ${mode.questionCount} Soru`}
       </button>
 
       {/* Reklam alani */}
