@@ -46,6 +46,10 @@ export type EventName =
   | 'DailyLogin'          // Gunluk giris XP'si alindi
   | 'PremiumUpsell'       // Premium'a gec CTA'si tiklandi
   | 'Day2Return'          // Kayit olan 2. gun geri geldi
+  // Gun 2 — Guest signup escalation modal
+  | 'PromptShown'         // Modal gosterildi (level 1/2/3)
+  | 'PromptCtaClicked'    // Primary CTA tiklandi (signup) veya Level 3 exit_lobby
+  | 'PromptDismissed'     // Modal kapatildi (esc/overlay/button - hard wall disinda)
 
 /**
  * Plausible custom event gonder. Sessizce basarisiz olur (hic fırlatmaz).
