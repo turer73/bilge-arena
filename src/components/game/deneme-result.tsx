@@ -29,8 +29,7 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
   const { score, questions, xpEarned, answers } = useQuizStore()
   const { user } = useAuthStore()
   const { incrementQuizCount } = useGuestSession()
-  const [promptOpen, setPromptOpen] = useState(false)
-  const [promptLevel, setPromptLevel] = useState<1 | 2 | 3>(1)
+  const [prompt, setPrompt] = useState<{ open: boolean; level: 1 | 2 | 3 }>({ open: false, level: 1 })
   const totalQuestions = questions.length
   const pct = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0
   const rank = calculateRank(score, totalQuestions)
@@ -65,9 +64,9 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
     promptInitialized.current = true
 
     const nextCount = incrementQuizCount()
-    setPromptLevel(computePromptLevel(nextCount))
+    const level = computePromptLevel(nextCount)
     // Animasyonlar bitsin, modal sonra
-    const timer = setTimeout(() => setPromptOpen(true), 1500)
+    const timer = setTimeout(() => setPrompt({ open: true, level }), 1500)
     return () => clearTimeout(timer)
   }, [isGuest, incrementQuizCount])
 
@@ -253,9 +252,9 @@ export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onEx
       {/* Guest signup prompt — Gun 2 escalation modal */}
       {isGuest && (
         <SignupPromptModal
-          level={promptLevel}
-          open={promptOpen}
-          onDismiss={() => setPromptOpen(false)}
+          level={prompt.level}
+          open={prompt.open}
+          onDismiss={() => setPrompt((p) => ({ ...p, open: false }))}
           onExitToLobby={onExit}
         />
       )}

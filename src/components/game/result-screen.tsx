@@ -15,11 +15,10 @@ interface ResultScreenProps {
 }
 
 export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
-  const { score, questions, answers, xpEarned, maxStreak, lives, livesEnabled, maxLives } = useQuizStore()
+  const { score, questions, answers, xpEarned, maxStreak, lives, livesEnabled } = useQuizStore()
   const { user } = useAuthStore()
   const { incrementQuizCount } = useGuestSession()
-  const [promptOpen, setPromptOpen] = useState(false)
-  const [promptLevel, setPromptLevel] = useState<1 | 2 | 3>(1)
+  const [prompt, setPrompt] = useState<{ open: boolean; level: 1 | 2 | 3 }>({ open: false, level: 1 })
   const totalQuestions = questions.length
   const answeredCount = answers.length
   const pct = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0
@@ -56,9 +55,9 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
     promptInitialized.current = true
 
     const nextCount = incrementQuizCount()
-    setPromptLevel(computePromptLevel(nextCount))
+    const level = computePromptLevel(nextCount)
     // Stat animasyonlari bitsin, rank reveal olsun, sonra modal
-    const timer = setTimeout(() => setPromptOpen(true), 1500)
+    const timer = setTimeout(() => setPrompt({ open: true, level }), 1500)
     return () => clearTimeout(timer)
   }, [isGuest, incrementQuizCount])
 
@@ -153,9 +152,9 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
       {/* Guest signup prompt — Gun 2 escalation modal */}
       {isGuest && (
         <SignupPromptModal
-          level={promptLevel}
-          open={promptOpen}
-          onDismiss={() => setPromptOpen(false)}
+          level={prompt.level}
+          open={prompt.open}
+          onDismiss={() => setPrompt((p) => ({ ...p, open: false }))}
           onExitToLobby={onExit}
         />
       )}

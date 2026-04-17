@@ -1,24 +1,25 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 const GUEST_QUIZ_COUNT_KEY = 'guest_quiz_count'
+
+function readStoredCount(): number {
+  if (typeof window === 'undefined') return 0
+  try {
+    const stored = localStorage.getItem(GUEST_QUIZ_COUNT_KEY)
+    return stored ? parseInt(stored, 10) || 0 : 0
+  } catch {
+    return 0
+  }
+}
 
 /**
  * Guest kullanicilar icin quiz tamamlama sayacini yonetir.
  * localStorage'da tutulur, kayit olduktan sonra temizlenir.
  */
 export function useGuestSession() {
-  const [quizCount, setQuizCount] = useState<number>(0)
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(GUEST_QUIZ_COUNT_KEY)
-      setQuizCount(stored ? parseInt(stored, 10) || 0 : 0)
-    } catch {
-      // Safari private mode vb. - sessizce atla
-    }
-  }, [])
+  const [quizCount, setQuizCount] = useState<number>(readStoredCount)
 
   const incrementQuizCount = useCallback((): number => {
     try {
