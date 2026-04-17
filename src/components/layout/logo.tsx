@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useUIStore } from '@/stores/ui-store'
 
 interface LogoProps {
@@ -14,7 +15,7 @@ export function Logo({ size = 36, showText = true }: LogoProps) {
 
   return (
     <Link href="/" className="flex items-center gap-2.5">
-      <img src={src} alt="Bilge Arena" width={size} height={size} />
+      <Image src={src} alt="Bilge Arena" width={size} height={size} priority />
       {showText && (
         <div>
           <div

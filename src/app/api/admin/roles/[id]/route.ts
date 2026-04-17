@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
+import { roleUpdateSchema } from '@/lib/validations/schemas'
 
 /**
  * PATCH /api/admin/roles/[id]
@@ -18,7 +19,11 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
-    const { name, description, permissions } = body
+    const parsed = roleUpdateSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Guncellenecek alan yok' }, { status: 400 })
+    }
+    const { name, description, permissions } = parsed.data
 
     // Rolün var olduğunu kontrol et
     const { data: role } = await supabase

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
+import { homepageSectionUpdateSchema } from '@/lib/validations/schemas'
 
 /**
  * PATCH /api/admin/homepage/sections/[key]
@@ -19,11 +20,11 @@ export async function PATCH(
 
     const { key } = await params
     const body = await request.json()
-    const { config } = body
-
-    if (!config || typeof config !== 'object') {
+    const parsed = homepageSectionUpdateSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json({ error: 'Geçersiz config verisi' }, { status: 400 })
     }
+    const { config } = parsed.data
 
     const { error } = await supabase
       .from('homepage_sections')

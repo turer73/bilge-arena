@@ -2,18 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
-
-const ALLOWED_FIELDS = [
-  'content',
-  'image_url',
-  'alt_text',
-  'placement',
-  'alignment',
-  'size',
-  'styles',
-  'sort_order',
-  'is_published',
-] as const
+import { homepageElementUpdateSchema } from '@/lib/validations/schemas'
 
 /**
  * PATCH /api/admin/homepage/elements/[id]
@@ -33,20 +22,15 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    // Sadece izin verilen alanlari filtrele
-    const updates: Record<string, unknown> = {}
-    for (const field of ALLOWED_FIELDS) {
-      if (body[field] !== undefined) {
-        updates[field] = body[field]
-      }
-    }
-
-    if (Object.keys(updates).length === 0) {
+    // Zod ile hem tip guvenligi hem whitelist dogrulamasi
+    const parsed = homepageElementUpdateSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'Güncellenecek geçerli alan bulunamadı' },
         { status: 400 }
       )
     }
+    const updates: Record<string, unknown> = parsed.data
 
     const svc = createServiceRoleClient()
     const { error } = await svc
