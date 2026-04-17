@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/nextjs'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { trackEvent } from '@/lib/utils/plausible'
+import { resetGuestQuizCount } from '@/lib/hooks/use-guest-session'
 import type { Profile } from '@/types/database'
 
 /**
@@ -93,6 +94,8 @@ export function useAuth() {
         const ageMs = Date.now() - createdMs
         if (ageMs < 2 * 60 * 1000) {
           trackEvent('Signup', { props: { provider: 'google' } })
+          // Guest quiz sayacini temizle — artik kayitli kullanici, modal tekrar gosterilmemeli
+          resetGuestQuizCount()
         }
         // Eski user da olsa flag koy — ilerde tekrar dusmemesi icin
         localStorage.setItem(signupKey, '1')
