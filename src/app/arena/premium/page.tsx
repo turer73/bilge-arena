@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import PremiumClient from './premium-client'
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bilgearena.com').trim()
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
 /* ─── SEO Metadata ─── */
 export const metadata: Metadata = {

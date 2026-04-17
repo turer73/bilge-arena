@@ -154,7 +154,7 @@ function buildDigestHTML(data: {
       </table>
     </div>
     <div style="text-align:center;margin-top:24px;">
-      <a href="https://www.bilgearena.com/arena" style="display:inline-block;background:#2563EB;color:white;padding:12px 32px;border-radius:8px;font-weight:600;text-decoration:none;font-size:14px;">
+      <a href="https://bilgearena.com/arena" style="display:inline-block;background:#2563EB;color:white;padding:12px 32px;border-radius:8px;font-weight:600;text-decoration:none;font-size:14px;">
         Arena'ya Don
       </a>
     </div>
