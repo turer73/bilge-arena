@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { homepagePublishSchema } from '@/lib/validations/schemas'
 
 /**
  * POST /api/admin/homepage/publish
@@ -16,14 +17,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { action, section_keys, element_ids } = body
-
-    if (action !== 'publish' && action !== 'unpublish') {
+    const parsed = homepagePublishSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'action "publish" veya "unpublish" olmalıdır' },
         { status: 400 }
       )
     }
+    const { action, section_keys, element_ids } = parsed.data
 
     const isPublished = action === 'publish'
     let publishedSections = 0

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
+import { homepageReorderSchema } from '@/lib/validations/schemas'
 
 /**
  * PATCH /api/admin/homepage/elements/reorder
@@ -15,14 +16,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { section_key, ordered_ids } = body
-
-    if (!section_key || !Array.isArray(ordered_ids) || ordered_ids.length === 0) {
+    const parsed = homepageReorderSchema.safeParse(body)
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'section_key ve ordered_ids (dizi) zorunludur' },
         { status: 400 }
       )
     }
+    const { section_key, ordered_ids } = parsed.data
 
     // Her element icin sort_order guncelle
     const updates = ordered_ids.map((id: string, index: number) =>

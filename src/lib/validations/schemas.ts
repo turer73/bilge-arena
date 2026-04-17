@@ -200,6 +200,63 @@ export const reportUpdateSchema = z.object({
 })
 
 // ============================================================
+// Admin: homepage editor
+// ============================================================
+
+export const homepageElementCreateSchema = z.object({
+  section_key: z.string().min(1).max(100),
+  element_type: z.string().min(1).max(50),
+  content: z.unknown().nullish(),
+  image_url: z.string().url().max(500).nullish(),
+  alt_text: z.string().max(200).nullish(),
+  placement: z.string().max(50).nullish(),
+  alignment: z.string().max(50).nullish(),
+  size: z.string().max(50).nullish(),
+  styles: z.record(z.string(), z.unknown()).nullish(),
+})
+
+export const homepageElementUpdateSchema = z.object({
+  content: z.unknown().optional(),
+  image_url: z.string().url().max(500).nullish(),
+  alt_text: z.string().max(200).nullish(),
+  placement: z.string().max(50).nullish(),
+  alignment: z.string().max(50).nullish(),
+  size: z.string().max(50).nullish(),
+  styles: z.record(z.string(), z.unknown()).nullish(),
+  sort_order: z.number().int().min(0).max(10000).optional(),
+  is_published: z.boolean().optional(),
+}).refine(data => Object.keys(data).length > 0, {
+  message: 'Guncellenecek alan yok',
+})
+
+export const homepageReorderSchema = z.object({
+  section_key: z.string().min(1).max(100),
+  ordered_ids: z.array(z.string().uuid()).min(1).max(100),
+})
+
+export const homepagePublishSchema = z.object({
+  action: z.enum(['publish', 'unpublish']),
+  section_keys: z.array(z.string().max(100)).optional(),
+  element_ids: z.array(z.string().uuid()).optional(),
+})
+
+export const homepageSectionUpdateSchema = z.object({
+  config: z.record(z.string(), z.unknown()),
+})
+
+// ============================================================
+// Admin: role update
+// ============================================================
+
+export const roleUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(100).optional(),
+  description: z.string().trim().max(500).optional(),
+  permissions: z.array(z.string().max(100)).max(100).optional(),
+}).refine(data => Object.keys(data).length > 0, {
+  message: 'Guncellenecek alan yok',
+})
+
+// ============================================================
 // Sabitleri export et (client tarafinda da kullanilabilir)
 // ============================================================
 
