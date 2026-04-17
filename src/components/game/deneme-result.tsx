@@ -1,9 +1,12 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { calculateRank, RANK_CONFIG } from '@/lib/utils/xp'
 import { getCategoryLabel } from '@/lib/constants/games'
 import { ShareButtons } from '@/components/social/share-buttons'
+import { trackEvent } from '@/lib/utils/plausible'
 
 interface DenemeResultProps {
   gameName: string
@@ -22,10 +25,31 @@ interface CategoryStat {
 
 export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onExit }: DenemeResultProps) {
   const { score, questions, xpEarned, answers } = useQuizStore()
+  const { user } = useAuthStore()
   const totalQuestions = questions.length
   const pct = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0
   const rank = calculateRank(score, totalQuestions)
   const config = RANK_CONFIG[rank]
+
+  // Deneme sinavi tamamlandiginda event
+  const tracked = useRef(false)
+  useEffect(() => {
+    if (tracked.current) return
+    tracked.current = true
+    trackEvent('QuizComplete', {
+      props: {
+        mode: 'deneme',
+        game: gameName,
+        rank,
+        pct,
+        correct: score,
+        total: totalQuestions,
+        time_sec: elapsedTime,
+        xp: xpEarned,
+        isGuest: !user,
+      },
+    })
+  }, [user, gameName, rank, pct, score, totalQuestions, elapsedTime, xpEarned])
 
   // Konu bazli analiz
   const categoryStats: CategoryStat[] = []

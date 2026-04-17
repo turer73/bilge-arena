@@ -1,8 +1,11 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { calculateRank, RANK_CONFIG } from '@/lib/utils/xp'
 import { useQuizStore } from '@/stores/quiz-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { ShareButtons } from '@/components/social/share-buttons'
+import { trackEvent } from '@/lib/utils/plausible'
 
 interface ResultScreenProps {
   onRestart: () => void
@@ -11,12 +14,34 @@ interface ResultScreenProps {
 
 export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
   const { score, questions, answers, xpEarned, maxStreak, lives, livesEnabled, maxLives } = useQuizStore()
+  const { user } = useAuthStore()
   const totalQuestions = questions.length
   const answeredCount = answers.length
   const pct = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0
   const rank = calculateRank(score, answeredCount)
   const config = RANK_CONFIG[rank]
   const gameOver = livesEnabled && lives === 0
+
+  // Analytics: bu ekran render olunca quiz tamamlandi demek
+  // useRef guard: React 19 double-mount'a karsi tek sefer gonder
+  const tracked = useRef(false)
+  useEffect(() => {
+    if (tracked.current) return
+    tracked.current = true
+    const isGuest = !user
+    const eventName = isGuest ? 'GuestQuizComplete' : 'QuizComplete'
+    trackEvent(eventName, {
+      props: {
+        rank,
+        pct,
+        correct: score,
+        total: answeredCount,
+        xp: xpEarned,
+        gameOver,
+        maxStreak,
+      },
+    })
+  }, [user, rank, pct, score, answeredCount, xpEarned, gameOver, maxStreak])
 
   const stats = [
     { label: 'DOĞRU', value: `${score}/${answeredCount}`, color: 'var(--growth)' },
