@@ -10,6 +10,7 @@ import { useSidebarData } from '@/lib/hooks/use-sidebar-data'
 import { useSessionSaver } from '@/lib/hooks/use-session-saver'
 import { useQuizLimit } from '@/lib/hooks/use-quiz-limit'
 import { getLevelFromXP } from '@/lib/constants/levels'
+import { trackEvent } from '@/lib/utils/plausible'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 
@@ -91,7 +92,17 @@ export function QuizEngine({ game }: QuizEngineProps) {
           game={game}
           selectedMode={gameStore.selectedMode}
           onSelectMode={(m) => gameStore.setMode(m.id)}
-          onStart={quiz.handleStart}
+          onStart={() => {
+            trackEvent(user ? 'UserQuizStart' : 'GuestQuizStart', {
+              props: {
+                game,
+                mode: gameStore.selectedMode,
+                category: gameStore.selectedCategory ?? 'all',
+                difficulty: gameStore.selectedDifficulty ?? 'all',
+              },
+            })
+            quiz.handleStart()
+          }}
           onLimitReached={() => setShowPremiumModal(true)}
           userXP={userXP}
           userStreak={userStreak}

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import * as Sentry from '@sentry/nextjs'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
+import { trackEvent } from '@/lib/utils/plausible'
 import type { Profile } from '@/types/database'
 
 /**
@@ -84,6 +85,31 @@ export function useAuth() {
 
     if (!data) return
 
+    // 2a) Signup event — ilk 2 dakika icindeki yeni user'lari yakala, tek sefer
+    try {
+      const signupKey = `signup_tracked_${userId}`
+      if (!localStorage.getItem(signupKey) && data.created_at) {
+        const createdMs = new Date(data.created_at).getTime()
+        const ageMs = Date.now() - createdMs
+        if (ageMs < 2 * 60 * 1000) {
+          trackEvent('Signup', { props: { provider: 'google' } })
+        }
+        // Eski user da olsa flag koy — ilerde tekrar dusmemesi icin
+        localStorage.setItem(signupKey, '1')
+      }
+
+      // 2b) Day2Return event — son goruldugu gun != bugun ise
+      const today = new Date().toISOString().split('T')[0]
+      const lastSeenKey = `last_seen_${userId}`
+      const lastSeen = localStorage.getItem(lastSeenKey)
+      if (lastSeen && lastSeen !== today) {
+        trackEvent('Day2Return', { props: { daysSinceLast: daysBetween(lastSeen, today) } })
+      }
+      localStorage.setItem(lastSeenKey, today)
+    } catch {
+      // localStorage yoksa sessizce atla (Safari private mode vb.)
+    }
+
     // 2) Google hesap bilgilerini senkronize et
     // display_name ve avatar_url her zaman Google'dan guncellenir
     // Kullanicinin site ici adi: username (ayri alan)
@@ -155,4 +181,11 @@ export function useAuth() {
   }
 
   return { user, profile, loading, signInWithGoogle, signOut }
+}
+
+/** YYYY-MM-DD stringleri arasi gun farki (analytics icin) */
+function daysBetween(fromISO: string, toISO: string): number {
+  const from = new Date(fromISO).getTime()
+  const to = new Date(toISO).getTime()
+  return Math.max(1, Math.round((to - from) / (1000 * 60 * 60 * 24)))
 }

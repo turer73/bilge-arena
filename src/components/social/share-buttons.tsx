@@ -1,5 +1,7 @@
 'use client'
 
+import { trackEvent } from '@/lib/utils/plausible'
+
 interface ShareButtonsProps {
   rank: string
   score: number
@@ -19,18 +21,22 @@ export function ShareButtons({ rank, score, total, xp, gameName }: ShareButtonsP
   const encodedUrl = encodeURIComponent(url)
 
   const shareWhatsApp = () => {
+    trackEvent('ShareClick', { props: { platform: 'whatsapp', rank, pct } })
     window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank')
   }
 
   const shareTwitter = () => {
+    trackEvent('ShareClick', { props: { platform: 'twitter', rank, pct } })
     window.open(`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`, '_blank')
   }
 
   const shareFacebook = () => {
+    trackEvent('ShareClick', { props: { platform: 'facebook', rank, pct } })
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`, '_blank')
   }
 
   const shareNative = async () => {
+    trackEvent('ShareClick', { props: { platform: 'native', rank, pct } })
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Bilge Arena Sonuc', text, url })
