@@ -85,13 +85,13 @@ export default function FriendsClient() {
       body: JSON.stringify({ friendId }),
     })
     if (res.ok) {
-      toast.success('Arkadas istegi gonderildi!')
+      toast.success('Arkadaş isteği gönderildi!')
       setSearchQuery('')
       setSearchResults([])
       fetchFriends()
     } else {
       const err = await res.json()
-      toast.error(err.error || 'Istek gonderilemedi')
+      toast.error(err.error || 'İstek gönderilemedi')
     }
   }
 
@@ -102,7 +102,7 @@ export default function FriendsClient() {
       body: JSON.stringify({ friendshipId }),
     })
     if (res.ok) {
-      toast.success('Arkadas istegi kabul edildi!')
+      toast.success('Arkadaş isteği kabul edildi!')
       fetchFriends()
     }
   }
@@ -123,10 +123,10 @@ export default function FriendsClient() {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
         <div className="mb-4 text-5xl">👥</div>
-        <h1 className="mb-2 text-xl font-bold">Arkadaslar</h1>
-        <p className="mb-6 text-sm text-[var(--text-sub)]">Arkadaslarini gormek icin giris yap.</p>
+        <h1 className="mb-2 text-xl font-bold">Arkadaşlar</h1>
+        <p className="mb-6 text-sm text-[var(--text-sub)]">Arkadaşlarını görmek için giriş yap.</p>
         <Link href="/giris" className="btn-primary inline-block rounded-[10px] px-8 py-3 font-display text-sm font-bold tracking-wider">
-          Giris Yap
+          Giriş Yap
         </Link>
       </div>
     )
@@ -149,7 +149,7 @@ export default function FriendsClient() {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-6">
-      <h1 className="mb-6 text-xl font-bold">Arkadaslar</h1>
+      <h1 className="mb-6 text-xl font-bold">Arkadaşlar</h1>
 
       {/* Arama */}
       <div className="mb-6">
@@ -157,10 +157,10 @@ export default function FriendsClient() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Kullanici ara..."
+          placeholder="Kullanıcı ara..."
           className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-sm outline-none focus:border-[var(--focus)]"
         />
-        {searching && <p className="mt-2 text-xs text-[var(--muted)]">Araniyor...</p>}
+        {searching && <p className="mt-2 text-xs text-[var(--muted)]">Aranıyor...</p>}
         {searchResults.length > 0 && (
           <div className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--card)] divide-y divide-[var(--border)]">
             {searchResults.map((u) => (
@@ -192,7 +192,7 @@ export default function FriendsClient() {
       {pendingReceived.length > 0 && (
         <div className="mb-6">
           <h2 className="mb-2 text-xs font-bold tracking-wider text-[var(--reward)]">
-            GELEN ISTEKLER ({pendingReceived.length})
+            GELEN İSTEKLER ({pendingReceived.length})
           </h2>
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] divide-y divide-[var(--border)]">
             {pendingReceived.map((f) => (
@@ -210,7 +210,7 @@ export default function FriendsClient() {
                     Kabul
                   </button>
                   <button
-                    onClick={() => removeFriend(f.friendshipId, 'Istek reddedildi')}
+                    onClick={() => removeFriend(f.friendshipId, 'İstek reddedildi')}
                     className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]"
                   >
                     Reddet
@@ -226,7 +226,7 @@ export default function FriendsClient() {
       {pendingSent.length > 0 && (
         <div className="mb-6">
           <h2 className="mb-2 text-xs font-bold tracking-wider text-[var(--text-sub)]">
-            GONDERILEN ISTEKLER ({pendingSent.length})
+            GÖNDERİLEN İSTEKLER ({pendingSent.length})
           </h2>
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] divide-y divide-[var(--border)]">
             {pendingSent.map((f) => (
@@ -236,10 +236,10 @@ export default function FriendsClient() {
                   <div className="text-sm font-semibold truncate">{displayName(f.profile)}</div>
                 </div>
                 <button
-                  onClick={() => removeFriend(f.friendshipId, 'Istek iptal edildi')}
+                  onClick={() => removeFriend(f.friendshipId, 'İstek iptal edildi')}
                   className="text-xs text-[var(--muted)] underline"
                 >
-                  Iptal
+                  İptal
                 </button>
               </div>
             ))}
@@ -249,12 +249,12 @@ export default function FriendsClient() {
 
       {/* Arkadaslar */}
       <h2 className="mb-2 text-xs font-bold tracking-wider text-[var(--text-sub)]">
-        ARKADASLAR ({friends.length})
+        ARKADAŞLAR ({friends.length})
       </h2>
       {friends.length === 0 ? (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center">
           <div className="mb-2 text-3xl">👥</div>
-          <p className="text-sm text-[var(--muted)]">Henuz arkadasin yok. Yukaridaki arama ile kullanici bul!</p>
+          <p className="text-sm text-[var(--muted)]">Henüz arkadaşın yok. Yukarıdaki arama ile kullanıcı bul!</p>
         </div>
       ) : (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] divide-y divide-[var(--border)]">
@@ -267,7 +267,7 @@ export default function FriendsClient() {
                   <div className="flex items-center gap-2 text-[10px] text-[var(--muted)]">
                     <span>{f.profile.total_xp} XP</span>
                     {f.profile.current_streak ? (
-                      <span className="text-[var(--reward)]">🔥 {f.profile.current_streak} gun</span>
+                      <span className="text-[var(--reward)]">🔥 {f.profile.current_streak} gün</span>
                     ) : null}
                   </div>
                 </div>
@@ -283,9 +283,9 @@ export default function FriendsClient() {
                   ⚔️
                 </button>
                 <button
-                  onClick={() => removeFriend(f.friendshipId, 'Arkadas kaldirildi')}
+                  onClick={() => removeFriend(f.friendshipId, 'Arkadaş kaldırıldı')}
                   className="text-xs text-[var(--muted)] hover:text-[var(--urgency)]"
-                  title="Arkadasliktan cikar"
+                  title="Arkadaşlıktan çıkar"
                 >
                   ✕
                 </button>
@@ -306,11 +306,11 @@ export default function FriendsClient() {
                         })
                         setSendingChallenge(false)
                         if (res.ok) {
-                          toast.success(`${g.name} duellosu gonderildi!`)
+                          toast.success(`${g.name} duellosu gönderildi!`)
                           setChallengeTarget(null)
                         } else {
                           const data = await res.json()
-                          toast.error(data.error || 'Duello olusturulamadi')
+                          toast.error(data.error || 'Duello oluşturulamadı')
                         }
                       }}
                       className="flex flex-col items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 text-center transition-all hover:border-[var(--focus)] hover:bg-[var(--focus)]/10 disabled:opacity-50"

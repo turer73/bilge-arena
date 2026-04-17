@@ -25,9 +25,9 @@ export default function DuelloPage() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
         <Swords className="mx-auto mb-4 h-12 w-12 text-[var(--text-muted)]" />
-        <h1 className="text-xl font-bold">Giris yaparak duello yapabilirsin</h1>
+        <h1 className="text-xl font-bold">Giriş yaparak duello yapabilirsin</h1>
         <Link href="/giris" className="mt-4 inline-block rounded-lg bg-[var(--focus)] px-6 py-2 text-sm font-bold text-white">
-          Giris Yap
+          Giriş Yap
         </Link>
       </div>
     )
@@ -72,15 +72,15 @@ export default function DuelloPage() {
       ) : challenges.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-8 text-center">
           <Swords className="mx-auto mb-3 h-10 w-10 text-[var(--text-muted)]" />
-          <p className="text-sm font-medium">Henuz duello yok</p>
+          <p className="text-sm font-medium">Henüz duello yok</p>
           <p className="mt-1 text-xs text-[var(--text-sub)]">
-            Arkadaslar sayfasindan birini sec ve meydan oku!
+            Arkadaşlar sayfasından birini seç ve meydan oku!
           </p>
           <Link
             href="/arena/arkadaslar"
             className="mt-4 inline-block rounded-lg bg-[var(--focus)] px-5 py-2 text-xs font-bold text-white"
           >
-            Arkadaslarima Git
+            Arkadaşlarıma Git
           </Link>
         </div>
       ) : (
@@ -117,7 +117,7 @@ export default function DuelloPage() {
           {active.length > 0 && (
             <section>
               <h2 className="mb-2 text-[10px] font-extrabold tracking-widest text-[var(--focus)]">
-                AKTIF ({active.length})
+                AKTİF ({active.length})
               </h2>
               <div className="space-y-2">
                 {active.map(c => {
@@ -129,7 +129,7 @@ export default function DuelloPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate">vs {getOpponent(c)}</p>
                         <p className="text-[10px] text-[var(--text-sub)]">
-                          {GAMES[c.game as GameSlug]?.name || c.game} · {c.status === 'pending' ? 'Cevap bekleniyor' : myScore ? 'Rakip bekleniyor' : 'Senin siran'}
+                          {GAMES[c.game as GameSlug]?.name || c.game} · {c.status === 'pending' ? 'Cevap bekleniyor' : myScore ? 'Rakip bekleniyor' : 'Senin sıran'}
                         </p>
                       </div>
                       {canPlay && (
@@ -160,7 +160,7 @@ export default function DuelloPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold truncate">vs {getOpponent(c)}</p>
                         <p className="text-[10px] text-[var(--text-sub)]">
-                          {GAMES[c.game as GameSlug]?.name || c.game} · {won ? `Kazandin! +${c.xp_reward} XP` : draw ? 'Berabere' : 'Kaybettin'}
+                          {GAMES[c.game as GameSlug]?.name || c.game} · {won ? `Kazandın! +${c.xp_reward} XP` : draw ? 'Berabere' : 'Kaybettin'}
                         </p>
                       </div>
                       <span className={`text-xs font-bold ${won ? 'text-[var(--reward)]' : draw ? 'text-[var(--text-muted)]' : 'text-[var(--urgency)]'}`}>

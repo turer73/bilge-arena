@@ -59,7 +59,7 @@ export function calculateRank(correctCount: number, totalCount: number): Rank {
 export const RANK_CONFIG: Record<Rank, { color: string; message: string }> = {
   S: { color: 'var(--reward)', message: 'Efsane!' },
   A: { color: 'var(--growth)', message: 'Harika!' },
-  B: { color: 'var(--focus)', message: 'Iyi Is!' },
+  B: { color: 'var(--focus)', message: 'İyi İş!' },
   C: { color: 'var(--wisdom)', message: 'Devam Et!' },
   D: { color: 'var(--urgency)', message: 'Tekrar Dene' },
 }

@@ -95,13 +95,13 @@ export function Navbar() {
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--card)]"
-                  aria-label="Kullanici menusu"
+                  aria-label="Kullanıcı menüsü"
                   aria-expanded={dropdownOpen}
                 >
                   {profile?.avatar_url ? (
                     <Image
                       src={profile.avatar_url}
-                      alt={profile?.username || profile?.display_name || 'Kullanici avatari'}
+                      alt={profile?.username || profile?.display_name || 'Kullanıcı avatarı'}
                       width={32}
                       height={32}
                       className="h-8 w-8 rounded-full"
@@ -141,7 +141,7 @@ export function Navbar() {
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]"
                     >
                       <Users size={14} />
-                      Arkadaslar
+                      Arkadaşlar
                     </Link>
                     <Link
                       href="/arena/duello"
