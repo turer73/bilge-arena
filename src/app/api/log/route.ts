@@ -1,12 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { logSchema } from '@/lib/validations/schemas'
 
 const logLimiter = createRateLimiter('log', 30, 60_000) // 30 req/dk
 
 export async function POST(request: Request) {
   try {
-    const { type, message, meta } = await request.json()
+    const body = await request.json()
+    const parsed = logSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ ok: false }, { status: 400 })
+    }
+    const { type, message, meta } = parsed.data
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

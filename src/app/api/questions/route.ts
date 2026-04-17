@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { escapeForLike } from '@/lib/utils/security'
+import { questionUpdateSchema } from '@/lib/validations/schemas'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // 120 req/dk (50 öğrenci × ~2 req/dk)
 const VALID_GAMES = new Set(GAME_SLUGS)
@@ -87,11 +88,11 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { questionId, updates } = body
-
-  if (!questionId) {
+  const parsed = questionUpdateSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Missing questionId' }, { status: 400 })
   }
+  const { questionId, updates } = parsed.data
 
   // Mass assignment onleme: sadece izin verilen alanlari kabul et
   const ALLOWED_FIELDS = [

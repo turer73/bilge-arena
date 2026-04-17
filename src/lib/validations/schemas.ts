@@ -156,6 +156,50 @@ export const roleAssignSchema = z.object({
 })
 
 // ============================================================
+// Log (client error reporting)
+// ============================================================
+
+export const logSchema = z.object({
+  type: z.enum(['error', 'warn', 'info']).optional().default('error'),
+  message: z.string().max(500).optional(),
+  meta: z.unknown().optional(),
+})
+
+// ============================================================
+// Quest progress update
+// ============================================================
+
+export const questProgressSchema = z.object({
+  sessionData: z.object({
+    correctAnswers: z.number().int().min(0).max(1000).optional(),
+    maxStreak: z.number().int().min(0).max(1000).optional(),
+    accuracy: z.number().min(0).max(100).optional(),
+    game: z.string().max(50).optional(),
+  }),
+})
+
+// ============================================================
+// Admin: questions update
+// ============================================================
+
+export const questionUpdateSchema = z.object({
+  questionId: z.string().uuid(),
+  updates: z.record(z.string(), z.unknown()).optional(),
+})
+
+// ============================================================
+// Admin: error reports
+// ============================================================
+
+const REPORT_STATUSES = ['pending', 'in_review', 'resolved', 'dismissed'] as const
+
+export const reportUpdateSchema = z.object({
+  reportId: z.string().uuid(),
+  status: z.enum(REPORT_STATUSES),
+  adminNote: z.string().max(2000).nullish(),
+})
+
+// ============================================================
 // Sabitleri export et (client tarafinda da kullanilabilir)
 // ============================================================
 
