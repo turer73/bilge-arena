@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { questProgressSchema } from '@/lib/validations/schemas'
 
 const questsLimiter = createRateLimiter('quests', 30, 60_000) // 30 req/dk
 
@@ -79,11 +80,11 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json()
-  const { sessionData } = body
-
-  if (!sessionData) {
+  const parsed = questProgressSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Eksik veri' }, { status: 400 })
   }
+  const { sessionData } = parsed.data
 
   const svc = createServiceRoleClient()
   const today = new Date().toISOString().split('T')[0]

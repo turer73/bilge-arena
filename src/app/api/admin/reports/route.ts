@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
+import { reportUpdateSchema } from '@/lib/validations/schemas'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -43,17 +44,11 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { reportId, status, adminNote } = body
-
-  if (!reportId || !status) {
-    return NextResponse.json({ error: 'Missing reportId or status' }, { status: 400 })
+  const parsed = reportUpdateSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Gecersiz istek' }, { status: 400 })
   }
-
-  // Gecerli status degerleri
-  const VALID_STATUSES = ['pending', 'in_review', 'resolved', 'dismissed']
-  if (!VALID_STATUSES.includes(status)) {
-    return NextResponse.json({ error: 'Gecersiz status degeri' }, { status: 400 })
-  }
+  const { reportId, status, adminNote } = parsed.data
 
   const updates: Record<string, unknown> = { status }
   if (adminNote !== undefined) updates.admin_note = adminNote

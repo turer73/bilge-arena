@@ -1,0 +1,2 @@
+echo "pre-push: npm run build + vitest run (deploy disiplini)"
+npm run build && npm run test
