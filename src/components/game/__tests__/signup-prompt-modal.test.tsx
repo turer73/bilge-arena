@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { SignupPromptModal } from '../signup-prompt-modal'
 
 const signInWithGoogleMock = vi.fn()
+const signInWithMagicLinkMock = vi.fn()
 const trackEventMock = vi.fn()
 
 vi.mock('@/lib/hooks/use-auth', () => ({
   useAuth: () => ({
     signInWithGoogle: signInWithGoogleMock,
+    signInWithMagicLink: signInWithMagicLinkMock,
     user: null,
     profile: null,
     loading: false,
@@ -22,6 +24,7 @@ vi.mock('@/lib/utils/plausible', () => ({
 describe('SignupPromptModal', () => {
   beforeEach(() => {
     signInWithGoogleMock.mockClear()
+    signInWithMagicLinkMock.mockClear()
     trackEventMock.mockClear()
   })
 
@@ -110,5 +113,91 @@ describe('SignupPromptModal', () => {
     const dialog = screen.getByRole('dialog')
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(dialog).toHaveAttribute('aria-labelledby', 'prompt-modal-title')
+  })
+
+  // --- Gun 3: Magic link akisi (Opsiyon Z progressive disclosure) ---
+
+  describe('Magic link akisi', () => {
+    it('ilk render: email input GIZLI, "Email ile giris" linki gorunur', () => {
+      render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+      expect(screen.queryByLabelText('Email adresin')).not.toBeInTheDocument()
+      expect(screen.getByText(/Email ile giris yap/)).toBeInTheDocument()
+    })
+
+    it('"Email ile giris" tiklaninca MagicLinkRevealed event fire + input acilir', () => {
+      render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+      fireEvent.click(screen.getByText(/Email ile giris yap/))
+      expect(trackEventMock).toHaveBeenCalledWith('MagicLinkRevealed', { props: { level: 1 } })
+      expect(screen.getByLabelText('Email adresin')).toBeInTheDocument()
+      expect(screen.getByText('Giris Linki Gonder')).toBeInTheDocument()
+    })
+
+    it('gecersiz email submit: validation hatasi goster, signInWithMagicLink CAGRILMAZ', async () => {
+      render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+      fireEvent.click(screen.getByText(/Email ile giris yap/))
+      const input = screen.getByLabelText('Email adresin') as HTMLInputElement
+      fireEvent.change(input, { target: { value: 'bozuk' } })
+      fireEvent.click(screen.getByText('Giris Linki Gonder'))
+      // Validation error beklenir (asenkron degil, senkron)
+      expect(await screen.findByText(/Gecerli bir email/)).toBeInTheDocument()
+      expect(signInWithMagicLinkMock).not.toHaveBeenCalled()
+    })
+
+    it('gecerli email submit: MagicLinkRequested + signInWithMagicLink cagrilir', async () => {
+      signInWithMagicLinkMock.mockResolvedValue({ ok: true })
+      render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+      fireEvent.click(screen.getByText(/Email ile giris yap/))
+      const input = screen.getByLabelText('Email adresin')
+      fireEvent.change(input, { target: { value: 'test@example.com' } })
+      await act(async () => {
+        fireEvent.click(screen.getByText('Giris Linki Gonder'))
+      })
+      expect(trackEventMock).toHaveBeenCalledWith('MagicLinkRequested', { props: { level: 1 } })
+      expect(signInWithMagicLinkMock).toHaveBeenCalledWith('test@example.com')
+    })
+
+    it('basarili gonderim: MagicLinkSent event + success UI', async () => {
+      signInWithMagicLinkMock.mockResolvedValue({ ok: true })
+      render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+      fireEvent.click(screen.getByText(/Email ile giris yap/))
+      fireEvent.change(screen.getByLabelText('Email adresin'), { target: { value: 'test@example.com' } })
+      await act(async () => {
+        fireEvent.click(screen.getByText('Giris Linki Gonder'))
+      })
+      expect(trackEventMock).toHaveBeenCalledWith('MagicLinkSent', { props: { level: 1 } })
+      expect(screen.getByText(/Email gonderildi/)).toBeInTheDocument()
+      expect(screen.getByText('test@example.com')).toBeInTheDocument()
+    })
+
+    it('basarisiz gonderim: MagicLinkFailed event + error UI + retry butonu', async () => {
+      signInWithMagicLinkMock.mockResolvedValue({ ok: false, error: 'SMTP down' })
+      render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+      fireEvent.click(screen.getByText(/Email ile giris yap/))
+      fireEvent.change(screen.getByLabelText('Email adresin'), { target: { value: 'test@example.com' } })
+      await act(async () => {
+        fireEvent.click(screen.getByText('Giris Linki Gonder'))
+      })
+      expect(trackEventMock).toHaveBeenCalledWith(
+        'MagicLinkFailed',
+        expect.objectContaining({ props: expect.objectContaining({ level: 1 }) }),
+      )
+      expect(screen.getByText('Tekrar dene')).toBeInTheDocument()
+    })
+
+    it('rate limit hatasi kullanici-dostu Turkce mesaj cevirir', async () => {
+      signInWithMagicLinkMock.mockResolvedValue({ ok: false, error: 'Email rate limit exceeded' })
+      render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+      fireEvent.click(screen.getByText(/Email ile giris yap/))
+      fireEvent.change(screen.getByLabelText('Email adresin'), { target: { value: 'test@example.com' } })
+      await act(async () => {
+        fireEvent.click(screen.getByText('Giris Linki Gonder'))
+      })
+      expect(screen.getByText(/Cok fazla istek/)).toBeInTheDocument()
+    })
+
+    it('Level 3 hard wall: magic link yine gorunur (alternatif primary action)', () => {
+      render(<SignupPromptModal level={3} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+      expect(screen.getByText(/Email ile giris yap/)).toBeInTheDocument()
+    })
   })
 })

@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { trackEvent } from '@/lib/utils/plausible'
+import { validateEmail, getEmailErrorMessage } from '@/lib/utils/email'
 
 interface SignupPromptModalProps {
   level: 1 | 2 | 3
@@ -35,11 +36,31 @@ const LEVEL_CONFIG = {
   },
 } as const
 
+/**
+ * Magic link alt-akis durumu. Opsiyon Z (progressive disclosure):
+ * - hidden: Sadece "Email ile giris" linki gorunur (default)
+ * - input: Email inputu + "Gonder" butonu acik
+ * - sending: Istek devam ediyor (buton disabled, spinner)
+ * - sent: Supabase kabul etti, kullanici inbox'i kontrol etmeli (60s cooldown)
+ * - error: Fail, retry mumkun
+ */
+type MagicLinkState =
+  | { status: 'hidden' }
+  | { status: 'input'; email: string; error?: string }
+  | { status: 'sending'; email: string }
+  | { status: 'sent'; email: string; cooldownEndsAt: number }
+  | { status: 'error'; email: string; message: string }
+
+const COOLDOWN_MS = 60_000 // Supabase server-side limit ile senkron
+
 export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: SignupPromptModalProps) {
-  const { signInWithGoogle } = useAuth()
+  const { signInWithGoogle, signInWithMagicLink } = useAuth()
   const tracked = useRef(false)
   const config = LEVEL_CONFIG[level]
   const isHardWall = level === 3
+
+  const [ml, setMl] = useState<MagicLinkState>({ status: 'hidden' })
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0)
 
   // Gosterildigi an event fire
   useEffect(() => {
@@ -48,7 +69,7 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
     trackEvent('PromptShown', { props: { level } })
   }, [open, level])
 
-  // ESC kapatma - sadece soft/medium icin
+  // ESC kapatma - sadece soft/medium icin, sent state'de de engelleme
   useEffect(() => {
     if (!open || isHardWall) return
     const onKey = (e: KeyboardEvent) => {
@@ -60,6 +81,21 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, isHardWall, level, onDismiss])
+
+  // Cooldown countdown (saniye cinsinden UI icin)
+  useEffect(() => {
+    if (ml.status !== 'sent') {
+      setCooldownRemaining(0)
+      return
+    }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((ml.cooldownEndsAt - Date.now()) / 1000))
+      setCooldownRemaining(remaining)
+    }
+    tick()
+    const interval = setInterval(tick, 500)
+    return () => clearInterval(interval)
+  }, [ml])
 
   if (!open) return null
 
@@ -82,6 +118,61 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
     if (isHardWall) return
     trackEvent('PromptDismissed', { props: { level, method: 'overlay' } })
     onDismiss()
+  }
+
+  const handleRevealMagicLink = () => {
+    trackEvent('MagicLinkRevealed', { props: { level } })
+    setMl({ status: 'input', email: '' })
+  }
+
+  const handleMagicLinkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (ml.status !== 'input' && ml.status !== 'error') return
+
+    const emailRaw = ml.status === 'input' ? ml.email : ml.email
+    const validation = validateEmail(emailRaw)
+    if (!validation.ok) {
+      setMl({ status: 'input', email: emailRaw, error: getEmailErrorMessage(validation.reason) })
+      return
+    }
+
+    trackEvent('MagicLinkRequested', { props: { level } })
+    setMl({ status: 'sending', email: validation.normalized })
+
+    const result = await signInWithMagicLink(validation.normalized)
+    if (result.ok) {
+      trackEvent('MagicLinkSent', { props: { level } })
+      setMl({
+        status: 'sent',
+        email: validation.normalized,
+        cooldownEndsAt: Date.now() + COOLDOWN_MS,
+      })
+    } else {
+      trackEvent('MagicLinkFailed', { props: { level, error: result.error.slice(0, 50) } })
+      setMl({ status: 'error', email: validation.normalized, message: translateMagicLinkError(result.error) })
+    }
+  }
+
+  const handleResend = async () => {
+    if (ml.status !== 'sent' || cooldownRemaining > 0) return
+    setMl({ status: 'sending', email: ml.email })
+    const result = await signInWithMagicLink(ml.email)
+    if (result.ok) {
+      trackEvent('MagicLinkSent', { props: { level, resend: true } })
+      setMl({
+        status: 'sent',
+        email: ml.email,
+        cooldownEndsAt: Date.now() + COOLDOWN_MS,
+      })
+    } else {
+      trackEvent('MagicLinkFailed', { props: { level, error: result.error.slice(0, 50), resend: true } })
+      setMl({ status: 'error', email: ml.email, message: translateMagicLinkError(result.error) })
+    }
+  }
+
+  const handleRetryAfterError = () => {
+    if (ml.status !== 'error') return
+    setMl({ status: 'input', email: ml.email })
   }
 
   return (
@@ -127,7 +218,7 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
           {config.message}
         </p>
 
-        {/* Butonlar */}
+        {/* Ana butonlar */}
         <div className={`flex ${isHardWall ? 'flex-col' : 'flex-col sm:flex-row'} gap-2`}>
           <button
             onClick={handlePrimary}
@@ -143,8 +234,130 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
             {config.secondaryCta}
           </button>
         </div>
+
+        {/* Magic link alt-akisi (Opsiyon Z: progressive disclosure) */}
+        <div className="mt-4 border-t border-[var(--border)] pt-4">
+          {ml.status === 'hidden' && (
+            <button
+              type="button"
+              onClick={handleRevealMagicLink}
+              className="w-full text-center text-sm text-[var(--text-sub)] transition-colors hover:text-[var(--focus)] hover:underline"
+            >
+              Google yok mu? <span className="font-semibold">Email ile giris yap →</span>
+            </button>
+          )}
+
+          {(ml.status === 'input' || ml.status === 'error') && (
+            <form onSubmit={handleMagicLinkSubmit} noValidate className="flex flex-col gap-2">
+              <label htmlFor="magic-link-email" className="text-xs font-semibold text-[var(--text-sub)]">
+                Email adresin
+              </label>
+              <input
+                id="magic-link-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={ml.status === 'input' ? ml.email : ml.email}
+                onChange={(e) => {
+                  if (ml.status === 'input') setMl({ status: 'input', email: e.target.value })
+                  else setMl({ status: 'input', email: e.target.value })
+                }}
+                placeholder="ad@domain.com"
+                required
+                aria-describedby={ml.status === 'input' && ml.error ? 'magic-link-error' : undefined}
+                aria-invalid={ml.status === 'input' && !!ml.error}
+                className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none transition-colors focus:border-[var(--focus)]"
+              />
+              {ml.status === 'input' && ml.error && (
+                <p id="magic-link-error" className="text-xs text-[var(--urgency)]">
+                  {ml.error}
+                </p>
+              )}
+              {ml.status === 'error' && (
+                <p className="text-xs text-[var(--urgency)]">
+                  {ml.message}{' '}
+                  <button type="button" onClick={handleRetryAfterError} className="font-semibold underline">
+                    Tekrar dene
+                  </button>
+                </p>
+              )}
+              <button
+                type="submit"
+                className="btn-primary mt-1 w-full rounded-[10px] py-2.5 text-sm font-bold"
+              >
+                Giris Linki Gonder
+              </button>
+            </form>
+          )}
+
+          {ml.status === 'sending' && (
+            <div className="flex items-center justify-center gap-2 py-3 text-sm text-[var(--text-sub)]">
+              <Spinner />
+              <span>Gonderiliyor...</span>
+            </div>
+          )}
+
+          {ml.status === 'sent' && (
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-start gap-2 rounded-[10px] border border-[var(--growth-border)] bg-[var(--growth-bg)] p-3">
+                <CheckIcon />
+                <div className="flex-1">
+                  <p className="font-semibold text-[var(--growth)]">Email gonderildi ✓</p>
+                  <p className="mt-1 text-xs text-[var(--text-sub)]">
+                    <span className="font-medium">{ml.email}</span> adresine giris linki yolladik. 2 dakika icinde gelmezse spam klasorunu kontrol et.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={cooldownRemaining > 0}
+                className="text-center text-xs text-[var(--text-sub)] transition-colors enabled:hover:text-[var(--focus)] enabled:hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {cooldownRemaining > 0
+                  ? `${cooldownRemaining}s sonra tekrar gonderilebilir`
+                  : 'Gelmedi mi? Tekrar gonder'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Supabase hata mesajlarini Turkce ve kullanici dostu versiyonlara cevir.
+ * Tanimayan hatalari oldugu gibi gecer (debugging icin).
+ */
+function translateMagicLinkError(raw: string): string {
+  const lower = raw.toLowerCase()
+  if (lower.includes('rate limit') || lower.includes('too many')) {
+    return 'Cok fazla istek gonderdin. 1 dakika bekle, sonra tekrar dene.'
+  }
+  if (lower.includes('invalid') && lower.includes('email')) {
+    return 'Bu email adresi gecerli degil. Yeniden kontrol et.'
+  }
+  if (lower.includes('network') || lower.includes('fetch')) {
+    return 'Internet baglantini kontrol et.'
+  }
+  return 'Email gonderilemedi. Biraz sonra tekrar dene.'
+}
+
+function Spinner() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="animate-spin" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-[var(--growth)]" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
   )
 }
 

@@ -93,7 +93,12 @@ export function useAuth() {
         const createdMs = new Date(data.created_at).getTime()
         const ageMs = Date.now() - createdMs
         if (ageMs < 2 * 60 * 1000) {
-          trackEvent('Signup', { props: { provider: 'google' } })
+          // Provider'i auth user'dan cikar (google ya da email/magic link)
+          const { data: { user: newUser } } = await supabase.auth.getUser()
+          const provider = newUser?.app_metadata?.provider === 'email'
+            ? 'magic_link'
+            : (newUser?.app_metadata?.provider ?? 'google')
+          trackEvent('Signup', { props: { provider } })
           // Guest quiz sayacini temizle — artik kayitli kullanici, modal tekrar gosterilmemeli
           resetGuestQuizCount()
         }
@@ -178,12 +183,43 @@ export function useAuth() {
     })
   }
 
+  /**
+   * Magic link ile giris (passwordless). Kullanici yoksa olusturulur (shouldCreateUser=true).
+   * Basarili olursa Supabase email ile giris linki gonderir. UI sonuca gore state guncellemeli.
+   *
+   * Donus:
+   *   { ok: true }                  -> email kuyruga girdi, kullaniciya "kutunu kontrol et" goster
+   *   { ok: false, error: string }  -> Supabase hatasi (rate limit, invalid email, SMTP sorunu)
+   */
+  async function signInWithMagicLink(
+    email: string,
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          shouldCreateUser: true,
+        },
+      })
+      if (error) {
+        return { ok: false, error: error.message }
+      }
+      return { ok: true }
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'Bilinmeyen hata',
+      }
+    }
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
     useAuthStore.getState().signOut()
   }
 
-  return { user, profile, loading, signInWithGoogle, signOut }
+  return { user, profile, loading, signInWithGoogle, signInWithMagicLink, signOut }
 }
 
 /** YYYY-MM-DD stringleri arasi gun farki (analytics icin) */
