@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const supabase = await createClient()
   const admin = await checkPermission(supabase, 'admin.dashboard.view')
@@ -18,11 +20,16 @@ export async function GET() {
     supabase.from('error_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
   ])
 
-  return NextResponse.json({
-    totalUsers: usersResult.count ?? 0,
-    totalQuestions: questionsResult.count ?? 0,
-    totalSessions: sessionsResult.count ?? 0,
-    totalAnswers: answersResult.count ?? 0,
-    pendingReports: reportsResult.count ?? 0,
-  })
+  return NextResponse.json(
+    {
+      totalUsers: usersResult.count ?? 0,
+      totalQuestions: questionsResult.count ?? 0,
+      totalSessions: sessionsResult.count ?? 0,
+      totalAnswers: answersResult.count ?? 0,
+      pendingReports: reportsResult.count ?? 0,
+    },
+    {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
+    },
+  )
 }
