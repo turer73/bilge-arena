@@ -21,6 +21,10 @@ function readStoredCount(): number {
 export function useGuestSession() {
   const [quizCount, setQuizCount] = useState<number>(readStoredCount)
 
+  // Not: Bu callback stable identity olmali (deps bos). Aksi halde
+  // tuketen useEffect cleanup ile timer'i oldurur ve modal acilmaz.
+  // Regression 2026-04-18: bkz. __tests__/use-guest-session.test.ts
+  // localStorage zaten source-of-truth, quizCount state cache amacli.
   const incrementQuizCount = useCallback((): number => {
     try {
       const current = parseInt(localStorage.getItem(GUEST_QUIZ_COUNT_KEY) ?? '0', 10) || 0
@@ -29,9 +33,9 @@ export function useGuestSession() {
       setQuizCount(next)
       return next
     } catch {
-      return quizCount + 1
+      return 0
     }
-  }, [quizCount])
+  }, [])
 
   const resetQuizCount = useCallback(() => {
     try {
