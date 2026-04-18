@@ -78,6 +78,30 @@ describe('useGuestSession', () => {
     expect(result.current.quizCount).toBe(0)
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
   })
+
+  // Regression (2026-04-18): incrementQuizCount icindeki setState, callback'i
+  // yeniden olusturursa tuketen useEffect cleanup ile setTimeout'u oldurur ve
+  // prompt modal hic acilmaz. Callback identity stable olmali.
+  it('incrementQuizCount identity state degisse bile stabil kalir', () => {
+    const { result, rerender } = renderHook(() => useGuestSession())
+    const firstRef = result.current.incrementQuizCount
+    act(() => {
+      firstRef()
+    })
+    rerender()
+    expect(result.current.quizCount).toBe(1)
+    expect(result.current.incrementQuizCount).toBe(firstRef)
+  })
+
+  it('resetQuizCount identity de stable', () => {
+    const { result, rerender } = renderHook(() => useGuestSession())
+    const firstRef = result.current.resetQuizCount
+    act(() => {
+      result.current.incrementQuizCount()
+    })
+    rerender()
+    expect(result.current.resetQuizCount).toBe(firstRef)
+  })
 })
 
 describe('resetGuestQuizCount (module helper)', () => {
