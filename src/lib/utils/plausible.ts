@@ -50,6 +50,11 @@ export type EventName =
   | 'PromptShown'         // Modal gosterildi (level 1/2/3)
   | 'PromptCtaClicked'    // Primary CTA tiklandi (signup) veya Level 3 exit_lobby
   | 'PromptDismissed'     // Modal kapatildi (esc/overlay/button - hard wall disinda)
+  // Gun 3 — Magic link email capture (modal icinde)
+  | 'MagicLinkRevealed'   // "Email ile giris" linki tiklandi, email input acildi
+  | 'MagicLinkRequested'  // Email girildi, "Gonder" butonuna basildi
+  | 'MagicLinkSent'       // Supabase email gonderdi (basarili)
+  | 'MagicLinkFailed'     // Email gonderilemedi (rate limit, invalid, SMTP error)
 
 /**
  * Plausible custom event gonder. Sessizce basarisiz olur (hic fırlatmaz).
