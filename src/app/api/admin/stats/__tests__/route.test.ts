@@ -5,13 +5,23 @@ const { mockCheckPermission, mockCount } = vi.hoisted(() => ({
   mockCount: vi.fn(),
 }))
 
+// User-scoped client — sadece auth/permission icin kullaniliyor.
+// Count sorgulari ona degil service-role'e gidiyor.
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
+    auth: { getUser: vi.fn(async () => ({ data: { user: null } })) },
+  })),
+}))
+
+// Service-role client — RLS bypass'li, gercek count sorgulari burada.
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         is: vi.fn(() => mockCount()),
         eq: vi.fn(() => mockCount()),
         head: true,
+        then: (resolve: (v: unknown) => void) => resolve(mockCount()),
       })),
     })),
   })),
