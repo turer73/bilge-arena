@@ -1,12 +1,15 @@
 // ============================================================
 // Bilge Arena — Soru Yükleme Scripti
-// Kullanım: node database/seed.js
+// Kullanım:
+//   node database/seed.js                 → sample modu (varsayılan, ~20 soru)
+//   node database/seed.js --full          → full modu (private/questions.json)
+//   QUESTIONS_JSON_PATH=/path node database/seed.js --full  → custom yol
 // Gereksinim: SUPABASE_URL ve SUPABASE_SERVICE_KEY .env'de tanımlı olmalı
 // ============================================================
 
 const { createClient } = require('@supabase/supabase-js')
-const { readFileSync } = require('fs')
-const { join } = require('path')
+const { readFileSync, existsSync } = require('fs')
+const { join, resolve, isAbsolute } = require('path')
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
@@ -17,6 +20,19 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// Mod secimi: --sample (default) | --full
+const args = process.argv.slice(2)
+const isFull = args.includes('--full')
+
+const SAMPLE_PATH = 'wordquest/data/questions-sample.json'
+const FULL_DEFAULT = 'private/questions.json'
+
+const relPath = isFull
+  ? (process.env.QUESTIONS_JSON_PATH || FULL_DEFAULT)
+  : SAMPLE_PATH
+
+const absPath = isAbsolute(relPath) ? relPath : resolve(__dirname, '..', relPath)
 
 // Zorluk haritası
 const DIFFICULTY_MAP = {
@@ -114,11 +130,23 @@ function transformWordQuest(data) {
 // ──────────────────────────────────────────
 async function seed() {
   console.log('🚀 Bilge Arena — Soru yükleme başlıyor...\n')
+  console.log(`📂 Mod: ${isFull ? 'FULL' : 'SAMPLE'}`)
+  console.log(`📄 Kaynak: ${relPath}`)
+
+  if (!existsSync(absPath)) {
+    console.error(`\n❌ Dosya bulunamadi: ${absPath}`)
+    if (isFull) {
+      console.error('   --full modu icin `private/questions.json` dosyasi veya')
+      console.error('   `QUESTIONS_JSON_PATH` env ile gecerli bir yol gerekli.')
+      console.error('   Full dataset icin maintainer ile iletisime gec.')
+    } else {
+      console.error('   Sample dosyasi olmali. Repo kurulumu eksik olabilir.')
+    }
+    process.exit(1)
+  }
 
   // Soru bankasını oku
-  const rawData = JSON.parse(
-    readFileSync(join(__dirname, '../wordquest/data/questions.json'), 'utf-8')
-  )
+  const rawData = JSON.parse(readFileSync(absPath, 'utf-8'))
 
   const rows = transformWordQuest(rawData)
   console.log(`📦 Toplam dönüştürülen soru: ${rows.length}`)

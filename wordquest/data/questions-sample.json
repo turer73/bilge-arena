@@ -1,0 +1,380 @@
+{
+  "meta": {
+    "version": "sample-1.0.0",
+    "totalQuestions": 19,
+    "status": "sample_for_dev",
+    "notlar": "Bu dosya sadece dev ortaminda seed testi icindir. Production seed icin QUESTIONS_JSON_PATH env ile private/questions.json yolunu verin.",
+    "son_guncelleme": "2026-04-22",
+    "public_ok": true
+  },
+  "vocabulary": [
+    {
+      "id": "v001",
+      "sentence": "The most powerful ---- to parachuting is fear, but one should also take its high cost into account.",
+      "options": [
+        "resemblance",
+        "adjustment",
+        "deterrent",
+        "submission",
+        "adherence"
+      ],
+      "answer": 2,
+      "word": "deterrent",
+      "meaning_tr": "caydırıcı",
+      "level": "C1",
+      "exam": "YDS"
+    },
+    {
+      "id": "v011",
+      "sentence": "The government decided to ---- strict measures to control the spread of the disease.",
+      "options": [
+        "implement",
+        "withdraw",
+        "neglect",
+        "diminish",
+        "postpone"
+      ],
+      "answer": 0,
+      "word": "implement",
+      "meaning_tr": "uygulamak, yürürlüğe koymak",
+      "level": "B2",
+      "exam": "YDS"
+    },
+    {
+      "id": "v021",
+      "sentence": "It is ---- that we take immediate action to address the climate crisis before it is too late.",
+      "options": [
+        "imperative",
+        "optional",
+        "trivial",
+        "redundant",
+        "arbitrary"
+      ],
+      "answer": 0,
+      "word": "imperative",
+      "meaning_tr": "zorunlu, mecburi",
+      "level": "C1",
+      "exam": "YDS"
+    },
+    {
+      "id": "v031",
+      "sentence": "The ---- of the experiment confirmed what scientists had predicted about the reaction.",
+      "options": [
+        "outcome",
+        "obstacle",
+        "contrast",
+        "exception",
+        "deficiency"
+      ],
+      "answer": 0,
+      "word": "outcome",
+      "meaning_tr": "sonuç",
+      "level": "B1",
+      "exam": "YKS"
+    }
+  ],
+  "phrasal_verbs": [
+    {
+      "id": "pv001",
+      "sentence": "Making videos should be a lot of fun, but lots of people ---- problems and lose momentum before they even get started.",
+      "options": [
+        "hand over",
+        "look for",
+        "turn down",
+        "give up",
+        "run into"
+      ],
+      "answer": 4,
+      "word": "run into",
+      "meaning_tr": "karşılaşmak, rastlamak",
+      "level": "B2",
+      "exam": "YDS"
+    },
+    {
+      "id": "pv011",
+      "sentence": "The government decided to ---- the outdated regulation and replace it with a modern one.",
+      "options": [
+        "do away with",
+        "come up with",
+        "look into",
+        "put off",
+        "hand over"
+      ],
+      "answer": 0,
+      "word": "do away with",
+      "meaning_tr": "kaldırmak, ortadan kaldırmak",
+      "level": "C1",
+      "exam": "YÖKDİL"
+    },
+    {
+      "id": "pv021",
+      "sentence": "The government has ---- a new set of rules for online data privacy protection.",
+      "options": [
+        "brought in",
+        "given up",
+        "turned down",
+        "put off",
+        "looked into"
+      ],
+      "answer": 0,
+      "word": "brought in",
+      "meaning_tr": "getirmek, yürürlüğe koymak",
+      "level": "B2",
+      "exam": "YDS"
+    }
+  ],
+  "restatement": [
+    {
+      "id": "r_orig_001",
+      "sentence": "Despite being one of the smallest countries in the world, Luxembourg has one of the highest GDP per capita figures globally.",
+      "options": [
+        "Luxembourg, despite its high GDP per capita, is still considered one of the smallest economies in the world.",
+        "Although Luxembourg is among the smallest nations by size, its citizens enjoy one of the highest average incomes worldwide.",
+        "Luxembourg's small size has prevented it from achieving high economic output compared to larger nations.",
+        "The GDP per capita of Luxembourg is high mainly because of the country's large population density.",
+        "Luxembourg's global economic standing is remarkable despite the fact that its GDP has been declining recently."
+      ],
+      "answer": 1,
+      "level": "B2",
+      "exam": "YKS"
+    },
+    {
+      "id": "r_orig_011",
+      "sentence": "Unlike traditional classrooms, online learning platforms allow students to study at their own pace and revisit course materials as many times as needed.",
+      "options": [
+        "Online learning platforms are considered inferior to traditional classrooms because they do not offer structured schedules.",
+        "Traditional classrooms allow students more flexibility than online platforms when it comes to revisiting materials.",
+        "In contrast to conventional education settings, digital learning tools give learners the freedom to progress at a comfortable speed and review content repeatedly.",
+        "Online learning is only effective for students who already have strong self-discipline and prior academic knowledge.",
+        "Students who use online platforms are required to complete their courses faster than those in traditional classrooms."
+      ],
+      "answer": 2,
+      "level": "B1",
+      "exam": "YKS"
+    },
+    {
+      "id": "r_orig_021",
+      "sentence": "Microplastics have been detected in nearly every environment on Earth, from the depths of the ocean to mountain peaks, raising serious concerns about their long-term effects on ecosystems.",
+      "options": [
+        "Scientists have found microplastics only in ocean environments, where they pose the greatest threat to marine ecosystems.",
+        "The discovery of microplastics in virtually all of Earth's environments, including deep seas and high altitudes, has prompted significant worry about their ecological impact over time.",
+        "Microplastics are large enough to be filtered out of most ecosystems and therefore pose little long-term environmental risk.",
+        "Mountain peaks and ocean depths remain free of microplastics, which are mostly confined to urban and industrial areas.",
+        "Concerns about microplastics have been exaggerated by scientists since they break down quickly and cause minimal harm to ecosystems."
+      ],
+      "answer": 1,
+      "level": "C1",
+      "exam": "YKS"
+    }
+  ],
+  "grammar": [
+    {
+      "id": "g_orig_001",
+      "sentence": "By the time the rescue team arrived, the trapped miners ---- in the cave for nearly three days.",
+      "options": [
+        "were waiting",
+        "had been waiting",
+        "have been waiting",
+        "would be waiting",
+        "will have waited"
+      ],
+      "answer": 1,
+      "structure": "past_perfect_continuous",
+      "level": "B2",
+      "exam": "YKS"
+    },
+    {
+      "id": "g_orig_011",
+      "sentence": "It is essential that every participant ---- a signed consent form before the trial begins.",
+      "options": [
+        "submits",
+        "submit",
+        "submitted",
+        "will submit",
+        "has submitted"
+      ],
+      "answer": 1,
+      "structure": "subjunctive",
+      "level": "C1",
+      "exam": "YKS"
+    },
+    {
+      "id": "g_orig_021",
+      "sentence": "The company's latest product has been designed ---- the needs of both professional and amateur photographers.",
+      "options": [
+        "meeting",
+        "to meet",
+        "met",
+        "having met",
+        "being met"
+      ],
+      "answer": 1,
+      "structure": "infinitive_of_purpose",
+      "level": "B1",
+      "exam": "YKS"
+    }
+  ],
+  "sentence_completion": [
+    {
+      "id": "sc_orig_001",
+      "sentence": "Although the initial results of the experiment were promising, the researchers cautioned that ----.",
+      "options": [
+        "further trials were needed before drawing definitive conclusions",
+        "the experiment had already been replicated successfully in other laboratories",
+        "all participants had responded positively to the new treatment method",
+        "the findings confirmed what scientists had long suspected about the compound",
+        "no additional funding would be required to continue the research programme"
+      ],
+      "answer": 0,
+      "level": "B2",
+      "exam": "YKS"
+    },
+    {
+      "id": "sc_orig_011",
+      "sentence": "Contrary to popular belief, multitasking does not improve productivity; in fact, ----.",
+      "options": [
+        "it is a skill that can be developed through regular practice and discipline",
+        "most people are naturally gifted at handling several complex tasks simultaneously",
+        "it tends to reduce the quality of work by dividing cognitive focus between tasks",
+        "it is most effective when the tasks being performed require creative thinking",
+        "organisations actively encourage employees to develop multitasking capabilities"
+      ],
+      "answer": 2,
+      "level": "B2",
+      "exam": "YKS"
+    },
+    {
+      "id": "sc_orig_021",
+      "sentence": "The reason many wildlife species are now listed as endangered is primarily that ----.",
+      "options": [
+        "zoos have failed to implement effective breeding programmes for threatened animals",
+        "natural predators have been removed from ecosystems, upsetting the ecological balance",
+        "human activities such as habitat destruction, pollution, and poaching have severely reduced their populations",
+        "climate scientists have not yet accurately predicted the full impact of global warming on wildlife",
+        "conservation funding from international organisations has been declining steadily"
+      ],
+      "answer": 2,
+      "level": "B1",
+      "exam": "YKS"
+    }
+  ],
+  "cloze_test": [
+    {
+      "id": "ct_orig_001",
+      "passage": "The human immune system is a remarkable defence network that protects the body from harmful invaders. When a pathogen such as a bacterium or virus enters the body, specialised white blood cells (1)---- it and trigger an immune response. Some of these cells produce proteins called antibodies, which (2)---- to specific pathogens and neutralise them. This process can take several days the first time the body encounters a new threat, which is why people often feel ill (3)---- the immune system mounts a full response. However, the immune system has a powerful memory: once it has encountered a pathogen, it can respond (4)---- if exposed again, often preventing illness entirely.",
+      "questions": [
+        {
+          "number": 1,
+          "options": [
+            "ignore",
+            "detect",
+            "create",
+            "destroy",
+            "avoid"
+          ],
+          "answer": 1
+        },
+        {
+          "number": 2,
+          "options": [
+            "respond",
+            "attach",
+            "belong",
+            "react",
+            "contribute"
+          ],
+          "answer": 1
+        },
+        {
+          "number": 3,
+          "options": [
+            "after",
+            "while",
+            "since",
+            "although",
+            "unless"
+          ],
+          "answer": 1
+        },
+        {
+          "number": 4,
+          "options": [
+            "slowly",
+            "randomly",
+            "much more rapidly",
+            "less effectively",
+            "with great difficulty"
+          ],
+          "answer": 2
+        }
+      ],
+      "topic": "Biology / Immune System",
+      "level": "B2",
+      "exam": "YKS"
+    }
+  ],
+  "dialogue": [
+    {
+      "id": "d_orig_001",
+      "dialogue": [
+        {
+          "speaker": "A",
+          "line": "I've been thinking about switching careers. I'm in finance now, but I want to work in education."
+        },
+        {
+          "speaker": "B",
+          "line": "That's a significant change. What's drawing you towards education?"
+        },
+        {
+          "speaker": "A",
+          "line": "----"
+        },
+        {
+          "speaker": "B",
+          "line": "That's a meaningful reason. Have you looked into any teacher training programmes yet?"
+        }
+      ],
+      "options": [
+        "I think the salary in education is much higher than in finance.",
+        "I want to make a direct impact on people's lives rather than just managing numbers.",
+        "I have always found that finance offers more job security than education.",
+        "I heard that the working hours in schools are much longer than in offices.",
+        "I want to work in a field where I don't need to interact with people directly."
+      ],
+      "answer": 1,
+      "level": "B2",
+      "exam": "YKS"
+    },
+    {
+      "id": "d_orig_011",
+      "dialogue": [
+        {
+          "speaker": "A",
+          "line": "I read that scientists have discovered microplastics in human blood. It's terrifying."
+        },
+        {
+          "speaker": "B",
+          "line": "I saw that too. The long-term effects still aren't fully known."
+        },
+        {
+          "speaker": "A",
+          "line": "Do you think people are doing enough to reduce plastic use?"
+        },
+        {
+          "speaker": "B",
+          "line": "----"
+        }
+      ],
+      "options": [
+        "Definitely — plastic use has been declining significantly in most countries.",
+        "Honestly, not really. Individual efforts help, but we need much stronger policies.",
+        "I think the problem is being overstated by environmental groups.",
+        "Plastic is completely safe, so there's no need to worry about reducing it.",
+        "Only people in wealthy countries need to think about reducing plastic consumption."
+      ],
+      "answer": 1,
+      "level": "B2",
+      "exam": "YKS"
+    }
+  ]
+}
