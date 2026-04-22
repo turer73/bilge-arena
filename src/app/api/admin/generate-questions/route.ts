@@ -71,46 +71,40 @@ const CATEGORY_LABELS: Record<string, string> = {
   phrasal_verbs: 'İngilizce Phrasal Verbs',
 }
 
+// Template production'da QUESTION_GEN_PROMPT_TEMPLATE env'inden okunur.
+// Env yoksa generic bir fallback kullanilir — soru uretimi calisir ama kalite dusuk olur
+// (zorluk kalibrasyonu, secenek tasarim kurallari, few-shot directive'leri eksik).
+// Gercek template Vercel/Supabase env'lerine yazilir; repo'da saklamayiz.
+//
+// Placeholder'lar: {categoryLabel}, {langRule}, {topicList}
+// KRITIK: JSON key guardrail'i ("question", "options"...) fallback'te zorunlu — Gemini
+// aksi halde Turkce key uretip JSON.parse'i patlatiyor (observed behavior, 2025-11).
+const QUESTION_GEN_PROMPT_FALLBACK = `Sen YKS soru uretiyorsun. Kategori: {categoryLabel}.
+- Her soru 5 secenekli (A-E), 1 dogru cevap (index 0-4)
+- {langRule}
+- Zorluk seviyesine uygun, cozum kisa ve net olmali
+- JSON formatinda dondur
+{topicList}
+
+CIKTI FORMATI — JSON key isimleri INGILIZCE olmali:
+[{"question":"Soru metni","options":["A","B","C","D","E"],"answer":0,"solution":"Cozum","topic":"Konu"}]
+
+KRITIK: JSON anahtarlari MUTLAKA "question", "options", "answer", "solution", "topic" olmali.
+Turkce key KULLANMA. SADECE JSON dondur, baska hicbir sey yazma.`
+
 function buildSystemPrompt(game: string, category: string): string {
   const isEnglish = game === 'wordquest'
-  const lang = isEnglish ? 'Ingilizce' : 'Turkce'
+  const categoryLabel = CATEGORY_LABELS[category] || category
   const topics = TOPIC_MAP[game]?.[category] || []
   const topicList = topics.length > 0 ? `\nBu kategorideki YKS konulari: ${topics.join(', ')}` : ''
+  const langRule = isEnglish ? 'Soru metni Ingilizce, cozum Turkce olmali' : 'Turkce yazilmali'
 
-  return `Sen deneyimli bir YKS soru yazarisin. ${CATEGORY_LABELS[category] || category} alaninda uzmansin.
+  const template = process.env.QUESTION_GEN_PROMPT_TEMPLATE || QUESTION_GEN_PROMPT_FALLBACK
 
-KURALLAR:
-- Her soru 5 secenekli (A-E) olmali
-- Tam olarak 1 dogru cevap olmali (0-4 index)
-- ${isEnglish ? 'Soru metni Ingilizce, cozum Turkce olmali' : 'Turkce yazilmali'}
-- Zorluk seviyesine KESINLIKLE uygun olmali
-- Cozum aciklamasi kisa, net ve ogretici olmali
-- Secenekler mantikli ve yaniltici olmali (rastgele deger koyma)
-- Mevcut sorulardan FARKLI sorular uret
-- JSON formatinda dondur
-${topicList}
-
-ZORLUK SEVIYELERI:
-1: Temel bilgi — dogrudan hatirlatma, tek islem
-2: Basit uygulama — tek adim, formul uygulama
-3: Orta seviye — birden fazla adim, bilgi birlestirme
-4: Zor — analiz, sentez, cok adimli cozum
-5: Uzman — tuzakli, derin anlama, YKS seviyesinde
-
-CIKTI FORMATI — JSON key isimleri INGILIZCE olmali, degistirme:
-[
-  {
-    "question": "Soru metni buraya (Turkce)",
-    "options": ["A secenegi", "B secenegi", "C secenegi", "D secenegi", "E secenegi"],
-    "answer": 0,
-    "solution": "Kisa cozum aciklamasi (Turkce)",
-    "topic": "Konu adi"
-  }
-]
-
-KRITIK: JSON anahtarlari (key) MUTLAKA "question", "options", "answer", "solution", "topic" olmali.
-Turkce key KULLANMA ("soru", "secenekler", "cevap" gibi key KULLANMA).
-SADECE JSON dondur, baska hicbir sey yazma.`
+  return template
+    .replace(/\{categoryLabel\}/g, categoryLabel)
+    .replace(/\{langRule\}/g, langRule)
+    .replace(/\{topicList\}/g, topicList)
 }
 
 /**
