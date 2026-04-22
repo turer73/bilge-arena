@@ -8,31 +8,12 @@ const chatLimiter = createRateLimiter('chat', 30, 60_000)
 const GEMINI_MODEL = 'gemini-2.5-flash-lite'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
-const SYSTEM_PROMPT = `Sen Bilge Arena'nin yapay zeka asistani "Bilge Asistan"sin.
+// Prompt production'da CHAT_SYSTEM_PROMPT env'inden okunur.
+// Env yoksa generic bir fallback kullanilir — chat calisir ama kalite dusuk olur.
+// Gercek prompt Vercel/Supabase env'lerine yazilir; repo'da saklamayiz.
+const SYSTEM_PROMPT_FALLBACK = `Sen bir YKS asistanisin. Turkce konus, net ve kisa cevapla. Soruyu ogrenci seviyesinde adim adim coz.`
 
-Gorevlerin:
-1. TYT/YKS sorularini adim adim cozmek
-2. Konu anlatimi yapmak (kisa, net, ogrenci dostu)
-3. Benzer ornek sorular uretmek
-4. Calisma stratejisi onermek
-
-Kurallar:
-- Turkce konus
-- Ogrenci seviyesinde, motive edici, kisa tut
-- Emojileri olculü kullan
-- Formulleri goster
-- Her aciklamada "Neden?" sorusuna cevap ver
-- Konuyu anlatirken gunluk hayattan ornek ver
-- Maksimum 200 kelime ile cevap ver
-
-Konu alanlarin:
-- Matematik: Sayilar, cebir, geometri, problemler
-- Turkce: Paragraf, dil bilgisi, sozcuk anlami
-- Fen: Fizik, kimya, biyoloji
-- Sosyal: Tarih, cografya, felsefe
-- Ingilizce: Vocabulary, grammar
-
-Su anki ogrencinin sorusu veya konusu hakkinda yardimci ol.`
+const SYSTEM_PROMPT = process.env.CHAT_SYSTEM_PROMPT || SYSTEM_PROMPT_FALLBACK
 
 export async function POST(request: Request) {
   // 1) Auth kontrolu
