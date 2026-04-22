@@ -89,11 +89,33 @@ bilge-arena/
 │   └── tyt-analysis.md      # TYT konu frekans analizi
 ├── wordquest/
 │   ├── data/
-│   │   └── questions.json   # 635 soru bankası
+│   │   ├── questions-sample.json  # ~20 soru (public, dev testi için)
+│   │   └── questions.json         # 489 soru (git-ignored, private)
 │   └── docs/
-│       └── license-audit.md # Lisans denetim raporu
+│       └── license-audit.md       # Lisans denetim raporu
+├── database/
+│   └── seed.js                    # Supabase seed (sample/full modu)
 └── README.md
 ```
+
+## 🧪 Geliştirme Kurulumu
+
+1. **Bağımlılıklar:** `npm install`
+2. **Env dosyası:** `.env.example` → `.env.local` kopyala, Supabase değerlerini doldur
+3. **Dev sunucu:** `npm run dev` (http://localhost:3000)
+
+### Soru Bankası Seed
+
+```bash
+# Varsayılan: sample dosyası (~20 soru, dev testleri için)
+node database/seed.js
+
+# Full dataset (maintainer'dan al, private/questions.json veya custom path)
+node database/seed.js --full
+QUESTIONS_JSON_PATH=/yol/questions.json node database/seed.js --full
+```
+
+Full dataset git'te takip edilmez (`.gitignore` ile `wordquest/data/` ve `/private/` hariç). Yeni gelistiriciler maintainer ile iletisime geçer.
 
 ---
 
