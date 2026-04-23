@@ -1,44 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockGetUser, mockCheckAdmin, mockRangeResult, mockUpdateEq } = vi.hoisted(() => ({
+const { mockGetUser, mockCheckAdmin, mockRpc, mockUpdateEq } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockCheckAdmin: vi.fn(),
-  mockRangeResult: vi.fn(),
+  mockRpc: vi.fn(),
   mockUpdateEq: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mockGetUser },
+    rpc: mockRpc,
     from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        order: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            range: mockRangeResult,
-          })),
-          range: mockRangeResult,
-        })),
-      })),
       update: vi.fn(() => ({
         eq: mockUpdateEq,
       })),
       insert: vi.fn().mockResolvedValue({ error: null }),
     })),
   })),
-}))
-
-vi.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: () => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        order: vi.fn(() => ({
-          eq: vi.fn(() => ({ range: mockRangeResult })),
-          range: mockRangeResult,
-        })),
-      })),
-    })),
-  }),
 }))
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -73,9 +53,8 @@ describe('GET /api/questions', () => {
   it('returns question list for authenticated user', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockCheckAdmin.mockResolvedValue(null)
-    mockRangeResult.mockResolvedValue({
-      data: [{ id: 'q1', game: 'matematik' }],
-      count: 1,
+    mockRpc.mockResolvedValue({
+      data: [{ id: 'q1', game: 'matematik', total_count: 1 }],
       error: null,
     })
 
@@ -83,6 +62,7 @@ describe('GET /api/questions', () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.questions).toHaveLength(1)
+    expect(json.questions[0].total_count).toBeUndefined() // total_count sirade disarida
     expect(json.total).toBe(1)
   })
 
@@ -97,10 +77,40 @@ describe('GET /api/questions', () => {
   it('returns 500 on db error', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockCheckAdmin.mockResolvedValue(null)
-    mockRangeResult.mockResolvedValue({ data: null, count: null, error: { message: 'DB error' } })
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'DB error' } })
 
     const res = await GET(makeGet())
     expect(res.status).toBe(500)
+  })
+
+  it('search parametresi search_questions RPC cagrisina aktarilir (accent-insensitive)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockCheckAdmin.mockResolvedValue(null)
+    mockRpc.mockResolvedValue({ data: [], error: null })
+
+    await GET(makeGet('http://localhost/api/questions?search=cozum&game=matematik'))
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'search_questions',
+      expect.objectContaining({
+        search_q: 'cozum',
+        game_filter: 'matematik',
+        admin_view: false,
+      }),
+    )
+  })
+
+  it('admin ise admin_view=true gecilir (pasif sorulari da goster)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } })
+    mockCheckAdmin.mockResolvedValue({ id: 'admin-1' })
+    mockRpc.mockResolvedValue({ data: [], error: null })
+
+    await GET(makeGet('http://localhost/api/questions'))
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'search_questions',
+      expect.objectContaining({ admin_view: true }),
+    )
   })
 })
 
