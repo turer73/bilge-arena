@@ -1,7 +1,10 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 
-export const runtime = 'edge'
+// Node runtime — Vercel edge function 1 MB limit (Hobby plan) Inter WOFF embed
+// ile aşıldığı için nodejs'e alındı. OG görseli nadir çağrılır (sosyal paylaşım),
+// cold start gecikmesi kullanıcı tarafında fark edilmez.
+export const runtime = 'nodejs'
 
 const interBoldPromise = fetch(
   new URL('./Inter-Bold.woff', import.meta.url),
