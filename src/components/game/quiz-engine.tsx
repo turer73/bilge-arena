@@ -11,6 +11,7 @@ import { useSessionSaver } from '@/lib/hooks/use-session-saver'
 import { useQuizLimit } from '@/lib/hooks/use-quiz-limit'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { trackEvent } from '@/lib/utils/plausible'
+import { trUpper } from '@/lib/utils/tr-text'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 
@@ -202,7 +203,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           <div className="animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
             <div className="mb-1 flex items-center justify-between">
               <span className="text-[9px] font-bold tracking-widest text-[var(--text-sub)]">
-                DENEME SINAVI — {gameDef.name.toUpperCase()}
+                DENEME SINAVI — {trUpper(gameDef.name)}
               </span>
               <span className="text-[10px] font-bold text-[var(--text-sub)]">
                 {quizStore.currentIndex + 1}/{quizStore.questions.length}

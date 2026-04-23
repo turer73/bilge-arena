@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { escapeForLike } from '@/lib/utils/security'
 
 /**
- * GET /api/users/search?q=... — Kullanici arama (arkadas eklemek icin)
- * Sadece giris yapmis kullanicilar kullanabilir.
+ * GET /api/users/search?q=... — Kullanici arama (arkadas eklemek icin).
+ * Accent-insensitive: "ozkan" sorgusu "Özkan" profili bulur (migration 026).
  */
 export async function GET(req: Request) {
   const supabase = await createClient()
@@ -18,12 +17,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ users: [] })
   }
 
-  const { data } = await supabase
-    .from('profiles')
-    .select('id, username, display_name, avatar_url, total_xp')
-    .or(`display_name.ilike.%${escapeForLike(query)}%,username.ilike.%${escapeForLike(query)}%`)
-    .neq('id', user.id)
-    .limit(10)
+  const { data } = await supabase.rpc('search_profiles', {
+    q: query,
+    exclude_id: user.id,
+    result_limit: 10,
+  })
 
   return NextResponse.json({ users: data || [] })
 }

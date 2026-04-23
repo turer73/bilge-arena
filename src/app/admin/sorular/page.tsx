@@ -346,7 +346,7 @@ export default function AdminQuestionsPage() {
                       ? 'bg-[var(--growth)] text-white'
                       : 'border border-[var(--border)] text-[var(--text-sub)]'
                   }`}
-                  title={editContent.answer === i ? 'Dogru cevap' : 'Dogru olarak isaretle'}
+                  title={editContent.answer === i ? 'Doğru cevap' : 'Doğru olarak işaretle'}
                 >
                   {'ABCDE'[i]}
                 </button>

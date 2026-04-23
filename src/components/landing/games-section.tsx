@@ -10,9 +10,9 @@ const GAMES = [
     slug: 'matematik',
     emoji: '\uD83E\uDDEE',
     icon: Calculator,
-    name: 'Matematik Atolyesi',
+    name: 'Matematik Atölyesi',
     sub: 'TYT Mat',
-    desc: 'Problemler, geometri, sayilar — en sik cikan konulara odakli alistirmalar.',
+    desc: 'Problemler, geometri, sayılar — en sık çıkan konulara odaklı alıştırmalar.',
     color: { m: 'var(--focus)', l: 'var(--focus-light)', bg: 'var(--focus-bg)', border: 'var(--focus-border)' },
     count: '200 soru',
     ready: true,
@@ -22,9 +22,9 @@ const GAMES = [
     slug: 'turkce',
     emoji: '\uD83D\uDCDD',
     icon: BookOpen,
-    name: 'Turkce Atolyesi',
-    sub: 'TYT Turkce',
-    desc: 'Paragraf, dil bilgisi, sozcuk turleri — TYT Turkce\'nin nabzini tut.',
+    name: 'Türkçe Atölyesi',
+    sub: 'TYT Türkçe',
+    desc: 'Paragraf, dil bilgisi, sözcük türleri — TYT Türkçe\'nin nabzını tut.',
     color: { m: 'var(--reward)', l: 'var(--reward-light)', bg: 'var(--reward-bg)', border: 'var(--reward-border)' },
     count: '200 soru',
     ready: true,
@@ -34,9 +34,9 @@ const GAMES = [
     slug: 'fen',
     emoji: '\uD83D\uDD2C',
     icon: FlaskConical,
-    name: 'Fen Atolyesi',
+    name: 'Fen Atölyesi',
     sub: 'TYT Fen',
-    desc: 'Biyoloji, Fizik, Kimya — TYT Fen Bilimleri sorulariyla hazirlan.',
+    desc: 'Biyoloji, Fizik, Kimya — TYT Fen Bilimleri sorularıyla hazırlan.',
     color: { m: 'var(--growth)', l: 'var(--growth-light)', bg: 'var(--growth-bg)', border: 'var(--growth-border)' },
     count: '100 soru',
     ready: true,
@@ -46,9 +46,9 @@ const GAMES = [
     slug: 'sosyal',
     emoji: '\uD83C\uDF0D',
     icon: Globe,
-    name: 'Sosyal Atolyesi',
+    name: 'Sosyal Atölyesi',
     sub: 'TYT Sosyal',
-    desc: 'Tarih, Cografya, Felsefe — Sosyal Bilimler sorulariyla pratik yap.',
+    desc: 'Tarih, Coğrafya, Felsefe — Sosyal Bilimler sorularıyla pratik yap.',
     color: { m: 'var(--wisdom)', l: 'var(--wisdom-light)', bg: 'var(--wisdom-bg)', border: 'var(--wisdom-border)' },
     count: '100 soru',
     ready: true,
@@ -58,9 +58,9 @@ const GAMES = [
     slug: 'wordquest',
     emoji: '\uD83D\uDCD6',
     icon: Languages,
-    name: 'Kelime Atolyesi',
-    sub: 'Ingilizce',
-    desc: 'Vocabulary, grammar, cloze test — 489 ozgun soru ile YDT\'ye tam hazirlik.',
+    name: 'Kelime Atölyesi',
+    sub: 'İngilizce',
+    desc: 'Vocabulary, grammar, cloze test — 489 özgün soru ile YDT\'ye tam hazırlık.',
     color: { m: 'var(--focus)', l: 'var(--focus-light)', bg: 'var(--focus-bg)', border: 'var(--focus-border)' },
     count: '489 soru',
     ready: true,
@@ -96,12 +96,12 @@ export function GamesSection({ config }: GamesSectionProps = {}) {
             ) : (
               <>
                 <span className="text-[var(--text)]">Arena </span>
-                <span className="text-[var(--reward-light)]">Oyunlari</span>
+                <span className="text-[var(--reward-light)]">Oyunları</span>
               </>
             )}
           </h2>
           <p className="mx-auto mt-4 max-w-[500px] text-[var(--text-sub)]">
-            {sectionSubtitle || 'Her ders kendi arenasinda. Oyna, kazan, siralamada yuksel.'}
+            {sectionSubtitle || 'Her ders kendi arenasında. Oyna, kazan, sıralamada yüksel.'}
           </p>
         </div>
 
@@ -134,7 +134,7 @@ export function GamesSection({ config }: GamesSectionProps = {}) {
                     {g.emoji}
                   </div>
                   <Badge color={g.colorKey}>
-                    {g.ready ? 'Hazir' : 'Yakinda'}
+                    {g.ready ? 'Hazır' : 'Yakında'}
                   </Badge>
                 </div>
 

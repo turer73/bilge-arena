@@ -1,12 +1,21 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 
-export const runtime = 'edge'
+// Node runtime — Vercel edge function 1 MB limit (Hobby plan) Inter WOFF embed
+// ile aşıldığı için nodejs'e alındı. OG görseli nadir çağrılır (sosyal paylaşım),
+// cold start gecikmesi kullanıcı tarafında fark edilmez.
+export const runtime = 'nodejs'
+
+const interBoldPromise = fetch(
+  new URL('./Inter-Bold.woff', import.meta.url),
+).then((res) => res.arrayBuffer())
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const title = searchParams.get('title') || 'Bilge Arena'
-  const subtitle = searchParams.get('subtitle') || 'YKS Hazirlık Platformu'
+  const subtitle = searchParams.get('subtitle') || 'YKS Hazırlık Platformu'
+
+  const interBold = await interBoldPromise
 
   return new ImageResponse(
     (
@@ -19,10 +28,9 @@ export async function GET(request: NextRequest) {
           alignItems: 'center',
           justifyContent: 'center',
           background: 'linear-gradient(135deg, #0A0E1A 0%, #111827 50%, #0A0E1A 100%)',
-          fontFamily: 'system-ui, sans-serif',
+          fontFamily: 'Inter',
         }}
       >
-        {/* Glow efekti */}
         <div
           style={{
             position: 'absolute',
@@ -36,10 +44,8 @@ export async function GET(request: NextRequest) {
           }}
         />
 
-        {/* Logo emoji */}
         <div style={{ fontSize: 72, marginBottom: 24 }}>⚔️</div>
 
-        {/* Title */}
         <div
           style={{
             fontSize: 56,
@@ -56,7 +62,6 @@ export async function GET(request: NextRequest) {
           {title}
         </div>
 
-        {/* Subtitle */}
         <div
           style={{
             fontSize: 28,
@@ -69,7 +74,6 @@ export async function GET(request: NextRequest) {
           {subtitle}
         </div>
 
-        {/* Footer */}
         <div
           style={{
             position: 'absolute',
@@ -88,6 +92,9 @@ export async function GET(request: NextRequest) {
     {
       width: 1200,
       height: 630,
-    }
+      fonts: [
+        { name: 'Inter', data: interBold, weight: 700, style: 'normal' },
+      ],
+    },
   )
 }

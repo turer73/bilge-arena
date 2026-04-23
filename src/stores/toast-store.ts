@@ -64,7 +64,7 @@ export const toast = {
     playSound('xp')
     useToastStore.getState().addToast({
       type: 'quest',
-      title: 'Gorev Tamamlandi!',
+      title: 'Görev Tamamlandı!',
       description: questTitle,
       icon: '📋',
       duration: 5000,
@@ -74,7 +74,7 @@ export const toast = {
     useToastStore.getState().addToast({
       type: 'streak',
       title: `${count} Seri!`,
-      description: count >= 10 ? 'Durdurulamaz!' : count >= 5 ? 'Ates ustunde!' : 'Devam et!',
+      description: count >= 10 ? 'Durdurulamaz!' : count >= 5 ? 'Ateş üstünde!' : 'Devam et!',
       icon: '🔥',
       duration: 3000,
     }),

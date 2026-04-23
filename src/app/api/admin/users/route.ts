@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission, logAdminAction } from '@/lib/supabase/admin'
-import { escapeForLike } from '@/lib/utils/security'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -21,21 +20,21 @@ export async function GET(request: NextRequest) {
   const limit = 20
   const offset = (page - 1) * limit
 
-  let query = supabase
-    .from('profiles')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
+  // Accent-insensitive arama: "ozkan" -> "Özkan" (migration 026 RPC)
+  // total_count pencere fonksiyonu ile RPC icinden geliyor.
+  const { data: rows } = await supabase.rpc('search_profiles_admin', {
+    q: search || null,
+    result_offset: offset,
+    result_limit: limit,
+  })
 
-  if (search) {
-    const safe = escapeForLike(search)
-    query = query.or(`display_name.ilike.%${safe}%,username.ilike.%${safe}%`)
-  }
-
-  const { data: users, count } = await query.range(offset, offset + limit - 1)
+  const rawRows = (rows ?? []) as Array<{ id: string; total_count: number | string } & Record<string, unknown>>
+  const users: Array<{ id: string } & Record<string, unknown>> = rawRows.map(({ total_count: _tc, ...rest }) => rest)
+  const count = rawRows.length > 0 ? Number(rawRows[0].total_count) : 0
 
   // RBAC: Her kullanıcının atanmış rollerini de getir
-  let usersWithRoles = users || []
-  if (users && users.length > 0) {
+  let usersWithRoles: Array<Record<string, unknown>> = users
+  if (users.length > 0) {
     const userIds = users.map(u => u.id)
     const { data: allUserRoles } = await supabase
       .from('user_roles')

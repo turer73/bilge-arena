@@ -11,7 +11,7 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
 // Prompt production'da CHAT_SYSTEM_PROMPT env'inden okunur.
 // Env yoksa generic bir fallback kullanilir — chat calisir ama kalite dusuk olur.
 // Gercek prompt Vercel/Supabase env'lerine yazilir; repo'da saklamayiz.
-const SYSTEM_PROMPT_FALLBACK = `Sen bir YKS asistanisin. Turkce konus, net ve kisa cevapla. Soruyu ogrenci seviyesinde adim adim coz.`
+const SYSTEM_PROMPT_FALLBACK = `Sen bir YKS asistanısın. Türkçe konuş, net ve kısa cevapla. Soruyu öğrenci seviyesinde adım adım çöz.`
 
 const SYSTEM_PROMPT = process.env.CHAT_SYSTEM_PROMPT || SYSTEM_PROMPT_FALLBACK
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   if (authError || !user) {
     return NextResponse.json(
-      { error: 'Bu ozelligi kullanmak icin giris yapmaniz gerekiyor.' },
+      { error: 'Bu özelliği kullanmak için giriş yapmanız gerekiyor.' },
       { status: 401 }
     )
   }

@@ -139,7 +139,7 @@ describe('SignupPromptModal', () => {
       fireEvent.change(input, { target: { value: 'bozuk' } })
       fireEvent.click(screen.getByText('Giris Linki Gonder'))
       // Validation error beklenir (asenkron degil, senkron)
-      expect(await screen.findByText(/Gecerli bir email/)).toBeInTheDocument()
+      expect(await screen.findByText(/Geçerli bir e-posta/)).toBeInTheDocument()
       expect(signInWithMagicLinkMock).not.toHaveBeenCalled()
     })
 
@@ -192,7 +192,7 @@ describe('SignupPromptModal', () => {
       await act(async () => {
         fireEvent.click(screen.getByText('Giris Linki Gonder'))
       })
-      expect(screen.getByText(/Cok fazla istek/)).toBeInTheDocument()
+      expect(screen.getByText(/Çok fazla istek/)).toBeInTheDocument()
     })
 
     it('Level 3 hard wall: magic link yine gorunur (alternatif primary action)', () => {

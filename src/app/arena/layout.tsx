@@ -7,7 +7,7 @@ const OnboardingOverlay = dynamic(() => import('@/components/onboarding/onboardi
 
 export const metadata: Metadata = {
   title: 'Arena',
-  description: 'Bilge Arena oyun alani. Matematik, Turkce, Fen, Sosyal ve Ingilizce sorulari coz, XP kazan, siralamalarda yuksel!',
+  description: 'Bilge Arena oyun alanı. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çöz, XP kazan, sıralamalarda yüksel!',
 }
 
 export default function ArenaLayout({

@@ -12,11 +12,11 @@ interface SettingDef {
 }
 
 const SETTING_DEFS: SettingDef[] = [
-  { key: 'maintenance_mode', label: 'Bakim Modu', description: 'Siteyi gecici olarak kapatir', type: 'toggle', defaultValue: false, icon: '🔧' },
-  { key: 'registration_enabled', label: 'Kayit Acik', description: 'Yeni kullanici kaydi yapilabilir', type: 'toggle', defaultValue: true, icon: '📝' },
-  { key: 'daily_quest_count', label: 'Gunluk Gorev Sayisi', description: 'Her gun kac gorev verilecek', type: 'number', defaultValue: 3, icon: '🎯' },
-  { key: 'max_chat_messages_guest', label: 'Misafir Chat Limiti', description: 'Misafirlerin gunluk chat mesaj limiti', type: 'number', defaultValue: 5, icon: '💬' },
-  { key: 'max_chat_messages_user', label: 'Kullanici Chat Limiti', description: 'Kayitli kullanicilarin gunluk chat mesaj limiti', type: 'number', defaultValue: 20, icon: '💬' },
+  { key: 'maintenance_mode', label: 'Bakım Modu', description: 'Siteyi geçici olarak kapatır', type: 'toggle', defaultValue: false, icon: '🔧' },
+  { key: 'registration_enabled', label: 'Kayıt Açık', description: 'Yeni kullanıcı kaydı yapılabilir', type: 'toggle', defaultValue: true, icon: '📝' },
+  { key: 'daily_quest_count', label: 'Günlük Görev Sayısı', description: 'Her gün kaç görev verilecek', type: 'number', defaultValue: 3, icon: '🎯' },
+  { key: 'max_chat_messages_guest', label: 'Misafir Sohbet Limiti', description: 'Misafirlerin günlük sohbet mesaj limiti', type: 'number', defaultValue: 5, icon: '💬' },
+  { key: 'max_chat_messages_user', label: 'Kullanıcı Sohbet Limiti', description: 'Kayıtlı kullanıcıların günlük sohbet mesaj limiti', type: 'number', defaultValue: 20, icon: '💬' },
 ]
 
 export default function AdminSettingsPage() {
@@ -29,7 +29,7 @@ export default function AdminSettingsPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/admin/settings')
-      if (!res.ok) throw new Error('Ayarlar yuklenemedi')
+      if (!res.ok) throw new Error('Ayarlar yüklenemedi')
       const data = await res.json()
       const serverValues: Record<string, boolean | number> = {}
       // Sunucudan gelen degerleri parse et, yoksa default kullan
@@ -47,7 +47,7 @@ export default function AdminSettingsPage() {
       }
       setValues(serverValues)
     } catch (err) {
-      console.error('Ayar yukleme hatasi:', err)
+      console.error('Ayar yükleme hatası:', err)
       // Hata durumunda default degerleri kullan
       const defaults: Record<string, boolean | number> = {}
       for (const def of SETTING_DEFS) {
@@ -64,7 +64,7 @@ export default function AdminSettingsPage() {
   }, [fetchSettings])
 
   const updateSetting = async (key: string, value: boolean | number) => {
-    // Iyimser guncelleme
+    // İyimser güncelleme
     const prev = values[key]
     setValues((v) => ({ ...v, [key]: value }))
     setSaving(key)
@@ -92,8 +92,8 @@ export default function AdminSettingsPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Site Ayarlari</h1>
-        <p className="text-sm text-[var(--text-sub)]">Genel platform yapilandirmasi</p>
+        <h1 className="text-2xl font-bold">Site Ayarları</h1>
+        <p className="text-sm text-[var(--text-sub)]">Genel platform yapılandırması</p>
       </div>
 
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)]">
@@ -122,7 +122,7 @@ export default function AdminSettingsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold">{setting.label}</span>
                       {isSaving && (
-                        <span className="text-[10px] text-[var(--text-sub)]">kaydediliyor...</span>
+                        <span className="text-[10px] text-[var(--text-sub)]">kaydediliyor…</span>
                       )}
                       {justSaved && (
                         <span className="text-[10px] font-bold text-[var(--growth)]">✓</span>
@@ -173,7 +173,7 @@ export default function AdminSettingsPage() {
       </div>
 
       <div className="mt-4 text-center text-[11px] text-[var(--text-sub)]">
-        Degisiklikler otomatik olarak kaydedilir
+        Değişiklikler otomatik olarak kaydedilir
       </div>
     </div>
   )

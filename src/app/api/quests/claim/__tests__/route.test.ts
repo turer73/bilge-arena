@@ -109,7 +109,7 @@ describe('POST /api/quests/claim', () => {
     const res = await POST(makeRequest({ questId: 'q1' }))
     expect(res.status).toBe(400)
     const json = await res.json()
-    expect(json.error).toContain('tamamlanmadi')
+    expect(json.error).toContain('tamamlanmadı')
   })
 
   it('returns 400 if XP already claimed', async () => {

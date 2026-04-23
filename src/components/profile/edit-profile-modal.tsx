@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { refreshProfile } from '@/lib/hooks/use-auth'
 import { toast } from '@/stores/toast-store'
+import { trUpper } from '@/lib/utils/tr-text'
 import { X, Camera, Trash2 } from 'lucide-react'
 import type { Profile } from '@/types/database'
 
@@ -32,7 +33,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     if (!file) return
 
     if (file.size > 1024 * 1024) {
-      toast.error('Dosya en fazla 1MB olmali')
+      toast.error('Dosya en fazla 1MB olmalı')
       return
     }
 
@@ -52,14 +53,14 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
       const data = await res.json()
 
       if (res.ok) {
-        toast.success('Avatar guncellendi')
+        toast.success('Avatar güncellendi')
         setAvatarFile(null)
         await refreshProfile()
       } else {
-        toast.error(data.error || 'Avatar yuklenemedi')
+        toast.error(data.error || 'Avatar yüklenemedi')
       }
     } catch {
-      toast.error('Bir hata olustu')
+      toast.error('Bir hata oluştu')
     }
     setUploadingAvatar(false)
   }
@@ -69,20 +70,20 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     try {
       const res = await fetch('/api/profile/avatar', { method: 'DELETE' })
       if (res.ok) {
-        toast.success('Avatar kaldirildi')
+        toast.success('Avatar kaldırıldı')
         setAvatarPreview(null)
         setAvatarFile(null)
         await refreshProfile()
       }
     } catch {
-      toast.error('Bir hata olustu')
+      toast.error('Bir hata oluştu')
     }
     setUploadingAvatar(false)
   }
 
   const handleSave = async () => {
     if (displayName.trim().length < 2) {
-      toast.error('Isim en az 2 karakter olmali')
+      toast.error('İsim en az 2 karakter olmalı')
       return
     }
 
@@ -104,14 +105,14 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
 
       const data = await res.json()
       if (res.ok) {
-        toast.success('Profil guncellendi')
+        toast.success('Profil güncellendi')
         await refreshProfile()
         onClose()
       } else {
-        toast.error(data.error || 'Profil guncellenemedi')
+        toast.error(data.error || 'Profil güncellenemedi')
       }
     } catch {
-      toast.error('Bir hata olustu')
+      toast.error('Bir hata oluştu')
     }
     setSaving(false)
   }
@@ -121,7 +122,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
       <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-3">
-          <h2 className="text-sm font-bold">Profili Duzenle</h2>
+          <h2 className="text-sm font-bold">Profili Düzenle</h2>
           <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-[var(--surface)]">
             <X size={16} />
           </button>
@@ -140,7 +141,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                 />
               ) : (
                 <div className="flex h-20 w-20 items-center justify-center rounded-full border-[3px] border-[var(--border)] bg-[var(--surface)] text-3xl">
-                  {(displayName || 'A').charAt(0).toUpperCase()}
+                  {trUpper((displayName || 'A').charAt(0))}
                 </div>
               )}
               <button
@@ -164,14 +165,14 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                 className="flex items-center gap-1 text-[10px] text-[var(--urgency)] hover:underline disabled:opacity-50"
               >
                 <Trash2 size={10} />
-                Avatari Kaldir
+                Avatarı Kaldır
               </button>
             )}
           </div>
 
-          {/* Isim */}
+          {/* İsim */}
           <div>
-            <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SITE ICI AD</label>
+            <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SİTE İÇİ AD</label>
             <input
               type="text"
               value={displayName}
@@ -182,20 +183,20 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
             <p className="mt-0.5 text-[9px] text-[var(--text-sub)]">{displayName.length}/30</p>
           </div>
 
-          {/* Sehir */}
+          {/* Şehir */}
           <div>
-            <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SEHIR</label>
+            <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">ŞEHİR</label>
             <input
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="Istanbul, Ankara..."
+              placeholder="İstanbul, Ankara..."
               maxLength={50}
               className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
             />
           </div>
 
-          {/* Sinif */}
+          {/* Sınıf */}
           <div>
             <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SINIF</label>
             <select
@@ -203,11 +204,11 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
               onChange={(e) => setGrade(e.target.value)}
               className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
             >
-              <option value="">Secin...</option>
-              <option value="9">9. Sinif</option>
-              <option value="10">10. Sinif</option>
-              <option value="11">11. Sinif</option>
-              <option value="12">12. Sinif</option>
+              <option value="">Seçin...</option>
+              <option value="9">9. Sınıf</option>
+              <option value="10">10. Sınıf</option>
+              <option value="11">11. Sınıf</option>
+              <option value="12">12. Sınıf</option>
               <option value="mezun">Mezun</option>
             </select>
           </div>
@@ -219,7 +220,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
             onClick={onClose}
             className="rounded-lg px-4 py-2 text-xs font-medium text-[var(--text-sub)] hover:bg-[var(--surface)]"
           >
-            Iptal
+            İptal
           </button>
           <button
             onClick={handleSave}

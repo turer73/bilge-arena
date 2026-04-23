@@ -6,6 +6,8 @@ const mockGetUser = vi.fn()
 const mockCheckPermission = vi.fn()
 const mockInviteUserByEmail = vi.fn()
 const mockInsert = vi.fn()
+const mockRpc = vi.fn()
+const mockUserRolesIn = vi.fn()
 
 function makeChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {}
@@ -16,7 +18,14 @@ function makeChain() {
   return chain
 }
 
-const mockFrom = vi.fn(() => {
+const mockFrom = vi.fn((table: string) => {
+  if (table === 'user_roles') {
+    return {
+      select: vi.fn(() => ({
+        in: mockUserRolesIn,
+      })),
+    }
+  }
   const chain = makeChain()
   chain.insert = mockInsert.mockResolvedValue({ data: null, error: null })
   return chain
@@ -26,6 +35,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mockGetUser },
     from: mockFrom,
+    rpc: mockRpc,
   })),
 }))
 
@@ -50,7 +60,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
   }),
 }))
 
-import { POST } from '../route'
+import { POST, GET } from '../route'
 
 // ─── Helpers ────────────────────────────────────────
 
@@ -156,5 +166,72 @@ describe('POST /api/admin/users', () => {
 
     const data = await res.json()
     expect(data.error).toBe('Bu e-posta adresi zaten kayıtlı')
+  })
+})
+
+describe('GET /api/admin/users', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function makeGetRequest(search?: string) {
+    const url = search
+      ? `http://localhost/api/admin/users?search=${encodeURIComponent(search)}`
+      : 'http://localhost/api/admin/users'
+    return new Request(url) as import('next/server').NextRequest
+  }
+
+  it('returns 403 if not authorized', async () => {
+    mockCheckPermission.mockResolvedValue(null)
+    const res = await GET(makeGetRequest())
+    expect(res.status).toBe(403)
+  })
+
+  it('search parametresi search_profiles_admin RPC cagrisina aktarilir (accent-insensitive)', async () => {
+    mockCheckPermission.mockResolvedValue(ADMIN_USER)
+    mockRpc.mockResolvedValue({ data: [], error: null })
+    mockUserRolesIn.mockResolvedValue({ data: [] })
+
+    const res = await GET(makeGetRequest('ozkan'))
+    expect(res.status).toBe(200)
+
+    expect(mockRpc).toHaveBeenCalledWith('search_profiles_admin', {
+      q: 'ozkan',
+      result_offset: 0,
+      result_limit: 20,
+    })
+  })
+
+  it('bos arama icin q null gecilir (filtresiz liste)', async () => {
+    mockCheckPermission.mockResolvedValue(ADMIN_USER)
+    mockRpc.mockResolvedValue({ data: [], error: null })
+    mockUserRolesIn.mockResolvedValue({ data: [] })
+
+    await GET(makeGetRequest())
+    expect(mockRpc).toHaveBeenCalledWith('search_profiles_admin', {
+      q: null,
+      result_offset: 0,
+      result_limit: 20,
+    })
+  })
+
+  it('total_count RPC penceresinden okunur, users payload bu alanlari icermez', async () => {
+    mockCheckPermission.mockResolvedValue(ADMIN_USER)
+    mockRpc.mockResolvedValue({
+      data: [
+        { id: 'u1', username: 'a', display_name: 'A', total_count: 42 },
+        { id: 'u2', username: 'b', display_name: 'B', total_count: 42 },
+      ],
+      error: null,
+    })
+    mockUserRolesIn.mockResolvedValue({ data: [] })
+
+    const res = await GET(makeGetRequest())
+    const json = await res.json()
+
+    expect(json.total).toBe(42)
+    expect(json.users).toHaveLength(2)
+    expect(json.users[0].total_count).toBeUndefined()
+    expect(json.users[0].id).toBe('u1')
   })
 })

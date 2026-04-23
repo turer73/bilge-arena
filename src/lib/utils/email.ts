@@ -12,6 +12,8 @@
  * - Kurumsal email tesvik: bilgearena.com kendi domaini olan kullaniciyi flag'le
  */
 
+import { trLower } from './tr-text'
+
 const MAX_EMAIL_LENGTH = 254 // RFC 5321 uyumlu
 const BASIC_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -25,7 +27,7 @@ export type EmailValidationError = 'empty' | 'invalid' | 'too_long'
  * Email dogrulama. Basariliysa trim + lowercase normalize edilmis email doner.
  */
 export function validateEmail(raw: string): EmailValidationResult {
-  const normalized = raw.trim().toLowerCase()
+  const normalized = trLower(raw.trim())
 
   if (!normalized) {
     return { ok: false, reason: 'empty' }
@@ -48,10 +50,10 @@ export function validateEmail(raw: string): EmailValidationResult {
 export function getEmailErrorMessage(reason: EmailValidationError): string {
   switch (reason) {
     case 'empty':
-      return 'Email adresi bos birakilamaz.'
+      return 'E-posta adresi boş bırakılamaz.'
     case 'invalid':
-      return 'Gecerli bir email adresi gir (ornek: ad@domain.com).'
+      return 'Geçerli bir e-posta adresi gir (örnek: ad@domain.com).'
     case 'too_long':
-      return 'Email adresi cok uzun.'
+      return 'E-posta adresi çok uzun.'
   }
 }

@@ -51,9 +51,9 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
 
   const effectiveTopic = topic === '__custom__' ? customTopic : topic
 
-  // ── AI Uretim ──────────────────────────────────────
+  // ── AI Üretim ──────────────────────────────────────
   const handleGenerate = async () => {
-    if (!category) { toast.error('Kategori secin'); return }
+    if (!category) { toast.error('Kategori seçin'); return }
     setLoading(true)
     setPreview([])
 
@@ -75,20 +75,20 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
         setPreview([])
         onGenerated?.()
       } else {
-        toast.error(data.error || 'Uretim basarisiz')
+        toast.error(data.error || 'Üretim başarısız')
       }
     } catch {
-      toast.error('Bir hata olustu')
+      toast.error('Bir hata oluştu')
     }
     setLoading(false)
   }
 
   // ── Manuel Kaydet ──────────────────────────────────
   const handleManualSave = async () => {
-    if (!category) { toast.error('Kategori secin'); return }
-    if (!manualQ || manualQ.length < 10) { toast.error('Soru en az 10 karakter olmali'); return }
-    if (manualOpts.some(o => !o.trim())) { toast.error('Tum secenekleri doldurun'); return }
-    if (!manualSolution || manualSolution.length < 5) { toast.error('Cozum en az 5 karakter olmali'); return }
+    if (!category) { toast.error('Kategori seçin'); return }
+    if (!manualQ || manualQ.length < 10) { toast.error('Soru en az 10 karakter olmalı'); return }
+    if (manualOpts.some(o => !o.trim())) { toast.error('Tüm seçenekleri doldurun'); return }
+    if (!manualSolution || manualSolution.length < 5) { toast.error('Çözüm en az 5 karakter olmalı'); return }
 
     setManualSaving(true)
     try {
@@ -114,10 +114,10 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
         setManualSolution('')
         onGenerated?.()
       } else {
-        toast.error(data.error || 'Kayit basarisiz')
+        toast.error(data.error || 'Kayıt başarısız')
       }
     } catch {
-      toast.error('Bir hata olustu')
+      toast.error('Bir hata oluştu')
     }
     setManualSaving(false)
   }
@@ -142,7 +142,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                 tab === 'ai' ? 'bg-[var(--focus)] text-white' : 'text-[var(--text-sub)] hover:text-[var(--text)]'
               }`}
             >
-              AI ile Uret
+              AI ile Üret
             </button>
             <button
               onClick={() => setTab('manual')}
@@ -170,13 +170,13 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
             </div>
 
             <div>
-              <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">KATEGORI</label>
+              <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">KATEGORİ</label>
               <select
                 value={category}
                 onChange={(e) => { setCategory(e.target.value); setTopic('') }}
                 className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
               >
-                <option value="">Sec...</option>
+                <option value="">Seç...</option>
                 {gameDef.categories.map((cat) => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
@@ -190,7 +190,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                 onChange={(e) => setTopic(e.target.value)}
                 className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
               >
-                <option value="">Tumu</option>
+                <option value="">Tümü</option>
                 {topics.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
@@ -201,7 +201,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                   type="text"
                   value={customTopic}
                   onChange={(e) => setCustomTopic(e.target.value)}
-                  placeholder="Konu adini yaz..."
+                  placeholder="Konu adını yaz..."
                   className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
                 />
               )}
@@ -216,7 +216,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
               >
                 {[1, 2, 3, 4, 5].map((d) => (
                   <option key={d} value={d}>
-                    {d} - {['Kolay', 'Orta', 'Zor', 'Cok Zor', 'Uzman'][d - 1]}
+                    {d} - {['Kolay', 'Orta', 'Zor', 'Çok Zor', 'Uzman'][d - 1]}
                   </option>
                 ))}
               </select>
@@ -245,18 +245,18 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                   disabled={loading || !category}
                   className="mt-4 rounded-lg bg-[var(--focus)] px-6 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
-                  {loading ? 'Uretiliyor...' : 'AI ile Uret'}
+                  {loading ? 'Üretiliyor...' : 'AI ile Üret'}
                 </button>
               </div>
 
               <p className="mt-2 text-[10px] text-[var(--text-sub)]">
-                Uretilenler pasif olarak kaydedilir. Soru listesinden aktif hale getirin.
+                Üretilenler pasif olarak kaydedilir. Soru listesinden aktif hale getirin.
               </p>
 
               {/* Onizleme */}
               {preview.length > 0 && (
                 <div className="mt-4 space-y-3">
-                  <h4 className="text-xs font-bold text-[var(--text-sub)]">ONIZLEME ({preview.length} soru)</h4>
+                  <h4 className="text-xs font-bold text-[var(--text-sub)]">ÖNİZLEME ({preview.length} soru)</h4>
                   {preview.map((q, i) => (
                     <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-3">
                       <div className="flex items-start justify-between gap-2">
@@ -278,7 +278,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                         ))}
                       </div>
                       {q.solution && (
-                        <p className="mt-1 text-[10px] text-[var(--text-sub)]">Cozum: {q.solution}</p>
+                        <p className="mt-1 text-[10px] text-[var(--text-sub)]">Çözüm: {q.solution}</p>
                       )}
                     </div>
                   ))}
@@ -291,18 +291,18 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
           {tab === 'manual' && (
             <div className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SORU METNI</label>
+                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SORU METNİ</label>
                 <textarea
                   value={manualQ}
                   onChange={(e) => setManualQ(e.target.value)}
-                  placeholder="Soru metnini yazin..."
+                  placeholder="Soru metnini yazın..."
                   rows={3}
                   className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-[var(--text-sub)]">SECENEKLER (dogru olani tiklayin)</label>
+                <label className="block text-[10px] font-bold text-[var(--text-sub)]">SEÇENEKLER (doğru olanı tıklayın)</label>
                 {manualOpts.map((opt, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <button
@@ -324,7 +324,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                         next[i] = e.target.value
                         setManualOpts(next)
                       }}
-                      placeholder={`${String.fromCharCode(65 + i)} secenegi`}
+                      placeholder={`${String.fromCharCode(65 + i)} seçeneği`}
                       className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs"
                     />
                   </div>
@@ -332,11 +332,11 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
               </div>
 
               <div>
-                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">COZUM ACIKLAMASI</label>
+                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">ÇÖZÜM AÇIKLAMASI</label>
                 <textarea
                   value={manualSolution}
                   onChange={(e) => setManualSolution(e.target.value)}
-                  placeholder="Cozum aciklamasi..."
+                  placeholder="Çözüm açıklaması..."
                   rows={2}
                   className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
                 />
@@ -350,7 +350,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                 {manualSaving ? 'Kaydediliyor...' : 'Kaydet (Aktif)'}
               </button>
               <p className="text-[10px] text-[var(--text-sub)]">
-                Manuel eklenen sorular dogrudan aktif olarak kaydedilir.
+                Manuel eklenen sorular doğrudan aktif olarak kaydedilir.
               </p>
             </div>
           )}

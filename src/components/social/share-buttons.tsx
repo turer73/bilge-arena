@@ -13,8 +13,8 @@ interface ShareButtonsProps {
 export function ShareButtons({ rank, score, total, xp, gameName }: ShareButtonsProps) {
   const pct = total > 0 ? Math.round((score / total) * 100) : 0
   const text = gameName
-    ? `Bilge Arena'da ${gameName} oyununda ${rank} rank aldim! ${score}/${total} dogru (%${pct}) - ${xp} XP kazandim! 🏆`
-    : `Bilge Arena'da ${rank} rank aldim! ${score}/${total} dogru (%${pct}) - ${xp} XP kazandim! 🏆`
+    ? `Bilge Arena'da ${gameName} oyununda ${rank} rank aldım! ${score}/${total} doğru (%${pct}) - ${xp} XP kazandım! 🏆`
+    : `Bilge Arena'da ${rank} rank aldım! ${score}/${total} doğru (%${pct}) - ${xp} XP kazandım! 🏆`
 
   const url = 'https://bilgearena.com'
   const encodedText = encodeURIComponent(text)

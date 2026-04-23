@@ -1,7 +1,7 @@
 {
-  "name": "Bilge Arena — YKS Hazirlik",
+  "name": "Bilge Arena — YKS Hazırlık",
   "short_name": "Bilge Arena",
-  "description": "Oyunlastirilmis YKS hazirlık platformu. Matematik, Turkce, Fen, Sosyal ve Ingilizce sorulari coz, XP kazan, yuksel!",
+  "description": "Oyunlaştırılmış YKS hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çöz, XP kazan, yüksel!",
   "start_url": "/arena",
   "scope": "/",
   "display": "standalone",
