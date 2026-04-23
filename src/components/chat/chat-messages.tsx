@@ -11,10 +11,10 @@ interface ChatMessagesProps {
 }
 
 const QUICK_ACTIONS = [
-  { label: 'Bu soruyu coz', prompt: 'Bu soruyu adim adim cozer misin? Cozumu detayli acikla.' },
-  { label: 'Konu anlat', prompt: 'Bu sorunun konusunu kisa ve net bir sekilde anlatir misin? Gunluk hayattan ornek ver.' },
-  { label: 'Ornek soru sor', prompt: 'Bu konuyla ilgili bana benzer bir ornek soru sorabilir misin?' },
-  { label: 'Calisma onerisi', prompt: 'Bu konu icin etkili calisma stratejisi onerir misin? Hangi konulara oncelik vermeliyim?' },
+  { label: 'Bu soruyu çöz', prompt: 'Bu soruyu adım adım çözer misin? Çözümü detaylı açıkla.' },
+  { label: 'Konu anlat', prompt: 'Bu sorunun konusunu kısa ve net bir şekilde anlatır mısın? Günlük hayattan örnek ver.' },
+  { label: 'Örnek soru sor', prompt: 'Bu konuyla ilgili bana benzer bir örnek soru sorabilir misin?' },
+  { label: 'Çalışma önerisi', prompt: 'Bu konu için etkili çalışma stratejisi önerir misin? Hangi konulara öncelik vermeliyim?' },
 ]
 
 export function ChatMessages({ messages, isLoading, onQuickAction }: ChatMessagesProps) {
@@ -40,7 +40,7 @@ export function ChatMessages({ messages, isLoading, onQuickAction }: ChatMessage
           </div>
         ) : (
           <div className="text-[11px] leading-relaxed text-[var(--text-sub)]">
-            Merhaba! Soru cozumu, konu anlatimi veya calisma onerileri icin buradayim.
+            Merhaba! Soru çözümü, konu anlatımı veya çalışma önerileri için buradayım.
           </div>
         )}
         <div className="flex flex-wrap justify-center gap-1.5">

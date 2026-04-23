@@ -20,7 +20,7 @@ interface LeaderboardTableProps {
 const MEDALS = ['🥇', '🥈', '🥉']
 const MEDAL_COLORS = ['var(--reward)', '#CBD5E1', '#CD7F32']
 
-export function LeaderboardTable({ entries, title = 'Haftalik Siralama' }: LeaderboardTableProps) {
+export function LeaderboardTable({ entries, title = 'Haftalık Sıralama' }: LeaderboardTableProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)]">
       {/* Header */}

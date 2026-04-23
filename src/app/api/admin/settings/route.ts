@@ -29,19 +29,19 @@ export async function GET() {
 
 // ─── Setting Validasyon Kuralları ──────────────────────
 const SETTING_VALIDATORS: Record<string, (v: unknown) => string | null> = {
-  maintenance_mode: (v) => typeof v === 'boolean' ? null : 'Boolean olmali',
-  registration_enabled: (v) => typeof v === 'boolean' ? null : 'Boolean olmali',
+  maintenance_mode: (v) => typeof v === 'boolean' ? null : 'Boolean olmalı',
+  registration_enabled: (v) => typeof v === 'boolean' ? null : 'Boolean olmalı',
   daily_quest_count: (v) => {
     const n = Number(v)
-    return Number.isInteger(n) && n >= 1 && n <= 10 ? null : '1-10 arasi tam sayi olmali'
+    return Number.isInteger(n) && n >= 1 && n <= 10 ? null : '1-10 arası tam sayı olmalı'
   },
   max_chat_messages_guest: (v) => {
     const n = Number(v)
-    return Number.isInteger(n) && n >= 0 && n <= 100 ? null : '0-100 arasi tam sayi olmali'
+    return Number.isInteger(n) && n >= 0 && n <= 100 ? null : '0-100 arası tam sayı olmalı'
   },
   max_chat_messages_user: (v) => {
     const n = Number(v)
-    return Number.isInteger(n) && n >= 1 && n <= 500 ? null : '1-500 arasi tam sayi olmali'
+    return Number.isInteger(n) && n >= 1 && n <= 500 ? null : '1-500 arası tam sayı olmalı'
   },
 }
 
@@ -66,7 +66,7 @@ export async function PATCH(request: NextRequest) {
   }
   const err = validator(value)
   if (err) {
-    return NextResponse.json({ error: `Gecersiz deger: ${err}` }, { status: 400 })
+    return NextResponse.json({ error: `Geçersiz değer: ${err}` }, { status: 400 })
   }
 
   const svc = createServiceRoleClient()

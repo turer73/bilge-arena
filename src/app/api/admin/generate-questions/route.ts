@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
+import { trLower } from '@/lib/utils/tr-text'
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -79,25 +80,25 @@ const CATEGORY_LABELS: Record<string, string> = {
 // Placeholder'lar: {categoryLabel}, {langRule}, {topicList}
 // KRITIK: JSON key guardrail'i ("question", "options"...) fallback'te zorunlu — Gemini
 // aksi halde Turkce key uretip JSON.parse'i patlatiyor (observed behavior, 2025-11).
-const QUESTION_GEN_PROMPT_FALLBACK = `Sen YKS soru uretiyorsun. Kategori: {categoryLabel}.
-- Her soru 5 secenekli (A-E), 1 dogru cevap (index 0-4)
+const QUESTION_GEN_PROMPT_FALLBACK = `Sen YKS soru üretiyorsun. Kategori: {categoryLabel}.
+- Her soru 5 seçenekli (A-E), 1 doğru cevap (index 0-4)
 - {langRule}
-- Zorluk seviyesine uygun, cozum kisa ve net olmali
-- JSON formatinda dondur
+- Zorluk seviyesine uygun, çözüm kısa ve net olmalı
+- JSON formatında döndür
 {topicList}
 
-CIKTI FORMATI — JSON key isimleri INGILIZCE olmali:
-[{"question":"Soru metni","options":["A","B","C","D","E"],"answer":0,"solution":"Cozum","topic":"Konu"}]
+ÇIKTI FORMATI — JSON key isimleri İngilizce olmalı:
+[{"question":"Soru metni","options":["A","B","C","D","E"],"answer":0,"solution":"Çözüm","topic":"Konu"}]
 
-KRITIK: JSON anahtarlari MUTLAKA "question", "options", "answer", "solution", "topic" olmali.
-Turkce key KULLANMA. SADECE JSON dondur, baska hicbir sey yazma.`
+KRİTİK: JSON anahtarları MUTLAKA "question", "options", "answer", "solution", "topic" olmalı.
+Türkçe key KULLANMA. SADECE JSON döndür, başka hiçbir şey yazma.`
 
 function buildSystemPrompt(game: string, category: string): string {
   const isEnglish = game === 'wordquest'
   const categoryLabel = CATEGORY_LABELS[category] || category
   const topics = TOPIC_MAP[game]?.[category] || []
   const topicList = topics.length > 0 ? `\nBu kategorideki YKS konulari: ${topics.join(', ')}` : ''
-  const langRule = isEnglish ? 'Soru metni Ingilizce, cozum Turkce olmali' : 'Turkce yazilmali'
+  const langRule = isEnglish ? 'Soru metni İngilizce, çözüm Türkçe olmalı' : 'Türkçe yazılmalı'
 
   const template = process.env.QUESTION_GEN_PROMPT_TEMPLATE || QUESTION_GEN_PROMPT_FALLBACK
 
@@ -169,7 +170,7 @@ export async function POST(req: Request) {
     if (existing) {
       for (const e of existing) {
         const c = e.content as { question?: string; sentence?: string }
-        const text = (c.question || c.sentence || '').slice(0, 50).toLowerCase()
+        const text = trLower((c.question || c.sentence || '').slice(0, 50))
         if (text) existingPrefixes.add(text)
       }
     }
@@ -263,13 +264,13 @@ Soru sayisi: ${count}${fewShotText}`
       .map((r) => (r as { success: true; data: QData }).data)
 
     if (validQuestions.length === 0) {
-      return NextResponse.json({ error: 'AI gecerli soru uretemedi', raw: text }, { status: 502 })
+      return NextResponse.json({ error: 'AI geçerli soru üretemedi', raw: text }, { status: 502 })
     }
 
     // ── Duplicate filtre ──────────────────────────────
     let duplicateCount = 0
     const uniqueQuestions = validQuestions.filter((q) => {
-      const prefix = q.question.slice(0, 50).toLowerCase()
+      const prefix = trLower(q.question.slice(0, 50))
       if (existingPrefixes.has(prefix)) {
         duplicateCount++
         return false

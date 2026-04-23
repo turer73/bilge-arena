@@ -9,6 +9,7 @@ import { Logo } from './logo'
 import { ThemeToggle } from './theme-toggle'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { trUpper } from '@/lib/utils/tr-text'
 
 const NAV_LINKS = [
   { href: '/', label: 'Ana Sayfa' },
@@ -109,7 +110,7 @@ export function Navbar() {
                     />
                   ) : (
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus)] text-sm font-bold text-white">
-                      {(profile?.username || profile?.display_name || user.email || '?')[0].toUpperCase()}
+                      {trUpper((profile?.username || profile?.display_name || user.email || '?')[0])}
                     </div>
                   )}
                 </button>

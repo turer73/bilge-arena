@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const rl = await pushLimiter.check(user.id)
-  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+  if (!rl.success) return NextResponse.json({ error: 'Çok hızlı istek' }, { status: 429 })
 
   const body = await req.json()
   const parsed = pushSubscribeSchema.safeParse(body)
@@ -32,8 +32,8 @@ export async function POST(req: Request) {
     )
 
   if (error) {
-    console.error('[Push API] Kayit hatasi:', error)
-    return NextResponse.json({ error: 'Kayit basarisiz' }, { status: 500 })
+    console.error('[Push API] Kayıt hatası:', error)
+    return NextResponse.json({ error: 'Kayıt başarısız' }, { status: 500 })
   }
 
   return NextResponse.json({ status: 'subscribed' })

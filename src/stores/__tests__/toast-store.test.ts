@@ -98,7 +98,7 @@ describe('toast helper fonksiyonlari', () => {
     toast.quest('3 oyun oyna')
     const t = useToastStore.getState().toasts[0]
     expect(t.type).toBe('quest')
-    expect(t.title).toBe('Gorev Tamamlandi!')
+    expect(t.title).toBe('Görev Tamamlandı!')
     expect(t.description).toBe('3 oyun oyna')
   })
 
@@ -110,7 +110,7 @@ describe('toast helper fonksiyonlari', () => {
 
     toast.streak(7)
     t = useToastStore.getState().toasts[1]
-    expect(t.description).toBe('Ates ustunde!')
+    expect(t.description).toBe('Ateş üstünde!')
 
     toast.streak(15)
     t = useToastStore.getState().toasts[2]
