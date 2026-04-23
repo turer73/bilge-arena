@@ -1,20 +1,22 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 
-// Node runtime — Vercel edge function 1 MB limit (Hobby plan) Inter WOFF embed
-// ile aşıldığı için nodejs'e alındı. OG görseli nadir çağrılır (sosyal paylaşım),
-// cold start gecikmesi kullanıcı tarafında fark edilmez.
-export const runtime = 'nodejs'
+// Edge runtime — font public/fonts/ altında static asset olarak servis ediliyor,
+// bundle'a embed edilmediği için 1 MB limiti aşılmıyor. Runtime fetch CDN cached.
+export const runtime = 'edge'
 
-const interBoldPromise = fetch(
-  new URL('./Inter-Bold.woff', import.meta.url),
-).then((res) => res.arrayBuffer())
+let interBoldPromise: Promise<ArrayBuffer> | null = null
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+  const { origin, searchParams } = new URL(request.url)
   const title = searchParams.get('title') || 'Bilge Arena'
   const subtitle = searchParams.get('subtitle') || 'YKS Hazırlık Platformu'
 
+  if (!interBoldPromise) {
+    interBoldPromise = fetch(`${origin}/fonts/Inter-Bold.woff`).then((res) =>
+      res.arrayBuffer(),
+    )
+  }
   const interBold = await interBoldPromise
 
   return new ImageResponse(
