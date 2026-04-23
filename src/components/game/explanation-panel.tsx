@@ -100,8 +100,8 @@ export function ExplanationPanel({
         style={{ color: isCorrect ? 'var(--growth)' : 'var(--urgency)' }}
       >
         {isCorrect
-          ? '✓ Dogru! Mukemmel 🎉'
-          : `✗ Yanlis. Dogru: ${getOptionLetter(correctAnswer)}) ${correctText}`}
+          ? '✓ Doğru! Mükemmel 🎉'
+          : `✗ Yanlış. Doğru: ${getOptionLetter(correctAnswer)}) ${correctText}`}
       </div>
 
       {/* Aciklama */}

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   }
 
   const rl = await claimLimiter.check(user.id)
-  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+  if (!rl.success) return NextResponse.json({ error: 'Çok hızlı istek' }, { status: 429 })
 
   const body = await request.json()
   const parsed = questClaimSchema.safeParse(body)
@@ -34,9 +34,9 @@ export async function POST(request: Request) {
     .eq('user_id', user.id)
     .single()
 
-  if (!uq) return NextResponse.json({ error: 'Gorev bulunamadi' }, { status: 404 })
-  if (!uq.is_completed) return NextResponse.json({ error: 'Gorev henuz tamamlanmadi' }, { status: 400 })
-  if (uq.xp_claimed) return NextResponse.json({ error: 'XP zaten alindi' }, { status: 400 })
+  if (!uq) return NextResponse.json({ error: 'Görev bulunamadı' }, { status: 404 })
+  if (!uq.is_completed) return NextResponse.json({ error: 'Görev henüz tamamlanmadı' }, { status: 400 })
+  if (uq.xp_claimed) return NextResponse.json({ error: 'XP zaten alındı' }, { status: 400 })
 
   const xpReward = (uq.quest as { xp_reward?: number } | null)?.xp_reward ?? 50
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     .select('id')
 
   if (!claimed || claimed.length === 0) {
-    return NextResponse.json({ error: 'XP zaten alindi' }, { status: 400 })
+    return NextResponse.json({ error: 'XP zaten alındı' }, { status: 400 })
   }
 
   // 2) XP log

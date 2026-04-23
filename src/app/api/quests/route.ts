@@ -17,7 +17,7 @@ export async function GET() {
 
   const rl = await questsLimiter.check(user.id)
   if (!rl.success) {
-    return NextResponse.json({ error: 'Cok fazla istek' }, { status: 429 })
+    return NextResponse.json({ error: 'Çok fazla istek' }, { status: 429 })
   }
 
   const svc = createServiceRoleClient()
@@ -64,7 +64,7 @@ export async function GET() {
 
   if (error) {
     console.error('[Quests API] Insert error:', error)
-    return NextResponse.json({ error: 'Gorev atanamadi' }, { status: 500 })
+    return NextResponse.json({ error: 'Görev atanamadı' }, { status: 500 })
   }
 
   return NextResponse.json({ quests: created })

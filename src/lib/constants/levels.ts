@@ -9,8 +9,8 @@ export interface LevelTier {
 
 export const LEVELS: LevelTier[] = [
   { level: 1, name: 'Acemi',    minXP: 0,     maxXP: 999,    badge: '\u{1F6E1}\uFE0F',  color: 'text-muted' },
-  { level: 2, name: 'Cirak',    minXP: 1000,  maxXP: 4999,   badge: '\u2694\uFE0F',  color: 'focus' },
-  { level: 3, name: 'Savasci',  minXP: 5000,  maxXP: 14999,  badge: '\u{1F451}', color: 'reward' },
+  { level: 2, name: 'Çırak',    minXP: 1000,  maxXP: 4999,   badge: '\u2694\uFE0F',  color: 'focus' },
+  { level: 3, name: 'Savaşçı',  minXP: 5000,  maxXP: 14999,  badge: '\u{1F451}', color: 'reward' },
   { level: 4, name: 'Usta',     minXP: 15000, maxXP: 49999,  badge: '\u{1F48E}', color: 'wisdom' },
   { level: 5, name: 'Efsane',   minXP: 50000, maxXP: Infinity, badge: '\u{1F525}', color: 'urgency' },
 ]

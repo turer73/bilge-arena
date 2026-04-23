@@ -66,8 +66,8 @@ describe('validateEmail', () => {
 
 describe('getEmailErrorMessage', () => {
   it('her reason icin Turkce mesaj doner', () => {
-    expect(getEmailErrorMessage('empty')).toContain('bos')
-    expect(getEmailErrorMessage('invalid')).toContain('ornek')
+    expect(getEmailErrorMessage('empty')).toContain('boş')
+    expect(getEmailErrorMessage('invalid')).toContain('örnek')
     expect(getEmailErrorMessage('too_long')).toContain('uzun')
   })
 })

@@ -79,23 +79,23 @@ const faqJsonLd = {
       name: 'Bilge Arena nedir?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Bilge Arena, YKS\'ye hazirlanan ogrenciler icin oyunlastirilmis bir ogrenme platformudur. Matematik, Turkce, Fen, Sosyal ve Ingilizce sorulari cozerek XP kazanir, seviye atlar ve siralamada yukselirsiniz.',
+        text: 'Bilge Arena, YKS\'ye hazırlanan öğrenciler için oyunlaştırılmış bir öğrenme platformudur. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çözerek XP kazanır, seviye atlar ve sıralamada yükselirsiniz.',
       },
     },
     {
       '@type': 'Question',
-      name: 'Bilge Arena ucretli mi?',
+      name: 'Bilge Arena ücretli mi?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Hayir, Bilge Arena tamamen ucretsizdir. Soru bankasi, AI asistan ve tum ozellikler ucretsiz olarak sunulmaktadir.',
+        text: 'Hayır, Bilge Arena tamamen ücretsizdir. Soru bankası, AI asistan ve tüm özellikler ücretsiz olarak sunulmaktadır.',
       },
     },
     {
       '@type': 'Question',
-      name: 'Nasil kayit olabilirim?',
+      name: 'Nasıl kayıt olabilirim?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Google hesabinizla tek tikla giris yapabilirsiniz. Ek bilgi istenmez. Misafir olarak da oynayabilirsiniz ancak ilerlemeniz kaydedilmez.',
+        text: 'Google hesabınızla tek tıkla giriş yapabilirsiniz. Ek bilgi istenmez. Misafir olarak da oynayabilirsiniz ancak ilerlemeniz kaydedilmez.',
       },
     },
     {
@@ -103,7 +103,7 @@ const faqJsonLd = {
       name: 'Hangi dersler mevcut?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Matematik, Turkce, Fen Bilimleri (Fizik, Kimya, Biyoloji), Sosyal Bilimler (Tarih, Cografya, Felsefe) ve Ingilizce (WordQuest) oyun konsollari mevcuttur.',
+        text: 'Matematik, Türkçe, Fen Bilimleri (Fizik, Kimya, Biyoloji), Sosyal Bilimler (Tarih, Coğrafya, Felsefe) ve İngilizce (WordQuest) oyun konsolları mevcuttur.',
       },
     },
   ],
@@ -150,18 +150,18 @@ export default function NasilCalisirPage() {
 
       {/* Soru Bankasi */}
       <section className="mb-16">
-        <h2 className="mb-3 text-center text-2xl font-bold">Soru Bankasi</h2>
+        <h2 className="mb-3 text-center text-2xl font-bold">Soru Bankası</h2>
         <p className="mb-8 text-center text-sm text-[var(--text-sub)]">
-          3700+ ozgun soru, 5 ders, 20+ kategori. Surekli buyuyor.
+          3700+ özgün soru, 5 ders, 20+ kategori. Sürekli büyüyor.
         </p>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {[
-            { name: 'Matematik', count: 960, cats: 'Sayilar, Problemler, Geometri, Denklemler, Fonksiyonlar, Olasilik', color: '#2563EB', icon: '🧮' },
-            { name: 'Turkce', count: 920, cats: 'Paragraf, Dil Bilgisi, Sozcuk, Anlam, Yazim', color: '#D97706', icon: '📖' },
+            { name: 'Matematik', count: 960, cats: 'Sayılar, Problemler, Geometri, Denklemler, Fonksiyonlar, Olasılık', color: '#2563EB', icon: '🧮' },
+            { name: 'Türkçe', count: 920, cats: 'Paragraf, Dil Bilgisi, Sözcük, Anlam, Yazım', color: '#D97706', icon: '📖' },
             { name: 'Fen', count: 600, cats: 'Fizik, Kimya, Biyoloji', color: '#059669', icon: '🔬' },
-            { name: 'Sosyal', count: 604, cats: 'Tarih, Cografya, Felsefe', color: '#7C3AED', icon: '🌍' },
-            { name: 'Ingilizce', count: 635, cats: 'Vocabulary, Grammar, Cloze, Dialogue', color: '#3B82F6', icon: '🌐' },
+            { name: 'Sosyal', count: 604, cats: 'Tarih, Coğrafya, Felsefe', color: '#7C3AED', icon: '🌍' },
+            { name: 'İngilizce', count: 635, cats: 'Vocabulary, Grammar, Cloze, Dialogue', color: '#3B82F6', icon: '🌐' },
           ].map((d) => (
             <div
               key={d.name}
@@ -185,16 +185,16 @@ export default function NasilCalisirPage() {
       <section className="mb-16">
         <h2 className="mb-3 text-center text-2xl font-bold">Zorluk Sistemi</h2>
         <p className="mb-8 text-center text-sm text-[var(--text-sub)]">
-          Her soru 5 kademeli zorluk seviyesinde. Sistem basarina gore otomatik ayarlar.
+          Her soru 5 kademeli zorluk seviyesinde. Sistem başarına göre otomatik ayarlar.
         </p>
 
         <div className="space-y-3">
           {[
-            { level: 1, name: 'Kolay', color: '#22C55E', desc: 'Temel bilgi ve dogrudan hatirlatma. Konuya yeni baslayanlar icin.', xp: '10 XP', example: '"Asagidakilerden hangisi asal sayidir?"' },
-            { level: 2, name: 'Orta', color: '#3B82F6', desc: 'Basit uygulama gerektiren tek adimli sorular. Konuyu bilenler icin.', xp: '20 XP', example: '"3 basamakli 5A7 sayisi 9\'a bolunuyorsa A kactir?"' },
-            { level: 3, name: 'Zor', color: '#F59E0B', desc: 'Birden fazla adim ve islem gerektiren sorular. Pratik yapmak isteyenler icin.', xp: '30 XP', example: '"Bir isin 1/3\'u yapilmis, kalanin 2/5\'i daha yapilirsa tamamlanma orani nedir?"' },
-            { level: 4, name: 'Cok Zor', color: '#EF4444', desc: 'Analiz ve sentez gerektiren, tuzak secenekli sorular. Sinava hazirlananlar icin.', xp: '40 XP', example: '"f(x)=2x+1 ve g(x)=x²-3 ise (fog)(2) kactir?"' },
-            { level: 5, name: 'Uzman', color: '#DC2626', desc: 'Cok adimli, derin dusunce gerektiren sorular. Ustalar icin.', xp: '50 XP', example: '"Dairesel bir havuzun cevresi 62.8m ise alani kac m²?"' },
+            { level: 1, name: 'Kolay', color: '#22C55E', desc: 'Temel bilgi ve doğrudan hatırlatma. Konuya yeni başlayanlar için.', xp: '10 XP', example: '"Aşağıdakilerden hangisi asal sayıdır?"' },
+            { level: 2, name: 'Orta', color: '#3B82F6', desc: 'Basit uygulama gerektiren tek adımlı sorular. Konuyu bilenler için.', xp: '20 XP', example: '"3 basamaklı 5A7 sayısı 9\'a bölünüyorsa A kaçtır?"' },
+            { level: 3, name: 'Zor', color: '#F59E0B', desc: 'Birden fazla adım ve işlem gerektiren sorular. Pratik yapmak isteyenler için.', xp: '30 XP', example: '"Bir işin 1/3\'ü yapılmış, kalanın 2/5\'i daha yapılırsa tamamlanma oranı nedir?"' },
+            { level: 4, name: 'Çok Zor', color: '#EF4444', desc: 'Analiz ve sentez gerektiren, tuzak seçenekli sorular. Sınava hazırlananlar için.', xp: '40 XP', example: '"f(x)=2x+1 ve g(x)=x²-3 ise (fog)(2) kaçtır?"' },
+            { level: 5, name: 'Uzman', color: '#DC2626', desc: 'Çok adımlı, derin düşünce gerektiren sorular. Ustalar için.', xp: '50 XP', example: '"Dairesel bir havuzun çevresi 62.8m ise alanı kaç m²?"' },
           ].map((d) => (
             <div
               key={d.level}
@@ -214,7 +214,7 @@ export default function NasilCalisirPage() {
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-[var(--text-sub)]">{d.desc}</p>
-                <p className="mt-1.5 text-xs italic text-[var(--text-muted)]">Ornek: {d.example}</p>
+                <p className="mt-1.5 text-xs italic text-[var(--text-muted)]">Örnek: {d.example}</p>
               </div>
             </div>
           ))}
@@ -223,9 +223,9 @@ export default function NasilCalisirPage() {
         <div className="mt-6 rounded-xl border border-[var(--focus)]/20 bg-[var(--focus-bg)] p-5">
           <h3 className="mb-2 text-sm font-bold text-[var(--focus)]">Adaptif Zorluk</h3>
           <p className="text-xs leading-relaxed text-[var(--text-sub)]">
-            Bilge Arena, basari oranina gore zorlugu otomatik ayarlar. Cok basariliysan zorlar,
-            zorlaniyorsan kolaylastirir. Ayrica yanlis yaptigin sorulari tekrar karsilar —
-            boylece zayif noktalarini guclendirir. Zorluk secimini kendin de yapabilirsin.
+            Bilge Arena, başarı oranına göre zorluğu otomatik ayarlar. Çok başarılıysan zorlar,
+            zorlanıyorsan kolaylaştırır. Ayrıca yanlış yaptığın soruları tekrar karşılar —
+            böylece zayıf noktalarını güçlendirir. Zorluk seçimini kendin de yapabilirsin.
           </p>
         </div>
       </section>

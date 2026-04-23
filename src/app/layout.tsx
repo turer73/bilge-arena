@@ -13,7 +13,7 @@ import './globals.css'
 
 /* ─── Google Fonts — Template birebir ─── */
 const cinzel = Cinzel({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   weight: ['700', '900'],
   variable: '--font-cinzel',
   display: 'swap',

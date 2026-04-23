@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { toast } from '@/stores/toast-store'
 import Link from 'next/link'
 import { GAME_LIST, type GameSlug } from '@/lib/constants/games'
+import { trUpper } from '@/lib/utils/tr-text'
 
 interface FriendProfile {
   id: string
@@ -166,7 +167,7 @@ export default function FriendsClient() {
             {searchResults.map((u) => (
               <div key={u.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus)] text-xs font-bold text-white">
-                  {displayName(u).charAt(0).toUpperCase()}
+                  {trUpper(displayName(u).charAt(0))}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold truncate">{displayName(u)}</div>
@@ -344,7 +345,7 @@ function ProfileAvatar({ profile }: { profile: FriendProfile }) {
   }
   return (
     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus)] text-xs font-bold text-white">
-      {name.charAt(0).toUpperCase()}
+      {trUpper(name.charAt(0))}
     </div>
   )
 }

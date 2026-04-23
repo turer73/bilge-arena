@@ -1,10 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkAdmin } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { GAME_SLUGS } from '@/lib/constants/games'
-import { escapeForLike } from '@/lib/utils/security'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // 120 req/dk (50 öğrenci × ~2 req/dk)
@@ -49,30 +47,31 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Gecersiz oyun adi' }, { status: 400 })
   }
 
-  // Admin ise service role client kullan (pasif sorulari da gorsun)
+  // Admin pasif sorulari da gorsun (RPC icinde admin_view bayragi ile kontrollu)
   const isAdmin = await checkAdmin(supabase)
-  const db = isAdmin ? createServiceRoleClient() : supabase
 
-  let query = db
-    .from('questions')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
+  // Accent-insensitive arama: "cozum" -> "çözüm" (migration 026 RPC)
+  // total_count pencere fonksiyonu ile RPC icinden geliyor.
+  const activeFilter = active === 'true' ? true : active === 'false' ? false : null
 
-  if (game) query = query.eq('game', game)
-  if (category) query = query.eq('category', category)
-  if (difficulty) query = query.eq('difficulty', parseInt(difficulty))
-  if (active === 'true') query = query.eq('is_active', true)
-  if (active === 'false') query = query.eq('is_active', false)
-  if (search && search.length >= 2) {
-    const escaped = escapeForLike(search)
-    query = query.or(`content->>question.ilike.%${escaped}%,content->>sentence.ilike.%${escaped}%`)
-  }
-
-  const { data, count, error } = await query.range(offset, offset + limit - 1)
+  const { data: rows, error } = await supabase.rpc('search_questions', {
+    search_q: search && search.length >= 2 ? search : null,
+    game_filter: game || null,
+    category_filter: category || null,
+    difficulty_filter: difficulty ? parseInt(difficulty) : null,
+    active_filter: activeFilter,
+    admin_view: !!isAdmin,
+    result_offset: offset,
+    result_limit: limit,
+  })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  const rawRows = (rows ?? []) as Array<{ total_count: number | string } & Record<string, unknown>>
+  const data = rawRows.map(({ total_count: _tc, ...rest }) => rest)
+  const count = rawRows.length > 0 ? Number(rawRows[0].total_count) : 0
 
   return NextResponse.json(
     { questions: data, total: count, page, limit },

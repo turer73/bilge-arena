@@ -28,11 +28,11 @@ export function ChatWidget() {
       })
 
       if (!res.ok) {
-        let errorMsg = 'Uzgunum, bir hata olustu. Lutfen tekrar deneyin.'
+        let errorMsg = 'Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.'
         if (res.status === 401) {
-          errorMsg = 'Bu ozelligi kullanmak icin giris yapmaniz gerekiyor. 🔑'
+          errorMsg = 'Bu özelliği kullanmak için giriş yapmanız gerekiyor. 🔑'
         } else if (res.status === 429) {
-          errorMsg = 'Cok fazla mesaj gonderdiniz. Biraz bekleyip tekrar deneyin. ⏳'
+          errorMsg = 'Çok fazla mesaj gönderdiniz. Biraz bekleyip tekrar deneyin. ⏳'
         } else {
           try {
             const errBody = await res.json()
@@ -60,10 +60,10 @@ export function ChatWidget() {
       }
 
       if (!fullText) {
-        updateLastAssistant('Cevap alinamadi. Lutfen tekrar deneyin.')
+        updateLastAssistant('Cevap alınamadı. Lütfen tekrar deneyin.')
       }
     } catch {
-      updateLastAssistant('Baglanti hatasi. Internet baglantinizi kontrol edin.')
+      updateLastAssistant('Bağlantı hatası. İnternet bağlantınızı kontrol edin.')
     } finally {
       setLoading(false)
     }

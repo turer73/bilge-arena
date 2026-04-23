@@ -333,15 +333,15 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
 function translateMagicLinkError(raw: string): string {
   const lower = raw.toLowerCase()
   if (lower.includes('rate limit') || lower.includes('too many')) {
-    return 'Cok fazla istek gonderdin. 1 dakika bekle, sonra tekrar dene.'
+    return 'Çok fazla istek gönderdin. 1 dakika bekle, sonra tekrar dene.'
   }
   if (lower.includes('invalid') && lower.includes('email')) {
-    return 'Bu email adresi gecerli degil. Yeniden kontrol et.'
+    return 'Bu e-posta adresi geçerli değil. Yeniden kontrol et.'
   }
   if (lower.includes('network') || lower.includes('fetch')) {
-    return 'Internet baglantini kontrol et.'
+    return 'İnternet bağlantını kontrol et.'
   }
-  return 'Email gonderilemedi. Biraz sonra tekrar dene.'
+  return 'E-posta gönderilemedi. Biraz sonra tekrar dene.'
 }
 
 function Spinner() {

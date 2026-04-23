@@ -13,11 +13,11 @@ describe('getLevelFromXP', () => {
   })
 
   it('1000 XP = Cirak (seviye 2)', () => {
-    expect(getLevelFromXP(1000).name).toBe('Cirak')
+    expect(getLevelFromXP(1000).name).toBe('Çırak')
   })
 
   it('5000 XP = Savasci (seviye 3)', () => {
-    expect(getLevelFromXP(5000).name).toBe('Savasci')
+    expect(getLevelFromXP(5000).name).toBe('Savaşçı')
   })
 
   it('15000 XP = Usta (seviye 4)', () => {
