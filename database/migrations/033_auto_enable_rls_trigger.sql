@@ -82,13 +82,9 @@ BEGIN
       AND schema_name = 'public'
   LOOP
     EXECUTE 'ALTER TABLE ' || obj.object_identity || ' ENABLE ROW LEVEL SECURITY';
-    RAISE NOTICE 'auto_enable_rls: RLS enabled on %', obj.object_identity;
   END LOOP;
 END;
 $$;
-
-COMMENT ON FUNCTION public.auto_enable_rls_on_create() IS
-  'Event trigger helper: public.* yeni tablolara otomatik ENABLE ROW LEVEL SECURITY uygular. Migration 033.';
 
 -- 2) Event trigger (DDL sonrasi tetiklenir)
 DROP EVENT TRIGGER IF EXISTS auto_enable_rls_trg;
@@ -98,7 +94,22 @@ CREATE EVENT TRIGGER auto_enable_rls_trg
   WHEN TAG IN ('CREATE TABLE')
   EXECUTE FUNCTION public.auto_enable_rls_on_create();
 
-COMMENT ON EVENT TRIGGER auto_enable_rls_trg IS
-  'CREATE TABLE sonrasi public.* tablolarina otomatik RLS acar. Defense in depth, PR-S.2a devami. Migration 033.';
-
 COMMIT;
+
+-- =============================================================================
+-- Not (2026-04-24): Bu dosyanin onceki versiyonunda asagidaki kozmetik ifadeler
+-- vardi:
+--   COMMENT ON FUNCTION public.auto_enable_rls_on_create() IS '...';
+--   COMMENT ON EVENT TRIGGER auto_enable_rls_trg IS '...';
+--   RAISE NOTICE 'auto_enable_rls: RLS enabled on %', obj.object_identity;
+--
+-- Supabase Dashboard SQL Editor'un client-side statement splitter'i COMMENT
+-- string literal icindeki "CREATE TABLE" + ASCII Turkce sozcuk kombinasyonunu
+-- yanlis bolup "42P01 relation \"sonrasi\" does not exist" hatasi uretti
+-- (ornek: PR-S.2c deneme 1). Gercek PostgreSQL parser bu SQL'i sorunsuz
+-- kabul eder; sadece Dashboard client path'inde problem var. Migration 033
+-- Dashboard'dan paste edilerek uygulandigi icin kozmetik ifadeler kaldirildi.
+--
+-- psql veya supabase db push ile apply edilirse COMMENT'ler geri eklenebilir;
+-- davranis icin gerekli degiller, sadece dokumantasyon hijyenidir.
+-- =============================================================================
