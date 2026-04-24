@@ -22,6 +22,13 @@ const eslintConfig = defineConfig([
       "react-hooks/refs": "warn",
       "react-hooks/immutability": "warn",
       "react-hooks/globals": "warn",
+      // Underscore prefix = intentionally unused (destructuring, signature match)
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+        destructuredArrayIgnorePattern: "^_",
+      }],
     },
   },
 ])

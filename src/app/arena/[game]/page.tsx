@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { GAMES, type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
+import { type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
 import { notFound } from 'next/navigation'
 import GameClient from './game-client'
 

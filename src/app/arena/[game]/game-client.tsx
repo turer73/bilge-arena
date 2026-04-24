@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams, useRouter } from 'next/navigation'
-import { GAMES, type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
+import { type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
 
 // Quiz engine lazy-load — agir bileseni ayri chunk'a taşı (~40KB+ JS azalma)
 const QuizEngine = dynamic(

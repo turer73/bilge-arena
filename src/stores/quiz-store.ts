@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Question, Difficulty } from '@/types/database'
+import type { Question } from '@/types/database'
 import type { XPResult } from '@/lib/utils/xp'
 
 export type QuizState = 'idle' | 'loading' | 'playing' | 'answered' | 'completed'

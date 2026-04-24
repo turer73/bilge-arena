@@ -112,7 +112,7 @@ export default function AdminRolesPage() {
   }
 
   // ── Fetch assigned users for a role ──
-  const fetchAssignedUsers = async (roleId: string) => {
+  const fetchAssignedUsers = async (_roleId: string) => {
     try {
       const res = await fetch(`/api/admin/users?search=&page=1`)
       if (!res.ok) return

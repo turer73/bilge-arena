@@ -20,7 +20,6 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   // RBAC: Roller
   const [roles, setRoles] = useState<Role[]>([])

@@ -24,9 +24,8 @@ vi.mock('next/navigation', () => ({
 
 // next/image mock — basit <img> olarak render et
 vi.mock('next/image', () => ({
-  // eslint-disable-next-line jsx-a11y/alt-text
   default: (props: Record<string, unknown>) => {
-    const { fill, priority, ...rest } = props
+    const { fill: _fill, priority: _priority, ...rest } = props
     return <img alt="" {...rest} />
   },
 }))

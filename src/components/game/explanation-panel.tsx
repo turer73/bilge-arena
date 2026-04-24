@@ -17,7 +17,7 @@ interface ExplanationPanelProps {
 
 export function ExplanationPanel({
   question,
-  selectedOption,
+  selectedOption: _selectedOption,
   isCorrect,
   isLastQuestion,
   onNext,

@@ -1,6 +1,6 @@
 'use client'
 
-import { BADGES, RARITY_COLORS, type BadgeDefinition } from '@/lib/constants/badges'
+import { BADGES, RARITY_COLORS } from '@/lib/constants/badges'
 
 interface BadgeShowcaseProps {
   earnedBadgeCodes: string[]
