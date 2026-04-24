@@ -10,9 +10,6 @@ const withBundleAnalyzer = bundleAnalyzer({
 const nextConfig = {
   output: 'standalone',
 
-  // Lint'i Docker build'den ayır — VPS'te OOM önlemi
-  // Lint ayrıca CI/CD pipeline'da veya lokalde çalıştırılır
-  eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: false },
   images: {
     // AVIF > WebP > JPEG — en iyi sıkıştırma formatlarını tercih et
@@ -110,13 +107,6 @@ const nextConfig = {
       {
         // Statik asset'ler icin agresif caching (1 yil)
         source: '/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff|woff2)',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
-        // JS/CSS chunk'lari icin caching (Next.js zaten hash'liyor)
-        source: '/_next/static/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
