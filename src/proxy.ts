@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Health endpoint — Uptime Kuma icin auth bypass
   if (request.nextUrl.pathname === '/api/health/ping') {
     return NextResponse.next()
