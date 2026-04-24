@@ -62,6 +62,27 @@ describe('validateEmail', () => {
     expect(result.ok).toBe(true)
     if (result.ok) expect(result.normalized).toBe('user+tag@gmail.com')
   })
+
+  it('ASCII I iceren email dotless i yerine ASCII i olarak normalize olur', () => {
+    // Regresyon: trLower kullanildiginda INFO@gmail.com -> ınfo@gmail.com
+    // olurdu (tr-TR I → ı). Email identifier olarak bu kimlik mismatch.
+    const result = validateEmail('INFO@gmail.com')
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.normalized).toBe('info@gmail.com')
+      expect(result.normalized).not.toContain('ı')
+    }
+  })
+
+  it('karisik buyuk I ve ASCII karakter ile email dogru normalize olur', () => {
+    const result = validateEmail('Iris.Titan@MAIL.COM')
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.normalized).toBe('iris.titan@mail.com')
+      expect(result.normalized).not.toContain('ı')
+      expect(result.normalized).not.toContain('İ')
+    }
+  })
 })
 
 describe('getEmailErrorMessage', () => {

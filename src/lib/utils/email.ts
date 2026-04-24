@@ -12,8 +12,6 @@
  * - Kurumsal email tesvik: bilgearena.com kendi domaini olan kullaniciyi flag'le
  */
 
-import { trLower } from './tr-text'
-
 const MAX_EMAIL_LENGTH = 254 // RFC 5321 uyumlu
 const BASIC_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -23,11 +21,13 @@ export type EmailValidationResult =
 
 export type EmailValidationError = 'empty' | 'invalid' | 'too_long'
 
-/**
- * Email dogrulama. Basariliysa trim + lowercase normalize edilmis email doner.
- */
+// RFC 5321: email local-part + domain ASCII-case-insensitive. tr-TR locale
+// `I` -> `ı` donusumu yapar, bu da `INFO@gmail.com` -> `ınfo@gmail.com` gibi
+// kimlik mismatch yaratir (Codex PR #14 review P2). Bu yuzden vanilla
+// String.prototype.toLowerCase() kullaniyoruz; identifier normalizasyonu
+// TDK diakritik kuralindan bagimsiz.
 export function validateEmail(raw: string): EmailValidationResult {
-  const normalized = trLower(raw.trim())
+  const normalized = raw.trim().toLowerCase()
 
   if (!normalized) {
     return { ok: false, reason: 'empty' }
