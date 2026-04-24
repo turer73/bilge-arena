@@ -73,9 +73,17 @@ export async function GET(request: NextRequest) {
   const data = rawRows.map(({ total_count: _tc, ...rest }) => rest)
   const count = rawRows.length > 0 ? Number(rawRows[0].total_count) : 0
 
+  // Admin yanitlari admin_view=true ile pasif sorulari icerir; bu datayi CDN'de
+  // public cache etmek hem stale toggle/edit gozlenmesine (sayfa nav sonrasi
+  // eski durum geri doner) hem de anon session'larda admin-only leak'e yol acar.
+  // Admin ise no-store; anon ise mevcut 5dk edge cache davranisi korunur.
+  const cacheControl = isAdmin
+    ? 'private, no-store'
+    : 'public, s-maxage=300, stale-while-revalidate=60'
+
   return NextResponse.json(
     { questions: data, total: count, page, limit },
-    { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' } },
+    { headers: { 'Cache-Control': cacheControl } },
   )
 }
 

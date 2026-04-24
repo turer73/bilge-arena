@@ -112,6 +112,24 @@ describe('GET /api/questions', () => {
       expect.objectContaining({ admin_view: true }),
     )
   })
+
+  it('admin yanitinda Cache-Control private, no-store (CDN admin datasini cachelemesin)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } })
+    mockCheckAdmin.mockResolvedValue({ id: 'admin-1' })
+    mockRpc.mockResolvedValue({ data: [], error: null })
+
+    const res = await GET(makeGet('http://localhost/api/questions?active=false'))
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
+  })
+
+  it('anon yanitinda Cache-Control public CDN cache aktif (mevcut davranis)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    mockCheckAdmin.mockResolvedValue(null)
+    mockRpc.mockResolvedValue({ data: [], error: null })
+
+    const res = await GET(makeGet('http://localhost/api/questions'))
+    expect(res.headers.get('Cache-Control')).toBe('public, s-maxage=300, stale-while-revalidate=60')
+  })
 })
 
 describe('PATCH /api/questions', () => {
