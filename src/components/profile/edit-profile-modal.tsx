@@ -6,7 +6,6 @@ import { refreshProfile } from '@/lib/hooks/use-auth'
 import { toast } from '@/stores/toast-store'
 import { trUpper } from '@/lib/utils/tr-text'
 import { X, Camera, Trash2 } from 'lucide-react'
-import type { Profile } from '@/types/database'
 
 interface EditProfileModalProps {
   open: boolean

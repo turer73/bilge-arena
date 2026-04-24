@@ -22,11 +22,9 @@ interface SaveSessionParams {
  * Hata durumunda null dondurur, client tarafinda hata gosterilmez.
  */
 export async function saveGameSession({
-  userId,
   game,
   mode,
   answers,
-  totalXP,
   maxStreak,
   category,
   difficulty,

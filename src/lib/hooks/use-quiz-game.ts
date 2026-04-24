@@ -292,7 +292,6 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     if (index === getCorrectIndex(question.content)) return 'correct'
     if (index === lastAnswer.selectedOption) return 'wrong'
     return 'dim'
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizStore])
 
   return {

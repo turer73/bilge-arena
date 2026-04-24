@@ -25,7 +25,7 @@ interface CategoryStat {
   pct: number
 }
 
-export function DenemeResult({ gameName, totalTime, elapsedTime, onRestart, onExit }: DenemeResultProps) {
+export function DenemeResult({ gameName, totalTime: _totalTime, elapsedTime, onRestart, onExit }: DenemeResultProps) {
   const { score, questions, xpEarned, answers } = useQuizStore()
   const { user } = useAuthStore()
   const { incrementQuizCount } = useGuestSession()

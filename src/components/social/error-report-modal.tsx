@@ -22,7 +22,7 @@ interface ErrorReportModalProps {
 }
 
 export function ErrorReportModal({
-  questionId,
+  questionId: _questionId,
   isOpen,
   onClose,
   onSubmit,

@@ -6,7 +6,7 @@ import { ModeSelector } from './mode-selector'
 import { StreakBadge } from './streak-badge'
 import { SoundToggle } from './sound-toggle'
 import { XPBar } from './xp-bar'
-import { getLevelFromXP, getLevelProgress } from '@/lib/constants/levels'
+import { getLevelFromXP } from '@/lib/constants/levels'
 import { QuizLimitBanner } from '@/components/premium/quiz-limit-banner'
 import { AdBanner } from '@/components/ads/ad-banner'
 
