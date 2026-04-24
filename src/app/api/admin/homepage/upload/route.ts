@@ -48,8 +48,6 @@ export async function POST(request: NextRequest) {
 
     const filePath = `logos/${Date.now()}-${sanitizedFilename}.png`
 
-    const uploadBuffer = new Uint8Array(buffer)
-
     const { error: uploadError } = await supabase.storage
       .from('homepage-assets')
       .upload(filePath, buffer, {

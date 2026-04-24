@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { toast } from '@/stores/toast-store'
 import Link from 'next/link'
-import { GAME_LIST, type GameSlug } from '@/lib/constants/games'
+import { GAME_LIST } from '@/lib/constants/games'
 import { trUpper } from '@/lib/utils/tr-text'
 
 interface FriendProfile {

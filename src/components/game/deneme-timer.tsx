@@ -40,7 +40,6 @@ export function DenemeTimer({ totalTime, onTimeUp, isPaused = false }: DenemeTim
     return () => clearInterval(interval)
   }, [isPaused])
 
-  const elapsed = totalTime - remaining
   const pct = (remaining / totalTime) * 100
 
   const formatTime = useCallback((s: number) => {
