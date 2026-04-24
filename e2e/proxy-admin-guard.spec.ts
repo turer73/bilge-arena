@@ -11,28 +11,26 @@ test.describe('proxy auth boundary', () => {
     await expect(page).toHaveURL(/\/giris/)
   })
 
-  // TODO (user contribution): /api/health/ping auth bypass dogrulamasi.
-  // Proxy'nin line 9-11 bypass mantigini kilitler — Uptime Kuma bagimlilik.
-  // Hint:
-  //   const res = await request.get('/api/health/ping')
-  //   expect(res.status()).toBe(200)
-  //   const body = await res.json()
-  //   expect(body.status veya body.ok gibi bir alan).toBe('ok' veya true)
-  // Dikkat: Mevcut api/health/ping response sekli ne? src/app/api/health/ping/route.ts oku.
-  test.fixme('health endpoint bypasses proxy auth (no cookie)', async ({ request }) => {
-    // placeholder
+  // Proxy'nin /api/health/ping bypass mantigini kilitler (proxy.ts:9-11).
+  // Uptime Kuma bagimliligi — auth cookie olmadan da 200 dondurmeli.
+  test('health endpoint bypasses proxy auth (no cookie)', async ({ request }) => {
+    const res = await request.get('/api/health/ping')
+    expect(res.status()).toBe(200)
+    const body = await res.json()
+    expect(body.status).toBe('ok')
+    expect(typeof body.ts).toBe('number')
   })
 
-  // TODO (user contribution): /admin redirect response'unda no-store cache headers.
-  // Proxy'nin line 81-83 header set mantigini kilitler.
-  // Hint:
-  //   const res = await request.get('/admin', { maxRedirects: 0, failOnStatusCode: false })
-  //   expect(res.status()).toBe(302) // veya 307
-  //   expect(res.headers()['cache-control']).toContain('no-store')
-  // UYARI: Next.js redirect response'larinda custom cache header'lar duser.
-  // Bu test regresyon'da failse, gercek validasyon Task 6 manuel smoke + Task 8 preview'da.
-  // Eger redirect'ten cache header gelmiyorsa bu test'i test.skip yap + yorum ekle.
-  test.fixme('admin redirect carries no-store cache headers', async ({ request }) => {
-    // placeholder
+  // /admin redirect response'unda no-store cache headers dogrulamasi.
+  // next.config.mjs headers() /admin/:path* match'i redirect'e de uygulaniyor,
+  // proxy.ts:81-83 redundant header set'i authenticated yola ek guvence.
+  // Regresyon: redirect'te cache header dusarsa CF edge admin redirect'i cachelebilir.
+  test('admin redirect carries no-store cache headers', async ({ request }) => {
+    const res = await request.get('/admin', { maxRedirects: 0, failOnStatusCode: false })
+    expect(res.status()).toBeGreaterThanOrEqual(300)
+    expect(res.status()).toBeLessThan(400)
+    expect(res.headers()['cache-control']).toContain('no-store')
+    expect(res.headers()['cdn-cache-control']).toBe('no-store')
+    expect(res.headers()['cloudflare-cdn-cache-control']).toBe('no-store')
   })
 })
