@@ -33,6 +33,20 @@ const TOPIC_MAP: Record<string, Record<string, string[]>> = {
     tarih: ['İlk Türk Devletleri', 'Osmanlı Kuruluş', 'Osmanlı Yükseliş', 'Tanzimat', 'Kurtuluş Savaşı', 'Atatürk İnkılapları', 'Çok Partili Dönem'],
     cografya: ['İklim', 'Nüfus', 'Göç', 'Harita Bilgisi', 'Türkiye Coğrafyası', 'Doğal Afetler', 'Ekonomik Coğrafya'],
     felsefe: ['Felsefenin Alanı', 'Bilgi Felsefesi', 'Ahlak Felsefesi', 'Mantık', 'Psikoloji', 'Sosyoloji'],
+    // 2026-04-26: sosyoloji kategorisi DB'de mevcut (13 soru) ama TOPIC_MAP'te yoktu;
+    // AI generator bu kategoriye konu listesi olmadan ureyemiyordu. YKS müfredatı sosyoloji konuları:
+    sosyoloji: [
+      'Toplum ve Birey',
+      'Sosyal Yapı',
+      'Toplumsal Kurumlar',
+      'Toplumsal Değişme',
+      'Aile',
+      'Kültür ve Toplum',
+      'Din ve Toplum',
+      'Eğitim ve Toplum',
+      'Toplumsal Tabakalaşma',
+      'Toplumsal Hareketlilik',
+    ],
   },
   wordquest: {
     vocabulary: ['Synonyms', 'Antonyms', 'Contextual Meaning', 'Word Families', 'Collocations'],
@@ -63,6 +77,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   tarih: 'Tarih',
   cografya: 'Coğrafya',
   felsefe: 'Felsefe ve Mantık',
+  sosyoloji: 'Sosyoloji',
   vocabulary: 'İngilizce Kelime Bilgisi',
   grammar: 'İngilizce Dilbilgisi',
   cloze_test: 'İngilizce Boşluk Doldurma',
