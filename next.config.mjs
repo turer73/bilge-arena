@@ -52,6 +52,35 @@ const nextConfig = {
     ]
   },
 
+  /**
+   * Permanent redirects for legacy / orphan URLs.
+   *
+   * GSC "Yeniden yonlendirme hatasi" pattern on bilgearena.com:
+   *   www.bilgearena.com/<bare-name>  -- 308 -->  bilgearena.com/<bare-name>  -- 404
+   *
+   * Common external/historical crawl paths that 404 — bare game names without
+   * the /arena prefix, English auth paths, generic "oyunlar" landing.
+   * All targets verified 200 before commit.
+   */
+  async redirects() {
+    return [
+      // Bare game names → /arena/<game> (the dynamic [game] route)
+      { source: '/matematik', destination: '/arena/matematik', permanent: true },
+      { source: '/turkce',    destination: '/arena/turkce',    permanent: true },
+      { source: '/fen',       destination: '/arena/fen',       permanent: true },
+      { source: '/sosyal',    destination: '/arena/sosyal',    permanent: true },
+      { source: '/wordquest', destination: '/arena/wordquest', permanent: true },
+      // Generic game landings
+      { source: '/oyun',     destination: '/arena', permanent: true },
+      { source: '/oyunlar',  destination: '/arena', permanent: true },
+      { source: '/anasayfa', destination: '/',      permanent: true },
+      // Legacy auth paths — site uses /giris (Turkish)
+      { source: '/login',    destination: '/giris', permanent: true },
+      { source: '/register', destination: '/giris', permanent: true },
+      { source: '/kayit',    destination: '/giris', permanent: true },
+    ]
+  },
+
   // Guvenlik + performans header'lari
   async headers() {
     return [
