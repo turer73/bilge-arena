@@ -121,15 +121,49 @@ Funnel okuması (rakam değil oran):
 
 ---
 
-## 5. Uygulama Çerçevesi (sonraki TDD planında detay)
+## 5. Uygulama Çerçevesi — Mevcut Altyapı + Boşluklar
 
-Henüz kod planı YOK. Karar verilmesi gereken çatallar:
+### 5.1 Zaten Hazır Olan (planı yazarken bilmiyordum, sonra keşfettim)
 
-1. **AI üretim arayüzü:** Var mı? Yok. `/admin/questions/generate` route + Gemini call + onay sırası gerek.
-2. **Kalite kontrol kanalı:** Yeni soru → `is_active=false` → admin review → `is_active=true`. RLS migration 029 zaten admin update destekliyor; akış mevcut.
-3. **Bulk insert güvenliği:** Schema 023 (composite index) zaten var; `external_id` `'gen_<game>_<n>'` pattern ile çakışma engellenmeli.
-4. **Çoklu cevap formatı tutarlılığı:** Mevcut sorularda `content.answer` alanı 0-based int (seed-tyt.js'den). AI üretiminde bu kontrat zorlanmalı.
-5. **Telif/Özgünlük:** YKS soruları telifli olabilir. AI üretimi orijinal olmalı; eski sorulardan derive değil. Prompt'ta açıkça belirtilmeli.
+Aşağıdaki altyapı **production'da hazır:**
+
+| Bileşen | Konum | Durum |
+| --- | --- | --- |
+| AI üretim API'si | `src/app/api/admin/generate-questions/route.ts` (421 LOC) | Gemini 2.5 Flash Lite, Zod validation, duplicate detection (50-char prefix), few-shot (mevcut 3 sorudan), `source='ai_generated'` + `is_active=false` ile insert |
+| Admin üretici UI | `src/components/admin/ai-question-generator.tsx` (361 LOC) | Game/category/difficulty/topic seçimi, bilgi card'ı, üretim butonu |
+| Admin onay sırası | `src/app/admin/sorular/page.tsx` (419 LOC) | `is_active` toggle (Pasif → Aktif), edit, sil |
+| RBAC permission | `admin.questions.generate` | `checkPermission` ile guarded |
+| RLS migration 029 | `database/migrations/029_questions_admin_rls_policies.sql` | Admin INSERT/UPDATE/DELETE açık |
+| TOPIC_MAP | route.ts:11-46 | 5 oyun × 3-7 kategori, YKS konuları |
+
+**Pratik anlamı:** Tier B "araç inşa etme" işi DEĞİL. Mevcut araç çalışıyor; eksik olan **konfigürasyon** + **batch çalıştırma** + **manuel review iterasyonları**.
+
+### 5.2 Mevcut Araçtaki Boşluklar (eklenmeli)
+
+1. **`TOPIC_MAP.sosyal` sosyoloji eksik** (route.ts:32-36) — sadece tarih/coğrafya/felsefe var. Kritik bulgu (sosyoloji kategorisi 13 soru ile en sıkışık), AI generator bu boşluğu doldurmak için **çalıştırılamıyor**. Eklenmeli: `sosyoloji: ['Toplum ve Birey', 'Sosyal Yapı', 'Toplumsal Değişme', 'Aile', 'Kültür', ...]`.
+2. **Wordquest CEFR seviye filtresi yok** — route body sadece `{game, category, difficulty, topic}` alıyor; A1/A2/C2 hedeflemek için `level_tag` eklenmeli ve hem prompt'a hem insert'e (`level_tag` kolonu) yazılmalı.
+3. **Wordquest difficulty 1 ve 5 dağılım eksik** — UI varsayılan difficulty 2-4 öneriyor olabilir; `<AiQuestionGenerator />` component'i kontrol edilmeli.
+4. **Batch UX** — UI tek seferde N (default 5) soru üretiyor. 187 sosyoloji için ~38 run gerekir; UI'da queue/loop yok. Manuel iterasyon → admin sıkılır. **Opsiyon:** "5×10=50 soru bir komut" multi-batch UI eklemek.
+
+### 5.3 Karar Çatalları (planlama)
+
+1. **CEFR + difficulty 5 (boss) için ek sütun?** Schema'da `level_tag` zaten var (questions:66). Insert'e eklenmesi yeterli, schema değişikliği gerekmiyor.
+2. **Telif:** AI prompt'unda "YKS sorularını birebir kopyalama, özgün üret" satırı **var mı**? `QUESTION_GEN_PROMPT_FALLBACK` içinde yok. Production env `QUESTION_GEN_PROMPT_TEMPLATE` daha sıkı olabilir (görünmez). Kontrol edilmeli.
+3. **Onay batch'i:** 187 sorunun manuel review süresi ~3-5 saat. **AI ön-filtre** (Gemini'ye "bu kalitede mi?" sorusu) maliyeti düşürür ama kalite riski açar. Manuel default tercih.
+4. **Wordquest UX boşluğu**: Tier B kapsamında DEĞİL (Section 3.C). Ayrı bir keşif/sprint.
+
+### 5.4 Revize Edilmiş Sprint Tahminleri
+
+Eski tahminler "yeni araç inşa et" varsayımıyla idi; mevcut araç bilgisi ışığında:
+
+| Sprint | İş | Yeni süre tahmini |
+| --- | --- | --- |
+| 1: sosyoloji +187 | TOPIC_MAP'e konu ekle (10 dk) → 38 üretim run × 30 sn (~20 dk) → 187 manuel review (~3 saat) → Aktif et | **~4 saat tek mühendis** |
+| 2: wordquest A1+A2 +400 | Route'a level_tag desteği (~1 saat dev) → 80 üretim run (~45 dk) → review (~5 saat) | **~7 saat** |
+| 3: yazım kuralları + matematik denge +200 | TOPIC_MAP zaten var → 40 üretim run → review (~3 saat) | **~4 saat** |
+| 4: C2 + boss difficulty +200 | Manuel curate veya AI + sıkı review | **~6 saat** |
+
+**Toplam:** ~21 saat tek mühendis = 3 iş günü dağıtık. Kalite kontrol ana darboğaz, otomasyon değil.
 
 ---
 
@@ -137,8 +171,9 @@ Henüz kod planı YOK. Karar verilmesi gereken çatallar:
 
 - **wordquest düşük play sayısı** içerik eklenmesiyle düzelmeyecek. Ayrı UX sprintinde araştırılmalı: hero CTA, onboarding game seçimi, marketing.
 - **Plausible Day2Return = 25** (Signup = 22) — Day2Return Signup'tan büyük çıkıyor; bu Plausible event mismatch (Day2Return guest+user'ı sayıyor olabilir). Doğrulanmalı, ama bu envanter raporunun konusu değil.
-- **Soru üretim hızı** belirsiz: Gemini 2.5 Pro tek prompt'ta 5-10 kaliteli soru üretebilir; 187 sosyoloji sorusu için ~25 prompt + 25 review iterasyonu. **Tek mühendisin yarım gün işi**, 3-4 günde dağılırsa kalite daha iyi.
 - **Production data taze değil** — Snapshot anı: 2026-04-26 22:39 UTC. Sprintler başlamadan re-run gerekir.
+- **Plan hatası (kendine karşı dürüstlük):** İlk sürümde "AI üretim arayüzü yok" yazmıştım. Yanlış. Repo'yu önceden taramadım; lint çıktısında `ai-question-generator.tsx` görünce farkettim. Section 5 baştan yazıldı. Ders: planlama öncesi `find src -name '*generate*'` 5 saniyelik komut, varsayım üretmekten çok daha sağlam.
+- **`QUESTION_GEN_PROMPT_TEMPLATE` env**: Production'da hangi prompt kullanılıyor görünmüyor (env'de saklı). Telif riski + kalite kalibrasyonu burada gizli; admin onayı sırasında dikkat etmek gerek.
 
 ---
 
