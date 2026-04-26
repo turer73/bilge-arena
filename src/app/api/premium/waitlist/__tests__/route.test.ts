@@ -4,18 +4,39 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // vi.hoisted: vi.mock factory'leri import time'da calisir; bu yuzden mock fn'leri
 // hoist edilmis blok icinde tanimlanmali (TDZ ReferenceError onlemek icin).
 
-const { mockInsert, mockFrom, mockRateLimitCheck, mockResendSend } = vi.hoisted(
-  () => {
-    const mockInsert = vi.fn()
-    const mockFrom = vi.fn(() => ({ insert: mockInsert }))
-    const mockRateLimitCheck = vi.fn()
-    const mockResendSend = vi.fn()
-    return { mockInsert, mockFrom, mockRateLimitCheck, mockResendSend }
+const {
+  mockInsert,
+  mockFrom,
+  mockRateLimitCheck,
+  mockResendSend,
+  mockCreateClient,
+  mockCreateServiceRoleClient,
+} = vi.hoisted(() => {
+  const mockInsert = vi.fn()
+  const mockFrom = vi.fn(() => ({ insert: mockInsert }))
+  const mockRateLimitCheck = vi.fn()
+  const mockResendSend = vi.fn()
+  // Defense-in-depth: hem anon hem service-role client mock'lansin.
+  // Codex P1 fix sonrasi route service-role kullanir (RLS, anon INSERT'i blokluyor).
+  // Mevcut testler her iki mock da ayni mockFrom'u dondurdugu icin etkilenmez.
+  const mockCreateClient = vi.fn(async () => ({ from: mockFrom }))
+  const mockCreateServiceRoleClient = vi.fn(() => ({ from: mockFrom }))
+  return {
+    mockInsert,
+    mockFrom,
+    mockRateLimitCheck,
+    mockResendSend,
+    mockCreateClient,
+    mockCreateServiceRoleClient,
   }
-)
+})
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({ from: mockFrom })),
+  createClient: mockCreateClient,
+}))
+
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: mockCreateServiceRoleClient,
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
@@ -163,5 +184,21 @@ describe('POST /api/premium/waitlist', () => {
     expect(res.status).toBe(200)
     const insertedRow = mockInsert.mock.calls[0][0]
     expect(insertedRow.email).toBe('user@example.com')
+  })
+
+  // 2026-04-26 (Codex P1 fix): waitlist route, anon client yerine service-role client kullanmali.
+  // Migration 039 sonrasi RLS policy 'TO service_role' ile kilitlenir; anon client INSERT yapamaz.
+  // Route service-role'u kullanmazsa production'da 401/403 doner. Bu test, refactor'un bozulmamasini garantiler.
+  it('uses service-role client (not anon) so RLS lock to service_role works', async () => {
+    const req = makeRequest({
+      email: 'security-check@example.com',
+      plan: 'monthly',
+      kvkkConsent: true,
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+    // Defense-in-depth: anon createClient hic cagrilmamali, service-role'a gecilmis olmali
+    expect(mockCreateServiceRoleClient).toHaveBeenCalled()
+    expect(mockCreateClient).not.toHaveBeenCalled()
   })
 })
