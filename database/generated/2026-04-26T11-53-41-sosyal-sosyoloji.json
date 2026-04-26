@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T11:53:41.396Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 4,
+  "level_tag": null,
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Toplumda bireylerin sahip olduğu konumları ve bu konumlara bağlı olarak edindikleri hak ve sorumlulukları ifade eden kavram aşağıdakilerden hangisidir?",
+      "options": [
+        "Sosyal statü",
+        "Sosyal rol",
+        "Sosyal grup",
+        "Sosyal norm",
+        "Sosyal tabaka"
+      ],
+      "answer": 0,
+      "solution": "Sosyal statü, bir bireyin toplumdaki yerini ve konumunu belirlerken, bu konuma bağlı hak ve yükümlülükleri de beraberinde getirir.",
+      "topic": "Toplumsal Tabakalaşma"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi toplumsal yapıyı oluşturan temel unsurlardan biri olarak kabul edilmez?",
+      "options": [
+        "Normlar",
+        "Değerler",
+        "Statüler",
+        "Fiziksel coğrafya",
+        "Kurumlar"
+      ],
+      "answer": 3,
+      "solution": "Toplumsal yapı, bireylerin birbirleriyle olan ilişkileri, bu ilişkileri düzenleyen normlar, değerler, statüler ve kurumlar aracılığıyla oluşur. Fiziksel coğrafya ise çevresel bir faktördür.",
+      "topic": "Toplumsal Yapı"
+    },
+    {
+      "question": "İnsanların belirli bir amaç etrafında örgütlenerek ortak çıkarlarını savunmak ve geliştirmek amacıyla oluşturdukları kalıcı birlikteliklere ne ad verilir?",
+      "options": [
+        "Toplumsal hareket",
+        "Toplumsal grup",
+        "Toplumsal kurum",
+        "Toplumsal değer",
+        "Toplumsal rol"
+      ],
+      "answer": 1,
+      "solution": "Toplumsal grup, ortak bir amaç veya ilgi etrafında bir araya gelmiş, aralarında etkileşim bulunan bireyler topluluğudur.",
+      "topic": "Toplum ve Birey"
+    },
+    {
+      "question": "Bir toplumdaki bireylerin veya grupların, toplumsal hiyerarşi içinde farklı düzeylerde yer alması durumuna ne ad verilir?",
+      "options": [
+        "Toplumsal hareketlilik",
+        "Toplumsal tabakalaşma",
+        "Toplumsal bütünleşme",
+        "Toplumsal değişme",
+        "Toplumsal normlar"
+      ],
+      "answer": 1,
+      "solution": "Toplumsal tabakalaşma, toplumun üst, orta ve alt gibi farklı katmanlara ayrılması ve bu katmanlar arasında eşitsizliklerin bulunması durumunu ifade eder.",
+      "topic": "Toplumsal Tabakalaşma"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi toplumsal değişmeyi tetikleyen içsel faktörlerden biri değildir?",
+      "options": [
+        "Nüfus artışı",
+        "Teknolojik gelişmeler",
+        "Ekonomik eşitsizlikler",
+        "Dışarıdan gelen kültürel etkiler",
+        "Bilimsel buluşlar"
+      ],
+      "answer": 3,
+      "solution": "Dışarıdan gelen kültürel etkiler, toplumsal değişmeyi tetikleyen dışsal bir faktördür. Nüfus artışı, teknolojik gelişmeler, ekonomik eşitsizlikler ve bilimsel buluşlar ise toplumun kendi iç dinamiklerinden kaynaklanan içsel faktörlerdir.",
+      "topic": "Toplumsal Değişme"
+    }
+  ]
+}

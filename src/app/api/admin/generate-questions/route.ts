@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
-import { trLower } from '@/lib/utils/tr-text'
+import { trLower, isLikelyTurkish } from '@/lib/utils/tr-text'
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -33,6 +33,20 @@ const TOPIC_MAP: Record<string, Record<string, string[]>> = {
     tarih: ['İlk Türk Devletleri', 'Osmanlı Kuruluş', 'Osmanlı Yükseliş', 'Tanzimat', 'Kurtuluş Savaşı', 'Atatürk İnkılapları', 'Çok Partili Dönem'],
     cografya: ['İklim', 'Nüfus', 'Göç', 'Harita Bilgisi', 'Türkiye Coğrafyası', 'Doğal Afetler', 'Ekonomik Coğrafya'],
     felsefe: ['Felsefenin Alanı', 'Bilgi Felsefesi', 'Ahlak Felsefesi', 'Mantık', 'Psikoloji', 'Sosyoloji'],
+    // 2026-04-26: sosyoloji kategorisi DB'de mevcut (13 soru) ama TOPIC_MAP'te yoktu;
+    // AI generator bu kategoriye konu listesi olmadan ureyemiyordu. YKS müfredatı sosyoloji konuları:
+    sosyoloji: [
+      'Toplum ve Birey',
+      'Sosyal Yapı',
+      'Toplumsal Kurumlar',
+      'Toplumsal Değişme',
+      'Aile',
+      'Kültür ve Toplum',
+      'Din ve Toplum',
+      'Eğitim ve Toplum',
+      'Toplumsal Tabakalaşma',
+      'Toplumsal Hareketlilik',
+    ],
   },
   wordquest: {
     vocabulary: ['Synonyms', 'Antonyms', 'Contextual Meaning', 'Word Families', 'Collocations'],
@@ -63,6 +77,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   tarih: 'Tarih',
   cografya: 'Coğrafya',
   felsefe: 'Felsefe ve Mantık',
+  sosyoloji: 'Sosyoloji',
   vocabulary: 'İngilizce Kelime Bilgisi',
   grammar: 'İngilizce Dilbilgisi',
   cloze_test: 'İngilizce Boşluk Doldurma',
@@ -93,12 +108,38 @@ const QUESTION_GEN_PROMPT_FALLBACK = `Sen YKS soru üretiyorsun. Kategori: {cate
 KRİTİK: JSON anahtarları MUTLAKA "question", "options", "answer", "solution", "topic" olmalı.
 Türkçe key KULLANMA. SADECE JSON döndür, başka hiçbir şey yazma.`
 
-function buildSystemPrompt(game: string, category: string): string {
+// CEFR seviyesine gore AI'ye verilecek kelime/grammar kalibrasyon ipucu.
+// 2026-04-26 (Tier C): Onceki versiyon C2 rubrigi ('Mastery: idiomatic
+// native-like vocabulary...') tamamen Ingilizce'ydi -> Gemini bu rubrigin
+// etkisinde solution'lari Ingilizce uretti (10 satir gozlemlendi). Drift
+// kayniginda kapatildi: tum rehberler Turkce, "Ileri Duzey/Usta/Yetkin/Ana
+// Dili" gibi acik Turkce yon-belirleyici kelimeler eklendi. Tek surum
+// gercek (database/run-generation.mjs CLI ile birebir mirror edilir).
+const CEFR_GUIDANCE: Record<string, string> = {
+  A1: 'A1 — Başlangıç Düzeyi: en temel 500-1000 kelime, simple present/past, kısa cümleler, günlük basit konular',
+  A2: 'A2 — Temel Düzey: yaygın 2000 kelime, present/past/future temel kullanım, basit bağlaç yapıları',
+  B1: 'B1 — Orta Düzey: 3000-4000 kelime, present perfect, 1st conditional, edilgen yapılar',
+  B2: 'B2 — Orta-İleri Düzey: deyimler, phrasal verb kullanımı, 2nd-3rd conditional, dolaylı anlatım',
+  C1: 'C1 — İleri Düzey: nüanslı kelime hazinesi, karmaşık dilbilgisi yapıları, soyut konular, resmi register',
+  C2: 'C2 — Usta Düzey (Ana Dili Yetkinliği): native-level deyimsel kullanım, karmaşık yapılar, soyut konular',
+}
+
+function buildSystemPrompt(game: string, category: string, levelTag: string | null): string {
   const isEnglish = game === 'wordquest'
   const categoryLabel = CATEGORY_LABELS[category] || category
   const topics = TOPIC_MAP[game]?.[category] || []
   const topicList = topics.length > 0 ? `\nBu kategorideki YKS konulari: ${topics.join(', ')}` : ''
-  const langRule = isEnglish ? 'Soru metni İngilizce, çözüm Türkçe olmalı' : 'Türkçe yazılmalı'
+  // Wordquest icin CEFR seviyesi prompt'a girer; aksi halde Gemini her zaman B2 zorlugunda
+  // soru ureticek (eski hata). Diger oyunlarda level_tag yok, langRule sade kalir.
+  const cefrLine = isEnglish && levelTag && CEFR_GUIDANCE[levelTag]
+    ? `\nCEFR seviyesi: ${CEFR_GUIDANCE[levelTag]}. Soru zorlugu bu seviyeye uygun olmali.`
+    : ''
+  // 2026-04-26 (Tier C): "çözüm Türkçe olmalı" tek satir kural
+  // Gemini'nin C2 Ingilizce rubrik ile birlikte gormesinde drift'i engelleyemedi.
+  // Daha kuvvetli emir kipi + tekrar + ornek-yon belirtilen kalip kullanildi.
+  const langRule = isEnglish
+    ? `Soru metni İngilizce yazılmalı. ANCAK "solution" alanı MUTLAKA Türkçe yazılmalıdır — kesinlikle İngilizce kullanma. Örnek doğru kalıp: "elated kelimesi çok mutlu anlamına gelir".${cefrLine}`
+    : 'Türkçe yazılmalı'
 
   const template = process.env.QUESTION_GEN_PROMPT_TEMPLATE || QUESTION_GEN_PROMPT_FALLBACK
 
@@ -119,11 +160,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
 
-  const { game, category, difficulty, count = 5, topic } = await req.json()
+  const { game, category, difficulty, count = 5, topic, level_tag } = await req.json()
 
   if (!game || !category || !difficulty) {
     return NextResponse.json({ error: 'game, category, difficulty gerekli' }, { status: 400 })
   }
+
+  // CEFR seviye dogrulamasi: verilirse sadece A1-C2 izinli (DB CHECK constraint ile uyumlu).
+  // 2026-04-26 (Tier B): wordquest icin level_tag onceden form'da yoktu, generator bu alani sessizce
+  // dusurup NULL ekliyordu. Artik UI gondermeli; dogrulanmadan ekleme yok.
+  const VALID_CEFR = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const
+  if (level_tag !== undefined && level_tag !== null && !(VALID_CEFR as readonly string[]).includes(level_tag)) {
+    return NextResponse.json({ error: 'Gecersiz level_tag — A1/A2/B1/B2/C1/C2 olmali' }, { status: 400 })
+  }
+  // wordquest icin default 'B2' (seed davranisi: legacy 364 soru B2 etiketli);
+  // diger oyunlarda level_tag anlamsiz, NULL olarak insert edilir (eski davranisi koruyor).
+  const effectiveLevelTag: string | null = level_tag ?? (game === 'wordquest' ? 'B2' : null)
 
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
   if (!apiKey) {
@@ -191,7 +243,7 @@ Soru sayisi: ${count}${fewShotText}`
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: buildSystemPrompt(game, category) }] },
+        system_instruction: { parts: [{ text: buildSystemPrompt(game, category, effectiveLevelTag) }] },
         contents: [{ parts: [{ text: userPrompt }] }],
         generationConfig: {
           temperature: 0.8,
@@ -267,9 +319,33 @@ Soru sayisi: ${count}${fewShotText}`
       return NextResponse.json({ error: 'AI geçerli soru üretemedi', raw: text }, { status: 502 })
     }
 
+    // ── Solution dil kontrolu (drift guard, sadece wordquest) ─────────
+    // 2026-04-26 (Tier C): C2 prompt drift gozlemi sonrasi eklendi.
+    // Defense-in-depth: asil kaynagi (CEFR rubrigi Turkce) duzelttik ama
+    // Gemini gelecekte yine drift edebilir; runtime filtre satirin DB'ye
+    // ulasmasini engeller. Sadece wordquest'te uygulanir cunku diger
+    // oyunlar zaten Turkce ureticek.
+    let languageDriftCount = 0
+    const languageOkQuestions = game === 'wordquest'
+      ? validQuestions.filter((q) => {
+          if (!isLikelyTurkish(q.solution)) {
+            languageDriftCount++
+            return false
+          }
+          return true
+        })
+      : validQuestions
+
+    if (languageOkQuestions.length === 0) {
+      return NextResponse.json({
+        error: `${validQuestions.length} soru üretildi ama tümü İngilizce solution içeriyor (CEFR drift)`,
+        languageDriftCount,
+      }, { status: 409 })
+    }
+
     // ── Duplicate filtre ──────────────────────────────
     let duplicateCount = 0
-    const uniqueQuestions = validQuestions.filter((q) => {
+    const uniqueQuestions = languageOkQuestions.filter((q) => {
       const prefix = trLower(q.question.slice(0, 50))
       if (existingPrefixes.has(prefix)) {
         duplicateCount++
@@ -281,7 +357,7 @@ Soru sayisi: ${count}${fewShotText}`
 
     if (uniqueQuestions.length === 0) {
       return NextResponse.json({
-        error: `${validQuestions.length} soru uretildi ama hepsi mevcut sorularla ayni`,
+        error: `${languageOkQuestions.length} soru uretildi ama hepsi mevcut sorularla ayni`,
         duplicateCount,
       }, { status: 409 })
     }
@@ -292,6 +368,7 @@ Soru sayisi: ${count}${fewShotText}`
       category,
       topic: q.topic || topic || null,
       difficulty: Number(difficulty),
+      level_tag: effectiveLevelTag,
       content: {
         question: q.question,
         options: q.options,
@@ -317,6 +394,7 @@ Soru sayisi: ${count}${fewShotText}`
       generated: validQuestions.length,
       saved: inserted?.length || 0,
       duplicateCount,
+      languageDriftCount,
       questions: uniqueQuestions,
     })
   } catch (err) {
@@ -338,7 +416,7 @@ export async function PUT(req: Request) {
   }
 
   const body = await req.json()
-  const { game, category, topic, difficulty, question, options, answer, solution } = body
+  const { game, category, topic, difficulty, question, options, answer, solution, level_tag } = body
 
   // Dogrulama
   const { z } = await import('zod')
@@ -351,12 +429,17 @@ export async function PUT(req: Request) {
     options: z.array(z.string().min(1).max(500)).length(5),
     answer: z.number().int().min(0).max(4),
     solution: z.string().min(5).max(3000),
+    // CEFR enum — DB CHECK constraint ile birebir; manuel ekleme akisinda da
+    // generator'in kabullendigi sema gecerli olmali (tek surum hakikat).
+    level_tag: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).optional(),
   })
 
-  const result = schema.safeParse({ game, category, topic, difficulty, question, options, answer, solution })
+  const result = schema.safeParse({ game, category, topic, difficulty, question, options, answer, solution, level_tag })
   if (!result.success) {
     return NextResponse.json({ error: 'Gecersiz veri', details: result.error.flatten() }, { status: 400 })
   }
+
+  const effectiveLevelTag: string | null = level_tag ?? (game === 'wordquest' ? 'B2' : null)
 
   const svc = createServiceRoleClient()
   const { data: inserted, error } = await svc
@@ -366,6 +449,7 @@ export async function PUT(req: Request) {
       category,
       topic: topic || null,
       difficulty,
+      level_tag: effectiveLevelTag,
       content: { question, options, answer, solution },
       source: 'manual',
       is_active: true,

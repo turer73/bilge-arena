@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T08:17:14.329Z",
+  "game": "wordquest",
+  "category": "grammar",
+  "difficulty": 4,
+  "level_tag": "C2",
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "The committee, ---- by a diverse group of experts, has put forth a comprehensive report on sustainable urban development.",
+      "options": [
+        "comprising",
+        "composed of",
+        "which comprises",
+        "that composes",
+        "being comprised by"
+      ],
+      "answer": 0,
+      "solution": "'Comprising' here functions as a participle modifying 'committee'. 'Composed of' is also grammatically correct but less concise in this context. 'Which comprises' would require a relative clause structure.",
+      "topic": "Relative Clauses"
+    },
+    {
+      "question": "By the time the rescue team arrived, the hikers ---- for over 24 hours, battling harsh weather conditions.",
+      "options": [
+        "had been lost",
+        "were losing",
+        "have been losing",
+        "would lose",
+        "had lost"
+      ],
+      "answer": 0,
+      "solution": "The past perfect continuous tense ('had been losing') is used to emphasize the duration of an action that was completed before another past action (the arrival of the rescue team).",
+      "topic": "Tenses"
+    },
+    {
+      "question": "Had the company ---- its security protocols more rigorously, the data breach might have been averted.",
+      "options": [
+        "enforced",
+        "enforcing",
+        "been enforcing",
+        "have enforced",
+        "enforces"
+      ],
+      "answer": 0,
+      "solution": "This is a third conditional sentence with inversion. The structure 'Had + subject + past participle' is used to express a hypothetical past condition.",
+      "topic": "Conditionals"
+    },
+    {
+      "question": "It is imperative that all employees ---- their annual performance reviews by the end of the fiscal year.",
+      "options": [
+        "complete",
+        "completes",
+        "completed",
+        "will complete",
+        "are completing"
+      ],
+      "answer": 0,
+      "solution": "The subjunctive mood is required after 'imperative that'. The base form of the verb ('complete') is used regardless of the subject.",
+      "topic": "Modals"
+    },
+    {
+      "question": "Despite the initial setbacks, the ambitious project ---- by a dedicated team of engineers and scientists.",
+      "options": [
+        "is being seen through",
+        "has been seen through",
+        "was seeing through",
+        "will see through",
+        "is seeing through"
+      ],
+      "answer": 0,
+      "solution": "The present continuous passive ('is being seen through') indicates an ongoing action that is happening now or around now, fitting the context of a project currently in progress despite challenges.",
+      "topic": "Passive Voice"
+    }
+  ]
+}

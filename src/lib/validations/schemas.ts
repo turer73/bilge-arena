@@ -257,6 +257,29 @@ export const roleUpdateSchema = z.object({
 })
 
 // ============================================================
+// Premium waitlist (lansman bekleme listesi)
+// ============================================================
+// /arena/premium sayfasindaki "Bildirim al" formunun submit body'si.
+// kvkkConsent literal(true): KVKK m.5 acik riza zorunlu, uncheck submit reddedilir.
+
+export const premiumWaitlistSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(5, 'Email cok kisa')
+    .max(255, 'Email cok uzun')
+    .email('Gecerli email girin'),
+  plan: z.enum(['monthly', 'yearly']),
+  kvkkConsent: z.literal(true, {
+    message: 'KVKK aydinlatma metni onayi zorunlu',
+  }),
+  source: z.string().max(100).optional(),
+})
+
+export type PremiumWaitlistInput = z.infer<typeof premiumWaitlistSchema>
+
+// ============================================================
 // Sabitleri export et (client tarafinda da kullanilabilir)
 // ============================================================
 
