@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T08:17:04.252Z",
+  "game": "wordquest",
+  "category": "vocabulary",
+  "difficulty": 4,
+  "level_tag": "C2",
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Despite the initial setbacks, the team remained ----, convinced that their innovative approach would ultimately prevail.",
+      "options": [
+        "undaunted",
+        "gregarious",
+        "transient",
+        "perfunctory",
+        "garrulous"
+      ],
+      "answer": 0,
+      "solution": "Undaunted, meaning not intimidated or discouraged by difficulty, loss, or danger, fits the context of the team's persistence despite setbacks.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "The diplomat's ---- language was carefully chosen to avoid escalating the already tense negotiations.",
+      "options": [
+        "ambiguous",
+        "explicit",
+        "veiled",
+        "forthright",
+        "blunt"
+      ],
+      "answer": 2,
+      "solution": "Veiled means not expressed directly, which aligns with language chosen to be careful and avoid escalation, implying indirectness.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "Her ---- analysis of the economic data revealed subtle trends that others had overlooked.",
+      "options": [
+        "cursory",
+        "superficial",
+        "perceptive",
+        "hasty",
+        "obvious"
+      ],
+      "answer": 2,
+      "solution": "Perceptive means having or showing sensitive insight, which is necessary to find subtle trends in data.",
+      "topic": "Synonyms"
+    },
+    {
+      "question": "The ---- of the ancient manuscript made it a prized possession for the museum.",
+      "options": [
+        "mundanity",
+        "rarity",
+        "commonness",
+        "ordinariness",
+        "banality"
+      ],
+      "answer": 1,
+      "solution": "Rarity, meaning the state or quality of being uncommon, fits the context of a manuscript being a prized possession.",
+      "topic": "Antonyms"
+    },
+    {
+      "question": "The company's ---- strategy involved investing heavily in research and development to stay ahead of competitors.",
+      "options": [
+        "conservative",
+        "reactive",
+        "stagnant",
+        "proactive",
+        "retrospective"
+      ],
+      "answer": 3,
+      "solution": "Proactive means acting before others do, especially by anticipating future problems or needs, which fits the strategy of investing to stay ahead.",
+      "topic": "Contextual Meaning"
+    }
+  ]
+}

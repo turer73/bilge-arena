@@ -1,5 +1,5 @@
 {
-  "takenAt": "2026-04-25T22:39:52.443Z",
+  "takenAt": "2026-04-26T08:18:00.749Z",
   "totalActive": 3737,
   "byGame": {
     "wordquest": {
@@ -98,13 +98,13 @@
     }
   },
   "plays": {
-    "since": "2026-03-26T22:39:52.358Z",
-    "totalSessions": 113,
+    "since": "2026-03-27T08:18:00.660Z",
+    "totalSessions": 117,
     "byGame": {
       "sosyal": 61,
       "fen": 17,
-      "turkce": 17,
-      "matematik": 16,
+      "turkce": 19,
+      "matematik": 18,
       "wordquest": 2
     }
   }

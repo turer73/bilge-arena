@@ -1,0 +1,39 @@
+{
+  "takenAt": "2026-04-26T08:14:42.780Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 3,
+  "level_tag": null,
+  "count": 2,
+  "duplicate_count": 0,
+  "raw_count": 2,
+  "valid_count": 2,
+  "questions": [
+    {
+      "question": "Bir toplumda bireylerin belirli bir statüye ulaşmak için gösterdikleri çabalar ve bu çabalar sonucunda elde ettikleri konumlar, sosyolojide hangi kavramla açıklanır?",
+      "options": [
+        "Toplumsal normlar",
+        "Toplumsal tabakalaşma",
+        "Toplumsal dayanışma",
+        "Kültürel yayılma",
+        "Sosyal kontrol"
+      ],
+      "answer": 1,
+      "solution": "Bu durum, bireylerin toplumdaki hiyerarşik yapıda yerlerini belirleyen toplumsal tabakalaşma süreciyle ilgilidir.",
+      "topic": "Toplumsal Tabakalaşma"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi, toplumsal kurumların temel işlevlerinden biri değildir?",
+      "options": [
+        "Toplumsal düzeni sağlama",
+        "Bireylerin temel ihtiyaçlarını karşılama",
+        "Kültürel değerleri gelecek nesillere aktarma",
+        "Bireylerin tüm kararlarını alma sürecini yönetme",
+        "Toplumsal bütünlüğü koruma"
+      ],
+      "answer": 3,
+      "solution": "Toplumsal kurumlar bireylerin kararlarını yönlendirir ancak tüm kararlarını alma sürecini yönetmezler; bu bireysel özerklik alanına girer.",
+      "topic": "Toplumsal Kurumlar"
+    }
+  ]
+}

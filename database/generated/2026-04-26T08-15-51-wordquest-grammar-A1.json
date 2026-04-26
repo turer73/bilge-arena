@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T08:15:51.837Z",
+  "game": "wordquest",
+  "category": "grammar",
+  "difficulty": 1,
+  "level_tag": "A1",
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "My sister ---- to the park every Sunday with her dog.",
+      "options": [
+        "goes",
+        "go",
+        "going",
+        "went",
+        "gone"
+      ],
+      "answer": 0,
+      "solution": "Simple Present Tense, tekil şahıs (sister) ile 'goes' kullanılır.",
+      "topic": "Tenses"
+    },
+    {
+      "question": "I ---- my homework yesterday evening.",
+      "options": [
+        "do",
+        "does",
+        "doing",
+        "did",
+        "done"
+      ],
+      "answer": 3,
+      "solution": "Simple Past Tense, dün akşam (yesterday evening) geçmişte olduğu için 'did' kullanılır.",
+      "topic": "Tenses"
+    },
+    {
+      "question": "If it ---- tomorrow, we will stay home.",
+      "options": [
+        "rains",
+        "rain",
+        "raining",
+        "rained",
+        "is raining"
+      ],
+      "answer": 0,
+      "solution": "First Conditional, if cümlesinde şimdiki zaman (rains) ve ana cümlede gelecek zaman (will stay) kullanılır.",
+      "topic": "Conditionals"
+    },
+    {
+      "question": "The book ---- on the table is mine.",
+      "options": [
+        "who",
+        "which",
+        "where",
+        "when",
+        "whose"
+      ],
+      "answer": 1,
+      "solution": "Relative Clause, cansız nesne (book) için 'which' kullanılır.",
+      "topic": "Relative Clauses"
+    },
+    {
+      "question": "You ---- finish your project by Friday.",
+      "options": [
+        "must",
+        "can",
+        "should",
+        "might",
+        "could"
+      ],
+      "answer": 0,
+      "solution": "Modal Verbs, Cuma'ya kadar bitirme zorunluluğunu ifade etmek için 'must' kullanılır.",
+      "topic": "Modals"
+    }
+  ]
+}
