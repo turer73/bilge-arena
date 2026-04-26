@@ -1,0 +1,39 @@
+{
+  "takenAt": "2026-04-26T08:14:54.800Z",
+  "game": "wordquest",
+  "category": "vocabulary",
+  "difficulty": 1,
+  "level_tag": "A1",
+  "count": 2,
+  "duplicate_count": 0,
+  "raw_count": 2,
+  "valid_count": 2,
+  "questions": [
+    {
+      "question": "My sister is very ----. She always helps people who need it.",
+      "options": [
+        "kind",
+        "sad",
+        "angry",
+        "busy",
+        "quiet"
+      ],
+      "answer": 0,
+      "solution": "Kişinin yardımsever olması 'kind' (nazik, iyi) kelimesiyle ifade edilir. Diğer seçenekler (sad: üzgün, angry: kızgın, busy: meşgul, quiet: sessiz) bu durumu anlatmaz.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "It is ---- to drink water when you are thirsty.",
+      "options": [
+        "important",
+        "difficult",
+        "boring",
+        "strange",
+        "impossible"
+      ],
+      "answer": 0,
+      "solution": "Susuz olduğunda su içmenin gerekliliği 'important' (önemli) kelimesiyle ifade edilir. Diğer seçenekler (difficult: zor, boring: sıkıcı, strange: garip, impossible: imkansız) bu durumu karşılamaz.",
+      "topic": "Contextual Meaning"
+    }
+  ]
+}

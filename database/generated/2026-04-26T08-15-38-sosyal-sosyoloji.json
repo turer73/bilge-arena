@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T08:15:38.028Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 4,
+  "level_tag": null,
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Toplumsal yapıyı oluşturan temel unsurlardan biri olan ve bireylerin birbirleriyle etkileşimde bulunarak oluşturduğu anlamlı bütünlere ne ad verilir?",
+      "options": [
+        "Birey",
+        "Grup",
+        "Kurum",
+        "Toplum",
+        "Kültür"
+      ],
+      "answer": 1,
+      "solution": "Toplumsal yapıyı oluşturan ve bireylerin etkileşimleriyle ortaya çıkan anlamlı bütünlere grup adı verilir.",
+      "topic": "Toplum ve Birey"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi toplumsal tabakalaşmanın temel boyutlarından biri olarak kabul edilmez?",
+      "options": [
+        "Sınıf",
+        "Statü",
+        "Güç",
+        "Irk",
+        "Eğitim"
+      ],
+      "answer": 4,
+      "solution": "Toplumsal tabakalaşma genellikle sınıf, statü ve güç gibi boyutlara göre gerçekleşir. Irk da önemli bir ayrım noktası olabilirken, eğitim daha çok bu tabakalar arasındaki hareketliliği veya bireyin konumunu belirleyen bir faktördür.",
+      "topic": "Toplumsal Tabakalaşma"
+    },
+    {
+      "question": "Bir toplumun nesilden nesile aktarılan, paylaşılan değerler, inançlar, normlar, semboller ve maddi unsurlar bütününe ne ad verilir?",
+      "options": [
+        "Toplumsal yapı",
+        "Toplumsal kurum",
+        "Kültür",
+        "Toplumsal grup",
+        "Sosyal norm"
+      ],
+      "answer": 2,
+      "solution": "Bir toplumun paylaştığı soyut ve somut unsurların tümüne kültür denir.",
+      "topic": "Kültür ve Toplum"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi, bireylerin toplumsal normlara uyum sağlamasını ve toplumsal beklentileri karşılamasını amaçlayan toplumsal kontrol mekanizmalarından biridir?",
+      "options": [
+        "Toplumsal hareketlilik",
+        "Sosyalizasyon",
+        "Toplumsal sapma",
+        "Kültürel gecikme",
+        "Toplumsal yabancılaşma"
+      ],
+      "answer": 1,
+      "solution": "Sosyalizasyon, bireyin toplumsal değerleri, normları ve davranış kalıplarını öğrendiği ve benimsediği yaşam boyu süren bir süreçtir, bu da toplumsal kontrolü sağlar.",
+      "topic": "Eğitim ve Toplum"
+    },
+    {
+      "question": "Sanayileşme, kentleşme ve sekülerleşme gibi süreçlerin etkisiyle toplumların geleneksel yapılarından modern yapılara doğru geçiş yapmasına ne ad verilir?",
+      "options": [
+        "Toplumsal çözülme",
+        "Toplumsal değişim",
+        "Toplumsal bütünleşme",
+        "Kültürel asimilasyon",
+        "Sosyal statüko"
+      ],
+      "answer": 1,
+      "solution": "Toplumların zaman içinde yapısal, işlevsel ve kültürel olarak geçirdiği dönüşümlere toplumsal değişim denir. Sanayileşme ve kentleşme bu değişimin önemli göstergeleridir.",
+      "topic": "Toplumsal Değişme"
+    }
+  ]
+}

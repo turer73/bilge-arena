@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T08:15:24.304Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 2,
+  "level_tag": null,
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Toplumun en küçük ve temel birimi olarak kabul edilen, akrabalık bağlarına dayanan toplumsal yapı aşağıdakilerden hangisidir?",
+      "options": [
+        "Aile",
+        "Okul",
+        "Sendika",
+        "Parti",
+        "Dernek"
+      ],
+      "answer": 0,
+      "solution": "Aile, genellikle akrabalık bağları ve evlilik yoluyla kurulan, toplumsal yaşamın temel taşı olarak kabul edilen en küçük toplumsal gruptur.",
+      "topic": "Aile"
+    },
+    {
+      "question": "Toplumsal tabakalaşma ile ilgili olarak, bir kişinin toplum içindeki yerini belirleyen temel ölçütler arasında aşağıdakilerden hangisi yer almaz?",
+      "options": [
+        "Ekonomik durum",
+        "Eğitim seviyesi",
+        "Siyasi güç",
+        "Dinî inanç",
+        "Meslek"
+      ],
+      "answer": 3,
+      "solution": "Toplumsal tabakalaşma genellikle ekonomik güç, eğitim, meslek ve siyasi etki gibi ölçütlere dayanır. Dini inanç bireysel bir tercih olup doğrudan tabakalaşma ölçütü değildir.",
+      "topic": "Toplumsal Tabakalaşma"
+    },
+    {
+      "question": "Toplumun genel kabul görmüş düşünce, duygu ve davranış biçimlerinin tümünü ifade eden sosyolojik kavram aşağıdakilerden hangisidir?",
+      "options": [
+        "Toplumsal kurum",
+        "Toplumsal grup",
+        "Kültür",
+        "Toplumsal norm",
+        "Sosyal statü"
+      ],
+      "answer": 2,
+      "solution": "Kültür, bir toplumun paylaştığı değerleri, inançları, adetleri, sanatları, yasaları ve diğer tüm yaşam biçimlerini kapsayan geniş bir kavramdır.",
+      "topic": "Kültür ve Toplum"
+    },
+    {
+      "question": "Toplumun ihtiyaçlarını karşılamak üzere kurulmuş, belirli kurallara ve rollere sahip örgütlenmiş yapılara ne ad verilir?",
+      "options": [
+        "Toplumsal hareket",
+        "Toplumsal değer",
+        "Toplumsal kurum",
+        "Toplumsal norm",
+        "Sosyal statü"
+      ],
+      "answer": 2,
+      "solution": "Toplumsal kurumlar, toplumun temel ihtiyaçlarını (aile, eğitim, din, ekonomi, siyaset gibi) karşılamak için oluşturulmuş, belirli kuralları ve yapıları olan organizasyonlardır.",
+      "topic": "Toplumsal Kurumlar"
+    },
+    {
+      "question": "Bir toplumun zaman içinde geçirdiği yapısal ve işlevsel değişiklikler sürecine ne ad verilir?",
+      "options": [
+        "Toplumsallaşma",
+        "Toplumsal hareketlilik",
+        "Toplumsal değişme",
+        "Kültürel asimilasyon",
+        "Toplumsal bütünleşme"
+      ],
+      "answer": 2,
+      "solution": "Toplumsal değişme, bir toplumun yapısında, kurumlarında, değerlerinde, normlarında veya davranış biçimlerinde meydana gelen uzun süreli ve kalıcı dönüşümleri ifade eder.",
+      "topic": "Toplumsal Değişme"
+    }
+  ]
+}

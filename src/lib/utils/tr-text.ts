@@ -101,3 +101,40 @@ export function trSlug(input: string): string {
 export function trNormalize(input: string): string {
   return trDeaccent(trLower(input))
 }
+
+/**
+ * Heuristic: metnin muhtemelen Turkce olup olmadigini doner.
+ *
+ * NEDEN: AI uretim akisinda (`/api/admin/generate-questions`) prompt drift
+ * sonucu wordquest C2 cozumleri Ingilizce uretildi (Apr 2026 production gozlemi).
+ * Bu helper drift'i runtime'da yakalamak icin kullanilir — Zod sonrasi her
+ * wordquest solution'i bu fonksiyondan gecirilir, false donerse satir filtrelenir.
+ *
+ * Heuristic kararlari (false-positive > false-negative maliyetine optimize):
+ *   - Cok kisa metin (< 30 char): emin olunamaz, lenient kabul (true).
+ *     Ornek: "elated = mutlu" (18 char) -> true (kisa Turkce'yi reddetme).
+ *   - Turkce-spesifik karakter (ç, ğ, ı, ö, ş, ü) varsa: kuvvetli sinyal, true.
+ *   - Cumle baginda Turkce stopword (bir, bu, ve, ile, kelime, anlam) varsa: true.
+ *   - Aksi halde uzun metinde sinyal yok -> false (muhtemelen Ingilizce).
+ *
+ * Word-boundary (\b) ile false-positive engellenir:
+ *   - "every" icinde "ve" var, eslesmez (\bve\b).
+ *   - "bird" icinde "bir" var, eslesmez (\bbir\b).
+ *
+ * NOT: Bu fonksiyon dogal dil tespiti yapmaz — sadece Turkce-Ingilizce ayrimi
+ * icin tasarlanmistir. Diger dilleri (Almanca, Fransizca vb.) yanlis kabul edebilir.
+ */
+export function isLikelyTurkish(input: string): boolean {
+  const text = (input ?? '').trim()
+  if (text.length === 0) return false
+  // Cok kisa metinde guvenilir tespit yok — lenient
+  if (text.length < 30) return true
+
+  // Strong signal: Turkce-spesifik karakterler. Ingilizce metinde gecmez.
+  if (/[çğıöşüÇĞİÖŞÜ]/.test(text)) return true
+
+  // Secondary signal: ASCII-only Turkce stopword/connector eslesmesi.
+  // Word-boundary (\b) ile substring false-positive engellenir.
+  const turkishMarkers = /\b(bir|bu|ve|ile|olan|olarak|kelime|anlam|gelir|veya|degil|sunlar|nedir|cok|ozellikle)\b/i
+  return turkishMarkers.test(text)
+}

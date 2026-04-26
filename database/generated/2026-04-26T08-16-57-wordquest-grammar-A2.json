@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T08:16:57.305Z",
+  "game": "wordquest",
+  "category": "grammar",
+  "difficulty": 2,
+  "level_tag": "A2",
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "She usually ---- to the park on Sundays, but today she is at home because of the rain.",
+      "options": [
+        "goes",
+        "go",
+        "going",
+        "went",
+        "is going"
+      ],
+      "answer": 0,
+      "solution": "Simple Present Tense (goes) kullanılır çünkü 'usually' (genellikle) kelimesi alışkanlıkları belirtir.",
+      "topic": "Tenses"
+    },
+    {
+      "question": "If I ---- more free time, I would learn to play the guitar.",
+      "options": [
+        "had",
+        "have",
+        "will have",
+        "had had",
+        "am having"
+      ],
+      "answer": 0,
+      "solution": "İkinci tip koşul (Second Conditional) yapısıdır. Gerçekleşmesi zor veya imkansız durumlar için 'If + Simple Past' kullanılır.",
+      "topic": "Conditionals"
+    },
+    {
+      "question": "The cake ---- by my mother for my birthday party last year.",
+      "options": [
+        "baked",
+        "was baked",
+        "bakes",
+        "is baked",
+        "has baked"
+      ],
+      "answer": 1,
+      "solution": "Past Simple Passive (was baked) kullanılır çünkü eylem geçmişte yapılmıştır ve özne (kek) eylemi yapmamıştır, edilgen durumdadır.",
+      "topic": "Passive Voice"
+    },
+    {
+      "question": "I saw a man ---- was walking his dog in the park.",
+      "options": [
+        "who",
+        "which",
+        "whose",
+        "where",
+        "when"
+      ],
+      "answer": 0,
+      "solution": "'who' zamiri, insanları niteleyen bir relative clause başlatmak için kullanılır.",
+      "topic": "Relative Clauses"
+    },
+    {
+      "question": "You ---- bring your passport to the airport; it's required for international flights.",
+      "options": [
+        "must",
+        "should",
+        "can",
+        "might",
+        "would"
+      ],
+      "answer": 0,
+      "solution": "'must' zorunluluk belirtir. Pasaportun havaalanına getirilmesi uluslararası uçuşlar için zorunludur.",
+      "topic": "Modals"
+    }
+  ]
+}

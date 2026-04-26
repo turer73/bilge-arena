@@ -1,0 +1,52 @@
+{
+  "takenAt": "2026-04-26T11:54:56.423Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 3,
+  "level_tag": null,
+  "count": 3,
+  "duplicate_count": 2,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Toplumsal bir olgu olarak kabul edilen, bireylerin birbirleriyle etkileşimde bulunarak oluşturdukları, ortak bir kültürü ve yaşam biçimini paylaşan insan topluluğuna ne ad verilir?",
+      "options": [
+        "Grup",
+        "Kurum",
+        "Toplum",
+        "Kültür",
+        "Devlet"
+      ],
+      "answer": 2,
+      "solution": "Bireylerin etkileşimleriyle oluşan, ortak kültüre sahip insan topluluğuna 'toplum' denir. Grup daha küçük birimlerdir, kurumlar ise belirli işlevleri yerine getiren yapılardır.",
+      "topic": "Toplum ve Birey"
+    },
+    {
+      "question": "Bireyin içinde yaşadığı toplumun değerlerini, normlarını, inançlarını ve davranış biçimlerini öğrendiği, benimsediği ve içselleştirdiği sürece ne ad verilir?",
+      "options": [
+        "Toplumsallaşma",
+        "Kültürleşme",
+        "Entagrasyon",
+        "Asimilasyon",
+        "Sosyalizasyon"
+      ],
+      "answer": 0,
+      "solution": "Bireyin toplumsal kuralları ve değerleri öğrendiği sürece 'toplumsallaşma' denir. Sosyalizasyon da bu sürecin eş anlamlısıdır.",
+      "topic": "Toplum ve Birey"
+    },
+    {
+      "question": "Toplumun temel işlevlerini yerine getiren, belirli amaçlara yönelik olarak kurumsallaşmış insan ilişkileri ve davranış örüntülerinin bütününe ne ad verilir?",
+      "options": [
+        "Toplumsal grup",
+        "Toplumsal tabaka",
+        "Toplumsal kurum",
+        "Toplumsal hareket",
+        "Toplumsal norm"
+      ],
+      "answer": 2,
+      "solution": "Belirli toplumsal ihtiyaçları karşılamak ve işlevleri yerine getirmek üzere kurumsallaşmış yapı ve kurallara 'toplumsal kurum' denir. Aile, eğitim, din gibi yapılar buna örnektir.",
+      "topic": "Toplumsal Kurumlar"
+    }
+  ]
+}

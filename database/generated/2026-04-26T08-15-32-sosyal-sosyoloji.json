@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T08:15:32.164Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 3,
+  "level_tag": null,
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Bir toplumun yaşam biçimini, değerlerini, inançlarını, sanatını ve kurallarını ifade eden kavram aşağıdakilerden hangisidir?",
+      "options": [
+        "Toplum",
+        "Kültür",
+        "Kurum",
+        "Grup",
+        "Statü"
+      ],
+      "answer": 1,
+      "solution": "Kültür, bir toplumun paylaştığı maddi ve manevi ögelerin tamamını ifade eder.",
+      "topic": "Kültür ve Toplum"
+    },
+    {
+      "question": "Toplumsal tabakalaşmanın temelini oluşturan ve bireylerin veya grupların toplumdaki konumlarını belirleyen en önemli faktörler nelerdir?",
+      "options": [
+        "Bireysel yetenekler ve kişisel özellikler",
+        "Ekonomik kaynaklar, güç ve prestij",
+        "Yaş ve cinsiyet gibi biyolojik özellikler",
+        "Eğitim düzeyi ve meslek",
+        "Fiziksel görünüm ve ırk"
+      ],
+      "answer": 1,
+      "solution": "Sosyolojide tabakalaşma genellikle ekonomik durum, siyasi güç ve toplumsal saygınlık (prestij) gibi unsurlara dayanır.",
+      "topic": "Toplumsal Tabakalaşma"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi toplumsal değişmeyi etkileyen içsel faktörlerden biridir?",
+      "options": [
+        "Teknolojik gelişmeler",
+        "Savaşlar ve göçler",
+        "Nüfus artışı veya azalışı",
+        "Doğal afetler",
+        "Küreselleşme"
+      ],
+      "answer": 2,
+      "solution": "Nüfus yapısındaki değişimler (doğum, ölüm oranları, yaş dağılımı vb.) doğrudan toplumun kendi dinamiklerinden kaynaklanan içsel bir değişim unsurudur.",
+      "topic": "Toplumsal Değişme"
+    },
+    {
+      "question": "Bireyin toplum içindeki rolünü ve konumunu belirleyen, toplum tarafından kendisine atfedilen veya kendisinin edindiği özelliklere ne ad verilir?",
+      "options": [
+        "Sosyal norm",
+        "Sosyal değer",
+        "Sosyal statü",
+        "Sosyal rol",
+        "Sosyal sınıf"
+      ],
+      "answer": 2,
+      "solution": "Sosyal statü, bir bireyin toplumdaki yerini ve konumunu belirleyen hak ve ödevler bütününü ifade eder.",
+      "topic": "Toplum ve Birey"
+    },
+    {
+      "question": "Bir toplumda bireylerin yaşamlarını sürdürürken uymaları beklenen, yazılı olmayan kurallar bütününe ne ad verilir?",
+      "options": [
+        "Yasa",
+        "Gelenek",
+        "Örf",
+        "Sosyal norm",
+        "Değer"
+      ],
+      "answer": 3,
+      "solution": "Sosyal normlar, bir toplumda kabul gören ve bireylerin davranışlarını düzenleyen yazılı olmayan kurallardır.",
+      "topic": "Kültür ve Toplum"
+    }
+  ]
+}

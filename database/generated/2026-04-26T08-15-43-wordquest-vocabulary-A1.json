@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T08:15:43.923Z",
+  "game": "wordquest",
+  "category": "vocabulary",
+  "difficulty": 1,
+  "level_tag": "A1",
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "The opposite of 'big' is ----.",
+      "options": [
+        "large",
+        "small",
+        "tall",
+        "long",
+        "wide"
+      ],
+      "answer": 1,
+      "solution": "Zıt anlamlısı soruluyor. 'Big' (büyük) kelimesinin zıt anlamlısı 'small' (küçük) kelimesidir.",
+      "topic": "Antonyms"
+    },
+    {
+      "question": "She is a ---- student; she always does her homework on time.",
+      "options": [
+        "lazy",
+        "clever",
+        "fast",
+        "slow",
+        "tired"
+      ],
+      "answer": 1,
+      "solution": "Cümledeki ipucu 'she always does her homework on time' (her zaman ödevini zamanında yapar). Bu, öğrencinin zeki olduğunu gösterir.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "A ---- is a place where you can buy food and drinks.",
+      "options": [
+        "library",
+        "hospital",
+        "restaurant",
+        "school",
+        "park"
+      ],
+      "answer": 2,
+      "solution": "Tanıma uyan kelime soruluyor. 'Food and drinks' (yiyecek ve içecek) satılan yer 'restaurant' (restoran) kelimesidir.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "We need to ---- the cake before we eat it.",
+      "options": [
+        "cut",
+        "drive",
+        "sing",
+        "read",
+        "sleep"
+      ],
+      "answer": 0,
+      "solution": "Bu kelime, nesneyle yapılan bir eylemi ifade etmeli. Pasta gibi yiyecekleri yemekten önce keseriz.",
+      "topic": "Collocations"
+    },
+    {
+      "question": "My ---- is a doctor. She helps sick people.",
+      "options": [
+        "brother",
+        "teacher",
+        "sister",
+        "friend",
+        "neighbor"
+      ],
+      "answer": 2,
+      "solution": "Cümle, hasta insanlara yardım eden ve 'doktor' olan bir aile üyesini tanımlıyor. Bu kişi 'sister' (kız kardeş) olabilir.",
+      "topic": "Contextual Meaning"
+    }
+  ]
+}

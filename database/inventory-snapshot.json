@@ -1,0 +1,111 @@
+{
+  "takenAt": "2026-04-26T11:55:28.574Z",
+  "totalActive": 3737,
+  "byGame": {
+    "wordquest": {
+      "total": 640,
+      "byCategory": {
+        "vocabulary": 295,
+        "sentence_completion": 81,
+        "phrasal_verbs": 69,
+        "grammar": 90,
+        "restatement": 35,
+        "dialogue": 35,
+        "cloze_test": 35
+      },
+      "byDifficulty": {
+        "1": 0,
+        "2": 364,
+        "3": 241,
+        "4": 35,
+        "5": 0
+      },
+      "byLevel": {
+        "B2": 369,
+        "B1": 85,
+        "C1": 186
+      }
+    },
+    "matematik": {
+      "total": 966,
+      "byCategory": {
+        "sayilar": 162,
+        "olasilik": 80,
+        "problemler": 281,
+        "geometri": 283,
+        "denklemler": 80,
+        "fonksiyonlar": 80
+      },
+      "byDifficulty": {
+        "1": 76,
+        "2": 309,
+        "3": 429,
+        "4": 94,
+        "5": 58
+      },
+      "byLevel": {}
+    },
+    "turkce": {
+      "total": 919,
+      "byCategory": {
+        "yazim_kurallari": 39,
+        "paragraf": 320,
+        "dil_bilgisi": 280,
+        "sozcuk": 210,
+        "anlam_bilgisi": 70
+      },
+      "byDifficulty": {
+        "1": 120,
+        "2": 263,
+        "3": 305,
+        "4": 146,
+        "5": 85
+      },
+      "byLevel": {}
+    },
+    "fen": {
+      "total": 608,
+      "byCategory": {
+        "fizik": 207,
+        "kimya": 202,
+        "biyoloji": 199
+      },
+      "byDifficulty": {
+        "1": 48,
+        "2": 274,
+        "3": 170,
+        "4": 70,
+        "5": 46
+      },
+      "byLevel": {}
+    },
+    "sosyal": {
+      "total": 604,
+      "byCategory": {
+        "tarih": 202,
+        "cografya": 201,
+        "felsefe": 188,
+        "sosyoloji": 13
+      },
+      "byDifficulty": {
+        "1": 100,
+        "2": 211,
+        "3": 149,
+        "4": 88,
+        "5": 56
+      },
+      "byLevel": {}
+    }
+  },
+  "plays": {
+    "since": "2026-03-27T11:55:28.445Z",
+    "totalSessions": 117,
+    "byGame": {
+      "sosyal": 61,
+      "fen": 17,
+      "turkce": 19,
+      "matematik": 18,
+      "wordquest": 2
+    }
+  }
+}

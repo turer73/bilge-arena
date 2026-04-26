@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T11:52:05.271Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 2,
+  "level_tag": null,
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Toplumu oluşturan bireylerin karşılıklı etkileşimlerini ve bu etkileşimler sonucu ortaya çıkan örüntüleri inceleyen bilim dalı aşağıdakilerden hangisidir?",
+      "options": [
+        "Psikoloji",
+        "Antropoloji",
+        "Sosyoloji",
+        "Tarih",
+        "Felsefe"
+      ],
+      "answer": 2,
+      "solution": "Sosyoloji, toplumları, toplumsal ilişkileri, toplumsal kurumları ve insan davranışlarını inceleyen sosyal bir bilimdir.",
+      "topic": "Toplum ve Birey"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi toplumsal yapının temel unsurlarından biri olarak kabul edilir?",
+      "options": [
+        "Bireysel yetenekler",
+        "Doğal kaynaklar",
+        "Toplumsal roller",
+        "Kişisel düşünceler",
+        "Rastgele olaylar"
+      ],
+      "answer": 2,
+      "solution": "Toplumsal yapı, bireylerin birbirleriyle olan ilişkilerini, statülerini ve rollerini kapsar. Toplumsal roller bu yapının temel bir parçasıdır.",
+      "topic": "Toplumsal Yapı"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi toplumsal kurumlardan biri değildir?",
+      "options": [
+        "Aile",
+        "Devlet",
+        "Eğitim sistemi",
+        "Pazar",
+        "Bireysel hobiler"
+      ],
+      "answer": 4,
+      "solution": "Aile, devlet, eğitim ve ekonomi gibi yapılar toplumsal kurumları oluştururken, bireysel hobiler kurumsal bir yapıya sahip değildir.",
+      "topic": "Toplumsal Kurumlar"
+    },
+    {
+      "question": "Bir toplumda meydana gelen köklü ve genellikle hızlı değişimlere ne ad verilir?",
+      "options": [
+        "Toplumsal durağanlık",
+        "Toplumsal uyum",
+        "Toplumsal değişim",
+        "Toplumsal bütünleşme",
+        "Toplumsal hareketlilik"
+      ],
+      "answer": 2,
+      "solution": "Toplumsal değişim, bir toplumun yapısında, kurumlarında veya değerlerinde meydana gelen dönüşümleri ifade eder. Köklü değişimler bu kategoriye girer.",
+      "topic": "Toplumsal Değişme"
+    },
+    {
+      "question": "Bireylerin veya grupların toplum içindeki konumlarını yükseltmesi veya düşürmesi durumuna ne ad verilir?",
+      "options": [
+        "Toplumsal entegrasyon",
+        "Toplumsal tabakalaşma",
+        "Toplumsal hareketlilik",
+        "Toplumsal normlar",
+        "Kültürel yayılma"
+      ],
+      "answer": 2,
+      "solution": "Toplumsal hareketlilik, bireylerin veya grupların toplumsal statülerinde meydana gelen dikey veya yatay yöndeki değişimleri ifade eder.",
+      "topic": "Toplumsal Hareketlilik"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "takenAt": "2026-04-26T11:53:02.310Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 3,
+  "level_tag": null,
+  "count": 2,
+  "duplicate_count": 3,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Toplumsal hareketlilikle ilgili olarak aşağıdaki ifadelerden hangisi doğrudur?",
+      "options": [
+        "Bireylerin yalnızca dikey hareketliliği ifade eder.",
+        "Toplumun üst tabakasına geçişi engeller.",
+        "Bireylerin veya grupların toplumsal konumlarında meydana gelen değişimleri kapsar.",
+        "Sadece ekonomik alanda meydana gelen değişimleri içerir.",
+        "Toplumsal statülerin kalıcı olduğunu savunur."
+      ],
+      "answer": 2,
+      "solution": "Toplumsal hareketlilik, bireylerin veya grupların zaman içinde mevcut toplumsal konumlarında meydana gelen yükselme, alçalma veya yatay yöndeki değişimlerini ifade eder.",
+      "topic": "Toplumsal Hareketlilik"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi 'aile' kurumunun temel işlevlerinden biri değildir?",
+      "options": [
+        "Sosyalizasyon",
+        "Ekonomik destek sağlama",
+        "Duygusal tatmin",
+        "Bireylerin kişisel hobilerini belirleme",
+        "Üreme ve soyun devamı"
+      ],
+      "answer": 3,
+      "solution": "Bireylerin kişisel hobilerini belirlemek, ailenin birincil işlevleri arasında yer almaz. Ailenin temel işlevleri arasında sosyalizasyon, ekonomik destek, duygusal destek, üreme ve üyelerinin korunması bulunur.",
+      "topic": "Aile"
+    }
+  ]
+}

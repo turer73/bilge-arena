@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-04-26T08:15:58.060Z",
+  "game": "wordquest",
+  "category": "vocabulary",
+  "difficulty": 2,
+  "level_tag": "A2",
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "She decided to ---- a new hobby, like painting, to relax after work.",
+      "options": [
+        "take up",
+        "give up",
+        "put off",
+        "look for",
+        "run out of"
+      ],
+      "answer": 0,
+      "solution": "'Take up' bir hobiyi veya aktiviteyi yeni başlatmak anlamına gelir.",
+      "topic": "Collocations"
+    },
+    {
+      "question": "The weather forecast said it would be sunny, but it is ---- raining.",
+      "options": [
+        "actually",
+        "suddenly",
+        "eventually",
+        "slowly",
+        "hardly"
+      ],
+      "answer": 0,
+      "solution": "'Actually' kelimesi beklentinin aksine bir durumu ifade etmek için kullanılır. Burada hava güneşli olacaktı ama aslında yağmur yağıyor.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "He was very ---- when he heard the good news; he smiled and jumped.",
+      "options": [
+        "sad",
+        "angry",
+        "happy",
+        "tired",
+        "bored"
+      ],
+      "answer": 2,
+      "solution": "İyi haber duyunca gülmek ve zıplamak mutluluk belirtisidir. 'Happy' kelimesi mutlu anlamına gelir.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "If you don't study, you will ---- the exam.",
+      "options": [
+        "pass",
+        "fail",
+        "enjoy",
+        "start",
+        "finish"
+      ],
+      "answer": 1,
+      "solution": "Çalışmazsanız sınavdan kalırsınız. 'Fail' sınavdan kalmak demektir.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "The opposite of 'fast' is ----.",
+      "options": [
+        "quick",
+        "rapid",
+        "slow",
+        "speedy",
+        "swift"
+      ],
+      "answer": 2,
+      "solution": "'Fast' kelimesinin zıt anlamlısı 'slow' kelimesidir.",
+      "topic": "Antonyms"
+    }
+  ]
+}

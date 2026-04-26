@@ -22,6 +22,9 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
   const [topic, setTopic] = useState('')
   const [customTopic, setCustomTopic] = useState('')
   const [difficulty, setDifficulty] = useState(3)
+  // CEFR seviye — sadece wordquest icin anlamli; default B2 (uretim DB'sinde
+  // 364/640 wordquest sorusu B2 etiketli, mevcut ortalamayi korumak icin).
+  const [levelTag, setLevelTag] = useState<'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2'>('B2')
   const [topics, setTopics] = useState<string[]>([])
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'ai' | 'manual'>('ai')
@@ -64,6 +67,9 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
         body: JSON.stringify({
           game, category, difficulty, count,
           ...(effectiveTopic ? { topic: effectiveTopic } : {}),
+          // level_tag sadece wordquest icin gonderilir; backend de wordquest
+          // disinda goz ardi eder (NULL'a fallback). Form bunu acikca disable ediyor.
+          ...(game === 'wordquest' ? { level_tag: levelTag } : {}),
         }),
       })
 
@@ -102,6 +108,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
           options: manualOpts,
           answer: manualAnswer,
           solution: manualSolution,
+          ...(game === 'wordquest' ? { level_tag: levelTag } : {}),
         }),
       })
 
@@ -222,6 +229,29 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
               </select>
             </div>
           </div>
+
+          {/* CEFR seviye — sadece wordquest icin gosterilir, AI prompt zorlugunu kalibre eder.
+              2026-04-26 oncesi: form bu alani hic gondermiyordu, AI hep B2 zorlugunda uretiyor
+              ama metadata NULL kaliyordu. Artik UI gondermeli, prompt'a yansir. */}
+          {game === 'wordquest' && (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">CEFR SEVİYESİ</label>
+                <select
+                  value={levelTag}
+                  onChange={(e) => setLevelTag(e.target.value as typeof levelTag)}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
+                >
+                  <option value="A1">A1 - Başlangıç</option>
+                  <option value="A2">A2 - Temel</option>
+                  <option value="B1">B1 - Orta-Alt</option>
+                  <option value="B2">B2 - Orta-Üst</option>
+                  <option value="C1">C1 - İleri</option>
+                  <option value="C2">C2 - Ustalık</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* ── AI Tab ─────────────────────────────── */}
           {tab === 'ai' && (
