@@ -1,0 +1,39 @@
+{
+  "takenAt": "2026-04-26T11:54:19.456Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 2,
+  "level_tag": null,
+  "count": 2,
+  "duplicate_count": 0,
+  "raw_count": 2,
+  "valid_count": 2,
+  "questions": [
+    {
+      "question": "Toplumun temelini oluşturan, bireylerin birbirleriyle etkileşimde bulunduğu ve ortak bir kültürü paylaştığı geniş insan topluluğuna ne ad verilir?",
+      "options": [
+        "Grup",
+        "Cemaat",
+        "Toplum",
+        "Örgüt",
+        "Kurum"
+      ],
+      "answer": 2,
+      "solution": "Toplum, ortak bir kültürü paylaşan ve etkileşimde bulunan geniş insan topluluğudur. Grup daha küçük bir birimdir, cemaat ortak değerlere ve aidiyete vurgu yapar, örgüt belirli bir amaç için kurulmuş yapıdır ve kurum ise toplumsal yaşamın belirli bir alanını düzenleyen kalıplaşmış davranışlar bütünüdür.",
+      "topic": "Toplum ve Birey"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi, toplumsal yapının temel unsurlarından biri olan 'sosyal statü' kavramını en iyi şekilde açıklar?",
+      "options": [
+        "Bireyin bir gruptaki arkadaşlık ilişkileri",
+        "Bireyin toplumdaki veya bir gruptaki konumu ve bunun getirdiği haklar ve sorumluluklar",
+        "Bireyin kişisel yetenekleri ve becerileri",
+        "Bireyin diğer insanlarla olan iletişimi",
+        "Bireyin sahip olduğu maddi varlıklar"
+      ],
+      "answer": 1,
+      "solution": "Sosyal statü, bireyin toplumdaki veya belirli bir gruptaki yerini belirleyen bir kavramdır. Bu konum, bireyin sahip olduğu hakları, yerine getirmesi gereken sorumlulukları ve diğer bireylerle olan ilişkilerini etkiler.",
+      "topic": "Toplumsal Yapı"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "takenAt": "2026-04-26T11:37:10.986Z",
+  "takenAt": "2026-04-26T11:55:28.574Z",
   "totalActive": 3737,
   "byGame": {
     "wordquest": {
@@ -98,7 +98,7 @@
     }
   },
   "plays": {
-    "since": "2026-03-27T11:37:10.792Z",
+    "since": "2026-03-27T11:55:28.445Z",
     "totalSessions": 117,
     "byGame": {
       "sosyal": 61,

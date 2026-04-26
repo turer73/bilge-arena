@@ -1,0 +1,65 @@
+{
+  "takenAt": "2026-04-26T11:53:22.595Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 3,
+  "level_tag": null,
+  "count": 4,
+  "duplicate_count": 1,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Aile kurumu ile ilgili olarak aşağıdaki ifadelerden hangisi yanlıştır?",
+      "options": [
+        "Toplumların devamlılığını sağlayan temel kurumlardan biridir.",
+        "Bireylerin sosyalleşmesinde önemli bir rol oynar.",
+        "Zamanla geçirdiği değişimler toplumdan topluma farklılık gösterebilir.",
+        "Sadece çekirdek aile tipi tüm toplumlarda geçerlidir.",
+        "Ekonomik, hukuki ve duygusal işlevleri yerine getirebilir."
+      ],
+      "answer": 3,
+      "solution": "Aile tipleri (çekirdek, geniş vb.) toplumdan topluma ve zamana göre farklılık gösterir. Sadece çekirdek aile tipinin tüm toplumlarda geçerli olduğunu söylemek yanlıştır.",
+      "topic": "Aile"
+    },
+    {
+      "question": "Bir bireyin toplum içindeki yeri ve bu yere bağlı olarak sahip olduğu hak ve sorumluluklara ne ad verilir?",
+      "options": [
+        "Toplumsal hareketlilik",
+        "Toplumsal tabakalaşma",
+        "Toplumsal statü",
+        "Sosyal norm",
+        "Toplumsal rol"
+      ],
+      "answer": 2,
+      "solution": "Toplumsal statü, bir bireyin toplum içindeki konumunu ve bu konuma bağlı hak ve yükümlülüklerini ifade eder. Rol ise statünün gerektirdiği davranış biçimidir.",
+      "topic": "Toplumsal Tabakalaşma"
+    },
+    {
+      "question": "Toplumsal değişmeyi açıklayan teorilerden biri olan 'Modernleşme Teorisi'ne göre, toplumlar hangi aşamalardan geçerek gelişir?",
+      "options": [
+        "Geleneksel toplumdan sanayi toplumuna",
+        "Göçebe toplumdan yerleşik topluma",
+        "Avcı-toplayıcı toplumdan tarım toplumuna",
+        "Kapitalist toplumdan sosyalist topluma",
+        "Feodal toplumdan monarşik topluma"
+      ],
+      "answer": 0,
+      "solution": "Modernleşme teorisi, toplumların genellikle geleneksel, sanayileşmekte olan ve modern (sanayi) toplum aşamalarından geçerek geliştiğini öne sürer.",
+      "topic": "Toplumsal Değişme"
+    },
+    {
+      "question": "Bir toplumun yaşam biçimini, inançlarını, değerlerini, sanatını ve bilgisini kapsayan bütün unsurlara ne ad verilir?",
+      "options": [
+        "Toplumsal kurum",
+        "Toplumsal yapı",
+        "Kültür",
+        "Toplumsal norm",
+        "Sosyal sermaye"
+      ],
+      "answer": 2,
+      "solution": "Kültür, bir toplumun paylaştığı maddi ve manevi unsurların tamamını ifade eder. Yaşam biçimi, inançlar, değerler, sanat ve bilgi kültürel unsurlardır.",
+      "topic": "Kültür ve Toplum"
+    }
+  ]
+}
