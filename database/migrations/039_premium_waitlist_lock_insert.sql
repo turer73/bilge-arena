@@ -22,15 +22,30 @@
 -- Sonuc: tek INSERT yolu app route'u olur; KVKK + rate-limit
 -- + Zod tek kapida kalir.
 --
--- Idempotent: DROP POLICY IF EXISTS + CREATE POLICY tekrar
--- uygulanabilir; ikinci kosumda DROP no-op, CREATE bireysel
--- ad cakismasi olabilir -- bunu da once DROP ile koruyoruz.
+-- Idempotent: HER IKI policy icin de DROP IF EXISTS + CREATE
+-- patterni. Postgres CREATE POLICY IF NOT EXISTS desteklemiyor,
+-- bu yuzden CREATE oncesi mutlaka DROP IF EXISTS gerekli. Aksi
+-- halde ikinci kosumda CREATE bireysel ad cakismasi (42710,
+-- "policy ... already exists") hatasi verir.
+--
+-- Codex P2 fix (2026-04-26): Onceki versiyon sadece eski policy'yi
+-- DROP'luyor, yeni policy'yi (premium_waitlist_insert_service_role_only)
+-- DROP'lamadan CREATE ediyordu. Docstring'de "bunu da once DROP ile
+-- koruyoruz" yaziyordu ama SQL bunu gerceklestirmiyordu --
+-- comment-vs-code drift. Bu fix iki DROP'u da SQL'e tasir.
 -- ============================================================
 
--- ── Eski policy'yi kaldir ───────────────────────────────────
+-- ── Eski policy'yi kaldir (migration 037 mirasi) ────────────
 -- DROP POLICY IF EXISTS migration tekrar calistirilirsa hata
 -- vermez (no policy = no-op).
 DROP POLICY IF EXISTS "premium_waitlist_insert_anyone" ON premium_waitlist;
+
+-- ── Yeni policy ad cakismasini onlemek icin DROP IF EXISTS ──
+-- Migration ikinci kez calistirilirsa veya rollback/replay
+-- senaryosunda policy zaten var olabilir. CREATE'ten once
+-- DROP IF EXISTS ile temizliyoruz; ilk kosumda no-op, ikinci+
+-- kosumda eski instance'i siler.
+DROP POLICY IF EXISTS "premium_waitlist_insert_service_role_only" ON premium_waitlist;
 
 -- ── Yeni policy: yalnizca service_role ──────────────────────
 -- TO service_role: PostgREST anon ve authenticated rolleri bu
@@ -62,4 +77,9 @@ CREATE POLICY "premium_waitlist_insert_service_role_only"
 --   --   -H "apikey: <anon_key>" -H "Authorization: Bearer <anon_key>"
 --   --   -d '{"email":"x@y.com","plan":"monthly","kvkk_consent_at":...}'
 --   -- Beklenen: 401/403 (RLS violation), eskiden 201 idi.
+--
+--   -- 4. Idempotency: bu migration dosyasini SQL Editor'de tekrar calistir
+--   -- Beklenen: hata yok, "DROP POLICY 1 row" + "DROP POLICY 1 row" + "CREATE POLICY"
+--   -- Eski versiyon hatasi: ERROR: policy "premium_waitlist_insert_service_role_only"
+--   -- for table "premium_waitlist" already exists (SQLSTATE 42710).
 -- ============================================================
