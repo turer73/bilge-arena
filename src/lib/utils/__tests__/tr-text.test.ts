@@ -7,6 +7,7 @@ import {
   trDeaccent,
   trSlug,
   trNormalize,
+  isLikelyTurkish,
 } from '../tr-text'
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -169,5 +170,64 @@ describe('trNormalize', () => {
     const query = 'ozkan'
     const match = profiles.find(p => trNormalize(p).includes(trNormalize(query)))
     expect(match).toBe('Özkan Yılmaz')
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════
+// isLikelyTurkish — AI uretim solution dilinin Turkce olmasini dogrular
+// ═══════════════════════════════════════════════════════════════════════
+// 2026-04-26: wordquest C2 prompt'u Ingilizce rubrik kullaninca Gemini cozumleri
+// Ingilizce uretti (10 satir gozlemlendi). Bu helper drift'i runtime'da
+// yakalamak icin: route insert oncesi her wordquest solution'i bu fonksiyondan
+// gecirir, false donerse o satir filtrelenir (insert edilmez).
+//
+// Heuristic kararlari:
+//   - Cok kisa metin (< 30 char): emin olunamaz, lenient kabul (true).
+//   - Turkce-ozel karakter (ç ğ ı ö ş ü) iceriyorsa: kuvvetli sinyal, true.
+//   - Turkce stopword (bir, bu, ve, ile, kelime, anlam...) iceriyorsa: ikincil sinyal.
+//   - Uzun metin + iki sinyal de yok: false (muhtemelen Ingilizce).
+describe('isLikelyTurkish', () => {
+  it('bos veya whitespace-only metin false doner', () => {
+    expect(isLikelyTurkish('')).toBe(false)
+    expect(isLikelyTurkish('   ')).toBe(false)
+  })
+
+  it('cok kisa metin (< 30 char) lenient kabul edilir (true)', () => {
+    // Kisa metinde dil tespiti guvenilir degil — false-positive (gecerli kisa
+    // turkce'yi reddetmek) maliyetli. Lenient davranis kasitli.
+    expect(isLikelyTurkish('elated = cok mutlu')).toBe(true) // 18 char, no Turkish chars
+    expect(isLikelyTurkish('Ok')).toBe(true)
+  })
+
+  it('Turkce-spesifik karakter iceren uzun metni Turkce kabul eder', () => {
+    expect(isLikelyTurkish('Bu çözüm doğru cevabın açıklamasıdır ve oldukça önemlidir.')).toBe(true)
+    // Tek karakter bile yeterli — strong signal
+    expect(isLikelyTurkish('Undaunted kelimesi cesur, korkmayan anlamına gelir bence.')).toBe(true)
+  })
+
+  it('Turkce stopword iceren uzun ASCII metni Turkce kabul eder', () => {
+    // Turkce-ozel karakter olmadan da, stopword'lerden taninabilir
+    // ('bir', 've', 'bu', 'kelime', 'anlam' gibi)
+    expect(isLikelyTurkish('Synonym: elated bu kelime cok mutlu anlam tasiyor demektir bence.')).toBe(true)
+  })
+
+  it('uzun saf Ingilizce metni reddeder (drift detection)', () => {
+    // Bu test C2 drift senaryosunun runtime guard'ini dogrular
+    const englishSolution = 'Undaunted means not intimidated or discouraged by difficulty, loss, or danger. It fits the context well.'
+    expect(isLikelyTurkish(englishSolution)).toBe(false)
+  })
+
+  it('English false-positive guard: stopword regex word-boundary kontrolu yapar', () => {
+    // "every" icinde "ve" gecer ama \b sayesinde eslesmemeli
+    // "bird" icinde "bir" gecer ama \b sayesinde eslesmemeli
+    // "blue" icinde "ile" yok — emin olmak icin
+    const englishWithSubstrings = 'Every bird flies above the blue ocean during the morning hours of summer.'
+    expect(isLikelyTurkish(englishWithSubstrings)).toBe(false)
+  })
+
+  it('C2 drift gercek ornegi (Apr 2026 production data): reddedilir', () => {
+    // Yasanmis vaka: Gemini prompt drift sonucu ureten solution'lardan ornek
+    const realDriftCase = 'Veiled means not expressed directly, which aligns with language chosen to be careful and avoid escalation, implying indirectness.'
+    expect(isLikelyTurkish(realDriftCase)).toBe(false)
   })
 })

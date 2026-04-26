@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
-import { trLower } from '@/lib/utils/tr-text'
+import { trLower, isLikelyTurkish } from '@/lib/utils/tr-text'
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -109,15 +109,19 @@ KRİTİK: JSON anahtarları MUTLAKA "question", "options", "answer", "solution",
 Türkçe key KULLANMA. SADECE JSON döndür, başka hiçbir şey yazma.`
 
 // CEFR seviyesine gore AI'ye verilecek kelime/grammar kalibrasyon ipucu.
-// 2026-04-26: A1/A2 ve C2 icin uretim eksikti — soru kalitesi seviyeye gore
-// baska turlu eslesmiyor (B2 prompt + A1 etiketi = yanlis metadata).
+// 2026-04-26 (Tier C): Onceki versiyon C2 rubrigi ('Mastery: idiomatic
+// native-like vocabulary...') tamamen Ingilizce'ydi -> Gemini bu rubrigin
+// etkisinde solution'lari Ingilizce uretti (10 satir gozlemlendi). Drift
+// kayniginda kapatildi: tum rehberler Turkce, "Ileri Duzey/Usta/Yetkin/Ana
+// Dili" gibi acik Turkce yon-belirleyici kelimeler eklendi. Tek surum
+// gercek (database/run-generation.mjs CLI ile birebir mirror edilir).
 const CEFR_GUIDANCE: Record<string, string> = {
-  A1: 'A1 — Beginner: en temel 500-1000 kelime, simple present/past, kisa cumleler, gunluk konular',
-  A2: 'A2 — Elementary: yaygin 2000 kelime, present/past/future basics, simple connectors',
-  B1: 'B1 — Intermediate: 3000-4000 kelime, present perfect, 1st conditional, passive basics',
-  B2: 'B2 — Upper-Intermediate: idioms, phrasal verbs, 2nd-3rd conditional, reported speech',
-  C1: 'C1 — Advanced: nuanced vocabulary, complex structures, abstract topics, formal register',
-  C2: 'C2 — Mastery: idiomatic native-like vocabulary, sophisticated structures, abstract topics',
+  A1: 'A1 — Başlangıç Düzeyi: en temel 500-1000 kelime, simple present/past, kısa cümleler, günlük basit konular',
+  A2: 'A2 — Temel Düzey: yaygın 2000 kelime, present/past/future temel kullanım, basit bağlaç yapıları',
+  B1: 'B1 — Orta Düzey: 3000-4000 kelime, present perfect, 1st conditional, edilgen yapılar',
+  B2: 'B2 — Orta-İleri Düzey: deyimler, phrasal verb kullanımı, 2nd-3rd conditional, dolaylı anlatım',
+  C1: 'C1 — İleri Düzey: nüanslı kelime hazinesi, karmaşık dilbilgisi yapıları, soyut konular, resmi register',
+  C2: 'C2 — Usta Düzey (Ana Dili Yetkinliği): native-level deyimsel kullanım, karmaşık yapılar, soyut konular',
 }
 
 function buildSystemPrompt(game: string, category: string, levelTag: string | null): string {
@@ -130,8 +134,11 @@ function buildSystemPrompt(game: string, category: string, levelTag: string | nu
   const cefrLine = isEnglish && levelTag && CEFR_GUIDANCE[levelTag]
     ? `\nCEFR seviyesi: ${CEFR_GUIDANCE[levelTag]}. Soru zorlugu bu seviyeye uygun olmali.`
     : ''
+  // 2026-04-26 (Tier C): "çözüm Türkçe olmalı" tek satir kural
+  // Gemini'nin C2 Ingilizce rubrik ile birlikte gormesinde drift'i engelleyemedi.
+  // Daha kuvvetli emir kipi + tekrar + ornek-yon belirtilen kalip kullanildi.
   const langRule = isEnglish
-    ? `Soru metni İngilizce, çözüm Türkçe olmalı.${cefrLine}`
+    ? `Soru metni İngilizce yazılmalı. ANCAK "solution" alanı MUTLAKA Türkçe yazılmalıdır — kesinlikle İngilizce kullanma. Örnek doğru kalıp: "elated kelimesi çok mutlu anlamına gelir".${cefrLine}`
     : 'Türkçe yazılmalı'
 
   const template = process.env.QUESTION_GEN_PROMPT_TEMPLATE || QUESTION_GEN_PROMPT_FALLBACK
@@ -312,9 +319,33 @@ Soru sayisi: ${count}${fewShotText}`
       return NextResponse.json({ error: 'AI geçerli soru üretemedi', raw: text }, { status: 502 })
     }
 
+    // ── Solution dil kontrolu (drift guard, sadece wordquest) ─────────
+    // 2026-04-26 (Tier C): C2 prompt drift gozlemi sonrasi eklendi.
+    // Defense-in-depth: asil kaynagi (CEFR rubrigi Turkce) duzelttik ama
+    // Gemini gelecekte yine drift edebilir; runtime filtre satirin DB'ye
+    // ulasmasini engeller. Sadece wordquest'te uygulanir cunku diger
+    // oyunlar zaten Turkce ureticek.
+    let languageDriftCount = 0
+    const languageOkQuestions = game === 'wordquest'
+      ? validQuestions.filter((q) => {
+          if (!isLikelyTurkish(q.solution)) {
+            languageDriftCount++
+            return false
+          }
+          return true
+        })
+      : validQuestions
+
+    if (languageOkQuestions.length === 0) {
+      return NextResponse.json({
+        error: `${validQuestions.length} soru üretildi ama tümü İngilizce solution içeriyor (CEFR drift)`,
+        languageDriftCount,
+      }, { status: 409 })
+    }
+
     // ── Duplicate filtre ──────────────────────────────
     let duplicateCount = 0
-    const uniqueQuestions = validQuestions.filter((q) => {
+    const uniqueQuestions = languageOkQuestions.filter((q) => {
       const prefix = trLower(q.question.slice(0, 50))
       if (existingPrefixes.has(prefix)) {
         duplicateCount++
@@ -326,7 +357,7 @@ Soru sayisi: ${count}${fewShotText}`
 
     if (uniqueQuestions.length === 0) {
       return NextResponse.json({
-        error: `${validQuestions.length} soru uretildi ama hepsi mevcut sorularla ayni`,
+        error: `${languageOkQuestions.length} soru uretildi ama hepsi mevcut sorularla ayni`,
         duplicateCount,
       }, { status: 409 })
     }
@@ -363,6 +394,7 @@ Soru sayisi: ${count}${fewShotText}`
       generated: validQuestions.length,
       saved: inserted?.length || 0,
       duplicateCount,
+      languageDriftCount,
       questions: uniqueQuestions,
     })
   } catch (err) {

@@ -127,13 +127,16 @@ const CATEGORY_LABELS = {
   phrasal_verbs: 'İngilizce Phrasal Verbs',
 }
 
+// 2026-04-26 (Tier C): route.ts ile birebir mirror — tek surum gercek.
+// C2 onceden Ingilizce idi -> Gemini drift, 10 satir Ingilizce solution
+// uretti. Tum rehberler Turkce'ye cevrildi (asil kaynaktan duzeltme).
 const CEFR_GUIDANCE = {
-  A1: 'A1 — Beginner: en temel 500-1000 kelime, simple present/past, kisa cumleler, gunluk konular',
-  A2: 'A2 — Elementary: yaygin 2000 kelime, present/past/future basics, simple connectors',
-  B1: 'B1 — Intermediate: 3000-4000 kelime, present perfect, 1st conditional, passive basics',
-  B2: 'B2 — Upper-Intermediate: idioms, phrasal verbs, 2nd-3rd conditional, reported speech',
-  C1: 'C1 — Advanced: nuanced vocabulary, complex structures, abstract topics, formal register',
-  C2: 'C2 — Mastery: idiomatic native-like vocabulary, sophisticated structures, abstract topics',
+  A1: 'A1 — Baslangic Duzeyi: en temel 500-1000 kelime, simple present/past, kisa cumleler, gunluk basit konular',
+  A2: 'A2 — Temel Duzey: yaygin 2000 kelime, present/past/future temel kullanim, basit baglac yapilari',
+  B1: 'B1 — Orta Duzey: 3000-4000 kelime, present perfect, 1st conditional, edilgen yapilar',
+  B2: 'B2 — Orta-Ileri Duzey: deyimler, phrasal verb kullanimi, 2nd-3rd conditional, dolayli anlatim',
+  C1: 'C1 — Ileri Duzey: nuansli kelime hazinesi, karmasik dilbilgisi yapilari, soyut konular, resmi register',
+  C2: 'C2 — Usta Duzey (Ana Dili Yetkinligi): native-level deyimsel kullanim, karmasik yapilar, soyut konular',
 }
 
 const PROMPT_FALLBACK = `Sen YKS soru üretiyorsun. Kategori: {categoryLabel}.
@@ -157,8 +160,9 @@ function buildSystemPrompt(g, c, lvl) {
   const cefrLine = isEnglish && lvl && CEFR_GUIDANCE[lvl]
     ? `\nCEFR seviyesi: ${CEFR_GUIDANCE[lvl]}. Soru zorlugu bu seviyeye uygun olmali.`
     : ''
+  // route.ts ile mirror: solution Turkce kuralini emir kipi + ornek ile guclendir
   const langRule = isEnglish
-    ? `Soru metni İngilizce, çözüm Türkçe olmalı.${cefrLine}`
+    ? `Soru metni Ingilizce yazilmali. ANCAK "solution" alani MUTLAKA Turkce yazilmalidir — kesinlikle Ingilizce kullanma. Ornek dogru kalip: "elated kelimesi cok mutlu anlamina gelir".${cefrLine}`
     : 'Türkçe yazılmalı'
 
   const tpl = process.env.QUESTION_GEN_PROMPT_TEMPLATE || PROMPT_FALLBACK
@@ -174,6 +178,19 @@ function trLower(s) {
   let out = ''
   for (const ch of s) out += TR_MAP[ch] ?? ch.toLowerCase()
   return out
+}
+
+// ── isLikelyTurkish — src/lib/utils/tr-text.ts mirror (CLI standalone) ──
+// Heuristic Turkce dil tespiti. wordquest solution'larinda Ingilizce drift
+// yakalamak icin. Tek surum gercegin korunmasi adina mantik birebir kopya;
+// (ileride tr-text.ts ESM import'una gecirilebilir, 2. CLI gelirse refactor).
+function isLikelyTurkish(input) {
+  const text = (input ?? '').trim()
+  if (text.length === 0) return false
+  if (text.length < 30) return true
+  if (/[çğıöşüÇĞİÖŞÜ]/.test(text)) return true
+  const turkishMarkers = /\b(bir|bu|ve|ile|olan|olarak|kelime|anlam|gelir|veya|degil|sunlar|nedir|cok|ozellikle)\b/i
+  return turkishMarkers.test(text)
 }
 
 // ── Effective level_tag: route ile ayni davranis ─────
@@ -324,10 +341,34 @@ for (let i = 0; i < questions.length; i++) {
 }
 console.log(`Validate: ${valid.length}/${questions.length} sorun gecti.`)
 
+// ── Solution dil kontrolu (drift guard, sadece wordquest) ──
+// route.ts ile ayni davranis. C2 prompt drift gozlemi sonrasi eklendi.
+const languageOk = []
+let driftCount = 0
+if (game === 'wordquest') {
+  for (const q of valid) {
+    if (isLikelyTurkish(q.solution)) {
+      languageOk.push(q)
+    } else {
+      driftCount++
+      console.warn(`  Solution Ingilizce gibi gozukuyor, filtrelendi: "${q.solution.slice(0, 60)}..."`)
+    }
+  }
+  console.log(`Dil kontrolu: ${languageOk.length}/${valid.length} Turkce solution, ${driftCount} drift filtrelendi.`)
+} else {
+  // wordquest disinda dil kontrolu yok — diger oyunlar zaten Turkce
+  languageOk.push(...valid)
+}
+
+if (languageOk.length === 0) {
+  console.error('HATA: Tum solution\'lar Ingilizce (CEFR drift). Insert iptal.')
+  process.exit(4)
+}
+
 // ── Dedup ────────────────────────────────────
 const unique = []
 let dupCount = 0
-for (const q of valid) {
+for (const q of languageOk) {
   const prefix = trLower(q.question.slice(0, 50))
   if (existingPrefixes.has(prefix)) {
     dupCount++

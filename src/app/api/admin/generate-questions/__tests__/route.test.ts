@@ -212,6 +212,141 @@ describe('POST /api/admin/generate-questions — level_tag passthrough', () => {
   })
 })
 
+describe('POST /api/admin/generate-questions — Turkce solution dil kontrolu (drift guard)', () => {
+  // 2026-04-26: C2 prompt'u eski versiyonda Ingilizce CEFR rubrik iceriyordu;
+  // Gemini bunun etkisinde solution'lari Ingilizce uretti. Iki katmanli onlem:
+  //   1. Statik prompt testi: C2 rubrigi Turkce olmali (asil kaynaktan duzelt).
+  //   2. Runtime testi: Ingilizce solution donerse insert filtrelenir (defense-in-depth).
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key'
+    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
+  })
+
+  afterEach(() => {
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  })
+
+  it('C2 system prompt rubrigi Turkce karakterler icermeli (asil kaynaktan duzeltme)', async () => {
+    mockGeminiResponse([VALID_AI_QUESTION])
+    const { POST } = await import('../route')
+    await POST(makePostBody({
+      game: 'wordquest',
+      category: 'vocabulary',
+      difficulty: 4,
+      level_tag: 'C2',
+      count: 1,
+    }))
+
+    expect(fetchCalls).toHaveLength(1)
+    const sentBody = fetchCalls[0].body as {
+      system_instruction?: { parts?: Array<{ text?: string }> }
+    }
+    const systemText = sentBody.system_instruction?.parts?.[0]?.text ?? ''
+    // C2 rubrigi Turkce karakter iceriyor olmali — onceki Ingilizce metin
+    // ('Mastery: idiomatic native-like vocabulary...') Gemini'yi Ingilizce
+    // solution'a yonlendiriyordu. Turkce karakter kontrolu basit ve guvenilir.
+    expect(systemText).toMatch(/[çğıöşüÇĞİÖŞÜ]/)
+    // Ileri seviye anlamli Turkce kelimeler beklenir (Mastery yerine "Ileri Duzey" gibi)
+    expect(systemText).toMatch(/ileri|usta|yetkin|ana dili/i)
+  })
+
+  it('wordquest Ingilizce solution donerse o satir insert edilmez (drift filtre)', async () => {
+    // Gemini bir gecerli (Turkce solution) + bir drift (Ingilizce solution) doner
+    const turkishSolutionQ = {
+      question: 'Which word means very happy? Pick the correct synonym.',
+      options: ['sad', 'elated', 'angry', 'tired', 'bored'],
+      answer: 1,
+      solution: 'Elated kelimesi cok mutlu, sevincli anlamina gelir; bu durumda dogru cevaptir bence.',
+      topic: 'Synonyms',
+    }
+    const englishDriftQ = {
+      question: 'Which word means brave despite difficulty?',
+      options: ['undaunted', 'tired', 'happy', 'sad', 'lazy'],
+      answer: 0,
+      // Saf Ingilizce — heuristic bunu reddetmeli
+      solution: 'Undaunted means not intimidated or discouraged by difficulty, loss, or danger.',
+      topic: 'Synonyms',
+    }
+    mockGeminiResponse([turkishSolutionQ, englishDriftQ])
+
+    const { POST } = await import('../route')
+    const res = await POST(makePostBody({
+      game: 'wordquest',
+      category: 'vocabulary',
+      difficulty: 4,
+      level_tag: 'C2',
+      count: 2,
+    }))
+
+    expect(res.status).toBe(200)
+    expect(mockInsertCapture).toHaveBeenCalledOnce()
+    const payload = mockInsertCapture.mock.calls[0][0] as Array<Record<string, unknown>>
+    // Sadece Turkce-solution'li 1 satir insert edilmeli, drift olan 2. satir filtrelenmeli
+    expect(payload).toHaveLength(1)
+    const inserted = payload[0]
+    const content = inserted.content as { solution: string }
+    expect(content.solution).toMatch(/anlamina gelir/i)
+  })
+
+  it('wordquest tum solution Ingilizce donerse 409 doner (hicbiri insert edilmez)', async () => {
+    const allDrift = [
+      {
+        question: 'Which word best fits the context of complete fearlessness?',
+        options: ['undaunted', 'tired', 'sleepy', 'hungry', 'sad'],
+        answer: 0,
+        solution: 'Undaunted means not intimidated by difficulty, loss, or danger really.',
+        topic: 'Synonyms',
+      },
+      {
+        question: 'Which word implies indirect language used in tense diplomacy?',
+        options: ['veiled', 'happy', 'angry', 'simple', 'noisy'],
+        answer: 0,
+        solution: 'Veiled means not expressed directly, which avoids escalation in negotiations.',
+        topic: 'Contextual Meaning',
+      },
+    ]
+    mockGeminiResponse(allDrift)
+
+    const { POST } = await import('../route')
+    const res = await POST(makePostBody({
+      game: 'wordquest',
+      category: 'vocabulary',
+      difficulty: 4,
+      level_tag: 'C2',
+      count: 2,
+    }))
+
+    expect(res.status).toBe(409)
+    expect(mockInsertCapture).not.toHaveBeenCalled()
+  })
+
+  it('matematik (non-wordquest): solution dil kontrolu uygulanmaz (Turkce zaten kural)', async () => {
+    // Drift filter sadece wordquest icin; diger oyunlarda solution Turkce demeti zaten
+    // Zod min(5) ve prompt 'Türkçe yazılmalı' ile guvence altinda — gereksiz kontrol koymayalim.
+    const mathQ = {
+      question: 'A normal Turkish math question?',
+      options: ['1','2','3','4','5'],
+      answer: 0,
+      // Hipotetik: Ingilizce gibi gorunen kisa solution — math icin filtreleme yok
+      solution: 'The answer is one because basic arithmetic logic applies to this case directly.',
+      topic: 'Aritmetik',
+    }
+    mockGeminiResponse([mathQ])
+    const { POST } = await import('../route')
+    const res = await POST(makePostBody({
+      game: 'matematik',
+      category: 'sayilar',
+      difficulty: 2,
+      count: 1,
+    }))
+
+    expect(res.status).toBe(200)
+    expect(mockInsertCapture).toHaveBeenCalledOnce()
+  })
+})
+
 describe('PUT /api/admin/generate-questions — manuel level_tag', () => {
   beforeEach(() => {
     vi.clearAllMocks()
