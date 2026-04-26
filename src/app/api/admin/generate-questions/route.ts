@@ -175,7 +175,11 @@ export async function POST(req: Request) {
   }
   // wordquest icin default 'B2' (seed davranisi: legacy 364 soru B2 etiketli);
   // diger oyunlarda level_tag anlamsiz, NULL olarak insert edilir (eski davranisi koruyor).
-  const effectiveLevelTag: string | null = level_tag ?? (game === 'wordquest' ? 'B2' : null)
+  // Codex P2 fix (2026-04-26): kosulu once degerlendir, level_tag'i once degil.
+  // Eski formul `level_tag ?? (game === 'wordquest' ? 'B2' : null)` sol-once eval
+  // ettigi icin matematik+B2 -> 'B2' (yanlis cross-game leak). Yeni formul wordquest
+  // disindaysa client'in gonderdigini hic dikkate almaz, NULL koyar.
+  const effectiveLevelTag: string | null = game === 'wordquest' ? (level_tag ?? 'B2') : null
 
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
   if (!apiKey) {
@@ -439,7 +443,11 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'Gecersiz veri', details: result.error.flatten() }, { status: 400 })
   }
 
-  const effectiveLevelTag: string | null = level_tag ?? (game === 'wordquest' ? 'B2' : null)
+  // Codex P2 fix (2026-04-26): kosulu once degerlendir, level_tag'i once degil.
+  // Eski formul `level_tag ?? (game === 'wordquest' ? 'B2' : null)` sol-once eval
+  // ettigi icin matematik+B2 -> 'B2' (yanlis cross-game leak). Yeni formul wordquest
+  // disindaysa client'in gonderdigini hic dikkate almaz, NULL koyar.
+  const effectiveLevelTag: string | null = game === 'wordquest' ? (level_tag ?? 'B2') : null
 
   const svc = createServiceRoleClient()
   const { data: inserted, error } = await svc

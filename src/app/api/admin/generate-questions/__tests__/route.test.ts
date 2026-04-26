@@ -153,6 +153,41 @@ describe('POST /api/admin/generate-questions — level_tag passthrough', () => {
     expect(payload[0].level_tag).toBeNull()
   })
 
+  // 2026-04-26 (Codex P2 fix): client cross-game level_tag gondermesin diye server authoritative coerce.
+  // Eski formul: `level_tag ?? (game === 'wordquest' ? 'B2' : null)` — sol-once eval ettigi icin
+  // matematik+B2 -> 'B2' (yanlis). Yeni formul: `game === 'wordquest' ? (level_tag ?? 'B2') : null`.
+  // Bu testler Codex review'un saglik duvari; regresyon yasanirsa kirilir.
+  it('matematik (non-wordquest): client level_tag B2 gonderse bile DB payload NULL olur (cross-game guard)', async () => {
+    const { POST } = await import('../route')
+    const res = await POST(makePostBody({
+      game: 'matematik',
+      category: 'sayilar',
+      difficulty: 3,
+      level_tag: 'B2', // Client kotuye kullanim: TYT matematik'e CEFR seviyesi
+      count: 1,
+    }))
+
+    expect(res.status).toBe(200)
+    const payload = mockInsertCapture.mock.calls[0][0] as Array<Record<string, unknown>>
+    // Server otoritatif: non-wordquest'e level_tag yazilmamali
+    expect(payload[0].level_tag).toBeNull()
+  })
+
+  it('sosyal (non-wordquest): client level_tag C1 gonderse bile DB payload NULL olur', async () => {
+    const { POST } = await import('../route')
+    const res = await POST(makePostBody({
+      game: 'sosyal',
+      category: 'sosyoloji',
+      difficulty: 3,
+      level_tag: 'C1', // Client kotuye kullanim: sosyoloji'ye C1
+      count: 1,
+    }))
+
+    expect(res.status).toBe(200)
+    const payload = mockInsertCapture.mock.calls[0][0] as Array<Record<string, unknown>>
+    expect(payload[0].level_tag).toBeNull()
+  })
+
   it('gecersiz level_tag (D1) 400 doner — sema check', async () => {
     const { POST } = await import('../route')
     const res = await POST(makePostBody({
@@ -386,5 +421,27 @@ describe('PUT /api/admin/generate-questions — manuel level_tag', () => {
     expect(mockInsertCapture).toHaveBeenCalledOnce()
     const payload = mockInsertCapture.mock.calls[0][0] as Record<string, unknown>
     expect(payload.level_tag).toBe('B1')
+  })
+
+  // 2026-04-26 (Codex P2 fix): PUT manuel ekleme yolunda da ayni cross-game guard.
+  it('matematik manuel ekleme: client level_tag A1 gonderse bile DB payload NULL olur (cross-game guard)', async () => {
+    vi.resetModules()
+    const { PUT } = await import('../route')
+    const res = await PUT(makePutBody({
+      game: 'matematik',
+      category: 'sayilar',
+      difficulty: 2,
+      level_tag: 'A1', // Client kotuye kullanim
+      question: 'Bir TYT matematik sorusu burada nedir?',
+      options: ['1', '2', '3', '4', '5'],
+      answer: 0,
+      solution: 'Bu sorunun cevabi temel aritmetik mantigi ile bulunur.',
+    }))
+
+    expect(res.status).toBe(200)
+    expect(mockInsertCapture).toHaveBeenCalledOnce()
+    const payload = mockInsertCapture.mock.calls[0][0] as Record<string, unknown>
+    // Server otoritatif: non-wordquest'e level_tag yazilmamali
+    expect(payload.level_tag).toBeNull()
   })
 })
