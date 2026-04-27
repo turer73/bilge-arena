@@ -40,3 +40,8 @@ test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+
+# VPS infra secrets (DB passwords, JWT secrets, env files - VPS-only)
+infra/vps/*/secrets/*.env
+infra/vps/*/secrets/*.json
+!infra/vps/*/secrets/.gitkeep
