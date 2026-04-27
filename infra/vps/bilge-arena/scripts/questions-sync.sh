@@ -2,16 +2,20 @@
 # =============================================================================
 # Bilge Arena questions snapshot sync (Secenek A)
 # =============================================================================
-# Hedef: Mevcut Supabase pg_dump (03:00 TR) icindeki questions / categories /
+# Hedef: Mevcut Supabase pg_dump (02:00 TR) icindeki questions / categories /
 #        game_categories / games tablolarini bilge_arena_dev'e SELECT-only
-#        restore eder. Calisma penceresi: 03:30 TR (master backup'tan 30 dk
-#        sonra). PR1 mergelendikten sonra cron'a eklenir.
+#        restore eder. Calisma penceresi: 02:30 TR (master backup'tan 30 dk
+#        sonra; gozlemlenen pg_dump suresi 3-7 dk, comfortable buffer).
+#        PR1 mergelendikten sonra cron'a eklenir.
 #
 # Plan referansi: docs/plans/2026-04-27-oda-sistemi-implementation.md Task 0.5
 #
 # Plan-deviations:
-#   #19 Master backup cron'u 03:00 TR (planda 02:00). questions-sync 03:30 TR.
-#       /etc/cron entry "30 3 * * *" yapildi.
+#   #19 RETRACTED 2026-04-27: Onceki oturumda master backup'in 03:00 TR'de
+#       calistigi varsayilmisti (eski mtime'lardan). Gercekte crontab "0 2 * * *"
+#       (02:00 TR) ve script header'i "02:00 TR" diyor. Tarihsel mtime 03:03-07
+#       eski "0 3 * * *" zamanlamasinin kalintisi. questions-sync 02:30 TR'ye
+#       cekildi (plan ile hizali). install-cron.sh entry: "30 2 * * *".
 #   #20 Mevcut Supabase schema'sinda categories/game_categories/games tablolari
 #       YOK (zcat | grep COPY public ile dogrulandi 2026-04-27). Sadece
 #       public.questions sync edilir. Schema normalize edildiginde
