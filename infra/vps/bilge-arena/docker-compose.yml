@@ -1,0 +1,77 @@
+# =============================================================================
+# Bilge Arena Oda Sistemi: PostgREST + Realtime (VPS-side)
+# =============================================================================
+# Hedef: panola-postgres (172.18.0.4) icindeki bilge_arena_dev DB'sine REST +
+#        Realtime erisimi. Caddy panola-network'te → SNI ile api-dev/ws-dev
+#        domainlerini bu container'lara yonlendirir (host port exposure yok).
+#
+# Plan referansi: docs/plans/2026-04-27-oda-sistemi-implementation.md Task 0.2-0.3
+#
+# Plan-deviations:
+#   - Network: panola-network (plan: 'panola') - gercek docker network adi.
+#   - PGRST_DB_SCHEMAS (cogul): PostgREST 12+ standardi (plan: PGRST_DB_SCHEMA).
+#   - PGRST_JWT_SECRET={"jwks_url":"..."}: Asymmetric ES256 JWKS (plan: HS256
+#     shared secret). Supabase 2024+ JWT signing keys'e gecti, JWKS public.
+#   - PGRST_DB_USE_LEGACY_GUCS=false: Modern current_setting() (PG14+).
+#   - Container DNS routing: Caddy panola-network uyesi, bilge-arena-postgrest
+#     hostname'iyle erisir (plan: host.docker.internal:3001 host bridge).
+#
+# Calistirma:
+#   ssh root@100.126.113.23 "cd /opt/bilge-arena && docker compose up -d postgrest"
+# =============================================================================
+
+networks:
+  bilge-arena-net:
+    name: bilge-arena-net
+    driver: bridge
+  panola-network:
+    external: true
+    name: panola-network
+
+services:
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    container_name: bilge-arena-postgrest
+    restart: unless-stopped
+    env_file:
+      - ./secrets/postgrest.env
+    networks:
+      - bilge-arena-net
+      - panola-network
+    ports:
+      # Local-only debug bind (Caddy uses container DNS, not this)
+      - '127.0.0.1:3001:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider http://localhost:3000/ || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  realtime:
+    image: supabase/realtime:v2.30.34
+    container_name: bilge-arena-realtime
+    restart: unless-stopped
+    env_file:
+      - ./secrets/realtime.env
+    networks:
+      - bilge-arena-net
+      - panola-network
+    ports:
+      # Local-only debug bind
+      - '127.0.0.1:4001:4000'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:4000/api/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s  # Phoenix slow boot 30-60s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
