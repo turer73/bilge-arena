@@ -2,22 +2,37 @@
 # Bilge Arena Oda Sistemi: PostgREST + Realtime (VPS-side)
 # =============================================================================
 # Hedef: panola-postgres (172.18.0.4) icindeki bilge_arena_dev DB'sine REST +
-#        Realtime erisimi. Caddy panola-network'te → SNI ile api-dev/ws-dev
-#        domainlerini bu container'lara yonlendirir (host port exposure yok).
+#        Realtime erisimi. dokploy-traefik public TLS edge'inden api-dev /
+#        ws-dev.bilgearena.com SNI ile bu container'lara yonlendirir
+#        (host port exposure 127.0.0.1 sadece debug icin).
 #
-# Plan referansi: docs/plans/2026-04-27-oda-sistemi-implementation.md Task 0.2-0.3
+# Plan referansi: docs/plans/2026-04-27-oda-sistemi-implementation.md Task 0.2-0.4
 #
-# Plan-deviations:
-#   - Network: panola-network (plan: 'panola') - gercek docker network adi.
-#   - PGRST_DB_SCHEMAS (cogul): PostgREST 12+ standardi (plan: PGRST_DB_SCHEMA).
-#   - PGRST_JWT_SECRET={"jwks_url":"..."}: Asymmetric ES256 JWKS (plan: HS256
-#     shared secret). Supabase 2024+ JWT signing keys'e gecti, JWKS public.
-#   - PGRST_DB_USE_LEGACY_GUCS=false: Modern current_setting() (PG14+).
-#   - Container DNS routing: Caddy panola-network uyesi, bilge-arena-postgrest
-#     hostname'iyle erisir (plan: host.docker.internal:3001 host bridge).
+# Plan-deviations (cumulative):
+#   #8  Network: panola-network (plan: 'panola') - gercek docker network adi.
+#   #9  PGRST_DB_SCHEMAS (cogul): PostgREST 12+ standardi (plan: PGRST_DB_SCHEMA).
+#   #10 PGRST_JWT_SECRET={"jwks_url":"..."}: Asymmetric ES256 JWKS (plan: HS256).
+#       Supabase 2024+ JWT signing keys'e gecti, JWKS public.
+#   #11 PGRST_DB_USE_LEGACY_GUCS=false: Modern current_setting() (PG14+).
+#   #12 wal_level=logical degisikligi koordineli Panola restart penceresinde
+#       yapilacak. Sprint 0 postgres_changes ozelligi olmadan ship.
+#   #13 API_JWT_SECRET = bilge-arena-internal HS256 (Realtime JWKS yok).
+#   #14 ECTO_IPV6=false (image default true, panola-network IPv4-only).
+#   #15 DB_ENC_KEY format: 16 raw ASCII bytes (NOT 32 hex chars). Realtime
+#       aes_128_ecb env degerini olduğu gibi kullanir, hex decode yok.
+#   #16 Realtime healthcheck path: / (plan: /api/health, route YOK).
+#   #17 Public TLS edge: dokploy-traefik (plan: panola-caddy). panola-caddy
+#       internal :8080 backend gateway, public TLS terminate ETMIYOR. Traefik
+#       label-based discovery + dokploy-network membership gerekli.
+#   #18 PostgREST 12.2.3 distroless image: /bin/sh ve wget yok. CMD-SHELL
+#       healthcheck kalici unhealthy raporlar. Traefik v3 docker provider
+#       (config.go:199) unhealthy container'lari filtreler -> routerlar
+#       hic register edilmez. Healthcheck disable, Traefik LB-level passive
+#       health yeterli (real traffic + retries). Realtime image curl iceriyor,
+#       healthcheck calisiyor.
 #
 # Calistirma:
-#   ssh root@100.126.113.23 "cd /opt/bilge-arena && docker compose up -d postgrest"
+#   ssh root@100.126.113.23 "cd /opt/bilge-arena && docker compose up -d"
 # =============================================================================
 
 networks:
@@ -27,6 +42,11 @@ networks:
   panola-network:
     external: true
     name: panola-network
+  # Plan-deviation #17: Traefik (Dokploy) discover icin gerekli external network.
+  # docker provider exposedByDefault=false, label gerekli.
+  dokploy-network:
+    external: true
+    name: dokploy-network
 
 services:
   postgrest:
@@ -38,14 +58,32 @@ services:
     networks:
       - bilge-arena-net
       - panola-network
+      - dokploy-network
     ports:
-      # Local-only debug bind (Caddy uses container DNS, not this)
+      # Local-only debug bind (Traefik uses container DNS, not this)
       - '127.0.0.1:3001:3000'
+    # Plan-deviation #18: PostgREST 12.2.3 image is distroless (no /bin/sh, no wget).
+    # Any CMD-SHELL healthcheck permanently reports unhealthy. Traefik v3 docker
+    # provider filters unhealthy containers (config.go:199), which causes our
+    # routers to never be registered. Disable Docker-level healthcheck and rely on
+    # Traefik's load-balancer-level passive health (per real traffic).
     healthcheck:
-      test: ['CMD-SHELL', 'wget -q --spider http://localhost:3000/ || exit 1']
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      disable: true
+    labels:
+      # Traefik labels (Plan-deviation #17)
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=dokploy-network'
+      # HTTPS router: api-dev.bilgearena.com -> bilge-arena-postgrest:3000
+      - 'traefik.http.routers.bilge-arena-api.rule=Host(`api-dev.bilgearena.com`)'
+      - 'traefik.http.routers.bilge-arena-api.entrypoints=websecure'
+      - 'traefik.http.routers.bilge-arena-api.tls=true'
+      - 'traefik.http.routers.bilge-arena-api.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.bilge-arena-api.service=bilge-arena-api'
+      - 'traefik.http.services.bilge-arena-api.loadbalancer.server.port=3000'
+      # HTTP -> HTTPS redirect router
+      - 'traefik.http.routers.bilge-arena-api-http.rule=Host(`api-dev.bilgearena.com`)'
+      - 'traefik.http.routers.bilge-arena-api-http.entrypoints=web'
+      - 'traefik.http.routers.bilge-arena-api-http.middlewares=redirect-to-https@file'
     logging:
       driver: 'json-file'
       options:
@@ -61,6 +99,7 @@ services:
     networks:
       - bilge-arena-net
       - panola-network
+      - dokploy-network
     ports:
       # Local-only debug bind
       - '127.0.0.1:4001:4000'
@@ -74,6 +113,21 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s  # Phoenix slow boot 30-60s
+    labels:
+      # Traefik labels (WebSocket upgrade Traefik tarafindan native handle edilir)
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=dokploy-network'
+      # HTTPS router: ws-dev.bilgearena.com -> bilge-arena-realtime:4000
+      - 'traefik.http.routers.bilge-arena-ws.rule=Host(`ws-dev.bilgearena.com`)'
+      - 'traefik.http.routers.bilge-arena-ws.entrypoints=websecure'
+      - 'traefik.http.routers.bilge-arena-ws.tls=true'
+      - 'traefik.http.routers.bilge-arena-ws.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.bilge-arena-ws.service=bilge-arena-ws'
+      - 'traefik.http.services.bilge-arena-ws.loadbalancer.server.port=4000'
+      # HTTP -> HTTPS redirect router
+      - 'traefik.http.routers.bilge-arena-ws-http.rule=Host(`ws-dev.bilgearena.com`)'
+      - 'traefik.http.routers.bilge-arena-ws-http.entrypoints=web'
+      - 'traefik.http.routers.bilge-arena-ws-http.middlewares=redirect-to-https@file'
     logging:
       driver: 'json-file'
       options:
