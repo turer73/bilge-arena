@@ -84,8 +84,18 @@ BEGIN
       USING ERRCODE = 'P0001';
   END IF;
 
-  -- Room lookup (no FOR UPDATE -- multiple submitters paralel)
-  SELECT * INTO v_room FROM public.rooms WHERE id = p_room_id;
+  -- Room lookup with FOR SHARE (Codex P1 PR #39 deadlock fix):
+  --   Lock order MATCH reveal_round (rooms ilk, sonra room_rounds). Aksi
+  --   takdirde reverse-order deadlock:
+  --     T1 submit: FOR SHARE room_rounds, sonra INSERT answers (FK lock
+  --       on rooms). T1 rooms FK lock'unu bekler.
+  --     T2 reveal: FOR UPDATE rooms, sonra FOR UPDATE room_rounds.
+  --       T2 room_rounds lock'unu bekler.
+  --     -> 40P01 deadlock.
+  --   FOR SHARE on rooms multiple submitters'i hala parallel bicimde tutar
+  --   (SHARE compatible with SHARE). reveal_round'un FOR UPDATE rooms'u
+  --   submit'lerin SHARE release etmesini bekler — UX dogru semantik.
+  SELECT * INTO v_room FROM public.rooms WHERE id = p_room_id FOR SHARE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Oda bulunamadi: %', p_room_id
       USING ERRCODE = 'P0002';
