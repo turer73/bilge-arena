@@ -289,4 +289,28 @@ BEGIN
   RAISE NOTICE 'OK Test 8: idempotent re-call, count=0';
 END $$;
 
+-- =============================================================================
+-- Test 9 (Codex P1 PR #40 fix regression guard):
+-- PUBLIC EXECUTE revoke edildi mi -- authenticated + anon goremesin
+-- =============================================================================
+DO $$
+BEGIN
+  IF has_function_privilege('authenticated',
+                             'public.auto_relay_tick(int,int,int)',
+                             'EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL Test 9: authenticated EXECUTE privilege grant duruyor (REVOKE FROM PUBLIC eksik)';
+  END IF;
+  IF has_function_privilege('anon',
+                             'public.auto_relay_tick(int,int,int)',
+                             'EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL Test 9: anon EXECUTE privilege grant duruyor';
+  END IF;
+  IF NOT has_function_privilege('bilge_arena_app',
+                                 'public.auto_relay_tick(int,int,int)',
+                                 'EXECUTE') THEN
+    RAISE EXCEPTION 'FAIL Test 9: bilge_arena_app (OWNER) EXECUTE kaybetti';
+  END IF;
+  RAISE NOTICE 'OK Test 9: PUBLIC EXECUTE revoked (authenticated/anon=f, owner=t)';
+END $$;
+
 ROLLBACK;

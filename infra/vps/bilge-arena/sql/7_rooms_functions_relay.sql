@@ -29,6 +29,20 @@
 -- reveal_round + advance_round + submit_answer tum lock graph'i ayni sirada,
 -- deadlock impossible.
 --
+-- Privilege model (Codex P1 PR #40 fix):
+--   REVOKE EXECUTE FROM PUBLIC -- PostgreSQL CREATE FUNCTION default
+--   GRANT EXECUTE TO PUBLIC verir. auto_relay_tick auth check'siz oldugundan
+--   PUBLIC erisim privilege escalation acar (anon/authenticated rolu force-
+--   advance yapabilir). Sadece OWNER (bilge_arena_app) execute eder, system
+--   cron bu role uzerinden cagiri.
+--
+-- Race-safety (Codex P2 PR #40 fix):
+--   "Refetch under lock" pattern: candidate select'te room_id alir, lock
+--   acquisition sonrasi v_room.current_round_index uzerinden round'u
+--   YENIDEN fetch eder. Stale candidate.round_id kullanmaz -- aksi takdirde
+--   host advance+reveal arada gectiyse, eski round_id locked + hold-expired
+--   check pass + advance YENI revealed round'i ATLAR.
+--
 -- Calistirma:
 --   docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev \
 --     -v ON_ERROR_STOP=on -f - < infra/vps/bilge-arena/sql/7_rooms_functions_relay.sql
@@ -66,7 +80,7 @@ BEGIN
   -- Phase 1: active rooms with expired deadline -> auto-reveal
   -- =========================================================================
   FOR v_candidate IN
-    SELECT r.id AS room_id, rr.id AS round_id
+    SELECT r.id AS room_id
     FROM public.rooms r
     JOIN public.room_rounds rr
       ON rr.room_id = r.id
@@ -81,13 +95,20 @@ BEGIN
     SELECT * INTO v_room FROM public.rooms
       WHERE id = v_candidate.room_id FOR UPDATE;
 
-    -- Re-verify state under lock (concurrent host action olabilir)
-    IF v_room.state <> 'active' THEN
+    -- Re-verify state + round index under lock (concurrent host action olabilir)
+    IF v_room.state <> 'active' OR v_room.current_round_index < 1 THEN
       CONTINUE;
     END IF;
 
+    -- Refetch CURRENT round under lock (Codex P2 fix: stale candidate.round_id
+    -- kullanma -- v_room.current_round_index uzerinden YENIDEN cek)
     SELECT * INTO v_round FROM public.room_rounds
-      WHERE id = v_candidate.round_id FOR UPDATE;
+      WHERE room_id = v_room.id
+        AND round_index = v_room.current_round_index
+      FOR UPDATE;
+    IF NOT FOUND THEN
+      CONTINUE;
+    END IF;
 
     -- Re-verify revealed_at under lock
     IF v_round.revealed_at IS NOT NULL THEN
@@ -147,7 +168,7 @@ BEGIN
   -- Phase 2: reveal rooms with expired hold -> auto-advance OR complete
   -- =========================================================================
   FOR v_candidate IN
-    SELECT r.id AS room_id, rr.id AS round_id
+    SELECT r.id AS room_id
     FROM public.rooms r
     JOIN public.room_rounds rr
       ON rr.room_id = r.id
@@ -165,8 +186,18 @@ BEGIN
       CONTINUE;
     END IF;
 
+    -- Refetch CURRENT round under lock (Codex P2 fix: candidate select arasi
+    -- host advance+reveal yapmis olabilir, current_round_index degismistir.
+    -- v_candidate.round_id kullanmadan v_room.current_round_index'ten YENIDEN
+    -- cek -- aksi takdirde stale round'un hold-expired check'i pass olur ve
+    -- yeni revealed round'in hold suresini ATLAR).
     SELECT * INTO v_round FROM public.room_rounds
-      WHERE id = v_candidate.round_id FOR UPDATE;
+      WHERE room_id = v_room.id
+        AND round_index = v_room.current_round_index
+      FOR UPDATE;
+    IF NOT FOUND THEN
+      CONTINUE;
+    END IF;
 
     -- Re-verify hold expired
     IF v_round.revealed_at IS NULL OR
@@ -216,5 +247,12 @@ BEGIN
 END;
 $$;
 
--- NOT GRANT EXECUTE TO authenticated -- system-only via OWNER (bilge_arena_app)
+-- Privilege hardening (Codex P1 PR #40 fix):
+-- PostgreSQL CREATE FUNCTION default GRANT EXECUTE TO PUBLIC verir.
+-- auto_relay_tick auth check'siz oldugundan PUBLIC erisim vulnerability acar
+-- (anon/authenticated rolu PostgREST RPC ile /rpc/auto_relay_tick cagirip
+-- force-advance yapabilirdi). REVOKE FROM PUBLIC + GRANT yok = sadece OWNER
+-- (bilge_arena_app) execute, system cron bu role ile cagirir.
+REVOKE EXECUTE ON FUNCTION public.auto_relay_tick(INT, INT, INT) FROM PUBLIC;
+
 COMMIT;
