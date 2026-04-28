@@ -53,6 +53,7 @@
 --   P0009 - Henuz round basla(ma)di (current_round_index < 1)
 --   P0010 - Sure doldu (NOW() > round.ends_at)
 --   P0011 - Zaten cevapladin (UNIQUE round_id+user_id)
+--   P0012 - Round reveal edildi, late submit reddedildi (Codex P1 race fix)
 -- =============================================================================
 
 \set ON_ERROR_STOP on
@@ -110,13 +111,27 @@ BEGIN
       USING ERRCODE = 'P0001';
   END IF;
 
-  -- Current round
+  -- Current round - FOR SHARE lock (Codex P1 race fix):
+  --   FOR SHARE multiple submitters paralel (each holds SHARE) ama
+  --   reveal_round'un FOR UPDATE'ini BLOCKS. Boylece submit/reveal
+  --   serialize olur. Ayrica revealed_at re-check race gap'i yakalar:
+  --   reveal_round commit etmis ama submit eski snapshot'tan state=active
+  --   okumusa, FOR SHARE altinda revealed_at IS NOT NULL gorur ve reddeder.
   SELECT * INTO v_round
     FROM public.room_rounds
-    WHERE room_id = p_room_id AND round_index = v_room.current_round_index;
+    WHERE room_id = p_room_id AND round_index = v_room.current_round_index
+    FOR SHARE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Aktif round bulunamadi (data integrity ihlali)'
       USING ERRCODE = 'P0002';
+  END IF;
+
+  -- Race guard: round zaten reveal edilmisse late submit reddedilir.
+  -- Aksi takdirde insert edilen row reveal_round'un UPDATE'inden sonra
+  -- gelir, is_correct=NULL/points=0 sonsuza kalir (silent corruption).
+  IF v_round.revealed_at IS NOT NULL THEN
+    RAISE EXCEPTION 'Round zaten reveal edildi, late submit reddedildi (revealed_at: %)', v_round.revealed_at
+      USING ERRCODE = 'P0012';
   END IF;
 
   -- Deadline check
