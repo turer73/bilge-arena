@@ -442,6 +442,64 @@ EXCEPTION
     RAISE EXCEPTION 'FAIL Test 4.7: yanlis hata: % (%)', SQLERRM, SQLSTATE;
 END $$;
 
+-- =============================================================================
+-- Section 4-extra: Codex P1 race fix regression guard (Test 4.9)
+-- =============================================================================
+-- Race scenario (Codex PR #38 P1):
+--   submit reads state='active' (eski snapshot) → reveal_round commit eder
+--   → submit INSERT happens AFTER reveal'in UPDATE'i → row is_correct=NULL
+--   sonsuza kalir (silent corruption).
+-- Fix: submit_answer'da FOR SHARE on round + revealed_at IS NOT NULL check.
+-- Test: synthetic setup ile revealed_at SET olan bir round olustur, state
+-- 'active' goster, submit_answer P0012 atmali.
+
+-- Synthetic: yeni room, round revealed_at SET, state='active' (race outcome simule)
+INSERT INTO public.rooms
+  (id, code, host_id, title, category, difficulty, question_count,
+   max_players, per_question_seconds, mode, state, current_round_index)
+VALUES
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'RACEAA',
+   '22222222-2222-2222-2222-222222222222', 'Race Test', 'cebir', 2, 5,
+   8, 20, 'sync', 'active', 1);
+
+INSERT INTO public.room_members (room_id, user_id, role)
+VALUES
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+   '22222222-2222-2222-2222-222222222222', 'host'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+   '55555555-5555-5555-5555-555555555555', 'player');
+
+-- round_index=1 with revealed_at SET (race outcome simule eden state)
+INSERT INTO public.room_rounds
+  (room_id, round_index, question_id, question_content_snapshot,
+   started_at, ends_at, revealed_at)
+VALUES
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 1, gen_random_uuid(),
+   '{"question":"q","options":["a","b"],"answer":"a"}'::jsonb,
+   NOW() - INTERVAL '5 seconds', NOW() + INTERVAL '30 seconds',
+   NOW() - INTERVAL '1 second');  -- revealed_at SET = race fix tetikleyici
+
+-- Test 4.9: late submitter P0012 alir
+SELECT set_config('request.jwt.claim.sub',
+                  '55555555-5555-5555-5555-555555555555', FALSE);
+DO $$
+BEGIN
+  PERFORM public.submit_answer(
+    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
+    'a'::text
+  );
+  RAISE EXCEPTION 'FAIL Test 4.9: race-fix bypass — late submit basarili';
+EXCEPTION
+  WHEN sqlstate 'P0012' THEN
+    RAISE NOTICE 'OK Test 4.9: revealed_at gate aktif, late submit bloke (P0012)';
+  WHEN OTHERS THEN
+    RAISE EXCEPTION 'FAIL Test 4.9: yanlis hata: % (%)', SQLERRM, SQLSTATE;
+END $$;
+
+-- Reset: ana test odasina don audit count icin
+SELECT set_config('request.jwt.claim.sub',
+                  '22222222-2222-2222-2222-222222222222', FALSE);
+
 -- Test 4.8: Audit log entry'leri
 DO $$
 DECLARE v_round_started INT; v_round_revealed INT; v_room_completed INT;
