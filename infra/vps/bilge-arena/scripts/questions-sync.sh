@@ -20,6 +20,12 @@
 #       YOK (zcat | grep COPY public ile dogrulandi 2026-04-27). Sadece
 #       public.questions sync edilir. Schema normalize edildiginde
 #       (Sprint 1+) tablolar listeye eklenir.
+#   #28 Codex P1 fix (PR #34 review): Onceki implementasyon TRUNCATE+restore'u
+#       UC AYRI psql session'da kosuyordu (BEGIN/TRUNCATE heredoc, COPY restore,
+#       COMMIT -c). Her psql cikisinda transaction otomatik rollback olur,
+#       dolayisiyla atomicity yoktu. Fix: tek psql STDIN'ine BEGIN+TRUNCATE+COPY+
+#       COMMIT brace-grouping ile pipeyle gonderilir, ON_ERROR_STOP=on ile herhangi
+#       bir hata otomatik rollback'e cevirilir.
 #
 # Calistirma (manuel test):
 #   ssh root@100.126.113.23 "/opt/bilge-arena/scripts/questions-sync.sh"
@@ -78,17 +84,20 @@ done
 LINES=$(wc -l < "$TMP_SQL")
 [ "$LINES" -lt 100 ] && fail "Extracted SQL cok kucuk ($LINES satir)"
 
-# 2) bilge_arena_dev'de TRUNCATE + restore (transactional)
+# 2) bilge_arena_dev'de TRUNCATE + restore (transactional, plan-deviation #28).
+# Tek psql session'da BEGIN+TRUNCATE+COPY+COMMIT calistir. ON_ERROR_STOP=on
+# herhangi bir COPY satiri (constraint violation vs.) hata verirse psql cikar
+# ve transaction otomatik rollback olur (-> 02:30 TR sync atomic).
 . /opt/bilge-arena/secrets/db.env
 
-docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev <<'SQLEOF' >> "$LOG_FILE" 2>&1
-BEGIN;
-TRUNCATE public.questions CASCADE;
-SQLEOF
-
-docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev < "$TMP_SQL" >> "$LOG_FILE" 2>&1
-
-docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev -c 'COMMIT;' >> "$LOG_FILE" 2>&1
+{
+  printf 'BEGIN;\n'
+  printf 'TRUNCATE public.questions CASCADE;\n'
+  cat "$TMP_SQL"
+  printf 'COMMIT;\n'
+} | docker exec -i panola-postgres psql -v ON_ERROR_STOP=on \
+    -U bilge_arena_app -d bilge_arena_dev >> "$LOG_FILE" 2>&1 \
+  || fail "psql restore basarisiz; ON_ERROR_STOP transaction'i otomatik rollback'e cevirdi"
 
 QC=$(docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev -t -c 'SELECT COUNT(*) FROM public.questions' | tr -d ' ')
 DURATION=$((SECONDS - START))
