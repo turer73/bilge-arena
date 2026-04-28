@@ -23,13 +23,18 @@
 
 BEGIN;
 
--- 1) FORCE RLS aktif (6 oda tablosunda)
+-- 1a) FORCE RLS aktif (5 oda tablosunda - room_members HARIC, plan-deviation #33)
+-- room_members FORCE'lanirsa is_room_member SECURITY DEFINER helper'i recursion'a
+-- girer (Codex P1 PR #35 review). PostgreSQL semantik: SECURITY DEFINER
+-- BYPASSRLS attribute'u DEGIL; sadece OWNER context'i veriyor. OWNER auto-bypass
+-- FORCE RLS aciksa devre disi -> helper'in icindeki SELECT room_members yine
+-- policy'yi tetikler -> infinite loop.
 DO $$
 DECLARE
   tbl TEXT;
 BEGIN
   FOR tbl IN SELECT unnest(ARRAY[
-    'rooms', 'room_members', 'room_rounds',
+    'rooms', 'room_rounds',
     'room_answers', 'room_reactions', 'room_audit_log'
   ])
   LOOP
@@ -39,6 +44,25 @@ BEGIN
     END IF;
     RAISE NOTICE 'OK: FORCE RLS enabled on public.%', tbl;
   END LOOP;
+END $$;
+
+-- 1b) room_members FORCE RLS DEVRE DISI (regression guard).
+-- Bu testin FAIL olmasi: birisi geri ekledi -> SECURITY DEFINER recursion riski.
+DO $$
+DECLARE
+  rms_force BOOL;
+  rms_enabled BOOL;
+BEGIN
+  SELECT relforcerowsecurity, relrowsecurity
+    INTO rms_force, rms_enabled
+    FROM pg_class WHERE oid = 'public.room_members'::regclass;
+  IF rms_force THEN
+    RAISE EXCEPTION 'ASSERT FAILED: room_members FORCE RLS aktif (Codex P1 PR #35: is_room_member recursion). Plan-deviation #33 ihlali.';
+  END IF;
+  IF NOT rms_enabled THEN
+    RAISE EXCEPTION 'ASSERT FAILED: room_members RLS bile devre disi (authenticated/anon bypass). 2_rooms.sql ENABLE RLS adimi atlanmis olabilir.';
+  END IF;
+  RAISE NOTICE 'OK: room_members RLS enabled, FORCE devre disi (SECURITY DEFINER recursion engellendi)';
 END $$;
 
 -- 2) Policy varligi (her oda tablosunda en az 1 SELECT policy)

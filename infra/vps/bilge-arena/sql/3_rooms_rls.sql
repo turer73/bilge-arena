@@ -12,11 +12,20 @@
 --   #29 SECURITY DEFINER helper functions (Panola Migration 016b pattern):
 --       room_members policy'si self-table check yaparsa RLS recursion riski.
 --       Cozum: is_room_member(uuid) ve is_room_host(uuid) helper'lari OWNER
---       (bilge_arena_app) ile calisip RLS'i bypass eder. SET search_path
---       fixed (public, pg_catalog) - injection sertlik.
---   #30 FORCE RLS on 6 tables: ALTER TABLE owner bypass'ini engeller.
+--       (bilge_arena_app) context'inde calisir. NOT: SECURITY DEFINER
+--       BYPASSRLS attribute'u VERMEZ; OWNER auto-bypass'a guveniyor.
+--       SET search_path fixed (public, pg_catalog) - injection sertlik.
+--   #30 FORCE RLS on 5 tables (rooms, room_rounds, room_answers, room_reactions,
+--       room_audit_log): ALTER TABLE owner bypass'ini engeller.
 --       service_role BYPASSRLS attribute (cluster-wide) hala calisir;
 --       admin/cron icin service_role kullanilacak.
+--   #33 (Codex P1 PR #35 fix) room_members FORCE RLS LISTESINDE DEGIL:
+--       is_room_member helper room_members'i okur. FORCE RLS aciksa OWNER
+--       auto-bypass devre disi -> SECURITY DEFINER icindeki SELECT yine
+--       policy'yi tetikler -> infinite recursion. Trade-off: room_members
+--       owner bypass aktif (app traffic PostgREST/authenticated role uzerinden,
+--       bilge_arena_app direkt baglanti yok = production attack surface degil).
+--       Test 1b regression guard: room_members FORCE'lanirsa fail.
 --
 -- Calistirma:
 --   docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev \
@@ -75,12 +84,25 @@ GRANT EXECUTE ON FUNCTION public.is_room_host(UUID) TO authenticated, anon;
 -- =============================================================================
 -- 2) FORCE RLS (plan-deviation #30 — owner bypass koruma)
 -- =============================================================================
+-- Plan-deviation #33 (Codex P1 PR #35 fix): room_members'i FORCE RLS LISTESINE
+-- DAHIL ETMIYORUZ. Aksi takdirde:
+--   1. room_members SELECT policy is_room_member(room_id) cagiriyor
+--   2. is_room_member SECURITY DEFINER -> OWNER (bilge_arena_app) context
+--   3. PostgreSQL: SECURITY DEFINER BYPASSRLS attribute'u VERMEZ; sadece OWNER
+--      privileges'larini saglar. OWNER auto-bypass FORCE RLS aciksa devre disi.
+--   4. helper icindeki SELECT room_members yine RLS policy'yi tetikler
+--   5. policy is_room_member'i tekrar cagirir -> sonsuz dongu
+-- Trade-off: room_members'da owner bypass aktif. App traffic PostgREST uzerinden
+-- authenticated/anon JWT role'leri ile geliyor, bilge_arena_app dogrudan
+-- baglanmiyor. Bu nedenle owner bypass production attack surface degil.
+-- Test 1b (3_rooms_rls_test.sql) regression guard: room_members FORCE'lanirsa
+-- assertion fail eder.
 ALTER TABLE public.rooms             FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.room_members      FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.room_rounds       FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.room_answers      FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.room_reactions    FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.room_audit_log    FORCE ROW LEVEL SECURITY;
+-- room_members: ENABLE RLS (2_rooms.sql), FORCE RLS DEGIL (yukaridaki gerekce)
 
 -- =============================================================================
 -- 3) rooms policies (4 toplam)
