@@ -1,0 +1,42 @@
+# Bilge Arena .gitattributes
+# Plan-deviation #52: Sprint 1 sirasinda Windows-side editing CRLF line endings
+# yaratti, Linux shebang `bash\r` parser hatasi VPS deploy'da. Her commit'te
+# `sed -i 's/\r$//'` manual fix gerekiyordu. Bu file kalici cozum:
+# .sh + .sql + diger Linux-context dosyalar zorunlu LF.
+#
+# Mevcut dosyalar git tarafindan otomatik normalize edilir (bir sonraki
+# Git touch'ta CRLF -> LF cevrilir). Yeni dosyalar dogrudan LF.
+
+# Auto-detect line endings, but force LF for cross-platform Linux scripts
+* text=auto
+
+# Shell scripts MUST be LF (deploy on VPS Linux)
+*.sh text eol=lf
+
+# SQL files MUST be LF (deploy via psql/Docker on VPS Linux)
+*.sql text eol=lf
+
+# Configuration files (Linux deploys)
+*.yml text eol=lf
+*.yaml text eol=lf
+Caddyfile text eol=lf
+Dockerfile text eol=lf
+
+# Source code: Cross-platform but LF preferred (Next.js + Node convention)
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Binary files: don't normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
