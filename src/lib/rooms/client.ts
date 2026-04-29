@@ -104,7 +104,23 @@ export async function callRpc<T>(
     }
   }
 
-  // Success: parse JSON body
+  // Success: 204 No Content (Codex P1 PR #41 fix).
+  // PostgREST `RETURNS VOID` fonksiyonlari icin 204 doner (empty body).
+  // Etkilenen 7 RPC: start_room, leave_room, kick_member, cancel_room,
+  // submit_answer, reveal_round, advance_round. response.json() empty body'de
+  // SyntaxError firlatir -> caller silent fail (DB success ama UI "hata").
+  // Plan-deviation #55: VOID success path = data: null, caller T narrowing.
+  if (response.status === 204) {
+    return { ok: true, data: null as T }
+  }
+
+  // Defansif: 200 + Content-Length:0 case'i de hemen handle et
+  // (PostgREST farkli config'te 200 boyle dondurebilir, paranoia)
+  if (response.headers.get('content-length') === '0') {
+    return { ok: true, data: null as T }
+  }
+
+  // Success with body: parse JSON
   try {
     const data = (await response.json()) as T
     return { ok: true, data }
