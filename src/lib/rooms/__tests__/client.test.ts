@@ -130,8 +130,11 @@ describe('callRpc', () => {
 
   it('handles unparseable response body', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
-      // 2xx but body not JSON
-      new Response('not json', { status: 200, headers: { 'Content-Type': 'text/plain' } }),
+      // 2xx but body not JSON, content-length>0 (paranoia bypass)
+      new Response('not json', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain', 'Content-Length': '8' },
+      }),
     ) as unknown as typeof fetch
 
     const result = await callRpc('jwt', 'create_room', {})
@@ -140,6 +143,36 @@ describe('callRpc', () => {
     if (!result.ok) {
       expect(result.error.code).toBe('UNKNOWN')
       expect(result.error.message).toContain('parse')
+    }
+  })
+
+  // Codex P1 PR #41 fix: VOID-returning RPC functions (start_room, leave_room,
+  // kick_member, cancel_room, submit_answer, reveal_round, advance_round)
+  // PostgREST 204 No Content doner. response.json() empty body'de SyntaxError
+  // firlatirdi -> caller silent fail.
+  it('handles 204 No Content for VOID RPC (start_room et al.)', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(null, { status: 204 }),
+    ) as unknown as typeof fetch
+
+    const result = await callRpc<null>('jwt', 'start_room', { p_room_id: 'uuid' })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toBeNull()
+    }
+  })
+
+  it('handles 200 with Content-Length:0 (defansif paranoia)', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response('', { status: 200, headers: { 'Content-Length': '0' } }),
+    ) as unknown as typeof fetch
+
+    const result = await callRpc<null>('jwt', 'leave_room', { p_room_id: 'uuid' })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.data).toBeNull()
     }
   })
 
