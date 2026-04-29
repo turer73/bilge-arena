@@ -1,0 +1,124 @@
+/**
+ * Bilge Arena Oda Sistemi: server-fetch helpers unit tests
+ * Sprint 1 PR4a Task 2
+ *
+ * 10 senaryo:
+ *   fetchMyRooms (7): authorized 2 rows, RLS empty, network reject,
+ *     URL params, Bearer header, cache no-store, malformed JSON
+ *   fetchRoomByCode (3): found, not found, special-char encoding
+ *
+ * Mock: globalThis.fetch (vi.fn()), per-test reset.
+ */
+
+import { describe, test, expect, vi, beforeEach, afterAll } from 'vitest'
+import { fetchMyRooms, fetchRoomByCode } from '../server-fetch'
+
+const ORIGINAL_FETCH = globalThis.fetch
+const mockFetch = vi.fn()
+
+beforeEach(() => {
+  globalThis.fetch = mockFetch as unknown as typeof fetch
+  mockFetch.mockReset()
+})
+
+afterAll(() => {
+  globalThis.fetch = ORIGINAL_FETCH
+})
+
+const ok = (body: unknown) =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve(body),
+  })
+
+describe('fetchMyRooms', () => {
+  test('1) authorized + 2 rows → array of 2', async () => {
+    mockFetch.mockReturnValue(
+      ok([
+        {
+          id: 'a',
+          code: 'BIL2A',
+          title: 'A',
+          state: 'lobby',
+          created_at: '2026-04-29',
+          room_members: [{ count: 3 }],
+        },
+        {
+          id: 'b',
+          code: 'BIL2B',
+          title: 'B',
+          state: 'in_progress',
+          created_at: '2026-04-29',
+          room_members: [{ count: 6 }],
+        },
+      ]),
+    )
+    const rooms = await fetchMyRooms('jwt')
+    expect(rooms).toHaveLength(2)
+    expect(rooms[0].code).toBe('BIL2A')
+  })
+
+  test('2) RLS empty → []', async () => {
+    mockFetch.mockReturnValue(ok([]))
+    expect(await fetchMyRooms('jwt')).toEqual([])
+  })
+
+  test('3) network reject → []', async () => {
+    mockFetch.mockRejectedValue(new Error('ECONNREFUSED'))
+    expect(await fetchMyRooms('jwt')).toEqual([])
+  })
+
+  test('4) URL params: state in lobby/in_progress + order desc', async () => {
+    mockFetch.mockReturnValue(ok([]))
+    await fetchMyRooms('jwt')
+    const url = String(mockFetch.mock.calls[0][0])
+    // URLSearchParams encode'lar comma'yi %2C, parantezi de encode edebilir
+    expect(url).toMatch(/state=in\.(\(|%28)lobby(%2C|,)in_progress(\)|%29)/)
+    expect(url).toMatch(/order=created_at\.desc/)
+  })
+
+  test('5) Authorization Bearer header set', async () => {
+    mockFetch.mockReturnValue(ok([]))
+    await fetchMyRooms('my-jwt')
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    const headers = init.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer my-jwt')
+  })
+
+  test('6) cache: no-store set', async () => {
+    mockFetch.mockReturnValue(ok([]))
+    await fetchMyRooms('jwt')
+    const init = mockFetch.mock.calls[0][1] as RequestInit
+    expect(init.cache).toBe('no-store')
+  })
+
+  test('7) malformed JSON → []', async () => {
+    mockFetch.mockReturnValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.reject(new Error('parse error')),
+    })
+    expect(await fetchMyRooms('jwt')).toEqual([])
+  })
+})
+
+describe('fetchRoomByCode', () => {
+  test('8) found → first row', async () => {
+    mockFetch.mockReturnValue(ok([{ id: 'a', code: 'BIL2A' }]))
+    const r = await fetchRoomByCode('jwt', 'BIL2A')
+    expect(r?.code).toBe('BIL2A')
+  })
+
+  test('9) not found / RLS → null', async () => {
+    mockFetch.mockReturnValue(ok([]))
+    expect(await fetchRoomByCode('jwt', 'NONE')).toBeNull()
+  })
+
+  test('10) special-char code "BIL/GE" → URL encoded once', async () => {
+    mockFetch.mockReturnValue(ok([]))
+    await fetchRoomByCode('jwt', 'BIL/GE')
+    const url = String(mockFetch.mock.calls[0][0])
+    expect(url).toMatch(/code=eq\.BIL%2FGE/)
+  })
+})
