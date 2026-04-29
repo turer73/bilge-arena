@@ -26,6 +26,13 @@
 #       dolayisiyla atomicity yoktu. Fix: tek psql STDIN'ine BEGIN+TRUNCATE+COPY+
 #       COMMIT brace-grouping ile pipeyle gonderilir, ON_ERROR_STOP=on ile herhangi
 #       bir hata otomatik rollback'e cevirilir.
+#   #51 (PR3 prep, 2026-04-29): Supabase Panola wordquest sorulari ALTERNATIF
+#       content sema kullanir ({type, correct, options, ...}) -- bilge_arena_dev
+#       chk_content_required_fields CHECK ({question, options, answer} zorunlu)
+#       ile uyumsuz. Restore wordquest first-row'da CHECK ihlali ile fail eder.
+#       Cozum: awk ile $3 == 'wordquest' satirlari filtre et (tab-separated COPY
+#       format). matematik/turkce/fen/sosyal dahil edilir. wordquest game-mode
+#       kelime arena icin ayri bir sprint'te normalize edilir.
 #
 # Calistirma (manuel test):
 #   ssh root@100.126.113.23 "/opt/bilge-arena/scripts/questions-sync.sh"
@@ -81,8 +88,20 @@ for table in questions; do
   sed -n "/^COPY public\\.${table} /,/^\\\\\\.\$/p" "$DUMP_DECOMP" >> "$TMP_SQL"
 done
 
+# Plan-deviation #51: wordquest content sema farkli ({type, correct, options, ...})
+# bilge_arena_dev chk_content_required_fields CHECK ({question, options, answer})
+# ile uyumsuz. Awk filter -- COPY header, \. terminator ve game!=wordquest
+# data satirlari korunur (tab-separated COPY format, $3 = game column).
+TMP_FILTERED=$(mktemp)
+awk -F'\t' '
+  /^COPY public\.questions / { print; next }
+  /^\\\.$/ { print; next }
+  $3 != "wordquest" { print }
+' "$TMP_SQL" > "$TMP_FILTERED"
+mv "$TMP_FILTERED" "$TMP_SQL"
+
 LINES=$(wc -l < "$TMP_SQL")
-[ "$LINES" -lt 100 ] && fail "Extracted SQL cok kucuk ($LINES satir)"
+[ "$LINES" -lt 100 ] && fail "Extracted SQL cok kucuk ($LINES satir, wordquest filter sonrasi)"
 
 # 2) bilge_arena_dev'de TRUNCATE + restore (transactional, plan-deviation #28).
 # Tek psql session'da BEGIN+TRUNCATE+COPY+COMMIT calistir. ON_ERROR_STOP=on
