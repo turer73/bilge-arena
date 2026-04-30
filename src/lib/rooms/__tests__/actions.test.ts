@@ -29,7 +29,12 @@ vi.mock('../client', () => ({ callRpc: mockCallRpc }))
 vi.mock('next/navigation', () => ({ redirect: mockRedirect }))
 vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
-import { createRoomAction, joinRoomAction, startRoomAction } from '../actions'
+import {
+  createRoomAction,
+  joinRoomAction,
+  startRoomAction,
+  cancelRoomAction,
+} from '../actions'
 
 const mockSupabase = (user: unknown, session: unknown) => {
   mockCreateClient.mockResolvedValue({
@@ -272,5 +277,52 @@ describe('startRoomAction', () => {
       p_room_id: validUuid,
     })
     expect(mockRevalidatePath).toHaveBeenCalledWith('/oda')
+  })
+})
+
+// =============================================================================
+// cancelRoomAction: form submit → cancel_room RPC + redirect (PR4c Task 3)
+// =============================================================================
+
+describe('cancelRoomAction', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  test('28) anon user → error: Giris yapmalisin', async () => {
+    mockSupabase(null, null)
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    const r = await cancelRoomAction({}, fd)
+    expect(r.error).toMatch(/Giris yapmalisin/)
+  })
+
+  test('29) success → callRpc(cancel_room) + redirect /oda', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: null })
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    fd.set('reason', 'host_canceled')
+    await cancelRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'cancel_room', {
+      p_room_id: validUuid,
+      p_reason: 'host_canceled',
+    })
+    expect(mockRedirect).toHaveBeenCalledWith('/oda')
+  })
+
+  test('30) RPC P0003 (state disinda) → error: Oda zaten...', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'P0003',
+        message: 'Oda zaten completed durumunda; iptal edilemez',
+        status: 409,
+      },
+    })
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    fd.set('reason', 'host_canceled')
+    const r = await cancelRoomAction({}, fd)
+    expect(r.error).toMatch(/Oda zaten/)
   })
 })
