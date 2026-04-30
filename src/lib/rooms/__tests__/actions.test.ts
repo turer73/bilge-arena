@@ -29,7 +29,7 @@ vi.mock('../client', () => ({ callRpc: mockCallRpc }))
 vi.mock('next/navigation', () => ({ redirect: mockRedirect }))
 vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
-import { createRoomAction, joinRoomAction } from '../actions'
+import { createRoomAction, joinRoomAction, startRoomAction } from '../actions'
 
 const mockSupabase = (user: unknown, session: unknown) => {
   mockCreateClient.mockResolvedValue({
@@ -204,6 +204,10 @@ describe('createRoomAction', () => {
 // PR4b Task 1: 3 senaryo (auth, validation, success)
 // =============================================================================
 
+// Zod 4 uuid() RFC 4122 strict: pos 14 = version (1-5), pos 19 = variant (8/9/a/b)
+// Memory id=feedback_zod4_uuid_strict
+const validUuid = '11111111-1111-4111-8111-111111111111'
+
 describe('joinRoomAction', () => {
   beforeEach(() => vi.clearAllMocks())
 
@@ -232,5 +236,41 @@ describe('joinRoomAction', () => {
     await joinRoomAction({}, fd)
     expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'join_room', { p_code: 'BLZGE2' })
     expect(mockRedirect).toHaveBeenCalledWith('/oda/BLZGE2')
+  })
+})
+
+// =============================================================================
+// startRoomAction: form submit → start_room RPC (PR4c Task 2)
+// =============================================================================
+
+describe('startRoomAction', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  test('25) anon user → error: Giris yapmalisin', async () => {
+    mockSupabase(null, null)
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    const r = await startRoomAction({}, fd)
+    expect(r.error).toMatch(/Giris yapmalisin/)
+  })
+
+  test('26) invalid room_id (not uuid) → error', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = new FormData()
+    fd.set('room_id', 'not-a-uuid')
+    const r = await startRoomAction({}, fd)
+    expect(r.error).toMatch(/gecersiz/i)
+  })
+
+  test('27) success → callRpc(start_room) + revalidatePath /oda', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: null })
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    await startRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'start_room', {
+      p_room_id: validUuid,
+    })
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/oda')
   })
 })
