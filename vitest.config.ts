@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Next.js compile-time `server-only` paketi vitest'te yok, no-op stub
+      'server-only': path.resolve(__dirname, './src/test/server-only-stub.ts'),
     },
   },
   test: {
