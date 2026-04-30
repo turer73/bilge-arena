@@ -20,6 +20,13 @@
 
 import 'server-only'
 
+import type {
+  Member,
+  Room,
+  CurrentRound,
+  RoomState as RoomFullState,
+} from './room-state-reducer'
+
 const RPC_URL =
   process.env.BILGE_ARENA_RPC_URL ?? 'http://127.0.0.1:3001'
 
@@ -27,13 +34,24 @@ const RPC_URL =
 // Types
 // =============================================================================
 
-export type RoomState = 'lobby' | 'in_progress' | 'finished' | 'cancelled'
+/**
+ * DB CHECK constraint chk_rooms_state ile birebir (2_rooms.sql:133).
+ *
+ * Plan-deviation note: PR4a'de yanlislikla 'in_progress'/'finished'/'cancelled'
+ * yazilmisti, DB'de YOK. Hot-fix PR4b-5'te dogru enum'la yer degistirildi.
+ */
+export type RoomLifecycleState =
+  | 'lobby'
+  | 'active'
+  | 'reveal'
+  | 'completed'
+  | 'archived'
 
 export type RoomListItem = {
   id: string
   code: string
   title: string
-  state: RoomState
+  state: RoomLifecycleState
   created_at: string
   room_members: Array<{ count: number }>
 }
@@ -42,7 +60,7 @@ export type RoomDetail = {
   id: string
   code: string
   title: string
-  state: RoomState
+  state: RoomLifecycleState
   category: string
   difficulty: number
   question_count: number
@@ -108,6 +126,73 @@ export async function fetchRoomByCode(
     if (!res.ok) return null
     const rows = (await res.json()) as RoomDetail[]
     return rows[0] ?? null
+  } catch {
+    return null
+  }
+}
+
+// =============================================================================
+// fetchRoomState — /oda/[code] full lobby state SSR + GET /state route
+// =============================================================================
+
+/**
+ * Oda full state SSR data: room + members + current_round + answers_count.
+ * 4 paralel PostgREST query (Promise.all).
+ *
+ * `online: Set<>` ve `isStale: false` HOOK tarafinda eklenir (presence-derived,
+ * channel error sonrasi flag). REST sadece durable schema verisi doner.
+ *
+ * 4c'de doldurulacak placeholder:
+ *   - answers_count: room_answers count (current_round filter)
+ *   - scoreboard: room_answers + question correctness aggregate
+ *
+ * Hata pathleri:
+ *   - room yok / RLS empty → null
+ *   - members fetch fail → [] (sessiz)
+ *   - rounds fetch fail → null current_round (sessiz)
+ */
+export async function fetchRoomState(
+  jwt: string,
+  roomId: string,
+): Promise<Omit<RoomFullState, 'online' | 'isStale'> | null> {
+  const headers = { Authorization: `Bearer ${jwt}` }
+  const opts = { headers, cache: 'no-store' as const }
+
+  try {
+    const [roomRes, membersRes, roundRes] = await Promise.all([
+      fetch(
+        `${RPC_URL}/rooms?id=eq.${roomId}&select=*&limit=1`,
+        opts,
+      ),
+      fetch(
+        `${RPC_URL}/room_members?room_id=eq.${roomId}&select=*&order=joined_at.asc`,
+        opts,
+      ),
+      fetch(
+        `${RPC_URL}/room_rounds?room_id=eq.${roomId}&select=*&order=round_index.desc&limit=1`,
+        opts,
+      ),
+    ])
+
+    if (!roomRes.ok) return null
+    const rooms = (await roomRes.json()) as Room[]
+    if (rooms.length === 0) return null
+
+    const members = membersRes.ok
+      ? ((await membersRes.json()) as Member[])
+      : []
+    const rounds = roundRes.ok
+      ? ((await roundRes.json()) as CurrentRound[])
+      : []
+    const current_round = rounds[0] ?? null
+
+    return {
+      room: rooms[0],
+      members,
+      current_round,
+      answers_count: 0, // TODO 4c
+      scoreboard: [], // TODO 4c
+    }
   } catch {
     return null
   }

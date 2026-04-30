@@ -31,11 +31,18 @@ export type Member = {
   score?: number
 }
 
+/**
+ * DB CHECK constraint chk_rooms_state ile birebir.
+ * 2_rooms.sql:133 — ('lobby','active','reveal','completed','archived').
+ *
+ * Plan-deviation: design.md Bolum 3'te yanlislikla 'in_progress'/'finished'/
+ * 'cancelled' yazilmis (Anatolia360 model). DB'de yok, types.ts dogru.
+ */
 export type Room = {
   id: string
   code: string
   title: string
-  state: 'lobby' | 'in_progress' | 'finished' | 'cancelled'
+  state: 'lobby' | 'active' | 'reveal' | 'completed' | 'archived'
   mode: 'sync' | 'async'
   host_id: string
   category: string
@@ -44,8 +51,9 @@ export type Room = {
   max_players: number
   per_question_seconds: number
   created_at: string
-  started_at?: string
-  finished_at?: string
+  started_at?: string | null
+  ended_at?: string | null
+  archived_at?: string | null
 }
 
 export type CurrentRound = {

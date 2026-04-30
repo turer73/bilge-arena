@@ -103,12 +103,12 @@ describe('roomStateReducer', () => {
     expect(result.members).toHaveLength(0)
   })
 
-  test('6) ROOM_UPDATE -> state lobby->in_progress', () => {
+  test('6) ROOM_UPDATE -> state lobby->active', () => {
     const result = roomStateReducer(initialState(), {
       type: 'ROOM_UPDATE',
-      payload: { state: 'in_progress', started_at: '2026-04-30T01:00:00Z' },
+      payload: { state: 'active', started_at: '2026-04-30T01:00:00Z' },
     })
-    expect(result.room.state).toBe('in_progress')
+    expect(result.room.state).toBe('active')
     expect(result.room.started_at).toBe('2026-04-30T01:00:00Z')
   })
 
