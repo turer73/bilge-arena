@@ -8,14 +8,14 @@
 import type { Room } from '@/lib/rooms/room-state-reducer'
 
 const CATEGORY_LABELS: Record<string, string> = {
-  'genel-kultur': 'Genel Kultur',
+  'genel-kultur': 'Genel Kültür',
   tarih: 'Tarih',
-  cografya: 'Cografya',
+  cografya: 'Coğrafya',
   edebiyat: 'Edebiyat',
   matematik: 'Matematik',
   fen: 'Fen Bilimleri',
-  ingilizce: 'Ingilizce',
-  vatandaslik: 'Vatandaslik',
+  ingilizce: 'İngilizce',
+  vatandaslik: 'Vatandaşlık',
   futbol: 'Futbol',
   sinema: 'Sinema',
 }

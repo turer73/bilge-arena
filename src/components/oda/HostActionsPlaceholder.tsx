@@ -23,7 +23,7 @@ export function HostActionsPlaceholder({
         Host Paneli (yakinda)
       </h2>
       <p className="text-xs text-[var(--text-sub)]">
-        {'Oyun baslat, oyun iptal et ve uye cikar islemleri 4c’de eklenecek.'}
+        {'Oyun başlat, oyun iptal et ve üye çıkar işlemleri 4c’de eklenecek.'}
       </p>
     </section>
   )
