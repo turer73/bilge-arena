@@ -25,6 +25,7 @@ import { HostActions } from './HostActions'
 import { GameInProgress } from './GameInProgress'
 import { GameCompleted } from './GameCompleted'
 import { GameView } from './GameView'
+import { SonucView } from './SonucView'
 import { HostGameActions } from './HostGameActions'
 
 interface LobbyContainerProps {
@@ -65,7 +66,7 @@ export function LobbyContainer({
   if (roomState === 'reveal') {
     return (
       <div className="space-y-4">
-        <GameInProgress state={state} userId={userId} />
+        <SonucView state={state} userId={userId} />
         <HostGameActions
           isHost={isHost}
           roomId={state.room.id}
