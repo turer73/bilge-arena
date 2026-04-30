@@ -1,0 +1,145 @@
+/**
+ * Bilge Arena Oda Sistemi: Room State Reducer (Pure State Machine)
+ * Sprint 1 PR4b Task 2
+ *
+ * Realtime channel event'leri (postgres_changes + presence) -> state guncellemesi.
+ * Pure func, side-effect yok. setupRoomChannel (side-effect layer) bu reducer'i
+ * dispatch eder, useRoomChannel hook'u useReducer ile orchestrate eder.
+ *
+ * Event tipleri:
+ *   HYDRATE          - REST resync (mount + reconnect)
+ *   ROOM_UPDATE      - rooms tablosu UPDATE
+ *   MEMBER_INSERT    - room_members INSERT (idempotent)
+ *   MEMBER_UPDATE    - room_members UPDATE (kick, score)
+ *   MEMBER_DELETE    - room_members DELETE (leave)
+ *   PRESENCE_SYNC    - presence sync (full snapshot)
+ *   PRESENCE_JOIN    - presence join (1 user)
+ *   PRESENCE_LEAVE   - presence leave (1 user)
+ *   CHANNEL_ERROR    - WebSocket / system error
+ *
+ * Online state ephemeral: presence-derived Set, postgres_changes ile relate yok.
+ * isStale: channel error sonrasi UI banner gostermek icin flag.
+ */
+
+export type Member = {
+  user_id: string
+  display_name: string
+  emoji?: string
+  joined_at: string
+  is_host: boolean
+  is_kicked: boolean
+  score?: number
+}
+
+export type Room = {
+  id: string
+  code: string
+  title: string
+  state: 'lobby' | 'in_progress' | 'finished' | 'cancelled'
+  mode: 'sync' | 'async'
+  host_id: string
+  category: string
+  difficulty: number
+  question_count: number
+  max_players: number
+  per_question_seconds: number
+  created_at: string
+  started_at?: string
+  finished_at?: string
+}
+
+export type CurrentRound = {
+  round_number: number
+  question_id: string
+  started_at: string
+  /** Server-computed: started_at + per_question_seconds */
+  deadline: string
+  revealed_at: string | null
+}
+
+export type ScoreboardEntry = {
+  user_id: string
+  score: number
+  correct_count: number
+}
+
+export type RoomState = {
+  room: Room
+  members: Member[]
+  current_round: CurrentRound | null
+  answers_count: number
+  scoreboard: ScoreboardEntry[]
+  /** presence-derived ephemeral online users */
+  online: Set<string>
+  /** Channel error sonrasi UI banner flag, hydrate ile false yapilir */
+  isStale: boolean
+}
+
+export type RoomEvent =
+  | {
+      type: 'HYDRATE'
+      payload: Omit<RoomState, 'online' | 'isStale'>
+    }
+  | { type: 'ROOM_UPDATE'; payload: Partial<Room> }
+  | { type: 'MEMBER_INSERT'; payload: Member }
+  | { type: 'MEMBER_UPDATE'; payload: Member }
+  | { type: 'MEMBER_DELETE'; payload: { user_id: string } }
+  | { type: 'PRESENCE_SYNC'; payload: { online: string[] } }
+  | { type: 'PRESENCE_JOIN'; payload: { user_id: string } }
+  | { type: 'PRESENCE_LEAVE'; payload: { user_id: string } }
+  | { type: 'CHANNEL_ERROR'; payload: { error: string } }
+
+export function roomStateReducer(state: RoomState, event: RoomEvent): RoomState {
+  switch (event.type) {
+    case 'HYDRATE':
+      return { ...event.payload, online: state.online, isStale: false }
+
+    case 'ROOM_UPDATE':
+      return { ...state, room: { ...state.room, ...event.payload } }
+
+    case 'MEMBER_INSERT': {
+      const existing = state.members.find(
+        (m) => m.user_id === event.payload.user_id,
+      )
+      if (existing) return state
+      return { ...state, members: [...state.members, event.payload] }
+    }
+
+    case 'MEMBER_UPDATE':
+      return {
+        ...state,
+        members: state.members.map((m) =>
+          m.user_id === event.payload.user_id ? event.payload : m,
+        ),
+      }
+
+    case 'MEMBER_DELETE':
+      return {
+        ...state,
+        members: state.members.filter(
+          (m) => m.user_id !== event.payload.user_id,
+        ),
+      }
+
+    case 'PRESENCE_SYNC':
+      return { ...state, online: new Set(event.payload.online) }
+
+    case 'PRESENCE_JOIN': {
+      const next = new Set(state.online)
+      next.add(event.payload.user_id)
+      return { ...state, online: next }
+    }
+
+    case 'PRESENCE_LEAVE': {
+      const next = new Set(state.online)
+      next.delete(event.payload.user_id)
+      return { ...state, online: next }
+    }
+
+    case 'CHANNEL_ERROR':
+      return { ...state, isStale: true }
+
+    default:
+      return state
+  }
+}
