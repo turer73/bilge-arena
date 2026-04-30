@@ -78,22 +78,31 @@ export function GameView({ state, userId }: GameViewProps) {
       aria-label="Aktif soru"
       className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6"
     >
-      <header className="mb-4 flex items-center justify-between">
+      <header className="mb-4 flex items-center justify-between gap-2">
         <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-700 dark:text-blue-300">
           Soru {current_round.round_index} / {room.question_count}
         </span>
-        <span
-          aria-label="Kalan süre"
-          className={
-            isExpired
-              ? 'rounded-full bg-red-500/15 px-3 py-1 text-xs font-bold text-red-700 dark:text-red-300'
-              : remaining <= 5
-                ? 'rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300'
-                : 'rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300'
-          }
-        >
-          {isExpired ? 'Süre doldu' : `${remaining} sn`}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* PR4e-5: cevap veren oyuncu sayisi badge */}
+          <span
+            aria-label="Cevap veren oyuncu sayısı"
+            className="rounded-full bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--text-sub)]"
+          >
+            ✓ {state.answers_count} / {members.length}
+          </span>
+          <span
+            aria-label="Kalan süre"
+            className={
+              isExpired
+                ? 'rounded-full bg-red-500/15 px-3 py-1 text-xs font-bold text-red-700 dark:text-red-300'
+                : remaining <= 5
+                  ? 'rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300'
+                  : 'rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300'
+            }
+          >
+            {isExpired ? 'Süre doldu' : `${remaining} sn`}
+          </span>
+        </div>
       </header>
 
       <h2 className="mb-4 text-base font-semibold leading-relaxed">
