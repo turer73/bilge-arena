@@ -113,3 +113,22 @@ export const kickMemberSchema = z.object({
 })
 
 export type KickMemberBody = z.infer<typeof kickMemberSchema>
+
+// =============================================================================
+// startRoomAction (Server Action) — PR4c
+// =============================================================================
+export const startRoomSchema = z.object({
+  room_id: z.string().uuid('Gecersiz oda kimligi'),
+})
+
+export type StartRoomBody = z.infer<typeof startRoomSchema>
+
+// =============================================================================
+// cancelRoomAction (Server Action) — PR4c
+// =============================================================================
+export const cancelRoomActionSchema = z.object({
+  room_id: z.string().uuid('Gecersiz oda kimligi'),
+  reason: z.string().trim().min(1).max(100).default('host_canceled'),
+})
+
+export type CancelRoomActionBody = z.infer<typeof cancelRoomActionSchema>

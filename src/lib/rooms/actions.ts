@@ -30,6 +30,8 @@ import { callRpc } from './client'
 import {
   createRoomSchema,
   joinRoomSchema,
+  startRoomSchema,
+  cancelRoomActionSchema,
   type CreateRoomBody,
 } from './validations'
 
@@ -210,6 +212,77 @@ export async function leaveRoomAction(
   if (!result.ok) return { error: result.error.message }
 
   // Listeyi guncelle, anasayfaya don
+  revalidatePath('/oda')
+  redirect('/oda')
+}
+
+// =============================================================================
+// startRoomAction: host oyunu baslatir (PR4c Task 2)
+// =============================================================================
+
+export type StartRoomActionState = {
+  /** Top-level hata: auth, P0001 sadece host, P0003 lobby disinda, vb. */
+  error?: string
+}
+
+/**
+ * Host icin oyunu baslat. start_room RPC lobby → active gecisi yapar
+ * (audit_log 'room_started'). Realtime UPDATE event ile UI durum
+ * gecisini otomatik gosterecek (no redirect — lobby ayni sayfa).
+ */
+export async function startRoomAction(
+  _prev: StartRoomActionState,
+  formData: FormData,
+): Promise<StartRoomActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = startRoomSchema.safeParse({
+    room_id: formData.get('room_id')?.toString() ?? '',
+  })
+  if (!parsed.success) return { error: 'Gecersiz oda kimligi' }
+
+  const result = await callRpc<null>(auth.jwt, 'start_room', {
+    p_room_id: parsed.data.room_id,
+  })
+  if (!result.ok) return { error: result.error.message }
+
+  revalidatePath('/oda')
+  return {}
+}
+
+// =============================================================================
+// cancelRoomAction: host odayi iptal eder (PR4c Task 3)
+// =============================================================================
+
+export type CancelRoomActionState = {
+  error?: string
+}
+
+/**
+ * Host icin odayi iptal et. cancel_room RPC state'i 'completed' yapar
+ * (plan-deviation #39: chk_rooms_state 'canceled' icermez), audit_log
+ * 'room_canceled' marker + reason. Player /oda listesine yonlendirilir.
+ */
+export async function cancelRoomAction(
+  _prev: CancelRoomActionState,
+  formData: FormData,
+): Promise<CancelRoomActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = cancelRoomActionSchema.safeParse({
+    room_id: formData.get('room_id')?.toString() ?? '',
+    reason: formData.get('reason')?.toString() ?? 'host_canceled',
+  })
+  if (!parsed.success) return { error: 'Form verisi gecersiz' }
+
+  const result = await callRpc<null>(auth.jwt, 'cancel_room', {
+    p_room_id: parsed.data.room_id,
+    p_reason: parsed.data.reason,
+  })
+  if (!result.ok) return { error: result.error.message }
+
   revalidatePath('/oda')
   redirect('/oda')
 }
