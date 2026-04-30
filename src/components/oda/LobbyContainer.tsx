@@ -18,7 +18,7 @@ import { LobbyHeader } from './LobbyHeader'
 import { RoomInfoPanel } from './RoomInfoPanel'
 import { MemberRoster } from './MemberRoster'
 import { MemberActions } from './MemberActions'
-import { HostActionsPlaceholder } from './HostActionsPlaceholder'
+import { HostActions } from './HostActions'
 
 interface LobbyContainerProps {
   roomId: string
@@ -48,7 +48,11 @@ export function LobbyContainer({
         roomCode={state.room.code}
         roomState={state.room.state}
       />
-      <HostActionsPlaceholder isHost={isHost} />
+      <HostActions
+        isHost={isHost}
+        roomId={state.room.id}
+        roomState={state.room.state}
+      />
     </div>
   )
 }
