@@ -188,12 +188,33 @@ export async function fetchRoomState(
       : []
     const current_round = rounds[0] ?? null
 
+    // PR4e-5: room_answers count for current round (Prefer: count=exact header)
+    let answers_count = 0
+    if (current_round?.round_id) {
+      const answersRes = await fetch(
+        `${RPC_URL}/room_answers?round_id=eq.${current_round.round_id}&select=user_id`,
+        {
+          ...opts,
+          headers: {
+            ...opts.headers,
+            Prefer: 'count=exact',
+          },
+        },
+      )
+      if (answersRes.ok) {
+        // PostgREST returns Content-Range: 0-N/total
+        const range = answersRes.headers.get('content-range') ?? ''
+        const total = parseInt(range.split('/')[1] ?? '0', 10)
+        answers_count = Number.isNaN(total) ? 0 : total
+      }
+    }
+
     return {
       room: rooms[0],
       members,
       current_round,
-      answers_count: 0, // TODO 4e-3
-      scoreboard: [], // TODO 4e-4
+      answers_count,
+      scoreboard: [], // TODO 4e-6 (full scoreboard with correct_count + tie-breaker)
     }
   } catch {
     return null

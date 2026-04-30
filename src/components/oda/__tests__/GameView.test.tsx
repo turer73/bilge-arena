@@ -62,7 +62,7 @@ const baseState: RoomState = {
     question_text: 'Türkiye’nin başkenti neresidir?',
     options: ['İstanbul', 'Ankara', 'İzmir', 'Bursa'],
   },
-  answers_count: 0,
+  answers_count: 3,
   scoreboard: [],
   online: new Set<string>(),
   isStale: false,
@@ -99,6 +99,11 @@ describe('GameView', () => {
 
     // Soru badge + countdown
     expect(screen.getByText('Soru 2 / 10')).toBeInTheDocument()
+
+    // PR4e-5: answers_count badge "✓ 3 / 1" (3 cevap / 1 member fixture)
+    expect(
+      screen.getByLabelText(/Cevap veren oyuncu sayısı/i),
+    ).toHaveTextContent('3')
 
     // Skor
     expect(screen.getByText('12')).toBeInTheDocument()
