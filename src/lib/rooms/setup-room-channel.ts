@@ -102,6 +102,34 @@ export function setupRoomChannel(
     () => onRoundChange?.(),
   )
 
+  // Codex P2 PR #54: room_answers INSERT -> answers_count refresh.
+  // submit_answer her player icin INSERT yapar; aktif round boyunca badge
+  // canli kalsin (advance/reveal'a kadar beklemesin). reveal_round sonrasi
+  // UPDATE de is_correct/points_awarded doldurur, scoreboard PR'da kullanim.
+  // RLS active-state'inde kendi cevabin disinda diger kayitlari gormez ama
+  // INSERT broadcast room genelinde yayinlanir; PostgREST count=exact yine
+  // total room_answers sayar (anti-cheat: cevap deger gorulmuyor, sadece sayim).
+  channel.on(
+    'postgres_changes' as never,
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'room_answers',
+      filter: `room_id=eq.${roomId}`,
+    },
+    () => onRoundChange?.(),
+  )
+  channel.on(
+    'postgres_changes' as never,
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'room_answers',
+      filter: `room_id=eq.${roomId}`,
+    },
+    () => onRoundChange?.(),
+  )
+
   // Presence: sync (full snapshot), join, leave
   channel.on('presence', { event: 'sync' }, () => {
     const state = channel.presenceState()
