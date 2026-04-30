@@ -23,6 +23,8 @@ export function setupRoomChannel(
   roomId: string,
   userId: string,
   dispatch: (event: RoomEvent) => void,
+  /** Codex P1 PR50/51 fix: room_rounds INSERT/UPDATE -> hook refetch /state */
+  onRoundChange?: () => void,
 ): RealtimeChannel {
   const channel = supabase.channel(`room-${roomId}`, {
     config: { presence: { key: userId } },
@@ -74,6 +76,30 @@ export function setupRoomChannel(
     },
     (payload: { old: { user_id: string } }) =>
       dispatch({ type: 'MEMBER_DELETE', payload: { user_id: payload.old.user_id } }),
+  )
+
+  // Codex P1 PR #50: room_rounds INSERT/UPDATE -> current_round stale fix.
+  // advance_round insert eder, reveal_round update eder. Hook refetch /state
+  // ile fresh question_text + correct_answer + revealed_at vs.
+  channel.on(
+    'postgres_changes' as never,
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'room_rounds',
+      filter: `room_id=eq.${roomId}`,
+    },
+    () => onRoundChange?.(),
+  )
+  channel.on(
+    'postgres_changes' as never,
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'room_rounds',
+      filter: `room_id=eq.${roomId}`,
+    },
+    () => onRoundChange?.(),
   )
 
   // Presence: sync (full snapshot), join, leave

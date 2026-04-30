@@ -34,6 +34,8 @@ import {
   cancelRoomActionSchema,
   kickMemberActionSchema,
   submitAnswerActionSchema,
+  advanceRoundActionSchema,
+  revealRoundActionSchema,
   type CreateRoomBody,
 } from './validations'
 
@@ -362,6 +364,69 @@ export async function submitAnswerAction(
   const result = await callRpc<null>(auth.jwt, 'submit_answer', {
     p_room_id: parsed.data.room_id,
     p_answer_value: parsed.data.answer_value,
+  })
+  if (!result.ok) return { error: result.error.message }
+
+  return {}
+}
+
+// =============================================================================
+// advanceRoundAction + revealRoundAction (host) — PR4e-3
+// =============================================================================
+
+export type AdvanceRoundActionState = { error?: string }
+export type RevealRoundActionState = { error?: string }
+
+/**
+ * Host icin sonraki tura geç (active state'inde, current_round bittiyse).
+ * advance_round RPC: yeni round olusturur (round_index + 1), question_id
+ * randomize, started_at = now(), ends_at = started_at + per_question_seconds.
+ * Son tursa room.state -> completed (all rounds done).
+ *
+ * Realtime: rooms UPDATE + room_rounds INSERT eventlari client'lara yayinlanir.
+ */
+export async function advanceRoundAction(
+  _prev: AdvanceRoundActionState,
+  formData: FormData,
+): Promise<AdvanceRoundActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = advanceRoundActionSchema.safeParse({
+    room_id: formData.get('room_id')?.toString() ?? '',
+  })
+  if (!parsed.success) return { error: 'Gecersiz oda kimligi' }
+
+  const result = await callRpc<null>(auth.jwt, 'advance_round', {
+    p_room_id: parsed.data.room_id,
+  })
+  if (!result.ok) return { error: result.error.message }
+
+  return {}
+}
+
+/**
+ * Host icin mevcut turu reveal et (active -> reveal). reveal_round RPC:
+ * room_rounds.revealed_at = now(); is_correct + points_awarded computed
+ * (linear decay #43); room.state = 'reveal'.
+ *
+ * Realtime: room.state UPDATE + room_answers UPDATE (is_correct/points_awarded
+ * dolar) ile client SonucView'i (PR4e-4) gosterir.
+ */
+export async function revealRoundAction(
+  _prev: RevealRoundActionState,
+  formData: FormData,
+): Promise<RevealRoundActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = revealRoundActionSchema.safeParse({
+    room_id: formData.get('room_id')?.toString() ?? '',
+  })
+  if (!parsed.success) return { error: 'Gecersiz oda kimligi' }
+
+  const result = await callRpc<null>(auth.jwt, 'reveal_round', {
+    p_room_id: parsed.data.room_id,
   })
   if (!result.ok) return { error: result.error.message }
 

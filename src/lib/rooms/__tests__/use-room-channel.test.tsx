@@ -61,7 +61,8 @@ describe('useRoomChannel', () => {
       {},
       'r1',
       'u1',
-      expect.any(Function),
+      expect.any(Function), // dispatch callback
+      expect.any(Function), // onRoundChange refetch (Codex P1 PR #50 fix)
     )
 
     unmount()
