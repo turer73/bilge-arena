@@ -35,6 +35,7 @@ import {
   startRoomAction,
   cancelRoomAction,
   kickMemberAction,
+  submitAnswerAction,
 } from '../actions'
 
 const mockSupabase = (user: unknown, session: unknown) => {
@@ -365,6 +366,45 @@ describe('kickMemberAction', () => {
     expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'kick_member', {
       p_room_id: validUuid,
       p_target_user_id: targetUuid,
+    })
+  })
+})
+
+// =============================================================================
+// submitAnswerAction: form submit -> submit_answer RPC (PR4e-2)
+// =============================================================================
+
+describe('submitAnswerAction', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  test('34) anon user → error: Giris yapmalisin', async () => {
+    mockSupabase(null, null)
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    fd.set('answer_value', 'Istanbul')
+    const r = await submitAnswerAction({}, fd)
+    expect(r.error).toMatch(/Giris yapmalisin/)
+  })
+
+  test('35) empty answer_value → error', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    fd.set('answer_value', '')
+    const r = await submitAnswerAction({}, fd)
+    expect(r.error).toMatch(/bos|gecersiz/i)
+  })
+
+  test('36) success → callRpc(submit_answer, {p_room_id, p_answer_value})', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: null })
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    fd.set('answer_value', 'Istanbul')
+    await submitAnswerAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'submit_answer', {
+      p_room_id: validUuid,
+      p_answer_value: 'Istanbul',
     })
   })
 })

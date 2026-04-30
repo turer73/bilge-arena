@@ -159,6 +159,8 @@ export async function fetchRoomState(
   const opts = { headers, cache: 'no-store' as const }
 
   try {
+    // PR4e-2: room_round_question_view (anti-cheat) — soru icerigi + round meta
+    // tek query'de doner. revealed_at NULL ise correct_answer/explanation NULL.
     const [roomRes, membersRes, roundRes] = await Promise.all([
       fetch(
         `${RPC_URL}/rooms?id=eq.${roomId}&select=*&limit=1`,
@@ -169,7 +171,7 @@ export async function fetchRoomState(
         opts,
       ),
       fetch(
-        `${RPC_URL}/room_rounds?room_id=eq.${roomId}&select=*&order=round_index.desc&limit=1`,
+        `${RPC_URL}/room_round_question_view?room_id=eq.${roomId}&select=*&order=round_index.desc&limit=1`,
         opts,
       ),
     ])
@@ -190,8 +192,8 @@ export async function fetchRoomState(
       room: rooms[0],
       members,
       current_round,
-      answers_count: 0, // TODO 4c
-      scoreboard: [], // TODO 4c
+      answers_count: 0, // TODO 4e-3
+      scoreboard: [], // TODO 4e-4
     }
   } catch {
     return null

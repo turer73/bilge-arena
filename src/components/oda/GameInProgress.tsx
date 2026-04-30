@@ -22,7 +22,7 @@ export function GameInProgress({ state, userId }: GameInProgressProps) {
   const { room, current_round, members } = state
   const me = members.find((m) => m.user_id === userId)
   const isReveal = room.state === 'reveal'
-  const roundNumber = current_round?.round_number ?? 0
+  const roundNumber = current_round?.round_index ?? 0
 
   return (
     <section

@@ -33,6 +33,7 @@ import {
   startRoomSchema,
   cancelRoomActionSchema,
   kickMemberActionSchema,
+  submitAnswerActionSchema,
   type CreateRoomBody,
 } from './validations'
 
@@ -318,6 +319,49 @@ export async function kickMemberAction(
   const result = await callRpc<null>(auth.jwt, 'kick_member', {
     p_room_id: parsed.data.room_id,
     p_target_user_id: parsed.data.target_user_id,
+  })
+  if (!result.ok) return { error: result.error.message }
+
+  return {}
+}
+
+// =============================================================================
+// submitAnswerAction: oyuncu cevap gonder (PR4e-2)
+// =============================================================================
+
+export type SubmitAnswerActionState = {
+  /** Top-level hata: auth, P0001 oda active degil, P0003 zaten cevap gonderdi */
+  error?: string
+}
+
+/**
+ * Oyuncu submit_answer RPC ile aktif soruya cevap verir. response_ms
+ * server-side hesaplanir (anti-cheat: client supplied degil). Reveal'a
+ * kadar is_correct + points NULL kalir.
+ *
+ * Realtime: room_answers INSERT event ile UI'lar answers_count guncelleyebilir
+ * (4e-3'te). Bu PR'da sadece submit + hata gosterimi.
+ */
+export async function submitAnswerAction(
+  _prev: SubmitAnswerActionState,
+  formData: FormData,
+): Promise<SubmitAnswerActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = submitAnswerActionSchema.safeParse({
+    room_id: formData.get('room_id')?.toString() ?? '',
+    answer_value: formData.get('answer_value')?.toString() ?? '',
+  })
+  if (!parsed.success) {
+    const first = parsed.error.flatten().fieldErrors
+    const msg = first.answer_value?.[0] ?? first.room_id?.[0] ?? 'Gecersiz form'
+    return { error: msg }
+  }
+
+  const result = await callRpc<null>(auth.jwt, 'submit_answer', {
+    p_room_id: parsed.data.room_id,
+    p_answer_value: parsed.data.answer_value,
   })
   if (!result.ok) return { error: result.error.message }
 

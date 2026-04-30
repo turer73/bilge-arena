@@ -142,3 +142,13 @@ export const kickMemberActionSchema = z.object({
 })
 
 export type KickMemberActionBody = z.infer<typeof kickMemberActionSchema>
+
+// =============================================================================
+// submitAnswerAction (Server Action) — PR4e-2
+// =============================================================================
+export const submitAnswerActionSchema = z.object({
+  room_id: z.string().uuid('Gecersiz oda kimligi'),
+  answer_value: z.string().trim().min(1, 'Cevap bos olamaz').max(200, 'Cevap cok uzun'),
+})
+
+export type SubmitAnswerActionBody = z.infer<typeof submitAnswerActionSchema>

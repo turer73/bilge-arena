@@ -24,6 +24,7 @@ import { MemberActions } from './MemberActions'
 import { HostActions } from './HostActions'
 import { GameInProgress } from './GameInProgress'
 import { GameCompleted } from './GameCompleted'
+import { GameView } from './GameView'
 
 interface LobbyContainerProps {
   roomId: string
@@ -40,11 +41,17 @@ export function LobbyContainer({
   const isHost = userId === state.room.host_id
   const roomState = state.room.state
 
-  // State-aware routing (PR4e-1 scaffold)
+  // State-aware routing
+  // PR4e-1: lobby/completed/archived/active+reveal scaffold
+  // PR4e-2: active state'e GameView (gercek soru + answer form + timer),
+  //         reveal state hala GameInProgress (4e-3'te SonucView yapilacak)
   if (roomState === 'completed' || roomState === 'archived') {
     return <GameCompleted state={state} userId={userId} />
   }
-  if (roomState === 'active' || roomState === 'reveal') {
+  if (roomState === 'active') {
+    return <GameView state={state} userId={userId} />
+  }
+  if (roomState === 'reveal') {
     return <GameInProgress state={state} userId={userId} />
   }
 
