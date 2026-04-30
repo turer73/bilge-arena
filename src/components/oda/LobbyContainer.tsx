@@ -25,6 +25,7 @@ import { HostActions } from './HostActions'
 import { GameInProgress } from './GameInProgress'
 import { GameCompleted } from './GameCompleted'
 import { GameView } from './GameView'
+import { HostGameActions } from './HostGameActions'
 
 interface LobbyContainerProps {
   roomId: string
@@ -49,10 +50,28 @@ export function LobbyContainer({
     return <GameCompleted state={state} userId={userId} />
   }
   if (roomState === 'active') {
-    return <GameView state={state} userId={userId} />
+    return (
+      <div className="space-y-4">
+        <GameView state={state} userId={userId} />
+        <HostGameActions
+          isHost={isHost}
+          roomId={state.room.id}
+          roomState={roomState}
+        />
+      </div>
+    )
   }
   if (roomState === 'reveal') {
-    return <GameInProgress state={state} userId={userId} />
+    return (
+      <div className="space-y-4">
+        <GameInProgress state={state} userId={userId} />
+        <HostGameActions
+          isHost={isHost}
+          roomId={state.room.id}
+          roomState={roomState}
+        />
+      </div>
+    )
   }
 
   // Default: lobby view
