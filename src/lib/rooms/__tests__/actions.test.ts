@@ -29,7 +29,7 @@ vi.mock('../client', () => ({ callRpc: mockCallRpc }))
 vi.mock('next/navigation', () => ({ redirect: mockRedirect }))
 vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }))
 
-import { createRoomAction } from '../actions'
+import { createRoomAction, joinRoomAction } from '../actions'
 
 const mockSupabase = (user: unknown, session: unknown) => {
   mockCreateClient.mockResolvedValue({
@@ -196,5 +196,41 @@ describe('createRoomAction', () => {
     const callArgs = mockCallRpc.mock.calls[0]
     expect(callArgs[2]).not.toHaveProperty('csrf')
     expect(callArgs[2]).not.toHaveProperty('garbage')
+  })
+})
+
+// =============================================================================
+// joinRoomAction: form submit → join_room RPC → redirect
+// PR4b Task 1: 3 senaryo (auth, validation, success)
+// =============================================================================
+
+describe('joinRoomAction', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  test('1) anon user → error: Giris yapmalisin', async () => {
+    mockSupabase(null, null)
+    const fd = new FormData()
+    fd.set('code', 'BLZGE2')
+    const r = await joinRoomAction({}, fd)
+    expect(r.error).toMatch(/Giris yapmalisin/)
+  })
+
+  test('2) invalid code (3 char) → fieldErrors.code', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = new FormData()
+    fd.set('code', 'abc')
+    const r = await joinRoomAction({}, fd)
+    expect(r.fieldErrors?.code?.length).toBeGreaterThan(0)
+  })
+
+  test('3) success → callRpc(join_room) + redirect', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: null })
+    const fd = new FormData()
+    // Crockford-32: I, O, 0, 1 yasak; 'BLZGE2' tum karakterler valid
+    fd.set('code', 'BLZGE2')
+    await joinRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'join_room', { p_code: 'BLZGE2' })
+    expect(mockRedirect).toHaveBeenCalledWith('/oda/BLZGE2')
   })
 })
