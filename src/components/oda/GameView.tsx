@@ -78,28 +78,45 @@ export function GameView({ state, userId }: GameViewProps) {
       aria-label="Aktif soru"
       className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6"
     >
-      <header className="mb-4 flex items-center justify-between">
+      <header className="mb-4 flex items-center justify-between gap-2">
         <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-700 dark:text-blue-300">
           Soru {current_round.round_index} / {room.question_count}
         </span>
-        <span
-          aria-label="Kalan süre"
-          className={
-            isExpired
-              ? 'rounded-full bg-red-500/15 px-3 py-1 text-xs font-bold text-red-700 dark:text-red-300'
-              : remaining <= 5
-                ? 'rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300'
-                : 'rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300'
-          }
-        >
-          {isExpired ? 'Süre doldu' : `${remaining} sn`}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* PR4e-5: cevap veren oyuncu sayisi badge */}
+          <span
+            aria-label="Cevap veren oyuncu sayısı"
+            className="rounded-full bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--text-sub)]"
+          >
+            ✓ {state.answers_count} / {members.length}
+          </span>
+          <span
+            aria-label="Kalan süre"
+            className={
+              isExpired
+                ? 'rounded-full bg-red-500/15 px-3 py-1 text-xs font-bold text-red-700 dark:text-red-300'
+                : remaining <= 5
+                  ? 'rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300'
+                  : 'rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300'
+            }
+          >
+            {isExpired ? 'Süre doldu' : `${remaining} sn`}
+          </span>
+        </div>
       </header>
 
       <h2 className="mb-4 text-base font-semibold leading-relaxed">
         {questionText}
       </h2>
 
+      {/*
+        Codex P2 PR #50: client-side timer expiry HARD-DISABLE'i kaldirildi.
+        Browser clock authoritative degil — server RPC submit_answer deadline
+        gerçek otoritedir. Eger client clock onde / sekme throttle olursa
+        gecerli cevap blocked olabilir. Visual amber renk + uyari mesaji
+        kullaniciya kalan zamani bildirsin, server RPC ihtiyac duyarsa
+        reject etsin (P0001 'soru suresi bitti').
+      */}
       <form action={formAction} className="space-y-2">
         <input type="hidden" name="room_id" value={room.id} />
         <ul className="space-y-2">
@@ -109,7 +126,7 @@ export function GameView({ state, userId }: GameViewProps) {
                 type="submit"
                 name="answer_value"
                 value={opt}
-                disabled={isPending || isExpired}
+                disabled={isPending}
                 className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left text-sm font-medium transition-colors hover:border-[var(--focus)] hover:bg-[var(--card)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span
@@ -124,6 +141,12 @@ export function GameView({ state, userId }: GameViewProps) {
           ))}
         </ul>
       </form>
+      {isExpired && (
+        <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+          Süre dolmuş görünüyor — yine de cevap göndermeyi deneyebilirsin,
+          sunucu kabul ederse skoruna eklenecek.
+        </p>
+      )}
 
       {actionState.error && (
         <p

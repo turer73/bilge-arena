@@ -152,3 +152,19 @@ export const submitAnswerActionSchema = z.object({
 })
 
 export type SubmitAnswerActionBody = z.infer<typeof submitAnswerActionSchema>
+
+// =============================================================================
+// advanceRoundAction + revealRoundAction (host) — PR4e-3
+// (Ikisi de ayni shape: room_id UUID; ayri schema gerekmiyor ama isim
+// ayriligi action'lar arasinda netlik saglar.)
+// =============================================================================
+export const advanceRoundActionSchema = z.object({
+  room_id: z.string().uuid('Gecersiz oda kimligi'),
+})
+
+export const revealRoundActionSchema = z.object({
+  room_id: z.string().uuid('Gecersiz oda kimligi'),
+})
+
+export type AdvanceRoundActionBody = z.infer<typeof advanceRoundActionSchema>
+export type RevealRoundActionBody = z.infer<typeof revealRoundActionSchema>

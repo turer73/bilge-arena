@@ -27,17 +27,9 @@ export function useRoomChannel(
   useEffect(() => {
     isMounted.current = true
     const supabase = createClient()
-    const channel = setupRoomChannel(
-      supabase,
-      roomId,
-      userId,
-      (event) => {
-        if (isMounted.current) dispatch(event)
-      },
-    )
 
-    // Reconnect: REST resync (memory id=335 - Realtime missed event'leri replay etmez)
-    const reconnectListener = async () => {
+    // Reconnect + round-change REST resync (memory id=335 + Codex P1 PR50)
+    const refetchRoomState = async () => {
       try {
         const res = await fetch(`/api/rooms/${roomId}/state`)
         if (!res.ok) return
@@ -46,9 +38,21 @@ export function useRoomChannel(
           dispatch({ type: 'HYDRATE', payload: fresh })
         }
       } catch {
-        // Network error during reconnect - isStale flag zaten setlenmis durumda
+        // Network error - isStale flag zaten setli kalir
       }
     }
+
+    const channel = setupRoomChannel(
+      supabase,
+      roomId,
+      userId,
+      (event) => {
+        if (isMounted.current) dispatch(event)
+      },
+      refetchRoomState, // Codex P1 PR #50: room_rounds INSERT/UPDATE -> refresh
+    )
+
+    const reconnectListener = refetchRoomState
 
     // Phoenix Socket-pattern: onError TS tipinde expose edilmemis ama runtime'da var.
     // realtime-js RealtimeClient (https://github.com/supabase/realtime-js).

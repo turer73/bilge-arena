@@ -36,6 +36,8 @@ import {
   cancelRoomAction,
   kickMemberAction,
   submitAnswerAction,
+  advanceRoundAction,
+  revealRoundAction,
 } from '../actions'
 
 const mockSupabase = (user: unknown, session: unknown) => {
@@ -405,6 +407,72 @@ describe('submitAnswerAction', () => {
     expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'submit_answer', {
       p_room_id: validUuid,
       p_answer_value: 'Istanbul',
+    })
+  })
+})
+
+// =============================================================================
+// advanceRoundAction + revealRoundAction (host) — PR4e-3
+// =============================================================================
+
+describe('advanceRoundAction', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  test('37) anon user → error: Giris yapmalisin', async () => {
+    mockSupabase(null, null)
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    const r = await advanceRoundAction({}, fd)
+    expect(r.error).toMatch(/Giris yapmalisin/)
+  })
+
+  test('38) invalid room_id → error', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = new FormData()
+    fd.set('room_id', 'not-uuid')
+    const r = await advanceRoundAction({}, fd)
+    expect(r.error).toMatch(/gecersiz/i)
+  })
+
+  test('39) success → callRpc(advance_round)', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: null })
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    await advanceRoundAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'advance_round', {
+      p_room_id: validUuid,
+    })
+  })
+})
+
+describe('revealRoundAction', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  test('40) anon user → error: Giris yapmalisin', async () => {
+    mockSupabase(null, null)
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    const r = await revealRoundAction({}, fd)
+    expect(r.error).toMatch(/Giris yapmalisin/)
+  })
+
+  test('41) invalid room_id → error', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = new FormData()
+    fd.set('room_id', 'not-uuid')
+    const r = await revealRoundAction({}, fd)
+    expect(r.error).toMatch(/gecersiz/i)
+  })
+
+  test('42) success → callRpc(reveal_round)', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: null })
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    await revealRoundAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'reveal_round', {
+      p_room_id: validUuid,
     })
   })
 })

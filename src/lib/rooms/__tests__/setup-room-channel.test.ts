@@ -36,13 +36,16 @@ describe('setupRoomChannel', () => {
     const sb = mockSupabaseClient(ch)
     setupRoomChannel(sb as never, 'r1', 'u1', vi.fn())
 
-    // 4 postgres_changes call: rooms UPDATE, room_members INSERT/UPDATE/DELETE
+    // 6 postgres_changes call:
+    // - rooms UPDATE (id=eq.r1)
+    // - room_members INSERT/UPDATE/DELETE (room_id=eq.r1, x3)
+    // - room_rounds INSERT/UPDATE (room_id=eq.r1, x2 — Codex P1 PR #50 fix)
     const calls = ch.on.mock.calls.filter((c) => c[0] === 'postgres_changes')
-    expect(calls).toHaveLength(4)
+    expect(calls).toHaveLength(6)
 
     const filters = calls.map((c) => c[1].filter)
     expect(filters).toContain('id=eq.r1')
-    expect(filters.filter((f) => f === 'room_id=eq.r1')).toHaveLength(3)
+    expect(filters.filter((f) => f === 'room_id=eq.r1')).toHaveLength(5)
   })
 
   test('13) subscribe() called', () => {
