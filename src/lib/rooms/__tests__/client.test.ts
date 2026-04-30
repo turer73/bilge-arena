@@ -163,16 +163,20 @@ describe('callRpc', () => {
     }
   })
 
-  it('handles 200 with Content-Length:0 (defansif paranoia)', async () => {
+  it('rejects 200 with empty body (Codex P2 PR #42 fix)', async () => {
+    // Eski davranis: 200 + content-length:0 -> ok:true, data:null
+    // Yeni davranis: VOID RPC'ler 204 doner; 200 + empty SUSPICIOUS,
+    // create_room gibi data-returning RPC'ler icin sessiz null kabul edilemez.
+    // JSON parse fail eder, ok:false, "Response parse hatasi".
     globalThis.fetch = vi.fn().mockResolvedValue(
       new Response('', { status: 200, headers: { 'Content-Length': '0' } }),
     ) as unknown as typeof fetch
 
-    const result = await callRpc<null>('jwt', 'leave_room', { p_room_id: 'uuid' })
+    const result = await callRpc<{ id: string }>('jwt', 'create_room', { p_title: 'X' })
 
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.data).toBeNull()
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.message).toMatch(/parse/i)
     }
   })
 
