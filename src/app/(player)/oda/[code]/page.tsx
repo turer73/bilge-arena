@@ -1,17 +1,21 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { fetchRoomByCode } from '@/lib/rooms/server-fetch'
-import { StateBadge } from '@/components/oda/StateBadge'
+import { fetchRoomByCode, fetchRoomState } from '@/lib/rooms/server-fetch'
+import { LobbyContainer } from '@/components/oda/LobbyContainer'
 
 /**
- * Bilge Arena Oda: /oda/[code] placeholder lobby
- * Sprint 1 PR4a Task 5
+ * Bilge Arena Oda: /oda/[code] real lobby (PR4b)
  *
- * 4b'de gercek lobby ile yeniden yazilacak. Su an: oda detaylarini
- * gosteren minimal placeholder + "lobby hazirlaniyor" mesaji.
+ * Server Component:
+ *   1) Auth + session JWT zorunlu (yoksa /giris?redirect=...)
+ *   2) Code -> room ID resolve (RLS member-only, yok ise 404)
+ *   3) Initial state SSR fetch (room + members + current_round)
+ *   4) <LobbyContainer/> client component'a aktar — useRoomChannel ile
+ *      postgres_changes + presence Realtime sync baslar
  *
- * RLS member-only: kullanici uye degilse fetchRoomByCode null doner -> 404.
+ * 4a placeholder REPLACE edildi. Tum oda info LobbyHeader/RoomInfoPanel/
+ * MemberRoster/MemberActions/HostActionsPlaceholder componentleri uzerinden.
  */
 export default async function Page({
   params,
@@ -21,50 +25,45 @@ export default async function Page({
   const { code } = await params
   const supabase = await createClient()
   const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect(`/giris?redirect=/oda/${code}`)
+  const {
     data: { session },
   } = await supabase.auth.getSession()
   if (!session?.access_token) redirect(`/giris?redirect=/oda/${code}`)
 
+  // Code -> ID resolve (RLS member-only)
   const room = await fetchRoomByCode(session.access_token, code)
   if (!room) notFound()
 
+  // Initial state SSR (full lobby payload)
+  const partial = await fetchRoomState(session.access_token, room.id)
+  if (!partial) notFound()
+
+  // Hook ephemeral fields (online + isStale) SSR'da bos baslat,
+  // mount sonrasi useRoomChannel presence sync ile doldurur.
+  const initialState = {
+    ...partial,
+    online: new Set<string>(),
+    isStale: false,
+  }
+
   return (
     <>
-      <header className="mb-6">
+      <header className="mb-4">
         <Link
           href="/oda"
           className="text-sm text-[var(--text-sub)] hover:underline"
         >
           ← Odalarım
         </Link>
-        <div className="mt-2 flex items-center gap-3">
-          <h1 className="text-xl font-bold">{room.title}</h1>
-          <StateBadge state={room.state} />
-        </div>
       </header>
-
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 text-center">
-        <p className="text-sm text-[var(--text-sub)]">
-          Hoşgeldin! Bu oda hazırlanıyor — yakında burada lobby olacak.
-        </p>
-        <code className="mt-3 inline-block rounded bg-[var(--surface)] px-3 py-1 font-mono text-sm">
-          {room.code}
-        </code>
-        <dl className="mt-4 grid grid-cols-2 gap-2 text-xs text-[var(--text-sub)]">
-          <dt>Kategori:</dt>
-          <dd>{room.category}</dd>
-          <dt>Zorluk:</dt>
-          <dd>{room.difficulty}/5</dd>
-          <dt>Soru:</dt>
-          <dd>{room.question_count}</dd>
-          <dt>Maksimum:</dt>
-          <dd>{room.max_players} oyuncu</dd>
-          <dt>Süre:</dt>
-          <dd>{room.per_question_seconds}sn/soru</dd>
-          <dt>Mod:</dt>
-          <dd>{room.mode === 'sync' ? 'Senkron' : 'Asenkron'}</dd>
-        </dl>
-      </div>
+      <LobbyContainer
+        roomId={room.id}
+        userId={user.id}
+        initialState={initialState}
+      />
     </>
   )
 }
