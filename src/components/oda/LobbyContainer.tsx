@@ -57,6 +57,7 @@ export function LobbyContainer({
           isHost={isHost}
           roomId={state.room.id}
           roomState={roomState}
+          currentRound={state.current_round}
         />
       </div>
     )
@@ -69,6 +70,7 @@ export function LobbyContainer({
           isHost={isHost}
           roomId={state.room.id}
           roomState={roomState}
+          currentRound={state.current_round}
         />
       </div>
     )
