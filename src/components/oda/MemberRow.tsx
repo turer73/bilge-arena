@@ -1,21 +1,67 @@
 /**
  * Bilge Arena Oda: <MemberRow> tek member satiri
- * Sprint 1 PR4b Task 6
+ * Sprint 1 PR4b Task 6 (PR4d kick eklenmistir)
  *
- * Server component. Avatar (emoji), display_name, host rozet, online dot.
- * Member list icinde MemberRoster tarafindan render edilir.
+ * Server component. Avatar (emoji), display_name, host rozet, online dot,
+ * (host viewer ise) kick button.
+ *
+ * Kick button kosullari (PR4d):
+ *   - viewerIsHost (current user host_id'ye esit)
+ *   - member host degil (host kendini cikaramaz)
+ *   - member current viewer degil (host kendini cikaramaz)
+ *   - member is_kicked degil (zaten cikarilmis)
+ *   - room state lobby/active/reveal (kick_member RPC P0003 kontrol)
  */
 
 import type { Member } from '@/lib/rooms/room-state-reducer'
 import { cn } from '@/lib/utils/cn'
+import { KickMemberButton } from './KickMemberButton'
+
+type RoomLifecycleState =
+  | 'lobby'
+  | 'active'
+  | 'reveal'
+  | 'completed'
+  | 'archived'
 
 interface MemberRowProps {
   member: Member
   isOnline: boolean
   isHost: boolean
+  /** Goruntulen kullanici host mu (kick button rendering icin) */
+  viewerIsHost?: boolean
+  /** Goruntulen kullanicinin user_id'si (host kendini cikaramaz) */
+  viewerUserId?: string
+  /** Oda ID (kick form action icin) */
+  roomId?: string
+  /** Oda state (kick state guard) */
+  roomState?: RoomLifecycleState
 }
 
-export function MemberRow({ member, isOnline, isHost }: MemberRowProps) {
+const KICKABLE_STATES: ReadonlyArray<RoomLifecycleState> = [
+  'lobby',
+  'active',
+  'reveal',
+]
+
+export function MemberRow({
+  member,
+  isOnline,
+  isHost,
+  viewerIsHost,
+  viewerUserId,
+  roomId,
+  roomState,
+}: MemberRowProps) {
+  const canShowKick =
+    viewerIsHost === true &&
+    !isHost &&
+    member.user_id !== viewerUserId &&
+    !member.is_kicked &&
+    roomId !== undefined &&
+    roomState !== undefined &&
+    KICKABLE_STATES.includes(roomState)
+
   return (
     <li
       className={cn(
@@ -33,6 +79,13 @@ export function MemberRow({ member, isOnline, isHost }: MemberRowProps) {
         <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
           Host
         </span>
+      )}
+      {canShowKick && (
+        <KickMemberButton
+          roomId={roomId}
+          targetUserId={member.user_id}
+          targetName={member.display_name}
+        />
       )}
       <span
         aria-label={isOnline ? 'online' : 'offline'}
