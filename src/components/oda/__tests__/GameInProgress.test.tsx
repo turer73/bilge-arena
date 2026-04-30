@@ -35,10 +35,10 @@ const baseState = (overrides: Partial<RoomState['room']> = {}): RoomState => ({
     },
   ],
   current_round: {
-    round_number: 3,
+    round_index: 3,
     question_id: 'q1',
     started_at: '2026-04-30T00:00:00Z',
-    deadline: '2026-04-30T00:00:20Z',
+    ends_at: '2026-04-30T00:00:20Z',
     revealed_at: null,
   },
   answers_count: 0,
