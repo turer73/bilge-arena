@@ -174,3 +174,42 @@ export async function joinRoomAction(
 
   redirect(`/oda/${parsed.data.code}`)
 }
+
+// =============================================================================
+// leaveRoomAction: form submit → leave_room RPC → redirect /oda (PR4b Task 6)
+// =============================================================================
+
+export type LeaveRoomActionState = {
+  /** Top-level hata (auth, RPC P0001 oda lobby disinda) */
+  error?: string
+}
+
+/**
+ * `<MemberActions>` leave button form action handler. Member room_members'tan
+ * silinir, /oda listesine donulur.
+ *
+ * Server Action ile progressive enhancement — JS yokken bile calisir.
+ *
+ * @returns Hata state veya throw NEXT_REDIRECT.
+ */
+export async function leaveRoomAction(
+  _prev: LeaveRoomActionState,
+  formData: FormData,
+): Promise<LeaveRoomActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const roomId = formData.get('room_id')?.toString()
+  if (!roomId) {
+    return { error: 'Oda kimligi eksik' }
+  }
+
+  const result = await callRpc<null>(auth.jwt, 'leave_room', {
+    p_room_id: roomId,
+  })
+  if (!result.ok) return { error: result.error.message }
+
+  // Listeyi guncelle, anasayfaya don
+  revalidatePath('/oda')
+  redirect('/oda')
+}
