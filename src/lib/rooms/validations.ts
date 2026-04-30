@@ -132,3 +132,13 @@ export const cancelRoomActionSchema = z.object({
 })
 
 export type CancelRoomActionBody = z.infer<typeof cancelRoomActionSchema>
+
+// =============================================================================
+// kickMemberAction (Server Action) — PR4d
+// =============================================================================
+export const kickMemberActionSchema = z.object({
+  room_id: z.string().uuid('Gecersiz oda kimligi'),
+  target_user_id: z.string().uuid('Gecersiz hedef kullanici kimligi'),
+})
+
+export type KickMemberActionBody = z.infer<typeof kickMemberActionSchema>
