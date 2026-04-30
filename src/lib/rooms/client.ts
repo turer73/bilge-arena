@@ -114,11 +114,11 @@ export async function callRpc<T>(
     return { ok: true, data: null as T }
   }
 
-  // Defansif: 200 + Content-Length:0 case'i de hemen handle et
-  // (PostgREST farkli config'te 200 boyle dondurebilir, paranoia)
-  if (response.headers.get('content-length') === '0') {
-    return { ok: true, data: null as T }
-  }
+  // Codex P2 PR #42 fix: 200 + empty body, RPC SHOULD return JSON ama backend
+  // bos doner — bu sessiz "data: null" yerine acik hata olmali (data-returning
+  // RPCs: create_room beklenen JSON payload). Asagidaki JSON parse fail
+  // SyntaxError ile yakalanir, ok:false; reset.
+  // (Onceki "200 + content-length:0 -> ok:true,null" fast-path kaldirildi.)
 
   // Success with body: parse JSON
   try {
