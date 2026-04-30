@@ -14,11 +14,22 @@
 import type { Member } from '@/lib/rooms/room-state-reducer'
 import { MemberRow } from './MemberRow'
 
+type RoomLifecycleState =
+  | 'lobby'
+  | 'active'
+  | 'reveal'
+  | 'completed'
+  | 'archived'
+
 interface MemberRosterProps {
   members: Member[]
   online: Set<string>
   hostId: string
   maxPlayers: number
+  /** Kick button rendering icin (PR4d) */
+  viewerUserId?: string
+  roomId?: string
+  roomState?: RoomLifecycleState
 }
 
 export function MemberRoster({
@@ -26,7 +37,12 @@ export function MemberRoster({
   online,
   hostId,
   maxPlayers,
+  viewerUserId,
+  roomId,
+  roomState,
 }: MemberRosterProps) {
+  const viewerIsHost =
+    viewerUserId !== undefined && viewerUserId === hostId
   // Host once, sonra joined_at ASC
   const sorted = [...members].sort((a, b) => {
     if (a.user_id === hostId) return -1
@@ -57,6 +73,10 @@ export function MemberRoster({
               member={m}
               isOnline={online.has(m.user_id)}
               isHost={m.user_id === hostId}
+              viewerIsHost={viewerIsHost}
+              viewerUserId={viewerUserId}
+              roomId={roomId}
+              roomState={roomState}
             />
           ))}
         </ul>

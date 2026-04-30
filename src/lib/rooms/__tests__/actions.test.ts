@@ -34,6 +34,7 @@ import {
   joinRoomAction,
   startRoomAction,
   cancelRoomAction,
+  kickMemberAction,
 } from '../actions'
 
 const mockSupabase = (user: unknown, session: unknown) => {
@@ -324,5 +325,46 @@ describe('cancelRoomAction', () => {
     fd.set('reason', 'host_canceled')
     const r = await cancelRoomAction({}, fd)
     expect(r.error).toMatch(/Oda zaten/)
+  })
+})
+
+// =============================================================================
+// kickMemberAction: form submit -> kick_member RPC (PR4d)
+// =============================================================================
+
+const targetUuid = '22222222-2222-4222-8222-222222222222'
+
+describe('kickMemberAction', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  test('31) anon user → error: Giris yapmalisin', async () => {
+    mockSupabase(null, null)
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    fd.set('target_user_id', targetUuid)
+    const r = await kickMemberAction({}, fd)
+    expect(r.error).toMatch(/Giris yapmalisin/)
+  })
+
+  test('32) invalid target_user_id (not uuid) → error', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    fd.set('target_user_id', 'not-a-uuid')
+    const r = await kickMemberAction({}, fd)
+    expect(r.error).toMatch(/gecersiz/i)
+  })
+
+  test('33) success → callRpc(kick_member, {p_room_id, p_target_user_id})', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: null })
+    const fd = new FormData()
+    fd.set('room_id', validUuid)
+    fd.set('target_user_id', targetUuid)
+    await kickMemberAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'kick_member', {
+      p_room_id: validUuid,
+      p_target_user_id: targetUuid,
+    })
   })
 })

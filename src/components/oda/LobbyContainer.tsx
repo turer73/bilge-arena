@@ -42,6 +42,9 @@ export function LobbyContainer({
         online={state.online}
         hostId={state.room.host_id}
         maxPlayers={state.room.max_players}
+        viewerUserId={userId}
+        roomId={state.room.id}
+        roomState={state.room.state}
       />
       <MemberActions
         roomId={state.room.id}

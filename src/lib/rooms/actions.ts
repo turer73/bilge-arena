@@ -32,6 +32,7 @@ import {
   joinRoomSchema,
   startRoomSchema,
   cancelRoomActionSchema,
+  kickMemberActionSchema,
   type CreateRoomBody,
 } from './validations'
 
@@ -285,4 +286,40 @@ export async function cancelRoomAction(
 
   revalidatePath('/oda')
   redirect('/oda')
+}
+
+// =============================================================================
+// kickMemberAction: host uyeyi odadan cikarir (PR4d)
+// =============================================================================
+
+export type KickMemberActionState = {
+  /** Top-level hata: auth, P0001 sadece host, P0003 completed/archived'ta yasak */
+  error?: string
+}
+
+/**
+ * Host icin uyeyi odadan cikar. kick_member RPC P0001 sadece host (auth.uid()
+ * = host_id) check, P0003 state IN ('completed','archived')'ta yasak. Realtime
+ * MEMBER_UPDATE event ile UI is_kicked=true gosterir (member_row opacity).
+ */
+export async function kickMemberAction(
+  _prev: KickMemberActionState,
+  formData: FormData,
+): Promise<KickMemberActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = kickMemberActionSchema.safeParse({
+    room_id: formData.get('room_id')?.toString() ?? '',
+    target_user_id: formData.get('target_user_id')?.toString() ?? '',
+  })
+  if (!parsed.success) return { error: 'Gecersiz form verisi' }
+
+  const result = await callRpc<null>(auth.jwt, 'kick_member', {
+    p_room_id: parsed.data.room_id,
+    p_target_user_id: parsed.data.target_user_id,
+  })
+  if (!result.ok) return { error: result.error.message }
+
+  return {}
 }
