@@ -56,13 +56,29 @@ export type Room = {
   archived_at?: string | null
 }
 
+/**
+ * room_round_question_view ile birebir (anti-cheat: revealed_at NULL ise
+ * correct_answer + explanation NULL doner). PR4e-2'de question_text +
+ * options + correct_answer eklendi.
+ *
+ * NOT: PR4b'de yanlislikla 'round_number'/'deadline' yazilmisti, DB ve
+ * view 'round_index'/'ends_at' kullaniyor (types.ts:147 + 6_rooms.sql).
+ * PR4e2-3 hot-fix.
+ */
 export type CurrentRound = {
-  round_number: number
+  round_id?: string
+  round_index: number
   question_id: string
   started_at: string
-  /** Server-computed: started_at + per_question_seconds */
-  deadline: string
+  /** Server-computed via started_at + per_question_seconds, view alani */
+  ends_at: string
   revealed_at: string | null
+  /** room_round_question_view'den gelen soru icerigi (PR4e-2) */
+  question_text?: string
+  options?: string[]
+  /** revealed_at IS NOT NULL ise dolu, aksi NULL */
+  correct_answer?: string | null
+  explanation?: string | null
 }
 
 export type ScoreboardEntry = {
