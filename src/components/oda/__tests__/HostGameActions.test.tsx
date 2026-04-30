@@ -1,9 +1,6 @@
 /**
  * Bilge Arena Oda: HostGameActions smoke test
- * Sprint 1 PR4e-3
- *
- * 1 senaryo: isHost + state=active -> "Cevabi Goster" buton; state=reveal
- * -> "Sonraki Tura Geç" buton. isHost=false -> null.
+ * Sprint 1 PR4e-3 + Codex P1 PR #51 fix (bootstrap advance)
  */
 
 import { describe, test, expect, vi } from 'vitest'
@@ -26,21 +23,42 @@ vi.mock('@/lib/rooms/actions', () => ({
 }))
 
 import { HostGameActions } from '../HostGameActions'
+import type { CurrentRound } from '@/lib/rooms/room-state-reducer'
 
 const formAction = vi.fn()
+
+const activeRound: CurrentRound = {
+  round_index: 1,
+  question_id: 'q1',
+  started_at: '2026-04-30T00:00:00Z',
+  ends_at: '2026-04-30T00:00:20Z',
+  revealed_at: null,
+}
 
 describe('HostGameActions', () => {
   test('1) isHost=false -> null', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const { container } = render(
-      <HostGameActions isHost={false} roomId="r1" roomState="active" />,
+      <HostGameActions
+        isHost={false}
+        roomId="r1"
+        roomState="active"
+        currentRound={activeRound}
+      />,
     )
     expect(container.firstChild).toBeNull()
   })
 
-  test('2) isHost=true + state=active -> "Cevabı Göster" buton', () => {
+  test('2) active + currentRound exists -> "Cevabı Göster"', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
-    render(<HostGameActions isHost={true} roomId="r1" roomState="active" />)
+    render(
+      <HostGameActions
+        isHost={true}
+        roomId="r1"
+        roomState="active"
+        currentRound={activeRound}
+      />,
+    )
     expect(
       screen.getByRole('button', { name: /Cevabı Göster/i }),
     ).toBeInTheDocument()
@@ -49,9 +67,16 @@ describe('HostGameActions', () => {
     ).not.toBeInTheDocument()
   })
 
-  test('3) isHost=true + state=reveal -> "Sonraki Tura Geç" buton', () => {
+  test('3) reveal -> "Sonraki Tura Geç"', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
-    render(<HostGameActions isHost={true} roomId="r1" roomState="reveal" />)
+    render(
+      <HostGameActions
+        isHost={true}
+        roomId="r1"
+        roomState="reveal"
+        currentRound={activeRound}
+      />,
+    )
     expect(
       screen.getByRole('button', { name: /Sonraki Tura/i }),
     ).toBeInTheDocument()
@@ -60,11 +85,34 @@ describe('HostGameActions', () => {
     ).not.toBeInTheDocument()
   })
 
-  test('4) isHost=true + state=lobby -> null (sadece active/reveal)', () => {
+  test('4) lobby -> null', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const { container } = render(
-      <HostGameActions isHost={true} roomId="r1" roomState="lobby" />,
+      <HostGameActions
+        isHost={true}
+        roomId="r1"
+        roomState="lobby"
+        currentRound={null}
+      />,
     )
     expect(container.firstChild).toBeNull()
+  })
+
+  test('5) Codex P1 PR#51 fix: active + currentRound=null -> "İlk Soruyu Başlat" (bootstrap advance)', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(
+      <HostGameActions
+        isHost={true}
+        roomId="r1"
+        roomState="active"
+        currentRound={null}
+      />,
+    )
+    expect(
+      screen.getByRole('button', { name: /İlk Soruyu Başlat/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Cevabı Göster/i }),
+    ).not.toBeInTheDocument()
   })
 })
