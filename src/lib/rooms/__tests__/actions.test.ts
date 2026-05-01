@@ -613,6 +613,16 @@ describe('quickPlayRoomAction', () => {
     const r = await quickPlayRoomAction({}, fd)
     expect(r.error).toMatch(/cakistir/)
   })
+
+  test('6) Codex P3 #5: whitelist DISI kategori → fieldErrors.category', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = new FormData()
+    fd.set('category', 'matematik-eski') // whitelist disi
+    const r = await quickPlayRoomAction({}, fd)
+    expect(r.fieldErrors?.category?.length).toBeGreaterThan(0)
+    // RPC cagrisi yapilmamali (Zod fail)
+    expect(mockCallRpc).not.toHaveBeenCalled()
+  })
 })
 
 // =============================================================================

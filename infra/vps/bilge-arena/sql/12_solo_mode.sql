@@ -17,8 +17,9 @@
 -- Plan-deviations:
 --   #70 (yeni): Bot user concept = rastgele UUID + is_bot=TRUE flag.
 --       Panola Supabase'de bot user create ETMIYORUZ (cross-project impact).
---       room_members.user_id NOT NULL constraint korunur, gen_random_uuid()
---       bot icin de calisir (UNIQUE room_id+user_id pattern).
+--       room_members.user_id NOT NULL ama FK YOK (2_rooms.sql:142 — sadece
+--       comment "Panola GoTrue user", REFERENCES yok). gen_random_uuid()
+--       bot icin guvenli, UNIQUE room_id+user_id collision astronomik dusuk.
 --   #71 (yeni): MVP scope bot ANSWER logic dahil DEGIL (PR2'ye baglidir).
 --       Bot uyeler reveal'a kadar cevap vermez, auto_relay_tick deadline
 --       expired -> reveal -> bot 0 puan. User tek basina yarisir, 1000 puan
@@ -30,6 +31,14 @@
 --       gozukmez — solo deneyim, public spam onlem).
 --   #74 (yeni): rooms.member_count trigger zaten 4 uye INSERT'i syncler
 --       (PR #61 plan-deviation #69 paterni); manuel guncelleme gerekmez.
+--   #80 (Codex P1 fix): room_members.display_name kolonu (nullable) eklenir
+--       ve bot insert'inde "Bot 1/2/3" set edilir. Sprint 1'de Member tipi
+--       display_name istiyordu ama room_members tablosunda kolon yoktu —
+--       gercek user'lar icin profiles join veya UI fallback kullanilmis.
+--       Bu fix bot'lar icin DB-level isim verir, UI'da "BOT" rozet + isim
+--       birlikte gosterilir. Mevcut user'lar icin kolon NULL kalir.
+--   #81 (Codex P1 fix): title 'Hızlı Oyun' (TR diakritik). Audit log + DB
+--       Türkçe karakter, UI ile tutarli (TDK feedback memory).
 --
 -- Kalitim plan-deviations:
 --   #41: Caller identity = auth.uid()
@@ -51,6 +60,15 @@ BEGIN;
 -- =============================================================================
 ALTER TABLE public.room_members
   ADD COLUMN IF NOT EXISTS is_bot BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- =============================================================================
+-- 1b) room_members.display_name kolonu (Codex P1 fix #80)
+-- =============================================================================
+-- Sprint 1'de eksik kalmis: Member tipi display_name istiyordu ama tablo
+-- kolonu yoktu. Bot icin DB-level isim ('Bot 1' vb.). Mevcut user'lar icin
+-- NULL — UI fallback yapar (Sprint 1 davranisi degismez, yan etki yok).
+ALTER TABLE public.room_members
+  ADD COLUMN IF NOT EXISTS display_name TEXT;
 
 -- =============================================================================
 -- 2) quick_play_room: solo oda + 3 bot member tek RPC
@@ -95,7 +113,7 @@ BEGIN
          max_players, per_question_seconds, mode, state, auto_advance_seconds,
          is_public)
       VALUES
-        (v_code, v_caller, 'Hizli Oyun', p_category, p_difficulty,
+        (v_code, v_caller, 'Hızlı Oyun', p_category, p_difficulty,
          p_question_count, 4, 20, 'sync', 'lobby', 5, FALSE)
       RETURNING id INTO v_room_id;
 
@@ -109,15 +127,15 @@ BEGIN
     END;
   END LOOP;
 
-  -- Host (caller) member ekle
-  INSERT INTO public.room_members (room_id, user_id, role, is_bot)
-    VALUES (v_room_id, v_caller, 'host', FALSE);
+  -- Host (caller) member ekle (display_name NULL — UI/profiles fallback)
+  INSERT INTO public.room_members (room_id, user_id, role, is_bot, display_name)
+    VALUES (v_room_id, v_caller, 'host', FALSE, NULL);
 
-  -- 3 bot member ekle (rastgele UUID, is_bot=TRUE, role=player)
+  -- 3 bot member ekle (rastgele UUID, is_bot=TRUE, role=player, named "Bot N")
   FOR v_i IN 1..3 LOOP
     v_bot_id := gen_random_uuid();
-    INSERT INTO public.room_members (room_id, user_id, role, is_bot)
-      VALUES (v_room_id, v_bot_id, 'player', TRUE);
+    INSERT INTO public.room_members (room_id, user_id, role, is_bot, display_name)
+      VALUES (v_room_id, v_bot_id, 'player', TRUE, 'Bot ' || v_i);
   END LOOP;
 
   -- Audit

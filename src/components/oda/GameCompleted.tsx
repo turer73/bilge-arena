@@ -124,16 +124,14 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
         })}
       </ol>
 
-      {/* Sprint 2C Task 8: Replay & Share */}
+      {/* Sprint 2C Task 8: Replay & Share
+          Codex P1 fix: NEXT_PUBLIC_SITE_URL ile SSR/client tutarli URL
+          (window.location.origin SSR'da yok, hidrasyon mismatch yapiyordu) */}
       {!isArchived && (
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <ReplayButton sourceRoomId={room.id} />
           <ShareButton
-            url={
-              typeof window !== 'undefined'
-                ? `${window.location.origin}/oda/${room.code}`
-                : `/oda/${room.code}`
-            }
+            url={`${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/oda/${room.code}`}
             text={(() => {
               const me = ranked.find((r) => r.user_id === userId)
               const score = me?.score ?? 0

@@ -22,6 +22,13 @@
 --       same questions = score gaming.
 --   #77 (yeni): is_public=FALSE clone (Aktif Odalar listesinde gozukmez).
 --       Kullanici kod paylasarak arkadaslarini cagirir.
+--   #78 (Codex P3 fix): Source state CHECK — sadece completed/archived odalar
+--       replay edilebilir (defense-in-depth, UI !isArchived ile zaten filtreli
+--       ama RPC seviyesinde tekrar). lobby/active/reveal odalarda anlamsiz.
+--   #79 (Codex P3 fix): Title overflow handling — source.title 80 char cap.
+--       "(Tekrar)" 10 karakter ekler. Fix: zaten "(Tekrar)" iceriyorsa ekleme,
+--       fazla uzunsa source title'i 70 char'a kis. chk_rooms_title_length
+--       (3-80) constraint guvenli.
 --
 -- Calistirma:
 --   docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev \
@@ -47,8 +54,10 @@ DECLARE
   v_source    public.rooms%ROWTYPE;
   v_new_id    UUID;
   v_new_code  CHAR(6);
+  v_new_title TEXT;
   v_attempt   INT := 0;
   v_max_retry CONSTANT INT := 5;
+  v_tekrar_marker CONSTANT TEXT := ' (Tekrar)';
 BEGIN
   v_caller := auth.uid();
   IF v_caller IS NULL THEN
@@ -66,6 +75,12 @@ BEGIN
       USING ERRCODE = 'P0002';
   END IF;
 
+  -- Plan-deviation #78 (Codex P3): Source state defense-in-depth
+  IF v_source.state NOT IN ('completed', 'archived') THEN
+    RAISE EXCEPTION 'Sadece tamamlanmis odalar replay edilebilir (mevcut state: %)', v_source.state
+      USING ERRCODE = 'P0003';
+  END IF;
+
   -- Plan-deviation #75: caller herhangi bir member olabilir, host olmak sart degil
   -- Member kontrolu (anti-spam: rastgele oda clone'u engelle)
   IF NOT EXISTS (
@@ -75,6 +90,20 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Sadece odaya katilmis kullanicilar replay edebilir'
       USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Plan-deviation #79 (Codex P3): Title overflow handling
+  -- Eger zaten "(Tekrar)" iceriyorsa ekleme; aksi takdirde ekle ve gerekirse
+  -- source kismini kis (chk_rooms_title_length 3-80 char).
+  IF v_source.title LIKE '%' || v_tekrar_marker THEN
+    -- Zaten (Tekrar) marker var, oldugu gibi kullan
+    v_new_title := v_source.title;
+  ELSIF char_length(v_source.title) + char_length(v_tekrar_marker) <= 80 THEN
+    -- Sigar
+    v_new_title := v_source.title || v_tekrar_marker;
+  ELSE
+    -- Source title kis (max 80 - 10 = 70 char)
+    v_new_title := substring(v_source.title FROM 1 FOR 80 - char_length(v_tekrar_marker)) || v_tekrar_marker;
   END IF;
 
   -- Code generation with collision retry
@@ -89,7 +118,7 @@ BEGIN
          is_public)
       VALUES
         (v_new_code, v_caller,
-         v_source.title || ' (Tekrar)',  -- title'a (Tekrar) marker
+         v_new_title,  -- plan-deviation #79: overflow-safe title
          v_source.category,
          v_source.difficulty,
          v_source.question_count,

@@ -187,14 +187,26 @@ export type RevealRoundActionBody = z.infer<typeof revealRoundActionSchema>
 // =============================================================================
 // quickPlayRoomAction — Sprint 2B Task 4 (Solo mode)
 // =============================================================================
-// 4 alan: category, difficulty, question_count + bot_count (sabit 3, ayri PR'da
-// dynamic olabilir). max_players=4 sabit (1 user + 3 bot, plan-deviation #72).
+// Codex P3 #5 fix: kategori whitelist (UI dropdown ile tek kaynak). Backend
+// herhangi bir string kabul etmemeli — kotuniyetli/eski client farkli kategori
+// gonderemez. UI 10 kategori, Zod enum + TypeScript const aynisi.
+export const QUICK_PLAY_CATEGORIES = [
+  'genel-kultur',
+  'tarih',
+  'cografya',
+  'edebiyat',
+  'matematik',
+  'fen',
+  'ingilizce',
+  'vatandaslik',
+  'futbol',
+  'sinema',
+] as const
+
 export const quickPlayRoomActionSchema = z.object({
-  category: z
-    .string()
-    .trim()
-    .min(1, 'Kategori secilmeli')
-    .max(30, 'Kategori cok uzun'),
+  category: z.enum(QUICK_PLAY_CATEGORIES, {
+    message: 'Geçersiz kategori',
+  }),
   difficulty: z.number().int().min(1).max(5).default(2),
   question_count: z.number().int().min(5).max(30).default(10),
 })

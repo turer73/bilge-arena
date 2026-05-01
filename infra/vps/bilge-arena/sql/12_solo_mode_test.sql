@@ -1,13 +1,21 @@
 -- =============================================================================
--- Bilge Arena Oda Sistemi: 12_solo_mode test (Sprint 2B Task 4 / PR1 skeleton)
+-- Bilge Arena Oda Sistemi: 12_solo_mode test (Sprint 2B Task 4 + Codex fix)
 -- =============================================================================
--- 6 Test:
+-- 11 Test (Codex P1+P3 fix v2 — gercek RPC cagri):
 --   T1: room_members.is_bot DEFAULT FALSE
---   T2: quick_play_room var (3 arg, JSONB return)
---   T3: quick_play_room oda olusturur, member_count=4 (1 host + 3 bot)
---   T4: bot uyeler is_bot=TRUE, host is_bot=FALSE
---   T5: oda is_public=FALSE (solo, Aktif Odalar listesinde gozukmez)
---   T6: REVOKE PUBLIC + GRANT authenticated dogru
+--   T2: room_members.display_name kolonu (Codex P1 #80, nullable)
+--   T3: room_members.user_id FK YOK regression (Codex P1 #1)
+--   T4: quick_play_room var (3 arg, JSONB return)
+--   T5: GERCEK RPC cagri — oda + 4 member + bot count + host is_bot=FALSE
+--   T6: Bot display_name "Bot 1/2/3" set edildi (Codex P1 #2)
+--   T7: oda is_public=FALSE (solo, listede degil)
+--   T8: oda title 'Hızlı Oyun' (Codex P3 #9, TR diakritik)
+--   T9: auth.uid() NULL P0001 reddi (Codex P3 #4)
+--   T10: audit_log 'quick_play_created' marker yazilir (Codex P3 #4)
+--   T11: REVOKE PUBLIC + GRANT authenticated
+--
+-- Auth simulation: SET LOCAL request.jwt.claim.sub TO '<uuid>'.
+-- auth.uid() bu GUC'tan okur (0_init_db.sql:64-74).
 -- =============================================================================
 
 \set ON_ERROR_STOP on
@@ -36,7 +44,48 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- T2: quick_play_room var (3 arg, JSONB return)
+-- T2: room_members.display_name kolonu (Codex P1 #80)
+-- =============================================================================
+DO $$
+DECLARE v_nullable TEXT;
+DECLARE v_data_type TEXT;
+BEGIN
+  SELECT is_nullable, data_type INTO v_nullable, v_data_type
+  FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='room_members'
+    AND column_name='display_name';
+
+  IF v_data_type IS NULL THEN
+    RAISE EXCEPTION 'T2 FAIL: display_name kolonu yok';
+  END IF;
+  IF v_nullable <> 'YES' THEN
+    RAISE EXCEPTION 'T2 FAIL: display_name nullable olmali, mevcut: %', v_nullable;
+  END IF;
+
+  RAISE NOTICE 'OK: T2 room_members.display_name nullable kolon';
+END $$;
+
+-- =============================================================================
+-- T3: room_members.user_id FK YOK regression (Codex P1 #1)
+-- =============================================================================
+DO $$
+DECLARE v_fk_count INT;
+BEGIN
+  SELECT COUNT(*) INTO v_fk_count
+  FROM pg_constraint
+  WHERE conrelid = 'public.room_members'::regclass
+    AND contype = 'f'
+    AND pg_get_constraintdef(oid) LIKE '%user_id%';
+
+  IF v_fk_count > 0 THEN
+    RAISE EXCEPTION 'T3 FAIL: user_id FK var (% adet) bot insert kirar', v_fk_count;
+  END IF;
+
+  RAISE NOTICE 'OK: T3 room_members.user_id FK YOK (bot rastgele UUID guvenli)';
+END $$;
+
+-- =============================================================================
+-- T4: quick_play_room var (3 arg, JSONB)
 -- =============================================================================
 DO $$
 DECLARE v_arg_count INT;
@@ -48,90 +97,141 @@ BEGIN
   WHERE proname = 'quick_play_room' AND pronamespace = 'public'::regnamespace;
 
   IF v_arg_count IS NULL THEN
-    RAISE EXCEPTION 'T2 FAIL: quick_play_room bulunamadi';
+    RAISE EXCEPTION 'T4 FAIL: quick_play_room bulunamadi';
   END IF;
   IF v_arg_count <> 3 THEN
-    RAISE EXCEPTION 'T2 FAIL: arg sayisi 3 olmali, mevcut: %', v_arg_count;
+    RAISE EXCEPTION 'T4 FAIL: arg sayisi 3 olmali, mevcut: %', v_arg_count;
   END IF;
   IF v_return <> 'jsonb' THEN
-    RAISE EXCEPTION 'T2 FAIL: return type jsonb olmali, mevcut: %', v_return;
+    RAISE EXCEPTION 'T4 FAIL: return jsonb olmali, mevcut: %', v_return;
   END IF;
 
-  RAISE NOTICE 'OK: T2 quick_play_room (3 arg, jsonb)';
+  RAISE NOTICE 'OK: T4 quick_play_room (3 arg, jsonb)';
 END $$;
 
 -- =============================================================================
--- T3+T4+T5: oda olustur + 4 member + bot flag + is_public=FALSE
+-- T5+T6+T7+T8: GERCEK RPC cagri (Codex P3 #4 fix)
 -- =============================================================================
--- NOT: auth.uid() bu test contextinde NULL (psql -U bilge_arena_app baglanti).
--- DEFINER fonksiyon icinde auth.uid() Panola GoTrue context yok, NULL doner.
--- Bunu bypass etmek icin dogrudan rooms+room_members manuel test (RPC mock).
 DO $$
 DECLARE
   v_test_user UUID := gen_random_uuid();
+  v_result JSONB;
   v_room_id UUID;
+  v_room_code CHAR(6);
   v_member_count INT;
   v_bot_count INT;
   v_host_bot BOOLEAN;
-  v_is_public BOOLEAN;
+  v_room RECORD;
+  v_bot_names TEXT[];
 BEGIN
-  -- Manuel oda + 4 member insert (RPC body simulation)
-  INSERT INTO public.rooms
-    (code, host_id, title, category, difficulty, question_count,
-     max_players, per_question_seconds, mode, state, is_public)
-  VALUES
-    ('TST12A', v_test_user, 'Hizli Oyun', 'matematik', 2, 10,
-     4, 20, 'sync', 'lobby', FALSE)
-  RETURNING id INTO v_room_id;
+  PERFORM set_config('request.jwt.claim.sub', v_test_user::TEXT, TRUE);
 
-  -- Host
-  INSERT INTO public.room_members (room_id, user_id, role, is_bot)
-    VALUES (v_room_id, v_test_user, 'host', FALSE);
+  v_result := public.quick_play_room('matematik', 2::SMALLINT, 10::SMALLINT);
+  v_room_id := (v_result->>'id')::UUID;
+  v_room_code := (v_result->>'code')::CHAR(6);
 
-  -- 3 bot
-  INSERT INTO public.room_members (room_id, user_id, role, is_bot)
-    VALUES
-      (v_room_id, gen_random_uuid(), 'player', TRUE),
-      (v_room_id, gen_random_uuid(), 'player', TRUE),
-      (v_room_id, gen_random_uuid(), 'player', TRUE);
+  IF v_room_id IS NULL THEN
+    RAISE EXCEPTION 'T5 FAIL: result.id NULL';
+  END IF;
+  IF v_room_code IS NULL OR length(v_room_code) <> 6 THEN
+    RAISE EXCEPTION 'T5 FAIL: result.code gecersiz: %', v_room_code;
+  END IF;
 
-  -- T3: member_count
   SELECT member_count INTO v_member_count
   FROM public.rooms WHERE id = v_room_id;
   IF v_member_count <> 4 THEN
-    RAISE EXCEPTION 'T3 FAIL: member_count beklenen 4, mevcut %', v_member_count;
+    RAISE EXCEPTION 'T5 FAIL: member_count beklenen 4, mevcut %', v_member_count;
   END IF;
-  RAISE NOTICE 'OK: T3 1 host + 3 bot = member_count 4';
+  RAISE NOTICE 'OK: T5 RPC ile 4 member (1 host + 3 bot, trigger sync)';
 
-  -- T4a: bot count
   SELECT COUNT(*) INTO v_bot_count
   FROM public.room_members
   WHERE room_id = v_room_id AND is_bot = TRUE;
   IF v_bot_count <> 3 THEN
-    RAISE EXCEPTION 'T4 FAIL: bot count beklenen 3, mevcut %', v_bot_count;
+    RAISE EXCEPTION 'T6 FAIL: bot count beklenen 3, mevcut %', v_bot_count;
   END IF;
-  RAISE NOTICE 'OK: T4a 3 bot member is_bot=TRUE';
 
-  -- T4b: host bot DEGIL
   SELECT is_bot INTO v_host_bot
   FROM public.room_members
   WHERE room_id = v_room_id AND user_id = v_test_user;
   IF v_host_bot <> FALSE THEN
-    RAISE EXCEPTION 'T4 FAIL: host is_bot=FALSE olmali, mevcut %', v_host_bot;
+    RAISE EXCEPTION 'T6 FAIL: host is_bot=FALSE olmali, mevcut %', v_host_bot;
   END IF;
-  RAISE NOTICE 'OK: T4b host is_bot=FALSE';
 
-  -- T5: oda is_public=FALSE (solo, listede gozukmez)
-  SELECT is_public INTO v_is_public
-  FROM public.rooms WHERE id = v_room_id;
-  IF v_is_public <> FALSE THEN
-    RAISE EXCEPTION 'T5 FAIL: solo oda is_public=FALSE olmali, mevcut %', v_is_public;
+  SELECT array_agg(display_name ORDER BY display_name) INTO v_bot_names
+  FROM public.room_members
+  WHERE room_id = v_room_id AND is_bot = TRUE;
+  IF v_bot_names <> ARRAY['Bot 1', 'Bot 2', 'Bot 3'] THEN
+    RAISE EXCEPTION 'T6 FAIL: bot display_name beklenen [Bot 1, Bot 2, Bot 3], mevcut %', v_bot_names;
   END IF;
-  RAISE NOTICE 'OK: T5 quick_play_room oda is_public=FALSE (Aktif Odalar listesinde gozukmez)';
+  RAISE NOTICE 'OK: T6 3 bot is_bot=TRUE display_name Bot 1/2/3, host is_bot=FALSE';
+
+  SELECT * INTO v_room FROM public.rooms WHERE id = v_room_id;
+  IF v_room.is_public <> FALSE THEN
+    RAISE EXCEPTION 'T7 FAIL: oda is_public=FALSE olmali, mevcut %', v_room.is_public;
+  END IF;
+  RAISE NOTICE 'OK: T7 oda is_public=FALSE';
+
+  IF v_room.title <> 'Hızlı Oyun' THEN
+    RAISE EXCEPTION 'T8 FAIL: title beklenen Hızlı Oyun, mevcut %', v_room.title;
+  END IF;
+  RAISE NOTICE 'OK: T8 oda title Hızlı Oyun (TR diakritik)';
+
+  PERFORM set_config('request.jwt.claim.sub', '', TRUE);
 END $$;
 
 -- =============================================================================
--- T6: REVOKE PUBLIC + GRANT authenticated
+-- T9: auth.uid() NULL reddi (Codex P3 #4)
+-- =============================================================================
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', '', TRUE);
+
+  BEGIN
+    PERFORM public.quick_play_room('matematik', 2::SMALLINT, 10::SMALLINT);
+    RAISE EXCEPTION 'T9 FAIL: auth.uid() NULL ile cagri kabul edildi';
+  EXCEPTION WHEN sqlstate 'P0001' THEN
+    RAISE NOTICE 'OK: T9 auth.uid() NULL P0001 reddetti';
+  END;
+END $$;
+
+-- =============================================================================
+-- T10: audit_log 'quick_play_created' marker (Codex P3 #4)
+-- =============================================================================
+DO $$
+DECLARE
+  v_test_user UUID := gen_random_uuid();
+  v_result JSONB;
+  v_room_id UUID;
+  v_audit_count INT;
+  v_payload JSONB;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', v_test_user::TEXT, TRUE);
+  v_result := public.quick_play_room('tarih', 3::SMALLINT, 15::SMALLINT);
+  v_room_id := (v_result->>'id')::UUID;
+
+  SELECT COUNT(*), MIN(payload) INTO v_audit_count, v_payload
+  FROM public.room_audit_log
+  WHERE room_id = v_room_id
+    AND actor_id = v_test_user
+    AND action = 'quick_play_created';
+
+  IF v_audit_count <> 1 THEN
+    RAISE EXCEPTION 'T10 FAIL: audit_log row sayisi % (1 beklenir)', v_audit_count;
+  END IF;
+  IF (v_payload->>'bot_count')::INT <> 3 THEN
+    RAISE EXCEPTION 'T10 FAIL: audit payload bot_count beklenen 3';
+  END IF;
+  IF v_payload->>'category' <> 'tarih' THEN
+    RAISE EXCEPTION 'T10 FAIL: audit payload category beklenen tarih';
+  END IF;
+  RAISE NOTICE 'OK: T10 audit_log quick_play_created marker (bot_count=3, category=tarih)';
+
+  PERFORM set_config('request.jwt.claim.sub', '', TRUE);
+END $$;
+
+-- =============================================================================
+-- T11: REVOKE PUBLIC + GRANT authenticated
 -- =============================================================================
 DO $$
 DECLARE v_public_has BOOLEAN;
@@ -143,12 +243,12 @@ BEGIN
     INTO v_auth_has;
 
   IF v_public_has THEN
-    RAISE EXCEPTION 'T6 FAIL: PUBLIC EXECUTE gonderilmemeli';
+    RAISE EXCEPTION 'T11 FAIL: PUBLIC EXECUTE gonderilmemeli';
   END IF;
   IF NOT v_auth_has THEN
-    RAISE EXCEPTION 'T6 FAIL: authenticated EXECUTE gerek';
+    RAISE EXCEPTION 'T11 FAIL: authenticated EXECUTE gerek';
   END IF;
-  RAISE NOTICE 'OK: T6 REVOKE PUBLIC + GRANT authenticated dogru';
+  RAISE NOTICE 'OK: T11 REVOKE PUBLIC + GRANT authenticated dogru';
 END $$;
 
 ROLLBACK;

@@ -2,15 +2,18 @@
 
 /**
  * Bilge Arena Oda: <QuickPlayPanel> "Hızlı Oyun" CTA
- * Sprint 2B Task 4 (Solo mode)
+ * Sprint 2B Task 4 (Solo mode) + Codex review fix
  *
  * /oda sekmesinin ust kisminda gosterilir. Tek tikla 3 bot rakiple solo
  * oyun olusturur (quick_play_room RPC -> redirect /oda/[code]).
  *
  * Plan-deviation #71: bot ANSWER logic dahil DEGIL (PR2'de eklenir).
- * Bot uyeler reveal'a kadar pasif kalir, auto_relay deadline -> 0 puan.
- *
  * Plan-deviation #72: max_players=4 sabit (1 user + 3 bot).
+ *
+ * Codex P3 #3 fix: state.fieldErrors UI'da render edilir (action signature
+ * vaat ettigi gibi).
+ * Codex P3 #5 fix: kategori whitelist Zod enum (validations.ts), UI labelli
+ * Record ile single source of truth.
  *
  * Beklenen etki: yeni user dwell 0:45 -> 4:30 (Sprint 2 plan Task 4).
  */
@@ -20,19 +23,22 @@ import {
   quickPlayRoomAction,
   type QuickPlayRoomActionState,
 } from '@/lib/rooms/actions'
+import { QUICK_PLAY_CATEGORIES } from '@/lib/rooms/validations'
 
-const CATEGORIES = [
-  { value: 'genel-kultur', label: 'Genel Kültür' },
-  { value: 'tarih', label: 'Tarih' },
-  { value: 'cografya', label: 'Coğrafya' },
-  { value: 'edebiyat', label: 'Edebiyat' },
-  { value: 'matematik', label: 'Matematik' },
-  { value: 'fen', label: 'Fen Bilimleri' },
-  { value: 'ingilizce', label: 'İngilizce' },
-  { value: 'vatandaslik', label: 'Vatandaşlık' },
-  { value: 'futbol', label: 'Futbol' },
-  { value: 'sinema', label: 'Sinema' },
-]
+// Codex P3 #5: kategori whitelist Zod schema'da QUICK_PLAY_CATEGORIES.
+// UI labellari burada Record ile tutulur — value'lar Zod enum ile birebir.
+const CATEGORY_LABELS: Record<(typeof QUICK_PLAY_CATEGORIES)[number], string> = {
+  'genel-kultur': 'Genel Kültür',
+  tarih: 'Tarih',
+  cografya: 'Coğrafya',
+  edebiyat: 'Edebiyat',
+  matematik: 'Matematik',
+  fen: 'Fen Bilimleri',
+  ingilizce: 'İngilizce',
+  vatandaslik: 'Vatandaşlık',
+  futbol: 'Futbol',
+  sinema: 'Sinema',
+}
 
 const initialState: QuickPlayRoomActionState = {}
 
@@ -56,20 +62,32 @@ export function QuickPlayPanel() {
       </header>
 
       <form action={formAction} className="flex flex-col gap-3 sm:flex-row">
-        <select
-          id="quick-play-category"
-          name="category"
-          required
-          defaultValue="genel-kultur"
-          aria-label="Hızlı oyun kategorisi"
-          className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
-        >
-          {CATEGORIES.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        <div className="flex-1">
+          <select
+            id="quick-play-category"
+            name="category"
+            required
+            defaultValue="genel-kultur"
+            aria-label="Hızlı oyun kategorisi"
+            aria-invalid={state.fieldErrors?.category ? 'true' : undefined}
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
+          >
+            {QUICK_PLAY_CATEGORIES.map((value) => (
+              <option key={value} value={value}>
+                {CATEGORY_LABELS[value]}
+              </option>
+            ))}
+          </select>
+          {/* Codex P3 #3 fix: fieldErrors UI'da render */}
+          {state.fieldErrors?.category && state.fieldErrors.category[0] && (
+            <p
+              role="alert"
+              className="mt-1 text-xs text-red-700 dark:text-red-300"
+            >
+              {state.fieldErrors.category[0]}
+            </p>
+          )}
+        </div>
 
         <input type="hidden" name="difficulty" value="2" />
         <input type="hidden" name="question_count" value="10" />

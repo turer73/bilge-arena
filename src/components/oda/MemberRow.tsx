@@ -76,7 +76,8 @@ export function MemberRow({
         {member.is_bot ? '🤖' : (member.emoji ?? '🎮')}
       </span>
       <span className="flex-1 truncate text-sm font-medium">
-        {member.display_name}
+        {/* Codex P1 #80 fix: display_name NULL/undefined fallback "Oyuncu" */}
+        {member.display_name ?? 'Oyuncu'}
         {member.is_bot && (
           <span
             aria-label="Bot oyuncu"
@@ -87,7 +88,7 @@ export function MemberRow({
         )}
         {isTyping && (
           <span
-            aria-label={`${member.display_name} cevap seçiyor`}
+            aria-label={`${member.display_name ?? 'Oyuncu'} cevap seçiyor`}
             className="ml-1.5 inline-flex items-center gap-0.5 text-[var(--text-sub)]"
             title="Cevap seçiyor"
           >
@@ -106,7 +107,7 @@ export function MemberRow({
         <KickMemberButton
           roomId={roomId}
           targetUserId={member.user_id}
-          targetName={member.display_name}
+          targetName={member.display_name ?? 'Oyuncu'}
         />
       )}
       <span
