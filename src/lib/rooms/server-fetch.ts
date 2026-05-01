@@ -377,7 +377,8 @@ export async function fetchRoomState(
             const a = agg.get(m.user_id) ?? { correct: 0, ms_total: 0 }
             return {
               user_id: m.user_id,
-              display_name: m.display_name,
+              // Codex P1 #80: display_name NULL/undefined fallback "Oyuncu"
+              display_name: m.display_name ?? 'Oyuncu',
               score: m.score ?? 0,
               correct_count: a.correct,
               response_ms_total: a.ms_total,

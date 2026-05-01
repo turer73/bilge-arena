@@ -23,7 +23,9 @@
 
 export type Member = {
   user_id: string
-  display_name: string
+  /** Sprint 2B Task 4 Codex P1 #80: bot icin 'Bot 1/2/3', real user icin
+   *  NULL/undefined (Sprint 1 davranisi — UI/profiles fallback "Oyuncu"). */
+  display_name?: string | null
   emoji?: string
   joined_at: string
   is_host: boolean
