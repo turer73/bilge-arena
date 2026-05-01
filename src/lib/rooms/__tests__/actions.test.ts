@@ -39,6 +39,7 @@ import {
   advanceRoundAction,
   revealRoundAction,
   quickPlayRoomAction,
+  replayRoomAction,
 } from '../actions'
 
 const mockSupabase = (user: unknown, session: unknown) => {
@@ -611,5 +612,63 @@ describe('quickPlayRoomAction', () => {
     fd.set('category', 'matematik')
     const r = await quickPlayRoomAction({}, fd)
     expect(r.error).toMatch(/cakistir/)
+  })
+})
+
+// =============================================================================
+// replayRoomAction (Sprint 2C Task 8 / Replay & Share)
+// =============================================================================
+
+describe('replayRoomAction', () => {
+  const validRoomUuid = '22222222-2222-4222-8222-222222222222'
+
+  beforeEach(() => vi.clearAllMocks())
+
+  test('1) anon user → error: Giris yapmalisin', async () => {
+    mockSupabase(null, null)
+    const fd = new FormData()
+    fd.set('source_room_id', validRoomUuid)
+    const r = await replayRoomAction({}, fd)
+    expect(r.error).toMatch(/Giris yapmalisin/)
+  })
+
+  test('2) invalid UUID → error: Gecersiz oda kimligi', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = new FormData()
+    fd.set('source_room_id', 'not-uuid')
+    const r = await replayRoomAction({}, fd)
+    expect(r.error).toMatch(/Gecersiz oda kimligi/)
+  })
+
+  test('3) success → callRpc(replay_room) + revalidate + redirect', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({
+      ok: true,
+      data: { id: 'newr', code: 'REPLAY' },
+    })
+    const fd = new FormData()
+    fd.set('source_room_id', validRoomUuid)
+    await replayRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'replay_room', {
+      p_source_room_id: validRoomUuid,
+    })
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/oda')
+    expect(mockRedirect).toHaveBeenCalledWith('/oda/REPLAY')
+  })
+
+  test('4) RPC P0001 (member degil) → error', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'P0001',
+        message: 'Sadece odaya katilmis kullanicilar replay edebilir',
+        status: 403,
+      },
+    })
+    const fd = new FormData()
+    fd.set('source_room_id', validRoomUuid)
+    const r = await replayRoomAction({}, fd)
+    expect(r.error).toMatch(/replay edebilir/)
   })
 })

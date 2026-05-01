@@ -40,6 +40,7 @@ import {
   revealRoundActionSchema,
   refreshLobbyPreviewActionSchema,
   quickPlayRoomActionSchema,
+  replayRoomActionSchema,
   type CreateRoomBody,
 } from './validations'
 
@@ -538,4 +539,43 @@ export async function refreshLobbyPreviewAction(
   )
 
   return { question }
+}
+
+// =============================================================================
+// replayRoomAction — Sprint 2C Task 8 (Replay & Share)
+// =============================================================================
+
+export type ReplayRoomActionState = {
+  /** Top-level hata: auth, P0001 member degil, P0002 oda bulunamadi */
+  error?: string
+}
+
+/**
+ * Tamamlanmis odanin ayarlariyla yeni oda clone et. Caller herhangi bir
+ * member olabilir (host olmasi sart degil — plan-deviation #75).
+ *
+ * Anti-cheat: yeni oda yeni RANDOM sorular ceker (advance_round PR2b),
+ * source oda sorularini KULLANMAZ.
+ */
+export async function replayRoomAction(
+  _prev: ReplayRoomActionState,
+  formData: FormData,
+): Promise<ReplayRoomActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = replayRoomActionSchema.safeParse({
+    source_room_id: formData.get('source_room_id')?.toString() ?? '',
+  })
+  if (!parsed.success) return { error: 'Gecersiz oda kimligi' }
+
+  const result = await callRpc<{ id: string; code: string }>(
+    auth.jwt,
+    'replay_room',
+    { p_source_room_id: parsed.data.source_room_id },
+  )
+  if (!result.ok) return { error: result.error.message }
+
+  revalidatePath('/oda')
+  redirect(`/oda/${result.data.code}`)
 }

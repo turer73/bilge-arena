@@ -13,6 +13,8 @@
 import Link from 'next/link'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 import { cn } from '@/lib/utils/cn'
+import { ShareButton } from './ShareButton'
+import { ReplayButton } from './ReplayButton'
 
 interface GameCompletedProps {
   state: RoomState
@@ -122,7 +124,28 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
         })}
       </ol>
 
-      <div className="mt-6 flex justify-center gap-2">
+      {/* Sprint 2C Task 8: Replay & Share */}
+      {!isArchived && (
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <ReplayButton sourceRoomId={room.id} />
+          <ShareButton
+            url={
+              typeof window !== 'undefined'
+                ? `${window.location.origin}/oda/${room.code}`
+                : `/oda/${room.code}`
+            }
+            text={(() => {
+              const me = ranked.find((r) => r.user_id === userId)
+              const score = me?.score ?? 0
+              return score > 0
+                ? `Bilge Arena'da "${room.title}" oyununu bitirdim, ${score} puan topladım!`
+                : `Bilge Arena'da "${room.title}" oyununu oynadım!`
+            })()}
+          />
+        </div>
+      )}
+
+      <div className="mt-3 flex justify-center gap-2">
         <Link
           href="/oda"
           className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium hover:bg-[var(--card)]"
