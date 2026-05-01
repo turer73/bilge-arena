@@ -137,7 +137,10 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
         const ogParams = new URLSearchParams({ og_title: room.title })
         if (score > 0) ogParams.set('og_score', String(score))
         if (room.category) ogParams.set('og_category', room.category)
-        const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/oda/${room.code}?${ogParams.toString()}`
+        // Codex P1 fix (T8 PR3 follow-up): /p/[code] public share route
+        // (auth YOK, sosyal medya crawler dostu). /oda/[code] auth-gated
+        // crawler /giris'e redirect olurdu.
+        const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/p/${room.code}?${ogParams.toString()}`
         const shareText =
           score > 0
             ? `Bilge Arena'da "${room.title}" oyununu bitirdim, ${score} puan topladım!`
