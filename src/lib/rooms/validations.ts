@@ -61,6 +61,13 @@ export const createRoomSchema = z.object({
     .max(60)
     .default(20),
   mode: z.enum(['sync', 'async']).default('sync'),
+  // Sprint 2A Task 1: 0=manuel mode, 1-30=auto-advance saniye sayisi
+  auto_advance_seconds: z
+    .number()
+    .int()
+    .min(0, 'Otomatik geçiş süresi 0-30 arasında olmalı')
+    .max(30, 'Otomatik geçiş süresi en fazla 30 saniye olabilir')
+    .default(5),
 })
 
 export type CreateRoomBody = z.infer<typeof createRoomSchema>

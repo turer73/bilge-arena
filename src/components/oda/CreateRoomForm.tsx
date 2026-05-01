@@ -112,6 +112,15 @@ export function CreateRoomForm() {
         error={state.fieldErrors?.per_question_seconds?.[0]}
       />
 
+      <NumField
+        label="Otomatik Geçiş Süresi (0-30 sn, 0 = manuel)"
+        name="auto_advance_seconds"
+        min={0}
+        max={30}
+        defaultValue={5}
+        error={state.fieldErrors?.auto_advance_seconds?.[0]}
+      />
+
       <Field label="Mod" name="mode" error={state.fieldErrors?.mode?.[0]}>
         <select
           id="field-mode"

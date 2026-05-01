@@ -50,6 +50,8 @@ export interface Room {
   mode: RoomMode
   state: RoomState
   current_round_index: number // 0=henuz baslamadi, 1..N = aktif round
+  // Sprint 2A Task 1: 0=manuel, 1-30=auto-advance saniye (default 5)
+  auto_advance_seconds: number
   created_at: string // ISO 8601
   updated_at: string
   started_at: string | null
@@ -168,6 +170,7 @@ export interface CreateRoomInput {
   p_max_players?: number // default 8
   p_per_question_seconds?: number // default 20
   p_mode?: RoomMode // default 'sync'
+  p_auto_advance_seconds?: number // default 5 (Sprint 2A Task 1)
 }
 
 export interface CreateRoomResponse {

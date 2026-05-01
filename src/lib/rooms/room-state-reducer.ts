@@ -50,6 +50,8 @@ export type Room = {
   question_count: number
   max_players: number
   per_question_seconds: number
+  /** Sprint 2A Task 1: 0=manuel, 1-30=auto-advance saniye (default 5) */
+  auto_advance_seconds?: number
   created_at: string
   started_at?: string | null
   ended_at?: string | null
