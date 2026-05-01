@@ -6,6 +6,7 @@ import { RoomCard } from '@/components/oda/RoomCard'
 import { EmptyState } from '@/components/oda/EmptyState'
 import { TabNav } from '@/components/oda/TabNav'
 import { PublicRoomList } from '@/components/oda/PublicRoomList'
+import { QuickPlayPanel } from '@/components/oda/QuickPlayPanel'
 
 /**
  * Bilge Arena Oda: /oda 2-sekmeli liste
@@ -75,14 +76,19 @@ export default async function Page({
           rooms={publicRooms}
           selectedCategory={params.cat ?? ''}
         />
-      ) : myRooms.length === 0 ? (
-        <EmptyState />
       ) : (
-        <div className="space-y-3">
-          {myRooms.map((room) => (
-            <RoomCard key={room.id} room={room} />
-          ))}
-        </div>
+        <>
+          <QuickPlayPanel />
+          {myRooms.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="space-y-3">
+              {myRooms.map((room) => (
+                <RoomCard key={room.id} room={room} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </>
   )
