@@ -175,3 +175,18 @@ export const revealRoundActionSchema = z.object({
 
 export type AdvanceRoundActionBody = z.infer<typeof advanceRoundActionSchema>
 export type RevealRoundActionBody = z.infer<typeof revealRoundActionSchema>
+
+// =============================================================================
+// refreshLobbyPreviewAction — Sprint 2A Task 2
+// =============================================================================
+export const refreshLobbyPreviewActionSchema = z.object({
+  category: z
+    .string()
+    .trim()
+    .min(1, 'Kategori bos olamaz')
+    .max(30, 'Kategori cok uzun'),
+})
+
+export type RefreshLobbyPreviewActionBody = z.infer<
+  typeof refreshLobbyPreviewActionSchema
+>

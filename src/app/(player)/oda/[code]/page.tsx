@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { fetchRoomByCode, fetchRoomState } from '@/lib/rooms/server-fetch'
+import {
+  fetchRoomByCode,
+  fetchRoomState,
+  fetchLobbyPreviewQuestion,
+} from '@/lib/rooms/server-fetch'
 import { LobbyContainer } from '@/components/oda/LobbyContainer'
 
 /**
@@ -50,6 +54,15 @@ export default async function Page({
     isStale: false,
   }
 
+  // Sprint 2A Task 2: Lobby preview question (sadece lobby state'inde gosterilir)
+  const initialPreviewQuestion =
+    partial.room.state === 'lobby'
+      ? await fetchLobbyPreviewQuestion(
+          session.access_token,
+          partial.room.category,
+        )
+      : null
+
   return (
     <>
       <header className="mb-4">
@@ -64,6 +77,7 @@ export default async function Page({
         roomId={room.id}
         userId={user.id}
         initialState={initialState}
+        initialPreviewQuestion={initialPreviewQuestion}
       />
     </>
   )

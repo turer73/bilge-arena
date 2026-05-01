@@ -72,6 +72,50 @@ export type RoomDetail = {
 }
 
 // =============================================================================
+// LobbyPreviewQuestion (Sprint 2A Task 2)
+// =============================================================================
+/**
+ * Anti-cheat sift: sadece question + options. correct_answer asla client'a
+ * gonderilmez (RPC SECURITY INVOKER + JSONB build sift).
+ */
+export type LobbyPreviewQuestion = {
+  question: string
+  options: string[]
+}
+
+/**
+ * Lobby beklerken kategori-uygun rastgele 1 soru ceker. RPC anti-cheat sift
+ * (correct_answer haric). Eslesme yoksa null.
+ *
+ * Anti-cheat tradeoff (plan-deviation #62): gercek questions havuzundan, MVP
+ * kabul. Risk: preview sorusu sonradan oyunda cikabilir (~%1-5).
+ */
+export async function fetchLobbyPreviewQuestion(
+  jwt: string,
+  category: string,
+): Promise<LobbyPreviewQuestion | null> {
+  try {
+    const res = await fetch(`${RPC_URL}/rpc/get_lobby_preview_question`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_category: category }),
+      cache: 'no-store',
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as LobbyPreviewQuestion | null
+    if (!data || typeof data.question !== 'string' || !Array.isArray(data.options)) {
+      return null
+    }
+    return { question: data.question, options: data.options }
+  } catch {
+    return null
+  }
+}
+
+// =============================================================================
 // fetchMyRooms — /oda list page veri kaynagi
 // =============================================================================
 

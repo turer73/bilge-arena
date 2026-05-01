@@ -11,7 +11,11 @@
  */
 
 import { describe, test, expect, vi, beforeEach, afterAll } from 'vitest'
-import { fetchMyRooms, fetchRoomByCode } from '../server-fetch'
+import {
+  fetchMyRooms,
+  fetchRoomByCode,
+  fetchLobbyPreviewQuestion,
+} from '../server-fetch'
 
 const ORIGINAL_FETCH = globalThis.fetch
 const mockFetch = vi.fn()
@@ -120,5 +124,66 @@ describe('fetchRoomByCode', () => {
     await fetchRoomByCode('jwt', 'BIL/GE')
     const url = String(mockFetch.mock.calls[0][0])
     expect(url).toMatch(/code=eq\.BIL%2FGE/)
+  })
+})
+
+describe('fetchLobbyPreviewQuestion (Sprint 2A Task 2)', () => {
+  test('11) ok JSONB {question, options} → tip-safe object', async () => {
+    mockFetch.mockReturnValue(
+      ok({ question: 'Türkiye başkenti?', options: ['Ankara', 'İstanbul'] }),
+    )
+    const r = await fetchLobbyPreviewQuestion('jwt', 'cografya')
+    expect(r).toEqual({
+      question: 'Türkiye başkenti?',
+      options: ['Ankara', 'İstanbul'],
+    })
+  })
+
+  test('12) Anti-cheat: response answer alani client tarafa gelmez (sift)', async () => {
+    // RPC zaten answer dondurmez, yine de defense-in-depth: server-fetch
+    // typecheck question + options istisnasi geri donderir, answer akmaz
+    mockFetch.mockReturnValue(
+      ok({
+        question: 'Soru?',
+        options: ['a', 'b'],
+        // Hipotetik: server-side bug answer ekledi; cli sift atmali
+        answer: 'a',
+      }),
+    )
+    const r = await fetchLobbyPreviewQuestion('jwt', 'tarih')
+    expect(r).not.toHaveProperty('answer')
+    expect(r).toEqual({ question: 'Soru?', options: ['a', 'b'] })
+  })
+
+  test('13) RPC NULL doner (kategori bos) → null', async () => {
+    mockFetch.mockReturnValue(ok(null))
+    expect(await fetchLobbyPreviewQuestion('jwt', 'xx')).toBeNull()
+  })
+
+  test('14) malformed response (options array degil) → null', async () => {
+    mockFetch.mockReturnValue(ok({ question: 'X', options: 'not-array' }))
+    expect(await fetchLobbyPreviewQuestion('jwt', 'cat')).toBeNull()
+  })
+
+  test('15) network reject → null sessiz', async () => {
+    mockFetch.mockRejectedValue(new Error('ECONNREFUSED'))
+    expect(await fetchLobbyPreviewQuestion('jwt', 'cat')).toBeNull()
+  })
+
+  test('16) POST + Bearer JWT + Content-Type JSON', async () => {
+    mockFetch.mockReturnValue(ok({ question: 'X', options: [] }))
+    await fetchLobbyPreviewQuestion('jwt-token', 'matematik')
+    const callArgs = mockFetch.mock.calls[0]
+    const url = String(callArgs[0])
+    const opts = callArgs[1] as RequestInit
+    expect(url).toMatch(/\/rpc\/get_lobby_preview_question$/)
+    expect(opts.method).toBe('POST')
+    expect((opts.headers as Record<string, string>).Authorization).toBe(
+      'Bearer jwt-token',
+    )
+    expect((opts.headers as Record<string, string>)['Content-Type']).toBe(
+      'application/json',
+    )
+    expect(opts.body).toBe(JSON.stringify({ p_category: 'matematik' }))
   })
 })
