@@ -17,6 +17,7 @@
 
 import { useRoomChannel } from '@/lib/rooms/use-room-channel'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
+import type { LobbyPreviewQuestion as PreviewQ } from '@/lib/rooms/server-fetch'
 import { LobbyHeader } from './LobbyHeader'
 import { RoomInfoPanel } from './RoomInfoPanel'
 import { MemberRoster } from './MemberRoster'
@@ -27,17 +28,21 @@ import { GameCompleted } from './GameCompleted'
 import { GameView } from './GameView'
 import { SonucView } from './SonucView'
 import { HostGameActions } from './HostGameActions'
+import { LobbyPreviewQuestion } from './LobbyPreviewQuestion'
 
 interface LobbyContainerProps {
   roomId: string
   userId: string
   initialState: RoomState
+  /** Sprint 2A Task 2: SSR initial preview soru (lobby state'inde) */
+  initialPreviewQuestion?: PreviewQ | null
 }
 
 export function LobbyContainer({
   roomId,
   userId,
   initialState,
+  initialPreviewQuestion = null,
 }: LobbyContainerProps) {
   const { state, isOnline, broadcastTyping } = useRoomChannel(
     roomId,
@@ -105,6 +110,11 @@ export function LobbyContainer({
         isHost={isHost}
         roomId={state.room.id}
         roomState={state.room.state}
+      />
+      {/* Sprint 2A Task 2: Lobby preview soru widget'i — sadece lobby state'i */}
+      <LobbyPreviewQuestion
+        initialQuestion={initialPreviewQuestion}
+        category={state.room.category}
       />
     </div>
   )
