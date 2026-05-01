@@ -68,7 +68,15 @@ export const createRoomSchema = z.object({
     .min(0, 'Otomatik geçiş süresi 0-30 arasında olmalı')
     .max(30, 'Otomatik geçiş süresi en fazla 30 saniye olabilir')
     .default(5),
-})
+  // Sprint 2A Task 3: public oda discovery (host opt-in)
+  is_public: z.boolean().default(false),
+}).refine(
+  (data) => !data.is_public || data.max_players <= 6,
+  {
+    message: 'Herkese açık odalarda en fazla 6 oyunculu olabilir',
+    path: ['max_players'],
+  },
+)
 
 export type CreateRoomBody = z.infer<typeof createRoomSchema>
 

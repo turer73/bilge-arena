@@ -195,6 +195,41 @@ describe('createRoomAction', () => {
     )
   })
 
+  test('8d) Sprint 2A Task 3: is_public checkbox checked -> true', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: { id: 'r', code: 'X' } })
+    const fd = validForm()
+    fd.set('max_players', '6') // is_public=true ile uyumlu (refine)
+    fd.set('is_public', 'on')
+    await createRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith(
+      'jwt',
+      'create_room',
+      expect.objectContaining({ is_public: true }),
+    )
+  })
+
+  test('8e) is_public checkbox unchecked (formData yok) -> false default', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: { id: 'r', code: 'X' } })
+    const fd = validForm() // is_public set edilmedi
+    await createRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith(
+      'jwt',
+      'create_room',
+      expect.objectContaining({ is_public: false }),
+    )
+  })
+
+  test('8f) is_public=true + max_players=10 -> Zod refine fail (fieldErrors)', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = validForm()
+    fd.set('max_players', '10')
+    fd.set('is_public', 'on')
+    const r = await createRoomAction({}, fd)
+    expect(r.fieldErrors?.max_players?.length).toBeGreaterThan(0)
+  })
+
   test('9) mode "invalid" → fieldErrors.mode', async () => {
     mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
     const fd = validForm()

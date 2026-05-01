@@ -15,6 +15,7 @@ import {
   fetchMyRooms,
   fetchRoomByCode,
   fetchLobbyPreviewQuestion,
+  fetchPublicRooms,
 } from '../server-fetch'
 
 const ORIGINAL_FETCH = globalThis.fetch
@@ -185,5 +186,74 @@ describe('fetchLobbyPreviewQuestion (Sprint 2A Task 2)', () => {
       'application/json',
     )
     expect(opts.body).toBe(JSON.stringify({ p_category: 'matematik' }))
+  })
+})
+
+describe('fetchPublicRooms (Sprint 2A Task 3)', () => {
+  test('17) authenticated + 2 public rooms -> array', async () => {
+    mockFetch.mockReturnValue(
+      ok([
+        {
+          id: 'a',
+          code: 'PUBA12',
+          title: 'Halka Acik Oda',
+          category: 'matematik',
+          difficulty: 2,
+          question_count: 10,
+          max_players: 6,
+          member_count: 2,
+          created_at: '2026-04-30',
+        },
+      ]),
+    )
+    const rooms = await fetchPublicRooms('jwt')
+    expect(rooms).toHaveLength(1)
+    expect(rooms[0].code).toBe('PUBA12')
+    // Codex P1 v2: member_count direkt kolon (denormalized)
+    expect(rooms[0].member_count).toBe(2)
+  })
+
+  test('18) anonim user (jwt=null) -> Authorization header gonderilmez', async () => {
+    mockFetch.mockReturnValue(ok([]))
+    await fetchPublicRooms(null)
+    const callArgs = mockFetch.mock.calls[0]
+    const opts = callArgs[1] as RequestInit
+    const headers = opts.headers as Record<string, string>
+    expect(headers.Authorization).toBeUndefined()
+  })
+
+  test('19) URL params: is_public=eq.true + state=eq.lobby + order desc + limit 20', async () => {
+    mockFetch.mockReturnValue(ok([]))
+    await fetchPublicRooms('jwt')
+    const url = String(mockFetch.mock.calls[0][0])
+    expect(url).toMatch(/is_public=eq\.true/)
+    expect(url).toMatch(/state=eq\.lobby/)
+    expect(url).toMatch(/order=created_at\.desc/)
+    expect(url).toMatch(/limit=20/)
+    expect(url).toMatch(/select=id%2Ccode%2Ctitle/)
+    // Codex P1 v2: member_count direkt kolon (room_members(count) embed degil)
+    expect(url).toMatch(/member_count/)
+    expect(url).not.toMatch(/room_members\(count\)/)
+  })
+
+  test('20) kategori filter: cat=matematik -> URL category=eq.matematik', async () => {
+    mockFetch.mockReturnValue(ok([]))
+    await fetchPublicRooms('jwt', { category: 'matematik' })
+    const url = String(mockFetch.mock.calls[0][0])
+    expect(url).toMatch(/category=eq\.matematik/)
+  })
+
+  test('21) network reject -> [] sessiz', async () => {
+    mockFetch.mockRejectedValue(new Error('ECONNREFUSED'))
+    expect(await fetchPublicRooms('jwt')).toEqual([])
+  })
+
+  test('22) RLS empty (anon yetki yok) -> []', async () => {
+    mockFetch.mockReturnValue({
+      ok: false,
+      status: 403,
+      json: () => Promise.resolve([]),
+    })
+    expect(await fetchPublicRooms(null)).toEqual([])
   })
 })

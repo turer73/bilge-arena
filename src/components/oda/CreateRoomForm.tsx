@@ -121,6 +121,24 @@ export function CreateRoomForm() {
         error={state.fieldErrors?.auto_advance_seconds?.[0]}
       />
 
+      {/* Sprint 2A Task 3: Public oda checkbox */}
+      <div>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            id="field-is-public"
+            name="is_public"
+            className="mt-0.5"
+          />
+          <span>
+            <span className="font-semibold">Herkese Açık</span>
+            <span className="ml-1 text-xs text-[var(--text-sub)]">
+              (Aktif Odalar listesinde herkes görür, max 6 oyuncu)
+            </span>
+          </span>
+        </label>
+      </div>
+
       <Field label="Mod" name="mode" error={state.fieldErrors?.mode?.[0]}>
         <select
           id="field-mode"

@@ -111,10 +111,29 @@ describe('CreateRoomForm', () => {
       'max_players',
       'per_question_seconds',
       'auto_advance_seconds',
+      'is_public',
       'mode',
     ]
     for (const n of names) {
       expect(container.querySelector(`[name="${n}"]`)).not.toBeNull()
     }
+  })
+
+  test('7) Sprint 2A Task 3: is_public checkbox unchecked default', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    const { container } = render(<CreateRoomForm />)
+    const checkbox = container.querySelector(
+      'input[name="is_public"]',
+    ) as HTMLInputElement
+    expect(checkbox).not.toBeNull()
+    expect(checkbox.type).toBe('checkbox')
+    expect(checkbox.checked).toBe(false)
+  })
+
+  test('8) Sprint 2A Task 3: "Herkese Açık" label + uyari mesaji', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(<CreateRoomForm />)
+    expect(screen.getByText(/Herkese Açık/i)).toBeInTheDocument()
+    expect(screen.getByText(/max 6 oyuncu/i)).toBeInTheDocument()
   })
 })

@@ -116,6 +116,10 @@ export async function createRoomAction(
   // istem disi enable olur. Bos/null durumunda undefined gonder, Zod .default(5)
   // devreye girsin.
   const autoAdvanceRaw = formData.get('auto_advance_seconds')?.toString() ?? ''
+  // is_public: <input type="checkbox" name="is_public" /> checked iken
+  // FormData'da deger 'on' (HTML standardi); unchecked ise yok. Boolean
+  // donusumu acik: deger varligi -> true, yoksa false (Zod .default(false)
+  // de yedek emniyet).
   const raw = {
     title: formData.get('title')?.toString() ?? '',
     category: formData.get('category')?.toString() ?? '',
@@ -126,6 +130,7 @@ export async function createRoomAction(
     mode: formData.get('mode')?.toString() ?? 'sync',
     auto_advance_seconds:
       autoAdvanceRaw.trim() === '' ? undefined : Number(autoAdvanceRaw),
+    is_public: formData.get('is_public') !== null,
   }
   const parsed = createRoomSchema.safeParse(raw)
   if (!parsed.success) {

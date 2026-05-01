@@ -25,6 +25,8 @@ describe('createRoomSchema', () => {
       expect(r.data.mode).toBe('sync')
       // Sprint 2A Task 1: auto_advance_seconds default 5
       expect(r.data.auto_advance_seconds).toBe(5)
+      // Sprint 2A Task 3: is_public default false
+      expect(r.data.is_public).toBe(false)
     }
   })
 
@@ -64,6 +66,53 @@ describe('createRoomSchema', () => {
       auto_advance_seconds: 31,
     })
     expect(r.success).toBe(false)
+  })
+
+  it('Sprint 2A Task 3: accepts is_public=true with max_players=6 (cap)', () => {
+    const r = createRoomSchema.safeParse({
+      title: 'Acik Oda',
+      category: 'sayilar',
+      is_public: true,
+      max_players: 6,
+    })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.is_public).toBe(true)
+      expect(r.data.max_players).toBe(6)
+    }
+  })
+
+  it('Sprint 2A Task 3: rejects is_public=true with max_players=10 (refine)', () => {
+    const r = createRoomSchema.safeParse({
+      title: 'Acik Oda',
+      category: 'sayilar',
+      is_public: true,
+      max_players: 10,
+    })
+    expect(r.success).toBe(false)
+    if (!r.success) {
+      const fieldErr = r.error.flatten().fieldErrors
+      expect(fieldErr.max_players).toBeDefined()
+    }
+  })
+
+  it('Sprint 2A Task 3: rejects is_public=true with default max_players=8 (refine)', () => {
+    const r = createRoomSchema.safeParse({
+      title: 'Acik Oda',
+      category: 'sayilar',
+      is_public: true,
+    })
+    expect(r.success).toBe(false)
+  })
+
+  it('Sprint 2A Task 3: is_public=false ile max_players=20 hala kabul', () => {
+    const r = createRoomSchema.safeParse({
+      title: 'Buyuk Oda',
+      category: 'sayilar',
+      is_public: false,
+      max_players: 20,
+    })
+    expect(r.success).toBe(true)
   })
 
   it('rejects title <3 chars', () => {

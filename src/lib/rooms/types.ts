@@ -52,6 +52,8 @@ export interface Room {
   current_round_index: number // 0=henuz baslamadi, 1..N = aktif round
   // Sprint 2A Task 1: 0=manuel, 1-30=auto-advance saniye (default 5)
   auto_advance_seconds: number
+  // Sprint 2A Task 3: public oda discovery (host opt-in)
+  is_public: boolean
   created_at: string // ISO 8601
   updated_at: string
   started_at: string | null
@@ -171,6 +173,7 @@ export interface CreateRoomInput {
   p_per_question_seconds?: number // default 20
   p_mode?: RoomMode // default 'sync'
   p_auto_advance_seconds?: number // default 5 (Sprint 2A Task 1)
+  p_is_public?: boolean // default false (Sprint 2A Task 3)
 }
 
 export interface CreateRoomResponse {
