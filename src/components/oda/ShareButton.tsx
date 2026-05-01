@@ -8,7 +8,9 @@
  *   - Clipboard (modern Navigator.clipboard.writeText)
  *   - WhatsApp (wa.me/?text= deep link)
  *   - Telegram (t.me/share/url?url=&text=)
- *   - X (x.com/intent/post — yeni domain, twitter.com hala redirect)
+ *   - X / Twitter (twitter.com/intent/tweet — X documented web-intent
+ *     endpoint; x.com/intent/post documented DEGIL ve prefilled composer
+ *     calismayabilir — Codex P2 PR #65 follow-up fix)
  *
  * Native Web Share API fallback (mobile cihazlarda sistem paylaşım sheet'i).
  *
@@ -106,8 +108,11 @@ export function ShareButton({ url, text }: ShareButtonProps) {
   const shareLinks = {
     whatsapp: `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
     telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
-    // Codex fix #9: x.com (yeni domain). twitter.com hala redirect ama freshness.
-    twitter: `https://x.com/intent/post?text=${encodedText}&url=${encodedUrl}`,
+    // Codex P2 PR #65 follow-up: twitter.com/intent/tweet X'in documented
+    // web-intent endpoint'i. x.com/intent/post documented DEGIL — prefilled
+    // composer calismaz. X domain'e gectikten sonra legacy intent URL'leri
+    // hala twitter.com altinda yasiyor.
+    twitter: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
   }
 
   return (
