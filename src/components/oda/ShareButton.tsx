@@ -2,20 +2,28 @@
 
 /**
  * Bilge Arena Oda: <ShareButton> sosyal paylaşım butonu
- * Sprint 2C Task 8 (Replay & Share)
+ * Sprint 2C Task 8 (Replay & Share) + Codex review fix
  *
  * 4 paylaşım kanalı:
  *   - Clipboard (modern Navigator.clipboard.writeText)
  *   - WhatsApp (wa.me/?text= deep link)
  *   - Telegram (t.me/share/url?url=&text=)
- *   - X / Twitter (twitter.com/intent/tweet?text=&url=)
+ *   - X (x.com/intent/post — yeni domain, twitter.com hala redirect)
  *
  * Native Web Share API fallback (mobile cihazlarda sistem paylaşım sheet'i).
  *
  * Beklenen etki: viral K-faktor 0.05 -> 0.15 (Sprint 2 plan Task 8).
+ *
+ * Codex fix paterni:
+ *   - aria-haspopup, aria-expanded, role=menu (a11y)
+ *   - Esc tuşu ile menü kapanır
+ *   - Outside-click ile kapanma (useRef + document listener)
+ *   - Item click sonrası menu kapanır (clipboard "Kopyalandı" feedback ile)
+ *   - Clipboard fail için error state (sessiz fail değil)
+ *   - navigator.share native cast kaldırıldı (lib.dom.d.ts'te zaten var)
  */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ShareButtonProps {
   /** Paylaşılan oda URL (kanonik) */
@@ -26,32 +34,71 @@ interface ShareButtonProps {
 
 export function ShareButton({ url, text }: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Outside-click ile menüyü kapat
+  useEffect(() => {
+    if (!open) return
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [open])
+
+  // Esc tuşu ile menüyü kapat
+  useEffect(() => {
+    if (!open) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [open])
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(`${text}\n${url}`)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setError(null)
+      setTimeout(() => {
+        setCopied(false)
+        setOpen(false)
+      }, 1500)
     } catch {
-      // Clipboard izni yoksa fallback yok, sessiz fail
+      // Clipboard izni yoksa kullanıcıya feedback ver (Codex fix #3)
+      setError('Kopyalanamadı — tarayıcı izni gerekli')
+      setCopied(false)
     }
   }
 
   const handleNativeShare = async () => {
-    if (typeof navigator !== 'undefined' && 'share' in navigator) {
+    // Native Web Share API tarayıcı tarafindan destekleniyor mu (Codex fix #8)
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
-        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: 'Bilge Arena',
-          text,
-          url,
-        })
+        await navigator.share({ title: 'Bilge Arena', text, url })
+        return
       } catch {
-        // Kullanici iptal etti, sessiz
+        // Kullanıcı iptal etti — menüye düş (Codex fix #2 native iptal sonrasi menu)
+        setOpen(true)
+        return
       }
-    } else {
-      setOpen(!open)
     }
+    setOpen((v) => !v)
+  }
+
+  const handleItemClick = () => {
+    // Item click sonrasi menu kapanir (Codex fix #2)
+    setOpen(false)
   }
 
   const encodedUrl = encodeURIComponent(url)
@@ -59,14 +106,17 @@ export function ShareButton({ url, text }: ShareButtonProps) {
   const shareLinks = {
     whatsapp: `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
     telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
-    twitter: `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
+    // Codex fix #9: x.com (yeni domain). twitter.com hala redirect ama freshness.
+    twitter: `https://x.com/intent/post?text=${encodedText}&url=${encodedUrl}`,
   }
 
   return (
-    <div className="relative inline-block" data-testid="share-button">
+    <div className="relative inline-block" data-testid="share-button" ref={containerRef}>
       <button
         type="button"
         onClick={handleNativeShare}
+        aria-haspopup="menu"
+        aria-expanded={open}
         className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium hover:bg-[var(--card)]"
       >
         🔗 Paylaş
@@ -87,11 +137,20 @@ export function ShareButton({ url, text }: ShareButtonProps) {
           >
             {copied ? '✓ Kopyalandı' : '📋 Kopyala'}
           </button>
+          {error && (
+            <p
+              role="alert"
+              className="px-3 py-1 text-[11px] text-red-700 dark:text-red-300"
+            >
+              {error}
+            </p>
+          )}
           <a
             role="menuitem"
             href={shareLinks.whatsapp}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={handleItemClick}
             className="rounded px-3 py-2 text-left text-sm hover:bg-[var(--surface)]"
             data-testid="share-whatsapp"
           >
@@ -102,6 +161,7 @@ export function ShareButton({ url, text }: ShareButtonProps) {
             href={shareLinks.telegram}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={handleItemClick}
             className="rounded px-3 py-2 text-left text-sm hover:bg-[var(--surface)]"
             data-testid="share-telegram"
           >
@@ -112,10 +172,11 @@ export function ShareButton({ url, text }: ShareButtonProps) {
             href={shareLinks.twitter}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={handleItemClick}
             className="rounded px-3 py-2 text-left text-sm hover:bg-[var(--surface)]"
             data-testid="share-twitter"
           >
-            🐦 X / Twitter
+            🐦 X
           </a>
         </div>
       )}
