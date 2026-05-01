@@ -127,9 +127,20 @@ export async function fetchPublicRooms(
       headers,
       cache: 'no-store',
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      // Codex P3 #3 fix: silent failure observability — production'da Sentry
+      // gormeli (network/RLS hatasi vs. RLS empty ayriliyor).
+      console.error(
+        '[fetchPublicRooms] non-OK response',
+        res.status,
+        res.statusText,
+      )
+      return []
+    }
     return (await res.json()) as PublicRoomCard[]
-  } catch {
+  } catch (err) {
+    // Codex P3 #3 fix: network reject observability
+    console.error('[fetchPublicRooms] fetch failed', err)
     return []
   }
 }

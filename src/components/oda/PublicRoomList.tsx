@@ -2,31 +2,23 @@
 
 /**
  * Bilge Arena Oda: <PublicRoomList> "Aktif Odalar" tab listesi
- * Sprint 2A Task 3
+ * Sprint 2A Task 3 + Codex review fix (PR #61 follow-up)
  *
  * RLS policy rooms_select_public_lobby (TO anon, authenticated) ile fetch.
  * Anonim user da görebilir (PostgREST PGRST_DB_ANON_ROLE=anon).
  *
  * Kategori filter URL state ile sync — refresh sonrasi korunur, deeplinkable.
+ *
+ * Codex P3 #1 fix: r.category raw slug yerine slugToLabel ile insan-okunabilir
+ * ('genel-kultur' → 'Genel Kültür').
+ * Codex P3 #2 fix: CATEGORIES tek kaynak src/lib/rooms/categories.ts
+ * (PublicRoomList + QuickPlayPanel + CreateRoomForm refactor hedefi).
  */
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { PublicRoomCard } from '@/lib/rooms/server-fetch'
-
-const CATEGORIES = [
-  { value: '', label: 'Tüm Kategoriler' },
-  { value: 'genel-kultur', label: 'Genel Kültür' },
-  { value: 'tarih', label: 'Tarih' },
-  { value: 'cografya', label: 'Coğrafya' },
-  { value: 'edebiyat', label: 'Edebiyat' },
-  { value: 'matematik', label: 'Matematik' },
-  { value: 'fen', label: 'Fen Bilimleri' },
-  { value: 'ingilizce', label: 'İngilizce' },
-  { value: 'vatandaslik', label: 'Vatandaşlık' },
-  { value: 'futbol', label: 'Futbol' },
-  { value: 'sinema', label: 'Sinema' },
-]
+import { ROOM_CATEGORIES, slugToLabel } from '@/lib/rooms/categories'
 
 interface PublicRoomListProps {
   rooms: PublicRoomCard[]
@@ -60,9 +52,10 @@ export function PublicRoomList({
           onChange={handleCategoryChange}
           className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
         >
-          {CATEGORIES.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
+          <option value="">Tüm Kategoriler</option>
+          {ROOM_CATEGORIES.map((slug) => (
+            <option key={slug} value={slug}>
+              {slugToLabel(slug)}
             </option>
           ))}
         </select>
@@ -98,7 +91,8 @@ export function PublicRoomList({
                       {r.title}
                     </h3>
                     <p className="mt-1 text-xs text-[var(--text-sub)]">
-                      {r.category} · Zorluk {r.difficulty}/5 ·{' '}
+                      {/* Codex P3 #1 fix: slugToLabel('genel-kultur')='Genel Kültür' */}
+                      {slugToLabel(r.category)} · Zorluk {r.difficulty}/5 ·{' '}
                       {r.question_count} soru
                     </p>
                   </div>

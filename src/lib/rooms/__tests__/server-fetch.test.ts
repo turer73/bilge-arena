@@ -243,17 +243,32 @@ describe('fetchPublicRooms (Sprint 2A Task 3)', () => {
     expect(url).toMatch(/category=eq\.matematik/)
   })
 
-  test('21) network reject -> [] sessiz', async () => {
+  test('21) network reject -> [] (Codex P3 #3: console.error log)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockFetch.mockRejectedValue(new Error('ECONNREFUSED'))
     expect(await fetchPublicRooms('jwt')).toEqual([])
+    // Silent failure DEGIL — observability icin console.error log
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[fetchPublicRooms] fetch failed',
+      expect.any(Error),
+    )
+    errorSpy.mockRestore()
   })
 
-  test('22) RLS empty (anon yetki yok) -> []', async () => {
+  test('22) non-OK 403 -> [] + console.error (Codex P3 #3 observability)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockFetch.mockReturnValue({
       ok: false,
       status: 403,
+      statusText: 'Forbidden',
       json: () => Promise.resolve([]),
     })
     expect(await fetchPublicRooms(null)).toEqual([])
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[fetchPublicRooms] non-OK response',
+      403,
+      'Forbidden',
+    )
+    errorSpy.mockRestore()
   })
 })

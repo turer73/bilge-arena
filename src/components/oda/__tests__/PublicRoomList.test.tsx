@@ -94,4 +94,29 @@ describe('PublicRoomList', () => {
     const link = screen.getByLabelText('Genel Kültür Düellosu odasına katıl')
     expect(link.getAttribute('href')).toBe('/oda/PUBA12')
   })
+
+  test('7) Codex P3 #1: kategori slug→label gosterimi (raw slug DEGIL)', () => {
+    render(<PublicRoomList rooms={sampleRooms} />)
+    // 'genel-kultur' yerine 'Genel Kültür' gorunmeli
+    expect(screen.queryByText(/genel-kultur · Zorluk/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/Genel Kültür · Zorluk 3\/5 · 10 soru/i)).toBeInTheDocument()
+    expect(screen.getByText(/Matematik · Zorluk 4\/5 · 15 soru/i)).toBeInTheDocument()
+  })
+
+  test('8) Codex P3 #2: kategori secenekleri ROOM_CATEGORIES helper ile uyumlu', () => {
+    const { container } = render(<PublicRoomList rooms={sampleRooms} />)
+    const options = container.querySelectorAll<HTMLOptionElement>(
+      'select[name="category"] option',
+    )
+    // 1 boş + 10 kategori = 11 option
+    expect(options).toHaveLength(11)
+    // Ilk option boş ('Tüm Kategoriler')
+    expect(options[0].value).toBe('')
+    expect(options[0].textContent).toMatch(/Tüm Kategoriler/i)
+    // 2-11. options: ROOM_CATEGORIES + slugToLabel (dropdown'da insan-okunabilir)
+    expect(options[1].value).toBe('genel-kultur')
+    expect(options[1].textContent).toBe('Genel Kültür')
+    expect(options[5].value).toBe('matematik')
+    expect(options[5].textContent).toBe('Matematik')
+  })
 })
