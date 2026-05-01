@@ -109,6 +109,10 @@ export async function createRoomAction(
   if (!auth.ok) return { error: auth.error }
 
   // FormData → object → Zod (defaults schemada tanimli)
+  // Codex P2: numeric field bos string ise Number('') === 0 -> manuel mode
+  // istem disi enable olur. Bos/null durumunda undefined gonder, Zod .default(5)
+  // devreye girsin.
+  const autoAdvanceRaw = formData.get('auto_advance_seconds')?.toString() ?? ''
   const raw = {
     title: formData.get('title')?.toString() ?? '',
     category: formData.get('category')?.toString() ?? '',
@@ -117,7 +121,8 @@ export async function createRoomAction(
     max_players: Number(formData.get('max_players') ?? 8),
     per_question_seconds: Number(formData.get('per_question_seconds') ?? 20),
     mode: formData.get('mode')?.toString() ?? 'sync',
-    auto_advance_seconds: Number(formData.get('auto_advance_seconds') ?? 5),
+    auto_advance_seconds:
+      autoAdvanceRaw.trim() === '' ? undefined : Number(autoAdvanceRaw),
   }
   const parsed = createRoomSchema.safeParse(raw)
   if (!parsed.success) {
