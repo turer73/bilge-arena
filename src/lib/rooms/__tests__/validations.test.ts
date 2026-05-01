@@ -118,8 +118,8 @@ describe('createRoomSchema', () => {
   })
 })
 
-describe('quickPlayRoomActionSchema (Sprint 2B Task 4)', () => {
-  it('1) accepts minimal valid input + defaults', () => {
+describe('quickPlayRoomActionSchema (Sprint 2B Task 4 + Codex P3 #5 fix)', () => {
+  it('1) accepts whitelist kategori + defaults', () => {
     const r = quickPlayRoomActionSchema.safeParse({ category: 'matematik' })
     expect(r.success).toBe(true)
     if (r.success) {
@@ -134,7 +134,30 @@ describe('quickPlayRoomActionSchema (Sprint 2B Task 4)', () => {
     expect(r.success).toBe(false)
   })
 
-  it('3) rejects difficulty out of 1-5', () => {
+  it('3) Codex P3 #5: rejects whitelist DISI kategori (kotu niyetli/eski client)', () => {
+    const r = quickPlayRoomActionSchema.safeParse({
+      category: 'matematik-eski',
+    })
+    expect(r.success).toBe(false)
+    if (!r.success) {
+      const fe = r.error.flatten().fieldErrors
+      expect(fe.category).toBeDefined()
+    }
+  })
+
+  it('4) Codex P3 #5: tum 10 whitelist kategori kabul edilir', () => {
+    const validCategories = [
+      'genel-kultur', 'tarih', 'cografya', 'edebiyat',
+      'matematik', 'fen', 'ingilizce', 'vatandaslik',
+      'futbol', 'sinema',
+    ]
+    for (const cat of validCategories) {
+      const r = quickPlayRoomActionSchema.safeParse({ category: cat })
+      expect(r.success).toBe(true)
+    }
+  })
+
+  it('5) rejects difficulty out of 1-5', () => {
     expect(
       quickPlayRoomActionSchema.safeParse({
         category: 'tarih',
@@ -149,7 +172,7 @@ describe('quickPlayRoomActionSchema (Sprint 2B Task 4)', () => {
     ).toBe(false)
   })
 
-  it('4) rejects question_count out of 5-30', () => {
+  it('6) rejects question_count out of 5-30', () => {
     expect(
       quickPlayRoomActionSchema.safeParse({
         category: 'tarih',
@@ -162,14 +185,6 @@ describe('quickPlayRoomActionSchema (Sprint 2B Task 4)', () => {
         question_count: 31,
       }).success,
     ).toBe(false)
-  })
-
-  it('5) trims whitespace on category', () => {
-    const r = quickPlayRoomActionSchema.safeParse({
-      category: '  matematik  ',
-    })
-    expect(r.success).toBe(true)
-    if (r.success) expect(r.data.category).toBe('matematik')
   })
 
   it('rejects title <3 chars', () => {
