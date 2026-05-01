@@ -215,3 +215,12 @@ export const refreshLobbyPreviewActionSchema = z.object({
 export type RefreshLobbyPreviewActionBody = z.infer<
   typeof refreshLobbyPreviewActionSchema
 >
+
+// =============================================================================
+// replayRoomAction — Sprint 2C Task 8 (Replay & Share)
+// =============================================================================
+export const replayRoomActionSchema = z.object({
+  source_room_id: z.string().uuid('Gecersiz oda kimligi'),
+})
+
+export type ReplayRoomActionBody = z.infer<typeof replayRoomActionSchema>

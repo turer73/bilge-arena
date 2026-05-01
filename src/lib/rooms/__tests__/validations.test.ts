@@ -11,6 +11,7 @@ import {
   cancelRoomSchema,
   kickMemberSchema,
   quickPlayRoomActionSchema,
+  replayRoomActionSchema,
   ROOM_CODE_REGEX,
 } from '../validations'
 
@@ -319,5 +320,27 @@ describe('ROOM_CODE_REGEX', () => {
     expect(ROOM_CODE_REGEX.test('AIAAAA')).toBe(false)
     expect(ROOM_CODE_REGEX.test('AOAAAA')).toBe(false)
     expect(ROOM_CODE_REGEX.test('A1AAAA')).toBe(false)
+  })
+})
+
+describe('replayRoomActionSchema (Sprint 2C Task 8)', () => {
+  // Zod v4 uuid() RFC 4122 strict — fixture nibble valid
+  const validUuid = '11111111-1111-4111-8111-111111111111'
+
+  it('1) accepts valid UUID', () => {
+    const r = replayRoomActionSchema.safeParse({ source_room_id: validUuid })
+    expect(r.success).toBe(true)
+  })
+
+  it('2) rejects non-UUID', () => {
+    expect(
+      replayRoomActionSchema.safeParse({ source_room_id: 'not-uuid' }).success,
+    ).toBe(false)
+  })
+
+  it('3) rejects empty string', () => {
+    expect(
+      replayRoomActionSchema.safeParse({ source_room_id: '' }).success,
+    ).toBe(false)
   })
 })
