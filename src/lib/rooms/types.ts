@@ -79,6 +79,9 @@ export interface RoomMember {
   is_active: boolean
   // Sprint 2B Task 4: bot rakipler (solo mode)
   is_bot: boolean
+  /** Sprint 2B Task 4 Codex P1 #80: bot icin "Bot 1/2/3", real user icin
+   *  NULL (Sprint 1 davranisi — UI/profiles fallback). */
+  display_name?: string | null
 }
 
 // =============================================================================

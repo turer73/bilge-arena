@@ -93,4 +93,31 @@ describe('QuickPlayPanel', () => {
     expect(screen.getByTestId('quick-play-panel')).toBeInTheDocument()
     expect(screen.getByText(/🤖 Hızlı Oyun/i)).toBeInTheDocument()
   })
+
+  test('8) Codex P3 #3: fieldErrors.category role=alert + aria-invalid', () => {
+    mockUseActionState.mockReturnValue([
+      { fieldErrors: { category: ['Geçersiz kategori'] } },
+      formAction,
+      false,
+    ])
+    render(<QuickPlayPanel />)
+    const alerts = screen.getAllByRole('alert')
+    expect(alerts.some((a) => a.textContent === 'Geçersiz kategori')).toBe(true)
+    const select = screen.getByLabelText(/Hızlı oyun kategorisi/i)
+    expect(select.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  test('9) Codex P3 #5: kategori secenekleri Zod whitelist ile birebir', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    const { container } = render(<QuickPlayPanel />)
+    const options = container.querySelectorAll<HTMLOptionElement>(
+      'select[name="category"] option',
+    )
+    const values = Array.from(options).map((o) => o.value)
+    expect(values).toEqual([
+      'genel-kultur', 'tarih', 'cografya', 'edebiyat',
+      'matematik', 'fen', 'ingilizce', 'vatandaslik',
+      'futbol', 'sinema',
+    ])
+  })
 })
