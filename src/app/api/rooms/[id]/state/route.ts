@@ -25,7 +25,7 @@ export async function GET(
   if (!auth.ok) return auth.response
 
   const { id } = await params
-  const state = await fetchRoomState(auth.jwt, id)
+  const state = await fetchRoomState(auth.jwt, id, auth.userId)
   if (!state) {
     return NextResponse.json(
       { error: 'Oda bulunamadi', code: 'P0002' },

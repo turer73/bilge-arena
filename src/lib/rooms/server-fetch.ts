@@ -154,7 +154,10 @@ export async function fetchRoomByCode(
 export async function fetchRoomState(
   jwt: string,
   roomId: string,
-): Promise<Omit<RoomFullState, 'online' | 'isStale'> | null> {
+  /** PR4f: cevap veren kullanici filter (my_answer query); RLS auth.uid() de
+   *  kontrol eder ama explicit filter pickup hatalarinin onune gecer. */
+  userId?: string,
+): Promise<Omit<RoomFullState, 'online' | 'isStale' | 'typing_users'> | null> {
   const headers = { Authorization: `Bearer ${jwt}` }
   const opts = { headers, cache: 'no-store' as const }
 
@@ -209,12 +212,86 @@ export async function fetchRoomState(
       }
     }
 
+    // PR4f: my_answer (current round, user'in kendi cevabi) query.
+    // RLS active state'inde sadece kendi cevap satirini gormeli, reveal sonrasi
+    // tum cevaplar gorunur. Filter explicit user_id=eq.{userId} guvenli.
+    let my_answer:
+      | {
+          answer_value: string
+          is_correct: boolean | null
+          points_awarded: number
+          response_ms: number
+        }
+      | null = null
+    if (current_round?.round_id && userId) {
+      const myAnswerRes = await fetch(
+        `${RPC_URL}/room_answers?round_id=eq.${current_round.round_id}&user_id=eq.${userId}&select=answer_value,is_correct,points_awarded,response_ms&limit=1`,
+        opts,
+      )
+      if (myAnswerRes.ok) {
+        const rows = (await myAnswerRes.json()) as Array<typeof my_answer>
+        my_answer = rows[0] ?? null
+      }
+    }
+
+    // PR4g: scoreboard hesaplama (reveal/completed/archived state).
+    // Lobby/active'de gerekmez. RLS reveal sonrasi tum room_answers SELECT
+    // eder, oncesinde sadece kendi cevabi (popularity yok).
+    // Tie-breaker: score DESC, correct_count DESC, response_ms_total ASC (hizli).
+    let scoreboard: Array<{
+      user_id: string
+      display_name: string
+      score: number
+      correct_count: number
+      response_ms_total: number
+    }> = []
+    const isPostGame = ['reveal', 'completed', 'archived'].includes(rooms[0].state)
+    if (isPostGame && members.length > 0) {
+      const allAnswersRes = await fetch(
+        `${RPC_URL}/room_answers?room_id=eq.${roomId}&select=user_id,is_correct,response_ms`,
+        opts,
+      )
+      if (allAnswersRes.ok) {
+        const allAnswers = (await allAnswersRes.json()) as Array<{
+          user_id: string
+          is_correct: boolean | null
+          response_ms: number
+        }>
+        const agg = new Map<string, { correct: number; ms_total: number }>()
+        for (const a of allAnswers) {
+          const cur = agg.get(a.user_id) ?? { correct: 0, ms_total: 0 }
+          if (a.is_correct === true) cur.correct += 1
+          cur.ms_total += a.response_ms ?? 0
+          agg.set(a.user_id, cur)
+        }
+        scoreboard = members
+          .filter((m) => !m.is_kicked)
+          .map((m) => {
+            const a = agg.get(m.user_id) ?? { correct: 0, ms_total: 0 }
+            return {
+              user_id: m.user_id,
+              display_name: m.display_name,
+              score: m.score ?? 0,
+              correct_count: a.correct,
+              response_ms_total: a.ms_total,
+            }
+          })
+          .sort((a, b) => {
+            if (a.score !== b.score) return b.score - a.score
+            if (a.correct_count !== b.correct_count)
+              return b.correct_count - a.correct_count
+            return a.response_ms_total - b.response_ms_total
+          })
+      }
+    }
+
     return {
       room: rooms[0],
       members,
       current_round,
       answers_count,
-      scoreboard: [], // TODO 4e-6 (full scoreboard with correct_count + tie-breaker)
+      my_answer,
+      scoreboard,
     }
   } catch {
     return null

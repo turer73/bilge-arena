@@ -42,8 +42,10 @@ const baseState = (overrides: Partial<RoomState['room']> = {}): RoomState => ({
     revealed_at: null,
   },
   answers_count: 0,
+  my_answer: null,
   scoreboard: [],
   online: new Set<string>(),
+  typing_users: new Set<string>(),
   isStale: false,
 })
 

@@ -39,8 +39,10 @@ const dummyInitial: RoomState = {
   members: [],
   current_round: null,
   answers_count: 0,
+  my_answer: null,
   scoreboard: [],
   online: new Set<string>(),
+  typing_users: new Set<string>(),
   isStale: false,
 }
 

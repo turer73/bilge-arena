@@ -46,8 +46,10 @@ const completedState = (
   ],
   current_round: null,
   answers_count: 0,
+  my_answer: null,
   scoreboard: [],
   online: new Set<string>(),
+  typing_users: new Set<string>(),
   isStale: false,
 })
 
@@ -70,5 +72,54 @@ describe('GameCompleted', () => {
       <GameCompleted state={completedState({ state: 'archived' })} userId="u1" />,
     )
     expect(screen.getByText(/arşivlendi.*30/i)).toBeInTheDocument()
+  })
+
+  test('3) PR4g: scoreboard ile medal UI (top 3 emoji + correct_count + tie-breaker)', () => {
+    const stateWithBoard: RoomState = {
+      ...completedState(),
+      scoreboard: [
+        {
+          user_id: 'u-host',
+          display_name: 'Veli',
+          score: 80,
+          correct_count: 8,
+          response_ms_total: 65000,
+        },
+        {
+          user_id: 'u1',
+          display_name: 'Ali',
+          score: 50,
+          correct_count: 5,
+          response_ms_total: 90000,
+        },
+        {
+          user_id: 'u2',
+          display_name: 'Ayşe',
+          score: 50,
+          correct_count: 5,
+          response_ms_total: 100000,
+        },
+        {
+          user_id: 'u3',
+          display_name: 'Can',
+          score: 20,
+          correct_count: 2,
+          response_ms_total: 30000,
+        },
+      ],
+    }
+    render(<GameCompleted state={stateWithBoard} userId="u1" />)
+
+    // Top 3 medal emoji
+    expect(screen.getByText('🥇')).toBeInTheDocument()
+    expect(screen.getByText('🥈')).toBeInTheDocument()
+    expect(screen.getByText('🥉')).toBeInTheDocument()
+
+    // 4. sira numara gozukur
+    expect(screen.getByText('4')).toBeInTheDocument()
+
+    // correct_count detay (Veli 8, Ali+Ayşe 5 herkesin)
+    expect(screen.getByText(/8 doğru/)).toBeInTheDocument()
+    expect(screen.getAllByText(/5 doğru/)).toHaveLength(2)
   })
 })
