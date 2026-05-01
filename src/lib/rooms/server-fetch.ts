@@ -154,6 +154,9 @@ export async function fetchRoomByCode(
 export async function fetchRoomState(
   jwt: string,
   roomId: string,
+  /** PR4f: cevap veren kullanici filter (my_answer query); RLS auth.uid() de
+   *  kontrol eder ama explicit filter pickup hatalarinin onune gecer. */
+  userId?: string,
 ): Promise<Omit<RoomFullState, 'online' | 'isStale'> | null> {
   const headers = { Authorization: `Bearer ${jwt}` }
   const opts = { headers, cache: 'no-store' as const }
@@ -209,12 +212,35 @@ export async function fetchRoomState(
       }
     }
 
+    // PR4f: my_answer (current round, user'in kendi cevabi) query.
+    // RLS active state'inde sadece kendi cevap satirini gormeli, reveal sonrasi
+    // tum cevaplar gorunur. Filter explicit user_id=eq.{userId} guvenli.
+    let my_answer:
+      | {
+          answer_value: string
+          is_correct: boolean | null
+          points_awarded: number
+          response_ms: number
+        }
+      | null = null
+    if (current_round?.round_id && userId) {
+      const myAnswerRes = await fetch(
+        `${RPC_URL}/room_answers?round_id=eq.${current_round.round_id}&user_id=eq.${userId}&select=answer_value,is_correct,points_awarded,response_ms&limit=1`,
+        opts,
+      )
+      if (myAnswerRes.ok) {
+        const rows = (await myAnswerRes.json()) as Array<typeof my_answer>
+        my_answer = rows[0] ?? null
+      }
+    }
+
     return {
       room: rooms[0],
       members,
       current_round,
       answers_count,
-      scoreboard: [], // TODO 4e-6 (full scoreboard with correct_count + tie-breaker)
+      my_answer,
+      scoreboard: [], // TODO PR4g (full scoreboard with correct_count + tie-breaker)
     }
   } catch {
     return null

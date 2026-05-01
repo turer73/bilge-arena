@@ -67,15 +67,27 @@ export function SonucView({ state, userId }: SonucViewProps) {
       <ul className="mb-4 space-y-2">
         {options.map((opt, idx) => {
           const isCorrect = correct !== null && correct !== undefined && opt === correct
+          // PR4f: kullanicinin secimi
+          const isMine = state.my_answer?.answer_value === opt
           return (
             <li
               key={idx}
-              aria-label={isCorrect ? 'Doğru cevap' : undefined}
+              aria-label={
+                isCorrect
+                  ? isMine
+                    ? 'Doğru cevap (senin cevabın)'
+                    : 'Doğru cevap'
+                  : isMine
+                    ? 'Senin yanlış cevabın'
+                    : undefined
+              }
               className={cn(
                 'flex items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium',
                 isCorrect
                   ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100'
-                  : 'border-[var(--border)] bg-[var(--surface)] opacity-60',
+                  : isMine
+                    ? 'border-red-500/40 bg-red-500/10 text-red-900 dark:text-red-100'
+                    : 'border-[var(--border)] bg-[var(--surface)] opacity-60',
               )}
             >
               <span
@@ -84,16 +96,35 @@ export function SonucView({ state, userId }: SonucViewProps) {
                   'inline-flex size-6 items-center justify-center rounded-full text-xs font-bold',
                   isCorrect
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-[var(--card)] text-[var(--text-sub)]',
+                    : isMine
+                      ? 'bg-red-600 text-white'
+                      : 'bg-[var(--card)] text-[var(--text-sub)]',
                 )}
               >
-                {isCorrect ? '✓' : String.fromCharCode(65 + idx)}
+                {isCorrect ? '✓' : isMine ? '✗' : String.fromCharCode(65 + idx)}
               </span>
               <span className="flex-1">{opt}</span>
+              {isMine && !isCorrect && (
+                <span className="text-[10px] font-bold text-red-700 dark:text-red-300">
+                  Senin Cevabın
+                </span>
+              )}
+              {isMine && isCorrect && (
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                  Senin Cevabın
+                </span>
+              )}
             </li>
           )
         })}
       </ul>
+
+      {/* PR4f: kullanici cevap vermediyse uyari */}
+      {state.my_answer === null && (
+        <p className="mb-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+          Bu turda cevap vermedin (süre dolmuş ya da pas geçilmiş).
+        </p>
+      )}
 
       {explanation && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">

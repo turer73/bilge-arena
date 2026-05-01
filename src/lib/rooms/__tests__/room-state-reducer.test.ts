@@ -45,6 +45,7 @@ const initialState = (): RoomState => ({
   members: [],
   current_round: null,
   answers_count: 0,
+  my_answer: null,
   scoreboard: [],
   online: new Set<string>(),
   isStale: false,
@@ -57,7 +58,8 @@ describe('roomStateReducer', () => {
       members: [initialMember()],
       current_round: null,
       answers_count: 0,
-      scoreboard: [],
+      my_answer: null,
+  scoreboard: [],
     }
     const result = roomStateReducer(initialState(), {
       type: 'HYDRATE',

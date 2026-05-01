@@ -63,6 +63,7 @@ const baseState: RoomState = {
     options: ['İstanbul', 'Ankara', 'İzmir', 'Bursa'],
   },
   answers_count: 3,
+  my_answer: null,
   scoreboard: [],
   online: new Set<string>(),
   isStale: false,
@@ -76,36 +77,65 @@ describe('GameView', () => {
     vi.useRealTimers()
   })
 
-  test('1) active + question + 4 options -> render form + buttons + skor', () => {
+  test('1) active + question + 4 options -> render select-then-submit form', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const { container } = render(<GameView state={baseState} userId="u1" />)
 
     expect(mockUseActionState).toHaveBeenCalledWith(mockSubmitAnswerAction, {})
     expect(screen.getByText(/Türkiye’nin başkenti/)).toBeInTheDocument()
 
-    // 4 secenek butonu (her biri name="answer_value" + value=opt)
-    const buttons = container.querySelectorAll(
-      'button[name="answer_value"]',
+    // PR4f: 4 option butonu type=button (toggle selection), aria-pressed
+    const optionButtons = container.querySelectorAll(
+      'button[type="button"][aria-pressed]',
     ) as NodeListOf<HTMLButtonElement>
-    expect(buttons).toHaveLength(4)
-    expect(buttons[0].value).toBe('İstanbul')
-    expect(buttons[1].value).toBe('Ankara')
+    expect(optionButtons).toHaveLength(4)
 
-    // Hidden room_id
+    // 1 submit butonu ("Önce Bir Seçenek Seç" disabled)
+    expect(
+      screen.getByRole('button', { name: /Önce Bir Seçenek Seç/i }),
+    ).toBeDisabled()
+
+    // Hidden room_id + answer_value
     const roomIdInput = container.querySelector(
       'input[name="room_id"]',
     ) as HTMLInputElement | null
     expect(roomIdInput?.value).toBe('r1')
+    const answerInput = container.querySelector(
+      'input[name="answer_value"]',
+    ) as HTMLInputElement | null
+    expect(answerInput?.value).toBe('') // henuz secim yok
 
     // Soru badge + countdown
     expect(screen.getByText('Soru 2 / 10')).toBeInTheDocument()
-
-    // PR4e-5: answers_count badge "✓ 3 / 1" (3 cevap / 1 member fixture)
     expect(
       screen.getByLabelText(/Cevap veren oyuncu sayısı/i),
     ).toHaveTextContent('3')
 
     // Skor
     expect(screen.getByText('12')).toBeInTheDocument()
+  })
+
+  test('2) PR4f: my_answer dolu -> "Cevabın Gönderildi" lock UI + indicator', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    const stateWithAnswer: RoomState = {
+      ...baseState,
+      my_answer: {
+        answer_value: 'Ankara',
+        is_correct: null,
+        points_awarded: 0,
+        response_ms: 8500,
+      },
+    }
+    render(<GameView state={stateWithAnswer} userId="u1" />)
+
+    // Submit button "Cevabın Gönderildi" + disabled
+    expect(
+      screen.getByRole('button', { name: /Cevabın Gönderildi/i }),
+    ).toBeDisabled()
+
+    // Indicator "Cevabın: Ankara" — strong tagi icin 1 match
+    expect(screen.getByText(/Cevabın:/)).toBeInTheDocument()
+    const strongAnkara = screen.getByText('Ankara', { selector: 'strong' })
+    expect(strongAnkara).toBeInTheDocument()
   })
 })

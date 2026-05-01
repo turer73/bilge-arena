@@ -3,26 +3,27 @@
 /**
  * Bilge Arena Oda: <GameView> aktif soru + cevap form
  * Sprint 1 PR4e-2 (active state, GameInProgress reveal'a kalir)
+ * Sprint 1 PR4f: my_answer + selected highlight + auto-submit on timeout
  *
- * Soru gosterir, 4 secenek butonu (option click -> form submit), basit
- * countdown timer (started_at + per_question_seconds vs Date.now()).
+ * Soru gosterir, 4 secenek kart (click toggle local select), "Onayla"
+ * submit butonu ile form action tetikler. Cevap gonderildikten sonra UI
+ * kilitli, my_answer dolu (highlight emerald + "Cevabın gönderildi: X").
+ *
+ * Auto-submit: isExpired + selectedOption + !my_answer -> form auto submit
+ * (kullanici secmis ama tiklayip onaylayamadan sure dolarsa).
  *
  * Anti-cheat: revealed_at NULL ise correct_answer NULL gelir (server-side
  * RLS view), client onceden goremez. Submit cutoff RPC server-side
  * (deadline gectikten sonra P0001), UI sadece visual timer.
- *
- * Out-of-scope (PR4e-3):
- * - "Cevabin gonderildi: X" indicator (room_answers fetch gerek)
- * - Selected option highlight after submit (state local)
- * - Auto-submit on timeout
  */
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import {
   submitAnswerAction,
   type SubmitAnswerActionState,
 } from '@/lib/rooms/actions'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
+import { cn } from '@/lib/utils/cn'
 
 const initialState: SubmitAnswerActionState = {}
 
@@ -57,6 +58,30 @@ export function GameView({ state, userId }: GameViewProps) {
     submitAnswerAction,
     initialState,
   )
+  const [selectedOption, setSelectedOption] = useState<string | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const autoSubmitFiredRef = useRef(false)
+
+  // PR4f auto-submit: isExpired + secim var + henuz cevap gondermemis -> form auto submit
+  useEffect(() => {
+    if (
+      remaining <= 0 &&
+      selectedOption &&
+      !state.my_answer &&
+      !isPending &&
+      !autoSubmitFiredRef.current &&
+      formRef.current
+    ) {
+      autoSubmitFiredRef.current = true
+      formRef.current.requestSubmit()
+    }
+  }, [remaining, selectedOption, state.my_answer, isPending])
+
+  // Round degisirse local selection sifirla
+  useEffect(() => {
+    setSelectedOption(null)
+    autoSubmitFiredRef.current = false
+  }, [current_round?.round_id])
 
   if (!current_round) {
     return (
@@ -72,6 +97,11 @@ export function GameView({ state, userId }: GameViewProps) {
   const options = current_round.options ?? []
   const questionText = current_round.question_text ?? '(Soru yükleniyor)'
   const isExpired = remaining <= 0
+  const hasAnswered = state.my_answer !== null
+  const lockUI = hasAnswered || isPending
+  // Hangi secenek highlight: oncelikle gerçek my_answer (server canonical),
+  // henuz submit edilmediyse local secim.
+  const highlightedOption = state.my_answer?.answer_value ?? selectedOption
 
   return (
     <section
@@ -83,7 +113,6 @@ export function GameView({ state, userId }: GameViewProps) {
           Soru {current_round.round_index} / {room.question_count}
         </span>
         <div className="flex items-center gap-2">
-          {/* PR4e-5: cevap veren oyuncu sayisi badge */}
           <span
             aria-label="Cevap veren oyuncu sayısı"
             className="rounded-full bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--text-sub)]"
@@ -109,42 +138,74 @@ export function GameView({ state, userId }: GameViewProps) {
         {questionText}
       </h2>
 
-      {/*
-        Codex P2 PR #50: client-side timer expiry HARD-DISABLE'i kaldirildi.
-        Browser clock authoritative degil — server RPC submit_answer deadline
-        gerçek otoritedir. Eger client clock onde / sekme throttle olursa
-        gecerli cevap blocked olabilir. Visual amber renk + uyari mesaji
-        kullaniciya kalan zamani bildirsin, server RPC ihtiyac duyarsa
-        reject etsin (P0001 'soru suresi bitti').
-      */}
-      <form action={formAction} className="space-y-2">
+      <form action={formAction} ref={formRef} className="space-y-3">
         <input type="hidden" name="room_id" value={room.id} />
+        <input type="hidden" name="answer_value" value={selectedOption ?? ''} />
         <ul className="space-y-2">
-          {options.map((opt, idx) => (
-            <li key={idx}>
-              <button
-                type="submit"
-                name="answer_value"
-                value={opt}
-                disabled={isPending}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left text-sm font-medium transition-colors hover:border-[var(--focus)] hover:bg-[var(--card)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span
-                  aria-hidden="true"
-                  className="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-[var(--card)] text-xs font-bold"
+          {options.map((opt, idx) => {
+            const isSelected = highlightedOption === opt
+            return (
+              <li key={idx}>
+                <button
+                  type="button"
+                  onClick={() => !lockUI && setSelectedOption(opt)}
+                  disabled={lockUI}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    'w-full rounded-lg border px-4 py-3 text-left text-sm font-medium transition-colors disabled:cursor-not-allowed',
+                    isSelected
+                      ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100'
+                      : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--focus)] hover:bg-[var(--card)]',
+                    lockUI && !isSelected && 'opacity-40',
+                  )}
                 >
-                  {String.fromCharCode(65 + idx)}
-                </span>
-                {opt}
-              </button>
-            </li>
-          ))}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'mr-2 inline-flex size-6 items-center justify-center rounded-full text-xs font-bold',
+                      isSelected
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-[var(--card)] text-[var(--text-sub)]',
+                    )}
+                  >
+                    {String.fromCharCode(65 + idx)}
+                  </span>
+                  {opt}
+                </button>
+              </li>
+            )
+          })}
         </ul>
+
+        <button
+          type="submit"
+          disabled={lockUI || !selectedOption}
+          className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-[var(--surface)] disabled:text-[var(--text-sub)]"
+        >
+          {hasAnswered
+            ? '✓ Cevabın Gönderildi'
+            : isPending
+              ? 'Gönderiliyor…'
+              : selectedOption
+                ? 'Onayla ve Gönder'
+                : 'Önce Bir Seçenek Seç'}
+        </button>
       </form>
-      {isExpired && (
-        <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-          Süre dolmuş görünüyor — yine de cevap göndermeyi deneyebilirsin,
-          sunucu kabul ederse skoruna eklenecek.
+
+      {hasAnswered && (
+        <p className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+          Cevabın: <strong>{state.my_answer?.answer_value}</strong>
+          {state.my_answer?.is_correct === null
+            ? ' — sonuç açıklamada görünecek.'
+            : state.my_answer?.is_correct
+              ? ` — doğru! (+${state.my_answer.points_awarded ?? 0} puan)`
+              : ' — yanlış cevap.'}
+        </p>
+      )}
+
+      {!hasAnswered && isExpired && !selectedOption && (
+        <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+          Süre doldu, cevap veremeden geçti. Sonraki turu bekle.
         </p>
       )}
 

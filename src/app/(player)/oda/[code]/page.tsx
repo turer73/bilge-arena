@@ -38,7 +38,7 @@ export default async function Page({
   if (!room) notFound()
 
   // Initial state SSR (full lobby payload)
-  const partial = await fetchRoomState(session.access_token, room.id)
+  const partial = await fetchRoomState(session.access_token, room.id, user.id)
   if (!partial) notFound()
 
   // Hook ephemeral fields (online + isStale) SSR'da bos baslat,

@@ -46,6 +46,7 @@ const completedState = (
   ],
   current_round: null,
   answers_count: 0,
+  my_answer: null,
   scoreboard: [],
   online: new Set<string>(),
   isStale: false,

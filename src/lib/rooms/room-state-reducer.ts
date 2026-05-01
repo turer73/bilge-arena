@@ -87,11 +87,24 @@ export type ScoreboardEntry = {
   correct_count: number
 }
 
+/** Mevcut kullanicinin aktif round'a verdigi cevap (PR4f).
+ *  RLS: active state'inde sadece kendi cevabi gorunur; reveal sonrasi
+ *  is_correct + points_awarded server compute edilmis halde gelir. */
+export type MyAnswer = {
+  answer_value: string
+  is_correct: boolean | null
+  points_awarded: number
+  response_ms: number
+}
+
 export type RoomState = {
   room: Room
   members: Member[]
   current_round: CurrentRound | null
   answers_count: number
+  /** PR4f: kullanicinin kendi cevabi (active state'inde anonim, reveal sonrasi
+   *  is_correct + points dolu) */
+  my_answer: MyAnswer | null
   scoreboard: ScoreboardEntry[]
   /** presence-derived ephemeral online users */
   online: Set<string>
