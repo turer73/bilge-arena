@@ -27,6 +27,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { callRpc } from './client'
+import { fetchLobbyPreviewQuestion } from './server-fetch'
+import type { LobbyPreviewQuestion } from './server-fetch'
 import {
   createRoomSchema,
   joinRoomSchema,
@@ -36,6 +38,7 @@ import {
   submitAnswerActionSchema,
   advanceRoundActionSchema,
   revealRoundActionSchema,
+  refreshLobbyPreviewActionSchema,
   type CreateRoomBody,
 } from './validations'
 
@@ -437,4 +440,43 @@ export async function revealRoundAction(
   if (!result.ok) return { error: result.error.message }
 
   return {}
+}
+
+// =============================================================================
+// refreshLobbyPreviewAction — Sprint 2A Task 2 (Lobby auto-question widget)
+// =============================================================================
+
+export type RefreshLobbyPreviewActionState = {
+  /** Yeni cekilen soru, ilk render'da SSR initial; refresh sonrasi guncellenir */
+  question?: LobbyPreviewQuestion | null
+  /** Top-level hata: auth, fetch fail, kategori bos */
+  error?: string
+}
+
+/**
+ * Lobby preview widget'ta "Yeni Soru" butonu Server Action handler.
+ * useActionState ile in-place update — redirect veya revalidatePath YOK,
+ * sadece state.question doner UI bunu render eder.
+ *
+ * Anti-cheat: get_lobby_preview_question RPC correct_answer dondurmez,
+ * server-fetch sift de typecheck eder. Bu action sadece passthrough.
+ */
+export async function refreshLobbyPreviewAction(
+  _prev: RefreshLobbyPreviewActionState,
+  formData: FormData,
+): Promise<RefreshLobbyPreviewActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = refreshLobbyPreviewActionSchema.safeParse({
+    category: formData.get('category')?.toString() ?? '',
+  })
+  if (!parsed.success) return { error: 'Gecersiz kategori' }
+
+  const question = await fetchLobbyPreviewQuestion(
+    auth.jwt,
+    parsed.data.category,
+  )
+
+  return { question }
 }
