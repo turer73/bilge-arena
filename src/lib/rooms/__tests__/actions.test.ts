@@ -162,7 +162,36 @@ describe('createRoomAction', () => {
         max_players: 8,
         per_question_seconds: 20,
         mode: 'sync',
+        // Sprint 2A Task 1: auto_advance_seconds default 5
+        auto_advance_seconds: 5,
       }),
+    )
+  })
+
+  test('8b) Codex P2: auto_advance_seconds bos string → default 5 (manuel mode degil)', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: { id: 'r', code: 'X' } })
+    const fd = validForm()
+    // Kullanici alan bos birakti — Number('') 0 olur, default 5 beklenir
+    fd.set('auto_advance_seconds', '')
+    await createRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith(
+      'jwt',
+      'create_room',
+      expect.objectContaining({ auto_advance_seconds: 5 }),
+    )
+  })
+
+  test('8c) auto_advance_seconds=0 explicit (manuel mode kasitli) korunur', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({ ok: true, data: { id: 'r', code: 'X' } })
+    const fd = validForm()
+    fd.set('auto_advance_seconds', '0')
+    await createRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith(
+      'jwt',
+      'create_room',
+      expect.objectContaining({ auto_advance_seconds: 0 }),
     )
   })
 
