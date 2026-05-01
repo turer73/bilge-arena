@@ -49,6 +49,7 @@ const baseState = (overrides: Partial<RoomState['current_round']> = {}): RoomSta
   my_answer: null,
   scoreboard: [],
   online: new Set<string>(),
+  typing_users: new Set<string>(),
   isStale: false,
 })
 

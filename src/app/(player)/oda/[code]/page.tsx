@@ -41,11 +41,12 @@ export default async function Page({
   const partial = await fetchRoomState(session.access_token, room.id, user.id)
   if (!partial) notFound()
 
-  // Hook ephemeral fields (online + isStale) SSR'da bos baslat,
-  // mount sonrasi useRoomChannel presence sync ile doldurur.
+  // Hook ephemeral fields (online + typing_users + isStale) SSR'da bos baslat,
+  // mount sonrasi useRoomChannel presence sync + broadcast ile doldurur.
   const initialState = {
     ...partial,
     online: new Set<string>(),
+    typing_users: new Set<string>(),
     isStale: false,
   }
 

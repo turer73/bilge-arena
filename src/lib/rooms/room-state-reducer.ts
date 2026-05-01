@@ -111,6 +111,10 @@ export type RoomState = {
   scoreboard: ScoreboardEntry[]
   /** presence-derived ephemeral online users */
   online: Set<string>
+  /** PR4h: aktif soruda dusunmekte olan oyuncular (broadcast typing event,
+   *  3sn sonra otomatik temizlenir). Anti-cheat: hangi cevabi sectigi gorulmez,
+   *  sadece "biri secim yapiyor" sinyali. */
+  typing_users: Set<string>
   /** Channel error sonrasi UI banner flag, hydrate ile false yapilir */
   isStale: boolean
 }
@@ -118,7 +122,7 @@ export type RoomState = {
 export type RoomEvent =
   | {
       type: 'HYDRATE'
-      payload: Omit<RoomState, 'online' | 'isStale'>
+      payload: Omit<RoomState, 'online' | 'isStale' | 'typing_users'>
     }
   | { type: 'ROOM_UPDATE'; payload: Partial<Room> }
   | { type: 'MEMBER_INSERT'; payload: Member }
@@ -127,12 +131,19 @@ export type RoomEvent =
   | { type: 'PRESENCE_SYNC'; payload: { online: string[] } }
   | { type: 'PRESENCE_JOIN'; payload: { user_id: string } }
   | { type: 'PRESENCE_LEAVE'; payload: { user_id: string } }
+  | { type: 'TYPING_START'; payload: { user_id: string } }
+  | { type: 'TYPING_STOP'; payload: { user_id: string } }
   | { type: 'CHANNEL_ERROR'; payload: { error: string } }
 
 export function roomStateReducer(state: RoomState, event: RoomEvent): RoomState {
   switch (event.type) {
     case 'HYDRATE':
-      return { ...event.payload, online: state.online, isStale: false }
+      return {
+        ...event.payload,
+        online: state.online,
+        typing_users: state.typing_users,
+        isStale: false,
+      }
 
     case 'ROOM_UPDATE':
       return { ...state, room: { ...state.room, ...event.payload } }
@@ -174,6 +185,20 @@ export function roomStateReducer(state: RoomState, event: RoomEvent): RoomState 
       const next = new Set(state.online)
       next.delete(event.payload.user_id)
       return { ...state, online: next }
+    }
+
+    case 'TYPING_START': {
+      if (state.typing_users.has(event.payload.user_id)) return state
+      const next = new Set(state.typing_users)
+      next.add(event.payload.user_id)
+      return { ...state, typing_users: next }
+    }
+
+    case 'TYPING_STOP': {
+      if (!state.typing_users.has(event.payload.user_id)) return state
+      const next = new Set(state.typing_users)
+      next.delete(event.payload.user_id)
+      return { ...state, typing_users: next }
     }
 
     case 'CHANNEL_ERROR':

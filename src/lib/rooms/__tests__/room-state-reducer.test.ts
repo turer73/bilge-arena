@@ -48,6 +48,7 @@ const initialState = (): RoomState => ({
   my_answer: null,
   scoreboard: [],
   online: new Set<string>(),
+  typing_users: new Set<string>(),
   isStale: false,
 })
 
@@ -150,5 +151,31 @@ describe('roomStateReducer', () => {
     // @ts-expect-error - unknown event tipi test ediliyor
     const result = roomStateReducer(s, { type: 'UNKNOWN', payload: {} })
     expect(result).toBe(s)
+  })
+
+  test('11) PR4h: TYPING_START -> typing_users ekle, TYPING_STOP -> cikar', () => {
+    const s1 = roomStateReducer(initialState(), {
+      type: 'TYPING_START',
+      payload: { user_id: 'u1' },
+    })
+    expect(s1.typing_users.has('u1')).toBe(true)
+
+    const s2 = roomStateReducer(s1, {
+      type: 'TYPING_STOP',
+      payload: { user_id: 'u1' },
+    })
+    expect(s2.typing_users.has('u1')).toBe(false)
+  })
+
+  test('12) PR4h: TYPING_START idempotent — ayni kullanici ekleme yenilemez referans', () => {
+    const s1 = roomStateReducer(initialState(), {
+      type: 'TYPING_START',
+      payload: { user_id: 'u1' },
+    })
+    const s2 = roomStateReducer(s1, {
+      type: 'TYPING_START',
+      payload: { user_id: 'u1' },
+    })
+    expect(s2).toBe(s1)
   })
 })

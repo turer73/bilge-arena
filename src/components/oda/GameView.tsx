@@ -30,6 +30,8 @@ const initialState: SubmitAnswerActionState = {}
 interface GameViewProps {
   state: RoomState
   userId: string
+  /** PR4h: cevap secince diger oyunculara typing broadcast */
+  onTyping?: () => void
 }
 
 function useCountdown(targetIso: string | undefined) {
@@ -50,7 +52,7 @@ function useCountdown(targetIso: string | undefined) {
   return remaining
 }
 
-export function GameView({ state, userId }: GameViewProps) {
+export function GameView({ state, userId, onTyping }: GameViewProps) {
   const { room, current_round, members } = state
   const me = members.find((m) => m.user_id === userId)
   const remaining = useCountdown(current_round?.ends_at)
@@ -148,7 +150,11 @@ export function GameView({ state, userId }: GameViewProps) {
               <li key={idx}>
                 <button
                   type="button"
-                  onClick={() => !lockUI && setSelectedOption(opt)}
+                  onClick={() => {
+                    if (lockUI) return
+                    setSelectedOption(opt)
+                    onTyping?.() // PR4h: secim degisince typing broadcast
+                  }}
                   disabled={lockUI}
                   aria-pressed={isSelected}
                   className={cn(

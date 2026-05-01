@@ -157,7 +157,7 @@ export async function fetchRoomState(
   /** PR4f: cevap veren kullanici filter (my_answer query); RLS auth.uid() de
    *  kontrol eder ama explicit filter pickup hatalarinin onune gecer. */
   userId?: string,
-): Promise<Omit<RoomFullState, 'online' | 'isStale'> | null> {
+): Promise<Omit<RoomFullState, 'online' | 'isStale' | 'typing_users'> | null> {
   const headers = { Authorization: `Bearer ${jwt}` }
   const opts = { headers, cache: 'no-store' as const }
 
