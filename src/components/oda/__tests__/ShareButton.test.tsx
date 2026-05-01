@@ -67,13 +67,15 @@ describe('ShareButton', () => {
     expect(href).toContain('text=' + encodeURIComponent('Test'))
   })
 
-  test('5) X (Codex P3 #9): x.com/intent/post (twitter.com degil)', () => {
+  test('5) X / Twitter (Codex P2 PR #65 follow-up): twitter.com/intent/tweet documented endpoint', () => {
     render(<ShareButton url="https://x.com/o/ABC" text="Tweet" />)
     fireEvent.click(screen.getByRole('button', { name: /Paylaş/i }))
     const tw = screen.getByTestId('share-twitter')
     const href = tw.getAttribute('href')!
-    expect(href).toMatch(/^https:\/\/x\.com\/intent\/post/)
-    expect(href).not.toMatch(/twitter\.com/)
+    // X'in documented web-intent endpoint twitter.com/intent/tweet
+    // (x.com/intent/post documented DEGIL, prefilled composer calismaz)
+    expect(href).toMatch(/^https:\/\/twitter\.com\/intent\/tweet/)
+    expect(href).not.toMatch(/x\.com\/intent\/post/)
     expect(href).toContain('text=' + encodeURIComponent('Tweet'))
   })
 
