@@ -50,12 +50,19 @@ export const CATEGORY_LABELS: Record<RoomCategorySlug, string> = {
 /**
  * Slug -> Label conversion (fallback raw slug bilinmeyen kategori icin).
  *
+ * Codex P1 fix: `slug in CATEGORY_LABELS` prototype pollution riski —
+ * `__proto__`, `toString`, `constructor` gibi inherited keys de match olur,
+ * Object.prototype'tan non-string deger doner ve UI'da "[object Object]"
+ * goruntulenir. `Object.hasOwn` own-property kontrolu ile sadece kendi
+ * keylerini eslestirir.
+ *
  * Kullanim:
  *   slugToLabel('genel-kultur') === 'Genel Kültür'
  *   slugToLabel('xx_unknown')   === 'xx_unknown'  (fallback)
+ *   slugToLabel('__proto__')    === '__proto__'   (prototype fallback)
  */
 export function slugToLabel(slug: string): string {
-  if (slug in CATEGORY_LABELS) {
+  if (Object.hasOwn(CATEGORY_LABELS, slug)) {
     return CATEGORY_LABELS[slug as RoomCategorySlug]
   }
   return slug
@@ -64,7 +71,9 @@ export function slugToLabel(slug: string): string {
 /**
  * Whitelist kategori dogrulamasi (Zod kullanmadan kontrol).
  * Backend RPC + UI dropdown disinda nadir kullanilir.
+ *
+ * Codex P1 fix: Object.hasOwn (prototype pollution onlem).
  */
 export function isValidCategory(slug: string): slug is RoomCategorySlug {
-  return slug in CATEGORY_LABELS
+  return Object.hasOwn(CATEGORY_LABELS, slug)
 }

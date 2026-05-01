@@ -45,6 +45,24 @@ describe('slugToLabel', () => {
     expect(slugToLabel('xx_unknown')).toBe('xx_unknown')
     expect(slugToLabel('')).toBe('')
   })
+
+  it('Codex P1 fix: prototype pollution — __proto__ raw fallback (Object.hasOwn)', () => {
+    // `slug in CATEGORY_LABELS` __proto__ icin TRUE donerdi (Object.prototype),
+    // CATEGORY_LABELS['__proto__'] non-string deger -> UI bozulur.
+    // Object.hasOwn own-key only -> raw fallback.
+    expect(slugToLabel('__proto__')).toBe('__proto__')
+    expect(typeof slugToLabel('__proto__')).toBe('string')
+  })
+
+  it('Codex P1 fix: toString prototype key fallback raw', () => {
+    expect(slugToLabel('toString')).toBe('toString')
+    expect(typeof slugToLabel('toString')).toBe('string')
+  })
+
+  it('Codex P1 fix: constructor prototype key fallback raw', () => {
+    expect(slugToLabel('constructor')).toBe('constructor')
+    expect(typeof slugToLabel('constructor')).toBe('string')
+  })
 })
 
 describe('isValidCategory', () => {
@@ -58,5 +76,12 @@ describe('isValidCategory', () => {
     expect(isValidCategory('matematik-eski')).toBe(false)
     expect(isValidCategory('')).toBe(false)
     expect(isValidCategory('xx_unknown')).toBe(false)
+  })
+
+  it('Codex P1 fix: prototype keys (__proto__/toString/constructor) false', () => {
+    expect(isValidCategory('__proto__')).toBe(false)
+    expect(isValidCategory('toString')).toBe(false)
+    expect(isValidCategory('constructor')).toBe(false)
+    expect(isValidCategory('hasOwnProperty')).toBe(false)
   })
 })
