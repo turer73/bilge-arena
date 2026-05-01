@@ -126,22 +126,32 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
 
       {/* Sprint 2C Task 8: Replay & Share
           Codex P1 fix: NEXT_PUBLIC_SITE_URL ile SSR/client tutarli URL
-          (window.location.origin SSR'da yok, hidrasyon mismatch yapiyordu) */}
-      {!isArchived && (
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <ReplayButton sourceRoomId={room.id} />
-          <ShareButton
-            url={`${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/oda/${room.code}`}
-            text={(() => {
-              const me = ranked.find((r) => r.user_id === userId)
-              const score = me?.score ?? 0
-              return score > 0
-                ? `Bilge Arena'da "${room.title}" oyununu bitirdim, ${score} puan topladım!`
-                : `Bilge Arena'da "${room.title}" oyununu oynadım!`
-            })()}
-          />
-        </div>
-      )}
+          (window.location.origin SSR'da yok, hidrasyon mismatch yapiyordu)
+
+          T8 PR3: og_title/og_score/og_category querystring eklenir, sosyal
+          medya crawler page generateMetadata ile dinamik OG image URL uretir
+          (DB fetch YOK, anon crawler dostu). */}
+      {!isArchived && (() => {
+        const me = ranked.find((r) => r.user_id === userId)
+        const score = me?.score ?? 0
+        const ogParams = new URLSearchParams({ og_title: room.title })
+        if (score > 0) ogParams.set('og_score', String(score))
+        if (room.category) ogParams.set('og_category', room.category)
+        // Codex P1 fix (T8 PR3 follow-up): /p/[code] public share route
+        // (auth YOK, sosyal medya crawler dostu). /oda/[code] auth-gated
+        // crawler /giris'e redirect olurdu.
+        const shareUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/p/${room.code}?${ogParams.toString()}`
+        const shareText =
+          score > 0
+            ? `Bilge Arena'da "${room.title}" oyununu bitirdim, ${score} puan topladım!`
+            : `Bilge Arena'da "${room.title}" oyununu oynadım!`
+        return (
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <ReplayButton sourceRoomId={room.id} />
+            <ShareButton url={shareUrl} text={shareText} />
+          </div>
+        )
+      })()}
 
       <div className="mt-3 flex justify-center gap-2">
         <Link

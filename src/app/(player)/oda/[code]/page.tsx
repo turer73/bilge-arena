@@ -18,9 +18,11 @@ import { LobbyContainer } from '@/components/oda/LobbyContainer'
  *   4) <LobbyContainer/> client component'a aktar — useRoomChannel ile
  *      postgres_changes + presence Realtime sync baslar
  *
- * 4a placeholder REPLACE edildi. Tum oda info LobbyHeader/RoomInfoPanel/
- * MemberRoster/MemberActions/HostActionsPlaceholder componentleri uzerinden.
+ * Codex P1 fix (T8 PR3 follow-up): generateMetadata burada DEGIL — sosyal
+ * medya crawler oturumsuz hit edip /giris'e redirect olurdu. Public share
+ * route /p/[code] OG metadata flow saglar.
  */
+
 export default async function Page({
   params,
 }: {
