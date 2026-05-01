@@ -30,6 +30,8 @@ interface MemberRosterProps {
   viewerUserId?: string
   roomId?: string
   roomState?: RoomLifecycleState
+  /** PR4h: typing broadcast aktif olan kullanici ID'leri */
+  typingUsers?: Set<string>
 }
 
 export function MemberRoster({
@@ -40,6 +42,7 @@ export function MemberRoster({
   viewerUserId,
   roomId,
   roomState,
+  typingUsers,
 }: MemberRosterProps) {
   const viewerIsHost =
     viewerUserId !== undefined && viewerUserId === hostId
@@ -77,6 +80,7 @@ export function MemberRoster({
               viewerUserId={viewerUserId}
               roomId={roomId}
               roomState={roomState}
+              isTyping={typingUsers?.has(m.user_id)}
             />
           ))}
         </ul>

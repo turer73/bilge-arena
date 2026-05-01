@@ -11,7 +11,8 @@
  * Race protection: isMounted ref ile dispatch ignore unmounted.
  */
 
-import { useEffect, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { setupRoomChannel } from './setup-room-channel'
 import { roomStateReducer, type RoomState } from './room-state-reducer'
@@ -23,6 +24,7 @@ export function useRoomChannel(
 ) {
   const [state, dispatch] = useReducer(roomStateReducer, initialState)
   const isMounted = useRef(true)
+  const channelRef = useRef<RealtimeChannel | null>(null)
 
   useEffect(() => {
     isMounted.current = true
@@ -51,6 +53,7 @@ export function useRoomChannel(
       },
       refetchRoomState, // Codex P1 PR #50: room_rounds INSERT/UPDATE -> refresh
     )
+    channelRef.current = channel
 
     const reconnectListener = refetchRoomState
 
@@ -67,9 +70,34 @@ export function useRoomChannel(
 
     return () => {
       isMounted.current = false
+      channelRef.current = null
       channel.unsubscribe()
     }
   }, [roomId, userId])
 
-  return { state, isOnline: !state.isStale }
+  // PR4h: typing broadcast helper. Player secenek tikladiginda call edilir,
+  // 3sn sonra otomatik typing_stop emit. Reentrant-safe (re-call timer reset).
+  const typingTimerRef = useRef<number | null>(null)
+  const broadcastTyping = useCallback(() => {
+    const ch = channelRef.current
+    if (!ch) return
+    void ch.send({
+      type: 'broadcast',
+      event: 'typing_start',
+      payload: { user_id: userId },
+    })
+    if (typingTimerRef.current !== null) {
+      window.clearTimeout(typingTimerRef.current)
+    }
+    typingTimerRef.current = window.setTimeout(() => {
+      void ch.send({
+        type: 'broadcast',
+        event: 'typing_stop',
+        payload: { user_id: userId },
+      })
+      typingTimerRef.current = null
+    }, 3000)
+  }, [userId])
+
+  return { state, isOnline: !state.isStale, broadcastTyping }
 }

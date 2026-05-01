@@ -36,6 +36,8 @@ interface MemberRowProps {
   roomId?: string
   /** Oda state (kick state guard) */
   roomState?: RoomLifecycleState
+  /** PR4h: typing broadcast aldiysa "..." indicator goster */
+  isTyping?: boolean
 }
 
 const KICKABLE_STATES: ReadonlyArray<RoomLifecycleState> = [
@@ -52,6 +54,7 @@ export function MemberRow({
   viewerUserId,
   roomId,
   roomState,
+  isTyping,
 }: MemberRowProps) {
   const canShowKick =
     viewerIsHost === true &&
@@ -74,6 +77,17 @@ export function MemberRow({
       </span>
       <span className="flex-1 truncate text-sm font-medium">
         {member.display_name}
+        {isTyping && (
+          <span
+            aria-label={`${member.display_name} cevap seçiyor`}
+            className="ml-1.5 inline-flex items-center gap-0.5 text-[var(--text-sub)]"
+            title="Cevap seçiyor"
+          >
+            <span className="size-1 animate-pulse rounded-full bg-[var(--text-sub)]" />
+            <span className="size-1 animate-pulse rounded-full bg-[var(--text-sub)] [animation-delay:150ms]" />
+            <span className="size-1 animate-pulse rounded-full bg-[var(--text-sub)] [animation-delay:300ms]" />
+          </span>
+        )}
       </span>
       {isHost && (
         <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">

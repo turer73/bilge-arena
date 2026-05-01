@@ -143,6 +143,28 @@ export function setupRoomChannel(
     dispatch({ type: 'PRESENCE_LEAVE', payload: { user_id: key } }),
   )
 
+  // PR4h: typing broadcast — player aktif soruda secenek tikladiginda emit;
+  // diger oyuncular MemberRoster'da "X..." indicator gorur. Auto-stop 3sn
+  // sonra (client-side timer; sunucu tarafinda timeout yok). Anti-cheat:
+  // payload sadece user_id, secilen cevap GIZLI (broadcast ettigimiz tek sey
+  // kullanicinin "dusunuyor" oldugu).
+  channel.on(
+    'broadcast' as never,
+    { event: 'typing_start' } as never,
+    (payload: { payload?: { user_id?: string } }) => {
+      const uid = payload.payload?.user_id
+      if (uid) dispatch({ type: 'TYPING_START', payload: { user_id: uid } })
+    },
+  )
+  channel.on(
+    'broadcast' as never,
+    { event: 'typing_stop' } as never,
+    (payload: { payload?: { user_id?: string } }) => {
+      const uid = payload.payload?.user_id
+      if (uid) dispatch({ type: 'TYPING_STOP', payload: { user_id: uid } })
+    },
+  )
+
   // System error listener (channel error -> isStale flag)
   channel.on(
     'system' as never,

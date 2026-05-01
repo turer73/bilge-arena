@@ -39,7 +39,11 @@ export function LobbyContainer({
   userId,
   initialState,
 }: LobbyContainerProps) {
-  const { state, isOnline } = useRoomChannel(roomId, userId, initialState)
+  const { state, isOnline, broadcastTyping } = useRoomChannel(
+    roomId,
+    userId,
+    initialState,
+  )
   const isHost = userId === state.room.host_id
   const roomState = state.room.state
 
@@ -53,7 +57,7 @@ export function LobbyContainer({
   if (roomState === 'active') {
     return (
       <div className="space-y-4">
-        <GameView state={state} userId={userId} />
+        <GameView state={state} userId={userId} onTyping={broadcastTyping} />
         <HostGameActions
           isHost={isHost}
           roomId={state.room.id}
@@ -90,6 +94,7 @@ export function LobbyContainer({
         viewerUserId={userId}
         roomId={state.room.id}
         roomState={state.room.state}
+        typingUsers={state.typing_users}
       />
       <MemberActions
         roomId={state.room.id}

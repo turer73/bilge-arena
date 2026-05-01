@@ -46,8 +46,10 @@ const baseState = (overrides: Partial<RoomState['current_round']> = {}): RoomSta
     ...overrides,
   },
   answers_count: 0,
+  my_answer: null,
   scoreboard: [],
   online: new Set<string>(),
+  typing_users: new Set<string>(),
   isStale: false,
 })
 
@@ -75,5 +77,27 @@ describe('SonucView', () => {
       <SonucView state={baseState({ round_index: 10 })} userId="u1" />,
     )
     expect(screen.getByText(/Son tur!/i)).toBeInTheDocument()
+  })
+
+  test('3) PR4f: my_answer wrong -> "Senin Cevabın" red marker, my_answer null -> "cevap vermedin" warning', () => {
+    // Yanlis cevap: Istanbul (correct=Ankara)
+    const wrongState = baseState()
+    wrongState.my_answer = {
+      answer_value: 'İstanbul',
+      is_correct: false,
+      points_awarded: 0,
+      response_ms: 12000,
+    }
+    const { rerender } = render(<SonucView state={wrongState} userId="u1" />)
+    expect(screen.getByLabelText(/Senin yanlış cevabın/i)).toBeInTheDocument()
+    expect(
+      screen.getAllByText('Senin Cevabın')[0],
+    ).toBeInTheDocument()
+
+    // Cevap vermemis
+    const noAnswerState = baseState()
+    noAnswerState.my_answer = null
+    rerender(<SonucView state={noAnswerState} userId="u1" />)
+    expect(screen.getByText(/cevap vermedin/i)).toBeInTheDocument()
   })
 })

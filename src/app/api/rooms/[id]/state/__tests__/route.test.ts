@@ -73,7 +73,8 @@ describe('GET /api/rooms/[id]/state', () => {
       scoreboard: [],
     })
     await GET(req(), params)
-    expect(mockFetchRoomState).toHaveBeenCalledWith('jwt', 'r1')
+    // PR4f: userId param eklendi (my_answer query icin)
+    expect(mockFetchRoomState).toHaveBeenCalledWith('jwt', 'r1', 'u1')
   })
 
   test('19) lobby state -> current_round null', async () => {
