@@ -15,9 +15,13 @@
 --       gercek questions havuzu MVP kabul (daha az seeding cabasi). Risk:
 --       preview sorusu sonradan oyunda cikabilir (~%1-5, havuz 3719 soru).
 --       Cozum yetersizse Sprint 2D'de questions.is_lobby_only kolonu eklenir.
---   #63 (yeni): RPC SECURITY INVOKER (auth.uid() not used). questions tablosu
---       RLS yok (read-only, anti-cheat view ile korunur). Bu RPC anti-cheat
---       view'a paralel calisir — sadece question + options doner.
+--   #63 (yeni, Codex P1 fix v2): RPC SECURITY DEFINER (caller role
+--       authenticated questions tablosuna erisemez — 2_rooms.sql:97 REVOKE
+--       ALL FROM authenticated, anon). Owner bilge_arena_app questions'a
+--       tam erisim sahibi, RPC owner role ile execute eder, anti-cheat
+--       JSONB build aşamasında saglanir (answer alani dondurulmez). Eski
+--       SECURITY INVOKER production'da permission error verir, widget
+--       sürekli "Henüz uygun soru yok" gosterirdi.
 --   #64 (yeni): ORDER BY RANDOM() LIMIT 1 query plan icin OK (3719 satir
 --       seq scan ~5ms). Buyuk havuzda (>100K) tablesample veya offset-random
 --       gerekebilir, MVP'de yeterli.
@@ -41,12 +45,18 @@ BEGIN;
 -- get_lobby_preview_question: rastgele soru (anti-cheat: answer haric)
 -- =============================================================================
 -- Returns: JSONB {question: text, options: text[]} VEYA NULL (kategori bos ise)
--- Caller authenticated, anti-cheat sift correct_answer dondurmez.
+--
+-- SECURITY DEFINER: questions tablosuna authenticated rolu erisemez (2_rooms.sql:97
+-- REVOKE ALL FROM authenticated, anon — anti-cheat read-only view ile korunur).
+-- Bu RPC owner bilge_arena_app role ile execute eder, JSONB build sift
+-- (answer alani disarda) ile anti-cheat saglar. Plan-deviation #63 (Codex P1 fix).
+--
+-- search_path SET edildi (DEFINER hardening — migration 030 ile uyumlu).
 CREATE OR REPLACE FUNCTION public.get_lobby_preview_question(p_category TEXT)
 RETURNS JSONB
 LANGUAGE sql
 STABLE
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path = public, pg_catalog
 AS $$
   SELECT jsonb_build_object(

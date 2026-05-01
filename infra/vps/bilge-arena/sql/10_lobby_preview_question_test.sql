@@ -3,11 +3,12 @@
 -- =============================================================================
 -- TDD GREEN dogrulama: 10_lobby_preview_question.sql migration uygulandiktan sonra.
 --
--- 4 Test:
+-- 5 Test:
 --   T1: get_lobby_preview_question fonksiyon var, JSONB doner
 --   T2: Anti-cheat: response 'answer' alani ICERMEZ
 --   T3: Bos kategori (eslesmesyen) -> NULL doner
 --   T4: REVOKE PUBLIC + GRANT authenticated dogru ayarli
+--   T5: SECURITY DEFINER (Codex P1 fix v2 - questions REVOKE workaround)
 --
 -- Calistirma:
 --   docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev \
@@ -124,6 +125,32 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'OK: T4 REVOKE PUBLIC + GRANT authenticated dogru';
+END $$;
+
+-- =============================================================================
+-- T5: SECURITY DEFINER (Codex P1 fix v2)
+-- =============================================================================
+-- questions tablosuna authenticated REVOKE'lu (2_rooms.sql:97). RPC INVOKER
+-- olsa permission error. DEFINER ile owner bilge_arena_app role'unde
+-- calisir, authenticated cagrirken bypass.
+DO $$
+DECLARE v_security TEXT;
+BEGIN
+  SELECT CASE WHEN prosecdef THEN 'DEFINER' ELSE 'INVOKER' END
+  INTO v_security
+  FROM pg_proc
+  WHERE proname = 'get_lobby_preview_question'
+    AND pronamespace = 'public'::regnamespace;
+
+  IF v_security IS NULL THEN
+    RAISE EXCEPTION 'T5 FAIL: fonksiyon bulunamadi';
+  END IF;
+
+  IF v_security <> 'DEFINER' THEN
+    RAISE EXCEPTION 'T5 FAIL: SECURITY % olmali DEFINER, mevcut %', 'DEFINER', v_security;
+  END IF;
+
+  RAISE NOTICE 'OK: T5 SECURITY DEFINER (questions REVOKE bypass)';
 END $$;
 
 ROLLBACK;
