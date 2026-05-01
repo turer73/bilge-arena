@@ -185,6 +185,23 @@ export type AdvanceRoundActionBody = z.infer<typeof advanceRoundActionSchema>
 export type RevealRoundActionBody = z.infer<typeof revealRoundActionSchema>
 
 // =============================================================================
+// quickPlayRoomAction — Sprint 2B Task 4 (Solo mode)
+// =============================================================================
+// 4 alan: category, difficulty, question_count + bot_count (sabit 3, ayri PR'da
+// dynamic olabilir). max_players=4 sabit (1 user + 3 bot, plan-deviation #72).
+export const quickPlayRoomActionSchema = z.object({
+  category: z
+    .string()
+    .trim()
+    .min(1, 'Kategori secilmeli')
+    .max(30, 'Kategori cok uzun'),
+  difficulty: z.number().int().min(1).max(5).default(2),
+  question_count: z.number().int().min(5).max(30).default(10),
+})
+
+export type QuickPlayRoomActionBody = z.infer<typeof quickPlayRoomActionSchema>
+
+// =============================================================================
 // refreshLobbyPreviewAction — Sprint 2A Task 2
 // =============================================================================
 export const refreshLobbyPreviewActionSchema = z.object({

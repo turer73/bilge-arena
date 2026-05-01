@@ -10,6 +10,7 @@ import {
   submitAnswerSchema,
   cancelRoomSchema,
   kickMemberSchema,
+  quickPlayRoomActionSchema,
   ROOM_CODE_REGEX,
 } from '../validations'
 
@@ -113,6 +114,61 @@ describe('createRoomSchema', () => {
       max_players: 20,
     })
     expect(r.success).toBe(true)
+  })
+})
+
+describe('quickPlayRoomActionSchema (Sprint 2B Task 4)', () => {
+  it('1) accepts minimal valid input + defaults', () => {
+    const r = quickPlayRoomActionSchema.safeParse({ category: 'matematik' })
+    expect(r.success).toBe(true)
+    if (r.success) {
+      expect(r.data.category).toBe('matematik')
+      expect(r.data.difficulty).toBe(2)
+      expect(r.data.question_count).toBe(10)
+    }
+  })
+
+  it('2) rejects empty category', () => {
+    const r = quickPlayRoomActionSchema.safeParse({ category: '' })
+    expect(r.success).toBe(false)
+  })
+
+  it('3) rejects difficulty out of 1-5', () => {
+    expect(
+      quickPlayRoomActionSchema.safeParse({
+        category: 'tarih',
+        difficulty: 0,
+      }).success,
+    ).toBe(false)
+    expect(
+      quickPlayRoomActionSchema.safeParse({
+        category: 'tarih',
+        difficulty: 6,
+      }).success,
+    ).toBe(false)
+  })
+
+  it('4) rejects question_count out of 5-30', () => {
+    expect(
+      quickPlayRoomActionSchema.safeParse({
+        category: 'tarih',
+        question_count: 4,
+      }).success,
+    ).toBe(false)
+    expect(
+      quickPlayRoomActionSchema.safeParse({
+        category: 'tarih',
+        question_count: 31,
+      }).success,
+    ).toBe(false)
+  })
+
+  it('5) trims whitespace on category', () => {
+    const r = quickPlayRoomActionSchema.safeParse({
+      category: '  matematik  ',
+    })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.category).toBe('matematik')
   })
 
   it('rejects title <3 chars', () => {
