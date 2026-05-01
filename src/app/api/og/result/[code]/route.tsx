@@ -24,6 +24,34 @@ export const runtime = 'edge'
 
 let interBoldPromise: Promise<ArrayBuffer> | null = null
 
+/**
+ * Inter-Bold.woff fetch with cache + fail-state reset.
+ *
+ * Codex P1 fix (PR #66): Onceki kodda fetch fail edince bad promise cache'lenir,
+ * sonraki request'lerde de bozuk doner — edge worker recycle olana kadar
+ * kalici outage. Fix: reject path'inde cache reset (transient hata recoverable).
+ */
+async function getInterBold(origin: string): Promise<ArrayBuffer> {
+  if (!interBoldPromise) {
+    interBoldPromise = (async () => {
+      try {
+        const res = await fetch(`${origin}/fonts/Inter-Bold.woff`)
+        if (!res.ok) {
+          throw new Error(
+            `Inter-Bold.woff fetch failed: ${res.status} ${res.statusText}`,
+          )
+        }
+        return await res.arrayBuffer()
+      } catch (err) {
+        // Cache reset on failure — sonraki request fresh fetch denemeli
+        interBoldPromise = null
+        throw err
+      }
+    })()
+  }
+  return interBoldPromise
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> },
@@ -34,12 +62,7 @@ export async function GET(
   const score = searchParams.get('score')
   const category = searchParams.get('category')
 
-  if (!interBoldPromise) {
-    interBoldPromise = fetch(`${origin}/fonts/Inter-Bold.woff`).then((res) =>
-      res.arrayBuffer(),
-    )
-  }
-  const interBold = await interBoldPromise
+  const interBold = await getInterBold(origin)
 
   return new ImageResponse(
     (

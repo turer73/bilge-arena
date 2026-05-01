@@ -28,11 +28,15 @@ vi.mock('next/og', () => ({
 }))
 
 // Inter-Bold.woff fetch mock (CDN cached)
+// Codex P1 fix: getInterBold res.ok check eder, mock ok=true zorunlu
 const mockFetch = vi.fn()
 beforeEach(() => {
+  vi.resetModules() // module-level interBoldPromise reset
   globalThis.fetch = mockFetch as unknown as typeof fetch
   mockFetch.mockReset()
   mockFetch.mockResolvedValue({
+    ok: true,
+    status: 200,
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
   })
 })
@@ -76,17 +80,61 @@ describe('/api/og/result/[code] route', () => {
     expect(res._jsxRendered).toBe(true)
   })
 
-  test('4) Inter-Bold.woff fetch (CDN cached, 1 kez)', async () => {
+  test('4) Inter-Bold.woff fetch ilk cagri', async () => {
     const { GET } = await import('../route')
     const request = new Request(
       'https://bilgearena.com/api/og/result/X',
     ) as unknown as Parameters<typeof GET>[0]
     const params = Promise.resolve({ code: 'X' })
     await GET(request, { params })
-    // Promise cached, ilk çağrıda fetch invoked
-    const fetchCalls = mockFetch.mock.calls.filter((c) =>
+    const fontCalls = mockFetch.mock.calls.filter((c) =>
       String(c[0]).includes('Inter-Bold.woff'),
     )
-    expect(fetchCalls.length).toBeGreaterThanOrEqual(0) // module-level cache nedeniyle 0 veya 1
+    expect(fontCalls.length).toBe(1)
+  })
+
+  test('5) Codex P1 fix: font fetch fail (500) -> error throw + cache reset', async () => {
+    const { GET } = await import('../route')
+
+    // 1. cagri: 500 fail
+    mockFetch.mockReset()
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    })
+
+    const request1 = new Request(
+      'https://bilgearena.com/api/og/result/X',
+    ) as unknown as Parameters<typeof GET>[0]
+
+    await expect(
+      GET(request1, { params: Promise.resolve({ code: 'X' }) }),
+    ).rejects.toThrow(/Inter-Bold\.woff fetch failed: 500/)
+
+    // 2. cagri: cache reset edildi, fresh fetch — 200 OK
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    })
+
+    const request2 = new Request(
+      'https://bilgearena.com/api/og/result/X',
+    ) as unknown as Parameters<typeof GET>[0]
+
+    const res2 = (await GET(request2, {
+      params: Promise.resolve({ code: 'X' }),
+    })) as unknown as { _jsxRendered: boolean }
+
+    // Cache reset oldu: 2. cagri basarili (eski promise stale donmedi)
+    expect(res2._jsxRendered).toBe(true)
+
+    // 2 fetch çağrısı yapıldı (1. fail, 2. success)
+    const fontCalls = mockFetch.mock.calls.filter((c) =>
+      String(c[0]).includes('Inter-Bold.woff'),
+    )
+    expect(fontCalls.length).toBe(2)
   })
 })
