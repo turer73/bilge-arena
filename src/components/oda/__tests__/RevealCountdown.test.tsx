@@ -75,4 +75,37 @@ describe('RevealCountdown', () => {
     // 5 - 3 = 2 saniye kaldi
     expect(screen.getByText('2')).toBeInTheDocument()
   })
+
+  test('5) Codex P1: serverOffsetMs=5000 (server 5sn ileri) + reveal=now + auto=10 -> remaining=5', () => {
+    // Client clock 5sn geride: Date.now() server'dan 5sn geride.
+    // serverOffsetMs=+5000 ile compensate edilir.
+    // Server'da reveal su an oldu, hedef +10sn sonra.
+    // Server'a gore 5sn gecmis (offset), hedef -5sn = 5sn kaldi.
+    const reveal = new Date('2026-05-01T00:00:00Z')
+    vi.setSystemTime(reveal) // client clock reveal aninda
+    render(
+      <RevealCountdown
+        revealedAt={reveal.toISOString()}
+        autoAdvanceSeconds={10}
+        serverOffsetMs={5000}
+      />,
+    )
+    // Server now = client + 5000ms = reveal + 5sn
+    // Target = reveal + 10sn -> remaining = 5sn
+    expect(screen.getByText('5')).toBeInTheDocument()
+  })
+
+  test('6) serverOffsetMs default 0 (geriye uyum) - 4. testle ayni davranis', () => {
+    const reveal = new Date('2026-05-01T00:00:00Z')
+    vi.setSystemTime(new Date(reveal.getTime() + 2000))
+    render(
+      <RevealCountdown
+        revealedAt={reveal.toISOString()}
+        autoAdvanceSeconds={5}
+        // serverOffsetMs prop verilmemis -> 0 default
+      />,
+    )
+    // 5 - 2 = 3 saniye
+    expect(screen.getByText('3')).toBeInTheDocument()
+  })
 })
