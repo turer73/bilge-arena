@@ -23,7 +23,47 @@ describe('createRoomSchema', () => {
       expect(r.data.max_players).toBe(8)
       expect(r.data.per_question_seconds).toBe(20)
       expect(r.data.mode).toBe('sync')
+      // Sprint 2A Task 1: auto_advance_seconds default 5
+      expect(r.data.auto_advance_seconds).toBe(5)
     }
+  })
+
+  it('Sprint 2A: accepts auto_advance_seconds=0 (manuel mode)', () => {
+    const r = createRoomSchema.safeParse({
+      title: 'Manuel',
+      category: 'sayilar',
+      auto_advance_seconds: 0,
+    })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.auto_advance_seconds).toBe(0)
+  })
+
+  it('Sprint 2A: accepts auto_advance_seconds=30 (max)', () => {
+    const r = createRoomSchema.safeParse({
+      title: 'Yavaş',
+      category: 'sayilar',
+      auto_advance_seconds: 30,
+    })
+    expect(r.success).toBe(true)
+    if (r.success) expect(r.data.auto_advance_seconds).toBe(30)
+  })
+
+  it('Sprint 2A: rejects auto_advance_seconds=-1 (below min)', () => {
+    const r = createRoomSchema.safeParse({
+      title: 'Eksi',
+      category: 'sayilar',
+      auto_advance_seconds: -1,
+    })
+    expect(r.success).toBe(false)
+  })
+
+  it('Sprint 2A: rejects auto_advance_seconds=31 (above max)', () => {
+    const r = createRoomSchema.safeParse({
+      title: 'Çok',
+      category: 'sayilar',
+      auto_advance_seconds: 31,
+    })
+    expect(r.success).toBe(false)
   })
 
   it('rejects title <3 chars', () => {
