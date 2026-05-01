@@ -117,6 +117,7 @@ export async function createRoomAction(
     max_players: Number(formData.get('max_players') ?? 8),
     per_question_seconds: Number(formData.get('per_question_seconds') ?? 20),
     mode: formData.get('mode')?.toString() ?? 'sync',
+    auto_advance_seconds: Number(formData.get('auto_advance_seconds') ?? 5),
   }
   const parsed = createRoomSchema.safeParse(raw)
   if (!parsed.success) {

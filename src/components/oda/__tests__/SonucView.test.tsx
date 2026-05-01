@@ -100,4 +100,25 @@ describe('SonucView', () => {
     rerender(<SonucView state={noAnswerState} userId="u1" />)
     expect(screen.getByText(/cevap vermedin/i)).toBeInTheDocument()
   })
+
+  test('4) Sprint 2A: auto_advance_seconds=5 + revealed_at -> RevealCountdown render', () => {
+    const s = baseState()
+    s.room.auto_advance_seconds = 5
+    render(<SonucView state={s} userId="u1" />)
+    expect(screen.getByTestId('reveal-countdown')).toBeInTheDocument()
+  })
+
+  test('5) Sprint 2A: auto_advance_seconds=0 (manuel mode) -> RevealCountdown gizli', () => {
+    const s = baseState()
+    s.room.auto_advance_seconds = 0
+    render(<SonucView state={s} userId="u1" />)
+    expect(screen.queryByTestId('reveal-countdown')).not.toBeInTheDocument()
+  })
+
+  test('6) Sprint 2A: revealed_at NULL -> RevealCountdown gizli', () => {
+    const s = baseState({ revealed_at: null, correct_answer: null, explanation: null })
+    s.room.auto_advance_seconds = 5
+    render(<SonucView state={s} userId="u1" />)
+    expect(screen.queryByTestId('reveal-countdown')).not.toBeInTheDocument()
+  })
 })

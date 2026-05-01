@@ -16,6 +16,7 @@
 
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 import { cn } from '@/lib/utils/cn'
+import { RevealCountdown } from './RevealCountdown'
 
 interface SonucViewProps {
   state: RoomState
@@ -139,6 +140,13 @@ export function SonucView({ state, userId }: SonucViewProps) {
         <p className="mt-4 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
           Son tur! Host bir sonraki adımda oyunu bitirecek, sıralama gösterilecek.
         </p>
+      )}
+
+      {current_round.revealed_at && (
+        <RevealCountdown
+          revealedAt={current_round.revealed_at}
+          autoAdvanceSeconds={room.auto_advance_seconds ?? 0}
+        />
       )}
     </section>
   )
