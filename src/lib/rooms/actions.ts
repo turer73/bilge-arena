@@ -39,6 +39,7 @@ import {
   advanceRoundActionSchema,
   revealRoundActionSchema,
   refreshLobbyPreviewActionSchema,
+  quickPlayRoomActionSchema,
   type CreateRoomBody,
 } from './validations'
 
@@ -445,6 +446,59 @@ export async function revealRoundAction(
   if (!result.ok) return { error: result.error.message }
 
   return {}
+}
+
+// =============================================================================
+// quickPlayRoomAction — Sprint 2B Task 4 (Solo mode skeleton)
+// =============================================================================
+
+export type QuickPlayRoomActionState = {
+  /** Field-level Zod hatalari */
+  fieldErrors?: { category?: string[]; difficulty?: string[]; question_count?: string[] }
+  /** Top-level hata: auth, RPC */
+  error?: string
+}
+
+/**
+ * "Hızlı Oyun" Server Action — kullaniciyi 3 bot rakiple solo odaya
+ * yonlendirir. quick_play_room RPC oda + 4 member (1 host + 3 bot)
+ * olusturur, lobby state'inde host start_room basana kadar bekler.
+ *
+ * Plan-deviation #71: bot answer logic dahil DEGIL (PR2'de eklenir).
+ * Bot uyeler reveal'a kadar pasif kalir, auto_relay deadline -> 0 puan.
+ */
+export async function quickPlayRoomAction(
+  _prev: QuickPlayRoomActionState,
+  formData: FormData,
+): Promise<QuickPlayRoomActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = quickPlayRoomActionSchema.safeParse({
+    category: formData.get('category')?.toString() ?? '',
+    difficulty: Number(formData.get('difficulty') ?? 2),
+    question_count: Number(formData.get('question_count') ?? 10),
+  })
+  if (!parsed.success) {
+    return {
+      fieldErrors: parsed.error.flatten()
+        .fieldErrors as QuickPlayRoomActionState['fieldErrors'],
+    }
+  }
+
+  const result = await callRpc<{ id: string; code: string }>(
+    auth.jwt,
+    'quick_play_room',
+    {
+      p_category: parsed.data.category,
+      p_difficulty: parsed.data.difficulty,
+      p_question_count: parsed.data.question_count,
+    },
+  )
+  if (!result.ok) return { error: result.error.message }
+
+  revalidatePath('/oda')
+  redirect(`/oda/${result.data.code}`)
 }
 
 // =============================================================================

@@ -29,6 +29,8 @@ export type Member = {
   is_host: boolean
   is_kicked: boolean
   score?: number
+  /** Sprint 2B Task 4: bot rakipler (solo mode) */
+  is_bot?: boolean
 }
 
 /**

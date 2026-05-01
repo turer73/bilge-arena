@@ -77,6 +77,8 @@ export interface RoomMember {
   score: number
   streak: number
   is_active: boolean
+  // Sprint 2B Task 4: bot rakipler (solo mode)
+  is_bot: boolean
 }
 
 // =============================================================================

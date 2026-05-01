@@ -73,10 +73,18 @@ export function MemberRow({
       )}
     >
       <span aria-hidden="true" className="text-lg">
-        {member.emoji ?? '🎮'}
+        {member.is_bot ? '🤖' : (member.emoji ?? '🎮')}
       </span>
       <span className="flex-1 truncate text-sm font-medium">
         {member.display_name}
+        {member.is_bot && (
+          <span
+            aria-label="Bot oyuncu"
+            className="ml-1.5 rounded-full bg-purple-500/15 px-1.5 py-0.5 text-[9px] font-bold text-purple-700 dark:text-purple-300"
+          >
+            BOT
+          </span>
+        )}
         {isTyping && (
           <span
             aria-label={`${member.display_name} cevap seçiyor`}

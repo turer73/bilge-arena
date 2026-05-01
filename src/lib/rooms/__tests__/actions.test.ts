@@ -38,6 +38,7 @@ import {
   submitAnswerAction,
   advanceRoundAction,
   revealRoundAction,
+  quickPlayRoomAction,
 } from '../actions'
 
 const mockSupabase = (user: unknown, session: unknown) => {
@@ -538,5 +539,77 @@ describe('revealRoundAction', () => {
     expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'reveal_round', {
       p_room_id: validUuid,
     })
+  })
+})
+
+// =============================================================================
+// quickPlayRoomAction (Sprint 2B Task 4 / Solo mode)
+// =============================================================================
+
+describe('quickPlayRoomAction', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  test('1) anon user → error: Giris yapmalisin', async () => {
+    mockSupabase(null, null)
+    const fd = new FormData()
+    fd.set('category', 'matematik')
+    const r = await quickPlayRoomAction({}, fd)
+    expect(r.error).toMatch(/Giris yapmalisin/)
+  })
+
+  test('2) empty category → fieldErrors.category', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    const fd = new FormData()
+    fd.set('category', '')
+    const r = await quickPlayRoomAction({}, fd)
+    expect(r.fieldErrors?.category?.length).toBeGreaterThan(0)
+  })
+
+  test('3) success → callRpc(quick_play_room, p_category) + redirect', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({
+      ok: true,
+      data: { id: 'r1', code: 'BOTABC' },
+    })
+    const fd = new FormData()
+    fd.set('category', 'matematik')
+    fd.set('difficulty', '3')
+    fd.set('question_count', '15')
+    await quickPlayRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'quick_play_room', {
+      p_category: 'matematik',
+      p_difficulty: 3,
+      p_question_count: 15,
+    })
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/oda')
+    expect(mockRedirect).toHaveBeenCalledWith('/oda/BOTABC')
+  })
+
+  test('4) defaults: difficulty=2, question_count=10', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({
+      ok: true,
+      data: { id: 'r1', code: 'X' },
+    })
+    const fd = new FormData()
+    fd.set('category', 'tarih')
+    await quickPlayRoomAction({}, fd)
+    expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'quick_play_room', {
+      p_category: 'tarih',
+      p_difficulty: 2,
+      p_question_count: 10,
+    })
+  })
+
+  test('5) RPC error -> error message', async () => {
+    mockSupabase({ id: 'u1' }, { access_token: 'jwt' })
+    mockCallRpc.mockResolvedValue({
+      ok: false,
+      error: { code: 'P0013', message: 'Code generation cakistir', status: 500 },
+    })
+    const fd = new FormData()
+    fd.set('category', 'matematik')
+    const r = await quickPlayRoomAction({}, fd)
+    expect(r.error).toMatch(/cakistir/)
   })
 })
