@@ -201,15 +201,16 @@ describe('fetchPublicRooms (Sprint 2A Task 3)', () => {
           difficulty: 2,
           question_count: 10,
           max_players: 6,
+          member_count: 2,
           created_at: '2026-04-30',
-          room_members: [{ count: 2 }],
         },
       ]),
     )
     const rooms = await fetchPublicRooms('jwt')
     expect(rooms).toHaveLength(1)
     expect(rooms[0].code).toBe('PUBA12')
-    expect(rooms[0].room_members[0].count).toBe(2)
+    // Codex P1 v2: member_count direkt kolon (denormalized)
+    expect(rooms[0].member_count).toBe(2)
   })
 
   test('18) anonim user (jwt=null) -> Authorization header gonderilmez', async () => {
@@ -230,6 +231,9 @@ describe('fetchPublicRooms (Sprint 2A Task 3)', () => {
     expect(url).toMatch(/order=created_at\.desc/)
     expect(url).toMatch(/limit=20/)
     expect(url).toMatch(/select=id%2Ccode%2Ctitle/)
+    // Codex P1 v2: member_count direkt kolon (room_members(count) embed degil)
+    expect(url).toMatch(/member_count/)
+    expect(url).not.toMatch(/room_members\(count\)/)
   })
 
   test('20) kategori filter: cat=matematik -> URL category=eq.matematik', async () => {

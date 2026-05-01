@@ -3,7 +3,7 @@
 -- =============================================================================
 -- TDD GREEN dogrulama: 11_rooms_public_discovery.sql migration uygulandiktan sonra.
 --
--- 7 Test:
+-- 10 Test:
 --   T1: rooms.is_public DEFAULT FALSE
 --   T2: chk_rooms_public_max_players_cap reddedir is_public=true + max_players=10
 --   T3: chk_rooms_public_max_players_cap kabul eder is_public=true + max_players=6
@@ -11,6 +11,9 @@
 --   T5: rooms_select_public_lobby policy var (TO anon, authenticated)
 --   T6: anon role rooms tablosuna SELECT GRANT'i var
 --   T7: create_room imzasi 9 parametre (yeni)
+--   T8: rooms.member_count kolonu var (Codex P1 v2)
+--   T9: trg_room_members_count_sync trigger var
+--   T10: trigger INSERT room_members -> rooms.member_count +1
 -- =============================================================================
 
 \set ON_ERROR_STOP on
@@ -138,6 +141,109 @@ BEGIN
     RAISE EXCEPTION 'T7 FAIL: arg sayisi 9 olmali, mevcut: %', v_arg_count;
   END IF;
   RAISE NOTICE 'OK: T7 create_room 9 parametre';
+END $$;
+
+-- =============================================================================
+-- T8: rooms.member_count kolonu var (Codex P1 v2)
+-- =============================================================================
+DO $$
+DECLARE v_default TEXT;
+DECLARE v_nullable TEXT;
+BEGIN
+  SELECT column_default, is_nullable
+  INTO v_default, v_nullable
+  FROM information_schema.columns
+  WHERE table_schema='public'
+    AND table_name='rooms'
+    AND column_name='member_count';
+
+  IF v_default IS NULL THEN
+    RAISE EXCEPTION 'T8 FAIL: rooms.member_count kolonu yok';
+  END IF;
+  IF v_default !~ '^0' THEN
+    RAISE EXCEPTION 'T8 FAIL: member_count default 0 degil: %', v_default;
+  END IF;
+  IF v_nullable <> 'NO' THEN
+    RAISE EXCEPTION 'T8 FAIL: member_count NOT NULL olmali, mevcut: %', v_nullable;
+  END IF;
+
+  RAISE NOTICE 'OK: T8 rooms.member_count NOT NULL DEFAULT 0';
+END $$;
+
+-- =============================================================================
+-- T9: trg_room_members_count_sync trigger var
+-- =============================================================================
+DO $$
+DECLARE v_count INT;
+BEGIN
+  SELECT COUNT(*) INTO v_count
+  FROM pg_trigger
+  WHERE tgname = 'trg_room_members_count_sync'
+    AND tgrelid = 'public.room_members'::regclass;
+
+  IF v_count = 0 THEN
+    RAISE EXCEPTION 'T9 FAIL: trg_room_members_count_sync trigger yok';
+  END IF;
+
+  RAISE NOTICE 'OK: T9 trg_room_members_count_sync trigger var';
+END $$;
+
+-- =============================================================================
+-- T10: Trigger uye INSERT/DELETE ile member_count senkron
+-- =============================================================================
+DO $$
+DECLARE
+  v_test_user UUID := gen_random_uuid();
+  v_test_user2 UUID := gen_random_uuid();
+  v_room_id UUID;
+  v_count INT;
+BEGIN
+  -- Test odasi olustur (member_count=0 default)
+  INSERT INTO public.rooms
+    (code, host_id, title, category, difficulty, question_count,
+     max_players, per_question_seconds, mode, state)
+  VALUES
+    ('TST10C', v_test_user, 'T10 trigger', 'matematik', 2, 10,
+     6, 20, 'sync', 'lobby')
+  RETURNING id INTO v_room_id;
+
+  -- 1. uye INSERT (host)
+  INSERT INTO public.room_members (room_id, user_id, role, is_active)
+    VALUES (v_room_id, v_test_user, 'host', TRUE);
+
+  SELECT member_count INTO v_count FROM public.rooms WHERE id = v_room_id;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'T10 FAIL: 1 uye INSERT sonrasi member_count=%, beklenen 1', v_count;
+  END IF;
+
+  -- 2. uye INSERT (player)
+  INSERT INTO public.room_members (room_id, user_id, role, is_active)
+    VALUES (v_room_id, v_test_user2, 'player', TRUE);
+
+  SELECT member_count INTO v_count FROM public.rooms WHERE id = v_room_id;
+  IF v_count <> 2 THEN
+    RAISE EXCEPTION 'T10 FAIL: 2 uye INSERT sonrasi member_count=%, beklenen 2', v_count;
+  END IF;
+
+  -- is_active = FALSE update (kick simulation)
+  UPDATE public.room_members SET is_active = FALSE
+    WHERE room_id = v_room_id AND user_id = v_test_user2;
+
+  SELECT member_count INTO v_count FROM public.rooms WHERE id = v_room_id;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'T10 FAIL: 1 uye kick sonrasi member_count=%, beklenen 1', v_count;
+  END IF;
+
+  -- DELETE
+  DELETE FROM public.room_members
+    WHERE room_id = v_room_id AND user_id = v_test_user;
+
+  SELECT member_count INTO v_count FROM public.rooms WHERE id = v_room_id;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'T10 FAIL: host DELETE sonrasi member_count=%, beklenen 0', v_count;
+  END IF;
+
+  RAISE NOTICE 'OK: T10 trigger INSERT/UPDATE/DELETE member_count senkron';
 END $$;
 
 ROLLBACK;

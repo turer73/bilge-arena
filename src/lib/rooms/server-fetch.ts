@@ -77,6 +77,10 @@ export type RoomDetail = {
 /**
  * /oda?tab=public listesinde gosterilen kart. RLS policy
  * rooms_select_public_lobby (TO anon, authenticated) is_public + lobby filter.
+ *
+ * Codex P1 v2 (PR #61): member_count rooms tablosunda denormalized
+ * kolon (trigger ile senkron). Eski room_members(count) embed'i anon icin
+ * RLS reddederdi.
  */
 export type PublicRoomCard = {
   id: string
@@ -86,8 +90,8 @@ export type PublicRoomCard = {
   difficulty: number
   question_count: number
   max_players: number
+  member_count: number
   created_at: string
-  room_members: Array<{ count: number }>
 }
 
 /**
@@ -105,9 +109,11 @@ export async function fetchPublicRooms(
   url.searchParams.set('state', 'eq.lobby')
   url.searchParams.set('order', 'created_at.desc')
   url.searchParams.set('limit', String(opts?.limit ?? 20))
+  // Codex P1 v2: room_members(count) embed yerine rooms.member_count
+  // (anon icin RLS gerek olmaz, denormalized cached).
   url.searchParams.set(
     'select',
-    'id,code,title,category,difficulty,question_count,max_players,created_at,room_members(count)',
+    'id,code,title,category,difficulty,question_count,max_players,member_count,created_at',
   )
   if (opts?.category) {
     url.searchParams.set('category', `eq.${opts.category}`)

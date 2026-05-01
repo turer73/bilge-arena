@@ -30,6 +30,16 @@
 --   #68 (yeni): create_room 9. parametre, eski 8-arg DROP edildi (PR #58
 --       patterni). Production deploy ile migration apply arasinda kucuk
 --       pencere riski (memory id=416). Trafik dusuk kabul edildi.
+--   #69 (yeni, Codex P1 v2): rooms.member_count denormalized + trigger
+--       senkronizasyon. Ilk yaklasim PostgREST `room_members(count)` embed
+--       idi ama room_members RLS policy `TO authenticated` + same-room
+--       member only — anon user yetki yok, uye sayisi 0/6 gorur (Codex P1
+--       PR #61). RLS policy ekle yaklasimi rooms <-> room_members policy
+--       cagrisinda recursion riski (rooms FORCE RLS aktif, owner bypass
+--       yok). Cozum: rooms.member_count INT cached + AFTER trigger ile
+--       room_members CRUD'unda guncellenir. Anti-cheat: trigger SECURITY
+--       DEFINER, count manipule edilemez. Backfill UPDATE migration'in
+--       icinde.
 --
 -- Kalitim plan-deviations:
 --   #41: Caller identity = auth.uid()
@@ -51,6 +61,70 @@ BEGIN;
 -- =============================================================================
 ALTER TABLE public.rooms
   ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- =============================================================================
+-- 1b) rooms.member_count denormalized (Codex P1 v2 fix)
+-- =============================================================================
+-- room_members RLS authenticated only + same-room member -> anon kullanici
+-- room_members(count) embed alamaz. Recursion riski oldugu icin RLS policy
+-- yerine cached count + trigger pattern (plan-deviation #69).
+ALTER TABLE public.rooms
+  ADD COLUMN IF NOT EXISTS member_count INT NOT NULL DEFAULT 0;
+
+-- Backfill: mevcut odalar icin aktif uye sayisi
+UPDATE public.rooms r
+SET member_count = (
+  SELECT COUNT(*)
+  FROM public.room_members rm
+  WHERE rm.room_id = r.id
+    AND rm.is_active = TRUE
+);
+
+-- Trigger fonksiyon: room_members CRUD -> rooms.member_count senkron
+-- SECURITY DEFINER: trigger kullanici yetkilerine bagimsiz calismali
+CREATE OR REPLACE FUNCTION public._room_members_count_sync()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.is_active = TRUE THEN
+      UPDATE public.rooms
+      SET member_count = member_count + 1, updated_at = NOW()
+      WHERE id = NEW.room_id;
+    END IF;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    IF OLD.is_active = TRUE THEN
+      UPDATE public.rooms
+      SET member_count = GREATEST(0, member_count - 1), updated_at = NOW()
+      WHERE id = OLD.room_id;
+    END IF;
+    RETURN OLD;
+  ELSIF TG_OP = 'UPDATE' THEN
+    -- is_active flag toggle (kick = TRUE -> FALSE; rejoin tersi)
+    IF OLD.is_active = TRUE AND NEW.is_active = FALSE THEN
+      UPDATE public.rooms
+      SET member_count = GREATEST(0, member_count - 1), updated_at = NOW()
+      WHERE id = NEW.room_id;
+    ELSIF OLD.is_active = FALSE AND NEW.is_active = TRUE THEN
+      UPDATE public.rooms
+      SET member_count = member_count + 1, updated_at = NOW()
+      WHERE id = NEW.room_id;
+    END IF;
+    RETURN NEW;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_room_members_count_sync ON public.room_members;
+CREATE TRIGGER trg_room_members_count_sync
+  AFTER INSERT OR UPDATE OF is_active OR DELETE ON public.room_members
+  FOR EACH ROW
+  EXECUTE FUNCTION public._room_members_count_sync();
 
 -- =============================================================================
 -- 2) chk_rooms_public_max_players_cap — public oda max 6 kisi (roadmap)

@@ -26,8 +26,8 @@ const sampleRooms: PublicRoomCard[] = [
     difficulty: 3,
     question_count: 10,
     max_players: 6,
+    member_count: 2,
     created_at: '2026-04-30T10:00:00Z',
-    room_members: [{ count: 2 }],
   },
   {
     id: 'r2',
@@ -37,8 +37,8 @@ const sampleRooms: PublicRoomCard[] = [
     difficulty: 4,
     question_count: 15,
     max_players: 4,
+    member_count: 1,
     created_at: '2026-04-30T11:00:00Z',
-    room_members: [{ count: 1 }],
   },
 ]
 

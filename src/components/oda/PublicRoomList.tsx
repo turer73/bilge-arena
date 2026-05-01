@@ -103,7 +103,7 @@ export function PublicRoomList({
                     </p>
                   </div>
                   <span className="shrink-0 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                    {r.room_members[0]?.count ?? 0}/{r.max_players}
+                    {r.member_count}/{r.max_players}
                   </span>
                 </div>
               </Link>
