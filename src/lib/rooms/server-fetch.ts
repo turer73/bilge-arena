@@ -72,6 +72,63 @@ export type RoomDetail = {
 }
 
 // =============================================================================
+// PublicRoomCard (Sprint 2A Task 3)
+// =============================================================================
+/**
+ * /oda?tab=public listesinde gosterilen kart. RLS policy
+ * rooms_select_public_lobby (TO anon, authenticated) is_public + lobby filter.
+ */
+export type PublicRoomCard = {
+  id: string
+  code: string
+  title: string
+  category: string
+  difficulty: number
+  question_count: number
+  max_players: number
+  created_at: string
+  room_members: Array<{ count: number }>
+}
+
+/**
+ * Public lobby odalarini listeler. Anonim user (JWT yok) ve authenticated
+ * her ikisi de cagiribilir — RLS policy + GRANT SELECT TO anon ile.
+ *
+ * Kategori filter optional. Default 20 oda max (created_at DESC).
+ */
+export async function fetchPublicRooms(
+  jwt: string | null,
+  opts?: { category?: string; limit?: number },
+): Promise<PublicRoomCard[]> {
+  const url = new URL(`${RPC_URL}/rooms`)
+  url.searchParams.set('is_public', 'eq.true')
+  url.searchParams.set('state', 'eq.lobby')
+  url.searchParams.set('order', 'created_at.desc')
+  url.searchParams.set('limit', String(opts?.limit ?? 20))
+  url.searchParams.set(
+    'select',
+    'id,code,title,category,difficulty,question_count,max_players,created_at,room_members(count)',
+  )
+  if (opts?.category) {
+    url.searchParams.set('category', `eq.${opts.category}`)
+  }
+
+  const headers: Record<string, string> = {}
+  if (jwt) headers.Authorization = `Bearer ${jwt}`
+
+  try {
+    const res = await fetch(url.toString(), {
+      headers,
+      cache: 'no-store',
+    })
+    if (!res.ok) return []
+    return (await res.json()) as PublicRoomCard[]
+  } catch {
+    return []
+  }
+}
+
+// =============================================================================
 // LobbyPreviewQuestion (Sprint 2A Task 2)
 // =============================================================================
 /**
