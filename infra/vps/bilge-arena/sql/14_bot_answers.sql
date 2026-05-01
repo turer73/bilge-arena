@@ -2,10 +2,8 @@
 -- Bilge Arena Oda Sistemi: 14_bot_answers migration (Sprint 2B Task 4 PR2)
 -- =============================================================================
 -- Hedef: Solo mode bot rakipleri AKTIF cevap versin (Sprint 2A T4 PR1
--- skeleton'i canlandirir). Trigger + helper RPC + RLS policy paterni.
+-- skeleton'i canlandirir). Trigger + helper RPC paterni.
 --
---          - room_answers_insert_bot RLS policy (RLS bypass alternatif yerine
---             policy ekleyerek)
 --          - _submit_bot_answers_for_round(p_room_id, p_round_index) helper
 --             SECURITY DEFINER + OWNER bilge_arena_app
 --          - trg_bot_answers_on_round_start AFTER UPDATE OF started_at
@@ -23,20 +21,25 @@
 -- - Yanlis cevap: options array'inden random non-correct sec
 --
 -- Plan-deviations:
---   #86 (yeni): RLS policy yaklasimi (BYPASSRLS gerekmez). Trigger DEFINER
---       + OWNER bilge_arena_app FORCE RLS aciksa bypass etmez. Yeni policy
---       room_answers_insert_bot WITH CHECK EXISTS room_members is_bot=TRUE.
---       Trigger içinden auth.uid()=host iken bot user_id satiri insert eder,
---       policy bot member dogrular.
+--   #86 (yeni): Bot insert RLS bypass — bilge_arena_app BYPASSRLS attribute
+--       (0b_authenticated_role_membership.sql:57). SECURITY DEFINER trigger
+--       FORCE RLS tablosuna policy mate-eden olmadan insert eder. Yeni RLS
+--       policy gerekmez (auto_relay_tick reveal/score updateleri ayni paterni
+--       kullanir, room_audit_log inserti da ayni). Anti-cheat: helper sadece
+--       bot members (is_bot=TRUE) icin INSERT eder, gercek user user_id'leri
+--       kullanmaz. Defense-in-depth: function REVOKE'lu, sadece trigger
+--       icinden cagrilir.
 --   #87 (yeni): Bot answer logic basit MVP — questions difficulty kullanir
 --       ama daha gelismis (kategori-spesifik, soru-spesifik) ileride.
 --   #88 (yeni): Yanlis cevap rastgele options'dan secim — duplicate'siz.
 --       Eger options 2 elemanli ve bot yanlis cevap secse hep ayni wrong
 --       (50% case). Daha cok options ile dagilim adil.
 --   #89 (yeni): Trigger AFTER UPDATE OF started_at — round basladiktan sonra.
---       Onceki started_at NULL'dan NOT NULL'a gectiginde tetikle.
---       advance_round modify edilmez (mevcut RPC dokunulmaz, plan-deviation
---       #88 kalitim).
+--       started_at NOT NULL kolonu (2_rooms.sql:163), start_room INSERT'te
+--       deger atar. Trigger sadece UPDATE'te tetikler — INSERT cagrilmaz.
+--       advance_round Case 1 (active(0)->active(1)) ve Case 2 (reveal->next)
+--       started_at = NOW() UPDATE'i tetikleyici. advance_round modify edilmez
+--       (mevcut RPC dokunulmaz, plan-deviation #88 kalitim).
 --
 -- Calistirma:
 --   docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev \
@@ -48,33 +51,12 @@
 BEGIN;
 
 -- =============================================================================
--- 1) RLS policy: room_answers_insert_bot (#86 plan-deviation)
--- =============================================================================
--- Mevcut room_answers_insert_self_active policy: WITH CHECK (user_id=auth.uid())
--- Bot satirlari user_id=auth.uid() degil — yeni policy gerek.
-DROP POLICY IF EXISTS room_answers_insert_bot ON public.room_answers;
-CREATE POLICY room_answers_insert_bot
-  ON public.room_answers
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.room_members rm
-      WHERE rm.room_id = room_answers.room_id
-        AND rm.user_id = room_answers.user_id
-        AND rm.is_bot = TRUE
-        AND rm.is_active = TRUE
-    )
-    AND points_awarded = 0
-    AND is_correct IS NULL
-  );
-
--- =============================================================================
--- 2) Helper function: _submit_bot_answers_for_round
+-- 1) Helper function: _submit_bot_answers_for_round
 -- =============================================================================
 -- Trigger tarafindan cagrilir. Loop bot members + random answer + INSERT.
 -- Anti-cheat: points_awarded=0, is_correct=NULL — reveal_round/auto_relay_tick
--- reveal sirasinda compute eder (gercek user paterni).
+-- reveal sirasinda compute eder (gercek user paterni — submit_answer satiri
+-- 161 ile birebir uyumlu).
 CREATE OR REPLACE FUNCTION public._submit_bot_answers_for_round(
   p_room_id UUID,
   p_round_index SMALLINT
@@ -94,12 +76,19 @@ DECLARE
   v_accuracy NUMERIC;
   v_response_ms INT;
   v_wrong_idx INT;
+  v_attempt INT;
 BEGIN
   -- Round + Room fetch
   SELECT * INTO v_round
   FROM public.room_rounds
   WHERE room_id = p_room_id AND round_index = p_round_index;
-  IF NOT FOUND OR v_round.started_at IS NULL THEN
+  IF NOT FOUND THEN
+    RETURN;
+  END IF;
+
+  -- Defensive: revealed_at NOT NULL ise atla (trigger zaten guard ediyor ama
+  -- direct cagri korumasi).
+  IF v_round.revealed_at IS NOT NULL THEN
     RETURN;
   END IF;
 
@@ -129,7 +118,8 @@ BEGIN
     ELSE 0.60
   END;
 
-  -- Loop active bot members (skip if zaten cevap vermisse — UNIQUE constraint)
+  -- Loop active bot members (skip if zaten cevap vermisse — UNIQUE constraint
+  -- room_answers (round_id, user_id))
   FOR v_bot IN
     SELECT rm.user_id
     FROM public.room_members rm
@@ -144,20 +134,27 @@ BEGIN
   LOOP
     -- Random correct or incorrect (#87)
     IF random() < v_accuracy THEN
-      v_answer := v_correct
+      v_answer := v_correct;
     ELSE
-      -- Pick random wrong option (#88)
-      LOOP
+      -- Pick random wrong option (#88) — bounded retry to avoid hot loop
+      v_attempt := 0;
+      v_answer := NULL;
+      WHILE v_attempt < 10 LOOP
         v_wrong_idx := floor(random() * v_options_count)::INT;
         v_answer := v_options->>v_wrong_idx;
         EXIT WHEN v_answer IS NOT NULL AND v_answer <> v_correct;
+        v_attempt := v_attempt + 1;
       END LOOP;
+      -- Fallback: tum options correct ile esit ise (corrupt data)
+      IF v_answer IS NULL OR v_answer = v_correct THEN
+        v_answer := v_correct;
+      END IF;
     END IF;
 
     -- response_ms: 5000-15000 random (humanlike)
     v_response_ms := 5000 + floor(random() * 10001)::INT;
 
-    -- INSERT (RLS policy room_answers_insert_bot uygulanir)
+    -- INSERT (FORCE RLS bilge_arena_app BYPASSRLS ile bypass — #86)
     INSERT INTO public.room_answers
       (room_id, round_id, user_id, answer_value, response_ms,
        is_correct, points_awarded)
@@ -172,9 +169,11 @@ REVOKE EXECUTE ON FUNCTION public._submit_bot_answers_for_round(UUID, SMALLINT) 
 -- Trigger sadece authenticated cagrisindan tetiklenir, GRANT yok (helper).
 
 -- =============================================================================
--- 3) Trigger: AFTER UPDATE OF started_at ON room_rounds (#89 plan-deviation)
+-- 2) Trigger: AFTER UPDATE OF started_at ON room_rounds (#89 plan-deviation)
 -- =============================================================================
--- Yeni round started — bot answers otomatik insert
+-- Yeni round started — bot answers otomatik insert.
+-- started_at NOT NULL (2_rooms.sql:163) — INSERT'te value var, sadece UPDATE'te
+-- degisir. AFTER UPDATE OF zaten INSERT'i atlar.
 CREATE OR REPLACE FUNCTION public._bot_answers_round_start_trigger()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -182,10 +181,10 @@ SECURITY DEFINER
 SET search_path = public, pg_catalog
 AS $$
 BEGIN
-  -- Sadece started_at NULL'dan NOT NULL'a gectiginde tetikle
-  -- (advance_round bootstrap veya next round)
-  IF (OLD.started_at IS NULL OR OLD.started_at <> NEW.started_at)
-     AND NEW.started_at IS NOT NULL
+  -- Sadece started_at gercekten degistiyse + revealed_at NULL ise tetikle.
+  -- IS DISTINCT FROM NULL-safe equality (started_at NOT NULL kolonu olsa bile
+  -- defensive).
+  IF OLD.started_at IS DISTINCT FROM NEW.started_at
      AND NEW.revealed_at IS NULL THEN
     PERFORM public._submit_bot_answers_for_round(NEW.room_id, NEW.round_index);
   END IF;
