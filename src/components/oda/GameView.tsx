@@ -60,15 +60,26 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
     submitAnswerAction,
     initialState,
   )
-  const [selectedOption, setSelectedOption] = useState<string | null>(null)
+  // PR4f + Codex P1 fix: secimi current_round'a tag'le.
+  // Round degisince stale auto-submit'i onleyen guard.
+  const [selection, setSelection] = useState<{
+    option: string
+    round_id: string
+  } | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const autoSubmitFiredRef = useRef(false)
 
+  const currentRoundId = current_round?.round_id
+
   // PR4f auto-submit: isExpired + secim var + henuz cevap gondermemis -> form auto submit
+  // Codex P1 PR #56 fix: selection.round_id === currentRoundId kontrolu, stale
+  // selection (round geçtiyse) auto-submit firing'i onler.
   useEffect(() => {
     if (
       remaining <= 0 &&
-      selectedOption &&
+      selection &&
+      currentRoundId &&
+      selection.round_id === currentRoundId &&
       !state.my_answer &&
       !isPending &&
       !autoSubmitFiredRef.current &&
@@ -77,13 +88,13 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
       autoSubmitFiredRef.current = true
       formRef.current.requestSubmit()
     }
-  }, [remaining, selectedOption, state.my_answer, isPending])
+  }, [remaining, selection, state.my_answer, isPending, currentRoundId])
 
   // Round degisirse local selection sifirla
   useEffect(() => {
-    setSelectedOption(null)
+    setSelection(null)
     autoSubmitFiredRef.current = false
-  }, [current_round?.round_id])
+  }, [currentRoundId])
 
   if (!current_round) {
     return (
@@ -102,8 +113,13 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
   const hasAnswered = state.my_answer !== null
   const lockUI = hasAnswered || isPending
   // Hangi secenek highlight: oncelikle gerçek my_answer (server canonical),
-  // henuz submit edilmediyse local secim.
-  const highlightedOption = state.my_answer?.answer_value ?? selectedOption
+  // henuz submit edilmediyse local secim. Selection sadece current round icinse
+  // gosterilir (stale guard - Codex P1 fix).
+  const localSelection =
+    selection && selection.round_id === currentRoundId
+      ? selection.option
+      : null
+  const highlightedOption = state.my_answer?.answer_value ?? localSelection
 
   return (
     <section
@@ -142,7 +158,7 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
 
       <form action={formAction} ref={formRef} className="space-y-3">
         <input type="hidden" name="room_id" value={room.id} />
-        <input type="hidden" name="answer_value" value={selectedOption ?? ''} />
+        <input type="hidden" name="answer_value" value={localSelection ?? ''} />
         <ul className="space-y-2">
           {options.map((opt, idx) => {
             const isSelected = highlightedOption === opt
@@ -151,8 +167,8 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    if (lockUI) return
-                    setSelectedOption(opt)
+                    if (lockUI || !currentRoundId) return
+                    setSelection({ option: opt, round_id: currentRoundId })
                     onTyping?.() // PR4h: secim degisince typing broadcast
                   }}
                   disabled={lockUI}
@@ -185,14 +201,14 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
 
         <button
           type="submit"
-          disabled={lockUI || !selectedOption}
+          disabled={lockUI || !localSelection}
           className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-[var(--surface)] disabled:text-[var(--text-sub)]"
         >
           {hasAnswered
             ? '✓ Cevabın Gönderildi'
             : isPending
               ? 'Gönderiliyor…'
-              : selectedOption
+              : localSelection
                 ? 'Onayla ve Gönder'
                 : 'Önce Bir Seçenek Seç'}
         </button>
@@ -209,7 +225,7 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
         </p>
       )}
 
-      {!hasAnswered && isExpired && !selectedOption && (
+      {!hasAnswered && isExpired && !localSelection && (
         <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
           Süre doldu, cevap veremeden geçti. Sonraki turu bekle.
         </p>

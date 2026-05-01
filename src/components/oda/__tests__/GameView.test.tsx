@@ -116,6 +116,31 @@ describe('GameView', () => {
     expect(screen.getByText('12')).toBeInTheDocument()
   })
 
+  test('3) Codex P1 PR#56 fix: round_id degisirse stale localSelection sifirlanir (highlight kaybolur)', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    const { rerender, container } = render(<GameView state={baseState} userId="u1" />)
+    // hidden input bos baslangicta (selection yok)
+    let answerInput = container.querySelector(
+      'input[name="answer_value"]',
+    ) as HTMLInputElement
+    expect(answerInput.value).toBe('')
+
+    // Yeni round_id ile re-render — eski selection yok, hidden bos
+    const nextRound: RoomState = {
+      ...baseState,
+      current_round: {
+        ...baseState.current_round!,
+        round_id: 'new-round-id',
+        round_index: 3,
+      },
+    }
+    rerender(<GameView state={nextRound} userId="u1" />)
+    answerInput = container.querySelector(
+      'input[name="answer_value"]',
+    ) as HTMLInputElement
+    expect(answerInput.value).toBe('')
+  })
+
   test('2) PR4f: my_answer dolu -> "Cevabın Gönderildi" lock UI + indicator', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const stateWithAnswer: RoomState = {
