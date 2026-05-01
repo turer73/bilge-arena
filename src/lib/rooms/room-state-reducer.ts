@@ -83,8 +83,11 @@ export type CurrentRound = {
 
 export type ScoreboardEntry = {
   user_id: string
+  display_name: string
   score: number
   correct_count: number
+  /** PR4g tie-breaker: total response_ms (lower = faster = better) */
+  response_ms_total: number
 }
 
 /** Mevcut kullanicinin aktif round'a verdigi cevap (PR4f).
