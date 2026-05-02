@@ -183,7 +183,6 @@ export interface LeaderboardWeeklyRanked extends LeaderboardWeekly {
   username: string
   display_name: string | null
   avatar_url: string | null
-  city: string | null
   level_name: string
   current_streak: number
   current_rank: number
