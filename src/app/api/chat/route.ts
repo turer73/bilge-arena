@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { chatRequestSchema } from '@/lib/validations/schemas'
+import { getClientIp } from '@/lib/utils/client-ip'
 
 const chatLimiter = createRateLimiter('chat', 30, 60_000)
 const chatIpLimiter = createRateLimiter('chat-ip', 60, 60_000)
@@ -63,8 +64,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const ip = (request.headers.get('cf-connecting-ip') ??
-              request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
+  const ip = getClientIp(request.headers)
   const ipRl = await chatIpLimiter.check(ip)
   if (!ipRl.success) {
     return NextResponse.json(

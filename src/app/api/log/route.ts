@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { logSchema } from '@/lib/validations/schemas'
+import { getClientIp } from '@/lib/utils/client-ip'
 
 const logLimiter = createRateLimiter('log', 30, 60_000) // 30 req/dk
 
@@ -18,8 +19,9 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
 
     // Rate limiting (IP veya userId bazli)
-    // Sadece ilk IP'yi al (x-forwarded-for spoofing onleme)
-    const key = user?.id || (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'anonymous'
+    // getClientIp anti-XFF-spoof: cf-connecting-ip > x-real-ip > XFF rightmost
+    const ip = getClientIp(request.headers)
+    const key = user?.id || (ip !== 'unknown' ? ip : 'anonymous')
     const rl = await logLimiter.check(key)
     if (!rl.success) {
       return NextResponse.json({ ok: false }, { status: 429 })

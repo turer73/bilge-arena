@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { getClientIp } from '@/lib/utils/client-ip'
 
 const adminRolesLimiter = createRateLimiter('admin-roles', 20, 60_000)
 
@@ -64,7 +65,7 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
+    const ip = getClientIp(request.headers)
     const rl = await adminRolesLimiter.check(ip)
     if (!rl.success) {
       return NextResponse.json({ error: 'Çok fazla istek' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } })
