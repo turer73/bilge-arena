@@ -53,6 +53,11 @@ vi.mock('@/lib/supabase/admin', () => ({
   checkPermission: mockCheckPermission,
 }))
 
+// Rate limiter — testlerde bypass (gercek davranis ayri unit test'te dogrulanir)
+vi.mock('@/lib/utils/rate-limit', () => ({
+  createRateLimiter: () => ({ check: async () => ({ success: true }) }),
+}))
+
 // ── Gemini fetch mock helper ────────────────────────
 // fetchCalls: AI'ya gonderilen request body'lerini yakalar (sistem prompt
 // dogrulamasi icin).
