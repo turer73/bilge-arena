@@ -39,7 +39,10 @@ export default function SiralamaClient() {
         const url = user?.id
           ? `/api/leaderboard/full?currentUserId=${encodeURIComponent(user.id)}`
           : '/api/leaderboard/full'
-        const res = await fetch(url, { cache: 'no-store' })
+        // Cache: response Cache-Control'a guven (anon: public s-maxage=120,
+        // auth: private max-age=60). no-store cache stratejisini iptal eder
+        // (Codex PR #81 P2). sidebar/landing client'lari bare fetch kullanir.
+        const res = await fetch(url)
         if (!res.ok) {
           if (!cancelled) {
             setEntries([])
