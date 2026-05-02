@@ -1,22 +1,23 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { LeaderboardTable } from '@/components/leaderboard/leaderboard-table'
 
-interface LeaderboardRow {
-  user_id: string
-  xp_earned: number
-  sessions_played: number
-  correct_answers: number
-  accuracy: number
-  username: string | null
-  display_name: string | null
+interface ApiPlayer {
+  rank: number
+  name: string
   avatar_url: string | null
+  xp: number
   level_name: string | null
-  current_rank: number
+  is_me: boolean
+}
+
+interface ApiResponse {
+  players: ApiPlayer[]
+  myRank: number
+  source: 'weekly' | 'profiles_fallback' | 'empty'
 }
 
 export default function SiralamaClient() {
@@ -28,61 +29,48 @@ export default function SiralamaClient() {
   const [isAllTime, setIsAllTime] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
+
     async function fetchLeaderboard() {
       setLoading(true)
-      const supabase = createClient()
+      try {
+        // Browser->Supabase direkt cagri yerine API proxy uzerinden
+        // (Madde 9 — pentest raporu, CF Rate Limit + service-role + edge cache).
+        const url = user?.id
+          ? `/api/leaderboard/full?currentUserId=${encodeURIComponent(user.id)}`
+          : '/api/leaderboard/full'
+        const res = await fetch(url, { cache: 'no-store' })
+        if (!res.ok) {
+          if (!cancelled) {
+            setEntries([])
+            setLoading(false)
+          }
+          return
+        }
+        const json = (await res.json()) as ApiResponse
+        if (cancelled) return
 
-      // 1) Haftalik siralama — leaderboard_weekly_ranked view
-      const { data: weeklyData, error: weeklyErr } = await supabase
-        .from('leaderboard_weekly_ranked')
-        .select('*')
-        .order('current_rank', { ascending: true })
-        .limit(50)
-
-      if (!weeklyErr && weeklyData && weeklyData.length > 0) {
-        const rows = weeklyData as LeaderboardRow[]
-        setEntries(
-          rows.map((r) => ({
-            rank: r.current_rank,
-            name: r.username || r.display_name || 'Arenaci',
-            avatar: r.avatar_url || '👤',
-            xp: r.xp_earned,
-            level: r.level_name || getLevelFromXP(r.xp_earned).name,
-            isCurrentUser: user?.id === r.user_id,
-          }))
-        )
-        setIsAllTime(false)
-        setLoading(false)
-        return
+        const mapped = (json.players ?? []).map((p) => ({
+          rank: p.rank,
+          name: p.name,
+          avatar: p.avatar_url || '👤',
+          xp: p.xp,
+          level: p.level_name || getLevelFromXP(p.xp).name,
+          isCurrentUser: p.is_me,
+        }))
+        setEntries(mapped)
+        setIsAllTime(json.source === 'profiles_fallback')
+      } catch {
+        if (!cancelled) setEntries([])
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-
-      // 2) Haftalik veri yoksa — all-time profiles fallback
-      const { data: profilesData, error: profilesErr } = await supabase
-        .from('profiles')
-        .select('id, display_name, username, avatar_url, total_xp, level_name')
-        .gt('total_xp', 0)
-        .is('deleted_at', null)
-        .order('total_xp', { ascending: false })
-        .limit(50)
-
-      if (!profilesErr && profilesData && profilesData.length > 0) {
-        setEntries(
-          profilesData.map((p, idx) => ({
-            rank: idx + 1,
-            name: p.username || p.display_name || 'Arenaci',
-            avatar: p.avatar_url || '👤',
-            xp: p.total_xp ?? 0,
-            level: p.level_name || getLevelFromXP(p.total_xp ?? 0).name,
-            isCurrentUser: user?.id === p.id,
-          }))
-        )
-        setIsAllTime(true)
-      }
-
-      setLoading(false)
     }
 
     fetchLeaderboard()
+    return () => {
+      cancelled = true
+    }
   }, [user?.id])
 
   return (
