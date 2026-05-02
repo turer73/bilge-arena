@@ -86,7 +86,7 @@ gelmeyebilir, MANUEL inceleme yapilacak. Onceki 33 fix patterni:
 ## Memory API + Komutlar
 
 **Endpoint:** `http://100.113.153.62:8420/api/v1/memory`
-**Header:** `X-Memory-Key: n7lfjr7aqpe_wWm7VqihgI_fafGNK9ltEYmnBGUPsvg`
+**Header:** `X-Memory-Key: <MEMORY_KEY_REDACTED>`
 **Cihaz:** `surer`
 
 ```bash
@@ -99,7 +99,7 @@ pnpm type-check && pnpm test --run && pnpm lint && pnpm build
 
 # Memory POST (zorunlu kayit, JSON file ile - inline curl Turkce karakterde fail eder)
 echo '{"device_name":"surer","project":"bilge-arena","task":"...","status":"completed","details":"..."}' > .tmp.json
-curl -s -X POST -H "X-Memory-Key: n7lfjr7aqpe_wWm7VqihgI_fafGNK9ltEYmnBGUPsvg" \
+curl -s -X POST -H "X-Memory-Key: <MEMORY_KEY_REDACTED>" \
   -H "Content-Type: application/json" -d @.tmp.json \
   http://100.113.153.62:8420/api/v1/memory/tasks
 rm .tmp.json
