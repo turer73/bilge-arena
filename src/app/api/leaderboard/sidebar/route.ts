@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { getClientIp } from '@/lib/utils/client-ip'
 
 // Anon erisilebilir endpoint, IP bazli rate limit (pentest sertlestirme)
 const limiter = createRateLimiter('leaderboard-sidebar', 60, 60_000)
@@ -33,7 +34,7 @@ interface SidebarLeader {
  * Rate limit: 60 req/dk per IP.
  */
 export async function GET(request: NextRequest) {
-  const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
+  const ip = getClientIp(request.headers)
   const rl = await limiter.check(ip)
   if (!rl.success) {
     return NextResponse.json(
