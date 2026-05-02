@@ -1,4 +1,5 @@
 import { createClient } from './server'
+import { getClientIp } from '@/lib/utils/client-ip'
 import type { Role } from '@/types/database'
 import type { User } from '@supabase/supabase-js'
 
@@ -95,7 +96,13 @@ export async function logAdminAction(
     request?: Request
   },
 ) {
-  const ip = opts.request?.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
+  // PR #76 followup: anti-XFF-spoof helper. Audit log forensic integrity —
+  // saldirgan rate limit context'inden farkli olarak, audit'te leftmost XFF
+  // kazaninca soruşturmaya sahte IP duser. cf-connecting-ip > x-real-ip >
+  // XFF rightmost zinciri (PR #76 paterni).
+  // getClientIp 'unknown' donerse string olarak audit'e yazilir (mevcut null
+  // davranisindan daha bilgilendirici — "header attempted but unparseable").
+  const ip = opts.request ? getClientIp(opts.request.headers) : null
   const userAgent = opts.request?.headers.get('user-agent')?.slice(0, 256) || null
 
   await supabase.from('admin_logs').insert({
