@@ -16,16 +16,24 @@ export interface PushPayload {
 }
 
 /**
+ * Push bildirim gonderim sonucu.
+ * - 'sent': basariyla gonderildi
+ * - 'expired': abonelik gecersiz (410/404), DB'den silinmeli
+ * - 'error': gecici hata (network, server) — abonelik sakla, sonraki firing'de tekrar dene
+ */
+export type PushSendResult = 'sent' | 'expired' | 'error'
+
+/**
  * Tek bir aboneye push bildirim gonderir.
- * Basarisiz olursa false doner (abonelik suresiz olmus olabilir).
+ * Caller, 'expired' donen aboneligi DB'den silmek istiyor olabilir.
  */
 export async function sendPushNotification(
   subscription: { endpoint: string; p256dh: string; auth: string },
   payload: PushPayload,
-): Promise<boolean> {
+): Promise<PushSendResult> {
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
     console.warn('[Push] VAPID keys not configured')
-    return false
+    return 'error'
   }
 
   const pushSubscription = {
@@ -46,14 +54,13 @@ export async function sendPushNotification(
         data: { url: payload.url || '/arena' },
       }),
     )
-    return true
+    return 'sent'
   } catch (err: unknown) {
     const statusCode = (err as { statusCode?: number }).statusCode
     if (statusCode === 410 || statusCode === 404) {
-      // Abonelik artik gecersiz
-      return false
+      return 'expired'
     }
     console.error('[Push] Gonderim hatasi:', err)
-    return false
+    return 'error'
   }
 }
