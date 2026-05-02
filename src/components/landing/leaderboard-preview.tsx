@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Trophy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase/client'
 
 interface LeaderUser {
   rank: number
@@ -12,6 +11,13 @@ interface LeaderUser {
   xp: number
   streak: number
   badge: string
+}
+
+interface ApiLeader {
+  rank: number
+  username: string
+  total_xp: number
+  current_streak: number
 }
 
 const BADGES = ['👑', '🥈', '🥉', '4', '5']
@@ -26,26 +32,31 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
   const description = (config?.description as string) || 'Her hafta sıfırlanan haftalık turnuva. En çok XP kazanan öğrenci zirvede yer alır.'
   const buttonText = (config?.button_text as string) || 'Sıralamayı Gör'
 
+  // Madde 9 (pentest raporu) refactor: Browser->Supabase direkt cagri yerine
+  // /api/leaderboard/landing proxy uzerinden gecer. CF Rate Limit + IP rate
+  // limit + service-role server-side filter.
   useEffect(() => {
-    const supabase = createClient()
-    supabase
-      .from('profiles')
-      .select('username, display_name, total_xp, current_streak')
-      .order('total_xp', { ascending: false })
-      .gt('total_xp', 0)
-      .is('deleted_at', null)
-      .limit(5)
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setUsers(data.map((p, i) => ({
-            rank: i + 1,
-            name: p.username || p.display_name || `Oyuncu ${i + 1}`,
-            xp: p.total_xp || 0,
-            streak: p.current_streak || 0,
-            badge: BADGES[i] || String(i + 1),
-          })))
-        }
+    let cancelled = false
+    fetch('/api/leaderboard/landing')
+      .then((r) => (r.ok ? r.json() : { leaders: [] }))
+      .then(({ leaders }: { leaders?: ApiLeader[] }) => {
+        if (cancelled || !leaders || leaders.length === 0) return
+        setUsers(
+          leaders.map((p) => ({
+            rank: p.rank,
+            name: p.username,
+            xp: p.total_xp,
+            streak: p.current_streak,
+            badge: BADGES[p.rank - 1] || String(p.rank),
+          })),
+        )
       })
+      .catch((err) => {
+        console.error('[LeaderboardPreview] fetch hatasi:', err)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
   return (
     <section className="bg-[var(--bg)] py-24">
