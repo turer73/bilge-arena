@@ -143,7 +143,7 @@ describe('GET /api/leaderboard/sidebar', () => {
     expect(res.status).toBe(500)
   })
 
-  it('sets Cache-Control with s-maxage=60', async () => {
+  it('sets public cache when no currentUserId (anon leaderboard)', async () => {
     mockWeeklyRes.mockResolvedValueOnce({
       data: [
         { user_id: 'u1', username: 'A', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1 },
@@ -151,7 +151,51 @@ describe('GET /api/leaderboard/sidebar', () => {
       error: null,
     })
     const res = await GET(makeRequest() as never)
-    expect(res.headers.get('Cache-Control')).toContain('s-maxage=60')
+    const cc = res.headers.get('Cache-Control') ?? ''
+    expect(cc).toContain('public')
+    expect(cc).toContain('s-maxage=60')
+  })
+
+  it('sets private cache when currentUserId provided (user-specific payload)', async () => {
+    mockWeeklyRes.mockResolvedValueOnce({
+      data: [
+        { user_id: 'u1', username: 'A', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1 },
+      ],
+      error: null,
+    })
+    // currentUserId top 5'te degil -> ayri myRank sorgusu calisir
+    mockWeeklySingleRes.mockResolvedValueOnce({ data: { current_rank: 99 }, error: null })
+    const res = await GET(makeRequest(VALID_UUID) as never)
+    const cc = res.headers.get('Cache-Control') ?? ''
+    expect(cc).toContain('private')
+    expect(cc).toContain('max-age=60')
+    expect(cc).not.toContain('public')
+  })
+
+  it('does NOT include user_id in response (data minimization)', async () => {
+    mockWeeklyRes.mockResolvedValueOnce({
+      data: [
+        { user_id: 'leaked-uuid', username: 'A', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1 },
+      ],
+      error: null,
+    })
+    const res = await GET(makeRequest() as never)
+    const body = await res.json()
+    expect(body.players[0]).not.toHaveProperty('user_id')
+    expect(JSON.stringify(body)).not.toContain('leaked-uuid')
+  })
+
+  it('rejects non-canonical UUID format (e.g. all dashes)', async () => {
+    mockWeeklyRes.mockResolvedValueOnce({
+      data: [
+        { user_id: 'u1', username: 'X', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1 },
+      ],
+      error: null,
+    })
+    // 36 chars ama kanonik 8-4-4-4-12 degil — gecersiz
+    const res = await GET(makeRequest('------------------------------------') as never)
+    const body = await res.json()
+    expect(body.players[0].is_me).toBe(false)
   })
 })
 

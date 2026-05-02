@@ -7,7 +7,8 @@ const limiter = createRateLimiter('leaderboard-sidebar', 60, 60_000)
 
 interface SidebarLeader {
   rank: number
-  user_id: string | null
+  // user_id REMOVED (review LOW): client is_me uses pre-computed flag,
+  // no need to expose internal UUID — data minimization.
   name: string
   avatar_url: string | null
   xp_earned: number
@@ -43,9 +44,17 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const currentUserId = searchParams.get('currentUserId')
-  // UUID format guard (anti-injection — RPC'ye gitmiyor ama defensive)
-  const isValidUuid = currentUserId && /^[0-9a-f-]{36}$/i.test(currentUserId)
+  // UUID format guard — kanonik 8-4-4-4-12 (review LOW: tighten edildi)
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const isValidUuid = !!currentUserId && UUID_RE.test(currentUserId)
   const safeUserId = isValidUuid ? currentUserId : null
+
+  // Cache strategy (review LOW: user-specific payload fragility):
+  //   - currentUserId yoksa: public cache OK (anonim leaderboard)
+  //   - currentUserId varsa: is_me + myRank user-specific -> private cache
+  const cacheControl = safeUserId
+    ? 'private, max-age=60'
+    : 'public, s-maxage=60, stale-while-revalidate=30'
 
   const supabase = createServiceRoleClient()
 
@@ -72,7 +81,6 @@ export async function GET(request: NextRequest) {
         `Oyuncu ${i + 1}`
       return {
         rank: i + 1,
-        user_id: row.user_id,
         name,
         avatar_url: row.avatar_url,
         xp_earned: Number(row.xp_earned || 0),
@@ -92,11 +100,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       { players, myRank, source: 'weekly' },
-      {
-        headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
-        },
-      },
+      { headers: { 'Cache-Control': cacheControl } },
     )
   }
 
@@ -115,7 +119,7 @@ export async function GET(request: NextRequest) {
   if (!profiles || profiles.length === 0) {
     return NextResponse.json(
       { players: [], myRank: 0, source: 'empty' },
-      { headers: { 'Cache-Control': 'public, s-maxage=60' } },
+      { headers: { 'Cache-Control': cacheControl } },
     )
   }
 
@@ -125,7 +129,6 @@ export async function GET(request: NextRequest) {
     if (isMe) myRank = i + 1
     return {
       rank: i + 1,
-      user_id: p.id,
       name: p.username || p.display_name || `Oyuncu ${i + 1}`,
       avatar_url: p.avatar_url,
       xp_earned: Number(p.total_xp || 0),
@@ -135,10 +138,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(
     { players, myRank, source: 'profiles_fallback' },
-    {
-      headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
-      },
-    },
+    { headers: { 'Cache-Control': cacheControl } },
   )
 }
