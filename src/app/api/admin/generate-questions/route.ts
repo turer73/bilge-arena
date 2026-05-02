@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { trLower, isLikelyTurkish } from '@/lib/utils/tr-text'
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+
+// AI generator pahali endpoint — admin yetkisi disinda EDoS koruma
+const aiGenLimiter = createRateLimiter('ai-gen', 10, 60_000)
 
 // ── Kategori bazli YKS konu listesi ─────────────────────
 const TOPIC_MAP: Record<string, Record<string, string[]>> = {
@@ -158,6 +162,15 @@ export async function POST(req: Request) {
   const admin = await checkPermission(supabase, 'admin.questions.generate')
   if (!admin) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
+  }
+
+  // Rate limit — admin yetkisi calinsa bile Gemini quota & maliyet korumasi
+  const rl = await aiGenLimiter.check(admin.id)
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla soru uretim talebi. Lutfen biraz bekleyin.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+    )
   }
 
   const { game, category, difficulty, count = 5, topic, level_tag } = await req.json()
