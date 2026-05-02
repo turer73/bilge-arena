@@ -4,13 +4,15 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 
-// Cift kalkan rate limit (Codex PR #75 P1):
-//   IP-bazli (anon + abuse): 60 req/dk — kazima/spam ucretine engel
-//   User-bazli (auth + realtime): 240 req/dk (4 req/sn) — sidebar
-//     Supabase Realtime XP update'lerinde her olay fetchSidebarLeaderboard
-//     tetikler. NAT/okul/sirket Wi-Fi'sinde 60 req/dk yetersiz, blank
-//     leaderboard yan etkisi olur (use-sidebar-data realtime subscription).
-const ipLimiter = createRateLimiter('leaderboard-sidebar-ip', 60, 60_000)
+// Cift kalkan rate limit (Codex PR #75 P1 + PR #78 P1):
+//   1. IP limit (her hit'te ONCE): 300 req/dk
+//      - NAT/okul/sirket Wi-Fi'sinde 30+ kullanici toleransi (PR #75 review)
+//      - Anonim flood'u erken kes — auth.getUser() Supabase roundtrip'ini
+//        engelle (PR #78 review: anon flood auth quota tuketmemeli)
+//   2. User limit (IP gectikten sonra, auth varsa): 240 req/dk
+//      - Auth user'i IP basina degil user-id basina kontrol — ek katman
+//      - sidebar Supabase Realtime XP update'lerinde realtime overflow tolere
+const ipLimiter = createRateLimiter('leaderboard-sidebar-ip', 300, 60_000)
 const userLimiter = createRateLimiter('leaderboard-sidebar-user', 240, 60_000)
 
 interface SidebarLeader {
@@ -39,33 +41,38 @@ interface SidebarLeader {
  *
  * Cache: 60 saniye edge (sidebar her sayfa render'inda gosterilir).
  *
- * Rate limit (Codex P1 fix):
- *   - Auth user (cookie): user-id basis 240 req/dk (realtime XP overflow tolere)
- *   - Anon: IP basis 60 req/dk (anti-abuse)
+ * Rate limit (Codex PR #75 + PR #78 P1 fix'leri):
+ *   1. IP limit her zaman ONCE (anon flood'u erken kes — auth API roundtrip
+ *      engellemek): 300 req/dk per IP (NAT toleransli)
+ *   2. Auth user ise (IP gectikten sonra) user-id limit ek katman:
+ *      240 req/dk realtime XP overflow tolere
  *   - getClientIp helper anti-XFF-spoof (PR #76)
  */
 export async function GET(request: NextRequest) {
-  // Auth context'i cek (cookie). Anon ise user null, IP rate'a dus.
+  // 1. IP rate limit ONCE — auth.getUser() Supabase roundtrip'ten once.
+  //    Anonim flood'da auth quota tuketilmesin (Codex PR #78 P1).
+  const ip = getClientIp(request.headers)
+  const ipRl = await ipLimiter.check(ip)
+  if (!ipRl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek' },
+      { status: 429, headers: { 'Retry-After': String(ipRl.retryAfter ?? 60) } },
+    )
+  }
+
+  // 2. IP gectikten sonra auth check + ek user-id limit (cift kalkan).
+  //    Auth user yoksa IP limit yeterli, ek check yok.
   const cookieClient = await createClient()
   const {
     data: { user },
   } = await cookieClient.auth.getUser()
 
   if (user) {
-    const rl = await userLimiter.check(user.id)
-    if (!rl.success) {
+    const userRl = await userLimiter.check(user.id)
+    if (!userRl.success) {
       return NextResponse.json(
         { error: 'Cok fazla istek' },
-        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } },
-      )
-    }
-  } else {
-    const ip = getClientIp(request.headers)
-    const rl = await ipLimiter.check(ip)
-    if (!rl.success) {
-      return NextResponse.json(
-        { error: 'Cok fazla istek' },
-        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } },
+        { status: 429, headers: { 'Retry-After': String(userRl.retryAfter ?? 60) } },
       )
     }
   }
