@@ -25,71 +25,53 @@ export interface TopicStrength {
 
 // ---------- Mini Leaderboard ----------
 
+interface ApiSidebarLeader {
+  rank: number
+  user_id: string | null
+  name: string
+  avatar_url: string | null
+  xp_earned: number
+  is_me: boolean
+}
+
+interface ApiSidebarResponse {
+  players?: ApiSidebarLeader[]
+  myRank?: number
+}
+
 /**
  * Haftalik ilk 5 oyuncuyu ceker.
- * Oncelik: leaderboard_weekly_ranked view
- * Fallback: profiles tablosu (toplam XP'ye gore)
+ *
+ * Madde 9 (pentest raporu) refactor: Browser->Supabase direkt cagri
+ * (`leaderboard_weekly_ranked` view) yerine `/api/leaderboard/sidebar`
+ * proxy uzerinden gecer. Service-role client server-side, edge cache
+ * 60s, IP rate limit 60 req/dk.
  */
 export async function fetchSidebarLeaderboard(
   currentUserId?: string
 ): Promise<{ players: SidebarPlayer[]; myRank: number }> {
-  const supabase = createClient()
+  try {
+    const url = currentUserId
+      ? `/api/leaderboard/sidebar?currentUserId=${encodeURIComponent(currentUserId)}`
+      : '/api/leaderboard/sidebar'
+    const res = await fetch(url)
+    if (!res.ok) return { players: [], myRank: 0 }
+    const json = (await res.json()) as ApiSidebarResponse
+    const apiPlayers = json.players ?? []
+    const myRank = json.myRank ?? 0
 
-  // Haftalik view'i dene
-  const { data: weeklyData } = await supabase
-    .from('leaderboard_weekly_ranked')
-    .select('user_id, display_name, username, avatar_url, xp_earned, current_rank')
-    .order('current_rank', { ascending: true })
-    .limit(5)
-
-  if (weeklyData && weeklyData.length > 0) {
-    let myRank = 0
-    const players: SidebarPlayer[] = weeklyData.map((row, i) => {
-      const isMe = row.user_id === currentUserId
-      if (isMe) myRank = i + 1
-      return {
-        name: (row as Record<string, unknown>).username as string || row.display_name || `Oyuncu ${i + 1}`,
-        avatar: row.avatar_url ? '👤' : ['🦊', '🐉', '🦉', '🌟', '⚔️'][i % 5],
-        xp: Number(row.xp_earned || 0).toLocaleString('tr-TR'),
-        isMe,
-      }
-    })
-
-    // Kullanici ilk 5'te yoksa, sırasını bul
-    if (myRank === 0 && currentUserId) {
-      const { data: myData } = await supabase
-        .from('leaderboard_weekly_ranked')
-        .select('current_rank')
-        .eq('user_id', currentUserId)
-        .single()
-      if (myData) myRank = myData.current_rank
-    }
+    const players: SidebarPlayer[] = apiPlayers.map((row, i) => ({
+      name: row.name,
+      avatar: row.avatar_url ? '👤' : ['🦊', '🐉', '🦉', '🌟', '⚔️'][i % 5],
+      xp: row.xp_earned.toLocaleString('tr-TR'),
+      isMe: row.is_me,
+    }))
 
     return { players, myRank }
+  } catch (err) {
+    console.error('[fetchSidebarLeaderboard] proxy hatasi:', err)
+    return { players: [], myRank: 0 }
   }
-
-  // Fallback: profiles tablosu
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, username, display_name, avatar_url, total_xp')
-    .order('total_xp', { ascending: false })
-    .limit(5)
-
-  if (!profiles) return { players: [], myRank: 0 }
-
-  let myRank = 0
-  const players: SidebarPlayer[] = profiles.map((p, i) => {
-    const isMe = p.id === currentUserId
-    if (isMe) myRank = i + 1
-    return {
-      name: p.username || p.display_name || `Oyuncu ${i + 1}`,
-      avatar: p.avatar_url ? '👤' : ['🦊', '🐉', '🦉', '🌟', '⚔️'][i % 5],
-      xp: Number(p.total_xp || 0).toLocaleString('tr-TR'),
-      isMe,
-    }
-  })
-
-  return { players, myRank }
 }
 
 // ---------- Konu Gucu ----------
