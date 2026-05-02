@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
+import { getClientIp } from '@/lib/utils/client-ip'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // 120 req/dk (50 öğrenci × ~2 req/dk)
 const VALID_GAMES = new Set(GAME_SLUGS)
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
   // Auth'suz istekler IP bazlı rate limit'e tabi
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
+    const ip = getClientIp(request.headers)
     const rl = await questionsLimiter.check(ip)
     if (!rl.success) {
       return NextResponse.json(

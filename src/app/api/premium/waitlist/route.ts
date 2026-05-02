@@ -32,6 +32,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { NextResponse } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { premiumWaitlistSchema } from '@/lib/validations/schemas'
+import { getClientIp } from '@/lib/utils/client-ip'
 import { Resend } from 'resend'
 
 // 5 req/dk: tek bir kullanici/bot tek IP'den dakikada 5'ten fazla submit edemez.
@@ -40,10 +41,10 @@ const waitlistLimiter = createRateLimiter('premium-waitlist', 5, 60_000)
 
 export async function POST(request: Request) {
   // ─── Rate-limit ────────────────────────────────────────────
-  // IP key: x-forwarded-for ilk IP (spoofing onleme). Yoksa 'anonymous'.
-  const ipKey =
-    (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() ||
-    'anonymous'
+  // getClientIp anti-XFF-spoof: cf-connecting-ip > x-real-ip > XFF rightmost.
+  // Headers yoksa 'unknown' doner — 'anonymous' fallback bucket'a yonlendir.
+  const ip = getClientIp(request.headers)
+  const ipKey = ip !== 'unknown' ? ip : 'anonymous'
 
   const rl = await waitlistLimiter.check(ipKey)
   if (!rl.success) {
