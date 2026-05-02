@@ -72,11 +72,14 @@ export async function GET(req: Request) {
   const streakMap = new Map(profiles.map((p) => [p.id, p.current_streak as number]))
 
   let sentCount = 0
+  let expiredCount = 0
+  const expiredEndpoints: string[] = []
+
   for (const sub of subscriptions) {
     const streak = streakMap.get(sub.user_id) ?? 0
     if (streak < 1) continue
 
-    const ok = await sendPushNotification(
+    const result = await sendPushNotification(
       { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
       {
         title: 'Bilge Arena',
@@ -84,11 +87,28 @@ export async function GET(req: Request) {
         url: '/arena',
       },
     )
-    if (ok) sentCount += 1
+    if (result === 'sent') sentCount += 1
+    else if (result === 'expired') {
+      expiredCount += 1
+      expiredEndpoints.push(sub.endpoint)
+    }
+  }
+
+  // Expired subscription cleanup — 410/404 donen endpoint'leri DB'den sil
+  // (sonsuza kadar tekrar denenmemesi icin)
+  if (expiredEndpoints.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('push_subscriptions')
+      .delete()
+      .in('endpoint', expiredEndpoints)
+    if (deleteError) {
+      console.error('[StreakReminder] expired cleanup hatasi:', deleteError)
+    }
   }
 
   return NextResponse.json({
     sent: sentCount,
+    expired: expiredCount,
     candidates: profiles.length,
     subscriptions: subscriptions.length,
   })
