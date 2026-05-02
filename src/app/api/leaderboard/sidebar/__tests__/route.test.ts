@@ -1,9 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockWeeklyRes, mockWeeklySingleRes, mockProfilesRes } = vi.hoisted(() => ({
+const {
+  mockWeeklyRes,
+  mockWeeklySingleRes,
+  mockProfilesRes,
+  mockGetUser,
+  mockIpCheck,
+  mockUserCheck,
+} = vi.hoisted(() => ({
   mockWeeklyRes: vi.fn(),
   mockWeeklySingleRes: vi.fn(),
   mockProfilesRes: vi.fn(),
+  mockGetUser: vi.fn(async () => ({
+    data: { user: null as null | { id: string; email?: string } },
+  })),
+  mockIpCheck: vi.fn(async () => ({ success: true, retryAfter: 0 })),
+  mockUserCheck: vi.fn(async () => ({ success: true, retryAfter: 0 })),
+}))
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(async () => ({
+    auth: { getUser: mockGetUser },
+  })),
 }))
 
 vi.mock('@/lib/supabase/service-role', () => ({
@@ -36,8 +54,9 @@ vi.mock('@/lib/supabase/service-role', () => ({
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
-  createRateLimiter: vi.fn(() => ({
-    check: vi.fn(async () => ({ success: true, retryAfter: 0 })),
+  // Iki farkli limiter (IP + user); module ad'ina gore farkli check mock
+  createRateLimiter: vi.fn((name: string) => ({
+    check: name === 'leaderboard-sidebar-user' ? mockUserCheck : mockIpCheck,
   })),
 }))
 
@@ -55,7 +74,13 @@ function makeRequest(currentUserId?: string, ip = '1.2.3.4') {
 const VALID_UUID = '11111111-2222-3333-4444-555555555555'
 
 describe('GET /api/leaderboard/sidebar', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Default: anon user; her test override edebilir
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    mockIpCheck.mockResolvedValue({ success: true, retryAfter: 0 })
+    mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })
+  })
 
   it('returns weekly source when view has data', async () => {
     mockWeeklyRes.mockResolvedValueOnce({
@@ -199,21 +224,72 @@ describe('GET /api/leaderboard/sidebar', () => {
   })
 })
 
-describe('GET /api/leaderboard/sidebar rate limit', () => {
-  it('returns 429 when limiter rejects', async () => {
-    vi.resetModules()
-    vi.doMock('@/lib/utils/rate-limit', () => ({
-      createRateLimiter: vi.fn(() => ({
-        check: vi.fn(async () => ({ success: false, retryAfter: 30 })),
-      })),
-    }))
-    vi.doMock('@/lib/supabase/service-role', () => ({
-      createServiceRoleClient: vi.fn(),
-    }))
+describe('GET /api/leaderboard/sidebar rate limit (Codex PR #75 + #78 P1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    mockIpCheck.mockResolvedValue({ success: true, retryAfter: 0 })
+    mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })
+  })
 
-    const { GET: GET2 } = await import('../route')
-    const res = await GET2(makeRequest() as never)
+  it('IP limit ONCE — anon flood erken kes, auth.getUser cagrilmaz (PR #78 P1)', async () => {
+    mockIpCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 })
+    const res = await GET(makeRequest() as never)
     expect(res.status).toBe(429)
     expect(res.headers.get('Retry-After')).toBe('30')
+    // KRITIK: IP rejection'da auth.getUser CAGRILMAMALI — Supabase Auth quota tasarruf
+    expect(mockGetUser).not.toHaveBeenCalled()
+    expect(mockUserCheck).not.toHaveBeenCalled()
+  })
+
+  it('anon: IP gecince auth.getUser cagrilir, user limit skip (anon)', async () => {
+    mockWeeklyRes.mockResolvedValueOnce({
+      data: [
+        { user_id: 'u1', username: 'A', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1 },
+      ],
+      error: null,
+    })
+    const res = await GET(makeRequest() as never)
+    expect(res.status).toBe(200)
+    expect(mockIpCheck).toHaveBeenCalled()
+    expect(mockGetUser).toHaveBeenCalled()
+    expect(mockUserCheck).not.toHaveBeenCalled()  // anon -> user limit skip
+  })
+
+  it('auth user: IP + user-id cift kalkan, ikisi de cagrilir', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: VALID_UUID, email: 'a@b.com' } },
+    })
+    mockWeeklyRes.mockResolvedValueOnce({
+      data: [
+        { user_id: 'u1', username: 'A', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1 },
+      ],
+      error: null,
+    })
+    const res = await GET(makeRequest() as never)
+    expect(res.status).toBe(200)
+    expect(mockIpCheck).toHaveBeenCalled()
+    expect(mockUserCheck).toHaveBeenCalledWith(VALID_UUID)
+  })
+
+  it('auth user: user-id limit reject -> 429 (IP geçti ama user limit doldu)', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: VALID_UUID } },
+    })
+    mockUserCheck.mockResolvedValueOnce({ success: false, retryAfter: 15 })
+    const res = await GET(makeRequest() as never)
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('15')
+  })
+
+  it('SECURITY: anon flood IP limit durur, auth API tetiklenmez (PR #78 P1)', async () => {
+    // 100 anon flood request - hepsi IP limit'te 429
+    mockIpCheck.mockResolvedValue({ success: false, retryAfter: 60 })
+    for (let i = 0; i < 5; i++) {
+      const res = await GET(makeRequest() as never)
+      expect(res.status).toBe(429)
+    }
+    // KRITIK: 5 anon hit'te auth.getUser SIFIR cagri
+    expect(mockGetUser).toHaveBeenCalledTimes(0)
   })
 })
