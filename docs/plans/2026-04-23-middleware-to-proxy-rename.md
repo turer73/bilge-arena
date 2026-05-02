@@ -379,7 +379,7 @@ gh pr comment <PR_NUMBER> --body "Vercel preview smoke test: PASS (4/4). Auth gu
 
 ```bash
 curl -s -X POST \
-  -H "X-Memory-Key: n7lfjr7aqpe_wWm7VqihgI_fafGNK9ltEYmnBGUPsvg" \
+  -H "X-Memory-Key: <MEMORY_KEY_REDACTED>" \
   -H "Content-Type: application/json" \
   -d '{"device_name":"windows-masaustu","platform":"win32","summary":"PR-B acildi: middleware.ts -> proxy.ts, Next16 konvansiyon, PR #<NUM>"}' \
   http://100.113.153.62:8420/api/v1/memory/sessions
@@ -389,7 +389,7 @@ curl -s -X POST \
 
 ```bash
 curl -s -X POST \
-  -H "X-Memory-Key: n7lfjr7aqpe_wWm7VqihgI_fafGNK9ltEYmnBGUPsvg" \
+  -H "X-Memory-Key: <MEMORY_KEY_REDACTED>" \
   -H "Content-Type: application/json" \
   -d '{"project":"bilge-arena","task":"PR-B middleware to proxy rename","status":"pending","description":"PR acildi review bekliyor, preview smoke gecti"}' \
   http://100.113.153.62:8420/api/v1/memory/tasks

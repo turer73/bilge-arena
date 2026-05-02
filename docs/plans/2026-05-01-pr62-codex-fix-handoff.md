@@ -141,7 +141,7 @@ git push  # force-with-lease gerekirse: git push --force-with-lease
 
 # Memory POST (zorunlu kayit, JSON file ile)
 echo '{"device_name":"surer","project":"bilge-arena","task":"...","status":"completed","details":"..."}' > .tmp.json
-curl -s -X POST -H "X-Memory-Key: n7lfjr7aqpe_wWm7VqihgI_fafGNK9ltEYmnBGUPsvg" \
+curl -s -X POST -H "X-Memory-Key: <MEMORY_KEY_REDACTED>" \
   -H "Content-Type: application/json" -d @.tmp.json \
   http://100.113.153.62:8420/api/v1/memory/tasks
 rm .tmp.json
