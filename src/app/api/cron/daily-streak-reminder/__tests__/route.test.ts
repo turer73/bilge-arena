@@ -14,8 +14,8 @@ vi.mock('@/lib/utils/push', () => ({
   sendPushNotification: mockSendPush,
 }))
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
       if (table === 'profiles') {
         return {

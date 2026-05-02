@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { sendPushNotification } from '@/lib/utils/push'
 
 const CRON_SECRET = process.env.CRON_SECRET
@@ -23,7 +23,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
-  const supabase = await createClient()
+  // RLS bypass icin service-role client (Codex P1 fix): cron context'te
+  // auth.uid() NULL — anon-key client push_subscriptions.push_own RLS'i
+  // gecemez (USING auth.uid() = user_id). Service-role RLS bypass eder.
+  const supabase = createServiceRoleClient()
 
   // Dun (UTC) baslangici + bugun (UTC) baslangici — date range ile filtre
   const now = new Date()
