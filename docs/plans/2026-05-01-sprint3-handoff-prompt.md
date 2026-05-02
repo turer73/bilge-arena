@@ -52,7 +52,7 @@
 ## Memory API
 
 - **Endpoint:** `http://100.113.153.62:8420/api/v1/memory`
-- **Header:** `X-Memory-Key: n7lfjr7aqpe_wWm7VqihgI_fafGNK9ltEYmnBGUPsvg`
+- **Header:** `X-Memory-Key: <MEMORY_KEY_REDACTED>`
 - **Cihaz:** `windows-masaustu`
 - **Onemli ID'ler:**
   - `id=411` Server Action kalibi (6 bilesen)

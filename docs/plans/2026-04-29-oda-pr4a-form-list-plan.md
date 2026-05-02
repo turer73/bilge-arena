@@ -1388,15 +1388,15 @@ Pattern: Sprint 0/1'de Codex P1 her PR icin bir review yapti, follow-up commitle
 **Step 4: Memory POST (zorunlu)**
 
 ```bash
-curl -s -X POST -H "X-Memory-Key: n7lfjr7aqpe_wWm7VqihgI_fafGNK9ltEYmnBGUPsvg" -H "Content-Type: application/json" \
+curl -s -X POST -H "X-Memory-Key: <MEMORY_KEY_REDACTED>" -H "Content-Type: application/json" \
   -d '{"device_name":"windows-masaustu","platform":"windows","summary":"Bilge Arena PR4a tamamlandi: createRoomAction Server Action + 42 TDD GREEN. Codebase ilk Server Action ornegi."}' \
   http://100.113.153.62:8420/api/v1/memory/sessions
 
-curl -s -X POST -H "X-Memory-Key: n7lfjr7aqpe_wWm7VqihgI_fafGNK9ltEYmnBGUPsvg" -H "Content-Type: application/json" \
+curl -s -X POST -H "X-Memory-Key: <MEMORY_KEY_REDACTED>" -H "Content-Type: application/json" \
   -d '{"type":"feedback","name":"server_action_codebase_first","description":"Bilge Arena PR4a Server Action codebase ilk ornegi - useActionState + redirect","content":"Why: Next 16 + React 19 idiomi. How to apply: form action={formAction}, redirect server-side, no client-fetch JSON round-trip."}' \
   http://100.113.153.62:8420/api/v1/memory/memories
 
-curl -s -X POST -H "X-Memory-Key: n7lfjr7aqpe_wWm7VqihgI_fafGNK9ltEYmnBGUPsvg" -H "Content-Type: application/json" \
+curl -s -X POST -H "X-Memory-Key: <MEMORY_KEY_REDACTED>" -H "Content-Type: application/json" \
   -d '{"project":"bilge-arena","task":"Sprint 1 PR4a - Server Action form + my-rooms list + placeholder + 42 TDD GREEN","status":"completed","description":"PR opened, Codex P1 review pending"}' \
   http://100.113.153.62:8420/api/v1/memory/tasks
 ```
