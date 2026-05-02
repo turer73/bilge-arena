@@ -1,9 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { getClientIp } from '@/lib/utils/client-ip'
 
-// Anon erisilebilir endpoint, IP bazli rate limit (pentest sertlestirme)
-const limiter = createRateLimiter('leaderboard-sidebar', 60, 60_000)
+// Cift kalkan rate limit (Codex PR #75 P1):
+//   IP-bazli (anon + abuse): 60 req/dk — kazima/spam ucretine engel
+//   User-bazli (auth + realtime): 240 req/dk (4 req/sn) — sidebar
+//     Supabase Realtime XP update'lerinde her olay fetchSidebarLeaderboard
+//     tetikler. NAT/okul/sirket Wi-Fi'sinde 60 req/dk yetersiz, blank
+//     leaderboard yan etkisi olur (use-sidebar-data realtime subscription).
+const ipLimiter = createRateLimiter('leaderboard-sidebar-ip', 60, 60_000)
+const userLimiter = createRateLimiter('leaderboard-sidebar-user', 240, 60_000)
 
 interface SidebarLeader {
   rank: number
@@ -30,16 +38,36 @@ interface SidebarLeader {
  * currentUserId verilmisse + ilk 5'te degilse, ayri sorgu ile rank getir.
  *
  * Cache: 60 saniye edge (sidebar her sayfa render'inda gosterilir).
- * Rate limit: 60 req/dk per IP.
+ *
+ * Rate limit (Codex P1 fix):
+ *   - Auth user (cookie): user-id basis 240 req/dk (realtime XP overflow tolere)
+ *   - Anon: IP basis 60 req/dk (anti-abuse)
+ *   - getClientIp helper anti-XFF-spoof (PR #76)
  */
 export async function GET(request: NextRequest) {
-  const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown'
-  const rl = await limiter.check(ip)
-  if (!rl.success) {
-    return NextResponse.json(
-      { error: 'Cok fazla istek' },
-      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } },
-    )
+  // Auth context'i cek (cookie). Anon ise user null, IP rate'a dus.
+  const cookieClient = await createClient()
+  const {
+    data: { user },
+  } = await cookieClient.auth.getUser()
+
+  if (user) {
+    const rl = await userLimiter.check(user.id)
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Cok fazla istek' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } },
+      )
+    }
+  } else {
+    const ip = getClientIp(request.headers)
+    const rl = await ipLimiter.check(ip)
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Cok fazla istek' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } },
+      )
+    }
   }
 
   const { searchParams } = new URL(request.url)
