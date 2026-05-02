@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // CRON_SECRET modul basinda okundugu icin import'tan once set
-const { mockSendPush, mockProfilesRes, mockSubscriptionsRes } = vi.hoisted(() => {
+const { mockSendPush, mockProfilesRes, mockSubscriptionsRes, mockDeleteRes } = vi.hoisted(() => {
   process.env.CRON_SECRET = 'test-secret-123'
   return {
     mockSendPush: vi.fn(),
     mockProfilesRes: vi.fn(),
     mockSubscriptionsRes: vi.fn(),
+    mockDeleteRes: vi.fn(() => Promise.resolve({ error: null })),
   }
 })
 
@@ -32,6 +33,9 @@ vi.mock('@/lib/supabase/service-role', () => ({
         return {
           select: vi.fn(() => ({
             in: vi.fn(() => mockSubscriptionsRes()),
+          })),
+          delete: vi.fn(() => ({
+            in: vi.fn(() => mockDeleteRes()),
           })),
         }
       }
@@ -104,12 +108,12 @@ describe('GET /api/cron/daily-streak-reminder', () => {
       ],
       error: null,
     })
-    mockSendPush.mockResolvedValue(true)
+    mockSendPush.mockResolvedValue('sent')
 
     const res = await GET(makeRequest('Bearer test-secret-123'))
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual({ sent: 2, candidates: 2, subscriptions: 2 })
+    expect(body).toEqual({ sent: 2, expired: 0, candidates: 2, subscriptions: 2 })
     expect(mockSendPush).toHaveBeenCalledTimes(2)
 
     // U1 streak=5 mesaji icerir
@@ -123,7 +127,7 @@ describe('GET /api/cron/daily-streak-reminder', () => {
     })
   })
 
-  it('skips invalid subscriptions (sendPushNotification returns false)', async () => {
+  it('deletes expired subscriptions (410/404) and tracks expired count', async () => {
     mockProfilesRes.mockResolvedValueOnce({
       data: [{ id: 'u1', display_name: 'A', current_streak: 3 }],
       error: null,
@@ -135,12 +139,37 @@ describe('GET /api/cron/daily-streak-reminder', () => {
       ],
       error: null,
     })
-    mockSendPush.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+    mockSendPush.mockResolvedValueOnce('sent').mockResolvedValueOnce('expired')
 
     const res = await GET(makeRequest('Bearer test-secret-123'))
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.sent).toBe(1)
+    expect(body.expired).toBe(1)
     expect(body.subscriptions).toBe(2)
+    // Cleanup DELETE cagirildi
+    expect(mockDeleteRes).toHaveBeenCalled()
+  })
+
+  it('does not delete on transient errors (network/5xx)', async () => {
+    mockProfilesRes.mockResolvedValueOnce({
+      data: [{ id: 'u1', display_name: 'A', current_streak: 2 }],
+      error: null,
+    })
+    mockSubscriptionsRes.mockResolvedValueOnce({
+      data: [
+        { user_id: 'u1', endpoint: 'https://e1', p256dh: 'k1', auth: 'a1' },
+      ],
+      error: null,
+    })
+    mockSendPush.mockResolvedValueOnce('error')
+
+    const res = await GET(makeRequest('Bearer test-secret-123'))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.sent).toBe(0)
+    expect(body.expired).toBe(0)
+    // Transient error icin DELETE cagrilmaz (sub korunur, sonraki firing'de tekrar denenir)
+    expect(mockDeleteRes).not.toHaveBeenCalled()
   })
 })
