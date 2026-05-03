@@ -8,10 +8,23 @@
 import type { Room } from '@/lib/rooms/room-state-reducer'
 import { CATEGORY_GROUPS } from '@/lib/rooms/validations'
 
-// Tek kaynak: validations.ts CATEGORY_GROUPS — flat lookup map
-const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-  CATEGORY_GROUPS.flatMap((g) => g.categories.map((c) => [c.value, c.label])),
-)
+// Yeni taxonomy (validations.ts CATEGORY_GROUPS) + legacy slug'lar
+// (pre-2026-05-03 oda kayitlari raw slug gozukmesin — Codex P2 PR #92 fix).
+const CATEGORY_LABELS: Record<string, string> = {
+  ...Object.fromEntries(
+    CATEGORY_GROUPS.flatMap((g) => g.categories.map((c) => [c.value, c.label])),
+  ),
+  // Legacy (pre-2026-05-03): oda yaratan eski kullanicilarin RoomInfoPanel'i
+  // raw 'genel-kultur' yerine 'Genel Kültür' goruyor.
+  'genel-kultur': 'Genel Kültür',
+  matematik: 'Matematik',
+  fen: 'Fen Bilimleri',
+  edebiyat: 'Edebiyat',
+  ingilizce: 'İngilizce',
+  vatandaslik: 'Vatandaşlık',
+  futbol: 'Futbol',
+  sinema: 'Sinema',
+}
 
 const MODE_LABELS = {
   sync: 'Senkron',
