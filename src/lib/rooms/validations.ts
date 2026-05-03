@@ -189,18 +189,47 @@ export type RevealRoundActionBody = z.infer<typeof revealRoundActionSchema>
 // =============================================================================
 // Codex P3 #5 fix: kategori whitelist (UI dropdown ile tek kaynak). Backend
 // herhangi bir string kabul etmemeli — kotuniyetli/eski client farkli kategori
-// gonderemez. UI 10 kategori, Zod enum + TypeScript const aynisi.
+// gonderemez. 2026-05-03 fix: DB taxonomy ile uyumlu 18 alt-kategori
+// (questions tablosundaki gercek category degerleri).
 export const QUICK_PLAY_CATEGORIES = [
-  'genel-kultur',
-  'tarih',
-  'cografya',
-  'edebiyat',
-  'matematik',
-  'fen',
-  'ingilizce',
-  'vatandaslik',
-  'futbol',
-  'sinema',
+  // Türkçe
+  'paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari',
+  // Matematik
+  'geometri', 'problemler', 'sayilar', 'denklemler', 'fonksiyonlar', 'olasilik',
+  // Fen
+  'fizik', 'kimya', 'biyoloji',
+  // Sosyal
+  'tarih', 'cografya', 'felsefe', 'sosyoloji',
+] as const
+
+/** Kategori → ders ayrımı (UI optgroup için, RoomInfoPanel display için ortak kaynak) */
+export const CATEGORY_GROUPS = [
+  { game: 'turkce', label: 'Türkçe', categories: [
+    { value: 'paragraf', label: 'Paragraf' },
+    { value: 'dil_bilgisi', label: 'Dil Bilgisi' },
+    { value: 'sozcuk', label: 'Sözcük' },
+    { value: 'anlam_bilgisi', label: 'Anlam Bilgisi' },
+    { value: 'yazim_kurallari', label: 'Yazım Kuralları' },
+  ]},
+  { game: 'matematik', label: 'Matematik', categories: [
+    { value: 'geometri', label: 'Geometri' },
+    { value: 'problemler', label: 'Problemler' },
+    { value: 'sayilar', label: 'Sayılar' },
+    { value: 'denklemler', label: 'Denklemler' },
+    { value: 'fonksiyonlar', label: 'Fonksiyonlar' },
+    { value: 'olasilik', label: 'Olasılık' },
+  ]},
+  { game: 'fen', label: 'Fen Bilimleri', categories: [
+    { value: 'fizik', label: 'Fizik' },
+    { value: 'kimya', label: 'Kimya' },
+    { value: 'biyoloji', label: 'Biyoloji' },
+  ]},
+  { game: 'sosyal', label: 'Sosyal Bilimler', categories: [
+    { value: 'tarih', label: 'Tarih' },
+    { value: 'cografya', label: 'Coğrafya' },
+    { value: 'felsefe', label: 'Felsefe' },
+    { value: 'sosyoloji', label: 'Sosyoloji' },
+  ]},
 ] as const
 
 export const quickPlayRoomActionSchema = z.object({
