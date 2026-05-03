@@ -229,6 +229,21 @@ export type RefreshLobbyPreviewActionBody = z.infer<
 >
 
 // =============================================================================
+// POST /api/rooms/:id/invite — email davet (host -> guest)
+// =============================================================================
+export const inviteRoomSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, 'Email bos olamaz')
+    .max(254, 'Email cok uzun')
+    .email('Gecerli bir email girin'),
+})
+
+export type InviteRoomBody = z.infer<typeof inviteRoomSchema>
+
+// =============================================================================
 // replayRoomAction — Sprint 2C Task 8 (Replay & Share)
 // =============================================================================
 export const replayRoomActionSchema = z.object({
