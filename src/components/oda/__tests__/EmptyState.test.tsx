@@ -8,11 +8,13 @@ describe('EmptyState', () => {
     expect(screen.getByText(/Henuz aktif odan yok/)).toBeInTheDocument()
   })
 
-  test('2) Yeni Oda link href + Kod disabled', () => {
+  test('2) Yeni Oda link + Kod ile Katil link aktif', () => {
     render(<EmptyState />)
     const newLink = screen.getByText(/Yeni Oda Kur/) as HTMLAnchorElement
     expect(newLink.getAttribute('href')).toBe('/oda/yeni')
-    const kodBtn = screen.getByText(/Kod ile Katil/).closest('button')
-    expect(kodBtn).toBeDisabled()
+    // 2026-05-03 fix: Kod ile Katil artik disabled buton degil, /oda/kod link
+    const kodLink = screen.getByText(/Kod ile Katil/).closest('a') as HTMLAnchorElement
+    expect(kodLink).toBeInTheDocument()
+    expect(kodLink.getAttribute('href')).toBe('/oda/kod')
   })
 })

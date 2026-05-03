@@ -57,15 +57,12 @@ export default async function Page({
           <Link href="/oda/yeni" className="btn-primary px-4 py-2 text-sm">
             + Yeni Oda
           </Link>
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-sub)] opacity-60"
-            title="4b'de aktif olur"
+          <Link
+            href="/oda/kod"
+            className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--text)] transition-colors hover:bg-[var(--card)]"
           >
-            Kod ile Katıl <span className="ml-1 text-[10px]">(yakında)</span>
-          </button>
+            Kod ile Katıl
+          </Link>
         </div>
       </header>
 

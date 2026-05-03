@@ -1,14 +1,21 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { CreateRoomForm } from '@/components/oda/CreateRoomForm'
+import { createClient } from '@/lib/supabase/server'
 
 /**
  * Bilge Arena Oda: /oda/yeni form sayfasi
- * Sprint 1 PR4a Task 5
+ * Sprint 1 PR4a Task 5 + 2026-05-03 auth path-preserve fix (Codex P1 PR #89)
  *
- * Auth guard parent layout'tan geliyor. Server Component shell, form
- * client component (useActionState).
+ * Auth guard kendi sayfasinda — layout artik global redirect yapmiyor cunku
+ * pathname'i bilemez. Login sonrasi /oda/yeni'ye geri donmek icin spesifik
+ * redirect query parametresi gerek.
  */
-export default function Page() {
+export default async function Page() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/giris?redirect=/oda/yeni')
+
   return (
     <>
       <header className="mb-6">
