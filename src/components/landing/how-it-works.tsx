@@ -1,4 +1,4 @@
-import { Shield, Target, Zap, Trophy } from 'lucide-react'
+import { Shield, Target, Zap, Trophy, Users } from 'lucide-react'
 
 const STEPS = [
   {
@@ -29,6 +29,14 @@ const STEPS = [
     title: 'XP Kazan & Yüksel',
     desc: 'Her doğru cevap XP kazandırır, seviye atla, listeye gir.',
   },
+  {
+    n: '05',
+    icon: Users,
+    color: { m: 'var(--urgency)', l: 'var(--urgency-light)', bg: 'var(--urgency-bg)' },
+    title: 'Arkadaşlarınla Yarış',
+    desc: 'Oda kur, kod paylaş, eş zamanlı çoklu oyuncu turnuvası.',
+    badge: 'YENİ',
+  },
 ]
 
 interface HowItWorksProps {
@@ -51,27 +59,35 @@ export function HowItWorks({ config }: HowItWorksProps = {}) {
             Nasıl Çalışır
           </div>
           <h2 className="font-display text-4xl font-black lg:text-[42px]">
-            <span className="text-[var(--text)]">4 Adımda </span>
+            <span className="text-[var(--text)]">5 Adımda </span>
             <span className="text-[var(--focus-light)]">Arena&apos;ya Gir</span>
           </h2>
         </div>
 
         {/* Adimlar */}
-        <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {/* Baglanti cizgisi (sadece desktop) */}
           <div
-            className="absolute left-[12%] right-[12%] top-[52px] hidden h-px lg:block"
+            className="absolute left-[10%] right-[10%] top-[52px] hidden h-px lg:block"
             style={{
               background:
                 'linear-gradient(90deg, transparent, var(--focus-border), transparent)',
             }}
           />
 
-          {steps.map(({ n, icon: Icon, color, title, desc }) => (
+          {steps.map(({ n, icon: Icon, color, title, desc, badge }) => (
             <div
               key={n}
               className="relative rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 text-center"
             >
+              {badge && (
+                <div
+                  className="absolute -right-2 -top-2 rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-white"
+                  style={{ background: 'var(--urgency)' }}
+                >
+                  {badge}
+                </div>
+              )}
               <div
                 className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border-2"
                 style={{

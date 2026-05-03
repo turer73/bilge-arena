@@ -14,6 +14,7 @@ import { trUpper } from '@/lib/utils/tr-text'
 const NAV_LINKS = [
   { href: '/', label: 'Ana Sayfa' },
   { href: '/arena', label: 'Oyunlar' },
+  { href: '/oda', label: 'Oda Modu' },
   { href: '/arena/siralama', label: 'Sıralama' },
   { href: '/nasil-calisir', label: 'Nasıl Çalışır' },
   { href: '/hakkinda', label: 'Hakkında' },
@@ -143,6 +144,13 @@ export function Navbar() {
                     >
                       <Users size={14} />
                       Arkadaşlar
+                    </Link>
+                    <Link
+                      href="/oda"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
+                    >
+                      <Users size={14} />
+                      Oda Modu
                     </Link>
                     <Link
                       href="/arena/duello"

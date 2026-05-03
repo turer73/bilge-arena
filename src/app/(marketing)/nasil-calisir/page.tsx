@@ -230,6 +230,60 @@ export default function NasilCalisirPage() {
         </div>
       </section>
 
+      {/* Oda Modu — Cok Oyunculu */}
+      <section className="mb-16">
+        <div className="mb-6 flex items-center justify-center gap-2">
+          <span className="rounded-full bg-[var(--urgency)] px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider text-white">
+            YENİ
+          </span>
+          <h2 className="text-2xl font-bold">Oda Modu — Arkadaşlarınla Yarış</h2>
+        </div>
+        <p className="mb-8 text-center text-sm text-[var(--text-sub)]">
+          Eş zamanlı çoklu oyuncu turnuva sistemi. Oda kur, arkadaşlarına kod paylaş, aynı soruları aynı anda çözün.
+        </p>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { num: '1', icon: '🎯', title: 'Oda Aç', desc: 'Ders, mod, soru sayısı seç. Sistem 6 haneli oda kodu üretir.' },
+            { num: '2', icon: '🔗', title: 'Kodu Paylaş', desc: 'Arkadaşlarına kodu gönder, /oda/kod sayfasından girsinler.' },
+            { num: '3', icon: '⚔️', title: 'Eş Zamanlı Çöz', desc: 'Tüm oyuncular aynı soruyu aynı anda görür, hızlı doğru = yüksek puan.' },
+            { num: '4', icon: '🏆', title: 'Sonucu Gör', desc: 'Her tur sonunda doğru cevap + skor tablosu, oyun sonunda kazanan ilan edilir.' },
+          ].map((s) => (
+            <div
+              key={s.num}
+              className="rounded-xl border border-[var(--focus)]/20 bg-[var(--focus-bg)] p-5 text-center"
+            >
+              <div className="mb-2 text-3xl">{s.icon}</div>
+              <div className="mb-1 text-[10px] font-bold tracking-widest text-[var(--focus)]">
+                ADIM {s.num}
+              </div>
+              <h3 className="mb-2 font-bold">{s.title}</h3>
+              <p className="text-xs leading-relaxed text-[var(--text-sub)]">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 flex flex-wrap justify-center gap-3 text-xs text-[var(--text-muted)]">
+          <span className="flex items-center gap-1.5">⚡ Hızlı doğru = bonus puan</span>
+          <span className="flex items-center gap-1.5">👥 2-8 oyuncu</span>
+          <span className="flex items-center gap-1.5">📲 Realtime sync</span>
+          <span className="flex items-center gap-1.5">🔁 Tekrar oyna</span>
+        </div>
+
+        <div className="mt-6 text-center">
+          <Link href="/oda/yeni">
+            <Button variant="primary" size="md">
+              Oda Aç
+            </Button>
+          </Link>
+          <Link href="/oda/kod" className="ml-2">
+            <Button variant="ghost" size="md">
+              Odaya Katıl
+            </Button>
+          </Link>
+        </div>
+      </section>
+
       {/* Ekstra Özellikler */}
       <section className="mb-16">
         <h2 className="mb-8 text-center text-2xl font-bold">Ekstra Özellikler</h2>
