@@ -74,7 +74,10 @@ export function MemberRoster({
             <MemberRow
               key={m.user_id}
               member={m}
-              isOnline={online.has(m.user_id)}
+              // Botlar virtual (gen_random_uuid, presence track yok) — UX
+              // tutarliligi icin hep online gosterilir, gercek user'lar
+              // presence Set'inden derlenir.
+              isOnline={m.is_bot === true || online.has(m.user_id)}
               isHost={m.user_id === hostId}
               viewerIsHost={viewerIsHost}
               viewerUserId={viewerUserId}
