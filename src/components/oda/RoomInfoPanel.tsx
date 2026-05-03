@@ -6,19 +6,12 @@
  */
 
 import type { Room } from '@/lib/rooms/room-state-reducer'
+import { CATEGORY_GROUPS } from '@/lib/rooms/validations'
 
-const CATEGORY_LABELS: Record<string, string> = {
-  'genel-kultur': 'Genel Kültür',
-  tarih: 'Tarih',
-  cografya: 'Coğrafya',
-  edebiyat: 'Edebiyat',
-  matematik: 'Matematik',
-  fen: 'Fen Bilimleri',
-  ingilizce: 'İngilizce',
-  vatandaslik: 'Vatandaşlık',
-  futbol: 'Futbol',
-  sinema: 'Sinema',
-}
+// Tek kaynak: validations.ts CATEGORY_GROUPS — flat lookup map
+const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  CATEGORY_GROUPS.flatMap((g) => g.categories.map((c) => [c.value, c.label])),
+)
 
 const MODE_LABELS = {
   sync: 'Senkron',

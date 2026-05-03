@@ -120,10 +120,10 @@ describe('createRoomSchema', () => {
 
 describe('quickPlayRoomActionSchema (Sprint 2B Task 4 + Codex P3 #5 fix)', () => {
   it('1) accepts whitelist kategori + defaults', () => {
-    const r = quickPlayRoomActionSchema.safeParse({ category: 'matematik' })
+    const r = quickPlayRoomActionSchema.safeParse({ category: 'paragraf' })
     expect(r.success).toBe(true)
     if (r.success) {
-      expect(r.data.category).toBe('matematik')
+      expect(r.data.category).toBe('paragraf')
       expect(r.data.difficulty).toBe(2)
       expect(r.data.question_count).toBe(10)
     }
@@ -145,11 +145,12 @@ describe('quickPlayRoomActionSchema (Sprint 2B Task 4 + Codex P3 #5 fix)', () =>
     }
   })
 
-  it('4) Codex P3 #5: tum 10 whitelist kategori kabul edilir', () => {
+  it('4) Codex P3 #5: tum 18 DB alt-kategori kabul edilir', () => {
     const validCategories = [
-      'genel-kultur', 'tarih', 'cografya', 'edebiyat',
-      'matematik', 'fen', 'ingilizce', 'vatandaslik',
-      'futbol', 'sinema',
+      'paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari',
+      'geometri', 'problemler', 'sayilar', 'denklemler', 'fonksiyonlar', 'olasilik',
+      'fizik', 'kimya', 'biyoloji',
+      'tarih', 'cografya', 'felsefe', 'sosyoloji',
     ]
     for (const cat of validCategories) {
       const r = quickPlayRoomActionSchema.safeParse({ category: cat })
