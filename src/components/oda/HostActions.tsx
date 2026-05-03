@@ -18,6 +18,7 @@ import {
   type StartRoomActionState,
   type CancelRoomActionState,
 } from '@/lib/rooms/actions'
+import { InviteByEmailButton } from './InviteByEmailButton'
 
 type RoomLifecycleState =
   | 'lobby'
@@ -74,6 +75,8 @@ export function HostActions({ isHost, roomId, roomState }: HostActionsProps) {
             {startPending ? 'Başlatılıyor…' : 'Oyunu Başlat'}
           </button>
         </form>
+
+        <InviteByEmailButton roomId={roomId} disabled={!canStart} />
 
         <button
           type="button"
