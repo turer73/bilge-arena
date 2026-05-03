@@ -26,23 +26,27 @@ export function useRoomChannel(
   const isMounted = useRef(true)
   const channelRef = useRef<RealtimeChannel | null>(null)
 
+  // 2026-05-03 fix: Realtime postgres_changes Bilge Arena DB'sini gormuyor
+  // (rooms tablolari bilge_arena_dev DB'sinde, Panola Supabase Realtime ana
+  // postgres DB'sini izliyor). Channel CHANNEL_ERROR -> isStale=true kalir,
+  // postgres_changes hicbir zaman fire etmez. Polling fallback (asagida) ile
+  // sistem degraded-mode'da tam islevsel kalir; gercek Realtime sonra ws-dev.
+  const refetchRoomState = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/rooms/${roomId}/state`)
+      if (!res.ok) return
+      const fresh = await res.json()
+      if (isMounted.current) {
+        dispatch({ type: 'HYDRATE', payload: fresh })
+      }
+    } catch {
+      // Network error - isStale flag zaten setli kalir
+    }
+  }, [roomId])
+
   useEffect(() => {
     isMounted.current = true
     const supabase = createClient()
-
-    // Reconnect + round-change REST resync (memory id=335 + Codex P1 PR50)
-    const refetchRoomState = async () => {
-      try {
-        const res = await fetch(`/api/rooms/${roomId}/state`)
-        if (!res.ok) return
-        const fresh = await res.json()
-        if (isMounted.current) {
-          dispatch({ type: 'HYDRATE', payload: fresh })
-        }
-      } catch {
-        // Network error - isStale flag zaten setli kalir
-      }
-    }
 
     const channel = setupRoomChannel(
       supabase,
@@ -55,8 +59,6 @@ export function useRoomChannel(
     )
     channelRef.current = channel
 
-    const reconnectListener = refetchRoomState
-
     // Phoenix Socket-pattern: onError TS tipinde expose edilmemis ama runtime'da var.
     // realtime-js RealtimeClient (https://github.com/supabase/realtime-js).
     const socket = channel.socket as unknown as {
@@ -64,7 +66,7 @@ export function useRoomChannel(
     }
     if (socket.onError) {
       socket.onError(() => {
-        void reconnectListener()
+        void refetchRoomState()
       })
     }
 
@@ -73,7 +75,18 @@ export function useRoomChannel(
       channelRef.current = null
       channel.unsubscribe()
     }
-  }, [roomId, userId])
+  }, [roomId, userId, refetchRoomState])
+
+  // Polling fallback: Realtime channel error ise (isStale=true) her 3sn REST
+  // resync. Lobby->active gecisi, member updates, round changes hepsi yakalanir.
+  // Realtime saglikli (isStale=false) iken polling devre disi (zero overhead).
+  useEffect(() => {
+    if (!state.isStale) return
+    const id = window.setInterval(() => {
+      if (isMounted.current) void refetchRoomState()
+    }, 3000)
+    return () => window.clearInterval(id)
+  }, [state.isStale, refetchRoomState])
 
   // PR4h: typing broadcast helper. Player secenek tikladiginda call edilir,
   // 3sn sonra otomatik typing_stop emit. Reentrant-safe (re-call timer reset).
