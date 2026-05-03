@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Zap, Check } from 'lucide-react'
+import { Zap, Check, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface CTASectionProps {
@@ -52,7 +52,7 @@ export function CTASection({ config }: CTASectionProps = {}) {
           {subheading}
         </p>
 
-        <div className="mt-10 flex justify-center">
+        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href="/arena">
             <Button
               variant="primary"
@@ -61,6 +61,12 @@ export function CTASection({ config }: CTASectionProps = {}) {
             >
               <Zap size={20} />
               {buttonText}
+            </Button>
+          </Link>
+          <Link href="/oda">
+            <Button variant="ghost" size="lg" className="text-lg">
+              <Users size={18} />
+              Arkadaşlarınla Oda Kur
             </Button>
           </Link>
         </div>
