@@ -19,9 +19,15 @@ const { mockGetAuth, mockFetchRoomState } = vi.hoisted(() => ({
   mockFetchRoomState: vi.fn(),
 }))
 
-vi.mock('@/lib/rooms/api-helpers', () => ({ getAuthAndJwt: mockGetAuth }))
+vi.mock('@/lib/rooms/api-helpers', () => ({ getAuthRateLimited: mockGetAuth }))
 vi.mock('@/lib/rooms/server-fetch', () => ({
   fetchRoomState: mockFetchRoomState,
+}))
+// Rate limit mock — her zaman success doner (rate limit logic ayri test edilir)
+vi.mock('@/lib/utils/rate-limit', () => ({
+  createRateLimiter: vi.fn(() => ({
+    check: vi.fn(async () => ({ success: true, retryAfter: 0 })),
+  })),
 }))
 
 import { GET } from '../route'

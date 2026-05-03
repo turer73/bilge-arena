@@ -7,15 +7,20 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getAuthAndJwt, parseEmptyBody } from '@/lib/rooms/api-helpers'
+import { getAuthRateLimited, parseEmptyBody } from '@/lib/rooms/api-helpers'
 import { callRpc } from '@/lib/rooms/client'
 import { toResponse } from '@/lib/rooms/errors'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+// Normal flow — leave once per room. Multi-room hop tolere icin 30/dk
+const ipLimiter = createRateLimiter('rooms-leave-ip', 60, 60_000)
+const userLimiter = createRateLimiter('rooms-leave-user', 30, 60_000)
 
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const auth = await getAuthAndJwt()
+  const auth = await getAuthRateLimited(req, ipLimiter, userLimiter)
   if (!auth.ok) return auth.response
 
   const empty = await parseEmptyBody(req)
