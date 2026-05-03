@@ -16,17 +16,20 @@
  * visual disable. isHost=false -> null render (early).
  */
 
-import { useActionState } from 'react'
+import { useActionState, useRef } from 'react'
 import {
   advanceRoundAction,
   revealRoundAction,
+  cancelRoomAction,
   type AdvanceRoundActionState,
   type RevealRoundActionState,
+  type CancelRoomActionState,
 } from '@/lib/rooms/actions'
 import type { CurrentRound } from '@/lib/rooms/room-state-reducer'
 
 const advanceInitial: AdvanceRoundActionState = {}
 const revealInitial: RevealRoundActionState = {}
+const cancelInitial: CancelRoomActionState = {}
 
 interface HostGameActionsProps {
   isHost: boolean
@@ -51,11 +54,16 @@ export function HostGameActions({
     revealRoundAction,
     revealInitial,
   )
+  const [cancelState, cancelFormAction, cancelPending] = useActionState(
+    cancelRoomAction,
+    cancelInitial,
+  )
+  const cancelDialogRef = useRef<HTMLDialogElement>(null)
 
   if (!isHost) return null
   if (roomState !== 'active' && roomState !== 'reveal') return null
 
-  const showError = advanceState.error ?? revealState.error
+  const showError = advanceState.error ?? revealState.error ?? cancelState.error
   const isReveal = roomState === 'reveal'
   // Codex P1 PR #51: active + current_round=null -> bootstrap advance gerek
   const needsBootstrap = roomState === 'active' && currentRound === null
@@ -97,6 +105,45 @@ export function HostGameActions({
             </button>
           </form>
         )}
+
+        {/* 2026-05-03: stuck state escape route — host her zaman iptal edebilir */}
+        <button
+          type="button"
+          onClick={() => cancelDialogRef.current?.showModal()}
+          disabled={cancelPending}
+          className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-bold text-red-700 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40 dark:text-red-300"
+        >
+          {cancelPending ? 'İptal ediliyor…' : 'Odayı İptal Et'}
+        </button>
+
+        <dialog
+          ref={cancelDialogRef}
+          aria-label="İptal onay"
+          className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 backdrop:bg-black/40"
+        >
+          <form action={cancelFormAction} className="space-y-3">
+            <input type="hidden" name="room_id" value={roomId} />
+            <input type="hidden" name="reason" value="host_canceled" />
+            <p className="text-sm">
+              {'Bu odayı iptal etmek istediğine emin misin? Oyun bitirilir, üyeler odadan çıkarılır.'}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => cancelDialogRef.current?.close()}
+                className="rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="submit"
+                className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white"
+              >
+                Evet, İptal Et
+              </button>
+            </div>
+          </form>
+        </dialog>
       </div>
 
       {showError && (
