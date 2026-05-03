@@ -45,6 +45,22 @@ export function SonucView({ state, userId }: SonucViewProps) {
   const isLastRound =
     current_round.round_index >= room.question_count
 
+  // 2026-05-03 BUG FIX: question_content_snapshot.answer field 0-indexed
+  // integer string olarak DB'de saklaniyor (ornegin "2"). Botlar bunu
+  // direkt submit eder, frontend de PR #98'den itibaren index gonderiyor.
+  // Display icin index -> options[index] map; legacy text degerinde ayni
+  // string fallback yapilir.
+  const resolveOptionText = (val: string | null | undefined): string | null => {
+    if (val === null || val === undefined) return null
+    const idx = parseInt(val, 10)
+    if (!Number.isNaN(idx) && idx >= 0 && idx < options.length) {
+      return options[idx]
+    }
+    return val
+  }
+  const correctOption = resolveOptionText(correct)
+  const myAnswerOption = resolveOptionText(state.my_answer?.answer_value)
+
   return (
     <section
       aria-label="Tur sonucu"
@@ -67,9 +83,9 @@ export function SonucView({ state, userId }: SonucViewProps) {
 
       <ul className="mb-4 space-y-2">
         {options.map((opt, idx) => {
-          const isCorrect = correct !== null && correct !== undefined && opt === correct
-          // PR4f: kullanicinin secimi
-          const isMine = state.my_answer?.answer_value === opt
+          const isCorrect = correctOption !== null && opt === correctOption
+          // PR4f: kullanicinin secimi (index -> options[idx] resolved)
+          const isMine = myAnswerOption !== null && opt === myAnswerOption
           return (
             <li
               key={idx}
