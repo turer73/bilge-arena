@@ -56,6 +56,8 @@ export type Room = {
   per_question_seconds: number
   /** Sprint 2A Task 1: 0=manuel, 1-30=auto-advance saniye (default 5) */
   auto_advance_seconds?: number
+  /** PR4e: 0=lobby/bootstrap-pending, 1..N=aktif round_index */
+  current_round_index?: number
   /** Sprint 2A Task 3: public oda discovery (host opt-in) */
   is_public?: boolean
   created_at: string

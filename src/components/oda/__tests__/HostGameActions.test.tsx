@@ -6,11 +6,14 @@
 import { describe, test, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-const { mockUseActionState, mockAdvance, mockReveal } = vi.hoisted(() => ({
-  mockUseActionState: vi.fn(),
-  mockAdvance: vi.fn(),
-  mockReveal: vi.fn(),
-}))
+const { mockUseActionState, mockAdvance, mockReveal, mockCancel } = vi.hoisted(
+  () => ({
+    mockUseActionState: vi.fn(),
+    mockAdvance: vi.fn(),
+    mockReveal: vi.fn(),
+    mockCancel: vi.fn(),
+  }),
+)
 
 vi.mock('react', async () => {
   const actual = await vi.importActual<typeof import('react')>('react')
@@ -20,6 +23,7 @@ vi.mock('react', async () => {
 vi.mock('@/lib/rooms/actions', () => ({
   advanceRoundAction: mockAdvance,
   revealRoundAction: mockReveal,
+  cancelRoomAction: mockCancel,
 }))
 
 import { HostGameActions } from '../HostGameActions'
@@ -114,5 +118,35 @@ describe('HostGameActions', () => {
     expect(
       screen.queryByRole('button', { name: /Cevabı Göster/i }),
     ).not.toBeInTheDocument()
+  })
+
+  test('6) 2026-05-03 stuck-state escape: active state -> "Odayı İptal Et" host icin gorunur', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(
+      <HostGameActions
+        isHost={true}
+        roomId="r1"
+        roomState="active"
+        currentRound={activeRound}
+      />,
+    )
+    expect(
+      screen.getByRole('button', { name: /Odayı İptal Et/i }),
+    ).toBeInTheDocument()
+  })
+
+  test('7) reveal state -> "Odayı İptal Et" yine gorunur (stuck-state escape)', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(
+      <HostGameActions
+        isHost={true}
+        roomId="r1"
+        roomState="reveal"
+        currentRound={activeRound}
+      />,
+    )
+    expect(
+      screen.getByRole('button', { name: /Odayı İptal Et/i }),
+    ).toBeInTheDocument()
   })
 })
