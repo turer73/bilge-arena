@@ -77,16 +77,21 @@ export function useRoomChannel(
     }
   }, [roomId, userId, refetchRoomState])
 
-  // Polling fallback: Realtime channel error ise (isStale=true) her 3sn REST
-  // resync. Lobby->active gecisi, member updates, round changes hepsi yakalanir.
-  // Realtime saglikli (isStale=false) iken polling devre disi (zero overhead).
+  // Polling: Realtime postgres_changes hibrit DB mismatch sebebiyle hicbir zaman
+  // fire etmiyor (Panola Realtime != bilge_arena_dev). Bu sebeple polling primary
+  // mekanizma; isStale=true iken hizli recovery (3sn), aksi halde defense-in-depth
+  // (5sn). PR #95 ws-dev.bilgearena.com switch sonrasi sadece isStale durumunda
+  // calismaya cekilebilir.
   useEffect(() => {
-    if (!state.isStale) return
+    if (state.room.state === 'completed' || state.room.state === 'archived') {
+      return // terminal state, polling gereksiz
+    }
+    const intervalMs = state.isStale ? 3000 : 5000
     const id = window.setInterval(() => {
       if (isMounted.current) void refetchRoomState()
-    }, 3000)
+    }, intervalMs)
     return () => window.clearInterval(id)
-  }, [state.isStale, refetchRoomState])
+  }, [state.isStale, state.room.state, refetchRoomState])
 
   // PR4h: typing broadcast helper. Player secenek tikladiginda call edilir,
   // 3sn sonra otomatik typing_stop emit. Reentrant-safe (re-call timer reset).
