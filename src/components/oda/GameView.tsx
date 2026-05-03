@@ -119,7 +119,25 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
     selection && selection.round_id === currentRoundId
       ? selection.option
       : null
-  const highlightedOption = state.my_answer?.answer_value ?? localSelection
+  // 2026-05-03 BUG FIX: question_content_snapshot.answer field 0-indexed
+  // integer string olarak DB'de saklaniyor (ornegin "2"). Botlar bunu direkt
+  // submit ediyor (correct match), ama frontend onceden option TEXT'ini
+  // submit ediyordu -> reveal_round'da is_correct hep FALSE olarak isaretliyor,
+  // user her cevabi yanlis sayiliyordu. Cozum: submission'da index gonder
+  // (asagidaki onClick), highlight'ta da my_answer.answer_value (index string)
+  // -> options[index] map'i yap.
+  const highlightedOption = (() => {
+    const myAnswerVal = state.my_answer?.answer_value
+    if (myAnswerVal !== undefined) {
+      const idx = parseInt(myAnswerVal, 10)
+      if (!Number.isNaN(idx) && idx >= 0 && idx < options.length) {
+        return options[idx]
+      }
+      // Legacy: pre-fix submissions option TEXT olarak saklandi, geriye uyumlu
+      return myAnswerVal
+    }
+    return localSelection
+  })()
 
   return (
     <section
@@ -171,11 +189,14 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
                     // 2026-05-03: tek-tik submit (yaris oyunu UX). FormData
                     // direkt construct + formAction(fd) — setSelection async
                     // re-render'i beklemez, hidden input stale value sorunu yok.
+                    // BUG FIX: answer_value 0-indexed integer string olarak
+                    // gonderiliyor (botlarla ayni format, reveal_round
+                    // is_correct comparison'i match etsin diye).
                     setSelection({ option: opt, round_id: currentRoundId })
                     onTyping?.()
                     const fd = new FormData()
                     fd.append('room_id', room.id)
-                    fd.append('answer_value', opt)
+                    fd.append('answer_value', String(idx))
                     formAction(fd)
                   }}
                   disabled={lockUI}
@@ -224,7 +245,7 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
 
       {hasAnswered && (
         <p className="mt-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
-          Cevabın: <strong>{state.my_answer?.answer_value}</strong>
+          Cevabın: <strong>{highlightedOption ?? state.my_answer?.answer_value}</strong>
           {state.my_answer?.is_correct === null
             ? ' — sonuç açıklamada görünecek.'
             : state.my_answer?.is_correct
