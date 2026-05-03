@@ -20,21 +20,9 @@ import {
   createRoomAction,
   type CreateRoomActionState,
 } from '@/lib/rooms/actions'
+import { CATEGORY_GROUPS } from '@/lib/rooms/validations'
 import { Field } from './Field'
 import { NumField } from './NumField'
-
-const CATEGORIES = [
-  { value: 'genel-kultur', label: 'Genel Kültür' },
-  { value: 'tarih', label: 'Tarih' },
-  { value: 'cografya', label: 'Coğrafya' },
-  { value: 'edebiyat', label: 'Edebiyat' },
-  { value: 'matematik', label: 'Matematik' },
-  { value: 'fen', label: 'Fen Bilimleri' },
-  { value: 'ingilizce', label: 'İngilizce' },
-  { value: 'vatandaslik', label: 'Vatandaşlık' },
-  { value: 'futbol', label: 'Futbol' },
-  { value: 'sinema', label: 'Sinema' },
-]
 
 const initialState: CreateRoomActionState = {}
 
@@ -68,13 +56,17 @@ export function CreateRoomForm() {
           id="field-category"
           name="category"
           required
-          defaultValue="genel-kultur"
+          defaultValue="paragraf"
           className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
         >
-          {CATEGORIES.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
+          {CATEGORY_GROUPS.map((group) => (
+            <optgroup key={group.game} label={group.label}>
+              {group.categories.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </Field>

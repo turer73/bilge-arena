@@ -36,22 +36,31 @@ describe('QuickPlayPanel', () => {
     ).toBeInTheDocument()
   })
 
-  test('2) 10 kategori secenegi var', () => {
+  test('2) 18 alt-kategori secenegi var (DB taxonomy ile uyumlu)', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const { container } = render(<QuickPlayPanel />)
     const options = container.querySelectorAll(
       'select[name="category"] option',
     )
-    expect(options).toHaveLength(10)
+    expect(options).toHaveLength(18)
   })
 
-  test('3) default kategori = genel-kultur', () => {
+  test('3) default kategori = paragraf (zengin kategori)', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     render(<QuickPlayPanel />)
     const select = screen.getByLabelText(
       /Hızlı oyun kategorisi/i,
     ) as HTMLSelectElement
-    expect(select.value).toBe('genel-kultur')
+    expect(select.value).toBe('paragraf')
+  })
+
+  test('3a) optgroup ders bazli gruplama (Türkçe/Matematik/Fen/Sosyal)', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    const { container } = render(<QuickPlayPanel />)
+    const groups = container.querySelectorAll('select[name="category"] optgroup')
+    expect(groups).toHaveLength(4)
+    const labels = Array.from(groups).map((g) => g.getAttribute('label'))
+    expect(labels).toEqual(['Türkçe', 'Matematik', 'Fen Bilimleri', 'Sosyal Bilimler'])
   })
 
   test('4) hidden inputs: difficulty=2, question_count=10', () => {
@@ -107,7 +116,7 @@ describe('QuickPlayPanel', () => {
     expect(select.getAttribute('aria-invalid')).toBe('true')
   })
 
-  test('9) Codex P3 #5: kategori secenekleri Zod whitelist ile birebir', () => {
+  test('9) Codex P3 #5: kategori secenekleri Zod whitelist ile birebir (18 DB alt-kategori)', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const { container } = render(<QuickPlayPanel />)
     const options = container.querySelectorAll<HTMLOptionElement>(
@@ -115,9 +124,14 @@ describe('QuickPlayPanel', () => {
     )
     const values = Array.from(options).map((o) => o.value)
     expect(values).toEqual([
-      'genel-kultur', 'tarih', 'cografya', 'edebiyat',
-      'matematik', 'fen', 'ingilizce', 'vatandaslik',
-      'futbol', 'sinema',
+      // Türkçe (5)
+      'paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari',
+      // Matematik (6)
+      'geometri', 'problemler', 'sayilar', 'denklemler', 'fonksiyonlar', 'olasilik',
+      // Fen (3)
+      'fizik', 'kimya', 'biyoloji',
+      // Sosyal (4)
+      'tarih', 'cografya', 'felsefe', 'sosyoloji',
     ])
   })
 })

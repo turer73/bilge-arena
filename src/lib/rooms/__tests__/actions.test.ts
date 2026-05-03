@@ -53,8 +53,8 @@ const mockSupabase = (user: unknown, session: unknown) => {
 
 const validForm = () => {
   const fd = new FormData()
-  fd.set('title', 'Genel Kultur Yarismasi')
-  fd.set('category', 'genel-kultur')
+  fd.set('title', 'Paragraf Yarismasi')
+  fd.set('category', 'paragraf')
   fd.set('difficulty', '3')
   fd.set('question_count', '10')
   fd.set('max_players', '6')
@@ -106,7 +106,7 @@ describe('createRoomAction', () => {
     expect(mockCallRpc).toHaveBeenCalledWith(
       'jwt',
       'create_room',
-      expect.objectContaining({ title: 'Genel Kultur Yarismasi', mode: 'sync' }),
+      expect.objectContaining({ title: 'Paragraf Yarismasi', mode: 'sync' }),
     )
     expect(mockRevalidatePath).toHaveBeenCalledWith('/oda')
     expect(mockRedirect).toHaveBeenCalledWith('/oda/BIL2GE')
@@ -573,12 +573,12 @@ describe('quickPlayRoomAction', () => {
       data: { id: 'r1', code: 'BOTABC' },
     })
     const fd = new FormData()
-    fd.set('category', 'matematik')
+    fd.set('category', 'geometri')
     fd.set('difficulty', '3')
     fd.set('question_count', '15')
     await quickPlayRoomAction({}, fd)
     expect(mockCallRpc).toHaveBeenCalledWith('jwt', 'quick_play_room', {
-      p_category: 'matematik',
+      p_category: 'geometri',
       p_difficulty: 3,
       p_question_count: 15,
     })
@@ -609,7 +609,7 @@ describe('quickPlayRoomAction', () => {
       error: { code: 'P0013', message: 'Code generation cakistir', status: 500 },
     })
     const fd = new FormData()
-    fd.set('category', 'matematik')
+    fd.set('category', 'geometri')
     const r = await quickPlayRoomAction({}, fd)
     expect(r.error).toMatch(/cakistir/)
   })

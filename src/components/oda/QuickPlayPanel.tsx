@@ -23,22 +23,7 @@ import {
   quickPlayRoomAction,
   type QuickPlayRoomActionState,
 } from '@/lib/rooms/actions'
-import { QUICK_PLAY_CATEGORIES } from '@/lib/rooms/validations'
-
-// Codex P3 #5: kategori whitelist Zod schema'da QUICK_PLAY_CATEGORIES.
-// UI labellari burada Record ile tutulur — value'lar Zod enum ile birebir.
-const CATEGORY_LABELS: Record<(typeof QUICK_PLAY_CATEGORIES)[number], string> = {
-  'genel-kultur': 'Genel Kültür',
-  tarih: 'Tarih',
-  cografya: 'Coğrafya',
-  edebiyat: 'Edebiyat',
-  matematik: 'Matematik',
-  fen: 'Fen Bilimleri',
-  ingilizce: 'İngilizce',
-  vatandaslik: 'Vatandaşlık',
-  futbol: 'Futbol',
-  sinema: 'Sinema',
-}
+import { CATEGORY_GROUPS } from '@/lib/rooms/validations'
 
 const initialState: QuickPlayRoomActionState = {}
 
@@ -67,15 +52,19 @@ export function QuickPlayPanel() {
             id="quick-play-category"
             name="category"
             required
-            defaultValue="genel-kultur"
+            defaultValue="paragraf"
             aria-label="Hızlı oyun kategorisi"
             aria-invalid={state.fieldErrors?.category ? 'true' : undefined}
             className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
           >
-            {QUICK_PLAY_CATEGORIES.map((value) => (
-              <option key={value} value={value}>
-                {CATEGORY_LABELS[value]}
-              </option>
+            {CATEGORY_GROUPS.map((group) => (
+              <optgroup key={group.game} label={group.label}>
+                {group.categories.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           {/* Codex P3 #3 fix: fieldErrors UI'da render */}
