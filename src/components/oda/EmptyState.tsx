@@ -1,10 +1,9 @@
 /**
  * Bilge Arena Oda: <EmptyState> /oda list bos durum
- * Sprint 1 PR4a Task 3
+ * Sprint 1 PR4a Task 3 + 2026-05-03 "(yakinda)" stale fix
  *
- * 2 CTA: "Yeni Oda Kur" (aktif Link) + "Kod ile Katil" (4a'da disabled,
- * 4b'de aktif olacak). BilgiArena referansi (memory id=324) kod-paylas
- * akisinin ilk dokunusu.
+ * 2 CTA: "Yeni Oda Kur" + "Kod ile Katil" (her ikisi de aktif Link).
+ * 4b'de eklenmis /oda/kod sayfasi referansi — disabled durumu kaldirildi.
  */
 
 import Link from 'next/link'
@@ -17,15 +16,12 @@ export function EmptyState() {
         <Link href="/oda/yeni" className="btn-primary px-4 py-2 text-sm">
           + Yeni Oda Kur
         </Link>
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-sub)] opacity-60"
-          title="4b'de aktif olur"
+        <Link
+          href="/oda/kod"
+          className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm text-[var(--text)] transition-colors hover:bg-[var(--card)]"
         >
-          Kod ile Katil <span className="ml-1 text-[10px]">(yakinda)</span>
-        </button>
+          Kod ile Katil
+        </Link>
       </div>
     </div>
   )
