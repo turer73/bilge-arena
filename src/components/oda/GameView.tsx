@@ -168,8 +168,15 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
                   type="button"
                   onClick={() => {
                     if (lockUI || !currentRoundId) return
+                    // 2026-05-03: tek-tik submit (yaris oyunu UX). FormData
+                    // direkt construct + formAction(fd) — setSelection async
+                    // re-render'i beklemez, hidden input stale value sorunu yok.
                     setSelection({ option: opt, round_id: currentRoundId })
-                    onTyping?.() // PR4h: secim degisince typing broadcast
+                    onTyping?.()
+                    const fd = new FormData()
+                    fd.append('room_id', room.id)
+                    fd.append('answer_value', opt)
+                    formAction(fd)
                   }}
                   disabled={lockUI}
                   aria-pressed={isSelected}
@@ -199,19 +206,20 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
           })}
         </ul>
 
-        <button
-          type="submit"
-          disabled={lockUI || !localSelection}
-          className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-[var(--surface)] disabled:text-[var(--text-sub)]"
-        >
-          {hasAnswered
-            ? '✓ Cevabın Gönderildi'
-            : isPending
-              ? 'Gönderiliyor…'
-              : localSelection
-                ? 'Onayla ve Gönder'
-                : 'Önce Bir Seçenek Seç'}
-        </button>
+        {/* Status banner: tek-tik submit oldugu icin "Onayla" butonu yok.
+            Pending/submitted state'i banner'da gosterilir. */}
+        {(isPending || hasAnswered) && (
+          <div
+            className={cn(
+              'w-full rounded-lg px-4 py-2 text-center text-sm font-medium',
+              hasAnswered
+                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                : 'bg-blue-500/15 text-blue-700 dark:text-blue-300',
+            )}
+          >
+            {hasAnswered ? '✓ Cevabın Gönderildi' : 'Gönderiliyor…'}
+          </div>
+        )}
       </form>
 
       {hasAnswered && (

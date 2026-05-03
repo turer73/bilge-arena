@@ -68,6 +68,10 @@ export function LobbyContainer({
           roomId={state.room.id}
           roomState={roomState}
           currentRound={state.current_round}
+          answersCount={state.answers_count}
+          totalActiveMembers={
+            state.members.filter((m) => !m.is_kicked).length
+          }
         />
       </div>
     )
@@ -81,6 +85,10 @@ export function LobbyContainer({
           roomId={state.room.id}
           roomState={roomState}
           currentRound={state.current_round}
+          answersCount={state.answers_count}
+          totalActiveMembers={
+            state.members.filter((m) => !m.is_kicked).length
+          }
         />
       </div>
     )

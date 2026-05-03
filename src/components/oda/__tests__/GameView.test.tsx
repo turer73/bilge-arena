@@ -78,33 +78,33 @@ describe('GameView', () => {
     vi.useRealTimers()
   })
 
-  test('1) active + question + 4 options -> render select-then-submit form', () => {
+  test('1) active + question + 4 options -> tek-tik UX (Onayla butonu yok)', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const { container } = render(<GameView state={baseState} userId="u1" />)
 
     expect(mockUseActionState).toHaveBeenCalledWith(mockSubmitAnswerAction, {})
     expect(screen.getByText(/Türkiye’nin başkenti/)).toBeInTheDocument()
 
-    // PR4f: 4 option butonu type=button (toggle selection), aria-pressed
+    // 4 option butonu type=button + aria-pressed; tikladiginda direkt submit
     const optionButtons = container.querySelectorAll(
       'button[type="button"][aria-pressed]',
     ) as NodeListOf<HTMLButtonElement>
     expect(optionButtons).toHaveLength(4)
 
-    // 1 submit butonu ("Önce Bir Seçenek Seç" disabled)
+    // 2026-05-03: tek-tik UX — "Onayla ve Gönder" butonu yok, type=submit
+    // butonu da yok (form artik onClick handler ile submit ediliyor)
     expect(
-      screen.getByRole('button', { name: /Önce Bir Seçenek Seç/i }),
-    ).toBeDisabled()
+      screen.queryByRole('button', { name: /Onayla ve Gönder/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Önce Bir Seçenek Seç/i }),
+    ).not.toBeInTheDocument()
 
     // Hidden room_id + answer_value
     const roomIdInput = container.querySelector(
       'input[name="room_id"]',
     ) as HTMLInputElement | null
     expect(roomIdInput?.value).toBe('r1')
-    const answerInput = container.querySelector(
-      'input[name="answer_value"]',
-    ) as HTMLInputElement | null
-    expect(answerInput?.value).toBe('') // henuz secim yok
 
     // Soru badge + countdown
     expect(screen.getByText('Soru 2 / 10')).toBeInTheDocument()
@@ -141,7 +141,7 @@ describe('GameView', () => {
     expect(answerInput.value).toBe('')
   })
 
-  test('2) PR4f: my_answer dolu -> "Cevabın Gönderildi" lock UI + indicator', () => {
+  test('2) PR4f: my_answer dolu -> "Cevabın Gönderildi" status banner + indicator', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const stateWithAnswer: RoomState = {
       ...baseState,
@@ -154,10 +154,8 @@ describe('GameView', () => {
     }
     render(<GameView state={stateWithAnswer} userId="u1" />)
 
-    // Submit button "Cevabın Gönderildi" + disabled
-    expect(
-      screen.getByRole('button', { name: /Cevabın Gönderildi/i }),
-    ).toBeDisabled()
+    // 2026-05-03: tek-tik UX — submit button yok, "Cevabın Gönderildi" banner
+    expect(screen.getByText(/✓ Cevabın Gönderildi/i)).toBeInTheDocument()
 
     // Indicator "Cevabın: Ankara" — strong tagi icin 1 match
     expect(screen.getByText(/Cevabın:/)).toBeInTheDocument()

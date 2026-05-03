@@ -16,7 +16,7 @@
  * visual disable. isHost=false -> null render (early).
  */
 
-import { useActionState, useRef } from 'react'
+import { useActionState, useEffect, useRef } from 'react'
 import {
   advanceRoundAction,
   revealRoundAction,
@@ -31,6 +31,9 @@ const advanceInitial: AdvanceRoundActionState = {}
 const revealInitial: RevealRoundActionState = {}
 const cancelInitial: CancelRoomActionState = {}
 
+const AUTO_REVEAL_GRACE_MS = 1000  // herkes cevap verdikten 1sn sonra reveal
+const DEADLINE_GRACE_MS = 1500     // sure dolduktan 1.5sn sonra reveal
+
 interface HostGameActionsProps {
   isHost: boolean
   roomId: string
@@ -38,6 +41,10 @@ interface HostGameActionsProps {
   roomState: 'active' | 'reveal' | 'lobby' | 'completed' | 'archived'
   /** Mevcut round (null ise henuz baslatilmamis, advance bootstrap gerek) */
   currentRound: CurrentRound | null
+  /** PR #97 auto-reveal: herkes cevap verdiyse reveal tetiklemek icin */
+  answersCount?: number
+  /** PR #97 auto-reveal: aktif (kicked degil) uye sayisi */
+  totalActiveMembers?: number
 }
 
 export function HostGameActions({
@@ -45,6 +52,8 @@ export function HostGameActions({
   roomId,
   roomState,
   currentRound,
+  answersCount = 0,
+  totalActiveMembers = 0,
 }: HostGameActionsProps) {
   const [advanceState, advanceFormAction, advancePending] = useActionState(
     advanceRoundAction,
@@ -59,6 +68,54 @@ export function HostGameActions({
     cancelInitial,
   )
   const cancelDialogRef = useRef<HTMLDialogElement>(null)
+  const revealFiredRef = useRef<string | null>(null)
+
+  // PR #97 auto-reveal: yaris UX iyilestirmesi. Host'un her tur "Cevabi
+  // Goster" tiklamasi gerekmiyor. Iki tetikleyici:
+  //   (a) Herkes cevap verdi (answers_count >= active_members) -> 1sn grace
+  //   (b) Sure doldu (NOW > ends_at) -> 1.5sn grace
+  // Grace period polling delay'ini absorbe eder. Manuel "Cevabi Goster"
+  // butonu duruyor — host erken bitirmek isterse.
+  useEffect(() => {
+    if (!isHost) return
+    if (roomState !== 'active') return
+    if (!currentRound || currentRound.revealed_at) return
+    const roundKey = currentRound.round_id ?? `idx-${currentRound.round_index}`
+    if (revealFiredRef.current === roundKey) return
+
+    const fireReveal = () => {
+      if (revealFiredRef.current === roundKey) return
+      revealFiredRef.current = roundKey
+      const fd = new FormData()
+      fd.append('room_id', roomId)
+      revealFormAction(fd)
+    }
+
+    // (a) Herkes cevap verdi
+    if (totalActiveMembers > 0 && answersCount >= totalActiveMembers) {
+      const id = window.setTimeout(fireReveal, AUTO_REVEAL_GRACE_MS)
+      return () => window.clearTimeout(id)
+    }
+
+    // (b) Sure doldu
+    const deadline = new Date(currentRound.ends_at).getTime()
+    const now = Date.now()
+    const ms = deadline - now + DEADLINE_GRACE_MS
+    if (ms <= 0) {
+      fireReveal()
+      return
+    }
+    const id = window.setTimeout(fireReveal, ms)
+    return () => window.clearTimeout(id)
+  }, [
+    isHost,
+    roomState,
+    currentRound,
+    answersCount,
+    totalActiveMembers,
+    roomId,
+    revealFormAction,
+  ])
 
   if (!isHost) return null
   if (roomState !== 'active' && roomState !== 'reveal') return null
