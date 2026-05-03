@@ -1,15 +1,8 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import type { GameSlug } from '@/lib/constants/games'
 
 // ---------- Tip tanimlari ----------
-
-/** session_answers + questions JOIN satir tipi */
-interface AnswerWithQuestion {
-  is_correct: boolean
-  questions: { game: string; category: string }
-}
 
 export interface SidebarPlayer {
   name: string
@@ -76,48 +69,34 @@ export async function fetchSidebarLeaderboard(
 
 // ---------- Konu Gucu ----------
 
+interface ApiTopicStrengthsResponse {
+  topics?: TopicStrength[]
+  game?: string
+}
+
 /**
  * Belirli bir oyun icin kullanicinin kategori bazli basari yuzdelerini ceker.
- * session_answers + questions JOIN.
+ *
+ * Madde 9 #4 (pentest raporu) refactor: Browser->Supabase direkt cagri yerine
+ * `/api/profile/topic-strengths` proxy uzerinden gecer. Auth-only endpoint —
+ * server-side service-role + auth.uid() filter, edge cache 60s private,
+ * IP+user cift kalkan rate limit. Aggregation server-side (eski client-side
+ * aggregation cok bandwidth wastes).
+ *
+ * userId param API'de kullanilmaz — auth.uid() server-side filter eder.
+ * Backward compat icin imza korundu (use-sidebar-data hook'u userId guard).
  */
 export async function fetchTopicStrengths(
-  userId: string,
-  game: GameSlug
+  _userId: string,
+  game: GameSlug,
 ): Promise<TopicStrength[]> {
-  const supabase = createClient()
-
-  const { data } = await supabase
-    .from('session_answers')
-    .select('is_correct, questions!inner(game, category)')
-    .eq('user_id', userId)
-    .eq('questions.game', game)
-    .returns<AnswerWithQuestion[]>()
-
-  if (!data || data.length === 0) return []
-
-  // Kategori bazli toplam/dogru say
-  const catMap = new Map<string, { total: number; correct: number }>()
-
-  for (const row of data) {
-    const q = row.questions
-    if (!q?.category) continue
-
-    if (!catMap.has(q.category)) catMap.set(q.category, { total: 0, correct: 0 })
-    const stat = catMap.get(q.category)!
-    stat.total++
-    if (row.is_correct) stat.correct++
+  try {
+    const res = await fetch(`/api/profile/topic-strengths?game=${encodeURIComponent(game)}`)
+    if (!res.ok) return []
+    const json = (await res.json()) as ApiTopicStrengthsResponse
+    return json.topics ?? []
+  } catch (err) {
+    console.error('[fetchTopicStrengths] proxy hatasi:', err)
+    return []
   }
-
-  const topics: TopicStrength[] = []
-  Array.from(catMap.entries()).forEach(([category, stat]) => {
-    topics.push({
-      label: category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' '),
-      percentage: stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0,
-    })
-  })
-
-  // Yuksek → dusuk sirala
-  topics.sort((a, b) => b.percentage - a.percentage)
-
-  return topics
 }
