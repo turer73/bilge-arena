@@ -63,6 +63,12 @@ export function ShareCodeButton({ code, className }: ShareCodeButtonProps) {
     }
   }
 
+  // Codex P2 PR #90 fix: hardcoded prod URL yerine NEXT_PUBLIC_SITE_URL env var.
+  // Staging/preview deploy'larinda dogru host'a paylasilsin (https://staging.bilgearena.com gibi).
+  // Env yoksa production fallback.
+  const SITE_URL =
+    (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').replace(/\/$/, '')
+
   const handleNativeShare = async (e: React.MouseEvent) => {
     e.preventDefault()
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
@@ -70,7 +76,7 @@ export function ShareCodeButton({ code, className }: ShareCodeButtonProps) {
         await navigator.share({
           title: 'Bilge Arena Oda Daveti',
           text: `Bilge Arena'da bana katıl! Oda kodu: ${code}`,
-          url: `https://bilgearena.com/oda/kod?code=${encodeURIComponent(code)}`,
+          url: `${SITE_URL}/oda/kod?code=${encodeURIComponent(code)}`,
         })
         setOpen(false)
       } catch {
@@ -80,7 +86,7 @@ export function ShareCodeButton({ code, className }: ShareCodeButtonProps) {
   }
 
   const shareText = `Bilge Arena'da odama katıl! Kod: ${code}`
-  const shareUrl = `https://bilgearena.com/oda/kod?code=${encodeURIComponent(code)}`
+  const shareUrl = `${SITE_URL}/oda/kod?code=${encodeURIComponent(code)}`
   const encodedText = encodeURIComponent(shareText)
   const encodedUrl = encodeURIComponent(shareUrl)
 

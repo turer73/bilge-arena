@@ -34,12 +34,17 @@ export function roomInviteEmail({
   game,
   baseUrl = 'https://bilgearena.com',
 }: RoomInviteParams): { subject: string; html: string } {
+  // Codex P2 PR #90 fix: subject plain-text, HTML-escape kullanma —
+  // 'Ali & Veli' raw kalmali, 'Ali &amp; Veli' entity gozukmemeli inbox'ta.
+  // HTML body icin ayri escape edilir (safeName).
   const safeName = escapeHtml(hostName)
   const safeCode = escapeHtml(roomCode)
   const gameLabel = game ? GAME_LABELS[game] || escapeHtml(game) : ''
   const joinUrl = `${baseUrl}/oda/kod?code=${encodeURIComponent(roomCode)}`
 
-  const subject = `${safeName} seni Bilge Arena'da bir odaya davet etti`
+  // Subject: raw hostName (HTML escape yok). Trim to safe length.
+  const trimmedName = hostName.trim().slice(0, 60)
+  const subject = `${trimmedName} seni Bilge Arena'da bir odaya davet etti`
 
   const html = `<!DOCTYPE html>
 <html lang="tr">
