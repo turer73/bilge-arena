@@ -9,16 +9,21 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getAuthAndJwt, parseBody } from '@/lib/rooms/api-helpers'
+import { getAuthRateLimited, parseBody } from '@/lib/rooms/api-helpers'
 import { callRpc } from '@/lib/rooms/client'
 import { toResponse } from '@/lib/rooms/errors'
 import { cancelRoomSchema } from '@/lib/rooms/validations'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+// Host abuse koruma — normalde 1 cancel/oda
+const ipLimiter = createRateLimiter('rooms-cancel-ip', 60, 60_000)
+const userLimiter = createRateLimiter('rooms-cancel-user', 5, 60_000)
 
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const auth = await getAuthAndJwt()
+  const auth = await getAuthRateLimited(req, ipLimiter, userLimiter)
   if (!auth.ok) return auth.response
 
   const validated = await parseBody(req, cancelRoomSchema)
