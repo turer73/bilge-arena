@@ -10,15 +10,20 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getAuthAndJwt, parseEmptyBody } from '@/lib/rooms/api-helpers'
+import { getAuthRateLimited, parseEmptyBody } from '@/lib/rooms/api-helpers'
 import { callRpc } from '@/lib/rooms/client'
 import { toResponse } from '@/lib/rooms/errors'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+// Host action — round transition. Hizli ardisik geciste 60/dk yeter.
+const ipLimiter = createRateLimiter('rooms-advance-ip', 240, 60_000)
+const userLimiter = createRateLimiter('rooms-advance-user', 60, 60_000)
 
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const auth = await getAuthAndJwt()
+  const auth = await getAuthRateLimited(req, ipLimiter, userLimiter)
   if (!auth.ok) return auth.response
 
   const empty = await parseEmptyBody(req)

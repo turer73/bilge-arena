@@ -14,16 +14,22 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getAuthAndJwt, parseBody } from '@/lib/rooms/api-helpers'
+import { getAuthRateLimited, parseBody } from '@/lib/rooms/api-helpers'
 import { callRpc } from '@/lib/rooms/client'
 import { toResponse } from '@/lib/rooms/errors'
 import { submitAnswerSchema } from '@/lib/rooms/validations'
+import { createRateLimiter } from '@/lib/utils/rate-limit'
+
+// Yuksek frekans: 10 soru x 5sn min = 12/dk gercek max. 60/dk per user
+// botabuse + leaderboard manipulation engeller, gercek kullanima genis margin
+const ipLimiter = createRateLimiter('rooms-submit-ip', 240, 60_000)
+const userLimiter = createRateLimiter('rooms-submit-user', 60, 60_000)
 
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const auth = await getAuthAndJwt()
+  const auth = await getAuthRateLimited(req, ipLimiter, userLimiter)
   if (!auth.ok) return auth.response
 
   const validated = await parseBody(req, submitAnswerSchema)
