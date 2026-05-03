@@ -21,8 +21,8 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 const MODE_LABELS = {
-  sync: 'Senkron',
-  async: 'Asenkron',
+  sync: 'Birlikte yarış',
+  async: 'Kendi hızında',
 } as const
 
 interface RoomInfoPanelProps {
