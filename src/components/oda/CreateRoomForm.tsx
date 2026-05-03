@@ -138,8 +138,8 @@ export function CreateRoomForm() {
           defaultValue="sync"
           className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
         >
-          <option value="sync">Senkron (host yönetir)</option>
-          <option value="async">Asenkron (sırayla)</option>
+          <option value="sync">🤝 Birlikte yarış (aynı anda, host yönetir)</option>
+          <option value="async">🚶 Kendi hızında (sırayla, herkes kendi başına)</option>
         </select>
       </Field>
 
