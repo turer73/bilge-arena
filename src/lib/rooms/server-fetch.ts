@@ -280,19 +280,18 @@ export async function fetchRoomState(
   const opts = { headers, cache: 'no-store' as const }
 
   try {
-    // PR4e-2: room_round_question_view (anti-cheat) — soru icerigi + round meta
-    // tek query'de doner. revealed_at NULL ise correct_answer/explanation NULL.
-    const [roomRes, membersRes, roundRes] = await Promise.all([
-      fetch(
-        `${RPC_URL}/rooms?id=eq.${roomId}&select=*&limit=1`,
-        opts,
-      ),
+    // 2026-05-03 fix: room_round_question_view onceden order=round_index.desc&limit=1
+    // ile cekiliyordu — start_room artik N round'i pre-create ettigi icin bu query
+    // her zaman MAX round_index'i (round 10/10) donduruyordu, gercek current_round
+    // degil. Sonuc: bootstrap (current_round=null) hicbir zaman tetiklenmedi, host
+    // "Ilk Soruyu Baslat" butonunu gormedi, submit_answer P0009 ile reddetti.
+    // Fix: room.current_round_index biliniyor (room oldugu icin 2-fazli fetch);
+    // round_index=eq filtresi ile dogru round cekilir, current_round_index<1 ise
+    // null kalir (bootstrap state).
+    const [roomRes, membersRes] = await Promise.all([
+      fetch(`${RPC_URL}/rooms?id=eq.${roomId}&select=*&limit=1`, opts),
       fetch(
         `${RPC_URL}/room_members?room_id=eq.${roomId}&select=*&order=joined_at.asc`,
-        opts,
-      ),
-      fetch(
-        `${RPC_URL}/room_round_question_view?room_id=eq.${roomId}&select=*&order=round_index.desc&limit=1`,
         opts,
       ),
     ])
@@ -304,10 +303,19 @@ export async function fetchRoomState(
     const members = membersRes.ok
       ? ((await membersRes.json()) as Member[])
       : []
-    const rounds = roundRes.ok
-      ? ((await roundRes.json()) as CurrentRound[])
-      : []
-    const current_round = rounds[0] ?? null
+
+    const currentIndex = rooms[0].current_round_index
+    let current_round: CurrentRound | null = null
+    if (typeof currentIndex === 'number' && currentIndex >= 1) {
+      const roundRes = await fetch(
+        `${RPC_URL}/room_round_question_view?room_id=eq.${roomId}&round_index=eq.${currentIndex}&select=*&limit=1`,
+        opts,
+      )
+      if (roundRes.ok) {
+        const rounds = (await roundRes.json()) as CurrentRound[]
+        current_round = rounds[0] ?? null
+      }
+    }
 
     // PR4e-5: room_answers count for current round (Prefer: count=exact header)
     let answers_count = 0
