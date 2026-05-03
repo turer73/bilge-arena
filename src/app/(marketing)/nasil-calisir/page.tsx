@@ -278,7 +278,7 @@ export default function NasilCalisirPage() {
           </Link>
           <Link href="/oda/kod" className="ml-2">
             <Button variant="ghost" size="md">
-              Koda Katıl
+              Odaya Katıl
             </Button>
           </Link>
         </div>
