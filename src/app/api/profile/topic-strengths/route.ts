@@ -41,7 +41,11 @@ interface TopicStrength {
  *   session_answers + questions JOIN -> kategori bazli toplam/dogru ->
  *   yuzde (%X dogru) -> sirali liste.
  *
- * Cache: private 60s (auth-spesifik veri, public cache uygun degil).
+ * Cache: no-store (Codex PR #86 P1 fix). Browser HTTP cache URL-keyed; ayni
+ * URL ile user A logout + user B login (60s icinde) -> user B'nin response'i
+ * user A'nin cached topics'i olur. Cookie/auth degisikligi cache key'i degil.
+ * Vary: Cookie alternatif ama Vercel edge cache ile karmasik. no-store en
+ * acik guvenli secim, server-side query maliyeti dusuk (auth-only, low freq).
  *
  * Rate limit: IP 120/dk + user 60/dk (auth-only flow, sidebar'dan dusuk freq).
  */
@@ -100,7 +104,7 @@ export async function GET(request: NextRequest) {
   if (!data || data.length === 0) {
     return NextResponse.json(
       { topics: [], game },
-      { headers: { 'Cache-Control': 'private, max-age=60' } },
+      { headers: { 'Cache-Control': 'no-store' } },
     )
   }
 
@@ -124,6 +128,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(
     { topics, game },
-    { headers: { 'Cache-Control': 'private, max-age=60' } },
+    { headers: { 'Cache-Control': 'no-store' } },
   )
 }

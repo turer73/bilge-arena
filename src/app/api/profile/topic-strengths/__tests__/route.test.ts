@@ -167,14 +167,28 @@ describe('GET /api/profile/topic-strengths', () => {
     expect(body.topics[2].percentage).toBe(50)  // b 1/2
   })
 
-  it('sets private cache (auth-spesifik veri)', async () => {
+  it('sets no-store (Codex PR #86 P1 — user-switch cache poisoning prevent)', async () => {
+    // Browser HTTP cache URL-keyed; private+max-age user A response'unu
+    // user B (account switch) ayni URL'de gor verir. no-store en acik secim.
     mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
     mockAnswersRes.mockResolvedValueOnce({ data: [], error: null })
     const res = await GET(makeRequest() as never)
     const cc = res.headers.get('Cache-Control') ?? ''
-    expect(cc).toContain('private')
-    expect(cc).toContain('max-age=60')
+    expect(cc).toBe('no-store')
+    expect(cc).not.toContain('max-age')
     expect(cc).not.toContain('public')
+    expect(cc).not.toContain('private')
+  })
+
+  it('sets no-store also when topics non-empty (consistency)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
+    mockAnswersRes.mockResolvedValueOnce({
+      data: [{ is_correct: true, questions: { game: 'matematik', category: 'sayilar' } }],
+      error: null,
+    })
+    const res = await GET(makeRequest() as never)
+    const cc = res.headers.get('Cache-Control') ?? ''
+    expect(cc).toBe('no-store')
   })
 
   it('does not include user_id or raw answers in response (data minimization)', async () => {
