@@ -178,4 +178,145 @@ describe('roomStateReducer', () => {
     })
     expect(s2).toBe(s1)
   })
+
+  // ===========================================================================
+  // Async PR1 Faz B1 testleri (3 yeni test)
+  // ===========================================================================
+
+  test('13) Async B1: MEMBER_OPTIMISTIC_UPDATE — caller member alanlari merge', () => {
+    const me = initialMember({
+      user_id: 'me',
+      current_round_index: 1,
+      score: 0,
+    })
+    const other = initialMember({ user_id: 'other', current_round_index: 1 })
+    const s = { ...initialState(), members: [me, other] }
+
+    const result = roomStateReducer(s, {
+      type: 'MEMBER_OPTIMISTIC_UPDATE',
+      payload: {
+        user_id: 'me',
+        updates: {
+          current_round_index: 2,
+          current_round_started_at: '2026-05-04T10:00:00Z',
+          score: 850,
+        },
+      },
+    })
+
+    const updated = result.members.find((m) => m.user_id === 'me')!
+    expect(updated.current_round_index).toBe(2)
+    expect(updated.current_round_started_at).toBe('2026-05-04T10:00:00Z')
+    expect(updated.score).toBe(850)
+    // Other uye degismedi
+    const otherSame = result.members.find((m) => m.user_id === 'other')!
+    expect(otherSame.current_round_index).toBe(1)
+  })
+
+  test('14) Async B1: HYDRATE async-fresher — lokal optimistic ileride ise korunur', () => {
+    const localMe = initialMember({
+      user_id: 'me',
+      current_round_index: 3,
+      current_round_started_at: '2026-05-04T10:05:00Z',
+      score: 1500,
+    })
+    const stateWithLocal: RoomState = {
+      ...initialState(),
+      room: { ...initialState().room, mode: 'async' },
+      members: [localMe],
+    }
+
+    // Server polling stale: current_round_index=2 (lokal=3 ileride)
+    const serverFresh = {
+      room: { ...initialState().room, mode: 'async' as const },
+      members: [
+        initialMember({
+          user_id: 'me',
+          current_round_index: 2,
+          current_round_started_at: '2026-05-04T10:00:00Z',
+          score: 800,
+        }),
+      ],
+      current_round: null,
+      answers_count: 0,
+      my_answer: null,
+      scoreboard: [],
+    }
+
+    const result = roomStateReducer(stateWithLocal, {
+      type: 'HYDRATE',
+      payload: serverFresh,
+      caller_user_id: 'me',
+    })
+
+    const meAfter = result.members.find((m) => m.user_id === 'me')!
+    expect(meAfter.current_round_index).toBe(3) // lokal korundu
+    expect(meAfter.score).toBe(1500) // lokal korundu (max)
+  })
+
+  test('15) Async B1: HYDRATE sync mode normal replace — caller_user_id ihmal edilir', () => {
+    const localMe = initialMember({ user_id: 'me', score: 500 })
+    const stateWithLocal: RoomState = {
+      ...initialState(),
+      members: [localMe],
+    }
+
+    // Sync modda server kazanir, lokal optimistic-fresher logic devre disi
+    const serverFresh = {
+      room: initialState().room, // mode='sync'
+      members: [initialMember({ user_id: 'me', score: 300 })],
+      current_round: null,
+      answers_count: 0,
+      my_answer: null,
+      scoreboard: [],
+    }
+
+    const result = roomStateReducer(stateWithLocal, {
+      type: 'HYDRATE',
+      payload: serverFresh,
+      caller_user_id: 'me',
+    })
+
+    const meAfter = result.members.find((m) => m.user_id === 'me')!
+    expect(meAfter.score).toBe(300) // server kazandi (sync mode)
+  })
+
+  test('16) Async B1: HYDRATE async server-fresher — lokal eskiyse server kazanir', () => {
+    const localMe = initialMember({
+      user_id: 'me',
+      current_round_index: 1,
+      score: 100,
+    })
+    const stateWithLocal: RoomState = {
+      ...initialState(),
+      room: { ...initialState().room, mode: 'async' },
+      members: [localMe],
+    }
+
+    // Server: round 2'ye gectim (lokal hala round 1)
+    const serverFresh = {
+      room: { ...initialState().room, mode: 'async' as const },
+      members: [
+        initialMember({
+          user_id: 'me',
+          current_round_index: 2,
+          score: 800,
+        }),
+      ],
+      current_round: null,
+      answers_count: 0,
+      my_answer: null,
+      scoreboard: [],
+    }
+
+    const result = roomStateReducer(stateWithLocal, {
+      type: 'HYDRATE',
+      payload: serverFresh,
+      caller_user_id: 'me',
+    })
+
+    const meAfter = result.members.find((m) => m.user_id === 'me')!
+    expect(meAfter.current_round_index).toBe(2) // server kazandi (lokal eski)
+    expect(meAfter.score).toBe(800)
+  })
 })
