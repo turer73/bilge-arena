@@ -23,11 +23,13 @@ export default async function Page() {
       <header className="mb-6">
         <Link
           href="/oda"
-          className="text-sm text-[var(--text-sub)] hover:underline"
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface)]"
+          aria-label="Odalarım sayfasına dön"
         >
-          ← Odalarım
+          <span aria-hidden="true">←</span>
+          <span>Odalarıma Dön</span>
         </Link>
-        <h1 className="mt-2 text-xl font-bold">Kod ile Katıl</h1>
+        <h1 className="mt-3 text-xl font-bold">Kod ile Katıl</h1>
         <p className="mt-1 text-sm text-[var(--text-sub)]">
           Arkadaşının paylaştığı 6 karakterli oda kodunu yaz.
         </p>
