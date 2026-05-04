@@ -370,7 +370,12 @@ BEGIN
       USING ERRCODE = 'P0001';
   END IF;
 
-  SELECT * INTO v_room FROM public.rooms WHERE id = p_room_id FOR SHARE;
+  -- Codex PR #99 P1: rooms FOR UPDATE (FOR SHARE degil). Final round'da
+  -- member.finished_at UPDATE'i _check_all_members_finished_async trigger'i
+  -- fire eder, trigger rooms FOR UPDATE ister. Iki concurrent finisher
+  -- FOR SHARE -> FOR UPDATE upgrade'inde deadlock 40P01 olusur. FOR UPDATE
+  -- ile baslamak iki transaction'i serialize eder, deadlock yok.
+  SELECT * INTO v_room FROM public.rooms WHERE id = p_room_id FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Oda bulunamadi: %', p_room_id USING ERRCODE = 'P0002';
   END IF;
