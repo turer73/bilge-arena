@@ -36,6 +36,15 @@ test.describe('Oda routes — auth guard', () => {
     // Test burada sadece /giris'e gidisi dogruluyor — query param tasimasi
     // implementation detayi (Sprint 3 e2e auth flow'da zenginlestirilebilir).
   })
+
+  // Async PR4 Faz E: async-spesifik route guard smoke
+  test('/oda/yeni async oda olusturma form rendered (anonim -> redirect)', async ({ page }) => {
+    // Anonim user form goremez, redirect olmali (mevcut sync paterniyle ayni)
+    await page.goto('/oda/yeni?mode=async')
+    await expect(page).toHaveURL(/\/giris/)
+    // Async-spesifik route param query'i auth guard'i bypass etmiyor
+    // (CreateRoomForm async option zaten mode select icinde — Faz C'den)
+  })
 })
 
 /**
