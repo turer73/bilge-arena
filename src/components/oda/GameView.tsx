@@ -32,6 +32,22 @@ interface GameViewProps {
   userId: string
   /** PR4h: cevap secince diger oyunculara typing broadcast */
   onTyping?: () => void
+  /** Async PR2 Faz C: submit_answer_async RPC return ile lokal optimistic
+   *  my_answer + score update. Polling HYDRATE 3-5sn delay'ini absorbe eder.
+   *
+   *  Codex PR #100 P2: idempotentRetry flag — true ise score eklenmez (network
+   *  blip retry score double-count engeli). */
+  onAsyncSubmitSuccess?: (
+    myAnswer: {
+      answer_value: string
+      is_correct: boolean
+      points_awarded: number
+      response_ms: number
+    },
+    correctAnswer: string,
+    explanation: string | null,
+    idempotentRetry: boolean,
+  ) => void
 }
 
 function useCountdown(targetIso: string | undefined) {
@@ -52,7 +68,12 @@ function useCountdown(targetIso: string | undefined) {
   return remaining
 }
 
-export function GameView({ state, userId, onTyping }: GameViewProps) {
+export function GameView({
+  state,
+  userId,
+  onTyping,
+  onAsyncSubmitSuccess,
+}: GameViewProps) {
   const { room, current_round, members } = state
   const me = members.find((m) => m.user_id === userId)
   const remaining = useCountdown(current_round?.ends_at)
@@ -60,6 +81,7 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
     submitAnswerAction,
     initialState,
   )
+  const isAsync = room.mode === 'async'
   // PR4f + Codex P1 fix: secimi current_round'a tag'le.
   // Round degisince stale auto-submit'i onleyen guard.
   const [selection, setSelection] = useState<{
@@ -95,6 +117,47 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
     setSelection(null)
     autoSubmitFiredRef.current = false
   }, [currentRoundId])
+
+  // Async PR2 Faz C: submit_answer_async RPC return ile lokal optimistic update.
+  // Idempotent retry'da da fire eder (callback safe — score double-count
+  // server-side guarded, lokal state zaten ayni values).
+  const lastResultRef = useRef<typeof actionState.result>(undefined)
+  useEffect(() => {
+    if (
+      !isAsync ||
+      !actionState.result ||
+      !onAsyncSubmitSuccess ||
+      lastResultRef.current === actionState.result
+    ) {
+      return
+    }
+    lastResultRef.current = actionState.result
+    const r = actionState.result
+    // selection.option index'i (string olarak) submit edildi — answer_value ayni
+    const answerVal = selection?.option ?? ''
+    // Ama selection.option seçenegin TEXT'idir (display); submit FormData'da
+    // String(idx). Frontend'in lokal hesabinda answer_value = idx (matchable
+    // bot/server formati). Kac idx? options.indexOf(selection.option).
+    const opts = current_round?.options ?? []
+    const idx = opts.findIndex((o) => o === answerVal)
+    onAsyncSubmitSuccess(
+      {
+        answer_value: idx >= 0 ? String(idx) : answerVal,
+        is_correct: r.is_correct,
+        points_awarded: r.points_awarded,
+        response_ms: r.response_ms,
+      },
+      r.correct_answer,
+      r.explanation ?? null,
+      r.idempotent_retry,
+    )
+  }, [
+    isAsync,
+    actionState.result,
+    onAsyncSubmitSuccess,
+    selection,
+    current_round?.options,
+  ])
 
   if (!current_round) {
     return (
@@ -184,6 +247,7 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
       <form action={formAction} ref={formRef} className="space-y-3">
         <input type="hidden" name="room_id" value={room.id} />
         <input type="hidden" name="answer_value" value={localSelection ?? ''} />
+        {isAsync && <input type="hidden" name="mode" value="async" />}
         <ul className="space-y-2">
           {options.map((opt, idx) => {
             const isSelected = highlightedOption === opt
@@ -204,6 +268,7 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
                     const fd = new FormData()
                     fd.append('room_id', room.id)
                     fd.append('answer_value', String(idx))
+                    if (isAsync) fd.append('mode', 'async')
                     formAction(fd)
                   }}
                   disabled={lockUI}

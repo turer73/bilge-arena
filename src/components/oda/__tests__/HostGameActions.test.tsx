@@ -289,4 +289,67 @@ describe('HostGameActions', () => {
     })
     expect(sharedFormAction).not.toHaveBeenCalled()
   })
+
+  // ===========================================================================
+  // Async PR2 Faz C testler
+  // ===========================================================================
+
+  test('12) Async Faz C: mode="async" + active -> sadece "Odayı İptal Et" (advance/reveal yok)', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(
+      <HostGameActions
+        isHost={true}
+        roomId="r1"
+        roomState="active"
+        currentRound={activeRound}
+        mode="async"
+      />,
+    )
+    expect(
+      screen.getByRole('button', { name: /Odayı İptal Et/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Cevabı Göster/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /İlk Soruyu Başlat/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Sonraki Tura/i }),
+    ).not.toBeInTheDocument()
+    // Async aciklamasi
+    expect(
+      screen.getByText(/Async modda her oyuncu kendi hızında ilerler/i),
+    ).toBeInTheDocument()
+  })
+
+  test('13) Async Faz C: mode="async" + reveal -> sadece cancel (auto-reveal devre disi)', () => {
+    vi.useFakeTimers()
+    const sharedFormAction = vi.fn()
+    mockUseActionState.mockReturnValue([{}, sharedFormAction, false])
+
+    const round = {
+      ...activeRound,
+      round_id: 'rnd-async-1',
+      ends_at: new Date(Date.now() + 60_000).toISOString(),
+    }
+
+    render(
+      <HostGameActions
+        isHost={true}
+        roomId="r1"
+        roomState="active"
+        currentRound={round}
+        answersCount={4}
+        totalActiveMembers={4}
+        mode="async"
+      />,
+    )
+
+    // Async modda all-answered + grace bekle: auto-reveal fire ETMEMELI
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+    expect(sharedFormAction).not.toHaveBeenCalled()
+  })
 })

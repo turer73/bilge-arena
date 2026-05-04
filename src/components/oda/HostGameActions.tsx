@@ -45,6 +45,9 @@ interface HostGameActionsProps {
   answersCount?: number
   /** PR #97 auto-reveal: aktif (kicked degil) uye sayisi */
   totalActiveMembers?: number
+  /** Async PR2 Faz C: async modda sadece cancel button render — advance/reveal
+   *  per-user (SonucView'da kullaniciya ait advanceRoundForMemberAction). */
+  mode?: 'sync' | 'async'
 }
 
 export function HostGameActions({
@@ -54,6 +57,7 @@ export function HostGameActions({
   currentRound,
   answersCount = 0,
   totalActiveMembers = 0,
+  mode = 'sync',
 }: HostGameActionsProps) {
   const [advanceState, advanceFormAction, advancePending] = useActionState(
     advanceRoundAction,
@@ -83,6 +87,9 @@ export function HostGameActions({
   // fire etmez (oyun stuck, manuel tiklamadan kurtulmuyor). Yeni paterni:
   // dispatchedRoundRef "tetikledim" tutar (idempotent guard), revealState.error
   // varsa reset edilir ve sonraki render denenir.
+  //
+  // Faz C: async modda auto-reveal devre disi (per-user reveal SonucView'da
+  // submit_answer_async return ile, host'un advance/reveal tiklamasi yok).
   const dispatchedRoundRef = useRef<string | null>(null)
   useEffect(() => {
     // Hata aldiysak dispatchedRoundRef reset et — sonraki render'da retry
@@ -93,6 +100,7 @@ export function HostGameActions({
 
   useEffect(() => {
     if (!isHost) return
+    if (mode === 'async') return  // Async: per-user reveal, host advance yok
     if (roomState !== 'active') return
     if (!currentRound || currentRound.revealed_at) return
     const roundKey = currentRound.round_id ?? `idx-${currentRound.round_index}`
@@ -147,7 +155,10 @@ export function HostGameActions({
   const isReveal = roomState === 'reveal'
   // Codex P1 PR #51: active + current_round=null -> bootstrap advance gerek
   const needsBootstrap = roomState === 'active' && currentRound === null
-  const showAdvance = isReveal || needsBootstrap
+  // Faz C: async modda advance/reveal/bootstrap host'un degil; sadece cancel.
+  const isAsync = mode === 'async'
+  const showAdvance = !isAsync && (isReveal || needsBootstrap)
+  const showReveal = !isAsync && !showAdvance && roomState === 'active'
 
   return (
     <section
@@ -173,7 +184,7 @@ export function HostGameActions({
           </form>
         )}
 
-        {!showAdvance && roomState === 'active' && (
+        {showReveal && (
           <form action={revealFormAction}>
             <input type="hidden" name="room_id" value={roomId} />
             <button
@@ -236,11 +247,13 @@ export function HostGameActions({
       )}
 
       <p className="mt-2 text-xs text-[var(--text-sub)]">
-        {needsBootstrap
-          ? 'Oyuna ilk soru ile başla. Süre dolduğunda cevabı gösterebilirsin.'
-          : isReveal
-            ? 'Sonraki turu sen başlat. Son turdan sonra oyun otomatik biter.'
-            : 'Süre dolmadan da cevabı gösterip skoru hesaplayabilirsin.'}
+        {isAsync
+          ? 'Async modda her oyuncu kendi hızında ilerler. Sadece odayı iptal edebilirsin.'
+          : needsBootstrap
+            ? 'Oyuna ilk soru ile başla. Süre dolduğunda cevabı gösterebilirsin.'
+            : isReveal
+              ? 'Sonraki turu sen başlat. Son turdan sonra oyun otomatik biter.'
+              : 'Süre dolmadan da cevabı gösterip skoru hesaplayabilirsin.'}
       </p>
     </section>
   )
