@@ -15,7 +15,12 @@ import { useCallback, useEffect, useReducer, useRef } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { setupRoomChannel } from './setup-room-channel'
-import { roomStateReducer, type RoomState } from './room-state-reducer'
+import {
+  roomStateReducer,
+  type RoomState,
+  type Member,
+  type MyAnswer,
+} from './room-state-reducer'
 
 export function useRoomChannel(
   roomId: string,
@@ -119,5 +124,33 @@ export function useRoomChannel(
     }, 3000)
   }, [userId])
 
-  return { state, isOnline: !state.isStale, broadcastTyping }
+  // Async PR2 Faz C: optimistic update helper'lar. submit_answer_async ve
+  // advance_round_for_member RPC return ile lokal state'i polling beklemeden
+  // guncelle (3-5sn delay UX'i bozmasin). Polling HYDRATE async-fresher logic
+  // ile lokal optimistic state korunur (server stale ise).
+  const setOptimisticMyAnswer = useCallback((answer: MyAnswer | null) => {
+    if (isMounted.current) {
+      dispatch({ type: 'OPTIMISTIC_MY_ANSWER_SET', payload: answer })
+    }
+  }, [])
+
+  const updateOptimisticMember = useCallback(
+    (memberUserId: string, updates: Partial<Member>) => {
+      if (isMounted.current) {
+        dispatch({
+          type: 'MEMBER_OPTIMISTIC_UPDATE',
+          payload: { user_id: memberUserId, updates },
+        })
+      }
+    },
+    [],
+  )
+
+  return {
+    state,
+    isOnline: !state.isStale,
+    broadcastTyping,
+    setOptimisticMyAnswer,
+    updateOptimisticMember,
+  }
 }

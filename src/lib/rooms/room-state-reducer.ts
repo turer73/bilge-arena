@@ -157,6 +157,10 @@ export type RoomEvent =
       type: 'MEMBER_OPTIMISTIC_UPDATE'
       payload: { user_id: string; updates: Partial<Member> }
     }
+  /** Async PR2 Faz C: submit_answer_async RPC return ile my_answer'i lokal
+   *  optimistic set. Polling HYDRATE 3-5sn delay yerine UI anlik SonucView'a
+   *  flip eder. payload=null: clear (advance sonrasi). */
+  | { type: 'OPTIMISTIC_MY_ANSWER_SET'; payload: MyAnswer | null }
   | { type: 'PRESENCE_SYNC'; payload: { online: string[] } }
   | { type: 'PRESENCE_JOIN'; payload: { user_id: string } }
   | { type: 'PRESENCE_LEAVE'; payload: { user_id: string } }
@@ -252,6 +256,9 @@ export function roomStateReducer(state: RoomState, event: RoomEvent): RoomState 
             : m,
         ),
       }
+
+    case 'OPTIMISTIC_MY_ANSWER_SET':
+      return { ...state, my_answer: event.payload }
 
     case 'MEMBER_DELETE':
       return {

@@ -14,18 +14,64 @@
  * - Skor degisikligi animasyonu
  */
 
+'use client'
+
+import { useActionState, useEffect, useRef } from 'react'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
+import {
+  advanceRoundForMemberAction,
+  type AdvanceRoundForMemberActionState,
+} from '@/lib/rooms/actions'
 import { cn } from '@/lib/utils/cn'
 import { RevealCountdown } from './RevealCountdown'
+
+const advanceInitial: AdvanceRoundForMemberActionState = {}
 
 interface SonucViewProps {
   state: RoomState
   userId: string
+  /** Async PR2 Faz C: advance_round_for_member RPC return ile lokal optimistic
+   *  my_answer clear + member.current_round_index/finished_at update.
+   *  Polling HYDRATE 3-5sn delay'ini absorbe eder. */
+  onAsyncAdvanceSuccess?: (result: {
+    status: 'advanced' | 'finished'
+    round_index: number
+    started_at?: string
+    finished_at?: string
+  }) => void
 }
 
-export function SonucView({ state, userId }: SonucViewProps) {
+export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewProps) {
   const { room, current_round, members } = state
   const me = members.find((m) => m.user_id === userId)
+  const isAsync = room.mode === 'async'
+  const [advanceState, advanceFormAction, advancePending] = useActionState(
+    advanceRoundForMemberAction,
+    advanceInitial,
+  )
+  const advanceFiredRef = useRef<string | null>(null)
+  const lastResultRef = useRef<typeof advanceState.result>(undefined)
+
+  // Async PR2 Faz C: advance RPC return ile lokal optimistic
+  useEffect(() => {
+    if (
+      !isAsync ||
+      !advanceState.result ||
+      !onAsyncAdvanceSuccess ||
+      lastResultRef.current === advanceState.result
+    ) {
+      return
+    }
+    lastResultRef.current = advanceState.result
+    onAsyncAdvanceSuccess(advanceState.result)
+  }, [isAsync, advanceState.result, onAsyncAdvanceSuccess])
+
+  // Codex P1 paterni: error olursa fired ref reset, sonraki render retry
+  useEffect(() => {
+    if (advanceState.error && advanceFiredRef.current) {
+      advanceFiredRef.current = null
+    }
+  }, [advanceState.error])
 
   if (!current_round) {
     return (
@@ -165,12 +211,92 @@ export function SonucView({ state, userId }: SonucViewProps) {
         </p>
       )}
 
-      {current_round.revealed_at && (
+      {current_round.revealed_at && !isAsync && (
         <RevealCountdown
           revealedAt={current_round.revealed_at}
           autoAdvanceSeconds={room.auto_advance_seconds ?? 0}
         />
       )}
+
+      {isAsync && (
+        <AsyncAdvanceControls
+          roomId={room.id}
+          autoAdvanceSeconds={room.auto_advance_seconds ?? 5}
+          onFire={() => {
+            const roundKey = current_round.round_id ?? `idx-${current_round.round_index}`
+            if (advanceFiredRef.current === roundKey) return
+            advanceFiredRef.current = roundKey
+            const fd = new FormData()
+            fd.append('room_id', room.id)
+            advanceFormAction(fd)
+          }}
+          isPending={advancePending}
+          isLastRound={isLastRound}
+          error={advanceState.error}
+        />
+      )}
     </section>
+  )
+}
+
+// ===========================================================================
+// AsyncAdvanceControls (sub-component) — async per-user auto-advance + manual
+// ===========================================================================
+
+interface AsyncAdvanceControlsProps {
+  roomId: string
+  autoAdvanceSeconds: number
+  onFire: () => void
+  isPending: boolean
+  isLastRound: boolean
+  error?: string
+}
+
+function AsyncAdvanceControls({
+  autoAdvanceSeconds,
+  onFire,
+  isPending,
+  isLastRound,
+  error,
+}: AsyncAdvanceControlsProps) {
+  // Auto-advance timer: SonucView render'ind (caller cevap submit etti) NOW'dan
+  // autoAdvanceSeconds sonra fire. Manuel "Sonraki" butonu da fire edebilir.
+  const onFireRef = useRef(onFire)
+  useEffect(() => {
+    onFireRef.current = onFire
+  }, [onFire])
+
+  useEffect(() => {
+    if (autoAdvanceSeconds <= 0) return
+    const id = window.setTimeout(() => {
+      onFireRef.current()
+    }, autoAdvanceSeconds * 1000)
+    return () => window.clearTimeout(id)
+  }, [autoAdvanceSeconds])
+
+  return (
+    <div className="mt-4 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-[var(--text-sub)]">
+          {isLastRound ? 'Son tur — finiş' : `${autoAdvanceSeconds} saniye sonra otomatik devam`}
+        </span>
+        <button
+          type="button"
+          onClick={onFire}
+          disabled={isPending}
+          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {isPending ? 'Geçiliyor…' : isLastRound ? 'Bitir' : 'Sonraki Soru →'}
+        </button>
+      </div>
+      {error && (
+        <p
+          role="alert"
+          className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300"
+        >
+          {error}
+        </p>
+      )}
+    </div>
   )
 }
