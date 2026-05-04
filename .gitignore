@@ -41,6 +41,9 @@ playwright-report/
 blob-report/
 playwright/.cache/
 
+# Vitest coverage (lcov + html, codecov upload icin lokal artifact)
+/coverage/
+
 # VPS infra secrets (DB passwords, JWT secrets, env files - VPS-only)
 infra/vps/*/secrets/*.env
 infra/vps/*/secrets/*.json
