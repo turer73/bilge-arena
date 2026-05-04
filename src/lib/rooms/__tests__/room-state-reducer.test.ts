@@ -281,6 +281,157 @@ describe('roomStateReducer', () => {
     expect(meAfter.score).toBe(300) // server kazandi (sync mode)
   })
 
+  // Codex PR #100 P1 — async my_answer + current_round optimistic patch koruma
+
+  test('15b) Codex PR #100 P1: HYDRATE async my_answer lokal NOT NULL + server NULL -> lokal kazanir', () => {
+    const localMyAnswer = {
+      answer_value: '2',
+      is_correct: true,
+      points_awarded: 800,
+      response_ms: 3000,
+    }
+    const stateWithLocal: RoomState = {
+      ...initialState(),
+      room: { ...initialState().room, mode: 'async' },
+      my_answer: localMyAnswer,
+    }
+    const serverFresh = {
+      room: { ...initialState().room, mode: 'async' as const },
+      members: [],
+      current_round: null,
+      answers_count: 0,
+      my_answer: null, // server view revealed_at NULL nedeniyle bos
+      scoreboard: [],
+    }
+    const result = roomStateReducer(stateWithLocal, {
+      type: 'HYDRATE',
+      payload: serverFresh,
+      caller_user_id: 'me',
+    })
+    expect(result.my_answer).toEqual(localMyAnswer) // lokal korundu
+  })
+
+  test('15c) Codex PR #100 P1: HYDRATE async ayni round_id current_round patch korunur', () => {
+    const stateWithLocal: RoomState = {
+      ...initialState(),
+      room: { ...initialState().room, mode: 'async' },
+      current_round: {
+        round_id: 'rnd-1',
+        round_index: 1,
+        question_id: 'q1',
+        started_at: '2026-05-04T00:00:00Z',
+        ends_at: '2026-05-04T00:00:20Z',
+        revealed_at: '2026-05-04T00:00:05Z', // lokal patch
+        correct_answer: '2', // lokal patch
+        explanation: 'aciklama', // lokal patch
+        question_text: 'Test soru?',
+        options: ['a', 'b', 'c', 'd'],
+      },
+    }
+    const serverFresh = {
+      room: { ...initialState().room, mode: 'async' as const },
+      members: [],
+      current_round: {
+        round_id: 'rnd-1',
+        round_index: 1,
+        question_id: 'q1',
+        started_at: '2026-05-04T00:00:00Z',
+        ends_at: '2026-05-04T00:00:20Z',
+        revealed_at: null, // server view stale (revealed_at NULL)
+        correct_answer: null, // server NULL
+        explanation: null, // server NULL
+        question_text: 'Test soru?',
+        options: ['a', 'b', 'c', 'd'],
+      },
+      answers_count: 1,
+      my_answer: null,
+      scoreboard: [],
+    }
+    const result = roomStateReducer(stateWithLocal, {
+      type: 'HYDRATE',
+      payload: serverFresh,
+      caller_user_id: 'me',
+    })
+    // Lokal patch korundu (server NULL'i overwrite etmedi)
+    expect(result.current_round?.correct_answer).toBe('2')
+    expect(result.current_round?.explanation).toBe('aciklama')
+    expect(result.current_round?.revealed_at).toBe('2026-05-04T00:00:05Z')
+  })
+
+  test('15d) Codex PR #100 P1: HYDRATE async farkli round_id lokal patch overwrite olur', () => {
+    const stateWithLocal: RoomState = {
+      ...initialState(),
+      room: { ...initialState().room, mode: 'async' },
+      current_round: {
+        round_id: 'rnd-1',
+        round_index: 1,
+        question_id: 'q1',
+        started_at: '2026-05-04T00:00:00Z',
+        ends_at: '2026-05-04T00:00:20Z',
+        revealed_at: '2026-05-04T00:00:05Z',
+        correct_answer: '2',
+        explanation: 'eski round',
+      },
+    }
+    const serverFresh = {
+      room: { ...initialState().room, mode: 'async' as const },
+      members: [],
+      current_round: {
+        round_id: 'rnd-2', // farkli round
+        round_index: 2,
+        question_id: 'q2',
+        started_at: '2026-05-04T00:01:00Z',
+        ends_at: '2026-05-04T00:01:20Z',
+        revealed_at: null,
+        correct_answer: null,
+        explanation: null,
+      },
+      answers_count: 0,
+      my_answer: null,
+      scoreboard: [],
+    }
+    const result = roomStateReducer(stateWithLocal, {
+      type: 'HYDRATE',
+      payload: serverFresh,
+      caller_user_id: 'me',
+    })
+    // Yeni round yeni patch — eski round_id-1 patch'i overwrite olur
+    expect(result.current_round?.round_id).toBe('rnd-2')
+    expect(result.current_round?.correct_answer).toBeNull()
+    expect(result.current_round?.explanation).toBeNull()
+    expect(result.current_round?.revealed_at).toBeNull()
+  })
+
+  test('15e) Codex PR #100 P1: OPTIMISTIC_CURRENT_ROUND_PATCH current_round patch eder', () => {
+    const stateWithRound: RoomState = {
+      ...initialState(),
+      current_round: {
+        round_id: 'rnd-1',
+        round_index: 1,
+        question_id: 'q1',
+        started_at: '2026-05-04T00:00:00Z',
+        ends_at: '2026-05-04T00:00:20Z',
+        revealed_at: null,
+        correct_answer: null,
+        explanation: null,
+      },
+    }
+    const result = roomStateReducer(stateWithRound, {
+      type: 'OPTIMISTIC_CURRENT_ROUND_PATCH',
+      payload: {
+        correct_answer: '3',
+        explanation: 'patch aciklamasi',
+        revealed_at: '2026-05-04T00:00:10Z',
+      },
+    })
+    expect(result.current_round?.correct_answer).toBe('3')
+    expect(result.current_round?.explanation).toBe('patch aciklamasi')
+    expect(result.current_round?.revealed_at).toBe('2026-05-04T00:00:10Z')
+    // Diger alanlar korundu
+    expect(result.current_round?.round_id).toBe('rnd-1')
+    expect(result.current_round?.round_index).toBe(1)
+  })
+
   test('16) Async B1: HYDRATE async server-fresher — lokal eskiyse server kazanir', () => {
     const localMe = initialMember({
       user_id: 'me',

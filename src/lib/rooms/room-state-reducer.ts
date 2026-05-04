@@ -161,6 +161,12 @@ export type RoomEvent =
    *  optimistic set. Polling HYDRATE 3-5sn delay yerine UI anlik SonucView'a
    *  flip eder. payload=null: clear (advance sonrasi). */
   | { type: 'OPTIMISTIC_MY_ANSWER_SET'; payload: MyAnswer | null }
+  /** Async PR2 Faz C Codex P1: submit_answer_async RPC return correct_answer +
+   *  explanation'i current_round'a patchle. Async modda room_round_question_view
+   *  revealed_at NULL oldugu icin correct_answer NULL doner — bu patch UI'da
+   *  SonucView'in dogru cevabi gostermesini saglar (yoksa kullanici dogru
+   *  cevap verse bile "yanlis" rengi gorur). */
+  | { type: 'OPTIMISTIC_CURRENT_ROUND_PATCH'; payload: Partial<CurrentRound> }
   | { type: 'PRESENCE_SYNC'; payload: { online: string[] } }
   | { type: 'PRESENCE_JOIN'; payload: { user_id: string } }
   | { type: 'PRESENCE_LEAVE'; payload: { user_id: string } }
@@ -219,9 +225,46 @@ export function roomStateReducer(state: RoomState, event: RoomEvent): RoomState 
         }
       }
 
+      // Codex PR #100 P1 fix: my_answer + current_round.correct_answer/
+      // explanation/revealed_at lokal optimistic patch'i polling HYDRATE
+      // overwrite etmesin. Async modda submit_answer_async return'unden
+      // gelen veriler revealed_at NULL gelir (server view), polling stale
+      // overwrite ederse SonucView dogru cevap renklendirmesi kaybolur.
+      let mergedMyAnswer = event.payload.my_answer
+      if (state.my_answer && !event.payload.my_answer) {
+        // Lokal optimistic kazanir (server henuz gormemis veya RLS gizli)
+        mergedMyAnswer = state.my_answer
+      }
+
+      let mergedCurrentRound = event.payload.current_round
+      if (
+        state.current_round &&
+        event.payload.current_round &&
+        state.current_round.round_id === event.payload.current_round.round_id
+      ) {
+        // Ayni round_id — lokal patch'i (correct_answer/explanation/revealed_at)
+        // server NULL ise koru. Member sonraki round'a gectiginde polling
+        // farkli round_id getirir, bu kosul tetiklenmez (eski round patch
+        // overwrite olur, bu istenen davranis).
+        mergedCurrentRound = {
+          ...event.payload.current_round,
+          correct_answer:
+            state.current_round.correct_answer ??
+            event.payload.current_round.correct_answer,
+          explanation:
+            state.current_round.explanation ??
+            event.payload.current_round.explanation,
+          revealed_at:
+            state.current_round.revealed_at ??
+            event.payload.current_round.revealed_at,
+        }
+      }
+
       return {
         ...event.payload,
         members: mergedMembers,
+        my_answer: mergedMyAnswer,
+        current_round: mergedCurrentRound,
         online: state.online,
         typing_users: state.typing_users,
         isStale: false,
@@ -259,6 +302,14 @@ export function roomStateReducer(state: RoomState, event: RoomEvent): RoomState 
 
     case 'OPTIMISTIC_MY_ANSWER_SET':
       return { ...state, my_answer: event.payload }
+
+    case 'OPTIMISTIC_CURRENT_ROUND_PATCH':
+      return state.current_round
+        ? {
+            ...state,
+            current_round: { ...state.current_round, ...event.payload },
+          }
+        : state
 
     case 'MEMBER_DELETE':
       return {

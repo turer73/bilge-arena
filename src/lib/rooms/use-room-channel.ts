@@ -20,6 +20,7 @@ import {
   type RoomState,
   type Member,
   type MyAnswer,
+  type CurrentRound,
 } from './room-state-reducer'
 
 export function useRoomChannel(
@@ -146,11 +147,29 @@ export function useRoomChannel(
     [],
   )
 
+  // Codex PR #100 P1: submit_answer_async RPC return correct_answer +
+  // explanation'i current_round'a patchle. Async modda view revealed_at NULL
+  // oldugu icin correct_answer NULL doner ve SonucView dogru cevap renklendirmesini
+  // yapamaz (kullanici dogru cevap verse bile "yanlis" gosterir). Patch UI'da
+  // dogru gosterimi saglar.
+  const patchOptimisticCurrentRound = useCallback(
+    (updates: Partial<CurrentRound>) => {
+      if (isMounted.current) {
+        dispatch({
+          type: 'OPTIMISTIC_CURRENT_ROUND_PATCH',
+          payload: updates,
+        })
+      }
+    },
+    [],
+  )
+
   return {
     state,
     isOnline: !state.isStale,
     broadcastTyping,
     setOptimisticMyAnswer,
     updateOptimisticMember,
+    patchOptimisticCurrentRound,
   }
 }

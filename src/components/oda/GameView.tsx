@@ -33,7 +33,10 @@ interface GameViewProps {
   /** PR4h: cevap secince diger oyunculara typing broadcast */
   onTyping?: () => void
   /** Async PR2 Faz C: submit_answer_async RPC return ile lokal optimistic
-   *  my_answer + score update. Polling HYDRATE 3-5sn delay'ini absorbe eder. */
+   *  my_answer + score update. Polling HYDRATE 3-5sn delay'ini absorbe eder.
+   *
+   *  Codex PR #100 P2: idempotentRetry flag — true ise score eklenmez (network
+   *  blip retry score double-count engeli). */
   onAsyncSubmitSuccess?: (
     myAnswer: {
       answer_value: string
@@ -43,6 +46,7 @@ interface GameViewProps {
     },
     correctAnswer: string,
     explanation: string | null,
+    idempotentRetry: boolean,
   ) => void
 }
 
@@ -145,6 +149,7 @@ export function GameView({
       },
       r.correct_answer,
       r.explanation ?? null,
+      r.idempotent_retry,
     )
   }, [
     isAsync,

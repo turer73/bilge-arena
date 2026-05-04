@@ -50,6 +50,7 @@ export function LobbyContainer({
     broadcastTyping,
     setOptimisticMyAnswer,
     updateOptimisticMember,
+    patchOptimisticCurrentRound,
   } = useRoomChannel(roomId, userId, initialState)
   const isHost = userId === state.room.host_id
   const roomState = state.room.state
@@ -58,6 +59,12 @@ export function LobbyContainer({
   // Async PR2 Faz C: submit_answer_async RPC return ile lokal optimistic
   // my_answer + member.score update. Polling HYDRATE async-fresher logic
   // (reducer) lokal state'i polling stale'inden korur.
+  //
+  // Codex PR #100 P1: correct_answer + explanation current_round'a patchle —
+  // async modda view revealed_at NULL oldugu icin correct_answer NULL doner;
+  // patch SonucView'da dogru cevap renklendirmesini saglar.
+  // Codex PR #100 P2: idempotent retry score double-count engeli — retry'da
+  // score eklemez (RPC return'unde idempotent_retry=true).
   const handleAsyncSubmitSuccess = (
     myAnswer: {
       answer_value: string
@@ -65,12 +72,26 @@ export function LobbyContainer({
       points_awarded: number
       response_ms: number
     },
+    correctAnswer: string,
+    explanation: string | null,
+    idempotentRetry: boolean,
   ) => {
     setOptimisticMyAnswer(myAnswer)
-    const me = state.members.find((m) => m.user_id === userId)
-    updateOptimisticMember(userId, {
-      score: (me?.score ?? 0) + myAnswer.points_awarded,
+    // Codex P1: correct_answer + explanation patch (SonucView dogru renklendirme).
+    // revealed_at lokal NOW set ediyoruz ki SonucView eski paterni (revealed_at
+    // NOT NULL ile correct_answer goster) async'te de calissin.
+    patchOptimisticCurrentRound({
+      correct_answer: correctAnswer,
+      explanation,
+      revealed_at: new Date().toISOString(),
     })
+    // Codex P2: idempotent retry'da score double-count yapma
+    if (!idempotentRetry) {
+      const me = state.members.find((m) => m.user_id === userId)
+      updateOptimisticMember(userId, {
+        score: (me?.score ?? 0) + myAnswer.points_awarded,
+      })
+    }
   }
 
   // Async PR2 Faz C: advance_round_for_member RPC return ile lokal state.
