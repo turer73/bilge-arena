@@ -50,11 +50,18 @@ export function SonucView({ state, userId }: SonucViewProps) {
   // direkt submit eder, frontend de PR #98'den itibaren index gonderiyor.
   // Display icin index -> options[index] map; legacy text degerinde ayni
   // string fallback yapilir.
+  //
+  // Codex PR #99 P2: parseInt numeric prefix kabul eder ("2. Dünya Savaşı"
+  // -> 2). Legacy text answer'lar yanlislikla options[idx] olarak remap
+  // edilir. Strict /^\d+$/ regex ile sadece tamamen rakam olan string'leri
+  // index olarak kabul et.
   const resolveOptionText = (val: string | null | undefined): string | null => {
     if (val === null || val === undefined) return null
-    const idx = parseInt(val, 10)
-    if (!Number.isNaN(idx) && idx >= 0 && idx < options.length) {
-      return options[idx]
+    if (/^\d+$/.test(val)) {
+      const idx = parseInt(val, 10)
+      if (idx >= 0 && idx < options.length) {
+        return options[idx]
+      }
     }
     return val
   }

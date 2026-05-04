@@ -126,12 +126,19 @@ export function GameView({ state, userId, onTyping }: GameViewProps) {
   // user her cevabi yanlis sayiliyordu. Cozum: submission'da index gonder
   // (asagidaki onClick), highlight'ta da my_answer.answer_value (index string)
   // -> options[index] map'i yap.
+  //
+  // Codex PR #99 P2: parseInt numeric prefix kabul eder ("2. Dünya Savaşı"
+  // -> 2). Legacy text answer'lar yanlislikla options[idx] olarak remap
+  // edilir. Strict /^\d+$/ regex ile sadece tamamen rakam olan string'leri
+  // index olarak kabul et.
   const highlightedOption = (() => {
     const myAnswerVal = state.my_answer?.answer_value
     if (myAnswerVal !== undefined) {
-      const idx = parseInt(myAnswerVal, 10)
-      if (!Number.isNaN(idx) && idx >= 0 && idx < options.length) {
-        return options[idx]
+      if (/^\d+$/.test(myAnswerVal)) {
+        const idx = parseInt(myAnswerVal, 10)
+        if (idx >= 0 && idx < options.length) {
+          return options[idx]
+        }
       }
       // Legacy: pre-fix submissions option TEXT olarak saklandi, geriye uyumlu
       return myAnswerVal

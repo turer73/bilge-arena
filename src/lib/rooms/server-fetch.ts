@@ -304,9 +304,26 @@ export async function fetchRoomState(
       ? ((await membersRes.json()) as Member[])
       : []
 
-    const currentIndex = rooms[0].current_round_index
+    // Async PR1 Faz B2: mode-aware current_round_index lookup. Async modda
+    // her uye kendi round'unda olur (member.current_round_index ground truth);
+    // sync modda rooms.current_round_index ortak.
+    const isAsync = rooms[0].mode === 'async'
+    let currentIndex: number | undefined
+    if (isAsync && userId) {
+      const meMember = members.find((m) => m.user_id === userId)
+      currentIndex = meMember?.current_round_index
+    } else {
+      currentIndex = rooms[0].current_round_index
+    }
+
     let current_round: CurrentRound | null = null
-    if (typeof currentIndex === 'number' && currentIndex >= 1) {
+    // Async'te uye finished_at sonrasi current_round_index = question_count+1
+    // sembolik degeri alir; o noktada round fetch atlanir (UI WaitingForOthers).
+    if (
+      typeof currentIndex === 'number' &&
+      currentIndex >= 1 &&
+      currentIndex <= rooms[0].question_count
+    ) {
       const roundRes = await fetch(
         `${RPC_URL}/room_round_question_view?room_id=eq.${roomId}&round_index=eq.${currentIndex}&select=*&limit=1`,
         opts,

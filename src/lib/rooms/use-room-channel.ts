@@ -37,12 +37,14 @@ export function useRoomChannel(
       if (!res.ok) return
       const fresh = await res.json()
       if (isMounted.current) {
-        dispatch({ type: 'HYDRATE', payload: fresh })
+        // Async PR1 Faz B1: caller_user_id geciriliyor — async modda lokal
+        // optimistic state polling HYDRATE'i geri yutmasin (reducer karar verir).
+        dispatch({ type: 'HYDRATE', payload: fresh, caller_user_id: userId })
       }
     } catch {
       // Network error - isStale flag zaten setli kalir
     }
-  }, [roomId])
+  }, [roomId, userId])
 
   useEffect(() => {
     isMounted.current = true

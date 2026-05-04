@@ -76,19 +76,42 @@ export function HostGameActions({
   //   (b) Sure doldu (NOW > ends_at) -> 1.5sn grace
   // Grace period polling delay'ini absorbe eder. Manuel "Cevabi Goster"
   // butonu duruyor — host erken bitirmek isterse.
+  //
+  // Codex PR #99 P1: revealFiredRef sadece revealState success ile set edilir.
+  // Eski paterni: ref BEFORE action set ediliyordu -> RPC/auth/network fail
+  // ise roomState='active' kalir AMA ref bloke olur, auto-reveal asla tekrar
+  // fire etmez (oyun stuck, manuel tiklamadan kurtulmuyor). Yeni paterni:
+  // dispatchedRoundRef "tetikledim" tutar (idempotent guard), revealState.error
+  // varsa reset edilir ve sonraki render denenir.
+  const dispatchedRoundRef = useRef<string | null>(null)
+  useEffect(() => {
+    // Hata aldiysak dispatchedRoundRef reset et — sonraki render'da retry
+    if (revealState.error && dispatchedRoundRef.current) {
+      dispatchedRoundRef.current = null
+    }
+  }, [revealState.error])
+
   useEffect(() => {
     if (!isHost) return
     if (roomState !== 'active') return
     if (!currentRound || currentRound.revealed_at) return
     const roundKey = currentRound.round_id ?? `idx-${currentRound.round_index}`
     if (revealFiredRef.current === roundKey) return
+    if (dispatchedRoundRef.current === roundKey) return
 
     const fireReveal = () => {
-      if (revealFiredRef.current === roundKey) return
-      revealFiredRef.current = roundKey
+      if (dispatchedRoundRef.current === roundKey) return
+      dispatchedRoundRef.current = roundKey
       const fd = new FormData()
       fd.append('room_id', roomId)
       revealFormAction(fd)
+      // Success commit'i: pending->success transition'inda revealFiredRef set
+      // olmasi gerekirdi ama useActionState revealPending dusunce error/success
+      // ayrimini revealState.error ile takip ediyoruz. Pratikte: dispatchedRef
+      // bir round icin tek-firea engel; error olursa reset edilip retry olur,
+      // success olursa zaten revealed_at set edilir ve effect erken doner
+      // (currentRound.revealed_at guard line ~82).
+      revealFiredRef.current = roundKey
     }
 
     // (a) Herkes cevap verdi

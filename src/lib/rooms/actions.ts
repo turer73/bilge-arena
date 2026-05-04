@@ -347,18 +347,43 @@ export async function kickMemberAction(
 // submitAnswerAction: oyuncu cevap gonder (PR4e-2)
 // =============================================================================
 
+/**
+ * Async PR1 Faz B3: submit_answer_async RPC return type.
+ * Atomic submit-and-reveal — is_correct + points hemen compute, correct_answer
+ * + explanation RPC return'unde gelir. idempotent_retry=true ise mevcut row'a
+ * 2. submit yapilmis (network blip), score double-count etmez.
+ */
+export type SubmitAnswerAsyncResult = {
+  is_correct: boolean
+  points_awarded: number
+  /** 0-indexed integer string ("0".."N-1") — bot ile ayni format (PR #98) */
+  correct_answer: string
+  explanation?: string | null
+  response_ms: number
+  idempotent_retry: boolean
+}
+
 export type SubmitAnswerActionState = {
   /** Top-level hata: auth, P0001 oda active degil, P0003 zaten cevap gonderdi */
   error?: string
+  /** Async PR1 Faz B3: async submit return data — frontend SonucView optimistic
+   *  update icin (sync modda undefined). */
+  result?: SubmitAnswerAsyncResult
 }
 
 /**
- * Oyuncu submit_answer RPC ile aktif soruya cevap verir. response_ms
- * server-side hesaplanir (anti-cheat: client supplied degil). Reveal'a
- * kadar is_correct + points NULL kalir.
+ * Oyuncu submit_answer RPC ile aktif soruya cevap verir.
+ *
+ * Sync mod (default): response_ms server-side hesaplanir, is_correct + points
+ *   reveal'a kadar NULL kalir. Action {} doner.
+ *
+ * Async mod (mode='async' formData field): submit_answer_async RPC ANINDA
+ *   is_correct + points compute eder, correct_answer + explanation return'unde
+ *   gelir. Action { result: {...} } doner — frontend SonucView optimistic update
+ *   eder, polling delay'i beklemez.
  *
  * Realtime: room_answers INSERT event ile UI'lar answers_count guncelleyebilir
- * (4e-3'te). Bu PR'da sadece submit + hata gosterimi.
+ * (sync). Async modda polling primary, RPC return ile optimistic.
  */
 export async function submitAnswerAction(
   _prev: SubmitAnswerActionState,
@@ -370,6 +395,7 @@ export async function submitAnswerAction(
   const parsed = submitAnswerActionSchema.safeParse({
     room_id: formData.get('room_id')?.toString() ?? '',
     answer_value: formData.get('answer_value')?.toString() ?? '',
+    mode: formData.get('mode')?.toString() ?? 'sync',
   })
   if (!parsed.success) {
     const first = parsed.error.flatten().fieldErrors
@@ -377,6 +403,20 @@ export async function submitAnswerAction(
     return { error: msg }
   }
 
+  if (parsed.data.mode === 'async') {
+    const result = await callRpc<SubmitAnswerAsyncResult>(
+      auth.jwt,
+      'submit_answer_async',
+      {
+        p_room_id: parsed.data.room_id,
+        p_answer_value: parsed.data.answer_value,
+      },
+    )
+    if (!result.ok) return { error: result.error.message }
+    return { result: result.data }
+  }
+
+  // Sync mevcut akis
   const result = await callRpc<null>(auth.jwt, 'submit_answer', {
     p_room_id: parsed.data.room_id,
     p_answer_value: parsed.data.answer_value,
@@ -447,6 +487,65 @@ export async function revealRoundAction(
   if (!result.ok) return { error: result.error.message }
 
   return {}
+}
+
+// =============================================================================
+// advanceRoundForMemberAction — Async PR1 Faz B3
+// =============================================================================
+
+/**
+ * Async PR1 Faz B3: advance_round_for_member RPC return type.
+ * status='advanced' -> sonraki round'a geçti, current_round_index=round_index
+ * status='finished' -> tum sorular bitti, finished_at set edildi
+ */
+export type AdvanceRoundForMemberResult = {
+  status: 'advanced' | 'finished'
+  round_index: number
+  /** Async member.current_round_started_at (advanced) veya finished_at (finished) */
+  started_at?: string
+  finished_at?: string
+}
+
+export type AdvanceRoundForMemberActionState = {
+  /** Top-level hata: auth, P0001 oda active degil, P0003 oyun bitti, P0009 once cevap ver */
+  error?: string
+  /** RPC return — frontend optimistic state update icin */
+  result?: AdvanceRoundForMemberResult
+}
+
+/**
+ * Async PR1 Faz B3: oyuncu kendi round'unu ilerletir veya finished_at set eder.
+ *
+ * SonucView 5sn auto-advance gerisayim bitince tetiklenir. Final round'da
+ * status='finished' doner — frontend WaitingForOthers'a geçer (Faz C).
+ *
+ * Anti-cheat: RPC server-side once-cevap-ver guard yapar (P0009 reddeder).
+ * Member.score zaten submit_answer_async ile guncellendi, bu RPC sadece
+ * round pointer'i ilerletir.
+ *
+ * Realtime: polling primary (Hibrit DB mismatch). RPC return ile optimistic
+ * MEMBER_OPTIMISTIC_UPDATE dispatch edilebilir.
+ */
+export async function advanceRoundForMemberAction(
+  _prev: AdvanceRoundForMemberActionState,
+  formData: FormData,
+): Promise<AdvanceRoundForMemberActionState> {
+  const auth = await getAuthForAction()
+  if (!auth.ok) return { error: auth.error }
+
+  const parsed = advanceRoundActionSchema.safeParse({
+    room_id: formData.get('room_id')?.toString() ?? '',
+  })
+  if (!parsed.success) return { error: 'Gecersiz oda kimligi' }
+
+  const result = await callRpc<AdvanceRoundForMemberResult>(
+    auth.jwt,
+    'advance_round_for_member',
+    { p_room_id: parsed.data.room_id },
+  )
+  if (!result.ok) return { error: result.error.message }
+
+  return { result: result.data }
 }
 
 // =============================================================================
