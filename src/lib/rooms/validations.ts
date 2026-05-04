@@ -164,6 +164,9 @@ export type KickMemberActionBody = z.infer<typeof kickMemberActionSchema>
 export const submitAnswerActionSchema = z.object({
   room_id: z.string().uuid('Gecersiz oda kimligi'),
   answer_value: z.string().trim().min(1, 'Cevap bos olamaz').max(200, 'Cevap cok uzun'),
+  // Async PR1 Faz B3: opsiyonel mode field (default 'sync', backwards-compat).
+  // Frontend GameView async modda 'async' gonderir, action submit_answer_async RPC'ye geder.
+  mode: z.enum(['sync', 'async']).optional().default('sync'),
 })
 
 export type SubmitAnswerActionBody = z.infer<typeof submitAnswerActionSchema>
