@@ -15,9 +15,22 @@ import { PWAInstallPrompt } from '../pwa-install-prompt'
 
 const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+// iPadOS 13+ Safari 'desktop class' mode'da UA 'Macintosh' doner
+const IPADOS_DESKTOP_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
 
 function setUA(ua: string) {
   Object.defineProperty(navigator, 'userAgent', { value: ua, configurable: true })
+}
+
+function setPlatform(platform: string, maxTouchPoints: number) {
+  Object.defineProperty(navigator, 'platform', {
+    value: platform,
+    configurable: true,
+  })
+  Object.defineProperty(navigator, 'maxTouchPoints', {
+    value: maxTouchPoints,
+    configurable: true,
+  })
 }
 
 function setStandalone(standalone: boolean) {
@@ -37,6 +50,8 @@ beforeEach(() => {
   vi.useFakeTimers()
   localStorage.clear()
   setStandalone(false)
+  // Default: non-iPadOS platform (Linux desktop), maxTouchPoints=0
+  setPlatform('Linux x86_64', 0)
 })
 
 afterEach(() => {
@@ -137,5 +152,33 @@ describe('PWAInstallPrompt', () => {
     })
     // CriOS detect → iOS olmasına rağmen banner gosterilmedi (regex !CriOS)
     expect(container.firstChild).toBeNull()
+  })
+
+  // Codex PR #111 P2: iPadOS 13+ Safari 'desktop class' UA detection
+  test('7) iPadOS desktop UA (Macintosh + maxTouchPoints>1) -> iOS instructional', () => {
+    setUA(IPADOS_DESKTOP_UA)
+    setPlatform('MacIntel', 5) // iPadOS Safari touch destekli
+    render(<PWAInstallPrompt />)
+    act(() => {
+      vi.advanceTimersByTime(5_000) // iOS delay
+    })
+
+    // Instructional metin gosterilmeli (iOS path)
+    expect(screen.getByText(/tarayıcının paylaş simgesine/i)).toBeInTheDocument()
+    // Install button YOK (iPadOS Safari beforeinstallprompt yok)
+    expect(screen.queryByRole('button', { name: /Uygulamayı Yükle/i })).not.toBeInTheDocument()
+  })
+
+  test('8) Gercek macOS Safari desktop (MacIntel + maxTouchPoints=0) -> iOS DEGIL', () => {
+    // macOS desktop Safari beforeinstallprompt destekler (Safari 17+),
+    // touch yok. Android branch'a duser, beforeinstallprompt event bekler.
+    setUA('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15')
+    setPlatform('MacIntel', 0) // Desktop Mac, touch YOK
+    render(<PWAInstallPrompt />)
+    act(() => {
+      vi.advanceTimersByTime(5_000)
+    })
+    // iOS instructional metin gozukmemeli (touch yok = iPadOS degil)
+    expect(screen.queryByText(/tarayıcının paylaş simgesine/i)).not.toBeInTheDocument()
   })
 })

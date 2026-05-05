@@ -41,8 +41,20 @@ export function PWAInstallPrompt() {
     if (dismissed && Date.now() - Number(dismissed) < DISMISS_DURATION) return
 
     // iOS detect (beforeinstallprompt yok, instructional UI)
+    // iPadOS 13+ Safari 'desktop class' modunda UA 'Macintosh' donduruyor —
+    // navigator.platform === 'MacIntel' + maxTouchPoints > 1 ile yakalanir.
+    // Codex PR #111 P2: bu detect olmadan iPad kullanicilar Android branch'a
+    // duser ve banner asla goremez.
     const ua = navigator.userAgent
-    const ios = /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua)
+    const isClassicIOS =
+      /iPad|iPhone|iPod/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua)
+    const isIPadOSDesktop =
+      typeof navigator.platform === 'string' &&
+      navigator.platform === 'MacIntel' &&
+      navigator.maxTouchPoints > 1 &&
+      // iOS Chrome/Firefox/Edge degil — sadece Safari instructional UI
+      !/CriOS|FxiOS|EdgiOS/.test(ua)
+    const ios = isClassicIOS || isIPadOSDesktop
     setIsIOS(ios)
 
     if (ios) {
