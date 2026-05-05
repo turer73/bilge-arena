@@ -1,6 +1,9 @@
 import bundleAnalyzer from '@next/bundle-analyzer'
 import { withSentryConfig } from '@sentry/nextjs'
-import withPWA from '@ducanh2912/next-pwa'
+// next-pwa kaldirildi: Next 16 ile sw.js dispatcher'i uretmiyordu (workbox/
+// swe-worker uretti ama master sw.js yok) → /sw.js HTML fallback → workbox
+// install fail → PWA broken (Codex P1 PR #108). Manuel public/sw.js
+// yazildi (build_id-bagimsiz, vanilla SW API + offline fallback).
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
@@ -151,19 +154,11 @@ const nextConfig = {
   },
 }
 
-const pwaConfig = withPWA({
-  dest: 'public',
-  register: false,      // Manuel register — hata yakalama ile
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-  cacheOnFrontEndNav: true,
-  reloadOnOnline: true,
-  fallbacks: {
-    document: '/offline',
-  },
-})
+// pwaConfig kaldirildi — manuel public/sw.js artik kullaniliyor.
+// SWRegister component (src/components/layout/sw-register.tsx) /sw.js
+// register eder. Offline fallback /offline route uzerinden.
 
-export default withSentryConfig(withBundleAnalyzer(pwaConfig(nextConfig)), {
+export default withSentryConfig(withBundleAnalyzer(nextConfig), {
   // Source map'leri Sentry'ye yukle ama client bundle'dan sil (guvenlik)
   hideSourceMaps: true,
 
