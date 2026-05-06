@@ -1,0 +1,83 @@
+{
+  "takenAt": "2026-05-06T20:33:01.290Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 4,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Bir metropolde yaşayan, yüksek eğitimli ve teknoloji sektöründe çalışan bir mühendis, ailesinin kuşaklardır devam ettirdiği tarımsal faaliyetleri ve kırsal yaşam tarzını tamamen geride bırakmıştır. Bu mühendisin babası ise köydeki tarlasını satıp şehre göç ederek küçük bir atölye kurmuş, ancak geleneksel değerlere bağlılığını sürdürmüştür. Mühendisin dedesi ise hayatı boyunca köyünden hiç ayrılmamış ve sadece tarımla uğraşmıştır. Bu üç kuşağın yaşam biçimleri ve sosyal konumlarındaki farklılaşma, aşağıdaki sosyolojik kavramlardan hangisiyle en kapsamlı şekilde açıklanır?",
+      "options": [
+        "A) Kuşaklararası dikey hareketlilik",
+        "B) Coğrafi hareketlilik",
+        "C) Statü tutarsızlığı",
+        "D) Toplumsal çözülme",
+        "E) Kuşak içi yatay hareketlilik"
+      ],
+      "answer": 0,
+      "solution": "Soruda üç farklı kuşağın (dede, baba, torun) sosyal tabakalar arasındaki konumlarının belirgin bir şekilde değiştiği anlatılmaktadır. Dede tarım toplumunda, baba sanayi toplumuna geçişte, torun ise bilgi toplumunda yer almaktadır. Bu durum, farklı kuşaklar arasında gerçekleşen ve sosyal sınıfta yükselmeyi ifade eden 'kuşaklararası dikey hareketlilik' kavramıyla açıklanır. Coğrafi hareketlilik sadece yer değiştirmeyi ifade eder ve statüdeki değişimi kapsamaz. Statü tutarsızlığı, bir bireyin farklı statülerinin birbiriyle uyumsuz olmasıdır (örn. eğitimi yüksek, geliri düşük). Toplumsal çözülme daha geniş bir norm ve değer kaybını ifade eder. Kuşak içi hareketlilik ise bir bireyin kendi yaşam süresi içindeki statü değişikliğidir.",
+      "topic": "Toplumsal Tabakalaşma ve Hareketlilik",
+      "difficulty": 4
+    },
+    {
+      "question": "Modern toplumlarda, bireylerin kimliklerini giderek daha fazla tüketim alışkanlıkları üzerinden inşa ettikleri gözlemlenmektedir. Bireyler, sahip oldukları markalar, tercih ettikleri tatil yerleri veya dinledikleri müzik türleri aracılığıyla kendilerini ifade etmekte ve sosyal gruplara aidiyetlerini pekiştirmektedirler. Bu durum, tüketimin sadece bir ihtiyaç karşılama eylemi olmaktan çıkıp sembolik bir anlam kazandığını göstermektedir. Jean Baudrillard'ın teorileri çerçevesinde, nesnelerin kullanım değerinden çok, sosyal statü ve kimlik belirttiği bu duruma ne ad verilir?",
+      "options": [
+        "A) Yabancılaşma",
+        "B) Gösterişçi tüketim",
+        "C) Rasyonelleşme",
+        "D) Nesnelerin gösterge değeri",
+        "E) Kültürel gecikme"
+      ],
+      "answer": 3,
+      "solution": "Jean Baudrillard, postmodern toplumlarda nesnelerin kullanım değerinin (fonksiyonunun) önüne geçerek birer göstergeye dönüştüğünü savunur. Sorudaki senaryoda bireyler, ürünleri sadece işlevleri için değil, aynı zamanda belirli bir yaşam tarzını, kimliği ve sosyal statüyü 'göstermek' için kullanmaktadır. Bu, 'nesnelerin gösterge değeri' kavramıyla doğrudan ilişkilidir. Gösterişçi tüketim (Veblen) bu duruma yakın olsa da, Baudrillard'ın vurgusu daha çok nesnenin bir semboller sisteminin parçası olmasıdır. Yabancılaşma, rasyonelleşme ve kültürel gecikme ise parçada anlatılan kimlik inşası sürecini doğrudan açıklamaz.",
+      "topic": "Tüketim Sosyolojisi ve Postmodernizm",
+      "difficulty": 4
+    },
+    {
+      "question": "Bir sosyolog, bir şehirdeki suç oranlarının belirli mahallelerde yoğunlaşmasının nedenlerini araştırırken, bu mahallelerdeki binaların bakımsızlığı, kamusal alanların (parklar, meydanlar vb.) terk edilmişliği ve sokak aydınlatmasının yetersizliği gibi fiziksel çevre koşullarının, mahalle sakinlerinde bir güvensizlik ve sahipsizlik hissi yarattığını tespit etmiştir. Bu hissin, bireylerin sosyal kontrol mekanizmalarını zayıflattığını ve suç işlemeye yönelik eğilimleri artırdığını öne sürmüştür. Bu araştırma, suçu açıklayan aşağıdaki teorilerden hangisinin varsayımlarına dayanmaktadır?",
+      "options": [
+        "A) Etiketleme Kuramı",
+        "B) Kırık Camlar Teorisi",
+        "C) Gerilim Kuramı (Anomi)",
+        "D) Farklılaşmış Birliktelikler Kuramı",
+        "E) Çatışma Kuramı"
+      ],
+      "answer": 1,
+      "solution": "Paragrafta açıklanan senaryo, 'Kırık Camlar Teorisi'nin temel mantığını yansıtmaktadır. Bu teoriye göre, bir çevredeki küçük düzensizlikler (kırık bir cam, grafiti, çöp vb.) o çevrenin sahipsiz ve denetimsiz olduğu izlenimini yaratır. Bu izlenim, daha ciddi suçların işlenmesi için uygun bir ortam oluşturur. Sosyologun bulguları, fiziksel çevrenin bozulmasının sosyal kontrolü zayıflatarak suçu artırdığına işaret etmektedir ki bu da teorinin özüdür. Diğer teoriler suçu farklı mekanizmalarla açıklar: Etiketleme (toplumun bireyi damgalaması), Gerilim (amaç-araç uyumsuzluğu), Farklılaşmış Birliktelikler (suçlu davranışın öğrenilmesi) ve Çatışma (güç ve eşitsizlik).",
+      "topic": "Suç Sosyolojisi ve Kentsel Sosyoloji",
+      "difficulty": 4
+    },
+    {
+      "question": "Max Weber'e göre modern devletin en temel özelliklerinden biri, meşru fiziksel şiddet kullanma tekelini elinde bulundurmasıdır. Ancak bu şiddet tekeli, keyfî bir güç kullanımını değil, belirli yasalara ve rasyonel ilkelere dayanan bir otoriteyi ifade eder. Devlet, bu gücünü bürokratik bir aygıt aracılığıyla, kişisel olmayan ve herkes için geçerli olan kurallar çerçevesinde uygular. Bu durum, Weber'in analiz ettiği hangi otorite tipinin modern devlette egemen olduğunu gösterir?",
+      "options": [
+        "A) Geleneksel otorite",
+        "B) Karizmatik otorite",
+        "C) Yasal-ussal otorite",
+        "D) Patrimonyal otorite",
+        "E) Feodal otorite"
+      ],
+      "answer": 2,
+      "solution": "Paragrafta modern devletin gücünü yasalara, rasyonel ilkelere, bürokrasiye ve kişisel olmayan kurallara dayandırdığı vurgulanmaktadır. Bu tanım, Max Weber'in 'yasal-ussal otorite' (legal-rational authority) kavramıyla tam olarak örtüşmektedir. Bu otorite tipi, gücünü kutsallıktan (geleneksel) veya liderin olağanüstü özelliklerinden (karizmatik) değil, kanunların ve kuralların meşruiyetinden alır. Bürokratik yapı, bu otorite tipinin en saf halidir. Patrimonyal ve feodal otoriteler ise geleneksel otoritenin alt tipleridir.",
+      "topic": "Siyaset Sosyolojisi ve Weber'in Otorite Tipleri",
+      "difficulty": 4
+    },
+    {
+      "question": "Bir ülkede hükümet, ekonomik verimliliği artırmak amacıyla, daha önce kamu tarafından yürütülen sağlık ve eğitim hizmetlerinin büyük bir kısmını özel sektöre devretme kararı almıştır. Bu politika değişikliği sonucunda, bu hizmetlere erişimde bireylerin gelir düzeyi belirleyici bir faktör hâline gelmiş ve toplumun farklı kesimleri arasında hizmet kalitesi açısından belirgin farklar ortaya çıkmıştır. Sosyolojik açıdan bakıldığında, bu durumun en temel sonucu aşağıdakilerden hangisidir?",
+      "options": [
+        "A) Sosyal devlet anlayışının güçlenmesi",
+        "B) Toplumsal tabakalaşmanın kültürel boyut kazanması",
+        "C) Sosyal hareketliliğin artması",
+        "D) Fırsat eşitliğinin zayıflaması ve sosyal adaletsizliğin derinleşmesi",
+        "E) Sivil toplum kuruluşlarının işlevini yitirmesi"
+      ],
+      "answer": 3,
+      "solution": "Soruda, temel kamu hizmetleri olan sağlık ve eğitimin piyasa koşullarına bırakılmasıyla, bu hizmetlere erişimin parasal güce endekslendiği belirtilmektedir. Bu durum, gelir düzeyi düşük olan bireylerin kaliteli sağlık ve eğitim hizmetlerinden mahrum kalmasına yol açar. Kaliteli eğitim ve sağlık, bireylerin sosyal hayatta daha iyi konumlara gelmesi için temel araçlardır. Bu araçlara erişimin engellenmesi, 'fırsat eşitliği' ilkesini zayıflatır ve toplumdaki mevcut ekonomik eşitsizliklerin daha da derinleşmesine, yani 'sosyal adaletsizliğin' artmasına neden olur. Bu politika, sosyal devlet anlayışının güçlenmesinin tam tersi bir durumdur ve sosyal hareketliliği artırmaktan ziyade engeller.",
+      "topic": "Sosyal Politika ve Eşitsizlik",
+      "difficulty": 4
+    }
+  ]
+}

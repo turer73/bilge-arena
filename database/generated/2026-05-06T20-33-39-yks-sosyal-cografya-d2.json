@@ -1,0 +1,83 @@
+{
+  "takenAt": "2026-05-06T20:33:39.591Z",
+  "game": "sosyal",
+  "category": "cografya",
+  "difficulty": 2,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Atmosferin yeryüzüne en yakın katmanı olan ve içerisinde su buharının tamamına yakınını barındırdığı için yağmur, kar, rüzgâr gibi tüm iklim olaylarının yaşandığı katman aşağıdakilerden hangisidir?",
+      "options": [
+        "A) Troposfer",
+        "B) Stratosfer",
+        "C) Mezosfer",
+        "D) Termosfer",
+        "E) Ekzosfer"
+      ],
+      "answer": 0,
+      "solution": "İklim olaylarının gerçekleştiği katman Troposfer'dir. Çünkü bu katman, atmosferdeki gazların yaklaşık %75'ini ve su buharının tamamına yakınını içerir. Stratosfer ozon tabakasını barındırır, Mezosfer'de gök taşları yanar, Termosfer'de ise sıcaklıklar çok yüksektir ve kutup ışıkları oluşur.",
+      "topic": "Atmosfer ve Katmanları",
+      "difficulty": 2
+    },
+    {
+      "question": "Kalker gibi suda kolay çözünebilen kayaçların yaygın olduğu arazilerde, yeraltı sularının eritmesiyle oluşan ve 'kör vadi' olarak da bilinen, bir ucu kapalı ve suyun bir düdenle yeraltına daldığı vadi türü aşağıdakilerden hangisidir?",
+      "options": [
+        "A) Kanyon vadi",
+        "B) Boğaz vadi",
+        "C) Çentik vadi",
+        "D) Asimetrik vadi",
+        "E) Sığırkuyruğu vadi"
+      ],
+      "answer": 4,
+      "solution": "Soruda tanımı yapılan vadi türü sığırkuyruğu vadidir. Karstik arazilerde akarsuyun bir düdende (suyutan) kaybolmasıyla oluşan, bir ucu kapalı bu özel vadi şekline bu ad verilir. Diğer vadi tipleri oluşum süreçleri ve şekilleri bakımından farklılık gösterir ve karstik erimeyle doğrudan ilişkili bu spesifik şekli tanımlamazlar.",
+      "topic": "Karstik Şekiller ve Akarsu Topoğrafyası",
+      "difficulty": 2
+    },
+    {
+      "question": "Bir şehrin ekonomisi, çevresindeki geniş ve verimli ovalarda yetiştirilen tarım ürünlerinin işlendiği çok sayıda gıda fabrikası, konserve tesisi ve bu ürünlerin pazarlandığı büyük bir ticaret borsası üzerine kurulmuştur. Bu bilgilere göre şehrin baskın fonksiyonel özelliği aşağıdakilerden hangisidir?",
+      "options": [
+        "A) İdari",
+        "B) Turizm",
+        "C) Tarım",
+        "D) Ulaşım",
+        "E) Madencilik"
+      ],
+      "answer": 2,
+      "solution": "Paragrafta şehrin ekonomisinin tarımsal üretime ve bu üretimin işlenmesine dayandığı vurgulanmaktadır. Gıda fabrikaları, konserve tesisleri ve ticaret borsası gibi unsurlar, şehrin bir tarım kenti (agro-city) olduğunu göstermektedir. Bu nedenle baskın fonksiyonu tarımdır.",
+      "topic": "Nüfus ve Yerleşme Coğrafyası",
+      "difficulty": 2
+    },
+    {
+      "question": "Türkiye'de kara ve demir yolu ağlarının genel olarak doğu-batı yönlü uzanmasının temel nedeni aşağıdakilerden hangisidir?",
+      "options": [
+        "A) Akarsu ağlarının bu yönde akması",
+        "B) Yer şekillerinin ve dağ sıralarının uzanış doğrultusu",
+        "C) Önemli limanların batı kıyılarında yer alması",
+        "D) Nüfusun batı bölgelerinde yoğunlaşması",
+        "E) Tarihî ticaret yollarının bu güzergâhı izlemesi"
+      ],
+      "answer": 1,
+      "solution": "Türkiye'de Kuzey Anadolu Dağları ve Toros Dağları'nın kıyıya paralel olarak doğu-batı yönünde uzanması, kuzey-güney yönlü ulaşımı zorlaştırır ve maliyetini artırır. Bu nedenle ana ulaşım aksları, dağ sıraları arasındaki olukları ve vadileri takip ederek doğu-batı yönünde gelişmiştir. Diğer seçenekler bu durumun sonucu veya dolaylı etkenleridir.",
+      "topic": "Ulaşım Coğrafyası",
+      "difficulty": 2
+    },
+    {
+      "question": "Aşağıdaki doğal afetlerden hangisinin meydana gelmesinde iklim olaylarının doğrudan bir etkisi olduğu söylenemez?",
+      "options": [
+        "A) Şiddetli kuraklık",
+        "B) Sel ve taşkın",
+        "C) Orman yangını",
+        "D) Tektonik deprem",
+        "E) Hortum"
+      ],
+      "answer": 3,
+      "solution": "Tektonik depremler, yer kabuğunun derinliklerindeki levha hareketleri ve fay hatlarındaki enerji birikimi sonucu meydana gelen jeolojik kökenli afetlerdir. İklim olayları veya atmosferik koşullarla doğrudan bir ilişkisi yoktur. Kuraklık, sel, hortum gibi olaylar doğrudan meteorolojik kökenlidir. Orman yangınlarının çıkışını ise sıcaklık ve kuraklık gibi iklimsel faktörler büyük ölçüde etkiler.",
+      "topic": "Doğal Afetler",
+      "difficulty": 2
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:42:31.524Z",
+  "game": "turkce",
+  "category": "paragraf",
+  "difficulty": 4,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Bilim, pek çoklarınca nihai hakikatlerin biriktiği bir depo olarak görülür. Oysa bu, bilimin doğasına aykırı bir yaklaşımdır. Bilimsel bilgi, bir binanın tuğlaları gibi üst üste eklenerek mutlak doğruya ulaşmaz; daha ziyade, eski bir haritanın daha hassas ve detaylı bir yenisiyle değiştirilmesine benzer. Newton’un evren modeli yanlış olduğu için değil, daha geniş bir olgular setini açıklayan Einstein’ın modeli ortaya çıktığı için geri plana çekilmiştir. Dolayısıyla bilimin gücü, iddialarının sarsılmazlığında değil, kendini sürekli daha iyi açıklamalarla yenileyebilme kapasitesinde yatar.",
+      "options": [
+        "A) Bilimsel bilginin, önceki teorileri tamamen geçersiz kılarak ilerlediği",
+        "B) Newton'un kuramlarının günümüz fiziği için artık bir önem taşımadığı",
+        "C) Bilimin asıl değerinin, değişmez doğrular sunmasında değil, dinamik ve kendini düzelten yapısında olduğu",
+        "D) Bilimsel devrimlerin gerçekleşmesinde halkın genel kanılarının belirleyici rol oynadığı",
+        "E) Bir bilimsel teorinin ancak evrendeki tüm olguları açıklayabildiği takdirde değerli sayılacağı"
+      ],
+      "answer": 2,
+      "solution": "Parçada bilimin, mutlak ve değişmez doğrular biriktirmek yerine, mevcut açıklamaları daha kapsayıcı ve hassas olanlarla sürekli yenileyen bir süreç olduğu vurgulanmaktadır. 'Kendini sürekli daha iyi açıklamalarla yenileyebilme kapasitesi' ifadesi bu ana fikri özetler. Diğer seçenekler metindeki bilgileri ya yanlış yorumlamakta (A, B) ya da metnin kapsamı dışında iddialarda bulunmaktadır (D, E).",
+      "topic": "Paragrafta Ana Düşünce"
+    },
+    {
+      "question": "Modern kent yaşamı, bireyi ev ve iş yeri arasına sıkışan bir sarkaç hâline getirdi. Oysa geçmişin kent dokusunda bu iki temel mekânın dışında, bireylerin bir araya gelip gayriresmî bağlar kurduğu 'ara duraklar' vardı: mahalle kahvesi, halka açık kütüphaneler, esnaf dükkânının önündeki bank... Bu mekânlar, ne evin özel mahremiyetini ne de iş yerinin biçimsel ilişkilerini barındırırdı. Günümüzde ise dijital platformların sanal sosyalleşmesi ve özel araç odaklı yaşam biçimi, bu türden fiziksel buluşma noktalarını işlevsizleştirdi. İnsanlar artık bir 'topluluğun parçası' olma hissini, ekranlar aracılığıyla geçici ve yüzeysel bir şekilde telafi etmeye çalışıyor.",
+      "options": [
+        "A) Kamusal alanların bakım maliyetlerinin giderek artması",
+        "B) Kentleşmeye bağlı olarak geleneksel aile yapısının zayıflaması",
+        "C) Dijitalleşmenin, profesyonel hayattaki verimliliği düşürmesi",
+        "D) Modern mimarinin ticari faaliyetler için yetersiz kalması",
+        "E) Toplumsal bağların zayıflaması ve bireylerin yalnızlaşması"
+      ],
+      "answer": 4,
+      "solution": "Parçada, modern yaşamın ev ve iş yeri dışındaki sosyal buluşma mekânlarını (ara duraklar) ortadan kaldırdığı ve bunun sonucunda insanların 'topluluğun parçası olma hissini' kaybettiği belirtilmektedir. Bu durum, toplumsal bağların zayıflamasına ve bireylerin sosyal olarak izole olmasına, yani yalnızlaşmasına işaret etmektedir. Diğer seçenekler parçanın ana odağı olan bu sosyal soruna değil, farklı konulara değinmektedir.",
+      "topic": "Paragrafta Yardımcı Düşünce"
+    },
+    {
+      "question": "Sanat tarihinde öyle bir damar vardır ki estetik deneyimden çok, duygusal bir refleks tetiklemeyi hedefler. Bu anlayışta özgünlük ve derinlik yerini, izleyicide acıma, nostalji veya coşku gibi önceden kodlanmış hisleri en kestirme yoldan uyandıran formüllere bırakır. Batan güne karşı duran bir çift silüeti, kocaman gözlerle bakan masum bir çocuk figürü gibi klişelerle işler. Asıl amacı, karmaşık bir duyguyu veya düşünceyi işlemek değil, estetik bir etki yaratıyormuş gibi görünen hazır bir duygu paketi sunmaktır. Bu yüzden samimiyetten uzak, bir taklit ve gösteriştir.",
+      "options": [
+        "A) Gerçekliği nesnel bir kesinlikle yansıtmayı amaçlaması",
+        "B) İzleyicinin entelektüel varsayımlarına meydan okuması",
+        "C) Geleneksel formlar yerine deneysel teknikleri önceliklendirmesi",
+        "D) Özgün bir estetik deneyim yerine, yüzeysel ve formülleştirilmiş bir duygusal tepki sunması",
+        "E) Mitolojik ve tarihsel temaları modern bir yorumla ele alması"
+      ],
+      "answer": 3,
+      "solution": "Parçada anlatılan sanat anlayışının temel özelliği, 'hazır bir duygu paketi sunması', 'formüllerle' ve 'klişelerle' işlemesi, samimiyetten uzak bir 'taklit ve gösteriş' olmasıdır. Bu ifadeler, özgün bir deneyim yerine, önceden planlanmış, yüzeysel bir duygusal tepki hedeflendiğini açıkça göstermektedir. Diğer seçenekler (A, B, C, E) farklı sanat akımlarının özellikleridir ve parçada anlatılanla çelişir.",
+      "topic": "Paragrafta Konu"
+    },
+    {
+      "question": "Dilin yalnızca bir iletişim aracı olduğunu düşünmek, onun en temel işlevlerinden birini göz ardı etmektir. Dil, aynı zamanda düşüncenin de kalıbıdır. Örneğin, gramerinde gelecek zaman kipi bulunmayan bir kültürün üyelerinin, geleceğe yönelik tasarruf yapma veya uzun vadeli planlama eğilimlerinin, bu kipe sahip dilleri konuşanlara göre daha zayıf olduğu gözlemlenmiştir. Bu durum, kelimelerin ve dil bilgisi yapılarının, dünyayı algılama, kategorize etme ve hatta geleceği tahayyül etme biçimlerimizi derinden etkilediğini gösterir. Biz dünyayı olduğu gibi değil, dilimizin bize sunduğu çerçeveden görürüz.",
+      "options": [
+        "A) Bütün dillerin evrensel ve ortak bir dil bilgisi yapısını paylaştığı",
+        "B) Bir toplumun ekonomik refah düzeyinin kullandığı dil tarafından belirlendiği",
+        "C) Dilin yapısının ve sözcük dağarcığının, konuşanların gerçeklik algısını ve düşünce süreçlerini şekillendirdiği",
+        "D) Karmaşık bir gramer yapısına sahip olmadan soyut düşüncenin mümkün olmadığı",
+        "E) İletişimin, dilin ekonomik alışverişi kolaylaştıran en temel işlevi olduğu"
+      ],
+      "answer": 2,
+      "solution": "Parçanın ana tezi, 'dilin düşüncenin kalıbı olduğu' ve 'dünyayı dilimizin bize sunduğu çerçeveden gördüğümüz' ifadelerinde özetlenmiştir. Verilen örnek (gelecek zaman kipi ve planlama eğilimi), dil yapısının algıyı ve davranışları nasıl etkilediğini göstermektedir. Bu nedenle C seçeneği, parçanın temel savını en doğru şekilde ifade eder. B ve E seçenekleri verilen örneği genellerken, A seçeneği parçadaki iddiayla çelişir, D seçeneği ise metinden çıkarılamayacak kadar kesin bir yargıdır.",
+      "topic": "Paragrafta Ana Düşünce"
+    },
+    {
+      "question": "Tüketim toplumunun en büyük açmazlarından biri, eylem ile sonuç arasındaki mesafenin giderek açılmasıdır. Birkaç kuşak önce insan, yediği ekmeğin tarlasını, giydiği kazağın yününü veren hayvanı bilirdi. Bugün ise bir akıllı telefona sahip olmak için hangi madenlerin hangi koşullarda çıkarıldığını, bir tişörtün pamuğunun ne kadar su tükettiğini ve hangi okyanusları aşarak mağazaya ulaştığını düşünmüyoruz. Üretim süreçlerinin küresel ölçekte parçalanması ve karmaşık tedarik zincirleri, ürünün ekolojik ve sosyal maliyetini bir sis perdesinin arkasına gizliyor. Bu görünmezlik, biz tüketicilerde sorumluluktan azade, sınırsız bir tüketim hakkı yanılsaması yaratıyor.",
+      "options": [
+        "A) Çevre dostu ürünlerin yeterince yaygın ve ulaşılabilir olmaması",
+        "B) Tüketicilerin şirketler tarafından kasıtlı olarak yanlış bilgilendirilmesi",
+        "C) Tüketici ile üretim süreci arasındaki fiziksel ve bilişsel uzaklığın, gerçek maliyetleri görünmez kılması",
+        "D) Çevre bilinci konusundaki eğitim sisteminin yetersizliği",
+        "E) İnsanların doğası gereği bencil olup gelecek nesilleri düşünmemesi"
+      ],
+      "answer": 2,
+      "solution": "Yazara göre modern tüketimdeki kayıtsızlığın temel nedeni, 'eylem ile sonuç arasındaki mesafenin açılması'dır. Parçada bu durum, karmaşık tedarik zincirlerinin ürünlerin gerçek 'ekolojik ve sosyal maliyetini' bir 'sis perdesinin arkasına gizlemesi' olarak açıklanmıştır. Bu 'görünmezlik', tüketici ile üretim arasındaki uzaklıktan kaynaklanır ve sorumluluk hissini ortadan kaldırır. Dolayısıyla C seçeneği, metnin ana argümanını doğru bir şekilde özetlemektedir.",
+      "topic": "Paragrafta Neden-Sonuç İlişkisi"
+    }
+  ]
+}

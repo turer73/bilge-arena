@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:41:42.806Z",
+  "game": "turkce",
+  "category": "paragraf",
+  "difficulty": 4,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Günümüz insanı, bir yandan bireyselliğini kutsarken diğer yandan endüstriyel bir tornadan çıkmışçasına tek tipleşiyor. Bu çelişkinin panzehiri olarak pazarlanan 'özgünlük' ise artık bir arayış değil, bir tüketim nesnesi. El yapımı bir fincandan kahve içmek, 'butik' bir otelde konaklamak veya 'organik' pazardan alışveriş yapmak, bireyin kendini sistemin dışında ve özel hissetmesi için tasarlanmış ritüellere dönüştü. Ne var ki bu ritüellerin bizzat kendisi, yine sistemin kodlarıyla yazılmış birer simülasyondur. Gerçek bir içsel yolculuktan ziyade, başkalarına sunulan bir imaj hâline gelen özgünlük, en ironik şekilde, en çok taklit edilen şey olmuştur.",
+      "options": [
+        "Teknolojinin gelişmesiyle birlikte tamamen ortadan kalkmıştır.",
+        "Tüketim kültürü tarafından içeriği boşaltılarak bir imaja dönüştürülmüştür.",
+        "Sadece kırsal yaşamda ve geleneksel topluluklarda korunabilen bir değerdir.",
+        "Bireylerin içsel bir arayışla ulaşabileceği nihai bir hedef olarak görülmektedir.",
+        "Modern toplumda bireyselliği ve farklılığı teşvik eden en önemli unsurdur."
+      ],
+      "answer": 1,
+      "solution": "Parçada, 'özgünlük' kavramının artık içsel bir arayış olmaktan çıkıp el yapımı fincan, butik otel gibi tüketim nesneleri üzerinden sergilenen bir 'imaj' hâline geldiği vurgulanmaktadır. Bu durum, özgünlüğün tüketim kültürü tarafından yeniden tanımlandığını ve içinin boşaltıldığını gösterir. B seçeneği, parçanın bu ana fikrini doğru bir şekilde özetlemektedir.",
+      "topic": "Paragrafta Anlam (Çıkarım)"
+    },
+    {
+      "question": "Bilimsel konsensüs, genellikle bir grup bilim insanının bir konuda oylama yaparak ulaştığı sabit bir karar gibi yanlış anlaşılır. Oysa konsensüs, bir dogmanın ilanı değil, mevcut kanıtların ağırlığının belirli bir teoriyi ezici bir şekilde desteklemesi durumudur. Bu, sürecin bittiği anlamına gelmez; aksine, sürekli bir sınama ve sorgulama sürecinin geçici bir durağıdır. Bilimsel ilerleme, tam da bu konsensüsü sarsacak yeni kanıtların ortaya çıkmasıyla mümkün olur. Ancak bu sarsıntıyı yapacak olan, alanın metodolojisine hâkim uzmanların getireceği yeni verilerdir; konu dışı fikirler veya kişisel inançlar değil. Dolayısıyla, konsensüse karşı çıkmak bilimin doğasında varken, bunu kanıtsız yapmak bilimsel sürecin kendisini reddetmektir.",
+      "options": [
+        "Bilimsel gerçekler zamanla değişebileceği için hiçbir teoriye tam olarak güvenilmemelidir.",
+        "Bilimsel ilerlemenin temel motoru, yerleşik görüşlere karşı çıkan aykırı düşüncelerdir.",
+        "Bilimsel uzlaşı, mutlak bir doğruyu değil, mevcut kanıtlara dayanan en güçlü açıklamayı temsil eden dinamik bir süreçtir.",
+        "Bir teorinin bilimsel olarak kabul görmesi için tüm bilim insanlarının tam bir fikir birliği içinde olması şarttır.",
+        "Bilimsel tartışmalarda kişisel inançların da en az kanıtlar kadar değeri vardır."
+      ],
+      "answer": 2,
+      "solution": "Paragrafta bilimsel konsensüsün statik bir dogma olmadığı, aksine mevcut kanıtlara dayalı en güçlü açıklama olduğu ve yeni kanıtlarla değişebilen dinamik bir yapıya sahip olduğu anlatılmaktadır. C seçeneği, bu tanımı en kapsamlı şekilde ifade eder: konsensüsün mutlak bir doğru olmadığını, kanıta dayandığını ve dinamik bir süreç olduğunu belirtir. Diğer seçenekler ya parçadaki bilgiyi aşırı yorumlamakta ya da parçada reddedilen fikirleri içermektedir.",
+      "topic": "Paragrafta Anlam (Ana Düşünce)"
+    },
+    {
+      "question": "Tarihî roman dendiğinde akla ilk gelen, genellikle geçmiş bir dönemin kostümlerini, mekânlarını ve olaylarını aslına sadık kalarak yeniden canlandırma çabasıdır. Okur, bir zaman makinesine binmişçesine o dönemin atmosferini solumak ister. Ne var ki usta bir tarihî romancı için geçmiş, sadece bir dekor ya da kaçış rampası değildir. Aksine, günümüzün karmaşık sorunlarını, insani zaaflarını ve toplumsal dinamiklerini daha güvenli bir mesafeden, farklı bir ayna üzerinden tartışmak için kullandığı bir laboratuvardır. Yazar, doğrudan bugünü anlatsa belki de sloganik veya didaktik kaçacak bir eleştiriyi, yüzlerce yıl öncesinin perdesi arkasından çok daha etkili bir şekilde sunabilir. Bu yüzden iyi bir tarihî roman, bize geçmişi ne kadar iyi anlattığından çok...",
+      "options": [
+        "tarihsel gerçeklere ne kadar bağlı kaldığıyla ölçülür.",
+        "okuru günümüzün sıkıntılarından ne kadar uzaklaştırdığıyla değer kazanır.",
+        "bugüne dair ne kadar derin ve evrensel bir sorgulama başlattığıyla önem kazanır.",
+        "yazarının araştırma sürecinde ne kadar titiz davrandığını gösterir.",
+        "karakterlerinin dönemin dilini ve üslubunu ne kadar başarıyla yansıttığına bağlıdır."
+      ],
+      "answer": 2,
+      "solution": "Paragraf, iyi bir tarihî romanın amacının sadece geçmişi canlandırmak olmadığını, asıl amacının geçmişi bir 'laboratuvar' veya 'ayna' olarak kullanarak günümüz sorunlarını ele almak olduğunu savunur. Cümlenin sonu bu fikri tamamlamalıdır. C seçeneği, romanın değerinin 'bugüne dair' başlattığı sorgulama ile ölçüldüğünü belirterek parçanın ana fikriyle tam bir uyum sağlar ve metnin akışını mantıksal olarak tamamlar.",
+      "topic": "Paragraf Yapısı (Cümle Tamamlama)"
+    },
+    {
+      "question": "Robotik ve 3D animasyon alanında sıkça karşılaşılan 'Tekinsiz Vadi', insan benzerliği arttıkça sempatinin de artacağı yönündeki genel beklentinin çöktüğü o tuhaf aralığı tanımlar. Bir endüstriyel robot kolu bize soğuk gelebilir ama itici gelmez. Sevimli bir çizgi film karakteri ise bizde sıcak duygular uyandırır. Ancak bir robot veya dijital karakter, insana neredeyse tıpatıp benzeyip de minik bir kusur sergilediğinde – örneğin göz hareketleri donuklaştığında veya ten dokusu hafifçe yapay kaldığında – sempatimiz aniden yerini bir ürpertiye, hatta tiksintiye bırakır. Tıpkı sağlıklı bir insana bakarken birden onun bir protez taşıdığını fark ettiğimizde hissettiğimiz o anlık yabancılaşma gibi. Bu durum, beynimizin 'insan' kategorisine soktuğu varlıktaki küçük anormallikleri bir tehdit veya hastalık belirtisi olarak algılamasından kaynaklanıyor olabilir.",
+      "options": [
+        "Karşılaştırma yapmaktan",
+        "Örneklemeye başvurmaktan",
+        "Benzetme (Analoji) kurmaktan",
+        "Olasılık bildiren bir tahminde bulunmaktan",
+        "Tanımların nesnelliğini sorgulamaktan"
+      ],
+      "answer": 4,
+      "solution": "Parçada, 'Tekinsiz Vadi' kavramı açıklanırken endüstriyel robot, çizgi film karakteri ve insansı robot karşılaştırılmıştır (A). Donuk göz hareketleri gibi somut örnekler verilmiştir (B). Hissedilen duygu, protez fark etme anına benzetilmiştir (C). Son cümlede '...kaynaklanıyor olabilir' ifadesiyle bir tahminde bulunulmuştur (D). Ancak metin boyunca herhangi bir tanımın doğruluğu veya nesnelliği tartışılmamış, aksine 'Tekinsiz Vadi' tanımı yapılarak bu tanım üzerinden açıklamalara devam edilmiştir.",
+      "topic": "Anlatım Biçimleri ve Düşünceyi Geliştirme Yolları"
+    },
+    {
+      "question": "Modern yaşamın en sinsi tuzaklarından biri, 'boş zaman' kavramını bir verimlilik projesine dönüştürmesidir. Eskiden sadece keyif almak için yapılan bir yürüyüş, şimdi atılan adımları sayan bir uygulamayla 'kardiyo seansına'; hobi olarak başlanan resim, sosyal medyada 'sipariş alınır' ilanıyla bir 'yan gelire' dönüşüyor. Her anın bir faydaya, bir kazanca, bir kişisel gelişim basamağına tahvil edilmesi gerektiği fikri, hayatın kendiliğindenliğini ve oyunsu neşesini yok ediyor. Bir enstrümanı sadece ruhu dinlendirdiği için, hiçbir ustalık iddiası olmadan çalmanın değeri unutuluyor. Bu yaklaşım, insanı kendi hayatının bir proje yöneticisine, anları ise tamamlanması gereken görevlere indirgiyor.",
+      "options": [
+        "Hedonizm: Hayatın tek amacının anlık hazza ulaşmak olduğunu savunan anlayış.",
+        "Faydacılık: Her eylemin getireceği pratik yarar ve sonuca göre değerlendirilmesi gerektiği düşüncesi.",
+        "Mükemmeliyetçilik: Her işte kusursuzluğa ulaşma ve hatayı kabul etmeme eğilimi.",
+        "Nihilizm: Hayatın anlamsız ve değersiz olduğunu öne süren felsefi görüş.",
+        "Gelenekçilik: Geçmişin değerlerine ve alışkanlıklarına sıkı sıkıya bağlı kalma durumu."
+      ],
+      "answer": 1,
+      "solution": "Parçada eleştirilen temel tutum, boş zaman aktiviteleri de dâhil olmak üzere her eylemin bir 'faydaya', 'kazanca' veya somut bir sonuca dönüştürülme zorunluluğudur. Yürüyüşün spor, hobinin gelir kapısı olması bu durumu örnekler. Bir eylemin değerini getirdiği pratik yararla ölçen bu anlayış, 'faydacılık' (utilitarianism) ilkesiyle doğrudan örtüşmektedir. Dolayısıyla eleştirilen tutum faydacılıktır.",
+      "topic": "Paragrafta Anlam (Eleştirilen Tutum)"
+    }
+  ]
+}

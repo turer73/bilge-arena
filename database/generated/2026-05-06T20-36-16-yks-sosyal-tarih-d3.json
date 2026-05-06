@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:36:16.443Z",
+  "game": "sosyal",
+  "category": "tarih",
+  "difficulty": 3,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Osmanlı Devleti'nde, 19. yüzyılın ortalarında İstanbul'daki bir İngiliz sefirinin Londra'ya gönderdiği raporda şu ifadeler yer almaktadır: \"Padişah, tebaası olan Müslim ve gayrimüslim ayrımı yapmaksızın herkesin can, mal ve namus güvenliğinin devlet teminatı altına alındığını ilan eden bir ferman yayımladı. Bu adımın, Mısır Valisi'nin yarattığı buhran karşısında Avrupalı devletlerin desteğini kazanmaya yönelik stratejik bir hamle olduğu açıktır.\" Sefirin raporunda bahsettiği bu gelişme aşağıdakilerden hangisidir?",
+      "options": [
+        "Sened-i İttifak",
+        "Tanzimat Fermanı",
+        "Islahat Fermanı",
+        "Kanun-i Esasi'nin ilanı",
+        "II. Meşrutiyet'in ilanı"
+      ],
+      "answer": 1,
+      "solution": "Metinde bahsedilen özellikler; tüm tebaanın can, mal ve namus güvenliğinin sağlanması ve bu adımın Mısır Meselesi (Kavalalı Mehmet Ali Paşa İsyanı) sırasında Avrupa'nın desteğini almak amacıyla atılması, 1839'da ilan edilen Tanzimat Fermanı'nın (Gülhane Hatt-ı Hümayunu) temel amaçları ve içeriğiyle doğrudan örtüşmektedir. Islahat Fermanı daha çok gayrimüslim haklarına odaklanmış ve Kırım Savaşı sonrası ilan edilmiştir. Diğer seçenekler ise anayasal ve meşruti yönetimle ilgili olup metindeki içerikle uyuşmamaktadır.",
+      "topic": "Osmanlı Tarihi (19. Yüzyıl Islahatları)"
+    },
+    {
+      "question": "Türkiye Cumhuriyeti'nin ilk yıllarında gerçekleştirilen; \n\nI. Şeriye ve Evkaf Vekaleti'nin kaldırılarak yerine Diyanet İşleri Başkanlığı ve Vakıflar Genel Müdürlüğü'nün kurulması,\nII. Eğitim ve öğretim faaliyetlerinin Tevhid-i Tedrisat Kanunu ile birleştirilmesi ve Maarif Vekaleti'ne bağlanması,\nIII. Devlet yönetiminde dini referansların ve unvanların kaldırılarak hukuki düzenlemelerin akıl ve bilime dayandırılması\n\ngibi inkılaplar, aşağıdaki Atatürk ilkelerinden hangisinin hayata geçirilmesine en doğrudan hizmet etmiştir?",
+      "options": [
+        "Halkçılık",
+        "Milliyetçilik",
+        "Devletçilik",
+        "Cumhuriyetçilik",
+        "Laiklik"
+      ],
+      "answer": 4,
+      "solution": "Verilen üç öncül de din ve devlet işlerinin birbirinden ayrılması, eğitimin birleştirilerek sekülerleştirilmesi ve hukukun dine değil, akla ve bilime dayandırılması süreçlerini ifade etmektedir. Bu durum, devletin din ve vicdan özgürlüğünü güvence altına alırken, yönetimde ve kamusal alanda dinsel kuralları referans almaması anlamına gelen laiklik ilkesinin temel uygulamalarıdır.",
+      "topic": "Atatürk İlkeleri ve İnkılap Tarihi"
+    },
+    {
+      "question": "Hz. Osman'ın şehit edilmesinin ardından başlayan ve İslam tarihindeki ilk ciddi iç karışıklıklar olarak kabul edilen 'İlk Fitne' döneminde Cemel Vakası ve Sıffin Savaşı gibi olaylar yaşanmıştır. Bu olaylar sonucunda Müslüman toplumunda Hariciler gibi ilk siyasi ve itikadi gruplaşmalar ortaya çıkmıştır. Bu gelişmeler aşağıdaki halifelerden hangisinin döneminde meydana gelmiştir?",
+      "options": [
+        "Hz. Ebu Bekir",
+        "Hz. Ömer",
+        "Hz. Ali",
+        "Hz. Muaviye",
+        "Hz. Ömer bin Abdülaziz"
+      ],
+      "answer": 2,
+      "solution": "İslam tarihindeki ilk büyük iç savaş olan 'İlk Fitne' dönemi, Hz. Osman'ın vefatından sonra halife olan Hz. Ali döneminde yaşanmıştır. Cemel Vakası'nda Hz. Aişe, Talha ve Zübeyr ile; Sıffin Savaşı'nda ise Şam Valisi Muaviye ile mücadele etmiştir. Bu savaşların sonucunda ortaya çıkan Hakem Olayı, Haricilerin doğuşuna neden olmuştur. Dolayısıyla, bahsedilen olayların tamamı Hz. Ali'nin hilafet dönemine aittir.",
+      "topic": "İslam Tarihi ve Uygarlığı"
+    },
+    {
+      "question": "Büyük Selçuklu Devleti'nde uygulanan ikta sistemi, belirli bir toprağın vergi gelirlerinin, devlete asker beslemesi koşuluyla komutanlara veya devlet adamlarına hizmetleri karşılığında verilmesine dayanıyordu. Bu sistem sayesinde devlet, hazineden para harcamadan büyük bir orduyu sürekli hazır tutabiliyordu. Bu sistemin başarılı bir şekilde uygulanmasının Büyük Selçuklu Devleti için sağladığı en önemli siyasi sonuç aşağıdakilerden hangisidir?",
+      "options": [
+        "Göçebe Türkmenlerin yerleşik hayata geçişini tamamen engellemesi",
+        "Merkezi otoritenin taşradaki gücünü ve denetimini artırması",
+        "Bizans ile yapılan ticari faaliyetlerin sona ermesi",
+        "Toprak mülkiyetinin tamamen komutanların şahsına geçmesi",
+        "Sultanın yetkilerini sınırlayan feodal bir yapının resmen kurulması"
+      ],
+      "answer": 1,
+      "solution": "İkta sistemi, devlete ait toprakların gelirlerini kullanarak, doğrudan sultana bağlı ve maaş yükü oluşturmayan bir ordu (cebelü) meydana getirmeyi amaçlamıştır. Bu sayede sultan, eyaletlerde hem askeri gücünü hem de vergi toplama ve yönetim üzerindeki kontrolünü artırmıştır. İkta sahipleri devleti temsil ettiğinden, bu sistem merkezi otoritenin taşraya yayılmasını ve güçlenmesini sağlamıştır. Zayıfladığı dönemlerde feodal bir yapıya dönüşme riski taşısa da, başarılı uygulandığı dönemde merkeziyetçi yapıyı desteklemiştir.",
+      "topic": "Türk-İslam Devletleri Tarihi"
+    },
+    {
+      "question": "Mondros Mütarekesi'nin 7. maddesi, \"İtilaf Devletleri, güvenliklerini tehdit edecek bir durumun ortaya çıkması hâlinde herhangi bir stratejik noktayı işgal etme hakkına sahip olacaktır.\" hükmünü içermekteydi. Bu maddenin İtilaf Devletleri tarafından Anadolu'nun çeşitli yerlerinde fiilen uygulanmaya başlanması, aşağıdakilerden hangisine doğrudan zemin hazırlamıştır?",
+      "options": [
+        "Osmanlı Mebusan Meclisinin Misakımillî'yi ilan etmesine",
+        "İstanbul Hükûmeti'nin Sevr Antlaşması'nı imzalamasına",
+        "Halkın bölgesel direniş hareketleri olan Kuvâ-yi Milliye'yi oluşturmasına",
+        "Mustafa Kemal'in IX. Ordu Müfettişi olarak Samsun'a gönderilmesine",
+        "Saltanatın ve hilafetin TBMM tarafından kaldırılmasına"
+      ],
+      "answer": 2,
+      "solution": "Mondros Mütarekesi'nin 7. maddesi, İtilaf Devletleri'nin Anadolu'daki işgallerine hukuki bir kılıf olarak kullanılmıştır. İzmir, Adana, Urfa, Antep gibi bölgelerin bu maddeye dayanılarak işgal edilmesi, İstanbul Hükûmeti'nin teslimiyetçi politikasına karşı halkın kendi kendini savunma ihtiyacını doğurmuştur. Bu durum, ülkenin çeşitli yerlerinde işgallere karşı silahlı direniş gösteren düzensiz halk birlikleri olan Kuvâ-yi Milliye'nin ortaya çıkmasının temel nedenidir.",
+      "topic": "Milli Mücadele Dönemi"
+    }
+  ]
+}

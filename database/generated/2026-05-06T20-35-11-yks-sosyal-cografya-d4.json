@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:35:11.649Z",
+  "game": "sosyal",
+  "category": "cografya",
+  "difficulty": 4,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Türkiye'de kivi tarımı, kışların ılık geçtiği, don olaylarının nadiren -7°C'nin altına indiği, yıllık yağış miktarının yeterli ve bağıl nem oranının yüksek olduğu alanlarda ekonomik olarak yapılabilmektedir. Ayrıca, asidik karakterli ve organik maddece zengin toprakları tercih etmektedir. Bu iklim ve toprak özellikleri dikkate alındığında, aşağıdaki coğrafi alanlardan hangisinin kivi tarımı için en elverişsiz koşullara sahip olduğu söylenebilir?",
+      "options": [
+        "Doğu Karadeniz'in kıyı kuşağı",
+        "Yalova ve çevresindeki ovalık alanlar",
+        "Tuz Gölü'nün güneyindeki platolar",
+        "Menteşe Yöresi'nin denize bakan yamaçları",
+        "Çukurova Deltası'nın kuzeyindeki engebeli araziler"
+      ],
+      "answer": 2,
+      "solution": "Kivi, yüksek nem ve ılıman kış koşulları gerektiren bir bitkidir. Doğu Karadeniz kıyı kuşağı, Yalova çevresi ve Menteşe Yöresi bu koşulları büyük ölçüde sağlar. Çukurova'nın kuzeyi de mikroiklim özellikleri ile kısmen uygun olabilir. Ancak Tuz Gölü'nün güneyindeki platolar, karasal iklimin tipik özelliklerini taşır: Kışlar sert ve donlu, yazlar kurak ve sıcak, yıllık yağış miktarı az ve bağıl nem oranı düşüktür. Bu koşullar, kivi tarımının ekonomik olarak yapılmasına kesinlikle olanak tanımaz.",
+      "topic": "Tarım Coğrafyası ve İklim"
+    },
+    {
+      "question": "Bir şehrin fonksiyonel gelişimi üzerinde coğrafi konumu, tarihsel birikimi ve beşerî sermayesi belirleyici rol oynar. Tarihî İpek Yolu üzerinde yer alan, Fırat Nehri'ne yakın verimli tarım arazileriyle öne çıkan bir kent, Cumhuriyet sonrası dönemde özellikle 1980'lerden itibaren planlı sanayi bölgelerinin kurulmasıyla tekstil, gıda ve makine halısı üretiminde Türkiye'nin lider merkezlerinden birine dönüşmüştür. Son yıllarda aldığı yoğun göçlerle demografik yapısı çeşitlenmiş ve bölgesel bir çekim merkezi hâline gelmiştir. Bu parçada fonksiyonel gelişim süreci anlatılan şehir aşağıdakilerden hangisidir?",
+      "options": [
+        "Bursa",
+        "Adana",
+        "Kayseri",
+        "Gaziantep",
+        "Konya"
+      ],
+      "answer": 3,
+      "solution": "Parçada belirtilen özellikler Gaziantep ile örtüşmektedir. Tarihî İpek Yolu güzergâhında olması, Fırat'a yakınlığı, özellikle organize sanayi bölgeleriyle tekstil, gıda ve halı sanayisinde öncü rol oynaması ve Suriye'den aldığı yoğun göçlerle demografik yapısının değişmesi Gaziantep'in tipik özellikleridir. Adana tarım ve sanayi şehri olsa da halı üretimi ve belirtilen tarihsel bağlamda ayrışır. Kayseri sanayileşmiş olsa da konumu ve tarımsal arka planı farklıdır. Bursa ve Konya'nın sanayi ve tarihsel gelişim yolları metindeki profilden belirgin şekilde farklıdır.",
+      "topic": "Şehir Coğrafyası ve Ekonomik Faaliyetler"
+    },
+    {
+      "question": "Türkiye'deki bir bölge, yıl içinde dört mevsimin belirgin olarak yaşanması, yıllık sıcaklık farklarının 20-25°C'yi bulması, yağışların en fazla ilkbahar mevsiminde konveksiyonel karakterde düşmesi ve doğal bitki örtüsünün büyük oranda antropojen bozkırlardan oluşması gibi özelliklere sahiptir. Bu bölgede arazi kullanımına ilişkin aşağıdaki yorumlardan hangisinin yapılması en zordur?",
+      "options": [
+        "Nadas uygulamasının tarımsal verimliliği sınırlayan bir faktör olması",
+        "Küçükbaş hayvancılığın, özellikle koyun yetiştiriciliğinin yaygın olması",
+        "Tahıl tarımının, özellikle buğday ve arpanın geniş alanlar kaplaması",
+        "Yaz aylarında yaylacılık faaliyetlerinin ekonomik öneme sahip olması",
+        "Sulama imkânlarının geliştiği yerlerde endüstri bitkileri tarımının artması"
+      ],
+      "answer": 3,
+      "solution": "Tanımlanan iklim ve bitki örtüsü özellikleri, Türkiye'nin karasal iklim bölgelerine (İç Anadolu, Doğu Anadolu'nun alçak kesimleri) aittir. Bu bölgelerde nadas, küçükbaş hayvancılık, tahıl tarımı ve sulamayla endüstri bitkileri tarımı yaygındır. Ancak yaylacılık, genellikle yaz sıcaklıklarından ve kuraklıktan kaçmak amacıyla daha serin, yağışlı ve otlakların gür olduğu yüksek dağlık alanlarda (örn. Karadeniz, Toroslar) yapılan bir faaliyettir. Karasal iklim bölgelerinin platoları yazın kurak ve sıcak olduğundan, bu bölgelerde yaylacılık diğer seçeneklere göre çok daha az gelişmiştir ve ekonomik önemi sınırlıdır.",
+      "topic": "İklim, Bitki Örtüsü ve Beşerî Faaliyetler"
+    },
+    {
+      "question": "Türkiye, Alp-Himalaya deprem kuşağı üzerinde yer almakta ve bu durum jeomorfolojik yapısını derinden etkilemektedir. Özellikle Kuzey Anadolu Fay Hattı (KAF) gibi doğrultu atımlı fay zonları, sadece deprem üretmekle kalmaz, aynı zamanda kendilerine özgü yer şekillerinin oluşumuna da neden olur. Fayın hareketi sırasında oluşan bükülmeler (fay dirsekleri) ve sıçramalar (step-over), yerel ölçekte sıkışma ve gerilme alanları yaratır. Bu tektonik süreçler sonucunda aşağıdaki yer şekli çiftlerinden hangisinin bir arada oluşması beklenir?",
+      "options": [
+        "Fiyort kıyıları ve sirk gölleri",
+        "Traverten taraçaları ve polye ovaları",
+        "Tombolo ve lagünler",
+        "Transpresyonel sırtlar ve transtansiyonel çöküntü havzaları",
+        "Volkan konileri ve maar gölleri"
+      ],
+      "answer": 3,
+      "solution": "Doğrultu atımlı fay zonlarında, fayın doğrultusundaki bükülmeler sıkışmaya (transpresyon), sıçramalar ise gerilmeye (transtansiyon) neden olur. Sıkışma alanlarında malzeme yukarı doğru itilerek 'transpresyonel sırtlar' veya 'çiçek yapıları' denilen yükseltiler oluşur. Gerilme alanlarında ise kabuk çökerek 'transtansiyonel (pull-apart) çöküntü havzaları' adı verilen ovaları (örn. Erzincan, Erbaa, Niksar ovaları) meydana getirir. Diğer seçenekler ise farklı jeomorfolojik süreçlerle ilgilidir: Fiyortlar buzul, travertenler karstik, tombolo dalga biriktirmesi, volkan konileri ise volkanizma faaliyetleri sonucu oluşur.",
+      "topic": "Jeomorfoloji ve Tektonizma"
+    },
+    {
+      "question": "Türkiye'nin dış ticaretinde deniz yolu taşımacılığı, maliyet avantajı ve tek seferde yüksek miktarda yük taşıma kapasitesi nedeniyle en çok tercih edilen yöntemdir. Ancak bazı ürün grupları, bozulabilirlik, yüksek katma değer veya aciliyet gibi nedenlerle deniz yolundan ziyade hava yolu taşımacılığını zorunlu kılabilmektedir. Buna göre, Türkiye'nin ihracatında aşağıdaki ürünlerden hangisinin taşınmasında hava yolunun payının diğerlerine göre daha yüksek olması beklenir?",
+      "options": [
+        "İzmir Limanı'ndan ihraç edilen mermer blokları",
+        "Zonguldak Limanı'ndan ihraç edilen demir-çelik ürünleri",
+        "Antalya'dan Avrupa'ya gönderilen kesme çiçek ve taze fasulye",
+        "İskenderun Limanı'ndan yüklenen narenciye",
+        "Bandırma Limanı'ndan sevk edilen bor mineralleri"
+      ],
+      "answer": 2,
+      "solution": "Hava yolu taşımacılığı, birim maliyeti en yüksek taşıma türüdür. Bu nedenle genellikle hafif, pahada ağır, çabuk bozulabilen veya acil ulaştırılması gereken ürünler için tercih edilir. Seçenekler arasında kesme çiçek ve taze fasulye, çabuk bozulabilir (raf ömrü kısa) ve pazar değerini koruması için hızlı bir şekilde tüketiciye ulaştırılması gereken ürünlerdir. Mermer, demir-çelik, narenciye ve bor mineralleri ise ağır, hacimli ve dayanıklı ürünler olup maliyet etkinliği açısından neredeyse tamamen deniz yolu ile taşınır. Bu nedenle hava yolunun payı kesme çiçek gibi ürünlerde en yüksektir.",
+      "topic": "Ulaşım Coğrafyası ve Dış Ticaret"
+    }
+  ]
+}

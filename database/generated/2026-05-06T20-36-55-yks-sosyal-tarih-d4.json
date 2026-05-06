@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:36:55.022Z",
+  "game": "sosyal",
+  "category": "tarih",
+  "difficulty": 4,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "III. Selim döneminde hayata geçirilen Nizam-ı Cedid reformları, özellikle askeri alanda Batı tarzı bir ordu kurmayı hedeflemiş ancak ciddi bir toplumsal direnişle karşılaşarak başarısız olmuştur. Bu direnişin temelinde, reformların mevcut güç dengelerini ve geleneksel kurumların çıkarlarını doğrudan tehdit etmesi yatmaktadır. Bu bağlamda, Nizam-ı Cedid'e karşı en örgütlü ve etkili muhalefeti oluşturan zümrenin, kendi askeri ve sosyal statülerinin sarsılacağı endişesini taşıyan grup aşağıdakilerden hangisidir?",
+      "options": [
+        "A) Reaya",
+        "B) İlmiye sınıfı",
+        "C) Yeniçeri Ocağı",
+        "D) Ayanlar",
+        "E) Saray bürokrasisi"
+      ],
+      "answer": 2,
+      "solution": "Nizam-ı Cedid reformlarının merkezinde, Yeniçeri Ocağı'na alternatif olarak modern bir ordu kurulması fikri vardı. Bu durum, yüzyıllardır Osmanlı ordusunun bel kemiği olan ve zamanla siyasi bir güce dönüşen Yeniçeri Ocağı'nın varlığını ve imtiyazlarını doğrudan tehdit ediyordu. Dolayısıyla, reformlara karşı en şiddetli, örgütlü ve sonuç alıcı muhalefet, askeri etkinliklerini yitirmiş olmalarına rağmen sosyal ve siyasi güçlerini kaybetmek istemeyen Yeniçeriler tarafından yürütülmüştür. Nitekim bu muhalefet, Kabakçı Mustafa İsyanı ile III. Selim'in tahttan indirilmesine ve reformların sona ermesine yol açmıştır.",
+      "topic": "Osmanlı Devleti'nde Yenileşme Hareketleri"
+    },
+    {
+      "question": "Büyük Taarruz'un zaferle sonuçlanması ve Mudanya Mütarekesi'nin imzalanması, Türk Kurtuluş Savaşı'nın askeri safhasını büyük ölçüde sonlandırmıştır. Bu gelişmelerin ardından İtilaf Devletleri, hem İstanbul Hükûmeti'ni hem de Ankara'daki TBMM Hükûmeti'ni Lozan'da yapılacak barış görüşmelerine birlikte davet etmiştir. İtilaf Devletleri'nin bu ikili davet politikasının ardındaki temel stratejik amaç aşağıdakilerden hangisidir?",
+      "options": [
+        "A) Osmanlı Hanedanı'nın devamlılığını güvence altına almak.",
+        "B) Türk tarafında ikilik yaratarak diplomatik pozisyonlarını zayıflatmak ve Sevr'e benzer koşulları kabul ettirmek.",
+        "C) Mustafa Kemal Paşa'nın liderliğini uluslararası alanda tanımak.",
+        "D) Sovyet Rusya'nın konferanstaki etkisini dengelemek.",
+        "E) Boğazlar üzerindeki tam kontrolü İstanbul Hükûmeti'ne bırakmak."
+      ],
+      "answer": 1,
+      "solution": "İtilaf Devletleri, askeri alanda yenilmiş olsalar da diplomatik masada üstünlük kurmayı amaçlıyorlardı. Hem İstanbul hem de Ankara hükümetlerini aynı anda davet ederek, Türk tarafını bölmeyi, aralarında çıkacak anlaşmazlıklardan faydalanarak kendi tezlerini kabul ettirmeyi hedeflediler. Bu strateji, Türk delegasyonu içinde bir güç mücadelesi ve kafa karışıklığı yaratarak onları zayıflatma ve Lozan'da daha elverişli şartlar elde etme amacı taşıyordu. TBMM Hükûmeti bu oyunu görmüş ve 1 Kasım 1922'de saltanatı kaldırarak bu ikiliğe son vermiştir.",
+      "topic": "Kurtuluş Savaşı'nda Diplomasi ve Lozan Antlaşması"
+    },
+    {
+      "question": "Emeviler Dönemi'nde fethedilen topraklardaki Arap olmayan Müslümanlar (Mevali), genellikle Araplarla eşit haklara sahip olmamış, daha fazla vergi ödemek zorunda kalmış ve orduda daha düşük maaş almışlardır. Bu durum, İslam'ın evrensel eşitlik ilkesiyle çelişen bir sosyal tabakalaşma yaratmıştır. Emevilerin bu politikasının, aşağıdaki tarihsel gelişmelerden hangisinin ortaya çıkmasında birincil derecede etkili olduğu savunulabilir?",
+      "options": [
+        "A) Endülüs'te güçlü bir medeniyetin kurulması",
+        "B) Abbasilerin, Emevi hanedanını yıkmasını sağlayan geniş halk desteğini bulması",
+        "C) Sıffin Savaşı'nın ve Hakem Olayı'nın yaşanması",
+        "D) İslamiyet'in Orta Asya Türkleri arasında yayılmasının tamamen durması",
+        "E) Bizans İmparatorluğu ile uzun süreli barış antlaşmalarının yapılması"
+      ],
+      "answer": 1,
+      "solution": "Emevilerin Mevali politikası, özellikle Horasan ve İran coğrafyasındaki Arap olmayan Müslümanlar arasında büyük bir hoşnutsuzluk yaratmıştır. Bu hoşnutsuz kitle, Emevi yönetimini adaletsiz ve Arap ırkçılığına dayalı olarak görmüştür. Emevi hanedanına karşı muhalefetin liderliğini yapan Abbasiler, bu durumu akıllıca kullanarak Mevali'nin desteğini arkalarına almışlardır. Emevi yönetimine son veren Abbasi İhtilali'nin toplumsal tabanını büyük ölçüde, eşitlik ve adalet vaatleriyle harekete geçirilen Mevali oluşturmuştur. Dolayısıyla bu politika, hanedan değişikliğine zemin hazırlayan en önemli sosyal faktörlerden biridir.",
+      "topic": "İslam Medeniyetinin Doğuşu ve İlk İslam Devletleri"
+    },
+    {
+      "question": "Anadolu Selçuklu Devleti'nde hükümdarlar, fethettikleri toprakları veya devlete ait arazileri (miri arazi) yöneticilere ve komutanlara hizmetleri karşılığında \"ikta\" olarak verirlerdi. İkta sahibi, toprağın mülkiyetine değil, sadece belirli bir süre için vergi gelirlerini toplama hakkına sahip olur ve karşılığında devlete asker (cebelü) beslerdi. Bu sistemin, aşağıdaki amaçlardan hangisine hizmet ettiği *söylenemez*?",
+      "options": [
+        "A) Devlet hazinesine yük olmadan sürekli ve savaşa hazır bir ordu bulundurmak.",
+        "B) Ülkenin en ücra köşelerinde bile devlet otoritesini tesis etmek ve asayişi sağlamak.",
+        "C) Tarımsal üretimin sürekliliğini teşvik etmek ve kontrol altında tutmak.",
+        "D) Yönetici ve komutanları devlete bağlılıklarını artıracak şekilde ödüllendirmek.",
+        "E) Zamanla babadan oğula geçen ve merkezi otoriteden bağımsız büyük feodal beylikler oluşturmak."
+      ],
+      "answer": 4,
+      "solution": "İkta sistemi, merkezi otoriteyi güçlendirmek amacıyla tasarlanmış bir sistemdir. Temel amacı, toprağın mülkiyetini devlette tutarak büyük ve bağımsız feodal beyliklerin oluşumunu engellemektir. İkta sahibinin görevi ve yetkisi hükümdar tarafından sonlandırılabilirdi ve normal şartlarda babadan oğula geçmezdi. Seçenek E'de belirtilen durum, sistemin amacı değil, sistemin bozulması veya zayıflaması durumunda ortaya çıkabilecek bir risktir. Diğer seçenekler (A, B, C, D) ise ikta sisteminin doğrudan hedeflerini ve faydalarını yansıtmaktadır: masrafsız ordu kurmak, otoriteyi yaymak, üretimi denetlemek ve sadakati ödüllendirmek.",
+      "topic": "Türklerin İslamiyet'i Kabulü ve İlk Türk-İslam Devletleri"
+    },
+    {
+      "question": "Türkiye Cumhuriyeti'nin kuruluş felsefesinde laiklik, sadece din ve devlet işlerinin ayrılması olarak değil, aynı zamanda toplumsal hayatın akla ve bilime göre düzenlenmesi olarak yorumlanmıştır. Bu yorum doğrultusunda yapılan inkılaplar, geleneksel toplumsal yapıyı modern bir ulus-devlet yapısına dönüştürmeyi amaçlamıştır. Buna göre, 3 Mart 1924 tarihinde gerçekleştirilen inkılaplar bir bütün olarak değerlendirildiğinde, hangisinin bu geniş kapsamlı laiklik anlayışının *doğrudan bir yansıması* olduğu savunulamaz?",
+      "options": [
+        "A) Halifeliğin kaldırılması",
+        "B) Tevhid-i Tedrisat Kanunu'nun kabul edilmesi",
+        "C) Şer'iye ve Evkaf Vekâleti'nin kaldırılması",
+        "D) Erkan-ı Harbiye-i Umumiye Vekâleti'nin kaldırılması",
+        "E) Osmanlı hanedanı mensuplarının yurt dışına çıkarılması"
+      ],
+      "answer": 4,
+      "solution": "3 Mart 1924'te kabul edilen kanunların tamamı, ulus-devletin temellerini atmaya yönelik kritik adımlardır. Halifeliğin kaldırılması (siyasi-dini gücün ayrılması), Şer'iye ve Evkaf Vekaleti'nin kaldırılması (din ve vakıf işlerinin devlet yönetiminden ayrılması) ve Tevhid-i Tedrisat Kanunu (eğitimin birleştirilmesi ve laikleştirilmesi) doğrudan laiklik ilkesiyle ilgilidir. Osmanlı hanedanının yurt dışına çıkarılması da saltanat ve hilafet iddialarını ortadan kaldırarak laik cumhuriyet rejimini güvence altına alma amacına hizmet eder. Ancak Erkan-ı Harbiye-i Umumiye Vekaleti'nin kaldırılıp yerine Genelkurmay Başkanlığı'nın kurulması, doğrudan laiklikten ziyade \"ordunun siyasetten ayrılması\" ilkesini hayata geçirmeye yöneliktir. Bu, modern demokratik bir devletin temel unsurlarından biridir fakat laiklik ilkesinin değil, cumhuriyetçilik ve devletin modern yapılandırılması ilkesinin bir gereğidir.",
+      "topic": "Atatürkçülük ve Türk İnkılabı"
+    }
+  ]
+}
