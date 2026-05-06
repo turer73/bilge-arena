@@ -3,7 +3,16 @@ export interface BadgeDefinition {
   name: string
   description: string
   icon: string
-  conditionType: 'games_played' | 'correct_answers' | 'streak' | 'xp' | 'category_mastery' | 'daily_quest'
+  conditionType:
+    | 'games_played'
+    | 'correct_answers'
+    | 'streak'
+    | 'xp'
+    | 'category_mastery'
+    | 'daily_quest'
+    | 'multiplayer_wins'
+    | 'rooms_completed'
+    | 'multiplayer_firsts'
   conditionValue: number
   xpReward: number
   rarity: 'common' | 'rare' | 'epic' | 'legendary'
@@ -33,6 +42,12 @@ export const BADGES: BadgeDefinition[] = [
 
   // Gunluk gorev
   { code: 'daily_first', name: 'Görevci', description: 'İlk günlük görevi tamamla', icon: '📋', conditionType: 'daily_quest', conditionValue: 1, xpReward: 50, rarity: 'common' },
+
+  // Multiplayer (Faz 3)
+  { code: 'mp_first_room', name: 'Arena Çırağı', description: 'İlk odan tamamlandı', icon: '⚔️', conditionType: 'rooms_completed', conditionValue: 1, xpReward: 50, rarity: 'common' },
+  { code: 'mp_ten_rooms', name: 'Arena Savaşçısı', description: '10 oda tamamla', icon: '🛡️', conditionType: 'rooms_completed', conditionValue: 10, xpReward: 200, rarity: 'rare' },
+  { code: 'mp_first_win', name: 'İlk Galibiyet', description: 'Bir multiplayer odada birinci ol', icon: '🥇', conditionType: 'multiplayer_firsts', conditionValue: 1, xpReward: 150, rarity: 'common' },
+  { code: 'mp_five_firsts', name: 'Şampiyon', description: '5 multiplayer odada birinci ol', icon: '🏆', conditionType: 'multiplayer_firsts', conditionValue: 5, xpReward: 500, rarity: 'epic' },
 ]
 
 export const RARITY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -42,19 +57,31 @@ export const RARITY_COLORS: Record<string, { bg: string; border: string; text: s
   legendary: { bg: 'var(--reward-bg)', border: 'var(--reward-border)', text: 'var(--reward)' },
 }
 
+export interface BadgeStats {
+  gamesPlayed: number
+  correctAnswers: number
+  bestStreak: number
+  totalXP: number
+  dailyQuestsCompleted: number
+  // Faz 3 multiplayer (opsiyonel - eski caller'lar 0 default'la)
+  multiplayerWins?: number
+  roomsCompleted?: number
+  multiplayerFirsts?: number
+}
+
 /**
  * Kullanici profilini rozet kosullarina karsi kontrol et
  */
-export function checkBadgeEarned(
-  badge: BadgeDefinition,
-  stats: { gamesPlayed: number; correctAnswers: number; bestStreak: number; totalXP: number; dailyQuestsCompleted: number }
-): boolean {
+export function checkBadgeEarned(badge: BadgeDefinition, stats: BadgeStats): boolean {
   switch (badge.conditionType) {
     case 'games_played': return stats.gamesPlayed >= badge.conditionValue
     case 'correct_answers': return stats.correctAnswers >= badge.conditionValue
     case 'streak': return stats.bestStreak >= badge.conditionValue
     case 'xp': return stats.totalXP >= badge.conditionValue
     case 'daily_quest': return stats.dailyQuestsCompleted >= badge.conditionValue
+    case 'multiplayer_wins': return (stats.multiplayerWins ?? 0) >= badge.conditionValue
+    case 'rooms_completed': return (stats.roomsCompleted ?? 0) >= badge.conditionValue
+    case 'multiplayer_firsts': return (stats.multiplayerFirsts ?? 0) >= badge.conditionValue
     default: return false
   }
 }
