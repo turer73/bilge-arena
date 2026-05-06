@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T19:30:43.608Z",
+  "game": "wordquest",
+  "category": "grammar",
+  "difficulty": 4,
+  "level_tag": "C2",
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "____ the timely intervention of the seasoned diplomat, the peace talks would have collapsed, plunging the region into further turmoil.",
+      "options": [
+        "Had it not been for",
+        "If it were not for",
+        "Should it not be for",
+        "Were it not for",
+        "Unless there had been"
+      ],
+      "answer": 0,
+      "solution": "Bu cümle, geçmişte gerçekleşmemiş bir durumu ifade eden 'üçüncü tip koşul cümlesi' (Third Conditional) yapısının devrik (inverted) halidir. 'If it had not been for' yapısının devrik hali 'Had it not been for' şeklindedir ve 'eğer ... olmasaydı' anlamına gelir. Ana cümledeki 'would have collapsed' bu yapıyı gerektirir.",
+      "topic": "Conditionals"
+    },
+    {
+      "question": "The intricate tapestry, rumored ____ by a blind artisan centuries ago, is now considered a priceless national treasure.",
+      "options": [
+        "to be woven",
+        "to have been woven",
+        "having been woven",
+        "being woven",
+        "to have woven"
+      ],
+      "answer": 1,
+      "solution": "Cümlede, dokuma eyleminin (weave) ana fiilden (is rumored) daha önce gerçekleştiği ('centuries ago' - yüzyıllar önce) belirtilmektedir. Bu durumda, geçmişte tamamlanmış bir eylemi belirtmek için 'perfect infinitive' (to have + V3) yapısı kullanılır. Ayrıca, halı kendi kendine dokunmadığı için edilgen (passive) çatı gereklidir. Bu nedenle doğru yapı 'to have been woven' (dokunmuş olduğu) şeklindedir.",
+      "topic": "Passive Voice"
+    },
+    {
+      "question": "The philosophical conundrum, the intricacies of ____ the speaker elaborated at great length, left the audience pondering for days.",
+      "options": [
+        "which",
+        "that",
+        "whose",
+        "upon which",
+        "what"
+      ],
+      "answer": 3,
+      "solution": "Bu cümlede 'elaborate' fiili 'on' veya 'upon' edatıyla kullanılır ('bir konu üzerinde detaylı durmak'). Cansız bir varlık olan 'conundrum' (muamma) için kullanılan ilgi zamiri 'which'dir. Resmi ve ileri düzey İngilizcede, bu edat ilgi zamirinin önüne getirilir. Bu nedenle doğru yapı 'upon which' şeklindedir.",
+      "topic": "Relative Clauses"
+    },
+    {
+      "question": "Given the sheer amount of evidence against him, the defendant ____ acquitted, but the jury's surprising verdict was a testament to his lawyer's persuasive genius.",
+      "options": [
+        "can't have been",
+        "mustn't have been",
+        "might not have been",
+        "shouldn't have been",
+        "couldn't have been"
+      ],
+      "answer": 4,
+      "solution": "Bu cümlede, geçmişteki bir olay hakkında güçlü bir mantıksal çıkarım veya imkansızlık ifade edilmektedir. 'Sheer amount of evidence' (delillerin çokluğu) göz önüne alındığında, sanığın beraat etmesinin mantıken 'imkansız olduğu' sonucu çıkarılır. Geçmişteki bu tür güçlü olumsuz çıkarımlar için 'couldn't have + V3' yapısı kullanılır ve '...olmuş olamaz' anlamına gelir.",
+      "topic": "Modals"
+    },
+    {
+      "question": "By the time the new regulations are fully implemented next year, our research team ____ the long-term effects of the policy for over five years, providing invaluable data.",
+      "options": [
+        "will be investigating",
+        "will have investigated",
+        "will have been investigating",
+        "is going to investigate",
+        "investigates"
+      ],
+      "answer": 2,
+      "solution": "Cümlede, gelecekteki belirli bir zamana ('By the time the new regulations are fully implemented') kadar devam etmiş olacak bir eylemin süresi ('for over five years') vurgulanmaktadır. Gelecekte bir noktaya kadar devam edecek olan bir eylemin süresini belirtmek için 'Future Perfect Continuous' (will have been + V-ing) zaman yapısı kullanılır.",
+      "topic": "Tenses"
+    }
+  ]
+}

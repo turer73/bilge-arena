@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T19:30:18.513Z",
+  "game": "wordquest",
+  "category": "grammar",
+  "difficulty": 3,
+  "level_tag": "C2",
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Had it not been for the timely intervention of the seasoned diplomat, the peace talks ---- collapsed, plunging the region into further chaos.",
+      "options": [
+        "would have inevitably",
+        "will have inevitably",
+        "would inevitably",
+        "had inevitably",
+        "were inevitably to have"
+      ],
+      "answer": 0,
+      "solution": "Bu, 'Type 3 Conditional' yapısının devrik (inverted) halidir. 'Had it not been for...' (Eğer ... olmasaydı) ifadesi, geçmişteki varsayımsal bir durumu anlatır. Ana cümlede bu duruma bağlı olarak geçmişte gerçekleşmiş olacak sonuç 'would have + V3' ile ifade edilir.",
+      "topic": "Conditionals"
+    },
+    {
+      "question": "The ancient manuscript, previously ---- lost to the annals of history, ---- by a team of intrepid archaeologists in a secluded monastery.",
+      "options": [
+        "thought to have been / was serendipitously unearthed",
+        "having been thought to be / serendipitously unearthed",
+        "thinking it was / has been serendipitously unearthed",
+        "to be thought of as / was being serendipitously unearthed",
+        "being thought to have been / had serendipitously unearthed"
+      ],
+      "answer": 0,
+      "solution": "İlk boşluk için, geçmişte kaybolduğu düşünülen bir durumu ifade etmek üzere 'thought to have been' pasif yapısı kullanılır. İkinci boşluk için, belirli bir geçmiş zamanda gerçekleşen bir keşif eylemi 'Simple Past Passive' (was unearthed) ile anlatılır.",
+      "topic": "Passive Voice"
+    },
+    {
+      "question": "Given the complete lack of forensic evidence and no signs of forced entry, the detective concluded that the perpetrator ---- the victim personally and ---- let in voluntarily.",
+      "options": [
+        "must have known / must have been",
+        "might have known / should have been",
+        "can't have known / might have been",
+        "should have known / would have been",
+        "would have known / could have been"
+      ],
+      "answer": 0,
+      "solution": "Cümledeki kanıtlar, dedektifin geçmişe yönelik güçlü bir çıkarım yaptığını gösterir. Bu durum için 'must have + V3' yapısı kullanılır. İlk boşluk 'failin kurbanı tanımış olması gerektiği', ikinci boşluk ise 'gönüllü olarak içeri alınmış olması gerektiği' anlamını bu yapı ile verir.",
+      "topic": "Modals"
+    },
+    {
+      "question": "The complex legal framework, ---- the company had to operate for decades, was finally overhauled to encourage foreign investment.",
+      "options": [
+        "within which",
+        "which",
+        "that",
+        "whereby",
+        "of what"
+      ],
+      "answer": 0,
+      "solution": "Cümlenin orijinal hali 'the company had to operate within the complex legal framework' şeklindedir. 'framework' kelimesini niteleyen bir sıfat cümlesi (relative clause) oluştururken, 'within' edatı 'which' zamirinin önüne gelir. Bu yapı, 'where' kullanımına benzer ancak daha formel ve spesifiktir.",
+      "topic": "Relative Clauses"
+    },
+    {
+      "question": "It is abundantly clear from the disarray in the laboratory and the exhausted look on the researchers' faces that they ---- to synthesise the elusive compound all night.",
+      "options": [
+        "have been struggling",
+        "had struggled",
+        "were struggling",
+        "have struggled",
+        "would be struggling"
+      ],
+      "answer": 0,
+      "solution": "Cümledeki mevcut kanıtlar (laboratuvardaki dağınıklık), eylemin sonucunun şu anı etkilediğini gösterir. Eylemin bütün gece boyunca devam eden bir süreç olduğunu vurgulamak için 'Present Perfect Continuous' (have been + V-ing) yapısı kullanılır.",
+      "topic": "Tenses"
+    }
+  ]
+}
