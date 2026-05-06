@@ -1,0 +1,77 @@
+{
+  "takenAt": "2026-05-06T18:11:39.138Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 3,
+  "prompt_version": "tdk-rehberli-v2",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde kesme işaretinin kullanımı yanlıştır?",
+      "options": [
+        "A) Ankara'ya yarın gideceğiz.",
+        "B) TBMM'nin açılış törenine katıldı.",
+        "C) Türk'çenin zenginliği tartışılmazdır.",
+        "D) Atatürk'ün ilkeleri yol göstericidir.",
+        "E) 1990'lı yıllar çok farklıydı."
+      ],
+      "answer": 2,
+      "solution": "Yapım ekleri özel isimlere gelse bile kesme işaretiyle ayrılmaz. 'Türk' sözcüğüne gelen '-çe' eki bir yapım eki olduğundan 'Türkçenin' şeklinde bitişik yazılmalıydı.",
+      "topic": "Kesme İşareti"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde \"da/de\" veya \"ki\" bağlacının yazımıyla ilgili bir yanlışlık yapılmıştır?",
+      "options": [
+        "A) O da benimle sinemaya gelecek.",
+        "B) Raftaki kitapları düzenledim.",
+        "C) Baktımki herkes gitmişti.",
+        "D) Yarınki toplantıya mutlaka katılmalısın.",
+        "E) Evde kimse yoktu, anahtarı kapının altında buldum."
+      ],
+      "answer": 2,
+      "solution": "'Ki' bağlacı her zaman ayrı yazılır. Bu nedenle 'Baktımki' yerine 'Baktım ki' şeklinde ayrı yazılması gerekmektedir.",
+      "topic": "Bağlaç Da/De/Ki vs Ek -da/-de/-ki"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde altı çizili kelime grubunun yazımı doğrudur?",
+      "options": [
+        "A) Bu konuda herkez aynı fikirdeydi.",
+        "B) Bana biraz daha zaman verin.",
+        "C) Hiç bir şey beni bu kadar mutlu edemez.",
+        "D) Bir kaç öğrenci sınavda başarısız oldu.",
+        "E) O, herşeyin en iyisini isterdi."
+      ],
+      "answer": 1,
+      "solution": "'Biraz' kelimesi belirsizlik ifade eden birleşik bir kelime olup bitişik yazılır, bu nedenle kullanımı doğrudur. 'Herkes', 'hiçbir', 'birkaç' ve 'her şey' kelimelerinin yazımları ise yanlıştır.",
+      "topic": "Bitişik/Ayrı Yazım"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde ikilemelerin yazımıyla ilgili bir yanlışlık yapılmıştır?",
+      "options": [
+        "A) Masmavi denizler her zaman beni büyülemiştir.",
+        "B) Çocuklar neşe içinde koşa koşa bahçeye çıktı.",
+        "C) Yavaşyavaş ilerleyen trafik herkesi çileden çıkardı.",
+        "D) Simsiyah saçları rüzgarda dalgalanıyordu.",
+        "E) Eksik eksik konuşarak kimseye derdini anlatamadı."
+      ],
+      "answer": 2,
+      "solution": "Tekrar ikilemeleri her zaman ayrı yazılır. Bu nedenle 'yavaşyavaş' yerine 'yavaş yavaş' şeklinde ayrı yazılması gerekmektedir. 'Masmavi' ve 'simsiyah' pekiştirme olduğu için bitişik yazılır.",
+      "topic": "İkilemeler"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde sayıların yazımıyla ilgili bir yanlışlık yapılmıştır?",
+      "options": [
+        "A) Toplantı 15.30'da başlayacak.",
+        "B) Bu proje 2023-2024 eğitim öğretim yılında tamamlandı.",
+        "C) Mağazadan 150000 TL'ye yeni bir araba aldı.",
+        "D) Yarışmada 3'üncü oldu ve bronz madalya kazandı.",
+        "E) Sınav 09.00'da sona erecek."
+      ],
+      "answer": 2,
+      "solution": "Para miktarları yazılırken binlik gruplar arasına nokta konulmalı veya 'bin' kelimesi kullanılmalıdır. '150000 TL' yerine '150.000 TL' veya '150 bin TL' şeklinde yazılması gerekmektedir.",
+      "topic": "Sayı Yazımı"
+    }
+  ]
+}
