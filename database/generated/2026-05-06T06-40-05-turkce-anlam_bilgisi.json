@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T06:40:05.110Z",
+  "game": "turkce",
+  "category": "anlam_bilgisi",
+  "difficulty": 3,
+  "level_tag": null,
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde 'kırık' sözcüğü temel anlamıyla kullanılmıştır?",
+      "options": [
+        "Kırık kanatlarıyla uçmaya çalışıyordu.",
+        "Kırık bir kalple yaşamak zordur.",
+        "Kırık dökük eşyaları bir kenara attı.",
+        "Kırık bir umutla bekliyordu.",
+        "Kırık bir sesle şarkı söyledi."
+      ],
+      "answer": 0,
+      "solution": "'Kırık kanatları' ifadesinde kanadın fiziksel olarak parçalanmış olması temel anlamıdır. Diğer seçeneklerde mecaz anlamlar söz konusudur.",
+      "topic": "Söz Yorumu"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde karşılaştırma anlamı vardır?",
+      "options": [
+        "Bugün hava dünden daha sıcak.",
+        "Kitabı okuyup bitirdim.",
+        "Yarın sinemaya gideceğiz.",
+        "Toplantı birazdan başlayacak.",
+        "Çok yorgun görünüyorsun."
+      ],
+      "answer": 0,
+      "solution": "'Bugün hava dünden daha sıcak.' cümlesinde bugünkü hava ile dünkü hava arasında bir sıcaklık karşılaştırması yapılmaktadır.",
+      "topic": "Cümle Anlamı"
+    },
+    {
+      "question": "'Damlaya damlaya göl olur.' atasözünün anlamı aşağıdakilerden hangisidir?",
+      "options": [
+        "Su tasarrufu yapmalıyız.",
+        "Küçük meblağlar birikerek büyük bir servet oluşturur.",
+        "Göl kenarında yaşamak güzeldir.",
+        "Su kaynaklarını korumalıyız.",
+        "Her şeyin bir başlangıcı vardır."
+      ],
+      "answer": 1,
+      "solution": "Bu atasözü, az az biriken paranın veya malın zamanla büyük bir servete dönüşebileceğini ifade eder.",
+      "topic": "Anlam İlişkileri"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde bir varsayım söz konusudur?",
+      "options": [
+        "Odanın kapısını yavaşça açtı.",
+        "Akşam bize gelirsen, birlikte film izleriz.",
+        "Bütün gün sokakta oynadı, muhtemelen yorgundur.",
+        "Yarın sabah erken kalkmalısın.",
+        "Bu işi bitirmek için çok uğraştı."
+      ],
+      "answer": 2,
+      "solution": "'Bütün gün sokakta oynadı, muhtemelen yorgundur.' cümlesinde, kişinin yorgun olup olmadığına dair bir tahmin veya varsayımda bulunulmaktadır.",
+      "topic": "Cümle Anlamı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde 'keskin' sözcüğü terim anlamıyla kullanılmıştır?",
+      "options": [
+        "Keskin bir koku genzimi yaktı.",
+        "Keskin bir zekaya sahipti.",
+        "Keskin bıçak her işi kolaylaştırır.",
+        "Keskin bir virajı dönerken dikkatli olmalısın.",
+        "Keskin bir ses duyuldu."
+      ],
+      "answer": 2,
+      "solution": "'Keskin bıçak' ifadesinde 'keskin', bir aletin kesme yeteneğiyle ilgili özel bir anlamda, yani terim anlamıyla kullanılmıştır. Diğer seçeneklerde mecaz anlamlar bulunmaktadır.",
+      "topic": "Söz Yorumu"
+    }
+  ]
+}

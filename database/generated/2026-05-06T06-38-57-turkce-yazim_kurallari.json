@@ -1,0 +1,26 @@
+{
+  "takenAt": "2026-05-06T06:38:57.876Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 2,
+  "level_tag": null,
+  "count": 1,
+  "duplicate_count": 4,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde altı çizili kelimenin yazımı yanlıştır?",
+      "options": [
+        "Bu sene sınava çok iyi hazırlandı.",
+        "Her şey yolunda gidiyor.",
+        "Her zaman iyimser olmalısın.",
+        "Bana bir şiir okur musun?",
+        "Birkaç gün sonra görüşürüz."
+      ],
+      "answer": 1,
+      "solution": "'Her şey' kelimesi ayrı yazılır. Bu nedenle 'herşey' şeklinde bitişik yazılması yazım yanlışıdır.",
+      "topic": "Yazım Kuralları"
+    }
+  ]
+}

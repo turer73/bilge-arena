@@ -1,0 +1,65 @@
+{
+  "takenAt": "2026-05-06T06:39:43.052Z",
+  "game": "turkce",
+  "category": "anlam_bilgisi",
+  "difficulty": 2,
+  "level_tag": null,
+  "count": 4,
+  "duplicate_count": 1,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde 'ince' sözcüğü temel anlamıyla kullanılmıştır?",
+      "options": [
+        "İnce bir hastalık geçirdi.",
+        "İnce bir ses duyuldu.",
+        "İnce bir kumaş aldı.",
+        "İnce hesaplar yapıyordu.",
+        "İnce hastalığa yakalanmış."
+      ],
+      "answer": 2,
+      "solution": "'İnce bir kumaş aldı.' cümlesinde 'ince' sözcüğü, bir nesnenin kalınlığının az olması anlamında, yani temel anlamıyla kullanılmıştır. Diğer seçeneklerde mecaz anlamlar söz konusudur.",
+      "topic": "Söz Yorumu"
+    },
+    {
+      "question": "'Bugünlerde aklı başında biri gibi davranmıyor.' cümlesindeki altı çizili söz grubunun cümleye kattığı anlam aşağıdakilerden hangisidir?",
+      "options": [
+        "Mantıksız",
+        "Dengesiz",
+        "Akıllı",
+        "Kaygılı",
+        "Kavgacı"
+      ],
+      "answer": 1,
+      "solution": "'Aklı başında olmak' deyimi, dengeli, mantıklı ve olgun davranmak anlamına gelir. Cümlede bu deyimin olumsuzu kullanılarak kişinin dengesiz davrandığı anlatılmak istenmiştir.",
+      "topic": "Söz Yorumu"
+    },
+    {
+      "question": "'Zaman her şeyin ilacıdır.' atasözüyle anlatılmak istenen aşağıdakilerden hangisidir?",
+      "options": [
+        "Zamanın kıymetini bilmek gerekir.",
+        "En zor durumlar bile zamanla düzelir.",
+        "Zamanı iyi kullanmak gerekir.",
+        "Her iş zamanında yapılmalıdır.",
+        "Geçmişi unutmak zordur."
+      ],
+      "answer": 1,
+      "solution": "Bu atasözü, yaşanan üzücü veya zor olayların zamanla etkisinin azalacağını, acıların dineceğini ve durumun düzeleceğini ifade eder.",
+      "topic": "Anlam İlişkileri"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde bir beklenti dile getirilmiştir?",
+      "options": [
+        "Bu film harika olmuş.",
+        "Yarın hava güneşli olacak.",
+        "Umarım bu yıl tatile gidebiliriz.",
+        "Kapı çalıyor, gelen kim acaba?",
+        "Çok yorgunum, hemen uyumak istiyorum."
+      ],
+      "answer": 2,
+      "solution": "'Umarım bu yıl tatile gidebiliriz.' cümlesinde, 'umarım' kelimesiyle geleceğe yönelik bir isteğin veya dileğin gerçekleşmesi beklentisi ifade edilmiştir.",
+      "topic": "Cümle Anlamı"
+    }
+  ]
+}

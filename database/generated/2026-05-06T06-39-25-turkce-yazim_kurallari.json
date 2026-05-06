@@ -1,0 +1,39 @@
+{
+  "takenAt": "2026-05-06T06:39:25.425Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 4,
+  "level_tag": null,
+  "count": 2,
+  "duplicate_count": 3,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde ikileme doğru yazılmıştır?",
+      "options": [
+        "Çocuğun gözleri masmavi parlıyordu.",
+        "Evleri taştan taşa yapılmıştı.",
+        "Kırk yılda bir seni görür olduk.",
+        "Elindeki eşyaları güme güme taşıyordu.",
+        "Sabahtan akşama dek çalıştık."
+      ],
+      "answer": 0,
+      "solution": "'Masmavi' pekiştirme yoluyla oluşmuş bir ikilemedir ve bitişik yazılır.",
+      "topic": "Yazım Kuralları"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde sayıların yazımıyla ilgili bir yanlışlık yapılmıştır?",
+      "options": [
+        "Saat 14.30'da buluşacağız.",
+        "Sınavda 75 net yaptım.",
+        "Her yıl 23 Nisan'da Ulusal Egemenlik ve Çocuk Bayramı kutlanır.",
+        "Bu proje için 100.000 TL harcandı.",
+        "İkişerli gruplar halinde ilerleyelim."
+      ],
+      "answer": 3,
+      "solution": "Para miktarları yazıyla da belirtilebilir ancak bu şekilde kesme işaretiyle ayrılmaz. '100 bin TL' veya 'yüz bin TL' şeklinde yazılmalıdır.",
+      "topic": "Yazım Kuralları"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "takenAt": "2026-05-06T06:40:22.827Z",
+  "game": "wordquest",
+  "category": "vocabulary",
+  "difficulty": 1,
+  "level_tag": "A1",
+  "count": 4,
+  "duplicate_count": 1,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "The weather is very ---- today. It is sunny and warm.",
+      "options": [
+        "cold",
+        "hot",
+        "rainy",
+        "cloudy",
+        "windy"
+      ],
+      "answer": 1,
+      "solution": "weather kelimesi hava durumunu ifade eder. 'Sunny and warm' (güneşli ve sıcak) ifadesi 'hot' (sıcak) kelimesiyle uyumludur.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "I need to ---- my friend's birthday next week. I will buy a gift.",
+      "options": [
+        "forget",
+        "celebrate",
+        "ignore",
+        "avoid",
+        "hate"
+      ],
+      "answer": 1,
+      "solution": "Arkadaşın doğum gününü kutlamak için hediye alacağımızdan, 'celebrate' (kutlamak) kelimesi en uygun seçenektir. Diğer seçenekler olumsuz anlamlar taşır.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "Please ---- the door when you leave the room.",
+      "options": [
+        "open",
+        "close",
+        "break",
+        "paint",
+        "throw"
+      ],
+      "answer": 1,
+      "solution": "Odadan çıkarken kapıyı kapatmak gerekir. Bu nedenle 'close' (kapatmak) kelimesi doğru seçenektir.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "A: Do you like apples?\nB: Yes, I ---- them very much.",
+      "options": [
+        "eat",
+        "see",
+        "hear",
+        "smell",
+        "play"
+      ],
+      "answer": 0,
+      "solution": "Elmaları sevdiğimizi belirttiğimiz için, elmalarla yapılan eylem 'eat' (yemek) olmalıdır.",
+      "topic": "Contextual Meaning"
+    }
+  ]
+}
