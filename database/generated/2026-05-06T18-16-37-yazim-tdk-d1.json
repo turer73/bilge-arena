@@ -1,0 +1,77 @@
+{
+  "takenAt": "2026-05-06T18:16:37.598Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 1,
+  "prompt_version": "tdk-rehberli-v2",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki kelimelerden hangisinde kesme işaretinin kullanımı doğrudur?",
+      "options": [
+        "Türkiye'nin",
+        "Ahmet'in kitabı nerde?",
+        "Bu yıl İzmir'e gideceğim.",
+        "Türk'çe dersini çok seviyorum.",
+        "O bir Antalya'lı."
+      ],
+      "answer": 0,
+      "solution": "Özel isimlere getirilen iyelik, durum ve bildirme ekleri kesme işaretiyle ayrılır. 'Türkiye'nin' yazımı bu kurala uygundur. Diğer seçeneklerdeki yapım ekleri ('-çe', '-li') veya eksik/yanlış kullanım hatalıdır.",
+      "topic": "Kesme İşareti Kullanımı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde 'de' bağlacı doğru yazılmıştır?",
+      "options": [
+        "Sen de bizimle gelmek ister misin?",
+        "Kitabım okulda kalmış.",
+        "Bende sana katılmıyorum.",
+        "Yarın ki sınav çok önemli.",
+        "Evde ki hesap çarşıya uymadı."
+      ],
+      "answer": 0,
+      "solution": "Bağlaç olan 'de' cümleden çıkarıldığında cümlenin anlamı bozulmaz ve her zaman ayrı yazılır. 'Sen bizimle gelmek ister misin?' cümlesi anlamlı olduğu için 'de' bağlaçtır ve ayrı yazımı doğrudur.",
+      "topic": "'de' Bağlacının Yazımı"
+    },
+    {
+      "question": "Aşağıdaki kelimelerden hangisinin yazımı doğrudur?",
+      "options": [
+        "herkes",
+        "herkez",
+        "herşey",
+        "birşey",
+        "hiç bir"
+      ],
+      "answer": 0,
+      "solution": "TDK'ye göre 'herkes' kelimesi 's' harfi ile biter ve her zaman bitişik yazılır. 'Her şey' ve 'bir şey' ayrı, 'hiçbir' ise bitişik yazılır.",
+      "topic": "Bitişik ve Ayrı Yazılan Kelimeler"
+    },
+    {
+      "question": "Aşağıdaki ikilemelerden hangisi doğru yazılmıştır?",
+      "options": [
+        "yavaş yavaş",
+        "yavaşyavaş",
+        "koşakoşa",
+        "elele",
+        "gide gide"
+      ],
+      "answer": 0,
+      "solution": "Tekrar yoluyla oluşturulan ikilemeler her zaman ayrı yazılır. 'yavaş yavaş' bu kurala uygun bir kullanımdır. Diğer seçenekler bitişik yazılarak hata yapılmıştır.",
+      "topic": "İkilemelerin Yazımı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde sayıların yazımıyla ilgili bir yanlışlık yoktur?",
+      "options": [
+        "Toplantı saat 14.30'da başlayacak.",
+        "Sınav 10:00'da yapılacakmış.",
+        "Bankadan 50.000'bin TL kredi çektim.",
+        "Okullar 1999-2000 eğitim yılında tatil edildi.",
+        "Yarışmada 3'üncü oldu."
+      ],
+      "answer": 0,
+      "solution": "TDK kurallarına göre saat ve dakika arasına nokta konur ve gelen ekler kesme işaretiyle ayrılır. '14.30'da' yazımı bu kurala uygundur. Diğer seçeneklerde iki nokta kullanımı veya eklerin yazımı hatalıdır.",
+      "topic": "Sayıların Yazımı"
+    }
+  ]
+}

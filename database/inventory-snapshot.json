@@ -1,6 +1,6 @@
 {
-  "takenAt": "2026-05-06T17:21:39.126Z",
-  "totalActive": 3896,
+  "takenAt": "2026-05-06T18:32:02.711Z",
+  "totalActive": 3916,
   "byGame": {
     "wordquest": {
       "total": 689,
@@ -48,19 +48,19 @@
       "byLevel": {}
     },
     "turkce": {
-      "total": 951,
+      "total": 971,
       "byCategory": {
-        "yazim_kurallari": 39,
+        "yazim_kurallari": 59,
         "paragraf": 320,
         "dil_bilgisi": 280,
         "anlam_bilgisi": 102,
         "sozcuk": 210
       },
       "byDifficulty": {
-        "1": 120,
-        "2": 271,
-        "3": 322,
-        "4": 153,
+        "1": 128,
+        "2": 275,
+        "3": 327,
+        "4": 156,
         "5": 85
       },
       "byLevel": {}
@@ -100,7 +100,7 @@
     }
   },
   "plays": {
-    "since": "2026-04-06T17:21:39.042Z",
+    "since": "2026-04-06T18:32:02.625Z",
     "totalSessions": 218,
     "byGame": {
       "sosyal": 78,

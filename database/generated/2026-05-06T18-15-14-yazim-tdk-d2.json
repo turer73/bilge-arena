@@ -1,0 +1,77 @@
+{
+  "takenAt": "2026-05-06T18:15:14.274Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 2,
+  "prompt_version": "tdk-rehberli-v2",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde kesme işareti (') kullanımı doğrudur?",
+      "options": [
+        "Bugün TBMM'nin açılış yıl dönümü.",
+        "Arkadaşım Antalyalı'dır.",
+        "Bu konuyu Türkçe'ye çevirebilir misin?",
+        "Akşam yemeği için Ahmet'lere gideceğiz.",
+        "TDK'li bir uzmandan yardım aldık."
+      ],
+      "answer": 0,
+      "solution": "Kısaltmalara getirilen çekim ekleri kesme işaretiyle ayrılır. 'TBMM'nin' kullanımı doğrudur. Yapım ekleri ('Antalyalı', 'Türkçe') kesme işaretiyle ayrılmaz.",
+      "topic": "Kesme İşareti Kullanımı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde 'de/da' bağlacının yazımı yanlıştır?",
+      "options": [
+        "Bu akşam sinemaya bende geleceğim.",
+        "Yarın okulda bir toplantı var.",
+        "O da bizimle aynı fikirde.",
+        "Kitabı okudum da pek beğenmedim.",
+        "Sokakta oynayan çocuklar neşeliydi."
+      ],
+      "answer": 0,
+      "solution": "Bağlaç olan 'de/da' ayrı yazılır. Cümleden çıkarıldığında anlam bozulmaz. 'Bende geleceğim' yerine 'Ben de geleceğim' yazılmalıdır. Diğer şıklardaki ek olan '-de/-da' doğru yazılmıştır.",
+      "topic": "Bağlaç Olan de/da'nın Yazımı"
+    },
+    {
+      "question": "Aşağıdaki birleşik kelimelerden hangisinin yazımı doğrudur?",
+      "options": [
+        "herhangi bir",
+        "herkez",
+        "bir çok",
+        "hiç bir",
+        "herşey"
+      ],
+      "answer": 0,
+      "solution": "'Herhangi bir' ifadesi bu şekilde ayrı yazılır. 'Herkes', 'birçok', 'hiçbir' bitişik; 'her şey' ise ayrı yazılması gereken kelimelerdir.",
+      "topic": "Bitişik ve Ayrı Yazılan Kelimeler"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde ikilemenin yazımı doğrudur?",
+      "options": [
+        "Merdivenleri yavaş yavaş çıktı.",
+        "Çocuklar elele tutuşup yürüdüler.",
+        "Bu işi ergeç bitireceğiz.",
+        "Odaya girince burunburuna geldik.",
+        "Artarda gelen haberler bizi üzdü."
+      ],
+      "answer": 0,
+      "solution": "Anlamı güçlendirmek için kullanılan ikilemeler ayrı yazılır. 'Yavaş yavaş' doğru bir kullanımdır. Diğer seçeneklerdeki ikilemeler de ('el ele', 'er geç', 'burun buruna', 'art arda') ayrı yazılmalıdır.",
+      "topic": "İkilemelerin Yazımı"
+    },
+    {
+      "question": "Sayıların yazımıyla ilgili aşağıdaki cümlelerin hangisinde yazım yanlışı yoktur?",
+      "options": [
+        "Toplantı saat 14.30'da başlayacak.",
+        "Okul 1998'de kurulmuş.",
+        "Sınav 10:00'da yapılacak.",
+        "Bana 100'er TL verdiler.",
+        "Yarışmada 3'üncü oldu."
+      ],
+      "answer": 1,
+      "solution": "Yıllara gelen çekim ekleri kesme işaretiyle ayrılır ve '1998'de' kullanımı doğrudur. Saatlerde nokta kullanılır ('10.00'da'), üleştirme sayıları rakamla değil yazıyla yazılır ('yüzer'), sıra sayı ekinde ise noktadan sonra tekrar 'inci' eki gelmez ('3'üncü' yerine '3.' veya 'üçüncü').",
+      "topic": "Sayıların Yazımı"
+    }
+  ]
+}
