@@ -10,6 +10,9 @@
  * basit siralama.
  */
 
+'use client'
+
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 import { cn } from '@/lib/utils/cn'
@@ -19,6 +22,30 @@ import { ReplayButton } from './ReplayButton'
 interface GameCompletedProps {
   state: RoomState
   userId: string
+}
+
+/**
+ * Faz 3 Multiplayer achievements: oda completed olunca stats grant +
+ * badge re-check. Idempotent (RPC backend tarafinda zaten room_id+user_id
+ * UNIQUE log ile cift sayim engelleniyor) ama burada local guard eklendi
+ * ki React Strict Mode double-effect aynı oda icin 2 fetch yapmasin.
+ */
+async function grantStatsAndCheckBadges(roomId: string, isFirstPlace: boolean) {
+  try {
+    const grantRes = await fetch('/api/multiplayer/grant-stats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, isFirstPlace }),
+    })
+    if (!grantRes.ok) {
+      // Sessiz fail — best-effort. Beta'da kullanici-gorunmez.
+      return
+    }
+    // Rozet check — yeni rozet varsa user_achievements'a ekler
+    await fetch('/api/badges', { method: 'POST' })
+  } catch {
+    // Network hatasi — best-effort, retry yok (idempotency log koruyor)
+  }
 }
 
 const MEDALS = ['🥇', '🥈', '🥉'] as const
@@ -49,6 +76,18 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
             response_ms_total: 0,
           }))
           .sort((a, b) => b.score - a.score)
+
+  // Faz 3: oda completed olunca stats grant + badge check (1 kez per oda)
+  // Codex P1 onlem: ref ile idempotent guard, double-mount riskine karsi
+  const grantedRef = useRef<string | null>(null)
+  const isFirstPlace = ranked.length > 0 && ranked[0].user_id === userId
+  useEffect(() => {
+    if (isArchived) return
+    if (room.state !== 'completed') return
+    if (grantedRef.current === room.id) return
+    grantedRef.current = room.id
+    void grantStatsAndCheckBadges(room.id, isFirstPlace)
+  }, [room.state, room.id, isArchived, isFirstPlace])
 
   return (
     <section
