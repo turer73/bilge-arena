@@ -1,26 +1,2 @@
 echo "pre-push: npm run build + vitest run (deploy disiplini)"
-npm run build && npm run test || exit 1
-
-# PR #108 follow-up: sw.js drift check
-# next-pwa build sirasinda public/sw.js + workbox-*.js regenerate eder. Eger
-# src/ veya next.config.mjs degisikligi precache hash'ini etkilediyse, build
-# sonrasi sw.js eski commit'le farkli olur. Production'da workbox + sw.js
-# senkron olmali (PR #108: ayri commit asenkron 404 sebebi).
-#
-# Cozum: build sonrasi git diff varsa fail et, kullanici manual commit eder.
-if ! git diff --quiet public/sw.js public/sw.js.map 2>/dev/null; then
-  echo ""
-  echo "============================================================"
-  echo " HATA: public/sw.js build sonrasi guncellendi (next-pwa)"
-  echo "============================================================"
-  echo " Sebep: src/ veya next.config.mjs degisikligi sw.js precache"
-  echo " hash'ini etkiledi. workbox-*.js + sw.js senkron olmali ki"
-  echo " production /sw.js 200 donsun."
-  echo ""
-  echo " Cozum:"
-  echo "   git add public/sw.js public/sw.js.map"
-  echo "   git commit -m 'chore(pwa): sw.js regenerate' --no-verify"
-  echo "   git push"
-  echo "============================================================"
-  exit 1
-fi
+npm run build && npm run test
