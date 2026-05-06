@@ -1,0 +1,25 @@
+{
+  "takenAt": "2026-05-06T19:27:07.903Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 2,
+  "prompt_version": "tdk-rehberli-v2",
+  "count": 1,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde yön adlarının yazımıyla ilgili bir yanlışlık yapılmıştır?",
+      "options": [
+        "Anadolu'nun batısı Ege Bölgesi'dir.",
+        "Rüzgâr kuzeyden oldukça sert esiyor.",
+        "Bu konuda Batı medeniyetinin etkisi büyüktür.",
+        "Evin pencereleri güneye bakıyor.",
+        "Yarın Doğu Karadeniz'de yağmur bekleniyor."
+      ],
+      "answer": 0,
+      "solution": "Yön bildiren sözcükler, bir yer adından sonra geldiğinde küçük harfle yazılır. 'Anadolu'nun batısı' şeklinde yazılması gerekirken 'Batısı' olarak yazılması yanlıştır.",
+      "topic": "Büyük Harflerin Kullanımı"
+    }
+  ]
+}

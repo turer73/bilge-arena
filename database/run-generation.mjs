@@ -68,7 +68,7 @@ if (level_tag !== null && !['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(level_t
 }
 
 // ── Sabitler — route.ts ile bire bir (audit aksaklik = tek kaynaktan duplicate) ──
-const GEMINI_MODEL = 'gemini-2.5-flash-lite'
+const GEMINI_MODEL = process.env.GEMINI_MODEL_OVERRIDE || 'gemini-2.5-flash-lite'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 const TOPIC_MAP = {
@@ -271,7 +271,8 @@ const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
     contents: [{ parts: [{ text: userPrompt }] }],
     generationConfig: {
       temperature: 0.8,
-      maxOutputTokens: 4096,
+      // pro thinking-mode 4096'yi tuketebilir, response icin 8192 buyut
+      maxOutputTokens: GEMINI_MODEL.includes('pro') ? 8192 : 4096,
       responseMimeType: 'application/json',
     },
   }),
@@ -417,7 +418,7 @@ const insertData = unique.map((q) => ({
     answer: q.answer,
     solution: q.solution,
   },
-  source: 'ai_generated',
+  source: process.env.GEMINI_MODEL_OVERRIDE?.includes('pro') ? 'ai_generated_v2' : 'ai_generated',
   is_active: false,
 }))
 

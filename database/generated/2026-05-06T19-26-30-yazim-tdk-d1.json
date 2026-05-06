@@ -1,0 +1,77 @@
+{
+  "takenAt": "2026-05-06T19:26:30.794Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 1,
+  "prompt_version": "tdk-rehberli-v2",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde gezegen adlarının yazımı doğrudur?",
+      "options": [
+        "Ay, Dünya'nın uydusudur.",
+        "Bugün dünya kadar işim var.",
+        "Güneş sistemindeki en büyük gezegen Jüpiter'dir.",
+        "Bu haber tüm Dünya'da duyuldu.",
+        "Sen benim güneşim, ayım gibisin."
+      ],
+      "answer": 0,
+      "solution": "Gezegen ve yıldız adları coğrafi bir terim olarak kullanıldığında büyük harfle başlar. 'Dünya' kelimesi bu cümlede gezegen adı olarak kullanıldığı için doğru yazılmıştır.",
+      "topic": "Büyük Harf Kullanımı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde tarihi dönem ve olay adlarının yazımı doğrudur?",
+      "options": [
+        "Bu eser, Tanzimat Dönemi'nde yazılmıştır.",
+        "Kurtuluş savaşı, tarihimizin önemli bir sayfasıdır.",
+        "Milli mücadele yıllarında büyük fedakârlıklar yapıldı.",
+        "Lale devri, Osmanlı'da bir barış dönemiydi.",
+        "İlk çağ uygarlıkları hakkında bir belgesel izledim."
+      ],
+      "answer": 0,
+      "solution": "Tarihi olay, çağ ve dönem adları büyük harfle başlar. 'Tanzimat Dönemi' ifadesi belirli bir tarihi dönemi belirttiği için doğru yazılmıştır.",
+      "topic": "Büyük Harf Kullanımı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde kurum ve kuruluş adlarının yazımı doğrudur?",
+      "options": [
+        "Türk Dil Kurumu, dilimiz üzerine çalışmalar yapar.",
+        "Bu okul, milli eğitim bakanlığına bağlıdır.",
+        "Karar, resmi gazete'de yayımlandı.",
+        "Yeşilay derneği'nin yeni bir kampanyası var.",
+        "Türkiye büyük millet meclisi Ankara'dadır."
+      ],
+      "answer": 0,
+      "solution": "Kurum, kuruluş, kurul ve iş yeri adlarına ait her kelime büyük harfle başlar. 'Türk Dil Kurumu' bu kurala uygun olarak doğru yazılmıştır.",
+      "topic": "Büyük Harf Kullanımı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde yer adlarının yazımı doğrudur?",
+      "options": [
+        "Ankara Kalesi'nden şehri izledik.",
+        "Toplantı Taksim meydanında yapılacak.",
+        "Evimiz Cumhuriyet caddesi üzerindedir.",
+        "Ağrı dağı'nın zirvesi karla kaplıydı.",
+        "Boğaziçi köprüsü'nde trafik vardı."
+      ],
+      "answer": 0,
+      "solution": "Yer adlarında (kıta, bölge, il, ilçe, köy, semt vb.) ilk isimden sonra gelen ve tür bildiren ikinci isimler (deniz, nehir, göl, dağ, boğaz, kale vb.) büyük harfle başlar.",
+      "topic": "Büyük Harf Kullanımı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde kişi adlarıyla kullanılan unvanların yazımı doğrudur?",
+      "options": [
+        "Yüzbaşı Ali, göreve yeni başladı.",
+        "Bugün doktor ayşe hanım izinliymiş.",
+        "Komşumuz Avukat can bey ile konuştuk.",
+        "Zeynep öğretmen bize masal anlattı.",
+        "Toplantıya mühendis Hasan Bey de katıldı."
+      ],
+      "answer": 0,
+      "solution": "Kişi adlarından önce ve sonra gelen unvanlar, saygı sözleri, rütbe adları ve lakaplar büyük harfle başlar. 'Yüzbaşı Ali' kullanımı bu kurala uygundur.",
+      "topic": "Büyük Harf Kullanımı"
+    }
+  ]
+}
