@@ -1,107 +1,107 @@
 {
-  "takenAt": "2026-05-06T19:33:04.315Z",
-  "totalActive": 3962,
+  "takenAt": "2026-05-06T20:19:40.599Z",
+  "totalActive": 1507,
   "byGame": {
     "wordquest": {
-      "total": 719,
+      "total": 91,
       "byCategory": {
-        "grammar": 115,
-        "vocabulary": 349,
-        "sentence_completion": 81,
-        "phrasal_verbs": 69,
-        "restatement": 35,
-        "dialogue": 35,
-        "cloze_test": 35
+        "grammar": 26,
+        "vocabulary": 55,
+        "sentence_completion": 6,
+        "phrasal_verbs": 1,
+        "restatement": 1,
+        "cloze_test": 1,
+        "dialogue": 1
       },
       "byDifficulty": {
         "1": 26,
-        "2": 397,
-        "3": 251,
-        "4": 45,
+        "2": 35,
+        "3": 19,
+        "4": 11,
         "5": 0
       },
       "byLevel": {
         "C2": 30,
         "A1": 24,
         "A2": 25,
-        "B2": 369,
-        "B1": 85,
-        "C1": 186
+        "B2": 9,
+        "C1": 2,
+        "B1": 1
       }
     },
     "matematik": {
-      "total": 966,
+      "total": 388,
       "byCategory": {
-        "sayilar": 162,
-        "olasilik": 80,
-        "problemler": 281,
-        "geometri": 283,
-        "denklemler": 80,
-        "fonksiyonlar": 80
+        "sayilar": 62,
+        "olasilik": 40,
+        "problemler": 103,
+        "geometri": 103,
+        "denklemler": 40,
+        "fonksiyonlar": 40
       },
       "byDifficulty": {
-        "1": 76,
-        "2": 309,
-        "3": 429,
-        "4": 94,
-        "5": 58
+        "1": 38,
+        "2": 117,
+        "3": 157,
+        "4": 47,
+        "5": 29
       },
       "byLevel": {}
     },
     "turkce": {
-      "total": 987,
+      "total": 427,
       "byCategory": {
-        "yazim_kurallari": 75,
-        "paragraf": 320,
-        "dil_bilgisi": 280,
-        "anlam_bilgisi": 102,
-        "sozcuk": 210
+        "yazim_kurallari": 55,
+        "paragraf": 120,
+        "dil_bilgisi": 105,
+        "sozcuk": 80,
+        "anlam_bilgisi": 67
       },
       "byDifficulty": {
-        "1": 137,
-        "2": 278,
-        "3": 331,
-        "4": 156,
-        "5": 85
+        "1": 65,
+        "2": 117,
+        "3": 137,
+        "4": 70,
+        "5": 38
       },
       "byLevel": {}
     },
     "fen": {
-      "total": 608,
+      "total": 258,
       "byCategory": {
-        "kimya": 202,
-        "biyoloji": 199,
-        "fizik": 207
+        "kimya": 86,
+        "biyoloji": 83,
+        "fizik": 89
       },
       "byDifficulty": {
-        "1": 48,
-        "2": 274,
-        "3": 170,
-        "4": 70,
-        "5": 46
+        "1": 24,
+        "2": 104,
+        "3": 72,
+        "4": 35,
+        "5": 23
       },
       "byLevel": {}
     },
     "sosyal": {
-      "total": 682,
+      "total": 343,
       "byCategory": {
-        "tarih": 202,
+        "tarih": 84,
         "sosyoloji": 91,
-        "cografya": 201,
-        "felsefe": 188
+        "cografya": 83,
+        "felsefe": 85
       },
       "byDifficulty": {
-        "1": 100,
-        "2": 233,
-        "3": 187,
-        "4": 106,
-        "5": 56
+        "1": 44,
+        "2": 110,
+        "3": 100,
+        "4": 61,
+        "5": 28
       },
       "byLevel": {}
     }
   },
   "plays": {
-    "since": "2026-04-06T19:33:04.190Z",
+    "since": "2026-04-06T20:19:40.509Z",
     "totalSessions": 218,
     "byGame": {
       "sosyal": 78,
