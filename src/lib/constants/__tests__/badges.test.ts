@@ -11,8 +11,8 @@ const emptyStats = {
 }
 
 describe('BADGES constant', () => {
-  it('14 rozet tanimli olmali', () => {
-    expect(BADGES).toHaveLength(14)
+  it('18 rozet tanimli olmali (Faz 3 multiplayer +4)', () => {
+    expect(BADGES).toHaveLength(18)
   })
 
   it('her rozetin benzersiz kodu olmali', () => {
@@ -110,5 +110,39 @@ describe('checkBadgeEarned', () => {
     for (const badge of legendaries) {
       expect(badge.conditionValue).toBeGreaterThanOrEqual(1000)
     }
+  })
+
+  // Faz 3: Multiplayer rozet testleri
+  describe('Multiplayer (Faz 3)', () => {
+    it('mp_first_room: ilk oda tamamlaninca kazanilmali', () => {
+      const badge = BADGES.find((b) => b.code === 'mp_first_room')!
+      expect(badge).toBeDefined()
+      expect(checkBadgeEarned(badge, { ...emptyStats, roomsCompleted: 0 })).toBe(false)
+      expect(checkBadgeEarned(badge, { ...emptyStats, roomsCompleted: 1 })).toBe(true)
+    })
+
+    it('mp_ten_rooms: 10 oda tamamlaninca kazanilmali', () => {
+      const badge = BADGES.find((b) => b.code === 'mp_ten_rooms')!
+      expect(checkBadgeEarned(badge, { ...emptyStats, roomsCompleted: 9 })).toBe(false)
+      expect(checkBadgeEarned(badge, { ...emptyStats, roomsCompleted: 10 })).toBe(true)
+    })
+
+    it('mp_first_win: ilk birincilikte kazanilmali', () => {
+      const badge = BADGES.find((b) => b.code === 'mp_first_win')!
+      expect(checkBadgeEarned(badge, { ...emptyStats, multiplayerFirsts: 0 })).toBe(false)
+      expect(checkBadgeEarned(badge, { ...emptyStats, multiplayerFirsts: 1 })).toBe(true)
+    })
+
+    it('mp_five_firsts: 5 birincilikte kazanilmali', () => {
+      const badge = BADGES.find((b) => b.code === 'mp_five_firsts')!
+      expect(checkBadgeEarned(badge, { ...emptyStats, multiplayerFirsts: 4 })).toBe(false)
+      expect(checkBadgeEarned(badge, { ...emptyStats, multiplayerFirsts: 5 })).toBe(true)
+    })
+
+    it('multiplayer rozetleri stats opsiyonel field eksikse 0 saymali', () => {
+      const badge = BADGES.find((b) => b.code === 'mp_first_room')!
+      // multiplayerFirsts/Wins/roomsCompleted hic verilmeden
+      expect(checkBadgeEarned(badge, emptyStats)).toBe(false)
+    })
   })
 })
