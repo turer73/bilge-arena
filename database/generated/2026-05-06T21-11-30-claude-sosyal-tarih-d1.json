@@ -1,0 +1,105 @@
+{
+  "takenAt": "2026-05-06T21:11:30.233Z",
+  "game": "sosyal",
+  "category": "tarih",
+  "difficulty": 1,
+  "topic": null,
+  "prompt_version": "yks-claude-v4",
+  "model": "claude-sonnet-4-6",
+  "count": 7,
+  "valid_count": 10,
+  "raw_count": 10,
+  "questions": [
+    {
+      "question": "Osmanlı Devleti'nde ilk anayasa hangi yıl ilan edilmiştir?",
+      "options": [
+        "1839",
+        "1856",
+        "1876",
+        "1908",
+        "1920"
+      ],
+      "answer": 2,
+      "solution": "Osmanlı Devleti'nin ilk anayasası olan Kanun-i Esasi, 1876 yılında Sultan II. Abdülhamit döneminde ilan edilmiştir. 1839 Tanzimat Fermanı ve 1856 Islahat Fermanı birer ferman olup anayasa niteliği taşımaz. 1908 ise II. Meşrutiyet'in ilan yılıdır.",
+      "topic": "Osmanlı Devleti – Anayasal Gelişmeler"
+    },
+    {
+      "question": "Kurtuluş Savaşı sırasında Türkiye Büyük Millet Meclisi hangi şehirde açılmıştır?",
+      "options": [
+        "İstanbul",
+        "Sivas",
+        "Erzurum",
+        "Ankara",
+        "Bursa"
+      ],
+      "answer": 3,
+      "solution": "TBMM, 23 Nisan 1920'de Ankara'da açılmıştır. İstanbul işgal altında olduğundan millî hareketin merkezi Ankara seçilmiştir. Erzurum ve Sivas ise kongrelerin toplandığı şehirlerdir.",
+      "topic": "Kurtuluş Savaşı – TBMM"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi Atatürk'ün gerçekleştirdiği inkılaplar arasında yer almaz?",
+      "options": [
+        "Harf İnkılabı",
+        "Takvim değişikliği",
+        "Medreselerin açılması",
+        "Tekke ve zaviyelerin kapatılması",
+        "Şapka İnkılabı"
+      ],
+      "answer": 2,
+      "solution": "Medreselerin açılması Atatürk inkılaplarından değil; aksine medreseler kapatılarak eğitim Tevhid-i Tedrisat Kanunu ile tek çatı altında birleştirilmiştir. Harf İnkılabı, takvim değişikliği, tekke ve zaviyelerin kapatılması ile Şapka İnkılabı Atatürk döneminde gerçekleştirilen reformlardır.",
+      "topic": "Atatürk İnkılapları"
+    },
+    {
+      "question": "Osmanlı Devleti'nin Birinci Dünya Savaşı'na girdiği ittifak bloğu hangisidir?",
+      "options": [
+        "İtilaf Devletleri",
+        "Üçlü İtilaf",
+        "Bağlantısızlar",
+        "İttifak Devletleri",
+        "Müttefik Kuvvetler"
+      ],
+      "answer": 3,
+      "solution": "Osmanlı Devleti, Birinci Dünya Savaşı'nda Almanya ve Avusturya-Macaristan'ın yer aldığı İttifak Devletleri bloğunda savaşmıştır. İtilaf (Üçlü İtilaf) bloğunda ise İngiltere, Fransa ve Rusya bulunmaktaydı.",
+      "topic": "Birinci Dünya Savaşı"
+    },
+    {
+      "question": "Sanayi Devrimi ilk olarak hangi ülkede başlamıştır?",
+      "options": [
+        "Fransa",
+        "Almanya",
+        "Amerika Birleşik Devletleri",
+        "İngiltere",
+        "Hollanda"
+      ],
+      "answer": 3,
+      "solution": "Sanayi Devrimi, 18. yüzyılın ikinci yarısında İngiltere'de başlamıştır. Buhar makinesinin geliştirilmesi ve tekstil sanayisindeki makineleşme bu sürecin temel dinamikleridir. Diğer ülkeler sanayileşme sürecine daha sonra dahil olmuştur.",
+      "topic": "Sanayi Devrimi"
+    },
+    {
+      "question": "Fransız İhtilali hangi yıl gerçekleşmiştir?",
+      "options": [
+        "1776",
+        "1789",
+        "1804",
+        "1815",
+        "1848"
+      ],
+      "answer": 1,
+      "solution": "Fransız İhtilali 1789 yılında patlak vermiş; özgürlük, eşitlik ve kardeşlik ilkeleri dünyaya yayılmıştır. 1776 Amerika'nın bağımsızlık ilanı, 1804 Napolyon'un imparatorluk ilanı, 1815 ise Napolyon'un Waterloo yenilgisidir.",
+      "topic": "Fransız İhtilali"
+    },
+    {
+      "question": "İstanbul'un fethini gerçekleştiren Osmanlı padişahı kimdir?",
+      "options": [
+        "II. Murat",
+        "I. Beyazıt",
+        "II. Mehmet",
+        "I. Selim",
+        "II. Selim"
+      ],
+      "answer": 2,
+      "solution": "İstanbul 29 Mayıs 1453'te Sultan II. Mehmet (Fatih Sultan Mehmet) tarafından fethedilmiştir. Bu fetihle Orta Çağ kapanmış ve Yeni Çağ başlamıştır. I. Selim ise yaklaşık yarım asır sonra hüküm sürmüştür.",
+      "topic": "İstanbul'un Fethi"
+    }
+  ]
+}

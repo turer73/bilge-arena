@@ -1,0 +1,79 @@
+{
+  "takenAt": "2026-05-06T21:07:11.874Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 2,
+  "topic": null,
+  "prompt_version": "yks-claude-v4",
+  "model": "claude-sonnet-4-6",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Bir bireyin doğduğu aile, etnik köken veya cinsiyet gibi kendi iradesi dışında kazandığı toplumsal konuma ne ad verilir?",
+      "options": [
+        "Kazanılmış statü",
+        "Atanmış statü",
+        "Edilgen statü",
+        "Doğal statü",
+        "Birincil statü"
+      ],
+      "answer": 1,
+      "solution": "Bireyin kendi çabası veya tercihleri olmaksızın doğuştan ya da sonradan toplum tarafından kendisine yüklenen konuma 'atanmış statü' denir. Kazanılmış statü ise bireyin kendi çabası ve başarısıyla elde ettiği konumdur. 'Edilgen statü', 'doğal statü' ve 'birincil statü' sosyolojik terimler arasında bu anlamda kullanılmaz.",
+      "topic": "Toplumsal Statü"
+    },
+    {
+      "question": "Toplumsal değişmenin önünde engel oluşturan, var olan düzeni ve geleneksel yapıyı korumayı amaçlayan güçlere sosyolojide ne ad verilir?",
+      "options": [
+        "Toplumsal hareketlilik",
+        "Sosyal kontrol",
+        "Toplumsal bütünleşme",
+        "Tutucu güçler",
+        "Kurumsal dönüşüm"
+      ],
+      "answer": 3,
+      "solution": "Sosyolojide mevcut toplumsal yapıyı, gelenekleri ve normları koruyarak değişime direnen unsurlara 'tutucu güçler' denir. Toplumsal hareketlilik bireyler ya da grupların tabakalar arasındaki yer değiştirmesini, sosyal kontrol ise bireylerin normlara uymasını sağlayan mekanizmaları ifade eder. Toplumsal bütünleşme ve kurumsal dönüşüm farklı süreçlere karşılık gelir.",
+      "topic": "Toplumsal Değişme"
+    },
+    {
+      "question": "Aynı coğrafi alanda yaşayan, ortak çıkarları ve etkileşimi bulunan insan topluluğuna sosyolojide ne ad verilir?",
+      "options": [
+        "Toplum",
+        "Cemaat",
+        "Topluluk",
+        "Kalabalık",
+        "Küme"
+      ],
+      "answer": 2,
+      "solution": "Belirli bir coğrafi alanda bir arada bulunan, ortak çıkarlar etrafında etkileşim içindeki insan grubuna 'topluluk' denir. Cemaat, Ferdinand Tönnies'in kavramlaştırmasında duygusal ve geleneksel bağlara dayalı küçük grupları ifade eder. Kalabalık geçici bir aradalığı, küme ise daha az örgütlü bir birlikteliği anlatır. Toplum ise daha geniş ve karmaşık bir sosyal yapıyı tanımlar.",
+      "topic": "Topluluk ve Toplum"
+    },
+    {
+      "question": "Bireyin içinde yetiştiği aile, okul ve arkadaş çevresi aracılığıyla toplumun değer ve normlarını benimsemesi süreci aşağıdaki kavramlardan hangisiyle açıklanır?",
+      "options": [
+        "Sosyal kontrol",
+        "Sosyalleşme",
+        "Kültürel yayılma",
+        "Toplumsal hareketlilik",
+        "Kültürel asimilasyon"
+      ],
+      "answer": 1,
+      "solution": "Bireyin toplumun değer, norm ve kültürel öğelerini çeşitli kurumlar aracılığıyla öğrenmesi ve içselleştirmesi süreci 'sosyalleşme' olarak adlandırılır. Sosyal kontrol, toplumun bireyleri kurallara uymaya yöneltmesi; kültürel yayılma, kültür öğelerinin toplumlar arasında geçişi; toplumsal hareketlilik, tabakalar arası yer değiştirme; kültürel asimilasyon ise bir grubun başka bir kültür tarafından eriyip yok olması anlamına gelir.",
+      "topic": "Sosyalleşme"
+    },
+    {
+      "question": "Sanayi Devrimi sonrasında kentlere göç eden işçi kesiminin oluşturduğu yeni toplumsal tabakaya sosyolojide genel olarak ne ad verilir?",
+      "options": [
+        "Burjuvazi",
+        "Aristokrasi",
+        "Proletarya",
+        "Köylülük",
+        "Orta sınıf"
+      ],
+      "answer": 2,
+      "solution": "Sanayi Devrimi ile birlikte fabrikalarda ücretli olarak çalışan ve üretim araçlarına sahip olmayan işçi kesimi Marksist sosyolojide 'proletarya' olarak adlandırılır. Burjuvazi üretim araçlarına sahip olan sermaye sınıfını, aristokrasi köklü toprak sahibi soylular kesimini, köylülük tarım alanında çalışanları, orta sınıf ise esnaf, memur ve küçük girişimcileri kapsar.",
+      "topic": "Toplumsal Tabakalaşma"
+    }
+  ]
+}

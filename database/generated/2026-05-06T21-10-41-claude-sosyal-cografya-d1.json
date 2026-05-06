@@ -1,0 +1,105 @@
+{
+  "takenAt": "2026-05-06T21:10:41.421Z",
+  "game": "sosyal",
+  "category": "cografya",
+  "difficulty": 1,
+  "topic": null,
+  "prompt_version": "yks-claude-v4",
+  "model": "claude-sonnet-4-6",
+  "count": 7,
+  "valid_count": 10,
+  "raw_count": 10,
+  "questions": [
+    {
+      "question": "Türkiye hangi kıtada yer alır?",
+      "options": [
+        "Yalnızca Asya",
+        "Yalnızca Avrupa",
+        "Asya ve Afrika",
+        "Asya ve Avrupa",
+        "Avrupa ve Afrika"
+      ],
+      "answer": 3,
+      "solution": "Türkiye topraklarının büyük bölümü Asya kıtasında (Anadolu), küçük bir bölümü ise Avrupa kıtasında (Trakya) yer almaktadır. Bu nedenle Türkiye, iki kıtada toprakları bulunan ender ülkelerden biridir.",
+      "topic": "Türkiye Coğrafyası - Konum"
+    },
+    {
+      "question": "Akdeniz kıyılarında görülen iklim tipinin en belirgin özelliği hangisidir?",
+      "options": [
+        "Yazları soğuk ve yağışlı, kışları sıcak ve kurak",
+        "Yazları sıcak ve kurak, kışları ılık ve yağışlı",
+        "Her mevsim eşit yağış ve ılıman sıcaklık",
+        "Yazları çok soğuk, kışları ılık ve nemli",
+        "Tüm yıl boyunca sıcak ve nemli"
+      ],
+      "answer": 1,
+      "solution": "Akdeniz ikliminde yazlar sıcak ve kurak, kışlar ise ılık ve yağışlı geçer. Bu iklim tipi Türkiye'nin güney ve batı kıyılarında hâkimdir; zeytinlik ve narenciye bahçeleri bu iklimin simgesi sayılır.",
+      "topic": "Türkiye Coğrafyası - İklim"
+    },
+    {
+      "question": "Dünya'nın en büyük okyanusu hangisidir?",
+      "options": [
+        "Atlantik Okyanusu",
+        "Hint Okyanusu",
+        "Arktik Okyanusu",
+        "Antarktika Okyanusu",
+        "Pasifik Okyanusu"
+      ],
+      "answer": 4,
+      "solution": "Pasifik Okyanusu, yaklaşık 165 milyon km² yüzölçümüyle dünya yüzeyinin üçte birini kaplayan en büyük ve en derin okyanustur. Atlantik Okyanusu ise ikinci büyük okyanustur.",
+      "topic": "Genel Coğrafya - Okyanuslar"
+    },
+    {
+      "question": "Türkiye'de en fazla yağış hangi bölgede alınır?",
+      "options": [
+        "İç Anadolu Bölgesi",
+        "Ege Bölgesi",
+        "Doğu Anadolu Bölgesi",
+        "Karadeniz Bölgesi",
+        "Güneydoğu Anadolu Bölgesi"
+      ],
+      "answer": 3,
+      "solution": "Karadeniz Bölgesi, özellikle Doğu Karadeniz kesimiyle Türkiye'nin en fazla yağış alan bölgesidir. Rize ili yıllık ortalama 2 200 mm'yi aşan yağış miktarıyla Türkiye'nin en yağışlı ili olarak öne çıkar.",
+      "topic": "Türkiye Coğrafyası - Yağış Dağılımı"
+    },
+    {
+      "question": "Türkiye'nin komşusu olmayan ülke aşağıdakilerden hangisidir?",
+      "options": [
+        "Gürcistan",
+        "Ermenistan",
+        "Azerbaycan",
+        "Suriye",
+        "Kazakistan"
+      ],
+      "answer": 4,
+      "solution": "Türkiye'nin kara sınırı komşuları; Yunanistan, Bulgaristan, Gürcistan, Ermenistan, Azerbaycan (Nahçıvan), İran, Irak ve Suriye'dir. Kazakistan, Türkiye ile herhangi bir kara veya deniz sınırı paylaşmayan, Orta Asya'da yer alan bir ülkedir.",
+      "topic": "Türkiye Coğrafyası - Komşu Ülkeler"
+    },
+    {
+      "question": "Ekvator'a en yakın konumdaki bölge aşağıdakilerden hangisidir?",
+      "options": [
+        "Kutup bölgeleri",
+        "Orta enlemler",
+        "Tropikal (tropik) bölgeler",
+        "Muson bölgeleri",
+        "Ekvatoral bölgeler"
+      ],
+      "answer": 4,
+      "solution": "Ekvator, 0° enlemi üzerinde yer alır ve bu hattın hemen çevresinde kalan alanlar 'ekvatoral bölgeler' olarak adlandırılır. Tropikal bölgeler ise Dönenceler arasında kalan ve ekvatordan biraz daha uzak olan bölgelerdir.",
+      "topic": "Genel Coğrafya - Enlem Kuşakları"
+    },
+    {
+      "question": "Türkiye'nin güneybatısında yer alan ve Akdeniz'e kıyısı bulunan şehir hangisidir?",
+      "options": [
+        "Trabzon",
+        "Samsun",
+        "Sinop",
+        "Antalya",
+        "Zonguldak"
+      ],
+      "answer": 3,
+      "solution": "Antalya, Türkiye'nin güneybatısında Akdeniz kıyısında konumlanan bir şehirdir. Trabzon, Samsun, Sinop ve Zonguldak ise Karadeniz kıyısında yer alan şehirlerdir; bu nedenle bu seçenekler yanlıştır.",
+      "topic": "Türkiye Coğrafyası - Kıyı Şehirleri"
+    }
+  ]
+}

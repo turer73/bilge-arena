@@ -1,0 +1,144 @@
+{
+  "takenAt": "2026-05-06T21:16:01.335Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 2,
+  "topic": null,
+  "prompt_version": "yks-claude-v4",
+  "model": "claude-sonnet-4-6",
+  "count": 10,
+  "valid_count": 10,
+  "raw_count": 10,
+  "questions": [
+    {
+      "question": "Bir bireyin kendi çabası ve başarısıyla toplumsal hiyerarşide üst basamaklara yükselmesi sosyolojide hangi kavramla açıklanır?",
+      "options": [
+        "Yatay hareketlilik",
+        "Nesiller arası hareketlilik",
+        "Yukarı doğru dikey hareketlilik",
+        "Toplumsal tabakalaşma",
+        "Statü tutarsızlığı"
+      ],
+      "answer": 2,
+      "solution": "Bireyin kendi çabası sonucunda toplumsal sıralamada daha üst bir konuma geçmesi 'yukarı doğru dikey hareketlilik' kavramıyla ifade edilir. Yatay hareketlilik aynı tabaka içinde yer değiştirmeyi, nesiller arası hareketlilik ise farklı kuşaklar arasındaki konum değişikliğini anlatır. Tabakalaşma bir toplumsal yapı biçimidir, statü tutarsızlığı ise farklı statü boyutlarının birbirini dengelememesi durumudur.",
+      "topic": "Toplumsal Hareketlilik"
+    },
+    {
+      "question": "Ailenin, eğitimin, dinin ve ekonominin toplumda temel ihtiyaçları karşılamak üzere örgütlenmiş yapılar olarak tanımlanması sosyolojide hangi kavrama karşılık gelir?",
+      "options": [
+        "Toplumsal grup",
+        "Toplumsal norm",
+        "Toplumsal kurum",
+        "Toplumsal statü",
+        "Sosyalizasyon"
+      ],
+      "answer": 2,
+      "solution": "Toplumsal kurumlar; aile, eğitim, din, ekonomi gibi temel toplumsal ihtiyaçları karşılamak amacıyla oluşturulmuş, belirli kural ve değerlere sahip örgütlü yapılardır. Toplumsal gruplar belirli bireylerin bir araya gelmesiyle oluşur; norm davranış kuralıdır; statü bireyin toplumdaki konumudur; sosyalizasyon ise kültürün bireye aktarılması sürecidir.",
+      "topic": "Toplumsal Kurumlar"
+    },
+    {
+      "question": "Bir bireyin toplumda doğuştan kazandığı, çaba gerektirmeyen konumuna sosyolojide ne ad verilir?",
+      "options": [
+        "Kazanılmış statü",
+        "Toplumsal rol",
+        "Atfedilmiş statü",
+        "Sosyal prestij",
+        "Referans grubu"
+      ],
+      "answer": 2,
+      "solution": "Atfedilmiş (verilmiş) statü, bireyin kendi iradesi veya çabası dışında, doğuştan sahip olduğu toplumdaki konumdur; cinsiyet, ırk, doğduğu aile bu duruma örnek verilebilir. Kazanılmış statü ise bireyin kendi çabasıyla elde ettiği konumdur. Rol, statünün gerektirdiği davranışları ifade eder; prestij, saygınlık düzeyini gösterir; referans grubu, bireyin kendini kıyasladığı gruptur.",
+      "topic": "Toplumsal Statü"
+    },
+    {
+      "question": "Bireyin doğduğu ailede kazandığı kültürel değerleri, tutumları ve davranış kalıplarını içselleştirdiği süreç sosyolojide hangi kavramla ifade edilir?",
+      "options": [
+        "İkincil sosyalizasyon",
+        "Kültürleşme",
+        "Birincil sosyalizasyon",
+        "Kültürel asimilasyon",
+        "Toplumsal kontrol"
+      ],
+      "answer": 2,
+      "solution": "Birincil sosyalizasyon, bireyin yaşamının ilk yıllarında aile içinde gerçekleşen ve temel değerlerin, dil ve davranış kalıplarının içselleştirildiği süreçtir. İkincil sosyalizasyon okul, iş yeri gibi ortamlarda sonraki dönemlerde devam eder. Kültürleşme farklı kültürlerin etkileşimini, asimilasyon bir kültürün diğerine tamamen uyum sağlamasını, toplumsal kontrol ise bireylerin normlara uyumunu sağlayan mekanizmaları ifade eder.",
+      "topic": "Sosyalizasyon"
+    },
+    {
+      "question": "Toplumda bireylerin birbirlerine karşı yerine getirmeleri beklenen davranış biçimlerine sosyolojide ne ad verilir?",
+      "options": [
+        "Toplumsal değer",
+        "Toplumsal norm",
+        "Toplumsal rol",
+        "Toplumsal statü",
+        "Toplumsal kurum"
+      ],
+      "answer": 2,
+      "solution": "Toplumsal rol, bireyin sahip olduğu statüye bağlı olarak toplumun kendisinden beklediği davranış örüntülerini ifade eder. Değerler genel kabul gören ilkeler ve amaçlardır; normlar yazılı olmayan davranış kurallarıdır; statü bireyin toplumdaki konumudur; kurumlar ise belirli ihtiyaçlara yanıt veren örgütlü yapılardır.",
+      "topic": "Toplumsal Rol"
+    },
+    {
+      "question": "Farklı toplumların kültürlerini kendi değer yargılarıyla değil, o kültürün iç mantığıyla değerlendirme yaklaşımına ne ad verilir?",
+      "options": [
+        "Etnosentrizm",
+        "Kültürel rölatifizm",
+        "Kültür emperyalizmi",
+        "Kültürel asimilasyon",
+        "Alt kültür"
+      ],
+      "answer": 1,
+      "solution": "Kültürel rölatifizm (kültürel görecilik), bir kültürü yargılarken o kültürün kendi iç tutarlılığını ve bağlamını esas alma anlayışıdır. Etnosentrizm ise kendi kültürünü üstün sayarak diğerlerini ona göre yargılamaktır. Kültür emperyalizmi güçlü bir kültürün zayıf kültürler üzerindeki baskısını, asimilasyon bir kültürün başka kültüre kaynaşmasını, alt kültür ise ana kültür içindeki farklı küçük grupları ifade eder.",
+      "topic": "Kültür ve Kültürel Farklılık"
+    },
+    {
+      "question": "Bireyin mensup olduğu grupların beklentileri birbiriyle çeliştiğinde yaşanan duruma sosyolojide ne ad verilir?",
+      "options": [
+        "Rol çatışması",
+        "Statü tutarsızlığı",
+        "Anomik durum",
+        "Sosyal dışlanma",
+        "Toplumsal tabakalaşma"
+      ],
+      "answer": 0,
+      "solution": "Rol çatışması, bireyin üstlendiği farklı roller arasındaki beklentilerin birbiriyle uyuşmaması sonucu ortaya çıkan gerilim durumudur; örneğin hem ebeveyn hem de yoğun çalışma saatlerine sahip bir çalışan bu çatışmayı yaşayabilir. Statü tutarsızlığı farklı statü boyutlarının dengesizliğini, anomik durum kuralsızlık halini, sosyal dışlanma bireyin toplumsal katılımdan yoksun kalmasını ifade eder.",
+      "topic": "Rol ve Statü"
+    },
+    {
+      "question": "Kentleşme sürecinde köyden şehre göç eden bireylerin hem kır hem de kent kültürüne tam olarak uyum sağlayamaması durumu sosyolojide hangi kavramla açıklanır?",
+      "options": [
+        "Kentsel dönüşüm",
+        "Marjinalleşme",
+        "Kültürel gecikme",
+        "Sosyal mobilite",
+        "İç göç"
+      ],
+      "answer": 1,
+      "solution": "Marjinalleşme, bireylerin veya grupların toplumun merkezindeki kültüre tam olarak dahil olamayıp iki kültür arasında kaldığı durumu ifade eder. Kentsel dönüşüm fiziksel yapıların yenilenmesini, kültürel gecikme maddi kültürün değişmesine karşın manevi kültürün geride kalmasını, sosyal mobilite bireysel yer değiştirmeyi, iç göç ise ülke içindeki nüfus hareketini anlatır.",
+      "topic": "Kentleşme ve Göç"
+    },
+    {
+      "question": "Toplumsal değişimin hızlı yaşandığı dönemlerde kuralların ve değerlerin zayıflaması, bireylerin yönelim kaybetmesi durumunu tanımlamak için Émile Durkheim hangi kavramı kullanmıştır?",
+      "options": [
+        "Alienasyon",
+        "Anomi",
+        "Hegemonya",
+        "Stigma",
+        "Sosyal sermaye"
+      ],
+      "answer": 1,
+      "solution": "Anomi kavramı Émile Durkheim tarafından toplumsal kuralsızlık ve değer boşluğu durumunu tanımlamak için kullanılmıştır; bireylerin neye göre davranacaklarını bilemedikleri bir toplumsal kargaşa haline işaret eder. Alienasyon (yabancılaşma) Marx'a ait bir kavramdır; hegemonya Gramsci'nin kültürel egemenlik açıklamasıdır; stigma Goffman'ın damgalama teorisiyle ilişkilidir; sosyal sermaye ise Bourdieu ve Putnam'ın sosyal ağlara dayalı kaynak kavramıdır.",
+      "topic": "Klasik Sosyoloji Kuramları"
+    },
+    {
+      "question": "Bireylerin toplumsal normları içselleştirerek bu normlara aykırı davranmaktan kaçınmasını sağlayan mekanizma sosyolojide hangi kavramla ifade edilir?",
+      "options": [
+        "Sosyalizasyon",
+        "Sosyal hareketlilik",
+        "Sosyal kontrol",
+        "Sosyal tabakalaşma",
+        "Sosyal dayanışma"
+      ],
+      "answer": 2,
+      "solution": "Sosyal kontrol, bireylerin toplumsal normlara uyumunu sağlamak amacıyla toplumun ödül ve ceza gibi çeşitli mekanizmalar aracılığıyla bireyleri yönlendirme sürecidir; resmi (yasa, polis) ve gayri resmi (eleştiri, dışlama) biçimleri vardır. Sosyalizasyon kültürün aktarımı, sosyal hareketlilik bireysel konum değişikliği, tabakalaşma toplumun katmanlara ayrılması, sosyal dayanışma ise bireyleri birbirine bağlayan bütünleşme duygusudur.",
+      "topic": "Sosyal Kontrol"
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "takenAt": "2026-05-06T21:06:44.294Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 1,
+  "topic": null,
+  "prompt_version": "yks-claude-v4",
+  "model": "claude-sonnet-4-6",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Bireyin doğduğu ailesi, içinde bulunduğu etnik grup veya cinsiyeti gibi kendi iradesi dışında kazandığı toplumsal konuma ne ad verilir?",
+      "options": [
+        "Kazanılmış statü",
+        "Atfedilmiş statü",
+        "Toplumsal rol",
+        "Toplumsal hareketlilik",
+        "Referans grubu"
+      ],
+      "answer": 1,
+      "solution": "Bireyin kendi çabası veya tercihi olmaksızın, doğumla ya da doğuştan gelen özelliklerle edindiği konuma 'atfedilmiş statü' denir. Kazanılmış statü ise bireyin eğitim, meslek gibi kişisel çabasıyla elde ettiği konumdur. Toplumsal rol, statünün gerektirdiği beklenen davranışlardır. Toplumsal hareketlilik ise bireyin ya da grubun bir statüden diğerine geçişini ifade eder.",
+      "topic": "Toplumsal Statü"
+    },
+    {
+      "question": "Toplumun bireyleri belirli davranış kalıplarına uymaya yöneltmek için kullandığı ödül ve ceza mekanizmalarının tümüne ne ad verilir?",
+      "options": [
+        "Sosyalizasyon",
+        "Sosyal tabakalaşma",
+        "Sosyal kontrol",
+        "Sosyal değişme",
+        "Sosyal hareketlilik"
+      ],
+      "answer": 2,
+      "solution": "Toplumun, bireylerin normlara uymasını sağlamak amacıyla başvurduğu ödüllendirme ve yaptırım mekanizmalarının bütünü 'sosyal kontrol' olarak adlandırılır. Sosyalizasyon bireyin topluma uyum sürecini, tabakalaşma toplumun katmanlara ayrılmasını, sosyal değişme toplumun yapısındaki dönüşümü ifade eder. Sosyal hareketlilik ise bireyin ya da grubun tabakalar arasındaki yer değiştirmesidir.",
+      "topic": "Sosyal Kontrol"
+    },
+    {
+      "question": "Bireyler arası etkileşimlerin ve ilişkilerin belirli kurallara bağlandığı, görece kalıcı toplumsal yapılara ne ad verilir?",
+      "options": [
+        "Toplumsal norm",
+        "Toplumsal değer",
+        "Toplumsal kurum",
+        "Toplumsal statü",
+        "Kültürel yayılma"
+      ],
+      "answer": 2,
+      "solution": "Aile, eğitim, din, ekonomi gibi belirli ihtiyaçları karşılamak üzere oluşmuş, kurallarla düzenlenmiş kalıcı yapılar 'toplumsal kurum' olarak tanımlanır. Toplumsal norm bireysel davranışları düzenleyen kurallardır; değerler ise toplumun benimsediği genel ilkelerdir. Statü bireyin toplumdaki konumunu, kültürel yayılma ise kültür unsurlarının toplumlar arasında aktarımını ifade eder.",
+      "topic": "Toplumsal Kurumlar"
+    },
+    {
+      "question": "Bir bireyin hem anne hem de çalışan biri olarak farklı beklentilerle karşı karşıya kalması ve bu beklentileri aynı anda karşılamakta güçlük çekmesi hangi kavramla açıklanır?",
+      "options": [
+        "Rol çatışması",
+        "Statü tutarsızlığı",
+        "Sosyal dışlanma",
+        "Kültür şoku",
+        "Anomi"
+      ],
+      "answer": 0,
+      "solution": "Bireyin aynı anda üstlendiği birden fazla rolün birbiriyle çelişen beklentiler yaratması durumuna 'rol çatışması' denir. Statü tutarsızlığı, bireyin farklı statü boyutlarında eşit olmayan konumlara sahip olmasıdır. Sosyal dışlanma bireyin toplumdan uzaklaştırılmasıdır. Kültür şoku yeni bir kültürle karşılaşıldığında yaşanan uyum güçlüğüdür. Anomi ise toplumsal normların zayıflamasıyla ortaya çıkan kuralsızlık durumudur.",
+      "topic": "Toplumsal Rol"
+    },
+    {
+      "question": "Sosyolojinin kurucusu olarak kabul edilen ve bu bilim dalına 'sosyoloji' adını veren düşünür kimdir?",
+      "options": [
+        "Émile Durkheim",
+        "Karl Marx",
+        "Max Weber",
+        "Auguste Comte",
+        "Herbert Spencer"
+      ],
+      "answer": 3,
+      "solution": "'Sosyoloji' kavramını ilk kez kullanan ve bu disiplini bağımsız bir bilim olarak tanımlayan düşünür Auguste Comte'dur. Durkheim sosyolojiye bilimsel yöntemler kazandırmış, Marx sınıf çatışmasını ön plana çıkarmış, Weber anlayıcı sosyoloji yaklaşımını geliştirmiş, Spencer ise evrimci sosyoloji anlayışıyla tanınmıştır. Ancak 'sosyoloji' adını koyan kişi Auguste Comte'dur.",
+      "topic": "Sosyolojinin Tarihsel Gelişimi"
+    }
+  ]
+}
