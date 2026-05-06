@@ -1,0 +1,38 @@
+{
+  "takenAt": "2026-05-06T18:30:06.919Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 4,
+  "prompt_version": "tdk-rehberli-v2",
+  "count": 2,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde kesme işaretinin kullanımıyla ilgili bir yazım yanlışı yoktur?",
+      "options": [
+        "Bu karar, Resmi Gazete'de yayımlanarak yürürlüğe girdi.",
+        "Arkadaşım ODTÜ'lü olduğunu gururla söylerdi.",
+        "Türk'çenin doğru kullanımı üzerine bir seminer düzenlendi.",
+        "Bu akşam Ayşe'gil bize yemeğe gelecekmiş.",
+        "1995'de yaşananlar hâlâ hafızalardaydı."
+      ],
+      "answer": 0,
+      "solution": "Kurum, kuruluş, kurul, birleşim, oturum ve iş yeri adlarına gelen ekler kesmeyle ayrılmaz kuralının istisnası 'Resmi Gazete'dir. 'Resmi Gazete'de' yazımı doğrudur.",
+      "topic": "Kesme İşareti Kullanımı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde bitişik veya ayrı yazımla ilgili bir hata bulunmaktadır?",
+      "options": [
+        "Son anda yaptığı bu hamleyle hepimizi alt üst etti.",
+        "Onunla en son bir hafta önce baş başa görüştük.",
+        "Herhangi bir sorunla karşılaşırsanız lütfen bizi arayın.",
+        "Bugün art arda gelen telefonlar yüzünden işime odaklanamadım.",
+        "Bu konuyu oldubittiye getirmesine izin vermeyeceğim."
+      ],
+      "answer": 0,
+      "solution": "Somut olarak yer bildirmeyen 'alt' ve 'üst' sözleriyle kurulan birleşik kelimeler bitişik yazılır. 'Altüst etmek' bu kurala uyar ve bitişik yazılmalıdır. Ayrı yazımı yanlıştır.",
+      "topic": "Bitişik ve Ayrı Yazılan Kelimeler"
+    }
+  ]
+}

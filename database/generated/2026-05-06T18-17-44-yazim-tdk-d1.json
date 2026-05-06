@@ -1,0 +1,64 @@
+{
+  "takenAt": "2026-05-06T18:17:44.658Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 1,
+  "prompt_version": "tdk-rehberli-v2",
+  "count": 4,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki kelimelerden hangisinde kesme işareti (') kullanımı doğrudur?",
+      "options": [
+        "Ankara'ya",
+        "Türk'çe",
+        "Antalyalı'nın",
+        "Ahmet'ler",
+        "TDK'li"
+      ],
+      "answer": 0,
+      "solution": "Özel adlara getirilen iyelik, durum ve bildirme ekleri kesme işaretiyle ayrılır. 'Ankara'ya' kelimesinde özel isme gelen yönelme hal eki '-a' doğru bir şekilde ayrılmıştır.",
+      "topic": "Kesme İşareti Kullanımı"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde 'de' bağlacının yazımı doğrudur?",
+      "options": [
+        "Bu filmi ben de izlemek istiyorum.",
+        "Kitabım okulda kalmış.",
+        "Sende fazla kalem var mı?",
+        "Ahmetde bizimle gelecek.",
+        "Yarın ki sınav çok önemli."
+      ],
+      "answer": 0,
+      "solution": "Bağlaç olan 'de', cümleden çıkarıldığında cümlenin anlamı bozulmaz ve her zaman ayrı yazılır. 'Bu filmi ben izlemek istiyorum.' cümlesi anlamlı olduğu için 'de' ayrı yazılmalıdır.",
+      "topic": "Bağlaç Olan 'da/de' Yazımı"
+    },
+    {
+      "question": "Aşağıdaki sözcüklerden hangisinin yazımı doğrudur?",
+      "options": [
+        "herkes",
+        "herkez",
+        "birşey",
+        "herşey",
+        "hiç bir"
+      ],
+      "answer": 0,
+      "solution": "TDK kurallarına göre 'herkes' kelimesi 's' harfi ile biter ve bitişik yazılır. Diğer seçeneklerdeki 'birşey', 'herşey' ve 'hiç bir' yazımları yanlıştır; doğruları 'bir şey', 'her şey' ve 'hiçbir' olmalıdır.",
+      "topic": "Bitişik ve Ayrı Yazılan Kelimeler"
+    },
+    {
+      "question": "Saat ve dakikayı gösteren sayıların yazımında aşağıdaki kullanımlardan hangisi doğrudur?",
+      "options": [
+        "Toplantı 14.30'da başlayacak.",
+        "Toplantı 14:30'da başlayacak.",
+        "Toplantı 14,30'da başlayacak.",
+        "Saat oniki otuzda buluşalım.",
+        "Saat 09 00'da ders başlıyor."
+      ],
+      "answer": 0,
+      "solution": "TDK yazım kurallarına göre saat ve dakika gösteren sayıları birbirinden ayırmak için nokta (.) kullanılır. Bu nedenle '14.30'da' yazımı doğrudur.",
+      "topic": "Sayıların Yazımı"
+    }
+  ]
+}

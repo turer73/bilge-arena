@@ -1,0 +1,28 @@
+{
+  "auditedAt": "2026-05-06T18:35:00Z",
+  "trigger": "yazim_kurallari yeniden generate (PR #114 16/16 fail sonrasi)",
+  "model": "gemini-2.5-pro",
+  "promptVersion": "tdk-rehberli-v2",
+  "totalGenerated": 24,
+  "totalRejected": 4,
+  "totalApproved": 20,
+  "qualityRate": "%83 (flash-lite %0'dan -> pro %83)",
+  "rejectedItems": [
+    {"id": "d9eb65e3-c582-4c75-9d2e-ead570120f0e", "difficulty": 2, "reason": "Sayi yazimi sorusu: A '14.30''da' ve B '1998''de' her ikisi de TDK'ya gore dogru, soruda 2 dogru cevap"},
+    {"id": "dc1a9129-e363-47c5-9ad0-58607758c8b1", "difficulty": 3, "reason": "'Mademki' kendi-celisen: cevap D olarak isaretliyor 'yanlis' ama D'de zaten bitisik dogru yazilmis"},
+    {"id": "209fcc00-c526-4e4d-a812-9e6db015aed2", "difficulty": 4, "reason": "Birlesik fiil sorusu: cevap E 'sabretti' zaten dogru yazilmis, soruda 'yanlislik' arasaydim hicbir secenekte yok"},
+    {"id": "71dc307d-c185-4b4c-82b6-415c7a445141", "difficulty": 1, "reason": "4cc30c99 'herkes' sorusu ile aciktan duplicate (secenek sirasi farkli ama icerik ayni)"}
+  ],
+  "approvedDistribution": {
+    "difficulty_1": 8,
+    "difficulty_2": 4,
+    "difficulty_3": 5,
+    "difficulty_4": 3
+  },
+  "lessons": [
+    "Pro model self-consistency'yi flash-lite'tan cok daha iyi koruyor",
+    "Pro maxOutputTokens 4096 yetersiz: thinking-mode 4093 token harcayinca response'a yer kalmiyor; 8192 kullan",
+    "Pro yavas (~35s/batch) ama kalite farki maliyeti telafi ediyor",
+    "Dedup 50-char prefix duplicate'leri yakalamiyor: 'herkes' iki versiyonu prefix farkli ama icerik ayni"
+  ]
+}
