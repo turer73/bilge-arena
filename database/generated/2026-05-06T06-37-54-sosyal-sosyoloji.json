@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T06:37:54.672Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 2,
+  "level_tag": null,
+  "count": 5,
+  "duplicate_count": 0,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Bir toplumda bireylerin davranışlarını düzenleyen, kabul görmüş ve yazılı olmayan kurallar bütününe ne ad verilir?",
+      "options": [
+        "Toplumsal kurum",
+        "Toplumsal statü",
+        "Toplumsal norm",
+        "Toplumsal değer",
+        "Toplumsal rol"
+      ],
+      "answer": 2,
+      "solution": "Yazılı olmayan ve bireylerin davranışlarını yönlendiren kurallar toplumsal normlardır.",
+      "topic": "Kültür ve Toplum"
+    },
+    {
+      "question": "Aşağıdakilerden hangisi, aile kurumunun temel işlevlerinden biri olarak kabul edilmez?",
+      "options": [
+        "Üreme ve neslin devamını sağlama",
+        "Çocukların sosyalleştirilmesi",
+        "Ekonomik destek sağlama",
+        "Bireylerin tüm kişisel gelişimlerini tamamlama",
+        "Duygusal destek ve sevgi sunma"
+      ],
+      "answer": 3,
+      "solution": "Aile, bireylerin kişisel gelişimlerini destekler ancak tüm gelişimlerini tamamlama sorumluluğu sadece aileye ait değildir; bu süreç eğitim ve diğer toplumsal kurumlarla da ilişkilidir.",
+      "topic": "Aile"
+    },
+    {
+      "question": "Toplumun genel kabul görmüş düşünce, inanç ve yaşam biçimlerini ifade eden kavram aşağıdakilerden hangisidir?",
+      "options": [
+        "Toplumsal hareketlilik",
+        "Toplumsal değişme",
+        "Kültür",
+        "Toplumsal yapı",
+        "Sosyal kontrol"
+      ],
+      "answer": 2,
+      "solution": "Toplumun paylaştığı bu unsurlar genel olarak kültür olarak tanımlanır.",
+      "topic": "Kültür ve Toplum"
+    },
+    {
+      "question": "Bir toplumda bireylerin veya grupların, toplumun alt kademelerinden üst kademelerine veya tersine doğru hareket etmesine ne ad verilir?",
+      "options": [
+        "Toplumsal bütünleşme",
+        "Toplumsal hareketlilik",
+        "Toplumsal statü",
+        "Toplumsal norm",
+        "Toplumsal tabakalaşma"
+      ],
+      "answer": 1,
+      "solution": "Bireylerin veya grupların sosyal konumlarında meydana gelen dikey veya yatay yöndeki değişimler toplumsal hareketlilik olarak adlandırılır.",
+      "topic": "Toplumsal Hareketlilik"
+    },
+    {
+      "question": "Eğitim kurumunun temel toplumsal işlevleri arasında aşağıdakilerden hangisi yer almaz?",
+      "options": [
+        "Bilgi ve becerileri aktarmak",
+        "Toplumsal değerleri kazandırmak",
+        "Bireylerin sosyal statülerini belirlemek",
+        "Toplumsal düzeni ve bütünlüğü sağlamak",
+        "Bireylerin ekonomik hayata hazırlanmasını sağlamak"
+      ],
+      "answer": 3,
+      "solution": "Eğitim kurumları bilgi ve beceri aktarımı ile bireyleri topluma hazırlar, ancak doğrudan toplumsal düzeni ve bütünlüğü sağlama görevi öncelikli olarak diğer toplumsal kurumlara aittir.",
+      "topic": "Eğitim ve Toplum"
+    }
+  ]
+}

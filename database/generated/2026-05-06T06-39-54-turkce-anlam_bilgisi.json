@@ -1,0 +1,65 @@
+{
+  "takenAt": "2026-05-06T06:39:54.050Z",
+  "game": "turkce",
+  "category": "anlam_bilgisi",
+  "difficulty": 3,
+  "level_tag": null,
+  "count": 4,
+  "duplicate_count": 1,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde 'açık' sözcüğü, 'belli, anlaşılır' anlamında kullanılmıştır?",
+      "options": [
+        "Bugün hava çok açık.",
+        "Sorunun cevabı gayet açık.",
+        "Açık bir yara vardı.",
+        "Kapı sonuna kadar açıktı.",
+        "Ona her şeyi açıkça söyledim."
+      ],
+      "answer": 1,
+      "solution": "'Sorunun cevabı gayet açık.' cümlesinde 'açık' sözcüğü, anlaşılır, net anlamında kullanılmıştır. Diğer seçeneklerde ise 'açık hava', 'yarının belirginliği', 'kapının aralığı' ve 'doğrudan, dürüstçe' anlamlarında kullanılmıştır.",
+      "topic": "Söz Yorumu"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde 'zaman' sözcüğü, 'bir işi yapmaya uygun olan an' anlamında kullanılmıştır?",
+      "options": [
+        "Zaman su gibi akıp gidiyor.",
+        "Bu iş için yeterli zamanımız yok.",
+        "Her şeyin bir zamanı vardır.",
+        "Toplantı için doğru zaman bu.",
+        "Boş zamanlarını kitap okuyarak geçirir."
+      ],
+      "answer": 3,
+      "solution": "'Toplantı için doğru zaman bu.' cümlesinde 'zaman' bir işin yapılması için uygun anı ifade etmektedir. Diğer seçeneklerde 'zaman' genel olarak vakit, süre veya belirli bir dönem anlamlarında kullanılmıştır.",
+      "topic": "Söz Yorumu"
+    },
+    {
+      "question": "'İşleyen demir pas tutmaz.' atasözünün anlamı aşağıdakilerden hangisidir?",
+      "options": [
+        "Demir metaller paslanır.",
+        "Düzenli çalışan, üretken kimse gelişir ve ilerler.",
+        "Paslı demirler tehlikelidir.",
+        "Çok çalışmak insanı yorar.",
+        "Boş duran demir çabuk paslanır."
+      ],
+      "answer": 1,
+      "solution": "Bu atasözü, sürekli çalışan, meşgul olan ve üretkenliğinden bir şey kaybetmeyen kimsenin hem bedenen hem de zihnen diri kalacağını, gelişeceğini ve ilerleyeceğini ifade eder.",
+      "topic": "Anlam İlişkileri"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde bir eylem, gerçekleştiği anda başka bir eyleme engel olmuştur?",
+      "options": [
+        "Annem, ben eve gelmeden yemeği hazırlamıştı.",
+        "Öğretmen içeri girince öğrenciler sustu.",
+        "Film başlayınca herkes yerini aldı.",
+        "Sabah erkenden kalkıp işe gitti.",
+        "Kitabı okumayı bitirince uyudu."
+      ],
+      "answer": 1,
+      "solution": "'Öğretmen içeri girince öğrenciler sustu.' cümlesinde, öğretmenin içeri girme eylemi, öğrencilerin konuşma eylemini engellemiştir. Yani bir eylem diğerinin gerçekleşmesini önlemiştir.",
+      "topic": "Cümle Anlamı"
+    }
+  ]
+}
