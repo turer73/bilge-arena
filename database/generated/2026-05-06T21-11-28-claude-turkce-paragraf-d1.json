@@ -1,0 +1,144 @@
+{
+  "takenAt": "2026-05-06T21:11:28.649Z",
+  "game": "turkce",
+  "category": "paragraf",
+  "difficulty": 1,
+  "topic": null,
+  "prompt_version": "yks-claude-v4",
+  "model": "claude-sonnet-4-6",
+  "count": 10,
+  "valid_count": 10,
+  "raw_count": 10,
+  "questions": [
+    {
+      "question": "'Kitaplar, insanlığın birikimini gelecek nesillere taşıyan en güvenilir araçlardır. Yazılı kültür sayesinde binlerce yıl önce yaşayan düşünürlerin fikirleri bugün hâlâ okunabilmektedir. Bir toplumun okuma alışkanlığı, o toplumun entelektüel düzeyini doğrudan yansıtır.' Bu parçanın ana düşüncesi aşağıdakilerden hangisidir?",
+      "options": [
+        "Kitaplar yalnızca eğlence amaçlı okunmalıdır",
+        "Kitaplar ve okuma kültürü toplumların gelişiminde temel bir öneme sahiptir",
+        "Eski düşünürlerin fikirleri artık geçerliliğini yitirmiştir",
+        "Yazılı kültür yalnızca bilim insanlarını ilgilendirir",
+        "Okuma alışkanlığı bireysel bir tercih meselesidir"
+      ],
+      "answer": 1,
+      "solution": "Parçada kitapların bilgiyi nesillere aktardığı, okuma kültürünün toplumların entelektüel düzeyini belirlediği vurgulanmaktadır. Bu nedenle ana düşünce, kitap ve okuma kültürünün toplumsal gelişimdeki temel rolüdür. Diğer seçenekler ya parçayla çelişmekte ya da parçada hiç yer almamaktadır.",
+      "topic": "Paragraf - Ana Düşünce"
+    },
+    {
+      "question": "'Bir paragrafta yazar, önce genel bir iddiada bulunur; ardından bu iddiayı somut örneklerle destekler; son olarak da vardığı sonucu okura sunar.' Bu açıklamaya göre paragrafın yapısı nasıl sıralanmaktadır?",
+      "options": [
+        "Sonuç - Örnek - İddia",
+        "Örnek - İddia - Sonuç",
+        "İddia - Örnek - Sonuç",
+        "Örnek - Sonuç - İddia",
+        "Sonuç - İddia - Örnek"
+      ],
+      "answer": 2,
+      "solution": "Parçada sırasıyla 'genel iddia', 'somut örnekler' ve 'sonuç' ifadeleri kullanılmıştır. Bu, paragrafın tümdengelim yapısını tanımlar: önce genel ifade, sonra örnekler, en sonda ise varılan yargı. Diğer seçenekler bu sıralamayı bozduğu için yanlıştır.",
+      "topic": "Paragraf - Yapı"
+    },
+    {
+      "question": "'Sanat, toplumsal sorunları yansıtmak için güçlü bir araçtır. Ressam Diego Rivera'nın duvar resimleri, Meksika'nın siyasi ve sosyal gerçekliğini tüm çıplaklığıyla ortaya koymuştur. Bir sanat eseri yalnızca estetik kaygıyla değil, toplumsal bir mesaj taşıyarak da değer kazanabilir.' Bu parçada aşağıdaki yargılardan hangisine ulaşılabilir?",
+      "options": [
+        "Diego Rivera yalnızca estetik kaygıyla resim yapmıştır",
+        "Sanatın toplumsal işlevi olabileceği savunulmaktadır",
+        "Duvar resmi sanatın en üstün biçimidir",
+        "Meksika sanatı dünyada en gelişmiş sanat anlayışını temsil eder",
+        "Toplumsal mesaj taşıyan eserler estetik değer taşıyamaz"
+      ],
+      "answer": 1,
+      "solution": "Parçada sanatın toplumsal sorunları yansıtabileceği ve bu yolla değer kazanabileceği belirtilmektedir. Rivera örneği bu düşünceyi desteklemek için verilmiştir. Diğer seçenekler parçayla çelişmekte ya da parçada yer almayan bilgiler içermektedir.",
+      "topic": "Paragraf - Yargıya Ulaşma"
+    },
+    {
+      "question": "Bir paragrafta 'ancak, fakat, oysa, ne var ki' gibi sözcüklerin kullanılması, o paragrafta hangi anlam ilişkisinin kurulduğunu gösterir?",
+      "options": [
+        "Neden-sonuç ilişkisi",
+        "Koşul ilişkisi",
+        "Karşıtlık ilişkisi",
+        "Sıralama ilişkisi",
+        "Amaç ilişkisi"
+      ],
+      "answer": 2,
+      "solution": "'Ancak, fakat, oysa, ne var ki' bağlaçları iki düşünce arasında zıtlık ya da karşıtlık kurmak için kullanılır. Bu sözcükler okuyucuya 'beklenmedik bir durum ya da çelişki geliyor' sinyali verir. Diğer seçeneklerdeki ilişkiler farklı bağlaçlarla kurulur: neden-sonuç için 'çünkü, bu nedenle'; koşul için 'eğer, şayet' gibi sözcükler kullanılır.",
+      "topic": "Paragraf - Bağlaç ve Anlam İlişkisi"
+    },
+    {
+      "question": "'Dil, yalnızca iletişim aracı değil; aynı zamanda bir kültürün taşıyıcısıdır. Bir toplumun inançlarını, değerlerini ve tarihini en iyi o toplumun dili yansıtır. Bu yüzden bir dili öğrenmek, o dili konuşan toplumu anlamanın en etkili yoludur.' Bu parçada dilin işlevi nasıl tanımlanmaktadır?",
+      "options": [
+        "Dil yalnızca günlük iletişimi kolaylaştıran bir araçtır",
+        "Dil hem iletişim hem de kültür aktarımı işlevi görür",
+        "Dil, toplumlar arasındaki farklılıkları ortadan kaldırır",
+        "Dil öğrenmek yalnızca dilbilimcilerin ilgi alanındadır",
+        "Kültür, dilden bağımsız olarak gelişir"
+      ],
+      "answer": 1,
+      "solution": "Parçada dilin iletişim aracı olmanın ötesinde kültürü taşıma işlevi de gördüğü vurgulanmaktadır. 'Yalnızca iletişim aracı değil; aynı zamanda kültürün taşıyıcısı' ifadesi bu çift işlevi açıkça ortaya koymaktadır. Diğer seçenekler ya eksik ya da parçayla çelişen bilgiler sunmaktadır.",
+      "topic": "Paragraf - Anlam Çıkarma"
+    },
+    {
+      "question": "'Bilim insanları, yeni bir teori ortaya atmadan önce kapsamlı gözlemler yapar ve veriler toplar. Toplanan veriler analiz edildikten sonra bir hipotez oluşturulur. Bu hipotez deney yoluyla sınanır ve elde edilen sonuçlar değerlendirilir.' Bu parçada bilimsel sürecin hangi özelliği ön plana çıkarılmaktadır?",
+      "options": [
+        "Bilimsel çalışmalar rastlantıya dayalıdır",
+        "Bilimsel süreç belirli aşamaları olan sistematik bir yapıya sahiptir",
+        "Hipotez oluşturmak bilimsel sürecin tek adımıdır",
+        "Gözlem yapmak bilimde gereksiz bir adımdır",
+        "Deney sonuçları her zaman hipotezi doğrular"
+      ],
+      "answer": 1,
+      "solution": "Parçada gözlem, hipotez oluşturma ve deney aşamaları sırasıyla aktarılmıştır. Bu durum, bilimsel sürecin belirli bir düzen içinde ilerleyen sistematik bir yapıya sahip olduğunu göstermektedir. Diğer seçenekler parçayla açıkça çelişmektedir: parçada rastlantıya yer verilmemekte, hipotez tek adım olarak sunulmamakta ve deney sonuçlarının hipotezi doğrulayacağı iddia edilmemektedir.",
+      "topic": "Paragraf - Temel Düşünce"
+    },
+    {
+      "question": "'Çevre kirliliği yalnızca doğayı değil, insan sağlığını da olumsuz etkiler. Kirli hava solunum yolu hastalıklarına, kirli su ise sindirim sistemi rahatsızlıklarına yol açar. Bu nedenle çevreyi korumak aynı zamanda insan sağlığını korumak demektir.' Bu parçaya göre çevre kirliliği ile insan sağlığı arasındaki ilişki nasıl açıklanmaktadır?",
+      "options": [
+        "Çevre kirliliğinin insan sağlığıyla doğrudan bir ilgisi yoktur",
+        "Çevre kirliliği yalnızca hayvanları olumsuz etkiler",
+        "Çevre kirliliği insan sağlığını olumsuz etkiler ve bu ikisi arasında doğrudan bir bağ vardır",
+        "İnsan sağlığını korumak için yalnızca sağlıklı beslenmek yeterlidir",
+        "Kirli hava yalnızca sindirim sistemi hastalıklarına neden olur"
+      ],
+      "answer": 2,
+      "solution": "Parçada çevre kirliliğinin hem doğayı hem de insan sağlığını olumsuz etkilediği açıkça belirtilmektedir. Kirli hava ile solunum hastalıkları, kirli su ile sindirim sorunları arasındaki bağlantı somut örneklerle verilmiştir. Diğer seçenekler parçadaki bilgilerle doğrudan çelişmektedir.",
+      "topic": "Paragraf - Bilgiye Ulaşma"
+    },
+    {
+      "question": "Bir yazıda 'Bu görüşe katılmak mümkün değildir; zira yapılan araştırmalar tam aksini ortaya koymaktadır.' cümlesi geçiyorsa yazar bu cümleyle ne yapmaktadır?",
+      "options": [
+        "Bir görüşü desteklemektedir",
+        "Bir görüşü çürütmeye çalışmaktadır",
+        "Okuyucuya soru sormaktadır",
+        "Konuyu özetlemektedir",
+        "Yeni bir konu açmaktadır"
+      ],
+      "answer": 1,
+      "solution": "'Bu görüşe katılmak mümkün değildir' ifadesi bir karşı çıkışı, 'zira araştırmalar aksini ortaya koyuyor' ifadesi ise bu karşı çıkışın gerekçesini göstermektedir. Yazar açıkça var olan bir görüşü reddetmekte ve bunu kanıta dayandırmaktadır. Bu, bir görüşü çürütme işlevidir.",
+      "topic": "Paragraf - Yazarın Amacı"
+    },
+    {
+      "question": "'Şiir, duyguların en yoğun biçimde dile getirildiği edebi türdür. Az sözcükle çok anlam taşıyan şiir, okuyucuyu düşündürür ve hissettirir. Sözcük seçimi, ses uyumu ve imge kullanımı şiiri diğer edebi türlerden ayıran temel özelliklerdir.' Bu parçada şiir ile ilgili aşağıdaki bilgilerden hangisine ulaşılamaz?",
+      "options": [
+        "Şiir duyguları yoğun biçimde aktarır",
+        "Şiirde sözcük seçimi önemlidir",
+        "Şiir az sözcükle çok anlam taşır",
+        "Şiir yalnızca aşk konusunu işler",
+        "Ses uyumu şiiri diğer türlerden ayırır"
+      ],
+      "answer": 3,
+      "solution": "Parçada şiirin duygusal yoğunluğu, sözcük ekonomisi, ses uyumu ve imge kullanımından söz edilmektedir. Ancak şiirin yalnızca aşk konusunu işlediğine dair herhangi bir bilgi verilmemiştir. Bu nedenle bu yargıya parçadan ulaşmak mümkün değildir. Diğer seçeneklerin tamamı parçada açıkça ifade edilmektedir.",
+      "topic": "Paragraf - Ulaşılamayan Bilgi"
+    },
+    {
+      "question": "Bir paragrafın giriş cümlesinin görevi nedir?",
+      "options": [
+        "Paragrafın sonucunu özetlemek",
+        "Paragrafın konusunu ve temel düşüncesini okuyucuya tanıtmak",
+        "Yalnızca örnekler vermek",
+        "Karşıt görüşleri sıralamak",
+        "Paragraftaki tanımları açıklamak"
+      ],
+      "answer": 1,
+      "solution": "Giriş cümlesi, paragrafın odaklanacağı konuyu ve temel düşünceyi okuyucuya ilk olarak sunan cümledir. Bu cümle sayesinde okuyucu, paragrafın nereye gittiğini anlar. Sonucu özetlemek gelişme ya da sonuç cümlesinin; örnek vermek ise destekleyici cümlelerin görevidir.",
+      "topic": "Paragraf - Yapısal Unsurlar"
+    }
+  ]
+}

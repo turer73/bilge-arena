@@ -1,0 +1,144 @@
+{
+  "takenAt": "2026-05-06T21:10:51.853Z",
+  "game": "sosyal",
+  "category": "tarih",
+  "difficulty": 1,
+  "topic": null,
+  "prompt_version": "yks-claude-v4",
+  "model": "claude-sonnet-4-6",
+  "count": 10,
+  "valid_count": 10,
+  "raw_count": 10,
+  "questions": [
+    {
+      "question": "Osmanlı Devleti'nde ilk kez anayasa hangi padişah döneminde ilan edilmiştir?",
+      "options": [
+        "Abdülmecit",
+        "Abdülaziz",
+        "II. Abdülhamit",
+        "V. Mehmet",
+        "II. Mahmut"
+      ],
+      "answer": 2,
+      "solution": "Osmanlı'nın ilk anayasası olan Kanun-i Esasi, 1876 yılında II. Abdülhamit döneminde ilan edilmiştir. Bu anayasayla birlikte Meclis-i Mebusan da açılmış, böylece Osmanlı tarihinde ilk meşrutiyet dönemi (I. Meşrutiyet) başlamıştır. Diğer padişahlar bu anayasayla doğrudan ilişkili değildir.",
+      "topic": "Osmanlı Devleti – Anayasal Gelişmeler"
+    },
+    {
+      "question": "Türk tarihinde 'Kurtuluş Savaşı'nın başlangıcı olarak kabul edilen Mustafa Kemal'in Samsun'a çıkış tarihi aşağıdakilerden hangisidir?",
+      "options": [
+        "23 Nisan 1919",
+        "19 Mayıs 1919",
+        "30 Ağustos 1922",
+        "24 Temmuz 1923",
+        "10 Ağustos 1920"
+      ],
+      "answer": 1,
+      "solution": "Mustafa Kemal Paşa, 19 Mayıs 1919'da Samsun'a çıkmıştır. Bu tarih, Kurtuluş Savaşı'nın fiilen başladığı sembolik gün olarak Türk tarihine geçmiş ve aynı zamanda Atatürk'ün gençliğe armağan ettiği 'Gençlik ve Spor Bayramı' olarak kutlanmaktadır.",
+      "topic": "Kurtuluş Savaşı – Başlangıç"
+    },
+    {
+      "question": "Lozan Antlaşması hangi yıl imzalanmıştır?",
+      "options": [
+        "1920",
+        "1921",
+        "1922",
+        "1923",
+        "1924"
+      ],
+      "answer": 3,
+      "solution": "Lozan Antlaşması, 24 Temmuz 1923'te İsviçre'nin Lozan şehrinde imzalanmıştır. Bu antlaşma, Türkiye Cumhuriyeti'nin uluslararası alanda tanındığı temel belgedir ve Misak-ı Millî sınırlarını büyük ölçüde belirleyen diplomatik zafer olarak değerlendirilmektedir.",
+      "topic": "Lozan Antlaşması"
+    },
+    {
+      "question": "Osmanlı Devleti'nin kuruluş yüzyılı olarak kabul edilen dönem aşağıdakilerden hangisidir?",
+      "options": [
+        "11. yüzyıl",
+        "12. yüzyıl",
+        "13. yüzyıl",
+        "14. yüzyıl",
+        "15. yüzyıl"
+      ],
+      "answer": 2,
+      "solution": "Osmanlı Devleti, genel kabule göre 13. yüzyılın sonlarında (yaklaşık 1299) Osman Bey tarafından kurulmuştur. Bu nedenle Osmanlı'nın kuruluş yüzyılı 13. yüzyıl olarak kabul edilmektedir. Diğer yüzyıllar Osmanlı'nın farklı gelişim dönemlerine karşılık gelir.",
+      "topic": "Osmanlı Devleti – Kuruluş"
+    },
+    {
+      "question": "Türkiye'de halifelik hangi yıl kaldırılmıştır?",
+      "options": [
+        "1922",
+        "1923",
+        "1924",
+        "1925",
+        "1926"
+      ],
+      "answer": 2,
+      "solution": "Halifelik, 3 Mart 1924'te TBMM'nin aldığı kararla kaldırılmıştır. Son halife Abdülmecit Efendi yurt dışına çıkarılmıştır. Bu karar, Türkiye'nin laik devlet yapısına geçişinde önemli bir adım olarak değerlendirilir. Saltanat ise daha önce, 1922'de kaldırılmıştı.",
+      "topic": "Türkiye Cumhuriyeti – Laiklik"
+    },
+    {
+      "question": "Osmanlı Devleti'nde 'Divan-ı Hümayun'un başkanı kimdir?",
+      "options": [
+        "Padişah",
+        "Veziriazam",
+        "Kazasker",
+        "Defterdar",
+        "Şeyhülislam"
+      ],
+      "answer": 1,
+      "solution": "Divan-ı Hümayun, Osmanlı'nın en yüksek yürütme ve yargı organıdır. Başlangıçta padişah bu divana başkanlık etse de zamanla bu görev veziriazama devredilmiştir. Veziriazam, padişahın mutlak vekili sıfatıyla divana başkanlık etmiş ve devlet işlerini yönetmiştir.",
+      "topic": "Osmanlı Devleti – Yönetim"
+    },
+    {
+      "question": "Türkiye'de Latin alfabesi hangi yıl kabul edilmiştir?",
+      "options": [
+        "1926",
+        "1927",
+        "1928",
+        "1929",
+        "1930"
+      ],
+      "answer": 2,
+      "solution": "Latin alfabesi, 1 Kasım 1928'de kabul edilerek yürürlüğe girmiştir. Bu inkılap sayesinde Arap harflerinden Latin harflerine geçilmiş, okuma-yazma oranının artırılması ve eğitimin yaygınlaştırılması hedeflenmiştir. Harf İnkılabı olarak da bilinen bu gelişme, Atatürk'ün öncülüğünde gerçekleştirilmiştir.",
+      "topic": "Atatürk İnkılapları – Harf İnkılabı"
+    },
+    {
+      "question": "İstanbul'un Osmanlılar tarafından fethedildiği yıl aşağıdakilerden hangisidir?",
+      "options": [
+        "1389",
+        "1402",
+        "1453",
+        "1461",
+        "1517"
+      ],
+      "answer": 2,
+      "solution": "İstanbul, 29 Mayıs 1453'te Sultan II. Mehmet (Fatih Sultan Mehmet) tarafından fethedilmiştir. Bu fetih, Doğu Roma İmparatorluğu'nun sona ermesi ve Orta Çağ'ın kapanması bakımından dünya tarihi açısından da önemli bir dönüm noktasıdır.",
+      "topic": "Osmanlı Devleti – Fetihler"
+    },
+    {
+      "question": "Türkiye Büyük Millet Meclisi hangi tarihte açılmıştır?",
+      "options": [
+        "19 Mayıs 1919",
+        "10 Ağustos 1920",
+        "23 Nisan 1920",
+        "29 Ekim 1923",
+        "1 Kasım 1922"
+      ],
+      "answer": 2,
+      "solution": "TBMM, 23 Nisan 1920'de Ankara'da açılmıştır. Mustafa Kemal'in önderliğinde toplanan bu meclis, işgal altındaki İstanbul hükümetine karşı millî iradeyi temsil eden bağımsız bir otorite oluşturmuştur. Bu nedenle 23 Nisan, Ulusal Egemenlik ve Çocuk Bayramı olarak kutlanmaktadır.",
+      "topic": "Kurtuluş Savaşı – TBMM"
+    },
+    {
+      "question": "Osmanlı Devleti'nde 'yeniçeri ocağı' hangi padişah tarafından kaldırılmıştır?",
+      "options": [
+        "III. Selim",
+        "II. Mahmut",
+        "I. Abdülhamit",
+        "Abdülmecit",
+        "II. Abdülhamit"
+      ],
+      "answer": 1,
+      "solution": "Yeniçeri Ocağı, II. Mahmut tarafından 1826 yılında kaldırılmıştır. Bu olay, Osmanlı tarihinde 'Vaka-i Hayriye' (Hayırlı Olay) olarak adlandırılmıştır. III. Selim de orduyu modernleştirmeye çalışmış ancak yeniçerilerin isyanı sonucu başarılı olamamıştır; bu reformu fiilen gerçekleştiren II. Mahmut'tur.",
+      "topic": "Osmanlı Devleti – Askeri Reformlar"
+    }
+  ]
+}

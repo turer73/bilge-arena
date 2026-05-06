@@ -1,6 +1,6 @@
 {
-  "takenAt": "2026-05-06T20:45:44.921Z",
-  "totalActive": 1566,
+  "takenAt": "2026-05-06T21:57:43.990Z",
+  "totalActive": 1890,
   "byGame": {
     "wordquest": {
       "total": 91,
@@ -41,26 +41,26 @@
       },
       "byDifficulty": {
         "1": 38,
-        "2": 117,
+        "2": 116,
         "3": 157,
-        "4": 47,
+        "4": 48,
         "5": 29
       },
       "byLevel": {}
     },
     "turkce": {
-      "total": 432,
+      "total": 499,
       "byCategory": {
         "yazim_kurallari": 55,
-        "paragraf": 125,
+        "paragraf": 192,
         "dil_bilgisi": 105,
         "sozcuk": 80,
         "anlam_bilgisi": 67
       },
       "byDifficulty": {
-        "1": 65,
-        "2": 118,
-        "3": 138,
+        "1": 90,
+        "2": 145,
+        "3": 153,
         "4": 73,
         "5": 38
       },
@@ -83,17 +83,17 @@
       "byLevel": {}
     },
     "sosyal": {
-      "total": 397,
+      "total": 654,
       "byCategory": {
-        "sosyoloji": 101,
-        "cografya": 98,
-        "tarih": 98,
-        "felsefe": 100
+        "sosyoloji": 181,
+        "cografya": 152,
+        "tarih": 157,
+        "felsefe": 164
       },
       "byDifficulty": {
-        "1": 44,
-        "2": 125,
-        "3": 120,
+        "1": 159,
+        "2": 199,
+        "3": 188,
         "4": 80,
         "5": 28
       },
@@ -101,12 +101,12 @@
     }
   },
   "plays": {
-    "since": "2026-04-06T20:45:44.830Z",
-    "totalSessions": 218,
+    "since": "2026-04-06T21:57:43.910Z",
+    "totalSessions": 221,
     "byGame": {
       "sosyal": 78,
       "fen": 45,
-      "turkce": 49,
+      "turkce": 52,
       "matematik": 40,
       "wordquest": 6
     }
