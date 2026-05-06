@@ -192,7 +192,13 @@ export function GameCompleted({ state, userId }: GameCompletedProps) {
         )
       })()}
 
-      <div className="mt-3 flex justify-center gap-2">
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
+        <Link
+          href="/arena"
+          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium hover:bg-[var(--card)]"
+        >
+          🏠 Ana Sayfa
+        </Link>
         <Link
           href="/oda"
           className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium hover:bg-[var(--card)]"

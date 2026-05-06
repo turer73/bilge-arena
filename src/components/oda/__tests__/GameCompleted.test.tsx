@@ -62,9 +62,10 @@ describe('GameCompleted', () => {
     expect(screen.getByText('Ali')).toBeInTheDocument()
     expect(screen.getByText(/\(sen\)/)).toBeInTheDocument()
 
-    // Yeni oda + odalarım linkleri
+    // Yeni oda + odalarım + ana sayfa linkleri
     expect(screen.getByRole('link', { name: /Yeni Oda Kur/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Odalarım/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Ana Sayfa/i })).toBeInTheDocument()
   })
 
   test('2) state=archived -> arşiv mesaji gosterilir', () => {
