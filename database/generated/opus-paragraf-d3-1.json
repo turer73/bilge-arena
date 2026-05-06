@@ -1,0 +1,206 @@
+[
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Ana Düşünce - Çıkarım",
+    "question": "Modern toplumlarda hızla yayılan dijital teknolojiler, bireyin dikkat süresini azaltırken aynı anda birden fazla kaynaktan bilgi edinme yetisini güçlendirmiştir. Sosyologlar bu duruma 'çoklu görev paradoksu' adını vermektedir: Bir tarafta derinlemesine düşünme yetisi zayıflarken diğer tarafta bilgiyi hızla tarayıp kategorize etme becerisi gelişmektedir. Bu nedenle yeni eğitim modelleri, hem derin okuma hem de bilgiyi süzme becerilerini birlikte geliştirmek üzere tasarlanmaktadır. Bu paragraftan aşağıdakilerden hangisi çıkarılabilir?",
+    "options": [
+      "Çoklu görev becerisi yalnızca olumsuz sonuçlar doğurur.",
+      "Dijital teknolojiler hem dikkat sürecini olumsuz etkiler hem de yeni bilişsel beceriler kazandırır; eğitim bu ikiliğe yanıt vermelidir.",
+      "Eğitim modelleri yalnızca derin okumaya odaklanmalıdır.",
+      "Modern toplumlarda bilgi taraması artık önemini yitirmiştir.",
+      "Sosyologlar yeni teknolojileri tamamen reddetmektedir."
+    ],
+    "answer": 1,
+    "solution": "Paragraf, dijital teknolojinin hem olumsuz (dikkat azalması) hem olumlu (çoklu kaynak yönetimi) etkileri olduğunu söyler ve eğitim modellerinin bu ikiliğe yanıt verdiğini belirtir. B bu çift yönlü değerlendirmeyi ve eğitimin rolünü tam yansıtır. Diğer seçenekler ya tek yönü abartır ya paragrafa zıttır."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Yardımcı Düşünce",
+    "question": "Antik Yunan tragedyalarında kahraman çoğunlukla bir kusur (hamartia) nedeniyle düşüşe geçer; bu kusur kibir, körlük ya da kaderin uyarılarına aldırmama biçiminde tezahür eder. Aristoteles'e göre seyirci, bu düşüşü izlerken acıma ve korku duyguları yaşar; bu duyguların tragedya yoluyla arınmasına 'katarsis' denir. Modern psikoloji de sanatın benzer bir terapötik işlev gördüğünü kabul eder. Bu paragrafa göre aşağıdakilerden hangisi söylenemez?",
+    "options": [
+      "Hamartia, tragedya kahramanının düşüşüne neden olan bir kusurdur.",
+      "Seyirci, tragedyada kahramanın çöküşünü izlerken duygusal arınma yaşar.",
+      "Modern psikoloji, sanatın terapötik işlevi olduğu görüşündedir.",
+      "Aristoteles katarsis kavramının kaynağı sayılır.",
+      "Tragedya, tüm seyircilerde aynı duygusal etkiyi yaratır."
+    ],
+    "answer": 4,
+    "solution": "Paragraf, tragedyanın seyircide acıma ve korku uyandırdığını, bu duyguların katarsisle arındığını söyler ama 'tüm seyircilerde aynı etki' yaratıldığı yargısı yer almaz. Bu nedenle E paragraftan çıkarılamaz. Diğer dört seçenek metinden doğrudan çıkarılabilir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Anlatıcı Tutumu",
+    "question": "'Bugün medya, kalabalıkları belirli bir gerçekliğe inandırma konusunda eskisinden çok daha güçlü; ne yazık ki bu güç, çoğu zaman olguları çarpıtmak için kullanılıyor. Yine de tarih bize gösteriyor ki gerçek, baskı altında bile uzun süre saklı kalamaz.' Bu sözlerin sahibi yazarın tutumu için aşağıdakilerden hangisi söylenebilir?",
+    "options": [
+      "Yazar, medyanın gücünden umutsuzdur ve hiçbir çözüm görmemektedir.",
+      "Yazar, medyanın çarpıtmalarını eleştirmekle birlikte gerçeğin er geç ortaya çıkacağına dair umudunu korur.",
+      "Yazar, medyanın olumlu rolünü vurgulamakta ve eleştirmemektedir.",
+      "Yazar, medyanın yalnızca eğlence işlevi gördüğünü düşünür.",
+      "Yazar, gerçeğin asla ortaya çıkmayacağını savunur."
+    ],
+    "answer": 1,
+    "solution": "Yazar bir yandan medyanın olguları çarpıtmasını eleştiriyor, diğer yandan 'gerçeğin uzun süre saklı kalamayacağını' söyleyerek umudunu koruyor. B, eleştirel-umutlu bu çift yönlü tutumu doğru özetler."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Düşüncenin Akışı - Boş Bırakılan Cümle",
+    "question": "Bilim insanları, başka gezegenlerde yaşam aramak için 'astrobiyoloji' adı verilen disiplinler arası bir alan geliştirmişlerdir. Mars, Europa ve Enceladus gibi gök cisimleri sıvı su veya tuzlu okyanus barındırma potansiyelleriyle bu araştırmaların odağındadır. ----. Bu nedenle uzay ajansları yeni nesil sondaları biyoimza tespit edebilen sensörlerle donatmaktadır. Yukarıdaki paragrafta boş bırakılan yere aşağıdakilerden hangisi en uygundur?",
+    "options": [
+      "Mars'ta su artık tamamen yok olmuştur.",
+      "Yaşamın varlığını gösteren biyokimyasal izlere 'biyoimza' denir; bunların belirlenmesi astrobiyolojinin en kritik görevidir.",
+      "Astronomi yalnızca gök cisimlerinin hareketini inceler.",
+      "Uzay araştırmaları çok pahalı olduğu için durdurulmuştur.",
+      "Müzik tarihinin önemli kompozitörleri 18. yüzyılda yetişmiştir."
+    ],
+    "answer": 1,
+    "solution": "Önceki cümle gök cisimlerinin sudan dolayı odakta olduğunu, sonraki cümle ise 'biyoimza tespit eden sensörler'den söz ediyor. Boş kısım, biyoimza kavramını tanıtmalıdır ki sonraki cümleyle bağlantı kurulsun. Sadece B bu işlevi görüyor; diğerleri ya konuya zıt ya alakasız."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Söz Sanatı",
+    "question": "'Sokakta yürürken yağmur birden başladı; gökyüzü, ağlamaklı bir çocuk gibi gözyaşlarını tutamadı.' cümlesinde aşağıdaki söz sanatlarından hangisi kullanılmamıştır?",
+    "options": [
+      "Kişileştirme",
+      "Teşbih (benzetme)",
+      "Mübalağa (abartma)",
+      "Mecaz",
+      "Cinas"
+    ],
+    "answer": 4,
+    "solution": "Cümlede gökyüzü ağlamaklı bir çocuğa benzetilerek kişileştirme ve teşbih (gibi edatıyla) yapılmıştır. 'Gözyaşlarını tutamadı' ifadesi mecaz içerir; 'sicim gibi yağmur' türü bir abartı (mübalağa) da örtük olarak vardır. Cinas ise aynı yazılışlı farklı anlamlı sözcüklerin kullanımıdır; bu cümlede yoktur."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Anlam İlişkileri",
+    "question": "'Yıllarca sıkı çalıştı, mesleğinde uzmanlaştı; ne ki bütün bu emeği zamansız bir hastalık silip götürdü.' cümlesindeki düşünce ilişkisi için aşağıdakilerden hangisi söylenebilir?",
+    "options": [
+      "Beklenen sonuç dışında, beklenmeyen olumsuz bir sonuç anlatılmıştır (karşıtlık-beklenmezlik).",
+      "Bir koşul ve onun sonucu anlatılmıştır.",
+      "Yalnızca neden-sonuç ilişkisi vardır.",
+      "İki olay eş zamanlı olarak verilmiştir.",
+      "Olaylar arasında karşılaştırma yapılmıştır."
+    ],
+    "answer": 0,
+    "solution": "Cümlede önce çalışma ve uzmanlaşma anlatılır, ardından 'ne ki' (ne var ki) bağlacıyla beklenen olumlu sonuç yerine zamansız bir hastalığın bütün emeği yok ettiği anlatılır. Bu, karşıtlık ve özellikle 'beklenmedik olumsuz sonuç' ilişkisidir. Saf bir neden-sonuç ya da koşul yoktur."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Paragrafın Yapısı - Giriş",
+    "question": "Aşağıdakilerden hangisi 'kentleşme ve psikolojik sağlık' temalı bir paragraf için en uygun giriş cümlesidir?",
+    "options": [
+      "Türk müziği tarihi köklü bir geçmişe sahiptir.",
+      "Modern kentlerde yaşam temposunun hızlanmasıyla bireyin psikolojik dengesi de artan bir biçimde tehdit altına girmiştir.",
+      "Geçen yıl ihracat rakamlarımız bir önceki yılı geride bırakmıştır.",
+      "Antik dönemde kuvvet birimi olarak farklı sistemler kullanılmıştır.",
+      "Yeni nesil otomobiller daha az yakıt tüketmektedir."
+    ],
+    "answer": 1,
+    "solution": "Paragrafın temasıyla doğrudan ilişkili tek seçenek B'dir; modern kent yaşamı ile psikolojik denge arasındaki bağı kurar ve sonraki cümlelerin gelişmesi için zemin hazırlar. Diğer cümleler farklı konulara aittir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Düşünceyi Geliştirme Yolu",
+    "question": "Bir yazar, yazısında 'Sanat eğitimi çocuklarda yaratıcılığı geliştirir.' iddiasını desteklemek için sırasıyla araştırma sonuçları, ünlü pedagogların görüşleri ve örnek okul deneyimlerini sunmuştur. Yazarın bu yazıda kullandığı düşünceyi geliştirme yolları aşağıdakilerin hangisinde doğru verilmiştir?",
+    "options": [
+      "Tanımlama - Karşılaştırma - Örneklendirme",
+      "Sayısal verilerden yararlanma - Tanık gösterme - Örneklendirme",
+      "Tartışma - Tanım - Karşılaştırma",
+      "Soru sorma - Tanık gösterme - Karşılaştırma",
+      "Tanımlama - Sınıflandırma - Örneklendirme"
+    ],
+    "answer": 1,
+    "solution": "Araştırma sonuçları sayısal verilerden yararlanma; ünlü pedagogların görüşleri tanık gösterme; örnek okul deneyimleri ise örneklendirmedir. B bu üç yöntemi doğru sıralar. Diğer seçeneklerde belirtilen yöntemler paragraftaki yöntemlerle eşleşmez."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Düşüncenin Akışı - Bozan Cümle",
+    "question": "(I) Genetik mühendisliği son yıllarda tıp alanında devrim niteliğinde gelişmelere yol açmıştır. (II) Özellikle CRISPR teknolojisi, hastalıklı genleri hedefli biçimde düzenleme imkânı sunmaktadır. (III) Bu yöntem sayesinde kalıtsal pek çok hastalığın tedavisi daha gerçekçi bir hedef hâline gelmiştir. (IV) Türk halı sanatı dünyada büyük ilgi görmektedir. (V) Bununla birlikte etik tartışmalar da yöntemin sınırlarının nasıl çizileceğini gündeme getirmektedir. Düşüncenin akışını bozan cümle aşağıdakilerden hangisidir?",
+    "options": ["I", "II", "III", "IV", "V"],
+    "answer": 3,
+    "solution": "I, II, III ve V cümleleri genetik mühendisliği, CRISPR ve buna ilişkin etik tartışmalardan söz ederek konu bütünlüğü oluşturur. IV. cümle Türk halı sanatından bahseder ve metnin akışını bozar."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Çıkarım - Olasılık",
+    "question": "Yapay zekâ sistemleri, eğitildikleri verilerin önyargılarını da öğrenmeye eğilimlidir; bu nedenle adli karar destek sistemlerinde ırka veya cinsiyete dayalı sistematik hatalar tespit edilmiştir. Çoğu uzman bu tür sistemlerin geliştirilmesinde 'algoritmik şeffaflık' ve 'denetlenebilirlik' ilkelerinin temel alınması gerektiğini vurgulamaktadır. Bu paragrafa göre aşağıdaki çıkarımlardan hangisi yapılabilir?",
+    "options": [
+      "YZ sistemleri her zaman tarafsızdır.",
+      "Adli alanda YZ kullanımı tamamen yasaklanmıştır.",
+      "Eğitim verisinin önyargıları YZ'nin kararlarına yansıyabilir; şeffaflık ve denetim bu riski azaltabilir.",
+      "Algoritmik şeffaflık YZ'nin doğruluğunu garanti eder.",
+      "İnsan karar vericiler YZ'ye göre çok daha tarafsızdır."
+    ],
+    "answer": 2,
+    "solution": "Paragraf, YZ sistemlerinin eğitim verisindeki önyargıları öğrendiğini ve bunun adli alanda sistematik hatalara yol açtığını söyler; çözüm olarak şeffaflık ve denetim önerir. C bu ilişkiyi doğru biçimde özetler. Diğer seçenekler ya tam tersini söyler ya garanti üretir ya konuyu aşırı genelleştirir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Anlatım Biçimi",
+    "question": "'İklim değişikliği, yalnızca buzulların erimesi değil aynı zamanda biyoçeşitliliğin azalması, tarımsal verim düşüşü ve göç hareketlerinin artmasıdır. Bu nedenle iklim politikaları çok boyutlu olmak zorundadır.' Bu paragraftaki düşünceyi geliştirme yolu için aşağıdakilerden hangisi en doğrudur?",
+    "options": [
+      "Sayısal verilerle açıklama",
+      "Tanımlama yoluyla anlatım",
+      "Karşılaştırma yapma",
+      "Tanık gösterme",
+      "Tartışma"
+    ],
+    "answer": 1,
+    "solution": "Yazar 'iklim değişikliği'nin ne olduğunu açıklamak için 'yalnızca... değil aynı zamanda...' kalıbını kullanarak kavramı çok boyutlu biçimde tanımlamıştır. Burada baskın yöntem tanımlamadır. Sayısal veri, tanık ya da karşılaştırma kullanılmamıştır."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Başlık Belirleme",
+    "question": "Bir paragrafta sırasıyla şu konular ele alınıyor: insanın tarih boyunca yıldızları gözlemleyişi, eski uygarlıkların yıldız haritaları, modern astrofiziğin gelişimi ve gelecekteki uzay yolculuklarına dair beklentiler. Bu paragrafa en uygun başlık aşağıdakilerden hangisidir?",
+    "options": [
+      "Antik Yunan'da Astronomi",
+      "Modern Astrofizik Tarihi",
+      "İnsanlığın Yıldızlarla Macerası",
+      "Gelecekte Uzay Turizmi",
+      "Bilim Kurgu Edebiyatı"
+    ],
+    "answer": 2,
+    "solution": "Paragraf antik dönemden günümüze ve geleceğe uzanan, insanlığın yıldızlarla olan tarihsel ilişkisini bütüncül biçimde ele alır. C başlığı bu kapsamı yansıtır. Diğer seçenekler dönemin tek bir yönünü kapsadığından paragrafın bütünüyle örtüşmez."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Olgu - Görüş Ayrımı",
+    "question": "Aşağıdaki cümlelerden hangisi tamamen kanıtlanabilir bir olgu (gerçeklik) bildirmektedir?",
+    "options": [
+      "Kış aylarında en güzel müzikler dinlenir.",
+      "Bence Türk romanı dünyanın en derin romanıdır.",
+      "Su, atmosfer basıncında 100°C'de kaynar.",
+      "Eski kuşakların kitap zevki yenilerden üstündür.",
+      "Şehir hayatı insanı mutsuz etmektedir."
+    ],
+    "answer": 2,
+    "solution": "Olgu, doğruluğu ya da yanlışlığı nesnel biçimde kanıtlanabilen önermedir. Suyun atmosfer basıncında 100°C'de kaynaması fiziksel olarak ölçülebilen bir olgudur. Diğer seçenekler 'bence', 'en güzel', 'üstündür' gibi kişisel değerlendirmelerle kanı (görüş) bildirir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Paragrafın Sonuç Cümlesi",
+    "question": "Şehir içi trafiğin ağırlaştığı son yıllarda, toplu taşıma sistemlerine yatırım yapan kentler hem hava kirliliğinde hem de stres düzeylerinde belirgin düşüş yaşamıştır. Sürdürülebilir ulaşım planlaması artık yalnızca çevre değil; kamu sağlığı politikalarının da ayrılmaz parçasıdır. Bu paragraf için en uygun sonuç cümlesi aşağıdakilerden hangisidir?",
+    "options": [
+      "Bu nedenle özel araç sayısının artırılması teşvik edilmelidir.",
+      "Bu yüzden kentler, ulaşım planlarını çevre, sağlık ve toplumsal refah çerçevesinde bütüncül bir biçimde ele almak durumundadır.",
+      "Toplu taşıma sistemlerinin kullanımı her geçen yıl azalmaktadır.",
+      "Trafik sorunlarının çözümü tamamen bireylerin elindedir.",
+      "Hava kirliliği yalnızca kırsal alanlarda görülen bir sorundur."
+    ],
+    "answer": 1,
+    "solution": "Paragraf, sürdürülebilir ulaşımın çevre ve kamu sağlığı için bütüncül önemine vurgu yapar. B sonuç cümlesi bu vurguyu pekiştirip kentlere bütüncül planlama çağrısı yaparak metinle tutarlı bir kapanış sağlar. Diğer seçenekler ya paragrafa zıt ya konu dışıdır."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 3,
+    "topic": "Yazarın Amacı",
+    "question": "'Bu kitabı, gençlere matematiğin yalnızca ezberlenmesi gereken kurallar bütünü olmadığını; aksine düşünmenin sevincini, problemleri çözmenin keyfini gösteren bir oyun olduğunu anlatmak için kaleme aldım.' Bu cümleden yazarın temel amacı için aşağıdakilerden hangisi söylenebilir?",
+    "options": [
+      "Matematik ders kitaplarını eleştirmek",
+      "Matematiğin formüllerini öğretmek",
+      "Matematiği eğlenceli ve düşünsel bir etkinlik olarak sunarak gençlere sevdirmek",
+      "Matematik tarihini özetlemek",
+      "Matematik yarışmalarına hazırlanmak"
+    ],
+    "answer": 2,
+    "solution": "Yazar, kitabını 'matematiğin düşünmenin sevincini ve problem çözmenin keyfini' anlattığı bir 'oyun' olarak sunduğunu söyler ve hedef kitleyi 'gençler' olarak belirler. Bu, matematiği eğlenceli-düşünsel bir uğraş olarak gençlere sevdirme amacıdır. C cevabı bu amacı doğru ifade eder."
+  }
+]

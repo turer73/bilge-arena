@@ -1,0 +1,79 @@
+{
+  "takenAt": "2026-05-06T21:11:14.531Z",
+  "game": "sosyal",
+  "category": "cografya",
+  "difficulty": 1,
+  "topic": null,
+  "prompt_version": "yks-claude-v4",
+  "model": "claude-sonnet-4-6",
+  "count": 5,
+  "valid_count": 10,
+  "raw_count": 10,
+  "questions": [
+    {
+      "question": "Dünya'nın en uzun nehri olarak kabul edilen nehir hangisidir?",
+      "options": [
+        "Amazon",
+        "Mississippi",
+        "Nil",
+        "Yangtze",
+        "Kongo"
+      ],
+      "answer": 2,
+      "solution": "Nil Nehri yaklaşık 6.650 km uzunluğuyla dünya'nın en uzun nehri olarak kabul edilmektedir. Amazon Nehri ise en fazla su taşıyan nehir olma özelliğini taşır.",
+      "topic": "Dünya Coğrafyası"
+    },
+    {
+      "question": "Akdeniz ikliminin temel özelliği aşağıdakilerden hangisidir?",
+      "options": [
+        "Yazları soğuk ve yağışlı, kışları ılık ve kurak",
+        "Yazları sıcak ve kurak, kışları ılık ve yağışlı",
+        "Her mevsim bol yağışlı ve ılıman",
+        "Yazları nemli ve serin, kışları çok soğuk",
+        "Tüm yıl boyunca kurak ve sıcak"
+      ],
+      "answer": 1,
+      "solution": "Akdeniz ikliminde yazlar sıcak ve kurak, kışlar ise ılık ve yağışlı geçer. Bu iklim tipi Türkiye'nin güney ve batı kıyılarında etkilidir; zeytinlik ve narenciye bahçeleri bu iklimin karakteristik bitki örtüsüdür.",
+      "topic": "İklim Bilgisi"
+    },
+    {
+      "question": "Türkiye'de yıllık yağış miktarının en az olduğu bölge hangisidir?",
+      "options": [
+        "Karadeniz Bölgesi",
+        "Marmara Bölgesi",
+        "İç Anadolu Bölgesi",
+        "Ege Bölgesi",
+        "Akdeniz Bölgesi"
+      ],
+      "answer": 2,
+      "solution": "İç Anadolu Bölgesi, denizlerin nemli etkisinden uzak olması nedeniyle Türkiye'nin en az yağış alan bölgesidir. Karadeniz Bölgesi ise en fazla yağış alan bölge olma özelliğini taşır.",
+      "topic": "Türkiye Coğrafyası"
+    },
+    {
+      "question": "Türkiye'de Karadeniz iklimine özgü doğal bitki örtüsü aşağıdakilerden hangisidir?",
+      "options": [
+        "Maki",
+        "Step",
+        "Savan",
+        "Sık yapraklı orman",
+        "Tundra"
+      ],
+      "answer": 3,
+      "solution": "Karadeniz kıyılarında bol yağış ve nemli hava koşulları nedeniyle sık yapraklı geniş yapraklı ormanlar yetişir. Maki Akdeniz iklimine, step ise İç Anadolu'nun kurak iklimine özgü bitki örtüsüdür.",
+      "topic": "Bitki Örtüsü ve İklim"
+    },
+    {
+      "question": "Ekvator'un geçtiği kıtalar arasında aşağıdakilerden hangisi yer almaz?",
+      "options": [
+        "Afrika",
+        "Güney Amerika",
+        "Asya",
+        "Avrupa",
+        "Okyanusya"
+      ],
+      "answer": 3,
+      "solution": "Ekvator; Afrika, Güney Amerika, Asya ve Okyanusya kıtalarından geçmektedir. Avrupa kıtası ise Ekvator'un çok kuzeyinde yer aldığından Ekvator bu kıtadan geçmez.",
+      "topic": "Dünya Coğrafyası"
+    }
+  ]
+}

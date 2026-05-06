@@ -1,0 +1,144 @@
+{
+  "takenAt": "2026-05-06T21:14:48.414Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 2,
+  "topic": null,
+  "prompt_version": "yks-claude-v4",
+  "model": "claude-sonnet-4-6",
+  "count": 10,
+  "valid_count": 10,
+  "raw_count": 10,
+  "questions": [
+    {
+      "question": "Bir bireyin doğduğu ailede, okulda ve akran gruplarında geçirdiği süreçler sonucunda toplumun değer, norm ve beklentilerini içselleştirmesine sosyolojide ne ad verilir?",
+      "options": [
+        "Toplumsal hareketlilik",
+        "Sosyalleşme",
+        "Sosyal kontrol",
+        "Kültürel asimilasyon",
+        "Toplumsal tabakalaşma"
+      ],
+      "answer": 1,
+      "solution": "Bireyin toplumun değer, norm ve beklentilerini öğrenip benimsemesi sürecine sosyalleşme denir. Sosyal kontrol bu normların uygulanmasını sağlayan mekanizmalardır. Kültürel asimilasyon ise bir grubun başka bir grubun kültürünü benimsemesidir. Toplumsal hareketlilik ve tabakalaşma ise statü ile ilgili kavramlardır.",
+      "topic": "Sosyalleşme"
+    },
+    {
+      "question": "Bir toplumda bireyin doğumuyla birlikte elde ettiği, kendi çabası olmaksızın sahip olduğu konuma sosyolojide ne ad verilir?",
+      "options": [
+        "Kazanılmış statü",
+        "Edinilmiş rol",
+        "Verilmiş statü",
+        "Toplumsal prestij",
+        "Sosyal sermaye"
+      ],
+      "answer": 2,
+      "solution": "Bireyin doğumuyla ya da kendi iradesi dışındaki etkenlerle elde ettiği konuma verilmiş (atfedilmiş) statü denir. Kazanılmış statü ise bireyin kendi çabası ve başarılarıyla elde ettiği konumdur. Toplumsal prestij saygınlıkla, sosyal sermaye ise ilişki ağlarıyla bağlantılı kavramlardır.",
+      "topic": "Toplumsal Statü"
+    },
+    {
+      "question": "Fabrika işçisi olan bir kişinin zaman içinde mühendislik eğitimi alarak üst yönetici konumuna gelmesi sosyolojide aşağıdaki kavramlardan hangisiyle açıklanır?",
+      "options": [
+        "Yatay toplumsal hareketlilik",
+        "Kültürel değişme",
+        "Dikey toplumsal hareketlilik",
+        "Toplumsal bütünleşme",
+        "Sosyal dışlanma"
+      ],
+      "answer": 2,
+      "solution": "Bireyin toplumsal tabakalar arasında yukarıya ya da aşağıya doğru yer değiştirmesi dikey toplumsal hareketliliktir. Yatay hareketlilik ise aynı tabaka içindeki yer değiştirmeyi ifade eder. Bu örnekte kişi alt bir konumdan üst bir konuma geçtiğinden dikey hareketlilik söz konusudur.",
+      "topic": "Toplumsal Hareketlilik"
+    },
+    {
+      "question": "Toplumsal kurumlar arasındaki ilişkiyi ele aldığımızda, eğitim kurumunun yerine getirdiği temel işlev aşağıdakilerden hangisidir?",
+      "options": [
+        "Toplumsal dayanışmayı zayıflatmak",
+        "Kültürel mirası kuşaktan kuşağa aktarmak",
+        "Ekonomik üretimi doğrudan gerçekleştirmek",
+        "Siyasi iktidarı meşrulaştırmak",
+        "Dini değerleri yaymak"
+      ],
+      "answer": 1,
+      "solution": "Eğitim kurumunun temel işlevlerinden biri kültürel birikimi, değerleri ve bilgiyi yeni kuşaklara aktarmaktır. Bu süreç toplumun sürekliliğini sağlar. Diğer seçenekler ekonomi, siyaset ve din gibi farklı kurumların işlevleriyle ilgilidir.",
+      "topic": "Toplumsal Kurumlar"
+    },
+    {
+      "question": "Bir toplumda bireylerin belirli kurallara uymalarını sağlamak amacıyla uygulanan ödül ve ceza mekanizmalarının bütününe ne ad verilir?",
+      "options": [
+        "Sosyal tabakalaşma",
+        "Sosyal kontrol",
+        "Sosyal hareketlilik",
+        "Sosyal dayanışma",
+        "Sosyal rol"
+      ],
+      "answer": 1,
+      "solution": "Toplumda bireylerin normlara uymasını sağlamak için kullanılan ödül, ceza ve denetim mekanizmalarının tamamına sosyal kontrol denir. Sosyal dayanışma toplumsal birlikteliği, tabakalaşma ise toplumun katmanlara ayrılmasını ifade eder. Sosyal hareketlilik tabakalar arası geçişle ilgilidir.",
+      "topic": "Sosyal Kontrol"
+    },
+    {
+      "question": "Aynı ilgi alanlarını paylaşan, birbirleriyle düzenli etkileşim içinde olan ve ortak bir kimlik duygusu taşıyan insan topluluğuna sosyolojide ne ad verilir?",
+      "options": [
+        "Kalabalık",
+        "Topluluk (cemaat)",
+        "Toplumsal kurum",
+        "Nüfus",
+        "Kültürel grup"
+      ],
+      "answer": 1,
+      "solution": "Ortak çıkar, kimlik ve düzenli etkileşim temelinde bir araya gelen insan topluluklarına cemaat ya da topluluk denir. Kalabalık geçici ve rastlantısal bir birlikteliği, nüfus ise yalnızca sayısal bir toplamı ifade eder. Toplumsal kurum ise davranışları düzenleyen kalıplaşmış yapılardır.",
+      "topic": "Toplumsal Gruplar"
+    },
+    {
+      "question": "Sosyolojinin kurucusu sayılan ve toplumu organizmaya benzeterek 'sosyal statik' ve 'sosyal dinamik' kavramlarını geliştiren düşünür kimdir?",
+      "options": [
+        "Émile Durkheim",
+        "Karl Marx",
+        "Auguste Comte",
+        "Max Weber",
+        "Herbert Spencer"
+      ],
+      "answer": 2,
+      "solution": "Sosyoloji biliminin kurucusu olarak kabul edilen Auguste Comte, toplumu incelemek için 'sosyal statik' (toplumun düzeni) ve 'sosyal dinamik' (toplumun değişimi) kavramlarını geliştirmiştir. Durkheim toplumsal dayanışma, Marx çatışma teorisi, Weber ise anlayıcı sosyoloji ile tanınır.",
+      "topic": "Sosyolojinin Tarihi ve Kurucu Düşünürler"
+    },
+    {
+      "question": "Bireyin toplumda işgal ettiği konumun gerektirdiği davranış biçimlerine sosyolojide ne ad verilir?",
+      "options": [
+        "Toplumsal norm",
+        "Toplumsal statü",
+        "Toplumsal rol",
+        "Toplumsal değer",
+        "Toplumsal kurum"
+      ],
+      "answer": 2,
+      "solution": "Toplumsal rol, bireyin sahip olduğu statünün kendisinden beklediği davranış kalıplarını ifade eder. Statü bireyin konumunu, norm ise genel davranış kurallarını tanımlar. Değerler neyin doğru ve önemli olduğuna dair genel yargılardır. Rol, statü ile normların kesiştiği noktada ortaya çıkar.",
+      "topic": "Toplumsal Rol ve Statü"
+    },
+    {
+      "question": "Farklı kültürel geçmişlere sahip bireylerin ya da grupların uzun süreli temas sonucunda birbirinin kültürel özelliklerini etkilemesi ve her iki kültürde de değişimler meydana gelmesi sürecine ne ad verilir?",
+      "options": [
+        "Kültürel asimilasyon",
+        "Kültürleşme (akültürasyon)",
+        "Kültür şoku",
+        "Kültürel yayılma",
+        "Kültürel gecikme"
+      ],
+      "answer": 1,
+      "solution": "İki farklı kültürün uzun süreli temasıyla her iki kültürde de değişimler yaşanmasına akültürasyon (kültürleşme) denir. Asimilasyonda bir kültür diğerini tamamen yutar. Kültür şoku yeni bir kültüre girişte yaşanan uyum güçlüğüdür. Kültürel yayılma ise kültür öğelerinin bir toplumdan diğerine geçmesidir.",
+      "topic": "Kültür ve Kültürel Değişme"
+    },
+    {
+      "question": "Sanayileşme sürecinde kırsal alandan kentlere göç eden bireylerin yeni yaşam koşullarına uyum sağlayamaması sonucu toplumsal normsuzluk ya da kuralsızlık durumu yaşaması Émile Durkheim'ın hangi kavramıyla açıklanır?",
+      "options": [
+        "Yabancılaşma",
+        "Anomi",
+        "Sınıf çatışması",
+        "Sosyal Darwinizm",
+        "Kolektif bilinç"
+      ],
+      "answer": 1,
+      "solution": "Durkheim, bireyin toplumsal normlardan kopması ve kuralsızlık durumunu 'anomi' kavramıyla açıklar. Yabancılaşma Marksist bir kavramdır ve işçinin emeğinden kopuşunu ifade eder. Kolektif bilinç toplumun ortak değer ve inançlarını, sınıf çatışması ise toplumsal gruplar arasındaki çıkar çatışmasını tanımlar.",
+      "topic": "Temel Sosyolojik Kavramlar"
+    }
+  ]
+}

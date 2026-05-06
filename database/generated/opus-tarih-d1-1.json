@@ -1,0 +1,188 @@
+[
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "İlk Çağ Uygarlıkları",
+    "question": "İlk yazılı hukuk kuralları olarak kabul edilen kanunlar hangi uygarlığa aittir?",
+    "options": [
+      "Eski Mısır",
+      "Sümerler",
+      "Hititler",
+      "Asurlular",
+      "Persler"
+    ],
+    "answer": 1,
+    "solution": "Sümerler, Mezopotamya'da ortaya çıkan ve yazıyı icat eden ilk uygarlıktır. 'Urukagina Kanunları' insanlık tarihinin ilk yazılı yasaları olarak kabul edilir; daha sonra Babil hükümdarı Hammurabi'nin (MÖ 1750) kanunları daha kapsamlı bir hukuk sistemini ortaya koymuştur."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "İslam Tarihi",
+    "question": "Hicret olayı (Hz. Muhammed'in Mekke'den Medine'ye göçü) hangi yılda gerçekleşmiştir?",
+    "options": ["610", "622", "630", "632", "656"],
+    "answer": 1,
+    "solution": "Hicret, 622 yılında Hz. Muhammed'in Mekke'den Medine'ye göçü olayıdır ve İslam takviminin başlangıcı kabul edilir. 610 ilk vahyin gelişi, 630 Mekke'nin fethi, 632 Hz. Muhammed'in vefatı, 656 ise Hz. Osman'ın şehit edilmesi olaylarıdır."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Türk Tarihi",
+    "question": "Türklerin İslamiyeti kabul ettiği ve Karahanlı Devleti'nin İslam'a geçiş kararının alındığı dönemin hükümdarı aşağıdakilerden hangisidir?",
+    "options": [
+      "Bilge Kağan",
+      "Satuk Buğra Han",
+      "Tuğrul Bey",
+      "Alparslan",
+      "Melikşah"
+    ],
+    "answer": 1,
+    "solution": "Satuk Buğra Han, 950 yılı civarında Karahanlı Devleti'nde İslamiyeti kabul eden ilk Türk hükümdarıdır ve adını 'Abdülkerim Satuk Buğra Han' olarak değiştirmiştir. Onun döneminde başlayan İslamlaşma süreci sonraki kuşaklarla yaygınlaşmıştır."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Selçuklu",
+    "question": "Anadolu'nun Türklere açılmasını sağlayan 1071 Malazgirt Savaşı'nda Selçuklu ordusunun başında bulunan hükümdar aşağıdakilerden hangisidir?",
+    "options": ["Tuğrul Bey", "Alparslan", "Melikşah", "Sultan Sancar", "Berkyaruk"],
+    "answer": 1,
+    "solution": "Sultan Alparslan, 26 Ağustos 1071 Malazgirt Savaşı'nda Bizans İmparatoru Romen Diyojen'i mağlup etmiş ve Anadolu'yu Türklere açmıştır. Tuğrul Bey 1055'te Bağdat'a girmiş, Melikşah ise Selçuklu'nun en görkemli dönemini açmıştır."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Osmanlı Kuruluş",
+    "question": "Osmanlı Devleti hangi yılda kurulmuştur?",
+    "options": ["1071", "1299", "1326", "1453", "1517"],
+    "answer": 1,
+    "solution": "Osmanlı Devleti, 1299 yılında Söğüt'te Osman Bey tarafından kurulmuştur. 1326 Bursa'nın fethi (Orhan Bey), 1453 İstanbul'un fethi (Fatih), 1517 Mısır'ın fethi (Yavuz Sultan Selim) olaylarıdır."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Osmanlı",
+    "question": "Yavuz Sultan Selim'in 1517'de Memlükleri yenmesi ve halifelik makamının Osmanlı'ya geçmesi hangi savaş sonrasında gerçekleşmiştir?",
+    "options": [
+      "Çaldıran Savaşı",
+      "Mercidabık Savaşı",
+      "Ridaniye Savaşı",
+      "Mohaç Savaşı",
+      "Preveze Deniz Savaşı"
+    ],
+    "answer": 2,
+    "solution": "Yavuz Sultan Selim, 1516 Mercidabık ve 1517 Ridaniye savaşlarında Memlükleri yenmiştir. Ridaniye Savaşı (1517) sonucu Mısır Osmanlı topraklarına katılmış ve halifelik Osmanlı'ya geçmiştir. Mercidabık ise Suriye'yi kazandırmıştır. Çaldıran (1514) Safevilere karşı, Mohaç (1526) Macarlara, Preveze (1538) Akdeniz'de kazanılmıştır."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Coğrafi Keşifler",
+    "question": "Amerika kıtasını 1492'de keşfeden denizci aşağıdakilerden hangisidir?",
+    "options": [
+      "Vasco de Gama",
+      "Magellan",
+      "Kristof Kolomb",
+      "Bartolomeo Diaz",
+      "James Cook"
+    ],
+    "answer": 2,
+    "solution": "Kristof Kolomb (Christopher Columbus), 1492'de İspanya kraliçesi Isabel'in desteğiyle Atlas Okyanusu'nu geçerek Amerika kıtasının Karayip adalarına ulaşmıştır. Vasco de Gama Hindistan'a deniz yolu (1498), Magellan dünya çevresinde ilk yolculuk (1519-1522), Diaz Ümit Burnu (1488), Cook ise Pasifik keşifleri yapmıştır."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Fransız Devrimi",
+    "question": "Fransız Devrimi hangi yıl başlamıştır?",
+    "options": ["1453", "1648", "1789", "1815", "1848"],
+    "answer": 2,
+    "solution": "Fransız Devrimi, 14 Temmuz 1789'da Bastille'in basılmasıyla başladı. Devrim, 'Hürriyet, eşitlik, kardeşlik' ilkelerini yayarak modern demokrasilerin ve milliyetçilik akımının kaynağı olmuştur."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "I. Dünya Savaşı",
+    "question": "I. Dünya Savaşı hangi yıllar arasında yaşanmıştır?",
+    "options": [
+      "1914-1918",
+      "1939-1945",
+      "1853-1856",
+      "1877-1878",
+      "1923-1929"
+    ],
+    "answer": 0,
+    "solution": "I. Dünya Savaşı, 28 Temmuz 1914 (Avusturya-Macaristan'ın Sırbistan'a savaş ilanı) - 11 Kasım 1918 (Mondros Mütarekesi sonrası Almanya'nın teslimi) tarihleri arasında gerçekleşmiştir. II. Dünya Savaşı 1939-1945, Kırım Savaşı 1853-1856, 93 Harbi ise 1877-1878'dir."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Cumhuriyet",
+    "question": "Türkiye Cumhuriyeti hangi tarihte ilan edilmiştir?",
+    "options": [
+      "23 Nisan 1920",
+      "30 Ağustos 1922",
+      "29 Ekim 1923",
+      "3 Mart 1924",
+      "10 Kasım 1938"
+    ],
+    "answer": 2,
+    "solution": "Türkiye Cumhuriyeti, 29 Ekim 1923'te TBMM kararıyla ilan edilmiş; Mustafa Kemal Paşa ilk cumhurbaşkanı olarak seçilmiştir. 23 Nisan 1920 TBMM'nin açılışı, 30 Ağustos 1922 Başkomutanlık Meydan Muharebesi, 3 Mart 1924 Halifeliğin kaldırılması, 10 Kasım 1938 Atatürk'ün vefatıdır."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Atatürk İlkeleri",
+    "question": "Atatürk'ün altı temel ilkesi (Altı Ok) arasında aşağıdakilerden hangisi yer almaz?",
+    "options": [
+      "Cumhuriyetçilik",
+      "Milliyetçilik",
+      "Halkçılık",
+      "Sosyalizm",
+      "İnkılapçılık"
+    ],
+    "answer": 3,
+    "solution": "Atatürk'ün Altı Oku şunlardır: Cumhuriyetçilik, Milliyetçilik, Halkçılık, Devletçilik, Laiklik, İnkılapçılık. Sosyalizm bu ilkeler arasında yer almaz; Atatürk devletçiliği benimsemiş, ancak bu sosyalizmden farklı bir karma ekonomi modelidir."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Antik Dünya",
+    "question": "Antik Mısır'da firavunlar için inşa edilen anıtsal mezarlara ne ad verilir?",
+    "options": [
+      "Ziggurat",
+      "Piramit",
+      "Akropolis",
+      "Forum",
+      "Stupa"
+    ],
+    "answer": 1,
+    "solution": "Antik Mısır'da firavunlar için piramitler inşa edilmiştir; en bilineni Giza'daki Keops piramidi. Ziggurat Mezopotamya'ya ait basamaklı tapınak, Akropolis Yunan şehirlerinin tepedeki kale, Forum Roma'nın meydanı, Stupa ise Hint-Budist anıtıdır."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Reform",
+    "question": "Reform hareketini başlatan ve 95 tezini Wittenberg Kilisesi'nin kapısına asan din adamı aşağıdakilerden hangisidir?",
+    "options": [
+      "John Calvin",
+      "Martin Luther",
+      "Henry VIII",
+      "Erasmus",
+      "John Wycliffe"
+    ],
+    "answer": 1,
+    "solution": "Martin Luther, 31 Ekim 1517'de Wittenberg'deki kilisenin kapısına Kilise'nin endüljans satışı gibi uygulamalarına karşı 95 tezini asmış ve Reform hareketinin başlatıcısı olmuştur. Calvin Cenevre'de farklı bir Protestan akımı (Kalvenizm) kurmuş, Henry VIII ise İngiltere'de Anglikan Kilisesi'ni oluşturmuştur."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Türk Tarihi - Karakter",
+    "question": "Selçuklu vezirliği görevinde bulunmuş, 'Siyasetname' adlı eserin yazarı olan devlet adamı aşağıdakilerden hangisidir?",
+    "options": [
+      "Tonyukuk",
+      "Nizamülmülk",
+      "Sokollu Mehmet Paşa",
+      "Şemsi Paşa",
+      "Yusuf Has Hacip"
+    ],
+    "answer": 1,
+    "solution": "Nizamülmülk, Büyük Selçuklu Devleti'nde Alparslan ve Melikşah dönemlerinde vezirlik yapmış; 'Siyasetname' (Siyaset Kitabı) adlı eserinde devlet yönetimine ilişkin görüşlerini sunmuştur. Ayrıca 'Nizamiye Medreseleri'ni kurmuştur. Tonyukuk Köktürk veziri, Yusuf Has Hacip 'Kutadgu Bilig' yazarıdır."
+  },
+  {
+    "game": "sosyal", "category": "tarih", "difficulty": 1,
+    "topic": "Sanayi Devrimi",
+    "question": "Sanayi Devrimi ilk olarak hangi ülkede başlamıştır?",
+    "options": [
+      "Fransa",
+      "Almanya",
+      "İngiltere",
+      "ABD",
+      "İtalya"
+    ],
+    "answer": 2,
+    "solution": "Sanayi Devrimi, 18. yüzyılın ikinci yarısında İngiltere'de buhar makinesinin (James Watt 1769) yaygınlaşmasıyla başlamış ve dokuma sektöründen tüm üretime yayılmıştır. İngiltere'nin kömür ve demir kaynakları, sömürgelerden gelen sermaye, deniz ulaşımı ve liberal ekonomi ortamı bu öncülüğü mümkün kılmıştır."
+  }
+]

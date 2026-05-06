@@ -1,0 +1,188 @@
+[
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Türkiye - Akarsular",
+    "question": "Türkiye'nin en uzun akarsuyu aşağıdakilerden hangisidir?",
+    "options": ["Sakarya", "Kızılırmak", "Yeşilırmak", "Fırat", "Dicle"],
+    "answer": 1,
+    "solution": "Türkiye sınırları içinde tamamen kalan en uzun akarsu Kızılırmak'tır (yaklaşık 1.355 km). Fırat ve Dicle daha uzun olsalar da büyük bölümleri Türkiye dışındadır. Sakarya yaklaşık 824 km, Yeşilırmak yaklaşık 519 km uzunluğundadır."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "İklim",
+    "question": "Karasal iklim ile okyanus ikliminin temel farkı aşağıdakilerden hangisidir?",
+    "options": [
+      "Karasal iklimde yıl içindeki sıcaklık farkı azken okyanus ikliminde fazladır.",
+      "Karasal iklimde yıl içindeki sıcaklık farkı fazlayken okyanus ikliminde azdır.",
+      "İki iklim de aynı sıcaklık özelliklerini gösterir.",
+      "Karasal iklim sadece kutup bölgelerinde görülür.",
+      "Okyanus ikliminde yağış görülmez."
+    ],
+    "answer": 1,
+    "solution": "Karasal iklimde denizin termik denge etkisi az olduğundan yaz-kış sıcaklık farkı (yıllık amplitüd) yüksektir. Okyanus iklimi ise denizel etki nedeniyle sıcaklık farkı düşük, yağış dağılımı görece dengelidir. Karasal iklim Orta Asya, İç Anadolu gibi denizden uzak bölgelerde yaygındır."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Türkiye - Konum",
+    "question": "Türkiye'nin matematik konumu aşağıdaki paralel ve meridyen aralıklarından hangisinde yer alır?",
+    "options": [
+      "26°-45° doğu meridyenleri ile 36°-42° kuzey paralelleri arası",
+      "26°-45° batı meridyenleri ile 36°-42° güney paralelleri arası",
+      "0°-30° doğu meridyenleri ile 30°-50° kuzey paralelleri arası",
+      "60°-80° doğu meridyenleri ile 36°-42° kuzey paralelleri arası",
+      "26°-45° doğu meridyenleri ile 0°-20° kuzey paralelleri arası"
+    ],
+    "answer": 0,
+    "solution": "Türkiye 36°-42° kuzey paralelleri ile 26°-45° doğu meridyenleri arasında yer alır. Bu konum Türkiye'nin orta kuşakta, Kuzey Yarım Küre'de ve Doğu Yarım Küre'de bulunmasını sağlar. Yıldız haritasında gerçek yer aşağıda kuzey kutbu yön referansıyla belirlenir."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Türkiye - Ekonomik Coğrafya",
+    "question": "Türkiye'de zeytinin en yaygın yetiştirildiği bölge aşağıdakilerden hangisidir?",
+    "options": [
+      "Karadeniz Bölgesi",
+      "İç Anadolu Bölgesi",
+      "Doğu Anadolu Bölgesi",
+      "Ege Bölgesi",
+      "Güneydoğu Anadolu Bölgesi"
+    ],
+    "answer": 3,
+    "solution": "Zeytin, Akdeniz iklimi bitki örtüsünün karakteristik ürünüdür ve Türkiye'de en fazla Ege Bölgesi'nde yetiştirilir; Türkiye zeytin üretiminin yaklaşık %75'i Ege ve Marmara'dan karşılanır. Ege'de Aydın, Manisa, İzmir başta gelen zeytin üreticisi illerdir."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Dünya - Kıtalar",
+    "question": "Dünya'nın en büyük yüzölçümüne sahip kıtası aşağıdakilerden hangisidir?",
+    "options": ["Afrika", "Asya", "Kuzey Amerika", "Antarktika", "Avustralya"],
+    "answer": 1,
+    "solution": "Asya, yaklaşık 44,58 milyon km² yüzölçümüyle dünyanın en büyük kıtasıdır. Kara yüzeyinin yaklaşık üçte birini ve dünya nüfusunun yaklaşık %60'ını barındırır. Afrika ikinci, Kuzey Amerika üçüncü büyük kıtadır."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Türkiye - Bölgeler",
+    "question": "Türkiye'nin yedi coğrafi bölgesi içinde en küçük yüzölçümlü bölge aşağıdakilerden hangisidir?",
+    "options": [
+      "Akdeniz Bölgesi",
+      "Marmara Bölgesi",
+      "Karadeniz Bölgesi",
+      "Güneydoğu Anadolu Bölgesi",
+      "Ege Bölgesi"
+    ],
+    "answer": 3,
+    "solution": "Türkiye'nin coğrafi bölgeleri arasında en küçük yüzölçümlü olan Güneydoğu Anadolu Bölgesi'dir (yaklaşık 75.000 km², Türkiye yüzölçümünün %9-10'u). En büyük bölge ise Doğu Anadolu Bölgesi'dir."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Yerşekilleri",
+    "question": "Akarsuların aşındırma faaliyetleri sonucunda oluşan ve 'V' biçimli derin vadi tipine ne ad verilir?",
+    "options": ["Asimetrik vadi", "Çentik (kanyon) vadi", "Boğaz", "Tabanlı vadi", "Menderes"],
+    "answer": 1,
+    "solution": "Genç akarsuların derine aşındırması sonucu oluşan, kesitten 'V' biçimli görünen derin ve dar vadiye 'çentik vadi' veya 'kanyon' denir. Tabanlı vadi olgun akarsularda; menderes ise yatay aşındırma ile geniş ovalarda kıvrımlı akış olarak oluşur. Boğaz iki dağlık alan arasındaki dar geçiştir."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Türkiye - Madenler",
+    "question": "Türkiye'de bor madeninin en zengin rezervleri aşağıdaki bölgelerden hangisinde bulunur?",
+    "options": [
+      "Karadeniz Bölgesi",
+      "İç Anadolu Bölgesi",
+      "Marmara Bölgesi",
+      "Ege Bölgesi (Eskişehir-Kütahya-Balıkesir hattı)",
+      "Güneydoğu Anadolu Bölgesi"
+    ],
+    "answer": 3,
+    "solution": "Türkiye dünya bor rezervinin yaklaşık %73'üne sahiptir. Bu rezervler özellikle Eskişehir (Kırka), Kütahya (Emet) ve Balıkesir (Bigadiç-Susurluk) illerinde, yani Ege Bölgesi'nin iç kesimlerinde yoğunlaşmıştır."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Atmosfer",
+    "question": "Bir bölgede sıcaklık ile birlikte basınç değiştiğinde basınç ile sıcaklık arasındaki ilişki için aşağıdakilerden hangisi söylenebilir?",
+    "options": [
+      "Sıcaklık arttıkça basınç artar.",
+      "Sıcaklık arttıkça basınç azalır.",
+      "Sıcaklık ve basınç arasında ilişki yoktur.",
+      "Basınç ve sıcaklık aynı değerde sabit kalır.",
+      "Basınç sadece nemden etkilenir."
+    ],
+    "answer": 1,
+    "solution": "Termik basınç ilkesine göre sıcaklık arttığında hava ısınır, hacmi genişler, yoğunluğu azalır ve yükselir; bu da basıncın azalmasına yol açar (alçak basınç merkezi). Tersine, soğuyan hava ağırlaşıp çöker ve yüksek basınç oluşturur. Bu nedenle Ekvator çevresinde alçak, kutuplarda yüksek basınç hâkimdir."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Türkiye - Nüfus",
+    "question": "Türkiye'de nüfus yoğunluğunun en yüksek olduğu coğrafi bölge aşağıdakilerden hangisidir?",
+    "options": [
+      "Karadeniz Bölgesi",
+      "Marmara Bölgesi",
+      "Ege Bölgesi",
+      "İç Anadolu Bölgesi",
+      "Akdeniz Bölgesi"
+    ],
+    "answer": 1,
+    "solution": "Marmara Bölgesi, sanayi yoğunluğu, ulaşım kolaylığı, İstanbul başta olmak üzere büyük şehirlerin varlığı nedeniyle Türkiye'de en yoğun nüfusa sahip bölgedir. Türkiye nüfusunun yaklaşık %30'u Marmara Bölgesi'nde yaşar; km² başına düşen kişi sayısı 300'ün üzerindedir."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Dünya - Okyanus Akıntıları",
+    "question": "Avrupa'nın batı kıyılarının enleminden beklenenden daha ılıman bir iklime sahip olmasında etkili olan sıcak su akıntısı aşağıdakilerden hangisidir?",
+    "options": [
+      "Labrador Akıntısı",
+      "Gulf Stream (Golfstrim)",
+      "Peru (Humboldt) Akıntısı",
+      "Benguela Akıntısı",
+      "Oyaşio Akıntısı"
+    ],
+    "answer": 1,
+    "solution": "Gulf Stream, Meksika Körfezi'nden çıkıp Atlas Okyanusu'nun batısından kuzeydoğuya doğru akan sıcak su akıntısıdır. Avrupa'nın batı kıyılarına ulaşarak bu bölgenin enleminden beklenenden çok daha ılıman ve nemli bir iklime sahip olmasını sağlar. Labrador, Peru, Benguela ve Oyaşio ise soğuk akıntılardır."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Türkiye - Tarım",
+    "question": "GAP (Güneydoğu Anadolu Projesi) ile aşağıdaki bölgelerden hangisinde sulamalı tarımın geliştirilmesi hedeflenmiştir?",
+    "options": [
+      "Doğu Karadeniz",
+      "Marmara",
+      "Güneydoğu Anadolu",
+      "İç Anadolu",
+      "Akdeniz"
+    ],
+    "answer": 2,
+    "solution": "GAP, Fırat ve Dicle nehirleri üzerinde inşa edilen barajlar (Atatürk, Karakaya, Birecik vb.) ve sulama kanallarıyla Güneydoğu Anadolu Bölgesi'nde sulamalı tarımı geliştirmeyi, enerji üretmeyi ve sosyo-ekonomik kalkınmayı sağlamayı amaçlayan kapsamlı bir entegre projedir. 9 ili kapsar."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Yerşekilleri - Volkanik",
+    "question": "Türkiye'deki volkanik dağlardan biri olmayan aşağıdakilerden hangisidir?",
+    "options": ["Erciyes Dağı", "Nemrut Dağı", "Süphan Dağı", "Kaçkar Dağı", "Hasan Dağı"],
+    "answer": 3,
+    "solution": "Kaçkar Dağı (3.937 m), Doğu Karadeniz Dağları'nın en yüksek noktasıdır ve volkanik kökenli değil, granitik kıvrım kökenli bir dağdır. Erciyes, Nemrut, Süphan ve Hasan Dağı ise Türkiye'deki en bilinen volkanik dağlardır."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Türkiye - Ulaşım",
+    "question": "Türkiye'de demiryolu ulaşımının en yoğun olduğu coğrafi bölge aşağıdakilerden hangisidir?",
+    "options": [
+      "Marmara Bölgesi",
+      "İç Anadolu Bölgesi",
+      "Karadeniz Bölgesi",
+      "Doğu Anadolu Bölgesi",
+      "Akdeniz Bölgesi"
+    ],
+    "answer": 1,
+    "solution": "İç Anadolu Bölgesi'nde Ankara'nın merkez olması, geniş düzlüklerin demiryolu yapımını kolaylaştırması ve diğer bölgeleri birbirine bağlayan transit hatların buradan geçmesi nedeniyle demiryolu ağı en yoğundur. Karadeniz ve Doğu Anadolu'da engebeli arazi nedeniyle demiryolu daha azdır."
+  },
+  {
+    "game": "sosyal", "category": "cografya", "difficulty": 2,
+    "topic": "Dünya - Çöller",
+    "question": "Dünyanın en büyük sıcak çölü aşağıdakilerden hangisidir?",
+    "options": [
+      "Gobi Çölü",
+      "Kalahari Çölü",
+      "Sahra Çölü",
+      "Atacama Çölü",
+      "Patagonya Çölü"
+    ],
+    "answer": 2,
+    "solution": "Sahra Çölü, yaklaşık 9 milyon km² yüzölçümüyle dünyanın en büyük sıcak çölüdür ve Kuzey Afrika'da yer alır. Dünyanın en büyük çölü ise Antarktika'dır (soğuk çöl). Gobi Asya'da, Kalahari Güney Afrika'da, Atacama Şili'de yer alan diğer önemli çöllerdir."
+  }
+]

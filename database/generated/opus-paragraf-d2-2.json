@@ -1,0 +1,200 @@
+[
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Düşüncenin Akışı",
+    "question": "(I) Tarihsel romanlar, geçmiş bir dönemi kurmaca bir hikâye içine yerleştiren eserlerdir. (II) Yazar, dönemin koşullarını ve kişilerini araştırarak hayata geçirir. (III) Bu tür romanlar okurun dönemi sezgisel olarak kavramasına yardımcı olur. (IV) İklim değişikliği son yüzyılın en kritik sorunudur. (V) Tarihsel roman okumak, ders kitabıyla edinilemeyecek bir his ve bağlam sağlar. Düşüncenin akışını bozan cümle hangisidir?",
+    "options": ["I", "II", "III", "IV", "V"],
+    "answer": 3,
+    "solution": "I, II, III ve V cümleleri tarihsel roman türünü konu eder. IV. cümle iklim değişikliği hakkındadır ve konuyla ilgisizdir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Anlam İlişkisi",
+    "question": "'Çok çalıştığı hâlde sınavda başarılı olamadı.' cümlesinde aşağıdakilerden hangi anlam ilişkisi vardır?",
+    "options": [
+      "Neden-sonuç",
+      "Karşıtlık (beklenmezlik)",
+      "Karşılaştırma",
+      "Koşul",
+      "Açıklama"
+    ],
+    "answer": 1,
+    "solution": "'Hâlde' bağlacı, beklenen sonucun (başarılı olma) gerçekleşmediğini, beklenmedik bir durumun ortaya çıktığını ifade eder. Bu, karşıtlık (beklenmezlik) ilişkisidir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Yazarın Tutumu",
+    "question": "'Sosyal medya platformları, kullanıcı odaklı görünmesine karşın aslında reklam verenlere kullanıcının dikkatini satar; biz ise bu sürecin ürünü hâline geliriz. Yine de bu platformların doğru bilinçle kullanıldığında öğrenme ve dayanışma için araç olabileceği yadsınamaz.' Bu paragraftaki yazarın tutumu için aşağıdakilerden hangisi en doğrudur?",
+    "options": [
+      "Sosyal medyaya tamamen karşıdır.",
+      "Sosyal medyayı koşulsuz savunur.",
+      "Eleştirel bir mesafe alır ama olumlu kullanım potansiyelini kabul eder.",
+      "Sosyal medyayı yalnızca eğlence aracı olarak görür.",
+      "Sosyal medya hakkında hiçbir görüş bildirmez."
+    ],
+    "answer": 2,
+    "solution": "Yazar, sosyal medya platformlarının iş modelini eleştirir ('biz ürün hâline geliriz') ama doğru kullanıldığında öğrenme ve dayanışma için araç olabileceğini de söyler. Bu eleştirel-dengeli tutum C'ye karşılık gelir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Anlatım Biçimi",
+    "question": "'Doğa yürüyüşü, hem fiziksel hem ruhsal sağlık için faydalıdır. Bu görüşü destekleyen pek çok bilimsel araştırma vardır. Ünlü psikiyatr Dr. Selçuk Yılmaz da kitaplarında doğa yürüyüşünün stresi azalttığını vurgular.' Bu paragrafta hangi anlatım yöntemi/yöntemleri kullanılmıştır?",
+    "options": [
+      "Yalnızca tanımlama",
+      "Sayısal verilerden yararlanma ve karşılaştırma",
+      "Tanık gösterme",
+      "Öyküleme",
+      "Yalnızca betimleme"
+    ],
+    "answer": 2,
+    "solution": "Yazar, görüşünü desteklemek için tanınmış bir psikiyatrı kaynak olarak gösteriyor; bu, tanık gösterme yöntemidir. Sayısal veri, karşılaştırma, öyküleme veya betimleme baskın değildir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Çıkarım",
+    "question": "Birçok antik kültürde gece gökyüzündeki yıldız kümeleri farklı isimler ve hikâyelerle anılırdı. Bu adlandırmalar yalnızca astronomik gözlem değil; aynı zamanda mitolojik ve kültürel değerleri yansıtmaktaydı. Bu paragraftan aşağıdakilerden hangisi çıkarılabilir?",
+    "options": [
+      "Antik kültürler astronomi bilmiyordu.",
+      "Yıldız adlandırmaları antik kültürlerin değer sistemiyle ilişkiliydi.",
+      "Mitoloji yıldızlardan ayrı bir alandır.",
+      "Antik kültürler tek bir gök hikâyesi paylaşıyordu.",
+      "Modern astronomi mitolojiyi tamamen reddetmiştir."
+    ],
+    "answer": 1,
+    "solution": "Paragraf, antik kültürlerin yıldız adlandırmalarının mitolojik ve kültürel değerlerini yansıttığını söyler; yani bu adlandırmalar değer sistemleriyle ilişkilidir. B doğru çıkarımdır."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Düşünceyi Geliştirme",
+    "question": "'Vegan beslenme, bazı vitamin ve minerallerin (özellikle B12, demir, omega-3) eksikliğine yol açabilir. Bu nedenle vegan beslenenlerin düzenli kan tahlili yaptırması ve gerektiğinde takviye kullanması önerilir.' Bu paragrafta hangi düşünceyi geliştirme yolu kullanılmıştır?",
+    "options": [
+      "Tanımlama",
+      "Karşılaştırma",
+      "Örneklendirme (tipik eksiklikler verilmiş)",
+      "Tanık gösterme",
+      "Öyküleme"
+    ],
+    "answer": 2,
+    "solution": "Yazar, vegan beslenmenin yol açabileceği eksiklikleri B12, demir, omega-3 gibi somut örneklerle belirgin hâle getiriyor. Bu, örneklendirme yöntemidir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Paragraf Yapısı",
+    "question": "'Türkiye'de tarımsal üretim son yıllarda iklim değişikliği nedeniyle dalgalanmalar göstermektedir.' Bu cümlenin ardından gelmesi en uygun cümle aşağıdakilerden hangisidir?",
+    "options": [
+      "Türkiye, kâğıt geri dönüşümünde son yıllarda büyük ilerleme kaydetti.",
+      "Kuraklık ve düzensiz yağışlar buğday verimini doğrudan etkilemekte; çiftçiler ek sulama önlemleri almak zorunda kalmaktadır.",
+      "Eski Türk müziğinde ud önemli bir çalgıdır.",
+      "Romanya, Avrupa Birliği üyesidir.",
+      "Sigara dumanı insan sağlığına zararlıdır."
+    ],
+    "answer": 1,
+    "solution": "Giriş cümlesi tarımsal üretimin iklim değişikliğinden etkilendiğini söylüyor. B somut etkilerini (kuraklık, yağış, buğday verimi) ve çiftçinin önlemini açıklayarak doğal bir devam sağlar."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Anlam Bilgisi",
+    "question": "'Ortaya çıkarmak' deyiminin cümle içinde aşağıdakilerden hangisinde mecazi anlamı korunarak kullanıldığı görülür?",
+    "options": [
+      "Bavulu ortaya çıkarmak için odayı dağıttı.",
+      "Soruşturma, gerçeği bütün açıklığıyla ortaya çıkardı.",
+      "Çiçekleri sundurmadan ortaya çıkardı.",
+      "Anahtarı kanepenin altından ortaya çıkardı.",
+      "Eski fotoğrafları sandıktan ortaya çıkardı."
+    ],
+    "answer": 1,
+    "solution": "B'de 'ortaya çıkarmak' soruşturmanın gerçeği görünür kıldığını anlatır; mecazi (açığa çıkarmak, ifşa etmek) kullanımdır. Diğer şıklarda 'ortaya çıkarmak' fiziki olarak bir şeyi görünür hâle getirme anlamındadır (gerçek anlam)."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Anlatıcı Tutumu",
+    "question": "'Modern eğitim sistemleri test odaklı olmasıyla eleştirilmiştir; ancak bu sistemlerin avantajları, dezavantajlarıyla birlikte nesnel bir biçimde değerlendirilmelidir.' Bu cümleyle yazarın tutumu için aşağıdakilerden hangisi söylenebilir?",
+    "options": [
+      "Yazar, test odaklı sistemleri tamamen reddeder.",
+      "Yazar, test odaklı sistemleri koşulsuz savunur.",
+      "Yazar, dengeli ve nesnel bir değerlendirme önerir.",
+      "Yazar, eğitime hiç önem vermez.",
+      "Yazar, modern eğitimi gereksiz bulur."
+    ],
+    "answer": 2,
+    "solution": "Yazar, test odaklı eğitimin eleştirilerini kabul eder ama avantajları-dezavantajlarıyla birlikte nesnel değerlendirilmesi gerektiğini söyler. C bu dengeli-nesnel tutuma karşılık gelir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Söz Sanatı",
+    "question": "'Hayat, bazen bir ırmaktır; akar gider; bazen bir taş, sabit kalır.' cümlesinde aşağıdakilerden hangi söz sanatı kullanılmıştır?",
+    "options": [
+      "Cinas",
+      "Mübalağa",
+      "Tezat",
+      "Tariz",
+      "Mecazımürsel"
+    ],
+    "answer": 2,
+    "solution": "Cümlede hayat 'ırmak' (akıp giden) ile 'taş' (sabit) gibi birbirine zıt kavramlarla anlatılmıştır. Bu zıtlık, tezat (karşıtlık) sanatıdır."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Olgu - Görüş",
+    "question": "Aşağıdaki cümlelerden hangisi yazarın kişisel görüşünü (kanı/görüş) yansıtır?",
+    "options": [
+      "Türkiye'nin başkenti Ankara'dır.",
+      "Ay, Dünya'nın doğal uydusudur.",
+      "Bence Boğaz Köprüsü, İstanbul'un en güzel manzarasıdır.",
+      "İnsan vücudu yaklaşık %60 sudan oluşur.",
+      "Su, atmosfer basıncında 100°C'de kaynar."
+    ],
+    "answer": 2,
+    "solution": "C cümlesi 'bence' ifadesi ve 'en güzel' niteleme öbeğiyle yazarın öznel değerlendirmesini içerir; bu, kişisel görüş bildirir. Diğer cümleler nesnel olarak doğrulanabilir olgulardır."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Çıkarım",
+    "question": "Bilgisayar başında uzun süre hareketsiz oturmak; göz yorgunluğu, bel ağrısı ve kan dolaşımı sorunlarına yol açabilir. Bu nedenle her 45-50 dakikada bir kısa molalar vermek, hem fiziksel hem zihinsel performansı korumaya yardımcı olur. Bu paragrafa göre aşağıdakilerden hangisi söylenemez?",
+    "options": [
+      "Uzun süre hareketsiz oturmak göz yorgunluğuna yol açabilir.",
+      "Düzenli molalar fiziksel ve zihinsel performansa katkı sağlar.",
+      "Bel ağrısı uzun süre hareketsizlikle ilişkilendirilir.",
+      "Tüm bilgisayar kullanıcıları bel ağrısı çekmez.",
+      "45-50 dakikalık aralıklarla mola verme önerisi vardır."
+    ],
+    "answer": 3,
+    "solution": "Paragrafta 'tüm bilgisayar kullanıcıları bel ağrısı çekmez' gibi olumsuz bir yargı yer almaz; sadece olası riskler ve mola önerisi vardır. D çıkarımı paragrafta açıkça yer almaz. Diğer cümleler doğrudan paragraftan çıkarılır."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Düşüncenin Akışı",
+    "question": "(I) Bisiklet kullanmak çevre dostudur. (II) Egzoz gazı çıkarmaz, gürültü kirliliği yaratmaz. (III) Sağlıklı yaşamı destekler. (IV) Bisiklet için ayrı yollar yapılması gereklidir. (V) Cep telefonu pillerinin geri dönüşümü çok önemlidir. Düşüncenin akışını bozan cümle aşağıdakilerden hangisidir?",
+    "options": ["I", "II", "III", "IV", "V"],
+    "answer": 4,
+    "solution": "I-IV cümleleri bisiklet kullanımı ve onun çevresel-sağlık-altyapı boyutlarını ele alır. V. cümle cep telefonu pillerinin geri dönüşümünden bahseder ve konuyla doğrudan ilgili değildir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Anlatım Biçimi",
+    "question": "'Geleneksel pazarlar, yerel ürünleri sergileyen ve toplumu kaynaştıran sosyal mekânlardır.' cümlesinde hangi düşünceyi geliştirme yolu kullanılmıştır?",
+    "options": [
+      "Karşılaştırma",
+      "Tanımlama",
+      "Tanık gösterme",
+      "Sayısal veri",
+      "Örneklendirme"
+    ],
+    "answer": 1,
+    "solution": "Cümle, geleneksel pazarın ne olduğunu (yerel ürünleri sergileyen ve toplumu kaynaştıran sosyal mekânlar) tanımlamaktadır. Bu, tanımlama yöntemidir."
+  },
+  {
+    "game": "turkce", "category": "paragraf", "difficulty": 2,
+    "topic": "Yazarın Amacı",
+    "question": "'Bu yazıyı, geri dönüşümün günlük yaşamımızda ne kadar önemli olduğunu hatırlatmak ve okuyucularımı küçük ama anlamlı adımlar atmaya teşvik etmek için kaleme aldım.' cümlesinden yazarın amacı için aşağıdakilerden hangisi söylenebilir?",
+    "options": [
+      "Yalnızca bilgi vermek",
+      "Sadece eleştirmek",
+      "Bilinçlendirmek ve eyleme geçirmek",
+      "Bir hikâye anlatmak",
+      "Tarafsız bir analiz sunmak"
+    ],
+    "answer": 2,
+    "solution": "Yazar, hem geri dönüşümün önemini hatırlatmayı (bilinçlendirme) hem de okuyucuları somut adımlar atmaya yönlendirmeyi (eyleme geçirme) amaçladığını söylüyor. C bu çift yönlü amacı doğru ifade eder."
+  }
+]
