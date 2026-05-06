@@ -1,0 +1,39 @@
+{
+  "takenAt": "2026-05-06T06:38:40.846Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 2,
+  "level_tag": null,
+  "count": 2,
+  "duplicate_count": 3,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde yazım yanlışı vardır?",
+      "options": [
+        "Bakkaldan üç kilo şeker aldım.",
+        "Yarın sabah erkenden yola çıkacağız.",
+        "Her gün düzenli spor yapıyorum.",
+        "Bu yılki tatilimiz çok güzel geçti.",
+        "Her zaman dürüst olmaya çalıştım."
+      ],
+      "answer": 3,
+      "solution": "C şıkkındaki 'bu yılki' kelimesi 'bu seneki' gibi somut olarak tarihe işaret etmediği için ayrı yazılmalıdır.",
+      "topic": "Yazım Kuralları"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde sayıların yazımı ile ilgili bir yanlışlık vardır?",
+      "options": [
+        "Bu yıl 2023-2024 eğitim öğretim yılı başladı.",
+        "Saat dokuzu beş geçe buluşacaktık.",
+        "Yarın saat 14.30'da oradayım.",
+        "5 yaşındaki çocuk parkta oynuyordu.",
+        "Üçüncü kez sınava giriyorum."
+      ],
+      "answer": 0,
+      "solution": "Belirli bir tarih aralığını gösteren sayılar kesme işaretiyle ayrılmaz. '2023-2024' yerine '2023-2024' veya '2023 2024' şeklinde yazılmalıdır.",
+      "topic": "Yazım Kuralları"
+    }
+  ]
+}

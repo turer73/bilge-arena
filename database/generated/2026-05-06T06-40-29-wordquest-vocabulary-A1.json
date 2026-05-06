@@ -1,0 +1,65 @@
+{
+  "takenAt": "2026-05-06T06:40:29.732Z",
+  "game": "wordquest",
+  "category": "vocabulary",
+  "difficulty": 2,
+  "level_tag": "A1",
+  "count": 4,
+  "duplicate_count": 1,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "I am ----. I want to eat something.",
+      "options": [
+        "hungry",
+        "happy",
+        "cold",
+        "tired",
+        "sad"
+      ],
+      "answer": 0,
+      "solution": "hungry kelimesi aç olduğunuzu ifade eder.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "We ---- to the park yesterday.",
+      "options": [
+        "went",
+        "go",
+        "goes",
+        "going",
+        "gone"
+      ],
+      "answer": 0,
+      "solution": "Yesterday kelimesi geçmiş zamanı belirttiği için 'went' fiili kullanılmalıdır.",
+      "topic": "Word Families"
+    },
+    {
+      "question": "Please ---- the door when you leave.",
+      "options": [
+        "close",
+        "open",
+        "wash",
+        "cook",
+        "read"
+      ],
+      "answer": 0,
+      "solution": "Ayrılırken kapıyı kapatmak gerekir, bu yüzden close kelimesi kullanılır.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "A cat is an ----.",
+      "options": [
+        "animal",
+        "fruit",
+        "car",
+        "house",
+        "book"
+      ],
+      "answer": 0,
+      "solution": "Kedi bir hayvandır (animal). Diğer seçenekler (fruit: meyve, car: araba, house: ev, book: kitap) kediyi tanımlamaz.",
+      "topic": "Contextual Meaning"
+    }
+  ]
+}

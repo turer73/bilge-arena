@@ -1,0 +1,52 @@
+{
+  "takenAt": "2026-05-06T06:40:26.687Z",
+  "game": "wordquest",
+  "category": "vocabulary",
+  "difficulty": 2,
+  "level_tag": "A1",
+  "count": 3,
+  "duplicate_count": 2,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "I like to ---- books before I go to sleep.",
+      "options": [
+        "eat",
+        "drink",
+        "sleep",
+        "read",
+        "play"
+      ],
+      "answer": 3,
+      "solution": "Uykuya dalmadan önce kitaplarla yapılan eylem 'read' (okumak) kelimesiyle ifade edilir. Diğer seçenekler (eat: yemek, drink: içmek, sleep: uyumak, play: oynamak) bu bağlamda uygun değildir.",
+      "topic": "Contextual Meaning"
+    },
+    {
+      "question": "My ---- is my mother.",
+      "options": [
+        "brother",
+        "sister",
+        "father",
+        "mother",
+        "friend"
+      ],
+      "answer": 3,
+      "solution": "'Mother' kelimesi zaten seçeneklerde verilmiş ve annemi ifade eder. Diğer seçenekler erkek kardeş, kız kardeş, baba ve arkadaştır.",
+      "topic": "Word Families"
+    },
+    {
+      "question": "It is ---- to be polite to other people.",
+      "options": [
+        "good",
+        "bad",
+        "sad",
+        "angry",
+        "difficult"
+      ],
+      "answer": 0,
+      "solution": "Diğer insanlara karşı kibar olmanın olumlu bir durum olduğunu belirtmek için 'good' (iyi) kelimesi kullanılır. 'Bad' (kötü), 'sad' (üzgün), 'angry' (kızgın) ve 'difficult' (zor) bu bağlamda uygun değildir.",
+      "topic": "Contextual Meaning"
+    }
+  ]
+}

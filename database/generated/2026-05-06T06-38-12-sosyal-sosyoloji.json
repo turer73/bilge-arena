@@ -1,0 +1,39 @@
+{
+  "takenAt": "2026-05-06T06:38:12.147Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 3,
+  "level_tag": null,
+  "count": 2,
+  "duplicate_count": 3,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Bireyin toplum içindeki yeri ve sahip olduğu haklar ile sorumluluklar bütününe ne ad verilir?",
+      "options": [
+        "Rol",
+        "Statü",
+        "Grup",
+        "Kültür",
+        "Müeyyide"
+      ],
+      "answer": 1,
+      "solution": "Bireyin toplum içindeki konumu ve ona atfedilen haklar ile sorumluluklar statü kavramıyla ifade edilir.",
+      "topic": "Toplum ve Birey"
+    },
+    {
+      "question": "Toplumun genel kabul görmüş, yazılı olmayan ve uyulması beklenen davranış kurallarına ne ad verilir?",
+      "options": [
+        "Yasa",
+        "Değer",
+        "Gelenek",
+        "Norm",
+        "Kurum"
+      ],
+      "answer": 3,
+      "solution": "Toplumun davranışlarını düzenleyen, yazılı olmayan ve genel kabul görmüş kurallar topluluğuna norm denir.",
+      "topic": "Kültür ve Toplum"
+    }
+  ]
+}

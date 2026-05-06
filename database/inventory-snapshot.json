@@ -1,29 +1,31 @@
 {
-  "takenAt": "2026-04-26T11:55:28.574Z",
-  "totalActive": 3737,
+  "takenAt": "2026-05-06T06:36:43.753Z",
+  "totalActive": 3796,
   "byGame": {
     "wordquest": {
-      "total": 640,
+      "total": 661,
       "byCategory": {
-        "vocabulary": 295,
+        "vocabulary": 306,
         "sentence_completion": 81,
+        "grammar": 100,
         "phrasal_verbs": 69,
-        "grammar": 90,
         "restatement": 35,
         "dialogue": 35,
         "cloze_test": 35
       },
       "byDifficulty": {
-        "1": 0,
-        "2": 364,
+        "1": 11,
+        "2": 374,
         "3": 241,
         "4": 35,
         "5": 0
       },
       "byLevel": {
+        "A1": 11,
         "B2": 369,
         "B1": 85,
-        "C1": 186
+        "C1": 186,
+        "A2": 10
       }
     },
     "matematik": {
@@ -51,8 +53,8 @@
         "yazim_kurallari": 39,
         "paragraf": 320,
         "dil_bilgisi": 280,
-        "sozcuk": 210,
-        "anlam_bilgisi": 70
+        "anlam_bilgisi": 70,
+        "sozcuk": 210
       },
       "byDifficulty": {
         "1": 120,
@@ -66,9 +68,9 @@
     "fen": {
       "total": 608,
       "byCategory": {
-        "fizik": 207,
         "kimya": 202,
-        "biyoloji": 199
+        "biyoloji": 199,
+        "fizik": 207
       },
       "byDifficulty": {
         "1": 48,
@@ -80,32 +82,32 @@
       "byLevel": {}
     },
     "sosyal": {
-      "total": 604,
+      "total": 642,
       "byCategory": {
         "tarih": 202,
         "cografya": 201,
         "felsefe": 188,
-        "sosyoloji": 13
+        "sosyoloji": 51
       },
       "byDifficulty": {
         "1": 100,
-        "2": 211,
-        "3": 149,
-        "4": 88,
+        "2": 223,
+        "3": 165,
+        "4": 98,
         "5": 56
       },
       "byLevel": {}
     }
   },
   "plays": {
-    "since": "2026-03-27T11:55:28.445Z",
-    "totalSessions": 117,
+    "since": "2026-04-06T06:36:43.631Z",
+    "totalSessions": 213,
     "byGame": {
-      "sosyal": 61,
-      "fen": 17,
-      "turkce": 19,
-      "matematik": 18,
-      "wordquest": 2
+      "sosyal": 77,
+      "fen": 43,
+      "turkce": 49,
+      "matematik": 38,
+      "wordquest": 6
     }
   }
 }

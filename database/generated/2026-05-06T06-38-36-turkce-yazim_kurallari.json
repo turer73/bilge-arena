@@ -1,0 +1,39 @@
+{
+  "takenAt": "2026-05-06T06:38:36.650Z",
+  "game": "turkce",
+  "category": "yazim_kurallari",
+  "difficulty": 1,
+  "level_tag": null,
+  "count": 2,
+  "duplicate_count": 3,
+  "raw_count": 5,
+  "valid_count": 5,
+  "questions": [
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde noktalama yanlışı vardır?",
+      "options": [
+        "Bu kitaptan çok etkilendim, herkese tavsiye ederim.",
+        "Yarın İstanbul'a gidiyorum, hava durumunu kontrol ettim.",
+        "Ne kadar güzel bir manzara, değil mi?",
+        "Onu gördüğümde çok şaşırdım, inanamadım.",
+        "Odaya girdi, kimse yoktu."
+      ],
+      "answer": 2,
+      "solution": "Sonunda soru anlamı taşıyan veya bir çekimserlik, şüphe bildiren ifadelerde soru işareti kullanılır. 'Değil mi?' zarf-fiil grubu bir soru oluşturduğu için soru işareti almalıdır.",
+      "topic": "Noktalama İşaretleri"
+    },
+    {
+      "question": "Aşağıdaki cümlelerin hangisinde yazım yanlışı yoktur?",
+      "options": [
+        "Bu tür durumlarda her zaman dikkatli olmalıyız.",
+        "Seninle bir daha asla görüşmiyeceğim.",
+        "Bu iş için ona bir sürü para verdik.",
+        "Sana çagdaş bir sanat anlayışı öneriyorum.",
+        "Onunla bir gün önce tanışmıştık."
+      ],
+      "answer": 0,
+      "solution": "'Bu tür' ifadesi doğru yazılmıştır. Diğer seçeneklerde 'görüşmeyeceğim', 'bir sürü', 'çağdaş' ve 'bir gün önce' ifadelerinde yazım yanlışı bulunmaktadır.",
+      "topic": "Yazım Kuralları"
+    }
+  ]
+}
