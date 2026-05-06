@@ -42,9 +42,10 @@ if (!GEMINI_API_KEY) {
   console.error('HATA: GOOGLE_GENERATIVE_AI_API_KEY env gerekli'); process.exit(1)
 }
 
-const [, , difficultyArg, countArg] = process.argv
+const [, , difficultyArg, countArg, topicArg] = process.argv
 const difficulty = parseInt(difficultyArg ?? '2', 10)
 const count = parseInt(countArg ?? '5', 10)
+const topic = topicArg && topicArg !== '--' ? topicArg : null
 
 if (![1, 2, 3, 4, 5].includes(difficulty)) {
   console.error('HATA: difficulty 1-5'); process.exit(1)
@@ -129,6 +130,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 console.log('=== yazim_kurallari TDK-rehberli AI uretim ===')
 console.log('Difficulty:', difficulty + '/5')
 console.log('Count:', count)
+console.log('Topic:', topic ?? '(cesitli)')
 console.log('Model:', GEMINI_MODEL, '\n')
 
 // Few-shot: mevcut iyi sorulardan 3 tane
@@ -169,9 +171,13 @@ for (const e of existing ?? []) {
 console.log(`Dedup prefix set: ${existingPrefixes.size}`)
 
 // Gemini call
+const topicFocus = topic
+  ? `Sadece "${topic}" konusunda soru uret (DIGER konulari KULLANMA).`
+  : 'Konu cesitliligi (her batch\'te farkli): kesme isareti, da/de/ki bagrac, bitisik/ayri yazim, ikileme, sayi yazimi, buyuk harf'
+
 const userPrompt = `${count} adet TDK Yazim Kurallari sorusu uret.
 Zorluk: ${difficulty}/5
-Konu cesitliligi (her batch'te farkli): kesme isareti, da/de/ki bagrac, bitisik/ayri yazim, ikileme, sayi yazimi, buyuk harf
+${topicFocus}
 ${fewShot}`
 
 console.log('\nGemini cagriliyor...')
