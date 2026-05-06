@@ -67,7 +67,7 @@ export default async function Page({
 
   return (
     <>
-      <header className="mb-4">
+      <header className="mb-4 flex flex-wrap items-center gap-2">
         <Link
           href="/oda"
           className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface)]"
@@ -75,6 +75,14 @@ export default async function Page({
         >
           <span aria-hidden="true">←</span>
           <span>Odalarıma Dön</span>
+        </Link>
+        <Link
+          href="/arena"
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-sub)] transition-colors hover:bg-[var(--card)]"
+          aria-label="Ana sayfaya dön"
+        >
+          <span aria-hidden="true">🏠</span>
+          <span>Ana Sayfa</span>
         </Link>
       </header>
       <LobbyContainer
