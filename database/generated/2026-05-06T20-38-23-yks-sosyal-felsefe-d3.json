@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:38:23.709Z",
+  "game": "sosyal",
+  "category": "felsefe",
+  "difficulty": 3,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Bir sanat eleştirmeni, yeni bir heykeli incelerken şu yorumu yapar: \"Bu eserin estetik değeri, onu oluşturan mermerin nadir olmasından veya işçiliğinin zorluğundan kaynaklanmıyor. Değeri, izleyicide uyandırdığı o tarif edilemez yücelik ve uyum hissindedir. Sanat, nesnenin kendisinde değil, öznedeki bu özel deneyimde yaşar.\" Bu eleştirmenin sanat anlayışı, aşağıdaki felsefi yaklaşımlardan hangisine en yakındır?",
+      "options": [
+        "Sanat, yansıtmadır (mimesis).",
+        "Sanat, oyundur.",
+        "Sanat, yaratmadır.",
+        "Sanat, nesnel bir özelliktir.",
+        "Sanat, alımlayıcı odaklı bir deneyimdir."
+      ],
+      "answer": 4,
+      "solution": "Eleştirmen, eserin değerini malzemenin veya tekniğin nesnel özelliklerine değil, izleyicinin (öznenin/alımlayıcının) yaşadığı kişisel deneyime ve duyguya bağlamaktadır. Bu vurgu, sanatın anlamının ve değerinin alımlayıcının yorumu ve tecrübesiyle oluştuğunu savunan alımlayıcı odaklı estetik anlayışıyla örtüşür. Diğer seçenekler ise sanatı taklit (A), pratik faydadan uzak bir etkinlik (B), sanatçının dehasının bir ürünü (C) veya eserin kendi içkin özelliklerine bağlı (D) olarak tanımlar.",
+      "topic": "Sanat Felsefesi"
+    },
+    {
+      "question": "Bir tartışmada, katılımcılardan biri şöyle bir akıl yürütür: \"Eğer bir toplumda adalet varsa, o toplumda mutluluk artar. Gözlemlediğimiz Z toplumunda mutluluk oranı artmıştır. O hâlde, Z toplumunda adalet sağlanmıştır.\" Bu çıkarımın mantıksal olarak geçersiz olmasının temel nedeni aşağıdakilerden hangisidir?",
+      "options": [
+        "Öncüllerden biri yanlış olabilir.",
+        "Sonucun doğruluğu öncüllere bağlı değildir.",
+        "Koşullu bir önermenin sonucunu doğrulayarak öncülünü doğrulamaya çalışması.",
+        "Mutluluk ve adalet arasında nedensel bir bağ kurması.",
+        "Yetersiz kanıttan aceleci bir genellemeye varılması."
+      ],
+      "answer": 2,
+      "solution": "Bu akıl yürütme, \"sonucu evetleme\" (affirming the consequent) adı verilen formel bir safsatadır. Yapı şöyledir: P ise Q'dur. Q gerçekleşmiştir. O halde P de gerçekleşmiştir. Ancak mutluluğun artmasının adaletten başka nedenleri de olabilir (örneğin ekonomik refah, kültürel bir festival vb.). Dolayısıyla, sonucun (mutluluğun artması) doğru olması, öncülün (adaletin var olması) doğru olmasını zorunlu kılmaz. Bu, çıkarımın mantıksal yapısını geçersiz kılar.",
+      "topic": "Mantık - Safsatalar"
+    },
+    {
+      "question": "Platon'un \"Devlet\" adlı eserinde anlattığı mağara alegorisinde, mağaradaki insanlar duvardaki gölgeleri gerçeklik sanırlar. Zincirlerinden kurtulup mağaradan çıkan birinin gerçek dünyayı, yani Güneş'i ve nesnelerin kendisini görmesi, acı verici ama aydınlatıcı bir süreçtir. Bu alegoride, mağaranın dışındaki \"Güneş\"in temsil ettiği kavram aşağıdakilerden hangisidir?",
+      "options": [
+        "Duyusal deneyimlerin toplamı",
+        "Toplumsal gelenekler ve yasalar",
+        "İyi ideası",
+        "Bilimsel bilgi",
+        "Demokratik yönetim biçimi"
+      ],
+      "answer": 2,
+      "solution": "Platon'un mağara alegorisinde, mağaranın dışındaki dünya \"idealar dünyasını\" temsil eder. Bu dünyadaki her şeyin görülmesini ve bilinmesini sağlayan en yüksek ilke, tıpkı fiziksel dünyadaki her şeyi görmemizi sağlayan Güneş gibi, İyi ideasıdır. İyi ideası, diğer tüm ideaların varlık ve bilinebilirlik nedenidir ve felsefi aydınlanmanın nihai hedefidir. Diğer seçenekler ya mağaranın içindeki dünyayla (A, B) ya da idealar dünyasının alt seviyeleriyle (D) ilgilidir.",
+      "topic": "Varlık Felsefesi - Platon"
+    },
+    {
+      "question": "Descartes, \"Düşünüyorum, o hâlde varım\" (Cogito, ergo sum) sonucuna ulaştıktan sonra, bu kesin bilgiden hareketle diğer varlıkların ve Tanrı'nın varlığını kanıtlamaya çalışır. Onun bu yöntemi, bilginin kaynağı ve temeli konusunda hangi felsefi tutumu örneklendirir?",
+      "options": [
+        "Empirizm",
+        "Rasyonalizm",
+        "Kritisizm",
+        "Septisizm",
+        "Pragmatizm"
+      ],
+      "answer": 1,
+      "solution": "Descartes, her şeyden şüphe ederek başladığı felsefi yolculuğunda, şüphe edilemeyecek tek şeyin şüphe eden zihnin (düşüncenin) varlığı olduğu sonucuna varır. Bu, aklın kendi içsel faaliyetinden türetilen apaçık bir bilgidir. Bilginin temelini duyusal deneyimlere değil, akla ve düşünceye dayandıran bu yaklaşım, Rasyonalizmin (Akılcılık) temel özelliğidir. Empirizm bilgiyi deneyime, Septisizm şüphede kalmaya, Kritisizm akıl ve deneyimi birleştirmeye, Pragmatizm ise bilginin faydasına odaklanır.",
+      "topic": "Bilgi Felsefesi"
+    },
+    {
+      "question": "Bir ahlak filozofu şöyle der: \"Bir eylemin doğruluğunu belirleyen şey, o eylemin sonuçları ya da getireceği mutluluk değildir. Aksine, eylemin arkasındaki niyettir. Eğer bir eylem, ödeve uygunluktan ve evrenselleştirilebilir bir ilkeye saygıdan kaynaklanıyorsa, sonuçları kötü bile olsa ahlaki olarak doğrudur.\" Bu görüş, aşağıdaki ahlak anlayışlarından hangisiyle örtüşmektedir?",
+      "options": [
+        "Hedonizm (Hazcılık)",
+        "Utilitarizm (Faydacılık)",
+        "Egoizm (Bencillik)",
+        "Deontoloji (Ödev Ahlakı)",
+        "Erdem Etiği"
+      ],
+      "answer": 3,
+      "solution": "Paragrafta açıklanan görüş, Immanuel Kant'ın geliştirdiği Deontolojik (Ödev) ahlak anlayışının temel ilkelerini yansıtmaktadır. Bu anlayışa göre bir eylemin ahlaki değeri, sonuçlarına (fayda, mutluluk) göre değil, eylemin temelindeki niyetin ve ilkenin (kategorik imperatif/koşulsuz buyruk) doğruluğuna göre belirlenir. Vurgu, sonuçlar yerine ödeve ve evrensel ahlak yasasına uygunluktadır. Utilitarizm sonuçlara odaklanırken, Hedonizm ve Egoizm sırasıyla haz ve kişisel çıkara odaklanır. Erdem Etiği ise eylemlerden çok failin karakterine odaklanır.",
+      "topic": "Ahlak Felsefesi"
+    }
+  ]
+}

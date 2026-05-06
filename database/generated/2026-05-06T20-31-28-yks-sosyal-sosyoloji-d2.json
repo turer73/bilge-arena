@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:31:28.999Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 2,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Bir bireyin kendi çabası, eğitimi ve yetenekleri sayesinde toplum içinde bir pozisyon elde etmesi, örneğin bir işçinin çocuğunun üniversite okuyarak doktor olması, sosyolojide önemli bir kavramı ifade eder. Bu durum, bireyin doğuştan getirdiği özelliklerden ziyade kişisel başarısına dayanır.",
+      "options": [
+        "A) Verilmiş statü",
+        "B) Anahtar statü",
+        "C) Toplumsal prestij",
+        "D) Kazanılmış statü",
+        "E) Toplumsal rol"
+      ],
+      "answer": 3,
+      "solution": "Soruda bahsedilen durum, bireyin kendi emeği ve başarısı ile elde ettiği konumu ifade etmektedir. Bu durum sosyolojide 'kazanılmış statü' olarak adlandırılır. 'Verilmiş statü' ise cinsiyet veya aile gibi doğuştan gelen konumları belirtir ve bu nedenle yanlıştır. Diğer seçenekler ise statünün kendisinden çok, onunla ilişkili farklı kavramlardır.",
+      "topic": "Toplumsal Statü ve Rol"
+    },
+    {
+      "question": "Ankara'da bir lisede tarih öğretmeni olarak görev yapan Ali Bey, tayin isteyerek Bursa'daki başka bir liseye yine tarih öğretmeni olarak atanmıştır. Bu değişiklik sonucunda Ali Bey'in mesleği, gelir düzeyi ve toplumsal saygınlığında önemli bir değişiklik olmamıştır.",
+      "options": [
+        "A) Dikey hareketlilik",
+        "B) Kuşaklararası hareketlilik",
+        "C) Yatay hareketlilik",
+        "D) Yapısal hareketlilik",
+        "E) Toplumsal tabakalaşma"
+      ],
+      "answer": 2,
+      "solution": "Yatay hareketlilik, bireyin toplumsal tabakalar arasında bir geçiş yapmadan, benzer statüdeki bir pozisyondan diğerine geçmesidir. Ali Bey'in aynı mesleği farklı bir şehirde sürdürmesi, gelir ve statüsünde bir değişiklik yaratmadığı için yatay hareketliliğe örnektir. Dikey hareketlilikte ise toplumsal sınıflar arasında yükselme veya alçalma söz konusudur.",
+      "topic": "Toplumsal Hareketlilik"
+    },
+    {
+      "question": "Bir toplumun duyu organlarıyla algılanabilen, somut ve teknolojik unsurları maddi kültürü oluşturur. Buna karşın, o toplumun inançları, gelenekleri ve ahlak anlayışı gibi soyut unsurlar manevi kültürü meydana getirir. Bazen bu iki kültür ögesi arasında bir uyumsuzluk ve değişim hızında farklılık gözlemlenebilir.",
+      "options": [
+        "A) Kültürel yayılma",
+        "B) Kültürel gecikme",
+        "C) Kültürleşme",
+        "D) Alt kültür",
+        "E) Kültür şoku"
+      ],
+      "answer": 1,
+      "solution": "Maddi kültür unsurlarının (teknoloji gibi) manevi kültür unsurlarından (gelenek, ahlak gibi) daha hızlı değişmesi ve bu iki alan arasında bir uyumsuzluk ortaya çıkması durumuna 'kültürel gecikme' denir. Paragrafta tam olarak bu durum, yani iki kültür ögesi arasındaki değişim hızı farkı vurgulanmaktadır.",
+      "topic": "Kültür"
+    },
+    {
+      "question": "Üyeleri arasında samimi, yüz yüze ve duygusal bağların güçlü olduğu, 'biz' bilincinin hâkim olduğu küçük gruplara birincil grup denir. İlişkilerin daha resmi, çıkara dayalı ve geçici olduğu, belirli amaçlar için bir araya gelinmiş gruplar ise ikincil grup olarak adlandırılır.",
+      "options": [
+        "A) Aile",
+        "B) Arkadaş grubu",
+        "C) Bir şirketin proje ekibi",
+        "D) Köydeki komşuluk ilişkileri",
+        "E) Çocukluk oyun grubu"
+      ],
+      "answer": 2,
+      "solution": "Bir şirketin proje ekibi, belirli bir amacı (projeyi tamamlamak) gerçekleştirmek için bir araya gelmiş, ilişkilerin resmi ve profesyonel olduğu bir yapıdır. Bu özellikleriyle ikincil gruba örnektir. Aile, arkadaş grubu, komşuluk ilişkileri ve oyun grubu ise daha samimi ve duygusal bağlara dayandığı için birincil grup özelliği gösterir.",
+      "topic": "Toplumsal Gruplar"
+    },
+    {
+      "question": "Toplumda bireylerin davranışlarını denetleyen ve onları belirli kurallara uymaya yönelten mekanizmalar bulunur. Bu mekanizmalardan biri, kanunlar, yönetmelikler ve mahkemeler gibi devlet tarafından uygulanan yazılı kurallardır. Diğeri ise ayıp, günah, alay, kınama gibi toplum tarafından uygulanan yazılı olmayan kurallardır.",
+      "options": [
+        "A) İnformel toplumsal kontrol",
+        "B) Toplumsal sapma",
+        "C) Anomi",
+        "D) Yabancılaşma",
+        "E) Formel toplumsal kontrol"
+      ],
+      "answer": 4,
+      "solution": "Paragrafın ilk bölümünde açıklanan, devletin yazılı kurallar (kanun, yönetmelik vb.) aracılığıyla sağladığı denetim mekanizmasına 'formel (resmî) toplumsal kontrol' denir. İkinci bölümde bahsedilen ayıp, kınama gibi yazılı olmayan yaptırımlar ise 'informel (resmî olmayan) toplumsal kontrol' kapsamına girer. Soru kökünde özellikle devlet tarafından uygulanan yazılı kurallar vurgulandığı için doğru cevap E seçeneğidir.",
+      "topic": "Toplumsal Kontrol ve Sapma"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:39:59.232Z",
+  "game": "turkce",
+  "category": "paragraf",
+  "difficulty": 2,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Dijital çağın bireylere sunduğu en büyük yanılsamalardan biri, bilginin kalıcılığıdır. Birkaç tıklamayla ulaşılan devasa arşivler, sanki sonsuza dek orada duracakmış gibi bir güven hissi verir. Oysa bu durum, kumdan kaleler inşa etmeye benzer. Fiziksel bir kütüphanedeki bin yıllık bir el yazması, doğru koşullarda varlığını sürdürebilirken; on yıl önce kaydedilmiş bir dijital video, format uyumsuzluğu veya sunucu hatası nedeniyle bir anda erişilmez olabilir. Dijital verinin kırılganlığı, onun en belirgin ama en çok göz ardı edilen özelliğidir.",
+      "options": [
+        "Dijital bilginin sanılanın aksine oldukça kırılgan ve güvencesiz olduğu",
+        "Fiziksel kütüphanelerin dijital arşivlerden daha üstün olduğu",
+        "Geçmişte bilgiye ulaşmanın çok daha zor olduğu",
+        "Teknolojinin çok hızlı bir şekilde geliştiği",
+        "Veri yedeklemenin günümüzde büyük önem taşıdığı"
+      ],
+      "answer": 0,
+      "solution": "Parçada, dijital bilginin kalıcı olduğu algısının bir yanılsama olduğu, format uyumsuzluğu veya sunucu hatası gibi nedenlerle kolayca yok olabileceği vurgulanmaktadır. Bu durum, dijital verinin kırılgan yapısını ana fikir olarak öne çıkarmaktadır. Diğer seçenekler metinde değinilen yan fikirler olsa da asıl vurgu bu değildir.",
+      "topic": "Paragrafta Ana Düşünce"
+    },
+    {
+      "question": "Sosyolog Ray Oldenburg'un popülerleştirdiği 'üçüncü mekân' kavramı, modern toplumun sosyal dokusunu anlamak için önemli bir anahtardır. Birinci mekân evimiz, ikinci mekân ise iş yerimizdir. Üçüncü mekânlar ise bu iki alanın dışında kalan, insanların bir araya gelip serbestçe sosyalleştiği kafe, kütüphane, park gibi kamusal alanlardır. Bu mekânlar, bireylerin gündelik hayatın stresinden uzaklaşarak topluluk hissini yaşadığı, farklı fikirlerin rahatça paylaşıldığı ve aidiyet duygusunun pekiştiği nötr bölgelerdir. Onların varlığı, bir toplumun ruh sağlığı için hayati önem taşır.",
+      "options": [
+        "Şehir ekonomisine ticari olarak katkıda bulunmak",
+        "İş hayatının stresini atmak için alternatif çalışma ortamları yaratmak",
+        "İnsanlara yalnızca eğlence ve dinlenme imkânı sağlamak",
+        "Ev ortamının yerini tutan daha samimi ortamlar oluşturmak",
+        "Bireylere sosyalleşebilecekleri ve topluluk duygusunu güçlendirebilecekleri tarafsız bir alan sunmak"
+      ],
+      "answer": 4,
+      "solution": "Parçada 'üçüncü mekânlar', ev ve iş yeri dışında, insanların bir araya geldiği, sosyalleştiği, topluluk ve aidiyet hissini pekiştirdiği 'nötr bölgeler' olarak tanımlanmaktadır. Bu tanım, E seçeneğindeki işlevi tam olarak karşılamaktadır. Diğer seçenekler ya kapsam dışıdır ya da metnin vurguladığı temel sosyal işlevi yansıtmamaktadır.",
+      "topic": "Paragrafta Yardımcı Düşünce"
+    },
+    {
+      "question": "Tarihî bir eseri restore etmek, onu ilk yapıldığı günkü parlaklığına kavuşturmak anlamına gelmez. Bu yaygın bir yanılgıdır. Aksine, nitelikli bir restorasyonun amacı, eserin zaman içinde kazandığı tarihsel kimliği ve yaşanmışlığı silmek değil, onu geleceğe taşımaktır. Yapılan müdahale, eserin özgün dokusuna saygı duymalı, eklenen yeni kısımlar ayırt edilebilir olmalı ve eserin 'zamanın tanıklığı' rolü korunmalıdır. Dolayısıyla restorasyon, bir yeniden yaratma eylemi değil, bir 'yarayı iyileştirme' ve 'ömrü uzatma' çabasıdır.",
+      "options": [
+        "Sanat eserini ilk günkü görünümüne döndürmek",
+        "Onarımda modern ve dayanıklı malzemeler kullanmak",
+        "Eserin özgün dokusunu ve tarihsel kimliğini korumak",
+        "Eserin maddi değerini artırmaya odaklanmak",
+        "Halkın eseri daha kolay anlamasını sağlamak"
+      ],
+      "answer": 2,
+      "solution": "Paragrafta restorasyonun amacının, eseri 'ilk günkü gibi yapmak' olmadığı, aksine 'özgün dokusuna saygı duyarak' ve 'tarihsel kimliğini' silmeden geleceğe taşımak olduğu açıkça belirtilmektedir. Bu nedenle temel ilke, eserin özgünlüğünü ve tarihsel niteliğini muhafaza etmektir. A seçeneği, metinde 'yanılgı' olarak belirtilen düşüncedir.",
+      "topic": "Paragrafta Ana Düşünce"
+    },
+    {
+      "question": "Kentlerin geceyi gündüze çeviren yapay aydınlatması, insan yaşamını kolaylaştırsa da doğal yaşam üzerinde göz ardı edilen olumsuz etkilere sahiptir. Özellikle gece aktif olan canlılar için 'ışık kirliliği' adı verilen bu durum, hayati bir tehdittir. Göçmen kuşların ve deniz kaplumbağalarının yön bulma yetenekleri, yapay ışıklar yüzünden zayıflar. Ateş böcekleri gibi biyolüminesans yoluyla iletişim kuran türlerin üreme döngüleri bozulur. Avcı-av ilişkileri değişir çünkü gece karanlığına adapte olmuş pek çok canlı, bu sahte aydınlıkta savunmasız kalır.",
+      "options": [
+        "Işık kirliliğinden yalnızca göçmen kuşlar etkilenmektedir.",
+        "İnsanlar ışık kirliliğinin sonuçlarından etkilenmemektedir.",
+        "Yapay aydınlatma, birçok canlı türünün doğal davranış kalıplarını olumsuz etkilemektedir.",
+        "Bu sorunun temel nedeni yerleşim yerlerindeki konut aydınlatmalarıdır.",
+        "Işık kirliliği sorununun günümüzde bir çözümü yoktur."
+      ],
+      "answer": 2,
+      "solution": "Parçada göçmen kuşlar, deniz kaplumbağaları, ateş böcekleri ve diğer gece canlılarının yapay ışıktan nasıl etkilendiği örneklerle anlatılmaktadır. Bu örnekler, yapay aydınlatmanın canlıların yön bulma, üreme, avlanma gibi doğal davranışlarını bozduğunu göstermektedir. Dolayısıyla metinden ulaşılabilecek en genel yargı C seçeneğidir. Diğer seçenekler ya metindeki bilgiyle çelişir ya da metinden çıkarılamayacak iddialar içerir.",
+      "topic": "Paragraftan Çıkarılabilecek Yargı"
+    },
+    {
+      "question": "Okumak, pek çokları için kelimelerin gözün önünden akıp gittiği pasif bir eylemdir. Sayfalar çevrilir, satırlar taranır ama metinle okur arasında gerçek bir bağ kurulmaz. Oysa nitelikli okuma, bir diyalogtur. Yazarın sunduğu düşüncelere sorular sormak, önemli görülen yerlerin altını çizmek, metnin kenarına notlar almak ve kendi hayatımızla bağlantılar kurmak, okumayı edilgen bir tüketimden etken bir üretime dönüştürür. Kitabın kapağını kapattığımızda zihnimizde kalanlar, işte bu çabanın ürünüdür.",
+      "options": [
+        "Daha fazla sayıda kitap okumaları",
+        "Hızlı okuma tekniklerini öğrenmeleri",
+        "Okuduklarını başkalarıyla paylaşarak pekiştirmeleri",
+        "Okuma eylemini daha verimli kılmak için metinle etkileşime girmeleri",
+        "Sadece klasik olarak kabul edilen eserleri tercih etmeleri"
+      ],
+      "answer": 3,
+      "solution": "Yazar, pasif okumayı eleştirerek nitelikli okumanın metinle diyalog kurmak, sorular sormak, notlar almak gibi aktif eylemlerle gerçekleştiğini belirtmektedir. Bu, okurun metinle etkileşime girmesi gerektiği anlamına gelir. Yazarın asıl tavsiyesi, okumayı verimli bir eyleme dönüştürmek için bu etkileşimli yöntemin benimsenmesidir.",
+      "topic": "Paragrafta Yazarın Tutumu/Tavsiyesi"
+    }
+  ]
+}

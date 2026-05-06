@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:40:45.363Z",
+  "game": "turkce",
+  "category": "paragraf",
+  "difficulty": 3,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "“Normal” olarak kabul edilen davranışlar, evrensel ve zamandan bağımsız gerçeklikler değildir. Aksine, her toplumun kendi tarihsel, kültürel ve ekonomik koşulları içinde şekillendirdiği geçici uzlaşılardır. Dün sapkınlık olarak görülen bir eylem, bugün sıradanlaşabilir; bir coğrafyada yadırganan bir alışkanlık, başka bir coğrafyada temel bir görgü kuralı sayılabilir. Bu durum, “normal”in aslında görünmez bir sosyal sözleşme olduğunu ve bu sözleşmenin maddelerinin sürekli yeniden müzakere edildiğini gösterir. Dolayısıyla normalliğin sınırlarını çizen, doğa yasaları değil, kolektif kabuller ve zamanın ruhudur.",
+      "options": [
+        "A) Toplumsal kuralların evrensel değerlere dayanması gerektiği",
+        "B) “Normal” kavramının, toplumsal uzlaşıya dayalı ve değişken bir yapı olduğu",
+        "C) Farklı coğrafyalardaki görgü kurallarının çatışmasının kaçınılmaz olduğu",
+        "D) Tarihsel süreçlerin toplumsal ahlakı olumsuz etkilediği",
+        "E) Bireylerin toplumsal normlara her zaman uymak zorunda olduğu"
+      ],
+      "answer": 1,
+      "solution": "Paragrafta “normal”in evrensel ve sabit bir kavram olmadığı, aksine toplumların kendi koşulları içinde oluşturduğu, zamanla ve mekâna göre değişebilen bir sosyal uzlaşı olduğu vurgulanmaktadır. Metnin ana fikri, normalliğin doğa yasaları gibi değil, kolektif kabullere dayalı, değişken bir yapı olduğudur. Diğer seçenekler metnin ana fikrini değil, yan düşünceleri veya metinle çelişen yargıları ifade etmektedir.",
+      "topic": "Paragrafta Ana Düşünce"
+    },
+    {
+      "question": "Dijital iletişim araçları, coğrafi mesafeleri ortadan kaldırarak insanları birbirine hiç olmadığı kadar yaklaştırma vaadiyle hayatımıza girdi. Bir tıkla dünyanın öbür ucundaki bir dostumuzla görüntülü konuşabiliyor, yüzlerce kişilik gruplarda anında fikir alışverişi yapabiliyoruz. Ancak bu niceliksel artış, her zaman niteliksel bir derinleşme anlamına gelmiyor. Emojilerle geçiştirilen teselliler, “beğeni” butonlarıyla ifade edilen destekler, yüz yüze bir temasın, samimi bir dokunuşun veya içten bir ses tonunun yerini tutamıyor. İletişim ağımız genişledikçe, gerçek bağ kurma becerimiz daralıyor ve kalabalıklar içinde bir yalnızlık paradoksu ortaya çıkıyor.",
+      "options": [
+        "A) Teknolojinin gelişmesiyle birlikte iletişim olanaklarının azaldığı",
+        "B) Dijital iletişimin, bağlantı sayısını artırırken ilişkilerin derinliğini zayıflatabildiği",
+        "C) İnsanların artık yüz yüze iletişim kurmaktan tamamen kaçındığı",
+        "D) Coğrafi uzaklıkların sosyal ilişkiler üzerindeki belirleyici etkisinin sürdüğü",
+        "E) Emojilerin ve sosyal medya beğenilerinin modern iletişimin temelini oluşturduğu"
+      ],
+      "answer": 1,
+      "solution": "Parçada, dijital iletişim araçlarının insanları nicelik olarak birbirine bağlarken, ilişkilerdeki niteliği ve derinliği azaltabildiği vurgulanmaktadır. Yazar, artan bağlantı sayısına rağmen gerçek ve samimi bağların zayıfladığına, bunun da bir “yalnızlık paradoksu” yarattığına dikkat çekmektedir. Diğer seçenekler ya metnin söylediğinin tersini iddia etmekte ya da konuyu yanlış yorumlamaktadır.",
+      "topic": "Paragrafta Vurgulanan Düşünce"
+    },
+    {
+      "question": "Doğada hayatta kalma mücadelesi, canlıları olağanüstü adaptasyonlar geliştirmeye itmiştir. Bunlardan en ilginçlerinden biri, “taklitçilik” yani mimetizmdir. Örneğin, bazı zehirsiz yılan türleri, yaşadıkları bölgedeki oldukça zehirli mercan yılanlarının parlak ve sıralı renk desenlerini bire bir kopyalar. Avcılar, tehlikeli olan gerçek mercan yılanından kaçınmayı öğrendikleri için, ona tıpatıp benzeyen bu zararsız taklitçiden de uzak dururlar. Bu strateji, taklitçi türün av olma olasılığını ciddi oranda düşürür. Ancak bu aldatmacanın işe yaraması, avcının zihnindeki “tehlikeli model” imgesinin varlığına ve taklitçinin sayısının, model olan zehirli türün sayısını aşmamasına bağlıdır.",
+      "options": [
+        "A) Doğadaki tüm taklit stratejileri avcılardan korunma amaçlıdır.",
+        "B) Taklitçilik, yalnızca yılan türleri arasında görülen bir adaptasyondur.",
+        "C) Bir taklit stratejisinin başarısı, hem modelin hem de taklitçinin popülasyon dengesine bağlıdır.",
+        "D) Avcı hayvanlar, taklitçi türleri zamanla ayırt etme yeteneği kazanamazlar.",
+        "E) Renk desenleri, bir canlının zehirli olup olmadığını anlamanın en güvenilir yoludur."
+      ],
+      "answer": 2,
+      "solution": "Paragrafın son cümlesinde, taklit stratejisinin başarılı olmasının iki koşula bağlı olduğu belirtilmiştir: avcının zihninde tehlikeli bir modelin varlığı ve taklitçi türün sayısının model türün sayısını geçmemesi. Bu durum, stratejinin başarısının popülasyon dengeleriyle doğrudan ilişkili olduğunu göstermektedir. Bu nedenle C seçeneği paragraftan çıkarılabilecek en doğru sonuçtur.",
+      "topic": "Paragraftan Çıkarılabilecek Yargı"
+    },
+    {
+      "question": "Bir sanat eserini anlamlandırma sürecinde sıkça şu soruyla karşılaşırız: Anlam, sanatçının tuvaline veya heykeline kodladığı özgün niyette mi saklıdır, yoksa eserin her bir izleyiciyle kurduğu diyalogda yeniden mi yaratılır? Kimi eleştirmenler, eserin “doğru” yorumunun, yaratıcısının biyografisine ve kişisel beyanlarına bakılarak bulunabileceğini savunur. Diğer bir görüş ise eserin, yaratıcısının elinden çıktığı andan itibaren ondan bağımsızlaştığını ve her izleyicinin kendi bilgi birikimi ve duygusal durumuyla ona yeni ve meşru anlamlar yüklediğini ileri sürer. Bu yaklaşıma göre, Mona Lisa'nın gülümsemesi Leonardo'nun ne düşündüğünden çok, ona bakan milyonlarca gözün ne hissettiğiyle ilgilidir.",
+      "options": [
+        "A) Sanat eserlerinin estetik değerini belirleyen ölçütlerin neler olduğu",
+        "B) Sanatçının biyografisinin eser yorumundaki rolünün ne ölçüde olduğu",
+        "C) Modern sanatın klasik sanattan hangi yönleriyle ayrıldığı",
+        "D) Bir sanat eserinin ticari başarısının nasıl sağlanabileceği",
+        "E) Sanat eleştirmenlerinin toplumsal algıyı nasıl şekillendirdiği"
+      ],
+      "answer": 1,
+      "solution": "Paragrafta temel olarak bir sanat eserinin anlamının kaynağı tartışılmaktadır. Bir yanda anlamı sanatçının niyetine ve biyografisine bağlayan görüş, diğer yanda ise anlamı izleyicinin yorumunda bulan görüş karşılaştırılmaktadır. Dolayısıyla, metnin merkezindeki tartışma, sanatçının hayatı ve niyetinin, yani biyografik bilgilerin, eseri yorumlamadaki yeri ve öneminin ne olduğu sorunudur.",
+      "topic": "Paragrafta Tartışılan Konu"
+    },
+    {
+      "question": "Düşüncelerimizi kelimelere döktüğümüz genel bir kanıdır. Peki ya kullandığımız kelimeler de düşüncelerimizi şekillendiriyorsa? Dil bilimindeki “dilsel görelilik” hipotezi tam da bunu öne sürer: Konuştuğumuz dil, dünyayı algılama ve kavrama biçimimizi etkiler. Örneğin, bazı dillerde “mavi” ve “yeşil” için tek bir kelime bulunurken, başka dillerde karın farklı durumlarını anlatan onlarca farklı kelime vardır. Bu ikinci dilin konuşurlarının, kar manzarasına baktıklarında, diğer dilin konuşurlarının fark etmeyeceği kadar çok ayrıntıyı ve nüansı gördükleri iddia edilir. Bu durum, dilin sadece bir iletişim aracı değil, aynı zamanda gerçekliği filtreleyen bir zihinsel mercek olduğunu düşündürmektedir.",
+      "options": [
+        "A) Dillerin kelime hazinesi ne kadar zenginse o dilin o kadar üstün olduğu",
+        "B) Her dilde tüm renkleri ve doğa olaylarını ifade edecek kelimelerin bulunduğu",
+        "C) Düşüncenin dilden tamamen bağımsız evrensel bir yapı olduğu",
+        "D) Konuşulan dilin, bireyin dünya algısını ve düşünce yapısını etkileyebileceği",
+        "E) Yeni bir dil öğrenmenin, insanın zekâ seviyesini doğrudan artırdığı"
+      ],
+      "answer": 3,
+      "solution": "Paragrafta, “dilsel görelilik” hipotezi üzerinden, dilin sadece düşünceleri ifade etme aracı olmadığı, aynı zamanda düşünce ve algı süreçlerini de şekillendirdiği anlatılmaktadır. Kar renkleri ve mavi/yeşil ayrımı gibi örneklerle, bir dilin sahip olduğu kelime ve yapıların, o dili konuşanların dünyayı nasıl algıladığını etkilediği vurgulanmaktadır. Dolayısıyla metnin ana tezi, dilin algı ve düşünce üzerinde etkili bir faktör olduğudur.",
+      "topic": "Paragrafta Anlatılmak İstenen"
+    }
+  ]
+}
