@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:34:24.953Z",
+  "game": "sosyal",
+  "category": "cografya",
+  "difficulty": 3,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Bir tarım araştırmacısı, Türkiye'de yaz sıcaklıklarının ve buharlaşmanın yüksek olduğu, tarımsal faaliyetlerin büyük ölçüde modern sulama projelerine bağımlı olduğu bir sahada inceleme yapmaktadır. İncelediği topraklarda tuz ve kireç oranının da belirgin olduğunu tespit etmiştir. Bu koşulların tümü dikkate alındığında, araştırmacının aşağıdaki projelerden hangisinin etki sahasında çalışma olasılığı en yüksektir?",
+      "options": [
+        "A) Doğu Karadeniz Projesi (DOKAP)",
+        "B) Yeşilırmak Havzası Gelişim Projesi (YHGP)",
+        "C) Güneydoğu Anadolu Projesi (GAP)",
+        "D) Doğu Anadolu Projesi (DAP)",
+        "E) Zonguldak, Bartın, Karabük Projesi (ZBK)"
+      ],
+      "answer": 2,
+      "solution": "Soruda betimlenen coğrafi koşullar (yüksek sıcaklık, buharlaşma, sulamaya bağımlılık, tuz ve kireçli topraklar) Güneydoğu Anadolu Bölgesi'nin karakteristik özellikleridir. Güneydoğu Anadolu Projesi (GAP), Fırat ve Dicle nehirleri üzerinde kurulan barajlarla bölgenin sulama sorununu çözmeyi hedefleyen en büyük bölgesel kalkınma projesidir. Diğer projeler ise farklı coğrafi ve ekonomik hedeflere sahiptir: DOKAP yaylacılık ve turizm, DAP hayvancılık, YHGP erozyonla mücadele ve ZBK ise madencilik ve sanayi odaklıdır.",
+      "topic": "Bölgesel Kalkınma Projeleri ve Tarım Coğrafyası"
+    },
+    {
+      "question": "Türkiye'nin jeolojik yapısı, levha hareketlerinin aktif olduğu bir bölgede yer almasının sonuçlarını pek çok alanda göstermektedir. Bu durum, bazı enerji kaynaklarının oluşumu ve yer seçiminde doğrudan belirleyici olmuştur. Buna göre, aşağıdaki enerji santrallerinden hangisinin konumu, doğrudan bu tektonik aktiviteyle ilişkili olan bir çöküntü alanı (graben) üzerinde veya yakınında kurulmuştur?",
+      "options": [
+        "A) Keban Hidroelektrik Santrali",
+        "B) Çatalağzı Termik Santrali",
+        "C) Germencik Jeotermal Santrali",
+        "D) Alaçatı Rüzgâr Enerjisi Santrali",
+        "E) Akkuyu Nükleer Güç Santrali"
+      ],
+      "answer": 2,
+      "solution": "Tektonik aktivite sonucu oluşan grabenler (çöküntü hendekleri), fay hatları boyunca sıcak su kaynaklarının yüzeye çıkmasını kolaylaştırır. Bu potansiyelden yararlanan jeotermal enerji santralleri, bu tür alanlarda kurulur. Germencik Jeotermal Santrali, Türkiye'nin en önemli grabenlerinden olan Büyük Menderes Graben'i içerisinde yer alır. Diğer seçenekler ise farklı faktörlere bağlıdır: Keban su gücüne, Çatalağzı taş kömürü yataklarına, Alaçatı rüzgâr potansiyeline, Akkuyu ise sismik olarak daha güvenli kabul edilen bir alana ve soğutma suyu kaynağına yakınlığa göre konumlandırılmıştır.",
+      "topic": "Türkiye'nin Jeomorfolojisi ve Enerji Kaynakları"
+    },
+    {
+      "question": "Türkiye'deki bazı şehirlerin büyüme ve gelişme dinamikleri, tarım veya sanayi gibi temel ekonomik faaliyetlerden ziyade, sonradan kazandıkları idari ve stratejik fonksiyonlarla şekillenmiştir. Cumhuriyet'in ilk yıllarında küçük bir kasaba iken başkent ilan edilmesiyle birlikte hızlı bir nüfus artışı yaşamış, kamu binaları, üniversiteler ve ulaşım ağlarının merkezi hâline gelerek fonksiyonel bir dönüşüm geçirmiştir. Bu parçada sözü edilen gelişim sürecini yaşayan şehir aşağıdakilerden hangisidir?",
+      "options": [
+        "A) İstanbul",
+        "B) Bursa",
+        "C) İzmir",
+        "D) Ankara",
+        "E) Adana"
+      ],
+      "answer": 3,
+      "solution": "Paragrafta açıklanan durum, Ankara'nın gelişim sürecini tam olarak yansıtmaktadır. Ankara, 1923'te başkent ilan edilmeden önce küçük bir Anadolu kasabasıyken, bu idari fonksiyonu kazandıktan sonra hızla büyüyerek modern bir kente dönüşmüştür. Diğer şehirlerin gelişiminde farklı faktörler ön plandadır: İstanbul tarih boyunca bir imparatorluk merkezi ve ticaret limanı, Bursa sanayi ve tarih, İzmir liman ve tarımsal hinterlant, Adana ise tarım ve tarıma dayalı sanayi ile büyümüştür.",
+      "topic": "Nüfus ve Yerleşme Coğrafyası"
+    },
+    {
+      "question": "Türkiye'de dağların uzanış doğrultusu, iç kesimlerle kıyı kesimleri arasındaki ulaşımı önemli ölçüde etkilemektedir. Bu durum, özellikle bazı kıyı şeritlerinde demir yolu ağının iç bölgelere sokulmasını coğrafi olarak zorlaştırmış veya engellemiştir. Aşağıdaki coğrafi bölümlerden hangisinde, bu doğal engele bağlı olarak demir yolu ulaşımı gelişmemiştir?",
+      "options": [
+        "A) Adana Bölümü",
+        "B) Güney Marmara Bölümü",
+        "C) Kıyı Ege Bölümü",
+        "D) Doğu Karadeniz Bölümü",
+        "E) Konya Bölümü"
+      ],
+      "answer": 3,
+      "solution": "Doğu Karadeniz Bölümü'nde, Kuzey Anadolu Dağları kıyıya paralel ve çok yakın bir şekilde uzanır. Bu yüksek ve sarp dağ sıraları, kıyı ile iç kesimler arasında doğal bir duvar oluşturarak demir yolu gibi maliyetli ve düz bir güzergâh gerektiren ulaşım ağlarının yapımını engellemiştir. Buna karşın Kıyı Ege'de dağlar kıyıya dik uzandığı için aralarındaki grabenler iç kesimlere doğru birer ulaşım koridoru oluşturur. Adana, Konya ve Güney Marmara bölümleri ise yer şekillerinin daha sade olması nedeniyle demir yolu ulaşımına daha elverişlidir.",
+      "topic": "Ulaşım Coğrafyası ve Yer Şekilleri"
+    },
+    {
+      "question": "Bir coğrafya öğretmeni, öğrencilerine karstik arazilerde jeotermal suların yeryüzüne çıkarken bünyesindeki kalsiyum karbonatı çökelterek oluşturduğu basamaklı, beyaz kayaç yapılarından bahsetmiştir. Bu oluşumların hem görsel bir zenginlik sunduğunu hem de sıcak su kaynakları sayesinde sağlık turizmi için önemli bir merkez hâline geldiğini belirtmiştir. Öğretmenin anlattığı bu doğal ve beşerî coğrafya özelliklerinin bir arada en belirgin şekilde görüldüğü yöre aşağıdakilerden hangisidir?",
+      "options": [
+        "A) Kapadokya Yöresi",
+        "B) Ihlara Vadisi",
+        "C) Pamukkale ve çevresi",
+        "D) Uludağ ve çevresi",
+        "E) Datça Yarımadası"
+      ],
+      "answer": 2,
+      "solution": "Soruda tarif edilen jeolojik süreç, traverten oluşumudur. Jeotermal suların kalsiyum karbonatı çökelterek oluşturduğu basamaklı beyaz yapılar travertenlerdir. Bu oluşumun Türkiye'deki en bilinen ve UNESCO Dünya Mirası Listesi'nde yer alan örneği Pamukkale'dir. Pamukkale aynı zamanda sıcak su kaynakları ile bir sağlık turizmi (termal turizm) merkezidir. Diğer seçenekler farklı özelliklere sahiptir: Kapadokya peribacaları (volkanik), Ihlara bir kanyon, Uludağ kış turizmi merkezi, Datça ise kıyı turizmi ile öne çıkar.",
+      "topic": "Turizm Coğrafyası ve Karstik Şekiller"
+    }
+  ]
+}

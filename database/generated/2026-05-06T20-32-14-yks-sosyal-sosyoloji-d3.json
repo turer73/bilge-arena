@@ -1,0 +1,78 @@
+{
+  "takenAt": "2026-05-06T20:32:14.968Z",
+  "game": "sosyal",
+  "category": "sosyoloji",
+  "difficulty": 3,
+  "topic": null,
+  "prompt_version": "yks-orijinal-v3",
+  "count": 5,
+  "valid_count": 5,
+  "raw_count": 5,
+  "questions": [
+    {
+      "question": "Bir tekstil fabrikasında uzun yıllardır usta olarak çalışan Ali Bey, emekli olduktan sonra torunlarına bakmak için evde kalmaya başlamıştır. Bu süreçte mahalledeki emeklilerle kurduğu dostluklar ve katıldığı hobi kursları sayesinde yeni bir sosyal çevre edinmiştir. Ancak ekonomik geliri ve toplumdaki saygınlık düzeyi belirgin bir şekilde değişmemiştir. Ali Bey'in yaşadığı bu durum, aşağıdaki toplumsal hareketlilik türlerinden hangisine bir örnektir?",
+      "options": [
+        "Kuşaklararası dikey hareketlilik",
+        "Kuşak içi yatay hareketlilik",
+        "Yapısal hareketlilik",
+        "Kuşak içi dikey hareketlilik",
+        "Coğrafi hareketlilik"
+      ],
+      "answer": 1,
+      "solution": "Toplumsal hareketlilik, bireyin toplumsal tabakalar arasındaki yer değiştirmesidir. Yatay hareketlilik, bireyin toplumsal statüsünde, gelirinde veya saygınlığında önemli bir değişiklik olmadan, benzer düzeydeki bir pozisyondan diğerine geçmesidir. Ali Bey'in emekli olup sosyal çevresini değiştirmesi ancak ekonomik ve saygınlık düzeyinin sabit kalması, kendi yaşam süresi (kuşak içi) içinde gerçekleşen bir yatay hareketliliktir. Dikey hareketlilikte ise statüde belirgin bir artış veya azalış söz konusudur.",
+      "topic": "Toplumsal Tabakalaşma ve Hareketlilik"
+    },
+    {
+      "question": "Gelişen teknolojiyle birlikte ortaya çıkan akıllı ev sistemleri, aydınlatmadan ısıtmaya kadar birçok işlevi otomatikleştirmektedir. Ancak bu sistemlerin yaygınlaşması, siber güvenlik ve kişisel verilerin mahremiyeti gibi konularda yeni yasal düzenlemelerin ve toplumsal ahlaki normların aynı hızda gelişmemesi sorununu ortaya çıkarmıştır. Bu durum, teknolojinin getirdiği yenilikler ile toplumsal kuralların bu yeniliklere uyum sağlama hızı arasındaki farkı göstermektedir. Bu farkı açıklayan sosyolojik kavram aşağıdakilerden hangisidir?",
+      "options": [
+        "Kültür şoku",
+        "Kültürel yayılma",
+        "Kültürel gecikme",
+        "Karşıt kültür",
+        "Kültür emperyalizmi"
+      ],
+      "answer": 2,
+      "solution": "Kültürel gecikme (cultural lag), William Ogburn tarafından ortaya atılan bir kavramdır. Bir kültürün maddi unsurlarının (teknoloji, aletler) manevi unsurlarından (normlar, yasalar, inançlar) daha hızlı değişmesi sonucu ortaya çıkan uyumsuzluk ve boşluk durumunu ifade eder. Sorudaki akıllı ev teknolojisinin (maddi kültür) hızla gelişmesine rağmen, mahremiyet ve güvenlikle ilgili yasa ve normların (manevi kültür) geride kalması bu kavrama tam olarak uymaktadır.",
+      "topic": "Kültür"
+    },
+    {
+      "question": "Bir şirketin farklı departmanlarından gelen ve altı ay sürecek bir pazar araştırma projesi için bir araya getirilen bir grup düşünelim. Bu grup üyelerinin ilişkileri resmi, mesafeli ve tamamen proje hedeflerine ulaşmaya yöneliktir. Grup üyeleri, proje bittikten sonra dağılacaklarını ve bu tür bir etkileşime devam etmeyeceklerini bilmektedirler. Charles Cooley'in grup sınıflandırmasına göre, bu proje ekibi aşağıdaki grup türlerinden hangisine en iyi örnektir?",
+      "options": [
+        "Birincil grup",
+        "İkincil grup",
+        "Referans grubu",
+        "İç grup",
+        "Cemaat"
+      ],
+      "answer": 1,
+      "solution": "Sosyolojide gruplar, ilişkilerin niteliğine göre birincil ve ikincil olarak ayrılır. Birincil gruplar, aile ve yakın arkadaş çevresi gibi, yüz yüze, samimi ve uzun süreli ilişkilerin olduğu gruplardır. İkincil gruplar ise, sorudaki proje ekibi gibi, belirli bir amaca ulaşmak için kurulan, ilişkilerin resmi, mesafeli ve geçici olduğu gruplardır. Bu nedenle proje ekibi, tipik bir ikincil grup örneğidir.",
+      "topic": "Toplumsal Gruplar"
+    },
+    {
+      "question": "Émile Durkheim, özellikle sanayileşme gibi hızlı toplumsal değişim dönemlerinde, eski toplumsal bağların ve değerlerin zayıfladığını ancak yerlerine yenilerinin henüz tam olarak yerleşmediğini belirtir. Bu ara dönemde bireyler, neyin doğru neyin yanlış olduğu konusunda bir belirsizlik yaşar, davranışlarına rehberlik edecek açık ve tutarlı kurallardan yoksun kalırlar. Bu durumun toplumsal intihar oranlarında artışa bile yol açabileceğini savunur. Durkheim'ın tanımladığı bu toplumsal durum aşağıdaki kavramlardan hangisiyle ifade edilir?",
+      "options": [
+        "Yabancılaşma",
+        "Rasyonelleşme",
+        "Bürokrasi",
+        "Anomi",
+        "Mekanik dayanışma"
+      ],
+      "answer": 3,
+      "solution": "Anomi, kelime anlamıyla 'kuralsızlık' demektir. Émile Durkheim'a göre anomi, hızlı toplumsal değişim süreçlerinde toplumsal normların zayıflaması veya ortadan kalkmasıyla ortaya çıkan bir toplumsal kargaşa ve kuralsızlık durumudur. Bireyler bu durumda kendilerini boşlukta hisseder ve davranışlarını neye göre düzenleyeceklerini bilemezler. Paragrafta anlatılan durum, tam olarak Durkheim'ın anomi kavramına karşılık gelmektedir. Yabancılaşma Marx'ın, rasyonelleşme ise Weber'in bir kavramıdır ve farklı olguları açıklarlar.",
+      "topic": "Sosyolojiye Giriş ve Kuramlar"
+    },
+    {
+      "question": "Bir toplumda eğitimin temel ve açık amacı, bireylere bilgi ve beceri kazandırarak onları meslek hayatına hazırlamak ve topluma faydalı vatandaşlar yetiştirmektir. Ancak eğitim kurumları, bu amacın yanı sıra, farklı sosyal sınıflardan gelen öğrencileri ortak bir ulusal kimlik etrafında birleştirme, gençlerin belirli bir süre iş gücü piyasasına girmesini geciktirerek işsizliği önleme gibi dolaylı ve genellikle planlanmamış sonuçlar da doğurur. Robert Merton'un yapısal-işlevselci yaklaşımına göre, eğitimin bu dolaylı ve planlanmamış sonuçları aşağıdaki kavramlardan hangisiyle açıklanır?",
+      "options": [
+        "Açık işlev (Manifest function)",
+        "Gizli işlev (Latent function)",
+        "İşlevsizlik (Dysfunction)",
+        "Toplumsal kontrol",
+        "Toplumsal bütünleşme"
+      ],
+      "answer": 1,
+      "solution": "Robert Merton, toplumsal kurumların işlevlerini ikiye ayırır: açık ve gizli işlevler. Açık işlevler, kurumun bilinçli olarak tasarlanmış, beklenen ve kabul edilen sonuçlarıdır (eğitimin bilgi kazandırması gibi). Gizli işlevler ise, planlanmamış, beklenmeyen ve genellikle farkında olunmayan sonuçlardır. Soruda belirtilen, eğitimin işsizliği ertelemesi veya ulusal kimlik oluşturması gibi yan etkileri, eğitimin gizli işlevlerine örnektir.",
+      "topic": "Toplumsal Kurumlar"
+    }
+  ]
+}
