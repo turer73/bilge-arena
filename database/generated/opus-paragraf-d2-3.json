@@ -1,0 +1,242 @@
+[
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Yapay zeka teknolojileri son yillarda hizla gelisti. Saglik alaninda hastaliklarin tanisini koymaktan, egitimde kisiselestirilmis ders icerigi sunmaya kadar genis bir yelpazede kullanilir oldu. Ancak bu teknolojiler insan zekasinin yerini almaktan ziyade, onu desteklemek amacli kullanilmalidir. Yapay zeka bir araçtir; karar verici olarak insanlarin sorumlulugu yine geri bizdedir.\n\nBu parcanin yazarinin yapay zekaya iliskin temel onerisi asagidakilerden hangisidir?",
+    "options": [
+      "Yapay zeka sinirsiz olarak insan zekasinin yerini almali",
+      "Yapay zeka tamamen yasaklanmalidir",
+      "Yapay zeka insan zekasini desteklemek amacli kullanilmali, karar sorumlulugu insanda kalmali",
+      "Yapay zeka yalnizca saglik alaninda kullanilmalidir",
+      "Yapay zeka egitimde kullanilmamalidir"
+    ],
+    "answer": 2,
+    "solution": "Parca yapay zekanin insan zekasinin yerini almak yerine onu desteklemek amacli kullanilmasini ve karar verici olarak insanin sorumlulugunun korunmasini onerir. C secenegi bu dengeli yaklasimi dogru ifade eder.",
+    "topic": "Yazarin gorusu"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Bir gencin ileride mutlu ve basarili bir birey olmasi yalniz akademik basari ile saglanmaz. Sosyal beceriler, duygu yonetimi, problem cozme ve elesturel dusunme yetkinlikleri en az dersler kadar onemlidir. Bu yuzden egitim sisteminin sadece sinava odaklanmasi yetersizdir; bireyin tum yonleriyle gelisimini destekleyen bir yaklasim benimsenmelidir.\n\nBu parcaya gore egitim sisteminin nasil olmasi gerekmektedir?",
+    "options": [
+      "Yalnizca sinava odaklanmali",
+      "Sadece akademik basariyi olcmeli",
+      "Bireyin tum yonleriyle gelisimini destekleyen butuncul bir yaklasim benimsenmeli",
+      "Sosyal becerileri yok saymali",
+      "Hicbir olculme yapmamali"
+    ],
+    "answer": 2,
+    "solution": "Parcaya gore akademik basari yetersizdir; bireyin sosyal beceri, duygu yonetimi, problem cozme ve elesturel dusunme dahil tum yonleriyle gelisimi gozetilmelidir. C secenegi bu butuncul yaklasimi ifade eder.",
+    "topic": "Yazarin gorusu"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Sehirde yasayan insanlar dogadan kopmus durumdadir. Beton binalarin arasinda gunlerini geciren bireyler agac, kus, toprak gibi dogal varliklarla yeterli temas kuramiyor. Oysa bilimsel arastirmalar dogadan koparilmis bir yasamin stres seviyesini artirdigini, mutluluk duyguludunu azalttigini gostermistir. Sehir planlamacilarina dusen, yesil alanlari ve dogal ekosistemleri kentin merkezine yerlestirmektir.\n\nBu parcanin yazari sehir yasaminin probleme cozumunu nerede gormektedir?",
+    "options": [
+      "Beton binalari yikmakta",
+      "Sehri tamamen terk etmekte",
+      "Sehir merkezine yesil alan ve dogal ekosistem yerlestirilmekte",
+      "Yapay agaclar dikmekte",
+      "Stresin nedenlerini yok saymakta"
+    ],
+    "answer": 2,
+    "solution": "Parcanin son cumlesi cozumu acikca verir: Sehir planlamacilarina dusen yesil alanlari ve dogal ekosistemleri kentin merkezine yerlestirmektir. C secenegi bu cozumu dogru ifade eder.",
+    "topic": "Anlam cikarma"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Genc kusagin sosyal medyaya bagimliligi, ebeveynler icin gunumuzun en buyuk sorunlarindan biridir. Cocuklar saatlerce telefona bakmakta, gercek dunyadan kopmaktadirlar. Ancak bu sorunla mucadele etmek icin yasaklayici bir tutum almak yerine, ayrintili konusarak bu mecranin avantaj ve dezavantajlarini birlikte deyerlendirmek daha etkilidir.\n\nBu parcaya gore sosyal medya bagimliligi ile mucadelede yazar nasil bir yaklasim onerir?",
+    "options": [
+      "Sosyal medyayi tamamen yasaklamak",
+      "Cocuklarla konusarak avantaj-dezavantaji birlikte deyerlendirmek",
+      "Cocuklara hicbir mudahalede bulunmamak",
+      "Sadece yasal duzenlemelere guvenmek",
+      "Cocuklari evden cikarmamak"
+    ],
+    "answer": 1,
+    "solution": "Parcaya gore yasaklayici tutum yerine ayrintili konusma ve birlikte avantaj-dezavantaj deyerlendirmek daha etkilidir. B secenegi bu diyalog odakli yaklasimi dogru ifade eder.",
+    "topic": "Yazarin gorusu"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Sanat eseri yapildigi donemin kosullarini yansitsa da iyi bir eser yalnizca tarihsel bir belge degildir. Ote yandan, eserdeki anlam evrensel insan deneyimleriyle ilgilidir; bu yuzden yuzyillar oncesinden gelen bir yapit hala bizi etkileyebilir. Sanatin gucu, hem belirli bir doneme ait olusu hem de o donemden bagimsiz evrensel deyerlere isaret edisidir.\n\nBu parcaya gore sanat eserinin gucu nereden gelir?",
+    "options": [
+      "Yalniz tarihsel belge nitelikinden",
+      "Sadece evrensel deyerlerden",
+      "Hem doneme ozgu hem de evrensel deyerlere isaret eden ikili nitelikten",
+      "Sanatcinin biyografisinden",
+      "Eserin pazardaki maddi degerinden"
+    ],
+    "answer": 2,
+    "solution": "Parcanin son cumlesi sanatin gucunun ikili niteliginde oldugunu acikca soyler: hem belirli bir doneme ait hem de evrensel deyerlere isaret etmesi. C secenegi bu butuncul yargı ifade eder.",
+    "topic": "Anlam cikarma"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Kuresel iklim degisikligi gunumuzun en buyuk sorunlarindan biridir. Buz daglari erimekte, su seviyeleri yukselmekte, kuraklik ve seller cogalmaktadir. Bu durum yalniz cevre meselesi degildir; kac yuz milyon insanin gocune, gida guvenliksizligine ve uluslararasi catismaya yol acabilir. Sorunun bu denli karmasik yansimalari, cozumun da uluslararasi isbirligi gerektirdigini gosterir.\n\nBu parcaya gore iklim degisikligi sorununun cozumu hangisi olabilir?",
+    "options": [
+      "Yalnizca tek bir ulkenin caba gostermesi",
+      "Sorunu yok saymak",
+      "Uluslararasi isbirligi",
+      "Bilim adamlarinin oneri vermemesi",
+      "Sadece teknolojinin gelismesini beklemek"
+    ],
+    "answer": 2,
+    "solution": "Parcanin son cumlesi cozumu acikca soyler: cozumun uluslararasi isbirligi gerektirdigini. C secenegi bu cozumu dogru ifade eder.",
+    "topic": "Anlam cikarma"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Bir kentin gelisimi, sadece yapilan binalarin yuksekligi ya da yollarin uzunluğuyla olculmez. Bir kentin gercek gelismisliği yasayanların gunluk hayatinda dustugu kolayliktan, yararlandigi sosyal hizmetlerin niteliginden, kulturel etkinliklere kolaylikla katilabilmesinden anlasilir. Yani gelisme, fiziksel altyapidan once insan odakli olmalıdır.\n\nBu parcaya gore bir kentin gerek gelismislik olcutu nedir?",
+    "options": [
+      "Binalarin yuksekligi",
+      "Yollarin uzunlugu",
+      "Vatandaslarin gunluk hayat kolayliği, sosyal hizmet ve kultur erisimi",
+      "Trafiğin azligi",
+      "Saatlik nufus yogunlugu"
+    ],
+    "answer": 2,
+    "solution": "Parcaya gore bir kentin gerçek gelismisligi insan odakli olmaktan ve vatandaslarin gunluk yasam kolayliği, sosyal hizmet ve kultur erisiminden anlasilir. C secenegi bu butuncul olcutu ifade eder.",
+    "topic": "Yazarin gorusu"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Yazinin tarihi, insanlik tarihinin bir donum noktasidir. Yazi sayesinde insan deneyimleri kalici hale gelmis, kusaktan kusaga aktarilabilmistir. Sozun gecisken dogasi yerine yazi, bilgiyi sabitleyen bir araç olmustur. Bu yuzden yazinin icadi sadece bir iletisim devrimi değil, bir bellek devrimidir.\n\nBu parcaya gore yazinin asıl onemi neyden gelmektedir?",
+    "options": [
+      "Sozun yerini almasinda",
+      "Bilgiyi kayit altina alip kuşaktan kuşaga aktarabilmesinde",
+      "Egitim icin gereksiz olmasinda",
+      "Yalniz iletisim icin kullanilmasinda",
+      "Tek bir kulture ait olmasinda"
+    ],
+    "answer": 1,
+    "solution": "Parcaya gore yazinin asıl onemi bilgiyi sabitleyerek (kalici kilarak) kuşaktan kuşaga aktarilmasinda yatar; yazi bir 'bellek devrimi'dir. B secenegi bu yargı ifade eder.",
+    "topic": "Anlam cikarma"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Calisanlarin verimliligi sadece is yerinde geçirilen saat ile olculmemelidir. Bir calisanin motivasyonu, calisma ortaminin niteligi, dinlenme firsati ve ozel hayatla is hayatinin dengesi de verimi belirler. Uzun saatler ofiste oturmak verim demek degildir; aksine uzun ve dinlenmesiz calisma sonunda yorulan calisanin verimi düşer.\n\nBu parcanin temel iddiasi nedir?",
+    "options": [
+      "Verim sadece is yerinde gecirilen saat ile artar",
+      "Uzun saatler verimliligi artirir",
+      "Verim motivasyon, ortam, dinlenme ve is-ozel hayat dengesi gibi cok faktorle belirlenir",
+      "Calisanlarin ozel hayati onemli degildir",
+      "Dinlenme isi azaltir"
+    ],
+    "answer": 2,
+    "solution": "Parcanin temel iddiasi: verimi yalniz calisma saati degil, motivasyon-ortam-dinlenme-is yasam dengesi gibi cok faktor birlikte belirler. Uzun saatler verimsizliğe yol açabilir. C secenegi bu cok boyutlu bakişi ifade eder.",
+    "topic": "Ana fikir"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Yazarlar genellikle kendi yasadiklari donemden ve cevrelerinden etkilenirler. Bir yazarin ailesi, dostluklari, yetistigi sehir, donemin siyasi ortami eserlerinin temalari ve uslubu uzerinde belirgin etkiler birakir. Bu yuzden bir yazari iyi anlamak isteyen okuyucu, sadece eserlerini degil, yazarin yasamindaki bu etkilenis kosullarini da gormezden gelemez.\n\nBu parcaya gore bir yazari iyi anlamak icin ne yapilmalidir?",
+    "options": [
+      "Sadece eserleri okunmalidir",
+      "Eserlerle birlikte yazarin yasam kosullari da incelenmelidir",
+      "Yazardan tamamen bagimsiz okumak",
+      "Yalniz yazarin ozel hayatina bakmak",
+      "Yazari hic okumamak"
+    ],
+    "answer": 1,
+    "solution": "Parcaya gore bir yazari iyi anlamak icin sadece eser degil, yazarin yasamındaki etkilenis kosullari da incelenmelidir. B secenegi bu butuncul yaklasimi dogru ifade eder.",
+    "topic": "Yazarin gorusu"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Bir cocugun ozguveni, yetiskinlerin onu nasil deyerlendirdiğine cok bagimlidir. Cocuk her gun aldigi ovgu ve elestirilerle kendine dair bir resim olusturur. Surekli yargilanan, kucuk gorulen bir cocuk yetiskin olduguna ozguvensiz birey olur; aksine, hatasi gosterilirken cabasi takdir edilen cocuk saglikli bir ozsaygiya sahip olur. Aile ve okul bu konuda dikkatli davranmalidir.\n\nBu parcanin temel mesaji nedir?",
+    "options": [
+      "Cocuklara hic elesturi yapmamak",
+      "Cocuklarin ozguveni yetiskinlerin tutumuyla yakindan iliskilidir; aile ve okul dikkatli olmalidir",
+      "Yetiskinlerin cocuklara mudahalesi yararli degildir",
+      "Ozguven sadece bir genetik ozelliktir",
+      "Okul cocuklarin gelismesinde rol almamalidir"
+    ],
+    "answer": 1,
+    "solution": "Parcanin son iki cumlesi temel mesaji ozetler: cocugun ozguveni yetiskinlerin (aile-okul) tutumuyla iliskilidir ve bunlar dikkatli davranmalidir. B secenegi bu butuncul iddiayı ifade eder.",
+    "topic": "Ana fikir"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Tarih ogrenmenin yarari yalniz gecmisi bilmek degildir. Tarih, bugünun olaylarina baglam saglar, gelecekteki kararlara isik tutar. Gecmiste yapilan hatalardan ders alan toplumlar bunlari tekrar etmemek icin daha iyi politikalar uretebilirler. Bu yuzden tarih bilinci olan bir toplum, daha bilincli bir gelecege adim atar.\n\nBu parcaya gore tarih ogrenmenin asıl yarari nedir?",
+    "options": [
+      "Sadece gecmisi anmak",
+      "Bugünun olaylarina baglam saglamak ve gelecekteki kararlara isik tutmak",
+      "Sadece ders kitabi yazmak",
+      "Sadece akademisyenler icin gerekli olmak",
+      "Tarihi figurleri taklit etmek"
+    ],
+    "answer": 1,
+    "solution": "Parcaya gore tarih ogrenmenin asıl yarari sadece gecmisi bilmek degil, bugüne baglam saglamak ve gelecek kararlara isik tutmaktir. B secenegi bu butuncul yarari dogru ifade eder.",
+    "topic": "Anlam cikarma"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Ekonominin gelismesi sadece zenginlikle olculmemelidir. Bir ulkenin gercek refahi, vatandaslarinin temel ihtiyaclarinin karsilanması, gelir adaletinin saglanması, egitim-saglik gibi hizmetlere herkesin ulasabilmesi ve cevrenin korunması ile birlikte ele alinmalidir. Aksi halde rakamsal olarak buyuyen ama vatandaslarinin mutsuz oldugu bir ekonomi 'gelismis' kabul edilemez.\n\nBu parcanin temel iddiasi nedir?",
+    "options": [
+      "Ekonomik gelisme yalniz GSYIH ile olculmelidir",
+      "Vatandaslarin mutlulugu onemli degildir",
+      "Ekonomik gelisme rakamsal buyumeyi degil, refah-adalet-hizmet-cevre dengesini de icermelidir",
+      "Cevre korumasi ekonomi ile iliskili degildir",
+      "Gelir adaleti gereksizdir"
+    ],
+    "answer": 2,
+    "solution": "Parcanin temel iddiasi: ekonomik gelisme rakamsal buyume degil, refah-gelir adaleti-hizmet-cevre boyutlarini icermelidir. C secenegi bu cok boyutlu bakişi dogru ifade eder.",
+    "topic": "Ana fikir"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Iyi bir konusmaci olmak yalniz akıcı konusmaktan ibaret degildir. Iyi konusmaci dinleyenle göz teması kurar, beden dilini etkili kullanır, dinleyenin ilgisini canli tutar ve mesajini açık-anlasilir bir bicimde ileterek beklenen sonucu yaratir. Bu beceri dogustan degil, surekli pratikle gelisen bir niteliktir.\n\nBu parcaya gore iyi bir konusmaci olmak nasil saglanir?",
+    "options": [
+      "Yalniz dogustan gelen bir yetenektir",
+      "Sadece akici konusmakla yeterlidir",
+      "Goz temasi, beden dili, ilgi cekme, mesajin acik iletilmesi gibi becerileri pratikle gelistirmekle saglanir",
+      "Konusmaci yalniz mesaj iletmelidir, dinleyici onemsizdir",
+      "Egitim hicbir katki saglamaz"
+    ],
+    "answer": 2,
+    "solution": "Parcaya gore iyi konusmaci olmak goz temasi, beden dili, ilgi cekme ve acik mesaj iletmeyi pratikle gelistirmektir; dogustan degildir. C secenegi bu butuncul yaklasimi ifade eder.",
+    "topic": "Yazarin gorusu"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 2,
+    "question": "Kitap satislarinin son yillarda artmasi olumlu bir gelismedir; ancak bu artisin asıl onemi okur sayisinin artmasidir. Bir kitabin satilmasi onun aslında okunmasi anlamina gelmez. Asil olcut, satilan kitabin gercekten okunup oradan baska kitaplara kopru kuran bir okuma kulturune yol acmasidir.\n\nBu parcanin yazari kitap satislarinin artisini nasil deyerlendirir?",
+    "options": [
+      "Sadece satislar kendi basina yeterlidir",
+      "Satislar olumlu ama asıl onemli olan kitabin gercekten okunması ve okuma kulturune yol acmasidir",
+      "Satis sayilari onemli degildir",
+      "Kitap satislari hicbir kazanim saglamaz",
+      "Sadece akademik kitaplar satilmalidir"
+    ],
+    "answer": 1,
+    "solution": "Parcaya gore satislarin artisi olumlu, ancak asıl olcut kitabin gercekten okunup okuma kulturune kopru olmasidir. B secenegi bu nuansli yaklasimi dogru ifade eder.",
+    "topic": "Yazarin gorusu"
+  }
+]
