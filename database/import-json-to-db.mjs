@@ -56,9 +56,13 @@ function validate(q) {
   if (typeof q.solution !== 'string' || q.solution.length < 5 || q.solution.length > 3000) return 'solution 5-3000 char'
   if (!q.game || !q.category || !Number.isInteger(q.difficulty)) return 'game/category/difficulty eksik'
 
-  const endsQ = /\?\s*$/.test(q.question)
-  const hasMarker = /(hangisi|nedir|nasıl|ne ad verilir|en uygun|en iyi|en yakın|en doğru|hangi|kaç |yorum)/i.test(q.question)
-  if (!endsQ && !hasMarker) return 'soru-cumlesi yok'
+  // Marker validate sadece Turkce ders icerigi icin (sosyal/turkce/matematik/fen)
+  // Wordquest (Ingilizce) icin "fill-in-blank" ve "Choose..." formati standarttir
+  if (q.game !== 'wordquest') {
+    const endsQ = /\?\s*$/.test(q.question)
+    const hasMarker = /(hangisi|nedir|nasıl|ne ad verilir|en uygun|en iyi|en yakın|en doğru|hangi|kaç |yorum)/i.test(q.question)
+    if (!endsQ && !hasMarker) return 'soru-cumlesi yok'
+  }
   for (const o of q.options) if (/^[A-E]\)\s/.test(o)) return 'options A) prefix YASAK'
   return null
 }
@@ -124,7 +128,7 @@ const insertData = unique.map(q => ({
   category: q.category,
   topic: q.topic ?? null,
   difficulty: q.difficulty,
-  level_tag: null,
+  level_tag: q.level_tag ?? null,
   content: { question: q.question, options: q.options, answer: q.answer, solution: q.solution },
   source: 'ai_claude_v4',
   is_active: false,
