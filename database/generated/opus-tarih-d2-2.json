@@ -69,14 +69,14 @@
     "difficulty": 2,
     "question": "Tanzimat Fermani'nin (1839) en temel ozelligi asagidakilerden hangisidir?",
     "options": [
-      "Padisahin yetkilerini sinirlandiran ilk anayasal belge olmasi",
+      "Tum tebaaya can, mal ve namus guvencesi taninarak hukuk onunde esitlik ilkesinin kabulu",
       "Cumhuriyetin ilan edilmesi",
       "Dogu Anadolu'ya ozel statu tanimasi",
       "Mutlak monarsiyi guclendirmesi",
       "Saltanati lagvetmesi"
     ],
     "answer": 0,
-    "solution": "Tanzimat Fermani 1839'da Sultan Abdulmecid tarafindan yayimlanmis ve padisah ilk kez kendi yetkisini sinirlandirip yasalara bagli kalacagini taahhut etmistir. Bu yonu ile Osmanli'da anayasal gelismelerin baslangici sayilir.",
+    "solution": "Tanzimat Fermani 1839'da Sultan Abdulmecid tarafindan yayimlanmis; tum Osmanli tebaasina (Musluman-gayrimuslim) can, mal ve namus guvencesi tanimis ve hukuk onunde esitlik ilkesini benimsemistir. Padisah yetkisini sinirlandiran ilk belge ise 1808 Sened-i Ittifak kabul edilir.",
     "topic": "Tanzimat"
   },
   {
@@ -104,7 +104,7 @@
       "Son Osmanli Mebusan Meclisi'nde kabul edilmistir",
       "Erzurum ve Sivas Kongresi kararlari temelinde olusturulmustur",
       "Vatanin sinirlarini cizen siyasi bir karardir",
-      "Istanbul'un isgalinin ardindan ortaya cikan bir tepki olarak doğmustur",
+      "Lozan Antlasmasi'nin temelini olusturmustur",
       "Yeni TBMM tarafindan reddedilmistir"
     ],
     "answer": 4,
@@ -147,16 +147,16 @@
     "game": "sosyal",
     "category": "tarih",
     "difficulty": 2,
-    "question": "Cumhuriyet Doneminde 1924 Anayasasi ile gerceklestirilen onemli bir degisiklik asagidakilerden hangisidir?",
+    "question": "1924 Anayasasi'nin getirdigi temel duzenlemelerden biri asagidakilerden hangisidir?",
     "options": [
-      "Kadinlara secme ve secilme hakki taninmistir",
-      "Saltanat kaldirilmistir",
-      "Halifelik kaldirilmistir",
-      "Devletin dini Islam ifadesi anayasadan cikarilmistir",
-      "Soyadi Kanunu cikarilmistir"
+      "Egemenligin kayitsiz sartsiz millete ait oldugu ilkesinin yeniden teyit edilmesi",
+      "Saltanat'in kaldirilmasi",
+      "Halifelik'in kaldirilmasi",
+      "Cok partili sistemin guvence altina alinmasi",
+      "Soyadi Kanunu'nun cikarilmasi"
     ],
-    "answer": 2,
-    "solution": "1924 Anayasasi'nin onemli bir basariyla halifelik 3 Mart 1924'te kaldirildi (ayni gunde Tevhid-i Tedrisat ve Seriye Vekaleti de kaldirildi). Saltanat 1922'de, kadin secme hakki 1934'te, devlet dini ifadesi 1928'de cikti.",
+    "answer": 0,
+    "solution": "20 Nisan 1924'te kabul edilen 1924 Anayasasi, egemenligin kayitsiz sartsiz millete ait oldugu ilkesini ve TBMM'nin yasama-yurutme uzerindeki ustunlugunu pekistirmistir. Saltanat 1922'de TBMM kararıyla, halifelik 3 Mart 1924'te ayri bir kanunla kaldirildi (anayasa oncesi); soyadi 1934, cok partili sistem fiilen 1946 sonrasidir.",
     "topic": "Cumhuriyet inkilaplari"
   },
   {

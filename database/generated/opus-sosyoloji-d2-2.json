@@ -211,7 +211,7 @@
     "game": "sosyal",
     "category": "sosyoloji",
     "difficulty": 2,
-    "question": "Bir kisi belirli bir donmeyi (cevre) icine alan bilgi, davranis ve aliskanliklari, sosyal kontrol araclariyla benimsemekte olabilir. Bu sureci en iyi acklayan kavram hangisidir?",
+    "question": "Bireyin icinde yasadigi toplumun bilgi, deger, norm ve davranis kaliplarini aile, okul, medya gibi sosyal kontrol araclari yoluyla ogrenip benimsemesi surecini en iyi aciklayan kavram asagidakilerden hangisidir?",
     "options": [
       "Asimile olma",
       "Sosyalizasyon",
@@ -220,7 +220,7 @@
       "Marjinallesme"
     ],
     "answer": 1,
-    "solution": "Sosyalizasyon (toplumsallasma) bireyin icinde bulundugu cevrenin (aile, okul, medya gibi) bilgi, deger, norm, davranis ve rolleri ogrenip ic yatirim haline getirme surecidir. Asimile olma ise farkli bir kulture donusum, cogunluk kulturune erime anlamı tasir.",
+    "solution": "Sosyalizasyon (toplumsallasma) bireyin icinde bulundugu cevrenin (aile, okul, medya gibi) bilgi, deger, norm, davranis ve rolleri ogrenip icsellestirme surecidir. Asimile olma ise farkli bir kulture donusum, cogunluk kulturune erime anlami tasir.",
     "topic": "Sosyalizasyon"
   },
   {

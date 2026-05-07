@@ -179,16 +179,16 @@
     "game": "turkce",
     "category": "paragraf",
     "difficulty": 1,
-    "question": "Kis aylarinda insanlar daha sik hasta olur. Soguk hava bagisiklik sistemini zayiflatir, viruslerin yayilmasini kolaylastirir. Bu yuzden kis aylarinda saglikli beslenmek, vitamin almak ve hijyen kurallarina dikkat etmek onemlidir.\n\nBu parcaya gore kis aylarinda hastaliktan korunmak icin yapilmasi gerekenler arasinda asagidakilerden hangisi yer almaz?",
+    "question": "Kis aylarinda insanlar daha sik hasta olur. Soguk hava bagisiklik sistemini zayiflatir, viruslerin yayilmasini kolaylastirir. Bu yuzden kis aylarinda saglikli beslenmek, vitamin almak ve hijyen kurallarina dikkat etmek onemlidir.\n\nBu parcaya gore kis aylarinda hastaliktan korunmak icin parcada onerilen davranislardan biri asagidakilerden hangisidir?",
     "options": [
-      "Saglikli beslenmek",
-      "Vitamin almak",
-      "Hijyen kurallarina dikkat etmek",
+      "Bagisiklik sistemini gucsuz tutmak",
       "Sicak iklimlere yolculuk yapmak",
-      "Bagisiklik sistemini gucsuz tutmak"
+      "Hijyen kurallarina dikkat etmek",
+      "Spor yapmamak",
+      "Sicak su icmek"
     ],
-    "answer": 4,
-    "solution": "Parca bagisiklik sistemini guclu tutmayi onerir; gucsuz tutmak parcanin tersi. Sicak iklime yolculuk parcada yer almaz; saglikli beslenme, vitamin ve hijyen ise acikca onerilen sey lerdir. Burada acik karsitlik bagisiklik sistemini gucsuz tutmak ve secenek 'D'.",
+    "answer": 2,
+    "solution": "Parca acikca uc oneri sunar: saglikli beslenmek, vitamin almak ve hijyen kurallarina dikkat etmek. C secenegi (hijyen kurallarina dikkat etmek) parcada birebir onerilen davranistir. Diger secenekler parcada yer almaz veya tersini ifade eder.",
     "topic": "Detay anlam cikarma"
   },
   {
