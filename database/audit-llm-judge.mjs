@@ -25,7 +25,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -37,6 +37,11 @@ if (existsSync(envPath)) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"(.*)"$/, '$1')
   }
+}
+
+// Alias: Vercel AI SDK GOOGLE_GENERATIVE_AI_API_KEY kullanir, scriptler GEMINI_API_KEY bekler
+if (process.env.GOOGLE_GENERATIVE_AI_API_KEY && !process.env.GEMINI_API_KEY) {
+  process.env.GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY
 }
 
 // CLI parse
@@ -409,7 +414,8 @@ async function main() {
 }
 
 // Run if invoked directly (test importlarda main çalışmasın)
-const isMain = import.meta.url === `file://${process.argv[1]}`
+// pathToFileURL = Windows backslash + Linux forward slash ikisini de file:// URL'e çevirir
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
 if (isMain) {
   main().catch(e => { console.error(e); process.exit(1) })
 }
