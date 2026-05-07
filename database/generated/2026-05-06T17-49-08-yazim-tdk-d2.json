@@ -65,12 +65,12 @@
       "options": [
         "Saat 15.30'da buluşacağız.",
         "Toplantı 2023-2024 eğitim öğretim yılında yapılacak.",
-        "Kıyafetin fiyatı 500 TL idi.",
+        "Kıyafetin fiyatı 500TL idi.",
         "Bu proje 10 bin liraya mal oldu.",
         "Saat 09.00'da ders başlayacak."
       ],
       "answer": 2,
-      "solution": "Yıl aralıkları kısa çizgi ile gösterilir ve kesme işareti kullanılmaz: '2023-2024'. Bu kullanım doğrudur.",
+      "solution": "TDK'ya göre para birimi kısaltmalarından önce boşluk bırakılır: '500 TL'. Bitişik yazım ('500TL') yanlıştır. Diğer seçeneklerde saat (15.30, 09.00 nokta ile), yıl aralığı (2023-2024 kısa çizgi ile) ve sayı yazımı (10 bin) TDK'ya uygundur.",
       "topic": "Sayıların Yazımı"
     }
   ]

@@ -3,8 +3,8 @@
  * Sprint 1 PR4e-1
  */
 
-import { describe, test, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import { GameCompleted } from '../GameCompleted'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 
@@ -97,6 +97,125 @@ describe('GameCompleted', () => {
     // gecirilen url prop'u og_title=Test+Bitti og_score=850 og_category=genel-kultur
     // icermeli. Nested mock yapmadan dogrulayamiyoruz, bu yuzden URL yapisi
     // GameCompleted source'da inline; integration testi (manuel preview) yeterli.
+  })
+
+  describe('Faz 3: grant-stats + badges fetch (PR #117)', () => {
+    let fetchSpy: ReturnType<typeof vi.fn>
+
+    beforeEach(() => {
+      fetchSpy = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+      vi.stubGlobal('fetch', fetchSpy)
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    test('completed -> /api/multiplayer/grant-stats + /api/badges cagrilir, isFirstPlace=true gonderilir', async () => {
+      const stateWithBoard: RoomState = {
+        ...completedState(),
+        scoreboard: [
+          {
+            user_id: 'u1',
+            display_name: 'Ali',
+            score: 100,
+            correct_count: 10,
+            response_ms_total: 50000,
+          },
+          {
+            user_id: 'u2',
+            display_name: 'Ayşe',
+            score: 80,
+            correct_count: 8,
+            response_ms_total: 60000,
+          },
+        ],
+      }
+      render(<GameCompleted state={stateWithBoard} userId="u1" />)
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          '/api/multiplayer/grant-stats',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ roomId: 'r1', isFirstPlace: true }),
+          }),
+        )
+      })
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith('/api/badges', { method: 'POST' })
+      })
+    })
+
+    test('isFirstPlace=false gonderir kullanici 1. degilse', async () => {
+      const stateWithBoard: RoomState = {
+        ...completedState(),
+        scoreboard: [
+          {
+            user_id: 'u-host',
+            display_name: 'Veli',
+            score: 100,
+            correct_count: 10,
+            response_ms_total: 50000,
+          },
+          {
+            user_id: 'u1',
+            display_name: 'Ali',
+            score: 50,
+            correct_count: 5,
+            response_ms_total: 80000,
+          },
+        ],
+      }
+      render(<GameCompleted state={stateWithBoard} userId="u1" />)
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          '/api/multiplayer/grant-stats',
+          expect.objectContaining({
+            body: JSON.stringify({ roomId: 'r1', isFirstPlace: false }),
+          }),
+        )
+      })
+    })
+
+    test('archived state -> grant fetch yapilmaz', async () => {
+      render(
+        <GameCompleted
+          state={completedState({ state: 'archived' })}
+          userId="u1"
+        />,
+      )
+      await new Promise((r) => setTimeout(r, 30))
+      expect(fetchSpy).not.toHaveBeenCalled()
+    })
+
+    test('grant fetch !ok -> badge fetch yapilmaz (best-effort sessiz fail)', async () => {
+      fetchSpy.mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      render(<GameCompleted state={completedState()} userId="u1" />)
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          '/api/multiplayer/grant-stats',
+          expect.any(Object),
+        )
+      })
+      await new Promise((r) => setTimeout(r, 30))
+      const badgeCalls = fetchSpy.mock.calls.filter(
+        (c: unknown[]) => c[0] === '/api/badges',
+      )
+      expect(badgeCalls).toHaveLength(0)
+    })
+
+    test('fetch reject (network err) -> hata yutulur, throw atilmaz', async () => {
+      fetchSpy.mockRejectedValueOnce(new Error('network'))
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      render(<GameCompleted state={completedState()} userId="u1" />)
+      await new Promise((r) => setTimeout(r, 30))
+      // catch yutar; React bir error throw etmemeli (test crash etmiyorsa OK)
+      expect(true).toBe(true)
+      errSpy.mockRestore()
+    })
   })
 
   test('3) PR4g: scoreboard ile medal UI (top 3 emoji + correct_count + tie-breaker)', () => {

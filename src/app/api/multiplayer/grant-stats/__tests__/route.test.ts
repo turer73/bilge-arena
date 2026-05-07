@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockGetUser = vi.fn()
 const mockRpc = vi.fn()
+const { mockRateCheck } = vi.hoisted(() => ({
+  mockRateCheck: vi.fn().mockResolvedValue({ success: true }),
+}))
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
@@ -16,7 +19,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
 
 vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: () => ({
-    check: vi.fn().mockResolvedValue({ success: true }),
+    check: mockRateCheck,
   }),
 }))
 
@@ -33,12 +36,37 @@ function makeReq(body: unknown): Request {
 describe('POST /api/multiplayer/grant-stats', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockRateCheck.mockResolvedValue({ success: true })
   })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const res = await POST(makeReq({ roomId: 'r1', isFirstPlace: false }))
     expect(res.status).toBe(401)
+  })
+
+  it('returns 429 when rate limit exceeded', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRateCheck.mockResolvedValueOnce({ success: false })
+    const res = await POST(makeReq({ roomId: 'r1', isFirstPlace: false }))
+    expect(res.status).toBe(429)
+    const body = await res.json()
+    expect(body.error).toMatch(/cok fazla/i)
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 for malformed JSON body', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const req = new Request('http://localhost/api/multiplayer/grant-stats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{not valid json',
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/json/i)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
   it('returns 400 for invalid body (missing fields)', async () => {
