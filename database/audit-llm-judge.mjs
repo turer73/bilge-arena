@@ -126,6 +126,36 @@ Severity kuralları:
 
 issues olası değerler: "wrong_answer", "multi_correct", "factual_error", "ambiguous_wording", "weak_distractor", "solution_mismatch", "out_of_scope", "tdk_violation"
 
+ZORUNLU GUARD'LAR (false positive azaltma — bu kurallar severity'yi belirler):
+
+GUARD 1 — AGREEMENT ROOT:
+self_answer == marked_answer ise:
+- agrees_with_marked = true
+- "wrong_answer" issue EKLEME (mantiken yanlis)
+- "solution_mismatch" işaretleyebilirsin AMA reasoning_brief'te çözüm metnindeki SOMUT mismatched sayı/harf'i alıntıla. Sadece "tutarsızlık var" yetersiz, explicit değer farkı göster.
+- Eğer somut mismatch yoksa: severity = "ok", issues = []
+- Sadece tek başına solution_mismatch varsa: severity = "minor" max, "major" YASAK
+
+GUARD 2 — SEMANTIK NÜANS (sosyoloji/felsefe/tarih/dil bilgisi):
+Bu kategorilerde kavram tanımları kaynaklara göre farklılaşabilir:
+- Topluluk vs Toplum vs Cemaat (sosyolojide farklı kavramlar — community, society, gemeinschaft)
+- Tarihsel başkent (Beylik dönemi vs Devlet dönemi)
+- Toplumsal Norm vs Rol vs Statü (statüye bağlı vs genel kural)
+- MEB ders kitabı yorumu standart kabul edilebilir
+self_answer farklı ama her iki cevap da makul ise:
+- severity = "minor" maksimum, "major" YASAK
+- issues = ["ambiguous_wording"], wrong_answer EKLEME
+- reasoning_brief'te "iki cevap da savunulabilir" belirt
+
+GUARD 3 — CONFIDENCE RUBRIC:
+- 0.95-1.0: Soruda explicit matematiksel/sayısal hata (örn: 0.5+0.3=0.7), self-solve sayısal sonucu marked'tan farklı, çözüm de yanlışı doğruluyor. Bu seviye sadece tartışmasız hatalar için.
+- 0.7-0.9: Yorum farkı veya kavramsal ambigüite, birden fazla makul cevap var
+- 0.5-0.7: Belirsizlik var, verdiğin cevaba tam emin değilsin
+
+GUARD 4 — BAĞLAM HASSASIYETI:
+"Bir bölgede sıcaklık-basınç" gibi sorularda BAĞLAM kapalı kap (PV=nRT) değil ATMOSFERİK olabilir. Atmosferik bağlamda sıcaklık↑ → basınç↓ (termik basınç ilkesi).
+Soru bağlamı tartışmaya açık ise: severity = "ok", issues = ["ambiguous_wording"]
+
 NOT: TDK yazım kontrolü (diakritik kaybı: "acik" yerine "açık" gibi) ayrı bir
 deterministic pre-check ile yapılıyor; bu listeye senin tarafından eklenmesi gerekmiyor
 ancak gözüne çarpan başka yazım/akademik dil hatasını "minor" olarak flagleyebilirsin.`
