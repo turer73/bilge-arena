@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Heraklietos'un 'Aynı nehre iki kez giremezsin' özdeyişi ile Parmenides'in 'Var olan vardır, var olmayan yoktur' önermesi arasındaki en temel karşıtlık aşağıdakilerden hangisidir?",
+    "options": [
+      "Bilginin kaynağı sorununda",
+      "Değişim ve oluşun gerçekliği konusunda",
+      "Tanrı anlayışında",
+      "İnsan doğasında",
+      "Ahlaki erdemler konusunda"
+    ],
+    "answer": 1,
+    "solution": "Heraklietos için varlığın özü değişim ve akıştır; her şey sürekli oluş halindedir. Parmenides için ise gerçek varlık değişmez, bölünmez ve birdir; değişim duyu yanılsamasıdır. Bu karşıtlık Antik Yunan metafiziğinin temel sorununu (oluş-varlık) belirlemiştir.",
+    "topic": "Heraklietos-Parmenides"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Platon'un 'Mağara Alegorisi'nde mağaradan çıkıp gerçek dünyayı gören kişinin geri dönerek diğerlerine anlattığında karşılaşacağı tepkiyi neyi sembolize etmek için kullandığı söylenebilir?",
+    "options": [
+      "Filozofun toplumda anlaşılmamasını ve dışlanmasını",
+      "Bilginin doğuştan geldiğini",
+      "Eğitimin başarısızlığını",
+      "Tanrı'nın insanlardan uzak oluşunu",
+      "Yönetim sorunlarını"
+    ],
+    "answer": 0,
+    "solution": "Mağara Alegorisi'nde dışarıdaki gerçek dünyayı gören kişi (filozof), geri dönüp gölgelere alışkın insanlara hakikati anlattığında alay edilir, hatta öldürülmek istenir. Bu, Sokrates'in trajik sonu ve genel olarak filozofun toplumdaki yalnızlığını sembolize eder.",
+    "topic": "Mağara Alegorisi"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Aristoteles'in metafiziğinde 'dört neden' (causae) öğretisine göre bir heykelin var olması nedensel olarak nasıl açıklanır?",
+    "options": [
+      "Yalnızca yapan sanatçının niyeti",
+      "Madde (mermer), biçim (heykel formu), yapan (sanatçı) ve amaç (gösterim) nedenleri birlikte",
+      "Yalnızca tanrısal bir nedenle",
+      "Yalnızca maddenin doğal hareketiyle",
+      "Yalnızca biçim ve amaçla"
+    ],
+    "answer": 1,
+    "solution": "Aristoteles'in dört nedeni: maddi neden (heykelin yapıldığı mermer), formel neden (heykelin biçimi), fail neden (heykeltıraş), gai/erek neden (heykelin amacı, gösterim). Bir varlığın tam açıklaması bu dört nedenin birlikte ele alınmasını gerektirir.",
+    "topic": "Aristoteles Dört Neden"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Kant'ın 'kategorik buyruk' (kategorischer Imperativ) ahlak ilkesine göre bir eylemin ahlaki olduğunu belirleyen ölçüt aşağıdakilerden hangisidir?",
+    "options": [
+      "Eylemin sonuçlarının yararlı olması",
+      "Eylemin ardındaki ilkenin evrenselleştirilebilir olması",
+      "Çoğunluğun mutluluğunu artırması",
+      "Tanrı'nın iradesine uygun olması",
+      "Toplumsal kurallara uyması"
+    ],
+    "answer": 1,
+    "solution": "Kant'ın kategorik buyruğu: 'Öyle bir maksimle eyle ki, onun aynı zamanda bir evrensel yasa olmasını isteyebilesin.' Eylemin ahlakiliği sonuçlarına değil, ilkesinin tutarlı biçimde herkes için geçerli olabilmesine bağlıdır. Bu Kant'ın deontolojik etiğinin temelidir.",
+    "topic": "Kategorik Buyruk"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Hume'un 'is-ought' (olgu-değer) ayrımına göre aşağıdakilerden hangisi ahlak teorisi açısından temel bir sorundur?",
+    "options": [
+      "Olgu ve değer aynı türden cümlelerdir",
+      "Olgusal önermelerden değer önermelerine geçiş mantıksal olarak gerekçelendirilemez",
+      "Tüm değerler olgulardan türetilebilir",
+      "Ahlak duyguya değil akla dayanır",
+      "Ahlak kültürel olarak görecelidir"
+    ],
+    "answer": 1,
+    "solution": "Hume'a göre 'X şudur' (olgu) ile 'X şöyle olmalıdır' (değer) arasında mantıksal bir köprü kurulamaz. Doğal olgulardan ahlaki değerlere doğrudan çıkarım yapılamaz; bu 'naturalistik yanılgı' olarak da adlandırılır. G.E. Moore bunu sistematik biçimde işlemiştir.",
+    "topic": "Olgu-Değer Ayrımı"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Hegel'in 'efendi-köle diyalektiği' (Herrschaft-Knechtschaft) bölümünde efendinin köle üzerindeki egemenliğinin uzun vadede paradoksal bir biçimde tersine dönmesinin temel nedeni aşağıdakilerden hangisidir?",
+    "options": [
+      "Efendinin gücünü kaybetmesi",
+      "Kölenin ürettiği emek ile dünyayı dönüştürmesi ve gerçek özbilince ulaşması",
+      "Efendinin köleyi affetmesi",
+      "Kölenin isyan etmesi",
+      "Efendinin ölmesi"
+    ],
+    "answer": 1,
+    "solution": "Hegel'e göre efendi tüketici, köle üreticidir. Köle çalışarak doğayı dönüştürür ve nesnede kendini gerçekleştirir; bu süreçte gerçek özbilince ulaşır. Efendi ise köleye bağımlı hale gelir, kendi kendine yetemez. Bu diyalektik Marx'ı derinden etkilemiştir.",
+    "topic": "Efendi-Köle Diyalektiği"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Wittgenstein'ın 'Tractatus Logico-Philosophicus' eserinde geliştirdiği dil-resim kuramına göre felsefi sorunların büyük kısmı aşağıdaki nedenlerden hangisinden kaynaklanır?",
+    "options": [
+      "Bilimin yetersizliğinden",
+      "Dilin yapısının yanlış kullanılması ve mantıksal sınırların aşılmasından",
+      "Tanrı'nın gizli kalmasından",
+      "Toplumsal koşullardan",
+      "İnsanın akıl yetisinin sınırlılığından"
+    ],
+    "answer": 1,
+    "solution": "Wittgenstein'a göre dilin sınırları dünyanın sınırlarıdır. Felsefi sorunlar genellikle dilin yapısını yanlış anlamaktan, anlamlı söz alanının dışına çıkmaktan kaynaklanır. 'Konuşulamayan üzerine susmalı' ünlü sonsözü bu görüşü özetler. Sonradan Felsefi Soruşturmalar'da bu görüşü revize etti.",
+    "topic": "Wittgenstein"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Foucault'nun 'iktidar/bilgi' kavramı çiftine göre aşağıdaki yargılardan hangisi doğrudur?",
+    "options": [
+      "Bilgi iktidardan tamamen bağımsızdır",
+      "İktidar yalnızca devletin elindedir",
+      "İktidar ve bilgi karşılıklı olarak birbirini üretir; bilgi söylemleri iktidar ilişkilerini şekillendirir",
+      "Bilgi yalnızca bilim insanlarının elindedir",
+      "İktidar her zaman baskıcıdır"
+    ],
+    "answer": 2,
+    "solution": "Foucault'ya göre bilgi nesnel ve tarafsız değildir; iktidar ilişkileri içinde üretilir. Aynı şekilde iktidar yalnızca yasaklayıcı değil, üretkendir, söylemler aracılığıyla işler. Tımarhane, hapishane, klinik bu iktidar/bilgi ağlarının somut örnekleridir.",
+    "topic": "Foucault İktidar"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Heidegger'in 'Dasein' (orada-olan) kavramı insanı diğer varlıklardan ayıran hangi temel özelliği vurgular?",
+    "options": [
+      "Akıl yürütme yeteneği",
+      "Kendi varlığını sorgulayabilen, varlık anlamını anlayabilen tek varlık olması",
+      "Konuşma yeteneği",
+      "Toplumsallık",
+      "Alet kullanma kapasitesi"
+    ],
+    "answer": 1,
+    "solution": "Heidegger için Dasein, varlığın anlamını sorabilen tek varlıktır. İnsan dünyaya 'fırlatılmış' olarak vardır ve kendi varoluşunu sorgular. 'Varlık ve Zaman' adlı eserde geliştirilen bu kavram, ontolojinin yeniden temellendirilmesini hedefler.",
+    "topic": "Heidegger Dasein"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "John Stuart Mill'in 'haz hesapları' bağlamında nicel hazcılığa karşı geliştirdiği 'nitel hazcılık' yaklaşımı aşağıdaki ilkelerden hangisini benimser?",
+    "options": [
+      "Tüm hazlar eşit değerlidir",
+      "Bazı hazlar (entelektüel, ahlaki) niteliksel olarak daha üstündür ve sadece miktarla ölçülemez",
+      "Haz tek başına ahlakın ölçüsü değildir",
+      "Hazzın yerine erdem konulmalıdır",
+      "Haz tamamen öznel ve göreceli olduğu için ölçülemez"
+    ],
+    "answer": 1,
+    "solution": "Mill, Bentham'ın saf nicel hazcılığını eleştirir. Mill'e göre 'doyumsuz Sokrates, doyumlu domuzdan iyidir'; entelektüel ve ahlaki hazlar bedensel hazlardan niteliksel olarak üstündür. Bu yaklaşım faydacılığı (utilitarizm) daha sofistike bir biçime dönüştürür.",
+    "topic": "Mill Faydacılığı"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Aşağıdakilerden hangisi Habermas'ın 'iletişimsel eylem' kuramının temel ilkesidir?",
+    "options": [
+      "Bilim ve teknoloji yaşamın tüm alanını yönlendirmelidir",
+      "Toplumsal sorunlar baskı yoluyla çözülmelidir",
+      "Demokratik toplum, eşit konuşma koşulları altında akıl yürütme ve uzlaşma üzerine kurulmalıdır",
+      "Bireysel çıkar her zaman kamu çıkarına önceliklidir",
+      "Gelenek ve otorite akıldan üstündür"
+    ],
+    "answer": 2,
+    "solution": "Habermas'a göre demokratik toplum 'ideal konuşma durumu' altında karşılıklı eşit anlaşma ve akıl yürütme ile gelişir. İletişimsel eylem, stratejik (araçsal) eylemden ayrı, anlaşma odaklıdır. Frankfurt Okulu eleştirel teorinin önde gelen temsilcisidir.",
+    "topic": "Habermas"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Antik dönem Stoacılarının (Zenon, Epiktetos, Marcus Aurelius) 'apatheia' (duygulardan bağımsızlık) öğretisinin temel mantığı aşağıdakilerden hangisidir?",
+    "options": [
+      "Tüm duyguların yok edilmesi",
+      "Bilge kişinin kontrol edemediği şeylere karşı kayıtsız (apatheia) olması, yalnızca kontrol edebileceğine odaklanması",
+      "Acının zevkten daha değerli olması",
+      "Toplumdan tamamen çekilmek",
+      "Materyal yaşamı reddetmek"
+    ],
+    "answer": 1,
+    "solution": "Stoacılara göre dış dünyadaki olaylar büyük ölçüde kontrol dışıdır; bu nedenle bilge kişi onlara karşı duygusal aşırılık (pathos) göstermez. Ancak kontrol edilebilen iç dünya (yargı, niyet, eylem) bilgenin asıl alanıdır. 'Apatheia' duygusuzluk değil, doğru duygu disiplinidir.",
+    "topic": "Stoacılık"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "İslam felsefesinde Farabi'nin 'erdemli şehir' (el-Medinetü'l-Fazıla) teorisi aşağıdakilerden hangisinden etkilenmiştir ve onunla nasıl karşılaştırılır?",
+    "options": [
+      "Aristoteles'in Politika'sından, doğrudan kopya niteliğindedir",
+      "Platon'un Devlet'inden, filozof-yöneticinin liderliği fikrini İslamî bağlamda yeniden üretir",
+      "Konfüçyüs'ten, bilgelik öğretisi temellidir",
+      "Aristoteles'in Etik'inden ve toplumsal denge fikrine dayanır",
+      "Hint felsefesinden, kast sistemini benimser"
+    ],
+    "answer": 1,
+    "solution": "Farabi (870-950) Platon'un Devlet'inden derin bir biçimde etkilenmiştir. Erdemli şehrin başında peygamber-filozof yönetici (Reis-i Evvel) bulunur. Platon'un filozof-kralına benzer ancak İslamî teolojik bağlamda yeniden formüle edilmiştir.",
+    "topic": "Farabi"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Hannah Arendt'in 'kötülüğün sıradanlığı' (banality of evil) tezi Eichmann davası bağlamında aşağıdaki düşüncelerden hangisini savunur?",
+    "options": [
+      "Nazi suçluları doğuştan kötüydü",
+      "Vahim suçlar, kötü niyetli değil, düşünmeyen ve sorgulamayan sıradan bürokratlar tarafından da işlenebilir",
+      "Kötülük yalnızca toplumsal koşullarla açıklanır",
+      "Kötülük hiç açıklanamaz",
+      "Yalnızca liderler suçludur, alt kademe sorumlu değildir"
+    ],
+    "answer": 1,
+    "solution": "Arendt, Eichmann davasını izlerken bu sıradan bürokratın 'canavar' olmadığını, yalnızca 'düşünmeyen' biri olduğunu gözlemledi. Vahim suçlar büyük ideolojik öfkeyle değil, sorgulamadan emir uygulayan sıradan kişilerce işlenebilir. Bu tez, ahlaki sorumluluğu ön plana çıkarır.",
+    "topic": "Arendt Kötülük"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 3,
+    "question": "Aşağıdaki argümanlardan hangisi Anselm'in Tanrı'nın varlığı için ileri sürdüğü 'ontolojik kanıt' tarzındadır?",
+    "options": [
+      "Doğadaki düzen bir tasarımcıyı gerektirir",
+      "Her şeyin bir nedeni vardır, bu zincir Tanrı'da son bulur",
+      "Tanrı 'kendisinden büyüğü düşünülemeyen' varlık olarak tanımlanırsa, var olmamak ondan eksiklik olur; bu nedenle Tanrı vardır",
+      "Toplumlarda evrensel olarak Tanrı inancı vardır",
+      "Mucizeler Tanrı'nın varlığını gösterir"
+    ],
+    "answer": 2,
+    "solution": "Anselm'in ontolojik kanıtı yalnızca Tanrı kavramının analizinden hareket eder: 'kendisinden daha büyüğü düşünülemeyen' varlık zorunlu olarak vardır, çünkü var olmayan bir varlığın yerine var olanı düşünebilirdik. Diğer kanıtlar tasarım, kozmolojik veya tutum kanıtlarıdır.",
+    "topic": "Ontolojik Kanıt"
+  }
+]
