@@ -1,0 +1,59 @@
+[
+  {
+    "id": "test-wrong-1",
+    "content": {
+      "game": "matematik",
+      "category": "sayilar",
+      "difficulty": 1,
+      "question": "7 × 8 işleminin sonucu kaçtır?",
+      "options": ["48", "54", "56", "63", "64"],
+      "answer": 0,
+      "solution": "7 ile 8'in çarpımı 56'dır.",
+      "topic": "Çarpma İşlemi"
+    },
+    "_expected": {
+      "severity": "major",
+      "agrees_with_marked": false,
+      "self_answer": 2,
+      "issues_should_include": ["wrong_answer", "solution_mismatch"]
+    }
+  },
+  {
+    "id": "test-wrong-2",
+    "content": {
+      "game": "sosyal",
+      "category": "tarih",
+      "difficulty": 1,
+      "question": "Cumhuriyet hangi yıl ilan edilmiştir?",
+      "options": ["1919", "1920", "1921", "1922", "1923"],
+      "answer": 3,
+      "solution": "Türkiye Cumhuriyeti 29 Ekim 1923 tarihinde Mustafa Kemal Atatürk tarafından ilan edilmiştir.",
+      "topic": "Cumhuriyet Dönemi"
+    },
+    "_expected": {
+      "severity": "major",
+      "agrees_with_marked": false,
+      "self_answer": 4,
+      "issues_should_include": ["wrong_answer", "solution_mismatch"]
+    }
+  },
+  {
+    "id": "test-wrong-3",
+    "content": {
+      "game": "fen",
+      "category": "kimya",
+      "difficulty": 2,
+      "question": "Suyun kimyasal formülü nedir?",
+      "options": ["HO", "H2O", "H3O", "OH2", "H2O2"],
+      "answer": 4,
+      "solution": "Su molekülü 2 hidrojen ve 1 oksijen atomundan oluşur, formülü H2O'dur.",
+      "topic": "Moleküller"
+    },
+    "_expected": {
+      "severity": "major",
+      "agrees_with_marked": false,
+      "self_answer": 1,
+      "issues_should_include": ["wrong_answer", "solution_mismatch"]
+    }
+  }
+]
