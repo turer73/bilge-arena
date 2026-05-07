@@ -46,3 +46,13 @@ playwright/.cache/
 infra/vps/*/secrets/*.env
 infra/vps/*/secrets/*.json
 !infra/vps/*/secrets/.gitkeep
+
+# LLM judge audit run artifacts (lokal calisma ciktilari, fixture bunlardan ayri)
+database/audit-claude-batch.json
+database/audit-claude-stats.json
+database/audit-llm-judge-report.json
+database/audit-semantic-report.json
+database/audit-validate-report.json
+database/__tests__/_eval-input.json
+database/__tests__/_eval-output.json
+database/__tests__/eval-judge-report.json
