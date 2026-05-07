@@ -56,3 +56,4 @@ database/audit-validate-report.json
 database/__tests__/_eval-input.json
 database/__tests__/_eval-output.json
 database/__tests__/eval-judge-report.json
+database/import-judge-audit-*.json

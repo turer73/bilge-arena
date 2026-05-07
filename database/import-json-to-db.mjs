@@ -10,13 +10,17 @@
  *      "answer", "solution", "topic" }, ...]
  *
  * Kullanım:
- *   node database/import-json-to-db.mjs <jsonPath>
+ *   node database/import-json-to-db.mjs <jsonPath> [--judge]
+ *
+ * --judge: insert sonrası LLM kalite denetimi (warn-only, insert bloklamaz)
+ *          Gemini provider gerektirir (GEMINI_API_KEY veya GOOGLE_GENERATIVE_AI_API_KEY)
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+import { spawnSync } from 'node:child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const envPath = join(__dirname, '..', '.env.local')
@@ -32,8 +36,10 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABAS
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY
 if (!SUPABASE_URL || !SUPABASE_KEY) { console.error('SUPABASE env yok'); process.exit(1) }
 
-const [, , jsonPath] = process.argv
-if (!jsonPath) { console.error('Kullanım: node import-json-to-db.mjs <path>'); process.exit(1) }
+const args = process.argv.slice(2)
+const USE_JUDGE = args.includes('--judge')
+const jsonPath = args.find(a => !a.startsWith('--'))
+if (!jsonPath) { console.error('Kullanım: node import-json-to-db.mjs <path> [--judge]'); process.exit(1) }
 const absPath = resolve(jsonPath)
 if (!existsSync(absPath)) { console.error('Dosya yok:', absPath); process.exit(1) }
 
@@ -137,3 +143,87 @@ const insertData = unique.map(q => ({
 const { data: inserted, error } = await supabase.from('questions').insert(insertData).select('id')
 if (error) { console.error('Insert error:', error.message); process.exit(4) }
 console.log(`\nDB'ye eklendi: ${inserted?.length ?? 0} (source=ai_claude_v4, is_active=false)`)
+
+// --judge: LLM kalite denetimi (warn-only, insert'i etkilemez)
+if (USE_JUDGE && inserted?.length > 0) {
+  console.log('\n--- LLM Judge başlıyor (warn-only) ---')
+
+  // Judge input: inserted IDs + content
+  const judgeInput = inserted.map((row, idx) => {
+    const q = unique[idx]
+    return {
+      id: row.id,
+      game: q.game,
+      category: q.category,
+      difficulty: q.difficulty,
+      content: { question: q.question, options: q.options, answer: q.answer, solution: q.solution },
+      source: 'ai_claude_v4',
+      is_active: false,
+    }
+  })
+
+  const ts = Date.now()
+  const tmpIn = join(__dirname, `_import-judge-in-${ts}.json`)
+  const tmpOut = join(__dirname, `_import-judge-out-${ts}.json`)
+
+  try {
+    writeFileSync(tmpIn, JSON.stringify(judgeInput))
+
+    const judgeScript = join(__dirname, 'audit-llm-judge.mjs')
+    const result = spawnSync(
+      process.execPath,
+      [judgeScript, '--input', tmpIn, '--output', tmpOut, '--concurrency', '5'],
+      { encoding: 'utf-8', timeout: 300_000, env: process.env }
+    )
+
+    if (result.stdout) process.stdout.write(result.stdout)
+    if (result.stderr) process.stderr.write(result.stderr)
+
+    if (result.status !== 0) {
+      console.warn(`[JUDGE] Süreç exit ${result.status} — sonuçlar atlanıyor`)
+    } else if (existsSync(tmpOut)) {
+      const judgeResults = JSON.parse(readFileSync(tmpOut, 'utf-8'))
+      const majors = judgeResults.filter(r => r.severity === 'major')
+      const minors = judgeResults.filter(r => r.severity === 'minor')
+
+      console.log(`[JUDGE] Sonuç: ${judgeResults.length} incelendi, ${majors.length} major, ${minors.length} minor`)
+
+      if (majors.length > 0) {
+        console.warn(`[JUDGE] ⚠ MAJOR (is_active=false kalacak, elle incelenmeli):`)
+        for (const r of majors) {
+          console.warn(`  ${r.id}  [${r.flag_type}]  ${(r.reason ?? '').slice(0, 100)}`)
+        }
+      }
+
+      // Audit log kaydet
+      const auditLog = {
+        import_ts: new Date().toISOString(),
+        source_file: absPath,
+        inserted: inserted.length,
+        judge_total: judgeResults.length,
+        major_count: majors.length,
+        minor_count: minors.length,
+        majors,
+        minors,
+      }
+      const auditPath = join(__dirname, `import-judge-audit-${ts}.json`)
+      writeFileSync(auditPath, JSON.stringify(auditLog, null, 2))
+      console.log(`[JUDGE] Audit log: ${auditPath}`)
+    } else {
+      console.warn('[JUDGE] Çıktı dosyası yok, sonuç kaydedilemedi')
+    }
+  } catch (err) {
+    console.warn('[JUDGE] Hata (import etkilenmedi):', err.message)
+  } finally {
+    for (const f of [tmpIn, tmpOut]) {
+      try { if (existsSync(f)) unlinkSync(f) } catch { /* ignore */ }
+    }
+  }
+
+  console.log('--- Judge tamamlandı (is_active=false kalır, blok yok) ---')
+}
+
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+if (isMain) {
+  // No-op, top-level await zaten bitti
+}
