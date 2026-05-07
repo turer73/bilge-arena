@@ -64,7 +64,19 @@ function validate(q) {
 }
 
 const raw = JSON.parse(readFileSync(absPath, 'utf-8'))
-const questions = Array.isArray(raw) ? raw : (raw.questions || [])
+let questions
+if (Array.isArray(raw)) {
+  questions = raw
+} else if (Array.isArray(raw.questions)) {
+  // Batch shape: top-level game/category/difficulty + questions array (item-only payload)
+  const defaults = {}
+  if (raw.game) defaults.game = raw.game
+  if (raw.category) defaults.category = raw.category
+  if (Number.isInteger(raw.difficulty)) defaults.difficulty = raw.difficulty
+  questions = raw.questions.map(q => ({ ...defaults, ...q }))
+} else {
+  questions = []
+}
 console.log(`JSON yüklendi: ${questions.length} soru`)
 
 // DB-side dedup prefix seti (mevcut tüm sorular)
