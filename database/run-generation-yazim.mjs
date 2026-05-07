@@ -78,9 +78,10 @@ TDK KURAL OZETI (5 KATEGORI)
 
 3. BITISIK/AYRI YAZIM
    Her zaman BITISIK: herkes, biraz, hicbir, birkac, birtakim, hicbiri,
-                     bircok, herhangi, birsey
+                     bircok, herhangi
    Her zaman AYRI:    her sey, bir sey, her bir, bir gun, bir kez,
                      bu yilki (zaman + ki), o gunku
+   NOT: "bir sey" AYRI yazilir; "birsey" YANLISTIR.
 
 4. IKILEMELER
    PEKISTIRME (bitisik): masmavi, simsiyah, yepyeni, capcanli
