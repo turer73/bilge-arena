@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Marx'ın 'sınıf bilinci' kavramı çerçevesinde 'kendinde sınıf' (class in itself) ile 'kendisi için sınıf' (class for itself) arasındaki temel fark aşağıdakilerden hangisidir?",
+    "options": [
+      "Aynı kavramdır, farklı isimlendirilmiştir",
+      "İlki nesnel ekonomik konumu, ikincisi öznel sınıf bilincine ulaşmış örgütlü sınıfı ifade eder",
+      "İlki proletaryayı, ikincisi burjuvaziyi anlatır",
+      "İlki tarihsel, ikincisi günümüze ait sınıfları kapsar",
+      "İlki kentsel, ikincisi kırsal sınıfları temsil eder"
+    ],
+    "answer": 1,
+    "solution": "Marx için 'kendinde sınıf' aynı üretim ilişkisi içinde yer alan ancak ortak bilincine henüz varmamış grubu, 'kendisi için sınıf' ise sınıf bilinci kazanmış, çıkarlarını kavrayan ve ortak eylem yetisine ulaşmış sınıfı belirtir. Sınıf mücadelesi ikincisinin oluşumunu gerektirir.",
+    "topic": "Sınıf Bilinci"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Weber'in 'rasyonelleşme' tezi çerçevesinde modern bürokrasinin getirdiği 'demir kafes' (iron cage) metaforuyla anlatılan paradoksal durum aşağıdakilerden hangisidir?",
+    "options": [
+      "Bürokrasinin yeterince gelişmemiş olması",
+      "Verimliliği artıran rasyonel kuralların aynı zamanda bireysel özgürlüğü ve anlamı kısıtlaması",
+      "Bürokrasinin tamamen kaldırılması gerektiği",
+      "Modern toplumun dinine geri dönmesi",
+      "Karizmatik liderliğin bürokrasiyi yok etmesi"
+    ],
+    "answer": 1,
+    "solution": "Weber'e göre modern toplumun rasyonelleşmesi (hesaplanabilirlik, kurallar, bürokrasi) verimlilik sağlar ama aynı zamanda 'büyü bozumu' yaratır; bireyi kuralların demir kafesine hapseder. Verimlilik ile özgürlük arasındaki bu paradoks Weber'in temel tezidir.",
+    "topic": "Demir Kafes"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Durkheim'ın 'mekanik dayanışma' ile 'organik dayanışma' ayrımına göre, modern toplumların geleneksel toplumlardan farkı aşağıdakilerden hangisidir?",
+    "options": [
+      "Modern toplumlarda dayanışma tamamen yoktur",
+      "Modern toplumlarda dayanışma benzerlikten değil, işbölümünden ve karşılıklı bağımlılıktan doğar",
+      "Geleneksel toplumlarda hiç işbölümü yoktur",
+      "Modern toplumlar bireyselliği reddeder",
+      "Geleneksel toplumlar daha rasyoneldir"
+    ],
+    "answer": 1,
+    "solution": "Durkheim'a göre geleneksel (mekanik) dayanışma benzerlik temellidir; herkes aynı işi yapar, kolektif bilinç güçlüdür. Modern (organik) dayanışmada ise karmaşık işbölümü insanları farklılaştırır ama aynı zamanda karşılıklı bağımlı kılar. Bu, dayanışmanın yeni bir biçimini doğurur.",
+    "topic": "Dayanışma Tipleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Bourdieu'nün 'habitus' kavramı çerçevesinde sosyal sınıfın yeniden üretiminde aşağıdakilerden hangisi temel mekanizmadır?",
+    "options": [
+      "Yalnızca yasal düzenlemeler",
+      "Çocuğun ailesinden bedenleşmiş eğilimler, beğeniler ve dilsel kodlar yoluyla edindiği yatkınlıkların okul ve diğer alanlarda 'doğal' olarak değerlendirilmesi",
+      "Devletin bilinçli zorlaması",
+      "Doğal yetenek farkları",
+      "Kişinin çabası"
+    ],
+    "answer": 1,
+    "solution": "Bourdieu'ye göre habitus, sınıfa özgü beğeni-davranış-konuşma tarzlarının bedenleşmiş hâlidir. Üst sınıf çocukları okulda gerek dil gerek davranış olarak avantajlıdır; sistem bu yatkınlıkları 'yetenek' olarak ödüllendirir. Bu kültürel sermaye eşitsizliği yeniden üretir.",
+    "topic": "Habitus"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Goffman'ın 'sahne arkası-sahne önü' (front stage / back stage) ayrımı bağlamında günlük etkileşimlerimizin tiyatrosal yönünün anlamı aşağıdakilerden hangisidir?",
+    "options": [
+      "İnsanlar her zaman yalan söyler",
+      "Bireyler farklı toplumsal bağlamlarda farklı 'rol' performansları sergilerler ve kimliklerini durumlara göre yönetirler",
+      "Toplumsal hayat tamamen sahnelenmiş bir oyundur",
+      "Aynı kişi her ortamda aynı şekilde davranır",
+      "Toplumsal gerçeklik yoktur"
+    ],
+    "answer": 1,
+    "solution": "Goffman'ın sembolik etkileşimci yaklaşımına göre bireyler iş, ev, arkadaş gibi farklı bağlamlarda kimliklerini ve davranışlarını sahneler. Sahne önünde resmi rol, sahne arkasında daha rahat sergilenir. Bu yalan değil, etkileşimin doğal bir özelliğidir.",
+    "topic": "Goffman Etkileşim"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Anomi kavramının Durkheim'ın 'İntihar' çalışmasındaki kullanımı bağlamında, modern toplumlarda intihar oranlarının yükselmesi nasıl açıklanır?",
+    "options": [
+      "Bireysel patolojiler yüzünden",
+      "Hızlı toplumsal değişimle birlikte geleneksel norm sistemlerinin zayıflaması ve bireyin ahlaki bağlardan yoksun kalması nedeniyle",
+      "Yalnızca ekonomik kriz dönemlerinde",
+      "Modern dünyanın sıkı kuralları nedeniyle",
+      "Genetik faktörler nedeniyle"
+    ],
+    "answer": 1,
+    "solution": "Durkheim'a göre intihar bireysel değil, toplumsal olgulardan etkilenir. Anomik intihar, hızlı sosyal değişim (ekonomik kriz, refah patlaması) sırasında normların belirsizleştiği koşullarda artar. Toplumsal düzenleme zayıfladığında bireyler ahlaki yön bulmakta zorlanır.",
+    "topic": "Anomi ve İntihar"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Foucault'nun 'biyo-iktidar' (biopower) kavramı modern devletin önceki egemenlik biçimlerinden farkını nasıl açıklar?",
+    "options": [
+      "Modern devletin yalnızca ölüm yetkisini kullanması",
+      "Modern iktidarın bireylerin yaşamını, sağlığını, doğurganlığını ve nüfusu yönetme/optimize etme amacıyla işlemesi",
+      "Devletin tamamen kaldırılması",
+      "Modern devletin daha az müdahaleci olması",
+      "İktidarın yalnız parlamentoda olması"
+    ],
+    "answer": 1,
+    "solution": "Foucault'ya göre eski egemenlik 'öldürme yetkisi' iken modern iktidar 'yaşamı yönetme' yetkisidir. Sağlık politikaları, nüfus istatistikleri, doğurganlık kontrolü, hijyen kampanyaları biyo-iktidarın işleyişidir. Devlet bireyi nüfus seviyesinde yönetir.",
+    "topic": "Biyo-iktidar"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Parsons'ın yapısal-fonksiyonalizminde 'AGIL şeması' bir toplumsal sistemin sürebilmesi için aşağıdaki dört temel işlevi yerine getirmesini öngörür. Aşağıdakilerden hangisi bu dört işlevden biri değildir?",
+    "options": [
+      "Adaptasyon (çevreye uyum)",
+      "Hedef ulaşımı (amaç edinme)",
+      "Bütünleşme (sistem parçalarının uyumu)",
+      "Latent örüntü koruma (kültürel sürdürme)",
+      "Devrim (sistemi yıkma)"
+    ],
+    "answer": 4,
+    "solution": "Parsons'ın AGIL şeması: A=Adaptation, G=Goal attainment, I=Integration, L=Latent pattern maintenance. Bu dört işlev her toplumsal sistemin sürdürülebilirlik koşuludur. Devrim sistem yıkıcı bir süreç olarak fonksiyonalizmin teorik şeması içinde yer almaz.",
+    "topic": "AGIL Şeması"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Mead'in 'sembolik etkileşimcilik' yaklaşımına göre 'benlik' (self) nasıl oluşur?",
+    "options": [
+      "Doğuştan tamamlanmış olarak gelir",
+      "Yalnızca biyolojik olgunlaşmayla şekillenir",
+      "Toplumsal etkileşim içinde 'genelleştirilmiş öteki'nin perspektifini içselleştirerek oluşur",
+      "Sadece anne-baba etkisiyle kurulur",
+      "Bireyin kendi içsel kararlarıyla şekillenir"
+    ],
+    "answer": 2,
+    "solution": "Mead'e göre benlik üç aşamada gelişir: hazırlık (taklit), oyun (rol alma), oyun-toplum (genelleştirilmiş öteki). Çocuk, başkalarının perspektifini içselleştirerek 'ben' (I) ve 'beni' (Me) ayrımına ulaşır. Benlik toplumsal etkileşimin bir ürünüdür.",
+    "topic": "Mead Benlik"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Toplumsal hareketlilik teorilerinde 'açık sınıf sistemi' ile 'kapalı sınıf sistemi' arasındaki temel fark aşağıdakilerden hangisidir?",
+    "options": [
+      "Açık sistemde sınıflar yoktur",
+      "Açık sistemde dikey hareketlilik mümkündür ve başarı bireysel performansa açıktır; kapalı sistemde konum doğuştan büyük ölçüde belirlidir",
+      "Kapalı sistemde herkes eşittir",
+      "Açık sistemde gelir farkı yoktur",
+      "Kapalı sistemde eğitim önemlidir"
+    ],
+    "answer": 1,
+    "solution": "Açık sınıf sistemi modern endüstri toplumlarında görülür; eğitim, çaba ve başarıyla bireyler sınıflar arasında hareket edebilir. Kapalı sistemde (örn. Hindistan kast sistemi) konum doğuştan belirlidir, dikey hareketlilik son derece sınırlıdır. Hiçbir sistem tam açık veya tam kapalı değildir.",
+    "topic": "Sınıf Sistemleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Toplumsal cinsiyet (gender) ile biyolojik cinsiyet (sex) arasındaki kavramsal ayrımın sosyolojik önemi aşağıdakilerden hangisidir?",
+    "options": [
+      "Biyolojik farkların görmezden gelinmesi",
+      "Cinsiyete dair beklenti, rol ve konumların önemli ölçüde toplumsal-kültürel olarak inşa edildiğinin gösterilmesi",
+      "Erkek-kadın eşitsizliğinin doğal olduğunun kanıtlanması",
+      "Cinsiyetin tek belirleyici olduğunun kabul edilmesi",
+      "Tüm toplumların aynı cinsiyet rollerine sahip olduğunun gösterilmesi"
+    ],
+    "answer": 1,
+    "solution": "Sosyolojik bakış açısıyla 'sex' biyolojik, 'gender' toplumsal-kültürel inşadır. Toplumlar cinsiyete farklı roller, beklentiler, hak ve sorumluluklar yükler. Bu ayrım eşitsizliklerin değişebilir olduğunu, biyolojiyle açıklanmadığını gösterir.",
+    "topic": "Toplumsal Cinsiyet"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Giddens'ın 'yapılaşma' (structuration) teorisi yapı-fail (agency) ikilemini nasıl aşmayı önerir?",
+    "options": [
+      "Yalnızca yapıyı kabul ederek",
+      "Yalnızca faili kabul ederek",
+      "Yapı ve fail karşılıklı olarak birbirini şekillendirir; yapılar eylemlerle yeniden üretilir, eylemler yapılar içinde gerçekleşir",
+      "Yapı ve faili birbirinden tamamen ayırarak",
+      "Toplumsal eylemleri reddederek"
+    ],
+    "answer": 2,
+    "solution": "Giddens, yapısalcı (Durkheim, Marx) ve eylem teorileri (Weber, sembolik etkileşim) arasındaki çelişkiyi aşmak için yapılaşma kavramını kullanır. Sosyal yapılar bireysel eylemler içinde sürer ve değişir; ne yapı ne fail mutlak önceliklidir, ikisi diyalektik bir ilişkide vardır.",
+    "topic": "Giddens Yapılaşma"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Modernleşme teorisi (Rostow, Parsons) eleştirmenlerinin temel itirazı aşağıdakilerden hangisidir?",
+    "options": [
+      "Modernleşme imkansızdır",
+      "Modernleşmenin Batı modelini evrensel norma dönüştürerek farklı toplumların kendine özgü gelişme yollarını ve sömürgeci geçmişin etkilerini göz ardı etmesi",
+      "Modernleşme çok yavaştır",
+      "Modernleşme istikrarlı değildir",
+      "Modernleşme kavramı bilimsel değildir"
+    ],
+    "answer": 1,
+    "solution": "Bağımlılık teorisi (Frank, Wallerstein) ve postkolonyal eleştiri, modernleşmenin Batı'yı norm kabul ederek diğer toplumları 'gelişmemiş' olarak konumlandırdığını ve sömürgecilik-küresel kapitalizmin yarattığı yapısal eşitsizlikleri göz ardı ettiğini savunur. Bu eleştiri evrensel-doğrusal modernleşmeye karşıdır.",
+    "topic": "Modernleşme Eleştirisi"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Castells'in 'ağ toplumu' (network society) tezine göre bilgi ve iletişim teknolojilerinin toplumsal yapıyı dönüştürmesinin temel sonucu aşağıdakilerden hangisidir?",
+    "options": [
+      "Ulus-devletin tamamen yok olması",
+      "Üretimin, gücün ve deneyimin örgütlenme biçiminin hiyerarşik kurumlardan esnek ağlara doğru kayması",
+      "Toplumsal eşitsizliklerin tamamen kalkması",
+      "Bireysel ilişkilerin önemsizleşmesi",
+      "Yüz yüze etkileşimin tamamen ortadan kalkması"
+    ],
+    "answer": 1,
+    "solution": "Castells'e göre dijital ağlar üretimi, finans sistemini, kültürü ve sosyal hareketleri ağ formunda yeniden örgütler. Hiyerarşik bürokrasi yerini esnek, küresel ağlara bırakır. Bu dönüşüm yeni eşitsizlik biçimlerini de doğurur (dijital uçurum), ancak eşitsizlik kalkmaz.",
+    "topic": "Ağ Toplumu"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Beck'in 'risk toplumu' tezi modern endüstriyel toplumun sanayi öncesi toplumlardan farkını hangi açıdan vurgular?",
+    "options": [
+      "Risklerin tamamen ortadan kalkması",
+      "Doğal kaynaklı risklerin yerini insan eliyle üretilmiş, küresel ölçekli ve sınıf-ülke sınırını aşan risklerin alması",
+      "Risk hesabının olanaklı olması",
+      "Risklerin yalnızca sınıfsal olması",
+      "Risklerin yerel kalması"
+    ],
+    "answer": 1,
+    "solution": "Beck'e göre modern toplumda riskler artık doğal değil, sanayinin ürünüdür: çevre kirliliği, nükleer kaza, iklim değişikliği. Bu riskler küresel, görünmez ve sınıf-ülke sınırını aşar. Sınıfsal eşitsizlik yerine 'risk dağılımı' yeni bir eksen oluşturur. Modernlik kendi sonuçlarıyla yüzleşir (refleksif modernleşme).",
+    "topic": "Risk Toplumu"
+  }
+]
