@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Türkiye Cumhuriyeti'nin başkenti hangi şehirdir?",
+    "options": [
+      "İstanbul",
+      "Ankara",
+      "İzmir",
+      "Bursa",
+      "Konya"
+    ],
+    "answer": 1,
+    "solution": "Türkiye Cumhuriyeti'nin başkenti Ankara'dır. 13 Ekim 1923'te başkent olarak kabul edilmiş, 29 Ekim 1923'te ilan edilen cumhuriyetin başkenti olarak süregelmiştir.",
+    "topic": "Başkent"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi Türk-İslam tarihinde önemli bir devlettir?",
+    "options": [
+      "İnkalar",
+      "Mayalar",
+      "Karahanlılar",
+      "Aztekler",
+      "Romalılar"
+    ],
+    "answer": 2,
+    "solution": "Karahanlılar (840-1212) ilk Türk-İslam devleti kabul edilir. Satuk Buğra Han döneminde İslam'a geçmişler, Türklerin İslamlaşmasında öncü rol oynamışlardır. Diğer şıklar Amerika veya Avrupa kökenli devletlerdir.",
+    "topic": "Türk-İslam Devletleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Osmanlı Devleti hangi yıl yıkılmıştır?",
+    "options": [
+      "1900",
+      "1918",
+      "1922",
+      "1923",
+      "1927"
+    ],
+    "answer": 2,
+    "solution": "Osmanlı Devleti 1 Kasım 1922'de saltanatın kaldırılmasıyla resmen sona ermiştir. Son padişah VI. Mehmet (Vahdettin) ülkeyi terk etmiştir. 1923'te Cumhuriyet ilan edilmiştir.",
+    "topic": "Osmanlı'nın Sonu"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Mustafa Kemal'e 'Atatürk' soyadı hangi yıl verilmiştir?",
+    "options": [
+      "1923",
+      "1924",
+      "1928",
+      "1934",
+      "1937"
+    ],
+    "answer": 3,
+    "solution": "1934 Soyadı Kanunu çıkarıldıktan sonra TBMM 24 Kasım 1934'te 2587 sayılı kanunla Mustafa Kemal'e 'Atatürk' soyadını vermiştir. Aynı anda başkalarının bu soyadını alması da yasaklanmıştır.",
+    "topic": "Atatürk Soyadı"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Fransız İhtilali hangi yıl başlamıştır?",
+    "options": [
+      "1789",
+      "1815",
+      "1848",
+      "1871",
+      "1799"
+    ],
+    "answer": 0,
+    "solution": "Fransız İhtilali 14 Temmuz 1789'da Bastille hapishanesinin basılmasıyla başlamıştır. 'Hürriyet, eşitlik, kardeşlik' sloganları yaymış, milliyetçilik ve cumhuriyet fikirlerinin Avrupa'ya yayılmasını sağlamıştır.",
+    "topic": "Fransız İhtilali"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi 23 Nisan'ın anlamıdır?",
+    "options": [
+      "Cumhuriyet Bayramı",
+      "Zafer Bayramı",
+      "Ulusal Egemenlik ve Çocuk Bayramı",
+      "Atatürk'ü Anma, Gençlik ve Spor Bayramı",
+      "Demokrasi Bayramı"
+    ],
+    "answer": 2,
+    "solution": "23 Nisan 1920'de TBMM'nin açılışı kutlanır. Bu tarih Atatürk tarafından çocuklara armağan edilmiş ve 1979'dan itibaren UNICEF tarafından dünya çocukları için Türkiye'de kutlanan uluslararası bayram haline gelmiştir.",
+    "topic": "23 Nisan"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi bir Osmanlı padişahıdır?",
+    "options": [
+      "Albert Einstein",
+      "Genghis Khan",
+      "Süleyman the Magnificent (Kanuni Sultan Süleyman)",
+      "Napolyon Bonaparte",
+      "Aleksandros"
+    ],
+    "answer": 2,
+    "solution": "Kanuni Sultan Süleyman (1494-1566) Osmanlı'nın 10. padişahıdır. Avrupa'da 'Magnificent' (Muhteşem), Doğu'da 'Kanuni' olarak bilinir. 1520-1566 arası 46 yıl tahta kalmış, devleti zirveye ulaştırmıştır.",
+    "topic": "Osmanlı Padişahları"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Tevhid-i Tedrisat Kanunu hangi yıl çıkarılmıştır?",
+    "options": [
+      "1922",
+      "1923",
+      "1924",
+      "1928",
+      "1934"
+    ],
+    "answer": 2,
+    "solution": "Tevhid-i Tedrisat (Eğitim Birliği) Kanunu 3 Mart 1924'te çıkarılmıştır. Aynı gün halifelik ve Şer'iye Vekaleti de kaldırıldı. Tüm eğitim kurumları Milli Eğitim Bakanlığı'na bağlandı.",
+    "topic": "Tevhid-i Tedrisat"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi 30 Ağustos Zafer Bayramı'nın anısıdır?",
+    "options": [
+      "Cumhuriyetin ilanı",
+      "Sakarya zaferi",
+      "Büyük Taarruz ve Başkomutanlık Meydan Muharebesi",
+      "İzmir'in kurtarılması",
+      "TBMM'nin açılması"
+    ],
+    "answer": 2,
+    "solution": "30 Ağustos 1922'de Başkomutanlık Meydan Muharebesi (Dumlupınar) zaferle sonuçlandı. 26 Ağustos'ta başlayan Büyük Taarruz'un dönüm noktasıdır. 30 Ağustos Zafer Bayramı olarak kutlanır.",
+    "topic": "30 Ağustos"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi Türklerin tarihteki ilk büyük devleti kabul edilir?",
+    "options": [
+      "Hunlar",
+      "Karahanlılar",
+      "Selçuklular",
+      "Osmanlılar",
+      "Göktürkler"
+    ],
+    "answer": 0,
+    "solution": "Asya Hun Devleti (MÖ 220) Türklerin tarihteki ilk büyük devleti kabul edilir. Mete Han döneminde (MÖ 209-174) zirveye ulaşmıştır. Göktürkler (552) ise 'Türk' adını ilk kez devlet adı olarak kullanan devlettir.",
+    "topic": "İlk Türk Devleti"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi Cumhuriyet'in ilanıyla aynı gün gerçekleşmiştir?",
+    "options": [
+      "Halifelik kaldırıldı",
+      "Saltanat kaldırıldı",
+      "Mustafa Kemal Atatürk Cumhurbaşkanı seçildi",
+      "Latin alfabesi kabul edildi",
+      "Soyadı Kanunu çıkarıldı"
+    ],
+    "answer": 2,
+    "solution": "29 Ekim 1923'te Cumhuriyet ilan edildi ve aynı gün TBMM Mustafa Kemal'i ilk cumhurbaşkanı olarak oybirliğiyle seçti. Saltanat 1922, halifelik 1924, alfabe 1928, soyadı 1934'te yapıldı.",
+    "topic": "Cumhuriyet İlanı"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi Atatürk'ün doğum yeri olarak kabul edilir?",
+    "options": [
+      "Ankara",
+      "İstanbul",
+      "Selanik",
+      "İzmir",
+      "Bursa"
+    ],
+    "answer": 2,
+    "solution": "Mustafa Kemal Atatürk 1881'de Selanik'te (bugün Yunanistan'da) Ali Rıza ve Zübeyde Hanım'ın çocuğu olarak doğmuştur. Doğum tarihi 19 Mayıs olarak kabul edilir (kesin tarih bilinmediği için).",
+    "topic": "Atatürk Doğumu"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Birinci Dünya Savaşı'nda Osmanlı Devleti hangi grupta yer almıştır?",
+    "options": [
+      "İtilaf Devletleri",
+      "İttifak Devletleri",
+      "Tarafsız",
+      "Arabulucu",
+      "Müttefik"
+    ],
+    "answer": 1,
+    "solution": "Osmanlı Devleti I. Dünya Savaşı'nda (1914-1918) Almanya ve Avusturya-Macaristan ile birlikte İttifak Devletleri (Merkez Güçler) tarafında yer almıştır. İtilaf Devletleri ise İngiltere, Fransa, Rusya'yı kapsıyordu.",
+    "topic": "I. Dünya Savaşı"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "Roma İmparatorluğu hangi yıl ikiye ayrılmıştır?",
+    "options": [
+      "MS 285",
+      "MS 395",
+      "MS 476",
+      "MS 1453",
+      "MS 800"
+    ],
+    "answer": 1,
+    "solution": "Roma İmparatorluğu MS 395'te İmparator Theodosius'un ölümü ile oğulları arasında Doğu (Bizans) ve Batı Roma olarak ikiye ayrılmıştır. Batı Roma 476'da, Doğu Roma (Bizans) 1453'te yıkılmıştır.",
+    "topic": "Roma İmparatorluğu"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 1,
+    "question": "İlk Türk Cumhurbaşkanı'nın askeri rütbesi hangidir?",
+    "options": [
+      "General",
+      "Albay",
+      "Mareşal (Müşir)",
+      "Tuğgeneral",
+      "Yarbay"
+    ],
+    "answer": 2,
+    "solution": "Mustafa Kemal Atatürk Sakarya Meydan Muharebesi'nden (1921) sonra TBMM tarafından kendisine 'Mareşal (Müşir)' rütbesi ve 'Gazi' unvanı verilmiştir. Bu rütbeyi alan ilk Türk komutandır. İsmet İnönü ve Fevzi Çakmak da sonradan mareşal rütbesi almıştır.",
+    "topic": "Atatürk Rütbe"
+  }
+]
