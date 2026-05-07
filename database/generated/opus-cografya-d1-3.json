@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi bir adadır?",
+    "options": [
+      "Madagaskar",
+      "Antalya",
+      "Berlin",
+      "Tibet",
+      "Sibirya"
+    ],
+    "answer": 0,
+    "solution": "Madagaskar Hint Okyanusu'nda Afrika'nın güneydoğusunda yer alan dünyanın 4. büyük adasıdır. Antalya bir şehir, Berlin bir başkent, Tibet bir yayla ve Sibirya bir bölgedir.",
+    "topic": "Adalar"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Aşağıdaki şehirlerden hangisi Akdeniz Bölgesi'nde yer alır?",
+    "options": [
+      "Trabzon",
+      "Antalya",
+      "Erzurum",
+      "Edirne",
+      "Samsun"
+    ],
+    "answer": 1,
+    "solution": "Antalya Akdeniz Bölgesi'nin merkezi şehirlerinden biridir, turizmiyle ünlüdür. Trabzon Karadeniz, Erzurum Doğu Anadolu, Edirne Marmara, Samsun Karadeniz Bölgesi'nde yer alır.",
+    "topic": "Şehir-Bölge"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Bir haritada kuzey yönü genellikle nereyi gösterir?",
+    "options": [
+      "Aşağıyı",
+      "Yukarıyı",
+      "Sağı",
+      "Solu",
+      "Merkezi"
+    ],
+    "answer": 1,
+    "solution": "Standart haritalarda kuzey yönü yukarıyı gösterir. Bu konvansiyon Avrupa'da geç Ortaçağ'dan itibaren yaygınlaşmış, modern haritacılığın temel kuralı haline gelmiştir.",
+    "topic": "Harita Yönleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Türkiye'nin doğusunda hangi ülke yer alır?",
+    "options": [
+      "Yunanistan",
+      "Bulgaristan",
+      "İran",
+      "Suriye",
+      "Irak"
+    ],
+    "answer": 2,
+    "solution": "Türkiye'nin doğusunda İran yer alır. Yunanistan ve Bulgaristan batıda, Suriye ve Irak güneyde, Gürcistan-Ermenistan-Azerbaycan kuzeydoğuda Türkiye'nin komşularıdır.",
+    "topic": "Türkiye Komşuları"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi bir başkenttir?",
+    "options": [
+      "İstanbul",
+      "Roma",
+      "New York",
+      "Şangay",
+      "Münih"
+    ],
+    "answer": 1,
+    "solution": "Roma İtalya'nın başkentidir. İstanbul Türkiye'nin en kalabalık şehri ama başkenti değil, başkent Ankara'dır. New York ABD'nin en büyük şehri ama başkent Washington D.C., Şangay Çin'in en büyük şehri ama başkent Pekin, Münih Almanya'nın bir şehri ama başkent Berlin'dir.",
+    "topic": "Başkentler"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Pamuk en çok hangi bölgede yetiştirilir?",
+    "options": [
+      "Karadeniz Bölgesi",
+      "İç Anadolu Bölgesi",
+      "Güneydoğu Anadolu Bölgesi (özellikle Çukurova ve GAP)",
+      "Doğu Anadolu Bölgesi",
+      "Marmara Bölgesi"
+    ],
+    "answer": 2,
+    "solution": "Pamuk en çok Çukurova (Akdeniz/GAP sınırı) ve GAP bölgesi (Güneydoğu Anadolu) ile Ege ovalarında yetiştirilir. Sıcak iklim ve sulama gerektiren bir bitkidir. GAP projesi sayesinde Güneydoğu üretimi büyük ölçüde artmıştır.",
+    "topic": "Pamuk"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Türkiye'nin batısındaki deniz hangisidir?",
+    "options": [
+      "Karadeniz",
+      "Ege Denizi",
+      "Hint Okyanusu",
+      "Hazar Denizi",
+      "Akdeniz"
+    ],
+    "answer": 1,
+    "solution": "Türkiye'nin batısında Ege Denizi yer alır. Kuzeyde Karadeniz, güneyde Akdeniz, kuzeybatıda Marmara Denizi bulunur. Hazar Denizi Asya kıyısındadır.",
+    "topic": "Türkiye Denizleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Aşağıdaki olaylardan hangisi yer hareketleri ile ilgilidir?",
+    "options": [
+      "Yağmur yağması",
+      "Deprem",
+      "Kar yağışı",
+      "Rüzgar esmesi",
+      "Sis oluşumu"
+    ],
+    "answer": 1,
+    "solution": "Deprem yer kabuğunda biriken enerji boşalmasıyla oluşan yer hareketidir. Yağmur, kar, rüzgar, sis atmosfer olaylarıdır (meteorolojiktir).",
+    "topic": "Doğa Olayları"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Türkiye'de en çok çay yetiştirilen şehir hangisidir?",
+    "options": [
+      "Bursa",
+      "Konya",
+      "Rize",
+      "Ankara",
+      "İzmir"
+    ],
+    "answer": 2,
+    "solution": "Çay özellikle Doğu Karadeniz'de Rize, Trabzon ve Artvin'de yetiştirilir. Çay nemli, yağışlı ve eğimli arazilere ihtiyaç duyar; Doğu Karadeniz iklimi bu şartları sağlar. Türkiye'de en yoğun çay üretimi Rize'de yapılır.",
+    "topic": "Çay Yetiştiriciliği"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi bir göl türüdür?",
+    "options": [
+      "Tatlı su gölü",
+      "Bataklık",
+      "Akarsu",
+      "Buzul",
+      "Yağmur ormanı"
+    ],
+    "answer": 0,
+    "solution": "Tatlı su gölü göl türlerinden biridir. Diğerleri (tuzlu, sodalı, bilgi göllü, kapalı havzalı vb.) farklı kategorilerdir. Bataklık dururgan su, akarsu hareketli su, buzul katı, yağmur ormanı ekosistem türüdür.",
+    "topic": "Göl Türleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi atmosfer olayıdır?",
+    "options": [
+      "Volkanik patlama",
+      "Yağmur",
+      "Deprem",
+      "Heyelan",
+      "Tsunami"
+    ],
+    "answer": 1,
+    "solution": "Yağmur, kar, rüzgar, sis atmosferde gerçekleşen meteorolojik olaylardır. Volkanik patlama, deprem, heyelan, tsunami ise yer kabuğu veya yer kütlesi hareketleriyle ilgili jeolojik olaylardır.",
+    "topic": "Atmosfer Olayları"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Aşağıdaki kıtalardan hangisi en küçüktür?",
+    "options": [
+      "Asya",
+      "Afrika",
+      "Avustralya",
+      "Avrupa",
+      "Antarktika"
+    ],
+    "answer": 2,
+    "solution": "Avustralya yaklaşık 8,6 milyon km² ile dünyanın en küçük kıtasıdır. Asya 44, Afrika 30, Antarktika 14, Avrupa 10 milyon km² yüzölçümüne sahiptir. Avustralya genellikle Okyanusya kıtasının ana parçası olarak da değerlendirilir.",
+    "topic": "Kıta Boyutları"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi yenilenebilir enerji kaynağıdır?",
+    "options": [
+      "Kömür",
+      "Petrol",
+      "Doğal gaz",
+      "Güneş enerjisi",
+      "Linyit"
+    ],
+    "answer": 3,
+    "solution": "Güneş enerjisi yenilenebilir bir kaynaktır; tükenmez ve yenilenir. Kömür, petrol, doğal gaz, linyit fosil yakıtlardır ve yenilenemez kaynaklardır. Rüzgar, hidrolik, jeotermal ve biyokütle de yenilenebilir kaynaklardandır.",
+    "topic": "Enerji Kaynakları"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Türkiye'nin güneyinde hangi deniz bulunur?",
+    "options": [
+      "Karadeniz",
+      "Marmara Denizi",
+      "Ege Denizi",
+      "Akdeniz",
+      "Hazar Denizi"
+    ],
+    "answer": 3,
+    "solution": "Türkiye'nin güneyinde Akdeniz yer alır. Akdeniz Antalya, Mersin, Adana, Hatay gibi illerin kıyılarını yıkar. Akdeniz aynı zamanda Akdeniz iklim kuşağına adını veren denizdir.",
+    "topic": "Türkiye Denizleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 1,
+    "question": "Pamukkale'deki traverten oluşumunun temel nedeni aşağıdakilerden hangisidir?",
+    "options": [
+      "Volkanik patlama",
+      "Sıcak su kaynaklarındaki kireçli suyun çökelmesi",
+      "Buzul erimesi",
+      "Rüzgar etkisi",
+      "Deniz dalgaları"
+    ],
+    "answer": 1,
+    "solution": "Pamukkale'deki travertenler, yer altından çıkan sıcak ve kireç bakımından zengin suyun yüzeyde soğuyup karbondioksit kaybetmesi sonucu kireç (kalsiyum karbonat) çökelmesiyle oluşur. Beyaz teraslar bu süreçle binlerce yıldır şekillenmektedir.",
+    "topic": "Pamukkale"
+  }
+]
