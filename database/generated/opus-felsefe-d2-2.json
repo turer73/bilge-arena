@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Bilginin kaynaginin yalniz akil oldugunu, deneyim olmadan akil yoluyla zorunlu-evrensel bilgiye ulasilabilecegini savunan bilgi anlayisi asagidakilerden hangisidir?",
+    "options": [
+      "Empirizm",
+      "Pragmatizm",
+      "Rasyonalizm",
+      "Pozitivizm",
+      "Septisizm"
+    ],
+    "answer": 2,
+    "solution": "Rasyonalizm (akilcilik) Descartes, Spinoza ve Leibniz tarafindan temsil edilir; bilginin kaynagini akil olarak goren ogretidir. Empirizm bilgiyi deney-duyumla, pragmatizm fayda ile, pozitivizm olgu-bilim ile, septisizm ise bilginin imkansizligini ele alir.",
+    "topic": "Bilgi felsefesi"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi Sokrates'in felsefesi ile ilgili dogru bir yargidir?",
+    "options": [
+      "Bilgiyi tanrisal vahye dayali kabul etmistir",
+      "Bilmediklerinin bilincinde olmayi felsefenin baslangici saymistir",
+      "Atom kuramini gelistirmistir",
+      "Devlet adli eseri yazmistir",
+      "Olu doğanin ilk varligi su olarak gormustur"
+    ],
+    "answer": 1,
+    "solution": "Sokrates Bildigim tek sey hicbir sey bilmedigimdir sozu ile bilmediginin bilincinde olmayi (entelektuel alcakgonullulugu) felsefenin baslangici saymistir. Atom kurami Demokritos, Devlet eseri Platon, su unsuru Thales ile ozdeslesir.",
+    "topic": "Sokrates"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Aristoteles'in bilgi anlayisi icin asagidakilerden hangisi sosylenebilir?",
+    "options": [
+      "Bilginin tek kaynaginin akil oldugunu savunmustur",
+      "Bilginin duyumlarla baslayip akilla sistemlestigini ileri surmustur",
+      "Bilginin imkansiz oldugunu savunmustur",
+      "Bilginin yararliliga gore degistigini soylemistir",
+      "Bilginin tamamen sezgiyle elde edildigini savunmustur"
+    ],
+    "answer": 1,
+    "solution": "Aristoteles Hocasi Platon'un saf akilciligindan ayrilarak bilginin duyumlardan baslayip tumevarim ve akil isleyisi ile genel-zorunlu bilgi haline geldigini savunur. Bu tavri sonradan empirizm ile rasyonalizmin sentezi olarak yorumlanir.",
+    "topic": "Aristoteles"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi Platon'un Idealar Kurami'nin temel ozelligidir?",
+    "options": [
+      "Gercek varliklarin sadece duyusal nesneler oldugu",
+      "Asil-degismez gercekligin idealar dunyasi oldugu, duyusal dunyanin onlarin golgesi oldugu",
+      "Tum varliklarin maddi atomlardan ibaret oldugu",
+      "Bilginin imkansiz oldugu",
+      "Iyiye ulasmanin ancak hazla mumkun oldugu"
+    ],
+    "answer": 1,
+    "solution": "Platon'un Idealar Kurami'na gore degismez-mukemmel-tumel idealar dunyasi gercek varlik alanidir, duyusal dunya bu idealarin gecici-eksik kopyalaridir. Magara Alegorisi bu kuramin ozetidir. Atomculuk Demokritos, hazcilik Epikuros ile ozdesetir.",
+    "topic": "Platon"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi etik anlayislari arasindaki farki dogru ifade etmez?",
+    "options": [
+      "Hedonizm hazza ulasmayi en yuksek iyi sayar",
+      "Stoacilik erdemi hayatin amaci olarak gorur",
+      "Faydacilik en cok kisinin en yuksek faydasini ahlakin olcutu sayar",
+      "Kant ahlaki, mutluluk olculu olarak ele alir",
+      "Aristoteles eudaimonia yi insanin amaci olarak belirler"
+    ],
+    "answer": 3,
+    "solution": "Kant ahlaki MUTLULUK uzerine degil, kosulsuz buyruk (kategorik imperatif) ve odev uzerine kurar. Mutlulukcu etiklerle (Aristoteles, Epikuros) yaklasimi taban tabana zittir. Diger ifadeler ilgili felsefelerin gercek goruslerini yansitir.",
+    "topic": "Etik akimlar"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi varlik felsefesinin (ontolojinin) temel sorularindan biri DEGILDIR?",
+    "options": [
+      "Varlik nedir?",
+      "Varlik bir veya cok mudur?",
+      "Varlik degisken mi yoksa sabit midir?",
+      "Bilginin kaynagi nedir?",
+      "Varlik maddi mi tinsel midir?"
+    ],
+    "answer": 3,
+    "solution": "Bilginin kaynagi sorusu epistemolojinin (bilgi felsefesinin) konusudur. Varlik nedir, bir mi-cok mu, degisken mi sabit, maddi mi tinsel sorulari ontolojinin temel sorularindandir.",
+    "topic": "Varlik felsefesi"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Bilgi sahibi olmanin imkansiz oldugunu, kesin bilgiye ulasilamayacagini savunan dusunce akimi asagidakilerden hangisidir?",
+    "options": [
+      "Dogmatizm",
+      "Rasyonalizm",
+      "Septisizm",
+      "Empirizm",
+      "Pragmatizm"
+    ],
+    "answer": 2,
+    "solution": "Septisizm (suphecilik) Pyrrhon, Sextus Empiricus ile baslayip Hume gibi modern dusunurlerce surdurulen ve insanin kesin bilgiye ulasmasinin imkansiz oldugunu savunan akimdir. Dogmatizm ise tersi: kesin bilgi mumkun.",
+    "topic": "Septisizm"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi siyaset felsefesinin temel sorulari arasinda yer almaz?",
+    "options": [
+      "Egemenligin kaynagi nedir?",
+      "Iyi devlet nasil olmalidir?",
+      "Dogal hak ile pozitif hak farki nedir?",
+      "Toplumsal sozlesme dogal mi yapay midir?",
+      "Bilginin kaynagi deney midir akil midir?"
+    ],
+    "answer": 4,
+    "solution": "Bilginin kaynagi epistemolojinin (bilgi felsefesinin) konusudur. Egemenlik, iyi devlet, dogal-pozitif hak ve toplumsal sozlesme siyaset felsefesinin temel sorulari arasindadir.",
+    "topic": "Siyaset felsefesi"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Hobbes, Locke ve Rousseau'nun ortak goruslerinden biri asagidakilerden hangisidir?",
+    "options": [
+      "Toplumsal sozlesme dusuncesini benimsemeleri",
+      "Mutlak monarsiyi savunmalari",
+      "Cumhuriyetcilige karsi cikmalari",
+      "Ekonomi olarak komunizmi savunmalari",
+      "Dini referansli devlet sistemini destelemeleri"
+    ],
+    "answer": 0,
+    "solution": "Hobbes, Locke ve Rousseau farkli sonuclara ulassalar da hepsi devletin kuruculugunu Toplumsal Sozlesme dusuncesine dayandirmislardir. Hobbes mutlak otorite, Locke sinirli devlet, Rousseau halk egemenligi sonucuna varir.",
+    "topic": "Toplumsal sozlesme"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi sanat felsefesinin (estetigin) temel sorulari arasinda yer alir?",
+    "options": [
+      "Toplumun kaynagi nedir?",
+      "Bilginin sinirlari nelerdir?",
+      "Guzellik nedir, sanat eseri nasil deger kazanir?",
+      "Iyi devlet nasil olmalidir?",
+      "Mantiksal cikarsamalar nasil yapilir?"
+    ],
+    "answer": 2,
+    "solution": "Estetigin temel sorulari guzelligin tanimi, sanat eserinin degeri, sanat-eser-sanatci iliskisi ve estetik yargilarin ozelligidir. Diger secenekler sosyoloji, epistemoloji, siyaset felsefesi ve mantik konularidir.",
+    "topic": "Estetik"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Pragmatizm akiminin bilgi anlayisina gore bir bilginin DOGRU olabilmesinin temel olcutu nedir?",
+    "options": [
+      "Apriori akli olmasi",
+      "Mantiksal tutarliligi",
+      "Pratik faydaya yol acmasi",
+      "Estetik degerinin yuksek olmasi",
+      "Tarihsel sureklilik tasimasi"
+    ],
+    "answer": 2,
+    "solution": "Pragmatizm William James, John Dewey ile ozdeslesen bir akim olup bir onermenin doğrulugunun olcutunu pratik faydaya, isleyisliklikteki sonuca baglar. Bilgiyi sabit-mutlak degil, kullanim degeriyle anlamli bulur.",
+    "topic": "Pragmatizm"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi Stoa felsefesinin (Stoacilik) ozelliklerinden biri DEGILDIR?",
+    "options": [
+      "Erdem hayatin amacidir",
+      "Hazza yonelmek en yuksek iyidir",
+      "Insanin doganin yasalarina uyumlu yasamasi gerekir",
+      "Duygulara hakimiyet (apatheia) onemlidir",
+      "Logos evreni duzenleyen ortak akildir"
+    ],
+    "answer": 1,
+    "solution": "Hazza yonelme, Epikuros felsefesinin (hedonizm) ozelligidir. Stoacilik (Zenon, Marcus Aurelius, Seneca) tersine erdemi, doga ile uyumu, duygulara hakimiyeti ve evreni duzenleyen logosu (akil) one cikarir.",
+    "topic": "Stoacilik"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Mantiksal cikarsamada genel onermelerden ozel sonuclara ulasma yontemine ne ad verilir?",
+    "options": [
+      "Tumevarim",
+      "Tumdengelim",
+      "Analoji",
+      "Diyalektik",
+      "Cinsleme"
+    ],
+    "answer": 1,
+    "solution": "Tumdengelim (deduksiyon), genel-evrensel oncullerden ozel sonuca varma yontemidir. Tumevarim ozel ornk gozlemlerden genellemeye gider, analoji benzetmeyle, diyalektik tez-antitez-sentez ile ilerler.",
+    "topic": "Mantik"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi din felsefesinin (teolojinin felsefi incelemesinin) temel sorulari arasinda yer almaz?",
+    "options": [
+      "Tanrinin var olup olmadigi",
+      "Imanin akli temellendirilebilirligi",
+      "Kotuluk problemi",
+      "Olum sonrasi yasam",
+      "Bilim cihazlarinin nasil yapilabilecegi"
+    ],
+    "answer": 4,
+    "solution": "Bilim cihazlarinin yapimi muhendislik-uygulamali bilim konusudur, din felsefesinin sorusu degildir. Tanri varligi, iman-akil iliskisi, kotuluk problemi ve olum otesi din felsefesinin temel sorulari arasindadir.",
+    "topic": "Din felsefesi"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 2,
+    "question": "Olusu evrenin temel ilkesi sayan ve Her sey akar, hicbir sey aynisinda kalmaz diyen Antik Yunan filozofu hangisidir?",
+    "options": [
+      "Parmenides",
+      "Demokritos",
+      "Herakleitos",
+      "Anaksimenes",
+      "Pythagoras"
+    ],
+    "answer": 2,
+    "solution": "Herakleitos surekli olusu, degisimi ve karsitlarin uyumunu evrenin temeli kabul eder; Panta rhei (Her sey akar) sozu kendisine atfedilir. Parmenides bunun tersi: degismez-tek varlik. Pythagoras sayilari, Demokritos atomlari ilke sayar.",
+    "topic": "Antik filozoflar"
+  }
+]
