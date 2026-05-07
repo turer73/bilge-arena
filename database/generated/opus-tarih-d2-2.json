@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Kavimler Gocu sonucunda Bati Roma Imparatorlugu'nun yikilmasi ve Avrupa'da feodalitenin temellerinin atilmasi hangi cagin baslangici sayilir?",
+    "options": [
+      "Ilk Cag",
+      "Orta Cag",
+      "Yeni Cag",
+      "Yakin Cag",
+      "Bilgi Cagi"
+    ],
+    "answer": 1,
+    "solution": "Bati Roma Imparatorlugu'nun yikildigi 476 yili Ilk Cag'in sonu, Orta Cag'in baslangici kabul edilir. Yeni Cag 1453 Istanbul'un fethi, Yakin Cag 1789 Fransiz Ihtilali ile baslar.",
+    "topic": "Cag siniflandirmasi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi Magna Carta'nin tarihte oynadigi rolu en iyi acklayan yargidir?",
+    "options": [
+      "Mutlak monarsiyi guclendirmistir",
+      "Krali yasalara bagimli kilarak temel hak ve ozgurluklerin gelisimine zemin hazirlamistir",
+      "Kiliseyi devlet otoritesine bagimli kilmistir",
+      "Sanayi devriminin baslangici olmustur",
+      "Cogunluk demokrasisini ilan etmistir"
+    ],
+    "answer": 1,
+    "solution": "1215 yilinda Ingiliz krali Yurtsuz John'un imzaladigi Magna Carta krali ilk kez yasalara bagimli kilmis ve soylulara guvenceli haklar tanimistir. Bu belge Bati'da temel hak ve ozgurluklerin tarihsel kaynagi sayilir.",
+    "topic": "Magna Carta"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Kanuni Sultan Suleyman doneminde Macaristan'in buyuk bolumunun Osmanli yonetimine girmesini saglayan zafer asagidakilerden hangisidir?",
+    "options": [
+      "Cirpan Savasi",
+      "Mohac Meydan Savasi",
+      "Pres Beziye Savasi",
+      "Ridaniye Savasi",
+      "Otlukbeli Savasi"
+    ],
+    "answer": 1,
+    "solution": "1526 Mohac Meydan Savasi'nda Kanuni Sultan Suleyman Macar kuvvetlerini yenmis, Macaristan'in buyuk bolumu Osmanli'ya bagli kralliga donusturulmustur. Otlukbeli II. Mehmet, Ridaniye Yavuz donemi savaslaridir.",
+    "topic": "Kanuni donemi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi Lale Devri'nin (1718-1730) yenilik calismalarindan biri DEGILDIR?",
+    "options": [
+      "Ilk Turkce matbaanin acilmasi",
+      "Cicek hastaligi asisinin yapilmasi",
+      "Anayasa hazirlanmasi",
+      "Yeni cini atolyelerinin kurulmasi",
+      "Itfaiye orgutu Yeniceri Tulumbacilarinin kurulmasi"
+    ],
+    "answer": 2,
+    "solution": "Anayasa Lale Devri'nde degil, 1876 Birinci Mesrutiyet'te (Kanun-i Esasi) hazirlanmistir. Lale Devri'nde Ibrahim Muteferrika matbaasi, cicek asisi, cini atolyeleri (Tekfur Sarayi) ve tulumbaci ocagi gibi yenilikler yapilmistir.",
+    "topic": "Lale Devri"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Tanzimat Fermani'nin (1839) en temel ozelligi asagidakilerden hangisidir?",
+    "options": [
+      "Padisahin yetkilerini sinirlandiran ilk anayasal belge olmasi",
+      "Cumhuriyetin ilan edilmesi",
+      "Dogu Anadolu'ya ozel statu tanimasi",
+      "Mutlak monarsiyi guclendirmesi",
+      "Saltanati lagvetmesi"
+    ],
+    "answer": 0,
+    "solution": "Tanzimat Fermani 1839'da Sultan Abdulmecid tarafindan yayimlanmis ve padisah ilk kez kendi yetkisini sinirlandirip yasalara bagli kalacagini taahhut etmistir. Bu yonu ile Osmanli'da anayasal gelismelerin baslangici sayilir.",
+    "topic": "Tanzimat"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Asagidaki olaylardan hangisi I. Dunya Savasi'nin baslamasina dogrudan neden olmustur?",
+    "options": [
+      "Fransiz Ihtilali",
+      "Saraybosna suikasti",
+      "Berlin Konferansi",
+      "Uc Imparator Birligi'nin kurulmasi",
+      "Versay Antlasmasi'nin imzalanmasi"
+    ],
+    "answer": 1,
+    "solution": "28 Haziran 1914'te Avusturya-Macaristan Veliahdi Franz Ferdinand'in Saraybosna'da Sirpli Princip tarafindan oldurulmesi I. Dunya Savasi'nin dogrudan tetikleyicisi olmustur. Versay Antlasmasi savasin sonucunda imzalanmistir.",
+    "topic": "I. Dunya Savasi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Misak-i Milli ile ilgili asagidaki ifadelerden hangisi yanlistir?",
+    "options": [
+      "Son Osmanli Mebusan Meclisi'nde kabul edilmistir",
+      "Erzurum ve Sivas Kongresi kararlari temelinde olusturulmustur",
+      "Vatanin sinirlarini cizen siyasi bir karardir",
+      "Istanbul'un isgalinin ardindan ortaya cikan bir tepki olarak doğmustur",
+      "Yeni TBMM tarafindan reddedilmistir"
+    ],
+    "answer": 4,
+    "solution": "Misak-i Milli 28 Ocak 1920'de Son Osmanli Mebusan Meclisi'nde kabul edildi ve TBMM tarafindan benimsendi; reddedilmedi. Lozan Antlasmasi'nin temelini olusturdu.",
+    "topic": "Misak-i Milli"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "II. Mesrutiyet'in (1908) ilan edilmesinde belirleyici rol oynayan siyasi yapi asagidakilerden hangisidir?",
+    "options": [
+      "Genc Osmanlilar",
+      "Ittihat ve Terakki Cemiyeti",
+      "Hurriyet ve Itilaf Firkasi",
+      "Cumhuriyet Halk Firkasi",
+      "Ahrar Firkasi"
+    ],
+    "answer": 1,
+    "solution": "II. Mesrutiyet 1908'de Ittihat ve Terakki Cemiyeti'nin baski ve eylemleri sonucu II. Abdulhamid tarafindan yeniden ilan edilmistir. Genc Osmanlilar I. Mesrutiyet'in arkasindadir; CHF Cumhuriyet doneminde kurulmustur.",
+    "topic": "II. Mesrutiyet"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi Lozan Antlasmasi'nda (1923) cozumlenmemis ve sonraki yillarda ele alinmistir?",
+    "options": [
+      "Kapitulasyonlarin kaldirilmasi",
+      "Bati sinirinin Meric Nehri olarak belirlenmesi",
+      "Hatay'in Turkiye'ye katilmasi",
+      "Bogazlarin ilkesel olarak Turkiye'ye birakilmasi",
+      "Savas tazminatinin gorusulmesi"
+    ],
+    "answer": 2,
+    "solution": "Hatay sorunu Lozan'da cozumlenmedi, 1939'da diplomatik sureclerle Turkiye'ye katildi. Kapitulasyonlar Lozan'da kaldirildi, Bogazlar ilkesel olarak Turkiye'ye verildi (sonradan 1936 Montrö ile tam egemenlik), bati siniri ve tazminat Lozan'da netlesti.",
+    "topic": "Lozan Antlasmasi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Cumhuriyet Doneminde 1924 Anayasasi ile gerceklestirilen onemli bir degisiklik asagidakilerden hangisidir?",
+    "options": [
+      "Kadinlara secme ve secilme hakki taninmistir",
+      "Saltanat kaldirilmistir",
+      "Halifelik kaldirilmistir",
+      "Devletin dini Islam ifadesi anayasadan cikarilmistir",
+      "Soyadi Kanunu cikarilmistir"
+    ],
+    "answer": 2,
+    "solution": "1924 Anayasasi'nin onemli bir basariyla halifelik 3 Mart 1924'te kaldirildi (ayni gunde Tevhid-i Tedrisat ve Seriye Vekaleti de kaldirildi). Saltanat 1922'de, kadin secme hakki 1934'te, devlet dini ifadesi 1928'de cikti.",
+    "topic": "Cumhuriyet inkilaplari"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi Sevr Antlasmasi'nin (1920) ozelliklerinden biri DEGILDIR?",
+    "options": [
+      "Osmanli topraklarini parcaliyordu",
+      "Bati Anadolu Yunanistan'a birakiliyordu",
+      "Bogazlar uluslararasi komisyona devrediliyordu",
+      "TBMM tarafindan onaylandi",
+      "Ermeni ve Kurt bolgeleri ongoruyordu"
+    ],
+    "answer": 3,
+    "solution": "Sevr Antlasmasi TBMM tarafindan TANINMADI ve onaylanmadi; Mustafa Kemal liderliginde Kurtulus Savasi ile gecersiz kilindi. Diger maddeler antlasmanin gercek hukumleridir.",
+    "topic": "Sevr Antlasmasi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi Mondros Ateskes Antlasmasi'nin (30 Ekim 1918) sonuclarindan biri DEGILDIR?",
+    "options": [
+      "Osmanli ordularinin terhis edilmesi",
+      "Anadolu'da Ermeni devleti kurulmasi",
+      "Itilaf Devletleri'nin guvenlik tehdidi olduguna karar verecegi yerleri isgal hakki",
+      "Ulasim ve haberlesme noktalarinin Itilaf Devletleri'nin denetimine girmesi",
+      "Bogazlarin Itilaf Devletleri'ne acilmasi"
+    ],
+    "answer": 1,
+    "solution": "Mondros Ateskes Antlasmasi'nda Anadolu'da Ermeni devleti kurulacagi maddesi yer almaz; bu ifade Sevr taslagindadir. Mondros'un diger maddeleri ordunun terhisi, isgal yetkisi, ulasim denetimi ve Bogazlarin acilmasidir.",
+    "topic": "Mondros Ateskesi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Karlofca Antlasmasi (1699) Osmanli Devleti acisindan tarihte hangi onemi tasir?",
+    "options": [
+      "Osmanli'nin Ortadogu'da hakimiyetini perciledigi belge",
+      "Osmanli'nin Bati'da ilk buyuk toprak kaybinin yasandigi antlasma",
+      "Osmanli'da matbaaninin ilk kez kullanilmasini saglayan antlasma",
+      "Osmanli'da meşrutiyetin kurulmasinin temelini hazirlayan belge",
+      "Osmanli'da 1. Mesrutiyet'i sona erdiren antlasma"
+    ],
+    "answer": 1,
+    "solution": "1699 Karlofca Antlasmasi II. Viyana Kusatmasi sonrasinda imzalanmis, Osmanli Bati'da ilk kez genis toprak kaybetmistir (Macaristan, Erdel, Mora gibi). Osmanli icin Gerileme Donemi'nin baslangic gostergesidir.",
+    "topic": "Karlofca Antlasmasi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Asagidakilerden hangisi Ataturk'un dis siyaset ilkelerinin temelinde yer alir?",
+    "options": [
+      "Yurtta sulh, cihanda sulh",
+      "Topraklarin geri alinmasi",
+      "Komsu ulkelerin ic islerine karisma",
+      "Dini referansli devlet politikalari",
+      "Saltanati savunan bir yaklasim"
+    ],
+    "answer": 0,
+    "solution": "Ataturk'un dis siyaset ilkelerinin ozeti Yurtta sulh, cihanda sulh sozudur. Bu ilke baris esasli, gercekci ve karsilikli saygiya dayali bir dis politika anlayisini ifade eder.",
+    "topic": "Ataturkcu dis politika"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Sanayi Devrimi'nin Avrupa toplumunda yarattigi en onemli sosyal degisiklik nedir?",
+    "options": [
+      "Feodal beyliklerin guclenmesi",
+      "Burjuva ve isci siniflarinin one cikmasi",
+      "Tarim toplumunun hakim kalmasi",
+      "Kilisenin siyasi otoritesinin artmasi",
+      "Loncalarin etkinliginin artmasi"
+    ],
+    "answer": 1,
+    "solution": "Sanayi Devrimi'nin sosyal sonucu yeni siniflarin dogusudur: sermaye sahibi burjuva sinifi ve fabrikalarda ucretle calisan isci sinifi. Feodal yapi ve loncalar gucunu kaybetti, tarim agirligi azaldi, kilise otoritesi sinirlandi.",
+    "topic": "Sanayi Devrimi"
+  }
+]

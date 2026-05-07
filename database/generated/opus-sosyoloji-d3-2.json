@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi Max Weber'in toplumsal eylem turlerinden Amaca-arac (zweck-rasyonel) eylemini en iyi tanimlar?",
+    "options": [
+      "Duygusal sezgi ile yonlendirilen eylem",
+      "Geleneklerin tekrarlanmasi yoluyla yapilan eylem",
+      "Bilincli amacin secilmesi ve bu amaca en uygun aracin akilci hesabıyla yapilan eylem",
+      "Bir degerin kendi basina amac sayilarak yapilan eylem",
+      "Kollektif bilincten kaynaklanan zorunluluklar"
+    ],
+    "answer": 2,
+    "solution": "Weber'in dort eylem turunden zweck-rasyonel (amac-arac rasyonel) eylem, bilincli olarak amac belirlenmesi ve bu amaca en uygun aracin akilci hesabıyla yapilan eylemdir. Diger turler: duygu temelli (afektiv), gelenek temelli, deger temelli (wertrational) eylemlerdir.",
+    "topic": "Weber eylem kuramı"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi Karl Marx'in sinif kurami acisindan dogru bir yargidir?",
+    "options": [
+      "Siniflar yalniz dini referanslarla siniflandirilir",
+      "Tarih, sinif catismalarinin tarihidir; siniflar uretim araclarına sahip olus iliskileriyle belirlenir",
+      "Siniflar yalniz mesleğe gore belirlenir",
+      "Sosyalizmden once siniflar var olamaz",
+      "Sinif catismasi modern toplumda yok olmustur"
+    ],
+    "answer": 1,
+    "solution": "Marx'a gore tum tarih sinif catismalarinin tarihidir ve siniflarin temeli uretim araclarına sahip olma-olmama iliskisidir (burjuva ve isci sinifi). Marx'in kuramında siniflar mesleğe veya dini referansa gore degil, ekonomik altyapiya gore belirlenir.",
+    "topic": "Marx sinif kurami"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Emile Durkheim'in anomi kavraminin sosyolojik anlami asagidakilerden hangisidir?",
+    "options": [
+      "Bireyin toplumla yuksek entegrasyonu",
+      "Toplumsal degerlerin ve normlarin zayifladigi, bireyin yon kaybettigi durum",
+      "Asiri bireysellik karsisinda guclu bir dini cevre",
+      "Geleneksel toplum yapisina geri donus",
+      "Yonetimin demokratiklesmesi"
+    ],
+    "answer": 1,
+    "solution": "Durkheim'in anomi kavrami toplumsal degerlerin ve normlarin zayifladigi, bireyin yon kaybettigi normsuz durumdur. Modernlesme, hizli toplumsal degisme ve ekonomik krizler donminde gozlenir; intihar oranlari ile iliskilendirilir.",
+    "topic": "Durkheim anomi"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Toplumsal yapinin parcalarinin uyumla isleyen bir butun olusturdugunu, her kurumun belirli bir islevi yerine getirdigini savunan sosyoloji kurami asagidakilerden hangisidir?",
+    "options": [
+      "Catisma kurami",
+      "Yapisal-fonksiyonalizm",
+      "Sembolik etkilesim kurami",
+      "Etnometodoloji",
+      "Postmodern kuram"
+    ],
+    "answer": 1,
+    "solution": "Yapisal-fonksiyonalizm (T. Parsons, R. Merton) toplumsal yapinin parcalarinin uyumla isleyen bir butun olusturdugunu, her kurumun belirli bir islevi yerine getirdigini ileri surer. Catisma kurami toplumun catismalardan ozumlendigini savunur.",
+    "topic": "Yapisal-fonksiyonalizm"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Sembolik etkilesim kurami (G. H. Mead, H. Blumer) asagidakilerden hangisini temel olarak ele alir?",
+    "options": [
+      "Toplumsal yapinin makro analiziini",
+      "Insanlarin gunluk etkilesimde anlamlari sembolik olarak insa etmelerini",
+      "Sinif catismalarini",
+      "Iktidar kurumlarinin tarihsel donusumunu",
+      "Genetik temelli kollektif bilinc"
+    ],
+    "answer": 1,
+    "solution": "Sembolik etkilesim kurami insan davranisinin baslica boyutunu yuzylyuz etkilesimde sembollerin (dil, jest, mimik) yorumlanmasi araciligıyla anlam insa etmek olarak gorur. Mikro duzeyde calisan, gunluk yasamı incele yen bir kuramdir.",
+    "topic": "Sembolik etkilesim"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi Auguste Comte'un sosyolojinin kurucusu olarak benimsedigi tutumun temel ozelligidir?",
+    "options": [
+      "Toplumu metafizik kavramlarla aciklama",
+      "Toplumu olgular ve bilimsel yontemle inceleme",
+      "Toplumu yalniz dini referanslarla aciklama",
+      "Sosyolojiyi felsefenin bir alt dalı olarak kabul etme",
+      "Toplumsal olgulari yalniz tarihsel anlatimla aciklama"
+    ],
+    "answer": 1,
+    "solution": "Auguste Comte sosyolojinin kurucusu olarak pozitivist bir tutum benimser: toplum, olgular ve bilimsel yontemle (gözlem, deney, analiz) incelenmelidir. Metafizik ve teolojik aciklamalar bilim dısıdır; toplum bilimi de doga bilimleri gibi ele alinabilir.",
+    "topic": "Comte"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi sosyolojide bir gozlem sirasinda arastirmacinin kendi varligi nedeniyle olusan etkiyi anlatir?",
+    "options": [
+      "Esnek olcek etkisi",
+      "Hawthorne etkisi",
+      "Kontrol etkisi",
+      "Negatif gosteri etkisi",
+      "Halo etkisi"
+    ],
+    "answer": 1,
+    "solution": "Hawthorne etkisi (Hawthorne effect) bir arastirmada gozlem altinda olduklarini bilen kisilerin davranislarini degistirmesi olarak tanimlanir. Adi 1924-1932 arasi ABD Hawthorne fabrikasında yapilan calisma sonucundaki gozlem nedeniyle yapis tutmustur.",
+    "topic": "Sosyolojik yontem"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi modernlesme surecini elestirel bir bakisla ele alan ve yararlari kadar zararlarini da goruyoruna gore (rasyonelligin demir kafesi gibi metaforla) degerlendiren dusunurdur?",
+    "options": [
+      "Auguste Comte",
+      "Max Weber",
+      "Herbert Spencer",
+      "Talcott Parsons",
+      "Robert Merton"
+    ],
+    "answer": 1,
+    "solution": "Max Weber modernlesmeye iliskin elestirel-elenge yaklasiminda rasyonelligin demir kafesi (iron cage of rationality) metaforu ile bireyin biroketrasimle giderek mekaniklesen bir hayata sıkışmasini anlatir. Comte, Spencer, Parsons ise ilerlemeci tutumlari ile bilinir.",
+    "topic": "Weber modernlesme"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi sosyolojide kentlesme sürecinin tipik bir sonucu DEGILDIR?",
+    "options": [
+      "Ikincil iliki yogunlugunun artmasi",
+      "Birincil iliki (akrabalık-komsulu) sikligin azalmasi",
+      "Sosyal hareketliligin artmasi",
+      "Tarima dayali ekonominin yayginlasmasi",
+      "Is bolumu ve uzmanlasmanin artmasi"
+    ],
+    "answer": 3,
+    "solution": "Tarima dayali ekonominin yayginlasmasi kentlesmenin tersine bir sonuctur. Kentlesme tarim diși istihdam, ikincil iliskiler, sosyal hareketlilik ve is bolumunun artmasi ile karakterize edilir. Birincil iliskiler azalır.",
+    "topic": "Kentlesme"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi sosyalizasyonun (toplumsallasma) temel kurumlarindan biri DEGILDIR?",
+    "options": [
+      "Aile",
+      "Egitim",
+      "Akran gruplari",
+      "Tribunaller (mahkeme)",
+      "Kitle iletisim araclari"
+    ],
+    "answer": 3,
+    "solution": "Mahkemeler (tribunaller) hukuk uyusmazliklarini cozumleyen kurumlardir, sosyalizasyon kurumu olarak tanimlanmaz. Aile birincil sosyalizasyon, egitim, akran gruplari ve kitle iletisim araclari ikincil sosyalizasyon kurumlaridir.",
+    "topic": "Sosyalizasyon"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi bir toplumda sapma davranisinin (deviance) sosyolojik aciklamasinin Robert Merton tarafindan gelistirilen Stres Kurami'na uygun bir uyaridir?",
+    "options": [
+      "Sapma kisinin biyolojik ozelliklerinden kaynaklanir",
+      "Toplum tarafindan onaylanan kulturel hedefler ile bu hedeflere ulasma araclarinin yetersizligi gerilim yaratir, bu durum sapmaya yol acabilir",
+      "Sapma yalniz aileden ogrenilir",
+      "Sapma kollektif bilincin tezahurudur",
+      "Sapma sermayedarlarin toplumun aleyhine yarattigi bir kavramdir"
+    ],
+    "answer": 1,
+    "solution": "Robert Merton'un Stres (Strain) Kurami'na gore toplum kulturel hedefler (basari, zenginlik) belirler ama tum bireylerin bu hedeflere ulasacak meşru araclara erisimi olmaz. Bu hedef-arac uyumsuzlugu (strain) bireyleri sapmaya, ozellikle yenilik (illegal yollarla hedefe ulasma) yoluna iter.",
+    "topic": "Merton sapma kurami"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi kapital turleri (P. Bourdieu) arasindadir?",
+    "options": [
+      "Madeni para",
+      "Kulturel kapital, sosyal kapital, ekonomik kapital, sembolik kapital",
+      "Yalniz akademik kapital",
+      "Yalniz politik kapital",
+      "Yalniz dini kapital"
+    ],
+    "answer": 1,
+    "solution": "Pierre Bourdieu kapital kavramini ekonomik degerin otesine genisleterek dort kategoride ele alir: ekonomik kapital, kulturel kapital (egitim, beceri), sosyal kapital (ag iliskileri) ve sembolik kapital (prestij, tanınmıslık). Bu turler birbirine donusebilir.",
+    "topic": "Bourdieu kapital"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi Antik Yunan'dan Sanayi Devrimi'ne kadar sosyolojide one cikan toplumsal degisme yaklasimi olan dogrusal-ilerlemeci anlayisi en iyi temsil eder?",
+    "options": [
+      "Spengler ve Toynbee'nin dongusel kuramlari",
+      "Comte'un tek yonlu uc evre yasası ve Spencer'in evrimsel ilerleme dusuncesi",
+      "Marx'in diyalektik materyalizmi",
+      "Postmodern parcalanmis tarih anlayisi",
+      "Foucault'nun iktidar arkeolojisi"
+    ],
+    "answer": 1,
+    "solution": "Comte'un Uc Evre Yasası (teolojik-metafizik-pozitif) ve Herbert Spencer'in toplumun basitten karmasiga, homojenden heterojene gectigi evrimsel ilerleme dusuncesi dogrusal-ilerlemeci anlayisi temsil eder. Spengler-Toynbee dongusel, Marx diyalektik, Foucault parcalı yaklasimi savunur.",
+    "topic": "Toplumsal degisme"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi sosyolojide toplumsal cinsiyet (gender) ile biyolojik cinsiyet (sex) ayrimini en iyi acklayan ifadedir?",
+    "options": [
+      "Cinsiyet yalniz biyolojik temellidir, toplumsal cinsiyetinden farki yoktur",
+      "Cinsiyet biyolojik-fiziksel ozellikleri, toplumsal cinsiyet kulturel-sosyal yuklemeleri ifade eder",
+      "Toplumsal cinsiyet yalnizca sembolik gostergeleri kapsar",
+      "Iki kavram da yalnizca dini referanslara dayanir",
+      "Toplumsal cinsiyet hicbir toplumda farklilasmaz"
+    ],
+    "answer": 1,
+    "solution": "Sosyolojide cinsiyet (sex) biyolojik-fiziksel kategoriyi, toplumsal cinsiyet (gender) ise erkeklik-kadinlik gibi rollere atfedilen sosyal-kulturel yuklemeleri ifade eder. Toplumsal cinsiyet kulturden kulture ve donemler arasinda farklilasir; biyolojik cinsiyetten ayri analiz edilir.",
+    "topic": "Toplumsal cinsiyet"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 3,
+    "question": "Asagidakilerden hangisi Mead'in benlik kurami'ndaki I (Ben) ve Me (Bana) ayriminin acklamasidir?",
+    "options": [
+      "I sadece kollektif bilinci ifade eder, Me ise bireyin biyolojik benligidir",
+      "I bireyin yenilikci ve spontan tarafini, Me ise iclesirilmis toplumsal beklentileri ifade eder",
+      "I dinsel benligi, Me ise akilci benligi anlatir",
+      "I toplumsal cinsiyeti, Me ise meslek kimligini ifade eder",
+      "I yalnizca biyolojik refleksleri, Me psikolojik durumu temsil eder"
+    ],
+    "answer": 1,
+    "solution": "G. H. Mead'in benlik kuraminda I bireyin spontan, yenilikci, yaratıcı tarafini, Me ise toplumsallasma sirasinda icsellestirdigi baskalarinin (genellestirilmis baskasi) beklentilerini temsil eder. Benlik bu iki yon arasindaki sürekli etkilesimde sekillenir.",
+    "topic": "Mead benlik kurami"
+  }
+]
