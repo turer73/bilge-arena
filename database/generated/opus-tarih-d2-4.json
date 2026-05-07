@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Anadolu Selçuklu Devleti'nin başkenti aşağıdakilerden hangisidir?",
+    "options": [
+      "İstanbul",
+      "İznik",
+      "Konya",
+      "Sivas",
+      "Bursa"
+    ],
+    "answer": 2,
+    "solution": "Anadolu Selçuklu Devleti'nin başkenti Konya'dır. 1075-1097 arası İznik başkent olmuş, ancak Bizans tarafından geri alınınca başkent Konya'ya taşınmış ve devletin sonuna (1308) kadar Konya başkent kalmıştır.",
+    "topic": "Anadolu Selçuklu"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "1071 Malazgirt Savaşı'nın Türk tarihi açısından önemi aşağıdakilerden hangisidir?",
+    "options": [
+      "Bizans'ın yıkılması",
+      "Anadolu'nun Türklere yurt olarak açılması",
+      "İstanbul'un fethi",
+      "Osmanlı Devleti'nin kurulması",
+      "Haçlı seferlerinin başlaması"
+    ],
+    "answer": 1,
+    "solution": "1071 Malazgirt Savaşı'nda Sultan Alparslan komutasındaki Selçuklu ordusu Bizans'ı yenmiştir. Bu zaferle Anadolu Türklere yurt olarak açılmış, Türkmen göçleriyle Anadolu'nun Türkleşmesi süreci başlamıştır.",
+    "topic": "Malazgirt Savaşı"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Yavuz Sultan Selim döneminde (1512-1520) gerçekleştirilen önemli bir gelişme aşağıdakilerden hangisidir?",
+    "options": [
+      "İstanbul'un fethi",
+      "Halifeliğin Osmanlı'ya geçmesi",
+      "Anadolu beyliklerinin tamamen Osmanlı'ya katılması",
+      "Coğrafi keşiflerin başlaması",
+      "Tanzimat Fermanı'nın ilanı"
+    ],
+    "answer": 1,
+    "solution": "Yavuz Sultan Selim 1517 Mısır seferi ile Memluklü Devleti'ne son verdi ve halifelik unvanı Osmanlı padişahlarına geçti. Ayrıca kutsal emanetler Osmanlı'ya getirildi. Bu olay Osmanlı'nın İslam dünyasındaki manevi liderliğinin başlangıcıdır.",
+    "topic": "Yavuz Sultan Selim"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Trablusgarp Savaşı (1911-1912) Osmanlı Devleti ile hangi ülke arasında yapılmıştır?",
+    "options": [
+      "Yunanistan",
+      "Bulgaristan",
+      "İtalya",
+      "Rusya",
+      "Avusturya-Macaristan"
+    ],
+    "answer": 2,
+    "solution": "Trablusgarp Savaşı 1911-1912 yıllarında İtalya'nın Osmanlı'nın Kuzey Afrika eyaleti Trablusgarp'a saldırmasıyla başladı. Mustafa Kemal de bu savaşta Tobruk ve Derne'de görev yaptı. Savaş Osmanlı'nın Trablusgarp ve Bingazi'yi kaybetmesiyle sonuçlandı.",
+    "topic": "Trablusgarp Savaşı"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi I. Dünya Savaşı'nda Osmanlı Devleti'nin savaştığı cephelerden biri değildir?",
+    "options": [
+      "Çanakkale",
+      "Kafkasya",
+      "Kanal (Süveyş)",
+      "Galiçya",
+      "Pasifik"
+    ],
+    "answer": 4,
+    "solution": "Osmanlı I. Dünya Savaşı'nda Çanakkale, Kafkasya, Kanal (Süveyş), Hicaz-Yemen, Filistin-Suriye, Irak, Galiçya, Romanya ve Makedonya cephelerinde savaştı. Pasifik cephesinde Osmanlı kuvvetleri bulunmadı.",
+    "topic": "I. Dünya Savaşı Cepheleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "1923 Türkiye Cumhuriyeti'nin ilk Cumhurbaşkanı kim olmuştur?",
+    "options": [
+      "İsmet İnönü",
+      "Mustafa Kemal Atatürk",
+      "Celal Bayar",
+      "Fevzi Çakmak",
+      "Kazım Karabekir"
+    ],
+    "answer": 1,
+    "solution": "29 Ekim 1923'te Cumhuriyet'in ilanı ile aynı gün Mustafa Kemal Atatürk TBMM tarafından oybirliğiyle ilk cumhurbaşkanı seçildi. 1923-1938 arası 4 dönem cumhurbaşkanlığı yaptı, 10 Kasım 1938'deki vefatına kadar görevde kaldı.",
+    "topic": "Cumhurbaşkanlığı"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi Atatürk döneminde gerçekleştirilen ekonomik ve sosyal yeniliklerden biri değildir?",
+    "options": [
+      "Aşar vergisinin kaldırılması (1925)",
+      "Tekke ve zaviyelerin kapatılması (1925)",
+      "Kabotaj Kanunu'nun çıkarılması (1926)",
+      "Avrupa Birliği'ne katılım (1995)",
+      "Türk Medeni Kanunu'nun kabulü (1926)"
+    ],
+    "answer": 3,
+    "solution": "Avrupa Birliği'ne katılım Atatürk dönemine ait bir gelişme değildir; AB Gümrük Birliği 1995'te imzalanmıştır. Aşar vergisi kaldırılması, tekke-zaviyelerin kapatılması, Kabotaj Kanunu ve Medeni Kanun Atatürk döneminin önemli yeniliklerindendir.",
+    "topic": "Atatürk Dönemi Yenilikleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "1839 Tanzimat Fermanı'nın ilan edildiği padişah kimdir?",
+    "options": [
+      "II. Mahmut",
+      "Abdülmecit",
+      "Abdülaziz",
+      "II. Abdülhamit",
+      "Sultan Abdulhamit"
+    ],
+    "answer": 1,
+    "solution": "Tanzimat Fermanı (Gülhane Hatt-ı Hümayunu) 3 Kasım 1839'da Sultan Abdülmecit döneminde Mustafa Reşit Paşa tarafından okundu ve ilan edildi. II. Mahmut 1839'da ölmüş, oğlu Abdülmecit yeni padişah olmuştu.",
+    "topic": "Tanzimat Fermanı"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Çanakkale Deniz Savaşları'nın (18 Mart 1915) Osmanlı zaferi olarak sonuçlanmasında belirleyici rol oynayan komutan aşağıdakilerden hangisidir?",
+    "options": [
+      "Mustafa Kemal",
+      "İsmet Paşa",
+      "Cevat Paşa",
+      "Liman von Sanders",
+      "Esat Paşa"
+    ],
+    "answer": 2,
+    "solution": "Çanakkale Boğaz Komutanı Cevat Paşa (Çobanlı) 18 Mart 1915'te İtilaf donanmasını mayın hatlarıyla durdurmayı başardı, 'Çanakkale geçilmez' efsanesini yarattı. Mustafa Kemal kara savaşlarında (Anafartalar) öne çıktı; iki ayrı dönem.",
+    "topic": "Çanakkale Savaşı"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Aşağıdaki olaylardan hangisi Kurtuluş Savaşı'nın doğuda bitirildiğini gösterir?",
+    "options": [
+      "Sakarya Meydan Muharebesi",
+      "Gümrü Antlaşması",
+      "I. İnönü Savaşı",
+      "Büyük Taarruz",
+      "Mudanya Mütarekesi"
+    ],
+    "answer": 1,
+    "solution": "Doğu cephesinde Kazım Karabekir komutasında Türk ordusu Ermeni ordusunu yenip 3 Aralık 1920 Gümrü Antlaşması'nı imzaladı. Bu antlaşma TBMM'nin imzaladığı ilk uluslararası antlaşmadır ve doğu cephesinin kapanışıdır. Diğer şıklar batı cephesindedir.",
+    "topic": "Doğu Cephesi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Mehmed II'nin (Fatih) İstanbul'u fethettiği 1453'te Bizans imparatoru kimdi?",
+    "options": [
+      "I. Justinianus",
+      "I. Konstantin",
+      "XI. Konstantin (Konstantinos Dragazes)",
+      "Heraklius",
+      "Aleksios I. Komnenos"
+    ],
+    "answer": 2,
+    "solution": "1453'te İstanbul'un fethi sırasında Bizans imparatoru XI. Konstantin (Konstantinos Dragazes) idi. Şehrin son savunmasında ölmüş, böylece Bizans (Doğu Roma) İmparatorluğu da fiilen sona ermiştir. I. Konstantin 4. yüzyılda yaşamıştır.",
+    "topic": "İstanbul'un Fethi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Sanayi Devrimi ilk olarak hangi ülkede başlamıştır?",
+    "options": [
+      "Fransa",
+      "Almanya",
+      "İngiltere",
+      "ABD",
+      "İtalya"
+    ],
+    "answer": 2,
+    "solution": "Sanayi Devrimi 18. yüzyılın ikinci yarısında (1760-1800) İngiltere'de başlamıştır. James Watt'ın buhar makinesi (1769), tekstil makinaları, kömür-demir kaynakları ve sömürgelerden gelen sermaye İngiltere'yi öncü konuma getirmiştir.",
+    "topic": "Sanayi Devrimi"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi Atatürk'ün 'Altı Ok' ilkelerinin anayasaya girdiği yıl değildir?",
+    "options": [
+      "1937",
+      "Cumhuriyetçilik anayasaya 1924'te girmişti",
+      "Halkçılık 1924'te kabul edildi",
+      "Devletçilik 1937'de eklendi",
+      "Tüm altı ok 1923'te birden eklendi"
+    ],
+    "answer": 4,
+    "solution": "Atatürk'ün altı ilkesi farklı tarihlerde anayasaya girdi: cumhuriyetçilik, halkçılık 1924'te; milliyetçilik, devletçilik, laiklik, inkılapçılık 1937'de altı ok olarak anayasaya eklendi. Hepsinin birden 1923'te girmesi yanlıştır.",
+    "topic": "Altı Ok"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Atatürk'ün gençliğe hitabesi (Gençliğe Hitabe) hangi eserin sonunda yer alır?",
+    "options": [
+      "Söylev (Nutuk)",
+      "Geometri",
+      "Vatandaş için Medeni Bilgiler",
+      "Tarih I",
+      "Tarih II"
+    ],
+    "answer": 0,
+    "solution": "Atatürk'ün Gençliğe Hitabesi 1927'de okuduğu Nutuk (Söylev)'un sonunda yer alır. Türk gençliğine 'Birinci vazifen, Türk istiklalini, Türk Cumhuriyetini, ilelebed muhafaza ve müdafaa etmektir' diye hitap eder. Geometri Atatürk'ün matematik kitabıdır.",
+    "topic": "Gençliğe Hitabe"
+  },
+  {
+    "game": "sosyal",
+    "category": "tarih",
+    "difficulty": 2,
+    "question": "Mudanya Mütarekesi (11 Ekim 1922) hangi sonuca yol açmıştır?",
+    "options": [
+      "Kurtuluş Savaşı'nın silahlı askeri evresinin sona ermesi ve Doğu Trakya'nın savaşmadan geri alınması",
+      "Lozan Antlaşması'nın imzalanması",
+      "Cumhuriyetin ilanı",
+      "Saltanatın kaldırılması",
+      "Halifeliğin kaldırılması"
+    ],
+    "answer": 0,
+    "solution": "Mudanya Mütarekesi (11 Ekim 1922) Türkiye, İngiltere, Fransa ve İtalya arasında imzalandı. Kurtuluş Savaşı'nın askeri evresi resmen sona erdi, Yunanistan da uymak zorunda kaldı. Doğu Trakya 15 gün içinde savaşmadan TBMM'ye teslim edildi.",
+    "topic": "Mudanya Mütarekesi"
+  }
+]
