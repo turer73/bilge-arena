@@ -1,0 +1,242 @@
+[
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Düzenli uyumak sağlık için çok önemlidir. Yetişkinler günde ortalama 7-8 saat, çocuklar 9-10 saat uykuya ihtiyaç duyar. Yeterli uyku, hafızayı güçlendirir, bağışıklık sistemini destekler ve gün içinde dikkati artırır.\n\nBu paragraf hangi konuyu anlatmaktadır?",
+    "options": [
+      "Spor yapmanın faydaları",
+      "Düzenli uyumanın önemi ve faydaları",
+      "Sağlıklı beslenme",
+      "Kitap okuma alışkanlığı",
+      "Su içme alışkanlığı"
+    ],
+    "answer": 1,
+    "solution": "Paragrafın tüm cümleleri uyku konusu etrafında döner: uyku süresi, uykunun faydaları (hafıza, bağışıklık, dikkat). Konu açıkça düzenli uyumanın önemidir.",
+    "topic": "Konu"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Dostluk, insan hayatının vazgeçilmez bir parçasıdır. İyi bir dost zor zamanlarda yanımızda olur, sevincimizi paylaşır. Dostluğun temelinde güven, saygı ve karşılıklı anlayış vardır.\n\nBu paragrafa göre dostluğun temelinde aşağıdakilerden hangisi yoktur?",
+    "options": [
+      "Güven",
+      "Saygı",
+      "Karşılıklı anlayış",
+      "Yarış",
+      "İyi bir dostluk için gereken duygular"
+    ],
+    "answer": 3,
+    "solution": "Paragrafta 'Dostluğun temelinde güven, saygı ve karşılıklı anlayış vardır' der. Yarış dostluğun değil rekabetin temelidir. Diğer şıklar paragrafta yer alır.",
+    "topic": "Bulunmayan"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Çevremizdeki ağaçlar bizim için çok değerlidir. Hava temizliği sağlarlar, oksijen verirler, kuşlara ve diğer canlılara yuva olurlar. Ağaç dikmek hem çevre hem de gelecek nesiller için bir armağandır.\n\nBu paragrafın ana fikri aşağıdakilerden hangisidir?",
+    "options": [
+      "Kuşlar ağaçlarda yaşar",
+      "Ağaçlar oksijen verir",
+      "Ağaçlar çevre ve gelecek için değerli olduğundan korunmalı ve dikilmelidir",
+      "Yağmur ormanları çoğaltılmalıdır",
+      "Hava kirliliği büyük sorundur"
+    ],
+    "answer": 2,
+    "solution": "Paragraf ağaçların değerini sayar (hava, oksijen, yuva) ve sonunda ağaç dikmenin armağan olduğunu söyler. Ana fikir ağaçların korunması ve dikilmesidir; C bunu özetler.",
+    "topic": "Ana Fikir"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "El yıkamak hijyen için en basit ama en etkili yöntemlerden biridir. Yemekten önce, tuvaletten sonra ve dışarıdan eve geldiğimizde ellerimizi yıkamalıyız. Bu basit alışkanlık birçok hastalığı önler.\n\nBu paragrafa göre eller hangi durumlarda yıkanmalıdır?",
+    "options": [
+      "Sadece yemekten önce",
+      "Sadece tuvaletten sonra",
+      "Yemekten önce, tuvaletten sonra ve dışarıdan eve gelince",
+      "Sadece akşamları",
+      "Yalnız uyumadan önce"
+    ],
+    "answer": 2,
+    "solution": "Paragraf üç durum sayar: yemekten önce, tuvaletten sonra ve dışarıdan eve geldiğimizde. C üçünü de içerir.",
+    "topic": "Bilgi Tarama"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Türkiye'nin başkenti Ankara, İç Anadolu Bölgesi'nde yer alır. Cumhuriyetin ilanından sonra başkent olmuştur. Tarihi ve kültürel zenginlikleriyle önemli bir merkezdir.\n\nBu paragraftan ulaşılabilecek yargı aşağıdakilerden hangisidir?",
+    "options": [
+      "Ankara'nın denize kıyısı vardır",
+      "Ankara Marmara Bölgesi'ndedir",
+      "Ankara Cumhuriyetin başkenti olarak İç Anadolu'da yer alan tarihi bir merkezdir",
+      "Ankara turizm şehridir",
+      "Ankara'da hiç tarih yoktur"
+    ],
+    "answer": 2,
+    "solution": "Paragraf Ankara'nın başkent (Cumhuriyet sonrası), İç Anadolu'da olduğunu ve tarihi-kültürel zenginliğini söyler. C üç bilgiyi birleştirir.",
+    "topic": "Çıkarım"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Çocukluk döneminde oyun çok önemlidir. Oyun sayesinde çocuklar yeni şeyler öğrenir, hayal güçlerini geliştirir ve arkadaş edinir. Aynı zamanda fiziksel olarak da hareket ettikleri için sağlıklı kalırlar.\n\nBu paragrafta oyunun çocuklara faydası olarak aşağıdakilerden hangisi söylenmemiştir?",
+    "options": [
+      "Yeni şeyler öğrenme",
+      "Hayal gücünün gelişmesi",
+      "Arkadaş edinme",
+      "Fiziksel sağlık",
+      "Para kazanma"
+    ],
+    "answer": 4,
+    "solution": "Paragrafta öğrenme, hayal gücü, arkadaşlık ve fiziksel sağlık fayda olarak sayılır. Para kazanma yer almaz.",
+    "topic": "Bulunmayan"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Atatürk'ün en önemli sözlerinden biri 'Yurtta sulh, cihanda sulh' sözüdür. Bu söz onun barışçıl dış politikasını özetler. Atatürk Türkiye'nin diğer ülkelerle barış içinde yaşamasını istemiştir.\n\nBu paragrafa göre Atatürk'ün dış politikasının ana ilkesi nedir?",
+    "options": [
+      "Savaşçılık",
+      "Yalıtılmışlık",
+      "Barışçıl ilişkiler",
+      "Sömürgecilik",
+      "İlişkileri kesme"
+    ],
+    "answer": 2,
+    "solution": "Paragraf 'Yurtta sulh, cihanda sulh' sözünün onun 'barışçıl dış politikasını özetlediğini' söyler. C bu ilkeyi yansıtır.",
+    "topic": "Ana Düşünce"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Ay, Dünya'nın tek doğal uydusudur. Geceleri parlak görünmesinin nedeni Güneş'in ışığını yansıtmasıdır. Ay'ın hareketleri gel-git olaylarına neden olur.\n\nAy'ın geceleri parlak görünmesinin nedeni nedir?",
+    "options": [
+      "Kendi ışığı vardır",
+      "Yıldızdır",
+      "Güneş'in ışığını yansıtır",
+      "Yandığı için",
+      "İçinde lamba olduğu için"
+    ],
+    "answer": 2,
+    "solution": "Paragrafta açıkça belirtilir: 'Geceleri parlak görünmesinin nedeni Güneş'in ışığını yansıtmasıdır.'",
+    "topic": "Bilgi Tarama"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Türkçemiz çok zengin bir dildir. Atasözlerimiz, deyimlerimiz ve folklorik ifadelerimiz bu zenginliğin örneklerindendir. Dilimizi doğru ve güzel kullanmak kültürümüze sahip çıkmak demektir.\n\nBu paragrafın yazarı aşağıdakilerden hangisini önermektedir?",
+    "options": [
+      "Yabancı dil öğrenmemizi",
+      "Türkçeyi doğru ve güzel kullanmamızı",
+      "Dilimizi değiştirmemizi",
+      "Atasözlerini ezberlememizi",
+      "Folklor araştırması yapmamızı"
+    ],
+    "answer": 1,
+    "solution": "Paragrafın son cümlesi açıkça önerir: 'Dilimizi doğru ve güzel kullanmak kültürümüze sahip çıkmak demektir.' Yazarın önerisi B'dir.",
+    "topic": "Yazarın Önerisi"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Doğal afetler insan hayatını derinden etkiler. Deprem, sel, yangın gibi afetlerden korunmak için önceden hazırlık yapmak çok önemlidir. Acil durum çantası bulundurmak ve afet planı yapmak hayat kurtarabilir.\n\nBu paragrafa göre doğal afetlere karşı ne yapmalıyız?",
+    "options": [
+      "Hiçbir şey yapamayız",
+      "Önceden hazırlık yapmalıyız",
+      "Sadece dua etmeliyiz",
+      "Şehirleri terk etmeliyiz",
+      "Sadece sigorta yaptırmalıyız"
+    ],
+    "answer": 1,
+    "solution": "Paragraf 'önceden hazırlık yapmak çok önemlidir' der ve somut öneriler verir (acil durum çantası, afet planı). B bu önerileri kapsar.",
+    "topic": "Önerilen Davranış"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Engelli bireyler de toplumun bir parçasıdır. Onlara karşı saygılı olmalı, ihtiyaç duyduklarında yardım etmeliyiz. Engelli rampaları, sesli uyarılar gibi düzenlemeler yaşamlarını kolaylaştırır.\n\nBu paragraf hangi konu hakkındadır?",
+    "options": [
+      "Trafik kuralları",
+      "Engelli bireylere saygı, yardım ve uygun düzenlemeler",
+      "Yaşlılara hizmet",
+      "Çocuk hakları",
+      "Hayvan koruma"
+    ],
+    "answer": 1,
+    "solution": "Paragraf engelli bireylere karşı saygıyı, yardımı ve uygun fiziksel düzenlemeleri (rampalar, sesli uyarılar) anlatır. B bu üç konuyu kapsar.",
+    "topic": "Konu"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Bazı insanlar köpekleri, bazıları kedileri tercih eder. Köpekler sadık ve hareketli, kediler bağımsız ve sessizdir. Her hayvanın kendine özgü bir kişiliği olduğu için her birinin sevenleri vardır.\n\nBu paragrafa göre kediler ile köpekler arasındaki fark aşağıdakilerden hangisidir?",
+    "options": [
+      "Her ikisi de aynıdır",
+      "Köpekler sadık-hareketli, kediler bağımsız-sessizdir",
+      "Köpekler kötü, kediler iyidir",
+      "Sadece köpekler sevilir",
+      "Kediler hareketli, köpekler sessizdir"
+    ],
+    "answer": 1,
+    "solution": "Paragrafta açıkça yazar: 'Köpekler sadık ve hareketli, kediler bağımsız ve sessizdir.' B bu iki tanımı doğru yansıtır.",
+    "topic": "Karşılaştırma"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Sebze yemek vücudumuz için çok faydalıdır. Vitaminler, mineraller ve lif içerirler. Düzenli sebze tüketmek bağışıklık sistemini güçlendirir ve sindirimi düzenler.\n\nBu paragrafa göre sebzeler aşağıdakilerden hangisini içermez?",
+    "options": [
+      "Vitaminler",
+      "Mineraller",
+      "Lif",
+      "Şeker",
+      "Yararlı bileşenler"
+    ],
+    "answer": 3,
+    "solution": "Paragrafta sebzelerin içeriği vitamin, mineral ve lif olarak sayılır. Şeker (eklenmiş anlamda) sebzelerde yer almaz. Doğal şeker meyvelerde daha çoktur.",
+    "topic": "Bulunmayan"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "İnternetteki bilgilerin hepsi güvenilir değildir. Bazı siteler doğru bilgi verirken bazıları yanlış veya yanıltıcı içerikler paylaşır. Bilgi ararken birden fazla kaynak kontrol etmek önemlidir.\n\nBu paragrafın yazarı internet kullanıcılarına ne tavsiye etmektedir?",
+    "options": [
+      "İnterneti hiç kullanmamalarını",
+      "Sadece tek bir siteye güvenmelerini",
+      "Bilgi için birden fazla kaynak kontrol etmelerini",
+      "Hiçbir bilgiye inanmamalarını",
+      "İnternette sadece sosyal medya kullanmalarını"
+    ],
+    "answer": 2,
+    "solution": "Paragrafın son cümlesi açıkça tavsiye verir: 'Bilgi ararken birden fazla kaynak kontrol etmek önemlidir.' C bu tavsiyeyi yansıtır.",
+    "topic": "Tavsiye"
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "difficulty": 1,
+    "question": "Kütüphaneler bilgi hazinesidir. Çeşitli konularda kitap, dergi ve dokümana erişim sağlarlar. Sessiz çalışma ortamı sundukları için öğrenciler tarafından sıkça tercih edilir.\n\nBu paragrafta kütüphaneler hangi özellikleriyle anlatılmaktadır?",
+    "options": [
+      "Yalnızca eski yapı olarak",
+      "Bilgi kaynağı, çeşitli kitap-dergi sunan ve sessiz çalışma ortamı sağlayan yerler olarak",
+      "Sadece çocuklar için",
+      "Sadece yazlık alan",
+      "Eğlence merkezi olarak"
+    ],
+    "answer": 1,
+    "solution": "Paragraf kütüphanelerin üç özelliğini sayar: bilgi hazinesi olması, çeşitli yayına erişim, sessiz çalışma ortamı. B bu üç özelliği birleştirir.",
+    "topic": "Özellikler"
+  }
+]

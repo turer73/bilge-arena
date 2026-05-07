@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi 'kültür şoku' kavramının doğru tanımıdır?",
+    "options": [
+      "Bir bireyin kendi kültürünü reddetmesi",
+      "Tanıdık kültürel ortamdan farklı bir kültüre geçen bireyin yaşadığı uyumsuzluk ve gerilim duygusu",
+      "Yeni teknolojilerin getirdiği değişim",
+      "Eski geleneklerin kaybolması",
+      "Bir kişinin yabancı dil öğrenmesi"
+    ],
+    "answer": 1,
+    "solution": "Kültür şoku, bir bireyin tanıdık kültürel ortamdan farklı kültüre geçtiğinde yaşadığı şaşkınlık, uyumsuzluk ve duygusal gerilim halidir. Kalverson'ın 4 aşamalı modeli (bal ayı-hayal kırıklığı-uyum-kabul) sıkça referans gösterilir.",
+    "topic": "Kültür Şoku"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Modern toplumun en önemli özelliklerinden biri olan 'işbölümü' kavramı ilk olarak hangi sosyolog tarafından sistematik olarak incelenmiştir?",
+    "options": [
+      "Karl Marx",
+      "Émile Durkheim",
+      "Max Weber",
+      "Talcott Parsons",
+      "George Mead"
+    ],
+    "answer": 1,
+    "solution": "Émile Durkheim 'Toplumsal İşbölümü' (1893) eserinde işbölümünün geleneksel ve modern toplumlarda nasıl farklı dayanışma türleri yarattığını incelemiştir. Mekanik dayanışma (benzerlik) ile organik dayanışma (işbölümüne dayalı bağımlılık) ayrımı buradan gelir.",
+    "topic": "İşbölümü"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Toplumsal bir grupta üyelerin birbirleriyle geçerli ilişkiler kurabilmesi için aşağıdakilerden hangisi gereklidir?",
+    "options": [
+      "Aynı yaşta olmaları",
+      "Ortak amaç, kimlik duygusu ve düzenli etkileşim",
+      "Aynı şehirde yaşamaları",
+      "Aynı ekonomik düzeyde olmaları",
+      "Aynı dini paylaşmaları"
+    ],
+    "answer": 1,
+    "solution": "Sosyolojik anlamda bir grup için ortak amaç, kimlik duygusu (bizlik bilinci) ve düzenli etkileşim gereklidir. Aynı yer, yaş, gelir veya din rastlantısal bir araya gelmeyi grup yapmaz; etkileşim ve aidiyet temeldir.",
+    "topic": "Grup Oluşumu"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi sosyolojide 'rol' kavramının tanımıdır?",
+    "options": [
+      "Bireyin gönüllü olarak seçtiği davranışlar",
+      "Bir statünün gerektirdiği davranış kalıpları ve toplumsal beklentiler",
+      "Bireyin doğuştan gelen özellikleri",
+      "Sadece tiyatroda oynanan karakterler",
+      "Resmi kurumların kuralları"
+    ],
+    "answer": 1,
+    "solution": "Sosyolojide rol, bir statünün (öğretmen, anne, doktor) gerektirdiği davranış kalıpları ve toplumsal beklentilerdir. Statü 'olduğunuz kişi', rol 'yaptığınız şey' olarak özetlenebilir. Rol çatışması ve rol gerilimi rol kavramının türevleridir.",
+    "topic": "Rol Kavramı"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Marx'a göre toplumsal değişimin temel motoru aşağıdakilerden hangisidir?",
+    "options": [
+      "Dini reformlar",
+      "Sınıflar arasındaki çatışma ve üretim ilişkilerinin değişimi",
+      "Bireysel kararlar",
+      "Coğrafi keşifler",
+      "Kültürel etkileşim"
+    ],
+    "answer": 1,
+    "solution": "Karl Marx'a göre tarihin motoru sınıf mücadelesidir. Üretim güçlerinin gelişimi üretim ilişkileriyle çelişince yeni bir toplumsal düzen ortaya çıkar (köleci-feodal-kapitalist-sosyalist). 'Tarihte var olan tüm toplumların tarihi sınıf mücadelelerinin tarihidir' (Manifesto).",
+    "topic": "Marx Toplumsal Değişim"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi 'kentleşme'nin sonuçlarından biri olarak değerlendirilemez?",
+    "options": [
+      "Hizmet sektörünün büyümesi",
+      "Aile yapısının küçülmesi",
+      "Tarımsal istihdamın artması",
+      "Modern eğitimin yaygınlaşması",
+      "Geleneksel bağların zayıflaması"
+    ],
+    "answer": 2,
+    "solution": "Kentleşme tarımsal istihdamı azaltır, çünkü kentler sanayi ve hizmet ekonomisine dayanır. Aile küçülmesi, modern eğitim, geleneksel bağların zayıflaması, hizmet sektörü büyümesi kentleşmenin tipik sonuçlarındandır.",
+    "topic": "Kentleşme Sonuçları"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Weber'in 'Protestan Etiği ve Kapitalizmin Ruhu' eserinde geliştirdiği temel tez nedir?",
+    "options": [
+      "Kapitalizm tamamen ekonomik bir olgudur",
+      "Protestan inancındaki çalışma etiği ve kazancın yeniden yatırıma dönüştürülmesi düşüncesi modern kapitalizmin gelişimine zemin hazırlamıştır",
+      "Din ekonomik yapıyı belirlemez",
+      "Marx tamamen haksızdır",
+      "Tüm dinler aynıdır"
+    ],
+    "answer": 1,
+    "solution": "Weber'in tezi: Calvinist Protestanlığın 'kader' (predestinasyon) ve 'meslek çağrısı' (Beruf) anlayışları inananları sıkı çalışmaya, tutumluluğa ve servet biriktirip yeniden yatırıma sevk etti; bu zihniyet modern kapitalizmin gelişimini hızlandırdı. Tek nedensellik değil, anlamlı bağ kurar.",
+    "topic": "Weber Protestan Etiği"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Sosyolojide 'aile' kurumunun temel işlevleri arasında aşağıdakilerden hangisi yer almaz?",
+    "options": [
+      "Üreme ve nesil sürekliliği",
+      "Çocukların birincil sosyalizasyonu",
+      "Duygusal destek sağlama",
+      "Vergi tahsil etme",
+      "Ekonomik dayanışma"
+    ],
+    "answer": 3,
+    "solution": "Vergi tahsil etme devletin işlevidir, ailenin değil. Aile kurumunun klasik işlevleri: üreme, çocuk sosyalizasyonu, duygusal destek, ekonomik dayanışma, statü kazandırma ve cinsel düzenlemedir. Modern toplumda bu işlevlerin bir kısmı diğer kurumlara devredilmiştir.",
+    "topic": "Aile İşlevleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi sosyolojide 'iktidar' (power) kavramını en doğru tanımlar?",
+    "options": [
+      "Bir kişinin sahip olduğu para",
+      "Direnişe rağmen kendi iradesini gerçekleştirebilme yetisi",
+      "Bireyin fiziksel gücü",
+      "Bir ülkenin nüfusu",
+      "Bireyin yaşı"
+    ],
+    "answer": 1,
+    "solution": "Max Weber'in klasik tanımına göre iktidar, 'bir aktörün direnişe rağmen kendi iradesini gerçekleştirebilme şansı'dır. Bu tanım iktidarı bir ilişki olarak konumlar; ekonomik, siyasal, kültürel veya kişisel formlarda görülebilir.",
+    "topic": "İktidar"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Sosyolojide 'cemaat' (Gemeinschaft) ile 'cemiyet' (Gesellschaft) ayrımını yapan düşünür kimdir?",
+    "options": [
+      "Émile Durkheim",
+      "Karl Marx",
+      "Ferdinand Tönnies",
+      "Max Weber",
+      "Auguste Comte"
+    ],
+    "answer": 2,
+    "solution": "Ferdinand Tönnies (1855-1936) 1887'de yayımladığı 'Cemaat ve Cemiyet' eserinde bu ünlü ayrımı yaptı. Cemaat geleneksel-duygusal-organik bağlarla, cemiyet sözleşme-çıkar-hesap ilişkileriyle örgütlenir. Geleneksel-modern toplum ayrımının temel kavramlarından biridir.",
+    "topic": "Cemaat-Cemiyet Ayrımı"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi 'sosyal hareketlilik'in (mobility) bir biçimi değildir?",
+    "options": [
+      "Dikey hareketlilik (yukarı-aşağı sınıf değişimi)",
+      "Yatay hareketlilik (aynı sınıfta meslek değişimi)",
+      "Kuşaklar arası hareketlilik (baba-oğul arası sınıf farkı)",
+      "Coğrafi hareketlilik (mekan değişimi)",
+      "Zihinsel hareketlilik"
+    ],
+    "answer": 4,
+    "solution": "'Zihinsel hareketlilik' sosyolojide bir kavram değildir. Sosyal hareketlilik dikey, yatay, kuşaklararası, kuşakiçi ve coğrafi (mekansal) olarak sınıflandırılır. Açık sınıf sistemleri yüksek dikey hareketlilik sunarken, kapalı sistemlerde (kast) bu sınırlıdır.",
+    "topic": "Sosyal Hareketlilik Türleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Modern toplumdan farklı olarak geleneksel toplumun temel özelliği aşağıdakilerden hangisidir?",
+    "options": [
+      "Hızlı değişim",
+      "Bireyselcilik",
+      "Sıkı geleneksel-dini bağlar ve tarım ekonomisi",
+      "Sanayileşmiş üretim",
+      "Demokratik yönetim"
+    ],
+    "answer": 2,
+    "solution": "Geleneksel toplum tarım ekonomisi, sıkı geleneksel-dini bağlar, küçük ve çoğu zaman akrabalık temelli topluluklar, otoriter yapılar ve yavaş değişim ile karakterizedir. Modern toplum tüm bu özelliklerin tersi yönde gelişir.",
+    "topic": "Geleneksel-Modern Toplum"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi sosyolojinin bilim olarak kullandığı yöntemlerden biri değildir?",
+    "options": [
+      "Anket",
+      "Görüşme",
+      "Gözlem",
+      "İçerik analizi",
+      "Astrolojik yorum"
+    ],
+    "answer": 4,
+    "solution": "Astroloji bilimsel bir yöntem değildir, sosyolojide kullanılmaz. Sosyoloji nicel (anket, istatistik) ve nitel (görüşme, gözlem, içerik analizi, etnografi) yöntemleri kullanır. Bilimsel sosyoloji deneye dayanan veya hermenötik (yorumlayıcı) yaklaşımlarla işler.",
+    "topic": "Sosyoloji Yöntemleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Bir toplumda farklı kültürlerin barış içinde bir arada yaşamasını ve birbirinden etkilenmesini ifade eden kavram aşağıdakilerden hangisidir?",
+    "options": [
+      "Asimilasyon",
+      "Kültürel çoğulculuk (multikültüralizm)",
+      "Etnosentrizm",
+      "Ksenofobi",
+      "Marjinalleşme"
+    ],
+    "answer": 1,
+    "solution": "Kültürel çoğulculuk (multikültüralizm) farklı kültürel grupların asimile edilmeden, kendi özelliklerini koruyarak bir arada yaşaması anlayışını ifade eder. Asimilasyon farklılıkların erimesi, etnosentrizm kendi kültürünü merkez alma, ksenofobi yabancı korkusudur.",
+    "topic": "Multikültüralizm"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 2,
+    "question": "Sosyolojide 'sosyal sapma' (deviance) kavramı için aşağıdakilerden hangisi söylenebilir?",
+    "options": [
+      "Her zaman olumsuz bir davranıştır",
+      "Toplumun kabul ettiği norm ve değerlerden ayrılan davranışlar bütünüdür ve toplum/zamana göre tanımı değişir",
+      "Sadece suçlu davranışları kapsar",
+      "Bireysel bir patolojidir, sosyolojinin konusu değildir",
+      "Modern toplumlarda görülmez"
+    ],
+    "answer": 1,
+    "solution": "Sosyal sapma toplumun normlarından ayrılan davranışlar bütünüdür. Sapma 'kötülük' değil, görece bir kavramdır; aynı davranış bir toplumda sapma sayılırken başkasında olağan olabilir. Yenilik, sanat, sosyal değişimin bir kısmı sapma olarak başlar (Durkheim 'sapmanın işlevselliği').",
+    "topic": "Sosyal Sapma"
+  }
+]
