@@ -1,0 +1,72 @@
+[
+  {
+    "id": "test-correct-1",
+    "content": {
+      "game": "sosyal",
+      "category": "tarih",
+      "difficulty": 2,
+      "question": "Türkiye Büyük Millet Meclisi hangi tarihte açılmıştır?",
+      "options": ["19 Mayıs 1919", "23 Nisan 1920", "29 Ekim 1923", "30 Ağustos 1922", "1 Kasım 1922"],
+      "answer": 1,
+      "solution": "TBMM, Mustafa Kemal Atatürk önderliğinde 23 Nisan 1920'de Ankara'da açılmıştır. 19 Mayıs 1919 Samsun'a çıkış, 29 Ekim 1923 Cumhuriyet'in ilanı, 30 Ağustos 1922 Büyük Taarruz, 1 Kasım 1922 saltanatın kaldırılması tarihleridir.",
+      "topic": "Kurtuluş Savaşı"
+    },
+    "_expected": { "severity": "ok", "agrees_with_marked": true, "solution_supports_marked": true }
+  },
+  {
+    "id": "test-correct-2",
+    "content": {
+      "game": "matematik",
+      "category": "denklemler",
+      "difficulty": 1,
+      "question": "2x + 5 = 13 denkleminde x kaçtır?",
+      "options": ["3", "4", "5", "6", "9"],
+      "answer": 1,
+      "solution": "2x + 5 = 13 → 2x = 13 - 5 → 2x = 8 → x = 4. Cevap B şıkkıdır.",
+      "topic": "Birinci Dereceden Denklemler"
+    },
+    "_expected": { "severity": "ok", "agrees_with_marked": true, "solution_supports_marked": true }
+  },
+  {
+    "id": "test-correct-3",
+    "content": {
+      "game": "sosyal",
+      "category": "cografya",
+      "difficulty": 1,
+      "question": "Türkiye'nin en kalabalık şehri hangisidir?",
+      "options": ["Ankara", "İzmir", "İstanbul", "Bursa", "Antalya"],
+      "answer": 2,
+      "solution": "İstanbul, yaklaşık 16 milyon nüfusu ile Türkiye'nin en kalabalık şehridir. Ankara başkenttir ancak nüfus olarak ikinci sıradadır.",
+      "topic": "Türkiye Coğrafyası"
+    },
+    "_expected": { "severity": "ok", "agrees_with_marked": true, "solution_supports_marked": true }
+  },
+  {
+    "id": "test-correct-4",
+    "content": {
+      "game": "fen",
+      "category": "fizik",
+      "difficulty": 2,
+      "question": "Suyun normal koşullarda kaynama sıcaklığı kaç °C'dir?",
+      "options": ["0", "50", "75", "100", "120"],
+      "answer": 3,
+      "solution": "Normal atmosfer basıncında (1 atm) saf suyun kaynama noktası 100°C'dir. 0°C donma noktasıdır.",
+      "topic": "Hal Değişimleri"
+    },
+    "_expected": { "severity": "ok", "agrees_with_marked": true, "solution_supports_marked": true }
+  },
+  {
+    "id": "test-correct-5",
+    "content": {
+      "game": "sosyal",
+      "category": "felsefe",
+      "difficulty": 2,
+      "question": "\"Bilgi nedir, nasıl elde edilir?\" sorularıyla ilgilenen felsefe dalı aşağıdakilerden hangisidir?",
+      "options": ["Etik", "Estetik", "Epistemoloji", "Ontoloji", "Mantık"],
+      "answer": 2,
+      "solution": "Epistemoloji (bilgi felsefesi) bilginin kaynağı, sınırları ve doğruluğunu inceler. Etik ahlak, estetik güzel, ontoloji varlık, mantık çıkarım ile ilgilenir.",
+      "topic": "Felsefenin Alanları"
+    },
+    "_expected": { "severity": "ok", "agrees_with_marked": true, "solution_supports_marked": true }
+  }
+]

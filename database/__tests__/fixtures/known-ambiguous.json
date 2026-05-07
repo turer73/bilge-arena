@@ -1,0 +1,43 @@
+[
+  {
+    "id": "test-ambig-1",
+    "content": {
+      "game": "sosyal",
+      "category": "cografya",
+      "difficulty": 1,
+      "question": "Türkiye'nin büyük şehirlerinden biri aşağıdakilerden hangisidir?",
+      "options": ["İstanbul", "Ankara", "İzmir", "Bursa", "Adana"],
+      "answer": 0,
+      "solution": "İstanbul Türkiye'nin en büyük şehridir.",
+      "topic": "Şehirler"
+    },
+    "_expected": {
+      "severity": "major",
+      "issues_should_include": ["multi_correct", "ambiguous_wording"]
+    }
+  },
+  {
+    "id": "test-ambig-2",
+    "content": {
+      "game": "turkce",
+      "category": "anlam_bilgisi",
+      "difficulty": 2,
+      "question": "Aşağıdaki cümlelerden hangisinde mecaz anlam vardır?",
+      "options": [
+        "Bu yemeğin tadı çok güzel.",
+        "Sözleri yüreğimi yaktı.",
+        "Kalbim hızla çarpıyordu.",
+        "Bu olay beni derinden sarstı.",
+        "Masa üstünde duruyor."
+      ],
+      "answer": 1,
+      "solution": "\"Yüreğimi yaktı\" mecaz anlamlı bir kullanımdır. Yürek gerçekten yanmaz, sözlerin acı verici etkisi anlatılmıştır.",
+      "topic": "Mecaz Anlam"
+    },
+    "_expected": {
+      "severity": "major",
+      "issues_should_include": ["multi_correct"],
+      "_note": "B, C, D şıklarının üçü de mecaz içeriyor — tek doğru yok"
+    }
+  }
+]
