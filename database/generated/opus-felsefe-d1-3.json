@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Felsefe kelimesi hangi dilden gelir ve ne anlama gelir?",
+    "options": [
+      "Latince - bilgelik",
+      "Yunanca - bilgelik sevgisi (philo-sophia)",
+      "Arapça - akıl",
+      "Farsça - düşünce",
+      "İbranice - hikmet"
+    ],
+    "answer": 1,
+    "solution": "Felsefe kelimesi Yunanca 'philo' (sevmek) ve 'sophia' (bilgelik) kelimelerinin birleşiminden gelir, 'bilgelik sevgisi' anlamına gelir. Bu kavram Pisagor'a kadar götürülür.",
+    "topic": "Felsefe Kavramı"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi felsefenin temel dallarından biri değildir?",
+    "options": [
+      "Ontoloji (varlık felsefesi)",
+      "Epistemoloji (bilgi felsefesi)",
+      "Etik (ahlak felsefesi)",
+      "Estetik (sanat felsefesi)",
+      "Astronomi"
+    ],
+    "answer": 4,
+    "solution": "Astronomi gökcisimleri inceleyen bir doğa bilimidir, felsefenin dalı değildir. Ontoloji, epistemoloji, etik, estetik, mantık, siyaset felsefesi felsefenin temel dallarıdır.",
+    "topic": "Felsefe Dalları"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "'Devlet' adlı eseri hangi filozof yazmıştır?",
+    "options": [
+      "Aristoteles",
+      "Sokrates",
+      "Platon",
+      "Pythagoras",
+      "Heraklietos"
+    ],
+    "answer": 2,
+    "solution": "'Devlet' (Politeia) Platon'un en ünlü eseridir. Platon bu eserinde ideal devlet, adalet, filozof-kral, mağara alegorisi gibi temel kavramları işlemiştir. Sokrates Platon'un hocasıdır ama eser yazmamıştır.",
+    "topic": "Platon"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "İlk filozof olarak kabul edilen kişi kimdir?",
+    "options": [
+      "Sokrates",
+      "Platon",
+      "Thales",
+      "Aristoteles",
+      "Pythagoras"
+    ],
+    "answer": 2,
+    "solution": "Thales (MÖ 624-546) Milet okulunun kurucusu ve genellikle ilk filozof olarak kabul edilen düşünürdür. Mitolojik açıklamalar yerine doğal nedenlere başvurarak felsefenin başlangıcını işaretlemiştir.",
+    "topic": "İlk Filozof"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "'Cogito, ergo sum' (Düşünüyorum, öyleyse varım) sözü hangi filozofa aittir?",
+    "options": [
+      "Sokrates",
+      "Descartes",
+      "Kant",
+      "Hegel",
+      "Sartre"
+    ],
+    "answer": 1,
+    "solution": "Bu ünlü söz René Descartes'a (1596-1650) aittir. 'Metot Üzerine Konuşma' eserinde geliştirdiği metodik şüphenin nihai sonucudur ve modern felsefenin başlangıcı kabul edilir.",
+    "topic": "Cogito"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi etik felsefesinin sorularından biridir?",
+    "options": [
+      "Var olan nedir?",
+      "Bilgi nasıl elde edilir?",
+      "İyi ve kötü nedir?",
+      "Güzel nedir?",
+      "Mantık nasıl işler?"
+    ],
+    "answer": 2,
+    "solution": "Etik (ahlak felsefesi) iyi-kötü, doğru-yanlış, ahlaki ölçütler ve değerler hakkında soru sorar. Var olan ontolojinin, bilgi epistemolojinin, güzel estetiğin, mantık ise mantığın konularıdır.",
+    "topic": "Etik"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Sokrates'in öğretim yöntemine ne ad verilir?",
+    "options": [
+      "Diyalektik soru-cevap (maieutik)",
+      "Tümdengelim",
+      "Tümevarım",
+      "Empirizm",
+      "Pozitivizm"
+    ],
+    "answer": 0,
+    "solution": "Sokrates'in yöntemi 'diyalektik' veya 'maieutik' (ebelik sanatı) olarak bilinir. Sürekli sorular sorarak muhatabını çelişkilerini fark ettirir ve hakikate doğru yöneltir. Sokrates kendi cevabını dayatmaz, sorularıyla yol gösterir.",
+    "topic": "Sokratik Yöntem"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi bir Antik Yunan filozofu değildir?",
+    "options": [
+      "Sokrates",
+      "Platon",
+      "Aristoteles",
+      "Heraklietos",
+      "Kant"
+    ],
+    "answer": 4,
+    "solution": "Immanuel Kant (1724-1804) Alman filozofudur, Antik Yunan'a ait değildir. Sokrates, Platon, Aristoteles ve Heraklietos Antik Yunan filozoflarıdır.",
+    "topic": "Antik Filozoflar"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Aristoteles'in hocası kimdir?",
+    "options": [
+      "Sokrates",
+      "Platon",
+      "Heraklietos",
+      "Pythagoras",
+      "Demokritos"
+    ],
+    "answer": 1,
+    "solution": "Aristoteles (MÖ 384-322) Platon'un Akademia'sında 20 yıl öğrenim görmüş ve Platon'un en parlak öğrencisi olmuştur. Sokrates ise Platon'un hocasıdır. Bu üçlü 'Sokrates-Platon-Aristoteles' Batı felsefesinin temelidir.",
+    "topic": "Filozof Soyağacı"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi 'mantık' biliminin kurucusudur?",
+    "options": [
+      "Sokrates",
+      "Platon",
+      "Aristoteles",
+      "Pisagor",
+      "Diojen"
+    ],
+    "answer": 2,
+    "solution": "Aristoteles 'Organon' adlı eser bütünüyle mantığın sistematik kurucusu olarak kabul edilir. Kıyas (sillojizm) teorisi modern mantığa kadar mantık öğretiminin temelini oluşturmuştur.",
+    "topic": "Mantığın Kurucusu"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi felsefenin özelliklerinden biri değildir?",
+    "options": [
+      "Eleştirel düşünmeyi geliştirir",
+      "Kavramları sorgular",
+      "Bilgiye doğrudan deneyle ulaşır",
+      "Akıl yürütme yöntemini kullanır",
+      "Soru sorma temelinde işler"
+    ],
+    "answer": 2,
+    "solution": "Felsefe deneyi değil, akıl yürütme ve kavramsal analizi temel alır. Deney bilim alanına aittir. Felsefe eleştirel düşünme, kavramsal sorgulama, akıl yürütme ve soru sormayla işler.",
+    "topic": "Felsefenin Özellikleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "'Bilgi güçtür' sözü hangi filozofa aittir?",
+    "options": [
+      "Sokrates",
+      "Aristoteles",
+      "Francis Bacon",
+      "Hegel",
+      "Kant"
+    ],
+    "answer": 2,
+    "solution": "'Bilgi güçtür' (scientia potentia est) sözü İngiliz filozof Francis Bacon'a (1561-1626) atfedilir. Bacon modern bilimsel yöntemin öncülerinden olup deneysel bilginin önemini vurgulamıştır.",
+    "topic": "Felsefi Sözler"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Sokrates'in yargılanması ve ölümü ne şekilde olmuştur?",
+    "options": [
+      "Savaşta ölmüştür",
+      "Doğal yollarla ölmüştür",
+      "Atina mahkemesinin kararıyla baldıran zehri içerek idam edilmiştir",
+      "Hapse atılıp orada ölmüştür",
+      "Sürgüne gönderilmiştir"
+    ],
+    "answer": 2,
+    "solution": "Sokrates MÖ 399'da Atina mahkemesinde 'gençleri yoldan çıkarmak' ve 'tanrılara saygısızlık' suçlamasıyla yargılanmış, idam edilmiştir. Cezası baldıran zehri içerek ölüm idi. Platon bu davayı 'Apoloji' eserinde anlatmıştır.",
+    "topic": "Sokrates'in Ölümü"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Aşağıdakilerden hangisi bir filozof değildir?",
+    "options": [
+      "Aristoteles",
+      "Albert Einstein",
+      "Kant",
+      "Nietzsche",
+      "Sartre"
+    ],
+    "answer": 1,
+    "solution": "Albert Einstein (1879-1955) bir teorik fizikçidir, filozof değildir. Aristoteles, Kant, Nietzsche ve Sartre Batı felsefesinin önemli isimleridir.",
+    "topic": "Filozof Tanıma"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Karl Marx'ın yazdığı en ünlü eser hangisidir?",
+    "options": [
+      "Devlet",
+      "Etika",
+      "Kapital (Das Kapital)",
+      "Saf Aklın Eleştirisi",
+      "Böyle Buyurdu Zerdüşt"
+    ],
+    "answer": 2,
+    "solution": "'Kapital' (Das Kapital) Karl Marx'ın (1818-1883) kapitalizmin ekonomik analizini yaptığı en ünlü eseridir. İlk cilt 1867'de yayımlanmış, sonraki ciltler ölümünden sonra Engels tarafından düzenlenip yayımlanmıştır.",
+    "topic": "Marx Eserleri"
+  }
+]
