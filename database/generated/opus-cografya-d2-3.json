@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Türkiye'de kara iklimi ile Akdeniz iklimi arasındaki en belirgin fark aşağıdakilerden hangisidir?",
+    "options": [
+      "Yıllık sıcaklık farkı",
+      "Bitki örtüsü çeşitliliği",
+      "Kar yağışı süresi",
+      "Hakim rüzgar yönü",
+      "Yağışın mevsimlere dağılımı ve sıcaklık farkı"
+    ],
+    "answer": 4,
+    "solution": "Akdeniz iklimi yazı sıcak-kurak, kışı ılık-yağışlı geçer (yağış kışın); kara ikliminde yaz sıcak-kurak, kış soğuk-kar yağışlı, yıllık sıcaklık farkı yüksektir. Temel ayrım yağışın mevsimlere dağılımı ve sıcaklık farkıdır.",
+    "topic": "Türkiye İklimi"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Aşağıdaki bölgelerden hangisinde yıllık sıcaklık farkı en yüksektir?",
+    "options": [
+      "Karadeniz",
+      "Akdeniz",
+      "Ege",
+      "Doğu Anadolu",
+      "Marmara"
+    ],
+    "answer": 3,
+    "solution": "Doğu Anadolu Bölgesi karasal iklimin en belirgin yaşandığı bölgedir. Yükselti yüksek, denizden uzak ve kapalı havzalar nedeniyle yıllık sıcaklık farkı 30 °C'yi aşar (Erzurum, Kars, Ağrı).",
+    "topic": "Sıcaklık Farkı"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Türkiye'de tarım ürünlerinin bölgesel dağılımıyla ilgili olarak aşağıdakilerden hangisi yanlıştır?",
+    "options": [
+      "Çay yetiştiriciliği Doğu Karadeniz kıyılarında yoğunlaşır",
+      "Pamuk Çukurova ve GAP bölgesinde yetişir",
+      "Fındık Karadeniz kıyılarında üretilir",
+      "Muz Akdeniz kıyılarının doğusunda yetiştirilir",
+      "Zeytin İç Anadolu'da yoğun olarak yetiştirilir"
+    ],
+    "answer": 4,
+    "solution": "Zeytin Akdeniz iklimi bitkisidir; Ege, Akdeniz ve Marmara kıyı kesimlerinde yetişir. İç Anadolu karasal iklim nedeniyle zeytin için uygun değildir. Diğer şıklar doğrudur.",
+    "topic": "Türkiye Tarım Ürünleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Türkiye'nin matematik konumunun sonuçlarından biri aşağıdakilerden hangisidir?",
+    "options": [
+      "Üç tarafı denizlerle çevrili olması",
+      "Asya ile Avrupa arasında köprü olması",
+      "Orta kuşakta yer alması nedeniyle dört mevsimin belirgin yaşanması",
+      "Petrol kaynaklarına yakın bulunması",
+      "Dağlık ve engebeli bir ülke olması"
+    ],
+    "answer": 2,
+    "solution": "Matematik konum (enlem-boylam) sonuçları: dört mevsim belirgin, güneş ışınlarının geliş açısı, gece-gündüz farkı. Diğer şıklar özel konum sonuçlarıdır (denizler, kıtalararası köprü, petrol).",
+    "topic": "Matematik Konum"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Aşağıdaki rüzgarlardan hangisi Türkiye'de yazın etkili olan ve sıcaklığı düşüren rüzgardır?",
+    "options": [
+      "Lodos",
+      "Poyraz",
+      "Karayel",
+      "Yıldız",
+      "Etezyen (Meltem)"
+    ],
+    "answer": 4,
+    "solution": "Etezyen rüzgarları (yerel adı Meltem) yazın Ege ve Akdeniz kıyılarında kuzeyden esen, sıcaklığı düşüren rüzgarlardır. Kıyıların yazın daha serin ve elverişli olmasını sağlar.",
+    "topic": "Rüzgarlar"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Türkiye'de nüfus yoğunluğunun en az olduğu bölge hangisidir?",
+    "options": [
+      "Marmara",
+      "Ege",
+      "Akdeniz",
+      "Doğu Anadolu",
+      "Karadeniz"
+    ],
+    "answer": 3,
+    "solution": "Doğu Anadolu Bölgesi yüzölçümü en geniş, nüfusu görece az olduğundan nüfus yoğunluğu en düşük bölgedir (km² başına yaklaşık 50 kişi). Marmara en kalabalık bölgedir.",
+    "topic": "Nüfus Yoğunluğu"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Türkiye'nin doğal göllerinden Tuz Gölü'nün suyunun çok tuzlu olmasının temel nedeni aşağıdakilerden hangisidir?",
+    "options": [
+      "Sıcak iklim ve buharlaşma fazlalığı",
+      "Tektonik kökenli olması",
+      "Volkanik kökenli olması",
+      "Maden suyu açığa çıkması",
+      "Akarsulardan beslenmemesi"
+    ],
+    "answer": 0,
+    "solution": "Tuz Gölü, kapalı havzada yer alır; sıcak ve kurak iklim nedeniyle yoğun buharlaşma yaşanır. Buharlaşma sonucu tuz konsantrasyonu artar, dünyada tuzluluk oranı en yüksek göllerden biridir.",
+    "topic": "Türkiye Gölleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "GAP (Güneydoğu Anadolu Projesi) öncelikli olarak hangi nehirler üzerinde yapılan barajlarla bölgenin kalkınmasını hedeflemektedir?",
+    "options": [
+      "Sakarya ve Kızılırmak",
+      "Yeşilırmak ve Çoruh",
+      "Fırat ve Dicle",
+      "Aras ve Kura",
+      "Asi ve Seyhan"
+    ],
+    "answer": 2,
+    "solution": "GAP, Fırat ve Dicle nehirleri üzerinde 22 baraj ve 19 hidroelektrik santralı kapsayan, sulamaya dayalı kalkınma projesidir. Atatürk Barajı projenin en büyük yapısıdır.",
+    "topic": "GAP Projesi"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Aşağıdaki dağlardan hangisi volkanik kökenlidir?",
+    "options": [
+      "Toros Dağları",
+      "Kaçkar Dağları",
+      "Erciyes Dağı",
+      "Aladağlar",
+      "Köroğlu Dağları"
+    ],
+    "answer": 2,
+    "solution": "Erciyes Dağı volkanik kökenli, koni biçimli bir yanardağdır. Türkiye'nin sönmüş yanardağları arasında Erciyes, Hasan, Ağrı, Süphan, Nemrut, Tendürek bulunur.",
+    "topic": "Volkanik Dağlar"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Türkiye'nin enerji kaynaklarından hangisi yenilenebilir bir kaynak değildir?",
+    "options": [
+      "Hidroelektrik",
+      "Rüzgar",
+      "Güneş",
+      "Jeotermal",
+      "Linyit"
+    ],
+    "answer": 4,
+    "solution": "Linyit fosil yakıttır, yenilenebilir değildir. Hidroelektrik (akarsu), rüzgar, güneş ve jeotermal yenilenebilir enerji kaynaklarıdır. Türkiye linyit bakımından zengindir (Soma, Tunçbilek, Afşin-Elbistan).",
+    "topic": "Enerji Kaynakları"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi Türkiye'de iç göçün temel nedenlerinden biri değildir?",
+    "options": [
+      "İş olanaklarının kentlerde yoğunlaşması",
+      "Eğitim olanaklarına ulaşmak",
+      "Tarım alanlarının makineleşmesi",
+      "Kıyı bölgelerinin yağış almaması",
+      "Sağlık hizmetlerine kolay erişim ihtiyacı"
+    ],
+    "answer": 3,
+    "solution": "Türkiye'de iç göçün temel nedenleri ekonomik (iş), eğitim, sağlık, tarımda makineleşme nedeniyle iş gücü ihtiyacının azalmasıdır. Kıyı bölgeleri zaten Türkiye'de en çok yağış alan bölgelerdir.",
+    "topic": "İç Göç"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Damlama sulama yönteminin geleneksel salma sulamaya göre en önemli üstünlüğü aşağıdakilerden hangisidir?",
+    "options": [
+      "Daha ucuz olması",
+      "Su kullanımında verimlilik sağlaması ve toprak tuzlanmasını önlemesi",
+      "Daha hızlı kurulması",
+      "Tüm bitkilere uygulanabilmesi",
+      "İşgücü gerektirmemesi"
+    ],
+    "answer": 1,
+    "solution": "Damlama sulama bitkinin kök bölgesine damla damla su verir; salma sulamaya göre %30-50 su tasarrufu sağlar, buharlaşma ve toprak tuzlanmasını azaltır. Kuraklık ve su kıtlığında kritik öneme sahiptir.",
+    "topic": "Modern Tarım"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Türkiye'nin kıyı uzunluğu yaklaşık ne kadardır?",
+    "options": [
+      "5500 km",
+      "6500 km",
+      "7200 km",
+      "8000 km",
+      "8333 km"
+    ],
+    "answer": 4,
+    "solution": "Türkiye'nin toplam kıyı uzunluğu yaklaşık 8333 km'dir (adalar dahil). En uzun kıyı Akdeniz ve Ege'de bulunur. Kıyı uzunluğu girinti çıkıntı, yarımada ve adaların etkisiyle belirlenir.",
+    "topic": "Türkiye Kıyıları"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Aşağıdakilerden hangisi heyelan oluşumunu kolaylaştıran etkenler arasında yer almaz?",
+    "options": [
+      "Eğimli arazi",
+      "Aşırı yağış",
+      "Kil oranı yüksek geçirimsiz tabakalar",
+      "Bitki örtüsünün tahrip edilmesi",
+      "Düz ve geniş tarım alanları"
+    ],
+    "answer": 4,
+    "solution": "Düz araziler heyelan yerine taşkın-erozyon riski taşır. Heyelan eğimli arazilerde, aşırı yağışla doygunlaşan toprak veya geçirimsiz tabaka üzerinde, bitki örtüsü tahrip olduğunda kolaylıkla oluşur. Karadeniz Bölgesi heyelan riskinin en yüksek olduğu bölgedir.",
+    "topic": "Doğa Olayları"
+  },
+  {
+    "game": "sosyal",
+    "category": "cografya",
+    "difficulty": 2,
+    "question": "Türkiye'de en fazla deprem riski taşıyan kuşak aşağıdakilerden hangisidir?",
+    "options": [
+      "İç Anadolu'nun ortası",
+      "Kuzey Anadolu Fay Hattı ve Doğu Anadolu Fay Hattı",
+      "Karadeniz kıyıları",
+      "Güneydoğu Anadolu",
+      "Ege kıyıları yalnız"
+    ],
+    "answer": 1,
+    "solution": "Türkiye'nin deprem aktivitesi büyük ölçüde Kuzey Anadolu Fayı (KAF) ve Doğu Anadolu Fayı (DAF) üzerinde yoğunlaşır. Bu iki ana fay hattı Türkiye'nin %92'sinin deprem kuşağında olmasının nedenidir.",
+    "topic": "Deprem Bölgeleri"
+  }
+]
