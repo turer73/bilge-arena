@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Toplumu olusturan bireyler arasindaki etkilesim ve iliskileri inceleyen bilim dali asagidakilerden hangisidir?",
+    "options": [
+      "Tarih",
+      "Felsefe",
+      "Sosyoloji",
+      "Cografya",
+      "Psikoloji"
+    ],
+    "answer": 2,
+    "solution": "Sosyoloji toplumun yapisini, bireyler arasi iliki ve etkilesimleri, sosyal kurumlari, gruplari ve degisimi inceleyen bilim dalidir. Tarih gecmisi, felsefe varlik-bilgi-deger sorularini, cografya yer-mekan iliskisini, psikoloji bireyin zihnini inceler.",
+    "topic": "Sosyolojinin tanimi"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Sosyolojinin kurucusu ve bu adi ilk kullanan kisi asagidakilerden hangisidir?",
+    "options": [
+      "Karl Marx",
+      "Auguste Comte",
+      "Max Weber",
+      "Emile Durkheim",
+      "Herbert Spencer"
+    ],
+    "answer": 1,
+    "solution": "Auguste Comte 1830'lu yillarda sosyoloji terimini ilk kez kullanmis ve bilimi kurmustur. Marx, Weber ve Durkheim sosyolojinin gelisimine onemli katkilar yapan klasik dusunurlerdir; ancak kurucu Comte'tur.",
+    "topic": "Sosyolojinin kurucusu"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Aile, okul, devlet, din ve ekonomi gibi yapilara ne ad verilir?",
+    "options": [
+      "Sosyal grup",
+      "Sosyal kurum",
+      "Sosyal sinif",
+      "Sosyal hareketlilik",
+      "Sosyal norm"
+    ],
+    "answer": 1,
+    "solution": "Sosyal kurumlar toplumun temel ihtiyaclarini karsilamak icin gelismis, kurali olan, yerlesmis sosyal yapilardir. Aile (uretim ve sosyalizasyon), okul (egitim), devlet (yonetim), din (inanc), ekonomi (uretim ve dagilim) temel sosyal kurumlardir.",
+    "topic": "Sosyal kurumlar"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Bireyin icinde dogdugu toplumun kulturel deyer, norm ve davranislarini ogrenmesi sureci nasil adlandirilir?",
+    "options": [
+      "Sosyal hareketlilik",
+      "Asimile olma",
+      "Toplumsallasma (sosyalizasyon)",
+      "Modernlesme",
+      "Globalleme"
+    ],
+    "answer": 2,
+    "solution": "Toplumsallasma (sosyalizasyon) bireyin icinde dogdugu toplumun deger, norm, dil, davranis ve rolleri ogrenip benimseme surecidir. Aile birincil, okul-akran-medya ikincil sosyalizasyon araclaridir.",
+    "topic": "Sosyalizasyon"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Bir toplumdaki bireylerin uymak zorunda oldugu yazili veya sozlu davranis kurallarina ne denir?",
+    "options": [
+      "Norm",
+      "Statu",
+      "Rol",
+      "Sınıf",
+      "Mit"
+    ],
+    "answer": 0,
+    "solution": "Norm bir toplumda bireylerin uymasi gereken yazili (yasalar) veya sozlu (gelenek-gorenek-ahlak) davranis kurallaridir. Statu bireyin sosyal konumu, rol bu konumun gerektirdigi davranis bicimidir.",
+    "topic": "Norm"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Bireyin toplumdaki konumuna ne ad verilir?",
+    "options": [
+      "Rol",
+      "Statu",
+      "Norm",
+      "Aidiyet",
+      "Cinsiyet"
+    ],
+    "answer": 1,
+    "solution": "Statu bireyin toplum yapisindaki konumudur (ogretmen, doktor, anne, ogrenci gibi). Rol bu konumun gerektirdigi davranis ve sorumluluklardir; norm ise davranis kurallaridir.",
+    "topic": "Statu"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Bir toplumda paylasilan deyerler, normlar, gelenekler, dil, sanat ve inanclarin tumune ne ad verilir?",
+    "options": [
+      "Toplum",
+      "Devlet",
+      "Kultur",
+      "Sosyal sinif",
+      "Anomi"
+    ],
+    "answer": 2,
+    "solution": "Kultur bir toplumun ortak deyerleri, normlari, gelenekleri, dili, sanati, inanclari, kurumlari ve yasam tarzini icerir. Toplum bu kulturu paylasan insan toplulugudur.",
+    "topic": "Kultur"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi birincil sosyalizasyon kurumudur?",
+    "options": [
+      "Okul",
+      "Aile",
+      "Is yeri",
+      "Medya",
+      "Akran grubu"
+    ],
+    "answer": 1,
+    "solution": "Aile bireyin dogumdan itibaren ilk sosyalizasyonunun gerceklestigi birincil kurumdur. Okul, akran gruplari, is yerleri ve medya ikincil sosyalizasyon kaynaklaridir.",
+    "topic": "Sosyalizasyon kurumlari"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Iki veya daha fazla bireyin ortak amaclarla bir araya gelerek olusturdugu insan toplulugu nasil adlandirilir?",
+    "options": [
+      "Sosyal grup",
+      "Sosyal kurum",
+      "Yasal yapilanma",
+      "Maddi kultur",
+      "Asabiyet"
+    ],
+    "answer": 0,
+    "solution": "Sosyal grup iki veya daha fazla bireyin ortak amac, deger ve norm cevresinde duzenli olarak etkilesime girdigi insan toplulugudur. Sosyal kurum ise daha kalici-yapisal duzenlemelerdir (aile, okul gibi).",
+    "topic": "Sosyal grup"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi bireysel olmayan, toplumsal nitelikli bir olgudur?",
+    "options": [
+      "Bireyin uyku duzeni",
+      "Bir kisinin yiyecek tercihi",
+      "Bir ulkenin egitim sistemi",
+      "Bireyin parmak izi",
+      "Tek kisinin nefes alip vermesi"
+    ],
+    "answer": 2,
+    "solution": "Toplumsal olgu bireyleri asar, toplumun butunune ait olur ve disardan zorlayici olarak hisseder. Bir ulkenin egitim sistemi sosyal kurumdur ve toplumsal niteliklidir. Diger secenekler bireyseldir.",
+    "topic": "Toplumsal olgu"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Bir kisinin sahip oldugu birden fazla rolu yerine getirirken yasadigi cakisma durumu nasil adlandirilir?",
+    "options": [
+      "Rol catismasi",
+      "Statu farki",
+      "Sosyal hareketlilik",
+      "Anomi",
+      "Marjinalize olma"
+    ],
+    "answer": 0,
+    "solution": "Rol catismasi bir bireyin ayni anda yerine getirdigi farkli rollerin (anne+meslek sahibi, calisan+ogrenci gibi) gereklerinin birbirleriyle catismasi durumudur. Anomi ise normsuzluk halidir.",
+    "topic": "Rol catismasi"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Bir toplumdaki bireylerin sosyal konumlarinin (statulerinin) zaman icinde degismesine ne ad verilir?",
+    "options": [
+      "Sosyal kurum",
+      "Sosyal hareketlilik",
+      "Sosyal norm",
+      "Sosyal kontrol",
+      "Sosyal yapı"
+    ],
+    "answer": 1,
+    "solution": "Sosyal hareketlilik bireylerin veya gruplarin sosyal konumlarinin (statu, sinif) zaman icinde degismesidir. Yatay (ayni katmanda meslek degisimi) ve dikey (statu yukselmesi/duşmesi) olabilir.",
+    "topic": "Sosyal hareketlilik"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Bir toplumun bireylerinin paylastigi ortak deyer ve davranislarin uzerine kurulu olan toplum birimi asagidakilerden hangisidir?",
+    "options": [
+      "Sürü",
+      "Devlet",
+      "Cemaat",
+      "Sosyal sinif",
+      "Komite"
+    ],
+    "answer": 2,
+    "solution": "Cemaat bireylerin yuz-yuze, kisisel ve duygusal iliski kurdugu, ortak deyer-davranisla bagli olduğu (akrabalik, koy, mahalle gibi) toplum birimidir. Toplum (cemiyet) ise daha buyuk-yari kisisel-cikar temellidir (klasik Tonnies ayrımı).",
+    "topic": "Cemaat ve cemiyet"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi maddi olmayan (manevi) kulturun ornegidir?",
+    "options": [
+      "Bilgisayar",
+      "Otomobil",
+      "Binalar",
+      "Inanclar ve gelenekler",
+      "Giyim esyalari"
+    ],
+    "answer": 3,
+    "solution": "Maddi olmayan (manevi) kultur insanin urettigi inanc, deyer, gelenek, dil, sanat, kural ve dusuncelerdir. Maddi kultur ise bilgisayar, bina, giyim, otomobil gibi somut nesnelerdir.",
+    "topic": "Maddi-manevi kultur"
+  },
+  {
+    "game": "sosyal",
+    "category": "sosyoloji",
+    "difficulty": 1,
+    "question": "Toplumsal kontrol araclari arasinda asagidakilerden hangisi yer almaz?",
+    "options": [
+      "Hukuk",
+      "Ahlak",
+      "Gelenek",
+      "Din",
+      "Bireyin kendi parmak izi"
+    ],
+    "answer": 4,
+    "solution": "Toplumsal kontrol araclari toplumdaki bireyleri belli kurallara uygun davranmaya yonelten yapilar olarak hukuk, ahlak, gelenek, din ve egitim ile saglanir. Parmak izi bireysel-biyolojik bir nitelik olarak toplumsal kontrol araci degildir.",
+    "topic": "Toplumsal kontrol"
+  }
+]

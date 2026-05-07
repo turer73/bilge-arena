@@ -1,0 +1,242 @@
+[
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Felsefe sozcugunun kaynagi olan Yunanca philosophia ne anlama gelir?",
+    "options": [
+      "Bilimi sevmek",
+      "Bilgelik sevgisi",
+      "Devleti yonetmek",
+      "Tanriyi tanimak",
+      "Sanatla ilgilenmek"
+    ],
+    "answer": 1,
+    "solution": "Felsefe Yunanca philosophia (philia=sevgi + sophia=bilgelik) sozcuğunun karsiligidir ve 'bilgelik sevgisi' anlamina gelir. Pythagoras'in bu kelimeyi ilk kez kullandigi belirtilir.",
+    "topic": "Felsefe nedir"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Asagidaki dusunurlerden hangisi Antik Yunan felsefesinin kurucularindan biri sayilir?",
+    "options": [
+      "Descartes",
+      "Kant",
+      "Platon",
+      "Hegel",
+      "Hume"
+    ],
+    "answer": 2,
+    "solution": "Platon (MO 427-347) Sokrates'in ogrencisi ve Antik Yunan felsefesinin kuruculirinden biridir. Idealar Kuramı, Devlet ve Şölen onun unlu eserleridir. Descartes 17. yy, Kant 18. yy, Hegel 19. yy, Hume 18. yy filozoflaridir.",
+    "topic": "Antik Yunan filozoflari"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi varlik felsefesinin (ontoloji) konusudur?",
+    "options": [
+      "Bilginin nasil elde edildigi",
+      "Iyi-kotu davranis kurallari",
+      "Var olanin temel niteligi",
+      "Sanat eserinin guzelligi",
+      "Mantiksal cikarsamalar"
+    ],
+    "answer": 2,
+    "solution": "Ontoloji (varlik felsefesi) var olanin temel niteligini, varolusu, varlik turlerini inceler. Bilgi felsefesi (epistemoloji) bilgiyi, ahlak (etik) iyi-kotu davranisi, estetik guzelligi, mantik cikarsamalari konu edinir.",
+    "topic": "Ontoloji"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Sokrates'in ogretim yonteminin temel ozelligi nedir?",
+    "options": [
+      "Doğrudan ders anlatma",
+      "Yazili eser yazma",
+      "Soru-cevap (diyalektik) ile dusunmeyi tetikleme",
+      "Deneyle gozleme dayanma",
+      "Mistik vahye basvurma"
+    ],
+    "answer": 2,
+    "solution": "Sokrates'in unlu yontemi maieutik (dogurtma sanati) olarak da bilinen soru-cevap yontemidir. Karsisindakine sorular sorarak onun bildigini sandigi seyleri sorgulamasini saglar, kendi bildigi sandigi yanlislari ortaya cikarir.",
+    "topic": "Sokrates yontemi"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi etik (ahlak felsefesi) konularindandir?",
+    "options": [
+      "Var olanin kaynagi",
+      "Iyi-kotu, dogru-yanlis davranislar",
+      "Bilginin sinirlari",
+      "Sanat eserinin estetik degeri",
+      "Mantiksal cikarsamalar"
+    ],
+    "answer": 1,
+    "solution": "Etik (ahlak felsefesi) iyi-kotu, dogru-yanlis davranislari, ahlaki yargilarin temellendirilmesini, eylem normlarini inceler. Var olanin kaynagi ontolojinin, bilgi sinirlari epistemolojinin, estetik sanat felsefesinin konusudur.",
+    "topic": "Etik"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Asagidaki disiplinlerden hangisi felsefenin alt dallari arasinda yer almaz?",
+    "options": [
+      "Ontoloji",
+      "Epistemoloji",
+      "Etik",
+      "Estetik",
+      "Astroloji"
+    ],
+    "answer": 4,
+    "solution": "Felsefenin temel alt dallari ontoloji (varlik), epistemoloji (bilgi), etik (ahlak), estetik (sanat-guzellik), mantik, siyaset felsefesi, din felsefesi, bilim felsefesi vb.dir. Astroloji bilimsel olmayan, yildizlardan kehanet ile ilgili pseudo-bilim olarak felsefenin alti degildir.",
+    "topic": "Felsefe alt dallari"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Aristoteles asagidakilerden hangisinin kurucusu sayilir?",
+    "options": [
+      "Idealizm felsefesi",
+      "Mantik bilimi",
+      "Ortacag teolojisi",
+      "Pozitivizm",
+      "Egzistansiyalizm"
+    ],
+    "answer": 1,
+    "solution": "Aristoteles (MO 384-322) klasik mantigin kurucusu sayilir. Sillojizm (kıyas), kategoriler ve onerme cesitleri uzerine yaptigi calismalar 'Organon' ile bilinen mantik eserlerinde toplanir. Idealizmin kurucusu hocasi Platon'dur.",
+    "topic": "Aristoteles"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Bilgi felsefesinde 'Bilginin kaynagi nedir?' sorusuna 'akil' yanitini veren akima ne ad verilir?",
+    "options": [
+      "Empirizm",
+      "Rasyonalizm",
+      "Pragmatizm",
+      "Septisizm",
+      "Pozitivizm"
+    ],
+    "answer": 1,
+    "solution": "Rasyonalizm (akilcilik) bilginin kaynagini akil olarak gosteren epistemolojik akimdir. Descartes, Spinoza, Leibniz onun temsilcilerindendir. Empirizm ise bilginin deney/duyumlardan geldigini savunur.",
+    "topic": "Rasyonalizm"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi Antik Yunan'da maddenin temeli olarak suyu gosteren ilk filozofdur?",
+    "options": [
+      "Pythagoras",
+      "Heraklietos",
+      "Thales",
+      "Anaksimenes",
+      "Demokritos"
+    ],
+    "answer": 2,
+    "solution": "Thales (MO 624-546) Milet okulu kurucusu olup maddenin temel ilkesini (arche) su olarak gosteren ilk filozoftur. Anaksimenes hava, Heraklietos ates, Demokritos atom, Pythagoras sayi olarak goren filozoflardir.",
+    "topic": "Antik Yunan filozoflari"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi felsefenin onemli ozellik yansitir?",
+    "options": [
+      "Soruna kesin tek bir cevap verir",
+      "Sorgulayici, elesturel ve sistematik dusunmeye dayanir",
+      "Yalniz mistik vahye dayanir",
+      "Yalniz olgulardan kesin yargilar uretir",
+      "Hicbir akil yurutmeyi kabul etmez"
+    ],
+    "answer": 1,
+    "solution": "Felsefe sorgulayici, elesturel, sistematik ve butunlestirici bir dusunme tarzidir. Kesin tek cevaplari yoktur; sorulara akıl yoluyla yaklasir, dogmatizmden kacinir, alternatif tezleri tartisir.",
+    "topic": "Felsefenin nitelikleri"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Platon'un Magara Alegorisi (Allegory of the Cave) hangi felsefi gorusu acklar?",
+    "options": [
+      "Tum bilginin deneye dayandigini",
+      "Duyusal dunyanin gercek dunya oldugunu",
+      "Asil gercekligin idealar dunyasinda oldugu, duyusal dunyanin onun golgesi oldugunu",
+      "Tanrinin kanitlanabilir oldugunu",
+      "Toplumun kapitalist olmasi gerektigini"
+    ],
+    "answer": 2,
+    "solution": "Platon'un Devlet eserindeki Magara Alegorisi'ne gore biz duyusal dunyada magaradaki golgeleri gerceklik saniriz; oysa asıl gercek idealar dunyasidir. Magaradan cikan kisi gunesi (iyi ideasini) gormek demektir.",
+    "topic": "Magara Alegorisi"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi siyaset felsefesinin onemli sorularindan biridir?",
+    "options": [
+      "Bilginin kaynagi nedir?",
+      "Iyi devlet nasil olmalidir?",
+      "Sanat nedir?",
+      "Bir cemberin alani nasil hesaplanir?",
+      "Kelimelerin yazimi"
+    ],
+    "answer": 1,
+    "solution": "Siyaset felsefesi devlet, egemenlik, adalet, ozgurluk, hukuk gibi konulari inceler; 'Iyi devlet nasil olmalidir?' temel sorulardan biridir. Bilgi-sanat-matematik-yazim baska disiplinlerin alanlari.",
+    "topic": "Siyaset felsefesi"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi Sokrates'e atfedilen unlu sozdur?",
+    "options": [
+      "Cogito, ergo sum (Dusunuyorum, oyleyse varim)",
+      "Ben hicbir sey bilmedigimi biliyorum",
+      "Bilgi guctur",
+      "Tanrı oldu",
+      "Var olmak algilanmis olmaktir"
+    ],
+    "answer": 1,
+    "solution": "Sokrates'in unlu sozu 'Bildigim tek sey hicbir sey bilmedigimdir' olarak Tureken bilinir. Bu bilmediginin bilincinde olma tutumu, felsefenin baslangici sayilir. Diger sozler: Cogito-Descartes, Bilgi guctur-Bacon, Tanrı oldu-Nietzsche, Esse est percipi-Berkeley.",
+    "topic": "Sokrates"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Bilim ile felsefe arasindaki temel fark asagidakilerden hangisidir?",
+    "options": [
+      "Bilim felsefeden once ortaya cikmistir",
+      "Bilim olgusal-deneysel yontemle gozlenebilir alani inceler, felsefe ise daha kapsamli, sorgulayici ve eleştirel bir yapidadir",
+      "Bilim hicbir akil yurutmez",
+      "Felsefe sadece dini ele alir",
+      "Bilim sadece doga olaylarini, felsefe de sadece sanati ele alir"
+    ],
+    "answer": 1,
+    "solution": "Bilim olgusal-deneysel yontemle gozlenebilir alani sistemli inceler, sinirli sorulara kesin yanit verir. Felsefe ise bilimin alanlarinin otesinde, daha kapsamli ve sorgulayici-eleştirel bir tutum tasir; varlik, bilgi, deyer gibi temel sorulari ele alir.",
+    "topic": "Bilim ve felsefe"
+  },
+  {
+    "game": "sosyal",
+    "category": "felsefe",
+    "difficulty": 1,
+    "question": "Asagidakilerden hangisi mantigin temel sorulari arasindadir?",
+    "options": [
+      "Iyi davranis nedir?",
+      "Dogru cikarsamalar nasil yapilir?",
+      "Var olan nedir?",
+      "Sanat eserinin guzelligi nereden gelir?",
+      "Tanrı var midir?"
+    ],
+    "answer": 1,
+    "solution": "Mantik dogru cikarsamalar nasil yapilir, gecerli akil yurutme bicimleri nelerdir gibi sorulari inceler. Onerme, kıyas, gecerlilik ve dogruluk mantigin temel kavramlaridir. Etik (iyi davranis), ontoloji (var olan), estetik (guzellik), din felsefesi (Tanrı) baska alanlardir.",
+    "topic": "Mantik"
+  }
+]
