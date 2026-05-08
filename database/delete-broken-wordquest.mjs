@@ -19,6 +19,8 @@ if (existsSync(envPath)) {
   }
 }
 
+const FORCE = process.argv.includes('--force')
+
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -57,7 +59,13 @@ console.log(`Bozuk (question bos veya answer eksik): ${brokenCount}`)
 console.log(`Iyi gorunen (ama yine pasif): ${okLooking}`)
 
 if (okLooking > 0) {
-  console.log(`\nUYARI: ${okLooking} soru icerikli ama pasif. Bunlar da silinecek.`)
+  if (!FORCE) {
+    console.error(`\nHATA: ${okLooking} soru icerikli ve pasif. Kalite gozden gecirilmeden silme riski.`)
+    console.error(`Sadece bozuk sorulari silmek icin once bozuklari elle ayikla.`)
+    console.error(`Tum pasif sorulari silmek istiyorsan: --force ile calistir.`)
+    process.exit(1)
+  }
+  console.log(`\nUYARI (--force): ${okLooking} icerikli-ama-pasif soru da silinecek.`)
 }
 
 // 2. Backup
