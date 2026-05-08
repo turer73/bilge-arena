@@ -69,6 +69,8 @@ for (const r of reviews) {
     } else {
       actions.manual_queue.push({ id: r.id, action: r.suggested_action, reason: r.reasoning })
     }
+  } else if (r.verdict === 'ambiguous') {
+    actions.manual_queue.push({ id: r.id, action: 'ambiguous', reason: r.reasoning })
   } else {
     actions.no_action.push({ id: r.id, verdict: r.verdict, reason: r.reasoning })
   }
