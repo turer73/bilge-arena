@@ -15,18 +15,18 @@
  * Cleanup: caller channel.unsubscribe() yapmalidir (useRoomChannel hook).
  */
 
-import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js'
+import { RealtimeClient, type RealtimeChannel } from '@supabase/supabase-js'
 import type { Member, Room, RoomEvent } from './room-state-reducer'
 
 export function setupRoomChannel(
-  supabase: SupabaseClient,
+  realtime: RealtimeClient,
   roomId: string,
   userId: string,
   dispatch: (event: RoomEvent) => void,
   /** Codex P1 PR50/51 fix: room_rounds INSERT/UPDATE -> hook refetch /state */
   onRoundChange?: () => void,
 ): RealtimeChannel {
-  const channel = supabase.channel(`room-${roomId}`, {
+  const channel = realtime.channel(`room-${roomId}`, {
     config: { presence: { key: userId } },
   })
 
