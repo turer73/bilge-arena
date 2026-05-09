@@ -182,11 +182,14 @@ if (USE_JUDGE && inserted?.length > 0) {
     if (result.status !== 0) {
       console.warn(`[JUDGE] Süreç exit ${result.status} — sonuçlar atlanıyor`)
     } else if (existsSync(tmpOut)) {
-      const judgeResults = JSON.parse(readFileSync(tmpOut, 'utf-8'))
-      const majors = judgeResults.filter(r => r.severity === 'major')
-      const minors = judgeResults.filter(r => r.severity === 'minor')
+      const judgeRaw = JSON.parse(readFileSync(tmpOut, 'utf-8'))
+      // audit-llm-judge.mjs { summary, flagged, errored } formatı döner
+      const allRows = Array.isArray(judgeRaw) ? judgeRaw : (judgeRaw.flagged || [])
+      const judgedCount = Array.isArray(judgeRaw) ? judgeRaw.length : (judgeRaw.summary?.judged ?? allRows.length)
+      const majors = allRows.filter(r => r.severity === 'major')
+      const minors = allRows.filter(r => r.severity === 'minor')
 
-      console.log(`[JUDGE] Sonuç: ${judgeResults.length} incelendi, ${majors.length} major, ${minors.length} minor`)
+      console.log(`[JUDGE] Sonuç: ${judgedCount} incelendi, ${majors.length} major, ${minors.length} minor`)
 
       if (majors.length > 0) {
         console.warn(`[JUDGE] ⚠ MAJOR (is_active=false kalacak, elle incelenmeli):`)
@@ -200,7 +203,7 @@ if (USE_JUDGE && inserted?.length > 0) {
         import_ts: new Date().toISOString(),
         source_file: absPath,
         inserted: inserted.length,
-        judge_total: judgeResults.length,
+        judge_total: judgedCount,
         major_count: majors.length,
         minor_count: minors.length,
         majors,
