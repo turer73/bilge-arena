@@ -104,21 +104,20 @@ describe('useRoomChannel', () => {
       useRoomChannel('r1', 'u1', staleInitial),
     )
 
-    // Tick 3s -> 1 fetch
+    // Mount aninda 1 initial fetch + 3s polling = toplam 2 cagri.
+    // Initial refetch (bos deps useEffect) mount sirasinda calisir; polling da
+    // isStale=true iken 3sn'de bir kez tetiklenir.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3000)
     })
     expect(fetchMock).toHaveBeenCalledWith('/api/rooms/r1/state')
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
 
-    // Tick 6s -> 2 fetch (3+3) — yine isStale (HYDRATE'i dispatch sonrasi
-    // reducer isStale=false yapiyor; bu test interval clear'i kontrol icin
-    // unmount-base senaryoyu izole tutuyor).
+    // Unmount sonrasi 10sn gec — yeni fetch yok (interval temizlendi).
     unmount()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10000)
     })
-    // Unmount sonrasi yeni fetch yok
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 })

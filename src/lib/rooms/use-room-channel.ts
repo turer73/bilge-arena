@@ -52,6 +52,13 @@ export function useRoomChannel(
     }
   }, [roomId, userId])
 
+  // Mount'ta bir kez fresh state cek: SSR hydration ile DB arasindaki stale gap'i kapat.
+  // Realtime postgres_changes gelmeden once kullanici baska state'teki odaya girebilir.
+  useEffect(() => {
+    void refetchRoomState()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     isMounted.current = true
     let realtimeClient: RealtimeClient | null = null
