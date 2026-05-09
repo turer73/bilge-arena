@@ -48,7 +48,7 @@ const badQuestions = []
 for (const q of passive) {
   const c = q.content || {}
   const hasQ = (c.question || c.text || '').trim().length > 10
-  const hasA = typeof c.answer === 'number'
+  const hasA = typeof c.answer === 'number' && c.answer >= 0 && c.answer <= 4
   const hasOpts = Array.isArray(c.options) && c.options.length === 5
   if (hasQ && hasA && hasOpts) {
     goodIds.push(q.id)

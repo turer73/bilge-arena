@@ -387,7 +387,17 @@ async function main() {
     process.exit(1)
   }
   const data = JSON.parse(readFileSync(opts.input, 'utf-8'))
-  let rows = Array.isArray(data) ? data : (data.questions || [])
+  let rows
+  if (Array.isArray(data)) {
+    rows = data
+  } else if (data.questions) {
+    // Generated JSON files: { takenAt, game, category, difficulty, questions: [...] }
+    // Merge parent-level metadata into each row so filters and prompts work correctly
+    const { questions, takenAt: _ts, ...parentMeta } = data
+    rows = questions.map(q => ({ ...parentMeta, ...q }))
+  } else {
+    rows = []
+  }
 
   // Apply filter (top-level + content merged)
   for (const [k, v] of Object.entries(opts.filter)) {
@@ -415,7 +425,7 @@ async function main() {
   const dur = ((Date.now() - Date.now()) / 1000).toFixed(0)
 
   // Aggregate
-  const flagged = results.filter(r => r.severity && r.severity !== 'ok')
+  const flagged = results.filter(r => r.severity && (r.severity !== 'ok' || (r.issues && r.issues.length > 0)))
   const errored = results.filter(r => r.error)
   const bySeverity = { ok: 0, minor: 0, major: 0 }
   const byIssue = {}
