@@ -11,13 +11,13 @@
 import { describe, test, expect, vi, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-const { mockSetupChannel, mockUnsubscribe, mockCreateClient } = vi.hoisted(() => ({
+const { mockSetupChannel, mockUnsubscribe, mockCreateOdaClient } = vi.hoisted(() => ({
   mockSetupChannel: vi.fn(),
   mockUnsubscribe: vi.fn(),
-  mockCreateClient: vi.fn(),
+  mockCreateOdaClient: vi.fn(),
 }))
 
-vi.mock('@/lib/supabase/client', () => ({ createClient: mockCreateClient }))
+vi.mock('../oda-realtime-client', () => ({ createOdaRealtimeClient: mockCreateOdaClient }))
 vi.mock('../setup-room-channel', () => ({ setupRoomChannel: mockSetupChannel }))
 
 import { useRoomChannel } from '../use-room-channel'
@@ -54,24 +54,23 @@ describe('useRoomChannel', () => {
     vi.restoreAllMocks()
   })
 
-  test('14) Mount -> setupRoomChannel called once; unmount -> channel.unsubscribe called', () => {
-    const channelMock = {
-      unsubscribe: mockUnsubscribe,
-      socket: { onMessage: vi.fn(), onError: vi.fn() },
-    }
+  test('14) Mount -> setupRoomChannel called once; unmount -> channel.unsubscribe called', async () => {
+    const mockClient = { onError: vi.fn(), disconnect: vi.fn() }
+    const channelMock = { unsubscribe: mockUnsubscribe }
     mockSetupChannel.mockReturnValue(channelMock)
-    mockCreateClient.mockReturnValue({})
+    mockCreateOdaClient.mockResolvedValue(mockClient)
 
     const { unmount } = renderHook(() =>
       useRoomChannel('r1', 'u1', dummyInitial),
     )
+    await act(async () => {})
     expect(mockSetupChannel).toHaveBeenCalledTimes(1)
     expect(mockSetupChannel).toHaveBeenCalledWith(
-      {},
+      mockClient,
       'r1',
       'u1',
-      expect.any(Function), // dispatch callback
-      expect.any(Function), // onRoundChange refetch (Codex P1 PR #50 fix)
+      expect.any(Function),
+      expect.any(Function),
     )
 
     unmount()
@@ -85,7 +84,7 @@ describe('useRoomChannel', () => {
       socket: { onMessage: vi.fn(), onError: vi.fn() },
     }
     mockSetupChannel.mockReturnValue(channelMock)
-    mockCreateClient.mockReturnValue({})
+    mockCreateOdaClient.mockResolvedValue({ onError: vi.fn(), disconnect: vi.fn() })
 
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

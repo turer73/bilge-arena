@@ -12,8 +12,8 @@
  */
 
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import type { RealtimeChannel } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
+import { type RealtimeChannel, type RealtimeClient } from '@supabase/supabase-js'
+import { createOdaRealtimeClient } from './oda-realtime-client'
 import { setupRoomChannel } from './setup-room-channel'
 import {
   roomStateReducer,
@@ -54,34 +54,29 @@ export function useRoomChannel(
 
   useEffect(() => {
     isMounted.current = true
-    const supabase = createClient()
+    let realtimeClient: RealtimeClient | null = null
+    let channel: RealtimeChannel | null = null
 
-    const channel = setupRoomChannel(
-      supabase,
-      roomId,
-      userId,
-      (event) => {
-        if (isMounted.current) dispatch(event)
-      },
-      refetchRoomState, // Codex P1 PR #50: room_rounds INSERT/UPDATE -> refresh
-    )
-    channelRef.current = channel
-
-    // Phoenix Socket-pattern: onError TS tipinde expose edilmemis ama runtime'da var.
-    // realtime-js RealtimeClient (https://github.com/supabase/realtime-js).
-    const socket = channel.socket as unknown as {
-      onError?: (callback: (error: Error) => void) => void
-    }
-    if (socket.onError) {
-      socket.onError(() => {
-        void refetchRoomState()
-      })
-    }
+    void createOdaRealtimeClient().then((client) => {
+      if (!isMounted.current || !client) return
+      realtimeClient = client
+      channel = setupRoomChannel(
+        client,
+        roomId,
+        userId,
+        (event) => {
+          if (isMounted.current) dispatch(event)
+        },
+        refetchRoomState,
+      )
+      channelRef.current = channel
+    })
 
     return () => {
       isMounted.current = false
       channelRef.current = null
-      channel.unsubscribe()
+      channel?.unsubscribe()
+      realtimeClient?.disconnect()
     }
   }, [roomId, userId, refetchRoomState])
 
