@@ -19,6 +19,8 @@ if (existsSync(envPath)) {
   }
 }
 
+const FORCE = process.argv.includes('--force')
+
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -43,21 +45,46 @@ while (true) {
 
 console.log(`Hedef: ${target.length} soru (game=wordquest, is_active=false)\n`)
 
-// Bozukluk dogrulamasi: question bos ya da answer eksik
+// Bozukluk dogrulamasi — WordQuest 4 farkli icerik semasi var:
+//   1. AI-generated / import-json-to-db: { question, options, answer }
+//   2. Seed multiple_choice:             { sentence, options, correct }
+//   3. Seed cloze_test:                  { type:'cloze_test', passage, questions:[{correct}] }
+//   4. Seed dialogue:                    { type:'dialogue', lines, options, correct }
+function isValidContent(c) {
+  if (!c) return false
+  // 1. AI format
+  if ((c.question || c.text || '').trim().length > 0 && typeof c.answer === 'number') return true
+  // 2. Seed multiple_choice
+  if (typeof c.sentence === 'string' && c.sentence.trim().length > 0 &&
+      Array.isArray(c.options) &&
+      (typeof c.correct === 'number' || typeof c.correct === 'string')) return true
+  // 3. Cloze test
+  if (c.type === 'cloze_test' && typeof c.passage === 'string' && c.passage.trim().length > 0 &&
+      Array.isArray(c.questions) && c.questions.length > 0) return true
+  // 4. Dialogue
+  if (c.type === 'dialogue' && Array.isArray(c.lines) && c.lines.length > 0 &&
+      Array.isArray(c.options) &&
+      (typeof c.correct === 'number' || typeof c.correct === 'string')) return true
+  return false
+}
+
 let brokenCount = 0
 let okLooking = 0
 for (const q of target) {
-  const c = q.content || {}
-  const hasQ = (c.question || c.text || '').trim().length > 0
-  const hasA = typeof c.answer === 'number'
-  if (!hasQ || !hasA) brokenCount++
-  else okLooking++
+  if (isValidContent(q.content)) okLooking++
+  else brokenCount++
 }
-console.log(`Bozuk (question bos veya answer eksik): ${brokenCount}`)
-console.log(`Iyi gorunen (ama yine pasif): ${okLooking}`)
+console.log(`Bozuk (tum semalar kontrol edildi): ${brokenCount}`)
+console.log(`Icerikli (ama pasif): ${okLooking}`)
 
 if (okLooking > 0) {
-  console.log(`\nUYARI: ${okLooking} soru icerikli ama pasif. Bunlar da silinecek.`)
+  if (!FORCE) {
+    console.error(`\nHATA: ${okLooking} soru icerikli ve pasif. Kalite gozden gecirilmeden silme riski.`)
+    console.error(`Sadece bozuk sorulari silmek icin once bozuklari elle ayikla.`)
+    console.error(`Tum pasif sorulari silmek istiyorsan: --force ile calistir.`)
+    process.exit(1)
+  }
+  console.log(`\nUYARI (--force): ${okLooking} icerikli-ama-pasif soru da silinecek.`)
 }
 
 // 2. Backup
