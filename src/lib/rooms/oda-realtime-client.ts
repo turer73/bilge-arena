@@ -21,8 +21,33 @@ export async function createOdaRealtimeClient(): Promise<RealtimeClient | null> 
       params: { apikey: body.token, vsn: '1.0.0' },
     })
     client.setAuth(body.token)
+
+    const cbs = (client as unknown as {
+      stateChangeCallbacks: {
+        open: Array<() => void>
+        close: Array<(e: unknown) => void>
+        error: Array<(e: unknown) => void>
+      }
+    }).stateChangeCallbacks
+    cbs.open.push(() => console.info('[OdaRealtime] OPEN', WS_URL))
+    cbs.close.push((e) => console.warn('[OdaRealtime] CLOSE', e))
+    cbs.error.push((e) => console.error('[OdaRealtime] ERROR', e))
+
     client.connect()
-    console.info('[OdaRealtime] connecting to', WS_URL)
+    console.info('[OdaRealtime] connecting to', WS_URL, 'tokenLen=', body.token.length, 'endpointURL=', client.endpointURL())
+
+    setTimeout(() => {
+      const conn = (client as unknown as { conn?: { readyState?: number } }).conn
+      console.info(
+        '[OdaRealtime] +3s state=',
+        client.connectionState(),
+        'isConnected=',
+        client.isConnected(),
+        'wsReadyState=',
+        conn?.readyState,
+      )
+    }, 3000)
+
     return client
   } catch (err) {
     console.error('[OdaRealtime] unexpected error', err)
