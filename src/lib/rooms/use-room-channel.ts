@@ -85,14 +85,17 @@ export function useRoomChannel(
   // mekanizma; isStale=true iken hizli recovery (3sn), aksi halde defense-in-depth
   // (5sn). PR #95 ws-dev.bilgearena.com switch sonrasi sadece isStale durumunda
   // calismaya cekilebilir.
+  // Polling: VPS Realtime postgres_changes aktif oldugunda sadece isStale
+  // (baglanti hatasi) durumunda recovery icin calisir. Normal akista
+  // postgres_changes anlık guncelleme saglar, polling gereksiz.
   useEffect(() => {
     if (state.room.state === 'completed' || state.room.state === 'archived') {
-      return // terminal state, polling gereksiz
+      return
     }
-    const intervalMs = state.isStale ? 3000 : 5000
+    if (!state.isStale) return
     const id = window.setInterval(() => {
       if (isMounted.current) void refetchRoomState()
-    }, intervalMs)
+    }, 3000)
     return () => window.clearInterval(id)
   }, [state.isStale, state.room.state, refetchRoomState])
 
