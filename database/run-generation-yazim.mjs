@@ -81,7 +81,6 @@ TDK KURAL OZETI (5 KATEGORI)
                      bircok, herhangi
    Her zaman AYRI:    her sey, bir sey, her bir, bir gun, bir kez,
                      bu yilki (zaman + ki), o gunku
-   NOT: "bir sey" AYRI yazilir; "birsey" YANLISTIR.
 
 4. IKILEMELER
    PEKISTIRME (bitisik): masmavi, simsiyah, yepyeni, capcanli
@@ -105,6 +104,9 @@ ANTI-PATTERN — KESINLIKLE YAPMA
 ❌ "Bu yilki ayri yazilir" — YANLIS, "bu yilki" ZAMAN+ki, ayri yazilmaz mi?
    Aslinda TDK: "bu yilki" AYRI yazilir cunku zaman bildiren isim sonu degil
    ama "yarinki" (zaman zarfi sonu ki) BITISIK yazilir.
+❌ "birsey" secenegi DOGRU yazim gibi gosterme: daima "bir sey" (iki kelime, sayi+isim)
+   Kural: herkes/hicbir/birkac = SABIT BILISIK (kendi basina anlamsiz parcalar);
+          bir sey = sayi (bir) + isim (sey) = her zaman AYRI
 
 ==================================================================
 URETIM KURALLARI
