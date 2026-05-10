@@ -276,9 +276,9 @@ export function GameView({
                   className={cn(
                     'w-full rounded-lg border px-4 py-3 text-left text-sm font-medium transition-colors disabled:cursor-not-allowed',
                     isSelected
-                      ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100'
-                      : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--focus)] hover:bg-[var(--card)]',
-                    lockUI && !isSelected && 'opacity-40',
+                      ? 'border-emerald-500 bg-emerald-500/15 text-[var(--text)] dark:text-emerald-50'
+                      : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--focus)] hover:bg-[var(--card)]',
+                    lockUI && !isSelected && 'opacity-50',
                   )}
                 >
                   <span

@@ -154,10 +154,10 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
               className={cn(
                 'flex items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium',
                 isCorrect
-                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100'
+                  ? 'border-emerald-500 bg-emerald-500/15 text-[var(--text)] dark:text-emerald-50'
                   : isMine
-                    ? 'border-red-500/40 bg-red-500/10 text-red-900 dark:text-red-100'
-                    : 'border-[var(--border)] bg-[var(--surface)] opacity-60',
+                    ? 'border-red-500 bg-red-500/15 text-[var(--text)] dark:text-red-50'
+                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-sub)] opacity-80',
               )}
             >
               <span
@@ -175,12 +175,12 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
               </span>
               <span className="flex-1">{opt}</span>
               {isMine && !isCorrect && (
-                <span className="text-[10px] font-bold text-red-700 dark:text-red-300">
+                <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                   Senin Cevabın
                 </span>
               )}
               {isMine && isCorrect && (
-                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                   Senin Cevabın
                 </span>
               )}
