@@ -87,22 +87,22 @@ export function useRoomChannel(
     }
   }, [roomId, userId, refetchRoomState])
 
-  // Polling: Realtime postgres_changes hibrit DB mismatch sebebiyle hicbir zaman
-  // fire etmiyor (Panola Realtime != bilge_arena_dev). Bu sebeple polling primary
-  // mekanizma; isStale=true iken hizli recovery (3sn), aksi halde defense-in-depth
-  // (5sn). PR #95 ws-dev.bilgearena.com switch sonrasi sadece isStale durumunda
-  // calismaya cekilebilir.
-  // Polling: VPS Realtime postgres_changes aktif oldugunda sadece isStale
-  // (baglanti hatasi) durumunda recovery icin calisir. Normal akista
-  // postgres_changes anlık guncelleme saglar, polling gereksiz.
+  // Polling: defense-in-depth. VPS ws-dev Realtime WS aciliyor (isConnected=true)
+  // ama postgres_changes broadcast'leri henuz uretilmiyor (publication/replica
+  // identity setup tam degil) — sonuc: WS bagli ama hicbir oda update'i gelmez,
+  // isStale=false oldugu icin polling de bypass edilirdi → client sonsuza dek
+  // round 1'de takilirdi. 2026-05-10 fix: isStale gating kaldirildi, polling
+  // her zaman calisiyor. isStale=true (baglanti kopuk) ise 3sn (hizli recovery),
+  // normal akista 5sn (server-load dengesi). postgres_changes gercek anlamda
+  // calistiginda bu interval'i 15-30sn'e cekip primary'i Realtime'a verebiliriz.
   useEffect(() => {
     if (state.room.state === 'completed' || state.room.state === 'archived') {
       return
     }
-    if (!state.isStale) return
+    const interval = state.isStale ? 3000 : 5000
     const id = window.setInterval(() => {
       if (isMounted.current) void refetchRoomState()
-    }, 3000)
+    }, interval)
     return () => window.clearInterval(id)
   }, [state.isStale, state.room.state, refetchRoomState])
 
