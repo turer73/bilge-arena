@@ -61,81 +61,49 @@ export async function fetchQuizQuestions({
     }
   }
 
-  let query = supabase
-    .from('questions')
-    .select('*')
-    .eq('game', game)
-    .eq('is_active', true)
+  // UUID formatini dogrula — type-safe uuid[] icin
+  const safeExcludeIds = recentIds.filter(id => /^[0-9a-f-]{36}$/i.test(id))
 
-  if (category) query = query.eq('category', category)
-  if (difficulty) query = query.eq('difficulty', difficulty)
-
-  // Son 50 soruyu disla (yeterli soru kalmazsa asagida fallback var)
-  if (recentIds.length > 0) {
-    // UUID formatini dogrula — string interpolation yerine guvenli filtre
-    const safeIds = recentIds.filter(id => /^[0-9a-f-]{36}$/i.test(id))
-    if (safeIds.length > 0) {
-      query = query.not('id', 'in', `(${safeIds.join(',')})`)
-    }
+  // Tam server-side random: select_random_questions RPC (migration 044)
+  // ORDER BY random() + SECURITY DEFINER + authenticated EXECUTE.
+  // Tum aktif havuzdan limit kadar gercek random; pencere-bias yok, tek roundtrip.
+  // Review/spaced-repetition icin extra %30 cektigimizden p_limit'i biraz buyutuyoruz.
+  const fetchLimit = Math.min(limit * 2, 50)
+  const rpcArgs: {
+    p_game: string
+    p_limit: number
+    p_category?: string
+    p_difficulty?: number
+    p_exclude_ids?: string[]
+  } = {
+    p_game: game,
+    p_limit: fetchLimit,
   }
+  if (category) rpcArgs.p_category = category
+  if (difficulty) rpcArgs.p_difficulty = difficulty
+  if (safeExcludeIds.length > 0) rpcArgs.p_exclude_ids = safeExcludeIds
 
-  // Daha iyi rastgelelik icin fazla cek
-  const fetchLimit = Math.min(limit * 3, 150)
+  const { data: rpcData, error } = await supabase.rpc('select_random_questions', rpcArgs)
+  let data = rpcData as Question[] | null
 
-  // BUG FIX: PostgREST default order DETERMINISTIC, .limit() hep ayni ilk N soruyu getiriyor.
-  // Pool buyuk olsa bile (2697 soru) hep ilk 150 cekiliyor; geri kalan ~94 percent havuz atil.
-  // Cozum: count + random offset penceresi (window slides) — RPC migration ile kalici fix.
-  // NOT: count icin ayri sayim sorgusu yapiyoruz; head:true ile satir cekmeden cabuk donuyor.
-  let countQuery = supabase
-    .from('questions')
-    .select('id', { count: 'exact', head: true })
-    .eq('game', game)
-    .eq('is_active', true)
-
-  if (category) countQuery = countQuery.eq('category', category)
-  if (difficulty) countQuery = countQuery.eq('difficulty', difficulty)
-
-  if (recentIds.length > 0) {
-    const safeCountIds = recentIds.filter(id => /^[0-9a-f-]{36}$/i.test(id))
-    if (safeCountIds.length > 0) {
-      countQuery = countQuery.not('id', 'in', `(${safeCountIds.join(',')})`)
-    }
-  }
-
-  const { count: poolCount } = await countQuery
-  const total = poolCount ?? fetchLimit
-  const maxOffset = Math.max(0, total - fetchLimit)
-  const randomOffset = Math.floor(Math.random() * (maxOffset + 1))
-
-  const queryResult = await query.range(randomOffset, randomOffset + fetchLimit - 1)
-  const { error } = queryResult
-  let { data } = queryResult
-
-  // Fallback: cooldown sonrasi yeterli soru kalmadiysa, filtreyi kaldir ve tekrar dene
-  if (!error && data && data.length < limit && recentIds.length > 0) {
-    let fallbackQuery = supabase
-      .from('questions')
-      .select('*')
-      .eq('game', game)
-      .eq('is_active', true)
-
-    if (category) fallbackQuery = fallbackQuery.eq('category', category)
-    if (difficulty) fallbackQuery = fallbackQuery.eq('difficulty', difficulty)
-
-    // Fallback'te de random offset uygula
-    const fallbackMaxOffset = Math.max(0, total - fetchLimit)
-    const fallbackOffset = Math.floor(Math.random() * (fallbackMaxOffset + 1))
-    const { data: allData, error: fallbackError } = await fallbackQuery.range(
-      fallbackOffset,
-      fallbackOffset + fetchLimit - 1,
+  // Fallback: cooldown filter sonrasi yeterli soru gelmediyse, exclude'siz tekrar dene
+  if (!error && data && data.length < limit && safeExcludeIds.length > 0) {
+    const { data: fallbackData, error: fallbackError } = await supabase.rpc(
+      'select_random_questions',
+      {
+        p_game: game,
+        p_limit: fetchLimit,
+        ...(category ? { p_category: category } : {}),
+        ...(difficulty ? { p_difficulty: difficulty } : {}),
+      },
     )
-    if (!fallbackError && allData && allData.length > data.length) {
-      data = allData
+    if (!fallbackError && fallbackData && (fallbackData as Question[]).length > data.length) {
+      data = fallbackData as Question[]
     }
   }
 
   if (error || !data || data.length === 0) {
-    if (error) console.warn('[fetchQuizQuestions] Hata:', error.message)
+    if (error) console.warn('[fetchQuizQuestions] RPC hata:', error.message)
 
     // Network hatasi — cache'den dene
     const cached = await getCachedQuestions({ game, category, difficulty, limit })
@@ -143,7 +111,7 @@ export async function fetchQuizQuestions({
     return []
   }
 
-  const questions = data as unknown as Question[]
+  const questions = data as Question[]
 
   // Arkaplanda cache'e kaydet (await etmeye gerek yok)
   cacheQuestions(questions).catch(() => {})

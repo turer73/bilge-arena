@@ -1,15 +1,21 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import type { Question } from '@/types/database'
 
-// ─── Supabase client mock (createClient'i ele alıyoruz) ─────────────────────
+// ─── Supabase client mock ─────────────────────
 
 type Captured = {
-  count?: number
-  rangeCalls: Array<{ from: number; to: number }>
-  filters: Record<string, unknown[]>
+  rpcCalls: Array<{ fn: string; args: Record<string, unknown> }>
+  fromCalls: string[]
+  rpcResult: Question[] | null
+  rpcError: { message: string } | null
 }
 
-const captured: Captured = { rangeCalls: [], filters: {} }
+const captured: Captured = {
+  rpcCalls: [],
+  fromCalls: [],
+  rpcResult: null,
+  rpcError: null,
+}
 
 function makeQuestion(id: string, game: string): Question {
   return {
@@ -34,53 +40,30 @@ function makeQuestion(id: string, game: string): Question {
   } as unknown as Question
 }
 
-// Chainable mock query builder
-function makeQueryBuilder(opts: {
-  countResult?: number
-  rangeResult: Question[]
-  recordRange?: boolean
-  recordFilter?: boolean
-}) {
+// Builder: user_question_history sorgusu için chainable
+function makeQueryBuilder() {
   const builder: Record<string, unknown> = {}
   const chain = () => builder
   builder.select = vi.fn(chain)
-  builder.eq = vi.fn((col: string, val: unknown) => {
-    if (opts.recordFilter) {
-      captured.filters[col] = captured.filters[col] || []
-      ;(captured.filters[col] as unknown[]).push(val)
-    }
-    return chain()
-  })
+  builder.eq = vi.fn(chain)
   builder.not = vi.fn(chain)
   builder.in = vi.fn(chain)
   builder.gte = vi.fn(chain)
   builder.order = vi.fn(chain)
-  builder.limit = vi.fn(() => Promise.resolve({ data: opts.rangeResult, error: null }))
-  builder.range = vi.fn((from: number, to: number) => {
-    if (opts.recordRange) captured.rangeCalls.push({ from, to })
-    return Promise.resolve({ data: opts.rangeResult, error: null })
-  })
-  // count head:true call returns then-able with { count, error }
-  builder.then = (resolve: (v: { count: number; error: null }) => void) =>
-    resolve({ count: opts.countResult ?? 0, error: null })
+  builder.limit = vi.fn(() => Promise.resolve({ data: [], error: null }))
   return builder
 }
 
 vi.mock('@/lib/supabase/client', () => {
   return {
     createClient: () => ({
-      from: vi.fn((_table: string) => {
-        // İlk çağrı: count head:true (questions)
-        // İkinci çağrı: range fetch (questions)
-        // 3. çağrı: user_question_history (recentIds yoksa hep boş)
-        // Sadeleştirme: tek bir akıllı builder döndür — her dalda
-        const result = makeQuestion('q-1', 'matematik')
-        return makeQueryBuilder({
-          countResult: captured.count ?? 2697,
-          rangeResult: Array.from({ length: 30 }, (_, i) => makeQuestion(`q-${i}`, 'matematik')),
-          recordRange: true,
-          recordFilter: true,
-        })
+      from: vi.fn((table: string) => {
+        captured.fromCalls.push(table)
+        return makeQueryBuilder()
+      }),
+      rpc: vi.fn((fn: string, args: Record<string, unknown>) => {
+        captured.rpcCalls.push({ fn, args })
+        return Promise.resolve({ data: captured.rpcResult, error: captured.rpcError })
       }),
     }),
   }
@@ -94,11 +77,12 @@ vi.mock('@/lib/utils/question-cache', () => ({
 // Import AFTER mocks
 import { fetchQuizQuestions } from '../questions'
 
-describe('fetchQuizQuestions — random offset window', () => {
+describe('fetchQuizQuestions — RPC server-side random', () => {
   beforeEach(() => {
-    captured.rangeCalls = []
-    captured.filters = {}
-    captured.count = 2697
+    captured.rpcCalls = []
+    captured.fromCalls = []
+    captured.rpcResult = Array.from({ length: 20 }, (_, i) => makeQuestion(`q-${i}`, 'matematik'))
+    captured.rpcError = null
     vi.stubGlobal('navigator', { onLine: true })
   })
 
@@ -107,62 +91,63 @@ describe('fetchQuizQuestions — random offset window', () => {
     vi.restoreAllMocks()
   })
 
-  it('range cagirisi yapilir (limit degil) — random offset penceresi aktif', async () => {
-    const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    expect(result.length).toBeGreaterThan(0)
-    expect(captured.rangeCalls.length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('range penceresi fetchLimit (limit*3=30 veya max 150) boyutunda', async () => {
+  it('select_random_questions RPC cagrilir (count + range degil)', async () => {
     await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    const call = captured.rangeCalls[0]
-    const windowSize = call.to - call.from + 1
-    expect(windowSize).toBe(30) // limit*3, 150'den kucuk
+    expect(captured.rpcCalls.length).toBe(1)
+    expect(captured.rpcCalls[0].fn).toBe('select_random_questions')
   })
 
-  it('count pool buyukse offset 0..(count-window) araliginda', async () => {
-    captured.count = 2697
-    // 100 kere cagir, offset'ler degisiyor mu?
-    const offsets = new Set<number>()
-    for (let i = 0; i < 30; i++) {
-      captured.rangeCalls = []
-      await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-      if (captured.rangeCalls.length > 0) {
-        offsets.add(captured.rangeCalls[0].from)
-      }
-    }
-    // Random olmali — 30 deneme icinde en az 5 farkli offset
-    expect(offsets.size).toBeGreaterThan(5)
-    // Hicbiri max'i asmasin: max = count - fetchLimit = 2697 - 30 = 2667
-    for (const off of offsets) {
-      expect(off).toBeGreaterThanOrEqual(0)
-      expect(off).toBeLessThanOrEqual(2667)
-    }
-  })
-
-  it('pool kucukse (count < fetchLimit) offset 0 olur', async () => {
-    captured.count = 20 // 30'dan az
+  it('p_game ve p_limit RPC parametre olarak gecer', async () => {
     await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    expect(captured.rangeCalls[0].from).toBe(0)
+    const args = captured.rpcCalls[0].args
+    expect(args.p_game).toBe('matematik')
+    // fetchLimit = min(limit*2, 50) = 20
+    expect(args.p_limit).toBe(20)
   })
 
-  it('cevrimdisi mode supabase cagirmaz, cache kullanir', async () => {
+  it('category filter p_category parametresi olur', async () => {
+    await fetchQuizQuestions({ game: 'matematik', limit: 10, category: 'cebir' })
+    expect(captured.rpcCalls[0].args.p_category).toBe('cebir')
+  })
+
+  it('difficulty filter p_difficulty parametresi olur', async () => {
+    await fetchQuizQuestions({ game: 'matematik', limit: 10, difficulty: 3 })
+    expect(captured.rpcCalls[0].args.p_difficulty).toBe(3)
+  })
+
+  it('category/difficulty yoksa RPC parametre eklenmez', async () => {
+    await fetchQuizQuestions({ game: 'matematik', limit: 10 })
+    const args = captured.rpcCalls[0].args
+    expect(args).not.toHaveProperty('p_category')
+    expect(args).not.toHaveProperty('p_difficulty')
+    expect(args).not.toHaveProperty('p_exclude_ids')
+  })
+
+  it('cevrimdisi mode RPC cagrilmaz', async () => {
     vi.stubGlobal('navigator', { onLine: false })
-    captured.rangeCalls = []
+    captured.rpcCalls = []
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    expect(captured.rangeCalls.length).toBe(0)
+    expect(captured.rpcCalls.length).toBe(0)
     expect(result).toEqual([])
   })
 
-  it('category filter PostgREST eq cagirisinda', async () => {
-    captured.filters = {}
-    await fetchQuizQuestions({ game: 'matematik', limit: 10, category: 'cebir' })
-    expect(captured.filters.category).toContain('cebir')
+  it('RPC sonucu Question dizisi olarak dondurulur', async () => {
+    captured.rpcResult = [makeQuestion('q-a', 'matematik'), makeQuestion('q-b', 'matematik')]
+    const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
+    expect(result.length).toBe(2)
+    expect(result[0].id).toMatch(/^q-/)
   })
 
-  it('difficulty filter PostgREST eq cagirisinda', async () => {
-    captured.filters = {}
-    await fetchQuizQuestions({ game: 'matematik', limit: 10, difficulty: 3 })
-    expect(captured.filters.difficulty).toContain(3)
+  it('RPC hata donerse offline cache fallback denenir', async () => {
+    captured.rpcError = { message: 'rpc failed' }
+    captured.rpcResult = null
+    const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
+    expect(result).toEqual([])
+  })
+
+  it('limit*2 üst sınır 50', async () => {
+    await fetchQuizQuestions({ game: 'matematik', limit: 100 })
+    // fetchLimit = min(100*2, 50) = 50
+    expect(captured.rpcCalls[0].args.p_limit).toBe(50)
   })
 })
