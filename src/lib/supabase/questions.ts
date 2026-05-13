@@ -82,7 +82,32 @@ export async function fetchQuizQuestions({
   // Daha iyi rastgelelik icin fazla cek
   const fetchLimit = Math.min(limit * 3, 150)
 
-  const queryResult = await query.limit(fetchLimit)
+  // BUG FIX: PostgREST default order DETERMINISTIC, .limit() hep ayni ilk N soruyu getiriyor.
+  // Pool buyuk olsa bile (2697 soru) hep ilk 150 cekiliyor; geri kalan ~94 percent havuz atil.
+  // Cozum: count + random offset penceresi (window slides) — RPC migration ile kalici fix.
+  // NOT: count icin ayri sayim sorgusu yapiyoruz; head:true ile satir cekmeden cabuk donuyor.
+  let countQuery = supabase
+    .from('questions')
+    .select('id', { count: 'exact', head: true })
+    .eq('game', game)
+    .eq('is_active', true)
+
+  if (category) countQuery = countQuery.eq('category', category)
+  if (difficulty) countQuery = countQuery.eq('difficulty', difficulty)
+
+  if (recentIds.length > 0) {
+    const safeCountIds = recentIds.filter(id => /^[0-9a-f-]{36}$/i.test(id))
+    if (safeCountIds.length > 0) {
+      countQuery = countQuery.not('id', 'in', `(${safeCountIds.join(',')})`)
+    }
+  }
+
+  const { count: poolCount } = await countQuery
+  const total = poolCount ?? fetchLimit
+  const maxOffset = Math.max(0, total - fetchLimit)
+  const randomOffset = Math.floor(Math.random() * (maxOffset + 1))
+
+  const queryResult = await query.range(randomOffset, randomOffset + fetchLimit - 1)
   const { error } = queryResult
   let { data } = queryResult
 
@@ -97,7 +122,13 @@ export async function fetchQuizQuestions({
     if (category) fallbackQuery = fallbackQuery.eq('category', category)
     if (difficulty) fallbackQuery = fallbackQuery.eq('difficulty', difficulty)
 
-    const { data: allData, error: fallbackError } = await fallbackQuery.limit(fetchLimit)
+    // Fallback'te de random offset uygula
+    const fallbackMaxOffset = Math.max(0, total - fetchLimit)
+    const fallbackOffset = Math.floor(Math.random() * (fallbackMaxOffset + 1))
+    const { data: allData, error: fallbackError } = await fallbackQuery.range(
+      fallbackOffset,
+      fallbackOffset + fetchLimit - 1,
+    )
     if (!fallbackError && allData && allData.length > data.length) {
       data = allData
     }
