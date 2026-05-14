@@ -1,0 +1,10 @@
+# ÖSYM PDF'leri — telif hakkı ÖSYM'ye ait, git'e eklenmez
+pdfs/
+
+# Extracted JSON'lar — PDF'lerden türetildi, soru metinleri telif kapsamında
+extracted/
+
+# Templates — gerçek ÖSYM soru metinleri içerir, telif kapsamında
+templates/
+
+# Sadece scripts/ (kod) commit edilir — soru metni içermez
