@@ -5,7 +5,7 @@ import { checkPermission } from '@/lib/supabase/admin'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { trLower, isLikelyTurkish } from '@/lib/utils/tr-text'
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite'
+const GEMINI_MODEL = 'gemini-2.5-flash'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 // AI generator pahali endpoint — admin yetkisi disinda EDoS koruma
