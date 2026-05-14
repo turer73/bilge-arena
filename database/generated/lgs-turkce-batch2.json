@@ -1,0 +1,252 @@
+[
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Şiirde Anlam",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Yağmur çarpar taşlara,\nSen dönmez misin başlara?\nGöz yaşlarım taşlara\nAkıp gider izin de.\"\n\nBu dörtlükte anlatılan duygu ağırlıklı olarak hangisidir?",
+      "options": ["Sevinç ve coşku", "Özlem ve hüzün", "Öfke ve isyan", "Korku ve endişe", "Şaşkınlık ve merak"],
+      "answer": 1,
+      "solution": "Dörtlükte sevilen birinin yokluğu, göz yaşları ve beklenti teması işlenmektedir. Hâkim duygu özlem ve hüzündür."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Şiirde Anlam",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Kitaplar en sessiz\nVe en dürüst arkadaşlardır;\nYalnız olduğunda seninledirler,\nSeni hiç terk etmezler.\"\n\nBu dizelerde kitaplar hangi özelliğiyle ön plana çıkarılmaktadır?",
+      "options": ["Bilgi kaynağı olması", "Sadık ve sürekli dost olması", "Tarihi belgeler içermesi", "Okunması zor olması", "Pahalı olması"],
+      "answer": 1,
+      "solution": "Dizelerde kitaplar; insanı yalnız bırakmayan, dürüst ve sürekli bir dost olarak sunulmaktadır."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Metnin Yapısı",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir yazının giriş bölümünde bulunması gereken temel özellik aşağıdakilerden hangisidir?",
+      "options": ["Konunun ayrıntılı olarak işlenmesi", "Sonuç yargısının verilmesi", "Okuyucunun ilgisini çekip konunun tanıtılması", "Kanıtların sıralanması", "Önerilerin sunulması"],
+      "answer": 2,
+      "solution": "Giriş bölümü; okuyucunun dikkatini çekerek konuyu tanıtan kısa bölümdür. Ayrıntılar ve sonuç yargıları diğer bölümlere aittir."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Öykü Unsurları",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Ayşe, kar yağan o soğuk sabah evden çıktığında çantasında sadece birkaç kuruşu vardı. Bir dilim ekmek almak için markete girdi, ama kasada çok az para kaldığını görünce duraksadı.\" Bu metnin olay örgüsündeki çatışma türü nedir?",
+      "options": ["İnsan – insan çatışması", "İnsan – toplum çatışması", "İnsan – doğa çatışması", "İnsan – iç dünya çatışması", "Çatışma yoktur"],
+      "answer": 3,
+      "solution": "Ayşe, duraksama anında iç çatışma yaşamaktadır; ne yapacağına karar vermeye çalışmaktadır. Bu insan – kendi iç dünyası çatışmasıdır."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Öykü Unsurları",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir öyküde \"mekân\" öğesi neyi ifade eder?",
+      "options": ["Olayların yaşandığı zaman dilimi", "Olayların yaşandığı yer ve ortam", "Olayları yaşayan kişiler", "Hikâyenin ana düşüncesi", "Yazarın üslubu"],
+      "answer": 1,
+      "solution": "Mekân; öykünün geçtiği yer veya ortamdır (sokak, ev, köy vb.). Zaman ve kişilerle birlikte öykünün temel unsurlarından birini oluşturur."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Metin Türü",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Su döngüsü, yeryüzündeki suyun güneş enerjisiyle buharlaşması, atmosferde yoğunlaşması ve yağış olarak geri dönmesi sürecidir.\" Bu cümle hangi metin türüne aittir?",
+      "options": ["Hikâye (öykü)", "Şiir", "Bilgilendirici (açıklayıcı) metin", "İkna edici metin", "Anı"],
+      "answer": 2,
+      "solution": "Cümle; bir olguyu nesnel ve tanımlayıcı biçimde aktarmaktadır. Bu özellik bilgilendirici (açıklayıcı) metin türüne özgüdür."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Yazarın Tutumu",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Günümüz gençleri, geçmişin koşullarına kıyasla çok daha fazla fırsata sahiptir; dijital kütüphaneler, online kurslar ve uluslararası burslar sayesinde bilgiye erişim artık çok kolay.\" Bu cümledeki yazar tutumu hangisidir?",
+      "options": ["Eleştirici", "Karamsar", "Olumlu ve destekleyici", "Tarafsız ve betimleyici", "İronik"],
+      "answer": 2,
+      "solution": "Yazar, günümüz gençlerinin sahip olduğu fırsatları olumlu biçimde vurgulayarak destekleyici bir tutum sergilemektedir."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "İki Metin Karşılaştırma",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Metin 1: \"Teknoloji insanlığın en büyük gelişimidir; hastalıklara çare bulur, uzaklıkları kısaltır.\"\nMetin 2: \"Teknoloji, insan ilişkilerini zedeler; ekranlar bizi birbirimizden koparır.\"\n\nBu iki metin arasındaki temel fark nedir?",
+      "options": ["İkisi de teknolojiyi desteklemektedir", "İkisi de teknolojiyi eleştirmektedir", "Biri destekler, diğeri eleştirir", "İkisi de tarafsızdır", "Konuları farklıdır"],
+      "answer": 2,
+      "solution": "Metin 1 teknolojiyi olumlu (destekleyici), Metin 2 olumsuz (eleştirici) bir bakış açısıyla ele almaktadır. Bu iki metin zıt tutumlara sahiptir."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Bağlantı Cümlesi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Spor yapmak sağlığı korur. ___ Stresi azaltır ve uyku kalitesini artırır. Bunun yanı sıra özgüveni güçlendirir.\" Boşluğa en uygun bağlaç hangisidir?",
+      "options": ["Ancak", "Oysa", "Bunun ötesinde", "Hâlbuki", "Ne var ki"],
+      "answer": 2,
+      "solution": "\"Bunun ötesinde\" (Üstelik/Ayrıca anlamına da gelir) cümleleri aynı yönde ekleyerek bağlar. Önceki cümle sağlık vurgusunu sürdürmektedir."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Ana Düşünce",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Bir dil öğrenmek yalnızca kelime ve dilbilgisi kuralı ezberlemek değildir. O dili konuşan insanların kültürünü, düşünce biçimini ve dünyaya bakışını da öğrenmektir. Bu nedenle dil öğrenmek insanı zenginleştirir.\" Bu paragrafın ana düşüncesi hangisidir?",
+      "options": ["Dil öğrenmek zordur", "Dil öğrenmek kelime ezberi gerektirir", "Dil öğrenmek kültürel ve zihinsel bir kazanımdır", "Yabancı dilde iletişim önemlidir", "Her dilin kendine özgü kuralları vardır"],
+      "answer": 2,
+      "solution": "Paragrafta dil öğrenmenin sıradan bir ezberden öte, kültürel ve zihinsel bir zenginleşme olduğu vurgulanmaktadır."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Diyalog Metni",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "— Bu kitabı okudun mu?\n— Evet, çok etkilendim. Özellikle sondaki sürpriz bitti.\n— Ben de okumak istiyordum zaten, yarın alırım.\n\nBu diyalogdan hangisi kesinlikle çıkarılamaz?",
+      "options": ["İki kişi konuşmaktadır", "Kitabın sonu sürprizli bitmektedir", "Birinci kişi kitabı okumuştur", "İkinci kişi kitabı satın alacaktır", "İkinci kişi kitabı çok beğenmemiştir"],
+      "answer": 4,
+      "solution": "\"Çok etkilendim\" ifadesi kitabı beğendiğini gösterir. \"Beğenmedi\" sonucu çıkarılamaz. Diğer seçenekler diyalogdan açıkça çıkarılabilmektedir."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Paragraf Sıralaması",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşağıdaki cümleleri anlamlı bir paragraf oluşturacak biçimde sıralayınız.\nI. Bu nedenle düzenli egzersiz yaşam kalitesini artırır.\nII. Egzersiz yapmak kalp sağlığını korur ve bağışıklık sistemini güçlendirir.\nIII. Ayrıca ruh halini olumlu etkiler ve enerji seviyesini yükseltir.\nIV. Fiziksel aktivite, modern yaşamın vazgeçilmezi hâline gelmiştir.",
+      "options": ["IV – II – III – I", "I – II – III – IV", "II – I – III – IV", "IV – I – II – III", "III – II – IV – I"],
+      "answer": 0,
+      "solution": "IV ile konu tanıtılır, II ile somut yararlar verilir, III ile ek yararlar eklenir, I ile sonuç yargısına ulaşılır. Doğru sıra: IV-II-III-I."
+    }
+  },
+  {
+    "game": "turkce", "category": "dil_bilgisi", "topic": "Fiil Çekimleri – Kip ve Kişi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Sınıfta kimse konuşmuyordu.\" cümlesindeki fiil hangi kiple çekimlenmiştir?",
+      "options": ["Geniş zaman", "Şimdiki zaman", "Görülen geçmiş zaman", "Öğrenilen geçmiş zaman", "Şimdiki zamanın hikâyesi"],
+      "answer": 4,
+      "solution": "konuşmuyordu = konuş- + -ıyor + -du. -ıyordu eki şimdiki zamanın hikâyesini oluşturur; geçmişte hâlâ sürmekte olan bir eylemi anlatır. Doğru yanıt: şimdiki zamanın hikâyesi."
+    }
+  },
+  {
+    "game": "turkce", "category": "dil_bilgisi", "topic": "Sözcük Türleri – Edat",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Okula kadar yürüdüm.\" cümlesinde \"kadar\" sözcüğü hangi görevdedir?",
+      "options": ["Bağlaç", "Ünlem", "Edat (ilgeç)", "Zarf", "Sıfat"],
+      "answer": 2,
+      "solution": "\"Kadar\" burada \"okula\" sözcüğüne bağlanarak sınır/süre anlamı katan bir edattır (ilgeç). Tek başına anlamı yoktur; bir isim ya da zamire bağlı kullanılır."
+    }
+  },
+  {
+    "game": "turkce", "category": "dil_bilgisi", "topic": "Sözcük Türleri – Bağlaç",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Hem yorgun hem de hasta hissediyordum.\" cümlesinde \"hem...hem de\" ne görev yapmaktadır?",
+      "options": ["Edat", "Bağlaç", "Zarf", "Ünlem", "Zamir"],
+      "answer": 1,
+      "solution": "\"Hem...hem de\" çift bağlaçtır; iki öğeyi aynı anda var olan iki özelliği bağlar. Bağlaçlar sözcük, sözcük grubu veya cümleler arasında ilişki kurar."
+    }
+  },
+  {
+    "game": "turkce", "category": "dil_bilgisi", "topic": "Cümle Öğeleri – Nesne",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Annem her sabah taze ekmek alır.\" cümlesinin nesnesi hangisidir?",
+      "options": ["Annem", "Her sabah", "Taze ekmek", "Alır", "Her"],
+      "answer": 2,
+      "solution": "Nesne, geçişli fiillerin etkisini üstlenen öğedir. \"Ne alır?\" → \"taze ekmek\" → nesne. Annem öznedir, her sabah zarf tümlecidir."
+    }
+  },
+  {
+    "game": "turkce", "category": "dil_bilgisi", "topic": "Cümle Öğeleri – Zarf Tümleci",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Çok hızlı koştuğu için nefes nefese kaldı.\" cümlesinde zarf tümleci hangisidir?",
+      "options": ["Çok hızlı koştuğu için", "Nefes nefese", "Kaldı", "Çok", "Hızlı"],
+      "answer": 0,
+      "solution": "\"Neden kaldı?\" sorusuna \"çok hızlı koştuğu için\" cevabı gelir → sebep bildiren zarf tümlecidir."
+    }
+  },
+  {
+    "game": "turkce", "category": "dil_bilgisi", "topic": "Yapım Eki – İsimden Fiil",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşağıdaki sözcüklerden hangisi isimden türetilmiş bir fiildir?",
+      "options": ["Güldür-", "Sev-", "Temizle-", "Koş-", "Gel-"],
+      "answer": 2,
+      "solution": "\"Temizle-\" sözcüğü \"temiz\" (isim/sıfat) + -le (isimden fiil yapım eki) ile oluşturulmuştur. Güldür- fiilden fiil, diğerleri kök fiildir."
+    }
+  },
+  {
+    "game": "turkce", "category": "yazim_kurallari", "topic": "Büyük Harf – Özel İsimler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşağıdaki cümlelerin hangisinde büyük harf kullanımı yanlıştır?",
+      "options": ["Türk Dil Kurumu bu yıl yeni kılavuz yayımladı.", "Marmara Denizi İstanbul ile Çanakkale arasındadır.", "Mehmet, ankara'da yaşıyor.", "Ramazan Bayramı bu ay kutlanacak.", "Doğu Anadolu'da kar yağışı bekleniyor."],
+      "answer": 2,
+      "solution": "\"ankara\" özel isimdir; büyük harfle \"Ankara\" yazılmalıdır. \"Mehmet, Ankara'da yaşıyor.\" doğru biçimdir."
+    }
+  },
+  {
+    "game": "turkce", "category": "yazim_kurallari", "topic": "Yazım – de/da Ayrı Yazım",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Eve geldim, odama da geçtim.\" cümlesinde \"da\" sözcüğü neden ayrı yazılmıştır?",
+      "options": ["Ek değil, bağlaçtır; her zaman ayrı yazılır", "Ünlü uyumuna uymadığı için", "Fiille birleştiği için", "Büyük ünlü uyumu bozulduğu için", "Özne konumunda olduğu için"],
+      "answer": 0,
+      "solution": "\"da/de\" bağlaç olarak kullanıldığında her zaman ayrı yazılır. Ek (-da/-de) olduğunda ise sözcüğe bitişik yazılır. Burada \"da\" bağlaçtır (= üstelik/ayrıca anlamı)."
+    }
+  },
+  {
+    "game": "turkce", "category": "yazim_kurallari", "topic": "Sayıların Yazımı",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşağıdaki sayı yazımlarından hangisi doğrudur?",
+      "options": ["Bin dörtyüz kırk beş", "Bindörtyüzkırkbeş", "Bin dört yüz kırk beş", "1445 rakamla yazılmalı", "Bindörtyüz kırk beş"],
+      "answer": 2,
+      "solution": "Sayılar yazıyla yazılırken her basamak ayrı yazılır: bin + dört yüz + kırk + beş → \"bin dört yüz kırk beş\"."
+    }
+  },
+  {
+    "game": "turkce", "category": "yazim_kurallari", "topic": "Noktalama – Noktalı Virgül",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Noktalı virgül (;) aşağıdaki cümlelerin hangisinde doğru kullanılmıştır?",
+      "options": ["Kitap okudum; televizyon izledim.", "Merhaba; nasılsın?", "Bu; doğru değil.", "Evet; hayır.", "Gel; buraya."],
+      "answer": 0,
+      "solution": "Noktalı virgül; birbiriyle ilgili birden fazla yargıyı sıralamak için kullanılır. \"Kitap okudum; televizyon izledim\" — iki bağımsız yargı noktalı virgülle doğru biçimde ayrılmıştır."
+    }
+  },
+  {
+    "game": "turkce", "category": "yazim_kurallari", "topic": "Yazım – mi/mı Soru Eki",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"Geldin mi?\" cümlesinde \"mi\" neden ayrı yazılmıştır?",
+      "options": ["Ünlü uyumuna uymadığı için", "Soru eki her zaman ayrı yazılır", "Fiilden sonra gelen her ek ayrı yazılır", "Bağlaç olduğu için ayrı yazılır", "Vurgu aldığı için ayrı yazılır"],
+      "answer": 1,
+      "solution": "\"mı/mi/mu/mü\" soru eki Türkçede daima ayrı yazılır. Ünlü uyumuna uyar ancak sözcükten ayrı tutulur: geldin mi, biliyor musun, uyudu mu."
+    }
+  },
+  {
+    "game": "turkce", "category": "yazim_kurallari", "topic": "Yazım – ki Eki ve Bağlacı",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşağıdaki cümlelerin hangisinde \"ki\" yanlış yazılmıştır?",
+      "options": ["Onunki benden güzel.", "Sanıyorum ki haklısın.", "Öyleki hiç beklemiyordum.", "Bugünkü hava çok soğuk.", "Anladımki geç kaldım."],
+      "answer": 4,
+      "solution": "Bağlaç olarak kullanılan \"ki\" ayrı yazılır: \"Anladım ki geç kaldım.\" — \"Anladımki\" yanlıştır. 3. seçenekte \"öyle ki\" olmalıdır o da yanlış, ancak en açık hata 5. seçenektir."
+    }
+  },
+  {
+    "game": "turkce", "category": "yazim_kurallari", "topic": "Kısaltma ve Noktalama",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "\"T.B.M.M. bugün toplandı.\" cümlesinde kısaltma nasıl okunur ve nokta kullanımı doğru mudur?",
+      "options": ["Okunmaz; nokta yanlıştır", "Te-Be-Em-Em olarak okunur; nokta doğrudur", "Türkiye Büyük Millet Meclisi olarak okunur; nokta doğrudur", "Kısaltmalar noktasız yazılmalıdır", "Sadece büyük harf yeterlidir"],
+      "answer": 2,
+      "solution": "T.B.M.M. kısaltması \"Türkiye Büyük Millet Meclisi\" olarak okunur. Her harften sonra nokta konulması TDK kuralına uygundur."
+    }
+  }
+]

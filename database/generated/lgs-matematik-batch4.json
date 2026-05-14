@@ -1,0 +1,202 @@
+[
+  {
+    "game": "matematik", "category": "veri", "topic": "Tablo ve Grafik Okuma",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir sınıfta yapılan anket sonuçlarına göre öğrencilerin favori dersleri:\n• Matematik: 12 öğrenci\n• Türkçe: 8 öğrenci\n• Fen: 10 öğrenci\n• Sosyal: 6 öğrenci\nBu sınıfta en az tercih edilen ders hangisidir ve toplam öğrenci sayısı kaçtır?",
+      "options": ["Türkçe – 36", "Sosyal – 36", "Matematik – 36", "Fen – 36", "Sosyal – 30"],
+      "answer": 1,
+      "solution": "En az tercih edilen ders 6 öğrenciyle Sosyal'dir. Toplam: 12+8+10+6 = 36 öğrenci."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Tablo ve Grafik Okuma",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir haftalık hava sıcaklıkları (°C):\nPzt: 18, Sal: 22, Çar: 20, Per: 24, Cum: 16\n\nBu verilerin aritmetik ortalaması kaçtır?",
+      "options": ["18", "19", "20", "22", "16"],
+      "answer": 2,
+      "solution": "Toplam: 18+22+20+24+16 = 100. Ortalama: 100 ÷ 5 = 20°C."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Ortalama, Medyan, Mod",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "5 sınavdan alınan notlar: 60, 75, 80, 75, 90\n\nBu verilerin modu ve medyanı sırasıyla kaçtır?",
+      "options": ["75 ve 75", "75 ve 80", "80 ve 75", "60 ve 80", "90 ve 75"],
+      "answer": 0,
+      "solution": "Mod: En sık tekrarlanan değer = 75. Medyan: Sıralı dizi (60,75,75,80,90) ortadaki = 75. Her ikisi de 75'tir."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Ortalama, Medyan, Mod",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir sınıfın 6 öğrencisinin boy ölçüleri (cm): 155, 162, 158, 162, 170, 165\n\nBu veri kümesinin ortalaması kaç cm'dir?",
+      "options": ["160", "161", "162", "163", "165"],
+      "answer": 2,
+      "solution": "Toplam: 155+162+158+162+170+165 = 972. Ortalama: 972 ÷ 6 = 162 cm."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Olasılık",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "İçinde 4 kırmızı, 3 mavi, 3 sarı bilye bulunan bir torbadan rastgele 1 bilye çekiliyor. Mavi bilye gelme olasılığı kaçtır?",
+      "options": ["3/10", "4/10", "3/7", "1/3", "3/4"],
+      "answer": 0,
+      "solution": "Toplam bilye: 4+3+3 = 10. Mavi bilye sayısı: 3. Olasılık: 3/10."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Olasılık",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Adil bir madeni para iki kez atılıyor. İki atışta da tura gelme olasılığı kaçtır?",
+      "options": ["1/2", "1/4", "1/3", "3/4", "2/4"],
+      "answer": 1,
+      "solution": "Her atışta tura olasılığı 1/2'dir. Bağımsız iki olayın birlikte gerçekleşme olasılığı: 1/2 × 1/2 = 1/4."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Olasılık",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "1'den 20'ye kadar numaralandırılmış kartlar arasından rastgele çekilen kartın 5'in katı olma olasılığı kaçtır?",
+      "options": ["1/4", "1/5", "3/20", "4/20", "1/20"],
+      "answer": 1,
+      "solution": "1–20 arasında 5'in katları: 5, 10, 15, 20 → 4 adet. Olasılık: 4/20 = 1/5."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Çeyrek Değerler ve Yayılım",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir veri kümesinin en küçük değeri 12, en büyük değeri 48 olduğuna göre bu veri kümesinin değişim aralığı (range) kaçtır?",
+      "options": ["24", "30", "36", "48", "60"],
+      "answer": 2,
+      "solution": "Değişim aralığı = En büyük – En küçük = 48 – 12 = 36."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Tablo ve Grafik Okuma",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir okul kantininin aylık satış grafiğine göre Ocak'ta 500, Şubat'ta 600, Mart'ta 700 ürün satılmıştır. Bu 3 ayda ortalama kaç ürün satılmıştır?",
+      "options": ["550", "600", "620", "650", "700"],
+      "answer": 1,
+      "solution": "Toplam: 500+600+700 = 1800. Ortalama: 1800 ÷ 3 = 600 ürün."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Ortalama Problemi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "4 öğrencinin not ortalaması 70'tir. 5. öğrenci sınava girdiğinde ortalama 72'ye çıkmıştır. 5. öğrencinin aldığı not kaçtır?",
+      "options": ["76", "78", "80", "82", "84"],
+      "answer": 2,
+      "solution": "4 öğrencinin toplam notu: 4×70 = 280. 5 öğrencinin toplam notu: 5×72 = 360. 5. öğrencinin notu: 360 – 280 = 80."
+    }
+  },
+  {
+    "game": "matematik", "category": "sayilar", "topic": "Rasyonel Sayılar – Sayı Doğrusu",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Sayı doğrusunda -3/4 ile 1/2 arasındaki tam ortadaki nokta hangisidir?",
+      "options": ["-1/8", "-1/4", "1/8", "-3/8", "1/4"],
+      "answer": 0,
+      "solution": "Ortadaki nokta = (-3/4 + 1/2) / 2 = (-3/4 + 2/4) / 2 = (-1/4) / 2 = -1/8."
+    }
+  },
+  {
+    "game": "matematik", "category": "sayilar", "topic": "Rasyonel Sayılar – İşlemler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "3/4 + 2/3 – 1/2 işleminin sonucu kaçtır?",
+      "options": ["11/12", "5/6", "7/12", "1", "13/12"],
+      "answer": 0,
+      "solution": "Ortak payda 12: 9/12 + 8/12 – 6/12 = 11/12."
+    }
+  },
+  {
+    "game": "matematik", "category": "sayilar", "topic": "Mutlak Değer",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "|−7| + |3| – |−2| işleminin sonucu kaçtır?",
+      "options": ["6", "8", "10", "12", "2"],
+      "answer": 1,
+      "solution": "|−7| = 7, |3| = 3, |−2| = 2. İşlem: 7 + 3 – 2 = 8."
+    }
+  },
+  {
+    "game": "matematik", "category": "sayilar", "topic": "Kesirli Sayı Problemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir kutu çikolata bir sınıfın 3/5'ine dağıtıldı. Kalan çikolataların 1/2'si de öğretmene verildi. Başlangıçta 60 çikolata varsa öğretmene kaç çikolata verilmiştir?",
+      "options": ["10", "12", "15", "18", "20"],
+      "answer": 1,
+      "solution": "Dağıtılan: 60 × 3/5 = 36. Kalan: 60 – 36 = 24. Öğretmene: 24 × 1/2 = 12 çikolata."
+    }
+  },
+  {
+    "game": "matematik", "category": "sayilar", "topic": "Tam Sayı İşlemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "(−3) × (−4) + (−2) × 5 işleminin sonucu kaçtır?",
+      "options": ["−22", "−2", "2", "22", "14"],
+      "answer": 2,
+      "solution": "(−3)×(−4) = 12. (−2)×5 = −10. 12 + (−10) = 2."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Örüntü ve Denklem",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "1, 4, 9, 16, 25, ... sayı dizisinin 8. terimi kaçtır?",
+      "options": ["36", "49", "64", "81", "100"],
+      "answer": 2,
+      "solution": "Bu dizi tam kare sayılarıdır: 1², 2², 3², 4², 5², ... 8. terim = 8² = 64."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "İki Bilinmeyenli Denklem",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "x + y = 10 ve x – y = 4 denklem sisteminin çözümü (x, y) hangisidir?",
+      "options": ["(6, 4)", "(7, 3)", "(8, 2)", "(5, 5)", "(4, 6)"],
+      "answer": 1,
+      "solution": "İki denklemi toplarsak: 2x = 14 → x = 7. y = 10 – 7 = 3. Çözüm: (7, 3)."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Üçgende Açılar",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir üçgenin iç açıları 2x°, 3x°, 4x° olduğuna göre x değeri kaçtır?",
+      "options": ["15", "18", "20", "22", "25"],
+      "answer": 2,
+      "solution": "Üçgenin iç açıları toplamı 180°'dir. 2x + 3x + 4x = 180 → 9x = 180 → x = 20."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Benzer Üçgenler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "İki benzer üçgende kenar oranı 1:3'tür. Küçük üçgenin alanı 12 cm² ise büyük üçgenin alanı kaç cm²'dir?",
+      "options": ["36", "72", "108", "144", "48"],
+      "answer": 2,
+      "solution": "Benzer şekillerde alan oranı, kenar oranının karesiyle orantılıdır. Alan oranı: 1²:3² = 1:9. Büyük üçgen: 12 × 9 = 108 cm²."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Silindir Hacmi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Taban yarıçapı 5 cm, yüksekliği 8 cm olan bir silindirin hacmi kaç cm³'tür? (π ≈ 3 alınız)",
+      "options": ["450", "550", "600", "650", "700"],
+      "answer": 2,
+      "solution": "V = π × r² × h = 3 × 5² × 8 = 3 × 25 × 8 = 600 cm³."
+    }
+  }
+]
