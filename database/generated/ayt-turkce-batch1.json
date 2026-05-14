@@ -1,0 +1,202 @@
+[
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Divan Edebiyatı – Gazel",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Divan edebiyatında bütün beyitlerinde aynı konu ve duygunun işlendiği gazele ne denir?",
+      "options": ["Yek-avaz gazel", "Yek-âhenk gazel", "Musammat gazel", "Yedekli gazel", "Ayaklı gazel"],
+      "answer": 1,
+      "solution": "Divan edebiyatında bütün beyitlerinde aynı tema ve duygunun işlendiği gazele yek-âhenk gazel denir. Yek-avaz gazel ise tüm beyitlerin aynı güçte söylendiği gazeldir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Divan Edebiyatı – Kaside",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Divan edebiyatında kasidenin şairin kendisini övdüğü bölümüne ne ad verilir?",
+      "options": ["Nesib", "Girizgâh", "Fahriye", "Tegazzül", "Dua"],
+      "answer": 2,
+      "solution": "Kasidenin bölümleri sırasıyla: Nesib (giriş), Girizgâh (geçiş), Methiye (övgü), Fahriye (şairin kendini övmesi), Tegazzül (gazel), Dua. Şairin kendi övgüsünü yaptığı bölüm FAHRİYE'dir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Divan Edebiyatı – Mesnevi",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Divan edebiyatında her beyitinin kendi içinde kafiyeli olduğu (aa bb cc...) ve uzun anlatı şiirlerde kullanılan nazım biçimi hangisidir?",
+      "options": ["Gazel", "Kaside", "Mesnevi", "Murabba", "Terkib-i bent"],
+      "answer": 2,
+      "solution": "MESNEVİ: aa/bb/cc... kafiye düzeniyle her beyit kendi içinde kafiyeli olduğundan çok uzun anlatı şiirleri yazmaya olanak tanır. Roman işlevi görür. Örnek: Mevlâna'nın Mesnevisi, Fuzuli'nin Leyla ile Mecnun'u."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Tanzimat Edebiyatı – Tiyatro",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Türk edebiyatının ilk tiyatro eseri olarak kabul edilen ve yanlış Batılılaşmayı konu alan 'Şair Evlenmesi'nin yazarı kimdir?",
+      "options": ["Namık Kemal", "Ziya Paşa", "Ahmet Vefik Paşa", "Şinasi", "Recaizade Mahmut Ekrem"],
+      "answer": 3,
+      "solution": "Şinasi'nin 'Şair Evlenmesi' (1860), Türk edebiyatının ilk tiyatro eseri olarak kabul edilir. Yanlış Batılılaşmayı ve görücü usulü evliliği eleştiren bir komedidir. Şinasi aynı zamanda Türkçe gazetecilik ve noktalama işaretlerinin öncüsüdür."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Tanzimat Edebiyatı – Roman",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Namık Kemal'in 'İntibah' romanı hangi temel temayı işler?",
+      "options": ["Osmanlı-Rus savaşını", "Batılılaşma ve aile kurumunu", "Kötü çevre-aşk trajedisi ve yıkımı", "Köy-şehir çatışmasını", "Tarihî kahramanlığı"],
+      "answer": 2,
+      "solution": "'İntibah' (Uyanış, 1876) Namık Kemal'in ilk romanıdır. Kötü bir kadına âşık olan Ali Bey'in çevre etkisiyle yıkılışını anlatır; kıskançlık, aşk ve aldatılma temaları ön plandadır. Tanzimat romanlarının ilk psikolojik derinlik denemesidir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Tanzimat – İkinci Kuşak",
+    "difficulty": 4, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Tanzimat'ın ikinci kuşağında 'sanat sanat içindir' ilkesini benimseyerek 'Zemzeme' şiir kitabıyla ve 'Araba Sevdası' romanıyla tanınan yazar kimdir?",
+      "options": ["Namık Kemal", "Şinasi", "Recaizade Mahmut Ekrem", "Abdülhak Hamit Tarhan", "Muallim Naci"],
+      "answer": 2,
+      "solution": "Recaizade Mahmut Ekrem, Tanzimat'ın ikinci kuşağında 'sanat sanat içindir' anlayışını savunmuştur. 'Zemzeme' (3 cilt şiir kitabı) ve ilk Batılı anlayışta roman olan 'Araba Sevdası' başlıca eserleridir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Servet-i Fünun – Şiir",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Servet-i Fünun şiirinin en önemli temsilcisi olup 'Rübab-ı Şikeste' adlı eseriyle tanınan şair kimdir?",
+      "options": ["Cenap Şahabettin", "Halit Ziya", "Mehmet Rauf", "Tevfik Fikret", "Hüseyin Cahit"],
+      "answer": 3,
+      "solution": "Tevfik Fikret, Servet-i Fünun şiirinin önde gelen ismidir. 'Rübab-ı Şikeste' (Kırık Saz, 1900) başlıca şiir kitabıdır. Sosyal eleştiri ve bireysel acı temalarıyla öne çıkar; dönemin ardından 'Haluk'un Defteri' ile iyimser bir çizgiye geçer."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Servet-i Fünun – Roman",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Halit Ziya Uşaklıgil'in Türk edebiyatında ilk başarılı realist roman olarak kabul edilen ve yasak aşkı işleyen eseri hangisidir?",
+      "options": ["Ferdi ve Şürekâsı", "Kırık Hayatlar", "Aşk-ı Memnu", "Mâi ve Siyah", "Nemide"],
+      "answer": 2,
+      "solution": "'Aşk-ı Memnu' (Yasak Aşk, 1900) Halit Ziya'nın en olgun eseri ve Türk edebiyatının ilk tam realist romanı kabul edilir. Yasak aşkı, ahlaki çöküşü ve trajedik sonu realist bir bakışla ele alır."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Millî Edebiyat – Hikâye",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Millî Edebiyat döneminin öncü hikâyecisi olup 'Kaşağı', 'Yalnız Efe', 'Forsa' gibi eserleriyle tanınan yazar kimdir?",
+      "options": ["Halide Edip Adıvar", "Yakup Kadri Karaosmanoğlu", "Refik Halit Karay", "Ömer Seyfettin", "Reşat Nuri Güntekin"],
+      "answer": 3,
+      "solution": "Ömer Seyfettin, Millî Edebiyat döneminin en verimli hikâyecisidir. Sade Türkçeyi ve milliyetçi temaları kullanan yazarın 200'ü aşkın hikâyesi arasında 'Kaşağı', 'Yalnız Efe', 'Forsa', 'Pembe İncili Kaftan' öne çıkar."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Millî Edebiyat – Roman",
+    "difficulty": 4, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'Kiralık Konak' ve 'Yaban' romanlarıyla Millî Edebiyat döneminin önemli romancısı kimdir?",
+      "options": ["Halide Edip Adıvar", "Refik Halit Karay", "Yakup Kadri Karaosmanoğlu", "Reşat Nuri Güntekin", "Ahmet Hamdi Tanpınar"],
+      "answer": 2,
+      "solution": "Yakup Kadri Karaosmanoğlu; 'Kiralık Konak' (nesiller arası değer çatışması, yanlış Batılılaşma) ve 'Yaban' (Kurtuluş Savaşı'nda köylü-aydın uçurumu) gibi toplumsal eleştiri içeren romanlarıyla öne çıkar."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Cumhuriyet Dönemi – Garip Hareketi",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "1941'de yayımlanan 'Garip' adlı ortak şiir kitabıyla Türk şiirinde yeni bir dönem açan üç şairden biri DEĞİLDİR?",
+      "options": ["Orhan Veli Kanık", "Melih Cevdet Anday", "Oktay Rifat", "Cahit Sıtkı Tarancı", "Bu şairlerin hepsi Garip'te yer almıştır"],
+      "answer": 3,
+      "solution": "Garip hareketinin üç şairi: Orhan Veli Kanık, Melih Cevdet Anday ve Oktay Rifat'tır. Cahit Sıtkı Tarancı hece vezniyle yazan, Garip akımı dışında bir şairdir. 'Otuz Beş Yaş' şiiriyle tanınır."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Cumhuriyet Dönemi – Roman",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'İnce Memed' romanıyla Anadolu halk kahramanlığını anlatan ve Nobel'e defalarca aday gösterilen romancımız kimdir?",
+      "options": ["Orhan Pamuk", "Kemal Tahir", "Yaşar Kemal", "Fakir Baykurt", "Samim Kocagöz"],
+      "answer": 2,
+      "solution": "Yaşar Kemal, 'İnce Memed' (1955) romanıyla Anadolu'nun ezilen insanlarını ve efsanevi halk kahramanını anlatmıştır. 40'tan fazla dile çevrilen roman, yazarını Nobel adayı yapmıştır. Kemal toplumcu gerçekçi Türk edebiyatının simgesidir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Cumhuriyet Dönemi – Toplumcu Şiir",
+    "difficulty": 4, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'Memleketimden İnsan Manzaraları' ve 'Kuvâyi Milliye Destanı' gibi destansı yapıtlarıyla tanınan toplumcu gerçekçi şairimiz kimdir?",
+      "options": ["Ahmet Haşim", "Yahya Kemal Beyatlı", "Nazım Hikmet Ran", "Necip Fazıl Kısakürek", "Fazıl Hüsnü Dağlarca"],
+      "answer": 2,
+      "solution": "Nazım Hikmet Ran, modern Türk şiirinin en önemli temsilcisidir. 'Memleketimden İnsan Manzaraları', 'Kuvâyi Milliye Destanı', 'Şeyh Bedreddin Destanı' toplumcu gerçekçi anlayışla yazılmış başlıca yapıtlarıdır. Serbest şiiri Türkçeye taşımıştır."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Şiir Türleri",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Savaşları, kahramanlıkları ve destanları anlatan; toplumsal coşkuyu yansıtan şiir türü hangisidir?",
+      "options": ["Lirik şiir", "Didaktik şiir", "Dramatik şiir", "Epik şiir", "Pastoral şiir"],
+      "answer": 3,
+      "solution": "EPİK şiir: savaş, kahramanlık, destan gibi büyük toplumsal olayları anlatan coşkulu şiir türüdür. Örnekler: Homeros'un İlyada ve Odise'si, Türk destanları. Lirik: duygusal; Didaktik: öğretici; Dramatik: çatışma/gerilim; Pastoral: doğa/kır."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Halk Edebiyatı – Koşma Türleri",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Halk şiirinde doğayı, güzelliği ve sevgiyi anlatan koşma türü hangisidir?",
+      "options": ["Koçaklama", "Taşlama", "Güzelleme", "Ağıt", "Varsağı"],
+      "answer": 2,
+      "solution": "Koşma türleri: Güzelleme (güzellik, sevgi, doğa), Koçaklama (kahramanlık, savaş), Taşlama (hiciv, eleştiri), Ağıt (ölüm, yas). Varsağı ise hece vezninde ayrı bir nazım biçimidir; koşma türü değildir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Roman Türleri – Natüralizm",
+    "difficulty": 4, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "İnsanı kalıtım ve çevre koşullarının belirlediğini öne sürerek gözlem yerine deneyi esas alan edebî akım hangisidir?",
+      "options": ["Realizm", "Romantizm", "Natüralizm", "Sembolizm", "Parnasizm"],
+      "answer": 2,
+      "solution": "NATÜRALİZM (Émile Zola öncülüğünde): insanın kalıtım ve çevre tarafından belirlendiğini savunur, romanda deney yöntemini kullanır. Realizm toplumsal gözlemi esas alır; Natüralizm bunu bilimsel determinizmle pekiştirir. Türkçede Hüseyin Rahmi Gürpınar etkisindedir."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Paragraf – Ana Fikir",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Bir paragrafta ana fikri bulmak için hangi yöntem izlenmelidir?",
+      "options": ["İlk cümleyi ana fikir kabul etmek", "Son cümleyi ana fikir kabul etmek", "Tüm cümleleri kapsayan ortak düşünceyi bulmak", "En uzun cümleyi seçmek", "En kısa cümleyi seçmek"],
+      "answer": 2,
+      "solution": "Ana fikir, paragraftaki TÜM cümlelerin altında yatan ortak ve genellenebilir düşüncedir. İlk veya son cümle bazen ana fikri yansıtsa da bu kesin kural değildir. Paragrafın tamamını kapsayan, geneli ifade eden düşünce ana fikirdir."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Paragraf – Başlık",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Bir metne başlık seçerken temel ölçüt aşağıdakilerden hangisi olmalıdır?",
+      "options": ["Başlığın kısa ve çarpıcı olması", "Başlığın metnin ana fikrini ya da konusunu yansıtması", "Başlığın soru cümlesi olması", "Başlığın yazar adını içermesi", "Başlığın süslü sözcüklerden oluşması"],
+      "answer": 1,
+      "solution": "Doğru başlık, metnin ANA FİKRİNİ ya da konusunu en iyi biçimde yansıtandır. Kısa ve çarpıcı olması ikincil bir niteliktir. Başlığı okuyunca metnin içeriği hakkında doğru bir ipucu edinilmelidir."
+    }
+  },
+  {
+    "game": "turkce", "category": "dil_bilgisi", "topic": "Cümle Bilgisi – Yüklem Türleri",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'Bahçedeki güller açmıştı.' cümlesinde yüklem hangi türdendir?",
+      "options": ["Eylem yüklemi – etken fiil", "Eylem yüklemi – edilgen fiil", "Ad yüklemi – isim", "Eylem yüklemi – dönüşlü fiil", "Ad yüklemi – sıfat"],
+      "answer": 0,
+      "solution": "'açmıştı' = aç- kökü + mış (öğrenilen geçmiş) + tı (hikâye eki). Özne 'güller' eylemi bizzat yapar → ETKİN (etken) fiil. Edilgen olsaydı 'açılmıştı' olurdu. Bu bir EYLEM YÜKLEMİ – etken fiildir."
+    }
+  },
+  {
+    "game": "turkce", "category": "dil_bilgisi", "topic": "Sözcük Türleri – Bağlaç",
+    "difficulty": 3, "exam_ref": "AYT-EA", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'Ne çalıştı ne de başardı.' cümlesindeki 'ne...ne de' yapısı hangi tür bağlaçtır?",
+      "options": ["Sıralama bağlacı", "Karşıtlık bağlacı", "Koşul bağlacı", "Seçme bağlacı", "Olumsuzluk-birliktelik bağlacı"],
+      "answer": 4,
+      "solution": "'Ne...ne de...' yapısı iki eylemi birden olumsuzlayan OLUMSUZLUK-BİRLİKTELİK bağlacıdır; her iki eylem de gerçekleşmemiştir. 'Ya...ya...' seçme; 'hem...hem...' olumlu birliktelik; 'ama/fakat' karşıtlık bağlacıdır."
+    }
+  }
+]
