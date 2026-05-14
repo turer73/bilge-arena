@@ -100,6 +100,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 mode: gameStore.selectedMode,
                 category: gameStore.selectedCategory ?? 'all',
                 difficulty: gameStore.selectedDifficulty ?? 'all',
+                exam_ref: gameStore.selectedExamRef ?? 'all',
               },
             })
             quiz.handleStart()
@@ -111,6 +112,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
           onSelectCategory={gameStore.setCategory}
           selectedDifficulty={gameStore.selectedDifficulty}
           onSelectDifficulty={gameStore.setDifficulty}
+          selectedExamRef={gameStore.selectedExamRef}
+          onSelectExamRef={gameStore.setExamRef}
           quizLimit={{
             canPlay: quizLimit.canPlay,
             remaining: quizLimit.remaining,

@@ -154,6 +154,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         category: gameStore.selectedCategory,
         difficulty,
         userId: isDeneme ? null : userId, // Deneme'de spaced repetition kapatilir
+        examRef: gameStore.selectedExamRef,
       })
 
       // Fallback: Supabase'de soru yoksa demo sorulari kullan
@@ -202,7 +203,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         timer.start()
       }
     }
-  }, [game, mode, quizStore, timer, isDeneme, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, userId])
+  }, [game, mode, quizStore, timer, isDeneme, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, gameStore.selectedExamRef, userId])
 
   // --- Cevap ver ---
 

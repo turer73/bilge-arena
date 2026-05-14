@@ -24,6 +24,9 @@ interface LobbyProps {
   /** Zorluk filtresi */
   selectedDifficulty: number | null
   onSelectDifficulty: (difficulty: number | null) => void
+  /** Sınav referansı filtresi (TYT / LGS / null=tümü) */
+  selectedExamRef: string | null
+  onSelectExamRef: (examRef: string | null) => void
   /** Quiz limit bilgileri (use-quiz-limit hook'undan) */
   quizLimit?: {
     canPlay: boolean
@@ -42,6 +45,12 @@ const DIFFICULTY_OPTIONS = [
   { value: 5, label: 'Uzman' },
 ] as const
 
+const EXAM_REF_OPTIONS = [
+  { value: null, label: 'Tümü' },
+  { value: 'TYT', label: 'TYT (Lise)' },
+  { value: 'LGS', label: 'LGS (8. Sınıf)' },
+] as const
+
 export function Lobby({
   game,
   selectedMode,
@@ -54,6 +63,8 @@ export function Lobby({
   onSelectCategory,
   selectedDifficulty,
   onSelectDifficulty,
+  selectedExamRef,
+  onSelectExamRef,
   quizLimit,
 }: LobbyProps) {
   const gameDef = GAMES[game]
@@ -108,6 +119,31 @@ export function Lobby({
       {/* Konu & Zorluk filtresi (deneme modunda gizle — deneme kendi dagilimini kullanir) */}
       {!mode.isDeneme && (
         <div className="animate-fadeUp flex flex-col gap-3" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+          {/* Sınav Modu filtresi (wordquest hariç — wordquest level_tag kullanır) */}
+          {game !== 'wordquest' && (
+            <div>
+              <h2 className="mb-2 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+                SINAV MODU
+              </h2>
+              <div className="flex flex-wrap gap-1.5">
+                {EXAM_REF_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.label}
+                    onClick={() => onSelectExamRef(opt.value)}
+                    className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                      selectedExamRef === opt.value
+                        ? 'text-white shadow-sm'
+                        : 'bg-[var(--surface)] text-[var(--text-sub)] hover:bg-[var(--border)]'
+                    }`}
+                    style={selectedExamRef === opt.value ? { backgroundColor: gameDef.colorHex } : undefined}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Konu filtresi */}
           <div>
             <h2 className="mb-2 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">

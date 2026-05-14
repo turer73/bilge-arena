@@ -10,6 +10,8 @@ interface FetchQuestionsOptions {
   category?: string | null
   difficulty?: number | null
   userId?: string | null
+  /** 'TYT' | 'LGS' | null (null = tümü) */
+  examRef?: string | null
 }
 
 /** Fisher-Yates shuffle (in-place) */
@@ -32,6 +34,7 @@ export async function fetchQuizQuestions({
   category,
   difficulty,
   userId,
+  examRef,
 }: FetchQuestionsOptions): Promise<Question[]> {
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
 
@@ -75,6 +78,7 @@ export async function fetchQuizQuestions({
     p_category?: string
     p_difficulty?: number
     p_exclude_ids?: string[]
+    p_exam_ref?: string
   } = {
     p_game: game,
     p_limit: fetchLimit,
@@ -82,6 +86,7 @@ export async function fetchQuizQuestions({
   if (category) rpcArgs.p_category = category
   if (difficulty) rpcArgs.p_difficulty = difficulty
   if (safeExcludeIds.length > 0) rpcArgs.p_exclude_ids = safeExcludeIds
+  if (examRef) rpcArgs.p_exam_ref = examRef
 
   const { data: rpcData, error } = await supabase.rpc('select_random_questions', rpcArgs)
   let data = rpcData as Question[] | null
@@ -95,6 +100,7 @@ export async function fetchQuizQuestions({
         p_limit: fetchLimit,
         ...(category ? { p_category: category } : {}),
         ...(difficulty ? { p_difficulty: difficulty } : {}),
+        ...(examRef ? { p_exam_ref: examRef } : {}),
       },
     )
     if (!fallbackError && fallbackData && (fallbackData as Question[]).length > data.length) {
