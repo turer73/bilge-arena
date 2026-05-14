@@ -60,7 +60,7 @@ export function roomInviteEmail({
           <tr>
             <td style="background:linear-gradient(135deg,#2563EB 0%,#1d4ed8 100%);padding:32px 32px 28px;text-align:center;">
               <div style="font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">BILGE ARENA</div>
-              <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px;letter-spacing:1px;">YKS HAZIRLIK</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px;letter-spacing:1px;">YKS · LGS · AYT HAZIRLIK</div>
             </td>
           </tr>
           <tr>

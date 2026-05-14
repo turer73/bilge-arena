@@ -29,7 +29,7 @@ const FEATURES = [
   { icon: '🔥', label: 'Seri Yap', desc: 'Üst üste doğrularla bonus' },
   { icon: '🏆', label: 'Liderboard', desc: 'Arkadaşlarınla yarış' },
   { icon: '⚔️', label: 'Düello', desc: 'Arkadaşına meydan oku' },
-  { icon: '🎯', label: '3700+ Soru', desc: 'YKS müfredatına uygun' },
+  { icon: '🎯', label: '3700+ Soru', desc: 'YKS · LGS · AYT kapsamlı' },
 ]
 
 export function OnboardingOverlay() {
@@ -96,7 +96,7 @@ export function OnboardingOverlay() {
           </span>
         </h1>
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--text-sub)]">
-          YKS&apos;ye hazırlanmak artık oyun kadar eğlenceli.
+          YKS, LGS ve AYT&apos;ye hazırlanmak artık oyun kadar eğlenceli.
         </p>
       </motion.div>
 

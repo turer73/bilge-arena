@@ -40,7 +40,7 @@ interface FooterProps {
 }
 
 export function Footer({ config }: FooterProps = {}) {
-  const brandDescription = (config?.brand_description as string) || "YKS'ye hazırlanan öğrenciler için oyun tabanlı ücretsiz alıştırma platformu."
+  const brandDescription = (config?.brand_description as string) || "YKS, LGS ve AYT'ye hazırlanan öğrenciler için oyun tabanlı ücretsiz alıştırma platformu."
   const copyright = (config?.copyright as string) || '\u00A9 2026 Bilge Arena. Tüm hakları saklıdır.'
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--surface)]">

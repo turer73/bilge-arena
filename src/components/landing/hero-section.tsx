@@ -62,9 +62,9 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ config }: HeroSectionProps = {}) {
-  const badge = (config?.badge as string) || "Türkiye'nin YKS Oyun Platformu"
+  const badge = (config?.badge as string) || "Türkiye'nin YKS · LGS · AYT Oyun Platformu"
   const heading = (config?.heading as string[]) || ['Öğren.', 'Kazan.', 'Yüksel.']
-  const subheading = (config?.subheading as string) || "YKS'ye hazırlanmak artık"
+  const subheading = (config?.subheading as string) || "YKS, LGS ve AYT'ye hazırlanmak artık"
   const logoUrl = (config?.logo_url as string) || '/logo/icon-512-transparent.png'
   const ctaPrimary = (config?.cta_primary as { text?: string; href?: string }) || {}
   const ctaSecondary = (config?.cta_secondary as { text?: string; href?: string }) || {}

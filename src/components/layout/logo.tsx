@@ -29,7 +29,7 @@ export function Logo({ size = 36, showText = true }: LogoProps) {
             className="font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]"
             style={{ fontSize: size * 0.18 }}
           >
-            YKS Hazırlık
+            YKS · LGS · AYT
           </div>
         </div>
       )}

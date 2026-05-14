@@ -10,7 +10,7 @@ let interBoldPromise: Promise<ArrayBuffer> | null = null
 export async function GET(request: NextRequest) {
   const { origin, searchParams } = new URL(request.url)
   const title = searchParams.get('title') || 'Bilge Arena'
-  const subtitle = searchParams.get('subtitle') || 'YKS Hazırlık Platformu'
+  const subtitle = searchParams.get('subtitle') || 'YKS · LGS · AYT Hazırlık Platformu'
 
   if (!interBoldPromise) {
     interBoldPromise = fetch(`${origin}/fonts/Inter-Bold.woff`).then((res) =>

@@ -16,27 +16,27 @@ export const revalidate = 300
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
 export const metadata: Metadata = {
-  title: 'Bilge Arena — YKS Hazırlık Platformu | Oyunlaştırılmış Sınav Hazırlığı',
+  title: 'Bilge Arena — YKS · LGS · AYT Hazırlık Platformu | Oyunlaştırılmış Sınav Hazırlığı',
   description:
-    'YKS, TYT ve AYT sınavlarına oyunlaştırılmış öğrenme ile hazırlan. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çöz, XP kazan, sıralamada yüksel! 3700+ soru, 5 oyun modu, tamamen ücretsiz.',
+    'YKS, LGS, TYT ve AYT sınavlarına oyunlaştırılmış öğrenme ile hazırlan. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çöz, XP kazan, sıralamada yüksel! 3700+ soru, 5 oyun modu, tamamen ücretsiz.',
   keywords: [
-    'YKS hazırlık', 'TYT soru çöz', 'AYT hazırlık', 'üniversite sınavı',
-    'online test çöz', 'YKS matematik', 'TYT Türkçe', 'TYT Fen',
-    'sınav hazırlık platformu', 'oyunlaştırılmış öğrenme', 'ücretsiz YKS',
+    'YKS hazırlık', 'LGS hazırlık', 'TYT soru çöz', 'AYT hazırlık', 'üniversite sınavı',
+    'online test çöz', 'YKS matematik', 'LGS matematik', 'TYT Türkçe', 'TYT Fen',
+    'sınav hazırlık platformu', 'oyunlaştırılmış öğrenme', 'ücretsiz YKS', 'ücretsiz LGS',
   ],
   alternates: {
     canonical: siteUrl,
   },
   openGraph: {
-    title: 'Bilge Arena — Oyunlaştırılmış YKS Hazırlık Platformu',
-    description: 'YKS\'ye hazırlanmak artık oyun kadar eğlenceli! Soruları çöz, XP kazan, zirvede yerini al.',
+    title: 'Bilge Arena — Oyunlaştırılmış YKS · LGS · AYT Hazırlık Platformu',
+    description: 'YKS, LGS ve AYT\'ye hazırlanmak artık oyun kadar eğlenceli! Soruları çöz, XP kazan, zirvede yerini al.',
     url: siteUrl,
-    images: [{ url: `${siteUrl}/og-image.png`, width: 1200, height: 630, alt: 'Bilge Arena YKS Platformu' }],
+    images: [{ url: `${siteUrl}/og-image.png`, width: 1200, height: 630, alt: 'Bilge Arena YKS LGS AYT Platformu' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bilge Arena — Oyunlaştırılmış YKS Hazırlık',
-    description: 'YKS\'ye hazırlanmak artık oyun kadar eğlenceli! 3700+ soru, 5 oyun, tamamen ücretsiz.',
+    title: 'Bilge Arena — Oyunlaştırılmış YKS · LGS · AYT Hazırlık',
+    description: 'YKS, LGS ve AYT\'ye hazırlanmak artık oyun kadar eğlenceli! 3700+ soru, 5 oyun, tamamen ücretsiz.',
     images: [`${siteUrl}/og-image.png`],
   },
 }

@@ -5,7 +5,7 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').t
 export const metadata: Metadata = {
   title: 'Hakkında — Bilge Arena Nedir?',
   description:
-    'Bilge Arena, YKS\'ye hazırlanan öğrenciler için oyunlaştırılmış ücretsiz bir alıştırma platformudur. Misyonumuz, vizyonumuz ve takım bilgileri.',
+    'Bilge Arena, YKS, LGS ve AYT\'ye hazırlanan öğrenciler için oyunlaştırılmış ücretsiz bir alıştırma platformudur. Misyonumuz, vizyonumuz ve takım bilgileri.',
   alternates: {
     canonical: `${siteUrl}/hakkinda`,
   },
@@ -40,7 +40,7 @@ const VALUES = [
 ]
 
 const TIMELINE = [
-  { year: '2024', event: 'Fikir aşaması — YKS hazırlığı neden sıkıcı olmak zorunda?' },
+  { year: '2024', event: 'Fikir aşaması — YKS ve LGS hazırlığı neden sıkıcı olmak zorunda?' },
   { year: '2025 Q1', event: 'Prototip ve soru bankası oluşturma' },
   { year: '2025 Q2', event: 'Beta lansman — ilk 100 öğrenci' },
   { year: '2025 Q3', event: 'AYT modülleri ve yapay zeka asistan' },
@@ -57,7 +57,7 @@ export default function HakkindaPage() {
           Bilge Arena Hakkında
         </h1>
         <p className="mx-auto max-w-[560px] text-base leading-relaxed text-[var(--text-sub)]">
-          YKS&#39;ye hazırlanan öğrenciler için oyun tabanlı, ücretsiz bir alıştırma platformu.
+          YKS, LGS ve AYT&#39;ye hazırlanan öğrenciler için oyun tabanlı, ücretsiz bir alıştırma platformu.
           Amacımız çalışmayı sıkıcı olmaktan çıkarıp, öğrenciyi motive eden bir deneyime
           dönüştürmek.
         </p>

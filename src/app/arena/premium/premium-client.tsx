@@ -45,7 +45,7 @@ export default function PremiumClient() {
           ⭐ Bilge Arena <span className="text-[var(--reward)]">Premium</span>
         </h1>
         <p className="mt-2 text-sm text-[var(--text-sub)] md:text-base">
-          Sınırsız öğrenme deneyimi ile YKS hedefine ulaş
+          Sınırsız öğrenme deneyimi ile YKS, LGS ve AYT hedefine ulaş
         </p>
       </div>
 

@@ -5,15 +5,15 @@ import { Button } from '@/components/ui/button'
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
 export const metadata: Metadata = {
-  title: 'Nasıl Çalışır — Adım Adım YKS Hazırlık',
+  title: 'Nasıl Çalışır — Adım Adım YKS · LGS · AYT Hazırlık',
   description:
-    'Bilge Arena nasıl çalışır? Kayıt ol, oyun seç, soruları çöz, XP kazan ve sıralamalarda yüksel!',
+    'Bilge Arena nasıl çalışır? Kayıt ol, oyun seç, soruları çöz, XP kazan ve sıralamalarda yüksel! YKS, LGS ve AYT için.',
   alternates: {
     canonical: `${siteUrl}/nasil-calisir`,
   },
   openGraph: {
     title: 'Nasıl Çalışır | Bilge Arena',
-    description: 'Bilge Arena\'da YKS hazırlık süreci adım adım.',
+    description: 'Bilge Arena\'da YKS, LGS ve AYT hazırlık süreci adım adım.',
     url: `${siteUrl}/nasil-calisir`,
   },
 }
@@ -79,7 +79,7 @@ const faqJsonLd = {
       name: 'Bilge Arena nedir?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Bilge Arena, YKS\'ye hazırlanan öğrenciler için oyunlaştırılmış bir öğrenme platformudur. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çözerek XP kazanır, seviye atlar ve sıralamada yükselirsiniz.',
+        text: 'Bilge Arena, YKS, LGS ve AYT\'ye hazırlanan öğrenciler için oyunlaştırılmış bir öğrenme platformudur. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çözerek XP kazanır, seviye atlar ve sıralamada yükselirsiniz.',
       },
     },
     {
@@ -122,7 +122,7 @@ export default function NasilCalisirPage() {
           Nasıl Çalışır?
         </h1>
         <p className="mx-auto max-w-[520px] text-base text-[var(--text-sub)]">
-          6 adımda YKS hazırlığını oyuna dönüştür. Kayıt ol, oyna, öğren, yüksel!
+          6 adımda YKS, LGS ve AYT hazırlığını oyuna dönüştür. Kayıt ol, oyna, öğren, yüksel!
         </p>
       </section>
 

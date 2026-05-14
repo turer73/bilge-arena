@@ -5,25 +5,25 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').t
 
 /* ─── SEO Metadata ─── */
 export const metadata: Metadata = {
-  title: 'Premium — Sınırsız YKS Hazırlık',
+  title: 'Premium — Sınırsız YKS · LGS · AYT Hazırlık',
   description:
     'Bilge Arena Premium ile sınırsız quiz çöz, reklamsız öğren, AI asistandan sınırsız destek al. 7 gün ücretsiz dene!',
   keywords: [
-    'Bilge Arena Premium', 'YKS premium', 'sınırsız soru çöz',
-    'reklamsız öğrenme', 'YKS hazırlık abonelik',
+    'Bilge Arena Premium', 'YKS premium', 'LGS premium', 'sınırsız soru çöz',
+    'reklamsız öğrenme', 'YKS hazırlık abonelik', 'AYT hazırlık',
   ],
   alternates: {
     canonical: `${siteUrl}/arena/premium`,
   },
   openGraph: {
-    title: 'Bilge Arena Premium — Sınırsız YKS Hazırlık',
+    title: 'Bilge Arena Premium — Sınırsız YKS · LGS · AYT Hazırlık',
     description: 'Sınırsız quiz, reklamsız deneyim, AI asistan. 7 gün ücretsiz dene!',
     url: `${siteUrl}/arena/premium`,
     images: [{ url: `${siteUrl}/og-image.png`, width: 1200, height: 630, alt: 'Bilge Arena Premium' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bilge Arena Premium — Sınırsız YKS Hazırlık',
+    title: 'Bilge Arena Premium — Sınırsız YKS · LGS · AYT Hazırlık',
     description: 'Sınırsız quiz, reklamsız deneyim, AI asistan. 7 gün ücretsiz dene!',
     images: [`${siteUrl}/og-image.png`],
   },

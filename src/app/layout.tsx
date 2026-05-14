@@ -28,12 +28,12 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Bilge Arena — YKS Hazırlık Platformu',
+    default: 'Bilge Arena — YKS · LGS · AYT Hazırlık Platformu',
     template: '%s | Bilge Arena',
   },
   description:
-    'Oyunlaştırılmış YKS hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularıyla öğren, kazan, yüksel!',
-  keywords: ['YKS', 'TYT', 'AYT', 'üniversite sınavı', 'hazırlık', 'test', 'quiz', 'oyun'],
+    'Oyunlaştırılmış YKS, LGS ve AYT hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularıyla öğren, kazan, yüksel!',
+  keywords: ['YKS', 'LGS', 'TYT', 'AYT', 'üniversite sınavı', 'ortaokul sınavı', 'hazırlık', 'test', 'quiz', 'oyun'],
   authors: [{ name: 'Bilge Arena' }],
   creator: 'Bilge Arena',
   metadataBase: new URL((process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').trim()),
@@ -41,14 +41,14 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'tr_TR',
     siteName: 'Bilge Arena',
-    title: 'Bilge Arena — YKS Hazırlık Platformu',
-    description: 'Oyunlaştırılmış YKS hazırlık platformu. Öğren, kazan, yüksel!',
+    title: 'Bilge Arena — YKS · LGS · AYT Hazırlık Platformu',
+    description: 'Oyunlaştırılmış YKS, LGS ve AYT hazırlık platformu. Öğren, kazan, yüksel!',
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bilge Arena — YKS Hazırlık Platformu',
-    description: 'Oyunlaştırılmış YKS hazırlık platformu. Öğren, kazan, yüksel!',
+    title: 'Bilge Arena — YKS · LGS · AYT Hazırlık Platformu',
+    description: 'Oyunlaştırılmış YKS, LGS ve AYT hazırlık platformu. Öğren, kazan, yüksel!',
     images: ['/og-image.png'],
   },
   icons: {
@@ -74,7 +74,7 @@ const jsonLd = [
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'Bilge Arena',
-    description: 'Oyunlaştırılmış YKS hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularıyla öğren, kazan, yüksel!',
+    description: 'Oyunlaştırılmış YKS, LGS ve AYT hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularıyla öğren, kazan, yüksel!',
     url: siteUrl,
     applicationCategory: 'EducationalApplication',
     operatingSystem: 'Web',
@@ -98,7 +98,7 @@ const jsonLd = [
     name: 'Bilge Arena',
     url: siteUrl,
     logo: `${siteUrl}/logo-horizontal.png`,
-    description: 'YKS\'ye hazırlanan öğrenciler için oyunlaştırılmış öğrenme platformu.',
+    description: 'YKS, LGS ve AYT\'ye hazırlanan öğrenciler için oyunlaştırılmış öğrenme platformu.',
     sameAs: [],
     contactPoint: {
       '@type': 'ContactPoint',
@@ -108,7 +108,7 @@ const jsonLd = [
     },
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
-      name: 'YKS Hazırlık Oyunları',
+      name: 'YKS · LGS · AYT Hazırlık Oyunları',
       itemListElement: [
         { '@type': 'Course', name: 'Matematik', description: 'TYT · AYT-SAY · LGS Matematik soruları — sayılar, geometri, türev, integral', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
         { '@type': 'Course', name: 'Türkçe & Edebiyat', description: 'TYT · AYT-EA · LGS Türkçe soruları — paragraf, dil bilgisi, edebiyat', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
