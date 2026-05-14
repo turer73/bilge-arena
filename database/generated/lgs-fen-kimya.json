@@ -1,0 +1,211 @@
+[
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit, Baz ve pH (günlük örnekler)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Limon suyu, sirke ve mide suyu pH değerleri 7'nin altındadır. Bu maddeler nasıl sınıflandırılır?",
+      "options": ["Baz", "Nötr", "Asit", "Tuz", "Metal"],
+      "answer": 2,
+      "solution": "pH < 7 olan maddeler asidiktir. Limon suyu (pH≈2), sirke (pH≈3), mide suyu (pH≈1,5) hepsi asittir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit, Baz ve pH (günlük örnekler)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Temizlik ürünleri, sabun ve amonyak gibi maddelerin pH değeri 7'nin üzerindedir. Bu maddeler hangi sınıfa girer?",
+      "options": ["Asit", "Nötr", "Baz", "Karbonhidrat", "Enzim"],
+      "answer": 2,
+      "solution": "pH > 7 olan maddeler bazik (alkali) sınıftadır. Sabun (pH≈9), çamaşır sodası (pH≈11) baz örnekleridir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit, Baz ve pH (günlük örnekler)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Asit ve baz karıştırıldığında hangi olay gerçekleşir?",
+      "options": ["Her zaman patlama olur", "Nötralleşme: su ve tuz oluşur", "Asit her zaman baskın gelir", "Her iki madde de gaz hâline geçer", "Renk değişimi olmaz"],
+      "answer": 1,
+      "solution": "Asit + Baz → Su + Tuz reaksiyonuna nötralleşme denir. pH 7'ye yaklaşır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit, Baz ve pH (günlük örnekler)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Arı sokması asidik, arı sokması ise bazik madde içermektedir. Arı sokmasına karşı hangi madde sürülmelidir?",
+      "options": ["Limon suyu (asit)", "Sirke (asit)", "Karbonat çözeltisi (baz)", "Tuz suyu (nötr)", "Saf su"],
+      "answer": 2,
+      "solution": "Arı sokması asidiktir. Baz olan karbonat çözeltisi asidi nötralize eder ve acıyı azaltır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit, Baz ve pH (günlük örnekler)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "pH ölçeği hakkında hangisi doğrudur?\nI. pH 0-14 arasında bir değer alır.\nII. pH = 7 nötr, < 7 asidik, > 7 baziktir.\nIII. pH arttıkça madde daha asidik olur.",
+      "options": ["Yalnız I", "Yalnız II", "I ve II", "II ve III", "I, II ve III"],
+      "answer": 2,
+      "solution": "I doğru. II doğru. III yanlış: pH arttıkça madde daha bazik, azaldıkça daha asidik olur. Cevap: I ve II.",
+      "type": "roman_numeral"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit, Baz ve pH (günlük örnekler)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Turnosol kağıdı asidik çözeltide hangi rengi alır?",
+      "options": ["Mavi", "Yeşil", "Sarı", "Kırmızı", "Turuncu"],
+      "answer": 3,
+      "solution": "Turnosol (litmus) kağıdı asidik çözeltide kırmızı, bazik çözeltide mavi renk alır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit, Baz ve pH (günlük örnekler)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Mide yanması (reflü) yaşayan bir kişi antasit ilaç içmektedir. Bu ilacın etkisi nasıldır?",
+      "options": ["Mide asidini artırır", "Mideye daha fazla asit ürettirir", "Baz özelliğiyle mide asidini nötralize eder", "Midenin kasılmasını önler", "Sindirim enzimlerini aktive eder"],
+      "answer": 2,
+      "solution": "Antasitler bazik maddeler içerir (örn. Mg(OH)₂, CaCO₃). Mide asidini (HCl) nötralize ederek yanma hissini giderir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Kimyasal Tepkimeler ve Denklemler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Kimyasal bir tepkimede kütlenin korunumu yasasına göre ne gözlemlenir?",
+      "options": ["Ürünlerin kütlesi reaktiflerden fazladır", "Reaktiflerin kütlesi ürünlerden fazladır", "Reaktifler ve ürünlerin toplam kütlesi eşittir", "Tepkime sırasında kütle yok olur", "Kütle sadece gaz tepkimelerde korunur"],
+      "answer": 2,
+      "solution": "Kütlenin korunumu: tepkimelerde atomlar yok olmaz, yeniden düzenlenir. Reaktifler kütlesi = Ürünler kütlesi.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Kimyasal Tepkimeler ve Denklemler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "2H₂ + O₂ → 2H₂O denkleminde 4 g hidrojen ile tepkimeye giren oksijen miktarı kaç gram olur? (H=1, O=16)",
+      "options": ["16 g", "24 g", "32 g", "40 g", "48 g"],
+      "answer": 2,
+      "solution": "2H₂ = 4 g. O₂ = 32 g. Oran: 4 g H₂ → 32 g O₂. 4 g H₂ ile 32 g O₂ tepkimeye girer.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Kimyasal Tepkimeler ve Denklemler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Fiziksel değişim ile kimyasal değişim arasındaki fark nedir?",
+      "options": ["Fiziksel değişimde maddenin kütlesi değişir", "Kimyasal değişimde yeni maddeler oluşur, fizikselinde oluşmaz", "İkisi aynı sonucu verir", "Fiziksel değişim geri alınamaz", "Kimyasal değişimde kütle değişir"],
+      "answer": 1,
+      "solution": "Kimyasal değişimde atomlar yeniden düzenlenerek yeni maddeler (ürünler) oluşur. Fiziksel değişimde maddenin kimyasal yapısı korunur.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Kimyasal Tepkimeler ve Denklemler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşağıdakilerden hangisi kimyasal değişime örnektir?",
+      "options": ["Buzun erimesi", "Şekerin suda çözünmesi", "Demirin paslanması", "Suyun buharlaşması", "Camın kırılması"],
+      "answer": 2,
+      "solution": "Demirin paslanması (demir + oksijen → demir oksit) yeni bir madde oluşturur. Diğerleri fiziksel değişimdir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Kimyasal Tepkimeler ve Denklemler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Kimyasal tepkimelerin hızını artıran etkenler hangileridir?\nI. Sıcaklığı artırmak\nII. Katalizör kullanmak\nIII. Reaktiflerin konsantrasyonunu azaltmak",
+      "options": ["Yalnız I", "Yalnız III", "I ve II", "I ve III", "I, II ve III"],
+      "answer": 2,
+      "solution": "I doğru (yüksek sıcaklık → daha fazla çarpışma). II doğru (katalizör aktivasyon enerjisini düşürür). III yanlış (konsantrasyonu artırmak hızlandırır, azaltmak yavaşlatır). Cevap: I ve II.",
+      "type": "roman_numeral"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Kimyasal Tepkimeler ve Denklemler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir mum yanarken hem fiziksel hem kimyasal değişim gözlemlenir. Aşağıdakilerden hangisi kimyasal değişimdir?",
+      "options": ["Mumun erimesi", "Sıvı mumun akması", "Mumun yanarak CO₂ ve H₂O oluşturması", "Mumun şeklinin değişmesi", "Mumun yüzeyinin pürüzsüzleşmesi"],
+      "answer": 2,
+      "solution": "Mumun yanması (C + H₂ + O₂ → CO₂ + H₂O) kimyasal tepkimedir. Erimesi ise fiziksel değişimdir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Kimyasal Tepkimeler ve Denklemler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Ekzotermik ve endotermik tepkimeler nasıl ayırt edilir?",
+      "options": ["Ekzotermik ısı alır, endotermik ısı verir", "Ekzotermik ısı verir, endotermik ısı alır", "İkisi de aynı ısı değişimini gösterir", "Ekzotermik sadece yanma tepkimeleridir", "Endotermik her zaman patlama ile sonuçlanır"],
+      "answer": 1,
+      "solution": "Ekzotermik: ısı açığa çıkar (yanma, patlama). Endotermik: ısı dışarıdan alınır (fotosentez, pişirme).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Karışımlar ve Çözeltiler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Tuzlu su bir karışımdır. Bu karışımı bileşenlerine ayırmak için hangi yöntem kullanılmalıdır?",
+      "options": ["Süzme", "Mıknatısla ayırma", "Buharlaştırma", "Çöktürme", "Damıtma"],
+      "answer": 4,
+      "solution": "Tuzlu su homojen karışımdır. Damıtma (önce kaynatarak buharlaştırma, sonra yoğuşturma) ile su ve tuz ayrılabilir. Buharlaştırma da tuzu geri kazandırır fakat suyu kaybeder.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Karışımlar ve Çözeltiler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Homojen karışımlar ile heterojen karışımlar arasındaki temel fark nedir?",
+      "options": ["Homojen karışımda bileşenler görülür, heterojeninde görülmez", "Homojen karışımda bileşenler gözle ayırt edilemez, heterojeninde edilir", "Homojen karışım her zaman sıvıdır", "Heterojen karışım tek bileşenlidir", "İkisi de aynıdır"],
+      "answer": 1,
+      "solution": "Homojen (örn. tuzlu su): her noktada bileşim aynı, gözle ayrım yapılamaz. Heterojen (örn. çakıl taşlı su): gözle ayırt edilebilir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Karışımlar ve Çözeltiler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşağıdakilerden hangisi homojen karışıma örnektir?",
+      "options": ["Zeytinyağlı su", "Toprak", "Granit", "Limonata", "Kum-demir talaşı karışımı"],
+      "answer": 3,
+      "solution": "Limonata (su + şeker + limon suyu) her noktada aynı bileşime sahip, gözle ayrım yapılamaz → homojen karışım. Diğerleri heterojen.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Karışımlar ve Çözeltiler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Sıcaklık artışı genellikle katı maddelerin suda çözünürlüğünü nasıl etkiler?",
+      "options": ["Azaltır", "Değiştirmez", "Artırır", "Önce artırır sonra azaltır", "Çözünürlük sıcaklıktan bağımsızdır"],
+      "answer": 2,
+      "solution": "Çoğu katı madde için sıcaklık artışı çözünürlüğü artırır (örn. şeker, tuz). Gazlar için tam tersidir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Karışımlar ve Çözeltiler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "500 mL suda 25 g tuz çözülmüştür. Bu çözeltinin kütlece yüzde derişimi yaklaşık kaçtır?",
+      "options": ["%4,8", "%5,0", "%4,5", "%5,5", "%6,0"],
+      "answer": 0,
+      "solution": "Çözelti kütlesi = 500 + 25 = 525 g. Derişim = (25/525) × 100 ≈ 4,76 ≈ %4,8.",
+      "type": "regular"
+    }
+  }
+]

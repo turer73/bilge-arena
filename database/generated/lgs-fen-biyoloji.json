@@ -1,0 +1,288 @@
+[
+  {
+    "game": "fen", "category": "biyoloji", "topic": "DNA, Gen ve Kalıtım (Mendel)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "DNA'nın temel yapı birimi nedir ve bulunduğu yer neresidir?",
+      "options": ["Amino asit, ribozom", "Nükleotit, hücre çekirdeği", "Glikoz, mitokondri", "Yağ asidi, hücre zarı", "Nükleotit, sitoplazma"],
+      "answer": 1,
+      "solution": "DNA nükleotitlerden oluşur ve çoğunlukla hücre çekirdeğinde bulunur. Her nükleotit: şeker + fosfat + azotlu baz.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "DNA, Gen ve Kalıtım (Mendel)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Mendel'in bezelye deneylerine göre, sarı (baskın) × yeşil (çekinik) çaprazlamada F1 neslinde hangi oran beklenir?",
+      "options": ["1 sarı : 1 yeşil", "3 sarı : 1 yeşil", "Tümü sarı", "Tümü yeşil", "1 sarı : 3 yeşil"],
+      "answer": 2,
+      "solution": "Saf sarı (SS) × saf yeşil (ss) → F1: tümü Ss (sarı fenotip). Baskın gen tüm bireylerde baskın gelir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "DNA, Gen ve Kalıtım (Mendel)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Iki heterozigot bireyin (Ss × Ss) çaprazlanmasında F2 neslinde beklenen fenotip oranı nedir?",
+      "options": ["1 baskın : 1 çekinik", "1 baskın : 3 çekinik", "3 baskın : 1 çekinik", "Tümü baskın", "Tümü çekinik"],
+      "answer": 2,
+      "solution": "Ss × Ss → SS : Ss : ss = 1:2:1. Fenotip: 3 sarı (SS+Ss) : 1 yeşil (ss) → 3:1.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "DNA, Gen ve Kalıtım (Mendel)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "DNA ile ilgili hangi ifadeler doğrudur?\nI. DNA çift sarmal yapısında iki zincirden oluşur.\nII. A her zaman T ile, G her zaman C ile eşleşir.\nIII. DNA yalnızca ökaryot hücrelerde bulunur.",
+      "options": ["Yalnız I", "Yalnız II", "I ve II", "I ve III", "I, II ve III"],
+      "answer": 2,
+      "solution": "I doğru (çift sarmal). II doğru (A-T, G-C eşleşmesi). III yanlış: prokaryotlarda da DNA vardır (sitoplazmada). Cevap: I ve II.",
+      "type": "roman_numeral"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "DNA, Gen ve Kalıtım (Mendel)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir DNA zincirinde adenin bazı %30 oranında bulunmaktadır. Timin bazı yüzdesi nedir?",
+      "options": ["%20", "%25", "%30", "%35", "%40"],
+      "answer": 2,
+      "solution": "DNA'da A = T baz eşleşmesi kuralı. A = %30 ise T de %30'dur.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "DNA, Gen ve Kalıtım (Mendel)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Baskın ve çekinik allel kavramları için hangisi doğrudur?",
+      "options": ["Baskın allel her zaman homozigot bireyde görülür", "Çekinik allel yalnızca çekinik homozigot bireyde fenotipte görülür", "Baskın allel olmadan çekinik allel işlev yapmaz", "Heterozigot bireyler her zaman çekinik fenotip gösterir", "Çekinik allel kalıtım yoluyla aktarılamaz"],
+      "answer": 1,
+      "solution": "Çekinik allel yalnızca homozigot çekinik (rr) bireyde fenotipte görülür. Rr bireyde baskın allel maskelenmiş çekinik alleli gizler.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "DNA, Gen ve Kalıtım (Mendel)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Mutasyon hakkında aşağıdakilerden hangisi doğrudur?",
+      "options": ["Mutasyon her zaman zararlıdır", "Mutasyon DNA dizisinde kalıcı değişikliktir", "Mutasyon yalnızca virüsler tarafından oluşturulur", "Mutasyon sonucunda organizma hemen ölür", "Mutasyon kalıtsal değildir"],
+      "answer": 1,
+      "solution": "Mutasyon, DNA dizisinde meydana gelen kalıcı değişikliktir. Zararlı, yararlı ya da etkisiz olabilir. Kalıtsal olabilir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "DNA, Gen ve Kalıtım (Mendel)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Orak hücreli anemi hastalığı çekinik genle kalıtılmaktadır. Hastalıklı olmayan (Ss) taşıyıcı bir anne ve baba birleşirse çocuklarının kaçta kaçı hasta olur?",
+      "options": ["1/4", "1/2", "3/4", "Tümü hasta", "Hiç hasta olmaz"],
+      "answer": 0,
+      "solution": "Ss × Ss → SS(sağlıklı):Ss(taşıyıcı):ss(hasta) = 1:2:1. Hasta olma olasılığı = 1/4.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Mitoz ve Mayoz Bölünme",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Mitoz bölünme ile mayoz bölünme arasındaki temel fark nedir?",
+      "options": ["Mitoz 4 yavru hücre, mayoz 2 yavru hücre verir", "Mitoz yavru hücreler kromozom sayısını yarıya düşürür", "Mayoz yavru hücrelerin kromozom sayısı ana hücrenin yarısıdır", "Her ikisi de aynı sayıda hücre üretir", "Mitoz yalnızca üreme hücresi üretir"],
+      "answer": 2,
+      "solution": "Mayoz: 2n→n, 4 haploid hücre üretir (üreme hücreleri). Mitoz: 2n→2n, 2 diploid hücre üretir (büyüme/yenileme).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Mitoz ve Mayoz Bölünme",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "İnsan vücudunda hangi hücreler mayoz bölünme geçirir?",
+      "options": ["Deri hücreleri", "Kemik iliği hücreleri", "Karaciğer hücreleri", "Yumurta ve sperm oluşturan hücreler", "Beyin nöronları"],
+      "answer": 3,
+      "solution": "Mayoz bölünme yalnızca gonatlarda (testis ve yumurtalık) gerçekleşir; sperm ve yumurta (gamet) üretiminde kullanılır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Mitoz ve Mayoz Bölünme",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "46 kromozomlu bir insan hücresi mitoz geçirirse oluşan yavru hücreler kaç kromozom taşır?",
+      "options": ["23", "46", "92", "12", "48"],
+      "answer": 1,
+      "solution": "Mitoz: 2n → 2n. 46 kromozomlu ana hücre → 2 yavru hücre, her biri 46 kromozomlu.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Mitoz ve Mayoz Bölünme",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Mitoz ve mayoz bölünme karşılaştırmasında hangileri doğrudur?\nI. Mitoz büyüme ve yenilenmede, mayoz üreme hücresi üretiminde rol alır.\nII. Mayoz sonucu oluşan hücreler genetik olarak farklıdır.\nIII. Her iki bölünmede de DNA eşlenmesi gerçekleşir.",
+      "options": ["Yalnız I", "Yalnız II", "I ve II", "I ve III", "I, II ve III"],
+      "answer": 4,
+      "solution": "I doğru. II doğru (mayozda çaprazlama nedeniyle genetik çeşitlilik oluşur). III doğru (her ikisinde de bölünme öncesi DNA eşlenir). Cevap: I, II ve III.",
+      "type": "roman_numeral"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Mitoz ve Mayoz Bölünme",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir yara kapandığında deride hücre yenilenmesi gerçekleşir. Bu süreçte hangi bölünme türü görev yapar?",
+      "options": ["Mayoz I", "Mayoz II", "Mitoz", "Amitoz", "Hiçbiri"],
+      "answer": 2,
+      "solution": "Vücuttaki büyüme, yenilenme ve onarım mitoz bölünme ile gerçekleşir. Yara iyileşmesi de mitozla sağlanır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Mitoz ve Mayoz Bölünme",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "46 kromozomlu bir hücre mayoz geçirirse kaç hücre oluşur ve her birinde kaç kromozom bulunur?",
+      "options": ["2 hücre, 46 kromozom", "2 hücre, 23 kromozom", "4 hücre, 46 kromozom", "4 hücre, 23 kromozom", "8 hücre, 23 kromozom"],
+      "answer": 3,
+      "solution": "Mayoz: 1 ana hücre (2n=46) → 4 yavru hücre, her biri haploid (n=23).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Mitoz ve Mayoz Bölünme",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Kanser, hücrelerin kontrolsüz mitoz bölünmesi sonucu oluşur. Bu bilgiye göre kanser hücreleri için hangisi doğrudur?",
+      "options": ["Mayoz bölünme geçirirler", "Bölünme sinyallerini yok sayarlar ve sürekli bölünürler", "Daha az DNA içerirler", "Yalnızca yaşlı bireylerde görülür", "Bağışıklık sistemi tarafından kolayca yok edilir"],
+      "answer": 1,
+      "solution": "Kanser hücrelerinde bölünmeyi durduran mekanizmalar bozulmuştur. Hücreler kontrol dışı bölünerek tümör oluşturur.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Ekosistem ve Besin Zinciri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Besin zincirinde enerji akışı nasıl gerçekleşir?",
+      "options": ["Her basamakta enerji artar", "Enerji döngüsel olarak geri dönüşür", "Her basamakta enerji yaklaşık %90 oranında azalır", "Enerji miktarı tüm basamaklarda eşittir", "Üreticilerden tüketicilere aktarımda enerji artışı olur"],
+      "answer": 2,
+      "solution": "Besin zincirinde bir basamaktan diğerine geçerken enerjinin yaklaşık %90'ı ısı olarak kaybolur; yalnızca %10'u aktarılır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Ekosistem ve Besin Zinciri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Ot → Çekirge → Kurbağa → Yılan → Şahin besin zincirinde üreticiler hangileridir?",
+      "options": ["Çekirge ve kurbağa", "Şahin", "Ot", "Yılan ve şahin", "Tüm canlılar"],
+      "answer": 2,
+      "solution": "Üreticiler fotosentez yapan organizmalardır. Bu besin zincirinde 'Ot' tek üreticidir. Diğerleri tüketicidir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Ekosistem ve Besin Zinciri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir ekosistemde kurbağa popülasyonu aniden azalırsa ne olur?",
+      "options": ["Çekirge popülasyonu azalır, yılan popülasyonu artar", "Çekirge popülasyonu artar, yılan popülasyonu azalır", "Her iki popülasyon da artar", "Hiçbir değişim olmaz", "Ot miktarı azalır"],
+      "answer": 1,
+      "solution": "Kurbağa azalınca çekirge (besin) üzerindeki baskı kalkar → çekirge artar. Yılana (kurbağa tüketen) besin azalır → yılan azalır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Ekosistem ve Besin Zinciri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Ayrıştırıcılar (mantar, bakteri) ekosistemde nasıl bir rol üstlenir?",
+      "options": ["Güneş enerjisini kimyasal enerjiye dönüştürür", "Ölü organik maddeleri ayrıştırarak mineral döngüsünü sağlar", "Birincil tüketici olarak ot yer", "Fotosentez yapar", "Ekosisteme yabancı madde katar"],
+      "answer": 1,
+      "solution": "Ayrıştırıcılar ölü organizma ve atıkları parçalayarak inorganik maddelere dönüştürür. Minerallerin döngüsünü sağlarlar.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Ekosistem ve Besin Zinciri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Biyoçeşitlilik azalmasının ekosisteme etkisi nedir?",
+      "options": ["Ekosistem daha kararlı hale gelir", "Enerji akışı hızlanır", "Ekosistem dengesizleşir ve dış etkilere karşı kırılgan hale gelir", "Besin döngüsü kolaylaşır", "Ayrıştırıcı sayısı artar"],
+      "answer": 2,
+      "solution": "Biyoçeşitlilik ekosistemin direncini sağlar. Tür azalması, besin ağını zayıflatır ve ekosistemi çevresel değişikliklere karşı kırılgan kılar.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Ekosistem ve Besin Zinciri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Biyotik ve abiyotik faktörler hakkında hangisi doğrudur?\nI. Bitkiler biyotik faktördür.\nII. Su abiyotik faktördür.\nIII. Güneş ışığı biyotik faktördür.",
+      "options": ["Yalnız I", "Yalnız II", "I ve II", "II ve III", "I, II ve III"],
+      "answer": 2,
+      "solution": "I doğru (bitkiler canlıdır → biyotik). II doğru (su cansız çevre faktörü → abiyotik). III yanlış (güneş ışığı abiyotik). Cevap: I ve II.",
+      "type": "roman_numeral"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "İnsan Vücudu (sinir, bağışıklık)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bağışıklık sistemi ile ilgili hangisi doğrudur?",
+      "options": ["Yalnızca beyaz kan hücrelerinden oluşur", "Vücudu yalnızca bakterilere karşı korur", "Antikor üreterek yabancı antijenlere karşı savaşır", "Sinir sistemi ile hiçbir ilgisi yoktur", "Aşılar bağışıklık sistemini zayıflatır"],
+      "answer": 2,
+      "solution": "Bağışıklık sistemi antikor (immunoglobulin) üreterek antijenlerle (bakteri, virüs) savaşır. Hem hücresel hem humoral bağışıklık içerir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "İnsan Vücudu (sinir, bağışıklık)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Sıcak bir nesneye dokunulduğunda el hemen çekilmektedir. Bu olayda hangi sistem rol oynar?",
+      "options": ["Yalnızca beyin", "Yalnızca omurilik soğanı", "Sinir sistemi — omurilik refleks yayı", "Hormonal sistem", "Kas-iskelet sistemi tek başına"],
+      "answer": 2,
+      "solution": "El çekme refleksi omurilik düzeyinde gerçekleşir; beynin işlemesi beklenmeden hızlı yanıt verilir. Bu refleks yayı sinir sisteminin parçasıdır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "İnsan Vücudu (sinir, bağışıklık)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşı uygulamasının amacı nedir?",
+      "options": ["Vücuda hastalık yapıcı canlı organizma vermek", "Bağışıklık sistemini baskılamak", "Vücuda zayıflatılmış antijen vererek bağışıklık geliştirmek", "Antikor üretimini durdurmak", "Hormonal dengeyi sağlamak"],
+      "answer": 2,
+      "solution": "Aşılar zayıflatılmış/ölü mikroorganizma ya da parçaları içerir. Bağışıklık sistemi bu antijenlere karşı hafıza hücresi üretir; gerçek hastalıkla karşılaşıldığında hızlı yanıt verilir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "İnsan Vücudu (sinir, bağışıklık)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Merkezi sinir sistemi ve çevresel sinir sistemi hangi yapılardan oluşur?",
+      "options": ["Kalp ve akciğer; mide ve bağırsak", "Beyin ve omurilik; sinirler", "Beyin ve omurilik soğanı; omurga", "Nöronlar ve sinapslar; kaslar", "Hormonlar ve bezler; kan"],
+      "answer": 1,
+      "solution": "MSS: beyin + omurilik. ÇSS: vücuttaki tüm sinirler (kranyal ve spinal sinirler). Birlikte tam sinir sistemini oluşturur.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "İnsan Vücudu (sinir, bağışıklık)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Vücuda giren bir bakteri ile ilgili hangi olaylar gerçekleşir?\nI. Beyaz kan hücreleri bakteriyi tanır.\nII. Antikor üretimi başlar.\nIII. Hafıza hücreleri oluşarak ileriki enfeksiyonlara hazırlanır.",
+      "options": ["Yalnız I", "Yalnız II", "I ve II", "II ve III", "I, II ve III"],
+      "answer": 4,
+      "solution": "I doğru (fagositler ve lenfositler tanır). II doğru (B lenfositler antikor üretir). III doğru (hafıza hücreleri bağışıklığı kalıcı kılar). Cevap: I, II ve III.",
+      "type": "roman_numeral"
+    }
+  }
+]

@@ -1,0 +1,210 @@
+[
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Üslü ve Köklü İfadeler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Bir karenin kenar uzunluğu √75 cm olduğuna göre, bu karenin alanı kaç cm²'dir?",
+      "options": ["25", "50", "75", "100", "125"],
+      "answer": 2,
+      "solution": "Karenin alanı = kenar² = (√75)² = 75 cm².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Üslü ve Köklü İfadeler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "2⁵ × 4² ifadesinin değeri kaçtır?",
+      "options": ["64", "128", "256", "512", "1024"],
+      "answer": 3,
+      "solution": "4² = (2²)² = 2⁴ olduğundan 2⁵ × 2⁴ = 2⁹ = 512.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Üslü ve Köklü İfadeler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Bir depoda 3² × 5 adet elma ve 2³ × 5 adet armut bulunmaktadır. Bu depodaki toplam meyve sayısı kaçtır?",
+      "options": ["65", "75", "85", "95", "105"],
+      "answer": 2,
+      "solution": "Elma: 9 × 5 = 45, Armut: 8 × 5 = 40. Toplam: 45 + 40 = 85.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Üslü ve Köklü İfadeler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "√144 + √25 − √9 ifadesinin sonucu kaçtır?",
+      "options": ["11", "12", "13", "14", "15"],
+      "answer": 3,
+      "solution": "√144 = 12, √25 = 5, √9 = 3. Sonuç: 12 + 5 − 3 = 14.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Üslü ve Köklü İfadeler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Ahmet, tasarruf kutusuna her gün bir önceki günün 3 katı kadar para atmaktadır. İlk gün 2 TL attığına göre, 5. gün kaç TL atar?",
+      "options": ["54 TL", "108 TL", "162 TL", "216 TL", "486 TL"],
+      "answer": 2,
+      "solution": "Gün 1: 2, Gün 2: 6, Gün 3: 18, Gün 4: 54, Gün 5: 2 × 3⁴ = 2 × 81 = 162 TL.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Üslü ve Köklü İfadeler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "3√48 ifadesi aşağıdakilerden hangisine eşittir?",
+      "options": ["4√3", "6√3", "12√3", "4√12", "8√3"],
+      "answer": 2,
+      "solution": "√48 = √(16×3) = 4√3. Dolayısıyla 3√48 = 3 × 4√3 = 12√3.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Üslü ve Köklü İfadeler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "2⁸ ÷ 2³ işleminin sonucu, 2'nin kaçıncı kuvvetine eşittir?",
+      "options": ["2", "3", "4", "5", "6"],
+      "answer": 3,
+      "solution": "Üslü ifadelerin bölümünde üsler çıkarılır: 2⁸ ÷ 2³ = 2⁸⁻³ = 2⁵. Cevap: 5.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Çarpanlar ve Katlar / EBOB-EKOK",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Bir bahçeye 24 adet gül, 36 adet lale ve 48 adet papatya dikilecektir. Çiçekler, her sıraya aynı sayıda ve aynı türden gelecek şekilde sıralanacaktır. En az kaç sıra oluşturulur?",
+      "options": ["8", "9", "10", "11", "12"],
+      "answer": 1,
+      "solution": "EBOB(24, 36, 48) = 12. Her sıraya 12 çiçek gider. Toplam sıra = (24+36+48)/12 = 108/12 = 9.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Çarpanlar ve Katlar / EBOB-EKOK",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "İki otobüs aynı anda hareket etmektedir. Biri 12 dakikada, diğeri 20 dakikada bir durağa dönmektedir. Bu iki otobüs en erken kaç dakika sonra aynı anda durağa gelir?",
+      "options": ["30", "40", "50", "60", "80"],
+      "answer": 3,
+      "solution": "EKOK(12, 20) = 60. İki otobüs 60 dakika sonra aynı anda durağa gelir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Çarpanlar ve Katlar / EBOB-EKOK",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "90 ve 126 sayılarının EBOB'u ile EKOK'unun toplamı kaçtır?",
+      "options": ["576", "648", "774", "882", "918"],
+      "answer": 2,
+      "solution": "90 = 2×3²×5, 126 = 2×3²×7. EBOB = 2×3² = 18. EKOK = 2×3²×5×7 = 630. Toplam = 18 + 630 = 648.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Çarpanlar ve Katlar / EBOB-EKOK",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "120 cm ve 84 cm uzunluğundaki iki şerit, eşit parçalara bölünmek isteniyor. Her iki şeritten de artık kalmayacak şekilde kesilebilecek en uzun parça uzunluğu kaç cm'dir?",
+      "options": ["6", "8", "10", "12", "14"],
+      "answer": 3,
+      "solution": "EBOB(120, 84) = 12. Her iki şeritten de 12 cm'lik parçalar artıksız kesilir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Çarpanlar ve Katlar / EBOB-EKOK",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "İki sayının EBOB'u 15, EKOK'u 180'dir. Bu iki sayıdan biri 45 ise diğeri kaçtır?",
+      "options": ["30", "45", "60", "75", "90"],
+      "answer": 2,
+      "solution": "EBOB × EKOK = sayı₁ × sayı₂ → 15 × 180 = 45 × x → x = 2700/45 = 60.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik",
+    "category": "sayilar",
+    "topic": "Çarpanlar ve Katlar / EBOB-EKOK",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Bir sınıfta 30 kız, 42 erkek öğrenci vardır. Öğrenciler, kız ve erkek sayıları eşit olacak şekilde gruplara ayrılacaktır. En fazla kaç grup oluşturulabilir?",
+      "options": ["4", "5", "6", "7", "8"],
+      "answer": 2,
+      "solution": "EBOB(30, 42) = 6. En fazla 6 grup oluşturulur. Her grupta 30/6=5 kız, 42/6=7 erkek olur.",
+      "type": "regular"
+    }
+  }
+]

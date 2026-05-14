@@ -1,0 +1,377 @@
+[
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Mondros Mütarekesi ve İşgaller",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Mondros Mütarekesi'nin imzalanmasından sonra Osmanlı topraklarında işgaller başlamıştır. Bu gelişmenin ardından Türk halkı direniş örgütleri kurmuştur. Bu örgütlerin genel adı nedir?",
+      "options": ["Kuvayı Milliye", "Müdafaa-i Hukuk Cemiyetleri", "Temsil Heyeti", "İttihat ve Terakki", "Kızılay"],
+      "answer": 1,
+      "solution": "İşgallere karşı kurulan yerel direniş örgütleri Müdafaa-i Hukuk Cemiyetleri adıyla örgütlenmiştir. Kuvayı Milliye ise bu dönemde oluşan düzensiz kuvvetlerin adıdır."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Mustafa Kemal'in Anadolu'ya Geçişi",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Mustafa Kemal, Anadolu'daki Millî Mücadele'yi başlatmak amacıyla hangi şehre çıkmıştır?",
+      "options": ["İstanbul", "Ankara", "Samsun", "Trabzon", "Erzurum"],
+      "answer": 2,
+      "solution": "Mustafa Kemal, 19 Mayıs 1919'da Samsun'a çıkarak Millî Mücadele'yi resmen başlatmıştır. Bu tarih bugün Atatürk'ü Anma, Gençlik ve Spor Bayramı olarak kutlanmaktadır."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Kongreler Dönemi",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Millî Mücadele döneminde toplanan Erzurum ve Sivas Kongrelerine ilişkin aşağıdaki bilgilerden hangisi doğrudur?",
+      "options": ["Erzurum Kongresi tüm Anadolu'yu temsil etmekteydi.", "Sivas Kongresi yalnızca Doğu Anadolu'yu kapsıyordu.", "Sivas Kongresi, ulusal birliği ve bütünlüğü tüm yurt adına ilan etti.", "Erzurum Kongresi'nde Temsil Heyeti kurulmadı.", "Her iki kongre İstanbul Hükümeti tarafından desteklendi."],
+      "answer": 2,
+      "solution": "Sivas Kongresi (4-11 Eylül 1919) Anadolu genelini temsil eden bir kongre olarak toplanmış, vatanın bölünmezliğini ve ulusal iradenin egemenliğini ilan etmiştir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "TBMM'nin Açılması",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Türkiye Büyük Millet Meclisi hangi tarihte ve nerede açılmıştır?",
+      "options": ["19 Mayıs 1919, Samsun", "23 Nisan 1920, Ankara", "29 Ekim 1923, Ankara", "1 Kasım 1922, İstanbul", "10 Ağustos 1920, İstanbul"],
+      "answer": 1,
+      "solution": "TBMM, 23 Nisan 1920'de Ankara'da açılmıştır. Bu tarih, ulusal egemenliğin somutlaşması ve yeni devletin temellerinin atılması açısından büyük önem taşır."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Kurtuluş Savaşı Cepheleri",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Kurtuluş Savaşı'nda Doğu Cephesi'nde hangi devletle savaşılmıştır?",
+      "options": ["Yunanistan", "Fransa", "Ermenistan", "İngiltere", "İtalya"],
+      "answer": 2,
+      "solution": "Doğu Cephesi'nde Ermenistan ile savaşılmış; Kazım Karabekir komutasındaki kuvvetler başarı kazanmış ve Gümrü Antlaşması imzalanmıştır (Aralık 1920)."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Lozan Antlaşması",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Lozan Antlaşması'nın (1923) Türkiye açısından önemi nedir?",
+      "options": ["Osmanlı Devleti'nin tarihten silinmesi", "Yeni Türk devletinin uluslararası alanda tanınması", "Kapitülasyonların yeniden düzenlenmesi", "Halifeliğin kaldırılması", "Saltanatın sona ermesi"],
+      "answer": 1,
+      "solution": "Lozan Antlaşması, 24 Temmuz 1923'te imzalanmış; Türkiye Cumhuriyeti'nin bağımsızlığını ve sınırlarını uluslararası alanda resmen tanıtmıştır. Millî Mücadele'nin diplomatik zaferidir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Cumhuriyet'in İlanı",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Türkiye Cumhuriyeti hangi tarihte ilan edilmiş, ilk Cumhurbaşkanı kimdir?",
+      "options": ["23 Nisan 1920 – Mustafa Kemal", "29 Ekim 1923 – Mustafa Kemal", "29 Ekim 1923 – İsmet İnönü", "1 Kasım 1922 – Mustafa Kemal", "3 Mart 1924 – Mustafa Kemal"],
+      "answer": 1,
+      "solution": "Türkiye Cumhuriyeti 29 Ekim 1923'te ilan edilmiş; Mustafa Kemal Atatürk ilk Cumhurbaşkanı seçilmiştir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Atatürk İnkılapları – Harf",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Harf İnkılabı hangi tarihte gerçekleştirilmiş ve ne amaçlanmıştır?",
+      "options": ["1924 – Yabancı dil öğretimini yaygınlaştırmak", "1928 – Latin alfabesine geçerek okuma-yazmayı yaygınlaştırmak", "1932 – Osmanlıcayı korumak", "1924 – Arapça öğretimini zorunlu kılmak", "1930 – Türkçeyi Arapça kurallara göre düzenlemek"],
+      "answer": 1,
+      "solution": "1 Kasım 1928'de çıkarılan Harf Kanunu ile Latin alfabesi benimsenmiş; eski Arap alfabesinin yerini alan bu inkılap okuma-yazmayı kolaylaştırmayı ve eğitimi yaygınlaştırmayı hedeflemiştir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Atatürk İlkeleri",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Atatürk'ün altı temel ilkesi (Altı Ok) arasında yer almayan hangisidir?",
+      "options": ["Cumhuriyetçilik", "Milliyetçilik", "Halkçılık", "Monarşizm", "Devletçilik"],
+      "answer": 3,
+      "solution": "Atatürk'ün altı ilkesi: Cumhuriyetçilik, Milliyetçilik, Halkçılık, Devletçilik, Laiklik, Devrimcilik (İnkılapçılık). Monarşizm bu ilkeler arasında yer almaz; tam tersine Cumhuriyetçilik monarşizmin karşısındadır."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Atatürk İlkeleri – Laiklik",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Laiklik ilkesinin temel anlamı nedir?",
+      "options": ["Devletin dini İslam olarak benimsemesi", "Din ve devlet işlerinin birbirinden ayrılması", "Tüm dini kurumların kapatılması", "Bireylerin din seçme hakkının kaldırılması", "Devletin din eğitimini yasaklaması"],
+      "answer": 1,
+      "solution": "Laiklik; devlet yönetiminin dini kurallara değil, akla ve bilime dayandırılması, din ve devlet işlerinin birbirinden ayrılması ilkesidir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Sosyal İnkılaplar",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Türk kadınına milletvekili seçme ve seçilme hakkı hangi yıl tanınmıştır?",
+      "options": ["1923", "1924", "1930", "1934", "1938"],
+      "answer": 3,
+      "solution": "Türk kadınına 1934'te milletvekili seçme ve seçilme hakkı tanınmıştır. Bu tarihte pek çok Avrupa ülkesinden önce Türk kadını tam siyasi haklara kavuşmuştur."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "inkılap_tarihi",
+    "topic": "Ekonomik İnkılaplar",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Devletçilik ilkesi çerçevesinde 1930'larda Türkiye'de gerçekleştirilen temel uygulama nedir?",
+      "options": ["Özel girişimcilerin ülke dışına çıkarılması", "Devletin sanayi ve ekonomide belirleyici bir rol üstlenmesi", "Yabancı şirketlerin tüm sektörlere davet edilmesi", "Tarım dışı tüm üretimin yasaklanması", "Kapitülasyonların yeniden yürürlüğe girmesi"],
+      "answer": 1,
+      "solution": "Devletçilik ilkesi; özel girişimin yetersiz kaldığı alanlarda devletin ekonomiye doğrudan müdahil olmasını öngörmektedir. Bu kapsamda KİT'ler (kamu iktisadi teşebbüsleri) kurulmuştur."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Hz. Muhammed'in Hayatı",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Hz. Muhammed (s.a.v.) hangi şehirde doğmuştur ve doğum yılı kabul edilen tarih nedir?",
+      "options": ["Medine – 572", "Mekke – 571", "Kudüs – 570", "Mekke – 610", "Taif – 571"],
+      "answer": 1,
+      "solution": "Hz. Muhammed, Miladi 571 yılında (Fil Yılı) Mekke'de doğmuştur. Bu yıl Fil Olayı nedeniyle tarihe geçmiştir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "İlk Vahiy ve Nübüvvet",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Hz. Muhammed'e (s.a.v.) ilk vahiy nerede ve hangi melek aracılığıyla gelmiştir?",
+      "options": ["Medine'de – Mikail aracılığıyla", "Hira Mağarası'nda – Cebrail aracılığıyla", "Kâbe'de – Cebrail aracılığıyla", "Taif'te – Cebrail aracılığıyla", "Mekke çarşısında – İsrafil aracılığıyla"],
+      "answer": 1,
+      "solution": "İlk vahiy, Hz. Peygamber 40 yaşındayken Hira Mağarası'nda Cebrail aracılığıyla gelmiştir. İnen ilk ayet Alak Suresi'nin ilk beş ayetidir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Hicret",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Hz. Muhammed ve Müslümanların Mekke'den Medine'ye göç etmesine ne ad verilir ve bu olay İslam tarihinde neden önemlidir?",
+      "options": ["Fetih – Mekke'nin fethini simgeler", "Hicret – İslam takviminin başlangıcı sayılır", "Bedir – İlk savaşın adıdır", "Miraç – Göğe yükselişi ifade eder", "Tebük – Son büyük seferi gösterir"],
+      "answer": 1,
+      "solution": "Hicret, MS 622'de gerçekleşmiştir. İslam takviminin (Hicri takvim) başlangıç noktası kabul edilmesi nedeniyle büyük önem taşır."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "İslam'ın Şartları",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "İslam'ın beş şartı sırasıyla hangisinde doğru verilmiştir?",
+      "options": ["Kelime-i şahadet, namaz, oruç, hac, zekat", "Kelime-i şahadet, namaz, zekat, oruç, hac", "Namaz, oruç, zekat, hac, cihad", "Kelime-i şahadet, zekat, namaz, hac, oruç", "Namaz, oruç, hac, zekat, kelime-i tevhid"],
+      "answer": 1,
+      "solution": "İslam'ın beş şartı: 1. Kelime-i şahadet, 2. Namaz, 3. Zekat, 4. Oruç, 5. Hac. Bu sıralama İlmihal kaynaklarında ve hadislerde belirtilmektedir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "İmanın Şartları",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "İmanın altı şartından biri olan \"kader ve kazaya iman\" neyi ifade eder?",
+      "options": ["Yalnızca iyiliklerin Allah tarafından yaratıldığına inanmak", "Her şeyin Allah'ın bilgi, irade ve yaratmasıyla gerçekleştiğine inanmak", "İnsanın hiçbir tercih hakkının olmadığını kabul etmek", "Kötü olayların şeytandan geldiğine inanmak", "Gelecekteki her şeyin değiştirilemeyeceğini kabul etmek"],
+      "answer": 1,
+      "solution": "Kader; Allah'ın her şeyi önceden bilmesi, kaza ise bu bilgiye uygun yaratmasıdır. Kader ve kazaya iman; her şeyin Allah'ın ilmi, iradesi ve yaratmasıyla olduğuna inanmaktır."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Namaz",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Günlük beş vakit namaz hangi vakitlerden oluşmaktadır?",
+      "options": ["Sabah, öğle, ikindi, akşam, yatsı", "Sabah, öğle, öğleden sonra, akşam, gece", "Tan, öğle, ikindi, güneş batımı, gece", "Fecir, rumi öğle, asır, gurub, işa", "Fecr, zuhr, asr, mağrib, işa"],
+      "answer": 0,
+      "solution": "Beş vakit namaz; sabah, öğle, ikindi, akşam ve yatsı olarak sıralanır. Arapçada fecr/zuhr/asr/mağrib/işa olarak da bilinir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Oruç",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Ramazan orucu hangi Hicri ayda tutulur ve farz olduğuna dair ayet hangi surede yer almaktadır?",
+      "options": ["Şevval ayı – Bakara Suresi", "Ramazan ayı – Bakara Suresi", "Muharrem ayı – Nisa Suresi", "Recep ayı – Maide Suresi", "Zilhicce ayı – Hac Suresi"],
+      "answer": 1,
+      "solution": "Ramazan orucu, Hicri takvimin 9. ayı olan Ramazan ayında tutulur. Oruçla ilgili ayet Bakara Suresi 183-185. ayetlerde yer almaktadır."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Zekat",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Zekatın farz olabilmesi için kişide bulunması gereken en az mal miktarı (nisap) ne olarak belirlenmiştir?",
+      "options": ["Her Müslümanın ödeyeceği sabit miktardır", "Bir yıl el değmeden duran belli bir miktar mal ya da altın/gümüş", "Devletin belirlediği bir vergi oranıdır", "Gelirin onda biridir ve herkese farklı uygulanır", "Yalnızca çiftçilerden alınan bir vergidir"],
+      "answer": 1,
+      "solution": "Zekat için nisap şartı vardır: En az 80,18 gram altın ya da eşdeğeri mala sahip olup bu miktarın üzerinde bir yıl tam mülkiyetle kalması gerekir. Üzerinden geçen zaman dilimi havl olarak adlandırılır."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Hac",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Hac ibadetinin farz olduğu kişi için gerekli şartlar arasında aşağıdakilerden hangisi yer almaz?",
+      "options": ["Müslüman olmak", "Akıllı ve ergin olmak", "Mali ve bedeni güce sahip olmak", "Erkek olmak", "Özgür olmak"],
+      "answer": 3,
+      "solution": "Hac; erkek ya da kadın fark etmeksizin, mali ve bedeni güce sahip olan her Müslümana farzdır. Erkek olmak haccın farz olma şartları arasında yer almaz."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Dört Büyük Kitap",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Dört büyük ilahi kitap ve indirildiği peygamberler hangi seçenekte doğru eşleştirilmiştir?",
+      "options": ["Tevrat – Hz. İsa, Zebur – Hz. Davut, İncil – Hz. Musa, Kuran – Hz. Muhammed", "Tevrat – Hz. Musa, Zebur – Hz. Davut, İncil – Hz. İsa, Kuran – Hz. Muhammed", "Tevrat – Hz. İbrahim, Zebur – Hz. Süleyman, İncil – Hz. Yahya, Kuran – Hz. Muhammed", "Tevrat – Hz. Musa, Zebur – Hz. İsa, İncil – Hz. Yahya, Kuran – Hz. Muhammed", "Zebur – Hz. Musa, Tevrat – Hz. Davut, İncil – Hz. İsa, Kuran – Hz. Muhammed"],
+      "answer": 1,
+      "solution": "Dört büyük kitap: Tevrat → Hz. Musa, Zebur → Hz. Davut, İncil → Hz. İsa, Kuran → Hz. Muhammed (s.a.v.). Bu eşleşme temel ilmihal bilgisidir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Hz. Muhammed'in Ahlakı ve Özellikleri",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Peygamberlerin ortak özelliklerinden biri olan \"ismet\" ne anlama gelir?",
+      "options": ["Doğru sözlü olmak (sıdk)", "Tebliğ etmek (tebliğ)", "Günahlardan korunmuş olmak (masumiyet)", "Akıllı ve zeki olmak (fetanet)", "Emanete sadık olmak (emanet)"],
+      "answer": 2,
+      "solution": "İsmet; peygamberlerin büyük ve küçük günah işlemekten Allah tarafından korunmuş olmaları anlamına gelir. Peygamberlerin beş temel sıfatından biridir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Meleklere İman",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Aşağıdaki meleklerden hangisinin görevi kıyamet günü suru üflemektir?",
+      "options": ["Cebrail", "Mikail", "İsrafil", "Azrail", "Münker"],
+      "answer": 2,
+      "solution": "İsrafil, kıyamet koptuğunda ve yeniden dirilişte suru üflemekle görevli melektir. Cebrail vahiy, Mikail rızık, Azrail ölüm ile görevlidir."
+    }
+  },
+  {
+    "game": "sosyal",
+    "category": "din_kulturu",
+    "topic": "Ahiret İnancı",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Ahiret inancına göre insanın öldükten sonra yeniden dirileceği ve hesap vereceği bu hayata ne ad verilir?",
+      "options": ["Berzah", "Haşir (mahşer)", "Cennet", "Cehennem", "Araf"],
+      "answer": 1,
+      "solution": "Haşir (mahşer); kıyametin kopmasının ardından tüm insanların yeniden dirilerek Allah'ın huzurunda toplanacağı ve hesap vereceği aşamadır."
+    }
+  }
+]

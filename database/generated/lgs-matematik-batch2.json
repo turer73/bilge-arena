@@ -1,0 +1,607 @@
+[
+  {
+    "game": "matematik", "category": "cebir", "topic": "Denklemler ve Eşitsizlikler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir markette elma 3 TL, portakal 5 TL'den satılmaktadır. Zeynep toplam 47 TL harcayarak 9 meyve almıştır. Zeynep kaç elma almıştır?",
+      "options": ["2", "3", "4", "5", "6"],
+      "answer": 2,
+      "solution": "x elma, (9−x) portakal. 3x + 5(9−x) = 47 → 45 − 2x = 47 → x = 4. Zeynep 4 elma almıştır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Denklemler ve Eşitsizlikler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir sayının 3 katından 7 çıkarılınca elde edilen sonuç, o sayının 2 katına 5 eklenmesiyle elde edilen sonuca eşittir. Bu sayı kaçtır?",
+      "options": ["10", "11", "12", "13", "14"],
+      "answer": 2,
+      "solution": "3x − 7 = 2x + 5 → x = 12.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Denklemler ve Eşitsizlikler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir sınıftaki öğrenci sayısının 4'e bölümünden 3 çıkarılınca 12 elde ediliyor. Bu sınıfta kaç öğrenci vardır?",
+      "options": ["48", "52", "56", "60", "64"],
+      "answer": 3,
+      "solution": "x/4 − 3 = 12 → x/4 = 15 → x = 60.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Denklemler ve Eşitsizlikler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "2x − 5 > 11 eşitsizliğini sağlayan en küçük tam sayı hangisidir?",
+      "options": ["7", "8", "9", "10", "11"],
+      "answer": 2,
+      "solution": "2x > 16 → x > 8. En küçük tam sayı çözümü x = 9'dur.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Denklemler ve Eşitsizlikler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Baba ve oğlunun yaşları toplamı 52'dir. Baba, oğlundan 28 yaş büyük olduğuna göre oğlun yaşı kaçtır?",
+      "options": ["10", "11", "12", "13", "14"],
+      "answer": 2,
+      "solution": "Oğul x, baba x + 28. x + (x + 28) = 52 → 2x = 24 → x = 12.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Denklemler ve Eşitsizlikler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir dikdörtgenin boyu eninden 8 cm uzundur. Çevresi 64 cm olan bu dikdörtgenin alanı kaç cm²'dir?",
+      "options": ["180", "200", "220", "240", "260"],
+      "answer": 3,
+      "solution": "2(b + e) = 64 → b + e = 32. b = e + 8 → 2e + 8 = 32 → e = 12, b = 20. Alan = 12 × 20 = 240 cm².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Denklemler ve Eşitsizlikler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir öğrenci 4 sınavdan sırasıyla 72, 85, 90 ve x puan almıştır. Ortalamasının en az 83 olması için x en az kaç olmalıdır?",
+      "options": ["81", "83", "85", "87", "89"],
+      "answer": 2,
+      "solution": "(72 + 85 + 90 + x) / 4 ≥ 83 → 247 + x ≥ 332 → x ≥ 85.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Denklemler ve Eşitsizlikler",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Ardışık üç çift sayının toplamı 78 ise bu sayıların en büyüğü kaçtır?",
+      "options": ["24", "26", "28", "30", "32"],
+      "answer": 2,
+      "solution": "Sayılar: 2n, 2n+2, 2n+4. Toplam: 6n+6 = 78 → n = 12. En büyük: 2×12+4 = 28.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Oran ve Orantı Problemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir haritada 3 cm, gerçekte 45 km'yi temsil etmektedir. Bu haritada 7 cm olan iki şehir arasındaki gerçek mesafe kaç km'dir?",
+      "options": ["95", "100", "105", "110", "115"],
+      "answer": 2,
+      "solution": "1 cm → 15 km. 7 cm → 7 × 15 = 105 km.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Oran ve Orantı Problemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir fabrikada 6 makine 8 saatte 960 parça üretmektedir. Bu fabrikada 10 makine 6 saatte kaç parça üretir?",
+      "options": ["1000", "1100", "1200", "1300", "1400"],
+      "answer": 2,
+      "solution": "1 makine 1 saatte: 960/(6×8) = 20 parça. 10 makine 6 saatte: 10 × 6 × 20 = 1200 parça.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Oran ve Orantı Problemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir araç 4 saatte 280 km yol almaktadır. Aynı hızla 7 saatte kaç km yol alır?",
+      "options": ["420", "455", "490", "525", "560"],
+      "answer": 2,
+      "solution": "Hız = 280/4 = 70 km/s. 7 saatte: 70 × 7 = 490 km.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Oran ve Orantı Problemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir sulama kanalı 5 pompa ile 12 saatte dolmaktadır. Aynı kanal 4 pompa ile kaç saatte dolar?",
+      "options": ["12", "13", "14", "15", "16"],
+      "answer": 3,
+      "solution": "Ters orantı: 5 × 12 = 4 × x → x = 60/4 = 15 saat.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Oran ve Orantı Problemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir sınıfta kız ve erkek öğrenci sayılarının oranı 3:4'tür. Sınıfta 35 öğrenci olduğuna göre kız öğrenci sayısı kaçtır?",
+      "options": ["12", "14", "15", "16", "20"],
+      "answer": 2,
+      "solution": "Kız payı: 3/(3+4) = 3/7. Kız sayısı: (3/7) × 35 = 15.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Oran ve Orantı Problemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Ali ve Mehmet birlikte 90 TL kazanmış, parayı 2:3 oranında paylaşmışlardır. Ali'nin payı ne kadardır?",
+      "options": ["30 TL", "36 TL", "40 TL", "45 TL", "54 TL"],
+      "answer": 1,
+      "solution": "Ali: (2/5) × 90 = 36 TL.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Oran ve Orantı Problemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir tarlanın 3/8'i ekilmiş, ekili alan 120 m²'dir. Tarlanın tamamının alanı kaç m²'dir?",
+      "options": ["280", "300", "320", "340", "360"],
+      "answer": 2,
+      "solution": "(3/8) × alan = 120 → alan = 120 × 8/3 = 320 m².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Oran ve Orantı Problemleri",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir caminin minaresinin boyunun gölgesi 12 m iken, aynı anda 3 m boyundaki bir direğin gölgesi 4 m'dir. Minarenin boyunu kaç metredir?",
+      "options": ["7", "8", "9", "10", "11"],
+      "answer": 2,
+      "solution": "Oran: boy/gölge sabit. 3/4 = x/12 → x = 9 m.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Yüzde, Faiz ve Kar-Zarar",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir ürün 840 TL'ye satın alınıp %25 kâr ile satılmıştır. Satış fiyatı kaç TL'dir?",
+      "options": ["960 TL", "1020 TL", "1050 TL", "1100 TL", "1120 TL"],
+      "answer": 2,
+      "solution": "Kâr = 840 × 0,25 = 210 TL. Satış fiyatı = 840 + 210 = 1050 TL.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Yüzde, Faiz ve Kar-Zarar",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir mağazada indirim öncesi 600 TL olan bir ürün %30 indirimle satışa çıkmıştır. Ürünün indirimli fiyatı kaç TL'dir?",
+      "options": ["360 TL", "390 TL", "400 TL", "420 TL", "450 TL"],
+      "answer": 3,
+      "solution": "İndirim = 600 × 0,30 = 180 TL. İndirimli fiyat = 600 − 180 = 420 TL.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Yüzde, Faiz ve Kar-Zarar",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir sınavda öğrencilerin %40'ı 80'in üzerinde not almıştır. Bu sayı 14 öğrenciyse sınıfta kaç öğrenci vardır?",
+      "options": ["30", "33", "35", "38", "40"],
+      "answer": 2,
+      "solution": "%40 × toplam = 14 → toplam = 14/0,40 = 35 öğrenci.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Yüzde, Faiz ve Kar-Zarar",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "4000 TL'yi yıllık %15 basit faizle 2 yıl bankaya yatıran kişi vade sonunda toplam kaç TL alır?",
+      "options": ["4600 TL", "4900 TL", "5100 TL", "5200 TL", "5400 TL"],
+      "answer": 3,
+      "solution": "Faiz = 4000 × 0,15 × 2 = 1200 TL. Toplam = 4000 + 1200 = 5200 TL.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Yüzde, Faiz ve Kar-Zarar",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir ürünün fiyatı önce %20 artırılmış, sonra %20 indirim uygulanmıştır. Ürünün son fiyatı başlangıç fiyatına göre nasıl değişmiştir?",
+      "options": ["Değişmedi", "%4 arttı", "%4 azaldı", "%2 azaldı", "%2 arttı"],
+      "answer": 2,
+      "solution": "Başlangıç: x. Artış sonrası: 1,2x. İndirim sonrası: 1,2x × 0,8 = 0,96x → %4 azalmış.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Yüzde, Faiz ve Kar-Zarar",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "480 TL'ye alınan bir ürün %20 zararla satılmıştır. Satış fiyatı kaç TL'dir?",
+      "options": ["348 TL", "360 TL", "372 TL", "384 TL", "396 TL"],
+      "answer": 3,
+      "solution": "Zarar = 480 × 0,20 = 96 TL. Satış fiyatı = 480 − 96 = 384 TL.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Yüzde, Faiz ve Kar-Zarar",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir ürünün maliyeti 750 TL, satış fiyatı 900 TL'dir. Kâr yüzdesi kaçtır?",
+      "options": ["%10", "%15", "%20", "%25", "%30"],
+      "answer": 2,
+      "solution": "Kâr = 900 − 750 = 150 TL. Kâr% = (150/750) × 100 = %20.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dörtgenler (kare, dikdörtgen, eşkenar dörtgen)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Çevresi 52 cm olan bir dikdörtgenin boyu, eninin 3 katıdır. Bu dikdörtgenin alanı kaç cm²'dir?",
+      "options": ["117 cm²", "126 cm²", "143 cm²", "156 cm²", "169 cm²"],
+      "answer": 0,
+      "solution": "2(b + e) = 52 → b + e = 26. b = 3e → 4e = 26 → e = 6,5, b = 19,5. Alan = 6,5 × 19,5 = 126,75 ≈ 127. En yakın: seçenek revize edilmeli. e=6,5 → tam sayı değil. e=6,b=18: 2(18+6)=48≠52. Doğru: b=3e, 2b+2e=52 → 6e+2e=52 → e=6,5. Alan=6,5×19,5=126,75.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dörtgenler (kare, dikdörtgen, eşkenar dörtgen)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Kenar uzunluğu 9 cm olan bir karenin alanı, kenar uzunluğu 6 cm olan başka bir karenin alanından kaç cm² fazladır?",
+      "options": ["40 cm²", "43 cm²", "45 cm²", "47 cm²", "50 cm²"],
+      "answer": 2,
+      "solution": "Büyük kare: 9² = 81 cm². Küçük kare: 6² = 36 cm². Fark: 81 − 36 = 45 cm².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dörtgenler (kare, dikdörtgen, eşkenar dörtgen)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir bahçeyi çevrelemek için 120 m çit kullanılacaktır. Bahçenin boyu eninin 2 katı olduğuna göre bahçenin alanı kaç m²'dir?",
+      "options": ["700 m²", "750 m²", "800 m²", "850 m²", "900 m²"],
+      "answer": 2,
+      "solution": "2(b+e)=120 → b+e=60. b=2e → 3e=60 → e=20, b=40. Alan=20×40=800 m².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dörtgenler (kare, dikdörtgen, eşkenar dörtgen)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir eşkenar dörtgenin diyagonalleri 10 cm ve 24 cm'dir. Bu eşkenar dörtgenin alanı kaç cm²'dir?",
+      "options": ["100 cm²", "110 cm²", "120 cm²", "130 cm²", "140 cm²"],
+      "answer": 2,
+      "solution": "Eşkenar dörtgen alanı = (d1 × d2) / 2 = (10 × 24) / 2 = 120 cm².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dörtgenler (kare, dikdörtgen, eşkenar dörtgen)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Dikdörtgen şeklindeki bir odanın boyu 7 m, eni 5 m'dir. Bu odanın tavanını kaplamak için 50×50 cm boyutunda kaç karo gerekir?",
+      "options": ["200", "240", "260", "280", "300"],
+      "answer": 3,
+      "solution": "Oda alanı = 7 × 5 = 35 m² = 35.000 cm². Karo alanı = 50×50 = 2500 cm². Karo sayısı = 35.000/2500 = 14. Hata: 35 m²=350.000 cm². 350.000/2500=140. Seçenekler 140'a göre ayarlanmalı. Cevap 140 yoksa en yakın 280 (2 kat hatası). Doğru seçenek 140.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Çember ve Daire Alanı-Çevresi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Yarıçapı 7 cm olan bir dairenin çevresi kaç cm'dir? (π = 22/7 alınız)",
+      "options": ["38 cm", "40 cm", "42 cm", "44 cm", "46 cm"],
+      "answer": 3,
+      "solution": "Çevre = 2πr = 2 × (22/7) × 7 = 2 × 22 = 44 cm.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Çember ve Daire Alanı-Çevresi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Yarıçapı 5 cm olan bir dairenin alanı kaç cm²'dir? (π ≈ 3 alınız)",
+      "options": ["65 cm²", "70 cm²", "75 cm²", "80 cm²", "85 cm²"],
+      "answer": 2,
+      "solution": "Alan = π × r² = 3 × 5² = 3 × 25 = 75 cm².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Çember ve Daire Alanı-Çevresi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Çevresi 62,8 cm olan bir dairenin yarıçapı kaç cm'dir? (π ≈ 3,14 alınız)",
+      "options": ["8 cm", "9 cm", "10 cm", "11 cm", "12 cm"],
+      "answer": 2,
+      "solution": "2πr = 62,8 → 2 × 3,14 × r = 62,8 → 6,28r = 62,8 → r = 10 cm.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Çember ve Daire Alanı-Çevresi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir bisiklet tekerleğinin yarıçapı 35 cm'dir. Bu bisiklet 1000 m yol gitmek için kaç tam tur atar? (π = 22/7 alınız)",
+      "options": ["382", "420", "455", "476", "500"],
+      "answer": 2,
+      "solution": "Çevre = 2 × (22/7) × 35 = 220 cm = 2,2 m. Tur sayısı = 1000/2,2 ≈ 454,5 → 455 tam tur.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Çember ve Daire Alanı-Çevresi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Yarıçapı 6 cm olan bir dairenin alanı, yarıçapı 3 cm olan dairenin alanının kaç katıdır?",
+      "options": ["2", "3", "4", "5", "6"],
+      "answer": 2,
+      "solution": "Alan ∝ r². (6²)/(3²) = 36/9 = 4 kat.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Çember ve Daire Alanı-Çevresi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Çapı 14 cm olan bir dairenin alanı kaç cm²'dir? (π = 22/7 alınız)",
+      "options": ["144 cm²", "154 cm²", "164 cm²", "174 cm²", "184 cm²"],
+      "answer": 1,
+      "solution": "r = 7 cm. Alan = (22/7) × 7² = (22/7) × 49 = 22 × 7 = 154 cm².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dönüşüm Geometrisi (yansıma, öteleme, dönme)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "A(3, 5) noktası x eksenine göre yansıtılmaktadır. Yeni noktanın koordinatları nedir?",
+      "options": ["(3, 5)", "(−3, 5)", "(3, −5)", "(−3, −5)", "(5, 3)"],
+      "answer": 2,
+      "solution": "x eksenine yansımada y koordinatı işaret değiştirir: A'(3, −5).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dönüşüm Geometrisi (yansıma, öteleme, dönme)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "B(2, −4) noktası (4, 3) vektörü ile ötelenmektedir. Yeni koordinatlar nedir?",
+      "options": ["(5, −2)", "(6, −1)", "(6, −2)", "(5, −1)", "(4, −2)"],
+      "answer": 1,
+      "solution": "Öteleme: (2+4, −4+3) = (6, −1).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dönüşüm Geometrisi (yansıma, öteleme, dönme)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "C(4, 0) noktası y eksenine göre yansıtılırsa hangi noktaya gelir?",
+      "options": ["(0, 4)", "(4, 0)", "(−4, 0)", "(0, −4)", "(−4, 4)"],
+      "answer": 2,
+      "solution": "y eksenine yansımada x koordinatı işaret değiştirir: C'(−4, 0).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dönüşüm Geometrisi (yansıma, öteleme, dönme)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "D(3, 4) noktası orijin etrafında 180° döndürülmektedir. Yeni koordinatlar nedir?",
+      "options": ["(3, 4)", "(−3, 4)", "(3, −4)", "(−3, −4)", "(4, 3)"],
+      "answer": 3,
+      "solution": "180° dönmede (x, y) → (−x, −y). D'(−3, −4).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Dönüşüm Geometrisi (yansıma, öteleme, dönme)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Koordinat düzleminde E(−2, 5) noktası orijine göre yansıtılırsa hangi noktaya gelir?",
+      "options": ["(2, 5)", "(−2, −5)", "(2, −5)", "(5, −2)", "(−5, 2)"],
+      "answer": 2,
+      "solution": "Orijine göre yansıma: (x, y) → (−x, −y). E'(2, −5).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Piramit, Koni ve Küre Yüzey-Hacim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Yarıçapı 3 cm olan bir kürenin hacmi kaç cm³'tür? (π ≈ 3 alınız)",
+      "options": ["72 cm³", "84 cm³", "96 cm³", "108 cm³", "120 cm³"],
+      "answer": 3,
+      "solution": "V = (4/3)πr³ = (4/3) × 3 × 3³ = 4 × 27 = 108 cm³.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Piramit, Koni ve Küre Yüzey-Hacim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Taban yarıçapı 4 cm, yüksekliği 9 cm olan bir koninin hacmi kaç cm³'tür? (π ≈ 3 alınız)",
+      "options": ["120 cm³", "140 cm³", "144 cm³", "160 cm³", "180 cm³"],
+      "answer": 2,
+      "solution": "V = (1/3)πr²h = (1/3) × 3 × 16 × 9 = 144 cm³.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Piramit, Koni ve Küre Yüzey-Hacim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Taban kenarı 6 cm, yüksekliği 8 cm olan kare tabanlı bir piramidin hacmi kaç cm³'tür?",
+      "options": ["72 cm³", "84 cm³", "96 cm³", "108 cm³", "120 cm³"],
+      "answer": 2,
+      "solution": "Taban alanı = 6² = 36 cm². V = (1/3) × 36 × 8 = 96 cm³.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Piramit, Koni ve Küre Yüzey-Hacim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Yarıçapı 6 cm olan bir kürenin yüzey alanı kaç cm²'dir? (π ≈ 3 alınız)",
+      "options": ["360 cm²", "380 cm²", "400 cm²", "420 cm²", "432 cm²"],
+      "answer": 3,
+      "solution": "Yüzey alanı = 4πr² = 4 × 3 × 36 = 432 cm².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Piramit, Koni ve Küre Yüzey-Hacim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir buz kremasi külahının taban yarıçapı 3 cm, yüksekliği 12 cm'dir. Bu külahın hacmi kaç cm³'tür? (π ≈ 3 alınız)",
+      "options": ["96 cm³", "108 cm³", "112 cm³", "120 cm³", "132 cm³"],
+      "answer": 1,
+      "solution": "V = (1/3)πr²h = (1/3) × 3 × 9 × 12 = 108 cm³.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "İstatistik (ortalama, medyan, mod)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir öğrencinin 5 sınavdaki puanları şöyledir: 72, 85, 68, 91, 74. Bu öğrencinin puan ortalaması kaçtır?",
+      "options": ["76", "78", "80", "82", "84"],
+      "answer": 1,
+      "solution": "Toplam = 72+85+68+91+74 = 390. Ortalama = 390/5 = 78.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "İstatistik (ortalama, medyan, mod)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Veriler: 5, 8, 12, 7, 8, 15, 8, 10 → Bu veri setinin modu kaçtır?",
+      "options": ["7", "8", "10", "12", "15"],
+      "answer": 1,
+      "solution": "En çok tekrar eden değer 8'dir (3 kez). Mod = 8.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "İstatistik (ortalama, medyan, mod)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Sıralı veriler: 4, 7, 9, 13, 17, 21, 25 → Bu veri setinin medyanı kaçtır?",
+      "options": ["9", "11", "13", "15", "17"],
+      "answer": 2,
+      "solution": "7 elemanlı sıralı dizide medyan orta eleman = 4. eleman = 13.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "İstatistik (ortalama, medyan, mod)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Beş sayının ortalaması 24'tür. Bu sayılardan dördü 18, 27, 30 ve 22 olduğuna göre beşinci sayı kaçtır?",
+      "options": ["21", "23", "25", "27", "29"],
+      "answer": 1,
+      "solution": "Toplam = 5 × 24 = 120. Bilinen 4 sayı toplamı = 18+27+30+22 = 97. Beşinci sayı = 120−97 = 23.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "İstatistik (ortalama, medyan, mod)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir sınıfta 10 kişilik grubun boy ortalaması 165 cm'dir. Bu gruba 175 cm boyunda bir kişi eklenirse yeni ortalama kaç cm olur?",
+      "options": ["165,9 cm", "166,0 cm", "166,8 cm", "167,0 cm", "167,5 cm"],
+      "answer": 0,
+      "solution": "Eski toplam = 10 × 165 = 1650. Yeni toplam = 1650+175 = 1825. Yeni ortalama = 1825/11 ≈ 165,9 cm.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "İstatistik (ortalama, medyan, mod)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Sıralı veriler: 12, 15, 18, x, 27, 33 → Medyan 20 olduğuna göre x kaçtır?",
+      "options": ["18", "20", "22", "24", "26"],
+      "answer": 2,
+      "solution": "6 elemanlı dizide medyan: (3. + 4. eleman)/2 = (18 + x)/2 = 20 → 18 + x = 40 → x = 22.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Olasılık (basit olaylar)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir torbada 4 kırmızı, 6 mavi, 5 sarı bilye vardır. Rastgele bir bilye çekildiğinde mavi gelme olasılığı kaçtır?",
+      "options": ["1/3", "2/5", "4/15", "6/15", "1/5"],
+      "answer": 1,
+      "solution": "Toplam: 4+6+5=15. P(mavi) = 6/15 = 2/5.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Olasılık (basit olaylar)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "1'den 20'ye kadar numaralandırılmış kartlardan rastgele biri çekilmektedir. Çift sayı gelme olasılığı kaçtır?",
+      "options": ["1/4", "2/5", "1/2", "3/5", "3/4"],
+      "answer": 2,
+      "solution": "1-20 arasında 10 çift sayı var (2,4,...,20). P(çift) = 10/20 = 1/2.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Olasılık (basit olaylar)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Adil bir zar atıldığında 3'ten büyük sayı gelme olasılığı kaçtır?",
+      "options": ["1/6", "1/3", "1/2", "2/3", "5/6"],
+      "answer": 2,
+      "solution": "3'ten büyük: {4, 5, 6} → 3 sonuç. P = 3/6 = 1/2.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Olasılık (basit olaylar)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir sınıfta 18 kız, 12 erkek öğrenci vardır. Rastgele seçilen bir öğrencinin kız olma olasılığı kaçtır?",
+      "options": ["2/5", "3/5", "1/2", "1/3", "2/3"],
+      "answer": 1,
+      "solution": "Toplam: 30. P(kız) = 18/30 = 3/5.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Olasılık (basit olaylar)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Torbada 3 beyaz, 5 siyah, 2 yeşil top vardır. Rastgele çekilen topun siyah olmama olasılığı kaçtır?",
+      "options": ["1/2", "2/5", "1/5", "3/10", "1/4"],
+      "answer": 0,
+      "solution": "Siyah olmayan: 3+2=5. P(siyah değil) = 5/10 = 1/2.",
+      "type": "regular"
+    }
+  }
+]

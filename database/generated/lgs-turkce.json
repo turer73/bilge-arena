@@ -1,0 +1,512 @@
+[
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Eş ve Zıt Anlamlı Sözcükler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Savmak\" sözcüğünün eş anlamlısı aşağıdakilerden hangisidir?",
+      "options": ["Biriktirmek", "Uzaklaştırmak", "Karıştırmak", "Yaklaştırmak", "Toplamak"],
+      "answer": 1,
+      "solution": "Savmak; defetmek, uzaklaştırmak anlamına gelir. \"Başından savmak\" deyiminde olduğu gibi kullanılır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Eş ve Zıt Anlamlı Sözcükler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Cömert\" sözcüğünün zıt anlamlısı hangisidir?",
+      "options": ["Çalışkan", "Cimri", "Alçakgönüllü", "Yiğit", "Sabırlı"],
+      "answer": 1,
+      "solution": "Cömert; eli açık, varlığını başkalarıyla paylaşan kişi demektir. Zıt anlamlısı cimridir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Mecaz ve Gerçek Anlam",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Eli açık biri olduğu için herkese yardım eder.\" cümlesinde altı çizili sözcük hangi anlamda kullanılmıştır?",
+      "options": ["Gerçek anlam", "Yan anlam", "Mecaz anlam", "Terim anlam", "Eş anlam"],
+      "answer": 2,
+      "solution": "\"Eli açık\" burada cömert anlamını taşıyan bir deyimdir; mecaz anlam kullanılmıştır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Deyimler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Kulak vermek\" deyiminin anlamı nedir?",
+      "options": ["Müzik aleti çalmak", "Dikkatle dinlemek", "Bir şeyi hediye etmek", "Sesi yükseltmek", "Kulağı acımak"],
+      "answer": 1,
+      "solution": "Kulak vermek; birine veya bir şeye dikkatle, ilgiyle kulak kesilerek dinlemek demektir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Atasözleri",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Damlaya damlaya göl olur.\" atasözüyle anlatılmak istenen düşünce hangisidir?",
+      "options": ["Su kaynakları korunmalıdır", "Küçük birikimlerin zamanla büyük sonuçlar doğurduğu", "Göllerin yağmurla beslendiği", "Tasarruf etmenin önemi olmadığı", "Azın azı çoktur"],
+      "answer": 1,
+      "solution": "Bu atasözü; küçük şeylerin birikmesiyle büyük sonuçların elde edilebileceğini anlatır. Sabır ve birikim vurgulanır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Çok Anlamlılık",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Baş\" sözcüğünün aşağıdaki cümlelerin hangisinde diğerlerinden farklı bir anlamda kullanıldığı görülmektedir?",
+      "options": ["Başı çok ağrıyor.", "Sınıfın başına geçti.", "Dağın başına tırmandık.", "Konunun başından anlat.", "Bu işin başını o çekiyor."],
+      "answer": 0,
+      "solution": "\"Başı çok ağrıyor\" cümlesinde \"baş\" gerçek (vücudun üst bölümü) anlamındadır. Diğer seçeneklerde mecaz (önder, tepe, başlangıç) anlamlarında kullanılmıştır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Somut ve Soyut Anlam",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Aşağıdaki sözcüklerden hangisi soyut anlamlıdır?",
+      "options": ["Kalem", "Masa", "Özgürlük", "Araba", "Dağ"],
+      "answer": 2,
+      "solution": "Soyut sözcükler duyularla algılanamayan kavramlardır. Özgürlük görülüp dokunulamaz; soyut bir kavramdır. Diğerleri somuttur."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Ad Aktarması (Mecaz-ı Mürsel)",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Ankara bu konuda karar verdi.\" cümlesinde altı çizili sözcük nasıl bir anlam özelliği taşır?",
+      "options": ["Gerçek anlam", "Ad aktarması (mecaz-ı mürsel)", "Benzetme", "Terim anlam", "Yan anlam"],
+      "answer": 1,
+      "solution": "Ankara, hükümet ya da yetkili makam anlamında kullanılmıştır. Bir yer adının orada bulunan kurum yerine kullanılması ad aktarmasıdır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Terim ve Sözlük Anlamı",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Açı\" sözcüğü matematik dersinde terim anlamıyla kullanılmaktadır. Aşağıdaki cümlelerin hangisinde \"açı\" sözcüğü terim anlamıyla kullanılmıştır?",
+      "options": ["Konuya farklı bir açıdan baktı.", "İki doğrunun kesişmesiyle oluşan açı 90 derecedir.", "Olayı değişik açılardan ele aldı.", "Onun açısından bakınca haklı.", "Fotoğrafçı farklı bir açı seçti."],
+      "answer": 1,
+      "solution": "Geometride iki doğru veya ışının birleşim noktasında oluşan ölçüm anlamında kullanılması terim anlamdır. Diğer seçeneklerde \"bakış noktası\" mecaz anlamı vardır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "anlam_bilgisi",
+    "topic": "Deyimler",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Ağzı sıkı\" deyiminin anlamı aşağıdakilerden hangisidir?",
+      "options": ["Yavaş konuşan", "Sırrı dışarıya sızdırmayan", "Çok yemek yiyen", "Tartışmaktan kaçınan", "Sessiz ve sakin olan"],
+      "answer": 1,
+      "solution": "Ağzı sıkı; söylememesi gereken şeyleri saklamayı bilen, güvenilir kişi anlamına gelir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Ses Bilgisi – Ünlü Uyumu",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Aşağıdaki sözcüklerin hangisi büyük ünlü uyumunu bozmaktadır?",
+      "options": ["Çiçek", "Karanlık", "Elma", "Hanım", "Kitap"],
+      "answer": 3,
+      "solution": "\"Hanım\" sözcüğünde a-ı birlikteliği büyük ünlü uyumunu bozar; \"a\" geniş, \"ı\" dar ünlüdür, peş peşe gelmemelidir. Diğer sözcüklerde uyum bozulmaz."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Ses Bilgisi – Ünsüz Benzeşmesi",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Geçti\" sözcüğünde görülen ses olayı aşağıdakilerden hangisidir?",
+      "options": ["Ünlü daralması", "Ünsüz yumuşaması", "Ünsüz sertleşmesi", "Ünlü düşmesi", "Ünsüz türemesi"],
+      "answer": 2,
+      "solution": "\"Geç\" kökü sert ünsüzle biter; -ti eki aldığında t sert kalır: geç+ti→geçti. Sert ünsüzden sonra gelen eklerin sertleşmesi ünsüz sertleşmesidir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Sözcük Türleri – Sıfat",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Beş kişi bu işi başardı.\" cümlesinde \"beş\" sözcüğü hangi tür sıfattır?",
+      "options": ["Niteleme sıfatı", "İşaret sıfatı", "Sayı sıfatı", "Belgisiz sıfat", "Soru sıfatı"],
+      "answer": 2,
+      "solution": "Bir ismi sayı bakımından belirten sıfatlar sayı sıfatıdır. \"Beş kişi\" ifadesinde \"beş\" ismi (kişi) sayı ile nitelediğinden sayı sıfatıdır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Sözcük Türleri – Zamir",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Bu kitabı sen al, diğerini ben alırım.\" cümlesinde kaç tane kişi zamiri vardır?",
+      "options": ["1", "2", "3", "4", "5"],
+      "answer": 1,
+      "solution": "\"Sen\" ve \"ben\" kişi zamirleridir. \"Bu\" ve \"diğer\" ise işaret zamiri ve belgisiz zamirdir. Toplam 2 kişi zamiri bulunmaktadır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Sözcük Türleri – Zarf",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Çok hızlı koştu ama yine de geç kaldı.\" cümlesinde kaç tane zarf vardır?",
+      "options": ["1", "2", "3", "4", "5"],
+      "answer": 2,
+      "solution": "\"Çok\" (derece zarfı), \"hızlı\" (niteleme zarfı/hal zarfı), \"yine de\" (bağlaç+pekiştirme), \"geç\" (zaman zarfı). Fiilleri niteleyen zarf sayısı: çok, hızlı, geç → 3 zarf."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Cümle Öğeleri – Özne",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Bahçedeki sarı çiçekler sabah erken açmış.\" cümlesinin öznesi hangisidir?",
+      "options": ["Bahçedeki", "Sarı çiçekler", "Sabah", "Erken", "Açmış"],
+      "answer": 1,
+      "solution": "Özne, eylemi gerçekleştiren ya da yüklemin bildirdiği oluş/durumun kaynağıdır. \"Kim açmış?\" sorusuna \"sarı çiçekler\" cevabı gelir; özne budur."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Anlatım Bozukluğu",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Aşağıdaki cümlelerin hangisinde anlatım bozukluğu vardır?",
+      "options": ["Bu konuyu araştırmam gerekiyor.", "Kitabı okuyup bitirdim.", "Hem yorgun hem de hasta görünüyordu.", "Güzel bir gün geçirdik ve eğlendik.", "Bunu yapıyor musun yoksa yapmıyor musun?"],
+      "answer": 3,
+      "solution": "\"Güzel bir gün geçirdik ve eğlendik.\" cümlesinde anlam tekrarı (özdeş anlam) anlatım bozukluğu vardır; güzel gün geçirmek zaten eğlenmek demektir. Diğer cümleler doğrudur."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Yapım Ekleri",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Yazarlık\" sözcüğündeki yapım eklerinin sırası hangisidir?",
+      "options": ["-ar, -lık", "-arlık", "-ar + -lık", "-yar + -lık", "-r + -ık"],
+      "answer": 2,
+      "solution": "Yaz (fiil) + -ar (fiilden isim yapım eki → yazar) + -lık (isimden isim yapım eki → yazarlık). İki ayrı yapım eki art arda gelmiştir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Fiil Kipleri",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Yarın erken kalkmalıyım.\" cümlesindeki fiil hangi kiple çekimlenmiştir?",
+      "options": ["Geniş zaman", "Gereklilik kipi", "Dilek-şart kipi", "İstek kipi", "Emir kipi"],
+      "answer": 1,
+      "solution": "\"Kalkmalıyım\" fiilinde -malı/-meli gereklilik kipi eki kullanılmıştır. Bu kip zorunluluk veya gereklilik ifade eder."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "dil_bilgisi",
+    "topic": "Cümle Türleri – Anlamına Göre",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Yarın sınava girmeyebilir misin?\" cümlesi anlam bakımından hangi tür bir cümledir?",
+      "options": ["Olumlu soru cümlesi", "Olumsuz soru cümlesi", "Emir cümlesi", "Ünlem cümlesi", "Koşul cümlesi"],
+      "answer": 1,
+      "solution": "Cümle biçim olarak soru (-mi) içermekte, anlam olarak olumsuzluk (-meyebilir) taşımaktadır. Bu nedenle olumsuz soru cümlesidir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "topic": "Ana Düşünce",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Teknoloji hayatımızı kolaylaştırmaktadır; ancak insanları tembelleştirdiği de bir gerçektir. Artık yürümek yerine araba kullanıyor, yazmak yerine bilgisayar kullanıyoruz. Bu durum, fiziksel aktivitemizi azaltmış ve bazı temel becerilerin körelmesine yol açmıştır.\" paragrafının ana düşüncesi hangisidir?",
+      "options": ["Teknoloji gelişmeye devam etmektedir.", "Araba kullanmak kolaylık sağlar.", "Teknoloji insanları bazı yönlerden olumsuz etkilemektedir.", "Bilgisayar yazma becerisini artırır.", "Teknoloji kullanmak zorunludur."],
+      "answer": 2,
+      "solution": "Paragrafta teknolojinin kolaylaştırıcı etkisinin yanı sıra tembelleştirme ve beceri kaybı gibi olumsuz sonuçları vurgulanmaktadır. Ana düşünce bu olumsuz etkidir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "topic": "Paragrafın Konusu",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Ülkemizde her yıl milyonlarca ağaç kesilmektedir. Bu durum orman varlığını hızla azaltmakta, iklim değişikliğini hızlandırmaktadır. Ağaçlar hem oksijen üretir hem de karbon yutağı işlevi görür. Bu nedenle ağaç kesimine sınır getirilmeli, yerine yenileri dikilmelidir.\" paragrafının konusu nedir?",
+      "options": ["İklim değişikliğinin nedenleri", "Ülkemizdeki orman alanları", "Ağaç kesiminin zararları ve alınması gereken önlemler", "Karbon salınımını azaltma yolları", "Oksijen üretiminin önemi"],
+      "answer": 2,
+      "solution": "Paragrafın tamamında ağaç kesiminin olumsuz sonuçları ve bu soruna karşı alınabilecek önlemler ele alınmaktadır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "topic": "Paragraf Sıralaması",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Aşağıdaki cümleler anlamlı bir paragraf oluşturacak biçimde sıralandığında hangisi ilk cümle olmalıdır?\nI. Bu nedenle her gün düzenli uyku uyumaya özen göstermeliyiz.\nII. Uyku sırasında beyin gün boyunca edinilen bilgileri kalıcı belleğe aktarır.\nIII. Yetersiz uyku dikkat eksikliğine ve öğrenme güçlüğüne yol açar.\nIV. Uyku, sağlıklı bir yaşam için vazgeçilmez bir ihtiyaçtır.",
+      "options": ["I", "II", "III", "IV", "III – IV"],
+      "answer": 3,
+      "solution": "Paragraflar genellikle genel bir yargıyla başlar. IV. cümle \"uyku vazgeçilmezdir\" genel yargısını sunmaktadır. Ardından II (beyin işlevi), III (eksikliğin sonucu), I (öneri) gelir. Doğru sıra: IV-II-III-I."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "topic": "Boşluk Doldurma",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Kitap okumak hayal gücünü geliştirir. ___ Üstelik sözcük dağarcığını genişletir ve yazma becerisini güçlendirir.\" cümlesinin boş yerine aşağıdakilerden hangisi getirilebilir?",
+      "options": ["Çünkü zaman almaktadır.", "Oysa televizyon izlemek daha kolaydır.", "Ayrıca empati yeteneğini de artırır.", "Ancak herkes okumayı sevmez.", "Bu nedenle yazılı kaynaklar kullanılmaz."],
+      "answer": 2,
+      "solution": "Boşluktan önce kitabın hayal gücünü geliştirdiği, sonra sözcük dağarcığını artırdığı belirtilmektedir. \"Ayrıca\" bağlacıyla ekleme yapan C seçeneği anlam bütünlüğünü sağlar."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "topic": "Anlatım Biçimi",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Fotosentez, bitkilerin güneş ışığını kullanarak karbondioksit ve suyu besin maddesine dönüştürdüğü biyokimyasal bir süreçtir. Bu süreçte klorofil pigmenti temel rol oynar ve oksijen açığa çıkar.\" Bu paragrafta hangi anlatım biçimi kullanılmıştır?",
+      "options": ["Öyküleme", "Betimleme", "Tartışma", "Açıklama", "Kanıtlama"],
+      "answer": 3,
+      "solution": "Paragrafta fotosentezin ne olduğu ve nasıl gerçekleştiği nesnel biçimde aktarılmaktadır. Bir olguyu tanımlayıp açıklayan anlatım biçimi açıklamadır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "topic": "Yazarın Tutumu",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Günümüz insanı ekranlara öyle bağımlı olmuştur ki, karşısındaki insanla göz göze konuşmayı bile unutmuştur. Bu büyük bir yoksunluktur.\" Bu paragrafta yazarın tutumu nasıldır?",
+      "options": ["Övücü", "Tarafsız", "Eleştirici", "Betimleyici", "Destekleyici"],
+      "answer": 2,
+      "solution": "\"Büyük bir yoksunluktur\" ifadesi yazarın ekran bağımlılığına karşı olumsuz bir tutum sergilediğini gösterir. Yazar eleştirici bir tutum içindedir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "topic": "Başlık",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Spor yapmak yalnızca vücudu değil, zihni de güçlendirir. Düzenli egzersiz yapan bireylerin stres düzeyinin daha düşük olduğu ve konsantrasyonlarının daha yüksek olduğu bilimsel çalışmalarla kanıtlanmıştır.\" Bu paragrafın başlığı ne olabilir?",
+      "options": ["Sporcu Beslenmesi", "Stresin Zararları", "Sporun Beden ve Zihin Üzerindeki Yararları", "Konsantrasyon Teknikleri", "Bilimsel Araştırmalar"],
+      "answer": 2,
+      "solution": "Paragrafta sporun hem beden hem zihin üzerindeki olumlu etkileri işlenmektedir. En kapsayıcı ve uygun başlık C seçeneğidir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "topic": "Sözcük Anlamı Bağlamda",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Sanatçının tablolarındaki renkler, izleyicinin ruhunu okşuyordu.\" cümlesinde \"okşamak\" sözcüğü hangi anlamda kullanılmıştır?",
+      "options": ["Elle hafifçe dokunmak", "Hoşa gitmek, mutluluk vermek", "Bir şeyi düzeltmek", "Tahriş etmek", "Sürtmek"],
+      "answer": 1,
+      "solution": "\"Ruhunu okşumak\" ifadesinde okşamak sözcüğü mecaz anlamıyla kullanılmış; hoşa gitmek, iyi gelmek anlamını taşımaktadır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "paragraf",
+    "topic": "Özetleme",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"İnsanlar hata yapar ve bu hatalardan ders çıkarır. Hatalar olmadan gelişim mümkün olmaz; tarihte pek çok büyük buluş da bir hata ya da şans eseri gerçekleşmiştir.\" paragrafını en iyi özetleyen cümle hangisidir?",
+      "options": ["Hatalar tehlikelidir.", "Bilim şansa dayanır.", "Hatalar gelişimin ve keşfin kaynağı olabilir.", "İnsanlar her zaman hata yapar.", "Tarihte büyük hatalar yapılmıştır."],
+      "answer": 2,
+      "solution": "Paragrafın temel mesajı; hataların insanı geliştirdiği ve buluşlara kapı araladığıdır. C seçeneği bu mesajı en doğru biçimde özetler."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "yazim_kurallari",
+    "topic": "Büyük Harf Kullanımı",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Aşağıdaki cümlelerin hangisinde büyük harf kullanımı yanlıştır?",
+      "options": ["Türkiye Büyük Millet Meclisi bugün toplandı.", "İstanbul'un tarihi yarımadası ziyaretçilere açıktır.", "Bu yaz Karadeniz kıyılarını gezeceğiz.", "Atatürk, cumhuriyeti 1923'te ilan etti.", "Ege denizi kıyısında güzel bir tatil geçirdik."],
+      "answer": 4,
+      "solution": "\"Ege Denizi\" özel isimdir; hem \"Ege\" hem \"Denizi\" büyük harfle yazılmalıdır. \"ege denizi\" biçimindeki yazım yanlıştır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "yazim_kurallari",
+    "topic": "Noktalama – Virgül",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Eve geldiğimde herkes uyumuş(,) ışıklar sönmüştü.\" cümlesinde virgül hangi işlevi üstlenmektedir?",
+      "options": ["Sıralama yapar", "Hitap için kullanılır", "Bağlaçsız sıralı cümleleri birbirinden ayırır", "Alıntıya giriş yapar", "Açıklama cümlesini ayırır"],
+      "answer": 2,
+      "solution": "\"ve\" bağlacı kullanılmadan sıralanan iki yargı arasında virgül kullanılır. Burada virgül bağlaçsız sıralı cümleleri birbirinden ayırmaktadır."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "yazim_kurallari",
+    "topic": "Bitişik – Ayrı Yazım",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Aşağıdaki sözcüklerin hangisi yanlış yazılmıştır?",
+      "options": ["Bilgisayar", "Başörtüsü", "Herhangi", "Hiç bir", "Gecekondu"],
+      "answer": 3,
+      "solution": "\"Hiçbir\" bitişik yazılır; \"hiç bir\" biçiminde ayrı yazılması yanlıştır. Belgisiz sıfat olarak kullanılan \"hiçbir\" tek sözcüktür."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "yazim_kurallari",
+    "topic": "Kesme İşareti",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "Aşağıdaki seçeneklerin hangisinde kesme işareti doğru kullanılmıştır?",
+      "options": ["Türkiye'de pek çok tarihi eser bulunmaktadır.", "Türkiye'nin nüfusu artmaktadır.", "İstanbul'un tarihi çok eskiye dayanır.", "Ankara'da hava soğuk.", "Hepsi doğrudur."],
+      "answer": 4,
+      "solution": "Özel isimlere getirilen ekler kesme işaretiyle ayrılır: Türkiye'de, Türkiye'nin, İstanbul'un, Ankara'da hepsi doğrudur. Tüm seçenekler doğru kullanımı göstermektedir."
+    }
+  },
+  {
+    "game": "turkce",
+    "category": "yazim_kurallari",
+    "topic": "ki Bağlacı – Eki Ayrımı",
+    "difficulty": 2,
+    "exam_ref": "LGS",
+    "source": "ai_claude_lgs",
+    "is_active": false,
+    "content": {
+      "question": "\"Sanıyorum ki yarın gelecek.\" cümlesinde \"ki\" sözcüğü ayrı mı, bitişik mi yazılmalıdır?",
+      "options": ["Bitişik: sanıyorumki", "Ayrı: sanıyorum ki", "İkisi de kullanılabilir", "Ek olduğu için bitişik", "Hiçbiri doğru değil"],
+      "answer": 1,
+      "solution": "Bağlaç olarak kullanılan \"ki\" ayrı yazılır. \"Sanıyorum ki\" cümlesinde \"ki\" cümleleri birbirine bağlayan bağlaçtır; ayrı yazılmalıdır."
+    }
+  }
+]

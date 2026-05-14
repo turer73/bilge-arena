@@ -1,0 +1,354 @@
+[
+  {
+    "game": "fen", "category": "fizik", "topic": "Mevsimler ve İklim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Kuzey Yarımküre'de yaz mevsimi yaşanırken Güney Yarımküre'de hangi mevsim yaşanır?",
+      "options": ["İlkbahar", "Yaz", "Sonbahar", "Kış", "Mevsim değişmez"],
+      "answer": 3,
+      "solution": "Kuzey Yarımküre Haziran-Ağustos'ta Güneş'e yakın (yaz), Güney Yarımküre Güneş'ten uzak olduğu için kış yaşar.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Mevsimler ve İklim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Dünya'nın ekseninin yörünge düzlemine göre eğik olması aşağıdakilerden hangisine neden olur?",
+      "options": ["Gece-gündüz oluşumuna", "Mevsimlerin oluşumuna", "Ay'ın evrelerine", "Güneş tutulmalarına", "Gelgit olayına"],
+      "answer": 1,
+      "solution": "Dünya'nın 23,5° eğimi nedeniyle yılın farklı dönemlerinde Güneş ışınları farklı açılarla düşer → mevsimler oluşur.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Mevsimler ve İklim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşağıdaki ifadelerden hangileri doğrudur?\nI. Ekvator'a yakın bölgelerde yıl boyunca sıcaklık farkı azdır.\nII. Kutup bölgelerinde yıl boyunca gece ve gündüz eşit uzunluktadır.\nIII. Türkiye Kuzey Yarımküre'de yer aldığından Aralık'ta kış yaşar.",
+      "options": ["Yalnız I", "Yalnız III", "I ve III", "II ve III", "I, II ve III"],
+      "answer": 2,
+      "solution": "I doğru (Ekvator'da eksen eğiminden az etkilenilir). II yanlış (kutuplarda 6 aylık gece/gündüz olur). III doğru. Cevap: I ve III.",
+      "type": "roman_numeral"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Mevsimler ve İklim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "21 Mart ve 23 Eylül'de (Ekinoks günleri) hangi durum gözlemlenir?",
+      "options": ["Kuzey Yarımküre'de yaz yaşanır", "Gece ve gündüz her yerde eşit uzunluktadır", "Güneş ışınları yalnızca Ekvator'a dik düşer", "B ve C seçenekleri birlikte doğrudur", "Dünya Güneş'e en yakın konumdadır"],
+      "answer": 3,
+      "solution": "Ekinokslarda güneş ışınları Ekvator'a dik düşer ve her yerde gece = gündüz = 12 saat olur. B ve C birlikte doğru.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Mevsimler ve İklim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "İklim ile hava durumu arasındaki fark nedir?",
+      "options": ["İklim kısa süreli atmosfer olaylarını, hava durumu uzun sürelileri kapsar", "Hava durumu kısa süreli atmosfer olaylarını, iklim uzun süreli ortalamaları kapsar", "İkisi de aynı anlama gelir", "İklim yalnızca sıcaklığı, hava durumu tüm parametreleri kapsar", "Hava durumu yalnızca yağış miktarını ölçer"],
+      "answer": 1,
+      "solution": "Hava durumu: günlük/kısa süreli atmosfer değişimleri. İklim: uzun yıllar (30+ yıl) boyunca ölçülen ortalama atmosfer koşulları.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Mevsimler ve İklim",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Güneş ışınlarının yüzeye dik açıyla değil de eğik açıyla gelmesi nasıl bir etki yaratır?",
+      "options": ["Birim alandaki ışın enerjisi artar, sıcaklık yükselir", "Birim alandaki ışın enerjisi azalır, sıcaklık düşer", "Işın enerjisi değişmez ama nem artar", "Gece süresi uzar", "Hava basıncı düşer"],
+      "answer": 1,
+      "solution": "Eğik gelen ışınlar daha geniş alana yayılır → birim alana düşen enerji azalır → sıcaklık düşer (kış mantığı).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Kuvvet ve Hareket (sürtünme, eğim)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Düz bir yolda sabit hızla hareket eden bir araç için aşağıdakilerden hangisi doğrudur?",
+      "options": ["Net kuvvet ileri yöndedir", "Net kuvvet geri yöndedir", "Net kuvvet sıfırdır", "Sürtünme kuvveti yoktur", "İvme pozitiftir"],
+      "answer": 2,
+      "solution": "Sabit hız → ivme = 0 → Newton'un 2. yasasına göre net kuvvet = 0. İtme kuvveti = sürtünme kuvveti.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Kuvvet ve Hareket (sürtünme, eğim)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Kütlesi 5 kg olan bir nesneye 20 N net kuvvet uygulanmaktadır. Nesnenin ivmesi kaç m/s²'dir?",
+      "options": ["2 m/s²", "3 m/s²", "4 m/s²", "5 m/s²", "6 m/s²"],
+      "answer": 2,
+      "solution": "F = m × a → a = F/m = 20/5 = 4 m/s².",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Kuvvet ve Hareket (sürtünme, eğim)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Sürtünme kuvveti ile ilgili aşağıdakilerden hangileri doğrudur?\nI. Her zaman harekete zıt yönde etkir.\nII. Yüzey ne kadar pürüzlü olursa sürtünme o kadar büyük olur.\nIII. Yağlama işlemi sürtünme kuvvetini artırır.",
+      "options": ["Yalnız I", "Yalnız II", "I ve II", "II ve III", "I, II ve III"],
+      "answer": 2,
+      "solution": "I doğru (sürtünme harekete karşıdır). II doğru (pürüzlülük artar → sürtünme artar). III yanlış (yağlama azaltır). Cevap: I ve II.",
+      "type": "roman_numeral"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Kuvvet ve Hareket (sürtünme, eğim)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Eğik düzlemde bir cismin kayması için gereken kuvvet, düz yüzeydeki kuvvetten neden azdır?",
+      "options": ["Eğik düzlemde yerçekimi yoktur", "Eğik düzlem cismin ağırlığını bileşenlere ayırarak bir kısmını taşır", "Sürtünme eğik düzlemde sıfırdır", "Cismin kütlesi eğik düzlemde azalır", "Eğik düzlem kuvveti iki katına çıkarır"],
+      "answer": 1,
+      "solution": "Eğik düzlem, yerçekimi kuvvetini eğime paralel ve dik bileşenlere ayırır. Düzlem dik bileşeni taşır, yalnızca paralel bileşene karşı kuvvet uygulanır.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Kuvvet ve Hareket (sürtünme, eğim)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Durgun hâldeki bir cisim üzerine etkiyen kuvvetler hakkında ne söylenebilir?",
+      "options": ["Hiç kuvvet yoktur", "Yalnızca yerçekimi kuvveti vardır", "Kuvvetlerin bileşkesi sıfırdır", "Normal kuvvet yoktur", "Sürtünme kuvveti hareketi başlatır"],
+      "answer": 2,
+      "solution": "Denge hâlinde (durgun cisim) → net kuvvet = 0. Yerçekimi + normal kuvvet birbirini dengeler.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Kuvvet ve Hareket (sürtünme, eğim)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aynı kuvvet iki farklı kütleye uygulanmaktadır. Kütlesi büyük olan cisme ne olur?",
+      "options": ["Daha büyük ivme kazanır", "Aynı ivmeyi kazanır", "Daha küçük ivme kazanır", "Hiç hareket etmez", "Geri yönde hareket eder"],
+      "answer": 2,
+      "solution": "a = F/m. Aynı F için kütle büyükse ivme küçük olur. Kütle ve ivme ters orantılı.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Kuvvet ve Hareket (sürtünme, eğim)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Zemin ile temas hâlindeki bir tahta kutunun altına rulolar yerleştirilmektedir. Bu işlem kutuyu hareket ettirmeyi neden kolaylaştırır?",
+      "options": ["Kutunun kütlesini azaltır", "Kayan sürtünmeyi yuvarlanan sürtünmeye dönüştürür ve azaltır", "Yerçekimini ortadan kaldırır", "Normal kuvveti sıfırlar", "Kuvvetin yönünü değiştirir"],
+      "answer": 1,
+      "solution": "Yuvarlanan sürtünme kayan sürtünmeden çok daha küçüktür. Rulolar, kayan teması yuvarlanan temasa çevirir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Basit Makineler (kaldıraç, palanga)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir kaldıraçta destek noktasından yük kolunun uzunluğu 2 m, kuvvet kolunun uzunluğu 6 m'dir. 300 N'luk yükü kaldırmak için kaç N kuvvet uygulanmalıdır?",
+      "options": ["50 N", "75 N", "100 N", "150 N", "200 N"],
+      "answer": 2,
+      "solution": "F × kuvvet kolu = W × yük kolu → F × 6 = 300 × 2 → F = 100 N.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Basit Makineler (kaldıraç, palanga)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Hareketli palangada kaldırılmak istenen yük 240 N ise iple uygulanması gereken kuvvet kaç N'dur?",
+      "options": ["60 N", "80 N", "120 N", "160 N", "240 N"],
+      "answer": 2,
+      "solution": "Hareketli palangada yükü 2 ip taşır. F = W/2 = 240/2 = 120 N.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Basit Makineler (kaldıraç, palanga)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Basit makineler ile ilgili hangi ifade yanlıştır?",
+      "options": ["Kuvveti azaltabilirler", "Kuvvetin yönünü değiştirebilirler", "Yapılan işi azaltırlar", "Kuvvetin etki noktasını değiştirebilirler", "Hareketi kolaylaştırabilirler"],
+      "answer": 2,
+      "solution": "Basit makineler işten kazandırmaz; yapılan iş aynı kalır (enerji korunumu). Sadece kuvvet miktarını veya yönünü değiştirirler.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Basit Makineler (kaldıraç, palanga)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Aşağıdakilerden hangileri birer basit makinedir?\nI. Makas\nII. Çivi\nIII. Kapı kolu\nIV. Merdiven",
+      "options": ["Yalnız I ve II", "Yalnız I ve III", "I, II ve III", "I, III ve IV", "I, II, III ve IV"],
+      "answer": 3,
+      "solution": "Makas (kaldıraç), çivi (kama), kapı kolu (tekerlek-mil), merdiven (eğik düzlem) — hepsi basit makine türleridir.",
+      "type": "roman_numeral"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Basit Makineler (kaldıraç, palanga)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Sabit palanga kullanıldığında aşağıdakilerden hangisi değişir?",
+      "options": ["Yapılan iş miktarı azalır", "Kuvvetin büyüklüğü azalır", "Kuvvetin yönü değişir", "Hem kuvvet hem iş azalır", "Yükün ağırlığı azalır"],
+      "answer": 2,
+      "solution": "Sabit palanga kuvvet kazandırmaz, işten kazandırmaz; yalnızca kuvvetin yönünü değiştirir (aşağı çekerek yukarı kaldırma).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Basit Makineler (kaldıraç, palanga)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir kaldıraçta destek noktası yüke çok yakın, kuvvete çok uzaksa bu kaldıraç ne işe yarar?",
+      "options": ["Kuvvetten kazandırır, yoldan kaybettirir", "Kuvvetten kaybettirir, yoldan kazandırır", "Ne kuvvetten ne yoldan kazandırır", "Hem kuvvetten hem yoldan kazandırır", "Yalnızca kuvvetin yönünü değiştirir"],
+      "answer": 0,
+      "solution": "Kuvvet kolu uzun > yük kolu kısa → kuvvetten kazanılır (küçük kuvvetle büyük yük kaldırılır), fakat uygulanan yol uzar.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik Yükü ve Elektrik Enerjisi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Plastik bir cetvel saça sürtüldükten sonra kağıt parçalarını çekmektedir. Bu olayın açıklaması nedir?",
+      "options": ["Cetvel manyetik özellik kazandı", "Cetvel elektrikle yüklendi, elektrostatik kuvvet oluştu", "Kağıt parçaları ısındı ve havalandı", "Yerçekimi azaldı", "Sürtünme kuvveti kağıdı iterek yere yapıştırdı"],
+      "answer": 1,
+      "solution": "Sürtünme ile elektriklenen cetvel statik elektrik yükü kazanır. Yüklü nesne nötr cisimleri çekebilir (yük ayrışması).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik Yükü ve Elektrik Enerjisi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Elektrik yükleriyle ilgili aşağıdakilerden hangileri doğrudur?\nI. Aynı işaretli yükler birbirini iter.\nII. Zıt işaretli yükler birbirini çeker.\nIII. Nötr cisimler hiçbir zaman elektriksel kuvvet hissetmez.",
+      "options": ["Yalnız I", "Yalnız III", "I ve II", "I ve III", "I, II ve III"],
+      "answer": 2,
+      "solution": "I doğru, II doğru. III yanlış: nötr cisimler yüklü cisimlere yaklaştığında yük ayrışması ile çekilir. Cevap: I ve II.",
+      "type": "roman_numeral"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik Yükü ve Elektrik Enerjisi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Bir evde kullanılan 100 W gücündeki lamba günde 5 saat çalıştırılmaktadır. Bu lambalar 1 ayda (30 gün) kaç kWh elektrik enerjisi tüketir?",
+      "options": ["10 kWh", "12 kWh", "14 kWh", "15 kWh", "18 kWh"],
+      "answer": 3,
+      "solution": "Güç = 0,1 kW. Süre = 5×30 = 150 saat. Enerji = 0,1 × 150 = 15 kWh.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik Yükü ve Elektrik Enerjisi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "İletkenler ve yalıtkanlar hakkında hangisi doğrudur?",
+      "options": ["Plastik iletken, bakır yalıtkandır", "Bakır iletken, ahşap yalıtkandır", "Her iki madde de iletkendir", "Her iki madde de yalıtkandır", "Metal yalıtkan, cam iletkendir"],
+      "answer": 1,
+      "solution": "Bakır elektrik akımını iletir (iletken). Ahşap elektrik akımını iletmez (yalıtkan).",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik Yükü ve Elektrik Enerjisi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Elektrik çarpmasına karşı alınabilecek güvenlik önlemlerinden hangisi yanlıştır?",
+      "options": ["Islak elle prizlere dokunmamak", "Elektrikli cihazları fişten çekerek tamir etmek", "Yüksek gerilim hatlarına yaklaşmamak", "Banyoda saç kurutma makinesi kullanmak", "Sigortaları doğru değerde kullanmak"],
+      "answer": 3,
+      "solution": "Banyoda ıslak ortamda saç kurutma makinesi kullanmak son derece tehlikelidir; su elektriği iletir ve çarpma riski çok yüksektir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik Yükü ve Elektrik Enerjisi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Evlerde kullanılan elektrikli cihazlar paralel bağlıdır. Bunun avantajı nedir?",
+      "options": ["Tüm cihazlar aynı akımı kullanır", "Bir cihaz bozulunca diğerleri de durur", "Her cihaz bağımsız açılıp kapanabilir, arıza diğerlerini etkilemez", "Enerji tasarrufu sağlar", "Gerilim bölüşülür"],
+      "answer": 2,
+      "solution": "Paralel devrede her cihaz aynı gerilimi alır ve bağımsız çalışır. Bir cihaz devreden çıksa diğerleri etkilenmez.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik Yükü ve Elektrik Enerjisi",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Elektrik enerjisini ısı enerjisine dönüştüren cihaz hangisidir?",
+      "options": ["Dinamit", "Mikrofon", "Hoparlör", "Elektrikli fırın", "Fotovoltaik panel"],
+      "answer": 3,
+      "solution": "Elektrikli fırın elektrik enerjisini ısı enerjisine dönüştürür. Diğerleri farklı enerji dönüşümleri yapar.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Maddenin Halleri ve Isı (hal değişimi)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Suyun 0°C'de katıdan sıvıya geçmesi (erime) sırasında sıcaklığı nasıl değişir?",
+      "options": ["Sürekli artar", "Sürekli azalır", "Sabit kalır", "Önce artar sonra azalır", "Erime olmaz"],
+      "answer": 2,
+      "solution": "Hal değişimi sırasında sıcaklık sabit kalır. Verilen ısı bağ kırmak için kullanılır (gizli ısı), sıcaklığı artırmaz.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Maddenin Halleri ve Isı (hal değişimi)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Islak çamaşırlar rüzgarlı havada daha hızlı kurur. Bunun nedeni nedir?",
+      "options": ["Rüzgar sıcaklığı artırır", "Rüzgar buharlaşmayı hızlandırır çünkü su buharını uzaklaştırır", "Rüzgarda nem artar", "Rüzgar çamaşırları ısıtır", "Rüzgarda yerçekimi azalır"],
+      "answer": 1,
+      "solution": "Rüzgar, su yüzeyindeki su buharını sürekli uzaklaştırır. Buharlaşma hızı artar → çamaşırlar daha çabuk kurur.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Maddenin Halleri ve Isı (hal değişimi)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Hal değişimleri ile ilgili hangi eşleştirme doğrudur?",
+      "options": ["Erime → gaz → sıvı", "Buharlaşma → sıvı → gaz", "Yoğuşma → sıvı → katı", "Donma → katı → sıvı", "Süblimleşme → sıvı → katı"],
+      "answer": 1,
+      "solution": "Buharlaşma: sıvı → gaz. Erime: katı→sıvı. Donma: sıvı→katı. Yoğuşma: gaz→sıvı. Süblimleşme: katı→gaz.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Maddenin Halleri ve Isı (hal değişimi)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Kütlesi 2 kg olan suyun sıcaklığını 20°C artırmak için gereken ısı miktarı kaç kJ'dir? (Suyun özgül ısısı 4,18 J/g°C)",
+      "options": ["83,6 kJ", "104,5 kJ", "125,4 kJ", "146,3 kJ", "167,2 kJ"],
+      "answer": 3,
+      "solution": "Q = m × c × ΔT = 2000 g × 4,18 J/g°C × 20°C = 167.200 J = 167,2 kJ.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Maddenin Halleri ve Isı (hal değişimi)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Kış günlerinde çiçek bahçelerinin üzerine su püskürtüldüğünde çiçekler donmaktan korunur. Bu nasıl açıklanır?",
+      "options": ["Su ısı yalıtkanıdır", "Su donma sırasında ısı salar ve çiçekleri ısıtır", "Su donunca çiçekleri mekanik olarak korur", "Su güneş ışınlarını yansıtır", "Su donunca hafifler"],
+      "answer": 1,
+      "solution": "Su donma (sıvı→katı) sırasında gizli ısı salar. Bu ısı çiçeklerin çevresini ısıtır ve çiçeklerin donmasını geciktirir.",
+      "type": "regular"
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Maddenin Halleri ve Isı (hal değişimi)",
+    "difficulty": 2, "exam_ref": "LGS", "source": "ai_claude_lgs", "is_active": false,
+    "content": {
+      "question": "Özgül ısı kapasitesi büyük olan bir madde için ne söylenebilir?",
+      "options": ["Az ısı ile çok ısınır", "Çok ısı ile az ısınır", "Hızla ısınır ve hızla soğur", "Hal değişimi yapmaz", "Isı iletkenliği yüksektir"],
+      "answer": 1,
+      "solution": "Özgül ısı kapasitesi büyük madde, sıcaklığını 1°C artırmak için daha fazla ısı gerektirir → yavaş ısınır, yavaş soğur.",
+      "type": "regular"
+    }
+  }
+]
