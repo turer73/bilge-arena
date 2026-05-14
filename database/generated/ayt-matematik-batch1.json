@@ -1,0 +1,202 @@
+[
+  {
+    "game": "matematik", "category": "cebir", "topic": "Bileşke Fonksiyon",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "f(x) = 2x + 1 ve g(x) = x² – 1 olduğuna göre (f∘g)(2) değeri kaçtır?",
+      "options": ["5", "7", "9", "11", "13"],
+      "answer": 1,
+      "solution": "g(2) = 2² – 1 = 3. f(g(2)) = f(3) = 2·3 + 1 = 7."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Üstel Denklem",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "4^x = 8 denkleminin çözümü kaçtır?",
+      "options": ["1", "2", "3/2", "1/2", "3"],
+      "answer": 2,
+      "solution": "4^x = (2²)^x = 2^(2x) ve 8 = 2³. Denklem: 2x = 3 → x = 3/2."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Logaritma",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "log₂ 8 + log₃ 9 ifadesinin değeri kaçtır?",
+      "options": ["4", "5", "6", "7", "8"],
+      "answer": 1,
+      "solution": "log₂ 8 = log₂ 2³ = 3. log₃ 9 = log₃ 3² = 2. Toplam: 3 + 2 = 5."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Trigonometri – Sinüs Farkı",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "sin 60° · cos 30° – cos 60° · sin 30° ifadesinin değeri kaçtır?",
+      "options": ["√3/2", "1/2", "1", "√2/2", "0"],
+      "answer": 1,
+      "solution": "sin A · cos B – cos A · sin B = sin(A – B) formülü: sin(60° – 30°) = sin 30° = 1/2."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Türev – Türev Değeri",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "f(x) = x³ – 3x² + 2 fonksiyonunun x = 1 noktasındaki türev değeri kaçtır?",
+      "options": ["-3", "-1", "0", "1", "3"],
+      "answer": 0,
+      "solution": "f'(x) = 3x² – 6x. f'(1) = 3·1 – 6·1 = 3 – 6 = –3."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Türev – Teğet Doğrusu",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "y = x² + 3x fonksiyonunun x = 1 noktasındaki teğet doğrusunun denklemi hangisidir?",
+      "options": ["y = 5x – 1", "y = 5x + 1", "y = 3x + 1", "y = 2x + 2", "y = 4x – 2"],
+      "answer": 0,
+      "solution": "y(1) = 1 + 3 = 4. y' = 2x + 3 → y'(1) = 5. Teğet: y – 4 = 5(x – 1) → y = 5x – 1."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "İntegral – Belirsiz",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "∫(2x + 3) dx ifadesinin sonucu aşağıdakilerden hangisidir?",
+      "options": ["x² + 3x + C", "2x² + 3x + C", "x² + 3 + C", "x + C", "2x + C"],
+      "answer": 0,
+      "solution": "∫2x dx = x², ∫3 dx = 3x. Sonuç: x² + 3x + C."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "İntegral – Belirli",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "∫₀² x dx ifadesinin değeri kaçtır?",
+      "options": ["1", "2", "3", "4", "0"],
+      "answer": 1,
+      "solution": "[x²/2]₀² = (4/2) – (0/2) = 2 – 0 = 2."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Diziler – Geometrik",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "2, 6, 18, 54, ... geometrik dizisinin 5. terimi kaçtır?",
+      "options": ["108", "162", "243", "324", "486"],
+      "answer": 1,
+      "solution": "İlk terim a₁ = 2, ortak oran q = 3. a₅ = 2 · 3⁴ = 2 · 81 = 162."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Diziler – Aritmetik",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "İlk terimi 3, ortak farkı 4 olan aritmetik dizinin 10. terimi kaçtır?",
+      "options": ["35", "37", "39", "41", "43"],
+      "answer": 2,
+      "solution": "aₙ = a₁ + (n–1)d. a₁₀ = 3 + 9 · 4 = 3 + 36 = 39."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Limit",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "lim(x→2) (x² – 4) / (x – 2) ifadesinin değeri kaçtır?",
+      "options": ["2", "3", "4", "5", "0"],
+      "answer": 2,
+      "solution": "x² – 4 = (x–2)(x+2). Sadeleştirme: lim(x→2)(x+2) = 2 + 2 = 4."
+    }
+  },
+  {
+    "game": "matematik", "category": "sayilar", "topic": "Karmaşık Sayılar",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "(2 + 3i)(1 – i) işleminin sonucu aşağıdakilerden hangisidir?",
+      "options": ["5 + i", "2 + i", "5 – i", "2 – i", "3 + i"],
+      "answer": 0,
+      "solution": "(2+3i)(1–i) = 2–2i+3i–3i² = 2+i–3(–1) = 2+i+3 = 5+i."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Analitik Geometri – Uzaklık",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "A(1, 2) ve B(4, 6) noktaları arasındaki uzaklık kaç birimdir?",
+      "options": ["3", "4", "5", "6", "7"],
+      "answer": 2,
+      "solution": "|AB| = √((4–1)² + (6–2)²) = √(9 + 16) = √25 = 5 birim."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Analitik Geometri – Çember",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Merkezi (2, 3) ve yarıçapı 4 birim olan çemberin denklemi hangisidir?",
+      "options": ["(x–2)² + (y–3)² = 4", "(x–2)² + (y–3)² = 16", "(x+2)² + (y+3)² = 16", "x² + y² = 16", "(x–2)² + (y–3)² = 8"],
+      "answer": 1,
+      "solution": "Çember denklemi: (x – a)² + (y – b)² = r². Merkez (2,3), r = 4 → r² = 16. Denklem: (x–2)² + (y–3)² = 16."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Kombinasyon",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "C(5, 2) değeri kaçtır?",
+      "options": ["6", "8", "10", "12", "15"],
+      "answer": 2,
+      "solution": "C(5,2) = 5! / (2! · 3!) = (5 · 4) / (2 · 1) = 20 / 2 = 10."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Permütasyon",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "5 kişi 5 ayrı koltuğa kaç farklı biçimde oturabilir?",
+      "options": ["24", "60", "120", "240", "720"],
+      "answer": 2,
+      "solution": "5 kişinin 5 yere oturma sayısı 5! = 5 · 4 · 3 · 2 · 1 = 120."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Klasik Olasılık",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "3 kırmızı ve 2 mavi bilye içeren bir torbadan aynı anda 2 bilye çekildiğinde ikisinin de kırmızı olma olasılığı kaçtır?",
+      "options": ["1/5", "1/10", "3/10", "2/5", "1/2"],
+      "answer": 2,
+      "solution": "Toplam yol: C(5,2) = 10. İkisi kırmızı: C(3,2) = 3. Olasılık: 3/10."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Parabol – Tepe Noktası",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "y = x² – 4x + 3 parabolünün tepe noktası hangisidir?",
+      "options": ["(1, 0)", "(2, –1)", "(–2, 1)", "(0, 3)", "(2, 0)"],
+      "answer": 1,
+      "solution": "x_tepe = –b / (2a) = 4 / 2 = 2. y_tepe = 4 – 8 + 3 = –1. Tepe noktası: (2, –1)."
+    }
+  },
+  {
+    "game": "matematik", "category": "sayilar", "topic": "Matris – Determinant",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "A = [[2, 3], [1, 4]] matrisinin determinantı kaçtır?",
+      "options": ["3", "4", "5", "6", "11"],
+      "answer": 2,
+      "solution": "det(A) = (2)(4) – (3)(1) = 8 – 3 = 5."
+    }
+  },
+  {
+    "game": "matematik", "category": "sayilar", "topic": "Köklü Denklem",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "√(x + 4) = 3 denkleminin çözümü kaçtır?",
+      "options": ["3", "4", "5", "6", "7"],
+      "answer": 2,
+      "solution": "Her iki tarafı karele alınırsa: x + 4 = 9 → x = 5. Doğrulama: √(5 + 4) = √9 = 3 ✓"
+    }
+  }
+]

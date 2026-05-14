@@ -60,5 +60,6 @@ database/import-judge-audit-*.json
 database/audit-math-fen-result.json
 database/generated/*
 !database/generated/lgs-*.json
+!database/generated/ayt-*.json
 database/backup-*.json
 database/_*.json

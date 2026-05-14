@@ -49,6 +49,7 @@ const EXAM_REF_OPTIONS = [
   { value: null, label: 'Tümü' },
   { value: 'TYT', label: 'TYT (Lise)' },
   { value: 'LGS', label: 'LGS (8. Sınıf)' },
+  { value: 'AYT-SAY', label: 'AYT Sayısal' },
 ] as const
 
 export function Lobby({

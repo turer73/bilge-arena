@@ -1,0 +1,302 @@
+[
+  {
+    "game": "fen", "category": "fizik", "topic": "Dinamik – Newton'un 2. Yasası",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kütlesi 5 kg olan bir cisme 3 m/s² ivme kazandırmak için gereken net kuvvet kaç N'dür?",
+      "options": ["8", "10", "15", "20", "25"],
+      "answer": 2,
+      "solution": "F = m · a = 5 · 3 = 15 N."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Kinematik – Serbest Düşme",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Durumdan serbest bırakılan bir cisim 2 s sonra kaç m düşmüştür? (g = 10 m/s²)",
+      "options": ["10", "15", "20", "25", "30"],
+      "answer": 2,
+      "solution": "h = ½ · g · t² = ½ · 10 · 4 = 20 m."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Enerji – Kinetik Enerji",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kütlesi 2 kg olan bir cisim 4 m/s hızla hareket etmektedir. Bu cismin kinetik enerjisi kaç J'dür?",
+      "options": ["8", "12", "16", "20", "32"],
+      "answer": 2,
+      "solution": "Eₖ = ½ · m · v² = ½ · 2 · 4² = ½ · 2 · 16 = 16 J."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Momentum",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kütlesi 3 kg olan ve 5 m/s hızla hareket eden bir cismin momentumu kaç kg·m/s'dir?",
+      "options": ["8", "10", "12", "15", "20"],
+      "answer": 3,
+      "solution": "p = m · v = 3 · 5 = 15 kg·m/s."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik – Ohm Yasası",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "12 V gerilim altında 4 Ω dirençten geçen akım kaç A'dır?",
+      "options": ["2", "3", "4", "6", "8"],
+      "answer": 1,
+      "solution": "I = V / R = 12 / 4 = 3 A."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik – Seri Devre",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "2 Ω ve 3 Ω'luk dirençler seri bağlandığında eşdeğer direnç kaç Ω'dur?",
+      "options": ["1", "1,2", "5", "6", "10"],
+      "answer": 2,
+      "solution": "Seri bağlı dirençlerde R_eş = R₁ + R₂ = 2 + 3 = 5 Ω."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik – Paralel Devre",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "4 Ω ve 4 Ω'luk dirençler paralel bağlandığında eşdeğer direnç kaç Ω'dur?",
+      "options": ["1", "2", "4", "8", "16"],
+      "answer": 1,
+      "solution": "1/R_eş = 1/4 + 1/4 = 2/4 → R_eş = 2 Ω. Eşit iki direnç paralelde: R/2 = 4/2 = 2 Ω."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Dalga – v = fλ",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Frekansı 200 Hz ve dalga boyu 2 m olan bir dalganın hızı kaç m/s'dir?",
+      "options": ["100", "200", "300", "400", "500"],
+      "answer": 3,
+      "solution": "v = f · λ = 200 · 2 = 400 m/s."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Optik – Kırılma İndisi",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kırılma indisi n = 1,5 olan camda ışık hızı kaç m/s'dir? (c = 3·10⁸ m/s)",
+      "options": ["1·10⁸", "1,5·10⁸", "2·10⁸", "2,5·10⁸", "3·10⁸"],
+      "answer": 2,
+      "solution": "v = c / n = (3·10⁸) / 1,5 = 2·10⁸ m/s."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Modern Fizik – Fotoelektrik Etki",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Fotoelektrik etkide bir metalden elektron koparılabilmesi için kesinlikle gerekli olan koşul hangisidir?",
+      "options": ["Işık şiddetinin artırılması", "Foton frekansının eşik frekansı aşması", "Işığın uzun süre tutulması", "Metalin ısıtılması", "Yüksek gerilim uygulanması"],
+      "answer": 1,
+      "solution": "Fotoelektrik etkide elektron kopabilmesi için foton enerjisi E = hf'nin metalin iş işlevinden büyük olması, yani frekansın eşik değeri aşması şarttır. Işık şiddeti elektron sayısını etkiler, kopma koşulunu değil."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit-Baz – pH Hesabı",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "[H⁺] = 10⁻³ mol/L olan bir sulu çözeltinin pH'ı kaçtır?",
+      "options": ["1", "2", "3", "4", "5"],
+      "answer": 2,
+      "solution": "pH = –log[H⁺] = –log(10⁻³) = 3."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit-Baz – Titrasyon",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "0,1 mol/L HCl çözeltisinin 20 mL'sini tam nötrleştirmek için 0,2 mol/L NaOH çözeltisinden kaç mL gerekir?",
+      "options": ["5", "10", "15", "20", "40"],
+      "answer": 1,
+      "solution": "n(HCl) = 0,1 · 0,02 = 0,002 mol. n(NaOH) = n(HCl) = 0,002 mol. V(NaOH) = 0,002 / 0,2 = 0,01 L = 10 mL."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Kimyasal Denge – Kc İfadesi",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "2SO₂(g) + O₂(g) ⇌ 2SO₃(g) tepkimesi için Kc ifadesi hangisidir?",
+      "options": ["Kc = [SO₃]² / ([SO₂]² · [O₂])", "Kc = [SO₂]² · [O₂] / [SO₃]²", "Kc = [SO₃] / ([SO₂] · [O₂])", "Kc = 2[SO₃] / (2[SO₂] + [O₂])", "Kc = [SO₃]² · [O₂] / [SO₂]²"],
+      "answer": 0,
+      "solution": "Denge sabiti: ürünlerin katsayı üssündeki konsantrasyonları / reaktiflerin katsayı üssündeki konsantrasyonları. Kc = [SO₃]² / ([SO₂]² · [O₂])."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Yükseltgenme Basamağı",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "MnO₄⁻ iyonunda Mn'ın yükseltgenme basamağı kaçtır?",
+      "options": ["+2", "+4", "+5", "+6", "+7"],
+      "answer": 4,
+      "solution": "O'nun yükseltgenme basamağı –2; 4 oksijen için –8. İyon yükü –1. x + (–8) = –1 → x = +7."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Organik Kimya – Fonksiyonel Gruplar",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "–COOH fonksiyonel grubunu içeren organik bileşikler hangi sınıfa aittir?",
+      "options": ["Alkol", "Aldehit", "Keton", "Karboksilik asit", "Ester"],
+      "answer": 3,
+      "solution": "Karboksil grubu (–COOH), karboksilik asitlerin fonksiyonel grubudur. Örnek: CH₃COOH (asetik asit)."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Organik Kimya – IUPAC Adlandırma",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "CH₃–CH₂–CH₂–OH bileşiğinin IUPAC adı hangisidir?",
+      "options": ["Metanol", "Etanol", "1-Propanol", "2-Propanol", "1-Bütanol"],
+      "answer": 2,
+      "solution": "3 karbonlu zincir (propan) + –OH grubu 1. karbonda → 1-propanol. Etanol = 2C, Metanol = 1C."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "İdeal Gaz – Molar Hacim",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "0°C ve 1 atm'de 1 mol ideal gazın hacmi yaklaşık kaç L'dir? (R = 0,082 L·atm/mol·K)",
+      "options": ["11,2", "18,4", "22,4", "24,0", "44,8"],
+      "answer": 2,
+      "solution": "PV = nRT → V = nRT/P = (1)(0,082)(273) / 1 ≈ 22,4 L. STP koşullarında standart molar hacimdir."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Kimyasal Denge – Le Chatelier",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "N₂(g) + 3H₂(g) ⇌ 2NH₃(g) + ısı tepkimesinde basıncın artırılması dengeyi nasıl etkiler?",
+      "options": ["Denge değişmez", "Denge NH₃ yönünde kayar (sağa)", "Denge H₂ yönünde kayar (sola)", "Sadece sıcaklık değişirse kayar", "Katalizör eklenirse kayar"],
+      "answer": 1,
+      "solution": "Basınç artırılınca mol sayısı daha az olan taraf tercih edilir. Sol: 1 + 3 = 4 mol gaz; Sağ: 2 mol gaz. Denge sağa (NH₃ yönünde) kayar."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Molarite Hesabı",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "4 g NaOH (M = 40 g/mol) 500 mL suda çözüldüğünde oluşan çözeltinin molaritesi kaç mol/L'dir?",
+      "options": ["0,1", "0,2", "0,4", "0,5", "1,0"],
+      "answer": 1,
+      "solution": "n = 4 / 40 = 0,1 mol. C = n / V = 0,1 / 0,5 = 0,2 mol/L."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Elektrokimya – Anot-Katot",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Elektrokimyasal pilde oksidasyonun (elektron kaybının) gerçekleştiği elektrot hangisidir?",
+      "options": ["Katot", "Anot", "Tuz köprüsü", "Diyafram", "Her iki elektrot"],
+      "answer": 1,
+      "solution": "Pilde anotta oksidasyon (elektron kaybı), katotta redüksiyon (elektron kazanımı) gerçekleşir. 'Anot-Oksidasyon, Katot-Redüksiyon' kısaltmasıyla hatırlanabilir."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Hücre Bölünmesi – Mitoz",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Diploid (2n) bir hücre mitoz bölünme geçirdiğinde oluşan hücre sayısı ve ploidi düzeyi hangisidir?",
+      "options": ["2 haploid hücre", "2 diploid hücre", "4 haploid hücre", "4 diploid hücre", "1 diploid hücre"],
+      "answer": 1,
+      "solution": "Mitoz bölünmede bir diploid hücreden 2 özdeş diploid (2n) hücre oluşur. Genetik bilgi korunur; büyüme ve onarım için kullanılır."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Hücre Bölünmesi – Mayoz",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Diploid (2n) bir primer oosit mayoz bölünme geçirdiğinde kaç adet işlevsel yumurta hücresi oluşur?",
+      "options": ["1", "2", "3", "4", "8"],
+      "answer": 0,
+      "solution": "Oogenezde primer oositten mayoz I → 1 sekonder oosit + 1 polar cisim; mayoz II → 1 yumurta + 1 polar cisim. Toplam işlevsel yumurta: 1."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Kalıtım – Mendel Genotip Oranı",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Aa × Aa çaprazlamasında döllerinin genotip oranı hangisidir?",
+      "options": ["1 AA : 2 Aa : 1 aa", "3 AA : 1 aa", "1 AA : 1 aa", "2 AA : 2 aa", "Tümü Aa"],
+      "answer": 0,
+      "solution": "Punnett karesi: AA, Aa, Aa, aa → 1 AA : 2 Aa : 1 aa. Fenotip oranı ise (dominant özellik baskınsa) 3 : 1'dir."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Kan Grupları – ABO Sistemi",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "AB kan grubundaki anne (I^A I^B) ile 0 kan grubundaki babanın (ii) çocukları hangi kan grubunda olabilir?",
+      "options": ["Sadece AB", "A veya B", "A, B veya AB", "0, A veya B", "Sadece 0"],
+      "answer": 1,
+      "solution": "Anne I^A I^B × Baba ii → Döller: I^A i (A grubu) veya I^B i (B grubu). AB (I^A I^B) veya 0 (ii) grubu mümkün değildir."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Moleküler Biyoloji – DNA Tamamlayıcılığı",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Bir DNA ipliğinin dizisi 5'–ATGCTA–3' ise tamamlayıcı ipliğin dizisi (3'→5') nedir?",
+      "options": ["3'–ATGCTA–5'", "3'–UACGAU–5'", "3'–TACGAT–5'", "5'–TAGCAT–3'", "3'–ATCGTA–5'"],
+      "answer": 2,
+      "solution": "DNA'da A-T, G-C eşleşmesi ve antiparalellik vardır. 5'-A-T-G-C-T-A-3' dizisinin tamamlayıcısı: 3'-T-A-C-G-A-T-5' = 3'-TACGAT-5'."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Ekoloji – %10 Enerji Kuralı",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Bir ekosistemde üreticiler 10.000 kkal enerji içeriyorsa %10 enerji aktarım kuralına göre birinci tüketici düzeyindeki kullanılabilir enerji kaç kkal'dir?",
+      "options": ["100", "1.000", "5.000", "10.000", "100.000"],
+      "answer": 1,
+      "solution": "%10 kuralına göre her trofik düzeyde enerjinin %10'u sonraki düzeye aktarılır. 10.000 × %10 = 1.000 kkal."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "İnsan Fizyolojisi – Hormonlar",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kan şekeri yükseldiğinde pankreastan salgılanan ve kan şekerini düşüren hormon hangisidir?",
+      "options": ["Glukagon", "Adrenalin", "İnsülin", "Tiroksin", "Kortizol"],
+      "answer": 2,
+      "solution": "İnsülin, pankreas beta hücrelerinden kan glikozu yükselince salgılanır; glikozun hücrece alınmasını ve glikojen sentezini artırarak kan şekerini düşürür."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Sinir Sistemi – Sinaps",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Nöronlar arasında impuls iletimi sinapsta nasıl gerçekleşir?",
+      "options": ["Elektrik akımı doğrudan geçer", "Nörotransmitörler presinaptik uçtan salınarak postsinaptik almaçlara bağlanır", "İki nöron birbirine doğrudan temas eder", "Hormonlar sinapsa salınır", "İyon kanalları her zaman açık kalır"],
+      "answer": 1,
+      "solution": "Sinir impulsı presinaptik uca ulaşınca veziküller nörotransmiter serbest bırakır; bu maddeler sinaptik aralığı geçerek postsinaptik almaçlara bağlanır ve sinyali iletir."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Protein Sentezi – Lokasyon",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Protein sentezinde transkripsiyon ve translasyon süreçleri sırasıyla nerede gerçekleşir?",
+      "options": ["Sitoplazmada – çekirdekte", "Çekirdekte – ribozomda", "Ribozomda – çekirdekte", "Mitokondride – ribozomda", "Çekirdekte – mitokondride"],
+      "answer": 1,
+      "solution": "Transkripsiyon çekirdekte (DNA → mRNA); translasyon sitoplazmadaki ribozomlarda (mRNA → protein) gerçekleşir."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Evrim – Doğal Seçilim",
+    "difficulty": 3, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Darwin'in doğal seçilim kuramına göre aşağıdakilerden hangisi doğrudur?",
+      "options": ["Tüm bireyler eşit hayatta kalma şansına sahiptir", "Çevreye daha iyi uyum sağlayan bireyler hayatta kalma ve üreme avantajına sahiptir", "Mutasyonlar evrimde etkisizdir", "Türler değişmez ve sabit yapıdadır", "Bireyler ihtiyaç duydukları organları bilinçli geliştirebilir"],
+      "answer": 1,
+      "solution": "Doğal seçilimde uygun varyasyonlara sahip bireyler çevreye daha iyi uyum sağlar, hayatta kalır ve ürer. Bu özellikler sonraki nesillere aktarılarak popülasyon yapısı değişir."
+    }
+  }
+]
