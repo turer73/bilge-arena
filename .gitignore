@@ -58,3 +58,6 @@ database/__tests__/_eval-output.json
 database/__tests__/eval-judge-report.json
 database/import-judge-audit-*.json
 database/audit-math-fen-result.json
+database/generated/
+database/backup-*.json
+database/_*.json
