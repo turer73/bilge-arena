@@ -45,5 +45,5 @@ if (error) {
   console.error('\n✗ DB hata:', error.message)
   process.exit(1)
 }
-console.log(`\n✓ Eklendi: ${data.length} soru (is_active=false, exam_ref=LGS)`)
+console.log(`\n✓ Eklendi: ${data.length} soru (is_active=false, exam_ref=${first.exam_ref ?? 'null'})`)
 console.log('IDs:', data.map(d => d.id).join(', '))

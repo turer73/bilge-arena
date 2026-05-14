@@ -51,6 +51,7 @@ const EXAM_REF_OPTIONS = [
   { value: 'LGS', label: 'LGS (8. Sınıf)' },
   { value: 'AYT-SAY', label: 'AYT Sayısal' },
   { value: 'AYT-EA', label: 'AYT Eşit Ağırlık' },
+  { value: 'AYT-SOZ', label: 'AYT Sözel' },
 ] as const
 
 export function Lobby({

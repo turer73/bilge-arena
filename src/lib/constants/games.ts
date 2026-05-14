@@ -31,7 +31,7 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
     colorHex: '#D97706',
     icon: 'book-open',
     categories: ['paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari', 'edebiyat'],
-    examTags: ['TYT', 'AYT-EA', 'LGS'],
+    examTags: ['TYT', 'AYT-EA', 'AYT-SOZ', 'LGS'],
   },
   fen: {
     slug: 'fen',
@@ -51,7 +51,7 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
     colorHex: '#7C3AED',
     icon: 'globe',
     categories: ['tarih', 'cografya', 'felsefe', 'sosyoloji'],
-    examTags: ['TYT', 'LGS'],
+    examTags: ['TYT', 'AYT-SOZ', 'LGS'],
   },
   wordquest: {
     slug: 'wordquest',

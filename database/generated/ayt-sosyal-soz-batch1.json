@@ -1,0 +1,162 @@
+[
+  {
+    "game": "sosyal", "category": "tarih", "topic": "Osmanlı – Sened-i İttifak",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "1808'de II. Mahmut ile ayanlar arasında imzalanan ve merkezi otoriteyi sınırlayan belge hangisidir?",
+      "options": ["Tanzimat Fermanı", "Islahat Fermanı", "Sened-i İttifak", "Kanun-i Esasi", "Misak-ı Millî"],
+      "answer": 2,
+      "solution": "Sened-i İttifak (1808): Ayanların padişahla yaptığı anlaşma; merkezi otoriteyi sınırlayan, ayanların gücünü meşrulaştıran belgedir. Tanzimat (1839), Islahat (1856), Kanun-i Esasi (1876) daha sonraki gelişmelerdir."
+    }
+  },
+  {
+    "game": "sosyal", "category": "tarih", "topic": "Osmanlı – İlk Anayasa",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Osmanlı Devleti'nin ilk anayasası olan Kanun-i Esasi hangi yılda ilan edilmiştir?",
+      "options": ["1839", "1856", "1876", "1908", "1919"],
+      "answer": 2,
+      "solution": "Kanun-i Esasi, II. Abdülhamit döneminde 1876'da ilan edildi. Osmanlı'nın ilk anayasasıdır. 1877-78 Osmanlı-Rus Savaşı (93 Harbi) gerekçesiyle 1878'de askıya alındı; II. Meşrutiyet'le (1908) yeniden yürürlüğe girdi."
+    }
+  },
+  {
+    "game": "sosyal", "category": "tarih", "topic": "Kurtuluş Savaşı – Doğu Cephesi",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kurtuluş Savaşı'nda Doğu Cephesi'nde Ermenistan ile imzalanan ve Kars, Ardahan'ı Türkiye'ye bırakan antlaşma hangisidir?",
+      "options": ["Mudanya Ateşkesi", "Lozan Antlaşması", "Gümrü Antlaşması", "Ankara Antlaşması", "Sevr Antlaşması"],
+      "answer": 2,
+      "solution": "Gümrü Antlaşması (Aralık 1920): Türkiye-Ermenistan arasında imzalanan, Kars ve Ardahan'ı Türkiye'ye bırakan ilk uluslararası antlaşmadır. Lozan (1923) genel barış; Mudanya (1922) Yunanistan ile ateşkes."
+    }
+  },
+  {
+    "game": "sosyal", "category": "tarih", "topic": "Atatürk İnkılapları – Hukuk",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "1926'da yürürlüğe giren Türk Medeni Kanunu hangi ülkenin medeni kanunundan uyarlanmıştır?",
+      "options": ["Fransa", "Almanya", "İsviçre", "İtalya", "Belçika"],
+      "answer": 2,
+      "solution": "1926'da kabul edilen Türk Medeni Kanunu, İsviçre Medeni Kanunu'ndan uyarlanmıştır. Çok eşlilik ve dini nikâhı kaldırarak kadın-erkek eşitliğini hukuki zemine oturtmuştur."
+    }
+  },
+  {
+    "game": "sosyal", "category": "tarih", "topic": "Atatürk Dönemi – Ekonomi",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "1929 Büyük Buhranı'nın ardından Türkiye'nin benimsediği, devletin ekonomiye doğrudan müdahalesini öngören ekonomi modeli hangisidir?",
+      "options": ["Liberalizm", "Devletçilik", "Korporatizm", "Merkantilizm", "Serbest piyasa"],
+      "answer": 1,
+      "solution": "1929 krizi sonrasında Türkiye Devletçilik ilkesini benimsedi; devlet, özel sektörün giremediği ya da giremeyeceği sanayi alanlarına yatırım yaptı. Bu dönemde kurulan Sümerbank, Etibank bunun örneğidir."
+    }
+  },
+  {
+    "game": "sosyal", "category": "tarih", "topic": "Tanzimat – İçerik",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "1839 tarihli Tanzimat Fermanı'nın (Gülhane Hatt-ı Hümayunu) getirdiği temel ilkelerden biri DEĞİLDİR?",
+      "options": ["Can güvenliğinin sağlanması", "Mal güvenliğinin sağlanması", "Meşruti yönetime geçiş", "Askerlik usulünün düzenlenmesi", "Vergi adaletinin sağlanması"],
+      "answer": 2,
+      "solution": "Tanzimat Fermanı; can/mal güvenliği, vergi adaleti ve askerlik düzenlemelerini getirdi. Meşruti yönetime geçiş ise ancak 1876'da Kanun-i Esasi ile gerçekleşti; Tanzimat bu dönüşümü içermez."
+    }
+  },
+  {
+    "game": "sosyal", "category": "cografya", "topic": "Türkiye İklimi – Akdeniz",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Akdeniz iklimine özgü 'yazları sıcak ve kurak, kışları ılık ve yağışlı' özelliği hangi etkenle açıklanır?",
+      "options": ["Kutup ön cephesinin yaz-kış hareketi", "Karasal yüksek basıncın etkisi", "Muson rüzgârlarının yönü", "Okyanus akıntılarının sıcaklığı", "Enlem ile yükseltinin birleşimi"],
+      "answer": 0,
+      "solution": "Akdeniz ikliminde yazın Azor Yüksek Basıncı bölgeye sıcak-kuru hava getirir; kışın Kutup Ön Cephesi güneye inerek yağışlara neden olur. Bu mevsimsel baskı kaymasıdır."
+    }
+  },
+  {
+    "game": "sosyal", "category": "cografya", "topic": "Türkiye – Nüfus Dağılımı",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Türkiye'de nüfusun en seyrek olduğu bölge hangisidir?",
+      "options": ["Karadeniz Bölgesi", "Akdeniz Bölgesi", "Doğu Anadolu Bölgesi", "Ege Bölgesi", "Güneydoğu Anadolu Bölgesi"],
+      "answer": 2,
+      "solution": "Doğu Anadolu Bölgesi; yüksek enlem, sert iklim koşulları, engebeli arazi ve sınırlı tarım olanakları nedeniyle Türkiye'nin en seyrek nüfuslu bölgesidir. Km² başına düşen nüfus en düşük bu bölgededir."
+    }
+  },
+  {
+    "game": "sosyal", "category": "cografya", "topic": "Coğrafi Bölgeler – Tarım",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Türkiye'de fındık üretiminin büyük çoğunluğu hangi bölgede yapılır?",
+      "options": ["Ege Bölgesi", "Marmara Bölgesi", "Karadeniz Bölgesi", "Akdeniz Bölgesi", "İç Anadolu Bölgesi"],
+      "answer": 2,
+      "solution": "Karadeniz Bölgesi; nemli iklimi ve dağlık kıyı şeridi ile fındık üretiminde dünya lideri olan Türkiye'nin bu ürününde %70'den fazlasını sağlar. Giresun ve Ordu öne çıkan illerdir."
+    }
+  },
+  {
+    "game": "sosyal", "category": "cografya", "topic": "Dağlar – Türkiye Jeomorfolojisi",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Türkiye'nin en yüksek dağı olan Ağrı Dağı hangi dağ sırasına aittir?",
+      "options": ["Kuzey Anadolu Dağları", "Toros Dağları", "Doğu Anadolu Volkanik Platosu", "Güneydoğu Toroslar", "Orta Anadolu Platosu"],
+      "answer": 2,
+      "solution": "Ağrı Dağı (5.137 m), Doğu Anadolu'daki volkanik faaliyet sonucu oluşmuş bir stratovolkandır; Kuzey Anadolu (Pontid) veya Toros (Torid) sistemine değil, Doğu Anadolu volkanik platosuna aittir."
+    }
+  },
+  {
+    "game": "sosyal", "category": "felsefe", "topic": "Bilgi Felsefesi – Empirizm",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'Zihin başlangıçta boş bir levha (tabula rasa) gibidir; tüm bilgi deneyimden gelir' görüşü hangi felsefi akıma aittir?",
+      "options": ["Rasyonalizm", "Empirizm", "İdealizm", "Varoluşçuluk", "Pragmatizm"],
+      "answer": 1,
+      "solution": "EMPİRİZM (John Locke öncülüğünde): tüm bilginin duyu deneyiminden kaynaklandığını savunur. 'Tabula rasa' (boş levha) metaforu Locke'a aittir. Rasyonalizm ise bilginin akıldan geldiğini öne sürer."
+    }
+  },
+  {
+    "game": "sosyal", "category": "felsefe", "topic": "Etik – Kant Ahlak Felsefesi",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kant'ın 'Yalnızca evrensel yasa olmasını isteyebileceğin ilkeye göre davran' şeklinde ifade ettiği ahlak ilkesi ne adla anılır?",
+      "options": ["Hipotekik buyruk", "Koşulsuz buyruk", "Faydacılık ilkesi", "Erdem etiği", "Altın kural"],
+      "answer": 1,
+      "solution": "Kant'ın KATEGORİK (Koşulsuz) BUYRUK ilkesidir. Eylemlerimizin arkasındaki maxim'in evrensel yasa olabilmesini ahlakın temeli sayar. Hipotetik buyruk ise 'Eğer X istiyorsan, Y yap' biçimindeki koşullu buyruğu ifade eder."
+    }
+  },
+  {
+    "game": "sosyal", "category": "felsefe", "topic": "Varlık Felsefesi – Platon",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Platon'a göre duyularla algılanan nesnelerin yalnızca gölgeleri olduğu, gerçek ve değişmez varlıkların bulunduğu âlem hangisidir?",
+      "options": ["Fenomenler âlemi", "Görünüşler âlemi", "İdealar âlemi", "Maddeler âlemi", "Duyumlar âlemi"],
+      "answer": 2,
+      "solution": "Platon'un İDEALAR ÂLEMİ: gerçek, değişmez ve mükemmel formların (idea) bulunduğu yerdir. Duyusal dünya ise bu idelerin eksik ve geçici kopyalarıdır. Mağara metaforu bu ayrımı somutlaştırır."
+    }
+  },
+  {
+    "game": "sosyal", "category": "felsefe", "topic": "Modern Felsefe – Varoluşçuluk",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'Varoluş özden önce gelir' savıyla insanın özgürlüğünü ve sorumluluğunu merkeze alan varoluşçu düşünür kimdir?",
+      "options": ["Friedrich Nietzsche", "Søren Kierkegaard", "Martin Heidegger", "Jean-Paul Sartre", "Albert Camus"],
+      "answer": 3,
+      "solution": "Jean-Paul Sartre'ın bu cümlesi varoluşçuluğun özüdür: insan, önceden belirlenmiş bir özü olmaksızın var olur ve özünü kendi seçimleriyle oluşturur. Bu, mutlak özgürlük ve sorumluluk anlamına gelir."
+    }
+  },
+  {
+    "game": "sosyal", "category": "sosyoloji", "topic": "Toplumsal Tabakalaşma",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Bireyin doğduğu sosyal tabakadan farklı bir tabakaya geçmesi sürecine ne ad verilir?",
+      "options": ["Sosyal kontrol", "Sosyal değişme", "Sosyal hareketlilik", "Sosyalleşme", "Sosyal tabakalaşma"],
+      "answer": 2,
+      "solution": "SOSYAL HAREKETLİLİK (Social Mobility): bireyin ya da grubun toplumsal tabakalar arasında dikey (yukarı-aşağı) veya yatay hareketidir. Eğitim, evlilik ve mesleki başarı bu hareketliliği sağlayan başlıca etkenlerdir."
+    }
+  },
+  {
+    "game": "sosyal", "category": "sosyoloji", "topic": "Durkheim – Toplumsal Dayanışma",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Durkheim'a göre ilkel toplumlardaki benzerlik temelli, kolektif bilincin güçlü olduğu dayanışma türü hangisidir?",
+      "options": ["Organik dayanışma", "Mekanik dayanışma", "İşlevsel dayanışma", "Sınıfsal dayanışma", "Sembolik dayanışma"],
+      "answer": 1,
+      "solution": "MEKANİK DAYANIŞMA: bireyler arasındaki benzerliğe dayalı, kolektif bilincin baskın olduğu geleneksel/ilkel toplumlarda görülür. Modern sanayi toplumlarında ise iş bölümüne dayalı ORGANİK dayanışma hâkimdir."
+    }
+  }
+]

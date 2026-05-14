@@ -46,6 +46,27 @@ const HowItWorks = dynamic(() => import('@/components/landing/how-it-works').the
 const LeaderboardPreview = dynamic(() => import('@/components/landing/leaderboard-preview').then(m => ({ default: m.LeaderboardPreview })))
 const CTASection = dynamic(() => import('@/components/landing/cta-section').then(m => ({ default: m.CTASection })))
 
+// Oyun başına aktif soru sayısını DB'den çek (ISR ile 5dk cache'lenir)
+async function getGameCounts(): Promise<Record<string, number>> {
+  try {
+    const supabase = await createClient()
+    const games = ['matematik', 'turkce', 'fen', 'sosyal', 'wordquest']
+    const results = await Promise.all(
+      games.map((g) =>
+        supabase
+          .from('questions')
+          .select('*', { count: 'exact', head: true })
+          .eq('game', g)
+          .eq('is_active', true)
+          .then(({ count }) => [g, count ?? 0] as [string, number])
+      )
+    )
+    return Object.fromEntries(results)
+  } catch {
+    return {}
+  }
+}
+
 // Fetch homepage content from DB
 async function getHomepageContent() {
   try {
@@ -69,7 +90,10 @@ async function getHomepageContent() {
 }
 
 export default async function Home() {
-  const { sections, elements } = await getHomepageContent()
+  const [{ sections, elements }, gameCounts] = await Promise.all([
+    getHomepageContent(),
+    getGameCounts(),
+  ])
 
   return (
     <>
@@ -82,7 +106,7 @@ export default async function Home() {
           <StatsBar config={sections.stats} />
         </SectionWrapper>
         <SectionWrapper section="games" elements={elements}>
-          <GamesSection config={sections.games} />
+          <GamesSection config={sections.games} gameCounts={gameCounts} />
         </SectionWrapper>
         {/* Fold-alti bolumleri content-visibility ile ertele */}
         <div className="cv-auto">

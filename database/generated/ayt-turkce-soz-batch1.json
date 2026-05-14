@@ -1,0 +1,102 @@
+[
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Divan – Şiir Sanatları – İstiare",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'Aslan gibi savaştı' ifadesinde hangi söz sanatı kullanılmıştır?",
+      "options": ["İstiare", "Teşbih", "Mecaz-ı mürsel", "Kinaye", "Telmih"],
+      "answer": 1,
+      "solution": "TEŞBİH: iki unsur arasında benzetme ilişkisi kurulan ve benzetme edatının (gibi, kadar, sanki) kullanıldığı sanattır. 'Aslan gibi' = benzetilen(savaşçı) + benzetme edatı (gibi) + kendisine benzetilen (aslan) → açık teşbih. İstiare'de benzetme edatı kullanılmaz."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Divan – Mazmun",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Divan şiirinde 'lale' sözcüğünün simgesel anlamı aşağıdakilerden hangisidir?",
+      "options": ["Ayrılık ve hüzün", "Gençlik ve güzellik", "Allah sevgisi ve vahdet", "Ölüm ve yas", "Güzelin yanağı ya da kadeh"],
+      "answer": 4,
+      "solution": "Divan şiirinde LALE, güzelin yanağını (al rengi) ya da şarap kadehini simgeleyen bir mazmundur. Ayrıca Allah kelimesinin Arap harfleriyle yazılışına benzediğinden tasavvufi anlam da taşıyabilir. Gül ise sevgiliyi (mecazî ya da ilahî) simgeler."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Fuzuli – Leyla ile Mecnun",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Fuzuli'nin Türkçe, Arapça ve Farsça olmak üzere üç dilde kaleme aldığı, beşeri aşkın ilahî aşka dönüşümünü anlatan mesnevisi hangisidir?",
+      "options": ["Şikâyetnâme", "Beng ü Bâde", "Leyla ile Mecnun", "Hadikatü's-Süeda", "Su Kasidesi"],
+      "answer": 2,
+      "solution": "Fuzuli'nin en tanınan eseri LEYLA İLE MECNUN mesnevisidir; üç dilde ayrı ayrı yazdığı bu eser, beşeri aşkın tasavvufi/ilahî aşka evirilişini işler. Şikâyetnâme (nesir), Beng ü Bâde (mesnevi), Hadikatü's-Süeda (Hz. Hüseyin'i anlatan) diğer eserleridir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Baki – Kanuni Mersiyesi",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kanunî Sultan Süleyman'ın ölümü üzerine kaleme alınan ve Divan edebiyatının en güçlü mersiyelerinden biri kabul edilen eserin şairi kimdir?",
+      "options": ["Fuzuli", "Baki", "Nedim", "Nef'i", "Şeyh Galip"],
+      "answer": 1,
+      "solution": "Baki'nin 'Kanunî Mersiyesi', Türk edebiyatının en güçlü mersiyelerinden biridir. Baki; 'Sultanü'ş-şuara' (şairler sultanı) unvanıyla da tanınır. Fuzuli ise aynı dönemde farklı bir coğrafyada (Bağdat/Azerbaycan) yaşamıştır."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Mehmet Akif Ersoy – Safahat",
+    "difficulty": 3, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Mehmet Akif Ersoy'un toplumsal ve dinî temaları aruzla işlediği yedi kitaplık şiir külliyatı hangi adı taşır?",
+      "options": ["Rübab-ı Şikeste", "Kırmızı Kara", "Safahat", "Göl Saatleri", "Şermin"],
+      "answer": 2,
+      "solution": "SAFAHAT, Mehmet Akif Ersoy'un tüm şiirlerini içeren yedi kitaplık bütünleşik şiir kitabıdır. İstiklal Marşı'nın şairi olan Akif; Müslüman toplumunun sorunlarını, yozlaşmayı ve kurtuluş yolunu şiirlerinde işlemiştir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Yahya Kemal – Neo-Klasikizm",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Divan şiiri geleneğini Batılı şiir anlayışıyla harmanlayan, 'Eski Şiirin Rüzgârıyla' gibi eserlerle Türk şiirine yeni bir soluk getiren şair kimdir?",
+      "options": ["Ahmet Haşim", "Yahya Kemal Beyatlı", "Faruk Nafiz Çamlıbel", "Arif Nihat Asya", "Necip Fazıl Kısakürek"],
+      "answer": 1,
+      "solution": "Yahya Kemal Beyatlı, Divan geleneğinin şekil ve mazmunlarını modern Batı estetiğiyle harmanlayan neo-klasik çizgidedir. 'Kendi Gök Kubbemiz', 'Eski Şiirin Rüzgârıyla' başlıca eserleridir. Ahmet Haşim ise sembolist/empresyonist çizgidedir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Ahmet Haşim – Saf Şiir",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'Şiir şairle okuyucu arasında sözcüklerin ötesinde müzikle kurulan bir bağdır' anlayışını savunan, empresyonizmin öncüsü Türk şairi kimdir?",
+      "options": ["Tevfik Fikret", "Mehmet Akif Ersoy", "Ahmet Haşim", "Cenap Şahabettin", "Yahya Kemal"],
+      "answer": 2,
+      "solution": "Ahmet Haşim, şiirde anlam yerine müziği ve atmosferi ön plana çıkaran 'saf şiir' anlayışını Türk edebiyatına getirmiştir. 'Şiir Hakkında Bazı Mülahazalar' adlı önsözü bu anlayışın manifestosudur. 'Göl Saatleri' ve 'Piyale' başlıca eserleridir."
+    }
+  },
+  {
+    "game": "turkce", "category": "edebiyat", "topic": "Tevfik Fikret – Dönem Farkı",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Tevfik Fikret'in birinci şiir döneminde kişisel hüzün ve umutsuzluğu yansıtan eseri hangisidir?",
+      "options": ["Haluk'un Defteri", "Tarih-i Kadim", "Rübab-ı Şikeste", "Şermin", "Doksan Beşe Doğru"],
+      "answer": 2,
+      "solution": "RÜBAB-I ŞİKESTE (Kırık Saz, 1900): Fikret'in bireysel hüzün, kötümserlik ve karamsar bakış açısını yansıttığı ilk büyük şiir kitabıdır. İkinci dönemde 'Haluk'un Defteri'nde geleceğe dönük iyimser/toplumcu bir kimlik öne çıkar."
+    }
+  },
+  {
+    "game": "turkce", "category": "dil_bilgisi", "topic": "Cümle Bilgisi – Fiilimsi",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "'Yazan kişi dikkatli olmalı.' cümlesinde altı çizili 'Yazan' sözcüğü hangi tür fiilimsıdır?",
+      "options": ["Mastar (isim-fiil)", "Sıfat-fiil (ortaç)", "Zarf-fiil (ulaç)", "Yüklem fiili", "Yardımcı fiil"],
+      "answer": 1,
+      "solution": "'Yazan' = yaz- + -an (sıfat-fiil eki). 'kişi' adını nitelediğinden SIFAT-FİİL (ortaç)'tır. Mastar: yazmak/yazma/yazış. Zarf-fiil (bağ-fiil): yazarak/yazınca/yazarken gibi cümle içi zaman/durum bildiren fiilimsidir."
+    }
+  },
+  {
+    "game": "turkce", "category": "paragraf", "topic": "Paragraf – Düşünce Geliştirme Yolları",
+    "difficulty": 4, "exam_ref": "AYT-SOZ", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Bir düşünceyi kanıtlamak için gerçek olaylardan ya da kişisel yaşantılardan somut örnekler vererek açıklama yöntemine ne denir?",
+      "options": ["Tanımlama", "Karşılaştırma", "Örneklendirme", "Sayısal verilerle kanıtlama", "Tanık gösterme"],
+      "answer": 2,
+      "solution": "ÖRNEKLENDİRME: soyut bir düşünceyi somutlaştırmak ya da kanıtlamak için gerçek olaylar, yaşantılar veya durumlar aracılığıyla açıklama yöntemidir. 'Örneğin...', 'Şöyle ki...', 'Nitekim...' gibi bağlaçlarla başlar."
+    }
+  }
+]
