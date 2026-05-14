@@ -1,0 +1,162 @@
+[
+  {
+    "game": "fen", "category": "fizik", "topic": "Dinamik – Atış Hareketi",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Yataydan 30° açıyla 20 m/s hızla fırlatılan bir cismin maksimum yüksekliği kaç m'dir? (g = 10 m/s²)",
+      "options": ["3", "4", "5", "6", "10"],
+      "answer": 2,
+      "solution": "v₀y = v₀·sin30° = 20·0,5 = 10 m/s. h_max = v₀y² / (2g) = 100 / 20 = 5 m."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Enerji – İş-Enerji Teoremi",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kütlesi 4 kg olan cisim 10 m/s hızdayken 3 m/s'ye yavaşlamıştır. Sürtünme kuvvetinin yaptığı iş kaç J'dür?",
+      "options": ["–220", "–182", "–154", "–128", "–91"],
+      "answer": 1,
+      "solution": "W = ΔEk = ½m(v²–v₀²) = ½·4·(9–100) = 2·(–91) = –182 J."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Elektrik – Kondansatör",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Kapasitesi 4 μF olan kondansatör 12 V'luk pile bağlandığında depolanan enerji kaç μJ'dür?",
+      "options": ["24", "48", "144", "288", "576"],
+      "answer": 3,
+      "solution": "E = ½·C·V² = ½·4·10⁻⁶·144 = 288·10⁻⁶ J = 288 μJ."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Manyetizma – Manyetik Kuvvet",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "2 A akım taşıyan ve B = 0,5 T'lık manyetik alanda dik konumda bulunan 30 cm uzunluğundaki iletken tele etkiyen manyetik kuvvet kaç N'dir?",
+      "options": ["0,15", "0,20", "0,30", "0,45", "0,60"],
+      "answer": 2,
+      "solution": "F = B·I·L = 0,5·2·0,30 = 0,30 N."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Termodinamik – İdeal Gaz İşi",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Sabit basınçlı (izobarik) bir süreçte 2 mol ideal gaz 300 K'den 450 K'ye ısıtılmaktadır. Gazın yaptığı iş kaç J'dür? (R = 8,3 J/mol·K)",
+      "options": ["1245", "1660", "2490", "3320", "4980"],
+      "answer": 2,
+      "solution": "W = nRΔT = 2·8,3·(450–300) = 2·8,3·150 = 2490 J."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Optik – İnce Mercek",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Odak uzaklığı 10 cm olan yakınsak bir mercekten 30 cm uzağa cisim konuluyor. Görüntünün konumu kaç cm'dir?",
+      "options": ["10", "12", "15", "18", "20"],
+      "answer": 2,
+      "solution": "1/f = 1/v – 1/u → 1/10 = 1/v + 1/30 (işaretli: 1/v = 1/10 – 1/30 = 3/30–1/30 = 2/30) → v = 15 cm."
+    }
+  },
+  {
+    "game": "fen", "category": "fizik", "topic": "Modern Fizik – Yarı Ömür",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Yarı ömrü 5 yıl olan 80 g radyoaktif maddenin 15 yıl sonra kalan miktarı kaç g'dır?",
+      "options": ["5", "8", "10", "15", "20"],
+      "answer": 2,
+      "solution": "15 yıl = 3 yarı ömür. Kalan = 80 · (1/2)³ = 80/8 = 10 g."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Denge – Baskı Etkisi Hesabı",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "H₂(g) + I₂(g) ⇌ 2HI(g) tepkimesinde denge anında [H₂] = 0,1 M, [I₂] = 0,2 M, [HI] = 0,4 M ise Kc değeri kaçtır?",
+      "options": ["2", "4", "8", "16", "32"],
+      "answer": 2,
+      "solution": "Kc = [HI]² / ([H₂][I₂]) = (0,4)² / (0,1·0,2) = 0,16 / 0,02 = 8."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Asit-Baz – Tampon Çözelti",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Ka = 10⁻⁵ olan zayıf bir asit (HA) ve eş mol tuzundan (NaA) oluşan tampon çözeltinin pH'ı kaçtır? (Henderson-Hasselbalch: pH = pKa + log[A⁻]/[HA])",
+      "options": ["3", "4", "5", "6", "7"],
+      "answer": 2,
+      "solution": "pH = pKa + log([A⁻]/[HA]) = –log(10⁻⁵) + log(1) = 5 + 0 = 5. Eşit molar konsantrasyonda pH = pKa = 5."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Elektrokimya – Hücre Potansiyeli",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "E°(Zn²⁺/Zn) = –0,76 V ve E°(Cu²⁺/Cu) = +0,34 V olduğuna göre Zn|Zn²⁺||Cu²⁺|Cu galvanik pilinin standart hücre potansiyeli kaç V'dur?",
+      "options": ["0,42", "0,76", "1,10", "1,52", "0,34"],
+      "answer": 2,
+      "solution": "E°hücre = E°katot – E°anot = E°(Cu²⁺/Cu) – E°(Zn²⁺/Zn) = 0,34 – (–0,76) = 1,10 V."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Organik – Alken Tepkimesi",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "CH₂=CH₂ + HBr → ? tepkimesinde Markovnikov kuralına göre oluşan ürün hangisidir?",
+      "options": ["CH₃–CH₂Br", "CH₂Br–CH₂Br", "CH₂Br–CH₃", "CH₃–CHBr₂", "CH₃–CH₃"],
+      "answer": 0,
+      "solution": "Etilen simetrik olduğundan iki karbon eşdeğerdir. H etilene katılır: H–CH₂–CH₂Br = CH₃CH₂Br (bromoetan). Markovnikov etil alken için fark yaratmaz, ürün CH₃CH₂Br."
+    }
+  },
+  {
+    "game": "fen", "category": "kimya", "topic": "Çözelti – Donma Noktası Alçalması",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "100 g suya 18 g glikoz (M = 180 g/mol) çözüldüğünde donma noktası kaç °C olur? (Kf(su) = 1,86 °C·kg/mol)",
+      "options": ["–0,186", "–0,93", "–1,86", "–3,72", "–9,30"],
+      "answer": 2,
+      "solution": "n(glikoz) = 18/180 = 0,1 mol. Molalite = 0,1 mol / 0,1 kg = 1 mol/kg. ΔTf = Kf · m = 1,86 · 1 = 1,86°C. Donma noktası: 0 – 1,86 = –1,86°C."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Kalıtım – Bağlı Genler",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "X'e bağlı resesif bir hastalık (h) için taşıyıcı anne (X^H X^h) ve sağlıklı baba (X^H Y) çiftinin oğullarında hastalık olasılığı kaçtır?",
+      "options": ["0", "1/4", "1/2", "3/4", "1"],
+      "answer": 2,
+      "solution": "Oğullar X^H Y veya X^h Y alır (anneden biri, babadan Y). Hasta oğul: X^h Y. Olasılık = 1/2. Tüm çocuklar: 1/4 X^H X^H, 1/4 X^H X^h, 1/4 X^H Y (sağlıklı), 1/4 X^h Y (hasta). Oğulların yarısı hasta."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Kalıtım – Polihibrit Çaprazlama",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "AaBb × AaBb çaprazlamasında A_bb genotipine sahip bireyler tüm döllerin kaçta kaçını oluşturur?",
+      "options": ["1/16", "2/16", "3/16", "4/16", "6/16"],
+      "answer": 2,
+      "solution": "P(A_) = 3/4; P(bb) = 1/4. Bağımsız kalıtım: P(A_bb) = 3/4 · 1/4 = 3/16."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Moleküler Biyoloji – PCR",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "PCR yöntemiyle 3 döngü sonunda 1 çift sarmallı DNA kalıbından kaç çift sarmallı DNA molekülü elde edilir?",
+      "options": ["4", "6", "8", "12", "16"],
+      "answer": 2,
+      "solution": "Her döngüde kopya sayısı iki katına çıkar. 1 → 2 → 4 → 8. 3 döngü sonunda 2³ = 8 çift sarmallı DNA molekülü oluşur."
+    }
+  },
+  {
+    "game": "fen", "category": "biyoloji", "topic": "Ekoloji – Popülasyon Dinamiği",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "Taşıma kapasitesi 1000 olan bir popülasyon logistik büyüme modeliyle büyümektedir. Popülasyon 500 bireydeyken büyüme hızı maksimum mı, azalıyor mu yoksa sıfır mı?",
+      "options": ["Sıfır — büyüme durdu", "Azalıyor — yavaşladı", "Maksimum — en hızlı noktada", "Artan — hızlanıyor", "Negatif — çöküş başladı"],
+      "answer": 2,
+      "solution": "Logistik büyümede dN/dt en fazla N = K/2 noktasında maksimuma ulaşır. K = 1000 için N = 500 = K/2 → büyüme hızı maksimum."
+    }
+  }
+]

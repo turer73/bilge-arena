@@ -1,0 +1,152 @@
+[
+  {
+    "game": "matematik", "category": "cebir", "topic": "Türev – Artan-Azalan Aralık",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "f(x) = x³ – 6x² + kx – 5 fonksiyonu tüm reel sayılarda artan olduğuna göre k'nın alabileceği en küçük tam sayı değeri kaçtır?",
+      "options": ["10", "11", "12", "13", "14"],
+      "answer": 2,
+      "solution": "f'(x) = 3x² – 12x + k ≥ 0 her x için sağlanmalı. Diskriminant ≤ 0: 144 – 12k ≤ 0 → k ≥ 12. En küçük tam sayı: 12."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Türev – Ekstremum Noktaları",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "f(x) = x³ + ax² + bx + 1 fonksiyonunun x = –1'de yerel maksimumu ve x = 3'te yerel minimumu varsa a – b değeri kaçtır?",
+      "options": ["3", "4", "5", "6", "7"],
+      "answer": 3,
+      "solution": "f'(x) = 3x² + 2ax + b ve f'(–1) = 0, f'(3) = 0 olmalı. f'(x) = 3(x+1)(x–3) = 3x² – 6x – 9. Katsayı karşılaştırması: 2a = –6 → a = –3, b = –9. a – b = –3 – (–9) = 6."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Türev – Maksimum-Minimum Problemi",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "y = 12 – x² parabolünün birinci bölgesindeki P(a, b) noktasından eksenlere paralel kenarlarla oluşturulan dikdörtgenin maksimum alanı kaçtır?",
+      "options": ["8", "12", "16", "20", "24"],
+      "answer": 2,
+      "solution": "Alan A(a) = a · b = a(12 – a²). A'(a) = 12 – 3a² = 0 → a = 2. b = 12 – 4 = 8. Maks alan = 2 · 8 = 16."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "İntegral – Alan Hesabı",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "y = x² – 4 eğrisi ile x ekseni arasında kalan bölgenin alanı kaçtır?",
+      "options": ["8/3", "16/3", "32/3", "4", "16"],
+      "answer": 2,
+      "solution": "y = 0: x = ±2. [–2, 2] aralığında eğri x ekseninin altında. Alan = ∫₋₂² (4 – x²) dx = [4x – x³/3]₋₂² = (8 – 8/3) – (–8 + 8/3) = 16 – 16/3 = 32/3."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "İntegral – Lineer Özellik",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "∫₀³ f(x) dx = 7 ve ∫₀³ g(x) dx = 3 ise ∫₀³ [2f(x) – 3g(x)] dx değeri kaçtır?",
+      "options": ["3", "5", "7", "9", "11"],
+      "answer": 1,
+      "solution": "İntegral lineerdir: 2·∫₀³ f(x) dx – 3·∫₀³ g(x) dx = 2·7 – 3·3 = 14 – 9 = 5."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Limit – sin(x)/x",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "lim(x→0) (sin 3x) / (2x) ifadesinin değeri kaçtır?",
+      "options": ["1/2", "2/3", "3/2", "3", "∞"],
+      "answer": 2,
+      "solution": "lim(x→0) sin(3x)/(2x) = (3/2) · lim(x→0) sin(3x)/(3x) = (3/2) · 1 = 3/2."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Logaritma – Denklem",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "log₂ x + log₂(x – 2) = 3 denkleminin çözümü kaçtır?",
+      "options": ["{1}", "{4}", "{8}", "{2, 4}", "{–2, 4}"],
+      "answer": 1,
+      "solution": "log₂[x(x–2)] = 3 → x(x–2) = 8 → x² – 2x – 8 = 0 → (x–4)(x+2) = 0. x > 2 koşulundan x = 4. Çözüm: {4}."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Analitik Geometri – Dik Doğru",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "A(2, –1) noktasından geçen ve 3x – 4y + 5 = 0 doğrusuna dik olan doğrunun denklemi hangisidir?",
+      "options": ["4x + 3y – 5 = 0", "4x + 3y + 5 = 0", "3x + 4y – 2 = 0", "4x – 3y – 11 = 0", "3x – 4y – 10 = 0"],
+      "answer": 0,
+      "solution": "d₁ eğimi m₁ = 3/4. Dik doğrunun eğimi m₂ = –4/3. A(2,–1) üzerinden: y+1 = –(4/3)(x–2) → 3y+3 = –4x+8 → 4x+3y–5 = 0."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Trigonometri – Kosinüs Teoremi",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "ABC üçgeninde a = 3, b = 5, c = 7 ise cos C değeri kaçtır?",
+      "options": ["1/2", "–1/2", "√3/2", "–√3/2", "0"],
+      "answer": 1,
+      "solution": "cos C = (a² + b² – c²) / (2ab) = (9 + 25 – 49) / (2·3·5) = –15/30 = –1/2. C = 120°."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Olasılık – Koşullu Olasılık",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "60 öğrenciden 35'i matematik, 28'i fen sever; 15'i her ikisini de sever. Matematik seven bir öğrencinin fen de sevme olasılığı kaçtır?",
+      "options": ["1/4", "3/7", "15/28", "2/7", "7/15"],
+      "answer": 1,
+      "solution": "P(Fen | Matematik) = P(Fen ∩ Matematik) / P(Matematik) = (15/60) / (35/60) = 15/35 = 3/7."
+    }
+  },
+  {
+    "game": "matematik", "category": "sayilar", "topic": "Karmaşık Sayılar – Üs Hesabı",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "z = (1 + i)⁴ işleminin sonucu kaçtır?",
+      "options": ["–4", "–4i", "4", "4i", "–2 + 2i"],
+      "answer": 0,
+      "solution": "(1+i)² = 1 + 2i + i² = 1 + 2i – 1 = 2i. (1+i)⁴ = (2i)² = 4i² = –4."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Fonksiyon – Ters Fonksiyon",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "f(x) = (2x + 3) / (x – 1) fonksiyonunun tersi f⁻¹(x) nedir?",
+      "options": ["(x + 3) / (x – 2)", "(x – 3) / (2 – x)", "(x – 1) / (2x + 3)", "(2x – 3) / (x + 1)", "(x + 3) / (2 + x)"],
+      "answer": 0,
+      "solution": "y = (2x+3)/(x–1) → y(x–1) = 2x+3 → xy – y = 2x+3 → x(y–2) = y+3 → x = (y+3)/(y–2). f⁻¹(x) = (x+3)/(x–2)."
+    }
+  },
+  {
+    "game": "matematik", "category": "cebir", "topic": "Diziler – Geometrik Dizi Toplamı",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "İlk terimi 3, ortak oranı 2 olan geometrik dizinin ilk 6 teriminin toplamı kaçtır?",
+      "options": ["63", "93", "127", "189", "381"],
+      "answer": 3,
+      "solution": "Sₙ = a₁(qⁿ – 1) / (q – 1) = 3(2⁶ – 1) / (2 – 1) = 3 · 63 = 189."
+    }
+  },
+  {
+    "game": "matematik", "category": "geometri", "topic": "Analitik Geometri – Çember Standart Form",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "x² + y² – 4x + 6y – 12 = 0 çemberinin merkezi ve yarıçapı nedir?",
+      "options": ["M(2, –3), r = 5", "M(–2, 3), r = 5", "M(2, –3), r = 25", "M(4, –6), r = 5", "M(2, 3), r = 5"],
+      "answer": 0,
+      "solution": "(x²–4x+4) + (y²+6y+9) = 12+4+9 → (x–2)² + (y+3)² = 25. Merkez M(2, –3), yarıçap r = 5."
+    }
+  },
+  {
+    "game": "matematik", "category": "veri", "topic": "Binom Açılımı",
+    "difficulty": 4, "exam_ref": "AYT-SAY", "source": "ai_claude_ayt", "is_active": false,
+    "content": {
+      "question": "(x + 2)⁵ açılımında x³ teriminin katsayısı kaçtır?",
+      "options": ["20", "40", "60", "80", "120"],
+      "answer": 1,
+      "solution": "Genel terim: C(5,k)·x^(5–k)·2^k. x³ için 5–k = 3 → k = 2. C(5,2)·2² = 10·4 = 40."
+    }
+  }
+]
