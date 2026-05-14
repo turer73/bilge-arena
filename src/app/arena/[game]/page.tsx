@@ -9,28 +9,28 @@ interface GamePageProps {
 
 const GAME_META: Record<GameSlug, { title: string; description: string; keywords: string[] }> = {
   matematik: {
-    title: 'Matematik Soruları — TYT & AYT Matematik',
-    description: 'Sayılar, problemler, geometri, denklemler ve fonksiyonlar. TYT-AYT matematik sorularını çöz, XP kazan, sıralamada yüksel!',
-    keywords: ['TYT matematik', 'AYT matematik', 'matematik soru çöz', 'geometri soruları', 'YKS matematik'],
+    title: 'Matematik Soruları — TYT · AYT-SAY · LGS Matematik',
+    description: 'Sayılar, problemler, geometri, türev, integral. TYT\'den AYT Sayısal\'a ve LGS\'ye matematik sorularını çöz, XP kazan!',
+    keywords: ['TYT matematik', 'AYT matematik', 'LGS matematik', 'matematik soru çöz', 'geometri soruları', 'YKS matematik'],
   },
   turkce: {
-    title: 'Türkçe Soruları — TYT Türkçe',
-    description: 'Paragraf, dil bilgisi, sözcük ve anlam bilgisi. TYT Türkçe sorularıyla pratik yap, dil hakimiyetini geliştir!',
-    keywords: ['TYT Türkçe', 'Türkçe soru çöz', 'paragraf soruları', 'dil bilgisi soruları', 'YKS Türkçe'],
+    title: 'Türkçe Soruları — TYT · AYT-EA · LGS Türkçe',
+    description: 'Paragraf, dil bilgisi, edebiyat, sözcük ve anlam bilgisi. TYT, AYT Eşit Ağırlık ve LGS Türkçe sorularıyla pratik yap!',
+    keywords: ['TYT Türkçe', 'AYT EA Türkçe', 'LGS Türkçe', 'edebiyat soruları', 'paragraf soruları', 'dil bilgisi soruları'],
   },
   fen: {
-    title: 'Fen Bilimleri Soruları — TYT Fen',
-    description: 'Fizik, kimya ve biyoloji soruları. TYT Fen Bilimleri konularına hâkim ol, bilgini test et!',
-    keywords: ['TYT Fen', 'fizik soruları', 'kimya soruları', 'biyoloji soruları', 'YKS Fen Bilimleri'],
+    title: 'Fen Bilimleri Soruları — TYT · AYT-SAY · LGS Fen',
+    description: 'Fizik, kimya ve biyoloji soruları. TYT temelinden AYT Sayısal düzeyine kadar Fen Bilimleri konularına hâkim ol!',
+    keywords: ['TYT Fen', 'AYT Sayısal fen', 'LGS fen', 'fizik soruları', 'kimya soruları', 'biyoloji soruları'],
   },
   sosyal: {
-    title: 'Sosyal Bilimler Soruları — TYT Sosyal',
-    description: 'Tarih, coğrafya ve felsefe soruları. TYT Sosyal Bilimler konularıyla antrenman yap, bilgini pekiştir!',
-    keywords: ['TYT Sosyal', 'tarih soruları', 'coğrafya soruları', 'felsefe soruları', 'YKS Sosyal Bilimler'],
+    title: 'Sosyal Bilimler Soruları — TYT · LGS Sosyal',
+    description: 'Tarih, coğrafya, felsefe ve sosyoloji soruları. TYT ve LGS Sosyal Bilimler konularıyla antrenman yap!',
+    keywords: ['TYT Sosyal', 'LGS sosyal bilimler', 'tarih soruları', 'coğrafya soruları', 'felsefe soruları'],
   },
   wordquest: {
     title: 'İngilizce Soruları — YDT İngilizce',
-    description: 'Vocabulary, grammar ve reading soruları. YDT İngilizce sorularıyla kelime dağarcığını genişlet!',
+    description: 'Vocabulary, grammar ve reading soruları. YDT İngilizce sorularıyla kelime dağarcığını genişlet, sıralamada yüksel!',
     keywords: ['YDT İngilizce', 'İngilizce soru çöz', 'vocabulary', 'grammar soruları', 'YKS İngilizce'],
   },
 }

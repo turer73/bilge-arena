@@ -8,7 +8,7 @@ interface GameStore {
   selectedMode: string
   selectedCategory: string | null
   selectedDifficulty: number | null
-  /** null = tümü, 'TYT', 'LGS' */
+  /** null = tümü, 'TYT', 'LGS', 'AYT-SAY', 'AYT-EA' */
   selectedExamRef: string | null
 
   setGame: (game: GameSlug) => void

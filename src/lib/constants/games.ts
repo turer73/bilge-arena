@@ -8,35 +8,40 @@ export interface GameDefinition {
   colorHex: string     // Dogrudan hex (gradient/fallback icin)
   icon: string         // Lucide icon adi
   categories: string[]
+  /** Hangi sınav(lar)a kaynaklık ediyor — lobby filtre etiketleriyle eşleşmeli */
+  examTags: string[]
 }
 
 export const GAMES: Record<GameSlug, GameDefinition> = {
   matematik: {
     slug: 'matematik',
     name: 'Matematik',
-    description: 'Sayılar, problemler, geometri, denklemler ve daha fazlası',
+    description: 'Sayılar, problemler, geometri, denklemler, fonksiyonlar, türev ve integral',
     color: 'focus',
     colorHex: '#2563EB',
     icon: 'calculator',
     categories: ['sayilar', 'problemler', 'geometri', 'denklemler', 'fonksiyonlar', 'olasilik'],
+    examTags: ['TYT', 'AYT-SAY', 'LGS'],
   },
   turkce: {
     slug: 'turkce',
     name: 'Türkçe',
-    description: 'Paragraf, dil bilgisi, sözcük ve anlam',
+    description: 'Paragraf, dil bilgisi, edebiyat, sözcük ve anlam bilgisi',
     color: 'reward',
     colorHex: '#D97706',
     icon: 'book-open',
-    categories: ['paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari'],
+    categories: ['paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari', 'edebiyat'],
+    examTags: ['TYT', 'AYT-EA', 'LGS'],
   },
   fen: {
     slug: 'fen',
     name: 'Fen Bilimleri',
-    description: 'Fizik, kimya ve biyoloji',
+    description: 'Fizik, kimya ve biyoloji — TYT temelinden AYT Sayısal düzeyine',
     color: 'growth',
     colorHex: '#059669',
     icon: 'flask-conical',
     categories: ['fizik', 'kimya', 'biyoloji'],
+    examTags: ['TYT', 'AYT-SAY', 'LGS'],
   },
   sosyal: {
     slug: 'sosyal',
@@ -46,15 +51,17 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
     colorHex: '#7C3AED',
     icon: 'globe',
     categories: ['tarih', 'cografya', 'felsefe', 'sosyoloji'],
+    examTags: ['TYT', 'LGS'],
   },
   wordquest: {
     slug: 'wordquest',
     name: 'İngilizce',
-    description: 'Vocabulary, grammar ve reading',
+    description: 'Vocabulary, grammar ve reading — YDT İngilizce hazırlık',
     color: 'focus',
     colorHex: '#3B82F6',
     icon: 'languages',
     categories: ['vocabulary', 'grammar', 'cloze_test', 'dialogue', 'restatement', 'sentence_completion', 'phrasal_verbs'],
+    examTags: ['YDT'],
   },
 } as const
 
@@ -80,6 +87,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   sozcuk: 'Sözcük',
   anlam_bilgisi: 'Anlam Bilgisi',
   yazim_kurallari: 'Yazım Kuralları',
+  edebiyat: 'Edebiyat',
   // fen
   fizik: 'Fizik',
   kimya: 'Kimya',

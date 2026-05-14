@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { GAME_LIST } from '@/lib/constants/games'
+import { GAME_LIST, getCategoryLabel } from '@/lib/constants/games'
 
 const GAME_EMOJI: Record<string, string> = {
   matematik: '🧮',
@@ -50,6 +50,23 @@ export default function ArenaClient() {
               {game.name}
             </h2>
 
+            {/* Sinav etiketleri */}
+            <div className="mb-2 flex flex-wrap gap-1 xl:gap-1.5">
+              {game.examTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide md:text-[10px] xl:px-2.5 xl:text-[11px]"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${game.colorHex} 12%, transparent)`,
+                    borderColor: `color-mix(in srgb, ${game.colorHex} 30%, transparent)`,
+                    color: game.colorHex,
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
             {/* Aciklama */}
             <p className="mb-3 text-[11px] text-[var(--text-sub)] md:mb-4 md:text-xs xl:text-sm">
               {game.description}
@@ -63,10 +80,10 @@ export default function ArenaClient() {
                   className="rounded-full px-2 py-0.5 text-[9px] font-medium md:text-[10px] xl:px-2.5 xl:text-xs"
                   style={{
                     backgroundColor: `color-mix(in srgb, ${game.colorHex} 10%, transparent)`,
-                    color: game.colorHex,
+                    color: `color-mix(in srgb, ${game.colorHex} 70%, var(--text-sub))`,
                   }}
                 >
-                  {cat}
+                  {getCategoryLabel(cat)}
                 </span>
               ))}
             </div>
