@@ -256,9 +256,9 @@ Zorluk: ${difficulty}/5
 Soru sayisi: ${count}${fewShotText}`
 
   try {
-    const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    const res = await fetch(GEMINI_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: buildSystemPrompt(game, category, effectiveLevelTag) }] },
         contents: [{ parts: [{ text: userPrompt }] }],
