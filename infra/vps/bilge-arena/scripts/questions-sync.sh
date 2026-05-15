@@ -103,20 +103,33 @@ mv "$TMP_FILTERED" "$TMP_SQL"
 LINES=$(wc -l < "$TMP_SQL")
 [ "$LINES" -lt 100 ] && fail "Extracted SQL cok kucuk ($LINES satir, wordquest filter sonrasi)"
 
-# 2) bilge_arena_dev'de TRUNCATE + restore (transactional, plan-deviation #28).
-# Tek psql session'da BEGIN+TRUNCATE+COPY+COMMIT calistir. ON_ERROR_STOP=on
-# herhangi bir COPY satiri (constraint violation vs.) hata verirse psql cikar
-# ve transaction otomatik rollback olur (-> 02:30 TR sync atomic).
+# 2) bilge_arena_dev staging table uzerinden TRUNCATE + restore.
+# Plan-deviation #52 (2026-05-15): Supabase prod uniq_questions_active_content_idx
+# yok; dump'ta duplicate (game+category+question) satirlar olabilir.
+# Fix: LIKE staging COPY (no constraint), DISTINCT ON ile dedup, sonra INSERT.
+# Plan-deviation #53 (2026-05-15): bilge_arena_dev'de base_points GENERATED ALWAYS
+# AS (difficulty * 10) STORED -- SELECT * ile INSERT yasak. Non-generated kolonlar
+# explicit listelenir, base_points DB tarafindan yeniden hesaplanir.
 . /opt/bilge-arena/secrets/db.env
 
+TMP_STAGED=$(mktemp)
+sed 's/^COPY public\.questions /COPY questions_stage /' "$TMP_SQL" > "$TMP_STAGED"
+
 {
-  printf 'BEGIN;\n'
-  printf 'TRUNCATE public.questions CASCADE;\n'
-  cat "$TMP_SQL"
-  printf 'COMMIT;\n'
+  echo 'BEGIN;'
+  echo 'CREATE TEMP TABLE questions_stage (LIKE public.questions) ON COMMIT DROP;'
+  cat "$TMP_STAGED"
+  echo 'TRUNCATE public.questions CASCADE;'
+  echo "INSERT INTO public.questions (id,external_id,game,category,subcategory,topic,difficulty,level_tag,content,is_active,is_boss,times_answered,times_correct,source,exam_ref,created_at,updated_at)"
+  echo "SELECT DISTINCT ON (game, category, (content->>'question'))"
+  echo "  id,external_id,game,category,subcategory,topic,difficulty,level_tag,content,is_active,is_boss,times_answered,times_correct,source,exam_ref,created_at,updated_at"
+  echo 'FROM questions_stage'
+  echo "ORDER BY game, category, (content->>'question'), is_active DESC, id DESC;"
+  echo 'COMMIT;'
 } | docker exec -i panola-postgres psql -v ON_ERROR_STOP=on \
     -U bilge_arena_app -d bilge_arena_dev >> "$LOG_FILE" 2>&1 \
-  || fail "psql restore basarisiz; ON_ERROR_STOP transaction'i otomatik rollback'e cevirdi"
+  || fail "psql restore basarisiz; ON_ERROR_STOP rollback'e cevirdi"
+rm -f "$TMP_STAGED"
 
 QC=$(docker exec -i panola-postgres psql -U bilge_arena_app -d bilge_arena_dev -t -c 'SELECT COUNT(*) FROM public.questions' | tr -d ' ')
 DURATION=$((SECONDS - START))
