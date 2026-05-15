@@ -13,6 +13,11 @@
 
 set -euo pipefail
 
+# Concurrent run korumasi (crontab duplicate / elle tetikleme vs.)
+LOCK_FILE=/tmp/bilge-arena-backup.lock
+exec 200>"$LOCK_FILE"
+flock -n 200 || { echo "[$(date +%H:%M:%S)] SKIP: baska bir bilge-arena-backup instance calisuyor" >> /opt/backup/logs/bilge-arena-cron.log; exit 0; }
+
 ENV_FILE="/opt/backup/bilge-arena/.env"
 DATE=$(date +%Y-%m-%d)
 BACKUP_DIR="/opt/backup/data/${DATE}"
