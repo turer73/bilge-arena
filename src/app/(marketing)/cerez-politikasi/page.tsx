@@ -12,7 +12,7 @@ export default function CerezPolitikasiPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <h1 className="mb-2 text-3xl font-bold">Çerez Politikası</h1>
-      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 9 Mart 2026</p>
+      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 17 Mayıs 2026</p>
 
       <div className="space-y-8 text-sm leading-relaxed text-[var(--text-muted)]">
         <section>
@@ -73,6 +73,11 @@ export default function CerezPolitikasiPage() {
             <li>
               <strong>Supabase Auth:</strong> Kimlik doğrulama için oturum çerezleri
               kullanır. Yalnızca giriş yapmış kullanıcılara uygulanır.
+            </li>
+            <li>
+              <strong>Cloudflare:</strong> DNS yönetimi için kullanılır; mevcut yapılandırmada
+              çerez yerleştirmez (yalnızca DNS modu — proxy/CDN devre dışı). Etkinleştirilirse
+              bot koruma ve oturum çerezleri oluşturulabilir; bu durumda bu sayfa güncellenir.
             </li>
           </ul>
           <p className="mt-2">
