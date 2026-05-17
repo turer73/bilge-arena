@@ -10,16 +10,18 @@ Dump dosyasında **191 satır profil** vardır AMA bunların **~35 tanesi saldı
 
 - **Toplam dump satırı:** 191
 - **Bot hesap sayısı:** 35 (silindi, Klipper Discovery #453)
-- **Gerçek (legit) kullanıcı etkilenen:** ~156 (Klipper analizi: "156 Google login")
+- **Gerçek (legit) kullanıcı etkilenen:** **156** (auth.refresh_tokens distinct_users SQL sayımı, 2026-05-17 18:00 TR)
 
-Avukat bildirim formunda **etkilenen kişi sayısı: ~156** yazılmalıdır (191 değil).
+> **Teknik kanıt:** `SELECT count(DISTINCT user_id) FROM auth.refresh_tokens` → 156. Bu sayı dump'ta sızdırılan profilin 191 satırından bot 35 çıkarıldıktan sonra kalan gerçek kullanıcı tabanıyla **birebir eşleşmiştir**. Tahmin değil, sayım.
+
+Avukat bildirim formunda **etkilenen kişi sayısı: 156** yazılmalıdır (191 değil, ~ tahmin değil).
 
 > **Not:** Bu brief avukata sunulmak üzere hazırlandı. Avukatın değerlendirmesi sonrası KVKK Kurumu'na bildirim yükümlülüğü belirlenecek.
 
 ## 1. OLAY ÖZETI
 
 ### Ne sızdı?
-- **~156 gerçek kullanıcı profili (dump'ta 191 satır vardı; bunlardan ~35'i saldırganın aynı gün yarattığı bot hesaplardı, sonradan silindi)** (public.profiles tablosu)
+- **156 gerçek kullanıcı profili (dump'ta 191 satır vardı; bunlardan ~35'i saldırganın aynı gün yarattığı bot hesaplardı, sonradan silindi)** (public.profiles tablosu)
 - Sızan alanlar (PII):
   - `username` (kullanıcı adı, kişiyi tanımlayabilir)
   - `display_name` (Google adı)
@@ -52,6 +54,9 @@ Avukat bildirim formunda **etkilenen kişi sayısı: ~156** yazılmalıdır (191
 | **2026-05-17 09:00–13:00** | Faz 2: Migration 040 (anon column REVOKE) prod, 8 PR proxy refactor |
 | **2026-05-17 ~14:53** | Tüm Madde 9 PR'ları merge (8 PR, browser→API proxy migration) |
 | **2026-05-17 ~17:30** | Service-role JWT rotate + legacy JWT disable, 4/4 verification PASS |
+| **2026-05-17 ~18:00** | Migration 050+051+052 prod apply (likes trigger + honeypot + integrity fix, drift=0) |
+| **2026-05-17 ~18:00** | L2-TR audit: auth.refresh_tokens.distinct_users = **156** (KVKK etkilenen sayım) |
+| **2026-05-17 ~18:00** | V2 sign all users out: 564/564 refresh_tokens revoked (active=0). Access JWT residual max 1 saat |
 
 ## 3. SALDIRGAN PROFIL
 
@@ -87,15 +92,21 @@ Avukat bildirim formunda **etkilenen kişi sayısı: ~156** yazılmalıdır (191
 - likes_count race condition trigger (PR #154)
 - Honeypot sentinel profile (PR #154)
 
+### Faz 5: Session invalidation (2026-05-17 ~18:00 TR)
+- **V2 sign all users out TAMAMLANDI:** `UPDATE auth.refresh_tokens SET revoked=true WHERE revoked=false` → 183 active token revoke, toplam 564/564 revoked
+- Access JWT residual pencere: max **1 saat** (sonra zorunlu re-auth; JWT secret rotate yapılmadı, anon-key kırılma riski + Vercel redeploy zamanlama riski → yumuşak sign-out tercih edildi)
+- **Etki:** Saldırgan elinde refresh token kaldıysa hızla geçersiz; legitimate kullanıcılar 1 saat içinde Google OAuth ile re-auth (consent saklı, tek tık)
+
 ### Yapılacak / değerlendirilen
-- Postgres direct DB password rotate (V1) — envanter sonrası karar
-- Tüm aktif kullanıcı session'larını invalidate (V2) — "Sign all users out"
-- Migration 049 authenticated SELECT REVOKE — final lockdown
+- Postgres direct DB password rotate (V1) — envanter sonrası karar (Klipper deep audit Note #111)
+- Migration 049 authenticated SELECT REVOKE — final lockdown (admin.ts/proxy.ts refactor sonrası)
+- Edge access logging (Traefik + Caddy) — saldırı forensic kapasite (Klipper Discovery #126 + KVKK uyum: 14g retention + IP SHA256 pseudonymize + privacy policy update)
+- CF proxy bilgearena.com — şu an DNS-only, edge WAF/rate-limit/bot-protection yok; karar data-driven (edge log topladıktan sonra)
 
 ## 5. ETKİLENEN KİŞİ BİLDİRİMİ
 
 ### Yapılması düşünülen
-KVKK md. 12/5 kapsamında etkilenen **~156 gerçek kullanıcıya** email bildirimi (35 bot hesaba bildirim YOK — saldırganın kendi yarattıkları):
+KVKK md. 12/5 kapsamında etkilenen **156 gerçek kullanıcıya** email bildirimi (35 bot hesaba bildirim YOK — saldırganın kendi yarattıkları):
 
 **Şablon (TR):**
 ```
@@ -121,6 +132,7 @@ ALDIĞIMIZ ÖNLEMLER:
 - Saldırgan elindeki yetki belgeleri geçersiz kılındı
 - 8 güvenlik iyileştirmesi production'a uygulandı
 - Yeni saldırıyı tespit eden honeypot sistemi kuruldu
+- Tüm aktif kullanıcı oturumları 17 Mayıs 18:00 TR'de geçersiz kılındı — bir sonraki ziyarette tekrar giriş yapmanız gerekecek
 
 HAKLARINIZ (KVKK md. 11):
 - İşlenip işlenmediğini öğrenme
@@ -149,7 +161,7 @@ Bilge Arena
 - İhlal tarihi: 2026-05-16
 - Tespit tarihi: 2026-05-17 00:11
 - Kategori: PII (kişisel bilgiler)
-- Etkilenen kişi sayısı: ~156 gerçek kullanıcı (dump'ta 191 satır vardı, bunlardan 35'i saldırganın aynı gün yarattığı bot hesaplardı — silindi, KVKK kapsamında etkilenen sayılmaz)
+- Etkilenen kişi sayısı: 156 gerçek kullanıcı (dump'ta 191 satır vardı, bunlardan 35'i saldırganın aynı gün yarattığı bot hesaplardı — silindi, KVKK kapsamında etkilenen sayılmaz)
 - Alınan önlemler: yukarıdaki Faz 1-4 özeti
 - Etkilenen kişi bildirimi planlandı mı: Evet, hazır
 
@@ -167,7 +179,7 @@ Avukata sunulacaklar:
 Dürüstlük gereği avukatla paylaşılmalı:
 - **Saldırı vektörü kanıtlanmadı** (log retention 7 gün, 14 gün keşif evresi kayıp)
 - **Saldırı süresinin tam başlangıcı belirlenemedi** (Klipper analizi)
-- ~156 gerçek kullanıcının PII bilgisi saldırganın elinde **geri çekilemez** — KVKK ihlali statüsü değişmez (35 bot saldırganın kendi yarattıkları, geri çekme anlamsız)
+- 156 gerçek kullanıcının PII bilgisi saldırganın elinde **geri çekilemez** — KVKK ihlali statüsü değişmez (35 bot saldırganın kendi yarattıkları, geri çekme anlamsız)
 
 ## 9. EYLEM
 
@@ -177,8 +189,10 @@ Dürüstlük gereği avukatla paylaşılmalı:
 | 2 | VERBIS kayıt durumu kontrol | Avukat | 2026-05-18 |
 | 3 | Kurum bildirim gerekli mi karar | Avukat | 2026-05-18 |
 | 4 | (Gerekiyorsa) Kurum bildirim formu doldur | Kullanıcı + avukat | 2026-05-19 22:58'e kadar |
-| 5 | ~156 gerçek kullanıcıya email bildirimi (bot hesaplar hariç) | Kullanıcı | Avukat onayından sonra |
-| 6 | V2 Sign all users out | Kullanıcı | Mümkünse bu hafta |
+| 5 | 156 gerçek kullanıcıya email bildirimi (bot hesaplar hariç) | Kullanıcı | Avukat onayından sonra |
+| 6 | ~~V2 Sign all users out~~ ✅ TAMAMLANDI (2026-05-17 18:00 TR, 564/564 refresh_tokens revoked) | — | — |
+| 7 | V1 Postgres direct DB password rotate (envanter sonrası) | Kullanıcı + Klipper | Bu hafta |
+| 8 | Edge access logging (Traefik+Caddy) + KVKK 14g pseudonymize | Klipper sprint | Bu hafta |
 
 ---
 
