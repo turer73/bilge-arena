@@ -141,7 +141,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       let difficulty = gameStore.selectedDifficulty
       if (!difficulty && userId && !isDeneme) {
         try {
-          const suggested = await getAdaptiveDifficulty(userId, game, gameStore.selectedCategory)
+          const suggested = await getAdaptiveDifficulty(game, gameStore.selectedCategory)
           if (suggested) difficulty = suggested
         } catch {
           // Adaptive difficulty alinamazsa varsayilan devam eder

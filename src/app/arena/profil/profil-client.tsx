@@ -40,7 +40,7 @@ export default function ProfilClient() {
 
     // Paralel olarak stats ve rozetleri cek
     Promise.all([
-      fetchProfileStats(user.id),
+      fetchProfileStats(),
       fetch('/api/badges').then((r) => r.ok ? r.json() : null),
     ])
       .then(([statsData, badgesData]) => {
