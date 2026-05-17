@@ -12,7 +12,7 @@ export default function GizlilikPolitikasiPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <h1 className="mb-2 text-3xl font-bold">Gizlilik Politikası</h1>
-      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 9 Mart 2026</p>
+      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 17 Mayıs 2026</p>
 
       <div className="prose-custom space-y-8 text-sm leading-relaxed text-[var(--text-muted)]">
         <section>
@@ -32,6 +32,7 @@ export default function GizlilikPolitikasiPage() {
             <li><strong>Kimlik doğrulama:</strong> Google OAuth ile giriş yapıldığında Google hesap bilgileri</li>
             <li><strong>Kullanım verileri:</strong> Çözülen sorular, oyun istatistikleri, XP puanları, sıralama verileri</li>
             <li><strong>Teknik veriler:</strong> IP adresi, tarayıcı türü, cihaz bilgisi, çerez verileri</li>
+            <li><strong>Sunucu erişim kayıtları (edge log):</strong> IP adresi, kullanıcı aracısı (User-Agent), erişilen yol ve zaman damgası — ters proxy katmanında güvenlik incelemesi ve hata tespiti için tutulur (saklama: bkz. KVKK aydınlatma metni Madde 6)</li>
             <li><strong>İletişim verileri:</strong> Hata raporları, geri bildirimler</li>
           </ul>
         </section>
@@ -55,7 +56,7 @@ export default function GizlilikPolitikasiPage() {
             sınırlı paylaşım yapılabilir:
           </p>
           <ul className="ml-4 list-disc space-y-1">
-            <li><strong>Hizmet sağlayıcılar:</strong> Supabase (veritabanı ve kimlik doğrulama), Vercel (hosting ve analitik)</li>
+            <li><strong>Hizmet sağlayıcılar:</strong> Supabase Inc. — ABD (veritabanı ve kimlik doğrulama), Vercel Inc. — ABD (hosting), Cloudflare Inc. — ABD (DNS yönetimi), Contabo GmbH — Almanya (edge sunucu/ters proxy)</li>
             <li><strong>Yasal zorunluluk:</strong> Mahkeme kararı veya yasal talep durumunda</li>
             <li><strong>Kamuya açık veriler:</strong> Kullanıcı adı ve sıralama bilgileri liderlik tablosunda görünür</li>
           </ul>
@@ -78,7 +79,11 @@ export default function GizlilikPolitikasiPage() {
           <p>
             Verileriniz SSL/TLS şifreleme ile iletilir. Veritabanı erişimi Row Level Security
             (RLS) politikalarıyla korunur. Şifrelerin saklanması Supabase Auth tarafından
-            endüstri standardı bcrypt ile yapılır.
+            endüstri standardı bcrypt ile yapılır. Sunucu erişim kayıtları (edge log) 14 gün
+            sonra IP adresi tek yönlü kriptografik özet ile takma adlandırılır, 90 gün sonra
+            tamamen silinir. Veri ihlali tespit edildiğinde KVKK Madde 12 kapsamında 72 saat
+            içinde bildirim yapılır — son ihlal bildirimi için bkz.{' '}
+            <a href="/kvkk" className="text-[var(--focus)] underline">KVKK aydınlatma metni Madde 9</a>.
           </p>
         </section>
 

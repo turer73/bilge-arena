@@ -15,7 +15,7 @@ export default function KVKKPage() {
       <p className="mb-2 text-sm text-[var(--text-sub)]">
         6698 Sayılı Kişisel Verilerin Korunması Kanunu Kapsamında
       </p>
-      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 9 Mart 2026</p>
+      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 17 Mayıs 2026</p>
 
       <div className="space-y-8 text-sm leading-relaxed text-[var(--text-muted)]">
         <section>
@@ -54,9 +54,13 @@ export default function KVKKPage() {
                   <td className="py-2 pr-4">Teknik Veriler</td>
                   <td className="py-2">IP adresi, tarayıcı bilgisi, cihaz türü</td>
                 </tr>
-                <tr>
+                <tr className="border-b border-[var(--border)]">
                   <td className="py-2 pr-4">Çerez Verileri</td>
                   <td className="py-2">Oturum çerezleri, tercih çerezleri</td>
+                </tr>
+                <tr>
+                  <td className="py-2 pr-4">Edge Sunucu Log Verisi</td>
+                  <td className="py-2">IP adresi, kullanıcı aracısı (User-Agent), erişilen yol, zaman damgası — sunucu erişim kayıtlarında (Traefik/Caddy) güvenlik ve hata tespiti amacıyla işlenir</td>
                 </tr>
               </tbody>
             </table>
@@ -72,6 +76,7 @@ export default function KVKKPage() {
             <li>Hata raporlarının incelenmesi ve teknik destek sağlanması</li>
             <li>Yasal yükümlülüklerin yerine getirilmesi</li>
             <li>Platform güvenliğinin sağlanması ve kötüye kullanımın önlenmesi</li>
+            <li>Saldırı tespiti, veri ihlali incelemesi ve adli kayıt (edge sunucu log verisi)</li>
           </ul>
         </section>
 
@@ -92,6 +97,8 @@ export default function KVKKPage() {
           <ul className="ml-4 mt-2 list-disc space-y-1">
             <li><strong>Supabase Inc. (ABD):</strong> Veritabanı ve kimlik doğrulama hizmetleri</li>
             <li><strong>Vercel Inc. (ABD):</strong> Web hosting ve analitik hizmetleri</li>
+            <li><strong>Cloudflare Inc. (ABD):</strong> DNS yönetimi ve (etkinleştirildiğinde) CDN/güvenlik hizmetleri</li>
+            <li><strong>Contabo GmbH (Almanya):</strong> Edge sunucu (Traefik/Caddy ters proxy) — IP/User-Agent erişim kayıtları</li>
             <li><strong>Yetkili kamu kurum ve kuruluşları:</strong> Yasal zorunluluk halinde</li>
           </ul>
           <p className="mt-2">
@@ -107,6 +114,18 @@ export default function KVKKPage() {
             Hesabınızı silmeniz halinde kişisel verileriniz makul süre içinde silinir
             veya anonim hale getirilir. Yasal saklama yükümlülükleri saklıdır.
           </p>
+          <div className="mt-3">
+            <h3 className="mb-2 text-sm font-semibold text-[var(--text)]">Edge sunucu log verisi (KVKK Madde 7 imha politikası)</h3>
+            <ul className="ml-4 list-disc space-y-1">
+              <li><strong>0–14 gün:</strong> Ham log (IP + User-Agent + path + zaman damgası) — güvenlik incelemesi ve hata tespiti amacıyla</li>
+              <li><strong>14–90 gün:</strong> IP adresi tek yönlü kriptografik özet (SHA-256 + salt) ile takma adlandırılır (pseudonymization); User-Agent ve path ham kalır</li>
+              <li><strong>90 gün sonra:</strong> Log kaydı tamamen silinir</li>
+            </ul>
+            <p className="mt-2 text-xs text-[var(--text-sub)]">
+              İmha süreçleri otomatik betikler (edge-log-redact.sh) ile yürütülür. Saklama
+              süresi sonunda veriler geri döndürülemez biçimde silinir veya anonimleştirilir.
+            </p>
+          </div>
         </section>
 
         <section>
@@ -132,6 +151,30 @@ export default function KVKKPage() {
             adresine kimliğinizi tespit edici bilgilerle birlikte yazılı olarak
             başvurabilirsiniz. Başvurular en geç 30 gün içinde ücretsiz olarak
             sonuçlandırılır.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 text-lg font-bold text-[var(--text)]">9. Veri İhlali Bildirimi (KVKK Madde 12)</h2>
+          <p>
+            6698 sayılı Kanun&apos;un 12. maddesi uyarınca, kişisel verilerinizin
+            hukuka aykırı olarak başkaları tarafından elde edildiğini tespit ettiğimizde:
+          </p>
+          <ul className="ml-4 mt-2 list-disc space-y-1">
+            <li>İlgili kişilere ve Kişisel Verileri Koruma Kurulu&apos;na 72 saat içinde bildirim yapılır</li>
+            <li>İhlalin kapsamı, etkilenen veri türleri ve alınan önlemler şeffaf biçimde paylaşılır</li>
+            <li>İhlalin tekrarlanmaması için teknik ve idari önlemler güncellenir</li>
+          </ul>
+          <p className="mt-3 text-sm">
+            <strong>Son veri ihlali bildirimi:</strong> 16 Mayıs 2026 — kullanıcı profil
+            tablosundaki 156 kullanıcıya ait herkese açık alanlar (kullanıcı adı, görünen ad,
+            avatar bağlantısı, şehir, sınıf, oyun istatistikleri) üçüncü bir şahıs tarafından
+            izinsiz okundu. E-posta, parola, ödeme veya hassas iletişim bilgisi sızmadı.
+            17 Mayıs 2026 itibarıyla saldırı vektörü kapatıldı, yetki belgeleri (servis
+            anahtarları) rotate edildi, tüm aktif kullanıcı oturumları geçersiz kılındı,
+            8 güvenlik iyileştirmesi production&apos;a uygulandı ve etkilenen kullanıcılara
+            doğrudan e-posta ile bilgi verilecektir. Detaylı bilgi için{' '}
+            <strong>destek@bilgearena.com</strong>.
           </p>
         </section>
       </div>
