@@ -2,6 +2,7 @@
 
 import type { Question, GameType } from '@/types/database'
 import { cacheQuestions, getCachedQuestions } from '@/lib/utils/question-cache'
+import { filterValidUuids } from '@/lib/utils/uuid'
 
 interface FetchQuestionsOptions {
   game: GameType
@@ -67,8 +68,8 @@ export async function fetchQuizQuestions({
   if (examRef) params.set('examRef', examRef)
   if (includeReview) params.set('includeReview', 'true')
 
-  // UUID formatini dogrula — type-safe uuid[] icin
-  const safeExcludeIds = excludeIds.filter(id => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 50)
+  // Klipper review B3/P1: UUID validation ortak helper'da (src/lib/utils/uuid.ts).
+  const safeExcludeIds = filterValidUuids(excludeIds, 50)
   if (safeExcludeIds.length > 0) {
     params.set('excludeIds', safeExcludeIds.join(','))
   }

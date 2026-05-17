@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAME_SLUGS } from '@/lib/constants/games'
+import { isValidUuid } from '@/lib/utils/uuid'
 import type { Question } from '@/types/database'
 
 // Cift kalkan rate limit (Madde 9 pattern):
@@ -86,16 +87,39 @@ export async function GET(request: NextRequest) {
   const includeReview = searchParams.get('includeReview') === 'true'
 
   // excludeIds: comma-separated UUID listesi, max 50
+  // Klipper review B3/P1: UUID validation ortak helper'da (src/lib/utils/uuid.ts).
   const excludeIdsRaw = searchParams.get('excludeIds') ?? ''
-  const excludeIds = excludeIdsRaw
+  const clientExcludeIds = excludeIdsRaw
     .split(',')
-    .filter(id => /^[0-9a-f-]{36}$/i.test(id))
+    .filter(id => isValidUuid(id))
     .slice(0, 50)
 
   // Review icin %30 ekstra cek
   const fetchLimit = Math.min(limit * 2, 50)
 
   const admin = createServiceRoleClient()
+
+  // Klipper review B2: cooldown server-of-truth. Eski client-side kod
+  // user_question_history'den son 50 soruyu cekiyordu; PR #147 refactor
+  // bunu client state'ine birakti, ama sayfa reload = state sifir =
+  // kullanici az once gordugu sorularla yine karsilasir. Burada server'da
+  // tekrar history'yi okuyup client excludeIds ile birlestiriyoruz.
+  let historyExcludeIds: string[] = []
+  const { data: historyRows } = await admin
+    .from('user_question_history')
+    .select('question_id')
+    .eq('user_id', user.id)
+    .order('last_seen_at', { ascending: false })
+    .limit(50)
+
+  if (historyRows && historyRows.length > 0) {
+    historyExcludeIds = historyRows
+      .map(h => h.question_id as string)
+      .filter(id => isValidUuid(id))
+  }
+
+  // Client state + server history birlesimi, max 50 (uuid[] perf)
+  const mergedExcludeIds = Array.from(new Set([...clientExcludeIds, ...historyExcludeIds])).slice(0, 50)
 
   // 5) RPC cagri — select_random_questions (migration 046)
   const rpcArgs: {
@@ -111,7 +135,7 @@ export async function GET(request: NextRequest) {
   }
   if (category) rpcArgs.p_category = category
   if (difficulty) rpcArgs.p_difficulty = difficulty
-  if (excludeIds.length > 0) rpcArgs.p_exclude_ids = excludeIds
+  if (mergedExcludeIds.length > 0) rpcArgs.p_exclude_ids = mergedExcludeIds
   if (examRef) rpcArgs.p_exam_ref = examRef
 
   const initialRpc = await admin.rpc('select_random_questions', rpcArgs)
@@ -119,7 +143,7 @@ export async function GET(request: NextRequest) {
   let rpcData = initialRpc.data
 
   // Fallback: cooldown filter sonrasi yeterli soru gelmediyse, exclude'siz tekrar dene
-  if (!rpcError && rpcData && (rpcData as Question[]).length < limit && excludeIds.length > 0) {
+  if (!rpcError && rpcData && (rpcData as Question[]).length < limit && mergedExcludeIds.length > 0) {
     const fallbackArgs = { ...rpcArgs }
     delete fallbackArgs.p_exclude_ids
     const { data: fallbackData, error: fallbackError } = await admin.rpc(
