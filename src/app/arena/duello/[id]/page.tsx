@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
-import { createClient } from '@/lib/supabase/client'
 import { OptionButton } from '@/components/game/option-button'
 import { getCorrectIndex } from '@/lib/utils/question'
 import { playSound } from '@/lib/utils/sounds'
@@ -36,53 +35,43 @@ export default function DuelloGamePage() {
 
     const load = async () => {
       try {
-        const res = await fetch('/api/challenges')
-        const data = await res.json()
-        const c = (data.challenges || []).find((ch: Challenge) => ch.id === id)
-        if (!c) { setState('error'); return }
-        setChallenge(c)
+        // Madde 9 #9: tek payload /api/challenges/[id] — challenge + questions
+        const res = await fetch(`/api/challenges/${encodeURIComponent(id)}`, {
+          cache: 'no-store',
+        })
+        if (!res.ok) { setState('error'); return }
+        const data = await res.json() as { challenge: Challenge; questions: Question[] }
 
-        // Sorulari yukle
-        const supabase = createClient()
-        const { data: qs } = await supabase
-          .from('questions')
-          .select('*')
-          .in('id', c.question_ids)
+        if (!data.challenge) { setState('error'); return }
+        setChallenge(data.challenge)
 
-        if (qs && qs.length > 0) {
-          // question_ids sirasina gore sirala
-          const qMap = new Map(qs.map(q => [q.id, q]))
-          const ordered = c.question_ids
-            .map((qid: string) => qMap.get(qid))
-            .filter(Boolean) as Question[]
+        const ordered = data.questions ?? []
+        if (ordered.length === 0) { setState('error'); return }
 
-          // Sik sirasini karistir + mapping kaydet
-          const maps = new Map<string, number[]>()
-          const shuffled = ordered.map(q => {
-            const indices = q.content.options.map((_: string, i: number) => i)
-            for (let i = indices.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1))
-              ;[indices[i], indices[j]] = [indices[j], indices[i]]
-            }
-            maps.set(q.id, indices) // indices[newIdx] = originalIdx
-            const correctIdx = getCorrectIndex(q.content)
-            return {
-              ...q,
-              content: {
-                ...q.content,
-                options: indices.map((i: number) => q.content.options[i]),
-                answer: indices.indexOf(correctIdx),
-              },
-            }
-          })
-          shuffleMapRef.current = maps
+        // Sik sirasini karistir + mapping kaydet
+        const maps = new Map<string, number[]>()
+        const shuffled = ordered.map(q => {
+          const indices = q.content.options.map((_: string, i: number) => i)
+          for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            ;[indices[i], indices[j]] = [indices[j], indices[i]]
+          }
+          maps.set(q.id, indices)
+          const correctIdx = getCorrectIndex(q.content)
+          return {
+            ...q,
+            content: {
+              ...q.content,
+              options: indices.map((i: number) => q.content.options[i]),
+              answer: indices.indexOf(correctIdx),
+            },
+          }
+        })
+        shuffleMapRef.current = maps
 
-          setQuestions(shuffled)
-          setState('playing')
-          setStartTime(Date.now())
-        } else {
-          setState('error')
-        }
+        setQuestions(shuffled)
+        setState('playing')
+        setStartTime(Date.now())
       } catch {
         setState('error')
       }
