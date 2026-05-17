@@ -119,12 +119,16 @@ COMMENT ON COLUMN public.profiles.username IS
 -- Gercek anlamli sonuc icin pg_audit + audit_log tablosu gerek; bu MVP:
 -- Sadece honeypot existence + integrity check yapar.
 
+-- OUT param `honeypot_last_played_at` rename: profiles.last_played_at column ile
+-- ad cakismasi (PL/pgSQL 42702 ambiguous reference). Username::text cast:
+-- profiles.username = varchar(32), output text bekliyor (42804). SELECT'ler
+-- alias 'p' ile qualified (defensive). Hotfix migration 052 prod-side DROP+CREATE.
 CREATE OR REPLACE FUNCTION public.check_honeypot_integrity()
 RETURNS TABLE (
   honeypot_exists boolean,
   honeypot_username text,
   honeypot_xp integer,
-  last_played_at timestamptz,
+  honeypot_last_played_at timestamptz,
   drift_detected boolean,
   message text
 )
@@ -136,10 +140,10 @@ DECLARE
   v_id uuid := 'ffffffff-eeee-4ddd-cccc-000000000001';
   v_p record;
 BEGIN
-  SELECT id, username, total_xp, last_played_at
+  SELECT p.id, p.username, p.total_xp, p.last_played_at
     INTO v_p
-  FROM public.profiles
-  WHERE id = v_id;
+  FROM public.profiles p
+  WHERE p.id = v_id;
 
   IF v_p IS NULL THEN
     RETURN QUERY SELECT false, NULL::text, NULL::integer, NULL::timestamptz, true, 'Honeypot SILINMIS — saldiri belirtisi'::text;
@@ -149,7 +153,7 @@ BEGIN
   -- Drift kontrol: honeypot UI'dan oynatilmaz, total_xp 0 + last_played_at NULL olmali
   IF v_p.total_xp <> 0 OR v_p.last_played_at IS NOT NULL THEN
     RETURN QUERY SELECT
-      true, v_p.username, v_p.total_xp, v_p.last_played_at,
+      true, v_p.username::text, v_p.total_xp, v_p.last_played_at,
       true, 'Honeypot DEGISMIS — saldirgan veya bug'::text;
     RETURN;
   END IF;
@@ -157,14 +161,14 @@ BEGIN
   -- Username drift
   IF v_p.username NOT LIKE '\_\_honeypot\_%\_\_' ESCAPE '\' THEN
     RETURN QUERY SELECT
-      true, v_p.username, v_p.total_xp, v_p.last_played_at,
+      true, v_p.username::text, v_p.total_xp, v_p.last_played_at,
       true, 'Honeypot username degismis'::text;
     RETURN;
   END IF;
 
   -- Saglikli
   RETURN QUERY SELECT
-    true, v_p.username, v_p.total_xp, v_p.last_played_at,
+    true, v_p.username::text, v_p.total_xp, v_p.last_played_at,
     false, 'OK'::text;
 END;
 $$;
