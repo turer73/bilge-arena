@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAME_SLUGS } from '@/lib/constants/games'
+import { isValidUuid } from '@/lib/utils/uuid'
 import type { Question } from '@/types/database'
 
 // Cift kalkan rate limit (Madde 9 pattern):
@@ -86,13 +87,11 @@ export async function GET(request: NextRequest) {
   const includeReview = searchParams.get('includeReview') === 'true'
 
   // excludeIds: comma-separated UUID listesi, max 50
-  // Klipper review B3: strict UUID pattern; eski /^[0-9a-f-]{36}$/ gecersiz
-  // string'leri de gecirip PostgreSQL cast 22P02 500'e neden oluyordu.
-  const UUID_STRICT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  // Klipper review B3/P1: UUID validation ortak helper'da (src/lib/utils/uuid.ts).
   const excludeIdsRaw = searchParams.get('excludeIds') ?? ''
   const clientExcludeIds = excludeIdsRaw
     .split(',')
-    .filter(id => UUID_STRICT.test(id))
+    .filter(id => isValidUuid(id))
     .slice(0, 50)
 
   // Review icin %30 ekstra cek
@@ -116,7 +115,7 @@ export async function GET(request: NextRequest) {
   if (historyRows && historyRows.length > 0) {
     historyExcludeIds = historyRows
       .map(h => h.question_id as string)
-      .filter(id => UUID_STRICT.test(id))
+      .filter(id => isValidUuid(id))
   }
 
   // Client state + server history birlesimi, max 50 (uuid[] perf)
