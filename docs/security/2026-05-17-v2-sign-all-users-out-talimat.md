@@ -11,6 +11,8 @@ JWT secret rotate **yapmadık** (kullanıcı session'larını düşürmemek içi
 - Saldırgan eğer bir kullanıcının refresh token'ını ele geçirdiyse, **rotate sonrası bile session valid**
 - "Sign all users out" Supabase Auth Dashboard butonu tüm aktif sessionları geçersiz kılar
 
+> ⚠️ **Önemli — sign-out anlık JWT invalidation değildir:** Supabase sign-out **refresh token'ları** revoke eder (yeni access token üretilemez), ancak **halihazırda dağıtılmış access token JWT'leri** kendi expire süresi (varsayılan 1 saat) kadar geçerli kalır. Saldırgan elindeki access JWT ile API çağrılarına token expire olana kadar devam edebilir. **Anlık (immediate) invalidation gerekiyorsa JWT secret rotate** (Bölüm "Adım 2 alternatif" — Dashboard → Settings → API → JWT Secret → Generate new secret). Bu seçenek tüm mevcut access JWT'leri **anında 401** yapar. KVKK için "tüm session invalidate" iddiası ediliyorsa JWT secret rotate önerilir; sadece sign-out yapıldıysa "refresh revoke + access window ≤1 saat" daha doğru ifade.
+
 ## Etki
 
 - 156 Google OAuth kullanıcı + diğer magic link kullanıcılar **logged out** olur
@@ -27,7 +29,15 @@ JWT secret rotate **yapmadık** (kullanıcı session'larını düşürmemek içi
 4. **"Sign all users out"** veya **"Logout all users"** butonu
 5. Onay diyaloğu → onayla
 
-### Adım 2 — SQL alternatif (eğer button yoksa)
+### Adım 2 alternatif A — JWT secret rotate (anlık invalidation)
+Saldırgan access JWT elindeyse veya KVKK "tüm session invalidate" iddiası gerekirse:
+1. Supabase Dashboard → Settings → API → **JWT Secret**
+2. **"Generate new secret"** → onayla
+3. Tüm mevcut access JWT'ler anında 401 döner — kullanıcı yeniden login
+4. Vercel env'deki `SUPABASE_JWT_SECRET` varsa güncelle + redeploy
+5. **Uyarı:** Bu işlem geri alınamaz, kullanıcılar refresh + redirect ile yeniden yetkilenir
+
+### Adım 2 alternatif B — SQL (eğer Dashboard button yoksa, refresh revoke yeterli)
 SQL Editor:
 ```sql
 -- Tüm refresh tokenları revoke et

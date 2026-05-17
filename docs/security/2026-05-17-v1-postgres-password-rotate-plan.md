@@ -23,10 +23,14 @@ gh secret list --repo turer73/bilge-arena | grep -i postgres
 # Vercel project env var (Settings > Environment Variables) -> 'DATABASE_URL' veya 'POSTGRES_URL' var mı?
 
 # 2. VPS bilge-arena infra
-grep -rE "postgres://|postgresql://" infra/ scripts/ 2>/dev/null
+grep -rE "postgres(ql)?://" infra/ scripts/ 2>/dev/null
+grep -rE "lvnmzdowhfzmpkueurih" infra/ scripts/ 2>/dev/null  # project ref ayrica ara
 
 # 3. Klipper backup scripts
-ssh klipperos@100.84.251.49 'grep -rE "postgres://lvnm|postgresql://lvnm" /opt/linux-ai-server/ 2>/dev/null'
+# Genis pattern - URI'nin her yerinde project ref'i ara (host kismi, query string vs.)
+ssh klipperos@100.84.251.49 'grep -rE "postgres(ql)?://[^[:space:]\"]*lvnmzdowhfzmpkueurih" /opt/linux-ai-server/ 2>/dev/null'
+# Bonus: tum PG URI'leri (DATABASE_URL benzeri env var degerlerini de yakala)
+ssh klipperos@100.84.251.49 'grep -rE "postgres(ql)?://[^[:space:]\"]+" /opt/linux-ai-server/ 2>/dev/null | grep -v "127.0.0.1\|localhost"'
 
 # 4. n8n credentials
 # panola.app/n8n -> Credentials -> "Bilge Arena Postgres" var mı?
