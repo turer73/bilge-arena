@@ -61,6 +61,14 @@ BEGIN
     ) ON CONFLICT (id) DO NOTHING;
 
     -- Profile kaydi (auto-create trigger devre disi olabilir, manuel ekle)
+    --
+    -- Codex P2 review: Migration 005'teki on_auth_user_created trigger,
+    -- yukaridaki auth.users INSERT'inde public.profiles satirini auto-create
+    -- eder (varsayilan username + default alanlarla). Asagidaki explicit
+    -- INSERT sonrasi ON CONFLICT (id) DO NOTHING demek = honeypot username
+    -- yerine trigger'in koydugu default ad kalir; check_honeypot_integrity()
+    -- "Honeypot username degismis" hatasi verir. DO UPDATE ile honeypot
+    -- alanlarini zorla overwrite et.
     INSERT INTO public.profiles (
       id, username, display_name, avatar_url,
       total_xp, level, level_name, current_streak, longest_streak,
@@ -74,7 +82,19 @@ BEGIN
       0, 1, 'Acemi', 0, 0,
       0, 0, 0,
       NOW(), NULL
-    ) ON CONFLICT (id) DO NOTHING;
+    ) ON CONFLICT (id) DO UPDATE SET
+      username        = EXCLUDED.username,
+      display_name    = EXCLUDED.display_name,
+      avatar_url      = EXCLUDED.avatar_url,
+      total_xp        = EXCLUDED.total_xp,
+      level           = EXCLUDED.level,
+      level_name      = EXCLUDED.level_name,
+      current_streak  = EXCLUDED.current_streak,
+      longest_streak  = EXCLUDED.longest_streak,
+      total_questions = EXCLUDED.total_questions,
+      correct_answers = EXCLUDED.correct_answers,
+      total_sessions  = EXCLUDED.total_sessions,
+      last_played_at  = EXCLUDED.last_played_at;
   END IF;
 END $$;
 
