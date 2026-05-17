@@ -1,6 +1,5 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import type { Question, GameType } from '@/types/database'
 import { cacheQuestions, getCachedQuestions } from '@/lib/utils/question-cache'
 
@@ -9,9 +8,17 @@ interface FetchQuestionsOptions {
   limit?: number
   category?: string | null
   difficulty?: number | null
-  userId?: string | null
-  /** 'TYT' | 'LGS' | null (null = tümü) */
+  /** Cooldown icin son gorulen soru ID'leri (max 50, client state'inden) */
+  excludeIds?: string[]
+  /** 'TYT' | 'LGS' | 'AYT-SAY' | 'AYT-EA' | 'AYT-SOZ' | null (null = tümü) */
   examRef?: string | null
+  /** Spaced-repetition: yanlis cevaplanip dogrulanmamis sorulari ek olarak iste */
+  includeReview?: boolean
+}
+
+interface RandomQuestionsResponse {
+  questions: Question[]
+  reviewQuestions: Question[]
 }
 
 /** Fisher-Yates shuffle (in-place) */
@@ -24,17 +31,22 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 /**
- * Supabase'den quiz sorularini ceker, karistirir ve dondurur.
+ * /api/questions/random API'sinden quiz sorularini ceker, karistirir ve dondurur.
+ * Madde 9 #6: eski client `supabase.rpc('select_random_questions')` yerine proxy.
+ *
  * Cekilen sorular IndexedDB'ye kaydedilir (offline destek).
- * Ag yoksa veya Supabase hata verirse cache'den sunar.
+ * Ag yoksa veya API hata verirse cache'den sunar.
+ *
+ * Anon kullanici icin 401 doner -> use-quiz-game DEMO_QUESTIONS fallback (mevcut akis).
  */
 export async function fetchQuizQuestions({
   game,
   limit = 10,
   category,
   difficulty,
-  userId,
+  excludeIds = [],
   examRef,
+  includeReview = true,
 }: FetchQuestionsOptions): Promise<Question[]> {
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
 
@@ -42,158 +54,59 @@ export async function fetchQuizQuestions({
   if (!isOnline) {
     const cached = await getCachedQuestions({ game, category, difficulty, limit })
     if (cached.length > 0) return cached
-    // Cache de bossa bos dizi don (use-quiz-game DEMO fallback kullanir)
     return []
   }
 
-  // Cevrimici: Supabase'den cek
-  const supabase = createClient()
-
-  // --- Son gorulmus sorulari disla (cooldown) ---
-  let recentIds: string[] = []
-  if (userId) {
-    const { data: recentHistory } = await supabase
-      .from('user_question_history')
-      .select('question_id')
-      .eq('user_id', userId)
-      .order('last_seen_at', { ascending: false })
-      .limit(50)
-
-    if (recentHistory && recentHistory.length > 0) {
-      recentIds = recentHistory.map(h => h.question_id)
-    }
-  }
+  // Cevrimici: API'den cek
+  const params = new URLSearchParams({
+    game,
+    limit: String(limit),
+  })
+  if (category) params.set('category', category)
+  if (difficulty != null) params.set('difficulty', String(difficulty))
+  if (examRef) params.set('examRef', examRef)
+  if (includeReview) params.set('includeReview', 'true')
 
   // UUID formatini dogrula — type-safe uuid[] icin
-  const safeExcludeIds = recentIds.filter(id => /^[0-9a-f-]{36}$/i.test(id))
-
-  // Tam server-side random: select_random_questions RPC (migration 044)
-  // ORDER BY random() + SECURITY DEFINER + authenticated EXECUTE.
-  // Tum aktif havuzdan limit kadar gercek random; pencere-bias yok, tek roundtrip.
-  // Review/spaced-repetition icin extra %30 cektigimizden p_limit'i biraz buyutuyoruz.
-  const fetchLimit = Math.min(limit * 2, 50)
-  const rpcArgs: {
-    p_game: string
-    p_limit: number
-    p_category?: string
-    p_difficulty?: number
-    p_exclude_ids?: string[]
-    p_exam_ref?: string
-  } = {
-    p_game: game,
-    p_limit: fetchLimit,
+  const safeExcludeIds = excludeIds.filter(id => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 50)
+  if (safeExcludeIds.length > 0) {
+    params.set('excludeIds', safeExcludeIds.join(','))
   }
-  if (category) rpcArgs.p_category = category
-  if (difficulty) rpcArgs.p_difficulty = difficulty
-  if (safeExcludeIds.length > 0) rpcArgs.p_exclude_ids = safeExcludeIds
-  if (examRef) rpcArgs.p_exam_ref = examRef
 
-  const { data: rpcData, error } = await supabase.rpc('select_random_questions', rpcArgs)
-  let data = rpcData as Question[] | null
-
-  // Fallback: cooldown filter sonrasi yeterli soru gelmediyse, exclude'siz tekrar dene
-  if (!error && data && data.length < limit && safeExcludeIds.length > 0) {
-    const { data: fallbackData, error: fallbackError } = await supabase.rpc(
-      'select_random_questions',
-      {
-        p_game: game,
-        p_limit: fetchLimit,
-        ...(category ? { p_category: category } : {}),
-        ...(difficulty ? { p_difficulty: difficulty } : {}),
-        ...(examRef ? { p_exam_ref: examRef } : {}),
-      },
-    )
-    if (!fallbackError && fallbackData && (fallbackData as Question[]).length > data.length) {
-      data = fallbackData as Question[]
+  let response: RandomQuestionsResponse | null = null
+  try {
+    const res = await fetch(`/api/questions/random?${params.toString()}`, {
+      cache: 'no-store',
+    })
+    if (res.ok) {
+      response = (await res.json()) as RandomQuestionsResponse
     }
+  } catch (err) {
+    console.warn('[fetchQuizQuestions] API hata:', err)
   }
 
-  if (error || !data || data.length === 0) {
-    if (error) console.warn('[fetchQuizQuestions] RPC hata:', error.message)
+  const questions = response?.questions ?? []
+  const reviewQuestions = response?.reviewQuestions ?? []
 
-    // Network hatasi — cache'den dene
+  if (questions.length === 0) {
+    // Anon (401) veya network hatasi — cache'den dene
     const cached = await getCachedQuestions({ game, category, difficulty, limit })
     if (cached.length > 0) return cached
     return []
   }
 
-  const questions = data as Question[]
-
-  // Arkaplanda cache'e kaydet (await etmeye gerek yok)
+  // Arkaplanda cache'e kaydet
   cacheQuestions(questions).catch(() => {})
 
-  // --- Spaced Repetition: yanlis cevaplanan sorulari karistir ---
-  if (userId) {
-    try {
-      const reviewQuestions = await fetchReviewQuestions(supabase, userId, game, category, difficulty)
-      if (reviewQuestions.length > 0) {
-        const reviewCount = Math.max(1, Math.floor(limit * 0.3)) // %30 tekrar sorusu
-        const reviewSlice = shuffle([...reviewQuestions]).slice(0, reviewCount)
-        const reviewIds = new Set(reviewSlice.map(q => q.id))
-        // Yeni sorulardan tekrar sorulari cikar, sonra birlestir
-        const newQuestions = questions.filter(q => !reviewIds.has(q.id))
-        const newSlice = shuffle([...newQuestions]).slice(0, limit - reviewSlice.length)
-        return shuffle([...reviewSlice, ...newSlice])
-      }
-    } catch (err) {
-      console.warn('[fetchQuizQuestions] Review sorulari alinamadi:', err)
-    }
+  // Spaced repetition: review sorulari ile karistir (%30 review)
+  if (reviewQuestions.length > 0) {
+    const reviewCount = Math.max(1, Math.floor(limit * 0.3))
+    const reviewSlice = shuffle([...reviewQuestions]).slice(0, reviewCount)
+    const reviewIds = new Set(reviewSlice.map(q => q.id))
+    const newQuestions = questions.filter(q => !reviewIds.has(q.id))
+    const newSlice = shuffle([...newQuestions]).slice(0, limit - reviewSlice.length)
+    return shuffle([...reviewSlice, ...newSlice])
   }
 
   return shuffle([...questions]).slice(0, limit)
-}
-
-/**
- * Son 7 gunde yanlis cevaplanan ve sonrasinda dogru cevaplanmamis sorulari getirir.
- * Spaced repetition icin "zayif sorular" havuzunu olusturur.
- */
-async function fetchReviewQuestions(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-  game: GameType,
-  category?: string | null,
-  difficulty?: number | null,
-): Promise<Question[]> {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-
-  // 1) Son 7 gunde yanlis cevaplanan question_id'leri bul
-  const { data: wrongAnswers } = await supabase
-    .from('session_answers')
-    .select('question_id')
-    .eq('user_id', userId)
-    .eq('is_correct', false)
-    .gte('created_at', sevenDaysAgo)
-
-  if (!wrongAnswers || wrongAnswers.length === 0) return []
-
-  const wrongIds = Array.from(new Set(wrongAnswers.map(a => a.question_id)))
-
-  // 2) Bu sorulardan sonra dogru cevaplananlari cikar
-  const { data: correctAfter } = await supabase
-    .from('session_answers')
-    .select('question_id')
-    .eq('user_id', userId)
-    .eq('is_correct', true)
-    .in('question_id', wrongIds)
-    .gte('created_at', sevenDaysAgo)
-
-  const correctedIds = new Set((correctAfter || []).map(a => a.question_id))
-  const reviewIds = wrongIds.filter(id => !correctedIds.has(id))
-
-  if (reviewIds.length === 0) return []
-
-  // 3) Bu sorulari questions tablosundan cek
-  let query = supabase
-    .from('questions')
-    .select('*')
-    .in('id', reviewIds.slice(0, 20))
-    .eq('game', game)
-    .eq('is_active', true)
-
-  if (category) query = query.eq('category', category)
-  if (difficulty) query = query.eq('difficulty', difficulty)
-
-  const { data } = await query
-
-  return (data as unknown as Question[]) || []
 }
