@@ -8,35 +8,66 @@ import { trackEvent } from '@/lib/utils/plausible'
 import { resetGuestQuizCount } from '@/lib/hooks/use-guest-session'
 import type { Profile } from '@/types/database'
 
+interface ProfileApiResponse {
+  profile: Profile
+  isAdmin: boolean
+}
+
+interface ProfileSyncResponse extends ProfileApiResponse {
+  updated: boolean
+}
+
 /**
- * Profil verisini Supabase'den yeniden ceker ve auth-store'u gunceller.
+ * Profile API'sinden veriyi cek (Madde 9 #5: browser->Supabase yerine /api/profile).
+ * Sessizce null doner — hata caller tarafindan log'lanmali.
+ */
+async function fetchProfileFromApi(): Promise<ProfileApiResponse | null> {
+  try {
+    const res = await fetch('/api/profile', { cache: 'no-store' })
+    if (!res.ok) return null
+    return (await res.json()) as ProfileApiResponse
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Google metadata ile profili senkronize et — display_name + avatar_url update.
+ * Metadata server-side `auth.getUser()` ile alinir; istemciden gonderilmez.
+ */
+async function syncProfileFromApi(): Promise<ProfileSyncResponse | null> {
+  try {
+    const res = await fetch('/api/profile/sync', {
+      method: 'POST',
+      cache: 'no-store',
+    })
+    if (!res.ok) return null
+    return (await res.json()) as ProfileSyncResponse
+  } catch {
+    return null
+  }
+}
+
+/**
+ * API'den gelen profile + isAdmin'i Profile tipine bind eder.
+ * role alani UI'da kullanildigi icin 'admin' | 'user' string'ine map ediliyor.
+ */
+function applyRole(profile: Profile, isAdmin: boolean): Profile {
+  return {
+    ...profile,
+    role: isAdmin ? 'admin' : (profile.role || 'user'),
+  } as Profile
+}
+
+/**
+ * Profil verisini API'den yeniden ceker ve auth-store'u gunceller.
  * Hook disinda da cagirilabilir (ornegin session save sonrasi).
  * DB trigger'lari XP/level/streak guncelledikten sonra cagrilmali.
  */
 export async function refreshProfile(): Promise<void> {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
-
-  const { data } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (data) {
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', user.id)
-      .limit(1)
-
-    const profileWithRole = {
-      ...data,
-      role: (userRoles && userRoles.length > 0) ? 'admin' : (data.role || 'user'),
-    }
-    useAuthStore.getState().setProfile(profileWithRole as Profile)
-  }
+  const data = await fetchProfileFromApi()
+  if (!data) return
+  useAuthStore.getState().setProfile(applyRole(data.profile, data.isAdmin))
 }
 
 export function useAuth() {
@@ -49,7 +80,7 @@ export function useAuth() {
       setUser(authUser ?? null)
       if (authUser) {
         Sentry.setUser({ id: authUser.id, email: authUser.email })
-        fetchProfile(authUser.id).catch((err) => {
+        fetchProfileWithSync(authUser).catch((err) => {
           console.error('[useAuth] fetchProfile hatasi:', err)
         })
       }
@@ -65,7 +96,7 @@ export function useAuth() {
       setUser(session?.user ?? null)
       if (session?.user) {
         Sentry.setUser({ id: session.user.id, email: session.user.email })
-        fetchProfile(session.user.id)
+        fetchProfileWithSync(session.user)
       } else {
         Sentry.setUser(null)
         setProfile(null)
@@ -76,39 +107,38 @@ export function useAuth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function fetchProfile(userId: string) {
-    // 1) Profili cek
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (!data) return
-
-    // 2a) Signup event — ilk 2 dakika icindeki yeni user'lari yakala, tek sefer
+  /**
+   * Profile fetch + Google sync (eski fetchProfile'in API tabanli versiyonu).
+   * Sync endpoint Google metadata'yi server-side okur ve gerekirse update eder;
+   * sonra guncel profili doner. Sync endpoint hata verirse GET'e dusup
+   * mevcut profili gosterir.
+   */
+  async function fetchProfileWithSync(authUser: { id: string; email?: string }) {
+    // 1) Analytics event'leri (eski fetchProfile davranisi)
     try {
-      const signupKey = `signup_tracked_${userId}`
-      if (!localStorage.getItem(signupKey) && data.created_at) {
-        const createdMs = new Date(data.created_at).getTime()
-        const ageMs = Date.now() - createdMs
-        if (ageMs < 2 * 60 * 1000) {
-          // Provider'i auth user'dan cikar (google ya da email/magic link)
-          const { data: { user: newUser } } = await supabase.auth.getUser()
-          const provider = newUser?.app_metadata?.provider === 'email'
-            ? 'magic_link'
-            : (newUser?.app_metadata?.provider ?? 'google')
-          trackEvent('Signup', { props: { provider } })
-          // Guest quiz sayacini temizle — artik kayitli kullanici, modal tekrar gosterilmemeli
-          resetGuestQuizCount()
+      const signupKey = `signup_tracked_${authUser.id}`
+      if (!localStorage.getItem(signupKey)) {
+        // Profil bilgisi alindiktan sonra signup-eventini kontrol etmek icin
+        // once profili cek (created_at kontrolu icin)
+        const initialData = await fetchProfileFromApi()
+        if (initialData?.profile?.created_at) {
+          const createdMs = new Date(initialData.profile.created_at).getTime()
+          const ageMs = Date.now() - createdMs
+          if (ageMs < 2 * 60 * 1000) {
+            const { data: { user: u } } = await supabase.auth.getUser()
+            const provider = u?.app_metadata?.provider === 'email'
+              ? 'magic_link'
+              : (u?.app_metadata?.provider ?? 'google')
+            trackEvent('Signup', { props: { provider } })
+            resetGuestQuizCount()
+          }
+          localStorage.setItem(signupKey, '1')
         }
-        // Eski user da olsa flag koy — ilerde tekrar dusmemesi icin
-        localStorage.setItem(signupKey, '1')
       }
 
-      // 2b) Day2Return event — son goruldugu gun != bugun ise
+      // Day2Return event — son goruldugu gun != bugun ise
       const today = new Date().toISOString().split('T')[0]
-      const lastSeenKey = `last_seen_${userId}`
+      const lastSeenKey = `last_seen_${authUser.id}`
       const lastSeen = localStorage.getItem(lastSeenKey)
       if (lastSeen && lastSeen !== today) {
         trackEvent('Day2Return', { props: { daysSinceLast: daysBetween(lastSeen, today) } })
@@ -118,60 +148,18 @@ export function useAuth() {
       // localStorage yoksa sessizce atla (Safari private mode vb.)
     }
 
-    // 2) Google hesap bilgilerini senkronize et
-    // display_name ve avatar_url her zaman Google'dan guncellenir
-    // Kullanicinin site ici adi: username (ayri alan)
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    const meta = authUser?.user_metadata
-    if (meta) {
-      const googleName = meta.full_name || meta.name || null
-      const googleAvatar = meta.avatar_url || meta.picture || null
-      // Sadece custom avatar yoksa Google avatari kullan
-      const hasCustomAvatar = data.avatar_url?.includes('/avatars/') ?? false
-      const needsUpdate =
-        (googleName && googleName !== data.display_name) ||
-        (!hasCustomAvatar && googleAvatar && googleAvatar !== data.avatar_url)
-
-      if (needsUpdate) {
-        const updates: Record<string, string> = {}
-        if (googleName && googleName !== data.display_name) updates.display_name = googleName
-        if (!hasCustomAvatar && googleAvatar && googleAvatar !== data.avatar_url) updates.avatar_url = googleAvatar
-
-        const { data: updated } = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', userId)
-          .select('*')
-          .single()
-
-        if (updated) {
-          const { data: ur } = await supabase
-            .from('user_roles')
-            .select('role_id')
-            .eq('user_id', userId)
-            .limit(1)
-          setProfile({
-            ...updated,
-            role: (ur && ur.length > 0) ? 'admin' : (updated.role || 'user'),
-          } as Profile)
-          return
-        }
-      }
+    // 2) Sync endpoint (Google metadata + profile + roles tek istek)
+    const syncData = await syncProfileFromApi()
+    if (syncData) {
+      setProfile(applyRole(syncData.profile, syncData.isAdmin))
+      return
     }
 
-    // RBAC: user_roles tablosunda rolu varsa admin erisimi var
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', userId)
-      .limit(1)
-
-    const profileWithRole = {
-      ...data,
-      role: (userRoles && userRoles.length > 0) ? 'admin' : (data.role || 'user'),
+    // 3) Sync basarisiz olduysa GET'e dus
+    const getData = await fetchProfileFromApi()
+    if (getData) {
+      setProfile(applyRole(getData.profile, getData.isAdmin))
     }
-
-    setProfile(profileWithRole as Profile)
   }
 
   async function signInWithGoogle() {
