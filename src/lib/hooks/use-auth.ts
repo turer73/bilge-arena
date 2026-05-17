@@ -118,8 +118,9 @@ export function useAuth() {
     try {
       const signupKey = `signup_tracked_${authUser.id}`
       if (!localStorage.getItem(signupKey)) {
-        // Profil bilgisi alindiktan sonra signup-eventini kontrol etmek icin
-        // once profili cek (created_at kontrolu icin)
+        // Klipper review B1 fix: setItem outer block'ta — API hatasi olsa bile
+        // flag set edilmeli, yoksa her sayfa yuklenmesinde tekrar /api/profile
+        // cagrisi yapilir (rate limit dolar).
         const initialData = await fetchProfileFromApi()
         if (initialData?.profile?.created_at) {
           const createdMs = new Date(initialData.profile.created_at).getTime()
@@ -132,8 +133,9 @@ export function useAuth() {
             trackEvent('Signup', { props: { provider } })
             resetGuestQuizCount()
           }
-          localStorage.setItem(signupKey, '1')
         }
+        // Eski user da olsa veya API hata verse de flag set et
+        localStorage.setItem(signupKey, '1')
       }
 
       // Day2Return event — son goruldugu gun != bugun ise

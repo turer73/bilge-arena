@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockGetUser, mockRpc, mockSelectChain } = vi.hoisted(() => ({
+const { mockGetUser, mockRpc, mockSelectChain, mockHistory } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockRpc: vi.fn(),
   mockSelectChain: vi.fn(),
+  // Klipper review B2: user_question_history server-side cooldown read
+  mockHistory: vi.fn(async (): Promise<{ data: Array<{ question_id: string }>; error: null }> => ({
+    data: [],
+    error: null,
+  })),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -15,23 +20,37 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
     rpc: mockRpc,
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            in: vi.fn(() => ({
-              gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
+    from: vi.fn((table: string) => {
+      if (table === 'user_question_history') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              order: vi.fn(() => ({
+                limit: mockHistory,
+              })),
             })),
           })),
-          in: vi.fn(() => ({
+        }
+      }
+      // Diger tablolar (session_answers, questions) icin fallback chainable mock
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
             eq: vi.fn(() => ({
-              eq: mockSelectChain,
+              gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
+              in: vi.fn(() => ({
+                gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
+              })),
+            })),
+            in: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: mockSelectChain,
+              })),
             })),
           })),
         })),
-      })),
-    })),
+      }
+    }),
   })),
 }))
 
@@ -118,17 +137,58 @@ describe('GET /api/questions/random', () => {
     }))
   })
 
-  it('filters excludeIds to valid UUIDs only', async () => {
+  it('filters excludeIds to valid UUIDs only (B3 strict regex)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValue({ data: [], error: null })
     const validId = '12345678-1234-1234-1234-123456789012'
+    // B3: yanlis dash konumlu string'ler eski regex'e dusturuyordu, simdi reddedilmeli
+    const malformedDash = '---------abc123def456abc123def456abc1'
     await GET(makeRequest({
       game: 'matematik',
-      excludeIds: `${validId},invalid-id,not-a-uuid`,
+      excludeIds: `${validId},invalid-id,not-a-uuid,${malformedDash}`,
     }) as never)
     expect(mockRpc).toHaveBeenCalledWith('select_random_questions', expect.objectContaining({
       p_exclude_ids: [validId],
     }))
+  })
+
+  it('B2: merges server-side user_question_history into excludeIds', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [], error: null })
+    const historyId = '99999999-9999-4999-8999-999999999999'
+    mockHistory.mockResolvedValueOnce({
+      data: [{ question_id: historyId }],
+      error: null,
+    })
+
+    const clientId = '12345678-1234-1234-1234-123456789012'
+    await GET(makeRequest({ game: 'matematik', excludeIds: clientId }) as never)
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'select_random_questions',
+      expect.objectContaining({
+        p_exclude_ids: expect.arrayContaining([clientId, historyId]),
+      }),
+    )
+  })
+
+  it('B2: works when client excludeIds empty but history has entries', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [], error: null })
+    const historyId = '99999999-9999-4999-8999-999999999999'
+    mockHistory.mockResolvedValueOnce({
+      data: [{ question_id: historyId }],
+      error: null,
+    })
+
+    await GET(makeRequest({ game: 'matematik' }) as never)
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'select_random_questions',
+      expect.objectContaining({
+        p_exclude_ids: [historyId],
+      }),
+    )
   })
 
   it('sets Cache-Control no-store', async () => {

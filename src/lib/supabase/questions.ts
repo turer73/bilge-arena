@@ -67,8 +67,11 @@ export async function fetchQuizQuestions({
   if (examRef) params.set('examRef', examRef)
   if (includeReview) params.set('includeReview', 'true')
 
-  // UUID formatini dogrula — type-safe uuid[] icin
-  const safeExcludeIds = excludeIds.filter(id => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 50)
+  // Klipper review B3: strict UUID pattern (dash konumlari dogru). Eski
+  // /^[0-9a-f-]{36}$/ "---------abc..." gibi gecersiz stringleri de
+  // gecirir; PostgreSQL cast 22P02 fail eder ve endpoint 500 doner.
+  const UUID_STRICT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const safeExcludeIds = excludeIds.filter(id => UUID_STRICT.test(id)).slice(0, 50)
   if (safeExcludeIds.length > 0) {
     params.set('excludeIds', safeExcludeIds.join(','))
   }
