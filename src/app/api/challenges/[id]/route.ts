@@ -4,11 +4,12 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { challengeActionSchema } from '@/lib/validations/schemas'
+import { isValidUuid } from '@/lib/utils/uuid'
 
 const getIpLimiter = createRateLimiter('challenge-get-ip', 60, 60_000)
 const getUserLimiter = createRateLimiter('challenge-get-user', 30, 60_000)
 
-const UUID_RE = /^[0-9a-f-]{36}$/i
+// Klipper review P1: UUID validation ortak helper'a tasindi (B3 strict regex)
 
 /**
  * GET /api/challenges/[id]
@@ -56,7 +57,7 @@ export async function GET(
 
   // 4) Param validation
   const { id } = await params
-  if (!id || !UUID_RE.test(id)) {
+  if (!id || !isValidUuid(id)) {
     return NextResponse.json({ error: 'id gecersiz' }, { status: 400 })
   }
 
