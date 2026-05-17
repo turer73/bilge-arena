@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { commentContentSchema } from '@/lib/validations/schemas'
+import { isValidUuid } from '@/lib/utils/uuid'
 
 const listIpLimiter = createRateLimiter('comments-list-ip', 120, 60_000)
 const listUserLimiter = createRateLimiter('comments-list-user', 60, 60_000)
@@ -40,7 +41,9 @@ interface CommentDto {
   }
 }
 
-const UUID_RE = /^[0-9a-f-]{36}$/i
+// Klipper review P1: zayif UUID regex kaldirildi, ortak helper kullaniliyor
+// (src/lib/utils/uuid.ts -> isValidUuid). Eski /^[0-9a-f-]{36}$/i dash
+// konumlari yanlis stringleri de gecirip PostgreSQL cast 22P02 fail eder.
 
 /**
  * GET /api/comments?questionId=X
@@ -80,7 +83,7 @@ export async function GET(request: NextRequest) {
 
   // 3) Query param
   const questionId = new URL(request.url).searchParams.get('questionId')
-  if (!questionId || !UUID_RE.test(questionId)) {
+  if (!questionId || !isValidUuid(questionId)) {
     return NextResponse.json({ error: 'questionId gecersiz' }, { status: 400 })
   }
 
@@ -174,7 +177,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Gecersiz body' }, { status: 400 })
   }
   const questionId = body.questionId
-  if (!questionId || typeof questionId !== 'string' || !UUID_RE.test(questionId)) {
+  if (!questionId || typeof questionId !== 'string' || !isValidUuid(questionId)) {
     return NextResponse.json({ error: 'questionId gecersiz' }, { status: 400 })
   }
   const contentParse = commentContentSchema.safeParse(body.content)

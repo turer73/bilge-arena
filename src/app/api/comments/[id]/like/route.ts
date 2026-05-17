@@ -3,11 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { isValidUuid } from '@/lib/utils/uuid'
 
 const ipLimiter = createRateLimiter('comments-like-ip', 60, 60_000)
 const userLimiter = createRateLimiter('comments-like-user', 30, 60_000)
 
-const UUID_RE = /^[0-9a-f-]{36}$/i
+// Klipper review P1: UUID validation ortak helper'a tasindi (B3 strict regex)
 
 /**
  * POST /api/comments/[id]/like   -> like ekle
@@ -56,7 +57,7 @@ export async function POST(
   if (check.block) return check.block
 
   const { id } = await params
-  if (!id || !UUID_RE.test(id)) {
+  if (!id || !isValidUuid(id)) {
     return NextResponse.json({ error: 'id gecersiz' }, { status: 400 })
   }
 
@@ -85,7 +86,7 @@ export async function DELETE(
   if (check.block) return check.block
 
   const { id } = await params
-  if (!id || !UUID_RE.test(id)) {
+  if (!id || !isValidUuid(id)) {
     return NextResponse.json({ error: 'id gecersiz' }, { status: 400 })
   }
 
