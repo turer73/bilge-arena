@@ -1,28 +1,120 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { getClientIp } from '@/lib/utils/client-ip'
 import { profileUpdateSchema } from '@/lib/validations/schemas'
 
-const profileLimiter = createRateLimiter('profile-update', 10, 60_000)
+// Cift kalkan rate limit (Madde 9 #5 pattern — topic-strengths icin de ayni):
+//   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
+//   - User limit auth varsa ek katman
+const ipGetLimiter = createRateLimiter('profile-get-ip', 120, 60_000)
+const userGetLimiter = createRateLimiter('profile-get-user', 60, 60_000)
+
+const ipPatchLimiter = createRateLimiter('profile-patch-ip', 30, 60_000)
+const userPatchLimiter = createRateLimiter('profile-patch-user', 10, 60_000)
 
 /**
- * PATCH /api/profile — Profil bilgilerini guncelle
- * Body: { display_name?, city?, grade? }
+ * GET /api/profile
+ *
+ * Auth'lu kullanicinin kendi profilini + admin role flag'ini doner.
+ * use-auth.ts hook'unun her sayfa yuklenmesinde cagirdigi endpoint.
+ *
+ * Madde 9 #5 (pentest raporu): Browser->Supabase direkt cagri yerine bu proxy.
+ * Eski akis: client `.from('profiles').select('*').eq('id', user.id).single()`
+ *           + ayri `.from('user_roles').select('role_id').eq(...)`.
+ * Yeni akis: server-side auth + service-role + iki sorgu paralel.
+ *
+ * Cache: no-store (kullaniciya ozel veri, cache-key olarak cookie kullanmiyoruz).
+ * Rate limit: IP 120/dk + user 60/dk.
  */
-export async function PATCH(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export async function GET(request: NextRequest) {
+  // 1) IP rate limit
+  const ip = getClientIp(request.headers)
+  const ipRl = await ipGetLimiter.check(ip)
+  if (!ipRl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek' },
+      { status: 429, headers: { 'Retry-After': String(ipRl.retryAfter ?? 60) } },
+    )
+  }
+
+  // 2) Auth check (cookie/JWT)
+  const cookieClient = await createClient()
+  const { data: { user } } = await cookieClient.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
-  const rl = await profileLimiter.check(user.id)
-  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+  // 3) User rate limit
+  const userRl = await userGetLimiter.check(user.id)
+  if (!userRl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfter ?? 60) } },
+    )
+  }
 
-  const body = await req.json()
+  // 4) Service-role query — paralel profile + roles
+  const admin = createServiceRoleClient()
+  const [profileRes, rolesRes] = await Promise.all([
+    admin.from('profiles').select('*').eq('id', user.id).single(),
+    admin.from('user_roles').select('role_id').eq('user_id', user.id).limit(1),
+  ])
+
+  if (profileRes.error || !profileRes.data) {
+    // Auth user var ama profil yok — auto-create trigger calismadi
+    console.error('[Profile GET] profil bulunamadi:', profileRes.error?.code)
+    return NextResponse.json({ error: 'Profil bulunamadi' }, { status: 404 })
+  }
+
+  const isAdmin = !!(rolesRes.data && rolesRes.data.length > 0)
+
+  return NextResponse.json(
+    { profile: profileRes.data, isAdmin },
+    { headers: { 'Cache-Control': 'no-store' } },
+  )
+}
+
+/**
+ * PATCH /api/profile — Profil bilgilerini guncelle
+ *
+ * Body: { username?, display_name?, city?, grade?, onboarding_completed? }
+ * Madde 9 #5: service-role client kullanir (eski session client'tan fark:
+ * sprint #10 authenticated REVOKE'tan sonra session client kirilir).
+ */
+export async function PATCH(request: NextRequest) {
+  // 1) IP rate limit
+  const ip = getClientIp(request.headers)
+  const ipRl = await ipPatchLimiter.check(ip)
+  if (!ipRl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek' },
+      { status: 429, headers: { 'Retry-After': String(ipRl.retryAfter ?? 60) } },
+    )
+  }
+
+  // 2) Auth check
+  const cookieClient = await createClient()
+  const { data: { user } } = await cookieClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  }
+
+  // 3) User rate limit
+  const userRl = await userPatchLimiter.check(user.id)
+  if (!userRl.success) {
+    return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+  }
+
+  // 4) Body validation
+  const body = await request.json()
   const parsed = profileUpdateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Gecersiz veri' }, { status: 400 })
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || 'Gecersiz veri' },
+      { status: 400 },
+    )
   }
 
   const { username, display_name, city, grade, onboarding_completed } = parsed.data
@@ -33,15 +125,17 @@ export async function PATCH(req: Request) {
   if (grade !== undefined) updates.grade = grade
   if (onboarding_completed) updates.onboarding_completed = true
 
-  const { data, error } = await supabase
+  // 5) Service-role update — sahip kontrolu auth.uid() = user.id ile yapildi
+  const admin = createServiceRoleClient()
+  const { data, error } = await admin
     .from('profiles')
     .update(updates)
     .eq('id', user.id)
-    .select('id, display_name, city, grade, avatar_url')
+    .select('id, username, display_name, city, grade, avatar_url, onboarding_completed')
     .single()
 
   if (error) {
-    console.error('[Profile PATCH] Hata:', error)
+    console.error('[Profile PATCH] Hata:', error.code)
     return NextResponse.json({ error: 'Profil guncellenemedi' }, { status: 500 })
   }
 
