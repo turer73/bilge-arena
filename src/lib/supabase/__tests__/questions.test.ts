@@ -1,88 +1,48 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Question } from '@/types/database'
 
-// ─── Supabase client mock ─────────────────────
+vi.mock('@/lib/utils/question-cache', () => ({
+  cacheQuestions: vi.fn(async () => {}),
+  getCachedQuestions: vi.fn(async () => [] as Question[]),
+}))
 
-type Captured = {
-  rpcCalls: Array<{ fn: string; args: Record<string, unknown> }>
-  fromCalls: string[]
-  rpcResult: Question[] | null
-  rpcError: { message: string } | null
-}
+import { fetchQuizQuestions } from '../questions'
 
-const captured: Captured = {
-  rpcCalls: [],
-  fromCalls: [],
-  rpcResult: null,
-  rpcError: null,
-}
-
-function makeQuestion(id: string, game: string): Question {
+function makeQuestion(id: string, game = 'matematik'): Question {
   return {
     id,
-    external_id: null,
-    game: game as Question['game'],
-    category: 'cebir',
+    game,
+    category: 'sayilar',
     subcategory: null,
-    topic: null,
-    difficulty: 2,
-    level_tag: null,
-    content: { question: 'Q?', options: ['A', 'B', 'C', 'D'], answer: 0, solution: 'A' },
-    base_points: 20,
+    difficulty: 1,
     is_active: true,
-    is_boss: false,
-    times_answered: 0,
-    times_correct: 0,
-    source: 'test',
-    exam_ref: null,
-    created_at: '2026-05-13T00:00:00Z',
-    updated_at: '2026-05-13T00:00:00Z',
+    exam_ref: 'TYT',
+    content: {
+      soru: 'Test',
+      secenekler: ['A', 'B', 'C', 'D'],
+      dogru: 0,
+      aciklama: '',
+    },
   } as unknown as Question
 }
 
-// Builder: user_question_history sorgusu için chainable
-function makeQueryBuilder() {
-  const builder: Record<string, unknown> = {}
-  const chain = () => builder
-  builder.select = vi.fn(chain)
-  builder.eq = vi.fn(chain)
-  builder.not = vi.fn(chain)
-  builder.in = vi.fn(chain)
-  builder.gte = vi.fn(chain)
-  builder.order = vi.fn(chain)
-  builder.limit = vi.fn(() => Promise.resolve({ data: [], error: null }))
-  return builder
-}
+describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+  let lastUrl = ''
 
-vi.mock('@/lib/supabase/client', () => {
-  return {
-    createClient: () => ({
-      from: vi.fn((table: string) => {
-        captured.fromCalls.push(table)
-        return makeQueryBuilder()
-      }),
-      rpc: vi.fn((fn: string, args: Record<string, unknown>) => {
-        captured.rpcCalls.push({ fn, args })
-        return Promise.resolve({ data: captured.rpcResult, error: captured.rpcError })
-      }),
-    }),
-  }
-})
-
-vi.mock('@/lib/utils/question-cache', () => ({
-  cacheQuestions: vi.fn().mockResolvedValue(undefined),
-  getCachedQuestions: vi.fn().mockResolvedValue([]),
-}))
-
-// Import AFTER mocks
-import { fetchQuizQuestions } from '../questions'
-
-describe('fetchQuizQuestions — RPC server-side random', () => {
   beforeEach(() => {
-    captured.rpcCalls = []
-    captured.fromCalls = []
-    captured.rpcResult = Array.from({ length: 20 }, (_, i) => makeQuestion(`q-${i}`, 'matematik'))
-    captured.rpcError = null
+    lastUrl = ''
+    fetchMock = vi.fn(async (url: string) => {
+      lastUrl = url
+      return new Response(
+        JSON.stringify({
+          questions: Array.from({ length: 20 }, (_, i) => makeQuestion(`q-${i}`)),
+          reviewQuestions: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    })
+    vi.stubGlobal('fetch', fetchMock)
     vi.stubGlobal('navigator', { onLine: true })
   })
 
@@ -91,63 +51,102 @@ describe('fetchQuizQuestions — RPC server-side random', () => {
     vi.restoreAllMocks()
   })
 
-  it('select_random_questions RPC cagrilir (count + range degil)', async () => {
+  it('GET /api/questions/random cagrilir', async () => {
     await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    expect(captured.rpcCalls.length).toBe(1)
-    expect(captured.rpcCalls[0].fn).toBe('select_random_questions')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(lastUrl).toContain('/api/questions/random')
+    expect(lastUrl).toContain('game=matematik')
+    expect(lastUrl).toContain('limit=10')
   })
 
-  it('p_game ve p_limit RPC parametre olarak gecer', async () => {
-    await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    const args = captured.rpcCalls[0].args
-    expect(args.p_game).toBe('matematik')
-    // fetchLimit = min(limit*2, 50) = 20
-    expect(args.p_limit).toBe(20)
-  })
-
-  it('category filter p_category parametresi olur', async () => {
+  it('category query parametre olarak gecer', async () => {
     await fetchQuizQuestions({ game: 'matematik', limit: 10, category: 'cebir' })
-    expect(captured.rpcCalls[0].args.p_category).toBe('cebir')
+    expect(lastUrl).toContain('category=cebir')
   })
 
-  it('difficulty filter p_difficulty parametresi olur', async () => {
+  it('difficulty query parametre olarak gecer', async () => {
     await fetchQuizQuestions({ game: 'matematik', limit: 10, difficulty: 3 })
-    expect(captured.rpcCalls[0].args.p_difficulty).toBe(3)
+    expect(lastUrl).toContain('difficulty=3')
   })
 
-  it('category/difficulty yoksa RPC parametre eklenmez', async () => {
+  it('examRef query parametre olarak gecer', async () => {
+    await fetchQuizQuestions({ game: 'matematik', limit: 10, examRef: 'LGS' })
+    expect(lastUrl).toContain('examRef=LGS')
+  })
+
+  it('includeReview true varsayilan', async () => {
     await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    const args = captured.rpcCalls[0].args
-    expect(args).not.toHaveProperty('p_category')
-    expect(args).not.toHaveProperty('p_difficulty')
-    expect(args).not.toHaveProperty('p_exclude_ids')
+    expect(lastUrl).toContain('includeReview=true')
   })
 
-  it('cevrimdisi mode RPC cagrilmaz', async () => {
+  it('includeReview false ise param eklenmez', async () => {
+    await fetchQuizQuestions({ game: 'matematik', limit: 10, includeReview: false })
+    expect(lastUrl).not.toContain('includeReview')
+  })
+
+  it('excludeIds gecerli UUID listesi gecer', async () => {
+    const validId = '12345678-1234-1234-1234-123456789012'
+    await fetchQuizQuestions({
+      game: 'matematik',
+      limit: 10,
+      excludeIds: [validId, 'invalid-id'],
+    })
+    expect(lastUrl).toContain(`excludeIds=${encodeURIComponent(validId)}`)
+    expect(lastUrl).not.toContain('invalid-id')
+  })
+
+  it('cevrimdisi mode fetch cagrilmaz', async () => {
     vi.stubGlobal('navigator', { onLine: false })
-    captured.rpcCalls = []
+    fetchMock.mockClear()
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    expect(captured.rpcCalls.length).toBe(0)
+    expect(fetchMock).not.toHaveBeenCalled()
     expect(result).toEqual([])
   })
 
-  it('RPC sonucu Question dizisi olarak dondurulur', async () => {
-    captured.rpcResult = [makeQuestion('q-a', 'matematik'), makeQuestion('q-b', 'matematik')]
+  it('API hata donerse offline cache fallback denenir', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: 'fail' }), { status: 500 }),
+    )
+    const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
+    expect(result).toEqual([])
+  })
+
+  it('401 (anon) icin cache fallback', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: 'Yetkisiz' }), { status: 401 }),
+    )
+    const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
+    expect(result).toEqual([])
+  })
+
+  it('API sonucu Question dizisi olarak dondurulur', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          questions: [makeQuestion('q-a'), makeQuestion('q-b')],
+          reviewQuestions: [],
+        }),
+        { status: 200 },
+      ),
+    )
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
     expect(result.length).toBe(2)
     expect(result[0].id).toMatch(/^q-/)
   })
 
-  it('RPC hata donerse offline cache fallback denenir', async () => {
-    captured.rpcError = { message: 'rpc failed' }
-    captured.rpcResult = null
+  it('reviewQuestions varsa %30 oranla karistirilir', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          questions: Array.from({ length: 10 }, (_, i) => makeQuestion(`new-${i}`)),
+          reviewQuestions: Array.from({ length: 5 }, (_, i) => makeQuestion(`review-${i}`)),
+        }),
+        { status: 200 },
+      ),
+    )
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    expect(result).toEqual([])
-  })
-
-  it('limit*2 üst sınır 50', async () => {
-    await fetchQuizQuestions({ game: 'matematik', limit: 100 })
-    // fetchLimit = min(100*2, 50) = 50
-    expect(captured.rpcCalls[0].args.p_limit).toBe(50)
+    const reviewCount = result.filter(q => q.id.startsWith('review-')).length
+    expect(reviewCount).toBeGreaterThan(0)
+    expect(reviewCount).toBeLessThanOrEqual(4)
   })
 })

@@ -153,7 +153,9 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         limit: isDeneme ? mode.questionCount * 2 : mode.questionCount * 3,
         category: gameStore.selectedCategory,
         difficulty,
-        userId: isDeneme ? null : userId, // Deneme'de spaced repetition kapatilir
+        // Deneme'de spaced repetition kapatilir; normal modda server-side
+        // auth.uid() ile review questions otomatik gelir (Madde 9 #6).
+        includeReview: !isDeneme,
         examRef: gameStore.selectedExamRef,
       })
 
