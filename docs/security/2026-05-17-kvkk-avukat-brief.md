@@ -4,12 +4,22 @@
 **Veri Sorumlusu:** Turgut Ürer (turgut.urer@gmail.com), Bilge Arena (bilgearena.com)
 **Bildirim deadline:** 2026-05-19 22:58 TR (72 saat — KVKK md. 12/5)
 
+## ⚠️ ETKİLENEN KİŞİ SAYISI HAKKINDA
+
+Dump dosyasında **191 satır profil** vardır AMA bunların **~35 tanesi saldırganın aynı gün yarattığı bot hesaplardır** (lunix_NNNN x25 + jilij_NNNN x1 + diğerleri, hepsi disposable email ile, hepsi sonradan silindi). Bu botlar **gerçek kişi değildir** ve KVKK kapsamında "etkilenen kişi" sayılmazlar — saldırganın kendi kayıtlarıdır.
+
+- **Toplam dump satırı:** 191
+- **Bot hesap sayısı:** 35 (silindi, Klipper Discovery #453)
+- **Gerçek (legit) kullanıcı etkilenen:** ~156 (Klipper analizi: "156 Google login")
+
+Avukat bildirim formunda **etkilenen kişi sayısı: ~156** yazılmalıdır (191 değil).
+
 > **Not:** Bu brief avukata sunulmak üzere hazırlandı. Avukatın değerlendirmesi sonrası KVKK Kurumu'na bildirim yükümlülüğü belirlenecek.
 
 ## 1. OLAY ÖZETI
 
 ### Ne sızdı?
-- **191 kullanıcı profili** (public.profiles tablosu)
+- **~156 gerçek kullanıcı profili (dump'ta 191 satır vardı; bunlardan ~35'i saldırganın aynı gün yarattığı bot hesaplardı, sonradan silindi)** (public.profiles tablosu)
 - Sızan alanlar (PII):
   - `username` (kullanıcı adı, kişiyi tanımlayabilir)
   - `display_name` (Google adı)
@@ -85,7 +95,7 @@
 ## 5. ETKİLENEN KİŞİ BİLDİRİMİ
 
 ### Yapılması düşünülen
-KVKK md. 12/5 kapsamında etkilenen 191 kullanıcıya email bildirimi:
+KVKK md. 12/5 kapsamında etkilenen **~156 gerçek kullanıcıya** email bildirimi (35 bot hesaba bildirim YOK — saldırganın kendi yarattıkları):
 
 **Şablon (TR):**
 ```
@@ -139,7 +149,7 @@ Bilge Arena
 - İhlal tarihi: 2026-05-16
 - Tespit tarihi: 2026-05-17 00:11
 - Kategori: PII (kişisel bilgiler)
-- Etkilenen kişi sayısı: 191
+- Etkilenen kişi sayısı: ~156 gerçek kullanıcı (dump'ta 191 satır vardı, bunlardan 35'i saldırganın aynı gün yarattığı bot hesaplardı — silindi, KVKK kapsamında etkilenen sayılmaz)
 - Alınan önlemler: yukarıdaki Faz 1-4 özeti
 - Etkilenen kişi bildirimi planlandı mı: Evet, hazır
 
@@ -157,7 +167,7 @@ Avukata sunulacaklar:
 Dürüstlük gereği avukatla paylaşılmalı:
 - **Saldırı vektörü kanıtlanmadı** (log retention 7 gün, 14 gün keşif evresi kayıp)
 - **Saldırı süresinin tam başlangıcı belirlenemedi** (Klipper analizi)
-- 191 kullanıcının PII bilgisi saldırganın elinde **geri çekilemez** — KVKK ihlali statüsü değişmez
+- ~156 gerçek kullanıcının PII bilgisi saldırganın elinde **geri çekilemez** — KVKK ihlali statüsü değişmez (35 bot saldırganın kendi yarattıkları, geri çekme anlamsız)
 
 ## 9. EYLEM
 
@@ -167,7 +177,7 @@ Dürüstlük gereği avukatla paylaşılmalı:
 | 2 | VERBIS kayıt durumu kontrol | Avukat | 2026-05-18 |
 | 3 | Kurum bildirim gerekli mi karar | Avukat | 2026-05-18 |
 | 4 | (Gerekiyorsa) Kurum bildirim formu doldur | Kullanıcı + avukat | 2026-05-19 22:58'e kadar |
-| 5 | 191 kullanıcıya email bildirimi | Kullanıcı | Avukat onayından sonra |
+| 5 | ~156 gerçek kullanıcıya email bildirimi (bot hesaplar hariç) | Kullanıcı | Avukat onayından sonra |
 | 6 | V2 Sign all users out | Kullanıcı | Mümkünse bu hafta |
 
 ---
