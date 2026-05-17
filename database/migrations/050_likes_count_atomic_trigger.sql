@@ -20,6 +20,15 @@
 
 BEGIN;
 
+-- 0) Eski trigger'lari kaldir (Codex P1 review)
+--    Migration 002'deki trg_comment_likes_count AFTER INSERT/DELETE trigger'i
+--    hala duruyor (function: update_comment_likes_count). Yeni
+--    sync_likes_count_on_insert ile ayni event'te fire edip ikinci kez
+--    increment uyguluyor -> likes_count drift (insert sonrasi cift sayim,
+--    delete sonrasi eksi). Yeni trigger'i kurmadan once eskisini DROP.
+DROP TRIGGER IF EXISTS trg_comment_likes_count ON public.comment_likes;
+DROP FUNCTION IF EXISTS public.update_comment_likes_count();
+
 -- 1) Trigger fonksiyonu
 CREATE OR REPLACE FUNCTION public.sync_comment_likes_count()
 RETURNS TRIGGER
