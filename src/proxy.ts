@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isCsrfOriginAllowed, CSRF_PROTECTED_METHODS } from '@/lib/utils/csrf'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
@@ -8,6 +9,19 @@ export async function proxy(request: NextRequest) {
   // Health endpoint — Uptime Kuma icin auth bypass
   if (request.nextUrl.pathname === '/api/health/ping') {
     return NextResponse.next()
+  }
+
+  // ── CSRF Origin allowlist (klipper review H1/P5) ──
+  // State-changing istekler icin Origin/Referer kontrol; SameSite=Lax'in
+  // defense-in-depth katmani. Auth callback ve health istisna.
+  if (CSRF_PROTECTED_METHODS.has(request.method)) {
+    const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
+    if (!isAuthCallback && !isCsrfOriginAllowed(request.headers)) {
+      return NextResponse.json(
+        { error: 'CSRF: Origin reddedildi' },
+        { status: 403, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
   }
 
   // Response'u bir kez olustur — setAll icinde yeniden olusturmak
