@@ -167,14 +167,19 @@ export default function KVKKPage() {
           </ul>
           <p className="mt-3 text-sm">
             <strong>Son veri ihlali bildirimi:</strong> 16 Mayıs 2026 — kullanıcı profil
-            tablosundaki 156 kullanıcıya ait herkese açık alanlar (kullanıcı adı, görünen ad,
-            avatar bağlantısı, şehir, sınıf, oyun istatistikleri) üçüncü bir şahıs tarafından
-            izinsiz okundu. E-posta, parola, ödeme veya hassas iletişim bilgisi sızmadı.
-            17 Mayıs 2026 itibarıyla saldırı vektörü kapatıldı, yetki belgeleri (servis
-            anahtarları) rotate edildi, tüm aktif kullanıcı oturumları geçersiz kılındı,
-            8 güvenlik iyileştirmesi production&apos;a uygulandı ve etkilenen kullanıcılara
-            doğrudan e-posta ile bilgi verilecektir. Detaylı bilgi için{' '}
-            <strong>destek@bilgearena.com</strong>.
+            tablosundaki yaklaşık 165 gerçek kullanıcıya ait (191 satırlık dump&apos;tan
+            26 bot hesap çıkarıldıktan sonra) profil alanları üçüncü bir şahıs tarafından
+            izinsiz okundu. Sızan alanlar: kullanıcı adı, görünen ad, avatar bağlantısı,
+            oyun istatistikleri (XP, seviye, seri sayısı, doğru/yanlış cevap toplamları,
+            son oyun zamanı), rol göstergesi (1 adet admin kullanıcı dahil), referans kodu,
+            bildirim tercihi ve premium üyelik bayrağı; <em>şehir</em> alanı yalnızca 2,
+            <em> sınıf</em> alanı 0 kayıtta dolu idi. E-posta adresi, parola hash&apos;i,
+            ödeme bilgisi veya hassas iletişim bilgisi sızmadı (auth.users tablosuna
+            erişim kanıtı yok). 17 Mayıs 2026 itibarıyla saldırı vektörü kapatıldı,
+            yetki belgeleri (servis anahtarları) rotate edildi, tüm aktif kullanıcı
+            oturumları geçersiz kılındı, 8 güvenlik iyileştirmesi production&apos;a
+            uygulandı ve etkilenen kullanıcılara doğrudan e-posta ile bilgi verilecektir.
+            Detaylı bilgi için <strong>destek@bilgearena.com</strong>.
           </p>
         </section>
       </div>
