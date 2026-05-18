@@ -31,6 +31,7 @@ const FOOTER_LINKS = [
       { label: 'KVKK Aydınlatma', href: '/kvkk' },
       { label: 'Çerez Politikası', href: '/cerez-politikasi' },
       { label: 'Hakkında', href: '/hakkinda' },
+      { label: 'İletişim', href: '/iletisim' },
     ],
   },
 ]
