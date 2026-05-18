@@ -41,8 +41,13 @@ describe('isCsrfOriginAllowed', () => {
   })
 
   describe('dynamic allowlist', () => {
-    it('allows vercel preview bilge-arena-*.vercel.app', () => {
-      const h = makeHeaders({ origin: 'https://bilge-arena-abc123.vercel.app' })
+    it('allows vercel preview with our team suffix', () => {
+      const h = makeHeaders({ origin: 'https://bilge-arena-abc123-turgut-7032s-projects.vercel.app' })
+      expect(isCsrfOriginAllowed(h)).toBe(true)
+    })
+
+    it('allows vercel git branch preview with our team suffix', () => {
+      const h = makeHeaders({ origin: 'https://bilge-arena-git-feat-xyz-turgut-7032s-projects.vercel.app' })
       expect(isCsrfOriginAllowed(h)).toBe(true)
     })
 
@@ -90,6 +95,28 @@ describe('isCsrfOriginAllowed', () => {
 
     it('rejects bilge-arena.evil.app (subdomain trickery)', () => {
       const h = makeHeaders({ origin: 'https://bilge-arena.evil.app' })
+      expect(isCsrfOriginAllowed(h)).toBe(false)
+    })
+
+    it('rejects bilge-arenax.vercel.app (no dash, project-name spoof)', () => {
+      const h = makeHeaders({ origin: 'https://bilge-arenax.vercel.app' })
+      expect(isCsrfOriginAllowed(h)).toBe(false)
+    })
+
+    it('rejects bilge-arena-evil.vercel.app (attacker team, no team suffix)', () => {
+      const h = makeHeaders({ origin: 'https://bilge-arena-evil.vercel.app' })
+      expect(isCsrfOriginAllowed(h)).toBe(false)
+    })
+
+    it('rejects bilge-arena-evil-attacker-projects.vercel.app (different team suffix)', () => {
+      const h = makeHeaders({ origin: 'https://bilge-arena-evil-attacker-projects.vercel.app' })
+      expect(isCsrfOriginAllowed(h)).toBe(false)
+    })
+
+    it('rejects bilge-arena.vercel.app (bare alias, not deployed)', () => {
+      // bilge-arena.vercel.app HTTP 404 — Vercel hobby team uses team-suffixed URLs.
+      // Defense-in-depth: kabul edilmemeli ki ileride alias eklenirse istem disi geniseme olmasin.
+      const h = makeHeaders({ origin: 'https://bilge-arena.vercel.app' })
       expect(isCsrfOriginAllowed(h)).toBe(false)
     })
   })

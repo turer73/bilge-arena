@@ -9,7 +9,7 @@
  * Allowlist:
  *   - https://bilgearena.com
  *   - https://www.bilgearena.com
- *   - bilge-arena-*.vercel.app (Vercel preview deployments)
+ *   - bilge-arena-<hash>-turgut-7032s-projects.vercel.app (Vercel preview, our team)
  *   - localhost / 127.0.0.1 (local dev)
  *
  * Auth callback'leri (Supabase OAuth redirect) hicbir Origin header iletmez,
@@ -21,14 +21,27 @@ const CSRF_STATIC_ALLOWED = new Set([
   'https://www.bilgearena.com',
 ])
 
+// Vercel team slug — sadece bu suffix ile biten preview/deploy URL'leri kabul.
+// Saldirgan farkli Vercel hesabinda 'bilge-arena-evil' adli proje acsa bile
+// suffix kendi team slug'i olur, bizimkiyle eslesmez -> reject.
+// (turgut-7032s-projects: Vercel hobby team owner = turgut.urer@gmail.com)
+const VERCEL_TEAM_SUFFIX = '-turgut-7032s-projects.vercel.app'
+
 function isDynamicAllowed(originValue: string | null): boolean {
   if (!originValue) return false
   try {
     const u = new URL(originValue.startsWith('http') ? originValue : `https://${originValue}`)
-    // Vercel preview: bilge-arena-*.vercel.app
-    if (u.hostname.endsWith('.vercel.app') && u.hostname.startsWith('bilge-arena')) return true
     // Local dev
     if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return true
+    // Vercel preview: hem proje prefix hem team suffix gerekli.
+    // - 'bilge-arena-' (trailing dash) -> bilge-arenax tip projeleri reject
+    // - VERCEL_TEAM_SUFFIX -> bilge-arena-evil baska team altinda reject
+    if (
+      u.hostname.startsWith('bilge-arena-') &&
+      u.hostname.endsWith(VERCEL_TEAM_SUFFIX)
+    ) {
+      return true
+    }
     return false
   } catch {
     return false
