@@ -47,8 +47,22 @@ export const errorReportSchema = z.object({
 // Profil guncelleme
 // ============================================================
 
+/**
+ * Reserved username patterns — sistem hesaplari icin ayrilmis.
+ * Kullanici bu pattern'lere uyan username alirsa admin paneli/arkadas
+ * arama filtrelerinden gizlenir (migration 053). Codex PR #160 P2.
+ */
+const RESERVED_USERNAME_PATTERN = /^__honeypot_/i
+
 export const profileUpdateSchema = z.object({
-  username: z.string().trim().min(2).max(30).optional(),
+  username: z.string()
+    .trim()
+    .min(2)
+    .max(30)
+    .refine(v => !RESERVED_USERNAME_PATTERN.test(v), {
+      message: 'Bu kullanici adi sistem icin ayrilmistir',
+    })
+    .optional(),
   display_name: z.string().trim().max(50).optional(),
   city: z.string().trim().max(50).optional(),
   grade: z.number().int().min(9).max(13).optional(),

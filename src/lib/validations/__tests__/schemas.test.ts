@@ -147,6 +147,15 @@ describe('profileUpdateSchema', () => {
     expect(profileUpdateSchema.safeParse({ username: 'a'.repeat(31) }).success).toBe(false)
     expect(profileUpdateSchema.safeParse({ username: 'ab' }).success).toBe(true)
   })
+
+  it('reserved honeypot pattern username reddeder (admin gizli kalim engeli)', () => {
+    expect(profileUpdateSchema.safeParse({ username: '__honeypot_sentinel__' }).success).toBe(false)
+    expect(profileUpdateSchema.safeParse({ username: '__honeypot_evil__' }).success).toBe(false)
+    expect(profileUpdateSchema.safeParse({ username: '__HONEYPOT_x__' }).success).toBe(false)
+    // Pattern dis kullanim serbest
+    expect(profileUpdateSchema.safeParse({ username: 'honeypot_user' }).success).toBe(true)
+    expect(profileUpdateSchema.safeParse({ username: 'my_honeypot' }).success).toBe(true)
+  })
 })
 
 describe('sessionSubmitSchema', () => {
