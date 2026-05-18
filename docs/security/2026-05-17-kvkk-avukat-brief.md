@@ -6,32 +6,44 @@
 
 ## ⚠️ ETKİLENEN KİŞİ SAYISI HAKKINDA
 
-Dump dosyasında **191 satır profil** vardır AMA bunların **~35 tanesi saldırganın aynı gün yarattığı bot hesaplardır** (lunix_NNNN x25 + jilij_NNNN x1 + diğerleri, hepsi disposable email ile, hepsi sonradan silindi). Bu botlar **gerçek kişi değildir** ve KVKK kapsamında "etkilenen kişi" sayılmazlar — saldırganın kendi kayıtlarıdır.
+Dump dosyasında **191 satır profil** vardır. Bu satırların bir kısmı saldırganın aynı gün yarattığı bot hesaplardır; geri kalan gerçek kullanıcılar KVKK kapsamında "etkilenen kişi" sayılır.
 
-- **Toplam dump satırı:** 191
-- **Bot hesap sayısı:** 35 (silindi, Klipper Discovery #453)
-- **Gerçek (legit) kullanıcı etkilenen:** **156** (auth.refresh_tokens distinct_users SQL sayımı, 2026-05-17 18:00 TR)
+- **Toplam dump satırı:** 191 (distinct profile ID)
+- **Bot hesap (doğrulanmış pattern):** 26 satır, `lunix_NNNN` deseni (disposable email, hepsi aynı saat aralığında, hepsi sonradan silindi — Klipper Discovery #453)
+- **Gerçek (legit) kullanıcı etkilenen (alt sınır):** **165** (191 − 26 bot)
 
-> **Teknik kanıt:** `SELECT count(DISTINCT user_id) FROM auth.refresh_tokens` → 156. Bu sayı dump'ta sızdırılan profilin 191 satırından bot 35 çıkarıldıktan sonra kalan gerçek kullanıcı tabanıyla **birebir eşleşmiştir**. Tahmin değil, sayım.
+> **Teknik kanıt (revize):** rest-profiles.json dump dosyasında 191 distinct `id` UUID, bunların 26 tanesi `^lunix_\d+$` pattern eşleşmesi. Geri kalan 165 kayıt gerçek kullanıcı profili (Google OAuth display_name + avatar URL bulunan kayıtlar dahil). Sayım dump'taki distinct profile ID kümesinden türetilmiştir.
+>
+> **Not — daha önceki yanlış metodoloji:** Brief'in önceki sürümünde "156 = `SELECT count(DISTINCT user_id) FROM auth.refresh_tokens`" iddiası vardı. Bu metodoloji yanlıştır çünkü:
+> 1. `auth.refresh_tokens` audit zamanındaki canlı oturum sahiplerini sayar, dump zamanındaki profilleri değil.
+> 2. Dump'taki bir kullanıcının refresh token'ı süresi dolmuş veya hesap silinmiş olabilir; o kullanıcı yine de etkilenir.
+> 3. Audit zamanından sonra kayıt olan bir kullanıcının token'ı vardır ama dump'ta yoktur — etkilenmemiştir.
+>
+> refresh_tokens sayısı (156) yalnızca **dolaylı kanıt** (corroborating evidence) olarak kalır; otoriter sayım dump'ın distinct profile ID kümesinden gelir.
 
-Avukat bildirim formunda **etkilenen kişi sayısı: 156** yazılmalıdır (191 değil, ~ tahmin değil).
+Avukat bildirim formunda **etkilenen kişi sayısı: 165** (191 dump − 26 doğrulanmış bot). Eğer ek bot pattern doğrulanırsa bu sayı aşağı çekilebilir; aksi halde 165 koruyucu (konservatif) bildirimdir.
 
 > **Not:** Bu brief avukata sunulmak üzere hazırlandı. Avukatın değerlendirmesi sonrası KVKK Kurumu'na bildirim yükümlülüğü belirlenecek.
 
 ## 1. OLAY ÖZETI
 
 ### Ne sızdı?
-- **156 gerçek kullanıcı profili (dump'ta 191 satır vardı; bunlardan ~35'i saldırganın aynı gün yarattığı bot hesaplardı, sonradan silindi)** (public.profiles tablosu)
-- Sızan alanlar (PII):
-  - `username` (kullanıcı adı, kişiyi tanımlayabilir)
-  - `display_name` (Google adı)
-  - `avatar_url` (Google avatar URL — e-posta tahminine yarayabilir)
-  - `city` (şehir)
-  - `grade` (sınıf seviyesi 9-13)
-  - `role` (sistem rolü — 1 admin tespit edildi)
-  - `is_premium`, `premium_until` (ödeme statüsü)
-  - `total_xp`, `level`, `current_streak`, `last_played_at` (davranış profili)
-  - `created_at`, `referral_code` (zaman + sosyal graf)
+- **165 gerçek kullanıcı profili (dump'ta 191 satır, 26'sı doğrulanmış `lunix_NNNN` deseninde bot hesap; bot hesaplar sonradan silindi)** (public.profiles tablosu)
+- Sızan alanlar (PII) — dump'taki kolon doluluk oranlarıyla birlikte:
+  - `username` (kullanıcı adı, kişiyi tanımlayabilir) — 191/191 dolu
+  - `display_name` (Google hesabından alınan gerçek ad) — 191/191 dolu
+  - `avatar_url` (Google avatar URL — e-posta tahminine yarayabilir) — 156/191 dolu
+  - `role` (sistem rolü) — 191/191 dolu, **1 admin tespit edildi** (Turer)
+  - `notifications` (kullanıcı bildirim tercihi JSON) — 191/191 dolu
+  - `referral_code` (sosyal graf bağı) — 191/191 dolu
+  - `created_at`, `updated_at` (kayıt + son güncelleme zamanı) — 191/191 dolu
+  - `last_played_at` (son oyun zaman damgası) — 79/191 dolu
+  - `total_xp`, `level`, `current_streak`, `total_questions`, `correct_answers`, `total_sessions` (davranış profili) — kısmi dolu (74-79/191)
+  - `city` (şehir) — **yalnızca 2/191 dolu**
+  - `grade` (sınıf seviyesi 9-13) — **0/191 dolu** (şemada var ama hiç kayıt yok)
+  - `is_premium`, `premium_until` (ödeme statüsü) — **0/191 dolu** (henüz ödeme alınmıyor)
+
+> **Not (doluluk kaynak):** rest-profiles.json (191 satır) üzerinde 2026-05-18 sabahı PowerShell ile çalıştırılmış kolon-bazlı null sayımı. Şehir/sınıf/premium alanları şemada mevcut olsa da sızan verinin pratik içeriği bu alanlarda boştur. Bu bilgi KVKK bildiriminde "hangi veri kategorileri etkilendi" değerlendirmesinde sade-tutum (overstatement önleme) için sunulur — alan şemada olduğu için olasılık olarak listede yer alır.
 
 ### Ne sızmadı (bilinen)?
 - `auth.users` tablosu (e-posta + parola hash) — sızıntı kanıtı yok
@@ -55,7 +67,7 @@ Avukat bildirim formunda **etkilenen kişi sayısı: 156** yazılmalıdır (191 
 | **2026-05-17 ~14:53** | Tüm Madde 9 PR'ları merge (8 PR, browser→API proxy migration) |
 | **2026-05-17 ~17:30** | Service-role JWT rotate + legacy JWT disable, 4/4 verification PASS |
 | **2026-05-17 ~18:00** | Migration 050+051+052 prod apply (likes trigger + honeypot + integrity fix, drift=0) |
-| **2026-05-17 ~18:00** | L2-TR audit: auth.refresh_tokens.distinct_users = **156** (KVKK etkilenen sayım) |
+| **2026-05-17 ~18:00** | L2-TR audit: auth.refresh_tokens.distinct_users = 156 (dolaylı kanıt; otoriter etkilenen sayım dump'ın distinct profile ID kümesi — 191 satır − 26 bot = **165**) |
 | **2026-05-17 ~18:00** | V2 sign all users out: 564/564 refresh_tokens revoked (active=0). Access JWT residual max 1 saat |
 
 ## 3. SALDIRGAN PROFIL
@@ -106,7 +118,7 @@ Avukat bildirim formunda **etkilenen kişi sayısı: 156** yazılmalıdır (191 
 ## 5. ETKİLENEN KİŞİ BİLDİRİMİ
 
 ### Yapılması düşünülen
-KVKK md. 12/5 kapsamında etkilenen **156 gerçek kullanıcıya** email bildirimi (35 bot hesaba bildirim YOK — saldırganın kendi yarattıkları):
+KVKK md. 12/5 kapsamında etkilenen **165 gerçek kullanıcıya** email bildirimi (26 doğrulanmış bot hesaba bildirim YOK — saldırganın kendi yarattıkları):
 
 **Şablon (TR):**
 ```
@@ -161,7 +173,7 @@ Bilge Arena
 - İhlal tarihi: 2026-05-16
 - Tespit tarihi: 2026-05-17 00:11
 - Kategori: PII (kişisel bilgiler)
-- Etkilenen kişi sayısı: 156 gerçek kullanıcı (dump'ta 191 satır vardı, bunlardan 35'i saldırganın aynı gün yarattığı bot hesaplardı — silindi, KVKK kapsamında etkilenen sayılmaz)
+- Etkilenen kişi sayısı: 165 gerçek kullanıcı (dump'ta 191 satır, 26'sı doğrulanmış `lunix_NNNN` deseninde bot hesap — silindi, KVKK kapsamında etkilenen sayılmaz)
 - Alınan önlemler: yukarıdaki Faz 1-4 özeti
 - Etkilenen kişi bildirimi planlandı mı: Evet, hazır
 
@@ -179,7 +191,7 @@ Avukata sunulacaklar:
 Dürüstlük gereği avukatla paylaşılmalı:
 - **Saldırı vektörü kanıtlanmadı** (log retention 7 gün, 14 gün keşif evresi kayıp)
 - **Saldırı süresinin tam başlangıcı belirlenemedi** (Klipper analizi)
-- 156 gerçek kullanıcının PII bilgisi saldırganın elinde **geri çekilemez** — KVKK ihlali statüsü değişmez (35 bot saldırganın kendi yarattıkları, geri çekme anlamsız)
+- 165 gerçek kullanıcının PII bilgisi saldırganın elinde **geri çekilemez** — KVKK ihlali statüsü değişmez (26 bot saldırganın kendi yarattıkları, geri çekme anlamsız)
 
 ## 9. EYLEM
 
@@ -189,7 +201,7 @@ Dürüstlük gereği avukatla paylaşılmalı:
 | 2 | VERBIS kayıt durumu kontrol | Avukat | 2026-05-18 |
 | 3 | Kurum bildirim gerekli mi karar | Avukat | 2026-05-18 |
 | 4 | (Gerekiyorsa) Kurum bildirim formu doldur | Kullanıcı + avukat | 2026-05-19 22:58'e kadar |
-| 5 | 156 gerçek kullanıcıya email bildirimi (bot hesaplar hariç) | Kullanıcı | Avukat onayından sonra |
+| 5 | 165 gerçek kullanıcıya email bildirimi (bot hesaplar hariç) | Kullanıcı | Avukat onayından sonra |
 | 6 | ~~V2 Sign all users out~~ ✅ TAMAMLANDI (2026-05-17 18:00 TR, 564/564 refresh_tokens revoked) | — | — |
 | 7 | V1 Postgres direct DB password rotate (envanter sonrası) | Kullanıcı + Klipper | Bu hafta |
 | 8 | Edge access logging (Traefik+Caddy) + KVKK 14g pseudonymize | Klipper sprint | Bu hafta |
