@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Çok fazla istek' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } })
     }
 
-    const supabase = await createClient()
-    const admin = await checkPermission(supabase, 'admin.roles.manage')
+    const cookieClient = await createClient()
+    const admin = await checkPermission(cookieClient, 'admin.roles.manage')
     if (!admin) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
 
     const body = await request.json()
@@ -31,17 +31,19 @@ export async function POST(request: NextRequest) {
     }
     const { userId, roleId } = parsed.data
 
+    // Mig 049 prereq: data ops service-role'a gecti. Permission check yukarida.
+    const svc = createServiceRoleClient()
+
     // Kullanıcı ve rol kontrolü
     const [{ data: user }, { data: role }] = await Promise.all([
-      supabase.from('profiles').select('id, username').eq('id', userId).single(),
-      supabase.from('roles').select('id, slug, name').eq('id', roleId).single(),
+      svc.from('profiles').select('id, username').eq('id', userId).single(),
+      svc.from('roles').select('id, slug, name').eq('id', roleId).single(),
     ])
 
     if (!user) return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 })
     if (!role) return NextResponse.json({ error: 'Rol bulunamadı' }, { status: 404 })
 
     // Ata
-    const svc = createServiceRoleClient()
     const { error } = await svc
       .from('user_roles')
       .insert({ user_id: userId, role_id: roleId, assigned_by: admin.id })
@@ -80,8 +82,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Çok fazla istek' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } })
     }
 
-    const supabase = await createClient()
-    const admin = await checkPermission(supabase, 'admin.roles.manage')
+    const cookieClient = await createClient()
+    const admin = await checkPermission(cookieClient, 'admin.roles.manage')
     if (!admin) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
 
     const body = await request.json()
@@ -91,8 +93,11 @@ export async function DELETE(request: NextRequest) {
     }
     const { userId, roleId } = parsed.data
 
+    // Mig 049 prereq: roles read service-role (roles REVOKE'da degil ama tek client tutarliligi)
+    const svc = createServiceRoleClient()
+
     // Kendi super_admin rolünü kaldırmayı engelle
-    const { data: role } = await supabase
+    const { data: role } = await svc
       .from('roles')
       .select('slug')
       .eq('id', roleId)
@@ -105,7 +110,6 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Kaldır
-    const svc = createServiceRoleClient()
     const { error } = await svc
       .from('user_roles')
       .delete()

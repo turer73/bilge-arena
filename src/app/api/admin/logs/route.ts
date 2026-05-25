@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  const admin = await checkPermission(supabase, 'admin.logs.view')
+  const cookieClient = await createClient()
+  const admin = await checkPermission(cookieClient, 'admin.logs.view')
   if (!admin) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
@@ -16,7 +17,10 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') ?? '20')))
   const offset = (page - 1) * limit
 
-  let query = supabase
+  // Mig 049 prereq: data ops service-role'a gecti. Permission check yukarida.
+  const svc = createServiceRoleClient()
+
+  let query = svc
     .from('admin_logs')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
@@ -33,7 +37,7 @@ export async function GET(request: NextRequest) {
   // Admin isimlerini cek
   const adminIds = Array.from(new Set((data ?? []).map(l => l.admin_id)))
   const { data: profiles } = adminIds.length > 0
-    ? await supabase.from('profiles').select('id, display_name, username').in('id', adminIds)
+    ? await svc.from('profiles').select('id, display_name, username').in('id', adminIds)
     : { data: [] }
 
   const profileMap: Record<string, string> = {}

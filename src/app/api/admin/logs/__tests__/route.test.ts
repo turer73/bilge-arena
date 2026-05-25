@@ -8,7 +8,12 @@ const { mockCheckPermission, mockLogsRange, mockProfilesIn } = vi.hoisted(() => 
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({
+  // Mig 049 prereq: cookieClient sadece checkPermission'a verilir
+  createClient: vi.fn(async () => ({})),
+}))
+
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: () => ({
     from: vi.fn((table: string) => {
       if (table === 'admin_logs') {
         return {
@@ -31,7 +36,7 @@ vi.mock('@/lib/supabase/server', () => ({
       }
       return {}
     }),
-  })),
+  }),
 }))
 
 vi.mock('@/lib/supabase/admin', () => ({

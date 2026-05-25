@@ -14,34 +14,31 @@ const mockRoleSingle = vi.fn()
 const mockInsert = vi.fn()
 const mockDelete = vi.fn()
 
-function makeSupabaseFrom(table: string) {
-  if (table === 'profiles') {
-    return {
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({ single: mockProfileSingle })),
-      })),
-    }
-  }
-  if (table === 'roles') {
-    return {
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({ single: mockRoleSingle })),
-      })),
-    }
-  }
-  return { select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn() })) })) }
-}
-
 vi.mock('@/lib/supabase/server', () => ({
+  // Mig 049 prereq: cookieClient sadece auth + checkPermission icin
   createClient: vi.fn(async () => ({
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'admin-1' } } }) },
-    from: vi.fn((table: string) => makeSupabaseFrom(table)),
   })),
 }))
 
 vi.mock('@/lib/supabase/service-role', () => ({
+  // Data ops (profiles, roles, user_roles, admin_logs) artik service-role'da
   createServiceRoleClient: () => ({
     from: vi.fn((table: string) => {
+      if (table === 'profiles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ single: mockProfileSingle })),
+          })),
+        }
+      }
+      if (table === 'roles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({ single: mockRoleSingle })),
+          })),
+        }
+      }
       if (table === 'user_roles') {
         return {
           insert: mockInsert,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { escapeHtml } from '@/lib/utils/security'
 
 const CRON_SECRET = process.env.CRON_SECRET
@@ -26,7 +26,9 @@ export async function GET(req: Request) {
   }
 
   const resend = new Resend(resendKey)
-  const supabase = await createClient()
+  // Mig 049 prereq: cron user context'siz, hep service-role. auth.admin.listUsers()
+  // zaten service-role gerektiriyor.
+  const supabase = createServiceRoleClient()
 
   // Son 7 gunde aktif kullanicilari bul
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
