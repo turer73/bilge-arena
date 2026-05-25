@@ -130,3 +130,47 @@ Bu doküman audit; karar kullanıcıda. Seçenekler:
 - (A) Faz 1'i bu hafta başlat (10 dosya, en güvenli set, ~1-2 gün)
 - (B) Tüm Faz 1-5'i schedule et (sprint planına al)
 - (C) Mig 049'u defense-in-depth olarak ertele, defteri kapa
+
+---
+
+## DÜZELTME (2026-05-25, post-Faz 1 audit)
+
+Yukarıdaki tahminin tamamı yanlıştı. Gerçek kapsam:
+
+**İlk audit metodolojisi hatası:** `grep "from('PROTECTED_TABLE')"` çağrılarını saydı ama **authenticated context vs service-role context** ayırmıyordu. Madde 9 sprint #146-150 zaten kapsamlı browser→API proxy refactor yapmıştı; çoğu dosya `cookieClient` sadece `auth.getUser()` için kullanıyor + `createServiceRoleClient()` data ops için.
+
+**Gerçek kapsam (dinamik variable-name grep ile):**
+
+| Faz | Tahmin | Gerçek |
+|---|---|---|
+| Faz 1 (self-data CRUD) | 10 dosya | 3 dosya gerçekten kalmış (daily-login, quiz-limit, referral) |
+| Faz 2-5 (admin/cron/mp/social) | 20 dosya | 3 dosya gerçekten kalmış (admin/logs, admin/roles/assign, cron/weekly-digest) |
+| **TOPLAM** | **30 dosya / 6-7 gün** | **6 dosya / 1 oturum** |
+
+**Apply'ı engelleyen şey:** 6 dosyadaki 7 call site. Hepsi 2026-05-25 oturumunda kapatıldı.
+
+**Doğrulama komutu (sıfır sonuç = temiz):**
+```bash
+for f in $(grep -rl "from '@/lib/supabase/server'" src/ | grep -v __tests__); do
+  varname=$(grep -oE "(const|let)\s+\w+\s*=\s*await createClient" "$f" | head -1 | sed -E 's/.*\s+([a-zA-Z_]+)\s*=.*/\1/')
+  [ -z "$varname" ] && continue
+  bad=$(grep -nE "${varname}\.from\('(profiles|session_answers|game_sessions|user_topic_progress|user_question_history|comments|comment_likes|challenges)'\)" "$f" 2>/dev/null)
+  [ -n "$bad" ] && echo "❌ $f"
+done
+```
+
+**Lessons learned (sonraki audit'ler için):**
+- Grep call site sayar, semantic context ayırt etmez. Variable atama → kullanım zincirini takip et.
+- Pre-existing refactor work tahminini büyük gösterebilir. Önce "ne yapıldı" survey'i yap, sonra "ne kalan" estimate'i.
+- Önkoşul tahminini "üç katı yap" prensibi `30 / 30 = 1.0` ile yanlış yöne çalıştı; gerçek `30/6 = 5x` overestimate.
+
+## Sonuç
+
+**Mig 049 apply için kod tarafında engel kalmadı.** Apply için sadece:
+1. `database/migrations/049_authenticated_lockdown_DRAFT.sql` son satır `ROLLBACK;` → `COMMIT;`
+2. Dosya rename: `049_authenticated_lockdown.sql` (DRAFT suffix kaldır)
+3. Runbook `docs/runbooks/2026-05-17-madde9-final-lockdown.md` smoke test prod'da:
+   - login → quiz → leaderboard → profil → admin → duello → yorum
+4. Supabase apply (Supabase CLI veya Dashboard SQL Editor)
+
+İlgili commit: `3f5a6af` (Faz 1) + `28ac6d5` (Faz 2-5).

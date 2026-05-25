@@ -6,14 +6,14 @@
 
 ## P0 — Güvenlik kapanışı
 
-- [ ] **Migration 049 final lockdown apply** — `database/migrations/049_authenticated_lockdown_DRAFT.sql` hâlâ DRAFT (ROLLBACK ile sarılı). Ön koşullar:
-  - `src/app/page.tsx` landing ISR `questions.count(*)` → service-role'a geç
-  - `src/lib/supabase/admin.ts` admin RBAC (`user_roles`, `role_permissions`) → service-role'a geç
-  - `src/proxy.ts:70` middleware admin RBAC → service-role'a geç
-  - `src/app/api/admin/**`, `api/badges/`, `api/cron/**` → audit
-  - Prod smoke test: login + quiz + leaderboard + profil + admin + duello + yorum
-  - Runbook: `docs/runbooks/2026-05-17-madde9-final-lockdown.md`
-  - Apply: son satırdaki `ROLLBACK;` → `COMMIT;`
+- [ ] **Migration 049 final lockdown apply** — KOD TARAFI TAMAM (2026-05-25). Apply için kalan:
+  - Son satır `ROLLBACK;` → `COMMIT;`
+  - Dosya rename: `049_authenticated_lockdown_DRAFT.sql` → `049_authenticated_lockdown.sql`
+  - Prod smoke test: login + quiz + leaderboard + profil + admin + duello + yorum (runbook `docs/runbooks/2026-05-17-madde9-final-lockdown.md`)
+  - Supabase Dashboard SQL Editor veya CLI ile apply
+  - Detay: `docs/plans/2026-05-25-mig-049-prereq-audit.md` (post-Faz düzeltme bölümü)
+
+- [x] ~~**Mig 049 prereq refactor**~~ — Yapıldı (2026-05-25). 6 dosya (3 self-data + 3 admin/cron) service-role'a geçirildi. Doğrulama: 0 call site cookieClient'la REVOKE table'a erişiyor. Commits: `3f5a6af` (Faz 1) + `28ac6d5` (Faz 2-5).
 
 - [x] ~~**Service-role env var refactor**~~ — Yapıldı (2026-05-25 teknik borç oturumu). `SUPABASE_SERVICE_KEY` öncelikli, `SUPABASE_SERVICE_ROLE_KEY` fallback. `service-role.ts:4`, `proxy.ts:70` güncellendi. JWT secret rotation artık deploy'ı kırmadan yapılabilir (Supabase Dashboard aksiyonu kullanıcıda).
 
@@ -68,7 +68,9 @@
 - ✅ **react-hooks/exhaustive-deps** — `HostGameActions.tsx:141` `mode` deps'e eklendi (gerçek bug: mode geçişinde stale)
 - ✅ **react-hooks/purity** — `burst-particles.tsx` `useMemo+Math.random` → `useState(() => ...)` initializer pattern (React 19 uyumlu)
 - ✅ **Migration 017 collision dokümantasyonu** — `docs/runbooks/2026-05-25-migration-017-collision.md`
-- ✅ **Sonuç:** ESLint 16→11 warning (kalan 11 = `set-state-in-effect`, team tarafından `warn` olarak downgrade edilmiş, CI bloklamıyor). TypeScript 0 hata. Vitest 1599/1599 yeşil.
+- ✅ **npm audit fix** — 8 → 3 moderate advisory (ws, uuid, brace-expansion patch)
+- ✅ **Mig 049 prereq refactor** — 6 dosya (Faz 1: daily-login/quiz-limit/referral, Faz 2-5: admin/logs/admin/roles/assign/cron/weekly-digest) — `service-role` + `.eq` guard pattern. İlk audit "30 dosya / 6-7 gün" tahmini büyük overestimate çıktı — gerçek 6 dosya / 1 oturum.
+- ✅ **Sonuç:** ESLint 16→11 warning (kalan 11 = `set-state-in-effect`, team tarafından `warn` olarak downgrade edilmiş, CI bloklamıyor). TypeScript 0 hata. Vitest 1599/1599 yeşil. Mig 049 apply-ready.
 
 ## Beklemede (kullanıcı kararı)
 
