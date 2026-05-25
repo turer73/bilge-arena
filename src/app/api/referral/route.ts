@@ -13,19 +13,22 @@ const referralLimiter = createRateLimiter('referral-apply', 3, 60_000)
  */
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const cookieClient = await createClient()
+  const { data: { user } } = await cookieClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
+  // Mig 049 prereq: profiles authenticated REVOKE'a hazirlik
+  const svc = createServiceRoleClient()
+
   // Kendi kodunu al
-  const { data: profile } = await supabase
+  const { data: profile } = await svc
     .from('profiles')
     .select('referral_code')
     .eq('id', user.id)
     .single()
 
   // Kac kisi davet etti
-  const { count } = await supabase
+  const { count } = await svc
     .from('referral_rewards')
     .select('*', { count: 'exact', head: true })
     .eq('referrer_id', user.id)
@@ -38,8 +41,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const cookieClient = await createClient()
+  const { data: { user } } = await cookieClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
   const rl = await referralLimiter.check(user.id)
@@ -49,8 +52,11 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: 'Gecersiz kod' }, { status: 400 })
   const { code } = parsed.data
 
-  // Kendi kodunu kullanamaz
-  const { data: myProfile } = await supabase
+  // Mig 049 prereq: profiles authenticated REVOKE'a hazirlik
+  const svc = createServiceRoleClient()
+
+  // Kendi kodunu kullanamaz — sadece kendi profili (auth.uid() guard)
+  const { data: myProfile } = await svc
     .from('profiles')
     .select('referral_code, referred_by')
     .eq('id', user.id)
@@ -65,8 +71,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Zaten bir davet kodu kullandin' }, { status: 409 })
   }
 
-  // Kodu bul
-  const { data: referrer } = await supabase
+  // Kodu bul — referrer arama icin profiles SELECT (referral_code public lookup)
+  const { data: referrer } = await svc
     .from('profiles')
     .select('id')
     .eq('referral_code', code.toUpperCase())
@@ -75,8 +81,6 @@ export async function POST(req: Request) {
   if (!referrer) {
     return NextResponse.json({ error: 'Gecersiz davet kodu' }, { status: 404 })
   }
-
-  const svc = createServiceRoleClient()
 
   // referred_by guncelle
   await svc.from('profiles').update({ referred_by: referrer.id }).eq('id', user.id)

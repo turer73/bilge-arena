@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { FREE_DAILY_LIMIT } from '@/lib/constants/premium'
 
 /**
@@ -11,16 +12,19 @@ import { FREE_DAILY_LIMIT } from '@/lib/constants/premium'
  * Premium → sınırsız
  */
 export async function GET() {
-  const supabase = await createClient()
+  const cookieClient = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await cookieClient.auth.getUser()
   if (!user) {
     // Misafir kullanıcı — client-side kontrol
     return NextResponse.json({ limit: FREE_DAILY_LIMIT, used: 0, isPremium: false, isGuest: true })
   }
 
+  // Mig 049 prereq: profiles + game_sessions authenticated REVOKE'a hazirlik
+  const svc = createServiceRoleClient()
+
   // Premium kontrolü
-  const { data: profile } = await supabase
+  const { data: profile } = await svc
     .from('profiles')
     .select('is_premium, premium_until')
     .eq('id', user.id)
@@ -37,7 +41,7 @@ export async function GET() {
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
 
-  const { count } = await supabase
+  const { count } = await svc
     .from('game_sessions')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)

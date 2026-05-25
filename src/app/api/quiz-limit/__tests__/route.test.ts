@@ -29,8 +29,15 @@ const mockFrom = vi.fn((table: string) => {
 })
 
 vi.mock('@/lib/supabase/server', () => ({
+  // cookieClient sadece auth.getUser icin kullanilir (mig 049 prereq)
   createClient: vi.fn(async () => ({
     auth: { getUser: mockGetUser },
+  })),
+}))
+
+vi.mock('@/lib/supabase/service-role', () => ({
+  // Data ops (profiles + game_sessions) artik service-role uzerinden
+  createServiceRoleClient: vi.fn(() => ({
     from: mockFrom,
   })),
 }))

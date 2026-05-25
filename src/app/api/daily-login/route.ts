@@ -17,9 +17,9 @@ const loginLimiter = createRateLimiter('daily-login', 5, 60_000)
  *   - streak_reset: Seri kırıldı, 1'den başladı
  */
 export async function POST() {
-  const supabase = await createClient()
+  const cookieClient = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await cookieClient.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
@@ -27,8 +27,11 @@ export async function POST() {
   const rl = await loginLimiter.check(user.id)
   if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
 
+  // Mig 049 prereq: profiles authenticated REVOKE'a hazirlik — service-role + .eq guard
+  const svc = createServiceRoleClient()
+
   // Profili çek
-  const { data: profile } = await supabase
+  const { data: profile } = await svc
     .from('profiles')
     .select('current_streak, last_played_at, total_xp')
     .eq('id', user.id)
@@ -80,8 +83,6 @@ export async function POST() {
 
   // XP hesapla: gün * 10, max 70
   const xpReward = Math.min(newStreak * 10, 70)
-
-  const svc = createServiceRoleClient()
 
   // Profili güncelle — atomic guard: sadece bugun henuz claim edilmemisse
   const todayStart = new Date(todayStr + 'T00:00:00.000Z').toISOString()
