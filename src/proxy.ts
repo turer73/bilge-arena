@@ -67,7 +67,8 @@ export async function proxy(request: NextRequest) {
 
     // Session-based bos donduyse service key ile REST API dene
     if (!hasRole) {
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+      const serviceKey =
+        process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
       if (serviceKey) {
         try {
           const res = await fetch(

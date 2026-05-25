@@ -19,7 +19,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
       if (table === 'profiles') {
         return {
           // GET: .select('*').eq('id', x).single()
-          select: vi.fn((cols: string) => ({
+          select: vi.fn((_cols: string) => ({
             eq: vi.fn(() => ({ single: mockProfileSelect })),
           })),
           // PATCH: .update(x).eq('id', y).select(...).single()

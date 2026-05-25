@@ -472,13 +472,3 @@ export interface Database {
     CompositeTypes: Record<string, never>
   }
 }
-
-// ─── Backward Compatibility Aliases ──────────────────────
-// Eski kod referansları için (kademeli olarak kaldırılacak)
-
-/** @deprecated Badge kullanın */
-export type Achievement = Badge
-/** @deprecated UserBadge kullanın */
-export type UserAchievement = UserBadge
-/** @deprecated LeaderboardWeekly kullanın */
-export type LeaderboardEntry = LeaderboardWeekly

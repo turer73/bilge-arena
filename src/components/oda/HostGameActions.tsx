@@ -140,6 +140,7 @@ export function HostGameActions({
     return () => window.clearTimeout(id)
   }, [
     isHost,
+    mode,
     roomState,
     currentRound,
     answersCount,
