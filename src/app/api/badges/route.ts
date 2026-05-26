@@ -55,7 +55,7 @@ export async function POST() {
   // Kullanıcı istatistiklerini al (Faz 3: multiplayer sayaclari)
   const { data: profile } = await svc
     .from('profiles')
-    .select('total_xp, total_sessions, correct_answers, longest_streak, multiplayer_wins, rooms_completed, multiplayer_firsts')
+    .select('total_xp, total_sessions, correct_answers, longest_streak, current_streak, multiplayer_wins, rooms_completed, multiplayer_firsts')
     .eq('id', user.id)
     .single()
 
@@ -76,6 +76,8 @@ export async function POST() {
     bestStreak: profile.longest_streak ?? 0,
     totalXP: profile.total_xp ?? 0,
     dailyQuestsCompleted: dailyQuestsCount ?? 0,
+    // Art arda giriş serisi
+    loginStreak: profile.current_streak ?? 0,
     // Faz 3 multiplayer
     multiplayerWins: profile.multiplayer_wins ?? 0,
     roomsCompleted: profile.rooms_completed ?? 0,

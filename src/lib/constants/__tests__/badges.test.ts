@@ -11,8 +11,8 @@ const emptyStats = {
 }
 
 describe('BADGES constant', () => {
-  it('18 rozet tanimli olmali (Faz 3 multiplayer +4)', () => {
-    expect(BADGES).toHaveLength(18)
+  it('21 rozet tanimli olmali (login streak +3)', () => {
+    expect(BADGES).toHaveLength(21)
   })
 
   it('her rozetin benzersiz kodu olmali', () => {
@@ -91,6 +91,19 @@ describe('checkBadgeEarned', () => {
     expect(checkBadgeEarned(badge, { ...emptyStats, dailyQuestsCompleted: 1 })).toBe(true)
   })
 
+  it('login_7: 7 gunluk giris serisinde kazanilmali', () => {
+    const badge = BADGES.find((b) => b.code === 'login_7')!
+    expect(checkBadgeEarned(badge, { ...emptyStats, loginStreak: 6 })).toBe(false)
+    expect(checkBadgeEarned(badge, { ...emptyStats, loginStreak: 7 })).toBe(true)
+    expect(checkBadgeEarned(badge, { ...emptyStats, loginStreak: 30 })).toBe(true)
+  })
+
+  it('login_100: 100 gunluk giris serisinde kazanilmali', () => {
+    const badge = BADGES.find((b) => b.code === 'login_100')!
+    expect(checkBadgeEarned(badge, { ...emptyStats, loginStreak: 99 })).toBe(false)
+    expect(checkBadgeEarned(badge, { ...emptyStats, loginStreak: 100 })).toBe(true)
+  })
+
   it('bilinmeyen condition tipi false dondurmeli', () => {
     const fakeBadge: BadgeDefinition = {
       code: 'test',
@@ -105,10 +118,21 @@ describe('checkBadgeEarned', () => {
     expect(checkBadgeEarned(fakeBadge, { ...emptyStats, gamesPlayed: 999 })).toBe(false)
   })
 
-  it('legendary rozetler yuksek kosula sahip olmali', () => {
-    const legendaries = BADGES.filter((b) => b.rarity === 'legendary')
+  it('legendary rozetler (login_streak haric) yuksek kosula sahip olmali', () => {
+    const legendaries = BADGES.filter(
+      (b) => b.rarity === 'legendary' && b.conditionType !== 'login_streak'
+    )
     for (const badge of legendaries) {
       expect(badge.conditionValue).toBeGreaterThanOrEqual(1000)
+    }
+  })
+
+  it('login_streak legendary en az 100 gun gerektirmeli', () => {
+    const loginLegendary = BADGES.filter(
+      (b) => b.rarity === 'legendary' && b.conditionType === 'login_streak'
+    )
+    for (const badge of loginLegendary) {
+      expect(badge.conditionValue).toBeGreaterThanOrEqual(100)
     }
   })
 

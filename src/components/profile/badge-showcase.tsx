@@ -24,6 +24,7 @@ const CATEGORY_GROUPS: Array<{
   { key: 'streak',    label: 'Seri Şampiyonu',  icon: '🔥', types: ['streak'] },
   { key: 'xp',        label: 'XP Avcısı',       icon: '⚡', types: ['xp'] },
   { key: 'quest',     label: 'Görev Uzmanı',    icon: '📋', types: ['daily_quest'] },
+  { key: 'login',     label: 'Sadakat Serisi',  icon: '📅', types: ['login_streak'] },
   {
     key: 'arena',
     label: 'Arena Savaşçısı',

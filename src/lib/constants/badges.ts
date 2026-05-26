@@ -13,6 +13,7 @@ export interface BadgeDefinition {
     | 'multiplayer_wins'
     | 'rooms_completed'
     | 'multiplayer_firsts'
+    | 'login_streak'
   conditionValue: number
   xpReward: number
   rarity: 'common' | 'rare' | 'epic' | 'legendary'
@@ -43,6 +44,11 @@ export const BADGES: BadgeDefinition[] = [
   // Gunluk gorev
   { code: 'daily_first', name: 'Görevci', description: 'İlk günlük görevi tamamla', icon: '📋', conditionType: 'daily_quest', conditionValue: 1, xpReward: 50, rarity: 'common' },
 
+  // Art arda giriş serisi (login streak)
+  { code: 'login_7', name: 'Haftalık Azim', description: '7 gün üst üste giriş yap', icon: '📅', conditionType: 'login_streak', conditionValue: 7, xpReward: 150, rarity: 'rare' },
+  { code: 'login_30', name: 'Aylık Şampiyon', description: '30 gün üst üste giriş yap', icon: '🏅', conditionType: 'login_streak', conditionValue: 30, xpReward: 750, rarity: 'epic' },
+  { code: 'login_100', name: 'Efsane Azim', description: '100 gün üst üste giriş yap', icon: '💫', conditionType: 'login_streak', conditionValue: 100, xpReward: 3000, rarity: 'legendary' },
+
   // Multiplayer (Faz 3)
   { code: 'mp_first_room', name: 'Arena Çırağı', description: 'İlk odan tamamlandı', icon: '⚔️', conditionType: 'rooms_completed', conditionValue: 1, xpReward: 50, rarity: 'common' },
   { code: 'mp_ten_rooms', name: 'Arena Savaşçısı', description: '10 oda tamamla', icon: '🛡️', conditionType: 'rooms_completed', conditionValue: 10, xpReward: 200, rarity: 'rare' },
@@ -63,6 +69,8 @@ export interface BadgeStats {
   bestStreak: number
   totalXP: number
   dailyQuestsCompleted: number
+  // Login streak (opsiyonel - eski caller'lar 0 default'la)
+  loginStreak?: number
   // Faz 3 multiplayer (opsiyonel - eski caller'lar 0 default'la)
   multiplayerWins?: number
   roomsCompleted?: number
@@ -79,6 +87,7 @@ export function checkBadgeEarned(badge: BadgeDefinition, stats: BadgeStats): boo
     case 'streak': return stats.bestStreak >= badge.conditionValue
     case 'xp': return stats.totalXP >= badge.conditionValue
     case 'daily_quest': return stats.dailyQuestsCompleted >= badge.conditionValue
+    case 'login_streak': return (stats.loginStreak ?? 0) >= badge.conditionValue
     case 'multiplayer_wins': return (stats.multiplayerWins ?? 0) >= badge.conditionValue
     case 'rooms_completed': return (stats.roomsCompleted ?? 0) >= badge.conditionValue
     case 'multiplayer_firsts': return (stats.multiplayerFirsts ?? 0) >= badge.conditionValue
