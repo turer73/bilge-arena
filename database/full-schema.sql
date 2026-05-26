@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   correct_answers INTEGER DEFAULT 0,
   total_sessions  INTEGER DEFAULT 0,
 
-  preferred_theme VARCHAR(10) DEFAULT 'dark' CHECK (preferred_theme IN ('dark', 'light')),
+  preferred_theme VARCHAR(20) DEFAULT 'dark' CHECK (preferred_theme IN ('dark', 'light', 'okyanus', 'orman', 'gunbatimi', 'mor-gece')),
   notifications   BOOLEAN DEFAULT TRUE,
   role            TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
 
