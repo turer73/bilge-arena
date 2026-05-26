@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useState } from 'react'
 import { Zap, ArrowRight, Flame, Trophy, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ArenaBackground } from './arena-background'
@@ -69,6 +70,11 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
   const ctaPrimary = (config?.cta_primary as { text?: string; href?: string }) || {}
   const ctaSecondary = (config?.cta_secondary as { text?: string; href?: string }) || {}
   const miniStats = (config?.mini_stats as string[]) || null
+
+  // Bilge Chan: önce karakter görseli dene, yoksa logo fallback
+  const [mascotSrc, setMascotSrc] = useState('/bilge-chan-selam.png')
+  const [hasMascot, setHasMascot] = useState(true)
+
   return (
     <section className="relative flex min-h-screen items-center overflow-hidden">
       <ArenaBackground />
@@ -81,40 +87,106 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
 
         <div className="grid items-center gap-8 md:gap-12 lg:grid-cols-2 lg:gap-16">
 
-          {/* ── Arena görseli ── */}
-          {/* Mobilde üstte ortalı, lg+ sağda */}
+          {/* ── Maskot / Arena görseli ── */}
           <div className="relative order-first flex h-[220px] items-center justify-center
             md:h-[320px]
             lg:order-last lg:h-[520px]
             xl:h-[620px]
             2xl:h-[720px]">
 
-            {/* Merkez arena dairesi */}
+            {/* Zemin: platform parlaması */}
             <div
-              className="absolute flex h-[140px] w-[140px] items-center justify-center rounded-full animate-glow-pulse
-                md:h-[200px] md:w-[200px]
-                lg:h-[300px] lg:w-[300px]
-                xl:h-[380px] xl:w-[380px]
-                2xl:h-[440px] 2xl:w-[440px]"
-              style={{
-                background: 'radial-gradient(circle, var(--card) 0%, var(--surface) 70%)',
-                border: '2px solid #2563EB40',
-                boxShadow: '0 0 60px #2563EB30, inset 0 0 40px #2563EB10',
-              }}
-            >
-              <Image
-                src={logoUrl}
-                alt="Bilge Arena"
-                width={340}
-                height={340}
-                priority
-                className="h-[100px] w-[100px]
-                  md:h-[150px] md:w-[150px]
-                  lg:h-[220px] lg:w-[220px]
-                  xl:h-[280px] xl:w-[280px]
-                  2xl:h-[340px] 2xl:w-[340px]"
-                draggable={false}
-              />
+              className="absolute bottom-4 left-1/2 -translate-x-1/2
+                h-6 w-[160px] rounded-full blur-xl opacity-60
+                md:h-8 md:w-[220px]
+                lg:h-10 lg:w-[300px]"
+              style={{ background: 'var(--focus)' }}
+            />
+
+            {/* Bilge Chan / Logo merkezi */}
+            <div className="relative flex flex-col items-center">
+
+              {/* Konuşma balonu — sadece gerçek maskot varsa */}
+              {hasMascot && (
+                <div
+                  className="animate-float [animation-delay:0.3s] mb-2 rounded-2xl border px-3 py-1.5 text-xs font-bold shadow-md
+                    md:mb-3 md:rounded-3xl md:px-4 md:py-2 md:text-sm
+                    lg:mb-4 lg:text-base"
+                  style={{
+                    background: 'var(--card)',
+                    borderColor: 'var(--focus-border)',
+                    color: 'var(--focus)',
+                  }}
+                >
+                  Hazır mısın? 🎯
+                  {/* Balonun oku */}
+                  <span
+                    className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0 w-0"
+                    style={{
+                      borderLeft: '8px solid transparent',
+                      borderRight: '8px solid transparent',
+                      borderTop: '8px solid var(--focus-border)',
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Maskot görsel — karakter veya logo */}
+              <div
+                className={`relative animate-glow-pulse ${
+                  hasMascot
+                    ? 'rounded-none bg-transparent'
+                    : 'rounded-full'
+                }
+                  h-[130px] w-[130px] flex items-center justify-center
+                  md:h-[190px] md:w-[190px]
+                  lg:h-[300px] lg:w-[300px]
+                  xl:h-[380px] xl:w-[380px]
+                  2xl:h-[440px] 2xl:w-[440px]`}
+                style={
+                  hasMascot
+                    ? undefined
+                    : {
+                        background: 'radial-gradient(circle, var(--card) 0%, var(--surface) 70%)',
+                        border: '2px solid #2563EB40',
+                        boxShadow: '0 0 60px #2563EB30, inset 0 0 40px #2563EB10',
+                      }
+                }
+              >
+                <Image
+                  src={hasMascot ? mascotSrc : logoUrl}
+                  alt="Bilge Chan"
+                  width={440}
+                  height={440}
+                  priority
+                  className={`
+                    ${hasMascot ? 'drop-shadow-2xl object-contain' : 'object-contain'}
+                    h-full w-full`}
+                  onError={() => {
+                    if (hasMascot) {
+                      setHasMascot(false)
+                      setMascotSrc(logoUrl)
+                    }
+                  }}
+                  draggable={false}
+                />
+              </div>
+
+              {/* Karakter adı — sadece gerçek maskot varsa */}
+              {hasMascot && (
+                <div
+                  className="mt-2 rounded-full border px-3 py-1 text-[10px] font-extrabold tracking-widest
+                    md:mt-3 md:px-4 md:text-xs
+                    lg:text-sm"
+                  style={{
+                    background: 'var(--focus-bg)',
+                    borderColor: 'var(--focus-border)',
+                    color: 'var(--focus)',
+                  }}
+                >
+                  BİLGE CHAN
+                </div>
+              )}
             </div>
 
             {/* Orbit kartlar — mobilde gizli, md+ görünür */}
