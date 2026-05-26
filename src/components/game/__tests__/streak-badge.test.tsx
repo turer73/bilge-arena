@@ -16,19 +16,19 @@ describe('StreakBadge', () => {
 
   it('streak < 5 iken SERI! gostermez', () => {
     render(<StreakBadge streak={4} />)
-    expect(screen.queryByText('SERI!')).not.toBeInTheDocument()
+    expect(screen.queryByText('SERİ!')).not.toBeInTheDocument()
     expect(screen.queryByText('YANGIN!')).not.toBeInTheDocument()
   })
 
   it('streak >= 5 iken SERI! gosterir', () => {
     render(<StreakBadge streak={5} />)
-    expect(screen.getByText('SERI!')).toBeInTheDocument()
+    expect(screen.getByText('SERİ!')).toBeInTheDocument()
   })
 
   it('streak >= 10 iken YANGIN! gosterir', () => {
     render(<StreakBadge streak={10} />)
     expect(screen.getByText('YANGIN!')).toBeInTheDocument()
-    expect(screen.queryByText('SERI!')).not.toBeInTheDocument()
+    expect(screen.queryByText('SERİ!')).not.toBeInTheDocument()
   })
 
   it('ates emojisi her zaman gorunur', () => {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { XPBar } from '@/components/game/xp-bar'
-import { StreakBadge } from '@/components/game/streak-badge'
+import { StreakBadge, StreakMilestoneBanner } from '@/components/game/streak-badge'
 import { StatsGrid } from '@/components/profile/stats-grid'
 import { BadgeShowcase } from '@/components/profile/badge-showcase'
 import { ProgressChart } from '@/components/profile/progress-chart'
@@ -194,6 +194,13 @@ export default function ProfilClient() {
       </div>
 
       <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />
+
+      {/* Streak milestone banner (7 / 30 / 100 gün) */}
+      {currentStreak >= 7 && (
+        <div className="mb-4 animate-fadeUp" style={{ animationDelay: '0.05s', animationFillMode: 'both' }}>
+          <StreakMilestoneBanner streak={currentStreak} />
+        </div>
+      )}
 
       {/* Istatistikler */}
       <ComponentErrorBoundary label="İstatistikler" variant="inline">
