@@ -117,10 +117,21 @@ export async function POST() {
     reason: 'daily_login',
   }).then(() => {})
 
+  // Günlük giriş coin ödülü: streak * 2, max 20
+  const coinReward = Math.min(newStreak * 2, 20)
+  const { error: coinErr } = await svc.rpc('increment_coins', {
+    p_user_id: user.id,
+    p_amount: coinReward,
+  })
+  if (coinErr) {
+    console.error('[DailyLogin] increment_coins hatası:', coinErr.message)
+  }
+
   return NextResponse.json({
     status: streakReset ? 'streak_reset' : 'claimed',
     streak: newStreak,
     xpAwarded: xpReward,
+    coinsAwarded: coinErr ? 0 : coinReward,
     maxXP: 70,
   })
 }

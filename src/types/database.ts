@@ -41,6 +41,8 @@ export interface Profile {
   total_questions: number
   correct_answers: number
   total_sessions: number
+  // Coin ekonomisi
+  coin_balance: number
   // Premium
   is_premium: boolean
   premium_until: string | null

@@ -190,7 +190,18 @@ export async function POST(request: Request) {
     })
   }
 
-  // 5. Profil istatistiklerini guncelle — RPC ile atomik
+  // 5a. Coin kazanımı — doğru cevap başına 1 coin
+  if (correctCount > 0) {
+    const { error: coinErr } = await svc.rpc('increment_coins', {
+      p_user_id: user.id,
+      p_amount: correctCount,
+    })
+    if (coinErr) {
+      console.error('[Sessions API] increment_coins RPC hatasi:', coinErr.message)
+    }
+  }
+
+  // 5b. Profil istatistiklerini guncelle — RPC ile atomik
   const { error: xpError } = await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: totalXP })
   if (xpError) {
     console.error('[Sessions API] increment_xp RPC hatasi:', xpError.message)

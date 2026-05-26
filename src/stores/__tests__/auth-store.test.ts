@@ -20,6 +20,7 @@ const mockProfile = {
   total_questions: 50,
   correct_answers: 35,
   total_sessions: 10,
+  coin_balance: 0,
   is_premium: false,
   premium_until: null,
   preferred_theme: 'dark' as const,

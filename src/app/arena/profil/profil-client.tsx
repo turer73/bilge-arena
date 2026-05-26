@@ -105,6 +105,7 @@ export default function ProfilClient() {
   const totalSessions = profile.total_sessions ?? 0
   const correctAnswers = profile.correct_answers ?? 0
   const totalQuestions = profile.total_questions ?? 0
+  const coinBalance = (profile as { coin_balance?: number }).coin_balance ?? 0
   const displayName = profile.username || profile.display_name || 'Arenaci'
 
   const level = getLevelFromXP(totalXP)
@@ -120,9 +121,10 @@ export default function ProfilClient() {
 
   const mainStats = [
     { label: 'TOPLAM XP', value: totalXP, icon: '⚡', color: 'var(--reward)' },
+    { label: 'COIN', value: coinBalance, icon: '🪙', color: 'var(--reward-light)' },
     { label: 'OYUN', value: totalSessions, icon: '🎮', color: 'var(--focus)' },
-    { label: 'BASARI', value: `%${accuracy}`, icon: '🎯', color: 'var(--growth)' },
-    { label: 'EN IYI SERI', value: longestStreak, icon: '🔥', color: 'var(--reward-light)' },
+    { label: 'BAŞARI', value: `%${accuracy}`, icon: '🎯', color: 'var(--growth)' },
+    { label: 'EN İYİ SERİ', value: longestStreak, icon: '🔥', color: 'var(--reward-light)' },
   ]
 
   // Kategori ilerleme verisini hazirla (gercek veya bos)
