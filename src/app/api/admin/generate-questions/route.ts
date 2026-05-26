@@ -8,6 +8,15 @@ import { trLower, isLikelyTurkish } from '@/lib/utils/tr-text'
 const GEMINI_MODEL = 'gemini-2.5-pro'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
+// Vercel AI Gateway — Pro plan özelliği. AI_GATEWAY_API_KEY set edilmişse
+// doğrudan Gemini yerine gateway üzerinden çağrı yapılır:
+//   • Vercel dashboard'da token/maliyet observability
+//   • Model değişikliği kod değişikliği gerektirmez
+//   • Rate limit yönetimi merkezi
+// Key yoksa fallback: doğrudan Gemini API (geriye dönük uyumluluk)
+const AI_GATEWAY_URL = 'https://ai-gateway.vercel.sh/v1/chat/completions'
+const AI_GATEWAY_MODEL = 'google/gemini-2.5-pro'
+
 // AI generator pahali endpoint — admin yetkisi disinda EDoS koruma
 const aiGenLimiter = createRateLimiter('ai-gen', 10, 60_000)
 
@@ -194,10 +203,12 @@ export async function POST(req: Request) {
   // disindaysa client'in gonderdigini hic dikkate almaz, NULL koyar.
   const effectiveLevelTag: string | null = game === 'wordquest' ? (level_tag ?? 'B2') : null
 
+  const gatewayKey = process.env.AI_GATEWAY_API_KEY
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'GEMINI_API_KEY ayarlanmamis' }, { status: 500 })
+  if (!gatewayKey && !apiKey) {
+    return NextResponse.json({ error: 'AI_GATEWAY_API_KEY veya GEMINI_API_KEY ayarlanmamis' }, { status: 500 })
   }
+  const useGateway = !!gatewayKey
 
   // ── Few-shot: mevcut 3 soruyu ornek olarak cek ───────
   let fewShotText = ''
@@ -255,29 +266,56 @@ Kategori: ${category}${topicLine}
 Zorluk: ${difficulty}/5
 Soru sayisi: ${count}${fewShotText}`
 
-  try {
-    const res = await fetch(GEMINI_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: buildSystemPrompt(game, category, effectiveLevelTag) }] },
-        contents: [{ parts: [{ text: userPrompt }] }],
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 4096,
-          responseMimeType: 'application/json',
-        },
-      }),
-    })
+  const systemPromptText = buildSystemPrompt(game, category, effectiveLevelTag)
 
-    const json = await res.json().catch(() => null)
+  try {
+    let aiRes: Response
+    if (useGateway) {
+      // ── Vercel AI Gateway (OpenAI-compat) ─────────────────────────────
+      aiRes = await fetch(AI_GATEWAY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${gatewayKey}`,
+        },
+        body: JSON.stringify({
+          model: AI_GATEWAY_MODEL,
+          messages: [
+            { role: 'system', content: systemPromptText },
+            { role: 'user',   content: userPrompt },
+          ],
+          temperature: 0.8,
+          max_tokens: 4096,
+        }),
+      })
+    } else {
+      // ── Doğrudan Gemini API (fallback) ────────────────────────────────
+      aiRes = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey! },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPromptText }] },
+          contents: [{ parts: [{ text: userPrompt }] }],
+          generationConfig: {
+            temperature: 0.8,
+            maxOutputTokens: 4096,
+            responseMimeType: 'application/json',
+          },
+        }),
+      })
+    }
+
+    const json = await aiRes.json().catch(() => null)
     if (!json) {
       return NextResponse.json({ error: 'AI servisinden gecersiz yanit' }, { status: 502 })
     }
 
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text
+    // OpenAI format (gateway) veya Gemini format (doğrudan)
+    const text: string | undefined = useGateway
+      ? json.choices?.[0]?.message?.content
+      : json.candidates?.[0]?.content?.parts?.[0]?.text
     if (!text) {
-      return NextResponse.json({ error: 'AI yanit uretmedi' }, { status: 502 })
+      return NextResponse.json({ error: 'AI yanit uretmedi', via: useGateway ? 'gateway' : 'gemini' }, { status: 502 })
     }
 
     // JSON parse — bozuk JSON'i temizlemeye calis
