@@ -103,6 +103,23 @@ export default function ArenaClient() {
         </p>
       </div>
 
+      {/* ── Özel Modlar ── */}
+      <div className="mb-4 flex flex-wrap gap-2 md:mb-5">
+        <Link
+          href="/arena/fethet"
+          className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-bold text-[var(--text-sub)] transition-all hover:-translate-y-0.5 hover:border-[var(--reward-border)] hover:text-[var(--reward)] hover:shadow-sm md:px-4 md:text-sm"
+        >
+          <span>⚔️</span>
+          <span>Bil ve Fethet</span>
+          <span
+            className="rounded-full px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider"
+            style={{ background: 'var(--reward-bg)', color: 'var(--reward)' }}
+          >
+            YENİ
+          </span>
+        </Link>
+      </div>
+
       {/* ── Oyun konsollari ── */}
       <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:gap-5 2xl:gap-6">
         {GAME_LIST.map((game) => (
