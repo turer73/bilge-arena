@@ -47,7 +47,7 @@ export interface Profile {
   is_premium: boolean
   premium_until: string | null
   // Tercihler
-  preferred_theme: 'dark' | 'light'
+  preferred_theme: 'dark' | 'light' | 'okyanus' | 'orman' | 'gunbatimi' | 'mor-gece'
   notifications: boolean
   // Referral
   referral_code: string | null

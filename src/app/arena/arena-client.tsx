@@ -60,8 +60,13 @@ export default function ArenaClient() {
                 {level.name}
               </span>
             </div>
-            <div className="text-[10px] text-[var(--text-muted)] md:text-xs">
-              ⚡ {totalXP.toLocaleString('tr-TR')} XP
+            <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] md:text-xs">
+              <span>⚡ {totalXP.toLocaleString('tr-TR')} XP</span>
+              {((profile as { coin_balance?: number }).coin_balance ?? 0) > 0 && (
+                <span className="font-semibold" style={{ color: 'var(--reward-light)' }}>
+                  🪙 {((profile as { coin_balance?: number }).coin_balance ?? 0).toLocaleString('tr-TR')}
+                </span>
+              )}
             </div>
           </div>
 
