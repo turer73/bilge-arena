@@ -4,7 +4,8 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { BADGES, checkBadgeEarned } from '@/lib/constants/badges'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 
-const badgesLimiter = createRateLimiter('badges', 30, 60_000) // 30 req/dk
+const badgesGetLimiter = createRateLimiter('badges-get', 30, 60_000)  // 30 req/dk
+const badgesPostLimiter = createRateLimiter('badges-check', 5, 60_000)  // 5 req/dk (oyun sonu trigger)
 
 // GET: Kullanıcının kazanılmış rozetlerini getir
 export async function GET() {
@@ -15,7 +16,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
-  const rl = await badgesLimiter.check(user.id)
+  const rl = await badgesGetLimiter.check(user.id)
   if (!rl.success) {
     return NextResponse.json({ error: 'Cok fazla istek' }, { status: 429 })
   }
@@ -42,6 +43,11 @@ export async function POST() {
 
   if (!user) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+  }
+
+  const rlPost = await badgesPostLimiter.check(user.id)
+  if (!rlPost.success) {
+    return NextResponse.json({ error: 'Cok fazla istek' }, { status: 429 })
   }
 
   const svc = createServiceRoleClient()

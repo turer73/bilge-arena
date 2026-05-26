@@ -114,6 +114,13 @@ describe('POST /api/badges', () => {
     expect(res.status).toBe(401)
   })
 
+  it('returns 429 on rate limit (H4 abuse)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 } as never)
+    const res = await POST()
+    expect(res.status).toBe(429)
+  })
+
   it('returns 404 if profile missing', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockProfileSingle.mockResolvedValue({ data: null })
