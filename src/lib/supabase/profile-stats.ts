@@ -51,3 +51,25 @@ export async function fetchProfileStats(): Promise<ProfileStats> {
     return { gameStats: [], recentGames: [] }
   }
 }
+
+export interface BootstrapResponse extends ProfileStats {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  profile: any
+  isAdmin: boolean
+}
+
+/**
+ * Profile + istatistikleri tek seferde ceker (H3 — 2 round-trip → 1).
+ * /api/profile/bootstrap proxy uzerinden: profile + roles + stats hepsi paralel.
+ *
+ * Hata durumunda null doner — caller fallback'e dusebilir.
+ */
+export async function fetchProfileBootstrap(): Promise<BootstrapResponse | null> {
+  try {
+    const res = await fetch('/api/profile/bootstrap', { cache: 'no-store' })
+    if (!res.ok) return null
+    return (await res.json()) as BootstrapResponse
+  } catch {
+    return null
+  }
+}

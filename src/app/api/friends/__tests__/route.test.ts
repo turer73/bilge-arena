@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// ─── Hoisted ────────────────────────────────────────
+const { mockRateLimitCheck } = vi.hoisted(() => ({
+  mockRateLimitCheck: vi.fn(async () => ({ success: true })),
+}))
+
 // ─── Supabase mock ──────────────────────────────────
 
 const mockGetUser = vi.fn()
@@ -37,9 +42,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
-  createRateLimiter: () => ({
-    check: vi.fn().mockResolvedValue({ success: true }),
-  }),
+  createRateLimiter: vi.fn(() => ({ check: mockRateLimitCheck })),
 }))
 
 import { GET, POST, PATCH, DELETE } from '../route'
@@ -80,12 +83,22 @@ describe('GET /api/friends', () => {
 })
 
 describe('POST /api/friends', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRateLimitCheck.mockResolvedValue({ success: true })
+  })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const res = await POST(makeRequest({ friendId: VALID_UUID }))
     expect(res.status).toBe(401)
+  })
+
+  it('returns 429 on rate limit (H4 abuse)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 } as never)
+    const res = await POST(makeRequest({ friendId: VALID_UUID }))
+    expect(res.status).toBe(429)
   })
 
   it('returns 400 if friendId is invalid', async () => {
@@ -102,12 +115,22 @@ describe('POST /api/friends', () => {
 })
 
 describe('PATCH /api/friends', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRateLimitCheck.mockResolvedValue({ success: true })
+  })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const res = await PATCH(makeRequest({ friendshipId: VALID_UUID }))
     expect(res.status).toBe(401)
+  })
+
+  it('returns 429 on rate limit (H4 abuse)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 } as never)
+    const res = await PATCH(makeRequest({ friendshipId: VALID_UUID }))
+    expect(res.status).toBe(429)
   })
 
   it('returns 400 if friendshipId is invalid', async () => {
@@ -118,12 +141,22 @@ describe('PATCH /api/friends', () => {
 })
 
 describe('DELETE /api/friends', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRateLimitCheck.mockResolvedValue({ success: true })
+  })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const res = await DELETE(makeRequest({ friendshipId: VALID_UUID }))
     expect(res.status).toBe(401)
+  })
+
+  it('returns 429 on rate limit (H4 abuse)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 } as never)
+    const res = await DELETE(makeRequest({ friendshipId: VALID_UUID }))
+    expect(res.status).toBe(429)
   })
 
   it('returns 400 if friendshipId is invalid', async () => {

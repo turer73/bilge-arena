@@ -13,7 +13,7 @@ import { ReferralCard } from '@/components/profile/referral-card'
 import { EditProfileModal } from '@/components/profile/edit-profile-modal'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
-import { fetchProfileStats, type ProfileStats } from '@/lib/supabase/profile-stats'
+import { fetchProfileBootstrap, type ProfileStats } from '@/lib/supabase/profile-stats'
 import Link from 'next/link'
 
 // Mod isimleri
@@ -38,12 +38,15 @@ export default function ProfilClient() {
     if (!user) return
     setStatsLoading(true)
 
-    // Paralel olarak stats ve rozetleri cek
+    // Paralel olarak stats ve rozetleri cek — bootstrap tek seferde profile + stats (H3)
     Promise.all([
-      fetchProfileStats(),
+      fetchProfileBootstrap(),
       fetch('/api/badges').then((r) => r.ok ? r.json() : null),
     ])
-      .then(([statsData, badgesData]) => {
+      .then(([bootstrapData, badgesData]) => {
+        const statsData: ProfileStats = bootstrapData
+          ? { gameStats: bootstrapData.gameStats, recentGames: bootstrapData.recentGames }
+          : { gameStats: [], recentGames: [] }
         setStats(statsData)
         if (badgesData?.earnedCodes) {
           setEarnedBadgeCodes(badgesData.earnedCodes)

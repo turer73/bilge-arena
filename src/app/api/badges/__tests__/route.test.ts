@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+const { mockRateLimitCheck } = vi.hoisted(() => ({
+  mockRateLimitCheck: vi.fn(async () => ({ success: true })),
+}))
+
 const mockGetUser = vi.fn()
 const mockEarnedSelect = vi.fn()
 const mockProfileSingle = vi.fn()
@@ -59,9 +63,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
-  createRateLimiter: () => ({
-    check: vi.fn().mockResolvedValue({ success: true }),
-  }),
+  createRateLimiter: vi.fn(() => ({ check: mockRateLimitCheck })),
 }))
 
 import { GET, POST } from '../route'
@@ -70,12 +72,20 @@ describe('GET /api/badges', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockExistingBadges.mockClear()
+    mockRateLimitCheck.mockResolvedValue({ success: true })
   })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const res = await GET()
     expect(res.status).toBe(401)
+  })
+
+  it('returns 429 on rate limit (H4 abuse)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 } as never)
+    const res = await GET()
+    expect(res.status).toBe(429)
   })
 
   it('returns earned badges list', async () => {
@@ -95,6 +105,7 @@ describe('GET /api/badges', () => {
 describe('POST /api/badges', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockRateLimitCheck.mockResolvedValue({ success: true })
   })
 
   it('returns 401 if not authenticated', async () => {
