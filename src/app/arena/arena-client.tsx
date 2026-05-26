@@ -2,6 +2,9 @@
 
 import Link from 'next/link'
 import { GAME_LIST, getCategoryLabel } from '@/lib/constants/games'
+import { useAuthStore } from '@/stores/auth-store'
+import { getLevelFromXP } from '@/lib/constants/levels'
+import { StreakBadge } from '@/components/game/streak-badge'
 
 const GAME_EMOJI: Record<string, string> = {
   matematik: '🧮',
@@ -12,21 +15,95 @@ const GAME_EMOJI: Record<string, string> = {
 }
 
 export default function ArenaClient() {
+  const { user, profile } = useAuthStore()
+
+  const totalXP = profile?.total_xp ?? 0
+  const currentStreak = profile?.current_streak ?? 0
+  const displayName = profile?.username || profile?.display_name || 'Arenacı'
+  const level = getLevelFromXP(totalXP)
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 md:py-8 xl:max-w-5xl xl:px-6 2xl:max-w-6xl 2xl:py-10">
-      {/* Baslik */}
-      <div className="mb-6 text-center md:mb-8 xl:mb-10">
+
+      {/* ── Kişiselleştirilmiş karşılama (giriş yapılmışsa) ── */}
+      {user && profile ? (
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-3 md:mb-6 md:rounded-2xl md:px-5 md:py-3.5">
+          {/* Avatar / seviye ikonu */}
+          {profile.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={displayName}
+              className="h-9 w-9 shrink-0 rounded-full border-2 object-cover md:h-11 md:w-11"
+              style={{ borderColor: 'var(--focus-border)' }}
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-lg md:h-11 md:w-11 md:text-xl"
+              style={{
+                background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))',
+                borderColor: 'var(--focus-border)',
+              }}
+            >
+              {level.badge}
+            </div>
+          )}
+
+          {/* İsim + XP + Seviye */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1.5 truncate">
+              <span className="text-sm font-bold truncate md:text-base">{displayName}</span>
+              <span
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider md:text-[10px]"
+                style={{ background: 'var(--focus-bg)', color: 'var(--focus)' }}
+              >
+                {level.name}
+              </span>
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)] md:text-xs">
+              ⚡ {totalXP.toLocaleString('tr-TR')} XP
+            </div>
+          </div>
+
+          {/* Streak badge + profil linki */}
+          <div className="flex shrink-0 items-center gap-2">
+            <StreakBadge streak={currentStreak} />
+            <Link
+              href="/arena/profil"
+              className="hidden rounded-lg border border-[var(--border)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)] sm:block"
+            >
+              Profil →
+            </Link>
+          </div>
+        </div>
+      ) : (
+        /* Giriş yapılmamış — mini CTA */
+        <div className="mb-5 flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-3 md:mb-6">
+          <p className="text-sm text-[var(--text-sub)]">
+            <span className="font-bold text-[var(--text)]">Giriş yap</span> ve ilerlemeyi kaydet
+          </p>
+          <Link
+            href="/giris"
+            className="rounded-lg bg-[var(--focus)] px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
+          >
+            Giriş Yap
+          </Link>
+        </div>
+      )}
+
+      {/* ── Başlık ── */}
+      <div className="mb-5 text-center md:mb-7 xl:mb-8">
         <h1 className="font-display text-2xl font-black md:text-3xl xl:text-4xl 2xl:text-5xl">
           <span className="bg-gradient-to-r from-[var(--focus)] to-[var(--reward)] bg-clip-text text-transparent">
             Bilge Arena
           </span>
         </h1>
         <p className="mt-1.5 text-xs text-[var(--text-sub)] md:mt-2 md:text-sm xl:text-base">
-          Bir oyun konsolu sec ve maceraya basla
+          Bir oyun konsolu seç ve maceraya başla
         </p>
       </div>
 
-      {/* Oyun konsollari */}
+      {/* ── Oyun konsollari ── */}
       <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:gap-5 2xl:gap-6">
         {GAME_LIST.map((game) => (
           <Link
@@ -45,12 +122,15 @@ export default function ArenaClient() {
               {GAME_EMOJI[game.slug] || '📋'}
             </div>
 
-            {/* Baslik */}
-            <h2 className="mb-1 font-display text-base font-bold md:text-lg xl:text-xl 2xl:text-2xl" style={{ color: game.colorHex }}>
+            {/* Başlık */}
+            <h2
+              className="mb-1 font-display text-base font-bold md:text-lg xl:text-xl 2xl:text-2xl"
+              style={{ color: game.colorHex }}
+            >
               {game.name}
             </h2>
 
-            {/* Sinav etiketleri */}
+            {/* Sınav etiketleri */}
             <div className="mb-2 flex flex-wrap gap-1 xl:gap-1.5">
               {game.examTags.map((tag) => (
                 <span
@@ -67,7 +147,7 @@ export default function ArenaClient() {
               ))}
             </div>
 
-            {/* Aciklama */}
+            {/* Açıklama */}
             <p className="mb-3 text-[11px] text-[var(--text-sub)] md:mb-4 md:text-xs xl:text-sm">
               {game.description}
             </p>
