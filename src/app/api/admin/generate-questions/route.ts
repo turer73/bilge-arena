@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { generateText, gateway, createGateway } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
@@ -8,13 +9,10 @@ import { trLower, isLikelyTurkish } from '@/lib/utils/tr-text'
 const GEMINI_MODEL = 'gemini-2.5-pro'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
-// Vercel AI Gateway — Pro plan özelliği. AI_GATEWAY_API_KEY set edilmişse
-// doğrudan Gemini yerine gateway üzerinden çağrı yapılır:
-//   • Vercel dashboard'da token/maliyet observability
-//   • Model değişikliği kod değişikliği gerektirmez
-//   • Rate limit yönetimi merkezi
-// Key yoksa fallback: doğrudan Gemini API (geriye dönük uyumluluk)
-const AI_GATEWAY_URL = 'https://ai-gateway.vercel.sh/v1/chat/completions'
+// Vercel AI Gateway — ai SDK ile entegrasyon.
+// VERCEL_OIDC_TOKEN varlığında (Vercel deployment veya lokal `vc env pull`)
+// gateway provider otomatik olarak OIDC auth kullanır — ayrı API key gerekmez.
+// Fallback: doğrudan Gemini API (GOOGLE_GENERATIVE_AI_API_KEY ile).
 const AI_GATEWAY_MODEL = 'google/gemini-2.5-pro'
 
 // AI generator pahali endpoint — admin yetkisi disinda EDoS koruma
@@ -203,12 +201,13 @@ export async function POST(req: Request) {
   // disindaysa client'in gonderdigini hic dikkate almaz, NULL koyar.
   const effectiveLevelTag: string | null = game === 'wordquest' ? (level_tag ?? 'B2') : null
 
+  const oidcToken = process.env.VERCEL_OIDC_TOKEN
   const gatewayKey = process.env.AI_GATEWAY_API_KEY
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
-  if (!gatewayKey && !apiKey) {
-    return NextResponse.json({ error: 'AI_GATEWAY_API_KEY veya GEMINI_API_KEY ayarlanmamis' }, { status: 500 })
+  if (!oidcToken && !gatewayKey && !apiKey) {
+    return NextResponse.json({ error: 'VERCEL_OIDC_TOKEN veya GEMINI_API_KEY ayarlanmamis' }, { status: 500 })
   }
-  const useGateway = !!gatewayKey
+  const useGateway = !!(oidcToken || gatewayKey)
 
   // ── Few-shot: mevcut 3 soruyu ornek olarak cek ───────
   let fewShotText = ''
@@ -269,28 +268,42 @@ Soru sayisi: ${count}${fewShotText}`
   const systemPromptText = buildSystemPrompt(game, category, effectiveLevelTag)
 
   try {
-    let aiRes: Response
+    let text: string
+
     if (useGateway) {
-      // ── Vercel AI Gateway (OpenAI-compat) ─────────────────────────────
-      aiRes = await fetch(AI_GATEWAY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${gatewayKey}`,
-        },
-        body: JSON.stringify({
-          model: AI_GATEWAY_MODEL,
-          messages: [
-            { role: 'system', content: systemPromptText },
-            { role: 'user',   content: userPrompt },
-          ],
+      // ── Vercel AI Gateway — ai SDK ────────────────────────────────────
+      // Öncelik: explicit AI_GATEWAY_API_KEY > OIDC token (Vercel deployment)
+      const gwProvider = gatewayKey
+        ? createGateway({ apiKey: gatewayKey })(AI_GATEWAY_MODEL)
+        : gateway(AI_GATEWAY_MODEL)
+      try {
+        const result = await generateText({
+          model: gwProvider,
+          system: systemPromptText,
+          prompt: userPrompt,
           temperature: 0.8,
-          max_tokens: 4096,
-        }),
-      })
+          maxOutputTokens: 4096,
+        })
+        text = result.text
+      } catch (gwErr) {
+        // Lokal OIDC free-tier kısıtlamasında direkt Gemini'ye düş
+        if (!apiKey) throw gwErr
+        console.warn('[AI Generate] Gateway failed, falling back to direct Gemini:', (gwErr as Error).message?.slice(0, 80))
+        const aiRes = await fetch(GEMINI_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPromptText }] },
+            contents: [{ parts: [{ text: userPrompt }] }],
+            generationConfig: { temperature: 0.8, maxOutputTokens: 4096, responseMimeType: 'application/json' },
+          }),
+        })
+        const json = await aiRes.json().catch(() => null)
+        text = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+      }
     } else {
-      // ── Doğrudan Gemini API (fallback) ────────────────────────────────
-      aiRes = await fetch(GEMINI_API_URL, {
+      // ── Doğrudan Gemini API (fallback, lokal OIDC yoksa) ─────────────
+      const aiRes = await fetch(GEMINI_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey! },
         body: JSON.stringify({
@@ -303,17 +316,13 @@ Soru sayisi: ${count}${fewShotText}`
           },
         }),
       })
+      const json = await aiRes.json().catch(() => null)
+      if (!json) {
+        return NextResponse.json({ error: 'AI servisinden gecersiz yanit' }, { status: 502 })
+      }
+      text = json.candidates?.[0]?.content?.parts?.[0]?.text
     }
 
-    const json = await aiRes.json().catch(() => null)
-    if (!json) {
-      return NextResponse.json({ error: 'AI servisinden gecersiz yanit' }, { status: 502 })
-    }
-
-    // OpenAI format (gateway) veya Gemini format (doğrudan)
-    const text: string | undefined = useGateway
-      ? json.choices?.[0]?.message?.content
-      : json.candidates?.[0]?.content?.parts?.[0]?.text
     if (!text) {
       return NextResponse.json({ error: 'AI yanit uretmedi', via: useGateway ? 'gateway' : 'gemini' }, { status: 502 })
     }
