@@ -21,6 +21,7 @@ const mockProfile = {
   correct_answers: 35,
   total_sessions: 10,
   coin_balance: 0,
+  owned_frames: ['none', 'mavi'],
   is_premium: false,
   premium_until: null,
   preferred_theme: 'dark' as const,

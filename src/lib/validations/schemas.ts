@@ -67,6 +67,7 @@ export const profileUpdateSchema = z.object({
   city: z.string().trim().max(50).optional(),
   grade: z.number().int().min(9).max(13).optional(),
   onboarding_completed: z.literal(true).optional(),
+  preferred_theme: z.enum(['dark', 'light', 'okyanus', 'orman', 'gunbatimi', 'mor-gece']).optional(),
 }).refine(data => Object.keys(data).length > 0, {
   message: 'Guncellenecek alan yok',
 })

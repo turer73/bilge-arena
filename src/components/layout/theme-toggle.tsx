@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
+import { useAuthStore } from '@/stores/auth-store'
 import type { Theme } from '@/stores/ui-store'
 
 interface ThemeOption {
@@ -24,8 +25,10 @@ const THEME_OPTIONS: ThemeOption[] = [
 
 export function ThemeToggle() {
   const { theme, setTheme } = useUIStore()
+  const { user } = useAuthStore()
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Sayfa yüklendiğinde kayıtlı temayı yükle
+  // Sayfa yüklendiğinde kayıtlı temayı uygula
   useEffect(() => {
     const saved = localStorage.getItem('bilge-theme') as Theme | null
     if (saved && THEME_OPTIONS.some((t) => t.id === saved)) {
@@ -34,6 +37,23 @@ export function ThemeToggle() {
   }, [setTheme])
 
   const isDark = DARK_THEMES.has(theme)
+
+  function handleThemeChange(id: Theme) {
+    setTheme(id)
+
+    // Giriş yapmış kullanıcılar için DB'ye debounc'lu sync (600ms)
+    if (!user) return
+    if (syncTimer.current) clearTimeout(syncTimer.current)
+    syncTimer.current = setTimeout(() => {
+      fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferred_theme: id }),
+      }).catch(() => {
+        // Sessiz hata — localStorage tema çalışmaya devam eder
+      })
+    }, 600)
+  }
 
   return (
     <div
@@ -46,7 +66,7 @@ export function ThemeToggle() {
         return (
           <button
             key={opt.id}
-            onClick={() => setTheme(opt.id)}
+            onClick={() => handleThemeChange(opt.id)}
             title={opt.label}
             aria-label={opt.label}
             aria-pressed={active}

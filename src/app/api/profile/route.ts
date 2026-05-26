@@ -117,13 +117,14 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { username, display_name, city, grade, onboarding_completed } = parsed.data
+  const { username, display_name, city, grade, onboarding_completed, preferred_theme } = parsed.data
   const updates: Record<string, unknown> = {}
   if (username) updates.username = username
   if (display_name !== undefined) updates.display_name = display_name || null
   if (city !== undefined) updates.city = city || null
   if (grade !== undefined) updates.grade = grade
   if (onboarding_completed) updates.onboarding_completed = true
+  if (preferred_theme !== undefined) updates.preferred_theme = preferred_theme
 
   // 5) Service-role update — sahip kontrolu auth.uid() = user.id ile yapildi
   const admin = createServiceRoleClient()

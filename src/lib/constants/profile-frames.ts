@@ -15,6 +15,8 @@ export interface ProfileFrameDef {
   thickness: number
   /** Swatch önizleme rengi */
   preview: string
+  /** Coin satın alma bedeli — undefined = başlangıç çerçevesi (ücretsiz) */
+  coinCost?: number
 }
 
 export const PROFILE_FRAMES: ProfileFrameDef[] = [
@@ -46,6 +48,18 @@ export const PROFILE_FRAMES: ProfileFrameDef[] = [
     glow: '#F97316',
     thickness: 3,
     preview: '#F97316',
+    coinCost: 30,
+  },
+  {
+    id: 'zumrut',
+    name: 'Zümrüt Kalkan',
+    description: '100 oyun oynayan bilge',
+    rarity: 'rare',
+    ring: 'linear-gradient(135deg, #064E3B 0%, #34D399 40%, #A7F3D0 60%, #34D399 80%, #064E3B 100%)',
+    glow: '#10B981',
+    thickness: 3,
+    preview: '#10B981',
+    coinCost: 60,
   },
   {
     id: 'gold',
@@ -57,16 +71,7 @@ export const PROFILE_FRAMES: ProfileFrameDef[] = [
     animated: true,
     thickness: 3,
     preview: '#D97706',
-  },
-  {
-    id: 'zumrut',
-    name: 'Zümrüt Kalkan',
-    description: '100 oyun oynayan bilge',
-    rarity: 'rare',
-    ring: 'linear-gradient(135deg, #064E3B 0%, #34D399 40%, #A7F3D0 60%, #34D399 80%, #064E3B 100%)',
-    glow: '#10B981',
-    thickness: 3,
-    preview: '#10B981',
+    coinCost: 120,
   },
   {
     id: 'efsane',
@@ -78,6 +83,7 @@ export const PROFILE_FRAMES: ProfileFrameDef[] = [
     animated: true,
     thickness: 4,
     preview: '#7C3AED',
+    coinCost: 250,
   },
   {
     id: 'evren',
@@ -89,6 +95,7 @@ export const PROFILE_FRAMES: ProfileFrameDef[] = [
     animated: true,
     thickness: 4,
     preview: '#06B6D4',
+    coinCost: 300,
   },
 ]
 

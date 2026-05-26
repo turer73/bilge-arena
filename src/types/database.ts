@@ -43,6 +43,7 @@ export interface Profile {
   total_sessions: number
   // Coin ekonomisi
   coin_balance: number
+  owned_frames: string[]
   // Premium
   is_premium: boolean
   premium_until: string | null

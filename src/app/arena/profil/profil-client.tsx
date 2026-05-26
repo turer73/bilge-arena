@@ -36,6 +36,11 @@ export default function ProfilClient() {
   const [editOpen, setEditOpen] = useState(false)
   const [selectedFrameId, setSelectedFrameId] = useState<string>('none')
   const [framePickerOpen, setFramePickerOpen] = useState(false)
+  const [ownedFrames, setOwnedFrames] = useState<string[]>(['none', 'mavi'])
+  const [purchasing, setPurchasing] = useState<string | null>(null)
+  const [purchaseMsg, setPurchaseMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null)
+  // localCoinBalance: auth store'dan bağımsız anlık bakiye (satın alım sonrası güncellenir)
+  const [localCoinDelta, setLocalCoinDelta] = useState(0)
 
   // Çerçeve seçimini localStorage'dan yükle
   useEffect(() => {
@@ -46,6 +51,13 @@ export default function ProfilClient() {
       }
     } catch {}
   }, [])
+
+  // Profile'dan owned_frames yükle
+  useEffect(() => {
+    if (profile?.owned_frames && profile.owned_frames.length > 0) {
+      setOwnedFrames(profile.owned_frames)
+    }
+  }, [profile?.owned_frames])
 
   // Kullanici giris yaptiginda istatistikleri ve rozetleri cek
   useEffect(() => {
@@ -105,7 +117,7 @@ export default function ProfilClient() {
   const totalSessions = profile.total_sessions ?? 0
   const correctAnswers = profile.correct_answers ?? 0
   const totalQuestions = profile.total_questions ?? 0
-  const coinBalance = profile.coin_balance ?? 0
+  const coinBalance = Math.max(0, (profile.coin_balance ?? 0) - localCoinDelta)
   const displayName = profile.username || profile.display_name || 'Arenaci'
 
   const level = getLevelFromXP(totalXP)
@@ -117,6 +129,36 @@ export default function ProfilClient() {
     setSelectedFrameId(id)
     setFramePickerOpen(false)
     try { localStorage.setItem(FRAME_STORAGE_KEY, id) } catch {}
+  }
+
+  async function purchaseFrame(frameId: string) {
+    const frame = PROFILE_FRAMES.find((f) => f.id === frameId)
+    if (!frame || frame.coinCost === undefined) return
+    if (ownedFrames.includes(frameId)) return
+
+    setPurchasing(frameId)
+    setPurchaseMsg(null)
+    try {
+      const res = await fetch('/api/profile/frames/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frameId }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setOwnedFrames(data.owned_frames ?? [...ownedFrames, frameId])
+        setLocalCoinDelta((prev) => prev + (frame.coinCost ?? 0))
+        setPurchaseMsg({ id: frameId, ok: true, text: `${frame.name} satın alındı!` })
+        // Otomatik seç
+        selectFrame(frameId)
+      } else {
+        setPurchaseMsg({ id: frameId, ok: false, text: data.error ?? 'Satın alım başarısız' })
+      }
+    } catch {
+      setPurchaseMsg({ id: frameId, ok: false, text: 'Bağlantı hatası' })
+    } finally {
+      setPurchasing(null)
+    }
   }
 
   const mainStats = [
@@ -232,28 +274,78 @@ export default function ProfilClient() {
         {/* Çerçeve seçici paneli */}
         {framePickerOpen && (
           <div className="mt-3 animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-3">
-            <p className="mb-2.5 text-[9px] font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
-              Profil Çerçevesi
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {PROFILE_FRAMES.map((frm) => (
-                <div key={frm.id} className="flex flex-col items-center gap-1">
-                  <FrameDot
-                    frame={frm}
-                    active={selectedFrameId === frm.id}
-                    onClick={() => selectFrame(frm.id)}
-                  />
-                  <span
-                    className="text-[8px] font-bold leading-none"
-                    style={{ color: FRAME_RARITY_COLOR[frm.rarity] }}
-                  >
-                    {frm.id === 'none' ? '—' : FRAME_RARITY_LABEL[frm.rarity]}
-                  </span>
-                </div>
-              ))}
+            <div className="mb-2.5 flex items-center justify-between">
+              <p className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
+                Profil Çerçevesi
+              </p>
+              <span className="text-[10px] font-bold text-[var(--reward-light)]">
+                🪙 {coinBalance.toLocaleString('tr-TR')} coin
+              </span>
             </div>
+
+            {/* Mesaj */}
+            {purchaseMsg && (
+              <p
+                className="mb-2 rounded-lg px-2 py-1.5 text-[10px] font-medium"
+                style={{
+                  background: purchaseMsg.ok ? 'var(--growth-bg)' : 'var(--urgency-bg)',
+                  color: purchaseMsg.ok ? 'var(--growth)' : 'var(--urgency)',
+                }}
+              >
+                {purchaseMsg.ok ? '✓ ' : '✗ '}{purchaseMsg.text}
+              </p>
+            )}
+
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+              {PROFILE_FRAMES.map((frm) => {
+                const owned = ownedFrames.includes(frm.id)
+                const locked = !owned && frm.coinCost !== undefined
+                const canAfford = coinBalance >= (frm.coinCost ?? 0)
+                const isBuying = purchasing === frm.id
+
+                return (
+                  <div key={frm.id} className="flex flex-col items-center gap-1">
+                    <div className="relative">
+                      <FrameDot
+                        frame={frm}
+                        active={selectedFrameId === frm.id}
+                        onClick={() => owned && selectFrame(frm.id)}
+                        className={locked ? 'opacity-50' : ''}
+                      />
+                      {locked && (
+                        <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 text-[8px]">🔒</span>
+                      )}
+                    </div>
+
+                    <span
+                      className="text-[8px] font-bold leading-none text-center"
+                      style={{ color: FRAME_RARITY_COLOR[frm.rarity] }}
+                    >
+                      {frm.id === 'none' ? '—' : FRAME_RARITY_LABEL[frm.rarity]}
+                    </span>
+
+                    {locked && (
+                      <button
+                        onClick={() => purchaseFrame(frm.id)}
+                        disabled={!canAfford || isBuying}
+                        className="mt-0.5 rounded-md px-1.5 py-0.5 text-[8px] font-bold transition-colors disabled:opacity-40"
+                        style={{
+                          background: canAfford ? 'var(--reward-bg)' : 'var(--card-bg)',
+                          color: canAfford ? 'var(--reward-light)' : 'var(--text-muted)',
+                          border: '1px solid var(--reward-border)',
+                        }}
+                        title={canAfford ? `${frm.coinCost} coin harca` : `${frm.coinCost} coin gerekli`}
+                      >
+                        {isBuying ? '…' : `🪙${frm.coinCost}`}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
             {activeFrame.id !== 'none' && (
-              <p className="mt-2 text-[9px] text-[var(--text-muted)]">
+              <p className="mt-2.5 border-t border-[var(--border)] pt-2 text-[9px] text-[var(--text-muted)]">
                 <span className="font-bold" style={{ color: FRAME_RARITY_COLOR[activeFrame.rarity] }}>
                   {activeFrame.name}
                 </span>
