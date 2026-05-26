@@ -1,29 +1,67 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Moon, Sun } from 'lucide-react'
-import { useUIStore } from '@/stores/ui-store'
+import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
+import type { Theme } from '@/stores/ui-store'
+
+interface ThemeOption {
+  id: Theme
+  label: string
+  /** Renk noktası — temanın ana aksanı */
+  dot: string
+  /** Nokta arka planı (açık temalar için) */
+  dotBg?: string
+}
+
+const THEME_OPTIONS: ThemeOption[] = [
+  { id: 'dark',      label: 'Gece Mavisi',     dot: '#2563EB' },
+  { id: 'okyanus',   label: 'Derin Okyanus',   dot: '#0284C7' },
+  { id: 'orman',     label: 'Kadim Orman',     dot: '#0D9488' },
+  { id: 'gunbatimi', label: 'Kızıl Günbatımı', dot: '#EA580C' },
+  { id: 'mor-gece',  label: 'Mor Gece',        dot: '#6366F1' },
+  { id: 'light',     label: 'Gün Işığı',       dot: '#CBD5E1', dotBg: '#F1F5F9' },
+]
 
 export function ThemeToggle() {
-  const { theme, toggleTheme, setTheme } = useUIStore()
+  const { theme, setTheme } = useUIStore()
 
-  // Sayfa yuklendiginde localStorage'dan temayı al
+  // Sayfa yüklendiğinde kayıtlı temayı yükle
   useEffect(() => {
-    const saved = localStorage.getItem('bilge-theme') as 'dark' | 'light' | null
-    if (saved) setTheme(saved)
+    const saved = localStorage.getItem('bilge-theme') as Theme | null
+    if (saved && THEME_OPTIONS.some((t) => t.id === saved)) {
+      setTheme(saved)
+    }
   }, [setTheme])
 
+  const isDark = DARK_THEMES.has(theme)
+
   return (
-    <button
-      onClick={toggleTheme}
-      className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] transition-colors hover:bg-[var(--card)]"
-      aria-label={theme === 'dark' ? 'Acik temaya gec' : 'Koyu temaya gec'}
+    <div
+      className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5"
+      role="group"
+      aria-label="Tema seç"
     >
-      {theme === 'dark' ? (
-        <Sun size={16} className="text-[var(--reward)]" />
-      ) : (
-        <Moon size={16} className="text-[var(--focus)]" />
-      )}
-    </button>
+      {THEME_OPTIONS.map((opt) => {
+        const active = theme === opt.id
+        return (
+          <button
+            key={opt.id}
+            onClick={() => setTheme(opt.id)}
+            title={opt.label}
+            aria-label={opt.label}
+            aria-pressed={active}
+            className="relative h-4 w-4 rounded-full transition-all duration-150 hover:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+            style={{
+              backgroundColor: opt.dotBg ?? opt.dot,
+              border: opt.dotBg ? `1.5px solid ${opt.dot}` : undefined,
+              boxShadow: active
+                ? `0 0 0 2px ${isDark ? '#0a0a1a' : '#ffffff'}, 0 0 0 3.5px ${opt.dot}`
+                : undefined,
+              transform: active ? 'scale(1.15)' : undefined,
+            }}
+          />
+        )
+      })}
+    </div>
   )
 }

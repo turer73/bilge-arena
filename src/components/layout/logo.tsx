@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useUIStore } from '@/stores/ui-store'
+import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
 
 interface LogoProps {
   size?: number
@@ -11,7 +11,7 @@ interface LogoProps {
 
 export function Logo({ size = 36, showText = true }: LogoProps) {
   const theme = useUIStore((s) => s.theme)
-  const src = theme === 'dark' ? '/logo/icon-dark.svg' : '/logo/icon-light.svg'
+  const src = DARK_THEMES.has(theme) ? '/logo/icon-dark.svg' : '/logo/icon-light.svg'
 
   return (
     <Link href="/" className="flex items-center gap-2.5">

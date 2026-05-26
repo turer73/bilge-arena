@@ -144,6 +144,135 @@
 }
 
 /* ============================================================
+   Renkli Tema Paleti — Semantic renkler (reward/growth/wisdom/urgency)
+   tüm koyu temalar için aynı; sadece bg/border/text/focus değişir.
+   ============================================================ */
+
+[data-theme="okyanus"],
+[data-theme="orman"],
+[data-theme="gunbatimi"],
+[data-theme="mor-gece"] {
+  --reward-dark: #92400E;
+  --reward: #D97706;
+  --reward-light: #F59E0B;
+  --reward-xl: #FCD34D;
+  --reward-glow: #D97706;
+  --reward-bg: rgba(217, 119, 6, 0.12);
+  --reward-border: rgba(217, 119, 6, 0.3);
+
+  --growth-dark: #065F46;
+  --growth: #059669;
+  --growth-light: #10B981;
+  --growth-xl: #6EE7B7;
+  --growth-glow: #059669;
+  --growth-bg: rgba(5, 150, 105, 0.12);
+  --growth-border: rgba(5, 150, 105, 0.3);
+
+  --wisdom-dark: #4C1D95;
+  --wisdom: #7C3AED;
+  --wisdom-light: #8B5CF6;
+  --wisdom-xl: #C4B5FD;
+  --wisdom-glow: #7C3AED;
+  --wisdom-bg: rgba(124, 58, 237, 0.12);
+  --wisdom-border: rgba(124, 58, 237, 0.3);
+
+  --urgency-dark: #991B1B;
+  --urgency: #DC2626;
+  --urgency-light: #EF4444;
+  --urgency-xl: #FCA5A5;
+  --urgency-glow: #DC2626;
+  --urgency-bg: rgba(220, 38, 38, 0.12);
+  --urgency-border: rgba(220, 38, 38, 0.3);
+
+  --bg-secondary: var(--surface);
+  --card-bg: var(--card);
+}
+
+/* ── Okyanus (Derin Okyanus — gökyüzü mavisi) ── */
+[data-theme="okyanus"] {
+  --bg: #040D14;
+  --surface: #071C2C;
+  --card: #0B2540;
+  --cardHover: #112E4E;
+  --border: #0E4A70;
+  --border-strong: #0E4A70;
+  --border-glow: rgba(2, 132, 199, 0.4);
+  --text: #E0F2FE;
+  --text-sub: #93C5FD;
+  --text-muted: #3A7A9A;
+  --focus-dark: #0369A1;
+  --focus: #0284C7;
+  --focus-light: #0EA5E9;
+  --focus-xl: #7DD3FC;
+  --focus-glow: #0284C7;
+  --focus-bg: rgba(2, 132, 199, 0.12);
+  --focus-border: rgba(2, 132, 199, 0.3);
+}
+
+/* ── Orman (Kadim Orman — derin teal/yeşil) ── */
+[data-theme="orman"] {
+  --bg: #030A06;
+  --surface: #061410;
+  --card: #0A1E14;
+  --cardHover: #0E2A1B;
+  --border: #154D24;
+  --border-strong: #154D24;
+  --border-glow: rgba(13, 148, 136, 0.4);
+  --text: #F0FDF4;
+  --text-sub: #A7F3D0;
+  --text-muted: #4A7A60;
+  --focus-dark: #0F766E;
+  --focus: #0D9488;
+  --focus-light: #14B8A6;
+  --focus-xl: #99F6E4;
+  --focus-glow: #0D9488;
+  --focus-bg: rgba(13, 148, 136, 0.12);
+  --focus-border: rgba(13, 148, 136, 0.3);
+}
+
+/* ── Günbatımı (Kızıl Günbatımı — turuncu/amber) ── */
+[data-theme="gunbatimi"] {
+  --bg: #100500;
+  --surface: #1C0900;
+  --card: #281200;
+  --cardHover: #331800;
+  --border: #5C2A00;
+  --border-strong: #5C2A00;
+  --border-glow: rgba(234, 88, 12, 0.4);
+  --text: #FFF7ED;
+  --text-sub: #FDBA74;
+  --text-muted: #7A4B2A;
+  --focus-dark: #C2410C;
+  --focus: #EA580C;
+  --focus-light: #F97316;
+  --focus-xl: #FED7AA;
+  --focus-glow: #EA580C;
+  --focus-bg: rgba(234, 88, 12, 0.12);
+  --focus-border: rgba(234, 88, 12, 0.3);
+}
+
+/* ── Mor Gece (Derin Mor — indigo/violet) ── */
+[data-theme="mor-gece"] {
+  --bg: #06020F;
+  --surface: #0E0520;
+  --card: #160830;
+  --cardHover: #1C0C3E;
+  --border: #3D1A72;
+  --border-strong: #3D1A72;
+  --border-glow: rgba(99, 102, 241, 0.4);
+  --text: #F5F0FF;
+  --text-sub: #C4B5FD;
+  --text-muted: #6B5BA0;
+  --focus-dark: #4F46E5;
+  --focus: #6366F1;
+  --focus-light: #818CF8;
+  --focus-xl: #C7D2FE;
+  --focus-glow: #6366F1;
+  --focus-bg: rgba(99, 102, 241, 0.12);
+  --focus-border: rgba(99, 102, 241, 0.3);
+}
+
+/* ============================================================
    Base Styles — Template birebir
    ============================================================ */
 
