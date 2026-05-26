@@ -105,7 +105,7 @@ export default function ProfilClient() {
   const totalSessions = profile.total_sessions ?? 0
   const correctAnswers = profile.correct_answers ?? 0
   const totalQuestions = profile.total_questions ?? 0
-  const coinBalance = (profile as { coin_balance?: number }).coin_balance ?? 0
+  const coinBalance = profile.coin_balance ?? 0
   const displayName = profile.username || profile.display_name || 'Arenaci'
 
   const level = getLevelFromXP(totalXP)

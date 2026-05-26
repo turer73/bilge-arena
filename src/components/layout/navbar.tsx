@@ -93,7 +93,7 @@ export function Navbar() {
                   className="hidden items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-2 py-1 text-[11px] font-bold text-[var(--reward-light)] transition-colors hover:border-[var(--reward-border)] sm:flex"
                   title="Coin bakiyesi"
                 >
-                  🪙 {((profile as { coin_balance?: number }).coin_balance ?? 0).toLocaleString('tr-TR')}
+                  🪙 {(profile.coin_balance ?? 0).toLocaleString('tr-TR')}
                 </Link>
               )}
               <Link href="/arena" className="hidden sm:inline-flex">

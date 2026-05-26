@@ -62,9 +62,9 @@ export default function ArenaClient() {
             </div>
             <div className="flex items-center gap-2 text-[10px] text-[var(--text-muted)] md:text-xs">
               <span>⚡ {totalXP.toLocaleString('tr-TR')} XP</span>
-              {((profile as { coin_balance?: number }).coin_balance ?? 0) > 0 && (
+              {(profile.coin_balance ?? 0) > 0 && (
                 <span className="font-semibold" style={{ color: 'var(--reward-light)' }}>
-                  🪙 {((profile as { coin_balance?: number }).coin_balance ?? 0).toLocaleString('tr-TR')}
+                  🪙 {(profile.coin_balance ?? 0).toLocaleString('tr-TR')}
                 </span>
               )}
             </div>
