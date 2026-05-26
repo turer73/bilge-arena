@@ -14,6 +14,8 @@ import { EditProfileModal } from '@/components/profile/edit-profile-modal'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { fetchProfileBootstrap, type ProfileStats } from '@/lib/supabase/profile-stats'
+import { PROFILE_FRAMES, FRAME_STORAGE_KEY, getFrameById, FRAME_RARITY_LABEL, FRAME_RARITY_COLOR } from '@/lib/constants/profile-frames'
+import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
 import Link from 'next/link'
 
 // Mod isimleri
@@ -32,6 +34,18 @@ export default function ProfilClient() {
   const [statsLoading, setStatsLoading] = useState(false)
   const [earnedBadgeCodes, setEarnedBadgeCodes] = useState<string[]>([])
   const [editOpen, setEditOpen] = useState(false)
+  const [selectedFrameId, setSelectedFrameId] = useState<string>('none')
+  const [framePickerOpen, setFramePickerOpen] = useState(false)
+
+  // Çerçeve seçimini localStorage'dan yükle
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(FRAME_STORAGE_KEY)
+      if (saved && PROFILE_FRAMES.some((f) => f.id === saved)) {
+        setSelectedFrameId(saved)
+      }
+    } catch {}
+  }, [])
 
   // Kullanici giris yaptiginda istatistikleri ve rozetleri cek
   useEffect(() => {
@@ -96,6 +110,14 @@ export default function ProfilClient() {
   const level = getLevelFromXP(totalXP)
   const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
 
+  const activeFrame = getFrameById(selectedFrameId)
+
+  function selectFrame(id: string) {
+    setSelectedFrameId(id)
+    setFramePickerOpen(false)
+    try { localStorage.setItem(FRAME_STORAGE_KEY, id) } catch {}
+  }
+
   const mainStats = [
     { label: 'TOPLAM XP', value: totalXP, icon: '⚡', color: 'var(--reward)' },
     { label: 'OYUN', value: totalSessions, icon: '🎮', color: 'var(--focus)' },
@@ -145,26 +167,38 @@ export default function ProfilClient() {
       {/* Profil basligi */}
       <div className="mb-4 animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 md:mb-6 md:rounded-2xl md:p-6 xl:p-7 2xl:p-8">
         <div className="flex items-center gap-3 md:gap-4">
-          {profile.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={displayName}
-              className="h-12 w-12 rounded-full border-[3px] object-cover md:h-16 md:w-16 xl:h-20 xl:w-20"
-              style={{ borderColor: 'var(--focus-border)' }}
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div
-              className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] text-2xl md:h-16 md:w-16 md:text-3xl xl:h-20 xl:w-20 xl:text-4xl"
-              style={{
-                background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))',
-                borderColor: 'var(--focus-border)',
-              }}
+
+          {/* Avatar + Çerçeve */}
+          <div className="relative flex-shrink-0">
+            <ProfileFrameRing frame={activeFrame} size={48}>
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={displayName}
+                  className="h-12 w-12 rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div
+                  className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
+                  style={{ background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))' }}
+                >
+                  {level.badge}
+                </div>
+              )}
+            </ProfileFrameRing>
+
+            {/* Çerçeve değiştir butonu */}
+            <button
+              onClick={() => setFramePickerOpen((v) => !v)}
+              title="Çerçeve seç"
+              className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] text-[9px] shadow-sm transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
             >
-              {level.badge}
-            </div>
-          )}
-          <div className="flex-1">
+              🖼
+            </button>
+          </div>
+
+          <div className="flex-1 min-w-0">
             <h1 className="text-base font-bold md:text-xl xl:text-2xl">{displayName}</h1>
             <div className="flex items-center gap-2 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">
               <span>{level.badge} {level.name}</span>
@@ -181,16 +215,51 @@ export default function ProfilClient() {
               />
             </div>
           </div>
+
           <div className="flex flex-col items-end gap-2">
             <StreakBadge streak={currentStreak} />
             <button
               onClick={() => setEditOpen(true)}
               className="rounded-lg border border-[var(--border)] px-3 py-1 text-[10px] font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
             >
-              Duzenle
+              Düzenle
             </button>
           </div>
         </div>
+
+        {/* Çerçeve seçici paneli */}
+        {framePickerOpen && (
+          <div className="mt-3 animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-3">
+            <p className="mb-2.5 text-[9px] font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
+              Profil Çerçevesi
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {PROFILE_FRAMES.map((frm) => (
+                <div key={frm.id} className="flex flex-col items-center gap-1">
+                  <FrameDot
+                    frame={frm}
+                    active={selectedFrameId === frm.id}
+                    onClick={() => selectFrame(frm.id)}
+                  />
+                  <span
+                    className="text-[8px] font-bold leading-none"
+                    style={{ color: FRAME_RARITY_COLOR[frm.rarity] }}
+                  >
+                    {frm.id === 'none' ? '—' : FRAME_RARITY_LABEL[frm.rarity]}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {activeFrame.id !== 'none' && (
+              <p className="mt-2 text-[9px] text-[var(--text-muted)]">
+                <span className="font-bold" style={{ color: FRAME_RARITY_COLOR[activeFrame.rarity] }}>
+                  {activeFrame.name}
+                </span>
+                {' — '}{activeFrame.description}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />
