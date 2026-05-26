@@ -188,8 +188,28 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // 5) Service-role insert
+  // 5) Content dedup — ayni kullanici, ayni soru, ayni icerik 60 dk icinde tekrar yorum yapamaz (H-149-2)
   const admin = createServiceRoleClient()
+  const sixtyMinAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  const { data: existing } = await admin
+    .from('comments')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('question_id', questionId)
+    .eq('content', contentParse.data)
+    .eq('is_deleted', false)
+    .gte('created_at', sixtyMinAgo)
+    .limit(1)
+    .maybeSingle()
+
+  if (existing) {
+    return NextResponse.json(
+      { error: 'Bu yorumu zaten gönderdiniz' },
+      { status: 409 },
+    )
+  }
+
+  // 6) Service-role insert
   const { data, error } = await admin
     .from('comments')
     .insert({

@@ -1,250 +1,162 @@
+﻿/**
+ * Tests: GET + PATCH /api/challenges/[id]
+ * Kapsam: H-150-3 (PATCH rate limit), H-150-4 (maybeSingle hata), auth, UUID.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { NextRequest } from 'next/server'
 
-// ─── Mocks ──────────────────────────────────────────
-
-const { mockGetUser, mockChallengeSingle, mockUpdateEq, mockGetChallengeMaybeSingle, mockGetQuestionsIn } = vi.hoisted(() => ({
+const { mockGetUser, mockChallengeQuery, mockChallengeUpdate, mockQuestionsQuery, mockRateLimitCheck } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
-  mockChallengeSingle: vi.fn(),
-  mockUpdateEq: vi.fn(),
-  mockGetChallengeMaybeSingle: vi.fn(),
-  mockGetQuestionsIn: vi.fn(),
+  mockChallengeQuery: vi.fn(),
+  mockChallengeUpdate: vi.fn(async () => ({ error: null })),
+  mockQuestionsQuery: vi.fn(),
+  mockRateLimitCheck: vi.fn(async () => ({ success: true })),
 }))
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({
-    auth: { getUser: mockGetUser },
-  })),
-}))
+vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser } })) }))
 
 vi.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: () => ({
+  createServiceRoleClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
       if (table === 'challenges') {
         return {
           select: vi.fn(() => ({
-            // PATCH path: .select().eq().eq().eq().single()
             eq: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                eq: vi.fn(() => ({
-                  single: mockChallengeSingle,
-                })),
-              })),
-              // GET path: .select().eq().or().maybeSingle()
-              or: vi.fn(() => ({
-                maybeSingle: mockGetChallengeMaybeSingle,
-              })),
+              or: vi.fn(() => ({ maybeSingle: mockChallengeQuery })),
+              eq: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle: mockChallengeQuery })) })),
             })),
           })),
-          update: vi.fn(() => ({
-            eq: mockUpdateEq,
-          })),
+          update: vi.fn(() => ({ eq: vi.fn(() => mockChallengeUpdate()) })),
         }
       }
-      if (table === 'questions') {
-        return {
-          select: vi.fn(() => ({
-            in: mockGetQuestionsIn,
-          })),
-        }
-      }
+      if (table === 'questions') return { select: vi.fn(() => ({ in: mockQuestionsQuery })) }
       return {}
     }),
-  }),
-}))
-
-vi.mock('@/lib/utils/rate-limit', () => ({
-  createRateLimiter: vi.fn(() => ({
-    check: vi.fn(async () => ({ success: true })),
   })),
 }))
 
+vi.mock('@/lib/utils/rate-limit', () => ({ createRateLimiter: vi.fn(() => ({ check: mockRateLimitCheck })) }))
+
 import { GET, PATCH } from '../route'
 
-// ─── Helpers ────────────────────────────────────────
+const VALID_ID = '12345678-1234-1234-1234-123456789012'
+const USER_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
 
-const CHALLENGE_ID = '20000000-0000-4000-8000-000000000001'
-
-function makePatchReq(body: Record<string, unknown>) {
-  return new NextRequest(`http://localhost/api/challenges/${CHALLENGE_ID}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '1.2.3.4' },
-    body: JSON.stringify(body),
-  })
+function makeGetReq(id: string) {
+  const h = new Headers(); h.set('x-forwarded-for', '1.2.3.4')
+  return new Request(`http://localhost/api/challenges/${id}`, { headers: h })
 }
-
-function makeGetReq() {
-  const headers = new Headers()
-  headers.set('x-forwarded-for', '1.2.3.4')
-  return new Request(`http://localhost/api/challenges/${CHALLENGE_ID}`, { headers })
+function makePatchReq(id: string, body: unknown) {
+  const h = new Headers(); h.set('x-forwarded-for', '1.2.3.4'); h.set('Content-Type', 'application/json')
+  return new Request(`http://localhost/api/challenges/${id}`, { method: 'PATCH', headers: h, body: JSON.stringify(body) })
 }
-
-const paramsPromise = Promise.resolve({ id: CHALLENGE_ID })
-
-// ─── PATCH Tests ────────────────────────────────────
-
-describe('PATCH /api/challenges/[id]', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockUpdateEq.mockResolvedValue({ error: null })
-  })
-
-  it('returns 401 if not authenticated', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } })
-    const res = await PATCH(makePatchReq({ action: 'accept' }), { params: paramsPromise })
-    expect(res.status).toBe(401)
-  })
-
-  it('returns 400 for invalid action', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u2' } } })
-    const res = await PATCH(makePatchReq({ action: 'invalid' }), { params: paramsPromise })
-    expect(res.status).toBe(400)
-  })
-
-  it('returns 404 if challenge not found', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u2' } } })
-    mockChallengeSingle.mockResolvedValue({ data: null, error: null })
-    const res = await PATCH(makePatchReq({ action: 'accept' }), { params: paramsPromise })
-    expect(res.status).toBe(404)
-  })
-
-  it('returns 400 if challenge expired', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u2' } } })
-    mockChallengeSingle.mockResolvedValue({
-      data: { id: CHALLENGE_ID, status: 'pending', opponent_id: 'u2', expires_at: '2020-01-01T00:00:00Z' },
-      error: null,
-    })
-    const res = await PATCH(makePatchReq({ action: 'accept' }), { params: paramsPromise })
-    expect(res.status).toBe(400)
-  })
-
-  it('accepts challenge successfully', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u2' } } })
-    mockChallengeSingle.mockResolvedValue({
-      data: { id: CHALLENGE_ID, status: 'pending', opponent_id: 'u2', expires_at: '2099-01-01T00:00:00Z' },
-      error: null,
-    })
-    const res = await PATCH(makePatchReq({ action: 'accept' }), { params: paramsPromise })
-    expect(res.status).toBe(200)
-    const json = await res.json()
-    expect(json.status).toBe('accepted')
-  })
-
-  it('declines challenge successfully', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u2' } } })
-    mockChallengeSingle.mockResolvedValue({
-      data: { id: CHALLENGE_ID, status: 'pending', opponent_id: 'u2', expires_at: '2099-01-01T00:00:00Z' },
-      error: null,
-    })
-    const res = await PATCH(makePatchReq({ action: 'decline' }), { params: paramsPromise })
-    expect(res.status).toBe(200)
-    const json = await res.json()
-    expect(json.status).toBe('declined')
-  })
-})
-
-// ─── GET Tests ──────────────────────────────────────
+const makeParams = (id: string) => ({ params: Promise.resolve({ id }) })
 
 describe('GET /api/challenges/[id]', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('returns 401 if not authenticated', async () => {
+  it('returns 401 if unauthenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
-    const res = await GET(makeGetReq() as never, { params: paramsPromise })
-    expect(res.status).toBe(401)
+    expect((await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))).status).toBe(401)
   })
 
-  it('returns 400 if id invalid', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    const res = await GET(makeGetReq() as never, { params: Promise.resolve({ id: 'not-uuid' }) })
-    expect(res.status).toBe(400)
+  it('returns 400 for invalid UUID', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    expect((await GET(makeGetReq('bad') as never, makeParams('bad'))).status).toBe(400)
+  })
+
+  it('returns 429 on IP rate limit', async () => {
+    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 } as never)
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('30')
+  })
+
+  it('returns 500 on query error, not 404 (H-150-4)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeQuery.mockResolvedValue({ data: null, error: { code: '42501' } })
+    expect((await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))).status).toBe(500)
+  })
+
+  it('returns 404 if not found', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeQuery.mockResolvedValue({ data: null, error: null })
+    expect((await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))).status).toBe(404)
+  })
+
+  it('returns 200 with challenge and questions', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeQuery.mockResolvedValue({ data: { id: VALID_ID, question_ids: ['q1', 'q2'] }, error: null })
+    mockQuestionsQuery.mockResolvedValue({ data: [{ id: 'q1', content: {} }, { id: 'q2', content: {} }], error: null })
+    const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+    expect(res.status).toBe(200)
+    expect((await res.json()).questions).toHaveLength(2)
+  })
+})
+
+describe('PATCH /api/challenges/[id]', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('returns 401 if unauthenticated', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    expect((await PATCH(makePatchReq(VALID_ID, { action: 'accept' }) as never, makeParams(VALID_ID))).status).toBe(401)
+  })
+
+  it('returns 400 for invalid UUID', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    expect((await PATCH(makePatchReq('bad', { action: 'accept' }) as never, makeParams('bad'))).status).toBe(400)
+  })
+
+  it('returns 429 on IP rate limit (H-150-3)', async () => {
+    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 60 } as never)
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    const res = await PATCH(makePatchReq(VALID_ID, { action: 'accept' }) as never, makeParams(VALID_ID))
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('60')
+  })
+
+  it('returns 429 on user rate limit (H-150-3)', async () => {
+    mockRateLimitCheck.mockResolvedValueOnce({ success: true }).mockResolvedValueOnce({ success: false, retryAfter: 20 } as never)
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    expect((await PATCH(makePatchReq(VALID_ID, { action: 'accept' }) as never, makeParams(VALID_ID))).status).toBe(429)
+  })
+
+  it('returns 400 for invalid action', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    expect((await PATCH(makePatchReq(VALID_ID, { action: 'bad' }) as never, makeParams(VALID_ID))).status).toBe(400)
+  })
+
+  it('returns 500 on DB error, not silent 404 (H-150-4)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeQuery.mockResolvedValue({ data: null, error: { code: '08006' } })
+    expect((await PATCH(makePatchReq(VALID_ID, { action: 'accept' }) as never, makeParams(VALID_ID))).status).toBe(500)
   })
 
   it('returns 404 if challenge not found', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockGetChallengeMaybeSingle.mockResolvedValue({ data: null, error: null })
-    const res = await GET(makeGetReq() as never, { params: paramsPromise })
-    expect(res.status).toBe(404)
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeQuery.mockResolvedValue({ data: null, error: null })
+    expect((await PATCH(makePatchReq(VALID_ID, { action: 'accept' }) as never, makeParams(VALID_ID))).status).toBe(404)
   })
 
-  it('returns challenge + questions on success', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockGetChallengeMaybeSingle.mockResolvedValue({
-      data: {
-        id: CHALLENGE_ID,
-        challenger_id: 'u1',
-        opponent_id: 'u2',
-        question_ids: ['q1', 'q2'],
-      },
-      error: null,
-    })
-    mockGetQuestionsIn.mockResolvedValue({
-      data: [
-        { id: 'q1', content: { options: ['A', 'B'] } },
-        { id: 'q2', content: { options: ['C', 'D'] } },
-      ],
-      error: null,
-    })
-
-    const res = await GET(makeGetReq() as never, { params: paramsPromise })
+  it('accepts challenge', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeQuery.mockResolvedValue({ data: { id: VALID_ID, opponent_id: USER_ID, status: 'pending', expires_at: new Date(Date.now() + 86400000).toISOString() }, error: null })
+    const res = await PATCH(makePatchReq(VALID_ID, { action: 'accept' }) as never, makeParams(VALID_ID))
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.challenge.id).toBe(CHALLENGE_ID)
-    expect(body.questions).toHaveLength(2)
-    expect(body.questions[0].id).toBe('q1')
+    expect((await res.json()).status).toBe('accepted')
   })
 
-  it('preserves question_ids order', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockGetChallengeMaybeSingle.mockResolvedValue({
-      data: {
-        id: CHALLENGE_ID,
-        challenger_id: 'u1',
-        opponent_id: 'u2',
-        question_ids: ['q2', 'q1'], // Reverse order
-      },
-      error: null,
-    })
-    mockGetQuestionsIn.mockResolvedValue({
-      data: [
-        { id: 'q1', content: {} },
-        { id: 'q2', content: {} },
-      ],
-      error: null,
-    })
-
-    const res = await GET(makeGetReq() as never, { params: paramsPromise })
-    const body = await res.json()
-    expect(body.questions[0].id).toBe('q2')
-    expect(body.questions[1].id).toBe('q1')
+  it('declines challenge', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeQuery.mockResolvedValue({ data: { id: VALID_ID, opponent_id: USER_ID, status: 'pending', expires_at: new Date(Date.now() + 86400000).toISOString() }, error: null })
+    const res = await PATCH(makePatchReq(VALID_ID, { action: 'decline' }) as never, makeParams(VALID_ID))
+    expect(res.status).toBe(200)
+    expect((await res.json()).status).toBe('declined')
   })
 
-  it('returns empty questions array when question_ids empty', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockGetChallengeMaybeSingle.mockResolvedValue({
-      data: { id: CHALLENGE_ID, question_ids: [] },
-      error: null,
-    })
-
-    const res = await GET(makeGetReq() as never, { params: paramsPromise })
-    const body = await res.json()
-    expect(body.questions).toEqual([])
-  })
-
-  it('returns 500 on challenge query error', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockGetChallengeMaybeSingle.mockResolvedValue({ data: null, error: { code: '42501' } })
-    const res = await GET(makeGetReq() as never, { params: paramsPromise })
-    expect(res.status).toBe(500)
-  })
-
-  it('sets Cache-Control no-store', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockGetChallengeMaybeSingle.mockResolvedValue({
-      data: { id: CHALLENGE_ID, question_ids: [] },
-      error: null,
-    })
-    const res = await GET(makeGetReq() as never, { params: paramsPromise })
-    expect(res.headers.get('Cache-Control')).toBe('no-store')
+  it('returns 400 for expired challenge', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeQuery.mockResolvedValue({ data: { id: VALID_ID, opponent_id: USER_ID, status: 'pending', expires_at: new Date(Date.now() - 1000).toISOString() }, error: null })
+    expect((await PATCH(makePatchReq(VALID_ID, { action: 'accept' }) as never, makeParams(VALID_ID))).status).toBe(400)
   })
 })

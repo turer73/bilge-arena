@@ -31,13 +31,18 @@ export async function POST(
 
   const svc = createServiceRoleClient()
 
-  // Duelloyu bul
-  const { data: challenge } = await svc
+  // H-150-4: .single() → .maybeSingle() — sorgu hatalarini gizlemez
+  const { data: challenge, error: cErr } = await svc
     .from('challenges')
     .select('*')
     .eq('id', id)
     .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
-    .single()
+    .maybeSingle()
+
+  if (cErr) {
+    console.error('[/api/challenges/[id]/submit POST] query error:', cErr.code)
+    return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
+  }
 
   if (!challenge) {
     return NextResponse.json({ error: 'Duello bulunamadi' }, { status: 404 })

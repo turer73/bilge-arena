@@ -27,6 +27,7 @@ const mockSvcFrom = vi.fn((table: string) => {
         eq: vi.fn(() => ({
           or: vi.fn(() => ({
             single: mockChallengeSingle,
+            maybeSingle: mockChallengeSingle, // H-150-4: .single() -> .maybeSingle() degisikligi
           })),
         })),
       })),

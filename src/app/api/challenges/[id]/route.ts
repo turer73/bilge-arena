@@ -9,6 +9,10 @@ import { isValidUuid } from '@/lib/utils/uuid'
 const getIpLimiter = createRateLimiter('challenge-get-ip', 60, 60_000)
 const getUserLimiter = createRateLimiter('challenge-get-user', 30, 60_000)
 
+// H-150-3: PATCH rate limit (klipper review)
+const patchIpLimiter = createRateLimiter('challenge-patch-ip', 30, 60_000)
+const patchUserLimiter = createRateLimiter('challenge-patch-user', 10, 60_000)
+
 // Klipper review P1: UUID validation ortak helper'a tasindi (B3 strict regex)
 
 /**
@@ -114,16 +118,43 @@ export async function GET(
 /**
  * PATCH /api/challenges/[id] — Duello kabul/reddet
  * Body: { action: 'accept' | 'decline' }
+ *
+ * Rate limit: IP 30/dk + user 10/dk (H-150-3 klipper review)
  */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // 1) IP rate limit
+  const ip = getClientIp(req.headers)
+  const ipRl = await patchIpLimiter.check(ip)
+  if (!ipRl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek' },
+      { status: 429, headers: { 'Retry-After': String(ipRl.retryAfter ?? 60) } },
+    )
+  }
+
+  // 2) Auth
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
+  // 3) User rate limit
+  const userRl = await patchUserLimiter.check(user.id)
+  if (!userRl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfter ?? 60) } },
+    )
+  }
+
+  // 4) Param + body validation
   const { id } = await params
+  if (!id || !isValidUuid(id)) {
+    return NextResponse.json({ error: 'id gecersiz' }, { status: 400 })
+  }
+
   const body = await req.json()
   const parsed = challengeActionSchema.safeParse(body)
   if (!parsed.success) {
@@ -133,13 +164,19 @@ export async function PATCH(
 
   const svc = createServiceRoleClient()
 
-  const { data: challenge } = await svc
+  // H-150-4: .single() → .maybeSingle() — sorgu hatalarini gizlemez
+  const { data: challenge, error: cErr } = await svc
     .from('challenges')
     .select('*')
     .eq('id', id)
     .eq('opponent_id', user.id)
     .eq('status', 'pending')
-    .single()
+    .maybeSingle()
+
+  if (cErr) {
+    console.error('[/api/challenges/[id] PATCH] query error:', cErr.code)
+    return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
+  }
 
   if (!challenge) {
     return NextResponse.json({ error: 'Duello bulunamadi veya zaten cevaplanmis' }, { status: 404 })

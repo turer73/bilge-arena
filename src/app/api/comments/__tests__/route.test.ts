@@ -1,10 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockGetUser, mockCommentsList, mockLikesList, mockInsertComment } = vi.hoisted(() => ({
+const {
+  mockGetUser,
+  mockCommentsList,
+  mockLikesList,
+  mockInsertComment,
+  mockDedupCheck,
+  mockRateLimitCheck,
+} = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockCommentsList: vi.fn(),
   mockLikesList: vi.fn(),
   mockInsertComment: vi.fn(),
+  mockDedupCheck: vi.fn(),
+  mockRateLimitCheck: vi.fn(async () => ({ success: true })),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -13,20 +22,40 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+/**
+ * Servis-role mock: comments tablosu için 3 farklı zincir:
+ *   1) GET liste: .select(long).eq.eq.order.limit.returns
+ *   2) POST dedup: .select('id').eq.eq.eq.eq.gte.limit.maybeSingle
+ *   3) POST insert: .insert().select().single
+ */
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
       if (table === 'comments') {
         return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                order: vi.fn(() => ({
-                  limit: vi.fn(() => ({ returns: mockCommentsList })),
+          select: vi.fn((cols: string) => {
+            // GET listesi — uzun select string
+            if (cols !== 'id') {
+              return {
+                eq: vi.fn(() => ({
+                  eq: vi.fn(() => ({
+                    order: vi.fn(() => ({
+                      limit: vi.fn(() => ({ returns: mockCommentsList })),
+                    })),
+                  })),
                 })),
+              }
+            }
+            // POST dedup — select('id') zinciri
+            const dedupChain: Record<string, unknown> = {}
+            const makeEqChain = (): typeof dedupChain => ({
+              eq: vi.fn(() => makeEqChain()),
+              gte: vi.fn(() => ({
+                limit: vi.fn(() => ({ maybeSingle: mockDedupCheck })),
               })),
-            })),
-          })),
+            })
+            return makeEqChain()
+          }),
           insert: vi.fn(() => ({
             select: vi.fn(() => ({
               single: mockInsertComment,
@@ -48,7 +77,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
 
 vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: vi.fn(() => ({
-    check: vi.fn(async () => ({ success: true })),
+    check: mockRateLimitCheck,
   })),
 }))
 
@@ -88,6 +117,14 @@ describe('GET /api/comments', () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
     const res = await GET(makeGet('not-a-uuid') as never)
     expect(res.status).toBe(400)
+  })
+
+  it('returns 429 on IP rate limit', async () => {
+    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 } as never)
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    const res = await GET(makeGet(VALID_UUID) as never)
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('30')
   })
 
   it('returns comments without likes for anon user', async () => {
@@ -147,7 +184,15 @@ describe('GET /api/comments', () => {
 })
 
 describe('POST /api/comments', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Varsayılan: dedup yok, insert OK
+    mockDedupCheck.mockResolvedValue({ data: null, error: null })
+    mockInsertComment.mockResolvedValue({
+      data: { id: 'new-comment-id', created_at: '2026-05-17T00:00:00Z' },
+      error: null,
+    })
+  })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
@@ -173,13 +218,34 @@ describe('POST /api/comments', () => {
     expect(res.status).toBe(400)
   })
 
+  it('returns 429 on IP rate limit', async () => {
+    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 60 } as never)
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await POST(makePost({ questionId: VALID_UUID, content: 'merhaba' }) as never)
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('60')
+  })
+
+  it('returns 429 on user rate limit', async () => {
+    mockRateLimitCheck
+      .mockResolvedValueOnce({ success: true })  // IP geçer
+      .mockResolvedValueOnce({ success: false, retryAfter: 45 } as never) // user fail
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await POST(makePost({ questionId: VALID_UUID, content: 'merhaba' }) as never)
+    expect(res.status).toBe(429)
+  })
+
+  it('returns 409 if duplicate comment within 60 min (H-149-2)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockDedupCheck.mockResolvedValue({ data: { id: 'existing-id' }, error: null })
+    const res = await POST(makePost({ questionId: VALID_UUID, content: 'ayni yorum' }) as never)
+    expect(res.status).toBe(409)
+    const body = await res.json()
+    expect(body.error).toMatch(/zaten/)
+  })
+
   it('creates comment and returns 201', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockInsertComment.mockResolvedValue({
-      data: { id: 'new-comment-id', created_at: '2026-05-17T00:00:00Z' },
-      error: null,
-    })
-
     const res = await POST(makePost({ questionId: VALID_UUID, content: 'hello' }) as never)
     expect(res.status).toBe(201)
     const body = await res.json()
