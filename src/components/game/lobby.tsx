@@ -34,6 +34,8 @@ interface LobbyProps {
     isPremium: boolean
     isGuest: boolean
   }
+  /** Soru yükleme hatası (use-quiz-game'den) */
+  loadError?: string | null
 }
 
 const DIFFICULTY_OPTIONS = [
@@ -69,6 +71,7 @@ export function Lobby({
   selectedExamRef,
   onSelectExamRef,
   quizLimit,
+  loadError,
 }: LobbyProps) {
   const gameDef = GAMES[game]
   const level = getLevelFromXP(userXP)
@@ -242,6 +245,20 @@ export function Lobby({
             isPremium={quizLimit.isPremium}
             isGuest={quizLimit.isGuest}
           />
+        </div>
+      )}
+
+      {/* Soru yükleme hatası */}
+      {loadError && (
+        <div
+          className="animate-fadeUp rounded-xl border px-4 py-3 text-sm font-medium"
+          style={{
+            background: 'var(--urgency-bg, #7f1d1d20)',
+            borderColor: 'var(--urgency, #ef4444)',
+            color: 'var(--urgency, #ef4444)',
+          }}
+        >
+          ⚠️ {loadError}
         </div>
       )}
 

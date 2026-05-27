@@ -120,6 +120,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             isPremium: quizLimit.isPremium,
             isGuest: quizLimit.isGuest,
           }}
+          loadError={quiz.loadError}
         />
         <PremiumGateModal
           isOpen={showPremiumModal}

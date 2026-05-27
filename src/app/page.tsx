@@ -6,7 +6,7 @@ import { HeroSection } from '@/components/landing/hero-section'
 import { StatsBar } from '@/components/landing/stats-bar'
 import { GamesSection } from '@/components/landing/games-section'
 import { SectionWrapper } from '@/components/landing/section-wrapper'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import type { HomepageElement, HomepageSectionConfig } from '@/types/database'
 
 // ISR: Her 5 dakikada bir yeniden oluştur (Supabase sorgularını cache'le)
@@ -47,9 +47,10 @@ const LeaderboardPreview = dynamic(() => import('@/components/landing/leaderboar
 const CTASection = dynamic(() => import('@/components/landing/cta-section').then(m => ({ default: m.CTASection })))
 
 // Oyun başına aktif soru sayısını DB'den çek (ISR ile 5dk cache'lenir)
+// Service-role kullanır — anon key RLS'i soru sayımını engeller (ISR'da cookie yok)
 async function getGameCounts(): Promise<Record<string, number>> {
   try {
-    const supabase = await createClient()
+    const supabase = createServiceRoleClient()
     const games = ['matematik', 'turkce', 'fen', 'sosyal', 'wordquest']
     const results = await Promise.all(
       games.map((g) =>
@@ -70,7 +71,7 @@ async function getGameCounts(): Promise<Record<string, number>> {
 // Fetch homepage content from DB
 async function getHomepageContent() {
   try {
-    const supabase = await createClient()
+    const supabase = createServiceRoleClient()
     const [{ data: sections }, { data: elements }] = await Promise.all([
       supabase.from('homepage_sections').select('*').eq('is_published', true),
       supabase.from('homepage_elements').select('*').eq('is_published', true).order('sort_order'),

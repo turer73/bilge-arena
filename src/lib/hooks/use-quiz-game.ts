@@ -15,21 +15,13 @@ import type { Question } from '@/types/database'
 import type { OptionState } from '@/components/game/option-button'
 import { getCorrectIndex, shuffleOptions } from '@/lib/utils/question'
 
-// ---------- Fallback demo sorulari ----------
-// SADECE Supabase baglantisi koparsa kullanilir — gercek soru bankasi DB'de
-const DEMO_QUESTIONS: Question[] = [
-  {
-    id: 'demo-1', game: 'matematik', category: 'sayilar', subcategory: null, difficulty: 1,
-    content: { question: '[Demo] 2 + 3 = ?', options: ['4', '5', '6', '7', '8'], answer: 1, solution: 'Demo soru — internet baglantisinizi kontrol edin.' },
-    is_active: true, external_id: null, topic: null, level_tag: null, base_points: 10, is_boss: false, times_answered: 0, times_correct: 0, source: 'demo', exam_ref: null, updated_at: '', created_at: '',
-  },
-]
-
 // ---------- Hook return tipi ----------
 
 export interface UseQuizGameReturn {
   // Screen
   screen: 'lobby' | 'loading' | 'game' | 'result'
+  /** Soru yükleme hatası (null = sorun yok) — lobby'de gösterilir */
+  loadError: string | null
 
   // Mode bilgileri
   mode: ReturnType<typeof getModeById>
@@ -68,6 +60,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const gameStore = useGameStore()
 
   const [screen, setScreen] = useState<'lobby' | 'loading' | 'game' | 'result'>('lobby')
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showBurst, setShowBurst] = useState(false)
   const [showXPPopup, setShowXPPopup] = useState(false)
   const [showLifeLost, setShowLifeLost] = useState(false)
@@ -134,6 +127,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
 
   const handleStart = useCallback(async () => {
     setScreen('loading')
+    setLoadError(null)
 
     try {
       // Adaptive difficulty: kullanici zorluk secmediyse ve giris yaptiysa,
@@ -159,11 +153,12 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         examRef: gameStore.selectedExamRef,
       })
 
-      // Fallback: Supabase'de soru yoksa demo sorulari kullan
+      // Soru bulunamadıysa lobby'e geri dön — demo gösterme
       if (questions.length === 0) {
-        console.info('[QuizGame] Supabase bos, fallback DEMO_QUESTIONS')
-        questions = DEMO_QUESTIONS.filter(q => q.game === game)
-        if (questions.length === 0) questions = [...DEMO_QUESTIONS]
+        console.warn('[QuizGame] Soru bulunamadı — seçili filtrelerle soru yok')
+        setLoadError('Bu filtrelerle soru bulunamadı. Farklı bir konu veya zorluk seçin.')
+        setScreen('lobby')
+        return
       }
 
       // Sik sirasini karistir — cevap dagılımı dengesizligini onle
@@ -196,14 +191,9 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         timer.start()
       }
     } catch (err) {
-      console.error('[QuizGame] Soru yukleme hatasi:', err)
-      const fallback = DEMO_QUESTIONS.filter(q => q.game === game)
-      quizStore.startQuiz(fallback.length > 0 ? fallback : DEMO_QUESTIONS, mode.lives)
-      setScreen('game')
-      if (!isDeneme && mode.timePerQuestion > 0) {
-        timer.reset(mode.timePerQuestion)
-        timer.start()
-      }
+      console.error('[QuizGame] Soru yükleme hatası:', err)
+      setLoadError('Sorular yüklenirken bir hata oluştu. İnternet bağlantınızı kontrol edin.')
+      setScreen('lobby')
     }
   }, [game, mode, quizStore, timer, isDeneme, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, gameStore.selectedExamRef, userId])
 
@@ -299,6 +289,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
 
   return {
     screen,
+    loadError,
     mode,
     isDeneme,
     denemeConfig: denemeConfig ?? null,
