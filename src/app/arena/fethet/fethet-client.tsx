@@ -241,7 +241,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
                   textColor = 'var(--focus)'
                 }
 
-                const label = ['A', 'B', 'C', 'D'][i]
+                const label = ['A', 'B', 'C', 'D', 'E'][i] ?? String(i + 1)
 
                 return (
                   <button
