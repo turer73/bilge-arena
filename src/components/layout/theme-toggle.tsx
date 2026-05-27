@@ -25,16 +25,23 @@ const THEME_OPTIONS: ThemeOption[] = [
 
 export function ThemeToggle() {
   const { theme, setTheme } = useUIStore()
-  const { user } = useAuthStore()
+  const { user, profile } = useAuthStore()
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Sayfa yüklendiğinde kayıtlı temayı uygula
+  // Sayfa yüklendiğinde kayıtlı temayı uygula (localStorage — hızlı, oturumsuz)
   useEffect(() => {
     const saved = localStorage.getItem('bilge-theme') as Theme | null
     if (saved && THEME_OPTIONS.some((t) => t.id === saved)) {
       setTheme(saved)
     }
   }, [setTheme])
+
+  // Profil yüklenince DB'deki tema tercihini uygula (farklı cihaz / yeni sekme sync)
+  useEffect(() => {
+    if (profile?.preferred_theme) {
+      setTheme(profile.preferred_theme)
+    }
+  }, [profile?.preferred_theme, setTheme])
 
   const isDark = DARK_THEMES.has(theme)
 
