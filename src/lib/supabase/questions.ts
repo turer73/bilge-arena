@@ -111,3 +111,21 @@ export async function fetchQuizQuestions({
 
   return shuffle([...questions]).slice(0, limit)
 }
+
+/**
+ * Misafir önizleme: auth olmadan 1 gerçek soru döner.
+ * Kayıtsız kullanıcıya tek soru göstermek için kullanılır.
+ */
+export async function fetchPreviewQuestion(game: string): Promise<Question | null> {
+  try {
+    const res = await fetch(
+      `/api/questions/preview?game=${encodeURIComponent(game)}`,
+      { cache: 'no-store' },
+    )
+    if (!res.ok) return null
+    const data = await res.json() as { question: Question | null }
+    return data.question ?? null
+  } catch {
+    return null
+  }
+}

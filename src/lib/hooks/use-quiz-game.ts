@@ -7,7 +7,7 @@ import { useTimer } from '@/lib/hooks/use-timer'
 import { calculateXP } from '@/lib/utils/xp'
 import { getModeById, DENEME_CONFIGS, type DenemeConfig } from '@/lib/constants/modes'
 import type { GameSlug } from '@/lib/constants/games'
-import { fetchQuizQuestions } from '@/lib/supabase/questions'
+import { fetchQuizQuestions, fetchPreviewQuestion } from '@/lib/supabase/questions'
 import { getAdaptiveDifficulty } from '@/lib/supabase/adaptive-difficulty'
 import { useElapsedTime } from '@/components/game/deneme-timer'
 import { playSound } from '@/lib/utils/sounds'
@@ -22,6 +22,8 @@ export interface UseQuizGameReturn {
   screen: 'lobby' | 'loading' | 'game' | 'result'
   /** Soru yükleme hatası (null = sorun yok) — lobby'de gösterilir */
   loadError: string | null
+  /** Giriş yapmadan önizleme: 1 gerçek soru gösterildi, result'ta kayıt CTA */
+  isGuestMode: boolean
 
   // Mode bilgileri
   mode: ReturnType<typeof getModeById>
@@ -61,6 +63,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
 
   const [screen, setScreen] = useState<'lobby' | 'loading' | 'game' | 'result'>('lobby')
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [isGuestMode, setIsGuestMode] = useState(false)
   const [showBurst, setShowBurst] = useState(false)
   const [showXPPopup, setShowXPPopup] = useState(false)
   const [showLifeLost, setShowLifeLost] = useState(false)
@@ -128,6 +131,26 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const handleStart = useCallback(async () => {
     setScreen('loading')
     setLoadError(null)
+    setIsGuestMode(false)
+
+    // ── Misafir önizleme: giriş yapmadan 1 gerçek soru ──
+    if (!userId) {
+      const previewQ = await fetchPreviewQuestion(game)
+      if (!previewQ) {
+        setLoadError('Soru yüklenemedi. Lütfen giriş yapın veya internet bağlantınızı kontrol edin.')
+        setScreen('lobby')
+        return
+      }
+      const withShuffled = { ...previewQ, content: shuffleOptions(previewQ.content) }
+      quizStore.startQuiz([withShuffled], mode.lives)
+      setIsGuestMode(true)
+      setScreen('game')
+      if (!isDeneme && mode.timePerQuestion > 0) {
+        timer.reset(mode.timePerQuestion)
+        timer.start()
+      }
+      return
+    }
 
     try {
       // Adaptive difficulty: kullanici zorluk secmediyse ve giris yaptiysa,
@@ -270,6 +293,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
 
   const handleRestart = useCallback(() => {
     quizStore.resetQuiz()
+    setIsGuestMode(false)
     setScreen('lobby')
   }, [quizStore])
 
@@ -290,6 +314,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   return {
     screen,
     loadError,
+    isGuestMode,
     mode,
     isDeneme,
     denemeConfig: denemeConfig ?? null,

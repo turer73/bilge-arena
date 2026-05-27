@@ -148,6 +148,47 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
   // --- RESULT ---
   if (quiz.screen === 'result') {
+    // Misafir önizleme: 1 soru sonrası kayıt CTA
+    if (quiz.isGuestMode) {
+      const redirectPath = `/arena/${game}`
+      return (
+        <div className="mx-auto flex max-w-md flex-col items-center gap-5 px-4 py-16 text-center animate-scaleIn">
+          <div className="text-6xl">🎯</div>
+          <h2 className="font-display text-2xl font-black">
+            Nasıl buldun?
+          </h2>
+          <p className="text-sm text-[var(--text-sub)]">
+            <span className="font-bold" style={{ color: gameDef.colorHex }}>{gameDef.name}</span>
+            {' '}arenasında yüzlerce soru seni bekliyor. Ücretsiz hesap oluştur, ilerlemeyi kaydet, sıralamada yüksel.
+          </p>
+          <div className="flex w-full flex-col gap-2 sm:flex-row">
+            <a
+              href={`/giris?redirect=${encodeURIComponent(redirectPath)}`}
+              className="flex-1 rounded-[10px] py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+              style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}cc)` }}
+            >
+              🚀 Ücretsiz Kayıt Ol
+            </a>
+            <button
+              onClick={quiz.handleRestart}
+              className="flex-1 rounded-[10px] border border-[var(--border)] py-3 text-sm font-medium text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
+            >
+              Tekrar Dene
+            </button>
+          </div>
+          <p className="text-[10px] text-[var(--text-muted)]">
+            Zaten hesabın var mı?{' '}
+            <a
+              href={`/giris?redirect=${encodeURIComponent(redirectPath)}`}
+              className="underline hover:text-[var(--focus)]"
+            >
+              Giriş yap
+            </a>
+          </p>
+        </div>
+      )
+    }
+
     if (quiz.isDeneme && quiz.denemeConfig) {
       return (
         <DenemeResult
