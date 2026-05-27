@@ -135,7 +135,11 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
 
     // ── Misafir önizleme: giriş yapmadan 1 gerçek soru ──
     if (!userId) {
-      const previewQ = await fetchPreviewQuestion(game)
+      const previewQ = await fetchPreviewQuestion(game, {
+        category: gameStore.selectedCategory,
+        difficulty: gameStore.selectedDifficulty,
+        examRef: gameStore.selectedExamRef,
+      })
       if (!previewQ) {
         setLoadError('Soru yüklenemedi. Lütfen giriş yapın veya internet bağlantınızı kontrol edin.')
         setScreen('lobby')

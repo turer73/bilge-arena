@@ -114,14 +114,19 @@ export async function fetchQuizQuestions({
 
 /**
  * Misafir önizleme: auth olmadan 1 gerçek soru döner.
- * Kayıtsız kullanıcıya tek soru göstermek için kullanılır.
+ * Seçili kategori/zorluk/examRef filtreleri de uygulanır.
  */
-export async function fetchPreviewQuestion(game: string): Promise<Question | null> {
+export async function fetchPreviewQuestion(
+  game: string,
+  opts?: { category?: string | null; difficulty?: number | null; examRef?: string | null },
+): Promise<Question | null> {
   try {
-    const res = await fetch(
-      `/api/questions/preview?game=${encodeURIComponent(game)}`,
-      { cache: 'no-store' },
-    )
+    const params = new URLSearchParams({ game })
+    if (opts?.category) params.set('category', opts.category)
+    if (opts?.difficulty != null) params.set('difficulty', String(opts.difficulty))
+    if (opts?.examRef) params.set('examRef', opts.examRef)
+
+    const res = await fetch(`/api/questions/preview?${params.toString()}`, { cache: 'no-store' })
     if (!res.ok) return null
     const data = await res.json() as { question: Question | null }
     return data.question ?? null

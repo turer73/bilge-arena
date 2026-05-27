@@ -9,18 +9,19 @@ import type { Question } from '@/types/database'
 const ipLimiter = createRateLimiter('questions-preview-ip', 20, 3_600_000)
 
 const VALID_GAMES = new Set(GAME_SLUGS)
+const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ'])
 
 /**
- * GET /api/questions/preview?game=X
+ * GET /api/questions/preview?game=X[&category=Y&difficulty=Z&examRef=TYT]
  *
  * Auth gerektirmeyen misafir önizleme endpointi.
- * Kayıt olmadan oynamayı deneyen kullanıcılara 1 gerçek soru verir,
- * ardından kayıt ekranına yönlendirilirler.
+ * Kayıt olmadan oynamayı deneyen kullanıcılara 1 gerçek soru verir.
+ * Seçili filtreler (kategori, zorluk, sınav) uygulanır.
+ * Filtreyle soru bulunamazsa filtreler kaldırılarak tekrar denenir (fallback).
  *
  * - Auth yok (anon erişim)
- * - Service-role ile DB'den 1 random aktif soru
- * - Sadece game filtresi — misafir için konu/zorluk yok
- * - IP rate limit: 20/saat (kötüye kullanım engeli)
+ * - Service-role ile DB'den random aktif soru
+ * - IP rate limit: 20/saat
  */
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request.headers)
@@ -38,11 +39,37 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Geçerli oyun belirtilmedi' }, { status: 400 })
   }
 
+  const category = searchParams.get('category') || null
+  const difficultyRaw = searchParams.get('difficulty')
+  const difficulty = difficultyRaw ? parseInt(difficultyRaw, 10) : null
+  const examRefRaw = searchParams.get('examRef')
+  const examRef = examRefRaw && VALID_EXAM_REFS.has(examRefRaw) ? examRefRaw : null
+
   const admin = createServiceRoleClient()
-  const { data, error } = await admin.rpc('select_random_questions', {
-    p_game: game,
-    p_limit: 3, // Biraz havuz al, 1. tanesi kullanılır
-  })
+
+  // Filtreli RPC argümanları
+  const rpcArgs: {
+    p_game: string
+    p_limit: number
+    p_category?: string
+    p_difficulty?: number
+    p_exam_ref?: string
+  } = { p_game: game, p_limit: 3 }
+
+  if (category) rpcArgs.p_category = category
+  if (difficulty && Number.isFinite(difficulty)) rpcArgs.p_difficulty = difficulty
+  if (examRef) rpcArgs.p_exam_ref = examRef
+
+  let { data, error } = await admin.rpc('select_random_questions', rpcArgs)
+
+  // Filtreyle soru gelmezse filtreler olmadan tekrar dene
+  if (!error && (!data || (data as Question[]).length === 0) && (category || difficulty || examRef)) {
+    const fallback = await admin.rpc('select_random_questions', { p_game: game, p_limit: 3 })
+    if (!fallback.error) {
+      data = fallback.data
+      error = fallback.error
+    }
+  }
 
   if (error) {
     console.error('[/api/questions/preview] RPC hatası:', error.code)
