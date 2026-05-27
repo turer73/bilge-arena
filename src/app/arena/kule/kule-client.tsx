@@ -126,12 +126,20 @@ export function KuleClient() {
     dispatch({ type: 'SET_LOADING', loading: true })
     const diff = getDifficulty(floor)
     try {
-      const res = await fetch(
-        `/api/questions/random?game=${game}&difficulty=${diff}&limit=1`
-      )
+      // 1. deneme: zorluk filtreli
+      let res = await fetch(`/api/questions/random?game=${game}&difficulty=${diff}&limit=1`)
       if (!res.ok) throw new Error('Soru alınamadı')
-      const data = await res.json()
-      const qs: KuleQuestion[] = data.questions ?? []
+      let data = await res.json()
+      let qs: KuleQuestion[] = data.questions ?? []
+
+      // 2. deneme: zorluk filtresi olmadan (o zorlukta soru yoksa)
+      if (qs.length === 0) {
+        res = await fetch(`/api/questions/random?game=${game}&limit=1`)
+        if (!res.ok) throw new Error('Soru alınamadı')
+        data = await res.json()
+        qs = data.questions ?? []
+      }
+
       if (qs.length === 0) throw new Error('Soru bulunamadı')
       // Seçenek sırasını karıştır — her oynayışta farklı görünüm
       const q = qs[0]
