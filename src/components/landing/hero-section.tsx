@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Zap, ArrowRight, Flame, Trophy, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ArenaBackground } from './arena-background'
+import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
 
 /** Orbit etrafında süzen mini kart — tüm breakpoint'lere uyumlu */
 function FloatCard({
@@ -68,6 +69,8 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
   const subheading = (config?.subheading as string) || "YKS, LGS ve AYT'ye hazırlanmak artık"
   const logoUrl = (config?.logo_url as string) || '/logo/icon-512-transparent.png'
   const ctaPrimary = (config?.cta_primary as { text?: string; href?: string }) || {}
+  const { theme } = useUIStore()
+  const isDarkTheme = DARK_THEMES.has(theme)
   const ctaSecondary = (config?.cta_secondary as { text?: string; href?: string }) || {}
   const miniStats = (config?.mini_stats as string[]) || null
 
@@ -160,7 +163,9 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
                   height={440}
                   priority
                   className={`
-                    ${hasMascot ? 'drop-shadow-2xl object-contain' : 'object-contain'}
+                    ${hasMascot
+                      ? `drop-shadow-2xl object-contain${isDarkTheme ? ' mix-blend-screen' : ''}`
+                      : 'object-contain'}
                     h-full w-full`}
                   onError={() => {
                     if (hasMascot) {
