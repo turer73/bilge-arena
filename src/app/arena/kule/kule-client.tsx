@@ -4,6 +4,7 @@ import { useEffect, useCallback, useReducer } from 'react'
 import Link from 'next/link'
 import { GAME_LIST } from '@/lib/constants/games'
 import type { GameSlug } from '@/lib/constants/games'
+import { shuffleOptions } from '@/lib/utils/question'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -126,13 +127,15 @@ export function KuleClient() {
     const diff = getDifficulty(floor)
     try {
       const res = await fetch(
-        `/api/questions?game=${game}&difficulty=${diff}&limit=1&active=true`
+        `/api/questions/random?game=${game}&difficulty=${diff}&limit=1`
       )
       if (!res.ok) throw new Error('Soru alınamadı')
       const data = await res.json()
       const qs: KuleQuestion[] = data.questions ?? []
       if (qs.length === 0) throw new Error('Soru bulunamadı')
-      dispatch({ type: 'SET_QUESTION', question: qs[0] })
+      // Seçenek sırasını karıştır — her oynayışta farklı görünüm
+      const q = qs[0]
+      dispatch({ type: 'SET_QUESTION', question: { ...q, content: shuffleOptions(q.content) } })
     } catch (e) {
       dispatch({ type: 'SET_ERROR', error: (e as Error).message })
     }
