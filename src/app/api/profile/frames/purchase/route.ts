@@ -72,61 +72,42 @@ export async function POST(request: NextRequest) {
 
   const svc = createServiceRoleClient()
 
-  // 6) Mevcut profil: owned_frames + coin_balance
-  const { data: prof, error: profErr } = await svc
-    .from('profiles')
-    .select('coin_balance, owned_frames')
-    .eq('id', user.id)
-    .single()
+  // 6) Atomik satın alma: ownership-check + bakiye-kontrol + debit + append tek
+  //    UPDATE statement'inde (TOCTOU çift-harcama / array-clobber'a kapalı).
+  //    Migration: database/migrations/058_purchase_frame_atomic.sql
+  const { data: rows, error: rpcErr } = await svc.rpc('purchase_frame', {
+    p_user_id: user.id,
+    p_frame_id: frameId,
+    p_cost: frameDef.coinCost,
+  })
 
-  if (profErr || !prof) {
-    return NextResponse.json({ error: 'Profil bulunamadı' }, { status: 404 })
+  if (rpcErr) {
+    console.error('[FramePurchase] purchase_frame hatası:', rpcErr.message)
+    return NextResponse.json({ error: 'Satın alma başarısız' }, { status: 500 })
   }
 
-  // 7) Zaten sahip mi?
-  if ((prof.owned_frames as string[]).includes(frameId)) {
-    return NextResponse.json({ error: 'Bu çerçeveye zaten sahipsiniz' }, { status: 400 })
-  }
+  // 0 satır = ya zaten sahip ya yetersiz coin. Ayırt etmek için profili oku.
+  const result = Array.isArray(rows) ? rows[0] : rows
+  if (!result) {
+    const { data: prof } = await svc
+      .from('profiles')
+      .select('coin_balance, owned_frames')
+      .eq('id', user.id)
+      .single()
 
-  // 8) Yeterli coin var mı?
-  if ((prof.coin_balance ?? 0) < frameDef.coinCost) {
+    if (prof && (prof.owned_frames as string[]).includes(frameId)) {
+      return NextResponse.json({ error: 'Bu çerçeveye zaten sahipsiniz' }, { status: 400 })
+    }
     return NextResponse.json(
-      { error: `Yetersiz coin (gerekli: ${frameDef.coinCost}, bakiye: ${prof.coin_balance ?? 0})` },
+      { error: `Yetersiz coin (gerekli: ${frameDef.coinCost}, bakiye: ${prof?.coin_balance ?? 0})` },
       { status: 402 },
     )
-  }
-
-  // 9) Coin harca (atomik RPC)
-  const { error: spendErr } = await svc.rpc('spend_coins', {
-    p_user_id: user.id,
-    p_amount: frameDef.coinCost,
-  })
-  if (spendErr) {
-    console.error('[FramePurchase] spend_coins hatası:', spendErr.message)
-    // spend_coins RAISE EXCEPTION "Yetersiz bakiye" durumunda hata döner
-    return NextResponse.json({ error: 'Coin harcama başarısız' }, { status: 402 })
-  }
-
-  // 10) owned_frames'e ekle (array_append)
-  const { data: updated, error: updateErr } = await svc
-    .from('profiles')
-    .update({
-      owned_frames: [...(prof.owned_frames as string[]), frameId],
-    })
-    .eq('id', user.id)
-    .select('coin_balance, owned_frames')
-    .single()
-
-  if (updateErr || !updated) {
-    console.error('[FramePurchase] owned_frames güncelleme hatası:', updateErr?.message)
-    // Coin harcandı ama çerçeve eklenmedi — kritik hata, loglayıp devam et
-    return NextResponse.json({ error: 'Çerçeve eklenemedi' }, { status: 500 })
   }
 
   return NextResponse.json({
     success: true,
     frameId,
-    coin_balance: updated.coin_balance,
-    owned_frames: updated.owned_frames,
+    coin_balance: result.new_balance,
+    owned_frames: result.new_owned,
   })
 }
