@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { OptionButton } from '@/components/game/option-button'
-import { getCorrectIndex } from '@/lib/utils/question'
 import { playSound } from '@/lib/utils/sounds'
 import { toast } from '@/stores/toast-store'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
@@ -20,7 +19,7 @@ export default function DuelloGamePage() {
   const [challenge, setChallenge] = useState<Challenge | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [answers, setAnswers] = useState<{ questionId: string; selectedOption: number; isCorrect: boolean; timeTaken: number }[]>([])
+  const [answers, setAnswers] = useState<{ questionId: string; selectedOption: number; timeTaken: number }[]>([])
   const [state, setState] = useState<'loading' | 'playing' | 'answered' | 'result' | 'error'>('loading')
   const [selectedOption, setSelectedOption] = useState(-1)
   const [startTime, setStartTime] = useState(Date.now())
@@ -48,7 +47,9 @@ export default function DuelloGamePage() {
         const ordered = data.questions ?? []
         if (ordered.length === 0) { setState('error'); return }
 
-        // Sik sirasini karistir + mapping kaydet
+        // Sik sirasini karistir + mapping kaydet.
+        // Dogru cevap client'a gelmiyor (server strip ediyor); shuffle yalniz
+        // secenek sirasini bozar, mapping ile orijinal index sunucuya gonderilir.
         const maps = new Map<string, number[]>()
         const shuffled = ordered.map(q => {
           const indices = q.content.options.map((_: string, i: number) => i)
@@ -57,13 +58,11 @@ export default function DuelloGamePage() {
             ;[indices[i], indices[j]] = [indices[j], indices[i]]
           }
           maps.set(q.id, indices)
-          const correctIdx = getCorrectIndex(q.content)
           return {
             ...q,
             content: {
               ...q.content,
               options: indices.map((i: number) => q.content.options[i]),
-              answer: indices.indexOf(correctIdx),
             },
           }
         })
@@ -85,17 +84,13 @@ export default function DuelloGamePage() {
     if (state !== 'playing' || !question) return
 
     const timeTaken = (Date.now() - startTime) / 1000
-    const correctIndex = getCorrectIndex(question.content)
-    const isCorrect = optionIndex === correctIndex
 
     setSelectedOption(optionIndex)
     setState('answered')
 
-    if (isCorrect) {
-      playSound('correct')
-    } else {
-      playSound('wrong')
-    }
+    // Dogru cevap client'ta yok — duello sirasinda dogru/yanlis gosterilmez
+    // (rekabet butunlugu). Notr secim sesi; kazandi/kaybetti sesi duello sonunda.
+    playSound('click')
 
     // Sunucuya orijinal index gonder (shuffle mapping ile)
     const originalOption = shuffleMapRef.current.get(question.id)?.[optionIndex] ?? optionIndex
@@ -103,7 +98,6 @@ export default function DuelloGamePage() {
     setAnswers(prev => [...prev, {
       questionId: question.id,
       selectedOption: originalOption,
-      isCorrect,
       timeTaken,
     }])
 
@@ -116,7 +110,7 @@ export default function DuelloGamePage() {
         setStartTime(Date.now())
       } else {
         // Tum sorular bitti — sonuclari gonder
-        submitAnswers([...answers, { questionId: question.id, selectedOption: originalOption, isCorrect, timeTaken }])
+        submitAnswers([...answers, { questionId: question.id, selectedOption: originalOption, timeTaken }])
       }
     }, 1500)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,10 +139,10 @@ export default function DuelloGamePage() {
   }
 
   const getOptionState = (idx: number): OptionState => {
-    if (state !== 'answered' || !question) return 'idle'
-    const correctIndex = getCorrectIndex(question.content)
-    if (idx === correctIndex) return 'correct'
-    if (idx === selectedOption) return 'wrong'
+    if (state !== 'answered') return 'idle'
+    // Duello sirasinda dogru cevap gosterilmez (cevap client'a gelmiyor).
+    // Secilen sik vurgulanir, digerleri soner.
+    if (idx === selectedOption) return 'selected'
     return 'dim'
   }
 
@@ -175,7 +169,8 @@ export default function DuelloGamePage() {
 
   // Result
   if (state === 'result') {
-    const correct = answers.filter(a => a.isCorrect).length
+    // Skor sunucudan gelir (client dogru cevabi bilmez); gelene kadar '…'
+    const correct = submitResult?.score.correct ?? null
     return (
       <div className="mx-auto max-w-md px-4 py-10 text-center">
         <Swords className="mx-auto mb-4 h-12 w-12 text-[var(--reward)]" />

@@ -92,6 +92,25 @@ describe('GET /api/challenges/[id]', () => {
     expect(res.status).toBe(200)
     expect((await res.json()).questions).toHaveLength(2)
   })
+
+  it('cevap alanlarini strip eder — dogru cevap client a sizmaz', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeQuery.mockResolvedValue({ data: { id: VALID_ID, question_ids: ['q1'] }, error: null })
+    mockQuestionsQuery.mockResolvedValue({
+      data: [{ id: 'q1', content: { question: 'S', options: ['a', 'b', 'c', 'd'], answer: 2, solution: 'cunku', explanation: 'detay' } }],
+      error: null,
+    })
+    const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
+    expect(res.status).toBe(200)
+    const q = (await res.json()).questions[0]
+    // Soru icerigi gelir
+    expect(q.content.question).toBe('S')
+    expect(q.content.options).toHaveLength(4)
+    // Cevap / cozum / aciklama SIZMAZ
+    expect(q.content.answer).toBeUndefined()
+    expect(q.content.solution).toBeUndefined()
+    expect(q.content.explanation).toBeUndefined()
+  })
 })
 
 describe('PATCH /api/challenges/[id]', () => {

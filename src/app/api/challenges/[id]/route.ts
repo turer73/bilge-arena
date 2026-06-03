@@ -103,11 +103,25 @@ export async function GET(
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
-  // 7) question_ids sirasini koru
-  const qMap = new Map((qs ?? []).map(q => [q.id, q]))
+  // 7) question_ids sirasini koru + cevap alanlarini STRIP et.
+  //    GUVENLIK (duello cevap sizintisi): answer/solution/explanation/hint
+  //    client'a GONDERILMEZ. Dogru cevap yalniz submit endpoint'inde
+  //    sunucu tarafinda questions tablosundan okunur. Whitelist = default-deny:
+  //    content'e ileride eklenen yeni hassas alan da otomatik sizmaz.
+  const qMap = new Map((qs ?? []).map(q => [q.id, q] as const))
   const orderedQuestions = questionIds
     .map(qid => qMap.get(qid))
-    .filter(Boolean)
+    .filter((q): q is NonNullable<typeof q> => Boolean(q))
+    .map(q => ({
+      ...q,
+      content: {
+        question: q.content.question,
+        options: q.content.options,
+        sentence: q.content.sentence,
+        context: q.content.context,
+        type: q.content.type,
+      },
+    }))
 
   return NextResponse.json(
     { challenge, questions: orderedQuestions },

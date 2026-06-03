@@ -134,7 +134,9 @@ export const challengeSubmitSchema = z.object({
   answers: z.array(z.object({
     questionId: z.string().uuid(),
     selectedOption: z.number().int().min(0),
-    isCorrect: z.boolean(),
+    // vestigial: sunucu skoru questions tablosundan hesaplar, client isCorrect'i YOK SAYILIR
+    // (duello cevap sizintisi fix — client artik dogru cevabi bilmiyor)
+    isCorrect: z.boolean().optional(),
     timeTaken: z.number().min(0).max(300),
   })).min(1).max(50),
 })
