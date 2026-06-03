@@ -1,6 +1,6 @@
 import Script from 'next/script'
 import type { Metadata, Viewport } from 'next'
-import { Cinzel, DM_Sans } from 'next/font/google'
+import localFont from 'next/font/local'
 import dynamic from 'next/dynamic'
 
 const CookieBanner = dynamic(() => import('@/components/cookie-banner').then(m => m.CookieBanner))
@@ -11,17 +11,18 @@ import { OfflineIndicator } from '@/components/layout/offline-indicator'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import './globals.css'
 
-/* ─── Google Fonts — Template birebir ─── */
-const cinzel = Cinzel({
-  subsets: ['latin', 'latin-ext'],
-  weight: ['700', '900'],
+/* ─── Lokal fontlar (next/font/local) — build artik Google Fonts agina BAGIMLI DEGIL.
+   Variable TTF'ler src/app/fonts/ altinda; tum latin-ext glyph'leri (Turkce dahil) icerir. */
+const cinzel = localFont({
+  src: './fonts/Cinzel.ttf',
+  weight: '400 900',
   variable: '--font-cinzel',
   display: 'swap',
 })
 
-const dmSans = DM_Sans({
-  subsets: ['latin', 'latin-ext'],
-  weight: ['300', '400', '500', '600', '700'],
+const dmSans = localFont({
+  src: './fonts/DMSans.ttf',
+  weight: '100 1000',
   variable: '--font-dm-sans',
   display: 'swap',
 })
@@ -142,10 +143,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Preconnect — Supabase API + Storage, Google Fonts CDN */}
+        {/* Preconnect — Supabase API + Storage (fontlar artik lokal; Google Fonts CDN gerekmiyor) */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Plausible Analytics — SSR-rendered so the domain-verify crawler (static HTML fetch) can detect it */}
         <script defer data-domain="bilgearena.com" src="https://analytics.panola.app/js/script.js" />
       </head>
