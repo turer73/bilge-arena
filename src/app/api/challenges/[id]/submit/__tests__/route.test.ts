@@ -184,4 +184,22 @@ describe('POST /api/challenges/[id]/submit', () => {
     expect(json.score.correct).toBe(1) // Q1 correct, Q2 wrong
     expect(json.score.total).toBe(2)
   })
+
+  it('client isCorrect yok sayilir — skor DB cevabindan hesaplanir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeSingle.mockResolvedValue({
+      data: { id: CHALLENGE_ID, status: 'accepted', challenger_id: USER_ID, opponent_id: OPPONENT_ID, challenger_score: null, opponent_score: null },
+      error: null,
+    })
+    mockChallengeUpdate.mockResolvedValue({ error: null })
+    // Client tum cevaplari "dogru" iddia ediyor ama yanlis sik secti (answer 1 ve 2, secim 3)
+    const lyingAnswers = [
+      { questionId: Q1, selectedOption: 3, isCorrect: true, timeTaken: 1 },
+      { questionId: Q2, selectedOption: 3, isCorrect: true, timeTaken: 1 },
+    ]
+    const res = await POST(makeRequest({ answers: lyingAnswers }), { params: paramsPromise })
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.score.correct).toBe(0) // client yalanina ragmen 0
+  })
 })

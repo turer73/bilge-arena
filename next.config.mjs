@@ -11,14 +11,12 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // NOTE: `output: 'standalone'` Vercel'de public/* dosyalarini
-  // .next/standalone/public/'a otomatik kopyalamaz, sw.js/workbox/favicon
-  // 404 verir. Vercel zaten kendi build optimization'i yapar — standalone
-  // sadece Docker self-host icin gerekli. Bilge Arena Vercel hosting,
-  // standalone gereksiz. Kaldirildi (PWA + favicon 404 fix).
-  // Eger ileride Docker deploy istenirse `output: 'standalone'` ekle +
-  // package.json'a `postbuild: cp -r public .next/standalone/` script ile
-  // public/ kopyalama otomatize edilmeli.
+  // `output: 'standalone'` SADECE Docker self-host (Dockerfile) icin gerekli.
+  // Vercel'de standalone, public/* dosyalarini .next/standalone/public/'a
+  // KOPYALAMAZ → sw.js/workbox/favicon 404, PWA bozulur. O yuzden Vercel'de
+  // KAPALI; yalniz Dockerfile DOCKER_BUILD=true verince acilir (Dockerfile
+  // public/ ve .next/static'i zaten elle kopyaliyor, server.js standalone'dan gelir).
+  output: process.env.DOCKER_BUILD === 'true' ? 'standalone' : undefined,
 
   typescript: { ignoreBuildErrors: false },
   images: {

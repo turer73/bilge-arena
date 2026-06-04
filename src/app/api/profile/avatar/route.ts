@@ -5,14 +5,23 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 
 const avatarLimiter = createRateLimiter('avatar-upload', 5, 60_000)
 const MAX_SIZE = 1 * 1024 * 1024 // 1MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png']
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const EXT_BY_TYPE: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
 const BUCKET = 'avatars'
 
 // Magic bytes kontrolu — dosya uzantisina guvenme
 function detectMimeType(buffer: Uint8Array): string | null {
   if (buffer[0] === 0xFF && buffer[1] === 0xD8) return 'image/jpeg'
   if (buffer[0] === 0x89 && buffer[1] === 0x50) return 'image/png'
-  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46) return 'image/webp'
+  // WebP: "RIFF"...."WEBP" — RIFF tek basina WAV/AVI ile de eslesir, offset 8'de WEBP imzasini ara
+  if (
+    buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+    buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50
+  ) return 'image/webp'
   return null
 }
 
@@ -52,7 +61,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Gecersiz dosya formati' }, { status: 400 })
   }
 
-  const ext = detectedType.split('/')[1] === 'jpeg' ? 'jpg' : 'png'
+  const ext = EXT_BY_TYPE[detectedType]
   const filePath = `${user.id}/avatar.${ext}`
 
   // Service role client — RLS bypass
@@ -62,6 +71,7 @@ export async function POST(req: NextRequest) {
   await admin.storage.from(BUCKET).remove([
     `${user.id}/avatar.jpg`,
     `${user.id}/avatar.png`,
+    `${user.id}/avatar.webp`,
   ])
 
   // Yeni avatari yukle
@@ -111,6 +121,7 @@ export async function DELETE() {
   await admin.storage.from(BUCKET).remove([
     `${user.id}/avatar.jpg`,
     `${user.id}/avatar.png`,
+    `${user.id}/avatar.webp`,
   ])
 
   // Profili guncelle

@@ -90,3 +90,42 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  e2e:
+    name: 🎭 E2E (chromium)
+    runs-on: ubuntu-latest
+    needs: [lint, type-check, test]
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+      SENTRY_AUTH_TOKEN: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+
+      # NOT: CI'da SUPABASE_SERVICE_KEY (service-role) secret'i yok → service-role
+      # kullanan sayfalar (landing/arena vb.) dev server'da hata verir ve render
+      # flaky olur. Bu yuzden smoke yalniz service-role/data GEREKTIRMEYEN
+      # auth-boundary spec'leriyle sinirli: oda + admin guard redirect'leri
+      # (ilk CI kosusunda deterministik gecti). Tam suite icin operatorun
+      # SUPABASE_SERVICE_KEY secret'i eklemesi gerekir (follow-up).
+      - name: Run E2E smoke (chromium, backend-independent)
+        run: npm run test:e2e -- --project=chromium e2e/oda-routes.spec.ts e2e/proxy-admin-guard.spec.ts
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

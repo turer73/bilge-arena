@@ -23,6 +23,10 @@ function getRedis(): Redis | null {
 
   if (url && token) {
     redis = new Redis({ url, token })
+  } else if (process.env.NODE_ENV === 'production') {
+    // Serverless/multi-instance'da in-memory limiter her instance icin AYRI sayar →
+    // rate limit etkisi zayiflar. Prod'da Upstash/KV env var'lari set EDILMELI.
+    console.warn('[rate-limit] Redis yok (UPSTASH_REDIS_REST_* / KV_REST_API_*) — in-memory fallback aktif; multi-instance prod icin guvenilir DEGIL.')
   }
   redisChecked = true
   return redis

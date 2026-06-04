@@ -4,7 +4,7 @@ import { memo } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { getOptionLetter } from '@/lib/utils/question'
 
-export type OptionState = 'idle' | 'correct' | 'wrong' | 'dim'
+export type OptionState = 'idle' | 'correct' | 'wrong' | 'dim' | 'selected'
 
 interface OptionButtonProps {
   index: number
@@ -45,6 +45,15 @@ const stateStyles: Record<OptionState, {
     badgeBg: 'bg-[color-mix(in_srgb,var(--urgency)_14%,transparent)]',
     badgeText: 'text-[var(--urgency)]',
     shadow: 'shadow-[0_0_14px_rgba(220,38,38,0.27)]',
+  },
+  // Duello: cevap gosterilmeden secilen sikki vurgular (notr — dogru/yanlis belli etmez)
+  selected: {
+    bg: 'bg-[var(--focus-bg)]',
+    border: 'border-[var(--focus)]',
+    text: 'text-[var(--text)]',
+    badgeBg: 'bg-[var(--focus)]',
+    badgeText: 'text-white',
+    shadow: '',
   },
   dim: {
     bg: 'bg-[var(--card-bg)] opacity-40',
