@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Swords, Trophy, User, type LucideIcon } from 'lucide-react'
+import { Gamepad2, Swords, Trophy, User, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 /**
@@ -23,7 +23,7 @@ interface NavItem {
 }
 
 const ITEMS: NavItem[] = [
-  { id: 'lobby', href: '/arena', label: 'Oyunlar', Icon: Home },
+  { id: 'lobby', href: '/arena', label: 'Oyunlar', Icon: Gamepad2 },
   { id: 'oda', href: '/oda', label: 'Arena', Icon: Swords },
   { id: 'leaderboard', href: '/arena/siralama', label: 'Sıralama', Icon: Trophy },
   { id: 'profile', href: '/arena/profil', label: 'Profil', Icon: User },
