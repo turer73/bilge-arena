@@ -71,6 +71,28 @@ describe('ArenaClient (mobil home)', () => {
     expect(screen.getByText('GÜNLÜK GÖREV')).toBeInTheDocument()
   })
 
+  test('exam_type=lgs -> oyun listesi filtreli (İngilizce/YDT gizli, Matematik var)', () => {
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'lgsci', avatar_url: null, exam_type: 'lgs' },
+    }
+    render(<ArenaClient />)
+    expect(screen.getByText('Matematik')).toBeInTheDocument()
+    expect(screen.getByText('Türkçe')).toBeInTheDocument()
+    // İngilizce (wordquest, examTags=['YDT']) LGS'de gosterilmemeli
+    expect(screen.queryByText('İngilizce')).not.toBeInTheDocument()
+  })
+
+  test('exam_type=yks -> tüm dersler (İngilizce dahil)', () => {
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'yksci', avatar_url: null, exam_type: 'yks' },
+    }
+    render(<ArenaClient />)
+    expect(screen.getByText('Matematik')).toBeInTheDocument()
+    expect(screen.getByText('İngilizce')).toBeInTheDocument()
+  })
+
   test('maks seviye (Efsane): "Maksimum seviye" rozeti, sonraki-seviye metni yok', () => {
     mockAuth.value = {
       user: { id: UUID },

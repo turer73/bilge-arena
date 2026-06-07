@@ -66,6 +66,7 @@ export const profileUpdateSchema = z.object({
   display_name: z.string().trim().max(50).optional(),
   city: z.string().trim().max(50).optional(),
   grade: z.number().int().min(9).max(13).optional(),
+  exam_type: z.enum(['yks', 'lgs']).optional(),
   onboarding_completed: z.literal(true).optional(),
   preferred_theme: z.enum(['dark', 'light', 'okyanus', 'orman', 'gunbatimi', 'mor-gece']).optional(),
 }).refine(data => Object.keys(data).length > 0, {

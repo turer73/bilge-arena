@@ -117,12 +117,13 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { username, display_name, city, grade, onboarding_completed, preferred_theme } = parsed.data
+  const { username, display_name, city, grade, exam_type, onboarding_completed, preferred_theme } = parsed.data
   const updates: Record<string, unknown> = {}
   if (username) updates.username = username
   if (display_name !== undefined) updates.display_name = display_name || null
   if (city !== undefined) updates.city = city || null
   if (grade !== undefined) updates.grade = grade
+  if (exam_type !== undefined) updates.exam_type = exam_type
   if (onboarding_completed) updates.onboarding_completed = true
   if (preferred_theme !== undefined) updates.preferred_theme = preferred_theme
 
@@ -132,7 +133,7 @@ export async function PATCH(request: NextRequest) {
     .from('profiles')
     .update(updates)
     .eq('id', user.id)
-    .select('id, username, display_name, city, grade, avatar_url, onboarding_completed')
+    .select('id, username, display_name, city, grade, exam_type, avatar_url, onboarding_completed')
     .single()
 
   if (error) {
