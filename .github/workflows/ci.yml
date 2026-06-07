@@ -8,7 +8,11 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # PR/branch run'lari yeni push'ta iptal et (CI dakikasi tasarrufu); ama master'da
+  # ASLA iptal etme — her merge tam dogrulansin. Aksi halde hizli ardisik merge'de
+  # onceki merge-commit'in master run'i iptal olur, PR sayfasinda yaniltici
+  # "canceled" (kirmizi) gorunur (kod/test hatasi degil, concurrency yan etkisi).
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
   lint:
