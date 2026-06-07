@@ -5,6 +5,8 @@ import { memo } from 'react'
 interface Player {
   name: string
   avatar: string
+  /** Gercek kullanici avatar gorseli (varsa emoji yerine resim gosterilir) */
+  avatarUrl?: string | null
   xp: string
 }
 
@@ -50,7 +52,16 @@ export const MiniLeaderboard = memo(function MiniLeaderboard({ players, myRank =
             >
               {medal || i + 1}
             </span>
-            <span className="text-[15px]">{player.avatar}</span>
+            {player.avatarUrl ? (
+              <img
+                src={player.avatarUrl}
+                alt=""
+                className="h-[18px] w-[18px] shrink-0 rounded-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <span className="text-[15px]">{player.avatar}</span>
+            )}
             <span
               className="flex-1 text-[11px]"
               style={{
