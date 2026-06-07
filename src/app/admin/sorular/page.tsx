@@ -205,7 +205,8 @@ export default function AdminQuestionsPage() {
             ))}
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-xs">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface)]">
                 <th className="px-4 py-3 font-bold text-[var(--text-sub)]">Soru</th>
@@ -282,6 +283,7 @@ export default function AdminQuestionsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
 
         {!loading && filtered.length === 0 && (
