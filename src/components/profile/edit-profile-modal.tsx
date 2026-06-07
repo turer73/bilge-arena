@@ -17,6 +17,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const [displayName, setDisplayName] = useState(profile?.username || profile?.display_name || '')
   const [city, setCity] = useState(profile?.city || '')
   const [grade, setGrade] = useState(profile?.grade || '')
+  const [examType, setExamType] = useState<'yks' | 'lgs' | ''>(profile?.exam_type ?? '')
   const [saving, setSaving] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
@@ -99,6 +100,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
           username: displayName.trim(),
           city: city.trim() || undefined,
           grade: grade || undefined,
+          exam_type: examType || undefined,
         }),
       })
 
@@ -210,6 +212,21 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
               <option value="12">12. Sınıf</option>
               <option value="mezun">Mezun</option>
             </select>
+          </div>
+
+          {/* Sınav türü — içerik (dersler + sorular) buna göre filtrelenir */}
+          <div>
+            <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SINAV TÜRÜ</label>
+            <select
+              value={examType}
+              onChange={(e) => setExamType(e.target.value as 'yks' | 'lgs' | '')}
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
+            >
+              <option value="">Seçin...</option>
+              <option value="yks">YKS — Üniversite</option>
+              <option value="lgs">LGS — Lise</option>
+            </select>
+            <p className="mt-1 text-[10px] text-[var(--text-muted)]">Dersler ve sorular sınavına göre gelir.</p>
           </div>
         </div>
 

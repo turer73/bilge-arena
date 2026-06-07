@@ -28,6 +28,7 @@ export interface Profile {
   avatar_url: string | null
   city: string | null
   grade: number | null           // 9-13 (9-12 lise, 13 mezun)
+  exam_type?: 'yks' | 'lgs' | null // hedef sınav: yks (üniversite) | lgs (lise); null/undefined = belirlenmemiş (YKS-default). bkz lib/constants/exam-types.ts
   role: 'user' | 'admin'
   // XP & Seviye
   total_xp: number

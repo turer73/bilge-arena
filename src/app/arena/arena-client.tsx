@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { GAME_LIST, getCategoryLabel } from '@/lib/constants/games'
+import { getCategoryLabel } from '@/lib/constants/games'
+import { gamesForExamType } from '@/lib/constants/exam-types'
 import { useAuthStore } from '@/stores/auth-store'
 import { getLevelFromXP, LEVELS } from '@/lib/constants/levels'
 import { StreakBadge } from '@/components/game/streak-badge'
@@ -223,7 +224,7 @@ export default function ArenaClient() {
 
       {/* ── Oyun konsollari ── */}
       <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:gap-5 2xl:gap-6">
-        {GAME_LIST.map((game) => (
+        {gamesForExamType(profile?.exam_type).map((game) => (
           <Link
             key={game.slug}
             href={`/arena/${game.slug}`}
