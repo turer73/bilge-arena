@@ -68,7 +68,7 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
   ]
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 p-4 md:gap-4 md:p-6 xl:gap-5 xl:p-8">
+    <div className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center gap-3 p-4 md:min-h-[calc(100dvh-5rem)] md:gap-4 md:p-6 xl:gap-5 xl:p-8">
       {/* Can bitti uyarisi */}
       {gameOver && (
         <div className="animate-fadeUp rounded-xl border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-5 py-3 text-center">
