@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Navbar } from '@/components/layout/navbar'
+import { BottomNav } from '@/components/layout/bottom-nav'
 import { ArenaAuxiliaries } from '@/components/layout/arena-auxiliaries'
 import dynamic from 'next/dynamic'
 
@@ -18,10 +19,12 @@ export default function ArenaLayout({
   return (
     <>
       <Navbar />
-      <main className="min-h-screen pt-16">
+      {/* Mobilde alt tab-bar yuksekligi kadar bosluk birak ki icerik altta kalmasin */}
+      <main className="min-h-screen pt-16 pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0">
         {children}
       </main>
       <ArenaAuxiliaries />
+      <BottomNav />
       <OnboardingOverlay />
     </>
   )

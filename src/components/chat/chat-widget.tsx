@@ -74,7 +74,7 @@ export function ChatWidget() {
       {/* FAB butonu */}
       <button
         onClick={toggleOpen}
-        className={`fixed bottom-4 right-3 sm:bottom-5 sm:right-5 z-50 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 ${
+        className={`fixed right-3 sm:right-5 z-50 flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 bottom-[calc(72px+env(safe-area-inset-bottom))] md:bottom-5 ${
           isOpen
             ? 'bg-[var(--surface)] text-[var(--text-sub)] border border-[var(--border)]'
             : 'bg-[var(--focus)] text-white'
