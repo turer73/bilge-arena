@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
 import { useAuthStore } from '@/stores/auth-store'
 import type { Theme } from '@/stores/ui-store'
@@ -23,10 +23,31 @@ const THEME_OPTIONS: ThemeOption[] = [
   { id: 'light',     label: 'Gün Işığı',       dot: '#CBD5E1', dotBg: '#F1F5F9' },
 ]
 
+function Dot({ opt, size = 16 }: { opt: ThemeOption; size?: number }) {
+  return (
+    <span
+      className="shrink-0 rounded-full"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: opt.dotBg ?? opt.dot,
+        border: opt.dotBg ? `1.5px solid ${opt.dot}` : undefined,
+      }}
+    />
+  )
+}
+
+/**
+ * Tema seçici — tek tetikleyici butona basınca açılan popover.
+ * (Önceden 6 renk dairesi navbar'da yan yana inline duruyordu, çok yer
+ * kaplıyordu; artık geçerli temanın noktası + chevron, tıklayınca liste açılır.)
+ */
 export function ThemeToggle() {
   const { theme, setTheme } = useUIStore()
   const { user, profile } = useAuthStore()
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
 
   // Sayfa yüklendiğinde kayıtlı temayı uygula (localStorage — hızlı, oturumsuz)
   useEffect(() => {
@@ -43,10 +64,29 @@ export function ThemeToggle() {
     }
   }, [profile?.preferred_theme, setTheme])
 
+  // Dışarı tıkla / Escape → kapat
+  useEffect(() => {
+    if (!open) return
+    function onPointer(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
   const isDark = DARK_THEMES.has(theme)
+  const current = THEME_OPTIONS.find((t) => t.id === theme) ?? THEME_OPTIONS[0]
 
   function handleThemeChange(id: Theme) {
     setTheme(id)
+    setOpen(false)
 
     // Giriş yapmış kullanıcılar için DB'ye debounc'lu sync (600ms)
     if (!user) return
@@ -63,32 +103,61 @@ export function ThemeToggle() {
   }
 
   return (
-    <div
-      className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5"
-      role="group"
-      aria-label="Tema seç"
-    >
-      {THEME_OPTIONS.map((opt) => {
-        const active = theme === opt.id
-        return (
-          <button
-            key={opt.id}
-            onClick={() => handleThemeChange(opt.id)}
-            title={opt.label}
-            aria-label={opt.label}
-            aria-pressed={active}
-            className="relative h-4 w-4 rounded-full transition-all duration-150 hover:scale-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
-            style={{
-              backgroundColor: opt.dotBg ?? opt.dot,
-              border: opt.dotBg ? `1.5px solid ${opt.dot}` : undefined,
-              boxShadow: active
-                ? `0 0 0 2px ${isDark ? '#0a0a1a' : '#ffffff'}, 0 0 0 3.5px ${opt.dot}`
-                : undefined,
-              transform: active ? 'scale(1.15)' : undefined,
-            }}
-          />
-        )
-      })}
+    <div ref={rootRef} className="relative">
+      {/* Tetikleyici — geçerli tema noktası + chevron */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Tema seç"
+        title={`Tema: ${current.label}`}
+        className="flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 transition-colors hover:bg-[var(--card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+      >
+        <Dot opt={current} />
+        <svg
+          width="10"
+          height="6"
+          viewBox="0 0 10 6"
+          aria-hidden="true"
+          className="text-[var(--text-muted)]"
+          style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }}
+        >
+          <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {/* Popover — tema listesi (sağ hizalı, mobilde taşmasın) */}
+      {open && (
+        <div
+          role="menu"
+          aria-label="Tema seç"
+          className="absolute right-0 top-[calc(100%+6px)] z-50 min-w-[170px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg"
+        >
+          {THEME_OPTIONS.map((opt) => {
+            const active = theme === opt.id
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={active}
+                onClick={() => handleThemeChange(opt.id)}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:bg-[var(--surface)]"
+                style={{
+                  color: active ? 'var(--focus)' : 'var(--text-sub)',
+                  fontWeight: active ? 700 : 500,
+                  background: active ? 'var(--focus-bg)' : undefined,
+                }}
+              >
+                <Dot opt={opt} />
+                <span className="flex-1">{opt.label}</span>
+                {active && <span aria-hidden="true" style={{ color: 'var(--focus)' }}>✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
