@@ -28,19 +28,19 @@ export function LeaderboardTable({ entries, title = 'Haftalık Sıralama' }: Lea
         <h2 className="font-display text-sm font-bold">{title}</h2>
       </div>
 
-      {/* Table header */}
-      <div className="grid grid-cols-[40px_1fr_80px_60px] gap-2 border-b border-[var(--border)] px-4 py-2">
+      {/* Table header — mobilde 3 sütun (rank/oyuncu/XP), sm+ 4 sütun (+seviye) */}
+      <div className="grid grid-cols-[28px_minmax(0,1fr)_auto] gap-2 border-b border-[var(--border)] px-3 py-2 sm:grid-cols-[40px_minmax(0,1fr)_80px_64px] sm:px-4">
         <span className="text-[9px] font-extrabold tracking-wider text-[var(--text-muted)]">#</span>
         <span className="text-[9px] font-extrabold tracking-wider text-[var(--text-muted)]">OYUNCU</span>
         <span className="text-right text-[9px] font-extrabold tracking-wider text-[var(--text-muted)]">XP</span>
-        <span className="text-right text-[9px] font-extrabold tracking-wider text-[var(--text-muted)]">SEVİYE</span>
+        <span className="hidden text-right text-[9px] font-extrabold tracking-wider text-[var(--text-muted)] sm:block">SEVİYE</span>
       </div>
 
       {/* Entries */}
       {entries.map((entry, idx) => (
         <div
           key={entry.user_id ?? `rank-${idx}`}
-          className="grid grid-cols-[40px_1fr_80px_60px] items-center gap-2 px-4 py-2.5 transition-colors duration-200"
+          className="grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 transition-colors duration-200 sm:grid-cols-[40px_minmax(0,1fr)_80px_64px] sm:px-4"
           style={{
             background: entry.isCurrentUser ? 'var(--focus-bg)' : 'transparent',
             borderLeft: entry.isCurrentUser ? '3px solid var(--focus)' : '3px solid transparent',
@@ -55,30 +55,36 @@ export function LeaderboardTable({ entries, title = 'Haftalık Sıralama' }: Lea
           </span>
 
           {/* Player */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {entry.avatar.startsWith('http') ? (
               <Image
                 src={entry.avatar}
                 alt={entry.name}
                 width={32}
                 height={32}
-                className="h-8 w-8 rounded-full object-cover"
+                className="h-8 w-8 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)] text-lg">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-lg">
                 {entry.avatar}
               </span>
             )}
-            <span
-              className="text-sm"
-              style={{
-                fontWeight: entry.isCurrentUser ? 700 : 400,
-                color: entry.isCurrentUser ? 'var(--text)' : 'var(--text-sub)',
-              }}
-            >
-              {entry.name}
-              {entry.isCurrentUser && <span className="ml-1 text-[10px] text-[var(--focus)]">(Sen)</span>}
-            </span>
+            <div className="min-w-0 flex-1">
+              <span
+                className="block truncate text-sm"
+                style={{
+                  fontWeight: entry.isCurrentUser ? 700 : 400,
+                  color: entry.isCurrentUser ? 'var(--text)' : 'var(--text-sub)',
+                }}
+              >
+                {entry.name}
+                {entry.isCurrentUser && <span className="ml-1 text-[10px] text-[var(--focus)]">(Sen)</span>}
+              </span>
+              {/* Seviye — mobilde isim altında; sm+ kendi sütununda */}
+              <span className="block truncate text-[10px] text-[var(--text-muted)] sm:hidden">
+                {entry.level}
+              </span>
+            </div>
           </div>
 
           {/* XP */}
@@ -86,8 +92,8 @@ export function LeaderboardTable({ entries, title = 'Haftalık Sıralama' }: Lea
             {entry.xp.toLocaleString()}
           </span>
 
-          {/* Level */}
-          <span className="text-right text-xs text-[var(--text-sub)]">
+          {/* Level (sm+ ayrı sütun) */}
+          <span className="hidden text-right text-xs text-[var(--text-sub)] sm:block">
             {entry.level}
           </span>
         </div>
