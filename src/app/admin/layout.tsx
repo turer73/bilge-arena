@@ -10,7 +10,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />
-      <main className="ml-[220px] flex-1 p-6 lg:p-8">
+      {/* Mobilde sidebar drawer (off-canvas) -> tam genislik + hamburger icin ust bosluk.
+          lg+'de sabit sidebar icin sol margin. */}
+      <main className="flex-1 p-4 pt-16 lg:ml-[220px] lg:p-8 lg:pt-8">
         {children}
       </main>
     </div>
