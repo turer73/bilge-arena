@@ -1,10 +1,27 @@
 'use client'
 
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import { GAME_LIST, getCategoryLabel } from '@/lib/constants/games'
 import { useAuthStore } from '@/stores/auth-store'
-import { getLevelFromXP } from '@/lib/constants/levels'
+import { getLevelFromXP, LEVELS } from '@/lib/constants/levels'
 import { StreakBadge } from '@/components/game/streak-badge'
+import { XPBar } from '@/components/game/xp-bar'
+import { DailyQuests } from '@/components/game/daily-quests'
+import { MiniLeaderboard } from '@/components/game/mini-leaderboard'
+import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
+
+interface SidebarLeaderRow {
+  name: string
+  avatar_url: string | null
+  xp_earned: number
+}
+interface MiniLeader {
+  name: string
+  avatar: string
+  avatarUrl: string | null
+  xp: string
+}
 
 const GAME_EMOJI: Record<string, string> = {
   matematik: '🧮',
@@ -22,12 +39,52 @@ export default function ArenaClient() {
   const displayName = profile?.username || profile?.display_name || 'Arenacı'
   const level = getLevelFromXP(totalXP)
 
+  // Seviye ilerlemesi (XP cubugu + "sonraki seviyeye X XP")
+  const xpInto = totalXP - level.minXP
+  const tierSpan = level.maxXP === Infinity ? Math.max(xpInto, 1) : level.maxXP - level.minXP + 1
+  const nextTier = LEVELS.find((t) => t.level === level.level + 1)
+  const xpToNext = nextTier ? Math.max(0, nextTier.minXP - totalXP) : 0
+
+  // Gunluk gorevler (mevcut backend: /api/quests + /api/quests/claim)
+  const { quests, claimXP } = useDailyQuests()
+
+  // Mini haftalik siralama (mevcut /api/leaderboard/sidebar proxy'si)
+  const [leaders, setLeaders] = useState<MiniLeader[]>([])
+  const [myRank, setMyRank] = useState(0)
+  useEffect(() => {
+    const url = user?.id
+      ? `/api/leaderboard/sidebar?currentUserId=${user.id}`
+      : '/api/leaderboard/sidebar'
+    let cancelled = false
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { players?: SidebarLeaderRow[]; myRank?: number } | null) => {
+        if (cancelled || !data?.players) return
+        setLeaders(
+          data.players.map((p) => ({
+            name: p.name,
+            avatar: '👤',
+            avatarUrl: p.avatar_url ?? null,
+            xp: Number(p.xp_earned || 0).toLocaleString('tr-TR'),
+          })),
+        )
+        setMyRank(data.myRank ?? 0)
+      })
+      .catch(() => {
+        /* siralama opsiyonel — sessiz gec */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 md:py-8 xl:max-w-5xl xl:px-6 2xl:max-w-6xl 2xl:py-10">
 
       {/* ── Kişiselleştirilmiş karşılama (giriş yapılmışsa) ── */}
       {user && profile ? (
-        <div className="mb-5 flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-3 md:mb-6 md:rounded-2xl md:px-5 md:py-3.5">
+        <div className="mb-5 flex flex-col gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-3 md:mb-6 md:rounded-2xl md:px-5 md:py-3.5">
+          <div className="flex items-center gap-3">
           {/* Avatar / seviye ikonu */}
           {profile.avatar_url ? (
             <img
@@ -80,6 +137,25 @@ export default function ArenaClient() {
               Profil →
             </Link>
           </div>
+          </div>
+
+          {/* XP ilerleme çubuğu + sonraki seviye */}
+          <div className="flex flex-col gap-1">
+            <XPBar xp={xpInto} level={level.level} max={tierSpan} />
+            {nextTier ? (
+              <span className="text-[10px] text-[var(--text-muted)] md:text-[11px]">
+                {nextTier.badge} {nextTier.name}&apos;e{' '}
+                <span className="font-semibold tabular-nums text-[var(--text-sub)]">
+                  {xpToNext.toLocaleString('tr-TR')} XP
+                </span>{' '}
+                kaldı
+              </span>
+            ) : (
+              <span className="text-[10px] font-semibold text-[var(--reward)] md:text-[11px]">
+                {level.badge} Maksimum seviye — Efsane!
+              </span>
+            )}
+          </div>
         </div>
       ) : (
         /* Giriş yapılmamış — mini CTA */
@@ -93,6 +169,13 @@ export default function ArenaClient() {
           >
             Giriş Yap
           </Link>
+        </div>
+      )}
+
+      {/* ── Günlük görevler (giriş yapılmışsa) ── */}
+      {user && profile && quests.length > 0 && (
+        <div className="mb-5 md:mb-6">
+          <DailyQuests userQuests={quests} onClaimXP={claimXP} />
         </div>
       )}
 
@@ -209,6 +292,32 @@ export default function ArenaClient() {
             </div>
           </Link>
         ))}
+      </div>
+
+      {/* ── Mini sıralama + Arena CTA ── */}
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 md:mt-8 md:gap-4">
+        {leaders.length > 0 && (
+          <Link href="/arena/siralama" className="block transition-transform hover:-translate-y-0.5">
+            <MiniLeaderboard players={leaders} myRank={myRank} />
+          </Link>
+        )}
+        <Link
+          href="/oda"
+          className="flex items-center gap-3 rounded-xl border p-4 transition-transform hover:-translate-y-0.5 md:rounded-2xl"
+          style={{
+            borderColor: 'var(--wisdom-border)',
+            background: 'linear-gradient(135deg, var(--wisdom-bg), var(--card-bg))',
+          }}
+        >
+          <span className="text-3xl">⚔️</span>
+          <div className="flex-1">
+            <div className="text-sm font-bold text-[var(--text)] md:text-base">Arena’da yarış</div>
+            <div className="mt-0.5 text-[11px] text-[var(--text-sub)] md:text-xs">
+              Arkadaşlarınla canlı oda kur
+            </div>
+          </div>
+          <span className="text-xl" style={{ color: 'var(--wisdom-light)' }}>→</span>
+        </Link>
       </div>
     </div>
   )
