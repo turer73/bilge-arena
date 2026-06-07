@@ -20,7 +20,7 @@ vi.mock('next/link', () => ({
 
 import { BottomNav } from '../bottom-nav'
 
-const TABS = ['Anasayfa', 'Arena', 'Sıralama', 'Profil']
+const TABS = ['Oyunlar', 'Arena', 'Sıralama', 'Profil']
 
 function linkFor(label: string): HTMLAnchorElement {
   return screen.getByText(label).closest('a') as HTMLAnchorElement
@@ -35,7 +35,7 @@ describe('BottomNav', () => {
   test('4 sekmeyi dogru href ile render eder', () => {
     render(<BottomNav />)
     for (const t of TABS) expect(screen.getByText(t)).toBeInTheDocument()
-    expect(linkFor('Anasayfa')).toHaveAttribute('href', '/arena')
+    expect(linkFor('Oyunlar')).toHaveAttribute('href', '/arena')
     expect(linkFor('Arena')).toHaveAttribute('href', '/oda')
     expect(linkFor('Sıralama')).toHaveAttribute('href', '/arena/siralama')
     expect(linkFor('Profil')).toHaveAttribute('href', '/arena/profil')
@@ -47,26 +47,26 @@ describe('BottomNav', () => {
     expect(nav.className).toContain('md:hidden')
   })
 
-  test('activeOverride="lobby" → sadece Anasayfa aria-current', () => {
+  test('activeOverride="lobby" → sadece Oyunlar aria-current', () => {
     render(<BottomNav activeOverride="lobby" />)
-    expect(linkFor('Anasayfa')).toHaveAttribute('aria-current', 'page')
+    expect(linkFor('Oyunlar')).toHaveAttribute('aria-current', 'page')
     expect(linkFor('Arena')).not.toHaveAttribute('aria-current')
     expect(linkFor('Sıralama')).not.toHaveAttribute('aria-current')
     expect(linkFor('Profil')).not.toHaveAttribute('aria-current')
   })
 
-  test('usePathname=/arena → Anasayfa aktif (tam eslesme)', () => {
+  test('usePathname=/arena → Oyunlar aktif (tam eslesme)', () => {
     mockUsePathname.mockReturnValue('/arena')
     render(<BottomNav />)
-    expect(linkFor('Anasayfa')).toHaveAttribute('aria-current', 'page')
+    expect(linkFor('Oyunlar')).toHaveAttribute('aria-current', 'page')
   })
 
-  test('usePathname=/arena/siralama → Siralama aktif, Anasayfa DEGIL (tam-eslesme guard)', () => {
+  test('usePathname=/arena/siralama → Siralama aktif, Oyunlar DEGIL (tam-eslesme guard)', () => {
     mockUsePathname.mockReturnValue('/arena/siralama')
     render(<BottomNav />)
     expect(linkFor('Sıralama')).toHaveAttribute('aria-current', 'page')
     // /arena yalnizca tam eslesmede aktif olmali — alt rotada degil
-    expect(linkFor('Anasayfa')).not.toHaveAttribute('aria-current')
+    expect(linkFor('Oyunlar')).not.toHaveAttribute('aria-current')
   })
 
   test('usePathname=/oda/kod → Arena aktif (startsWith)', () => {
