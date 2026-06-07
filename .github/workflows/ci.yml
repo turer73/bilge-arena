@@ -7,11 +7,14 @@ on:
     branches: [master]
 
 concurrency:
-  group: ci-${{ github.ref }}
-  # PR/branch run'lari yeni push'ta iptal et (CI dakikasi tasarrufu); ama master'da
-  # ASLA iptal etme — her merge tam dogrulansin. Aksi halde hizli ardisik merge'de
-  # onceki merge-commit'in master run'i iptal olur, PR sayfasinda yaniltici
-  # "canceled" (kirmizi) gorunur (kod/test hatasi degil, concurrency yan etkisi).
+  # master: HER commit'e BENZERSIZ grup (sha) -> hic kuyruga girmez, hic iptal olmaz;
+  #         her merge tam dogrulanir. PR/branch: ref-bazli grup + cancel-in-progress
+  #         (yeni push stale run'i iptal eder, CI dakikasi tasarrufu).
+  # NOT (#174 eksikti): master'da cancel-in-progress:false TEK BASINA yetmez --
+  #   ayni grupta bekleyen (pending) run'lardan GitHub yalnizca EN YENISINI tutar,
+  #   oncekini "higher priority waiting request" ile iptal eder. Cozum: master'a
+  #   sha-benzersiz grup vererek pending kuyrugunu tamamen ortadan kaldirmak.
+  group: ${{ github.ref == 'refs/heads/master' && format('ci-master-{0}', github.sha) || format('ci-{0}', github.ref) }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
