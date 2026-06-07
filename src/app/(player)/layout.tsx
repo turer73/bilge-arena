@@ -1,3 +1,5 @@
+import { BottomNav } from '@/components/layout/bottom-nav'
+
 /**
  * Bilge Arena Oda: (player) route group layout
  * Sprint 1 PR4a Task 5 + 2026-05-03 auth redirect path-preserve fix
@@ -19,7 +21,11 @@ export default function PlayerLayout({
 }) {
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
+      {/* Mobilde alt tab-bar yüksekliği kadar boşluk bırak (içerik altta kalmasın) */}
+      <main className="mx-auto max-w-3xl px-4 pt-8 pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-8">
+        {children}
+      </main>
+      <BottomNav />
     </div>
   )
 }
