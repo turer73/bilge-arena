@@ -25,7 +25,10 @@ export default defineConfig({
         'src/types/**',
         'src/**/*.d.ts',
         'src/app/layout.tsx',
+        'src/app/arena/layout.tsx', // layout server-component wiring (root layout gibi)
         'src/app/**/loading.tsx',
+        // Prototip → gercek kod kopru demosu (noindex showcase, mock veri)
+        'src/app/mobil-demo/**',
       ],
     },
   },
