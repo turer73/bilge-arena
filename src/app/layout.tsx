@@ -33,8 +33,8 @@ export const metadata: Metadata = {
     template: '%s | Bilge Arena',
   },
   description:
-    'Oyunlaştırılmış YKS, LGS ve AYT hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularıyla öğren, kazan, yüksel!',
-  keywords: ['YKS', 'LGS', 'TYT', 'AYT', 'üniversite sınavı', 'ortaokul sınavı', 'hazırlık', 'test', 'quiz', 'oyun'],
+    'Bilge Arena\'da YKS ve LGS\'ye hazırlan: binlerce TYT · AYT sorusu, anlık sıralama, ödül sistemi. Arena\'ya gir, puan kazan, sıralamada yüksel — ücretsiz!',
+  keywords: ['YKS', 'arena yks', 'LGS', 'TYT', 'AYT', 'üniversite sınavı', 'yks hazırlık', 'ortaokul sınavı', 'hazırlık', 'test', 'quiz', 'oyun'],
   authors: [{ name: 'Bilge Arena' }],
   creator: 'Bilge Arena',
   metadataBase: new URL((process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').trim()),
@@ -43,13 +43,13 @@ export const metadata: Metadata = {
     locale: 'tr_TR',
     siteName: 'Bilge Arena',
     title: 'Bilge Arena — YKS · LGS · AYT Hazırlık Platformu',
-    description: 'Oyunlaştırılmış YKS, LGS ve AYT hazırlık platformu. Öğren, kazan, yüksel!',
+    description: 'Bilge Arena\'da YKS ve LGS\'ye hazırlan: binlerce soru, anlık sıralama, ödül sistemi — ücretsiz!',
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Bilge Arena — YKS · LGS · AYT Hazırlık Platformu',
-    description: 'Oyunlaştırılmış YKS, LGS ve AYT hazırlık platformu. Öğren, kazan, yüksel!',
+    description: 'Bilge Arena\'da YKS ve LGS\'ye hazırlan: binlerce soru, anlık sıralama, ödül sistemi — ücretsiz!',
     images: ['/og-image.png'],
   },
   icons: {
