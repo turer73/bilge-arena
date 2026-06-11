@@ -4,7 +4,6 @@ import type { Question } from '@/types/database'
 import { getOptionLetter, getCorrectIndex } from '@/lib/utils/question'
 import { LikeButton } from '@/components/social/like-button'
 import { useChatStore } from '@/stores/chat-store'
-import { BilgeChan } from '@/components/ui/bilge-chan'
 
 interface ExplanationPanelProps {
   question: Question
@@ -95,21 +94,14 @@ export function ExplanationPanel({
           : 'color-mix(in srgb, var(--urgency) 27%, transparent)',
       }}
     >
-      {/* Sonuc mesaji + Bilge Chan reaksiyonu */}
-      <div className="mb-1.5 flex items-center gap-2.5">
-        <BilgeChan
-          pose={isCorrect ? 'victory' : 'sad'}
-          height={52}
-          className="shrink-0 self-end"
-        />
-        <div
-          className="text-[13px] font-bold"
-          style={{ color: isCorrect ? 'var(--growth)' : 'var(--urgency)' }}
-        >
-          {isCorrect
-            ? '✓ Doğru! Mükemmel 🎉'
-            : `✗ Yanlış. Doğru: ${getOptionLetter(correctAnswer)}) ${correctText}`}
-        </div>
+      {/* Sonuc mesaji */}
+      <div
+        className="mb-1.5 text-[13px] font-bold"
+        style={{ color: isCorrect ? 'var(--growth)' : 'var(--urgency)' }}
+      >
+        {isCorrect
+          ? '✓ Doğru! Mükemmel 🎉'
+          : `✗ Yanlış. Doğru: ${getOptionLetter(correctAnswer)}) ${correctText}`}
       </div>
 
       {/* Aciklama */}

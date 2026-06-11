@@ -25,6 +25,7 @@ import { SoundToggle } from './sound-toggle'
 import { XPPopup } from './xp-popup'
 import { ExplanationPanel } from './explanation-panel'
 import { BilgeChan } from '@/components/ui/bilge-chan'
+import { BilgeChanCompanion } from './bilge-chan-companion'
 
 const BurstParticles = dynamic(
   () => import('./burst-particles').then(m => ({ default: m.BurstParticles })),
@@ -402,6 +403,12 @@ export function QuizEngine({ game }: QuizEngineProps) {
       {/* Sag sidebar */}
       {!quiz.isDeneme && (
         <div className="hidden flex-col gap-3 lg:flex">
+          <BilgeChanCompanion
+            key={quizStore.currentIndex}
+            quizState={quizStore.state}
+            lastIsCorrect={lastAnswer?.isCorrect ?? null}
+            question={question}
+          />
           <ComponentErrorBoundary label="Sıralama" variant="inline">
             <MiniLeaderboard players={sidebar.leaderboard} myRank={sidebar.myRank} />
           </ComponentErrorBoundary>
