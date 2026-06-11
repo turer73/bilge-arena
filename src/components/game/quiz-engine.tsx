@@ -24,6 +24,7 @@ import { StreakBadge } from './streak-badge'
 import { SoundToggle } from './sound-toggle'
 import { XPPopup } from './xp-popup'
 import { ExplanationPanel } from './explanation-panel'
+import { BilgeChan } from '@/components/ui/bilge-chan'
 
 const BurstParticles = dynamic(
   () => import('./burst-particles').then(m => ({ default: m.BurstParticles })),
@@ -135,12 +136,9 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (quiz.screen === 'loading') {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-4">
-        <div
-          className="h-12 w-12 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-transparent"
-          style={{ borderTopColor: gameDef.colorHex }}
-        />
+        <BilgeChan pose="reading" height={120} className="animate-float" priority />
         <p className="text-sm text-[var(--text-sub)] animate-pulse">
-          Sorular yukleniyor...
+          Sorular hazırlanıyor...
         </p>
       </div>
     )

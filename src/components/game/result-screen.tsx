@@ -8,6 +8,7 @@ import { ShareButtons } from '@/components/social/share-buttons'
 import { trackEvent } from '@/lib/utils/plausible'
 import { SignupPromptModal } from './signup-prompt-modal'
 import { useGuestSession, computePromptLevel } from '@/lib/hooks/use-guest-session'
+import { BilgeChan } from '@/components/ui/bilge-chan'
 
 interface ResultScreenProps {
   onRestart: () => void
@@ -78,6 +79,13 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
           </div>
         </div>
       )}
+
+      {/* Bilge Chan sonuc reaksiyonu */}
+      <BilgeChan
+        pose={gameOver ? 'sad' : 'victory'}
+        height={128}
+        className="animate-fadeUp"
+      />
 
       {/* Rank */}
       <div

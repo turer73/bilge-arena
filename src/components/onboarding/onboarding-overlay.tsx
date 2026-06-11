@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { GAMES, GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { useAuthStore } from '@/stores/auth-store'
 import { refreshProfile } from '@/lib/hooks/use-auth'
+import { BilgeChan } from '@/components/ui/bilge-chan'
 
 const GAME_EMOJIS: Record<GameSlug, string> = {
   matematik: '🧮',
@@ -70,14 +71,13 @@ export function OnboardingOverlay() {
       exit={{ opacity: 0, y: -20 }}
       className="flex flex-col items-center gap-6 text-center"
     >
-      {/* Logo animasyonu */}
+      {/* Bilge Chan hos geldin */}
       <motion.div
-        initial={{ scale: 0, rotate: -180 }}
-        animate={{ scale: 1, rotate: 0 }}
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
-        className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2563EB] to-[#7C3AED] shadow-2xl"
       >
-        <span className="text-4xl">🏛️</span>
+        <BilgeChan pose="wave" height={132} priority />
       </motion.div>
 
       <motion.div

@@ -75,7 +75,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
   const miniStats = (config?.mini_stats as string[]) || null
 
   // Bilge Chan: önce karakter görseli dene, yoksa logo fallback
-  const [mascotSrc, setMascotSrc] = useState('/bilge-chan-selam.png')
+  const [mascotSrc, setMascotSrc] = useState('/chan/chan-wave.webp')
   const [hasMascot, setHasMascot] = useState(true)
 
   return (
