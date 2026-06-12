@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import SiralamaClient from './siralama-client'
+import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
     canonical: `${siteUrl}/arena/siralama`,
   },
   openGraph: {
+    ...OG_DEFAULTS,
     title: 'Sıralama | Bilge Arena',
     description: 'Haftalık ve genel sıralama — en başarılı arenacıları gör.',
     url: `${siteUrl}/arena/siralama`,

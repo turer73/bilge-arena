@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import PremiumClient from './premium-client'
+import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
     canonical: `${siteUrl}/arena/premium`,
   },
   openGraph: {
+    ...OG_DEFAULTS,
     title: 'Bilge Arena Premium — Sınırsız YKS · LGS · AYT Hazırlık',
     description: 'Sınırsız quiz, reklamsız deneyim, AI asistan. 7 gün ücretsiz dene!',
     url: `${siteUrl}/arena/premium`,

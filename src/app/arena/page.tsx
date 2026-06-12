@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import ArenaClient from './arena-client'
+import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
     canonical: `${siteUrl}/arena`,
   },
   openGraph: {
+    ...OG_DEFAULTS,
     title: 'Arena | Bilge Arena',
     description: '5 farklı oyun konsoluy YKS, LGS ve AYT\'ye hazırlan. Soruları çöz, XP kazan, sıralamada yüksel!',
     url: `${siteUrl}/arena`,

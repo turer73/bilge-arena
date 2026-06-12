@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
 import { notFound } from 'next/navigation'
 import GameClient from './game-client'
+import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 interface GamePageProps {
   params: Promise<{ game: string }>
@@ -38,8 +39,11 @@ const GAME_META: Record<GameSlug, { title: string; description: string; keywords
 export async function generateMetadata({ params }: GamePageProps): Promise<Metadata> {
   const { game } = await params
 
+  // notFound() burada (streaming oncesi) cagrilmali: page icindeki guard
+  // loading.tsx shell'i 200 ile stream edildikten sonra calisir ve status'u
+  // degistiremez (soft-404). Metadata asamasinda cagrilinca gercek 404 doner.
   if (!GAME_SLUGS.includes(game as GameSlug)) {
-    return { title: 'Oyun Bulunamadi' }
+    notFound()
   }
 
   const meta = GAME_META[game as GameSlug]
@@ -54,6 +58,7 @@ export async function generateMetadata({ params }: GamePageProps): Promise<Metad
       canonical: `${siteUrl}/arena/${game}`,
     },
     openGraph: {
+      ...OG_DEFAULTS,
       title: `${meta.title} | Bilge Arena`,
       description: meta.description,
       url: `${siteUrl}/arena/${game}`,
@@ -71,6 +76,11 @@ export async function generateMetadata({ params }: GamePageProps): Promise<Metad
 export function generateStaticParams() {
   return GAME_SLUGS.map((game) => ({ game }))
 }
+
+// Soft-404 fix: loading.tsx boundary'si shell'i 200 ile stream ettigi icin
+// page/generateMetadata icindeki notFound() status'u degistiremiyor.
+// Slug listesi sabit — bilinmeyen param router seviyesinde gercek 404 alsin.
+export const dynamicParams = false
 
 export default async function GameConsolePage({ params }: GamePageProps) {
   const { game } = await params

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
     canonical: `${siteUrl}/hakkinda`,
   },
   openGraph: {
+    ...OG_DEFAULTS,
     title: 'Hakkında | Bilge Arena',
     description: 'Bilge Arena\'nın hikayesi, misyonu ve vizyonu.',
     url: `${siteUrl}/hakkinda`,

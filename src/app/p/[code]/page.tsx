@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { slugToLabel } from '@/lib/rooms/categories'
+import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 /**
  * Bilge Arena Oda: /p/[code] public share landing
@@ -50,6 +51,7 @@ export async function generateMetadata({
     title: `${ogTitle} — Bilge Arena`,
     description,
     openGraph: {
+      ...OG_DEFAULTS,
       title: ogTitle,
       description,
       images: [
