@@ -1,23 +1,19 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-
-  "regions": ["fra1"],
-
+  "regions": [
+    "fra1"
+  ],
   "functions": {
     "src/app/api/**": {
-      "maxDuration": 30,
-      "memory": 1024
+      "maxDuration": 30
     },
     "src/app/api/admin/generate-questions/**": {
-      "maxDuration": 120,
-      "memory": 1024
+      "maxDuration": 120
     },
     "src/app/api/cron/**": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
     }
   },
-
   "crons": [
     {
       "path": "/api/cron/weekly-digest",
