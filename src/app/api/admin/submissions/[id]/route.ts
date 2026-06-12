@@ -48,29 +48,45 @@ export async function PATCH(
   const note = typeof body.note === 'string' ? body.note.slice(0, 500) : null
 
   const svc = createServiceRoleClient()
-  const { data: sub, error: subErr } = await svc
+
+  // 1) ATOMIK CLAIM (Codex P1): pending satırı tek UPDATE ile sahiplen.
+  //    Eski akış (önce oku, sonra insert, sonra update) iki eşzamanlı onayda
+  //    İKİSİNİN de questions'a insert etmesine izin veriyordu — kaybeden
+  //    update 0 satır etkileyip yine 200 dönüyordu (duplicate + yanlış başarı).
+  //    Şimdi: claim'i kazanamayan hiç insert ETMEZ.
+  const newStatus = body.action === 'approve' ? 'approved' : 'rejected'
+  const { data: claimed, error: claimErr } = await svc
     .from('question_submissions')
-    .select('id, user_id, game, category, difficulty, content, status')
+    .update({
+      status: newStatus,
+      review_note: note,
+      reviewed_by: admin.id,
+      reviewed_at: new Date().toISOString(),
+    })
     .eq('id', id)
-    .single()
+    .eq('status', 'pending')
+    .select('id, game, category, difficulty, content')
+    .maybeSingle()
 
-  if (subErr || !sub) {
-    return NextResponse.json({ error: 'Gönderim bulunamadı' }, { status: 404 })
+  if (claimErr) {
+    console.error('[admin/submissions] claim hatası:', claimErr.code)
+    return NextResponse.json({ error: 'Güncelleme başarısız' }, { status: 500 })
   }
-  if (sub.status !== 'pending') {
-    return NextResponse.json({ error: 'Gönderim zaten değerlendirilmiş' }, { status: 409 })
+  if (!claimed) {
+    // Satır yok VEYA başka admin önce davrandı — ikisi de "değerlendirilemez"
+    return NextResponse.json({ error: 'Gönderim bulunamadı veya zaten değerlendirilmiş' }, { status: 409 })
   }
 
+  // 2) Approve ise soruyu OLUŞTUR (claim bizde — yarış yok)
   let questionId: string | null = null
-
   if (body.action === 'approve') {
     const { data: inserted, error: qErr } = await svc
       .from('questions')
       .insert({
-        game: sub.game,
-        category: sub.category,
-        difficulty: sub.difficulty,
-        content: sub.content,
+        game: claimed.game,
+        category: claimed.category,
+        difficulty: claimed.difficulty,
+        content: claimed.content,
         source: 'ugc',
         is_active: false,
       })
@@ -78,27 +94,22 @@ export async function PATCH(
       .single()
 
     if (qErr || !inserted) {
+      // Insert düştü: claim'i geri al ki gönderi kuyruğa dönsün (yarı-onay kalmasın)
       console.error('[admin/submissions] questions insert hatası:', qErr?.code)
+      await svc
+        .from('question_submissions')
+        .update({ status: 'pending', review_note: null, reviewed_by: null, reviewed_at: null })
+        .eq('id', id)
+        .eq('status', newStatus)
       return NextResponse.json({ error: 'Soru oluşturulamadı' }, { status: 500 })
     }
     questionId = inserted.id
-  }
 
-  const { error: updErr } = await svc
-    .from('question_submissions')
-    .update({
-      status: body.action === 'approve' ? 'approved' : 'rejected',
-      review_note: note,
-      reviewed_by: admin.id,
-      reviewed_at: new Date().toISOString(),
-      question_id: questionId,
-    })
-    .eq('id', id)
-    .eq('status', 'pending') // yarış koşulu guard'ı: bu arada değerlendirildiyse dokunma
-
-  if (updErr) {
-    console.error('[admin/submissions] update hatası:', updErr.code)
-    return NextResponse.json({ error: 'Güncelleme başarısız' }, { status: 500 })
+    // 3) İzlenebilirlik: oluşan question_id'yi gönderiye bağla
+    await svc
+      .from('question_submissions')
+      .update({ question_id: questionId })
+      .eq('id', id)
   }
 
   // Admin log (mevcut pattern)
