@@ -6,6 +6,7 @@ import { getClientIp } from '@/lib/utils/client-ip'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { isValidUuid } from '@/lib/utils/uuid'
 import type { Question } from '@/types/database'
+import { toPublicQuestion } from '@/lib/utils/question-public'
 
 // Cift kalkan rate limit (Madde 9 pattern):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -169,7 +170,11 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { questions, reviewQuestions },
+    // Whitelist: RPC tam DB satiri donduruyor; telemetri/ic alanlar sizmasin
+    {
+      questions: questions.map(toPublicQuestion),
+      reviewQuestions: reviewQuestions.map(toPublicQuestion),
+    },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }
