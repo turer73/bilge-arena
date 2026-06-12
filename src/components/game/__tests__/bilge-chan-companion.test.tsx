@@ -13,8 +13,8 @@ import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import type { Question } from '@/types/database'
 
 vi.mock('@/components/ui/bilge-chan', () => ({
-  BilgeChan: ({ pose }: { pose: string }) => (
-    <div data-testid="chan-pose" data-pose={pose} />
+  BilgeChan: ({ pose, priority }: { pose: string; priority?: boolean }) => (
+    <div data-testid="chan-pose" data-pose={pose} data-priority={String(priority ?? false)} />
   ),
 }))
 
@@ -180,6 +180,22 @@ describe('BilgeChanCompanion', () => {
     )
     expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
     expect(pose()).toBe('victory')
+  })
+
+  test('priority varsayılan kapalı (gizli instance preload etmesin — Codex P2), opt-in açılır', () => {
+    const { rerender } = render(
+      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
+    )
+    expect(screen.getByTestId('chan-pose').getAttribute('data-priority')).toBe('false')
+    rerender(
+      <BilgeChanCompanion
+        quizState="playing"
+        lastIsCorrect={null}
+        question={makeQuestion()}
+        priority
+      />,
+    )
+    expect(screen.getByTestId('chan-pose').getAttribute('data-priority')).toBe('true')
   })
 
   test('compact: yatay yerleşim sınıfları uygulanır', () => {

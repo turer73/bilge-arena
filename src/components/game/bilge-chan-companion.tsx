@@ -35,6 +35,12 @@ interface BilgeChanCompanionProps {
   height?: number
   /** Mobil/dar yerleşim: balon yanda, daha küçük */
   compact?: boolean
+  /**
+   * next/image preload (LCP). Varsayılan kapalı: quiz'de iki instance da
+   * mount olur (lg:hidden + hidden lg:flex), breakpoint'te gizli olan
+   * preload edilmemeli (Codex P2).
+   */
+  priority?: boolean
   className?: string
 }
 
@@ -60,6 +66,7 @@ export function BilgeChanCompanion({
   question,
   height = 240,
   compact = false,
+  priority = false,
   className,
 }: BilgeChanCompanionProps) {
   const [phase, setPhase] = useState<Phase>('intro')
@@ -169,7 +176,7 @@ export function BilgeChanCompanion({
           )}
         </div>
       )}
-      <BilgeChan pose={pose} height={height} priority={!compact} className={compact ? 'order-1' : ''} />
+      <BilgeChan pose={pose} height={height} priority={priority} className={compact ? 'order-1' : ''} />
     </div>
   )
 }
