@@ -22,6 +22,7 @@ const mockProfile = {
   total_sessions: 10,
   coin_balance: 0,
   owned_frames: ['none', 'mavi'],
+  owned_backgrounds: ['none', 'gece-mavisi'],
   is_premium: false,
   premium_until: null,
   preferred_theme: 'dark' as const,

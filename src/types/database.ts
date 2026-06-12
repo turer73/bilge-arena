@@ -45,6 +45,7 @@ export interface Profile {
   // Coin ekonomisi
   coin_balance: number
   owned_frames: string[]
+  owned_backgrounds: string[]
   // Premium
   is_premium: boolean
   premium_until: string | null
