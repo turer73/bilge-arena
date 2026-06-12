@@ -98,12 +98,12 @@ describe('GET /api/cron/honeypot-check', () => {
     expect(mockFlush).toHaveBeenCalled()
   })
 
-  it('bos sonuc: alarm (error) + 500', async () => {
+  it('boş sonuç: alarm (error) + 500', async () => {
     mockRpc.mockResolvedValue({ data: [], error: null })
     const res = await GET(reqWith('Bearer test-secret-123'))
     expect(res.status).toBe(500)
     expect(mockCapture).toHaveBeenCalledWith(
-      expect.stringContaining('bos sonuc'),
+      expect.stringContaining('boş sonuç'),
       expect.objectContaining({ level: 'error' }),
     )
   })

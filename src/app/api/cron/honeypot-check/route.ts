@@ -52,7 +52,7 @@ export async function GET(req: Request) {
   const row = (Array.isArray(data) ? data[0] : data) as HoneypotIntegrityRow | undefined
 
   if (!row) {
-    Sentry.captureMessage('[honeypot-check] RPC bos sonuc dondu', { level: 'error' })
+    Sentry.captureMessage('[honeypot-check] RPC boş sonuç döndü', { level: 'error' })
     await Sentry.flush(2000)
     return NextResponse.json({ error: 'Boş sonuç' }, { status: 500 })
   }
