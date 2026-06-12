@@ -24,6 +24,8 @@ import { StreakBadge } from './streak-badge'
 import { SoundToggle } from './sound-toggle'
 import { XPPopup } from './xp-popup'
 import { ExplanationPanel } from './explanation-panel'
+import { BilgeChan } from '@/components/ui/bilge-chan'
+import { BilgeChanCompanion } from './bilge-chan-companion'
 
 const BurstParticles = dynamic(
   () => import('./burst-particles').then(m => ({ default: m.BurstParticles })),
@@ -135,12 +137,9 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (quiz.screen === 'loading') {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-4">
-        <div
-          className="h-12 w-12 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-transparent"
-          style={{ borderTopColor: gameDef.colorHex }}
-        />
+        <BilgeChan pose="reading" height={120} className="animate-float" priority />
         <p className="text-sm text-[var(--text-sub)] animate-pulse">
-          Sorular yukleniyor...
+          Sorular hazırlanıyor...
         </p>
       </div>
     )
@@ -240,9 +239,21 @@ export function QuizEngine({ game }: QuizEngineProps) {
     {quiz.showLifeLost && <LifeLostOverlay />}
 
     <div className="mx-auto max-w-[940px] p-3 md:p-4 lg:p-5 xl:max-w-[1100px] xl:p-6 2xl:max-w-[1280px] 2xl:p-8">
-      <div className="grid grid-cols-1 gap-3 md:gap-4 lg:grid-cols-[1fr_190px] xl:grid-cols-[1fr_220px] xl:gap-5 2xl:grid-cols-[1fr_260px]">
+      <div className="grid grid-cols-1 gap-3 md:gap-4 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_320px] xl:gap-5 2xl:grid-cols-[1fr_360px]">
       {/* Sol sutun */}
       <div className="flex flex-col gap-3 md:gap-4 xl:gap-5">
+        {/* Mobil companion (lg altinda, yatay-compact) */}
+        {!quiz.isDeneme && (
+          <BilgeChanCompanion
+            key={`m-${quizStore.currentIndex}`}
+            quizState={quizStore.state}
+            lastIsCorrect={lastAnswer?.isCorrect ?? null}
+            question={question}
+            compact
+            height={104}
+            className="lg:hidden"
+          />
+        )}
         {/* Deneme timer */}
         {quiz.isDeneme && quiz.denemeConfig && (
           <div className="animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
@@ -404,6 +415,14 @@ export function QuizEngine({ game }: QuizEngineProps) {
       {/* Sag sidebar */}
       {!quiz.isDeneme && (
         <div className="hidden flex-col gap-3 lg:flex">
+          <BilgeChanCompanion
+            key={quizStore.currentIndex}
+            quizState={quizStore.state}
+            lastIsCorrect={lastAnswer?.isCorrect ?? null}
+            question={question}
+            height={340}
+            className="sticky top-4"
+          />
           <ComponentErrorBoundary label="Sıralama" variant="inline">
             <MiniLeaderboard players={sidebar.leaderboard} myRank={sidebar.myRank} />
           </ComponentErrorBoundary>

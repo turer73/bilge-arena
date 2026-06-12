@@ -74,7 +74,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
   const ctaSecondary = (config?.cta_secondary as { text?: string; href?: string }) || {}
   const miniStats = (config?.mini_stats as string[]) || null
 
-  // Bilge Chan: önce karakter görseli dene, yoksa logo fallback
+  // Anasayfa: logo kullanilir (Bilge Chan yalnizca quiz companion'da)
   const [mascotSrc, setMascotSrc] = useState('/bilge-chan-selam.png')
   const [hasMascot, setHasMascot] = useState(true)
 

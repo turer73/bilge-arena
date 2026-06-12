@@ -58,4 +58,15 @@ describe('ResultScreen', () => {
     expect(root.className).toContain('min-h-[calc(100dvh-8rem)]')
     expect(root.className).toContain('justify-center')
   })
+
+  test('normal bitiş: Bilge Chan victory pose', () => {
+    render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} />)
+    expect(screen.getByAltText('Bilge Chan zafer işareti yapıyor')).toBeInTheDocument()
+  })
+
+  test('gameOver (canlar bitti): Bilge Chan sad pose', () => {
+    quiz.value = { ...quiz.value, livesEnabled: true, lives: 0 }
+    render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} />)
+    expect(screen.getByAltText('Bilge Chan üzgün')).toBeInTheDocument()
+  })
 })
