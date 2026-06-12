@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
+import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { isPngBuffer } from '@/lib/utils/security'
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
@@ -17,6 +18,9 @@ export async function POST(request: NextRequest) {
     if (!admin) {
       return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
     }
+
+    const rlRes = await checkAdminMutationRl(admin.id, 'upload')
+    if (rlRes) return rlRes
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null

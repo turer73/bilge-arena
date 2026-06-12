@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
+import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { roleUpdateSchema } from '@/lib/validations/schemas'
 
 /**
@@ -16,6 +17,9 @@ export async function PATCH(
     const supabase = await createClient()
     const admin = await checkPermission(supabase, 'admin.roles.manage')
     if (!admin) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
+
+    const rlRes = await checkAdminMutationRl(admin.id)
+    if (rlRes) return rlRes
 
     const { id } = await params
     const body = await request.json()
@@ -86,6 +90,9 @@ export async function DELETE(
     const supabase = await createClient()
     const admin = await checkPermission(supabase, 'admin.roles.manage')
     if (!admin) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
+
+    const rlRes = await checkAdminMutationRl(admin.id)
+    if (rlRes) return rlRes
 
     const { id } = await params
 

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
+import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { NextResponse, type NextRequest } from 'next/server'
 import { reportUpdateSchema } from '@/lib/validations/schemas'
 
@@ -42,6 +43,9 @@ export async function PATCH(request: NextRequest) {
   if (!admin) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
+
+  const rlRes = await checkAdminMutationRl(admin.id)
+  if (rlRes) return rlRes
 
   const body = await request.json()
   const parsed = reportUpdateSchema.safeParse(body)

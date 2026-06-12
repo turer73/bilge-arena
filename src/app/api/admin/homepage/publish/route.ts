@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
+import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { revalidatePath } from 'next/cache'
 import { homepagePublishSchema } from '@/lib/validations/schemas'
 
@@ -15,6 +16,9 @@ export async function POST(request: NextRequest) {
     if (!admin) {
       return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
     }
+
+    const rlRes = await checkAdminMutationRl(admin.id)
+    if (rlRes) return rlRes
 
     const body = await request.json()
     const parsed = homepagePublishSchema.safeParse(body)
