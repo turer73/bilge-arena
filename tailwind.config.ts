@@ -156,6 +156,11 @@ const config: Config = {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-12px)' },
         },
+        chanIdle: {
+          '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+          '35%': { transform: 'translateY(-5px) rotate(-0.6deg)' },
+          '70%': { transform: 'translateY(-2px) rotate(0.5deg)' },
+        },
       },
       animation: {
         'slide-up': 'slideUp 0.4s ease-out',
@@ -177,6 +182,8 @@ const config: Config = {
         'slide-r': 'slideR 0.3s ease-out',
         'slideDown': 'slideDown 0.3s cubic-bezier(0.22,1,0.36,1)',
         'float': 'float 4s ease-in-out infinite',
+        // motion-reduce:animate-none ile kullan (erisilebilirlik)
+        'chan-idle': 'chanIdle 5s ease-in-out infinite',
         'rankReveal': 'rankReveal 0.8s cubic-bezier(0.22,1,0.36,1) both',
         'bounce-once': 'bounceOnce 0.45s ease',
         'life-lost-flash': 'lifeLostFlash 0.6s ease-out forwards',
