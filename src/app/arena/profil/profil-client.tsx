@@ -14,7 +14,9 @@ import { EditProfileModal } from '@/components/profile/edit-profile-modal'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { fetchProfileBootstrap, type ProfileStats } from '@/lib/supabase/profile-stats'
-import { PROFILE_FRAMES, FRAME_STORAGE_KEY, getFrameById, FRAME_RARITY_LABEL, FRAME_RARITY_COLOR } from '@/lib/constants/profile-frames'
+import { PROFILE_FRAMES, FRAME_STORAGE_KEY, FRAME_RARITY_LABEL, FRAME_RARITY_COLOR } from '@/lib/constants/profile-frames'
+import { PROFILE_BACKGROUNDS, BACKGROUND_STORAGE_KEY } from '@/lib/constants/profile-backgrounds'
+import { resolveOwnedSelection } from '@/lib/utils/owned-selection'
 import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
 import Link from 'next/link'
 
@@ -51,6 +53,24 @@ export default function ProfilClient() {
       }
     } catch {}
   }, [])
+
+  // Mağazadan seçilen arka planı yükle (frame deseniyle aynı)
+  const [backgroundId, setBackgroundId] = useState('none')
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(BACKGROUND_STORAGE_KEY)
+      if (saved && PROFILE_BACKGROUNDS.some((b) => b.id === saved)) {
+        setBackgroundId(saved)
+      }
+    } catch {}
+  }, [])
+  // SAHİPLİK GUARD (Codex P2): localStorage kullanıcı kontrolünde — elle
+  // yazılan paid-id satın almayı atlatamasın; ücretli + sahipsiz → 'none'
+  const activeBackground = resolveOwnedSelection(
+    backgroundId,
+    profile?.owned_backgrounds,
+    PROFILE_BACKGROUNDS,
+  )
 
   // Profile'dan owned_frames yükle
   useEffect(() => {
@@ -123,7 +143,8 @@ export default function ProfilClient() {
   const level = getLevelFromXP(totalXP)
   const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
 
-  const activeFrame = getFrameById(selectedFrameId)
+  // Aynı sahiplik guard'ı çerçeveler için (aynı localStorage bypass açığı vardı)
+  const activeFrame = resolveOwnedSelection(selectedFrameId, ownedFrames, PROFILE_FRAMES)
 
   function selectFrame(id: string) {
     setSelectedFrameId(id)
@@ -208,8 +229,12 @@ export default function ProfilClient() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 md:max-w-3xl md:py-8 xl:max-w-4xl xl:px-6 xl:py-10 2xl:max-w-5xl">
-      {/* Profil basligi */}
-      <div className="mb-4 animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 md:mb-6 md:rounded-2xl md:p-6 xl:p-7 2xl:p-8">
+      {/* Profil basligi — magazadan secilen arka planla (none=standart kart) */}
+      <div
+        data-testid="profil-header-card"
+        className={`relative mb-4 animate-fadeUp overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 md:mb-6 md:rounded-2xl md:p-6 xl:p-7 2xl:p-8 ${activeBackground.id !== 'none' ? (activeBackground.animClass ?? '') : ''}`}
+        style={activeBackground.id !== 'none' ? { background: activeBackground.css } : undefined}
+      >
         <div className="flex items-center gap-3 md:gap-4">
 
           {/* Avatar + Çerçeve */}

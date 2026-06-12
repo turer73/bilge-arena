@@ -233,6 +233,19 @@ export default function ArenaClient() {
             KATKI
           </span>
         </Link>
+        <Link
+          href="/arena/magaza"
+          className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-bold text-[var(--text-sub)] transition-all hover:-translate-y-0.5 hover:border-[var(--reward-border)] hover:text-[var(--reward)] hover:shadow-sm md:px-4 md:text-sm"
+        >
+          <span>🛍️</span>
+          <span>Mağaza</span>
+          <span
+            className="rounded-full px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider"
+            style={{ background: 'var(--reward-bg)', color: 'var(--reward)' }}
+          >
+            YENİ
+          </span>
+        </Link>
       </div>
 
       {/* ── Oyun konsollari ── */}

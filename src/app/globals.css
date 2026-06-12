@@ -644,3 +644,24 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   Profil Arka Plani Magazasi — hareket efektleri (Faz-1)
+   background-position/opacity animasyonlari; reduced-motion
+   blogu (yukarida) hepsini zaten kapatir.
+   ============================================================ */
+@keyframes bgDrift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+@keyframes bgPulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.18); }
+}
+@keyframes bgSlide {
+  0%   { background-position: 0 0; }
+  100% { background-position: 160px 0; }
+}
+.bg-anim-drift { background-size: 220% 220%; animation: bgDrift 14s ease-in-out infinite; }
+.bg-anim-pulse { animation: bgPulse 6s ease-in-out infinite; }
+.bg-anim-slide { animation: bgSlide 9s linear infinite; }
