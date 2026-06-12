@@ -5,6 +5,7 @@ import { BilgeChan, type ChanPose } from '@/components/ui/bilge-chan'
 import { getCorrectIndex, getOptionLetter } from '@/lib/utils/question'
 import type { Question } from '@/types/database'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
+import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-tts'
 
 /**
  * Typewriter — metni harf harf yazar. Parent `key={text}` ile remount eder;
@@ -71,6 +72,13 @@ export function BilgeChanCompanion({
 }: BilgeChanCompanionProps) {
   const [phase, setPhase] = useState<Phase>('intro')
   const [helpMsg, setHelpMsg] = useState('')
+  // TTS destegi hydration-sonrasi belirlenir (SSR'da speechSynthesis yok)
+  const [ttsReady, setTtsReady] = useState(false)
+  useEffect(() => {
+    setTtsReady(isTtsSupported())
+    // Soru degisiminde (remount) yarim kalan konusmayi kes
+    return () => stopChanSpeech()
+  }, [])
 
   const easy = question?.difficulty === 1
   const answered = quizState === 'answered'
@@ -148,6 +156,16 @@ export function BilgeChanCompanion({
           className={`relative ${compact ? 'order-2' : 'mb-2'} w-full ${bubbleWidth} rounded-2xl border border-[var(--focus-border)] bg-[var(--card)] px-3 py-2 text-xs leading-relaxed text-[var(--text)] shadow-md`}
         >
           <Typewriter key={message} text={message} />
+          {ttsReady && message && (
+            <button
+              onClick={() => speakChanLine(message)}
+              aria-label="Repliği sesli oku"
+              title="Bilge Chan konuşsun"
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--focus-border)] bg-[var(--card)] text-[10px] shadow transition-transform hover:scale-110 active:scale-95"
+            >
+              🔉
+            </button>
+          )}
           {showButtons && (
             <div className="mt-2 flex gap-2">
               <button
@@ -176,7 +194,13 @@ export function BilgeChanCompanion({
           )}
         </div>
       )}
-      <BilgeChan pose={pose} height={height} priority={priority} className={compact ? 'order-1' : ''} />
+      {/* Idle nefes animasyonu — reduced-motion tercihine saygili */}
+      <BilgeChan
+        pose={pose}
+        height={height}
+        priority={priority}
+        className={`animate-chan-idle motion-reduce:animate-none ${compact ? 'order-1' : ''}`}
+      />
     </div>
   )
 }

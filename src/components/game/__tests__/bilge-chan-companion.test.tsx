@@ -13,9 +13,16 @@ import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import type { Question } from '@/types/database'
 
 vi.mock('@/components/ui/bilge-chan', () => ({
-  BilgeChan: ({ pose, priority }: { pose: string; priority?: boolean }) => (
-    <div data-testid="chan-pose" data-pose={pose} data-priority={String(priority ?? false)} />
+  BilgeChan: ({ pose, priority, className }: { pose: string; priority?: boolean; className?: string }) => (
+    <div data-testid="chan-pose" data-pose={pose} data-priority={String(priority ?? false)} className={className} />
   ),
+}))
+
+const tts = vi.hoisted(() => ({ supported: true, speak: vi.fn(), stop: vi.fn() }))
+vi.mock('@/lib/utils/chan-tts', () => ({
+  isTtsSupported: () => tts.supported,
+  speakChanLine: tts.speak,
+  stopChanSpeech: tts.stop,
 }))
 
 import { BilgeChanCompanion } from '../bilge-chan-companion'
@@ -196,6 +203,41 @@ describe('BilgeChanCompanion', () => {
       />,
     )
     expect(screen.getByTestId('chan-pose').getAttribute('data-priority')).toBe('true')
+  })
+
+  test('TTS destekliyse balonda sesli-oku butonu; tıklayınca mevcut replik okunur', () => {
+    render(
+      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
+    )
+    const btn = screen.getByRole('button', { name: 'Repliği sesli oku' })
+    fireEvent.click(btn)
+    expect(tts.speak).toHaveBeenCalledWith(CHAN_LINES.greet[0])
+  })
+
+  test('TTS desteklenmiyorsa buton render edilmez', () => {
+    tts.supported = false
+    render(
+      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
+    )
+    expect(screen.queryByRole('button', { name: 'Repliği sesli oku' })).not.toBeInTheDocument()
+    tts.supported = true
+  })
+
+  test('idle animasyon sınıfı + reduced-motion guard uygulanır', () => {
+    render(
+      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
+    )
+    const chan = screen.getByTestId('chan-pose')
+    expect(chan.className).toContain('animate-chan-idle')
+    expect(chan.className).toContain('motion-reduce:animate-none')
+  })
+
+  test('unmount: yarım kalan konuşma kesilir', () => {
+    const { unmount } = render(
+      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
+    )
+    unmount()
+    expect(tts.stop).toHaveBeenCalled()
   })
 
   test('compact: yatay yerleşim sınıfları uygulanır', () => {
