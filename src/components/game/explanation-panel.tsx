@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import type { Question } from '@/types/database'
 import { getOptionLetter, getCorrectIndex } from '@/lib/utils/question'
 import { LikeButton } from '@/components/social/like-button'
@@ -26,6 +27,13 @@ export function ExplanationPanel({
 }: ExplanationPanelProps) {
   const correctAnswer = getCorrectIndex(question.content)
   const correctText = question.content.options[correctAnswer]
+
+  // Panel soru kartinin USTUNDE render olur; alt siklara tiklayan kullanicinin
+  // viewport'u asagida kalabilir — mount'ta paneli gorunur yap (jsdom guard'li)
+  const rootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    rootRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+  }, [])
 
   const handleTopicExplain = async () => {
     const topic = question.subcategory || question.category
@@ -84,6 +92,7 @@ export function ExplanationPanel({
 
   return (
     <div
+      ref={rootRef}
       className="animate-fadeUp rounded-xl border-[1.5px] px-[18px] py-[14px]"
       style={{
         background: isCorrect

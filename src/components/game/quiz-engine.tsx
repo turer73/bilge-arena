@@ -334,6 +334,36 @@ export function QuizEngine({ game }: QuizEngineProps) {
           </div>
         )}
 
+        {/* Aciklama paneli — cevap sonrasi sorunun USTUNDE: "Sonraki Soru"
+            kaydirmadan erisilebilir (mobil/desktop) */}
+        {!quiz.isDeneme && quizStore.state === 'answered' && lastAnswer && (
+          <>
+            <ExplanationPanel
+              question={question}
+              selectedOption={lastAnswer.selectedOption}
+              isCorrect={lastAnswer.isCorrect}
+              isLastQuestion={quizStore.isLastQuestion()}
+              onNext={quiz.handleNext}
+              onOpenComments={() => quiz.setShowComments(!quiz.showComments)}
+              onOpenReport={() => quiz.setShowReportModal(true)}
+            />
+
+            {quiz.showComments && (
+              <ComponentErrorBoundary label="Yorumlar" variant="inline">
+                <CommentSection questionId={question.id} isLoggedIn={!!user} />
+              </ComponentErrorBoundary>
+            )}
+
+            <ComponentErrorBoundary label="Hata Bildirimi" variant="minimal">
+              <ErrorReportModal
+                questionId={question.id}
+                isOpen={quiz.showReportModal}
+                onClose={() => quiz.setShowReportModal(false)}
+              />
+            </ComponentErrorBoundary>
+          </>
+        )}
+
         {/* Soru + Timer */}
         <div className="flex gap-3 animate-fadeUp" style={{ animationDelay: '0.08s', animationFillMode: 'both' }}>
           <div className="flex-1">
@@ -382,34 +412,6 @@ export function QuizEngine({ game }: QuizEngineProps) {
           </div>
         )}
 
-        {/* Aciklama paneli */}
-        {!quiz.isDeneme && quizStore.state === 'answered' && lastAnswer && (
-          <>
-            <ExplanationPanel
-              question={question}
-              selectedOption={lastAnswer.selectedOption}
-              isCorrect={lastAnswer.isCorrect}
-              isLastQuestion={quizStore.isLastQuestion()}
-              onNext={quiz.handleNext}
-              onOpenComments={() => quiz.setShowComments(!quiz.showComments)}
-              onOpenReport={() => quiz.setShowReportModal(true)}
-            />
-
-            {quiz.showComments && (
-              <ComponentErrorBoundary label="Yorumlar" variant="inline">
-                <CommentSection questionId={question.id} isLoggedIn={!!user} />
-              </ComponentErrorBoundary>
-            )}
-
-            <ComponentErrorBoundary label="Hata Bildirimi" variant="minimal">
-              <ErrorReportModal
-                questionId={question.id}
-                isOpen={quiz.showReportModal}
-                onClose={() => quiz.setShowReportModal(false)}
-              />
-            </ComponentErrorBoundary>
-          </>
-        )}
       </div>
 
       {/* Sag sidebar */}
