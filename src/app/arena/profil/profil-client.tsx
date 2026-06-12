@@ -14,8 +14,9 @@ import { EditProfileModal } from '@/components/profile/edit-profile-modal'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { fetchProfileBootstrap, type ProfileStats } from '@/lib/supabase/profile-stats'
-import { PROFILE_FRAMES, FRAME_STORAGE_KEY, getFrameById, FRAME_RARITY_LABEL, FRAME_RARITY_COLOR } from '@/lib/constants/profile-frames'
-import { PROFILE_BACKGROUNDS, BACKGROUND_STORAGE_KEY, getBackgroundById } from '@/lib/constants/profile-backgrounds'
+import { PROFILE_FRAMES, FRAME_STORAGE_KEY, FRAME_RARITY_LABEL, FRAME_RARITY_COLOR } from '@/lib/constants/profile-frames'
+import { PROFILE_BACKGROUNDS, BACKGROUND_STORAGE_KEY } from '@/lib/constants/profile-backgrounds'
+import { resolveOwnedSelection } from '@/lib/utils/owned-selection'
 import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
 import Link from 'next/link'
 
@@ -63,7 +64,13 @@ export default function ProfilClient() {
       }
     } catch {}
   }, [])
-  const activeBackground = getBackgroundById(backgroundId)
+  // SAHİPLİK GUARD (Codex P2): localStorage kullanıcı kontrolünde — elle
+  // yazılan paid-id satın almayı atlatamasın; ücretli + sahipsiz → 'none'
+  const activeBackground = resolveOwnedSelection(
+    backgroundId,
+    profile?.owned_backgrounds,
+    PROFILE_BACKGROUNDS,
+  )
 
   // Profile'dan owned_frames yükle
   useEffect(() => {
@@ -136,7 +143,8 @@ export default function ProfilClient() {
   const level = getLevelFromXP(totalXP)
   const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
 
-  const activeFrame = getFrameById(selectedFrameId)
+  // Aynı sahiplik guard'ı çerçeveler için (aynı localStorage bypass açığı vardı)
+  const activeFrame = resolveOwnedSelection(selectedFrameId, ownedFrames, PROFILE_FRAMES)
 
   function selectFrame(id: string) {
     setSelectedFrameId(id)
