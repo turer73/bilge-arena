@@ -5,7 +5,9 @@
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 
-const checks: Record<string, ReturnType<typeof vi.fn>> = {}
+// vi.mock hoist edilir — factory'nin gordugu state vi.hoisted ile tanimlanmali
+// (duz const TDZ'de kalir: standalone gecip full-suite'te import-sirasina gore patlar)
+const checks = vi.hoisted(() => ({}) as Record<string, ReturnType<typeof vi.fn>>)
 vi.mock('../rate-limit', () => ({
   createRateLimiter: (name: string) => {
     checks[name] = vi.fn().mockResolvedValue({ success: true })
