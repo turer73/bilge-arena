@@ -57,6 +57,24 @@ export async function cacheQuestions(questions: Question[]): Promise<void> {
   }
 }
 
+/**
+ * Cache girdilerinden oynanabilir olanlari sec (saf, test edilebilir).
+ *
+ * is_active artik API yanitlarinda yok (toPublicQuestion whitelist) —
+ * undefined=aktif say; alan sadece eski tam-satir cache girdilerinde var
+ * ve false ise (deaktive edilmis soru) elenmeye devam eder (Codex P2).
+ */
+export function filterPlayableCached(
+  questions: Question[],
+  category?: string | null,
+  difficulty?: number | null,
+): Question[] {
+  let filtered = questions.filter(q => q.is_active !== false)
+  if (category) filtered = filtered.filter(q => q.category === category)
+  if (difficulty) filtered = filtered.filter(q => q.difficulty === difficulty)
+  return filtered
+}
+
 /** Cache'den soru cek (oyun + opsiyonel kategori/zorluk filtresi) */
 export async function getCachedQuestions(options: {
   game: string
@@ -80,9 +98,7 @@ export async function getCachedQuestions(options: {
 
     db.close()
 
-    let filtered = questions.filter(q => q.is_active)
-    if (category) filtered = filtered.filter(q => q.category === category)
-    if (difficulty) filtered = filtered.filter(q => q.difficulty === difficulty)
+    const filtered = filterPlayableCached(questions, category, difficulty)
 
     // Fisher-Yates shuffle
     for (let i = filtered.length - 1; i > 0; i--) {
