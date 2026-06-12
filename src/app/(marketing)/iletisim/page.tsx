@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
     canonical: `${siteUrl}/iletisim`,
   },
   openGraph: {
+    ...OG_DEFAULTS,
     title: 'İletişim | Bilge Arena',
     description: 'Sorularınız ve önerileriniz için Bilge Arena ekibiyle iletişime geçin.',
     url: `${siteUrl}/iletisim`,

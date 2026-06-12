@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
     canonical: `${siteUrl}/nasil-calisir`,
   },
   openGraph: {
+    ...OG_DEFAULTS,
     title: 'Nasıl Çalışır | Bilge Arena',
     description: 'Bilge Arena\'da YKS, LGS ve AYT hazırlık süreci adım adım.',
     url: `${siteUrl}/nasil-calisir`,

@@ -8,6 +8,7 @@ import { GamesSection } from '@/components/landing/games-section'
 import { SectionWrapper } from '@/components/landing/section-wrapper'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import type { HomepageElement, HomepageSectionConfig } from '@/types/database'
+import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 // ISR: Her 5 dakikada bir yeniden oluştur (Supabase sorgularını cache'le)
 export const revalidate = 300
@@ -16,9 +17,10 @@ export const revalidate = 300
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
 export const metadata: Metadata = {
-  title: 'Bilge Arena — YKS · LGS · AYT Hazırlık Platformu | Oyunlaştırılmış Sınav Hazırlığı',
+  // SERP limitleri: title ~60 char, description 120-160 char (bug #582)
+  title: 'Bilge Arena — YKS · LGS · AYT Hazırlık Platformu',
   description:
-    'YKS, LGS, TYT ve AYT sınavlarına oyunlaştırılmış öğrenme ile hazırlan. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çöz, XP kazan, sıralamada yüksel! 3700+ soru, 5 oyun modu, tamamen ücretsiz.',
+    'Bilge Arena\'da YKS, LGS, TYT ve AYT\'ye oyunla hazırlan: 3700+ soru, 5 oyun modu, anlık sıralama ve ödüller — tamamen ücretsiz!',
   keywords: [
     'YKS hazırlık', 'LGS hazırlık', 'TYT soru çöz', 'AYT hazırlık', 'üniversite sınavı',
     'online test çöz', 'YKS matematik', 'LGS matematik', 'TYT Türkçe', 'TYT Fen',
@@ -28,6 +30,7 @@ export const metadata: Metadata = {
     canonical: siteUrl,
   },
   openGraph: {
+    ...OG_DEFAULTS,
     title: 'Bilge Arena — Oyunlaştırılmış YKS · LGS · AYT Hazırlık Platformu',
     description: 'YKS, LGS ve AYT\'ye hazırlanmak artık oyun kadar eğlenceli! Soruları çöz, XP kazan, zirvede yerini al.',
     url: siteUrl,

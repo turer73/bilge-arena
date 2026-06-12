@@ -85,12 +85,8 @@ const jsonLd = [
       priceCurrency: 'TRY',
     },
     inLanguage: 'tr',
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      ratingCount: '120',
-      bestRating: '5',
-    },
+    // aggregateRating KALDIRILDI: sitede gorunur puanlama mekanizmasi yok;
+    // dogrulanamayan rating markup'i Google manuel-aksiyon sebebi
     author: { '@type': 'Organization', name: 'Bilge Arena' },
   },
   {
@@ -100,7 +96,6 @@ const jsonLd = [
     url: siteUrl,
     logo: `${siteUrl}/logo-horizontal.png`,
     description: 'YKS, LGS ve AYT\'ye hazırlanan öğrenciler için oyunlaştırılmış öğrenme platformu.',
-    sameAs: [],
     contactPoint: {
       '@type': 'ContactPoint',
       email: 'iletisim@bilgearena.com',
