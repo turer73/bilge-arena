@@ -26,6 +26,10 @@
     {
       "path": "/api/cron/daily-streak-reminder",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/honeypot-check",
+      "schedule": "0 */6 * * *"
     }
   ]
 }
