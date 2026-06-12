@@ -20,9 +20,11 @@ sürücüsü olursa (ölçüm: quiz-tamamlama oranında Chan'lı/Chan'sız A-B).
 ## 2. TTS: **Web Speech API (BU PR)** → Faz-3'te sunucu TTS opsiyonu
 
 - **Bu PR:** `chan-tts.ts` — tarayıcı yerleşik `speechSynthesis`, `tr-TR`,
-  pitch 1.15 (genç ton). Sıfır maliyet, sıfır network, KVKK-temiz (metin cihaz
-  dışına çıkmaz). Global ses tercihi (SoundToggle) kapalıysa konuşmaz.
-  Balonda opt-in 🔉 butonu — otomatik konuşma YOK (ilk sürümde rahatsız etmesin).
+  pitch 1.15 (genç ton). Sıfır maliyet. Gizlilik: **yerel ses tercih edilir**
+  (`localService`); yalnızca uzak ses bulunan tarayıcı/OS'lerde metin
+  tarayıcının ses sağlayıcısına gider — mutlak "cihaz dışına çıkmaz" garantisi
+  YOK, best-effort (Codex P2 düzeltmesi). Global ses tercihi (SoundToggle)
+  kapalıysa konuşmaz. Balonda opt-in 🔉 butonu — otomatik konuşma YOK.
 - **Bilinen kısıt:** Ses kalitesi cihaza bağlı (Android TR sesi iyi, bazı
   masaüstlerinde robotik). Kabul edilen tradeoff.
 - **Faz-3 yükseltme yolu:** Edge-TTS / Piper (klipper SER8'de lokal, ücretsiz)

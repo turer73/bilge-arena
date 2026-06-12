@@ -6,9 +6,12 @@ import { getSoundEnabled } from '@/lib/utils/sounds'
  * Bilge Chan TTS — Web Speech API ile companion repliklerini seslendirir.
  *
  * Bilinçli tercihler:
- * - Tarayıcı yerleşik speechSynthesis: sıfır maliyet, sıfır network, KVKK-temiz
- *   (metin cihaz dışına çıkmaz). Kalite cihaza göre değişir — Faz-3'te sunucu
- *   TTS'e geçilirse bu modül tek değişim noktası.
+ * - Tarayıcı yerleşik speechSynthesis: sıfır maliyet, ek bağımlılık yok.
+ *   YEREL ses tercih edilir (localService) — Codex P2: bazı tarayıcı/OS
+ *   kombinasyonlarında yalnızca UZAK ses servisi bulunur; o durumda metin
+ *   tarayıcının ses sağlayıcısına gider (mutlak "cihaz dışına çıkmaz"
+ *   garantisi YOK, best-effort). Faz-3'te build-time statik MP3'e geçilirse
+ *   bu modül tek değişim noktası.
  * - Global ses tercihi (SoundToggle / bilge-sound) kapalıysa konuşmaz.
  * - Desteklenmeyen tarayıcıda sessizce no-op (buton zaten render edilmez).
  */
@@ -31,8 +34,10 @@ export function speakChanLine(text: string): boolean {
   utterance.rate = 1.05
   utterance.pitch = 1.15 // genç karakter tonu
 
-  // Türkçe ses varsa onu seç (yoksa tarayıcı lang'e göre düşer)
-  const trVoice = synth.getVoices().find(v => v.lang.toLowerCase().startsWith('tr'))
+  // Türkçe sesler içinde YEREL olani tercih et (gizlilik: metin cihazda kalsin);
+  // yerel TR yoksa uzak TR'ye dus (yukaridaki best-effort notu)
+  const trVoices = synth.getVoices().filter(v => v.lang.toLowerCase().startsWith('tr'))
+  const trVoice = trVoices.find(v => v.localService) ?? trVoices[0]
   if (trVoice) utterance.voice = trVoice
 
   synth.speak(utterance)
