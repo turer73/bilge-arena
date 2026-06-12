@@ -433,12 +433,18 @@ export function QuizEngine({ game }: QuizEngineProps) {
               onClaimXP={dailyQuests.claimXP}
             />
           </ComponentErrorBoundary>
+        </div>
+      )}
+      </div>
+
+      {/* Konu gucu — tam genislik alt bant (mobilde de gorunur) */}
+      {!quiz.isDeneme && (
+        <div className="mt-3 md:mt-4 xl:mt-5">
           <ComponentErrorBoundary label="Konu Gücü" variant="inline">
             <TopicsPanel topics={sidebarTopics} />
           </ComponentErrorBoundary>
         </div>
       )}
-      </div>
     </div>
     </>
   )
