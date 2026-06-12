@@ -45,7 +45,7 @@ export async function GET(req: Request) {
     )
     await Sentry.flush(2000)
     console.error('[honeypot-check] RPC hatasi:', error.code)
-    return NextResponse.json({ error: 'Integrity sorgusu basarisiz' }, { status: 500 })
+    return NextResponse.json({ error: 'Integrity sorgusu başarısız' }, { status: 500 })
   }
 
   // RETURNS TABLE → tek satirlik dizi
@@ -54,7 +54,7 @@ export async function GET(req: Request) {
   if (!row) {
     Sentry.captureMessage('[honeypot-check] RPC bos sonuc dondu', { level: 'error' })
     await Sentry.flush(2000)
-    return NextResponse.json({ error: 'Bos sonuc' }, { status: 500 })
+    return NextResponse.json({ error: 'Boş sonuç' }, { status: 500 })
   }
 
   if (row.drift_detected) {
