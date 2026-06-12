@@ -52,7 +52,10 @@ export function GoogleAnalytics() {
                 });
               }
             }
-          } catch(e) {}
+          } catch(e) {
+            // Bozuk consent kaydi: default 'denied' kalir (guvenli taraf) — sessiz yutma
+            console.warn('[GA] consent parse hatasi:', e && e.message);
+          }
         `}
       </Script>
     </>

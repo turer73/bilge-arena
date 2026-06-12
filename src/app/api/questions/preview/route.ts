@@ -4,6 +4,7 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import type { Question } from '@/types/database'
+import { toPublicQuestion } from '@/lib/utils/question-public'
 
 // Misafir önizlemesi için kısıtlı IP rate limit: 20/saat
 const ipLimiter = createRateLimiter('questions-preview-ip', 20, 3_600_000)
@@ -80,7 +81,8 @@ export async function GET(request: NextRequest) {
   const question = questions[0] ?? null
 
   return NextResponse.json(
-    { question },
+    // Whitelist: RPC tam DB satiri donduruyor; telemetri/ic alanlar sizmasin
+    { question: question ? toPublicQuestion(question) : null },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }
