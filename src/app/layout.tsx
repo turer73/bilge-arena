@@ -8,6 +8,7 @@ import { ToastContainer } from '@/components/ui/toast'
 import { SWRegister } from '@/components/layout/sw-register'
 import { PWAInstallPrompt } from '@/components/layout/pwa-install-prompt'
 import { OfflineIndicator } from '@/components/layout/offline-indicator'
+import { GlobalBackground } from '@/components/layout/global-background'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import './globals.css'
 
@@ -150,6 +151,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <OfflineIndicator />
+        <GlobalBackground />
         {children}
         <ToastContainer />
         <CookieBanner />
