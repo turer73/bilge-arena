@@ -15,6 +15,8 @@ const m = vi.hoisted(() => ({
   qInsert: vi.fn(),       // questions.insert() satırı
   qInsertResult: vi.fn(), // questions insert -> {data,error} (test başına ayarlanır)
   logInsert: vi.fn(),
+  rpc: vi.fn(),           // increment_coins (ödül)
+  notifInsert: vi.fn(),   // notifications.insert() satırı
 }))
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({}) }))
@@ -22,7 +24,11 @@ vi.mock('@/lib/supabase/admin', () => ({ checkPermission: m.checkPermission }))
 vi.mock('@/lib/utils/admin-rate-limit', () => ({ checkAdminMutationRl: m.rl }))
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({
+    rpc: (...args: unknown[]) => m.rpc(...args),
     from: (table: string) => {
+      if (table === 'notifications') {
+        return { insert: (row: unknown) => { m.notifInsert(row); return Promise.resolve({ error: null }) } }
+      }
       if (table === 'question_submissions') {
         return {
           update: (patch: unknown) => {
@@ -57,6 +63,7 @@ import { PATCH } from '../[id]/route'
 
 const CLAIMED = {
   id: '11111111-2222-4333-8444-555555555555',
+  user_id: 'submitter-1',
   game: 'matematik',
   category: 'problemler',
   difficulty: 3,
@@ -78,6 +85,7 @@ beforeEach(() => {
   m.rl.mockResolvedValue(null)
   m.claim.mockResolvedValue({ data: CLAIMED, error: null })
   m.qInsertResult.mockReturnValue({ data: { id: 'q-new' }, error: null })
+  m.rpc.mockResolvedValue({ error: null })
 })
 
 describe('PATCH /api/admin/submissions/[id]', () => {
@@ -103,6 +111,30 @@ describe('PATCH /api/admin/submissions/[id]', () => {
     )
     expect(m.subUpdate.mock.calls[1][0]).toEqual({ question_id: 'q-new' })
     expect(m.logInsert).toHaveBeenCalled()
+  })
+
+  it('approve: gönderene coin ödülü (increment_coins) + onay bildirimi', async () => {
+    await PATCH(req({ action: 'approve' }), params)
+    expect(m.rpc).toHaveBeenCalledWith('increment_coins', { p_user_id: 'submitter-1', p_amount: 50 })
+    expect(m.notifInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'submitter-1', type: 'submission_approved' }),
+    )
+  })
+
+  it('approve + ödül RPC hata: bildirim +50 VAAT ETMEZ (Codex P3)', async () => {
+    m.rpc.mockResolvedValueOnce({ error: { message: 'rpc patladı' } })
+    await PATCH(req({ action: 'approve' }), params)
+    const notif = m.notifInsert.mock.calls[0][0] as { body: string }
+    expect(notif.body).not.toContain('50')
+    expect(notif.body).toContain('eklendi')
+  })
+
+  it('reject: ödül YOK, gerekçeli red bildirimi gönderilir', async () => {
+    await PATCH(req({ action: 'reject', note: 'Telifli içerik' }), params)
+    expect(m.rpc).not.toHaveBeenCalled()
+    expect(m.notifInsert).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'submitter-1', type: 'submission_rejected', body: expect.stringContaining('Telifli') }),
+    )
   })
 
   it('YARIŞ (Codex P1 regression): claim kazanılamazsa 409 ve insert ASLA çağrılmaz', async () => {
