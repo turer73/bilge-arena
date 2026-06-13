@@ -29,7 +29,7 @@ interface LeaderboardPreviewProps {
 export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
   const [users, setUsers] = useState<LeaderUser[]>([])
   const title = (config?.title as string) || undefined
-  const description = (config?.description as string) || 'Her hafta sıfırlanan haftalık turnuva. En çok XP kazanan öğrenci zirvede yer alır.'
+  const description = (config?.description as string) || 'Tüm zamanların en çok XP toplayan öğrencileri. Sen de soru çözüp sıralamada yüksel.'
   const buttonText = (config?.button_text as string) || 'Sıralamayı Gör'
 
   // Madde 9 (pentest raporu) refactor: Browser->Supabase direkt cagri yerine
@@ -95,7 +95,7 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
         <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)]">
           {/* Baslik */}
           <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
-            <span className="text-sm font-bold">Bu Haftanın Liderleri</span>
+            <span className="text-sm font-bold">Tüm Zamanların Liderleri</span>
             <span className="rounded-full bg-[var(--focus-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--focus-light)]">
               Canlı
             </span>
