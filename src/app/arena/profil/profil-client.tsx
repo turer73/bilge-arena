@@ -357,7 +357,13 @@ export default function ProfilClient() {
 
           <div className="flex flex-col items-end gap-2">
             <StreakBadge streak={currentStreak} />
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap justify-end gap-1.5">
+              <Link
+                href="/arena/magaza"
+                className="rounded-lg border border-[var(--border)] px-3 py-1 text-[10px] font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--reward-border)] hover:text-[var(--reward)]"
+              >
+                🛍️ Mağaza
+              </Link>
               <Link
                 href="/arena/kisisellestir"
                 className="rounded-lg border border-[var(--border)] px-3 py-1 text-[10px] font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
