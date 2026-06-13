@@ -4,6 +4,8 @@ const {
   mockWeeklyRes,
   mockWeeklySingleRes,
   mockProfilesRes,
+  mockProfilesSingleRes,
+  mockProfilesCountRes,
   mockGetUser,
   mockIpCheck,
   mockUserCheck,
@@ -11,6 +13,8 @@ const {
   mockWeeklyRes: vi.fn(),
   mockWeeklySingleRes: vi.fn(),
   mockProfilesRes: vi.fn(),
+  mockProfilesSingleRes: vi.fn((): { data: { total_xp: number } | null; error: unknown } => ({ data: null, error: null })),
+  mockProfilesCountRes: vi.fn((): { count: number; error: unknown } => ({ count: 0, error: null })),
   mockGetUser: vi.fn(async () => ({
     data: { user: null as null | { id: string; email?: string } },
   })),
@@ -41,15 +45,29 @@ vi.mock('@/lib/supabase/service-role', () => ({
       }
       if (table === 'profiles') {
         return {
-          select: vi.fn(() => ({
-            gt: vi.fn(() => ({
-              is: vi.fn(() => ({
-                order: vi.fn(() => ({
-                  limit: vi.fn(() => mockProfilesRes()),
+          select: vi.fn((_cols: string, opts?: { count?: string; head?: boolean }) => {
+            // Tum-zaman my-rank COUNT sorgusu: select('id',{count,head}).is().gt()
+            if (opts?.head) {
+              const countChain = {
+                is: vi.fn(() => countChain),
+                gt: vi.fn(() => mockProfilesCountRes()),
+              }
+              return countChain
+            }
+            // Liste: .gt().is().order().limit()  |  my total_xp: .eq().single()
+            return {
+              gt: vi.fn(() => ({
+                is: vi.fn(() => ({
+                  order: vi.fn(() => ({
+                    limit: vi.fn(() => mockProfilesRes()),
+                  })),
                 })),
               })),
-            })),
-          })),
+              eq: vi.fn(() => ({
+                single: vi.fn(() => mockProfilesSingleRes()),
+              })),
+            }
+          }),
         }
       }
       return {}
@@ -66,12 +84,14 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 
 import { GET } from '../route'
 
-function makeRequest(currentUserId?: string, ip = '1.2.3.4') {
+function makeRequest(currentUserId?: string, ip = '1.2.3.4', period?: string) {
   const headers = new Headers()
   headers.set('x-forwarded-for', ip)
-  const url = currentUserId
-    ? `http://localhost/api/leaderboard/full?currentUserId=${currentUserId}`
-    : 'http://localhost/api/leaderboard/full'
+  const params = new URLSearchParams()
+  if (currentUserId) params.set('currentUserId', currentUserId)
+  if (period) params.set('period', period)
+  const qs = params.toString()
+  const url = `http://localhost/api/leaderboard/full${qs ? `?${qs}` : ''}`
   return new Request(url, { headers })
 }
 
@@ -228,6 +248,52 @@ describe('GET /api/leaderboard/full', () => {
     const body = await res.json()
     expect(body.players[0]).not.toHaveProperty('user_id')
     expect(JSON.stringify(body)).not.toContain('leaked-uuid')
+  })
+
+  // ── period=all (tum-zaman acik istek; ana sayfa CTA tutarliligi, Codex #196 P2) ──
+
+  it('period=all: haftalik view ATLA, dogrudan tum-zaman profiles (source=all_time)', async () => {
+    mockProfilesRes.mockResolvedValueOnce({
+      data: [
+        { id: 'u1', username: 'Bekir', display_name: null, avatar_url: null, total_xp: 3905, level_name: 'Usta' },
+        { id: 'u2', username: 'Defa', display_name: null, avatar_url: null, total_xp: 3075, level_name: 'Usta' },
+      ],
+      error: null,
+    })
+    const res = await GET(makeRequest(undefined, '1.2.3.4', 'all') as never)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.source).toBe('all_time')
+    expect(body.players[0]).toMatchObject({ rank: 1, name: 'Bekir', xp: 3905 })
+    // Haftalik view HIC sorgulanmamali (period=all kisa devre)
+    expect(mockWeeklyRes).not.toHaveBeenCalled()
+  })
+
+  it('period=all + bos profiles -> source=all_time, players []', async () => {
+    mockProfilesRes.mockResolvedValueOnce({ data: [], error: null })
+    const res = await GET(makeRequest(undefined, '1.2.3.4', 'all') as never)
+    const body = await res.json()
+    expect(body.source).toBe('all_time')
+    expect(body.players).toEqual([])
+    expect(mockWeeklyRes).not.toHaveBeenCalled()
+  })
+
+  it('period=all: top-50 disindaki kullanici sirasini COUNT ile hesaplar', async () => {
+    // Liste top-2 (kullanici yok) -> myRank=0 -> total_xp + count yoluna gir
+    mockProfilesRes.mockResolvedValueOnce({
+      data: [
+        { id: 'u1', username: 'A', display_name: null, avatar_url: null, total_xp: 5000, level_name: null },
+        { id: 'u2', username: 'B', display_name: null, avatar_url: null, total_xp: 4000, level_name: null },
+      ],
+      error: null,
+    })
+    mockProfilesSingleRes.mockReturnValueOnce({ data: { total_xp: 1200 }, error: null })
+    // 141 kisi benden cok XP'ye sahip -> sira 142
+    mockProfilesCountRes.mockReturnValueOnce({ count: 141, error: null })
+    const res = await GET(makeRequest(VALID_UUID, '1.2.3.4', 'all') as never)
+    const body = await res.json()
+    expect(body.source).toBe('all_time')
+    expect(body.myRank).toBe(142)
   })
 
   it('uses current_rank from view (not array index) for rank field', async () => {

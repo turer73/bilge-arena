@@ -17,7 +17,7 @@ interface ApiPlayer {
 interface ApiResponse {
   players: ApiPlayer[]
   myRank: number
-  source: 'weekly' | 'profiles_fallback' | 'empty'
+  source: 'weekly' | 'profiles_fallback' | 'all_time' | 'empty'
 }
 
 export default function SiralamaClient() {
@@ -27,18 +27,28 @@ export default function SiralamaClient() {
   >([])
   const [loading, setLoading] = useState(true)
   const [isAllTime, setIsAllTime] = useState(false)
+  // Ana sayfa 'Tum Zamanlarin Liderleri' CTA'si ?period=all ile gelir -> tum-zaman
+  // gorunumunu ACIKCA iste (haftalik-bos fallback'ten ayri). useSearchParams Suspense
+  // gerektirir; client effect'te window.location yeter (Codex #196 P2 cozumu).
+  const [explicitAllTime, setExplicitAllTime] = useState(false)
 
   useEffect(() => {
     let cancelled = false
 
     async function fetchLeaderboard() {
       setLoading(true)
+      const allTimeMode =
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('period') === 'all'
+      setExplicitAllTime(allTimeMode)
       try {
         // Browser->Supabase direkt cagri yerine API proxy uzerinden
         // (Madde 9 — pentest raporu, CF Rate Limit + service-role + edge cache).
-        const url = user?.id
-          ? `/api/leaderboard/full?currentUserId=${encodeURIComponent(user.id)}`
-          : '/api/leaderboard/full'
+        const params = new URLSearchParams()
+        if (user?.id) params.set('currentUserId', user.id)
+        if (allTimeMode) params.set('period', 'all')
+        const qs = params.toString()
+        const url = `/api/leaderboard/full${qs ? `?${qs}` : ''}`
         // Cache: response Cache-Control'a guven (anon: public s-maxage=120,
         // auth: private max-age=60). no-store cache stratejisini iptal eder
         // (Codex PR #81 P2). sidebar/landing client'lari bare fetch kullanir.
@@ -62,7 +72,8 @@ export default function SiralamaClient() {
           isCurrentUser: p.is_me,
         }))
         setEntries(mapped)
-        setIsAllTime(json.source === 'profiles_fallback')
+        // Tum-zaman: acik istek (all_time) VEYA haftalik-bos dususu (profiles_fallback)
+        setIsAllTime(json.source === 'all_time' || json.source === 'profiles_fallback')
       } catch {
         if (!cancelled) setEntries([])
       } finally {
@@ -111,7 +122,9 @@ export default function SiralamaClient() {
 
       <div className="mt-4 text-center text-xs text-[var(--text-muted)]">
         {isAllTime
-          ? 'Haftalık sıralama yeterli veri olunca otomatik gösterilir'
+          ? explicitAllTime
+            ? 'Tüm zamanların en yüksek XP sahibi arenacıları'
+            : 'Haftalık sıralama yeterli veri olunca otomatik gösterilir'
           : 'Sıralama her Pazartesi sıfırlanır'}
       </div>
     </div>

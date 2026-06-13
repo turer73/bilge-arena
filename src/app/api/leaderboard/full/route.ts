@@ -102,6 +102,9 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url)
+  // period=all -> haftalik view'i atla, dogrudan tum-zaman (profiles.total_xp).
+  // Ana sayfa 'Tum Zamanlarin Liderleri' vitrini buraya yonlendirir (CTA tutarliligi).
+  const allTime = searchParams.get('period') === 'all'
   const currentUserId = searchParams.get('currentUserId')
   // UUID format guard — kanonik 8-4-4-4-12 (sidebar review LOW: tighten edildi)
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -117,51 +120,54 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceRoleClient()
 
-  // Haftalik view'i dene (top 50)
-  const { data: weeklyData, error: weeklyError } = await supabase
-    .from('leaderboard_weekly_ranked')
-    .select('user_id, username, display_name, avatar_url, xp_earned, current_rank, level_name')
-    .order('current_rank', { ascending: true })
-    .limit(50)
+  // Haftalik view'i dene (top 50) — period=all istenmediyse. allTime ise
+  // dogrudan profiles (tum-zaman) yoluna gec (CTA tutarliligi, Codex #196 P2).
+  if (!allTime) {
+    const { data: weeklyData, error: weeklyError } = await supabase
+      .from('leaderboard_weekly_ranked')
+      .select('user_id, username, display_name, avatar_url, xp_earned, current_rank, level_name')
+      .order('current_rank', { ascending: true })
+      .limit(50)
 
-  if (weeklyError) {
-    console.error('[LeaderboardFull] weekly view hatasi:', weeklyError)
-    return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
-  }
-
-  if (weeklyData && weeklyData.length > 0) {
-    const rows = weeklyData as WeeklyRow[]
-    let myRank = 0
-    const players: FullLeader[] = rows.map((row) => {
-      const isMe = !!safeUserId && row.user_id === safeUserId
-      if (isMe) myRank = row.current_rank
-      return {
-        rank: row.current_rank,
-        name: row.username || row.display_name || `Oyuncu ${row.current_rank}`,
-        avatar_url: row.avatar_url,
-        xp: Number(row.xp_earned || 0),
-        level_name: row.level_name,
-        is_me: isMe,
-      }
-    })
-
-    // Kullanici ilk 50'de degilse, sirasini ayri sorgu ile getir
-    if (myRank === 0 && safeUserId) {
-      const { data: myData } = await supabase
-        .from('leaderboard_weekly_ranked')
-        .select('current_rank')
-        .eq('user_id', safeUserId)
-        .single()
-      if (myData) myRank = myData.current_rank
+    if (weeklyError) {
+      console.error('[LeaderboardFull] weekly view hatasi:', weeklyError)
+      return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
     }
 
-    return NextResponse.json(
-      { players, myRank, source: 'weekly' },
-      { headers: { 'Cache-Control': cacheControl } },
-    )
+    if (weeklyData && weeklyData.length > 0) {
+      const rows = weeklyData as WeeklyRow[]
+      let myRank = 0
+      const players: FullLeader[] = rows.map((row) => {
+        const isMe = !!safeUserId && row.user_id === safeUserId
+        if (isMe) myRank = row.current_rank
+        return {
+          rank: row.current_rank,
+          name: row.username || row.display_name || `Oyuncu ${row.current_rank}`,
+          avatar_url: row.avatar_url,
+          xp: Number(row.xp_earned || 0),
+          level_name: row.level_name,
+          is_me: isMe,
+        }
+      })
+
+      // Kullanici ilk 50'de degilse, sirasini ayri sorgu ile getir
+      if (myRank === 0 && safeUserId) {
+        const { data: myData } = await supabase
+          .from('leaderboard_weekly_ranked')
+          .select('current_rank')
+          .eq('user_id', safeUserId)
+          .single()
+        if (myData) myRank = myData.current_rank
+      }
+
+      return NextResponse.json(
+        { players, myRank, source: 'weekly' },
+        { headers: { 'Cache-Control': cacheControl } },
+      )
+    }
   }
 
-  // Fallback: profiles tablosu (tum zamanlar)
+  // Tum-zaman: profiles tablosu (period=all istegi) VEYA haftalik view bos (fallback)
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
     .select('id, username, display_name, avatar_url, total_xp, level_name')
@@ -175,9 +181,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Fallback sorgu basarisiz' }, { status: 500 })
   }
 
+  // source: explicit period=all -> 'all_time'; haftalik-bos dususu -> 'profiles_fallback'
+  const allTimeSource = allTime ? 'all_time' : 'profiles_fallback'
+
   if (!profilesData || profilesData.length === 0) {
     return NextResponse.json(
-      { players: [], myRank: 0, source: 'empty' },
+      { players: [], myRank: 0, source: allTime ? 'all_time' : 'empty' },
       { headers: { 'Cache-Control': cacheControl } },
     )
   }
@@ -198,8 +207,27 @@ export async function GET(request: NextRequest) {
     }
   })
 
+  // Tum-zaman sirasi: kullanici top-50'de degilse COUNT ile gercek sirayi getir
+  // (haftalik yolun myRank-ek-sorgu paritesi; daha once fallback'te eksikti).
+  if (myRank === 0 && safeUserId) {
+    const { data: me } = await supabase
+      .from('profiles')
+      .select('total_xp')
+      .eq('id', safeUserId)
+      .single()
+    const myXp = Number(me?.total_xp || 0)
+    if (myXp > 0) {
+      const { count } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .is('deleted_at', null)
+        .gt('total_xp', myXp)
+      myRank = (count ?? 0) + 1
+    }
+  }
+
   return NextResponse.json(
-    { players, myRank, source: 'profiles_fallback' },
+    { players, myRank, source: allTimeSource },
     { headers: { 'Cache-Control': cacheControl } },
   )
 }

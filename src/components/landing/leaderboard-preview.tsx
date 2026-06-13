@@ -79,7 +79,7 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
           <p className="mt-4 text-[var(--text-sub)] leading-relaxed lg:text-lg">
             {description}
           </p>
-          <Link href="/arena/siralama">
+          <Link href="/arena/siralama?period=all">
             <Button
               variant="gold"
               size="md"
@@ -143,7 +143,7 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
 
           {/* Tum listeyi gor */}
           <div className="py-3.5 text-center">
-            <Link href="/arena/siralama" className="text-sm font-semibold text-[var(--focus-light)] hover:underline">
+            <Link href="/arena/siralama?period=all" className="text-sm font-semibold text-[var(--focus-light)] hover:underline">
               Tüm listeyi gör &rarr;
             </Link>
           </div>
