@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords } from 'lucide-react'
 import { Logo } from './logo'
 import { ThemeToggle } from './theme-toggle'
+import { NotificationBell } from './notification-bell'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { trUpper } from '@/lib/utils/tr-text'
@@ -102,6 +103,7 @@ export function Navbar() {
                   Oyna
                 </Button>
               </Link>
+              <NotificationBell />
               {/* User dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button

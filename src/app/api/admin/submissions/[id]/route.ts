@@ -4,6 +4,8 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { isValidUuid } from '@/lib/utils/uuid'
+import { createNotification } from '@/lib/notifications/create'
+import { UGC_APPROVAL_COIN_REWARD } from '@/lib/constants/rewards'
 
 interface PatchBody {
   action?: 'approve' | 'reject'
@@ -65,7 +67,7 @@ export async function PATCH(
     })
     .eq('id', id)
     .eq('status', 'pending')
-    .select('id, game, category, difficulty, content')
+    .select('id, user_id, game, category, difficulty, content')
     .maybeSingle()
 
   if (claimErr) {
@@ -110,6 +112,33 @@ export async function PATCH(
       .from('question_submissions')
       .update({ question_id: questionId })
       .eq('id', id)
+
+    // 4) Gönderene coin ödülü (atomik increment_coins — artık service-role-only)
+    //    + bildirim. İkisi de YAN ETKİ: hata onayı geri almaz (log + devam).
+    const { error: rewardErr } = await svc.rpc('increment_coins', {
+      p_user_id: claimed.user_id,
+      p_amount: UGC_APPROVAL_COIN_REWARD,
+    })
+    if (rewardErr) console.error('[admin/submissions] ödül hatası:', rewardErr.message)
+
+    await createNotification(svc, {
+      userId: claimed.user_id,
+      type: 'submission_approved',
+      title: 'Sorun onaylandı! 🎉',
+      body: `Gönderdiğin soru havuza eklendi. +${UGC_APPROVAL_COIN_REWARD} 🪙 kazandın!`,
+      link: '/arena/soru-gonder',
+    })
+  } else {
+    // Reddedildi — gönderene gerekçeli bildirim
+    await createNotification(svc, {
+      userId: claimed.user_id,
+      type: 'submission_rejected',
+      title: 'Gönderimin değerlendirildi',
+      body: note
+        ? `Soru bu kez eklenmedi. Not: ${note}`
+        : 'Soru bu kez eklenmedi. Yeni sorularını bekliyoruz!',
+      link: '/arena/soru-gonder',
+    })
   }
 
   // Admin log (mevcut pattern)
