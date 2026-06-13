@@ -10,6 +10,7 @@ const m = vi.hoisted(() => ({
   userCheck: vi.fn(),
   getUser: vi.fn(),
   profileRead: vi.fn(),
+  rolesRead: vi.fn(),
   update: vi.fn(),
   updateEq: vi.fn(),
 }))
@@ -22,13 +23,16 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({
-    from: () => ({
-      select: () => ({ eq: () => ({ single: m.profileRead }) }),
-      update: (payload: unknown) => {
-        m.update(payload)
-        return { eq: m.updateEq }
-      },
-    }),
+    from: (table: string) =>
+      table === 'user_roles'
+        ? { select: () => ({ eq: () => ({ limit: m.rolesRead }) }) }
+        : {
+            select: () => ({ eq: () => ({ single: m.profileRead }) }),
+            update: (payload: unknown) => {
+              m.update(payload)
+              return { eq: m.updateEq }
+            },
+          },
   }),
 }))
 
@@ -47,6 +51,7 @@ beforeEach(() => {
   m.userCheck.mockResolvedValue({ success: true })
   m.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
   m.profileRead.mockResolvedValue({ data: { owned_nameplates: ['none', 'mavi-akim'] } })
+  m.rolesRead.mockResolvedValue({ data: [] })
   m.updateEq.mockResolvedValue({ error: null })
 })
 
@@ -78,5 +83,13 @@ describe('POST /api/profile/nameplates/select', () => {
     const res = await POST(req({ nameplateId: 'mavi-akim' }))
     expect(res.status).toBe(403)
     expect(m.update).not.toHaveBeenCalled()
+  })
+
+  it('personel (rol sahibi): sahipsiz ücretli panel seçilebilir', async () => {
+    m.rolesRead.mockResolvedValue({ data: [{ role_id: 'r1' }] })
+    m.profileRead.mockResolvedValue({ data: { owned_nameplates: ['none'] } })
+    const res = await POST(req({ nameplateId: 'mavi-akim' }))
+    expect(res.status).toBe(200)
+    expect(m.update).toHaveBeenCalledWith({ selected_nameplate: 'mavi-akim' })
   })
 })

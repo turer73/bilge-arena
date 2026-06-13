@@ -13,7 +13,13 @@ import {
  * çeker, kullanıcının sahip olduklarını (slug) gösterir. Kazanılan achievement
  * rozetlerinden (BadgeShowcase) ayrı bir bölüm.
  */
-export function CosmeticBadgeShelf({ ownedSlugs }: { ownedSlugs: string[] }) {
+export function CosmeticBadgeShelf({
+  ownedSlugs,
+  allOwned = false,
+}: {
+  ownedSlugs: string[]
+  allOwned?: boolean
+}) {
   const [all, setAll] = useState<StoreBadgeItem[]>([])
 
   useEffect(() => {
@@ -30,7 +36,7 @@ export function CosmeticBadgeShelf({ ownedSlugs }: { ownedSlugs: string[] }) {
   }, [])
 
   const ownedSet = new Set(ownedSlugs)
-  const owned = all.filter((b) => ownedSet.has(b.id))
+  const owned = allOwned ? all : all.filter((b) => ownedSet.has(b.id))
   if (owned.length === 0) return null
 
   return (

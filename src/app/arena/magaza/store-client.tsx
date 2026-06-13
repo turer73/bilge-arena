@@ -23,6 +23,7 @@ import {
   type VideoResolution,
 } from '@/lib/constants/video-backgrounds'
 import { toast } from '@/stores/toast-store'
+import { isStaff } from '@/lib/utils/is-staff'
 
 /**
  * Arka Plan Mağazası (Faz-2): CSS temalar (statik) + video temalar (DB) tek
@@ -66,9 +67,14 @@ export function StoreClient() {
 
   const allItems = useMemo(() => [...CSS_STORE_ITEMS, ...videoItems], [videoItems])
 
+  // Personel tüm temalara sahip (ücretsiz). allItems aşağıda tanımlı; staff
+  // bypass için tüm id'ler owned sayılır.
   const owned = useMemo(
-    () => new Set(profile?.owned_backgrounds ?? ['none', 'gece-mavisi']),
-    [profile?.owned_backgrounds],
+    () =>
+      isStaff(profile)
+        ? new Set(allItems.map((i) => i.id))
+        : new Set(profile?.owned_backgrounds ?? ['none', 'gece-mavisi']),
+    [profile, allItems],
   )
 
   // Kategori chip'leri: CSS kategorileri + (video tema varsa) Video
