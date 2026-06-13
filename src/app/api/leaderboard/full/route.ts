@@ -20,6 +20,7 @@ interface FullLeader {
   xp: number
   level_name: string | null
   is_me: boolean
+  nameplate: string
 }
 
 interface WeeklyRow {
@@ -39,6 +40,7 @@ interface ProfileRow {
   avatar_url: string | null
   total_xp: number | null
   level_name: string | null
+  selected_nameplate: string | null
 }
 
 /**
@@ -136,6 +138,16 @@ export async function GET(request: NextRequest) {
 
     if (weeklyData && weeklyData.length > 0) {
       const rows = weeklyData as WeeklyRow[]
+      // Nameplate seçimi haftalık view'de yok → kullanıcı id'leriyle profiles'tan toplu çek
+      const npMap = new Map<string, string>()
+      const ids = rows.map((r) => r.user_id)
+      if (ids.length > 0) {
+        const { data: npData } = await supabase
+          .from('profiles')
+          .select('id, selected_nameplate')
+          .in('id', ids)
+        for (const p of npData ?? []) npMap.set(p.id, p.selected_nameplate ?? 'none')
+      }
       let myRank = 0
       const players: FullLeader[] = rows.map((row) => {
         const isMe = !!safeUserId && row.user_id === safeUserId
@@ -147,6 +159,7 @@ export async function GET(request: NextRequest) {
           xp: Number(row.xp_earned || 0),
           level_name: row.level_name,
           is_me: isMe,
+          nameplate: npMap.get(row.user_id) ?? 'none',
         }
       })
 
@@ -170,7 +183,7 @@ export async function GET(request: NextRequest) {
   // Tum-zaman: profiles tablosu (period=all istegi) VEYA haftalik view bos (fallback)
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, total_xp, level_name')
+    .select('id, username, display_name, avatar_url, total_xp, level_name, selected_nameplate')
     .gt('total_xp', 0)
     .is('deleted_at', null)
     .order('total_xp', { ascending: false })
@@ -204,6 +217,7 @@ export async function GET(request: NextRequest) {
       xp: Number(p.total_xp || 0),
       level_name: p.level_name,
       is_me: isMe,
+      nameplate: p.selected_nameplate ?? 'none',
     }
   })
 

@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { Nameplate } from '@/components/profile/nameplate'
 
 interface LeaderboardEntry {
   rank: number
@@ -10,6 +11,7 @@ interface LeaderboardEntry {
   xp: number
   level: string
   isCurrentUser?: boolean
+  nameplate?: string
 }
 
 interface LeaderboardTableProps {
@@ -77,7 +79,7 @@ export function LeaderboardTable({ entries, title = 'Haftalık Sıralama' }: Lea
                   color: entry.isCurrentUser ? 'var(--text)' : 'var(--text-sub)',
                 }}
               >
-                {entry.name}
+                <Nameplate nameplateId={entry.nameplate}>{entry.name}</Nameplate>
                 {entry.isCurrentUser && <span className="ml-1 text-[10px] text-[var(--focus)]">(Sen)</span>}
               </span>
               {/* Seviye — mobilde isim altında; sm+ kendi sütununda */}

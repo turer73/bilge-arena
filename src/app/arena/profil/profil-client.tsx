@@ -27,6 +27,7 @@ import {
   type VideoResolution,
 } from '@/lib/constants/video-backgrounds'
 import { resolveOwnedSelection } from '@/lib/utils/owned-selection'
+import { Nameplate } from '@/components/profile/nameplate'
 import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
 import Link from 'next/link'
 
@@ -334,7 +335,9 @@ export default function ProfilClient() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold md:text-xl xl:text-2xl">{displayName}</h1>
+            <h1 className="text-base font-bold md:text-xl xl:text-2xl">
+              <Nameplate nameplateId={profile.selected_nameplate}>{displayName}</Nameplate>
+            </h1>
             <div className="flex items-center gap-2 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">
               <span>{level.badge} {level.name}</span>
               <span>·</span>

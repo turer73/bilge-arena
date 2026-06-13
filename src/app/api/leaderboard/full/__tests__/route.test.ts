@@ -4,6 +4,7 @@ const {
   mockWeeklyRes,
   mockWeeklySingleRes,
   mockProfilesRes,
+  mockNameplatesRes,
   mockProfilesSingleRes,
   mockProfilesCountRes,
   mockGetUser,
@@ -13,6 +14,8 @@ const {
   mockWeeklyRes: vi.fn(),
   mockWeeklySingleRes: vi.fn(),
   mockProfilesRes: vi.fn(),
+  // Weekly path nameplate toplu sorgusu: profiles.select('id, selected_nameplate').in('id', ids)
+  mockNameplatesRes: vi.fn(async () => ({ data: [] as { id: string; selected_nameplate: string }[], error: null })),
   mockProfilesSingleRes: vi.fn((): { data: { total_xp: number } | null; error: unknown } => ({ data: null, error: null })),
   mockProfilesCountRes: vi.fn((): { count: number; error: unknown } => ({ count: 0, error: null })),
   mockGetUser: vi.fn(async () => ({
@@ -66,6 +69,8 @@ vi.mock('@/lib/supabase/service-role', () => ({
               eq: vi.fn(() => ({
                 single: vi.fn(() => mockProfilesSingleRes()),
               })),
+              // Weekly path nameplate toplu çek: select('id, selected_nameplate').in('id', ids)
+              in: vi.fn(() => mockNameplatesRes()),
             }
           }),
         }
