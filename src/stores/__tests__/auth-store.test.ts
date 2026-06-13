@@ -25,6 +25,7 @@ const mockProfile = {
   owned_backgrounds: ['none', 'gece-mavisi'],
   owned_nameplates: ['none'],
   selected_nameplate: 'none',
+  owned_cosmetic_badges: [],
   is_premium: false,
   premium_until: null,
   preferred_theme: 'dark' as const,

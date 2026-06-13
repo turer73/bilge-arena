@@ -48,6 +48,7 @@ export interface Profile {
   owned_backgrounds: string[]
   owned_nameplates: string[]
   selected_nameplate: string
+  owned_cosmetic_badges: string[]
   // Premium
   is_premium: boolean
   premium_until: string | null
