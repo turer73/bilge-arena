@@ -11,10 +11,15 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
+// Path'ler env ile override edilebilir (Codex P2: tek-makine bağımlılığı).
+// Windows default'lar geriye uyumluluk için; CI/Linux'ta env ile verilir.
 const FFMPEG =
+  process.env.FFMPEG_PATH ||
   'C:\\Users\\sevdi\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin\\ffmpeg.exe'
-const SRC = 'F:\\projelerim\\bilge-arena-assets\\ensar-videos\\Arkaplanlar Vol 1'
-const OUT = 'F:\\projelerim\\bilge-arena-assets\\ensar-videos\\optimized'
+const SRC =
+  process.env.ENSAR_SRC || 'F:\\projelerim\\bilge-arena-assets\\ensar-videos\\Arkaplanlar Vol 1'
+const OUT =
+  process.env.ENSAR_OUT || 'F:\\projelerim\\bilge-arena-assets\\ensar-videos\\optimized'
 
 // ── .env.local parse (dotenv'siz) ──
 const envText = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8')
@@ -72,6 +77,7 @@ const VF = 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:-
 
 async function main() {
   const results = []
+  let uploadErrors = 0
   for (const it of list) {
     const inFile = path.join(SRC, it.file)
     if (!fs.existsSync(inFile)) {
@@ -104,6 +110,7 @@ async function main() {
     const up2 = await supabase.storage.from('video-backgrounds').upload(`${it.slug}/poster.jpg`, posterBuf, { contentType: 'image/jpeg', upsert: true })
     if (up1.error || up2.error) {
       console.error('  UPLOAD HATA:', up1.error?.message || up2.error?.message)
+      uploadErrors++
       continue
     }
     const hdUrl = supabase.storage.from('video-backgrounds').getPublicUrl(`${it.slug}/hd.mp4`).data.publicUrl
@@ -132,6 +139,11 @@ async function main() {
     else { ok++; console.log('  DB ✓', r.slug) }
   }
   console.log(`\nTAMAM: ${results.length} işlendi, ${ok} DB kaydı.`)
+  // Upload reddedilmişse seed'i başarısız say (Codex P2: sessiz veri kaybı önle)
+  if (uploadErrors > 0) {
+    console.error(`HATA: ${uploadErrors} dosya yüklenemedi — seed eksik.`)
+    process.exit(1)
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

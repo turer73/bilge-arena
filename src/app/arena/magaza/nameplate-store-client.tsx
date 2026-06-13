@@ -67,7 +67,7 @@ export function NameplateStoreClient() {
   }
 
   const buy = async () => {
-    if (!selected.coinCost) return
+    if (selected.coinCost === undefined) return // 0-coin panel geçerli (Codex P2)
     setBusy(true)
     try {
       const res = await fetch('/api/profile/nameplates/purchase', {
