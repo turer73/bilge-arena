@@ -24,7 +24,7 @@ vi.mock('@/lib/supabase/admin', () => ({ checkPermission: m.checkPermission }))
 vi.mock('@/lib/utils/admin-rate-limit', () => ({ checkAdminMutationRl: m.rl }))
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({
-    rpc: (...args: unknown[]) => { m.rpc(...args); return Promise.resolve({ error: null }) },
+    rpc: (...args: unknown[]) => m.rpc(...args),
     from: (table: string) => {
       if (table === 'notifications') {
         return { insert: (row: unknown) => { m.notifInsert(row); return Promise.resolve({ error: null }) } }
@@ -85,6 +85,7 @@ beforeEach(() => {
   m.rl.mockResolvedValue(null)
   m.claim.mockResolvedValue({ data: CLAIMED, error: null })
   m.qInsertResult.mockReturnValue({ data: { id: 'q-new' }, error: null })
+  m.rpc.mockResolvedValue({ error: null })
 })
 
 describe('PATCH /api/admin/submissions/[id]', () => {
@@ -118,6 +119,14 @@ describe('PATCH /api/admin/submissions/[id]', () => {
     expect(m.notifInsert).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: 'submitter-1', type: 'submission_approved' }),
     )
+  })
+
+  it('approve + ödül RPC hata: bildirim +50 VAAT ETMEZ (Codex P3)', async () => {
+    m.rpc.mockResolvedValueOnce({ error: { message: 'rpc patladı' } })
+    await PATCH(req({ action: 'approve' }), params)
+    const notif = m.notifInsert.mock.calls[0][0] as { body: string }
+    expect(notif.body).not.toContain('50')
+    expect(notif.body).toContain('eklendi')
   })
 
   it('reject: ödül YOK, gerekçeli red bildirimi gönderilir', async () => {

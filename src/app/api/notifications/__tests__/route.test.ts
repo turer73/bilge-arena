@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const m = vi.hoisted(() => ({
   getUser: vi.fn(),
   listResult: vi.fn(),
+  countResult: vi.fn(),
   svcUpdate: vi.fn(),
   eqChain: vi.fn(),
 }))
@@ -15,7 +16,11 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
     auth: { getUser: m.getUser },
     from: () => ({
-      select: () => ({ order: () => ({ limit: () => Promise.resolve(m.listResult()) }) }),
+      // liste: .select().order().limit() | count: .select(*,head).eq('is_read')
+      select: () => ({
+        order: () => ({ limit: () => Promise.resolve(m.listResult()) }),
+        eq: () => Promise.resolve(m.countResult()),
+      }),
     }),
   }),
 }))
@@ -51,6 +56,7 @@ beforeEach(() => {
     ],
     error: null,
   })
+  m.countResult.mockReturnValue({ count: 1, error: null })
 })
 
 describe('GET /api/notifications', () => {
@@ -59,16 +65,23 @@ describe('GET /api/notifications', () => {
     expect((await GET()).status).toBe(401)
   })
 
-  it('liste + okunmamış sayısı', async () => {
+  it('liste + okunmamış AYRI count\'tan (sayfa boyutundan bağımsız — Codex P2)', async () => {
+    // Sayfada 1 okunmamış görünse de gerçek count 7 (30+ senaryosu)
+    m.countResult.mockReturnValue({ count: 7, error: null })
     const res = await GET()
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.notifications).toHaveLength(2)
-    expect(data.unread).toBe(1)
+    expect(data.unread).toBe(7) // sayfadaki 1 değil, count sorgusundan
   })
 
-  it('sorgu hatası: 500', async () => {
+  it('liste sorgu hatası: 500', async () => {
     m.listResult.mockReturnValue({ data: null, error: { code: '42P01' } })
+    expect((await GET()).status).toBe(500)
+  })
+
+  it('count sorgu hatası: 500', async () => {
+    m.countResult.mockReturnValue({ count: null, error: { code: '42P01' } })
     expect((await GET()).status).toBe(500)
   })
 })

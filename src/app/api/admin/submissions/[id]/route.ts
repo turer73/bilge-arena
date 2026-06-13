@@ -121,11 +121,15 @@ export async function PATCH(
     })
     if (rewardErr) console.error('[admin/submissions] ödül hatası:', rewardErr.message)
 
+    // Bildirim coin vaadini yalnizca odul GERCEKTEN islendiyse yapsin
+    // (Codex P3: RPC hata verirse "+50" yaniltici olur — bakiye degismedi)
     await createNotification(svc, {
       userId: claimed.user_id,
       type: 'submission_approved',
       title: 'Sorun onaylandı! 🎉',
-      body: `Gönderdiğin soru havuza eklendi. +${UGC_APPROVAL_COIN_REWARD} 🪙 kazandın!`,
+      body: rewardErr
+        ? 'Gönderdiğin soru havuza eklendi. Teşekkürler!'
+        : `Gönderdiğin soru havuza eklendi. +${UGC_APPROVAL_COIN_REWARD} 🪙 kazandın!`,
       link: '/arena/soru-gonder',
     })
   } else {

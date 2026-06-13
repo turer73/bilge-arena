@@ -13,21 +13,28 @@ export async function GET() {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
   }
 
-  const { data, error } = await supabase
-    .from('notifications')
-    .select('id, type, title, body, link, is_read, created_at')
-    .order('created_at', { ascending: false })
-    .limit(30)
+  // Liste (son 30) + okunmamış sayısı AYRI sorgu: rozet sayfa boyutundan
+  // bağımsız olmalı (Codex P2 — 30+ bildirimde sayfadan saymak rozeti
+  // yanlış/0 gösterir). RLS her iki sorguyu da kendi satırlarına kısıtlar.
+  const [{ data, error }, { count, error: countErr }] = await Promise.all([
+    supabase
+      .from('notifications')
+      .select('id, type, title, body, link, is_read, created_at')
+      .order('created_at', { ascending: false })
+      .limit(30),
+    supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_read', false),
+  ])
 
-  if (error) {
-    console.error('[notifications] liste hatası:', error.code)
+  if (error || countErr) {
+    console.error('[notifications] liste hatası:', error?.code ?? countErr?.code)
     return NextResponse.json({ error: 'Bildirimler alınamadı' }, { status: 500 })
   }
 
-  const notifications = data ?? []
-  const unread = notifications.filter((n) => !n.is_read).length
   return NextResponse.json(
-    { notifications, unread },
+    { notifications: data ?? [], unread: count ?? 0 },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }
