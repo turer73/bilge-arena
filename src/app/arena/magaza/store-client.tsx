@@ -77,12 +77,9 @@ export function StoreClient() {
     [profile, allItems],
   )
 
-  // Kategori chip'leri: CSS kategorileri + (video tema varsa) Video
-  const categories = useMemo(() => {
-    const base = [...BACKGROUND_CATEGORIES]
-    if (videoItems.length > 0) base.push({ id: 'video' as never, label: 'Video', icon: '🎬' })
-    return base
-  }, [videoItems.length])
+  // Kategori chip'leri: video temalar kendi kategorilerinde (lofi/cyberpunk/
+  // manzara/pixel/kozmik) görünür; ayrı boş 'Video' chip'i yok (Codex P2).
+  const categories = BACKGROUND_CATEGORIES
 
   const visible = useMemo(
     () => allItems.filter((b) => category === 'all' || b.category === category),
@@ -117,7 +114,7 @@ export function StoreClient() {
   }
 
   const buy = async () => {
-    if (!selected.coinCost) return
+    if (selected.coinCost === undefined) return // 0-coin tema geçerli (Codex P2)
     setBusy(true)
     try {
       const res = await fetch('/api/profile/backgrounds/purchase', {

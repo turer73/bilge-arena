@@ -73,18 +73,23 @@ export async function PATCH(
   if (d.posterUrl !== undefined) updates.poster_url = d.posterUrl
   if (d.isPublished !== undefined) updates.is_published = d.isPublished
 
-  // Yayına alınıyorsa en az bir varyant garanti et (mevcut + gelen birleşik)
-  if (d.isPublished === true) {
+  // Yayın/varyant tutarlılığı (Codex P2): variants={} + isPublished omit ile
+  // YAYINDAKİ temayı varyantsız bırakmayı engelle — son durumu kontrol et.
+  if (d.isPublished === true || d.variants !== undefined) {
     const svcCheck = createServiceRoleClient()
     const { data: current } = await svcCheck
       .from('background_assets')
-      .select('variants')
+      .select('variants, is_published')
       .eq('id', id)
       .maybeSingle()
-    const merged = { ...(current?.variants ?? {}), ...(d.variants ?? {}) }
-    if (!merged.hd && !merged.k2 && !merged.k4) {
+    const finalPublished = d.isPublished ?? current?.is_published ?? false
+    // variants gönderildiyse REPLACE edilir (merge değil); gönderilmediyse mevcut kalır
+    const finalVariants = (d.variants !== undefined
+      ? d.variants
+      : (current?.variants as Record<string, string>)) ?? {}
+    if (finalPublished && !finalVariants.hd && !finalVariants.k2 && !finalVariants.k4) {
       return NextResponse.json(
-        { error: 'Yayınlamak için en az bir video varyantı gerekli' },
+        { error: 'Yayındaki tema en az bir video varyantı içermeli' },
         { status: 400 },
       )
     }
@@ -162,6 +167,18 @@ export async function DELETE(
   const kinds = ['hd', 'k2', 'k4', 'poster']
   const paths = kinds.flatMap((k) => exts.map((e) => `${data.slug}/${k}.${e}`))
   await svc.storage.from('video-backgrounds').remove(paths)
+
+  // Satın alanların owned listesinden çöp slug'ı temizle (Codex P2)
+  const { data: owners } = await svc
+    .from('profiles')
+    .select('id, owned_backgrounds')
+    .contains('owned_backgrounds', [data.slug])
+  for (const o of owners ?? []) {
+    await svc
+      .from('profiles')
+      .update({ owned_backgrounds: (o.owned_backgrounds as string[]).filter((s) => s !== data.slug) })
+      .eq('id', o.id)
+  }
 
   await svc.from('admin_logs').insert({
     admin_id: admin.id,

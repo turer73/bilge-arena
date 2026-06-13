@@ -142,6 +142,18 @@ export async function DELETE(
     `${data.slug}/icon.webp`,
   ])
 
+  // Satın alanların owned listesinden çöp slug'ı temizle (Codex P2)
+  const { data: owners } = await svc
+    .from('profiles')
+    .select('id, owned_cosmetic_badges')
+    .contains('owned_cosmetic_badges', [data.slug])
+  for (const o of owners ?? []) {
+    await svc
+      .from('profiles')
+      .update({ owned_cosmetic_badges: (o.owned_cosmetic_badges as string[]).filter((s) => s !== data.slug) })
+      .eq('id', o.id)
+  }
+
   await svc.from('admin_logs').insert({
     admin_id: admin.id,
     action: 'delete_cosmetic_badge',
