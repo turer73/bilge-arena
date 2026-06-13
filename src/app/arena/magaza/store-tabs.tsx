@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import { StoreClient } from './store-client'
 import { NameplateStoreClient } from './nameplate-store-client'
+import { BadgeStoreClient } from './badge-store-client'
 
-type Tab = 'bg' | 'np'
+type Tab = 'bg' | 'np' | 'badge'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'bg', label: 'Arka Plan', icon: '🖼️' },
   { id: 'np', label: 'İsim Paneli', icon: '🏷️' },
+  { id: 'badge', label: 'Rozet', icon: '🏅' },
 ]
 
 /** Mağaza kategori sekmeleri: Arka Plan (CSS+video) · İsim Paneli (nameplate). */
@@ -31,7 +33,7 @@ export function StoreTabs() {
           </button>
         ))}
       </div>
-      {tab === 'bg' ? <StoreClient /> : <NameplateStoreClient />}
+      {tab === 'bg' ? <StoreClient /> : tab === 'np' ? <NameplateStoreClient /> : <BadgeStoreClient />}
     </div>
   )
 }

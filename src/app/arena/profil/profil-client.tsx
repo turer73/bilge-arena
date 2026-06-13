@@ -6,6 +6,7 @@ import { XPBar } from '@/components/game/xp-bar'
 import { StreakBadge, StreakMilestoneBanner } from '@/components/game/streak-badge'
 import { StatsGrid } from '@/components/profile/stats-grid'
 import { BadgeShowcase } from '@/components/profile/badge-showcase'
+import { CosmeticBadgeShelf } from '@/components/profile/cosmetic-badge-shelf'
 import { ProgressChart } from '@/components/profile/progress-chart'
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
 import { NotificationSettings } from '@/components/profile/notification-settings'
@@ -563,6 +564,7 @@ export default function ProfilClient() {
       <ComponentErrorBoundary label="Rozetler" variant="inline">
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
           <BadgeShowcase earnedBadgeCodes={earnedBadgeCodes} />
+          <CosmeticBadgeShelf ownedSlugs={profile.owned_cosmetic_badges ?? []} />
         </div>
       </ComponentErrorBoundary>
 
