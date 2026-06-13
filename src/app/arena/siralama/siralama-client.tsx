@@ -12,6 +12,7 @@ interface ApiPlayer {
   xp: number
   level_name: string | null
   is_me: boolean
+  nameplate?: string
 }
 
 interface ApiResponse {
@@ -23,7 +24,7 @@ interface ApiResponse {
 export default function SiralamaClient() {
   const { user } = useAuthStore()
   const [entries, setEntries] = useState<
-    { rank: number; name: string; avatar: string; xp: number; level: string; isCurrentUser: boolean }[]
+    { rank: number; name: string; avatar: string; xp: number; level: string; isCurrentUser: boolean; nameplate: string }[]
   >([])
   const [loading, setLoading] = useState(true)
   const [isAllTime, setIsAllTime] = useState(false)
@@ -70,6 +71,7 @@ export default function SiralamaClient() {
           xp: p.xp,
           level: p.level_name || getLevelFromXP(p.xp).name,
           isCurrentUser: p.is_me,
+          nameplate: p.nameplate ?? 'none',
         }))
         setEntries(mapped)
         // Tum-zaman: acik istek (all_time) VEYA haftalik-bos dususu (profiles_fallback)

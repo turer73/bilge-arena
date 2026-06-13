@@ -46,6 +46,8 @@ export interface Profile {
   coin_balance: number
   owned_frames: string[]
   owned_backgrounds: string[]
+  owned_nameplates: string[]
+  selected_nameplate: string
   // Premium
   is_premium: boolean
   premium_until: string | null
