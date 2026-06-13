@@ -48,19 +48,34 @@ export async function POST(request: NextRequest) {
   }
   const { backgroundId } = parsed.data
 
+  const svc = createServiceRoleClient()
+
+  // Fiyat kaynağı: önce statik CSS katalog, bulunamazsa dinamik video katalog
+  // (background_assets, yalnız yayında olanlar). purchase_background RPC generic
+  // (id+cost) — her iki kaynak için de aynı atomik akış.
+  let cost: number
   const bgDef = PROFILE_BACKGROUNDS.find((b) => b.id === backgroundId)
-  if (!bgDef) {
-    return NextResponse.json({ error: 'Geçersiz arka plan' }, { status: 404 })
-  }
-  if (bgDef.coinCost === undefined) {
-    return NextResponse.json({ error: 'Bu arka plan ücretsiz, satın almaya gerek yok' }, { status: 400 })
+  if (bgDef) {
+    if (bgDef.coinCost === undefined) {
+      return NextResponse.json({ error: 'Bu arka plan ücretsiz, satın almaya gerek yok' }, { status: 400 })
+    }
+    cost = bgDef.coinCost
+  } else {
+    const { data: asset } = await svc
+      .from('background_assets')
+      .select('coin_cost, is_published')
+      .eq('slug', backgroundId)
+      .maybeSingle()
+    if (!asset || !asset.is_published) {
+      return NextResponse.json({ error: 'Geçersiz arka plan' }, { status: 404 })
+    }
+    cost = asset.coin_cost
   }
 
-  const svc = createServiceRoleClient()
   const { data: rows, error: rpcErr } = await svc.rpc('purchase_background', {
     p_user_id: user.id,
     p_background_id: backgroundId,
-    p_cost: bgDef.coinCost,
+    p_cost: cost,
   })
 
   if (rpcErr) {
@@ -81,7 +96,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Bu arka plana zaten sahipsiniz' }, { status: 400 })
     }
     return NextResponse.json(
-      { error: `Yetersiz coin (gerekli: ${bgDef.coinCost}, bakiye: ${prof?.coin_balance ?? 0})` },
+      { error: `Yetersiz coin (gerekli: ${cost}, bakiye: ${prof?.coin_balance ?? 0})` },
       { status: 402 },
     )
   }
