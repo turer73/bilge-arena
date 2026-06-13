@@ -12,6 +12,7 @@ const m = vi.hoisted(() => ({
   getUser: vi.fn(),
   rpc: vi.fn(),
   profileRead: vi.fn(),
+  assetRead: vi.fn(),
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
@@ -26,7 +27,11 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({
     rpc: m.rpc,
-    from: () => ({ select: () => ({ eq: () => ({ single: m.profileRead }) }) }),
+    // background_assets → maybeSingle (video dinamik fiyat); profiles → single
+    from: (table: string) =>
+      table === 'background_assets'
+        ? { select: () => ({ eq: () => ({ maybeSingle: m.assetRead }) }) }
+        : { select: () => ({ eq: () => ({ single: m.profileRead }) }) },
   }),
 }))
 
@@ -45,6 +50,7 @@ beforeEach(() => {
   m.ipCheck.mockResolvedValue({ success: true })
   m.userCheck.mockResolvedValue({ success: true })
   m.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+  m.assetRead.mockResolvedValue({ data: null })
   m.rpc.mockResolvedValue({
     data: [{ new_balance: 100, new_owned: ['none', 'gece-mavisi', 'nebula'] }],
     error: null,
@@ -103,5 +109,27 @@ describe('POST /api/profile/backgrounds/purchase', () => {
     m.ipCheck.mockResolvedValue({ success: false, retryAfter: 60 })
     expect((await POST(req({ backgroundId: 'nebula' }))).status).toBe(429)
     expect(m.getUser).not.toHaveBeenCalled()
+  })
+
+  it('video tema (DB): yayındaki temayı dinamik fiyatla satın alır', async () => {
+    m.assetRead.mockResolvedValue({ data: { coin_cost: 1200, is_published: true } })
+    m.rpc.mockResolvedValue({
+      data: [{ new_balance: 300, new_owned: ['none', 'orman-yagmuru'] }],
+      error: null,
+    })
+    const res = await POST(req({ backgroundId: 'orman-yagmuru' }))
+    expect(res.status).toBe(200)
+    expect(m.rpc).toHaveBeenCalledWith('purchase_background', {
+      p_user_id: 'u1',
+      p_background_id: 'orman-yagmuru',
+      p_cost: 1200,
+    })
+  })
+
+  it('video tema yayında değil: 404, RPC çağrılmaz', async () => {
+    m.assetRead.mockResolvedValue({ data: { coin_cost: 1200, is_published: false } })
+    const res = await POST(req({ backgroundId: 'taslak-tema' }))
+    expect(res.status).toBe(404)
+    expect(m.rpc).not.toHaveBeenCalled()
   })
 })
