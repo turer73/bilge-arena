@@ -11,6 +11,7 @@ import {
   type CosmeticBadgeRow,
 } from '@/lib/constants/cosmetic-badges'
 import { toast } from '@/stores/toast-store'
+import { isStaff } from '@/lib/utils/is-staff'
 
 /**
  * Kozmetik rozet mağazası. Rozetler tümü DB'de (admin yükler). Satın alınca
@@ -45,8 +46,11 @@ export function BadgeStoreClient() {
   }, [])
 
   const owned = useMemo(
-    () => new Set(profile?.owned_cosmetic_badges ?? []),
-    [profile?.owned_cosmetic_badges],
+    () =>
+      isStaff(profile)
+        ? new Set(items.map((b) => b.id))
+        : new Set(profile?.owned_cosmetic_badges ?? []),
+    [profile, items],
   )
   const selected = items.find((b) => b.id === selectedId) ?? null
   const balance = profile?.coin_balance ?? 0

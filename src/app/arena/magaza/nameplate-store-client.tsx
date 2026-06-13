@@ -12,6 +12,7 @@ import {
 } from '@/lib/constants/profile-nameplates'
 import { Nameplate } from '@/components/profile/nameplate'
 import { toast } from '@/stores/toast-store'
+import { isStaff } from '@/lib/utils/is-staff'
 
 /**
  * İsim Paneli (Nameplate) mağazası. Arka plan mağazasıyla aynı akış AMA seçim
@@ -26,8 +27,11 @@ export function NameplateStoreClient() {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const owned = useMemo(
-    () => new Set(profile?.owned_nameplates ?? ['none']),
-    [profile?.owned_nameplates],
+    () =>
+      isStaff(profile)
+        ? new Set(PROFILE_NAMEPLATES.map((n) => n.id))
+        : new Set(profile?.owned_nameplates ?? ['none']),
+    [profile],
   )
   const appliedId = profile?.selected_nameplate ?? 'none'
   const visible = useMemo(

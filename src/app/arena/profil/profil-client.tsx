@@ -29,6 +29,7 @@ import {
 } from '@/lib/constants/video-backgrounds'
 import { resolveOwnedSelection } from '@/lib/utils/owned-selection'
 import { Nameplate } from '@/components/profile/nameplate'
+import { isStaff } from '@/lib/utils/is-staff'
 import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
 import Link from 'next/link'
 
@@ -109,11 +110,9 @@ export default function ProfilClient() {
   // yazılan paid-id satın almayı atlatamasın; ücretli + sahipsiz → 'none'.
   // CSS (statik) + video (DB) tek katalog.
   const bgCatalog: StoreBackgroundItem[] = [...CSS_STORE_ITEMS, ...videoBgItems]
-  const activeBackground = resolveOwnedSelection(
-    backgroundId,
-    profile?.owned_backgrounds,
-    bgCatalog,
-  )
+  // Personel tüm temalara sahip (ücretsiz)
+  const bgOwned = isStaff(profile) ? bgCatalog.map((c) => c.id) : profile?.owned_backgrounds
+  const activeBackground = resolveOwnedSelection(backgroundId, bgOwned, bgCatalog)
   const activeBgVideoUrl =
     activeBackground.kind === 'video'
       ? resolveVariantUrl(activeBackground.variants, bgResolution)
@@ -192,7 +191,8 @@ export default function ProfilClient() {
   const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
 
   // Aynı sahiplik guard'ı çerçeveler için (aynı localStorage bypass açığı vardı)
-  const activeFrame = resolveOwnedSelection(selectedFrameId, ownedFrames, PROFILE_FRAMES)
+  const frameOwned = isStaff(profile) ? PROFILE_FRAMES.map((f) => f.id) : ownedFrames
+  const activeFrame = resolveOwnedSelection(selectedFrameId, frameOwned, PROFILE_FRAMES)
 
   function selectFrame(id: string) {
     setSelectedFrameId(id)
@@ -564,7 +564,7 @@ export default function ProfilClient() {
       <ComponentErrorBoundary label="Rozetler" variant="inline">
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
           <BadgeShowcase earnedBadgeCodes={earnedBadgeCodes} />
-          <CosmeticBadgeShelf ownedSlugs={profile.owned_cosmetic_badges ?? []} />
+          <CosmeticBadgeShelf ownedSlugs={profile.owned_cosmetic_badges ?? []} allOwned={isStaff(profile)} />
         </div>
       </ComponentErrorBoundary>
 

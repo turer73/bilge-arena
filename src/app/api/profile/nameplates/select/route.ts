@@ -45,16 +45,25 @@ export async function POST(request: NextRequest) {
 
   const svc = createServiceRoleClient()
 
-  // Sahiplik guard: ücretsiz (coinCost undefined) herkese açık; ücretli ise owned olmalı
+  // Sahiplik guard: ücretsiz (coinCost undefined) herkese açık; ücretli ise owned
+  // olmalı. İSTİSNA: personel (RBAC rolü olan) tüm panelleri ücretsiz kullanır.
   if (npDef.coinCost !== undefined) {
-    const { data: prof } = await svc
-      .from('profiles')
-      .select('owned_nameplates')
-      .eq('id', user.id)
-      .single()
-    const owned = (prof?.owned_nameplates as string[]) ?? ['none']
-    if (!owned.includes(nameplateId)) {
-      return NextResponse.json({ error: 'Bu panele sahip değilsiniz' }, { status: 403 })
+    const { data: roles } = await svc
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', user.id)
+      .limit(1)
+    const staff = !!(roles && roles.length > 0)
+    if (!staff) {
+      const { data: prof } = await svc
+        .from('profiles')
+        .select('owned_nameplates')
+        .eq('id', user.id)
+        .single()
+      const owned = (prof?.owned_nameplates as string[]) ?? ['none']
+      if (!owned.includes(nameplateId)) {
+        return NextResponse.json({ error: 'Bu panele sahip değilsiniz' }, { status: 403 })
+      }
     }
   }
 
