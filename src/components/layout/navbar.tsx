@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords } from 'lucide-react'
+import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette } from 'lucide-react'
 import { Logo } from './logo'
 import { ThemeToggle } from './theme-toggle'
 import { NotificationBell } from './notification-bell'
@@ -142,6 +142,13 @@ export function Navbar() {
                     >
                       <User size={14} />
                       Profil
+                    </Link>
+                    <Link
+                      href="/arena/kisisellestir"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]"
+                    >
+                      <Palette size={14} />
+                      Kişiselleştir
                     </Link>
                     <Link
                       href="/arena/siralama"

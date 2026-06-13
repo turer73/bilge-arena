@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { resolveOwnedSelection } from '@/lib/utils/owned-selection'
-import { BACKGROUND_STORAGE_KEY } from '@/lib/constants/profile-backgrounds'
+import { isStaff } from '@/lib/utils/is-staff'
+import { ZEMIN_STORAGE_KEY } from '@/lib/constants/profile-backgrounds'
 import {
   CSS_STORE_ITEMS,
   rowToStoreItem,
@@ -17,10 +18,14 @@ import {
 } from '@/lib/constants/video-backgrounds'
 
 /**
- * Global arka plan — kullanıcının mağazadan seçtiği temayı TÜM arena (giriş
- * sonrası) sayfalarının zeminine uygular. Sabit (fixed) katman; içeriğin
- * arkasında durur, okunabilirlik için üstüne yarı-saydam overlay biner.
+ * Sayfa zemini — kullanıcının kişiselleştirme stüdyosundan ZEMİN olarak seçtiği
+ * temayı TÜM arena (giriş sonrası) sayfalarının arkasına uygular. Sabit (fixed)
+ * katman; içeriğin arkasında durur, okunabilirlik için üstüne yarı-saydam overlay
+ * biner.
  *
+ * - Zemin seçimi KARTTAN AYRI (ZEMIN_STORAGE_KEY): varsayılan 'none' → zemin sade.
+ *   Mağazadan tema almak/uygulamak otomatik zemine YANSIMAZ; kullanıcı bilinçli
+ *   olarak stüdyodan "zemin" seçtiğinde görünür (kullanıcı kontrolü).
  * - Yalnız `/arena*` yollarında görünür (landing/tanıtım sayfaları sade kalır).
  * - Sahiplik guard'ı (resolveOwnedSelection): localStorage'a elle yazılan
  *   sahipsiz paid-id zemini değiştiremez → 'none' (arka plan yok).
@@ -35,11 +40,11 @@ export function GlobalBackground() {
   const [videoItems, setVideoItems] = useState<StoreBackgroundItem[]>([])
   const [reducedMotion, setReducedMotion] = useState(false)
 
-  // localStorage seçimi — mağaza/profilde değişince anında yansısın
+  // localStorage zemin seçimi — stüdyoda değişince anında yansısın
   useEffect(() => {
     const read = () => {
       try {
-        const saved = localStorage.getItem(BACKGROUND_STORAGE_KEY)
+        const saved = localStorage.getItem(ZEMIN_STORAGE_KEY)
         setBackgroundId(saved || 'none')
         const res = localStorage.getItem(BACKGROUND_RESOLUTION_KEY)
         if (res === 'hd' || res === 'k2' || res === 'k4') setResolution(res)
@@ -47,10 +52,10 @@ export function GlobalBackground() {
     }
     read()
     window.addEventListener('storage', read) // diğer sekmeler
-    window.addEventListener('bg-changed', read) // aynı sekme (mağaza "Uygula")
+    window.addEventListener('zemin-changed', read) // aynı sekme (stüdyo "Zemin")
     return () => {
       window.removeEventListener('storage', read)
-      window.removeEventListener('bg-changed', read)
+      window.removeEventListener('zemin-changed', read)
     }
   }, [])
 
@@ -82,7 +87,9 @@ export function GlobalBackground() {
   if (!pathname?.startsWith('/arena')) return null
 
   const catalog: StoreBackgroundItem[] = [...CSS_STORE_ITEMS, ...videoItems]
-  const active = resolveOwnedSelection(backgroundId, profile?.owned_backgrounds, catalog)
+  // Personel (RBAC rolü) tüm temalara sahip → zemin guard'ı staff için bypass.
+  const owned = isStaff(profile) ? catalog.map((c) => c.id) : profile?.owned_backgrounds
+  const active = resolveOwnedSelection(backgroundId, owned, catalog)
   if (active.id === 'none') return null
 
   const videoUrl = active.kind === 'video' ? resolveVariantUrl(active.variants, resolution) : null

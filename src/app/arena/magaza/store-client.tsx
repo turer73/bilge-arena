@@ -102,7 +102,7 @@ export function StoreClient() {
       localStorage.setItem(BACKGROUND_RESOLUTION_KEY, resolution)
       window.dispatchEvent(new Event('bg-changed')) // global zemini anında güncelle
     } catch {}
-    toast.success('Arka plan uygulandı', 'Tüm sayfalarda görüntülenecek ✨')
+    toast.success('Arka plan uygulandı', 'Profil kartında görünür · zemin için Kişiselleştir ✨')
   }
 
   const pickResolution = (res: VideoResolution) => {
