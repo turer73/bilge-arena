@@ -64,7 +64,7 @@ interface StudioPreviewProps {
   levelBadge: string
   levelName: string
   totalXp: number
-  decorationId: string | null | undefined
+  decorationIds: string[] | null | undefined
 }
 
 /**
@@ -85,7 +85,7 @@ export function StudioPreview({
   levelBadge,
   levelName,
   totalXp,
-  decorationId,
+  decorationIds,
 }: StudioPreviewProps) {
   const zeminActive = !!zemin && zemin.id !== 'none'
   const cardActive = !!card && card.id !== 'none'
@@ -127,7 +127,7 @@ export function StudioPreview({
               </div>
             )}
             <div className="flex items-center gap-3">
-              <AvatarDecoration decorationId={decorationId} size={48}>
+              <AvatarDecoration decorationIds={decorationIds} size={48}>
                 <ProfileFrameRing frame={frame} size={48}>
                   {avatarUrl ? (
                     <img

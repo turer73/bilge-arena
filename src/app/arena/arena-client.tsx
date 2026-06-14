@@ -12,6 +12,11 @@ import { DailyQuests } from '@/components/game/daily-quests'
 import { MiniLeaderboard } from '@/components/game/mini-leaderboard'
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useCardBackground, CardBackgroundLayer } from '@/components/profile/card-background'
+import { ProfileFrameRing } from '@/components/profile/profile-frame-ring'
+import { AvatarDecoration } from '@/components/profile/avatar-decoration'
+import { Nameplate } from '@/components/profile/nameplate'
+import { getFrameById, FRAME_STORAGE_KEY } from '@/lib/constants/profile-frames'
+import { AVATAR_DECORATION_STORAGE_KEY, parseDecorationIds } from '@/lib/constants/avatar-decorations'
 
 interface SidebarLeaderRow {
   name: string
@@ -37,6 +42,19 @@ export default function ArenaClient() {
   const { user, profile } = useAuthStore()
   // Profil kartıyla ORTAK kart arka planı (kullanıcının seçtiği tema burada da)
   const { activeBackground, activeBgVideoUrl, isCssBg, reducedMotion } = useCardBackground()
+
+  // Tüm kişiselleştirme lobi kartında da görünsün: çerçeve + süs (localStorage) +
+  // isim paneli (DB). Seçimler stüdyo/profilde yapılır; burada yansıtılır.
+  const [frameId, setFrameId] = useState('none')
+  const [decorationIds, setDecorationIds] = useState<string[]>([])
+  useEffect(() => {
+    try {
+      const f = localStorage.getItem(FRAME_STORAGE_KEY)
+      if (f) setFrameId(f)
+      setDecorationIds(parseDecorationIds(localStorage.getItem(AVATAR_DECORATION_STORAGE_KEY)))
+    } catch {}
+  }, [])
+  const lobbyFrame = getFrameById(frameId)
 
   const totalXP = profile?.total_xp ?? 0
   const currentStreak = profile?.current_streak ?? 0
@@ -97,31 +115,33 @@ export default function ArenaClient() {
             reducedMotion={reducedMotion}
           />
           <div className="flex items-center gap-3">
-          {/* Avatar / seviye ikonu */}
-          {profile.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={displayName}
-              className="h-9 w-9 shrink-0 rounded-full border-2 object-cover md:h-11 md:w-11"
-              style={{ borderColor: 'var(--focus-border)' }}
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-lg md:h-11 md:w-11 md:text-xl"
-              style={{
-                background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))',
-                borderColor: 'var(--focus-border)',
-              }}
-            >
-              {level.badge}
-            </div>
-          )}
+          {/* Avatar — çerçeve + süs(ler) (profildeki tüm kişiselleştirme burada da) */}
+          <AvatarDecoration decorationIds={decorationIds} size={44}>
+            <ProfileFrameRing frame={lobbyFrame} size={44}>
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={displayName}
+                  className="h-11 w-11 rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-xl"
+                  style={{ background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))' }}
+                >
+                  {level.badge}
+                </div>
+              )}
+            </ProfileFrameRing>
+          </AvatarDecoration>
 
           {/* İsim + XP + Seviye */}
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-1.5 truncate">
-              <span className="text-sm font-bold truncate md:text-base">{displayName}</span>
+              <span className="truncate text-sm font-bold md:text-base">
+                <Nameplate nameplateId={profile.selected_nameplate}>{displayName}</Nameplate>
+              </span>
               <span
                 className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider md:text-[10px]"
                 style={{ background: 'var(--focus-bg)', color: 'var(--focus)' }}
