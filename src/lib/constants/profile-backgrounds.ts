@@ -151,7 +151,16 @@ export const PROFILE_BACKGROUNDS: ProfileBackgroundDef[] = [
   },
 ]
 
+/** Profil KARTI arka planı (yalnız profil başlık kartında görünür). */
 export const BACKGROUND_STORAGE_KEY = 'bilge-arena-profile-background-v1'
+
+/**
+ * Sayfa ZEMİNİ arka planı (tüm arena sayfalarının arkasında). Karttan AYRI:
+ * kullanıcı kişiselleştirme stüdyosundan bilinçli olarak seçer (varsayılan
+ * 'none' = zemin sade). Eskiden kart seçimi otomatik tüm zemine uygulanıyordu;
+ * bu davranış kaldırıldı (kullanıcı kontrolü).
+ */
+export const ZEMIN_STORAGE_KEY = 'bilge-arena-zemin-v1'
 
 export const BACKGROUND_RARITY_LABEL: Record<BackgroundRarity, string> = {
   common: 'Sıradan',
