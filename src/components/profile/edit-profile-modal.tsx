@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { refreshProfile } from '@/lib/hooks/use-auth'
 import { toast } from '@/stores/toast-store'
 import { trUpper } from '@/lib/utils/tr-text'
-import { X, Camera, Trash2 } from 'lucide-react'
+import { X, Trash2 } from 'lucide-react'
 
 interface EditProfileModalProps {
   open: boolean
@@ -19,66 +19,29 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const [grade, setGrade] = useState(profile?.grade || '')
   const [examType, setExamType] = useState<'yks' | 'lgs' | ''>(profile?.exam_type ?? '')
   const [saving, setSaving] = useState(false)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const [removing, setRemoving] = useState(false)
 
   if (!open || !profile) return null
 
-  const currentAvatar = avatarPreview || profile.avatar_url
+  const currentAvatar = profile.avatar_url
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (file.size > 1024 * 1024) {
-      toast.error('Dosya en fazla 1MB olmalı')
-      return
-    }
-
-    setAvatarFile(file)
-    setAvatarPreview(URL.createObjectURL(file))
-  }
-
-  const handleAvatarUpload = async () => {
-    if (!avatarFile) return
-    setUploadingAvatar(true)
-
-    try {
-      const formData = new FormData()
-      formData.append('file', avatarFile)
-
-      const res = await fetch('/api/profile/avatar', { method: 'POST', body: formData })
-      const data = await res.json()
-
-      if (res.ok) {
-        toast.success('Avatar güncellendi')
-        setAvatarFile(null)
-        await refreshProfile()
-      } else {
-        toast.error(data.error || 'Avatar yüklenemedi')
-      }
-    } catch {
-      toast.error('Bir hata oluştu')
-    }
-    setUploadingAvatar(false)
-  }
-
+  // NOT: Serbest foto yükleme güvenlik nedeniyle kaldırıldı (cinsel-içerik/CSAM
+  // riski, moderasyon yoktu). Avatar = Google fotoğrafı / baş-harf; küratörlü
+  // hazır-avatar seti yakında. Kullanıcı yalnız mevcut avatarını kaldırabilir.
   const handleRemoveAvatar = async () => {
-    setUploadingAvatar(true)
+    setRemoving(true)
     try {
       const res = await fetch('/api/profile/avatar', { method: 'DELETE' })
       if (res.ok) {
         toast.success('Avatar kaldırıldı')
-        setAvatarPreview(null)
-        setAvatarFile(null)
         await refreshProfile()
+      } else {
+        toast.error('Avatar kaldırılamadı')
       }
     } catch {
       toast.error('Bir hata oluştu')
     }
-    setUploadingAvatar(false)
+    setRemoving(false)
   }
 
   const handleSave = async () => {
@@ -88,9 +51,6 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
     }
 
     setSaving(true)
-
-    // Avatar varsa once yukle
-    if (avatarFile) await handleAvatarUpload()
 
     try {
       const res = await fetch('/api/profile', {
@@ -130,45 +90,31 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
         </div>
 
         <div className="px-5 py-4 space-y-4">
-          {/* Avatar */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative group">
-              {currentAvatar ? (
-                <img
-                  src={currentAvatar}
-                  alt="Avatar"
-                  className="h-20 w-20 rounded-full border-[3px] border-[var(--focus-border)] object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-full border-[3px] border-[var(--border)] bg-[var(--surface)] text-3xl">
-                  {trUpper((displayName || 'A').charAt(0))}
-                </div>
-              )}
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--focus)] text-white shadow-md hover:bg-[var(--focus-dark)]"
-              >
-                <Camera size={13} />
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={handleAvatarChange}
+          {/* Avatar — serbest yükleme yok (güvenlik). Hazır-avatar seti yakında. */}
+          <div className="flex flex-col items-center gap-2">
+            {currentAvatar ? (
+              <img
+                src={currentAvatar}
+                alt="Avatar"
+                className="h-20 w-20 rounded-full border-[3px] border-[var(--focus-border)] object-cover"
+                referrerPolicy="no-referrer"
               />
-            </div>
+            ) : (
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border-[3px] border-[var(--border)] bg-[var(--surface)] text-3xl">
+                {trUpper((displayName || 'A').charAt(0))}
+              </div>
+            )}
             {currentAvatar && (
               <button
                 onClick={handleRemoveAvatar}
-                disabled={uploadingAvatar}
+                disabled={removing}
                 className="flex items-center gap-1 text-[10px] text-[var(--urgency)] hover:underline disabled:opacity-50"
               >
                 <Trash2 size={10} />
                 Avatarı Kaldır
               </button>
             )}
+            <p className="text-[9px] text-[var(--text-muted)]">Hazır avatar seti yakında 🎨</p>
           </div>
 
           {/* İsim */}
@@ -240,7 +186,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || uploadingAvatar}
+            disabled={saving || removing}
             className="rounded-lg bg-[var(--focus)] px-5 py-2 text-xs font-bold text-white disabled:opacity-50"
           >
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
