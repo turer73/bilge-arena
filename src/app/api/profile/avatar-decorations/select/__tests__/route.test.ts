@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const m = vi.hoisted(() => ({
+  ipCheck: vi.fn(),
   userCheck: vi.fn(),
   getUser: vi.fn(),
   profileRead: vi.fn(),
@@ -16,8 +17,9 @@ const m = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
-  createRateLimiter: () => ({ check: m.userCheck }),
+  createRateLimiter: (name: string) => ({ check: name.includes('-ip') ? m.ipCheck : m.userCheck }),
 }))
+vi.mock('@/lib/utils/client-ip', () => ({ getClientIp: () => '1.2.3.4' }))
 vi.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({ auth: { getUser: m.getUser } }),
 }))
@@ -48,6 +50,7 @@ function req(body: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  m.ipCheck.mockResolvedValue({ success: true })
   m.userCheck.mockResolvedValue({ success: true })
   m.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
   m.profileRead.mockResolvedValue({ data: { owned_avatar_decorations: ['aura'] } })
@@ -59,6 +62,12 @@ describe('POST /api/profile/avatar-decorations/select', () => {
   it('misafir: 401', async () => {
     m.getUser.mockResolvedValue({ data: { user: null } })
     expect((await POST(req({ decorationIds: ['konfeti'] }))).status).toBe(401)
+  })
+
+  it("IP limiti auth'tan önce: 429, getUser çağrılmaz", async () => {
+    m.ipCheck.mockResolvedValue({ success: false, retryAfter: 60 })
+    expect((await POST(req({ decorationIds: ['konfeti'] }))).status).toBe(429)
+    expect(m.getUser).not.toHaveBeenCalled()
   })
 
   it('dizi değil / eksik gövde: 400', async () => {

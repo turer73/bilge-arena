@@ -93,4 +93,28 @@ describe('AvatarDecorationStoreClient', () => {
     expect(JSON.parse(buyCall[1].body)).toEqual({ decorationId: 'crown' })
     expect(auth.value.setProfile.mock.calls.at(-1)![0]).toMatchObject({ coin_balance: 4400 })
   })
+
+  test('profil geç gelince worn senkronize olur, mevcut süsü silmez (Codex P2 regresyon)', async () => {
+    const base = {
+      username: 'Arenacı',
+      display_name: 'Arenacı',
+      avatar_url: null,
+      coin_balance: 5000,
+      owned_avatar_decorations: ['aura'],
+      role: 'user',
+    }
+    // İlk render: profil henüz süssüz (initializer [] yakalar)
+    auth.value.profile = { ...base, selected_avatar_decorations: [] }
+    const { rerender } = render(<AvatarDecorationStoreClient />)
+    // Profil sonradan takılı süsle gelir → effect worn'u ['aura']'ya senkronize etmeli
+    auth.value.profile = { ...base, selected_avatar_decorations: ['aura'] }
+    rerender(<AvatarDecorationStoreClient />)
+    // Konfeti ekle → aura KORUNMALI (stale [] olsa ['konfeti'] giderdi)
+    fireEvent.click(screen.getByLabelText('Konfeti önizleme'))
+    fireEvent.click(screen.getByRole('button', { name: 'Tak' }))
+
+    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar-decorations/select')!
+    expect(JSON.parse(call[1].body)).toEqual({ decorationIds: ['aura', 'konfeti'] })
+  })
 })

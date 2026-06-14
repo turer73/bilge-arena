@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { getClientIp } from '@/lib/utils/client-ip'
 import { z } from 'zod'
 import {
   AVATAR_DECORATIONS,
@@ -9,6 +10,7 @@ import {
   isDecorationFree,
 } from '@/lib/constants/avatar-decorations'
 
+const ipLimiter = createRateLimiter('decoration-select-ip', 40, 60_000)
 const userLimiter = createRateLimiter('decoration-select-user', 30, 60_000)
 
 const selectSchema = z.object({
@@ -26,6 +28,17 @@ const selectSchema = z.object({
  * kullanır. Tek geçersiz/sahipsiz id → tüm istek reddedilir (kısmi yazma yok).
  */
 export async function POST(request: NextRequest) {
+  // IP limit ONCE — auth.getUser() Supabase roundtrip'inden önce (anon flood
+  // Auth quota'sını tüketmesin; purchase route + leaderboard ile aynı desen).
+  const ip = getClientIp(request.headers)
+  const ipRl = await ipLimiter.check(ip)
+  if (!ipRl.success) {
+    return NextResponse.json(
+      { error: 'Çok fazla istek' },
+      { status: 429, headers: { 'Retry-After': String(ipRl.retryAfter ?? 60) } },
+    )
+  }
+
   const cookieClient = await createClient()
   const { data: { user } } = await cookieClient.auth.getUser()
   if (!user) {

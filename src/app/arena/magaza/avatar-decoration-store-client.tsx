@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/auth-store'
 import {
@@ -27,6 +27,13 @@ export function AvatarDecorationStoreClient() {
   const [selectedId, setSelectedId] = useState(AVATAR_DECORATIONS[0].id)
   const [busy, setBusy] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+
+  // Profil geç yüklenirse worn'u senkronize et — yoksa initializer stale [] yakalar
+  // ve ilk Tak/satın al mevcut süsleri /select ile siler (Codex P2). Optimistic
+  // toggle sonrası setProfile de buraya düşer (aynı değer → no-op).
+  useEffect(() => {
+    setWorn(profile?.selected_avatar_decorations ?? [])
+  }, [profile?.selected_avatar_decorations])
 
   const staff = isStaff(profile)
   const ownedSet = useMemo(
