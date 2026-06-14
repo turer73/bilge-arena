@@ -34,6 +34,7 @@ global.fetch = fetchMock as unknown as typeof fetch
 
 beforeEach(() => {
   vi.clearAllMocks()
+  auth.value.user = { id: 'u1' }
   auth.value.profile = {
     username: 'Arenacı',
     display_name: 'Arenacı',
@@ -116,5 +117,66 @@ describe('AvatarDecorationStoreClient', () => {
     await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
     const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar-decorations/select')!
     expect(JSON.parse(call[1].body)).toEqual({ decorationIds: ['aura', 'konfeti'] })
+  })
+
+  test('takılı süsü Çıkar → /select [] yazar', async () => {
+    auth.value.profile = {
+      ...(auth.value.profile as Record<string, unknown>),
+      selected_avatar_decorations: ['konfeti'],
+    }
+    render(<AvatarDecorationStoreClient />)
+    // konfeti varsayılan seçili + takılı → detayda "Çıkar"
+    fireEvent.click(screen.getByRole('button', { name: 'Çıkar' }))
+    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar-decorations/select')!
+    expect(JSON.parse(call[1].body)).toEqual({ decorationIds: [] })
+  })
+
+  test('/select hata → worn geri alınır + toast.error, profil güncellenmez', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'fail' }) }),
+    )
+    render(<AvatarDecorationStoreClient />)
+    fireEvent.click(screen.getByRole('button', { name: 'Tak' }))
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalled())
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+  })
+
+  test('misafir (user yok): Giriş Yap linki', () => {
+    auth.value.user = null
+    render(<AvatarDecorationStoreClient />)
+    expect(screen.getByRole('link', { name: 'Giriş Yap' })).toHaveAttribute(
+      'href',
+      '/giris?redirect=/arena/magaza',
+    )
+  })
+
+  test('yetersiz coin: sahipsiz ücretli süs butonu disabled', () => {
+    auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), coin_balance: 100 }
+    render(<AvatarDecorationStoreClient />)
+    fireEvent.click(screen.getByLabelText('Taç önizleme')) // crown 600 > 100
+    expect(screen.getByRole('button', { name: 'Yetersiz Coin' })).toBeDisabled()
+  })
+
+  test('satın alma hata → toast.error, profil güncellenmez', async () => {
+    fetchMock.mockImplementation((url: string) =>
+      url.includes('/purchase')
+        ? Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'yetersiz' }) })
+        : Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) }),
+    )
+    render(<AvatarDecorationStoreClient />)
+    fireEvent.click(screen.getByLabelText('Taç önizleme'))
+    fireEvent.click(screen.getByRole('button', { name: 'Şimdi Al' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Onayla' }))
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalled())
+    expect(auth.value.setProfile).not.toHaveBeenCalled()
+  })
+
+  test('onay modalı Vazgeç → satın alma çağrılmaz', () => {
+    render(<AvatarDecorationStoreClient />)
+    fireEvent.click(screen.getByLabelText('Taç önizleme'))
+    fireEvent.click(screen.getByRole('button', { name: 'Şimdi Al' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Vazgeç' }))
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/purchase'))).toBe(false)
   })
 })

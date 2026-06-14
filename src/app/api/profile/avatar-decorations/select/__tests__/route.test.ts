@@ -122,4 +122,9 @@ describe('POST /api/profile/avatar-decorations/select', () => {
     expect(res.status).toBe(200)
     expect(m.update).toHaveBeenCalledWith({ selected_avatar_decorations: ['crown', 'kanat'] })
   })
+
+  it('update hatası: 500', async () => {
+    m.updateEq.mockResolvedValue({ error: { message: 'boom' } })
+    expect((await POST(req({ decorationIds: ['konfeti'] }))).status).toBe(500)
+  })
 })

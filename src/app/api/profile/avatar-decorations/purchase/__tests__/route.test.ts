@@ -100,4 +100,9 @@ describe('POST /api/profile/avatar-decorations/purchase', () => {
     expect((await POST(req({ decorationId: 'aura' }))).status).toBe(429)
     expect(m.getUser).not.toHaveBeenCalled()
   })
+
+  it('RPC hatası: 500', async () => {
+    m.rpc.mockResolvedValue({ data: null, error: { message: 'boom' } })
+    expect((await POST(req({ decorationId: 'aura' }))).status).toBe(500)
+  })
 })
