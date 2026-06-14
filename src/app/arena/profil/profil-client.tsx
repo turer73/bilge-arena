@@ -16,18 +16,8 @@ import { getLevelFromXP } from '@/lib/constants/levels'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { fetchProfileBootstrap, type ProfileStats } from '@/lib/supabase/profile-stats'
 import { PROFILE_FRAMES, FRAME_STORAGE_KEY, FRAME_RARITY_LABEL, FRAME_RARITY_COLOR } from '@/lib/constants/profile-frames'
-import { BACKGROUND_STORAGE_KEY } from '@/lib/constants/profile-backgrounds'
-import {
-  CSS_STORE_ITEMS,
-  rowToStoreItem,
-  resolveVariantUrl,
-  BACKGROUND_RESOLUTION_KEY,
-  PUBLISHED_BACKGROUNDS_ENDPOINT,
-  type StoreBackgroundItem,
-  type BackgroundAssetRow,
-  type VideoResolution,
-} from '@/lib/constants/video-backgrounds'
 import { resolveOwnedSelection } from '@/lib/utils/owned-selection'
+import { useCardBackground, CardBackgroundLayer } from '@/components/profile/card-background'
 import { Nameplate } from '@/components/profile/nameplate'
 import { isStaff } from '@/lib/utils/is-staff'
 import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
@@ -67,57 +57,9 @@ export default function ProfilClient() {
     } catch {}
   }, [])
 
-  // Mağazadan seçilen arka planı yükle (frame deseniyle aynı; video temalar dahil)
-  const [backgroundId, setBackgroundId] = useState('none')
-  const [bgResolution, setBgResolution] = useState<VideoResolution>('k2')
-  const [videoBgItems, setVideoBgItems] = useState<StoreBackgroundItem[]>([])
-  const [reducedMotion, setReducedMotion] = useState(false)
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(BACKGROUND_STORAGE_KEY)
-      if (saved) setBackgroundId(saved)
-      const res = localStorage.getItem(BACKGROUND_RESOLUTION_KEY)
-      if (res === 'hd' || res === 'k2' || res === 'k4') setBgResolution(res)
-    } catch {}
-  }, [])
-
-  // prefers-reduced-motion → video yerine poster göster
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReducedMotion(mq.matches)
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-
-  // Yayındaki video temaları çek (mağaza ile aynı kaynak)
-  useEffect(() => {
-    let active = true
-    fetch(PUBLISHED_BACKGROUNDS_ENDPOINT)
-      .then((r) => (r.ok ? r.json() : { backgrounds: [] }))
-      .then((data: { backgrounds: BackgroundAssetRow[] }) => {
-        if (active) setVideoBgItems((data.backgrounds ?? []).map(rowToStoreItem))
-      })
-      .catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [])
-
-  // SAHİPLİK GUARD (Codex P2): localStorage kullanıcı kontrolünde — elle
-  // yazılan paid-id satın almayı atlatamasın; ücretli + sahipsiz → 'none'.
-  // CSS (statik) + video (DB) tek katalog.
-  const bgCatalog: StoreBackgroundItem[] = [...CSS_STORE_ITEMS, ...videoBgItems]
-  // Personel tüm temalara sahip (ücretsiz)
-  const bgOwned = isStaff(profile) ? bgCatalog.map((c) => c.id) : profile?.owned_backgrounds
-  const activeBackground = resolveOwnedSelection(backgroundId, bgOwned, bgCatalog)
-  const activeBgVideoUrl =
-    activeBackground.kind === 'video'
-      ? resolveVariantUrl(activeBackground.variants, bgResolution)
-      : null
-  const isCssBg = activeBackground.kind === 'css' && activeBackground.id !== 'none'
+  // Profil KART arka planı — lobi kullanıcı kartıyla ORTAK hook (aynı tema,
+  // sahiplik guard + personel bypass dahil). Zemin (ZEMIN_STORAGE_KEY) ayrı.
+  const { activeBackground, activeBgVideoUrl, isCssBg, reducedMotion } = useCardBackground()
 
   // Profile'dan owned_frames yükle
   useEffect(() => {
@@ -283,26 +225,11 @@ export default function ProfilClient() {
         className={`relative isolate mb-4 animate-fadeUp overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 md:mb-6 md:rounded-2xl md:p-6 xl:p-7 2xl:p-8 ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
         style={isCssBg ? { background: activeBackground.css } : undefined}
       >
-        {activeBackground.kind === 'video' &&
-          (reducedMotion || !activeBgVideoUrl
-            ? activeBackground.posterUrl && (
-                <img
-                  src={activeBackground.posterUrl}
-                  alt=""
-                  className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover"
-                />
-              )
-            : (
-                <video
-                  src={activeBgVideoUrl}
-                  poster={activeBackground.posterUrl}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover"
-                />
-              ))}
+        <CardBackgroundLayer
+          background={activeBackground}
+          videoUrl={activeBgVideoUrl}
+          reducedMotion={reducedMotion}
+        />
         <div className="flex items-center gap-3 md:gap-4">
 
           {/* Avatar + Çerçeve */}
