@@ -151,13 +151,26 @@ export function useAuth() {
     }
 
     // 2) Sync endpoint (Google metadata + profile + roles tek istek)
-    const syncData = await syncProfileFromApi()
-    if (syncData) {
-      setProfile(applyRole(syncData.profile, syncData.isAdmin))
-      return
+    // Google metadata sync OTURUM BASINA 1 kez yeter. Bu fonksiyon her mount'ta
+    // + onAuthStateChange'in INITIAL_SESSION'inda + her tam yuklemede cagriliyor;
+    // hepsi sync (5/dk) vurursa 429 olur (gercek bug). sessionStorage guard:
+    // ilk basarili sync'ten sonra duz GET'e (/api/profile, 60/dk) dusulur.
+    const syncKey = `profile_synced_${authUser.id}`
+    let alreadySynced = false
+    try { alreadySynced = sessionStorage.getItem(syncKey) === '1' } catch {}
+
+    if (!alreadySynced) {
+      const syncData = await syncProfileFromApi()
+      if (syncData) {
+        try { sessionStorage.setItem(syncKey, '1') } catch {}
+        setProfile(applyRole(syncData.profile, syncData.isAdmin))
+        return
+      }
+      // Sync basarisiz (429 dahil) → flag SET ETME (sonraki firsatta tekrar dene),
+      // asagidaki GET ile profili yine de goster.
     }
 
-    // 3) Sync basarisiz olduysa GET'e dus
+    // 3) Zaten sync edildi VEYA sync basarisiz → duz GET (genis limit)
     const getData = await fetchProfileFromApi()
     if (getData) {
       setProfile(applyRole(getData.profile, getData.isAdmin))
