@@ -112,8 +112,10 @@ export function GlobalBackground() {
       ) : active.kind === 'css' ? (
         <div className={`h-full w-full ${active.animClass ?? ''}`} style={{ background: active.css }} />
       ) : null}
-      {/* Okunabilirlik katmanı: tema hissedilir ama içerik net kalır */}
-      <div className="absolute inset-0 bg-[var(--bg)]/60" />
+      {/* Okunabilirlik katmanı: tema "ambient" hissedilir ama içerik net kalır.
+          /75 — parlak/hareketli videolar metni soluklaştırmasın (özellikle açık
+          temada --bg beyaz wash'i zayıf kalıyordu). */}
+      <div className="absolute inset-0 bg-[var(--bg)]/75" />
     </div>
   )
 }
