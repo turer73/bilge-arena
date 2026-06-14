@@ -20,14 +20,18 @@ export interface AvatarDecorationDef {
   coinCost?: number
 }
 
+// Faz 3a: tüm süsler ÜCRETSİZ (coinCost YOK). Ownership/purchase yolu henüz
+// olmadığından coin-fiyatı işaretlemiyoruz — yoksa "fiyatlı ama guard'sız =
+// bedava erişim" tutarsızlığı olur (Codex P2). Faz 3b'de coinCost + owned-guard
+// (DB selected_avatar_decoration + purchase RPC) BİRLİKTE gelir.
 export const AVATAR_DECORATIONS: AvatarDecorationDef[] = [
   { id: 'none', name: 'Süssüz', description: 'Standart görünüm', rarity: 'common', icon: '∅' },
-  { id: 'aura', name: 'Altın Hale', description: 'Avatarın arkasında parlayan hale', rarity: 'rare', icon: '🟡', coinCost: 150 },
-  { id: 'sparkle', name: 'Yıldız Tozu', description: 'Etrafında parıldayan yıldızlar', rarity: 'rare', icon: '✨', coinCost: 200 },
-  { id: 'konfeti', name: 'Konfeti', description: 'Kutlama havası', rarity: 'common', icon: '🎉', coinCost: 100 },
-  { id: 'kanat', name: 'Melek Kanadı', description: 'İki yanında melek kanatları', rarity: 'epic', icon: '🪽', coinCost: 500 },
-  { id: 'crown', name: 'Taç', description: 'Başının üstünde altın taç', rarity: 'epic', icon: '👑', coinCost: 600 },
-  { id: 'alev', name: 'Alev', description: 'Seri ateşi gibi yanan alevler', rarity: 'rare', icon: '🔥', coinCost: 250 },
+  { id: 'aura', name: 'Altın Hale', description: 'Avatarın arkasında parlayan hale', rarity: 'rare', icon: '🟡' },
+  { id: 'sparkle', name: 'Yıldız Tozu', description: 'Etrafında parıldayan yıldızlar', rarity: 'rare', icon: '✨' },
+  { id: 'konfeti', name: 'Konfeti', description: 'Kutlama havası', rarity: 'common', icon: '🎉' },
+  { id: 'kanat', name: 'Melek Kanadı', description: 'İki yanında melek kanatları', rarity: 'epic', icon: '🪽' },
+  { id: 'crown', name: 'Taç', description: 'Başının üstünde altın taç', rarity: 'epic', icon: '👑' },
+  { id: 'alev', name: 'Alev', description: 'Seri ateşi gibi yanan alevler', rarity: 'rare', icon: '🔥' },
 ]
 
 export const DECORATION_RARITY_LABEL: Record<DecorationRarity, string> = {

@@ -21,11 +21,14 @@ export function AvatarDecoration({
   const id = decorationId ?? 'none'
   const deco = renderDecoration(id, size)
   if (!deco) return <>{children}</>
+  // z-katmanlama (Codex P2): aura `behind` z-auto kalır; avatar açık z-[1] ile
+  // ÜSTÜNDE (çerçevesiz/konumlanmamış avatarda aura örtmesini önler); ön süsler
+  // z-[2] ile en üstte.
   return (
     <div className="relative inline-flex shrink-0">
       {deco.behind}
-      {children}
-      {deco.front}
+      <span className="relative z-[1] inline-flex">{children}</span>
+      {deco.front && <span className="pointer-events-none absolute inset-0 z-[2]">{deco.front}</span>}
     </div>
   )
 }
@@ -102,29 +105,26 @@ function renderDecoration(
             <span
               aria-hidden
               className="pointer-events-none absolute"
-              style={{
-                right: -em * 0.6,
-                top: size * 0.1,
-                fontSize: em,
-                transform: 'scaleX(-1)',
-                animation: 'float 3s ease-in-out infinite',
-              }}
+              style={{ right: -em * 0.6, top: size * 0.1, transform: 'scaleX(-1)' }}
             >
-              🪽
+              {/* Statik aynalama DIŞ span'de; float İÇ span'de (float scaleX'i ezmesin) */}
+              <span style={{ display: 'block', fontSize: em, animation: 'float 3s ease-in-out infinite' }}>🪽</span>
             </span>
           </>
         ),
       }
 
     case 'crown':
+      // Statik transform (ortalama) DIŞ span'de; float animasyonu (transform'u
+      // ezer) İÇ span'de — yoksa float translateX(-50%)'i silip tacı sağa kaydırır.
       return {
         front: (
           <span
             aria-hidden
             className="pointer-events-none absolute left-1/2"
-            style={{ top: -em * 0.58, transform: 'translateX(-50%)', fontSize: em, animation: 'float 3.4s ease-in-out infinite' }}
+            style={{ top: -em * 0.58, transform: 'translateX(-50%)' }}
           >
-            👑
+            <span style={{ display: 'block', fontSize: em, animation: 'float 3.4s ease-in-out infinite' }}>👑</span>
           </span>
         ),
       }
