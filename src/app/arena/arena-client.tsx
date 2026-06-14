@@ -11,6 +11,7 @@ import { XPBar } from '@/components/game/xp-bar'
 import { DailyQuests } from '@/components/game/daily-quests'
 import { MiniLeaderboard } from '@/components/game/mini-leaderboard'
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
+import { useCardBackground, CardBackgroundLayer } from '@/components/profile/card-background'
 
 interface SidebarLeaderRow {
   name: string
@@ -34,6 +35,8 @@ const GAME_EMOJI: Record<string, string> = {
 
 export default function ArenaClient() {
   const { user, profile } = useAuthStore()
+  // Profil kartıyla ORTAK kart arka planı (kullanıcının seçtiği tema burada da)
+  const { activeBackground, activeBgVideoUrl, isCssBg, reducedMotion } = useCardBackground()
 
   const totalXP = profile?.total_xp ?? 0
   const currentStreak = profile?.current_streak ?? 0
@@ -84,7 +87,15 @@ export default function ArenaClient() {
 
       {/* ── Kişiselleştirilmiş karşılama (giriş yapılmışsa) ── */}
       {user && profile ? (
-        <div className="mb-5 flex flex-col gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-3 md:mb-6 md:rounded-2xl md:px-5 md:py-3.5">
+        <div
+          className={`relative isolate mb-5 flex flex-col gap-2.5 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-3 md:mb-6 md:rounded-2xl md:px-5 md:py-3.5 ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
+          style={isCssBg ? { background: activeBackground.css } : undefined}
+        >
+          <CardBackgroundLayer
+            background={activeBackground}
+            videoUrl={activeBgVideoUrl}
+            reducedMotion={reducedMotion}
+          />
           <div className="flex items-center gap-3">
           {/* Avatar / seviye ikonu */}
           {profile.avatar_url ? (
