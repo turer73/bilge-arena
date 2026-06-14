@@ -49,6 +49,8 @@ export interface Profile {
   owned_nameplates: string[]
   selected_nameplate: string
   owned_cosmetic_badges: string[]
+  owned_avatar_decorations: string[]
+  selected_avatar_decorations: string[]
   // Premium
   is_premium: boolean
   premium_until: string | null

@@ -16,7 +16,6 @@ import { ProfileFrameRing } from '@/components/profile/profile-frame-ring'
 import { AvatarDecoration } from '@/components/profile/avatar-decoration'
 import { Nameplate } from '@/components/profile/nameplate'
 import { getFrameById, FRAME_STORAGE_KEY } from '@/lib/constants/profile-frames'
-import { AVATAR_DECORATION_STORAGE_KEY, parseDecorationIds } from '@/lib/constants/avatar-decorations'
 
 interface SidebarLeaderRow {
   name: string
@@ -43,18 +42,18 @@ export default function ArenaClient() {
   // Profil kartıyla ORTAK kart arka planı (kullanıcının seçtiği tema burada da)
   const { activeBackground, activeBgVideoUrl, isCssBg, reducedMotion } = useCardBackground()
 
-  // Tüm kişiselleştirme lobi kartında da görünsün: çerçeve + süs (localStorage) +
+  // Tüm kişiselleştirme lobi kartında da görünsün: çerçeve (localStorage) + süs +
   // isim paneli (DB). Seçimler stüdyo/profilde yapılır; burada yansıtılır.
   const [frameId, setFrameId] = useState('none')
-  const [decorationIds, setDecorationIds] = useState<string[]>([])
   useEffect(() => {
     try {
       const f = localStorage.getItem(FRAME_STORAGE_KEY)
       if (f) setFrameId(f)
-      setDecorationIds(parseDecorationIds(localStorage.getItem(AVATAR_DECORATION_STORAGE_KEY)))
     } catch {}
   }, [])
   const lobbyFrame = getFrameById(frameId)
+  // Süs(ler) DB'de (selected_avatar_decorations) — başkalarına da görünür.
+  const decorationIds = profile?.selected_avatar_decorations ?? []
 
   const totalXP = profile?.total_xp ?? 0
   const currentStreak = profile?.current_streak ?? 0

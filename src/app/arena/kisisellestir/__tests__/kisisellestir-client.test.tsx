@@ -22,6 +22,8 @@ const auth = vi.hoisted(() => ({
       owned_nameplates: ['none', 'gece'],
       selected_nameplate: 'none',
       owned_cosmetic_badges: [] as string[],
+      owned_avatar_decorations: ['aura'] as string[],
+      selected_avatar_decorations: [] as string[],
       role: 'user',
     } as Record<string, unknown> | null,
     setProfile: vi.fn(),
@@ -52,6 +54,8 @@ function resetProfile() {
     owned_nameplates: ['none', 'gece'],
     selected_nameplate: 'none',
     owned_cosmetic_badges: [],
+    owned_avatar_decorations: ['aura'],
+    selected_avatar_decorations: [],
     role: 'user',
   }
 }
@@ -124,6 +128,29 @@ describe('KisisellestirClient', () => {
     const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/nameplates/select')!
     expect(JSON.parse(call[1].body)).toEqual({ nameplateId: 'gece' })
     expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({ selected_nameplate: 'gece' })
+  })
+
+  test('süs alanı: ücretsiz süs takma /select API POST eder + profil günceller', async () => {
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: /Süs/ }))
+    // Konfeti ücretsiz → takılabilir
+    fireEvent.click(screen.getByText('Konfeti').closest('button')!)
+
+    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar-decorations/select')!
+    expect(JSON.parse(call[1].body)).toEqual({ decorationIds: ['konfeti'] })
+    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+      selected_avatar_decorations: ['konfeti'],
+    })
+  })
+
+  test('süs alanı: sahip-olunmayan ücretli süs kilitli, sahip olunan takılabilir', () => {
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: /Süs/ }))
+    // Taç (crown, 600) owned değil → kilitli (disabled)
+    expect(screen.getByText('Taç').closest('button')).toBeDisabled()
+    // Altın Hale (aura) owned → takılabilir
+    expect(screen.getByText('Altın Hale').closest('button')).not.toBeDisabled()
   })
 
   test('sahiplik filtresi: normal kullanıcı sahip-olmadığı ücretli temayı görmez', () => {

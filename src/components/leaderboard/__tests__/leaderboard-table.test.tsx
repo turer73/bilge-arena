@@ -15,7 +15,7 @@ vi.mock('next/image', () => ({
 import { LeaderboardTable } from '../leaderboard-table'
 
 const ENTRIES = [
-  { rank: 1, user_id: 'a', name: 'zeynep_yks_cok_uzun_bir_kullanici_adi', avatar: '🦉', xp: 9820, level: 'Savaşçı', isCurrentUser: false },
+  { rank: 1, user_id: 'a', name: 'zeynep_yks_cok_uzun_bir_kullanici_adi', avatar: '🦉', xp: 9820, level: 'Savaşçı', isCurrentUser: false, decorations: ['kanat'] },
   { rank: 2, user_id: 'b', name: 'Sen', avatar: 'https://cdn.x/a.png', xp: 2340, level: 'Çırak', isCurrentUser: true },
   { rank: 3, user_id: 'c', name: 'efe', avatar: '🦅', xp: 1500, level: 'Çırak', isCurrentUser: false },
 ]
@@ -44,5 +44,11 @@ describe('LeaderboardTable', () => {
     render(<LeaderboardTable entries={ENTRIES} />)
     expect(document.querySelector('img[src="https://cdn.x/a.png"]')).not.toBeNull()
     expect(screen.getByText('🦉')).toBeInTheDocument()
+  })
+
+  test('seçili süs(ler) avatar etrafında render eder (DB selected_avatar_decorations)', () => {
+    render(<LeaderboardTable entries={ENTRIES} />)
+    // rank 1 kanat takılı → SVG tüy-kanat overlay; süssüz satırlarda yok
+    expect(document.querySelector('svg')).not.toBeNull()
   })
 })

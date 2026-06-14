@@ -4,8 +4,10 @@
  * (kanat + taç + aura). Emoji + SVG (sıfır-asset, lisans-temiz, çocuk-dostu);
  * render `@/components/profile/avatar-decoration`.
  *
- * Faz 3a: ücretsiz + localStorage (JSON dizi) seçim. Faz 3b: coinCost + DB seçim
- * (başkalarına görünür) — sonra. 'none' YOK; boş dizi = süssüz.
+ * Faz 3b: coin ekonomisi + DB seçim (selected_avatar_decorations text[] →
+ * başkalarına sıralama/profilde görünür). 'none' YOK; boş dizi = süssüz.
+ * konfeti ÜCRETSİZ başlangıç süsü (coinCost yok → owned gerektirmez); diğerleri
+ * coin. Sahiplik DB owned_avatar_decorations; select endpoint free|owned|staff guard.
  */
 
 export type DecorationRarity = 'common' | 'rare' | 'epic' | 'legendary'
@@ -21,13 +23,14 @@ export interface AvatarDecorationDef {
   coinCost?: number
 }
 
+// Sıra = mağaza/stüdyo görünüm sırası (ücretsiz önce, sonra fiyat artan).
 export const AVATAR_DECORATIONS: AvatarDecorationDef[] = [
-  { id: 'aura', name: 'Altın Hale', description: 'Avatarın arkasında parlayan hale', rarity: 'rare', icon: '🟡' },
-  { id: 'sparkle', name: 'Yıldız Tozu', description: 'Etrafında parıldayan yıldızlar', rarity: 'rare', icon: '✨' },
   { id: 'konfeti', name: 'Konfeti', description: 'Kutlama havası', rarity: 'common', icon: '🎉' },
-  { id: 'kanat', name: 'Melek Kanadı', description: 'İki yanında melek kanatları', rarity: 'epic', icon: '🪽' },
-  { id: 'crown', name: 'Taç', description: 'Başının üstünde altın taç', rarity: 'epic', icon: '👑' },
-  { id: 'alev', name: 'Alev', description: 'Seri ateşi gibi yanan alevler', rarity: 'rare', icon: '🔥' },
+  { id: 'aura', name: 'Altın Hale', description: 'Avatarın arkasında parlayan hale', rarity: 'rare', icon: '🟡', coinCost: 150 },
+  { id: 'sparkle', name: 'Yıldız Tozu', description: 'Etrafında parıldayan yıldızlar', rarity: 'rare', icon: '✨', coinCost: 200 },
+  { id: 'alev', name: 'Alev', description: 'Seri ateşi gibi yanan alevler', rarity: 'rare', icon: '🔥', coinCost: 250 },
+  { id: 'kanat', name: 'Melek Kanadı', description: 'İki yanında melek kanatları', rarity: 'epic', icon: '🪽', coinCost: 500 },
+  { id: 'crown', name: 'Taç', description: 'Başının üstünde altın taç', rarity: 'epic', icon: '👑', coinCost: 600 },
 ]
 
 export const DECORATION_RARITY_LABEL: Record<DecorationRarity, string> = {
@@ -63,4 +66,10 @@ export function serializeDecorationIds(ids: string[]): string {
 
 export function getDecorationById(id: string | null | undefined): AvatarDecorationDef | undefined {
   return AVATAR_DECORATIONS.find((d) => d.id === id)
+}
+
+/** Ücretsiz süs (coinCost yok) → owned gerektirmeden takılabilir. */
+export function isDecorationFree(id: string): boolean {
+  const d = getDecorationById(id)
+  return !!d && d.coinCost === undefined
 }

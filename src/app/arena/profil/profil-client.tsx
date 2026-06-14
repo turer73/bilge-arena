@@ -22,7 +22,6 @@ import { Nameplate } from '@/components/profile/nameplate'
 import { isStaff } from '@/lib/utils/is-staff'
 import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
 import { AvatarDecoration } from '@/components/profile/avatar-decoration'
-import { AVATAR_DECORATION_STORAGE_KEY, parseDecorationIds } from '@/lib/constants/avatar-decorations'
 import Link from 'next/link'
 
 // Mod isimleri
@@ -42,7 +41,6 @@ export default function ProfilClient() {
   const [earnedBadgeCodes, setEarnedBadgeCodes] = useState<string[]>([])
   const [editOpen, setEditOpen] = useState(false)
   const [selectedFrameId, setSelectedFrameId] = useState<string>('none')
-  const [decorationIds, setDecorationIds] = useState<string[]>([])
   const [framePickerOpen, setFramePickerOpen] = useState(false)
   const [ownedFrames, setOwnedFrames] = useState<string[]>(['none', 'mavi'])
   const [purchasing, setPurchasing] = useState<string | null>(null)
@@ -57,9 +55,12 @@ export default function ProfilClient() {
       if (saved && PROFILE_FRAMES.some((f) => f.id === saved)) {
         setSelectedFrameId(saved)
       }
-      setDecorationIds(parseDecorationIds(localStorage.getItem(AVATAR_DECORATION_STORAGE_KEY)))
     } catch {}
   }, [])
+
+  // Süs(ler) DB'de (selected_avatar_decorations) — sıralama/profilde başkalarına
+  // da görünür; localStorage değil. Stüdyo/mağazadan seçilir.
+  const decorationIds = profile?.selected_avatar_decorations ?? []
 
   // Profil KART arka planı — lobi kullanıcı kartıyla ORTAK hook (aynı tema,
   // sahiplik guard + personel bypass dahil). Zemin (ZEMIN_STORAGE_KEY) ayrı.
