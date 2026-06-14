@@ -1,10 +1,11 @@
 /**
  * Avatar Süsleri — avatarın etrafına bindirilen kozmetik (kanat/taç/yıldız/
- * konfeti/aura/alev). Emoji + CSS (sıfır-asset, lisans-temiz, çocuk-dostu);
+ * konfeti/aura/alev). ÇOKLU seçim: kullanıcı birden fazlasını aynı anda takabilir
+ * (kanat + taç + aura). Emoji + SVG (sıfır-asset, lisans-temiz, çocuk-dostu);
  * render `@/components/profile/avatar-decoration`.
  *
- * Faz 3a: ücretsiz + localStorage seçim (kendi görünümü). Faz 3b: coinCost ile
- * coin ekonomisi + DB seçim (başkalarına görünür). coinCost alanı şimdiden var.
+ * Faz 3a: ücretsiz + localStorage (JSON dizi) seçim. Faz 3b: coinCost + DB seçim
+ * (başkalarına görünür) — sonra. 'none' YOK; boş dizi = süssüz.
  */
 
 export type DecorationRarity = 'common' | 'rare' | 'epic' | 'legendary'
@@ -20,12 +21,7 @@ export interface AvatarDecorationDef {
   coinCost?: number
 }
 
-// Faz 3a: tüm süsler ÜCRETSİZ (coinCost YOK). Ownership/purchase yolu henüz
-// olmadığından coin-fiyatı işaretlemiyoruz — yoksa "fiyatlı ama guard'sız =
-// bedava erişim" tutarsızlığı olur (Codex P2). Faz 3b'de coinCost + owned-guard
-// (DB selected_avatar_decoration + purchase RPC) BİRLİKTE gelir.
 export const AVATAR_DECORATIONS: AvatarDecorationDef[] = [
-  { id: 'none', name: 'Süssüz', description: 'Standart görünüm', rarity: 'common', icon: '∅' },
   { id: 'aura', name: 'Altın Hale', description: 'Avatarın arkasında parlayan hale', rarity: 'rare', icon: '🟡' },
   { id: 'sparkle', name: 'Yıldız Tozu', description: 'Etrafında parıldayan yıldızlar', rarity: 'rare', icon: '✨' },
   { id: 'konfeti', name: 'Konfeti', description: 'Kutlama havası', rarity: 'common', icon: '🎉' },
@@ -43,6 +39,28 @@ export const DECORATION_RARITY_LABEL: Record<DecorationRarity, string> = {
 
 export const AVATAR_DECORATION_STORAGE_KEY = 'bilge-arena-avatar-decoration-v1'
 
-export function getDecorationById(id: string | null | undefined): AvatarDecorationDef {
-  return AVATAR_DECORATIONS.find((d) => d.id === id) ?? AVATAR_DECORATIONS[0]
+const VALID_IDS = new Set(AVATAR_DECORATIONS.map((d) => d.id))
+
+/**
+ * localStorage değerini güvenli diziye çevirir. Hem yeni JSON-dizi formatını hem
+ * eski tek-string (Faz 3a) formatını okur; geçersiz/bilinmeyen id'leri eler.
+ */
+export function parseDecorationIds(raw: string | null | undefined): string[] {
+  if (!raw) return []
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    parsed = [raw] // eski tek-string biçim
+  }
+  const arr = Array.isArray(parsed) ? parsed : [parsed]
+  return arr.filter((x): x is string => typeof x === 'string' && VALID_IDS.has(x))
+}
+
+export function serializeDecorationIds(ids: string[]): string {
+  return JSON.stringify(ids.filter((id) => VALID_IDS.has(id)))
+}
+
+export function getDecorationById(id: string | null | undefined): AvatarDecorationDef | undefined {
+  return AVATAR_DECORATIONS.find((d) => d.id === id)
 }

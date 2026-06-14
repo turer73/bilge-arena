@@ -36,6 +36,8 @@ import {
   AVATAR_DECORATIONS,
   AVATAR_DECORATION_STORAGE_KEY,
   DECORATION_RARITY_LABEL,
+  parseDecorationIds,
+  serializeDecorationIds,
 } from '@/lib/constants/avatar-decorations'
 import { StudioPreview } from './studio-preview'
 
@@ -68,7 +70,7 @@ export function KisisellestirClient() {
   const [cardBgId, setCardBgId] = useState('none')
   const [zeminId, setZeminId] = useState('none')
   const [frameId, setFrameId] = useState('none')
-  const [decorationId, setDecorationId] = useState('none')
+  const [decorationIds, setDecorationIds] = useState<string[]>([])
   const [resolution, setResolution] = useState<VideoResolution>('k2')
   const [videoItems, setVideoItems] = useState<StoreBackgroundItem[]>([])
   const [reducedMotion, setReducedMotion] = useState(false)
@@ -83,8 +85,7 @@ export function KisisellestirClient() {
       if (zem) setZeminId(zem)
       const frm = localStorage.getItem(FRAME_STORAGE_KEY)
       if (frm && PROFILE_FRAMES.some((f) => f.id === frm)) setFrameId(frm)
-      const dec = localStorage.getItem(AVATAR_DECORATION_STORAGE_KEY)
-      if (dec && AVATAR_DECORATIONS.some((d) => d.id === dec)) setDecorationId(dec)
+      setDecorationIds(parseDecorationIds(localStorage.getItem(AVATAR_DECORATION_STORAGE_KEY)))
       const res = localStorage.getItem(BACKGROUND_RESOLUTION_KEY)
       if (res === 'hd' || res === 'k2' || res === 'k4') setResolution(res)
     } catch {}
@@ -182,10 +183,19 @@ export function KisisellestirClient() {
       localStorage.setItem(FRAME_STORAGE_KEY, id)
     } catch {}
   }
-  function applyDecoration(id: string) {
-    setDecorationId(id)
+  function toggleDecoration(id: string) {
+    setDecorationIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      try {
+        localStorage.setItem(AVATAR_DECORATION_STORAGE_KEY, serializeDecorationIds(next))
+      } catch {}
+      return next
+    })
+  }
+  function clearDecorations() {
+    setDecorationIds([])
     try {
-      localStorage.setItem(AVATAR_DECORATION_STORAGE_KEY, id)
+      localStorage.setItem(AVATAR_DECORATION_STORAGE_KEY, serializeDecorationIds([]))
     } catch {}
   }
   function applyResolution(res: VideoResolution) {
@@ -285,7 +295,7 @@ export function KisisellestirClient() {
             levelBadge={level.badge}
             levelName={level.name}
             totalXp={profile.total_xp ?? 0}
-            decorationId={decorationId}
+            decorationIds={decorationIds}
           />
         </div>
 
@@ -387,25 +397,41 @@ export function KisisellestirClient() {
             )}
 
             {area === 'sus' && (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {AVATAR_DECORATIONS.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => applyDecoration(d.id)}
-                    aria-pressed={decorationId === d.id}
-                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 ${
-                      decorationId === d.id ? 'border-[var(--focus)] shadow-lg' : 'border-[var(--border)]'
-                    } bg-[var(--card-bg)]`}
-                  >
-                    <span className="text-xl">{d.icon}</span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-[11px] font-bold text-[var(--text)]">{d.name}</span>
-                      <span className="block text-[9px] text-[var(--text-muted)]">
-                        {decorationId === d.id ? '✓ Aktif' : DECORATION_RARITY_LABEL[d.rarity]}
-                      </span>
-                    </span>
-                  </button>
-                ))}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-[var(--text-muted)]">Birden fazla süs seçebilirsin ✨</p>
+                  {decorationIds.length > 0 && (
+                    <button
+                      onClick={clearDecorations}
+                      className="text-[10px] font-bold text-[var(--urgency)] hover:underline"
+                    >
+                      Temizle ({decorationIds.length})
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {AVATAR_DECORATIONS.map((d) => {
+                    const active = decorationIds.includes(d.id)
+                    return (
+                      <button
+                        key={d.id}
+                        onClick={() => toggleDecoration(d.id)}
+                        aria-pressed={active}
+                        className={`flex items-center gap-2 rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 ${
+                          active ? 'border-[var(--focus)] shadow-lg' : 'border-[var(--border)]'
+                        } bg-[var(--card-bg)]`}
+                      >
+                        <span className="text-xl">{d.icon}</span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-[11px] font-bold text-[var(--text)]">{d.name}</span>
+                          <span className="block text-[9px] text-[var(--text-muted)]">
+                            {active ? '✓ Takılı' : DECORATION_RARITY_LABEL[d.rarity]}
+                          </span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )}
 

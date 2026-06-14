@@ -22,7 +22,7 @@ import { Nameplate } from '@/components/profile/nameplate'
 import { isStaff } from '@/lib/utils/is-staff'
 import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
 import { AvatarDecoration } from '@/components/profile/avatar-decoration'
-import { AVATAR_DECORATIONS, AVATAR_DECORATION_STORAGE_KEY } from '@/lib/constants/avatar-decorations'
+import { AVATAR_DECORATION_STORAGE_KEY, parseDecorationIds } from '@/lib/constants/avatar-decorations'
 import Link from 'next/link'
 
 // Mod isimleri
@@ -42,7 +42,7 @@ export default function ProfilClient() {
   const [earnedBadgeCodes, setEarnedBadgeCodes] = useState<string[]>([])
   const [editOpen, setEditOpen] = useState(false)
   const [selectedFrameId, setSelectedFrameId] = useState<string>('none')
-  const [decorationId, setDecorationId] = useState<string>('none')
+  const [decorationIds, setDecorationIds] = useState<string[]>([])
   const [framePickerOpen, setFramePickerOpen] = useState(false)
   const [ownedFrames, setOwnedFrames] = useState<string[]>(['none', 'mavi'])
   const [purchasing, setPurchasing] = useState<string | null>(null)
@@ -57,8 +57,7 @@ export default function ProfilClient() {
       if (saved && PROFILE_FRAMES.some((f) => f.id === saved)) {
         setSelectedFrameId(saved)
       }
-      const dec = localStorage.getItem(AVATAR_DECORATION_STORAGE_KEY)
-      if (dec && AVATAR_DECORATIONS.some((d) => d.id === dec)) setDecorationId(dec)
+      setDecorationIds(parseDecorationIds(localStorage.getItem(AVATAR_DECORATION_STORAGE_KEY)))
     } catch {}
   }, [])
 
@@ -239,7 +238,7 @@ export default function ProfilClient() {
 
           {/* Avatar + Çerçeve */}
           <div className="relative flex-shrink-0">
-            <AvatarDecoration decorationId={decorationId} size={48}>
+            <AvatarDecoration decorationIds={decorationIds} size={48}>
               <ProfileFrameRing frame={activeFrame} size={48}>
                 {profile.avatar_url ? (
                   <img

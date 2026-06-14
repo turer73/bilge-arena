@@ -1,43 +1,88 @@
 import type { ReactNode } from 'react'
 
 /**
- * Avatarın etrafına seçili süsü bindirir. children = avatar (genelde
- * ProfileFrameRing ile sarılı). Süs `pointer-events-none absolute` katman;
- * layout'u bozmaz, taşması serbest (üst kap overflow-hidden olmamalı).
- * id='none' → süs yok, children aynen döner.
+ * Avatarın etrafına seçili süs(ler)i bindirir. ÇOKLU seçim: decorationIds dizisi
+ * → tüm seçili süsler üst üste render (kanat + taç + aura aynı anda). children =
+ * avatar (genelde ProfileFrameRing'li). Süs `pointer-events-none absolute` katman;
+ * layout bozmaz, taşması serbest (üst kap overflow-hidden olmamalı).
  *
- * Emoji + CSS (sıfır-asset). Animasyonlar globals.css'teki mevcut keyframe'leri
- * kullanır (float, glow-pulse) + Tailwind animate-pulse.
+ * z-katmanlama: aura (behind) z-auto < avatar z-[1] < ön süsler z-[2].
+ * Emoji + SVG (sıfır-asset). Animasyonlar globals.css keyframe'leri (float,
+ * glow-pulse) + Tailwind animate-pulse.
  */
 export function AvatarDecoration({
-  decorationId,
+  decorationIds,
   size,
   children,
 }: {
-  decorationId: string | null | undefined
+  decorationIds: string[] | null | undefined
   size: number
   children: ReactNode
 }) {
-  const id = decorationId ?? 'none'
-  const deco = renderDecoration(id, size)
-  if (!deco) return <>{children}</>
-  // z-katmanlama (Codex P2): aura `behind` z-auto kalır; avatar açık z-[1] ile
-  // ÜSTÜNDE (çerçevesiz/konumlanmamış avatarda aura örtmesini önler); ön süsler
-  // z-[2] ile en üstte.
+  const ids = (decorationIds ?? []).filter((id) => id && id !== 'none')
+  const layers = ids.map((id) => renderDecoration(id, size)).filter(Boolean) as DecoLayer[]
+  const behinds = layers.map((l) => l.behind).filter(Boolean)
+  const fronts = layers.map((l) => l.front).filter(Boolean)
+
+  if (behinds.length === 0 && fronts.length === 0) return <>{children}</>
+
   return (
     <div className="relative inline-flex shrink-0">
-      {deco.behind}
+      {behinds.map((b, i) => (
+        <span key={`b${i}`}>{b}</span>
+      ))}
       <span className="relative z-[1] inline-flex">{children}</span>
-      {deco.front && <span className="pointer-events-none absolute inset-0 z-[2]">{deco.front}</span>}
+      {fronts.length > 0 && (
+        <span className="pointer-events-none absolute inset-0 z-[2]">
+          {fronts.map((f, i) => (
+            <span key={`f${i}`}>{f}</span>
+          ))}
+        </span>
+      )}
     </div>
   )
 }
 
-function renderDecoration(
-  id: string,
-  size: number,
-): { behind?: ReactNode; front?: ReactNode } | null {
-  const em = Math.max(13, Math.round(size * 0.44)) // süs emoji boyutu
+interface DecoLayer {
+  behind?: ReactNode
+  front?: ReactNode
+}
+
+/** Tüy katmanlı SVG melek kanadı (tek kanat; sağ için scaleX(-1) ile aynalanır). */
+function Wing({ px }: { px: number }) {
+  // Taban pivot (alt-orta) çevresinde yelpaze açılan yuvarlatılmış "tüy"ler.
+  const feathers = [0, 1, 2, 3, 4]
+  return (
+    <svg
+      width={px}
+      height={px * 1.15}
+      viewBox="0 0 40 46"
+      fill="none"
+      style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))' }}
+    >
+      <g>
+        {feathers.map((i) => (
+          <rect
+            key={i}
+            x="17"
+            y={6 + i * 1.5}
+            width="6.5"
+            height={30 - i * 4.5}
+            rx="3.25"
+            fill="#FFFFFF"
+            stroke="#E6C766"
+            strokeWidth="0.7"
+            transform={`rotate(${-6 - i * 17} 20 40)`}
+          />
+        ))}
+      </g>
+    </svg>
+  )
+}
+
+function renderDecoration(id: string, size: number): DecoLayer | null {
+  const em = Math.max(13, Math.round(size * 0.44)) // emoji süs boyutu
+  const wingPx = Math.round(size * 0.82)
 
   switch (id) {
     case 'aura':
@@ -92,31 +137,34 @@ function renderDecoration(
       }
 
     case 'kanat':
+      // SVG tüy-kanat (emoji 🪽 yerine — küçük/tutarsız görünüyordu). Statik konum/
+      // aynalama DIŞ span'de, float İÇ span'de (float transform'u ezmesin).
       return {
         front: (
           <>
             <span
               aria-hidden
               className="pointer-events-none absolute"
-              style={{ left: -em * 0.6, top: size * 0.1, fontSize: em, animation: 'float 3s ease-in-out infinite' }}
+              style={{ left: -wingPx * 0.72, top: size * 0.04 }}
             >
-              🪽
+              <span style={{ display: 'block', animation: 'float 3.2s ease-in-out infinite' }}>
+                <Wing px={wingPx} />
+              </span>
             </span>
             <span
               aria-hidden
               className="pointer-events-none absolute"
-              style={{ right: -em * 0.6, top: size * 0.1, transform: 'scaleX(-1)' }}
+              style={{ right: -wingPx * 0.72, top: size * 0.04, transform: 'scaleX(-1)' }}
             >
-              {/* Statik aynalama DIŞ span'de; float İÇ span'de (float scaleX'i ezmesin) */}
-              <span style={{ display: 'block', fontSize: em, animation: 'float 3s ease-in-out infinite' }}>🪽</span>
+              <span style={{ display: 'block', animation: 'float 3.2s ease-in-out infinite' }}>
+                <Wing px={wingPx} />
+              </span>
             </span>
           </>
         ),
       }
 
     case 'crown':
-      // Statik transform (ortalama) DIŞ span'de; float animasyonu (transform'u
-      // ezer) İÇ span'de — yoksa float translateX(-50%)'i silip tacı sağa kaydırır.
       return {
         front: (
           <span
