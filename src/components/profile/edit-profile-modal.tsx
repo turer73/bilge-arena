@@ -6,6 +6,7 @@ import { refreshProfile } from '@/lib/hooks/use-auth'
 import { toast } from '@/stores/toast-store'
 import { trUpper } from '@/lib/utils/tr-text'
 import { X, Trash2 } from 'lucide-react'
+import { PRESET_AVATARS } from '@/lib/constants/preset-avatars'
 
 interface EditProfileModalProps {
   open: boolean
@@ -20,6 +21,8 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const [examType, setExamType] = useState<'yks' | 'lgs' | ''>(profile?.exam_type ?? '')
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState(false)
+  const [galleryOpen, setGalleryOpen] = useState(false)
+  const [selectingAvatar, setSelectingAvatar] = useState(false)
 
   if (!open || !profile) return null
 
@@ -42,6 +45,29 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
       toast.error('Bir hata oluştu')
     }
     setRemoving(false)
+  }
+
+  // Küratörlü hazır-avatar seçimi (CC0 set). Sunucu yalnız bilinen preset-id'yi
+  // kabul eder; rastgele URL yok (serbest yükleme yerine güvenli yol).
+  const selectPreset = async (presetId: string) => {
+    setSelectingAvatar(true)
+    try {
+      const res = await fetch('/api/profile/avatar/preset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ presetId }),
+      })
+      if (res.ok) {
+        toast.success('Avatar seçildi')
+        setGalleryOpen(false)
+        await refreshProfile()
+      } else {
+        toast.error('Avatar seçilemedi')
+      }
+    } catch {
+      toast.error('Bir hata oluştu')
+    }
+    setSelectingAvatar(false)
   }
 
   const handleSave = async () => {
@@ -104,18 +130,43 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
                 {trUpper((displayName || 'A').charAt(0))}
               </div>
             )}
-            {currentAvatar && (
+            <div className="flex items-center gap-3">
               <button
-                onClick={handleRemoveAvatar}
-                disabled={removing}
-                className="flex items-center gap-1 text-[10px] text-[var(--urgency)] hover:underline disabled:opacity-50"
+                onClick={() => setGalleryOpen((v) => !v)}
+                className="rounded-lg border border-[var(--border)] px-3 py-1 text-[11px] font-bold text-[var(--focus)] transition-colors hover:border-[var(--focus)]"
               >
-                <Trash2 size={10} />
-                Avatarı Kaldır
+                🎨 Hazır Avatar
               </button>
-            )}
-            <p className="text-[9px] text-[var(--text-muted)]">Hazır avatar seti yakında 🎨</p>
+              {currentAvatar && (
+                <button
+                  onClick={handleRemoveAvatar}
+                  disabled={removing}
+                  className="flex items-center gap-1 text-[10px] text-[var(--urgency)] hover:underline disabled:opacity-50"
+                >
+                  <Trash2 size={10} />
+                  Kaldır
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Hazır avatar galerisi — küratörlü CC0 set (serbest yükleme yerine güvenli) */}
+          {galleryOpen && (
+            <div className="grid max-h-44 grid-cols-6 gap-2 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2">
+              {PRESET_AVATARS.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => selectPreset(a.id)}
+                  disabled={selectingAvatar}
+                  title={a.label}
+                  aria-label={`${a.label} avatar`}
+                  className="rounded-full p-0.5 transition-all hover:ring-2 hover:ring-[var(--focus)] disabled:opacity-50"
+                >
+                  <img src={a.path} alt="" className="h-10 w-10 rounded-full bg-[var(--card-bg)]" />
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* İsim */}
           <div>

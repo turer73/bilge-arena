@@ -42,17 +42,29 @@ describe('EditProfileModal', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  test('GÜVENLİK: serbest foto yükleme yok — file input bulunmaz + bilgi notu var', () => {
+  test('GÜVENLİK: serbest foto yükleme yok — file input bulunmaz + Hazır Avatar butonu var', () => {
     render(<EditProfileModal open onClose={vi.fn()} />)
     expect(screen.getByText('Profili Düzenle')).toBeInTheDocument()
     expect(document.querySelector('input[type="file"]')).toBeNull()
-    expect(screen.getByText(/Hazır avatar seti yakında/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Hazır Avatar/ })).toBeInTheDocument()
   })
 
-  test('avatar varsa "Avatarı Kaldır" → DELETE /api/profile/avatar', async () => {
+  test('hazır avatar galerisi: aç → preset seç → POST /api/profile/avatar/preset', async () => {
+    render(<EditProfileModal open onClose={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /Hazır Avatar/ }))
+    const presetBtns = screen.getAllByRole('button', { name: /Piksel avatar/ })
+    expect(presetBtns.length).toBeGreaterThan(0)
+    fireEvent.click(presetBtns[0])
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar/preset')).toBeTruthy(),
+    )
+    expect(refreshMock).toHaveBeenCalled()
+  })
+
+  test('avatar varsa "Kaldır" → DELETE /api/profile/avatar', async () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), avatar_url: 'https://x/a.png' }
     render(<EditProfileModal open onClose={vi.fn()} />)
-    fireEvent.click(screen.getByText('Avatarı Kaldır'))
+    fireEvent.click(screen.getByText('Kaldır'))
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith('/api/profile/avatar', { method: 'DELETE' }),
     )
@@ -61,7 +73,7 @@ describe('EditProfileModal', () => {
 
   test('avatar yoksa Kaldır butonu görünmez (baş-harf fallback)', () => {
     render(<EditProfileModal open onClose={vi.fn()} />)
-    expect(screen.queryByText('Avatarı Kaldır')).not.toBeInTheDocument()
+    expect(screen.queryByText('Kaldır')).not.toBeInTheDocument()
   })
 
   test('Kaydet → PATCH /api/profile + onClose', async () => {

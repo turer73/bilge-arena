@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag } from 'lucide-react'
@@ -113,12 +112,11 @@ export function Navbar() {
                   aria-expanded={dropdownOpen}
                 >
                   {profile?.avatar_url ? (
-                    <Image
+                    // Plain <img>: avatar SVG (hazır-avatar seti) next/image optimizer'ına takılır
+                    <img
                       src={profile.avatar_url}
                       alt={profile?.username || profile?.display_name || 'Kullanıcı avatarı'}
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 rounded-full"
+                      className="h-8 w-8 rounded-full object-cover"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
