@@ -95,9 +95,11 @@ export function ExplanationPanel({
       ref={rootRef}
       className="animate-fadeUp rounded-xl border-[1.5px] px-[18px] py-[14px]"
       style={{
+        // Opak taban (transparent DEĞİL) — video zeminde panel saydam kalıp
+        // açıklama metnini okunmaz yapıyordu; tinti card-bg ile karıştır.
         background: isCorrect
-          ? 'color-mix(in srgb, var(--growth) 12%, transparent)'
-          : 'color-mix(in srgb, var(--urgency) 10%, transparent)',
+          ? 'color-mix(in srgb, var(--growth) 12%, var(--card-bg))'
+          : 'color-mix(in srgb, var(--urgency) 10%, var(--card-bg))',
         borderColor: isCorrect
           ? 'color-mix(in srgb, var(--growth) 33%, transparent)'
           : 'color-mix(in srgb, var(--urgency) 27%, transparent)',

@@ -55,12 +55,15 @@ const stateStyles: Record<OptionState, {
     badgeText: 'text-white',
     shadow: '',
   },
+  // dim: cevap sonrası seçilmeyen/yanlış-olmayan şıklar. opacity-40 KULLANMA —
+  // video zeminde tüm butonu yarı-saydam yapıp metni okunmaz kılıyordu. Opak
+  // kalsın, sönükleştirme metin/badge rengiyle (muted) yapılsın.
   dim: {
-    bg: 'bg-[var(--card-bg)] opacity-40',
+    bg: 'bg-[var(--card-bg)]',
     border: 'border-[var(--border)]',
-    text: 'text-[var(--text-sub)]',
+    text: 'text-[var(--text-muted)]',
     badgeBg: 'bg-[var(--border)]',
-    badgeText: 'text-[var(--text-sub)]',
+    badgeText: 'text-[var(--text-muted)]',
     shadow: '',
   },
 }
