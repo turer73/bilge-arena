@@ -32,15 +32,21 @@ import { Nameplate } from '@/components/profile/nameplate'
 import { FrameDot } from '@/components/profile/profile-frame-ring'
 import { CosmeticBadgeShelf } from '@/components/profile/cosmetic-badge-shelf'
 import { toast } from '@/stores/toast-store'
+import {
+  AVATAR_DECORATIONS,
+  AVATAR_DECORATION_STORAGE_KEY,
+  DECORATION_RARITY_LABEL,
+} from '@/lib/constants/avatar-decorations'
 import { StudioPreview } from './studio-preview'
 
-type Area = 'zemin' | 'kart' | 'panel' | 'cerceve' | 'rozet'
+type Area = 'zemin' | 'kart' | 'panel' | 'cerceve' | 'rozet' | 'sus'
 
 const AREAS: { id: Area; label: string; icon: string; hint: string }[] = [
   { id: 'zemin', label: 'Zemin', icon: '🌅', hint: 'Tüm sayfaların arka planı' },
   { id: 'kart', label: 'Profil Kartı', icon: '🪪', hint: 'Profil başlık kartının arkası' },
   { id: 'panel', label: 'İsim Paneli', icon: '🏷️', hint: 'İsmin arkasındaki panel — sıralamada da görünür' },
   { id: 'cerceve', label: 'Çerçeve', icon: '🖼️', hint: 'Avatar çerçeven' },
+  { id: 'sus', label: 'Süs', icon: '🪽', hint: 'Avatarın etrafındaki süs (kanat, taç, yıldız…)' },
   { id: 'rozet', label: 'Rozet', icon: '🏅', hint: 'Profilinde sergilenen rozetler' },
 ]
 
@@ -62,6 +68,7 @@ export function KisisellestirClient() {
   const [cardBgId, setCardBgId] = useState('none')
   const [zeminId, setZeminId] = useState('none')
   const [frameId, setFrameId] = useState('none')
+  const [decorationId, setDecorationId] = useState('none')
   const [resolution, setResolution] = useState<VideoResolution>('k2')
   const [videoItems, setVideoItems] = useState<StoreBackgroundItem[]>([])
   const [reducedMotion, setReducedMotion] = useState(false)
@@ -76,6 +83,8 @@ export function KisisellestirClient() {
       if (zem) setZeminId(zem)
       const frm = localStorage.getItem(FRAME_STORAGE_KEY)
       if (frm && PROFILE_FRAMES.some((f) => f.id === frm)) setFrameId(frm)
+      const dec = localStorage.getItem(AVATAR_DECORATION_STORAGE_KEY)
+      if (dec && AVATAR_DECORATIONS.some((d) => d.id === dec)) setDecorationId(dec)
       const res = localStorage.getItem(BACKGROUND_RESOLUTION_KEY)
       if (res === 'hd' || res === 'k2' || res === 'k4') setResolution(res)
     } catch {}
@@ -171,6 +180,12 @@ export function KisisellestirClient() {
     setFrameId(id)
     try {
       localStorage.setItem(FRAME_STORAGE_KEY, id)
+    } catch {}
+  }
+  function applyDecoration(id: string) {
+    setDecorationId(id)
+    try {
+      localStorage.setItem(AVATAR_DECORATION_STORAGE_KEY, id)
     } catch {}
   }
   function applyResolution(res: VideoResolution) {
@@ -270,6 +285,7 @@ export function KisisellestirClient() {
             levelBadge={level.badge}
             levelName={level.name}
             totalXp={profile.total_xp ?? 0}
+            decorationId={decorationId}
           />
         </div>
 
@@ -366,6 +382,29 @@ export function KisisellestirClient() {
                       {frm.id === 'none' ? 'Yok' : frm.name}
                     </span>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {area === 'sus' && (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {AVATAR_DECORATIONS.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => applyDecoration(d.id)}
+                    aria-pressed={decorationId === d.id}
+                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 ${
+                      decorationId === d.id ? 'border-[var(--focus)] shadow-lg' : 'border-[var(--border)]'
+                    } bg-[var(--card-bg)]`}
+                  >
+                    <span className="text-xl">{d.icon}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[11px] font-bold text-[var(--text)]">{d.name}</span>
+                      <span className="block text-[9px] text-[var(--text-muted)]">
+                        {decorationId === d.id ? '✓ Aktif' : DECORATION_RARITY_LABEL[d.rarity]}
+                      </span>
+                    </span>
+                  </button>
                 ))}
               </div>
             )}

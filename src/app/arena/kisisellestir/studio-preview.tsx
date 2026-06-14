@@ -1,6 +1,7 @@
 'use client'
 
 import { ProfileFrameRing } from '@/components/profile/profile-frame-ring'
+import { AvatarDecoration } from '@/components/profile/avatar-decoration'
 import { Nameplate } from '@/components/profile/nameplate'
 import type { ProfileFrameDef } from '@/lib/constants/profile-frames'
 import {
@@ -63,6 +64,7 @@ interface StudioPreviewProps {
   levelBadge: string
   levelName: string
   totalXp: number
+  decorationId: string | null | undefined
 }
 
 /**
@@ -83,6 +85,7 @@ export function StudioPreview({
   levelBadge,
   levelName,
   totalXp,
+  decorationId,
 }: StudioPreviewProps) {
   const zeminActive = !!zemin && zemin.id !== 'none'
   const cardActive = !!card && card.id !== 'none'
@@ -124,23 +127,25 @@ export function StudioPreview({
               </div>
             )}
             <div className="flex items-center gap-3">
-              <ProfileFrameRing frame={frame} size={48}>
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={displayName}
-                    className="h-12 w-12 rounded-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
-                    style={{ background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))' }}
-                  >
-                    {levelBadge}
-                  </div>
-                )}
-              </ProfileFrameRing>
+              <AvatarDecoration decorationId={decorationId} size={48}>
+                <ProfileFrameRing frame={frame} size={48}>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName}
+                      className="h-12 w-12 rounded-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
+                      style={{ background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))' }}
+                    >
+                      {levelBadge}
+                    </div>
+                  )}
+                </ProfileFrameRing>
+              </AvatarDecoration>
               <div className="min-w-0 flex-1">
                 <div className="text-base font-bold">
                   <Nameplate nameplateId={nameplateId}>{displayName}</Nameplate>
