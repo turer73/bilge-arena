@@ -68,6 +68,7 @@ function jsonOk(data: Record<string, unknown>) {
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  sessionStorage.clear() // profile_synced_* guard'i testler arasi sizmasin
   // signup-analytics yan-yolunu sustur: kullanici "eski" gorunsun
   localStorage.setItem('signup_tracked_u1', '1')
   supa.authStateCb = null
@@ -97,6 +98,20 @@ describe('useAuth', () => {
     expect(sentry.setUser).toHaveBeenCalledWith({ id: 'u1', email: 'test@test.com' })
     const profileArg = store.setProfile.mock.calls.at(-1)![0]
     expect(profileArg).toMatchObject({ id: 'u1', role: 'user' })
+  })
+
+  test('oturum başına 1 sync: flag varsa sync atlanır, GET ile yüklenir', async () => {
+    supa.getUser.mockResolvedValue({ data: { user: AUTH_USER } })
+    sessionStorage.setItem('profile_synced_u1', '1') // önceki yükleme sync etmiş
+    renderHook(() => useAuth())
+
+    await waitFor(() => expect(store.setProfile).toHaveBeenCalled())
+    const calledSync = fetchMock.mock.calls.some((c) => String(c[0]).includes('/api/profile/sync'))
+    const calledGet = fetchMock.mock.calls.some(
+      (c) => String(c[0]).includes('/api/profile') && !String(c[0]).includes('/sync'),
+    )
+    expect(calledSync).toBe(false)
+    expect(calledGet).toBe(true)
   })
 
   test('sync endpoint düşerse GET /api/profile fallback çalışır', async () => {
