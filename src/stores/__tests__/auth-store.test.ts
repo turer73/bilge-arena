@@ -26,6 +26,8 @@ const mockProfile = {
   owned_nameplates: ['none'],
   selected_nameplate: 'none',
   owned_cosmetic_badges: [],
+  owned_avatar_decorations: [],
+  selected_avatar_decorations: [],
   is_premium: false,
   premium_until: null,
   preferred_theme: 'dark' as const,

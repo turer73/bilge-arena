@@ -21,6 +21,7 @@ interface FullLeader {
   level_name: string | null
   is_me: boolean
   nameplate: string
+  decorations: string[]
 }
 
 interface WeeklyRow {
@@ -41,6 +42,7 @@ interface ProfileRow {
   total_xp: number | null
   level_name: string | null
   selected_nameplate: string | null
+  selected_avatar_decorations: string[] | null
 }
 
 /**
@@ -138,15 +140,19 @@ export async function GET(request: NextRequest) {
 
     if (weeklyData && weeklyData.length > 0) {
       const rows = weeklyData as WeeklyRow[]
-      // Nameplate seçimi haftalık view'de yok → kullanıcı id'leriyle profiles'tan toplu çek
+      // Nameplate + süs seçimi haftalık view'de yok → profiles'tan toplu çek
       const npMap = new Map<string, string>()
+      const decoMap = new Map<string, string[]>()
       const ids = rows.map((r) => r.user_id)
       if (ids.length > 0) {
         const { data: npData } = await supabase
           .from('profiles')
-          .select('id, selected_nameplate')
+          .select('id, selected_nameplate, selected_avatar_decorations')
           .in('id', ids)
-        for (const p of npData ?? []) npMap.set(p.id, p.selected_nameplate ?? 'none')
+        for (const p of npData ?? []) {
+          npMap.set(p.id, p.selected_nameplate ?? 'none')
+          decoMap.set(p.id, (p.selected_avatar_decorations as string[]) ?? [])
+        }
       }
       let myRank = 0
       const players: FullLeader[] = rows.map((row) => {
@@ -160,6 +166,7 @@ export async function GET(request: NextRequest) {
           level_name: row.level_name,
           is_me: isMe,
           nameplate: npMap.get(row.user_id) ?? 'none',
+          decorations: decoMap.get(row.user_id) ?? [],
         }
       })
 
@@ -183,7 +190,7 @@ export async function GET(request: NextRequest) {
   // Tum-zaman: profiles tablosu (period=all istegi) VEYA haftalik view bos (fallback)
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, total_xp, level_name, selected_nameplate')
+    .select('id, username, display_name, avatar_url, total_xp, level_name, selected_nameplate, selected_avatar_decorations')
     .gt('total_xp', 0)
     .is('deleted_at', null)
     .order('total_xp', { ascending: false })
@@ -218,6 +225,7 @@ export async function GET(request: NextRequest) {
       level_name: p.level_name,
       is_me: isMe,
       nameplate: p.selected_nameplate ?? 'none',
+      decorations: p.selected_avatar_decorations ?? [],
     }
   })
 

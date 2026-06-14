@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { Nameplate } from '@/components/profile/nameplate'
+import { AvatarDecoration } from '@/components/profile/avatar-decoration'
 
 interface LeaderboardEntry {
   rank: number
@@ -12,6 +13,7 @@ interface LeaderboardEntry {
   level: string
   isCurrentUser?: boolean
   nameplate?: string
+  decorations?: string[]
 }
 
 interface LeaderboardTableProps {
@@ -58,19 +60,21 @@ export function LeaderboardTable({ entries, title = 'Haftalık Sıralama' }: Lea
 
           {/* Player */}
           <div className="flex min-w-0 items-center gap-2">
-            {entry.avatar.startsWith('http') ? (
-              <Image
-                src={entry.avatar}
-                alt={entry.name}
-                width={32}
-                height={32}
-                className="h-8 w-8 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-lg">
-                {entry.avatar}
-              </span>
-            )}
+            <AvatarDecoration decorationIds={entry.decorations ?? []} size={32}>
+              {entry.avatar.startsWith('http') ? (
+                <Image
+                  src={entry.avatar}
+                  alt={entry.name}
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-lg">
+                  {entry.avatar}
+                </span>
+              )}
+            </AvatarDecoration>
             <div className="min-w-0 flex-1">
               <span
                 className="block truncate text-sm"

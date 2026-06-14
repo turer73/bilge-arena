@@ -34,10 +34,8 @@ import { CosmeticBadgeShelf } from '@/components/profile/cosmetic-badge-shelf'
 import { toast } from '@/stores/toast-store'
 import {
   AVATAR_DECORATIONS,
-  AVATAR_DECORATION_STORAGE_KEY,
   DECORATION_RARITY_LABEL,
-  parseDecorationIds,
-  serializeDecorationIds,
+  isDecorationFree,
 } from '@/lib/constants/avatar-decorations'
 import { StudioPreview } from './studio-preview'
 
@@ -75,6 +73,7 @@ export function KisisellestirClient() {
   const [videoItems, setVideoItems] = useState<StoreBackgroundItem[]>([])
   const [reducedMotion, setReducedMotion] = useState(false)
   const [npBusy, setNpBusy] = useState(false)
+  const [decoBusy, setDecoBusy] = useState(false)
 
   // localStorage seçimlerini yükle (kart / zemin / çerçeve / çözünürlük)
   useEffect(() => {
@@ -85,11 +84,16 @@ export function KisisellestirClient() {
       if (zem) setZeminId(zem)
       const frm = localStorage.getItem(FRAME_STORAGE_KEY)
       if (frm && PROFILE_FRAMES.some((f) => f.id === frm)) setFrameId(frm)
-      setDecorationIds(parseDecorationIds(localStorage.getItem(AVATAR_DECORATION_STORAGE_KEY)))
       const res = localStorage.getItem(BACKGROUND_RESOLUTION_KEY)
       if (res === 'hd' || res === 'k2' || res === 'k4') setResolution(res)
     } catch {}
   }, [])
+
+  // Süs seçimi artık DB'de (selected_avatar_decorations) — başkalarına görünür.
+  // Profil yüklenince/değişince state'i senkronize et.
+  useEffect(() => {
+    setDecorationIds(profile?.selected_avatar_decorations ?? [])
+  }, [profile?.selected_avatar_decorations])
 
   // prefers-reduced-motion → video yerine poster
   useEffect(() => {
@@ -147,6 +151,17 @@ export function KisisellestirClient() {
     (n) => n.coinCost === undefined || npOwnedIds.includes(n.id),
   )
 
+  // Süs sahipliği: personel hepsini, diğerleri owned + ücretsiz. Sahipsiz ücretli
+  // süs takılamaz (kilitli kart → Mağaza). isDecorationFree zaten ücretsizi açar.
+  const decoOwnedSet = useMemo(
+    () =>
+      staff
+        ? new Set(AVATAR_DECORATIONS.map((d) => d.id))
+        : new Set(profile?.owned_avatar_decorations ?? []),
+    [staff, profile?.owned_avatar_decorations],
+  )
+  const canWearDeco = (id: string) => isDecorationFree(id) || decoOwnedSet.has(id)
+
   // ── Önizleme için çözülmüş (guard'lı) seçimler ──
   const zeminItem = resolveOwnedSelection(zeminId, bgOwnedIds, bgCatalog)
   const cardItem = resolveOwnedSelection(cardBgId, bgOwnedIds, bgCatalog)
@@ -183,20 +198,41 @@ export function KisisellestirClient() {
       localStorage.setItem(FRAME_STORAGE_KEY, id)
     } catch {}
   }
+  // Süs seçimini DB'ye yaz (optimistic; hata olursa geri al). selected_avatar_
+  // decorations sıralama/profilde başkalarına görünür → localStorage değil.
+  async function persistDecorations(next: string[]) {
+    if (!profile || decoBusy) return
+    const prev = decorationIds
+    setDecorationIds(next)
+    setDecoBusy(true)
+    try {
+      const res = await fetch('/api/profile/avatar-decorations/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decorationIds: next }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setDecorationIds(prev)
+        toast.error('Uygulanamadı', data.error ?? 'Bir şeyler ters gitti')
+        return
+      }
+      setProfile({ ...profile, selected_avatar_decorations: next })
+    } catch {
+      setDecorationIds(prev)
+      toast.error('Bağlantı hatası', 'Tekrar dene')
+    } finally {
+      setDecoBusy(false)
+    }
+  }
   function toggleDecoration(id: string) {
-    setDecorationIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-      try {
-        localStorage.setItem(AVATAR_DECORATION_STORAGE_KEY, serializeDecorationIds(next))
-      } catch {}
-      return next
-    })
+    if (!canWearDeco(id)) return
+    persistDecorations(
+      decorationIds.includes(id) ? decorationIds.filter((x) => x !== id) : [...decorationIds, id],
+    )
   }
   function clearDecorations() {
-    setDecorationIds([])
-    try {
-      localStorage.setItem(AVATAR_DECORATION_STORAGE_KEY, serializeDecorationIds([]))
-    } catch {}
+    persistDecorations([])
   }
   function applyResolution(res: VideoResolution) {
     setResolution(res)
@@ -399,11 +435,12 @@ export function KisisellestirClient() {
             {area === 'sus' && (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-[var(--text-muted)]">Birden fazla süs seçebilirsin ✨</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">Birden fazla süs takabilirsin ✨</p>
                   {decorationIds.length > 0 && (
                     <button
                       onClick={clearDecorations}
-                      className="text-[10px] font-bold text-[var(--urgency)] hover:underline"
+                      disabled={decoBusy}
+                      className="text-[10px] font-bold text-[var(--urgency)] hover:underline disabled:opacity-50"
                     >
                       Temizle ({decorationIds.length})
                     </button>
@@ -412,25 +449,33 @@ export function KisisellestirClient() {
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {AVATAR_DECORATIONS.map((d) => {
                     const active = decorationIds.includes(d.id)
+                    const wearable = canWearDeco(d.id)
                     return (
                       <button
                         key={d.id}
                         onClick={() => toggleDecoration(d.id)}
+                        disabled={decoBusy || !wearable}
                         aria-pressed={active}
-                        className={`flex items-center gap-2 rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 ${
+                        title={wearable ? undefined : 'Mağazadan satın al'}
+                        className={`flex items-center gap-2 rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 disabled:hover:translate-y-0 ${
                           active ? 'border-[var(--focus)] shadow-lg' : 'border-[var(--border)]'
-                        } bg-[var(--card-bg)]`}
+                        } bg-[var(--card-bg)] ${!wearable ? 'opacity-60' : ''}`}
                       >
                         <span className="text-xl">{d.icon}</span>
                         <span className="min-w-0">
                           <span className="block truncate text-[11px] font-bold text-[var(--text)]">{d.name}</span>
                           <span className="block text-[9px] text-[var(--text-muted)]">
-                            {active ? '✓ Takılı' : DECORATION_RARITY_LABEL[d.rarity]}
+                            {active
+                              ? '✓ Takılı'
+                              : wearable
+                                ? DECORATION_RARITY_LABEL[d.rarity]
+                                : `🔒 🪙${d.coinCost}`}
                           </span>
                         </span>
                       </button>
                     )
                   })}
+                  <StoreCta />
                 </div>
               </div>
             )}

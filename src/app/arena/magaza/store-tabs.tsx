@@ -4,16 +4,18 @@ import { useState } from 'react'
 import { StoreClient } from './store-client'
 import { NameplateStoreClient } from './nameplate-store-client'
 import { BadgeStoreClient } from './badge-store-client'
+import { AvatarDecorationStoreClient } from './avatar-decoration-store-client'
 
-type Tab = 'bg' | 'np' | 'badge'
+type Tab = 'bg' | 'np' | 'sus' | 'badge'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'bg', label: 'Arka Plan', icon: '🖼️' },
   { id: 'np', label: 'İsim Paneli', icon: '🏷️' },
+  { id: 'sus', label: 'Avatar Süsü', icon: '🪽' },
   { id: 'badge', label: 'Rozet', icon: '🏅' },
 ]
 
-/** Mağaza kategori sekmeleri: Arka Plan (CSS+video) · İsim Paneli (nameplate). */
+/** Mağaza kategori sekmeleri: Arka Plan (CSS+video) · İsim Paneli · Avatar Süsü · Rozet. */
 export function StoreTabs() {
   const [tab, setTab] = useState<Tab>('bg')
   return (
@@ -33,7 +35,15 @@ export function StoreTabs() {
           </button>
         ))}
       </div>
-      {tab === 'bg' ? <StoreClient /> : tab === 'np' ? <NameplateStoreClient /> : <BadgeStoreClient />}
+      {tab === 'bg' ? (
+        <StoreClient />
+      ) : tab === 'np' ? (
+        <NameplateStoreClient />
+      ) : tab === 'sus' ? (
+        <AvatarDecorationStoreClient />
+      ) : (
+        <BadgeStoreClient />
+      )}
     </div>
   )
 }
