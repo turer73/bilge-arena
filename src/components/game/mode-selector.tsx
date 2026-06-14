@@ -21,7 +21,8 @@ export function ModeSelector({ selectedMode, onSelect }: ModeSelectorProps) {
               'rounded-xl border-[1.5px] p-3 text-left transition-all duration-200',
               'hover:-translate-y-0.5',
               active
-                ? 'border-[var(--focus)] bg-[var(--focus-bg)]'
+                // OPAK seçili kart: video zeminde --focus-bg (rgba .12) saydamdı, yazı kayboluyordu
+                ? 'border-[var(--focus)] bg-[color-mix(in_srgb,var(--focus)_14%,var(--card-bg))]'
                 : 'border-[var(--border)] bg-[var(--card-bg)] hover:border-[var(--focus-border)]'
             )}
           >
