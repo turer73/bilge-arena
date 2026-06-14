@@ -43,4 +43,16 @@ REVOKE ALL ON FUNCTION purchase_avatar_decoration(uuid, text, integer) FROM anon
 REVOKE ALL ON FUNCTION purchase_avatar_decoration(uuid, text, integer) FROM authenticated;
 GRANT EXECUTE ON FUNCTION purchase_avatar_decoration(uuid, text, integer) TO service_role;
 
+-- GUVENLIK (Codex P1 — SISTEMIK, sadece sus degil): profiles UPDATE grant'ini
+-- authenticated + anon'dan cek. Mevcut profiles_update_own RLS politikasi kolon
+-- KISITLAMIYOR (WITH CHECK yok) ve UPDATE grant aciksti => giris yapmis kullanici
+-- PostgREST ile kendi satirinin coin_balance / total_xp / owned_* / selected_*
+-- kolonlarini DOGRUDAN UPDATE edip purchase RPC'yi ve tum ekonomiyi/ilerlemeyi
+-- bypass edebiliyordu (bedava coin/XP/kozmetik). TUM profil yazmalari server-side
+-- service-role uzerinden yapiliyor (20 API route denetlendi; tarayici dogrudan
+-- profil yazmiyor) => authenticated UPDATE'e ihtiyac yok. service_role UPDATE'i
+-- (BYPASSRLS + grant) korunur, mesru yazmalar etkilenmez. Geri alinabilir (re-grant).
+REVOKE UPDATE ON public.profiles FROM authenticated;
+REVOKE UPDATE ON public.profiles FROM anon;
+
 COMMIT;
