@@ -1,0 +1,13 @@
+Bilge Arena — Hazır Avatar Seti / Lisans Bildirimi
+
+Avatarlar DiceBear (https://www.dicebear.com) ile üretildi.
+Yalnız CC0 1.0 / MIT (atıf gerektirmeyen) stiller kullanıldı:
+
+  - pixel-art: DiceBear · CC0 1.0
+  - thumbs: DiceBear · CC0 1.0
+  - notionists: Zoish · CC0 1.0
+  - lorelei: Lisa Wischofsky · CC0 1.0
+  - open-peeps: Pablo Stanley · CC0 1.0
+
+CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+Üretim: scripts/gen-preset-avatars.mjs · 40 avatar
