@@ -31,7 +31,8 @@ const stateStyles: Record<OptionState, {
     shadow: '',
   },
   correct: {
-    bg: 'bg-[color-mix(in_srgb,var(--growth)_15%,transparent)]',
+    // OPAK (transparent DEĞİL): video zeminde şık saydam kalıp metni okunmaz yapıyordu
+    bg: 'bg-[color-mix(in_srgb,var(--growth)_15%,var(--card-bg))]',
     border: 'border-[var(--growth)]',
     text: 'text-[var(--growth)]',
     badgeBg: 'bg-[color-mix(in_srgb,var(--growth)_20%,transparent)]',
@@ -39,7 +40,7 @@ const stateStyles: Record<OptionState, {
     shadow: 'shadow-[0_0_18px_rgba(16,185,129,0.33)]',
   },
   wrong: {
-    bg: 'bg-[color-mix(in_srgb,var(--urgency)_12%,transparent)]',
+    bg: 'bg-[color-mix(in_srgb,var(--urgency)_12%,var(--card-bg))]',
     border: 'border-[var(--urgency)]',
     text: 'text-[var(--urgency)]',
     badgeBg: 'bg-[color-mix(in_srgb,var(--urgency)_14%,transparent)]',
@@ -48,7 +49,7 @@ const stateStyles: Record<OptionState, {
   },
   // Duello: cevap gosterilmeden secilen sikki vurgular (notr — dogru/yanlis belli etmez)
   selected: {
-    bg: 'bg-[var(--focus-bg)]',
+    bg: 'bg-[color-mix(in_srgb,var(--focus)_14%,var(--card-bg))]',
     border: 'border-[var(--focus)]',
     text: 'text-[var(--text)]',
     badgeBg: 'bg-[var(--focus)]',
