@@ -17,6 +17,12 @@ export const MASCOT_AVATARS: PresetAvatar[] = [
   { id: 'chan-3d-study', path: '/avatars/mascot/chan-avatar-3d-study.webp', style: 'bilge-chan', label: 'Bilge Chan' },
   { id: 'chan-3d-shy', path: '/avatars/mascot/chan-avatar-3d-shy.webp', style: 'bilge-chan', label: 'Bilge Chan' },
   { id: 'chan-3d-cool', path: '/avatars/mascot/chan-avatar-3d-cool.webp', style: 'bilge-chan', label: 'Bilge Chan' },
+  // Karakterler — Bilge Arena formasını (lacivert "B" varsity ceket) koruyan
+  // temalı varyantlar (erkek + astronot/uzaylı/kedi). Aynı Renderhane pipeline'ı.
+  { id: 'chan-3d-male', path: '/avatars/mascot/chan-avatar-3d-male.webp', style: 'bilge-chan', label: 'Karakterler' },
+  { id: 'chan-3d-astronaut', path: '/avatars/mascot/chan-avatar-3d-astronaut.webp', style: 'bilge-chan', label: 'Karakterler' },
+  { id: 'chan-3d-alien', path: '/avatars/mascot/chan-avatar-3d-alien.webp', style: 'bilge-chan', label: 'Karakterler' },
+  { id: 'chan-3d-cat', path: '/avatars/mascot/chan-avatar-3d-cat.webp', style: 'bilge-chan', label: 'Karakterler' },
 ]
 
 /** Maskot önce (galeri vitrini), sonra DiceBear preset'leri. */

@@ -8,12 +8,12 @@ import { MASCOT_AVATARS, ALL_AVATARS, avatarPath, AVATAR_GROUPS } from '../avata
 import { PRESET_AVATARS } from '../preset-avatars'
 
 describe('avatars katalog', () => {
-  it('MASCOT_AVATARS: Bilge Chan, webp path, benzersiz id', () => {
-    expect(MASCOT_AVATARS.length).toBeGreaterThanOrEqual(6)
+  it('MASCOT_AVATARS: webp path, benzersiz id, bilinen gruplar', () => {
+    expect(MASCOT_AVATARS.length).toBeGreaterThanOrEqual(10)
     const ids = MASCOT_AVATARS.map((a) => a.id)
     expect(new Set(ids).size).toBe(ids.length)
     for (const a of MASCOT_AVATARS) {
-      expect(a.label).toBe('Bilge Chan')
+      expect(['Bilge Chan', 'Karakterler']).toContain(a.label)
       expect(a.path).toMatch(/^\/avatars\/mascot\/.+\.webp$/)
     }
   })
@@ -30,9 +30,11 @@ describe('avatars katalog', () => {
     expect(avatarPath('yok')).toBeNull()
   })
 
-  it('AVATAR_GROUPS: Bilge Chan ilk grup, label benzersiz', () => {
+  it('AVATAR_GROUPS: Bilge Chan + Karakterler ilk iki grup, label benzersiz', () => {
     expect(AVATAR_GROUPS[0].label).toBe('Bilge Chan')
-    expect(AVATAR_GROUPS[0].items.length).toBe(MASCOT_AVATARS.length)
+    expect(AVATAR_GROUPS[0].items.length).toBe(6)
+    expect(AVATAR_GROUPS[1].label).toBe('Karakterler')
+    expect(AVATAR_GROUPS[1].items.length).toBe(4)
     const labels = AVATAR_GROUPS.map((g) => g.label)
     expect(new Set(labels).size).toBe(labels.length)
   })

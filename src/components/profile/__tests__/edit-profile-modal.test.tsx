@@ -61,11 +61,13 @@ describe('EditProfileModal', () => {
     expect(refreshMock).toHaveBeenCalled()
   })
 
-  test('galeride Bilge Chan maskot bölümü + 6 avatar görünür', () => {
+  test('galeride Bilge Chan (6) + Karakterler (4) bölümleri görünür', () => {
     render(<EditProfileModal open onClose={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: /Hazır Avatar/ }))
     expect(screen.getByText('Bilge Chan')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /Bilge Chan avatar/ }).length).toBe(6)
+    expect(screen.getByText('Karakterler')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Karakterler avatar/ }).length).toBe(4)
   })
 
   test('avatar varsa "Kaldır" → DELETE /api/profile/avatar', async () => {
