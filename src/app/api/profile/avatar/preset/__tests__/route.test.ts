@@ -54,6 +54,13 @@ describe('POST /api/profile/avatar/preset', () => {
     expect(mockEq).toHaveBeenCalledWith('id', 'u1')
   })
 
+  it('geçerli mascot avatar id → webp path set edilir', async () => {
+    const res = await POST(makeReq({ presetId: 'chan-3d-smile' }))
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.avatar_url).toBe('/avatars/mascot/chan-avatar-3d-smile.webp')
+  })
+
   it('bilinmeyen preset → 400, DB güncellenmez (URL enjeksiyon guard)', async () => {
     const res = await POST(makeReq({ presetId: '../../etc/passwd' }))
     expect(res.status).toBe(400)

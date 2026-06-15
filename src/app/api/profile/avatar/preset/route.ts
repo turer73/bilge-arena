@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
-import { presetAvatarPath } from '@/lib/constants/preset-avatars'
+import { avatarPath } from '@/lib/constants/avatars'
 
 const limiter = createRateLimiter('avatar-preset', 20, 60_000)
 const schema = z.object({ presetId: z.string().min(1).max(64) })
@@ -34,8 +34,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'presetId gerekli' }, { status: 400 })
   }
 
-  // Sadece bilinen preset → statik path. Bilinmiyorsa reddet (URL enjeksiyon guard).
-  const path = presetAvatarPath(parsed.data.presetId)
+  // Sadece bilinen avatar id → statik path (mascot webp + DiceBear svg).
+  // Bilinmiyorsa reddet (rastgele URL enjeksiyon guard).
+  const path = avatarPath(parsed.data.presetId)
   if (!path) {
     return NextResponse.json({ error: 'Geçersiz avatar' }, { status: 400 })
   }

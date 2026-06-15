@@ -1,0 +1,39 @@
+/**
+ * avatars.ts — Bilge Chan maskot + DiceBear preset birleşik katalog.
+ * avatarPath webp(mascot)+svg(preset) çözer; AVATAR_GROUPS Bilge Chan ilk.
+ */
+
+import { describe, it, expect } from 'vitest'
+import { MASCOT_AVATARS, ALL_AVATARS, avatarPath, AVATAR_GROUPS } from '../avatars'
+import { PRESET_AVATARS } from '../preset-avatars'
+
+describe('avatars katalog', () => {
+  it('MASCOT_AVATARS: Bilge Chan, webp path, benzersiz id', () => {
+    expect(MASCOT_AVATARS.length).toBeGreaterThanOrEqual(6)
+    const ids = MASCOT_AVATARS.map((a) => a.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const a of MASCOT_AVATARS) {
+      expect(a.label).toBe('Bilge Chan')
+      expect(a.path).toMatch(/^\/avatars\/mascot\/.+\.webp$/)
+    }
+  })
+
+  it('ALL_AVATARS = mascot + preset, mascot önce', () => {
+    expect(ALL_AVATARS.length).toBe(MASCOT_AVATARS.length + PRESET_AVATARS.length)
+    expect(ALL_AVATARS[0].label).toBe('Bilge Chan')
+  })
+
+  it('avatarPath: mascot webp + DiceBear svg çözer, geçersiz/enjeksiyon null', () => {
+    expect(avatarPath('chan-3d-smile')).toBe('/avatars/mascot/chan-avatar-3d-smile.webp')
+    expect(avatarPath(PRESET_AVATARS[0].id)).toBe(PRESET_AVATARS[0].path)
+    expect(avatarPath('../../etc/passwd')).toBeNull()
+    expect(avatarPath('yok')).toBeNull()
+  })
+
+  it('AVATAR_GROUPS: Bilge Chan ilk grup, label benzersiz', () => {
+    expect(AVATAR_GROUPS[0].label).toBe('Bilge Chan')
+    expect(AVATAR_GROUPS[0].items.length).toBe(MASCOT_AVATARS.length)
+    const labels = AVATAR_GROUPS.map((g) => g.label)
+    expect(new Set(labels).size).toBe(labels.length)
+  })
+})
