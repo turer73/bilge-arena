@@ -18,7 +18,9 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').t
 
 export const metadata: Metadata = {
   // SERP limitleri: title ~60 char, description 120-160 char (bug #582)
-  title: 'Bilge Arena — YKS · LGS · AYT Hazırlık Platformu',
+  // 'arena yks' sorgusu: pos 4.4 ama CTR %1.9 (snippet sorunu, Plausible bounce %27=landing iyi).
+  // CTR-fix: 'Oyunla' (farklılaştırıcı, OG ile tutarlı) + 'Ücretsiz' (güçlü CTR sürücüsü) başlığa. ~52 char.
+  title: 'Bilge Arena — Oyunla YKS·LGS·AYT Hazırlık | Ücretsiz',
   description:
     'Bilge Arena\'da YKS, LGS, TYT ve AYT\'ye oyunla hazırlan: 3700+ soru, 5 oyun modu, anlık sıralama ve ödüller — tamamen ücretsiz!',
   keywords: [
