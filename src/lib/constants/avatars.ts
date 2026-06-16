@@ -55,6 +55,29 @@ export function avatarPath(id: string): string | null {
 }
 
 /**
+ * Rarity — seviye kilidi (Z kuşağı: "exclusive/earn" bağlılık). Avatar id →
+ * gereken min seviye (LEVELS 1-5: Acemi→Efsane). Listede yoksa 1 = herkese açık.
+ * Çoğu avatar açık; birkaç prestij avatarı oynayarak (XP) açılır. Personel hepsi.
+ * Sunucu select-route + galeri bu eşiği uygular (kozmetik kilit, ödeme değil).
+ */
+const AVATAR_MIN_LEVEL: Record<string, number> = {
+  // Lv2 (Çırak)
+  'chan-3d-astronaut': 2, 'chan-3d-alien': 2, 'chan-3d-cat': 2,
+  'chan-dog': 2, 'chan-fox': 2, 'chan-gamer': 2, 'chan-athlete': 2,
+  // Lv3 (Savaşçı)
+  'chan-panda': 3, 'chan-owl': 3, 'chan-knight': 3, 'chan-anime-chan': 3,
+  // Lv4 (Usta)
+  'chan-wizard': 4, 'chan-anime-ninja': 4,
+  // Lv5 (Efsane) — en nadir
+  'chan-fairy': 5,
+}
+
+/** Avatarın gerektirdiği min seviye (yoksa 1 = herkese açık). */
+export function avatarMinLevel(id: string): number {
+  return AVATAR_MIN_LEVEL[id] ?? 1
+}
+
+/**
  * label'a göre gruplanmış (ekleme sırası korunur → "Bilge Chan" ilk). Galeride
  * bölüm başlıklarıyla render edilir.
  */

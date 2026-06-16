@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { MASCOT_AVATARS, ALL_AVATARS, avatarPath, AVATAR_GROUPS } from '../avatars'
+import { MASCOT_AVATARS, ALL_AVATARS, avatarPath, AVATAR_GROUPS, avatarMinLevel } from '../avatars'
 import { PRESET_AVATARS } from '../preset-avatars'
 
 describe('avatars katalog', () => {
@@ -46,5 +46,13 @@ describe('avatars katalog', () => {
     })
     const labels = AVATAR_GROUPS.map((g) => g.label)
     expect(new Set(labels).size).toBe(labels.length)
+  })
+
+  it('avatarMinLevel: rarity eşikleri (default 1, prestij yüksek)', () => {
+    expect(avatarMinLevel('chan-3d-smile')).toBe(1) // common
+    expect(avatarMinLevel(PRESET_AVATARS[0].id)).toBe(1) // DiceBear açık
+    expect(avatarMinLevel('chan-fairy')).toBe(5) // en nadir
+    expect(avatarMinLevel('chan-wizard')).toBe(4)
+    expect(avatarMinLevel('yok')).toBe(1)
   })
 })
