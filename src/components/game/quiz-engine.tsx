@@ -354,16 +354,20 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 <CommentSection questionId={question.id} isLoggedIn={!!user} />
               </ComponentErrorBoundary>
             )}
-
-            <ComponentErrorBoundary label="Hata Bildirimi" variant="minimal">
-              <ErrorReportModal
-                questionId={question.id}
-                isOpen={quiz.showReportModal}
-                onClose={() => quiz.setShowReportModal(false)}
-              />
-            </ComponentErrorBoundary>
           </>
         )}
+
+        {/* Hata bildirimi — oyun boyunca mount (cevaptan BAĞIMSIZ raporlama:
+            QuestionCard'daki "Bildir" butonu + ExplanationPanel "🐛" tetikler).
+            Önceden yalnız answered'da mount'tu → denemede cevaplamadan rapor
+            atılamıyordu (Ensar 06-16). */}
+        <ComponentErrorBoundary label="Hata Bildirimi" variant="minimal">
+          <ErrorReportModal
+            questionId={question.id}
+            isOpen={quiz.showReportModal}
+            onClose={() => quiz.setShowReportModal(false)}
+          />
+        </ComponentErrorBoundary>
 
         {/* Soru + Timer */}
         <div className="flex gap-3 animate-fadeUp" style={{ animationDelay: '0.08s', animationFillMode: 'both' }}>
@@ -372,6 +376,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
               question={question}
               currentIndex={quizStore.currentIndex}
               totalQuestions={quizStore.questions.length}
+              onReport={() => quiz.setShowReportModal(true)}
             >
               {quiz.showBurst && <BurstParticles />}
             </QuestionCard>

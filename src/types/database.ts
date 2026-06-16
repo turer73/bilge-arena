@@ -121,6 +121,7 @@ export interface QuestionContent {
   answer: number                 // 0-based index
   solution?: string
   sentence?: string              // WordQuest cloze format
+  passage?: string               // Öncül/ifade bloğu (roman_numeral: "I. ... II. ... III. ...")
   context?: string               // Ek bağlam
   hint?: string
   type?: string                  // multiple_choice, cloze_test, dialogue vb.

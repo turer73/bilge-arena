@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 // --- Stores ---
 const quizStoreValue: Record<string, unknown> = {
@@ -79,8 +79,11 @@ vi.mock('@/lib/utils/plausible', () => ({ trackEvent: vi.fn() }))
 
 // --- Ağır çocuk bileşenler: marker/null stub ---
 vi.mock('../question-card', () => ({
-  QuestionCard: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="question-card">{children}</div>
+  QuestionCard: ({ children, onReport }: { children?: React.ReactNode; onReport?: () => void }) => (
+    <div data-testid="question-card">
+      <button data-testid="qc-report" onClick={onReport} />
+      {children}
+    </div>
   ),
 }))
 vi.mock('../explanation-panel', () => ({
@@ -108,7 +111,12 @@ vi.mock('@/components/ads/ad-banner', () => ({ AdBanner: () => null }))
 vi.mock('@/components/ui/error-boundary', () => ({
   ComponentErrorBoundary: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }))
-vi.mock('next/dynamic', () => ({ default: () => () => null }))
+// Dynamic bileşenler null; AMA onClose alan (ErrorReportModal) bir kapat-butonu
+// render etsin → modal kapatma akışı test edilebilir.
+vi.mock('next/dynamic', () => ({
+  default: () => (props: { onClose?: () => void }) =>
+    props?.onClose ? <button data-testid="report-close" onClick={props.onClose} /> : null,
+}))
 
 import { QuizEngine } from '../quiz-engine'
 
@@ -146,6 +154,15 @@ describe('QuizEngine yerleşim', () => {
     } finally {
       quizGame.isDeneme = false
     }
+  })
+
+  test('rapor: QuestionCard "Bildir" modalı açar, kapat modalı kapatır (oyun sırasında)', () => {
+    quizGame.setShowReportModal = vi.fn()
+    render(<QuizEngine game="matematik" />)
+    fireEvent.click(screen.getByTestId('qc-report'))
+    expect(quizGame.setShowReportModal).toHaveBeenCalledWith(true)
+    fireEvent.click(screen.getByTestId('report-close'))
+    expect(quizGame.setShowReportModal).toHaveBeenCalledWith(false)
   })
 
   test('Konu Gücü bandı şıklardan sonra (tam genişlik alt bant korunur)', () => {

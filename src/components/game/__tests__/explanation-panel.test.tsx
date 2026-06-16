@@ -89,4 +89,19 @@ describe('ExplanationPanel', () => {
     delete Element.prototype.scrollIntoView
     expect(() => renderPanel()).not.toThrow()
   })
+
+  test('"Konu Anlatımı": passage dahil bağlam asistan fetch gövdesine girer', () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, body: null } as unknown as Response))
+    global.fetch = fetchMock as unknown as typeof fetch
+    const Q = {
+      ...QUESTION,
+      content: { ...QUESTION.content, passage: 'Öncül;\nI. Bir.\nII. İki.' },
+    } as unknown as Question
+    renderPanel({ question: Q, isCorrect: false, selectedOption: 0 })
+    fireEvent.click(screen.getByRole('button', { name: /Konu Anlat/ }))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/chat',
+      expect.objectContaining({ body: expect.stringContaining('I. Bir.') }),
+    )
+  })
 })

@@ -24,6 +24,7 @@ interface QuestionCardProps {
   question: Question
   currentIndex: number
   totalQuestions: number
+  onReport?: () => void // Oyun sırasında soruyu raporla (cevaptan bağımsız)
   children?: React.ReactNode // Burst particles slot
 }
 
@@ -31,6 +32,7 @@ export function QuestionCard({
   question,
   currentIndex,
   totalQuestions,
+  onReport,
   children,
 }: QuestionCardProps) {
   const diff = DIFF_CONFIG[question.difficulty] || DIFF_CONFIG[2]
@@ -43,7 +45,9 @@ export function QuestionCard({
       .map((o, i) => `${'ABCDE'[i]}) ${o}`)
       .join('\n')
     const text = question.content.question || question.content.sentence
-    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${text}\n\n${opts}`
+    // Öncül bloğu (passage) varsa soru metninin önüne ekle — asistan ifadeleri görsün
+    const body = question.content.passage ? `${question.content.passage}\n\n${text}` : text
+    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}`
     useChatStore.getState().setQuestionContext(ctx)
     useChatStore.getState().clearMessages()
     useChatStore.getState().setOpen(true)
@@ -95,6 +99,21 @@ export function QuestionCard({
           <span className="hidden sm:inline">Sor</span>
         </button>
 
+        {/* Soruyu raporla — cevaptan bağımsız, oyun sırasında (Ensar 06-16:
+            denemede bozuk soruyu cevaplamadan bildirememe sorunu) */}
+        {onReport && (
+          <button
+            type="button"
+            onClick={onReport}
+            className="flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold text-[var(--text-sub)] transition-all hover:bg-[color-mix(in_srgb,var(--reward)_14%,transparent)] hover:text-[var(--reward)] active:scale-95"
+            title="Soruyu raporla (hata/eksik içerik)"
+            aria-label="Soruyu raporla"
+          >
+            <span className="text-sm">🐛</span>
+            <span className="hidden sm:inline">Bildir</span>
+          </button>
+        )}
+
         <span className="text-[11px] font-semibold text-[var(--text-sub)]">
           {currentIndex + 1}
           <span className="text-[var(--text-muted)]">/{totalQuestions}</span>
@@ -108,6 +127,15 @@ export function QuestionCard({
           style={{ width: `${progress}%` }}
         />
       </div>
+
+      {/* Öncül/ifade bloğu (roman_numeral) — soru kökünden ÖNCE; \n satır sonları
+          korunur (I. / II. / III. alt alta). Eksikse soru "Yukarıdaki ifadeler..."
+          deyip boş görünüyordu (Ensar 06-16). */}
+      {question.content.passage && (
+        <p className="mb-3 whitespace-pre-line text-[13px] leading-[1.72] text-[var(--text-sub)] md:text-sm xl:text-[15px]">
+          {question.content.passage}
+        </p>
+      )}
 
       {/* Soru metni */}
       <p className="text-[13px] font-medium leading-[1.72] md:text-[15px] xl:text-base 2xl:text-lg">
