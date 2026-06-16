@@ -31,6 +31,10 @@ export const AVATAR_DECORATIONS: AvatarDecorationDef[] = [
   { id: 'alev', name: 'Alev', description: 'Seri ateşi gibi yanan alevler', rarity: 'rare', icon: '🔥', coinCost: 250 },
   { id: 'kanat', name: 'Melek Kanadı', description: 'İki yanında melek kanatları', rarity: 'epic', icon: '🪽', coinCost: 500 },
   { id: 'crown', name: 'Taç', description: 'Başının üstünde altın taç', rarity: 'epic', icon: '👑', coinCost: 600 },
+  // Aksesuarlar — baş üstü overlay (mix-and-match; crown ile aynı konum deseni)
+  { id: 'hat', name: 'Şapka', description: 'Başında şık fötr şapka', rarity: 'common', icon: '🎩', coinCost: 120 },
+  { id: 'grad', name: 'Mezuniyet Kepi', description: 'Başarı kepi', rarity: 'rare', icon: '🎓', coinCost: 300 },
+  { id: 'headphones', name: 'Kulaklık', description: 'Müzik tutkunu', rarity: 'rare', icon: '🎧', coinCost: 250 },
 ]
 
 export const DECORATION_RARITY_LABEL: Record<DecorationRarity, string> = {

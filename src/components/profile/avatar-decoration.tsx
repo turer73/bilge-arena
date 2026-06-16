@@ -199,6 +199,46 @@ function renderDecoration(id: string, size: number): DecoLayer | null {
         ),
       }
 
+    case 'hat':
+      return {
+        front: (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2"
+            style={{ top: -em * 0.5, transform: 'translateX(-50%)' }}
+          >
+            <span style={{ display: 'block', fontSize: em, animation: 'float 3.4s ease-in-out infinite' }}>🎩</span>
+          </span>
+        ),
+      }
+
+    case 'grad':
+      return {
+        front: (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2"
+            style={{ top: -em * 0.5, transform: 'translateX(-50%)' }}
+          >
+            <span style={{ display: 'block', fontSize: em, animation: 'float 3.4s ease-in-out infinite' }}>🎓</span>
+          </span>
+        ),
+      }
+
+    case 'headphones':
+      // Baş üstü/etrafı saran — ortalı, biraz büyük (kulaklık bandı kafayı sarar).
+      return {
+        front: (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-1/2"
+            style={{ top: -em * 0.16, transform: 'translateX(-50%)', fontSize: em * 1.3 }}
+          >
+            🎧
+          </span>
+        ),
+      }
+
     default:
       return null
   }
