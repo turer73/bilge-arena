@@ -42,6 +42,8 @@ interface BilgeChanCompanionProps {
    * preload edilmemeli (Codex P2).
    */
   priority?: boolean
+  /** 'yardim' balonu açılınca/kapanınca — parent per-soru sayacını duraklatır */
+  onHelpToggle?: (open: boolean) => void
   className?: string
 }
 
@@ -53,8 +55,6 @@ type Phase = 'intro' | 'offered' | 'help' | 'check' | 'declined'
 
 /** Yardım teklifi gecikmesi (ms). */
 const OFFER_DELAY = 6000
-/** Açıklamadan sonra "anlayabildin mi?" gecikmesi (ms). */
-const CHECK_DELAY = 7000
 
 /**
  * Bilge Chan — kişilikli quiz companion. Soru akışına göre pose + konuşma
@@ -68,6 +68,7 @@ export function BilgeChanCompanion({
   height = 240,
   compact = false,
   priority = false,
+  onHelpToggle,
   className,
 }: BilgeChanCompanionProps) {
   const [phase, setPhase] = useState<Phase>('intro')
@@ -90,12 +91,8 @@ export function BilgeChanCompanion({
     return () => clearTimeout(t)
   }, [phase, quizState])
 
-  // help → check ("anlayabildin mi?")
-  useEffect(() => {
-    if (phase !== 'help') return
-    const t = setTimeout(() => setPhase('check'), CHECK_DELAY)
-    return () => clearTimeout(t)
-  }, [phase])
+  // 'help' fazı OTOMATİK geçmez (Ensar 06-16): kullanıcı açıklamayı okuyup
+  // "Devam" butonuyla kendi geçer; bu sırada per-soru sayacı parent'ta durur.
 
   const introMsg = useMemo(
     () => (easy ? pickLine(CHAN_LINES.easyJoke) : pickLine(CHAN_LINES.greet)),
@@ -113,10 +110,15 @@ export function BilgeChanCompanion({
     const sol = question?.content.solution
     setHelpMsg(sol ? `${CHAN_LINES.explainIntro} ${sol}` : CHAN_LINES.noSolution)
     setPhase('help')
+    onHelpToggle?.(true) // sayaç dursun — kullanıcı açıklamayı okusun
   }
   const handleNo = () => {
     setHelpMsg(pickLine(CHAN_LINES.encourage))
     setPhase('declined')
+  }
+  const handleContinue = () => {
+    setPhase('check')
+    onHelpToggle?.(false) // sayaç kaldığı yerden devam etsin
   }
 
   if (!question) return null
@@ -181,6 +183,15 @@ export function BilgeChanCompanion({
                 Hayır
               </button>
             </div>
+          )}
+          {/* 'help' fazı: süre durdu — kullanıcı okuyup kendi devam eder (Ensar 06-16) */}
+          {phase === 'help' && !answered && (
+            <button
+              onClick={handleContinue}
+              className="mt-2 w-full rounded-lg bg-[var(--focus)] px-2 py-1.5 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
+            >
+              Devam →
+            </button>
           )}
           {!compact && (
             <span

@@ -249,6 +249,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             quizState={quizStore.state}
             lastIsCorrect={lastAnswer?.isCorrect ?? null}
             question={question}
+            onHelpToggle={quiz.setHelpPaused}
             compact
             height={104}
             className="lg:hidden"
@@ -428,6 +429,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             quizState={quizStore.state}
             lastIsCorrect={lastAnswer?.isCorrect ?? null}
             question={question}
+            onHelpToggle={quiz.setHelpPaused}
             height={340}
             className="sticky top-4"
           />

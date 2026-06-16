@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useGameStore } from '@/stores/game-store'
+import { useChatStore } from '@/stores/chat-store'
 import { useTimer } from '@/lib/hooks/use-timer'
 import { calculateXP } from '@/lib/utils/xp'
 import { getModeById, DENEME_CONFIGS, type DenemeConfig } from '@/lib/constants/modes'
@@ -42,6 +43,8 @@ export interface UseQuizGameReturn {
   showReportModal: boolean
   setShowComments: (v: boolean) => void
   setShowReportModal: (v: boolean) => void
+  /** Bilge Chan companion 'yardim' balonu acik/kapali — sayaci duraklatir */
+  setHelpPaused: (v: boolean) => void
 
   // Aksiyonlar
   handleStart: () => Promise<void>
@@ -90,6 +93,28 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     onTimeUp: handleTimeUp,
     autoStart: false,
   })
+
+  // --- Yardim acikken per-soru sayacini duraklat (Ensar 06-16) ---
+  // "Sor" sohbeti (chat-store) VEYA Bilge Chan companion 'yardim' balonu acikken
+  // kullanici aciklamayi okuyabilsin diye sayac durur; kapaninca kaldigi yerden
+  // devam eder. Yalniz klasik (per-soru sureli) modda; deneme genel suresi ayri.
+  const chatOpen = useChatStore((s) => s.isOpen)
+  const [helpPaused, setHelpPaused] = useState(false)
+  const helpOpen = chatOpen || helpPaused
+  const helpWasPausedRef = useRef(false)
+
+  useEffect(() => {
+    if (isDeneme || mode.timePerQuestion <= 0 || quizStore.state !== 'playing') return
+    if (helpOpen) {
+      timer.pause()
+      helpWasPausedRef.current = true
+    } else if (helpWasPausedRef.current) {
+      timer.start()
+      helpWasPausedRef.current = false
+    }
+  }, [helpOpen, isDeneme, mode.timePerQuestion, quizStore.state, timer])
+  // Companion-yardim durumu soru degisiminde handleNext/handleRestart'ta sifirlanir
+  // (effect yerine handler — gereksiz cascading render onler).
 
   // --- Deneme: sure dolunca tum sinavi bitir ---
 
@@ -266,6 +291,8 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const handleNext = useCallback(() => {
     setShowComments(false)
     setShowReportModal(false)
+    setHelpPaused(false) // yeni soruda yardım-duraklatma sıfırlanır
+    helpWasPausedRef.current = false
     if (quizStore.isLastQuestion()) {
       quizStore.completeQuiz()
       setScreen('result')
@@ -283,6 +310,8 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const handleRestart = useCallback(() => {
     quizStore.resetQuiz()
     setIsGuestMode(false)
+    setHelpPaused(false)
+    helpWasPausedRef.current = false
     setScreen('lobby')
   }, [quizStore])
 
@@ -316,6 +345,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     showReportModal,
     setShowComments,
     setShowReportModal,
+    setHelpPaused,
     handleStart,
     handleAnswer,
     handleNext,

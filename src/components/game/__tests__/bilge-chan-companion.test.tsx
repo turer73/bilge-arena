@@ -108,23 +108,36 @@ describe('BilgeChanCompanion', () => {
     expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
   })
 
-  test('Evet -> help: reading pose + explainIntro + solution; 7sn sonra check sorusu', () => {
+  test('Evet -> help: reading pose + solution + Devam butonu; OTO-geçiş YOK, süre durur (Ensar 06-16)', () => {
+    const onHelpToggle = vi.fn()
     render(
-      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
+      <BilgeChanCompanion
+        quizState="playing"
+        lastIsCorrect={null}
+        question={makeQuestion()}
+        onHelpToggle={onHelpToggle}
+      />,
     )
     act(() => vi.advanceTimersByTime(6000))
     fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
     expect(pose()).toBe('reading')
+    expect(onHelpToggle).toHaveBeenCalledWith(true) // sayaç dursun
     act(() => vi.advanceTimersByTime(TYPE_MS))
     expect(
       screen.getByText(`${CHAN_LINES.explainIntro} Çözüm metni burada.`),
     ).toBeInTheDocument()
-    // butonlar help fazında kaybolur
+    // Evet/Hayır gizlenir, Devam görünür
     expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Devam/ })).toBeInTheDocument()
 
-    // help -> check (CHECK_DELAY=7000); kalan typewriter süresi düşülmüş olabilir,
-    // toplamda 7000 + yazım payı ilerlet
-    act(() => vi.advanceTimersByTime(7000))
+    // OTO-geçiş YOK: 8sn sonra hâlâ 'help' (reading), check görünmez, Devam durur
+    act(() => vi.advanceTimersByTime(8000))
+    expect(pose()).toBe('reading')
+    expect(screen.queryByText(CHAN_LINES.check)).not.toBeInTheDocument()
+
+    // Devam -> check fazı + sayaç devam etsin (onHelpToggle false)
+    fireEvent.click(screen.getByRole('button', { name: /Devam/ }))
+    expect(onHelpToggle).toHaveBeenCalledWith(false)
     expect(pose()).toBe('idle')
     act(() => vi.advanceTimersByTime(TYPE_MS))
     expect(screen.getByText(CHAN_LINES.check)).toBeInTheDocument()
