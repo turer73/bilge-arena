@@ -44,6 +44,7 @@ const timer = vi.hoisted(() => ({
   isRunning: false,
   start: vi.fn(),
   stop: vi.fn(),
+  pause: vi.fn(),
   reset: vi.fn(),
 }))
 vi.mock('@/lib/hooks/use-timer', () => ({ useTimer: () => timer }))
@@ -247,5 +248,27 @@ describe('useQuizGame — handleNext / getOptionState', () => {
     quiz.currentQuestion.mockReturnValue(makeQ('q1'))
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
     expect(result.current.getOptionState(0)).toBe('idle')
+  })
+})
+
+describe('useQuizGame — yardım açıkken sayaç duraklatma', () => {
+  beforeEach(() => {
+    quiz.state = 'playing'
+    quiz.currentQuestion.mockReturnValue(makeQ('q1'))
+  })
+
+  test('klasik + playing: setHelpPaused(true) sayacı durdurur, (false) devam ettirir', () => {
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    act(() => result.current.setHelpPaused(true))
+    expect(timer.pause).toHaveBeenCalled()
+    act(() => result.current.setHelpPaused(false))
+    expect(timer.start).toHaveBeenCalled()
+  })
+
+  test('deneme: yardım sayacı duraklatmaz (genel süre bağımsız akar)', () => {
+    gameStore.selectedMode = 'deneme'
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    act(() => result.current.setHelpPaused(true))
+    expect(timer.pause).not.toHaveBeenCalled()
   })
 })

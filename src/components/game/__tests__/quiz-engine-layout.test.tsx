@@ -59,6 +59,7 @@ const quizGame = vi.hoisted(() => ({
   setShowComments: vi.fn(),
   showReportModal: false,
   setShowReportModal: vi.fn(),
+  setHelpPaused: vi.fn(),
   getOptionState: () => 'idle',
   handleAnswer: vi.fn(),
   handleNext: vi.fn(),
