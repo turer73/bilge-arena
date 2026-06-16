@@ -10,15 +10,14 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import type { Question } from '@/types/database'
 import { QuestionCard } from '../question-card'
 
-// handleAskAssistant store'a dokunur — render testleri için hafif stub
+// handleAskAssistant store'a dokunur — stabil spy'lar (çağrı doğrulanabilsin)
+const chat = vi.hoisted(() => ({
+  setQuestionContext: vi.fn(),
+  clearMessages: vi.fn(),
+  setOpen: vi.fn(),
+}))
 vi.mock('@/stores/chat-store', () => ({
-  useChatStore: {
-    getState: () => ({
-      setQuestionContext: vi.fn(),
-      clearMessages: vi.fn(),
-      setOpen: vi.fn(),
-    }),
-  },
+  useChatStore: { getState: () => chat },
 }))
 
 const makeQ = (content: Partial<Question['content']>): Question =>
@@ -69,5 +68,13 @@ describe('QuestionCard', () => {
   test('onReport yoksa "Bildir" butonu render edilmez', () => {
     render(<QuestionCard question={makeQ({})} currentIndex={0} totalQuestions={10} />)
     expect(screen.queryByRole('button', { name: 'Soruyu raporla' })).not.toBeInTheDocument()
+  })
+
+  test('"Sor": passage dahil bağlamı asistana aktarır (chat açılır)', () => {
+    const passage = 'Bir cümle;\nI. Birinci.\nII. İkinci.'
+    render(<QuestionCard question={makeQ({ passage })} currentIndex={0} totalQuestions={10} />)
+    fireEvent.click(screen.getByRole('button', { name: "Bilge Asistan'a sor" }))
+    expect(chat.setQuestionContext).toHaveBeenCalledWith(expect.stringContaining('I. Birinci.'))
+    expect(chat.setOpen).toHaveBeenCalledWith(true)
   })
 })
