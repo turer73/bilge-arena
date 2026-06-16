@@ -23,6 +23,21 @@ export const MASCOT_AVATARS: PresetAvatar[] = [
   { id: 'chan-3d-astronaut', path: '/avatars/mascot/chan-avatar-3d-astronaut.webp', style: 'bilge-chan', label: 'Karakterler' },
   { id: 'chan-3d-alien', path: '/avatars/mascot/chan-avatar-3d-alien.webp', style: 'bilge-chan', label: 'Karakterler' },
   { id: 'chan-3d-cat', path: '/avatars/mascot/chan-avatar-3d-cat.webp', style: 'bilge-chan', label: 'Karakterler' },
+  // Hayvanlar — formayı koruyan antropomorfik hayvan karakterleri
+  { id: 'chan-dog', path: '/avatars/mascot/chan-avatar-dog.webp', style: 'bilge-chan', label: 'Hayvanlar' },
+  { id: 'chan-fox', path: '/avatars/mascot/chan-avatar-fox.webp', style: 'bilge-chan', label: 'Hayvanlar' },
+  { id: 'chan-panda', path: '/avatars/mascot/chan-avatar-panda.webp', style: 'bilge-chan', label: 'Hayvanlar' },
+  { id: 'chan-owl', path: '/avatars/mascot/chan-avatar-owl.webp', style: 'bilge-chan', label: 'Hayvanlar' },
+  // Fantastik
+  { id: 'chan-wizard', path: '/avatars/mascot/chan-avatar-wizard.webp', style: 'bilge-chan', label: 'Fantastik' },
+  { id: 'chan-knight', path: '/avatars/mascot/chan-avatar-knight.webp', style: 'bilge-chan', label: 'Fantastik' },
+  { id: 'chan-fairy', path: '/avatars/mascot/chan-avatar-fairy.webp', style: 'bilge-chan', label: 'Fantastik' },
+  // Arketipler
+  { id: 'chan-gamer', path: '/avatars/mascot/chan-avatar-gamer.webp', style: 'bilge-chan', label: 'Arketipler' },
+  { id: 'chan-athlete', path: '/avatars/mascot/chan-avatar-athlete.webp', style: 'bilge-chan', label: 'Arketipler' },
+  // Anime — 2D cel-shaded stil (3D'den farklı estetik, çeşitlilik için)
+  { id: 'chan-anime-chan', path: '/avatars/mascot/chan-avatar-anime-chan.webp', style: 'anime', label: 'Anime' },
+  { id: 'chan-anime-ninja', path: '/avatars/mascot/chan-avatar-anime-ninja.webp', style: 'anime', label: 'Anime' },
 ]
 
 /** Maskot önce (galeri vitrini), sonra DiceBear preset'leri. */

@@ -9,11 +9,12 @@ import { PRESET_AVATARS } from '../preset-avatars'
 
 describe('avatars katalog', () => {
   it('MASCOT_AVATARS: webp path, benzersiz id, bilinen gruplar', () => {
-    expect(MASCOT_AVATARS.length).toBeGreaterThanOrEqual(10)
+    expect(MASCOT_AVATARS.length).toBeGreaterThanOrEqual(21)
     const ids = MASCOT_AVATARS.map((a) => a.id)
     expect(new Set(ids).size).toBe(ids.length)
+    const KNOWN = ['Bilge Chan', 'Karakterler', 'Hayvanlar', 'Fantastik', 'Arketipler', 'Anime']
     for (const a of MASCOT_AVATARS) {
-      expect(['Bilge Chan', 'Karakterler']).toContain(a.label)
+      expect(KNOWN).toContain(a.label)
       expect(a.path).toMatch(/^\/avatars\/mascot\/.+\.webp$/)
     }
   })
@@ -30,11 +31,19 @@ describe('avatars katalog', () => {
     expect(avatarPath('yok')).toBeNull()
   })
 
-  it('AVATAR_GROUPS: Bilge Chan + Karakterler ilk iki grup, label benzersiz', () => {
-    expect(AVATAR_GROUPS[0].label).toBe('Bilge Chan')
-    expect(AVATAR_GROUPS[0].items.length).toBe(6)
-    expect(AVATAR_GROUPS[1].label).toBe('Karakterler')
-    expect(AVATAR_GROUPS[1].items.length).toBe(4)
+  it('AVATAR_GROUPS: mascot grupları sırayla + label benzersiz', () => {
+    const expected: [string, number][] = [
+      ['Bilge Chan', 6],
+      ['Karakterler', 4],
+      ['Hayvanlar', 4],
+      ['Fantastik', 3],
+      ['Arketipler', 2],
+      ['Anime', 2],
+    ]
+    expected.forEach(([label, count], i) => {
+      expect(AVATAR_GROUPS[i].label).toBe(label)
+      expect(AVATAR_GROUPS[i].items.length).toBe(count)
+    })
     const labels = AVATAR_GROUPS.map((g) => g.label)
     expect(new Set(labels).size).toBe(labels.length)
   })
