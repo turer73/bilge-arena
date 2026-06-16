@@ -61,12 +61,13 @@ export function LeaderboardTable({ entries, title = 'Haftalık Sıralama' }: Lea
           {/* Player */}
           <div className="flex min-w-0 items-center gap-2">
             <AvatarDecoration decorationIds={entry.decorations ?? []} size={32}>
-              {entry.avatar.startsWith('http') ? (
+              {entry.avatar.startsWith('http') || entry.avatar.startsWith('/') ? (
                 <Image
                   src={entry.avatar}
                   alt={entry.name}
                   width={32}
                   height={32}
+                  unoptimized={entry.avatar.endsWith('.svg')}
                   className="h-8 w-8 shrink-0 rounded-full object-cover"
                 />
               ) : (
