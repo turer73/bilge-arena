@@ -63,3 +63,14 @@ database/generated/*
 !database/generated/ayt-*.json
 database/backup-*.json
 database/_*.json
+.env*.local
+
+# Lokal denetim/dogrulama artiklari (ekran goruntuleri, handoff, audit run ciktilari)
+/_*.png
+/_*.mjs
+/HANDOFF-*.md
+/qprev.json
+database/OUTPUT_REVIEW.json
+database/apply-review-manual-queue.json
+database/audit-active-*.json
+database/audit-active-*.csv
