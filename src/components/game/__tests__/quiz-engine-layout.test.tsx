@@ -44,27 +44,27 @@ vi.mock('@/stores/game-store', () => ({
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => ({ user: null, profile: null }) }))
 
 // --- Hooks ---
-vi.mock('@/lib/hooks/use-quiz-game', () => ({
-  useQuizGame: () => ({
-    screen: 'game',
-    isDeneme: false,
-    mode: { id: 'klasik', name: 'Klasik', questionCount: 10, timePerQuestion: 30, lives: 3 },
-    timer: { seconds: 24 },
-    denemeConfig: null,
-    loadError: null,
-    showBurst: false,
-    showXPPopup: false,
-    showLifeLost: false,
-    showComments: false,
-    setShowComments: vi.fn(),
-    showReportModal: false,
-    setShowReportModal: vi.fn(),
-    getOptionState: () => 'idle',
-    handleAnswer: vi.fn(),
-    handleNext: vi.fn(),
-    handleStart: vi.fn(),
-  }),
+// Mutable (vi.hoisted) → testler isDeneme'yi çevirebilir (deneme panel kontrolü).
+const quizGame = vi.hoisted(() => ({
+  screen: 'game',
+  isDeneme: false,
+  mode: { id: 'klasik', name: 'Klasik', questionCount: 10, timePerQuestion: 30, lives: 3 },
+  timer: { seconds: 24 },
+  denemeConfig: null,
+  loadError: null,
+  showBurst: false,
+  showXPPopup: false,
+  showLifeLost: false,
+  showComments: false,
+  setShowComments: vi.fn(),
+  showReportModal: false,
+  setShowReportModal: vi.fn(),
+  getOptionState: () => 'idle',
+  handleAnswer: vi.fn(),
+  handleNext: vi.fn(),
+  handleStart: vi.fn(),
 }))
+vi.mock('@/lib/hooks/use-quiz-game', () => ({ useQuizGame: () => quizGame }))
 vi.mock('@/lib/hooks/use-sidebar-data', () => ({
   useSidebarData: () => ({ leaderboard: [], myRank: null, topicData: [] }),
 }))
@@ -133,6 +133,19 @@ describe('QuizEngine yerleşim', () => {
     render(<QuizEngine game="matematik" />)
     expect(screen.queryByTestId('explanation-panel')).not.toBeInTheDocument()
     quizStoreValue.state = 'answered'
+  })
+
+  test('deneme answered: açıklama paneli render edilir (otomatik geçiş yok, butonla)', () => {
+    // Ensar 06-16: deneme'de cevap sonrası otomatik geçmek yerine kullanıcı
+    // açıklamayı/yanlışını okuyup "Sonraki Soru" butonuyla geçer. Panel deneme'de
+    // de görünmeli (eski kod `!isDeneme` ile gizliyordu → bu test onu engeller).
+    quizGame.isDeneme = true
+    try {
+      render(<QuizEngine game="matematik" />)
+      expect(screen.getByTestId('explanation-panel')).toBeInTheDocument()
+    } finally {
+      quizGame.isDeneme = false
+    }
   })
 
   test('Konu Gücü bandı şıklardan sonra (tam genişlik alt bant korunur)', () => {

@@ -335,8 +335,9 @@ export function QuizEngine({ game }: QuizEngineProps) {
         )}
 
         {/* Aciklama paneli — cevap sonrasi sorunun USTUNDE: "Sonraki Soru"
-            kaydirmadan erisilebilir (mobil/desktop) */}
-        {!quiz.isDeneme && quizStore.state === 'answered' && lastAnswer && (
+            kaydirmadan erisilebilir (mobil/desktop). Deneme'de de gosterilir:
+            otomatik ilerleme kaldirildi, kullanici butonla gecer (Ensar 06-16). */}
+        {quizStore.state === 'answered' && lastAnswer && (
           <>
             <ExplanationPanel
               question={question}
