@@ -17,6 +17,14 @@ export const MASCOT_AVATARS: PresetAvatar[] = [
   { id: 'chan-3d-study', path: '/avatars/mascot/chan-avatar-3d-study.webp', style: 'bilge-chan', label: 'Bilge Chan' },
   { id: 'chan-3d-shy', path: '/avatars/mascot/chan-avatar-3d-shy.webp', style: 'bilge-chan', label: 'Bilge Chan' },
   { id: 'chan-3d-cool', path: '/avatars/mascot/chan-avatar-3d-cool.webp', style: 'bilge-chan', label: 'Bilge Chan' },
+  // Erkek — erkek öğrencilere yönelik set (Bilge Chan'ın erkek muadili; kız-ağırlığı dengelenir)
+  { id: 'boy-smile', path: '/avatars/mascot/chan-avatar-boy-smile.webp', style: 'bilge-chan', label: 'Erkek' },
+  { id: 'boy-cool', path: '/avatars/mascot/chan-avatar-boy-cool.webp', style: 'bilge-chan', label: 'Erkek' },
+  { id: 'boy-gamer', path: '/avatars/mascot/chan-avatar-boy-gamer.webp', style: 'bilge-chan', label: 'Erkek' },
+  { id: 'boy-athlete', path: '/avatars/mascot/chan-avatar-boy-athlete.webp', style: 'bilge-chan', label: 'Erkek' },
+  { id: 'boy-astronaut', path: '/avatars/mascot/chan-avatar-boy-astronaut.webp', style: 'bilge-chan', label: 'Erkek' },
+  { id: 'boy-knight', path: '/avatars/mascot/chan-avatar-boy-knight.webp', style: 'bilge-chan', label: 'Erkek' },
+  { id: 'boy-anime', path: '/avatars/mascot/chan-avatar-boy-anime.webp', style: 'anime', label: 'Erkek' },
   // Karakterler — Bilge Arena formasını (lacivert "B" varsity ceket) koruyan
   // temalı varyantlar (erkek + astronot/uzaylı/kedi). Aynı Renderhane pipeline'ı.
   { id: 'chan-3d-male', path: '/avatars/mascot/chan-avatar-3d-male.webp', style: 'bilge-chan', label: 'Karakterler' },
@@ -64,8 +72,10 @@ const AVATAR_MIN_LEVEL: Record<string, number> = {
   // Lv2 (Çırak)
   'chan-3d-astronaut': 2, 'chan-3d-alien': 2, 'chan-3d-cat': 2,
   'chan-dog': 2, 'chan-fox': 2, 'chan-gamer': 2, 'chan-athlete': 2,
+  'boy-gamer': 2, 'boy-athlete': 2,
   // Lv3 (Savaşçı)
   'chan-panda': 3, 'chan-owl': 3, 'chan-knight': 3, 'chan-anime-chan': 3,
+  'boy-astronaut': 3, 'boy-knight': 3, 'boy-anime': 3,
   // Lv4 (Usta)
   'chan-wizard': 4, 'chan-anime-ninja': 4,
   // Lv5 (Efsane) — en nadir

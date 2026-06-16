@@ -9,10 +9,10 @@ import { PRESET_AVATARS } from '../preset-avatars'
 
 describe('avatars katalog', () => {
   it('MASCOT_AVATARS: webp path, benzersiz id, bilinen gruplar', () => {
-    expect(MASCOT_AVATARS.length).toBeGreaterThanOrEqual(21)
+    expect(MASCOT_AVATARS.length).toBeGreaterThanOrEqual(28)
     const ids = MASCOT_AVATARS.map((a) => a.id)
     expect(new Set(ids).size).toBe(ids.length)
-    const KNOWN = ['Bilge Chan', 'Karakterler', 'Hayvanlar', 'Fantastik', 'Arketipler', 'Anime']
+    const KNOWN = ['Bilge Chan', 'Erkek', 'Karakterler', 'Hayvanlar', 'Fantastik', 'Arketipler', 'Anime']
     for (const a of MASCOT_AVATARS) {
       expect(KNOWN).toContain(a.label)
       expect(a.path).toMatch(/^\/avatars\/mascot\/.+\.webp$/)
@@ -34,6 +34,7 @@ describe('avatars katalog', () => {
   it('AVATAR_GROUPS: mascot grupları sırayla + label benzersiz', () => {
     const expected: [string, number][] = [
       ['Bilge Chan', 6],
+      ['Erkek', 7],
       ['Karakterler', 4],
       ['Hayvanlar', 4],
       ['Fantastik', 3],
