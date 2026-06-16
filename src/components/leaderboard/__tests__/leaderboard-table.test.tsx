@@ -46,6 +46,19 @@ describe('LeaderboardTable', () => {
     expect(screen.getByText('🦉')).toBeInTheDocument()
   })
 
+  test('yerel-yol avatar (preset svg / mascot webp) <img> render eder — metin sızıntısı yok (Ensar 06-16)', () => {
+    const local = [
+      { rank: 1, user_id: 'p', name: 'Angel', avatar: '/avatars/preset/thumbs-3.svg', xp: 100, level: 'Acemi', isCurrentUser: false },
+      { rank: 2, user_id: 'q', name: 'Mert', avatar: '/avatars/mascot/chan-avatar-3d-smile.webp', xp: 90, level: 'Acemi', isCurrentUser: false },
+    ]
+    render(<LeaderboardTable entries={local} />)
+    // Yerel yollar <img src> olarak render edilmeli — eskiden else dalına düşüp
+    // "/avatars/preset/thumbs-3.svg" METİN olarak basılıyordu (bug).
+    expect(document.querySelector('img[src="/avatars/preset/thumbs-3.svg"]')).not.toBeNull()
+    expect(document.querySelector('img[src="/avatars/mascot/chan-avatar-3d-smile.webp"]')).not.toBeNull()
+    expect(screen.queryByText('/avatars/preset/thumbs-3.svg')).not.toBeInTheDocument()
+  })
+
   test('seçili süs(ler) avatar etrafında render eder (DB selected_avatar_decorations)', () => {
     render(<LeaderboardTable entries={ENTRIES} />)
     // rank 1 kanat takılı → SVG tüy-kanat overlay; süssüz satırlarda yok

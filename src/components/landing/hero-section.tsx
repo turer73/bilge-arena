@@ -74,8 +74,10 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
   const ctaSecondary = (config?.cta_secondary as { text?: string; href?: string }) || {}
   const miniStats = (config?.mini_stats as string[]) || null
 
-  // Anasayfa: logo kullanilir (Bilge Chan yalnizca quiz companion'da)
-  const [mascotSrc, setMascotSrc] = useState('/bilge-chan-selam.png')
+  // Anasayfa maskotu: Bilge Chan selam pozu (public/chan/chan-wave.webp — mevcut
+  // + deployed). Eskiden /bilge-chan-selam.png idi ama o dosya hiç yoktu → her
+  // açılışta next/image 400 + kırık-görsel flaşı. Yüklenemezse onError logoya düşer.
+  const [mascotSrc, setMascotSrc] = useState('/chan/chan-wave.webp')
   const [hasMascot, setHasMascot] = useState(true)
 
   return (
