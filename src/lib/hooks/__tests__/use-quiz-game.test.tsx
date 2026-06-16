@@ -2,12 +2,12 @@
  * Bilge Arena: useQuizGame çekirdek akış testleri.
  * Kapsam: handleStart (misafir önizleme / auth'lu / hata yolları),
  * handleAnswer (doğru/yanlış + sesler + timer), handleNext, getOptionState.
- * Deneme-modu otomatik-ilerleme ve elapsed ayrıntıları bilinçli kapsam dışı
- * (deneme akışı kendi bileşen testlerinde — dürüst kapsam notu PR'da).
+ * Deneme handleAnswer dalı (timer'a dokunmaz + otomatik ilerleme yok) kapsanır;
+ * elapsed/genel-süre ayrıntıları kendi bileşen testlerinde (dürüst kapsam notu).
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import type { Question } from '@/types/database'
 
 // --- Stateful quiz-store mock'u ---
@@ -193,6 +193,20 @@ describe('useQuizGame — handleAnswer', () => {
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
     act(() => result.current.handleAnswer(1))
     expect(quiz.answerQuestion).not.toHaveBeenCalled()
+  })
+
+  test('deneme: cevapta per-soru timer durdurulmaz (timeTaken=0) + answered\'da kalır', () => {
+    // Ensar 06-16: deneme'de per-soru süre yok (genel süre ayrı akar) ve cevap
+    // sonrası OTOMATİK geçiş yok — kullanıcı butonla geçer. Burada handleAnswer'ın
+    // deneme dalı timer.stop çağırmadığını ve nextQuestion'ı tetiklemediğini kilitler.
+    gameStore.selectedMode = 'deneme'
+    quiz.currentQuestion.mockReturnValue(makeQ('q1')) // doğru = 2
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    act(() => result.current.handleAnswer(2))
+
+    expect(quiz.answerQuestion).toHaveBeenCalledWith(2, true, 0, expect.anything())
+    expect(timer.stop).not.toHaveBeenCalled()
+    expect(quiz.nextQuestion).not.toHaveBeenCalled() // otomatik ilerleme yok
   })
 })
 

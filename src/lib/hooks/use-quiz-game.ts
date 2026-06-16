@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useGameStore } from '@/stores/game-store'
 import { useTimer } from '@/lib/hooks/use-timer'
@@ -74,7 +74,6 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const isDeneme = mode.isDeneme === true
   const denemeConfig = isDeneme ? DENEME_CONFIGS[game] : null
   const elapsed = useElapsedTime()
-  const autoAdvanceRef = useRef<NodeJS.Timeout | null>(null)
 
   // --- Timer ---
 
@@ -107,24 +106,10 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     }
   }, [quizStore.state, screen])
 
-  // --- Deneme: cevap sonrasi otomatik ilerleme ---
-
-  useEffect(() => {
-    if (!isDeneme || quizStore.state !== 'answered') return
-
-    autoAdvanceRef.current = setTimeout(() => {
-      if (quizStore.isLastQuestion()) {
-        quizStore.completeQuiz()
-        setScreen('result')
-      } else {
-        quizStore.nextQuestion()
-      }
-    }, 1200)
-
-    return () => {
-      if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current)
-    }
-  }, [isDeneme, quizStore.state, quizStore])
+  // --- Deneme: cevap sonrasi MANUEL ilerleme ---
+  // Otomatik ilerleme (1200ms) KALDIRILDI. Kullanıcı açıklamayı/yanlışını okuyup
+  // ExplanationPanel'deki "Sonraki Soru" butonuyla (handleNext) kendi geçer —
+  // gerçek deneme/test gibi. Genel deneme süresi akmaya devam eder (Ensar 06-16).
 
   // --- Sorulari yukle ve quiz'i baslat ---
 
