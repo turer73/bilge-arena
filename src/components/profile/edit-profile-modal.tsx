@@ -6,7 +6,9 @@ import { refreshProfile } from '@/lib/hooks/use-auth'
 import { toast } from '@/stores/toast-store'
 import { trUpper } from '@/lib/utils/tr-text'
 import { X, Trash2 } from 'lucide-react'
-import { PRESET_AVATARS } from '@/lib/constants/preset-avatars'
+import { AVATAR_GROUPS, avatarMinLevel } from '@/lib/constants/avatars'
+import { getLevelFromXP } from '@/lib/constants/levels'
+import { isStaff } from '@/lib/utils/is-staff'
 
 interface EditProfileModalProps {
   open: boolean
@@ -27,6 +29,9 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   if (!open || !profile) return null
 
   const currentAvatar = profile.avatar_url
+  // Rarity: kullanıcının seviyesi + personel bypass (kilitli avatar gösterimi için)
+  const userLevel = getLevelFromXP(profile.total_xp ?? 0).level
+  const staff = isStaff(profile)
 
   // NOT: Serbest foto yükleme güvenlik nedeniyle kaldırıldı (cinsel-içerik/CSAM
   // riski, moderasyon yoktu). Avatar = Google fotoğrafı / baş-harf; küratörlü
@@ -62,7 +67,8 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
         setGalleryOpen(false)
         await refreshProfile()
       } else {
-        toast.error('Avatar seçilemedi')
+        const data = await res.json().catch(() => null)
+        toast.error(data?.error ?? 'Avatar seçilemedi')
       }
     } catch {
       toast.error('Bir hata oluştu')
@@ -150,20 +156,41 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
             </div>
           </div>
 
-          {/* Hazır avatar galerisi — küratörlü CC0 set (serbest yükleme yerine güvenli) */}
+          {/* Hazır avatar galerisi — bölümlü: Bilge Chan maskotu (Renderhane 3D) +
+              küratörlü DiceBear CC0 set (serbest yükleme yerine güvenli) */}
           {galleryOpen && (
-            <div className="grid max-h-44 grid-cols-6 gap-2 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2">
-              {PRESET_AVATARS.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => selectPreset(a.id)}
-                  disabled={selectingAvatar}
-                  title={a.label}
-                  aria-label={`${a.label} avatar`}
-                  className="rounded-full p-0.5 transition-all hover:ring-2 hover:ring-[var(--focus)] disabled:opacity-50"
-                >
-                  <img src={a.path} alt="" className="h-10 w-10 rounded-full bg-[var(--card-bg)]" />
-                </button>
+            <div className="max-h-56 space-y-3 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2">
+              {AVATAR_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <p className="mb-1 px-0.5 text-[10px] font-bold text-[var(--text-sub)]">{group.label}</p>
+                  <div className="grid grid-cols-6 gap-2">
+                    {group.items.map((a) => {
+                      const need = avatarMinLevel(a.id)
+                      const locked = !staff && userLevel < need
+                      return (
+                        <button
+                          key={a.id}
+                          onClick={() => selectPreset(a.id)}
+                          disabled={selectingAvatar || locked}
+                          title={locked ? `Seviye ${need} gerekli` : a.label}
+                          aria-label={`${a.label} avatar`}
+                          className={`relative rounded-full p-0.5 transition-all hover:ring-2 hover:ring-[var(--focus)] ${locked ? 'opacity-50' : ''}`}
+                        >
+                          <img
+                            src={a.path}
+                            alt=""
+                            className="h-10 w-10 rounded-full bg-[var(--card-bg)] object-cover"
+                          />
+                          {locked && (
+                            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 text-[8px] font-bold text-white">
+                              🔒{need}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
           )}

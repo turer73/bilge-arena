@@ -7,17 +7,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { NextRequest } from 'next/server'
 
-const { mockGetUser, mockUpdate, mockEq } = vi.hoisted(() => ({
+const { mockGetUser, mockUpdate, mockEq, mockRoles, mockProfile } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockUpdate: vi.fn(),
   mockEq: vi.fn(),
+  mockRoles: vi.fn(),
+  mockProfile: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser } })),
 }))
 vi.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: vi.fn(() => ({ from: vi.fn(() => ({ update: mockUpdate })) })),
+  createServiceRoleClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      update: mockUpdate,
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ limit: mockRoles, single: mockProfile })) })),
+    })),
+  })),
 }))
 
 import { POST } from '../route'
@@ -35,6 +42,8 @@ beforeEach(() => {
   mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
   mockUpdate.mockReturnValue({ eq: mockEq })
   mockEq.mockResolvedValue({ error: null })
+  mockRoles.mockResolvedValue({ data: [] })
+  mockProfile.mockResolvedValue({ data: { total_xp: 999999 } }) // varsayılan: Lv5 (kilit açık)
 })
 
 describe('POST /api/profile/avatar/preset', () => {
@@ -54,6 +63,13 @@ describe('POST /api/profile/avatar/preset', () => {
     expect(mockEq).toHaveBeenCalledWith('id', 'u1')
   })
 
+  it('geçerli mascot avatar id → webp path set edilir', async () => {
+    const res = await POST(makeReq({ presetId: 'chan-3d-smile' }))
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.avatar_url).toBe('/avatars/mascot/chan-avatar-3d-smile.webp')
+  })
+
   it('bilinmeyen preset → 400, DB güncellenmez (URL enjeksiyon guard)', async () => {
     const res = await POST(makeReq({ presetId: '../../etc/passwd' }))
     expect(res.status).toBe(400)
@@ -63,6 +79,24 @@ describe('POST /api/profile/avatar/preset', () => {
   it('geçersiz body → 400', async () => {
     const res = await POST(makeReq({}))
     expect(res.status).toBe(400)
+  })
+
+  it('rarity: düşük seviye + kilitli avatar (fairy L5) → 403, update yok', async () => {
+    mockProfile.mockResolvedValue({ data: { total_xp: 0 } }) // Lv1
+    const res = await POST(makeReq({ presetId: 'chan-fairy' }))
+    expect(res.status).toBe(403)
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rarity: yeterli seviye → kilitli avatar açılır', async () => {
+    mockProfile.mockResolvedValue({ data: { total_xp: 999999 } }) // Lv5
+    expect((await POST(makeReq({ presetId: 'chan-fairy' }))).status).toBe(200)
+  })
+
+  it('rarity: personel → kilitli avatar düşük seviyede de açılır', async () => {
+    mockRoles.mockResolvedValue({ data: [{ role_id: 'r1' }] })
+    mockProfile.mockResolvedValue({ data: { total_xp: 0 } })
+    expect((await POST(makeReq({ presetId: 'chan-fairy' }))).status).toBe(200)
   })
 
   it('katalog tutarlılığı: tüm presetler /avatars/preset/ altında + benzersiz id', () => {

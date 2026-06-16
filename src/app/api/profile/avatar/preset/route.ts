@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
-import { presetAvatarPath } from '@/lib/constants/preset-avatars'
+import { avatarPath, avatarMinLevel } from '@/lib/constants/avatars'
+import { getLevelFromXP } from '@/lib/constants/levels'
 
 const limiter = createRateLimiter('avatar-preset', 20, 60_000)
 const schema = z.object({ presetId: z.string().min(1).max(64) })
@@ -34,13 +35,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'presetId gerekli' }, { status: 400 })
   }
 
-  // Sadece bilinen preset → statik path. Bilinmiyorsa reddet (URL enjeksiyon guard).
-  const path = presetAvatarPath(parsed.data.presetId)
+  // Sadece bilinen avatar id → statik path (mascot webp + DiceBear svg).
+  // Bilinmiyorsa reddet (rastgele URL enjeksiyon guard).
+  const path = avatarPath(parsed.data.presetId)
   if (!path) {
     return NextResponse.json({ error: 'Geçersiz avatar' }, { status: 400 })
   }
 
   const admin = createServiceRoleClient()
+
+  // Rarity — seviye kilidi. Gerekli seviye > 1 ise kullanıcının seviyesini
+  // (total_xp'den) doğrula. Personel (RBAC rolü) tüm avatarları açar.
+  const minLevel = avatarMinLevel(parsed.data.presetId)
+  if (minLevel > 1) {
+    const { data: roles } = await admin
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', user.id)
+      .limit(1)
+    const staff = !!(roles && roles.length > 0)
+    if (!staff) {
+      const { data: prof } = await admin
+        .from('profiles')
+        .select('total_xp')
+        .eq('id', user.id)
+        .single()
+      if (getLevelFromXP(prof?.total_xp ?? 0).level < minLevel) {
+        return NextResponse.json({ error: `Seviye ${minLevel} gerekli` }, { status: 403 })
+      }
+    }
+  }
+
   const { error } = await admin.from('profiles').update({ avatar_url: path }).eq('id', user.id)
   if (error) {
     console.error('[avatar/preset] update hatası:', error.code)
