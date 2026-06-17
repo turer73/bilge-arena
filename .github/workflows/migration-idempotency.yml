@@ -1,0 +1,31 @@
+name: Migration idempotency
+
+# Migration zinciri prod'a SIRALI uygulanir; biri re-run'da (db reset / preview
+# branch / yeni ortam) patlarsa sonraki tum migration'lar bloke olur ve Supabase'de
+# down-SQL yoktur. Bu guard, korumasiz DDL ekleyen PR'lari yakalar.
+# Linter sadece Node built-in kullanir -> npm install GEREKMEZ (hizli).
+
+on:
+  pull_request:
+    paths:
+      - 'database/migrations/**'
+      - 'database/lint-migrations.mjs'
+      - 'database/migration-idempotency-baseline.json'
+      - '.github/workflows/migration-idempotency.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'database/migrations/**'
+      - 'database/lint-migrations.mjs'
+      - 'database/migration-idempotency-baseline.json'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Lint migrations for idempotency
+        run: node database/lint-migrations.mjs

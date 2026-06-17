@@ -57,13 +57,18 @@ GRANT EXECUTE ON FUNCTION block_user(UUID) TO authenticated;
 -- ============================================================
 -- 2) user_reports tablosu (kullanici-kullanici sikayeti)
 -- ============================================================
-CREATE TYPE public.user_report_type AS ENUM (
-  'harassment',     -- taciz / zorbalik
-  'inappropriate',  -- uygunsuz icerik (avatar / isim)
-  'impersonation',  -- taklit / sahtekarlik
-  'spam',
-  'other'
-);
+-- CREATE TYPE'in IF NOT EXISTS'i yok -> re-run/db-reset/branch'te 42710 ile patlar
+-- ve sonraki tum migration'lari bloklar. DO/EXCEPTION ile idempotent.
+DO $$ BEGIN
+  CREATE TYPE public.user_report_type AS ENUM (
+    'harassment',     -- taciz / zorbalik
+    'inappropriate',  -- uygunsuz icerik (avatar / isim)
+    'impersonation',  -- taklit / sahtekarlik
+    'spam',
+    'other'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.user_reports (
   id               UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -79,27 +84,32 @@ CREATE TABLE IF NOT EXISTS public.user_reports (
   CHECK (reporter_id <> reported_user_id)
 );
 
-CREATE INDEX idx_user_reports_reported ON public.user_reports(reported_user_id);
-CREATE INDEX idx_user_reports_status ON public.user_reports(status) WHERE status = 'pending';
-CREATE INDEX idx_user_reports_reporter ON public.user_reports(reporter_id);
+CREATE INDEX IF NOT EXISTS idx_user_reports_reported ON public.user_reports(reported_user_id);
+CREATE INDEX IF NOT EXISTS idx_user_reports_status ON public.user_reports(status) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_user_reports_reporter ON public.user_reports(reporter_id);
 
 ALTER TABLE public.user_reports ENABLE ROW LEVEL SECURITY;
 
+-- POLICY'lerin IF NOT EXISTS'i yok -> re-run'da 42710. DROP IF EXISTS ile idempotent.
 -- Kullanici kendi sikayetlerini gorebilir
+DROP POLICY IF EXISTS "user_reports_select_own" ON public.user_reports;
 CREATE POLICY "user_reports_select_own" ON public.user_reports
   FOR SELECT USING (auth.uid() = reporter_id);
 
 -- Giris yapmis kullanici kendi adina sikayet olusturabilir
+DROP POLICY IF EXISTS "user_reports_insert" ON public.user_reports;
 CREATE POLICY "user_reports_insert" ON public.user_reports
   FOR INSERT WITH CHECK (auth.uid() = reporter_id);
 
 -- Admin tum sikayetleri gorebilir
+DROP POLICY IF EXISTS "user_reports_select_admin" ON public.user_reports;
 CREATE POLICY "user_reports_select_admin" ON public.user_reports
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
 -- Admin sikayet durumunu guncelleyebilir
+DROP POLICY IF EXISTS "user_reports_update_admin" ON public.user_reports;
 CREATE POLICY "user_reports_update_admin" ON public.user_reports
   FOR UPDATE USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
