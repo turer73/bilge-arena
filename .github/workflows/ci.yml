@@ -18,6 +18,40 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
+  lockfile-guard:
+    # package-lock.json Windows/macOS'ta uretilirse npm, Linux-only optional
+    # deps'i budar (npm/cli#4828: rollup/next-swc/lightningcss/sharp/rolldown
+    # -linux-x64-gnu + @emnapi/core). Sonuc: CI'da kriptik "npm ci ... Missing".
+    # Bu kapi pruning'i ERKEN ve NET mesajla yakalar; lockfile Linux'te (Klipper)
+    # uretilmeli. Konvansiyon degil, enforce.
+    name: 🔐 Lockfile platform guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Verify Linux-native optional deps present in package-lock.json
+        run: |
+          missing=()
+          for pkg in \
+            "@rollup/rollup-linux-x64-gnu" \
+            "@next/swc-linux-x64-gnu" \
+            "lightningcss-linux-x64-gnu" \
+            "@unrs/resolver-binding-linux-x64-gnu" \
+            "@img/sharp-linux-x64" \
+            "@emnapi/core"; do
+            grep -q "\"node_modules/${pkg}\"" package-lock.json || missing+=("$pkg")
+          done
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::package-lock.json eksik Linux-native optional dep: ${missing[*]}"
+            echo ""
+            echo "SEBEP: lockfile buyuk olasilikla Windows/macOS'ta uretildi; npm,"
+            echo "       Linux-only optional deps'i buddu (npm/cli#4828)."
+            echo "COZUM: Linux'te (Klipper) yeniden uret ve commit et:"
+            echo "       rm -rf node_modules package-lock.json && npm install"
+            exit 1
+          fi
+          echo "OK: lockfile Linux-native optional deps iceriyor (6/6 sentinel)."
+
   lint:
     name: 🔍 Lint
     runs-on: ubuntu-latest
