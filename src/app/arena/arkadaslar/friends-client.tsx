@@ -232,7 +232,11 @@ export default function FriendsClient() {
                   {trUpper(displayName(u).charAt(0))}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold truncate">{displayName(u)}</div>
+                  {u.username ? (
+                    <Link href={`/u/${u.username}`} className="block truncate text-sm font-semibold hover:underline">{displayName(u)}</Link>
+                  ) : (
+                    <div className="text-sm font-semibold truncate">{displayName(u)}</div>
+                  )}
                   <div className="text-[10px] text-[var(--muted)]">{u.total_xp} XP</div>
                 </div>
                 {existingIds.has(u.id) ? (
