@@ -1,0 +1,56 @@
+{
+  "_comment": "Otomatik uretildi: lint-migrations.mjs --write-baseline. Eski (grandfathered) idempotency ihlalleri. YENI migration eklerken bunu BUYUTME; yeni dosyalar idempotent olmali.",
+  "grandfathered": {
+    "002_add_comments.sql": {
+      "create-index-no-ine": 5,
+      "create-policy-no-drop": 10,
+      "create-trigger-no-drop": 1
+    },
+    "003_add_error_reports.sql": {
+      "create-index-no-ine": 3,
+      "create-type-unguarded": 2,
+      "create-policy-no-drop": 4
+    },
+    "004_add_admin_tables.sql": {
+      "create-index-no-ine": 2,
+      "create-policy-no-drop": 5
+    },
+    "010_add_consent_logs.sql": {
+      "create-policy-no-drop": 2
+    },
+    "012_add_client_logs_and_increment_xp.sql": {
+      "create-policy-no-drop": 1
+    },
+    "014_friend_system.sql": {
+      "create-trigger-no-drop": 1
+    },
+    "016_rbac.sql": {
+      "create-policy-no-drop": 12
+    },
+    "016b_fix_rls_recursion.sql": {
+      "create-policy-no-drop": 15
+    },
+    "017_homepage_editor.sql": {
+      "create-policy-no-drop": 6,
+      "create-trigger-no-drop": 2
+    },
+    "020_challenges.sql": {
+      "create-policy-no-drop": 2
+    },
+    "021_questions_composite_index.sql": {
+      "create-index-no-ine": 1
+    },
+    "024_missing_indexes.sql": {
+      "create-index-no-ine": 6
+    },
+    "025_fix_error_reports_rls_rbac.sql": {
+      "create-policy-no-drop": 2
+    },
+    "036_consolidate_permissive_policies.sql": {
+      "create-policy-no-drop": 5
+    },
+    "037_premium_waitlist.sql": {
+      "create-policy-no-drop": 3
+    }
+  }
+}
