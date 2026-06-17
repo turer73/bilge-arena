@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { GAMES, GAME_LIST, getCategoryLabel } from '@/lib/constants/games'
 import type { GameSlug } from '@/lib/constants/games'
+import { renderRichText } from '@/lib/utils/rich-text'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -215,7 +216,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
 
             {/* Soru */}
             <p className="mb-5 text-sm font-semibold leading-relaxed md:text-base">
-              {question.content.question}
+              {renderRichText(question.content.question)}
             </p>
 
             {/* Şıklar */}

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import type { Question } from '@/types/database'
 import { getOptionLetter, getCorrectIndex } from '@/lib/utils/question'
+import { stripRichText } from '@/lib/utils/rich-text'
 import { LikeButton } from '@/components/social/like-button'
 import { useChatStore } from '@/stores/chat-store'
 
@@ -40,9 +41,9 @@ export function ExplanationPanel({
     const opts = question.content.options
       .map((o, i) => `${'ABCDE'[i]}) ${o}`)
       .join('\n')
-    const qText = question.content.question || question.content.sentence || ''
-    // Öncül bloğu (passage) varsa soru metninin önüne ekle — asistan ifadeleri görsün
-    const body = question.content.passage ? `${question.content.passage}\n\n${qText}` : qText
+    const qText = stripRichText(question.content.question || question.content.sentence)
+    // Öncül bloğu (passage) varsa soru metninin önüne ekle — asistan ifadeleri görsün (<u> AI'ya gitmesin)
+    const body = question.content.passage ? `${stripRichText(question.content.passage)}\n\n${qText}` : qText
     const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}\n\nDoğru cevap: ${getOptionLetter(correctAnswer)}) ${correctText}${question.content.solution ? '\nÇözüm: ' + question.content.solution : ''}`
 
     const userMsg = `"${topic}" konusunu kısaca anlat. Bu soruyla ilgili temel kavramları ve formülleri özetle.`

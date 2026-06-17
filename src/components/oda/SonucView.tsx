@@ -24,6 +24,7 @@ import {
 } from '@/lib/rooms/actions'
 import { cn } from '@/lib/utils/cn'
 import { RevealCountdown } from './RevealCountdown'
+import { renderRichText } from '@/lib/utils/rich-text'
 
 const advanceInitial: AdvanceRoundForMemberActionState = {}
 
@@ -131,7 +132,7 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
       </header>
 
       <h2 className="mb-4 text-base font-semibold leading-relaxed">
-        {questionText}
+        {renderRichText(questionText)}
       </h2>
 
       <ul className="mb-4 space-y-2">
