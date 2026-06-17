@@ -52,16 +52,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'XP zaten alındı' }, { status: 400 })
   }
 
-  // 2) XP log
-  await svc.from('xp_log').insert({
-    user_id: user.id,
-    amount: xpReward,
-    reason: 'daily_quest',
-    details: { quest_slug: (uq.quest as { slug?: string } | null)?.slug },
-  })
-
-  // 3) Profil XP guncelle
-  const { error: rpcError } = await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: xpReward })
+  // 2) Profil XP + seviye + ledger — increment_xp icinde atomik
+  const { error: rpcError } = await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: xpReward, p_reason: 'daily_quest' })
   if (rpcError) {
     const { data: prof } = await svc.from('profiles').select('total_xp').eq('id', user.id).single()
     if (prof) {

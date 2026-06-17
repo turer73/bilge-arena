@@ -128,6 +128,7 @@ export async function POST() {
     const { error: rpcErr } = await svc.rpc('increment_xp', {
       p_user_id: user.id,
       p_amount: totalXPEarned,
+      p_reason: 'badge_earned',
     })
 
     if (rpcErr) {
@@ -146,14 +147,8 @@ export async function POST() {
       }
     }
 
-    // XP log'a kaydet
-    const xpLogInserts = newBadges.map((badge) => ({
-      user_id: user.id,
-      amount: badge.xpReward,
-      reason: 'badge_earned',
-      reference_id: badge.code,
-    }))
-    await svc.from('xp_log').insert(xpLogInserts)
+    // xp_log artik increment_xp icinde yazilir (per-rozet reference_id badge.code
+    // uuid degildi, eski manuel insert zaten fail ediyordu) — tek ozet satir.
   }
 
   return NextResponse.json({

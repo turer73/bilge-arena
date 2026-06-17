@@ -94,15 +94,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Odul kaydi basarisiz' }, { status: 500 })
   }
 
-  // Her iki tarafa XP ver
-  await svc.rpc('increment_xp', { p_user_id: referrer.id, p_amount: REFERRAL_XP })
-  await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: REFERRAL_XP })
-
-  // XP log kaydi
-  await svc.from('xp_log').insert([
-    { user_id: referrer.id, amount: REFERRAL_XP, reason: 'referral' },
-    { user_id: user.id, amount: REFERRAL_XP, reason: 'referral' },
-  ])
+  // Her iki tarafa XP ver (xp_log + seviye increment_xp icinde yazilir)
+  await svc.rpc('increment_xp', { p_user_id: referrer.id, p_amount: REFERRAL_XP, p_reason: 'referral' })
+  await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: REFERRAL_XP, p_reason: 'referral' })
 
   return NextResponse.json({ status: 'claimed', xpAwarded: REFERRAL_XP })
 }
