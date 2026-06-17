@@ -293,7 +293,7 @@ export function GameView({
                   >
                     {String.fromCharCode(65 + idx)}
                   </span>
-                  {opt}
+                  {renderRichText(opt)}
                 </button>
               </li>
             )

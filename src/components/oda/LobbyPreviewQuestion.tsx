@@ -76,7 +76,7 @@ export function LobbyPreviewQuestion({
                 >
                   {String.fromCharCode(65 + idx)}
                 </span>
-                <span className="flex-1">{opt}</span>
+                <span className="flex-1">{renderRichText(opt)}</span>
               </li>
             ))}
           </ul>

@@ -174,7 +174,7 @@ export function SonucView({ state, userId, onAsyncAdvanceSuccess }: SonucViewPro
               >
                 {isCorrect ? '✓' : isMine ? '✗' : String.fromCharCode(65 + idx)}
               </span>
-              <span className="flex-1">{opt}</span>
+              <span className="flex-1">{renderRichText(opt)}</span>
               {isMine && !isCorrect && (
                 <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                   Senin Cevabın
