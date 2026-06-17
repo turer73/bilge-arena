@@ -180,16 +180,6 @@ export async function POST(request: Request) {
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('id', sessionId)
 
-  // 4. INSERT xp_log (trigger profili gunceller)
-  if (totalXP > 0) {
-    await svc.from('xp_log').insert({
-      user_id: user.id,
-      amount: totalXP,
-      reason: 'session_complete',
-      reference_id: sessionId,
-    })
-  }
-
   // 5a. Coin kazanımı — doğru cevap başına 1 coin
   if (correctCount > 0) {
     const { error: coinErr } = await svc.rpc('increment_coins', {
@@ -201,8 +191,8 @@ export async function POST(request: Request) {
     }
   }
 
-  // 5b. Profil istatistiklerini guncelle — RPC ile atomik
-  const { error: xpError } = await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: totalXP })
+  // 5b. XP + seviye + ledger — increment_xp icinde atomik (xp_log dahil)
+  const { error: xpError } = await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: totalXP, p_reason: 'session_complete', p_reference_id: sessionId })
   if (xpError) {
     console.error('[Sessions API] increment_xp RPC hatasi:', xpError.message)
     // Fallback: profil total'lerini session toplamlarindan hesapla

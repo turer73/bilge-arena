@@ -118,13 +118,7 @@ export async function POST(
 
     // Kazanana bonus XP
     if (winnerId) {
-      await svc.rpc('increment_xp', { p_user_id: winnerId, p_amount: challenge.xp_reward })
-      await svc.from('xp_log').insert({
-        user_id: winnerId,
-        amount: challenge.xp_reward,
-        reason: 'challenge_win',
-        reference_id: id,
-      }).then(() => {})
+      await svc.rpc('increment_xp', { p_user_id: winnerId, p_amount: challenge.xp_reward, p_reason: 'challenge_win', p_reference_id: id })
     }
 
     return NextResponse.json({ score, result: 'completed', winnerId })
