@@ -117,7 +117,7 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { username, display_name, city, grade, exam_type, onboarding_completed, preferred_theme } = parsed.data
+  const { username, display_name, city, grade, exam_type, onboarding_completed, preferred_theme, is_discoverable } = parsed.data
   const updates: Record<string, unknown> = {}
   if (username) updates.username = username
   if (display_name !== undefined) updates.display_name = display_name || null
@@ -126,6 +126,7 @@ export async function PATCH(request: NextRequest) {
   if (exam_type !== undefined) updates.exam_type = exam_type
   if (onboarding_completed) updates.onboarding_completed = true
   if (preferred_theme !== undefined) updates.preferred_theme = preferred_theme
+  if (is_discoverable !== undefined) updates.is_discoverable = is_discoverable
 
   // 5) Service-role update — sahip kontrolu auth.uid() = user.id ile yapildi
   const admin = createServiceRoleClient()
@@ -133,7 +134,7 @@ export async function PATCH(request: NextRequest) {
     .from('profiles')
     .update(updates)
     .eq('id', user.id)
-    .select('id, username, display_name, city, grade, exam_type, avatar_url, onboarding_completed')
+    .select('id, username, display_name, city, grade, exam_type, avatar_url, onboarding_completed, is_discoverable')
     .single()
 
   if (error) {

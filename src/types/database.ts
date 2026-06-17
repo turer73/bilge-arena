@@ -57,6 +57,8 @@ export interface Profile {
   // Tercihler
   preferred_theme: 'dark' | 'light' | 'okyanus' | 'orman' | 'gunbatimi' | 'mor-gece'
   notifications: boolean
+  /** Opt-in keşif: kullanıcı aramasında görünür mü (migration 072; yeni kullanıcılar FALSE) */
+  is_discoverable: boolean
   // Referral
   referral_code: string | null
   referred_by: string | null
