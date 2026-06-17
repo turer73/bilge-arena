@@ -382,7 +382,7 @@ export function KuleClient() {
                   >
                     {answered && isCorrect ? '✓' : answered && isSelected ? '✕' : label}
                   </span>
-                  <span>{opt}</span>
+                  <span>{renderRichText(opt)}</span>
                 </button>
               )
             })}

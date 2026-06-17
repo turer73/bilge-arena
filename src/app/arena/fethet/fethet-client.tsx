@@ -258,7 +258,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
                     >
                       {label}
                     </span>
-                    <span>{opt}</span>
+                    <span>{renderRichText(opt)}</span>
                   </button>
                 )
               })}

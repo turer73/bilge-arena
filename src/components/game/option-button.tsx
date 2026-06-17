@@ -3,6 +3,7 @@
 import { memo } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { getOptionLetter } from '@/lib/utils/question'
+import { renderRichText } from '@/lib/utils/rich-text'
 
 export type OptionState = 'idle' | 'correct' | 'wrong' | 'dim' | 'selected'
 
@@ -101,7 +102,7 @@ export const OptionButton = memo(function OptionButton({ index, text, state, onC
 
       {/* Metin */}
       <span className={cn('text-[12px] font-medium leading-[1.45] md:text-[13.5px] xl:text-[15px] 2xl:text-base', s.text)}>
-        {text}
+        {renderRichText(text)}
       </span>
 
       {/* Dogru/yanlis ikonu */}
