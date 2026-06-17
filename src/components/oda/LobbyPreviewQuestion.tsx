@@ -23,6 +23,7 @@ import {
   type RefreshLobbyPreviewActionState,
 } from '@/lib/rooms/actions'
 import type { LobbyPreviewQuestion as PreviewQ } from '@/lib/rooms/server-fetch'
+import { renderRichText } from '@/lib/utils/rich-text'
 
 interface LobbyPreviewQuestionProps {
   initialQuestion: PreviewQ | null
@@ -61,7 +62,7 @@ export function LobbyPreviewQuestion({
       {currentQuestion ? (
         <>
           <p className="mb-4 text-base font-semibold leading-relaxed">
-            {currentQuestion.question}
+            {renderRichText(currentQuestion.question)}
           </p>
           <ul className="mb-4 space-y-2">
             {currentQuestion.options.map((opt, idx) => (

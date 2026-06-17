@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import { OptionButton } from '@/components/game/option-button'
 import { playSound } from '@/lib/utils/sounds'
+import { renderRichText } from '@/lib/utils/rich-text'
 import { toast } from '@/stores/toast-store'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import type { Question, Challenge } from '@/types/database'
@@ -225,7 +226,7 @@ export default function DuelloGamePage() {
 
       {/* Soru */}
       <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
-        <p className="text-sm font-medium leading-relaxed">{questionText}</p>
+        <p className="text-sm font-medium leading-relaxed">{renderRichText(questionText)}</p>
       </div>
 
       {/* Secenekler */}

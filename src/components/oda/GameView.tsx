@@ -24,6 +24,7 @@ import {
 } from '@/lib/rooms/actions'
 import type { RoomState } from '@/lib/rooms/room-state-reducer'
 import { cn } from '@/lib/utils/cn'
+import { renderRichText } from '@/lib/utils/rich-text'
 
 const initialState: SubmitAnswerActionState = {}
 
@@ -241,7 +242,7 @@ export function GameView({
       </header>
 
       <h2 className="mb-4 text-base font-semibold leading-relaxed">
-        {questionText}
+        {renderRichText(questionText)}
       </h2>
 
       <form action={formAction} ref={formRef} className="space-y-3">

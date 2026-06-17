@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { GAMES, GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { AIQuestionGenerator } from '@/components/admin/ai-question-generator'
 import type { Question, Difficulty } from '@/types/database'
+import { stripRichText } from '@/lib/utils/rich-text'
 
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([])
@@ -222,7 +223,7 @@ export default function AdminQuestionsPage() {
               {filtered.map((q) => (
                 <tr key={q.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] transition-colors">
                   <td className="max-w-[300px] truncate px-4 py-3">
-                    <div className="font-medium">{q.content.question}</div>
+                    <div className="font-medium">{stripRichText(q.content.question)}</div>
                     <div className="mt-0.5 text-[10px] text-[var(--text-sub)]">
                       {q.category}{q.subcategory ? ` / ${q.subcategory}` : ''}
                     </div>

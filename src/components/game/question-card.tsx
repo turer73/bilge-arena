@@ -3,6 +3,7 @@
 import type { Question } from '@/types/database'
 import { GAMES } from '@/lib/constants/games'
 import { useChatStore } from '@/stores/chat-store'
+import { renderRichText, stripRichText } from '@/lib/utils/rich-text'
 
 const DIFF_CONFIG: Record<number, { label: string; color: string }> = {
   1: { label: 'KOLAY', color: 'var(--growth)' },
@@ -44,9 +45,9 @@ export function QuestionCard({
     const opts = question.content.options
       .map((o, i) => `${'ABCDE'[i]}) ${o}`)
       .join('\n')
-    const text = question.content.question || question.content.sentence
-    // Öncül bloğu (passage) varsa soru metninin önüne ekle — asistan ifadeleri görsün
-    const body = question.content.passage ? `${question.content.passage}\n\n${text}` : text
+    const text = stripRichText(question.content.question || question.content.sentence)
+    // Öncül bloğu (passage) varsa soru metninin önüne ekle — asistan ifadeleri görsün (<u> markup'i AI'ya gitmesin)
+    const body = question.content.passage ? `${stripRichText(question.content.passage)}\n\n${text}` : text
     const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}`
     useChatStore.getState().setQuestionContext(ctx)
     useChatStore.getState().clearMessages()
@@ -133,13 +134,13 @@ export function QuestionCard({
           deyip boş görünüyordu (Ensar 06-16). */}
       {question.content.passage && (
         <p className="mb-3 whitespace-pre-line text-[13px] leading-[1.72] text-[var(--text-sub)] md:text-sm xl:text-[15px]">
-          {question.content.passage}
+          {renderRichText(question.content.passage)}
         </p>
       )}
 
-      {/* Soru metni */}
+      {/* Soru metni — <u>...</u> markup'i altcizili render edilir (alti cizili sozcuk sorulari) */}
       <p className="text-[13px] font-medium leading-[1.72] md:text-[15px] xl:text-base 2xl:text-lg">
-        {question.content.question || question.content.sentence}
+        {renderRichText(question.content.question || question.content.sentence)}
       </p>
 
       {/* Burst particles slot */}

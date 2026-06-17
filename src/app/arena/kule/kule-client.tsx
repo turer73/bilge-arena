@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { GAME_LIST } from '@/lib/constants/games'
 import type { GameSlug } from '@/lib/constants/games'
 import { shuffleOptions } from '@/lib/utils/question'
+import { renderRichText } from '@/lib/utils/rich-text'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -340,7 +341,7 @@ export function KuleClient() {
       {!state.loading && !state.error && state.question && (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5">
           <p className="mb-5 text-sm font-semibold leading-relaxed md:text-base">
-            {state.question.content.question}
+            {renderRichText(state.question.content.question)}
           </p>
 
           <div className="space-y-2">
