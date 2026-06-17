@@ -24,6 +24,12 @@ interface FriendItem {
   createdAt: string
 }
 
+interface BlockedItem {
+  friendshipId: string
+  profile: FriendProfile
+  createdAt: string
+}
+
 interface SearchUser {
   id: string
   username?: string | null
@@ -31,6 +37,16 @@ interface SearchUser {
   avatar_url: string | null
   total_xp: number
 }
+
+type ReportType = 'harassment' | 'inappropriate' | 'impersonation' | 'spam' | 'other'
+
+const REPORT_REASONS: { value: ReportType; label: string }[] = [
+  { value: 'harassment', label: 'Taciz / zorbalık' },
+  { value: 'inappropriate', label: 'Uygunsuz isim / avatar' },
+  { value: 'impersonation', label: 'Taklit / sahtekârlık' },
+  { value: 'spam', label: 'Spam' },
+  { value: 'other', label: 'Diğer' },
+]
 
 /** Username > display_name > fallback */
 function displayName(p: { username?: string | null; display_name?: string | null }): string {
@@ -48,6 +64,8 @@ export default function FriendsClient() {
   const [loading, setLoading] = useState(true)
   const [challengeTarget, setChallengeTarget] = useState<string | null>(null)
   const [sendingChallenge, setSendingChallenge] = useState(false)
+  const [blocked, setBlocked] = useState<BlockedItem[]>([])
+  const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null)
 
   const fetchFriends = useCallback(async () => {
     const res = await fetch('/api/friends')
@@ -56,6 +74,7 @@ export default function FriendsClient() {
     setFriends(data.friends || [])
     setPendingReceived(data.pendingReceived || [])
     setPendingSent(data.pendingSent || [])
+    setBlocked(data.blocked || [])
     setLoading(false)
   }, [])
 
@@ -117,6 +136,49 @@ export default function FriendsClient() {
     if (res.ok) {
       toast.info(label)
       fetchFriends()
+    }
+  }
+
+  const blockUser = async (targetId: string, name: string) => {
+    if (!confirm(`${name} engellensin mi? Arkadaşlığınız kaldırılır ve birbirinizi arayamazsınız.`)) return
+    const res = await fetch('/api/friends/block', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetId }),
+    })
+    if (res.ok) {
+      toast.info(`${name} engellendi`)
+      fetchFriends()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error || 'Engellenemedi')
+    }
+  }
+
+  const unblockUser = async (targetId: string) => {
+    const res = await fetch('/api/friends/block', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetId }),
+    })
+    if (res.ok) {
+      toast.info('Engel kaldırıldı')
+      fetchFriends()
+    }
+  }
+
+  const submitReport = async (reportType: ReportType, reason: string) => {
+    if (!reportTarget) return
+    const res = await fetch('/api/users/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reportedUserId: reportTarget.id, reportType, reason: reason || undefined }),
+    })
+    setReportTarget(null)
+    if (res.ok) toast.success('Şikayetin alındı, teşekkürler')
+    else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error || 'Şikayet gönderilemedi')
     }
   }
 
@@ -216,6 +278,13 @@ export default function FriendsClient() {
                   >
                     Reddet
                   </button>
+                  <button
+                    onClick={() => blockUser(f.profile.id, displayName(f.profile))}
+                    className="rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] hover:text-[var(--urgency)]"
+                    title="Engelle"
+                  >
+                    🚫
+                  </button>
                 </div>
               </div>
             ))}
@@ -284,6 +353,20 @@ export default function FriendsClient() {
                   ⚔️
                 </button>
                 <button
+                  onClick={() => setReportTarget({ id: f.profile.id, name: displayName(f.profile) })}
+                  className="text-sm text-[var(--muted)] hover:text-[var(--reward)]"
+                  title="Şikayet et"
+                >
+                  ⚑
+                </button>
+                <button
+                  onClick={() => blockUser(f.profile.id, displayName(f.profile))}
+                  className="text-sm text-[var(--muted)] hover:text-[var(--urgency)]"
+                  title="Engelle"
+                >
+                  🚫
+                </button>
+                <button
                   onClick={() => removeFriend(f.friendshipId, 'Arkadaş kaldırıldı')}
                   className="text-xs text-[var(--muted)] hover:text-[var(--urgency)]"
                   title="Arkadaşlıktan çıkar"
@@ -328,6 +411,40 @@ export default function FriendsClient() {
           ))}
         </div>
       )}
+
+      {/* Engellenenler */}
+      {blocked.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 text-xs font-bold tracking-wider text-[var(--text-sub)]">
+            ENGELLENENLER ({blocked.length})
+          </h2>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] divide-y divide-[var(--border)]">
+            {blocked.map((b) => (
+              <div key={b.friendshipId} className="flex items-center gap-3 px-4 py-3">
+                <ProfileAvatar profile={b.profile} />
+                <div className="flex-1 min-w-0">
+                  <div className="truncate text-sm font-semibold text-[var(--muted)]">{displayName(b.profile)}</div>
+                </div>
+                <button
+                  onClick={() => unblockUser(b.profile.id)}
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:text-[var(--text)]"
+                >
+                  Engeli kaldır
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sikayet modali */}
+      {reportTarget && (
+        <ReportModal
+          name={reportTarget.name}
+          onClose={() => setReportTarget(null)}
+          onSubmit={submitReport}
+        />
+      )}
     </div>
   )
 }
@@ -346,6 +463,70 @@ function ProfileAvatar({ profile }: { profile: FriendProfile }) {
   return (
     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--focus)] text-xs font-bold text-white">
       {trUpper(name.charAt(0))}
+    </div>
+  )
+}
+
+function ReportModal({
+  name,
+  onClose,
+  onSubmit,
+}: {
+  name: string
+  onClose: () => void
+  onSubmit: (type: ReportType, reason: string) => void
+}) {
+  const [type, setType] = useState<ReportType>('harassment')
+  const [reason, setReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="mb-1 text-base font-bold">Kullanıcıyı şikayet et</h3>
+        <p className="mb-4 truncate text-xs text-[var(--muted)]">{name}</p>
+
+        <div className="mb-4 space-y-1.5">
+          {REPORT_REASONS.map((r) => (
+            <label key={r.value} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="report-reason"
+                checked={type === r.value}
+                onChange={() => setType(r.value)}
+              />
+              {r.label}
+            </label>
+          ))}
+        </div>
+
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value.slice(0, 1000))}
+          placeholder="İstersen kısaca açıkla (opsiyonel)"
+          rows={3}
+          className="mb-4 w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--focus)]"
+        />
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--muted)]"
+          >
+            Vazgeç
+          </button>
+          <button
+            disabled={submitting}
+            onClick={() => { setSubmitting(true); onSubmit(type, reason) }}
+            className="rounded-lg bg-[var(--urgency)] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+          >
+            Şikayet et
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
