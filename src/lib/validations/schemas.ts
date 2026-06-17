@@ -105,6 +105,17 @@ export const friendActionSchema = z.object({
   friendshipId: z.string().uuid(),
 })
 
+// Engelle / sikayet
+export const blockUserSchema = z.object({
+  targetId: z.string().uuid(),
+})
+
+export const reportUserSchema = z.object({
+  reportedUserId: z.string().uuid(),
+  reportType: z.enum(['harassment', 'inappropriate', 'impersonation', 'spam', 'other']),
+  reason: z.string().trim().max(1000).optional(),
+})
+
 // ============================================================
 // Referral
 // ============================================================

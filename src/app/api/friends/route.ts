@@ -45,7 +45,23 @@ export async function GET() {
   const pendingReceived = list.filter((f) => f.status === 'pending' && !f.isSentByMe)
   const pendingSent = list.filter((f) => f.status === 'pending' && f.isSentByMe)
 
-  return NextResponse.json({ friends: accepted, pendingReceived, pendingSent })
+  // Engellediklerim (yalniz benim engelledigim; karsi tarafin engeli bana gosterilmez)
+  const { data: blockedRows } = await supabase
+    .from('friendships')
+    .select(`
+      id, created_at,
+      target:profiles!friendships_friend_id_fkey(id, username, display_name, avatar_url, total_xp, current_streak)
+    `)
+    .eq('user_id', user.id)
+    .eq('status', 'blocked')
+
+  const blocked = (blockedRows || []).map((b) => ({
+    friendshipId: b.id,
+    profile: b.target,
+    createdAt: b.created_at,
+  }))
+
+  return NextResponse.json({ friends: accepted, pendingReceived, pendingSent, blocked })
 }
 
 export async function POST(req: Request) {
@@ -72,6 +88,11 @@ export async function POST(req: Request) {
     .single()
 
   if (existing) {
+    if (existing.status === 'blocked') {
+      // Engel iliskisi (her iki yon) — istek gonderilemez. Hangi tarafin
+      // engelledigi sizdirilmaz; ayrica UNIQUE(user_id,friend_id) cakismasini onler.
+      return NextResponse.json({ error: 'Bu kullaniciya istek gonderilemez' }, { status: 403 })
+    }
     if (existing.status === 'accepted') {
       return NextResponse.json({ error: 'Zaten arkadassiniz' }, { status: 409 })
     }
