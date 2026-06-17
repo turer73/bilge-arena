@@ -74,11 +74,12 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
   const ctaSecondary = (config?.cta_secondary as { text?: string; href?: string }) || {}
   const miniStats = (config?.mini_stats as string[]) || null
 
-  // Anasayfa maskotu: Bilge Chan selam pozu (public/chan/chan-wave.webp — mevcut
-  // + deployed). Eskiden /bilge-chan-selam.png idi ama o dosya hiç yoktu → her
-  // açılışta next/image 400 + kırık-görsel flaşı. Yüklenemezse onError logoya düşer.
+  // Anasayfa görseli: marka logosu (logoUrl = /logo/icon-512-transparent.png),
+  // dairesel parlayan çerçevede. Bilge Chan maskotu kullanıcı isteğiyle
+  // anasayfadan kaldırıldı (hasMascot=false) — mekanizma korundu, gerekirse
+  // hasMascot=true ile maskot (chan-wave.webp) + balon + isim etiketi geri açılır.
   const [mascotSrc, setMascotSrc] = useState('/chan/chan-wave.webp')
-  const [hasMascot, setHasMascot] = useState(true)
+  const [hasMascot, setHasMascot] = useState(false)
 
   return (
     <section className="relative flex min-h-screen items-center overflow-hidden">
@@ -160,7 +161,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               >
                 <Image
                   src={hasMascot ? mascotSrc : logoUrl}
-                  alt="Bilge Chan"
+                  alt={hasMascot ? 'Bilge Chan' : 'Bilge Arena'}
                   width={440}
                   height={440}
                   priority
