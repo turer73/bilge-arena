@@ -175,4 +175,21 @@ describe('PATCH /api/profile', () => {
     const res = await PATCH(makePatch({ username: 'taken' }) as never)
     expect(res.status).toBe(500)
   })
+
+  it('accepts is_discoverable toggle (opt-in kesif)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockProfileUpdate.mockResolvedValue({
+      data: { id: 'u1', is_discoverable: false },
+      error: null,
+    })
+    const res = await PATCH(makePatch({ is_discoverable: false }) as never)
+    expect(res.status).toBe(200)
+    expect((await res.json()).is_discoverable).toBe(false)
+  })
+
+  it('rejects non-boolean is_discoverable', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await PATCH(makePatch({ is_discoverable: 'yes' }) as never)
+    expect(res.status).toBe(400)
+  })
 })

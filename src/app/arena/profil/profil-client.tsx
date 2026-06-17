@@ -10,6 +10,7 @@ import { CosmeticBadgeShelf } from '@/components/profile/cosmetic-badge-shelf'
 import { ProgressChart } from '@/components/profile/progress-chart'
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
 import { NotificationSettings } from '@/components/profile/notification-settings'
+import { DiscoverabilitySettings } from '@/components/profile/discoverability-settings'
 import { ReferralCard } from '@/components/profile/referral-card'
 import { EditProfileModal } from '@/components/profile/edit-profile-modal'
 import { getLevelFromXP } from '@/lib/constants/levels'
@@ -520,6 +521,11 @@ export default function ProfilClient() {
       <div className="mb-6 grid gap-3 sm:grid-cols-2 animate-fadeUp" style={{ animationDelay: '0.28s', animationFillMode: 'both' }}>
         <NotificationSettings />
         <ReferralCard />
+      </div>
+
+      {/* Gizlilik — opt-in keşif */}
+      <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+        <DiscoverabilitySettings />
       </div>
 
       {/* Konu ilerleme */}
