@@ -1,5 +1,5 @@
 /**
- * Ensar "Arkaplanlar Vol 1" videolarını web-loop'a optimize edip Supabase
+ * Arka plan videolarını (Ensar "Arkaplanlar Vol 1" + AI-üretilen lisans-temiz yeniler) web-loop'a optimize edip Supabase
  * video-backgrounds bucket'a yükler ve background_assets'e (is_published=true)
  * yazar. Idempotent (slug upsert + storage upsert).
  *
@@ -20,6 +20,11 @@ const SRC =
   process.env.ENSAR_SRC || 'F:\\projelerim\\bilge-arena-assets\\ensar-videos\\Arkaplanlar Vol 1'
 const OUT =
   process.env.ENSAR_OUT || 'F:\\projelerim\\bilge-arena-assets\\ensar-videos\\optimized'
+// AI-üretilen (lisans-temiz) kaynaklar bilge-arena-assets kökünde (Ensar dışı pipeline).
+// Telifli Ensar pixel orijinalleri (Chainsaw/Elden/Itachi vb.) AI ile yeniden üretildi;
+// aşağıda bu item'lar aiFile ile AI_SRC'deki temiz kaynaklara map edilir.
+const AI_SRC =
+  process.env.AI_SRC || 'F:\\projelerim\\bilge-arena-assets'
 
 // ── .env.local parse (dotenv'siz) ──
 const envText = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8')
@@ -58,13 +63,21 @@ const ITEMS = [
   { file: '(Manzara) Sakin ve Huzurlu Göl 2.mp4', slug: 'manzara-gol-2', name: 'Huzurlu Göl II', category: 'manzara', rarity: 'rare', coin_cost: 1300, description: 'Yansımalı sakin göl' },
   { file: '(Manzara) Su Altı Manzarası.mp4', slug: 'manzara-su-alti', name: 'Su Altı', category: 'manzara', rarity: 'epic', coin_cost: 1500, description: 'Derin mavi su altı manzarası' },
 
+  // TELİF NOTU: pixel-adventure tek telifli-orijinal (Adventure Time / Cartoon Network);
+  // AI-temiz versiyonu YOK. Kullanıcı telif riskini kabul edip yayınladı (2026-06-18).
   { file: '(Pixel Art) Adventure Time.mp4', slug: 'pixel-adventure', name: 'Pixel Macera', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Renkli piksel macera dünyası' },
-  { file: '(Pixel Art) Chainsaw Man.mp4', slug: 'pixel-chainsaw', name: 'Pixel Aksiyon', category: 'pixel', rarity: 'epic', coin_cost: 1600, description: 'Aksiyon temalı piksel sahne' },
-  { file: '(Pixel Art) Cyberpunk City.mp4', slug: 'pixel-cyberpunk-city', name: 'Pixel Siber Şehir', category: 'pixel', rarity: 'epic', coin_cost: 1600, description: '8-bit cyberpunk şehir' },
-  { file: '(Pixel Art) Cyberpunk.mp4', slug: 'pixel-cyberpunk', name: 'Pixel Cyberpunk', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Piksel neon atmosfer' },
-  { file: '(Pixel Art) Elden Ring.mp4', slug: 'pixel-elden', name: 'Pixel Diyar', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Fantastik piksel diyarı' },
-  { file: '(Pixel Art) Ukinami Yuzuha.mp4', slug: 'pixel-ukinami', name: 'Pixel Sahil', category: 'pixel', rarity: 'epic', coin_cost: 1600, description: 'Piksel sahil esintisi' },
-  { file: '(Pixel Art) İtachi Uchiha.mp4', slug: 'pixel-itachi', name: 'Pixel Savaşçı', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Piksel savaşçı sahnesi' },
+  // Aşağıdaki 6 pixel: AI ile yeniden üretilmiş lisans-temiz versiyonlar (AI_SRC).
+  { aiFile: 'pixel_chainsawSeamless_loopin.mp4', slug: 'pixel-chainsaw', name: 'Pixel Aksiyon', category: 'pixel', rarity: 'epic', coin_cost: 1600, description: 'Aksiyon temalı piksel sahne' },
+  { aiFile: 'pixel_cyberpunk_citySeamless_l.mp4', slug: 'pixel-cyberpunk-city', name: 'Pixel Siber Şehir', category: 'pixel', rarity: 'epic', coin_cost: 1600, description: '8-bit cyberpunk şehir' },
+  { aiFile: 'pixel_cyberpunkSeamless_loopin.mp4', slug: 'pixel-cyberpunk', name: 'Pixel Cyberpunk', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Piksel neon atmosfer' },
+  { aiFile: 'pixel_eldenSeamless_looping_pi.mp4', slug: 'pixel-elden', name: 'Pixel Diyar', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Fantastik piksel diyarı' },
+  { aiFile: 'pixel_ukinamiSeamless_looping.mp4', slug: 'pixel-ukinami', name: 'Pixel Sahil', category: 'pixel', rarity: 'epic', coin_cost: 1600, description: 'Piksel sahil esintisi' },
+  { aiFile: 'pixel_itachiSeamless_looping.mp4', slug: 'pixel-itachi', name: 'Pixel Savaşçı', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Piksel savaşçı sahnesi' },
+
+  // AI-üretilen lisans-temiz yeni arka planlar (06-17 yayınlandı):
+  { aiFile: 'comic_book_graphic_novel_art.mp4', slug: 'cizgi-roman', name: 'Çizgi Roman', category: 'cizgi-roman', rarity: 'epic', coin_cost: 1600, description: 'Cizgi roman / graphic novel tarzi dinamik arka plan' },
+  // NOT: pixel-doga kaynağı varsayım (tek kalan generic AI dosyası); seed çalıştırılırken doğrula.
+  { aiFile: 'user-ai-generation-sO01qxqp3reA-1080p.mp4', slug: 'pixel-doga', name: 'Pixel Doğa', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Pixel sanat dogal manzara - cayir, daglar, bulutlar' },
 
   { file: '(Boşluk) Uzay Bükülmesi.mp4', slug: 'kozmik-uzay-bukulmesi', name: 'Uzay Bükülmesi', category: 'kozmik', rarity: 'legendary', coin_cost: 2000, description: 'Yıldızlar arası uzay-zaman bükülmesi' },
 ]
@@ -79,9 +92,9 @@ async function main() {
   const results = []
   let uploadErrors = 0
   for (const it of list) {
-    const inFile = path.join(SRC, it.file)
+    const inFile = it.aiFile ? path.join(AI_SRC, it.aiFile) : path.join(SRC, it.file)
     if (!fs.existsSync(inFile)) {
-      console.error('ATLA (dosya yok):', it.file)
+      console.error('ATLA (dosya yok):', it.aiFile || it.file)
       continue
     }
     const outDir = path.join(OUT, it.slug)
