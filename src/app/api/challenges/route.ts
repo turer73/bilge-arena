@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { GAME_SLUGS } from '@/lib/constants/games'
@@ -29,7 +30,7 @@ export async function GET() {
     .order('created_at', { ascending: false })
     .limit(20)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return dbErrorResponse('challenges', error)
 
   return NextResponse.json({ challenges: data })
 }

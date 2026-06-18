@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return dbErrorResponse('admin/backgrounds', error)
   }
   return NextResponse.json({ backgrounds: data ?? [] })
 }

@@ -4,6 +4,7 @@ import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { NextResponse, type NextRequest } from 'next/server'
 import { reportUpdateSchema } from '@/lib/validations/schemas'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
   const { data: reports, count, error } = await query.range(offset, offset + limit - 1)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return dbErrorResponse('admin/reports', error)
   }
 
   return NextResponse.json({ reports, total: count, page, limit })
@@ -65,7 +66,7 @@ export async function PATCH(request: NextRequest) {
     .eq('id', reportId)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return dbErrorResponse('admin/reports', error)
   }
 
   // Admin log

@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { NextResponse, type NextRequest } from 'next/server'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 
 export async function GET() {
   const supabase = await createClient()
@@ -16,7 +17,7 @@ export async function GET() {
     .select('*')
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return dbErrorResponse('admin/settings', error)
   }
 
   // key->value map'e cevir
@@ -83,7 +84,7 @@ export async function PATCH(request: NextRequest) {
     })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return dbErrorResponse('admin/settings', error)
   }
 
   // Admin log

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 
 export async function GET(request: NextRequest) {
   const cookieClient = await createClient()
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
   const { data, count, error } = await query.range(offset, offset + limit - 1)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return dbErrorResponse('admin/logs', error)
   }
 
   // Admin isimlerini cek
