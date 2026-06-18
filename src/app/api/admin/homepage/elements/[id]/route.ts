@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
@@ -43,7 +44,7 @@ export async function PATCH(
       .eq('id', id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return dbErrorResponse('admin/homepage/elements/[id]', error)
     }
 
     return NextResponse.json({ success: true })
@@ -79,7 +80,7 @@ export async function DELETE(
       .eq('id', id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return dbErrorResponse('admin/homepage/elements/[id]', error)
     }
 
     // Admin log

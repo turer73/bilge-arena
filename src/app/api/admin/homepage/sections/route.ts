@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 
 /**
  * GET /api/admin/homepage/sections
@@ -20,7 +21,7 @@ export async function GET() {
       .order('section_key', { ascending: true })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return dbErrorResponse('admin/homepage/sections', error)
     }
 
     return NextResponse.json({ sections: sections ?? [] })

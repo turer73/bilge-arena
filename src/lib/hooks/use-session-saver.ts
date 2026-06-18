@@ -108,7 +108,7 @@ export function useSessionSaver({
                 }
               }
             })
-            .catch(() => {})
+            .catch((e) => console.warn('[session-saver] rozet bildirimi hatasi:', e))
         }
       })
       .catch((err) => console.error('[SessionSaver] Kaydetme hatasi:', err))

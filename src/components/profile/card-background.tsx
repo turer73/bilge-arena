@@ -64,7 +64,7 @@ export function useCardBackground(): CardBackground {
       .then((data: { backgrounds: BackgroundAssetRow[] }) => {
         if (active) setVideoBgItems((data.backgrounds ?? []).map(rowToStoreItem))
       })
-      .catch(() => {})
+      .catch((e) => console.warn('[card-bg] video arka plan yukleme hatasi:', e))
     return () => {
       active = false
     }

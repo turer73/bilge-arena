@@ -6,7 +6,8 @@ import { GAME_SLUGS } from '@/lib/constants/games'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
 
-const questionsLimiter = createRateLimiter('questions', 120, 60_000) // 120 req/dk (50 öğrenci × ~2 req/dk)
+const questionsLimiter = createRateLimiter('questions', 120, 60_000) // anon: IP bazli (50 öğrenci × ~2 req/dk)
+const questionsAuthLimiter = createRateLimiter('questions-auth', 240, 60_000) // authed: user-id bazli (daha yüksek ama sınırsız değil)
 const VALID_GAMES = new Set(GAME_SLUGS)
 
 /** parseInt ile boundary kontrolu: min <= val <= max */
@@ -19,18 +20,17 @@ function safeInt(value: string | null, fallback: number, min: number, max: numbe
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
 
-  // Auth'lu kullanıcılar rate limit'ten muaf (gerçek öğrenci, bot değil)
-  // Auth'suz istekler IP bazlı rate limit'e tabi
+  // Çift rate limit: anon → IP (120/dk), authed → user-id (240/dk).
+  // Authed muafiyeti KALDIRILDI — ele geçmiş/otomatik hesap brute-force'u önler.
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    const ip = getClientIp(request.headers)
-    const rl = await questionsLimiter.check(ip)
-    if (!rl.success) {
-      return NextResponse.json(
-        { error: 'Cok fazla istek. Lutfen bekleyin.' },
-        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
-      )
-    }
+  const rl = user
+    ? await questionsAuthLimiter.check(`user:${user.id}`)
+    : await questionsLimiter.check(getClientIp(request.headers))
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek. Lutfen bekleyin.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+    )
   }
   const { searchParams } = new URL(request.url)
 

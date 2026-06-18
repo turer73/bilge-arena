@@ -49,7 +49,7 @@ export function StoreClient() {
       .then((data: { backgrounds: BackgroundAssetRow[] }) => {
         if (active) setVideoItems((data.backgrounds ?? []).map(rowToStoreItem))
       })
-      .catch(() => {})
+      .catch((e) => console.warn('[magaza] video arka plan yukleme hatasi:', e))
     return () => {
       active = false
     }

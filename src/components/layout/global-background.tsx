@@ -77,7 +77,7 @@ export function GlobalBackground() {
       .then((data: { backgrounds: BackgroundAssetRow[] }) => {
         if (active) setVideoItems((data.backgrounds ?? []).map(rowToStoreItem))
       })
-      .catch(() => {})
+      .catch((e) => console.warn('[global-bg] video arka plan yukleme hatasi:', e))
     return () => {
       active = false
     }

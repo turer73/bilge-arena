@@ -61,6 +61,6 @@ export function useDailyLogin() {
         }
         // 'already_claimed' durumunda bir şey gösterme
       })
-      .catch(() => {})
+      .catch((e) => console.warn('[daily-login] istek hatasi:', e))
   }, [user])
 }

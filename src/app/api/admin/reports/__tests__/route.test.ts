@@ -177,7 +177,7 @@ describe('GET /api/admin/reports', () => {
     expect(mockRange).toHaveBeenCalledWith(999 * 20, 1000 * 20 - 1)
   })
 
-  it('returns 500 with error.message when supabase returns error', async () => {
+  it('returns 500 with GENERIC error (no PG message leak) when supabase returns error', async () => {
     mockCheckPermission.mockResolvedValue(ADMIN)
     mockRangeResult.mockReturnValue({
       data: null,
@@ -187,7 +187,7 @@ describe('GET /api/admin/reports', () => {
     const res = await GET(makeGetRequest())
     expect(res.status).toBe(500)
     const json = await res.json()
-    expect(json.error).toBe('db gitti')
+    expect(json.error).toBe('Bir hata oluştu.')
   })
 })
 
@@ -285,7 +285,7 @@ describe('PATCH /api/admin/reports', () => {
     })
   })
 
-  it('returns 500 with error.message when update fails', async () => {
+  it('returns 500 with GENERIC error (no PG message leak) when update fails', async () => {
     mockCheckPermission.mockResolvedValue(ADMIN)
     mockUpdateResult.mockReturnValue({ error: { message: 'update failed' } })
     const res = await PATCH(
@@ -293,6 +293,6 @@ describe('PATCH /api/admin/reports', () => {
     )
     expect(res.status).toBe(500)
     const json = await res.json()
-    expect(json.error).toBe('update failed')
+    expect(json.error).toBe('Bir hata oluştu.')
   })
 })
