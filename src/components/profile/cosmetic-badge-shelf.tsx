@@ -29,7 +29,7 @@ export function CosmeticBadgeShelf({
       .then((d: { badges: CosmeticBadgeRow[] }) => {
         if (active) setAll((d.badges ?? []).map(rowToBadgeItem))
       })
-      .catch(() => {})
+      .catch((e) => console.warn('[rozet-raf] rozet yukleme hatasi:', e))
     return () => {
       active = false
     }
