@@ -30,7 +30,11 @@ const auth = vi.hoisted(() => ({
     loading: false,
   },
 }))
-vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => auth.value }))
+// getState: applyAvatar concurrent-clobber fix (Codex PR#243) en guncel store
+// profilini useAuthStore.getState() ile okur — mock da saglamali.
+vi.mock('@/stores/auth-store', () => ({
+  useAuthStore: Object.assign(() => auth.value, { getState: () => auth.value }),
+}))
 
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 vi.mock('@/stores/toast-store', () => ({ toast: toastMock }))
@@ -97,14 +101,35 @@ describe('KisisellestirClient', () => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ backgrounds: [], badges: [] }) })
     })
     render(<KisisellestirClient />)
-    // Avatar varsayılan alan → galeri görünür; ilk "Bilge Chan" avatarını seç (Lv1, açık)
-    fireEvent.click(screen.getAllByLabelText('Bilge Chan avatar')[0])
+    // Avatar varsayılan alan → galeri görünür; ilk "Bilge Chan" avatarını seç (Lv1, açık).
+    // aria-label artık grup-içi benzersiz (Codex PR#243 a11y fix): "Bilge Chan avatar 1".
+    fireEvent.click(screen.getByLabelText('Bilge Chan avatar 1'))
 
     await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
     const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar/preset')!
     expect(call).toBeTruthy()
     expect(JSON.parse(call[1].body)).toHaveProperty('presetId')
     expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+      avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
+    })
+  })
+
+  test('avatar kaydı EN GÜNCEL profili merge eder — eşzamanlı alanı ezmez (Codex PR#243)', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/profile/avatar/preset')) {
+        // Yanıt dönmeden ÖNCE eşzamanlı bir nameplate kaydı olmuş gibi store'u güncelle.
+        auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), selected_nameplate: 'gece' }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp' }) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ backgrounds: [], badges: [] }) })
+    })
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByLabelText('Bilge Chan avatar 1'))
+
+    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    // Bayat closure olsa selected_nameplate 'none'a dönerdi (clobber); fix EN GÜNCEL'i ('gece') korur.
+    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+      selected_nameplate: 'gece',
       avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
     })
   })
