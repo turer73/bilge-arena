@@ -202,7 +202,7 @@ describe('PATCH /api/admin/reports', () => {
   it('returns 403 without admin.reports.manage permission', async () => {
     mockCheckPermission.mockResolvedValue(null)
     const res = await PATCH(
-      makePatchRequest({ reportId: REPORT_ID, status: 'in_review' }),
+      makePatchRequest({ reportId: REPORT_ID, status: 'reviewed' }),
     )
     expect(res.status).toBe(403)
     expect(mockCheckPermission).toHaveBeenCalledWith(
@@ -213,7 +213,7 @@ describe('PATCH /api/admin/reports', () => {
 
   it("returns 400 'Gecersiz istek' when reportId is missing", async () => {
     mockCheckPermission.mockResolvedValue(ADMIN)
-    const res = await PATCH(makePatchRequest({ status: 'in_review' }))
+    const res = await PATCH(makePatchRequest({ status: 'reviewed' }))
     expect(res.status).toBe(400)
     const json = await res.json()
     expect(json.error).toBe('Gecersiz istek')
@@ -230,7 +230,7 @@ describe('PATCH /api/admin/reports', () => {
   it('returns 200 { success: true } on a valid update', async () => {
     mockCheckPermission.mockResolvedValue(ADMIN)
     const res = await PATCH(
-      makePatchRequest({ reportId: REPORT_ID, status: 'in_review' }),
+      makePatchRequest({ reportId: REPORT_ID, status: 'reviewed' }),
     )
     expect(res.status).toBe(200)
     const json = await res.json()
@@ -248,7 +248,7 @@ describe('PATCH /api/admin/reports', () => {
 
   it('does NOT add resolved_by for non-resolved statuses', async () => {
     mockCheckPermission.mockResolvedValue(ADMIN)
-    await PATCH(makePatchRequest({ reportId: REPORT_ID, status: 'dismissed' }))
+    await PATCH(makePatchRequest({ reportId: REPORT_ID, status: 'rejected' }))
     const payload = mockUpdate.mock.calls[0][0] as Record<string, unknown>
     expect(payload).not.toHaveProperty('resolved_by')
   })
@@ -289,7 +289,7 @@ describe('PATCH /api/admin/reports', () => {
     mockCheckPermission.mockResolvedValue(ADMIN)
     mockUpdateResult.mockReturnValue({ error: { message: 'update failed' } })
     const res = await PATCH(
-      makePatchRequest({ reportId: REPORT_ID, status: 'in_review' }),
+      makePatchRequest({ reportId: REPORT_ID, status: 'reviewed' }),
     )
     expect(res.status).toBe(500)
     const json = await res.json()

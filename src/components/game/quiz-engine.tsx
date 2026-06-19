@@ -367,6 +367,19 @@ export function QuizEngine({ game }: QuizEngineProps) {
             questionId={question.id}
             isOpen={quiz.showReportModal}
             onClose={() => quiz.setShowReportModal(false)}
+            onSubmit={(data) => {
+              // #379: raporu error_reports'a kalici yaz (fire-and-forget;
+              // modal optimistik "gonderildi" gosterir). Hata sessiz loglanir.
+              fetch('/api/questions/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  questionId: question.id,
+                  report_type: data.type,
+                  description: data.description,
+                }),
+              }).catch((err) => console.error('[QuizEngine] rapor gonderilemedi:', err))
+            }}
           />
         </ComponentErrorBoundary>
 

@@ -43,6 +43,11 @@ export const errorReportSchema = z.object({
   description: z.string().trim().max(1000).optional().default(''),
 })
 
+// In-app "soru hatali" bildirimi (#379): modal report'una questionId eklenir.
+export const errorReportSubmitSchema = errorReportSchema.extend({
+  questionId: z.string().uuid(),
+})
+
 // ============================================================
 // Profil guncelleme
 // ============================================================
@@ -221,7 +226,10 @@ export const questionUpdateSchema = z.object({
 // Admin: error reports
 // ============================================================
 
-const REPORT_STATUSES = ['pending', 'in_review', 'resolved', 'dismissed'] as const
+// DB enum report_status ile birebir: pending/reviewed/resolved/rejected.
+// (Onceki ['in_review','dismissed'] DB'de yoktu -> admin "Incelendi"/"Reddet"
+//  PATCH'leri Zod'da 400 yiyordu; UI zaten reviewed/rejected gonderiyor.)
+const REPORT_STATUSES = ['pending', 'reviewed', 'resolved', 'rejected'] as const
 
 export const reportUpdateSchema = z.object({
   reportId: z.string().uuid(),
