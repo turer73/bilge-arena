@@ -25,6 +25,9 @@ const OUT =
 // aşağıda bu item'lar aiFile ile AI_SRC'deki temiz kaynaklara map edilir.
 const AI_SRC =
   process.env.AI_SRC || 'F:\\projelerim\\bilge-arena-assets'
+// Codex PR#238 P1: stored URL cache-bust surumu — same-path upsert sonrasi Supabase
+// CDN/edge eski (telifli) icerigi sunmasin. Her run yeni surum -> client taze ceker.
+const SEED_VERSION = process.env.SEED_VERSION || String(Date.now())
 
 // ── .env.local parse (dotenv'siz) ──
 const envText = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8')
@@ -76,8 +79,10 @@ const ITEMS = [
 
   // AI-üretilen lisans-temiz yeni arka planlar (06-17 yayınlandı):
   { aiFile: 'comic_book_graphic_novel_art.mp4', slug: 'cizgi-roman', name: 'Çizgi Roman', category: 'cizgi-roman', rarity: 'epic', coin_cost: 1600, description: 'Cizgi roman / graphic novel tarzi dinamik arka plan' },
-  // NOT: pixel-doga kaynağı varsayım (tek kalan generic AI dosyası); seed çalıştırılırken doğrula.
-  { aiFile: 'user-ai-generation-sO01qxqp3reA-1080p.mp4', slug: 'pixel-doga', name: 'Pixel Doğa', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Pixel sanat dogal manzara - cayir, daglar, bulutlar' },
+  // NOT: pixel-doga kaynağı VARSAYIM (tek kalan generic AI dosyası). Kimliği doğrulanana
+  // kadar unverified -> varsayilan ATLANIR (Codex PR#238 P1: yanlis dosyayi canli asset
+  // uzerine yazma riski). Bilincli dahil etmek icin: --allow-unverified.
+  { aiFile: 'user-ai-generation-sO01qxqp3reA-1080p.mp4', slug: 'pixel-doga', name: 'Pixel Doğa', category: 'pixel', rarity: 'rare', coin_cost: 1400, description: 'Pixel sanat dogal manzara - cayir, daglar, bulutlar', unverified: true },
 
   { file: '(Boşluk) Uzay Bükülmesi.mp4', slug: 'kozmik-uzay-bukulmesi', name: 'Uzay Bükülmesi', category: 'kozmik', rarity: 'legendary', coin_cost: 2000, description: 'Yıldızlar arası uzay-zaman bükülmesi' },
 ]
@@ -85,6 +90,9 @@ const ITEMS = [
 const limitIdx = process.argv.indexOf('--limit')
 const limit = limitIdx >= 0 ? parseInt(process.argv[limitIdx + 1], 10) : ITEMS.length
 const list = ITEMS.slice(0, limit)
+// Codex PR#238 P1: dogrulanmamis-kaynakli item'lar (unverified:true) varsayilan ATLANIR
+// (yanlis dosyayi canli asset uzerine yazma riski). Bilincli dahil: --allow-unverified.
+const allowUnverified = process.argv.includes('--allow-unverified')
 
 const VF = 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:-1:-1:color=black,setsar=1'
 
@@ -92,9 +100,19 @@ async function main() {
   const results = []
   let uploadErrors = 0
   for (const it of list) {
+    // Codex PR#238 P1: dogrulanmamis kaynak varsayilan ATLA (KASITLI skip, hata degil).
+    if (it.unverified && !allowUnverified) {
+      console.warn('ATLA (dogrulanmamis kaynak — --allow-unverified ile dahil et):', it.slug)
+      continue
+    }
     const inFile = it.aiFile ? path.join(AI_SRC, it.aiFile) : path.join(SRC, it.file)
     if (!fs.existsSync(inFile)) {
-      console.error('ATLA (dosya yok):', it.aiFile || it.file)
+      // Codex PR#238 P1: SESSIZ ATLAMA YOK. Eksik kaynak (ozellikle aiFile = telif-temiz
+      // replacement) sessiz gecilirse eski telifli icerik yayinda KALIR + katalog eksik
+      // olur ama process 0 ile cikardi -> reproducibility/telif-fix iddiasi bos. Hata
+      // say; sonda uploadErrors>0 ise exit 1.
+      console.error('HATA (kaynak dosya yok):', it.aiFile || it.file, '->', it.slug)
+      uploadErrors++
       continue
     }
     const outDir = path.join(OUT, it.slug)
@@ -126,8 +144,11 @@ async function main() {
       uploadErrors++
       continue
     }
-    const hdUrl = supabase.storage.from('video-backgrounds').getPublicUrl(`${it.slug}/hd.mp4`).data.publicUrl
-    const posterUrl = supabase.storage.from('video-backgrounds').getPublicUrl(`${it.slug}/poster.jpg`).data.publicUrl
+    // Codex PR#238 P1: stored URL'e cache-bust surumu ekle — same-path upsert sonrasi
+    // Supabase CDN/browser eski (telifli) icerigi sunmasin (admin-uploader ?t= ile ayni desen).
+    const cb = `?v=${SEED_VERSION}`
+    const hdUrl = supabase.storage.from('video-backgrounds').getPublicUrl(`${it.slug}/hd.mp4`).data.publicUrl + cb
+    const posterUrl = supabase.storage.from('video-backgrounds').getPublicUrl(`${it.slug}/poster.jpg`).data.publicUrl + cb
     results.push({ ...it, hdUrl, posterUrl })
     console.log('  ✓ uploaded')
   }
