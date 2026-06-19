@@ -112,6 +112,18 @@ const QUESTION_GEN_PROMPT_FALLBACK = `Sen YKS soru üretiyorsun. Kategori: {cate
 KRİTİK: JSON anahtarları MUTLAKA "question", "options", "answer", "solution", "topic" olmalı.
 Türkçe key KULLANMA. SADECE JSON döndür, başka hiçbir şey yazma.`
 
+// Üretim prompt'u (env QUESTION_GEN_PROMPT_TEMPLATE) VEYA fallback — HER İKİSİNE de
+// eklenen zorunlu kalite kuralları. Ensar (2026-06-19) iki sistematik bug raporladı:
+// (1) doğru cevap neredeyse her zaman EN UZUN şık (~%38-76, "en uzunu seç" ile gameable),
+// (2) çözümde şık harfi ("Seçenek B") var ama UI şıkları karıştırıyor → harf yanlış
+// görünüyor (118 soru). Bu kurallar gelecek üretimde ikisini de önler (env'i değiştirmeden,
+// kodda append edildiği için production env-prompt'una da uygulanır).
+const QUALITY_RULES = `
+
+ZORUNLU KALİTE KURALLARI (İHLAL ETME):
+1. ŞIK UZUNLUK DENGESİ: Tüm seçenekler BENZER uzunlukta olmalı. Doğru cevap diğerlerinden belirgin biçimde UZUN/DETAYLI OLMAMALI — çeldiriciler (yanlış şıklar) da doğru cevap kadar dolu, makul ve inandırıcı yazılmalı. Aksi halde öğrenci içeriği bilmeden sadece "en uzun şıkkı" seçerek doğruyu bulabilir.
+2. ÇÖZÜMDE ŞIK HARFİ YASAK: "solution" alanında ŞIK HARFİ (A/B/C/D/E) veya "X seçeneği", "X şıkkı", "doğru cevap X" gibi harfe dayalı ifade KULLANMA. Şıklar kullanıcıya KARIŞIK sırayla gösterildiğinden harf referansı yanlış görünür. Doğru cevabı ve neden doğru/yanlış olduğunu yalnızca İÇERİKLE (kavram/değer) açıkla.`
+
 // CEFR seviyesine gore AI'ye verilecek kelime/grammar kalibrasyon ipucu.
 // 2026-04-26 (Tier C): Onceki versiyon C2 rubrigi ('Mastery: idiomatic
 // native-like vocabulary...') tamamen Ingilizce'ydi -> Gemini bu rubrigin
@@ -150,7 +162,7 @@ function buildSystemPrompt(game: string, category: string, levelTag: string | nu
   return template
     .replace(/\{categoryLabel\}/g, categoryLabel)
     .replace(/\{langRule\}/g, langRule)
-    .replace(/\{topicList\}/g, topicList)
+    .replace(/\{topicList\}/g, topicList) + QUALITY_RULES
 }
 
 /**
