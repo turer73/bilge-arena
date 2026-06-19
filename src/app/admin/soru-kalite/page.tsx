@@ -31,27 +31,32 @@ export default function AdminQuestionQualityPage() {
   const [minAnswered, setMinAnswered] = useState(20)
   const [maxRate, setMaxRate] = useState(50)
 
-  const fetchQueue = useCallback(async () => {
+  const fetchQueue = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
     try {
       const params = new URLSearchParams({
         minAnswered: String(minAnswered),
         maxRate: String(maxRate),
       })
-      const res = await fetch(`/api/admin/question-quality?${params}`)
+      const res = await fetch(`/api/admin/question-quality?${params}`, { signal })
       if (!res.ok) throw new Error('Kuyruk yuklenemedi')
       const data = await res.json()
       setItems(data.questions ?? [])
       setCapped(!!data.capped)
     } catch (err) {
+      // P2d fix (Codex PR#242): iptal edilen (bayat-filtre) isteği yoksay — eski
+      // yanıt yeniyi ezmesin. Sadece güncel istek state'i güncelleyebilir.
+      if ((err as Error)?.name === 'AbortError') return
       console.error('Soru kalite kuyrugu hatasi:', err)
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }, [minAnswered, maxRate])
 
   useEffect(() => {
-    fetchQueue()
+    const ctrl = new AbortController()
+    fetchQueue(ctrl.signal)
+    return () => ctrl.abort()
   }, [fetchQueue])
 
   const toggleActive = async (id: string, current: boolean) => {

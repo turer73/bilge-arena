@@ -55,6 +55,14 @@ export async function POST(req: Request) {
     if (error.code === '23503') {
       return NextResponse.json({ error: 'Soru bulunamadi' }, { status: 400 })
     }
+    // P2c fix (Codex PR#242): 23505 = unique-violation. Yukaridaki read-before-insert
+    // ATOMIK degil — eszamanli istekler (hizli tiklama/coklu sekme/retry) ikisi de "yok"
+    // gorup ikisi de insert edebilir. Migration 076 partial-unique index (user_id,
+    // question_id WHERE status='pending') bunu DB-seviyesinde garanti eder; ihlali
+    // idempotent already_reported olarak ele al (index henuz uygulanmamissa no-op).
+    if (error.code === '23505') {
+      return NextResponse.json({ status: 'already_reported' })
+    }
     console.error('[questions/report] insert hatasi:', error.message)
     return NextResponse.json({ error: 'Rapor gonderilemedi' }, { status: 500 })
   }

@@ -246,11 +246,13 @@ describe('PATCH /api/admin/reports', () => {
     )
   })
 
-  it('does NOT add resolved_by for non-resolved statuses', async () => {
+  it('clears resolved_by (null) for non-resolved statuses (P2e)', async () => {
+    // P2e fix (Codex PR#242): resolved'DAN çıkışta (reviewed/rejected/pending) eski
+    // resolver TEMİZLENMELİ — yoksa status≠resolved iken çelişkili resolved_by kalır.
     mockCheckPermission.mockResolvedValue(ADMIN)
     await PATCH(makePatchRequest({ reportId: REPORT_ID, status: 'rejected' }))
     const payload = mockUpdate.mock.calls[0][0] as Record<string, unknown>
-    expect(payload).not.toHaveProperty('resolved_by')
+    expect(payload.resolved_by).toBeNull()
   })
 
   it('passes adminNote through to admin_note column', async () => {

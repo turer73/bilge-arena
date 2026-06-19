@@ -14,11 +14,15 @@ const REPORT_TYPES = [
 
 type ReportType = typeof REPORT_TYPES[number]['value']
 
+// onSubmit artık sonucu döndürebilir: {ok:false} -> modal HATA gösterir (sahte
+// başarı YOK). void/undefined dönerse (eski çağıranlar) başarı sayılır (geri-uyum).
+type ReportSubmitResult = { ok: boolean; error?: string } | void
+
 interface ErrorReportModalProps {
   questionId: string
   isOpen: boolean
   onClose: () => void
-  onSubmit?: (data: { type: ReportType; description: string }) => void
+  onSubmit?: (data: { type: ReportType; description: string }) => ReportSubmitResult | Promise<ReportSubmitResult>
 }
 
 export function ErrorReportModal({
@@ -30,11 +34,13 @@ export function ErrorReportModal({
   const [selectedType, setSelectedType] = useState<ReportType | null>(null)
   const [description, setDescription] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   if (!isOpen) return null
 
-  const handleSubmit = () => {
-    if (!selectedType) return
+  const handleSubmit = async () => {
+    if (!selectedType || submitting) return
 
     // Zod ile dogrula
     const parsed = errorReportSchema.safeParse({
@@ -43,12 +49,28 @@ export function ErrorReportModal({
     })
     if (!parsed.success) return
 
-    onSubmit?.({ type: selectedType, description: parsed.data.description ?? '' })
-    setSubmitted(true)
+    // P1 fix (Codex PR#242): onSubmit'i AWAIT et, başarıyı yalnız {ok} ise göster.
+    // Eski fire-and-forget guest'e (401) sahte "gönderildi" gösterip raporu düşürüyordu.
+    setErrorMsg(null)
+    setSubmitting(true)
+    try {
+      const result = await onSubmit?.({ type: selectedType, description: parsed.data.description ?? '' })
+      if (result && result.ok === false) {
+        setErrorMsg(result.error ?? 'Rapor gönderilemedi. Tekrar dene.')
+        setSubmitting(false)
+        return
+      }
+    } catch {
+      setErrorMsg('Rapor gönderilemedi. Tekrar dene.')
+      setSubmitting(false)
+      return
+    }
 
+    setSubmitted(true)
     // 2 saniye sonra kapat
     setTimeout(() => {
       setSubmitted(false)
+      setSubmitting(false)
       setSelectedType(null)
       setDescription('')
       onClose()
@@ -131,6 +153,13 @@ export function ErrorReportModal({
               </div>
             </div>
 
+            {/* Hata mesajı (P1: sahte başarı yerine gerçek geri-bildirim) */}
+            {errorMsg && (
+              <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+                {errorMsg}
+              </div>
+            )}
+
             {/* Butonlar */}
             <div className="flex gap-2">
               <button
@@ -141,10 +170,10 @@ export function ErrorReportModal({
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!selectedType}
+                disabled={!selectedType || submitting}
                 className="flex-1 rounded-lg bg-[var(--reward)] px-3 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
               >
-                Gonder
+                {submitting ? 'Gonderiliyor...' : 'Gonder'}
               </button>
             </div>
           </>

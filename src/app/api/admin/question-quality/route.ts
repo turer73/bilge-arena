@@ -77,7 +77,27 @@ export async function GET(request: NextRequest) {
     reportCounts.set(r.question_id, (reportCounts.get(r.question_id) ?? 0) + 1)
   }
 
-  const candidates = (rows ?? []) as QuestionRow[]
+  // P2a fix (Codex PR#242): rapor edilen sorular drift-örneklemesinin (times_answered
+  // >= minAnswered, top-500) DIŞINDA kalmış olabilir — bu durumda pending_reports>0
+  // filtresine hiç ulaşamıyor, kuyrukta görünmüyordu. Eksik rapor-soru satırlarını
+  // örnekleme eşiklerinden BAĞIMSIZ ayrıca çek.
+  const driftRows = (rows ?? []) as QuestionRow[]
+  const driftIds = new Set(driftRows.map((r) => r.id))
+  const missingReportedIds = [...reportCounts.keys()].filter((id) => !driftIds.has(id))
+  let extraRows: QuestionRow[] = []
+  if (missingReportedIds.length > 0) {
+    const { data: extra, error: extraErr } = await svc
+      .from('questions')
+      .select('id, game, category, subcategory, difficulty, is_active, content, times_answered, times_correct')
+      .in('id', missingReportedIds)
+    if (extraErr) {
+      console.error('[admin/question-quality] reported-rows error:', extraErr.message)
+      return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
+    }
+    extraRows = (extra ?? []) as QuestionRow[]
+  }
+
+  const candidates = [...driftRows, ...extraRows]
   const questions = candidates
     .map((q) => {
       const rate = q.times_answered > 0
@@ -100,7 +120,15 @@ export async function GET(request: NextRequest) {
     })
     // Drift = dusuk basari VEYA bekleyen kullanici raporu.
     .filter((q) => q.success_rate < maxRate || q.pending_reports > 0)
-    .sort((a, b) => a.success_rate - b.success_rate)
+    // P2b fix (Codex PR#242): bekleyen raporu olanlar ÖNCE — yalnız success_rate
+    // sıralayıp slice edince sağlıklı-oranlı bir rapor düşük-başarılıların arkasına
+    // düşüp limit'te kesiliyordu (kuyruk raporları güvenilir göstermiyordu).
+    .sort((a, b) => {
+      const aRep = a.pending_reports > 0 ? 1 : 0
+      const bRep = b.pending_reports > 0 ? 1 : 0
+      if (aRep !== bRep) return bRep - aRep
+      return a.success_rate - b.success_rate
+    })
     .slice(0, limit)
 
   return NextResponse.json({
@@ -108,7 +136,8 @@ export async function GET(request: NextRequest) {
     minAnswered,
     maxRate,
     // Aday havuzu CAP'e degdiyse daha dusuk-oynanmali drift sorular kapsam disi
-    // kalmis olabilir — UI bunu bildirir (sessiz kesme yok).
-    capped: candidates.length >= CANDIDATE_CAP,
+    // kalmis olabilir — UI bunu bildirir (sessiz kesme yok). NOT: rapor-soru
+    // ek satırları capped sinyalini şişirmesin → yalnız drift örneklemesine bak.
+    capped: driftRows.length >= CANDIDATE_CAP,
   })
 }

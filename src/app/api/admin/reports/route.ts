@@ -57,7 +57,10 @@ export async function PATCH(request: NextRequest) {
 
   const updates: Record<string, unknown> = { status }
   if (adminNote !== undefined) updates.admin_note = adminNote
-  if (status === 'resolved') updates.resolved_by = admin.id
+  // P2e fix (Codex PR#242): resolved'a girerken resolver yaz; resolved'DAN ÇIKARKEN
+  // (reviewed/rejected/pending) eski resolver'ı TEMİZLE — yoksa status≠resolved iken
+  // çelişkili resolved_by kalıyordu.
+  updates.resolved_by = status === 'resolved' ? admin.id : null
 
   const svc = createServiceRoleClient()
   const { error } = await svc
