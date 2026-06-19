@@ -169,7 +169,29 @@ function buildSystemPrompt(g, c, lvl) {
   return tpl
     .replace(/\{categoryLabel\}/g, categoryLabel)
     .replace(/\{langRule\}/g, langRule)
-    .replace(/\{topicList\}/g, topicList)
+    .replace(/\{topicList\}/g, topicList) + QUALITY_RULES
+}
+
+// route.ts ile mirror (Codex PR#250): sik-uzunluk dengesi + cozumde sik-harfi yasagi.
+// CLI batch generator da admin API ile ayni kurallari Gemini'ye gondermeli.
+const QUALITY_RULES = `
+
+ZORUNLU KALİTE KURALLARI (İHLAL ETME):
+1. ŞIK UZUNLUK DENGESİ: Tüm seçenekler BENZER uzunlukta olmalı. Doğru cevap diğerlerinden belirgin biçimde UZUN/DETAYLI OLMAMALI — çeldiriciler de doğru cevap kadar dolu, makul ve inandırıcı yazılmalı. Aksi halde öğrenci içeriği bilmeden sadece "en uzun şıkkı" seçerek doğruyu bulabilir.
+2. ÇÖZÜMDE ŞIK HARFİ YASAK: "solution" alanında ŞIK HARFİ (A/B/C/D/E) veya "X seçeneği", "X şıkkı", "doğru cevap X" gibi harfe dayalı ifade KULLANMA. Şıklar kullanıcıya KARIŞIK sırayla gösterildiğinden harf referansı yanlış görünür. Doğru cevabı yalnızca İÇERİKLE açıkla.`
+
+// src/lib/utils/sanitize-solution.ts mirror (CLI standalone): cozum sik-harfi reflerini sil
+// (insert oncesi backstop + few-shot priming kesme). Turkce-harf sinir + kok kullanir.
+const _TL = 'a-zA-ZçğıöşüÇĞİÖŞÜ'
+function stripSolutionLetterRefs(text) {
+  if (!text) return text
+  return text
+    .replace(new RegExp(`\\s*do[ğg]ru\\s+(cevap|yanıt|seçenek)\\s+[A-Ea-e]\\s*(seçeneğidir|şıkkıdır|seçenektir)?\\s*\\.?`, 'gi'), ' ')
+    .replace(new RegExp(`(?<![${_TL}])[A-Ea-e]\\s+(seçeneğ|şıkk)[${_TL}]*`, 'gi'), 'ilgili seçenek')
+    .replace(new RegExp(`(?<![${_TL}])(seçenek|şık)\\s+[A-Ea-e](?![${_TL}])`, 'gi'), 'ilgili seçenek')
+    .replace(new RegExp(`(?<![${_TL}])cevap\\s+[A-Ea-e](?![${_TL}])`, 'gi'), 'doğru cevap')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
 }
 
 // ── trLower (route ile ayni) ────────────────────────
@@ -223,7 +245,8 @@ let fewShotText = ''
       const c = e.content ?? {}
       const q = c.question || c.sentence || ''
       const opts = (c.options || []).map((o, j) => `  ${String.fromCharCode(65 + j)}) ${o}`).join('\n')
-      return `Ornek ${i + 1}:\nSoru: ${q}\n${opts}\nDogru: ${String.fromCharCode(65 + (c.answer ?? 0))}\nCozum: ${c.solution || '-'}`
+      // Codex PR#250: few-shot cozumlerindeki sik-harfi reflerini sterilize et (priming kes).
+      return `Ornek ${i + 1}:\nSoru: ${q}\n${opts}\nDogru: ${String.fromCharCode(65 + (c.answer ?? 0))}\nCozum: ${stripSolutionLetterRefs(c.solution || '-')}`
     })
     fewShotText = `\n\nMEVCUT ORNEKLER (bunlara benzer ama FARKLI sorular uret):\n${formatted.join('\n\n')}`
     console.log(`Few-shot: ${examples.length} ornek bulundu.`)
@@ -416,7 +439,8 @@ const insertData = unique.map((q) => ({
     question: q.question,
     options: q.options,
     answer: q.answer,
-    solution: q.solution,
+    // Codex PR#250: insert oncesi sik-harfi backstop (prompt-kurali advisory).
+    solution: stripSolutionLetterRefs(q.solution),
   },
   source: process.env.GEMINI_MODEL_OVERRIDE?.includes('pro') ? 'ai_generated_v2' : 'ai_generated',
   is_active: false,
