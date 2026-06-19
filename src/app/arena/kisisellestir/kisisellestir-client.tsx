@@ -37,11 +37,13 @@ import {
   DECORATION_RARITY_LABEL,
   isDecorationFree,
 } from '@/lib/constants/avatar-decorations'
+import { AVATAR_GROUPS, avatarMinLevel } from '@/lib/constants/avatars'
 import { StudioPreview } from './studio-preview'
 
-type Area = 'zemin' | 'kart' | 'panel' | 'cerceve' | 'rozet' | 'sus'
+type Area = 'avatar' | 'zemin' | 'kart' | 'panel' | 'cerceve' | 'rozet' | 'sus'
 
 const AREAS: { id: Area; label: string; icon: string; hint: string }[] = [
+  { id: 'avatar', label: 'Avatar', icon: '🧑', hint: 'Profil fotoğrafın — maskot karakterler + hazır set' },
   { id: 'zemin', label: 'Zemin', icon: '🌅', hint: 'Tüm sayfaların arka planı' },
   { id: 'kart', label: 'Profil Kartı', icon: '🪪', hint: 'Profil başlık kartının arkası' },
   { id: 'panel', label: 'İsim Paneli', icon: '🏷️', hint: 'İsmin arkasındaki panel — sıralamada da görünür' },
@@ -63,7 +65,7 @@ const AREAS: { id: Area; label: string; icon: string; hint: string }[] = [
  */
 export function KisisellestirClient() {
   const { user, profile, setProfile, loading } = useAuthStore()
-  const [area, setArea] = useState<Area>('zemin')
+  const [area, setArea] = useState<Area>('avatar')
 
   const [cardBgId, setCardBgId] = useState('none')
   const [zeminId, setZeminId] = useState('none')
@@ -74,6 +76,7 @@ export function KisisellestirClient() {
   const [reducedMotion, setReducedMotion] = useState(false)
   const [npBusy, setNpBusy] = useState(false)
   const [decoBusy, setDecoBusy] = useState(false)
+  const [avatarBusy, setAvatarBusy] = useState(false)
 
   // localStorage seçimlerini yükle (kart / zemin / çerçeve / çözünürlük)
   useEffect(() => {
@@ -265,6 +268,32 @@ export function KisisellestirClient() {
     }
   }
 
+  // Avatar seçimi — sunucu yalnız BİLİNEN preset-id'yi kabul eder (rastgele URL
+  // enjeksiyonu yok) ve avatar_url'i statik path'e set eder; dönen değerle
+  // profili güncelle → canlı önizleme anında yenilenir. Seviye kilidi sunucuda.
+  async function applyAvatar(presetId: string) {
+    if (!profile || avatarBusy) return
+    setAvatarBusy(true)
+    try {
+      const res = await fetch('/api/profile/avatar/preset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ presetId }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error('Uygulanamadı', data?.error ?? 'Avatar seçilemedi')
+        return
+      }
+      setProfile({ ...profile, avatar_url: data?.avatar_url ?? profile.avatar_url })
+      toast.success('Avatar uygulandı ✨')
+    } catch {
+      toast.error('Bağlantı hatası', 'Tekrar dene')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
   // ── Yükleniyor / giriş kontrolü ──
   if (loading) {
     return (
@@ -378,6 +407,57 @@ export function KisisellestirClient() {
 
           {/* Alan içeriği */}
           <div className="mt-4">
+            {area === 'avatar' && (
+              <div className="flex flex-col gap-3">
+                <p className="text-[10px] text-[var(--text-muted)]">
+                  Maskot karakterler + küratörlü hazır set. Bazı avatarlar seviye ile açılır 🔒
+                </p>
+                {AVATAR_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <p className="mb-1.5 text-[9px] font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
+                      {group.label}
+                    </p>
+                    <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+                      {group.items.map((a) => {
+                        const need = avatarMinLevel(a.id)
+                        const locked = !staff && level.level < need
+                        const selected = profile.avatar_url === a.path
+                        return (
+                          <button
+                            key={a.id}
+                            onClick={() => applyAvatar(a.id)}
+                            disabled={avatarBusy || locked}
+                            aria-pressed={selected}
+                            title={locked ? `Seviye ${need} gerekli` : a.label}
+                            aria-label={`${a.label} avatar`}
+                            className={`relative rounded-full p-0.5 transition-all hover:ring-2 hover:ring-[var(--focus)] ${
+                              selected ? 'ring-2 ring-[var(--focus)]' : ''
+                            } ${locked ? 'opacity-50' : ''}`}
+                          >
+                            <img
+                              src={a.path}
+                              alt=""
+                              className="h-12 w-12 rounded-full bg-[var(--card-bg)] object-cover"
+                            />
+                            {locked && (
+                              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 text-[9px] font-bold text-white">
+                                🔒{need}
+                              </span>
+                            )}
+                            {selected && !locked && (
+                              <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--focus)] text-[8px] text-white">
+                                ✓
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {(area === 'zemin' || area === 'kart') && (
               <BackgroundGrid
                 items={ownedBackgrounds}
