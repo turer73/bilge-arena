@@ -285,7 +285,13 @@ export function KisisellestirClient() {
         toast.error('Uygulanamadı', data?.error ?? 'Avatar seçilemedi')
         return
       }
-      setProfile({ ...profile, avatar_url: data?.avatar_url ?? profile.avatar_url })
+      // P2 fix (Codex PR#243): closure'daki bayat `profile` yerine EN GUNCEL store
+      // profilini oku + yalniz avatar_url'i merge et. Avatar POST donerken eszamanli
+      // nameplate/sus kaydi yapilmissa onu ezme (stale-spread clobber'i onler).
+      const latest = useAuthStore.getState().profile
+      if (latest) {
+        setProfile({ ...latest, avatar_url: data?.avatar_url ?? latest.avatar_url })
+      }
       toast.success('Avatar uygulandı ✨')
     } catch {
       toast.error('Bağlantı hatası', 'Tekrar dene')
@@ -418,10 +424,13 @@ export function KisisellestirClient() {
                       {group.label}
                     </p>
                     <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
-                      {group.items.map((a) => {
+                      {group.items.map((a, i) => {
                         const need = avatarMinLevel(a.id)
                         const locked = !staff && level.level < need
                         const selected = profile.avatar_url === a.path
+                        // P2 (Codex PR#243): aria-label'a grup-ici sira ekle — 6 buton
+                        // da "Bilge Chan avatar" idi, SR/ses-kontrol ayirt edemiyordu.
+                        const a11yLabel = `${a.label} avatar ${i + 1}`
                         return (
                           <button
                             key={a.id}
@@ -429,7 +438,7 @@ export function KisisellestirClient() {
                             disabled={avatarBusy || locked}
                             aria-pressed={selected}
                             title={locked ? `Seviye ${need} gerekli` : a.label}
-                            aria-label={`${a.label} avatar`}
+                            aria-label={a11yLabel}
                             className={`relative rounded-full p-0.5 transition-all hover:ring-2 hover:ring-[var(--focus)] ${
                               selected ? 'ring-2 ring-[var(--focus)]' : ''
                             } ${locked ? 'opacity-50' : ''}`}
