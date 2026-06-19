@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -28,6 +28,12 @@ export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
+  // Bu oturumda banner zaten gösterildi/kapatıldı mı. beforeinstallprompt bazı Android
+  // Chrome sürümlerinde install-kriteri değişince TEKRAR fırlar; eski handler bunu
+  // dismiss'e bakmadan yeniden gösteriyordu → kullanıcı kapatsa bile banner geri geliyor
+  // ("10 sn'de 10 kez"). handledRef + her seferinde localStorage dismiss re-check ile
+  // banner oturumda en fazla 1 kez açılır ve kapatıldıktan sonra bir daha açılmaz.
+  const handledRef = useRef(false)
 
   useEffect(() => {
     // Standalone mode (zaten install edilmiş) — hiç gösterme
@@ -36,9 +42,12 @@ export function PWAInstallPrompt() {
       (navigator as Navigator & { standalone?: boolean }).standalone === true
     if (standalone) return
 
-    // 7 gün dismiss tracking
-    const dismissed = localStorage.getItem(DISMISS_KEY)
-    if (dismissed && Date.now() - Number(dismissed) < DISMISS_DURATION) return
+    // 7 gün dismiss tracking — her gösterim denemesinde TEKRAR kontrol edilir (re-fire).
+    const isDismissed = () => {
+      const d = localStorage.getItem(DISMISS_KEY)
+      return !!d && Date.now() - Number(d) < DISMISS_DURATION
+    }
+    if (isDismissed()) return
 
     // iOS detect (beforeinstallprompt yok, instructional UI)
     // iPadOS 13+ Safari 'desktop class' modunda UA 'Macintosh' donduruyor —
@@ -57,34 +66,53 @@ export function PWAInstallPrompt() {
     const ios = isClassicIOS || isIPadOSDesktop
     setIsIOS(ios)
 
+    // Banner'ı oturumda en fazla 1 kez aç; zaten gösterildiyse (handledRef) ya da
+    // arada kapatıldıysa (localStorage) AÇMA. beforeinstallprompt'un tekrar fırlaması
+    // veya gecikmiş timer bu guard'a takılır → döngü kırılır.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const showOnce = () => {
+      if (handledRef.current || isDismissed()) return
+      handledRef.current = true
+      setVisible(true)
+    }
+
     if (ios) {
       // iOS: 5sn delay sonra banner göster (kullanıcı sayfayı yüklesin)
-      const timer = setTimeout(() => setVisible(true), 5000)
-      return () => clearTimeout(timer)
+      timer = setTimeout(showOnce, 5000)
+      return () => { if (timer) clearTimeout(timer) }
     }
 
     // Android/Desktop: beforeinstallprompt event listener
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
+      // Tekrar-fırlatma koruması: zaten gösterildi/kapatıldı ya da timer beklemedeyse
+      // YENİ timer kurma (aksi halde her re-fire banner'ı yeniden açıyordu).
+      if (handledRef.current || isDismissed() || timer) return
       // 3sn bekle, kullanıcı sayfayı görsün
-      setTimeout(() => setVisible(true), 3000)
+      timer = setTimeout(showOnce, 3000)
     }
     window.addEventListener('beforeinstallprompt', handler)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      if (timer) clearTimeout(timer)
+    }
   }, [])
 
   const handleInstall = useCallback(async () => {
     if (!deferredPrompt) return
+    handledRef.current = true
+    setVisible(false)
     await deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') {
-      setVisible(false)
-      setDeferredPrompt(null)
-    }
+    await deferredPrompt.userChoice
+    setDeferredPrompt(null)
+    // Kabul VEYA red — her iki halde de 7 gün tekrar sorma. Eski kod red'de
+    // (outcome:'dismissed') banner'ı açık bırakıp dismiss yazmıyordu → yeniden açılma.
+    localStorage.setItem(DISMISS_KEY, String(Date.now()))
   }, [deferredPrompt])
 
   const handleDismiss = useCallback(() => {
+    handledRef.current = true
     setVisible(false)
     setDeferredPrompt(null)
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
