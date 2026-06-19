@@ -77,18 +77,43 @@ beforeEach(() => {
 })
 
 describe('KisisellestirClient', () => {
-  test('başlık + alan sekmeleri render olur, varsayılan alan zemin', () => {
+  test('başlık + alan sekmeleri render olur, varsayılan alan avatar', () => {
     render(<KisisellestirClient />)
     expect(screen.getByText('🎨 Kişiselleştirme Stüdyosu')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '🌅 Zemin' })).toHaveAttribute('aria-pressed', 'true')
-    // zemin grid'inde ücretsiz tema görünür
-    expect(screen.getByLabelText('Gece Mavisi')).toBeInTheDocument()
+    // Avatar artık ilk + varsayılan alan (en sık aranan kişiselleştirme — kullanıcı
+    // "Kişiselleştir"e tıklayınca avatar seçici hemen önünde olsun).
+    expect(screen.getByRole('button', { name: '🧑 Avatar' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: '🌅 Zemin' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('avatar alanı (varsayılan): hazır avatar seçimi preset API POST eder + profil günceller', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/profile/avatar/preset')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp' }),
+        })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ backgrounds: [], badges: [] }) })
+    })
+    render(<KisisellestirClient />)
+    // Avatar varsayılan alan → galeri görünür; ilk "Bilge Chan" avatarını seç (Lv1, açık)
+    fireEvent.click(screen.getAllByLabelText('Bilge Chan avatar')[0])
+
+    await waitFor(() => expect(auth.value.setProfile).toHaveBeenCalled())
+    const call = fetchMock.mock.calls.find((c) => c[0] === '/api/profile/avatar/preset')!
+    expect(call).toBeTruthy()
+    expect(JSON.parse(call[1].body)).toHaveProperty('presetId')
+    expect(auth.value.setProfile.mock.calls[0][0]).toMatchObject({
+      avatar_url: '/avatars/mascot/chan-avatar-3d-smile.webp',
+    })
   })
 
   test('zemin seçimi ZEMIN anahtarına yazar + zemin-changed olayını tetikler (karta DEĞİL)', () => {
     const zeminSpy = vi.fn()
     window.addEventListener('zemin-changed', zeminSpy)
     render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
     fireEvent.click(screen.getByLabelText('Gece Mavisi'))
 
     expect(localStorage.getItem('bilge-arena-zemin-v1')).toBe('gece-mavisi')
@@ -155,6 +180,7 @@ describe('KisisellestirClient', () => {
 
   test('sahiplik filtresi: normal kullanıcı sahip-olmadığı ücretli temayı görmez', () => {
     render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
     // Nebula (400 coin) owned_backgrounds'ta yok → grid'de görünmez
     expect(screen.queryByLabelText('Nebula')).not.toBeInTheDocument()
   })
@@ -162,6 +188,7 @@ describe('KisisellestirClient', () => {
   test('personel bypass: admin tüm ücretli temaları görür', () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), role: 'admin' }
     render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
     expect(screen.getByLabelText('Nebula')).toBeInTheDocument()
   })
 
