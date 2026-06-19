@@ -293,7 +293,9 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     setShowReportModal(false)
     setHelpPaused(false) // yeni soruda yardım-duraklatma sıfırlanır
     helpWasPausedRef.current = false
-    if (quizStore.isLastQuestion()) {
+    // Son soru VEYA canlar bitti (livesExhausted: cozum gosterildi, kullanici "devam"
+    // dedi -> simdi game-over). Aksi halde son canda aciklama atlanip cikiyordu.
+    if (quizStore.isLastQuestion() || quizStore.livesExhausted) {
       quizStore.completeQuiz()
       setScreen('result')
     } else {

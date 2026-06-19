@@ -194,12 +194,20 @@ describe('quiz-store', () => {
       expect(useQuizStore.getState().lives).toBe(2)
     })
 
-    it('can bitince completed olmali', () => {
+    it('son can bitince ONCE cozum gosterilir (answered+livesExhausted), sonra game-over', () => {
+      // Ensar bug 2026-06-19: son canda aciklamayi goremeden game-over'a atliyordu.
       useQuizStore.getState().answerQuestion(0, false, 5, xpResult) // 2→1
       expect(useQuizStore.getState().state).toBe('answered')
+      expect(useQuizStore.getState().livesExhausted).toBe(false)
 
       useQuizStore.getState().nextQuestion()
       useQuizStore.getState().answerQuestion(0, false, 5, xpResult) // 1→0
+      // Son can bitti AMA state 'answered' kalir (dogru cevap/cozum gosterilsin).
+      expect(useQuizStore.getState().state).toBe('answered')
+      expect(useQuizStore.getState().livesExhausted).toBe(true)
+
+      // Kullanici cozumu okuyup "devam" -> simdi game-over.
+      useQuizStore.getState().nextQuestion()
       expect(useQuizStore.getState().state).toBe('completed')
     })
 
