@@ -118,4 +118,27 @@ describe('GET /api/admin/question-quality', () => {
     const json = await res.json()
     expect(JSON.stringify(json)).not.toContain('permission denied')
   })
+
+  it('returns GENERIC 500 when the reports aggregate query errors', async () => {
+    mockQuestions.mockReturnValue({ data: [q('a', 100, 30)], error: null })
+    mockReports.mockReturnValue({ data: null, error: { message: 'reports boom' } })
+    const res = await GET(makeRequest())
+    expect(res.status).toBe(500)
+    const json = await res.json()
+    expect(JSON.stringify(json)).not.toContain('reports boom')
+  })
+
+  it('falls back to content.sentence when question text is absent', async () => {
+    mockQuestions.mockReturnValue({
+      data: [{
+        id: 's1', game: 'turkce', category: 'dil', subcategory: null,
+        difficulty: 2, is_active: true, content: { sentence: 'Bosluk doldur' },
+        times_answered: 100, times_correct: 10,
+      }],
+      error: null,
+    })
+    const res = await GET(makeRequest())
+    const json = await res.json()
+    expect(json.questions[0].question_text).toBe('Bosluk doldur')
+  })
 })
