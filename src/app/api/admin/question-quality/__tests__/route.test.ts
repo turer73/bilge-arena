@@ -3,11 +3,12 @@ import type { NextRequest } from 'next/server'
 
 // ─── Mock setup ──────────────────────────────────
 
-const { mockCheckPermission, mockGte, mockQuestions, mockReports } = vi.hoisted(() => ({
+const { mockCheckPermission, mockGte, mockQuestions, mockReports, mockExtra } = vi.hoisted(() => ({
   mockCheckPermission: vi.fn(),
   mockGte: vi.fn(),
   mockQuestions: vi.fn(),
   mockReports: vi.fn(),
+  mockExtra: vi.fn(), // P2a: sample-dışı rapor-soru .in() sorgusu
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -28,6 +29,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
         chain.gte = vi.fn((col: string, val: number) => { mockGte(col, val); return chain })
         chain.order = vi.fn(() => chain)
         chain.limit = vi.fn(async () => mockQuestions())
+        chain.in = vi.fn(async () => mockExtra()) // P2a: rapor-extra (sample-dışı) sorgusu
         return chain
       }
       const chain: Record<string, unknown> = {}
@@ -62,6 +64,7 @@ describe('GET /api/admin/question-quality', () => {
     mockCheckPermission.mockResolvedValue(ADMIN)
     mockQuestions.mockReturnValue({ data: [], error: null })
     mockReports.mockReturnValue({ data: [], error: null })
+    mockExtra.mockReturnValue({ data: [], error: null })
   })
 
   it('returns 403 without admin.questions.view permission', async () => {
@@ -71,7 +74,7 @@ describe('GET /api/admin/question-quality', () => {
     expect(mockCheckPermission).toHaveBeenCalledWith(expect.anything(), 'admin.questions.view')
   })
 
-  it('keeps low-success OR reported questions, drops healthy ones, sorts by rate asc', async () => {
+  it('keeps low-success OR reported, drops healthy; reported FIRST then rate asc (P2b)', async () => {
     mockQuestions.mockReturnValue({
       data: [q('a', 100, 30), q('b', 100, 70), q('c', 100, 80)], // 30% / 70% / 80%
       error: null,
@@ -81,10 +84,28 @@ describe('GET /api/admin/question-quality', () => {
     const res = await GET(makeRequest()) // default minAnswered=20, maxRate=50
     expect(res.status).toBe(200)
     const json = await res.json()
-    // b (70%, raporsuz) elenir; a (30%<50) ve c (80% ama 1 rapor) kalir; rate asc -> a, c
-    expect(json.questions.map((x: { id: string }) => x.id)).toEqual(['a', 'c'])
-    expect(json.questions[0].success_rate).toBe(30)
-    expect(json.questions[1].pending_reports).toBe(1)
+    // b (70%, raporsuz) elenir; a (30%<50) ve c (80% ama 1 rapor) kalir.
+    // P2b fix (Codex PR#242): raporlu 'c' ÖNCE — yalnız rate-asc olsa 'c' sona
+    // düşüp limit'te kesilebilirdi (kuyruk raporu güvenilir göstermezdi).
+    expect(json.questions.map((x: { id: string }) => x.id)).toEqual(['c', 'a'])
+    expect(json.questions[0].pending_reports).toBe(1) // c — raporlu, önce
+    expect(json.questions[1].success_rate).toBe(30) // a — düşük-başarı
+  })
+
+  it('includes reported questions OUTSIDE the drift sample (P2a)', async () => {
+    // Drift örneklemesi yalnız 'a'yı döndürür; 'z' rapor edilmiş AMA times_answered
+    // düşük olduğundan sample DIŞINDA → ayrı .in() sorgusuyla çekilip dahil edilmeli.
+    mockQuestions.mockReturnValue({ data: [q('a', 100, 30)], error: null })
+    mockReports.mockReturnValue({ data: [{ question_id: 'z' }], error: null })
+    mockExtra.mockReturnValue({ data: [q('z', 5, 4)], error: null }) // %80 ama 1 rapor, sample-dışı
+
+    const res = await GET(makeRequest())
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    const ids = json.questions.map((x: { id: string }) => x.id)
+    expect(ids).toContain('z') // sample-dışı rapor yüzeye çıktı (eskiden kaybolurdu)
+    expect(ids[0]).toBe('z') // raporlu önce (P2b)
+    expect(mockExtra).toHaveBeenCalled() // .in() ile ayrı çekildi
   })
 
   it('passes the clamped minAnswered to the questions query', async () => {

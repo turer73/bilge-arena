@@ -367,18 +367,28 @@ export function QuizEngine({ game }: QuizEngineProps) {
             questionId={question.id}
             isOpen={quiz.showReportModal}
             onClose={() => quiz.setShowReportModal(false)}
-            onSubmit={(data) => {
-              // #379: raporu error_reports'a kalici yaz (fire-and-forget;
-              // modal optimistik "gonderildi" gosterir). Hata sessiz loglanir.
-              fetch('/api/questions/report', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  questionId: question.id,
-                  report_type: data.type,
-                  description: data.description,
-                }),
-              }).catch((err) => console.error('[QuizEngine] rapor gonderilemedi:', err))
+            onSubmit={async (data) => {
+              // #379 + P1 fix (Codex PR#242): AWAIT et, res.ok'a göre başarı/hata
+              // döndür. Eski fire-and-forget guest'e (401) sahte "gönderildi"
+              // gösterip raporu sessizce düşürüyordu (quiz guest-mode destekliyor).
+              try {
+                const res = await fetch('/api/questions/report', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    questionId: question.id,
+                    report_type: data.type,
+                    description: data.description,
+                  }),
+                })
+                if (res.ok) return { ok: true }
+                if (res.status === 401) return { ok: false, error: 'Rapor göndermek için giriş yapmalısın.' }
+                if (res.status === 429) return { ok: false, error: 'Çok fazla rapor. Biraz sonra tekrar dene.' }
+                return { ok: false, error: 'Rapor gönderilemedi. Tekrar dene.' }
+              } catch (err) {
+                console.error('[QuizEngine] rapor gonderilemedi:', err)
+                return { ok: false, error: 'Bağlantı hatası. Tekrar dene.' }
+              }
             }}
           />
         </ComponentErrorBoundary>
