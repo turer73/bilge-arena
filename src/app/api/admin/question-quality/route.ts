@@ -83,7 +83,13 @@ export async function GET(request: NextRequest) {
   // örnekleme eşiklerinden BAĞIMSIZ ayrıca çek.
   const driftRows = (rows ?? []) as QuestionRow[]
   const driftIds = new Set(driftRows.map((r) => r.id))
-  const missingReportedIds = [...reportCounts.keys()].filter((id) => !driftIds.has(id))
+  // P2 fix (Codex PR#245): IN-filter'ı CAP'le. Çok pending-rapor örnekleme dışındaysa
+  // yüzlerce UUID tek Supabase .in() URL-query'sine gömülür → bu admin endpoint TAM bu
+  // anda (rapor kuyruğu büyüdüğünde) 500/çok-yavaş olur. İlk CANDIDATE_CAP rapor-id'si
+  // yeterli (kuyruk zaten en fazla `limit` gösterir, raporlular önceliklendirilir).
+  const reportedOutsideDrift = [...reportCounts.keys()].filter((id) => !driftIds.has(id))
+  const reportedCapped = reportedOutsideDrift.length > CANDIDATE_CAP
+  const missingReportedIds = reportedOutsideDrift.slice(0, CANDIDATE_CAP)
   let extraRows: QuestionRow[] = []
   if (missingReportedIds.length > 0) {
     const { data: extra, error: extraErr } = await svc
@@ -138,6 +144,7 @@ export async function GET(request: NextRequest) {
     // Aday havuzu CAP'e degdiyse daha dusuk-oynanmali drift sorular kapsam disi
     // kalmis olabilir — UI bunu bildirir (sessiz kesme yok). NOT: rapor-soru
     // ek satırları capped sinyalini şişirmesin → yalnız drift örneklemesine bak.
-    capped: driftRows.length >= CANDIDATE_CAP,
+    // P2 (Codex PR#245): rapor-id'leri de CAP'lendiyse (>CANDIDATE_CAP) bunu da bildir.
+    capped: driftRows.length >= CANDIDATE_CAP || reportedCapped,
   })
 }

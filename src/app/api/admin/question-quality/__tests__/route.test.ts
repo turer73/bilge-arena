@@ -29,7 +29,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
         chain.gte = vi.fn((col: string, val: number) => { mockGte(col, val); return chain })
         chain.order = vi.fn(() => chain)
         chain.limit = vi.fn(async () => mockQuestions())
-        chain.in = vi.fn(async () => mockExtra()) // P2a: rapor-extra (sample-dışı) sorgusu
+        chain.in = vi.fn(async (_col: string, ids: string[]) => mockExtra(ids)) // P2a: rapor-extra sorgusu (ids yakalanır → cap testi)
         return chain
       }
       const chain: Record<string, unknown> = {}
@@ -106,6 +106,22 @@ describe('GET /api/admin/question-quality', () => {
     expect(ids).toContain('z') // sample-dışı rapor yüzeye çıktı (eskiden kaybolurdu)
     expect(ids[0]).toBe('z') // raporlu önce (P2b)
     expect(mockExtra).toHaveBeenCalled() // .in() ile ayrı çekildi
+  })
+
+  it('caps the reported-question IN-filter at CANDIDATE_CAP=500 (P2 Codex#245)', async () => {
+    // 600 rapor-soru örnekleme DIŞINDA → .in() yalnız ilk 500'ü almalı (dev URL/500 önle),
+    // capped=true bildirilmeli (sessiz kesme yok).
+    const manyIds = Array.from({ length: 600 }, (_, i) => `r${i}`)
+    mockQuestions.mockReturnValue({ data: [], error: null }) // drift boş
+    mockReports.mockReturnValue({ data: manyIds.map((id) => ({ question_id: id })), error: null })
+    mockExtra.mockReturnValue({ data: [], error: null })
+
+    const res = await GET(makeRequest())
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    const sentIds = mockExtra.mock.calls[0][0] as string[]
+    expect(sentIds.length).toBe(500) // CANDIDATE_CAP — sınırsız değil
+    expect(json.capped).toBe(true)
   })
 
   it('passes the clamped minAnswered to the questions query', async () => {

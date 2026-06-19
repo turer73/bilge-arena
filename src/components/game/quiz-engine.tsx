@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { useQuizGame } from '@/lib/hooks/use-quiz-game'
 import { useSidebarData } from '@/lib/hooks/use-sidebar-data'
+import { submitQuestionReport } from '@/lib/questions/submit-report'
 import { useSessionSaver } from '@/lib/hooks/use-session-saver'
 import { useQuizLimit } from '@/lib/hooks/use-quiz-limit'
 import { getLevelFromXP } from '@/lib/constants/levels'
@@ -367,29 +368,9 @@ export function QuizEngine({ game }: QuizEngineProps) {
             questionId={question.id}
             isOpen={quiz.showReportModal}
             onClose={() => quiz.setShowReportModal(false)}
-            onSubmit={async (data) => {
-              // #379 + P1 fix (Codex PR#242): AWAIT et, res.ok'a göre başarı/hata
-              // döndür. Eski fire-and-forget guest'e (401) sahte "gönderildi"
-              // gösterip raporu sessizce düşürüyordu (quiz guest-mode destekliyor).
-              try {
-                const res = await fetch('/api/questions/report', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    questionId: question.id,
-                    report_type: data.type,
-                    description: data.description,
-                  }),
-                })
-                if (res.ok) return { ok: true }
-                if (res.status === 401) return { ok: false, error: 'Rapor göndermek için giriş yapmalısın.' }
-                if (res.status === 429) return { ok: false, error: 'Çok fazla rapor. Biraz sonra tekrar dene.' }
-                return { ok: false, error: 'Rapor gönderilemedi. Tekrar dene.' }
-              } catch (err) {
-                console.error('[QuizEngine] rapor gonderilemedi:', err)
-                return { ok: false, error: 'Bağlantı hatası. Tekrar dene.' }
-              }
-            }}
+            // #379 + P1 fix (Codex PR#242): AWAIT'li gönderim, res.ok'a göre {ok,error}
+            // → modal sahte başarı göstermez. Mantık test-edilebilir helper'a çıkarıldı.
+            onSubmit={(data) => submitQuestionReport(question.id, data)}
           />
         </ComponentErrorBoundary>
 
