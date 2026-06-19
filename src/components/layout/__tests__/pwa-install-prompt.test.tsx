@@ -181,4 +181,34 @@ describe('PWAInstallPrompt', () => {
     // iOS instructional metin gozukmemeli (touch yok = iPadOS degil)
     expect(screen.queryByText(/tarayıcının paylaş simgesine/i)).not.toBeInTheDocument()
   })
+
+  // Ensar bug (2026-06-19): banner "10 sn'de 10 kez" donuyordu. beforeinstallprompt
+  // bazi Android Chrome'larda TEKRAR firlar; eski handler dismiss'e bakmadan banner'i
+  // yeniden aciyordu. Fix: dismiss sonrasi re-fire banner'i ACMAMALI.
+  test('9) dismiss sonrasi beforeinstallprompt TEKRAR firlasa da banner geri gelmez', () => {
+    setUA(ANDROID_UA)
+    render(<PWAInstallPrompt />)
+    const fire = () => {
+      const e = new Event('beforeinstallprompt')
+      Object.assign(e, { prompt: vi.fn(), userChoice: Promise.resolve({ outcome: 'dismissed' }) })
+      act(() => {
+        window.dispatchEvent(e)
+        vi.advanceTimersByTime(3_000)
+      })
+    }
+    // 1) ilk fire -> banner gosterilir
+    fire()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    // 2) kapat -> localStorage dismiss + handledRef
+    act(() => {
+      screen.getByRole('button', { name: /Kapat/i }).click()
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    // 3) beforeinstallprompt TEKRAR firlar -> banner GERI GELMEMELI (eski bug)
+    fire()
+    act(() => {
+      vi.advanceTimersByTime(5_000)
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
 })
