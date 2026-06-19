@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { trLower, isLikelyTurkish } from '@/lib/utils/tr-text'
+import { stripSolutionLetterRefs } from '@/lib/utils/sanitize-solution'
 
 const GEMINI_MODEL = 'gemini-2.5-pro'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -230,7 +231,9 @@ export async function POST(req: Request) {
         const c = e.content as { question?: string; sentence?: string; options?: string[]; answer?: number; solution?: string }
         const q = c.question || c.sentence || ''
         const opts = (c.options || []).map((o, j) => `  ${String.fromCharCode(65 + j)}) ${o}`).join('\n')
-        return `Ornek ${i + 1}:\nSoru: ${q}\n${opts}\nDogru: ${String.fromCharCode(65 + (c.answer ?? 0))}\nCozum: ${c.solution || '-'}`
+        // Codex PR#250: few-shot cozumlerindeki sik-harfi refleri sterilize edilir —
+        // aksi halde Gemini'yi yasakli desene (sik-harfi) priming ediyordu.
+        return `Ornek ${i + 1}:\nSoru: ${q}\n${opts}\nDogru: ${String.fromCharCode(65 + (c.answer ?? 0))}\nCozum: ${stripSolutionLetterRefs(c.solution || '-')}`
       })
       fewShotText = `\n\nMEVCUT ORNEKLER (bunlara benzer ama FARKLI sorular uret):\n${formatted.join('\n\n')}`
     }
@@ -403,7 +406,9 @@ Soru sayisi: ${count}${fewShotText}`
         question: q.question,
         options: q.options,
         answer: q.answer,
-        solution: q.solution,
+        // Codex PR#250: prompt-kurali advisory; model uymazsa harf-referansli cozum
+        // kaydolmasin diye insert oncesi backstop sterilize (defense-in-depth).
+        solution: stripSolutionLetterRefs(q.solution),
       },
       source: 'ai_generated',
       is_active: false,
