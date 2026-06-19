@@ -31,6 +31,7 @@ interface QuizStore {
   lives: number            // Kalan can sayisi
   maxLives: number         // Baslangic can sayisi
   livesEnabled: boolean    // Can sistemi aktif mi
+  livesExhausted: boolean  // Son can bitti (oyun-bitti) — ama once cozum gosterilir
 
   // Actions
   startQuiz: (questions: Question[], lives?: number) => void
@@ -59,6 +60,7 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
   lives: 0,
   maxLives: 0,
   livesEnabled: false,
+  livesExhausted: false,
 
   startQuiz: (questions, lives) => set({
     state: 'playing',
@@ -74,6 +76,7 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     lives: lives ?? 0,
     maxLives: lives ?? 0,
     livesEnabled: (lives ?? 0) > 0,
+    livesExhausted: false,
   }),
 
   answerQuestion: (selectedOption, isCorrect, timeTaken, xpResult) => {
@@ -84,9 +87,14 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     const newStreak = isCorrect ? streak + 1 : 0
     const xp = isCorrect ? xpResult.total : 0
     const newLives = (!isCorrect && livesEnabled) ? lives - 1 : lives
+    // Son can bitse bile state 'answered' KALIR — kullanici dogru cevabi/cozumu gorsun.
+    // Oyun-bitti gecisi nextQuestion'da livesExhausted ile yapilir (Ensar bug 2026-06-19:
+    // son canda aciklamayi goremeden game-over'a atliyordu).
+    const livesExhausted = newLives === 0 && livesEnabled
 
     set({
-      state: newLives === 0 && livesEnabled ? 'completed' : 'answered',
+      state: 'answered',
+      livesExhausted,
       answers: [...answers, {
         questionId: question.id,
         selectedOption,
@@ -105,8 +113,9 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
   },
 
   nextQuestion: () => {
-    const { currentIndex, questions } = get()
-    if (currentIndex + 1 >= questions.length) {
+    const { currentIndex, questions, livesExhausted } = get()
+    // Canlar bittiyse (cozum gosterildikten sonra "devam") oyunu bitir.
+    if (livesExhausted || currentIndex + 1 >= questions.length) {
       set({ state: 'completed' })
     } else {
       set({
@@ -133,6 +142,7 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     lives: 0,
     maxLives: 0,
     livesEnabled: false,
+    livesExhausted: false,
   }),
 
   currentQuestion: () => {

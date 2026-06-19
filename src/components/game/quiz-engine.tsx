@@ -345,7 +345,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
               question={question}
               selectedOption={lastAnswer.selectedOption}
               isCorrect={lastAnswer.isCorrect}
-              isLastQuestion={quizStore.isLastQuestion()}
+              isLastQuestion={quizStore.isLastQuestion() || quizStore.livesExhausted}
               onNext={quiz.handleNext}
               onOpenComments={() => quiz.setShowComments(!quiz.showComments)}
               onOpenReport={() => quiz.setShowReportModal(true)}
