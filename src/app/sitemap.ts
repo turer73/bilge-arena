@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next'
+import { REHBER_SLUGS } from '@/lib/content/rehber'
 
 const BASE = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -14,6 +15,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/arena/siralama`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${BASE}/hakkinda`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/nasil-calisir`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${BASE}/konular`, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${BASE}/rehber`, changeFrequency: 'weekly', priority: 0.6 },
     { url: `${BASE}/giris`, changeFrequency: 'monthly', priority: 0.4 },
     { url: `${BASE}/arena/premium`, changeFrequency: 'monthly', priority: 0.6 },
     // Yasal sayfalar
@@ -29,5 +32,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
-  return [...staticPages, ...gamePages]
+  // Public konu sayfalari — indekslenebilir ozgun icerik (AdSense low-value fix)
+  const konuPages: MetadataRoute.Sitemap = GAMES.map((game) => ({
+    url: `${BASE}/konular/${game}`,
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  }))
+
+  const rehberPages: MetadataRoute.Sitemap = REHBER_SLUGS.map((slug) => ({
+    url: `${BASE}/rehber/${slug}`,
+    changeFrequency: 'monthly' as const,
+    priority: 0.6,
+  }))
+
+  return [...staticPages, ...gamePages, ...konuPages, ...rehberPages]
 }
