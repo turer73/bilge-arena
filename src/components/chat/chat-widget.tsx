@@ -103,13 +103,28 @@ export function ChatWidget() {
                 <div className="text-[9px] text-[var(--growth)]">Cevrimici</div>
               </div>
             </div>
-            <button
-              onClick={() => useChatStore.getState().clearMessages()}
-              className="rounded-lg px-2 py-1 text-[10px] text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]"
-              title="Sohbeti temizle"
-            >
-              🗑️
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => useChatStore.getState().clearMessages()}
+                className="rounded-lg px-2 py-1 text-[10px] text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]"
+                title="Sohbeti temizle"
+              >
+                🗑️
+              </button>
+              {/* Kapat (X): mobilde FAB panel arkasında erisilemez kaliyordu — header'da
+                  belirgin kapat butonu (kullanici 'ekrandan cikilmiyor' sikayeti). */}
+              <button
+                onClick={toggleOpen}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]"
+                title="Kapat"
+                aria-label="Bilge Asistan'ı kapat"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Mesajlar */}
