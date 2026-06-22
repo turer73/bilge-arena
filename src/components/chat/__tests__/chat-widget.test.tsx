@@ -4,13 +4,16 @@
  * mobilde panel arkasinda erisilemez kaliyordu. Header'a belirgin X eklendi.
  */
 
-import { describe, test, expect, beforeEach } from 'vitest'
+import { describe, test, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ChatWidget } from '../chat-widget'
 import { useChatStore } from '@/stores/chat-store'
 
 describe('ChatWidget kapat (X)', () => {
   beforeEach(() => {
+    // jsdom scrollIntoView desteklemez (ChatMessages mesaj-render'da cagiriyor)
+    Element.prototype.scrollIntoView = vi.fn()
+    useChatStore.getState().clearMessages()
     useChatStore.getState().setOpen(false)
   })
 
@@ -35,5 +38,15 @@ describe('ChatWidget kapat (X)', () => {
     // iki ayri kontrol: temizle (title) + kapat (aria-label)
     expect(screen.getByTitle('Sohbeti temizle')).toBeTruthy()
     expect(screen.getByLabelText('Bilge Asistan\'ı kapat')).toBeTruthy()
+  })
+
+  test('cop butonu sohbeti temizler (kapatmaz)', () => {
+    useChatStore.getState().setOpen(true)
+    useChatStore.getState().addMessage('user', 'merhaba')
+    render(<ChatWidget />)
+    expect(useChatStore.getState().messages.length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByTitle('Sohbeti temizle'))
+    expect(useChatStore.getState().messages.length).toBe(0)  // temizlendi
+    expect(useChatStore.getState().isOpen).toBe(true)  // panel acik kaldi (temizle != kapat)
   })
 })
