@@ -82,6 +82,9 @@ describe('setCookieConsent', () => {
     setCookieConsent(true)
     expect(window.gtag).toHaveBeenCalledWith('consent', 'update', {
       analytics_storage: 'granted',
+      ad_storage: 'granted',
+      ad_user_data: 'granted',
+      ad_personalization: 'granted',
     })
   })
 
@@ -89,6 +92,9 @@ describe('setCookieConsent', () => {
     setCookieConsent(false)
     expect(window.gtag).toHaveBeenCalledWith('consent', 'update', {
       analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
     })
   })
 })
