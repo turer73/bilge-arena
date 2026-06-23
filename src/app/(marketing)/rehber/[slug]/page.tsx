@@ -21,6 +21,7 @@ export async function generateMetadata({
   const { slug } = await params
   const a = getArticle(slug)
   if (!a) return {}
+  const ogImage = `${siteUrl}/og?title=${encodeURIComponent(a.title)}&subtitle=${encodeURIComponent(a.description.slice(0, 80))}`
   return {
     title: `${a.title} | Bilge Arena Rehber`,
     description: a.description,
@@ -31,6 +32,13 @@ export async function generateMetadata({
       title: a.title,
       description: a.description,
       url: `${siteUrl}/rehber/${slug}`,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: a.title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: a.title,
+      description: a.description,
+      images: [ogImage],
     },
   }
 }
@@ -46,23 +54,35 @@ export default async function RehberArticlePage({
 
   const others = REHBER_ARTICLES.filter((x) => x.slug !== slug)
 
-  const articleJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: a.title,
-    description: a.description,
-    inLanguage: 'tr',
-    dateModified: a.updated,
-    author: { '@type': 'Organization', name: 'Bilge Arena' },
-    publisher: { '@type': 'Organization', name: 'Bilge Arena', url: siteUrl },
-    mainEntityOfPage: `${siteUrl}/rehber/${slug}`,
-  }
+  const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: a.title,
+      description: a.description,
+      inLanguage: 'tr',
+      datePublished: a.updated,
+      dateModified: a.updated,
+      author: { '@type': 'Organization', name: 'Bilge Arena' },
+      publisher: { '@type': 'Organization', name: 'Bilge Arena', url: siteUrl },
+      mainEntityOfPage: `${siteUrl}/rehber/${slug}`,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: siteUrl },
+        { '@type': 'ListItem', position: 2, name: 'Sınav Rehberi', item: `${siteUrl}/rehber` },
+        { '@type': 'ListItem', position: 3, name: a.title, item: `${siteUrl}/rehber/${slug}` },
+      ],
+    },
+  ]
 
   return (
     <article className="mx-auto max-w-[760px] px-6 py-12 lg:px-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       {/* Breadcrumb */}

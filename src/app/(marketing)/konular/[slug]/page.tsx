@@ -36,6 +36,7 @@ export async function generateMetadata({
   const g = GAMES[slug]
   const c = SUBJECT_CONTENT[slug]
   const title = `${g.name} Konuları — ${g.examTags.join(' · ')} | Bilge Arena`
+  const ogImage = `${siteUrl}/og?title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(c.tagline.slice(0, 80))}`
   return {
     title: `${g.name} — ${c.tagline}`,
     description: c.intro.slice(0, 155),
@@ -46,6 +47,13 @@ export async function generateMetadata({
       title,
       description: c.tagline,
       url: `${siteUrl}/konular/${slug}`,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: c.tagline,
+      images: [ogImage],
     },
   }
 }
@@ -63,22 +71,33 @@ export default async function KonuPage({
   const others = GAME_LIST.filter((x) => x.slug !== slug)
   const samples = SAMPLE_QUESTIONS[slug] ?? []
 
-  const courseJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Course',
-    name: `${g.name} — YKS · LGS Hazırlık`,
-    description: c.intro,
-    url: `${siteUrl}/konular/${slug}`,
-    provider: { '@type': 'Organization', name: 'Bilge Arena', url: siteUrl },
-    inLanguage: 'tr',
-    isAccessibleForFree: true,
-  }
+  const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Course',
+      name: `${g.name} — YKS · LGS Hazırlık`,
+      description: c.intro,
+      url: `${siteUrl}/konular/${slug}`,
+      provider: { '@type': 'Organization', name: 'Bilge Arena', url: siteUrl },
+      inLanguage: 'tr',
+      isAccessibleForFree: true,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: siteUrl },
+        { '@type': 'ListItem', position: 2, name: 'Konular', item: `${siteUrl}/konular` },
+        { '@type': 'ListItem', position: 3, name: g.name, item: `${siteUrl}/konular/${slug}` },
+      ],
+    },
+  ]
 
   return (
     <div className="mx-auto max-w-[900px] px-6 py-12 lg:px-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       {/* Breadcrumb */}
