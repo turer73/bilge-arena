@@ -19,6 +19,15 @@ const SLOT_SIZES: Record<AdSlot, { width: number; height: number; label: string 
 
 const ADSENSE_ID = process.env.NEXT_PUBLIC_ADSENSE_ID || ''
 
+// Gerçek AdSense slot ID'leri — AdSense konsolundan alınmalı
+// (Reklam birimi oluştur → "Reklam birimi kodu" altındaki sayısal değer)
+// Env var yoksa undefined → placeholder gösterilir, gerçek reklam yüklenmez
+const SLOT_IDS: Record<AdSlot, string | undefined> = {
+  lobby: process.env.NEXT_PUBLIC_ADSENSE_SLOT_LOBBY,
+  result: process.env.NEXT_PUBLIC_ADSENSE_SLOT_RESULT,
+  sidebar: process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR,
+}
+
 /**
  * Reklam banner bileşeni.
  *
@@ -51,8 +60,9 @@ export function AdBanner({ slot, className = '' }: AdBannerProps) {
 
   const size = SLOT_SIZES[slot]
 
-  // AdSense ID yoksa placeholder
-  if (!ADSENSE_ID) {
+  // AdSense ID veya slot ID yoksa placeholder
+  const slotId = SLOT_IDS[slot]
+  if (!ADSENSE_ID || !slotId) {
     return (
       <div
         className={`flex items-center justify-center overflow-hidden rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] ${className}`}
@@ -75,7 +85,7 @@ export function AdBanner({ slot, className = '' }: AdBannerProps) {
         className="adsbygoogle"
         style={{ display: 'block' }}
         data-ad-client={ADSENSE_ID}
-        data-ad-slot={slot}
+        data-ad-slot={slotId}
         data-ad-format="auto"
         data-full-width-responsive="true"
       />

@@ -115,15 +115,6 @@ const jsonLd = [
       ],
     },
   },
-  {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: siteUrl },
-      { '@type': 'ListItem', position: 2, name: 'Arena', item: `${siteUrl}/arena` },
-      { '@type': 'ListItem', position: 3, name: 'Sıralama', item: `${siteUrl}/arena/siralama` },
-    ],
-  },
 ]
 
 export default function RootLayout({
@@ -161,7 +152,7 @@ export default function RootLayout({
         {process.env.NEXT_PUBLIC_ADSENSE_ID && (
           <Script
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
-            strategy="beforeInteractive"
+            strategy="afterInteractive"
             crossOrigin="anonymous"
           />
         )}

@@ -38,10 +38,13 @@ export function setCookieConsent(analytics: boolean): CookieConsent {
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(consent))
 
-  // GA Consent Mode guncelle
+  // GA Consent Mode v2 guncelle — analytics + reklam depolama birlikte
   if (typeof window.gtag === 'function') {
     window.gtag('consent', 'update', {
       analytics_storage: analytics ? 'granted' : 'denied',
+      ad_storage: analytics ? 'granted' : 'denied',
+      ad_user_data: analytics ? 'granted' : 'denied',
+      ad_personalization: analytics ? 'granted' : 'denied',
     })
   }
 
