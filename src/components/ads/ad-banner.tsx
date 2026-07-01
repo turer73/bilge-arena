@@ -46,8 +46,8 @@ export function AdBanner({ slot, className = '' }: AdBannerProps) {
 
     try {
       const w = window as Window & { adsbygoogle?: Record<string, unknown>[] }
-      const adsbygoogle = w.adsbygoogle || []
-      adsbygoogle.push({})
+      w.adsbygoogle = w.adsbygoogle || []
+      w.adsbygoogle.push({})
       pushed.current = true
     } catch {
       // AdSense not loaded yet

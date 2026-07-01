@@ -134,10 +134,10 @@ export function CookieBanner() {
                         <BarChart3 size={18} className="text-blue-400" />
                         <div>
                           <p className="text-sm font-semibold text-[var(--text)]">
-                            Analitik Çerezler
+                            Analitik ve Reklam Çerezleri
                           </p>
                           <p className="text-xs text-[var(--text-muted)]">
-                            Google Analytics, Plausible Analytics — anonim kullanım istatistikleri
+                            Google Analytics, Plausible Analytics — kullanım istatistikleri ve kişiselleştirilmiş reklamlar
                           </p>
                         </div>
                       </div>
