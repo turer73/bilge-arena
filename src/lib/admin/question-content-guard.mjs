@@ -108,7 +108,15 @@ function isLikelyPremiseBody(text) {
     /(?:dır|dir|dur|dür|tır|tir|tur|tür|ar|er|ır|ir|ur|ür|maz|mez|malı|meli|olur|olmaz|artar|azalır|değişir|bağlıdır|orantılıdır)\.?$/i.test(normalized)
 }
 
+// Bir şık BİRDEN FAZLA roman rakamı içeriyorsa (ör. "I. neden-sonuç, II. amaç-sonuç")
+// bu bir KARŞILAŞTIRMA-CEVABIDIR (geçerli YKS formatı: iki durumu tek şıkta eşleştirir),
+// öncül-bölünmesi DEĞİL. Öncül-bölünmesi her şıkta TEK öncül taşır.
+const multiRomanInOneOptionRe = /(?:^|\s)(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s.*\b(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s/i
+
 export function hasSplitPremiseOptions(options) {
+  // FP-koruma: herhangi bir şık çoklu-roman içeriyorsa = karşılaştırma-cevabı, bölünme değil
+  if (options.some((option) => multiRomanInOneOptionRe.test(String(option)))) return false
+
   const romanLabeledBodies = options
     .map((option) => String(option).match(romanNumeralPrefixRe)?.[1]?.trim())
     .filter(Boolean)

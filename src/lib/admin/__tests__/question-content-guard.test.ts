@@ -57,6 +57,36 @@ describe('question-content-guard', () => {
     expect(err).toBeNull()
   })
 
+  it('coklu-roman iceren KARSILASTIRMA sikkini FP olarak reddetmez (I. X, II. Y)', () => {
+    // Gecerli YKS formati: tek sikta hem I hem II var = karsilastirma-cevabi,
+    // oncul-bolunmesi DEGIL. Guard bunu broken saymamali.
+    const err = validateGeneratedQuestionContent({
+      question: 'İki cümle arasındaki anlam ilişkisi açısından nasıl bir bağlantı vardır?',
+      options: [
+        'I. neden-sonuç, II. amaç-sonuç',
+        'I. neden-sonuç, II. neden-sonuç',
+        'I. amaç-sonuç, II. koşul-sonuç',
+        'I. eş anlamlı, II. zıt anlamlı',
+        'I. benzerlik, II. karşıtlık',
+      ],
+      answer: 0,
+      solution: 'Birinci cümlede neden-sonuç, ikincisinde amaç-sonuç ilişkisi vardır.',
+    }, { game: 'turkce', tdkGuard })
+
+    expect(err).toBeNull()
+  })
+
+  it('yasakli catch-all sik (Hicbiri) iceren soruyu reddeder', () => {
+    const err = validateGeneratedQuestionContent({
+      question: 'Fe₂O₃ + 3CO → 2Fe + 3CO₂ tepkimesinde hangi madde yükseltgenir?',
+      options: ['Fe₂O₃', 'CO', 'Fe', 'CO₂', 'Hiçbiri'],
+      answer: 1,
+      solution: 'CO içindeki karbon +2 değerlikten +4 değerliğe yükseltgenir.',
+    }, { game: 'fen', tdkGuard })
+
+    expect(err).toBe('Yasaklı şık içeriyor')
+  })
+
   it('prompt appendix tek ortak kaynaktan oyun bazli altin ornek verir', () => {
     expect(buildSubjectPromptAppendix('matematik')).toContain('ALTIN KURAL')
     expect(buildSubjectPromptAppendix('matematik')).toContain('ALTIN ÖRNEK')

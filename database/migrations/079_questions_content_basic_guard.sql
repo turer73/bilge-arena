@@ -14,6 +14,7 @@ DECLARE
   roman_count integer := 0;
   premise_like_count integer := 0;
   word_count integer := 0;
+  has_comparison_option boolean := false;
 BEGIN
   -- WordQuest has legacy nested shapes (cloze/dialogue/sentence). Application
   -- guards still validate AI-generated WordQuest; this DB guard protects the
@@ -62,6 +63,14 @@ BEGIN
       RETURN false;
     END IF;
 
+    -- FP-koruma (app-guard paritesi): bir şık BİRDEN FAZLA roman içeriyorsa
+    -- (ör. "I. neden-sonuç, II. amaç-sonuç") bu KARŞILAŞTIRMA-CEVABIDIR (geçerli),
+    -- öncül-bölünmesi değil. Bayrak set; diğer per-şık kontrolleri devam eder,
+    -- yalnız öncül-bölünme reddi sonda atlanır.
+    IF option_text ~* '(^|\s)(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s.*\y(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s' THEN
+      has_comparison_option := true;
+    END IF;
+
     IF option_text ~* '^\s*(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+' THEN
       roman_count := roman_count + 1;
       body := regexp_replace(option_text, '^\s*(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+', '', 'i');
@@ -74,7 +83,7 @@ BEGIN
     END IF;
   END LOOP;
 
-  IF roman_count >= 2 AND premise_like_count >= 1 THEN
+  IF roman_count >= 2 AND premise_like_count >= 1 AND NOT has_comparison_option THEN
     RETURN false;
   END IF;
 
