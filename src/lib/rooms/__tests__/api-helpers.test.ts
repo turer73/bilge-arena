@@ -21,7 +21,7 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
-import { getAuthRateLimited } from '../api-helpers'
+import { getAuthRateLimited, getAuthAndJwt } from '../api-helpers'
 
 const VALID_UUID = '11111111-2222-3333-4444-555555555555'
 const VALID_JWT = 'eyJ.test.jwt'
@@ -153,5 +153,38 @@ describe('getAuthRateLimited', () => {
 
     expect(ipLimiter.check).toHaveBeenCalledTimes(5)
     expect(mockGetUser).toHaveBeenCalledTimes(0)  // SECURITY: hicbir Supabase Auth call
+  })
+})
+
+describe('getAuthAndJwt', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetUser.mockResolvedValue({ data: { user: null }, error: null })
+    mockGetSession.mockResolvedValue({ data: { session: null } })
+  })
+
+  it('401 if no user', async () => {
+    const r = await getAuthAndJwt()
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.response.status).toBe(401)
+  })
+
+  it('401 if user var ama session/JWT yok', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } }, error: null })
+    mockGetSession.mockResolvedValue({ data: { session: null } })
+    const r = await getAuthAndJwt()
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.response.status).toBe(401)
+  })
+
+  it('ok:true — userId + jwt doner', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } }, error: null })
+    mockGetSession.mockResolvedValue({ data: { session: { access_token: VALID_JWT } } })
+    const r = await getAuthAndJwt()
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.userId).toBe(VALID_UUID)
+      expect(r.jwt).toBe(VALID_JWT)
+    }
   })
 })

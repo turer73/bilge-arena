@@ -82,8 +82,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Gecersiz davet kodu' }, { status: 404 })
   }
 
-  // referred_by guncelle
-  await svc.from('profiles').update({ referred_by: referrer.id }).eq('id', user.id)
+  // TOCTOU fix: referred_by'i ATOMIK set — yalniz henuz null'sa. Iki farkli
+  // gecerli kodla eszamanlı 2 istek ikisi de snapshot'ta null gorup cift-XP
+  // aliyordu (UNIQUE(referrer_id,referred_id) farkli referrer'da bloklamaz).
+  // Kosullu UPDATE + rows-affected kontrolu (daily-login deseni) tek-kazanan.
+  const { data: claimed } = await svc
+    .from('profiles')
+    .update({ referred_by: referrer.id })
+    .eq('id', user.id)
+    .is('referred_by', null)
+    .select('id')
+
+  if (!claimed || claimed.length === 0) {
+    return NextResponse.json({ error: 'Zaten bir davet kodu kullandin' }, { status: 409 })
+  }
 
   // Odul kaydi
   const { error } = await svc

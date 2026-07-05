@@ -250,6 +250,61 @@ export async function fetchRoomByCode(
 }
 
 // =============================================================================
+// verifyRoomFirstPlace — multiplayer grant-stats server-side dogrulama
+// =============================================================================
+
+/**
+ * Multiplayer isFirstPlace SERVER-SIDE dogrulama (grant-stats icin).
+ *
+ * Client'in gonderdigi isFirstPlace'e guvenilmez (denetim bulgusu: sahte
+ * birincilik iddiasi -> kisitli rozet). Oda-DB'den (bilge_arena_dev) kullanici
+ * JWT'siyle gercek durum okunur. RLS (rooms_select_host_or_member): kullanici
+ * yalniz uye oldugu odayi gorur.
+ *
+ * Kurallar:
+ *   - oda 'completed' degilse -> finished:false (grant reddedilir)
+ *   - caller uye degilse -> isFirstPlace:false
+ *   - caller.score == max(scores) VE score > 0 -> isFirstPlace:true
+ *     (score>0 sarti: iptal/all-zero odada herkese 'first' verilmesini onler)
+ *   - beraberlik: birden fazla max varsa hepsi first sayilir (kabul; kozmetik)
+ *   - oda-DB erisilemezse -> finished:false (fail-closed; sahte-grant riski yok)
+ */
+export async function verifyRoomFirstPlace(
+  jwt: string,
+  roomId: string,
+  userId: string,
+): Promise<{ finished: boolean; isFirstPlace: boolean }> {
+  const headers = { Authorization: `Bearer ${jwt}` }
+  const opts = { headers, cache: 'no-store' as const }
+
+  try {
+    const [roomRes, membersRes] = await Promise.all([
+      fetch(`${RPC_URL}/rooms?id=eq.${roomId}&select=state&limit=1`, opts),
+      fetch(`${RPC_URL}/room_members?room_id=eq.${roomId}&select=user_id,score`, opts),
+    ])
+
+    if (!roomRes.ok || !membersRes.ok) return { finished: false, isFirstPlace: false }
+
+    const rooms = (await roomRes.json()) as Array<{ state: string }>
+    if (rooms.length === 0 || rooms[0].state !== 'completed') {
+      return { finished: false, isFirstPlace: false }
+    }
+
+    const members = (await membersRes.json()) as Array<{ user_id: string; score: number }>
+    const me = members.find((m) => m.user_id === userId)
+    if (!me) return { finished: true, isFirstPlace: false }
+
+    const maxScore = members.reduce(
+      (mx, m) => (m.score > mx ? m.score : mx),
+      Number.NEGATIVE_INFINITY,
+    )
+    return { finished: true, isFirstPlace: me.score === maxScore && me.score > 0 }
+  } catch {
+    return { finished: false, isFirstPlace: false }
+  }
+}
+
+// =============================================================================
 // fetchRoomState — /oda/[code] full lobby state SSR + GET /state route
 // =============================================================================
 
