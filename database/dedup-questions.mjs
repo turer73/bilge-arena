@@ -74,20 +74,17 @@ if (divergeList.length) {
 }
 
 if (APPLY && delIds.length) {
-  // GÜVENLİK: silmeden ÖNCE silinecek satırların tam içeriğini yedekle (geri-alınabilir)
-  const { writeFileSync } = await import('node:fs')
-  const { data: bak } = await s.from('questions').select('*').in('id', delIds.slice(0, 1000))
-  const bakPath = join(__dirname, `dedup-backup-${delIds.length}rows.json`)
-  writeFileSync(bakPath, JSON.stringify(bak || [], null, 1))
-  console.log(`Yedek: ${bakPath} (${bak?.length || 0} satır)`)
-  console.log(`\n${delIds.length} satır siliniyor...`)
+  // SOFT-DELETE (is_active=false): hard-delete session_answers FK'ya takılır
+  // (cevaplanmış sorular) + geri-alınamaz. Soft-delete GERİ-ALINABILIR, FK-sorunsuz,
+  // veri-kaybısız; dedup amacını (çift-görünme) karşılar. keep her zaman active
+  // (pickKeep active-öncelik) -> her grupta 1 active kalır.
   const B = 100; let done = 0
   for (let i = 0; i < delIds.length; i += B) {
-    const { error } = await s.from('questions').delete().in('id', delIds.slice(i, i + B))
-    if (error) { console.error('SİLME HATASI:', error.message); break }
+    const { error } = await s.from('questions').update({ is_active: false }).in('id', delIds.slice(i, i + B))
+    if (error) { console.error('UPDATE HATASI:', error.message); break }
     done += Math.min(B, delIds.length - i)
   }
-  console.log(`✅ ${done} satır silindi.`)
+  console.log(`✅ ${done} redundant kopya PASİFLEŞTİRİLDİ (is_active=false, geri-alınabilir).`)
 } else if (!APPLY) {
   console.log(`\n(DRY-RUN — --apply ile sil)`)
 }
