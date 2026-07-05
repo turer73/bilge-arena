@@ -29,10 +29,24 @@ ZORUNLU KALİTE KURALLARI (İHLAL ETME):
 ÖRNEK FİZİK ÖNCÜLLÜ SORU YAPISI (FEW-SHOT):
 {"question": "Bir cismin kinetik enerjisi ile ilgili;\\nI. Cismin kütlesine bağlıdır.\\nII. Cismin hızının karesi ile orantılıdır.\\nIII. Vektörel bir büyüklüktür.\\nyargılarından hangileri doğrudur?", "options": ["Yalnız I", "Yalnız II", "I ve II", "I ve III", "I, II ve III"], "answer": 2, "solution": "Kinetik enerji Ek = 1/2*m*v^2 formülüyle hesaplanır. Formülden görüleceği üzere kütleye (I doğru) ve hızın karesine (II doğru) bağlıdır. Enerji skaler bir büyüklüktür, vektörel değildir (III yanlış). Dolayısıyla I ve II doğrudur."}`
 
+// 2026 YKS gerçek-sınav (ÖSYM) STİL-REFERANSI. Kaynak: data/soru-bankasi/_ref-2026/
+// (215 gerçek soru analizi, telifli-repo-dışı). Burada BİREBİR SORU YOK — yalnız
+// ÖSYM'nin genel soru-kökü kalıpları + biçim-istatistikleri (jenerik, telif-güvenli).
+// Amaç: üreticinin gerçek-sınav zorluğu/formatını yakalaması.
+export const REF_2026_STYLE = {
+  turkce:
+    '2026 YKS-STİLİ (TYT Türkçe + AYT Edebiyat gözlemi): Soruların ~%80\'i PARAGRAF-tabanlıdır (40-90 kelime metin + tek soru). Tipik soru-kökleri: "...anlatılmak istenen aşağıdakilerden hangisidir?", "...altı çizili sözle anlatılmak istenen...", "boş bırakılan yerlere sırasıyla aşağıdakilerden hangisi getirilmelidir?", "...bu parçadan aşağıdakilerin hangisi çıkarılamaz?". Şıklar tam-cümle/uzun (~85 karakter). Doğru cevap A-E arasında DENGELİ dağıtılmalı (belirli harfe yığma yok).',
+  sosyal:
+    '2026 YKS-STİLİ (TYT Sosyal + AYT Sosyal-2 gözlemi): ~%90 metin/çıkarım-tabanlı. Ezber değil YORUM sorulur. Tipik kökler: "...ilgili aşağıdakilerden hangisine ulaşılabilir?", "...hangisi söylenemez?", "...aşağıdaki çıkarımlardan hangisi yapılabilir?" (olumsuz-kök yaygın). I/II/III öncüllü + "Yalnız I / I ve II / I, II ve III" kombinasyon-şıklı sorular ~%15-20. Şıklar kısa-orta (~45 karakter). Cevap A-E dengeli.',
+  wordquest:
+    '2026 YDT-İngilizce STİLİ gözlemi: Cümle-tamamlama (vocabulary/collocation), cloze ve restatement ağırlıklı. Şıklar uzun (~110 karakter, çoğu tam-ifade). Doğru cevap dağılımında belirli harfe (özellikle son şık) yığma OLMAMALI — 2026\'da E-şık belirgin az işaretlenmişti; sen dengeli dağıt. Doğal, deyimsel İngilizce; yapay-çeviri kokusu olmasın.',
+}
+
 export function buildSubjectPromptAppendix(game) {
   const subjectRule = SUBJECT_GOLDEN_RULES[game] ? `\n\nALTIN KURAL: ${SUBJECT_GOLDEN_RULES[game]}` : ''
   const goldenExample = GOLDEN_EXAMPLES[game] ? `\n\nALTIN ÖRNEK:\n${GOLDEN_EXAMPLES[game]}` : ''
-  return `${subjectRule}${goldenExample}`
+  const ref2026 = REF_2026_STYLE[game] ? `\n\n${REF_2026_STYLE[game]}` : ''
+  return `${subjectRule}${goldenExample}${ref2026}`
 }
 
 function escapeRegExp(value) {
