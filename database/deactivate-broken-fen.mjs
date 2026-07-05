@@ -23,17 +23,21 @@ const APPLY = process.argv.includes('--apply')
 async function all(game) {
   let out = [], from = 0; const sz = 1000
   while (true) {
-    const { data } = await s.from('questions').select('id,content,is_active').eq('game', game).range(from, from + sz - 1)
+    const { data, error } = await s.from('questions').select('id,content,is_active').eq('game', game).range(from, from + sz - 1)
+    if (error) { console.error(`FETCH HATASI (${game}):`, error.message); process.exit(1) } // Codex P2: sessiz-fail YOK
     if (!data?.length) break; out.push(...data); if (data.length < sz) break; from += sz
   }
   return out
 }
 function isBroken(r) {
   const q = r.content?.question || ''
+  const passage = r.content?.passage || '' // Codex P2: öncüller passage'da olabilir
   const opts = (r.content?.options || []).join(' | ')
   const refsOutside = /(yukar[ıi]daki|verilen).{0,20}ifade|hangileri/i.test(q)
   const romanAnswers = /\b(I|II|III|IV)\b/.test(opts) && /ve|,|yaln/i.test(opts)
-  const hasInlineList = /\b(I{1,3}\.|[1-4]\.|•)/.test(q) || q.length > 200
+  // Öncül listesi gövdede VEYA passage'da varsa soru self-contained = broken DEĞİL.
+  const listText = `${q}\n${passage}`
+  const hasInlineList = /\b(I{1,3}\.|[1-4]\.|•)/.test(listText) || listText.length > 200
   return refsOutside && romanAnswers && !hasInlineList
 }
 

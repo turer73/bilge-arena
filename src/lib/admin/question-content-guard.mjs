@@ -114,8 +114,15 @@ function isLikelyPremiseBody(text) {
 const multiRomanInOneOptionRe = /(?:^|\s)(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s.*\b(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s/i
 
 export function hasSplitPremiseOptions(options) {
-  // FP-koruma: herhangi bir şık çoklu-roman içeriyorsa = karşılaştırma-cevabı, bölünme değil
+  // FP-koruma 1: herhangi bir şık çoklu-roman içeriyorsa = karşılaştırma-cevabı, bölünme değil
   if (options.some((option) => multiRomanInOneOptionRe.test(String(option)))) return false
+
+  // FP-koruma 2 (Codex #261): gerçek öncül-bölünmesinde şıklar arasında en az bir
+  // KOMBİNASYON-CEVABI ("Yalnız I", "I ve II") bulunur. Kombinasyon-cevabı yoksa,
+  // roman-prefixli şıklar bir AD-LİSTESİDİR (ör. "I. Meşrutiyet'in ilanı ve ...") —
+  // uzun tarihi-ad şıkları FP olarak reddedilmesin.
+  const hasCombinationAnswer = options.some((option) => premiseAnswerOptionRe.test(String(option).trim()))
+  if (!hasCombinationAnswer) return false
 
   const romanLabeledBodies = options
     .map((option) => String(option).match(romanNumeralPrefixRe)?.[1]?.trim())

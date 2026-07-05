@@ -76,6 +76,25 @@ describe('question-content-guard', () => {
     expect(err).toBeNull()
   })
 
+  it('UZUN Roma-adli sik (kombinasyon-cevapsiz) FP olarak reddedilmez (Codex #261)', () => {
+    // Tarihi-ad şıkları: her şık uzun roman-adı, AMA kombinasyon-cevabı ("I ve II") YOK
+    // = ad-listesi, öncül-bölünmesi değil.
+    const err = validateGeneratedQuestionContent({
+      question: 'Osmanlı modernleşmesiyle ilgili aşağıdakilerden hangisi meclisin açılmasını sağlamıştır?',
+      options: [
+        'I. Meşrutiyet’in ilanı ve Kanun-ı Esasi’nin kabul edilmesi süreci',
+        'II. Meşrutiyet’in ilanıyla meclisin yeniden açılması ve İttihat Terakki etkisi',
+        'Tanzimat Fermanı’nın ilan edilmesi ve gayrimüslim haklarının genişletilmesi',
+        'Islahat Fermanı’nın yürürlüğe girmesi ve eşitlik ilkesinin benimsenmesi',
+        'Sened-i İttifak ile ayanların siyasi güç kazanması ve merkezin zayıflaması',
+      ],
+      answer: 1,
+      solution: 'II. Meşrutiyet’in ilanı Kanun-ı Esasi’yi yeniden yürürlüğe koyarak meclisi açmıştır.',
+    }, { game: 'sosyal', tdkGuard })
+
+    expect(err).toBeNull()
+  })
+
   it('yasakli catch-all sik (Hicbiri) iceren soruyu reddeder', () => {
     const err = validateGeneratedQuestionContent({
       question: 'Fe₂O₃ + 3CO → 2Fe + 3CO₂ tepkimesinde hangi madde yükseltgenir?',

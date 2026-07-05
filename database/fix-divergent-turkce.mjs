@@ -20,7 +20,17 @@ config({ path: join(dirname(fileURLToPath(import.meta.url)), '..', '.env.local')
 const s = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://lvnmzdowhfzmpkueurih.supabase.co', process.env.SUPABASE_SERVICE_ROLE_KEY)
 const APPLY = process.argv.includes('--apply')
 
-const { data: rows } = await s.from('questions').select('id,content,is_active').eq('game', 'turkce')
+// Codex P2: tek-sayfa PostgREST 1000-cap'i hedef-UUID'yi kaçırabilir → pagination.
+async function allTurkce() {
+  let out = [], from = 0; const sz = 1000
+  while (true) {
+    const { data, error } = await s.from('questions').select('id,content,is_active').eq('game', 'turkce').range(from, from + sz - 1)
+    if (error) { console.error('FETCH HATASI:', error.message); process.exit(1) } // sessiz-fail YOK
+    if (!data?.length) break; out.push(...data); if (data.length < sz) break; from += sz
+  }
+  return out
+}
+const rows = await allTurkce()
 const q1 = rows.find((r) => r.id.startsWith('1a3e35d7'))
 const q2 = rows.find((r) => r.id.startsWith('22f3e4b5'))
 
