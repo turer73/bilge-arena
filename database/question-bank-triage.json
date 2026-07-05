@@ -11,7 +11,7 @@
     },
     "byCheck": {
       "W:solution_value_not_in_options": 34,
-      "W:solution_answer_mismatch": 40,
+      "W:solution_answer_mismatch": 7,
       "W:dup_id": 600
     }
   },
@@ -24,32 +24,8 @@
     },
     {
       "check": "solution_answer_mismatch",
-      "loc": "tyt_fen.json:fizik:fen_f022",
-      "msg": "solution \"200\" -> şık idx4 (\"200\") ama answer=3 (\"100\")",
-      "suggested_answer": 4
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_fen.json:fizik:fen_f024",
-      "msg": "solution \"420.000\" -> şık idx3 (\"420.000\") ama answer=2 (\"210.000\")",
-      "suggested_answer": 3
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_fen.json:fizik:fen_f075",
-      "msg": "solution \"60\" -> şık idx4 (\"60\") ama answer=3 (\"50\")",
-      "suggested_answer": 4
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_fen.json:fizik:fen_f076",
-      "msg": "solution \"84,8\" -> şık idx2 (\"84,8\") ama answer=3 (\"88,6\")",
-      "suggested_answer": 2
-    },
-    {
-      "check": "solution_answer_mismatch",
       "loc": "tyt_fen.json:kimya:fen_k031",
-      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=3 (\"7\")",
+      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=4 (\"8\")",
       "suggested_answer": 2
     },
     {
@@ -95,21 +71,9 @@
       "msg": "solution değeri \"%16\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:sayilar:mat_s058",
-      "msg": "solution \"0,8\" -> şık idx2 (\"0,8\") ama answer=1 (\"0,7\")",
-      "suggested_answer": 2
-    },
-    {
       "check": "solution_value_not_in_options",
       "loc": "tyt_matematik.json:sayilar:mat_s060",
       "msg": "solution değeri \"3\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:problemler:mat_p001",
-      "msg": "solution \"48\" -> şık idx4 (\"48\") ama answer=1 (\"36\")",
-      "suggested_answer": 4
     },
     {
       "check": "solution_value_not_in_options",
@@ -117,27 +81,9 @@
       "msg": "solution değeri \"6\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:problemler:mat_p010",
-      "msg": "solution \"1\" -> şık idx0 (\"1\") ama answer=1 (\"2\")",
-      "suggested_answer": 0
-    },
-    {
       "check": "solution_value_not_in_options",
       "loc": "tyt_matematik.json:problemler:mat_p026",
       "msg": "solution değeri \"11664\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:problemler:mat_p033",
-      "msg": "solution \"74\" -> şık idx3 (\"74\") ama answer=2 (\"65\")",
-      "suggested_answer": 3
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:problemler:mat_p047",
-      "msg": "solution \"480\" -> şık idx4 (\"480\") ama answer=3 (\"460\")",
-      "suggested_answer": 4
     },
     {
       "check": "solution_value_not_in_options",
@@ -145,62 +91,14 @@
       "msg": "solution değeri \"2:1\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:problemler:mat_p062",
-      "msg": "solution \"15\" -> şık idx4 (\"15\") ama answer=2 (\"9\")",
-      "suggested_answer": 4
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:problemler:mat_p064",
-      "msg": "solution \"42\" -> şık idx2 (\"42\") ama answer=3 (\"48\")",
-      "suggested_answer": 2
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:problemler:mat_p065",
-      "msg": "solution \"%20\" -> şık idx1 (\"%20\") ama answer=3 (\"%25\")",
-      "suggested_answer": 1
-    },
-    {
       "check": "solution_value_not_in_options",
       "loc": "tyt_matematik.json:problemler:mat_p066",
       "msg": "solution değeri \"33,3\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:problemler:mat_p072",
-      "msg": "solution \"61\" -> şık idx2 (\"61\") ama answer=1 (\"59\")",
-      "suggested_answer": 2
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:problemler:mat_p077",
-      "msg": "solution \"5:-1\" -> şık idx2 (\"5:-1\") ama answer=0 (\"5:1\")",
-      "suggested_answer": 2
-    },
-    {
       "check": "solution_value_not_in_options",
       "loc": "tyt_matematik.json:geometri:mat_g016",
       "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:geometri:mat_g021",
-      "msg": "solution \"44\" -> şık idx3 (\"44\") ama answer=2 (\"42\")",
-      "suggested_answer": 3
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:geometri:mat_g041",
-      "msg": "solution \"2:1\" -> şık idx2 (\"2:1\") ama answer=1 (\"1:2\")",
-      "suggested_answer": 2
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_matematik.json:geometri:mat_g049",
-      "msg": "solution \"67,5\" -> şık idx4 (\"67,5\") ama answer=3 (\"65\")",
-      "suggested_answer": 4
     },
     {
       "check": "solution_value_not_in_options",
@@ -479,12 +377,6 @@
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p001)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p001",
-      "msg": "solution \"48\" -> şık idx4 (\"48\") ama answer=1 (\"36\")",
-      "suggested_answer": 4
-    },
-    {
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p002",
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p002)"
@@ -533,12 +425,6 @@
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p010",
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p010)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p010",
-      "msg": "solution \"1\" -> şık idx0 (\"1\") ama answer=1 (\"2\")",
-      "suggested_answer": 0
     },
     {
       "check": "dup_id",
@@ -661,12 +547,6 @@
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p033)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p033",
-      "msg": "solution \"74\" -> şık idx3 (\"74\") ama answer=2 (\"65\")",
-      "suggested_answer": 3
-    },
-    {
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p034",
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p034)"
@@ -735,12 +615,6 @@
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p047",
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p047)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p047",
-      "msg": "solution \"480\" -> şık idx4 (\"480\") ama answer=3 (\"460\")",
-      "suggested_answer": 4
     },
     {
       "check": "dup_id",
@@ -823,12 +697,6 @@
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p062)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p062",
-      "msg": "solution \"15\" -> şık idx4 (\"15\") ama answer=2 (\"9\")",
-      "suggested_answer": 4
-    },
-    {
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p063",
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p063)"
@@ -839,21 +707,9 @@
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p064)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p064",
-      "msg": "solution \"42\" -> şık idx2 (\"42\") ama answer=3 (\"48\")",
-      "suggested_answer": 2
-    },
-    {
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p065",
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p065)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p065",
-      "msg": "solution \"%20\" -> şık idx1 (\"%20\") ama answer=3 (\"%25\")",
-      "suggested_answer": 1
     },
     {
       "check": "dup_id",
@@ -896,12 +752,6 @@
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p072)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p072",
-      "msg": "solution \"61\" -> şık idx2 (\"61\") ama answer=1 (\"59\")",
-      "suggested_answer": 2
-    },
-    {
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p073",
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p073)"
@@ -925,12 +775,6 @@
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p077",
       "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p077)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p077",
-      "msg": "solution \"5:-1\" -> şık idx2 (\"5:-1\") ama answer=0 (\"5:1\")",
-      "suggested_answer": 2
     },
     {
       "check": "dup_id",
@@ -1058,12 +902,6 @@
       "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g021)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g021",
-      "msg": "solution \"44\" -> şık idx3 (\"44\") ama answer=2 (\"42\")",
-      "suggested_answer": 3
-    },
-    {
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g022",
       "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g022)"
@@ -1164,12 +1002,6 @@
       "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g041)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g041",
-      "msg": "solution \"2:1\" -> şık idx2 (\"2:1\") ama answer=1 (\"1:2\")",
-      "suggested_answer": 2
-    },
-    {
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g042",
       "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g042)"
@@ -1208,12 +1040,6 @@
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g049",
       "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g049)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g049",
-      "msg": "solution \"67,5\" -> şık idx4 (\"67,5\") ama answer=3 (\"65\")",
-      "suggested_answer": 4
     },
     {
       "check": "dup_id",
@@ -1381,12 +1207,6 @@
       "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g080)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d048",
-      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=1 (\"1\")",
-      "suggested_answer": 2
-    },
-    {
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f001",
       "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f001)"
@@ -1502,12 +1322,6 @@
       "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f022)"
     },
     {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f022",
-      "msg": "solution \"200\" -> şık idx4 (\"200\") ama answer=3 (\"100\")",
-      "suggested_answer": 4
-    },
-    {
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f023",
       "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f023)"
@@ -1516,12 +1330,6 @@
       "check": "dup_id",
       "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f024",
       "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f024)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f024",
-      "msg": "solution \"420.000\" -> şık idx3 (\"420.000\") ama answer=2 (\"210.000\")",
-      "suggested_answer": 3
     },
     {
       "check": "dup_id",
@@ -1731,7 +1539,7 @@
     {
       "check": "solution_answer_mismatch",
       "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k031",
-      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=3 (\"7\")",
+      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=4 (\"8\")",
       "suggested_answer": 2
     },
     {
@@ -3060,12 +2868,6 @@
       "check": "dup_id",
       "loc": "tyt_turkce.json:dil_bilgisi:tr_d048",
       "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d048)"
-    },
-    {
-      "check": "solution_answer_mismatch",
-      "loc": "tyt_turkce.json:dil_bilgisi:tr_d048",
-      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=1 (\"1\")",
-      "suggested_answer": 2
     },
     {
       "check": "dup_id",
