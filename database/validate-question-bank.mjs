@@ -28,7 +28,7 @@
  * Çıkış kodu: ERROR varsa 1, yoksa 0.
  */
 
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -73,8 +73,16 @@ function checkEncoding(s) {
   return out
 }
 
-// Tüm dosyalardan normalize edilmiş soru kaydı üret.
+// data/soru-bankasi gitignored (ürün-IP, git-filter-repo'yla tarihten temizlendi)
+// -> CI clean-checkout'ta YOK. Test bunu existsSync ile koşullu-kontrol eder;
+// CI-regresyon-kilidi tracked-fixture'a bakar.
+export function questionBankExists(dir = DEFAULT_DIR) {
+  return existsSync(dir)
+}
+
+// Tüm dosyalardan normalize edilmiş soru kaydı üret. Dir yoksa boş (ENOENT-guard).
 function* iterRecords(dir) {
+  if (!existsSync(dir)) return
   for (const f of readdirSync(dir)) {
     if (!f.endsWith('.json') || f === 'soru-deposu-schema.json') continue
     const d = JSON.parse(readFileSync(join(dir, f), 'utf-8'))
