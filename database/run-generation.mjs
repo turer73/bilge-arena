@@ -21,6 +21,14 @@ import { createClient } from '@supabase/supabase-js'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  QUALITY_RULES,
+  buildSubjectPromptAppendix,
+  createTdkGuard,
+  parseExpandedTdkTokenPairs,
+  parseFixtureTdkTokenPairs,
+  validateGeneratedQuestionContent,
+} from '../src/lib/admin/question-content-guard.mjs'
 
 // ── env yukle ────────────────────────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -54,6 +62,28 @@ if (!game || !category || !difficultyArg) {
   console.error('       node run-generation.mjs sosyal sosyoloji 3 -- 5')
   process.exit(1)
 }
+
+// TDK Compliance check loading
+const tdkJsonPath = join(__dirname, '..', 'src', 'lib', 'validations', 'data', 'tdk-tokens-expanded.json')
+const tdkFixturePath = join(__dirname, '..', 'src', 'lib', 'validations', 'tdk-rules.fixture.ts')
+let tdkTokenPairs = []
+if (existsSync(tdkJsonPath)) {
+  try {
+    const tdkData = JSON.parse(readFileSync(tdkJsonPath, 'utf-8'))
+    tdkTokenPairs.push(...parseExpandedTdkTokenPairs(tdkData))
+  } catch (err) {
+    console.warn('TDK JSON yuklenemedi:', err.message)
+  }
+}
+if (existsSync(tdkFixturePath)) {
+  try {
+    tdkTokenPairs.push(...parseFixtureTdkTokenPairs(readFileSync(tdkFixturePath, 'utf-8')))
+  } catch (err) {
+    console.warn('TDK fixture yuklenemedi:', err.message)
+  }
+}
+const tdkGuard = createTdkGuard(tdkTokenPairs)
+
 const difficulty = parseInt(difficultyArg, 10)
 const level_tag = levelArg && levelArg !== '--' ? levelArg : null
 const count = parseInt(countArg ?? '5', 10)
@@ -169,17 +199,11 @@ function buildSystemPrompt(g, c, lvl) {
   return tpl
     .replace(/\{categoryLabel\}/g, categoryLabel)
     .replace(/\{langRule\}/g, langRule)
-    .replace(/\{topicList\}/g, topicList) + QUALITY_RULES
+    .replace(/\{topicList\}/g, topicList) + QUALITY_RULES + buildSubjectPromptAppendix(g)
 }
 
 // route.ts ile mirror (Codex PR#250): sik-uzunluk dengesi + cozumde sik-harfi yasagi.
 // CLI batch generator da admin API ile ayni kurallari Gemini'ye gondermeli.
-const QUALITY_RULES = `
-
-ZORUNLU KALİTE KURALLARI (İHLAL ETME):
-1. ŞIK UZUNLUK DENGESİ: Tüm seçenekler BENZER uzunlukta olmalı. Doğru cevap diğerlerinden belirgin biçimde UZUN/DETAYLI OLMAMALI — çeldiriciler de doğru cevap kadar dolu, makul ve inandırıcı yazılmalı. Aksi halde öğrenci içeriği bilmeden sadece "en uzun şıkkı" seçerek doğruyu bulabilir.
-2. ÇÖZÜMDE ŞIK HARFİ YASAK: "solution" alanında ŞIK HARFİ (A/B/C/D/E) veya "X seçeneği", "X şıkkı", "doğru cevap X" gibi harfe dayalı ifade KULLANMA. Şıklar kullanıcıya KARIŞIK sırayla gösterildiğinden harf referansı yanlış görünür. Doğru cevabı yalnızca İÇERİKLE açıkla.`
-
 // src/lib/utils/sanitize-solution.ts mirror (CLI standalone): cozum sik-harfi reflerini sil
 // (insert oncesi backstop + few-shot priming kesme). Turkce-harf sinir + kok kullanir.
 const _TL = 'a-zA-ZçğıöşüÇĞİÖŞÜ'
@@ -216,7 +240,7 @@ function isLikelyTurkish(input) {
 }
 
 // ── Effective level_tag: route ile ayni davranis ─────
-const effectiveLevelTag = level_tag ?? (game === 'wordquest' ? 'B2' : null)
+const effectiveLevelTag = game === 'wordquest' ? (level_tag ?? 'B2') : null
 
 // ── Main ─────────────────────────────────────────────
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -232,26 +256,16 @@ console.log(`Model:      ${GEMINI_MODEL}\n`)
 // ── Few-shot ───────────────────────────────
 let fewShotText = ''
 {
-  const { data: examples } = await supabase
-    .from('questions')
-    .select('content')
-    .eq('game', game)
-    .eq('category', category)
-    .eq('is_active', true)
-    .limit(3)
-
+  const { data: examples } = await supabase.from('questions').select('content').eq('game', game).eq('category', category).eq('is_active', true).limit(3)
   if (examples && examples.length > 0) {
     const formatted = examples.map((e, i) => {
       const c = e.content ?? {}
       const q = c.question || c.sentence || ''
-      const opts = (c.options || []).map((o, j) => `  ${String.fromCharCode(65 + j)}) ${o}`).join('\n')
-      // Codex PR#250: few-shot cozumlerindeki sik-harfi reflerini sterilize et (priming kes).
-      return `Ornek ${i + 1}:\nSoru: ${q}\n${opts}\nDogru: ${String.fromCharCode(65 + (c.answer ?? 0))}\nCozum: ${stripSolutionLetterRefs(c.solution || '-')}`
+      const optsArray = c.options || []
+      const opts = optsArray.map((o, j) => `  ${String.fromCharCode(65 + j)}) ${o}`).join('\n')
+      return `Dinamik Ornek ${i + 1}:\nSoru: ${q}\n${opts}\nDogru: ${optsArray[c.answer ?? 0]}\nCozum: ${stripSolutionLetterRefs(c.solution || '-')}`
     })
-    fewShotText = `\n\nMEVCUT ORNEKLER (bunlara benzer ama FARKLI sorular uret):\n${formatted.join('\n\n')}`
-    console.log(`Few-shot: ${examples.length} ornek bulundu.`)
-  } else {
-    console.log(`Few-shot: ornek soru yok (yeni kategori).`)
+    fewShotText = `\n\nMEVCUT BENZER ORNEKLER (Bu tarzda FARKLI soru uret):\n${formatted.join('\n\n')}`
   }
 }
 
@@ -351,6 +365,10 @@ function validate(q) {
   for (let i = 0; i < 5; i++) if (typeof q.options[i] !== 'string' || q.options[i].length < 1 || q.options[i].length > 500) return `options[${i}] 1-500 karakter`
   if (!Number.isInteger(q.answer) || q.answer < 0 || q.answer > 4) return 'answer 0-4 integer'
   if (typeof q.solution !== 'string' || q.solution.length < 5 || q.solution.length > 3000) return 'solution 5-3000 karakter'
+
+  const contentError = validateGeneratedQuestionContent(q, { game, tdkGuard })
+  if (contentError) return contentError
+
   return null
 }
 

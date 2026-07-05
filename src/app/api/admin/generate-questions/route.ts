@@ -1,4 +1,11 @@
 import { NextResponse } from 'next/server'
+import { forbiddenAsciiTokensAll } from '@/lib/validations/tdk-rules.fixture'
+import {
+  QUALITY_RULES,
+  buildSubjectPromptAppendix,
+  createTdkGuard,
+  validateGeneratedQuestionContent,
+} from '@/lib/admin/question-content-guard.mjs'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { dbErrorResponse } from '@/lib/utils/api-error'
@@ -12,6 +19,7 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
 
 // AI generator pahali endpoint — admin yetkisi disinda EDoS koruma
 const aiGenLimiter = createRateLimiter('ai-gen', 10, 60_000)
+const tdkGuard = createTdkGuard([...forbiddenAsciiTokensAll])
 
 // ── Kategori bazli YKS konu listesi ─────────────────────
 const TOPIC_MAP: Record<string, Record<string, string[]>> = {
@@ -120,12 +128,6 @@ Türkçe key KULLANMA. SADECE JSON döndür, başka hiçbir şey yazma.`
 // (2) çözümde şık harfi ("Seçenek B") var ama UI şıkları karıştırıyor → harf yanlış
 // görünüyor (118 soru). Bu kurallar gelecek üretimde ikisini de önler (env'i değiştirmeden,
 // kodda append edildiği için production env-prompt'una da uygulanır).
-const QUALITY_RULES = `
-
-ZORUNLU KALİTE KURALLARI (İHLAL ETME):
-1. ŞIK UZUNLUK DENGESİ: Tüm seçenekler BENZER uzunlukta olmalı. Doğru cevap diğerlerinden belirgin biçimde UZUN/DETAYLI OLMAMALI — çeldiriciler (yanlış şıklar) da doğru cevap kadar dolu, makul ve inandırıcı yazılmalı. Aksi halde öğrenci içeriği bilmeden sadece "en uzun şıkkı" seçerek doğruyu bulabilir.
-2. ÇÖZÜMDE ŞIK HARFİ YASAK: "solution" alanında ŞIK HARFİ (A/B/C/D/E) veya "X seçeneği", "X şıkkı", "doğru cevap X" gibi harfe dayalı ifade KULLANMA. Şıklar kullanıcıya KARIŞIK sırayla gösterildiğinden harf referansı yanlış görünür. Doğru cevabı ve neden doğru/yanlış olduğunu yalnızca İÇERİKLE (kavram/değer) açıkla.`
-
 // CEFR seviyesine gore AI'ye verilecek kelime/grammar kalibrasyon ipucu.
 // 2026-04-26 (Tier C): Onceki versiyon C2 rubrigi ('Mastery: idiomatic
 // native-like vocabulary...') tamamen Ingilizce'ydi -> Gemini bu rubrigin
@@ -164,8 +166,10 @@ function buildSystemPrompt(game: string, category: string, levelTag: string | nu
   return template
     .replace(/\{categoryLabel\}/g, categoryLabel)
     .replace(/\{langRule\}/g, langRule)
-    .replace(/\{topicList\}/g, topicList) + QUALITY_RULES
+    .replace(/\{topicList\}/g, topicList) + QUALITY_RULES + buildSubjectPromptAppendix(game)
 }
+
+type GeneratedQuestion = { question: string; options: string[]; answer: number; solution: string; topic?: string }
 
 /**
  * POST /api/admin/generate-questions — AI ile soru uretimi
@@ -213,34 +217,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'GOOGLE_GENERATIVE_AI_API_KEY ayarlanmamis' }, { status: 500 })
   }
 
-  // ── Few-shot: mevcut 3 soruyu ornek olarak cek ───────
+  // ── Few-shot: Artık Altın Örnekler kullanılıyor (yukarıda enjekte edildi) ───────
   let fewShotText = ''
   try {
-    let query = supabase
-      .from('questions')
-      .select('content')
-      .eq('game', game)
-      .eq('category', category)
-      .eq('is_active', true)
-      .limit(3)
-
+    let query = supabase.from('questions').select('content').eq('game', game).eq('category', category).eq('is_active', true).limit(3)
     if (topic) query = query.eq('topic', topic)
-
     const { data: examples } = await query
     if (examples && examples.length > 0) {
       const formatted = examples.map((e, i) => {
         const c = e.content as { question?: string; sentence?: string; options?: string[]; answer?: number; solution?: string }
         const q = c.question || c.sentence || ''
-        const opts = (c.options || []).map((o, j) => `  ${String.fromCharCode(65 + j)}) ${o}`).join('\n')
-        // Codex PR#250: few-shot cozumlerindeki sik-harfi refleri sterilize edilir —
-        // aksi halde Gemini'yi yasakli desene (sik-harfi) priming ediyordu.
-        return `Ornek ${i + 1}:\nSoru: ${q}\n${opts}\nDogru: ${String.fromCharCode(65 + (c.answer ?? 0))}\nCozum: ${stripSolutionLetterRefs(c.solution || '-')}`
+        const optsArray = c.options || []
+        const opts = optsArray.map((o: string, j: number) => `  ${String.fromCharCode(65 + j)}) ${o}`).join('\n')
+        return `Dinamik Ornek ${i + 1}:\nSoru: ${q}\n${opts}\nDogru: ${optsArray[c.answer ?? 0]}\nCozum: ${stripSolutionLetterRefs(c.solution || '-')}`
       })
-      fewShotText = `\n\nMEVCUT ORNEKLER (bunlara benzer ama FARKLI sorular uret):\n${formatted.join('\n\n')}`
+      fewShotText = `\n\nMEVCUT BENZER ORNEKLER (Bu tarzda FARKLI soru uret):\n${formatted.join('\n\n')}`
     }
-  } catch {
-    // Few-shot opsiyonel — hata olursa devam et
-  }
+  } catch {}
 
   // ── Mevcut soru metinlerini duplicate kontrolu icin cek ──
   const existingPrefixes: Set<string> = new Set()
@@ -341,13 +334,14 @@ Soru sayisi: ${count}${fewShotText}`
       answer: z.number().int().min(0).max(4),
       solution: z.string().min(5).max(3000),
       topic: z.string().optional(),
-    })
+    }).refine((data) => {
+      return validateGeneratedQuestionContent(data, { game, tdkGuard }) === null
+    }, { message: "Gelişmiş validasyon hatası (TDK ihlali, yasaklı şık veya hatalı öncüllü şık)" })
 
-    type QData = { question: string; options: string[]; answer: number; solution: string; topic?: string }
     const parsed = questions.map((q: unknown) => questionSchema.safeParse(q))
-    const validQuestions: QData[] = parsed
+    const validQuestions: GeneratedQuestion[] = parsed
       .filter((r) => r.success)
-      .map((r) => (r as { success: true; data: QData }).data)
+      .map((r) => (r as { success: true; data: GeneratedQuestion }).data)
 
     if (validQuestions.length === 0) {
       return NextResponse.json({ error: 'AI geçerli soru üretemedi', raw: text }, { status: 502 })
@@ -472,6 +466,10 @@ export async function PUT(req: Request) {
   const result = schema.safeParse({ game, category, topic, difficulty, question, options, answer, solution, level_tag })
   if (!result.success) {
     return NextResponse.json({ error: 'Gecersiz veri', details: result.error.flatten() }, { status: 400 })
+  }
+  const contentValidationError = validateGeneratedQuestionContent(result.data, { game, tdkGuard })
+  if (contentValidationError) {
+    return NextResponse.json({ error: 'Gecersiz soru içeriği', details: contentValidationError }, { status: 400 })
   }
 
   // Codex P2 fix (2026-04-26): kosulu once degerlendir, level_tag'i once degil.

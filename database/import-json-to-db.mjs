@@ -21,6 +21,12 @@ import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { spawnSync } from 'node:child_process'
+import {
+  createTdkGuard,
+  parseExpandedTdkTokenPairs,
+  parseFixtureTdkTokenPairs,
+  validateGeneratedQuestionContent,
+} from '../src/lib/admin/question-content-guard.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const envPath = join(__dirname, '..', '.env.local')
@@ -44,6 +50,25 @@ const absPath = resolve(jsonPath)
 if (!existsSync(absPath)) { console.error('Dosya yok:', absPath); process.exit(1) }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+const tdkJsonPath = join(__dirname, '..', 'src', 'lib', 'validations', 'data', 'tdk-tokens-expanded.json')
+const tdkFixturePath = join(__dirname, '..', 'src', 'lib', 'validations', 'tdk-rules.fixture.ts')
+const tdkTokenPairs = []
+if (existsSync(tdkJsonPath)) {
+  try {
+    tdkTokenPairs.push(...parseExpandedTdkTokenPairs(JSON.parse(readFileSync(tdkJsonPath, 'utf-8'))))
+  } catch (err) {
+    console.warn('TDK JSON yuklenemedi:', err.message)
+  }
+}
+if (existsSync(tdkFixturePath)) {
+  try {
+    tdkTokenPairs.push(...parseFixtureTdkTokenPairs(readFileSync(tdkFixturePath, 'utf-8')))
+  } catch (err) {
+    console.warn('TDK fixture yuklenemedi:', err.message)
+  }
+}
+const tdkGuard = createTdkGuard(tdkTokenPairs)
 
 function trLower(s) {
   return s
@@ -70,6 +95,8 @@ function validate(q) {
     if (!endsQ && !hasMarker) return 'soru-cumlesi yok'
   }
   for (const o of q.options) if (/^[A-E]\)\s/.test(o)) return 'options A) prefix YASAK'
+  const contentError = validateGeneratedQuestionContent(q, { game: q.game, tdkGuard })
+  if (contentError) return contentError
   return null
 }
 
