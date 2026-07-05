@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockGetUser = vi.fn()
 const mockQuestionsIn = vi.fn()
 const mockSessionInsertSelectSingle = vi.fn()
+const mockProfilesSingle = vi.fn()
+const mockSessionCountGte = vi.fn()
 
 // Chainable mock: every method returns the same object so chains work
 function makeChain(terminal?: Record<string, ReturnType<typeof vi.fn>>) {
@@ -25,8 +27,13 @@ const mockFrom = vi.fn((table: string) => {
   }
   if (table === 'game_sessions') {
     // INSERT path: from('game_sessions').insert(...).select(...).single()
-    // UPDATE path: from('game_sessions').update(...).eq(...)
-    const chain = makeChain({ single: mockSessionInsertSelectSingle })
+    // COUNT path (daily-limit gate): .select('id',{count}).eq(...).gte(...) -> mockSessionCountGte
+    const chain = makeChain({ single: mockSessionInsertSelectSingle, gte: mockSessionCountGte })
+    return chain
+  }
+  if (table === 'profiles') {
+    // daily-limit gate: .select('is_premium,premium_until').eq('id').single()
+    const chain = makeChain({ single: mockProfilesSingle })
     return chain
   }
   // session_answers, xp_log — fire and forget
@@ -94,6 +101,9 @@ describe('POST /api/sessions', () => {
       error: null,
     })
     mockSessionInsertSelectSingle.mockResolvedValue({ data: { id: 'session-1' }, error: null })
+    // Gate defaults: free (non-premium) kullanici, bugun 0 oturum -> gate gecer
+    mockProfilesSingle.mockResolvedValue({ data: { is_premium: false, premium_until: null }, error: null })
+    mockSessionCountGte.mockResolvedValue({ count: 0, error: null })
   })
 
   it('returns 401 if not authenticated', async () => {
@@ -144,5 +154,41 @@ describe('POST /api/sessions', () => {
 
     const res = await POST(makeRequest(validBody))
     expect(res.status).toBe(500)
+  })
+
+  // ─── P0 regresyon-kilidi: ayni questionId tekrar gonderilerek coin/XP farming ──
+  it('dedups repeated questionId — coin/XP farming korumasi', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    // Ayni dogru soruyu 5 kez gonder (cevabi bilinen tek soru amplifikasyonu)
+    const farmBody = {
+      game: 'matematik',
+      mode: 'classic',
+      timeLimit: 30,
+      answers: Array.from({ length: 5 }, () => ({
+        questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 5,
+      })),
+    }
+    const res = await POST(makeRequest(farmBody))
+    const json = await res.json()
+    // Dedup olmadan correctCount=5 (5 coin) olurdu; fix ile soru basi 1 -> 1
+    expect(json.correctCount).toBe(1)
+  })
+
+  // ─── P1 regresyon-kilidi: gunluk limit POST'ta enforce edilir ──
+  it('returns 403 when free user exceeds daily session limit', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockSessionCountGte.mockResolvedValue({ count: 5, error: null }) // FREE_DAILY_LIMIT'e ulasti
+    const res = await POST(makeRequest(validBody))
+    expect(res.status).toBe(403)
+    const json = await res.json()
+    expect(json.code).toBe('daily_limit')
+  })
+
+  it('premium user bypasses daily limit', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockProfilesSingle.mockResolvedValue({ data: { is_premium: true, premium_until: null }, error: null })
+    mockSessionCountGte.mockResolvedValue({ count: 999, error: null })
+    const res = await POST(makeRequest(validBody))
+    expect(res.status).toBe(200)
   })
 })

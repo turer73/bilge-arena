@@ -140,7 +140,10 @@ export async function POST() {
         .single()
 
       if (freshProfile) {
-        await supabase
+        // Fix: fallback anon `supabase` client kullaniyordu; profiles UPDATE
+        // authenticated'dan REVOKE edildigi icin (mig 069/074) sessizce fail
+        // edip rozet XP'si kaybolabiliyordu. Service-role ile yaz.
+        await svc
           .from('profiles')
           .update({ total_xp: (freshProfile.total_xp ?? 0) + totalXPEarned })
           .eq('id', user.id)
