@@ -1,0 +1,3431 @@
+{
+  "stats": {
+    "total": 2582,
+    "files": {
+      "tyt_fen.json": 250,
+      "tyt_matematik.json": 380,
+      "tyt_soru_bankasi_full.json": 600,
+      "tyt_sosyal.json": 252,
+      "tyt_turkce.json": 360,
+      "wordquest_clean_v8.json": 740
+    },
+    "byCheck": {
+      "W:solution_value_not_in_options": 34,
+      "W:solution_answer_mismatch": 40,
+      "W:dup_id": 600
+    }
+  },
+  "errors": [],
+  "warnings": [
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_fen.json:fizik:fen_f012",
+      "msg": "solution değeri \"10.000\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_fen.json:fizik:fen_f022",
+      "msg": "solution \"200\" -> şık idx4 (\"200\") ama answer=3 (\"100\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_fen.json:fizik:fen_f024",
+      "msg": "solution \"420.000\" -> şık idx3 (\"420.000\") ama answer=2 (\"210.000\")",
+      "suggested_answer": 3
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_fen.json:fizik:fen_f075",
+      "msg": "solution \"60\" -> şık idx4 (\"60\") ama answer=3 (\"50\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_fen.json:fizik:fen_f076",
+      "msg": "solution \"84,8\" -> şık idx2 (\"84,8\") ama answer=3 (\"88,6\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_fen.json:kimya:fen_k031",
+      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=3 (\"7\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_fen.json:kimya:fen_k035",
+      "msg": "solution \"7\" -> şık idx0 (\"7\") ama answer=3 (\"18\")",
+      "suggested_answer": 0
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_fen.json:biyoloji:fen_b047",
+      "msg": "solution \"2\" -> şık idx1 (\"2\") ama answer=3 (\"4\")",
+      "suggested_answer": 1
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_fen.json:biyoloji:fen_b080",
+      "msg": "solution değeri \"-38\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:sayilar:mat_s001",
+      "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:sayilar:mat_s042",
+      "msg": "solution değeri \"24,2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:sayilar:mat_s043",
+      "msg": "solution değeri \"7\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:sayilar:mat_s044",
+      "msg": "solution değeri \"1\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:sayilar:mat_s057",
+      "msg": "solution değeri \"%16\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:sayilar:mat_s058",
+      "msg": "solution \"0,8\" -> şık idx2 (\"0,8\") ama answer=1 (\"0,7\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:sayilar:mat_s060",
+      "msg": "solution değeri \"3\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:problemler:mat_p001",
+      "msg": "solution \"48\" -> şık idx4 (\"48\") ama answer=1 (\"36\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:problemler:mat_p008",
+      "msg": "solution değeri \"6\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:problemler:mat_p010",
+      "msg": "solution \"1\" -> şık idx0 (\"1\") ama answer=1 (\"2\")",
+      "suggested_answer": 0
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:problemler:mat_p026",
+      "msg": "solution değeri \"11664\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:problemler:mat_p033",
+      "msg": "solution \"74\" -> şık idx3 (\"74\") ama answer=2 (\"65\")",
+      "suggested_answer": 3
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:problemler:mat_p047",
+      "msg": "solution \"480\" -> şık idx4 (\"480\") ama answer=3 (\"460\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:problemler:mat_p053",
+      "msg": "solution değeri \"2:1\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:problemler:mat_p062",
+      "msg": "solution \"15\" -> şık idx4 (\"15\") ama answer=2 (\"9\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:problemler:mat_p064",
+      "msg": "solution \"42\" -> şık idx2 (\"42\") ama answer=3 (\"48\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:problemler:mat_p065",
+      "msg": "solution \"%20\" -> şık idx1 (\"%20\") ama answer=3 (\"%25\")",
+      "suggested_answer": 1
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:problemler:mat_p066",
+      "msg": "solution değeri \"33,3\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:problemler:mat_p072",
+      "msg": "solution \"61\" -> şık idx2 (\"61\") ama answer=1 (\"59\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:problemler:mat_p077",
+      "msg": "solution \"5:-1\" -> şık idx2 (\"5:-1\") ama answer=0 (\"5:1\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g016",
+      "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:geometri:mat_g021",
+      "msg": "solution \"44\" -> şık idx3 (\"44\") ama answer=2 (\"42\")",
+      "suggested_answer": 3
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:geometri:mat_g041",
+      "msg": "solution \"2:1\" -> şık idx2 (\"2:1\") ama answer=1 (\"1:2\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:geometri:mat_g049",
+      "msg": "solution \"67,5\" -> şık idx4 (\"67,5\") ama answer=3 (\"65\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g057",
+      "msg": "solution değeri \"198\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g062",
+      "msg": "solution değeri \"500.1:500\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g084",
+      "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g086",
+      "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g092",
+      "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g094",
+      "msg": "solution değeri \"3\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g095",
+      "msg": "solution değeri \"3\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g096",
+      "msg": "solution değeri \"3\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g097",
+      "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:geometri:mat_g100",
+      "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_matematik.json:denklemler:mat_d029",
+      "msg": "solution \"0\" -> şık idx1 (\"0\") ama answer=2 (\"1\")",
+      "suggested_answer": 1
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:denklemler:mat_d033",
+      "msg": "solution değeri \"-2.4\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_matematik.json:fonksiyonlar:mat_f031",
+      "msg": "solution değeri \"-2.2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s001",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s001)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s001",
+      "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s002",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s003",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s004",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s005",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s006",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s007",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s008",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s009",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s010",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s011",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s012",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s013",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s014",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s015",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s016",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s017",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s018",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s019",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s020",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s021",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s022",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s023",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s024",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s025",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s026",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s027",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s028",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s029",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s030",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s031",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s032",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s033",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s034",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s034)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s035",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s035)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s036",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s036)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s037",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s037)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s038",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s038)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s039",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s039)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/sayilar:mat_s040",
+      "msg": "id tekrar (ilk: tyt_matematik.json:sayilar:mat_s040)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p001",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p001)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p001",
+      "msg": "solution \"48\" -> şık idx4 (\"48\") ama answer=1 (\"36\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p002",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p003",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p004",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p005",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p006",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p007",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p008",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p008)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p008",
+      "msg": "solution değeri \"6\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p009",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p010",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p010)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p010",
+      "msg": "solution \"1\" -> şık idx0 (\"1\") ama answer=1 (\"2\")",
+      "suggested_answer": 0
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p011",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p012",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p013",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p014",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p015",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p016",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p017",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p018",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p019",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p020",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p021",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p022",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p023",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p024",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p025",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p026",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p026)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p026",
+      "msg": "solution değeri \"11664\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p027",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p028",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p029",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p030",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p031",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p032",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p033",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p033)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p033",
+      "msg": "solution \"74\" -> şık idx3 (\"74\") ama answer=2 (\"65\")",
+      "suggested_answer": 3
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p034",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p034)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p035",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p035)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p036",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p036)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p037",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p037)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p038",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p038)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p039",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p039)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p040",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p040)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p041",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p041)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p042",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p042)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p043",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p043)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p044",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p044)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p045",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p045)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p046",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p046)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p047",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p047)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p047",
+      "msg": "solution \"480\" -> şık idx4 (\"480\") ama answer=3 (\"460\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p048",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p048)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p049",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p049)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p050",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p050)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p051",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p051)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p052",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p052)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p053",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p053)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p053",
+      "msg": "solution değeri \"2:1\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p054",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p054)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p055",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p055)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p056",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p056)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p057",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p057)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p058",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p058)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p059",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p059)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p060",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p060)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p061",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p061)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p062",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p062)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p062",
+      "msg": "solution \"15\" -> şık idx4 (\"15\") ama answer=2 (\"9\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p063",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p063)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p064",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p064)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p064",
+      "msg": "solution \"42\" -> şık idx2 (\"42\") ama answer=3 (\"48\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p065",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p065)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p065",
+      "msg": "solution \"%20\" -> şık idx1 (\"%20\") ama answer=3 (\"%25\")",
+      "suggested_answer": 1
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p066",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p066)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p066",
+      "msg": "solution değeri \"33,3\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p067",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p067)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p068",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p068)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p069",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p069)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p070",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p070)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p071",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p071)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p072",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p072)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p072",
+      "msg": "solution \"61\" -> şık idx2 (\"61\") ama answer=1 (\"59\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p073",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p073)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p074",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p074)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p075",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p075)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p076",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p076)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p077",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p077)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p077",
+      "msg": "solution \"5:-1\" -> şık idx2 (\"5:-1\") ama answer=0 (\"5:1\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p078",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p078)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p079",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p079)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/problemler:mat_p080",
+      "msg": "id tekrar (ilk: tyt_matematik.json:problemler:mat_p080)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g001",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g002",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g003",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g004",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g005",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g006",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g007",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g008",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g009",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g010",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g011",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g012",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g013",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g014",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g015",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g016",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g016)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g016",
+      "msg": "solution değeri \"2\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g017",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g018",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g019",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g020",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g021",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g021)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g021",
+      "msg": "solution \"44\" -> şık idx3 (\"44\") ama answer=2 (\"42\")",
+      "suggested_answer": 3
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g022",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g023",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g024",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g025",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g026",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g027",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g028",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g029",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g030",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g031",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g032",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g033",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g034",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g034)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g035",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g035)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g036",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g036)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g037",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g037)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g038",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g038)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g039",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g039)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g040",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g040)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g041",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g041)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g041",
+      "msg": "solution \"2:1\" -> şık idx2 (\"2:1\") ama answer=1 (\"1:2\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g042",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g042)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g043",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g043)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g044",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g044)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g045",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g045)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g046",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g046)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g047",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g047)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g048",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g048)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g049",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g049)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g049",
+      "msg": "solution \"67,5\" -> şık idx4 (\"67,5\") ama answer=3 (\"65\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g050",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g050)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g051",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g051)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g052",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g052)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g053",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g053)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g054",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g054)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g055",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g055)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g056",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g056)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g057",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g057)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g057",
+      "msg": "solution değeri \"198\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g058",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g058)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g059",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g059)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g060",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g060)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g061",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g061)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g062",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g062)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g062",
+      "msg": "solution değeri \"500.1:500\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g063",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g063)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g064",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g064)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g065",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g065)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g066",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g066)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g067",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g067)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g068",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g068)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g069",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g069)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g070",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g070)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g071",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g071)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g072",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g072)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g073",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g073)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g074",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g074)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g075",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g075)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g076",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g076)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g077",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g077)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g078",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g078)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g079",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g079)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/matematik/geometri:mat_g080",
+      "msg": "id tekrar (ilk: tyt_matematik.json:geometri:mat_g080)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d048",
+      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=1 (\"1\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f001",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f002",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f003",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f004",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f005",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f006",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f007",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f008",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f009",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f010",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f011",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f012",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f012)"
+    },
+    {
+      "check": "solution_value_not_in_options",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f012",
+      "msg": "solution değeri \"10.000\" şıklarda yok (bozuk soru? doğru cevap eksik?)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f013",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f014",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f015",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f016",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f017",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f018",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f019",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f020",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f021",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f022",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f022)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f022",
+      "msg": "solution \"200\" -> şık idx4 (\"200\") ama answer=3 (\"100\")",
+      "suggested_answer": 4
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f023",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f024",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f024)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f024",
+      "msg": "solution \"420.000\" -> şık idx3 (\"420.000\") ama answer=2 (\"210.000\")",
+      "suggested_answer": 3
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f025",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f026",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f027",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f028",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f029",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f030",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f031",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f032",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f033",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/fizik:fen_f034",
+      "msg": "id tekrar (ilk: tyt_fen.json:fizik:fen_f034)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k001",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k002",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k003",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k004",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k005",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k006",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k007",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k008",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k009",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k010",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k011",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k012",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k013",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k014",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k015",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k016",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k017",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k018",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k019",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k020",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k021",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k022",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k023",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k024",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k025",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k026",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k027",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k028",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k029",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k030",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k031",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k031)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k031",
+      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=3 (\"7\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k032",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/kimya:fen_k033",
+      "msg": "id tekrar (ilk: tyt_fen.json:kimya:fen_k033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b001",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b002",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b003",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b004",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b005",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b006",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b007",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b008",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b009",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b010",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b011",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b012",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b013",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b014",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b015",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b016",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b017",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b018",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b019",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b020",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b021",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b022",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b023",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b024",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b025",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b026",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b027",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b028",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b029",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b030",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b031",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b032",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_soru_bankasi_full.json:subjects/fen/biyoloji:fen_b033",
+      "msg": "id tekrar (ilk: tyt_fen.json:biyoloji:fen_b033)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t026",
+      "msg": "solution \"1950\" -> şık idx3 (\"1950\") ama answer=2 (\"1946\")",
+      "suggested_answer": 3
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t001",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t002",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t003",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t004",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t005",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t006",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t007",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t008",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t009",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t010",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t011",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t012",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t013",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t014",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t015",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t016",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t017",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t018",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t019",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t020",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t021",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t022",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t023",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t024",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t025",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t026",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t026)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_sosyal.json:tarih:sos_t026",
+      "msg": "solution \"1950\" -> şık idx3 (\"1950\") ama answer=2 (\"1946\")",
+      "suggested_answer": 3
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t027",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t028",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t029",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t030",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t031",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t032",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t033",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:tarih:sos_t034",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/tarih:sos_t034)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c001",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c002",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c003",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c004",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c005",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c006",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c007",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c008",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c009",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c010",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c011",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c012",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c013",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c014",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c015",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c016",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c017",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c018",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c019",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c020",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c021",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c022",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c023",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c024",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c025",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c026",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c027",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c028",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c029",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c030",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c031",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c032",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:cografya:sos_c033",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/cografya:sos_c033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f001",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f002",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f003",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f004",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f005",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f006",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f007",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f008",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f009",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f010",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f011",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f012",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f013",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f014",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f015",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f016",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f017",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f018",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f019",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f020",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f021",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f022",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f023",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f024",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f025",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f026",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f027",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f028",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f029",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f030",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f031",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f032",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_sosyal.json:felsefe:sos_f033",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/sosyal/felsefe:sos_f033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p001",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p002",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p003",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p004",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p005",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p006",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p007",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p008",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p009",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p010",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p011",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p012",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p013",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p014",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p015",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p016",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p017",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p018",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p019",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p020",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p021",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p022",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p023",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p024",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p025",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p026",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p027",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p028",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p029",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p030",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p031",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p032",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p033",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p034",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p034)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p035",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p035)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p036",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p036)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p037",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p037)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p038",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p038)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p039",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p039)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p040",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p040)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p041",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p041)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p042",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p042)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p043",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p043)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p044",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p044)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p045",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p045)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p046",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p046)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p047",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p047)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p048",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p048)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p049",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p049)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p050",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p050)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p051",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p051)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p052",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p052)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p053",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p053)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p054",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p054)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p055",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p055)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p056",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p056)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p057",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p057)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p058",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p058)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p059",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p059)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p060",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p060)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p061",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p061)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p062",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p062)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p063",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p063)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p064",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p064)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p065",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p065)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p066",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p066)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p067",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p067)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p068",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p068)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p069",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p069)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p070",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p070)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p071",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p071)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p072",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p072)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p073",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p073)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p074",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p074)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p075",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p075)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p076",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p076)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p077",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p077)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p078",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p078)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p079",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p079)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:paragraf:tr_p080",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/paragraf:tr_p080)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d001",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d002",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d003",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d004",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d005",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d006",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d007",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d008",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d009",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d010",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d011",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d012",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d013",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d014",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d015",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d016",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d017",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d018",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d019",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d020",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d021",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d022",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d023",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d024",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d025",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d026",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d027",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d028",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d029",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d030",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d031",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d032",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d033",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d034",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d034)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d035",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d035)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d036",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d036)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d037",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d037)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d038",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d038)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d039",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d039)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d040",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d040)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d041",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d041)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d042",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d042)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d043",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d043)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d044",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d044)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d045",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d045)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d046",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d046)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d047",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d047)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d048",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d048)"
+    },
+    {
+      "check": "solution_answer_mismatch",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d048",
+      "msg": "solution \"2\" -> şık idx2 (\"2\") ama answer=1 (\"1\")",
+      "suggested_answer": 2
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d049",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d049)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d050",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d050)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d051",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d051)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d052",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d052)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d053",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d053)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d054",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d054)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d055",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d055)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d056",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d056)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d057",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d057)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d058",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d058)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d059",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d059)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d060",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d060)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d061",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d061)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d062",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d062)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d063",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d063)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d064",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d064)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d065",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d065)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d066",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d066)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d067",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d067)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d068",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d068)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d069",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d069)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:dil_bilgisi:tr_d070",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/dil_bilgisi:tr_d070)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s001",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s001)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s002",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s002)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s003",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s003)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s004",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s004)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s005",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s005)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s006",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s006)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s007",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s007)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s008",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s008)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s009",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s009)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s010",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s010)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s011",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s011)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s012",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s012)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s013",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s013)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s014",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s014)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s015",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s015)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s016",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s016)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s017",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s017)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s018",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s018)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s019",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s019)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s020",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s020)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s021",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s021)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s022",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s022)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s023",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s023)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s024",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s024)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s025",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s025)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s026",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s026)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s027",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s027)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s028",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s028)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s029",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s029)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s030",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s030)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s031",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s031)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s032",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s032)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s033",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s033)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s034",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s034)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s035",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s035)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s036",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s036)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s037",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s037)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s038",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s038)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s039",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s039)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s040",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s040)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s041",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s041)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s042",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s042)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s043",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s043)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s044",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s044)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s045",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s045)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s046",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s046)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s047",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s047)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s048",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s048)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s049",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s049)"
+    },
+    {
+      "check": "dup_id",
+      "loc": "tyt_turkce.json:sozcuk:tr_s050",
+      "msg": "id tekrar (ilk: tyt_soru_bankasi_full.json:subjects/turkce/sozcuk:tr_s050)"
+    }
+  ]
+}
