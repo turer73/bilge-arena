@@ -22,7 +22,12 @@ const s = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://lvnmzdow
 const APPLY = process.argv.includes('--apply')
 
 const qtext = (c) => c?.question || c?.sentence || JSON.stringify(c?.dialogue || c || '')
-const correctText = (c) => Array.isArray(c?.options) && Number.isInteger(c?.answer) ? c.options[c.answer] : null
+// content.answer (TYT) VEYA content.correct (wordquest) — ikisini de destekle (Codex #260-B)
+const correctText = (c) => {
+  if (!Array.isArray(c?.options)) return null
+  const i = Number.isInteger(c?.answer) ? c.answer : (Number.isInteger(c?.correct) ? c.correct : null)
+  return i === null ? null : (c.options[i] ?? null)
+}
 // GRUP ANAHTARI = soru-metni + ŞIK-SETİ (sıralı). Böylece yalnız gerçek içerik-
 // kopyaları (shuffled dahil) gruplanır; jenerik-gövde ("hangileri doğrudur?")
 // farklı-şıklı DISTINCT sorular AYRI kalır (yanlış-silme önlenir).
@@ -40,10 +45,25 @@ let groups = 0, toDelete = 0, diverge = 0, delActive = 0
 const divergeList = []
 const delIds = []
 
+// Pagination: PostgREST default 1000-satır -> >1000-satırlı game'de (sosyal 1359)
+// sayfa-1-ötesi dup'lar dedup-DIŞI kalır (Codex #260-C). range-loop ile tümünü çek.
+async function fetchAll(game) {
+  let out = [], from = 0; const size = 1000
+  while (true) {
+    const { data, error } = await s.from('questions').select('id, content, exam_ref, is_active, times_answered, created_at').eq('game', game).range(from, from + size - 1)
+    if (error) { console.error(`FETCH HATASI (${game}):`, error.message); process.exit(1) }
+    if (!data?.length) break
+    out.push(...data); if (data.length < size) break; from += size
+  }
+  return out
+}
+
 for (const game of ['matematik', 'fen', 'turkce', 'sosyal', 'wordquest']) {
-  const { data } = await s.from('questions').select('id, content, is_active, times_answered, created_at').eq('game', game)
+  const data = await fetchAll(game)
   const byQ = {}
-  for (const r of data || []) (byQ[qkey(r.content)] ||= []).push(r)
+  // GRUP ANAHTARI'na exam_ref DE dahil (Codex #260-A): TYT/LGS/AYT aynı-soru-metni
+  // FARKLI-sınav = FARKLI-soru -> collapse-etme (exam-modu geçerli-soru kaybetmesin).
+  for (const r of data || []) (byQ[qkey(r.content) + '||EX:' + (r.exam_ref || 'NULL')] ||= []).push(r)
   for (const [q, rows] of Object.entries(byQ)) {
     if (rows.length < 2) continue
     groups++
@@ -81,7 +101,9 @@ if (APPLY && delIds.length) {
   const B = 100; let done = 0
   for (let i = 0; i < delIds.length; i += B) {
     const { error } = await s.from('questions').update({ is_active: false }).in('id', delIds.slice(i, i + B))
-    if (error) { console.error('UPDATE HATASI:', error.message); break }
+    // Codex #260-D: batch-fail'de SESSİZCE 'success' yazma -> kısmi-cleanup gizlenir.
+    // Hata = exit1 (operatör kısmi-durumu görür, tam-sanmaz).
+    if (error) { console.error(`UPDATE HATASI (batch ${i}, ${done} yapıldı):`, error.message); process.exit(1) }
     done += Math.min(B, delIds.length - i)
   }
   console.log(`✅ ${done} redundant kopya PASİFLEŞTİRİLDİ (is_active=false, geri-alınabilir).`)

@@ -40,7 +40,9 @@ function loadQuestions(filePath, game) {
   for (const cat of categories) {
     for (const q of raw[cat]) {
       questions.push({
-        external_id: q.id || null,   // stable-key (idempotent re-seed / upsert için)
+        // stable-key. Codex #260-E: idempotent-reseed için .upsert({onConflict:'external_id'})
+        // gerekir AMA external_id UNIQUE-index ister (ayrı migration). Şimdilik plain-insert.
+        external_id: q.id || null,
         game,
         category: q.category || cat,
         subcategory: q.topic || null,
