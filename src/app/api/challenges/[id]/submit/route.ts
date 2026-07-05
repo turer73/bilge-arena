@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { challengeSubmitSchema } from '@/lib/validations/schemas'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 
 const submitLimiter = createRateLimiter('challenge-submit', 5, 60_000)
 
@@ -60,8 +61,13 @@ export async function POST(
     return NextResponse.json({ error: 'Zaten cevap gonderilmis' }, { status: 400 })
   }
 
-  // Server-side dogrulama
-  const questionIds = answers.map((a: { questionId: string }) => a.questionId)
+  // Server-side dogrulama. Dedup: ayni questionId birden fazla gonderilerek
+  // skor sisirmeyi onle (sessions P0 ile ayni sinif) — soru basi 1 cevap.
+  const uniqueAnswers = [...new Map(
+    (answers as { questionId: string; selectedOption: number; timeTaken: number }[])
+      .map((a) => [a.questionId, a]),
+  ).values()]
+  const questionIds = uniqueAnswers.map((a) => a.questionId)
   const { data: questions } = await svc
     .from('questions')
     .select('id, content, difficulty')
@@ -72,7 +78,7 @@ export async function POST(
   let correct = 0
   let totalTime = 0
 
-  for (const a of answers as { questionId: string; selectedOption: number; timeTaken: number }[]) {
+  for (const a of uniqueAnswers) {
     const q = questionMap.get(a.questionId)
     if (!q) continue
     const content = q.content as { answer?: number; correct?: number }
@@ -83,46 +89,61 @@ export async function POST(
 
   const score = {
     correct,
-    total: answers.length,
+    total: uniqueAnswers.length,
     time_sec: Math.round(totalTime),
     xp: correct * 20, // Basit XP hesaplama
   }
 
-  // Skoru kaydet
-  const updateField = isChallenger ? 'challenger_score' : 'opponent_score'
-  await svc.from('challenges').update({ [updateField]: score }).eq('id', id)
+  // Atomik submit (mig 077): skor-yaz + kazanan-belirle + XP tek transaction,
+  // challenge satiri FOR UPDATE kilitli -> eszamanli-submit race kok-cozumu.
+  const { data: rpcData, error: rpcError } = await svc.rpc('submit_challenge_answer', {
+    p_challenge_id: id,
+    p_user_id: user.id,
+    p_score: score,
+  })
 
-  // Her iki taraf da cevapladiysa sonuclandir
-  const otherScore = isChallenger ? challenge.opponent_score : challenge.challenger_score
+  // Deploy-sirasi guvenligi: mig 077 henuz uygulanmadiysa (RPC yok) eski
+  // non-atomik yola dus — merge-before-migration'da duello kirilmasin. Migration
+  // gelince atomik yol otomatik devreye girer.
+  if (rpcError && (rpcError.code === 'PGRST202' || rpcError.code === '42883')) {
+    const updateField = isChallenger ? 'challenger_score' : 'opponent_score'
+    await svc.from('challenges').update({ [updateField]: score }).eq('id', id)
 
-  if (otherScore) {
-    // Her ikisi de cevapladi — kazanani belirle
-    const myScore = score
-    const theirScore = otherScore as { correct: number; time_sec: number }
-
-    let winnerId: string | null = null
-    if (myScore.correct > theirScore.correct) {
-      winnerId = user.id
-    } else if (myScore.correct < theirScore.correct) {
-      winnerId = isChallenger ? challenge.opponent_id : challenge.challenger_id
-    } else {
-      // Esitlik — daha hizli olan kazanir
-      winnerId = myScore.time_sec < theirScore.time_sec ? user.id :
-        (myScore.time_sec > theirScore.time_sec ? (isChallenger ? challenge.opponent_id : challenge.challenger_id) : null)
+    const otherScore = isChallenger ? challenge.opponent_score : challenge.challenger_score
+    if (otherScore) {
+      const theirScore = otherScore as { correct: number; time_sec: number }
+      let winnerId: string | null = null
+      if (score.correct > theirScore.correct) {
+        winnerId = user.id
+      } else if (score.correct < theirScore.correct) {
+        winnerId = isChallenger ? challenge.opponent_id : challenge.challenger_id
+      } else {
+        winnerId = score.time_sec < theirScore.time_sec ? user.id :
+          (score.time_sec > theirScore.time_sec ? (isChallenger ? challenge.opponent_id : challenge.challenger_id) : null)
+      }
+      await svc.from('challenges').update({ status: 'completed', winner_id: winnerId }).eq('id', id)
+      if (winnerId) {
+        await svc.rpc('increment_xp', { p_user_id: winnerId, p_amount: challenge.xp_reward, p_reason: 'challenge_win', p_reference_id: id })
+      }
+      return NextResponse.json({ score, result: 'completed', winnerId })
     }
-
-    await svc.from('challenges').update({
-      status: 'completed',
-      winner_id: winnerId,
-    }).eq('id', id)
-
-    // Kazanana bonus XP
-    if (winnerId) {
-      await svc.rpc('increment_xp', { p_user_id: winnerId, p_amount: challenge.xp_reward, p_reason: 'challenge_win', p_reference_id: id })
-    }
-
-    return NextResponse.json({ score, result: 'completed', winnerId })
+    return NextResponse.json({ score, result: 'waiting_opponent' })
   }
 
-  return NextResponse.json({ score, result: 'waiting_opponent' })
+  if (rpcError) {
+    return dbErrorResponse('challenges/[id]/submit rpc', rpcError)
+  }
+
+  const result = rpcData as { ok: boolean; error?: string; result?: string; winnerId?: string | null }
+  if (!result?.ok) {
+    const statusMap: Record<string, number> = {
+      not_found: 404, not_participant: 403, already_completed: 400, already_submitted: 400,
+    }
+    return NextResponse.json(
+      { error: result?.error ?? 'submit_failed' },
+      { status: statusMap[result?.error ?? ''] ?? 400 },
+    )
+  }
+
+  return NextResponse.json({ score, result: result.result, winnerId: result.winnerId ?? null })
 }
