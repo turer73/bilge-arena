@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { FREE_DAILY_LIMIT } from '@/lib/constants/premium'
+import { trDayStartUtcISO } from '@/lib/utils/tr-date'
 
 /**
  * Günlük quiz limiti kontrol API'si.
@@ -37,15 +38,13 @@ export async function GET() {
     return NextResponse.json({ limit: -1, used: 0, isPremium: true, isGuest: false })
   }
 
-  // Bugünkü oturum sayısını hesapla
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-
+  // Bugünkü oturum sayısını hesapla — TR gun-siniri (sessions POST gate ile ayni
+  // boundary; display + enforcement tutarli). Onceden UTC-gece-yarisi idi.
   const { count } = await svc
     .from('game_sessions')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
-    .gte('created_at', todayStart.toISOString())
+    .gte('created_at', trDayStartUtcISO())
 
   const used = count ?? 0
 

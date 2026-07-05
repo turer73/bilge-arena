@@ -12,34 +12,33 @@
  *   roomId bilge_arena_dev'deki oda code'u (TEXT). Bu endpoint Panola'da
  *   profile guncellemesi yapar; oda DB'sine deger.
  *
- * Beta-only trust:
- *   isFirstPlace frontend'den geliyor. Hardening icin ileride api-dev
- *   scoreboard cross-DB dogrulama yapilabilir (room_members.score order'a
- *   bakar). Beta'da kullanici manipulasyonu sınırlı: ozel rozet, kademeli
- *   acilim. PR followup task.
+ * isFirstPlace SERVER-SIDE dogrulanir (denetim fix):
+ *   Client'in gonderdigi isFirstPlace ARTIK KULLANILMAZ. Oda-DB'den
+ *   (bilge_arena_dev) kullanici JWT'siyle room.state='completed' + gercek
+ *   max-skor okunur (verifyRoomFirstPlace). Sahte birincilik iddiasi engellenir.
  */
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { getAuthAndJwt } from '@/lib/rooms/api-helpers'
+import { verifyRoomFirstPlace } from '@/lib/rooms/server-fetch'
 
 const grantLimiter = createRateLimiter('mp-grant-stats', 20, 60_000)
 
+// isFirstPlace geriye-uyum icin kabul edilir ama YOK SAYILIR (server dogrular).
 const BodySchema = z.object({
   roomId: z.string().min(1).max(64),
-  isFirstPlace: z.boolean(),
+  isFirstPlace: z.boolean().optional(),
 })
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Auth + JWT (oda-DB dogrulamasi icin JWT gerekli)
+  const auth = await getAuthAndJwt()
+  if (!auth.ok) return auth.response
 
-  if (!user) {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-  }
-
-  const rl = await grantLimiter.check(user.id)
+  const rl = await grantLimiter.check(auth.userId)
   if (!rl.success) {
     return NextResponse.json({ error: 'Cok fazla istek' }, { status: 429 })
   }
@@ -56,17 +55,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Gecersiz parametre' }, { status: 400 })
   }
 
-  const { roomId, isFirstPlace } = parsed.data
+  const { roomId } = parsed.data
 
-  // RPC service-role uzerinden auth.uid() ile gelir.
-  // SECURITY DEFINER + auth.uid() kullaniciya ozgu insert/update.
-  // Burada svc client kullanmak yerine kullanici client'i kullaniyoruz
-  // ki auth.uid() RPC icinde dogru gelsin. Ancak svc rpc da auth context'i
-  // expose eder mi? Hayir — service-role bypass eder ama auth.uid()
-  // session-based oldugu icin null olur. user client kullanmaliyiz.
+  // SERVER-SIDE dogrulama: oda-DB'den gercek first-place (client iddiasi yok sayilir)
+  const verified = await verifyRoomFirstPlace(auth.jwt, roomId, auth.userId)
+  if (!verified.finished) {
+    return NextResponse.json({ error: 'Oda tamamlanmamis veya erisilemedi' }, { status: 400 })
+  }
+
+  // RPC user client ile (auth.uid() SECURITY DEFINER icinde gerekli).
+  const supabase = await createClient()
   const { data, error } = await supabase.rpc('grant_multiplayer_stats', {
     p_room_id: roomId,
-    p_first_place: isFirstPlace,
+    p_first_place: verified.isFirstPlace,
   })
 
   if (error) {

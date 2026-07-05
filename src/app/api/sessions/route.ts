@@ -4,7 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { sessionSubmitSchema } from '@/lib/validations/schemas'
 import { FREE_DAILY_LIMIT } from '@/lib/constants/premium'
-import { trDayString } from '@/lib/utils/tr-date'
+import { trDayString, trDayStartUtcISO } from '@/lib/utils/tr-date'
 
 // Replay korumasi: kullanici basina dk'da max 3 oturum
 const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
@@ -72,13 +72,14 @@ export async function POST(request: Request) {
   const isPremium = limitProfile?.is_premium === true &&
     (!limitProfile.premium_until || new Date(limitProfile.premium_until) > new Date())
   if (!isPremium) {
-    const dayStart = new Date()
-    dayStart.setHours(0, 0, 0, 0)
+    // TR gun-siniri: limit-penceresi odul-gunu ile ayni boundary (quiz-limit GET
+    // ile tutarli). Onceden setHours(0,0,0,0)=UTC-gece-yarisi idi -> limit TR 03:00
+    // resetleniyordu, odul-gunu TR gece-yarisi (uyumsuzluk).
     const { count: todayCount } = await svc
       .from('game_sessions')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .gte('created_at', dayStart.toISOString())
+      .gte('created_at', trDayStartUtcISO())
     if ((todayCount ?? 0) >= FREE_DAILY_LIMIT) {
       return NextResponse.json(
         { error: 'Günlük quiz limitine ulaştın.', code: 'daily_limit' },
