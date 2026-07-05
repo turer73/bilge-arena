@@ -75,3 +75,10 @@ database/apply-review-manual-queue.json
 database/audit-active-*.json
 database/audit-active-*.csv
 database/dedup-backup-*.json
+
+# Ham ÖSYM sınav-artifactleri (TELİFLİ — repo-dışı; few-shot yalnız gitignore'lu _ref-2026/ özet kullanır)
+tyt_2024.pdf
+tyt_text.txt
+extracted_qs.txt
+*_full.txt
+*_key.txt

@@ -140,4 +140,14 @@ describe('question-content-guard', () => {
     expect(buildSubjectPromptAppendix('matematik')).toContain('ALTIN ÖRNEK')
     expect(buildSubjectPromptAppendix('bilinmeyen')).toBe('')
   })
+
+  it('2026 YKS stil-referansi tum YKS-derslerinin promptuna girer', () => {
+    // Few-shot: 2026 gerçek-sınav stili tüm YKS derslerine eklenir (mat/fen görsel-pilot
+    // ile senaryo-stili çıkarıldı; görsel-şekil boyutu hariç aktarılabilir).
+    for (const game of ['turkce', 'sosyal', 'wordquest', 'matematik', 'fen']) {
+      expect(buildSubjectPromptAppendix(game)).toContain('2026')
+    }
+    // Bilinmeyen oyun 2026-stil almaz
+    expect(buildSubjectPromptAppendix('bilinmeyen')).not.toContain('2026')
+  })
 })
