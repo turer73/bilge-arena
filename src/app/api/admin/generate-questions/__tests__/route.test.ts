@@ -81,7 +81,7 @@ const VALID_AI_QUESTION = {
   question: 'Which word means very happy? Pick the correct synonym.',
   options: ['sad', 'elated', 'angry', 'tired', 'bored'],
   answer: 1,
-  solution: 'elated = cok mutlu (synonym)',
+  solution: 'elated = çok mutlu (synonym)',
   topic: 'Synonyms',
 }
 
@@ -298,7 +298,7 @@ describe('POST /api/admin/generate-questions — Turkce solution dil kontrolu (d
       question: 'Which word means very happy? Pick the correct synonym.',
       options: ['sad', 'elated', 'angry', 'tired', 'bored'],
       answer: 1,
-      solution: 'Elated kelimesi cok mutlu, sevincli anlamina gelir; bu durumda dogru cevaptir bence.',
+      solution: 'Elated kelimesi çok mutlu, sevinçli anlamına gelir; bu durumda doğru cevaptır bence.',
       topic: 'Synonyms',
     }
     const englishDriftQ = {
@@ -327,7 +327,7 @@ describe('POST /api/admin/generate-questions — Turkce solution dil kontrolu (d
     expect(payload).toHaveLength(1)
     const inserted = payload[0]
     const content = inserted.content as { solution: string }
-    expect(content.solution).toMatch(/anlamina gelir/i)
+    expect(content.solution).toMatch(/anlamına gelir/i)
   })
 
   it('wordquest tum solution Ingilizce donerse 409 doner (hicbiri insert edilmez)', async () => {
@@ -384,6 +384,93 @@ describe('POST /api/admin/generate-questions — Turkce solution dil kontrolu (d
 
     expect(res.status).toBe(200)
     expect(mockInsertCapture).toHaveBeenCalledOnce()
+  })
+})
+
+describe('POST /api/admin/generate-questions — gelismis icerik validasyonu', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key'
+    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
+  })
+
+  afterEach(() => {
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  })
+
+  it('tarih seceneklerindeki Roma rakamli adlari reddetmez', async () => {
+    mockGeminiResponse([{
+      question: "Osmanlı Devleti'nin gerileme döneminin başlangıcı olarak genellikle hangi savaş gösterilir?",
+      options: [
+        'Lepanto (1571)',
+        'II. Viyana Kuşatması (1683)',
+        'Karlofça Antlaşması (1699)',
+        'Prut Savaşı (1711)',
+        'Ziştovi (1791)',
+      ],
+      answer: 2,
+      solution: 'Karlofça Antlaşması büyük toprak kaybı nedeniyle gerileme dönemi için simge kabul edilir.',
+      topic: 'Osmanlı Gerileme',
+    }])
+
+    const { POST } = await import('../route')
+    const res = await POST(makePostBody({
+      game: 'sosyal',
+      category: 'tarih',
+      difficulty: 3,
+      count: 1,
+    }))
+
+    expect(res.status).toBe(200)
+    expect(mockInsertCapture).toHaveBeenCalledOnce()
+  })
+
+  it('onculleri options alanina bolen soruyu reddeder', async () => {
+    mockGeminiResponse([{
+      question: 'Bir cismin kinetik enerjisiyle ilgili hangileri doğrudur?',
+      options: [
+        'I. Cismin kütlesine bağlıdır',
+        'II. Hızının karesi ile orantılıdır',
+        'III. Vektörel bir büyüklüktür',
+        'I ve II',
+        'II ve III',
+      ],
+      answer: 3,
+      solution: 'Kinetik enerji kütleye ve hızın karesine bağlıdır; vektörel değildir.',
+      topic: 'Enerji',
+    }])
+
+    const { POST } = await import('../route')
+    const res = await POST(makePostBody({
+      game: 'fen',
+      category: 'fizik',
+      difficulty: 3,
+      count: 1,
+    }))
+
+    expect(res.status).toBe(502)
+    expect(mockInsertCapture).not.toHaveBeenCalled()
+  })
+
+  it('TDK ASCII ihlali olan Turkce soruyu insert etmez', async () => {
+    mockGeminiResponse([{
+      question: 'Hazirlik sürecinde ilk olarak hangi adım uygulanmalıdır?',
+      options: ['Plan yapmak', 'Sonucu açıklamak', 'Raporu silmek', 'Yanıtı saklamak', 'Soruyu atlamak'],
+      answer: 0,
+      solution: 'Hazırlık sürecinde önce plan yapılır.',
+      topic: 'Planlama',
+    }])
+
+    const { POST } = await import('../route')
+    const res = await POST(makePostBody({
+      game: 'turkce',
+      category: 'paragraf',
+      difficulty: 2,
+      count: 1,
+    }))
+
+    expect(res.status).toBe(502)
+    expect(mockInsertCapture).not.toHaveBeenCalled()
   })
 })
 

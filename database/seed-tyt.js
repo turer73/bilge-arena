@@ -24,12 +24,44 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
+async function loadQuestionContentGuard() {
+  const {
+    createTdkGuard,
+    parseExpandedTdkTokenPairs,
+    parseFixtureTdkTokenPairs,
+    validateGeneratedQuestionContent,
+  } = await import('../src/lib/admin/question-content-guard.mjs')
+
+  const tokenPairs = []
+  const tdkJsonPath = path.resolve(__dirname, '../src/lib/validations/data/tdk-tokens-expanded.json')
+  const tdkFixturePath = path.resolve(__dirname, '../src/lib/validations/tdk-rules.fixture.ts')
+  if (fs.existsSync(tdkJsonPath)) {
+    try {
+      tokenPairs.push(...parseExpandedTdkTokenPairs(JSON.parse(fs.readFileSync(tdkJsonPath, 'utf-8'))))
+    } catch (err) {
+      console.warn('TDK JSON yuklenemedi:', err.message)
+    }
+  }
+  if (fs.existsSync(tdkFixturePath)) {
+    try {
+      tokenPairs.push(...parseFixtureTdkTokenPairs(fs.readFileSync(tdkFixturePath, 'utf-8')))
+    } catch (err) {
+      console.warn('TDK fixture yuklenemedi:', err.message)
+    }
+  }
+
+  return {
+    tdkGuard: createTdkGuard(tokenPairs),
+    validateGeneratedQuestionContent,
+  }
+}
+
 // TYT dosyalari → game mapping
 const FILES = [
-  { file: '../../tyt_matematik.json', game: 'matematik' },
-  { file: '../../tyt_turkce.json', game: 'turkce' },
-  { file: '../../tyt_fen.json', game: 'fen' },
-  { file: '../../tyt_sosyal.json', game: 'sosyal' },
+  { file: '../data/soru-bankasi/tyt_matematik.json', game: 'matematik' },
+  { file: '../data/soru-bankasi/tyt_turkce.json', game: 'turkce' },
+  { file: '../data/soru-bankasi/tyt_fen.json', game: 'fen' },
+  { file: '../data/soru-bankasi/tyt_sosyal.json', game: 'sosyal' },
 ]
 
 function loadQuestions(filePath, game) {
@@ -62,12 +94,25 @@ function loadQuestions(filePath, game) {
 
 async function seed() {
   console.log('TYT soru bankasi yukleniyor...\n')
+  const guard = await loadQuestionContentGuard()
 
   let totalInserted = 0
 
   for (const { file, game } of FILES) {
-    const questions = loadQuestions(file, game)
+    const loadedQuestions = loadQuestions(file, game)
+    const questions = []
+    const rejected = []
+    for (const row of loadedQuestions) {
+      const err = guard.validateGeneratedQuestionContent(row.content, { game: row.game, tdkGuard: guard.tdkGuard })
+      if (err) rejected.push({ external_id: row.external_id, err, q: row.content.question?.slice(0, 60) })
+      else questions.push(row)
+    }
     console.log(`${game}: ${questions.length} soru yukleniyor...`)
+    if (rejected.length > 0) {
+      console.log(`${game}: ${rejected.length} soru kalite guard tarafindan reddedildi`)
+      for (const r of rejected.slice(0, 10)) console.log(`  ${r.external_id || '?'} [${r.err}] ${r.q}`)
+      if (rejected.length > 10) console.log(`  ... ${rejected.length - 10} ek red gizlendi`)
+    }
 
     // Batch insert (100'er)
     const BATCH = 100
