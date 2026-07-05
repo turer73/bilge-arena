@@ -98,7 +98,19 @@ const FORBIDDEN_OPTION_TEXT = new Set([
   'yukarıdakilerin hepsi',
 ])
 
-const romanNumeralPrefixRe = /^\s*(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+(.+)$/i
+// Codex #261: 'HİÇBİRİ' (Türkçe büyük-İ) veya 'Hiçbiri.' (noktalama) catch-all'ları
+// düz toLowerCase + trim ile set-anahtarına dönmez (dotted-i + punctuation) → kaçar.
+// Türkçe-güvenli lower (İ/I→i/ı) + noktalama-strip ile normalize et.
+export function normalizeOptionText(option) {
+  return String(option)
+    .replace(/İ/g, 'i').replace(/I/g, 'ı')
+    .toLowerCase()
+    .replace(/[.,!?;:]/g, '')
+    .trim()
+}
+
+// Roma etiketi hem '.' hem ')' liste-işaretiyle gelebilir (I. veya I))
+const romanNumeralPrefixRe = /^\s*(?:I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s+(.+)$/i
 const premiseAnswerOptionRe = /^\s*(?:Yalnız\s+)?(?:I|II|III|IV|V|VI|VII|VIII|IX|X)(?:\s*(?:,|ve)\s*(?:I|II|III|IV|V|VI|VII|VIII|IX|X))*\s*$/i
 
 function isLikelyPremiseBody(text) {
@@ -111,7 +123,7 @@ function isLikelyPremiseBody(text) {
 // Bir şık BİRDEN FAZLA roman rakamı içeriyorsa (ör. "I. neden-sonuç, II. amaç-sonuç")
 // bu bir KARŞILAŞTIRMA-CEVABIDIR (geçerli YKS formatı: iki durumu tek şıkta eşleştirir),
 // öncül-bölünmesi DEĞİL. Öncül-bölünmesi her şıkta TEK öncül taşır.
-const multiRomanInOneOptionRe = /(?:^|\s)(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s.*\b(?:I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s/i
+const multiRomanInOneOptionRe = /(?:^|\s)(?:I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s.*\b(?:I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s/i
 
 export function hasSplitPremiseOptions(options) {
   // FP-koruma 1: herhangi bir şık çoklu-roman içeriyorsa = karşılaştırma-cevabı, bölünme değil
@@ -137,8 +149,8 @@ export function hasLongPremiseAnswerOptions(question, options) {
 }
 
 export function validateGeneratedQuestionContent(data, { game, tdkGuard } = {}) {
-  const optsLower = (data.options || []).map((option) => String(option).toLowerCase().trim())
-  if (optsLower.some((option) => FORBIDDEN_OPTION_TEXT.has(option))) return 'Yasaklı şık içeriyor'
+  const optsNormalized = (data.options || []).map(normalizeOptionText)
+  if (optsNormalized.some((option) => FORBIDDEN_OPTION_TEXT.has(option))) return 'Yasaklı şık içeriyor'
 
   const tdkViolations = findQuestionTdkViolations(game, data, tdkGuard)
   if (tdkViolations.length > 0) return `TDK ASCII ihlali: ${tdkViolations.slice(0, 3).join(', ')}`

@@ -106,6 +106,35 @@ describe('question-content-guard', () => {
     expect(err).toBe('Yasaklı şık içeriyor')
   })
 
+  it('Turkce buyuk-harf/noktalamali catch-all (HİÇBİRİ, Hiçbiri.) reddedilir (Codex #261)', () => {
+    for (const catchAll of ['HİÇBİRİ', 'Hiçbiri.', 'HEPSİ', 'Hepsi']) {
+      const err = validateGeneratedQuestionContent({
+        question: 'Bu deney sorusunda hangi sonuç beklenir burada?',
+        options: ['Seçenek bir', 'Seçenek iki', 'Seçenek üç', 'Seçenek dört', catchAll],
+        answer: 0,
+        solution: 'Birinci seçenek doğru sonuçtur bu deneyde.',
+      }, { game: 'fen', tdkGuard })
+      expect(err, `catch-all: ${catchAll}`).toBe('Yasaklı şık içeriyor')
+    }
+  })
+
+  it('parantezli Roma etiketli oncul-bolunmesini yakalar (I) ... II) ...) (Codex #261)', () => {
+    const err = validateGeneratedQuestionContent({
+      question: 'Bir cismin kinetik enerjisiyle ilgili hangileri doğrudur?',
+      options: [
+        'I) Cismin kütlesine bağlıdır',
+        'II) Hızının karesi ile orantılıdır',
+        'III) Vektörel bir büyüklüktür',
+        'I ve II',
+        'II ve III',
+      ],
+      answer: 3,
+      solution: 'Kinetik enerji kütleye ve hızın karesine bağlıdır; vektörel değildir.',
+    }, { game: 'fen', tdkGuard })
+
+    expect(err).toBe('Öncüller seçeneklere bölünemez')
+  })
+
   it('prompt appendix tek ortak kaynaktan oyun bazli altin ornek verir', () => {
     expect(buildSubjectPromptAppendix('matematik')).toContain('ALTIN KURAL')
     expect(buildSubjectPromptAppendix('matematik')).toContain('ALTIN ÖRNEK')

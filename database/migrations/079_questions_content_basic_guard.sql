@@ -42,7 +42,11 @@ BEGIN
     RETURN false;
   END IF;
 
-  IF NOT (p_content ? 'answer') OR (p_content->>'answer') !~ '^[0-4]$' THEN
+  -- Codex #261: answer JSON-NUMBER olmalı. ->> string-coerce ettiğinden "2" (string)
+  -- veya null da '^[0-4]$'-yolunu yanıltır; game-API strict-eq ile eşleşmez → hiçbir
+  -- şık doğru render/score edilmez. jsonb_typeof ile gerçek sayı zorunlu.
+  IF jsonb_typeof(p_content->'answer') IS DISTINCT FROM 'number'
+     OR (p_content->>'answer') !~ '^[0-4]$' THEN
     RETURN false;
   END IF;
 
@@ -60,7 +64,9 @@ BEGIN
       RETURN false;
     END IF;
 
-    IF lower(btrim(option_text)) IN (
+    -- Codex #261: Türkçe büyük-İ + noktalama normalize (app-guard paritesi).
+    -- translate(İ→i, I→ı) + noktalama-strip ile 'HİÇBİRİ'/'Hiçbiri.' de yakalanır.
+    IF regexp_replace(lower(translate(btrim(option_text), 'İI', 'iı')), '[.,!?;:]', '', 'g') IN (
       'hiçbiri',
       'hepsi',
       'yukarıdakilerden hiçbiri',
@@ -72,7 +78,7 @@ BEGIN
     -- FP-koruma 1 (app-guard paritesi): bir şık BİRDEN FAZLA roman içeriyorsa
     -- (ör. "I. neden-sonuç, II. amaç-sonuç") bu KARŞILAŞTIRMA-CEVABIDIR (geçerli),
     -- öncül-bölünmesi değil.
-    IF option_text ~* '(^|\s)(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s.*\y(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s' THEN
+    IF option_text ~* '(^|\s)(I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s.*\y(I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s' THEN
       has_comparison_option := true;
     END IF;
 
@@ -83,9 +89,9 @@ BEGIN
       has_combination_answer := true;
     END IF;
 
-    IF option_text ~* '^\s*(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+' THEN
+    IF option_text ~* '^\s*(I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s+' THEN
       roman_count := roman_count + 1;
-      body := regexp_replace(option_text, '^\s*(I|II|III|IV|V|VI|VII|VIII|IX|X)\.\s+', '', 'i');
+      body := regexp_replace(option_text, '^\s*(I|II|III|IV|V|VI|VII|VIII|IX|X)[.)]\s+', '', 'i');
       word_count := coalesce(array_length(regexp_split_to_array(btrim(body), '\s+'), 1), 0);
 
       IF word_count >= 5
