@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "note": "Validator CI regresyon-kilidi fixture. BİLİNÇLİ defektler içerir — validator'ın her ERROR/WARN sınıfını yakaladığını deterministik doğrular. GERÇEK soru değildir. data/soru-bankasi gitignored (ürün-IP) olduğu için CI bu fixture'a bakar."
+  },
+  "temiz": [
+    {
+      "id": "clean1",
+      "question": "2 + 2 işleminin sonucu kaçtır?",
+      "options": ["3", "4", "5", "6", "7"],
+      "answer": 1,
+      "solution": "2+2=4"
+    }
+  ],
+  "defektler": [
+    {
+      "id": "def_dup_option",
+      "question": "Birebir aynı şık defekti test edilir mi?",
+      "options": ["alfa", "beta", "alfa", "gama", "delta"],
+      "answer": 1,
+      "solution": ""
+    },
+    {
+      "id": "def_answer_oor",
+      "question": "Answer indeksi aralık dışı defekti?",
+      "options": ["a", "b", "c", "d", "e"],
+      "answer": 9,
+      "solution": ""
+    },
+    {
+      "id": "def_option_count",
+      "question": "Beşten az şık defekti?",
+      "options": ["a", "b", "c"],
+      "answer": 0,
+      "solution": ""
+    },
+    {
+      "id": "def_encoding",
+      "question": "Encoding mojibake Ã¼ defekti test edilir mi?",
+      "options": ["a", "b", "c", "d", "e"],
+      "answer": 0,
+      "solution": ""
+    },
+    {
+      "id": "def_empty_option",
+      "question": "Boş şık defekti?",
+      "options": ["a", "", "c", "d", "e"],
+      "answer": 0,
+      "solution": ""
+    },
+    {
+      "id": "warn_sol_mismatch",
+      "question": "Solution-answer sayısal tutarsızlık (WARN) testi?",
+      "options": ["10", "20", "30", "40", "50"],
+      "answer": 0,
+      "solution": "Doğru sonuç = 30"
+    }
+  ],
+  "cloze": [
+    {
+      "id": "cl_ok",
+      "passage": "The immune system ---- pathogens effectively.",
+      "questions": [
+        { "number": 1, "options": ["ignore", "detect", "create", "avoid", "lose"], "answer": 1 }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint src/",
     "lint:migrations": "node database/lint-migrations.mjs",
+    "validate:questions": "node database/validate-question-bank.mjs",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
