@@ -7,6 +7,13 @@ const mockGetUser = vi.fn()
 const mockChallengeSingle = vi.fn()
 const mockQuestionsIn = vi.fn()
 const mockChallengeUpdate = vi.fn()
+// Atomik submit RPC (mig 077). Varsayilan: waiting_opponent. increment_xp -> {error:null}.
+const mockRpc = vi.fn(async (fn: string) => {
+  if (fn === 'submit_challenge_answer') {
+    return { data: { ok: true, result: 'waiting_opponent' }, error: null }
+  }
+  return { error: null }
+})
 
 // Chainable mock builder — terminal overrides end the chain
 function chain(terminal?: Record<string, ReturnType<typeof vi.fn>>) {
@@ -54,7 +61,7 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({
     from: mockSvcFrom,
-    rpc: vi.fn().mockResolvedValue({ error: null }),
+    rpc: mockRpc,
   }),
 }))
 
@@ -201,5 +208,39 @@ describe('POST /api/challenges/[id]/submit', () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.score.correct).toBe(0) // client yalanina ragmen 0
+  })
+
+  it('atomik RPC completed sonucunu ve winnerId iletir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeSingle.mockResolvedValue({
+      data: { id: CHALLENGE_ID, status: 'accepted', challenger_id: USER_ID, opponent_id: OPPONENT_ID, challenger_score: null, opponent_score: null },
+      error: null,
+    })
+    // RPC her iki tarafi da gorup sonuclandirdi
+    mockRpc.mockImplementationOnce(async () => ({
+      data: { ok: true, result: 'completed', winnerId: USER_ID }, error: null,
+    }))
+    const res = await POST(makeRequest({ answers: validAnswers }), { params: paramsPromise })
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.result).toBe('completed')
+    expect(json.winnerId).toBe(USER_ID)
+  })
+
+  it('dedup — ayni questionId tekrar skoru sismesin', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockChallengeSingle.mockResolvedValue({
+      data: { id: CHALLENGE_ID, status: 'accepted', challenger_id: USER_ID, opponent_id: OPPONENT_ID, challenger_score: null, opponent_score: null },
+      error: null,
+    })
+    // Ayni dogru soruyu 4 kez gonder
+    const dupAnswers = Array.from({ length: 4 }, () => ({
+      questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 2,
+    }))
+    const res = await POST(makeRequest({ answers: dupAnswers }), { params: paramsPromise })
+    const json = await res.json()
+    // Dedup olmadan correct=4, total=4 olurdu; fix ile 1/1
+    expect(json.score.correct).toBe(1)
+    expect(json.score.total).toBe(1)
   })
 })

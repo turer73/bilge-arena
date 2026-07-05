@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { sessionSubmitSchema } from '@/lib/validations/schemas'
+import { FREE_DAILY_LIMIT } from '@/lib/constants/premium'
+import { trDayString } from '@/lib/utils/tr-date'
 
 // Replay korumasi: kullanici basina dk'da max 3 oturum
 const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
@@ -46,10 +48,44 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Eksik veri' }, { status: 400 })
   }
-  const { game, mode, answers, category, difficulty: filterDifficulty, timeLimit } = parsed.data
+  const { game, mode, answers: rawAnswers, category, difficulty: filterDifficulty, timeLimit } = parsed.data
+
+  // P0 fix: ayni questionId birden fazla gonderilerek coin/XP farming'i onle.
+  // Odul dongusu ham dizi uzerinde donuyordu (questionMap yalniz lookup) -> ayni
+  // soru 100x gonderilince 100x coin. Soru basina en fazla 1 cevap say.
+  const answers = [...new Map(rawAnswers.map((a) => [a.questionId, a])).values()]
 
   // timeLimit zaten Zod ile 5-120 arasinda sinirli
   const safeTimeLimit = timeLimit
+
+  // Service role client — RLS bypass (tum INSERT/UPDATE + limit-gate okumasi icin)
+  const svc = createServiceRoleClient()
+
+  // P1 fix: gunluk quiz limiti POST'ta da enforce edilir. Onceden yalniz GET
+  // /api/quiz-limit'te hesaplaniyordu (gosterim); dogrudan POST bu limiti bypass
+  // ediyordu. Sayim quiz-limit ile ayni semantik (bugun baslangici + created_at).
+  const { data: limitProfile } = await svc
+    .from('profiles')
+    .select('is_premium, premium_until')
+    .eq('id', user.id)
+    .single()
+  const isPremium = limitProfile?.is_premium === true &&
+    (!limitProfile.premium_until || new Date(limitProfile.premium_until) > new Date())
+  if (!isPremium) {
+    const dayStart = new Date()
+    dayStart.setHours(0, 0, 0, 0)
+    const { count: todayCount } = await svc
+      .from('game_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', dayStart.toISOString())
+    if ((todayCount ?? 0) >= FREE_DAILY_LIMIT) {
+      return NextResponse.json(
+        { error: 'Günlük quiz limitine ulaştın.', code: 'daily_limit' },
+        { status: 403 },
+      )
+    }
+  }
 
   // Soru ID'lerini topla ve DB'den dogrula
   const questionIds = answers.map((a: { questionId: string }) => a.questionId)
@@ -121,9 +157,6 @@ export async function POST(request: Request) {
   const avgTime = answers.length > 0 ? totalTime / answers.length : 0
   const baseXP = Math.floor(totalXP * 0.7)
   const bonusXP = totalXP - baseXP
-
-  // Service role client — RLS bypass (tum INSERT/UPDATE islemleri icin)
-  const svc = createServiceRoleClient()
 
   // 1. INSERT game_sessions
   const { data: session, error: sessionError } = await svc
@@ -218,7 +251,7 @@ export async function POST(request: Request) {
 
   // 6. Gunluk gorevleri guncelle
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = trDayString(new Date())
     const accuracy = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0
     const { data: userQuests } = await svc
       .from('user_daily_quests')

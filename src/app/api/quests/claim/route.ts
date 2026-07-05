@@ -62,11 +62,17 @@ export async function POST(request: Request) {
   }
 
   // 4) Görev tamamlama coin ödülü: XP ödülünün %20'si (min 5, max 25)
+  // Fix: await edilmeliydi — fire-and-forget `.then()` ile coin RPC hata verse de
+  // yanit success + coins_earned donuyordu (kullanici coin almadan aldi saniyordu).
   const coinReward = Math.max(5, Math.min(25, Math.round(xpReward * 0.2)))
-  await svc.rpc('increment_coins', { p_user_id: user.id, p_amount: coinReward })
-    .then(({ error }) => {
-      if (error) console.error('[QuestClaim] increment_coins hatası:', error.message)
-    })
+  const { error: coinError } = await svc.rpc('increment_coins', { p_user_id: user.id, p_amount: coinReward })
+  if (coinError) {
+    console.error('[QuestClaim] increment_coins hatası:', coinError.message)
+  }
 
-  return NextResponse.json({ success: true, xp_earned: xpReward, coins_earned: coinReward })
+  return NextResponse.json({
+    success: true,
+    xp_earned: xpReward,
+    coins_earned: coinError ? 0 : coinReward,
+  })
 }

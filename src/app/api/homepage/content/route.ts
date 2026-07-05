@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 
 // ISR: 60 saniyede bir yeniden dogrula
 export const revalidate = 60
@@ -19,7 +20,7 @@ export async function GET() {
       .eq('is_published', true)
 
     if (sectionsError) {
-      return NextResponse.json({ error: sectionsError.message }, { status: 500 })
+      return dbErrorResponse('homepage/content GET sections', sectionsError)
     }
 
     // Yayinlanmis element'leri getir
@@ -30,7 +31,7 @@ export async function GET() {
       .order('sort_order', { ascending: true })
 
     if (elementsError) {
-      return NextResponse.json({ error: elementsError.message }, { status: 500 })
+      return dbErrorResponse('homepage/content GET elements', elementsError)
     }
 
     // Section'lari section_key -> config map'e cevir

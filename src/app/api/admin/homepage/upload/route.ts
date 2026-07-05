@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { isPngBuffer } from '@/lib/utils/security'
 
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 500 })
+      return dbErrorResponse('admin/homepage/upload', uploadError)
     }
 
     const { data: urlData } = supabase.storage

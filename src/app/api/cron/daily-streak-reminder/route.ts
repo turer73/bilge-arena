@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { sendPushNotification } from '@/lib/utils/push'
+import { trDayStartUtcISO } from '@/lib/utils/tr-date'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -28,12 +29,13 @@ export async function GET(req: Request) {
   // gecemez (USING auth.uid() = user_id). Service-role RLS bypass eder.
   const supabase = createServiceRoleClient()
 
-  // Dun (UTC) baslangici + bugun (UTC) baslangici — date range ile filtre
+  // Dun + bugun (TR gunune gore) baslangici — daily-login ile ayni gun-siniri.
+  // UTC gun-siniri kullanilinca "dun oynadi bugun oynamadi" penceresi TR gunune
+  // gore kaymis oluyordu (denetim bulgusu).
   const now = new Date()
-  const todayStart = new Date(now)
-  todayStart.setUTCHours(0, 0, 0, 0)
-  const yesterdayStart = new Date(todayStart)
-  yesterdayStart.setUTCDate(todayStart.getUTCDate() - 1)
+  const todayStartISO = trDayStartUtcISO(now)
+  const yesterdayStart = new Date(todayStartISO)
+  yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1)
 
   // Streak >= 1 + dun oynamis + bugun oynamamis profiller
   const { data: profiles, error: profileError } = await supabase
@@ -41,7 +43,7 @@ export async function GET(req: Request) {
     .select('id, display_name, current_streak')
     .gte('current_streak', 1)
     .gte('last_played_at', yesterdayStart.toISOString())
-    .lt('last_played_at', todayStart.toISOString())
+    .lt('last_played_at', todayStartISO)
 
   if (profileError) {
     console.error('[StreakReminder] profile query hatasi:', profileError)

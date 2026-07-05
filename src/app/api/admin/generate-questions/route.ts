@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { dbErrorResponse } from '@/lib/utils/api-error'
 import { checkPermission } from '@/lib/supabase/admin'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { trLower, isLikelyTurkish } from '@/lib/utils/tr-text'
@@ -421,8 +422,7 @@ Soru sayisi: ${count}${fewShotText}`
       .select('id')
 
     if (error) {
-      console.error('[AI Generate] Insert hatasi:', error)
-      return NextResponse.json({ error: 'Sorular kaydedilemedi: ' + error.message }, { status: 500 })
+      return dbErrorResponse('admin/generate-questions insert', error)
     }
 
     return NextResponse.json({

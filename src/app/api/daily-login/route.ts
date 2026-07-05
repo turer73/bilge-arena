@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { trDayString, trYesterdayString, trDayStartUtcISO } from '@/lib/utils/tr-date'
 
 const loginLimiter = createRateLimiter('daily-login', 5, 60_000)
 
@@ -42,15 +43,15 @@ export async function POST() {
   }
 
   const now = new Date()
-  const todayStr = now.toISOString().split('T')[0] // YYYY-MM-DD
+  const todayStr = trDayString(now) // TR takvim gunu (YYYY-MM-DD)
 
-  // Son oynanma tarihini kontrol et
+  // Son oynanma tarihini kontrol et — TR gunune gore
   const lastPlayed = profile.last_played_at
     ? new Date(profile.last_played_at)
     : null
 
   const lastPlayedStr = lastPlayed
-    ? lastPlayed.toISOString().split('T')[0]
+    ? trDayString(lastPlayed)
     : null
 
   // Bugün zaten giriş yapılmış mı?
@@ -62,10 +63,8 @@ export async function POST() {
     })
   }
 
-  // Dünkü tarih kontrolü — seri devam mı, kırıldı mı?
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  // Dünkü tarih kontrolü — seri devam mı, kırıldı mı? (TR gunune gore)
+  const yesterdayStr = trYesterdayString(now)
 
   let newStreak: number
   let streakReset = false
@@ -84,8 +83,8 @@ export async function POST() {
   // XP hesapla: gün * 10, max 70
   const xpReward = Math.min(newStreak * 10, 70)
 
-  // Profili güncelle — atomic guard: sadece bugun henuz claim edilmemisse
-  const todayStart = new Date(todayStr + 'T00:00:00.000Z').toISOString()
+  // Profili güncelle — atomic guard: sadece bugun (TR) henuz claim edilmemisse
+  const todayStart = trDayStartUtcISO(now)
   const { data: updated, error: updateError } = await svc
     .from('profiles')
     .update({
