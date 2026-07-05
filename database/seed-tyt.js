@@ -40,6 +40,7 @@ function loadQuestions(filePath, game) {
   for (const cat of categories) {
     for (const q of raw[cat]) {
       questions.push({
+        external_id: q.id || null,   // stable-key (idempotent re-seed / upsert için)
         game,
         category: q.category || cat,
         subcategory: q.topic || null,
