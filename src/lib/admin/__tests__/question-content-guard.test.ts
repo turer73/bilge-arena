@@ -141,12 +141,13 @@ describe('question-content-guard', () => {
     expect(buildSubjectPromptAppendix('bilinmeyen')).toBe('')
   })
 
-  it('2026 YKS stil-referansi metin-derslerin promptuna girer', () => {
-    // Few-shot: 2026 gerçek-sınav stil kalıpları metin-derslere eklenmeli
-    for (const game of ['turkce', 'sosyal', 'wordquest']) {
+  it('2026 YKS stil-referansi tum YKS-derslerinin promptuna girer', () => {
+    // Few-shot: 2026 gerçek-sınav stili tüm YKS derslerine eklenir (mat/fen görsel-pilot
+    // ile senaryo-stili çıkarıldı; görsel-şekil boyutu hariç aktarılabilir).
+    for (const game of ['turkce', 'sosyal', 'wordquest', 'matematik', 'fen']) {
       expect(buildSubjectPromptAppendix(game)).toContain('2026')
     }
-    // Görsel-formül dersleri (matematik/fen) 2026-stil ALMAZ (metin-referans yok)
-    expect(buildSubjectPromptAppendix('matematik')).not.toContain('2026 YKS-STİLİ')
+    // Bilinmeyen oyun 2026-stil almaz
+    expect(buildSubjectPromptAppendix('bilinmeyen')).not.toContain('2026')
   })
 })

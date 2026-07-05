@@ -40,6 +40,10 @@ export const REF_2026_STYLE = {
     '2026 YKS-STİLİ (TYT Sosyal + AYT Sosyal-2 gözlemi): ~%90 metin/çıkarım-tabanlı. Ezber değil YORUM sorulur. Tipik kökler: "...ilgili aşağıdakilerden hangisine ulaşılabilir?", "...hangisi söylenemez?", "...aşağıdaki çıkarımlardan hangisi yapılabilir?" (olumsuz-kök yaygın). I/II/III öncüllü + "Yalnız I / I ve II / I, II ve III" kombinasyon-şıklı sorular ~%15-20. Şıklar kısa-orta (~45 karakter). Cevap A-E dengeli.',
   wordquest:
     '2026 YDT-İngilizce STİLİ gözlemi: Cümle-tamamlama (vocabulary/collocation), cloze ve restatement ağırlıklı. Şıklar uzun (~110 karakter, çoğu tam-ifade). Doğru cevap dağılımında belirli harfe (özellikle son şık) yığma OLMAMALI — 2026\'da E-şık belirgin az işaretlenmişti; sen dengeli dağıt. Doğal, deyimsel İngilizce; yapay-çeviri kokusu olmasın.',
+  matematik:
+    '2026 TYT-Matematik STİLİ gözlemi (görsel-pilot): YENİ-NESİL senaryo-tabanlı — günlük-hayat kurgusu (ör. işlemci-nesilleri tablosu, çiçekçinin lale-saplarını ölçmesi), veri/tablo yorumlama, üstel-sayı/kesir/kök. Salt-işlem SORMA; bağlam kur. Şıklar sade (tam-sayı, sade-kesir, üstel-form). Formülleri düz-metin/Unicode yaz (√, ², ×, a/b); GÖRSEL-şekil/çizim gerektiren soru KURMA (platform metin-tabanlı, şekil gösteremez).',
+  fen:
+    '2026 TYT-Fen STİLİ gözlemi (görsel-pilot): Fizik+Kimya+Biyoloji karışık, fizik mekanik-ağırlıklı. Deney-düzeneği/senaryo yorumlama, I/II/III öncüllü mantık ("hangileri doğru olabilir?"), günlük-hayat kurgusu. Ezber DEĞİL analiz. Sembol/formül Unicode yaz; saf-geometri/devre/şekil gerektiren soru KURMA (platform metin-tabanlı, görsel gösteremez).',
 }
 
 export function buildSubjectPromptAppendix(game) {
