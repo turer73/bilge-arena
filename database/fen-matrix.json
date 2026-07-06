@@ -1,0 +1,282 @@
+[
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Kuvvet ve Hareket",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Kuvvet ve Hareket",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Kuvvet ve Hareket",
+  "difficulty": 4,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Enerji",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Enerji",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Enerji",
+  "difficulty": 4,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Isı ve Sıcaklık",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Isı ve Sıcaklık",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Isı ve Sıcaklık",
+  "difficulty": 4,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Basınç",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Basınç",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Basınç",
+  "difficulty": 4,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Elektrik",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Elektrik",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Elektrik",
+  "difficulty": 4,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Dalgalar",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Dalgalar",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Dalgalar",
+  "difficulty": 4,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Optik",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Optik",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "fizik",
+  "topic": "Optik",
+  "difficulty": 4,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Atom ve Periyodik Tablo",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Atom ve Periyodik Tablo",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Kimyasal Bağlar",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Kimyasal Bağlar",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Asit-Baz",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Asit-Baz",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Karışımlar",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Karışımlar",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Kimyasal Tepkimeler",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Kimyasal Tepkimeler",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Mol Kavramı",
+  "difficulty": 2,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "kimya",
+  "topic": "Mol Kavramı",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "biyoloji",
+  "topic": "Hücre",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "biyoloji",
+  "topic": "Canlıların Sınıflandırılması",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "biyoloji",
+  "topic": "Ekosistem",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "biyoloji",
+  "topic": "Kalıtım",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "biyoloji",
+  "topic": "DNA ve Gen",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "biyoloji",
+  "topic": "Sindirim Sistemi",
+  "difficulty": 3,
+  "count": 1
+ },
+ {
+  "game": "fen",
+  "category": "biyoloji",
+  "topic": "Dolaşım Sistemi",
+  "difficulty": 3,
+  "count": 1
+ }
+]
