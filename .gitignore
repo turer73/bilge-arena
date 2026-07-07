@@ -74,6 +74,9 @@ database/OUTPUT_REVIEW.json
 database/apply-review-manual-queue.json
 database/audit-active-*.json
 database/audit-active-*.csv
+database/audit-keybug-*.json
+database/audit-report-*.json
+database/zero-acc-*.json
 database/dedup-backup-*.json
 
 # Ham ÖSYM sınav-artifactleri (TELİFLİ — repo-dışı; few-shot yalnız gitignore'lu _ref-2026/ özet kullanır)
