@@ -36,9 +36,26 @@ function getProviderName() {
   return (process.env.LLM_PROVIDER || 'gemini').toLowerCase()
 }
 
+// Codex#266-P2: OpenAI-uyumlu provider'lar json_object modunda diziyi bir wrapper
+// obje içine sarabilir ({"questions":[...]} / {"sorular":[...]}). Eski hali JSON.parse
+// başarılı olunca o objeyi DÖNDÜRÜYORDU → downstream (array bekleyen üretim/judge) bozulur.
+// Artık: array ise direkt; wrapper obje ise tek array-değerli alanı çıkar; ikisi de değilse
+// metin içinden [...] regex-fallback.
+function _unwrapArray(v) {
+  if (Array.isArray(v)) return v
+  if (v && typeof v === 'object') {
+    const arrKey = Object.keys(v).find((k) => Array.isArray(v[k]))
+    if (arrKey) return v[arrKey]
+  }
+  return null
+}
+
 function parseJsonArray(text) {
   if (!text) return null
-  try { return JSON.parse(text) } catch { /* fall through */ }
+  try {
+    const arr = _unwrapArray(JSON.parse(text))
+    if (arr) return arr
+  } catch { /* fall through */ }
   const m = text.match(/\[[\s\S]*\]/)
   if (m) {
     try { return JSON.parse(m[0].replace(/,\s*([}\]])/g, '$1')) } catch { /* fall through */ }
@@ -94,7 +111,10 @@ async function callDeepSeek({ system, user, model }) {
 }
 
 async function callOllama({ system, user, model }) {
-  const baseUrl = process.env.OLLAMA_URL || 'http://100.84.251.49:11434'
+  // Codex#266-P2: default localhost — eski hard-coded Tailscale adresi (100.84.x.x), OLLAMA_URL
+  // verilmezse ağ-dışı fail eder ya da prompt'ları ortam-spesifik bir host'a gönderirdi.
+  // Klipper'ın Ollama'sı için: OLLAMA_URL=http://100.84.251.49:11434
+  const baseUrl = process.env.OLLAMA_URL || 'http://localhost:11434'
   const m = model || process.env.OLLAMA_MODEL || 'qwen2.5:7b'
   const res = await fetch(`${baseUrl}/api/chat`, {
     method: 'POST',
@@ -197,6 +217,9 @@ async function callGoProxy({ system, user, model }) {
   if (!text) throw new Error('GoProxy boş yanıt')
   return parseJsonArray(text)
 }
+
+// Test/regresyon için export (Codex#266-P2 wrapper-unwrap kilidi)
+export { parseJsonArray }
 
 export async function callLLM(prompt, options = {}) {
   const provider = getProviderName()
