@@ -1,20 +1,21 @@
 #!/usr/bin/env node
 /**
- * AI Soru Uretim CLI — Sosyoloji + Wordquest A1/A2/C2 icerik kosulari icin
+ * AI Soru Uretim CLI — Tüm oyunlar için genel amaçlı
  * --------------------------------------------------------------
+ * Provider-agnostic: Gemini, DeepSeek, Ollama veya Go-Proxy
+ * (env: LLM_PROVIDER=gemini|deepseek|ollama|go-proxy)
+ *
  * Kullanim:
  *   node database/run-generation.mjs <game> <category> <difficulty> [level_tag] [count]
  *
  * Ornek:
  *   node database/run-generation.mjs sosyal sosyoloji 3 -- 5
  *   node database/run-generation.mjs wordquest vocabulary 1 A1 5
+ *   LLM_PROVIDER=deepseek node database/run-generation.mjs fen fizik 3 -- 5
  *
  * Not:
  *   - Generated sorular DB'ye is_active=false ile eklenir; admin UI'dan review edilmeli.
  *   - Cikti ayni anda database/generated/ icine JSON olarak yazilir (audit + reproduce icin).
- *   - Bu CLI, /api/admin/generate-questions route ile *AYNI* prompt logic'ini kullanir
- *     (CEFR_GUIDANCE, TOPIC_MAP, dedup vs). 2026-04-26 tek kullanim icin duplicate edildi —
- *     ikinci kullanim olursa src/lib/admin/question-generator.ts'e refactor edilmeli.
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -29,6 +30,7 @@ import {
   parseFixtureTdkTokenPairs,
   validateGeneratedQuestionContent,
 } from '../src/lib/admin/question-content-guard.mjs'
+import { callLLM, getKeyStatus, getProvider } from './llm-client.mjs'
 
 // ── env yukle ────────────────────────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -43,14 +45,14 @@ if (existsSync(envPath)) {
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY
-const GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY
+const ks = getKeyStatus()
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('HATA: SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY env gerekli')
   process.exit(1)
 }
-if (!GEMINI_API_KEY) {
-  console.error('HATA: GOOGLE_GENERATIVE_AI_API_KEY env gerekli')
+if (!ks.hasKey) {
+  console.error(`HATA: ${ks.provider.toUpperCase()} key env gerekli`)
   process.exit(1)
 }
 
@@ -97,9 +99,8 @@ if (level_tag !== null && !['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(level_t
   process.exit(1)
 }
 
-// ── Sabitler — route.ts ile bire bir (audit aksaklik = tek kaynaktan duplicate) ──
-const GEMINI_MODEL = process.env.GEMINI_MODEL_OVERRIDE || 'gemini-2.5-flash-lite'
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+// ── Sabitler — model provider'dan gelir ──
+const MODEL = process.env.MODEL_OVERRIDE || (ks.provider === 'gemini' ? 'gemini-2.5-flash-lite' : ks.model || 'default')
 
 const TOPIC_MAP = {
   matematik: {
@@ -251,7 +252,8 @@ console.log(`Category:   ${category}`)
 console.log(`Difficulty: ${difficulty}/5`)
 console.log(`Level tag:  ${effectiveLevelTag ?? '(NULL)'}`)
 console.log(`Count:      ${count}`)
-console.log(`Model:      ${GEMINI_MODEL}\n`)
+console.log(`Provider:   ${ks.provider}`)
+console.log(`Model:      ${MODEL}\n`)
 
 // ── Few-shot ───────────────────────────────
 let fewShotText = ''
@@ -289,7 +291,7 @@ const existingPrefixes = new Set()
   console.log(`Dup-prefix set: ${existingPrefixes.size} mevcut soru.`)
 }
 
-// ── Gemini call ─────────────────────────────
+// ── LLM call (provider-agnostic) ─────────────────────────────
 const categoryLabel = CATEGORY_LABELS[category] || category
 const userPrompt = `${count} adet ${categoryLabel} sorusu uret.
 Oyun: ${game}
@@ -297,59 +299,16 @@ Kategori: ${category}
 ${effectiveLevelTag && game === 'wordquest' ? `CEFR: ${effectiveLevelTag}\n` : ''}Zorluk: ${difficulty}/5
 Soru sayisi: ${count}${fewShotText}`
 
-console.log(`\nGemini'ye gonderiliyor...`)
+console.log(`\n${ks.provider.toUpperCase()}'e gonderiliyor...`)
 const startTs = Date.now()
 
-const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    system_instruction: { parts: [{ text: buildSystemPrompt(game, category, effectiveLevelTag) }] },
-    contents: [{ parts: [{ text: userPrompt }] }],
-    generationConfig: {
-      temperature: 0.8,
-      // pro thinking-mode 4096'yi tuketebilir, response icin 8192 buyut
-      maxOutputTokens: GEMINI_MODEL.includes('pro') ? 8192 : 4096,
-      responseMimeType: 'application/json',
-    },
-  }),
-})
+const questions = await callLLM(
+  { system: buildSystemPrompt(game, category, effectiveLevelTag), user: userPrompt },
+  { model: MODEL }
+)
 
 const elapsedMs = Date.now() - startTs
-console.log(`Gemini yanit ${elapsedMs}ms, status ${res.status}.`)
-
-const json = await res.json().catch(() => null)
-if (!json) {
-  console.error('HATA: Gemini gecersiz JSON dondu')
-  console.error(await res.text().catch(() => ''))
-  process.exit(2)
-}
-
-const text = json.candidates?.[0]?.content?.parts?.[0]?.text
-if (!text) {
-  console.error('HATA: Gemini text uretmedi')
-  console.error(JSON.stringify(json, null, 2).slice(0, 1000))
-  process.exit(2)
-}
-
-// ── Parse ────────────────────────────────────
-let questions
-try {
-  questions = JSON.parse(text)
-} catch {
-  // Markdown code block fallback (route ile ayni)
-  const match = text.match(/\[[\s\S]*\]/)
-  if (match) {
-    const cleaned = match[0]
-      .replace(/,\s*([}\]])/g, '$1')
-      .replace(/[\x00-\x1F\x7F]/g, ' ')
-      .replace(/\n/g, ' ')
-    questions = JSON.parse(cleaned)
-  } else {
-    console.error('HATA: JSON parse basarisiz, raw:', text.slice(0, 500))
-    process.exit(2)
-  }
-}
+console.log(`${ks.provider.toUpperCase()} yanit ${elapsedMs}ms.`)
 
 if (!Array.isArray(questions)) {
   console.error('HATA: AI dizi dondurmedi, raw:', JSON.stringify(questions).slice(0, 500))
@@ -460,7 +419,7 @@ const insertData = unique.map((q) => ({
     // Codex PR#250: insert oncesi sik-harfi backstop (prompt-kurali advisory).
     solution: stripSolutionLetterRefs(q.solution),
   },
-  source: process.env.GEMINI_MODEL_OVERRIDE?.includes('pro') ? 'ai_generated_v2' : 'ai_generated',
+  source: `ai_${ks.provider}`,
   is_active: false,
 }))
 
