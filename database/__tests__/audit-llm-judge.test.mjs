@@ -150,6 +150,58 @@ describe('buildPromptForQuestion', () => {
     expect(user).toContain('Difficulty: 2')
     expect(user).toContain('Game: sosyal')
   })
+
+  // LGS-4 desteği (fen judge-katmanı): 4 seçenekli soru → A-D, geçerli aralık 0-3
+  const lgsQ = {
+    game: 'fen',
+    category: 'fizik',
+    difficulty: 3,
+    question: 'Kütlesi 2 kg olan cisme 10 N kuvvet uygulanıyor. İvme kaç m/s²?',
+    options: ['2 m/s²', '5 m/s²', '10 m/s²', '20 m/s²'],
+    answer: 1,
+    solution: 'F=m·a → a=10/2=5 m/s².',
+  }
+
+  it('4-seçenekli (LGS) soru: seçenek sayısı + geçerli aralık doğru', () => {
+    const { user } = buildPromptForQuestion(lgsQ)
+    expect(user).toContain('Seçenekler (4 adet)')
+    expect(user).toContain('self_answer 0-3 olmalı')
+    expect(user).toContain('D) 20 m/s²')
+    expect(user).not.toContain('E) ') // 5. seçenek yok
+    expect(user).toContain('İşaretli doğru cevap: B (index 1)')
+  })
+
+  it('5-seçenekli soruda geçerli aralık 0-4', () => {
+    const { user } = buildPromptForQuestion(sampleQ)
+    expect(user).toContain('Seçenekler (5 adet)')
+    expect(user).toContain('self_answer 0-4 olmalı')
+  })
+
+  it('system prompt görsel-zorunluluk guard içerir (requires_visual)', () => {
+    const { system } = buildPromptForQuestion(lgsQ)
+    expect(system).toMatch(/GÖRSEL ZORUNLULUĞU/)
+    expect(system).toMatch(/requires_visual/)
+  })
+
+  // Codex#267-P2: content.passage (öncül/tablo) prompt'a dahil — yoksa passage'lı soru
+  // yanlışlıkla requires_visual sanılır (oyun UI'ı passage'ı render eder)
+  it('passage prompt\'a öncül bloğu olarak dahil edilir', () => {
+    const qP = { ...lgsQ, passage: 'Tabloda maddeler: A=2g, B=4g, C=6g.' }
+    const { user } = buildPromptForQuestion(qP)
+    expect(user).toContain('Öncül/tablo/veri')
+    expect(user).toContain('A=2g, B=4g, C=6g')
+  })
+
+  it('content.passage (nested) da dahil edilir', () => {
+    const qP = { ...lgsQ, content: { passage: 'Grafikte X ekseni zaman, Y ekseni hızdır.' } }
+    const { user } = buildPromptForQuestion(qP)
+    expect(user).toContain('Grafikte X ekseni zaman')
+  })
+
+  it('passage yoksa öncül bloğu eklenmez', () => {
+    const { user } = buildPromptForQuestion(lgsQ)
+    expect(user).not.toContain('Öncül/tablo/veri')
+  })
 })
 
 describe('fixture sanity', () => {
