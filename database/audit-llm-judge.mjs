@@ -81,15 +81,27 @@ const PROVIDERS = {
     defaultModel: 'gemini-2.5-flash-lite',
     apiKeyEnv: 'GEMINI_API_KEY',
     endpoint: (m) => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,
-    // gemini-2.5-flash-lite: $0.075/1M in + $0.30/1M out
     estCostPerQ: (1000 * 0.075 + 200 * 0.30) / 1_000_000,
   },
   anthropic: {
     defaultModel: 'claude-haiku-4-5',
     apiKeyEnv: 'ANTHROPIC_API_KEY',
     endpoint: () => 'https://api.anthropic.com/v1/messages',
-    // claude-haiku-4-5: $1/1M in + $5/1M out
     estCostPerQ: (1000 * 1.0 + 200 * 5.0) / 1_000_000,
+  },
+  'opencode-zen': {
+    defaultModel: 'deepseek-v4-flash-free',
+    apiKeyEnv: 'OPENCODE_ZEN_API_KEY',
+    endpoint: () => 'https://opencode.ai/zen/v1/chat/completions',
+    estCostPerQ: 0,
+  },
+  // NVIDIA NIM — ücretsiz (kredi yok, ~40 RPM), OpenAI-uyumlu. Gemini spend-cap
+  // judge'ı da vuruyordu (default gemini) → cap'siz alternatif. Key: NVIDIA_API_KEY.
+  nim: {
+    defaultModel: 'deepseek-ai/deepseek-v4-pro',
+    apiKeyEnv: 'NVIDIA_API_KEY',
+    endpoint: () => 'https://integrate.api.nvidia.com/v1/chat/completions',
+    estCostPerQ: 0,
   },
 }
 
@@ -101,7 +113,7 @@ const model = opts.model || provider.defaultModel
 // JUDGE PROMPT — 3 kontrolün hepsi tek istekte
 const SYSTEM = `Sen Türkçe eğitim içerikleri kalite kontrol uzmanısın. YKS/TYT/AYT seviyesi sorularını semantik olarak değerlendiriyorsun.
 
-Bir test sorusu (soru metni, 5 seçenek, işaretli doğru cevap index'i, çözüm metni) verilecek. Aşağıdaki 3 kontrolü yap:
+Bir test sorusu (soru metni, seçenekler, işaretli doğru cevap index'i, çözüm metni) verilecek. Seçenek sayısı 4 (LGS/8. sınıf) veya 5 (YKS/TYT/AYT) olabilir — kullanıcı mesajında kaç seçenek olduğu ve geçerli cevap aralığı belirtilir. Aşağıdaki 3 kontrolü yap:
 
 1. SELF-SOLVE: İşaretli cevaba BAKMADAN, kendi çözümünü üret. Hangi şıkkı doğru buluyorsun?
 2. ADVERSARIAL: Soruda hata var mı? (belirsizlik, çoklu doğru cevap, gerçek-dışı iddia, zayıf/saçma distractor)
@@ -110,7 +122,7 @@ Bir test sorusu (soru metni, 5 seçenek, işaretli doğru cevap index'i, çözü
 Yanıtın TAM olarak şu JSON formatında, başka metin yok:
 
 {
-  "self_answer": <0-4 integer>,
+  "self_answer": <integer, 0 ile (seçenek sayısı - 1) arası>,
   "confidence": <0.0-1.0 float>,
   "agrees_with_marked": <bool>,
   "solution_supports_marked": <bool>,
@@ -124,7 +136,7 @@ Severity kuralları:
 - "minor": Stil/yazım sorunu, distractor zayıf, ama cevap doğru
 - "major": Cevap YANLIŞ, çoklu doğru cevap, gerçek-dışı iddia, anlamsız soru
 
-issues olası değerler: "wrong_answer", "multi_correct", "factual_error", "ambiguous_wording", "weak_distractor", "solution_mismatch", "out_of_scope", "tdk_violation"
+issues olası değerler: "wrong_answer", "multi_correct", "factual_error", "ambiguous_wording", "weak_distractor", "solution_mismatch", "out_of_scope", "tdk_violation", "requires_visual"
 
 ZORUNLU GUARD'LAR (false positive azaltma — bu kurallar severity'yi belirler):
 
@@ -156,6 +168,12 @@ GUARD 4 — BAĞLAM HASSASIYETI:
 "Bir bölgede sıcaklık-basınç" gibi sorularda BAĞLAM kapalı kap (PV=nRT) değil ATMOSFERİK olabilir. Atmosferik bağlamda sıcaklık↑ → basınç↓ (termik basınç ilkesi).
 Soru bağlamı tartışmaya açık ise: severity = "ok", issues = ["ambiguous_wording"]
 
+GUARD 5 — GÖRSEL ZORUNLULUĞU (metin-tabanlı platform):
+Bu platform yalnızca METİN gösterir — resim/şekil/grafik render EDİLMEZ. Soru bir görsele referans veriyorsa ("şekildeki", "grafikte", "aşağıdaki resimde", "yandaki devrede" vb.) VE o görsel metin içinde çözülebilir biçimde verilmemişse (ör. tablo/veri metin olarak yazılmamışsa; ASCII-çizim çoğu zaman okunaksız):
+- severity = "major", issues = ["requires_visual"]
+- reasoning_brief'te hangi görsel öğenin eksik olduğunu belirt
+İSTİSNA: gerekli tüm sayısal veri metinde açıkça yazılıysa (görsel yalnız süsse), görselsiz çözülebiliyorsa → bu guard'ı UYGULAMA.
+
 NOT: TDK yazım kontrolü (diakritik kaybı: "acik" yerine "açık" gibi) ayrı bir
 deterministic pre-check ile yapılıyor; bu listeye senin tarafından eklenmesi gerekmiyor
 ancak gözüne çarpan başka yazım/akademik dil hatasını "minor" olarak flagleyebilirsin.`
@@ -166,13 +184,16 @@ function buildUserPrompt(q) {
   const optionsText = opts.map((o, i) => `${letters[i]}) ${o}`).join('\n')
   const ans = q.answer
   const markedLetter = letters[ans] || '?'
+  const n = opts.length
+  const maxIdx = Math.max(0, n - 1)
   return `Soru:
 ${q.question}
 
-Seçenekler:
+Seçenekler (${n} adet):
 ${optionsText}
 
 İşaretli doğru cevap: ${markedLetter} (index ${ans})
+Geçerli cevap aralığı: self_answer 0-${maxIdx} olmalı (${n} seçenek).
 
 Çözüm metni:
 ${q.solution || '(boş)'}
@@ -225,20 +246,84 @@ async function callAnthropic(systemPrompt, userPrompt) {
   const data = await res.json()
   const text = data?.content?.[0]?.text
   if (!text) throw new Error('Anthropic: boş yanıt')
-  // Haiku JSON-only mode'u yok, response içinde JSON olabilir — extract
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   return jsonMatch ? jsonMatch[0] : text
 }
 
-const callLLM = opts.provider === 'gemini' ? callGemini : callAnthropic
+async function callOpenCodeZen(systemPrompt, userPrompt) {
+  const res = await fetch(provider.endpoint(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getApiKey()}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt + '\n\nYanıt SADECE JSON, başka metin YOK.' },
+      ],
+      temperature: 0.1,
+      max_tokens: 500,
+      response_format: { type: 'json_object' },
+    }),
+  })
+  if (!res.ok) throw new Error(`OpenCodeZen ${res.status}: ${await res.text()}`)
+  const data = await res.json()
+  const text = data?.choices?.[0]?.message?.content
+  if (!text) throw new Error('OpenCodeZen: boş yanıt')
+  return text
+}
+
+// NIM ve OpenCodeZen ikisi de OpenAI-uyumlu (choices[].message.content) — tek gövde paylaşır
+async function callNim(systemPrompt, userPrompt) {
+  const res = await fetch(provider.endpoint(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getApiKey()}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt + '\n\nYanıt SADECE JSON, başka metin YOK.' },
+      ],
+      temperature: 0.1,
+      max_tokens: 500,
+    }),
+  })
+  if (!res.ok) throw new Error(`NIM ${res.status}: ${await res.text()}`)
+  const data = await res.json()
+  const text = data?.choices?.[0]?.message?.content
+  if (!text) throw new Error('NIM: boş yanıt')
+  return text
+}
+
+const callLLM = opts.provider === 'anthropic' ? callAnthropic
+  : opts.provider === 'opencode-zen' ? callOpenCodeZen
+  : opts.provider === 'nim' ? callNim
+  : callGemini
 
 // Response parser — defensive (model her zaman valid JSON döndürmeyebilir)
 export function parseJudgeResponse(rawText) {
+  if (!rawText) return { error: 'empty_response' }
+  let text = rawText.trim()
+  // Markdown code block temizle
+  const mdMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (mdMatch) text = mdMatch[1].trim()
+  
   let parsed
   try {
-    parsed = JSON.parse(rawText)
+    parsed = JSON.parse(text)
   } catch (e) {
-    return { error: 'parse_failed', raw: rawText.slice(0, 200) }
+    // JSON object extract dene
+    const objMatch = text.match(/\{[\s\S]*\}/)
+    if (objMatch) {
+      try { parsed = JSON.parse(objMatch[0]) } catch { return { error: 'parse_failed', raw: rawText.slice(0, 200) } }
+    } else {
+      return { error: 'parse_failed', raw: rawText.slice(0, 200) }
+    }
   }
   // Validate shape
   const required = ['self_answer', 'agrees_with_marked', 'solution_supports_marked', 'severity']
@@ -343,8 +428,8 @@ async function judgeOne(row, attempt = 0) {
       tdk_violations: tdkViolations,
     }
   } catch (e) {
-    if (attempt < 2) {
-      await new Promise(res => setTimeout(res, 500 * (attempt + 1)))
+    if (attempt < 4) {
+      await new Promise(res => setTimeout(res, 1000 * (attempt + 1)))
       return judgeOne(row, attempt + 1)
     }
     return { id: row.id, error: e.message.slice(0, 100), category: c.category }

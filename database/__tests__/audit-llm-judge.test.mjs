@@ -150,6 +150,38 @@ describe('buildPromptForQuestion', () => {
     expect(user).toContain('Difficulty: 2')
     expect(user).toContain('Game: sosyal')
   })
+
+  // LGS-4 desteği (fen judge-katmanı): 4 seçenekli soru → A-D, geçerli aralık 0-3
+  const lgsQ = {
+    game: 'fen',
+    category: 'fizik',
+    difficulty: 3,
+    question: 'Kütlesi 2 kg olan cisme 10 N kuvvet uygulanıyor. İvme kaç m/s²?',
+    options: ['2 m/s²', '5 m/s²', '10 m/s²', '20 m/s²'],
+    answer: 1,
+    solution: 'F=m·a → a=10/2=5 m/s².',
+  }
+
+  it('4-seçenekli (LGS) soru: seçenek sayısı + geçerli aralık doğru', () => {
+    const { user } = buildPromptForQuestion(lgsQ)
+    expect(user).toContain('Seçenekler (4 adet)')
+    expect(user).toContain('self_answer 0-3 olmalı')
+    expect(user).toContain('D) 20 m/s²')
+    expect(user).not.toContain('E) ') // 5. seçenek yok
+    expect(user).toContain('İşaretli doğru cevap: B (index 1)')
+  })
+
+  it('5-seçenekli soruda geçerli aralık 0-4', () => {
+    const { user } = buildPromptForQuestion(sampleQ)
+    expect(user).toContain('Seçenekler (5 adet)')
+    expect(user).toContain('self_answer 0-4 olmalı')
+  })
+
+  it('system prompt görsel-zorunluluk guard içerir (requires_visual)', () => {
+    const { system } = buildPromptForQuestion(lgsQ)
+    expect(system).toMatch(/GÖRSEL ZORUNLULUĞU/)
+    expect(system).toMatch(/requires_visual/)
+  })
 })
 
 describe('fixture sanity', () => {
