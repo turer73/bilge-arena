@@ -186,7 +186,12 @@ function buildUserPrompt(q) {
   const markedLetter = letters[ans] || '?'
   const n = opts.length
   const maxIdx = Math.max(0, n - 1)
-  return `Soru:
+  // Codex#267-P2: content.passage (öncül/tablo/veri) oyun UI'ında soru kökünden ÖNCE
+  // render edilir (question-card.tsx). Judge'a dahil edilmezse, verisi passage'da olan
+  // sorular yanlışlıkla "requires_visual"/çözülemez sanılır (GUARD 5 false-positive).
+  const passage = q.passage || q.content?.passage || ''
+  const passageBlock = passage ? `Öncül/tablo/veri (soru kökünden önce öğrenciye gösterilir):\n${passage}\n\n` : ''
+  return `${passageBlock}Soru:
 ${q.question}
 
 Seçenekler (${n} adet):
@@ -396,6 +401,21 @@ function checkRowTDK(c) {
   return tdkPreCheck(buf)
 }
 
+// Codex#267-P2: NIM ~40 RPM cap. Concurrent runner + hızlı yanıtlar cap'i aşıp 429
+// üretebilir; per-worker retry-sleep aynı pencerede kalır. Global "slot rezervasyonu":
+// her çağrı _nimGateTs'i ileri iter, worker'lar min-interval'e serialize olur (race-safe:
+// senkron güncelleme). Yalnız provider=nim'de aktif.
+let _nimGateTs = 0
+const NIM_MIN_INTERVAL_MS = 1600 // ~37 req/dk (40 RPM altında güvenli marj)
+async function nimThrottle() {
+  if (opts.provider !== 'nim') return
+  const now = Date.now()
+  const slot = Math.max(now, _nimGateTs + NIM_MIN_INTERVAL_MS)
+  _nimGateTs = slot
+  const wait = slot - now
+  if (wait > 0) await new Promise(r => setTimeout(r, wait))
+}
+
 // Per-question judge with retry
 async function judgeOne(row, attempt = 0) {
   const c = normalizeRow(row)
@@ -403,11 +423,19 @@ async function judgeOne(row, attempt = 0) {
   const tdkViolations = checkRowTDK(c)
   const { system, user } = buildPromptForQuestion(c)
   try {
+    await nimThrottle()
     const raw = await callLLM(system, user)
     const parsed = parseJudgeResponse(raw)
     if (parsed.error) {
       if (attempt < 1) return judgeOne(row, attempt + 1)
       return { id: row.id, error: parsed.error, category: c.category, tdk_violations: tdkViolations }
+    }
+    // Codex#267-P2: self_answer seçenek-sayısı aralığını aşarsa (ör. 4-seçenekli soruda 4)
+    // geçerli-judged SAYMA — parser'ın gevşek 0-4 kabulünü option-count'a göre sıkılaştır.
+    const nOpts = Array.isArray(c.options) ? c.options.length : 5
+    if (typeof parsed.self_answer === 'number' && parsed.self_answer >= nOpts) {
+      if (attempt < 1) return judgeOne(row, attempt + 1)
+      return { id: row.id, error: `self_answer_out_of_range:${parsed.self_answer}/${nOpts}`, category: c.category, tdk_violations: tdkViolations }
     }
     // TDK ihlali varsa LLM'in issues array'ine merge + severity yükselt
     const issues = [...(parsed.issues || [])]

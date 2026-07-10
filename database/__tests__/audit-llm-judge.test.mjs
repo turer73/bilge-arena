@@ -182,6 +182,26 @@ describe('buildPromptForQuestion', () => {
     expect(system).toMatch(/GÖRSEL ZORUNLULUĞU/)
     expect(system).toMatch(/requires_visual/)
   })
+
+  // Codex#267-P2: content.passage (öncül/tablo) prompt'a dahil — yoksa passage'lı soru
+  // yanlışlıkla requires_visual sanılır (oyun UI'ı passage'ı render eder)
+  it('passage prompt\'a öncül bloğu olarak dahil edilir', () => {
+    const qP = { ...lgsQ, passage: 'Tabloda maddeler: A=2g, B=4g, C=6g.' }
+    const { user } = buildPromptForQuestion(qP)
+    expect(user).toContain('Öncül/tablo/veri')
+    expect(user).toContain('A=2g, B=4g, C=6g')
+  })
+
+  it('content.passage (nested) da dahil edilir', () => {
+    const qP = { ...lgsQ, content: { passage: 'Grafikte X ekseni zaman, Y ekseni hızdır.' } }
+    const { user } = buildPromptForQuestion(qP)
+    expect(user).toContain('Grafikte X ekseni zaman')
+  })
+
+  it('passage yoksa öncül bloğu eklenmez', () => {
+    const { user } = buildPromptForQuestion(lgsQ)
+    expect(user).not.toContain('Öncül/tablo/veri')
+  })
 })
 
 describe('fixture sanity', () => {
