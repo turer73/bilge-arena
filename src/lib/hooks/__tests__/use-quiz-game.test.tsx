@@ -160,7 +160,8 @@ describe('useQuizGame — handleAnswer', () => {
     act(() => result.current.handleAnswer(2)) // answer index 2 = doğru
 
     expect(timer.stop).toHaveBeenCalled()
-    expect(quiz.answerQuestion).toHaveBeenCalledWith(2, true, expect.any(Number), expect.anything())
+    // 5. arg = kanonik index (disc#1296); shuffle-haritasi yokken ekran-index'ine duser
+    expect(quiz.answerQuestion).toHaveBeenCalledWith(2, true, expect.any(Number), expect.anything(), 2)
     expect(fetchers.playSound).toHaveBeenCalledWith('correct')
     expect(result.current.showBurst).toBe(true)
     expect(result.current.showXPPopup).toBe(true)
@@ -177,7 +178,7 @@ describe('useQuizGame — handleAnswer', () => {
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
     act(() => result.current.handleAnswer(0))
 
-    expect(quiz.answerQuestion).toHaveBeenCalledWith(0, false, expect.any(Number), expect.anything())
+    expect(quiz.answerQuestion).toHaveBeenCalledWith(0, false, expect.any(Number), expect.anything(), 0)
     expect(fetchers.playSound).toHaveBeenCalledWith('life_lost')
     expect(result.current.showLifeLost).toBe(true)
   })
@@ -205,7 +206,7 @@ describe('useQuizGame — handleAnswer', () => {
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
     act(() => result.current.handleAnswer(2))
 
-    expect(quiz.answerQuestion).toHaveBeenCalledWith(2, true, 0, expect.anything())
+    expect(quiz.answerQuestion).toHaveBeenCalledWith(2, true, 0, expect.anything(), 2)
     expect(timer.stop).not.toHaveBeenCalled()
     expect(quiz.nextQuestion).not.toHaveBeenCalled() // otomatik ilerleme yok
   })

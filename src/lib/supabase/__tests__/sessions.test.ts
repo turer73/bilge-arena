@@ -98,6 +98,22 @@ describe('saveGameSession', () => {
     expect(body.answers[0]).not.toHaveProperty('xpEarned')
   })
 
+  it('selectedCanonical varsa selectedOption olarak ONU gondermeli (disc#1296)', async () => {
+    mockFetchSuccess()
+    await saveGameSession({
+      ...baseParams,
+      answers: [
+        // Kullanici ekranda 3. siradaki sikki secti; kanonik DB-index'i 1.
+        { questionId: 'q1', selectedOption: 3, selectedCanonical: 1, isCorrect: true, timeTaken: 5, xpEarned: 15 },
+      ] as AnswerRecord[],
+    })
+
+    const [, options] = mockFetch.mock.calls[0]
+    const body = JSON.parse(options.body)
+    // Server kanonik index'le notlar — ekran-index'i (3) DEGIL kanonik (1) gitmeli.
+    expect(body.answers[0].selectedOption).toBe(1)
+  })
+
   it('API hata donerse null dondurmeli', async () => {
     mockFetchError(500)
     const result = await saveGameSession(baseParams)

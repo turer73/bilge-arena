@@ -42,10 +42,16 @@ export function normalizeTYTQuestion(raw: RawTYTQuestion): QuestionContent {
 }
 
 /**
- * Soru seceneklerini karistir ve answer index'ini guncelle.
- * Practice modunda kullanilabilir.
+ * Soru seceneklerini karistir ve answer index'ini guncelle; ekran->kanonik
+ * index haritasini da dondur.
+ *
+ * map[ekranIdx] = kanonikIdx. Server /api/sessions'ta cevabi KANONIK DB
+ * index'iyle notlar (server-authority) — client secimi sunucuya gondermeden
+ * once bu haritayla geri cevirmek ZORUNLU. (disc#1296: 2026-04-14'ten beri
+ * ekran-index'i ham gonderiliyordu -> tum solo-quiz notlamasi ~%20'ye cakildi.
+ * Duello ayni haritalamayi bastan dogru yapiyordu; patern oradan alindi.)
  */
-export function shuffleOptions(content: QuestionContent): QuestionContent {
+export function shuffleOptionsWithMap(content: QuestionContent): { content: QuestionContent; map: number[] } {
   const correctIdx = getCorrectIndex(content)
   const indices = content.options.map((_, i) => i)
 
@@ -59,10 +65,18 @@ export function shuffleOptions(content: QuestionContent): QuestionContent {
   const newAnswer = indices.indexOf(correctIdx)
 
   return {
-    ...content,
-    options: newOptions,
-    answer: newAnswer,
+    content: { ...content, options: newOptions, answer: newAnswer },
+    map: indices,
   }
+}
+
+/**
+ * Soru seceneklerini karistir ve answer index'ini guncelle.
+ * Yalniz LOKAL kullanim (gosterim + lokal notlama) icin guvenli; secim
+ * sunucuya gonderilecekse shuffleOptionsWithMap kullan (bkz. disc#1296).
+ */
+export function shuffleOptions(content: QuestionContent): QuestionContent {
+  return shuffleOptionsWithMap(content).content
 }
 
 /**

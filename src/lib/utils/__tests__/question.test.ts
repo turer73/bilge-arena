@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   normalizeTYTQuestion,
   shuffleOptions,
+  shuffleOptionsWithMap,
   getOptionLetter,
   INDEX_TO_LETTER,
   EMPTY_QUESTION,
@@ -90,6 +91,45 @@ describe('shuffleOptions', () => {
     shuffleOptions(content)
     expect(content.options).toEqual(original.options)
     expect(content.answer).toBe(original.answer)
+  })
+})
+
+// ─── shuffleOptionsWithMap (disc#1296 regresyon kilidi) ─
+
+describe('shuffleOptionsWithMap', () => {
+  const content: QuestionContent = {
+    question: 'Test?',
+    options: ['A', 'B', 'C', 'D', 'E'],
+    answer: 2, // C dogru
+  }
+
+  it('map ekran-indexini kanonik indexe cevirmeli (map[ekranIdx]=kanonikIdx)', () => {
+    for (let run = 0; run < 20; run++) {
+      const { content: shuffled, map } = shuffleOptionsWithMap(content)
+      for (let i = 0; i < shuffled.options.length; i++) {
+        expect(shuffled.options[i]).toBe(content.options[map[i]])
+      }
+    }
+  })
+
+  it('shuffled answer haritayla kanonik answer\'a donmeli', () => {
+    for (let run = 0; run < 20; run++) {
+      const { content: shuffled, map } = shuffleOptionsWithMap(content)
+      expect(map[shuffled.answer!]).toBe(2)
+    }
+  })
+
+  it('REGRESYON disc#1296: ekranda dogru sikki secen kullanicinin sunucuya giden indexi server-grading\'i GECMELI', () => {
+    // Bug: client ekran-indexini ham gonderiyordu; server kanonik content.answer
+    // ile karsilastiriyordu -> dogru cevaplarin ~%80'i yanlis sayildi (aylik
+    // dogruluk %61 -> %20'ye cakildi). Bu test o zinciri uctan-uca kilitler.
+    for (let run = 0; run < 20; run++) {
+      const { content: shuffled, map } = shuffleOptionsWithMap(content)
+      const userClick = shuffled.answer!            // kullanici ekranda dogru sikki secti
+      const sentToServer = map[userClick]           // sessions.ts'in gonderdigi deger
+      const serverGrading = sentToServer === content.answer  // sessions/route.ts mantigi
+      expect(serverGrading).toBe(true)
+    }
   })
 })
 
