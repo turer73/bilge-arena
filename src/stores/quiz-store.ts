@@ -8,7 +8,8 @@ export type QuizState = 'idle' | 'loading' | 'playing' | 'answered' | 'completed
 
 export interface AnswerRecord {
   questionId: string
-  selectedOption: number
+  selectedOption: number       // EKRAN index'i (shuffle-sonrasi) — UI geri-bildirimi icin
+  selectedCanonical: number    // KANONIK DB index'i — server-grading buna gore (shuffle-index bug fix)
   isCorrect: boolean
   timeTaken: number        // saniye
   xpEarned: number
@@ -35,7 +36,7 @@ interface QuizStore {
 
   // Actions
   startQuiz: (questions: Question[], lives?: number) => void
-  answerQuestion: (selectedOption: number, isCorrect: boolean, timeTaken: number, xpResult: XPResult) => void
+  answerQuestion: (selectedOption: number, isCorrect: boolean, timeTaken: number, xpResult: XPResult, selectedCanonical?: number) => void
   nextQuestion: () => void
   completeQuiz: () => void
   resetQuiz: () => void
@@ -79,7 +80,7 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     livesExhausted: false,
   }),
 
-  answerQuestion: (selectedOption, isCorrect, timeTaken, xpResult) => {
+  answerQuestion: (selectedOption, isCorrect, timeTaken, xpResult, selectedCanonical) => {
     const { questions, currentIndex, answers, score, streak, maxStreak, xpEarned, lives, livesEnabled } = get()
     const question = questions[currentIndex]
     if (!question) return
@@ -98,6 +99,8 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
       answers: [...answers, {
         questionId: question.id,
         selectedOption,
+        // Caller kanonik index vermezse ekran-index'ine dus (shuffle'siz akislar icin dogru).
+        selectedCanonical: selectedCanonical ?? selectedOption,
         isCorrect,
         timeTaken,
         xpEarned: xp,

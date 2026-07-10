@@ -14,7 +14,7 @@ import { useElapsedTime } from '@/components/game/deneme-timer'
 import { playSound } from '@/lib/utils/sounds'
 import type { Question } from '@/types/database'
 import type { OptionState } from '@/components/game/option-button'
-import { getCorrectIndex, shuffleOptions } from '@/lib/utils/question'
+import { getCorrectIndex, shuffleOptionsWithMap } from '@/lib/utils/question'
 
 // ---------- Hook return tipi ----------
 
@@ -103,6 +103,10 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const helpOpen = chatOpen || helpPaused
   const helpWasPausedRef = useRef(false)
 
+  // Ekran->kanonik secenek haritasi (questionId -> map[ekranIdx]=kanonikIdx).
+  // Server-authority notlama kanonik index bekler (disc#1296, duello paterni).
+  const shuffleMapRef = useRef<Map<string, number[]>>(new Map())
+
   useEffect(() => {
     if (isDeneme || mode.timePerQuestion <= 0 || quizStore.state !== 'playing') return
     if (helpOpen) {
@@ -155,7 +159,9 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         setScreen('lobby')
         return
       }
-      const withShuffled = { ...previewQ, content: shuffleOptions(previewQ.content) }
+      const previewShuffled = shuffleOptionsWithMap(previewQ.content)
+      shuffleMapRef.current.set(previewQ.id, previewShuffled.map)
+      const withShuffled = { ...previewQ, content: previewShuffled.content }
       quizStore.startQuiz([withShuffled], mode.lives)
       setIsGuestMode(true)
       setScreen('game')
@@ -198,8 +204,15 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         return
       }
 
-      // Sik sirasini karistir — cevap dagılımı dengesizligini onle
-      questions = questions.map(q => ({ ...q, content: shuffleOptions(q.content) }))
+      // Sik sirasini karistir — cevap dagılımı dengesizligini onle.
+      // Ekran->kanonik haritasi saklanir: server /api/sessions KANONIK index'le
+      // notlar; secim gonderilmeden once geri cevrilir (disc#1296, duello paterni).
+      shuffleMapRef.current.clear()
+      questions = questions.map(q => {
+        const shuffled = shuffleOptionsWithMap(q.content)
+        shuffleMapRef.current.set(q.id, shuffled.map)
+        return { ...q, content: shuffled.content }
+      })
 
       if (isDeneme && denemeConfig) {
         // Deneme: kategori dagilimina gore sorulari sec
@@ -242,11 +255,15 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     const question = quizStore.currentQuestion()
     if (!question) return
 
+    // Ekran-index'ini kanonik DB-index'ine cevir — server bununla notlar (disc#1296).
+    const shuffleMap = shuffleMapRef.current.get(question.id)
+    const canonicalIndex = optionIndex >= 0 && shuffleMap ? shuffleMap[optionIndex] : optionIndex
+
     if (isDeneme) {
       const isCorrect = optionIndex === getCorrectIndex(question.content)
       const newStreak = isCorrect ? quizStore.streak + 1 : 0
       const xpResult = calculateXP(question.difficulty, 0, newStreak)
-      quizStore.answerQuestion(optionIndex, isCorrect, 0, xpResult)
+      quizStore.answerQuestion(optionIndex, isCorrect, 0, xpResult, canonicalIndex)
 
       if (isCorrect) {
         playSound(newStreak >= 3 ? 'streak' : 'correct')
@@ -265,7 +282,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       const isCorrect = optionIndex === getCorrectIndex(question.content)
       const newStreak = isCorrect ? quizStore.streak + 1 : 0
       const xpResult = calculateXP(question.difficulty, timer.seconds, newStreak)
-      quizStore.answerQuestion(optionIndex, isCorrect, timeTaken, xpResult)
+      quizStore.answerQuestion(optionIndex, isCorrect, timeTaken, xpResult, canonicalIndex)
 
       if (isCorrect) {
         playSound(newStreak >= 3 ? 'streak' : 'correct')

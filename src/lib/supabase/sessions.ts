@@ -39,7 +39,9 @@ export async function saveGameSession({
         mode,
         answers: answers.map(a => ({
           questionId: a.questionId,
-          selectedOption: a.selectedOption,
+          // Server KANONIK DB-index'iyle notlar; ekran-index'i degil (disc#1296).
+          // Eski kayitlarla uyum: selectedCanonical yoksa ekran-index'ine dus.
+          selectedOption: a.selectedCanonical ?? a.selectedOption,
           isCorrect: a.isCorrect,
           timeTaken: a.timeTaken,
         })),
