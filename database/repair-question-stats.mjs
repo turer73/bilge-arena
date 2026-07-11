@@ -30,6 +30,14 @@ const BUG_END = arg('bug-end') || new Date().toISOString()
 if (!arg('bug-start')) console.log('UYARI: --bug-start verilmedi, default 2026-04-14T00:00:00Z (gun-basi).')
 if (!arg('bug-end')) console.log('UYARI: --bug-end verilmedi, rapor "now" varsayiyor — SQL-apply icin GERCEK deploy zamanini kullan.')
 
+// Inverted-pencere guard (Codex 5.tur P2): BUG_START >= BUG_END ise OR-predicate her satiri
+// trusted sayar -> onarim zehirli-veriyi korur (sessiz-bozma). SQL'de de guard var (defense-in-depth),
+// ama operatore burada NET-HATA ver — bozuk-timestamp sessizce no-op/corrupt uretmesin.
+if (new Date(BUG_START).getTime() >= new Date(BUG_END).getTime()) {
+  console.error(`HATA: BUG_START (${BUG_START}) >= BUG_END (${BUG_END}) — ters/gecersiz pencere. BUG_START < BUG_END olmali.`)
+  process.exit(1)
+}
+
 // Uygulamadaki isimlendirmeyle ayni oncelik (src/lib/supabase/service-role.ts).
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!SERVICE_KEY) {
@@ -59,11 +67,12 @@ async function fetchAllOrdered(table, columns, filter) {
   return out
 }
 
-// Guvenilir (pencere-disi) cevaplardan per-soru sayac — prod-parite semantigi
-// (migration 022): ta = COUNT(*) SKIP DAHIL; tc = COUNT(*) FILTER is_correct.
+// Guvenilir cevaplardan per-soru sayac — prod-parite semantigi (migration 022):
+// ta = COUNT(*) SKIP DAHIL; tc = COUNT(*) FILTER is_correct. Pencere-disi VEYA is_skipped
+// (Codex 5.tur P2: skip'ler shuffle-bug'sindan bagimsiz, bug-penceresinde de gecerli-attempt).
 const trustedRows = await fetchAllOrdered(
-  'session_answers', 'question_id,is_correct,answered_at',
-  q => q.or(`answered_at.lt.${BUG_START},answered_at.gte.${BUG_END}`),
+  'session_answers', 'question_id,is_correct,answered_at,is_skipped',
+  q => q.or(`answered_at.lt.${BUG_START},answered_at.gte.${BUG_END},is_skipped.eq.true`),
 )
 const trusted = new Map()
 for (const r of trustedRows) {

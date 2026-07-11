@@ -19,6 +19,23 @@
 --   times_answered = COUNT(*)        -> SKIP DAHIL (is_skipped filtresi YOK)
 --   times_correct  = COUNT(*) FILTER (WHERE is_correct)
 --
+-- SKIP-KORUMA (Codex 5.tur P2): bug-penceresi cevaplari dislanir AMA is_skipped satirlari
+--   (timeout/atlama, selectedOption=-1) shuffle-index-bug'indan ETKILENMEZ — kullanici sik-index
+--   degil -1 gonderir, is_correct zaten false. Bunlari pencere-icinde de saymak times_answered'i
+--   dogru tutar (yoksa gecerli-attempt duser, dogruluk siser). -> predicate'e "OR is_skipped".
+--
+-- INVERTED-PENCERE GUARD (Codex 5.tur P2): BUG_START >= BUG_END (operator ters/yanlis-yazim) ise
+--   OR-predicate HER satiri trusted sayar -> onarim zehirli-veriyi KORUR (sessiz-bozma). UPDATE
+--   WHERE'ine "BUG_START < BUG_END" kosulu eklendi: ters-pencerede hicbir satir guncellenmez
+--   (no-op, zararsiz). .mjs producer da ayrica erken-hata verir (defense-in-depth).
+--
+-- STALE-CLIENT ARTIK-RISK (Codex 5.tur P2, KABUL — kesin-fix YOK): BUG_END sonrasi gelen satirlar
+--   "trusted" sayilir, ama deploy-aninda ACIK-TAB/eski-bundle kullanici post-BUG_END yanlis-index
+--   submit ederse o bozuk satir onarima girer. Post-hoc tespit IMKANSIZ (stale-client'in ne zaman
+--   gittigi bilinmez). Etki sinirli: trafik ~0.2 oturum/gun + acik-tab-nadir. Azaltma (operatore):
+--   emin degilsen BUG_END'e birkac-saat buffer ekle -- ama bu post-fix GECERLI veriyi de dislar
+--   (BUG_START gun-basi trade-off'unun simetrigi). Kesin cozum = server-side version-guard (ayri is).
+--
 -- PENCERE PARAMETRELERI — kosmadan once IKISINI DE gercek degerlerle degistir:
 --   :BUG_START = bug'li client'in GERCEK deploy ani (93172c6, 2026-04-14). Gun-basi
 --                kullanilirsa o gun deploy-ONCESI gecerli cevaplar da dislanir (Codex#3);
@@ -42,9 +59,13 @@ FROM (
     FROM session_answers
     WHERE answered_at < ':BUG_START'::timestamptz
        OR answered_at >= ':BUG_END'::timestamptz
+       OR is_skipped               -- Codex 5.tur P2: skip'ler shuffle-bug'sindan bagimsiz, pencere-icinde de sayilmali
     GROUP BY question_id
   ) tr ON tr.question_id = qq.id
 ) t
 WHERE q.id = t.qid
+  -- Inverted-pencere guard (Codex 5.tur P2): BUG_START >= BUG_END ise hicbir satir guncellenmez
+  -- (ters-pencerede OR-predicate her satiri trusted sayardi -> zehirli-veri korunurdu). No-op = zararsiz.
+  AND ':BUG_START'::timestamptz < ':BUG_END'::timestamptz
   AND (q.times_answered IS DISTINCT FROM COALESCE(t.ta, 0)
        OR q.times_correct IS DISTINCT FROM COALESCE(t.tc, 0));
