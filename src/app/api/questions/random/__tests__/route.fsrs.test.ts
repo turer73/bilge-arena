@@ -31,17 +31,19 @@ const { mockGetUser, mockRpc, mockHistory, sessionAnswersMock, questionsMock } =
   function makeTableMockHoisted() {
     const queue: { data: unknown; error: unknown }[] = []
     const push = (r: { data: unknown; error: unknown }) => queue.push(r)
+    let lastChain: Record<string, ReturnType<typeof vi.fn>> | null = null
     const from = vi.fn(() => {
       const result = queue.length > 0 ? queue.shift()! : { data: [], error: null }
-      const chain: Record<string, unknown> = {}
+      const chain: Record<string, ReturnType<typeof vi.fn>> = {}
       for (const m of ['select', 'eq', 'in', 'gte', 'order', 'limit']) {
         chain[m] = vi.fn(() => chain)
       }
-      chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+      ;(chain as unknown as { then: unknown }).then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
         Promise.resolve(result).then(resolve, reject)
+      lastChain = chain
       return chain
     })
-    return { from, push, reset: () => { queue.length = 0 } }
+    return { from, push, reset: () => { queue.length = 0; lastChain = null }, getLastChain: () => lastChain }
   }
   return {
     mockGetUser: vi.fn(),
@@ -115,6 +117,33 @@ describe('GET /api/questions/random — FEATURES.FSRS_REVIEW=true', () => {
     const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
     const body = await res.json()
     expect(body.reviewQuestions).toEqual([{ id: 'wq1', game: 'matematik' }])
+  })
+
+  it('Vercel Agent Review bulgusu: dueIds kirpilmadan .in()e gecirilir, limit DB-tarafinda + filtrelerden SONRA uygulanir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+
+    // 25 farkli soru, hepsi due (30 gun once yanlis) -- 20'den fazla, cross-game
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const ids = Array.from({ length: 25 }, (_, i) => `wq${i}`)
+    sessionAnswersMock.push({ data: ids.map((id) => ({ question_id: id })), error: null })
+    sessionAnswersMock.push({
+      data: ids.map((id) => ({ question_id: id, is_correct: false, answered_at: thirtyDaysAgo })),
+      error: null,
+    })
+    questionsMock.push({ data: [{ id: 'wq0', game: 'matematik' }], error: null })
+
+    await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
+
+    const chain = questionsMock.getLastChain()!
+    // .in() TUM 25 id ile cagrilmis olmali (JS-tarafinda 20'ye kirpilmamis)
+    expect(chain.in).toHaveBeenCalledWith('id', ids)
+    // .limit(20) filtrelerden (eq('game',...)) SONRA cagrilmis olmali
+    const inOrder = chain.in.mock.invocationCallOrder[0]
+    const eqGameOrder = chain.eq.mock.invocationCallOrder[0]
+    const limitOrder = chain.limit.mock.invocationCallOrder[0]
+    expect(inOrder).toBeLessThan(eqGameOrder)
+    expect(limitOrder).toBeGreaterThan(eqGameOrder)
   })
 
   it('henuz due OLMAYAN soru (yakin zamanda dogru cevaplanmis) havuza girmez, 7-gun fallback da bos doner', async () => {

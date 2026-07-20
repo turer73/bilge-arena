@@ -223,15 +223,22 @@ async function fetchFsrsDueQuestions(
 
   if (dueIds.length === 0) return []
 
+  // Vercel Agent Review bulgusu: dueIds cross-game bir liste (aday-taramasi
+  // game'e gore filtrelenmiyor). game/category/difficulty filtreleri ONCE
+  // uygulanip DB-tarafinda limit(20) yapilmali -- aksi halde JS-tarafinda
+  // slice(0,20) once yapilirsa cok-oyunlu kullanicida istenen oyuna ait ID
+  // kalmayabilir (havuz sessizce ac kalir).
   let query = admin
     .from('questions')
     .select('*')
-    .in('id', dueIds.slice(0, 20))
+    .in('id', dueIds)
     .eq('game', game)
     .eq('is_active', true)
 
   if (category) query = query.eq('category', category)
   if (difficulty) query = query.eq('difficulty', difficulty)
+
+  query = query.limit(20)
 
   const { data } = await query
   return (data as unknown as Question[]) || []
@@ -288,15 +295,19 @@ async function fetchReviewQuestions(
 
   if (reviewIds.length === 0) return []
 
+  // Ayni duzeltme (Vercel Agent Review, PR#274): reviewIds de game'e gore
+  // filtrelenmemis cross-game bir liste -- once filtre, sonra DB-tarafinda limit.
   let query = admin
     .from('questions')
     .select('*')
-    .in('id', reviewIds.slice(0, 20))
+    .in('id', reviewIds)
     .eq('game', game)
     .eq('is_active', true)
 
   if (category) query = query.eq('category', category)
   if (difficulty) query = query.eq('difficulty', difficulty)
+
+  query = query.limit(20)
 
   const { data } = await query
 
