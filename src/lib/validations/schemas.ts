@@ -97,6 +97,9 @@ export const sessionSubmitSchema = z.object({
   category: z.string().max(50).nullish(),
   difficulty: z.number().int().min(1).max(5).nullish(),
   timeLimit: z.number().int().min(5).max(120).optional().default(30),
+  // Idempotency: client tarafinda sonuc-ekranina girince BIR KEZ uretilir, ayni
+  // oturum-kaydetme denemesi (network-retry) icin sabit kalir (migration 081).
+  clientRequestId: z.string().uuid(),
 })
 
 // ============================================================

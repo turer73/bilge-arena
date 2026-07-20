@@ -4,9 +4,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockGetUser = vi.fn()
 const mockQuestionsIn = vi.fn()
-const mockSessionInsertSelectSingle = vi.fn()
 const mockProfilesSingle = vi.fn()
 const mockSessionCountGte = vi.fn()
+const mockRpc = vi.fn()
 
 // Chainable mock: every method returns the same object so chains work
 function makeChain(terminal?: Record<string, ReturnType<typeof vi.fn>>) {
@@ -26,9 +26,10 @@ const mockFrom = vi.fn((table: string) => {
     return chain
   }
   if (table === 'game_sessions') {
-    // INSERT path: from('game_sessions').insert(...).select(...).single()
-    // COUNT path (daily-limit gate): .select('id',{count}).eq(...).gte(...) -> mockSessionCountGte
-    const chain = makeChain({ single: mockSessionInsertSelectSingle, gte: mockSessionCountGte })
+    // gunluk-limit gate (COUNT): .select('id',{count}).eq(...).gte(...) -> mockSessionCountGte
+    // Session insert/answers/coin/XP/topic-progress artik complete_game_session
+    // RPC'sinde (migration 081) — bu chain'e dokunulmuyor.
+    const chain = makeChain({ gte: mockSessionCountGte })
     return chain
   }
   if (table === 'profiles') {
@@ -36,7 +37,7 @@ const mockFrom = vi.fn((table: string) => {
     const chain = makeChain({ single: mockProfilesSingle })
     return chain
   }
-  // session_answers, xp_log — fire and forget
+  // user_daily_quests, user_achievements — fire and forget (quest/badge best-effort)
   return makeChain()
 })
 
@@ -58,7 +59,7 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({
     from: mockFrom,
-    rpc: vi.fn().mockResolvedValue({ error: null }),
+    rpc: mockRpc,
   }),
 }))
 
@@ -76,6 +77,7 @@ function makeRequest(body: Record<string, unknown>) {
 
 const Q1 = '10000000-0000-4000-8000-000000000001'
 const Q2 = '10000000-0000-4000-8000-000000000002'
+const REQ_ID = '20000000-0000-4000-8000-000000000001'
 
 const validBody = {
   game: 'matematik',
@@ -86,6 +88,7 @@ const validBody = {
   ],
   maxStreak: 1,
   timeLimit: 30,
+  clientRequestId: REQ_ID,
 }
 
 // ─── Tests ──────────────────────────────────────────
@@ -100,7 +103,10 @@ describe('POST /api/sessions', () => {
       ],
       error: null,
     })
-    mockSessionInsertSelectSingle.mockResolvedValue({ data: { id: 'session-1' }, error: null })
+    mockRpc.mockResolvedValue({
+      data: { sessionId: 'session-1', totalXP: 0, correctCount: 0, wrongCount: 0, alreadyProcessed: false },
+      error: null,
+    })
     // Gate defaults: free (non-premium) kullanici, bugun 0 oturum -> gate gecer
     mockProfilesSingle.mockResolvedValue({ data: { is_premium: false, premium_until: null }, error: null })
     mockSessionCountGte.mockResolvedValue({ count: 0, error: null })
@@ -150,10 +156,59 @@ describe('POST /api/sessions', () => {
 
   it('returns 500 if session insert fails', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockSessionInsertSelectSingle.mockResolvedValue({ data: null, error: { message: 'DB error' } })
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'DB error' } })
 
     const res = await POST(makeRequest(validBody))
     expect(res.status).toBe(500)
+  })
+
+  it('returns 400 if clientRequestId eksik veya gecersiz UUID', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const { clientRequestId: _omit, ...bodyWithoutReqId } = validBody
+    const res = await POST(makeRequest(bodyWithoutReqId))
+    expect(res.status).toBe(400)
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('complete_game_session RPC p_client_request_id ile cagrilir (idempotency)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    await POST(makeRequest(validBody))
+    expect(mockRpc).toHaveBeenCalledWith(
+      'complete_game_session',
+      expect.objectContaining({ p_user_id: 'u1', p_client_request_id: REQ_ID }),
+    )
+  })
+
+  // ─── Regresyon-kilidi (Vercel Agent Review, PR#271): idempotent replay quest/badge'i
+  // TEKRAR calistirmamali — RPC odul-uretmedi (alreadyProcessed=true), quest current_value
+  // ikinci kez artmamali ──
+  it('alreadyProcessed=true iken quest/badge adimlarini atlar', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: { sessionId: 'session-1', totalXP: 15, correctCount: 1, wrongCount: 1, alreadyProcessed: true },
+      error: null,
+    })
+
+    const res = await POST(makeRequest(validBody))
+    expect(res.status).toBe(200)
+
+    const queriedTables = mockFrom.mock.calls.map(([table]) => table)
+    expect(queriedTables).not.toContain('user_daily_quests')
+    expect(queriedTables).not.toContain('user_achievements')
+  })
+
+  it('alreadyProcessed=false iken quest/badge adimlari normal calisir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: { sessionId: 'session-1', totalXP: 15, correctCount: 1, wrongCount: 1, alreadyProcessed: false },
+      error: null,
+    })
+
+    await POST(makeRequest(validBody))
+
+    const queriedTables = mockFrom.mock.calls.map(([table]) => table)
+    expect(queriedTables).toContain('user_daily_quests')
+    expect(queriedTables).toContain('user_achievements')
   })
 
   // ─── P0 regresyon-kilidi: ayni questionId tekrar gonderilerek coin/XP farming ──
@@ -164,6 +219,7 @@ describe('POST /api/sessions', () => {
       game: 'matematik',
       mode: 'classic',
       timeLimit: 30,
+      clientRequestId: REQ_ID,
       answers: Array.from({ length: 5 }, () => ({
         questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 5,
       })),

@@ -163,6 +163,7 @@ describe('sessionSubmitSchema', () => {
     game: 'matematik',
     mode: 'classic',
     answers: [{ questionId: '10000000-0000-4000-8000-000000000001', selectedOption: 1, isCorrect: true, timeTaken: 5 }],
+    clientRequestId: '20000000-0000-4000-8000-000000000001',
   }
 
   it('gecerli session kabul eder', () => {
@@ -171,6 +172,12 @@ describe('sessionSubmitSchema', () => {
 
   it('bos answers reddeder', () => {
     expect(sessionSubmitSchema.safeParse({ ...validSession, answers: [] }).success).toBe(false)
+  })
+
+  it('clientRequestId eksikse veya UUID degilse reddeder (migration 081 idempotency)', () => {
+    const { clientRequestId: _omit, ...withoutReqId } = validSession
+    expect(sessionSubmitSchema.safeParse(withoutReqId).success).toBe(false)
+    expect(sessionSubmitSchema.safeParse({ ...validSession, clientRequestId: 'not-a-uuid' }).success).toBe(false)
   })
 
   it('timeLimit default 30', () => {

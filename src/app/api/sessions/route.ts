@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Eksik veri' }, { status: 400 })
   }
-  const { game, mode, answers: rawAnswers, category, difficulty: filterDifficulty, timeLimit } = parsed.data
+  const { game, mode, answers: rawAnswers, category, difficulty: filterDifficulty, timeLimit, clientRequestId } = parsed.data
 
   // P0 fix: ayni questionId birden fazla gonderilerek coin/XP farming'i onle.
   // Odul dongusu ham dizi uzerinde donuyordu (questionMap yalniz lookup) -> ayni
@@ -159,198 +159,125 @@ export async function POST(request: Request) {
   const baseXP = Math.floor(totalXP * 0.7)
   const bonusXP = totalXP - baseXP
 
-  // 1. INSERT game_sessions
-  const { data: session, error: sessionError } = await svc
-    .from('game_sessions')
-    .insert({
-      user_id: user.id,
-      game,
-      mode,
-      status: 'active',
-      total_questions: answers.length,
-      correct_count: correctCount,
-      wrong_count: wrongCount,
-      skipped_count: 0,
-      base_xp: baseXP,
-      bonus_xp: bonusXP,
-      total_xp: totalXP,
-      time_spent_sec: Math.round(totalTime),
-      avg_time_sec: Math.round(avgTime * 10) / 10,
-      streak_at_start: 0,
-      filter_category: category || null,
-      filter_difficulty: filterDifficulty || null,
-    })
-    .select('id')
-    .single()
+  // 1-5b. Atomik oturum-tamamlama (migration 081, konu#6 Faz-1 karari): session+answers+
+  // question-stats+coin+XP+topic-progress TEK RPC'de, tek transaction — kismi hata
+  // (eskiden: answers yazilir ama XP RPC'si network-hatasi alirsa tutarsizlik) artik
+  // yapisal olarak imkansiz (RAISE EXCEPTION tum transaction'i geri alir). Idempotency:
+  // clientRequestId ayni oturum-kaydetme denemesi (network-retry) icin sabit — ikinci
+  // gelişte yeniden odul uretmez, ilk sonucu doner.
+  const { data: rpcResult, error: rpcError } = await svc.rpc('complete_game_session', {
+    p_user_id: user.id,
+    p_client_request_id: clientRequestId,
+    p_game: game,
+    p_mode: mode,
+    p_category: category || null,
+    p_filter_difficulty: filterDifficulty || null,
+    p_answers: verifiedAnswers.map(a => ({
+      question_id: a.question_id,
+      selected_option: a.selected_option,
+      is_correct: a.is_correct,
+      is_skipped: a.is_skipped,
+      time_taken_sec: a.time_taken_sec,
+      is_fast: a.is_fast,
+      xp_earned: a.xp_earned,
+      question_order: a.question_order,
+    })),
+    p_total_xp: totalXP,
+    p_base_xp: baseXP,
+    p_bonus_xp: bonusXP,
+    p_correct_count: correctCount,
+    p_wrong_count: wrongCount,
+    p_time_spent_sec: Math.round(totalTime),
+    p_avg_time_sec: Math.round(avgTime * 10) / 10,
+  })
 
-  if (sessionError || !session) {
-    console.error('[Sessions API] Oturum INSERT hatasi:', sessionError?.message)
+  if (rpcError || !rpcResult) {
+    console.error('[Sessions API] complete_game_session RPC hatasi:', rpcError?.message)
     return NextResponse.json({ error: 'Oturum kaydedilemedi' }, { status: 500 })
   }
 
-  const sessionId = session.id
-
-  // 2. INSERT session_answers
-  const answerRows = verifiedAnswers.map((a) => ({
-    ...a,
-    session_id: sessionId,
-  }))
-
-  await svc.from('session_answers').insert(answerRows)
-
-  // 2b. Soru bazli istatistikleri tek batch RPC ile guncelle (N istek → 1 istek)
-  try {
-    await svc.rpc('batch_increment_question_stats', {
-      q_ids: verifiedAnswers.map(a => a.question_id),
-      correct_flags: verifiedAnswers.map(a => a.is_correct),
-    })
-  } catch (e) {
-    console.error('[Sessions API] Question stats hatasi:', e)
-  }
-
-  // 3. UPDATE game_sessions status = 'completed'
-  await svc
-    .from('game_sessions')
-    .update({ status: 'completed', completed_at: new Date().toISOString() })
-    .eq('id', sessionId)
-
-  // 5a. Coin kazanımı — doğru cevap başına 1 coin
-  if (correctCount > 0) {
-    const { error: coinErr } = await svc.rpc('increment_coins', {
-      p_user_id: user.id,
-      p_amount: correctCount,
-    })
-    if (coinErr) {
-      console.error('[Sessions API] increment_coins RPC hatasi:', coinErr.message)
-    }
-  }
-
-  // 5b. XP + seviye + ledger — increment_xp icinde atomik (xp_log dahil)
-  const { error: xpError } = await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: totalXP, p_reason: 'session_complete', p_reference_id: sessionId })
-  if (xpError) {
-    console.error('[Sessions API] increment_xp RPC hatasi:', xpError.message)
-    // Fallback: profil total'lerini session toplamlarindan hesapla
-    const { data: sessions } = await svc
-      .from('game_sessions')
-      .select('total_xp, correct_count, total_questions')
-      .eq('user_id', user.id)
-      .eq('status', 'completed')
-    if (sessions) {
-      const totals = sessions.reduce((acc, s) => ({
-        xp: acc.xp + (s.total_xp || 0),
-        correct: acc.correct + (s.correct_count || 0),
-        total: acc.total + (s.total_questions || 0),
-      }), { xp: 0, correct: 0, total: 0 })
-      await svc.from('profiles').update({
-        total_xp: totals.xp,
-        correct_answers: totals.correct,
-        total_questions: totals.total,
-        total_sessions: sessions.length,
-      }).eq('id', user.id)
-    }
-  }
+  const sessionId = rpcResult.sessionId as string
+  // Idempotent replay (network-retry, migration 081): RPC odul-uretmedi, sadece ilk
+  // sonucu dondurdu -- quest/badge de TEKRAR calistirilmamali (Vercel Agent Review
+  // bulgusu, PR#271 — replay'de quest current_value'nun ikinci kez artmasi onleniyor).
+  const alreadyProcessed = rpcResult.alreadyProcessed === true
 
   // 6. Gunluk gorevleri guncelle
-  try {
-    const today = trDayString(new Date())
-    const accuracy = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0
-    const { data: userQuests } = await svc
-      .from('user_daily_quests')
-      .select('*, quest:daily_quests(*)')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .eq('is_completed', false)
+  if (!alreadyProcessed) {
+    try {
+      const today = trDayString(new Date())
+      const accuracy = answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0
+      const { data: userQuests } = await svc
+        .from('user_daily_quests')
+        .select('*, quest:daily_quests(*)')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .eq('is_completed', false)
 
-    if (userQuests && userQuests.length > 0) {
-      for (const uq of userQuests) {
-        const quest = uq.quest as { quest_type: string; target_value: number; target_game?: string } | null
-        if (!quest) continue
+      if (userQuests && userQuests.length > 0) {
+        for (const uq of userQuests) {
+          const quest = uq.quest as { quest_type: string; target_value: number; target_game?: string } | null
+          if (!quest) continue
 
-        let newValue = uq.current_value
-        switch (quest.quest_type) {
-          case 'play_sessions': newValue += 1; break
-          case 'correct_answers': newValue += correctCount; break
-          case 'streak_maintain': newValue = Math.max(newValue, maxStreak); break
-          case 'accuracy': newValue = Math.max(newValue, accuracy); break
-          case 'specific_game': if (game === quest.target_game) newValue += 1; break
+          let newValue = uq.current_value
+          switch (quest.quest_type) {
+            case 'play_sessions': newValue += 1; break
+            case 'correct_answers': newValue += correctCount; break
+            case 'streak_maintain': newValue = Math.max(newValue, maxStreak); break
+            case 'accuracy': newValue = Math.max(newValue, accuracy); break
+            case 'specific_game': if (game === quest.target_game) newValue += 1; break
+          }
+
+          const isCompleted = newValue >= quest.target_value
+          await svc.from('user_daily_quests').update({
+            current_value: newValue,
+            is_completed: isCompleted,
+            completed_at: isCompleted ? new Date().toISOString() : null,
+          }).eq('id', uq.id)
         }
-
-        const isCompleted = newValue >= quest.target_value
-        await svc.from('user_daily_quests').update({
-          current_value: newValue,
-          is_completed: isCompleted,
-          completed_at: isCompleted ? new Date().toISOString() : null,
-        }).eq('id', uq.id)
       }
+    } catch (e) {
+      console.error('[Sessions API] Quest update hatasi:', e)
     }
-  } catch (e) {
-    console.error('[Sessions API] Quest update hatasi:', e)
   }
 
-  // 7. Topic progress guncelle (adaptif zorluk icin)
-  try {
-    const { data: existingProgress } = await svc
-      .from('user_topic_progress')
-      .select('id, questions_seen, correct')
-      .eq('user_id', user.id)
-      .eq('game', game)
-      .eq('category', category || '')
-      .maybeSingle()
-
-    if (existingProgress) {
-      const newSeen = existingProgress.questions_seen + answers.length
-      const newCorrect = existingProgress.correct + correctCount
-      await svc.from('user_topic_progress').update({
-        questions_seen: newSeen,
-        correct: newCorrect,
-        accuracy_pct: Math.round((newCorrect / newSeen) * 100),
-      }).eq('id', existingProgress.id)
-    } else if (category) {
-      await svc.from('user_topic_progress').insert({
-        user_id: user.id,
-        game,
-        category,
-        questions_seen: answers.length,
-        correct: correctCount,
-        accuracy_pct: answers.length > 0 ? Math.round((correctCount / answers.length) * 100) : 0,
-      })
-    }
-  } catch (e) {
-    console.error('[Sessions API] Topic progress hatasi:', e)
-  }
+  // 7. Topic progress artik complete_game_session RPC icinde atomik guncelleniyor
+  // (migration 081 — accuracy_pct GENERATED ALWAYS kolonuna yazma bug'i da duzeldi).
 
   // 8. Rozet kontrolu — session tamamlaninca yeni rozetleri kontrol et
   let newBadges: string[] = []
-  try {
-    const { BADGES, checkBadgeEarned } = await import('@/lib/constants/badges')
-    const { data: prof } = await svc.from('profiles')
-      .select('total_xp, total_sessions, correct_answers, longest_streak')
-      .eq('id', user.id).single()
-    const { count: dqCount } = await svc.from('user_daily_quests')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id).eq('is_completed', true)
-    const { data: existing } = await svc.from('user_achievements')
-      .select('achievement_id').eq('user_id', user.id)
+  if (!alreadyProcessed) {
+    try {
+      const { BADGES, checkBadgeEarned } = await import('@/lib/constants/badges')
+      const { data: prof } = await svc.from('profiles')
+        .select('total_xp, total_sessions, correct_answers, longest_streak')
+        .eq('id', user.id).single()
+      const { count: dqCount } = await svc.from('user_daily_quests')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id).eq('is_completed', true)
+      const { data: existing } = await svc.from('user_achievements')
+        .select('achievement_id').eq('user_id', user.id)
 
-    if (prof) {
-      const stats = {
-        gamesPlayed: prof.total_sessions ?? 0,
-        correctAnswers: prof.correct_answers ?? 0,
-        bestStreak: prof.longest_streak ?? 0,
-        totalXP: prof.total_xp ?? 0,
-        dailyQuestsCompleted: dqCount ?? 0,
+      if (prof) {
+        const stats = {
+          gamesPlayed: prof.total_sessions ?? 0,
+          correctAnswers: prof.correct_answers ?? 0,
+          bestStreak: prof.longest_streak ?? 0,
+          totalXP: prof.total_xp ?? 0,
+          dailyQuestsCompleted: dqCount ?? 0,
+        }
+        const existingCodes = new Set((existing ?? []).map(b => b.achievement_id))
+        const earned = BADGES.filter(b => !existingCodes.has(b.code) && checkBadgeEarned(b, stats))
+        if (earned.length > 0) {
+          await svc.from('user_achievements').insert(
+            earned.map(b => ({ user_id: user.id, achievement_id: b.code, earned_at: new Date().toISOString() }))
+          )
+          newBadges = earned.map(b => b.code)
+        }
       }
-      const existingCodes = new Set((existing ?? []).map(b => b.achievement_id))
-      const earned = BADGES.filter(b => !existingCodes.has(b.code) && checkBadgeEarned(b, stats))
-      if (earned.length > 0) {
-        await svc.from('user_achievements').insert(
-          earned.map(b => ({ user_id: user.id, achievement_id: b.code, earned_at: new Date().toISOString() }))
-        )
-        newBadges = earned.map(b => b.code)
-      }
+    } catch (e) {
+      console.error('[Sessions API] Badge check hatasi:', e)
     }
-  } catch (e) {
-    console.error('[Sessions API] Badge check hatasi:', e)
   }
 
   return NextResponse.json({
