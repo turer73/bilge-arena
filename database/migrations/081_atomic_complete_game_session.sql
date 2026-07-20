@@ -103,20 +103,27 @@ BEGIN
     );
   END IF;
 
-  -- 1. Session insert (dogrudan completed -- tek-transaction'da 'active' ara-durumuna
-  -- gerek yok; grep dogrulandi: game_sessions.status='active' baska hicbir yerde
-  -- okunmuyor, sadece bu tablonun kendi INSERT'inde yaziliyordu).
+  -- 1. Session insert -- BILEREK 'active' ile baslar, hemen ardindan 'completed'a
+  -- UPDATE edilir (asagida, ayni transaction). Bu iki-adimli dans ZORUNLU: trg_session_complete
+  -- (full-schema.sql:549-550, AFTER UPDATE ON game_sessions) YALNIZ NEW.status='completed'
+  -- AND OLD.status='active' gecisinde tetiklenir -- haftalik leaderboard (leaderboard_weekly),
+  -- update_streak(), VE profiles.total_sessions/total_questions/correct_answers hepsi bu
+  -- trigger'a bagli. Dogrudan status='completed' ile INSERT yapmak (ilk taslak) bu trigger'i
+  -- hic tetiklemezdi -- leaderboard/streak/profil-sayaclari sessizce donardi (Vercel Agent
+  -- Review bulgusu, PR#271). NOT: trg_session_complete HICBIR numarali migration'da yok --
+  -- yalniz full-schema.sql/schema.sql/setup.js'te (mevcut migration-drift sorunu, Turgut'un
+  -- dis denetim raporunda ayrica flag'lendi, bu migration'in kapsami DEGIL).
   BEGIN
     INSERT INTO game_sessions (
       user_id, client_request_id, game, mode, status,
       total_questions, correct_count, wrong_count, skipped_count,
       base_xp, bonus_xp, total_xp, time_spent_sec, avg_time_sec,
-      streak_at_start, completed_at, filter_category, filter_difficulty
+      streak_at_start, filter_category, filter_difficulty
     ) VALUES (
-      p_user_id, p_client_request_id, p_game, p_mode, 'completed',
+      p_user_id, p_client_request_id, p_game, p_mode, 'active',
       p_correct_count + p_wrong_count, p_correct_count, p_wrong_count, 0,
       p_base_xp, p_bonus_xp, p_total_xp, p_time_spent_sec, p_avg_time_sec,
-      0, NOW(), p_category, p_filter_difficulty
+      0, p_category, p_filter_difficulty
     )
     RETURNING id INTO v_session_id;
   EXCEPTION WHEN unique_violation THEN
@@ -154,6 +161,11 @@ BEGIN
     (SELECT array_agg((x->>'question_id')::uuid) FROM jsonb_array_elements(p_answers) x),
     (SELECT array_agg((x->>'is_correct')::boolean) FROM jsonb_array_elements(p_answers) x)
   );
+
+  -- 2c. active -> completed (trg_session_complete'i tetikler -- leaderboard/streak/
+  -- profil-sayaclari, yukaridaki not). completed_at burada set edilir.
+  UPDATE game_sessions SET status = 'completed', completed_at = NOW()
+  WHERE id = v_session_id;
 
   -- 3. Coin -- yalniz dogru-cevap varsa (increment_coins p_amount<=0'da RAISE eder,
   -- 0-dogru bir oturumu tum transaction'i geri alarak kaybettirmemek icin guard)

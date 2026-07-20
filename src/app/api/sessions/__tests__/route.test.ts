@@ -179,6 +179,38 @@ describe('POST /api/sessions', () => {
     )
   })
 
+  // ─── Regresyon-kilidi (Vercel Agent Review, PR#271): idempotent replay quest/badge'i
+  // TEKRAR calistirmamali — RPC odul-uretmedi (alreadyProcessed=true), quest current_value
+  // ikinci kez artmamali ──
+  it('alreadyProcessed=true iken quest/badge adimlarini atlar', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: { sessionId: 'session-1', totalXP: 15, correctCount: 1, wrongCount: 1, alreadyProcessed: true },
+      error: null,
+    })
+
+    const res = await POST(makeRequest(validBody))
+    expect(res.status).toBe(200)
+
+    const queriedTables = mockFrom.mock.calls.map(([table]) => table)
+    expect(queriedTables).not.toContain('user_daily_quests')
+    expect(queriedTables).not.toContain('user_achievements')
+  })
+
+  it('alreadyProcessed=false iken quest/badge adimlari normal calisir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: { sessionId: 'session-1', totalXP: 15, correctCount: 1, wrongCount: 1, alreadyProcessed: false },
+      error: null,
+    })
+
+    await POST(makeRequest(validBody))
+
+    const queriedTables = mockFrom.mock.calls.map(([table]) => table)
+    expect(queriedTables).toContain('user_daily_quests')
+    expect(queriedTables).toContain('user_achievements')
+  })
+
   // ─── P0 regresyon-kilidi: ayni questionId tekrar gonderilerek coin/XP farming ──
   it('dedups repeated questionId — coin/XP farming korumasi', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
