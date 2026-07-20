@@ -16,11 +16,19 @@
  *   Client'in gonderdigi isFirstPlace ARTIK KULLANILMAZ. Oda-DB'den
  *   (bilge_arena_dev) kullanici JWT'siyle room.state='completed' + gercek
  *   max-skor okunur (verifyRoomFirstPlace). Sahte birincilik iddiasi engellenir.
+ *
+ * RPC service-role ile cagrilir (denetim fix, migration 080):
+ *   grant_multiplayer_stats artik authenticated'a acik DEGIL — eskiden
+ *   auth.uid()+authenticated-grant ile herhangi bir kullanici PostgREST
+ *   uzerinden dogrudan (bu route'u atlayarak) rastgele room_id'lerle RPC'yi
+ *   cagirip sinirsiz sayac uretebiliyordu. Simdi service_role-only + acik
+ *   p_user_id (increment_xp'deki desenle ayni); auth.userId route'ta zaten
+ *   JWT+verifyRoomFirstPlace ile dogrulandiktan sonra gecirilir.
  */
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getAuthAndJwt } from '@/lib/rooms/api-helpers'
 import { verifyRoomFirstPlace } from '@/lib/rooms/server-fetch'
@@ -63,9 +71,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Oda tamamlanmamis veya erisilemedi' }, { status: 400 })
   }
 
-  // RPC user client ile (auth.uid() SECURITY DEFINER icinde gerekli).
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('grant_multiplayer_stats', {
+  // RPC service-role client ile (migration 080 — authenticated grant kaldirildi,
+  // p_user_id auth.userId'den ACIKCA gecirilir; auth.uid() baglilik yok).
+  const svc = createServiceRoleClient()
+  const { data, error } = await svc.rpc('grant_multiplayer_stats', {
+    p_user_id: auth.userId,
     p_room_id: roomId,
     p_first_place: verified.isFirstPlace,
   })
