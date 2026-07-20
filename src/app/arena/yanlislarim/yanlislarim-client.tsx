@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/auth-store'
 import { GAMES, GAME_SLUGS, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
@@ -85,16 +85,22 @@ export default function YanlislarimClient() {
   const [error, setError] = useState(false)
   const [everHadAny, setEverHadAny] = useState<boolean | null>(null)
 
+  // Filtre-nesli sayaci: her filtre degisiminde artar. loadMore, cagrildigi
+  // andaki nesli yakalayip cevap gelince karsilastirir -- filtre bu arada
+  // degistiyse (yeni nesil basladiysa) eski sayfa-yanitini listeye EKLEMEZ
+  // (stale-response guard, Vercel Agent Review bulgusu, PR#273).
+  const requestGenRef = useRef(0)
+
   // Filtre degisince listeyi bastan yukle
   useEffect(() => {
     if (!user) return
-    let cancelled = false
+    const myGen = ++requestGenRef.current
     setLoading(true)
     setError(false)
 
     fetchWrongAnswers(gameFilter, statusFilter, 1)
       .then((data) => {
-        if (cancelled) return
+        if (requestGenRef.current !== myGen) return
         setItems(data.items)
         setPage(1)
         setHasMore(data.hasMore)
@@ -104,28 +110,31 @@ export default function YanlislarimClient() {
         }
       })
       .catch(() => {
-        if (!cancelled) setError(true)
+        if (requestGenRef.current === myGen) setError(true)
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (requestGenRef.current === myGen) setLoading(false)
       })
-
-    return () => {
-      cancelled = true
-    }
   }, [user, gameFilter, statusFilter])
 
   const loadMore = useCallback(() => {
     if (loadingMore) return
     setLoadingMore(true)
+    const myGen = requestGenRef.current
     const nextPage = page + 1
     fetchWrongAnswers(gameFilter, statusFilter, nextPage)
       .then((data) => {
+        // Filtre bu istek ucarken degistiyse (yeni nesil basladiysa) eski
+        // sayfa-yanitini ATLA -- aksi halde yanlis-filtreli sonuclar yeni
+        // listeye karisir.
+        if (requestGenRef.current !== myGen) return
         setItems((prev) => [...prev, ...data.items])
         setPage(nextPage)
         setHasMore(data.hasMore)
       })
-      .catch(() => setError(true))
+      .catch(() => {
+        if (requestGenRef.current === myGen) setError(true)
+      })
       .finally(() => setLoadingMore(false))
   }, [gameFilter, statusFilter, page, loadingMore])
 

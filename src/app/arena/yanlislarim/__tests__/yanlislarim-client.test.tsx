@@ -144,6 +144,38 @@ describe('YanlislarimClient', () => {
     expect(lastCall).toContain('page=2')
   })
 
+  test('loadMore stale-response guard: filtre degisirken gelen eski sayfa yanitini yok sayar (Vercel Agent Review bulgusu)', async () => {
+    mockFetchOnce({ items: [item()], page: 1, limit: 20, hasMore: true })
+    render(<YanlislarimClient />)
+    await waitFor(() => expect(screen.getByText('İki artı iki kaçtır?')).toBeInTheDocument())
+
+    // loadMore tetiklenir ama yaniti elle kontrol edilir (yavas network simulasyonu)
+    let resolveLoadMore!: (v: unknown) => void
+    fetchMock.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveLoadMore = resolve }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Daha Fazla Yükle' }))
+
+    // loadMore ucarken filtre degisir -> yeni (filtreli) istek hemen doner, liste sifirlanir
+    mockFetchOnce({ items: [], page: 1, limit: 20, hasMore: false })
+    fireEvent.click(screen.getByRole('button', { name: /Türkçe/ }))
+    await waitFor(() => expect(screen.queryByText('İki artı iki kaçtır?')).not.toBeInTheDocument())
+
+    // Simdi eski (stale) loadMore yaniti gec gelir -- yeni/filtreli listeye EKLENMEMELI
+    resolveLoadMore({
+      ok: true,
+      json: () => Promise.resolve({
+        items: [item({ questionId: Q2, content: { question: 'Stale ikinci soru?', options: ['A', 'B'], answer: 0 } })],
+        page: 2,
+        limit: 20,
+        hasMore: false,
+      }),
+    })
+
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.queryByText('Stale ikinci soru?')).not.toBeInTheDocument()
+  })
+
   test('API hatasında hata mesajı gösterilir', async () => {
     mockFetchOnce({ error: 'fail' }, false)
     render(<YanlislarimClient />)
