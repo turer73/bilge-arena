@@ -43,11 +43,15 @@ export function useSessionSaver({
 }: UseSessionSaverOptions) {
   const [saving, setSaving] = useState(false)
   const savedRef = useRef(false)
+  // Idempotency key (migration 081) — sonuc-ekrani basina SABIT, lobiye donulunce
+  // sifirlanir. savedRef ile ayni yasam-dongusu (retry/duplicate-invoke korumasi).
+  const requestIdRef = useRef<string | null>(null)
 
-  // Lobiye donulunce ref'i sifirla
+  // Lobiye donulunce ref'leri sifirla
   useEffect(() => {
     if (screen === 'lobby') {
       savedRef.current = false
+      requestIdRef.current = null
     }
   }, [screen])
 
@@ -60,6 +64,9 @@ export function useSessionSaver({
     if (answers.length === 0) return
 
     savedRef.current = true
+    if (!requestIdRef.current) {
+      requestIdRef.current = crypto.randomUUID()
+    }
     setSaving(true)
 
     saveGameSession({
@@ -71,6 +78,7 @@ export function useSessionSaver({
       maxStreak,
       category: selectedCategory,
       difficulty: selectedDifficulty,
+      clientRequestId: requestIdRef.current,
     })
       .then(async (sessionId) => {
         if (sessionId) {

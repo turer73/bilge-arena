@@ -23,6 +23,7 @@ const baseParams = {
   ] as AnswerRecord[],
   totalXP: 33,
   maxStreak: 1,
+  clientRequestId: '00000000-0000-4000-8000-000000000001',
 }
 
 function mockFetchSuccess(sessionId = 'session-123') {
@@ -86,6 +87,7 @@ describe('saveGameSession', () => {
     expect(body.answers[0].selectedOption).toBe(1)
     expect(body.answers[0].isCorrect).toBe(true)
     expect(body.answers[0].timeTaken).toBe(5)
+    expect(body.clientRequestId).toBe(baseParams.clientRequestId)
   })
 
   it('xpEarned gonderilmemeli (server hesaplar)', async () => {

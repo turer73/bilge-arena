@@ -13,6 +13,9 @@ interface SaveSessionParams {
   category?: string | null
   difficulty?: number | null
   timeLimit?: number
+  /** Idempotency key (migration 081) — cagiran, sonuc-ekranina girince BIR KEZ uretmeli
+   * ve ayni oturum-kaydetme denemesi boyunca sabit tutmali (network-retry korumasi). */
+  clientRequestId: string
 }
 
 /**
@@ -29,6 +32,7 @@ export async function saveGameSession({
   category,
   difficulty,
   timeLimit = 30,
+  clientRequestId,
 }: SaveSessionParams): Promise<string | null> {
   try {
     const res = await fetch('/api/sessions', {
@@ -49,6 +53,7 @@ export async function saveGameSession({
         category,
         difficulty,
         timeLimit,
+        clientRequestId,
       }),
     })
 
