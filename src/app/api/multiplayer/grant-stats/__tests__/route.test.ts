@@ -16,8 +16,8 @@ vi.mock('@/lib/rooms/server-fetch', () => ({
   verifyRoomFirstPlace: mockVerify,
 }))
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({ rpc: mockRpc })),
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => ({ rpc: mockRpc })),
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
@@ -101,6 +101,7 @@ describe('POST /api/multiplayer/grant-stats', () => {
     await POST(makeReq({ roomId: 'r1', isFirstPlace: true }))
     expect(mockVerify).toHaveBeenCalledWith('jwt-token', 'r1', 'u1')
     expect(mockRpc).toHaveBeenCalledWith('grant_multiplayer_stats', {
+      p_user_id: 'u1',
       p_room_id: 'r1',
       p_first_place: false, // client 'true' dedi ama server 'false'
     })
@@ -111,6 +112,7 @@ describe('POST /api/multiplayer/grant-stats', () => {
     // Client isFirstPlace hic gondermese bile server belirler
     await POST(makeReq({ roomId: 'abc-123' }))
     expect(mockRpc).toHaveBeenCalledWith('grant_multiplayer_stats', {
+      p_user_id: 'u1',
       p_room_id: 'abc-123',
       p_first_place: true,
     })
