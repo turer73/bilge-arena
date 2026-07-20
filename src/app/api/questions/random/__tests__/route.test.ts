@@ -1,15 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockGetUser, mockRpc, mockSelectChain, mockHistory } = vi.hoisted(() => ({
-  mockGetUser: vi.fn(),
-  mockRpc: vi.fn(),
-  mockSelectChain: vi.fn(),
-  // Klipper review B2: user_question_history server-side cooldown read
-  mockHistory: vi.fn(async (): Promise<{ data: Array<{ question_id: string }>; error: null }> => ({
-    data: [],
-    error: null,
-  })),
-}))
+// Esnek, sirali-kuyruklu query-builder mock: her .from(table) cagrisi kuyruktaki
+// bir sonraki { data, error } sonucunu doner; her chain-metodu ayni objeyi
+// dondurur (zincirlenebilir) VE .then() ile awaitable'dir (gercek supabase-js
+// PostgrestFilterBuilder davranisi -- zincirin HERHANGI bir noktasinda await
+// edilebilir). fetchReviewQuestions/fetchFsrsDueQuestions birden fazla farkli
+// uzunlukta zincir kullaniyor (gte ile biten eski-yol vs order/limit ile biten
+// FSRS-yolu) -- rigid sabit-zincir mock bunu karsilayamiyordu.
+const { mockGetUser, mockRpc, mockHistory, sessionAnswersMock, questionsMock, otherTableMock } = vi.hoisted(() => {
+  // function declaration (self-hoisting) -- vi.hoisted arrow-fn govdesinden
+  // guvenle cagirilabilir.
+  function makeTableMockHoisted() {
+    const queue: { data: unknown; error: unknown }[] = []
+    const push = (r: { data: unknown; error: unknown }) => queue.push(r)
+    const from = vi.fn(() => {
+      const result = queue.length > 0 ? queue.shift()! : { data: [], error: null }
+      const chain: Record<string, unknown> = {}
+      for (const m of ['select', 'eq', 'in', 'gte', 'order', 'limit']) {
+        chain[m] = vi.fn(() => chain)
+      }
+      chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
+        Promise.resolve(result).then(resolve, reject)
+      return chain
+    })
+    return { from, push, reset: () => { queue.length = 0 } }
+  }
+  return {
+    mockGetUser: vi.fn(),
+    mockRpc: vi.fn(),
+    // Klipper review B2: user_question_history server-side cooldown read
+    mockHistory: vi.fn(async (): Promise<{ data: Array<{ question_id: string }>; error: null }> => ({
+      data: [],
+      error: null,
+    })),
+    sessionAnswersMock: makeTableMockHoisted(),
+    questionsMock: makeTableMockHoisted(),
+    otherTableMock: makeTableMockHoisted(),
+  }
+})
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
@@ -32,24 +60,9 @@ vi.mock('@/lib/supabase/service-role', () => ({
           })),
         }
       }
-      // Diger tablolar (session_answers, questions) icin fallback chainable mock
-      return {
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
-              in: vi.fn(() => ({
-                gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
-              })),
-            })),
-            in: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                eq: mockSelectChain,
-              })),
-            })),
-          })),
-        })),
-      }
+      if (table === 'session_answers') return sessionAnswersMock.from()
+      if (table === 'questions') return questionsMock.from()
+      return otherTableMock.from()
     }),
   })),
 }))
@@ -71,7 +84,11 @@ function makeRequest(params: Record<string, string> = {}) {
 }
 
 describe('GET /api/questions/random', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    sessionAnswersMock.reset()
+    questionsMock.reset()
+  })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
@@ -204,5 +221,36 @@ describe('GET /api/questions/random', () => {
     const res = await GET(makeRequest({ game: 'matematik' }) as never)
     const body = await res.json()
     expect(body.reviewQuestions).toEqual([])
+  })
+
+  describe('includeReview=true (FEATURES.FSRS_REVIEW=false — 7-gun fallback yolu)', () => {
+    it('disc#1372 fix: answered_at kolonuyla sorgular ve sonuc doner (created_at DEGIL)', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+      mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+
+      // 1) yanlis-cevaplar sorgusu
+      sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
+      // 2) sonradan-dogru sorgusu (bos -> hala 'acik')
+      sessionAnswersMock.push({ data: [], error: null })
+      // 3) questions final-fetch
+      questionsMock.push({ data: [{ id: 'wq1', game: 'matematik' }], error: null })
+
+      const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
+      const body = await res.json()
+      expect(body.reviewQuestions).toEqual([{ id: 'wq1', game: 'matematik' }])
+    })
+
+    it('sonradan dogru cevaplanan soru review havuzundan cikar', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+      mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+
+      sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
+      sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null }) // sonradan dogru
+      // questions sorgusuna hic gidilmemeli (reviewIds bos) -- push etmiyoruz
+
+      const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
+      const body = await res.json()
+      expect(body.reviewQuestions).toEqual([])
+    })
   })
 })

@@ -31,6 +31,8 @@ const item = (overrides: Record<string, unknown> = {}) => ({
   wrongCount: 1,
   lastWrongAt: '2026-07-10T10:00:00Z',
   status: 'acik',
+  isDue: null,
+  dueAt: null,
   ...overrides,
 })
 
@@ -71,6 +73,20 @@ describe('YanlislarimClient', () => {
     expect(screen.getByText(/MATEMATİK/)).toBeInTheDocument()
     expect(screen.getByText('Açık')).toBeInTheDocument()
     expect(screen.getByText('Toplama işlemi.', { exact: false })).toBeInTheDocument()
+  })
+
+  test('isDue=true iken "Tekrar Zamanı" rozeti gösterilir (konu#7 S4)', async () => {
+    mockFetchOnce({ items: [item({ isDue: true, dueAt: '2026-07-01T00:00:00Z' })], page: 1, limit: 20, hasMore: false })
+    render(<YanlislarimClient />)
+    await waitFor(() => expect(screen.getByText('İki artı iki kaçtır?')).toBeInTheDocument())
+    expect(screen.getByText('Tekrar Zamanı', { exact: false })).toBeInTheDocument()
+  })
+
+  test('isDue=null (FEATURES.FSRS_REVIEW=false) iken rozet gösterilmez', async () => {
+    mockFetchOnce({ items: [item()], page: 1, limit: 20, hasMore: false })
+    render(<YanlislarimClient />)
+    await waitFor(() => expect(screen.getByText('İki artı iki kaçtır?')).toBeInTheDocument())
+    expect(screen.queryByText('Tekrar Zamanı', { exact: false })).not.toBeInTheDocument()
   })
 
   test('düzeltildi durumu farklı rozetle gösterilir', async () => {
