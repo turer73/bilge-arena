@@ -5,6 +5,8 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import type { QuestionContent } from '@/types/database'
+import { FEATURES } from '@/lib/constants/premium'
+import { foldQuestionCard, isCardDue, type ReviewEvent } from '@/lib/review/fsrs'
 
 // Cift kalkan rate limit (profile/topic-strengths paterni — auth-only endpoint):
 //   1. IP limit ONCE — anon flood auth.getUser() quota'sini tuketmesin
@@ -57,6 +59,9 @@ interface WrongAnswerItem {
   wrongCount: number
   lastWrongAt: string
   status: ReviewStatus
+  /** FSRS tekrar-zamani (konu#7 S4). FEATURES.FSRS_REVIEW=false iken her ikisi de null. */
+  isDue: boolean | null
+  dueAt: string | null
 }
 
 interface CandidateEntry {
@@ -203,9 +208,26 @@ export async function GET(request: NextRequest) {
   }
 
   const lastStatusByQuestion = new Map<string, boolean>()
+  // FEATURES.FSRS_REVIEW acikken lastRows (zaten cekilmis, ekstra sorgu YOK)
+  // ayni zamanda FSRS fold icin soru-basina olay-listesine gruplanir.
+  const eventsByQuestion = new Map<string, ReviewEvent[]>()
   for (const row of lastRows ?? []) {
     if (!lastStatusByQuestion.has(row.question_id)) {
       lastStatusByQuestion.set(row.question_id, row.is_correct)
+    }
+    if (FEATURES.FSRS_REVIEW) {
+      const list = eventsByQuestion.get(row.question_id) ?? []
+      list.push({ isCorrect: row.is_correct, answeredAt: row.answered_at })
+      eventsByQuestion.set(row.question_id, list)
+    }
+  }
+
+  const dueByQuestion = new Map<string, { isDue: boolean; dueAt: string }>()
+  if (FEATURES.FSRS_REVIEW) {
+    const now = new Date()
+    for (const [questionId, events] of eventsByQuestion) {
+      const card = foldQuestionCard(events)
+      dueByQuestion.set(questionId, { isDue: isCardDue(card, now), dueAt: card.due.toISOString() })
     }
   }
 
@@ -213,6 +235,7 @@ export async function GET(request: NextRequest) {
   let items: WrongAnswerItem[] = Array.from(candidates.entries()).map(([questionId, c]) => {
     const lastIsCorrect = lastStatusByQuestion.get(questionId) ?? false
     const status: ReviewStatus = lastIsCorrect ? 'duzeltildi' : 'acik'
+    const due = dueByQuestion.get(questionId)
     return {
       questionId,
       game: c.question.game,
@@ -224,6 +247,8 @@ export async function GET(request: NextRequest) {
       wrongCount: c.wrongCount,
       lastWrongAt: c.lastWrongAt,
       status,
+      isDue: due ? due.isDue : null,
+      dueAt: due ? due.dueAt : null,
     }
   })
 

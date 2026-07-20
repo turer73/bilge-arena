@@ -7,6 +7,13 @@ import { GAME_SLUGS } from '@/lib/constants/games'
 import { isValidUuid } from '@/lib/utils/uuid'
 import type { Question } from '@/types/database'
 import { toPublicQuestion } from '@/lib/utils/question-public'
+import { FEATURES } from '@/lib/constants/premium'
+import { computeDueMap } from '@/lib/review/due-map'
+
+// wrong-answers route'undaki (src/app/api/review/wrong-answers/route.ts) ayni
+// tarama-sinirlamasi deseni: cok-aktif kullanicida binlerce satir tek istekte
+// cekilmesin.
+const FSRS_WRONG_SCAN_LIMIT = 1000
 
 // Cift kalkan rate limit (Madde 9 pattern):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -180,8 +187,60 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * FSRS-tabanli review havuzu (konu#7 karari S1, FEATURES.FSRS_REVIEW=true iken).
+ * Kalici FSRS-state YOK: en az bir kez yanlis cevaplanmis her soru icin TUM
+ * (dogru+yanlis) session_answers gecmisi kronolojik olarak FSRS'e katlanir
+ * (src/lib/review/fsrs.ts), due<=simdi olanlar donulur. Bos donerse cagiran
+ * (fetchReviewQuestions) eski 7-gun mantigina otomatik duser.
+ */
+async function fetchFsrsDueQuestions(
+  admin: ReturnType<typeof createServiceRoleClient>,
+  userId: string,
+  game: string,
+  category: string | null,
+  difficulty: number | null,
+): Promise<Question[]> {
+  // 1) Adaylar: en az bir kez yanlis cevaplanmis sorular (soru-id'ye gore
+  // tekillestirilir asagida; tarama en son N yanlis-OLAYIYLA sinirli).
+  const { data: wrongRows } = await admin
+    .from('session_answers')
+    .select('question_id')
+    .eq('user_id', userId)
+    .eq('is_correct', false)
+    .order('answered_at', { ascending: false })
+    .limit(FSRS_WRONG_SCAN_LIMIT)
+
+  const candidateIds = Array.from(new Set((wrongRows ?? []).map(r => r.question_id as string)))
+  if (candidateIds.length === 0) return []
+
+  // 2) Bu adaylarin TAM (dogru+yanlis) gecmisi FSRS'e katlanir -- paylasilan
+  // yardimci (/api/review/wrong-answers ile ayni fold-mantigini kullanir,
+  // due-rozeti icin de burada kullaniliyor).
+  const dueMap = await computeDueMap(admin, userId, candidateIds)
+  const dueIds = Array.from(dueMap.entries())
+    .filter(([, info]) => info.isDue)
+    .map(([questionId]) => questionId)
+
+  if (dueIds.length === 0) return []
+
+  let query = admin
+    .from('questions')
+    .select('*')
+    .in('id', dueIds.slice(0, 20))
+    .eq('game', game)
+    .eq('is_active', true)
+
+  if (category) query = query.eq('category', category)
+  if (difficulty) query = query.eq('difficulty', difficulty)
+
+  const { data } = await query
+  return (data as unknown as Question[]) || []
+}
+
+/**
  * Son 7 gunde yanlis cevaplanan ve sonrasinda dogru cevaplanmamis sorulari getirir.
- * Spaced repetition icin "zayif sorular" havuzu.
+ * Spaced repetition icin "zayif sorular" havuzu (FEATURES.FSRS_REVIEW=false iken
+ * kullanilan mantik; FSRS acikken de bos/hata durumunda fallback olarak calisir).
  */
 async function fetchReviewQuestions(
   admin: ReturnType<typeof createServiceRoleClient>,
@@ -190,14 +249,27 @@ async function fetchReviewQuestions(
   category: string | null,
   difficulty: number | null,
 ): Promise<Question[]> {
+  if (FEATURES.FSRS_REVIEW) {
+    try {
+      const dueQuestions = await fetchFsrsDueQuestions(admin, userId, game, category, difficulty)
+      if (dueQuestions.length > 0) return dueQuestions
+    } catch (e) {
+      console.error('[/api/questions/random] FSRS fold hatasi, 7-gun fallback:', e)
+    }
+    // dueQuestions bos veya hata -> asagidaki 7-gun mantigina bilerek dusuluyor
+  }
+
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
+  // NOT (disc#1372): session_answers'ta created_at kolonu YOK, yalniz answered_at
+  // var -- eski kod created_at'a filtreliyordu (PostgREST hatasi -> data=null ->
+  // sessizce bos donuyordu, review-karistirma fiilen hic calismiyordu). Fix.
   const { data: wrongAnswers } = await admin
     .from('session_answers')
     .select('question_id')
     .eq('user_id', userId)
     .eq('is_correct', false)
-    .gte('created_at', sevenDaysAgo)
+    .gte('answered_at', sevenDaysAgo)
 
   if (!wrongAnswers || wrongAnswers.length === 0) return []
 
@@ -209,7 +281,7 @@ async function fetchReviewQuestions(
     .eq('user_id', userId)
     .eq('is_correct', true)
     .in('question_id', wrongIds)
-    .gte('created_at', sevenDaysAgo)
+    .gte('answered_at', sevenDaysAgo)
 
   const correctedIds = new Set((correctAfter || []).map(a => a.question_id))
   const reviewIds = wrongIds.filter(id => !correctedIds.has(id))

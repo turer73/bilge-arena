@@ -32,6 +32,9 @@ interface WrongAnswerItem {
   wrongCount: number
   lastWrongAt: string
   status: ReviewStatus
+  /** FSRS tekrar-zamani (konu#7 S1/S4). FEATURES.FSRS_REVIEW=false iken null. */
+  isDue: boolean | null
+  dueAt: string | null
 }
 
 interface WrongAnswersResponse {
@@ -329,6 +332,19 @@ function WrongAnswerCard({ item }: { item: WrongAnswerItem }) {
           {isFixed ? '✓ ' : '● '}
           {STATUS_LABEL[item.status]}
         </span>
+
+        {item.isDue === true && (
+          <span
+            className="rounded px-[7px] py-0.5 text-[9px] font-extrabold tracking-wider"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--focus) 15%, transparent)',
+              color: 'var(--focus)',
+              border: '1px solid color-mix(in srgb, var(--focus) 27%, transparent)',
+            }}
+          >
+            🔁 Tekrar Zamanı
+          </span>
+        )}
 
         <span className="rounded px-[7px] py-0.5 text-[10px] font-semibold text-[var(--text-sub)]" style={{ background: 'var(--bg-secondary)' }}>
           {getCategoryLabel(item.category)}
