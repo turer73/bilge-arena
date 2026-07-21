@@ -997,3 +997,30 @@ DROP TRIGGER IF EXISTS trg_referral_code ON profiles;
 CREATE TRIGGER trg_referral_code
   BEFORE INSERT ON profiles
   FOR EACH ROW EXECUTE FUNCTION generate_referral_code();
+
+-- ============================================================
+-- 084: "Bugunun 15'i" Otomatik Gunluk Calisma Plani
+-- Kullanicinin gunluk (TR takvim gunu) FSRS-due + zayif-kategori + yeni
+-- karma soru plani snapshot'i. Plan OYUN-BAZLI (UNIQUE user_id+game+plan_date).
+-- Bkz. database/migrations/084_daily_plan.sql
+-- ============================================================
+CREATE TABLE IF NOT EXISTS daily_plan (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id       UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  game          VARCHAR(20) NOT NULL,
+  plan_date     DATE NOT NULL DEFAULT CURRENT_DATE,
+  question_ids  UUID[] NOT NULL,
+  completed_ids UUID[] NOT NULL DEFAULT '{}',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_plan_user_game_date
+  ON daily_plan (user_id, game, plan_date);
+
+ALTER TABLE daily_plan ENABLE ROW LEVEL SECURITY;
+
+-- Self-SELECT policy -- user_daily_quests'teki "daily_own" (FOR ALL) deseninden
+-- BILINCLI farkli: TUM yazma /api/study/today (service-role) uzerinden yapilir.
+DROP POLICY IF EXISTS "daily_plan_own_select" ON daily_plan;
+CREATE POLICY "daily_plan_own_select" ON daily_plan
+  FOR SELECT USING (auth.uid() = user_id);

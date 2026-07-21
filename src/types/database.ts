@@ -276,6 +276,20 @@ export interface UserDailyQuest {
   quest?: DailyQuestDef
 }
 
+/**
+ * daily_plan — "Bugunun 15'i" gunluk karma calisma plani snapshot'i
+ * (migration 084). Oyun-bazli: UNIQUE(user_id, game, plan_date).
+ */
+export interface DailyPlan {
+  id: string
+  user_id: string
+  game: GameType
+  plan_date: string
+  question_ids: string[]
+  completed_ids: string[]
+  created_at: string
+}
+
 /** xp_log — XP audit trail */
 export interface XPLog {
   id: string

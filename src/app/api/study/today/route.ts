@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
       }
     }
   } catch (e) {
-    console.error('[/api/study/today] zayif-kategori hesaplama hatasi, atlaniyor:', e)
+    console.error('[/api/study/today] zayıf-kategori hesaplama hatasi, atlaniyor:', e)
   }
 
   // 6c) Yeni sorular -- kalan TUM slotlari doldurur (kademeli doldurma).
