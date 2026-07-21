@@ -21,12 +21,18 @@ export async function computeDueMap(
   const result = new Map<string, DueInfo>()
   if (questionIds.length === 0) return result
 
-  const { data: historyRows } = await admin
+  const { data: historyRows, error } = await admin
     .from('session_answers')
     .select('question_id, is_correct, answered_at')
     .eq('user_id', userId)
     .in('question_id', questionIds)
     .order('answered_at', { ascending: true })
+
+  // Transient okuma hatasini YUTMA: bos map "due yok" gibi gorunur ve cagiran
+  // (gunluk plan) yarim/yanlis snapshot'i tum TR-gunu boyunca persist eder
+  // (Codex P2). Fail-loud: fetchDueQuestions/study-today try/catch'i 500'e cevirir,
+  // questions/random ise 7-gun fallback'ine duser -- ikisi de bu throw'a hazir.
+  if (error) throw error
 
   const eventsByQuestion = new Map<string, ReviewEvent[]>()
   for (const row of historyRows ?? []) {

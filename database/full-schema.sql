@@ -1009,13 +1009,16 @@ CREATE TABLE IF NOT EXISTS daily_plan (
   user_id       UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   game          VARCHAR(20) NOT NULL,
   plan_date     DATE NOT NULL DEFAULT CURRENT_DATE,
+  exam_ref      VARCHAR(10),                    -- migration 085 (NULL = wordquest)
   question_ids  UUID[] NOT NULL,
   completed_ids UUID[] NOT NULL DEFAULT '{}',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_plan_user_game_date
-  ON daily_plan (user_id, game, plan_date);
+-- exam_ref plan kimliginin parcasi (migration 085); NULLS NOT DISTINCT ile
+-- wordquest (exam_ref NULL) da gunde tek plan.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_plan_user_game_date_exam
+  ON daily_plan (user_id, game, plan_date, exam_ref) NULLS NOT DISTINCT;
 
 ALTER TABLE daily_plan ENABLE ROW LEVEL SECURITY;
 

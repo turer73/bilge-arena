@@ -285,6 +285,9 @@ export interface DailyPlan {
   user_id: string
   game: GameType
   plan_date: string
+  /** Plan kimliginin parcasi (migration 085): gun-ici sinav degisiminde
+   *  dogru snapshot. null = wordquest (level_tag modeli, exam_ref kullanmaz). */
+  exam_ref: string | null
   question_ids: string[]
   completed_ids: string[]
   created_at: string

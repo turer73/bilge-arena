@@ -12,6 +12,9 @@ import type { Question } from '@/types/database'
 export interface TodayPlan {
   planDate: string
   game: string
+  /** Server'in COZDUGU exam_ref (profil default'una duesebilir). PATCH bu degeri
+   *  geri gonderir -- plan kimligiyle eslesmek zorunda (Codex P2). null = wordquest. */
+  examRef: string | null
   questions: Question[]
   completedIds: string[]
 }
@@ -19,6 +22,7 @@ export interface TodayPlan {
 interface TodayPlanResponse {
   planDate: string
   game: string
+  examRef: string | null
   questions: Question[]
   completedIds: string[]
 }
@@ -79,7 +83,10 @@ export function useTodayPlan(game: GameSlug, userId?: string | null, examRef?: s
       const res = await fetch('/api/study/today', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ game, questionIds }),
+        // examRef: server'in COZDUGU deger (plan.examRef) -- client'in gonderdigi
+        // ham exam_ref DEGIL. Aksi halde (client null, server TYT'ye cozmusse)
+        // PATCH lookup yanlis/hic satir bulur (Codex P2 identity).
+        body: JSON.stringify({ game, questionIds, examRef: plan?.examRef ?? null }),
       })
       if (!res.ok) return
       const data = (await res.json()) as { completedIds: string[] }
@@ -87,7 +94,7 @@ export function useTodayPlan(game: GameSlug, userId?: string | null, examRef?: s
     } catch {
       // Sessiz hata -- optimistic state kalir, sonraki fetchPlan ile senkronize olur.
     }
-  }, [game, userId])
+  }, [game, userId, plan?.examRef])
 
   useEffect(() => {
     fetchPlan()

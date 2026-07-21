@@ -101,31 +101,10 @@ export async function GET(request: NextRequest) {
   const admin = createServiceRoleClient()
   const planDate = trDayString()
 
-  // 5) Bugunku plan zaten var mi? (idempotent -- gun boyu sabit snapshot)
-  const { data: existing } = await admin
-    .from('daily_plan')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('game', game)
-    .eq('plan_date', planDate)
-    .maybeSingle()
-
-  if (existing) {
-    const questions = await fetchQuestionsInOrder(admin, existing.question_ids as string[])
-    return NextResponse.json(
-      {
-        planDate: existing.plan_date,
-        game,
-        questions,
-        completedIds: (existing.completed_ids as string[]) ?? [],
-      },
-      { headers: { 'Cache-Control': 'no-store' } },
-    )
-  }
-
-  // Client ilk render'da profil/store henuz hazir degilken exam_ref'siz istek
-  // atabilir. Filtresiz (LGS+YKS karisik) snapshot'i tum gun dondurmak yerine
-  // server-of-truth profil tercihine duseriz. Explicit gecerli exam_ref kazanir.
+  // 5) Sinav-referansini COZ -- plan KIMLIGININ parcasidir (asagidaki lookup +
+  // insert bu deger uzerinden yapilir, Codex P2). Client ilk render'da exam_ref'siz
+  // istek atabilir; filtresiz (LGS+YKS karisik) snapshot yerine server-of-truth
+  // profil tercihine duseriz. Explicit gecerli exam_ref kazanir.
   const { data: profile, error: profileError } = await admin
     .from('profiles')
     .select('exam_type')
@@ -154,7 +133,35 @@ export async function GET(request: NextRequest) {
     ? null
     : (requestedExamRef ?? defaultExamRefForType(examType))
 
-  // 6) Yok -- uret. 6a) FSRS-due (computeDueMap uzerinden, flag'siz).
+  // 6) Bugunku plan zaten var mi? (idempotent -- gun boyu sabit snapshot). exam_ref
+  // plan kimliginin parcasi: gun-ici TYT->AYT-SAY gecisinde eski (yanlis sinav)
+  // snapshot'i dondurmeyelim (Codex P2). NULL exam_ref (wordquest) icin .is() gerekir.
+  let lookupQuery = admin
+    .from('daily_plan')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('game', game)
+    .eq('plan_date', planDate)
+  lookupQuery = examRef === null
+    ? lookupQuery.is('exam_ref', null)
+    : lookupQuery.eq('exam_ref', examRef)
+  const { data: existing } = await lookupQuery.maybeSingle()
+
+  if (existing) {
+    const questions = await fetchQuestionsInOrder(admin, existing.question_ids as string[])
+    return NextResponse.json(
+      {
+        planDate: existing.plan_date,
+        game,
+        examRef: (existing.exam_ref as string | null) ?? null,
+        questions,
+        completedIds: (existing.completed_ids as string[]) ?? [],
+      },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  // 6a) FSRS-due (computeDueMap uzerinden, flag'siz).
   let dueQuestions: Question[]
   try {
     dueQuestions = await fetchDueQuestions(admin, user.id, game, null, null, examRef)
@@ -239,7 +246,7 @@ export async function GET(request: NextRequest) {
   // gece yarisina kadar yeni icerik/retry sansini kapatir; persist etmeden don.
   if (questionIds.length === 0) {
     return NextResponse.json(
-      { planDate, game, questions: [], completedIds: [] },
+      { planDate, game, examRef, questions: [], completedIds: [] },
       { headers: { 'Cache-Control': 'no-store' } },
     )
   }
@@ -252,6 +259,7 @@ export async function GET(request: NextRequest) {
       user_id: user.id,
       game,
       plan_date: planDate,
+      exam_ref: examRef,
       question_ids: questionIds,
       completed_ids: [],
     })
@@ -261,13 +269,17 @@ export async function GET(request: NextRequest) {
   let planRow = inserted
   if (insertError) {
     if (insertError.code === '23505') {
-      const { data: raceWinner } = await admin
+      // Race: exam_ref plan kimliginin parcasi -- ayni exam_ref satirini oku.
+      let raceQuery = admin
         .from('daily_plan')
         .select('*')
         .eq('user_id', user.id)
         .eq('game', game)
         .eq('plan_date', planDate)
-        .maybeSingle()
+      raceQuery = examRef === null
+        ? raceQuery.is('exam_ref', null)
+        : raceQuery.eq('exam_ref', examRef)
+      const { data: raceWinner } = await raceQuery.maybeSingle()
       planRow = raceWinner
     } else {
       console.error('[/api/study/today] plan insert hatasi:', insertError.code)
@@ -285,6 +297,7 @@ export async function GET(request: NextRequest) {
     {
       planDate: planRow.plan_date,
       game,
+      examRef: (planRow.exam_ref as string | null) ?? null,
       questions,
       completedIds: (planRow.completed_ids as string[]) ?? [],
     },
@@ -323,10 +336,17 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const body = await request.json().catch(() => null) as { game?: string; questionIds?: unknown } | null
+  const body = await request.json().catch(() => null) as { game?: string; questionIds?: unknown; examRef?: unknown } | null
   const game = body?.game
   if (!game || !VALID_GAMES.has(game as never)) {
     return NextResponse.json({ error: 'Gecerli oyun belirtilmedi' }, { status: 400 })
+  }
+  // exam_ref plan kimliginin parcasi (GET ile ayni): ayni game+gun icin farkli
+  // sinav planlari olabildiginden dogru satiri secmek ZORUNLU -- aksi halde
+  // maybeSingle() coklu satirda patlar. null = wordquest/exam-ref'siz plan.
+  const patchExamRef = typeof body?.examRef === 'string' ? body.examRef : null
+  if (patchExamRef && !VALID_EXAM_REFS.has(patchExamRef)) {
+    return NextResponse.json({ error: 'Gecersiz sinav referansi' }, { status: 400 })
   }
 
   const incomingIds = Array.isArray(body?.questionIds)
@@ -336,13 +356,16 @@ export async function PATCH(request: NextRequest) {
   const admin = createServiceRoleClient()
   const planDate = trDayString()
 
-  const { data: existing } = await admin
+  let existingQuery = admin
     .from('daily_plan')
     .select('*')
     .eq('user_id', user.id)
     .eq('game', game)
     .eq('plan_date', planDate)
-    .maybeSingle()
+  existingQuery = patchExamRef === null
+    ? existingQuery.is('exam_ref', null)
+    : existingQuery.eq('exam_ref', patchExamRef)
+  const { data: existing } = await existingQuery.maybeSingle()
 
   if (!existing) {
     return NextResponse.json({ error: 'Plan bulunamadi' }, { status: 404 })

@@ -25,6 +25,7 @@ const {
       const chain: Record<string, unknown> = {}
       chain.select = vi.fn(() => chain)
       chain.eq = vi.fn(() => chain)
+      chain.is = vi.fn(() => chain)
       chain.insert = vi.fn((obj: unknown) => {
         mode = 'insert'
         insertCalls.push(obj)
@@ -72,7 +73,7 @@ const {
     const from = vi.fn(() => {
       const result = queue.length > 0 ? queue.shift()! : defaultResult
       const chain: Record<string, unknown> = {}
-      for (const m of ['select', 'eq', 'order', 'limit', 'in']) {
+      for (const m of ['select', 'eq', 'is', 'order', 'limit', 'in']) {
         chain[m] = vi.fn(() => chain)
       }
       chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
@@ -372,6 +373,7 @@ describe('GET /api/study/today', () => {
     expect(await res.json()).toEqual({
       planDate: expect.any(String),
       game: 'matematik',
+      examRef: 'TYT',
       questions: [],
       completedIds: [],
     })

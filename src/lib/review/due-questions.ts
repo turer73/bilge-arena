@@ -28,11 +28,17 @@ export async function fetchDueQuestions(
 ): Promise<Question[]> {
   // 1) Adaylar: en az bir kez yanlis cevaplanmis sorular (soru-id'ye gore
   // tekillestirilir asagida; tarama en son N yanlis-OLAYIYLA sinirli).
+  // Game-scope ONCE, 1000-cap SONRA (Codex P2): cok-oyunlu aktif kullanicinin
+  // son 1000 yanlis-olayi baska oyunlardan ibaretse, game filtresi cap'ten SONRA
+  // uygulaninca istenen oyunun due sorulari sessizce dislaniyor ve plan due kotasi
+  // weak/new ile doluyordu. questions!inner join ile tarama game'e daraltilir --
+  // limit artik game-ici son 1000 yanlisa uygulanir.
   const { data: wrongRows, error: wrongError } = await admin
     .from('session_answers')
-    .select('question_id')
+    .select('question_id, questions!inner(game)')
     .eq('user_id', userId)
     .eq('is_correct', false)
+    .eq('questions.game', game)
     .order('answered_at', { ascending: false })
     .limit(FSRS_WRONG_SCAN_LIMIT)
 
