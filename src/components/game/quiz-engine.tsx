@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useGameStore } from '@/stores/game-store'
 import { useAuthStore } from '@/stores/auth-store'
@@ -15,6 +15,7 @@ import { trackEvent } from '@/lib/utils/plausible'
 import { trUpper } from '@/lib/utils/tr-text'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
+import { useTodayPlan } from '@/lib/hooks/use-today-plan'
 
 import { Lobby } from './lobby'
 import { Timer } from './timer'
@@ -42,6 +43,7 @@ const DenemeResult = dynamic(
 )
 import { MiniLeaderboard } from './mini-leaderboard'
 import { DailyQuests } from './daily-quests'
+import { TodayPlanCard } from './today-plan-card'
 import { TopicsPanel } from './topics-panel'
 import { LifeLostOverlay } from './life-lost-overlay'
 import { PremiumGateModal } from '@/components/premium/premium-gate-modal'
@@ -68,12 +70,17 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const gameStore = useGameStore()
   const { user, profile } = useAuthStore()
   const [showPremiumModal, setShowPremiumModal] = useState(false)
+  // "Bugunun 15'i" plani oynanirken true -- result ekranina gecince
+  // tamamlanan sorular plan'a isaretlenir (bkz. asagidaki effect). Restart'ta
+  // (screen tekrar 'lobby'ye donunce) sifirlanir.
+  const [planActive, setPlanActive] = useState(false)
 
   // --- Custom hooks ---
   const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game, user?.id)
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
   const dailyQuests = useDailyQuests()
+  const todayPlan = useTodayPlan(game, user?.id)
   useSessionSaver({
     screen: quiz.screen,
     userId: user?.id,
@@ -84,6 +91,22 @@ export function QuizEngine({ game }: QuizEngineProps) {
     onSessionSaved: dailyQuests.updateProgress,
   })
 
+  // Lobiye donulunce plan-aktif bayragini sifirla (handleRestart'in TUM
+  // cagri-noktalarini (result/deneme-result/misafir-CTA) tek tek sarmalamak
+  // yerine screen-gecisine bagli -- use-session-saver'daki savedRef reset
+  // deseniyle ayni yaklasim).
+  useEffect(() => {
+    if (quiz.screen === 'lobby') setPlanActive(false)
+  }, [quiz.screen])
+
+  // Plan bitince (result ekrani) o oturumda cevaplanan sorulari plan'a isaretle.
+  useEffect(() => {
+    if (quiz.screen !== 'result' || !planActive) return
+    const answeredIds = useQuizStore.getState().answers.map((a) => a.questionId)
+    if (answeredIds.length > 0) todayPlan.markCompleted(answeredIds)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quiz.screen, planActive])
+
   // Kullanicinin gercek XP ve streak degerleri
   const userXP = profile?.total_xp ?? 0
   const userStreak = profile?.current_streak ?? 0
@@ -92,6 +115,23 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (quiz.screen === 'lobby') {
     return (
       <>
+        {user && (
+          <div className="mx-auto max-w-md px-4 pt-4 md:max-w-lg md:px-6 xl:max-w-xl xl:px-8 2xl:max-w-2xl">
+            <TodayPlanCard
+              plan={todayPlan.plan}
+              loading={todayPlan.loading}
+              onStart={() => {
+                if (!todayPlan.plan || todayPlan.plan.questions.length === 0) return
+                trackEvent('UserQuizStart', {
+                  props: { game, mode: 'practice', category: 'all', difficulty: 'all', exam_ref: 'all' },
+                })
+                gameStore.setMode('practice')
+                setPlanActive(true)
+                quiz.handleStartPlanned(todayPlan.plan.questions)
+              }}
+            />
+          </div>
+        )}
         <Lobby
           game={game}
           selectedMode={gameStore.selectedMode}
