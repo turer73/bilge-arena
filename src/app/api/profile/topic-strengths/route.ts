@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { computeTopicStrengths } from '@/lib/review/topic-strengths'
 
 // Cift kalkan rate limit (auth-only endpoint icin sidebar'dan dusuk esikler):
 //   1. IP limit (her hit'te ONCE): 120 req/dk
@@ -13,16 +14,6 @@ import { GAMES, type GameSlug } from '@/lib/constants/games'
 //      - Tek kullanicinin game/category degisimi nadir (her oyun render'inda 1)
 const ipLimiter = createRateLimiter('topic-strengths-ip', 120, 60_000)
 const userLimiter = createRateLimiter('topic-strengths-user', 60, 60_000)
-
-interface AnswerWithQuestion {
-  is_correct: boolean
-  questions: { game: string; category: string }
-}
-
-interface TopicStrength {
-  label: string
-  percentage: number
-}
 
 /**
  * GET /api/profile/topic-strengths?game=<slug>
@@ -87,44 +78,21 @@ export async function GET(request: NextRequest) {
   }
   const game = gameRaw as GameSlug
 
-  // 5. Service-role query — kullanicinin kendi cevaplari, oyun bazli
+  // 5-6. Service-role query + aggregation — extract edilmis paylasilan helper
+  // (src/lib/review/topic-strengths.ts, /api/study/today plan-uretimi de
+  // zayif-kategori secimi icin ayni helper'i kullanir).
   const supabase = createServiceRoleClient()
-  const { data, error } = await supabase
-    .from('session_answers')
-    .select('is_correct, questions!inner(game, category)')
-    .eq('user_id', user.id)
-    .eq('questions.game', game)
-    .returns<AnswerWithQuestion[]>()
-
-  if (error) {
-    console.error('[TopicStrengths] sorgu hatasi:', error.code)
+  let strengths
+  try {
+    strengths = await computeTopicStrengths(supabase, user.id, game)
+  } catch (error) {
+    console.error('[TopicStrengths] sorgu hatasi:', (error as { code?: string } | null)?.code)
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
-  if (!data || data.length === 0) {
-    return NextResponse.json(
-      { topics: [], game },
-      { headers: { 'Cache-Control': 'no-store' } },
-    )
-  }
-
-  // 6. Server-side aggregation (eski client-side aggregation'in yerine)
-  const catMap = new Map<string, { total: number; correct: number }>()
-  for (const row of data) {
-    const q = row.questions
-    if (!q?.category) continue
-    if (!catMap.has(q.category)) catMap.set(q.category, { total: 0, correct: 0 })
-    const stat = catMap.get(q.category)!
-    stat.total++
-    if (row.is_correct) stat.correct++
-  }
-
-  const topics: TopicStrength[] = Array.from(catMap.entries())
-    .map(([category, stat]) => ({
-      label: category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' '),
-      percentage: stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0,
-    }))
-    .sort((a, b) => b.percentage - a.percentage)
+  // Eski sozlesme korunur: yalniz label+percentage disari sizar (category/total
+  // helper'in ic kullanimi icin, plan-uretimi bunlari dogrudan helper'dan okur).
+  const topics = strengths.map(({ label, percentage }) => ({ label, percentage }))
 
   return NextResponse.json(
     { topics, game },
