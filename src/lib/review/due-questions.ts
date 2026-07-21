@@ -24,16 +24,19 @@ export async function fetchDueQuestions(
   game: string,
   category: string | null = null,
   difficulty: number | null = null,
+  examRef: string | null = null,
 ): Promise<Question[]> {
   // 1) Adaylar: en az bir kez yanlis cevaplanmis sorular (soru-id'ye gore
   // tekillestirilir asagida; tarama en son N yanlis-OLAYIYLA sinirli).
-  const { data: wrongRows } = await admin
+  const { data: wrongRows, error: wrongError } = await admin
     .from('session_answers')
     .select('question_id')
     .eq('user_id', userId)
     .eq('is_correct', false)
     .order('answered_at', { ascending: false })
     .limit(FSRS_WRONG_SCAN_LIMIT)
+
+  if (wrongError) throw wrongError
 
   const candidateIds = Array.from(new Set((wrongRows ?? []).map(r => r.question_id as string)))
   if (candidateIds.length === 0) return []
@@ -62,9 +65,11 @@ export async function fetchDueQuestions(
 
   if (category) query = query.eq('category', category)
   if (difficulty) query = query.eq('difficulty', difficulty)
+  if (examRef) query = query.eq('exam_ref', examRef)
 
   query = query.limit(20)
 
-  const { data } = await query
+  const { data, error } = await query
+  if (error) throw error
   return (data as unknown as Question[]) || []
 }

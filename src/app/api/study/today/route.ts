@@ -10,6 +10,7 @@ import { fetchDueQuestions } from '@/lib/review/due-questions'
 import { computeTopicStrengths } from '@/lib/review/topic-strengths'
 import { composePlan } from '@/lib/study/compose-plan'
 import { toPublicQuestion, type PublicQuestion } from '@/lib/utils/question-public'
+import { defaultExamRefForType, type ExamType } from '@/lib/constants/exam-types'
 import type { Question } from '@/types/database'
 
 // Cift kalkan rate limit (topic-strengths/questions-random deseni ile ayni):
@@ -19,6 +20,7 @@ const ipLimiter = createRateLimiter('study-today-ip', 120, 60_000)
 const userLimiter = createRateLimiter('study-today-user', 60, 60_000)
 
 const VALID_GAMES = new Set(GAME_SLUGS)
+const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ', 'YDT'])
 
 const PLAN_SIZE = 15
 const DUE_QUOTA = 6
@@ -91,6 +93,10 @@ export async function GET(request: NextRequest) {
   if (!game || !VALID_GAMES.has(game as never)) {
     return NextResponse.json({ error: 'Gecerli oyun belirtilmedi' }, { status: 400 })
   }
+  const requestedExamRef = searchParams.get('exam_ref')
+  if (requestedExamRef && !VALID_EXAM_REFS.has(requestedExamRef)) {
+    return NextResponse.json({ error: 'Gecersiz sinav referansi' }, { status: 400 })
+  }
 
   const admin = createServiceRoleClient()
   const planDate = trDayString()
@@ -117,8 +123,40 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // Client ilk render'da profil/store henuz hazir degilken exam_ref'siz istek
+  // atabilir. Filtresiz (LGS+YKS karisik) snapshot'i tum gun dondurmak yerine
+  // server-of-truth profil tercihine duseriz. Explicit gecerli exam_ref kazanir.
+  const { data: profile, error: profileError } = await admin
+    .from('profiles')
+    .select('exam_type')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profileError) {
+    console.error('[/api/study/today] profil sinav turu sorgu hatasi:', profileError.code)
+    return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
+  }
+  const examType = (profile?.exam_type as ExamType | null | undefined) ?? null
+  if (
+    requestedExamRef
+    && ((examType === 'lgs' && requestedExamRef !== 'LGS')
+      || (examType === 'yks' && requestedExamRef === 'LGS'))
+  ) {
+    // Global store onceki kullanici/oturumdan stale exam_ref tasiyabilir. Profil
+    // tercihiyle capraz sinav turunu persist etmek yerine client'in default
+    // senkronizasyonunu beklemesine izin ver.
+    return NextResponse.json({ error: 'Sinav tercihiyle uyumsuz referans' }, { status: 400 })
+  }
+  const examRef = requestedExamRef ?? defaultExamRefForType(examType)
+
   // 6) Yok -- uret. 6a) FSRS-due (computeDueMap uzerinden, flag'siz).
-  const dueQuestions = await fetchDueQuestions(admin, user.id, game)
+  let dueQuestions: Question[]
+  try {
+    dueQuestions = await fetchDueQuestions(admin, user.id, game, null, null, examRef)
+  } catch (error) {
+    console.error('[/api/study/today] FSRS-due sorgu hatasi:', (error as { code?: string } | null)?.code)
+    return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
+  }
   const dueIds = dueQuestions.slice(0, DUE_QUOTA).map((q) => q.id)
 
   const selected = new Set<string>(dueIds)
@@ -127,30 +165,35 @@ export async function GET(request: NextRequest) {
   // sahip 2 kategori, her birinden ~2 soru). Aggregation hatasi olursa
   // (yeni kullanici / sorgu hatasi) sessizce atlanir -- slotlar "yeni"ye devrolur.
   const weakIds: string[] = []
+  let weakCategories: Awaited<ReturnType<typeof computeTopicStrengths>> = []
   try {
-    const strengths = await computeTopicStrengths(admin, user.id, game)
-    const weakCategories = strengths
+    weakCategories = (await computeTopicStrengths(admin, user.id, game))
       .filter((s) => s.total >= WEAK_MIN_SAMPLE)
       .sort((a, b) => a.percentage - b.percentage)
       .slice(0, WEAK_CATEGORY_COUNT)
-
-    for (const wc of weakCategories) {
-      const excludeIds = Array.from(selected)
-      const { data } = await admin.rpc('select_random_questions', {
-        p_game: game,
-        p_limit: WEAK_PER_CATEGORY,
-        p_category: wc.category,
-        ...(excludeIds.length > 0 ? { p_exclude_ids: excludeIds } : {}),
-      })
-      for (const row of (data ?? []) as Question[]) {
-        if (!selected.has(row.id)) {
-          selected.add(row.id)
-          weakIds.push(row.id)
-        }
-      }
-    }
   } catch (e) {
     console.error('[/api/study/today] zayıf-kategori hesaplama hatasi, atlaniyor:', e)
+  }
+
+  for (const wc of weakCategories) {
+    const excludeIds = Array.from(selected)
+    const { data, error } = await admin.rpc('select_random_questions', {
+      p_game: game,
+      p_limit: WEAK_PER_CATEGORY,
+      p_category: wc.category,
+      ...(excludeIds.length > 0 ? { p_exclude_ids: excludeIds } : {}),
+      ...(examRef ? { p_exam_ref: examRef } : {}),
+    })
+    if (error) {
+      console.error('[/api/study/today] zayıf-kategori RPC hatasi:', error.code)
+      return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
+    }
+    for (const row of (data ?? []) as Question[]) {
+      if (!selected.has(row.id)) {
+        selected.add(row.id)
+        weakIds.push(row.id)
+      }
+    }
   }
 
   // 6c) Yeni sorular -- kalan TUM slotlari doldurur (kademeli doldurma).
@@ -172,15 +215,29 @@ export async function GET(request: NextRequest) {
 
     const excludeIds = Array.from(new Set([...selected, ...historyIds])).slice(0, 50)
 
-    const { data: newData } = await admin.rpc('select_random_questions', {
+    const { data: newData, error: newError } = await admin.rpc('select_random_questions', {
       p_game: game,
       p_limit: kalan,
       ...(excludeIds.length > 0 ? { p_exclude_ids: excludeIds } : {}),
+      ...(examRef ? { p_exam_ref: examRef } : {}),
     })
+    if (newError) {
+      console.error('[/api/study/today] yeni-soru RPC hatasi:', newError.code)
+      return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
+    }
     newIds = ((newData ?? []) as Question[]).map((q) => q.id)
   }
 
   const questionIds = composePlan({ dueIds, weakIds, newIds, size: PLAN_SIZE })
+
+  // Mesru bos havuz kalici hata degildir. Bos snapshot yazilirsa UNIQUE satir
+  // gece yarisina kadar yeni icerik/retry sansini kapatir; persist etmeden don.
+  if (questionIds.length === 0) {
+    return NextResponse.json(
+      { planDate, game, questions: [], completedIds: [] },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
 
   // 7) Kaydet -- ayni gun icin es-zamanli iki GET yarisirsa (UNIQUE ihlali),
   // ikinci istek kendi ürettigini atip DB'deki gercek satiri okur (idempotent).

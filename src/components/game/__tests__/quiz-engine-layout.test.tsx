@@ -29,19 +29,19 @@ const quizStoreValue: Record<string, unknown> = {
   }),
 }
 vi.mock('@/stores/quiz-store', () => ({ useQuizStore: () => quizStoreValue }))
-vi.mock('@/stores/game-store', () => ({
-  useGameStore: () => ({
-    selectedMode: 'klasik',
-    setMode: vi.fn(),
-    selectedCategory: null,
-    setCategory: vi.fn(),
-    selectedDifficulty: null,
-    setDifficulty: vi.fn(),
-    selectedExamRef: null,
-    setExamRef: vi.fn(),
-  }),
+const gameStoreValue = vi.hoisted(() => ({
+  selectedMode: 'klasik',
+  setMode: vi.fn(),
+  selectedCategory: 'problemler' as string | null,
+  setCategory: vi.fn(),
+  selectedDifficulty: 3 as number | null,
+  setDifficulty: vi.fn(),
+  selectedExamRef: 'TYT' as string | null,
+  setExamRef: vi.fn(),
 }))
-vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => ({ user: null, profile: null }) }))
+vi.mock('@/stores/game-store', () => ({ useGameStore: () => gameStoreValue }))
+const authStoreValue = vi.hoisted(() => ({ user: null as { id: string } | null, profile: null }))
+vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => authStoreValue }))
 
 // --- Hooks ---
 // Mutable (vi.hoisted) → testler isDeneme'yi çevirebilir (deneme panel kontrolü).
@@ -64,18 +64,24 @@ const quizGame = vi.hoisted(() => ({
   handleAnswer: vi.fn(),
   handleNext: vi.fn(),
   handleStart: vi.fn(),
+  handleStartPlanned: vi.fn(),
 }))
 vi.mock('@/lib/hooks/use-quiz-game', () => ({ useQuizGame: () => quizGame }))
 vi.mock('@/lib/hooks/use-sidebar-data', () => ({
   useSidebarData: () => ({ leaderboard: [], myRank: null, topicData: [] }),
 }))
 vi.mock('@/lib/hooks/use-session-saver', () => ({ useSessionSaver: vi.fn() }))
-vi.mock('@/lib/hooks/use-quiz-limit', () => ({
-  useQuizLimit: () => ({ canPlay: true, remaining: 99, isPremium: false, isGuest: true }),
-}))
+const quizLimitValue = vi.hoisted(() => ({ canPlay: true, remaining: 99, isPremium: false, isGuest: true }))
+vi.mock('@/lib/hooks/use-quiz-limit', () => ({ useQuizLimit: () => quizLimitValue }))
 vi.mock('@/lib/hooks/use-daily-quests', () => ({
   useDailyQuests: () => ({ quests: [], claimXP: vi.fn(), updateProgress: vi.fn() }),
 }))
+const todayPlanValue = vi.hoisted(() => ({
+  plan: null as null | { planDate: string; game: string; questions: Array<{ id: string }>; completedIds: string[] },
+  loading: false,
+  markCompleted: vi.fn(),
+}))
+vi.mock('@/lib/hooks/use-today-plan', () => ({ useTodayPlan: () => todayPlanValue }))
 vi.mock('@/lib/utils/plausible', () => ({ trackEvent: vi.fn() }))
 
 // --- Ağır çocuk bileşenler: marker/null stub ---
@@ -103,11 +109,16 @@ vi.mock('../sound-toggle', () => ({ SoundToggle: () => null }))
 vi.mock('../xp-popup', () => ({ XPPopup: () => null }))
 vi.mock('../mini-leaderboard', () => ({ MiniLeaderboard: () => null }))
 vi.mock('../daily-quests', () => ({ DailyQuests: () => null }))
+vi.mock('../today-plan-card', () => ({
+  TodayPlanCard: ({ onStart }: { onStart: () => void }) => <button data-testid="today-plan-start" onClick={onStart} />,
+}))
 vi.mock('../topics-panel', () => ({ TopicsPanel: () => <div data-testid="topics-band" /> }))
 vi.mock('../life-lost-overlay', () => ({ LifeLostOverlay: () => null }))
 vi.mock('@/components/ui/bilge-chan', () => ({ BilgeChan: () => null }))
 vi.mock('../bilge-chan-companion', () => ({ BilgeChanCompanion: () => null }))
-vi.mock('@/components/premium/premium-gate-modal', () => ({ PremiumGateModal: () => null }))
+vi.mock('@/components/premium/premium-gate-modal', () => ({
+  PremiumGateModal: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div data-testid="premium-modal" /> : null,
+}))
 vi.mock('@/components/ads/ad-banner', () => ({ AdBanner: () => null }))
 vi.mock('@/components/ui/error-boundary', () => ({
   ComponentErrorBoundary: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
@@ -171,5 +182,61 @@ describe('QuizEngine yerleşim', () => {
     const band = screen.getByTestId('topics-band')
     const lastOption = screen.getByTestId('option-3')
     expect(lastOption.compareDocumentPosition(band) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
+
+describe("QuizEngine — Bugünün Planı başlangıcı", () => {
+  test('limit doluysa plan başlamaz ve premium modal açılır', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    todayPlanValue.plan = {
+      planDate: '2026-07-21',
+      game: 'matematik',
+      questions: [{ id: 'q-plan' }],
+      completedIds: [],
+    }
+    quizLimitValue.canPlay = false
+    quizGame.handleStartPlanned.mockClear()
+
+    try {
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByTestId('today-plan-start'))
+      expect(quizGame.handleStartPlanned).not.toHaveBeenCalled()
+      expect(screen.getByTestId('premium-modal')).toBeInTheDocument()
+    } finally {
+      quizLimitValue.canPlay = true
+      authStoreValue.user = null
+      todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('plan başlarken eski kategori/zorluk temizlenir ve practice mode kullanılır', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    const questions = [{ id: 'q-plan' }]
+    todayPlanValue.plan = {
+      planDate: '2026-07-21',
+      game: 'matematik',
+      questions,
+      completedIds: [],
+    }
+    gameStoreValue.setMode.mockClear()
+    gameStoreValue.setCategory.mockClear()
+    gameStoreValue.setDifficulty.mockClear()
+    quizGame.handleStartPlanned.mockClear()
+
+    try {
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByTestId('today-plan-start'))
+      expect(gameStoreValue.setMode).toHaveBeenCalledWith('practice')
+      expect(gameStoreValue.setCategory).toHaveBeenCalledWith(null)
+      expect(gameStoreValue.setDifficulty).toHaveBeenCalledWith(null)
+      expect(quizGame.handleStartPlanned).toHaveBeenCalledWith(questions)
+    } finally {
+      authStoreValue.user = null
+      todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
   })
 })

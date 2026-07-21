@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { GameSlug } from '@/lib/constants/games'
 import type { Question } from '@/types/database'
 
@@ -27,28 +27,45 @@ interface TodayPlanResponse {
  * "Bugunun 15'i" gunluk plan client hook'u -- use-daily-quests.ts paritesi.
  * Lobby'de gosterilecek karma plani ceker, tamamlanan sorulari isaretler.
  */
-export function useTodayPlan(game: GameSlug, userId?: string | null) {
+export function useTodayPlan(game: GameSlug, userId?: string | null, examRef?: string | null) {
   const [plan, setPlan] = useState<TodayPlan | null>(null)
   const [loading, setLoading] = useState(true)
+  const requestRef = useRef<AbortController | null>(null)
 
   const fetchPlan = useCallback(async () => {
+    requestRef.current?.abort()
     if (!userId) {
       setPlan(null)
       setLoading(false)
       return
     }
+    const controller = new AbortController()
+    requestRef.current = controller
+    // game/user/exam degisiminde onceki snapshot yeni baglamda gosterilmesin.
+    setPlan(null)
     setLoading(true)
     try {
-      const res = await fetch(`/api/study/today?game=${game}`, { cache: 'no-store' })
-      if (!res.ok) return
+      const params = new URLSearchParams({ game })
+      if (examRef) params.set('exam_ref', examRef)
+      const res = await fetch(`/api/study/today?${params}`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+      if (!res.ok) {
+        if (!controller.signal.aborted) setPlan(null)
+        return
+      }
       const data = (await res.json()) as TodayPlanResponse
-      setPlan(data)
-    } catch {
+      if (!controller.signal.aborted) setPlan(data.game === game ? data : null)
+    } catch (error) {
       // Sessiz hata -- gunluk plan opsiyonel bir yuzey, quiz akisini bloklamaz.
+      if ((error as { name?: string } | null)?.name !== 'AbortError' && !controller.signal.aborted) {
+        setPlan(null)
+      }
     } finally {
-      setLoading(false)
+      if (requestRef.current === controller) setLoading(false)
     }
-  }, [game, userId])
+  }, [game, userId, examRef])
 
   // Tamamlanan soru-id'lerini isaretle (optimistic update + server union).
   const markCompleted = useCallback(async (questionIds: string[]) => {
@@ -74,6 +91,7 @@ export function useTodayPlan(game: GameSlug, userId?: string | null) {
 
   useEffect(() => {
     fetchPlan()
+    return () => requestRef.current?.abort()
   }, [fetchPlan])
 
   const completedCount = plan?.completedIds.length ?? 0

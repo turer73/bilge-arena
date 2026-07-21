@@ -11,6 +11,7 @@ import { submitQuestionReport } from '@/lib/questions/submit-report'
 import { useSessionSaver } from '@/lib/hooks/use-session-saver'
 import { useQuizLimit } from '@/lib/hooks/use-quiz-limit'
 import { getLevelFromXP } from '@/lib/constants/levels'
+import { defaultExamRefForType } from '@/lib/constants/exam-types'
 import { trackEvent } from '@/lib/utils/plausible'
 import { trUpper } from '@/lib/utils/tr-text'
 
@@ -80,7 +81,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const quiz = useQuizGame(game, user?.id)
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
   const dailyQuests = useDailyQuests()
-  const todayPlan = useTodayPlan(game, user?.id)
+  const todayPlan = useTodayPlan(game, user?.id, gameStore.selectedExamRef)
   useSessionSaver({
     screen: quiz.screen,
     userId: user?.id,
@@ -122,10 +123,22 @@ export function QuizEngine({ game }: QuizEngineProps) {
               loading={todayPlan.loading}
               onStart={() => {
                 if (!todayPlan.plan || todayPlan.plan.questions.length === 0) return
+                if (!quizLimit.canPlay) {
+                  setShowPremiumModal(true)
+                  return
+                }
                 trackEvent('UserQuizStart', {
-                  props: { game, mode: 'practice', category: 'all', difficulty: 'all', exam_ref: 'all' },
+                  props: {
+                    game,
+                    mode: 'practice',
+                    category: 'all',
+                    difficulty: 'all',
+                    exam_ref: gameStore.selectedExamRef ?? defaultExamRefForType(profile?.exam_type) ?? 'all',
+                  },
                 })
                 gameStore.setMode('practice')
+                gameStore.setCategory(null)
+                gameStore.setDifficulty(null)
                 setPlanActive(true)
                 quiz.handleStartPlanned(todayPlan.plan.questions)
               }}

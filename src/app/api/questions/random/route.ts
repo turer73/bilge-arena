@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
   // 6) Review questions (opsiyonel, spaced-repetition)
   let reviewQuestions: Question[] = []
   if (includeReview && questions.length > 0) {
-    reviewQuestions = await fetchReviewQuestions(admin, user.id, game, category, difficulty)
+    reviewQuestions = await fetchReviewQuestions(admin, user.id, game, category, difficulty, examRef)
   }
 
   return NextResponse.json(
@@ -192,10 +192,11 @@ async function fetchReviewQuestions(
   game: string,
   category: string | null,
   difficulty: number | null,
+  examRef: string | null,
 ): Promise<Question[]> {
   if (FEATURES.FSRS_REVIEW) {
     try {
-      const dueQuestions = await fetchDueQuestions(admin, userId, game, category, difficulty)
+      const dueQuestions = await fetchDueQuestions(admin, userId, game, category, difficulty, examRef)
       if (dueQuestions.length > 0) return dueQuestions
     } catch (e) {
       console.error('[/api/questions/random] FSRS fold hatasi, 7-gun fallback:', e)
@@ -243,6 +244,7 @@ async function fetchReviewQuestions(
 
   if (category) query = query.eq('category', category)
   if (difficulty) query = query.eq('difficulty', difficulty)
+  if (examRef) query = query.eq('exam_ref', examRef)
 
   query = query.limit(20)
 
