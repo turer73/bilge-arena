@@ -271,9 +271,13 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     quizStore.startQuiz(shuffledQuestions, 0)
     setIsGuestMode(false)
     setLoadError(null)
+    // Timer BASLATILMAZ (plan suresiz) ama SIFIRLANIR: classic/blitz lobisinden
+    // gelindiginde useTimer onceki modun saniyesini (30/15) tutar; sifirlanmazsa
+    // handleAnswer'da timeTaken = 0 - timer.seconds NEGATIF olur, /api/sessions
+    // reddeder ve plan XP/ilerleme kaydedilmeden "tamamlandi" gorunur (Codex P1).
+    timer.reset(0)
     setScreen('game')
-    // Timer baslatilmaz -- plan modu daima suresiz (practice mode.timePerQuestion=0).
-  }, [quizStore])
+  }, [quizStore, timer])
 
   // --- Cevap ver ---
 
@@ -306,7 +310,9 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       }
     } else {
       timer.stop()
-      const timeTaken = mode.timePerQuestion - timer.seconds
+      // clamp(>=0): plan/practice modunda timePerQuestion=0 iken kirli timer.seconds
+      // negatif timeTaken uretmesin (defense-in-depth, Codex P1 timer.reset(0) ile birlikte).
+      const timeTaken = Math.max(0, mode.timePerQuestion - timer.seconds)
       const isCorrect = optionIndex === getCorrectIndex(question.content)
       const newStreak = isCorrect ? quizStore.streak + 1 : 0
       const xpResult = calculateXP(question.difficulty, timer.seconds, newStreak)

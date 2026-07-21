@@ -147,7 +147,12 @@ export async function GET(request: NextRequest) {
     // senkronizasyonunu beklemesine izin ver.
     return NextResponse.json({ error: 'Sinav tercihiyle uyumsuz referans' }, { status: 400 })
   }
-  const examRef = requestedExamRef ?? defaultExamRefForType(examType)
+  // WordQuest exam_ref KULLANMAZ (level_tag A1-C2 modeli; migration 046 TYT
+  // backfill'ine wordquest DAHIL DEGIL). exam_ref exact-filter oldugundan TYT
+  // default'u tum kovalari bosaltir ve plan karti hic gorunmez (Codex P2).
+  const examRef = game === 'wordquest'
+    ? null
+    : (requestedExamRef ?? defaultExamRefForType(examType))
 
   // 6) Yok -- uret. 6a) FSRS-due (computeDueMap uzerinden, flag'siz).
   let dueQuestions: Question[]
