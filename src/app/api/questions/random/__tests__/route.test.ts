@@ -245,12 +245,39 @@ describe('GET /api/questions/random', () => {
       mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
 
       sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
-      sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null }) // sonradan dogru
+      // en-son deneme (kronolojik siralamada son eleman) dogru -> duzeltilmis
+      sessionAnswersMock.push({
+        data: [
+          { question_id: 'wq1', is_correct: false },
+          { question_id: 'wq1', is_correct: true },
+        ],
+        error: null,
+      })
       // questions sorgusuna hic gidilmemeli (reviewIds bos) -- push etmiyoruz
 
       const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
       const body = await res.json()
       expect(body.reviewQuestions).toEqual([])
+    })
+
+    it('disc#1371 fix: yanlistan ONCE gelen dogru cevap soruyu duzeltilmis saymamali (kronolojik)', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+      mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+
+      sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
+      // en-son deneme (kronolojik siralamada son eleman) yanlis -> hala review'da kalmali
+      sessionAnswersMock.push({
+        data: [
+          { question_id: 'wq1', is_correct: true },
+          { question_id: 'wq1', is_correct: false },
+        ],
+        error: null,
+      })
+      questionsMock.push({ data: [{ id: 'wq1', game: 'matematik' }], error: null })
+
+      const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
+      const body = await res.json()
+      expect(body.reviewQuestions).toEqual([{ id: 'wq1', game: 'matematik' }])
     })
   })
 })

@@ -182,9 +182,13 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Son 7 gunde yanlis cevaplanan ve sonrasinda dogru cevaplanmamis sorulari getirir.
+ * Son 7 gunde yanlis cevaplanan ve en-son denemesi (kronolojik) hala yanlis olan
+ * sorulari getirir (disc#1371 fix -- pencere icindeki HERHANGI bir dogru cevap
+ * degil, en-son denemenin sonucu belirleyici).
  * Spaced repetition icin "zayif sorular" havuzu (FEATURES.FSRS_REVIEW=false iken
  * kullanilan mantik; FSRS acikken de bos/hata durumunda fallback olarak calisir).
+ * NOT: FSRS-due tarama fetchDueQuestions'a (src/lib/review/due-questions.ts) extract
+ * edildi (PR#276); bu dosyadaki eski fetchFsrsDueQuestions kaldirildi.
  */
 async function fetchReviewQuestions(
   admin: ReturnType<typeof createServiceRoleClient>,
@@ -220,16 +224,23 @@ async function fetchReviewQuestions(
 
   const wrongIds = Array.from(new Set(wrongAnswers.map(a => a.question_id)))
 
-  const { data: correctAfter } = await admin
+  // disc#1371 fix: "duzeltilmis" kronolojik olmali -- onceki kod pencere
+  // icindeki HERHANGI bir dogru cevaba bakiyordu, yanlistan ONCE gelen bir
+  // dogru cevabi da "duzeltilmis" sayip soruyu review havuzundan dusuruyordu.
+  // Artik en-son (answered_at'e gore) denemenin sonucuna bakiyoruz.
+  const { data: allAttempts } = await admin
     .from('session_answers')
-    .select('question_id')
+    .select('question_id, is_correct')
     .eq('user_id', userId)
-    .eq('is_correct', true)
     .in('question_id', wrongIds)
     .gte('answered_at', sevenDaysAgo)
+    .order('answered_at', { ascending: true })
 
-  const correctedIds = new Set((correctAfter || []).map(a => a.question_id))
-  const reviewIds = wrongIds.filter(id => !correctedIds.has(id))
+  const latestIsCorrect = new Map<string, boolean>()
+  for (const a of allAttempts || []) {
+    latestIsCorrect.set(a.question_id, a.is_correct)
+  }
+  const reviewIds = wrongIds.filter(id => latestIsCorrect.get(id) !== true)
 
   if (reviewIds.length === 0) return []
 
