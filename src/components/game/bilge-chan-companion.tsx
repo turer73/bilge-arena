@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { BilgeChan, type ChanPose } from '@/components/ui/bilge-chan'
 import { getCorrectIndex, getOptionLetter } from '@/lib/utils/question'
+import { supportsStagedCoachQuestion } from '@/lib/coach/question-shape'
 import type { Question } from '@/types/database'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-tts'
@@ -70,7 +71,8 @@ const OFFER_DELAY = 6000
  * Bilge Chan — kişilikli quiz companion. Soru akışına göre pose + konuşma
  * balonu (typewriter); "yardıma ihtiyacın var mı?" → kademeli 3 ipucu →
  * kullanıcı isterse çözüm. Client serbest prompt göndermez; server yalnız
- * questionId+stage kabul eder. Cevap verilince victory/sad.
+ * questionId+stage ve sonraki aşamalar için imzalı token kabul eder. Cevap
+ * verilince victory/sad.
  */
 export function BilgeChanCompanion({
   quizState,
@@ -85,6 +87,7 @@ export function BilgeChanCompanion({
   const [phase, setPhase] = useState<Phase>('intro')
   const [helpMsg, setHelpMsg] = useState('')
   const requestRef = useRef<AbortController | null>(null)
+  const progressTokenRef = useRef<string | null>(null)
   // TTS destegi hydration-sonrasi belirlenir (SSR'da speechSynthesis yok)
   const [ttsReady, setTtsReady] = useState(false)
   useEffect(() => {
@@ -101,10 +104,10 @@ export function BilgeChanCompanion({
 
   // intro → offered: setState yalnızca timer callback'inde
   useEffect(() => {
-    if (phase !== 'intro' || quizState !== 'playing') return
+    if (phase !== 'intro' || quizState !== 'playing' || !supportsStagedCoachQuestion(question?.content)) return
     const t = setTimeout(() => setPhase('offered'), OFFER_DELAY)
     return () => clearTimeout(t)
-  }, [phase, quizState])
+  }, [phase, question?.content, quizState])
 
   // Yardım fazları OTOMATİK geçmez: öğrenci ipuçları arasında kendi ilerler;
   // bu sırada per-soru sayacı parent'ta durur.
@@ -122,7 +125,7 @@ export function BilgeChanCompanion({
   }, [answered, lastIsCorrect, question])
 
   const requestHint = async (stage: 'hint1' | 'hint2' | 'hint3' | 'solution') => {
-    if (!question) return
+    if (!question || !supportsStagedCoachQuestion(question.content)) return
     requestRef.current?.abort()
     const controller = new AbortController()
     requestRef.current = controller
@@ -137,23 +140,32 @@ export function BilgeChanCompanion({
       const response = await fetch('/api/coach/hint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: question.id, stage }),
+        body: JSON.stringify({
+          questionId: question.id,
+          stage,
+          ...(stage === 'hint1' ? {} : { token: progressTokenRef.current }),
+        }),
         signal: controller.signal,
       })
       if (!response.ok) throw new Error('hint_failed')
-      const body = (await response.json()) as { stage?: string; hint?: string }
-      if (body.stage !== stage || !body.hint?.trim()) throw new Error('invalid_hint')
+      const body = (await response.json()) as { stage?: string; hint?: string; nextToken?: string | null }
+      if (body.stage !== stage || !body.hint?.trim()
+        || (stage !== 'solution' && !body.nextToken)) throw new Error('invalid_hint')
+      if (controller.signal.aborted || requestRef.current !== controller) return
+      progressTokenRef.current = body.nextToken ?? null
       setHelpMsg(body.hint.trim())
       setPhase(stage)
     } catch (error) {
-      if ((error as { name?: string } | null)?.name === 'AbortError' && !timedOut) return
+      if (requestRef.current !== controller || (controller.signal.aborted && !timedOut)) return
       setHelpMsg('Şu an ipucu alınamadı. Biraz sonra yeniden deneyebilirsin.')
       setPhase('error')
     } finally {
       window.clearTimeout(timeoutId)
+      if (requestRef.current === controller) requestRef.current = null
     }
   }
   const handleYes = () => {
+    progressTokenRef.current = null
     onHelpToggle?.(true) // sayaç kademeli yardım boyunca dursun
     void requestHint('hint1')
   }

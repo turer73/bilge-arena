@@ -24,6 +24,8 @@ describe('Bilge Koc hint guard', () => {
     expect(leaksAnswer('4 ile iki tarafı sadeleştir.', '4', 'B')).toBe(false)
     expect(leaksAnswer('Sonuç 4 olur.', '4', 'B')).toBe(true)
     expect(leaksAnswer('x = 3', '3', 'C')).toBe(true)
+    expect(leaksAnswer('Sonuç sekiz olur.', '8', 'B')).toBe(true)
+    expect(leaksAnswer('Sonuç 8 olur.', 'Sekiz', 'B')).toBe(true)
     expect(fallbackHint('hint3')).toContain('adım adım')
   })
 })

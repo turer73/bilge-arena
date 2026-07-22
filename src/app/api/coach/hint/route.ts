@@ -1,9 +1,14 @@
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
+import {
+  supportsStagedCoachQuestion,
+  type StagedCoachQuestionContent,
+} from '@/lib/coach/question-shape'
 import {
   buildCoachPrompt,
   fallbackHint,
@@ -17,26 +22,77 @@ const ipLimiter = createRateLimiter('coach-hint-ip', 40, 60_000)
 const requestSchema = z.object({
   questionId: z.string().uuid(),
   stage: z.enum(['hint1', 'hint2', 'hint3', 'solution']),
+  token: z.string().min(1).max(2_000).optional(),
 }).strict()
 
 const GEMINI_MODEL = 'gemini-2.5-flash-lite'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+const COACH_TOKEN_TTL_MS = 10 * 60_000
 
 interface QuestionRow {
   id: string
   category: string
   topic: string | null
-  content: {
-    question?: string
-    options?: string[]
-    answer?: number
-    hint?: string
-    solution?: string
-  }
+  content: unknown
   question_outcomes?: Array<{
     is_primary?: boolean
     curriculum_outcomes?: { title?: string } | Array<{ title?: string }> | null
   }>
+}
+
+type NextCoachStage = 'hint2' | 'hint3' | 'solution'
+
+interface CoachProgressPayload {
+  v: 1
+  userId: string
+  questionId: string
+  nextStage: NextCoachStage
+  exp: number
+}
+
+function coachTokenSecret(): string | null {
+  return process.env.COACH_TOKEN_SECRET
+    || process.env.SUPABASE_SERVICE_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || null
+}
+
+function nextStage(stage: Exclude<CoachHintStage, 'solution'>): NextCoachStage {
+  if (stage === 'hint1') return 'hint2'
+  if (stage === 'hint2') return 'hint3'
+  return 'solution'
+}
+
+function signCoachToken(payload: CoachProgressPayload, secret: string): string {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const signature = createHmac('sha256', secret).update(encoded).digest('base64url')
+  return `${encoded}.${signature}`
+}
+
+function verifyCoachToken(
+  token: string,
+  secret: string,
+  expected: Pick<CoachProgressPayload, 'userId' | 'questionId' | 'nextStage'>,
+): boolean {
+  const parts = token.split('.')
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return false
+
+  try {
+    const expectedSignature = createHmac('sha256', secret).update(parts[0]).digest()
+    const suppliedSignature = Buffer.from(parts[1], 'base64url')
+    if (suppliedSignature.length !== expectedSignature.length
+      || !timingSafeEqual(suppliedSignature, expectedSignature)) return false
+
+    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8')) as CoachProgressPayload
+    return payload.v === 1
+      && payload.userId === expected.userId
+      && payload.questionId === expected.questionId
+      && payload.nextStage === expected.nextStage
+      && Number.isInteger(payload.exp)
+      && payload.exp > Date.now()
+  } catch {
+    return false
+  }
 }
 
 function outcomeTitle(row: QuestionRow): string | null {
@@ -46,11 +102,10 @@ function outcomeTitle(row: QuestionRow): string | null {
   return related?.title ?? null
 }
 
-function answerDetails(row: QuestionRow) {
-  const answerIndex = row.content.answer
-  const answerText = typeof answerIndex === 'number' ? row.content.options?.[answerIndex] ?? null : null
-  const answerLetter = typeof answerIndex === 'number' && answerIndex >= 0 && answerIndex < 26
-    ? String.fromCharCode(65 + answerIndex)
+function answerDetails(content: StagedCoachQuestionContent) {
+  const answerText = content.options[content.answer] ?? null
+  const answerLetter = content.answer >= 0 && content.answer < 26
+    ? String.fromCharCode(65 + content.answer)
     : null
   return { answerText, answerLetter }
 }
@@ -85,14 +140,15 @@ async function generateHint(prompt: string): Promise<string | null> {
 }
 
 /**
- * POST /api/coach/hint { questionId, stage }
+ * POST /api/coach/hint { questionId, stage, token? }
  *
  * Client soru metni/cevap/serbest prompt gonderemez. Tum akademik baglam DB'den
- * okunur; hint2/3 cevabi sızdırırsa deterministik fallback kullanilir.
+ * okunur. Asama tokeni hint1 -> hint2 -> hint3 -> solution siralamasini
+ * serverda zorlar; token tekrar kullanilabilir, ancak stage atlanamaz.
  *
- * Sinir: Bu rehberli bir UI akisi, anti-cheat guvenlik siniri degildir. Mevcut
+ * Sinir: Bu rehberli bir UI akisi, anti-cheat guvenlik siniri değildir. Mevcut
  * PublicQuestion kontrati answer/solution'i quiz motoruna zaten yollar; gercek
- * sunucu-zorlamali siralama server-authoritative grading donusumu gerektirir.
+ * server-authoritative grading donusumu ayrica gerekir.
  */
 export async function POST(request: Request) {
   const ip = getClientIp(request.headers)
@@ -119,11 +175,28 @@ export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: 'Gecersiz istek' }, { status: 400 })
 
+  const secret = coachTokenSecret()
+  if (!secret) {
+    console.error('[CoachHint] token imza anahtari tanimli değil')
+    return NextResponse.json({ error: 'Koc servisi yapilandirilmamis' }, { status: 503 })
+  }
+
+  const { stage, token, questionId } = parsed.data
+  if (stage === 'hint1') {
+    if (token) return NextResponse.json({ error: 'Gecersiz ipucu sirasi' }, { status: 409 })
+  } else if (!token || !verifyCoachToken(token, secret, {
+    userId: user.id,
+    questionId,
+    nextStage: stage,
+  })) {
+    return NextResponse.json({ error: 'Gecersiz veya suresi dolmus ipucu sirasi' }, { status: 409 })
+  }
+
   const supabase = createServiceRoleClient()
   const { data, error } = await supabase
     .from('questions')
     .select('id, category, topic, content, question_outcomes(is_primary, curriculum_outcomes(title))')
-    .eq('id', parsed.data.questionId)
+    .eq('id', questionId)
     .eq('is_active', true)
     .maybeSingle()
 
@@ -134,16 +207,20 @@ export async function POST(request: Request) {
   if (!data) return NextResponse.json({ error: 'Soru bulunamadi' }, { status: 404 })
 
   const question = data as unknown as QuestionRow
-  const stage = parsed.data.stage as CoachHintStage
-  const { answerText, answerLetter } = answerDetails(question)
+  if (!supportsStagedCoachQuestion(question.content)) {
+    return NextResponse.json({ error: 'Bu soru tipi kademeli Koc icin desteklenmiyor' }, { status: 422 })
+  }
+  const content = question.content
+  const { answerText, answerLetter } = answerDetails(content)
 
   if (stage === 'solution') {
-    const solution = question.content.solution?.trim()
+    const solution = content.solution?.trim()
     return NextResponse.json(
       {
         stage,
         hint: solution?.slice(0, 2_000) || 'Bu soru için doğrulanmış çözüm henüz eklenmemiş.',
         source: solution ? 'solution' : 'fallback',
+        nextToken: null,
       },
       { headers: { 'Cache-Control': 'no-store' } },
     )
@@ -152,11 +229,11 @@ export async function POST(request: Request) {
   let hint: string | null = null
   let source: 'authored' | 'ai' | 'fallback' = 'fallback'
   if (stage === 'hint1') {
-    hint = question.content.hint?.trim() || null
+    hint = content.hint?.trim() || null
     if (hint) source = 'authored'
   } else {
     const prompt = buildCoachPrompt(stage, {
-      question: question.content.question ?? '',
+      question: content.question,
       category: question.category,
       topic: question.topic,
       outcomeTitle: outcomeTitle(question),
@@ -174,8 +251,16 @@ export async function POST(request: Request) {
     source = 'fallback'
   }
 
+  const nextToken = signCoachToken({
+    v: 1,
+    userId: user.id,
+    questionId,
+    nextStage: nextStage(stage),
+    exp: Date.now() + COACH_TOKEN_TTL_MS,
+  }, secret)
+
   return NextResponse.json(
-    { stage, hint, source },
+    { stage, hint, source, nextToken },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }

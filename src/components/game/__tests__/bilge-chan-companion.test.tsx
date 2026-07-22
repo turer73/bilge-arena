@@ -61,7 +61,17 @@ beforeEach(() => {
       hint3: 'Üçüncü ipucu',
       solution: 'Çözüm metni burada.',
     }
-    return new Response(JSON.stringify({ stage: body.stage, hint: hints[body.stage] }), {
+    const tokens: Record<string, string | null> = {
+      hint1: 'hint2-token',
+      hint2: 'hint3-token',
+      hint3: 'solution-token',
+      solution: null,
+    }
+    return new Response(JSON.stringify({
+      stage: body.stage,
+      hint: hints[body.stage],
+      nextToken: tokens[body.stage],
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
@@ -338,6 +348,42 @@ describe('BilgeChanCompanion', () => {
     const bubble = root.querySelector('div.relative') as HTMLElement
     expect(bubble.className).toContain('max-w-[190px]')
     expect(bubble.className).toContain('order-2')
+  })
+})
+
+describe('BilgeChanCompanion staged-coach guards', () => {
+  test('legacy soru seklinde Koc teklifi gostermez', () => {
+    render(
+      <BilgeChanCompanion
+        quizState="playing"
+        lastIsCorrect={null}
+        question={makeQuestion({
+          content: { sentence: 'Boslugu doldur', options: ['a', 'b'], answer: 0 } as Question['content'],
+        })}
+      />,
+    )
+    act(() => vi.advanceTimersByTime(6000))
+    expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
+  })
+
+  test('loading sonrasi donuste gec kalan response yardim fazini geri getirmez', async () => {
+    let resolveLate: ((response: Response) => void) | undefined
+    fetchMock.mockImplementationOnce(() => new Promise<Response>((resolve) => {
+      resolveLate = resolve
+    }))
+    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
+    act(() => vi.advanceTimersByTime(6000))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+    fireEvent.click(screen.getByRole('button', { name: /Soruyu/ }))
+
+    resolveLate?.(new Response(JSON.stringify({
+      stage: 'hint1', hint: 'Gec kalan ipucu', nextToken: 'hint2-token',
+    }), { status: 200 }))
+    await act(async () => { await Promise.resolve() })
+
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText(CHAN_LINES.check)).toBeInTheDocument()
+    expect(screen.queryByText('Gec kalan ipucu')).not.toBeInTheDocument()
   })
 })
 

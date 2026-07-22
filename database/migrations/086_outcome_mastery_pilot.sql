@@ -78,11 +78,6 @@ CREATE TABLE IF NOT EXISTS public.user_outcome_state (
 CREATE INDEX IF NOT EXISTS idx_user_outcome_state_outcome
   ON public.user_outcome_state (outcome_id, user_id);
 
--- Delayed-evidence EXISTS sorgusu her cevapta user+soru+zaman arar. Tek-kolon
--- indexleri birlestirmeye guvenmek yerine hot-path'e uygun composite index.
-CREATE INDEX IF NOT EXISTS idx_answers_user_question_time
-  ON public.session_answers (user_id, question_id, answered_at DESC);
-
 ALTER TABLE public.curriculum_outcomes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.question_outcomes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_outcome_state ENABLE ROW LEVEL SECURITY;
@@ -105,6 +100,12 @@ AS $$
 DECLARE
   v_is_delayed_correct BOOLEAN;
 BEGIN
+  -- Atlamak bir cevap/yanlis kaniti degildir. Wrong-notebook ve soru secimi
+  -- ile ayni semantigi koru; aksi halde mastery yuzdesi yapay olarak duser.
+  IF COALESCE(NEW.is_skipped, FALSE) THEN
+    RETURN NEW;
+  END IF;
+
   v_is_delayed_correct := NEW.is_correct AND EXISTS (
     SELECT 1
     FROM public.session_answers AS previous_answer

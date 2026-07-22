@@ -43,6 +43,36 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+const TURKISH_ONES = ['sıfır', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz'] as const
+const TURKISH_TENS = ['', 'on', 'yirmi', 'otuz', 'kırk', 'elli', 'altmış', 'yetmiş', 'seksen', 'doksan'] as const
+
+function smallIntegerToTurkish(value: number): string | null {
+  if (!Number.isInteger(value) || Math.abs(value) > 99) return null
+  const sign = value < 0 ? 'eksi ' : ''
+  const absolute = Math.abs(value)
+  if (absolute < 10) return `${sign}${TURKISH_ONES[absolute]}`
+  const tens = TURKISH_TENS[Math.floor(absolute / 10)]
+  const ones = absolute % 10
+  return `${sign}${tens}${ones ? ` ${TURKISH_ONES[ones]}` : ''}`
+}
+
+function answerVariants(answer: string): string[] {
+  const normalized = normalize(answer)
+  const variants = new Set([normalized])
+  if (/^-?\d+$/.test(normalized)) {
+    const words = smallIntegerToTurkish(Number(normalized))
+    if (words) variants.add(words)
+  } else {
+    for (let value = -99; value <= 99; value += 1) {
+      if (smallIntegerToTurkish(value) === normalized) {
+        variants.add(String(value))
+        break
+      }
+    }
+  }
+  return [...variants]
+}
+
 /** Model/küratörlü hint doğru seçenek veya "cevap X" kalıbı sızdırıyor mu? */
 export function leaksAnswer(
   hint: string,
@@ -50,14 +80,16 @@ export function leaksAnswer(
   answerLetter: string | null,
 ): boolean {
   const normalizedHint = normalize(hint)
-  const normalizedAnswer = answerText ? normalize(answerText) : ''
+  const normalizedAnswers = answerText ? answerVariants(answerText) : []
 
   // Uzun seçenek metninin aynen tekrarı güçlü sızıntı sinyalidir.
-  if (normalizedAnswer.length >= 4 && normalizedHint.includes(normalizedAnswer)) return true
+  if (normalizedAnswers.some((answer) => answer.length >= 4 && normalizedHint.includes(answer))) {
+    return true
+  }
 
   // Kısa/sayısal cevaplarda yalnız bağlamsal sonuç kalıplarını engelle; aksi
   // halde "4 ile sadeleştir" gibi meşru ara-adımlar false-positive olur.
-  if (normalizedAnswer) {
+  for (const normalizedAnswer of normalizedAnswers) {
     const answer = escapeRegex(normalizedAnswer)
     const explicitValue = new RegExp(
       `(?:cevap|yanıt|sonuç|değer|x|y)\\s*(?:şudur|olur|bulunur|çıkar|:|=|-)?\\s*${answer}(?:\\b|$)|${answer}\\s+(?:cevaptır|sonuçtur|bulunur|çıkar|olur)(?:\\b|$)`,

@@ -3,19 +3,29 @@
 -- suresini belirsizlestirmesin. Bu script idempotenttir; tum mevcut kaniti
 -- yeniden hesaplayip ayni user/outcome satirlarini SET eder (toplamaz).
 --
--- Prod uygulama notu:
+-- Prod uygulama notu (MAINTENANCE-ONLY):
 --   1) once 086 migration
---   2) dusuk trafikte bu script (lock_timeout 5s; kilit alamazsa guvenli fail)
---   3) smoke: attempts/correct/delayed tutarlilik kontrolleri
+--   2) preflight: hedef outcome/question mapping sayisini ve son session_answers
+--      yogunlugunu read-only sorguyla kontrol et
+--   3) dusuk trafikte bu scripti calistir; lock_timeout YALNIZ lock edinimini
+--      sinirlar. transaction_timeout toplam kilit/transaction suresini,
+--      statement_timeout ise backfill sorgusunu fail-safe sinirlar.
+--   4) smoke: attempts/correct/delayed tutarlilik kontrolleri
 
 BEGIN;
 
-SET LOCAL lock_timeout = '5s';
-SET LOCAL statement_timeout = '120s';
+SET LOCAL lock_timeout = '3s';
+SET LOCAL statement_timeout = '12s';
+-- PostgreSQL 17+: sadece lock edinimi degil, lock tutulurken tum maintenance
+-- transaction'ini da keskin bicimde sinirla.
+SET LOCAL transaction_timeout = '15s';
 
--- Snapshot ile trigger UPSERT'in birbirini ezdigi race'i engeller. Kilit
--- alinana kadar yeni session_answers INSERT'leri en fazla 5s bekler; alinmazsa
--- transaction hata ile tamamen geri doner.
+-- Snapshot ile trigger UPSERT'in birbirini ezdigi race'i engeller. Backfill
+-- mevcut writer kilidini en fazla 3s bekler; alamazsa tamamen geri doner. Kilit
+-- alindiktan sonra YENI session_answers INSERT'leri transaction bitene kadar
+-- bekleyebilir; PG17 transaction_timeout bu pencereyi toplam 15s ile keser.
+-- Bu nedenle script yalniz bakim penceresinde ve blocked-session gozlemiyle
+-- calistirilir.
 LOCK TABLE public.session_answers IN SHARE ROW EXCLUSIVE MODE;
 
 -- Aktif outcome kapsamini once temizleyip ayni transaction'da tam snapshot'i
@@ -50,6 +60,7 @@ WITH evidence AS (
   JOIN public.question_outcomes AS mapping ON mapping.question_id = answer.question_id
   JOIN public.curriculum_outcomes AS outcome ON outcome.id = mapping.outcome_id
   WHERE outcome.is_active = TRUE
+    AND COALESCE(answer.is_skipped, FALSE) = FALSE
   GROUP BY answer.user_id, mapping.outcome_id
 )
 INSERT INTO public.user_outcome_state (
