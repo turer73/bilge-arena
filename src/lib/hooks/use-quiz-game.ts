@@ -48,6 +48,8 @@ export interface UseQuizGameReturn {
 
   // Aksiyonlar
   handleStart: () => Promise<void>
+  /** "Bugunun 15'i" plan sorularini dogrudan baslatir -- fetch/slice yok. */
+  handleStartPlanned: (questions: Question[]) => void
   handleAnswer: (optionIndex: number) => void
   handleNext: () => void
   handleRestart: () => void
@@ -247,6 +249,36 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     }
   }, [game, mode, quizStore, timer, isDeneme, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, gameStore.selectedExamRef, userId])
 
+  // --- "Bugunun 15'i" plani dogrudan baslat ---
+  // handleStart'in basari-dalinin aynasi: fetch/slice yok (sorular caginan
+  // tarafindan zaten hazirlanmis gelir, bkz. use-today-plan.ts), lives sabit 0
+  // (plan modu daima cansiz/suresiz -- gameStore.setMode('practice') caginan
+  // tarafindan ayrica cagrilir, ama `mode`/`isDeneme` degiskenlerine BILEREK
+  // bagli DEGIL: setMode + handleStartPlanned ayni event-handler icinde ard
+  // arda cagrildiginda bu hook'un `mode` closure'i bir onceki render'in eski
+  // degerini tasir -- zustand set() senkron olsa da React yeniden render
+  // ETMEDEN bu callback'in closure'i guncellenmez).
+  const handleStartPlanned = useCallback((questions: Question[]) => {
+    if (questions.length === 0) return
+
+    shuffleMapRef.current.clear()
+    const shuffledQuestions = questions.map(q => {
+      const s = shuffleOptionsWithMap(q.content)
+      shuffleMapRef.current.set(q.id, s.map)
+      return { ...q, content: s.content }
+    })
+
+    quizStore.startQuiz(shuffledQuestions, 0)
+    setIsGuestMode(false)
+    setLoadError(null)
+    // Timer BASLATILMAZ (plan suresiz) ama SIFIRLANIR: classic/blitz lobisinden
+    // gelindiginde useTimer onceki modun saniyesini (30/15) tutar; sifirlanmazsa
+    // handleAnswer'da timeTaken = 0 - timer.seconds NEGATIF olur, /api/sessions
+    // reddeder ve plan XP/ilerleme kaydedilmeden "tamamlandi" gorunur (Codex P1).
+    timer.reset(0)
+    setScreen('game')
+  }, [quizStore, timer])
+
   // --- Cevap ver ---
 
   const handleAnswer = useCallback((optionIndex: number) => {
@@ -278,7 +310,9 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       }
     } else {
       timer.stop()
-      const timeTaken = mode.timePerQuestion - timer.seconds
+      // clamp(>=0): plan/practice modunda timePerQuestion=0 iken kirli timer.seconds
+      // negatif timeTaken uretmesin (defense-in-depth, Codex P1 timer.reset(0) ile birlikte).
+      const timeTaken = Math.max(0, mode.timePerQuestion - timer.seconds)
       const isCorrect = optionIndex === getCorrectIndex(question.content)
       const newStreak = isCorrect ? quizStore.streak + 1 : 0
       const xpResult = calculateXP(question.difficulty, timer.seconds, newStreak)
@@ -366,6 +400,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     setShowReportModal,
     setHelpPaused,
     handleStart,
+    handleStartPlanned,
     handleAnswer,
     handleNext,
     handleRestart,

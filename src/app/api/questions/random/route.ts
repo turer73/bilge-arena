@@ -8,12 +8,7 @@ import { isValidUuid } from '@/lib/utils/uuid'
 import type { Question } from '@/types/database'
 import { toPublicQuestion } from '@/lib/utils/question-public'
 import { FEATURES } from '@/lib/constants/premium'
-import { computeDueMap } from '@/lib/review/due-map'
-
-// wrong-answers route'undaki (src/app/api/review/wrong-answers/route.ts) ayni
-// tarama-sinirlamasi deseni: cok-aktif kullanicida binlerce satir tek istekte
-// cekilmesin.
-const FSRS_WRONG_SCAN_LIMIT = 1000
+import { fetchDueQuestions } from '@/lib/review/due-questions'
 
 // Cift kalkan rate limit (Madde 9 pattern):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -173,7 +168,7 @@ export async function GET(request: NextRequest) {
   // 6) Review questions (opsiyonel, spaced-repetition)
   let reviewQuestions: Question[] = []
   if (includeReview && questions.length > 0) {
-    reviewQuestions = await fetchReviewQuestions(admin, user.id, game, category, difficulty)
+    reviewQuestions = await fetchReviewQuestions(admin, user.id, game, category, difficulty, examRef)
   }
 
   return NextResponse.json(
@@ -187,64 +182,6 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * FSRS-tabanli review havuzu (konu#7 karari S1, FEATURES.FSRS_REVIEW=true iken).
- * Kalici FSRS-state YOK: en az bir kez yanlis cevaplanmis her soru icin TUM
- * (dogru+yanlis) session_answers gecmisi kronolojik olarak FSRS'e katlanir
- * (src/lib/review/fsrs.ts), due<=simdi olanlar donulur. Bos donerse cagiran
- * (fetchReviewQuestions) eski 7-gun mantigina otomatik duser.
- */
-async function fetchFsrsDueQuestions(
-  admin: ReturnType<typeof createServiceRoleClient>,
-  userId: string,
-  game: string,
-  category: string | null,
-  difficulty: number | null,
-): Promise<Question[]> {
-  // 1) Adaylar: en az bir kez yanlis cevaplanmis sorular (soru-id'ye gore
-  // tekillestirilir asagida; tarama en son N yanlis-OLAYIYLA sinirli).
-  const { data: wrongRows } = await admin
-    .from('session_answers')
-    .select('question_id')
-    .eq('user_id', userId)
-    .eq('is_correct', false)
-    .order('answered_at', { ascending: false })
-    .limit(FSRS_WRONG_SCAN_LIMIT)
-
-  const candidateIds = Array.from(new Set((wrongRows ?? []).map(r => r.question_id as string)))
-  if (candidateIds.length === 0) return []
-
-  // 2) Bu adaylarin TAM (dogru+yanlis) gecmisi FSRS'e katlanir -- paylasilan
-  // yardimci (/api/review/wrong-answers ile ayni fold-mantigini kullanir,
-  // due-rozeti icin de burada kullaniliyor).
-  const dueMap = await computeDueMap(admin, userId, candidateIds)
-  const dueIds = Array.from(dueMap.entries())
-    .filter(([, info]) => info.isDue)
-    .map(([questionId]) => questionId)
-
-  if (dueIds.length === 0) return []
-
-  // Vercel Agent Review bulgusu: dueIds cross-game bir liste (aday-taramasi
-  // game'e gore filtrelenmiyor). game/category/difficulty filtreleri ONCE
-  // uygulanip DB-tarafinda limit(20) yapilmali -- aksi halde JS-tarafinda
-  // slice(0,20) once yapilirsa cok-oyunlu kullanicida istenen oyuna ait ID
-  // kalmayabilir (havuz sessizce ac kalir).
-  let query = admin
-    .from('questions')
-    .select('*')
-    .in('id', dueIds)
-    .eq('game', game)
-    .eq('is_active', true)
-
-  if (category) query = query.eq('category', category)
-  if (difficulty) query = query.eq('difficulty', difficulty)
-
-  query = query.limit(20)
-
-  const { data } = await query
-  return (data as unknown as Question[]) || []
-}
-
-/**
  * Son 7 gunde yanlis cevaplanan ve sonrasinda dogru cevaplanmamis sorulari getirir.
  * Spaced repetition icin "zayif sorular" havuzu (FEATURES.FSRS_REVIEW=false iken
  * kullanilan mantik; FSRS acikken de bos/hata durumunda fallback olarak calisir).
@@ -255,10 +192,11 @@ async function fetchReviewQuestions(
   game: string,
   category: string | null,
   difficulty: number | null,
+  examRef: string | null,
 ): Promise<Question[]> {
   if (FEATURES.FSRS_REVIEW) {
     try {
-      const dueQuestions = await fetchFsrsDueQuestions(admin, userId, game, category, difficulty)
+      const dueQuestions = await fetchDueQuestions(admin, userId, game, category, difficulty, examRef)
       if (dueQuestions.length > 0) return dueQuestions
     } catch (e) {
       console.error('[/api/questions/random] FSRS fold hatasi, 7-gun fallback:', e)
@@ -306,6 +244,7 @@ async function fetchReviewQuestions(
 
   if (category) query = query.eq('category', category)
   if (difficulty) query = query.eq('difficulty', difficulty)
+  if (examRef) query = query.eq('exam_ref', examRef)
 
   query = query.limit(20)
 
