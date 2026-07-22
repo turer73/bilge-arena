@@ -17,6 +17,7 @@ import { trUpper } from '@/lib/utils/tr-text'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
+import { useMasteryMap } from '@/lib/hooks/use-mastery-map'
 
 import { Lobby } from './lobby'
 import { Timer } from './timer'
@@ -45,6 +46,7 @@ const DenemeResult = dynamic(
 import { MiniLeaderboard } from './mini-leaderboard'
 import { DailyQuests } from './daily-quests'
 import { TodayPlanCard } from './today-plan-card'
+import { MasteryMapCard } from './mastery-map-card'
 import { TopicsPanel } from './topics-panel'
 import { LifeLostOverlay } from './life-lost-overlay'
 import { PremiumGateModal } from '@/components/premium/premium-gate-modal'
@@ -82,6 +84,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
   const dailyQuests = useDailyQuests()
   const todayPlan = useTodayPlan(game, user?.id, gameStore.selectedExamRef)
+  const masteryMap = useMasteryMap(game, user?.id, gameStore.selectedExamRef)
   useSessionSaver({
     screen: quiz.screen,
     userId: user?.id,
@@ -89,7 +92,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
     selectedMode: gameStore.selectedMode,
     selectedCategory: gameStore.selectedCategory,
     selectedDifficulty: gameStore.selectedDifficulty,
-    onSessionSaved: dailyQuests.updateProgress,
+    onSessionSaved: (result) => {
+      dailyQuests.updateProgress(result)
+      void masteryMap.fetchMastery()
+    },
   })
 
   // Lobiye donulunce plan-aktif bayragini sifirla (handleRestart'in TUM
@@ -117,7 +123,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     return (
       <>
         {user && (
-          <div className="mx-auto max-w-md px-4 pt-4 md:max-w-lg md:px-6 xl:max-w-xl xl:px-8 2xl:max-w-2xl">
+          <div className="mx-auto max-w-md space-y-3 px-4 pt-4 md:max-w-lg md:px-6 xl:max-w-xl xl:px-8 2xl:max-w-2xl">
             <TodayPlanCard
               plan={todayPlan.plan}
               loading={todayPlan.loading}
@@ -143,6 +149,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 quiz.handleStartPlanned(todayPlan.plan.questions)
               }}
             />
+            <MasteryMapCard outcomes={masteryMap.outcomes} loading={masteryMap.loading} />
           </div>
         )}
         <Lobby
