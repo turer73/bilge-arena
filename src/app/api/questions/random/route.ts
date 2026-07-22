@@ -218,6 +218,7 @@ async function fetchReviewQuestions(
     .select('question_id')
     .eq('user_id', userId)
     .eq('is_correct', false)
+    .eq('is_skipped', false)
     .gte('answered_at', sevenDaysAgo)
 
   if (!wrongAnswers || wrongAnswers.length === 0) return []
@@ -227,18 +228,32 @@ async function fetchReviewQuestions(
   // disc#1371 fix: "duzeltilmis" kronolojik olmali -- onceki kod pencere
   // icindeki HERHANGI bir dogru cevaba bakiyordu, yanlistan ONCE gelen bir
   // dogru cevabi da "duzeltilmis" sayip soruyu review havuzundan dusuruyordu.
-  // Artik en-son (answered_at'e gore) denemenin sonucuna bakiyoruz.
+  // Artik en-son (answered_at'e gore) NON-SKIP denemenin sonucuna bakiyoruz.
+  //
+  // DESCENDING (Codex P2 page-cap): PostgREST implicit satir-cap'i (varsayilan
+  // 1000) cok-aktif kullanicida ASCENDING'de yalniz EN ESKI sayfayi getirir ->
+  // sonraki duzeltmeler gorulmez, latest stale kalir. Descending ile en YENI
+  // denemeler oncelikli; Map'e ilk yazan (= en yeni non-skip) kazanir.
+  //
+  // is_skipped ATLANIR (Codex P2 skip-handling): skip /api/sessions'ta
+  // is_correct=false/is_skipped=true kaydedilir ama wrong-answers akisi skip'i
+  // "yanlis DEGIL" sayar. Skip'i latest'e katarsak, yanlis->duzeltti->skip
+  // dizisinde skip duzeltmeyi ezip soruyu review'e geri ekler. Skip satirlari
+  // wrong/correct durumunu DEGISTIRMEZ -- en son NON-SKIP deneme belirleyici.
   const { data: allAttempts } = await admin
     .from('session_answers')
-    .select('question_id, is_correct')
+    .select('question_id, is_correct, is_skipped')
     .eq('user_id', userId)
     .in('question_id', wrongIds)
     .gte('answered_at', sevenDaysAgo)
-    .order('answered_at', { ascending: true })
+    .order('answered_at', { ascending: false })
 
   const latestIsCorrect = new Map<string, boolean>()
   for (const a of allAttempts || []) {
-    latestIsCorrect.set(a.question_id, a.is_correct)
+    if (a.is_skipped) continue
+    if (!latestIsCorrect.has(a.question_id)) {
+      latestIsCorrect.set(a.question_id, a.is_correct)
+    }
   }
   const reviewIds = wrongIds.filter(id => latestIsCorrect.get(id) !== true)
 

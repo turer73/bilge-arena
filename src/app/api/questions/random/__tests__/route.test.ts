@@ -245,11 +245,11 @@ describe('GET /api/questions/random', () => {
       mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
 
       sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
-      // en-son deneme (kronolojik siralamada son eleman) dogru -> duzeltilmis
+      // allAttempts DESCENDING doner (en yeni once); en-son deneme dogru -> duzeltilmis
       sessionAnswersMock.push({
         data: [
-          { question_id: 'wq1', is_correct: false },
-          { question_id: 'wq1', is_correct: true },
+          { question_id: 'wq1', is_correct: true, is_skipped: false },
+          { question_id: 'wq1', is_correct: false, is_skipped: false },
         ],
         error: null,
       })
@@ -265,11 +265,11 @@ describe('GET /api/questions/random', () => {
       mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
 
       sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
-      // en-son deneme (kronolojik siralamada son eleman) yanlis -> hala review'da kalmali
+      // allAttempts DESCENDING doner (en yeni once); en-son deneme yanlis -> review'da kalir
       sessionAnswersMock.push({
         data: [
-          { question_id: 'wq1', is_correct: true },
-          { question_id: 'wq1', is_correct: false },
+          { question_id: 'wq1', is_correct: false, is_skipped: false },
+          { question_id: 'wq1', is_correct: true, is_skipped: false },
         ],
         error: null,
       })
@@ -278,6 +278,28 @@ describe('GET /api/questions/random', () => {
       const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
       const body = await res.json()
       expect(body.reviewQuestions).toEqual([{ id: 'wq1', game: 'matematik' }])
+    })
+
+    it('Codex P2 skip-handling: en-son SKIP onceki duzeltmeyi ezmemeli (duzeltilmis kalir)', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+      mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+
+      sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
+      // DESCENDING: en yeni = SKIP (atlanmali), ondan onceki gercek deneme = dogru (duzeltilmis).
+      // Skip latest'e katilmaz -> son NON-SKIP dogru -> soru review'a GERI EKLENMEZ.
+      sessionAnswersMock.push({
+        data: [
+          { question_id: 'wq1', is_correct: false, is_skipped: true },
+          { question_id: 'wq1', is_correct: true, is_skipped: false },
+          { question_id: 'wq1', is_correct: false, is_skipped: false },
+        ],
+        error: null,
+      })
+      // reviewIds bos beklenir -> questions sorgusuna gidilmez
+
+      const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
+      const body = await res.json()
+      expect(body.reviewQuestions).toEqual([])
     })
   })
 })
