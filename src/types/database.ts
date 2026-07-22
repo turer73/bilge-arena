@@ -293,6 +293,42 @@ export interface DailyPlan {
   created_at: string
 }
 
+/** curriculum_outcomes — aciklanabilir kazanim tanimlari (migration 086). */
+export interface CurriculumOutcome {
+  id: string
+  code: string
+  game: GameType
+  category: string
+  title: string
+  description: string | null
+  exam_ref: string | null
+  sort_order: number
+  is_active: boolean
+  created_at: string
+}
+
+/** question_outcomes — soru/kazanim eslemesi ve kanit agirligi. */
+export interface QuestionOutcome {
+  question_id: string
+  outcome_id: string
+  weight: number
+  is_primary: boolean
+  created_at: string
+}
+
+/** user_outcome_state — trigger tarafindan tutulan seffaf kanit sayaclari. */
+export interface UserOutcomeState {
+  user_id: string
+  outcome_id: string
+  attempts: number
+  correct_attempts: number
+  weighted_earned: number
+  weighted_possible: number
+  delayed_correct: number
+  last_answered_at: string | null
+  updated_at: string
+}
+
 /** xp_log — XP audit trail */
 export interface XPLog {
   id: string
@@ -476,6 +512,10 @@ export interface Database {
       user_topic_progress: TableDef<UserTopicProgress>
       daily_quests: TableDef<DailyQuestDef>
       user_daily_quests: TableDef<UserDailyQuest>
+      daily_plan: TableDef<DailyPlan>
+      curriculum_outcomes: TableDef<CurriculumOutcome>
+      question_outcomes: TableDef<QuestionOutcome>
+      user_outcome_state: TableDef<UserOutcomeState>
       xp_log: TableDef<XPLog>
       user_question_history: TableDef<UserQuestionHistory>
       comments: TableDef<Comment>

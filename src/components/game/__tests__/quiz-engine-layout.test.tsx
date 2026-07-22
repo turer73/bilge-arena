@@ -82,6 +82,9 @@ const todayPlanValue = vi.hoisted(() => ({
   markCompleted: vi.fn(),
 }))
 vi.mock('@/lib/hooks/use-today-plan', () => ({ useTodayPlan: () => todayPlanValue }))
+vi.mock('@/lib/hooks/use-mastery-map', () => ({
+  useMasteryMap: () => ({ outcomes: [], loading: false, fetchMastery: vi.fn() }),
+}))
 vi.mock('@/lib/utils/plausible', () => ({ trackEvent: vi.fn() }))
 
 // --- Ağır çocuk bileşenler: marker/null stub ---
@@ -112,6 +115,7 @@ vi.mock('../daily-quests', () => ({ DailyQuests: () => null }))
 vi.mock('../today-plan-card', () => ({
   TodayPlanCard: ({ onStart }: { onStart: () => void }) => <button data-testid="today-plan-start" onClick={onStart} />,
 }))
+vi.mock('../mastery-map-card', () => ({ MasteryMapCard: () => null }))
 vi.mock('../topics-panel', () => ({ TopicsPanel: () => <div data-testid="topics-band" /> }))
 vi.mock('../life-lost-overlay', () => ({ LifeLostOverlay: () => null }))
 vi.mock('@/components/ui/bilge-chan', () => ({ BilgeChan: () => null }))

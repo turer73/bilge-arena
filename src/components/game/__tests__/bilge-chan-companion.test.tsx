@@ -48,14 +48,41 @@ function pose(): string | null {
   return screen.getByTestId('chan-pose').getAttribute('data-pose')
 }
 
+const fetchMock = vi.fn()
+
 beforeEach(() => {
   vi.useFakeTimers()
   vi.spyOn(Math, 'random').mockReturnValue(0)
+  fetchMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as { stage: string }
+    const hints: Record<string, string> = {
+      hint1: 'İlk ipucu',
+      hint2: 'İkinci ipucu',
+      hint3: 'Üçüncü ipucu',
+      solution: 'Çözüm metni burada.',
+    }
+    const tokens: Record<string, string | null> = {
+      hint1: 'hint2-token',
+      hint2: 'hint3-token',
+      hint3: 'solution-token',
+      solution: null,
+    }
+    return new Response(JSON.stringify({
+      stage: body.stage,
+      hint: hints[body.stage],
+      nextToken: tokens[body.stage],
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  })
+  vi.stubGlobal('fetch', fetchMock)
 })
 
 afterEach(() => {
   vi.useRealTimers()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe('BilgeChanCompanion', () => {
@@ -108,7 +135,82 @@ describe('BilgeChanCompanion', () => {
     expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
   })
 
-  test('Evet -> help: reading pose + solution + Devam butonu; OTO-geçiş YOK, süre durur (Ensar 06-16)', () => {
+  test('Evet -> 3 kademeli ipucu -> çözüm; her aşama server endpointinden gelir', async () => {
+    const onHelpToggle = vi.fn()
+    render(
+      <BilgeChanCompanion
+        quizState="playing"
+        lastIsCorrect={null}
+        question={makeQuestion()}
+        onHelpToggle={onHelpToggle}
+      />,
+    )
+    act(() => vi.advanceTimersByTime(6000))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+      await Promise.resolve()
+    })
+    expect(pose()).toBe('reading')
+    expect(onHelpToggle).toHaveBeenCalledWith(true) // sayaç dursun
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText('İlk ipucu')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Bir ipucu daha' })).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Bir ipucu daha' }))
+      await Promise.resolve()
+    })
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText('İkinci ipucu')).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Bir ipucu daha' }))
+      await Promise.resolve()
+    })
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText('Üçüncü ipucu')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Çözümü göster' })).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Çözümü göster' }))
+      await Promise.resolve()
+    })
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText('Çözüm metni burada.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Çözümü göster' })).not.toBeInTheDocument()
+
+    // OTO-geçiş yok; öğrenci kendisi soruya döner.
+    act(() => vi.advanceTimersByTime(8000))
+    expect(pose()).toBe('reading')
+    expect(screen.queryByText(CHAN_LINES.check)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Soruyu çözmeye dön/ }))
+    expect(onHelpToggle).toHaveBeenCalledWith(false)
+    expect(pose()).toBe('idle')
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText(CHAN_LINES.check)).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ questionId: 'q1', stage: 'hint1' })
+  })
+
+  test('endpoint hatasında güvenli hata mesajı ve soruya dönüş sunar', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 503 }))
+    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
+    act(() => vi.advanceTimersByTime(6000))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+      await Promise.resolve()
+    })
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText(/Şu an ipucu alınamadı/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Soruyu çözmeye dön/ })).toBeInTheDocument()
+  })
+
+  test('endpoint beklerken öğrenci loading ekranından soruya dönebilir', async () => {
+    fetchMock.mockImplementationOnce((_url: string, init?: RequestInit) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+    }))
     const onHelpToggle = vi.fn()
     render(
       <BilgeChanCompanion
@@ -120,37 +222,15 @@ describe('BilgeChanCompanion', () => {
     )
     act(() => vi.advanceTimersByTime(6000))
     fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
-    expect(pose()).toBe('reading')
-    expect(onHelpToggle).toHaveBeenCalledWith(true) // sayaç dursun
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(
-      screen.getByText(`${CHAN_LINES.explainIntro} Çözüm metni burada.`),
-    ).toBeInTheDocument()
-    // Evet/Hayır gizlenir, Devam görünür
-    expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Devam/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Soruyu çözmeye dön/ })).toBeInTheDocument()
 
-    // OTO-geçiş YOK: 8sn sonra hâlâ 'help' (reading), check görünmez, Devam durur
-    act(() => vi.advanceTimersByTime(8000))
-    expect(pose()).toBe('reading')
-    expect(screen.queryByText(CHAN_LINES.check)).not.toBeInTheDocument()
-
-    // Devam -> check fazı + sayaç devam etsin (onHelpToggle false)
-    fireEvent.click(screen.getByRole('button', { name: /Devam/ }))
-    expect(onHelpToggle).toHaveBeenCalledWith(false)
-    expect(pose()).toBe('idle')
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Soruyu çözmeye dön/ }))
+      await Promise.resolve()
+    })
+    expect(onHelpToggle).toHaveBeenLastCalledWith(false)
     act(() => vi.advanceTimersByTime(TYPE_MS))
     expect(screen.getByText(CHAN_LINES.check)).toBeInTheDocument()
-  })
-
-  test('Evet + solution yok -> noSolution fallback', () => {
-    const q = makeQuestion()
-    delete (q.content as { solution?: string }).solution
-    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={q} />)
-    act(() => vi.advanceTimersByTime(6000))
-    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText(CHAN_LINES.noSolution)).toBeInTheDocument()
   })
 
   test('Hayır -> declined: idle pose + encourage repliği, check fazına geçmez', () => {
@@ -268,6 +348,42 @@ describe('BilgeChanCompanion', () => {
     const bubble = root.querySelector('div.relative') as HTMLElement
     expect(bubble.className).toContain('max-w-[190px]')
     expect(bubble.className).toContain('order-2')
+  })
+})
+
+describe('BilgeChanCompanion staged-coach guards', () => {
+  test('legacy soru seklinde Koc teklifi gostermez', () => {
+    render(
+      <BilgeChanCompanion
+        quizState="playing"
+        lastIsCorrect={null}
+        question={makeQuestion({
+          content: { sentence: 'Boslugu doldur', options: ['a', 'b'], answer: 0 } as Question['content'],
+        })}
+      />,
+    )
+    act(() => vi.advanceTimersByTime(6000))
+    expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
+  })
+
+  test('loading sonrasi donuste gec kalan response yardim fazini geri getirmez', async () => {
+    let resolveLate: ((response: Response) => void) | undefined
+    fetchMock.mockImplementationOnce(() => new Promise<Response>((resolve) => {
+      resolveLate = resolve
+    }))
+    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
+    act(() => vi.advanceTimersByTime(6000))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+    fireEvent.click(screen.getByRole('button', { name: /Soruyu/ }))
+
+    resolveLate?.(new Response(JSON.stringify({
+      stage: 'hint1', hint: 'Gec kalan ipucu', nextToken: 'hint2-token',
+    }), { status: 200 }))
+    await act(async () => { await Promise.resolve() })
+
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText(CHAN_LINES.check)).toBeInTheDocument()
+    expect(screen.queryByText('Gec kalan ipucu')).not.toBeInTheDocument()
   })
 })
 

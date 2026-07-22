@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { BilgeChan, type ChanPose } from '@/components/ui/bilge-chan'
 import { getCorrectIndex, getOptionLetter } from '@/lib/utils/question'
+import { supportsStagedCoachQuestion } from '@/lib/coach/question-shape'
 import type { Question } from '@/types/database'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-tts'
@@ -51,15 +52,27 @@ interface BilgeChanCompanionProps {
  * Faz akışı. Parent her yeni soruda `key={currentIndex}` ile remount eder,
  * böylece her soru 'intro' fazından taze başlar.
  */
-type Phase = 'intro' | 'offered' | 'help' | 'check' | 'declined'
+type Phase =
+  | 'intro'
+  | 'offered'
+  | 'loading'
+  | 'hint1'
+  | 'hint2'
+  | 'hint3'
+  | 'solution'
+  | 'check'
+  | 'declined'
+  | 'error'
 
 /** Yardım teklifi gecikmesi (ms). */
 const OFFER_DELAY = 6000
 
 /**
  * Bilge Chan — kişilikli quiz companion. Soru akışına göre pose + konuşma
- * balonu (typewriter); "yardıma ihtiyacın var mı?" → EVET çözümü gösterir,
- * sonra "anlayabildin mi?" diye kontrol eder. Cevap verilince victory/sad.
+ * balonu (typewriter); "yardıma ihtiyacın var mı?" → kademeli 3 ipucu →
+ * kullanıcı isterse çözüm. Client serbest prompt göndermez; server yalnız
+ * questionId+stage ve sonraki aşamalar için imzalı token kabul eder. Cevap
+ * verilince victory/sad.
  */
 export function BilgeChanCompanion({
   quizState,
@@ -73,12 +86,17 @@ export function BilgeChanCompanion({
 }: BilgeChanCompanionProps) {
   const [phase, setPhase] = useState<Phase>('intro')
   const [helpMsg, setHelpMsg] = useState('')
+  const requestRef = useRef<AbortController | null>(null)
+  const progressTokenRef = useRef<string | null>(null)
   // TTS destegi hydration-sonrasi belirlenir (SSR'da speechSynthesis yok)
   const [ttsReady, setTtsReady] = useState(false)
   useEffect(() => {
     setTtsReady(isTtsSupported())
     // Soru degisiminde (remount) yarim kalan konusmayi kes
-    return () => stopChanSpeech()
+    return () => {
+      requestRef.current?.abort()
+      stopChanSpeech()
+    }
   }, [])
 
   const easy = question?.difficulty === 1
@@ -86,13 +104,13 @@ export function BilgeChanCompanion({
 
   // intro → offered: setState yalnızca timer callback'inde
   useEffect(() => {
-    if (phase !== 'intro' || quizState !== 'playing') return
+    if (phase !== 'intro' || quizState !== 'playing' || !supportsStagedCoachQuestion(question?.content)) return
     const t = setTimeout(() => setPhase('offered'), OFFER_DELAY)
     return () => clearTimeout(t)
-  }, [phase, quizState])
+  }, [phase, question?.content, quizState])
 
-  // 'help' fazı OTOMATİK geçmez (Ensar 06-16): kullanıcı açıklamayı okuyup
-  // "Devam" butonuyla kendi geçer; bu sırada per-soru sayacı parent'ta durur.
+  // Yardım fazları OTOMATİK geçmez: öğrenci ipuçları arasında kendi ilerler;
+  // bu sırada per-soru sayacı parent'ta durur.
 
   const introMsg = useMemo(
     () => (easy ? pickLine(CHAN_LINES.easyJoke) : pickLine(CHAN_LINES.greet)),
@@ -106,19 +124,65 @@ export function BilgeChanCompanion({
       : pickLine(CHAN_LINES.wrong).replace('{harf}', letter)
   }, [answered, lastIsCorrect, question])
 
+  const requestHint = async (stage: 'hint1' | 'hint2' | 'hint3' | 'solution') => {
+    if (!question || !supportsStagedCoachQuestion(question.content)) return
+    requestRef.current?.abort()
+    const controller = new AbortController()
+    requestRef.current = controller
+    let timedOut = false
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true
+      controller.abort()
+    }, 10_000)
+    setPhase('loading')
+    setHelpMsg('İpucu hazırlanıyor...')
+    try {
+      const response = await fetch('/api/coach/hint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: question.id,
+          stage,
+          ...(stage === 'hint1' ? {} : { token: progressTokenRef.current }),
+        }),
+        signal: controller.signal,
+      })
+      if (!response.ok) throw new Error('hint_failed')
+      const body = (await response.json()) as { stage?: string; hint?: string; nextToken?: string | null }
+      if (body.stage !== stage || !body.hint?.trim()
+        || (stage !== 'solution' && !body.nextToken)) throw new Error('invalid_hint')
+      if (controller.signal.aborted || requestRef.current !== controller) return
+      progressTokenRef.current = body.nextToken ?? null
+      setHelpMsg(body.hint.trim())
+      setPhase(stage)
+    } catch (error) {
+      if (requestRef.current !== controller || (controller.signal.aborted && !timedOut)) return
+      setHelpMsg('Şu an ipucu alınamadı. Biraz sonra yeniden deneyebilirsin.')
+      setPhase('error')
+    } finally {
+      window.clearTimeout(timeoutId)
+      if (requestRef.current === controller) requestRef.current = null
+    }
+  }
   const handleYes = () => {
-    const sol = question?.content.solution
-    setHelpMsg(sol ? `${CHAN_LINES.explainIntro} ${sol}` : CHAN_LINES.noSolution)
-    setPhase('help')
-    onHelpToggle?.(true) // sayaç dursun — kullanıcı açıklamayı okusun
+    progressTokenRef.current = null
+    onHelpToggle?.(true) // sayaç kademeli yardım boyunca dursun
+    void requestHint('hint1')
   }
   const handleNo = () => {
     setHelpMsg(pickLine(CHAN_LINES.encourage))
     setPhase('declined')
   }
   const handleContinue = () => {
+    requestRef.current?.abort()
+    requestRef.current = null
     setPhase('check')
     onHelpToggle?.(false) // sayaç kaldığı yerden devam etsin
+  }
+  const handleNextHint = () => {
+    if (phase === 'hint1') void requestHint('hint2')
+    else if (phase === 'hint2') void requestHint('hint3')
+    else if (phase === 'hint3') void requestHint('solution')
   }
 
   if (!question) return null
@@ -129,7 +193,7 @@ export function BilgeChanCompanion({
   if (answered) {
     pose = lastIsCorrect ? 'victory' : 'sad'
     message = answerMsg
-  } else if (phase === 'help') {
+  } else if (['loading', 'hint1', 'hint2', 'hint3', 'solution', 'error'].includes(phase)) {
     pose = 'reading'
     message = helpMsg
   } else if (phase === 'check') {
@@ -146,6 +210,7 @@ export function BilgeChanCompanion({
     message = introMsg
   }
   const showButtons = phase === 'offered' && !answered
+  const showHelpActions = ['loading', 'hint1', 'hint2', 'hint3', 'solution', 'error'].includes(phase) && !answered
 
   const bubbleWidth = compact ? 'max-w-[190px]' : 'max-w-[260px]'
 
@@ -184,14 +249,25 @@ export function BilgeChanCompanion({
               </button>
             </div>
           )}
-          {/* 'help' fazı: süre durdu — kullanıcı okuyup kendi devam eder (Ensar 06-16) */}
-          {phase === 'help' && !answered && (
-            <button
-              onClick={handleContinue}
-              className="mt-2 w-full rounded-lg bg-[var(--focus)] px-2 py-1.5 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
-            >
-              Devam →
-            </button>
+          {/* Kademeli yardım boyunca süre durur; öğrenci ipucu/çözüm arasında
+              kendi ilerler veya istediği anda soruya döner. */}
+          {showHelpActions && (
+            <div className="mt-2 flex flex-col gap-1.5">
+              {['hint1', 'hint2', 'hint3'].includes(phase) && (
+                <button
+                  onClick={handleNextHint}
+                  className="w-full rounded-lg bg-[var(--wisdom)] px-2 py-1.5 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
+                >
+                  {phase === 'hint3' ? 'Çözümü göster' : 'Bir ipucu daha'}
+                </button>
+              )}
+              <button
+                onClick={handleContinue}
+                className="w-full rounded-lg bg-[var(--focus)] px-2 py-1.5 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
+              >
+                Soruyu çözmeye dön →
+              </button>
+            </div>
           )}
           {!compact && (
             <span
