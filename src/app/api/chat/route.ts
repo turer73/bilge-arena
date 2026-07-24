@@ -10,7 +10,10 @@ import { getClientIp } from '@/lib/utils/client-ip'
 const chatLimiter = createRateLimiter('chat', 10, 60_000)
 const chatIpLimiter = createRateLimiter('chat-ip', 20, 60_000)
 
-const DEEPSEEK_MODEL = 'deepseek-chat'
+// HOTFIX (canli hata, Turgut-teyitli): DeepSeek API 'deepseek-chat' alias'ini
+// artik kabul etmiyor — "supported API model names are deepseek-v4-pro or
+// deepseek-v4-flash". Chat icin ucuz/hizli varyant secildi.
+const DEEPSEEK_MODEL = 'deepseek-v4-flash'
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 
 // Prompt production'da CHAT_SYSTEM_PROMPT env'inden okunur.
@@ -183,8 +186,10 @@ export async function POST(request: Request) {
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')
       console.error('[Chat API] DeepSeek error:', res.status, errBody.substring(0, 500))
+      // Ham upstream-hatasi KULLANICIYA SIZDIRILMAZ (canli ekranda JSON-dump
+      // gorundu — kotu UX + ic-detay sizintisi). Detay console.error'da.
       return NextResponse.json(
-        { error: `AI servisi hatasi: ${errBody.substring(0, 200)}` },
+        { error: 'AI servisi şu anda yanıt veremiyor. Lütfen birazdan tekrar deneyin.' },
         { status: 502 }
       )
     }
