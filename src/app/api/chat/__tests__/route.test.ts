@@ -6,15 +6,14 @@
  *   - Rate limit (user-id 429, IP 429)
  *   - Validation (400 Zod fail)
  *   - Injection regex sample (1 pattern test)
- *   - Gemini API error (502 fetch fail)
- *   - Gemini safety reject (502 finishReason SAFETY)
+ *   - DeepSeek API error (502 fetch fail)
+ *   - DeepSeek content_filter reject (502 finish_reason)
  *   - Success path (200 streaming)
  *
  * BU TEST KAPSAMINDA YOK (durust kayit):
  *   - 9 regex denylist'in her biri pozitif/negatif (sadece 1 sample)
- *   - Output safety check (BLOCKLIST varyanti)
  *   - Abuse log payload icerigi tam dogrulama (sadece insert call edildi)
- *   - GOOGLE_GENERATIVE_AI_API_KEY missing path (500)
+ *   - DEEPSEEK_API_KEY missing path (500)
  *   - Stream chunk content tam test (sadece response.text() check)
  *
  * Bu MVP baseline regression safety. Genis coverage sonraki PR'a.
@@ -28,7 +27,7 @@ const {
   mockAdminLogsInsert,
   mockFetch,
 } = vi.hoisted(() => {
-  process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-gemini-key'
+  process.env.DEEPSEEK_API_KEY = 'test-deepseek-key'
   return {
     mockGetUser: vi.fn(async () => ({
       data: { user: null as null | { id: string; email?: string } },
@@ -146,27 +145,26 @@ describe('POST /api/chat', () => {
     })
   })
 
-  it('returns 502 when Gemini fetch fails (non-OK)', async () => {
+  it('returns 502 when DeepSeek fetch fails (non-OK)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 503,
-      text: async () => 'Gemini overloaded',
+      text: async () => 'DeepSeek overloaded',
     })
     const res = await POST(makeReq(VALID_BODY))
     expect(res.status).toBe(502)
   })
 
-  it('returns 502 + admin_log insert when Gemini finishReason=SAFETY', async () => {
+  it('returns 502 + admin_log insert when DeepSeek finish_reason=content_filter', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        candidates: [
+        choices: [
           {
-            finishReason: 'SAFETY',
-            safetyRatings: [{ category: 'HARM_CATEGORY_HARASSMENT', probability: 'HIGH' }],
-            content: null,
+            finish_reason: 'content_filter',
+            message: null,
           },
         ],
       }),
@@ -180,15 +178,15 @@ describe('POST /api/chat', () => {
     })
   })
 
-  it('returns 200 streaming on Gemini success path', async () => {
+  it('returns 200 streaming on DeepSeek success path', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        candidates: [
+        choices: [
           {
-            finishReason: 'STOP',
-            content: { parts: [{ text: 'Asal sayilar 1 ve kendisinden baska boleni olmayan sayilardir.' }] },
+            finish_reason: 'stop',
+            message: { role: 'assistant', content: 'Asal sayilar 1 ve kendisinden baska boleni olmayan sayilardir.' },
           },
         ],
       }),
@@ -198,5 +196,28 @@ describe('POST /api/chat', () => {
     expect(res.headers.get('Content-Type')).toContain('text/plain')
     const text = await res.text()
     expect(text).toContain('Asal sayilar')
+  })
+
+  it('DeepSeek istegi OpenAI-uyumlu formatta (model + Bearer auth + system-mesaj) gonderilir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'ok' } }],
+      }),
+    })
+    await POST(makeReq(VALID_BODY))
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.deepseek.com/chat/completions',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer test-deepseek-key' }),
+      }),
+    )
+    const call = mockFetch.mock.calls[0] as [string, { body: string }]
+    const sentBody = JSON.parse(call[1].body)
+    expect(sentBody.model).toBe('deepseek-chat')
+    expect(sentBody.messages[0].role).toBe('system')
+    expect(sentBody.messages.at(-1)).toMatchObject({ role: 'user', content: 'Asal sayilar nedir?' })
   })
 })
