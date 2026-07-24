@@ -216,7 +216,7 @@ describe('POST /api/chat', () => {
     )
     const call = mockFetch.mock.calls[0] as [string, { body: string }]
     const sentBody = JSON.parse(call[1].body)
-    expect(sentBody.model).toBe('deepseek-chat')
+    expect(sentBody.model).toBe('deepseek-v4-flash')
     expect(sentBody.messages[0].role).toBe('system')
     expect(sentBody.messages.at(-1)).toMatchObject({ role: 'user', content: 'Asal sayilar nedir?' })
   })
