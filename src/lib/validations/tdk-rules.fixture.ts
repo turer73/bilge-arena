@@ -58,12 +58,23 @@ export type ExamplePair = readonly [invalid: string, valid: string]
 
 import expandedData from './data/tdk-tokens-expanded.json'
 
+// URL-slug istisnasi (yukaridaki diacritics.rule: "URL slug ... bu kuralin
+// istisnasidir") — /arena/calisma route'u (konu#7 ders-hub hub'i, plan onayli)
+// otomatik-sozluk kaynakli listede "calisma"/"çalışma" ciftiyle cakisiyor;
+// compliance test'in blunt string-literal regex'i URL-slug baglamini prose'tan
+// ayirt edemiyor (bkz. tdk-compliance.test.ts FALSE POSITIVE notu: "URL slug
+// ise fixture'dan kaldir"). Mevcut /arena/yanlislarim, /arena/kisisellestir,
+// /arena/siralama gibi route'lar zaten ASCII — bu paternle tutarli. sync-tdk-
+// tokens.mjs yeniden calistirilirsa bu filtre JSON'u degil, ciktiyi elden
+// gecirdigi icin korunur.
+const URL_SLUG_TOKEN_EXCEPTIONS = new Set<string>(['calisma'])
+
 // JSON cikti: tokens: Array<[ascii, turkish, count]>
 // TokenPair tipine donustur (count bilgisi drop, sadece [ascii, turkish])
 export const forbiddenAsciiTokensExpanded: readonly TokenPair[] =
-  (expandedData.tokens as Array<[string, string, number]>).map(
-    ([a, t]) => [a, t] as const,
-  )
+  (expandedData.tokens as Array<[string, string, number]>)
+    .filter(([a]) => !URL_SLUG_TOKEN_EXCEPTIONS.has(a))
+    .map(([a, t]) => [a, t] as const)
 
 // ═══════════════════════════════════════════════════════════════════════
 // TDK RULES — Single source of truth

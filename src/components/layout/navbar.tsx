@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX } from 'lucide-react'
+import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap } from 'lucide-react'
 import { Logo } from './logo'
 import { ThemeToggle } from './theme-toggle'
 import { NotificationBell } from './notification-bell'
@@ -14,6 +14,7 @@ import { trUpper } from '@/lib/utils/tr-text'
 const NAV_LINKS = [
   { href: '/', label: 'Ana Sayfa' },
   { href: '/arena', label: 'Oyunlar' },
+  { href: '/arena/calisma', label: 'Ders Çalış' },
   { href: '/oda', label: 'Oda Modu' },
   { href: '/arena/siralama', label: 'Sıralama' },
   { href: '/nasil-calisir', label: 'Nasıl Çalışır' },
@@ -140,6 +141,13 @@ export function Navbar() {
                     >
                       <User size={14} />
                       Profil
+                    </Link>
+                    <Link
+                      href="/arena/calisma"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]"
+                    >
+                      <GraduationCap size={14} />
+                      Ders Çalış
                     </Link>
                     <Link
                       href="/arena/yanlislarim"

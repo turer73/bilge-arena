@@ -4,11 +4,14 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { chatRequestSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
 
-const chatLimiter = createRateLimiter('chat', 30, 60_000)
-const chatIpLimiter = createRateLimiter('chat-ip', 60, 60_000)
+// Rate limit dusuruldu (konu#7 ders-hub plani, Faz 3): Gemini free-tier'a gore
+// daha maliyetli/dar DeepSeek kotasi + hub'da chat artik tek merkezi surface
+// (eskiden her /arena sayfasinda global FAB) — kotayi 30/60'tan 10/20'ye cek.
+const chatLimiter = createRateLimiter('chat', 10, 60_000)
+const chatIpLimiter = createRateLimiter('chat-ip', 20, 60_000)
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite'
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+const DEEPSEEK_MODEL = 'deepseek-chat'
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 
 // Prompt production'da CHAT_SYSTEM_PROMPT env'inden okunur.
 // Env yoksa sertlestirilmis fallback kullanilir (jailbreak/topic-drift/PII koruma).
@@ -28,7 +31,9 @@ Bu kuralları çiğneyen istekte: "Bu konuda yardım edemem." de ve dur.`
 
 const SYSTEM_PROMPT = process.env.CHAT_SYSTEM_PROMPT || SYSTEM_PROMPT_FALLBACK
 
-// Prompt-injection / jailbreak pattern denylist (defense-in-depth, Gemini safetyya ek)
+// Prompt-injection / jailbreak pattern denylist (defense-in-depth — DeepSeek'te
+// Gemini'deki gibi ayarlanabilir safetySettings yok, bu denylist + system-prompt
+// asil koruma katmani haline geldi, bkz. asagidaki DeepSeek fetch-cagrisi yorumu)
 const INJECTION_PATTERNS: RegExp[] = [
   /ignore\s+(previous|all|prior|above).*(instruction|prompt|rule)/i,
   /(sistem|onceki|önceki).{0,15}(talimat|prompt|kural).{0,15}(yok say|unut|ignore|bozma|gormezden)/i,
@@ -72,8 +77,8 @@ export async function POST(request: Request) {
   }
 
   // 2) Rate limiting — user ID + IP cift kalkani
-  // user-id basina 30/dk: tek hesabin agir kullanimi
-  // IP basina 60/dk: ayni IP'den coklu hesap acilarak yapilan saldiri korumasi
+  // user-id basina 10/dk: tek hesabin agir kullanimi
+  // IP basina 20/dk: ayni IP'den coklu hesap acilarak yapilan saldiri korumasi
   const rl = await chatLimiter.check(user.id)
   if (!rl.success) {
     return NextResponse.json(
@@ -106,7 +111,8 @@ export async function POST(request: Request) {
   const { messages, questionContext } = parsed.data
 
   // 3.5) Prompt-injection guard — jailbreak/role-swap/system-leak girisimlerini engelle
-  // Gemini safety settings asil koruma; bu ek katman erken-reddetme + audit log icin.
+  // DeepSeek gecisiyle bu denylist erken-reddetme + audit log'un OTESINDE asil
+  // savunma katmanlarindan biri oldu (Gemini'nin ayarlanabilir safety filtresi yok artik).
   const userText = [
     ...messages.map((m) => m.content),
     questionContext ?? '',
@@ -136,13 +142,14 @@ export async function POST(request: Request) {
     ? `${SYSTEM_PROMPT}\n\nOgrencinin su anda calistigi soru:\n${questionContext}`
     : SYSTEM_PROMPT
 
-  // Mesajlari Gemini formatina cevir
-  const geminiContents = messages.map((m) => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }))
+  // Mesajlari OpenAI-uyumlu (DeepSeek) formatina cevir — role isimleri zaten
+  // ayni ('user'/'assistant'), Gemini'deki 'model' remap'i gerekmiyor.
+  const deepseekMessages = [
+    { role: 'system' as const, content: systemInstruction },
+    ...messages.map((m) => ({ role: m.role, content: m.content })),
+  ]
 
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) {
     return NextResponse.json(
       { error: 'AI servisi yapilandirilmamis.' },
@@ -151,32 +158,31 @@ export async function POST(request: Request) {
   }
 
   try {
-    const res = await fetch(GEMINI_API_URL, {
+    const res = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
-      // API key header'da (URL query'de DEGIL) — URL'ler log/Sentry/proxy'de
-      // sizabilir, header'lar daha az loglanir.
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        contents: geminiContents,
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        generationConfig: {
-          maxOutputTokens: 500,
-          temperature: 0.7,
-        },
-        // En siki seviye — NSFW/hakaret/siddet/illegal tum tehlike kategorilerinde
-        // dusuk olasilikta bile bloke et. Default BLOCK_MEDIUM_AND_ABOVE'i sertlestiriyor.
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_LOW_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_LOW_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-        ],
+        model: DEEPSEEK_MODEL,
+        messages: deepseekMessages,
+        max_tokens: 500,
+        temperature: 0.7,
+        // GUVENLIK SERHI (konu#7 ders-hub plani, Faz 3): Gemini'nin
+        // safetySettings (NSFW/hakaret/siddet/illegal kategori bloklama)
+        // katmani DeepSeek'te YOK — OpenAI-uyumlu Chat Completions API'si
+        // boyle bir parametre sunmuyor. Kalan koruma katmanlari:
+        //   1) INJECTION_PATTERNS denylist (asagida, degismedi)
+        //   2) Sikilastirilmis SYSTEM_PROMPT (konu disi + jailbreak reddi)
+        //   3) DeepSeek'in kendi platform-seviyesi moderasyonu (opak, bize
+        //      finish_reason='content_filter' olarak yansiyabilir — asagida
+        //      Gemini'nin SAFETY/BLOCKLIST kontrolunun analogu olarak ele alinir)
+        // Bu net bir guvenlik-azalmasidir; prod'da abuse-log (admin_logs)
+        // izlenmeli, gerekirse denylist genisletilmeli.
       }),
     })
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => '')
-      console.error('[Chat API] Gemini error:', res.status, errBody.substring(0, 500))
+      console.error('[Chat API] DeepSeek error:', res.status, errBody.substring(0, 500))
       return NextResponse.json(
         { error: `AI servisi hatasi: ${errBody.substring(0, 200)}` },
         { status: 502 }
@@ -191,17 +197,17 @@ export async function POST(request: Request) {
       )
     }
 
-    // Gemini guvenlik filtresi tetiklendi mi?
-    const candidate = json.candidates?.[0]
-    if (candidate?.finishReason === 'SAFETY' || candidate?.finishReason === 'BLOCKLIST') {
+    // DeepSeek moderasyon/icerik-filtresi tetiklendi mi? (Gemini SAFETY/BLOCKLIST
+    // kontrolunun analogu — OpenAI-uyumlu API'lerde finish_reason='content_filter'.)
+    const choice = json.choices?.[0]
+    if (choice?.finish_reason === 'content_filter') {
       void supabase.from('admin_logs').insert({
         admin_id: user.id,
         action: 'chat_safety_blocked',
         target_type: 'chat',
         target_id: user.id,
         details: {
-          finishReason: candidate.finishReason,
-          ratings: candidate.safetyRatings,
+          finishReason: choice.finish_reason,
           excerpt: userText.slice(0, 200),
           ip,
         },
@@ -212,9 +218,11 @@ export async function POST(request: Request) {
       )
     }
 
-    const text = candidate?.content?.parts?.[0]?.text || 'Cevap alinamadi.'
+    const text = choice?.message?.content || 'Cevap alinamadi.'
 
-    // Streaming uyumlu response
+    // Streaming uyumlu response (mevcut fake-stream deseni korunur — tek
+    // parca halinde encode edilip tek seferde enqueue edilir; gercek
+    // token-stream DeepSeek'te opsiyonel, bu PR kapsaminda degil).
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       start(controller) {
