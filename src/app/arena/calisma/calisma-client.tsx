@@ -1,12 +1,19 @@
 'use client'
 
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
 import { defaultExamRefForType } from '@/lib/constants/exam-types'
 import { BilgeChan } from '@/components/ui/bilge-chan'
 import { TodayPlanFocus } from '@/components/study/today-plan-focus'
 import { MasteryActionCard } from '@/components/study/mastery-action-card'
+
+// Agir AI-chat bundle'i initial page load'dan cikar (teknik not: lazy-load).
+const StudyAssistant = dynamic(
+  () => import('@/components/study/study-assistant').then(m => ({ default: m.StudyAssistant })),
+  { ssr: false },
+)
 
 /**
  * Ders Çalışma Ortamı (öğrenme hub'ı) — /arena/calisma.
@@ -66,6 +73,7 @@ export default function CalismaClient() {
 
       <TodayPlanFocus game={game} userId={user.id} examRef={examRef} />
       <MasteryActionCard game={game} userId={user.id} examRef={examRef} />
+      <StudyAssistant />
     </div>
   )
 }
