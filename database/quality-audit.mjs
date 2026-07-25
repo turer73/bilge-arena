@@ -48,7 +48,8 @@ for (const game of games) {
     if (typeof a !== 'number' || a < 0 || a > 4) structFail++
     // 079-guard ile uyumlu eşik (solution≥5). Önceki 15-char eşik kozmetik-FP üretiyordu
     // (basit sorularda "tan45°=1" gibi kısa-ama-doğru çözümler bug sanılıyordu).
-    if ((c.solution || '').length < 5) structFail++
+    // wordquest muaf: format sentence+correct, solution alanı hiç yok (2026-07-25 FP-tespiti).
+    if (game !== 'wordquest' && (c.solution || '').length < 5) structFail++
     if (hasSplitPremiseOptions(o)) guardFail++
     if (typeof a === 'number') ad[a] = (ad[a] || 0) + 1
     const k = (c.question || c.sentence || '').slice(0, 45).toLowerCase()
