@@ -42,6 +42,18 @@ async function existingPrefixes() {
   return set
 }
 
+// Insert-time şık-karıştırma: AI-üretimi doğru cevabı B/C'ye yığma eğiliminde
+// (2026-07-25 audit: türkçe 339/349, sosyal 566/484 B/C-yığılması). Kayıt anında
+// karıştırarak yeni içerikte dağılımı dengeliyoruz. Fisher-Yates.
+function shuffleContentOptions(options, answer) {
+  const idx = options.map((_, i) => i)
+  for (let i = idx.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[idx[i], idx[j]] = [idx[j], idx[i]]
+  }
+  return { options: idx.map(i => options[i]), answer: idx.indexOf(answer) }
+}
+
 const existing = await existingPrefixes()
 const seenBatch = new Set()
 const rows = []
@@ -52,13 +64,16 @@ for (const q of batch) {
   if (existing.has(pfx) || existing.has('EID:' + eid)) { dupExisting++; continue }
   if (seenBatch.has(pfx)) { dupBatch++; continue }
   seenBatch.add(pfx)
+  // Çözüm metni şık-harfi referanslıyorsa karıştırma metni bozar — o soruda atla.
+  const refsLetter = /\b[A-E]\)|se[cç]enek\s+[A-E]\b|[şs][ıi]kk?[ıi]?\s+[A-E]\b|cevap:?\s+[A-E]\b/i.test(q.solution || '')
+  const sh = refsLetter ? { options: q.options, answer: q.answer } : shuffleContentOptions(q.options, q.answer)
   rows.push({
     game: 'fen',
     category: q.category,
     subcategory: q._topic || null,
     topic: q._topic || null,
     difficulty: q.difficulty || 2,
-    content: { question: q.question, options: q.options, answer: q.answer, solution: q.solution },
+    content: { question: q.question, options: sh.options, answer: sh.answer, solution: q.solution },
     external_id: eid,
     source: 'ai-gen-2026',
     exam_ref: 'TYT',

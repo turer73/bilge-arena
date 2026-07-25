@@ -4,17 +4,14 @@ import { useEffect, useState, useCallback } from 'react'
 import { GAMES, GAME_LIST, getCategoryLabel } from '@/lib/constants/games'
 import type { GameSlug } from '@/lib/constants/games'
 import { renderRichText } from '@/lib/utils/rich-text'
+import { shuffleOptions, getQuestionText } from '@/lib/utils/question'
+import type { QuestionContent } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface FethetQuestion {
   id: string
-  content: {
-    question: string
-    options: string[]
-    answer: number
-    solution?: string
-  }
+  content: QuestionContent
   category: string
   game: string
 }
@@ -91,7 +88,12 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
     )
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('Soru alınamadı')))
       .then((data) => {
-        const qs: FethetQuestion[] = (data.questions ?? []).slice(0, QUESTIONS_PER_CATEGORY)
+        // Şık sırasını karıştır (kule emsali): DB'deki B/C-yığılması ekrana sızmasın.
+        // shuffleOptions ayrıca wordquest'in `correct` alanını `answer`a normalize eder —
+        // bunsuz İngilizce kategorileri hiç doğru sayılmıyordu (disc#1427).
+        const qs: FethetQuestion[] = (data.questions ?? [])
+          .slice(0, QUESTIONS_PER_CATEGORY)
+          .map((q: FethetQuestion) => ({ ...q, content: shuffleOptions(q.content) }))
         if (qs.length === 0) {
           setError('Bu kategori için henüz soru eklenmemiş.')
         } else {
@@ -216,7 +218,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
 
             {/* Soru */}
             <p className="mb-5 text-sm font-semibold leading-relaxed md:text-base">
-              {renderRichText(question.content.question)}
+              {renderRichText(getQuestionText(question.content))}
             </p>
 
             {/* Şıklar */}
