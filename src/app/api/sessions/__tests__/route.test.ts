@@ -8,6 +8,12 @@ const mockProfilesSingle = vi.fn()
 const mockProfileSelect = vi.fn()
 const mockSessionCountGte = vi.fn()
 const mockRpc = vi.fn()
+const featureState = vi.hoisted(() => ({ QUIZ_LIMIT: false }))
+
+vi.mock('@/lib/constants/premium', () => ({
+  FEATURES: featureState,
+  FREE_DAILY_LIMIT: 5,
+}))
 
 // Chainable mock: every method returns the same object so chains work
 function makeChain(terminal?: Record<string, ReturnType<typeof vi.fn>>) {
@@ -101,6 +107,9 @@ const validBody = {
 describe('POST /api/sessions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Mevcut session testleri daily-limit gate'i acik varsayar. Kapali rollout
+    // yolu asagidaki ayri regresyon testiyle dogrulanir.
+    featureState.QUIZ_LIMIT = true
     mockQuestionsIn.mockResolvedValue({
       data: [
         { id: Q1, content: { answer: 1 }, difficulty: 2 },
@@ -306,6 +315,7 @@ describe('POST /api/sessions', () => {
   })
 
   it('returns 403 when free user exceeds daily session limit', async () => {
+    featureState.QUIZ_LIMIT = true
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockSessionCountGte.mockResolvedValue({ count: 5, error: null }) // FREE_DAILY_LIMIT'e ulasti
     const res = await POST(makeRequest(validBody))
@@ -315,10 +325,22 @@ describe('POST /api/sessions', () => {
   })
 
   it('premium user bypasses daily limit', async () => {
+    featureState.QUIZ_LIMIT = true
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockProfilesSingle.mockResolvedValue({ data: { is_premium: true, premium_until: null }, error: null })
     mockSessionCountGte.mockResolvedValue({ count: 999, error: null })
     const res = await POST(makeRequest(validBody))
     expect(res.status).toBe(200)
+  })
+
+  it('feature kapaliyken free user icin daily limit gate uygulanmaz', async () => {
+    featureState.QUIZ_LIMIT = false
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockSessionCountGte.mockResolvedValue({ count: 999, error: null })
+
+    const res = await POST(makeRequest(validBody))
+
+    expect(res.status).toBe(200)
+    expect(mockSessionCountGte).not.toHaveBeenCalled()
   })
 })
