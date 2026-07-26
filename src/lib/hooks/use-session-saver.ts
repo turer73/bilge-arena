@@ -6,6 +6,7 @@ import { saveGameSession } from '@/lib/supabase/sessions'
 import { refreshProfile } from '@/lib/hooks/use-auth'
 import { useAuthStore } from '@/stores/auth-store'
 import { getLevelFromXP } from '@/lib/constants/levels'
+import { BADGES } from '@/lib/constants/badges'
 import { toast } from '@/stores/toast-store'
 import type { GameSlug } from '@/lib/constants/games'
 
@@ -43,8 +44,7 @@ export function useSessionSaver({
 }: UseSessionSaverOptions) {
   const [saving, setSaving] = useState(false)
   const savedRef = useRef(false)
-  // Idempotency key (migration 081) — sonuc-ekrani basina SABIT, lobiye donulunce
-  // sifirlanir. savedRef ile ayni yasam-dongusu (retry/duplicate-invoke korumasi).
+  // Idempotency key (migration 081) sonuc-ekrani basina sabit, lobiye donulunce sifirlanir.
   const requestIdRef = useRef<string | null>(null)
 
   // Lobiye donulunce ref'leri sifirla
@@ -58,7 +58,7 @@ export function useSessionSaver({
   // Sonuc ekranina gecildiginde oturumu kaydet
   useEffect(() => {
     if (screen !== 'result' || savedRef.current || saving) return
-    if (!userId) return // Misafir — kaydetme
+    if (!userId) return // Misafir - kaydetme
 
     const { answers, xpEarned, maxStreak } = useQuizStore.getState()
     if (answers.length === 0) return
@@ -80,43 +80,37 @@ export function useSessionSaver({
       difficulty: selectedDifficulty,
       clientRequestId: requestIdRef.current,
     })
-      .then(async (sessionId) => {
-        if (sessionId) {
-          // Seviye atlama kontrolu icin onceki XP'yi kaydet
-          const oldXP = useAuthStore.getState().profile?.total_xp ?? 0
-          const oldLevel = getLevelFromXP(oldXP)
+      .then(async (session) => {
+        if (!session) return
 
-          await refreshProfile()
+        // Seviye atlama kontrolu icin onceki XP'yi kaydet
+        const oldXP = useAuthStore.getState().profile?.total_xp ?? 0
+        const oldLevel = getLevelFromXP(oldXP)
+        await refreshProfile()
 
-          // Yeni profil ile seviye karsilastir
-          const newXP = useAuthStore.getState().profile?.total_xp ?? 0
-          const newLevel = getLevelFromXP(newXP)
-          if (newLevel.level > oldLevel.level) {
-            toast.levelUp(newLevel.name, newLevel.badge)
-          }
+        // Yeni profil ile seviye karsilastir
+        const newXP = useAuthStore.getState().profile?.total_xp ?? 0
+        const newLevel = getLevelFromXP(newXP)
+        if (newLevel.level > oldLevel.level) {
+          toast.levelUp(newLevel.name, newLevel.badge)
+        }
 
-          // Günlük görevleri güncelle
-          const correctCount = answers.filter((a) => a.isCorrect).length
-          const totalCount = answers.length
-          onSessionSaved?.({
-            correctAnswers: correctCount,
-            totalQuestions: totalCount,
-            maxStreak,
-            accuracy: totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0,
-            game,
-          })
+        // Gunluk gorevleri guncelle
+        const correctCount = answers.filter((answer) => answer.isCorrect).length
+        const totalCount = answers.length
+        onSessionSaved?.({
+          correctAnswers: correctCount,
+          totalQuestions: totalCount,
+          maxStreak,
+          accuracy: totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0,
+          game,
+        })
 
-          // Rozet kontrolü — yeni rozetleri toast ile bildir
-          fetch('/api/badges', { method: 'POST' })
-            .then((r) => r.ok ? r.json() : null)
-            .then((data) => {
-              if (data?.newBadges?.length > 0) {
-                for (const badge of data.newBadges) {
-                  toast.badge(badge.name, badge.icon, badge.xpReward)
-                }
-              }
-            })
-            .catch((e) => console.warn('[session-saver] rozet bildirimi hatasi:', e))
+        // Sessions API awards badge XP atomically. Do not POST /api/badges again:
+        // that request sees an already-inserted badge and loses the toast.
+        for (const code of session.newBadges) {
+          const badge = BADGES.find((candidate) => candidate.code === code)
+          if (badge) toast.badge(badge.name, badge.icon, badge.xpReward)
         }
       })
       .catch((err) => console.error('[SessionSaver] Kaydetme hatasi:', err))

@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockGetUser = vi.fn()
 const mockQuestionsIn = vi.fn()
 const mockProfilesSingle = vi.fn()
+const mockProfileSelect = vi.fn()
 const mockSessionCountGte = vi.fn()
 const mockRpc = vi.fn()
 
@@ -35,6 +36,10 @@ const mockFrom = vi.fn((table: string) => {
   if (table === 'profiles') {
     // daily-limit gate: .select('is_premium,premium_until').eq('id').single()
     const chain = makeChain({ single: mockProfilesSingle })
+    chain.select = vi.fn((columns: string) => {
+      mockProfileSelect(columns)
+      return chain
+    })
     return chain
   }
   // user_daily_quests, user_achievements — fire and forget (quest/badge best-effort)
@@ -231,6 +236,75 @@ describe('POST /api/sessions', () => {
   })
 
   // ─── P1 regresyon-kilidi: gunluk limit POST'ta enforce edilir ──
+  it('newly earned session badges use the atomic award_badges RPC contract', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockProfilesSingle
+      .mockResolvedValueOnce({ data: { is_premium: false, premium_until: null }, error: null })
+      .mockResolvedValueOnce({ data: { total_xp: 0, total_sessions: 1, correct_answers: 1, longest_streak: 1 }, error: null })
+    mockRpc
+      .mockResolvedValueOnce({
+        data: { sessionId: 'session-1', totalXP: 15, correctCount: 1, wrongCount: 1, alreadyProcessed: false },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [{ awarded_codes: ['first_game', 'first_correct'], total_xp_earned: 75 }],
+        error: null,
+      })
+
+    const res = await POST(makeRequest(validBody))
+
+    expect(res.status).toBe(200)
+    expect(mockRpc).toHaveBeenLastCalledWith('award_badges', {
+      p_user_id: 'u1',
+      p_badge_codes: ['first_game', 'first_correct'],
+    })
+    expect((await res.json()).newBadges).toEqual(['first_game', 'first_correct'])
+  })
+
+  it('passes login streak stats to the badge RPC after a solo session', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockProfilesSingle
+      .mockResolvedValueOnce({ data: { is_premium: false, premium_until: null }, error: null })
+      .mockResolvedValueOnce({
+        data: {
+          total_xp: 0,
+          total_sessions: 0,
+          correct_answers: 0,
+          longest_streak: 0,
+          current_streak: 7,
+          multiplayer_wins: 0,
+          rooms_completed: 0,
+          multiplayer_firsts: 0,
+        },
+        error: null,
+      })
+    mockRpc
+      .mockResolvedValueOnce({
+        data: { sessionId: 'session-1', totalXP: 15, correctCount: 1, wrongCount: 1, alreadyProcessed: false },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [{ awarded_codes: ['login_7'], total_xp_earned: 150 }],
+        error: null,
+      })
+
+    const res = await POST(makeRequest(validBody))
+
+    expect(res.status).toBe(200)
+    expect(mockRpc).toHaveBeenLastCalledWith('award_badges', {
+      p_user_id: 'u1',
+      p_badge_codes: ['login_7'],
+    })
+    const badgeProfileSelect = mockProfileSelect.mock.calls
+      .map(([columns]) => String(columns))
+      .find((columns) => columns.includes('total_xp'))
+    expect(badgeProfileSelect).toContain('current_streak')
+    expect(badgeProfileSelect).toContain('multiplayer_wins')
+    expect(badgeProfileSelect).toContain('rooms_completed')
+    expect(badgeProfileSelect).toContain('multiplayer_firsts')
+    expect((await res.json()).newBadges).toEqual(['login_7'])
+  })
+
   it('returns 403 when free user exceeds daily session limit', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockSessionCountGte.mockResolvedValue({ count: 5, error: null }) // FREE_DAILY_LIMIT'e ulasti

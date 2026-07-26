@@ -26,7 +26,7 @@ const baseParams = {
   clientRequestId: '00000000-0000-4000-8000-000000000001',
 }
 
-function mockFetchSuccess(sessionId = 'session-123') {
+function mockFetchSuccess(sessionId = 'session-123', newBadges: string[] = []) {
   mockFetch.mockResolvedValueOnce({
     ok: true,
     json: async () => ({
@@ -35,6 +35,7 @@ function mockFetchSuccess(sessionId = 'session-123') {
       correctCount: 2,
       wrongCount: 1,
       maxStreak: 1,
+      newBadges,
     }),
   })
 }
@@ -56,10 +57,10 @@ describe('saveGameSession', () => {
     vi.restoreAllMocks()
   })
 
-  it('session ID dondurmeli', async () => {
-    mockFetchSuccess()
+  it('session ID ve atomik olarak kazanilan rozet kodlarini dondurmeli', async () => {
+    mockFetchSuccess('session-123', ['first_game'])
     const result = await saveGameSession(baseParams)
-    expect(result).toBe('session-123')
+    expect(result).toEqual({ sessionId: 'session-123', newBadges: ['first_game'] })
   })
 
   it('/api/sessions endpointine POST yapmali', async () => {

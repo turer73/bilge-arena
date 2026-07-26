@@ -101,61 +101,28 @@ export async function POST() {
     return NextResponse.json({ newBadges: [], totalXPEarned: 0 })
   }
 
-  // Yeni rozetleri kaydet
-  const inserts = newBadges.map((badge) => ({
-    user_id: user.id,
-    achievement_id: badge.code,
-    earned_at: new Date().toISOString(),
-  }))
+  // Yeni rozetleri kaydet — award_badges RPC'si (atomik insert + XP ödülü, disc#1492)
+  const badgeCodes = newBadges.map((b) => b.code)
+  const { data: awardResult, error: awardErr } = await svc.rpc('award_badges', {
+    p_user_id: user.id,
+    p_badge_codes: badgeCodes,
+  })
 
-  const { error } = await svc
-    .from('user_achievements')
-    .insert(inserts)
-
-  if (error) {
-    console.error('[Badges API] Insert error:', error)
-    // Duplicate hatasını yoksay (zaten kazanılmış)
-    if (!error.message.includes('duplicate')) {
-      return NextResponse.json({ error: 'Rozet kaydedilemedi' }, { status: 500 })
-    }
+  if (awardErr) {
+    console.error('[Badges API] award_badges RPC hatası:', awardErr)
+    return NextResponse.json({ error: 'Rozet kaydedilemedi' }, { status: 500 })
   }
 
-  // Rozet XP ödüllerini topla ve profile ekle
-  const totalXPEarned = newBadges.reduce((sum, b) => sum + b.xpReward, 0)
+  const awardedCodes = awardResult?.[0]?.awarded_codes ?? []
+  const totalXPEarned = awardResult?.[0]?.total_xp_earned ?? 0
 
-  if (totalXPEarned > 0) {
-    // Atomic XP increment: RPC varsa kullan, yoksa guncel profili cek
-    const { error: rpcErr } = await svc.rpc('increment_xp', {
-      p_user_id: user.id,
-      p_amount: totalXPEarned,
-      p_reason: 'badge_earned',
-    })
-
-    if (rpcErr) {
-      // Fallback: profili taze cek ve guncelle (race condition riski azaltildi)
-      const { data: freshProfile } = await svc
-        .from('profiles')
-        .select('total_xp')
-        .eq('id', user.id)
-        .single()
-
-      if (freshProfile) {
-        // Fix: fallback anon `supabase` client kullaniyordu; profiles UPDATE
-        // authenticated'dan REVOKE edildigi icin (mig 069/074) sessizce fail
-        // edip rozet XP'si kaybolabiliyordu. Service-role ile yaz.
-        await svc
-          .from('profiles')
-          .update({ total_xp: (freshProfile.total_xp ?? 0) + totalXPEarned })
-          .eq('id', user.id)
-      }
-    }
-
-    // xp_log artik increment_xp icinde yazilir (per-rozet reference_id badge.code
-    // uuid degildi, eski manuel insert zaten fail ediyordu) — tek ozet satir.
-  }
+  // XP log artık increment_xp içinde yazılıyor (tek satır, reason='badge_earned')
 
   return NextResponse.json({
-    newBadges: newBadges.map((b) => ({ code: b.code, name: b.name, icon: b.icon, xpReward: b.xpReward })),
+    newBadges: awardedCodes.map((code: string) => {
+      const badge = newBadges.find((b) => b.code === code)
+      return badge ? { code: badge.code, name: badge.name, icon: badge.icon, xpReward: badge.xpReward } : null
+    }).filter(Boolean),
     totalXPEarned,
   })
 }

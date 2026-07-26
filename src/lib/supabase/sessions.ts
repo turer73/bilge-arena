@@ -18,6 +18,11 @@ interface SaveSessionParams {
   clientRequestId: string
 }
 
+export interface SavedGameSession {
+  sessionId: string
+  newBadges: string[]
+}
+
 /**
  * Oyun oturumunu server-side API uzerinden kaydeder.
  * XP hesaplamasi artik server tarafinda yapilir (client-side XP manipulasyonunu onler).
@@ -33,7 +38,7 @@ export async function saveGameSession({
   difficulty,
   timeLimit = 30,
   clientRequestId,
-}: SaveSessionParams): Promise<string | null> {
+}: SaveSessionParams): Promise<SavedGameSession | null> {
   try {
     const res = await fetch('/api/sessions', {
       method: 'POST',
@@ -63,7 +68,14 @@ export async function saveGameSession({
     }
 
     const data = await res.json()
-    return data.sessionId ?? null
+    if (typeof data.sessionId !== 'string') return null
+
+    return {
+      sessionId: data.sessionId,
+      newBadges: Array.isArray(data.newBadges)
+        ? data.newBadges.filter((code: unknown): code is string => typeof code === 'string')
+        : [],
+    }
   } catch (err) {
     console.error('[saveGameSession] Fetch hatasi:', err)
     return null

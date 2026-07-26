@@ -245,12 +245,13 @@ export async function POST(request: Request) {
   // (migration 081 — accuracy_pct GENERATED ALWAYS kolonuna yazma bug'i da duzeldi).
 
   // 8. Rozet kontrolu — session tamamlaninca yeni rozetleri kontrol et
+  // award_badges RPC'si: atomik rozet insert + XP ödülü (disc#1492)
   let newBadges: string[] = []
   if (!alreadyProcessed) {
     try {
       const { BADGES, checkBadgeEarned } = await import('@/lib/constants/badges')
       const { data: prof } = await svc.from('profiles')
-        .select('total_xp, total_sessions, correct_answers, longest_streak')
+        .select('total_xp, total_sessions, correct_answers, longest_streak, current_streak, multiplayer_wins, rooms_completed, multiplayer_firsts')
         .eq('id', user.id).single()
       const { count: dqCount } = await svc.from('user_daily_quests')
         .select('*', { count: 'exact', head: true })
@@ -265,14 +266,24 @@ export async function POST(request: Request) {
           bestStreak: prof.longest_streak ?? 0,
           totalXP: prof.total_xp ?? 0,
           dailyQuestsCompleted: dqCount ?? 0,
+          loginStreak: prof.current_streak ?? 0,
+          multiplayerWins: prof.multiplayer_wins ?? 0,
+          roomsCompleted: prof.rooms_completed ?? 0,
+          multiplayerFirsts: prof.multiplayer_firsts ?? 0,
         }
         const existingCodes = new Set((existing ?? []).map(b => b.achievement_id))
         const earned = BADGES.filter(b => !existingCodes.has(b.code) && checkBadgeEarned(b, stats))
         if (earned.length > 0) {
-          await svc.from('user_achievements').insert(
-            earned.map(b => ({ user_id: user.id, achievement_id: b.code, earned_at: new Date().toISOString() }))
-          )
-          newBadges = earned.map(b => b.code)
+          const badgeCodes = earned.map(b => b.code)
+          const { data: awardResult, error: awardErr } = await svc.rpc('award_badges', {
+            p_user_id: user.id,
+            p_badge_codes: badgeCodes,
+          })
+          if (awardErr) {
+            console.error('[Sessions API] award_badges RPC hatası:', awardErr)
+          } else {
+            newBadges = awardResult?.[0]?.awarded_codes ?? []
+          }
         }
       }
     } catch (e) {
