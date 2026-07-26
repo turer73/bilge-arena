@@ -8,8 +8,7 @@ const mockGetUser = vi.fn()
 const mockEarnedSelect = vi.fn()
 const mockProfileSingle = vi.fn()
 const mockQuestsCount = vi.fn()
-const mockExistingBadges = vi.fn()
-const mockBadgeInsert = vi.fn()
+const mockRpc = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
@@ -27,38 +26,24 @@ vi.mock('@/lib/supabase/service-role', () => ({
     from: vi.fn((table: string) => {
       if (table === 'user_achievements') {
         return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => {
-              // Two paths call this — earned list and existingBadges
-              // Use call count heuristic: first call returns earned, second returns existing codes
-              return mockEarnedSelect()
-            }),
-          })),
-          insert: mockBadgeInsert,
+          select: vi.fn(() => ({ eq: vi.fn(() => mockEarnedSelect()) })),
         }
       }
       if (table === 'profiles') {
         return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({ single: mockProfileSingle })),
-          })),
+          select: vi.fn(() => ({ eq: vi.fn(() => ({ single: mockProfileSingle })) })),
         }
       }
       if (table === 'user_daily_quests') {
         return {
           select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: vi.fn(() => mockQuestsCount()),
-            })),
+            eq: vi.fn(() => ({ eq: vi.fn(() => mockQuestsCount()) })),
           })),
         }
       }
-      if (table === 'xp_log') {
-        return { insert: vi.fn().mockResolvedValue({ error: null }) }
-      }
-      return {}
+      return { select: vi.fn(() => ({ eq: vi.fn() })) }
     }),
-    rpc: vi.fn().mockResolvedValue({ error: null }),
+    rpc: mockRpc,
   }),
 }))
 
@@ -71,32 +56,25 @@ import { GET, POST } from '../route'
 describe('GET /api/badges', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockExistingBadges.mockClear()
     mockRateLimitCheck.mockResolvedValue({ success: true })
   })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
-    const res = await GET()
-    expect(res.status).toBe(401)
+    expect((await GET()).status).toBe(401)
   })
 
-  it('returns 429 on rate limit (H4 abuse)', async () => {
+  it('returns 429 on rate limit', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 } as never)
-    const res = await GET()
-    expect(res.status).toBe(429)
+    expect((await GET()).status).toBe(429)
   })
 
-  it('returns earned badges list', async () => {
+  it('returns the earned badges list', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockEarnedSelect.mockResolvedValue({
-      data: [{ achievement_id: 'first_win', earned_at: '2025-01-01' }],
-    })
+    mockEarnedSelect.mockResolvedValue({ data: [{ achievement_id: 'first_win', earned_at: '2025-01-01' }] })
 
-    const res = await GET()
-    expect(res.status).toBe(200)
-    const json = await res.json()
+    const json = await (await GET()).json()
     expect(json.earned).toHaveLength(1)
     expect(json.earnedCodes).toContain('first_win')
   })
@@ -110,26 +88,22 @@ describe('POST /api/badges', () => {
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
-    const res = await POST()
-    expect(res.status).toBe(401)
+    expect((await POST()).status).toBe(401)
   })
 
-  it('returns 429 on rate limit (H4 abuse)', async () => {
+  it('returns 429 on rate limit', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 30 } as never)
-    const res = await POST()
-    expect(res.status).toBe(429)
+    expect((await POST()).status).toBe(429)
   })
 
-  it('returns 404 if profile missing', async () => {
+  it('returns 404 if profile is missing', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockProfileSingle.mockResolvedValue({ data: null })
-
-    const res = await POST()
-    expect(res.status).toBe(404)
+    expect((await POST()).status).toBe(404)
   })
 
-  it('returns empty when no new badges earned', async () => {
+  it('returns empty when no new badges are earned', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockProfileSingle.mockResolvedValue({
       data: { total_xp: 0, total_sessions: 0, correct_answers: 0, longest_streak: 0, current_streak: 0 },
@@ -137,30 +111,43 @@ describe('POST /api/badges', () => {
     mockQuestsCount.mockResolvedValue({ count: 0 })
     mockEarnedSelect.mockResolvedValue({ data: [] })
 
-    const res = await POST()
-    expect(res.status).toBe(200)
-    const json = await res.json()
-    expect(json.newBadges).toEqual([])
-    expect(json.totalXPEarned).toBe(0)
+    expect(await (await POST()).json()).toMatchObject({ newBadges: [], totalXPEarned: 0 })
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('awards login_7 badge when current_streak >= 7', async () => {
+  it('uses the atomic RPC contract for a newly earned badge', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockProfileSingle.mockResolvedValue({
       data: { total_xp: 0, total_sessions: 0, correct_answers: 0, longest_streak: 0, current_streak: 7 },
     })
     mockQuestsCount.mockResolvedValue({ count: 0 })
-    // first call: existingBadges (boş), ikinci çağrı insert sonrası bir şey olmaz
-    mockEarnedSelect
-      .mockResolvedValueOnce({ data: [] })  // existing badges
-      .mockResolvedValueOnce({ data: [] })  // (varsa ikinci select)
-    mockBadgeInsert.mockResolvedValue({ error: null })
+    mockEarnedSelect.mockResolvedValue({ data: [] })
+    mockRpc.mockResolvedValue({
+      data: [{ awarded_codes: ['login_7'], total_xp_earned: 150 }],
+      error: null,
+    })
 
-    const res = await POST()
-    expect(res.status).toBe(200)
-    const json = await res.json()
-    const codes = json.newBadges.map((b: { code: string }) => b.code)
-    expect(codes).toContain('login_7')
-    expect(json.totalXPEarned).toBeGreaterThan(0)
+    const json = await (await POST()).json()
+    expect(json).toMatchObject({ totalXPEarned: 150 })
+    expect(json.newBadges.map((badge: { code: string }) => badge.code)).toEqual(['login_7'])
+    expect(mockRpc).toHaveBeenCalledWith('award_badges', {
+      p_user_id: 'u1',
+      p_badge_codes: ['login_7'],
+    })
+  })
+
+  it('returns no badge or XP when a concurrent request won the insert', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockProfileSingle.mockResolvedValue({
+      data: { total_xp: 0, total_sessions: 0, correct_answers: 0, longest_streak: 0, current_streak: 7 },
+    })
+    mockQuestsCount.mockResolvedValue({ count: 0 })
+    mockEarnedSelect.mockResolvedValue({ data: [] })
+    mockRpc.mockResolvedValue({
+      data: [{ awarded_codes: [], total_xp_earned: 0 }],
+      error: null,
+    })
+
+    expect(await (await POST()).json()).toMatchObject({ newBadges: [], totalXPEarned: 0 })
   })
 })
