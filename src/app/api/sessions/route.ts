@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { sessionSubmitSchema } from '@/lib/validations/schemas'
-import { FREE_DAILY_LIMIT } from '@/lib/constants/premium'
+import { FEATURES, FREE_DAILY_LIMIT } from '@/lib/constants/premium'
 import { trDayString, trDayStartUtcISO } from '@/lib/utils/tr-date'
 
 // Replay korumasi: kullanici basina dk'da max 3 oturum
@@ -61,30 +61,32 @@ export async function POST(request: Request) {
   // Service role client — RLS bypass (tum INSERT/UPDATE + limit-gate okumasi icin)
   const svc = createServiceRoleClient()
 
-  // P1 fix: gunluk quiz limiti POST'ta da enforce edilir. Onceden yalniz GET
-  // /api/quiz-limit'te hesaplaniyordu (gosterim); dogrudan POST bu limiti bypass
-  // ediyordu. Sayim quiz-limit ile ayni semantik (bugun baslangici + created_at).
-  const { data: limitProfile } = await svc
-    .from('profiles')
-    .select('is_premium, premium_until')
-    .eq('id', user.id)
-    .single()
-  const isPremium = limitProfile?.is_premium === true &&
-    (!limitProfile.premium_until || new Date(limitProfile.premium_until) > new Date())
-  if (!isPremium) {
-    // TR gun-siniri: limit-penceresi odul-gunu ile ayni boundary (quiz-limit GET
-    // ile tutarli). Onceden setHours(0,0,0,0)=UTC-gece-yarisi idi -> limit TR 03:00
-    // resetleniyordu, odul-gunu TR gece-yarisi (uyumsuzluk).
-    const { count: todayCount } = await svc
-      .from('game_sessions')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('created_at', trDayStartUtcISO())
-    if ((todayCount ?? 0) >= FREE_DAILY_LIMIT) {
-      return NextResponse.json(
-        { error: 'Günlük quiz limitine ulaştın.', code: 'daily_limit' },
-        { status: 403 },
-      )
+  // Gunluk quiz limiti feature acikken POST'ta da enforce edilir. UI ve server
+  // ayni FEATURES.QUIZ_LIMIT kaynagini kullanir; kapali rollout'ta tamamlanmis
+  // bir oturumun 403 ile sessizce kaybolmasina izin verilmez.
+  if (FEATURES.QUIZ_LIMIT) {
+    const { data: limitProfile } = await svc
+      .from('profiles')
+      .select('is_premium, premium_until')
+      .eq('id', user.id)
+      .single()
+    const isPremium = limitProfile?.is_premium === true &&
+      (!limitProfile.premium_until || new Date(limitProfile.premium_until) > new Date())
+    if (!isPremium) {
+      // TR gun-siniri: limit-penceresi odul-gunu ile ayni boundary (quiz-limit GET
+      // ile tutarli). Onceden setHours(0,0,0,0)=UTC-gece-yarisi idi -> limit TR 03:00
+      // resetleniyordu, odul-gunu TR gece-yarisi (uyumsuzluk).
+      const { count: todayCount } = await svc
+        .from('game_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', trDayStartUtcISO())
+      if ((todayCount ?? 0) >= FREE_DAILY_LIMIT) {
+        return NextResponse.json(
+          { error: 'Günlük quiz limitine ulaştın.', code: 'daily_limit' },
+          { status: 403 },
+        )
+      }
     }
   }
 
