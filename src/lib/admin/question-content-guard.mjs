@@ -29,10 +29,12 @@ ZORUNLU KALİTE KURALLARI (İHLAL ETME):
 ÖRNEK FİZİK ÖNCÜLLÜ SORU YAPISI (FEW-SHOT):
 {"question": "Bir cismin kinetik enerjisi ile ilgili;\\nI. Cismin kütlesine bağlıdır.\\nII. Cismin hızının karesi ile orantılıdır.\\nIII. Vektörel bir büyüklüktür.\\nyargılarından hangileri doğrudur?", "options": ["Yalnız I", "Yalnız II", "I ve II", "I ve III", "I, II ve III"], "answer": 2, "solution": "Kinetik enerji Ek = 1/2*m*v^2 formülüyle hesaplanır. Formülden görüleceği üzere kütleye (I doğru) ve hızın karesine (II doğru) bağlıdır. Enerji skaler bir büyüklüktür, vektörel değildir (III yanlış). Dolayısıyla I ve II doğrudur."}`
 
-// 2026 YKS gerçek-sınav (ÖSYM) STİL-REFERANSI. Kaynak: data/soru-bankasi/_ref-2026/
-// (215 gerçek soru analizi, telifli-repo-dışı). Burada BİREBİR SORU YOK — yalnız
+// 2026 YKS gerçek-sınav (ÖSYM) STİL-REFERANSI. Burada BİREBİR SORU YOK — yalnız
 // ÖSYM'nin genel soru-kökü kalıpları + biçim-istatistikleri (jenerik, telif-güvenli).
 // Amaç: üreticinin gerçek-sınav zorluğu/formatını yakalaması.
+// turkce/sosyal/wordquest kaynağı: data/soru-bankasi/_ref-2026/ (215 soru, telifli-repo-dışı).
+// matematik/fen kaynağı: data/soru-bankasi/cikmis-katalog/ (149 soru, vision-okuma ile
+// çıkarılmış TYT 2024-2026 kitapçıkları, database/analyze-catalog-style.py ile ölçüldü).
 export const REF_2026_STYLE = {
   turkce:
     '2026 YKS-STİLİ (TYT Türkçe + AYT Edebiyat gözlemi): Soruların ~%80\'i PARAGRAF-tabanlıdır (40-90 kelime metin + tek soru). Tipik soru-kökleri: "...anlatılmak istenen aşağıdakilerden hangisidir?", "...altı çizili sözle anlatılmak istenen...", "boş bırakılan yerlere sırasıyla aşağıdakilerden hangisi getirilmelidir?", "...bu parçadan aşağıdakilerin hangisi çıkarılamaz?". Şıklar tam-cümle/uzun (~85 karakter). Doğru cevap A-E arasında DENGELİ dağıtılmalı (belirli harfe yığma yok).',
@@ -41,9 +43,9 @@ export const REF_2026_STYLE = {
   wordquest:
     '2026 YDT-İngilizce STİLİ gözlemi: SEÇİLEN alıştırma-tipine/kategoriye SADIK KAL (vocabulary=tek-kelime veya kısa şık; grammar/cümle-tamamlama=daha uzun tam-ifade şık). Doğru cevap dağılımında belirli harfe (özellikle son şık) yığma OLMAMALI — 2026\'da E-şık belirgin az işaretlenmişti; sen dengeli dağıt. Doğal, deyimsel İngilizce; yapay-çeviri kokusu olmasın.',
   matematik:
-    '2026 TYT-Matematik STİLİ gözlemi (görsel-pilot): YENİ-NESİL senaryo-tabanlı — günlük-hayat kurgusu (ör. işlemci-nesilleri tablosu, çiçekçinin lale-saplarını ölçmesi), veri/tablo yorumlama, üstel-sayı/kesir/kök. Salt-işlem SORMA; bağlam kur. Şıklar sade (tam-sayı, sade-kesir, üstel-form). Formülleri düz-metin/Unicode yaz (√, ², ×, a/b); GÖRSEL-şekil/çizim gerektiren soru KURMA (platform metin-tabanlı, şekil gösteremez).',
+    '2026 TYT-Matematik STİLİ (149-soru analizi, mat: 95/120 metne-ifade-edilebilir, %79): Soruların %71\'i "Buna göre..." bağlacıyla kurulur, %51\'i sayısal-sonuç ister ("...kaçtır?"); "hangisi doğrudur/olabilir" tipi %8, olumsuz-kök ("hangisi yanlıştır") %5, I/II/III öncüllü yalnızca %4 — matematikte öncül nadir, fende yaygındır. Senaryo/kişi-adı kullanımı %39 (günlük-hayat kurgusu YENİ-NESİL formatın imzası ama zorunlu değil, saf-işlem sorusu da meşru), tablo/çizelge atfı %8. Şıklar KISA ve sade (ortalama 4 karakter — tam-sayı, sade-kesir veya kök/üstel-form, örn "1/6", "8"); uzun-cümle şık YOK. Cevap dağılımı A-E DENGELİ (16/22/19/20/18) — belirli harfe yığma yapma. Formülleri düz-metin/Unicode yaz (√, ², ×, a/b); GÖRSEL-şekil/çizim gerektiren soru KURMA (platform metin-tabanlı; kitapçıklarda da soruların %21\'i şekil-bağımlıydı ve bu yüzden katalog-dışı bırakıldı — o oranın tam tersi hedeflensin, şekilsiz çözülebilir kur).',
   fen:
-    '2026 TYT-Fen STİLİ gözlemi (görsel-pilot): SEÇİLEN fen alt-alanına (fizik/kimya/biyoloji) SADIK KAL — kategori-dışı konuya kayma. Deney-düzeneği/senaryo yorumlama, I/II/III öncüllü mantık ("hangileri doğru olabilir?"), günlük-hayat kurgusu. Ezber DEĞİL analiz. Sembol/formül Unicode yaz; saf-geometri/devre/şekil gerektiren soru KURMA (platform metin-tabanlı, görsel gösteremez).',
+    '2026 TYT-Fen STİLİ (149-soru analizi, fen: 54/60 metne-ifade-edilebilir, %90): Soruların %59\'u "hangisi doğrudur/olabilir" tipi ve %39\'u I/II/III öncüllü mantık sorusu (çoğunlukla birleşirler), %17\'si olumsuz-kök ("hangisi yanlıştır/olamaz"); sayısal-sonuç isteyen soru nadir (%2) — fen matematik gibi işlem değil, SÖZEL-ANALİZ ağırlıklı. SEÇİLEN alt-alana (fizik/kimya/biyoloji) SADIK KAL — kategori-dışı konuya kayma. Şıklar orta-uzun (ortalama 20 karakter, azami ~117 — ama öncüllü sorularda kombinasyon-şıklar "Yalnız I", "I ve II" gibi KISA kalmalı). Cevap dağılımı A-E DENGELİ (12/9/11/14/8) — belirli harfe yığma yapma. Sembol/formül Unicode yaz; saf-geometri/devre/şekil gerektiren soru KURMA (platform metin-tabanlı; kitapçıklarda da soruların %10\'u şekil-bağımlıydı ve bu yüzden katalog-dışı bırakıldı).',
 }
 
 export function buildSubjectPromptAppendix(game) {

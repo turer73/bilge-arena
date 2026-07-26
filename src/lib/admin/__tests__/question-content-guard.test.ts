@@ -142,8 +142,8 @@ describe('question-content-guard', () => {
   })
 
   it('2026 YKS stil-referansi tum YKS-derslerinin promptuna girer', () => {
-    // Few-shot: 2026 gerçek-sınav stili tüm YKS derslerine eklenir (mat/fen görsel-pilot
-    // ile senaryo-stili çıkarıldı; görsel-şekil boyutu hariç aktarılabilir).
+    // Few-shot: 2026 gerçek-sınav stili tüm YKS derslerine eklenir (mat/fen 149-soru
+    // katalog analiziyle ölçüldü; görsel-şekil boyutu hariç aktarılabilir).
     for (const game of ['turkce', 'sosyal', 'wordquest', 'matematik', 'fen']) {
       expect(buildSubjectPromptAppendix(game)).toContain('2026')
     }
