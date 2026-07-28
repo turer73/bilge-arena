@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { checkAdmin } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
@@ -125,6 +126,11 @@ export async function PATCH(request: NextRequest) {
   if (!admin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+
+  // Admin yazma işlemleri ortak kovada sınırlanır; ele geçirilmiş oturumun
+  // soru bankası ve admin log üzerinde sınırsız mutasyon yapmasını engeller.
+  const rlRes = await checkAdminMutationRl(admin.id)
+  if (rlRes) return rlRes
 
   const body = await request.json()
   const parsed = questionUpdateSchema.safeParse(body)
