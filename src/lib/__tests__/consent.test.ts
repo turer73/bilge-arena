@@ -1,11 +1,28 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getCookieConsent, setCookieConsent, clearCookieConsent, openConsentBanner } from '../consent'
+import {
+  getCookieConsent,
+  setCookieConsent,
+  clearCookieConsent,
+  openConsentBanner,
+  logConsent,
+} from '../consent'
+
+const supabaseMocks = vi.hoisted(() => ({
+  insert: vi.fn(),
+}))
+
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({
+    from: () => ({ insert: supabaseMocks.insert }),
+  }),
+}))
 
 // ─── localStorage mock ─────────────────────────────────
 
 const store: Record<string, string> = {}
 
 beforeEach(() => {
+  supabaseMocks.insert.mockReset().mockResolvedValue({ error: null })
   Object.keys(store).forEach(key => delete store[key])
 
   vi.stubGlobal('localStorage', {
@@ -120,5 +137,24 @@ describe('openConsentBanner', () => {
     expect(listener).toHaveBeenCalledTimes(1)
 
     window.removeEventListener('open-consent-banner', listener)
+  })
+})
+
+describe('logConsent', () => {
+  it('gecerli nested JSON degerini consent_logs tablosuna yazmali', async () => {
+    await logConsent('kvkk', { accepted: true, context: [null, 'signup', { version: 1 }] }, 'user-1')
+
+    expect(supabaseMocks.insert).toHaveBeenCalledWith({
+      user_id: 'user-1',
+      consent_type: 'kvkk',
+      consent_value: { accepted: true, context: [null, 'signup', { version: 1 }] },
+      user_agent: 'test-agent',
+    })
+  })
+
+  it('JSON olmayan degerleri veritabanina gondermemeli', async () => {
+    await logConsent('terms', { invalid: () => true })
+
+    expect(supabaseMocks.insert).not.toHaveBeenCalled()
   })
 })
