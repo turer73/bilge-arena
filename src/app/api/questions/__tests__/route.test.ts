@@ -1,23 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockGetUser, mockCheckAdmin, mockRpc, mockUpdateEq } = vi.hoisted(() => ({
-  mockGetUser: vi.fn(),
-  mockCheckAdmin: vi.fn(),
-  mockRpc: vi.fn(),
-  mockUpdateEq: vi.fn(),
-}))
+const { mockGetUser, mockCheckAdmin, mockRpc, mockFrom, mockUpdateEq, mockAdminMutationRl } = vi.hoisted(() => {
+  const mockUpdateEq = vi.fn()
+  const mockFrom = vi.fn(() => ({
+    update: vi.fn(() => ({ eq: mockUpdateEq })),
+    insert: vi.fn().mockResolvedValue({ error: null }),
+  }))
+
+  return {
+    mockGetUser: vi.fn(),
+    mockCheckAdmin: vi.fn(),
+    mockRpc: vi.fn(),
+    mockFrom,
+    mockUpdateEq,
+    mockAdminMutationRl: vi.fn(),
+  }
+})
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mockGetUser },
     rpc: mockRpc,
-    from: vi.fn(() => ({
-      update: vi.fn(() => ({
-        eq: mockUpdateEq,
-      })),
-      insert: vi.fn().mockResolvedValue({ error: null }),
-    })),
+    from: mockFrom,
   })),
 }))
 
@@ -29,6 +34,10 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: () => ({
     check: vi.fn().mockResolvedValue({ success: true }),
   }),
+}))
+
+vi.mock('@/lib/utils/admin-rate-limit', () => ({
+  checkAdminMutationRl: mockAdminMutationRl,
 }))
 
 import { GET, PATCH } from '../route'
@@ -133,7 +142,10 @@ describe('GET /api/questions', () => {
 })
 
 describe('PATCH /api/questions', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAdminMutationRl.mockResolvedValue(null)
+  })
 
   it('returns 403 if not admin', async () => {
     mockCheckAdmin.mockResolvedValue(null)
@@ -145,6 +157,18 @@ describe('PATCH /api/questions', () => {
     mockCheckAdmin.mockResolvedValue({ id: 'admin-1' })
     const res = await PATCH(makePatch({ updates: { is_active: false } }))
     expect(res.status).toBe(400)
+  })
+
+  it('returns the admin limiter 429 before parsing or mutating', async () => {
+    mockCheckAdmin.mockResolvedValue({ id: 'admin-1' })
+    mockAdminMutationRl.mockResolvedValue(new Response(null, { status: 429 }))
+
+    const res = await PATCH(makePatch({ questionId: VALID_QID, updates: { is_active: false } }))
+
+    expect(res.status).toBe(429)
+    expect(mockAdminMutationRl).toHaveBeenCalledWith('admin-1')
+    expect(mockFrom).not.toHaveBeenCalled()
+    expect(mockUpdateEq).not.toHaveBeenCalled()
   })
 
   it('returns 400 if questionId is not a UUID', async () => {

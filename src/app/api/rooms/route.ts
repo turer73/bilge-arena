@@ -3,7 +3,7 @@
  * Sprint 1 PR3
  *
  * Flow:
- *   1. Panola Supabase auth.getUser() ile JWT validate
+ *   1. IP-first + user-id çift rate limit ve JWT validate
  *   2. Zod schema validation (Codex P1 PR #37 fix kalitim — auth.uid() server-side)
  *   3. Bilge-arena PostgREST RPC: create_room(p_title, p_category, ...)
  *   4. Success: { id, code } | Error: P00xx mapping
@@ -11,44 +11,27 @@
  * Plan-deviation #41 (kalitim): host_id parametre olarak GONDERILMEZ — SQL
  * fonksiyonu auth.uid() kullanir. Impersonation defense layer.
  *
- * Rate limit: 5 oda/dakika per user (createRateLimiter pattern).
+ * Rate limit: 20 oda/dakika per IP + 5 oda/dakika per user. IP limiti
+ * auth lookup'tan önce uygulanır; anonim flood Supabase Auth kotasını tüketmez.
  */
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { createRoomSchema } from '@/lib/rooms/validations'
 import { callRpc } from '@/lib/rooms/client'
 import { toResponse } from '@/lib/rooms/errors'
 import type { CreateRoomResponse } from '@/lib/rooms/types'
+import { getAuthRateLimited } from '@/lib/rooms/api-helpers'
 
-const createLimiter = createRateLimiter('rooms-create', 5, 60_000)
+const createIpLimiter = createRateLimiter('rooms-create-ip', 20, 60_000)
+const createUserLimiter = createRateLimiter('rooms-create-user', 5, 60_000)
 
 export async function POST(req: Request) {
-  // 1) Auth (Panola Supabase JWT)
-  const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
+  // 1) IP-first + authenticated user çift kalkan; helper 429'da Retry-After döner.
+  const auth = await getAuthRateLimited(req, createIpLimiter, createUserLimiter)
+  if (!auth.ok) return auth.response
 
-  if (authError || !user) {
-    return NextResponse.json(
-      { error: 'Yetkisiz', code: 'P0001' },
-      { status: 401 },
-    )
-  }
-
-  // 2) Rate limit
-  const rl = await createLimiter.check(user.id)
-  if (!rl.success) {
-    return NextResponse.json(
-      { error: 'Cok hizli istek', code: 'RATE_LIMIT' },
-      { status: 429 },
-    )
-  }
-
-  // 3) Body validate
+  // 2) Body validate
   let body: unknown
   try {
     body = await req.json()
@@ -68,22 +51,11 @@ export async function POST(req: Request) {
     )
   }
 
-  // 4) Get Panola JWT to forward to bilge-arena PostgREST
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  if (!session?.access_token) {
-    return NextResponse.json(
-      { error: 'JWT alinamadi (session expired?)', code: 'P0001' },
-      { status: 401 },
-    )
-  }
-
-  // 5) RPC create_room call
+  // 3) RPC create_room call
   const { title, category, difficulty, question_count, max_players, per_question_seconds, mode } =
     parsed.data
 
-  const result = await callRpc<CreateRoomResponse>(session.access_token, 'create_room', {
+  const result = await callRpc<CreateRoomResponse>(auth.jwt, 'create_room', {
     p_title: title,
     p_category: category,
     p_difficulty: difficulty,

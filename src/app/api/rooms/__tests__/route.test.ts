@@ -1,30 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { NextResponse } from 'next/server'
 
 // ─── Hoisted mocks ───────────────────────────────────
 
 const {
-  mockGetUser,
-  mockGetSession,
-  mockRateLimitCheck,
+  mockGetAuthRateLimited,
+  mockCreateRateLimiter,
   mockCallRpc,
 } = vi.hoisted(() => ({
-  mockGetUser: vi.fn(),
-  mockGetSession: vi.fn(),
-  mockRateLimitCheck: vi.fn(async () => ({ success: true })),
+  mockGetAuthRateLimited: vi.fn(),
+  mockCreateRateLimiter: vi.fn((name: string, limit: number, windowMs: number) => ({
+    name,
+    limit,
+    windowMs,
+    check: vi.fn(),
+  })),
   mockCallRpc: vi.fn(),
 }))
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({
-    auth: {
-      getUser: mockGetUser,
-      getSession: mockGetSession,
-    },
-  })),
+vi.mock('@/lib/utils/rate-limit', () => ({
+  createRateLimiter: mockCreateRateLimiter,
 }))
 
-vi.mock('@/lib/utils/rate-limit', () => ({
-  createRateLimiter: vi.fn(() => ({ check: mockRateLimitCheck })),
+vi.mock('@/lib/rooms/api-helpers', () => ({
+  getAuthRateLimited: mockGetAuthRateLimited,
 }))
 
 vi.mock('@/lib/rooms/client', () => ({
@@ -64,32 +63,40 @@ describe('GET /api/rooms', () => {
 
 describe('POST /api/rooms', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockRateLimitCheck.mockResolvedValue({ success: true })
-    mockGetSession.mockResolvedValue({ data: { session: { access_token: 'jwt-token' } } })
+    mockGetAuthRateLimited.mockClear()
+    mockCallRpc.mockClear()
+    mockGetAuthRateLimited.mockResolvedValue({ ok: true, userId: 'u1', jwt: 'jwt-token' })
   })
 
-  it('returns 401 if not authenticated', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: null })
+  it('returns the IP-first helper 401 when not authenticated', async () => {
+    mockGetAuthRateLimited.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ error: 'Yetkisiz' }, { status: 401 }),
+    })
     const res = await POST(makePost(VALID_BODY))
     expect(res.status).toBe(401)
   })
 
-  it('returns 429 on rate limit (H4 abuse)', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null })
-    mockRateLimitCheck.mockResolvedValueOnce({ success: false, retryAfter: 60 } as never)
+  it('returns the IP-first helper 429 with Retry-After', async () => {
+    mockGetAuthRateLimited.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ error: 'Cok hizli istek' }, {
+        status: 429,
+        headers: { 'Retry-After': '60' },
+      }),
+    })
     const res = await POST(makePost(VALID_BODY))
     expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('60')
+    expect(mockCallRpc).not.toHaveBeenCalled()
   })
 
   it('returns 400 on validation error (missing required fields)', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null })
     const res = await POST(makePost({ title: 'Eksik' }))
     expect(res.status).toBe(400)
   })
 
   it('returns 400 on invalid JSON body', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null })
     const req = new Request('http://localhost/api/rooms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -99,15 +106,16 @@ describe('POST /api/rooms', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 401 if session token missing (JWT expired)', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null })
-    mockGetSession.mockResolvedValue({ data: { session: null } })
+  it('returns the helper 401 if session token missing (JWT expired)', async () => {
+    mockGetAuthRateLimited.mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ error: 'JWT alinamadi' }, { status: 401 }),
+    })
     const res = await POST(makePost(VALID_BODY))
     expect(res.status).toBe(401)
   })
 
   it('returns 201 on successful room creation', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null })
     mockCallRpc.mockResolvedValue({
       ok: true,
       data: { id: 'room-uuid', code: 'ABC123' },
@@ -118,10 +126,16 @@ describe('POST /api/rooms', () => {
     const json = await res.json()
     expect(json.id).toBe('room-uuid')
     expect(json.code).toBe('ABC123')
+    expect(mockGetAuthRateLimited).toHaveBeenCalledWith(
+      expect.any(Request),
+      expect.any(Object),
+      expect.any(Object),
+    )
+    expect(mockCreateRateLimiter).toHaveBeenCalledWith('rooms-create-ip', 20, 60_000)
+    expect(mockCreateRateLimiter).toHaveBeenCalledWith('rooms-create-user', 5, 60_000)
   })
 
   it('propagates RPC error status code', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null })
     mockCallRpc.mockResolvedValue({
       ok: false,
       error: { code: 'P0002', message: 'Kategori bulunamadi', status: 404 },
