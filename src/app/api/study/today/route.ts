@@ -9,7 +9,7 @@ import { trDayString } from '@/lib/utils/tr-date'
 import { fetchDueQuestions } from '@/lib/review/due-questions'
 import { computeTopicStrengths } from '@/lib/review/topic-strengths'
 import { composePlan } from '@/lib/study/compose-plan'
-import { toPublicQuestion, type PublicQuestion } from '@/lib/utils/question-public'
+import { parseQuestionRows, toPublicQuestion, type PublicQuestion } from '@/lib/utils/question-public'
 import { defaultExamRefForType, type ExamType } from '@/lib/constants/exam-types'
 import type { Question } from '@/types/database'
 
@@ -38,7 +38,7 @@ async function fetchQuestionsInOrder(
 ): Promise<PublicQuestion[]> {
   if (ids.length === 0) return []
   const { data } = await admin.from('questions').select('*').in('id', ids)
-  const byId = new Map(((data ?? []) as Question[]).map((q) => [q.id, q]))
+  const byId = new Map(parseQuestionRows(data).map((q) => [q.id, q]))
   return ids
     .map((id) => byId.get(id))
     .filter((q): q is Question => !!q)
@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
       console.error('[/api/study/today] zayıf-kategori RPC hatasi:', error.code)
       return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
     }
-    for (const row of (data ?? []) as Question[]) {
+    for (const row of parseQuestionRows(data)) {
       if (!selected.has(row.id)) {
         selected.add(row.id)
         weakIds.push(row.id)
@@ -237,7 +237,7 @@ export async function GET(request: NextRequest) {
       console.error('[/api/study/today] yeni-soru RPC hatasi:', newError.code)
       return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
     }
-    newIds = ((newData ?? []) as Question[]).map((q) => q.id)
+    newIds = parseQuestionRows(newData).map((q) => q.id)
   }
 
   const questionIds = composePlan({ dueIds, weakIds, newIds, size: PLAN_SIZE })

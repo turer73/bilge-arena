@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { QuestionRow } from '@/lib/utils/question-public'
 
 // Esnek, sirali-kuyruklu query-builder mock: her .from(table) cagrisi kuyruktaki
 // bir sonraki { data, error } sonucunu doner; her chain-metodu ayni objeyi
@@ -75,6 +76,30 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 
 import { GET } from '../route'
 
+function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): QuestionRow {
+  return {
+    id,
+    external_id: null,
+    game: 'matematik',
+    category: 'sayilar',
+    subcategory: null,
+    topic: null,
+    difficulty: 2,
+    level_tag: null,
+    content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'], answer: 1 },
+    base_points: 20,
+    is_active: true,
+    is_boss: false,
+    times_answered: 0,
+    times_correct: 0,
+    source: null,
+    exam_ref: null,
+    created_at: null,
+    updated_at: null,
+    ...overrides,
+  }
+}
+
 function makeRequest(params: Record<string, string> = {}) {
   const url = new URL('http://localhost/api/questions/random')
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
@@ -126,15 +151,19 @@ describe('GET /api/questions/random', () => {
   it('returns questions list on success', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     const fakeQuestions = [
-      { id: 'q1', game: 'matematik' },
-      { id: 'q2', game: 'matematik' },
+      makeQuestionRow('q1'),
+      makeQuestionRow('q2'),
     ]
     mockRpc.mockResolvedValue({ data: fakeQuestions, error: null })
 
     const res = await GET(makeRequest({ game: 'matematik', limit: '10' }) as never)
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.questions).toEqual(fakeQuestions)
+    expect(body.questions).toEqual([
+      expect.objectContaining({ id: 'q1', game: 'matematik', category: 'sayilar' }),
+      expect.objectContaining({ id: 'q2', game: 'matematik', category: 'sayilar' }),
+    ])
+    expect(body.questions[0]).not.toHaveProperty('times_answered')
   })
 
   it('returns 500 on RPC error', async () => {
@@ -217,7 +246,7 @@ describe('GET /api/questions/random', () => {
 
   it('does not include reviewQuestions when includeReview=false', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
     const res = await GET(makeRequest({ game: 'matematik' }) as never)
     const body = await res.json()
     expect(body.reviewQuestions).toEqual([])
@@ -226,23 +255,25 @@ describe('GET /api/questions/random', () => {
   describe('includeReview=true (FEATURES.FSRS_REVIEW=false — 7-gun fallback yolu)', () => {
     it('disc#1372 fix: answered_at kolonuyla sorgular ve sonuc doner (created_at DEGIL)', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-      mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+      mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
       // 1) yanlis-cevaplar sorgusu
       sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
       // 2) sonradan-dogru sorgusu (bos -> hala 'acik')
       sessionAnswersMock.push({ data: [], error: null })
       // 3) questions final-fetch
-      questionsMock.push({ data: [{ id: 'wq1', game: 'matematik' }], error: null })
+      questionsMock.push({ data: [makeQuestionRow('wq1')], error: null })
 
       const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
       const body = await res.json()
-      expect(body.reviewQuestions).toEqual([{ id: 'wq1', game: 'matematik' }])
+      expect(body.reviewQuestions).toEqual([
+        expect.objectContaining({ id: 'wq1', game: 'matematik', category: 'sayilar' }),
+      ])
     })
 
     it('sonradan dogru cevaplanan soru review havuzundan cikar', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-      mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+      mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
       sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
       // allAttempts DESCENDING doner (en yeni once); en-son deneme dogru -> duzeltilmis
@@ -262,7 +293,7 @@ describe('GET /api/questions/random', () => {
 
     it('disc#1371 fix: yanlistan ONCE gelen dogru cevap soruyu duzeltilmis saymamali (kronolojik)', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-      mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+      mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
       sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
       // allAttempts DESCENDING doner (en yeni once); en-son deneme yanlis -> review'da kalir
@@ -273,16 +304,18 @@ describe('GET /api/questions/random', () => {
         ],
         error: null,
       })
-      questionsMock.push({ data: [{ id: 'wq1', game: 'matematik' }], error: null })
+      questionsMock.push({ data: [makeQuestionRow('wq1')], error: null })
 
       const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
       const body = await res.json()
-      expect(body.reviewQuestions).toEqual([{ id: 'wq1', game: 'matematik' }])
+      expect(body.reviewQuestions).toEqual([
+        expect.objectContaining({ id: 'wq1', game: 'matematik', category: 'sayilar' }),
+      ])
     })
 
     it('Codex P2 skip-handling: en-son SKIP onceki duzeltmeyi ezmemeli (duzeltilmis kalir)', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-      mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+      mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
       sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
       // DESCENDING: en yeni = SKIP (atlanmali), ondan onceki gercek deneme = dogru (duzeltilmis).

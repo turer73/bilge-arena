@@ -5,6 +5,7 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { challengeActionSchema } from '@/lib/validations/schemas'
 import { isValidUuid } from '@/lib/utils/uuid'
+import { parseQuestionRows } from '@/lib/utils/question-public'
 
 const getIpLimiter = createRateLimiter('challenge-get-ip', 60, 60_000)
 const getUserLimiter = createRateLimiter('challenge-get-user', 30, 60_000)
@@ -108,7 +109,7 @@ export async function GET(
   //    client'a GONDERILMEZ. Dogru cevap yalniz submit endpoint'inde
   //    sunucu tarafinda questions tablosundan okunur. Whitelist = default-deny:
   //    content'e ileride eklenen yeni hassas alan da otomatik sizmaz.
-  const qMap = new Map((qs ?? []).map(q => [q.id, q] as const))
+  const qMap = new Map(parseQuestionRows(qs).map(q => [q.id, q] as const))
   const orderedQuestions = questionIds
     .map(qid => qMap.get(qid))
     .filter((q): q is NonNullable<typeof q> => Boolean(q))

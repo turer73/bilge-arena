@@ -41,6 +41,8 @@ export async function POST() {
   if (!profile) {
     return NextResponse.json({ error: 'profile_not_found' }, { status: 404 })
   }
+  // Eski profillerde alan NULL kalmis olabilir; ilk giris davranisini (0) koru.
+  const currentStreak = profile.current_streak ?? 0
 
   const now = new Date()
   const todayStr = trDayString(now) // TR takvim gunu (YYYY-MM-DD)
@@ -58,7 +60,7 @@ export async function POST() {
   if (lastPlayedStr === todayStr) {
     return NextResponse.json({
       status: 'already_claimed',
-      streak: profile.current_streak,
+      streak: currentStreak,
       xpAwarded: 0,
     })
   }
@@ -71,11 +73,11 @@ export async function POST() {
 
   if (lastPlayedStr === yesterdayStr) {
     // Dün de giriş yapılmış — seri devam
-    newStreak = profile.current_streak + 1
+    newStreak = currentStreak + 1
   } else {
     // Seri kırıldı veya ilk giriş
     newStreak = 1
-    if (profile.current_streak > 0) {
+    if (currentStreak > 0) {
       streakReset = true
     }
   }
@@ -99,7 +101,7 @@ export async function POST() {
   if (!updated || updated.length === 0) {
     return NextResponse.json({
       status: 'already_claimed',
-      streak: profile.current_streak,
+      streak: currentStreak,
       xpAwarded: 0,
     })
   }

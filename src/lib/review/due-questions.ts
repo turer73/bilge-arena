@@ -1,6 +1,7 @@
 import type { createServiceRoleClient } from '@/lib/supabase/service-role'
 import type { Question } from '@/types/database'
 import { computeDueMap } from './due-map'
+import { parseQuestionRows } from '@/lib/utils/question-public'
 
 // wrong-answers route'undaki (src/app/api/review/wrong-answers/route.ts) ayni
 // tarama-sinirlamasi deseni: cok-aktif kullanicida binlerce satir tek istekte
@@ -77,5 +78,5 @@ export async function fetchDueQuestions(
 
   const { data, error } = await query
   if (error) throw error
-  return (data as unknown as Question[]) || []
+  return parseQuestionRows(data)
 }

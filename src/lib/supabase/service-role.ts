@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.client'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 // Yeni isim (sb_secret_*) onceliklidir, eski legacy JWT format fallback
@@ -15,7 +16,7 @@ export function createServiceRoleClient() {
     throw new Error('SUPABASE_SERVICE_KEY (veya legacy SUPABASE_SERVICE_ROLE_KEY) tanımlı değil')
   }
 
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

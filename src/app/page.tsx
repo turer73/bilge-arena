@@ -7,7 +7,15 @@ import { StatsBar } from '@/components/landing/stats-bar'
 import { GamesSection } from '@/components/landing/games-section'
 import { SectionWrapper } from '@/components/landing/section-wrapper'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
-import type { HomepageElement, HomepageSectionConfig } from '@/types/database'
+import type {
+  HomepageAlignment,
+  HomepageElement,
+  HomepageElementType,
+  HomepagePlacement,
+  HomepageSection,
+  HomepageSize,
+} from '@/types/database'
+import type { Database, Json } from '@/types/database.generated'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 // ISR: Her 5 dakikada bir yeniden oluştur (Supabase sorgularını cache'le)
@@ -52,6 +60,68 @@ const HowItWorks = dynamic(() => import('@/components/landing/how-it-works').the
 const LeaderboardPreview = dynamic(() => import('@/components/landing/leaderboard-preview').then(m => ({ default: m.LeaderboardPreview })))
 const CTASection = dynamic(() => import('@/components/landing/cta-section').then(m => ({ default: m.CTASection })))
 
+type HomepageElementRow = Database['public']['Tables']['homepage_elements']['Row']
+
+const HOMEPAGE_SECTIONS: readonly HomepageSection[] = [
+  'hero', 'stats', 'games', 'how_it_works', 'cta', 'leaderboard', 'footer',
+]
+const HOMEPAGE_ELEMENT_TYPES: readonly HomepageElementType[] = ['logo', 'slogan', 'banner']
+const HOMEPAGE_PLACEMENTS: readonly HomepagePlacement[] = ['above', 'below', 'inline']
+const HOMEPAGE_ALIGNMENTS: readonly HomepageAlignment[] = ['left', 'center', 'right']
+const HOMEPAGE_SIZES: readonly HomepageSize[] = ['xs', 'sm', 'md', 'lg', 'xl']
+
+function isHomepageSection(value: string): value is HomepageSection {
+  return HOMEPAGE_SECTIONS.some((section) => section === value)
+}
+
+function isHomepageElementType(value: string): value is HomepageElementType {
+  return HOMEPAGE_ELEMENT_TYPES.some((type) => type === value)
+}
+
+function isHomepagePlacement(value: string): value is HomepagePlacement {
+  return HOMEPAGE_PLACEMENTS.some((placement) => placement === value)
+}
+
+function isHomepageAlignment(value: string): value is HomepageAlignment {
+  return HOMEPAGE_ALIGNMENTS.some((alignment) => alignment === value)
+}
+
+function isHomepageSize(value: string): value is HomepageSize {
+  return HOMEPAGE_SIZES.some((size) => size === value)
+}
+
+function jsonObjectToRecord(value: Json): Record<string, unknown> | null {
+  if (value === null || Array.isArray(value) || typeof value !== 'object') {
+    return null
+  }
+
+  return Object.fromEntries(Object.entries(value))
+}
+
+function normalizeHomepageElement(row: HomepageElementRow): HomepageElement | null {
+  const styles = jsonObjectToRecord(row.styles)
+  if (
+    !isHomepageSection(row.section_key) ||
+    !isHomepageElementType(row.element_type) ||
+    !isHomepagePlacement(row.placement) ||
+    !isHomepageAlignment(row.alignment) ||
+    !isHomepageSize(row.size) ||
+    !styles
+  ) {
+    return null
+  }
+
+  return {
+    ...row,
+    section_key: row.section_key,
+    element_type: row.element_type,
+    placement: row.placement,
+    alignment: row.alignment,
+    size: row.size,
+    styles,
+  }
+}
+
 // Oyun başına aktif soru sayısını DB'den çek (ISR ile 5dk cache'lenir)
 // Service-role kullanır — anon key RLS'i soru sayımını engeller (ISR'da cookie yok)
 async function getGameCounts(): Promise<Record<string, number>> {
@@ -83,14 +153,23 @@ async function getHomepageContent() {
       supabase.from('homepage_elements').select('*').eq('is_published', true).order('sort_order'),
     ])
 
-    const sectionMap: Record<string, Record<string, unknown>> = {}
-    sections?.forEach((s: HomepageSectionConfig) => {
-      if (s.config && Object.keys(s.config).length > 0) {
-        sectionMap[s.section_key] = s.config as Record<string, unknown>
+    const sectionMap: Partial<Record<HomepageSection, Record<string, unknown>>> = {}
+    sections?.forEach((section) => {
+      const config = jsonObjectToRecord(section.config)
+      if (
+        isHomepageSection(section.section_key) &&
+        config &&
+        Object.keys(config).length > 0
+      ) {
+        sectionMap[section.section_key] = config
       }
     })
 
-    return { sections: sectionMap, elements: (elements || []) as HomepageElement[] }
+    const normalizedElements = (elements ?? [])
+      .map(normalizeHomepageElement)
+      .filter((element): element is HomepageElement => element !== null)
+
+    return { sections: sectionMap, elements: normalizedElements }
   } catch {
     return { sections: {}, elements: [] }
   }

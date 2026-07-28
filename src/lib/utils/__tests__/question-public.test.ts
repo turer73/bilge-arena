@@ -5,8 +5,9 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import { toPublicQuestion } from '../question-public'
+import { parseQuestionContent, parseQuestionRows, toDomainQuestion, toPublicQuestion } from '../question-public'
 import type { Question } from '@/types/database'
+import type { QuestionRow } from '../question-public'
 
 const DB_ROW = {
   id: 'q-1',
@@ -53,5 +54,46 @@ describe('toPublicQuestion', () => {
 
   test('alan sayısı sabit: yeni DB kolonu eklenirse otomatik sızmaz', () => {
     expect(Object.keys(toPublicQuestion(DB_ROW))).toHaveLength(9)
+  })
+})
+
+const GENERATED_ROW = {
+  id: 'q-generated',
+  external_id: null,
+  game: 'matematik',
+  category: 'problemler',
+  subcategory: null,
+  topic: null,
+  difficulty: 3,
+  level_tag: null,
+  content: { question: '2 + 2?', options: ['3', '4'], answer: 1 },
+  base_points: null,
+  is_active: null,
+  is_boss: null,
+  times_answered: null,
+  times_correct: null,
+  source: null,
+  exam_ref: null,
+  created_at: null,
+  updated_at: null,
+} satisfies QuestionRow
+
+describe('generated question boundary', () => {
+  test('maps nullable generated fields to safe domain defaults', () => {
+    expect(toDomainQuestion(GENERATED_ROW)).toMatchObject({
+      id: 'q-generated',
+      difficulty: 3,
+      base_points: 30,
+      is_active: true,
+      is_boss: false,
+      times_answered: 0,
+      times_correct: 0,
+      source: 'unknown',
+    })
+  })
+
+  test('rejects malformed JSON content instead of casting it', () => {
+    expect(parseQuestionContent({ question: 'Broken', options: ['only-one'], answer: 4 })).toBeNull()
+    expect(parseQuestionRows([{ ...GENERATED_ROW, content: { unexpected: true } }])).toEqual([])
   })
 })

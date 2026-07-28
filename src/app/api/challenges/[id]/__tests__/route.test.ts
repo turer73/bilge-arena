@@ -3,6 +3,7 @@
  * Kapsam: H-150-3 (PATCH rate limit), H-150-4 (maybeSingle hata), auth, UUID.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { QuestionRow } from '@/lib/utils/question-public'
 
 const { mockGetUser, mockChallengeQuery, mockChallengeUpdate, mockQuestionsQuery, mockRateLimitCheck } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
@@ -40,6 +41,30 @@ import { GET, PATCH } from '../route'
 
 const VALID_ID = '12345678-1234-1234-1234-123456789012'
 const USER_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+
+function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): QuestionRow {
+  return {
+    id,
+    external_id: null,
+    game: 'matematik',
+    category: 'sayilar',
+    subcategory: null,
+    topic: null,
+    difficulty: 2,
+    level_tag: null,
+    content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'], answer: 1 },
+    base_points: 20,
+    is_active: true,
+    is_boss: false,
+    times_answered: 0,
+    times_correct: 0,
+    source: null,
+    exam_ref: null,
+    created_at: null,
+    updated_at: null,
+    ...overrides,
+  }
+}
 
 function makeGetReq(id: string) {
   const h = new Headers(); h.set('x-forwarded-for', '1.2.3.4')
@@ -87,7 +112,10 @@ describe('GET /api/challenges/[id]', () => {
   it('returns 200 with challenge and questions', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
     mockChallengeQuery.mockResolvedValue({ data: { id: VALID_ID, question_ids: ['q1', 'q2'] }, error: null })
-    mockQuestionsQuery.mockResolvedValue({ data: [{ id: 'q1', content: {} }, { id: 'q2', content: {} }], error: null })
+    mockQuestionsQuery.mockResolvedValue({
+      data: [makeQuestionRow('q1'), makeQuestionRow('q2')],
+      error: null,
+    })
     const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))
     expect(res.status).toBe(200)
     expect((await res.json()).questions).toHaveLength(2)
@@ -97,7 +125,15 @@ describe('GET /api/challenges/[id]', () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
     mockChallengeQuery.mockResolvedValue({ data: { id: VALID_ID, question_ids: ['q1'] }, error: null })
     mockQuestionsQuery.mockResolvedValue({
-      data: [{ id: 'q1', content: { question: 'S', options: ['a', 'b', 'c', 'd'], answer: 2, solution: 'cunku', explanation: 'detay' } }],
+      data: [makeQuestionRow('q1', {
+        content: {
+          question: 'S',
+          options: ['a', 'b', 'c', 'd'],
+          answer: 2,
+          solution: 'cunku',
+          explanation: 'detay',
+        },
+      })],
       error: null,
     })
     const res = await GET(makeGetReq(VALID_ID) as never, makeParams(VALID_ID))

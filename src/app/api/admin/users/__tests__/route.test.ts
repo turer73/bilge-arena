@@ -202,14 +202,13 @@ describe('GET /api/admin/users', () => {
     })
   })
 
-  it('bos arama icin q null gecilir (filtresiz liste)', async () => {
+  it('bos arama icin q atlanir (SQL varsayilaniyla filtresiz liste)', async () => {
     mockCheckPermission.mockResolvedValue(ADMIN_USER)
     mockRpc.mockResolvedValue({ data: [], error: null })
     mockUserRolesIn.mockResolvedValue({ data: [] })
 
     await GET(makeGetRequest())
     expect(mockRpc).toHaveBeenCalledWith('search_profiles_admin', {
-      q: null,
       result_offset: 0,
       result_limit: 20,
     })

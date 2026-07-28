@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isCsrfOriginAllowed, CSRF_PROTECTED_METHODS } from '@/lib/utils/csrf'
+import type { Database } from '@/types/database.client'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
@@ -28,7 +29,7 @@ export async function proxy(request: NextRequest) {
   // Next.js internal header'larini (Next-Router-State-Tree vb.) kaybettirir
   const response = NextResponse.next({ request })
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     SUPABASE_URL,
     SUPABASE_ANON_KEY,
     {

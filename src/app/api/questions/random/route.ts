@@ -6,7 +6,7 @@ import { getClientIp } from '@/lib/utils/client-ip'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { isValidUuid } from '@/lib/utils/uuid'
 import type { Question } from '@/types/database'
-import { toPublicQuestion } from '@/lib/utils/question-public'
+import { parseQuestionRows, toPublicQuestion } from '@/lib/utils/question-public'
 import { FEATURES } from '@/lib/constants/premium'
 import { fetchDueQuestions } from '@/lib/review/due-questions'
 
@@ -146,14 +146,14 @@ export async function GET(request: NextRequest) {
   let rpcData = initialRpc.data
 
   // Fallback: cooldown filter sonrasi yeterli soru gelmediyse, exclude'siz tekrar dene
-  if (!rpcError && rpcData && (rpcData as Question[]).length < limit && mergedExcludeIds.length > 0) {
+  if (!rpcError && rpcData && rpcData.length < limit && mergedExcludeIds.length > 0) {
     const fallbackArgs = { ...rpcArgs }
     delete fallbackArgs.p_exclude_ids
     const { data: fallbackData, error: fallbackError } = await admin.rpc(
       'select_random_questions',
       fallbackArgs,
     )
-    if (!fallbackError && fallbackData && (fallbackData as Question[]).length > (rpcData as Question[]).length) {
+    if (!fallbackError && fallbackData && fallbackData.length > rpcData.length) {
       rpcData = fallbackData
     }
   }
@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
-  const questions = (rpcData ?? []) as Question[]
+  const questions = parseQuestionRows(rpcData)
 
   // 6) Review questions (opsiyonel, spaced-repetition)
   let reviewQuestions: Question[] = []
@@ -276,5 +276,5 @@ async function fetchReviewQuestions(
 
   const { data } = await query
 
-  return (data as unknown as Question[]) || []
+  return parseQuestionRows(data)
 }

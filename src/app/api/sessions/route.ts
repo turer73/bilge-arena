@@ -5,12 +5,23 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { sessionSubmitSchema } from '@/lib/validations/schemas'
 import { FEATURES, FREE_DAILY_LIMIT } from '@/lib/constants/premium'
 import { trDayString, trDayStartUtcISO } from '@/lib/utils/tr-date'
+import { z } from 'zod'
 
 // Replay korumasi: kullanici basina dk'da max 3 oturum
 const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
 
 // XP hesaplama — client'a guvenmeden server-side recalculate
 const BASE_XP: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 50 }
+
+const completeSessionResultSchema = z.object({
+  sessionId: z.string().min(1),
+  alreadyProcessed: z.boolean(),
+})
+
+const answerIndexSchema = z.object({
+  answer: z.number().int().optional(),
+  correct: z.number().int().optional(),
+})
 
 function serverCalculateXP(
   difficulty: number,
@@ -123,8 +134,10 @@ export async function POST(request: Request) {
 
     // Dogru cevabi DB'den kontrol et
     // TYT: content.answer, WordQuest: content.correct
-    const content = question.content as { answer?: number; correct?: number }
-    const correctIndex = content.answer ?? content.correct
+    const parsedContent = answerIndexSchema.safeParse(question.content)
+    const correctIndex = parsedContent.success
+      ? parsedContent.data.answer ?? parsedContent.data.correct
+      : undefined
     const isActuallyCorrect = correctIndex === a.selectedOption
 
     // timeTaken sinirla: 0 ile timeLimit arasi (client manipulasyonunu onle)
@@ -135,7 +148,7 @@ export async function POST(request: Request) {
       streak++
       if (streak > maxStreak) maxStreak = streak
       correctCount++
-      xpEarned = serverCalculateXP(question.difficulty, safeTimeTaken, safeTimeLimit, streak)
+      xpEarned = serverCalculateXP(question.difficulty ?? 2, safeTimeTaken, safeTimeLimit, streak)
       totalXP += xpEarned
     } else {
       streak = 0
@@ -193,16 +206,16 @@ export async function POST(request: Request) {
     p_avg_time_sec: Math.round(avgTime * 10) / 10,
   })
 
-  if (rpcError || !rpcResult) {
+  const parsedRpcResult = completeSessionResultSchema.safeParse(rpcResult)
+  if (rpcError || !parsedRpcResult.success) {
     console.error('[Sessions API] complete_game_session RPC hatasi:', rpcError?.message)
     return NextResponse.json({ error: 'Oturum kaydedilemedi' }, { status: 500 })
   }
 
-  const sessionId = rpcResult.sessionId as string
+  const { sessionId, alreadyProcessed } = parsedRpcResult.data
   // Idempotent replay (network-retry, migration 081): RPC odul-uretmedi, sadece ilk
   // sonucu dondurdu -- quest/badge de TEKRAR calistirilmamali (Vercel Agent Review
   // bulgusu, PR#271 — replay'de quest current_value'nun ikinci kez artmasi onleniyor).
-  const alreadyProcessed = rpcResult.alreadyProcessed === true
 
   // 6. Gunluk gorevleri guncelle
   if (!alreadyProcessed) {
@@ -221,7 +234,7 @@ export async function POST(request: Request) {
           const quest = uq.quest as { quest_type: string; target_value: number; target_game?: string } | null
           if (!quest) continue
 
-          let newValue = uq.current_value
+          let newValue = uq.current_value ?? 0
           switch (quest.quest_type) {
             case 'play_sessions': newValue += 1; break
             case 'correct_answers': newValue += correctCount; break

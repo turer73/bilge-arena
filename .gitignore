@@ -21,6 +21,9 @@ tsconfig.tsbuildinfo
 
 .vercel
 
+# Supabase CLI'nin yerel baglanti/metaveri artefaktlari
+/supabase/.temp/
+
 # Soru bankasi veri dosyalari (full dataset DB'de, repo'da olmamali)
 data/soru-bankasi/
 wordquest/data/*

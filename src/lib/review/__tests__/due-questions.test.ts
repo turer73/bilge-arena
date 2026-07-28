@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { createServiceRoleClient } from '@/lib/supabase/service-role'
+import type { QuestionRow } from '@/lib/utils/question-public'
 
 const mockComputeDueMap = vi.hoisted(() => vi.fn())
 vi.mock('../due-map', () => ({ computeDueMap: mockComputeDueMap }))
@@ -7,6 +8,30 @@ vi.mock('../due-map', () => ({ computeDueMap: mockComputeDueMap }))
 import { fetchDueQuestions } from '../due-questions'
 
 type Admin = ReturnType<typeof createServiceRoleClient>
+
+function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): QuestionRow {
+  return {
+    id,
+    external_id: null,
+    game: 'matematik',
+    category: 'sayilar',
+    subcategory: null,
+    topic: null,
+    difficulty: 2,
+    level_tag: null,
+    content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'], answer: 1 },
+    base_points: 20,
+    is_active: true,
+    is_boss: false,
+    times_answered: 0,
+    times_correct: 0,
+    source: null,
+    exam_ref: null,
+    created_at: null,
+    updated_at: null,
+    ...overrides,
+  }
+}
 
 function makeThenableChain(result: { data: unknown; error: unknown }) {
   const chain: Record<string, unknown> = {}
@@ -26,7 +51,10 @@ describe('fetchDueQuestions', () => {
 
   it('exam_ref filtresini due soru sorgusuna uygular', async () => {
     const wrongChain = makeThenableChain({ data: [{ question_id: 'q1' }], error: null })
-    const questionChain = makeThenableChain({ data: [{ id: 'q1', exam_ref: 'LGS' }], error: null })
+    const questionChain = makeThenableChain({
+      data: [makeQuestionRow('q1', { exam_ref: 'LGS' })],
+      error: null,
+    })
     const admin = {
       from: vi.fn((table: string) => table === 'session_answers' ? wrongChain : questionChain),
     } as unknown as Admin

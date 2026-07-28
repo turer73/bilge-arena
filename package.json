@@ -11,6 +11,8 @@
     "start": "next start",
     "lint": "eslint src/",
     "lint:migrations": "node database/lint-migrations.mjs",
+    "db:types": "node scripts/sync-database-types.mjs",
+    "db:types:check": "node scripts/sync-database-types.mjs --check",
     "validate:questions": "node database/validate-question-bank.mjs",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
@@ -70,6 +72,7 @@
     "jsdom": "^28.1.0",
     "pg": "^8.20.0",
     "postcss": "^8.5.10",
+    "supabase": "2.109.1",
     "tailwindcss": "^3.4.14",
     "typescript": "^5.6.3",
     "vitest": "^4.0.18"
