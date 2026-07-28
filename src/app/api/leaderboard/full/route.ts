@@ -24,16 +24,6 @@ interface FullLeader {
   decorations: string[]
 }
 
-interface WeeklyRow {
-  user_id: string
-  username: string | null
-  display_name: string | null
-  avatar_url: string | null
-  xp_earned: number | null
-  current_rank: number
-  level_name: string | null
-}
-
 interface ProfileRow {
   id: string
   username: string | null
@@ -139,11 +129,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (weeklyData && weeklyData.length > 0) {
-      const rows = weeklyData as WeeklyRow[]
+      const rows = weeklyData
       // Nameplate + süs seçimi haftalık view'de yok → profiles'tan toplu çek
       const npMap = new Map<string, string>()
       const decoMap = new Map<string, string[]>()
-      const ids = rows.map((r) => r.user_id)
+      const ids = rows
+        .map((r) => r.user_id)
+        .filter((id): id is string => id !== null)
       if (ids.length > 0) {
         const { data: npData } = await supabase
           .from('profiles')
@@ -155,18 +147,19 @@ export async function GET(request: NextRequest) {
         }
       }
       let myRank = 0
-      const players: FullLeader[] = rows.map((row) => {
+      const players: FullLeader[] = rows.map((row, index) => {
+        const rank = row.current_rank ?? index + 1
         const isMe = !!safeUserId && row.user_id === safeUserId
-        if (isMe) myRank = row.current_rank
+        if (isMe) myRank = rank
         return {
-          rank: row.current_rank,
-          name: row.username || row.display_name || `Oyuncu ${row.current_rank}`,
+          rank,
+          name: row.username || row.display_name || `Oyuncu ${rank}`,
           avatar_url: row.avatar_url,
           xp: Number(row.xp_earned || 0),
           level_name: row.level_name,
           is_me: isMe,
-          nameplate: npMap.get(row.user_id) ?? 'none',
-          decorations: decoMap.get(row.user_id) ?? [],
+          nameplate: npMap.get(row.user_id ?? '') ?? 'none',
+          decorations: decoMap.get(row.user_id ?? '') ?? [],
         }
       })
 
@@ -177,7 +170,7 @@ export async function GET(request: NextRequest) {
           .select('current_rank')
           .eq('user_id', safeUserId)
           .single()
-        if (myData) myRank = myData.current_rank
+        if (myData) myRank = myData.current_rank ?? 0
       }
 
       return NextResponse.json(

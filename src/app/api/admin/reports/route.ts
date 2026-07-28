@@ -6,6 +6,12 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { reportUpdateSchema } from '@/lib/validations/schemas'
 import { dbErrorResponse } from '@/lib/utils/api-error'
 
+type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'rejected'
+
+function isReportStatus(value: string): value is ReportStatus {
+  return value === 'pending' || value === 'reviewed' || value === 'resolved' || value === 'rejected'
+}
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const admin = await checkPermission(supabase, 'admin.reports.view')
@@ -25,7 +31,7 @@ export async function GET(request: NextRequest) {
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
 
-  if (status && status !== 'all') {
+  if (status && isReportStatus(status)) {
     query = query.eq('status', status)
   }
 

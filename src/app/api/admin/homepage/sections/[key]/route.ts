@@ -4,6 +4,28 @@ import { createClient } from '@/lib/supabase/server'
 import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { homepageSectionUpdateSchema } from '@/lib/validations/schemas'
+import type { Json } from '@/types/database.generated'
+
+function isJson(value: unknown): value is Json {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    return value.every(isJson)
+  }
+
+  if (typeof value === 'object') {
+    return Object.values(value).every((entry) => entry === undefined || isJson(entry))
+  }
+
+  return false
+}
 
 /**
  * PATCH /api/admin/homepage/sections/[key]
@@ -30,6 +52,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'Geçersiz config verisi' }, { status: 400 })
     }
     const { config } = parsed.data
+
+    if (!isJson(config)) {
+      return NextResponse.json({ error: 'Config gecerli JSON olmalidir' }, { status: 400 })
+    }
 
     const { error } = await supabase
       .from('homepage_sections')

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { QuestionRow } from '@/lib/utils/question-public'
 
 // Esnek queue-tabanli mock'lar. daily_plan tablosu 3 farkli zincir kullanir
 // (select->maybeSingle / insert->single / update->single) -- ayri kuyruklarla
@@ -128,6 +129,30 @@ function uid(n: number): string {
   return `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`
 }
 
+function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): QuestionRow {
+  return {
+    id,
+    external_id: null,
+    game: 'matematik',
+    category: 'sayilar',
+    subcategory: null,
+    topic: null,
+    difficulty: 2,
+    level_tag: null,
+    content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'], answer: 1 },
+    base_points: 20,
+    is_active: true,
+    is_boss: false,
+    times_answered: 0,
+    times_correct: 0,
+    source: null,
+    exam_ref: null,
+    created_at: null,
+    updated_at: null,
+    ...overrides,
+  }
+}
+
 function makeGetRequest(params: Record<string, string> = {}) {
   const url = new URL('http://localhost/api/study/today')
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
@@ -182,7 +207,7 @@ describe('GET /api/study/today', () => {
       data: { id: 'plan-1', plan_date: '2026-07-21', question_ids: qids, completed_ids: [uid(1)] },
       error: null,
     })
-    questionsMock.push({ data: qids.map((id) => ({ id, game: 'matematik' })), error: null })
+    questionsMock.push({ data: qids.map((id) => makeQuestionRow(id)), error: null })
 
     const res = await GET(makeGetRequest({ game: 'matematik' }) as never)
     expect(res.status).toBe(200)
@@ -202,7 +227,7 @@ describe('GET /api/study/today', () => {
 
     // 2) due: 6 soru
     mockFetchDue.mockResolvedValueOnce(
-      Array.from({ length: 6 }, (_, i) => ({ id: uid(100 + i), game: 'matematik' })),
+      Array.from({ length: 6 }, (_, i) => makeQuestionRow(uid(100 + i))),
     )
 
     // 3) weak: 2 kategori (total>=5), en dusuk yuzdeli 2 tanesi
@@ -215,15 +240,15 @@ describe('GET /api/study/today', () => {
 
     // 4) weak-kategori RPC cagrilari (en zayif once: geometri(20), sonra problemler(40))
     mockRpc
-      .mockResolvedValueOnce({ data: [{ id: uid(200) }, { id: uid(201) }], error: null }) // geometri
-      .mockResolvedValueOnce({ data: [{ id: uid(210) }, { id: uid(211) }], error: null }) // problemler
+      .mockResolvedValueOnce({ data: [makeQuestionRow(uid(200)), makeQuestionRow(uid(201))], error: null }) // geometri
+      .mockResolvedValueOnce({ data: [makeQuestionRow(uid(210)), makeQuestionRow(uid(211))], error: null }) // problemler
 
     // 5) history (new-exclude icin) -- bos
     historyMock.push({ data: [], error: null })
 
     // 6) new RPC -- kalan 5
     mockRpc.mockResolvedValueOnce({
-      data: Array.from({ length: 5 }, (_, i) => ({ id: uid(300 + i) })),
+      data: Array.from({ length: 5 }, (_, i) => makeQuestionRow(uid(300 + i))),
       error: null,
     })
 
@@ -235,7 +260,14 @@ describe('GET /api/study/today', () => {
 
     // 8) final fetchQuestionsInOrder -- insert'e gonderilen id'lerle ayni sayida satir
     questionsMock.push({
-      data: Array.from({ length: 15 }, (_, i) => ({ id: `q${i}`, game: 'matematik' })),
+      data: [
+        ...Array.from({ length: 6 }, (_, i) => makeQuestionRow(uid(100 + i))),
+        makeQuestionRow(uid(200)),
+        makeQuestionRow(uid(201)),
+        makeQuestionRow(uid(210)),
+        makeQuestionRow(uid(211)),
+        ...Array.from({ length: 5 }, (_, i) => makeQuestionRow(uid(300 + i))),
+      ],
       error: null,
     })
 
@@ -265,7 +297,7 @@ describe('GET /api/study/today', () => {
     historyMock.push({ data: [], error: null })
     // kalan = 15 - 0 - 0 = 15 -- new RPC 15 soru doner
     mockRpc.mockResolvedValueOnce({
-      data: Array.from({ length: 15 }, (_, i) => ({ id: uid(400 + i) })),
+      data: Array.from({ length: 15 }, (_, i) => makeQuestionRow(uid(400 + i))),
       error: null,
     })
     dailyPlanMock.pushInsert({
@@ -273,7 +305,7 @@ describe('GET /api/study/today', () => {
       error: null,
     })
     questionsMock.push({
-      data: Array.from({ length: 15 }, (_, i) => ({ id: `q${i}`, game: 'matematik' })),
+      data: Array.from({ length: 15 }, (_, i) => makeQuestionRow(uid(400 + i))),
       error: null,
     })
 
@@ -287,13 +319,13 @@ describe('GET /api/study/today', () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     dailyPlanMock.pushSelect({ data: null, error: null })
     profileMock.push({ data: { exam_type: 'lgs' }, error: null })
-    mockFetchDue.mockResolvedValueOnce([{ id: uid(1), game: 'matematik' }])
+    mockFetchDue.mockResolvedValueOnce([makeQuestionRow(uid(1))])
     mockComputeStrengths.mockResolvedValueOnce([
       { label: 'Geometri', category: 'geometri', percentage: 20, total: 8 },
     ])
     mockRpc
-      .mockResolvedValueOnce({ data: [{ id: uid(2) }], error: null })
-      .mockResolvedValueOnce({ data: [{ id: uid(3) }], error: null })
+      .mockResolvedValueOnce({ data: [makeQuestionRow(uid(2))], error: null })
+      .mockResolvedValueOnce({ data: [makeQuestionRow(uid(3))], error: null })
     historyMock.push({ data: [], error: null })
     dailyPlanMock.pushInsert({
       data: { id: 'plan-lgs', plan_date: '2026-07-21', question_ids: [uid(1), uid(2), uid(3)], completed_ids: [] },
@@ -336,7 +368,7 @@ describe('GET /api/study/today', () => {
   it('new RPC hatasinda 500 doner ve partial plan persist etmez', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     dailyPlanMock.pushSelect({ data: null, error: null })
-    mockFetchDue.mockResolvedValueOnce([{ id: uid(1) }])
+    mockFetchDue.mockResolvedValueOnce([makeQuestionRow(uid(1))])
     mockComputeStrengths.mockResolvedValueOnce([])
     historyMock.push({ data: [], error: null })
     mockRpc.mockResolvedValueOnce({ data: null, error: { code: '08006' } })
@@ -349,7 +381,7 @@ describe('GET /api/study/today', () => {
   it('weak RPC hatasinda 500 doner ve partial plan persist etmez', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     dailyPlanMock.pushSelect({ data: null, error: null })
-    mockFetchDue.mockResolvedValueOnce([{ id: uid(1) }])
+    mockFetchDue.mockResolvedValueOnce([makeQuestionRow(uid(1))])
     mockComputeStrengths.mockResolvedValueOnce([
       { label: 'Geometri', category: 'geometri', percentage: 10, total: 8 },
     ])

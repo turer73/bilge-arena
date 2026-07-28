@@ -5,10 +5,34 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
+import type { Database, Json } from '@/types/database.generated'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // anon: IP bazli (50 öğrenci × ~2 req/dk)
 const questionsAuthLimiter = createRateLimiter('questions-auth', 240, 60_000) // authed: user-id bazli (daha yüksek ama sınırsız değil)
 const VALID_GAMES = new Set(GAME_SLUGS)
+
+type SearchQuestionsArgs = Database['public']['Functions']['search_questions']['Args']
+
+function isJson(value: unknown): value is Json {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    return value.every(isJson)
+  }
+
+  if (typeof value === 'object') {
+    return Object.values(value).every((entry) => entry === undefined || isJson(entry))
+  }
+
+  return false
+}
 
 /** parseInt ile boundary kontrolu: min <= val <= max */
 function safeInt(value: string | null, fallback: number, min: number, max: number): number {
@@ -55,16 +79,18 @@ export async function GET(request: NextRequest) {
   // total_count pencere fonksiyonu ile RPC icinden geliyor.
   const activeFilter = active === 'true' ? true : active === 'false' ? false : null
 
-  const { data: rows, error } = await supabase.rpc('search_questions', {
-    search_q: search && search.length >= 2 ? search : null,
-    game_filter: game || null,
-    category_filter: category || null,
-    difficulty_filter: difficulty ? parseInt(difficulty) : null,
-    active_filter: activeFilter,
+  const searchArgs: SearchQuestionsArgs = {
     admin_view: !!isAdmin,
     result_offset: offset,
     result_limit: limit,
-  })
+  }
+  if (search && search.length >= 2) searchArgs.search_q = search
+  if (game) searchArgs.game_filter = game
+  if (category) searchArgs.category_filter = category
+  if (difficulty) searchArgs.difficulty_filter = parseInt(difficulty)
+  if (activeFilter !== null) searchArgs.active_filter = activeFilter
+
+  const { data: rows, error } = await supabase.rpc('search_questions', searchArgs)
 
   if (error) {
     // PR #74 review LOW: raw error.message Postgres permission/schema bilgisini
@@ -75,7 +101,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
-  const rawRows = (rows ?? []) as Array<{ total_count: number | string } & Record<string, unknown>>
+  const rawRows = rows ?? []
   const data = rawRows.map(({ total_count: _tc, ...rest }) => rest)
   const count = rawRows.length > 0 ? Number(rawRows[0].total_count) : 0
 
@@ -132,13 +158,15 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Guncelleme basarisiz' }, { status: 500 })
   }
 
+  const logDetails: Json = isJson(updates) ? updates : {}
+
   // Admin log
   await supabase.from('admin_logs').insert({
     admin_id: admin.id,
     action: 'update_question',
     target_type: 'question',
     target_id: questionId,
-    details: updates,
+    details: logDetails,
   })
 
   return NextResponse.json({ success: true })

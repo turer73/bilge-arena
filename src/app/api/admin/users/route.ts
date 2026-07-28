@@ -3,6 +3,9 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission, logAdminAction } from '@/lib/supabase/admin'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { NextResponse, type NextRequest } from 'next/server'
+import type { Database } from '@/types/database.generated'
+
+type SearchProfilesAdminArgs = Database['public']['Functions']['search_profiles_admin']['Args']
 
 const adminUserLimiter = createRateLimiter('admin-users-create', 10, 60_000) // 10/dk
 
@@ -22,11 +25,13 @@ export async function GET(request: NextRequest) {
 
   // Accent-insensitive arama: "ozkan" -> "Özkan" (migration 026 RPC)
   // total_count pencere fonksiyonu ile RPC icinden geliyor.
-  const { data: rows } = await supabase.rpc('search_profiles_admin', {
-    q: search || null,
+  const searchArgs: SearchProfilesAdminArgs = {
     result_offset: offset,
     result_limit: limit,
-  })
+  }
+  if (search) searchArgs.q = search
+
+  const { data: rows } = await supabase.rpc('search_profiles_admin', searchArgs)
 
   const rawRows = (rows ?? []) as Array<{ id: string; total_count: number | string } & Record<string, unknown>>
   const users: Array<{ id: string } & Record<string, unknown>> = rawRows.map(({ total_count: _tc, ...rest }) => rest)

@@ -105,7 +105,8 @@ export async function PATCH(request: Request) {
     const quest = uq.quest as { quest_type: string; target_value: number; target_game?: string } | null
     if (!quest) continue
 
-    let newValue = uq.current_value
+    // Eski kayitlarda NULL olmasi, yeni gorevdeki 0 baslangiciyla ayni anlama gelir.
+    let newValue = uq.current_value ?? 0
     switch (quest.quest_type) {
       case 'play_sessions': newValue += 1; break
       case 'correct_answers': newValue += (sessionData.correctAnswers ?? 0); break

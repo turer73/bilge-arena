@@ -3,8 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAME_SLUGS } from '@/lib/constants/games'
-import type { Question } from '@/types/database'
-import { toPublicQuestion } from '@/lib/utils/question-public'
+import { parseQuestionRows, toPublicQuestion } from '@/lib/utils/question-public'
 
 // Misafir önizlemesi için kısıtlı IP rate limit: 20/saat
 const ipLimiter = createRateLimiter('questions-preview-ip', 20, 3_600_000)
@@ -64,7 +63,7 @@ export async function GET(request: NextRequest) {
   let { data, error } = await admin.rpc('select_random_questions', rpcArgs)
 
   // Filtreyle soru gelmezse filtreler olmadan tekrar dene
-  if (!error && (!data || (data as Question[]).length === 0) && (category || difficulty || examRef)) {
+  if (!error && (!data || data.length === 0) && (category || difficulty || examRef)) {
     const fallback = await admin.rpc('select_random_questions', { p_game: game, p_limit: 3 })
     if (!fallback.error) {
       data = fallback.data
@@ -77,7 +76,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Soru alınamadı' }, { status: 500 })
   }
 
-  const questions = (data ?? []) as Question[]
+  const questions = parseQuestionRows(data)
   const question = questions[0] ?? null
 
   return NextResponse.json(

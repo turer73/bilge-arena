@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { Json } from '@/types/database.generated'
 
 // ─── Types ───────────────────────────────────────────────
 export interface CookieConsent {
@@ -12,6 +13,27 @@ export type ConsentType = 'cookie' | 'terms' | 'kvkk'
 
 const STORAGE_KEY = 'bilge-arena-cookie-consent'
 const CONSENT_VERSION = 1
+
+function isJson(value: unknown): value is Json {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    return value.every(isJson)
+  }
+
+  if (typeof value === 'object') {
+    return Object.values(value).every((entry) => entry === undefined || isJson(entry))
+  }
+
+  return false
+}
 
 // ─── localStorage helpers ────────────────────────────────
 
@@ -72,6 +94,8 @@ export async function logConsent(
   userId?: string
 ) {
   try {
+    if (!isJson(value)) return
+
     const supabase = createClient()
     await supabase.from('consent_logs').insert({
       user_id: userId ?? null,

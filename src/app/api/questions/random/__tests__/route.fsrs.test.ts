@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { QuestionRow } from '@/lib/utils/question-public'
 
 /**
  * FEATURES.FSRS_REVIEW=true yolu — ayri dosya, cunku bu flag route modulunun
@@ -83,6 +84,30 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 
 import { GET } from '../route'
 
+function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): QuestionRow {
+  return {
+    id,
+    external_id: null,
+    game: 'matematik',
+    category: 'sayilar',
+    subcategory: null,
+    topic: null,
+    difficulty: 2,
+    level_tag: null,
+    content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'], answer: 1 },
+    base_points: 20,
+    is_active: true,
+    is_boss: false,
+    times_answered: 0,
+    times_correct: 0,
+    source: null,
+    exam_ref: null,
+    created_at: null,
+    updated_at: null,
+    ...overrides,
+  }
+}
+
 function makeRequest(params: Record<string, string> = {}) {
   const url = new URL('http://localhost/api/questions/random')
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
@@ -100,7 +125,7 @@ describe('GET /api/questions/random — FEATURES.FSRS_REVIEW=true', () => {
 
   it('due<=simdi olan soru FSRS-fold ile havuza girer', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
     // 1) aday-tarama: wq1 en az bir kez yanlis
     sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
@@ -112,16 +137,18 @@ describe('GET /api/questions/random — FEATURES.FSRS_REVIEW=true', () => {
       error: null,
     })
     // 3) questions final-fetch
-    questionsMock.push({ data: [{ id: 'wq1', game: 'matematik' }], error: null })
+    questionsMock.push({ data: [makeQuestionRow('wq1')], error: null })
 
     const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
     const body = await res.json()
-    expect(body.reviewQuestions).toEqual([{ id: 'wq1', game: 'matematik' }])
+    expect(body.reviewQuestions).toEqual([
+      expect.objectContaining({ id: 'wq1', game: 'matematik', category: 'sayilar' }),
+    ])
   })
 
   it('Vercel Agent Review bulgusu: dueIds kirpilmadan .in()e gecirilir, limit DB-tarafinda + filtrelerden SONRA uygulanir', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
     // 25 farkli soru, hepsi due (30 gun once yanlis) -- 20'den fazla, cross-game
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -131,7 +158,7 @@ describe('GET /api/questions/random — FEATURES.FSRS_REVIEW=true', () => {
       data: ids.map((id) => ({ question_id: id, is_correct: false, answered_at: thirtyDaysAgo })),
       error: null,
     })
-    questionsMock.push({ data: [{ id: 'wq0', game: 'matematik' }], error: null })
+    questionsMock.push({ data: [makeQuestionRow('wq0')], error: null })
 
     await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
 
@@ -148,7 +175,7 @@ describe('GET /api/questions/random — FEATURES.FSRS_REVIEW=true', () => {
 
   it('henuz due OLMAYAN soru (yakin zamanda dogru cevaplanmis) havuza girmez, 7-gun fallback da bos doner', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
     const now = new Date().toISOString()
     // 1) aday-tarama: wq1 gecmiste yanlis
@@ -171,7 +198,7 @@ describe('GET /api/questions/random — FEATURES.FSRS_REVIEW=true', () => {
 
   it('FSRS fold hata atarsa 7-gune duser (crash etmez)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRpc.mockResolvedValue({ data: [{ id: 'q1' }], error: null })
+    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
     // 1) aday-tarama basarisiz (error) -> wrongRows null -> candidateIds bos ->
     // fetchFsrsDueQuestions [] doner (try/catch'e girmeden), sonra 7-gun

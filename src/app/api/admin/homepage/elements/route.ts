@@ -5,6 +5,28 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { homepageElementCreateSchema } from '@/lib/validations/schemas'
+import type { Json } from '@/types/database.generated'
+
+function isJson(value: unknown): value is Json {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return true
+  }
+
+  if (Array.isArray(value)) {
+    return value.every(isJson)
+  }
+
+  if (typeof value === 'object') {
+    return Object.values(value).every((entry) => entry === undefined || isJson(entry))
+  }
+
+  return false
+}
 
 /**
  * GET /api/admin/homepage/elements
@@ -77,6 +99,14 @@ export async function POST(request: NextRequest) {
       styles,
     } = parsed.data
 
+    if (content != null && typeof content !== 'string') {
+      return NextResponse.json({ error: 'content metin olmalidir' }, { status: 400 })
+    }
+
+    if (styles != null && !isJson(styles)) {
+      return NextResponse.json({ error: 'styles gecerli JSON olmalidir' }, { status: 400 })
+    }
+
     const svc = createServiceRoleClient()
     const { data: element, error } = await svc
       .from('homepage_elements')
@@ -85,11 +115,11 @@ export async function POST(request: NextRequest) {
         element_type,
         content: content ?? null,
         image_url: image_url ?? null,
-        alt_text: alt_text ?? null,
-        placement: placement ?? null,
-        alignment: alignment ?? null,
-        size: size ?? null,
-        styles: styles ?? null,
+        alt_text: alt_text ?? undefined,
+        placement: placement ?? undefined,
+        alignment: alignment ?? undefined,
+        size: size ?? undefined,
+        styles: styles ?? undefined,
         created_by: admin.id,
       })
       .select()

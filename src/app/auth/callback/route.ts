@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import type { Database } from '@/types/database.client'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = await cookies()
-    const supabase = createServerClient(
+    const supabase = createServerClient<Database>(
       SUPABASE_URL,
       SUPABASE_ANON_KEY,
       {

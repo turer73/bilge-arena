@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
         .select('current_rank')
         .eq('user_id', safeUserId)
         .single()
-      if (myData) myRank = myData.current_rank
+      if (myData) myRank = myData.current_rank ?? 0
     }
 
     return NextResponse.json(
