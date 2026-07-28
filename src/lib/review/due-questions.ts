@@ -39,6 +39,7 @@ export async function fetchDueQuestions(
     .select('question_id, questions!inner(game)')
     .eq('user_id', userId)
     .eq('is_correct', false)
+    .or('is_skipped.eq.false,is_skipped.is.null')
     .eq('questions.game', game)
     .order('answered_at', { ascending: false })
     .limit(FSRS_WRONG_SCAN_LIMIT)

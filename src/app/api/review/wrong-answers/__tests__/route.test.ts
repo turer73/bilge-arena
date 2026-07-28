@@ -22,7 +22,7 @@ const {
 function makeThenableChain(resultGetter: () => unknown) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {}
   const self = () => chain
-  for (const m of ['select', 'eq', 'order', 'limit', 'in', 'returns']) {
+  for (const m of ['select', 'eq', 'or', 'order', 'limit', 'in', 'returns']) {
     chain[m] = vi.fn(self)
   }
   // Builder gercekte thenable — .returns() sonrasi dogrudan await edilir.
@@ -53,6 +53,10 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: vi.fn((name: string) => ({
     check: name === 'wrong-answers-user' ? mockUserCheck : mockIpCheck,
   })),
+}))
+
+vi.mock('@/lib/review/fsrs-rollout', () => ({
+  getFsrsReviewRollout: vi.fn(() => ({ enabled: false, bucket: 0, percentage: 0, reason: 'master_disabled' })),
 }))
 
 import { GET } from '../route'

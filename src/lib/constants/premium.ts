@@ -17,13 +17,6 @@ export const FEATURES = {
   /** Premium upsell modali (limit dolunca gosterilir). false iken gosterilmez. */
   PREMIUM_UPSELL: false,
 
-  /** FSRS-tabanli aralikli-tekrar (konu#7 karari, Faz-2 S1). false iken review
-   * havuzu eski sabit-7-gun mantigiyla calisir. true iken questions/random'daki
-   * fetchReviewQuestions() session_answers gecmisini FSRS'e katlayip due<=now
-   * olan sorulari doner (kalici state yok, read-time fold — src/lib/review/fsrs.ts).
-   * Havuz bos/hata alirsa 7-gun mantigina otomatik duser (fallback, flag'den
-   * bagimsiz). */
-  FSRS_REVIEW: false,
 } as const
 
 // ---------- Sabitler ----------

@@ -5,8 +5,8 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import type { QuestionContent } from '@/types/database'
-import { FEATURES } from '@/lib/constants/premium'
 import { foldQuestionCard, isCardDue, type ReviewEvent } from '@/lib/review/fsrs'
+import { getFsrsReviewRollout } from '@/lib/review/fsrs-rollout'
 
 // Cift kalkan rate limit (profile/topic-strengths paterni — auth-only endpoint):
 //   1. IP limit ONCE — anon flood auth.getUser() quota'sini tuketmesin
@@ -45,6 +45,7 @@ interface WrongAnswerRow {
 interface LastAnswerRow {
   question_id: string
   is_correct: boolean
+  is_skipped: boolean | null
   answered_at: string
 }
 
@@ -59,7 +60,7 @@ interface WrongAnswerItem {
   wrongCount: number
   lastWrongAt: string
   status: ReviewStatus
-  /** FSRS tekrar-zamani (konu#7 S4). FEATURES.FSRS_REVIEW=false iken her ikisi de null. */
+  /** FSRS tekrar-zamani (konu#7 S4). FSRS rollout disinda her ikisi de null. */
   isDue: boolean | null
   dueAt: string | null
 }
@@ -145,6 +146,7 @@ export async function GET(request: NextRequest) {
   //    questions!inner: soft-delete edilmis (is_active=false) sorular da FK
   //    korundugu icin dahil olur — gecmis kaydin kaybolmamasi tercih edildi.
   const admin = createServiceRoleClient()
+  const fsrsRollout = getFsrsReviewRollout(user.id)
   let wrongQuery = admin
     .from('session_answers')
     .select('question_id, selected_option, answered_at, is_skipped, questions!inner(id, game, category, subcategory, difficulty, content)')
@@ -196,9 +198,10 @@ export async function GET(request: NextRequest) {
   const questionIds = Array.from(candidates.keys())
   const { data: lastRows, error: lastError } = await admin
     .from('session_answers')
-    .select('question_id, is_correct, answered_at')
+    .select('question_id, is_correct, is_skipped, answered_at')
     .eq('user_id', user.id)
     .in('question_id', questionIds)
+    .or('is_skipped.eq.false,is_skipped.is.null')
     .order('answered_at', { ascending: false })
     .returns<LastAnswerRow[]>()
 
@@ -208,14 +211,17 @@ export async function GET(request: NextRequest) {
   }
 
   const lastStatusByQuestion = new Map<string, boolean>()
-  // FEATURES.FSRS_REVIEW acikken lastRows (zaten cekilmis, ekstra sorgu YOK)
+  // FSRS rollout acikken lastRows (zaten cekilmis, ekstra sorgu YOK)
   // ayni zamanda FSRS fold icin soru-basina olay-listesine gruplanir.
   const eventsByQuestion = new Map<string, ReviewEvent[]>()
   for (const row of lastRows ?? []) {
+    // Query filtresine ek savunma: mock/eski veri/istemci farklarinda skip bir
+    // yanlis deneme gibi son-durumu veya FSRS kartini degistirmesin.
+    if (row.is_skipped) continue
     if (!lastStatusByQuestion.has(row.question_id)) {
       lastStatusByQuestion.set(row.question_id, row.is_correct)
     }
-    if (FEATURES.FSRS_REVIEW) {
+    if (fsrsRollout.enabled) {
       const list = eventsByQuestion.get(row.question_id) ?? []
       list.push({ isCorrect: row.is_correct, answeredAt: row.answered_at })
       eventsByQuestion.set(row.question_id, list)
@@ -223,7 +229,7 @@ export async function GET(request: NextRequest) {
   }
 
   const dueByQuestion = new Map<string, { isDue: boolean; dueAt: string }>()
-  if (FEATURES.FSRS_REVIEW) {
+  if (fsrsRollout.enabled) {
     const now = new Date()
     for (const [questionId, events] of eventsByQuestion) {
       const card = foldQuestionCard(events)

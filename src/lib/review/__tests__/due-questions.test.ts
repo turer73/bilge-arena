@@ -35,7 +35,7 @@ function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): Ques
 
 function makeThenableChain(result: { data: unknown; error: unknown }) {
   const chain: Record<string, unknown> = {}
-  for (const method of ['select', 'eq', 'in', 'order', 'limit']) {
+  for (const method of ['select', 'eq', 'in', 'or', 'order', 'limit']) {
     chain[method] = vi.fn(() => chain)
   }
   chain.then = (resolve: (value: unknown) => unknown, reject?: (error: unknown) => unknown) =>
@@ -61,6 +61,7 @@ describe('fetchDueQuestions', () => {
 
     const result = await fetchDueQuestions(admin, 'u1', 'matematik', null, null, 'LGS')
     expect(result).toHaveLength(1)
+    expect(wrongChain.or).toHaveBeenCalledWith('is_skipped.eq.false,is_skipped.is.null')
     expect(questionChain.eq).toHaveBeenCalledWith('exam_ref', 'LGS')
   })
 
