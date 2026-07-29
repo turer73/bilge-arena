@@ -4,9 +4,14 @@ import type { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 type Admin = ReturnType<typeof createServiceRoleClient>
 
-function makeAdminMock(historyRows: Array<{ question_id: string; is_correct: boolean; answered_at: string }>) {
+function makeAdminMock(historyRows: Array<{
+  question_id: string
+  is_correct: boolean
+  is_skipped?: boolean | null
+  answered_at: string
+}>) {
   const chain: Record<string, unknown> = {}
-  for (const m of ['select', 'eq', 'in', 'order']) {
+  for (const m of ['select', 'eq', 'in', 'or', 'order']) {
     chain[m] = vi.fn(() => chain)
   }
   chain.then = (resolve: (v: unknown) => unknown) => Promise.resolve({ data: historyRows, error: null }).then(resolve)
@@ -42,5 +47,19 @@ describe('computeDueMap', () => {
     // due = t0+1dk; simdiki-zaman gercek Date.now() -- 2026-01-01'den cok sonra
     // oldugu icin isDue=true beklenir
     expect(result.get('q1')!.isDue).toBe(true)
+  })
+
+  it('skip olayini FSRS kartina katlamaz ve DB filtresini uygular', async () => {
+    const t0 = '2026-01-01T00:00:00.000Z'
+    const admin = makeAdminMock([
+      { question_id: 'q1', is_correct: true, is_skipped: false, answered_at: t0 },
+      { question_id: 'q1', is_correct: false, is_skipped: true, answered_at: '2026-01-03T00:00:00.000Z' },
+    ])
+
+    const result = await computeDueMap(admin, 'u1', ['q1'])
+
+    expect(result.get('q1')!.dueAt).toBe('2026-01-01T00:10:00.000Z')
+    const chain = (admin.from as ReturnType<typeof vi.fn>).mock.results[0].value
+    expect(chain.or).toHaveBeenCalledWith('is_skipped.eq.false,is_skipped.is.null')
   })
 })

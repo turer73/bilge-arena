@@ -7,8 +7,8 @@ import { GAME_SLUGS } from '@/lib/constants/games'
 import { isValidUuid } from '@/lib/utils/uuid'
 import type { Question } from '@/types/database'
 import { parseQuestionRows, toPublicQuestion } from '@/lib/utils/question-public'
-import { FEATURES } from '@/lib/constants/premium'
 import { fetchDueQuestions } from '@/lib/review/due-questions'
+import { getFsrsReviewRollout } from '@/lib/review/fsrs-rollout'
 
 // Cift kalkan rate limit (Madde 9 pattern):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -101,6 +101,7 @@ export async function GET(request: NextRequest) {
   const fetchLimit = Math.min(limit * 2, 50)
 
   const admin = createServiceRoleClient()
+  const fsrsRollout = getFsrsReviewRollout(user.id)
 
   // Klipper review B2: cooldown server-of-truth. Eski client-side kod
   // user_question_history'den son 50 soruyu cekiyordu; PR #147 refactor
@@ -168,7 +169,15 @@ export async function GET(request: NextRequest) {
   // 6) Review questions (opsiyonel, spaced-repetition)
   let reviewQuestions: Question[] = []
   if (includeReview && questions.length > 0) {
-    reviewQuestions = await fetchReviewQuestions(admin, user.id, game, category, difficulty, examRef)
+    reviewQuestions = await fetchReviewQuestions(
+      admin,
+      user.id,
+      game,
+      category,
+      difficulty,
+      examRef,
+      fsrsRollout.enabled,
+    )
   }
 
   return NextResponse.json(
@@ -185,8 +194,8 @@ export async function GET(request: NextRequest) {
  * Son 7 gunde yanlis cevaplanan ve en-son denemesi (kronolojik) hala yanlis olan
  * sorulari getirir (disc#1371 fix -- pencere icindeki HERHANGI bir dogru cevap
  * degil, en-son denemenin sonucu belirleyici).
- * Spaced repetition icin "zayif sorular" havuzu (FEATURES.FSRS_REVIEW=false iken
- * kullanilan mantik; FSRS acikken de bos/hata durumunda fallback olarak calisir).
+ * Spaced repetition icin "zayif sorular" havuzu (FSRS rollout disinda kalan
+ * kullanicilar icin eski 7-gun mantigi; FSRS hatasinda da guvenli fallback).
  * NOT: FSRS-due tarama fetchDueQuestions'a (src/lib/review/due-questions.ts) extract
  * edildi (PR#276); bu dosyadaki eski fetchFsrsDueQuestions kaldirildi.
  */
@@ -197,15 +206,16 @@ async function fetchReviewQuestions(
   category: string | null,
   difficulty: number | null,
   examRef: string | null,
+  fsrsEnabled: boolean,
 ): Promise<Question[]> {
-  if (FEATURES.FSRS_REVIEW) {
+  if (fsrsEnabled) {
     try {
-      const dueQuestions = await fetchDueQuestions(admin, userId, game, category, difficulty, examRef)
-      if (dueQuestions.length > 0) return dueQuestions
+      return await fetchDueQuestions(admin, userId, game, category, difficulty, examRef)
     } catch (e) {
       console.error('[/api/questions/random] FSRS fold hatasi, 7-gun fallback:', e)
     }
-    // dueQuestions bos veya hata -> asagidaki 7-gun mantigina bilerek dusuluyor
+    // Yalnizca hata -> asagidaki 7-gun mantigina dus. Bos FSRS havuzu, kullanicinin
+    // su anda due sorusu olmadigi anlamina gelir ve legacy havuzla doldurulmaz.
   }
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -218,7 +228,7 @@ async function fetchReviewQuestions(
     .select('question_id')
     .eq('user_id', userId)
     .eq('is_correct', false)
-    .eq('is_skipped', false)
+    .or('is_skipped.eq.false,is_skipped.is.null')
     .gte('answered_at', sevenDaysAgo)
 
   if (!wrongAnswers || wrongAnswers.length === 0) return []

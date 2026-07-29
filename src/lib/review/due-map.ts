@@ -23,9 +23,10 @@ export async function computeDueMap(
 
   const { data: historyRows, error } = await admin
     .from('session_answers')
-    .select('question_id, is_correct, answered_at')
+    .select('question_id, is_correct, is_skipped, answered_at')
     .eq('user_id', userId)
     .in('question_id', questionIds)
+    .or('is_skipped.eq.false,is_skipped.is.null')
     .order('answered_at', { ascending: true })
 
   // Transient okuma hatasini YUTMA: bos map "due yok" gibi gorunur ve cagiran
@@ -36,6 +37,7 @@ export async function computeDueMap(
 
   const eventsByQuestion = new Map<string, ReviewEvent[]>()
   for (const row of historyRows ?? []) {
+    if (row.is_skipped) continue
     const list = eventsByQuestion.get(row.question_id as string) ?? []
     list.push({ isCorrect: row.is_correct as boolean, answeredAt: row.answered_at as string })
     eventsByQuestion.set(row.question_id as string, list)

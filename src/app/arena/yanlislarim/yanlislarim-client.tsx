@@ -32,7 +32,7 @@ interface WrongAnswerItem {
   wrongCount: number
   lastWrongAt: string
   status: ReviewStatus
-  /** FSRS tekrar-zamani (konu#7 S1/S4). FEATURES.FSRS_REVIEW=false iken null. */
+  /** FSRS tekrar-zamani (konu#7 S1/S4). FSRS rollout disinda null. */
   isDue: boolean | null
   dueAt: string | null
 }

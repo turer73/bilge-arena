@@ -54,8 +54,8 @@ async function fetchQuestionsInOrder(
  *
  * Karma oran (composePlan, src/lib/study/compose-plan.ts): 6 FSRS-due +
  * 4 zayif-kategori + 5 yeni, kademeli doldurma (bir kova eksikse "yeni"ye
- * devrolur). FSRS due dogrudan computeDueMap'e dayanir (FEATURES.FSRS_REVIEW
- * flag'inden BAGIMSIZ -- bu flag genel quiz review-karisiminin rollout
+ * devrolur). FSRS due dogrudan computeDueMap'e dayanir (genel quiz FSRS
+ * rollout kararindan BAGIMSIZ -- bu ayarlar yalniz genel quiz/yanlislar yuzeyinin
  * anahtari, gunluk plan ayri/yeni bir yuzey).
  *
  * Auth zorunlu. Cache: no-store (kullaniciya ozel).

@@ -1,13 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-/**
- * FEATURES.FSRS_REVIEW=true yolu — ayri dosya (route.test.ts FEATURES'i mock'lamiyor,
- * flag import-aninda okunuyor). isDue/dueAt alanlarinin lastRows'tan (EKSTRA SORGU
- * OLMADAN) dogru turetildigini dogrular.
- */
-vi.mock('@/lib/constants/premium', () => ({
-  FEATURES: { QUIZ_LIMIT: false, ADS: false, PREMIUM_UPSELL: false, FSRS_REVIEW: true },
-  FREE_DAILY_LIMIT: 5,
+/** FSRS rollout kohortunda isDue/dueAt alanlarinin ek sorgusuz uretimi. */
+vi.mock('@/lib/review/fsrs-rollout', () => ({
+  getFsrsReviewRollout: vi.fn(() => ({ enabled: true, bucket: 0, percentage: 100, reason: 'cohort' })),
 }))
 
 const {
@@ -29,7 +24,7 @@ const {
 function makeThenableChain(resultGetter: () => unknown) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {}
   const self = () => chain
-  for (const m of ['select', 'eq', 'order', 'limit', 'in', 'returns']) {
+  for (const m of ['select', 'eq', 'or', 'order', 'limit', 'in', 'returns']) {
     chain[m] = vi.fn(self)
   }
   ;(chain as unknown as { then: (res: (v: unknown) => void) => Promise<unknown> }).then = (resolve) =>
@@ -78,7 +73,7 @@ const questionJoin = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-describe('GET /api/review/wrong-answers — FEATURES.FSRS_REVIEW=true', () => {
+describe('GET /api/review/wrong-answers — FSRS rollout kohortu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     state.callIndex = 0
@@ -136,5 +131,35 @@ describe('GET /api/review/wrong-answers — FEATURES.FSRS_REVIEW=true', () => {
     const body = await res.json()
     expect(body.items[0].status).toBe('duzeltildi')
     expect(body.items[0].isDue).toBe(false)
+  })
+
+  it('dogru cevaptan sonraki skip son-durumu ve FSRS kartini bozmaz', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
+    const wrongAt = '2026-01-01T00:00:00.000Z'
+    const correctAt = '2026-01-03T00:00:00.000Z'
+    mockWrongResult.mockReturnValue({
+      data: [{
+        question_id: Q1,
+        selected_option: 2,
+        answered_at: wrongAt,
+        is_skipped: false,
+        questions: questionJoin(),
+      }],
+      error: null,
+    })
+    mockLastResult.mockReturnValue({
+      data: [
+        { question_id: Q1, is_correct: false, is_skipped: true, answered_at: '2026-01-04T00:00:00.000Z' },
+        { question_id: Q1, is_correct: true, is_skipped: false, answered_at: correctAt },
+        { question_id: Q1, is_correct: false, is_skipped: false, answered_at: wrongAt },
+      ],
+      error: null,
+    })
+
+    const res = await GET(makeRequest())
+    const body = await res.json()
+
+    expect(body.items[0].status).toBe('duzeltildi')
+    expect(body.items[0].dueAt).not.toBe('2026-01-04T00:01:00.000Z')
   })
 })

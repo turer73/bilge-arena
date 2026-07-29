@@ -82,7 +82,7 @@ describe('YanlislarimClient', () => {
     expect(screen.getByText('Tekrar Zamanı', { exact: false })).toBeInTheDocument()
   })
 
-  test('isDue=null (FEATURES.FSRS_REVIEW=false) iken rozet gösterilmez', async () => {
+  test('isDue=null (FSRS rollout disi) iken rozet gösterilmez', async () => {
     mockFetchOnce({ items: [item()], page: 1, limit: 20, hasMore: false })
     render(<YanlislarimClient />)
     await waitFor(() => expect(screen.getByText('İki artı iki kaçtır?')).toBeInTheDocument())

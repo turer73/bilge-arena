@@ -1,15 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
 
-/**
- * FEATURES.FSRS_REVIEW=true yolu — ayri dosya, cunku bu flag route modulunun
- * IMPORT ANINDA okunuyor (module-level const), tek dosya icinde test-basina
- * toggle etmek dynamic-import/resetModules gerektirirdi. Bu dosya FSRS_REVIEW'i
- * BASTAN true mock'luyor.
- */
-vi.mock('@/lib/constants/premium', () => ({
-  FEATURES: { QUIZ_LIMIT: false, ADS: false, PREMIUM_UPSELL: false, FSRS_REVIEW: true },
-  FREE_DAILY_LIMIT: 5,
+/** FSRS rollout kohortuna dahil kullanicinin route davranisi. */
+vi.mock('@/lib/review/fsrs-rollout', () => ({
+  getFsrsReviewRollout: vi.fn(() => ({ enabled: true, bucket: 0, percentage: 100, reason: 'cohort' })),
 }))
 
 function makeTableMock() {
@@ -18,7 +12,7 @@ function makeTableMock() {
   const from = vi.fn(() => {
     const result = queue.length > 0 ? queue.shift()! : { data: [], error: null }
     const chain: Record<string, unknown> = {}
-    for (const m of ['select', 'eq', 'in', 'gte', 'order', 'limit']) {
+    for (const m of ['select', 'eq', 'in', 'gte', 'or', 'order', 'limit']) {
       chain[m] = vi.fn(() => chain)
     }
     chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
@@ -36,7 +30,7 @@ const { mockGetUser, mockRpc, mockHistory, sessionAnswersMock, questionsMock } =
     const from = vi.fn(() => {
       const result = queue.length > 0 ? queue.shift()! : { data: [], error: null }
       const chain: Record<string, ReturnType<typeof vi.fn>> = {}
-      for (const m of ['select', 'eq', 'in', 'gte', 'order', 'limit']) {
+      for (const m of ['select', 'eq', 'in', 'gte', 'or', 'order', 'limit']) {
         chain[m] = vi.fn(() => chain)
       }
       ;(chain as unknown as { then: unknown }).then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
@@ -116,7 +110,7 @@ function makeRequest(params: Record<string, string> = {}) {
   return new Request(url.toString(), { headers })
 }
 
-describe('GET /api/questions/random — FEATURES.FSRS_REVIEW=true', () => {
+describe('GET /api/questions/random — FSRS rollout kohortu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     sessionAnswersMock.reset()
@@ -173,7 +167,7 @@ describe('GET /api/questions/random — FEATURES.FSRS_REVIEW=true', () => {
     expect(limitOrder).toBeGreaterThan(eqGameOrder)
   })
 
-  it('henuz due OLMAYAN soru (yakin zamanda dogru cevaplanmis) havuza girmez, 7-gun fallback da bos doner', async () => {
+  it('henuz due OLMAYAN soru havuza girmez ve 7-gun fallback calismaz', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
@@ -194,15 +188,15 @@ describe('GET /api/questions/random — FEATURES.FSRS_REVIEW=true', () => {
     const res = await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
     const body = await res.json()
     expect(body.reviewQuestions).toEqual([])
+    expect(sessionAnswersMock.from).toHaveBeenCalledTimes(2)
   })
 
   it('FSRS fold hata atarsa 7-gune duser (crash etmez)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
 
-    // 1) aday-tarama basarisiz (error) -> wrongRows null -> candidateIds bos ->
-    // fetchFsrsDueQuestions [] doner (try/catch'e girmeden), sonra 7-gun
-    // fallback'ine geciliyor: o da 2 sorgu bekliyor
+    // 1) aday-tarama basarisiz (error) -> fetchDueQuestions throw eder; route
+    // yalniz hata halinde 7-gun fallback'ine gecer.
     sessionAnswersMock.push({ data: null, error: { code: '500' } })
     // 7-gun fallback: yanlis-cevaplar sorgusu
     sessionAnswersMock.push({ data: [], error: null })

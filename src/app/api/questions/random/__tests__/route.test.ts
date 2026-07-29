@@ -17,7 +17,7 @@ const { mockGetUser, mockRpc, mockHistory, sessionAnswersMock, questionsMock, ot
     const from = vi.fn(() => {
       const result = queue.length > 0 ? queue.shift()! : { data: [], error: null }
       const chain: Record<string, unknown> = {}
-      for (const m of ['select', 'eq', 'in', 'gte', 'order', 'limit']) {
+      for (const m of ['select', 'eq', 'in', 'gte', 'or', 'order', 'limit']) {
         chain[m] = vi.fn(() => chain)
       }
       chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
@@ -72,6 +72,10 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: vi.fn(() => ({
     check: vi.fn(async () => ({ success: true })),
   })),
+}))
+
+vi.mock('@/lib/review/fsrs-rollout', () => ({
+  getFsrsReviewRollout: vi.fn(() => ({ enabled: false, bucket: 0, percentage: 0, reason: 'master_disabled' })),
 }))
 
 import { GET } from '../route'
@@ -252,7 +256,7 @@ describe('GET /api/questions/random', () => {
     expect(body.reviewQuestions).toEqual([])
   })
 
-  describe('includeReview=true (FEATURES.FSRS_REVIEW=false — 7-gun fallback yolu)', () => {
+  describe('includeReview=true (FSRS rollout disi — 7-gun fallback yolu)', () => {
     it('disc#1372 fix: answered_at kolonuyla sorgular ve sonuc doner (created_at DEGIL)', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
       mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
@@ -269,6 +273,8 @@ describe('GET /api/questions/random', () => {
       expect(body.reviewQuestions).toEqual([
         expect.objectContaining({ id: 'wq1', game: 'matematik', category: 'sayilar' }),
       ])
+      const candidateChain = sessionAnswersMock.from.mock.results[0].value
+      expect(candidateChain.or).toHaveBeenCalledWith('is_skipped.eq.false,is_skipped.is.null')
     })
 
     it('sonradan dogru cevaplanan soru review havuzundan cikar', async () => {
