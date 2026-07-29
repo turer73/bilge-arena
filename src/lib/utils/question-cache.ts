@@ -1,9 +1,10 @@
 'use client'
 
-import type { Question } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 
 const DB_NAME = 'bilge-arena-cache'
-const DB_VERSION = 1
+// v2 cevap anahtarı/çözüm taşıyan eski cache girdilerini zorunlu temizler.
+const DB_VERSION = 2
 const STORE_NAME = 'questions'
 const META_STORE = 'cache_meta'
 const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 saat
@@ -18,6 +19,8 @@ function openDB(): Promise<IDBDatabase> {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' })
         store.createIndex('game', 'game', { unique: false })
         store.createIndex('game_category', ['game', 'category'], { unique: false })
+      } else {
+        request.transaction?.objectStore(STORE_NAME).clear()
       }
       if (!db.objectStoreNames.contains(META_STORE)) {
         db.createObjectStore(META_STORE, { keyPath: 'key' })
@@ -30,7 +33,7 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 /** Sorulari IndexedDB'ye kaydet */
-export async function cacheQuestions(questions: Question[]): Promise<void> {
+export async function cacheQuestions(questions: PublicQuestion[]): Promise<void> {
   try {
     const db = await openDB()
     const tx = db.transaction([STORE_NAME, META_STORE], 'readwrite')
@@ -65,10 +68,10 @@ export async function cacheQuestions(questions: Question[]): Promise<void> {
  * ve false ise (deaktive edilmis soru) elenmeye devam eder (Codex P2).
  */
 export function filterPlayableCached(
-  questions: Question[],
+  questions: Array<PublicQuestion & { is_active?: boolean }>,
   category?: string | null,
   difficulty?: number | null,
-): Question[] {
+): PublicQuestion[] {
   let filtered = questions.filter(q => q.is_active !== false)
   if (category) filtered = filtered.filter(q => q.category === category)
   if (difficulty) filtered = filtered.filter(q => q.difficulty === difficulty)
@@ -81,7 +84,7 @@ export async function getCachedQuestions(options: {
   category?: string | null
   difficulty?: number | null
   limit?: number
-}): Promise<Question[]> {
+}): Promise<PublicQuestion[]> {
   const { game, category, difficulty, limit = 10 } = options
 
   try {
@@ -90,9 +93,9 @@ export async function getCachedQuestions(options: {
     const store = tx.objectStore(STORE_NAME)
     const index = store.index('game')
 
-    const questions = await new Promise<Question[]>((resolve, reject) => {
+    const questions = await new Promise<Array<PublicQuestion & { is_active?: boolean }>>((resolve, reject) => {
       const request = index.getAll(game)
-      request.onsuccess = () => resolve(request.result as Question[])
+      request.onsuccess = () => resolve(request.result as Array<PublicQuestion & { is_active?: boolean }>)
       request.onerror = () => reject(request.error)
     })
 

@@ -1,6 +1,7 @@
 'use client'
 
-import type { Question, GameType } from '@/types/database'
+import type { GameType } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 import { cacheQuestions, getCachedQuestions } from '@/lib/utils/question-cache'
 import { filterValidUuids } from '@/lib/utils/uuid'
 
@@ -18,8 +19,8 @@ interface FetchQuestionsOptions {
 }
 
 interface RandomQuestionsResponse {
-  questions: Question[]
-  reviewQuestions: Question[]
+  questions: PublicQuestion[]
+  reviewQuestions: PublicQuestion[]
 }
 
 /** Fisher-Yates shuffle (in-place) */
@@ -48,7 +49,7 @@ export async function fetchQuizQuestions({
   excludeIds = [],
   examRef,
   includeReview = true,
-}: FetchQuestionsOptions): Promise<Question[]> {
+}: FetchQuestionsOptions): Promise<PublicQuestion[]> {
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
 
   // Cevrimdisi: dogrudan cache'den sun
@@ -119,7 +120,7 @@ export async function fetchQuizQuestions({
 export async function fetchPreviewQuestion(
   game: string,
   opts?: { category?: string | null; difficulty?: number | null; examRef?: string | null },
-): Promise<Question | null> {
+): Promise<PublicQuestion | null> {
   try {
     const params = new URLSearchParams({ game })
     if (opts?.category) params.set('category', opts.category)
@@ -128,7 +129,7 @@ export async function fetchPreviewQuestion(
 
     const res = await fetch(`/api/questions/preview?${params.toString()}`, { cache: 'no-store' })
     if (!res.ok) return null
-    const data = await res.json() as { question: Question | null }
+    const data = await res.json() as { question: PublicQuestion | null }
     return data.question ?? null
   } catch {
     return null

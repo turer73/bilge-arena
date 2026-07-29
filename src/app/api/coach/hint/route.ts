@@ -146,9 +146,9 @@ async function generateHint(prompt: string): Promise<string | null> {
  * okunur. Asama tokeni hint1 -> hint2 -> hint3 -> solution siralamasini
  * serverda zorlar; token tekrar kullanilabilir, ancak stage atlanamaz.
  *
- * Sinir: Bu rehberli bir UI akisi, anti-cheat guvenlik siniri değildir. Mevcut
- * PublicQuestion kontrati answer/solution'i quiz motoruna zaten yollar; gercek
- * server-authoritative grading donusumu ayrica gerekir.
+ * Sinir: Bu rehberli bir UI akisi, anti-cheat guvenlik siniri değildir.
+ * PublicQuestion answer/solution taşımaz; çözüm yalnız öğrencinin açık talebiyle
+ * imzalı aşama zincirinin sonunda açılır.
  */
 export async function POST(request: Request) {
   const ip = getClientIp(request.headers)

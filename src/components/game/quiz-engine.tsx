@@ -346,6 +346,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             quizState={quizStore.state}
             lastIsCorrect={lastAnswer?.isCorrect ?? null}
             question={question}
+            correctOption={lastAnswer?.correctOption ?? null}
             onHelpToggle={quiz.setHelpPaused}
             compact
             height={104}
@@ -441,6 +442,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
               question={question}
               selectedOption={lastAnswer.selectedOption}
               isCorrect={lastAnswer.isCorrect}
+              correctOption={lastAnswer.correctOption}
+              solution={lastAnswer.solution}
               isLastQuestion={quizStore.isLastQuestion() || quizStore.livesExhausted}
               onNext={quiz.handleNext}
               onOpenComments={() => quiz.setShowComments(!quiz.showComments)}
@@ -529,6 +532,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             quizState={quizStore.state}
             lastIsCorrect={lastAnswer?.isCorrect ?? null}
             question={question}
+            correctOption={lastAnswer?.correctOption ?? null}
             onHelpToggle={quiz.setHelpPaused}
             height={340}
             className="sticky top-4"

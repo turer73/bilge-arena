@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import type { Question } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 import type { XPResult } from '@/lib/utils/xp'
 
 export type QuizState = 'idle' | 'loading' | 'playing' | 'answered' | 'completed'
@@ -10,6 +10,8 @@ export interface AnswerRecord {
   questionId: string
   selectedOption: number       // EKRAN index'i (shuffle-sonrasi) — UI geri-bildirimi icin
   selectedCanonical: number    // KANONIK DB index'i — server-grading buna gore (shuffle-index bug fix)
+  correctOption: number        // EKRAN index'i — yalnız submit sonrası sunucudan açılır
+  solution: string | null      // yalnız submit sonrası sunucudan açılır
   isCorrect: boolean
   timeTaken: number        // saniye
   xpEarned: number
@@ -18,7 +20,7 @@ export interface AnswerRecord {
 interface QuizStore {
   // State
   state: QuizState
-  questions: Question[]
+  questions: PublicQuestion[]
   currentIndex: number
   answers: AnswerRecord[]
   score: number
@@ -35,14 +37,14 @@ interface QuizStore {
   livesExhausted: boolean  // Son can bitti (oyun-bitti) — ama once cozum gosterilir
 
   // Actions
-  startQuiz: (questions: Question[], lives?: number) => void
-  answerQuestion: (selectedOption: number, isCorrect: boolean, timeTaken: number, xpResult: XPResult, selectedCanonical?: number) => void
+  startQuiz: (questions: PublicQuestion[], lives?: number) => void
+  answerQuestion: (selectedOption: number, isCorrect: boolean, timeTaken: number, xpResult: XPResult, selectedCanonical?: number, correctOption?: number, solution?: string | null) => void
   nextQuestion: () => void
   completeQuiz: () => void
   resetQuiz: () => void
 
   // Computed helpers
-  currentQuestion: () => Question | null
+  currentQuestion: () => PublicQuestion | null
   progress: () => number
   isLastQuestion: () => boolean
 }
@@ -80,7 +82,7 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
     livesExhausted: false,
   }),
 
-  answerQuestion: (selectedOption, isCorrect, timeTaken, xpResult, selectedCanonical) => {
+  answerQuestion: (selectedOption, isCorrect, timeTaken, xpResult, selectedCanonical, correctOption, solution) => {
     const { questions, currentIndex, answers, score, streak, maxStreak, xpEarned, lives, livesEnabled } = get()
     const question = questions[currentIndex]
     if (!question) return
@@ -101,6 +103,8 @@ export const useQuizStore = create<QuizStore>((set, get) => ({
         selectedOption,
         // Caller kanonik index vermezse ekran-index'ine dus (shuffle'siz akislar icin dogru).
         selectedCanonical: selectedCanonical ?? selectedOption,
+        correctOption: correctOption ?? selectedOption,
+        solution: solution ?? null,
         isCorrect,
         timeTaken,
         xpEarned: xp,

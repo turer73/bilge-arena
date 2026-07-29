@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GameSlug } from '@/lib/constants/games'
-import type { Question } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 
 export interface PersonalizedMockPlan {
   generatedFor: string
   game: GameSlug
   examRef: string | null
-  questions: Question[]
+  questions: PublicQuestion[]
   breakdown: {
     wrong: number
     weak: number

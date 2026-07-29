@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { BilgeChan, type ChanPose } from '@/components/ui/bilge-chan'
-import { getCorrectIndex, getOptionLetter } from '@/lib/utils/question'
+import { getOptionLetter } from '@/lib/utils/question'
 import { supportsStagedCoachQuestion } from '@/lib/coach/question-shape'
-import type { Question } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-tts'
 
@@ -32,7 +32,9 @@ interface BilgeChanCompanionProps {
   /** Son cevap doğru mu (answered iken anlamlı) */
   lastIsCorrect: boolean | null
   /** Aktif soru */
-  question: Question | null
+  question: PublicQuestion | null
+  /** Submit sonrası sunucunun açtığı, ekrandaki doğru seçenek indeksi. */
+  correctOption?: number | null
   /** Pose yüksekliği (px) */
   height?: number
   /** Mobil/dar yerleşim: balon yanda, daha küçük */
@@ -78,6 +80,7 @@ export function BilgeChanCompanion({
   quizState,
   lastIsCorrect,
   question,
+  correctOption = null,
   height = 240,
   compact = false,
   priority = false,
@@ -117,12 +120,12 @@ export function BilgeChanCompanion({
     [easy],
   )
   const answerMsg = useMemo(() => {
-    if (!answered || !question) return ''
-    const letter = getOptionLetter(getCorrectIndex(question.content))
+    if (!answered || !question || correctOption === null) return ''
+    const letter = getOptionLetter(correctOption)
     return lastIsCorrect
       ? pickLine(CHAN_LINES.correct).replace('{harf}', letter)
       : pickLine(CHAN_LINES.wrong).replace('{harf}', letter)
-  }, [answered, lastIsCorrect, question])
+  }, [answered, correctOption, lastIsCorrect, question])
 
   const requestHint = async (stage: 'hint1' | 'hint2' | 'hint3' | 'solution') => {
     if (!question || !supportsStagedCoachQuestion(question.content)) return

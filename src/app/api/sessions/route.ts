@@ -12,6 +12,12 @@ const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
 
 // XP hesaplama — client'a guvenmeden server-side recalculate
 const BASE_XP: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 50 }
+const MODE_TIME_LIMITS: Record<string, number> = {
+  classic: 30,
+  blitz: 15,
+  marathon: 30,
+  boss: 45,
+}
 
 const completeSessionResultSchema = z.object({
   sessionId: z.string().min(1),
@@ -19,19 +25,34 @@ const completeSessionResultSchema = z.object({
 })
 
 const answerIndexSchema = z.object({
+  options: z.array(z.unknown()).min(2).max(5),
   answer: z.number().int().optional(),
   correct: z.number().int().optional(),
-})
+}).refine(
+  (content) => content.answer !== undefined || content.correct !== undefined,
+).refine(
+  (content) => content.answer === undefined
+    || content.correct === undefined
+    || content.answer === content.correct,
+).refine(
+  (content) => {
+    const correctOption = content.answer ?? content.correct
+    return correctOption !== undefined
+      && correctOption >= 0
+      && correctOption < content.options.length
+  },
+)
 
 function serverCalculateXP(
   difficulty: number,
   timeTaken: number,
   timeLimit: number,
-  currentStreak: number
+  currentStreak: number,
+  allowTimeBonus = true,
 ): number {
   const base = BASE_XP[difficulty] || 20
   const remainingSeconds = Math.max(0, timeLimit - timeTaken)
-  const timeBonus = remainingSeconds >= 20 ? 5 : 0
+  const timeBonus = allowTimeBonus && remainingSeconds >= 20 ? 5 : 0
   const streakBonus = currentStreak >= 5 ? 10 : 0
   return base + timeBonus + streakBonus
 }
@@ -59,15 +80,16 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Eksik veri' }, { status: 400 })
   }
-  const { game, mode, answers: rawAnswers, category, difficulty: filterDifficulty, timeLimit, clientRequestId } = parsed.data
+  const { game, mode, answers: rawAnswers, category, difficulty: filterDifficulty, clientRequestId } = parsed.data
 
   // P0 fix: ayni questionId birden fazla gonderilerek coin/XP farming'i onle.
   // Odul dongusu ham dizi uzerinde donuyordu (questionMap yalniz lookup) -> ayni
   // soru 100x gonderilince 100x coin. Soru basina en fazla 1 cevap say.
   const answers = [...new Map(rawAnswers.map((a) => [a.questionId, a])).values()]
 
-  // timeLimit zaten Zod ile 5-120 arasinda sinirli
-  const safeTimeLimit = timeLimit
+  // Süre bonusu istemcinin bildirdiği timeLimit'e güvenmez; mod sözleşmesinden gelir.
+  const rewardTimeLimit = MODE_TIME_LIMITS[mode] ?? 0
+  const allowTimeBonus = rewardTimeLimit > 0
 
   // Service role client — RLS bypass (tum INSERT/UPDATE + limit-gate okumasi icin)
   const svc = createServiceRoleClient()
@@ -140,15 +162,22 @@ export async function POST(request: Request) {
       : undefined
     const isActuallyCorrect = correctIndex === a.selectedOption
 
-    // timeTaken sinirla: 0 ile timeLimit arasi (client manipulasyonunu onle)
-    const safeTimeTaken = Math.min(Math.max(Number(a.timeTaken) || 0, 0), safeTimeLimit)
+    // Süresiz/practice ve denemede gerçek soru süresini koru. Zod üst sınırı
+    // zaten 300 sn; timeLimit yalnız süre bonusunun eşiğidir.
+    const safeTimeTaken = Math.min(Math.max(Number(a.timeTaken) || 0, 0), 300)
 
     let xpEarned = 0
     if (isActuallyCorrect) {
       streak++
       if (streak > maxStreak) maxStreak = streak
       correctCount++
-      xpEarned = serverCalculateXP(question.difficulty ?? 2, safeTimeTaken, safeTimeLimit, streak)
+      xpEarned = serverCalculateXP(
+        question.difficulty ?? 2,
+        safeTimeTaken,
+        rewardTimeLimit,
+        streak,
+        allowTimeBonus,
+      )
       totalXP += xpEarned
     } else {
       streak = 0

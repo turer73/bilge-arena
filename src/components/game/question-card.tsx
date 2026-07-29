@@ -1,6 +1,6 @@
 'use client'
 
-import type { Question } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 import { GAMES } from '@/lib/constants/games'
 import { renderRichText } from '@/lib/utils/rich-text'
 
@@ -21,7 +21,7 @@ const GAME_EMOJI: Record<string, string> = {
 }
 
 interface QuestionCardProps {
-  question: Question
+  question: PublicQuestion
   currentIndex: number
   totalQuestions: number
   onReport?: () => void // Oyun sırasında soruyu raporla (cevaptan bağımsız)

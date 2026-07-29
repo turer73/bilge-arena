@@ -1,7 +1,7 @@
 /**
  * Bilge Arena: toPublicQuestion — soru API whitelist'i.
  * Telemetri/iç alanlar (times_answered, times_correct, is_active, source,
- * external_id...) yanıttan düşmeli; quiz'in kullandığı alanlar korunmalı.
+ * external_id...) ve cevap anahtarı yanıttan düşmeli; soru metni korunmalı.
  */
 
 import { describe, test, expect } from 'vitest'
@@ -30,7 +30,7 @@ const DB_ROW = {
 } as unknown as Question
 
 describe('toPublicQuestion', () => {
-  test('quiz alanlarını korur (content answer/solution dahil — misafir notlaması client-side)', () => {
+  test('oynanabilir alanları korur, cevap anahtarı ve çözümü düşürür', () => {
     const pub = toPublicQuestion(DB_ROW)
     expect(pub).toEqual({
       id: 'q-1',
@@ -40,9 +40,27 @@ describe('toPublicQuestion', () => {
       topic: 'bileşik faiz',
       difficulty: 5,
       level_tag: null,
-      content: DB_ROW.content,
+      content: {
+        question: 'Soru?',
+        options: ['a', 'b', 'c', 'd'],
+      },
       base_points: 50,
     })
+  })
+
+  test('answer/solution/explanation/hint içerikten istemciye sızmaz', () => {
+    const question = {
+      ...DB_ROW,
+      content: {
+        ...DB_ROW.content,
+        hint: 'İpucu',
+        explanation: 'Açıklama',
+      },
+    }
+    const content = toPublicQuestion(question).content as Record<string, unknown>
+    for (const leak of ['answer', 'solution', 'explanation', 'hint']) {
+      expect(content).not.toHaveProperty(leak)
+    }
   })
 
   test('telemetri/iç alanları düşürür', () => {

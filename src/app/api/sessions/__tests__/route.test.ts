@@ -112,8 +112,8 @@ describe('POST /api/sessions', () => {
     featureState.QUIZ_LIMIT = true
     mockQuestionsIn.mockResolvedValue({
       data: [
-        { id: Q1, content: { answer: 1 }, difficulty: 2 },
-        { id: Q2, content: { answer: 2 }, difficulty: 2 },
+        { id: Q1, content: { options: ['a', 'b', 'c', 'd'], answer: 1 }, difficulty: 2 },
+        { id: Q2, content: { options: ['a', 'b', 'c', 'd'], answer: 2 }, difficulty: 2 },
       ],
       error: null,
     })
@@ -191,6 +191,39 @@ describe('POST /api/sessions', () => {
       'complete_game_session',
       expect.objectContaining({ p_user_id: 'u1', p_client_request_id: REQ_ID }),
     )
+  })
+
+  it('deneme gerçek soru süresini korur ve süre bonusu üretmez', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await POST(makeRequest({
+      game: 'matematik',
+      mode: 'deneme',
+      timeLimit: 30,
+      clientRequestId: REQ_ID,
+      answers: [{ questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 47.2 }],
+    }))
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).totalXP).toBe(20)
+    expect(mockRpc).toHaveBeenCalledWith('complete_game_session', expect.objectContaining({
+      p_total_xp: 20,
+      p_time_spent_sec: 47,
+      p_answers: [expect.objectContaining({ time_taken_sec: 47.2, is_fast: false })],
+    }))
+  })
+
+  it('istemci timeLimit yükselterek süre bonusu üretemez', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await POST(makeRequest({
+      game: 'matematik',
+      mode: 'classic',
+      timeLimit: 120,
+      clientRequestId: REQ_ID,
+      answers: [{ questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 15 }],
+    }))
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).totalXP).toBe(20)
   })
 
   // ─── Regresyon-kilidi (Vercel Agent Review, PR#271): idempotent replay quest/badge'i

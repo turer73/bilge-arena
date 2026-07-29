@@ -71,16 +71,35 @@ export function parseQuestionRows(rows: QuestionRow[] | null | undefined): Quest
 }
 
 /**
- * Soru API yanıtları için public alan whitelist'i.
+ * Cevap verilmeden önce istemciye gönderilebilen soru içeriği.
  *
- * RPC'ler tam DB satırı döndürür; iç telemetri/operasyon alanları
- * (times_answered, times_correct, is_active, source, external_id,
- * created_at...) client'a sızmamalı. Quiz'in kullandığı alanlar:
- * grading + açıklama paneli için content (answer/solution dahil),
- * companion/XP için difficulty + base_points, konu anlatımı için
- * game/category/subcategory/topic, WordQuest için level_tag.
+ * `answer`, `solution`, `explanation` ve `hint` bilerek bu kontratta yoktur.
+ * Doğru cevap ve çözüm yalnız `/api/questions/grade` submit yanıtında açılır.
  */
-export type PublicQuestion = Pick<
+export type PublicQuestionContent = Pick<
+  QuestionContent,
+  | 'question'
+  | 'options'
+  | 'sentence'
+  | 'passage'
+  | 'context'
+  | 'type'
+>
+
+export function toPublicQuestionContent(content: QuestionContent): PublicQuestionContent {
+  const { question, options, sentence, passage, context, type } = content
+  return {
+    question,
+    options,
+    ...(sentence !== undefined ? { sentence } : {}),
+    ...(passage !== undefined ? { passage } : {}),
+    ...(context !== undefined ? { context } : {}),
+    ...(type !== undefined ? { type } : {}),
+  }
+}
+
+/** Soru API yanıtları için public alan whitelist'i. */
+export type PublicQuestion = Omit<Pick<
   Question,
   | 'id'
   | 'game'
@@ -89,9 +108,8 @@ export type PublicQuestion = Pick<
   | 'topic'
   | 'difficulty'
   | 'level_tag'
-  | 'content'
   | 'base_points'
->
+>, 'content'> & { content: PublicQuestionContent }
 
 export function toPublicQuestion(q: Question): PublicQuestion {
   return {
@@ -102,7 +120,7 @@ export function toPublicQuestion(q: Question): PublicQuestion {
     topic: q.topic,
     difficulty: q.difficulty,
     level_tag: q.level_tag,
-    content: q.content,
+    content: toPublicQuestionContent(q.content),
     base_points: q.base_points,
   }
 }

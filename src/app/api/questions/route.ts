@@ -6,6 +6,7 @@ import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { parseQuestionContent, toPublicQuestionContent } from '@/lib/utils/question-public'
 import type { Database, Json } from '@/types/database.generated'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // anon: IP bazli (50 öğrenci × ~2 req/dk)
@@ -103,7 +104,23 @@ export async function GET(request: NextRequest) {
   }
 
   const rawRows = rows ?? []
-  const data = rawRows.map(({ total_count: _tc, ...rest }) => rest)
+  const data = isAdmin
+    ? rawRows.map(({ total_count: _tc, ...rest }) => rest)
+    : rawRows.flatMap((row) => {
+        const content = parseQuestionContent(row.content)
+        if (!content) return []
+        return [{
+          id: row.id,
+          game: row.game,
+          category: row.category,
+          subcategory: row.subcategory,
+          topic: row.topic,
+          difficulty: row.difficulty,
+          level_tag: row.level_tag,
+          content: toPublicQuestionContent(content),
+          base_points: row.difficulty * 10,
+        }]
+      })
   const count = rawRows.length > 0 ? Number(rawRows[0].total_count) : 0
 
   // Admin yanitlari admin_view=true ile pasif sorulari icerir; bu datayi CDN'de
