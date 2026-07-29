@@ -50,6 +50,8 @@ export interface UseQuizGameReturn {
   handleStart: () => Promise<void>
   /** "Bugunun 15'i" plan sorularini dogrudan baslatir -- fetch/slice yok. */
   handleStartPlanned: (questions: Question[]) => void
+  /** Sunucuda hazırlanmış kişisel soru setini gerçek deneme semantiğiyle başlatır. */
+  handleStartPreparedDeneme: (questions: Question[]) => void
   handleAnswer: (optionIndex: number) => void
   handleNext: () => void
   handleRestart: () => void
@@ -279,6 +281,29 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     setScreen('game')
   }, [quizStore, timer])
 
+  // --- Hazır Akıllı Deneme setini doğrudan başlat ---
+  // `setMode('deneme')` ile aynı event içinde çağrılabileceği için bu callback
+  // render anındaki `mode/isDeneme` closure'ına dayanmaz. Sunucu zaten 40 soruluk
+  // kişisel seti seçmiştir; burada yalnız seçenekleri karıştırıp deneme sayaçlarını
+  // temizleriz.
+  const handleStartPreparedDeneme = useCallback((questions: Question[]) => {
+    if (questions.length === 0) return
+
+    shuffleMapRef.current.clear()
+    const shuffledQuestions = questions.map((question) => {
+      const shuffled = shuffleOptionsWithMap(question.content)
+      shuffleMapRef.current.set(question.id, shuffled.map)
+      return { ...question, content: shuffled.content }
+    })
+
+    quizStore.startQuiz(shuffledQuestions)
+    elapsed.reset()
+    timer.reset(0)
+    setIsGuestMode(false)
+    setLoadError(null)
+    setScreen('game')
+  }, [elapsed, quizStore, timer])
+
   // --- Cevap ver ---
 
   const handleAnswer = useCallback((optionIndex: number) => {
@@ -401,6 +426,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     setHelpPaused,
     handleStart,
     handleStartPlanned,
+    handleStartPreparedDeneme,
     handleAnswer,
     handleNext,
     handleRestart,

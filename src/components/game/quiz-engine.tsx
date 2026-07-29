@@ -17,6 +17,7 @@ import { trUpper } from '@/lib/utils/tr-text'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
+import { usePersonalizedMock } from '@/lib/hooks/use-personalized-mock'
 import { useMasteryMap } from '@/lib/hooks/use-mastery-map'
 
 import { Lobby } from './lobby'
@@ -46,6 +47,7 @@ const DenemeResult = dynamic(
 import { MiniLeaderboard } from './mini-leaderboard'
 import { DailyQuests } from './daily-quests'
 import { TodayPlanCard } from './today-plan-card'
+import { PersonalizedMockCard } from './personalized-mock-card'
 import { MasteryMapCard } from './mastery-map-card'
 import { TopicsPanel } from './topics-panel'
 import { LifeLostOverlay } from './life-lost-overlay'
@@ -84,6 +86,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
   const dailyQuests = useDailyQuests()
   const todayPlan = useTodayPlan(game, user?.id, gameStore.selectedExamRef)
+  const personalizedMock = usePersonalizedMock(game, user?.id, gameStore.selectedExamRef)
   const masteryMap = useMasteryMap(game, user?.id, gameStore.selectedExamRef)
   useSessionSaver({
     screen: quiz.screen,
@@ -128,6 +131,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
               plan={todayPlan.plan}
               loading={todayPlan.loading}
               onStart={() => {
+                if (personalizedMock.loading) return
                 if (!todayPlan.plan || todayPlan.plan.questions.length === 0) return
                 if (!quizLimit.canPlay) {
                   setShowPremiumModal(true)
@@ -149,6 +153,37 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 quiz.handleStartPlanned(todayPlan.plan.questions)
               }}
             />
+            <PersonalizedMockCard
+              loading={personalizedMock.loading}
+              error={personalizedMock.error}
+              onStart={async () => {
+                if (!quizLimit.canPlay) {
+                  setShowPremiumModal(true)
+                  return
+                }
+
+                const plan = await personalizedMock.generate()
+                if (!plan) return
+
+                trackEvent('UserQuizStart', {
+                  props: {
+                    game,
+                    mode: 'deneme',
+                    source: 'personalized_mock',
+                    category: 'all',
+                    difficulty: 'all',
+                    exam_ref: plan.examRef ?? 'all',
+                    wrong_count: plan.breakdown.wrong,
+                    weak_count: plan.breakdown.weak,
+                  },
+                })
+                gameStore.setMode('deneme')
+                gameStore.setCategory(null)
+                gameStore.setDifficulty(null)
+                setPlanActive(false)
+                quiz.handleStartPreparedDeneme(plan.questions)
+              }}
+            />
             <MasteryMapCard outcomes={masteryMap.outcomes} loading={masteryMap.loading} />
           </div>
         )}
@@ -157,6 +192,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           selectedMode={gameStore.selectedMode}
           onSelectMode={(m) => gameStore.setMode(m.id)}
           onStart={() => {
+            if (personalizedMock.loading) return
             trackEvent(user ? 'UserQuizStart' : 'GuestQuizStart', {
               props: {
                 game,

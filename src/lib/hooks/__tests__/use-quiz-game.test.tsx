@@ -48,8 +48,9 @@ const timer = vi.hoisted(() => ({
   reset: vi.fn(),
 }))
 vi.mock('@/lib/hooks/use-timer', () => ({ useTimer: () => timer }))
+const elapsed = vi.hoisted(() => ({ reset: vi.fn(), seconds: 0 }))
 vi.mock('@/components/game/deneme-timer', () => ({
-  useElapsedTime: () => ({ reset: vi.fn(), seconds: 0 }),
+  useElapsedTime: () => elapsed,
 }))
 
 const fetchers = vi.hoisted(() => ({
@@ -146,6 +147,32 @@ describe('useQuizGame — handleStart', () => {
 
     expect(result.current.screen).toBe('lobby')
     expect(result.current.loadError).toContain('hata oluştu')
+  })
+})
+
+describe('useQuizGame — hazır Akıllı Deneme', () => {
+  test('fetch yapmadan soruları deneme semantiğiyle başlatır ve sayaçları sıfırlar', () => {
+    const questions = [makeQ('smart-1'), makeQ('smart-2')]
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+
+    act(() => result.current.handleStartPreparedDeneme(questions))
+
+    expect(fetchers.fetchQuizQuestions).not.toHaveBeenCalled()
+    expect(quiz.startQuiz).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 'smart-1' }),
+      expect.objectContaining({ id: 'smart-2' }),
+    ])
+    expect(elapsed.reset).toHaveBeenCalled()
+    expect(timer.reset).toHaveBeenCalledWith(0)
+    expect(result.current.screen).toBe('game')
+    expect(result.current.isGuestMode).toBe(false)
+  })
+
+  test('boş soru listesinde oyun başlatılmaz', () => {
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    act(() => result.current.handleStartPreparedDeneme([]))
+    expect(quiz.startQuiz).not.toHaveBeenCalled()
+    expect(result.current.screen).toBe('lobby')
   })
 })
 

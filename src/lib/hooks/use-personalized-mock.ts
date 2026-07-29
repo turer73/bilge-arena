@@ -1,0 +1,91 @@
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { GameSlug } from '@/lib/constants/games'
+import type { Question } from '@/types/database'
+
+export interface PersonalizedMockPlan {
+  generatedFor: string
+  game: GameSlug
+  examRef: string | null
+  questions: Question[]
+  breakdown: {
+    wrong: number
+    weak: number
+    coverage: number
+    weakCategories: string[]
+  }
+}
+
+interface ErrorResponse {
+  error?: string
+}
+
+/** İsteğe bağlı Akıllı Deneme üretimi; lobi render'ında otomatik sorgu yapmaz. */
+export function usePersonalizedMock(
+  game: GameSlug,
+  userId?: string | null,
+  examRef?: string | null,
+) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const busyRef = useRef(false)
+  const requestRef = useRef<AbortController | null>(null)
+
+  const generate = useCallback(async (): Promise<PersonalizedMockPlan | null> => {
+    if (!userId || busyRef.current) return null
+
+    busyRef.current = true
+    const controller = new AbortController()
+    requestRef.current = controller
+    setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({ game })
+      if (examRef) params.set('exam_ref', examRef)
+
+      const response = await fetch(`/api/study/personalized-mock?${params}`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+      if (controller.signal.aborted) return null
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null) as ErrorResponse | null
+        setError(payload?.error ?? 'Akıllı deneme oluşturulamadı.')
+        return null
+      }
+
+      const payload = await response.json() as PersonalizedMockPlan
+      if (controller.signal.aborted) return null
+      if (payload.game !== game || !Array.isArray(payload.questions)) {
+        setError('Akıllı deneme yanıtı geçersiz.')
+        return null
+      }
+      if (payload.questions.length < 40) {
+        setError('Bu sınav için 40 aktif soru bulunamadı.')
+        return null
+      }
+      return payload
+    } catch (caught) {
+      if (controller.signal.aborted || (caught as { name?: string } | null)?.name === 'AbortError') {
+        return null
+      }
+      setError('Akıllı deneme oluşturulamadı. Bağlantını kontrol et.')
+      return null
+    } finally {
+      if (requestRef.current === controller) {
+        requestRef.current = null
+        busyRef.current = false
+        setLoading(false)
+      }
+    }
+  }, [examRef, game, userId])
+
+  useEffect(() => () => {
+    requestRef.current?.abort()
+    requestRef.current = null
+    busyRef.current = false
+  }, [examRef, game, userId])
+
+  return { generate, loading, error }
+}
