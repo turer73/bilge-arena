@@ -163,6 +163,28 @@ describe('selectPersonalizedMock', () => {
     }
   })
 
+  it('reserves configured category slots before concentrated wrong/weak quotas', () => {
+    const distribution = DENEME_CONFIGS.matematik.questionDistribution
+    const candidates = Object.entries(distribution).flatMap(([category, count]) => {
+      const available = category === 'problemler' ? 32 : count
+      return Array.from({ length: available }, (_, index) => ({ id: `${category}-${index}`, category }))
+    })
+    const problemCandidates = candidates.filter(candidate => candidate.category === 'problemler')
+    const result = selectPersonalizedMock({
+      game: 'matematik',
+      candidates,
+      answers: problemCandidates.slice(0, 16).map(candidate => at(candidate.id, 'problemler', false)),
+      seed: 'coverage-reservation',
+    })
+    const categoryById = new Map(candidates.map(candidate => [candidate.id, candidate.category]))
+
+    expect(result.questionIds).toHaveLength(40)
+    for (const [category, count] of Object.entries(distribution)) {
+      expect(result.questionIds.filter(id => categoryById.get(id) === category)).toHaveLength(count)
+    }
+    expect(result.breakdown.wrong).toBeLessThanOrEqual(distribution.problemler)
+  })
+
   it('returns fewer questions when the candidate pool is too small', () => {
     const result = selectPersonalizedMock({
       game: 'matematik',

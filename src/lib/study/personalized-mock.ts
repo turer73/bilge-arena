@@ -162,11 +162,48 @@ export function selectPersonalizedMock({
   const weakCategories = weakestCategories(answers)
   const selected: string[] = []
   const used = new Set<string>()
+  const selectedByCategory = new Map<string, number>()
 
-  function take(candidate: PersonalizedMockCandidate): boolean {
+  // Kapsam hedefi yalnız gerçekten mevcut adaylarla doldurulabilecek minimumları
+  // rezerve eder. Böylece eksik içerikli bir kategori tüm denemeyi gereksiz yere
+  // kilitlemez; mevcut kategorilerdeki hedefler ise kişiselleştirme tarafından
+  // tüketilemez.
+  const availableByCategory = new Map<string, number>()
+  for (const candidate of normalizedCandidates) {
+    availableByCategory.set(
+      candidate.category,
+      (availableByCategory.get(candidate.category) ?? 0) + 1,
+    )
+  }
+  const distribution = Object.fromEntries(
+    Object.entries(DENEME_CONFIGS[game].questionDistribution).map(([category, required]) => [
+      category,
+      Math.min(required, availableByCategory.get(category) ?? 0),
+    ]),
+  )
+  const requiredCoverageTotal = Object.values(distribution).reduce((sum, count) => sum + count, 0)
+  const shouldReserveCoverage = targetSize >= requiredCoverageTotal
+
+  function take(candidate: PersonalizedMockCandidate, reserveCoverage = false): boolean {
     if (selected.length >= targetSize || used.has(candidate.id)) return false
+
+    if (reserveCoverage && shouldReserveCoverage) {
+      const slotsAfterTake = targetSize - selected.length - 1
+      let requiredAfterTake = 0
+      for (const [category, required] of Object.entries(distribution)) {
+        const selectedCount = selectedByCategory.get(category) ?? 0
+        const nextCount = selectedCount + Number(candidate.category === category)
+        requiredAfterTake += Math.max(0, required - nextCount)
+      }
+      if (requiredAfterTake > slotsAfterTake) return false
+    }
+
     used.add(candidate.id)
     selected.push(candidate.id)
+    selectedByCategory.set(
+      candidate.category,
+      (selectedByCategory.get(candidate.category) ?? 0) + 1,
+    )
     return true
   }
 
@@ -177,7 +214,7 @@ export function selectPersonalizedMock({
   })
   for (const candidate of shuffledCandidates(openWrongCandidates, seed, 'wrong')) {
     if (wrong >= Math.min(WRONG_QUOTA, targetSize)) break
-    if (take(candidate)) wrong++
+    if (take(candidate, true)) wrong++
   }
 
   const weakTarget = Math.min(
@@ -207,8 +244,8 @@ export function selectPersonalizedMock({
       weakIndexes.set(category, index)
 
       if (index >= pool.length) continue
-      if (take(pool[index])) {
-        weakIndexes.set(category, index + 1)
+      weakIndexes.set(category, index + 1)
+      if (take(pool[index], true)) {
         weak++
         pickedThisRound = true
       }
@@ -219,12 +256,8 @@ export function selectPersonalizedMock({
   }
 
   let coverage = 0
-  const distribution = DENEME_CONFIGS[game].questionDistribution
   for (const [category, required] of Object.entries(distribution)) {
-    const alreadySelected = selected.reduce(
-      (count, id) => count + Number(candidateById.get(id)?.category === category),
-      0,
-    )
+    const alreadySelected = selectedByCategory.get(category) ?? 0
     const missing = Math.max(0, required - alreadySelected)
     let filled = 0
 

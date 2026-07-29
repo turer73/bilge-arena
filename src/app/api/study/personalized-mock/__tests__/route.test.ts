@@ -104,6 +104,8 @@ describe('GET /api/study/personalized-mock', () => {
 
   it('oyun, sınav referansı ve profil uyumunu doğrular', async () => {
     expect((await GET(request('game=bilinmeyen'))).status).toBe(400)
+    expect((await GET(request('game=constructor'))).status).toBe(400)
+    expect((await GET(request('game=toString'))).status).toBe(400)
     expect((await GET(request('game=matematik&exam_ref=KPSS'))).status).toBe(400)
 
     const profileQuery = query({ data: { exam_type: 'lgs' }, error: null })

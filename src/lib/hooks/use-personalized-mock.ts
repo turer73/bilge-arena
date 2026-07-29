@@ -85,6 +85,7 @@ export function usePersonalizedMock(
     requestRef.current?.abort()
     requestRef.current = null
     busyRef.current = false
+    setLoading(false)
   }, [examRef, game, userId])
 
   return { generate, loading, error }

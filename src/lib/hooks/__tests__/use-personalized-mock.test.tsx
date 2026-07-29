@@ -73,5 +73,6 @@ describe('usePersonalizedMock', () => {
     resolveOld(response(PLAN))
 
     await expect(pending).resolves.toBeNull()
+    expect(result.current.loading).toBe(false)
   })
 })

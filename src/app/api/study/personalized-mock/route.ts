@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
-import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { GAMES, GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { defaultExamRefForType, type ExamType } from '@/lib/constants/exam-types'
 import { trDayString } from '@/lib/utils/tr-date'
 import {
@@ -19,6 +19,7 @@ const ipLimiter = createRateLimiter('personalized-mock-ip', 60, 60_000)
 const userLimiter = createRateLimiter('personalized-mock-user', 10, 60_000)
 
 const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ', 'YDT'])
+const VALID_GAMES = new Set<string>(GAME_SLUGS)
 const HISTORY_LIMIT = 1000
 const QUESTION_POOL_LIMIT = 1000
 const MOCK_SIZE = 40
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const gameRaw = searchParams.get('game')
-  if (!gameRaw || !(gameRaw in GAMES)) {
+  if (!gameRaw || !VALID_GAMES.has(gameRaw)) {
     return NextResponse.json({ error: 'Geçerli oyun belirtilmedi' }, { status: 400 })
   }
   const game = gameRaw as GameSlug
