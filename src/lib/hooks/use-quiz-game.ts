@@ -12,9 +12,11 @@ import { fetchQuizQuestions, fetchPreviewQuestion } from '@/lib/supabase/questio
 import { getAdaptiveDifficulty } from '@/lib/supabase/adaptive-difficulty'
 import { useElapsedTime } from '@/components/game/deneme-timer'
 import { playSound } from '@/lib/utils/sounds'
-import type { Question } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 import type { OptionState } from '@/components/game/option-button'
-import { getCorrectIndex, shuffleOptionsWithMap } from '@/lib/utils/question'
+import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
+import { gradeQuestion } from '@/lib/questions/grade-question'
+import { toast } from '@/stores/toast-store'
 
 // ---------- Hook return tipi ----------
 
@@ -49,9 +51,9 @@ export interface UseQuizGameReturn {
   // Aksiyonlar
   handleStart: () => Promise<void>
   /** "Bugunun 15'i" plan sorularini dogrudan baslatir -- fetch/slice yok. */
-  handleStartPlanned: (questions: Question[]) => void
+  handleStartPlanned: (questions: PublicQuestion[]) => void
   /** Sunucuda hazırlanmış kişisel soru setini gerçek deneme semantiğiyle başlatır. */
-  handleStartPreparedDeneme: (questions: Question[]) => void
+  handleStartPreparedDeneme: (questions: PublicQuestion[]) => void
   handleAnswer: (optionIndex: number) => void
   handleNext: () => void
   handleRestart: () => void
@@ -82,14 +84,49 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const denemeConfig = isDeneme ? DENEME_CONFIGS[game] : null
   const elapsed = useElapsedTime()
 
+  // Ekran->kanonik seçenek haritası (questionId -> map[ekranIdx]=kanonikIdx).
+  const shuffleMapRef = useRef<Map<string, number[]>>(new Map())
+  const gradingRef = useRef(false)
+  const gradeRequestRef = useRef<AbortController | null>(null)
+  const questionStartedAtRef = useRef(0)
+  const denemeTimeUpPendingRef = useRef(false)
+
+  useEffect(() => () => gradeRequestRef.current?.abort(), [])
+
   // --- Timer ---
 
   const handleTimeUp = useCallback(() => {
     const question = quizStore.currentQuestion()
-    if (question && quizStore.state === 'playing') {
-      const xpResult = calculateXP(question.difficulty, 0, quizStore.streak)
-      quizStore.answerQuestion(-1, false, mode.timePerQuestion, xpResult)
-    }
+    if (!question || quizStore.state !== 'playing' || gradingRef.current) return
+
+    gradingRef.current = true
+    const controller = new AbortController()
+    gradeRequestRef.current = controller
+    void gradeQuestion(question.id, -1, controller.signal)
+      .then((grade) => {
+        const current = useQuizStore.getState()
+        if (controller.signal.aborted || current.state !== 'playing' || current.currentQuestion()?.id !== question.id) return
+        const shuffleMap = shuffleMapRef.current.get(question.id)
+        const correctOption = shuffleMap ? shuffleMap.indexOf(grade.correctOption) : grade.correctOption
+        if (correctOption < 0) throw new Error('invalid_grade_mapping')
+        const xpResult = calculateXP(question.difficulty, 0, current.streak)
+        current.answerQuestion(-1, false, mode.timePerQuestion, xpResult, -1, correctOption, grade.solution)
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error('[QuizGame] Süre sonu notlandırma hatası:', error)
+          const current = useQuizStore.getState()
+          if (current.state === 'playing' && current.currentQuestion()?.id === question.id) {
+            const xpResult = calculateXP(question.difficulty, 0, current.streak)
+            current.answerQuestion(-1, false, mode.timePerQuestion, xpResult, -1, -1, null)
+          }
+          toast.error('Süre doldu', 'Çözüm şu anda alınamadı; soru boş bırakıldı.')
+        }
+      })
+      .finally(() => {
+        if (gradeRequestRef.current === controller) gradeRequestRef.current = null
+        gradingRef.current = false
+      })
   }, [quizStore, mode.timePerQuestion])
 
   const timer = useTimer({
@@ -107,10 +144,6 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const helpOpen = chatOpen || helpPaused
   const helpWasPausedRef = useRef(false)
 
-  // Ekran->kanonik secenek haritasi (questionId -> map[ekranIdx]=kanonikIdx).
-  // Server-authority notlama kanonik index bekler (disc#1296, duello paterni).
-  const shuffleMapRef = useRef<Map<string, number[]>>(new Map())
-
   useEffect(() => {
     if (isDeneme || mode.timePerQuestion <= 0 || quizStore.state !== 'playing') return
     if (helpOpen) {
@@ -127,6 +160,10 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   // --- Deneme: sure dolunca tum sinavi bitir ---
 
   const handleDenemeTimeUp = useCallback(() => {
+    if (gradingRef.current) {
+      denemeTimeUpPendingRef.current = true
+      return
+    }
     quizStore.completeQuiz()
     setScreen('result')
   }, [quizStore])
@@ -163,11 +200,12 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         setScreen('lobby')
         return
       }
-      const previewShuffled = shuffleOptionsWithMap(previewQ.content)
+      const previewShuffled = shufflePublicOptionsWithMap(previewQ.content)
       shuffleMapRef.current.set(previewQ.id, previewShuffled.map)
       const withShuffled = { ...previewQ, content: previewShuffled.content }
       quizStore.startQuiz([withShuffled], mode.lives)
       setIsGuestMode(true)
+      questionStartedAtRef.current = Date.now()
       setScreen('game')
       if (!isDeneme && mode.timePerQuestion > 0) {
         timer.reset(mode.timePerQuestion)
@@ -213,14 +251,14 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       // notlar; secim gonderilmeden once geri cevrilir (disc#1296, duello paterni).
       shuffleMapRef.current.clear()
       questions = questions.map(q => {
-        const shuffled = shuffleOptionsWithMap(q.content)
+        const shuffled = shufflePublicOptionsWithMap(q.content)
         shuffleMapRef.current.set(q.id, shuffled.map)
         return { ...q, content: shuffled.content }
       })
 
       if (isDeneme && denemeConfig) {
         // Deneme: kategori dagilimina gore sorulari sec
-        const distributed: Question[] = []
+        const distributed: PublicQuestion[] = []
         for (const [cat, count] of Object.entries(denemeConfig.questionDistribution)) {
           const catQuestions = questions.filter(q => q.category === cat)
           const shuffled = [...catQuestions].sort(() => Math.random() - 0.5)
@@ -238,6 +276,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         quizStore.startQuiz(questions.slice(0, mode.questionCount), mode.lives)
       }
 
+      questionStartedAtRef.current = Date.now()
       setScreen('game')
 
       if (!isDeneme && mode.timePerQuestion > 0) {
@@ -260,12 +299,12 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   // arda cagrildiginda bu hook'un `mode` closure'i bir onceki render'in eski
   // degerini tasir -- zustand set() senkron olsa da React yeniden render
   // ETMEDEN bu callback'in closure'i guncellenmez).
-  const handleStartPlanned = useCallback((questions: Question[]) => {
+  const handleStartPlanned = useCallback((questions: PublicQuestion[]) => {
     if (questions.length === 0) return
 
     shuffleMapRef.current.clear()
     const shuffledQuestions = questions.map(q => {
-      const s = shuffleOptionsWithMap(q.content)
+      const s = shufflePublicOptionsWithMap(q.content)
       shuffleMapRef.current.set(q.id, s.map)
       return { ...q, content: s.content }
     })
@@ -278,6 +317,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     // handleAnswer'da timeTaken = 0 - timer.seconds NEGATIF olur, /api/sessions
     // reddeder ve plan XP/ilerleme kaydedilmeden "tamamlandi" gorunur (Codex P1).
     timer.reset(0)
+    questionStartedAtRef.current = Date.now()
     setScreen('game')
   }, [quizStore, timer])
 
@@ -286,28 +326,30 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   // render anındaki `mode/isDeneme` closure'ına dayanmaz. Sunucu zaten 40 soruluk
   // kişisel seti seçmiştir; burada yalnız seçenekleri karıştırıp deneme sayaçlarını
   // temizleriz.
-  const handleStartPreparedDeneme = useCallback((questions: Question[]) => {
+  const handleStartPreparedDeneme = useCallback((questions: PublicQuestion[]) => {
     if (questions.length === 0) return
 
     shuffleMapRef.current.clear()
     const shuffledQuestions = questions.map((question) => {
-      const shuffled = shuffleOptionsWithMap(question.content)
+      const shuffled = shufflePublicOptionsWithMap(question.content)
       shuffleMapRef.current.set(question.id, shuffled.map)
       return { ...question, content: shuffled.content }
     })
 
     quizStore.startQuiz(shuffledQuestions)
     elapsed.reset()
+    denemeTimeUpPendingRef.current = false
     timer.reset(0)
     setIsGuestMode(false)
     setLoadError(null)
+    questionStartedAtRef.current = Date.now()
     setScreen('game')
   }, [elapsed, quizStore, timer])
 
   // --- Cevap ver ---
 
   const handleAnswer = useCallback((optionIndex: number) => {
-    if (quizStore.state !== 'playing') return
+    if (quizStore.state !== 'playing' || gradingRef.current) return
 
     const question = quizStore.currentQuestion()
     if (!question) return
@@ -315,51 +357,70 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     // Ekran-index'ini kanonik DB-index'ine cevir — server bununla notlar (disc#1296).
     const shuffleMap = shuffleMapRef.current.get(question.id)
     const canonicalIndex = optionIndex >= 0 && shuffleMap ? shuffleMap[optionIndex] : optionIndex
+    if (!Number.isInteger(canonicalIndex)) return
 
-    if (isDeneme) {
-      const isCorrect = optionIndex === getCorrectIndex(question.content)
-      const newStreak = isCorrect ? quizStore.streak + 1 : 0
-      const xpResult = calculateXP(question.difficulty, 0, newStreak)
-      quizStore.answerQuestion(optionIndex, isCorrect, 0, xpResult, canonicalIndex)
+    const isTimedMode = !isDeneme && mode.timePerQuestion > 0
+    const timeRemaining = isTimedMode ? timer.seconds : 0
+    const timeTaken = isTimedMode
+      ? Math.max(0, mode.timePerQuestion - timer.seconds)
+      : questionStartedAtRef.current > 0
+        ? Math.min(300, Math.max(0, (Date.now() - questionStartedAtRef.current) / 1000))
+        : 0
+    if (isTimedMode) timer.stop()
 
-      if (isCorrect) {
-        playSound(newStreak >= 3 ? 'streak' : 'correct')
-        setShowBurst(true)
-        setTimeout(() => setShowBurst(false), 1200)
-      } else {
-        playSound(quizStore.lives === 1 && quizStore.livesEnabled ? 'game_over' : 'wrong')
-        if (quizStore.livesEnabled) {
-          setShowLifeLost(true)
-          setTimeout(() => setShowLifeLost(false), 700)
+    gradingRef.current = true
+    const controller = new AbortController()
+    gradeRequestRef.current = controller
+
+    void gradeQuestion(question.id, canonicalIndex, controller.signal)
+      .then((grade) => {
+        const current = useQuizStore.getState()
+        if (controller.signal.aborted || current.state !== 'playing' || current.currentQuestion()?.id !== question.id) return
+
+        const correctOption = shuffleMap ? shuffleMap.indexOf(grade.correctOption) : grade.correctOption
+        if (correctOption < 0) throw new Error('invalid_grade_mapping')
+
+        const newStreak = grade.isCorrect ? current.streak + 1 : 0
+        const xpResult = calculateXP(question.difficulty, timeRemaining, newStreak)
+        current.answerQuestion(
+          optionIndex,
+          grade.isCorrect,
+          timeTaken,
+          xpResult,
+          canonicalIndex,
+          correctOption,
+          grade.solution,
+        )
+
+        if (grade.isCorrect) {
+          playSound(newStreak >= 3 ? 'streak' : 'correct')
+          setShowBurst(true)
+          if (!isDeneme) setShowXPPopup(true)
+          setTimeout(() => { setShowBurst(false); setShowXPPopup(false) }, isDeneme ? 1200 : 1600)
+        } else {
+          const livesNow = current.livesEnabled ? current.lives - 1 : -1
+          playSound(livesNow === 0 ? 'game_over' : current.livesEnabled ? 'life_lost' : 'wrong')
+          if (current.livesEnabled) {
+            setShowLifeLost(true)
+            setTimeout(() => setShowLifeLost(false), 700)
+          }
         }
-      }
-    } else {
-      timer.stop()
-      // clamp(>=0): plan/practice modunda timePerQuestion=0 iken kirli timer.seconds
-      // negatif timeTaken uretmesin (defense-in-depth, Codex P1 timer.reset(0) ile birlikte).
-      const timeTaken = Math.max(0, mode.timePerQuestion - timer.seconds)
-      const isCorrect = optionIndex === getCorrectIndex(question.content)
-      const newStreak = isCorrect ? quizStore.streak + 1 : 0
-      const xpResult = calculateXP(question.difficulty, timer.seconds, newStreak)
-      quizStore.answerQuestion(optionIndex, isCorrect, timeTaken, xpResult, canonicalIndex)
-
-      if (isCorrect) {
-        playSound(newStreak >= 3 ? 'streak' : 'correct')
-        setShowBurst(true)
-        setShowXPPopup(true)
-        setTimeout(() => { setShowBurst(false); setShowXPPopup(false) }, 1600)
-      } else {
-        // Son canda game_over sesi, değilse life_lost (can varsa) veya normal wrong
-        const livesNow = quizStore.livesEnabled ? quizStore.lives - 1 : -1
-        playSound(livesNow === 0 ? 'game_over' : quizStore.livesEnabled ? 'life_lost' : 'wrong')
-
-        // Can kaybi animasyonu
-        if (quizStore.livesEnabled) {
-          setShowLifeLost(true)
-          setTimeout(() => setShowLifeLost(false), 700)
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        console.error('[QuizGame] Cevap notlandırma hatası:', error)
+        if (isTimedMode && useQuizStore.getState().state === 'playing') timer.start()
+        toast.error('Cevap doğrulanamadı', 'Lütfen bağlantını kontrol edip tekrar dene.')
+      })
+      .finally(() => {
+        if (gradeRequestRef.current === controller) gradeRequestRef.current = null
+        gradingRef.current = false
+        if (denemeTimeUpPendingRef.current) {
+          denemeTimeUpPendingRef.current = false
+          useQuizStore.getState().completeQuiz()
+          setScreen('result')
         }
-      }
-    }
+      })
   }, [quizStore, timer, mode.timePerQuestion, isDeneme])
 
   // --- Sonraki soru ---
@@ -376,6 +437,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       setScreen('result')
     } else {
       quizStore.nextQuestion()
+      questionStartedAtRef.current = Date.now()
       if (!isDeneme && mode.timePerQuestion > 0) {
         timer.reset(mode.timePerQuestion)
         timer.start()
@@ -386,6 +448,10 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   // --- Yeniden baslat ---
 
   const handleRestart = useCallback(() => {
+    gradeRequestRef.current?.abort()
+    gradeRequestRef.current = null
+    gradingRef.current = false
+    denemeTimeUpPendingRef.current = false
     quizStore.resetQuiz()
     setIsGuestMode(false)
     setHelpPaused(false)
@@ -402,7 +468,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     const lastAnswer = quizStore.answers[quizStore.answers.length - 1]
     if (!lastAnswer) return 'idle'
 
-    if (index === getCorrectIndex(question.content)) return 'correct'
+    if (index === lastAnswer.correctOption) return 'correct'
     if (index === lastAnswer.selectedOption) return 'wrong'
     return 'dim'
   }, [quizStore])

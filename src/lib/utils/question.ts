@@ -1,4 +1,5 @@
 import type { Question, QuestionContent } from '@/types/database'
+import type { PublicQuestionContent } from '@/lib/utils/question-public'
 
 /**
  * Dogru cevap indexini dondurur.
@@ -66,6 +67,26 @@ export function shuffleOptionsWithMap(content: QuestionContent): { content: Ques
 
   return {
     content: { ...content, options: newOptions, answer: newAnswer },
+    map: indices,
+  }
+}
+
+/**
+ * Cevap anahtarı taşımayan public soru seçeneklerini karıştırır.
+ * `map[ekranIdx] = kanonikIdx`; doğru indeks sunucudan submit sonrasında gelir.
+ */
+export function shufflePublicOptionsWithMap(
+  content: PublicQuestionContent,
+): { content: PublicQuestionContent; map: number[] } {
+  const indices = content.options.map((_, index) => index)
+
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[indices[i], indices[j]] = [indices[j], indices[i]]
+  }
+
+  return {
+    content: { ...content, options: indices.map((index) => content.options[index]) },
     map: indices,
   }
 }

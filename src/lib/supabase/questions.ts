@@ -1,7 +1,8 @@
 'use client'
 
-import type { Question, GameType } from '@/types/database'
-import { cacheQuestions, getCachedQuestions } from '@/lib/utils/question-cache'
+import type { GameType } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
+import { cacheQuestions } from '@/lib/utils/question-cache'
 import { filterValidUuids } from '@/lib/utils/uuid'
 
 interface FetchQuestionsOptions {
@@ -18,8 +19,8 @@ interface FetchQuestionsOptions {
 }
 
 interface RandomQuestionsResponse {
-  questions: Question[]
-  reviewQuestions: Question[]
+  questions: PublicQuestion[]
+  reviewQuestions: PublicQuestion[]
 }
 
 /** Fisher-Yates shuffle (in-place) */
@@ -35,8 +36,9 @@ function shuffle<T>(arr: T[]): T[] {
  * /api/questions/random API'sinden quiz sorularini ceker, karistirir ve dondurur.
  * Madde 9 #6: eski client `supabase.rpc('select_random_questions')` yerine proxy.
  *
- * Cekilen sorular IndexedDB'ye kaydedilir (offline destek).
- * Ag yoksa veya API hata verirse cache'den sunar.
+ * Cekilen güvenli soru metinleri IndexedDB'ye kaydedilir. Notlandırma sunucu
+ * otoriter olduğu için çevrimdışıyken cache oynatılmaz; aksi halde cevap
+ * doğrulanamaz ve oturum ilerleyemez.
  *
  * Anon kullanici icin 401 doner -> use-quiz-game DEMO_QUESTIONS fallback (mevcut akis).
  */
@@ -48,13 +50,11 @@ export async function fetchQuizQuestions({
   excludeIds = [],
   examRef,
   includeReview = true,
-}: FetchQuestionsOptions): Promise<Question[]> {
+}: FetchQuestionsOptions): Promise<PublicQuestion[]> {
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
 
   // Cevrimdisi: dogrudan cache'den sun
   if (!isOnline) {
-    const cached = await getCachedQuestions({ game, category, difficulty, limit })
-    if (cached.length > 0) return cached
     return []
   }
 
@@ -90,9 +90,7 @@ export async function fetchQuizQuestions({
   const reviewQuestions = response?.reviewQuestions ?? []
 
   if (questions.length === 0) {
-    // Anon (401) veya network hatasi — cache'den dene
-    const cached = await getCachedQuestions({ game, category, difficulty, limit })
-    if (cached.length > 0) return cached
+    // Anon (401), offline veya network hatasında notlandırılamayan cache'i oynatma.
     return []
   }
 
@@ -119,7 +117,7 @@ export async function fetchQuizQuestions({
 export async function fetchPreviewQuestion(
   game: string,
   opts?: { category?: string | null; difficulty?: number | null; examRef?: string | null },
-): Promise<Question | null> {
+): Promise<PublicQuestion | null> {
   try {
     const params = new URLSearchParams({ game })
     if (opts?.category) params.set('category', opts.category)
@@ -128,7 +126,7 @@ export async function fetchPreviewQuestion(
 
     const res = await fetch(`/api/questions/preview?${params.toString()}`, { cache: 'no-store' })
     if (!res.ok) return null
-    const data = await res.json() as { question: Question | null }
+    const data = await res.json() as { question: PublicQuestion | null }
     return data.question ?? null
   } catch {
     return null

@@ -1,19 +1,17 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { GAMES, GAME_LIST, getCategoryLabel } from '@/lib/constants/games'
 import type { GameSlug } from '@/lib/constants/games'
 import { renderRichText } from '@/lib/utils/rich-text'
-import { shuffleOptions, getQuestionText } from '@/lib/utils/question'
-import type { QuestionContent } from '@/types/database'
+import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
+import { gradeQuestion } from '@/lib/questions/grade-question'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface FethetQuestion {
-  id: string
-  content: QuestionContent
-  category: string
-  game: string
+type FethetQuestion = PublicQuestion & {
+  optionMap: number[]
 }
 
 interface ActiveQuiz {
@@ -74,8 +72,13 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
   const [selected, setSelected] = useState<number | null>(null)
   const [correctCount, setCorrectCount] = useState(0)
   const [revealed, setRevealed] = useState(false)
+  const [grading, setGrading] = useState(false)
+  const [gradeError, setGradeError] = useState<string | null>(null)
+  const [correctOption, setCorrectOption] = useState<number | null>(null)
+  const [solution, setSolution] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [passed, setPassed] = useState(false)
+  const gradingRef = useRef(false)
 
   const gameConfig = GAMES[game]
   const color = gameConfig?.colorHex ?? 'var(--focus)'
@@ -88,12 +91,13 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
     )
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('Soru alınamadı')))
       .then((data) => {
-        // Şık sırasını karıştır (kule emsali): DB'deki B/C-yığılması ekrana sızmasın.
-        // shuffleOptions ayrıca wordquest'in `correct` alanını `answer`a normalize eder —
-        // bunsuz İngilizce kategorileri hiç doğru sayılmıyordu (disc#1427).
+        // Display choices are shuffled; the map retains their canonical DB indexes.
         const qs: FethetQuestion[] = (data.questions ?? [])
           .slice(0, QUESTIONS_PER_CATEGORY)
-          .map((q: FethetQuestion) => ({ ...q, content: shuffleOptions(q.content) }))
+          .map((q: PublicQuestion) => {
+            const shuffled = shufflePublicOptionsWithMap(q.content)
+            return { ...q, content: shuffled.content, optionMap: shuffled.map }
+          })
         if (qs.length === 0) {
           setError('Bu kategori için henüz soru eklenmemiş.')
         } else {
@@ -107,12 +111,30 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
   const question = questions[idx]
   const totalQ = questions.length
 
-  function handleSelect(optIdx: number) {
-    if (revealed) return
+  async function handleSelect(optIdx: number) {
+    if (revealed || gradingRef.current || !question) return
+    const canonicalIndex = question.optionMap[optIdx]
+    if (!Number.isInteger(canonicalIndex)) return
+
+    gradingRef.current = true
     setSelected(optIdx)
-    setRevealed(true)
-    if (optIdx === question.content.answer) {
-      setCorrectCount((c) => c + 1)
+    setGrading(true)
+    setGradeError(null)
+    try {
+      const grade = await gradeQuestion(question.id, canonicalIndex)
+      const displayCorrectOption = question.optionMap.indexOf(grade.correctOption)
+      if (displayCorrectOption < 0) throw new Error('invalid_grade_response')
+
+      setCorrectOption(displayCorrectOption)
+      setSolution(grade.solution)
+      if (grade.isCorrect) setCorrectCount((count) => count + 1)
+      setRevealed(true)
+    } catch {
+      setSelected(null)
+      setGradeError('Cevap kontrol edilemedi. Lütfen tekrar dene.')
+    } finally {
+      gradingRef.current = false
+      setGrading(false)
     }
   }
 
@@ -128,6 +150,9 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
       setIdx(nextIdx)
       setSelected(null)
       setRevealed(false)
+      setCorrectOption(null)
+      setSolution(null)
+      setGradeError(null)
     }
   }
 
@@ -218,7 +243,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
 
             {/* Soru */}
             <p className="mb-5 text-sm font-semibold leading-relaxed md:text-base">
-              {renderRichText(getQuestionText(question.content))}
+              {renderRichText(question.content.question || question.content.sentence || '')}
             </p>
 
             {/* Şıklar */}
@@ -229,11 +254,11 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
                 let textColor = 'var(--text)'
 
                 if (revealed) {
-                  if (i === question.content.answer) {
+                  if (i === correctOption) {
                     bg = 'var(--growth-bg)'
                     border = 'var(--growth-border)'
                     textColor = 'var(--growth)'
-                  } else if (i === selected && i !== question.content.answer) {
+                  } else if (i === selected && i !== correctOption) {
                     bg = 'var(--urgency-bg, rgba(239,68,68,0.1))'
                     border = 'var(--urgency-border, rgba(239,68,68,0.3))'
                     textColor = 'var(--urgency)'
@@ -250,7 +275,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
                   <button
                     key={i}
                     onClick={() => handleSelect(i)}
-                    disabled={revealed}
+                    disabled={revealed || grading}
                     className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all duration-150 disabled:cursor-default"
                     style={{ background: bg, borderColor: border, color: textColor }}
                   >
@@ -267,6 +292,13 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
             </div>
 
             {/* İleri butonu (cevap sonrası) */}
+            {grading && (
+              <p className="mt-3 text-center text-xs text-[var(--text-sub)]">Kontrol ediliyor...</p>
+            )}
+            {gradeError && (
+              <p className="mt-3 text-center text-xs text-[var(--urgency)]">{gradeError}</p>
+            )}
+
             {revealed && (
               <button
                 onClick={handleNext}
@@ -278,9 +310,9 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
             )}
 
             {/* Çözüm açıklaması */}
-            {revealed && question.content.solution && (
+            {revealed && solution && (
               <p className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[10px] text-[var(--text-sub)]">
-                💡 {question.content.solution}
+                💡 {solution}
               </p>
             )}
           </>

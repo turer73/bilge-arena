@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { BilgeChan, type ChanPose } from '@/components/ui/bilge-chan'
-import { getCorrectIndex, getOptionLetter } from '@/lib/utils/question'
-import { supportsStagedCoachQuestion } from '@/lib/coach/question-shape'
-import type { Question } from '@/types/database'
+import { getOptionLetter } from '@/lib/utils/question'
+import { supportsStagedCoachPublicQuestion } from '@/lib/coach/question-shape'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-tts'
 
@@ -32,7 +32,9 @@ interface BilgeChanCompanionProps {
   /** Son cevap doğru mu (answered iken anlamlı) */
   lastIsCorrect: boolean | null
   /** Aktif soru */
-  question: Question | null
+  question: PublicQuestion | null
+  /** Submit sonrası sunucunun açtığı, ekrandaki doğru seçenek indeksi. */
+  correctOption?: number | null
   /** Pose yüksekliği (px) */
   height?: number
   /** Mobil/dar yerleşim: balon yanda, daha küçük */
@@ -78,6 +80,7 @@ export function BilgeChanCompanion({
   quizState,
   lastIsCorrect,
   question,
+  correctOption = null,
   height = 240,
   compact = false,
   priority = false,
@@ -104,7 +107,7 @@ export function BilgeChanCompanion({
 
   // intro → offered: setState yalnızca timer callback'inde
   useEffect(() => {
-    if (phase !== 'intro' || quizState !== 'playing' || !supportsStagedCoachQuestion(question?.content)) return
+    if (phase !== 'intro' || quizState !== 'playing' || !supportsStagedCoachPublicQuestion(question?.content)) return
     const t = setTimeout(() => setPhase('offered'), OFFER_DELAY)
     return () => clearTimeout(t)
   }, [phase, question?.content, quizState])
@@ -117,15 +120,16 @@ export function BilgeChanCompanion({
     [easy],
   )
   const answerMsg = useMemo(() => {
-    if (!answered || !question) return ''
-    const letter = getOptionLetter(getCorrectIndex(question.content))
+    if (!answered || !question || correctOption === null) return ''
+    if (correctOption < 0) return 'Süre doldu; sıradaki soruda yeniden dene. 💙'
+    const letter = getOptionLetter(correctOption)
     return lastIsCorrect
       ? pickLine(CHAN_LINES.correct).replace('{harf}', letter)
       : pickLine(CHAN_LINES.wrong).replace('{harf}', letter)
-  }, [answered, lastIsCorrect, question])
+  }, [answered, correctOption, lastIsCorrect, question])
 
   const requestHint = async (stage: 'hint1' | 'hint2' | 'hint3' | 'solution') => {
-    if (!question || !supportsStagedCoachQuestion(question.content)) return
+    if (!question || !supportsStagedCoachPublicQuestion(question.content)) return
     requestRef.current?.abort()
     const controller = new AbortController()
     requestRef.current = controller
@@ -155,7 +159,7 @@ export function BilgeChanCompanion({
       progressTokenRef.current = body.nextToken ?? null
       setHelpMsg(body.hint.trim())
       setPhase(stage)
-    } catch (error) {
+    } catch {
       if (requestRef.current !== controller || (controller.signal.aborted && !timedOut)) return
       setHelpMsg('Şu an ipucu alınamadı. Biraz sonra yeniden deneyebilirsin.')
       setPhase('error')

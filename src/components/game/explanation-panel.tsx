@@ -1,16 +1,18 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import type { Question } from '@/types/database'
-import { getOptionLetter, getCorrectIndex } from '@/lib/utils/question'
+import type { PublicQuestion } from '@/lib/utils/question-public'
+import { getOptionLetter } from '@/lib/utils/question'
 import { stripRichText } from '@/lib/utils/rich-text'
 import { LikeButton } from '@/components/social/like-button'
 import { useChatStore } from '@/stores/chat-store'
 
 interface ExplanationPanelProps {
-  question: Question
+  question: PublicQuestion
   selectedOption: number
   isCorrect: boolean
+  correctOption: number
+  solution: string | null
   isLastQuestion: boolean
   onNext: () => void
   onOpenComments?: () => void
@@ -21,13 +23,15 @@ export function ExplanationPanel({
   question,
   selectedOption: _selectedOption,
   isCorrect,
+  correctOption,
+  solution,
   isLastQuestion,
   onNext,
   onOpenComments,
   onOpenReport,
 }: ExplanationPanelProps) {
-  const correctAnswer = getCorrectIndex(question.content)
-  const correctText = question.content.options[correctAnswer]
+  const correctAnswer = correctOption
+  const correctText = correctAnswer >= 0 ? question.content.options[correctAnswer] : null
 
   // Panel soru kartinin USTUNDE render olur; alt siklara tiklayan kullanicinin
   // viewport'u asagida kalabilir — mount'ta paneli gorunur yap (jsdom guard'li)
@@ -44,7 +48,10 @@ export function ExplanationPanel({
     const qText = stripRichText(question.content.question || question.content.sentence)
     // Öncül bloğu (passage) varsa soru metninin önüne ekle — asistan ifadeleri görsün (<u> AI'ya gitmesin)
     const body = question.content.passage ? `${stripRichText(question.content.passage)}\n\n${qText}` : qText
-    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}\n\nDoğru cevap: ${getOptionLetter(correctAnswer)}) ${correctText}${question.content.solution ? '\nÇözüm: ' + question.content.solution : ''}`
+    const answerContext = correctText
+      ? `${getOptionLetter(correctAnswer)}) ${correctText}`
+      : 'Sunucudan alınamadı'
+    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}\n\nDoğru cevap: ${answerContext}${solution ? '\nÇözüm: ' + solution : ''}`
 
     const userMsg = `"${topic}" konusunu kısaca anlat. Bu soruyla ilgili temel kavramları ve formülleri özetle.`
 
@@ -115,13 +122,15 @@ export function ExplanationPanel({
       >
         {isCorrect
           ? '✓ Doğru! Mükemmel 🎉'
-          : `✗ Yanlış. Doğru: ${getOptionLetter(correctAnswer)}) ${correctText}`}
+          : correctText
+            ? `✗ Yanlış. Doğru: ${getOptionLetter(correctAnswer)}) ${correctText}`
+            : '⏱ Süre doldu. Doğru cevap şu anda alınamadı.'}
       </div>
 
       {/* Aciklama */}
-      {question.content.solution && (
+      {solution && (
         <div className="mb-2.5 text-xs leading-relaxed text-[var(--text-sub)]">
-          📌 {question.content.solution}
+          📌 {solution}
         </div>
       )}
 

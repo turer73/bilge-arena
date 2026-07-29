@@ -6,34 +6,46 @@ import { sessionSubmitSchema } from '@/lib/validations/schemas'
 import { FEATURES, FREE_DAILY_LIMIT } from '@/lib/constants/premium'
 import { trDayString, trDayStartUtcISO } from '@/lib/utils/tr-date'
 import { z } from 'zod'
+import { getFirstQuestionAttempt } from '@/lib/questions/attempt-store'
 
 // Replay korumasi: kullanici basina dk'da max 3 oturum
 const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
 
 // XP hesaplama — client'a guvenmeden server-side recalculate
 const BASE_XP: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 50 }
-
 const completeSessionResultSchema = z.object({
   sessionId: z.string().min(1),
   alreadyProcessed: z.boolean(),
 })
 
 const answerIndexSchema = z.object({
+  options: z.array(z.string()).min(2).max(5),
   answer: z.number().int().optional(),
   correct: z.number().int().optional(),
-})
+}).refine(
+  (content) => content.answer !== undefined || content.correct !== undefined,
+).refine(
+  (content) => content.answer === undefined
+    || content.correct === undefined
+    || content.answer === content.correct,
+).refine(
+  (content) => {
+    const correctOption = content.answer ?? content.correct
+    return correctOption !== undefined
+      && correctOption >= 0
+      && correctOption < content.options.length
+  },
+)
 
 function serverCalculateXP(
   difficulty: number,
-  timeTaken: number,
-  timeLimit: number,
-  currentStreak: number
+  currentStreak: number,
 ): number {
   const base = BASE_XP[difficulty] || 20
-  const remainingSeconds = Math.max(0, timeLimit - timeTaken)
-  const timeBonus = remainingSeconds >= 20 ? 5 : 0
   const streakBonus = currentStreak >= 5 ? 10 : 0
-  return base + timeBonus + streakBonus
+  // Per-question duration comes from the client and remains useful analytics,
+  // but must never influence rewards until server-side timing exists.
+  return base + streakBonus
 }
 
 // POST: Oyun oturumunu kaydet (server-side XP hesaplama)
@@ -59,15 +71,12 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Eksik veri' }, { status: 400 })
   }
-  const { game, mode, answers: rawAnswers, category, difficulty: filterDifficulty, timeLimit, clientRequestId } = parsed.data
+  const { game, mode, answers: rawAnswers, category, difficulty: filterDifficulty, clientRequestId } = parsed.data
 
   // P0 fix: ayni questionId birden fazla gonderilerek coin/XP farming'i onle.
   // Odul dongusu ham dizi uzerinde donuyordu (questionMap yalniz lookup) -> ayni
   // soru 100x gonderilince 100x coin. Soru basina en fazla 1 cevap say.
   const answers = [...new Map(rawAnswers.map((a) => [a.questionId, a])).values()]
-
-  // timeLimit zaten Zod ile 5-120 arasinda sinirli
-  const safeTimeLimit = timeLimit
 
   // Service role client — RLS bypass (tum INSERT/UPDATE + limit-gate okumasi icin)
   const svc = createServiceRoleClient()
@@ -114,6 +123,12 @@ export async function POST(request: Request) {
   }
 
   const questionMap = new Map(questions.map(q => [q.id, q]))
+  const acceptedAttempts = new Map(await Promise.all(
+    questionIds.map(async (questionId) => [
+      questionId,
+      await getFirstQuestionAttempt(`user:${user.id}`, questionId),
+    ] as const),
+  ))
 
   // Server-side XP hesaplama
   let totalXP = 0
@@ -138,17 +153,25 @@ export async function POST(request: Request) {
     const correctIndex = parsedContent.success
       ? parsedContent.data.answer ?? parsedContent.data.correct
       : undefined
-    const isActuallyCorrect = correctIndex === a.selectedOption
+    // Grade endpoint'inin sabitlediği İLK seçim otoriterdir. Client session
+    // payload'ı doğru cevapla değiştirilse bile XP üretmez; grade edilmemiş
+    // doğrudan session submit ise skip sayılır.
+    const acceptedOption = acceptedAttempts.get(a.questionId) ?? -1
+    const isActuallyCorrect = correctIndex === acceptedOption
 
-    // timeTaken sinirla: 0 ile timeLimit arasi (client manipulasyonunu onle)
-    const safeTimeTaken = Math.min(Math.max(Number(a.timeTaken) || 0, 0), safeTimeLimit)
+    // Süresiz/practice ve denemede gerçek soru süresini koru. Zod üst sınırı
+    // zaten 300 sn; timeLimit yalnız süre bonusunun eşiğidir.
+    const safeTimeTaken = Math.min(Math.max(Number(a.timeTaken) || 0, 0), 300)
 
     let xpEarned = 0
     if (isActuallyCorrect) {
       streak++
       if (streak > maxStreak) maxStreak = streak
       correctCount++
-      xpEarned = serverCalculateXP(question.difficulty ?? 2, safeTimeTaken, safeTimeLimit, streak)
+      xpEarned = serverCalculateXP(
+        question.difficulty ?? 2,
+        streak,
+      )
       totalXP += xpEarned
     } else {
       streak = 0
@@ -160,9 +183,9 @@ export async function POST(request: Request) {
     return {
       question_id: a.questionId,
       user_id: user.id,
-      selected_option: a.selectedOption >= 0 ? a.selectedOption : null,
+      selected_option: acceptedOption >= 0 ? acceptedOption : null,
       is_correct: isActuallyCorrect,
-      is_skipped: a.selectedOption < 0,
+      is_skipped: acceptedOption < 0,
       time_taken_sec: Math.round(safeTimeTaken * 10) / 10,
       is_fast: safeTimeTaken < 10,
       xp_earned: xpEarned,

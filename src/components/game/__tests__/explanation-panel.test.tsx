@@ -44,6 +44,8 @@ function renderPanel(over: Partial<Parameters<typeof ExplanationPanel>[0]> = {})
       question={QUESTION}
       selectedOption={2}
       isCorrect={true}
+      correctOption={2}
+      solution="Çözüm açıklaması."
       isLastQuestion={false}
       onNext={onNext}
       {...over}

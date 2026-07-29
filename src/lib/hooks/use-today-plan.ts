@@ -2,20 +2,17 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { GameSlug } from '@/lib/constants/games'
-import type { Question } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 
-// NOT: /api/study/today PublicQuestion[] doner (whitelist -- questions/random
-// ile ayni desen, bkz. src/lib/supabase/questions.ts fetchQuizQuestions).
-// Quiz motoru (quizStore/QuestionCard/vs) Question tipini bekliyor; kullanilan
-// alanlar (content/difficulty/category/...) PublicQuestion'da zaten mevcut --
-// ayni "as Question[]" kasti-genisletme deseni burada da izlenir.
+// /api/study/today cevap anahtarı/çözüm içermeyen PublicQuestion[] döner.
+// Notlandırma seçimden sonra /api/questions/grade üzerinden yapılır.
 export interface TodayPlan {
   planDate: string
   game: string
   /** Server'in COZDUGU exam_ref (profil default'una duesebilir). PATCH bu degeri
    *  geri gonderir -- plan kimligiyle eslesmek zorunda (Codex P2). null = wordquest. */
   examRef: string | null
-  questions: Question[]
+  questions: PublicQuestion[]
   completedIds: string[]
 }
 
@@ -23,7 +20,7 @@ interface TodayPlanResponse {
   planDate: string
   game: string
   examRef: string | null
-  questions: Question[]
+  questions: PublicQuestion[]
   completedIds: string[]
 }
 

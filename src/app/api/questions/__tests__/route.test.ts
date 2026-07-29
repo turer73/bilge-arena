@@ -63,7 +63,17 @@ describe('GET /api/questions', () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockCheckAdmin.mockResolvedValue(null)
     mockRpc.mockResolvedValue({
-      data: [{ id: 'q1', game: 'matematik', total_count: 1 }],
+      data: [{
+        id: 'q1',
+        game: 'matematik',
+        category: 'cebir',
+        subcategory: null,
+        topic: null,
+        difficulty: 2,
+        level_tag: null,
+        content: { question: '2+2?', options: ['3', '4'], answer: 1, solution: 'Dört.' },
+        total_count: 1,
+      }],
       error: null,
     })
 
@@ -72,6 +82,7 @@ describe('GET /api/questions', () => {
     const json = await res.json()
     expect(json.questions).toHaveLength(1)
     expect(json.questions[0].total_count).toBeUndefined() // total_count sirade disarida
+    expect(json.questions[0].content).toEqual({ question: '2+2?', options: ['3', '4'] })
     expect(json.total).toBe(1)
   })
 

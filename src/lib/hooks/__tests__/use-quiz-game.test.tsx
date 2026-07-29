@@ -8,7 +8,7 @@
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import type { Question } from '@/types/database'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 
 // --- Stateful quiz-store mock'u ---
 const quiz = vi.hoisted(() => {
@@ -17,7 +17,7 @@ const quiz = vi.hoisted(() => {
     streak: 0,
     lives: 3,
     livesEnabled: true,
-    answers: [] as Array<{ selectedOption: number; isCorrect: boolean }>,
+    answers: [] as Array<{ selectedOption: number; isCorrect: boolean; correctOption: number }>,
     questions: [] as unknown[],
     currentQuestion: vi.fn((): unknown => null),
     isLastQuestion: vi.fn(() => false),
@@ -29,7 +29,9 @@ const quiz = vi.hoisted(() => {
   }
   return s
 })
-vi.mock('@/stores/quiz-store', () => ({ useQuizStore: () => quiz }))
+vi.mock('@/stores/quiz-store', () => ({
+  useQuizStore: Object.assign(() => quiz, { getState: () => quiz }),
+}))
 
 const gameStore = vi.hoisted(() => ({
   selectedMode: 'klasik',
@@ -67,17 +69,20 @@ vi.mock('@/lib/supabase/adaptive-difficulty', () => ({
   getAdaptiveDifficulty: fetchers.getAdaptiveDifficulty,
 }))
 vi.mock('@/lib/utils/sounds', () => ({ playSound: fetchers.playSound }))
+const grader = vi.hoisted(() => ({ gradeQuestion: vi.fn() }))
+vi.mock('@/lib/questions/grade-question', () => ({ gradeQuestion: grader.gradeQuestion }))
 
 import { useQuizGame } from '../use-quiz-game'
 
-const makeQ = (id: string): Question =>
+const makeQ = (id: string): PublicQuestion =>
   ({
     id,
     game: 'matematik',
     category: 'cebir',
     difficulty: 3,
-    content: { question: 'Soru?', options: ['a', 'b', 'c', 'd'], answer: 2 },
-  }) as unknown as Question
+    content: { question: 'Soru?', options: ['a', 'b', 'c', 'd'] },
+    base_points: 30,
+  }) as PublicQuestion
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -93,6 +98,11 @@ beforeEach(() => {
     Array.from({ length: 30 }, (_, i) => makeQ(`q${i}`)),
   )
   fetchers.fetchPreviewQuestion.mockResolvedValue(makeQ('preview'))
+  grader.gradeQuestion.mockImplementation(async (_questionId: string, selectedOption: number) => ({
+    isCorrect: selectedOption === 2,
+    correctOption: 2,
+    solution: 'Çözüm',
+  }))
 })
 
 describe('useQuizGame — handleStart', () => {
@@ -184,36 +194,36 @@ describe('useQuizGame — handleAnswer', () => {
 
   test('doğru cevap: timer durur, answerQuestion(doğru) + correct sesi + burst', async () => {
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
-    act(() => result.current.handleAnswer(2)) // answer index 2 = doğru
+    await act(async () => result.current.handleAnswer(2))
 
     expect(timer.stop).toHaveBeenCalled()
     // 5. arg = kanonik index (disc#1296); shuffle-haritasi yokken ekran-index'ine duser
-    expect(quiz.answerQuestion).toHaveBeenCalledWith(2, true, expect.any(Number), expect.anything(), 2)
+    expect(quiz.answerQuestion).toHaveBeenCalledWith(2, true, expect.any(Number), expect.anything(), 2, 2, 'Çözüm')
     expect(fetchers.playSound).toHaveBeenCalledWith('correct')
     expect(result.current.showBurst).toBe(true)
     expect(result.current.showXPPopup).toBe(true)
   })
 
-  test('3+ seri doğru: streak sesi', () => {
+  test('3+ seri doğru: streak sesi', async () => {
     quiz.streak = 2 // bu cevapla 3 olur
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
-    act(() => result.current.handleAnswer(2))
+    await act(async () => result.current.handleAnswer(2))
     expect(fetchers.playSound).toHaveBeenCalledWith('streak')
   })
 
-  test('yanlış cevap (can var): life_lost sesi + can animasyonu', () => {
+  test('yanlış cevap (can var): life_lost sesi + can animasyonu', async () => {
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
-    act(() => result.current.handleAnswer(0))
+    await act(async () => result.current.handleAnswer(0))
 
-    expect(quiz.answerQuestion).toHaveBeenCalledWith(0, false, expect.any(Number), expect.anything(), 0)
+    expect(quiz.answerQuestion).toHaveBeenCalledWith(0, false, expect.any(Number), expect.anything(), 0, 2, 'Çözüm')
     expect(fetchers.playSound).toHaveBeenCalledWith('life_lost')
     expect(result.current.showLifeLost).toBe(true)
   })
 
-  test('son canda yanlış: game_over sesi', () => {
+  test('son canda yanlış: game_over sesi', async () => {
     quiz.lives = 1
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
-    act(() => result.current.handleAnswer(0))
+    await act(async () => result.current.handleAnswer(0))
     expect(fetchers.playSound).toHaveBeenCalledWith('game_over')
   })
 
@@ -224,18 +234,39 @@ describe('useQuizGame — handleAnswer', () => {
     expect(quiz.answerQuestion).not.toHaveBeenCalled()
   })
 
-  test('deneme: cevapta per-soru timer durdurulmaz (timeTaken=0) + answered\'da kalır', () => {
+  test('deneme: cevapta per-soru timer durdurulmaz ve gerçek süre alanı kaydedilir', async () => {
     // Ensar 06-16: deneme'de per-soru süre yok (genel süre ayrı akar) ve cevap
     // sonrası OTOMATİK geçiş yok — kullanıcı butonla geçer. Burada handleAnswer'ın
     // deneme dalı timer.stop çağırmadığını ve nextQuestion'ı tetiklemediğini kilitler.
     gameStore.selectedMode = 'deneme'
     quiz.currentQuestion.mockReturnValue(makeQ('q1')) // doğru = 2
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
-    act(() => result.current.handleAnswer(2))
+    await act(async () => result.current.handleAnswer(2))
 
-    expect(quiz.answerQuestion).toHaveBeenCalledWith(2, true, 0, expect.anything(), 2)
+    expect(quiz.answerQuestion).toHaveBeenCalledWith(2, true, expect.any(Number), expect.anything(), 2, 2, 'Çözüm')
     expect(timer.stop).not.toHaveBeenCalled()
     expect(quiz.nextQuestion).not.toHaveBeenCalled() // otomatik ilerleme yok
+  })
+
+  test('deneme süresi grading sürerken dolarsa cevabı kaydedip sonra tamamlar', async () => {
+    gameStore.selectedMode = 'deneme'
+    let resolveGrade!: (value: { isCorrect: boolean; correctOption: number; solution: string | null }) => void
+    grader.gradeQuestion.mockReturnValue(new Promise((resolve) => { resolveGrade = resolve }))
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+
+    act(() => result.current.handleAnswer(2))
+    act(() => result.current.handleDenemeTimeUp())
+    expect(quiz.completeQuiz).not.toHaveBeenCalled()
+
+    await act(async () => {
+      resolveGrade({ isCorrect: true, correctOption: 2, solution: 'Çözüm' })
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(quiz.answerQuestion).toHaveBeenCalled()
+    expect(quiz.completeQuiz).toHaveBeenCalledOnce()
+    expect(result.current.screen).toBe('result')
   })
 })
 
@@ -263,7 +294,7 @@ describe('useQuizGame — handleNext / getOptionState', () => {
   test('getOptionState: answered\'da correct/wrong/dim ayrımı', () => {
     quiz.state = 'answered'
     quiz.currentQuestion.mockReturnValue(makeQ('q1')) // doğru = 2
-    quiz.answers = [{ selectedOption: 0, isCorrect: false }]
+    quiz.answers = [{ selectedOption: 0, isCorrect: false, correctOption: 2 }]
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
 
     expect(result.current.getOptionState(2)).toBe('correct')

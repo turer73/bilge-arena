@@ -20,16 +20,11 @@ describe('calculateXP', () => {
     expect(result.base).toBe(50)
   })
 
-  it('20+ saniye kalinca time bonus +5 verir', () => {
+  it('istemci suresinden time bonus uretmez', () => {
     const result = calculateXP(2 as Difficulty, 20, 0)
-    expect(result.timeBonus).toBe(5)
-    expect(result.total).toBe(25) // 20 base + 5 time
-    expect(result.hasBonus).toBe(true)
-  })
-
-  it('19 saniye kalinca time bonus vermez', () => {
-    const result = calculateXP(2 as Difficulty, 19, 0)
     expect(result.timeBonus).toBe(0)
+    expect(result.total).toBe(20)
+    expect(result.hasBonus).toBe(false)
   })
 
   it('5+ seri dogru ise streak bonus +10 verir', () => {
@@ -44,12 +39,12 @@ describe('calculateXP', () => {
     expect(result.streakBonus).toBe(0)
   })
 
-  it('tum bonuslar birlikte calisir', () => {
+  it('yalniz base ve streak bonusunu birlestirir', () => {
     const result = calculateXP(3 as Difficulty, 25, 7)
     expect(result.base).toBe(30)
-    expect(result.timeBonus).toBe(5)
+    expect(result.timeBonus).toBe(0)
     expect(result.streakBonus).toBe(10)
-    expect(result.total).toBe(45)
+    expect(result.total).toBe(40)
     expect(result.hasBonus).toBe(true)
   })
 

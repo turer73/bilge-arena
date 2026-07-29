@@ -251,7 +251,7 @@ describe('BilgeChanCompanion', () => {
     // correct[1] = 'Harika, {harf} doğru!' (index 1 -> random=0.34)
     vi.spyOn(Math, 'random').mockReturnValue(0.34)
     render(
-      <BilgeChanCompanion quizState="answered" lastIsCorrect={true} question={makeQuestion()} />,
+      <BilgeChanCompanion quizState="answered" lastIsCorrect={true} question={makeQuestion()} correctOption={2} />,
     )
     expect(pose()).toBe('victory')
     act(() => vi.advanceTimersByTime(TYPE_MS))
@@ -262,7 +262,7 @@ describe('BilgeChanCompanion', () => {
     // wrong[1] = 'Doğrusu {harf} idi, takılma. 💙'
     vi.spyOn(Math, 'random').mockReturnValue(0.34)
     render(
-      <BilgeChanCompanion quizState="answered" lastIsCorrect={false} question={makeQuestion()} />,
+      <BilgeChanCompanion quizState="answered" lastIsCorrect={false} question={makeQuestion()} correctOption={2} />,
     )
     expect(pose()).toBe('sad')
     act(() => vi.advanceTimersByTime(TYPE_MS))
@@ -276,7 +276,7 @@ describe('BilgeChanCompanion', () => {
     act(() => vi.advanceTimersByTime(6000))
     expect(screen.getByRole('button', { name: 'Evet' })).toBeInTheDocument()
     rerender(
-      <BilgeChanCompanion quizState="answered" lastIsCorrect={true} question={makeQuestion()} />,
+      <BilgeChanCompanion quizState="answered" lastIsCorrect={true} question={makeQuestion()} correctOption={2} />,
     )
     expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
     expect(pose()).toBe('victory')
