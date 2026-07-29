@@ -1,0 +1,78 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { KuleClient } from '../kule-client'
+
+const grader = vi.hoisted(() => ({ gradeQuestion: vi.fn() }))
+vi.mock('@/lib/questions/grade-question', () => ({ gradeQuestion: grader.gradeQuestion }))
+
+const QUESTION = {
+  id: 'kule-question-1',
+  game: 'matematik',
+  category: 'sayilar',
+  content: {
+    type: 'multiple_choice',
+    question: '2 + 2 kaç eder?',
+    options: ['4', '3', '5', '6'],
+  },
+}
+
+function mockQuestionFetch() {
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ questions: [QUESTION] }),
+  })))
+}
+
+async function startGame() {
+  render(<KuleClient />)
+  const game = await screen.findByText('Matematik')
+  fireEvent.click(game.closest('button')!)
+  await screen.findByText(QUESTION.content.question)
+}
+
+describe('KuleClient grading', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    vi.clearAllMocks()
+    mockQuestionFetch()
+    grader.gradeQuestion.mockResolvedValue({
+      isCorrect: true,
+      correctOption: 0,
+      solution: 'Sunucu çözümü',
+    })
+  })
+
+  it('grades the canonical option once and uses the server result for feedback', async () => {
+    await startGame()
+
+    const option = screen.getByText('4').closest('button')!
+    fireEvent.click(option)
+    fireEvent.click(option)
+
+    expect(await screen.findByText(/10 puan/)).toBeInTheDocument()
+    expect(screen.getByText(/Sunucu çözümü/)).toBeInTheDocument()
+    expect(grader.gradeQuestion).toHaveBeenCalledTimes(1)
+    expect(grader.gradeQuestion).toHaveBeenCalledWith('kule-question-1', 0)
+  })
+
+  it('shows a retryable error instead of fabricating a grading result', async () => {
+    grader.gradeQuestion.mockRejectedValueOnce(new Error('network'))
+    await startGame()
+
+    const option = screen.getByText('4').closest('button')!
+    fireEvent.click(option)
+
+    expect(await screen.findByText(/Cevap kontrol edilemedi/)).toBeInTheDocument()
+    expect(screen.queryByText(/10 puan/)).not.toBeInTheDocument()
+
+    grader.gradeQuestion.mockResolvedValueOnce({
+      isCorrect: true,
+      correctOption: 0,
+      solution: null,
+    })
+    fireEvent.click(option)
+
+    expect(await screen.findByText(/10 puan/)).toBeInTheDocument()
+    expect(grader.gradeQuestion).toHaveBeenCalledTimes(2)
+  })
+})

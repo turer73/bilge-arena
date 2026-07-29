@@ -247,6 +247,27 @@ describe('useQuizGame — handleAnswer', () => {
     expect(timer.stop).not.toHaveBeenCalled()
     expect(quiz.nextQuestion).not.toHaveBeenCalled() // otomatik ilerleme yok
   })
+
+  test('deneme süresi grading sürerken dolarsa cevabı kaydedip sonra tamamlar', async () => {
+    gameStore.selectedMode = 'deneme'
+    let resolveGrade!: (value: { isCorrect: boolean; correctOption: number; solution: string | null }) => void
+    grader.gradeQuestion.mockReturnValue(new Promise((resolve) => { resolveGrade = resolve }))
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+
+    act(() => result.current.handleAnswer(2))
+    act(() => result.current.handleDenemeTimeUp())
+    expect(quiz.completeQuiz).not.toHaveBeenCalled()
+
+    await act(async () => {
+      resolveGrade({ isCorrect: true, correctOption: 2, solution: 'Çözüm' })
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(quiz.answerQuestion).toHaveBeenCalled()
+    expect(quiz.completeQuiz).toHaveBeenCalledOnce()
+    expect(result.current.screen).toBe('result')
+  })
 })
 
 describe('useQuizGame — handleNext / getOptionState', () => {

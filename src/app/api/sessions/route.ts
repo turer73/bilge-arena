@@ -6,26 +6,20 @@ import { sessionSubmitSchema } from '@/lib/validations/schemas'
 import { FEATURES, FREE_DAILY_LIMIT } from '@/lib/constants/premium'
 import { trDayString, trDayStartUtcISO } from '@/lib/utils/tr-date'
 import { z } from 'zod'
+import { getFirstQuestionAttempt } from '@/lib/questions/attempt-store'
 
 // Replay korumasi: kullanici basina dk'da max 3 oturum
 const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
 
 // XP hesaplama — client'a guvenmeden server-side recalculate
 const BASE_XP: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 50 }
-const MODE_TIME_LIMITS: Record<string, number> = {
-  classic: 30,
-  blitz: 15,
-  marathon: 30,
-  boss: 45,
-}
-
 const completeSessionResultSchema = z.object({
   sessionId: z.string().min(1),
   alreadyProcessed: z.boolean(),
 })
 
 const answerIndexSchema = z.object({
-  options: z.array(z.unknown()).min(2).max(5),
+  options: z.array(z.string()).min(2).max(5),
   answer: z.number().int().optional(),
   correct: z.number().int().optional(),
 }).refine(
@@ -45,16 +39,13 @@ const answerIndexSchema = z.object({
 
 function serverCalculateXP(
   difficulty: number,
-  timeTaken: number,
-  timeLimit: number,
   currentStreak: number,
-  allowTimeBonus = true,
 ): number {
   const base = BASE_XP[difficulty] || 20
-  const remainingSeconds = Math.max(0, timeLimit - timeTaken)
-  const timeBonus = allowTimeBonus && remainingSeconds >= 20 ? 5 : 0
   const streakBonus = currentStreak >= 5 ? 10 : 0
-  return base + timeBonus + streakBonus
+  // Per-question duration comes from the client and remains useful analytics,
+  // but must never influence rewards until server-side timing exists.
+  return base + streakBonus
 }
 
 // POST: Oyun oturumunu kaydet (server-side XP hesaplama)
@@ -86,10 +77,6 @@ export async function POST(request: Request) {
   // Odul dongusu ham dizi uzerinde donuyordu (questionMap yalniz lookup) -> ayni
   // soru 100x gonderilince 100x coin. Soru basina en fazla 1 cevap say.
   const answers = [...new Map(rawAnswers.map((a) => [a.questionId, a])).values()]
-
-  // Süre bonusu istemcinin bildirdiği timeLimit'e güvenmez; mod sözleşmesinden gelir.
-  const rewardTimeLimit = MODE_TIME_LIMITS[mode] ?? 0
-  const allowTimeBonus = rewardTimeLimit > 0
 
   // Service role client — RLS bypass (tum INSERT/UPDATE + limit-gate okumasi icin)
   const svc = createServiceRoleClient()
@@ -136,6 +123,12 @@ export async function POST(request: Request) {
   }
 
   const questionMap = new Map(questions.map(q => [q.id, q]))
+  const acceptedAttempts = new Map(await Promise.all(
+    questionIds.map(async (questionId) => [
+      questionId,
+      await getFirstQuestionAttempt(`user:${user.id}`, questionId),
+    ] as const),
+  ))
 
   // Server-side XP hesaplama
   let totalXP = 0
@@ -160,7 +153,11 @@ export async function POST(request: Request) {
     const correctIndex = parsedContent.success
       ? parsedContent.data.answer ?? parsedContent.data.correct
       : undefined
-    const isActuallyCorrect = correctIndex === a.selectedOption
+    // Grade endpoint'inin sabitlediği İLK seçim otoriterdir. Client session
+    // payload'ı doğru cevapla değiştirilse bile XP üretmez; grade edilmemiş
+    // doğrudan session submit ise skip sayılır.
+    const acceptedOption = acceptedAttempts.get(a.questionId) ?? -1
+    const isActuallyCorrect = correctIndex === acceptedOption
 
     // Süresiz/practice ve denemede gerçek soru süresini koru. Zod üst sınırı
     // zaten 300 sn; timeLimit yalnız süre bonusunun eşiğidir.
@@ -173,10 +170,7 @@ export async function POST(request: Request) {
       correctCount++
       xpEarned = serverCalculateXP(
         question.difficulty ?? 2,
-        safeTimeTaken,
-        rewardTimeLimit,
         streak,
-        allowTimeBonus,
       )
       totalXP += xpEarned
     } else {
@@ -189,9 +183,9 @@ export async function POST(request: Request) {
     return {
       question_id: a.questionId,
       user_id: user.id,
-      selected_option: a.selectedOption >= 0 ? a.selectedOption : null,
+      selected_option: acceptedOption >= 0 ? acceptedOption : null,
       is_correct: isActuallyCorrect,
-      is_skipped: a.selectedOption < 0,
+      is_skipped: acceptedOption < 0,
       time_taken_sec: Math.round(safeTimeTaken * 10) / 10,
       is_fast: safeTimeTaken < 10,
       xp_earned: xpEarned,

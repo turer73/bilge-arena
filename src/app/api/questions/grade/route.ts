@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { recordFirstQuestionAttempt } from '@/lib/questions/attempt-store'
 
 const userLimiter = createRateLimiter('questions-grade-user', 120, 60_000)
 const ipLimiter = createRateLimiter('questions-grade-ip', 30, 60_000)
@@ -15,7 +16,7 @@ const requestSchema = z.object({
 }).strict()
 
 const contentSchema = z.object({
-  options: z.array(z.unknown()).min(2).max(5),
+  options: z.array(z.string()).min(2).max(5),
   answer: z.number().int().min(0).max(4).optional(),
   correct: z.number().int().min(0).max(4).optional(),
   solution: z.string().optional(),
@@ -47,8 +48,9 @@ export async function POST(request: Request) {
   const cookieClient = await createClient()
   const { data: { user } } = await cookieClient.auth.getUser()
   const limiter = user ? userLimiter : ipLimiter
-  const key = user?.id ?? getClientIp(request.headers)
-  const rateLimit = await limiter.check(key)
+  const identity = user?.id ?? getClientIp(request.headers)
+  const actorKey = user ? `user:${identity}` : `ip:${identity}`
+  const rateLimit = await limiter.check(identity)
   if (!rateLimit.success) {
     return NextResponse.json(
       { error: 'Cok fazla istek' },
@@ -84,10 +86,15 @@ export async function POST(request: Request) {
 
   const authoredSolution = content.data.solution?.trim() || content.data.explanation?.trim()
   const solution = authoredSolution?.slice(0, 2_000) || null
+  const acceptedOption = await recordFirstQuestionAttempt(
+    actorKey,
+    parsed.data.questionId,
+    parsed.data.selectedOption,
+  )
 
   return NextResponse.json(
     {
-      isCorrect: parsed.data.selectedOption === correctOption,
+      isCorrect: acceptedOption === correctOption,
       correctOption,
       solution,
     },

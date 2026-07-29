@@ -1,15 +1,14 @@
 /**
  * Fethet regresyon testleri (disc#1427 + şık-karıştırma).
  *
- * wordquest content'i `answer` değil `correct` + `question` değil `sentence` taşır.
- * Fix öncesi: İngilizce kategorilerinde soru metni boş render ediliyor ve hiçbir
- * seçim doğru sayılmıyordu (optIdx === undefined). shuffleOptions + getQuestionText
- * normalizasyonu bunu kapatır; şıklar karıştırıldığından testler sıra-bağımsız
- * (metin üzerinden) doğrular.
+ * Wordquest prompts use `sentence`; grading is always delegated to the server.
  */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { FethetClient } from '../fethet-client'
+
+const grader = vi.hoisted(() => ({ gradeQuestion: vi.fn() }))
+vi.mock('@/lib/questions/grade-question', () => ({ gradeQuestion: grader.gradeQuestion }))
 
 const WQ_QUESTIONS = [
   {
@@ -20,7 +19,6 @@ const WQ_QUESTIONS = [
       type: 'multiple_choice',
       sentence: 'The negotiations reached a ---- when neither side compromised.',
       options: ['deadlock', 'consensus', 'breakthrough', 'resolution', 'harmony'],
-      correct: 0,
     },
   },
   {
@@ -31,7 +29,6 @@ const WQ_QUESTIONS = [
       type: 'multiple_choice',
       sentence: 'The rapid ---- of technology transformed communication.',
       options: ['advancement', 'withdrawal', 'restriction', 'decline', 'stagnation'],
-      correct: 0,
     },
   },
   {
@@ -42,7 +39,6 @@ const WQ_QUESTIONS = [
       type: 'multiple_choice',
       sentence: 'The violin is a delicate ---- requiring years of practice.',
       options: ['instrument', 'ornament', 'utensil', 'gadget', 'device'],
-      correct: 0,
     },
   },
 ]
@@ -65,6 +61,11 @@ describe('FethetClient — wordquest (İngilizce) akışı', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.restoreAllMocks()
+    grader.gradeQuestion.mockImplementation(async (_questionId: string, selectedOption: number) => ({
+      isCorrect: selectedOption === 0,
+      correctOption: 0,
+      solution: null,
+    }))
   })
 
   it('wordquest sentence alanını soru metni olarak basar (fix öncesi boştu)', async () => {
@@ -83,6 +84,7 @@ describe('FethetClient — wordquest (İngilizce) akışı', () => {
       // Şıklar karıştırılmış olabilir — doğru şıkkı METİNLE bul (sıra-bağımsız).
       const opt = await screen.findByText(CORRECT_TEXTS[i])
       fireEvent.click(opt.closest('button')!)
+      await screen.findByText(/Sonraki|Sonucu/)
       fireEvent.click(
         screen.getByText(i < 2 ? 'Sonraki Soru →' : 'Sonucu Gör')
       )
@@ -99,10 +101,10 @@ describe('FethetClient — wordquest (İngilizce) akışı', () => {
 
     for (let i = 0; i < 3; i++) {
       // Doğru-OLMAYAN ilk şıkkı metinle bul ve tıkla.
-      const q = WQ_QUESTIONS[i].content
-      const wrongText = q.options.find((_, idx) => idx !== q.correct)!
+      const wrongText = WQ_QUESTIONS[i].content.options[1]!
       const opt = await screen.findByText(wrongText)
       fireEvent.click(opt.closest('button')!)
+      await screen.findByText(/Sonraki|Sonucu/)
       fireEvent.click(
         screen.getByText(i < 2 ? 'Sonraki Soru →' : 'Sonucu Gör')
       )

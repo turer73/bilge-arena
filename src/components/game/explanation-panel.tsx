@@ -31,7 +31,7 @@ export function ExplanationPanel({
   onOpenReport,
 }: ExplanationPanelProps) {
   const correctAnswer = correctOption
-  const correctText = question.content.options[correctAnswer]
+  const correctText = correctAnswer >= 0 ? question.content.options[correctAnswer] : null
 
   // Panel soru kartinin USTUNDE render olur; alt siklara tiklayan kullanicinin
   // viewport'u asagida kalabilir — mount'ta paneli gorunur yap (jsdom guard'li)
@@ -48,7 +48,10 @@ export function ExplanationPanel({
     const qText = stripRichText(question.content.question || question.content.sentence)
     // Öncül bloğu (passage) varsa soru metninin önüne ekle — asistan ifadeleri görsün (<u> AI'ya gitmesin)
     const body = question.content.passage ? `${stripRichText(question.content.passage)}\n\n${qText}` : qText
-    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}\n\nDoğru cevap: ${getOptionLetter(correctAnswer)}) ${correctText}${solution ? '\nÇözüm: ' + solution : ''}`
+    const answerContext = correctText
+      ? `${getOptionLetter(correctAnswer)}) ${correctText}`
+      : 'Sunucudan alınamadı'
+    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}\n\nDoğru cevap: ${answerContext}${solution ? '\nÇözüm: ' + solution : ''}`
 
     const userMsg = `"${topic}" konusunu kısaca anlat. Bu soruyla ilgili temel kavramları ve formülleri özetle.`
 
@@ -119,7 +122,9 @@ export function ExplanationPanel({
       >
         {isCorrect
           ? '✓ Doğru! Mükemmel 🎉'
-          : `✗ Yanlış. Doğru: ${getOptionLetter(correctAnswer)}) ${correctText}`}
+          : correctText
+            ? `✗ Yanlış. Doğru: ${getOptionLetter(correctAnswer)}) ${correctText}`
+            : '⏱ Süre doldu. Doğru cevap şu anda alınamadı.'}
       </div>
 
       {/* Aciklama */}

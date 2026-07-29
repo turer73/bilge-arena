@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useCallback, useReducer } from 'react'
+import { useEffect, useCallback, useReducer, useRef } from 'react'
 import Link from 'next/link'
 import { GAME_LIST } from '@/lib/constants/games'
 import type { GameSlug } from '@/lib/constants/games'
-import { shuffleOptions } from '@/lib/utils/question'
+import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
+import { gradeQuestion } from '@/lib/questions/grade-question'
+import type { PublicQuestion } from '@/lib/utils/question-public'
 import { renderRichText } from '@/lib/utils/rich-text'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -46,9 +48,8 @@ function getTierLabel(floor: number): string {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface KuleQuestion {
-  id: string
-  content: { question: string; options: string[]; answer: number; solution?: string }
+type KuleQuestion = PublicQuestion & {
+  optionMap: number[]
 }
 
 type Phase = 'menu' | 'playing' | 'feedback' | 'gameover'
@@ -62,6 +63,10 @@ interface State {
   highScore: number
   question: KuleQuestion | null
   selected: number | null
+  correctOption: number | null
+  solution: string | null
+  grading: boolean
+  gradeError: string | null
   loading: boolean
   error: string | null
   /** last feedback result */
@@ -73,7 +78,9 @@ type Action =
   | { type: 'SET_QUESTION'; question: KuleQuestion }
   | { type: 'SET_LOADING'; loading: boolean }
   | { type: 'SET_ERROR'; error: string }
-  | { type: 'SELECT_ANSWER'; idx: number }
+  | { type: 'START_GRADING'; idx: number }
+  | { type: 'GRADE_RESULT'; isCorrect: boolean; correctOption: number; solution: string | null }
+  | { type: 'GRADE_FAILED'; error: string }
   | { type: 'NEXT_FLOOR' }
   | { type: 'RESTART' }
   | { type: 'BACK_TO_MENU' }
@@ -81,47 +88,55 @@ type Action =
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SELECT_GAME':
-      return { ...state, phase: 'playing', game: action.game, floor: 1, lives: MAX_LIVES, score: 0, highScore: action.highScore, question: null, selected: null, loading: true, error: null }
+      return { ...state, phase: 'playing', game: action.game, floor: 1, lives: MAX_LIVES, score: 0, highScore: action.highScore, question: null, selected: null, correctOption: null, solution: null, grading: false, gradeError: null, loading: true, error: null, lastCorrect: false }
     case 'SET_QUESTION':
-      return { ...state, question: action.question, loading: false, error: null, selected: null }
+      return { ...state, question: action.question, loading: false, error: null, selected: null, correctOption: null, solution: null, grading: false, gradeError: null }
     case 'SET_LOADING':
       return { ...state, loading: action.loading }
     case 'SET_ERROR':
       return { ...state, error: action.error, loading: false }
-    case 'SELECT_ANSWER': {
-      if (state.selected !== null || !state.question) return state
-      const correct = action.idx === state.question.content.answer
+    case 'START_GRADING':
+      if (state.selected !== null || !state.question || state.grading) return state
+      return { ...state, selected: action.idx, grading: true, gradeError: null }
+    case 'GRADE_RESULT': {
+      if (state.selected === null || !state.question) return state
+      const correct = action.isCorrect
       const newLives = correct ? state.lives : state.lives - 1
       const newScore = correct ? state.score + SCORE_PER_FLOOR : state.score
       const gameOver = newLives <= 0
       return {
         ...state,
-        selected: action.idx,
+        correctOption: action.correctOption,
+        solution: action.solution,
+        grading: false,
         lives: newLives,
         score: newScore,
         lastCorrect: correct,
         phase: gameOver ? 'gameover' : 'feedback',
       }
     }
+    case 'GRADE_FAILED':
+      return { ...state, selected: null, grading: false, gradeError: action.error }
     case 'NEXT_FLOOR':
-      return { ...state, phase: 'playing', floor: state.floor + 1, question: null, selected: null, loading: true, error: null }
+      return { ...state, phase: 'playing', floor: state.floor + 1, question: null, selected: null, correctOption: null, solution: null, grading: false, gradeError: null, loading: true, error: null }
     case 'RESTART':
-      return { ...state, phase: 'playing', floor: 1, lives: MAX_LIVES, score: 0, question: null, selected: null, loading: true, error: null, highScore: Math.max(state.score, state.highScore) }
+      return { ...state, phase: 'playing', floor: 1, lives: MAX_LIVES, score: 0, question: null, selected: null, correctOption: null, solution: null, grading: false, gradeError: null, loading: true, error: null, highScore: Math.max(state.score, state.highScore) }
     case 'BACK_TO_MENU':
-      return { ...state, phase: 'menu', game: null, question: null }
+      return { ...state, phase: 'menu', game: null, question: null, selected: null, correctOption: null, solution: null, grading: false, gradeError: null, loading: false, error: null, lastCorrect: false }
     default: return state
   }
 }
 
 const INIT: State = {
   phase: 'menu', game: null, floor: 1, lives: MAX_LIVES, score: 0, highScore: 0,
-  question: null, selected: null, loading: false, error: null, lastCorrect: false,
+  question: null, selected: null, correctOption: null, solution: null, grading: false, gradeError: null, loading: false, error: null, lastCorrect: false,
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function KuleClient() {
   const [state, dispatch] = useReducer(reducer, INIT)
+  const gradingRef = useRef(false)
 
   const fetchQuestion = useCallback(async (game: string, floor: number) => {
     dispatch({ type: 'SET_LOADING', loading: true })
@@ -131,7 +146,7 @@ export function KuleClient() {
       let res = await fetch(`/api/questions/random?game=${game}&difficulty=${diff}&limit=1`)
       if (!res.ok) throw new Error('Soru alınamadı')
       let data = await res.json()
-      let qs: KuleQuestion[] = data.questions ?? []
+      let qs: PublicQuestion[] = data.questions ?? []
 
       // 2. deneme: zorluk filtresi olmadan (o zorlukta soru yoksa)
       if (qs.length === 0) {
@@ -144,7 +159,8 @@ export function KuleClient() {
       if (qs.length === 0) throw new Error('Soru bulunamadı')
       // Seçenek sırasını karıştır — her oynayışta farklı görünüm
       const q = qs[0]
-      dispatch({ type: 'SET_QUESTION', question: { ...q, content: shuffleOptions(q.content) } })
+      const shuffled = shufflePublicOptionsWithMap(q.content)
+      dispatch({ type: 'SET_QUESTION', question: { ...q, content: shuffled.content, optionMap: shuffled.map } })
     } catch (e) {
       dispatch({ type: 'SET_ERROR', error: (e as Error).message })
     }
@@ -156,6 +172,26 @@ export function KuleClient() {
       fetchQuestion(state.game, state.floor)
     }
   }, [state.phase, state.game, state.floor, state.loading, state.question, fetchQuestion])
+
+  const handleAnswer = useCallback(async (displayIndex: number) => {
+    const question = state.question
+    if (!question || state.phase !== 'playing' || state.selected !== null || gradingRef.current) return
+    const canonicalIndex = question.optionMap[displayIndex]
+    if (!Number.isInteger(canonicalIndex)) return
+
+    gradingRef.current = true
+    dispatch({ type: 'START_GRADING', idx: displayIndex })
+    try {
+      const grade = await gradeQuestion(question.id, canonicalIndex)
+      const correctOption = question.optionMap.indexOf(grade.correctOption)
+      if (correctOption < 0) throw new Error('invalid_grade_response')
+      dispatch({ type: 'GRADE_RESULT', isCorrect: grade.isCorrect, correctOption, solution: grade.solution })
+    } catch {
+      dispatch({ type: 'GRADE_FAILED', error: 'Cevap kontrol edilemedi. Lütfen tekrar dene.' })
+    } finally {
+      gradingRef.current = false
+    }
+  }, [state.question, state.phase, state.selected])
 
   // Oyun bitti → high score kaydet
   useEffect(() => {
@@ -341,13 +377,13 @@ export function KuleClient() {
       {!state.loading && !state.error && state.question && (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5">
           <p className="mb-5 text-sm font-semibold leading-relaxed md:text-base">
-            {renderRichText(state.question.content.question)}
+            {renderRichText(state.question.content.question || state.question.content.sentence || '')}
           </p>
 
           <div className="space-y-2">
             {state.question.content.options.map((opt, i) => {
               const answered = state.selected !== null
-              const isCorrect = i === state.question!.content.answer
+              const isCorrect = i === state.correctOption
               const isSelected = i === state.selected
 
               let bg = 'var(--bg-secondary)'
@@ -366,13 +402,13 @@ export function KuleClient() {
                 }
               }
 
-              const label = ['A', 'B', 'C', 'D'][i]
+              const label = ['A', 'B', 'C', 'D', 'E'][i] ?? String(i + 1)
 
               return (
                 <button
                   key={i}
-                  onClick={() => dispatch({ type: 'SELECT_ANSWER', idx: i })}
-                  disabled={answered}
+                  onClick={() => void handleAnswer(i)}
+                  disabled={answered || state.grading}
                   className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all duration-150 disabled:cursor-default"
                   style={{ background: bg, borderColor, color: textColor }}
                 >
@@ -389,6 +425,13 @@ export function KuleClient() {
           </div>
 
           {/* Geri bildirim sonrası devam */}
+          {state.grading && (
+            <p className="mt-3 text-center text-xs text-[var(--text-sub)]">Kontrol ediliyor...</p>
+          )}
+          {state.gradeError && (
+            <p className="mt-3 text-center text-xs text-[var(--urgency)]">{state.gradeError}</p>
+          )}
+
           {state.phase === 'feedback' && (
             <>
               <div
@@ -400,9 +443,9 @@ export function KuleClient() {
                   ? `✓ Doğru! +${SCORE_PER_FLOOR} puan`
                   : `✕ Yanlış! ${state.lives} can kaldı`}
               </div>
-              {state.question.content.solution && (
+              {state.solution && (
                 <p className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[10px] text-[var(--text-sub)]">
-                  💡 {state.question.content.solution}
+                  💡 {state.solution}
                 </p>
               )}
               <button

@@ -2,7 +2,7 @@
 
 import type { GameType } from '@/types/database'
 import type { PublicQuestion } from '@/lib/utils/question-public'
-import { cacheQuestions, getCachedQuestions } from '@/lib/utils/question-cache'
+import { cacheQuestions } from '@/lib/utils/question-cache'
 import { filterValidUuids } from '@/lib/utils/uuid'
 
 interface FetchQuestionsOptions {
@@ -36,8 +36,9 @@ function shuffle<T>(arr: T[]): T[] {
  * /api/questions/random API'sinden quiz sorularini ceker, karistirir ve dondurur.
  * Madde 9 #6: eski client `supabase.rpc('select_random_questions')` yerine proxy.
  *
- * Cekilen sorular IndexedDB'ye kaydedilir (offline destek).
- * Ag yoksa veya API hata verirse cache'den sunar.
+ * Cekilen güvenli soru metinleri IndexedDB'ye kaydedilir. Notlandırma sunucu
+ * otoriter olduğu için çevrimdışıyken cache oynatılmaz; aksi halde cevap
+ * doğrulanamaz ve oturum ilerleyemez.
  *
  * Anon kullanici icin 401 doner -> use-quiz-game DEMO_QUESTIONS fallback (mevcut akis).
  */
@@ -54,8 +55,6 @@ export async function fetchQuizQuestions({
 
   // Cevrimdisi: dogrudan cache'den sun
   if (!isOnline) {
-    const cached = await getCachedQuestions({ game, category, difficulty, limit })
-    if (cached.length > 0) return cached
     return []
   }
 
@@ -91,9 +90,7 @@ export async function fetchQuizQuestions({
   const reviewQuestions = response?.reviewQuestions ?? []
 
   if (questions.length === 0) {
-    // Anon (401) veya network hatasi — cache'den dene
-    const cached = await getCachedQuestions({ game, category, difficulty, limit })
-    if (cached.length > 0) return cached
+    // Anon (401), offline veya network hatasında notlandırılamayan cache'i oynatma.
     return []
   }
 

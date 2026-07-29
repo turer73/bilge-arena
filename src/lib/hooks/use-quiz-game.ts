@@ -89,6 +89,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const gradingRef = useRef(false)
   const gradeRequestRef = useRef<AbortController | null>(null)
   const questionStartedAtRef = useRef(0)
+  const denemeTimeUpPendingRef = useRef(false)
 
   useEffect(() => () => gradeRequestRef.current?.abort(), [])
 
@@ -114,7 +115,12 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       .catch((error) => {
         if (!controller.signal.aborted) {
           console.error('[QuizGame] Süre sonu notlandırma hatası:', error)
-          toast.error('Cevap doğrulanamadı', 'Lütfen bağlantını kontrol edip tekrar dene.')
+          const current = useQuizStore.getState()
+          if (current.state === 'playing' && current.currentQuestion()?.id === question.id) {
+            const xpResult = calculateXP(question.difficulty, 0, current.streak)
+            current.answerQuestion(-1, false, mode.timePerQuestion, xpResult, -1, -1, null)
+          }
+          toast.error('Süre doldu', 'Çözüm şu anda alınamadı; soru boş bırakıldı.')
         }
       })
       .finally(() => {
@@ -154,6 +160,10 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   // --- Deneme: sure dolunca tum sinavi bitir ---
 
   const handleDenemeTimeUp = useCallback(() => {
+    if (gradingRef.current) {
+      denemeTimeUpPendingRef.current = true
+      return
+    }
     quizStore.completeQuiz()
     setScreen('result')
   }, [quizStore])
@@ -328,6 +338,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
 
     quizStore.startQuiz(shuffledQuestions)
     elapsed.reset()
+    denemeTimeUpPendingRef.current = false
     timer.reset(0)
     setIsGuestMode(false)
     setLoadError(null)
@@ -404,6 +415,11 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       .finally(() => {
         if (gradeRequestRef.current === controller) gradeRequestRef.current = null
         gradingRef.current = false
+        if (denemeTimeUpPendingRef.current) {
+          denemeTimeUpPendingRef.current = false
+          useQuizStore.getState().completeQuiz()
+          setScreen('result')
+        }
       })
   }, [quizStore, timer, mode.timePerQuestion, isDeneme])
 
@@ -435,6 +451,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     gradeRequestRef.current?.abort()
     gradeRequestRef.current = null
     gradingRef.current = false
+    denemeTimeUpPendingRef.current = false
     quizStore.resetQuiz()
     setIsGuestMode(false)
     setHelpPaused(false)

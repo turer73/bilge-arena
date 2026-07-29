@@ -12,16 +12,24 @@ export interface StagedCoachQuestionContent {
   solution?: string
 }
 
+/** Client eligibility check; public payload intentionally has no answer key. */
+export function supportsStagedCoachPublicQuestion(content: unknown): boolean {
+  if (!content || typeof content !== 'object') return false
+  const candidate = content as Record<string, unknown>
+  return typeof candidate.question === 'string'
+    && Boolean(candidate.question.trim())
+    && Array.isArray(candidate.options)
+    && candidate.options.length >= 2
+    && candidate.options.every((option) => typeof option === 'string' && Boolean(option.trim()))
+}
+
 export function supportsStagedCoachQuestion(
   content: unknown,
 ): content is StagedCoachQuestionContent {
-  if (!content || typeof content !== 'object') return false
-
+  if (!supportsStagedCoachPublicQuestion(content)) return false
   const candidate = content as Record<string, unknown>
-  if (typeof candidate.question !== 'string' || !candidate.question.trim()) return false
-  if (!Array.isArray(candidate.options) || candidate.options.length < 2) return false
-  if (!candidate.options.every((option) => typeof option === 'string' && option.trim())) return false
   if (typeof candidate.answer !== 'number' || !Number.isInteger(candidate.answer)) return false
+  const options = candidate.options as unknown[]
 
-  return candidate.answer >= 0 && candidate.answer < candidate.options.length
+  return candidate.answer >= 0 && candidate.answer < options.length
 }

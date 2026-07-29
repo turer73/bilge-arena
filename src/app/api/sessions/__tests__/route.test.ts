@@ -9,11 +9,13 @@ const mockProfileSelect = vi.fn()
 const mockSessionCountGte = vi.fn()
 const mockRpc = vi.fn()
 const featureState = vi.hoisted(() => ({ QUIZ_LIMIT: false }))
+const mockGetFirstAttempt = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/constants/premium', () => ({
   FEATURES: featureState,
   FREE_DAILY_LIMIT: 5,
 }))
+vi.mock('@/lib/questions/attempt-store', () => ({ getFirstQuestionAttempt: mockGetFirstAttempt }))
 
 // Chainable mock: every method returns the same object so chains work
 function makeChain(terminal?: Record<string, ReturnType<typeof vi.fn>>) {
@@ -124,6 +126,9 @@ describe('POST /api/sessions', () => {
     // Gate defaults: free (non-premium) kullanici, bugun 0 oturum -> gate gecer
     mockProfilesSingle.mockResolvedValue({ data: { is_premium: false, premium_until: null }, error: null })
     mockSessionCountGte.mockResolvedValue({ count: 0, error: null })
+    mockGetFirstAttempt.mockImplementation(async (_actor: string, questionId: string) => (
+      questionId === Q1 ? 1 : questionId === Q2 ? 0 : null
+    ))
   })
 
   it('returns 401 if not authenticated', async () => {
@@ -166,6 +171,41 @@ describe('POST /api/sessions', () => {
     expect(json.wrongCount).toBe(1)
     expect(json.totalXP).toBeGreaterThan(0)
     expect(json.sessionId).toBe('session-1')
+  })
+
+  it('session payload ilk grade seçimini değiştiremez', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetFirstAttempt.mockResolvedValue(0)
+
+    const res = await POST(makeRequest({
+      game: 'matematik',
+      mode: 'classic',
+      answers: [{ questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 5 }],
+      timeLimit: 30,
+      clientRequestId: REQ_ID,
+    }))
+
+    expect((await res.json()).totalXP).toBe(0)
+    expect(mockRpc).toHaveBeenCalledWith('complete_game_session', expect.objectContaining({
+      p_answers: [expect.objectContaining({ selected_option: 0, is_correct: false })],
+    }))
+  })
+
+  it('grade edilmemiş doğrudan session cevabını skip sayar', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockGetFirstAttempt.mockResolvedValue(null)
+
+    await POST(makeRequest({
+      game: 'matematik',
+      mode: 'classic',
+      answers: [{ questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 5 }],
+      timeLimit: 30,
+      clientRequestId: REQ_ID,
+    }))
+
+    expect(mockRpc).toHaveBeenCalledWith('complete_game_session', expect.objectContaining({
+      p_answers: [expect.objectContaining({ selected_option: null, is_skipped: true, is_correct: false })],
+    }))
   })
 
   it('returns 500 if session insert fails', async () => {
@@ -212,14 +252,14 @@ describe('POST /api/sessions', () => {
     }))
   })
 
-  it('istemci timeLimit yükselterek süre bonusu üretemez', async () => {
+  it('istemci timeLimit ve timeTaken ile süre bonusu üretemez', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     const res = await POST(makeRequest({
       game: 'matematik',
       mode: 'classic',
       timeLimit: 120,
       clientRequestId: REQ_ID,
-      answers: [{ questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 15 }],
+      answers: [{ questionId: Q1, selectedOption: 1, isCorrect: true, timeTaken: 0 }],
     }))
 
     expect(res.status).toBe(200)

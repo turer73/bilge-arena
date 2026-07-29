@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockGetUser, mockQuestionQuery, mockUserLimiter, mockIpLimiter, mockGetClientIp } = vi.hoisted(() => ({
+const { mockGetUser, mockQuestionQuery, mockUserLimiter, mockIpLimiter, mockGetClientIp, mockRecordAttempt } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockQuestionQuery: vi.fn(),
   mockUserLimiter: { check: vi.fn() },
   mockIpLimiter: { check: vi.fn() },
   mockGetClientIp: vi.fn(),
+  mockRecordAttempt: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -29,6 +30,7 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 }))
 
 vi.mock('@/lib/utils/client-ip', () => ({ getClientIp: mockGetClientIp }))
+vi.mock('@/lib/questions/attempt-store', () => ({ recordFirstQuestionAttempt: mockRecordAttempt }))
 
 import { POST } from '../route'
 
@@ -49,6 +51,7 @@ describe('POST /api/questions/grade', () => {
     mockGetClientIp.mockReturnValue('203.0.113.8')
     mockIpLimiter.check.mockResolvedValue({ success: true })
     mockUserLimiter.check.mockResolvedValue({ success: true })
+    mockRecordAttempt.mockImplementation(async (_actor: string, _questionId: string, selected: number) => selected)
     mockQuestionQuery.mockResolvedValue({
       data: { id: QUESTION_ID, content: { options: ['a', 'b', 'c', 'd'], answer: 2, solution: 'Co\u0308zu\u0308m' } },
       error: null,
@@ -137,6 +140,17 @@ describe('POST /api/questions/grade', () => {
     expect(mockUserLimiter.check).toHaveBeenCalledWith('user-42')
     expect(mockIpLimiter.check).not.toHaveBeenCalled()
     expect(mockGetClientIp).not.toHaveBeenCalled()
+    expect(mockRecordAttempt).toHaveBeenCalledWith('user:user-42', QUESTION_ID, 2)
+  })
+
+  it('replayed selection is graded against the first accepted attempt', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
+    mockRecordAttempt.mockResolvedValue(-1)
+
+    const res = await POST(request({ questionId: QUESTION_ID, selectedOption: 2 }))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ isCorrect: false, correctOption: 2 })
   })
 
   it('supports WordQuest correct/explanation content and caps feedback length', async () => {
