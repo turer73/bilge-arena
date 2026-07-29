@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
 // --- Stores ---
 const quizStoreValue: Record<string, unknown> = {
@@ -65,6 +65,7 @@ const quizGame = vi.hoisted(() => ({
   handleNext: vi.fn(),
   handleStart: vi.fn(),
   handleStartPlanned: vi.fn(),
+  handleStartPreparedDeneme: vi.fn(),
 }))
 vi.mock('@/lib/hooks/use-quiz-game', () => ({ useQuizGame: () => quizGame }))
 vi.mock('@/lib/hooks/use-sidebar-data', () => ({
@@ -82,6 +83,14 @@ const todayPlanValue = vi.hoisted(() => ({
   markCompleted: vi.fn(),
 }))
 vi.mock('@/lib/hooks/use-today-plan', () => ({ useTodayPlan: () => todayPlanValue }))
+const personalizedMockValue = vi.hoisted(() => ({
+  loading: false,
+  error: null as string | null,
+  generate: vi.fn(),
+}))
+vi.mock('@/lib/hooks/use-personalized-mock', () => ({
+  usePersonalizedMock: () => personalizedMockValue,
+}))
 vi.mock('@/lib/hooks/use-mastery-map', () => ({
   useMasteryMap: () => ({ outcomes: [], loading: false, fetchMastery: vi.fn() }),
 }))
@@ -104,7 +113,9 @@ vi.mock('../option-button', () => ({
     <button data-testid={`option-${index}`} />
   ),
 }))
-vi.mock('../lobby', () => ({ Lobby: () => null }))
+vi.mock('../lobby', () => ({
+  Lobby: ({ onStart }: { onStart: () => void }) => <button data-testid="normal-quiz-start" onClick={onStart} />,
+}))
 vi.mock('../timer', () => ({ Timer: () => null }))
 vi.mock('../deneme-timer', () => ({ DenemeTimer: () => null }))
 vi.mock('../streak-badge', () => ({ StreakBadge: () => null }))
@@ -114,6 +125,9 @@ vi.mock('../mini-leaderboard', () => ({ MiniLeaderboard: () => null }))
 vi.mock('../daily-quests', () => ({ DailyQuests: () => null }))
 vi.mock('../today-plan-card', () => ({
   TodayPlanCard: ({ onStart }: { onStart: () => void }) => <button data-testid="today-plan-start" onClick={onStart} />,
+}))
+vi.mock('../personalized-mock-card', () => ({
+  PersonalizedMockCard: ({ onStart }: { onStart: () => void }) => <button data-testid="personalized-mock-start" onClick={onStart} />,
 }))
 vi.mock('../mastery-map-card', () => ({ MasteryMapCard: () => null }))
 vi.mock('../topics-panel', () => ({ TopicsPanel: () => <div data-testid="topics-band" /> }))
@@ -240,6 +254,70 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
     } finally {
       authStoreValue.user = null
       todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
+  })
+})
+
+describe('QuizEngine — Akıllı Deneme başlangıcı', () => {
+  test('kişisel set hazırlanırken normal quiz aynı anda başlatılamaz', () => {
+    quizGame.screen = 'lobby'
+    personalizedMockValue.loading = true
+    quizGame.handleStart.mockClear()
+    try {
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByTestId('normal-quiz-start'))
+      expect(quizGame.handleStart).not.toHaveBeenCalled()
+    } finally {
+      personalizedMockValue.loading = false
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('limit doluysa üretim çağrılmaz ve premium modal açılır', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    quizLimitValue.canPlay = false
+    personalizedMockValue.generate.mockClear()
+
+    try {
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByTestId('personalized-mock-start'))
+      expect(personalizedMockValue.generate).not.toHaveBeenCalled()
+      expect(screen.getByTestId('premium-modal')).toBeInTheDocument()
+    } finally {
+      quizLimitValue.canPlay = true
+      authStoreValue.user = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('kişisel set gerçek deneme modunda başlatılır ve filtreler temizlenir', async () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    const questions = [{ id: 'smart-1' }, { id: 'smart-2' }]
+    personalizedMockValue.generate.mockResolvedValueOnce({
+      generatedFor: '2026-07-29',
+      game: 'matematik',
+      examRef: 'TYT',
+      questions,
+      breakdown: { wrong: 1, weak: 1, coverage: 0, weakCategories: ['problemler'] },
+    })
+    gameStoreValue.setMode.mockClear()
+    gameStoreValue.setCategory.mockClear()
+    gameStoreValue.setDifficulty.mockClear()
+    quizGame.handleStartPreparedDeneme.mockClear()
+
+    try {
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByTestId('personalized-mock-start'))
+
+      await waitFor(() => expect(gameStoreValue.setMode).toHaveBeenCalledWith('deneme'))
+      expect(gameStoreValue.setCategory).toHaveBeenCalledWith(null)
+      expect(gameStoreValue.setDifficulty).toHaveBeenCalledWith(null)
+      expect(quizGame.handleStartPreparedDeneme).toHaveBeenCalledWith(questions)
+    } finally {
+      authStoreValue.user = null
       quizGame.screen = 'game'
     }
   })
