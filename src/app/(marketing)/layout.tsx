@@ -9,7 +9,7 @@ export default function MarketingLayout({
   return (
     <>
       <Navbar />
-      <main className="min-h-screen pt-20">{children}</main>
+      <main className="min-h-screen pt-[calc(var(--navbar-h)+0.5rem)]">{children}</main>
       <Footer />
     </>
   )

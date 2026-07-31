@@ -18,7 +18,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 sm:top-5 sm:right-5">
+    <div className="fixed top-4 right-4 bottom-20 md:bottom-auto z-[100] flex flex-col gap-2 sm:top-5 sm:right-5">
       {toasts.map((t) => {
         const style = TYPE_STYLES[t.type]
         return (

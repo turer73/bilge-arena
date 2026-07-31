@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
+import { useUIStore, type Theme } from '@/stores/ui-store'
 import { useAuthStore } from '@/stores/auth-store'
-import type { Theme } from '@/stores/ui-store'
 
 interface ThemeOption {
   id: Theme
@@ -81,7 +80,6 @@ export function ThemeToggle() {
     }
   }, [open])
 
-  const isDark = DARK_THEMES.has(theme)
   const current = THEME_OPTIONS.find((t) => t.id === theme) ?? THEME_OPTIONS[0]
 
   function handleThemeChange(id: Theme) {
@@ -132,7 +130,7 @@ export function ThemeToggle() {
         <div
           role="menu"
           aria-label="Tema seç"
-          className="absolute right-0 top-[calc(100%+6px)] z-50 min-w-[170px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg"
+          className="absolute right-0 max-sm:left-0 max-sm:right-auto top-[calc(100%+6px)] z-50 min-w-[170px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] shadow-lg"
         >
           {THEME_OPTIONS.map((opt) => {
             const active = theme === opt.id

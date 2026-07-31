@@ -11,12 +11,12 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<Variant, string> = {
-  primary: 'btn-primary',
-  ghost: 'btn-ghost',
+  primary: 'btn-primary active:scale-[0.97]',
+  ghost: 'btn-ghost active:scale-[0.97]',
   danger:
-    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-white transition-all duration-200 bg-[var(--urgency)] hover:bg-[var(--urgency-light)] shadow-[0_4px_14px_var(--urgency-bg)]',
+    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-white transition-all duration-200 active:scale-[0.97] bg-[var(--urgency)] hover:bg-[var(--urgency-light)] shadow-[0_4px_14px_var(--urgency-bg)]',
   gold:
-    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-white transition-all duration-200 bg-gold-badge hover:brightness-110 shadow-[0_4px_14px_var(--reward-bg)]',
+    'inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-white transition-all duration-200 active:scale-[0.97] bg-gold-badge hover:brightness-110 shadow-[0_4px_14px_var(--reward-bg)]',
 }
 
 const sizeStyles = {

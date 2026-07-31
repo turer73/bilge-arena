@@ -73,6 +73,13 @@
   /* Aliases */
   --bg-secondary: var(--surface);
   --card-bg: var(--card);
+
+  /* RGB bileşenler — rgba(var(--focus-rgb), 0.4) ile kullanım için */
+  --focus-rgb: 37, 99, 235;
+  --reward-rgb: 217, 119, 6;
+  --growth-rgb: 5, 150, 105;
+  --wisdom-rgb: 124, 58, 237;
+  --urgency-rgb: 220, 38, 38;
 }
 
 /* Light Theme */
@@ -90,8 +97,8 @@
 
   /* Text */
   --text: #0F172A;
-  --text-sub: #475569;
-  --text-muted: #94A3B8;
+  --text-sub: #334155;
+  --text-muted: #64748B;
 
   /* Focus */
   --focus-dark: #1E40AF;
@@ -141,6 +148,13 @@
   /* Aliases */
   --bg-secondary: var(--surface);
   --card-bg: var(--card);
+
+  /* RGB bileşenler */
+  --focus-rgb: 29, 78, 216;
+  --reward-rgb: 180, 83, 9;
+  --growth-rgb: 4, 120, 87;
+  --wisdom-rgb: 109, 40, 217;
+  --urgency-rgb: 185, 28, 28;
 }
 
 /* ============================================================
@@ -184,6 +198,12 @@
   --urgency-bg: rgba(220, 38, 38, 0.12);
   --urgency-border: rgba(220, 38, 38, 0.3);
 
+  /* RGB bileşenler (semantic: tüm koyu temalarda aynı) */
+  --reward-rgb: 217, 119, 6;
+  --growth-rgb: 5, 150, 105;
+  --wisdom-rgb: 124, 58, 237;
+  --urgency-rgb: 220, 38, 38;
+
   --bg-secondary: var(--surface);
   --card-bg: var(--card);
 }
@@ -207,6 +227,7 @@
   --focus-glow: #0284C7;
   --focus-bg: rgba(2, 132, 199, 0.12);
   --focus-border: rgba(2, 132, 199, 0.3);
+  --focus-rgb: 2, 132, 199;
 }
 
 /* ── Orman (Kadim Orman — derin teal/yeşil) ── */
@@ -228,6 +249,7 @@
   --focus-glow: #0D9488;
   --focus-bg: rgba(13, 148, 136, 0.12);
   --focus-border: rgba(13, 148, 136, 0.3);
+  --focus-rgb: 13, 148, 136;
 }
 
 /* ── Günbatımı (Kızıl Günbatımı — turuncu/amber) ── */
@@ -249,6 +271,7 @@
   --focus-glow: #EA580C;
   --focus-bg: rgba(234, 88, 12, 0.12);
   --focus-border: rgba(234, 88, 12, 0.3);
+  --focus-rgb: 234, 88, 12;
 }
 
 /* ── Mor Gece (Derin Mor — indigo/violet) ── */
@@ -270,6 +293,7 @@
   --focus-glow: #6366F1;
   --focus-bg: rgba(99, 102, 241, 0.12);
   --focus-border: rgba(99, 102, 241, 0.3);
+  --focus-rgb: 99, 102, 241;
 }
 
 /* ============================================================
@@ -277,6 +301,10 @@
    ============================================================ */
 
 @layer base {
+  :root {
+    --navbar-h: 72px;
+  }
+
   * {
     border-color: var(--border);
   }
@@ -293,9 +321,15 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
   /* Theme transition */
   [data-theme] {
-    transition: background-color 200ms ease, color 200ms ease;
+    transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, box-shadow 250ms ease, outline-color 250ms ease;
   }
 
   /* Scrollbar — Template: 5px, blue thumb */
@@ -311,6 +345,14 @@
   ::-webkit-scrollbar-thumb {
     background: var(--focus);
     border-radius: 99px;
+  }
+
+  /* Firefox scrollbar */
+  @supports (scrollbar-color: auto) {
+    * {
+      scrollbar-color: var(--focus) var(--surface);
+      scrollbar-width: thin;
+    }
   }
 }
 
@@ -586,6 +628,18 @@
     background-size: 200% auto;
   }
 
+  /* Skeleton shimmer — daha yumuşak gradient */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--border-strong) 25%,
+      color-mix(in srgb, var(--border-strong) 85%, var(--focus-xl)) 50%,
+      var(--border-strong) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2.5s ease-in-out infinite;
+  }
+
   /* Gradient backgrounds */
   .bg-hero-gradient {
     background: linear-gradient(135deg, #0B1120 0%, #1E3A8A 100%);
@@ -597,6 +651,28 @@
 
   .bg-success-gradient {
     background: linear-gradient(135deg, #064E3B 0%, #059669 100%);
+  }
+
+  /* Form elements */
+  .input-field {
+    @apply w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text)]
+           placeholder:text-[var(--text-muted)]
+           transition-all duration-200;
+  }
+
+  .input-field:hover {
+    border-color: var(--border-strong);
+  }
+
+  .input-field:focus {
+    border-color: var(--focus);
+    box-shadow: 0 0 0 3px var(--focus-bg);
+    outline: none;
+  }
+
+  .input-field.error {
+    border-color: var(--urgency);
+    box-shadow: 0 0 0 3px var(--urgency-bg);
   }
 }
 

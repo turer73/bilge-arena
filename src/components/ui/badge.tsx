@@ -2,13 +2,21 @@ import { cn } from '@/lib/utils/cn'
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   color?: string // CSS variable key: focus, reward, growth, wisdom, urgency
+  size?: 'sm' | 'md'
+  icon?: React.ReactNode
 }
 
-export function Badge({ color = 'focus', className, children, ...props }: BadgeProps) {
+const sizeStyles: Record<string, string> = {
+  sm: 'px-2.5 py-0.5 text-[10px] gap-1',
+  md: 'px-3 py-1 text-xs gap-1.5',
+}
+
+export function Badge({ color = 'focus', size = 'md', icon, className, children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold',
+        'inline-flex items-center rounded-full font-bold',
+        sizeStyles[size],
         className
       )}
       style={{
@@ -18,6 +26,7 @@ export function Badge({ color = 'focus', className, children, ...props }: BadgeP
       }}
       {...props}
     >
+      {icon}
       {children}
     </span>
   )

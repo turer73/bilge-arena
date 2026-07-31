@@ -115,7 +115,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               {/* Konuşma balonu — sadece gerçek maskot varsa */}
               {hasMascot && (
                 <div
-                  className="animate-float [animation-delay:0.3s] mb-2 rounded-2xl border px-3 py-1.5 text-xs font-bold shadow-md
+                  className="animate-float will-change-transform [animation-delay:0.3s] mb-2 rounded-2xl border px-3 py-1.5 text-xs font-bold shadow-md
                     md:mb-3 md:rounded-3xl md:px-4 md:py-2 md:text-sm
                     lg:mb-4 lg:text-base"
                   style={{
@@ -203,7 +203,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               val="12🔥"
               label="Günlük Seri"
               color="var(--urgency-light)"
-              className="animate-float absolute hidden md:flex
+              className="animate-float will-change-transform absolute hidden md:flex
                 md:left-0 md:top-2
                 lg:top-5
                 xl:left-[-30px] xl:top-8
@@ -236,7 +236,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               val="Uzman"
               label="Seviye"
               color="var(--wisdom-light)"
-              className="animate-float absolute hidden md:flex
+              className="animate-float will-change-transform absolute hidden md:flex
                 md:bottom-2 md:right-0
                 lg:bottom-16
                 xl:bottom-24 xl:right-[-20px]
@@ -265,7 +265,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
           {/* ── Sol — Metin ── */}
           <div className="text-center lg:text-left">
             {/* Status badge */}
-            <div className="animate-fadeUp mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-1
+            <div className="animate-fadeUp will-change-[transform,opacity] mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-1
               md:mb-6 md:px-4 md:py-1.5
               xl:px-5 xl:py-2">
               <div className="h-1.5 w-1.5 rounded-full bg-[var(--growth)] shadow-[0_0_8px_var(--growth)]" />
@@ -275,7 +275,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
             </div>
 
             {/* Başlık */}
-            <h1 className="animate-fadeUp font-display text-4xl font-black leading-[1.1] tracking-tight [animation-delay:100ms]
+            <h1 className="animate-fadeUp will-change-[transform,opacity] font-display text-4xl font-black leading-[1.1] tracking-tight [animation-delay:100ms]
               md:text-5xl
               lg:text-[58px]
               xl:text-[68px]
@@ -288,7 +288,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
             </h1>
 
             {/* Alt metin */}
-            <p className="animate-fadeUp mx-auto mt-4 max-w-[380px] text-base leading-relaxed text-[var(--text-sub)] [animation-delay:200ms]
+            <p className="animate-fadeUp will-change-[transform,opacity] mx-auto mt-4 max-w-[380px] text-base leading-relaxed text-[var(--text-sub)] [animation-delay:200ms]
               md:mt-5 md:max-w-[460px] md:text-lg
               lg:mx-0
               xl:max-w-[520px] xl:text-xl
@@ -299,7 +299,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
             </p>
 
             {/* CTA butonları */}
-            <div className="animate-fadeUp mt-7 flex justify-center gap-3 [animation-delay:300ms]
+            <div className="animate-fadeUp will-change-[transform,opacity] mt-7 flex justify-center gap-3 [animation-delay:300ms]
               md:mt-9
               lg:justify-start">
               <Link href={ctaPrimary.href || '/arena'}>
@@ -317,7 +317,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
             </div>
 
             {/* Mini istatistikler */}
-            <div className="animate-fadeUp mt-8 flex justify-center gap-6 [animation-delay:400ms]
+            <div className="animate-fadeUp will-change-[transform,opacity] mt-8 flex justify-center gap-6 [animation-delay:400ms]
               md:mt-12 md:gap-8
               lg:justify-start
               xl:gap-12">

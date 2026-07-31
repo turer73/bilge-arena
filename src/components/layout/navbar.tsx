@@ -54,13 +54,13 @@ export function Navbar() {
 
   return (
     <nav
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+      className={`fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,border-color,box-shadow] duration-500 ${
         scrolled || mobileOpen
-          ? 'border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl'
-          : 'bg-transparent'
+          ? 'border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl shadow-sm'
+          : 'bg-transparent backdrop-blur-none border-transparent'
       }`}
     >
-      <div className="mx-auto flex h-[72px] max-w-[1200px] items-center justify-between px-6 lg:px-8">
+      <div className="mx-auto flex h-[var(--navbar-h)] max-w-[1200px] items-center justify-between px-6 lg:px-8">
         {/* Logo */}
         <Logo size={36} />
 
@@ -250,7 +250,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl md:hidden">
+        <div key="mobile-menu" className="animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl md:hidden">
           <div className="flex flex-col gap-1 px-6 py-4">
             {NAV_LINKS.map(({ href, label }) => (
               <Link

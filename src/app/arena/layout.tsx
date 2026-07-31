@@ -20,7 +20,7 @@ export default function ArenaLayout({
     <>
       <Navbar />
       {/* Mobilde alt tab-bar yuksekligi kadar bosluk birak ki icerik altta kalmasin */}
-      <main className="min-h-screen pt-16 pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0">
+      <main className="min-h-screen pt-[var(--navbar-h)] pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0">
         {children}
       </main>
       <ArenaAuxiliaries />

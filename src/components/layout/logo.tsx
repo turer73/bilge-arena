@@ -11,11 +11,28 @@ interface LogoProps {
 
 export function Logo({ size = 36, showText = true }: LogoProps) {
   const theme = useUIStore((s) => s.theme)
-  const src = DARK_THEMES.has(theme) ? '/logo/icon-dark.svg' : '/logo/icon-light.svg'
+  const isDark = DARK_THEMES.has(theme)
 
   return (
     <Link href="/" className="flex items-center gap-2.5">
-      <Image src={src} alt="Bilge Arena" width={size} height={size} priority />
+      {/* İki icon yan yana opacity geçişi — tema değişince flicker olmaz */}
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <Image
+          src="/logo/icon-dark.svg"
+          alt="Bilge Arena"
+          width={size}
+          height={size}
+          priority
+          className={`absolute inset-0 transition-opacity duration-300 ${isDark ? 'opacity-100' : 'opacity-0'}`}
+        />
+        <Image
+          src="/logo/icon-light.svg"
+          alt="Bilge Arena"
+          width={size}
+          height={size}
+          className={`absolute inset-0 transition-opacity duration-300 ${isDark ? 'opacity-0' : 'opacity-100'}`}
+        />
+      </div>
       {showText && (
         <div>
           <div
