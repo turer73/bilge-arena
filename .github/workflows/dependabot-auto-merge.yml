@@ -25,9 +25,19 @@ jobs:
           while true; do
             # Kendi job'umuzu (auto-merge) DISLA. Aksi halde kendi IN_PROGRESS
             # durumumuzu gorup kendimizi bekler, timeout'a kadar donup fail ederiz.
+            # "|| true" ZORUNLU: GitHub Actions run bloklari "bash -e" ile kosar
+            # ve "gh pr checks" basarisiz check varsa exit 8 doner. Onsuz script
+            # daha donguye girmeden oluyor -- "CI failed" satiri bile basilmiyor.
             CHECKS=$(gh pr checks "$PR_URL" --json name,state \
-              -q '[.[] | select(.name != "auto-merge") | .state] | join(" ")')
+              -q '[.[] | select(.name != "auto-merge") | .state] | join(" ")' || true)
             echo "checks: $CHECKS"
+
+            # Bos cikti = check listesi henuz olusmadi; merge etme, bekle.
+            if [ -z "$CHECKS" ]; then
+              echo "No checks reported yet, waiting 30s..."
+              sleep 30
+              continue
+            fi
 
             if echo "$CHECKS" | grep -qE "IN_PROGRESS|QUEUED|PENDING|EXPECTED"; then
               echo "CI still running, waiting 30s..."
