@@ -142,12 +142,21 @@ describe('question-content-guard', () => {
   })
 
   it('2026 YKS stil-referansi tum YKS-derslerinin promptuna girer', () => {
-    // Few-shot: 2026 gerçek-sınav stili tüm YKS derslerine eklenir (mat/fen 149-soru
+    // Few-shot: 2026 gerçek-sınav stili tüm YKS derslerine eklenir (mat/fen 481-soru
     // katalog analiziyle ölçüldü; görsel-şekil boyutu hariç aktarılabilir).
     for (const game of ['turkce', 'sosyal', 'wordquest', 'matematik', 'fen']) {
       expect(buildSubjectPromptAppendix(game)).toContain('2026')
     }
     // Bilinmeyen oyun 2026-stil almaz
     expect(buildSubjectPromptAppendix('bilinmeyen')).not.toContain('2026')
+  })
+
+  it('mat/fen stil-referansi olculmus katalog istatistigine dayanir', () => {
+    // Regresyon: bu metinler tahmin/gözlem değil, database/analyze-catalog-style.py
+    // ölçümüdür. Örneklem büyüdüğünde metin de yeniden ölçülmeli.
+    for (const game of ['matematik', 'fen']) {
+      expect(buildSubjectPromptAppendix(game)).toContain('481-soru analizi')
+      expect(buildSubjectPromptAppendix(game)).not.toContain('görsel-pilot')
+    }
   })
 })
