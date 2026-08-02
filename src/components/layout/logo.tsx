@@ -14,12 +14,17 @@ export function Logo({ size = 36, showText = true }: LogoProps) {
   const isDark = DARK_THEMES.has(theme)
 
   return (
-    <Link href="/" className="flex items-center gap-2.5">
+    <Link
+      href="/"
+      aria-label="Bilge Arena ana sayfa"
+      className="flex items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-text)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+    >
       {/* İki icon yan yana opacity geçişi — tema değişince flicker olmaz */}
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <Image
           src="/logo/icon-dark.svg"
-          alt="Bilge Arena"
+          alt=""
+          aria-hidden="true"
           width={size}
           height={size}
           priority
@@ -27,7 +32,8 @@ export function Logo({ size = 36, showText = true }: LogoProps) {
         />
         <Image
           src="/logo/icon-light.svg"
-          alt="Bilge Arena"
+          alt=""
+          aria-hidden="true"
           width={size}
           height={size}
           className={`absolute inset-0 transition-opacity duration-300 ${isDark ? 'opacity-0' : 'opacity-100'}`}

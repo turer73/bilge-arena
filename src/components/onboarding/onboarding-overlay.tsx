@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { GAMES, GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { useAuthStore } from '@/stores/auth-store'
@@ -38,10 +38,45 @@ export function OnboardingOverlay() {
   const [grade, setGrade] = useState<string>('')
   const [selectedGame, setSelectedGame] = useState<GameSlug | null>(null)
   const [saving, setSaving] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const { profile } = useAuthStore()
+  const onboardingOpen = Boolean(profile && !profile.onboarding_completed)
+
+  useEffect(() => {
+    if (!onboardingOpen) return
+
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    dialogRef.current?.focus()
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus?.()
+    }
+  }, [onboardingOpen])
 
   if (!profile || profile.onboarding_completed) return null
+
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return
+
+    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+    if (!focusable?.length) return
+
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
 
   const handleComplete = async () => {
     setSaving(true)
@@ -85,7 +120,7 @@ export function OnboardingOverlay() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <h1 className="font-display text-3xl font-black tracking-tight">
+        <h1 id="onboarding-title" className="font-display text-3xl font-black tracking-tight">
           Bilge Arena&apos;ya<br />
           <span className="bg-gradient-to-r from-[#2563EB] to-[#7C3AED] bg-clip-text text-transparent">
             Hoş Geldin!
@@ -107,8 +142,8 @@ export function OnboardingOverlay() {
             className="flex flex-col items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2.5"
           >
             <span className="text-xl">{f.icon}</span>
-            <span className="text-[9px] font-bold">{f.label}</span>
-            <span className="text-[8px] text-[var(--text-muted)] leading-tight">{f.desc}</span>
+            <span className="text-xs font-bold">{f.label}</span>
+            <span className="text-xs leading-4 text-[var(--text-muted)]">{f.desc}</span>
           </motion.div>
         ))}
       </div>
@@ -127,7 +162,7 @@ export function OnboardingOverlay() {
         >
           ⚡
         </motion.span>
-        <span className="text-sm font-bold text-[var(--reward)]">
+        <span className="text-sm font-bold text-[var(--reward-text)]">
           Hazır mısın?
         </span>
       </motion.div>
@@ -137,7 +172,7 @@ export function OnboardingOverlay() {
         animate={{ opacity: 1 }}
         transition={{ delay: 1.8 }}
         onClick={() => setStep(1)}
-        className="rounded-xl bg-[var(--focus)] px-8 py-3 text-sm font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+        className="min-h-12 rounded-xl bg-[var(--focus)] px-8 py-3 text-sm font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
       >
         Başlayalım →
       </motion.button>
@@ -159,7 +194,7 @@ export function OnboardingOverlay() {
       >
         🎓
       </motion.div>
-      <h2 className="font-display text-2xl font-bold">Kaçıncı Sınıfsın?</h2>
+      <h2 id="onboarding-title" className="font-display text-2xl font-bold">Kaçıncı Sınıfsın?</h2>
       <p className="text-sm text-[var(--text-sub)]">Sana uygun zorlukta sorular hazırlayalım.</p>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
@@ -170,9 +205,10 @@ export function OnboardingOverlay() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
             onClick={() => setGrade(g.value)}
-            className={`rounded-xl border-2 px-4 py-3 text-sm font-bold transition-all ${
+            aria-pressed={grade === g.value}
+            className={`min-h-12 rounded-xl border-2 px-4 py-3 text-sm font-bold transition-all ${
               grade === g.value
-                ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus)] scale-105'
+                ? 'scale-105 border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus-text)]'
                 : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-sub)] hover:border-[var(--focus-light)]'
             }`}
           >
@@ -184,13 +220,13 @@ export function OnboardingOverlay() {
       <div className="flex gap-3">
         <button
           onClick={() => setStep(0)}
-          className="rounded-lg px-5 py-2 text-xs font-medium text-[var(--text-sub)] hover:bg-[var(--surface)]"
+          className="min-h-11 rounded-lg px-5 py-2 text-sm font-medium text-[var(--text-sub)] hover:bg-[var(--surface)]"
         >
           ← Geri
         </button>
         <button
           onClick={() => setStep(2)}
-          className="rounded-xl bg-[var(--focus)] px-6 py-2.5 text-sm font-bold text-white transition-transform hover:scale-105 active:scale-95"
+          className="min-h-11 rounded-xl bg-[var(--focus)] px-6 py-2.5 text-sm font-bold text-white transition-transform hover:scale-105 active:scale-95"
         >
           Devam →
         </button>
@@ -213,7 +249,7 @@ export function OnboardingOverlay() {
       >
         🎯
       </motion.div>
-      <h2 className="font-display text-2xl font-bold">Hangi Dersten Başlayalım?</h2>
+      <h2 id="onboarding-title" className="font-display text-2xl font-bold">Hangi Dersten Başlayalım?</h2>
       <p className="text-sm text-[var(--text-sub)]">İstediğini seç, sonra hepsini oynayabilirsin.</p>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
@@ -226,7 +262,8 @@ export function OnboardingOverlay() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.1, type: 'spring' }}
               onClick={() => setSelectedGame(slug)}
-              className={`flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition-all ${
+              aria-pressed={selectedGame === slug}
+              className={`flex min-h-24 flex-col items-center gap-2 rounded-2xl border-2 p-4 transition-all ${
                 selectedGame === slug
                   ? 'scale-105 shadow-lg'
                   : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--focus-light)]'
@@ -243,7 +280,7 @@ export function OnboardingOverlay() {
               >
                 {GAME_EMOJIS[slug]}
               </motion.span>
-              <span className="text-xs font-bold" style={selectedGame === slug ? { color: game.colorHex } : undefined}>
+              <span className="text-sm font-bold text-[var(--text)]">
                 {game.name}
               </span>
             </motion.button>
@@ -254,7 +291,7 @@ export function OnboardingOverlay() {
       <div className="flex gap-3">
         <button
           onClick={() => setStep(1)}
-          className="rounded-lg px-5 py-2 text-xs font-medium text-[var(--text-sub)] hover:bg-[var(--surface)]"
+          className="min-h-11 rounded-lg px-5 py-2 text-sm font-medium text-[var(--text-sub)] hover:bg-[var(--surface)]"
         >
           ← Geri
         </button>
@@ -263,7 +300,7 @@ export function OnboardingOverlay() {
           whileTap={{ scale: 0.95 }}
           onClick={handleComplete}
           disabled={saving}
-          className="rounded-xl bg-gradient-to-r from-[#2563EB] to-[#7C3AED] px-8 py-3 text-sm font-bold text-white shadow-lg disabled:opacity-50"
+          className="min-h-12 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#7C3AED] px-8 py-3 text-sm font-bold text-white shadow-lg disabled:opacity-50"
         >
           {saving ? 'Hazırlanıyor...' : 'Hemen Oyna! 🚀'}
         </motion.button>
@@ -272,7 +309,16 @@ export function OnboardingOverlay() {
   ]
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[var(--bg)]/80 px-4 py-8 backdrop-blur-md">
+    <MotionConfig reducedMotion="user">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
+      tabIndex={-1}
+      onKeyDown={handleDialogKeyDown}
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[var(--bg)]/80 px-4 py-8 outline-none backdrop-blur-md"
+    >
       {/* Progress dots */}
       <div className="absolute top-6 flex gap-2">
         {[0, 1, 2].map((i) => (
@@ -288,8 +334,9 @@ export function OnboardingOverlay() {
 
       {/* Atla */}
       <button
+        type="button"
         onClick={handleComplete}
-        className="absolute right-4 top-4 text-[10px] font-medium text-[var(--text-muted)] hover:text-[var(--text-sub)]"
+        className="absolute right-3 top-3 flex min-h-11 min-w-11 items-center justify-center rounded-lg px-3 text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--text-sub)]"
       >
         Atla
       </button>
@@ -298,5 +345,6 @@ export function OnboardingOverlay() {
         {steps[step]}
       </AnimatePresence>
     </div>
+    </MotionConfig>
   )
 }

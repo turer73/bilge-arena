@@ -23,11 +23,12 @@
   /* Text — T.text1, text2, text3 */
   --text: #EFF6FF;
   --text-sub: #94A3B8;
-  --text-muted: #475569;
+  --text-muted: #7C8AA5;
 
   /* Focus — T.blue (d, m, l, xl) */
   --focus-dark: #1D4ED8;
   --focus: #2563EB;
+  --focus-text: #60A5FA;
   --focus-light: #3B82F6;
   --focus-xl: #93C5FD;
   --focus-glow: #2563EB;
@@ -37,6 +38,7 @@
   /* Reward — T.gold (d, m, l, xl) */
   --reward-dark: #92400E;
   --reward: #D97706;
+  --reward-text: #F59E0B;
   --reward-light: #F59E0B;
   --reward-xl: #FCD34D;
   --reward-glow: #D97706;
@@ -46,6 +48,7 @@
   /* Growth — T.green (d, m, l, xl) */
   --growth-dark: #065F46;
   --growth: #059669;
+  --growth-text: #34D399;
   --growth-light: #10B981;
   --growth-xl: #6EE7B7;
   --growth-glow: #059669;
@@ -55,6 +58,7 @@
   /* Wisdom — T.purple (d, m, l, xl) */
   --wisdom-dark: #4C1D95;
   --wisdom: #7C3AED;
+  --wisdom-text: #A78BFA;
   --wisdom-light: #8B5CF6;
   --wisdom-xl: #C4B5FD;
   --wisdom-glow: #7C3AED;
@@ -64,6 +68,7 @@
   /* Urgency — T.red (d, m, l, xl) */
   --urgency-dark: #991B1B;
   --urgency: #DC2626;
+  --urgency-text: #F87171;
   --urgency-light: #EF4444;
   --urgency-xl: #FCA5A5;
   --urgency-glow: #DC2626;
@@ -103,6 +108,7 @@
   /* Focus */
   --focus-dark: #1E40AF;
   --focus: #1D4ED8;
+  --focus-text: #1D4ED8;
   --focus-light: #2563EB;
   --focus-xl: #93C5FD;
   --focus-glow: #1D4ED8;
@@ -112,6 +118,7 @@
   /* Reward */
   --reward-dark: #78350F;
   --reward: #B45309;
+  --reward-text: #92400E;
   --reward-light: #D97706;
   --reward-xl: #FCD34D;
   --reward-glow: #B45309;
@@ -121,6 +128,7 @@
   /* Growth */
   --growth-dark: #064E3B;
   --growth: #047857;
+  --growth-text: #047857;
   --growth-light: #059669;
   --growth-xl: #6EE7B7;
   --growth-glow: #047857;
@@ -130,6 +138,7 @@
   /* Wisdom */
   --wisdom-dark: #5B21B6;
   --wisdom: #6D28D9;
+  --wisdom-text: #6D28D9;
   --wisdom-light: #7C3AED;
   --wisdom-xl: #C4B5FD;
   --wisdom-glow: #6D28D9;
@@ -139,6 +148,7 @@
   /* Urgency */
   --urgency-dark: #7F1D1D;
   --urgency: #B91C1C;
+  --urgency-text: #B91C1C;
   --urgency-light: #DC2626;
   --urgency-xl: #FCA5A5;
   --urgency-glow: #B91C1C;
@@ -166,6 +176,10 @@
 [data-theme="orman"],
 [data-theme="gunbatimi"],
 [data-theme="mor-gece"] {
+  --reward-text: #F59E0B;
+  --growth-text: #34D399;
+  --wisdom-text: #A78BFA;
+  --urgency-text: #F87171;
   --reward-dark: #92400E;
   --reward: #D97706;
   --reward-light: #F59E0B;
@@ -219,9 +233,10 @@
   --border-glow: rgba(2, 132, 199, 0.4);
   --text: #E0F2FE;
   --text-sub: #93C5FD;
-  --text-muted: #3A7A9A;
+  --text-muted: #72A9C8;
   --focus-dark: #0369A1;
   --focus: #0284C7;
+  --focus-text: #38BDF8;
   --focus-light: #0EA5E9;
   --focus-xl: #7DD3FC;
   --focus-glow: #0284C7;
@@ -241,9 +256,10 @@
   --border-glow: rgba(13, 148, 136, 0.4);
   --text: #F0FDF4;
   --text-sub: #A7F3D0;
-  --text-muted: #4A7A60;
+  --text-muted: #7BA88E;
   --focus-dark: #0F766E;
   --focus: #0D9488;
+  --focus-text: #2DD4BF;
   --focus-light: #14B8A6;
   --focus-xl: #99F6E4;
   --focus-glow: #0D9488;
@@ -263,9 +279,10 @@
   --border-glow: rgba(234, 88, 12, 0.4);
   --text: #FFF7ED;
   --text-sub: #FDBA74;
-  --text-muted: #7A4B2A;
+  --text-muted: #C58A62;
   --focus-dark: #C2410C;
   --focus: #EA580C;
+  --focus-text: #FB923C;
   --focus-light: #F97316;
   --focus-xl: #FED7AA;
   --focus-glow: #EA580C;
@@ -285,9 +302,10 @@
   --border-glow: rgba(99, 102, 241, 0.4);
   --text: #F5F0FF;
   --text-sub: #C4B5FD;
-  --text-muted: #6B5BA0;
+  --text-muted: #9D8BC7;
   --focus-dark: #4F46E5;
   --focus: #6366F1;
+  --focus-text: #A5B4FC;
   --focus-light: #818CF8;
   --focus-xl: #C7D2FE;
   --focus-glow: #6366F1;

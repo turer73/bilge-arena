@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Zap, ArrowRight, Flame, Trophy, Star } from 'lucide-react'
+import { Zap, ArrowRight, Flame } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ArenaBackground } from './arena-background'
 import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
@@ -51,7 +51,7 @@ function FloatCard({
         <div className="text-xs font-extrabold leading-none text-[var(--text)] md:text-sm lg:text-lg xl:text-xl 2xl:text-2xl">
           {val}
         </div>
-        <div className="mt-0.5 text-[8px] text-[var(--text-muted)] md:text-[10px] lg:text-xs xl:text-sm 2xl:text-base">
+        <div className="mt-1 text-xs leading-tight text-[var(--text-muted)] xl:text-sm 2xl:text-base">
           {label}
         </div>
       </div>
@@ -183,8 +183,8 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               {/* Karakter adı — sadece gerçek maskot varsa */}
               {hasMascot && (
                 <div
-                  className="mt-2 rounded-full border px-3 py-1 text-[10px] font-extrabold tracking-widest
-                    md:mt-3 md:px-4 md:text-xs
+                  className="mt-2 rounded-full border px-3 py-1 text-xs font-extrabold tracking-widest
+                    md:mt-3 md:px-4
                     lg:text-sm"
                   style={{
                     background: 'var(--focus-bg)',
@@ -210,17 +210,6 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
                 2xl:left-[-50px] 2xl:top-12"
             />
             <FloatCard
-              icon={Trophy}
-              val="#3"
-              label="Liderboard"
-              color="var(--reward-light)"
-              className="animate-float [animation-delay:1s] absolute hidden md:flex
-                md:right-0 md:top-6
-                lg:top-10
-                xl:right-[-30px] xl:top-14
-                2xl:right-[-50px] 2xl:top-16"
-            />
-            <FloatCard
               icon={Zap}
               val="+30 XP"
               label="Doğru Cevap"
@@ -231,35 +220,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
                 xl:bottom-28 xl:left-[-40px]
                 2xl:bottom-36 2xl:left-[-60px]"
             />
-            <FloatCard
-              icon={Star}
-              val="Uzman"
-              label="Seviye"
-              color="var(--wisdom-light)"
-              className="animate-float will-change-transform absolute hidden md:flex
-                md:bottom-2 md:right-0
-                lg:bottom-16
-                xl:bottom-24 xl:right-[-20px]
-                2xl:bottom-32 2xl:right-[-40px]"
-            />
 
-            {/* Yüzde kartı — mobilde gizli, lg+ görünür */}
-            <div
-              className="animate-float [animation-delay:1.5s] absolute hidden lg:block
-                lg:right-[-40px] lg:top-1/2 lg:w-40 lg:rounded-xl lg:p-4
-                xl:right-[-60px] xl:w-48 xl:p-5
-                2xl:right-[-80px] 2xl:w-52
-                rounded-lg border border-[var(--growth-border)] bg-[var(--card)] p-3"
-              style={{ boxShadow: '0 8px 30px var(--growth-bg)' }}
-            >
-              <div className="text-[10px] text-[var(--text-muted)] lg:text-xs xl:text-sm">Doğruluk Oranı</div>
-              <div className="mt-1 text-2xl font-extrabold text-[var(--growth-light)] lg:text-3xl xl:text-4xl">
-                %84
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface)] xl:h-2">
-                <div className="xp-bar-fill h-full" style={{ width: '84%' }} />
-              </div>
-            </div>
           </div>
 
           {/* ── Sol — Metin ── */}
@@ -269,7 +230,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
               md:mb-6 md:px-4 md:py-1.5
               xl:px-5 xl:py-2">
               <div className="h-1.5 w-1.5 rounded-full bg-[var(--growth)] shadow-[0_0_8px_var(--growth)]" />
-              <span className="text-xs font-semibold text-[var(--focus-light)] md:text-sm xl:text-base">
+              <span className="text-xs font-semibold text-[var(--focus-text)] md:text-sm xl:text-base">
                 {badge}
               </span>
             </div>
@@ -299,17 +260,18 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
             </p>
 
             {/* CTA butonları */}
-            <div className="animate-fadeUp will-change-[transform,opacity] mt-7 flex justify-center gap-3 [animation-delay:300ms]
+            <div className="animate-fadeUp will-change-[transform,opacity] mt-7 flex flex-col justify-center gap-3 [animation-delay:300ms]
+              sm:flex-row
               md:mt-9
               lg:justify-start">
-              <Link href={ctaPrimary.href || '/arena'}>
-                <Button variant="primary" size="lg">
+              <Link href={ctaPrimary.href || '/arena'} className="w-full sm:w-auto">
+                <Button variant="primary" size="lg" className="min-h-12 w-full whitespace-nowrap sm:w-auto">
                   <Zap size={18} />
                   {ctaPrimary.text || 'Ücretsiz Başla'}
                 </Button>
               </Link>
-              <Link href={ctaSecondary.href || '/nasil-calisir'}>
-                <Button variant="ghost" size="lg">
+              <Link href={ctaSecondary.href || '/nasil-calisir'} className="w-full sm:w-auto">
+                <Button variant="ghost" size="lg" className="min-h-12 w-full whitespace-nowrap sm:w-auto">
                   {ctaSecondary.text || 'Nasıl Çalışır?'}
                   <ArrowRight size={16} />
                 </Button>
