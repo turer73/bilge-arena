@@ -13,12 +13,7 @@ permissions:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
-    # GECICI TEST KOSULU: fix/auto-merge-api-checks dali da kabul ediliyor ki
-    # check-okuma canli dogrulanabilsin. Merge adimi yine SADECE dependabot'ta
-    # calisir. Bu satirdaki "|| ..." kismi dogrulama bitince kaldirilacak.
-    if: >-
-      github.event.pull_request.user.login == 'dependabot[bot]' ||
-      github.event.pull_request.head.ref == 'fix/auto-merge-api-checks'
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
       # NOT: "gh pr review --approve" adimi bilerek YOK -- GITHUB_TOKEN ile PR
       # onaylamak GitHub tarafinda yasak ("GitHub Actions is not permitted to
