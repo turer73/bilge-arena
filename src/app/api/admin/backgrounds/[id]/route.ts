@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
+import type { TablesUpdate } from '@/types/database.generated'
 
 const idSchema = z.string().uuid()
 
@@ -63,7 +64,7 @@ export async function PATCH(
   const d = parsed.data
 
   // snake_case kolon eşlemesi (yalnız gönderilen alanlar)
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  const updates: TablesUpdate<'background_assets'> = { updated_at: new Date().toISOString() }
   if (d.name !== undefined) updates.name = d.name
   if (d.description !== undefined) updates.description = d.description
   if (d.category !== undefined) updates.category = d.category

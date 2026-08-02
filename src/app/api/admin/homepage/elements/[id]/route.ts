@@ -5,6 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { homepageElementUpdateSchema } from '@/lib/validations/schemas'
+import type { Json, TablesUpdate } from '@/types/database.generated'
 
 /**
  * PATCH /api/admin/homepage/elements/[id]
@@ -35,7 +36,14 @@ export async function PATCH(
         { status: 400 }
       )
     }
-    const updates: Record<string, unknown> = parsed.data
+    // styles JSONB sutunu; zod'dan Record<string, unknown> cikiyor. Deger
+    // request.json() ciktisindan geldigi icin Json-uyumlulugu tanim geregi
+    // saglaniyor, daraltma guvenli.
+    const { styles, ...rest } = parsed.data
+    const updates: TablesUpdate<'homepage_elements'> = {
+      ...rest,
+      ...(styles !== undefined ? { styles: styles as Json } : {}),
+    }
 
     const svc = createServiceRoleClient()
     const { error } = await svc

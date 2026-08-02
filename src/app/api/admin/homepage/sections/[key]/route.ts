@@ -60,7 +60,10 @@ export async function PATCH(
     const { error } = await supabase
       .from('homepage_sections')
       .update({ config, updated_by: admin.id })
-      .eq('key', key)
+      // Sutun adi 'section_key' (migration 017). Eskiden 'key' yaziyordu ve
+      // PostgREST "column does not exist" dondugu icin bu endpoint hic
+      // calismiyordu; supabase-js tip sikilastirmasi ortaya cikardi.
+      .eq('section_key', key)
 
     if (error) {
       return dbErrorResponse('admin/homepage/sections/[key]', error)

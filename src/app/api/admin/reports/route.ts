@@ -5,6 +5,7 @@ import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { NextResponse, type NextRequest } from 'next/server'
 import { reportUpdateSchema } from '@/lib/validations/schemas'
 import { dbErrorResponse } from '@/lib/utils/api-error'
+import type { TablesUpdate } from '@/types/database.generated'
 
 type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'rejected'
 
@@ -61,7 +62,7 @@ export async function PATCH(request: NextRequest) {
   }
   const { reportId, status, adminNote } = parsed.data
 
-  const updates: Record<string, unknown> = { status }
+  const updates: TablesUpdate<'error_reports'> = { status }
   if (adminNote !== undefined) updates.admin_note = adminNote
   // P2e fix (Codex PR#242): resolved'a girerken resolver yaz; resolved'DAN ÇIKARKEN
   // (reviewed/rejected/pending) eski resolver'ı TEMİZLE — yoksa status≠resolved iken
