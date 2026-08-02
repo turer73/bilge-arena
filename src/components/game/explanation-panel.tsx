@@ -103,7 +103,7 @@ export function ExplanationPanel({
   return (
     <div
       ref={rootRef}
-      className="animate-fadeUp rounded-xl border-[1.5px] px-[18px] py-[14px]"
+      className="animate-fadeUp rounded-xl border-[1.5px] p-4 md:p-5"
       style={{
         // Opak taban (transparent DEĞİL) — video zeminde panel saydam kalıp
         // açıklama metnini okunmaz yapıyordu; tinti card-bg ile karıştır.
@@ -117,8 +117,11 @@ export function ExplanationPanel({
     >
       {/* Sonuc mesaji */}
       <div
-        className="mb-1.5 text-[13px] font-bold"
-        style={{ color: isCorrect ? 'var(--growth)' : 'var(--urgency)' }}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="mb-2 text-base font-bold leading-6"
+        style={{ color: isCorrect ? 'var(--growth-text)' : 'var(--urgency-text)' }}
       >
         {isCorrect
           ? '✓ Doğru! Mükemmel 🎉'
@@ -129,30 +132,32 @@ export function ExplanationPanel({
 
       {/* Aciklama */}
       {solution && (
-        <div className="mb-2.5 text-xs leading-relaxed text-[var(--text-sub)]">
+        <div className="mb-4 text-[15px] leading-7 text-[var(--text-sub)]">
           📌 {solution}
         </div>
       )}
 
       {/* Alt bar: butonlar + sosyal ikonlar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
+          type="button"
           onClick={onNext}
-          className="rounded-lg bg-[var(--focus)] px-[18px] py-2 text-xs font-bold tracking-wider text-white transition-colors hover:bg-[var(--focus-light)]"
+          className="min-h-11 w-full rounded-xl bg-[var(--focus)] px-5 py-2.5 text-sm font-bold tracking-wide text-white transition-colors hover:bg-[var(--focus-light)] sm:w-auto"
         >
           {isLastQuestion ? 'Sonucu Gor →' : 'Sonraki Soru →'}
         </button>
 
         {/* Aksiyon ikonları */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Konu Anlatımı — belirgin buton */}
           <button
+            type="button"
             onClick={handleTopicExplain}
-            className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all hover:scale-[1.03] active:scale-95"
+            className="flex min-h-11 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-95"
             style={{
               borderColor: 'color-mix(in srgb, var(--wisdom) 35%, transparent)',
               background: 'color-mix(in srgb, var(--wisdom) 10%, transparent)',
-              color: 'var(--wisdom)',
+              color: 'var(--wisdom-text)',
             }}
             title="Bu konunun anlatımını Bilge Asistan'dan iste"
           >
@@ -164,8 +169,9 @@ export function ExplanationPanel({
 
           {onOpenComments && (
             <button
+              type="button"
               onClick={onOpenComments}
-              className="flex items-center gap-1 rounded-lg px-2 py-1 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--focus)]"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--focus-text)]"
               aria-label="Yorumlar"
             >
               <span className="text-xs">💬</span>
@@ -174,8 +180,9 @@ export function ExplanationPanel({
 
           {onOpenReport && (
             <button
+              type="button"
               onClick={onOpenReport}
-              className="flex items-center gap-1 rounded-lg px-2 py-1 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--reward)]"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--reward-text)]"
               aria-label="Hata bildir"
             >
               <span className="text-xs">🐛</span>

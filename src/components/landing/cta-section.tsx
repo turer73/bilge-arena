@@ -7,9 +7,9 @@ interface CTASectionProps {
 }
 
 export function CTASection({ config }: CTASectionProps = {}) {
-  const label = (config?.label as string) || 'Ücretsiz \u2022 Reklamsız \u2022 Sınırsız'
+  const label = (config?.label as string) || 'Ücretsiz başla \u2022 Kredi kartı gerekmez'
   const heading = (config?.heading as string) || undefined
-  const subheading = (config?.subheading as string) || 'Bugün başla. Kredi kartı yok, süre sınırı yok. Sadece öğren ve kazan.'
+  const subheading = (config?.subheading as string) || 'Bugün başla. Kredi kartı yok. Kendi hızında öğren ve kazan.'
   const buttonText = (config?.button_text as string) || 'Şimdi Başla — Ücretsiz'
   const trustItems = (config?.trust_items as string[]) || ['Kayıt ücretsiz', 'Kredi kartı gerekmez', 'İstediğin zaman bırak']
   return (
@@ -53,32 +53,32 @@ export function CTASection({ config }: CTASectionProps = {}) {
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link href="/arena">
+          <Link href="/arena" className="w-full sm:w-auto">
             <Button
               variant="primary"
               size="lg"
-              className="animate-glow-pulse text-lg"
+              className="min-h-12 w-full whitespace-nowrap text-base sm:w-auto sm:text-lg"
             >
               <Zap size={20} />
               {buttonText}
             </Button>
           </Link>
-          <Link href="/oda">
-            <Button variant="ghost" size="lg" className="text-lg">
+          <Link href="/oda" className="w-full sm:w-auto">
+            <Button variant="ghost" size="lg" className="min-h-12 w-full whitespace-nowrap text-base sm:w-auto sm:text-lg">
               <Users size={18} />
               Arkadaşlarınla Oda Kur
             </Button>
           </Link>
         </div>
 
-        <div className="mt-5 flex justify-center gap-6">
+        <div className="mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2 px-4">
           {trustItems.map(
             (t) => (
               <div
                 key={t}
                 className="flex items-center gap-1.5 text-sm text-[var(--text-muted)]"
               >
-                <Check size={14} className="text-[var(--growth)]" />
+                <Check size={14} className="text-[var(--growth-text)]" />
                 {t}
               </div>
             )
