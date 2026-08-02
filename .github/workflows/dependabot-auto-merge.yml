@@ -2,9 +2,7 @@ name: Dependabot Auto-Merge
 
 on:
   pull_request:
-    types: [opened, synchronize]
-  check_suite:
-    types: [completed]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -15,21 +13,26 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
-      - name: Approve PR
-        run: gh pr review "$PR_URL" --approve -b "dependabot auto-approve"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Wait for CI then auto-merge
+      # NOT: "gh pr review --approve" adimi bilerek YOK.
+      # GITHUB_TOKEN ile PR onaylamak GitHub tarafinda yasak:
+      #   "GitHub Actions is not permitted to approve pull requests"
+      # Eski surumde ilk adim buydu ve HER dependabot PR'inda job'i oldurdu
+      # (#296-305'in hepsindeki auto-merge hatasinin kok nedeni). master'da
+      # zorunlu-review kurali da yok, yani o onay zaten gereksizdi.
+      - name: Wait for CI then merge
         run: |
           echo "Waiting for CI checks to complete..."
           while true; do
-            CHECKS=$(gh pr checks "$PR_URL" --json state -q '[.[].state]')
-            if echo "$CHECKS" | grep -q "IN_PROGRESS\|QUEUED\|PENDING"; then
+            # Kendi job'umuzu (auto-merge) DISLA. Aksi halde kendi IN_PROGRESS
+            # durumumuzu gorup kendimizi bekler, timeout'a kadar donup fail ederiz.
+            CHECKS=$(gh pr checks "$PR_URL" --json name,state \
+              -q '[.[] | select(.name != "auto-merge") | .state] | join(" ")')
+            echo "checks: $CHECKS"
+
+            if echo "$CHECKS" | grep -qE "IN_PROGRESS|QUEUED|PENDING|EXPECTED"; then
               echo "CI still running, waiting 30s..."
               sleep 30
-            elif echo "$CHECKS" | grep -q "FAILURE\|ERROR\|CANCELLED"; then
+            elif echo "$CHECKS" | grep -qE "FAILURE|ERROR|CANCELLED|TIMED_OUT|ACTION_REQUIRED"; then
               echo "CI failed, not merging"
               exit 1
             else
@@ -37,8 +40,10 @@ jobs:
               break
             fi
           done
-          gh pr merge --auto --squash "$PR_URL"
+          # --auto KULLANILMIYOR: repoda allow_auto_merge kapali, o bayrakla komut
+          # hata verir. CI'yi yukarida zaten bekledigimiz icin dogrudan merge.
+          gh pr merge --squash --delete-branch "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        timeout-minutes: 15
+        timeout-minutes: 30
