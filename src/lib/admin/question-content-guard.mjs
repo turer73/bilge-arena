@@ -1,7 +1,7 @@
 export const SUBJECT_GOLDEN_RULES = {
-  matematik: 'MATEMATİK KURALI: Salt işlem sorma. Soruları günlük hayatla ilişkilendir, senaryo kur (yeni nesil). Şıkları tam sayı veya sade kesir ver.',
+  matematik: 'MATEMATİK KURALI: Mekanik işlem tekrarı sorma — çözüm en az bir akıl yürütme adımı gerektirsin. Bunu günlük-hayat senaryosuyla da doğrudan cebir/geometri kurgusuyla da yapabilirsin; senaryo ZORUNLU DEĞİL (gerçek sınavda yalnızca ~%17). Şıkları tam sayı veya sade kesir ver.',
   turkce: 'TÜRKÇE KURALI: Metinler en az 40-50 kelime uzunluğunda, edebi, felsefi veya bilimsel bir dille yazılmış olmalı. Çeldirici şıklar metnin içindeki kelimeleri kullanarak öğrenciyi düşürmeli.',
-  fen: 'FEN KURALI: Sadece ezber sorma. Deney kurguları, grafik yorumlama veya I, II, III öncüllü mantık soruları kurgula.',
+  fen: 'FEN KURALI: Sadece ezber sorma. Deney düzeneği veya olgu anlatımı üzerinden akıl yürütme iste; gerçek sınavın en yaygın biçimi I, II, III öncüllü yargı sorularıdır (~%40). Grafik/şekil ÇİZDİRME — platform metin-tabanlı; sayısal veriyi soru gövdesinde sözel olarak ver.',
   sosyal: 'SOSYAL KURALI: Tarihte neden-sonuç, Coğrafyada harita veya bölge özellikleri üzerinden ezber dışı mantık yürütme iste.',
   wordquest: 'İNGİLİZCE KURALI: Verilen CEFR seviyesine kesinlikle uy. Cümleler doğal İngilizce ile yazılmalı, gramer hataları veya yapay çeviri kokan ifadeler olmamalı.',
 }
