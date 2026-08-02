@@ -1,0 +1,114 @@
+/**
+ * Bilge Arena: OnboardingOverlay — modal erişilebilirlik davranışı.
+ *
+ * Bu dosya PR#308 review'ünde açılan boşluğu kapatır: focus trap, body scroll
+ * lock, focus restore ve Escape ile çıkış eklendi ama hiçbiri test edilmiyordu
+ * (codecov patch %0). Burada test edilen şey görsel değil, SÖZLEŞME:
+ * aria-modal="true" diyen bir diyalog klavye kullanıcısını hapsetmemeli.
+ */
+
+import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+
+const auth = vi.hoisted(() => ({
+  value: { profile: null as Record<string, unknown> | null },
+}))
+vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => auth.value }))
+
+const refreshMock = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/hooks/use-auth', () => ({ refreshProfile: refreshMock }))
+
+const routerMock = vi.hoisted(() => ({ push: vi.fn() }))
+vi.mock('next/navigation', () => ({ useRouter: () => routerMock }))
+
+vi.mock('@/components/ui/bilge-chan', () => ({
+  BilgeChan: () => <div data-testid="bilge-chan" />,
+}))
+
+import { OnboardingOverlay } from '../onboarding-overlay'
+
+const fetchMock = vi.fn()
+global.fetch = fetchMock as unknown as typeof fetch
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  document.body.style.overflow = ''
+  auth.value.profile = { onboarding_completed: false }
+  fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ success: true }) })
+})
+
+describe('OnboardingOverlay', () => {
+  test('onboarding tamamlanmissa hicbir sey render etmez', () => {
+    auth.value.profile = { onboarding_completed: true }
+    const { container } = render(<OnboardingOverlay />)
+    expect(container).toBeEmptyDOMElement()
+    // Kapaliyken sayfa kaydirmasina dokunmamali
+    expect(document.body.style.overflow).toBe('')
+  })
+
+  test('acikken modal sozlesmesini kurar: rol, baslik bagi, scroll lock', () => {
+    render(<OnboardingOverlay />)
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(document.body.style.overflow).toBe('hidden')
+
+    // aria-labelledby AKTIF adimin basligini gostermeli (adim 0)
+    const labelledBy = dialog.getAttribute('aria-labelledby')
+    expect(labelledBy).toBeTruthy()
+    expect(document.getElementById(labelledBy as string)).toHaveTextContent(/Ho.* Geldin/)
+  })
+
+  test('adim degisince baslik bagi yeni adima kayar (duplicate id regresyonu)', () => {
+    render(<OnboardingOverlay />)
+    const dialog = screen.getByRole('dialog')
+    const firstId = dialog.getAttribute('aria-labelledby')
+
+    fireEvent.click(screen.getByRole('button', { name: /Ba.*layal.*m/ }))
+
+    const secondId = dialog.getAttribute('aria-labelledby')
+    expect(secondId).not.toBe(firstId)
+    expect(document.getElementById(secondId as string)).toHaveTextContent(/S.*n.*fs.*n/)
+    // Ayni id iki kez DOM'da olmamali
+    expect(document.querySelectorAll(`#${CSS.escape(secondId as string)}`)).toHaveLength(1)
+  })
+
+  test('Escape modali kapatir (Atla ile ayni yol)', async () => {
+    render(<OnboardingOverlay />)
+
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/profile', expect.objectContaining({
+      method: 'PATCH',
+    })))
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
+    expect(body.onboarding_completed).toBe(true)
+  })
+
+  test('Tab odagi diyalog icinde tutar (focus trap)', () => {
+    render(<OnboardingOverlay />)
+    const dialog = screen.getByRole('dialog')
+
+    const focusable = dialog.querySelectorAll<HTMLElement>('button:not([disabled])')
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    expect(first).not.toBe(last)
+
+    last.focus()
+    fireEvent.keyDown(dialog, { key: 'Tab' })
+    expect(document.activeElement).toBe(first)
+
+    first.focus()
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
+  })
+
+  test('kapaninca sayfa kaydirmasini geri verir', () => {
+    const { unmount } = render(<OnboardingOverlay />)
+    expect(document.body.style.overflow).toBe('hidden')
+
+    unmount()
+
+    expect(document.body.style.overflow).toBe('')
+  })
+})
