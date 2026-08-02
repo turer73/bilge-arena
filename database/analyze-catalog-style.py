@@ -7,6 +7,12 @@ Amaç: REF_2026_STYLE (src/lib/admin/question-content-guard.mjs) metinlerini
 tahmine değil ÖLÇÜME dayandırmak. Çıktı jeneriktir (birebir soru yok) —
 telif-güvenli, prompt'a girmeye uygun.
 
+Kapsam: yalnız ÜNİVERSİTE katalogu (TYT + AYT, 5 şıklı). LGS (lise_metin_*.json)
+bilerek DIŞARIDA — 4 şıklı ayrı sınav, cevap-dağılımı/şık istatistiği karışır.
+
+Katalog büyüdüğünde bu script yeniden koşulmalı ve REF_2026_STYLE metinleri
+güncellenmelidir; metindeki "N-soru analizi" etiketi örneklemi belgeler.
+
   python database/analyze-catalog-style.py [ders ...]     # varsayılan: matematik fen
 """
 import io, json, os, re, sys
