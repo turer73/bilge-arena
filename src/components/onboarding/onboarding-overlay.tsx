@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { GAMES, GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
@@ -39,6 +39,10 @@ export function OnboardingOverlay() {
   const [selectedGame, setSelectedGame] = useState<GameSlug | null>(null)
   const [saving, setSaving] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
+  // Her adım kendi başlık id'sini alır: AnimatePresence geçişinde iki adım kısa
+  // süre birlikte DOM'da kalıyor, tek sabit id duplicate olup aria-labelledby'yi
+  // belirsizleştiriyordu.
+  const titleBaseId = useId()
   const router = useRouter()
   const { profile } = useAuthStore()
   const onboardingOpen = Boolean(profile && !profile.onboarding_completed)
@@ -60,6 +64,13 @@ export function OnboardingOverlay() {
   if (!profile || profile.onboarding_completed) return null
 
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    // Escape = "Atla" ile aynı çıkış yolu. Klavyeyle çıkış olmadan
+    // aria-modal="true" sözünü tutmuyordu.
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      if (!saving) void handleComplete()
+      return
+    }
     if (event.key !== 'Tab') return
 
     const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
@@ -120,7 +131,7 @@ export function OnboardingOverlay() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
-        <h1 id="onboarding-title" className="font-display text-3xl font-black tracking-tight">
+        <h1 id={`${titleBaseId}-0`} className="font-display text-3xl font-black tracking-tight">
           Bilge Arena&apos;ya<br />
           <span className="bg-gradient-to-r from-[#2563EB] to-[#7C3AED] bg-clip-text text-transparent">
             Hoş Geldin!
@@ -194,7 +205,7 @@ export function OnboardingOverlay() {
       >
         🎓
       </motion.div>
-      <h2 id="onboarding-title" className="font-display text-2xl font-bold">Kaçıncı Sınıfsın?</h2>
+      <h2 id={`${titleBaseId}-1`} className="font-display text-2xl font-bold">Kaçıncı Sınıfsın?</h2>
       <p className="text-sm text-[var(--text-sub)]">Sana uygun zorlukta sorular hazırlayalım.</p>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
@@ -249,7 +260,7 @@ export function OnboardingOverlay() {
       >
         🎯
       </motion.div>
-      <h2 id="onboarding-title" className="font-display text-2xl font-bold">Hangi Dersten Başlayalım?</h2>
+      <h2 id={`${titleBaseId}-2`} className="font-display text-2xl font-bold">Hangi Dersten Başlayalım?</h2>
       <p className="text-sm text-[var(--text-sub)]">İstediğini seç, sonra hepsini oynayabilirsin.</p>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
@@ -314,7 +325,7 @@ export function OnboardingOverlay() {
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="onboarding-title"
+      aria-labelledby={`${titleBaseId}-${step}`}
       tabIndex={-1}
       onKeyDown={handleDialogKeyDown}
       className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[var(--bg)]/80 px-4 py-8 outline-none backdrop-blur-md"

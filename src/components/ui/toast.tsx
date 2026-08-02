@@ -18,7 +18,11 @@ export function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-1/2 z-[100] flex -translate-x-1/2 flex-col-reverse gap-2 md:bottom-auto md:left-auto md:right-5 md:top-5 md:translate-x-0 md:flex-col">
+    // pointer-events-none: mobilde toast, lobinin sticky "Başlat" barıyla aynı alt
+    // bölgeye düşüyor (toast 5rem, sticky bar 4.75rem + ~90px yükseklik) ve z-[100]
+    // olduğu için tıklamayı yutuyordu. Kapsayıcı tıklamayı geçirir, kartlar kendi
+    // üstünde yakalar.
+    <div className="pointer-events-none fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-1/2 z-[100] flex -translate-x-1/2 flex-col-reverse gap-2 md:bottom-auto md:left-auto md:right-5 md:top-5 md:translate-x-0 md:flex-col">
       {toasts.map((t) => {
         const style = TYPE_STYLES[t.type]
         return (

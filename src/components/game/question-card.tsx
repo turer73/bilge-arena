@@ -1,5 +1,6 @@
 'use client'
 
+import { useId } from 'react'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { GAMES } from '@/lib/constants/games'
 import { renderRichText } from '@/lib/utils/rich-text'
@@ -39,10 +40,13 @@ export function QuestionCard({
   const game = GAMES[question.game]
   const emoji = GAME_EMOJI[question.game] || '📋'
   const progress = ((currentIndex + 1) / totalQuestions) * 100
+  // Sabit id yerine useId: aynı sayfada birden fazla kart render edilirse
+  // (ör. düello) duplicate id oluşup aria-labelledby belirsizleşiyordu.
+  const questionTextId = useId()
 
   return (
     <section
-      aria-labelledby="question-text"
+      aria-labelledby={questionTextId}
       className="relative animate-fadeUp overflow-hidden rounded-xl border-[1.5px] border-[var(--border)] bg-gradient-to-br from-[var(--card-bg)] to-[var(--bg-secondary)] p-4 md:rounded-2xl md:p-5 xl:p-6 2xl:p-7"
     >
       {/* Glow */}
@@ -123,7 +127,7 @@ export function QuestionCard({
       )}
 
       {/* Soru metni — <u>...</u> markup'i altcizili render edilir (alti cizili sozcuk sorulari) */}
-      <h2 id="question-text" className="text-base font-semibold leading-7 md:text-[17px] xl:text-lg 2xl:text-xl">
+      <h2 id={questionTextId} className="text-base font-semibold leading-7 md:text-[17px] xl:text-lg 2xl:text-xl">
         {renderRichText(question.content.question || question.content.sentence)}
       </h2>
 
