@@ -7,7 +7,7 @@ import { GAME_SLUGS } from '@/lib/constants/games'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { parseQuestionContent, toPublicQuestionContent } from '@/lib/utils/question-public'
-import type { Database, Json } from '@/types/database.generated'
+import type { Database, Json, TablesUpdate } from '@/types/database.generated'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // anon: IP bazli (50 öğrenci × ~2 req/dk)
 const questionsAuthLimiter = createRateLimiter('questions-auth', 240, 60_000) // authed: user-id bazli (daha yüksek ama sınırsız değil)
@@ -162,9 +162,12 @@ export async function PATCH(request: NextRequest) {
     'difficulty', 'level_tag', 'is_active', 'is_boss',
     'source', 'exam_ref', 'external_id',
   ]
+  // Object.fromEntries index-signature'li tip uretiyor; supabase-js'in update
+  // tipi bunu reddediyor. ALLOWED_FIELDS zaten sutun adlarini sinirladigi icin
+  // daraltma guvenli.
   const safeUpdates = Object.fromEntries(
     Object.entries(updates ?? {}).filter(([k]) => ALLOWED_FIELDS.includes(k))
-  )
+  ) as TablesUpdate<'questions'>
 
   if (Object.keys(safeUpdates).length === 0) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })

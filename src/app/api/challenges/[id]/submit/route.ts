@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { challengeSubmitSchema } from '@/lib/validations/schemas'
 import { dbErrorResponse } from '@/lib/utils/api-error'
+import type { TablesUpdate } from '@/types/database.generated'
 
 const submitLimiter = createRateLimiter('challenge-submit', 5, 60_000)
 
@@ -106,8 +107,12 @@ export async function POST(
   // non-atomik yola dus — merge-before-migration'da duello kirilmasin. Migration
   // gelince atomik yol otomatik devreye girer.
   if (rpcError && (rpcError.code === 'PGRST202' || rpcError.code === '42883')) {
-    const updateField = isChallenger ? 'challenger_score' : 'opponent_score'
-    await svc.from('challenges').update({ [updateField]: score }).eq('id', id)
+    // Computed key ({ [updateField]: score }) TS'te index-signature'a genisliyor
+    // ve supabase-js'in update tipi bunu reddediyor; iki ayri literal daha dar.
+    const scorePatch: TablesUpdate<'challenges'> = isChallenger
+      ? { challenger_score: score }
+      : { opponent_score: score }
+    await svc.from('challenges').update(scorePatch).eq('id', id)
 
     const otherScore = isChallenger ? challenge.opponent_score : challenge.challenger_score
     if (otherScore) {

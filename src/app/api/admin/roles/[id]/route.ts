@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { roleUpdateSchema } from '@/lib/validations/schemas'
+import type { TablesUpdate } from '@/types/database.generated'
 
 /**
  * PATCH /api/admin/roles/[id]
@@ -42,7 +43,7 @@ export async function PATCH(
 
     // Rol bilgilerini güncelle
     const svc = createServiceRoleClient()
-    const updates: Record<string, unknown> = {}
+    const updates: TablesUpdate<'roles'> = {}
     if (name !== undefined) updates.name = name
     if (description !== undefined) updates.description = description
 

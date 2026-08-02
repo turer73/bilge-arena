@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { profileUpdateSchema } from '@/lib/validations/schemas'
+import type { TablesUpdate } from '@/types/database.generated'
 
 // Cift kalkan rate limit (Madde 9 #5 pattern — topic-strengths icin de ayni):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -118,7 +119,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { username, display_name, city, grade, exam_type, onboarding_completed, preferred_theme, is_discoverable } = parsed.data
-  const updates: Record<string, unknown> = {}
+  const updates: TablesUpdate<'profiles'> = {}
   if (username) updates.username = username
   if (display_name !== undefined) updates.display_name = display_name || null
   if (city !== undefined) updates.city = city || null

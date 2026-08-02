@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
+import type { TablesUpdate } from '@/types/database.generated'
 
 const ipLimiter = createRateLimiter('profile-sync-ip', 30, 60_000)
 const userLimiter = createRateLimiter('profile-sync-user', 5, 60_000)
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
   const googleAvatar = (meta.avatar_url || meta.picture) as string | null | undefined
   const hasCustomAvatar = profile.avatar_url?.includes('/avatars/') ?? false
 
-  const updates: Record<string, string> = {}
+  const updates: TablesUpdate<'profiles'> = {}
   if (googleName && googleName !== profile.display_name) {
     updates.display_name = googleName
   }

@@ -256,14 +256,17 @@ export const homepageElementCreateSchema = z.object({
   styles: z.record(z.string(), z.unknown()).nullish(),
 })
 
+// NOT: nullish() yalnizca DB'de gercekten NULL kabul eden sutunlarda.
+// alt_text/placement/alignment/size/styles migration 017'de NOT NULL DEFAULT'lu;
+// bunlara null gecirmek zod'dan geciyor ama PostgREST'te patlıyordu (23502).
 export const homepageElementUpdateSchema = z.object({
-  content: z.unknown().optional(),
+  content: z.string().nullish(),
   image_url: z.string().url().max(500).nullish(),
-  alt_text: z.string().max(200).nullish(),
-  placement: z.string().max(50).nullish(),
-  alignment: z.string().max(50).nullish(),
-  size: z.string().max(50).nullish(),
-  styles: z.record(z.string(), z.unknown()).nullish(),
+  alt_text: z.string().max(200).optional(),
+  placement: z.string().max(50).optional(),
+  alignment: z.string().max(50).optional(),
+  size: z.string().max(50).optional(),
+  styles: z.record(z.string(), z.unknown()).optional(),
   sort_order: z.number().int().min(0).max(10000).optional(),
   is_published: z.boolean().optional(),
 }).refine(data => Object.keys(data).length > 0, {
