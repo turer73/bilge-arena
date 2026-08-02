@@ -7,59 +7,87 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  # checks + statuses ZORUNLU: "gh pr checks" hem check-run'lari (GitHub Actions
-  # job'lari) hem commit status'lerini (Vercel) okur. Bu ikisi olmadan komut HATA
-  # VERMEZ, sessizce BOS liste doner -- dongu sonsuza kadar "No checks reported"
-  # basip timeout'a kadar bekler. #297'de 30 dakika boyunca tam bunu yasadi.
   checks: read
   statuses: read
 
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    # GECICI TEST KOSULU: fix/auto-merge-api-checks dali da kabul ediliyor ki
+    # check-okuma canli dogrulanabilsin. Merge adimi yine SADECE dependabot'ta
+    # calisir. Bu satirdaki "|| ..." kismi dogrulama bitince kaldirilacak.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' ||
+      github.event.pull_request.head.ref == 'fix/auto-merge-api-checks'
     steps:
-      # NOT: "gh pr review --approve" adimi bilerek YOK.
-      # GITHUB_TOKEN ile PR onaylamak GitHub tarafinda yasak:
-      #   "GitHub Actions is not permitted to approve pull requests"
-      # Eski surumde ilk adim buydu ve HER dependabot PR'inda job'i oldurdu
-      # (#296-305'in hepsindeki auto-merge hatasinin kok nedeni). master'da
-      # zorunlu-review kurali da yok, yani o onay zaten gereksizdi.
+      # NOT: "gh pr review --approve" adimi bilerek YOK -- GITHUB_TOKEN ile PR
+      # onaylamak GitHub tarafinda yasak ("GitHub Actions is not permitted to
+      # approve pull requests"). master'da zorunlu-review kurali da yok.
       - name: Wait for CI then merge
         run: |
-          echo "Waiting for CI checks to complete..."
-          while true; do
-            # Kendi job'umuzu (auto-merge) DISLA. Aksi halde kendi IN_PROGRESS
-            # durumumuzu gorup kendimizi bekler, timeout'a kadar donup fail ederiz.
-            # "|| true" ZORUNLU: GitHub Actions run bloklari "bash -e" ile kosar
-            # ve "gh pr checks" basarisiz check varsa exit 8 doner. Onsuz script
-            # daha donguye girmeden oluyor -- "CI failed" satiri bile basilmiyor.
-            CHECKS=$(gh pr checks "$PR_URL" --json name,state \
-              -q '[.[] | select(.name != "auto-merge") | .state] | join(" ")' || true)
-            echo "checks: $CHECKS"
+          echo "::group::Teshis - baglam"
+          echo "repo:      $REPO"
+          echo "head sha:  $HEAD_SHA"
+          echo "pr:        $PR_URL"
+          echo "actor:     $PR_ACTOR"
+          echo "::endgroup::"
 
-            # Bos cikti = check listesi henuz olusmadi; merge etme, bekle.
-            if [ -z "$CHECKS" ]; then
-              echo "No checks reported yet, waiting 30s..."
+          # "gh pr checks" KULLANILMIYOR: dependabot baglaminda sessizce BOS liste
+          # donuyordu (hata basmadan), dongu 30 dk "No checks reported" deyip
+          # timeout'a dusuyordu. Ayni komut lokal PAT ile sorunsuz calisiyor.
+          # Bunun yerine iki kaynak DOGRUDAN sorgulaniyor:
+          #   - check-runs   -> GitHub Actions job'lari (Lint/Test/Build/E2E...)
+          #   - commit status-> Vercel, Codecov gibi harici entegrasyonlar
+          collect_states() {
+            # check-runs: tamamlanmamislar icin .status, tamamlananlar icin .conclusion
+            gh api "repos/$REPO/commits/$HEAD_SHA/check-runs" --paginate \
+              -q '.check_runs[] | select(.name != "auto-merge") | (.conclusion // .status)' 2>/dev/null || true
+            # commit statuses: pending/success/failure/error
+            gh api "repos/$REPO/commits/$HEAD_SHA/status" \
+              -q '.statuses[].state' 2>/dev/null || true
+          }
+
+          for attempt in $(seq 1 60); do
+            STATES=$(collect_states | tr '\n' ' ')
+            COUNT=$(echo "$STATES" | wc -w)
+            echo "[$attempt] durum sayisi=$COUNT | $STATES"
+
+            # Hic durum yoksa check'ler henuz kaydedilmemis demektir -- merge ETME.
+            if [ "$COUNT" -eq 0 ]; then
+              echo "Henuz check yok, 30s bekleniyor..."
               sleep 30
               continue
             fi
 
-            if echo "$CHECKS" | grep -qE "IN_PROGRESS|QUEUED|PENDING|EXPECTED"; then
-              echo "CI still running, waiting 30s..."
+            if echo "$STATES" | grep -qiE "\b(queued|in_progress|pending|waiting|requested)\b"; then
+              echo "CI devam ediyor, 30s bekleniyor..."
               sleep 30
-            elif echo "$CHECKS" | grep -qE "FAILURE|ERROR|CANCELLED|TIMED_OUT|ACTION_REQUIRED"; then
-              echo "CI failed, not merging"
-              exit 1
-            else
-              echo "All CI passed, merging..."
-              break
+              continue
             fi
+
+            if echo "$STATES" | grep -qiE "\b(failure|cancelled|timed_out|action_required|error|stale)\b"; then
+              echo "CI basarisiz -> merge EDILMIYOR"
+              exit 1
+            fi
+
+            echo "Tum CI gecti."
+            break
           done
+
+          if [ "$PR_ACTOR" != "dependabot[bot]" ]; then
+            echo "Bu bir dogrulama kosusu (actor=$PR_ACTOR); merge adimi ATLANIYOR."
+            exit 0
+          fi
+
           # --auto KULLANILMIYOR: repoda allow_auto_merge kapali, o bayrakla komut
-          # hata verir. CI'yi yukarida zaten bekledigimiz icin dogrudan merge.
+          # hata verir. CI zaten yukarida beklendi.
           gh pr merge --squash --delete-branch "$PR_URL"
         env:
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_ACTOR: ${{ github.event.pull_request.user.login }}
+          # secrets.GITHUB_TOKEN yerine github.token: dependabot baglaminda
+          # secrets ayri bir kasadan gelir ve davranis farkli olabiliyor.
+          GITHUB_TOKEN: ${{ github.token }}
         timeout-minutes: 30
