@@ -159,4 +159,15 @@ describe('question-content-guard', () => {
       expect(buildSubjectPromptAppendix(game)).not.toContain('görsel-pilot')
     }
   })
+
+  it('altin kural ile olculmus stil-referansi ayni promptta celismez', () => {
+    // ALTIN KURAL ve REF_2026_STYLE ayni prompt'a birlikte giriyor; ikisi zit
+    // sey soylerse uretici hangisine uyacagini bilemez.
+    // mat: olcum senaryoyu %17 (azinlik) buldu -> kural senaryoyu ZORUNLU tutmamali.
+    const mat = buildSubjectPromptAppendix('matematik')
+    expect(mat).not.toMatch(/senaryo kur/i)
+    // fen: platform metin-tabanli, sekil/grafik uretemiyor -> kural grafik ISTEMEMELI.
+    const fen = buildSubjectPromptAppendix('fen')
+    expect(fen).not.toMatch(/grafik yorumlama/i)
+  })
 })
