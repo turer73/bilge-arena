@@ -7,6 +7,12 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # checks + statuses ZORUNLU: "gh pr checks" hem check-run'lari (GitHub Actions
+  # job'lari) hem commit status'lerini (Vercel) okur. Bu ikisi olmadan komut HATA
+  # VERMEZ, sessizce BOS liste doner -- dongu sonsuza kadar "No checks reported"
+  # basip timeout'a kadar bekler. #297'de 30 dakika boyunca tam bunu yasadi.
+  checks: read
+  statuses: read
 
 jobs:
   auto-merge:
