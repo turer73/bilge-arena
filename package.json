@@ -82,6 +82,6 @@
     "serialize-javascript": "7.0.5",
     "postcss": "$postcss",
     "@babel/core": "^7.29.6",
-    "undici": "^7.28.0"
+    "undici": "^7.29.0"
   }
 }
