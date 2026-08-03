@@ -51,7 +51,7 @@
     "ts-fsrs": "5.4.1",
     "web-push": "^3.6.7",
     "zod": "^4.4.3",
-    "zustand": "^4.5.5"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.12",
