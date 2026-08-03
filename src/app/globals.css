@@ -1,6 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind 4: uc ayri @tailwind direktifi yerine tek @import.
+   @config, mevcut tailwind.config.ts'i (content globs + theme.extend) v4'e
+   bagliyor -- config'i CSS-first @theme'e tasimak ayri bir is, bu PR'in
+   kapsami yalnizca surum yukseltmesini calisir hale getirmek. */
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 /* ============================================================
    Bilge Arena — Design System CSS Variables
