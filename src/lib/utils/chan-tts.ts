@@ -1,31 +1,34 @@
 'use client'
 
 import { getSoundEnabled } from '@/lib/utils/sounds'
+import { CHAN_AUDIO_MAP } from '@/lib/constants/chan-audio-map'
 
 /**
- * Bilge Chan TTS — Web Speech API ile companion repliklerini seslendirir.
+ * Bilge Chan TTS — sabit replikler için önceden üretilmiş FreyaTTS MP3'ü
+ * (bkz. CHAN_AUDIO_MAP), dinamik metinler (Gemini ipucu/çözüm) için tarayıcı
+ * speechSynthesis fallback'i.
  *
  * Bilinçli tercihler:
- * - Tarayıcı yerleşik speechSynthesis: sıfır maliyet, ek bağımlılık yok.
- *   YEREL ses tercih edilir (localService) — Codex P2: bazı tarayıcı/OS
- *   kombinasyonlarında yalnızca UZAK ses servisi bulunur; o durumda metin
- *   tarayıcının ses sağlayıcısına gider (mutlak "cihaz dışına çıkmaz"
- *   garantisi YOK, best-effort). Faz-3'te build-time statik MP3'e geçilirse
- *   bu modül tek değişim noktası.
+ * - Statik MP3 varsa ONA öncelik: sabit tutarlı ses, sıfır çalışma-zamanı maliyeti.
+ * - speechSynthesis fallback (dinamik metin veya statik yüklenemezse): YEREL ses
+ *   tercih edilir (localService) — Codex P2: bazı tarayıcı/OS kombinasyonlarında
+ *   yalnızca UZAK ses servisi bulunur; o durumda metin tarayıcının ses sağlayıcısına
+ *   gider (mutlak "cihaz dışına çıkmaz" garantisi YOK, best-effort).
  * - Global ses tercihi (SoundToggle / bilge-sound) kapalıysa konuşmaz.
  * - Desteklenmeyen tarayıcıda sessizce no-op (buton zaten render edilmez).
  */
+
+let currentAudio: HTMLAudioElement | null = null
 
 export function isTtsSupported(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
 }
 
-/** Önceki konuşmayı iptal edip metni Türkçe seslendirir. */
-export function speakChanLine(text: string): boolean {
-  if (!isTtsSupported() || !getSoundEnabled()) return false
-  const cleaned = text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim()
-  if (!cleaned) return false
+function cleanLine(text: string): string {
+  return text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim()
+}
 
+function speakWithSynthesis(cleaned: string): void {
   const synth = window.speechSynthesis
   synth.cancel()
 
@@ -41,10 +44,37 @@ export function speakChanLine(text: string): boolean {
   if (trVoice) utterance.voice = trVoice
 
   synth.speak(utterance)
+}
+
+/** Önceki konuşmayı/oynatmayı iptal edip metni seslendirir (statik MP3 öncelikli). */
+export function speakChanLine(text: string): boolean {
+  if (!isTtsSupported() || !getSoundEnabled()) return false
+  const cleaned = cleanLine(text)
+  if (!cleaned) return false
+
+  stopChanSpeech()
+
+  const audioKey = CHAN_AUDIO_MAP[cleaned]
+  if (audioKey) {
+    const audio = new Audio(`/audio/chan/${audioKey}.mp3`)
+    currentAudio = audio
+    audio.play().catch(() => {
+      // Statik dosya oynatılamadı (ağ/format) — tarayıcı sesine düş.
+      if (currentAudio === audio) currentAudio = null
+      speakWithSynthesis(cleaned)
+    })
+    return true
+  }
+
+  speakWithSynthesis(cleaned)
   return true
 }
 
-/** Aktif konuşmayı durdur (soru değişimi/unmount temizliği). */
+/** Aktif konuşmayı/oynatmayı durdur (soru değişimi/unmount temizliği). */
 export function stopChanSpeech(): void {
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio = null
+  }
   if (isTtsSupported()) window.speechSynthesis.cancel()
 }

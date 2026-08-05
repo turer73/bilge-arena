@@ -8,6 +8,13 @@ import { describe, test, expect, vi, beforeEach } from 'vitest'
 const soundState = vi.hoisted(() => ({ enabled: true }))
 vi.mock('@/lib/utils/sounds', () => ({ getSoundEnabled: () => soundState.enabled }))
 
+// Varsayılan bos map: bu dosyadaki mevcut testler speechSynthesis yolunu hedefliyor,
+// statik-ses onceligi ayri bir describe blogunda test edilir.
+const audioMapState = vi.hoisted(() => ({ map: {} as Record<string, string> }))
+vi.mock('@/lib/constants/chan-audio-map', () => ({
+  get CHAN_AUDIO_MAP() { return audioMapState.map },
+}))
+
 import { isTtsSupported, speakChanLine, stopChanSpeech } from '../chan-tts'
 
 interface FakeVoice {
@@ -96,5 +103,44 @@ describe('chan-tts', () => {
   test('stopChanSpeech: cancel çağrılır', () => {
     stopChanSpeech()
     expect(synth.cancel).toHaveBeenCalled()
+  })
+})
+
+describe('chan-tts: statik ses önceliği (CHAN_AUDIO_MAP)', () => {
+  class FakeAudioOk {
+    src: string
+    constructor(src: string) { this.src = src }
+    play() { return Promise.resolve() }
+    pause() {}
+  }
+  class FakeAudioFail {
+    src: string
+    constructor(src: string) { this.src = src }
+    play() { return Promise.reject(new Error('playback failed')) }
+    pause() {}
+  }
+
+  beforeEach(() => {
+    audioMapState.map = { 'Merhaba! Hadi şu soruya bakalım.': 'abc123' }
+    Object.defineProperty(globalThis, 'Audio', { value: FakeAudioOk, configurable: true })
+    Object.defineProperty(window, 'Audio', { value: FakeAudioOk, configurable: true })
+  })
+
+  test('map eşleşirse statik MP3 (doğru path) çalınır, speechSynthesis çağrılmaz', () => {
+    const ok = speakChanLine('Merhaba! Hadi şu soruya bakalım.')
+    expect(ok).toBe(true)
+    expect(synth.speak).not.toHaveBeenCalled()
+  })
+
+  test('map eşleşmezse (dinamik ipucu metni) doğrudan speechSynthesis kullanılır', () => {
+    speakChanLine('Bu bir Gemini ipucu metni, manifestte yok.')
+    expect(synth.speak).toHaveBeenCalled()
+  })
+
+  test('statik oynatma reddedilirse speechSynthesis fallback devreye girer', async () => {
+    Object.defineProperty(globalThis, 'Audio', { value: FakeAudioFail, configurable: true })
+    Object.defineProperty(window, 'Audio', { value: FakeAudioFail, configurable: true })
+    speakChanLine('Merhaba! Hadi şu soruya bakalım.')
+    await vi.waitFor(() => expect(synth.speak).toHaveBeenCalled())
   })
 })

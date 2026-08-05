@@ -1,0 +1,181 @@
+{
+  "voice": "freya-tts-small-v1",
+  "params": "euler32-default",
+  "generatedAt": "2026-08-05T19:45:19.127Z",
+  "entries": [
+    {
+      "key": "fadaae0d6dd26882222086d9",
+      "category": "greet",
+      "letter": null,
+      "text": "Merhaba! Hadi şu soruya bakalım."
+    },
+    {
+      "key": "761a0156dd37c1c55ec1ace7",
+      "category": "greet",
+      "letter": null,
+      "text": "Selam! Bu soruyu birlikte çözelim."
+    },
+    {
+      "key": "c470f680ce7b111061a996de",
+      "category": "greet",
+      "letter": null,
+      "text": "Hazır mısın? Başlayalım!"
+    },
+    {
+      "key": "f224826139c90c263903e24f",
+      "category": "offer",
+      "letter": null,
+      "text": "Bu soru hakkında yardıma ihtiyacın var galiba?"
+    },
+    {
+      "key": "68836c16169ebfc5cb56d316",
+      "category": "check",
+      "letter": null,
+      "text": "Peki şimdi konuyu anlayabildin mi?"
+    },
+    {
+      "key": "f21250754271e64eeebadb8a",
+      "category": "encourage",
+      "letter": null,
+      "text": "Tamam, sana güveniyorum!"
+    },
+    {
+      "key": "d5fa9e735f94d5fab3ee7d10",
+      "category": "encourage",
+      "letter": null,
+      "text": "Kendin dene, yapabilirsin!"
+    },
+    {
+      "key": "a3cb579d704e6eadf76fa6fa",
+      "category": "encourage",
+      "letter": null,
+      "text": "Olur, sen bilirsin. Başaracaksın!"
+    },
+    {
+      "key": "538849170256a684054b991f",
+      "category": "easyJoke",
+      "letter": null,
+      "text": "Bu kadar kolay soru mu olur ya!"
+    },
+    {
+      "key": "10bc0c4f9556d35b954de37c",
+      "category": "easyJoke",
+      "letter": null,
+      "text": "Hadi ama, bunu uykunda bile çözersin!"
+    },
+    {
+      "key": "ac59a2fd55f2d047a736f47d",
+      "category": "correct",
+      "letter": "A",
+      "text": "Evet, cevap A!"
+    },
+    {
+      "key": "9206bc58c63c5062414b25cb",
+      "category": "correct",
+      "letter": "B",
+      "text": "Evet, cevap B!"
+    },
+    {
+      "key": "d5c207368ae24133e11d6ccc",
+      "category": "correct",
+      "letter": "C",
+      "text": "Evet, cevap C!"
+    },
+    {
+      "key": "fa53dca5d78d269488c26760",
+      "category": "correct",
+      "letter": "D",
+      "text": "Evet, cevap D!"
+    },
+    {
+      "key": "0f5e24b4703fd42d98e25994",
+      "category": "correct",
+      "letter": "E",
+      "text": "Evet, cevap E!"
+    },
+    {
+      "key": "227c0a6d96edbe768e07a8f6",
+      "category": "correct",
+      "letter": "A",
+      "text": "Harika, A doğru!"
+    },
+    {
+      "key": "5d61c9288cd083b2e8718da5",
+      "category": "correct",
+      "letter": "B",
+      "text": "Harika, B doğru!"
+    },
+    {
+      "key": "5791403d578897e6ff5dd920",
+      "category": "correct",
+      "letter": "C",
+      "text": "Harika, C doğru!"
+    },
+    {
+      "key": "df605b8f08c1f14d7ef8c9cd",
+      "category": "correct",
+      "letter": "D",
+      "text": "Harika, D doğru!"
+    },
+    {
+      "key": "cf6eda7ad5b17d5fe9aee6e8",
+      "category": "correct",
+      "letter": "E",
+      "text": "Harika, E doğru!"
+    },
+    {
+      "key": "c7802eb343d5b0d822cd0e79",
+      "category": "correct",
+      "letter": null,
+      "text": "Süper bildin!"
+    },
+    {
+      "key": "9f4c64b989d4ad0f616e7266",
+      "category": "wrong",
+      "letter": null,
+      "text": "Olmadı ama pes etme!"
+    },
+    {
+      "key": "844409ab4393e37db9f52a02",
+      "category": "wrong",
+      "letter": "A",
+      "text": "Doğrusu A idi, takılma."
+    },
+    {
+      "key": "000b871cd75f83452b78133c",
+      "category": "wrong",
+      "letter": "B",
+      "text": "Doğrusu B idi, takılma."
+    },
+    {
+      "key": "ab272210b817cf2369dac56e",
+      "category": "wrong",
+      "letter": "C",
+      "text": "Doğrusu C idi, takılma."
+    },
+    {
+      "key": "aa99ddab5d86e9d09ee00357",
+      "category": "wrong",
+      "letter": "D",
+      "text": "Doğrusu D idi, takılma."
+    },
+    {
+      "key": "d1e39e4d6a12d30e43c890b0",
+      "category": "wrong",
+      "letter": "E",
+      "text": "Doğrusu E idi, takılma."
+    },
+    {
+      "key": "ddf9d4be11c834069c729322",
+      "category": "wrong",
+      "letter": null,
+      "text": "Sorun değil, bir sonrakine!"
+    },
+    {
+      "key": "3b7ff78412ccbaf1c0505b48",
+      "category": "timeout",
+      "letter": null,
+      "text": "Süre doldu; sıradaki soruda yeniden dene."
+    }
+  ]
+}
