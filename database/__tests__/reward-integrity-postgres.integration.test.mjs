@@ -25,7 +25,7 @@ const migrationsDir = join(__dirname, '..', 'migrations');
 const migrationSql = (filename) => readFileSync(join(migrationsDir, filename), 'utf8');
 
 const fixtureSql = `
-  CREATE EXTENSION IF NOT EXISTS pgcrypto;
+  CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
   DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;

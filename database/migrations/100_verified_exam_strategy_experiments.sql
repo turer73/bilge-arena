@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS public.verified_exam_attempt_items (
 );
 
 CREATE TABLE IF NOT EXISTS public.controlled_experiments (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   experiment_key text NOT NULL CHECK (char_length(trim(experiment_key)) BETWEEN 1 AND 80),
   revision integer NOT NULL CHECK (revision >= 1),
   game text NOT NULL CHECK (game IN ('matematik','turkce','fen','sosyal')),
@@ -72,7 +72,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS controlled_experiments_one_active_scope_idx
   ON public.controlled_experiments(game, mode) WHERE status = 'active';
 
 CREATE TABLE IF NOT EXISTS public.controlled_experiment_assignments (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   experiment_id uuid NOT NULL REFERENCES public.controlled_experiments(id) ON DELETE RESTRICT,
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   variant text NOT NULL CHECK (variant IN ('control','treatment')),
@@ -88,7 +88,7 @@ ALTER TABLE public.verified_exam_attempts
   REFERENCES public.controlled_experiment_assignments(id) ON DELETE RESTRICT;
 
 CREATE TABLE IF NOT EXISTS public.verified_exam_strategy_events (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   attempt_id uuid NOT NULL REFERENCES public.verified_exam_attempts(attempt_id) ON DELETE CASCADE,
   client_event_id uuid NOT NULL,
   sequence integer NOT NULL CHECK (sequence >= 1),
@@ -109,7 +109,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS verified_exam_strategy_events_slot_idx
   WHERE position IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS public.controlled_experiment_exposures (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   assignment_id uuid NOT NULL REFERENCES public.controlled_experiment_assignments(id) ON DELETE RESTRICT,
   attempt_id uuid NOT NULL REFERENCES public.verified_exam_attempts(attempt_id) ON DELETE CASCADE,
   session_id uuid NOT NULL REFERENCES public.game_sessions(id) ON DELETE RESTRICT,
@@ -197,7 +197,7 @@ BEGIN
     OR cardinality(ARRAY(SELECT DISTINCT unnest(v_ids))) <> 40 THEN RAISE EXCEPTION 'items must be unique and contiguous' USING ERRCODE='22023'; END IF;
   IF (SELECT count(*) FROM public.questions q WHERE q.id = ANY(v_ids) AND q.is_active AND q.game = p_game
       AND q.exam_ref IS NOT DISTINCT FROM p_exam_ref) <> 40 THEN RAISE EXCEPTION 'questions do not match verified exam scope' USING ERRCODE='22023'; END IF;
-  v_hash := encode(public.digest(array_to_string(v_ids, ','), 'sha256'), 'hex');
+  v_hash := encode(extensions.digest(array_to_string(v_ids, ','), 'sha256'), 'hex');
   PERFORM pg_advisory_xact_lock(hashtextextended(p_user_id::text || ':' || p_game || ':' || coalesce(p_exam_ref,''), 100));
   SELECT * INTO v_existing FROM public.verified_exam_attempts WHERE user_id=p_user_id AND issue_request_id=p_request_id FOR UPDATE;
   IF FOUND THEN
@@ -245,7 +245,7 @@ BEGIN
   IF v_exam.status <> 'issued' OR v_attempt.expires_at <= v_now THEN RAISE EXCEPTION 'verified exam is not startable' USING ERRCODE='22023'; END IF;
   SELECT * INTO v_exp FROM public.controlled_experiments WHERE game=v_exam.game AND mode='deneme' AND status='active' FOR UPDATE;
   IF FOUND THEN
-    v_bucket := (('x'||substr(encode(public.digest(v_exp.experiment_key||':'||v_exp.revision||':'||v_exp.allocation_salt||':'||p_user_id::text,'sha256'),'hex'),1,4))::bit(16)::integer % 10000);
+    v_bucket := (('x'||substr(encode(extensions.digest(v_exp.experiment_key||':'||v_exp.revision||':'||v_exp.allocation_salt||':'||p_user_id::text,'sha256'),'hex'),1,4))::bit(16)::integer % 10000);
     INSERT INTO public.controlled_experiment_assignments(experiment_id,user_id,variant,bucket) VALUES(v_exp.id,p_user_id,CASE WHEN v_bucket < v_exp.allocation_bps THEN 'treatment' ELSE 'control' END,v_bucket)
     ON CONFLICT (experiment_id,user_id) DO NOTHING;
     SELECT * INTO v_assign FROM public.controlled_experiment_assignments WHERE experiment_id=v_exp.id AND user_id=p_user_id;
@@ -352,7 +352,7 @@ REVOKE ALL ON FUNCTION public.issue_verified_exam_attempt(uuid,text,text,text,js
 GRANT EXECUTE ON FUNCTION public.issue_verified_exam_attempt(uuid,text,text,text,jsonb,integer,integer,uuid), public.start_verified_exam_attempt(uuid,uuid,uuid), public.record_verified_exam_strategy_event(uuid,uuid,uuid,integer,smallint,text), public.finalize_verified_exam_attempt(uuid,uuid,uuid), public.get_verified_exam_strategy_evidence(uuid,uuid), public.record_verified_exam_exposure(uuid,uuid,text,integer,uuid) TO service_role;
 
 INSERT INTO public.controlled_experiments(experiment_key,revision,game,mode,status,allocation_bps,allocation_salt)
-VALUES ('mock_strategy_analysis_v1',1,'matematik','deneme','draft',0,encode(public.gen_random_bytes(32),'hex'))
+VALUES ('mock_strategy_analysis_v1',1,'matematik','deneme','draft',0,encode(extensions.gen_random_bytes(32),'hex'))
 ON CONFLICT (experiment_key,revision) DO NOTHING;
 
 COMMIT;

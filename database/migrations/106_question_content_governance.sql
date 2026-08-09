@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.content_governance_requests (
 );
 
 CREATE TABLE IF NOT EXISTS public.question_content_revisions (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
   revision_no integer NOT NULL CHECK (revision_no >= 1),
   base_revision_id uuid REFERENCES public.question_content_revisions(id) ON DELETE RESTRICT,
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS public.question_revision_approvals (
 );
 
 CREATE TABLE IF NOT EXISTS public.question_governance_events (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
   revision_id uuid REFERENCES public.question_content_revisions(id) ON DELETE RESTRICT,
   actor_id uuid REFERENCES public.profiles(id) ON DELETE RESTRICT,
@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS public.question_governance_events (
 );
 
 CREATE TABLE IF NOT EXISTS public.question_appeals (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   legacy_error_report_id uuid UNIQUE REFERENCES public.error_reports(id) ON DELETE RESTRICT,
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
@@ -141,7 +141,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS question_appeals_one_open_owner_question
   ON public.question_appeals(user_id,question_id) WHERE status IN ('submitted','acknowledged','investigating');
 
 CREATE TABLE IF NOT EXISTS public.question_appeal_events (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   appeal_id uuid NOT NULL REFERENCES public.question_appeals(id) ON DELETE RESTRICT,
   actor_id uuid REFERENCES public.profiles(id) ON DELETE RESTRICT,
   event_type text NOT NULL CHECK (event_type IN ('submitted','acknowledged','investigating','resolved','rejected','withdrawn','sla_breached')),
@@ -179,7 +179,7 @@ BEGIN
 END $fk$;
 
 CREATE TABLE IF NOT EXISTS public.question_error_incidents (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
   erroneous_revision_id uuid NOT NULL REFERENCES public.question_content_revisions(id) ON DELETE RESTRICT,
   corrected_revision_id uuid NOT NULL REFERENCES public.question_content_revisions(id) ON DELETE RESTRICT,
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS public.question_error_incidents (
 );
 
 CREATE TABLE IF NOT EXISTS public.question_result_corrections (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   incident_id uuid NOT NULL REFERENCES public.question_error_incidents(id) ON DELETE RESTRICT,
   session_answer_id uuid NOT NULL REFERENCES public.session_answers(id) ON DELETE RESTRICT,
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
@@ -250,7 +250,7 @@ INSERT INTO public.question_content_revisions(
   content,content_sha256,change_kind,change_summary,status,prepared_by,published_at
 )
 SELECT q.id,1,q.game,q.category,q.subcategory,q.topic,q.difficulty,q.level_tag,q.exam_ref,q.is_boss,
-  q.content,encode(public.digest(q.content::text,'sha256'),'hex'),'legacy_import','Pre-106 legacy import','published',NULL,clock_timestamp()
+  q.content,encode(extensions.digest(q.content::text,'sha256'),'hex'),'legacy_import','Pre-106 legacy import','published',NULL,clock_timestamp()
 FROM public.questions q
 WHERE q.published_revision_id IS NULL
 ON CONFLICT(question_id,revision_no) DO NOTHING;
@@ -290,7 +290,7 @@ WHERE a.legacy_error_report_id IS NOT NULL
 
 CREATE OR REPLACE FUNCTION public.content_governance_hash(p_payload jsonb)
 RETURNS text LANGUAGE sql IMMUTABLE SECURITY DEFINER SET search_path = pg_catalog AS $$
-  SELECT encode(public.digest(COALESCE(p_payload,'null'::jsonb)::text,'sha256'),'hex')
+  SELECT encode(extensions.digest(COALESCE(p_payload,'null'::jsonb)::text,'sha256'),'hex')
 $$;
 
 CREATE OR REPLACE FUNCTION public.content_governance_lock_request(p_user_id uuid,p_operation text,p_request_id uuid)
@@ -405,7 +405,7 @@ FOR EACH ROW EXECUTE FUNCTION public.tg_question_direct_insert_guard();
 
 CREATE OR REPLACE FUNCTION public.create_governed_question(p_user_id uuid,p_payload jsonb,p_request_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $fn$
-DECLARE qid uuid:=public.gen_random_uuid(); r public.question_content_revisions%ROWTYPE; h text; old public.content_governance_requests%ROWTYPE; out jsonb;
+DECLARE qid uuid:=gen_random_uuid(); r public.question_content_revisions%ROWTYPE; h text; old public.content_governance_requests%ROWTYPE; out jsonb;
 BEGIN
   IF NOT public.content_governance_has_permission(p_user_id,'content.prepare') THEN RAISE EXCEPTION 'content prepare permission required' USING ERRCODE='42501'; END IF;
   IF p_request_id IS NULL OR NOT public.content_governance_validate_payload(p_payload) OR p_payload->>'changeKind'<>'create' THEN RAISE EXCEPTION 'invalid governed question payload' USING ERRCODE='22023'; END IF;
@@ -416,7 +416,7 @@ BEGIN
   INSERT INTO public.questions(id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,content,is_active,published_revision_id)
   VALUES(qid,p_payload->'metadata'->>'game',p_payload->'metadata'->>'category',NULLIF(p_payload->'metadata'->>'subcategory',''),NULLIF(p_payload->'metadata'->>'topic',''),(p_payload->'metadata'->>'difficulty')::smallint,NULLIF(p_payload->'metadata'->>'levelTag',''),NULLIF(p_payload->'metadata'->>'examRef',''),COALESCE((p_payload->'metadata'->>'isBoss')::boolean,false),p_payload->'content',false,NULL);
   INSERT INTO public.question_content_revisions(question_id,revision_no,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,content,content_sha256,change_kind,change_summary,prepared_by)
-  VALUES(qid,1,p_payload->'metadata'->>'game',p_payload->'metadata'->>'category',NULLIF(p_payload->'metadata'->>'subcategory',''),NULLIF(p_payload->'metadata'->>'topic',''),(p_payload->'metadata'->>'difficulty')::smallint,NULLIF(p_payload->'metadata'->>'levelTag',''),NULLIF(p_payload->'metadata'->>'examRef',''),COALESCE((p_payload->'metadata'->>'isBoss')::boolean,false),p_payload->'content',encode(public.digest((p_payload->'content')::text,'sha256'),'hex'),'create',p_payload->>'summary',p_user_id) RETURNING * INTO r;
+  VALUES(qid,1,p_payload->'metadata'->>'game',p_payload->'metadata'->>'category',NULLIF(p_payload->'metadata'->>'subcategory',''),NULLIF(p_payload->'metadata'->>'topic',''),(p_payload->'metadata'->>'difficulty')::smallint,NULLIF(p_payload->'metadata'->>'levelTag',''),NULLIF(p_payload->'metadata'->>'examRef',''),COALESCE((p_payload->'metadata'->>'isBoss')::boolean,false),p_payload->'content',encode(extensions.digest((p_payload->'content')::text,'sha256'),'hex'),'create',p_payload->>'summary',p_user_id) RETURNING * INTO r;
   INSERT INTO public.question_revision_sources(revision_id,source_kind,source_title,source_url,license_code,license_url,attribution,provenance_ref)
   VALUES(r.id,p_payload->'source'->>'kind',p_payload->'source'->>'title',NULLIF(p_payload->'source'->>'url',''),p_payload->'source'->>'licenseCode',NULLIF(p_payload->'source'->>'licenseUrl',''),NULLIF(p_payload->'source'->>'attribution',''),NULLIF(p_payload->'source'->>'provenanceRef',''));
   INSERT INTO public.question_revision_outcomes(revision_id,outcome_id,weight,is_primary)
@@ -438,7 +438,7 @@ BEGIN
   SELECT * INTO q FROM public.questions WHERE id=p_question_id FOR UPDATE; IF NOT FOUND OR q.published_revision_id IS DISTINCT FROM p_base_revision_id THEN RAISE EXCEPTION 'stale or unknown revision base' USING ERRCODE='22023'; END IF;
   SELECT COALESCE(max(revision_no),0)+1 INTO n FROM public.question_content_revisions WHERE question_id=p_question_id;
   INSERT INTO public.question_content_revisions(question_id,revision_no,base_revision_id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,content,content_sha256,change_kind,change_summary,prepared_by)
-  VALUES(p_question_id,n,p_base_revision_id,p_payload->'metadata'->>'game',p_payload->'metadata'->>'category',NULLIF(p_payload->'metadata'->>'subcategory',''),NULLIF(p_payload->'metadata'->>'topic',''),(p_payload->'metadata'->>'difficulty')::smallint,NULLIF(p_payload->'metadata'->>'levelTag',''),NULLIF(p_payload->'metadata'->>'examRef',''),COALESCE((p_payload->'metadata'->>'isBoss')::boolean,false),p_payload->'content',encode(public.digest((p_payload->'content')::text,'sha256'),'hex'),p_payload->>'changeKind',p_payload->>'summary',p_user_id) RETURNING * INTO r;
+  VALUES(p_question_id,n,p_base_revision_id,p_payload->'metadata'->>'game',p_payload->'metadata'->>'category',NULLIF(p_payload->'metadata'->>'subcategory',''),NULLIF(p_payload->'metadata'->>'topic',''),(p_payload->'metadata'->>'difficulty')::smallint,NULLIF(p_payload->'metadata'->>'levelTag',''),NULLIF(p_payload->'metadata'->>'examRef',''),COALESCE((p_payload->'metadata'->>'isBoss')::boolean,false),p_payload->'content',encode(extensions.digest((p_payload->'content')::text,'sha256'),'hex'),p_payload->>'changeKind',p_payload->>'summary',p_user_id) RETURNING * INTO r;
   INSERT INTO public.question_revision_sources(revision_id,source_kind,source_title,source_url,license_code,license_url,attribution,provenance_ref)
   VALUES(r.id,p_payload->'source'->>'kind',p_payload->'source'->>'title',NULLIF(p_payload->'source'->>'url',''),p_payload->'source'->>'licenseCode',NULLIF(p_payload->'source'->>'licenseUrl',''),NULLIF(p_payload->'source'->>'attribution',''),NULLIF(p_payload->'source'->>'provenanceRef',''));
   INSERT INTO public.question_revision_outcomes(revision_id,outcome_id,weight,is_primary)
@@ -591,7 +591,7 @@ BEGIN
   SELECT array_agg((e->>'questionId')::uuid ORDER BY (e->>'position')::integer) INTO v_ids FROM jsonb_array_elements(p_items) e;
   IF (SELECT count(DISTINCT (e->>'position')::integer) FROM jsonb_array_elements(p_items)e)<>40 OR (SELECT min((e->>'position')::integer) FROM jsonb_array_elements(p_items)e)<>0 OR (SELECT max((e->>'position')::integer) FROM jsonb_array_elements(p_items)e)<>39 OR cardinality(ARRAY(SELECT DISTINCT unnest(v_ids)))<>40 THEN RAISE EXCEPTION 'items must be unique and contiguous' USING ERRCODE='22023'; END IF;
   IF (SELECT count(*) FROM public.questions q WHERE q.id=ANY(v_ids) AND q.is_active AND q.game=p_game AND q.exam_ref IS NOT DISTINCT FROM p_exam_ref)<>40 THEN RAISE EXCEPTION 'questions do not match verified exam scope' USING ERRCODE='22023'; END IF;
-  v_hash:=encode(public.digest(array_to_string(v_ids,','),'sha256'),'hex'); PERFORM pg_advisory_xact_lock(hashtextextended(p_user_id::text||':'||p_game||':'||coalesce(p_exam_ref,''),100)); SELECT * INTO v_existing FROM public.verified_exam_attempts WHERE user_id=p_user_id AND issue_request_id=p_request_id FOR UPDATE;
+  v_hash:=encode(extensions.digest(array_to_string(v_ids,','),'sha256'),'hex'); PERFORM pg_advisory_xact_lock(hashtextextended(p_user_id::text||':'||p_game||':'||coalesce(p_exam_ref,''),100)); SELECT * INTO v_existing FROM public.verified_exam_attempts WHERE user_id=p_user_id AND issue_request_id=p_request_id FOR UPDATE;
   IF FOUND THEN
     IF v_existing.game IS DISTINCT FROM p_game OR v_existing.exam_ref IS DISTINCT FROM p_exam_ref OR v_existing.question_set_hash<>v_hash OR v_existing.blueprint_version<>p_blueprint_version OR v_existing.planned_duration_sec<>p_planned_duration_sec OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_items)e JOIN public.verified_exam_attempt_items i ON i.attempt_id=v_existing.attempt_id AND i.position=(e->>'position')::smallint WHERE i.question_id<>(e->>'questionId')::uuid OR i.source_bucket<>(e->>'sourceBucket')) THEN RAISE EXCEPTION 'issuance replay payload differs' USING ERRCODE='22023'; END IF;
     RETURN jsonb_build_object('attemptId',v_existing.attempt_id,'expiresAt',(SELECT expires_at FROM public.verified_attempts WHERE id=v_existing.attempt_id),'plannedDurationSec',v_existing.planned_duration_sec,'status',v_existing.status,'snapshot',public.verified_exam_private_snapshot(v_existing.attempt_id),'replayed',true);

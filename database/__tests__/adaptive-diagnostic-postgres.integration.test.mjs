@@ -40,7 +40,7 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
       CREATE SCHEMA public;
       CREATE SCHEMA auth;
       CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-      CREATE EXTENSION IF NOT EXISTS pgcrypto;
+      CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
       DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
       DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
       DO $$ BEGIN CREATE ROLE service_role NOLOGIN BYPASSRLS; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
