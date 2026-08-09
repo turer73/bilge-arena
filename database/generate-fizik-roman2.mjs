@@ -177,6 +177,7 @@ async function main() {
         type: 'roman_numeral',
       },
       source: 'ai_gemini_tyt',
+      exam_ref: 'TYT',
       is_active: false,
     }))
 
