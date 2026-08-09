@@ -4,17 +4,36 @@ on:
   schedule:
     - cron: '17 2 * * *'
   workflow_dispatch:
+    inputs:
+      roadmap_operation:
+        description: Roadmap production operation
+        required: true
+        default: audit
+        type: choice
+        options:
+          - audit
+          - pg-acceptance
+          - apply-091-107
+      confirmation:
+        description: Required only for apply-091-107
+        required: false
+        type: string
+      approved_sha:
+        description: Exact master commit SHA required only for apply-091-107
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
   group: database-type-drift
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   compare-production-schema:
     name: Compare production schema
+    if: github.event_name != 'workflow_dispatch' || inputs.roadmap_operation != 'apply-091-107'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -34,7 +53,7 @@ jobs:
 
   roadmap-production-audit:
     name: Roadmap production audit
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.roadmap_operation == 'audit'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -48,3 +67,88 @@ jobs:
 
       - name: Run read-only production gates
         run: node scripts/roadmap-production-gate.mjs audit
+
+  roadmap-production-close:
+    name: Apply roadmap migrations 091-107
+    needs: roadmap-postgres-acceptance
+    if: github.event_name == 'workflow_dispatch' && inputs.roadmap_operation == 'apply-091-107' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: Production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: lvnmzdowhfzmpkueurih
+      ROADMAP_PRODUCTION_CONFIRMATION: ${{ inputs.confirmation }}
+      ROADMAP_PRODUCTION_APPROVED_SHA: ${{ inputs.approved_sha }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Assemble and validate the atomic SQL bundle
+        run: node scripts/roadmap-production-close.mjs assemble
+
+      - name: Repair legacy questions and apply migrations atomically
+        run: node scripts/roadmap-production-close.mjs apply
+
+      - name: Run post-apply read-only production gates
+        run: node scripts/roadmap-production-gate.mjs audit
+
+  roadmap-postgres-acceptance:
+    name: Roadmap PostgreSQL 17 acceptance
+    if: github.event_name == 'workflow_dispatch' && (inputs.roadmap_operation == 'pg-acceptance' || (inputs.roadmap_operation == 'apply-091-107' && github.ref == 'refs/heads/master'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bilge_roadmap_close_test_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Apply the assembled bundle to disposable PostgreSQL
+        env:
+          ROADMAP_CLOSE_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/bilge_roadmap_close_test_ci
+          ROADMAP_CLOSE_TEST_DATABASE_DISPOSABLE: '1'
+        run: npm run test:db -- database/__tests__/roadmap-production-close-postgres.integration.test.mjs
+
+  compare-production-schema-after-close:
+    name: Compare production schema after roadmap close
+    needs: roadmap-production-close
+    if: github.event_name == 'workflow_dispatch' && inputs.roadmap_operation == 'apply-091-107' && github.ref == 'refs/heads/master' && needs.roadmap-production-close.result == 'success'
+    runs-on: ubuntu-latest
+    environment: Production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: lvnmzdowhfzmpkueurih
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Compare generated types with production schema
+        run: npm run db:types:check
