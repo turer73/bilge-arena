@@ -259,7 +259,10 @@ export async function readVerifiedAttemptQuestionSnapshots(
 ): Promise<readonly VerifiedQuestionSnapshot[]> {
   let result: { data: unknown; error: { code?: string } | null }
   try {
-    const rpc = admin.rpc as unknown as (
+    // `admin.rpc` this'e bağımlıdır (gövdesi this.url/this.headers/this.fetch
+    // kullanır). Referansı bağlamadan çıkarmak üretimde TypeError firlatir ve
+    // istek hiç gönderilmeden asagidaki catch'e duserdi.
+    const rpc = admin.rpc.bind(admin) as unknown as (
       name: string,
       args: Record<string, unknown>,
     ) => Promise<{ data: unknown; error: { code?: string } | null }>
