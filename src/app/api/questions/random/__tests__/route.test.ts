@@ -192,6 +192,20 @@ describe('GET /api/questions/random', () => {
     }))
   })
 
+  it('fails closed if the RPC returns an AYT question for a TYT request', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: [makeQuestionRow('ayt-question', { exam_ref: 'AYT-SAY' })],
+      error: null,
+    })
+
+    const res = await GET(makeRequest({ game: 'matematik', examRef: 'TYT' }) as never)
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({ questions: [], attemptId: null })
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
   it('returns questions list on success', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     const fakeQuestions = [

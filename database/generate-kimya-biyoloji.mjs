@@ -170,6 +170,7 @@ async function main() {
         type: q.type || 'regular',
       },
       source: 'ai_gemini_tyt',
+      exam_ref: 'TYT',
       is_active: false,
     }))
 
