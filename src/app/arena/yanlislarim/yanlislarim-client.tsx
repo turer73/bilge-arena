@@ -10,6 +10,10 @@ import { trUpper } from '@/lib/utils/tr-text'
 import { OptionButton } from '@/components/game/option-button'
 import { SolutionBlock } from '@/components/game/solution-block'
 import type { QuestionContent } from '@/types/database'
+import {
+  REVIEW_ERROR_REASON_OPTIONS,
+  type ReviewErrorReasonCode,
+} from '@/lib/review/error-reasons'
 
 const GAME_EMOJI: Record<GameSlug, string> = {
   matematik: '🧮',
@@ -35,6 +39,11 @@ interface WrongAnswerItem {
   /** FSRS tekrar-zamani (konu#7 S1/S4). FSRS rollout disinda null. */
   isDue: boolean | null
   dueAt: string | null
+  stability: number | null
+  fsrsDifficulty: number | null
+  retrievability: number | null
+  reviewState: 'new' | 'learning' | 'review' | 'relearning' | null
+  errorReason: { code: ReviewErrorReasonCode; label: string } | null
 }
 
 interface WrongAnswersResponse {
@@ -75,6 +84,20 @@ async function fetchWrongAnswers(
   return (await res.json()) as WrongAnswersResponse
 }
 
+async function saveErrorReason(
+  questionId: string,
+  reasonCode: ReviewErrorReasonCode,
+): Promise<NonNullable<WrongAnswerItem['errorReason']>> {
+  const res = await fetch('/api/review/wrong-answers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ questionId, reasonCode }),
+  })
+  if (!res.ok) throw new Error('Hata nedeni kaydedilemedi')
+  const data = (await res.json()) as { errorReason: NonNullable<WrongAnswerItem['errorReason']> }
+  return data.errorReason
+}
+
 export default function YanlislarimClient() {
   const { user, loading: authLoading } = useAuthStore()
 
@@ -87,6 +110,8 @@ export default function YanlislarimClient() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState(false)
   const [everHadAny, setEverHadAny] = useState<boolean | null>(null)
+  const [savingReasonIds, setSavingReasonIds] = useState<Set<string>>(() => new Set())
+  const [reasonErrorIds, setReasonErrorIds] = useState<Set<string>>(() => new Set())
 
   // Filtre-nesli sayaci: her filtre degisiminde artar. loadMore, cagrildigi
   // andaki nesli yakalayip cevap gelince karsilastirir -- filtre bu arada
@@ -140,6 +165,32 @@ export default function YanlislarimClient() {
       })
       .finally(() => setLoadingMore(false))
   }, [gameFilter, statusFilter, page, loadingMore])
+
+  const changeErrorReason = useCallback(async (
+    questionId: string,
+    reasonCode: ReviewErrorReasonCode,
+  ) => {
+    setSavingReasonIds((current) => new Set(current).add(questionId))
+    setReasonErrorIds((current) => {
+      const next = new Set(current)
+      next.delete(questionId)
+      return next
+    })
+    try {
+      const errorReason = await saveErrorReason(questionId, reasonCode)
+      setItems((current) => current.map((item) => (
+        item.questionId === questionId ? { ...item, errorReason } : item
+      )))
+    } catch {
+      setReasonErrorIds((current) => new Set(current).add(questionId))
+    } finally {
+      setSavingReasonIds((current) => {
+        const next = new Set(current)
+        next.delete(questionId)
+        return next
+      })
+    }
+  }, [])
 
   // Yukleniyor (auth store)
   if (authLoading) {
@@ -250,7 +301,13 @@ export default function YanlislarimClient() {
               </h3>
               <div className="space-y-3">
                 {gameItems.map((item) => (
-                  <WrongAnswerCard key={item.questionId} item={item} />
+                  <WrongAnswerCard
+                    key={item.questionId}
+                    item={item}
+                    savingReason={savingReasonIds.has(item.questionId)}
+                    reasonError={reasonErrorIds.has(item.questionId)}
+                    onReasonChange={changeErrorReason}
+                  />
                 ))}
               </div>
             </div>
@@ -311,7 +368,17 @@ function FilterPill({
   )
 }
 
-function WrongAnswerCard({ item }: { item: WrongAnswerItem }) {
+function WrongAnswerCard({
+  item,
+  savingReason,
+  reasonError,
+  onReasonChange,
+}: {
+  item: WrongAnswerItem
+  savingReason: boolean
+  reasonError: boolean
+  onReasonChange: (questionId: string, reasonCode: ReviewErrorReasonCode) => void
+}) {
   const correctIndex = getCorrectIndex(item.content)
   const isFixed = item.status === 'duzeltildi'
 
@@ -388,6 +455,45 @@ function WrongAnswerCard({ item }: { item: WrongAnswerItem }) {
       </div>
 
       <SolutionBlock solution={item.content.solution} tone={item.status} />
+
+      <div className="mt-3 border-t border-[var(--border)] pt-3">
+        <p className="mb-2 text-[11px] font-bold text-[var(--text-sub)]">
+          Bu yanlışa ne sebep oldu?
+        </p>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Hata nedeni">
+          {REVIEW_ERROR_REASON_OPTIONS.map((reason) => {
+            const selected = item.errorReason?.code === reason.code
+            return (
+              <button
+                key={reason.code}
+                type="button"
+                aria-pressed={selected}
+                disabled={savingReason}
+                onClick={() => onReasonChange(item.questionId, reason.code)}
+                className="rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors disabled:cursor-wait disabled:opacity-60"
+                style={selected
+                  ? {
+                      borderColor: 'var(--focus)',
+                      color: 'var(--focus)',
+                      background: 'color-mix(in srgb, var(--focus) 12%, transparent)',
+                    }
+                  : {
+                      borderColor: 'var(--border)',
+                      color: 'var(--text-sub)',
+                      background: 'var(--bg-secondary)',
+                    }}
+              >
+                {reason.label}
+              </button>
+            )
+          })}
+        </div>
+        {reasonError && (
+          <p role="alert" className="mt-2 text-[10px] text-[var(--urgency)]">
+            Hata nedeni kaydedilemedi. Lütfen yeniden dene.
+          </p>
+        )}
+      </div>
     </div>
   )
 }

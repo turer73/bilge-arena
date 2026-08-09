@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { errorReportSchema, LIMITS } from '@/lib/validations/schemas'
 
 const REPORT_TYPES = [
@@ -36,6 +36,10 @@ export function ErrorReportModal({
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const titleId = useId()
+  const descriptionId = useId()
+  const descriptionHelpId = useId()
+  const errorId = useId()
 
   if (!isOpen) return null
 
@@ -86,12 +90,12 @@ export function ErrorReportModal({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeUp"
       onClick={handleBackdropClick}
     >
-      <div className="mx-4 w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-5 shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="mx-4 w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-5 shadow-2xl">
         {submitted ? (
           /* Basarili mesaji */
           <div className="flex flex-col items-center gap-3 py-6">
             <div className="text-4xl">✅</div>
-            <div className="text-sm font-bold">Raporun gonderildi!</div>
+            <div id={titleId} role="status" className="text-sm font-bold">Raporun gonderildi!</div>
             <div className="text-xs text-[var(--text-sub)]">
               Ekibimiz en kisa surede inceleyecek. Tesekkurler!
             </div>
@@ -102,27 +106,31 @@ export function ErrorReportModal({
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🐛</span>
-                <span className="text-sm font-bold">Hata Bildir</span>
+                <h2 id={titleId} className="text-sm font-bold">Hata Bildir</h2>
               </div>
               <button
                 onClick={onClose}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-sm text-[var(--text-sub)] transition-colors hover:bg-[var(--card)]"
+                type="button"
+                aria-label="Hata bildirimini kapat"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-sm text-[var(--text-sub)] transition-colors hover:bg-[var(--card)]"
               >
                 ✕
               </button>
             </div>
 
             {/* Tip secimi */}
-            <div className="mb-4">
-              <div className="mb-2 text-[10px] font-bold tracking-wider text-[var(--text-sub)]">
+            <fieldset className="mb-4">
+              <legend className="mb-2 text-[10px] font-bold tracking-wider text-[var(--text-sub)]">
                 HATA TURU
-              </div>
+              </legend>
               <div className="grid grid-cols-2 gap-1.5">
                 {REPORT_TYPES.map((type) => (
                   <button
                     key={type.value}
+                    type="button"
                     onClick={() => setSelectedType(type.value)}
-                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-left text-xs transition-all ${
+                    aria-pressed={selectedType === type.value}
+                    className={`flex min-h-11 items-center gap-1.5 rounded-lg border px-3 py-2 text-left text-xs transition-all ${
                       selectedType === type.value
                         ? 'border-[var(--focus)] bg-[var(--focus-bg)] text-[var(--focus)] font-bold'
                         : 'border-[var(--border)] text-[var(--text-sub)] hover:border-[var(--focus)] hover:bg-[var(--surface)]'
@@ -133,29 +141,31 @@ export function ErrorReportModal({
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
             {/* Aciklama */}
             <div className="mb-4">
-              <div className="mb-2 text-[10px] font-bold tracking-wider text-[var(--text-sub)]">
+              <label htmlFor={descriptionId} className="mb-2 block text-[10px] font-bold tracking-wider text-[var(--text-sub)]">
                 ACIKLAMA (OPSIYONEL)
-              </div>
+              </label>
               <textarea
+                id={descriptionId}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Hatanin detaylarini aciklayabilirsin..."
                 maxLength={LIMITS.REPORT_DESCRIPTION_MAX_LENGTH}
+                aria-describedby={`${descriptionHelpId}${errorMsg ? ` ${errorId}` : ''}`}
                 rows={3}
                 className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text)] placeholder:text-[var(--text-sub)] focus:border-[var(--focus)] focus:outline-none"
               />
-              <div className="mt-1 text-right text-[9px] text-[var(--text-sub)]">
+              <div id={descriptionHelpId} className="mt-1 text-right text-[9px] text-[var(--text-sub)]">
                 {description.length}/{LIMITS.REPORT_DESCRIPTION_MAX_LENGTH}
               </div>
             </div>
 
             {/* Hata mesajı (P1: sahte başarı yerine gerçek geri-bildirim) */}
             {errorMsg && (
-              <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+              <div id={errorId} role="alert" className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-400">
                 {errorMsg}
               </div>
             )}
@@ -163,15 +173,17 @@ export function ErrorReportModal({
             {/* Butonlar */}
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={onClose}
-                className="flex-1 rounded-lg border border-[var(--border)] px-3 py-2.5 text-xs font-bold text-[var(--text-sub)] transition-colors hover:bg-[var(--card)]"
+                className="min-h-11 flex-1 rounded-lg border border-[var(--border)] px-3 py-2.5 text-xs font-bold text-[var(--text-sub)] transition-colors hover:bg-[var(--card)]"
               >
                 Vazgec
               </button>
               <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={!selectedType || submitting}
-                className="flex-1 rounded-lg bg-[var(--reward)] px-3 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                className="min-h-11 flex-1 rounded-lg bg-[var(--reward)] px-3 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
               >
                 {submitting ? 'Gonderiliyor...' : 'Gonder'}
               </button>

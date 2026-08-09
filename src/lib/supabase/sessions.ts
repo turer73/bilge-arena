@@ -5,6 +5,7 @@ import type { AnswerRecord } from '@/stores/quiz-store'
 
 interface SaveSessionParams {
   userId: string
+  attemptId: string
   game: GameType
   mode: string
   answers: AnswerRecord[]
@@ -20,6 +21,9 @@ interface SaveSessionParams {
 
 export interface SavedGameSession {
   sessionId: string
+  totalXP: number
+  correctCount: number
+  wrongCount: number
   newBadges: string[]
 }
 
@@ -30,6 +34,7 @@ export interface SavedGameSession {
  * Hata durumunda null dondurur, client tarafinda hata gosterilmez.
  */
 export async function saveGameSession({
+  attemptId,
   game,
   mode,
   answers,
@@ -44,6 +49,7 @@ export async function saveGameSession({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        attemptId,
         game,
         mode,
         answers: answers.map(a => ({
@@ -68,10 +74,21 @@ export async function saveGameSession({
     }
 
     const data = await res.json()
-    if (typeof data.sessionId !== 'string') return null
+    if (
+      typeof data.sessionId !== 'string'
+      || !Number.isInteger(data.totalXP)
+      || data.totalXP < 0
+      || !Number.isInteger(data.correctCount)
+      || data.correctCount < 0
+      || !Number.isInteger(data.wrongCount)
+      || data.wrongCount < 0
+    ) return null
 
     return {
       sessionId: data.sessionId,
+      totalXP: data.totalXP,
+      correctCount: data.correctCount,
+      wrongCount: data.wrongCount,
       newBadges: Array.isArray(data.newBadges)
         ? data.newBadges.filter((code: unknown): code is string => typeof code === 'string')
         : [],

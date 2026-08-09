@@ -38,6 +38,8 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
         JSON.stringify({
           questions: Array.from({ length: 20 }, (_, i) => makeQuestion(`q-${i}`)),
           reviewQuestions: [],
+          attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          expiresAt: '2099-01-01T00:00:00.000Z',
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       )
@@ -57,6 +59,12 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
     expect(lastUrl).toContain('/api/questions/random')
     expect(lastUrl).toContain('game=matematik')
     expect(lastUrl).toContain('limit=10')
+    expect(lastUrl).toContain('mode=classic')
+  })
+
+  it('mode query parametre olarak gecer', async () => {
+    await fetchQuizQuestions({ game: 'matematik', limit: 10, mode: 'deneme' })
+    expect(lastUrl).toContain('mode=deneme')
   })
 
   it('category query parametre olarak gecer', async () => {
@@ -100,7 +108,7 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
     fetchMock.mockClear()
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
     expect(fetchMock).not.toHaveBeenCalled()
-    expect(result).toEqual([])
+    expect(result).toEqual({ questions: [], attemptId: null, expiresAt: null })
   })
 
   it('API hata donerse offline cache fallback denenir', async () => {
@@ -108,7 +116,7 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
       new Response(JSON.stringify({ error: 'fail' }), { status: 500 }),
     )
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    expect(result).toEqual([])
+    expect(result).toEqual({ questions: [], attemptId: null, expiresAt: null })
   })
 
   it('401 (anon) icin cache fallback', async () => {
@@ -116,7 +124,7 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
       new Response(JSON.stringify({ error: 'Yetkisiz' }), { status: 401 }),
     )
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    expect(result).toEqual([])
+    expect(result).toEqual({ questions: [], attemptId: null, expiresAt: null })
   })
 
   it('API sonucu Question dizisi olarak dondurulur', async () => {
@@ -125,13 +133,16 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
         JSON.stringify({
           questions: [makeQuestion('q-a'), makeQuestion('q-b')],
           reviewQuestions: [],
+          attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          expiresAt: '2099-01-01T00:00:00.000Z',
         }),
         { status: 200 },
       ),
     )
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    expect(result.length).toBe(2)
-    expect(result[0].id).toMatch(/^q-/)
+    expect(result.questions).toHaveLength(2)
+    expect(result.questions[0].id).toMatch(/^q-/)
+    expect(result.attemptId).toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
   })
 
   it('reviewQuestions varsa %30 oranla karistirilir', async () => {
@@ -140,13 +151,39 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
         JSON.stringify({
           questions: Array.from({ length: 10 }, (_, i) => makeQuestion(`new-${i}`)),
           reviewQuestions: Array.from({ length: 5 }, (_, i) => makeQuestion(`review-${i}`)),
+          attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          expiresAt: '2099-01-01T00:00:00.000Z',
         }),
         { status: 200 },
       ),
     )
     const result = await fetchQuizQuestions({ game: 'matematik', limit: 10 })
-    const reviewCount = result.filter(q => q.id.startsWith('review-')).length
+    const reviewCount = result.questions.filter(q => q.id.startsWith('review-')).length
     expect(reviewCount).toBeGreaterThan(0)
     expect(reviewCount).toBeLessThanOrEqual(4)
+  })
+
+  it.each([
+    { attemptId: null, expiresAt: '2099-01-01T00:00:00.000Z' },
+    { attemptId: 'not-a-uuid', expiresAt: '2099-01-01T00:00:00.000Z' },
+    { attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', expiresAt: 'invalid-date' },
+    { attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', expiresAt: '2020-01-01T00:00:00.000Z' },
+  ])('gecersiz veya eksik bileti fail-closed reddeder: %o', async (ticket) => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          questions: [makeQuestion('q-a')],
+          reviewQuestions: [],
+          ...ticket,
+        }),
+        { status: 200 },
+      ),
+    )
+
+    await expect(fetchQuizQuestions({ game: 'matematik' })).resolves.toEqual({
+      questions: [],
+      attemptId: null,
+      expiresAt: null,
+    })
   })
 })

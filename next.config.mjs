@@ -145,6 +145,34 @@ const nextConfig = {
         ],
       },
       {
+        // Öğretmen sınıfları özel üye/ödev verisi taşır. Bu daha özel ve daha
+        // geç kural, global CSP'deki analytics/reklam sağlayıcılarını çıkarır.
+        source: '/arena/sinif/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'",
+              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
+              "media-src 'self' blob: data: https://*.supabase.co",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com",
+              "frame-src 'self'",
+              "worker-src 'self' blob:",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; '),
+          },
+        ],
+      },
+      {
         // Statik asset'ler icin agresif caching (1 yil)
         source: '/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff|woff2)',
         headers: [

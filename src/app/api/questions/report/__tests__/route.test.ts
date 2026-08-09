@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Mock setup ──────────────────────────────────
 
-const { mockGetUser, mockMaybeSingle, mockInsert, mockRlCheck } = vi.hoisted(() => ({
+const { mockGetUser, mockMaybeSingle, mockInsert, mockRlCheck, mockContentRpc, mockCreateServiceRoleClient } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockMaybeSingle: vi.fn(),
   mockInsert: vi.fn(),
   mockRlCheck: vi.fn(),
+  mockContentRpc: vi.fn(),
+  mockCreateServiceRoleClient: vi.fn(),
 }))
 
 // User-scoped client: auth + error_reports dedup-select + insert (ayni `from`).
@@ -28,6 +30,14 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: vi.fn(() => ({ check: mockRlCheck })),
 }))
 
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: mockCreateServiceRoleClient,
+}))
+
+vi.mock('@/lib/content-governance/route-context', () => ({
+  contentRpc: mockContentRpc,
+}))
+
 import { POST } from '../route'
 
 // ─── Helpers ─────────────────────────────────────
@@ -46,10 +56,17 @@ function makeRequest(body: unknown) {
 describe('POST /api/questions/report', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
+    delete process.env.CONTENT_GOVERNANCE_ENABLED
     mockGetUser.mockResolvedValue({ data: { user: USER } })
     mockRlCheck.mockResolvedValue({ success: true })
     mockMaybeSingle.mockReturnValue({ data: null })
     mockInsert.mockReturnValue({ error: null })
+    mockCreateServiceRoleClient.mockReturnValue({})
+    mockContentRpc.mockResolvedValue({
+      data: { appealId: '22222222-2222-4222-8222-222222222222', status: 'submitted', replayed: false },
+      error: null,
+    })
   })
 
   it('returns 401 when not authenticated', async () => {
@@ -93,6 +110,32 @@ describe('POST /api/questions/report', () => {
       report_type: 'wrong_answer',
       description: 'kotu', // trim + null-empty
     })
+  })
+
+  it('routes the legacy endpoint into the owner-bound appeal RPC when server governance is enabled', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
+    const requestId = '33333333-3333-4333-8333-333333333333'
+    const res = await POST(makeRequest({ questionId: QID, report_type: 'wrong_answer', description: ' Anahtar yanlis. ', requestId }))
+    expect(res.status).toBe(201)
+    expect(await res.json()).toEqual({ status: 'reported' })
+    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal', {
+      p_user_id: USER.id,
+      p_question_id: QID,
+      p_session_answer_id: null,
+      p_reason: 'wrong_key',
+      p_description: 'Anahtar yanlis.',
+      p_request_id: requestId,
+    })
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('treats an already-open governed appeal as an idempotent legacy report', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
+    mockContentRpc.mockResolvedValue({ data: null, error: { code: '23505' } })
+    const res = await POST(makeRequest({ questionId: QID, report_type: 'unclear' }))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ status: 'already_reported' })
+    expect(mockInsert).not.toHaveBeenCalled()
   })
 
   it('maps FK violation (23503) to 400', async () => {

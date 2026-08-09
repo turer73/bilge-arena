@@ -7,11 +7,18 @@ import { renderRichText } from '@/lib/utils/rich-text'
 import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
 import { gradeQuestion } from '@/lib/questions/grade-question'
 import type { PublicQuestion } from '@/lib/utils/question-public'
+import { isValidUuid } from '@/lib/utils/uuid'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type FethetQuestion = PublicQuestion & {
   optionMap: number[]
+}
+
+interface QuestionListResponse {
+  questions?: PublicQuestion[]
+  attemptId?: unknown
+  expiresAt?: unknown
 }
 
 interface ActiveQuiz {
@@ -78,6 +85,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
   const [solution, setSolution] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const [passed, setPassed] = useState(false)
+  const [attemptId, setAttemptId] = useState<string | null>(null)
   const gradingRef = useRef(false)
 
   const gameConfig = GAMES[game]
@@ -86,11 +94,19 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
   useEffect(() => {
     setLoading(true)
     setError(null)
+    setAttemptId(null)
     fetch(
       `/api/questions?game=${game}&category=${category}&limit=${QUESTIONS_PER_CATEGORY}&active=true`
     )
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('Soru alınamadı')))
-      .then((data) => {
+      .then((data: QuestionListResponse) => {
+        const nextAttemptId = isValidUuid(data.attemptId)
+          && typeof data.expiresAt === 'string'
+          && Number.isFinite(Date.parse(data.expiresAt))
+          && Date.parse(data.expiresAt) > Date.now()
+          ? data.attemptId
+          : null
+        setAttemptId(nextAttemptId)
         // Display choices are shuffled; the map retains their canonical DB indexes.
         const qs: FethetQuestion[] = (data.questions ?? [])
           .slice(0, QUESTIONS_PER_CATEGORY)
@@ -121,7 +137,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
     setGrading(true)
     setGradeError(null)
     try {
-      const grade = await gradeQuestion(question.id, canonicalIndex)
+      const grade = await gradeQuestion(question.id, canonicalIndex, attemptId)
       const displayCorrectOption = question.optionMap.indexOf(grade.correctOption)
       if (displayCorrectOption < 0) throw new Error('invalid_grade_response')
 

@@ -7,8 +7,10 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import type { PublicQuestion } from '@/lib/utils/question-public'
+
+const ATTEMPT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 
 // --- Stateful quiz-store mock'u ---
 const quiz = vi.hoisted(() => {
@@ -19,6 +21,7 @@ const quiz = vi.hoisted(() => {
     livesEnabled: true,
     answers: [] as Array<{ selectedOption: number; isCorrect: boolean; correctOption: number }>,
     questions: [] as unknown[],
+    currentIndex: 0,
     currentQuestion: vi.fn((): unknown => null),
     isLastQuestion: vi.fn(() => false),
     startQuiz: vi.fn(),
@@ -71,6 +74,10 @@ vi.mock('@/lib/supabase/adaptive-difficulty', () => ({
 vi.mock('@/lib/utils/sounds', () => ({ playSound: fetchers.playSound }))
 const grader = vi.hoisted(() => ({ gradeQuestion: vi.fn() }))
 vi.mock('@/lib/questions/grade-question', () => ({ gradeQuestion: grader.gradeQuestion }))
+const strategyTelemetry = vi.hoisted(() => ({ questionOpened: vi.fn() }))
+vi.mock('@/lib/mock-strategy/client', () => ({
+  recordMockStrategyQuestionOpened: strategyTelemetry.questionOpened,
+}))
 
 import { useQuizGame } from '../use-quiz-game'
 
@@ -91,18 +98,22 @@ beforeEach(() => {
   quiz.lives = 3
   quiz.livesEnabled = true
   quiz.answers = []
+  quiz.currentIndex = 0
   quiz.currentQuestion.mockReturnValue(null)
   quiz.isLastQuestion.mockReturnValue(false)
   gameStore.selectedMode = 'klasik'
-  fetchers.fetchQuizQuestions.mockResolvedValue(
-    Array.from({ length: 30 }, (_, i) => makeQ(`q${i}`)),
-  )
+  fetchers.fetchQuizQuestions.mockResolvedValue({
+    questions: Array.from({ length: 30 }, (_, i) => makeQ(`q${i}`)),
+    attemptId: ATTEMPT_ID,
+    expiresAt: '2099-01-01T00:00:00.000Z',
+  })
   fetchers.fetchPreviewQuestion.mockResolvedValue(makeQ('preview'))
   grader.gradeQuestion.mockImplementation(async (_questionId: string, selectedOption: number) => ({
     isCorrect: selectedOption === 2,
     correctOption: 2,
     solution: 'Çözüm',
   }))
+  strategyTelemetry.questionOpened.mockResolvedValue(true)
 })
 
 describe('useQuizGame — handleStart', () => {
@@ -114,6 +125,7 @@ describe('useQuizGame — handleStart', () => {
     expect(fetchers.fetchQuizQuestions).not.toHaveBeenCalled()
     expect(quiz.startQuiz).toHaveBeenCalledWith([expect.objectContaining({ id: 'preview' })], expect.any(Number))
     expect(result.current.isGuestMode).toBe(true)
+    expect(result.current.attemptId).toBeNull()
     expect(result.current.screen).toBe('game')
     expect(timer.start).toHaveBeenCalled()
   })
@@ -133,16 +145,21 @@ describe('useQuizGame — handleStart', () => {
     await act(() => result.current.handleStart())
 
     expect(fetchers.fetchQuizQuestions).toHaveBeenCalledWith(
-      expect.objectContaining({ game: 'matematik', includeReview: true }),
+      expect.objectContaining({ game: 'matematik', includeReview: true, mode: 'classic' }),
     )
     const started = quiz.startQuiz.mock.calls[0][0]
     expect(started).toHaveLength(result.current.mode.questionCount)
     expect(result.current.screen).toBe('game')
     expect(result.current.isGuestMode).toBe(false)
+    expect(result.current.attemptId).toBe(ATTEMPT_ID)
   })
 
   test('auth\'lu + boş sonuç: filtre hatası mesajı + lobby', async () => {
-    fetchers.fetchQuizQuestions.mockResolvedValue([])
+    fetchers.fetchQuizQuestions.mockResolvedValue({
+      questions: [],
+      attemptId: null,
+      expiresAt: null,
+    })
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
     await act(() => result.current.handleStart())
 
@@ -165,7 +182,7 @@ describe('useQuizGame — hazır Akıllı Deneme', () => {
     const questions = [makeQ('smart-1'), makeQ('smart-2')]
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
 
-    act(() => result.current.handleStartPreparedDeneme(questions))
+    act(() => result.current.handleStartPreparedDeneme(questions, ATTEMPT_ID))
 
     expect(fetchers.fetchQuizQuestions).not.toHaveBeenCalled()
     expect(quiz.startQuiz).toHaveBeenCalledWith([
@@ -176,13 +193,43 @@ describe('useQuizGame — hazır Akıllı Deneme', () => {
     expect(timer.reset).toHaveBeenCalledWith(0)
     expect(result.current.screen).toBe('game')
     expect(result.current.isGuestMode).toBe(false)
+    expect(result.current.attemptId).toBe(ATTEMPT_ID)
   })
 
   test('boş soru listesinde oyun başlatılmaz', () => {
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
-    act(() => result.current.handleStartPreparedDeneme([]))
+    act(() => result.current.handleStartPreparedDeneme([], null))
     expect(quiz.startQuiz).not.toHaveBeenCalled()
     expect(result.current.screen).toBe('lobby')
+  })
+
+  test('tracked pilotta açılış ve cevap eventlerini deterministik sırayla gönderir', async () => {
+    const question = makeQ('smart-1')
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+
+    act(() => result.current.handleStartPreparedDeneme([question], ATTEMPT_ID, true))
+    await waitFor(() => expect(strategyTelemetry.questionOpened).toHaveBeenCalledWith(expect.objectContaining({
+      attemptId: ATTEMPT_ID,
+      sequence: 1,
+      position: 0,
+      clientEventId: expect.any(String),
+    })))
+
+    quiz.state = 'playing'
+    quiz.currentQuestion.mockReturnValue(question)
+    await act(async () => result.current.handleAnswer(0))
+
+    expect(grader.gradeQuestion).toHaveBeenCalledWith(
+      'smart-1',
+      expect.any(Number),
+      ATTEMPT_ID,
+      expect.any(AbortSignal),
+      expect.objectContaining({
+        clientEventId: expect.any(String),
+        sequence: 2,
+        position: 0,
+      }),
+    )
   })
 })
 
@@ -329,5 +376,31 @@ describe('useQuizGame — yardım açıkken sayaç duraklatma', () => {
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
     act(() => result.current.setHelpPaused(true))
     expect(timer.pause).not.toHaveBeenCalled()
+  })
+})
+
+describe('useQuizGame verified attempt fail-closed', () => {
+  test('authenticated questions without a ticket do not start', async () => {
+    fetchers.fetchQuizQuestions.mockResolvedValue({
+      questions: [makeQ('q1')],
+      attemptId: null,
+      expiresAt: null,
+    })
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+
+    await act(() => result.current.handleStart())
+
+    expect(quiz.startQuiz).not.toHaveBeenCalled()
+    expect(result.current.screen).toBe('lobby')
+    expect(result.current.attemptId).toBeNull()
+  })
+
+  test('prepared questions without a ticket do not start', () => {
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+
+    act(() => result.current.handleStartPreparedDeneme([makeQ('smart-1')], null))
+
+    expect(quiz.startQuiz).not.toHaveBeenCalled()
+    expect(result.current.attemptId).toBeNull()
   })
 })

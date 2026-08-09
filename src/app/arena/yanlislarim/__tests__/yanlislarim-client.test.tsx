@@ -33,6 +33,11 @@ const item = (overrides: Record<string, unknown> = {}) => ({
   status: 'acik',
   isDue: null,
   dueAt: null,
+  stability: null,
+  fsrsDifficulty: null,
+  retrievability: null,
+  reviewState: null,
+  errorReason: null,
   ...overrides,
 })
 
@@ -98,6 +103,36 @@ describe('YanlislarimClient', () => {
     })
     render(<YanlislarimClient />)
     await waitFor(() => expect(screen.getByText('Düzeltildi')).toBeInTheDocument())
+  })
+
+  test('kontrollü hata nedeni seçimi POST edilir ve seçili gösterilir', async () => {
+    mockFetchOnce({ items: [item()], page: 1, limit: 20, hasMore: false })
+    render(<YanlislarimClient />)
+    await waitFor(() => expect(screen.getByText('İki artı iki kaçtır?')).toBeInTheDocument())
+
+    mockFetchOnce({ errorReason: { code: 'knowledge_gap', label: 'Bilgi eksiği' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Bilgi eksiği' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Bilgi eksiği' })).toHaveAttribute('aria-pressed', 'true')
+    })
+    const postCall = fetchMock.mock.calls.find((call) => call[1]?.method === 'POST')
+    expect(postCall?.[0]).toBe('/api/review/wrong-answers')
+    expect(JSON.parse(postCall?.[1]?.body as string)).toEqual({
+      questionId: Q1,
+      reasonCode: 'knowledge_gap',
+    })
+  })
+
+  test('hata nedeni kaydedilemezse kart icinde yeniden deneme mesaji gosterilir', async () => {
+    mockFetchOnce({ items: [item()], page: 1, limit: 20, hasMore: false })
+    render(<YanlislarimClient />)
+    await waitFor(() => expect(screen.getByText('İki artı iki kaçtır?')).toBeInTheDocument())
+
+    mockFetchOnce({ error: 'fail' }, false)
+    fireEvent.click(screen.getByRole('button', { name: 'Tahmin' }))
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('kaydedilemedi'))
   })
 
   test('iki farklı ders sorusu ayrı gruplarda listelenir', async () => {

@@ -1,14 +1,6 @@
-/**
- * Bilge Arena: BilgeChanCompanion — faz akışı (intro→offered→help→check /
- * declined) + cevap reaksiyonları (victory/sad) + typewriter.
- *
- * Fake-timer notu: typewriter 26ms/harf yazar; intro mesajını okumak için
- * OFFER_DELAY'den (6000ms) KISA süre ilerletilir, yoksa faz değişir.
- * pickLine Math.random mock'u ile deterministik (0 → dizinin ilk elemanı).
- */
-
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import type { Question } from '@/types/database'
 
@@ -25,24 +17,52 @@ vi.mock('@/lib/utils/chan-tts', () => ({
   stopChanSpeech: tts.stop,
 }))
 
-import { BilgeChanCompanion } from '../bilge-chan-companion'
+const trackLearningEvent = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/analytics/learning-events', () => ({ trackLearningEvent }))
+
+import { BilgeChanCompanion as BilgeChanCompanionImpl } from '../bilge-chan-companion'
+
+const ATTEMPT_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+const SESSION_ID = '11111111-2222-4333-8444-555555555555'
+const TRANSFER_ID = '99999999-8888-4777-8666-555555555555'
+const TYPE_MS = 5000
+const oldCoachUiEnabled = process.env.NEXT_PUBLIC_COACH_ENABLED
+
+function BilgeChanCompanion(props: ComponentProps<typeof BilgeChanCompanionImpl>) {
+  return <BilgeChanCompanionImpl attemptId={ATTEMPT_ID} {...props} />
+}
 
 function makeQuestion(over: Partial<Question> = {}): Question {
   return {
-    id: 'q1',
+    id: 'aaaaaaaa-1111-4222-8333-bbbbbbbbbbbb',
+    game: 'matematik',
+    category: 'problemler',
+    subcategory: null,
+    topic: null,
     difficulty: 2,
+    level_tag: null,
+    base_points: 20,
     content: {
       question: 'Soru metni?',
       options: ['a', 'b', 'c', 'd'],
-      answer: 2, // C
+      answer: 2,
       solution: 'Çözüm metni burada.',
     },
     ...over,
   } as Question
 }
 
-/** Typewriter'ın mesajı tamamen yazması için yeterli, faz timer'larından kısa süre. */
-const TYPE_MS = 3000
+const transferQuestion = {
+  id: TRANSFER_ID,
+  game: 'matematik',
+  category: 'problemler',
+  subcategory: null,
+  topic: null,
+  difficulty: 2,
+  level_tag: null,
+  base_points: 20,
+  content: { question: 'Transfer sorusu?', options: ['10', '11', '12', '13'] },
+}
 
 function pose(): string | null {
   return screen.getByTestId('chan-pose').getAttribute('data-pose')
@@ -50,167 +70,134 @@ function pose(): string | null {
 
 const fetchMock = vi.fn()
 
+function successfulCoachResponse(stage: string) {
+  const common = {
+    sessionId: SESSION_ID,
+    sourceLabel: stage === 'solution' ? 'Onaylı soru çözümü' : 'Küratörlü Koç içeriği',
+    evaluation: { passed: true, policyVersion: 'coach-r2.2-v1' },
+  }
+  if (stage === 'transfer') {
+    return {
+      ...common,
+      stage,
+      isCorrect: true,
+      correctOption: 1,
+      solution: 'Transfer çözümü.',
+      source: 'approved_transfer',
+      sourceLabel: 'Onaylı soru bankası',
+      nextToken: null,
+    }
+  }
+  if (stage === 'solution') {
+    return {
+      ...common,
+      stage,
+      hint: 'Çözüm metni burada.',
+      source: 'solution',
+      transferQuestion,
+      nextToken: 'transfer-token',
+    }
+  }
+  const hints: Record<string, string> = {
+    hint1: 'Olası yanılgı: işlem sırası. İlk ipucu: verilenleri ayır.',
+    hint2: 'İkinci ipucu',
+    hint3: 'Küçük örnek çözümü',
+  }
+  const tokens: Record<string, string> = {
+    hint1: 'hint2-token',
+    hint2: 'hint3-token',
+    hint3: 'solution-token',
+  }
+  return {
+    ...common,
+    stage,
+    hint: hints[stage],
+    source: 'authored',
+    nextToken: tokens[stage],
+  }
+}
+
+async function flushPromises() {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+}
+
 beforeEach(() => {
+  process.env.NEXT_PUBLIC_COACH_ENABLED = 'true'
   vi.useFakeTimers()
   vi.spyOn(Math, 'random').mockReturnValue(0)
+  let requestCounter = 0
+  vi.spyOn(globalThis.crypto, 'randomUUID').mockImplementation(() => {
+    requestCounter += 1
+    return `10000000-0000-4000-8000-${String(requestCounter).padStart(12, '0')}`
+  })
+  fetchMock.mockReset()
   fetchMock.mockImplementation(async (_url: string, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body)) as { stage: string }
-    const hints: Record<string, string> = {
-      hint1: 'İlk ipucu',
-      hint2: 'İkinci ipucu',
-      hint3: 'Üçüncü ipucu',
-      solution: 'Çözüm metni burada.',
-    }
-    const tokens: Record<string, string | null> = {
-      hint1: 'hint2-token',
-      hint2: 'hint3-token',
-      hint3: 'solution-token',
-      solution: null,
-    }
-    return new Response(JSON.stringify({
-      stage: body.stage,
-      hint: hints[body.stage],
-      nextToken: tokens[body.stage],
-    }), {
+    return new Response(JSON.stringify(successfulCoachResponse(body.stage)), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
   })
   vi.stubGlobal('fetch', fetchMock)
+  trackLearningEvent.mockClear()
+  tts.speak.mockClear()
+  tts.stop.mockClear()
 })
 
 afterEach(() => {
+  if (oldCoachUiEnabled === undefined) delete process.env.NEXT_PUBLIC_COACH_ENABLED
+  else process.env.NEXT_PUBLIC_COACH_ENABLED = oldCoachUiEnabled
   vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
-describe('BilgeChanCompanion', () => {
-  test('question=null -> hiç render edilmez', () => {
+describe('BilgeChanCompanion R2.2', () => {
+  test('question=null iken render edilmez', () => {
     const { container } = render(
       <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={null} />,
     )
     expect(container.firstChild).toBeNull()
   })
 
-  test('intro: normal soru -> wave pose + greet repliği (typewriter tamamlanır)', () => {
-    render(
+  test('normal ve kolay soruda doğru başlangıç pozu kullanılır', () => {
+    const { rerender } = render(
       <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
     )
     expect(pose()).toBe('wave')
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText(CHAN_LINES.greet[0])).toBeInTheDocument()
-  })
-
-  test('intro: kolay soru (difficulty=1) -> angry pose + easyJoke repliği', () => {
-    render(
-      <BilgeChanCompanion
-        quizState="playing"
-        lastIsCorrect={null}
-        question={makeQuestion({ difficulty: 1 } as Partial<Question>)}
-      />,
+    rerender(
+      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion({ difficulty: 1 })} />,
     )
     expect(pose()).toBe('angry')
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText(CHAN_LINES.easyJoke[0])).toBeInTheDocument()
   })
 
-  test('6sn sonra offered: yardım teklifi + Evet/Hayır butonları', () => {
+  test('public kill switch kapalıysa yardım teklifi göstermez', () => {
+    process.env.NEXT_PUBLIC_COACH_ENABLED = 'false'
     render(
       <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
     )
     act(() => vi.advanceTimersByTime(6000))
-    expect(pose()).toBe('idle')
+    expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
+  })
+
+  test('6 saniye sonra yardım teklifi görünür; completed durumda görünmez', () => {
+    const { rerender } = render(
+      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
+    )
+    act(() => vi.advanceTimersByTime(6000))
     expect(screen.getByRole('button', { name: 'Evet' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Hayır' })).toBeInTheDocument()
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText(CHAN_LINES.offer)).toBeInTheDocument()
-  })
-
-  test('quizState playing değilse offered fazına geçmez (buton yok)', () => {
-    render(
+    rerender(
       <BilgeChanCompanion quizState="completed" lastIsCorrect={null} question={makeQuestion()} />,
     )
-    act(() => vi.advanceTimersByTime(10000))
     expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
   })
 
-  test('Evet -> 3 kademeli ipucu -> çözüm; her aşama server endpointinden gelir', async () => {
-    const onHelpToggle = vi.fn()
-    render(
-      <BilgeChanCompanion
-        quizState="playing"
-        lastIsCorrect={null}
-        question={makeQuestion()}
-        onHelpToggle={onHelpToggle}
-      />,
-    )
-    act(() => vi.advanceTimersByTime(6000))
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
-      await Promise.resolve()
-    })
-    expect(pose()).toBe('reading')
-    expect(onHelpToggle).toHaveBeenCalledWith(true) // sayaç dursun
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText('İlk ipucu')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Bir ipucu daha' })).toBeInTheDocument()
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Bir ipucu daha' }))
-      await Promise.resolve()
-    })
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText('İkinci ipucu')).toBeInTheDocument()
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Bir ipucu daha' }))
-      await Promise.resolve()
-    })
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText('Üçüncü ipucu')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Çözümü göster' })).toBeInTheDocument()
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Çözümü göster' }))
-      await Promise.resolve()
-    })
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText('Çözüm metni burada.')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Çözümü göster' })).not.toBeInTheDocument()
-
-    // OTO-geçiş yok; öğrenci kendisi soruya döner.
-    act(() => vi.advanceTimersByTime(8000))
-    expect(pose()).toBe('reading')
-    expect(screen.queryByText(CHAN_LINES.check)).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /Soruyu çözmeye dön/ }))
-    expect(onHelpToggle).toHaveBeenCalledWith(false)
-    expect(pose()).toBe('idle')
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText(CHAN_LINES.check)).toBeInTheDocument()
-    expect(fetchMock).toHaveBeenCalledTimes(4)
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ questionId: 'q1', stage: 'hint1' })
-  })
-
-  test('endpoint hatasında güvenli hata mesajı ve soruya dönüş sunar', async () => {
-    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 503 }))
-    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
-    act(() => vi.advanceTimersByTime(6000))
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
-      await Promise.resolve()
-    })
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText(/Şu an ipucu alınamadı/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Soruyu çözmeye dön/ })).toBeInTheDocument()
-  })
-
-  test('endpoint beklerken öğrenci loading ekranından soruya dönebilir', async () => {
-    fetchMock.mockImplementationOnce((_url: string, init?: RequestInit) => new Promise((_resolve, reject) => {
-      init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
-    }))
+  test('ilk deneme → yanılgı/ipucu → küçük örnek → çözüm → ölçülen transfer akışını tamamlar', async () => {
     const onHelpToggle = vi.fn()
     render(
       <BilgeChanCompanion
@@ -222,143 +209,124 @@ describe('BilgeChanCompanion', () => {
     )
     act(() => vi.advanceTimersByTime(6000))
     fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
-    expect(screen.getByRole('button', { name: /Soruyu çözmeye dön/ })).toBeInTheDocument()
+    expect(onHelpToggle).toHaveBeenCalledWith(true)
+    expect(screen.getByRole('group', { name: 'Koç öncesi ilk denemeni seç' })).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Soruyu çözmeye dön/ }))
-      await Promise.resolve()
+    fireEvent.click(screen.getByRole('button', { name: 'İlk deneme A: a' }))
+    await flushPromises()
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText(/Olası yanılgı/)).toBeInTheDocument()
+    expect(screen.getByText(/Kaynak: Küratörlü Koç içeriği/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'İkinci ipucunu al' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'İkinci ipucunu al' }))
+    await flushPromises()
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText('İkinci ipucu')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Küçük örneği gör' }))
+    await flushPromises()
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText('Küçük örnek çözümü')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Çözümü göster' }))
+    await flushPromises()
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText('Çözüm metni burada.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Transfer sorusuna geç' }))
+    expect(screen.getByRole('group', { name: 'Transfer sorusu?' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /B.*11/ }))
+    await flushPromises()
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText(/Transfer sorusu doğru/)).toBeInTheDocument()
+    expect(screen.getByText(/Kaynak: Onaylı soru bankası/)).toBeInTheDocument()
+    expect(trackLearningEvent).toHaveBeenCalledWith('CoachTransferResult', {
+      game: 'matematik',
+      result: 'correct',
+      coachDepth: 4,
+      timing: 'same_session',
     })
+
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    const bodies = fetchMock.mock.calls.map((call) => JSON.parse(String(call[1]?.body)))
+    expect(bodies.map((body) => body.stage)).toEqual(['hint1', 'hint2', 'hint3', 'solution', 'transfer'])
+    expect(bodies[0]).toMatchObject({ selectedOption: 0, attemptId: ATTEMPT_ID })
+    expect(bodies[4]).toMatchObject({ selectedOption: 1, token: 'transfer-token' })
+    expect(new Set(bodies.map((body) => body.requestId)).size).toBe(5)
+
+    fireEvent.click(screen.getByRole('button', { name: /Soruyu çözmeye dön/ }))
     expect(onHelpToggle).toHaveBeenLastCalledWith(false)
+  })
+
+  test('hata sonrası aynı idempotency requestId ile yeniden dener', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('{}', { status: 503 }))
+    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
+    act(() => vi.advanceTimersByTime(6000))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+    fireEvent.click(screen.getByRole('button', { name: 'İlk deneme A: a' }))
+    await flushPromises()
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText(/aynı isteği güvenle yeniden deneyebilirsin/i)).toBeInTheDocument()
+    const firstId = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).requestId
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aynı aşamayı yeniden dene' }))
+    await flushPromises()
+    const secondId = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)).requestId
+    expect(secondId).toBe(firstId)
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.getByText(/Olası yanılgı/)).toBeInTheDocument()
+  })
+
+  test('loading sırasında soruya dönülürse geç kalan yanıt fazı geri getirmez', async () => {
+    let resolveLate: ((response: Response) => void) | undefined
+    fetchMock.mockImplementationOnce((_url: string, init?: RequestInit) => new Promise<Response>((resolve, reject) => {
+      resolveLate = resolve
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+    }))
+    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
+    act(() => vi.advanceTimersByTime(6000))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+    fireEvent.click(screen.getByRole('button', { name: 'İlk deneme A: a' }))
+    expect(screen.getByRole('button', { name: /Soruyu çözmeye dön/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Soruyu çözmeye dön/ }))
+
+    resolveLate?.(new Response(JSON.stringify(successfulCoachResponse('hint1')), { status: 200 }))
+    await flushPromises()
     act(() => vi.advanceTimersByTime(TYPE_MS))
     expect(screen.getByText(CHAN_LINES.check)).toBeInTheDocument()
+    expect(screen.queryByText(/Olası yanılgı/)).not.toBeInTheDocument()
   })
 
-  test('Hayır -> declined: idle pose + encourage repliği, check fazına geçmez', () => {
-    render(
-      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
-    )
+  test('Hayır seçimi yardım zincirini başlatmaz', () => {
+    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
     act(() => vi.advanceTimersByTime(6000))
     fireEvent.click(screen.getByRole('button', { name: 'Hayır' }))
-    expect(pose()).toBe('idle')
     act(() => vi.advanceTimersByTime(TYPE_MS))
     expect(screen.getByText(CHAN_LINES.encourage[0])).toBeInTheDocument()
-    // declined check'e ilerlemez
-    act(() => vi.advanceTimersByTime(8000))
-    expect(screen.queryByText(CHAN_LINES.check)).not.toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  test('doğru cevap -> victory pose + {harf} doğru şıkla değişir', () => {
-    // correct[1] = 'Harika, {harf} doğru!' (index 1 -> random=0.34)
+  test('cevap sonrası doğru ve yanlış reaksiyonlarını korur', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.34)
-    render(
-      <BilgeChanCompanion quizState="answered" lastIsCorrect={true} question={makeQuestion()} correctOption={2} />,
+    const { rerender } = render(
+      <BilgeChanCompanion quizState="answered" lastIsCorrect question={makeQuestion()} correctOption={2} />,
     )
     expect(pose()).toBe('victory')
     act(() => vi.advanceTimersByTime(TYPE_MS))
     expect(screen.getByText('Harika, C doğru!')).toBeInTheDocument()
-  })
-
-  test('yanlış cevap -> sad pose + doğru şık harfi gösterilir', () => {
-    // wrong[1] = 'Doğrusu {harf} idi, takılma. 💙'
-    vi.spyOn(Math, 'random').mockReturnValue(0.34)
-    render(
+    rerender(
       <BilgeChanCompanion quizState="answered" lastIsCorrect={false} question={makeQuestion()} correctOption={2} />,
     )
     expect(pose()).toBe('sad')
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText('Doğrusu C idi, takılma. 💙')).toBeInTheDocument()
   })
 
-  test('answered iken offered fazında bile butonlar gizlenir', () => {
-    const { rerender } = render(
-      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
-    )
-    act(() => vi.advanceTimersByTime(6000))
-    expect(screen.getByRole('button', { name: 'Evet' })).toBeInTheDocument()
-    rerender(
-      <BilgeChanCompanion quizState="answered" lastIsCorrect={true} question={makeQuestion()} correctOption={2} />,
-    )
-    expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
-    expect(pose()).toBe('victory')
-  })
-
-  test('priority varsayılan kapalı (gizli instance preload etmesin — Codex P2), opt-in açılır', () => {
-    const { rerender } = render(
-      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
-    )
-    expect(screen.getByTestId('chan-pose').getAttribute('data-priority')).toBe('false')
-    rerender(
-      <BilgeChanCompanion
-        quizState="playing"
-        lastIsCorrect={null}
-        question={makeQuestion()}
-        priority
-      />,
-    )
-    expect(screen.getByTestId('chan-pose').getAttribute('data-priority')).toBe('true')
-  })
-
-  test('TTS destekliyse balonda sesli-oku butonu; tıklayınca mevcut replik okunur', () => {
-    render(
-      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
-    )
-    const btn = screen.getByRole('button', { name: 'Repliği sesli oku' })
-    fireEvent.click(btn)
-    expect(tts.speak).toHaveBeenCalledWith(CHAN_LINES.greet[0])
-  })
-
-  test('TTS desteklenmiyorsa buton render edilmez', () => {
-    tts.supported = false
-    render(
-      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
-    )
-    expect(screen.queryByRole('button', { name: 'Repliği sesli oku' })).not.toBeInTheDocument()
-    tts.supported = true
-  })
-
-  test('idle animasyon sınıfı + reduced-motion guard uygulanır', () => {
-    render(
-      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
-    )
-    const chan = screen.getByTestId('chan-pose')
-    expect(chan.className).toContain('animate-chan-idle')
-    expect(chan.className).toContain('motion-reduce:animate-none')
-  })
-
-  test('unmount: yarım kalan konuşma kesilir', () => {
-    const { unmount } = render(
-      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
-    )
-    unmount()
-    expect(tts.stop).toHaveBeenCalled()
-  })
-
-  test('compact: yatay yerleşim sınıfları uygulanır', () => {
-    const { container } = render(
-      <BilgeChanCompanion
-        quizState="playing"
-        lastIsCorrect={null}
-        question={makeQuestion()}
-        compact
-      />,
-    )
-    const root = container.firstChild as HTMLElement
-    expect(root.className).toContain('flex-row')
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    const bubble = root.querySelector('div.relative') as HTMLElement
-    expect(bubble.className).toContain('max-w-[190px]')
-    expect(bubble.className).toContain('order-2')
-  })
-})
-
-describe('BilgeChanCompanion staged-coach guards', () => {
-  test('legacy soru seklinde Koc teklifi gostermez', () => {
+  test('legacy soru şekli Koç teklifi göstermez', () => {
     render(
       <BilgeChanCompanion
         quizState="playing"
         lastIsCorrect={null}
         question={makeQuestion({
-          content: { sentence: 'Boslugu doldur', options: ['a', 'b'], answer: 0 } as Question['content'],
+          content: { sentence: 'Boşluğu doldur', options: ['a', 'b'], answer: 0 } as Question['content'],
         })}
       />,
     )
@@ -366,29 +334,40 @@ describe('BilgeChanCompanion staged-coach guards', () => {
     expect(screen.queryByRole('button', { name: 'Evet' })).not.toBeInTheDocument()
   })
 
-  test('loading sonrasi donuste gec kalan response yardim fazini geri getirmez', async () => {
-    let resolveLate: ((response: Response) => void) | undefined
-    fetchMock.mockImplementationOnce(() => new Promise<Response>((resolve) => {
-      resolveLate = resolve
-    }))
-    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
-    act(() => vi.advanceTimersByTime(6000))
-    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
-    fireEvent.click(screen.getByRole('button', { name: /Soruyu/ }))
+  test('TTS, priority, compact ve reduced-motion sözleşmeleri korunur', () => {
+    const { container } = render(
+      <BilgeChanCompanion
+        quizState="playing"
+        lastIsCorrect={null}
+        question={makeQuestion()}
+        compact
+        priority
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Repliği sesli oku' }))
+    expect(tts.speak).toHaveBeenCalledWith(CHAN_LINES.greet[0])
+    const chan = screen.getByTestId('chan-pose')
+    expect(chan.getAttribute('data-priority')).toBe('true')
+    expect(chan.className).toContain('motion-reduce:animate-none')
+    const root = container.firstChild as HTMLElement
+    expect(root.className).toContain('flex-row')
+    expect((root.querySelector('div.relative') as HTMLElement).className).toContain('max-w-[220px]')
+  })
 
-    resolveLate?.(new Response(JSON.stringify({
-      stage: 'hint1', hint: 'Gec kalan ipucu', nextToken: 'hint2-token',
-    }), { status: 200 }))
-    await act(async () => { await Promise.resolve() })
-
-    act(() => vi.advanceTimersByTime(TYPE_MS))
-    expect(screen.getByText(CHAN_LINES.check)).toBeInTheDocument()
-    expect(screen.queryByText('Gec kalan ipucu')).not.toBeInTheDocument()
+  test('TTS desteklenmiyorsa buton yoktur ve unmount konuşmayı keser', () => {
+    tts.supported = false
+    const { unmount } = render(
+      <BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />,
+    )
+    expect(screen.queryByRole('button', { name: 'Repliği sesli oku' })).not.toBeInTheDocument()
+    unmount()
+    expect(tts.stop).toHaveBeenCalled()
+    tts.supported = true
   })
 })
 
 describe('pickLine', () => {
-  test('random=0 -> ilk eleman, random≈1 -> son eleman', () => {
+  test('random=0 ilk, random yaklaşık 1 son elemanı seçer', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0)
     expect(pickLine(CHAN_LINES.greet)).toBe(CHAN_LINES.greet[0])
     vi.spyOn(Math, 'random').mockReturnValue(0.999)

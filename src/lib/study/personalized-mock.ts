@@ -32,8 +32,17 @@ export interface PersonalizedMockBreakdown {
   weakCategories: string[]
 }
 
+export type PersonalizedMockSourceBucket = 'wrong' | 'weak' | 'coverage'
+
+export interface PersonalizedMockItem {
+  questionId: string
+  sourceBucket: PersonalizedMockSourceBucket
+}
+
 export interface PersonalizedMockSelection {
   questionIds: string[]
+  /** Immutable per-question provenance in the same final order as questionIds. */
+  items: PersonalizedMockItem[]
   breakdown: PersonalizedMockBreakdown
 }
 
@@ -162,6 +171,7 @@ export function selectPersonalizedMock({
   const weakCategories = weakestCategories(answers)
   const selected: string[] = []
   const used = new Set<string>()
+  const sourceById = new Map<string, PersonalizedMockSourceBucket>()
   const selectedByCategory = new Map<string, number>()
 
   // Kapsam hedefi yalnız gerçekten mevcut adaylarla doldurulabilecek minimumları
@@ -184,7 +194,11 @@ export function selectPersonalizedMock({
   const requiredCoverageTotal = Object.values(distribution).reduce((sum, count) => sum + count, 0)
   const shouldReserveCoverage = targetSize >= requiredCoverageTotal
 
-  function take(candidate: PersonalizedMockCandidate, reserveCoverage = false): boolean {
+  function take(
+    candidate: PersonalizedMockCandidate,
+    sourceBucket: PersonalizedMockSourceBucket,
+    reserveCoverage = false,
+  ): boolean {
     if (selected.length >= targetSize || used.has(candidate.id)) return false
 
     if (reserveCoverage && shouldReserveCoverage) {
@@ -200,6 +214,7 @@ export function selectPersonalizedMock({
 
     used.add(candidate.id)
     selected.push(candidate.id)
+    sourceById.set(candidate.id, sourceBucket)
     selectedByCategory.set(
       candidate.category,
       (selectedByCategory.get(candidate.category) ?? 0) + 1,
@@ -214,7 +229,7 @@ export function selectPersonalizedMock({
   })
   for (const candidate of shuffledCandidates(openWrongCandidates, seed, 'wrong')) {
     if (wrong >= Math.min(WRONG_QUOTA, targetSize)) break
-    if (take(candidate, true)) wrong++
+    if (take(candidate, 'wrong', true)) wrong++
   }
 
   const weakTarget = Math.min(
@@ -245,7 +260,7 @@ export function selectPersonalizedMock({
 
       if (index >= pool.length) continue
       weakIndexes.set(category, index + 1)
-      if (take(pool[index], true)) {
+      if (take(pool[index], 'weak', true)) {
         weak++
         pickedThisRound = true
       }
@@ -267,7 +282,7 @@ export function selectPersonalizedMock({
       `coverage:${category}`,
     )) {
       if (filled >= missing || selected.length >= targetSize) break
-      if (take(candidate)) {
+      if (take(candidate, 'coverage')) {
         filled++
         coverage++
       }
@@ -277,7 +292,7 @@ export function selectPersonalizedMock({
 
   for (const candidate of shuffledCandidates(normalizedCandidates, seed, 'new')) {
     if (selected.length >= targetSize) break
-    if (take(candidate)) coverage++
+    if (take(candidate, 'coverage')) coverage++
   }
 
   // Aşamalar pedagojik kaynağı ele vermesin: yanlış → zayıf → kapsam bloklarını
@@ -288,9 +303,14 @@ export function selectPersonalizedMock({
     seed,
     'final',
   ).map(candidate => candidate.id)
+  const items = questionIds.map((questionId) => ({
+    questionId,
+    sourceBucket: sourceById.get(questionId) ?? 'coverage',
+  }))
 
   return {
     questionIds,
+    items,
     breakdown: { wrong, weak, coverage, weakCategories },
   }
 }

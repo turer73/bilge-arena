@@ -56,6 +56,7 @@ describe('CalismaClient', () => {
     render(<CalismaClient />)
     expect(screen.getByText('Ders Çalışma Ortamı')).toBeInTheDocument()
     expect(screen.getByTestId('today-plan-focus')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /10 soruluk kısa tanılama/i })).toHaveAttribute('href', '/arena/tani')
     expect(screen.getByTestId('mastery-action-card')).toBeInTheDocument()
     expect(screen.getByTestId('study-assistant-stub')).toBeInTheDocument()
   })

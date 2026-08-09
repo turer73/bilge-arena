@@ -12,6 +12,8 @@ interface GeneratedQuestion {
   topic?: string
 }
 
+interface OutcomeOption { id: string; code: string; title: string }
+
 /**
  * Admin paneli icin AI soru uretici + manuel soru ekleme.
  */
@@ -26,6 +28,9 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
   // 364/640 wordquest sorusu B2 etiketli, mevcut ortalamayi korumak icin).
   const [levelTag, setLevelTag] = useState<'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2'>('B2')
   const [topics, setTopics] = useState<string[]>([])
+  const [outcomes, setOutcomes] = useState<OutcomeOption[]>([])
+  const [outcomeId, setOutcomeId] = useState('')
+  const [governanceMode, setGovernanceMode] = useState(false)
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'ai' | 'manual'>('ai')
 
@@ -45,11 +50,19 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
 
   // Konu listesini cek
   useEffect(() => {
-    if (!category) { setTopics([]); return }
+    if (!category) { setTopics([]); setOutcomes([]); setOutcomeId(''); return }
     fetch(`/api/admin/generate-questions?game=${game}&category=${category}`)
       .then(r => r.ok ? r.json() : { topics: [] })
       .then(d => setTopics(d.topics || []))
       .catch(() => setTopics([]))
+    const params = new URLSearchParams({ game, category })
+    fetch(`/api/admin/content-quality/outcomes?${params}`)
+      .then(async (response) => {
+        if (response.status === 503) return { enabled: false, outcomes: [] as OutcomeOption[] }
+        return { enabled: true, outcomes: response.ok ? ((await response.json()).outcomes ?? []) as OutcomeOption[] : [] }
+      })
+      .then((result) => { setGovernanceMode(result.enabled); setOutcomes(result.outcomes); setOutcomeId('') })
+      .catch(() => { setOutcomes([]); setOutcomeId('') })
   }, [game, category])
 
   const effectiveTopic = topic === '__custom__' ? customTopic : topic
@@ -57,6 +70,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
   // ── AI Üretim ──────────────────────────────────────
   const handleGenerate = async () => {
     if (!category) { toast.error('Kategori seçin'); return }
+    if (governanceMode && !outcomeId) { toast.error('Birincil kazanım seçin'); return }
     setLoading(true)
     setPreview([])
 
@@ -70,6 +84,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
           // level_tag sadece wordquest icin gonderilir; backend de wordquest
           // disinda goz ardi eder (NULL'a fallback). Form bunu acikca disable ediyor.
           ...(game === 'wordquest' ? { level_tag: levelTag } : {}),
+          ...(governanceMode ? { outcomeId, requestId: crypto.randomUUID() } : {}),
         }),
       })
 
@@ -77,7 +92,9 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
 
       if (res.ok) {
         const dupMsg = data.duplicateCount > 0 ? ` (${data.duplicateCount} tekrar filtrelendi)` : ''
-        toast.success(`${data.saved} soru pasif olarak kaydedildi${dupMsg}`)
+        toast.success(governanceMode
+          ? `${data.saved} soru yönetişim taslağına alındı${dupMsg}`
+          : `${data.saved} soru pasif olarak kaydedildi${dupMsg}`)
         setPreview([])
         onGenerated?.()
       } else {
@@ -92,6 +109,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
   // ── Manuel Kaydet ──────────────────────────────────
   const handleManualSave = async () => {
     if (!category) { toast.error('Kategori seçin'); return }
+    if (governanceMode && !outcomeId) { toast.error('Birincil kazanım seçin'); return }
     if (!manualQ || manualQ.length < 10) { toast.error('Soru en az 10 karakter olmalı'); return }
     if (manualOpts.some(o => !o.trim())) { toast.error('Tüm seçenekleri doldurun'); return }
     if (!manualSolution || manualSolution.length < 5) { toast.error('Çözüm en az 5 karakter olmalı'); return }
@@ -109,12 +127,13 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
           answer: manualAnswer,
           solution: manualSolution,
           ...(game === 'wordquest' ? { level_tag: levelTag } : {}),
+          ...(governanceMode ? { outcomeId, requestId: crypto.randomUUID() } : {}),
         }),
       })
 
       const data = await res.json()
       if (res.ok) {
-        toast.success('Soru kaydedildi (aktif)')
+        toast.success(governanceMode ? 'Soru yönetişim taslağına alındı' : 'Soru kaydedildi (aktif)')
         setManualQ('')
         setManualOpts(['', '', '', '', ''])
         setManualAnswer(0)
@@ -253,6 +272,22 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
             </div>
           )}
 
+          {governanceMode && (
+            <div className="mt-3 max-w-2xl">
+              <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]" htmlFor="content-primary-outcome">BİRİNCİL KAZANIM</label>
+              <select
+                id="content-primary-outcome"
+                value={outcomeId}
+                onChange={(event) => setOutcomeId(event.target.value)}
+                className="min-h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-xs"
+              >
+                <option value="">Kazanım seçin…</option>
+                {outcomes.map((outcome) => <option key={outcome.id} value={outcome.id}>{outcome.code} — {outcome.title}</option>)}
+              </select>
+              {outcomes.length === 0 && <p className="mt-1 text-[10px] text-[var(--urgency)]">Bu kapsamda aktif kazanım bulunamadı; taslak oluşturulamaz.</p>}
+            </div>
+          )}
+
           {/* ── AI Tab ─────────────────────────────── */}
           {tab === 'ai' && (
             <>
@@ -272,7 +307,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
 
                 <button
                   onClick={handleGenerate}
-                  disabled={loading || !category}
+                  disabled={loading || !category || (governanceMode && !outcomeId)}
                   className="mt-4 rounded-lg bg-[var(--focus)] px-6 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
                   {loading ? 'Üretiliyor...' : 'AI ile Üret'}
@@ -280,7 +315,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
               </div>
 
               <p className="mt-2 text-[10px] text-[var(--text-sub)]">
-                Üretilenler pasif olarak kaydedilir. Soru listesinden aktif hale getirin.
+                {governanceMode ? 'Üretilenler taslak olur; iki bağımsız onaydan önce yayınlanmaz.' : 'Üretilenler pasif olarak kaydedilir. Soru listesinden aktif hale getirin.'}
               </p>
 
               {/* Onizleme */}
@@ -374,13 +409,13 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
 
               <button
                 onClick={handleManualSave}
-                disabled={manualSaving || !category || !manualQ}
+                disabled={manualSaving || !category || !manualQ || (governanceMode && !outcomeId)}
                 className="rounded-lg bg-[var(--growth)] px-6 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
-                {manualSaving ? 'Kaydediliyor...' : 'Kaydet (Aktif)'}
+                {manualSaving ? 'Kaydediliyor...' : (governanceMode ? 'Taslak Oluştur' : 'Kaydet (Aktif)')}
               </button>
               <p className="text-[10px] text-[var(--text-sub)]">
-                Manuel eklenen sorular doğrudan aktif olarak kaydedilir.
+                {governanceMode ? 'Manuel soru da iki bağımsız kontrolden geçmeden yayınlanmaz.' : 'Manuel eklenen sorular doğrudan aktif olarak kaydedilir.'}
               </p>
             </div>
           )}

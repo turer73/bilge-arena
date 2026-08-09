@@ -43,6 +43,23 @@ beforeEach(() => {
 })
 
 describe('ArenaClient (mobil home)', () => {
+  test('öğretmen sınıfı bağlantısını yalnız açık UI flag ile gösterir', () => {
+    const previous = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
+    try {
+      delete process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
+      const { unmount } = render(<ArenaClient />)
+      expect(screen.queryByRole('link', { name: /Sınıflarım/i })).not.toBeInTheDocument()
+      unmount()
+
+      process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED = 'true'
+      render(<ArenaClient />)
+      expect(screen.getByRole('link', { name: /Sınıflarım/i })).toHaveAttribute('href', '/arena/sinif')
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
+      else process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED = previous
+    }
+  })
+
   test('anon: login CTA + oyun grid + Arena CTA; XP bar/gorev YOK', async () => {
     render(<ArenaClient />)
     expect(screen.getByText(/ilerlemeyi kaydet/i)).toBeInTheDocument()

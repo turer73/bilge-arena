@@ -14,6 +14,13 @@ import {
 } from '@/lib/utils/question-public'
 import { selectPersonalizedMock } from '@/lib/study/personalized-mock'
 import type { Question } from '@/types/database'
+import {
+  issueVerifiedAttempt,
+  issueVerifiedExamAttempt,
+  toPublicVerifiedQuestions,
+} from '@/lib/verified-attempts'
+import { isValidUuid } from '@/lib/utils/uuid'
+import { DENEME_CONFIGS } from '@/lib/constants/modes'
 
 const ipLimiter = createRateLimiter('personalized-mock-ip', 60, 60_000)
 const userLimiter = createRateLimiter('personalized-mock-user', 10, 60_000)
@@ -23,6 +30,7 @@ const VALID_GAMES = new Set<string>(GAME_SLUGS)
 const HISTORY_LIMIT = 1000
 const QUESTION_POOL_LIMIT = 1000
 const MOCK_SIZE = 40
+const STRATEGY_BLUEPRINT_VERSION = 'personalized-mock-v1'
 
 interface HistoryRow {
   question_id: string
@@ -171,10 +179,55 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const questions = composition.questionIds
+  let questions = composition.questionIds
     .map((id) => questionsById.get(id))
     .filter((question): question is Question => Boolean(question))
     .map(toPublicQuestion)
+
+  let attemptId: string
+  let expiresAt: string
+  let strategyEligible = false
+  try {
+    // Migration 100 pilot is exam-ref scoped; WordQuest has no exam_ref and
+    // deliberately stays on the existing verified-attempt path.
+    const strategyEnabled = process.env.MOCK_STRATEGY_ENABLED === 'true'
+      && process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED === 'true'
+      && game !== 'wordquest'
+    const requestIdHeader = request.headers.get('x-idempotency-key')
+    const ticket = strategyEnabled
+      ? await issueVerifiedExamAttempt(admin, {
+          userId: user.id,
+          game,
+          examRef,
+          blueprintVersion: STRATEGY_BLUEPRINT_VERSION,
+          items: composition.items,
+          plannedDurationSec: DENEME_CONFIGS[game].totalTime,
+          requestId: requestIdHeader && isValidUuid(requestIdHeader)
+            ? requestIdHeader
+            : crypto.randomUUID(),
+        })
+      : await issueVerifiedAttempt(admin, {
+          userId: user.id,
+          game,
+          mode: 'deneme',
+          questionIds: questions.map(question => question.id),
+        })
+    attemptId = ticket.attemptId
+    expiresAt = ticket.expiresAt
+    strategyEligible = 'strategyEligible' in ticket && ticket.strategyEligible === true
+    const verifiedQuestions = toPublicVerifiedQuestions(ticket.questionSnapshots)
+    if (
+      verifiedQuestions.length !== questions.length
+      || verifiedQuestions.some((question, index) => question.id !== questions[index]?.id)
+    ) throw new Error('verified_attempt_snapshot_mismatch')
+    questions = verifiedQuestions
+  } catch {
+    console.error('[/api/study/personalized-mock] verified attempt issuance failed')
+    return NextResponse.json(
+      { error: 'Deneme baslatilamadi' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
 
   return NextResponse.json(
     {
@@ -183,6 +236,10 @@ export async function GET(request: NextRequest) {
       examRef,
       questions,
       breakdown: composition.breakdown,
+      attemptId,
+      expiresAt,
+      strategyEligible,
+      ...(strategyEligible ? { blueprintVersion: STRATEGY_BLUEPRINT_VERSION } : {}),
     },
     { headers: { 'Cache-Control': 'no-store' } },
   )

@@ -5,7 +5,13 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import { foldQuestionCard, isCardDue, type ReviewEvent } from '../fsrs'
+import {
+  foldQuestionCard,
+  getCardRetrievability,
+  isCardDue,
+  restoreQuestionCard,
+  type ReviewEvent,
+} from '../fsrs'
 
 const T0 = '2026-01-01T00:00:00.000Z'
 const T0_PLUS_2D = '2026-01-03T00:00:00.000Z'
@@ -70,5 +76,36 @@ describe('isCardDue', () => {
   test('due > now ise false', () => {
     const card = foldQuestionCard([{ isCorrect: false, answeredAt: T0 }])
     expect(isCardDue(card, new Date('2026-01-01T00:00:30.000Z'))).toBe(false)
+  })
+})
+
+describe('persistent card snapshot', () => {
+  test('DB snapshot restore edilince due ve retrievability fold sonucu ile aynidir', () => {
+    const folded = foldQuestionCard([
+      { isCorrect: true, answeredAt: T0 },
+      { isCorrect: true, answeredAt: T0_PLUS_2D },
+    ])
+    const restored = restoreQuestionCard({
+      dueAt: folded.due.toISOString(),
+      stability: folded.stability,
+      difficulty: folded.difficulty,
+      elapsedDays: folded.elapsed_days,
+      scheduledDays: folded.scheduled_days,
+      reps: folded.reps,
+      lapses: folded.lapses,
+      learningSteps: folded.learning_steps,
+      state: folded.state,
+      lastReviewAt: folded.last_review?.toISOString() ?? null,
+    })
+
+    const now = new Date('2026-01-08T00:00:00.000Z')
+    expect(restored.due.toISOString()).toBe(folded.due.toISOString())
+    expect(getCardRetrievability(restored, now)).toBe(
+      getCardRetrievability(folded, now),
+    )
+  })
+
+  test('New kartin retrievability degeri sifirdir', () => {
+    expect(getCardRetrievability(foldQuestionCard([]))).toBe(0)
   })
 })

@@ -42,6 +42,16 @@ const PERMISSION_GROUPS: { label: string; permissions: { key: string; label: str
     { key: 'admin.questions.edit', label: 'Duzenle' },
     { key: 'admin.questions.generate', label: 'Uret (AI)' },
   ]},
+  { label: 'İçerik Yönetişimi', permissions: [
+    { key: 'content.prepare', label: 'Taslak hazırla' },
+    { key: 'content.review.stage1', label: '1. aşama konu/doğruluk' },
+    { key: 'content.review.stage2', label: '2. aşama pedagoji/lisans' },
+    { key: 'content.publish', label: 'Yayınla' },
+    { key: 'content.appeals.manage', label: 'İtirazları yönet' },
+    { key: 'content.corrections.apply', label: 'Sonuç düzeltmesi uygula' },
+    { key: 'content.psychometrics.refresh', label: 'Psikometri yenile' },
+    { key: 'content.enforcement.manage', label: 'DB yazma korumasını yönet' },
+  ]},
   { label: 'Kullanicilar', permissions: [
     { key: 'admin.users.view', label: 'Goruntule' },
     { key: 'admin.users.manage', label: 'Yonet' },

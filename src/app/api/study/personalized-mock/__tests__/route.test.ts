@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NextRequest } from 'next/server'
 
 const mocks = vi.hoisted(() => {
@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => {
   const ipCheck = vi.fn()
   const userCheck = vi.fn()
   const from = vi.fn()
-  return { getUser, ipCheck, userCheck, from }
+  const issueVerifiedAttempt = vi.fn()
+  const issueVerifiedExamAttempt = vi.fn()
+  return { getUser, ipCheck, userCheck, from, issueVerifiedAttempt, issueVerifiedExamAttempt }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -21,6 +23,12 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: vi.fn((name: string) => ({
     check: name.endsWith('-ip') ? mocks.ipCheck : mocks.userCheck,
   })),
+}))
+
+vi.mock('@/lib/verified-attempts', () => ({
+  issueVerifiedAttempt: mocks.issueVerifiedAttempt,
+  issueVerifiedExamAttempt: mocks.issueVerifiedExamAttempt,
+  toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
 }))
 
 import { GET } from '../route'
@@ -64,16 +72,46 @@ function question(id: string, category = 'sayilar') {
 }
 
 const U1 = '11111111-1111-4111-8111-111111111111'
+const REQUEST_ID = '22222222-2222-4222-8222-222222222222'
+const oldStrategyFlag = process.env.MOCK_STRATEGY_ENABLED
+const oldStrategyUiFlag = process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED
 
-function request(queryString = 'game=matematik&exam_ref=TYT') {
-  return new Request(`http://localhost/api/study/personalized-mock?${queryString}`) as NextRequest
+function request(queryString = 'game=matematik&exam_ref=TYT', withRequestId = false) {
+  return new Request(`http://localhost/api/study/personalized-mock?${queryString}`, {
+    headers: withRequestId ? { 'X-Idempotency-Key': REQUEST_ID } : undefined,
+  }) as NextRequest
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  delete process.env.MOCK_STRATEGY_ENABLED
+  delete process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED
   mocks.ipCheck.mockResolvedValue({ success: true })
   mocks.userCheck.mockResolvedValue({ success: true })
   mocks.getUser.mockResolvedValue({ data: { user: { id: U1 } } })
+  const projected = (id: string, game: string) => ({
+    id,
+    game,
+    category: 'sayilar',
+    subcategory: null,
+    topic: null,
+    difficulty: 3,
+    level_tag: null,
+    base_points: 30,
+    content: { question: `${id}?`, options: ['a', 'b', 'c', 'd'] },
+  })
+  mocks.issueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
+    attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    expiresAt: '2099-01-01T00:00:00.000Z',
+    questionSnapshots: input.questionIds.map(id => projected(id, input.game)),
+  }))
+  mocks.issueVerifiedExamAttempt.mockImplementation(async (_admin: unknown, input: { game: string; items: Array<{ questionId: string }> }) => ({
+    attemptId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    expiresAt: '2099-01-01T00:00:00.000Z',
+    strategyEligible: true,
+    blueprintVersion: 'personalized-mock-v1',
+    questionSnapshots: input.items.map(item => projected(item.questionId, input.game)),
+  }))
 
   const profileQuery = query({ data: { exam_type: 'yks' }, error: null })
   const questionQuery = query({ data: [question('q1')], error: null })
@@ -84,6 +122,13 @@ beforeEach(() => {
     if (table === 'session_answers') return historyQuery
     throw new Error(`unexpected table: ${table}`)
   })
+})
+
+afterAll(() => {
+  if (oldStrategyFlag === undefined) delete process.env.MOCK_STRATEGY_ENABLED
+  else process.env.MOCK_STRATEGY_ENABLED = oldStrategyFlag
+  if (oldStrategyUiFlag === undefined) delete process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED
+  else process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED = oldStrategyUiFlag
 })
 
 describe('GET /api/study/personalized-mock', () => {
@@ -151,6 +196,19 @@ describe('GET /api/study/personalized-mock', () => {
     expect(historyQuery.or).toHaveBeenCalledWith('is_skipped.eq.false,is_skipped.is.null')
     expect(body.breakdown.wrong).toBe(1)
     expect(body.questions).toHaveLength(40)
+    expect(body).toMatchObject({
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    })
+    expect(mocks.issueVerifiedAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        userId: U1,
+        game: 'matematik',
+        mode: 'deneme',
+        questionIds: body.questions.map((item: { id: string }) => item.id),
+      },
+    )
     expect(body.questions[0]).not.toHaveProperty('source')
     expect(body.questions[0]).not.toHaveProperty('times_answered')
   })
@@ -160,6 +218,69 @@ describe('GET /api/study/personalized-mock', () => {
     const body = await response.json()
     expect(response.status).toBe(422)
     expect(body).toMatchObject({ available: 1 })
+    expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('server flag açıkken ordered source snapshot ile atomic verified exam üretir', async () => {
+    process.env.MOCK_STRATEGY_ENABLED = 'true'
+    process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED = 'true'
+    const profileQuery = query({ data: { exam_type: 'yks' }, error: null })
+    const pool = Array.from({ length: 40 }, (_, index) => question(`q${index}`))
+    const questionQuery = query({ data: pool, error: null })
+    const historyQuery = query({ data: [], error: null })
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profileQuery
+      if (table === 'questions') return questionQuery
+      if (table === 'session_answers') return historyQuery
+      throw new Error(`unexpected table: ${table}`)
+    })
+
+    const response = await GET(request(undefined, true))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      attemptId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      strategyEligible: true,
+      blueprintVersion: 'personalized-mock-v1',
+    })
+    expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mocks.issueVerifiedExamAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        userId: U1,
+        game: 'matematik',
+        examRef: 'TYT',
+        blueprintVersion: 'personalized-mock-v1',
+        plannedDurationSec: 2700,
+        requestId: REQUEST_ID,
+        items: expect.arrayContaining([
+          expect.objectContaining({ sourceBucket: 'coverage' }),
+        ]),
+      }),
+    )
+    const issued = mocks.issueVerifiedExamAttempt.mock.calls[0][1]
+    expect(issued.items.map((item: { questionId: string }) => item.questionId))
+      .toEqual(body.questions.map((item: { id: string }) => item.id))
+  })
+
+  it('fails closed without returning questions when ticket issuance fails', async () => {
+    const profileQuery = query({ data: { exam_type: 'yks' }, error: null })
+    const pool = Array.from({ length: 40 }, (_, index) => question(`q${index}`))
+    const questionQuery = query({ data: pool, error: null })
+    const historyQuery = query({ data: [], error: null })
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profileQuery
+      if (table === 'questions') return questionQuery
+      if (table === 'session_answers') return historyQuery
+      throw new Error(`unexpected table: ${table}`)
+    })
+    mocks.issueVerifiedAttempt.mockRejectedValueOnce(new Error('database detail'))
+
+    const response = await GET(request())
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Deneme baslatilamadi' })
   })
 
   it('profil varsayılanını kullanır ve sorgu hatasında 500 döner', async () => {

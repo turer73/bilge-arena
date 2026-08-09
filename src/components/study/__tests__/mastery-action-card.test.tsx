@@ -22,6 +22,8 @@ const mockedUseMasteryMap = vi.mocked(useMasteryMap)
 function mkOutcome(overrides: Partial<MasteryOutcome> = {}): MasteryOutcome {
   return {
     code: 'MAT-SAY-01',
+    nodeCode: 'ba-tyt-math-v1:outcome:sayilar',
+    path: ['TYT Matematik', 'Sayılar ve Cebir', 'Sayılar', 'Sayılar ve işlem'],
     title: 'Sayılar ve işlem becerisi (pilot)',
     description: null,
     game: 'matematik',
@@ -33,7 +35,19 @@ function mkOutcome(overrides: Partial<MasteryOutcome> = {}): MasteryOutcome {
     weightedPossible: 6,
     delayedCorrect: 0,
     accuracy: 50,
+    rawAccuracy: 50,
+    difficultyAccuracy: 50,
+    averageTimeSec: 12,
+    fastWrongRate: 20,
+    hintRate: 0,
+    averageHintStage: null,
+    guessRisk: 0,
+    carelessRisk: 0,
+    evidenceCompleteness: 100,
+    score: 50,
     status: 'developing',
+    modelVersion: 'evidence-v2',
+    components: { accuracy: 28, delayedRetrieval: 0, independence: 15, selfRegulation: 7 },
     lastAnsweredAt: null,
     ...overrides,
   }
@@ -53,7 +67,7 @@ describe('MasteryActionCard', () => {
 
   test('tum kazanimlar mastered ise kutlama mesaji gosterir (CTA yok)', () => {
     mockedUseMasteryMap.mockReturnValue({
-      outcomes: [mkOutcome({ status: 'mastered', accuracy: 92 })],
+      outcomes: [mkOutcome({ status: 'mastered', accuracy: 92, score: 92 })],
       loading: false,
     } as never)
     render(<MasteryActionCard game="matematik" userId="u1" />)
@@ -64,16 +78,20 @@ describe('MasteryActionCard', () => {
   test('en zayif kazanim secilir; CTA gameStore filtrelerini kurup oyuna yonlendirir', () => {
     mockedUseMasteryMap.mockReturnValue({
       outcomes: [
-        mkOutcome({ code: 'GUCLU', accuracy: 80 }),
-        mkOutcome({ code: 'ZAYIF', title: 'Zayıf kazanım', accuracy: 20 }),
+        mkOutcome({ code: 'GUCLU', accuracy: 80, score: 80 }),
+        mkOutcome({ code: 'ZAYIF', title: 'Zayıf kazanım', accuracy: 20, score: 20 }),
       ],
       loading: false,
     } as never)
     render(<MasteryActionCard game="matematik" userId="u1" />)
-    // En dusuk accuracy'li (ZAYIF) kart olarak gosterilir
+    // En dusuk birleşik skorlu (ZAYIF) kart olarak gösterilir.
     expect(screen.getByText('Zayıf kazanım')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Tüm hâkimiyet haritasını aç/i })).toHaveAttribute(
+      'href',
+      '/arena/hakimiyet?game=matematik',
+    )
 
-    fireEvent.click(screen.getByRole('button', { name: /5 Soru Çöz/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Bu kazanımı çalış/ }))
     const gs = useGameStore.getState()
     expect(gs.selectedCategory).toBe('sayilar')
     expect(gs.selectedExamRef).toBe('TYT')

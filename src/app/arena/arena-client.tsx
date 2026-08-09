@@ -44,13 +44,14 @@ export default function ArenaClient() {
 
   // Tüm kişiselleştirme lobi kartında da görünsün: çerçeve (localStorage) + süs +
   // isim paneli (DB). Seçimler stüdyo/profilde yapılır; burada yansıtılır.
-  const [frameId, setFrameId] = useState('none')
-  useEffect(() => {
+  const [frameId] = useState(() => {
     try {
-      const f = localStorage.getItem(FRAME_STORAGE_KEY)
-      if (f) setFrameId(f)
+      return typeof window === 'undefined'
+        ? 'none'
+        : localStorage.getItem(FRAME_STORAGE_KEY) ?? 'none'
     } catch {}
-  }, [])
+    return 'none'
+  })
   const lobbyFrame = getFrameById(frameId)
   // Süs(ler) DB'de (selected_avatar_decorations) — başkalarına da görünür.
   const decorationIds = profile?.selected_avatar_decorations ?? []
@@ -224,6 +225,21 @@ export default function ArenaClient() {
 
       {/* ── Özel Modlar ── */}
       <div className="mb-4 flex flex-wrap gap-2 md:mb-5">
+        {process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true' && (
+          <Link
+            href="/arena/sinif"
+            className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-bold text-[var(--text-sub)] transition-all hover:-translate-y-0.5 hover:border-[var(--growth-border)] hover:text-[var(--growth)] hover:shadow-sm md:px-4 md:text-sm"
+          >
+            <span aria-hidden="true">🎓</span>
+            <span>Sınıflarım</span>
+            <span
+              className="rounded-full px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider"
+              style={{ background: 'var(--growth-bg)', color: 'var(--growth)' }}
+            >
+              PİLOT
+            </span>
+          </Link>
+        )}
         <Link
           href="/arena/fethet"
           className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-bold text-[var(--text-sub)] transition-all hover:-translate-y-0.5 hover:border-[var(--reward-border)] hover:text-[var(--reward)] hover:shadow-sm md:px-4 md:text-sm"

@@ -1,13 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkAdmin } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
-import { GAME_SLUGS } from '@/lib/constants/games'
+import { GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { parseQuestionContent, toPublicQuestionContent } from '@/lib/utils/question-public'
 import type { Database, Json, TablesUpdate } from '@/types/database.generated'
+import { issueVerifiedAttempt, toPublicVerifiedQuestions } from '@/lib/verified-attempts'
+import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // anon: IP bazli (50 öğrenci × ~2 req/dk)
 const questionsAuthLimiter = createRateLimiter('questions-auth', 240, 60_000) // authed: user-id bazli (daha yüksek ama sınırsız değil)
@@ -16,24 +19,9 @@ const VALID_GAMES = new Set(GAME_SLUGS)
 type SearchQuestionsArgs = Database['public']['Functions']['search_questions']['Args']
 
 function isJson(value: unknown): value is Json {
-  if (
-    value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  ) {
-    return true
-  }
-
-  if (Array.isArray(value)) {
-    return value.every(isJson)
-  }
-
-  if (typeof value === 'object') {
-    return Object.values(value).every((entry) => entry === undefined || isJson(entry))
-  }
-
-  return false
+  if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) return true
+  if (Array.isArray(value)) return value.every(isJson)
+  return typeof value === 'object' && Object.values(value as Record<string, unknown>).every(isJson)
 }
 
 /** parseInt ile boundary kontrolu: min <= val <= max */
@@ -104,7 +92,7 @@ export async function GET(request: NextRequest) {
   }
 
   const rawRows = rows ?? []
-  const data = isAdmin
+  let data: Array<{ id: string }> = isAdmin
     ? rawRows.map(({ total_count: _tc, ...rest }) => rest)
     : rawRows.flatMap((row) => {
         const content = parseQuestionContent(row.content)
@@ -123,16 +111,40 @@ export async function GET(request: NextRequest) {
       })
   const count = rawRows.length > 0 ? Number(rawRows[0].total_count) : 0
 
+  let attemptId: string | null = null
+  let expiresAt: string | null = null
+  if (user && !isAdmin && game && activeFilter === true && data.length > 0) {
+    try {
+      const ticket = await issueVerifiedAttempt(createServiceRoleClient(), {
+        userId: user.id,
+        game: game as GameSlug,
+        mode: 'classic',
+        questionIds: data.map(question => question.id),
+      })
+      attemptId = ticket.attemptId
+      expiresAt = ticket.expiresAt
+      const verifiedQuestions = toPublicVerifiedQuestions(ticket.questionSnapshots)
+      if (
+        verifiedQuestions.length !== data.length
+        || verifiedQuestions.some((question, index) => question.id !== data[index]?.id)
+      ) throw new Error('verified_attempt_snapshot_mismatch')
+      data = verifiedQuestions
+    } catch {
+      console.error('[/api/questions] verified attempt issuance failed')
+      return NextResponse.json({ error: 'Sorular baslatilamadi' }, { status: 500 })
+    }
+  }
+
   // Admin yanitlari admin_view=true ile pasif sorulari icerir; bu datayi CDN'de
   // public cache etmek hem stale toggle/edit gozlenmesine (sayfa nav sonrasi
   // eski durum geri doner) hem de anon session'larda admin-only leak'e yol acar.
   // Admin ise no-store; anon ise mevcut 5dk edge cache davranisi korunur.
-  const cacheControl = isAdmin
+  const cacheControl = user || isAdmin
     ? 'private, no-store'
     : 'public, s-maxage=300, stale-while-revalidate=60'
 
   return NextResponse.json(
-    { questions: data, total: count, page, limit },
+    { questions: data, total: count, page, limit, attemptId, expiresAt },
     { headers: { 'Cache-Control': cacheControl } },
   )
 }
@@ -156,15 +168,13 @@ export async function PATCH(request: NextRequest) {
   }
   const { questionId, updates } = parsed.data
 
-  // Mass assignment onleme: sadece izin verilen alanlari kabul et
+  // Eski istemci sözleşmesini deterministik olarak doğrula. Yönetişim pilotu
+  // açıkken içerik/metadata yalnız revision draft, acil kapatma quarantine olur.
   const ALLOWED_FIELDS = [
     'content', 'game', 'category', 'subcategory', 'topic',
     'difficulty', 'level_tag', 'is_active', 'is_boss',
     'source', 'exam_ref', 'external_id',
   ]
-  // Object.fromEntries index-signature'li tip uretiyor; supabase-js'in update
-  // tipi bunu reddediyor. ALLOWED_FIELDS zaten sutun adlarini sinirladigi icin
-  // daraltma guvenli.
   const safeUpdates = Object.fromEntries(
     Object.entries(updates ?? {}).filter(([k]) => ALLOWED_FIELDS.includes(k))
   ) as TablesUpdate<'questions'>
@@ -173,20 +183,23 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
   }
 
-  const { error } = await supabase
-    .from('questions')
-    .update(safeUpdates)
-    .eq('id', questionId)
+  if (contentGovernanceEnabled()) {
+    return NextResponse.json(
+      {
+        error: 'Dogrudan soru guncellemesi kapatildi. Revizyon veya karantina akislarini kullanin.',
+        code: 'CONTENT_GOVERNANCE_REQUIRED',
+        questionId,
+      },
+      { status: 409, headers: { 'Cache-Control': 'private, no-store' } },
+    )
+  }
 
+  const { error } = await supabase.from('questions').update(safeUpdates).eq('id', questionId)
   if (error) {
-    // PR #74 review LOW: raw error.message leak — generic + server log
     console.error('[/api/questions PATCH] update error:', error.message)
     return NextResponse.json({ error: 'Guncelleme basarisiz' }, { status: 500 })
   }
-
   const logDetails: Json = isJson(updates) ? updates : {}
-
-  // Admin log
   await supabase.from('admin_logs').insert({
     admin_id: admin.id,
     action: 'update_question',
@@ -194,6 +207,5 @@ export async function PATCH(request: NextRequest) {
     target_id: questionId,
     details: logDetails,
   })
-
   return NextResponse.json({ success: true })
 }

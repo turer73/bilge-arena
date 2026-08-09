@@ -12,7 +12,7 @@ const quizStoreValue: Record<string, unknown> = {
   state: 'answered',
   currentIndex: 0,
   questions: [{ id: 'q1' }],
-  answers: [{ selectedOption: 2, isCorrect: true }],
+  answers: [{ questionId: 'q1', selectedOption: 2, isCorrect: true }],
   maxLives: 3,
   lives: 3,
   streak: 1,
@@ -28,7 +28,9 @@ const quizStoreValue: Record<string, unknown> = {
     content: { question: 'Soru?', options: ['a', 'b', 'c', 'd'], answer: 2 },
   }),
 }
-vi.mock('@/stores/quiz-store', () => ({ useQuizStore: () => quizStoreValue }))
+vi.mock('@/stores/quiz-store', () => ({
+  useQuizStore: Object.assign(() => quizStoreValue, { getState: () => quizStoreValue }),
+}))
 const gameStoreValue = vi.hoisted(() => ({
   selectedMode: 'klasik',
   setMode: vi.fn(),
@@ -47,6 +49,7 @@ vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => authStoreValue }))
 // Mutable (vi.hoisted) → testler isDeneme'yi çevirebilir (deneme panel kontrolü).
 const quizGame = vi.hoisted(() => ({
   screen: 'game',
+  attemptId: null as string | null,
   isDeneme: false,
   mode: { id: 'klasik', name: 'Klasik', questionCount: 10, timePerQuestion: 30, lives: 3 },
   timer: { seconds: 24 },
@@ -71,14 +74,23 @@ vi.mock('@/lib/hooks/use-quiz-game', () => ({ useQuizGame: () => quizGame }))
 vi.mock('@/lib/hooks/use-sidebar-data', () => ({
   useSidebarData: () => ({ leaderboard: [], myRank: null, topicData: [] }),
 }))
-vi.mock('@/lib/hooks/use-session-saver', () => ({ useSessionSaver: vi.fn() }))
+const useSessionSaverMock = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/hooks/use-session-saver', () => ({ useSessionSaver: useSessionSaverMock }))
 const quizLimitValue = vi.hoisted(() => ({ canPlay: true, remaining: 99, isPremium: false, isGuest: true }))
 vi.mock('@/lib/hooks/use-quiz-limit', () => ({ useQuizLimit: () => quizLimitValue }))
 vi.mock('@/lib/hooks/use-daily-quests', () => ({
   useDailyQuests: () => ({ quests: [], claimXP: vi.fn(), updateProgress: vi.fn() }),
 }))
 const todayPlanValue = vi.hoisted(() => ({
-  plan: null as null | { planDate: string; game: string; questions: Array<{ id: string }>; completedIds: string[] },
+  plan: null as null | {
+    planDate: string
+    game: string
+    examRef: string | null
+    questions: Array<{ id: string }>
+    completedIds: string[]
+    attemptId: string
+    expiresAt: string
+  },
   loading: false,
   markCompleted: vi.fn(),
 }))
@@ -95,6 +107,22 @@ vi.mock('@/lib/hooks/use-mastery-map', () => ({
   useMasteryMap: () => ({ outcomes: [], loading: false, fetchMastery: vi.fn() }),
 }))
 vi.mock('@/lib/utils/plausible', () => ({ trackEvent: vi.fn() }))
+const trackLearningEvent = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/analytics/learning-events', () => ({ trackLearningEvent }))
+const strategyClient = vi.hoisted(() => ({
+  enabled: false,
+  start: vi.fn(),
+  finalize: vi.fn(),
+  fetchAnalysis: vi.fn(),
+  exposure: vi.fn(),
+}))
+vi.mock('@/lib/mock-strategy/client', () => ({
+  isMockStrategyUiEnabled: () => strategyClient.enabled,
+  startMockStrategyAttempt: strategyClient.start,
+  finalizeMockStrategyAttempt: strategyClient.finalize,
+  fetchMockStrategyAnalysis: strategyClient.fetchAnalysis,
+  recordMockStrategyExposure: strategyClient.exposure,
+}))
 
 // --- Ağır çocuk bileşenler: marker/null stub ---
 vi.mock('../question-card', () => ({
@@ -210,8 +238,11 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
     todayPlanValue.plan = {
       planDate: '2026-07-21',
       game: 'matematik',
+      examRef: 'TYT',
       questions: [{ id: 'q-plan' }],
       completedIds: [],
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
     }
     quizLimitValue.canPlay = false
     quizGame.handleStartPlanned.mockClear()
@@ -236,13 +267,17 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
     todayPlanValue.plan = {
       planDate: '2026-07-21',
       game: 'matematik',
+      examRef: 'TYT',
       questions,
       completedIds: [],
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
     }
     gameStoreValue.setMode.mockClear()
     gameStoreValue.setCategory.mockClear()
     gameStoreValue.setDifficulty.mockClear()
     quizGame.handleStartPlanned.mockClear()
+    trackLearningEvent.mockClear()
 
     try {
       render(<QuizEngine game="matematik" />)
@@ -250,7 +285,70 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
       expect(gameStoreValue.setMode).toHaveBeenCalledWith('practice')
       expect(gameStoreValue.setCategory).toHaveBeenCalledWith(null)
       expect(gameStoreValue.setDifficulty).toHaveBeenCalledWith(null)
-      expect(quizGame.handleStartPlanned).toHaveBeenCalledWith(questions)
+      expect(quizGame.handleStartPlanned).toHaveBeenCalledWith(
+        questions,
+        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      )
+      expect(trackLearningEvent).toHaveBeenCalledWith('LearningPlanStarted', {
+        game: 'matematik',
+        planSize: 1,
+        completedBefore: 0,
+        examRef: 'TYT',
+      })
+    } finally {
+      authStoreValue.user = null
+      todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('plan yalnizca dogrulanmis oturum kaydi basarili olunca tamamlanir', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    todayPlanValue.plan = {
+      planDate: '2026-07-21',
+      game: 'matematik',
+      examRef: 'TYT',
+      questions: [{ id: 'q1' }],
+      completedIds: [],
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }
+    todayPlanValue.markCompleted.mockClear()
+    useSessionSaverMock.mockClear()
+    trackLearningEvent.mockClear()
+
+    try {
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByTestId('today-plan-start'))
+
+      expect(todayPlanValue.markCompleted).not.toHaveBeenCalled()
+
+      const latestOptions = useSessionSaverMock.mock.calls.at(-1)?.[0] as {
+        onSessionSaved?: (result: {
+          correctAnswers: number
+          totalQuestions: number
+          maxStreak: number
+          accuracy: number
+          game: string
+        }) => void
+      }
+      latestOptions.onSessionSaved?.({
+        correctAnswers: 1,
+        totalQuestions: 1,
+        maxStreak: 1,
+        accuracy: 100,
+        game: 'matematik',
+      })
+
+      expect(todayPlanValue.markCompleted).toHaveBeenCalledOnce()
+      expect(todayPlanValue.markCompleted).toHaveBeenCalledWith(['q1'])
+      expect(trackLearningEvent).toHaveBeenCalledWith('LearningPlanCompleted', {
+        game: 'matematik',
+        answeredCount: 1,
+        correctCount: 1,
+        accuracyPercent: 100,
+      })
     } finally {
       authStoreValue.user = null
       todayPlanValue.plan = null
@@ -301,6 +399,8 @@ describe('QuizEngine — Akıllı Deneme başlangıcı', () => {
       game: 'matematik',
       examRef: 'TYT',
       questions,
+      attemptId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      expiresAt: '2099-01-01T00:00:00.000Z',
       breakdown: { wrong: 1, weak: 1, coverage: 0, weakCategories: ['problemler'] },
     })
     gameStoreValue.setMode.mockClear()
@@ -315,8 +415,43 @@ describe('QuizEngine — Akıllı Deneme başlangıcı', () => {
       await waitFor(() => expect(gameStoreValue.setMode).toHaveBeenCalledWith('deneme'))
       expect(gameStoreValue.setCategory).toHaveBeenCalledWith(null)
       expect(gameStoreValue.setDifficulty).toHaveBeenCalledWith(null)
-      expect(quizGame.handleStartPreparedDeneme).toHaveBeenCalledWith(questions)
+      expect(quizGame.handleStartPreparedDeneme).toHaveBeenCalledWith(
+        questions,
+        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      )
     } finally {
+      authStoreValue.user = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('strateji pilotu sunucu start onayı gelmeden oyunu açmaz', async () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    strategyClient.enabled = true
+    strategyClient.start.mockResolvedValueOnce(null)
+    personalizedMockValue.generate.mockResolvedValueOnce({
+      generatedFor: '2026-08-08',
+      game: 'matematik',
+      examRef: 'TYT',
+      questions: [{ id: 'smart-1' }],
+      attemptId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      strategyEligible: true,
+      blueprintVersion: 'personalized-mock-v1',
+      breakdown: { wrong: 0, weak: 0, coverage: 1, weakCategories: [] },
+    })
+    quizGame.handleStartPreparedDeneme.mockClear()
+    gameStoreValue.setMode.mockClear()
+
+    try {
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByTestId('personalized-mock-start'))
+      await waitFor(() => expect(strategyClient.start).toHaveBeenCalled())
+      expect(quizGame.handleStartPreparedDeneme).not.toHaveBeenCalled()
+      expect(gameStoreValue.setMode).not.toHaveBeenCalledWith('deneme')
+    } finally {
+      strategyClient.enabled = false
       authStoreValue.user = null
       quizGame.screen = 'game'
     }

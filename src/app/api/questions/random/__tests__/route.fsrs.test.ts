@@ -4,6 +4,13 @@ import type { QuestionRow } from '@/lib/utils/question-public'
 /** FSRS rollout kohortuna dahil kullanicinin route davranisi. */
 vi.mock('@/lib/review/fsrs-rollout', () => ({
   getFsrsReviewRollout: vi.fn(() => ({ enabled: true, bucket: 0, percentage: 100, reason: 'cohort' })),
+  getPersistentFsrsReadRollout: vi.fn(() => ({ enabled: false, bucket: 0, percentage: 0, reason: 'master_disabled' })),
+}))
+
+const mockIssueVerifiedAttempt = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/verified-attempts', () => ({
+  issueVerifiedAttempt: mockIssueVerifiedAttempt,
+  toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
 }))
 
 function makeTableMock() {
@@ -113,14 +120,33 @@ function makeRequest(params: Record<string, string> = {}) {
 describe('GET /api/questions/random — FSRS rollout kohortu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      questionSnapshots: input.questionIds.map(id => ({
+        id,
+        game: input.game,
+        category: 'sayilar',
+        subcategory: null,
+        topic: null,
+        difficulty: 2,
+        level_tag: null,
+        base_points: 20,
+        content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'] },
+      })),
+    }))
+    mockRpc.mockImplementation(async (name: string) => {
+      if (name === 'select_random_questions') {
+        return { data: [makeQuestionRow('q1')], error: null }
+      }
+      return { data: null, error: { code: 'unexpected_rpc' } }
+    })
     sessionAnswersMock.reset()
     questionsMock.reset()
   })
 
   it('due<=simdi olan soru FSRS-fold ile havuza girer', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
-
     // 1) aday-tarama: wq1 en az bir kez yanlis
     sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
     // 2) tam gecmis: tek yanlis cevap, 30 gun once — Again sonrasi due kisa
@@ -140,10 +166,8 @@ describe('GET /api/questions/random — FSRS rollout kohortu', () => {
     ])
   })
 
-  it('Vercel Agent Review bulgusu: dueIds kirpilmadan .in()e gecirilir, limit DB-tarafinda + filtrelerden SONRA uygulanir', async () => {
+  it('game-kapsamli due adaylari dueAt sirasinda ilk 20ye sinirlanir ve DB filtresi korunur', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
-
     // 25 farkli soru, hepsi due (30 gun once yanlis) -- 20'den fazla, cross-game
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     const ids = Array.from({ length: 25 }, (_, i) => `wq${i}`)
@@ -157,8 +181,9 @@ describe('GET /api/questions/random — FSRS rollout kohortu', () => {
     await GET(makeRequest({ game: 'matematik', includeReview: 'true' }) as never)
 
     const chain = questionsMock.getLastChain()!
-    // .in() TUM 25 id ile cagrilmis olmali (JS-tarafinda 20'ye kirpilmamis)
-    expect(chain.in).toHaveBeenCalledWith('id', ids)
+    // Aday taramasi artik game/exam kapsaminda oldugu icin en erken ilk 20
+    // guvenle kirpilir; `.in()` URL'si de bounded kalir.
+    expect(chain.in).toHaveBeenCalledWith('id', ids.slice(0, 20))
     // .limit(20) filtrelerden (eq('game',...)) SONRA cagrilmis olmali
     const inOrder = chain.in.mock.invocationCallOrder[0]
     const eqGameOrder = chain.eq.mock.invocationCallOrder[0]
@@ -169,8 +194,6 @@ describe('GET /api/questions/random — FSRS rollout kohortu', () => {
 
   it('henuz due OLMAYAN soru havuza girmez ve 7-gun fallback calismaz', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
-
     const now = new Date().toISOString()
     // 1) aday-tarama: wq1 gecmiste yanlis
     sessionAnswersMock.push({ data: [{ question_id: 'wq1' }], error: null })
@@ -193,8 +216,6 @@ describe('GET /api/questions/random — FSRS rollout kohortu', () => {
 
   it('FSRS fold hata atarsa 7-gune duser (crash etmez)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
-
     // 1) aday-tarama basarisiz (error) -> fetchDueQuestions throw eder; route
     // yalniz hata halinde 7-gun fallback'ine gecer.
     sessionAnswersMock.push({ data: null, error: { code: '500' } })

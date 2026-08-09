@@ -81,6 +81,7 @@ const params = { params: Promise.resolve({ id: CLAIMED.id }) }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.unstubAllEnvs()
   m.checkPermission.mockResolvedValue({ id: 'admin-1' })
   m.rl.mockResolvedValue(null)
   m.claim.mockResolvedValue({ data: CLAIMED, error: null })
@@ -111,6 +112,33 @@ describe('PATCH /api/admin/submissions/[id]', () => {
     )
     expect(m.subUpdate.mock.calls[1][0]).toEqual({ question_id: 'q-new' })
     expect(m.logInsert).toHaveBeenCalled()
+  })
+
+  it('governance açıkken doğrudan insert yerine inactive governed draft oluşturur', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
+    const outcomeId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+    const questionId = '99999999-9999-4999-8999-999999999999'
+    m.rpc
+      .mockResolvedValueOnce({ data: { questionId, revisionId: '88888888-8888-4888-8888-888888888888', revisionNo: 1, status: 'draft', replayed: false }, error: null })
+      .mockResolvedValueOnce({ error: null })
+    const res = await PATCH(req({ action: 'approve', outcomeId }), params)
+    expect(res.status).toBe(200)
+    expect(m.qInsert).not.toHaveBeenCalled()
+    expect(m.rpc).toHaveBeenNthCalledWith(1, 'create_governed_question', expect.objectContaining({
+      p_user_id: 'admin-1', p_request_id: CLAIMED.id,
+      p_payload: expect.objectContaining({
+        changeKind: 'create', outcomes: [{ outcomeId, weight: 1, primary: true }],
+        source: expect.objectContaining({ kind: 'user_generated', licenseCode: 'PERMISSION' }),
+      }),
+    }))
+    expect(await res.json()).toEqual({ status: 'approved', question_id: questionId })
+  })
+
+  it('governance açıkken kazanımsız onayı claim etmeden reddeder', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
+    const res = await PATCH(req({ action: 'approve' }), params)
+    expect(res.status).toBe(400)
+    expect(m.claim).not.toHaveBeenCalled()
   })
 
   it('approve: gönderene coin ödülü (increment_coins) + onay bildirimi', async () => {

@@ -10,6 +10,8 @@ import { FethetClient } from '../fethet-client'
 const grader = vi.hoisted(() => ({ gradeQuestion: vi.fn() }))
 vi.mock('@/lib/questions/grade-question', () => ({ gradeQuestion: grader.gradeQuestion }))
 
+const ATTEMPT_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+
 const WQ_QUESTIONS = [
   {
     id: 'wq-1',
@@ -47,7 +49,11 @@ const CORRECT_TEXTS = ['deadlock', 'advancement', 'instrument']
 function mockFetchWith(questions: unknown[]) {
   vi.stubGlobal('fetch', vi.fn(async () => ({
     ok: true,
-    json: async () => ({ questions }),
+    json: async () => ({
+      questions,
+      attemptId: ATTEMPT_ID,
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }),
   })))
 }
 
@@ -93,6 +99,11 @@ describe('FethetClient — wordquest (İngilizce) akışı', () => {
     await waitFor(() => {
       expect(screen.getByText('Fethedildi!')).toBeInTheDocument()
     })
+    expect(grader.gradeQuestion).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Number),
+      ATTEMPT_ID,
+    )
   })
 
   it('yanlış seçimlerle kategori fethedilemez (notlama gerçekten ayırt ediyor)', async () => {

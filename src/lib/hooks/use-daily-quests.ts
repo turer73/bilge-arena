@@ -12,17 +12,21 @@ export function useDailyQuests() {
   const fetchQuests = useCallback(async () => {
     try {
       const res = await fetch('/api/quests')
-      if (!res.ok) return
+      if (!res.ok) return []
       const data = await res.json()
-      setQuests(data.quests ?? [])
+      const nextQuests = (data.quests ?? []) as UserDailyQuest[]
+      setQuests(nextQuests)
+      return nextQuests
     } catch {
       // Sessiz hata — görevler opsiyonel
+      return []
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Oturum sonrası görev ilerlemesini güncelle
+  // İlerleme migration 093'te doğrulanmış session ile atomik yazılır. İstemci
+  // yalnız sunucudaki yeni durumu tekrar okur ve yeni tamamlananları bildirir.
   const updateProgress = useCallback(async (sessionData: {
     correctAnswers: number
     totalQuestions: number
@@ -30,39 +34,19 @@ export function useDailyQuests() {
     accuracy: number
     game: string
   }) => {
-    try {
-      const res = await fetch('/api/quests', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionData }),
-      })
-      if (!res.ok) return
-      const data = await res.json()
-
-      // Güncellenen görevleri state'e yansıt
-      if (data.updated?.length) {
-        setQuests((prev) =>
-          prev.map((q) => {
-            const updated = data.updated.find((u: UserDailyQuest) => u.id === q.id)
-            return updated ?? q
-          })
-        )
-      }
-
-      // Yeni tamamlanan görevleri bildir
-      const newlyCompleted = (data.updated ?? []).filter(
-        (u: UserDailyQuest) => u.is_completed && !u.xp_claimed
-      )
-      for (const q of newlyCompleted) {
-        if (q.quest?.title) {
-          toast.quest(q.quest.title)
-        }
-      }
-      return newlyCompleted as UserDailyQuest[]
-    } catch {
-      return []
+    void sessionData
+    const previouslyCompleted = new Set(
+      quests.filter((quest) => quest.is_completed).map((quest) => quest.id),
+    )
+    const refreshed = await fetchQuests()
+    const newlyCompleted = refreshed.filter(
+      (quest) => quest.is_completed && !previouslyCompleted.has(quest.id),
+    )
+    for (const quest of newlyCompleted) {
+      if (quest.quest?.title) toast.quest(quest.quest.title)
     }
-  }, [])
+    return newlyCompleted
+  }, [fetchQuests, quests])
 
   // XP ödülü al
   const claimXP = useCallback(async (questId: string) => {

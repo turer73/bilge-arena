@@ -3,12 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GameSlug } from '@/lib/constants/games'
 import type { PublicQuestion } from '@/lib/utils/question-public'
+import { isValidUuid } from '@/lib/utils/uuid'
 
 export interface PersonalizedMockPlan {
   generatedFor: string
   game: GameSlug
   examRef: string | null
   questions: PublicQuestion[]
+  attemptId: string
+  expiresAt: string
+  strategyEligible?: boolean
+  blueprintVersion?: string
   breakdown: {
     wrong: number
     weak: number
@@ -46,6 +51,7 @@ export function usePersonalizedMock(
 
       const response = await fetch(`/api/study/personalized-mock?${params}`, {
         cache: 'no-store',
+        headers: { 'X-Idempotency-Key': crypto.randomUUID() },
         signal: controller.signal,
       })
       if (controller.signal.aborted) return null
@@ -57,7 +63,19 @@ export function usePersonalizedMock(
 
       const payload = await response.json() as PersonalizedMockPlan
       if (controller.signal.aborted) return null
-      if (payload.game !== game || !Array.isArray(payload.questions)) {
+      if (
+        payload.game !== game
+        || !Array.isArray(payload.questions)
+        || typeof payload.attemptId !== 'string'
+        || !isValidUuid(payload.attemptId)
+        || typeof payload.expiresAt !== 'string'
+        || !Number.isFinite(Date.parse(payload.expiresAt))
+        || Date.parse(payload.expiresAt) <= Date.now()
+        || (payload.strategyEligible === true && (
+          typeof payload.blueprintVersion !== 'string'
+          || payload.blueprintVersion.length === 0
+        ))
+      ) {
         setError('Akıllı deneme yanıtı geçersiz.')
         return null
       }

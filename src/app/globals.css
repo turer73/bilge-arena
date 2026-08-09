@@ -762,3 +762,57 @@
 .bg-anim-drift { background-size: 220% 220%; animation: bgDrift 14s ease-in-out infinite; }
 .bg-anim-pulse { animation: bgPulse 6s ease-in-out infinite; }
 .bg-anim-slide { animation: bgSlide 9s linear infinite; }
+
+/* Kağıt paketi yazdırma/PDF: özel sayfa dışındaki uygulama kabuğu basılmaz. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body.paper-print-page {
+    background: #fff !important;
+    color: #111827 !important;
+  }
+
+  body.paper-print-page * {
+    visibility: hidden !important;
+  }
+
+  body.paper-print-page .paper-print-root,
+  body.paper-print-page .paper-print-root * {
+    visibility: visible !important;
+  }
+
+  body.paper-print-page .paper-print-root {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    color: #111827 !important;
+    background: #fff !important;
+  }
+
+  body.paper-print-page .paper-screen-only {
+    display: none !important;
+  }
+
+  body.paper-print-page .paper-print-question,
+  body.paper-print-page .paper-optical-form {
+    break-inside: avoid;
+    border-color: #94a3b8 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  body.paper-print-page .paper-optical-form {
+    break-before: page;
+  }
+
+  body.paper-print-page .paper-optical-cell,
+  body.paper-print-page th,
+  body.paper-print-page td {
+    border-color: #64748b !important;
+  }
+}

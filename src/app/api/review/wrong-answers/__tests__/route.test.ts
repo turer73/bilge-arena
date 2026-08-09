@@ -9,6 +9,8 @@ const {
   mockUserCheck,
   mockWrongResult,
   mockLastResult,
+  mockReasonResult,
+  mockRpc,
   state,
 } = vi.hoisted(() => ({
   mockGetUser: vi.fn(async () => ({ data: { user: null as null | { id: string } } })),
@@ -16,6 +18,8 @@ const {
   mockUserCheck: vi.fn(async () => ({ success: true, retryAfter: 0 })),
   mockWrongResult: vi.fn((): { data: unknown[] | null; error: { code?: string; message?: string } | null } => ({ data: [], error: null })),
   mockLastResult: vi.fn((): { data: unknown[] | null; error: { code?: string; message?: string } | null } => ({ data: [], error: null })),
+  mockReasonResult: vi.fn((): { data: unknown[] | null; error: { code?: string; message?: string } | null } => ({ data: [], error: null })),
+  mockRpc: vi.fn(async () => ({ data: null, error: null as { code?: string } | null })),
   state: { callIndex: 0, chains: [] as Record<string, ReturnType<typeof vi.fn>>[] },
 }))
 
@@ -40,12 +44,14 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
+      if (table === 'review_logs') return makeThenableChain(mockReasonResult)
       if (table !== 'session_answers') return makeThenableChain(() => ({ data: [], error: null }))
       state.callIndex++
       const chain = makeThenableChain(state.callIndex === 1 ? mockWrongResult : mockLastResult)
       state.chains.push(chain)
       return chain
     }),
+    rpc: mockRpc,
   })),
 }))
 
@@ -59,7 +65,7 @@ vi.mock('@/lib/review/fsrs-rollout', () => ({
   getFsrsReviewRollout: vi.fn(() => ({ enabled: false, bucket: 0, percentage: 0, reason: 'master_disabled' })),
 }))
 
-import { GET } from '../route'
+import { GET, POST } from '../route'
 
 const U1 = '11111111-2222-3333-4444-555555555555'
 
@@ -67,6 +73,16 @@ function makeRequest(query = '', ip = '1.2.3.4') {
   const headers = new Headers()
   headers.set('x-forwarded-for', ip)
   return new Request(`http://localhost/api/review/wrong-answers${query}`, { headers }) as never
+}
+
+function makePostRequest(body: unknown, ip = '1.2.3.4') {
+  const headers = new Headers({ 'Content-Type': 'application/json' })
+  headers.set('x-forwarded-for', ip)
+  return new Request('http://localhost/api/review/wrong-answers', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  }) as never
 }
 
 const Q1 = 'aaaaaaaa-0000-4000-8000-000000000001'
@@ -92,6 +108,8 @@ describe('GET /api/review/wrong-answers', () => {
     mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })
     mockWrongResult.mockReturnValue({ data: [], error: null })
     mockLastResult.mockReturnValue({ data: [], error: null })
+    mockReasonResult.mockReturnValue({ data: [], error: null })
+    mockRpc.mockResolvedValue({ data: null, error: null })
   })
 
   it('rejects unauthorized (no user) with 401', async () => {
@@ -152,6 +170,38 @@ describe('GET /api/review/wrong-answers', () => {
       userSelectedOption: 2,
       wrongCount: 1,
     })
+  })
+
+  it('yalniz en son yanlis logun kontrollu hata nedenini doner, log kimligini sizdirmaz', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
+    mockWrongResult.mockReturnValue({
+      data: [{
+        question_id: Q1,
+        selected_option: 2,
+        answered_at: '2026-07-10T10:00:00Z',
+        is_skipped: false,
+        questions: questionJoin(),
+      }],
+      error: null,
+    })
+    mockLastResult.mockReturnValue({
+      data: [{ question_id: Q1, is_correct: false, answered_at: '2026-07-10T10:00:00Z' }],
+      error: null,
+    })
+    mockReasonResult.mockReturnValue({
+      data: [
+        { question_id: Q1, review_error_annotations: { reason_code: 'misread' } },
+        { question_id: Q1, review_error_annotations: { reason_code: 'guess' } },
+      ],
+      error: null,
+    })
+
+    const res = await GET(makeRequest())
+    const body = await res.json()
+    expect(body.items[0].errorReason).toEqual({ code: 'misread', label: 'Soruyu yanlış okuma' })
+    expect(JSON.stringify(body.items[0])).not.toContain('review_log')
+    expect(JSON.stringify(body.items[0])).not.toContain('answer_id')
+    expect(JSON.stringify(body.items[0])).not.toContain('session_id')
   })
 
   it('status=duzeltildi: son cevap dogruysa duzeltildi doner', async () => {
@@ -303,5 +353,61 @@ describe('GET /api/review/wrong-answers rate limit', () => {
     const res = await GET(makeRequest())
     expect(res.status).toBe(429)
     expect(res.headers.get('Retry-After')).toBe('12')
+  })
+})
+
+describe('POST /api/review/wrong-answers controlled error reason', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    state.callIndex = 0
+    state.chains = []
+    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
+    mockIpCheck.mockResolvedValue({ success: true, retryAfter: 0 })
+    mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })
+    mockReasonResult.mockReturnValue({ data: [], error: null })
+    mockRpc.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('anon istegi reddeder', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+    const res = await POST(makePostRequest({ questionId: Q1, reasonCode: 'guess' }))
+    expect(res.status).toBe(401)
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('serbest veya bilinmeyen nedeni reddeder', async () => {
+    const res = await POST(makePostRequest({ questionId: Q1, reasonCode: 'kendi_aciklamam' }))
+    expect(res.status).toBe(400)
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('kullanicinin soruya ait Again logu yoksa 404 doner', async () => {
+    const res = await POST(makePostRequest({ questionId: Q1, reasonCode: 'guess' }))
+    expect(res.status).toBe(404)
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('en son Again logunu auth user ile owner-korumali RPCye yollar', async () => {
+    const reviewLogId = 'bbbbbbbb-0000-4000-8000-000000000001'
+    mockReasonResult.mockReturnValue({ data: [{ id: reviewLogId }], error: null })
+
+    const res = await POST(makePostRequest({ questionId: Q1, reasonCode: 'calculation' }))
+    expect(res.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('set_review_error_reason', {
+      p_user_id: U1,
+      p_review_log_id: reviewLogId,
+      p_reason_code: 'calculation',
+    })
+    await expect(res.json()).resolves.toEqual({
+      errorReason: { code: 'calculation', label: 'Hesaplama hatası' },
+    })
+  })
+
+  it('RPC owner ihlalini 403 olarak esler', async () => {
+    mockReasonResult.mockReturnValue({ data: [{ id: 'bbbbbbbb-0000-4000-8000-000000000001' }], error: null })
+    mockRpc.mockResolvedValue({ data: null, error: { code: '42501' } })
+
+    const res = await POST(makePostRequest({ questionId: Q1, reasonCode: 'misread' }))
+    expect(res.status).toBe(403)
   })
 })

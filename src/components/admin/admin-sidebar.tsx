@@ -10,15 +10,15 @@ interface NavItem {
   href: string
   label: string
   icon: string
-  permission: string
+  permission: string | readonly string[]
 }
 
 const ADMIN_NAV: NavItem[] = [
   { href: '/admin', label: 'Dashboard', icon: '📊', permission: 'admin.dashboard.view' },
   { href: '/admin/anasayfa-editor', label: 'Anasayfa', icon: '🏠', permission: 'admin.homepage.view' },
-  { href: '/admin/sorular', label: 'Sorular', icon: '📝', permission: 'admin.questions.view' },
-  { href: '/admin/gonderiler', label: 'Gönderiler', icon: '📥', permission: 'admin.questions.view' },
-  { href: '/admin/soru-kalite', label: 'Soru Kalitesi', icon: '📉', permission: 'admin.questions.view' },
+  { href: '/admin/sorular', label: 'Sorular', icon: '📝', permission: ['admin.questions.view', 'content.prepare'] },
+  { href: '/admin/gonderiler', label: 'Gönderiler', icon: '📥', permission: ['admin.questions.view', 'content.prepare'] },
+  { href: '/admin/soru-kalite', label: 'Soru Kalitesi', icon: '📉', permission: ['admin.questions.view', 'content.prepare', 'content.review.stage1', 'content.review.stage2', 'content.publish', 'content.appeals.manage', 'content.corrections.apply', 'content.psychometrics.refresh'] },
   { href: '/admin/arka-planlar', label: 'Arka Planlar', icon: '🎬', permission: 'admin.backgrounds.view' },
   { href: '/admin/rozetler', label: 'Rozetler', icon: '🏅', permission: 'admin.badges.view' },
   { href: '/admin/kullanicilar', label: 'Kullanıcılar', icon: '👥', permission: 'admin.users.view' },
@@ -57,7 +57,8 @@ export function AdminSidebar() {
 
   // Rota değişince mobil drawer'ı kapat
   useEffect(() => {
-    setOpen(false)
+    const timer = window.setTimeout(() => setOpen(false), 0)
+    return () => window.clearTimeout(timer)
   }, [pathname])
 
   // Escape ile kapat (yalnızca açıkken)
@@ -73,7 +74,7 @@ export function AdminSidebar() {
   // permissions null ise → RBAC henüz aktif değil, tüm menüleri göster
   // permissions dolu ise → izne göre filtrele
   const visibleNav = permissions
-    ? ADMIN_NAV.filter(item => permissions.includes(item.permission))
+    ? ADMIN_NAV.filter(item => (Array.isArray(item.permission) ? item.permission : [item.permission]).some(permission => permissions.includes(permission)))
     : ADMIN_NAV
 
   return (

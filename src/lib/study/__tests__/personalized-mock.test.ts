@@ -130,6 +130,9 @@ describe('selectPersonalizedMock', () => {
 
     expect(result.questionIds.slice(0, 16).some(id => !wrongIds.has(id))).toBe(true)
     expect(result.questionIds.slice(16).some(id => wrongIds.has(id))).toBe(true)
+    expect(result.items.map(item => item.questionId)).toEqual(result.questionIds)
+    expect(result.items.filter(item => item.sourceBucket === 'wrong')).toHaveLength(16)
+    expect(result.items.filter(item => item.sourceBucket === 'coverage')).toHaveLength(24)
   })
 
   it('same-timestamp doğru cevabı giriş sırasından bağımsız son durum sayar', () => {

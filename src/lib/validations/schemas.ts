@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { REVIEW_ERROR_REASON_CODES } from '@/lib/review/error-reasons'
 
 // ============================================================
 // Chat API
@@ -46,6 +47,13 @@ export const errorReportSchema = z.object({
 // In-app "soru hatali" bildirimi (#379): modal report'una questionId eklenir.
 export const errorReportSubmitSchema = errorReportSchema.extend({
   questionId: z.string().uuid(),
+  requestId: z.string().uuid().optional(),
+})
+
+// Yanlis Defteri hata nedeni: serbest metin yok, yalniz dusuk kardinalli katalog.
+export const reviewErrorReasonSchema = z.object({
+  questionId: z.string().uuid(),
+  reasonCode: z.enum(REVIEW_ERROR_REASON_CODES),
 })
 
 // ============================================================
@@ -91,6 +99,7 @@ const answerSchema = z.object({
 })
 
 export const sessionSubmitSchema = z.object({
+  attemptId: z.string().uuid(),
   game: z.string().min(1).max(50),
   mode: z.string().min(1).max(30),
   answers: z.array(answerSchema).min(1).max(100),
@@ -181,7 +190,7 @@ export const pushUnsubscribeSchema = z.object({
 // ============================================================
 
 export const questClaimSchema = z.object({
-  questId: z.string().min(1).max(100),
+  questId: z.string().uuid(),
 })
 
 // ============================================================
@@ -201,19 +210,6 @@ export const logSchema = z.object({
   type: z.enum(['error', 'warn', 'info']).optional().default('error'),
   message: z.string().max(500).optional(),
   meta: z.unknown().optional(),
-})
-
-// ============================================================
-// Quest progress update
-// ============================================================
-
-export const questProgressSchema = z.object({
-  sessionData: z.object({
-    correctAnswers: z.number().int().min(0).max(1000).optional(),
-    maxStreak: z.number().int().min(0).max(1000).optional(),
-    accuracy: z.number().min(0).max(100).optional(),
-    game: z.string().max(50).optional(),
-  }),
 })
 
 // ============================================================

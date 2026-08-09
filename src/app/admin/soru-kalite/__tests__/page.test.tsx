@@ -29,6 +29,9 @@ function mockQuality(payload: unknown) {
     if (typeof url === 'string' && url.includes('/api/admin/question-quality')) {
       return Promise.resolve({ ok: true, json: () => Promise.resolve(payload) })
     }
+    if (typeof url === 'string' && url.includes('/api/admin/content-quality')) {
+      return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) })
+    }
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) }) // PATCH /api/questions
   })
 }
@@ -85,5 +88,19 @@ describe('AdminQuestionQualityPage', () => {
         updates: { is_active: false },
       })
     })
+  })
+
+  it('governance açıkken aktif soruyu doğrudan güncellemek yerine karantinaya alır', async () => {
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('/api/admin/question-quality')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(SAMPLE) })
+      if (url === '/api/admin/content-quality?limit=50') return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ items: [], nextCursor: null }) })
+      if (url.includes('/api/admin/content-quality/questions/q1/quarantine')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'quarantined' }) })
+      return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+    })
+    render(<AdminQuestionQualityPage />)
+    await screen.findByText('Kotu soru bir')
+    fireEvent.click(screen.getByText('Aktif'))
+    await waitFor(() => expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/quarantine'))).toBe(true))
+    expect(fetchMock.mock.calls.some((call) => call[0] === '/api/questions')).toBe(false)
   })
 })

@@ -26,6 +26,7 @@ export async function fetchDueQuestions(
   category: string | null = null,
   difficulty: number | null = null,
   examRef: string | null = null,
+  examScope: 'any' | 'exact' = 'any',
 ): Promise<Question[]> {
   // 1) Adaylar: en az bir kez yanlis cevaplanmis sorular (soru-id'ye gore
   // tekillestirilir asagida; tarama en son N yanlis-OLAYIYLA sinirli).
@@ -34,13 +35,20 @@ export async function fetchDueQuestions(
   // uygulaninca istenen oyunun due sorulari sessizce dislaniyor ve plan due kotasi
   // weak/new ile doluyordu. questions!inner join ile tarama game'e daraltilir --
   // limit artik game-ici son 1000 yanlisa uygulanir.
-  const { data: wrongRows, error: wrongError } = await admin
+  let wrongQuery = admin
     .from('session_answers')
-    .select('question_id, questions!inner(game)')
+    .select('question_id, questions!inner(game, category, difficulty, exam_ref)')
     .eq('user_id', userId)
     .eq('is_correct', false)
     .or('is_skipped.eq.false,is_skipped.is.null')
     .eq('questions.game', game)
+
+  if (category) wrongQuery = wrongQuery.eq('questions.category', category)
+  if (difficulty) wrongQuery = wrongQuery.eq('questions.difficulty', difficulty)
+  if (examRef) wrongQuery = wrongQuery.eq('questions.exam_ref', examRef)
+  else if (examScope === 'exact') wrongQuery = wrongQuery.is('questions.exam_ref', null)
+
+  const { data: wrongRows, error: wrongError } = await wrongQuery
     .order('answered_at', { ascending: false })
     .limit(FSRS_WRONG_SCAN_LIMIT)
 
@@ -55,15 +63,17 @@ export async function fetchDueQuestions(
   const dueMap = await computeDueMap(admin, userId, candidateIds)
   const dueIds = Array.from(dueMap.entries())
     .filter(([, info]) => info.isDue)
+    .sort(([, left], [, right]) => (
+      new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime()
+    ))
+    .slice(0, 20)
     .map(([questionId]) => questionId)
 
   if (dueIds.length === 0) return []
 
-  // Vercel Agent Review bulgusu: dueIds cross-game bir liste (aday-taramasi
-  // game'e gore filtrelenmiyor). game/category/difficulty filtreleri ONCE
-  // uygulanip DB-tarafinda limit(20) yapilmali -- aksi halde JS-tarafinda
-  // slice(0,20) once yapilirsa cok-oyunlu kullanicida istenen oyuna ait ID
-  // kalmayabilir (havuz sessizce ac kalir).
+  // Aday taramasi game/category/difficulty/exam kapsaminda daraltildigi icin
+  // en erken due olan ilk 20 kimlik guvenle sorgulanabilir. DB `.in()` sirayi
+  // korumaz; sonucu dueAt sirasina burada geri dizeriz.
   let query = admin
     .from('questions')
     .select('*')
@@ -74,10 +84,12 @@ export async function fetchDueQuestions(
   if (category) query = query.eq('category', category)
   if (difficulty) query = query.eq('difficulty', difficulty)
   if (examRef) query = query.eq('exam_ref', examRef)
+  else if (examScope === 'exact') query = query.is('exam_ref', null)
 
   query = query.limit(20)
 
   const { data, error } = await query
   if (error) throw error
-  return parseQuestionRows(data)
+  const byId = new Map(parseQuestionRows(data).map((question) => [question.id, question]))
+  return dueIds.map((id) => byId.get(id)).filter((question): question is Question => !!question)
 }

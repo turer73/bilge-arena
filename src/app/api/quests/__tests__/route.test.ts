@@ -61,7 +61,7 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: vi.fn(() => ({ check: mockRateLimitCheck })),
 }))
 
-import { GET } from '../route'
+import { GET, PATCH } from '../route'
 
 // ─── Tests ──────────────────────────────────────────
 
@@ -152,5 +152,18 @@ describe('GET /api/quests', () => {
 
     const res = await GET()
     expect(res.status).toBe(500)
+  })
+})
+
+describe('PATCH /api/quests', () => {
+  it('rejects client-controlled quest progress without reading auth or writing data', async () => {
+    vi.clearAllMocks()
+    const res = await PATCH()
+
+    expect(res.status).toBe(405)
+    expect(res.headers.get('Allow')).toBe('GET')
+    expect(mockGetUser).not.toHaveBeenCalled()
+    expect(mockExistingQuests).not.toHaveBeenCalled()
+    expect(mockInsertQuests).not.toHaveBeenCalled()
   })
 })

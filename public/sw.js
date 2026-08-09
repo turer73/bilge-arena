@@ -15,7 +15,7 @@
  * Eski cache'ler activate sirasinda temizlenir.
  */
 
-const STATIC_CACHE_VERSION = 'v1'
+const STATIC_CACHE_VERSION = 'v2'
 const STATIC_CACHE = `bilge-arena-static-${STATIC_CACHE_VERSION}`
 const RUNTIME_CACHE = `bilge-arena-runtime-${STATIC_CACHE_VERSION}`
 
@@ -77,6 +77,19 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/')) return
   if (url.pathname.startsWith('/_next/data/')) return
 
+  // Owner-only kağıt/PDF ekranları hiçbir zaman runtime/static cache'e girmez.
+  // Çevrimdışı artefakt yalnız kullanıcının kaydettiği PDF veya basılı sayfadır.
+  if (url.pathname === '/arena/kagit' || url.pathname.startsWith('/arena/kagit/')) {
+    event.respondWith(fetch(request).catch(() => caches.match('/offline')))
+    return
+  }
+
+  // Öğretmen sınıfları üye/ödev verisi içerir; özel sayfaları asla cache'e alma.
+  if (url.pathname === '/arena/sinif' || url.pathname.startsWith('/arena/sinif/')) {
+    event.respondWith(fetch(request).catch(() => caches.match('/offline')))
+    return
+  }
+
   // Network-first: HTML navigation + offline fallback
   const isHTMLRequest =
     request.mode === 'navigate' ||
@@ -85,16 +98,7 @@ self.addEventListener('fetch', (event) => {
   if (isHTMLRequest) {
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone()
-            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, clone))
-          }
-          return response
-        })
-        .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match('/offline')),
-        ),
+        .catch(() => caches.match('/offline')),
     )
     return
   }

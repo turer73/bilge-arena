@@ -5,14 +5,21 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import type { QuestionContent } from '@/types/database'
-import { foldQuestionCard, isCardDue, type ReviewEvent } from '@/lib/review/fsrs'
 import { getFsrsReviewRollout } from '@/lib/review/fsrs-rollout'
+import { computeDueMap, type DueInfo } from '@/lib/review/due-map'
+import {
+  getReviewErrorReasonLabel,
+  isReviewErrorReasonCode,
+  type ReviewErrorReasonCode,
+} from '@/lib/review/error-reasons'
+import { reviewErrorReasonSchema } from '@/lib/validations/schemas'
 
 // Cift kalkan rate limit (profile/topic-strengths paterni — auth-only endpoint):
 //   1. IP limit ONCE — anon flood auth.getUser() quota'sini tuketmesin
 //   2. User limit — auth kullanicinin kendi sayfasini asiri sik yenilemesine karsi
 const ipLimiter = createRateLimiter('wrong-answers-ip', 60, 60_000)
 const userLimiter = createRateLimiter('wrong-answers-user', 30, 60_000)
+const reasonLimiter = createRateLimiter('wrong-answers-reason', 20, 60_000)
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 50
@@ -63,6 +70,12 @@ interface WrongAnswerItem {
   /** FSRS tekrar-zamani (konu#7 S4). FSRS rollout disinda her ikisi de null. */
   isDue: boolean | null
   dueAt: string | null
+  /** Soru zorlugu `difficulty` ile karismamasi icin FSRS zorlugu ayri adlandirilir. */
+  stability: number | null
+  fsrsDifficulty: number | null
+  retrievability: number | null
+  reviewState: 'new' | 'learning' | 'review' | 'relearning' | null
+  errorReason: { code: ReviewErrorReasonCode; label: string } | null
 }
 
 interface CandidateEntry {
@@ -70,6 +83,14 @@ interface CandidateEntry {
   wrongCount: number
   lastWrongOption: number | null
   lastWrongAt: string
+}
+
+interface ReviewReasonRow {
+  question_id: string
+  review_error_annotations:
+    | { reason_code: string }
+    | { reason_code: string }[]
+    | null
 }
 
 /**
@@ -211,9 +232,6 @@ export async function GET(request: NextRequest) {
   }
 
   const lastStatusByQuestion = new Map<string, boolean>()
-  // FSRS rollout acikken lastRows (zaten cekilmis, ekstra sorgu YOK)
-  // ayni zamanda FSRS fold icin soru-basina olay-listesine gruplanir.
-  const eventsByQuestion = new Map<string, ReviewEvent[]>()
   for (const row of lastRows ?? []) {
     // Query filtresine ek savunma: mock/eski veri/istemci farklarinda skip bir
     // yanlis deneme gibi son-durumu veya FSRS kartini degistirmesin.
@@ -221,20 +239,56 @@ export async function GET(request: NextRequest) {
     if (!lastStatusByQuestion.has(row.question_id)) {
       lastStatusByQuestion.set(row.question_id, row.is_correct)
     }
-    if (fsrsRollout.enabled) {
-      const list = eventsByQuestion.get(row.question_id) ?? []
-      list.push({ isCorrect: row.is_correct, answeredAt: row.answered_at })
-      eventsByQuestion.set(row.question_id, list)
+  }
+
+  // Ortak hesaplayici, persistent-read kohortunda review_cards okur; backfill
+  // eksiginde yalniz eksik kartlari kanonik cevap gecmisinden katlar. Genel
+  // FSRS rollout kapaliysa geriye donuk API davranisi null kalir.
+  let dueByQuestion = new Map<string, DueInfo>()
+  if (fsrsRollout.enabled) {
+    try {
+      dueByQuestion = await computeDueMap(admin, user.id, questionIds)
+    } catch (error) {
+      const code = typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code ?? 'unknown')
+        : 'unknown'
+      console.error('[/api/review/wrong-answers] FSRS sorgu hatasi:', code)
+      return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
     }
   }
 
-  const dueByQuestion = new Map<string, { isDue: boolean; dueAt: string }>()
-  if (fsrsRollout.enabled) {
-    const now = new Date()
-    for (const [questionId, events] of eventsByQuestion) {
-      const card = foldQuestionCard(events)
-      dueByQuestion.set(questionId, { isDue: isCardDue(card, now), dueAt: card.due.toISOString() })
-    }
+  // Her soru icin yalniz EN SON yanlis review log'un kontrollu nedenini oku.
+  // Log/answer/session kimlikleri response'a eklenmez.
+  const { data: reasonRows, error: reasonError } = await admin
+    .from('review_logs')
+    .select('question_id, review_error_annotations(reason_code)')
+    .eq('user_id', user.id)
+    .eq('rating', 1)
+    .in('question_id', questionIds)
+    .order('reviewed_at', { ascending: false })
+    .order('answer_id', { ascending: false })
+    .returns<ReviewReasonRow[]>()
+
+  if (reasonError) {
+    console.error('[/api/review/wrong-answers] hata-nedeni sorgu hatasi:', reasonError.code)
+    return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
+  }
+
+  const reasonByQuestion = new Map<string, WrongAnswerItem['errorReason']>()
+  const seenReasonQuestionIds = new Set<string>()
+  for (const row of reasonRows ?? []) {
+    if (seenReasonQuestionIds.has(row.question_id)) continue
+    seenReasonQuestionIds.add(row.question_id)
+    const embedded = Array.isArray(row.review_error_annotations)
+      ? row.review_error_annotations[0]
+      : row.review_error_annotations
+    const code = embedded?.reason_code
+    reasonByQuestion.set(
+      row.question_id,
+      isReviewErrorReasonCode(code)
+        ? { code, label: getReviewErrorReasonLabel(code) }
+        : null,
+    )
   }
 
   // 8) Birlestir + status filtresi + en-son-yanlisa-gore sirala
@@ -255,6 +309,11 @@ export async function GET(request: NextRequest) {
       status,
       isDue: due ? due.isDue : null,
       dueAt: due ? due.dueAt : null,
+      stability: due ? due.stability : null,
+      fsrsDifficulty: due ? due.difficulty : null,
+      retrievability: due ? due.retrievability : null,
+      reviewState: due ? due.state : null,
+      errorReason: reasonByQuestion.get(questionId) ?? null,
     }
   })
 
@@ -271,6 +330,84 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(
     { items: pageItems, page, limit, hasMore },
+    { headers: { 'Cache-Control': 'no-store' } },
+  )
+}
+
+/**
+ * POST /api/review/wrong-answers
+ * Body: { questionId, reasonCode }
+ *
+ * Serbest metin kabul etmez. Sunucu auth kullanicisinin ilgili sorudaki en
+ * son Again log'unu bulur; owner kontrolunu migration 094 RPC'si tekrarlar.
+ */
+export async function POST(request: NextRequest) {
+  const ip = getClientIp(request.headers)
+  const ipRl = await ipLimiter.check(ip)
+  if (!ipRl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek' },
+      { status: 429, headers: { 'Retry-After': String(ipRl.retryAfter ?? 60) } },
+    )
+  }
+
+  const cookieClient = await createClient()
+  const {
+    data: { user },
+  } = await cookieClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
+
+  const userRl = await reasonLimiter.check(user.id)
+  if (!userRl.success) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek' },
+      { status: 429, headers: { 'Retry-After': String(userRl.retryAfter ?? 60) } },
+    )
+  }
+
+  const parsed = reviewErrorReasonSchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Gecersiz veri' }, { status: 400 })
+  }
+
+  const admin = createServiceRoleClient()
+  const { data: logs, error: logError } = await admin
+    .from('review_logs')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('question_id', parsed.data.questionId)
+    .eq('rating', 1)
+    .order('reviewed_at', { ascending: false })
+    .order('answer_id', { ascending: false })
+    .limit(1)
+    .returns<{ id: string }[]>()
+
+  if (logError) {
+    console.error('[/api/review/wrong-answers] review-log sorgu hatasi:', logError.code)
+    return NextResponse.json({ error: 'Hata nedeni kaydedilemedi' }, { status: 500 })
+  }
+  const latestWrongLog = logs?.[0]
+  if (!latestWrongLog) {
+    return NextResponse.json({ error: 'Yanlis cevap bulunamadi' }, { status: 404 })
+  }
+
+  const { error: rpcError } = await admin.rpc('set_review_error_reason', {
+    p_user_id: user.id,
+    p_review_log_id: latestWrongLog.id,
+    p_reason_code: parsed.data.reasonCode,
+  })
+  if (rpcError) {
+    const status = rpcError.code === 'P0002' ? 404
+      : rpcError.code === '42501' ? 403
+        : rpcError.code === '22023' ? 400
+          : 500
+    console.error('[/api/review/wrong-answers] hata-nedeni RPC hatasi:', rpcError.code)
+    return NextResponse.json({ error: 'Hata nedeni kaydedilemedi' }, { status })
+  }
+
+  const code = parsed.data.reasonCode
+  return NextResponse.json(
+    { errorReason: { code, label: getReviewErrorReasonLabel(code) } },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }

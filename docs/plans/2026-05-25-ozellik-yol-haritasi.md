@@ -1,5 +1,7 @@
 # Bilge Arena — Özellik Yol Haritası (2026-05-25)
 
+> **TARİHSEL BELGE — güncel plan değildir.** Bu dosya 25 Mayıs 2026 durumunu korur; bazı “yok/eksik” işaretleri artık geçersizdir. Uygulama ve tamamlanma kararlarında kanonik kaynak: [`2026-08-08-research-roadmap-completion.md`](./2026-08-08-research-roadmap-completion.md). Eski maddeler doğrulanmadan backlog veya yayın durumu olarak raporlanmamalıdır.
+
 **Kapsam:** Kullanıcı wishlist'i + reklam planı, mevcut kod durumuyla eşlenmiş. Güvenlik/ops backlog ayrı: `2026-05-25-yapilacaklar.md`.
 
 **Mevcut durum özeti:** Next.js 15 + Supabase, 9 oyun modu (`wordquest/matematik/turkce/fen` + `duello/oda`), PWA hazır, 50+ rozet sistemi mevcut, adaptive difficulty + daily streak çalışıyor. **Eksik kritik altyapı:** coin ekonomisi yok, ödeme gateway yok (`premium-gate-modal.tsx:77,90` TODO), maskot/shop hiç başlamamış.

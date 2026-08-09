@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { fsrsRolloutBucket, getFsrsReviewRollout } from '../fsrs-rollout'
+import {
+  fsrsRolloutBucket,
+  getFsrsReviewRollout,
+  getPersistentFsrsReadRollout,
+} from '../fsrs-rollout'
 
 const USER_ID = '11111111-2222-3333-4444-555555555555'
 
@@ -63,5 +67,40 @@ describe('FSRS review rollout', () => {
 
     expect(enabledAtBucket.enabled).toBe(true)
     expect(disabledBelowBucket).toMatchObject({ enabled: false, reason: 'outside_cohort' })
+  })
+})
+
+describe('persistent FSRS read rollout', () => {
+  it('eksik konfigurasyonda fold yoluna fail-closed doner', () => {
+    expect(getPersistentFsrsReadRollout(USER_ID, {})).toMatchObject({
+      enabled: false,
+      percentage: 0,
+      reason: 'master_disabled',
+    })
+  })
+
+  it.each([5, 25, 50, 100])('%%%i kapisini stabil user kovasina uygular', (percentage) => {
+    const decision = getPersistentFsrsReadRollout(USER_ID, {
+      FSRS_PERSISTENT_READ_ENABLED: 'true',
+      FSRS_PERSISTENT_READ_PERCENT: String(percentage),
+    })
+
+    expect(decision.percentage).toBe(percentage)
+    expect(decision.enabled).toBe(decision.bucket < percentage)
+  })
+
+  it('kill switch diger ayarlardan bagimsiz okuma kaynagini folda dondurur', () => {
+    expect(getPersistentFsrsReadRollout(USER_ID, {
+      FSRS_PERSISTENT_READ_ENABLED: 'true',
+      FSRS_PERSISTENT_READ_PERCENT: '100',
+      FSRS_PERSISTENT_READ_KILL_SWITCH: 'true',
+    })).toMatchObject({ enabled: false, reason: 'kill_switch', percentage: 100 })
+  })
+
+  it.each(['-1', '101', '5.5', 'NaN'])('gecersiz yuzdeyi sifira kapatir: %s', (value) => {
+    expect(getPersistentFsrsReadRollout(USER_ID, {
+      FSRS_PERSISTENT_READ_ENABLED: 'true',
+      FSRS_PERSISTENT_READ_PERCENT: value,
+    })).toMatchObject({ enabled: false, percentage: 0, reason: 'percentage_zero' })
   })
 })

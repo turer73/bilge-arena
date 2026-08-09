@@ -1,7 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockGetUser, mockCheckAdmin, mockRpc, mockFrom, mockUpdateEq, mockAdminMutationRl } = vi.hoisted(() => {
+const {
+  mockGetUser,
+  mockCheckAdmin,
+  mockRpc,
+  mockFrom,
+  mockUpdateEq,
+  mockAdminMutationRl,
+  mockIssueVerifiedAttempt,
+  mockServiceClient,
+} = vi.hoisted(() => {
   const mockUpdateEq = vi.fn()
   const mockFrom = vi.fn(() => ({
     update: vi.fn(() => ({ eq: mockUpdateEq })),
@@ -15,6 +24,8 @@ const { mockGetUser, mockCheckAdmin, mockRpc, mockFrom, mockUpdateEq, mockAdminM
     mockFrom,
     mockUpdateEq,
     mockAdminMutationRl: vi.fn(),
+    mockIssueVerifiedAttempt: vi.fn(),
+    mockServiceClient: { role: 'service' },
   }
 })
 
@@ -28,6 +39,15 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/supabase/admin', () => ({
   checkAdmin: mockCheckAdmin,
+}))
+
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => mockServiceClient),
+}))
+
+vi.mock('@/lib/verified-attempts', () => ({
+  issueVerifiedAttempt: mockIssueVerifiedAttempt,
+  toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
@@ -57,7 +77,24 @@ function makePatch(body: Record<string, unknown>) {
 }
 
 describe('GET /api/questions', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      questionSnapshots: input.questionIds.map(id => ({
+        id,
+        game: input.game,
+        category: 'cebir',
+        subcategory: null,
+        topic: null,
+        difficulty: 2,
+        level_tag: null,
+        base_points: 20,
+        content: { question: '2+2?', options: ['3', '4'] },
+      })),
+    }))
+  })
 
   it('returns question list for authenticated user', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
@@ -84,6 +121,65 @@ describe('GET /api/questions', () => {
     expect(json.questions[0].total_count).toBeUndefined() // total_count sirade disarida
     expect(json.questions[0].content).toEqual({ question: '2+2?', options: ['3', '4'] })
     expect(json.total).toBe(1)
+    expect(json.attemptId).toBeNull()
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
+  })
+
+  it('issues a classic attempt for an authenticated active single-game list', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockCheckAdmin.mockResolvedValue(null)
+    mockRpc.mockResolvedValue({
+      data: [{
+        id: VALID_QID,
+        game: 'matematik',
+        category: 'cebir',
+        subcategory: null,
+        topic: null,
+        difficulty: 2,
+        level_tag: null,
+        content: { question: '2+2?', options: ['3', '4'], answer: 1 },
+        total_count: 1,
+      }],
+      error: null,
+    })
+
+    const res = await GET(makeGet(
+      'http://localhost/api/questions?game=matematik&active=true&limit=3',
+    ))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.attemptId).toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(mockServiceClient, {
+      userId: 'u1',
+      game: 'matematik',
+      mode: 'classic',
+      questionIds: [VALID_QID],
+    })
+  })
+
+  it('fails closed when active-list attempt issuance fails', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockCheckAdmin.mockResolvedValue(null)
+    mockRpc.mockResolvedValue({
+      data: [{
+        id: VALID_QID,
+        game: 'matematik',
+        category: 'cebir',
+        difficulty: 2,
+        content: { question: '2+2?', options: ['3', '4'], answer: 1 },
+        total_count: 1,
+      }],
+      error: null,
+    })
+    mockIssueVerifiedAttempt.mockRejectedValueOnce(new Error('database detail'))
+
+    const res = await GET(makeGet(
+      'http://localhost/api/questions?game=matematik&active=true',
+    ))
+
+    expect(res.status).toBe(500)
+    expect(await res.json()).toEqual({ error: 'Sorular baslatilamadi' })
   })
 
   it('returns 400 for invalid game slug', async () => {
@@ -155,7 +251,9 @@ describe('GET /api/questions', () => {
 describe('PATCH /api/questions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
     mockAdminMutationRl.mockResolvedValue(null)
+    mockUpdateEq.mockResolvedValue({ error: null })
   })
 
   it('returns 403 if not admin', async () => {
@@ -194,13 +292,27 @@ describe('PATCH /api/questions', () => {
     expect(res.status).toBe(400)
   })
 
-  it('updates question successfully', async () => {
+  it('closes the legacy direct mutation path and points valid writes to governance', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
     mockCheckAdmin.mockResolvedValue({ id: 'admin-1' })
-    mockUpdateEq.mockResolvedValue({ error: null })
 
     const res = await PATCH(makePatch({ questionId: VALID_QID, updates: { is_active: false } }))
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(409)
     const json = await res.json()
-    expect(json.success).toBe(true)
+    expect(json).toEqual({
+      error: 'Dogrudan soru guncellemesi kapatildi. Revizyon veya karantina akislarini kullanin.',
+      code: 'CONTENT_GOVERNANCE_REQUIRED',
+      questionId: VALID_QID,
+    })
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(mockFrom).not.toHaveBeenCalled()
+    expect(mockUpdateEq).not.toHaveBeenCalled()
+  })
+
+  it('keeps the pre-migration legacy write path only while governance is disabled', async () => {
+    mockCheckAdmin.mockResolvedValue({ id: 'admin-1' })
+    const res = await PATCH(makePatch({ questionId: VALID_QID, updates: { is_active: false } }))
+    expect(res.status).toBe(200)
+    expect(mockUpdateEq).toHaveBeenCalledWith('id', VALID_QID)
   })
 })

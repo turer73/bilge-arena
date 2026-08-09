@@ -1,5 +1,7 @@
 # Bilge Arena — Yapılacaklar Listesi (2026-05-25)
 
+> **TARİHSEL BELGE — güncel backlog değildir.** Bu dosya 25 Mayıs 2026 anlık görüntüsünü korur. Güncel öncelik, kanıt ve tamamlanma durumu için kanonik kaynak: [`2026-08-08-research-roadmap-completion.md`](./2026-08-08-research-roadmap-completion.md). Buradaki açık/kapanmış işaretleri canlı durum olarak kullanılmamalıdır.
+
 **Bağlam:** 2026-05-16 olayı **authorized insider pentest** olarak reclassify edildi (commit `cecbb64` / PR #164) — dış ifşa değil, KVKK dış bildirim yükümlülüğü yok. Madde 9 sprint kapandı (#146-#164). Son commit 2026-05-18 (`be6860e` iletisim sayfasi). 0 açık PR, 0 açık issue. Bu liste **kapanmamış teknik işleri** topluyor — kriz değil normal sprint backlog.
 
 ---
