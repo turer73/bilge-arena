@@ -23,7 +23,7 @@ describePg('095 daily-plan items V2 real PostgreSQL', () => {
   let client; let user; let other
   beforeAll(async () => {
     client = new Client({ connectionString: url }); await client.connect()
-    await client.query(`DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth; CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    await client.query(`DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth; CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
       DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; DO $$ BEGIN CREATE ROLE service_role NOLOGIN BYPASSRLS; EXCEPTION WHEN duplicate_object THEN NULL; END $$; ALTER ROLE service_role BYPASSRLS; REVOKE CREATE ON SCHEMA public FROM PUBLIC, anon, authenticated, service_role; GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
       CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.questions(id uuid PRIMARY KEY, game text NOT NULL, exam_ref text); CREATE TABLE public.daily_plan(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,game varchar(20) NOT NULL,plan_date date NOT NULL,question_ids uuid[] NOT NULL,completed_ids uuid[] NOT NULL DEFAULT '{}',created_at timestamptz NOT NULL DEFAULT clock_timestamp(),exam_ref varchar(10));
       CREATE UNIQUE INDEX idx_daily_plan_user_game_date_exam ON public.daily_plan(user_id,game,plan_date,exam_ref) NULLS NOT DISTINCT;`)

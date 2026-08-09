@@ -22,7 +22,7 @@ WHERE role.slug = 'teacher_pilot'
 ON CONFLICT (role_id, permission) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS public.teacher_classrooms (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   teacher_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   name text NOT NULL CHECK (char_length(btrim(name)) BETWEEN 2 AND 60),
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
@@ -45,8 +45,8 @@ CREATE TABLE IF NOT EXISTS public.teacher_classroom_requests (
 );
 
 CREATE TABLE IF NOT EXISTS public.teacher_classroom_invites (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
-  invite_ref text NOT NULL UNIQUE DEFAULT encode(public.gen_random_bytes(16), 'hex')
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  invite_ref text NOT NULL UNIQUE DEFAULT encode(extensions.gen_random_bytes(16), 'hex')
     CHECK (invite_ref ~ '^[0-9a-f]{32}$'),
   classroom_id uuid NOT NULL REFERENCES public.teacher_classrooms(id) ON DELETE RESTRICT,
   issuer_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
@@ -61,10 +61,10 @@ CREATE TABLE IF NOT EXISTS public.teacher_classroom_invites (
 );
 
 CREATE TABLE IF NOT EXISTS public.teacher_classroom_memberships (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   classroom_id uuid NOT NULL REFERENCES public.teacher_classrooms(id) ON DELETE RESTRICT,
   student_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  member_ref text NOT NULL UNIQUE DEFAULT encode(public.gen_random_bytes(16), 'hex')
+  member_ref text NOT NULL UNIQUE DEFAULT encode(extensions.gen_random_bytes(16), 'hex')
     CHECK (member_ref ~ '^[0-9a-f]{32}$'),
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'withdrawn', 'removed')),
   accepted_at timestamptz NOT NULL DEFAULT clock_timestamp(),
@@ -84,7 +84,7 @@ CREATE INDEX IF NOT EXISTS teacher_classroom_memberships_student
   ON public.teacher_classroom_memberships (student_id, classroom_id, status);
 
 CREATE TABLE IF NOT EXISTS public.teacher_classroom_privacy_events (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   membership_id uuid NOT NULL REFERENCES public.teacher_classroom_memberships(id) ON DELETE RESTRICT,
   student_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   event_type text NOT NULL CHECK (
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS public.teacher_classroom_privacy_events (
 );
 
 CREATE TABLE IF NOT EXISTS public.teacher_assignments (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   classroom_id uuid NOT NULL REFERENCES public.teacher_classrooms(id) ON DELETE RESTRICT,
   teacher_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   title text NOT NULL CHECK (char_length(btrim(title)) BETWEEN 1 AND 160),
@@ -150,7 +150,7 @@ CREATE INDEX IF NOT EXISTS teacher_assignment_recipients_student
   ON public.teacher_assignment_recipients (student_id, assignment_id);
 
 CREATE TABLE IF NOT EXISTS public.teacher_assignment_submissions (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   assignment_id uuid NOT NULL,
   recipient_membership_id uuid NOT NULL,
   student_id uuid NOT NULL,
@@ -212,7 +212,7 @@ IMMUTABLE
 SECURITY DEFINER
 SET search_path = pg_catalog
 AS $fn$
-  SELECT encode(public.digest(convert_to(p_payload::text, 'UTF8'), 'sha256'), 'hex');
+  SELECT encode(extensions.digest(convert_to(p_payload::text, 'UTF8'), 'sha256'), 'hex');
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.teacher_classroom_is_teacher(p_user_id uuid)

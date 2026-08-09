@@ -34,9 +34,9 @@ describe('100 verified exam strategy migration', () => {
   it('pins a deterministic assignment at start, but starts default-off', () => {
     expect(sql).toMatch(/status text NOT NULL DEFAULT 'draft'/)
     expect(sql).toMatch(/'mock_strategy_analysis_v1',1,'matematik','deneme','draft',0/)
-    expect(sql).toMatch(/public\.digest\(v_exp\.experiment_key\|\|':'\|\|v_exp\.revision[\s\S]*p_user_id::text/)
-    expect(sql).toMatch(/public\.digest\(array_to_string\(v_ids, ','\), 'sha256'\)/)
-    expect(sql).toMatch(/public\.gen_random_bytes\(32\)/)
+    expect(sql).toMatch(/extensions\.digest\(v_exp\.experiment_key\|\|':'\|\|v_exp\.revision[\s\S]*p_user_id::text/)
+    expect(sql).toMatch(/extensions\.digest\(array_to_string\(v_ids, ','\), 'sha256'\)/)
+    expect(sql).toMatch(/extensions\.gen_random_bytes\(32\)/)
     expect(sql).toMatch(/UNIQUE \(experiment_id, user_id\)/)
     expect(sql).toMatch(/start_request_id=p_request_id/)
     expect(sql).toMatch(/IF v_exam\.status='active' THEN/)

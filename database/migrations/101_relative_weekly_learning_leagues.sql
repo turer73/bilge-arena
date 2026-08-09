@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.weekly_learning_league_tiers (
 );
 
 CREATE TABLE IF NOT EXISTS public.weekly_learning_league_cohorts (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   week_start date NOT NULL,
   exam_type text NOT NULL,
   tier text NOT NULL CHECK (tier IN ('bronz', 'gumus', 'altin', 'elmas')),
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public.weekly_learning_league_cohorts (
 );
 
 CREATE TABLE IF NOT EXISTS public.weekly_learning_league_memberships (
-  id uuid PRIMARY KEY DEFAULT public.gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   week_start date NOT NULL,
   cohort_id uuid REFERENCES public.weekly_learning_league_cohorts(id) ON DELETE RESTRICT,
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
