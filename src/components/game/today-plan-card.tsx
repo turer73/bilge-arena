@@ -1,11 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import type { TodayPlan } from '@/lib/hooks/use-today-plan'
 
 interface TodayPlanCardProps {
   plan: TodayPlan | null
   loading: boolean
   onStart: () => void
+  paperHref?: string | null
 }
 
 /**
@@ -13,7 +15,7 @@ interface TodayPlanCardProps {
  * modelinden. Giris yapmamis / plan henuz yuklenmemis / plan uretilemedi
  * (bos havuz) durumlarinda sessizce gizlenir -- quiz akisini bloklamaz.
  */
-export function TodayPlanCard({ plan, loading, onStart }: TodayPlanCardProps) {
+export function TodayPlanCard({ plan, loading, onStart, paperHref }: TodayPlanCardProps) {
   if (loading) {
     return (
       <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)]">
@@ -30,6 +32,18 @@ export function TodayPlanCard({ plan, loading, onStart }: TodayPlanCardProps) {
   const completed = Math.min(plan.completedIds.length, total)
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0
   const isDone = completed >= total
+  const composition = [
+    ['due', 'tekrar'],
+    ['weak_outcome', 'zayıf kazanım'],
+    ['current_target', 'hedef'],
+    ['challenge', 'meydan okuma'],
+    ['student_choice', 'senin seçimin'],
+  ]
+    .map(([slotType, label]) => ({
+      label,
+      count: (plan.items ?? []).filter((item) => item.slotType === slotType).length,
+    }))
+    .filter((entry) => entry.count > 0)
 
   return (
     <div className="animate-fadeUp overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)]" style={{ animationDelay: '0.28s', animationFillMode: 'both' }}>
@@ -48,6 +62,19 @@ export function TodayPlanCard({ plan, loading, onStart }: TodayPlanCardProps) {
           Tekrar zamanı gelenler, zayıf konuların ve yeni sorulardan karma bir plan hazırladık.
         </p>
 
+        {composition.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1" aria-label="Plan dengesi">
+            {composition.map((entry) => (
+              <span
+                key={entry.label}
+                className="rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-0.5 text-[9px] font-semibold text-[var(--text-sub)]"
+              >
+                {entry.count} {entry.label}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-[var(--border)]">
           <div
             className="h-full rounded-full transition-[width] duration-600"
@@ -65,6 +92,14 @@ export function TodayPlanCard({ plan, loading, onStart }: TodayPlanCardProps) {
         >
           {isDone ? '🔁 Tekrar Çöz' : completed > 0 ? '▶️ Devam Et' : '📝 Planı Başlat'} — {total} Soru
         </button>
+        {paperHref && (
+          <Link
+            href={paperHref}
+            className="mt-2 flex min-h-11 w-full items-center justify-center rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-4 text-xs font-bold text-[var(--text)] transition-colors hover:bg-[var(--cardHover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+          >
+            🖨️ Kağıt / PDF paketi
+          </Link>
+        )}
       </div>
     </div>
   )

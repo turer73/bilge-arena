@@ -5,6 +5,8 @@ import { KuleClient } from '../kule-client'
 const grader = vi.hoisted(() => ({ gradeQuestion: vi.fn() }))
 vi.mock('@/lib/questions/grade-question', () => ({ gradeQuestion: grader.gradeQuestion }))
 
+const ATTEMPT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
 const QUESTION = {
   id: 'kule-question-1',
   game: 'matematik',
@@ -19,7 +21,11 @@ const QUESTION = {
 function mockQuestionFetch() {
   vi.stubGlobal('fetch', vi.fn(async () => ({
     ok: true,
-    json: async () => ({ questions: [QUESTION] }),
+    json: async () => ({
+      questions: [QUESTION],
+      attemptId: ATTEMPT_ID,
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }),
   })))
 }
 
@@ -52,7 +58,7 @@ describe('KuleClient grading', () => {
     expect(await screen.findByText(/10 puan/)).toBeInTheDocument()
     expect(screen.getByText(/Sunucu çözümü/)).toBeInTheDocument()
     expect(grader.gradeQuestion).toHaveBeenCalledTimes(1)
-    expect(grader.gradeQuestion).toHaveBeenCalledWith('kule-question-1', 0)
+    expect(grader.gradeQuestion).toHaveBeenCalledWith('kule-question-1', 0, ATTEMPT_ID)
   })
 
   it('shows a retryable error instead of fabricating a grading result', async () => {

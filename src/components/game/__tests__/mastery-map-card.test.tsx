@@ -5,6 +5,8 @@ import type { MasteryOutcome } from '@/lib/hooks/use-mastery-map'
 
 const outcome: MasteryOutcome = {
   code: 'MAT-SAY-01',
+  nodeCode: 'ba-tyt-math-v1:outcome:sayilar',
+  path: ['TYT Matematik', 'Sayılar ve Cebir', 'Sayılar', 'Sayılar ve işlem'],
   title: 'Sayılar ve işlem becerisi (pilot)',
   description: 'Pilot',
   game: 'matematik',
@@ -16,7 +18,19 @@ const outcome: MasteryOutcome = {
   weightedPossible: 5,
   delayedCorrect: 1,
   accuracy: 80,
+  rawAccuracy: 80,
+  difficultyAccuracy: 82,
+  averageTimeSec: 11.5,
+  fastWrongRate: 0,
+  hintRate: 20,
+  averageHintStage: 1,
+  guessRisk: 0,
+  carelessRisk: 0,
+  evidenceCompleteness: 100,
+  score: 84,
   status: 'mastered',
+  modelVersion: 'evidence-v2',
+  components: { accuracy: 45, delayedRetrieval: 20, independence: 14, selfRegulation: 5 },
   lastAnsweredAt: '2026-07-22T08:00:00Z',
 }
 
@@ -31,7 +45,7 @@ describe('MasteryMapCard', () => {
   it('ham kaniti, durumu ve pilot uyarisi birlikte gosterir', () => {
     render(<MasteryMapCard outcomes={[outcome]} loading={false} />)
     expect(screen.getByText('Ustalaştın')).toBeInTheDocument()
-    expect(screen.getByText('%80')).toBeInTheDocument()
+    expect(screen.getByText('%84')).toBeInTheDocument()
     expect(screen.getByText('4/5 doğru')).toBeInTheDocument()
     expect(screen.getByText('1 gecikmeli doğru')).toBeInTheDocument()
     expect(screen.getByText(/resmî kazanım sınıflandırması değildir/i)).toBeInTheDocument()
@@ -44,6 +58,10 @@ describe('MasteryMapCard', () => {
       correctAttempts: 2,
       delayedCorrect: 0,
       accuracy: 100,
+      rawAccuracy: 100,
+      difficultyAccuracy: 100,
+      evidenceCompleteness: 40,
+      score: 100,
       status: 'insufficient',
     }]} loading={false} />)
     expect(screen.getByText('2/3 kanıt')).toBeInTheDocument()

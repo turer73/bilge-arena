@@ -6,6 +6,14 @@ import { AIQuestionGenerator } from '@/components/admin/ai-question-generator'
 import type { Question, Difficulty } from '@/types/database'
 import { stripRichText } from '@/lib/utils/rich-text'
 
+interface GovernanceRevisionDetail {
+  revisionId: string
+  metadata: Record<string, unknown>
+  content: Record<string, unknown>
+  source: Record<string, unknown>
+  outcomes: Array<{ outcomeId: string; weight: number; primary: boolean }>
+}
+
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [total, setTotal] = useState(0)
@@ -22,6 +30,9 @@ export default function AdminQuestionsPage() {
   const [editDifficulty, setEditDifficulty] = useState<Difficulty>(2)
   const [editCategory, setEditCategory] = useState('')
   const [saving, setSaving] = useState(false)
+  const [governanceDetail, setGovernanceDetail] = useState<GovernanceRevisionDetail | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [notice, setNotice] = useState('')
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true)
@@ -54,7 +65,8 @@ export default function AdminQuestionsPage() {
   }, [searchInput])
 
   useEffect(() => {
-    fetchQuestions()
+    const timer = window.setTimeout(() => void fetchQuestions(), 0)
+    return () => window.clearTimeout(timer)
   }, [fetchQuestions])
 
   // Server-side arama — client filtreye gerek yok
@@ -64,31 +76,43 @@ export default function AdminQuestionsPage() {
     const question = questions.find((q) => q.id === id)
     if (!question) return
 
-    // Iyimser guncelleme
-    setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, is_active: !q.is_active } : q))
-    )
-
+    setNotice('')
     try {
+      if (question.is_active) {
+        const quarantine = await fetch(`/api/admin/content-quality/questions/${id}/quarantine`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'Soru yönetimi ekranından acil görünürlük kapatma', requestId: crypto.randomUUID() }),
+        })
+        if (quarantine.ok) {
+          setQuestions((prev) => prev.map((item) => item.id === id ? { ...item, is_active: false } : item))
+          setNotice('Soru karantinaya alındı.')
+          return
+        }
+        if (quarantine.status !== 503) {
+          const body = await quarantine.json().catch(() => ({}))
+          throw new Error(body.error ?? 'Soru karantinaya alınamadı')
+        }
+      }
       const res = await fetch('/api/questions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionId: id, updates: { is_active: !question.is_active } }),
       })
       if (!res.ok) {
-        // Basarisiz — geri al
-        setQuestions((prev) =>
-          prev.map((q) => (q.id === id ? { ...q, is_active: question.is_active } : q))
-        )
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.code === 'CONTENT_GOVERNANCE_REQUIRED'
+          ? 'Pasif soru yalnız iki aşamalı onaylı revizyon yayınlanarak etkinleştirilebilir.'
+          : (body.error ?? 'Durum güncellenemedi'))
       }
-    } catch {
-      setQuestions((prev) =>
-        prev.map((q) => (q.id === id ? { ...q, is_active: question.is_active } : q))
-      )
+      setQuestions((prev) => prev.map((item) => item.id === id ? { ...item, is_active: !question.is_active } : item))
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : 'Durum güncellenemedi')
     }
   }
 
-  const openEdit = (q: Question) => {
+  const openEdit = async (q: Question) => {
+    setNotice('')
+    setGovernanceDetail(null)
     setEditQ(q)
     setEditContent({
       question: q.content.question || q.content.sentence || '',
@@ -98,6 +122,18 @@ export default function AdminQuestionsPage() {
     })
     setEditDifficulty(q.difficulty)
     setEditCategory(q.category)
+    setDetailLoading(true)
+    try {
+      const response = await fetch(`/api/admin/content-quality?questionId=${encodeURIComponent(q.id)}`, { cache: 'no-store' })
+      if (response.ok) {
+        const data = await response.json()
+        setGovernanceDetail(data.revision ?? null)
+      } else if (response.status !== 503) {
+        setNotice('Yayın revizyonu alınamadı; düzenleme taslağı oluşturulamaz.')
+      }
+    } catch {
+      setNotice('Yayın revizyonu alınamadı; legacy düzenleme kullanılacak.')
+    } finally { setDetailLoading(false) }
   }
 
   const saveEdit = async () => {
@@ -115,16 +151,39 @@ export default function AdminQuestionsPage() {
         difficulty: editDifficulty,
         category: editCategory,
       }
-      const res = await fetch('/api/questions', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: editQ.id, updates }),
-      })
+      const preserved = Object.fromEntries(
+        ['explanation', 'hint', 'sentence', 'passage', 'context', 'type']
+          .filter((key) => governanceDetail?.content[key] !== undefined)
+          .map((key) => [key, governanceDetail!.content[key]]),
+      )
+      const res = governanceDetail
+        ? await fetch('/api/admin/content-quality/revisions', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              questionId: editQ.id,
+              baseRevisionId: governanceDetail.revisionId,
+              requestId: crypto.randomUUID(),
+              payload: {
+                content: { ...preserved, ...updates.content },
+                metadata: { ...governanceDetail.metadata, category: editCategory, difficulty: editDifficulty },
+                outcomes: governanceDetail.outcomes,
+                source: governanceDetail.source,
+                changeKind: 'edit',
+                summary: 'Soru yönetimi ekranından içerik düzenleme taslağı oluşturuldu.',
+              },
+            }),
+          })
+        : await fetch('/api/questions', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ questionId: editQ.id, updates }),
+          })
       if (res.ok) {
-        setQuestions((prev) =>
-          prev.map((q) => q.id === editQ.id ? { ...q, ...updates, content: updates.content } : q)
-        )
+        if (!governanceDetail) setQuestions((prev) => prev.map((q) => q.id === editQ.id ? { ...q, ...updates, content: updates.content } : q))
+        setNotice(governanceDetail ? 'Düzenleme taslağı oluşturuldu; yayın için iki bağımsız onay bekliyor.' : 'Soru güncellendi.')
         setEditQ(null)
+      } else {
+        const body = await res.json().catch(() => ({}))
+        setNotice(body.error ?? 'Düzenleme kaydedilemedi.')
       }
     } catch (err) {
       console.error('Soru kaydetme hatasi:', err)
@@ -162,6 +221,8 @@ export default function AdminQuestionsPage() {
         // Ek olarak 500ms sonra tekrar fetch yap (race condition onlemi)
         setTimeout(() => fetchQuestions(), 500)
       }} />
+
+      {notice && <p role="status" className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-sub)]">{notice}</p>}
 
       {/* Filtreler */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -263,7 +324,7 @@ export default function AdminQuestionsPage() {
                   <td className="px-3 py-3 text-center">
                     <button
                       onClick={() => toggleActive(q.id)}
-                      className={`rounded-full px-3 py-1 text-[10px] font-bold transition-colors ${
+                      className={`min-h-11 rounded-full px-3 py-1 text-[10px] font-bold transition-colors ${
                         q.is_active
                           ? 'bg-[var(--growth-bg)] text-[var(--growth)]'
                           : 'bg-[var(--surface)] text-[var(--text-sub)]'
@@ -274,8 +335,8 @@ export default function AdminQuestionsPage() {
                   </td>
                   <td className="px-2 py-3">
                     <button
-                      onClick={() => openEdit(q)}
-                      className="rounded-lg px-2 py-1 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
+                      onClick={() => void openEdit(q)}
+                      className="min-h-11 rounded-lg px-2 py-1 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
                     >
                       Duzenle
                     </button>
@@ -408,10 +469,10 @@ export default function AdminQuestionsPage() {
               </button>
               <button
                 onClick={saveEdit}
-                disabled={saving || !editContent.question.trim()}
+                disabled={saving || detailLoading || !editContent.question.trim()}
                 className="rounded-lg bg-[var(--focus)] px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                {saving ? 'Kaydediliyor...' : 'Kaydet'}
+                {saving ? 'Kaydediliyor...' : detailLoading ? 'Revizyon okunuyor…' : governanceDetail ? 'Taslak Oluştur' : 'Kaydet'}
               </button>
             </div>
           </div>

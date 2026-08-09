@@ -10,6 +10,7 @@ import { PWAInstallPrompt } from '@/components/layout/pwa-install-prompt'
 import { OfflineIndicator } from '@/components/layout/offline-indicator'
 import { GlobalBackground } from '@/components/layout/global-background'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
+import { TEACHER_INVITE_BOOTSTRAP_SCRIPT } from '@/lib/teacher-classroom/invite-bootstrap'
 import './globals.css'
 
 /* ─── Lokal fontlar (next/font/local) — build artik Google Fonts agina BAGIMLI DEGIL.
@@ -130,6 +131,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* Davet fragmentini analytics betiklerinden önce first-party belleğe al ve URL'den sil. */}
+        <script
+          id="teacher-invite-bootstrap"
+          dangerouslySetInnerHTML={{ __html: TEACHER_INVITE_BOOTSTRAP_SCRIPT }}
+        />
         {/* Preconnect — Supabase API + Storage (fontlar artik lokal; Google Fonts CDN gerekmiyor) */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
@@ -151,9 +157,11 @@ export default function RootLayout({
         <GoogleAnalytics />
         {process.env.NEXT_PUBLIC_ADSENSE_ID && (
           <Script
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`}
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
+            {...{
+              src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`,
+              strategy: 'afterInteractive' as const,
+              crossOrigin: 'anonymous',
+            }}
           />
         )}
       </body>

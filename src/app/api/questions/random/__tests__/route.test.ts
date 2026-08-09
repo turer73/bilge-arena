@@ -8,7 +8,15 @@ import type { QuestionRow } from '@/lib/utils/question-public'
 // edilebilir). fetchReviewQuestions/fetchFsrsDueQuestions birden fazla farkli
 // uzunlukta zincir kullaniyor (gte ile biten eski-yol vs order/limit ile biten
 // FSRS-yolu) -- rigid sabit-zincir mock bunu karsilayamiyordu.
-const { mockGetUser, mockRpc, mockHistory, sessionAnswersMock, questionsMock, otherTableMock } = vi.hoisted(() => {
+const {
+  mockGetUser,
+  mockRpc,
+  mockHistory,
+  mockIssueVerifiedAttempt,
+  sessionAnswersMock,
+  questionsMock,
+  otherTableMock,
+} = vi.hoisted(() => {
   // function declaration (self-hoisting) -- vi.hoisted arrow-fn govdesinden
   // guvenle cagirilabilir.
   function makeTableMockHoisted() {
@@ -29,6 +37,7 @@ const { mockGetUser, mockRpc, mockHistory, sessionAnswersMock, questionsMock, ot
   return {
     mockGetUser: vi.fn(),
     mockRpc: vi.fn(),
+    mockIssueVerifiedAttempt: vi.fn(),
     // Klipper review B2: user_question_history server-side cooldown read
     mockHistory: vi.fn(async (): Promise<{ data: Array<{ question_id: string }>; error: null }> => ({
       data: [],
@@ -74,6 +83,11 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   })),
 }))
 
+vi.mock('@/lib/verified-attempts', () => ({
+  issueVerifiedAttempt: mockIssueVerifiedAttempt,
+  toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
+}))
+
 vi.mock('@/lib/review/fsrs-rollout', () => ({
   getFsrsReviewRollout: vi.fn(() => ({ enabled: false, bucket: 0, percentage: 0, reason: 'master_disabled' })),
 }))
@@ -117,6 +131,21 @@ describe('GET /api/questions/random', () => {
     vi.clearAllMocks()
     sessionAnswersMock.reset()
     questionsMock.reset()
+    mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2026-08-08T14:00:00.000Z',
+      questionSnapshots: input.questionIds.map(id => ({
+        id,
+        game: input.game,
+        category: 'sayilar',
+        subcategory: null,
+        topic: null,
+        difficulty: 2,
+        level_tag: null,
+        base_points: 20,
+        content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'] },
+      })),
+    }))
   })
 
   it('returns 401 if not authenticated', async () => {
@@ -135,6 +164,17 @@ describe('GET /api/questions/random', () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     const res = await GET(makeRequest({ game: 'invalid-game' }) as never)
     expect(res.status).toBe(400)
+  })
+
+  it('returns 400 if mode param is invalid before database work', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+
+    const res = await GET(makeRequest({ game: 'matematik', mode: 'invalid-mode' }) as never)
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: 'Gecerli mod belirtilmedi' })
+    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
   })
 
   it('calls select_random_questions RPC with correct args', async () => {
@@ -168,6 +208,68 @@ describe('GET /api/questions/random', () => {
       expect.objectContaining({ id: 'q2', game: 'matematik', category: 'sayilar' }),
     ])
     expect(body.questions[0]).not.toHaveProperty('times_answered')
+    expect(body).toMatchObject({
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2026-08-08T14:00:00.000Z',
+    })
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      {
+        userId: 'u1',
+        game: 'matematik',
+        mode: 'classic',
+        questionIds: ['q1', 'q2'],
+      },
+    )
+  })
+
+  it('issues one attempt for the ordered de-duplicated question and review union', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1'), makeQuestionRow('shared')], error: null })
+    sessionAnswersMock.push({ data: [{ question_id: 'shared' }, { question_id: 'review-2' }], error: null })
+    sessionAnswersMock.push({ data: [], error: null })
+    questionsMock.push({
+      data: [makeQuestionRow('shared'), makeQuestionRow('review-2')],
+      error: null,
+    })
+
+    const res = await GET(makeRequest({
+      game: 'matematik',
+      mode: 'practice',
+      includeReview: 'true',
+    }) as never)
+
+    expect(res.status).toBe(200)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(1)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        mode: 'practice',
+        questionIds: ['q1', 'shared', 'review-2'],
+      }),
+    )
+  })
+
+  it('returns null ticket and skips issuance when no questions were selected', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [], error: null })
+
+    const res = await GET(makeRequest({ game: 'matematik' }) as never)
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toMatchObject({ attemptId: null, expiresAt: null })
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('fails closed without returning questions when attempt issuance fails', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [makeQuestionRow('q1')], error: null })
+    mockIssueVerifiedAttempt.mockRejectedValueOnce(new Error('database detail'))
+
+    const res = await GET(makeRequest({ game: 'matematik' }) as never)
+
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: 'Deneme baslatilamadi' })
   })
 
   it('returns 500 on RPC error', async () => {

@@ -6,10 +6,13 @@ import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { isValidUuid } from '@/lib/utils/uuid'
 import { createNotification } from '@/lib/notifications/create'
 import { UGC_APPROVAL_COIN_REWARD } from '@/lib/constants/rewards'
+import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
+import { createGovernedQuestionDraft } from '@/lib/content-governance/question-drafts'
 
 interface PatchBody {
   action?: 'approve' | 'reject'
   note?: string
+  outcomeId?: string
 }
 
 /**
@@ -47,6 +50,10 @@ export async function PATCH(
   if (body.action !== 'approve' && body.action !== 'reject') {
     return NextResponse.json({ error: 'action approve|reject olmalı' }, { status: 400 })
   }
+  const governed = contentGovernanceEnabled()
+  if (body.action === 'approve' && governed && (!body.outcomeId || !isValidUuid(body.outcomeId))) {
+    return NextResponse.json({ error: 'Geçerli bir birincil kazanım seçilmelidir' }, { status: 400 })
+  }
   const note = typeof body.note === 'string' ? body.note.slice(0, 500) : null
 
   const svc = createServiceRoleClient()
@@ -82,18 +89,42 @@ export async function PATCH(
   // 2) Approve ise soruyu OLUŞTUR (claim bizde — yarış yok)
   let questionId: string | null = null
   if (body.action === 'approve') {
-    const { data: inserted, error: qErr } = await svc
-      .from('questions')
-      .insert({
-        game: claimed.game,
-        category: claimed.category,
-        difficulty: claimed.difficulty,
-        content: claimed.content,
-        source: 'ugc',
-        is_active: false,
-      })
-      .select('id')
-      .single()
+    let inserted: { id: string } | null = null
+    let qErr: { code?: string; message?: string } | null = null
+    if (governed) {
+      const created = await createGovernedQuestionDraft(svc, {
+          actorId: admin.id,
+          requestId: id,
+          content: claimed.content as Record<string, unknown>,
+          metadata: { game: claimed.game, category: claimed.category, difficulty: claimed.difficulty },
+          outcomeId: body.outcomeId!,
+          source: {
+            kind: 'user_generated',
+            title: 'Bilge Arena kullanıcı gönderimi',
+            licenseCode: 'PERMISSION',
+            attribution: 'Bilge Arena kullanıcı gönderimi; yayın izni hizmet koşulları kapsamında alınmıştır.',
+            provenanceRef: `submission:${id}`,
+          },
+          summary: 'Kullanıcı gönderimi moderasyon sonrası yönetişim taslağına alındı.',
+        })
+      inserted = created.data ? { id: created.data.questionId } : null
+      qErr = created.error
+    } else {
+      const legacy = await svc
+        .from('questions')
+        .insert({
+          game: claimed.game,
+          category: claimed.category,
+          difficulty: claimed.difficulty,
+          content: claimed.content,
+          source: 'ugc',
+          is_active: false,
+        })
+        .select('id')
+        .single()
+      inserted = legacy.data
+      qErr = legacy.error
+    }
 
     if (qErr || !inserted) {
       // Insert düştü: claim'i geri al ki gönderi kuyruğa dönsün (yarı-onay kalmasın)
@@ -128,8 +159,8 @@ export async function PATCH(
       type: 'submission_approved',
       title: 'Sorun onaylandı! 🎉',
       body: rewardErr
-        ? 'Gönderdiğin soru havuza eklendi. Teşekkürler!'
-        : `Gönderdiğin soru havuza eklendi. +${UGC_APPROVAL_COIN_REWARD} 🪙 kazandın!`,
+        ? (governed ? 'Gönderdiğin soru kalite inceleme taslağına alındı. Teşekkürler!' : 'Gönderdiğin soru havuza eklendi. Teşekkürler!')
+        : (governed ? `Gönderdiğin soru kalite inceleme taslağına alındı. +${UGC_APPROVAL_COIN_REWARD} 🪙 kazandın!` : `Gönderdiğin soru havuza eklendi. +${UGC_APPROVAL_COIN_REWARD} 🪙 kazandın!`),
       link: '/arena/soru-gonder',
     })
   } else {
@@ -151,7 +182,7 @@ export async function PATCH(
     action: body.action === 'approve' ? 'approve_submission' : 'reject_submission',
     target_type: 'question_submission',
     target_id: id,
-    details: { question_id: questionId, note },
+    details: { question_id: questionId, note, governed_draft: governed },
   })
 
   return NextResponse.json({

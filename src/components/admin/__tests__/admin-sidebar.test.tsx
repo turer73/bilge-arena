@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
 const mockUsePathname = vi.hoisted(() => vi.fn<() => string>(() => '/admin'))
 vi.mock('next/navigation', () => ({ usePathname: mockUsePathname }))
@@ -62,5 +62,13 @@ describe('AdminSidebar (mobil drawer)', () => {
     fireEvent.click(screen.getByRole('button', { name: /menüyü aç/i }))
     fireEvent.click(screen.getByRole('button', { name: /menüyü kapat/i }))
     expect(asideEl().className).toContain('-translate-x-full')
+  })
+
+  test('icerik reviewer rolu Soru Kalitesi menüsünü görür, ilgisiz admin menülerini görmez', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ permissions: ['content.review.stage2'], roles: [{ name: 'Pedagoji Reviewer' }] }) }) as unknown as typeof fetch
+    render(<AdminSidebar />)
+    await waitFor(() => expect(screen.queryByText('Kullanıcılar')).not.toBeInTheDocument())
+    expect(screen.getByText('Soru Kalitesi')).toBeInTheDocument()
+    expect(screen.queryByText('Sorular')).not.toBeInTheDocument()
   })
 })

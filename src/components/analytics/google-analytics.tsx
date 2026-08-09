@@ -18,8 +18,7 @@ export function GoogleAnalytics() {
   return (
     <>
       <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-        strategy="afterInteractive"
+        {...{ src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`, strategy: 'afterInteractive' as const }}
       />
       <Script id="ga-init" strategy="afterInteractive">
         {`

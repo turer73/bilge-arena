@@ -71,7 +71,22 @@ export default function CalismaClient() {
         </div>
       </div>
 
-      <TodayPlanFocus game={game} userId={user.id} examRef={examRef} />
+      <TodayPlanFocus
+        game={game}
+        userId={user.id}
+        examRef={examRef}
+        selectedCategory={gameStore.selectedCategory}
+      />
+      <Link
+        href="/arena/tani"
+        className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-[var(--focus)]/25 bg-[var(--focus)]/5 px-4 py-3 text-sm font-bold text-[var(--focus)] hover:bg-[var(--focus)]/10"
+      >
+        <span>
+          <span className="block">10 soruluk kısa tanılama</span>
+          <span className="mt-0.5 block text-[10px] font-medium text-[var(--text-sub)]">TYT Matematikte nereden başlamalıyım?</span>
+        </span>
+        <span aria-hidden="true">→</span>
+      </Link>
       <MasteryActionCard game={game} userId={user.id} examRef={examRef} />
       <StudyAssistant />
     </div>

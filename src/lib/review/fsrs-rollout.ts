@@ -10,6 +10,9 @@ export interface FsrsRolloutEnv {
   FSRS_REVIEW_ENABLED?: string
   FSRS_REVIEW_ROLLOUT_PERCENT?: string
   FSRS_REVIEW_KILL_SWITCH?: string
+  FSRS_PERSISTENT_READ_ENABLED?: string
+  FSRS_PERSISTENT_READ_PERCENT?: string
+  FSRS_PERSISTENT_READ_KILL_SWITCH?: string
 }
 
 export type FsrsRolloutReason =
@@ -26,6 +29,11 @@ export interface FsrsRolloutDecision {
   /** Effective rollout yuzdesi (gecersiz konfigurasyon = 0). */
   percentage: number
   reason: FsrsRolloutReason
+}
+
+export type PersistentFsrsReadReason = FsrsRolloutReason
+export type PersistentFsrsReadDecision = FsrsRolloutDecision & {
+  reason: PersistentFsrsReadReason
 }
 
 /** FNV-1a ile ayni userId icin kararlı 0..99 kova üretir. */
@@ -67,6 +75,38 @@ export function getFsrsReviewRollout(
   }
 
   if (!isTrue(env.FSRS_REVIEW_ENABLED)) {
+    return { enabled: false, bucket, percentage, reason: 'master_disabled' }
+  }
+
+  if (percentage === 0) {
+    return { enabled: false, bucket, percentage, reason: 'percentage_zero' }
+  }
+
+  if (bucket < percentage) {
+    return { enabled: true, bucket, percentage, reason: 'cohort' }
+  }
+
+  return { enabled: false, bucket, percentage, reason: 'outside_cohort' }
+}
+
+/**
+ * Kalici review_cards okuma kaynagi icin bagimsiz, fail-closed rollout.
+ * Trigger yazimi migration sonrasi tum kullanicilar icin acik kalabilir; bu
+ * karar yalniz okumanin kalici karttan mi, mevcut history-fold yolundan mi
+ * yapilacagini belirler.
+ */
+export function getPersistentFsrsReadRollout(
+  userId: string,
+  env: FsrsRolloutEnv = process.env,
+): PersistentFsrsReadDecision {
+  const bucket = fsrsRolloutBucket(userId)
+  const percentage = parsePercentage(env.FSRS_PERSISTENT_READ_PERCENT)
+
+  if (isTrue(env.FSRS_PERSISTENT_READ_KILL_SWITCH)) {
+    return { enabled: false, bucket, percentage, reason: 'kill_switch' }
+  }
+
+  if (!isTrue(env.FSRS_PERSISTENT_READ_ENABLED)) {
     return { enabled: false, bucket, percentage, reason: 'master_disabled' }
   }
 

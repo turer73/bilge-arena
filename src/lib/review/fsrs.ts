@@ -17,11 +17,31 @@
  * kullanici deneyiminde rastgele-gecikme gurultusu istenmiyor).
  */
 
-import { fsrs, createEmptyCard, generatorParameters, Rating, type Card } from 'ts-fsrs'
+import {
+  fsrs,
+  createEmptyCard,
+  generatorParameters,
+  Rating,
+  State,
+  type Card,
+} from 'ts-fsrs'
 
 export interface ReviewEvent {
   isCorrect: boolean
   answeredAt: string | Date
+}
+
+export interface PersistedReviewCardSnapshot {
+  dueAt: string | Date
+  stability: number
+  difficulty: number
+  elapsedDays: number
+  scheduledDays: number
+  reps: number
+  lapses: number
+  learningSteps: number
+  state: 0 | 1 | 2 | 3
+  lastReviewAt: string | Date | null
 }
 
 const scheduler = fsrs(generatorParameters({ enable_fuzz: false }))
@@ -54,4 +74,32 @@ export function foldQuestionCard(events: ReviewEvent[]): Card {
 /** Kart simdi (veya verilen `now`'da) tekrara due mu? */
 export function isCardDue(card: Card, now: Date = new Date()): boolean {
   return card.due.getTime() <= now.getTime()
+}
+
+/** Kalici DB snapshot'ini pinned ts-fsrs Card kontratina cevirir. */
+export function restoreQuestionCard(snapshot: PersistedReviewCardSnapshot): Card {
+  return {
+    due: new Date(snapshot.dueAt),
+    stability: snapshot.stability,
+    difficulty: snapshot.difficulty,
+    elapsed_days: snapshot.elapsedDays,
+    scheduled_days: snapshot.scheduledDays,
+    reps: snapshot.reps,
+    lapses: snapshot.lapses,
+    learning_steps: snapshot.learningSteps,
+    state: snapshot.state as State,
+    ...(snapshot.lastReviewAt ? { last_review: new Date(snapshot.lastReviewAt) } : {}),
+  }
+}
+
+/**
+ * Kartin verilen andaki hatirlanabilirligini 0..1 araliginda dondurur.
+ * API kesin algoritma agirliklarini veya kullanici kimligini aciga cikarmadan
+ * bu degeri yuvarlayarak sunabilir.
+ */
+export function getCardRetrievability(card: Card, now: Date = new Date()): number {
+  const value = scheduler.get_retrievability(card, now, false)
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(1, Math.max(0, value))
+    : 0
 }

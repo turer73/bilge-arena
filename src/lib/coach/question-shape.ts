@@ -10,6 +10,12 @@ export interface StagedCoachQuestionContent {
   answer: number
   hint?: string
   solution?: string
+  coach?: {
+    misconceptions?: string[]
+    hint1?: string
+    hint2?: string
+    miniExample?: string
+  }
 }
 
 /** Client eligibility check; public payload intentionally has no answer key. */
@@ -32,4 +38,29 @@ export function supportsStagedCoachQuestion(
   const options = candidate.options as unknown[]
 
   return candidate.answer >= 0 && candidate.answer < options.length
+}
+
+/**
+ * R2.2 kontrollü akış yalnız küratörlü çözümü bulunan sorularda açılır. İsteğe
+ * bağlı coach alanı da tamamen doğrulanır; kısmi/bozuk metadata sessizce
+ * kullanılmaz.
+ */
+export function supportsGuidedCoachQuestion(
+  content: unknown,
+): content is StagedCoachQuestionContent & { solution: string } {
+  if (!supportsStagedCoachQuestion(content)) return false
+  if (typeof content.solution !== 'string' || !content.solution.trim()) return false
+  if (content.coach === undefined) return true
+  if (!content.coach || typeof content.coach !== 'object') return false
+
+  const { misconceptions, hint1, hint2, miniExample } = content.coach
+  if (misconceptions !== undefined && (
+    !Array.isArray(misconceptions)
+    || misconceptions.length !== content.options.length
+    || misconceptions.some((item) => typeof item !== 'string' || !item.trim())
+  )) return false
+
+  return [hint1, hint2, miniExample].every(
+    (item) => item === undefined || (typeof item === 'string' && Boolean(item.trim())),
+  )
 }

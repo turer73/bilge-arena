@@ -8,6 +8,7 @@ import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
 import { gradeQuestion } from '@/lib/questions/grade-question'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { renderRichText } from '@/lib/utils/rich-text'
+import { isValidUuid } from '@/lib/utils/uuid'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,13 @@ function getTierLabel(floor: number): string {
 
 type KuleQuestion = PublicQuestion & {
   optionMap: number[]
+  attemptId: string
+}
+
+interface RandomQuestionResponse {
+  questions?: PublicQuestion[]
+  attemptId?: unknown
+  expiresAt?: unknown
 }
 
 type Phase = 'menu' | 'playing' | 'feedback' | 'gameover'
@@ -143,24 +151,41 @@ export function KuleClient() {
     const diff = getDifficulty(floor)
     try {
       // 1. deneme: zorluk filtreli
-      let res = await fetch(`/api/questions/random?game=${game}&difficulty=${diff}&limit=1`)
+      let res = await fetch(`/api/questions/random?game=${game}&difficulty=${diff}&limit=1&mode=classic`)
       if (!res.ok) throw new Error('Soru alınamadı')
-      let data = await res.json()
+      let data = await res.json() as RandomQuestionResponse
       let qs: PublicQuestion[] = data.questions ?? []
 
       // 2. deneme: zorluk filtresi olmadan (o zorlukta soru yoksa)
       if (qs.length === 0) {
-        res = await fetch(`/api/questions/random?game=${game}&limit=1`)
+        res = await fetch(`/api/questions/random?game=${game}&limit=1&mode=classic`)
         if (!res.ok) throw new Error('Soru alınamadı')
-        data = await res.json()
+        data = await res.json() as RandomQuestionResponse
         qs = data.questions ?? []
       }
 
       if (qs.length === 0) throw new Error('Soru bulunamadı')
       // Seçenek sırasını karıştır — her oynayışta farklı görünüm
+      if (
+        typeof data.attemptId !== 'string' ||
+        !isValidUuid(data.attemptId) ||
+        typeof data.expiresAt !== 'string' ||
+        !Number.isFinite(Date.parse(data.expiresAt)) ||
+        Date.parse(data.expiresAt) <= Date.now()
+      ) {
+        throw new Error('Soru oturumu dogrulanamadi')
+      }
       const q = qs[0]
       const shuffled = shufflePublicOptionsWithMap(q.content)
-      dispatch({ type: 'SET_QUESTION', question: { ...q, content: shuffled.content, optionMap: shuffled.map } })
+      dispatch({
+        type: 'SET_QUESTION',
+        question: {
+          ...q,
+          content: shuffled.content,
+          optionMap: shuffled.map,
+          attemptId: data.attemptId,
+        },
+      })
     } catch (e) {
       dispatch({ type: 'SET_ERROR', error: (e as Error).message })
     }
@@ -182,7 +207,7 @@ export function KuleClient() {
     gradingRef.current = true
     dispatch({ type: 'START_GRADING', idx: displayIndex })
     try {
-      const grade = await gradeQuestion(question.id, canonicalIndex)
+      const grade = await gradeQuestion(question.id, canonicalIndex, question.attemptId)
       const correctOption = question.optionMap.indexOf(grade.correctOption)
       if (correctOption < 0) throw new Error('invalid_grade_response')
       dispatch({ type: 'GRADE_RESULT', isCorrect: grade.isCorrect, correctOption, solution: grade.solution })

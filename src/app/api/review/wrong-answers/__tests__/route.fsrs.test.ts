@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-/** FSRS rollout kohortunda isDue/dueAt alanlarinin ek sorgusuz uretimi. */
+/** FSRS rollout kohortunda ortak due-map uzerinden guvenli metrikler. */
 vi.mock('@/lib/review/fsrs-rollout', () => ({
   getFsrsReviewRollout: vi.fn(() => ({ enabled: true, bucket: 0, percentage: 100, reason: 'cohort' })),
+  getPersistentFsrsReadRollout: vi.fn(() => ({ enabled: false, bucket: 0, percentage: 0, reason: 'master_disabled' })),
 }))
 
 const {
@@ -81,7 +82,7 @@ describe('GET /api/review/wrong-answers — FSRS rollout kohortu', () => {
     mockLastResult.mockReturnValue({ data: [], error: null })
   })
 
-  it('30 gun once tek yanlis cevap: isDue=true, dueAt dolu (ekstra sorgu YOK)', async () => {
+  it('30 gun once tek yanlis cevap: due ve guvenli FSRS metrikleri dolu', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     mockWrongResult.mockReturnValue({
@@ -103,6 +104,10 @@ describe('GET /api/review/wrong-answers — FSRS rollout kohortu', () => {
     const body = await res.json()
     expect(body.items[0].isDue).toBe(true)
     expect(typeof body.items[0].dueAt).toBe('string')
+    expect(typeof body.items[0].stability).toBe('number')
+    expect(typeof body.items[0].fsrsDifficulty).toBe('number')
+    expect(typeof body.items[0].retrievability).toBe('number')
+    expect(body.items[0].reviewState).toBe('learning')
   })
 
   it('yanlis + hemen ardindan dogru (simdi): isDue=false (henuz due degil)', async () => {

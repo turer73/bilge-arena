@@ -8,7 +8,7 @@ global.fetch = fetchMock as unknown as typeof fetch
 const DATA = { type: 'wrong_answer', description: 'yanlis' }
 
 describe('submitQuestionReport (Codex PR#242 P1: res.ok bazlı sonuç)', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => { vi.clearAllMocks(); vi.unstubAllEnvs() })
 
   it('200 → { ok: true }', async () => {
     fetchMock.mockResolvedValue({ ok: true, status: 201 })
@@ -46,6 +46,21 @@ describe('submitQuestionReport (Codex PR#242 P1: res.ok bazlı sonuç)', () => {
     await submitQuestionReport('q-42', DATA)
     expect(fetchMock).toHaveBeenCalledWith('/api/questions/report', expect.objectContaining({ method: 'POST' }))
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
-    expect(body).toEqual({ questionId: 'q-42', report_type: 'wrong_answer', description: 'yanlis' })
+    expect(body).toEqual({
+      questionId: 'q-42', report_type: 'wrong_answer', description: 'yanlis',
+      requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+    })
+  })
+
+  it('itiraz pilotunda legacy raporu owner-bound appeal istegine cevirir', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTENT_APPEALS_ENABLED', 'true')
+    fetchMock.mockResolvedValue({ ok: true, status: 201 })
+    await submitQuestionReport('11111111-1111-4111-8111-111111111111', { type: 'wrong_answer', description: 'Anahtar yanlis.' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/questions/appeals', expect.objectContaining({ method: 'POST' }))
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body).toEqual(expect.objectContaining({
+      questionId: '11111111-1111-4111-8111-111111111111', sessionAnswerId: null,
+      reason: 'wrong_key', explanation: 'Anahtar yanlis.', requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+    }))
   })
 })

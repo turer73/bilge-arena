@@ -13,6 +13,10 @@ import { checkPermission } from '@/lib/supabase/admin'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { trLower, isLikelyTurkish } from '@/lib/utils/tr-text'
 import { stripSolutionLetterRefs } from '@/lib/utils/sanitize-solution'
+import { isValidUuid } from '@/lib/utils/uuid'
+import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
+import { createGovernedQuestionDraft, deriveGovernedQuestionRequestId } from '@/lib/content-governance/question-drafts'
+import { contentGovernanceRpcStatus } from '@/lib/content-governance/server-contract'
 
 const GEMINI_MODEL = 'gemini-2.5-pro'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -191,10 +195,14 @@ export async function POST(req: Request) {
     )
   }
 
-  const { game, category, difficulty, count = 5, topic, level_tag } = await req.json()
+  const { game, category, difficulty, count = 5, topic, level_tag, outcomeId, requestId } = await req.json()
 
   if (!game || !category || !difficulty) {
     return NextResponse.json({ error: 'game, category, difficulty gerekli' }, { status: 400 })
+  }
+  const governed = contentGovernanceEnabled()
+  if (governed && (!isValidUuid(outcomeId) || !isValidUuid(requestId))) {
+    return NextResponse.json({ error: 'Yönetişim modunda kazanım ve requestId gereklidir' }, { status: 400 })
   }
 
   // CEFR seviye dogrulamasi: verilirse sadece A1-C2 izinli (DB CHECK constraint ile uyumlu).
@@ -410,13 +418,42 @@ Soru sayisi: ${count}${fewShotText}`
     }))
 
     const svc = createServiceRoleClient()
-    const { data: inserted, error } = await svc
-      .from('questions')
-      .insert(insertData)
-      .select('id')
-
-    if (error) {
-      return dbErrorResponse('admin/generate-questions insert', error)
+    let inserted: Array<{ id: string }> | null = null
+    if (governed) {
+      inserted = []
+      for (const [index, questionDraft] of insertData.entries()) {
+        const created = await createGovernedQuestionDraft(svc, {
+          actorId: admin.id,
+          requestId: deriveGovernedQuestionRequestId(requestId, index),
+          content: questionDraft.content,
+          metadata: {
+            game: questionDraft.game,
+            category: questionDraft.category,
+            topic: questionDraft.topic,
+            difficulty: questionDraft.difficulty,
+            levelTag: questionDraft.level_tag,
+          },
+          outcomeId,
+          source: {
+            kind: 'original',
+            title: 'Bilge Arena AI destekli taslak',
+            licenseCode: 'INTERNAL',
+            provenanceRef: `generator:${GEMINI_MODEL}`,
+          },
+          summary: 'AI destekli üretim kalite incelemesi için taslak olarak oluşturuldu.',
+        })
+        if (created.error || !created.data) {
+          return NextResponse.json(
+            { error: 'Yönetişim taslağı oluşturulamadı', saved: inserted.length },
+            { status: contentGovernanceRpcStatus(created.error?.code) },
+          )
+        }
+        inserted.push({ id: created.data.questionId })
+      }
+    } else {
+      const legacy = await svc.from('questions').insert(insertData).select('id')
+      if (legacy.error) return dbErrorResponse('admin/generate-questions insert', legacy.error)
+      inserted = legacy.data
     }
 
     return NextResponse.json({
@@ -445,7 +482,7 @@ export async function PUT(req: Request) {
   }
 
   const body = await req.json()
-  const { game, category, topic, difficulty, question, options, answer, solution, level_tag } = body
+  const { game, category, topic, difficulty, question, options, answer, solution, level_tag, outcomeId, requestId } = body
 
   // Dogrulama
   const { z } = await import('zod')
@@ -461,9 +498,11 @@ export async function PUT(req: Request) {
     // CEFR enum — DB CHECK constraint ile birebir; manuel ekleme akisinda da
     // generator'in kabullendigi sema gecerli olmali (tek surum hakikat).
     level_tag: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).optional(),
+    outcomeId: z.string().uuid().optional(),
+    requestId: z.string().uuid().optional(),
   })
 
-  const result = schema.safeParse({ game, category, topic, difficulty, question, options, answer, solution, level_tag })
+  const result = schema.safeParse({ game, category, topic, difficulty, question, options, answer, solution, level_tag, outcomeId, requestId })
   if (!result.success) {
     return NextResponse.json({ error: 'Gecersiz veri', details: result.error.flatten() }, { status: 400 })
   }
@@ -479,27 +518,49 @@ export async function PUT(req: Request) {
   const effectiveLevelTag: string | null = game === 'wordquest' ? (level_tag ?? 'B2') : null
 
   const svc = createServiceRoleClient()
-  const { data: inserted, error } = await svc
-    .from('questions')
-    .insert({
-      game,
-      category,
-      topic: topic || null,
-      difficulty,
-      level_tag: effectiveLevelTag,
-      content: { question, options, answer, solution },
-      source: 'manual',
-      is_active: true,
-    })
-    .select('id')
-    .single()
+  const governed = contentGovernanceEnabled()
+  if (governed && (!result.data.outcomeId || !result.data.requestId)) {
+    return NextResponse.json({ error: 'Yönetişim modunda kazanım ve requestId gereklidir' }, { status: 400 })
+  }
+  let inserted: { id: string } | null = null
+  let error: { code?: string; message?: string } | null = null
+  if (governed) {
+    const created = await createGovernedQuestionDraft(svc, {
+        actorId: admin.id,
+        requestId: result.data.requestId!,
+        content: { question, options, answer, solution },
+        metadata: { game, category, topic: topic || null, difficulty, levelTag: effectiveLevelTag },
+        outcomeId: result.data.outcomeId!,
+        source: { kind: 'original', title: 'Bilge Arena editör taslağı', licenseCode: 'INTERNAL' },
+        summary: 'Editör tarafından kalite incelemesi için taslak oluşturuldu.',
+      })
+    inserted = created.data ? { id: created.data.questionId } : null
+    error = created.error
+  } else {
+    const legacy = await svc
+      .from('questions')
+      .insert({
+        game,
+        category,
+        topic: topic || null,
+        difficulty,
+        level_tag: effectiveLevelTag,
+        content: { question, options, answer, solution },
+        source: 'manual',
+        is_active: true,
+      })
+      .select('id')
+      .single()
+    inserted = legacy.data
+    error = legacy.error
+  }
 
-  if (error) {
+  if (error || !inserted) {
     console.error('[Manuel Soru] Insert hatasi:', error)
     return NextResponse.json({ error: 'Soru kaydedilemedi' }, { status: 500 })
   }
 
-  return NextResponse.json({ id: inserted.id, success: true })
+  return NextResponse.json({ id: inserted.id, success: true, draft: governed })
 }
 
 /**

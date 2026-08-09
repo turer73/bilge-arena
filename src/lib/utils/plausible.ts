@@ -55,6 +55,14 @@ export type EventName =
   | 'MagicLinkRequested'  // Email girildi, "Gonder" butonuna basildi
   | 'MagicLinkSent'       // Supabase email gonderdi (basarili)
   | 'MagicLinkFailed'     // Email gonderilemedi (rate limit, invalid, SMTP error)
+  // Learning analytics — payloads must go through trackLearningEvent.
+  | 'LearningPlanStarted'
+  | 'LearningPlanCompleted'
+  | 'DueReviewCompleted'
+  | 'DelayedCorrectnessObserved'
+  | 'OutcomeStatusVerified'
+  | 'CoachStageViewed'
+  | 'CoachTransferResult'
 
 /**
  * Plausible custom event gonder. Sessizce basarisiz olur (hic fırlatmaz).

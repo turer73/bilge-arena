@@ -1,59 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// ─── Mocks ──────────────────────────────────────────
-
-const mockGetUser = vi.fn()
-const mockQuestSingle = vi.fn()
-const mockClaimSelect = vi.fn()
+const { mockGetUser, mockRpc } = vi.hoisted(() => ({
+  mockGetUser: vi.fn(),
+  mockRpc: vi.fn(),
+}))
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({
-    auth: { getUser: mockGetUser },
-  })),
+  createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser } })),
 }))
 
 vi.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: () => ({
-    from: vi.fn((table: string) => {
-      if (table === 'user_daily_quests') {
-        return {
-          // SELECT path: .select().eq().eq().single()
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                single: mockQuestSingle,
-              })),
-            })),
-          })),
-          // UPDATE path: .update().eq().eq().select()
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                select: mockClaimSelect,
-              })),
-            })),
-          })),
-        }
-      }
-      if (table === 'xp_log') {
-        return { insert: vi.fn().mockResolvedValue({ error: null }) }
-      }
-      if (table === 'profiles') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn().mockResolvedValue({ data: { total_xp: 100 }, error: null }),
-            })),
-          })),
-          update: vi.fn(() => ({
-            eq: vi.fn().mockResolvedValue({ error: null }),
-          })),
-        }
-      }
-      return {}
-    }),
-    rpc: vi.fn().mockResolvedValue({ error: null }),
-  }),
+  createServiceRoleClient: () => ({ rpc: mockRpc }),
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
@@ -64,7 +21,7 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 
 import { POST } from '../route'
 
-// ─── Helpers ────────────────────────────────────────
+const QUEST_ID = '10000000-0000-4000-8000-000000000001'
 
 function makeRequest(body: Record<string, unknown>) {
   return new Request('http://localhost/api/quests/claim', {
@@ -74,81 +31,77 @@ function makeRequest(body: Record<string, unknown>) {
   })
 }
 
-// ─── Tests ──────────────────────────────────────────
-
 describe('POST /api/quests/claim', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRpc.mockResolvedValue({
+      data: { xpEarned: 75, coinsEarned: 15, alreadyProcessed: false },
+      error: null,
+    })
+  })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
-    const res = await POST(makeRequest({ questId: 'q1' }))
-    expect(res.status).toBe(401)
+    expect((await POST(makeRequest({ questId: QUEST_ID }))).status).toBe(401)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('returns 400 if questId missing', async () => {
+  it('returns 400 if questId is missing or not a UUID', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    const res = await POST(makeRequest({}))
-    expect(res.status).toBe(400)
+    expect((await POST(makeRequest({}))).status).toBe(400)
+    expect((await POST(makeRequest({ questId: 'not-a-uuid' }))).status).toBe(400)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('returns 404 if quest not found', async () => {
+  it('claims XP and coins only through the atomic RPC', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockQuestSingle.mockResolvedValue({ data: null, error: null })
 
-    const res = await POST(makeRequest({ questId: 'q1' }))
-    expect(res.status).toBe(404)
-  })
+    const res = await POST(makeRequest({ questId: QUEST_ID }))
 
-  it('returns 400 if quest not completed', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockQuestSingle.mockResolvedValue({
-      data: { id: 'q1', is_completed: false, xp_claimed: false, quest: { xp_reward: 50 } },
-      error: null,
-    })
-
-    const res = await POST(makeRequest({ questId: 'q1' }))
-    expect(res.status).toBe(400)
-    const json = await res.json()
-    expect(json.error).toContain('tamamlanmadı')
-  })
-
-  it('returns 400 if XP already claimed', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockQuestSingle.mockResolvedValue({
-      data: { id: 'q1', is_completed: true, xp_claimed: true, quest: { xp_reward: 50 } },
-      error: null,
-    })
-
-    const res = await POST(makeRequest({ questId: 'q1' }))
-    expect(res.status).toBe(400)
-    const json = await res.json()
-    expect(json.error).toContain('zaten')
-  })
-
-  it('claims XP successfully', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockQuestSingle.mockResolvedValue({
-      data: { id: 'q1', is_completed: true, xp_claimed: false, quest: { xp_reward: 75, slug: 'daily-3' } },
-      error: null,
-    })
-    mockClaimSelect.mockResolvedValue({ data: [{ id: 'q1' }] })
-
-    const res = await POST(makeRequest({ questId: 'q1' }))
     expect(res.status).toBe(200)
-    const json = await res.json()
-    expect(json.success).toBe(true)
-    expect(json.xp_earned).toBe(75)
+    expect(mockRpc).toHaveBeenCalledOnce()
+    expect(mockRpc).toHaveBeenCalledWith('claim_daily_quest_reward', {
+      p_user_id: 'u1',
+      p_user_quest_id: QUEST_ID,
+    })
+    expect(await res.json()).toEqual({
+      success: true,
+      xp_earned: 75,
+      coins_earned: 15,
+      already_processed: false,
+    })
   })
 
-  it('returns 400 on race condition (double claim)', async () => {
+  it('returns the deterministic replay result without another app-side write', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockQuestSingle.mockResolvedValue({
-      data: { id: 'q1', is_completed: true, xp_claimed: false, quest: { xp_reward: 50 } },
+    mockRpc.mockResolvedValue({
+      data: { xpEarned: 75, coinsEarned: 15, alreadyProcessed: true },
       error: null,
     })
-    mockClaimSelect.mockResolvedValue({ data: [] }) // Atomic guard catches race
 
-    const res = await POST(makeRequest({ questId: 'q1' }))
-    expect(res.status).toBe(400)
+    const res = await POST(makeRequest({ questId: QUEST_ID }))
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).already_processed).toBe(true)
+    expect(mockRpc).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ['P0002', 404],
+    ['42501', 403],
+    ['22023', 400],
+    ['XX000', 500],
+  ])('maps PostgreSQL error %s to HTTP %i', async (code, status) => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: null, error: { code } })
+
+    expect((await POST(makeRequest({ questId: QUEST_ID }))).status).toBe(status)
+  })
+
+  it('fails closed when the RPC returns an invalid payload', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: { xpEarned: 75 }, error: null })
+
+    expect((await POST(makeRequest({ questId: QUEST_ID }))).status).toBe(500)
   })
 })

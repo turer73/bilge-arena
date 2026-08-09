@@ -3,8 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { questClaimSchema } from '@/lib/validations/schemas'
+import { z } from 'zod'
 
 const claimLimiter = createRateLimiter('quest-claim', 10, 60_000)
+const claimResultSchema = z.object({
+  xpEarned: z.number().int().nonnegative(),
+  coinsEarned: z.number().int().nonnegative(),
+  alreadyProcessed: z.boolean(),
+})
 
 // POST: Tamamlanan görevin XP ödülünü al
 export async function POST(request: Request) {
@@ -27,52 +33,31 @@ export async function POST(request: Request) {
 
   const svc = createServiceRoleClient()
 
-  const { data: uq } = await svc
-    .from('user_daily_quests')
-    .select('*, quest:daily_quests(*)')
-    .eq('id', questId)
-    .eq('user_id', user.id)
-    .single()
-
-  if (!uq) return NextResponse.json({ error: 'Görev bulunamadı' }, { status: 404 })
-  if (!uq.is_completed) return NextResponse.json({ error: 'Görev henüz tamamlanmadı' }, { status: 400 })
-  if (uq.xp_claimed) return NextResponse.json({ error: 'XP zaten alındı' }, { status: 400 })
-
-  const xpReward = (uq.quest as { xp_reward?: number } | null)?.xp_reward ?? 50
-
-  // 1) Atomic claim guard
-  const { data: claimed } = await svc
-    .from('user_daily_quests')
-    .update({ xp_claimed: true })
-    .eq('id', questId)
-    .eq('xp_claimed', false)
-    .select('id')
-
-  if (!claimed || claimed.length === 0) {
-    return NextResponse.json({ error: 'XP zaten alındı' }, { status: 400 })
+  // Migration 093: claim flag, XP, coin ve iki reward-ledger satiri tek
+  // transaction'da. Route'un profil fallback'i yoktur; RPC hata verirse hicbir
+  // parca uygulanmaz. Replay ayni sonucu doner ve yeniden odul uretmez.
+  const { data, error } = await svc.rpc('claim_daily_quest_reward', {
+    p_user_id: user.id,
+    p_user_quest_id: questId,
+  })
+  if (error) {
+    const status = error.code === 'P0002' ? 404
+      : error.code === '42501' ? 403
+        : error.code === '22023' ? 400
+          : 500
+    console.error('[QuestClaim] atomic RPC hatasi:', error.code)
+    return NextResponse.json({ error: 'Görev ödülü alınamadı' }, { status })
   }
-
-  // 2) Profil XP + seviye + ledger — increment_xp icinde atomik
-  const { error: rpcError } = await svc.rpc('increment_xp', { p_user_id: user.id, p_amount: xpReward, p_reason: 'daily_quest' })
-  if (rpcError) {
-    const { data: prof } = await svc.from('profiles').select('total_xp').eq('id', user.id).single()
-    if (prof) {
-      await svc.from('profiles').update({ total_xp: (prof.total_xp ?? 0) + xpReward }).eq('id', user.id)
-    }
-  }
-
-  // 4) Görev tamamlama coin ödülü: XP ödülünün %20'si (min 5, max 25)
-  // Fix: await edilmeliydi — fire-and-forget `.then()` ile coin RPC hata verse de
-  // yanit success + coins_earned donuyordu (kullanici coin almadan aldi saniyordu).
-  const coinReward = Math.max(5, Math.min(25, Math.round(xpReward * 0.2)))
-  const { error: coinError } = await svc.rpc('increment_coins', { p_user_id: user.id, p_amount: coinReward })
-  if (coinError) {
-    console.error('[QuestClaim] increment_coins hatası:', coinError.message)
+  const result = claimResultSchema.safeParse(data)
+  if (!result.success) {
+    console.error('[QuestClaim] atomic RPC geçersiz sonuç')
+    return NextResponse.json({ error: 'Görev ödülü alınamadı' }, { status: 500 })
   }
 
   return NextResponse.json({
     success: true,
-    xp_earned: xpReward,
-    coins_earned: coinError ? 0 : coinReward,
+    xp_earned: result.data.xpEarned,
+    coins_earned: result.data.coinsEarned,
+    already_processed: result.data.alreadyProcessed,
   })
 }

@@ -4,6 +4,7 @@ import {
   chatRequestSchema,
   commentContentSchema,
   errorReportSchema,
+  reviewErrorReasonSchema,
   profileUpdateSchema,
   sessionSubmitSchema,
   friendRequestSchema,
@@ -126,6 +127,19 @@ describe('errorReportSchema', () => {
   })
 })
 
+describe('reviewErrorReasonSchema', () => {
+  const questionId = 'aaaaaaaa-0000-4000-8000-000000000001'
+
+  it('yalniz katalogdaki hata nedenlerini kabul eder', () => {
+    expect(reviewErrorReasonSchema.safeParse({ questionId, reasonCode: 'knowledge_gap' }).success).toBe(true)
+    expect(reviewErrorReasonSchema.safeParse({ questionId, reasonCode: 'free_text' }).success).toBe(false)
+  })
+
+  it('gecersiz soru kimligini reddeder', () => {
+    expect(reviewErrorReasonSchema.safeParse({ questionId: 'q1', reasonCode: 'guess' }).success).toBe(false)
+  })
+})
+
 describe('profileUpdateSchema', () => {
   it('gecerli profil guncellemesini kabul eder', () => {
     const result = profileUpdateSchema.safeParse({ display_name: 'Ali', grade: 11 })
@@ -160,6 +174,7 @@ describe('profileUpdateSchema', () => {
 
 describe('sessionSubmitSchema', () => {
   const validSession = {
+    attemptId: '30000000-0000-4000-8000-000000000001',
     game: 'matematik',
     mode: 'classic',
     answers: [{ questionId: '10000000-0000-4000-8000-000000000001', selectedOption: 1, isCorrect: true, timeTaken: 5 }],
@@ -178,6 +193,12 @@ describe('sessionSubmitSchema', () => {
     const { clientRequestId: _omit, ...withoutReqId } = validSession
     expect(sessionSubmitSchema.safeParse(withoutReqId).success).toBe(false)
     expect(sessionSubmitSchema.safeParse({ ...validSession, clientRequestId: 'not-a-uuid' }).success).toBe(false)
+  })
+
+  it('attemptId eksikse veya UUID degilse reddeder', () => {
+    const { attemptId: _omit, ...withoutAttemptId } = validSession
+    expect(sessionSubmitSchema.safeParse(withoutAttemptId).success).toBe(false)
+    expect(sessionSubmitSchema.safeParse({ ...validSession, attemptId: 'not-a-uuid' }).success).toBe(false)
   })
 
   it('timeLimit default 30', () => {

@@ -18,7 +18,24 @@ describe('gradeQuestion', () => {
     })
     expect(fetchMock).toHaveBeenCalledWith('/api/questions/grade', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ questionId: 'q-1', selectedOption: 2 }),
+      body: JSON.stringify({ questionId: 'q-1', selectedOption: 2, attemptId: null }),
+    }))
+  })
+
+  test('attempt kimligini ve abort signalini ayni istekte tasir', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      isCorrect: true,
+      correctOption: 2,
+      solution: null,
+    }), { status: 200 }))
+    const controller = new AbortController()
+    const attemptId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+    await gradeQuestion('q-1', 2, attemptId, controller.signal)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/questions/grade', expect.objectContaining({
+      body: JSON.stringify({ questionId: 'q-1', selectedOption: 2, attemptId }),
+      signal: controller.signal,
     }))
   })
 

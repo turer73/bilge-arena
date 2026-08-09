@@ -23,6 +23,7 @@ import { Nameplate } from '@/components/profile/nameplate'
 import { isStaff } from '@/lib/utils/is-staff'
 import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
 import { AvatarDecoration } from '@/components/profile/avatar-decoration'
+import { ContentQualityStatus } from '@/components/profile/content-quality-status'
 import Link from 'next/link'
 
 // Mod isimleri
@@ -522,6 +523,8 @@ export default function ProfilClient() {
         <NotificationSettings />
         <ReferralCard />
       </div>
+
+      <ContentQualityStatus />
 
       {/* Gizlilik — opt-in keşif */}
       <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>

@@ -1,18 +1,16 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BilgeChan, type ChanPose } from '@/components/ui/bilge-chan'
 import { getOptionLetter } from '@/lib/utils/question'
 import { supportsStagedCoachPublicQuestion } from '@/lib/coach/question-shape'
+import { parseCoachPublicResponse } from '@/lib/coach/public-contract'
+import { trackLearningEvent } from '@/lib/analytics/learning-events'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-tts'
 
-/**
- * Typewriter — metni harf harf yazar. Parent `key={text}` ile remount eder;
- * setState yalnızca interval callback'inde (effect-body değil) → React19 temiz.
- */
-function Typewriter({ text, speed = 26 }: { text: string; speed?: number }) {
+function Typewriter({ text, speed = 18 }: { text: string; speed?: number }) {
   const [shown, setShown] = useState('')
   useEffect(() => {
     let i = 0
@@ -23,60 +21,48 @@ function Typewriter({ text, speed = 26 }: { text: string; speed?: number }) {
     }, speed)
     return () => clearInterval(id)
   }, [text, speed])
-  return <span>{shown}</span>
+  return <span className="whitespace-pre-wrap">{shown}</span>
 }
 
 interface BilgeChanCompanionProps {
-  /** quizStore.state: 'playing' | 'answered' | 'completed' */
+  attemptId?: string | null
   quizState: string
-  /** Son cevap doğru mu (answered iken anlamlı) */
   lastIsCorrect: boolean | null
-  /** Aktif soru */
   question: PublicQuestion | null
-  /** Submit sonrası sunucunun açtığı, ekrandaki doğru seçenek indeksi. */
   correctOption?: number | null
-  /** Pose yüksekliği (px) */
   height?: number
-  /** Mobil/dar yerleşim: balon yanda, daha küçük */
   compact?: boolean
-  /**
-   * next/image preload (LCP). Varsayılan kapalı: quiz'de iki instance da
-   * mount olur (lg:hidden + hidden lg:flex), breakpoint'te gizli olan
-   * preload edilmemeli (Codex P2).
-   */
   priority?: boolean
-  /** 'yardim' balonu açılınca/kapanınca — parent per-soru sayacını duraklatır */
   onHelpToggle?: (open: boolean) => void
   className?: string
 }
 
-/**
- * Faz akışı. Parent her yeni soruda `key={currentIndex}` ile remount eder,
- * böylece her soru 'intro' fazından taze başlar.
- */
+type GuidanceStage = 'hint1' | 'hint2' | 'hint3'
+type CoachRequestStage = GuidanceStage | 'solution' | 'transfer'
 type Phase =
   | 'intro'
   | 'offered'
+  | 'attempt'
   | 'loading'
-  | 'hint1'
-  | 'hint2'
-  | 'hint3'
+  | GuidanceStage
   | 'solution'
+  | 'transfer'
+  | 'transferResult'
   | 'check'
   | 'declined'
   | 'error'
 
-/** Yardım teklifi gecikmesi (ms). */
 const OFFER_DELAY = 6000
 
-/**
- * Bilge Chan — kişilikli quiz companion. Soru akışına göre pose + konuşma
- * balonu (typewriter); "yardıma ihtiyacın var mı?" → kademeli 3 ipucu →
- * kullanıcı isterse çözüm. Client serbest prompt göndermez; server yalnız
- * questionId+stage ve sonraki aşamalar için imzalı token kabul eder. Cevap
- * verilince victory/sad.
- */
+function secureRequestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  throw new Error('secure_request_id_unavailable')
+}
+
 export function BilgeChanCompanion({
+  attemptId = null,
   quizState,
   lastIsCorrect,
   question,
@@ -89,13 +75,17 @@ export function BilgeChanCompanion({
 }: BilgeChanCompanionProps) {
   const [phase, setPhase] = useState<Phase>('intro')
   const [helpMsg, setHelpMsg] = useState('')
+  const [sourceLabel, setSourceLabel] = useState<string | null>(null)
+  const [policyVersion, setPolicyVersion] = useState<string | null>(null)
+  const [transferQuestion, setTransferQuestion] = useState<PublicQuestion | null>(null)
   const requestRef = useRef<AbortController | null>(null)
   const progressTokenRef = useRef<string | null>(null)
-  // TTS destegi hydration-sonrasi belirlenir (SSR'da speechSynthesis yok)
+  const requestIdsRef = useRef<Partial<Record<CoachRequestStage, string>>>({})
+  const retryRef = useRef<{ stage: CoachRequestStage; selectedOption?: number } | null>(null)
   const [ttsReady, setTtsReady] = useState(false)
+
   useEffect(() => {
     setTtsReady(isTtsSupported())
-    // Soru degisiminde (remount) yarim kalan konusmayi kes
     return () => {
       requestRef.current?.abort()
       stopChanSpeech()
@@ -104,16 +94,14 @@ export function BilgeChanCompanion({
 
   const easy = question?.difficulty === 1
   const answered = quizState === 'answered'
+  const coachEnabled = process.env.NEXT_PUBLIC_COACH_ENABLED === 'true'
 
-  // intro → offered: setState yalnızca timer callback'inde
   useEffect(() => {
-    if (phase !== 'intro' || quizState !== 'playing' || !supportsStagedCoachPublicQuestion(question?.content)) return
-    const t = setTimeout(() => setPhase('offered'), OFFER_DELAY)
-    return () => clearTimeout(t)
-  }, [phase, question?.content, quizState])
-
-  // Yardım fazları OTOMATİK geçmez: öğrenci ipuçları arasında kendi ilerler;
-  // bu sırada per-soru sayacı parent'ta durur.
+    if (!coachEnabled || !attemptId || phase !== 'intro' || quizState !== 'playing'
+      || !supportsStagedCoachPublicQuestion(question?.content)) return
+    const timer = setTimeout(() => setPhase('offered'), OFFER_DELAY)
+    return () => clearTimeout(timer)
+  }, [attemptId, coachEnabled, phase, question?.content, quizState])
 
   const introMsg = useMemo(
     () => (easy ? pickLine(CHAN_LINES.easyJoke) : pickLine(CHAN_LINES.greet)),
@@ -128,50 +116,97 @@ export function BilgeChanCompanion({
       : pickLine(CHAN_LINES.wrong).replace('{harf}', letter)
   }, [answered, correctOption, lastIsCorrect, question])
 
-  const requestHint = async (stage: 'hint1' | 'hint2' | 'hint3' | 'solution') => {
-    if (!question || !supportsStagedCoachPublicQuestion(question.content)) return
+  const requestIdFor = (stage: CoachRequestStage) => {
+    const existing = requestIdsRef.current[stage]
+    if (existing) return existing
+    const created = secureRequestId()
+    requestIdsRef.current[stage] = created
+    return created
+  }
+
+  const requestCoach = async (stage: CoachRequestStage, selectedOption?: number) => {
+    if (!attemptId || !question || !supportsStagedCoachPublicQuestion(question.content)) return
     requestRef.current?.abort()
     const controller = new AbortController()
     requestRef.current = controller
+    retryRef.current = { stage, selectedOption }
     let timedOut = false
     const timeoutId = window.setTimeout(() => {
       timedOut = true
       controller.abort()
     }, 10_000)
     setPhase('loading')
-    setHelpMsg('İpucu hazırlanıyor...')
+    setSourceLabel(null)
+    setPolicyVersion(null)
+    setHelpMsg(stage === 'transfer' ? 'Transfer cevabın kontrol ediliyor...' : 'Koç aşaması hazırlanıyor...')
+
     try {
       const response = await fetch('/api/coach/hint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          attemptId,
           questionId: question.id,
+          requestId: requestIdFor(stage),
           stage,
+          ...(stage === 'hint1' || stage === 'transfer' ? { selectedOption } : {}),
           ...(stage === 'hint1' ? {} : { token: progressTokenRef.current }),
         }),
         signal: controller.signal,
       })
-      if (!response.ok) throw new Error('hint_failed')
-      const body = (await response.json()) as { stage?: string; hint?: string; nextToken?: string | null }
-      if (body.stage !== stage || !body.hint?.trim()
-        || (stage !== 'solution' && !body.nextToken)) throw new Error('invalid_hint')
+      if (!response.ok) throw new Error('coach_failed')
+      const body = parseCoachPublicResponse(await response.json())
+      if (!body || body.stage !== stage) throw new Error('invalid_coach_response')
       if (controller.signal.aborted || requestRef.current !== controller) return
-      progressTokenRef.current = body.nextToken ?? null
-      setHelpMsg(body.hint.trim())
-      setPhase(stage)
+
+      setSourceLabel(body.sourceLabel)
+      setPolicyVersion(body.evaluation.policyVersion)
+      progressTokenRef.current = body.nextToken
+      if (body.stage === 'transfer') {
+        const letter = getOptionLetter(body.correctOption)
+        setHelpMsg(body.isCorrect
+          ? `Transfer sorusu doğru. Yöntemi yeni soruya bağımsız taşıdın. ${body.solution ?? ''}`.trim()
+          : `Transfer sorusunda doğru seçenek ${letter}. ${body.solution ?? 'Çözümü yeniden inceleyip asıl soruya dön.'}`.trim())
+        setPhase('transferResult')
+        trackLearningEvent('CoachTransferResult', {
+          game: question.game,
+          result: body.isCorrect ? 'correct' : 'incorrect',
+          coachDepth: 4,
+          timing: 'same_session',
+        })
+      } else {
+        setHelpMsg(body.hint.trim())
+        if (body.stage === 'solution') setTransferQuestion(body.transferQuestion)
+        setPhase(body.stage)
+        trackLearningEvent('CoachStageViewed', {
+          game: question.game,
+          stage: body.stage,
+          result: 'shown',
+        })
+      }
+      retryRef.current = null
     } catch {
       if (requestRef.current !== controller || (controller.signal.aborted && !timedOut)) return
-      setHelpMsg('Şu an ipucu alınamadı. Biraz sonra yeniden deneyebilirsin.')
+      setHelpMsg('Şu an bu Koç aşaması alınamadı. Aynı isteği güvenle yeniden deneyebilirsin.')
       setPhase('error')
+      if (stage !== 'transfer') {
+        trackLearningEvent('CoachStageViewed', {
+          game: question.game,
+          stage,
+          result: 'error',
+        })
+      }
     } finally {
       window.clearTimeout(timeoutId)
       if (requestRef.current === controller) requestRef.current = null
     }
   }
+
   const handleYes = () => {
     progressTokenRef.current = null
-    onHelpToggle?.(true) // sayaç kademeli yardım boyunca dursun
-    void requestHint('hint1')
+    onHelpToggle?.(true)
+    setHelpMsg('Önce kendi ilk denemeni işaretle; bu seçim normal cevabını göndermez.')
+    setPhase('attempt')
   }
   const handleNo = () => {
     setHelpMsg(pickLine(CHAN_LINES.encourage))
@@ -180,24 +215,35 @@ export function BilgeChanCompanion({
   const handleContinue = () => {
     requestRef.current?.abort()
     requestRef.current = null
+    retryRef.current = null
     setPhase('check')
-    onHelpToggle?.(false) // sayaç kaldığı yerden devam etsin
+    onHelpToggle?.(false)
   }
-  const handleNextHint = () => {
-    if (phase === 'hint1') void requestHint('hint2')
-    else if (phase === 'hint2') void requestHint('hint3')
-    else if (phase === 'hint3') void requestHint('solution')
+  const handleNext = () => {
+    if (phase === 'hint1') void requestCoach('hint2')
+    else if (phase === 'hint2') void requestCoach('hint3')
+    else if (phase === 'hint3') void requestCoach('solution')
+    else if (phase === 'solution') setPhase('transfer')
+  }
+  const handleRetry = () => {
+    const retry = retryRef.current
+    if (retry) void requestCoach(retry.stage, retry.selectedOption)
   }
 
   if (!question) return null
 
-  // Pose + mesaj türetimi (effect yok) — cevap verildiyse reaksiyon önceliklidir
   let pose: ChanPose
   let message: string
   if (answered) {
     pose = lastIsCorrect ? 'victory' : 'sad'
     message = answerMsg
-  } else if (['loading', 'hint1', 'hint2', 'hint3', 'solution', 'error'].includes(phase)) {
+  } else if (phase === 'attempt') {
+    pose = 'reading'
+    message = helpMsg
+  } else if (phase === 'transfer') {
+    pose = 'reading'
+    message = 'Şimdi aynı kazanımı yeni bir soruda bağımsız uygula.'
+  } else if (['loading', 'hint1', 'hint2', 'hint3', 'solution', 'transferResult', 'error'].includes(phase)) {
     pose = 'reading'
     message = helpMsg
   } else if (phase === 'check') {
@@ -213,17 +259,18 @@ export function BilgeChanCompanion({
     pose = easy ? 'angry' : 'wave'
     message = introMsg
   }
-  const showButtons = phase === 'offered' && !answered
-  const showHelpActions = ['loading', 'hint1', 'hint2', 'hint3', 'solution', 'error'].includes(phase) && !answered
 
-  const bubbleWidth = compact ? 'max-w-[190px]' : 'max-w-[260px]'
+  const playing = quizState === 'playing'
+  const showOfferButtons = phase === 'offered' && playing
+  const showGuidanceActions = ['hint1', 'hint2', 'hint3', 'solution'].includes(phase) && playing
+  const showReturn = ['loading', 'transferResult', 'error'].includes(phase) && playing
+  const bubbleWidth = compact ? 'max-w-[220px]' : 'max-w-[300px]'
 
   return (
-    <div
-      className={`flex ${compact ? 'flex-row items-center gap-2' : 'flex-col items-center'} ${className ?? ''}`}
-    >
+    <div className={`flex ${compact ? 'flex-row items-center gap-2' : 'flex-col items-center'} ${className ?? ''}`}>
       {message && (
         <div
+          aria-live="polite"
           className={`relative ${compact ? 'order-2' : 'mb-2'} w-full ${bubbleWidth} rounded-2xl border border-[var(--focus-border)] bg-[var(--card)] px-3 py-2 text-xs leading-relaxed text-[var(--text)] shadow-md`}
         >
           <Typewriter key={message} text={message} />
@@ -232,47 +279,119 @@ export function BilgeChanCompanion({
               onClick={() => speakChanLine(message)}
               aria-label="Repliği sesli oku"
               title="Bilge Chan konuşsun"
-              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--focus-border)] bg-[var(--card)] text-[10px] shadow transition-transform hover:scale-110 active:scale-95"
+              className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-[var(--focus-border)] bg-[var(--card)] text-[11px] shadow transition-transform hover:scale-110 active:scale-95"
             >
               🔉
             </button>
           )}
-          {showButtons && (
+
+          {sourceLabel && policyVersion && (
+            <div className="mt-2 rounded-md bg-[var(--surface)] px-2 py-1 text-[10px] text-[var(--text-sub)]">
+              Kaynak: {sourceLabel} · Koruyucu kontrol geçti
+            </div>
+          )}
+
+          {showOfferButtons && (
             <div className="mt-2 flex gap-2">
               <button
                 onClick={handleYes}
-                className="flex-1 rounded-lg bg-[var(--growth)] px-2 py-1 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
+                className="min-h-11 flex-1 rounded-lg bg-[var(--growth)] px-2 py-2 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
               >
                 Evet
               </button>
               <button
                 onClick={handleNo}
-                className="flex-1 rounded-lg bg-[var(--urgency)] px-2 py-1 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
+                className="min-h-11 flex-1 rounded-lg bg-[var(--urgency)] px-2 py-2 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
               >
                 Hayır
               </button>
             </div>
           )}
-          {/* Kademeli yardım boyunca süre durur; öğrenci ipucu/çözüm arasında
-              kendi ilerler veya istediği anda soruya döner. */}
-          {showHelpActions && (
-            <div className="mt-2 flex flex-col gap-1.5">
-              {['hint1', 'hint2', 'hint3'].includes(phase) && (
-                <button
-                  onClick={handleNextHint}
-                  className="w-full rounded-lg bg-[var(--wisdom)] px-2 py-1.5 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
-                >
-                  {phase === 'hint3' ? 'Çözümü göster' : 'Bir ipucu daha'}
-                </button>
-              )}
+
+          {phase === 'attempt' && (
+            <fieldset className="mt-2">
+              <legend className="sr-only">Koç öncesi ilk denemeni seç</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {question.content.options.map((option, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => void requestCoach('hint1', index)}
+                    aria-label={`İlk deneme ${getOptionLetter(index)}: ${option}`}
+                    className="min-h-11 rounded-lg border border-[var(--focus-border)] bg-[var(--surface)] px-2 py-2 text-left text-[11px] font-semibold hover:bg-[var(--cardHover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+                  >
+                    <span className="mr-1 font-black">{getOptionLetter(index)}</span>
+                    <span className="line-clamp-2">{option}</span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
+          {showGuidanceActions && (
+            <div className="mt-2 flex flex-col gap-2">
+              <button
+                onClick={handleNext}
+                className="min-h-11 w-full rounded-lg bg-[var(--wisdom)] px-2 py-2 text-[11px] font-bold text-white transition-transform hover:scale-[1.02] active:scale-95"
+              >
+                {phase === 'hint1'
+                  ? 'İkinci ipucunu al'
+                  : phase === 'hint2'
+                    ? 'Küçük örneği gör'
+                    : phase === 'hint3'
+                      ? 'Çözümü göster'
+                      : 'Transfer sorusuna geç'}
+              </button>
               <button
                 onClick={handleContinue}
-                className="w-full rounded-lg bg-[var(--focus)] px-2 py-1.5 text-[11px] font-bold text-white transition-transform hover:scale-105 active:scale-95"
+                className="min-h-11 w-full rounded-lg bg-[var(--focus)] px-2 py-2 text-[11px] font-bold text-white transition-transform hover:scale-[1.02] active:scale-95"
               >
                 Soruyu çözmeye dön →
               </button>
             </div>
           )}
+
+          {phase === 'transfer' && transferQuestion && (
+            <fieldset className="mt-2">
+              <legend className="mb-2 font-semibold">{transferQuestion.content.question}</legend>
+              <div className="flex flex-col gap-2">
+                {transferQuestion.content.options.map((option, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => void requestCoach('transfer', index)}
+                    className="min-h-11 rounded-lg border border-[var(--focus-border)] bg-[var(--surface)] px-2 py-2 text-left text-[11px] font-semibold hover:bg-[var(--cardHover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+                  >
+                    <span className="mr-1 font-black">{getOptionLetter(index)}</span>{option}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={handleContinue}
+                className="mt-2 min-h-11 w-full rounded-lg bg-[var(--focus)] px-2 py-2 text-[11px] font-bold text-white"
+              >
+                Transferi atla ve soruya dön
+              </button>
+            </fieldset>
+          )}
+
+          {phase === 'error' && retryRef.current && (
+            <button
+              onClick={handleRetry}
+              className="mt-2 min-h-11 w-full rounded-lg bg-[var(--wisdom)] px-2 py-2 text-[11px] font-bold text-white"
+            >
+              Aynı aşamayı yeniden dene
+            </button>
+          )}
+          {showReturn && (
+            <button
+              onClick={handleContinue}
+              className="mt-2 min-h-11 w-full rounded-lg bg-[var(--focus)] px-2 py-2 text-[11px] font-bold text-white"
+            >
+              Soruyu çözmeye dön →
+            </button>
+          )}
+
           {!compact && (
             <span
               className="absolute -bottom-2 left-8 h-0 w-0"
@@ -285,7 +404,6 @@ export function BilgeChanCompanion({
           )}
         </div>
       )}
-      {/* Idle nefes animasyonu — reduced-motion tercihine saygili */}
       <BilgeChan
         pose={pose}
         height={height}

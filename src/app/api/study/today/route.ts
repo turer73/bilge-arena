@@ -3,67 +3,112 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
-import { GAME_SLUGS } from '@/lib/constants/games'
+import { GAME_SLUGS, GAMES, type GameSlug } from '@/lib/constants/games'
 import { isValidUuid } from '@/lib/utils/uuid'
 import { trDayString } from '@/lib/utils/tr-date'
 import { fetchDueQuestions } from '@/lib/review/due-questions'
-import { computeTopicStrengths } from '@/lib/review/topic-strengths'
-import { composePlan } from '@/lib/study/compose-plan'
 import { parseQuestionRows, toPublicQuestion, type PublicQuestion } from '@/lib/utils/question-public'
 import { defaultExamRefForType, type ExamType } from '@/lib/constants/exam-types'
+import { issueVerifiedAttempt, toPublicVerifiedQuestions } from '@/lib/verified-attempts'
+import { buildPlanCandidates } from '@/lib/study/plan-candidates'
+import { composePlanV2 } from '@/lib/study/compose-plan-v2'
+import {
+  normalizeTodayPlanItems,
+  parseDailyPlanRpcSnapshot,
+  type TodayPlanItem,
+} from '@/lib/study/today-plan-contract'
 import type { Question } from '@/types/database'
+import type { Json } from '@/types/database.generated'
 
-// Cift kalkan rate limit (topic-strengths/questions-random deseni ile ayni):
-//   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
-//   - User limit auth varsa ek katman
 const ipLimiter = createRateLimiter('study-today-ip', 120, 60_000)
 const userLimiter = createRateLimiter('study-today-user', 60, 60_000)
 
 const VALID_GAMES = new Set(GAME_SLUGS)
 const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ', 'YDT'])
+const BASE_QUESTION_LIMIT = 300
+const OUTCOME_LIMIT = 200
+const OUTCOME_MAPPING_LIMIT = 1_000
+const RECENT_QUESTION_LIMIT = 50
 
-const PLAN_SIZE = 15
-const DUE_QUOTA = 6
-const WEAK_CATEGORY_COUNT = 2
-const WEAK_PER_CATEGORY = 2
-const WEAK_MIN_SAMPLE = 5
-
-/**
- * Plan icindeki soru-id'lerini SIRALI olarak tam soru satirina cevirir
- * (RPC/`.in()` sirayi korumaz, snapshot sirasi burada yeniden kurulur).
- */
+function noStoreJson(body: unknown, init?: { status?: number }) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: { 'Cache-Control': 'no-store' },
+  })
+}
+/** `.in()` does not preserve the immutable snapshot order, so restore it. */
 async function fetchQuestionsInOrder(
   admin: ReturnType<typeof createServiceRoleClient>,
   ids: string[],
 ): Promise<PublicQuestion[]> {
   if (ids.length === 0) return []
-  const { data } = await admin.from('questions').select('*').in('id', ids)
-  const byId = new Map(parseQuestionRows(data).map((q) => [q.id, q]))
+  const { data, error } = await admin.from('questions').select('*').in('id', ids)
+  if (error) throw error
+  const byId = new Map(parseQuestionRows(data).map((question) => [question.id, question]))
   return ids
     .map((id) => byId.get(id))
-    .filter((q): q is Question => !!q)
+    .filter((question): question is Question => !!question)
     .map(toPublicQuestion)
 }
 
-/**
- * GET /api/study/today?game=<slug>
- *
- * "Bugunun 15'i" -- kullanicinin bugunku (TR takvim gunu) karma calisma
- * planini doner: varsa oldugu gibi (idempotent, gun boyu sabit snapshot),
- * yoksa uretir ve kalici olarak kaydeder (daily_plan, migration 084).
- *
- * Karma oran (composePlan, src/lib/study/compose-plan.ts): 6 FSRS-due +
- * 4 zayif-kategori + 5 yeni, kademeli doldurma (bir kova eksikse "yeni"ye
- * devrolur). FSRS due dogrudan computeDueMap'e dayanir (genel quiz FSRS
- * rollout kararindan BAGIMSIZ -- bu ayarlar yalniz genel quiz/yanlislar yuzeyinin
- * anahtari, gunluk plan ayri/yeni bir yuzey).
- *
- * Auth zorunlu. Cache: no-store (kullaniciya ozel).
- */
+async function respondWithTicket(
+  admin: ReturnType<typeof createServiceRoleClient>,
+  userId: string,
+  game: GameSlug,
+  planDate: string,
+  examRef: string | null,
+  questions: PublicQuestion[],
+  completedIds: string[],
+  items: TodayPlanItem[],
+) {
+  const returnedIds = new Set(questions.map((question) => question.id))
+  const safeCompletedIds = completedIds.filter((id) => returnedIds.has(id))
+  const safeItems = items.filter((item) => returnedIds.has(item.questionId))
+
+  if (questions.length === 0) {
+    return noStoreJson({
+      planDate,
+      game,
+      examRef,
+      questions,
+      completedIds: [],
+      items: [],
+      attemptId: null,
+      expiresAt: null,
+    })
+  }
+
+  try {
+    const ticket = await issueVerifiedAttempt(admin, {
+      userId,
+      game,
+      mode: 'practice',
+      questionIds: questions.map((question) => question.id),
+    })
+    const verifiedQuestions = toPublicVerifiedQuestions(ticket.questionSnapshots)
+    if (
+      verifiedQuestions.length !== questions.length
+      || verifiedQuestions.some((question, index) => question.id !== questions[index]?.id)
+    ) throw new Error('verified_attempt_snapshot_mismatch')
+    return noStoreJson({
+      planDate,
+      game,
+      examRef,
+      questions: verifiedQuestions,
+      completedIds: safeCompletedIds,
+      items: safeItems,
+      attemptId: ticket.attemptId,
+      expiresAt: ticket.expiresAt,
+    })
+  } catch {
+    console.error('[/api/study/today] verified attempt issuance failed')
+    return noStoreJson({ error: 'Plan baslatilamadi' }, { status: 500 })
+  }
+}
+
+/** GET /api/study/today?game=<slug>&exam_ref=<ref>&choice_category=<slug> */
 export async function GET(request: NextRequest) {
-  // 1) IP rate limit ONCE — anon flood auth.getUser() quota tuketmesin
-  const ip = getClientIp(request.headers)
-  const ipRl = await ipLimiter.check(ip)
+  const ipRl = await ipLimiter.check(getClientIp(request.headers))
   if (!ipRl.success) {
     return NextResponse.json(
       { error: 'Cok fazla istek' },
@@ -71,14 +116,10 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // 2) Auth check
   const cookieClient = await createClient()
   const { data: { user } } = await cookieClient.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-  }
+  if (!user) return noStoreJson({ error: 'Yetkisiz' }, { status: 401 })
 
-  // 3) User rate limit
   const userRl = await userLimiter.check(user.id)
   if (!userRl.success) {
     return NextResponse.json(
@@ -87,24 +128,23 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // 4) Game param validation
   const { searchParams } = new URL(request.url)
-  const game = searchParams.get('game')
-  if (!game || !VALID_GAMES.has(game as never)) {
-    return NextResponse.json({ error: 'Gecerli oyun belirtilmedi' }, { status: 400 })
+  const rawGame = searchParams.get('game')
+  if (!rawGame || !VALID_GAMES.has(rawGame as GameSlug)) {
+    return noStoreJson({ error: 'Gecerli oyun belirtilmedi' }, { status: 400 })
   }
+  const game = rawGame as GameSlug
   const requestedExamRef = searchParams.get('exam_ref')
   if (requestedExamRef && !VALID_EXAM_REFS.has(requestedExamRef)) {
-    return NextResponse.json({ error: 'Gecersiz sinav referansi' }, { status: 400 })
+    return noStoreJson({ error: 'Gecersiz sinav referansi' }, { status: 400 })
+  }
+  const choiceCategory = searchParams.get('choice_category')
+  if (choiceCategory && !GAMES[game].categories.some((category) => category === choiceCategory)) {
+    return noStoreJson({ error: 'Gecersiz secim kategorisi' }, { status: 400 })
   }
 
   const admin = createServiceRoleClient()
   const planDate = trDayString()
-
-  // 5) Sinav-referansini COZ -- plan KIMLIGININ parcasidir (asagidaki lookup +
-  // insert bu deger uzerinden yapilir, Codex P2). Client ilk render'da exam_ref'siz
-  // istek atabilir; filtresiz (LGS+YKS karisik) snapshot yerine server-of-truth
-  // profil tercihine duseriz. Explicit gecerli exam_ref kazanir.
   const { data: profile, error: profileError } = await admin
     .from('profiles')
     .select('exam_type')
@@ -112,8 +152,8 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
 
   if (profileError) {
-    console.error('[/api/study/today] profil sinav turu sorgu hatasi:', profileError.code)
-    return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
+    console.error('[/api/study/today] profile exam query failed:', profileError.code)
+    return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
   }
   const examType = (profile?.exam_type as ExamType | null | undefined) ?? null
   if (
@@ -121,21 +161,12 @@ export async function GET(request: NextRequest) {
     && ((examType === 'lgs' && requestedExamRef !== 'LGS')
       || (examType === 'yks' && requestedExamRef === 'LGS'))
   ) {
-    // Global store onceki kullanici/oturumdan stale exam_ref tasiyabilir. Profil
-    // tercihiyle capraz sinav turunu persist etmek yerine client'in default
-    // senkronizasyonunu beklemesine izin ver.
-    return NextResponse.json({ error: 'Sinav tercihiyle uyumsuz referans' }, { status: 400 })
+    return noStoreJson({ error: 'Sinav tercihiyle uyumsuz referans' }, { status: 400 })
   }
-  // WordQuest exam_ref KULLANMAZ (level_tag A1-C2 modeli; migration 046 TYT
-  // backfill'ine wordquest DAHIL DEGIL). exam_ref exact-filter oldugundan TYT
-  // default'u tum kovalari bosaltir ve plan karti hic gorunmez (Codex P2).
   const examRef = game === 'wordquest'
     ? null
     : (requestedExamRef ?? defaultExamRefForType(examType))
 
-  // 6) Bugunku plan zaten var mi? (idempotent -- gun boyu sabit snapshot). exam_ref
-  // plan kimliginin parcasi: gun-ici TYT->AYT-SAY gecisinde eski (yanlis sinav)
-  // snapshot'i dondurmeyelim (Codex P2). NULL exam_ref (wordquest) icin .is() gerekir.
   let lookupQuery = admin
     .from('daily_plan')
     .select('*')
@@ -145,176 +176,221 @@ export async function GET(request: NextRequest) {
   lookupQuery = examRef === null
     ? lookupQuery.is('exam_ref', null)
     : lookupQuery.eq('exam_ref', examRef)
-  const { data: existing } = await lookupQuery.maybeSingle()
+  const { data: existing, error: lookupError } = await lookupQuery.maybeSingle()
+  if (lookupError) {
+    console.error('[/api/study/today] plan lookup failed:', lookupError.code)
+    return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+  }
 
   if (existing) {
-    const questions = await fetchQuestionsInOrder(admin, existing.question_ids as string[])
-    return NextResponse.json(
-      {
-        planDate: existing.plan_date,
+    const questionIds = existing.question_ids as string[]
+    const legacyCompletedIds = (existing.completed_ids as string[]) ?? []
+    const { data: itemRows, error: itemError } = await admin
+      .from('daily_plan_items')
+      .select('question_id,position,slot_type,source_type,completed_at')
+      .eq('plan_id', existing.id)
+      .order('position', { ascending: true })
+    if (itemError) {
+      console.error('[/api/study/today] item lookup failed:', itemError.code)
+      return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+    }
+    const items = normalizeTodayPlanItems(itemRows ?? [], questionIds, legacyCompletedIds)
+    if (!items) return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+    const completedIds = (itemRows ?? []).length > 0
+      ? items.filter((item) => item.completed).map((item) => item.questionId)
+      : legacyCompletedIds
+    try {
+      const questions = await fetchQuestionsInOrder(admin, questionIds)
+      return respondWithTicket(
+        admin,
+        user.id,
         game,
-        examRef: (existing.exam_ref as string | null) ?? null,
+        existing.plan_date,
+        (existing.exam_ref as string | null) ?? null,
         questions,
-        completedIds: (existing.completed_ids as string[]) ?? [],
-      },
-      { headers: { 'Cache-Control': 'no-store' } },
-    )
-  }
-
-  // 6a) FSRS-due (computeDueMap uzerinden, flag'siz).
-  let dueQuestions: Question[]
-  try {
-    dueQuestions = await fetchDueQuestions(admin, user.id, game, null, null, examRef)
-  } catch (error) {
-    console.error('[/api/study/today] FSRS-due sorgu hatasi:', (error as { code?: string } | null)?.code)
-    return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
-  }
-  const dueIds = dueQuestions.slice(0, DUE_QUOTA).map((q) => q.id)
-
-  const selected = new Set<string>(dueIds)
-
-  // 6b) Zayif-kategori (min orneklem total>=5, en dusuk basari yuzdesine
-  // sahip 2 kategori, her birinden ~2 soru). Aggregation hatasi olursa
-  // (yeni kullanici / sorgu hatasi) sessizce atlanir -- slotlar "yeni"ye devrolur.
-  const weakIds: string[] = []
-  let weakCategories: Awaited<ReturnType<typeof computeTopicStrengths>> = []
-  try {
-    weakCategories = (await computeTopicStrengths(admin, user.id, game))
-      .filter((s) => s.total >= WEAK_MIN_SAMPLE)
-      .sort((a, b) => a.percentage - b.percentage)
-      .slice(0, WEAK_CATEGORY_COUNT)
-  } catch (e) {
-    console.error('[/api/study/today] zayıf-kategori hesaplama hatasi, atlaniyor:', e)
-  }
-
-  for (const wc of weakCategories) {
-    const excludeIds = Array.from(selected)
-    const { data, error } = await admin.rpc('select_random_questions', {
-      p_game: game,
-      p_limit: WEAK_PER_CATEGORY,
-      p_category: wc.category,
-      ...(excludeIds.length > 0 ? { p_exclude_ids: excludeIds } : {}),
-      ...(examRef ? { p_exam_ref: examRef } : {}),
-    })
-    if (error) {
-      console.error('[/api/study/today] zayıf-kategori RPC hatasi:', error.code)
-      return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
-    }
-    for (const row of parseQuestionRows(data)) {
-      if (!selected.has(row.id)) {
-        selected.add(row.id)
-        weakIds.push(row.id)
-      }
+        completedIds,
+        items,
+      )
+    } catch (error) {
+      console.error('[/api/study/today] snapshot question query failed:', (error as { code?: string })?.code)
+      return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
     }
   }
 
-  // 6c) Yeni sorular -- kalan TUM slotlari doldurur (kademeli doldurma).
-  // excludeIds: su ana kadar secilenler + kullanicinin son gordugu 50 soru
-  // (questions/random ile ayni cooldown deseni).
-  const kalan = PLAN_SIZE - dueIds.length - weakIds.length
-  let newIds: string[] = []
-  if (kalan > 0) {
-    const { data: historyRows } = await admin
+  let baseQuery = admin
+    .from('questions')
+    .select('*')
+    .eq('game', game)
+    .eq('is_active', true)
+  baseQuery = examRef === null
+    ? baseQuery.is('exam_ref', null)
+    : baseQuery.eq('exam_ref', examRef)
+
+  let outcomeQuery = admin
+    .from('curriculum_outcomes')
+    .select('id,code,category,sort_order')
+    .eq('game', game)
+    .eq('is_active', true)
+  outcomeQuery = examRef === null
+    ? outcomeQuery.is('exam_ref', null)
+    : outcomeQuery.eq('exam_ref', examRef)
+
+  const duePromise = fetchDueQuestions(admin, user.id, game, null, null, examRef, 'exact')
+    .then((data) => ({ data, error: null as unknown }))
+    .catch((error: unknown) => ({ data: null, error }))
+  const [dueResult, baseResult, outcomeResult, historyResult] = await Promise.all([
+    duePromise,
+    baseQuery.order('id', { ascending: true }).limit(BASE_QUESTION_LIMIT),
+    outcomeQuery.order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(OUTCOME_LIMIT),
+    admin
       .from('user_question_history')
       .select('question_id')
       .eq('user_id', user.id)
       .order('last_seen_at', { ascending: false })
-      .limit(50)
+      .limit(RECENT_QUESTION_LIMIT),
+  ])
 
-    const historyIds = ((historyRows ?? []) as { question_id: string }[])
-      .map((h) => h.question_id)
-      .filter((id) => isValidUuid(id))
-
-    const excludeIds = Array.from(new Set([...selected, ...historyIds])).slice(0, 50)
-
-    const { data: newData, error: newError } = await admin.rpc('select_random_questions', {
-      p_game: game,
-      p_limit: kalan,
-      ...(excludeIds.length > 0 ? { p_exclude_ids: excludeIds } : {}),
-      ...(examRef ? { p_exam_ref: examRef } : {}),
-    })
-    if (newError) {
-      console.error('[/api/study/today] yeni-soru RPC hatasi:', newError.code)
-      return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
-    }
-    newIds = parseQuestionRows(newData).map((q) => q.id)
+  if (dueResult.error || baseResult.error || outcomeResult.error || historyResult.error) {
+    const error = dueResult.error
+      ?? baseResult.error
+      ?? outcomeResult.error
+      ?? historyResult.error
+    console.error('[/api/study/today] candidate query failed:', (error as { code?: string } | null)?.code)
+    return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
   }
 
-  const questionIds = composePlan({ dueIds, weakIds, newIds, size: PLAN_SIZE })
+  const dueQuestions = dueResult.data ?? []
+  const baseQuestions = parseQuestionRows(baseResult.data)
+  const outcomes = (outcomeResult.data ?? []).map((row) => ({
+    id: row.id,
+    code: row.code,
+    category: row.category,
+    sortOrder: row.sort_order,
+  }))
+  const outcomeIds = outcomes.map((outcome) => outcome.id)
+  const baseQuestionIds = new Set(baseQuestions.map((question) => question.id))
 
-  // Mesru bos havuz kalici hata degildir. Bos snapshot yazilirsa UNIQUE satir
-  // gece yarisina kadar yeni icerik/retry sansini kapatir; persist etmeden don.
-  if (questionIds.length === 0) {
-    return NextResponse.json(
-      { planDate, game, examRef, questions: [], completedIds: [] },
-      { headers: { 'Cache-Control': 'no-store' } },
-    )
-  }
+  let outcomeStates: Array<{
+    outcomeId: string
+    attempts: number
+    correctAttempts: number
+    weightedEarned: number
+    weightedPossible: number
+    delayedCorrect: number
+    lastAnsweredAt: string | null
+  }> = []
+  let mappings: Array<{ questionId: string; outcomeId: string }> = []
 
-  // 7) Kaydet -- ayni gun icin es-zamanli iki GET yarisirsa (UNIQUE ihlali),
-  // ikinci istek kendi ürettigini atip DB'deki gercek satiri okur (idempotent).
-  const { data: inserted, error: insertError } = await admin
-    .from('daily_plan')
-    .insert({
-      user_id: user.id,
-      game,
-      plan_date: planDate,
-      exam_ref: examRef,
-      question_ids: questionIds,
-      completed_ids: [],
-    })
-    .select('*')
-    .single()
-
-  let planRow = inserted
-  if (insertError) {
-    if (insertError.code === '23505') {
-      // Race: exam_ref plan kimliginin parcasi -- ayni exam_ref satirini oku.
-      let raceQuery = admin
-        .from('daily_plan')
-        .select('*')
+  if (outcomeIds.length > 0) {
+    const [stateResult, mappingResult] = await Promise.all([
+      admin
+        .from('user_outcome_state')
+        .select('outcome_id,attempts,correct_attempts,weighted_earned,weighted_possible,delayed_correct,last_answered_at')
         .eq('user_id', user.id)
-        .eq('game', game)
-        .eq('plan_date', planDate)
-      raceQuery = examRef === null
-        ? raceQuery.is('exam_ref', null)
-        : raceQuery.eq('exam_ref', examRef)
-      const { data: raceWinner } = await raceQuery.maybeSingle()
-      planRow = raceWinner
-    } else {
-      console.error('[/api/study/today] plan insert hatasi:', insertError.code)
-      return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
+        .in('outcome_id', outcomeIds)
+        .limit(OUTCOME_LIMIT),
+      admin
+        .from('question_outcomes')
+        .select('question_id,outcome_id')
+        .in('outcome_id', outcomeIds)
+        .limit(OUTCOME_MAPPING_LIMIT),
+    ])
+    if (stateResult.error || mappingResult.error) {
+      console.error(
+        '[/api/study/today] outcome evidence query failed:',
+        (stateResult.error ?? mappingResult.error)?.code,
+      )
+      return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
     }
+    outcomeStates = (stateResult.data ?? []).map((row) => ({
+      outcomeId: row.outcome_id,
+      attempts: row.attempts,
+      correctAttempts: row.correct_attempts,
+      weightedEarned: row.weighted_earned,
+      weightedPossible: row.weighted_possible,
+      delayedCorrect: row.delayed_correct,
+      lastAnsweredAt: row.last_answered_at,
+    }))
+    mappings = (mappingResult.data ?? [])
+      .filter((row) => baseQuestionIds.has(row.question_id))
+      .map((row) => ({ questionId: row.question_id, outcomeId: row.outcome_id }))
   }
 
-  if (!planRow) {
-    return NextResponse.json({ error: 'Plan olusturulamadi' }, { status: 500 })
+  const recentQuestionIds = (historyResult.data ?? [])
+    .map((row) => row.question_id)
+    .filter((id): id is string => isValidUuid(id))
+  const seed = `${user.id}|${planDate}|${game}|${examRef ?? 'none'}`
+  const draft = composePlanV2(buildPlanCandidates({
+    seed,
+    dueQuestions,
+    baseQuestions,
+    outcomes,
+    outcomeStates,
+    mappings,
+    recentQuestionIds,
+    selectedCategory: choiceCategory,
+  }))
+
+  if (draft.length === 0) {
+    return respondWithTicket(admin, user.id, game, planDate, examRef, [], [], [])
   }
 
-  const questions = await fetchQuestionsInOrder(admin, planRow.question_ids as string[])
+  const rpcItems = draft.map((item) => ({
+    position: item.position,
+    question_id: item.questionId,
+    slot_type: item.slotType,
+    source_type: item.sourceType,
+    source_ref: item.sourceRef,
+  }))
+  const { data: rpcData, error: createError } = await admin.rpc('create_daily_plan_v2', {
+    p_user_id: user.id,
+    p_game: game,
+    p_plan_date: planDate,
+    p_exam_ref: examRef,
+    p_items: rpcItems as Json,
+  })
+  if (createError) {
+    console.error('[/api/study/today] atomic plan create failed:', createError.code)
+    return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+  }
 
-  return NextResponse.json(
-    {
-      planDate: planRow.plan_date,
+  const snapshot = parseDailyPlanRpcSnapshot(rpcData)
+  if (
+    !snapshot
+    || snapshot.game !== game
+    || snapshot.planDate !== planDate
+    || snapshot.examRef !== examRef
+  ) {
+    console.error('[/api/study/today] invalid atomic plan response')
+    return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+  }
+  const items = normalizeTodayPlanItems(snapshot.items, snapshot.questionIds, snapshot.completedIds)
+  if (!items) return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+  const completedIds = snapshot.items.length > 0
+    ? items.filter((item) => item.completed).map((item) => item.questionId)
+    : snapshot.completedIds
+
+  try {
+    const questions = await fetchQuestionsInOrder(admin, snapshot.questionIds)
+    return respondWithTicket(
+      admin,
+      user.id,
       game,
-      examRef: (planRow.exam_ref as string | null) ?? null,
+      snapshot.planDate,
+      snapshot.examRef,
       questions,
-      completedIds: (planRow.completed_ids as string[]) ?? [],
-    },
-    { headers: { 'Cache-Control': 'no-store' } },
-  )
+      completedIds,
+      items,
+    )
+  } catch (error) {
+    console.error('[/api/study/today] created question query failed:', (error as { code?: string })?.code)
+    return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+  }
 }
 
-/**
- * PATCH /api/study/today  body: { game: string, questionIds: string[] }
- *
- * Bugunku planin completed_ids alanina isaretlenen soru-id'lerini set-union
- * ile ekler (dedup). Yalniz planin KENDI question_ids'ine ait olan id'ler
- * kabul edilir -- plan-disi id'ler sessizce yok sayilir.
- */
+/** PATCH /api/study/today body: { game, questionIds, examRef } */
 export async function PATCH(request: NextRequest) {
-  const ip = getClientIp(request.headers)
-  const ipRl = await ipLimiter.check(ip)
+  const ipRl = await ipLimiter.check(getClientIp(request.headers))
   if (!ipRl.success) {
     return NextResponse.json(
       { error: 'Cok fazla istek' },
@@ -324,9 +400,7 @@ export async function PATCH(request: NextRequest) {
 
   const cookieClient = await createClient()
   const { data: { user } } = await cookieClient.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-  }
+  if (!user) return noStoreJson({ error: 'Yetkisiz' }, { status: 401 })
 
   const userRl = await userLimiter.check(user.id)
   if (!userRl.success) {
@@ -336,63 +410,60 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const body = await request.json().catch(() => null) as { game?: string; questionIds?: unknown; examRef?: unknown } | null
-  const game = body?.game
-  if (!game || !VALID_GAMES.has(game as never)) {
-    return NextResponse.json({ error: 'Gecerli oyun belirtilmedi' }, { status: 400 })
+  const body = await request.json().catch(() => null) as {
+    game?: string
+    questionIds?: unknown
+    examRef?: unknown
+  } | null
+  const rawGame = body?.game
+  if (!rawGame || !VALID_GAMES.has(rawGame as GameSlug)) {
+    return noStoreJson({ error: 'Gecerli oyun belirtilmedi' }, { status: 400 })
   }
-  // exam_ref plan kimliginin parcasi (GET ile ayni): ayni game+gun icin farkli
-  // sinav planlari olabildiginden dogru satiri secmek ZORUNLU -- aksi halde
-  // maybeSingle() coklu satirda patlar. null = wordquest/exam-ref'siz plan.
   const patchExamRef = typeof body?.examRef === 'string' ? body.examRef : null
   if (patchExamRef && !VALID_EXAM_REFS.has(patchExamRef)) {
-    return NextResponse.json({ error: 'Gecersiz sinav referansi' }, { status: 400 })
+    return noStoreJson({ error: 'Gecersiz sinav referansi' }, { status: 400 })
   }
-
   const incomingIds = Array.isArray(body?.questionIds)
-    ? (body.questionIds as unknown[]).filter((id): id is string => isValidUuid(id))
+    ? [...new Set(body.questionIds.filter((id): id is string => typeof id === 'string' && isValidUuid(id)))].slice(0, 15)
     : []
 
   const admin = createServiceRoleClient()
   const planDate = trDayString()
-
   let existingQuery = admin
     .from('daily_plan')
     .select('*')
     .eq('user_id', user.id)
-    .eq('game', game)
+    .eq('game', rawGame)
     .eq('plan_date', planDate)
   existingQuery = patchExamRef === null
     ? existingQuery.is('exam_ref', null)
     : existingQuery.eq('exam_ref', patchExamRef)
-  const { data: existing } = await existingQuery.maybeSingle()
-
-  if (!existing) {
-    return NextResponse.json({ error: 'Plan bulunamadi' }, { status: 404 })
+  const { data: existing, error: lookupError } = await existingQuery.maybeSingle()
+  if (lookupError) {
+    console.error('[/api/study/today] completion lookup failed:', lookupError.code)
+    return noStoreJson({ error: 'Guncellenemedi' }, { status: 500 })
   }
+  if (!existing) return noStoreJson({ error: 'Plan bulunamadi' }, { status: 404 })
 
-  // Plan-disi id'leri yok say -- yalniz planin kendi question_ids'ine sinirlanir.
   const planIds = new Set(existing.question_ids as string[])
   const validIncoming = incomingIds.filter((id) => planIds.has(id))
-
-  const mergedCompleted = Array.from(
-    new Set([...(existing.completed_ids as string[] ?? []), ...validIncoming]),
-  )
-
-  const { data: updated, error } = await admin
-    .from('daily_plan')
-    .update({ completed_ids: mergedCompleted })
-    .eq('id', existing.id)
-    .select('completed_ids')
-    .single()
-
+  const { data, error } = await admin.rpc('complete_daily_plan_items', {
+    p_user_id: user.id,
+    p_plan_id: existing.id,
+    p_question_ids: validIncoming,
+  })
   if (error) {
-    console.error('[/api/study/today] completed_ids guncelleme hatasi:', error.code)
-    return NextResponse.json({ error: 'Guncellenemedi' }, { status: 500 })
+    console.error('[/api/study/today] atomic completion failed:', error.code)
+    return noStoreJson({ error: 'Guncellenemedi' }, { status: 500 })
   }
-
-  return NextResponse.json(
-    { completedIds: (updated.completed_ids as string[]) ?? [] },
-    { headers: { 'Cache-Control': 'no-store' } },
-  )
+  const snapshot = parseDailyPlanRpcSnapshot(data)
+  if (!snapshot || snapshot.planId !== existing.id) {
+    return noStoreJson({ error: 'Guncellenemedi' }, { status: 500 })
+  }
+  const items = normalizeTodayPlanItems(snapshot.items, snapshot.questionIds, snapshot.completedIds)
+  if (!items) return noStoreJson({ error: 'Guncellenemedi' }, { status: 500 })
+  return noStoreJson({
+    completedIds: items.filter((item) => item.completed).map((item) => item.questionId),
+    items,
+  })
 }

@@ -9,11 +9,14 @@ import { ShareButtons } from '@/components/social/share-buttons'
 import { trackEvent } from '@/lib/utils/plausible'
 import { SignupPromptModal } from './signup-prompt-modal'
 import { useGuestSession, computePromptLevel } from '@/lib/hooks/use-guest-session'
+import type { MockStrategyAnalysis } from '@/lib/mock-strategy/analysis'
+import { MockStrategyPanel } from './mock-strategy-panel'
 
 interface DenemeResultProps {
   gameName: string
   totalTime: number      // toplam sure (saniye)
   elapsedTime: number    // gecen sure (saniye)
+  strategyAnalysis?: MockStrategyAnalysis | null
   onRestart: () => void
   onExit: () => void
 }
@@ -25,7 +28,14 @@ interface CategoryStat {
   pct: number
 }
 
-export function DenemeResult({ gameName, totalTime: _totalTime, elapsedTime, onRestart, onExit }: DenemeResultProps) {
+export function DenemeResult({
+  gameName,
+  totalTime: _totalTime,
+  elapsedTime,
+  strategyAnalysis = null,
+  onRestart,
+  onExit,
+}: DenemeResultProps) {
   const { score, questions, xpEarned, answers } = useQuizStore()
   const { user } = useAuthStore()
   const { incrementQuizCount } = useGuestSession()
@@ -220,6 +230,8 @@ export function DenemeResult({ gameName, totalTime: _totalTime, elapsedTime, onR
           </div>
         )}
       </div>
+
+      {strategyAnalysis && <MockStrategyPanel analysis={strategyAnalysis} />}
 
       {/* XP */}
       <div className="animate-fadeUp text-center" style={{ animationDelay: '0.6s', animationFillMode: 'both' }}>

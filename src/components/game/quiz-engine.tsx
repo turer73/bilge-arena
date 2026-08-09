@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useGameStore } from '@/stores/game-store'
 import { useAuthStore } from '@/stores/auth-store'
@@ -12,8 +12,13 @@ import { useSessionSaver } from '@/lib/hooks/use-session-saver'
 import { useQuizLimit } from '@/lib/hooks/use-quiz-limit'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { defaultExamRefForType } from '@/lib/constants/exam-types'
+import { trackLearningEvent } from '@/lib/analytics/learning-events'
 import { trackEvent } from '@/lib/utils/plausible'
 import { trUpper } from '@/lib/utils/tr-text'
+import { isMockStrategyUiEnabled, startMockStrategyAttempt } from '@/lib/mock-strategy/client'
+import { isPaperModeUiEnabled, paperPackCreateHref } from '@/lib/paper-mode/client'
+import { useMockStrategyResult } from '@/lib/hooks/use-mock-strategy-result'
+import { toast } from '@/stores/toast-store'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
@@ -75,22 +80,28 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const gameStore = useGameStore()
   const { user, profile } = useAuthStore()
   const [showPremiumModal, setShowPremiumModal] = useState(false)
-  // "Bugunun 15'i" plani oynanirken true -- result ekranina gecince
-  // tamamlanan sorular plan'a isaretlenir (bkz. asagidaki effect). Restart'ta
-  // (screen tekrar 'lobby'ye donunce) sifirlanir.
-  const [planActive, setPlanActive] = useState(false)
+  const [verifiedExamAttemptId, setVerifiedExamAttemptId] = useState<string | null>(null)
+  // "Bugunun 15'i" plani oynanirken true. Plan, yalnizca dogrulanmis oturum
+  // basariyla kaydedilince tamamlanir; lobby'ye donunce sifirlanir.
+  const planActiveRef = useRef(false)
 
   // --- Custom hooks ---
   const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game, user?.id)
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
   const dailyQuests = useDailyQuests()
-  const todayPlan = useTodayPlan(game, user?.id, gameStore.selectedExamRef)
+  const todayPlan = useTodayPlan(
+    game,
+    user?.id,
+    gameStore.selectedExamRef,
+    gameStore.selectedCategory,
+  )
   const personalizedMock = usePersonalizedMock(game, user?.id, gameStore.selectedExamRef)
   const masteryMap = useMasteryMap(game, user?.id, gameStore.selectedExamRef)
-  useSessionSaver({
+  const sessionSaver = useSessionSaver({
     screen: quiz.screen,
     userId: user?.id,
+    attemptId: quiz.attemptId,
     game,
     selectedMode: gameStore.selectedMode,
     selectedCategory: gameStore.selectedCategory,
@@ -98,7 +109,44 @@ export function QuizEngine({ game }: QuizEngineProps) {
     onSessionSaved: (result) => {
       dailyQuests.updateProgress(result)
       void masteryMap.fetchMastery()
+      if (planActiveRef.current) {
+        const activePlan = todayPlan.plan
+        const answeredIds = [
+          ...new Set(
+            useQuizStore
+              .getState()
+              .answers.map((answer) => answer.questionId)
+              .filter((questionId): questionId is string => Boolean(questionId)),
+          ),
+        ]
+        if (answeredIds.length > 0) void todayPlan.markCompleted(answeredIds)
+
+        // This event means every assigned plan question is covered by a
+        // server-verified session or earlier persisted progress. Question IDs
+        // remain local; analytics receives aggregate counts only.
+        if (activePlan) {
+          const planIds = new Set(activePlan.questions.map((question) => question.id))
+          const completedAfter = new Set(
+            [...activePlan.completedIds, ...answeredIds].filter((id) => planIds.has(id)),
+          )
+          if (planIds.size > 0 && completedAfter.size === planIds.size) {
+            trackLearningEvent('LearningPlanCompleted', {
+              game,
+              answeredCount: result.totalQuestions,
+              correctCount: result.correctAnswers,
+              accuracyPercent: result.accuracy,
+            })
+          }
+        }
+      }
     },
+  })
+  const strategyResult = useMockStrategyResult({
+    enabled: verifiedExamAttemptId === quiz.attemptId && isMockStrategyUiEnabled(),
+    analysisEnabled: quiz.strategyTracked === true,
+    attemptId: quiz.attemptId,
+    sessionId: sessionSaver?.savedSession?.sessionId ?? null,
+    plannedCount: quizStore.questions.length,
   })
 
   // Lobiye donulunce plan-aktif bayragini sifirla (handleRestart'in TUM
@@ -106,16 +154,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // yerine screen-gecisine bagli -- use-session-saver'daki savedRef reset
   // deseniyle ayni yaklasim).
   useEffect(() => {
-    if (quiz.screen === 'lobby') setPlanActive(false)
+    if (quiz.screen === 'lobby') {
+      planActiveRef.current = false
+    }
   }, [quiz.screen])
-
-  // Plan bitince (result ekrani) o oturumda cevaplanan sorulari plan'a isaretle.
-  useEffect(() => {
-    if (quiz.screen !== 'result' || !planActive) return
-    const answeredIds = useQuizStore.getState().answers.map((a) => a.questionId)
-    if (answeredIds.length > 0) todayPlan.markCompleted(answeredIds)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quiz.screen, planActive])
 
   // Kullanicinin gercek XP ve streak degerleri
   const userXP = profile?.total_xp ?? 0
@@ -130,6 +172,9 @@ export function QuizEngine({ game }: QuizEngineProps) {
             <TodayPlanCard
               plan={todayPlan.plan}
               loading={todayPlan.loading}
+              paperHref={isPaperModeUiEnabled() && todayPlan.plan
+                ? paperPackCreateHref(game, todayPlan.plan.examRef ?? gameStore.selectedExamRef)
+                : null}
               onStart={() => {
                 if (personalizedMock.loading) return
                 if (!todayPlan.plan || todayPlan.plan.questions.length === 0) return
@@ -146,11 +191,18 @@ export function QuizEngine({ game }: QuizEngineProps) {
                     exam_ref: gameStore.selectedExamRef ?? defaultExamRefForType(profile?.exam_type) ?? 'all',
                   },
                 })
+                trackLearningEvent('LearningPlanStarted', {
+                  game,
+                  planSize: todayPlan.plan.questions.length,
+                  completedBefore: todayPlan.plan.completedIds.length,
+                  examRef: todayPlan.plan.examRef,
+                })
                 gameStore.setMode('practice')
                 gameStore.setCategory(null)
                 gameStore.setDifficulty(null)
-                setPlanActive(true)
-                quiz.handleStartPlanned(todayPlan.plan.questions)
+                planActiveRef.current = true
+                setVerifiedExamAttemptId(null)
+                quiz.handleStartPlanned(todayPlan.plan.questions, todayPlan.plan.attemptId)
               }}
             />
             <PersonalizedMockCard
@@ -164,6 +216,21 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
                 const plan = await personalizedMock.generate()
                 if (!plan) return
+
+                let strategyTracked = false
+                let shouldFinalizeVerifiedExam = false
+                if (plan.strategyEligible === true && isMockStrategyUiEnabled()) {
+                  const started = await startMockStrategyAttempt(plan.attemptId, crypto.randomUUID())
+                  if (!started) {
+                    toast.error(
+                      'Deneme başlatılamadı',
+                      'Doğrulanmış deneme başlangıcı kaydedilemedi. Lütfen tekrar dene.',
+                    )
+                    return
+                  }
+                  shouldFinalizeVerifiedExam = true
+                  strategyTracked = started.trackingEnabled
+                }
 
                 trackEvent('UserQuizStart', {
                   props: {
@@ -180,8 +247,13 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 gameStore.setMode('deneme')
                 gameStore.setCategory(null)
                 gameStore.setDifficulty(null)
-                setPlanActive(false)
-                quiz.handleStartPreparedDeneme(plan.questions)
+                planActiveRef.current = false
+                setVerifiedExamAttemptId(shouldFinalizeVerifiedExam ? plan.attemptId : null)
+                if (strategyTracked) {
+                  quiz.handleStartPreparedDeneme(plan.questions, plan.attemptId, true)
+                } else {
+                  quiz.handleStartPreparedDeneme(plan.questions, plan.attemptId)
+                }
               }}
             />
             <MasteryMapCard outcomes={masteryMap.outcomes} loading={masteryMap.loading} />
@@ -193,6 +265,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           onSelectMode={(m) => gameStore.setMode(m.id)}
           onStart={() => {
             if (personalizedMock.loading) return
+            setVerifiedExamAttemptId(null)
             trackEvent(user ? 'UserQuizStart' : 'GuestQuizStart', {
               props: {
                 game,
@@ -291,6 +364,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           gameName={gameDef.name}
           totalTime={quiz.denemeConfig.totalTime}
           elapsedTime={quiz.elapsed.getElapsed()}
+          strategyAnalysis={strategyResult.result?.analysis ?? null}
           onRestart={quiz.handleRestart}
           onExit={quiz.handleRestart}
         />
@@ -343,6 +417,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
         {!quiz.isDeneme && (
           <BilgeChanCompanion
             key={`m-${quizStore.currentIndex}`}
+            attemptId={quiz.attemptId}
             quizState={quizStore.state}
             lastIsCorrect={lastAnswer?.isCorrect ?? null}
             question={question}
@@ -469,7 +544,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             onClose={() => quiz.setShowReportModal(false)}
             // #379 + P1 fix (Codex PR#242): AWAIT'li gönderim, res.ok'a göre {ok,error}
             // → modal sahte başarı göstermez. Mantık test-edilebilir helper'a çıkarıldı.
-            onSubmit={(data) => submitQuestionReport(question.id, data)}
+            onSubmit={(data: { type: string; description: string }) => submitQuestionReport(question.id, data)}
           />
         </ComponentErrorBoundary>
 
@@ -529,6 +604,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
         <div className="hidden flex-col gap-3 lg:flex">
           <BilgeChanCompanion
             key={quizStore.currentIndex}
+            attemptId={quiz.attemptId}
             quizState={quizStore.state}
             lastIsCorrect={lastAnswer?.isCorrect ?? null}
             question={question}

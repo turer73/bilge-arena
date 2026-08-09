@@ -26,6 +26,9 @@ global.fetch = fetchMock as unknown as typeof fetch
 beforeEach(() => {
   vi.clearAllMocks()
   fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+    if (url.includes('/api/admin/content-quality/outcomes')) {
+      return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) })
+    }
     if (init?.method === 'PATCH') {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ status: 'approved' }) })
     }
@@ -64,6 +67,26 @@ describe('SubmissionsPage', () => {
     expect(JSON.parse(patchCall[1].body)).toMatchObject({ action: 'reject', note: 'Telifli' })
   })
 
+  test('governance modunda kazanım seçmeden onaylatmaz ve seçimi PATCH bodyye koyar', async () => {
+    const outcomeId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.includes('/api/admin/content-quality/outcomes')) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ outcomes: [{ id: outcomeId, code: 'MAT-PRO-1', title: 'Problem kurar', category: 'problemler' }] }) })
+      }
+      if (init?.method === 'PATCH') return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'approved' }) })
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ submissions: [SUB] }) })
+    })
+    render(<SubmissionsPage />)
+    const select = await screen.findByRole('combobox', { name: /KAZANIM/i })
+    const approve = screen.getByRole('button', { name: /Taslağa al/i })
+    expect(approve).toBeDisabled()
+    fireEvent.change(select, { target: { value: outcomeId } })
+    fireEvent.click(approve)
+    await waitFor(() => expect(screen.queryByText('Faiz sorusu?')).not.toBeInTheDocument())
+    const patchCall = fetchMock.mock.calls.find((call) => call[1]?.method === 'PATCH')!
+    expect(JSON.parse(patchCall[1].body)).toMatchObject({ action: 'approve', outcomeId })
+  })
+
   test('boş kuyruk mesajı', async () => {
     fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ submissions: [] }) })
     render(<SubmissionsPage />)
@@ -72,6 +95,9 @@ describe('SubmissionsPage', () => {
 
   test('PATCH hatası: kart kalır + hata mesajı', async () => {
     fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.includes('/api/admin/content-quality/outcomes')) {
+        return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) })
+      }
       if (init?.method === 'PATCH') {
         return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Gönderim bulunamadı veya zaten değerlendirilmiş' }) })
       }

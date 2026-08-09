@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { GAMES } from '@/lib/constants/games'
 import { stripRichText } from '@/lib/utils/rich-text'
+import { ContentGovernancePanel } from '@/components/admin/content-governance-panel'
+import { ContentAppealsPanel } from '@/components/admin/content-appeals-panel'
 
 // #378 Tier 2: gercek cevap verisinden dusuk-basarili ("production drift")
 // sorulari + bekleyen kullanici raporlarini tek triage kuyrugunda gosterir.
@@ -30,6 +32,7 @@ export default function AdminQuestionQualityPage() {
   const [capped, setCapped] = useState(false)
   const [minAnswered, setMinAnswered] = useState(20)
   const [maxRate, setMaxRate] = useState(50)
+  const [mutationError, setMutationError] = useState('')
 
   const fetchQueue = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
@@ -55,24 +58,41 @@ export default function AdminQuestionQualityPage() {
 
   useEffect(() => {
     const ctrl = new AbortController()
-    fetchQueue(ctrl.signal)
-    return () => ctrl.abort()
+    const timer = window.setTimeout(() => void fetchQueue(ctrl.signal), 0)
+    return () => { window.clearTimeout(timer); ctrl.abort() }
   }, [fetchQueue])
 
   const toggleActive = async (id: string, current: boolean) => {
-    // Iyimser guncelleme — sorulari sayfasiyla ayni PATCH /api/questions ucu.
-    setItems((prev) => prev.map((q) => (q.id === id ? { ...q, is_active: !current } : q)))
+    setMutationError('')
     try {
+      if (current) {
+        const quarantine = await fetch(`/api/admin/content-quality/questions/${id}/quarantine`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'Kalite kuyruğundan acil görünürlük kapatma', requestId: crypto.randomUUID() }),
+        })
+        if (quarantine.ok) {
+          setItems((prev) => prev.map((question) => question.id === id ? { ...question, is_active: false } : question))
+          return
+        }
+        if (quarantine.status !== 503) {
+          const body = await quarantine.json().catch(() => ({}))
+          throw new Error(body.error ?? 'Soru karantinaya alınamadı')
+        }
+      }
       const res = await fetch('/api/questions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionId: id, updates: { is_active: !current } }),
       })
       if (!res.ok) {
-        setItems((prev) => prev.map((q) => (q.id === id ? { ...q, is_active: current } : q)))
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.code === 'CONTENT_GOVERNANCE_REQUIRED'
+          ? 'Pasif soru yalnız onaylı bir revizyon yayınlanarak etkinleştirilebilir.'
+          : (body.error ?? 'Durum güncellenemedi'))
       }
-    } catch {
-      setItems((prev) => prev.map((q) => (q.id === id ? { ...q, is_active: current } : q)))
+      setItems((prev) => prev.map((question) => question.id === id ? { ...question, is_active: !current } : question))
+    } catch (cause) {
+      setMutationError(cause instanceof Error ? cause.message : 'Durum güncellenemedi')
     }
   }
 
@@ -88,6 +108,11 @@ export default function AdminQuestionQualityPage() {
           isaretlenmis cevap veya anlasilmaz soru tespiti icin.
         </p>
       </div>
+
+      <ContentGovernancePanel />
+      <ContentAppealsPanel />
+
+      {mutationError && <p role="alert" className="mb-4 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-3 py-2 text-xs text-[var(--urgency)]">{mutationError}</p>}
 
       {/* Filtreler */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -185,7 +210,7 @@ export default function AdminQuestionQualityPage() {
                     <td className="px-3 py-3 text-center">
                       <button
                         onClick={() => toggleActive(q.id, q.is_active)}
-                        className={`rounded-full px-3 py-1 text-[10px] font-bold transition-colors ${
+                        className={`min-h-11 rounded-full px-3 py-1 text-[10px] font-bold transition-colors ${
                           q.is_active
                             ? 'bg-[var(--growth-bg)] text-[var(--growth)]'
                             : 'bg-[var(--surface)] text-[var(--text-sub)]'

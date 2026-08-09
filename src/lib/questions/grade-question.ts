@@ -6,16 +6,24 @@ export interface QuestionGradeResult {
   solution: string | null
 }
 
+export interface QuestionGradeStrategyEvent {
+  clientEventId: string
+  sequence: number
+  position: number
+}
+
 /** Doğru cevabı yalnız kullanıcı seçimini gönderdikten sonra açar. */
 export async function gradeQuestion(
   questionId: string,
   selectedOption: number,
+  attemptId: string | null = null,
   signal?: AbortSignal,
+  strategyEvent?: QuestionGradeStrategyEvent,
 ): Promise<QuestionGradeResult> {
   const response = await fetch('/api/questions/grade', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ questionId, selectedOption }),
+    body: JSON.stringify({ questionId, selectedOption, attemptId, ...(strategyEvent ? { strategyEvent } : {}) }),
     signal,
   })
 

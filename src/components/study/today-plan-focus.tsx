@@ -4,11 +4,13 @@ import { useRouter } from 'next/navigation'
 import type { GameSlug } from '@/lib/constants/games'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
 import { TodayPlanCard } from '@/components/game/today-plan-card'
+import { isPaperModeUiEnabled, paperPackCreateHref } from '@/lib/paper-mode/client'
 
 interface TodayPlanFocusProps {
   game: GameSlug
   userId?: string | null
   examRef?: string | null
+  selectedCategory?: string | null
 }
 
 /**
@@ -22,9 +24,9 @@ interface TodayPlanFocusProps {
  * gösterilir ve gerçek "Başlat" orada olur. Cross-page plan-state taşıma gibi
  * yeni bir mekanizma icat etmekten kaçınır (KISIT#7 — aşırı mühendislik yok).
  */
-export function TodayPlanFocus({ game, userId, examRef }: TodayPlanFocusProps) {
+export function TodayPlanFocus({ game, userId, examRef, selectedCategory }: TodayPlanFocusProps) {
   const router = useRouter()
-  const { plan, loading } = useTodayPlan(game, userId, examRef)
+  const { plan, loading } = useTodayPlan(game, userId, examRef, selectedCategory)
 
   if (!userId) return null
 
@@ -58,6 +60,9 @@ export function TodayPlanFocus({ game, userId, examRef }: TodayPlanFocusProps) {
       plan={plan}
       loading={loading}
       onStart={() => router.push(`/arena/${game}`)}
+      paperHref={isPaperModeUiEnabled() && plan
+        ? paperPackCreateHref(game, plan.examRef ?? examRef)
+        : null}
     />
   )
 }

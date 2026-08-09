@@ -17,6 +17,8 @@ import type { OptionState } from '@/components/game/option-button'
 import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
 import { gradeQuestion } from '@/lib/questions/grade-question'
 import { toast } from '@/stores/toast-store'
+import type { GameMode } from '@/types/database'
+import { recordMockStrategyQuestionOpened } from '@/lib/mock-strategy/client'
 
 // ---------- Hook return tipi ----------
 
@@ -27,6 +29,10 @@ export interface UseQuizGameReturn {
   loadError: string | null
   /** Giriş yapmadan önizleme: 1 gerçek soru gösterildi, result'ta kayıt CTA */
   isGuestMode: boolean
+  /** Sunucu dogrulamali soru kumesinin kimligi. */
+  attemptId: string | null
+  /** Yalniz yeni Akilli Deneme server-receipt telemetry zincirinde true. */
+  strategyTracked: boolean
 
   // Mode bilgileri
   mode: ReturnType<typeof getModeById>
@@ -51,9 +57,13 @@ export interface UseQuizGameReturn {
   // Aksiyonlar
   handleStart: () => Promise<void>
   /** "Bugunun 15'i" plan sorularini dogrudan baslatir -- fetch/slice yok. */
-  handleStartPlanned: (questions: PublicQuestion[]) => void
+  handleStartPlanned: (questions: PublicQuestion[], attemptId: string | null) => void
   /** Sunucuda hazırlanmış kişisel soru setini gerçek deneme semantiğiyle başlatır. */
-  handleStartPreparedDeneme: (questions: PublicQuestion[]) => void
+  handleStartPreparedDeneme: (
+    questions: PublicQuestion[],
+    attemptId: string | null,
+    strategyTracked?: boolean,
+  ) => void
   handleAnswer: (optionIndex: number) => void
   handleNext: () => void
   handleRestart: () => void
@@ -78,6 +88,8 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const [showLifeLost, setShowLifeLost] = useState(false)
   const [showComments, setShowComments] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
+  const [attemptId, setAttemptId] = useState<string | null>(null)
+  const [strategyTracked, setStrategyTracked] = useState(false)
 
   const mode = getModeById(gameStore.selectedMode)
   const isDeneme = mode.isDeneme === true
@@ -90,8 +102,27 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const gradeRequestRef = useRef<AbortController | null>(null)
   const questionStartedAtRef = useRef(0)
   const denemeTimeUpPendingRef = useRef(false)
+  const openedEventIdsRef = useRef<Map<number, string>>(new Map())
+  const answerEventIdsRef = useRef<Map<number, string>>(new Map())
 
   useEffect(() => () => gradeRequestRef.current?.abort(), [])
+
+  useEffect(() => {
+    if (!strategyTracked || screen !== 'game' || !attemptId) return
+    const position = quizStore.currentIndex
+    if (!Number.isInteger(position) || position < 0) return
+    let clientEventId = openedEventIdsRef.current.get(position)
+    if (!clientEventId) {
+      clientEventId = crypto.randomUUID()
+      openedEventIdsRef.current.set(position, clientEventId)
+    }
+    void recordMockStrategyQuestionOpened({
+      attemptId,
+      clientEventId,
+      sequence: position * 2 + 1,
+      position,
+    })
+  }, [attemptId, quizStore.currentIndex, screen, strategyTracked])
 
   // --- Timer ---
 
@@ -102,7 +133,17 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     gradingRef.current = true
     const controller = new AbortController()
     gradeRequestRef.current = controller
-    void gradeQuestion(question.id, -1, controller.signal)
+    const position = useQuizStore.getState().currentIndex
+    let strategyEvent
+    if (strategyTracked && attemptId) {
+      let clientEventId = answerEventIdsRef.current.get(position)
+      if (!clientEventId) {
+        clientEventId = crypto.randomUUID()
+        answerEventIdsRef.current.set(position, clientEventId)
+      }
+      strategyEvent = { clientEventId, sequence: position * 2 + 2, position }
+    }
+    void gradeQuestion(question.id, -1, attemptId, controller.signal, strategyEvent)
       .then((grade) => {
         const current = useQuizStore.getState()
         if (controller.signal.aborted || current.state !== 'playing' || current.currentQuestion()?.id !== question.id) return
@@ -127,7 +168,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         if (gradeRequestRef.current === controller) gradeRequestRef.current = null
         gradingRef.current = false
       })
-  }, [quizStore, mode.timePerQuestion])
+  }, [quizStore, mode.timePerQuestion, attemptId, strategyTracked])
 
   const timer = useTimer({
     initialTime: mode.timePerQuestion,
@@ -184,6 +225,10 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   // --- Sorulari yukle ve quiz'i baslat ---
 
   const handleStart = useCallback(async () => {
+    setAttemptId(null)
+    setStrategyTracked(false)
+    openedEventIdsRef.current.clear()
+    answerEventIdsRef.current.clear()
     setScreen('loading')
     setLoadError(null)
     setIsGuestMode(false)
@@ -227,24 +272,28 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         }
       }
 
-      let questions = await fetchQuizQuestions({
+      const questionSet = await fetchQuizQuestions({
         game,
         limit: isDeneme ? mode.questionCount * 2 : mode.questionCount * 3,
         category: gameStore.selectedCategory,
         difficulty,
+        mode: mode.id as GameMode,
         // Deneme'de spaced repetition kapatilir; normal modda server-side
         // auth.uid() ile review questions otomatik gelir (Madde 9 #6).
         includeReview: !isDeneme,
         examRef: gameStore.selectedExamRef,
       })
+      let questions = questionSet.questions
+      const newAttemptId = questionSet.attemptId
 
       // Soru bulunamadıysa lobby'e geri dön — demo gösterme
-      if (questions.length === 0) {
+      if (questions.length === 0 || !newAttemptId) {
         console.warn('[QuizGame] Soru bulunamadı — seçili filtrelerle soru yok')
         setLoadError('Bu filtrelerle soru bulunamadı. Farklı bir konu veya zorluk seçin.')
         setScreen('lobby')
         return
       }
+      setAttemptId(newAttemptId)
 
       // Sik sirasini karistir — cevap dagılımı dengesizligini onle.
       // Ekran->kanonik haritasi saklanir: server /api/sessions KANONIK index'le
@@ -299,8 +348,13 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   // arda cagrildiginda bu hook'un `mode` closure'i bir onceki render'in eski
   // degerini tasir -- zustand set() senkron olsa da React yeniden render
   // ETMEDEN bu callback'in closure'i guncellenmez).
-  const handleStartPlanned = useCallback((questions: PublicQuestion[]) => {
-    if (questions.length === 0) return
+  const handleStartPlanned = useCallback((questions: PublicQuestion[], newAttemptId: string | null) => {
+    setAttemptId(null)
+    setStrategyTracked(false)
+    openedEventIdsRef.current.clear()
+    answerEventIdsRef.current.clear()
+    if (questions.length === 0 || !newAttemptId) return
+    setAttemptId(newAttemptId)
 
     shuffleMapRef.current.clear()
     const shuffledQuestions = questions.map(q => {
@@ -326,8 +380,18 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   // render anındaki `mode/isDeneme` closure'ına dayanmaz. Sunucu zaten 40 soruluk
   // kişisel seti seçmiştir; burada yalnız seçenekleri karıştırıp deneme sayaçlarını
   // temizleriz.
-  const handleStartPreparedDeneme = useCallback((questions: PublicQuestion[]) => {
-    if (questions.length === 0) return
+  const handleStartPreparedDeneme = useCallback((
+    questions: PublicQuestion[],
+    newAttemptId: string | null,
+    shouldTrackStrategy = false,
+  ) => {
+    setAttemptId(null)
+    setStrategyTracked(false)
+    openedEventIdsRef.current.clear()
+    answerEventIdsRef.current.clear()
+    if (questions.length === 0 || !newAttemptId) return
+    setAttemptId(newAttemptId)
+    setStrategyTracked(shouldTrackStrategy)
 
     shuffleMapRef.current.clear()
     const shuffledQuestions = questions.map((question) => {
@@ -372,7 +436,18 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     const controller = new AbortController()
     gradeRequestRef.current = controller
 
-    void gradeQuestion(question.id, canonicalIndex, controller.signal)
+    const position = useQuizStore.getState().currentIndex
+    let strategyEvent
+    if (strategyTracked && attemptId) {
+      let clientEventId = answerEventIdsRef.current.get(position)
+      if (!clientEventId) {
+        clientEventId = crypto.randomUUID()
+        answerEventIdsRef.current.set(position, clientEventId)
+      }
+      strategyEvent = { clientEventId, sequence: position * 2 + 2, position }
+    }
+
+    void gradeQuestion(question.id, canonicalIndex, attemptId, controller.signal, strategyEvent)
       .then((grade) => {
         const current = useQuizStore.getState()
         if (controller.signal.aborted || current.state !== 'playing' || current.currentQuestion()?.id !== question.id) return
@@ -421,7 +496,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
           setScreen('result')
         }
       })
-  }, [quizStore, timer, mode.timePerQuestion, isDeneme])
+  }, [quizStore, timer, mode.timePerQuestion, isDeneme, attemptId, strategyTracked])
 
   // --- Sonraki soru ---
 
@@ -452,6 +527,10 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     gradeRequestRef.current = null
     gradingRef.current = false
     denemeTimeUpPendingRef.current = false
+    setAttemptId(null)
+    setStrategyTracked(false)
+    openedEventIdsRef.current.clear()
+    answerEventIdsRef.current.clear()
     quizStore.resetQuiz()
     setIsGuestMode(false)
     setHelpPaused(false)
@@ -477,6 +556,8 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     screen,
     loadError,
     isGuestMode,
+    attemptId,
+    strategyTracked,
     mode,
     isDeneme,
     denemeConfig: denemeConfig ?? null,

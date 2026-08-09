@@ -3,12 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
-import { GAME_SLUGS } from '@/lib/constants/games'
+import { GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { isValidUuid } from '@/lib/utils/uuid'
-import type { Question } from '@/types/database'
+import type { GameMode, Question } from '@/types/database'
 import { parseQuestionRows, toPublicQuestion } from '@/lib/utils/question-public'
 import { fetchDueQuestions } from '@/lib/review/due-questions'
 import { getFsrsReviewRollout } from '@/lib/review/fsrs-rollout'
+import { issueVerifiedAttempt, toPublicVerifiedQuestions } from '@/lib/verified-attempts'
 
 // Cift kalkan rate limit (Madde 9 pattern):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -17,6 +18,14 @@ const ipLimiter = createRateLimiter('questions-random-ip', 120, 60_000)
 const userLimiter = createRateLimiter('questions-random-user', 60, 60_000)
 
 const VALID_GAMES = new Set(GAME_SLUGS)
+const VALID_MODES: ReadonlySet<GameMode> = new Set<GameMode>([
+  'classic',
+  'blitz',
+  'marathon',
+  'boss',
+  'practice',
+  'deneme',
+])
 const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ'])
 
 /**
@@ -78,6 +87,12 @@ export async function GET(request: NextRequest) {
   if (!game || !VALID_GAMES.has(game as never)) {
     return NextResponse.json({ error: 'Gecerli oyun belirtilmedi' }, { status: 400 })
   }
+
+  const modeParam = searchParams.get('mode') ?? 'classic'
+  if (!VALID_MODES.has(modeParam as GameMode)) {
+    return NextResponse.json({ error: 'Gecerli mod belirtilmedi' }, { status: 400 })
+  }
+  const mode = modeParam as GameMode
 
   const limitRaw = parseInt(searchParams.get('limit') ?? '10', 10)
   const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(1, limitRaw), 100) : 10
@@ -180,12 +195,46 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // Whitelist: RPC tam DB satiri donduruyor; telemetri/ic alanlar sizmasin.
+  let publicQuestions = questions.map(toPublicQuestion)
+  let publicReviewQuestions = reviewQuestions.map(toPublicQuestion)
+  const issuedQuestionIds = [
+    ...new Set([...publicQuestions.map(question => question.id), ...publicReviewQuestions.map(question => question.id)]),
+  ]
+
+  let attemptId: string | null = null
+  let expiresAt: string | null = null
+  if (issuedQuestionIds.length > 0) {
+    try {
+      const attempt = await issueVerifiedAttempt(admin, {
+        userId: user.id,
+        game: game as GameSlug,
+        mode,
+        questionIds: issuedQuestionIds,
+      })
+      attemptId = attempt.attemptId
+      expiresAt = attempt.expiresAt
+      const verifiedQuestions = toPublicVerifiedQuestions(attempt.questionSnapshots)
+      if (
+        verifiedQuestions.length !== issuedQuestionIds.length
+        || verifiedQuestions.some((question, index) => question.id !== issuedQuestionIds[index])
+      ) throw new Error('verified_attempt_snapshot_mismatch')
+      const verifiedById = new Map(verifiedQuestions.map(question => [question.id, question]))
+      const nextQuestions = publicQuestions.map(question => verifiedById.get(question.id))
+      const nextReviewQuestions = publicReviewQuestions.map(question => verifiedById.get(question.id))
+      if (nextQuestions.some(question => !question) || nextReviewQuestions.some(question => !question)) {
+        throw new Error('verified_attempt_snapshot_mismatch')
+      }
+      publicQuestions = nextQuestions.filter((question): question is NonNullable<typeof question> => !!question)
+      publicReviewQuestions = nextReviewQuestions.filter((question): question is NonNullable<typeof question> => !!question)
+    } catch {
+      console.error('[/api/questions/random] verified attempt issuance failed')
+      return NextResponse.json({ error: 'Deneme baslatilamadi' }, { status: 500 })
+    }
+  }
+
   return NextResponse.json(
-    // Whitelist: RPC tam DB satiri donduruyor; telemetri/ic alanlar sizmasin
-    {
-      questions: questions.map(toPublicQuestion),
-      reviewQuestions: reviewQuestions.map(toPublicQuestion),
-    },
+    { questions: publicQuestions, reviewQuestions: publicReviewQuestions, attemptId, expiresAt },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }

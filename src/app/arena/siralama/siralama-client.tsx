@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { LeaderboardTable } from '@/components/leaderboard/leaderboard-table'
+import { WeeklyLearningLeague } from '@/components/leaderboard/weekly-learning-league'
+import { WeeklyLearningSpotlights } from '@/components/leaderboard/weekly-learning-spotlights'
+import { WeeklyTeamBoss } from '@/components/leaderboard/weekly-team-boss'
+import {
+  isLearningSpotlightsUiEnabled,
+  isSocialLeagueUiEnabled,
+  isTeamBossUiEnabled,
+} from '@/lib/social-league/client'
 
 interface ApiPlayer {
   rank: number
@@ -33,6 +41,9 @@ export default function SiralamaClient() {
   // gorunumunu ACIKCA iste (haftalik-bos fallback'ten ayri). useSearchParams Suspense
   // gerektirir; client effect'te window.location yeter (Codex #196 P2 cozumu).
   const [explicitAllTime, setExplicitAllTime] = useState(false)
+  const showRelativeLeague = Boolean(user) && isSocialLeagueUiEnabled()
+  const showLearningSpotlights = Boolean(user) && isLearningSpotlightsUiEnabled()
+  const showTeamBoss = Boolean(user) && isTeamBossUiEnabled()
 
   useEffect(() => {
     let cancelled = false
@@ -93,16 +104,23 @@ export default function SiralamaClient() {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-6 md:max-w-2xl md:py-8 xl:max-w-3xl xl:px-6 xl:py-10 2xl:max-w-4xl">
+      {showRelativeLeague && <WeeklyLearningLeague />}
+      {showLearningSpotlights && <WeeklyLearningSpotlights />}
+      {showTeamBoss && <WeeklyTeamBoss />}
       <div className="mb-4 text-center md:mb-6 xl:mb-8">
         <h1 className="font-display text-xl font-black md:text-2xl xl:text-3xl 2xl:text-4xl">
           <span className="bg-gradient-to-r from-[var(--reward)] to-[var(--reward-light)] bg-clip-text text-transparent">
-            🏆 {isAllTime ? 'Tüm Zamanlar Sıralaması' : 'Haftalık Sıralama'}
+            🏆 {isAllTime
+              ? 'Tüm Zamanlar Sıralaması'
+              : showRelativeLeague ? 'XP Sıralaması' : 'Haftalık Sıralama'}
           </span>
         </h1>
         <p className="mt-1 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">
           {isAllTime
             ? 'En yüksek XP sahibi arenacıların genel sıralaması'
-            : 'Bu haftanın en başarılı arenacıları'}
+            : showRelativeLeague
+              ? 'Bu tablo XP’yi gösterir; Yakın Rakip Ligi puanından ayrıdır'
+              : 'Bu haftanın en başarılı arenacıları'}
         </p>
       </div>
 
@@ -120,7 +138,9 @@ export default function SiralamaClient() {
       ) : (
         <LeaderboardTable
           entries={entries}
-          title={isAllTime ? 'Genel Sıralama — Tüm Zamanlar' : 'Global Sıralama — Bu Hafta'}
+          title={isAllTime
+            ? 'Genel Sıralama — Tüm Zamanlar'
+            : showRelativeLeague ? 'XP Sıralaması — Bu Hafta' : 'Global Sıralama — Bu Hafta'}
         />
       )}
 

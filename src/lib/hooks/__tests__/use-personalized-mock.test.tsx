@@ -11,6 +11,8 @@ const PLAN = {
   game: 'matematik' as const,
   examRef: 'TYT',
   questions: Array.from({ length: 40 }, (_, index) => ({ id: `q${index}` })),
+  attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  expiresAt: '2099-01-01T00:00:00.000Z',
   breakdown: { wrong: 1, weak: 0, coverage: 0, weakCategories: [] },
 }
 
@@ -27,7 +29,11 @@ describe('usePersonalizedMock', () => {
 
     expect(fetch).toHaveBeenCalledWith(
       '/api/study/personalized-mock?game=matematik&exam_ref=TYT',
-      { cache: 'no-store', signal: expect.any(AbortSignal) },
+      {
+        cache: 'no-store',
+        headers: { 'X-Idempotency-Key': expect.any(String) },
+        signal: expect.any(AbortSignal),
+      },
     )
     expect(plan).toEqual(PLAN)
     expect(result.current.error).toBeNull()
@@ -74,5 +80,25 @@ describe('usePersonalizedMock', () => {
 
     await expect(pending).resolves.toBeNull()
     expect(result.current.loading).toBe(false)
+  })
+})
+
+describe('usePersonalizedMock verified ticket validation', () => {
+  beforeEach(() => vi.stubGlobal('fetch', vi.fn()))
+  afterEach(() => vi.unstubAllGlobals())
+
+  it.each([
+    { attemptId: 'not-a-uuid', expiresAt: '2099-01-01T00:00:00.000Z' },
+    { attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', expiresAt: 'invalid' },
+    { attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', expiresAt: '2020-01-01T00:00:00.000Z' },
+  ])('rejects an invalid ticket: %o', async (ticket) => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...PLAN, ...ticket }))
+    const { result } = renderHook(() => usePersonalizedMock('matematik', 'u1', 'TYT'))
+
+    let plan: unknown
+    await act(async () => { plan = await result.current.generate() })
+
+    expect(plan).toBeNull()
+    expect(result.current.error).toBeTruthy()
   })
 })

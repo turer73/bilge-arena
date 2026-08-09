@@ -9,6 +9,7 @@ import { getLevelFromXP } from '@/lib/constants/levels'
 import { BADGES } from '@/lib/constants/badges'
 import { toast } from '@/stores/toast-store'
 import type { GameSlug } from '@/lib/constants/games'
+import type { SavedGameSession } from '@/lib/supabase/sessions'
 
 interface SessionResult {
   correctAnswers: number
@@ -21,6 +22,7 @@ interface SessionResult {
 interface UseSessionSaverOptions {
   screen: string
   userId?: string
+  attemptId?: string | null
   game: GameSlug
   selectedMode: string
   selectedCategory?: string | null
@@ -36,6 +38,7 @@ interface UseSessionSaverOptions {
 export function useSessionSaver({
   screen,
   userId,
+  attemptId,
   game,
   selectedMode,
   selectedCategory,
@@ -43,6 +46,7 @@ export function useSessionSaver({
   onSessionSaved,
 }: UseSessionSaverOptions) {
   const [saving, setSaving] = useState(false)
+  const [savedSession, setSavedSession] = useState<SavedGameSession | null>(null)
   const savedRef = useRef(false)
   // Idempotency key (migration 081) sonuc-ekrani basina sabit, lobiye donulunce sifirlanir.
   const requestIdRef = useRef<string | null>(null)
@@ -52,13 +56,14 @@ export function useSessionSaver({
     if (screen === 'lobby') {
       savedRef.current = false
       requestIdRef.current = null
+      setSavedSession(null)
     }
   }, [screen])
 
   // Sonuc ekranina gecildiginde oturumu kaydet
   useEffect(() => {
     if (screen !== 'result' || savedRef.current || saving) return
-    if (!userId) return // Misafir - kaydetme
+    if (!userId || !attemptId) return // Misafir veya dogrulanmis attempt yok - kaydetme
 
     const { answers, xpEarned, maxStreak } = useQuizStore.getState()
     if (answers.length === 0) return
@@ -71,6 +76,7 @@ export function useSessionSaver({
 
     saveGameSession({
       userId,
+      attemptId,
       game,
       mode: selectedMode,
       answers,
@@ -82,6 +88,7 @@ export function useSessionSaver({
     })
       .then(async (session) => {
         if (!session) return
+        setSavedSession(session)
 
         // Seviye atlama kontrolu icin onceki XP'yi kaydet
         const oldXP = useAuthStore.getState().profile?.total_xp ?? 0
@@ -96,8 +103,11 @@ export function useSessionSaver({
         }
 
         // Gunluk gorevleri guncelle
-        const correctCount = answers.filter((answer) => answer.isCorrect).length
-        const totalCount = answers.length
+        // Callback consumers use only the canonical values returned from the
+        // verified completion transaction. Local answer flags can be stale or
+        // tampered with and must not be labelled as verified.
+        const correctCount = session.correctCount
+        const totalCount = session.correctCount + session.wrongCount
         onSessionSaved?.({
           correctAnswers: correctCount,
           totalQuestions: totalCount,
@@ -116,7 +126,7 @@ export function useSessionSaver({
       .catch((err) => console.error('[SessionSaver] Kaydetme hatasi:', err))
       .finally(() => setSaving(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, userId, game, selectedMode, selectedCategory, selectedDifficulty])
+  }, [screen, userId, attemptId, game, selectedMode, selectedCategory, selectedDifficulty])
 
-  return { saving }
+  return { saving, savedSession }
 }

@@ -14,6 +14,7 @@ import { saveGameSession } from '../sessions'
 
 const baseParams = {
   userId: 'user-1',
+  attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   game: 'matematik' as const,
   mode: 'classic',
   answers: [
@@ -60,7 +61,13 @@ describe('saveGameSession', () => {
   it('session ID ve atomik olarak kazanilan rozet kodlarini dondurmeli', async () => {
     mockFetchSuccess('session-123', ['first_game'])
     const result = await saveGameSession(baseParams)
-    expect(result).toEqual({ sessionId: 'session-123', newBadges: ['first_game'] })
+    expect(result).toEqual({
+      sessionId: 'session-123',
+      totalXP: 33,
+      correctCount: 2,
+      wrongCount: 1,
+      newBadges: ['first_game'],
+    })
   })
 
   it('/api/sessions endpointine POST yapmali', async () => {
@@ -81,6 +88,7 @@ describe('saveGameSession', () => {
     const [, options] = mockFetch.mock.calls[0]
     const body = JSON.parse(options.body)
     expect(body.game).toBe('matematik')
+    expect(body.attemptId).toBe(baseParams.attemptId)
     expect(body.mode).toBe('classic')
     expect(body.maxStreak).toBe(1)
     expect(body.answers).toHaveLength(3)

@@ -4,19 +4,39 @@
 
 export type ReportSubmitResult = { ok: true } | { ok: false; error: string }
 
+const APPEAL_REASONS: Record<string, 'wrong_key' | 'ambiguous' | 'invalid_content' | 'other'> = {
+  wrong_answer: 'wrong_key',
+  unclear: 'ambiguous',
+  typo: 'invalid_content',
+  offensive: 'invalid_content',
+  duplicate: 'other',
+  other: 'other',
+}
+
 export async function submitQuestionReport(
   questionId: string,
   data: { type: string; description: string },
 ): Promise<ReportSubmitResult> {
   try {
-    const res = await fetch('/api/questions/report', {
+    const appealsEnabled = process.env.NEXT_PUBLIC_CONTENT_APPEALS_ENABLED === 'true'
+    const requestId = crypto.randomUUID()
+    const res = await fetch(appealsEnabled ? '/api/questions/appeals' : '/api/questions/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        questionId,
-        report_type: data.type,
-        description: data.description,
-      }),
+      body: JSON.stringify(appealsEnabled
+        ? {
+            questionId,
+            sessionAnswerId: null,
+            reason: APPEAL_REASONS[data.type] ?? 'other',
+            explanation: data.description,
+            requestId,
+          }
+        : {
+            questionId,
+            report_type: data.type,
+            description: data.description,
+            requestId,
+          }),
     })
     if (res.ok) return { ok: true }
     if (res.status === 401) return { ok: false, error: 'Rapor göndermek için giriş yapmalısın.' }

@@ -1,9 +1,9 @@
 'use client'
 
-import type { GameType } from '@/types/database'
+import type { GameMode, GameType } from '@/types/database'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { cacheQuestions } from '@/lib/utils/question-cache'
-import { filterValidUuids } from '@/lib/utils/uuid'
+import { filterValidUuids, isValidUuid } from '@/lib/utils/uuid'
 
 interface FetchQuestionsOptions {
   game: GameType
@@ -12,15 +12,25 @@ interface FetchQuestionsOptions {
   difficulty?: number | null
   /** Cooldown icin son gorulen soru ID'leri (max 50, client state'inden) */
   excludeIds?: string[]
-  /** 'TYT' | 'LGS' | 'AYT-SAY' | 'AYT-EA' | 'AYT-SOZ' | null (null = tümü) */
+  /** 'TYT' | 'LGS' | 'AYT-SAY' | 'AYT-EA' | 'AYT-SOZ' | null (null = tumu) */
   examRef?: string | null
   /** Spaced-repetition: yanlis cevaplanip dogrulanmamis sorulari ek olarak iste */
   includeReview?: boolean
+  /** Dogrulanmis deneme biletine baglanacak oyun modu */
+  mode?: GameMode
 }
 
 interface RandomQuestionsResponse {
   questions: PublicQuestion[]
   reviewQuestions: PublicQuestion[]
+  attemptId?: string | null
+  expiresAt?: string | null
+}
+
+export interface VerifiedQuestionSet {
+  questions: PublicQuestion[]
+  attemptId: string | null
+  expiresAt: string | null
 }
 
 /** Fisher-Yates shuffle (in-place) */
@@ -36,11 +46,11 @@ function shuffle<T>(arr: T[]): T[] {
  * /api/questions/random API'sinden quiz sorularini ceker, karistirir ve dondurur.
  * Madde 9 #6: eski client `supabase.rpc('select_random_questions')` yerine proxy.
  *
- * Cekilen güvenli soru metinleri IndexedDB'ye kaydedilir. Notlandırma sunucu
- * otoriter olduğu için çevrimdışıyken cache oynatılmaz; aksi halde cevap
- * doğrulanamaz ve oturum ilerleyemez.
+ * Cekilen guvenli soru metinleri IndexedDB'ye kaydedilir. Notlandirma sunucu
+ * otoriter oldugu icin cevrimdisiyken cache oynatilmaz; aksi halde cevap
+ * dogrulanamaz ve oturum ilerleyemez.
  *
- * Anon kullanici icin 401 doner -> use-quiz-game DEMO_QUESTIONS fallback (mevcut akis).
+ * Anon kullanici icin 401 doner -> use-quiz-game preview akisi kullanilir.
  */
 export async function fetchQuizQuestions({
   game,
@@ -50,25 +60,27 @@ export async function fetchQuizQuestions({
   excludeIds = [],
   examRef,
   includeReview = true,
-}: FetchQuestionsOptions): Promise<PublicQuestion[]> {
+  mode = 'classic',
+}: FetchQuestionsOptions): Promise<VerifiedQuestionSet> {
+  const emptyResult: VerifiedQuestionSet = {
+    questions: [],
+    attemptId: null,
+    expiresAt: null,
+  }
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
 
-  // Cevrimdisi: dogrudan cache'den sun
-  if (!isOnline) {
-    return []
-  }
+  if (!isOnline) return emptyResult
 
-  // Cevrimici: API'den cek
   const params = new URLSearchParams({
     game,
     limit: String(limit),
+    mode,
   })
   if (category) params.set('category', category)
   if (difficulty != null) params.set('difficulty', String(difficulty))
   if (examRef) params.set('examRef', examRef)
   if (includeReview) params.set('includeReview', 'true')
 
-  // Klipper review B3/P1: UUID validation ortak helper'da (src/lib/utils/uuid.ts).
   const safeExcludeIds = filterValidUuids(excludeIds, 50)
   if (safeExcludeIds.length > 0) {
     params.set('excludeIds', safeExcludeIds.join(','))
@@ -79,41 +91,50 @@ export async function fetchQuizQuestions({
     const res = await fetch(`/api/questions/random?${params.toString()}`, {
       cache: 'no-store',
     })
-    if (res.ok) {
-      response = (await res.json()) as RandomQuestionsResponse
-    }
+    if (res.ok) response = (await res.json()) as RandomQuestionsResponse
   } catch (err) {
     console.warn('[fetchQuizQuestions] API hata:', err)
   }
 
   const questions = response?.questions ?? []
   const reviewQuestions = response?.reviewQuestions ?? []
+  if (questions.length === 0) return emptyResult
 
-  if (questions.length === 0) {
-    // Anon (401), offline veya network hatasında notlandırılamayan cache'i oynatma.
-    return []
+  const attemptId = response?.attemptId
+  const expiresAt = response?.expiresAt
+  if (
+    typeof attemptId !== 'string' ||
+    !isValidUuid(attemptId) ||
+    typeof expiresAt !== 'string' ||
+    !Number.isFinite(Date.parse(expiresAt)) ||
+    Date.parse(expiresAt) <= Date.now()
+  ) {
+    return emptyResult
   }
 
-  // Arkaplanda cache'e kaydet
   cacheQuestions(questions).catch(() => {})
 
-  // Spaced repetition: review sorulari ile karistir (%30 review)
   if (reviewQuestions.length > 0) {
     const reviewCount = Math.max(1, Math.floor(limit * 0.3))
     const reviewSlice = shuffle([...reviewQuestions]).slice(0, reviewCount)
-    const reviewIds = new Set(reviewSlice.map(q => q.id))
-    const newQuestions = questions.filter(q => !reviewIds.has(q.id))
+    const reviewIds = new Set(reviewSlice.map(question => question.id))
+    const newQuestions = questions.filter(question => !reviewIds.has(question.id))
     const newSlice = shuffle([...newQuestions]).slice(0, limit - reviewSlice.length)
-    return shuffle([...reviewSlice, ...newSlice])
+    return {
+      questions: shuffle([...reviewSlice, ...newSlice]),
+      attemptId,
+      expiresAt,
+    }
   }
 
-  return shuffle([...questions]).slice(0, limit)
+  return {
+    questions: shuffle([...questions]).slice(0, limit),
+    attemptId,
+    expiresAt,
+  }
 }
 
-/**
- * Misafir önizleme: auth olmadan 1 gerçek soru döner.
- * Seçili kategori/zorluk/examRef filtreleri de uygulanır.
- */
+/** Misafir onizleme: auth olmadan 1 gercek soru doner. */
 export async function fetchPreviewQuestion(
   game: string,
   opts?: { category?: string | null; difficulty?: number | null; examRef?: string | null },

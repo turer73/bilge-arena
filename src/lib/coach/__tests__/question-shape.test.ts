@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  supportsGuidedCoachQuestion,
   supportsStagedCoachPublicQuestion,
   supportsStagedCoachQuestion,
 } from '../question-shape'
@@ -15,5 +16,24 @@ describe('staged coach question shape', () => {
   test('server eligibility geçerli answer anahtarı ister', () => {
     expect(supportsStagedCoachQuestion({ ...publicContent, answer: 1 })).toBe(true)
     expect(supportsStagedCoachQuestion({ ...publicContent, answer: 2 })).toBe(false)
+  })
+
+  test('R2.2 akışı küratörlü çözüm ve tam coach metadata ister', () => {
+    expect(supportsGuidedCoachQuestion({
+      ...publicContent,
+      answer: 1,
+      solution: 'İki ile iki toplanır.',
+      coach: {
+        misconceptions: ['Bir eksik sayılmış olabilir.', 'Toplama doğru kurulmuş olabilir.'],
+        hint1: 'İki grubu birleştir.',
+      },
+    })).toBe(true)
+    expect(supportsGuidedCoachQuestion({ ...publicContent, answer: 1 })).toBe(false)
+    expect(supportsGuidedCoachQuestion({
+      ...publicContent,
+      answer: 1,
+      solution: 'Çözüm',
+      coach: { misconceptions: ['Tek kayıt'] },
+    })).toBe(false)
   })
 })

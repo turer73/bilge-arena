@@ -1,102 +1,76 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
 
-// Esnek queue-tabanli mock'lar. daily_plan tablosu 3 farkli zincir kullanir
-// (select->maybeSingle / insert->single / update->single) -- ayri kuyruklarla
-// ayristirilir ki insert/update cagri-argumanlari da yakalanabilsin.
 const {
   mockGetUser,
   mockRpc,
   mockFetchDue,
-  mockComputeStrengths,
-  dailyPlanMock,
-  questionsMock,
-  historyMock,
-  profileMock,
+  mockIssueVerifiedAttempt,
+  tableMocks,
 } = vi.hoisted(() => {
-  function makeDailyPlanMock() {
-    const selectQueue: { data: unknown; error?: unknown }[] = []
-    const insertQueue: { data: unknown; error?: unknown }[] = []
-    const updateQueue: { data: unknown; error?: unknown }[] = []
-    const insertCalls: unknown[] = []
+  function makeTableMock(defaultResult: { data: unknown; error: unknown }) {
+    const queue: Array<{ data: unknown; error: unknown }> = []
+    const calls: Array<{ methods: Array<{ name: string; args: unknown[] }> }> = []
     const updateCalls: unknown[] = []
 
     const from = vi.fn(() => {
-      let mode: 'select' | 'insert' | 'update' = 'select'
+      const call = { methods: [] as Array<{ name: string; args: unknown[] }> }
+      calls.push(call)
       const chain: Record<string, unknown> = {}
-      chain.select = vi.fn(() => chain)
-      chain.eq = vi.fn(() => chain)
-      chain.is = vi.fn(() => chain)
-      chain.insert = vi.fn((obj: unknown) => {
-        mode = 'insert'
-        insertCalls.push(obj)
+      for (const name of ['select', 'eq', 'is', 'in', 'order', 'limit']) {
+        chain[name] = vi.fn((...args: unknown[]) => {
+          call.methods.push({ name, args })
+          return chain
+        })
+      }
+      chain.update = vi.fn((value: unknown) => {
+        updateCalls.push(value)
+        call.methods.push({ name: 'update', args: [value] })
         return chain
       })
-      chain.update = vi.fn((obj: unknown) => {
-        mode = 'update'
-        updateCalls.push(obj)
-        return chain
-      })
-      chain.maybeSingle = vi.fn(() =>
-        Promise.resolve(selectQueue.length > 0 ? selectQueue.shift()! : { data: null, error: null }),
+      const take = () => Promise.resolve(queue.shift() ?? defaultResult)
+      chain.maybeSingle = vi.fn(take)
+      chain.single = vi.fn(take)
+      chain.then = (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => (
+        take().then(resolve, reject)
       )
-      chain.single = vi.fn(() => {
-        if (mode === 'insert') {
-          return Promise.resolve(insertQueue.length > 0 ? insertQueue.shift()! : { data: null, error: null })
-        }
-        if (mode === 'update') {
-          return Promise.resolve(updateQueue.length > 0 ? updateQueue.shift()! : { data: null, error: null })
-        }
-        return Promise.resolve({ data: null, error: null })
-      })
       return chain
     })
 
     return {
       from,
-      pushSelect: (r: { data: unknown; error?: unknown }) => selectQueue.push(r),
-      pushInsert: (r: { data: unknown; error?: unknown }) => insertQueue.push(r),
-      pushUpdate: (r: { data: unknown; error?: unknown }) => updateQueue.push(r),
-      insertCalls,
+      calls,
       updateCalls,
+      push: (result: { data: unknown; error?: unknown }) => queue.push({
+        data: result.data,
+        error: result.error ?? null,
+      }),
       reset: () => {
-        selectQueue.length = 0
-        insertQueue.length = 0
-        updateQueue.length = 0
-        insertCalls.length = 0
+        queue.length = 0
+        calls.length = 0
         updateCalls.length = 0
+        from.mockClear()
       },
     }
-  }
-
-  function makeReadTableMock(defaultResult: { data: unknown; error?: unknown } = { data: [], error: null }) {
-    const queue: { data: unknown; error?: unknown }[] = []
-    const from = vi.fn(() => {
-      const result = queue.length > 0 ? queue.shift()! : defaultResult
-      const chain: Record<string, unknown> = {}
-      for (const m of ['select', 'eq', 'is', 'order', 'limit', 'in']) {
-        chain[m] = vi.fn(() => chain)
-      }
-      chain.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
-        Promise.resolve(result).then(resolve, reject)
-      chain.maybeSingle = vi.fn(() => Promise.resolve(result))
-      return chain
-    })
-    return { from, push: (r: { data: unknown; error?: unknown }) => queue.push(r), reset: () => { queue.length = 0 } }
   }
 
   return {
     mockGetUser: vi.fn(),
     mockRpc: vi.fn(),
     mockFetchDue: vi.fn(),
-    mockComputeStrengths: vi.fn(),
-    dailyPlanMock: makeDailyPlanMock(),
-    questionsMock: makeReadTableMock(),
-    historyMock: makeReadTableMock(),
-    profileMock: makeReadTableMock({ data: { exam_type: null }, error: null }),
+    mockIssueVerifiedAttempt: vi.fn(),
+    tableMocks: {
+      profiles: makeTableMock({ data: { exam_type: null }, error: null }),
+      daily_plan: makeTableMock({ data: null, error: null }),
+      daily_plan_items: makeTableMock({ data: [], error: null }),
+      questions: makeTableMock({ data: [], error: null }),
+      curriculum_outcomes: makeTableMock({ data: [], error: null }),
+      user_outcome_state: makeTableMock({ data: [], error: null }),
+      question_outcomes: makeTableMock({ data: [], error: null }),
+      user_question_history: makeTableMock({ data: [], error: null }),
+    },
   }
 })
-
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser } })),
 }))
@@ -104,12 +78,10 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
     rpc: mockRpc,
-    from: vi.fn((table: string) => {
-      if (table === 'daily_plan') return dailyPlanMock.from()
-      if (table === 'questions') return questionsMock.from()
-      if (table === 'user_question_history') return historyMock.from()
-      if (table === 'profiles') return profileMock.from()
-      throw new Error(`unexpected table: ${table}`)
+    from: vi.fn((table: keyof typeof tableMocks) => {
+      const mock = tableMocks[table]
+      if (!mock) throw new Error(`unexpected table: ${table}`)
+      return mock.from()
     }),
   })),
 }))
@@ -119,11 +91,14 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 }))
 
 vi.mock('@/lib/review/due-questions', () => ({ fetchDueQuestions: mockFetchDue }))
-vi.mock('@/lib/review/topic-strengths', () => ({ computeTopicStrengths: mockComputeStrengths }))
+vi.mock('@/lib/verified-attempts', () => ({
+  issueVerifiedAttempt: mockIssueVerifiedAttempt,
+  toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
+}))
 
 import { GET, PATCH } from '../route'
 
-const U1 = '11111111-1111-1111-1111-111111111111'
+const U1 = '11111111-1111-4111-8111-111111111111'
 
 function uid(n: number): string {
   return `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`
@@ -139,14 +114,14 @@ function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): Ques
     topic: null,
     difficulty: 2,
     level_tag: null,
-    content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'], answer: 1 },
+    content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'], answer: 1, solution: 'gizli' },
     base_points: 20,
     is_active: true,
     is_boss: false,
     times_answered: 0,
     times_correct: 0,
     source: null,
-    exam_ref: null,
+    exam_ref: 'TYT',
     created_at: null,
     updated_at: null,
     ...overrides,
@@ -155,317 +130,416 @@ function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): Ques
 
 function makeGetRequest(params: Record<string, string> = {}) {
   const url = new URL('http://localhost/api/study/today')
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
-  const headers = new Headers()
-  headers.set('x-forwarded-for', '1.2.3.4')
-  return new Request(url.toString(), { headers })
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
+  return new Request(url, { headers: { 'x-forwarded-for': '1.2.3.4' } })
 }
 
 function makePatchRequest(body: unknown) {
-  const headers = new Headers()
-  headers.set('x-forwarded-for', '1.2.3.4')
-  headers.set('Content-Type', 'application/json')
   return new Request('http://localhost/api/study/today', {
     method: 'PATCH',
-    headers,
+    headers: { 'x-forwarded-for': '1.2.3.4', 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
 }
 
+function installCreateRpcSuccess() {
+  mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+    if (name !== 'create_daily_plan_v2') throw new Error(`unexpected RPC: ${name}`)
+    const items = args.p_items as Array<Record<string, unknown>>
+    return {
+      data: {
+        planId: uid(900),
+        game: args.p_game,
+        planDate: args.p_plan_date,
+        examRef: args.p_exam_ref,
+        questionIds: items.map((item) => item.question_id),
+        completedIds: [],
+        items: items.map((item) => ({
+          questionId: item.question_id,
+          position: item.position,
+          slotType: item.slot_type,
+          sourceType: item.source_type,
+          completed: false,
+        })),
+      },
+      error: null,
+    }
+  })
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  for (const mock of Object.values(tableMocks)) mock.reset()
+  mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
+  mockFetchDue.mockResolvedValue([])
+  mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
+    attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    expiresAt: '2099-01-01T00:00:00.000Z',
+    questionSnapshots: input.questionIds.map(id => ({
+      id,
+      game: input.game,
+      category: 'sayilar',
+      subcategory: null,
+      topic: null,
+      difficulty: 2,
+      level_tag: null,
+      base_points: 20,
+      content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'] },
+    })),
+  }))
+  mockRpc.mockReset()
+})
+
 describe('GET /api/study/today', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    dailyPlanMock.reset()
-    questionsMock.reset()
-    historyMock.reset()
-    profileMock.reset()
+  it('auth ve parametre sinirlarini uygular', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null } })
+    expect((await GET(makeGetRequest({ game: 'matematik' }) as never)).status).toBe(401)
+
+    expect((await GET(makeGetRequest({ game: 'gecersiz' }) as never)).status).toBe(400)
+    expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'LGS_OR_1_1' }) as never)).status).toBe(400)
+    expect((await GET(makeGetRequest({ game: 'matematik', choice_category: 'fizik' }) as never)).status).toBe(400)
   })
 
-  it('401 doner kullanici auth degilse', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } })
-    const res = await GET(makeGetRequest({ game: 'matematik' }) as never)
-    expect(res.status).toBe(401)
-  })
-
-  it('400 doner game eksik/gecersizse', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    const res = await GET(makeGetRequest({ game: 'gecersiz' }) as never)
-    expect(res.status).toBe(400)
-  })
-
-  it('400 doner exam_ref allowlist disindaysa', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    const res = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'LGS_OR_1_1' }) as never)
-    expect(res.status).toBe(400)
-    expect(dailyPlanMock.from).not.toHaveBeenCalled()
-  })
-
-  it('bugunku plan zaten varsa yeniden uretmez, aynen doner (idempotent)', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    const qids = [uid(1), uid(2), uid(3)]
-    dailyPlanMock.pushSelect({
-      data: { id: 'plan-1', plan_date: '2026-07-21', question_ids: qids, completed_ids: [uid(1)] },
-      error: null,
+  it('mevcut V2 snapshotini sirali item metadatasi ve guvenli sorularla dondurur', async () => {
+    const questionIds = [uid(1), uid(2)]
+    tableMocks.daily_plan.push({
+      data: {
+        id: uid(800),
+        plan_date: '2026-08-08',
+        exam_ref: 'TYT',
+        question_ids: questionIds,
+        completed_ids: [questionIds[0]],
+      },
     })
-    questionsMock.push({ data: qids.map((id) => makeQuestionRow(id)), error: null })
-
-    const res = await GET(makeGetRequest({ game: 'matematik' }) as never)
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.questions.map((q: { id: string }) => q.id)).toEqual(qids)
-    expect(body.completedIds).toEqual([uid(1)])
-    expect(mockFetchDue).not.toHaveBeenCalled()
-    expect(mockComputeStrengths).not.toHaveBeenCalled()
-    expect(dailyPlanMock.insertCalls).toHaveLength(0)
-  })
-
-  it('plan yoksa uretir: 6 due + 4 weak + 5 new -> tam 15 benzersiz id, insert edilir', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-
-    // 1) existing check -> yok
-    dailyPlanMock.pushSelect({ data: null, error: null })
-
-    // 2) due: 6 soru
-    mockFetchDue.mockResolvedValueOnce(
-      Array.from({ length: 6 }, (_, i) => makeQuestionRow(uid(100 + i))),
-    )
-
-    // 3) weak: 2 kategori (total>=5), en dusuk yuzdeli 2 tanesi
-    mockComputeStrengths.mockResolvedValueOnce([
-      { label: 'Sayilar', category: 'sayilar', percentage: 80, total: 10 },
-      { label: 'Geometri', category: 'geometri', percentage: 20, total: 8 },
-      { label: 'Problemler', category: 'problemler', percentage: 40, total: 6 },
-      { label: 'Az-Ornek', category: 'az_ornek', percentage: 0, total: 2 }, // total<5 -- elenir
-    ])
-
-    // 4) weak-kategori RPC cagrilari (en zayif once: geometri(20), sonra problemler(40))
-    mockRpc
-      .mockResolvedValueOnce({ data: [makeQuestionRow(uid(200)), makeQuestionRow(uid(201))], error: null }) // geometri
-      .mockResolvedValueOnce({ data: [makeQuestionRow(uid(210)), makeQuestionRow(uid(211))], error: null }) // problemler
-
-    // 5) history (new-exclude icin) -- bos
-    historyMock.push({ data: [], error: null })
-
-    // 6) new RPC -- kalan 5
-    mockRpc.mockResolvedValueOnce({
-      data: Array.from({ length: 5 }, (_, i) => makeQuestionRow(uid(300 + i))),
-      error: null,
-    })
-
-    // 7) insert -- ne gonderilirse capture edilip ayni sekilde geri donsun
-    dailyPlanMock.pushInsert({
-      data: { id: 'plan-new', plan_date: '2026-07-21', question_ids: [], completed_ids: [] },
-      error: null,
-    })
-
-    // 8) final fetchQuestionsInOrder -- insert'e gonderilen id'lerle ayni sayida satir
-    questionsMock.push({
+    tableMocks.daily_plan_items.push({
       data: [
-        ...Array.from({ length: 6 }, (_, i) => makeQuestionRow(uid(100 + i))),
-        makeQuestionRow(uid(200)),
-        makeQuestionRow(uid(201)),
-        makeQuestionRow(uid(210)),
-        makeQuestionRow(uid(211)),
-        ...Array.from({ length: 5 }, (_, i) => makeQuestionRow(uid(300 + i))),
+        { question_id: questionIds[0], position: 1, slot_type: 'due', source_type: 'due', completed_at: '2026-08-08T10:00:00Z' },
+        { question_id: questionIds[1], position: 2, slot_type: 'weak_outcome', source_type: 'fresh', completed_at: null },
       ],
-      error: null,
     })
+    tableMocks.questions.push({ data: questionIds.map((id) => makeQuestionRow(id)) })
 
-    const res = await GET(makeGetRequest({ game: 'matematik' }) as never)
-    expect(res.status).toBe(200)
+    const response = await GET(makeGetRequest({ game: 'matematik' }) as never)
+    const body = await response.json()
 
-    // insert'e gonderilen question_ids: 6 due + (geometri 2 + problemler 2) + 5 new = 15, benzersiz
-    expect(dailyPlanMock.insertCalls).toHaveLength(1)
-    const insertedIds = (dailyPlanMock.insertCalls[0] as { question_ids: string[] }).question_ids
-    expect(insertedIds).toHaveLength(15)
-    expect(new Set(insertedIds).size).toBe(15)
-
-    // RPC en zayif kategoriler once cagrilmis olmali (geometri once problemler'den)
-    expect(mockRpc).toHaveBeenNthCalledWith(1, 'select_random_questions', expect.objectContaining({
-      p_category: 'geometri',
-    }))
-    expect(mockRpc).toHaveBeenNthCalledWith(2, 'select_random_questions', expect.objectContaining({
-      p_category: 'problemler',
-    }))
-  })
-
-  it('due bossa (fetchDue=[]) weak+new devreye girer, plan yine hedefe yakin dolar', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    dailyPlanMock.pushSelect({ data: null, error: null })
-    mockFetchDue.mockResolvedValueOnce([])
-    mockComputeStrengths.mockResolvedValueOnce([]) // zayif-sinyal yok -- yeni kullanici
-    historyMock.push({ data: [], error: null })
-    // kalan = 15 - 0 - 0 = 15 -- new RPC 15 soru doner
-    mockRpc.mockResolvedValueOnce({
-      data: Array.from({ length: 15 }, (_, i) => makeQuestionRow(uid(400 + i))),
-      error: null,
-    })
-    dailyPlanMock.pushInsert({
-      data: { id: 'plan-new2', plan_date: '2026-07-21', question_ids: [], completed_ids: [] },
-      error: null,
-    })
-    questionsMock.push({
-      data: Array.from({ length: 15 }, (_, i) => makeQuestionRow(uid(400 + i))),
-      error: null,
-    })
-
-    const res = await GET(makeGetRequest({ game: 'matematik' }) as never)
-    expect(res.status).toBe(200)
-    const insertedIds = (dailyPlanMock.insertCalls[0] as { question_ids: string[] }).question_ids
-    expect(insertedIds).toHaveLength(15)
-  })
-
-  it('profil exam_type defaultunu due, weak ve new kovalarinin tumune uygular', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    dailyPlanMock.pushSelect({ data: null, error: null })
-    profileMock.push({ data: { exam_type: 'lgs' }, error: null })
-    mockFetchDue.mockResolvedValueOnce([makeQuestionRow(uid(1))])
-    mockComputeStrengths.mockResolvedValueOnce([
-      { label: 'Geometri', category: 'geometri', percentage: 20, total: 8 },
+    expect(response.status).toBe(200)
+    expect(body.questions.map((question: { id: string }) => question.id)).toEqual(questionIds)
+    expect(body.questions[0].content).not.toHaveProperty('answer')
+    expect(body.questions[0].content).not.toHaveProperty('solution')
+    expect(body.items).toEqual([
+      expect.objectContaining({ questionId: questionIds[0], position: 1, slotType: 'due', sourceType: 'due', completed: true }),
+      expect.objectContaining({ questionId: questionIds[1], position: 2, slotType: 'weak_outcome', sourceType: 'fresh', completed: false }),
     ])
-    mockRpc
-      .mockResolvedValueOnce({ data: [makeQuestionRow(uid(2))], error: null })
-      .mockResolvedValueOnce({ data: [makeQuestionRow(uid(3))], error: null })
-    historyMock.push({ data: [], error: null })
-    dailyPlanMock.pushInsert({
-      data: { id: 'plan-lgs', plan_date: '2026-07-21', question_ids: [uid(1), uid(2), uid(3)], completed_ids: [] },
-      error: null,
-    })
-    questionsMock.push({ data: [], error: null })
-
-    const res = await GET(makeGetRequest({ game: 'matematik' }) as never)
-    expect(res.status).toBe(200)
-    expect(mockFetchDue).toHaveBeenCalledWith(expect.anything(), U1, 'matematik', null, null, 'LGS')
-    expect(mockRpc).toHaveBeenNthCalledWith(1, 'select_random_questions', expect.objectContaining({ p_exam_ref: 'LGS' }))
-    expect(mockRpc).toHaveBeenNthCalledWith(2, 'select_random_questions', expect.objectContaining({ p_exam_ref: 'LGS' }))
-  })
-
-  it('explicit exam_ref profil defaultunun onune gecer', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    dailyPlanMock.pushSelect({ data: null, error: null })
-    mockFetchDue.mockResolvedValueOnce([])
-    mockComputeStrengths.mockResolvedValueOnce([])
-    historyMock.push({ data: [], error: null })
-    mockRpc.mockResolvedValueOnce({ data: [], error: null })
-
-    const res = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'AYT-SAY' }) as never)
-    expect(res.status).toBe(200)
-    expect(mockFetchDue).toHaveBeenCalledWith(expect.anything(), U1, 'matematik', null, null, 'AYT-SAY')
-    expect(mockRpc).toHaveBeenCalledWith('select_random_questions', expect.objectContaining({ p_exam_ref: 'AYT-SAY' }))
-  })
-
-  it('profil sinav turuyle uyumsuz stale exam_ref snapshot olusturmaz', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    dailyPlanMock.pushSelect({ data: null, error: null })
-    profileMock.push({ data: { exam_type: 'lgs' }, error: null })
-
-    const res = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
-    expect(res.status).toBe(400)
+    expect(body.items[0]).not.toHaveProperty('sourceRef')
     expect(mockFetchDue).not.toHaveBeenCalled()
-    expect(dailyPlanMock.insertCalls).toHaveLength(0)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('new RPC hatasinda 500 doner ve partial plan persist etmez', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    dailyPlanMock.pushSelect({ data: null, error: null })
-    mockFetchDue.mockResolvedValueOnce([makeQuestionRow(uid(1))])
-    mockComputeStrengths.mockResolvedValueOnce([])
-    historyMock.push({ data: [], error: null })
-    mockRpc.mockResolvedValueOnce({ data: null, error: { code: '08006' } })
+  it('itemi olmayan ayni-gun legacy plana acik legacy metadata sentezler', async () => {
+    const questionId = uid(3)
+    tableMocks.daily_plan.push({
+      data: {
+        id: uid(801),
+        plan_date: '2026-08-08',
+        exam_ref: 'TYT',
+        question_ids: [questionId],
+        completed_ids: [questionId],
+      },
+    })
+    tableMocks.daily_plan_items.push({ data: [] })
+    tableMocks.questions.push({ data: [makeQuestionRow(questionId)] })
 
-    const res = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
-    expect(res.status).toBe(500)
-    expect(dailyPlanMock.insertCalls).toHaveLength(0)
+    const body = await (await GET(makeGetRequest({ game: 'matematik' }) as never)).json()
+
+    expect(body.items).toEqual([expect.objectContaining({
+      questionId,
+      slotType: 'legacy',
+      sourceType: 'legacy',
+      completed: true,
+    })])
   })
 
-  it('weak RPC hatasinda 500 doner ve partial plan persist etmez', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    dailyPlanMock.pushSelect({ data: null, error: null })
-    mockFetchDue.mockResolvedValueOnce([makeQuestionRow(uid(1))])
-    mockComputeStrengths.mockResolvedValueOnce([
-      { label: 'Geometri', category: 'geometri', percentage: 10, total: 8 },
-    ])
-    mockRpc.mockResolvedValueOnce({ data: null, error: { code: '08006' } })
+  it('yeni plani 5/5/3/1/1 olarak atomik RPC ile olusturur', async () => {
+    tableMocks.daily_plan.push({ data: null })
+    const due = Array.from({ length: 5 }, (_, index) => makeQuestionRow(uid(index + 1)))
+    const weak = Array.from({ length: 5 }, (_, index) => makeQuestionRow(uid(index + 6)))
+    const target = [
+      makeQuestionRow(uid(11), { category: 'problemler' }),
+      makeQuestionRow(uid(12), { category: 'problemler' }),
+      makeQuestionRow(uid(13), { category: 'problemler' }),
+      makeQuestionRow(uid(15), { category: 'problemler' }),
+    ]
+    const challenge = makeQuestionRow(uid(14), { category: 'geometri', difficulty: 5 })
+    const allQuestions = [...due, ...weak, ...target, challenge]
+    const weakOutcome = uid(701)
+    const currentOutcome = uid(702)
 
-    const res = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
-    expect(res.status).toBe(500)
-    expect(dailyPlanMock.insertCalls).toHaveLength(0)
+    mockFetchDue.mockResolvedValue(due)
+    tableMocks.questions.push({ data: allQuestions })
+    tableMocks.curriculum_outcomes.push({ data: [
+      { id: weakOutcome, code: 'MAT-WEAK', category: 'sayilar', sort_order: 1 },
+      { id: currentOutcome, code: 'MAT-NEXT', category: 'problemler', sort_order: 2 },
+    ] })
+    tableMocks.user_question_history.push({ data: [] })
+    tableMocks.user_outcome_state.push({ data: [
+      {
+        outcome_id: weakOutcome,
+        attempts: 5,
+        correct_attempts: 1,
+        weighted_earned: 1,
+        weighted_possible: 5,
+        delayed_correct: 0,
+        last_answered_at: '2026-08-07T10:00:00Z',
+      },
+    ] })
+    tableMocks.question_outcomes.push({ data: [
+      ...weak.map((question) => ({ question_id: question.id, outcome_id: weakOutcome })),
+      ...target.slice(0, 3).map((question) => ({ question_id: question.id, outcome_id: currentOutcome })),
+    ] })
+    tableMocks.questions.push({ data: allQuestions })
+    installCreateRpcSuccess()
+
+    const response = await GET(makeGetRequest({
+      game: 'matematik',
+      exam_ref: 'TYT',
+      choice_category: 'problemler',
+    }) as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    const createCall = mockRpc.mock.calls.find(([name]) => name === 'create_daily_plan_v2')
+    expect(createCall).toBeDefined()
+    const rpcItems = (createCall?.[1] as { p_items: Array<{ slot_type: string; source_type: string }> }).p_items
+    expect(rpcItems).toHaveLength(15)
+    expect(Object.fromEntries([
+      'due', 'weak_outcome', 'current_target', 'challenge', 'student_choice',
+    ].map((slot) => [slot, rpcItems.filter((item) => item.slot_type === slot).length]))).toEqual({
+      due: 5,
+      weak_outcome: 5,
+      current_target: 3,
+      challenge: 1,
+      student_choice: 1,
+    })
+    expect(rpcItems.filter((item) => item.source_type === 'due')).toHaveLength(5)
+    expect(rpcItems.filter((item) => item.source_type === 'weak_outcome')).toHaveLength(5)
+    expect(rpcItems.filter((item) => item.source_type === 'current_target')).toHaveLength(3)
+    expect(rpcItems.filter((item) => item.source_type === 'challenge')).toHaveLength(1)
+    expect(rpcItems.filter((item) => item.source_type === 'student_choice')).toHaveLength(1)
+    expect(new Set(body.questions.map((question: { id: string }) => question.id)).size).toBe(15)
+    expect(body.items).toHaveLength(15)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      userId: U1,
+      mode: 'practice',
+      questionIds: expect.any(Array),
+    }))
   })
 
-  it('tum havuzlar mesru bicimde bossa 200 doner ama bos snapshot persist etmez', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    dailyPlanMock.pushSelect({ data: null, error: null })
-    mockFetchDue.mockResolvedValueOnce([])
-    mockComputeStrengths.mockResolvedValueOnce([])
-    historyMock.push({ data: [], error: null })
-    mockRpc.mockResolvedValueOnce({ data: [], error: null })
+  it('eksik ogrenme kovalarini belgeli fresh fallback ile deterministik doldurur', async () => {
+    tableMocks.daily_plan.push({ data: null })
+    const questions = Array.from({ length: 15 }, (_, index) => makeQuestionRow(uid(100 + index), { difficulty: 3 }))
+    tableMocks.questions.push({ data: questions })
+    tableMocks.curriculum_outcomes.push({ data: [] })
+    tableMocks.user_question_history.push({ data: [] })
+    tableMocks.questions.push({ data: questions })
+    installCreateRpcSuccess()
 
-    const res = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
-    expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(200)
+    const items = (mockRpc.mock.calls[0][1] as { p_items: Array<{ source_type: string; position: number }> }).p_items
+    expect(items).toHaveLength(15)
+    expect(items.every((item) => item.source_type === 'fresh')).toBe(true)
+    expect(items.map((item) => item.position)).toEqual(Array.from({ length: 15 }, (_, index) => index + 1))
+  })
+
+  it('aday sorgularini sinirli tutar ve profilin LGS varsayilanini uygular', async () => {
+    tableMocks.profiles.push({ data: { exam_type: 'lgs' } })
+    tableMocks.daily_plan.push({ data: null })
+    tableMocks.questions.push({ data: [] })
+    tableMocks.curriculum_outcomes.push({ data: [] })
+    tableMocks.user_question_history.push({ data: [] })
+
+    const response = await GET(makeGetRequest({ game: 'matematik' }) as never)
+
+    expect(response.status).toBe(200)
+    expect(mockFetchDue).toHaveBeenCalledWith(expect.anything(), U1, 'matematik', null, null, 'LGS', 'exact')
+    expect(tableMocks.questions.calls[0].methods).toContainEqual({ name: 'limit', args: [300] })
+    expect(tableMocks.questions.calls[0].methods).toContainEqual({ name: 'eq', args: ['exam_ref', 'LGS'] })
+    expect(tableMocks.user_question_history.calls[0].methods).toContainEqual({ name: 'limit', args: [50] })
+  })
+
+  it('uyumsuz stale exam_ref ile snapshot olusturmaz', async () => {
+    tableMocks.profiles.push({ data: { exam_type: 'lgs' } })
+
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+
+    expect(response.status).toBe(400)
+    expect(mockFetchDue).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('tum havuzlar bossa bos snapshot yazmadan null bilet doner', async () => {
+    tableMocks.daily_plan.push({ data: null })
+    tableMocks.questions.push({ data: [] })
+    tableMocks.curriculum_outcomes.push({ data: [] })
+    tableMocks.user_question_history.push({ data: [] })
+
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
       planDate: expect.any(String),
       game: 'matematik',
       examRef: 'TYT',
       questions: [],
       completedIds: [],
+      items: [],
+      attemptId: null,
+      expiresAt: null,
     })
-    expect(dailyPlanMock.insertCalls).toHaveLength(0)
+    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
   })
 
-  it('Cache-Control no-store header her zaman set edilir', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    dailyPlanMock.pushSelect({
-      data: { id: 'plan-1', plan_date: '2026-07-21', question_ids: [], completed_ids: [] },
-      error: null,
+  it('aday sorgu hatasinda ve create RPC hatasinda kismi plan dondurmez', async () => {
+    tableMocks.daily_plan.push({ data: null })
+    tableMocks.questions.push({ data: null, error: { code: '08006' } })
+    tableMocks.curriculum_outcomes.push({ data: [] })
+    tableMocks.user_question_history.push({ data: [] })
+    expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).status).toBe(500)
+    expect(mockRpc).not.toHaveBeenCalled()
+
+    for (const mock of Object.values(tableMocks)) mock.reset()
+    tableMocks.daily_plan.push({ data: null })
+    const question = makeQuestionRow(uid(200), { difficulty: 3 })
+    tableMocks.questions.push({ data: [question] })
+    tableMocks.curriculum_outcomes.push({ data: [] })
+    tableMocks.user_question_history.push({ data: [] })
+    mockRpc.mockResolvedValue({ data: null, error: { code: '22023' } })
+    expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).status).toBe(500)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('gecersiz RPC cevabinda ve bilet hatasinda fail closed davranir', async () => {
+    tableMocks.daily_plan.push({ data: null })
+    const question = makeQuestionRow(uid(210), { difficulty: 3 })
+    tableMocks.questions.push({ data: [question] })
+    tableMocks.curriculum_outcomes.push({ data: [] })
+    tableMocks.user_question_history.push({ data: [] })
+    mockRpc.mockResolvedValue({ data: { planId: 'not-a-uuid' }, error: null })
+    expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).status).toBe(500)
+
+    for (const mock of Object.values(tableMocks)) mock.reset()
+    tableMocks.daily_plan.push({
+      data: {
+        id: uid(810),
+        plan_date: '2026-08-08',
+        exam_ref: 'TYT',
+        question_ids: [question.id],
+        completed_ids: [],
+      },
     })
-    questionsMock.push({ data: [], error: null })
-    const res = await GET(makeGetRequest({ game: 'matematik' }) as never)
-    expect(res.headers.get('Cache-Control')).toBe('no-store')
+    tableMocks.daily_plan_items.push({ data: [] })
+    tableMocks.questions.push({ data: [question] })
+    mockIssueVerifiedAttempt.mockRejectedValueOnce(new Error('secret database detail'))
+
+    const response = await GET(makeGetRequest({ game: 'matematik' }) as never)
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Plan baslatilamadi' })
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
   })
 })
 
 describe('PATCH /api/study/today', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    dailyPlanMock.reset()
-    questionsMock.reset()
-    historyMock.reset()
+  it('auth ve bulunamayan plan sinirlarini uygular', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: null } })
+    expect((await PATCH(makePatchRequest({ game: 'matematik', questionIds: [] }) as never)).status).toBe(401)
+
+    tableMocks.daily_plan.push({ data: null })
+    expect((await PATCH(makePatchRequest({ game: 'matematik', questionIds: [uid(1)] }) as never)).status).toBe(404)
   })
 
-  it('401 doner kullanici auth degilse', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } })
-    const res = await PATCH(makePatchRequest({ game: 'matematik', questionIds: [] }) as never)
-    expect(res.status).toBe(401)
-  })
-
-  it('404 doner bugun icin plan yoksa', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    dailyPlanMock.pushSelect({ data: null, error: null })
-    const res = await PATCH(makePatchRequest({ game: 'matematik', questionIds: [uid(1)] }) as never)
-    expect(res.status).toBe(404)
-  })
-
-  it('completed_ids set-union yapar ve plan-disi id"leri yok sayar', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
-    const planIds = [uid(1), uid(2), uid(3)]
-    dailyPlanMock.pushSelect({
-      data: { id: 'plan-1', question_ids: planIds, completed_ids: [uid(1)] },
+  it('V2 tamamlamayi owner-korumali RPC ile yapar ve plan disi idyi gondermez', async () => {
+    const planId = uid(820)
+    const questionIds = [uid(1), uid(2)]
+    const outside = uid(999)
+    tableMocks.daily_plan.push({ data: {
+      id: planId,
+      question_ids: questionIds,
+      completed_ids: [],
+    } })
+    mockRpc.mockResolvedValue({
+      data: {
+        planId,
+        game: 'matematik',
+        planDate: '2026-08-08',
+        examRef: null,
+        questionIds,
+        completedIds: [questionIds[1]],
+        items: [
+          { questionId: questionIds[0], position: 1, slotType: 'due', sourceType: 'due', completed: false },
+          { questionId: questionIds[1], position: 2, slotType: 'weak_outcome', sourceType: 'fresh', completed: true },
+        ],
+      },
       error: null,
     })
-    dailyPlanMock.pushUpdate({ data: { completed_ids: [uid(1), uid(2)] }, error: null })
 
-    const outsideId = uid(999) // plan disi -- yok sayilmali
-    const res = await PATCH(
-      makePatchRequest({ game: 'matematik', questionIds: [uid(2), outsideId] }) as never,
-    )
-    expect(res.status).toBe(200)
+    const response = await PATCH(makePatchRequest({
+      game: 'matematik',
+      questionIds: [questionIds[1], outside],
+    }) as never)
+    const body = await response.json()
 
-    // update'e gonderilen completed_ids: mevcut [uid(1)] + gecerli-yeni [uid(2)] (outsideId YOK)
-    const updateArg = dailyPlanMock.updateCalls[0] as { completed_ids: string[] }
-    expect(updateArg.completed_ids.sort()).toEqual([uid(1), uid(2)].sort())
-    expect(updateArg.completed_ids).not.toContain(outsideId)
+    expect(response.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('complete_daily_plan_items', {
+      p_user_id: U1,
+      p_plan_id: planId,
+      p_question_ids: [questionIds[1]],
+    })
+    expect(body.completedIds).toEqual([questionIds[1]])
+    expect(body.items[1]).toEqual(expect.objectContaining({ completed: true, sourceLabel: 'Yeni soru' }))
+    expect(tableMocks.daily_plan.updateCalls).toHaveLength(0)
+  })
 
-    const body = await res.json()
-    expect(body.completedIds).toEqual([uid(1), uid(2)])
+  it('legacy planda tamamlananlari atomik RPC ile birlestirir ve plan disi idyi yok sayar', async () => {
+    const planIds = [uid(1), uid(2), uid(3)]
+    const outside = uid(999)
+    tableMocks.daily_plan.push({ data: {
+      id: uid(830),
+      question_ids: planIds,
+      completed_ids: [planIds[0]],
+    } })
+    mockRpc.mockResolvedValue({
+      data: {
+        planId: uid(830),
+        game: 'matematik',
+        planDate: '2026-08-08',
+        examRef: null,
+        questionIds: planIds,
+        completedIds: [planIds[0], planIds[1]],
+        items: [],
+      },
+      error: null,
+    })
+
+    const response = await PATCH(makePatchRequest({
+      game: 'matematik',
+      questionIds: [planIds[1], outside],
+    }) as never)
+
+    expect(response.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('complete_daily_plan_items', {
+      p_user_id: U1,
+      p_plan_id: uid(830),
+      p_question_ids: [planIds[1]],
+    })
+    expect(tableMocks.daily_plan.updateCalls).toHaveLength(0)
+    expect(await response.json()).toEqual({
+      completedIds: [planIds[0], planIds[1]],
+      items: [
+        expect.objectContaining({ questionId: planIds[0], sourceType: 'legacy', completed: true }),
+        expect.objectContaining({ questionId: planIds[1], sourceType: 'legacy', completed: true }),
+        expect.objectContaining({ questionId: planIds[2], sourceType: 'legacy', completed: false }),
+      ],
+    })
   })
 })

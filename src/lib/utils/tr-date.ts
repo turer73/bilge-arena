@@ -10,13 +10,13 @@
  * saglamlik icin Intl + timeZone kullanilir.
  */
 
-const TR_TZ = 'Europe/Istanbul'
+export const TR_TIME_ZONE = 'Europe/Istanbul'
 
 /** Verilen ani TR takvim gunune cevirir: "YYYY-MM-DD". */
 export function trDayString(date: Date = new Date()): string {
   // en-CA locale ISO-benzeri YYYY-MM-DD uretir.
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: TR_TZ,
+    timeZone: TR_TIME_ZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
