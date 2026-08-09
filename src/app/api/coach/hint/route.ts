@@ -44,8 +44,12 @@ const requestSchema = z.object({
   }
 })
 
-const GEMINI_MODEL = 'gemini-2.5-flash-lite'
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
+// Gemini'den DeepSeek'e gecildi: Gemini aylik kotasi tukendiginde koc ipuclari
+// sessizce fallback'e dusuyordu (kesif #1403). Chat route'u ile ayni saglayici.
+// NOT: 'deepseek-chat' alias'i artik kabul edilmiyor; desteklenen adlar
+// deepseek-v4-pro / deepseek-v4-flash. Koc icin ucuz/hizli varyant secildi.
+const DEEPSEEK_MODEL = 'deepseek-v4-flash'
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 const COACH_TOKEN_TTL_MS = 10 * 60_000
 
 interface QuestionRow {
@@ -191,33 +195,40 @@ function answerDetails(content: StagedCoachQuestionContent) {
   return { answerText, answerLetter }
 }
 
+/**
+ * Koc ipucu metnini uretir. Prompt tamamen sunucuda, yalnizca DB-onayli soru /
+ * cozum / kazanim baglamindan kurulur; istemci serbest metin gonderemez.
+ *
+ * Gemini'nin safetySettings + finishReason katmani DeepSeek'te yok. Koc icin
+ * asil koruma zaten sonraki adimdaki evaluateCoachText sizinti kontrolu: model
+ * cevabi nihai cevabi ele veriyorsa 'fallback'e dusulur. Prompt kullanici
+ * metni icermedigi icin injection yuzeyi chat route'una gore cok dardir.
+ */
 async function generateCoachText(prompt: string): Promise<string | null> {
   if (process.env.COACH_AI_ENABLED !== 'true') return null
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) return null
 
-  const response = await fetch(GEMINI_API_URL, {
+  const response = await fetch(DEEPSEEK_API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     signal: AbortSignal.timeout(8_000),
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 180, temperature: 0 },
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-      ],
+      model: DEEPSEEK_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 180,
+      temperature: 0,
+      stream: false,
     }),
   })
   if (!response.ok) return null
   const json = await response.json().catch(() => null)
-  const candidate = json?.candidates?.[0]
-  if (!candidate || candidate.finishReason === 'SAFETY' || candidate.finishReason === 'BLOCKLIST') {
+  const choice = json?.choices?.[0]
+  // Kesilmis uretim yarim/yaniltici ipucu birakabilir; guvenli tarafta kal.
+  if (!choice || choice.finish_reason === 'content_filter' || choice.finish_reason === 'length') {
     return null
   }
-  const text = candidate.content?.parts?.[0]?.text
+  const text = choice.message?.content
   return typeof text === 'string' && text.trim() ? text.trim().slice(0, 700) : null
 }
 
