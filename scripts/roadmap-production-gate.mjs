@@ -142,10 +142,13 @@ WITH normalized AS (
          THEN jsonb_array_length(content->'options') END AS option_count,
     jsonb_typeof(content->'answer') AS answer_type,
     content->'answer' AS answer_value,
+    jsonb_typeof(content->'correct') AS legacy_correct_type,
+    content->'correct' AS legacy_correct_value,
     CASE WHEN jsonb_typeof(content->'answer')='number'
                    AND (content->>'answer') ~ '^[0-9]+$'
          THEN (content->>'answer')::integer END AS answer_index,
-    left(content->>'question', 160) AS question_preview
+    left(content->>'question', 160) AS question_preview,
+    left(content->>'sentence', 160) AS legacy_sentence_preview
   FROM public.questions
 ), classified AS (
   SELECT *,
@@ -158,7 +161,8 @@ WITH normalized AS (
   FROM normalized
 )
 SELECT id, external_id, game, category, topic, source, exam_ref, is_active,
-       answer_type, answer_value, option_count, question_preview
+       answer_type, answer_value, legacy_correct_type, legacy_correct_value,
+       option_count, question_preview, legacy_sentence_preview
 FROM classified
 WHERE invalid
 ORDER BY id
