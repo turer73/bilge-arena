@@ -77,7 +77,7 @@ const REQUEST_IDS = [
   '10000000-0000-4000-8000-000000000005',
 ] as const
 
-const oldApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+const oldApiKey = process.env.DEEPSEEK_API_KEY
 const oldCoachEnabled = process.env.COACH_ENABLED
 const oldCoachAiEnabled = process.env.COACH_AI_ENABLED
 const oldCoachTokenSecret = process.env.COACH_TOKEN_SECRET
@@ -251,7 +251,7 @@ describe('POST /api/coach/hint R2.2', () => {
       },
       error: null,
     })
-    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY
+    delete process.env.DEEPSEEK_API_KEY
     process.env.COACH_ENABLED = 'true'
     delete process.env.COACH_AI_ENABLED
     process.env.COACH_TOKEN_SECRET = TOKEN_SECRET
@@ -261,8 +261,8 @@ describe('POST /api/coach/hint R2.2', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   afterAll(() => {
-    if (oldApiKey === undefined) delete process.env.GOOGLE_GENERATIVE_AI_API_KEY
-    else process.env.GOOGLE_GENERATIVE_AI_API_KEY = oldApiKey
+    if (oldApiKey === undefined) delete process.env.DEEPSEEK_API_KEY
+    else process.env.DEEPSEEK_API_KEY = oldApiKey
     if (oldCoachEnabled === undefined) delete process.env.COACH_ENABLED
     else process.env.COACH_ENABLED = oldCoachEnabled
     if (oldCoachAiEnabled === undefined) delete process.env.COACH_AI_ENABLED
@@ -363,7 +363,7 @@ describe('POST /api/coach/hint R2.2', () => {
       }),
       error: null,
     })
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key'
+    process.env.DEEPSEEK_API_KEY = 'test-key'
     delete process.env.COACH_AI_ENABLED
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
@@ -386,10 +386,10 @@ describe('POST /api/coach/hint R2.2', () => {
       }),
       error: null,
     })
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key'
+    process.env.DEEPSEEK_API_KEY = 'test-key'
     process.env.COACH_AI_ENABLED = 'true'
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text: 'Olası odak: işlem sırası karışmış olabilir. Önce çarpma adımını işaretle.' }] } }],
+      choices: [{ message: { content: 'Olası odak: işlem sırası karışmış olabilir. Önce çarpma adımını işaretle.' }, finish_reason: 'stop' }],
     }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
 
@@ -417,15 +417,47 @@ describe('POST /api/coach/hint R2.2', () => {
       }),
       error: null,
     })
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key'
+    process.env.DEEPSEEK_API_KEY = 'test-key'
     process.env.COACH_AI_ENABLED = 'true'
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text: 'Doğru cevap B seçeneğidir.' }] } }],
+      choices: [{ message: { content: 'Doğru cevap B seçeneğidir.' }, finish_reason: 'stop' }],
     }), { status: 200 })))
     const response = await POST(coachRequest('hint1'))
     const body = await response.json()
     expect(body.source).toBe('fallback')
     expect(body.hint).not.toContain('B seçeneği')
+  })
+
+  // DeepSeek gecisi: Gemini'nin finishReason SAFETY/BLOCKLIST kontrolunun yerini
+  // content_filter + length aliyor. Kesilmis uretim yarim ipucu birakabilecegi
+  // icin bilerek reddedilir ve guvenli fallback'e dusulur.
+  it('kesilmiş veya filtrelenmiş model yanıtını kullanmaz', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockQuestionResult.mockResolvedValue({
+      data: questionRow({
+        content: {
+          question: 'İşlemin sonucu kaç?',
+          options: ['Altı', 'Sekiz', 'On', 'On iki'],
+          answer: 1,
+          solution: 'Önce çarpma yapılır ve sonuç sekiz bulunur.',
+        },
+      }),
+      error: null,
+    })
+    process.env.DEEPSEEK_API_KEY = 'test-key'
+    process.env.COACH_AI_ENABLED = 'true'
+
+    // Ayni metin finish_reason 'stop' ile source='ai' donuyor (yukaridaki test);
+    // burada yalniz kesilme/filtre bayragi degisiyor, yani fallback'e dusmenin
+    // tek sebebi bu guard olmalidir.
+    const kabulEdilenMetin = 'Olası odak: işlem sırası karışmış olabilir. Önce çarpma adımını işaretle.'
+    for (const finishReason of ['length', 'content_filter']) {
+      vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+        choices: [{ message: { content: kabulEdilenMetin }, finish_reason: finishReason }],
+      }), { status: 200 })))
+      const response = await POST(coachRequest('hint1'))
+      await expect(response.json()).resolves.toMatchObject({ source: 'fallback' })
+    }
   })
 
   it('aşama atlamayı, kurcalanmış ve süresi dolmuş tokeni reddeder', async () => {
