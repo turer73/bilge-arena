@@ -236,4 +236,29 @@ describe('verified attempts helper', () => {
       userId: '30000000-0000-4000-8000-000000000001',
     })).rejects.toThrow('verified_attempt_snapshot_denied')
   })
+
+  // Regresyon: supabase-js'in rpc gövdesi this.url/this.headers/this.fetch okur.
+  // Metodu bağlamadan çıkarmak üretimde TypeError firlatiyordu; istek hiç
+  // gönderilmediği için hata sessizce 500'e dönüşüyordu. Düz vi.fn() mock'u bu
+  // sinifi yakalayamaz, bu yüzden burada this'e bağımlı gerçekçi bir istemci var.
+  it('calls rpc bound to the client so a this-dependent implementation works', async () => {
+    const boundClient = {
+      url: 'https://example.supabase.co/rest/v1',
+      rpc(this: { url?: string } | undefined, name: string, args: Record<string, unknown>) {
+        // this yoksa burasi TypeError firlatir - tam olarak uretimdeki davranis.
+        if (typeof this?.url !== 'string') throw new TypeError('rpc called without a bound client')
+        return Promise.resolve({
+          data: { items: [normalSnapshotItem(QUESTION_ONE, 1)] },
+          error: null,
+          calledWith: [name, args],
+        })
+      },
+    } as unknown as SupabaseClient<Database>
+
+    const snapshots = await readVerifiedAttemptQuestionSnapshots(boundClient, {
+      attemptId: ATTEMPT_ID,
+      userId: '30000000-0000-4000-8000-000000000001',
+    })
+    expect(snapshots).toHaveLength(1)
+  })
 })

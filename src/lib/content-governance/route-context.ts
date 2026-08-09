@@ -27,5 +27,7 @@ export async function requireContentGovernanceContext(
 
 /** Type overlay intentionally lags migration 106; keep the unsafe boundary here, never in routes. */
 export async function contentRpc(admin: ReturnType<typeof createServiceRoleClient>, name: string, args: Record<string, unknown>) {
-  return (admin.rpc as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { code?: string } | null }>)(name, args)
+  // admin.rpc this'e bağımlıdır; referans çıkarılıp çağrılırsa TypeError fırlatır.
+  const rpc = admin.rpc.bind(admin) as unknown as (n: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { code?: string } | null }>
+  return rpc(name, args)
 }
