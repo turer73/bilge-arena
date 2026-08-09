@@ -17,7 +17,8 @@ const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ'])
  * Auth gerektirmeyen misafir önizleme endpointi.
  * Kayıt olmadan oynamayı deneyen kullanıcılara 1 gerçek soru verir.
  * Seçili filtreler (kategori, zorluk, sınav) uygulanır.
- * Filtreyle soru bulunamazsa filtreler kaldırılarak tekrar denenir (fallback).
+ * Zorluk havuzu boşsa yalnız zorluk gevşetilir. Sınav ve kategori kullanıcının
+ * açık kapsam seçimidir; başka bir sınav/dersten soru göstermemek için korunur.
  *
  * - Auth yok (anon erişim)
  * - Service-role ile DB'den random aktif soru
@@ -62,9 +63,19 @@ export async function GET(request: NextRequest) {
 
   let { data, error } = await admin.rpc('select_random_questions', rpcArgs)
 
-  // Filtreyle soru gelmezse filtreler olmadan tekrar dene
-  if (!error && (!data || data.length === 0) && (category || difficulty || examRef)) {
-    const fallback = await admin.rpc('select_random_questions', { p_game: game, p_limit: 3 })
+  // Yalnız zorluk tercihini gevşet. 05/08/2026 geri bildirimi: eski fallback
+  // TYT+biyoloji kapsamını da silip aktif AYT biyoloji sorusu döndürebiliyordu.
+  if (!error && (!data || data.length === 0) && difficulty !== null) {
+    const fallbackArgs: {
+      p_game: string
+      p_limit: number
+      p_category?: string
+      p_exam_ref?: string
+    } = { p_game: game, p_limit: 3 }
+    if (category) fallbackArgs.p_category = category
+    if (examRef) fallbackArgs.p_exam_ref = examRef
+
+    const fallback = await admin.rpc('select_random_questions', fallbackArgs)
     if (!fallback.error) {
       data = fallback.data
       error = fallback.error
@@ -76,7 +87,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Soru alınamadı' }, { status: 500 })
   }
 
-  const questions = parseQuestionRows(data)
+  // RPC/veri driftine karşı defense-in-depth: açık sınav ve kategori kapsamına
+  // uymayan satır hiçbir koşulda public yanıta çıkmaz.
+  const questions = parseQuestionRows(data).filter((question) =>
+    question.game === game
+    && (!category || question.category === category)
+    && (!examRef || question.exam_ref === examRef)
+  )
   const question = questions[0] ?? null
 
   return NextResponse.json(

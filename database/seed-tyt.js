@@ -85,6 +85,7 @@ function loadQuestions(filePath, game) {
           answer: q.answer,         // 0-based index (JSON zaten bu formatta)
           solution: q.solution || null,
         },
+        exam_ref: 'TYT',
         is_active: true,
       })
     }

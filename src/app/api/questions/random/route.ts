@@ -179,7 +179,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
-  const questions = parseQuestionRows(rpcData)
+  // RPC/veri driftine karşı defense-in-depth. Cooldown fallback'i yalnız
+  // p_exclude_ids'i kaldırır; kullanıcının oyun/kategori/zorluk/sınav kapsamı
+  // public yanıta çıkmadan önce burada da doğrulanır.
+  const questions = parseQuestionRows(rpcData).filter((question) =>
+    question.game === game
+    && (!category || question.category === category)
+    && (!difficulty || question.difficulty === difficulty)
+    && (!examRef || question.exam_ref === examRef)
+  )
 
   // 6) Review questions (opsiyonel, spaced-repetition)
   let reviewQuestions: Question[] = []

@@ -138,6 +138,7 @@ async function main() {
       difficulty: typeof q.difficulty === 'number' ? q.difficulty : 3,
       content: { question: q.question, options: q.options, answer: q.answer, solution: q.solution },
       source: 'ai_gemini_tyt',
+      exam_ref: 'TYT',
       is_active: false,
     }))
 
