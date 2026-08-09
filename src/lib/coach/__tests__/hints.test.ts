@@ -37,7 +37,18 @@ describe('Bilge Koç hint guard', () => {
     expect(leaksAnswer('x = 3', '3', 'C')).toBe(true)
     expect(leaksAnswer('Sonuç sekiz olur.', '8', 'B')).toBe(true)
     expect(leaksAnswer('Sonuç 8 olur.', 'Sekiz', 'B')).toBe(true)
-    expect(fallbackHint('hint3')).toContain('Küçük örnek')
+    expect(fallbackHint('hint3')).toContain('aynı sırayı')
+  })
+
+  // Koc cozumu olan HER soruda acilir (matematik disi ~3900 soru dahil), o yuzden
+  // fallback metinleri ders-bagimsiz kalmali. Onceki hint3 sabit bir aritmetik
+  // ornek iceriyordu ('3 kutuda 12 nesne...') ve Turkce/Sosyal sorularinda
+  // anlamsiz goruunuyordu.
+  it('fallback metinleri ders-bağımsızdır', () => {
+    const alanaOzgu = /\d|kutu|nesne|böl|topla|çarp|denklem|işlem sonucu|paragraf|cümle|tarih/i
+    for (const stage of ['hint1', 'hint2', 'hint3'] as const) {
+      expect(fallbackHint(stage)).not.toMatch(alanaOzgu)
+    }
   })
 
   it('küratörlü yanılgı ve ipucunu yalnız tam metadata ile kurar', () => {

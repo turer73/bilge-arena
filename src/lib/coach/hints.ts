@@ -15,10 +15,17 @@ export interface CoachQuestionContext {
   selectedOptionText: string
 }
 
+/**
+ * Kuratorlu (`content.coach`) veri ve model yaniti yoksa gosterilen son care
+ * metinler. Koc her derste acilabildigi icin bunlar DERS-BAGIMSIZ olmak
+ * zorundadir: matematik varsayan somut bir ornek Turkce paragraf veya tarih
+ * sorusunda anlamsiz gorunur. Bu yuzden metinler yontem duzeyinde kalir,
+ * hicbir alana ozgu islem/birim/nesne icermez.
+ */
 const FALLBACKS: Record<Exclude<CoachHintStage, 'solution'>, string> = {
-  hint1: 'Olası odak: verilenlerle istenen arasındaki ilişkiyi kurarken bir adım atlanmış olabilir. İlk ipucu: verilenleri ve senden isteneni iki ayrı liste halinde yaz.',
-  hint2: 'İstenen büyüklüğe ulaşan bağıntıyı kur; henüz işlem sonucuna gitme.',
-  hint3: 'Küçük örnek: 3 kutuda eşit sayıda toplam 12 nesne varsa, her kutudaki sayıyı bulmak için 12’yi 3’e bölüp 4 bulursun. Şimdi kendi sorunda aynı ilişkiyi farklı verilenlerle kur.',
+  hint1: 'Olası odak: verilenlerle istenen arasındaki ilişkiyi kurarken bir adım atlanmış olabilir. İlk ipucu: soruda verilenleri ve senden tam olarak ne istendiğini iki ayrı liste halinde yaz.',
+  hint2: 'Verilenlerden istenene götüren bağlantıyı adlandır; henüz sonuca gitme. Hangi bilgi hangi bilgiyi açıyor, onu belirle.',
+  hint3: 'Aynı yöntemi daha küçük ve tanıdık bir örnekte dene: benzer bir soruyu adım adım çözdüğünü düşün, hangi adımı önce yaptığını not et. Sonra aynı sırayı kendi sorunda uygula.',
 }
 
 export function fallbackHint(stage: Exclude<CoachHintStage, 'solution'>): string {
