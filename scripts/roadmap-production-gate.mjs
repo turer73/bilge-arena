@@ -83,7 +83,13 @@ FROM (VALUES
   ('104', to_regclass('public.paper_study_packs') IS NOT NULL),
   ('105', to_regclass('public.teacher_classrooms') IS NOT NULL),
   ('106', to_regclass('public.question_content_revisions') IS NOT NULL
-          AND to_regclass('public.verified_attempt_question_revisions') IS NOT NULL)
+          AND to_regclass('public.verified_attempt_question_revisions') IS NOT NULL),
+  ('107', EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.questions'::regclass
+      AND conname = 'questions_ai_gemini_tyt_exam_ref_check'
+  ))
 ) AS checks(migration, present)
 ORDER BY migration;
 `
@@ -120,6 +126,66 @@ SELECT
 FROM classified;
 `
 
+const invalidQuestionDetailSql = `
+WITH normalized AS (
+  SELECT
+    id,
+    external_id,
+    game,
+    category,
+    topic,
+    source,
+    exam_ref,
+    is_active,
+    jsonb_typeof(content->'options') AS options_type,
+    CASE WHEN jsonb_typeof(content->'options')='array'
+         THEN jsonb_array_length(content->'options') END AS option_count,
+    jsonb_typeof(content->'answer') AS answer_type,
+    content->'answer' AS answer_value,
+    CASE WHEN jsonb_typeof(content->'answer')='number'
+                   AND (content->>'answer') ~ '^[0-9]+$'
+         THEN (content->>'answer')::integer END AS answer_index,
+    left(content->>'question', 160) AS question_preview
+  FROM public.questions
+), classified AS (
+  SELECT *,
+    options_type IS DISTINCT FROM 'array'
+      OR option_count NOT BETWEEN 2 AND 5
+      OR answer_type IS DISTINCT FROM 'number'
+      OR answer_index IS NULL
+      OR answer_index NOT BETWEEN 0 AND 4
+      OR answer_index >= option_count AS invalid
+  FROM normalized
+)
+SELECT id, external_id, game, category, topic, source, exam_ref, is_active,
+       answer_type, answer_value, option_count, question_preview
+FROM classified
+WHERE invalid
+ORDER BY id
+LIMIT 100;
+`
+
+const geminiTytExamRefCountsSql = `
+SELECT COALESCE(exam_ref, 'NULL') AS exam_ref, count(*) AS question_count
+FROM public.questions
+WHERE source = 'ai_gemini_tyt'
+GROUP BY COALESCE(exam_ref, 'NULL')
+ORDER BY exam_ref;
+`
+
+const activeFenBiyolojiCountsSql = `
+SELECT
+  COALESCE(exam_ref, 'NULL') AS exam_ref,
+  COALESCE(source, 'NULL') AS source,
+  count(*) AS question_count
+FROM public.questions
+WHERE is_active = true
+  AND game = 'fen'
+  AND category = 'biyoloji'
+GROUP BY COALESCE(exam_ref, 'NULL'), COALESCE(source, 'NULL')
+ORDER BY exam_ref, source;
+`
+
 const project = await request(`/v1/projects/${PROJECT_REF}`)
 const backups = await optionalRequest(`/v1/projects/${PROJECT_REF}/database/backups`)
 const pooler = await optionalRequest(`/v1/projects/${PROJECT_REF}/config/database/pooler`)
@@ -142,6 +208,9 @@ if (present.get('091')) {
 }
 
 const questionPreflight = rowsOf(await query(questionPreflightSql))[0] ?? null
+const invalidQuestionDetail = rowsOf(await query(invalidQuestionDetailSql))
+const geminiTytExamRefCounts = rowsOf(await query(geminiTytExamRefCountsSql))
+const activeFenBiyolojiCounts = rowsOf(await query(activeFenBiyolojiCountsSql))
 
 const sanitizedPooler = pooler.ok && Array.isArray(pooler.value)
   ? pooler.value.map((entry) => ({
@@ -181,4 +250,7 @@ console.log(JSON.stringify({
   rawFingerprintShape: fingerprints.length ? undefined : fingerprintsResult,
   activeVerifiedAttempts,
   questionPreflight,
+  invalidQuestionDetail,
+  geminiTytExamRefCounts,
+  activeFenBiyolojiCounts,
 }, null, 2))
