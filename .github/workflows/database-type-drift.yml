@@ -31,3 +31,20 @@ jobs:
 
       - name: Compare generated types with production schema
         run: npm run db:types:check
+
+  roadmap-production-audit:
+    name: Roadmap production audit
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: lvnmzdowhfzmpkueurih
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Run read-only production gates
+        run: node scripts/roadmap-production-gate.mjs audit
