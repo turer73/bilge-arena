@@ -192,7 +192,7 @@ export type RevealRoundActionBody = z.infer<typeof revealRoundActionSchema>
 // =============================================================================
 // Codex P3 #5 fix: kategori whitelist (UI dropdown ile tek kaynak). Backend
 // herhangi bir string kabul etmemeli — kotuniyetli/eski client farkli kategori
-// gonderemez. 2026-05-03 fix: DB taxonomy ile uyumlu 18 alt-kategori
+// gonderemez. 2026-08-10 fix: DB taxonomy ile uyumlu 19 alt-kategori
 // (questions tablosundaki gercek category degerleri).
 export const QUICK_PLAY_CATEGORIES = [
   // Türkçe
@@ -202,7 +202,7 @@ export const QUICK_PLAY_CATEGORIES = [
   // Fen
   'fizik', 'kimya', 'biyoloji',
   // Sosyal
-  'tarih', 'cografya', 'felsefe', 'sosyoloji',
+  'tarih', 'cografya', 'felsefe', 'sosyoloji', 'din_kulturu',
 ] as const
 
 /** Kategori → ders ayrımı (UI optgroup için, RoomInfoPanel display için ortak kaynak) */
@@ -232,6 +232,7 @@ export const CATEGORY_GROUPS = [
     { value: 'cografya', label: 'Coğrafya' },
     { value: 'felsefe', label: 'Felsefe' },
     { value: 'sosyoloji', label: 'Sosyoloji' },
+    { value: 'din_kulturu', label: 'Din Kültürü' },
   ]},
 ] as const
 

@@ -5,6 +5,8 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  CATEGORY_GROUPS,
+  QUICK_PLAY_CATEGORIES,
   createRoomSchema,
   joinRoomSchema,
   submitAnswerSchema,
@@ -145,16 +147,26 @@ describe('quickPlayRoomActionSchema (Sprint 2B Task 4 + Codex P3 #5 fix)', () =>
     }
   })
 
-  it('4) Codex P3 #5: tum 18 DB alt-kategori kabul edilir', () => {
+  it('4) Codex P3 #5: tum 19 DB alt-kategori kabul edilir', () => {
     const validCategories = [
       'paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari',
       'geometri', 'problemler', 'sayilar', 'denklemler', 'fonksiyonlar', 'olasilik',
       'fizik', 'kimya', 'biyoloji',
-      'tarih', 'cografya', 'felsefe', 'sosyoloji',
+      'tarih', 'cografya', 'felsefe', 'sosyoloji', 'din_kulturu',
     ]
     for (const cat of validCategories) {
       const r = quickPlayRoomActionSchema.safeParse({ category: cat })
       expect(r.success).toBe(true)
+    }
+  })
+
+  it('sosyal quick-play secenekleri whitelist ile birebir kalir', () => {
+    const sosyal = CATEGORY_GROUPS.find((group) => group.game === 'sosyal')
+    expect(sosyal?.categories.map((category) => category.value)).toEqual([
+      'tarih', 'cografya', 'felsefe', 'sosyoloji', 'din_kulturu',
+    ])
+    for (const category of sosyal?.categories ?? []) {
+      expect(QUICK_PLAY_CATEGORIES).toContain(category.value)
     }
   })
 
