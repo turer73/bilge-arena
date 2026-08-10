@@ -84,6 +84,16 @@ export async function POST(request: Request) {
       if ((error as Error).message === 'verified_attempt_snapshot_denied') {
         return NextResponse.json({ error: 'Deneme dogrulanamadi' }, { status: 403 })
       }
+      if ((error as Error).message === 'verified_attempt_snapshot_unavailable') {
+        console.error(
+          '[/api/questions/grade] altyapi hatasi, snapshot okunamadi:',
+          (error as Error).cause,
+        )
+        return NextResponse.json(
+          { error: 'Notlandırma geçici olarak kullanılamıyor. Birazdan tekrar dene.' },
+          { status: 503, headers: { 'Retry-After': '15' } },
+        )
+      }
       console.error('[/api/questions/grade] attempt snapshot sorgu hatasi')
       return NextResponse.json(
         { error: 'Notlandirma su anda kullanilamiyor' },

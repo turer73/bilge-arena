@@ -312,6 +312,25 @@ describe('POST /api/questions/grade', () => {
     expect(mockQuestionQuery).not.toHaveBeenCalled()
   })
 
+  it('altyapi kusurunda 403 degil yeniden denenebilir 503 doner', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
+    mockReadSnapshots.mockRejectedValueOnce(
+      Object.assign(new Error('verified_attempt_snapshot_unavailable'), { cause: 'PGRST202' }),
+    )
+
+    const res = await POST(request({
+      questionId: QUESTION_ID,
+      selectedOption: 2,
+      attemptId: ATTEMPT_ID,
+    }))
+
+    expect(res.status).toBe(503)
+    expect(res.headers.get('Retry-After')).toBe('15')
+    expect(await res.json()).toEqual({
+      error: 'Notlandırma geçici olarak kullanılamıyor. Birazdan tekrar dene.',
+    })
+  })
+
   it('returns a generic 500 when attempt verification fails', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
     mockReadSnapshots.mockRejectedValue(new Error('verified_attempt_snapshot_read_failed'))

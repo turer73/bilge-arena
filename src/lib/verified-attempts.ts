@@ -253,6 +253,22 @@ export async function issueVerifiedExamAttempt(
   }, parsed.data.snapshot.items)
 }
 
+/**
+ * Gecici altyapi kusurlari — hicbiri kullanicinin denemesiyle ilgili degil.
+ * PGRST202 bunlarin en sinsisi: migration sonrasi PostgREST sema onbellegi
+ * tazelenmediginde RPC "yok" gorunur, istek 500'e duser ve sebep loglanmadigi
+ * icin teshis edilemez. Kod loga yazilir, istemciye sizmaz.
+ */
+const INFRA_ERROR_CODES = new Set([
+  'PGRST202', // RPC sema onbelleginde bulunamadi -> NOTIFY pgrst, 'reload schema'
+  'PGRST301', // JWT dogrulanamadi / suresi doldu
+  '08003', '08006', // baglanti kopmasi
+  '53300', // too_many_connections
+  '57P03', // cannot_connect_now (DB aciliyor)
+  '57014', // statement timeout
+  '40001', '40P01', // serialization failure / deadlock — yeniden denenebilir
+])
+
 export async function readVerifiedAttemptQuestionSnapshots(
   admin: SupabaseClient<Database>,
   input: { attemptId: string; userId: string; requireActive?: boolean },
@@ -275,8 +291,15 @@ export async function readVerifiedAttemptQuestionSnapshots(
     throw new Error('verified_attempt_snapshot_read_failed')
   }
   if (result.error) {
-    if (['P0002', '42501', '22023'].includes(result.error.code ?? '')) {
+    const code = result.error.code ?? ''
+    if (['P0002', '42501', '22023'].includes(code)) {
       throw new Error('verified_attempt_snapshot_denied')
+    }
+    if (INFRA_ERROR_CODES.has(code)) {
+      // Altyapi kusuru yetki reddi DEGILDIR: 403 vermek "denemen gecersiz" der ve
+      // ogrenci ilerlemesini bosuna kaybettigini sanir. Ayri sinif olarak firlat;
+      // cagiran 503 + Retry-After ile yeniden denenebilir oldugunu bildirir.
+      throw Object.assign(new Error('verified_attempt_snapshot_unavailable'), { cause: code })
     }
     throw new Error('verified_attempt_snapshot_read_failed')
   }

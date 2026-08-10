@@ -237,6 +237,40 @@ describe('verified attempts helper', () => {
     })).rejects.toThrow('verified_attempt_snapshot_denied')
   })
 
+  // PGRST202 = RPC sema onbelleginde yok (migration sonrasi reload edilmemis).
+  // Yetki reddi degil altyapi kusuru: 403'e esleseydi ogrenciye "denemen
+  // gecersiz" derdik. Ayri sinif + kod, cagiranin 503 dondurmesini saglar.
+  it.each(['PGRST202', 'PGRST301', '57P03', '53300', '40001', '57014'])(
+    'altyapi kodu %s icin yetki reddinden ayri sinif firlatir',
+    async (code) => {
+      rpc.mockResolvedValue({ data: null, error: { code, message: 'private detail' } })
+      await expect(readVerifiedAttemptQuestionSnapshots(admin, {
+        attemptId: ATTEMPT_ID,
+        userId: '30000000-0000-4000-8000-000000000001',
+      })).rejects.toThrow('verified_attempt_snapshot_unavailable')
+    },
+  )
+
+  it('altyapi hatasinda kodu teshis icin cause olarak tasir, mesaji sizdirmaz', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'private detail' } })
+    // Mesaj koda birebir esit: DB detayinin sizmadigini da kanitlar.
+    await expect(readVerifiedAttemptQuestionSnapshots(admin, {
+      attemptId: ATTEMPT_ID,
+      userId: '30000000-0000-4000-8000-000000000001',
+    })).rejects.toMatchObject({
+      message: 'verified_attempt_snapshot_unavailable',
+      cause: 'PGRST202',
+    })
+  })
+
+  it('bilinmeyen kodu genel okuma hatasi olarak birakir', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'XX999', message: 'private detail' } })
+    await expect(readVerifiedAttemptQuestionSnapshots(admin, {
+      attemptId: ATTEMPT_ID,
+      userId: '30000000-0000-4000-8000-000000000001',
+    })).rejects.toThrow('verified_attempt_snapshot_read_failed')
+  })
+
   // Regresyon: supabase-js'in rpc gövdesi this.url/this.headers/this.fetch okur.
   // Metodu bağlamadan çıkarmak üretimde TypeError firlatiyordu; istek hiç
   // gönderilmediği için hata sessizce 500'e dönüşüyordu. Düz vi.fn() mock'u bu

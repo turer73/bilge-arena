@@ -37,7 +37,9 @@ export default function AdminQuestionsPage() {
   const fetchQuestions = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ page: String(page), limit: '20' })
+      // admin_view=1 admin projeksiyonunu (pasif sorular + cevap anahtari) acikca
+      // ister. Parametresiz cagrilar oyun yuzeyi sayilir ve bilet alir (#1530).
+      const params = new URLSearchParams({ page: String(page), limit: '20', admin_view: '1' })
       if (filterGame !== 'all') params.set('game', filterGame)
       if (filterActive === 'active') params.set('active', 'true')
       if (filterActive === 'inactive') params.set('active', 'false')
