@@ -90,7 +90,7 @@ export async function POST(request: Request) {
           (error as Error).cause,
         )
         return NextResponse.json(
-          { error: 'Notlandirma gecici olarak kullanilamiyor. Birazdan tekrar dene.' },
+          { error: 'Notlandırma geçici olarak kullanılamıyor. Birazdan tekrar dene.' },
           { status: 503, headers: { 'Retry-After': '15' } },
         )
       }

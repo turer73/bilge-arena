@@ -327,7 +327,7 @@ describe('POST /api/questions/grade', () => {
     expect(res.status).toBe(503)
     expect(res.headers.get('Retry-After')).toBe('15')
     expect(await res.json()).toEqual({
-      error: 'Notlandirma gecici olarak kullanilamiyor. Birazdan tekrar dene.',
+      error: 'Notlandırma geçici olarak kullanılamıyor. Birazdan tekrar dene.',
     })
   })
 

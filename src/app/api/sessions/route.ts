@@ -122,7 +122,7 @@ export async function POST(request: Request) {
         (error as Error).cause,
       )
       return NextResponse.json(
-        { error: 'Oturum gecici olarak kaydedilemiyor. Birazdan tekrar dene.' },
+        { error: 'Oturum geçici olarak kaydedilemiyor. Birazdan tekrar dene.' },
         { status: 503, headers: { 'Retry-After': '15' } },
       )
     }
