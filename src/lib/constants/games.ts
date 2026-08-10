@@ -46,11 +46,11 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
   sosyal: {
     slug: 'sosyal',
     name: 'Sosyal Bilimler',
-    description: 'Tarih, coğrafya, felsefe ve sosyoloji',
+    description: 'Tarih, coğrafya, felsefe, sosyoloji ve din kültürü',
     color: 'wisdom',
     colorHex: '#7C3AED',
     icon: 'globe',
-    categories: ['tarih', 'cografya', 'felsefe', 'sosyoloji'],
+    categories: ['tarih', 'cografya', 'felsefe', 'sosyoloji', 'din_kulturu'],
     examTags: ['TYT', 'AYT-SOZ', 'LGS'],
   },
   wordquest: {
@@ -97,6 +97,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   cografya: 'Coğrafya',
   felsefe: 'Felsefe',
   sosyoloji: 'Sosyoloji',
+  din_kulturu: 'Din Kültürü',
   // ingilizce — orijinal terimler korundu (pedagojik)
   vocabulary: 'Vocabulary',
   grammar: 'Grammar',

@@ -36,13 +36,13 @@ describe('QuickPlayPanel', () => {
     ).toBeInTheDocument()
   })
 
-  test('2) 18 alt-kategori secenegi var (DB taxonomy ile uyumlu)', () => {
+  test('2) 19 alt-kategori secenegi var (DB taxonomy ile uyumlu)', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const { container } = render(<QuickPlayPanel />)
     const options = container.querySelectorAll(
       'select[name="category"] option',
     )
-    expect(options).toHaveLength(18)
+    expect(options).toHaveLength(19)
   })
 
   test('3) default kategori = paragraf (zengin kategori)', () => {
@@ -116,7 +116,7 @@ describe('QuickPlayPanel', () => {
     expect(select.getAttribute('aria-invalid')).toBe('true')
   })
 
-  test('9) Codex P3 #5: kategori secenekleri Zod whitelist ile birebir (18 DB alt-kategori)', () => {
+  test('9) Codex P3 #5: kategori secenekleri Zod whitelist ile birebir (19 DB alt-kategori)', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     const { container } = render(<QuickPlayPanel />)
     const options = container.querySelectorAll<HTMLOptionElement>(
@@ -130,8 +130,8 @@ describe('QuickPlayPanel', () => {
       'geometri', 'problemler', 'sayilar', 'denklemler', 'fonksiyonlar', 'olasilik',
       // Fen (3)
       'fizik', 'kimya', 'biyoloji',
-      // Sosyal (4)
-      'tarih', 'cografya', 'felsefe', 'sosyoloji',
+      // Sosyal (5)
+      'tarih', 'cografya', 'felsefe', 'sosyoloji', 'din_kulturu',
     ])
   })
 })

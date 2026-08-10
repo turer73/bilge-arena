@@ -26,8 +26,8 @@ const GAME_META: Record<GameSlug, { title: string; description: string; keywords
   },
   sosyal: {
     title: 'Sosyal Bilimler Soruları — TYT · LGS Sosyal',
-    description: 'Tarih, coğrafya, felsefe ve sosyoloji soruları. TYT ve LGS Sosyal Bilimler konularıyla antrenman yap!',
-    keywords: ['TYT Sosyal', 'LGS sosyal bilimler', 'tarih soruları', 'coğrafya soruları', 'felsefe soruları'],
+    description: 'Tarih, coğrafya, felsefe, sosyoloji ve din kültürü soruları. TYT ve LGS Sosyal Bilimler konularıyla antrenman yap!',
+    keywords: ['TYT Sosyal', 'LGS sosyal bilimler', 'tarih soruları', 'coğrafya soruları', 'felsefe soruları', 'din kültürü soruları'],
   },
   wordquest: {
     title: 'İngilizce Soruları — YDT İngilizce',
