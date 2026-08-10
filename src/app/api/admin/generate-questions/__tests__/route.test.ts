@@ -193,6 +193,38 @@ describe('POST /api/admin/generate-questions — level_tag passthrough', () => {
     expect(payload[0].level_tag).toBeNull()
   })
 
+  it('din_kulturu: kanonik etiket ve sınav konu rehberi prompta eklenir', async () => {
+    const { GET, POST } = await import('../route')
+    const topicsResponse = await GET(new Request(
+      'http://localhost/api/admin/generate-questions?game=sosyal&category=din_kulturu',
+    ))
+    expect(topicsResponse.status).toBe(200)
+    const topicPayload = await topicsResponse.json() as { topics: string[] }
+    expect(topicPayload.topics).toEqual(expect.arrayContaining([
+      'Bilgi ve İnanç',
+      'Kader İnancı',
+      'Zekât ve Sadaka',
+    ]))
+
+    const response = await POST(makePostBody({
+      game: 'sosyal',
+      category: 'din_kulturu',
+      difficulty: 2,
+      count: 1,
+    }))
+    expect(response.status).toBe(200)
+    const sentBody = fetchCalls[0].body as {
+      system_instruction?: { parts?: Array<{ text?: string }> }
+      contents?: Array<{ parts?: Array<{ text?: string }> }>
+    }
+    const fullPrompt = [
+      sentBody.system_instruction?.parts?.[0]?.text,
+      sentBody.contents?.[0]?.parts?.[0]?.text,
+    ].filter(Boolean).join('\n')
+    expect(fullPrompt).toContain('Din Kültürü')
+    expect(fullPrompt).toMatch(/Bilgi ve İnanç|Kader İnancı/)
+  })
+
   it('gecersiz level_tag (D1) 400 doner — sema check', async () => {
     const { POST } = await import('../route')
     const res = await POST(makePostBody({

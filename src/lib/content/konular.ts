@@ -51,12 +51,12 @@ export const SUBJECT_CONTENT: Record<GameSlug, SubjectContent> = {
     keywords: ['tyt fen', 'ayt fizik', 'kimya soru', 'biyoloji'],
   },
   sosyal: {
-    tagline: 'TYT Sosyal ve AYT Sözel: Tarih, Coğrafya, Felsefe',
+    tagline: 'TYT Sosyal, AYT Sözel ve LGS: Tarih, Coğrafya, Felsefe, Din Kültürü',
     intro:
-      'Sosyal Bilimler konsolu tarih, coğrafya, felsefe ve sosyolojiyi kapsar. TYT\'de net yükseltmek için verimli, AYT-Sözel için belirleyici bir alandır.',
+      'Sosyal Bilimler konsolu tarih, coğrafya, felsefe, sosyoloji ve din kültürünü kapsar. TYT ve LGS\'de net yükseltmek için verimli, AYT-Sözel için belirleyici bir alandır.',
     studyTip:
       'Tarihte kronoloji ve neden-sonuç ilişkisi, coğrafyada harita yorumu, felsefede akım-düşünür eşleştirmesi anahtardır. Düzenli aralıklı tekrar unutmayı belirgin biçimde azaltır.',
-    keywords: ['tyt sosyal', 'tarih soruları', 'coğrafya', 'felsefe'],
+    keywords: ['tyt sosyal', 'lgs din kültürü', 'tarih soruları', 'coğrafya', 'felsefe'],
   },
   wordquest: {
     tagline: 'YDT İngilizce: Vocabulary, Grammar ve Reading hazırlık',
