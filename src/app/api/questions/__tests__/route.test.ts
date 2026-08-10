@@ -216,17 +216,77 @@ describe('GET /api/questions', () => {
     )
   })
 
-  it('admin ise admin_view=true gecilir (pasif sorulari da goster)', async () => {
+  it('admin admin_view=1 isteyince admin_view=true gecilir (pasif sorulari da goster)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } })
     mockCheckAdmin.mockResolvedValue({ id: 'admin-1' })
     mockRpc.mockResolvedValue({ data: [], error: null })
 
-    await GET(makeGet('http://localhost/api/questions'))
+    await GET(makeGet('http://localhost/api/questions?admin_view=1'))
 
     expect(mockRpc).toHaveBeenCalledWith(
       'search_questions',
       expect.objectContaining({ admin_view: true }),
     )
+  })
+
+  it('admin admin_view gondermeden oynarsa bilet alir (kesif #1530)', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } })
+    mockCheckAdmin.mockResolvedValue({ id: 'admin-1' })
+    mockRpc.mockResolvedValue({
+      data: [{
+        id: VALID_QID,
+        game: 'matematik',
+        category: 'cebir',
+        subcategory: null,
+        topic: null,
+        difficulty: 2,
+        level_tag: null,
+        content: { question: '2+2?', options: ['3', '4'], answer: 1 },
+        total_count: 1,
+      }],
+      error: null,
+    })
+
+    const res = await GET(makeGet(
+      'http://localhost/api/questions?game=matematik&active=true&limit=3',
+    ))
+    const body = await res.json()
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'search_questions',
+      expect.objectContaining({ admin_view: false }),
+    )
+    expect(body.attemptId).toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
+    // Oyun yuzeyinde admin de public projeksiyon alir: cevap anahtari sizmaz.
+    expect(body.questions[0].content).toEqual({ question: '2+2?', options: ['3', '4'] })
+  })
+
+  it('non-admin admin_view=1 gonderse bile public projeksiyon alir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockCheckAdmin.mockResolvedValue(null)
+    mockRpc.mockResolvedValue({
+      data: [{
+        id: VALID_QID,
+        game: 'matematik',
+        category: 'cebir',
+        subcategory: null,
+        topic: null,
+        difficulty: 2,
+        level_tag: null,
+        content: { question: '2+2?', options: ['3', '4'], answer: 1, solution: 'Dort.' },
+        total_count: 1,
+      }],
+      error: null,
+    })
+
+    const res = await GET(makeGet('http://localhost/api/questions?admin_view=1'))
+    const body = await res.json()
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      'search_questions',
+      expect.objectContaining({ admin_view: false }),
+    )
+    expect(body.questions[0].content).toEqual({ question: '2+2?', options: ['3', '4'] })
   })
 
   it('admin yanitinda Cache-Control private, no-store (CDN admin datasini cachelemesin)', async () => {

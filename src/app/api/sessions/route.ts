@@ -116,6 +116,16 @@ export async function POST(request: Request) {
     if ((error as Error).message === 'verified_attempt_snapshot_denied') {
       return NextResponse.json({ error: 'Deneme dogrulanamadi' }, { status: 403 })
     }
+    if ((error as Error).message === 'verified_attempt_snapshot_unavailable') {
+      console.error(
+        '[Sessions API] altyapi hatasi, snapshot okunamadi:',
+        (error as Error).cause,
+      )
+      return NextResponse.json(
+        { error: 'Oturum gecici olarak kaydedilemiyor. Birazdan tekrar dene.' },
+        { status: 503, headers: { 'Retry-After': '15' } },
+      )
+    }
     console.error('[Sessions API] verified snapshot sorgu hatasi')
     return NextResponse.json({ error: 'Oturum kaydedilemedi' }, { status: 500 })
   }

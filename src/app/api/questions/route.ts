@@ -62,15 +62,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Gecersiz oyun adi' }, { status: 400 })
   }
 
-  // Admin pasif sorulari da gorsun (RPC icinde admin_view bayragi ile kontrollu)
+  // Admin projeksiyonu (pasif sorular + ham icerik + cevap anahtari) ACIK TALEBE
+  // baglidir; yalnizca rol yetmez. Onceden kosul salt rol bazliydi ve admin oyun
+  // oynarken de admin daline dusuyor, bilet kesilmiyor, grade 403 donuyordu
+  // (kesif #1530). Rol kontrolu kalkmiyor: non-admin bu parametreyi gonderse bile
+  // public projeksiyon alir.
   const isAdmin = await checkAdmin(supabase)
+  const adminProjection = !!isAdmin && searchParams.get('admin_view') === '1'
 
   // Accent-insensitive arama: "cozum" -> "çözüm" (migration 026 RPC)
   // total_count pencere fonksiyonu ile RPC icinden geliyor.
   const activeFilter = active === 'true' ? true : active === 'false' ? false : null
 
   const searchArgs: SearchQuestionsArgs = {
-    admin_view: !!isAdmin,
+    admin_view: adminProjection,
     result_offset: offset,
     result_limit: limit,
   }
@@ -92,7 +97,7 @@ export async function GET(request: NextRequest) {
   }
 
   const rawRows = rows ?? []
-  let data: Array<{ id: string }> = isAdmin
+  let data: Array<{ id: string }> = adminProjection
     ? rawRows.map(({ total_count: _tc, ...rest }) => rest)
     : rawRows.flatMap((row) => {
         const content = parseQuestionContent(row.content)
@@ -113,7 +118,7 @@ export async function GET(request: NextRequest) {
 
   let attemptId: string | null = null
   let expiresAt: string | null = null
-  if (user && !isAdmin && game && activeFilter === true && data.length > 0) {
+  if (user && !adminProjection && game && activeFilter === true && data.length > 0) {
     try {
       const ticket = await issueVerifiedAttempt(createServiceRoleClient(), {
         userId: user.id,
