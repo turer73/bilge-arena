@@ -43,6 +43,14 @@ describe('games sabitleri kontratları', () => {
     expect(getCategoryLabel('foo')).toBe('Foo')
   })
 
+  it('din_kulturu kategorisi sosyal oyunda yer alır (regresyon testi)', () => {
+    // 2026-08-10 keşif #1515: DB'de 13 LGS Din Kültürü sorusu vardı ama kanonik
+    // listede karşılığı yoktu; kategori filtresiyle hiç erişilemiyorlardı.
+    // Sosyoloji vakasının (2026-04-26) aynısı — bu sefer LGS tarafında.
+    expect(GAMES.sosyal.categories).toContain('din_kulturu')
+    expect(CATEGORY_LABELS.din_kulturu).toBe('Din Kültürü')
+  })
+
   it('sosyoloji kategorisi sosyal oyunda yer alır (regresyon testi)', () => {
     // 2026-04-26: DB'de 13 sosyoloji sorusu vardı ama AI generator topic listesi
     // bu kategoriye sahip değildi; yeni eklenen sosyoloji kategorisinin sürdürülmesi.
