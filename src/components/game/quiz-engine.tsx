@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useGameStore } from '@/stores/game-store'
 import { useAuthStore } from '@/stores/auth-store'
@@ -84,6 +84,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // "Bugunun 15'i" plani oynanirken true. Plan, yalnizca dogrulanmis oturum
   // basariyla kaydedilince tamamlanir; lobby'ye donunce sifirlanir.
   const planActiveRef = useRef(false)
+  const directPlanStartConsumedRef = useRef(false)
 
   // --- Custom hooks ---
   const quizLimit = useQuizLimit()
@@ -149,6 +150,92 @@ export function QuizEngine({ game }: QuizEngineProps) {
     plannedCount: quizStore.questions.length,
   })
 
+  const startTodayPlan = useCallback(() => {
+    if (personalizedMock.loading) return false
+    const plan = todayPlan.plan
+    if (!plan || plan.questions.length === 0) return false
+    if (!quizLimit.canPlay) {
+      setShowPremiumModal(true)
+      return true
+    }
+
+    const completedIds = new Set(plan.completedIds)
+    const remainingQuestions = plan.questions.filter((question) => !completedIds.has(question.id))
+    // Tamamlanan planda "Tekrar Çöz" tüm seti; kısmi planda "Devam Et" yalnız kalanı açar.
+    const questionsToStart = remainingQuestions.length > 0 ? remainingQuestions : plan.questions
+
+    trackEvent('UserQuizStart', {
+      props: {
+        game,
+        mode: 'practice',
+        category: 'all',
+        difficulty: 'all',
+        exam_ref: plan.examRef ?? gameStore.selectedExamRef ?? defaultExamRefForType(profile?.exam_type) ?? 'all',
+      },
+    })
+    trackLearningEvent('LearningPlanStarted', {
+      game,
+      planSize: plan.questions.length,
+      completedBefore: plan.completedIds.length,
+      examRef: plan.examRef,
+    })
+    gameStore.setMode('practice')
+    gameStore.setCategory(null)
+    gameStore.setDifficulty(null)
+    gameStore.setExamRef(plan.examRef ?? gameStore.selectedExamRef ?? defaultExamRefForType(profile?.exam_type))
+    planActiveRef.current = true
+    setVerifiedExamAttemptId(null)
+    quiz.handleStartPlanned(questionsToStart, plan.attemptId)
+    return true
+  }, [
+    game,
+    gameStore,
+    personalizedMock.loading,
+    profile?.exam_type,
+    quiz,
+    quizLimit.canPlay,
+    todayPlan.plan,
+  ])
+
+  // Ders Çalış CTA'sından gelen tek-kullanımlık niyeti, doğrulanmış plan bileti
+  // yüklendikten sonra mevcut güvenli başlatma yoluna bağla. URL hemen temizlenir;
+  // geri/yenile ve StrictMode aynı planı ikinci kez başlatamaz.
+  useEffect(() => {
+    if (
+      directPlanStartConsumedRef.current
+      || quiz.screen !== 'lobby'
+      || todayPlan.loading
+      || personalizedMock.loading
+      || typeof window === 'undefined'
+    ) return
+
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('start') !== 'today-plan') return
+
+    directPlanStartConsumedRef.current = true
+    url.searchParams.delete('start')
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${url.pathname}${url.search}${url.hash}`,
+    )
+
+    if (!todayPlan.plan || todayPlan.plan.questions.length === 0) {
+      toast.error('Bugünün planı yüklenemedi. Ders lobisinden tekrar deneyebilirsin.')
+      return
+    }
+    // Effect gövdesindeki senkron React state güncellemesini ertele. Bu iş kasıtlı
+    // olarak cleanup'ta iptal edilmez: StrictMode'un ilk deneme cleanup'ı URL
+    // niyetini tükettiği için ikinci effect aynı başlangıcı yeniden planlayamaz.
+    queueMicrotask(() => startTodayPlan())
+  }, [
+    personalizedMock.loading,
+    quiz.screen,
+    startTodayPlan,
+    todayPlan.loading,
+    todayPlan.plan,
+  ])
+
   // Lobiye donulunce plan-aktif bayragini sifirla (handleRestart'in TUM
   // cagri-noktalarini (result/deneme-result/misafir-CTA) tek tek sarmalamak
   // yerine screen-gecisine bagli -- use-session-saver'daki savedRef reset
@@ -175,35 +262,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
               paperHref={isPaperModeUiEnabled() && todayPlan.plan
                 ? paperPackCreateHref(game, todayPlan.plan.examRef ?? gameStore.selectedExamRef)
                 : null}
-              onStart={() => {
-                if (personalizedMock.loading) return
-                if (!todayPlan.plan || todayPlan.plan.questions.length === 0) return
-                if (!quizLimit.canPlay) {
-                  setShowPremiumModal(true)
-                  return
-                }
-                trackEvent('UserQuizStart', {
-                  props: {
-                    game,
-                    mode: 'practice',
-                    category: 'all',
-                    difficulty: 'all',
-                    exam_ref: gameStore.selectedExamRef ?? defaultExamRefForType(profile?.exam_type) ?? 'all',
-                  },
-                })
-                trackLearningEvent('LearningPlanStarted', {
-                  game,
-                  planSize: todayPlan.plan.questions.length,
-                  completedBefore: todayPlan.plan.completedIds.length,
-                  examRef: todayPlan.plan.examRef,
-                })
-                gameStore.setMode('practice')
-                gameStore.setCategory(null)
-                gameStore.setDifficulty(null)
-                planActiveRef.current = true
-                setVerifiedExamAttemptId(null)
-                quiz.handleStartPlanned(todayPlan.plan.questions, todayPlan.plan.attemptId)
-              }}
+              onStart={startTodayPlan}
             />
             <PersonalizedMockCard
               loading={personalizedMock.loading}

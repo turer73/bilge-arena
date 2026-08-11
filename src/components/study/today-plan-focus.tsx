@@ -1,9 +1,11 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { GameSlug } from '@/lib/constants/games'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
 import { TodayPlanCard } from '@/components/game/today-plan-card'
+import { useGameStore } from '@/stores/game-store'
 import { isPaperModeUiEnabled, paperPackCreateHref } from '@/lib/paper-mode/client'
 
 interface TodayPlanFocusProps {
@@ -11,55 +13,82 @@ interface TodayPlanFocusProps {
   userId?: string | null
   examRef?: string | null
   selectedCategory?: string | null
+  showStickyMobileAction?: boolean
 }
 
-/**
- * Ders çalışma hub'ının TEK-ODAK CTA'sı — retrieval varsayılan-akış (araştırma 1:
- * "Bugün ne çalışmalıyım" tek-odak CTA, Sunsama günlük-planlama deseni).
- *
- * Görsel dil mevcut TodayPlanCard (quiz-engine lobisiyle aynı) — yeni bileşen
- * icat etmek yerine tekrar kullanılır. onStart burada quiz-engine akışını
- * DOĞRUDAN başlatmaz (hub sayfası quiz state'inden bağımsız) — ilgili oyunun
- * sayfasına yönlendirir; orada aynı plan zaten quiz-engine tarafından çekilip
- * gösterilir ve gerçek "Başlat" orada olur. Cross-page plan-state taşıma gibi
- * yeni bir mekanizma icat etmekten kaçınır (KISIT#7 — aşırı mühendislik yok).
- */
-export function TodayPlanFocus({ game, userId, examRef, selectedCategory }: TodayPlanFocusProps) {
+export function TodayPlanFocus({
+  game,
+  userId,
+  examRef,
+  selectedCategory,
+  showStickyMobileAction = false,
+}: TodayPlanFocusProps) {
   const router = useRouter()
+  const gameStore = useGameStore()
   const { plan, loading } = useTodayPlan(game, userId, examRef, selectedCategory)
 
   if (!userId) return null
 
-  // Plan boş (yetersiz soru havuzu vb.) — TodayPlanCard sessizce null döner,
-  // ama hub'ın tek-odak alanı boş kalmamalı (plandaki empty-state kuralı).
+  const openGame = () => {
+    gameStore.setGame(game)
+    gameStore.setExamRef(examRef ?? null)
+    gameStore.setCategory(null)
+    router.push(`/arena/${game}`)
+  }
+
   if (!loading && (!plan || plan.questions.length === 0)) {
+    const showDiagnostic = game === 'matematik' && examRef === 'TYT'
     return (
-      <div className="animate-fadeUp overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)]" style={{ animationDelay: '0.28s', animationFillMode: 'both' }}>
-        <div className="border-b border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2">
-          <span className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
-            BUGÜNÜN 15&apos;İ
+      <div
+        className="animate-fadeUp overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)]"
+        style={{ animationDelay: '0.28s', animationFillMode: 'both' }}
+      >
+        <div className="border-b border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
+          <span className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">
+            BUGÜNÜN PLANI
           </span>
         </div>
-        <div className="px-4 py-5 text-center">
-          <p className="mb-3 text-[12px] leading-relaxed text-[var(--text-sub)]">
-            Bugün için hazır bir plan yok. Derse başlayarak ilk planını oluştur.
+        <div className="px-4 py-6 text-center">
+          <p className="text-sm font-bold text-[var(--text)]">Bu bağlam için hazır plan bulunamadı</p>
+          <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-[var(--text-sub)]">
+            Derse girerek bir çalışma oturumu başlatabilir ve sonraki planını oluşturabilirsin.
           </p>
           <button
-            onClick={() => router.push(`/arena/${game}`)}
-            className="btn-primary rounded-[10px] px-6 py-2.5 text-xs font-bold tracking-wide transition-transform hover:scale-[1.02]"
+            type="button"
+            onClick={openGame}
+            className="btn-primary mt-4 min-h-12 rounded-xl px-6 text-sm font-bold tracking-wide"
           >
-            📝 İlk Planını Oluştur
+            Derse Başla
           </button>
+          {showDiagnostic && (
+            <Link
+              href="/arena/tani"
+              className="mx-auto mt-2 flex min-h-11 w-fit items-center px-3 text-xs font-bold text-[var(--focus-text)] hover:underline"
+            >
+              Önce 10 soruluk kısa tanılama yap
+            </Link>
+          )}
         </div>
       </div>
     )
+  }
+
+  const startPlan = () => {
+    if (!plan || plan.questions.length === 0) return
+    gameStore.setGame(game)
+    gameStore.setMode('practice')
+    gameStore.setCategory(null)
+    gameStore.setDifficulty(null)
+    gameStore.setExamRef(plan.examRef ?? examRef ?? null)
+    router.push(`/arena/${game}?start=today-plan`)
   }
 
   return (
     <TodayPlanCard
       plan={plan}
       loading={loading}
-      onStart={() => router.push(`/arena/${game}`)}
+      onStart={startPlan}
+      showStickyMobileAction={showStickyMobileAction}
       paperHref={isPaperModeUiEnabled() && plan
         ? paperPackCreateHref(game, plan.examRef ?? examRef)
         : null}

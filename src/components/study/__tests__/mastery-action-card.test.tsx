@@ -1,8 +1,3 @@
-/**
- * MasteryActionCard — aksiyon-odaklı mastery kartı (en-zayıf kazanım + pratik CTA).
- * Codecov patch-coverage: PR#278 review turu (dallar: bos / hepsi-mastered / CTA-akisi).
- */
-
 import { describe, test, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MasteryActionCard } from '../mastery-action-card'
@@ -24,7 +19,7 @@ function mkOutcome(overrides: Partial<MasteryOutcome> = {}): MasteryOutcome {
     code: 'MAT-SAY-01',
     nodeCode: 'ba-tyt-math-v1:outcome:sayilar',
     path: ['TYT Matematik', 'Sayılar ve Cebir', 'Sayılar', 'Sayılar ve işlem'],
-    title: 'Sayılar ve işlem becerisi (pilot)',
+    title: 'Sayılar ve işlem becerisi',
     description: null,
     game: 'matematik',
     category: 'sayilar',
@@ -57,45 +52,62 @@ describe('MasteryActionCard', () => {
   beforeEach(() => {
     pushMock.mockClear()
     mockedUseMasteryMap.mockReset()
+    useGameStore.setState({
+      selectedGame: null,
+      selectedMode: 'classic',
+      selectedCategory: null,
+      selectedDifficulty: null,
+      selectedExamRef: null,
+    })
   })
 
-  test('userId yok / loading / outcome bos ise render etmez', () => {
+  test('loading veya outcome yoksa render etmez', () => {
     mockedUseMasteryMap.mockReturnValue({ outcomes: [], loading: false } as never)
     const { container } = render(<MasteryActionCard game="matematik" userId="u1" />)
     expect(container.innerHTML).toBe('')
   })
 
-  test('tum kazanimlar mastered ise kutlama mesaji gosterir (CTA yok)', () => {
+  test('tüm kazanımlar mastered ise güçlü durumunu gösterir', () => {
     mockedUseMasteryMap.mockReturnValue({
       outcomes: [mkOutcome({ status: 'mastered', accuracy: 92, score: 92 })],
       loading: false,
     } as never)
     render(<MasteryActionCard game="matematik" userId="u1" />)
-    expect(screen.getByText(/ustalaştın/i)).toBeInTheDocument()
+    expect(screen.getByText('GÜÇLÜ')).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
-  test('en zayif kazanim secilir; CTA gameStore filtrelerini kurup oyuna yonlendirir', () => {
+  test('güvenilir developing kazanımı insufficient kanıttan önce next-best seçer', () => {
     mockedUseMasteryMap.mockReturnValue({
       outcomes: [
-        mkOutcome({ code: 'GUCLU', accuracy: 80, score: 80 }),
-        mkOutcome({ code: 'ZAYIF', title: 'Zayıf kazanım', accuracy: 20, score: 20 }),
+        mkOutcome({ code: 'KANIT', title: 'Yeni konu', status: 'insufficient', attempts: 2, evidenceCompleteness: 66 }),
+        mkOutcome({ code: 'GELISEN', title: 'Gelişen konu', status: 'developing', score: 32 }),
       ],
       loading: false,
     } as never)
     render(<MasteryActionCard game="matematik" userId="u1" />)
-    // En dusuk birleşik skorlu (ZAYIF) kart olarak gösterilir.
-    expect(screen.getByText('Zayıf kazanım')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Tüm hâkimiyet haritasını aç/i })).toHaveAttribute(
-      'href',
-      '/arena/hakimiyet?game=matematik',
-    )
 
-    fireEvent.click(screen.getByRole('button', { name: /Bu kazanımı çalış/ }))
-    const gs = useGameStore.getState()
-    expect(gs.selectedCategory).toBe('sayilar')
-    expect(gs.selectedExamRef).toBe('TYT')
-    expect(gs.selectedMode).toBe('practice')
+    expect(screen.getByText('Gelişen konu')).toBeInTheDocument()
+    expect(screen.getByText('GELİŞİYOR')).toBeInTheDocument()
+    expect(screen.queryByText('Yeni konu')).not.toBeInTheDocument()
+  })
+
+  test('yalnız insufficient varsa zayıf demeden kanıt toplama aksiyonu verir', () => {
+    mockedUseMasteryMap.mockReturnValue({
+      outcomes: [mkOutcome({ status: 'insufficient', attempts: 1, evidenceCompleteness: 34 })],
+      loading: false,
+    } as never)
+    render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
+
+    expect(screen.getByText('KANIT TOPLA')).toBeInTheDocument()
+    expect(screen.queryByText(/zayıf/i)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Kanıt İçin Pratik Yap' }))
+
+    const state = useGameStore.getState()
+    expect(state.selectedGame).toBe('matematik')
+    expect(state.selectedCategory).toBe('sayilar')
+    expect(state.selectedExamRef).toBe('TYT')
+    expect(state.selectedMode).toBe('practice')
     expect(pushMock).toHaveBeenCalledWith('/arena/matematik')
   })
 })
