@@ -6,7 +6,7 @@ vi.mock('@/lib/utils/question-cache', () => ({
   getCachedQuestions: vi.fn(async () => [] as Question[]),
 }))
 
-import { fetchQuizQuestions } from '../questions'
+import { fetchPreviewQuestion, fetchPreviewQuestions, fetchQuizQuestions } from '../questions'
 
 function makeQuestion(id: string, game = 'matematik'): Question {
   return {
@@ -161,6 +161,28 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
     const reviewCount = result.questions.filter(q => q.id.startsWith('review-')).length
     expect(reviewCount).toBeGreaterThan(0)
     expect(reviewCount).toBeLessThanOrEqual(4)
+  })
+
+  it('misafir mikro turu en fazla 3 public soru alir', async () => {
+    const result = await fetchPreviewQuestions('turkce', { examRef: 'LGS' })
+
+    expect(lastUrl).toContain('/api/questions/preview')
+    expect(lastUrl).toContain('game=turkce')
+    expect(lastUrl).toContain('examRef=LGS')
+    expect(result).toHaveLength(3)
+  })
+
+  it('eski tek-soru preview yanitiyla geriye uyumludur', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ question: makeQuestion('legacy') }), { status: 200 }),
+    )
+
+    await expect(fetchPreviewQuestions('turkce')).resolves.toEqual([
+      expect.objectContaining({ id: 'legacy' }),
+    ])
+    await expect(fetchPreviewQuestion('turkce')).resolves.toEqual(
+      expect.objectContaining({ id: 'q-0' }),
+    )
   })
 
   it.each([

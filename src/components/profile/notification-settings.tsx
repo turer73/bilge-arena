@@ -28,7 +28,7 @@ export function NotificationSettings() {
         {status === 'prompt' && (
           <button
             onClick={subscribe}
-            className="rounded-lg bg-[var(--focus)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--focus)]/90"
+            className="min-h-11 rounded-lg bg-[var(--focus)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--focus)]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
           >
             Bildirimleri Ac
           </button>
@@ -39,7 +39,7 @@ export function NotificationSettings() {
             <span className="text-xs text-[var(--growth)]">Bildirimler aktif</span>
             <button
               onClick={unsubscribe}
-              className="text-xs text-[var(--muted)] underline hover:text-[var(--foreground)]"
+              className="min-h-11 min-w-11 px-2 text-xs text-[var(--muted)] underline hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
               Kapat
             </button>

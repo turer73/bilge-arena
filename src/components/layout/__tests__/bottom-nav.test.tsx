@@ -45,6 +45,8 @@ describe('BottomNav', () => {
     render(<BottomNav />)
     const nav = screen.getByRole('navigation', { name: /mobil gezinme/i })
     expect(nav.className).toContain('md:hidden')
+    expect(nav.style.minHeight).toBe('calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))')
+    expect(linkFor('Oyunlar').className).toContain('min-h-12')
   })
 
   test('activeOverride="lobby" → sadece Oyunlar aria-current', () => {

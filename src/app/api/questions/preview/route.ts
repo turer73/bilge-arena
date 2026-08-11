@@ -4,6 +4,11 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAME_SLUGS } from '@/lib/constants/games'
 import { parseQuestionRows, toPublicQuestion } from '@/lib/utils/question-public'
+import {
+  ACTIVATION_REWARD_COOKIE,
+  ACTIVATION_REWARD_TTL_SECONDS,
+  createActivationRewardToken,
+} from '@/lib/activation/server-reward'
 
 // Misafir önizlemesi için kısıtlı IP rate limit: 20/saat
 const ipLimiter = createRateLimiter('questions-preview-ip', 20, 3_600_000)
@@ -45,6 +50,11 @@ export async function GET(request: NextRequest) {
   const difficulty = difficultyRaw ? parseInt(difficultyRaw, 10) : null
   const examRefRaw = searchParams.get('examRef')
   const examRef = examRefRaw && VALID_EXAM_REFS.has(examRefRaw) ? examRefRaw : null
+  const activationRequested = searchParams.get('activation') === '1'
+
+  if (activationRequested && process.env.ACTIVATION_EXPERIMENT_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'Akış etkin değil' }, { status: 404 })
+  }
 
   const admin = createServiceRoleClient()
 
@@ -95,10 +105,37 @@ export async function GET(request: NextRequest) {
     && (!examRef || question.exam_ref === examRef)
   )
   const question = questions[0] ?? null
+  const publicQuestions = questions.slice(0, 3).map(toPublicQuestion)
 
-  return NextResponse.json(
-    // Whitelist: RPC tam DB satiri donduruyor; telemetri/ic alanlar sizmasin
-    { question: question ? toPublicQuestion(question) : null },
+  if (activationRequested && publicQuestions.length !== 3) {
+    return NextResponse.json(
+      { error: 'Üç soruluk akış şu anda hazırlanamadı' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const response = NextResponse.json(
+    // `question` eski istemciler icin korunur. Iki alan da public whitelist'ten gecer.
+    { question: question ? toPublicQuestion(question) : null, questions: publicQuestions },
     { headers: { 'Cache-Control': 'no-store' } },
   )
+
+  if (activationRequested && publicQuestions.length > 0) {
+    const rewardToken = createActivationRewardToken(publicQuestions.map((item) => item.id))
+    if (!rewardToken) {
+      return NextResponse.json(
+        { error: 'Aktivasyon ödülü yapılandırılmamış' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+    response.cookies.set(ACTIVATION_REWARD_COOKIE, rewardToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: ACTIVATION_REWARD_TTL_SECONDS,
+    })
+  }
+
+  return response
 }

@@ -49,6 +49,7 @@ export function BottomNav({ activeOverride }: BottomNavProps) {
       aria-label="Mobil gezinme"
       className="fixed inset-x-0 bottom-0 z-40 flex justify-around md:hidden"
       style={{
+        minHeight: 'calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))',
         paddingTop: 8,
         paddingBottom: 'calc(10px + env(safe-area-inset-bottom))',
         background: 'color-mix(in srgb, var(--surface) 90%, transparent)',
@@ -66,7 +67,7 @@ export function BottomNav({ activeOverride }: BottomNavProps) {
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'group relative flex flex-1 flex-col items-center gap-1 px-2 py-1',
+              'group relative flex min-h-12 flex-1 flex-col items-center justify-center gap-1 px-2 py-1',
               'transition-transform duration-150 active:scale-90',
             )}
             style={{ color: active ? 'var(--focus)' : 'var(--text-muted)' }}
@@ -107,7 +108,7 @@ export function BottomNav({ activeOverride }: BottomNavProps) {
             </span>
 
             <span
-              className="text-[10px] leading-none transition-all"
+              className="text-xs leading-none transition-all"
               style={{ fontWeight: active ? 700 : 600 }}
             >
               {item.label}

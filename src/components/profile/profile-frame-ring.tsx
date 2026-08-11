@@ -68,7 +68,7 @@ export function FrameDot({ frame, active, onClick, className = '' }: FrameDotPro
         title={frame.name}
         aria-label={frame.name}
         aria-pressed={active}
-        className={`relative h-7 w-7 rounded-full border-2 transition-all duration-150 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] ${className}`}
+        className={`relative h-11 w-11 rounded-full border-2 transition-all duration-150 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] ${className}`}
         style={{
           borderColor: active ? 'var(--focus)' : 'var(--border)',
           background: 'var(--card-bg)',
@@ -86,7 +86,7 @@ export function FrameDot({ frame, active, onClick, className = '' }: FrameDotPro
       title={frame.name}
       aria-label={frame.name}
       aria-pressed={active}
-      className={`relative h-7 w-7 flex-shrink-0 rounded-full transition-all duration-150 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] ${className}`}
+      className={`relative h-11 w-11 flex-shrink-0 rounded-full transition-all duration-150 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] ${className}`}
       style={{
         background: frame.ring,
         boxShadow: active

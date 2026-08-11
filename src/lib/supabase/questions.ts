@@ -134,22 +134,43 @@ export async function fetchQuizQuestions({
   }
 }
 
-/** Misafir onizleme: auth olmadan 1 gercek soru doner. */
-export async function fetchPreviewQuestion(
+interface PreviewQuestionsResponse {
+  question?: PublicQuestion | null
+  questions?: PublicQuestion[]
+}
+
+/** Misafir onizleme: auth olmadan en fazla 3 gercek soru doner. */
+export async function fetchPreviewQuestions(
   game: string,
-  opts?: { category?: string | null; difficulty?: number | null; examRef?: string | null },
-): Promise<PublicQuestion | null> {
+  opts?: {
+    category?: string | null
+    difficulty?: number | null
+    examRef?: string | null
+    activation?: boolean
+  },
+): Promise<PublicQuestion[]> {
   try {
     const params = new URLSearchParams({ game })
     if (opts?.category) params.set('category', opts.category)
     if (opts?.difficulty != null) params.set('difficulty', String(opts.difficulty))
     if (opts?.examRef) params.set('examRef', opts.examRef)
+    if (opts?.activation) params.set('activation', '1')
 
     const res = await fetch(`/api/questions/preview?${params.toString()}`, { cache: 'no-store' })
-    if (!res.ok) return null
-    const data = await res.json() as { question: PublicQuestion | null }
-    return data.question ?? null
+    if (!res.ok) return []
+    const data = await res.json() as PreviewQuestionsResponse
+    if (Array.isArray(data.questions)) return data.questions.slice(0, 3)
+    return data.question ? [data.question] : []
   } catch {
-    return null
+    return []
   }
+}
+
+/** Geriye uyumlu tek-soru yardimcisi. */
+export async function fetchPreviewQuestion(
+  game: string,
+  opts?: { category?: string | null; difficulty?: number | null; examRef?: string | null },
+): Promise<PublicQuestion | null> {
+  const questions = await fetchPreviewQuestions(game, opts)
+  return questions[0] ?? null
 }

@@ -180,7 +180,7 @@ export default function ProfilClient() {
   }
 
   const mainStats = [
-    { label: 'TOPLAM XP', value: totalXP, icon: '⚡', color: 'var(--reward)' },
+    { label: 'TOPLAM XP', value: totalXP, icon: '⚡', color: 'var(--reward)', featured: true },
     { label: 'COIN', value: coinBalance, icon: '🪙', color: 'var(--reward-light)' },
     { label: 'OYUN', value: totalSessions, icon: '🎮', color: 'var(--focus)' },
     { label: 'BAŞARI', value: `%${accuracy}`, icon: '🎯', color: 'var(--growth)' },
@@ -225,7 +225,7 @@ export default function ProfilClient() {
   })
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6 md:max-w-3xl md:py-8 xl:max-w-4xl xl:px-6 xl:py-10 2xl:max-w-5xl">
+    <div className="mx-auto max-w-2xl px-4 pt-6 pb-8 md:max-w-3xl md:py-8 xl:max-w-4xl xl:px-6 xl:py-10 2xl:max-w-5xl">
       {/* Profil basligi — magazadan secilen arka planla (none=standart kart) */}
       <div
         data-testid="profil-header-card"
@@ -237,7 +237,14 @@ export default function ProfilClient() {
           videoUrl={activeBgVideoUrl}
           reducedMotion={reducedMotion}
         />
-        <div className="flex items-center gap-3 md:gap-4">
+        {activeBackground.id !== 'none' && (
+          <div
+            aria-hidden
+            data-testid="profil-background-scrim"
+            className="pointer-events-none absolute inset-0 -z-[5] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--card-bg)_94%,transparent),color-mix(in_srgb,var(--card-bg)_76%,transparent))]"
+          />
+        )}
+        <div className="relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3 md:gap-x-4">
 
           {/* Avatar + Çerçeve */}
           <div className="relative flex-shrink-0">
@@ -265,65 +272,72 @@ export default function ProfilClient() {
             <button
               onClick={() => setFramePickerOpen((v) => !v)}
               title="Çerçeve seç"
-              className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] text-[9px] shadow-sm transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
+              aria-label="Profil çerçevesini değiştir"
+              aria-expanded={framePickerOpen}
+              className="absolute -bottom-3 -right-3 flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
-              🖼
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] text-[10px] shadow-sm transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]">
+                🖼
+              </span>
             </button>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold md:text-xl xl:text-2xl">
+          <div className="min-w-0 self-center">
+            <h1 className="truncate text-lg font-bold md:text-xl xl:text-2xl">
               <Nameplate nameplateId={profile.selected_nameplate}>{displayName}</Nameplate>
             </h1>
-            <div className="flex items-center gap-2 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">
-              <span>{level.badge} {level.name}</span>
-              <span>·</span>
-              <span>{totalXP.toLocaleString()} XP</span>
-              <span>·</span>
-              <span>{memberSince}</span>
-            </div>
-            <div className="mt-2">
-              <XPBar
-                xp={totalXP - level.minXP}
-                level={level.level}
-                max={level.maxXP === Infinity ? 50000 : level.maxXP - level.minXP + 1}
-              />
-            </div>
           </div>
 
-          <div className="flex flex-col items-end gap-2">
+          <div className="justify-self-end">
             <StreakBadge streak={currentStreak} />
-            <div className="flex flex-wrap justify-end gap-1.5">
-              <Link
-                href="/arena/magaza"
-                className="rounded-lg border border-[var(--border)] px-3 py-1 text-[10px] font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--reward-border)] hover:text-[var(--reward)]"
-              >
-                🛍️ Mağaza
-              </Link>
-              <Link
-                href="/arena/kisisellestir"
-                className="rounded-lg border border-[var(--border)] px-3 py-1 text-[10px] font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
-              >
-                🎨 Kişiselleştir
-              </Link>
-              <button
-                onClick={() => setEditOpen(true)}
-                className="rounded-lg border border-[var(--border)] px-3 py-1 text-[10px] font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
-              >
-                Düzenle
-              </button>
-            </div>
+          </div>
+
+          <div className="col-span-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-sub)] md:text-sm">
+            <span className="whitespace-nowrap">{level.badge} {level.name}</span>
+            <span aria-hidden>·</span>
+            <span className="whitespace-nowrap">{totalXP.toLocaleString('tr-TR')} XP</span>
+            <span aria-hidden>·</span>
+            <span className="whitespace-nowrap">Üye: {memberSince}</span>
+          </div>
+
+          <div className="col-span-3">
+            <XPBar
+              xp={totalXP - level.minXP}
+              level={level.level}
+              max={level.maxXP === Infinity ? 50000 : level.maxXP - level.minXP + 1}
+            />
+          </div>
+
+          <div className="col-span-3 grid grid-cols-3 gap-2 border-t border-[var(--border)] pt-3">
+            <Link
+              href="/arena/magaza"
+              className="flex min-h-11 items-center justify-center rounded-lg border border-[var(--border)] px-2 text-center text-xs font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--reward-border)] hover:text-[var(--reward)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+            >
+              <span aria-hidden>🛍️</span>&nbsp;Mağaza
+            </Link>
+            <Link
+              href="/arena/kisisellestir"
+              className="flex min-h-11 items-center justify-center rounded-lg border border-[var(--border)] px-1 text-center text-xs font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+            >
+              <span aria-hidden>🎨</span>&nbsp;Kişiselleştir
+            </Link>
+            <button
+              onClick={() => setEditOpen(true)}
+              className="min-h-11 rounded-lg border border-[var(--border)] px-2 text-xs font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+            >
+              Düzenle
+            </button>
           </div>
         </div>
 
         {/* Çerçeve seçici paneli */}
         {framePickerOpen && (
-          <div className="mt-3 animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-3">
+          <div className="relative z-10 mt-3 animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-3">
             <div className="mb-2.5 flex items-center justify-between">
-              <p className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
                 Profil Çerçevesi
               </p>
-              <span className="text-[10px] font-bold text-[var(--reward-light)]">
+              <span className="text-xs font-bold text-[var(--reward-light)]">
                 🪙 {coinBalance.toLocaleString('tr-TR')} coin
               </span>
             </div>
@@ -331,7 +345,7 @@ export default function ProfilClient() {
             {/* Mesaj */}
             {purchaseMsg && (
               <p
-                className="mb-2 rounded-lg px-2 py-1.5 text-[10px] font-medium"
+                className="mb-2 rounded-lg px-2 py-1.5 text-xs font-medium"
                 style={{
                   background: purchaseMsg.ok ? 'var(--growth-bg)' : 'var(--urgency-bg)',
                   color: purchaseMsg.ok ? 'var(--growth)' : 'var(--urgency)',
@@ -363,7 +377,7 @@ export default function ProfilClient() {
                     </div>
 
                     <span
-                      className="text-[8px] font-bold leading-none text-center"
+                      className="text-[10px] font-bold leading-none text-center"
                       style={{ color: FRAME_RARITY_COLOR[frm.rarity] }}
                     >
                       {frm.id === 'none' ? '—' : FRAME_RARITY_LABEL[frm.rarity]}
@@ -373,7 +387,7 @@ export default function ProfilClient() {
                       <button
                         onClick={() => purchaseFrame(frm.id)}
                         disabled={!canAfford || isBuying}
-                        className="mt-0.5 rounded-md px-1.5 py-0.5 text-[8px] font-bold transition-colors disabled:opacity-40"
+                        className="mt-0.5 min-h-11 min-w-11 rounded-md px-1.5 py-1 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-40"
                         style={{
                           background: canAfford ? 'var(--reward-bg)' : 'var(--card-bg)',
                           color: canAfford ? 'var(--reward-light)' : 'var(--text-muted)',
@@ -390,7 +404,7 @@ export default function ProfilClient() {
             </div>
 
             {activeFrame.id !== 'none' && (
-              <p className="mt-2.5 border-t border-[var(--border)] pt-2 text-[9px] text-[var(--text-muted)]">
+              <p className="mt-2.5 border-t border-[var(--border)] pt-2 text-xs text-[var(--text-muted)]">
                 <span className="font-bold" style={{ color: FRAME_RARITY_COLOR[activeFrame.rarity] }}>
                   {activeFrame.name}
                 </span>
@@ -420,7 +434,7 @@ export default function ProfilClient() {
       {/* Oyun bazli istatistikler */}
       {stats && stats.gameStats.length > 0 && (
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
-          <h3 className="mb-3 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+          <h3 className="mb-3 text-xs font-extrabold tracking-[0.14em] text-[var(--text-sub)]">
             OYUN ISTATISTIKLERI
           </h3>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
@@ -437,14 +451,14 @@ export default function ProfilClient() {
                     className="mx-auto mb-1.5 h-1 w-8 rounded-full"
                     style={{ backgroundColor: gameDef.colorHex }}
                   />
-                  <div className="text-[11px] font-bold">{gameDef.name}</div>
+                  <div className="text-xs font-bold">{gameDef.name}</div>
                   <div
                     className="font-display text-lg font-black"
                     style={{ color: gameDef.colorHex }}
                   >
                     %{gs.percentage}
                   </div>
-                  <div className="text-[9px] text-[var(--text-muted)]">
+                  <div className="text-xs text-[var(--text-muted)]">
                     {gs.correct}/{gs.total} dogru
                   </div>
                 </Link>
@@ -457,7 +471,7 @@ export default function ProfilClient() {
       {/* Son oyunlar */}
       {stats && stats.recentGames.length > 0 && (
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
-          <h3 className="mb-3 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+          <h3 className="mb-3 text-xs font-extrabold tracking-[0.14em] text-[var(--text-sub)]">
             SON OYUNLAR
           </h3>
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] divide-y divide-[var(--border)]">
@@ -484,7 +498,7 @@ export default function ProfilClient() {
                         {MODE_LABELS[g.mode] || g.mode}
                       </span>
                     </div>
-                    <div className="text-[10px] text-[var(--text-muted)]">
+                    <div className="text-xs text-[var(--text-muted)]">
                       {g.correct_count}/{g.total_questions} dogru · {timeAgo}
                     </div>
                   </div>
@@ -501,7 +515,7 @@ export default function ProfilClient() {
                     >
                       %{gameAccuracy}
                     </div>
-                    <div className="text-[9px] text-[var(--reward)]">+{g.total_xp} XP</div>
+                    <div className="text-xs text-[var(--reward)]">+{g.total_xp} XP</div>
                   </div>
                 </div>
               )
@@ -534,7 +548,7 @@ export default function ProfilClient() {
       {/* Konu ilerleme */}
       <ComponentErrorBoundary label="Konu İlerlemesi" variant="inline">
         <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-          <h3 className="mb-3 text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+          <h3 className="mb-3 text-xs font-extrabold tracking-[0.14em] text-[var(--text-sub)]">
             KONU ILERLEMESI
             {statsLoading && (
               <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-[var(--focus)]" />

@@ -78,8 +78,11 @@ const strategyTelemetry = vi.hoisted(() => ({ questionOpened: vi.fn() }))
 vi.mock('@/lib/mock-strategy/client', () => ({
   recordMockStrategyQuestionOpened: strategyTelemetry.questionOpened,
 }))
+const analytics = vi.hoisted(() => ({ trackEvent: vi.fn() }))
+vi.mock('@/lib/utils/plausible', () => ({ trackEvent: analytics.trackEvent }))
 
 import { useQuizGame } from '../use-quiz-game'
+import { markActivationExposure } from '@/lib/experiments/activation'
 
 const makeQ = (id: string): PublicQuestion =>
   ({
@@ -102,6 +105,7 @@ beforeEach(() => {
   quiz.currentQuestion.mockReturnValue(null)
   quiz.isLastQuestion.mockReturnValue(false)
   gameStore.selectedMode = 'klasik'
+  sessionStorage.clear()
   fetchers.fetchQuizQuestions.mockResolvedValue({
     questions: Array.from({ length: 30 }, (_, i) => makeQ(`q${i}`)),
     attemptId: ATTEMPT_ID,
@@ -128,6 +132,28 @@ describe('useQuizGame — handleStart', () => {
     expect(result.current.attemptId).toBeNull()
     expect(result.current.screen).toBe('game')
     expect(timer.start).toHaveBeenCalled()
+  })
+
+  test('anasayfa kontrol varyantinda ilk soru gorunumunu ve cevabi olcer', async () => {
+    markActivationExposure('control')
+    const question = makeQ('preview')
+    const { result } = renderHook(() => useQuizGame('matematik', null))
+
+    await act(() => result.current.handleStart())
+    expect(analytics.trackEvent).toHaveBeenCalledWith('ActivationQuestionShown', {
+      props: expect.objectContaining({ variant: 'control', game: 'matematik', position: 1 }),
+    })
+
+    quiz.state = 'playing'
+    quiz.currentQuestion.mockReturnValue(question)
+    await act(async () => result.current.handleAnswer(0))
+
+    expect(analytics.trackEvent).toHaveBeenCalledWith('ActivationAnswerSubmitted', {
+      props: expect.objectContaining({ variant: 'control', game: 'matematik', position: 1 }),
+    })
+    expect(analytics.trackEvent).toHaveBeenCalledWith('ActivationExplanationViewed', {
+      props: expect.objectContaining({ variant: 'control', game: 'matematik', position: 1 }),
+    })
   })
 
   test('misafir + preview null: loadError + lobby\'de kalır', async () => {

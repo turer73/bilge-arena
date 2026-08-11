@@ -436,6 +436,14 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
+      claim_activation_reward: {
+        Args: {
+          p_user_id: string
+          p_claim_id: string
+          p_amount: number
+        }
+        Returns: Json
+      }
       set_review_error_reason: {
         Args: {
           p_user_id: string

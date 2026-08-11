@@ -324,6 +324,7 @@
 @layer base {
   :root {
     --navbar-h: 72px;
+    --bottom-nav-h: 72px;
   }
 
   * {
@@ -724,6 +725,20 @@
     content-visibility: auto;
     contain-intrinsic-size: auto 500px;
   }
+}
+
+/* Ana sayfa first-value A/B testi. Atama <head>'de ilk boyamadan once yapilir;
+   bu iki panel arasinda hydration flicker ve CLS olusmasini engeller. */
+.activation-micro {
+  display: none;
+}
+
+html[data-activation-variant='micro'] .activation-control {
+  display: none;
+}
+
+html[data-activation-variant='micro'] .activation-micro {
+  display: flex;
 }
 
 /* ============================================================

@@ -4,10 +4,6 @@ const {
   mockGetUser,
   mockQuestionQuery,
   mockAttemptQuery,
-  mockAttemptIdEq,
-  mockAttemptUserEq,
-  mockAttemptIs,
-  mockAttemptGt,
   mockFrom,
   mockUserLimiter,
   mockIpLimiter,
@@ -35,10 +31,6 @@ const {
     mockGetUser: vi.fn(),
     mockQuestionQuery,
     mockAttemptQuery,
-    mockAttemptIdEq,
-    mockAttemptUserEq,
-    mockAttemptIs,
-    mockAttemptGt,
     mockFrom,
     mockUserLimiter: { check: vi.fn() },
     mockIpLimiter: { check: vi.fn() },
@@ -65,12 +57,21 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 }))
 
 vi.mock('@/lib/utils/client-ip', () => ({ getClientIp: mockGetClientIp }))
-vi.mock('@/lib/questions/attempt-store', () => ({ recordFirstQuestionAttempt: mockRecordAttempt }))
+vi.mock('@/lib/questions/attempt-store', () => ({
+  recordFirstQuestionAttempt: mockRecordAttempt,
+  getFirstQuestionAttempt: vi.fn(),
+}))
 vi.mock('@/lib/verified-attempts', () => ({
   readVerifiedAttemptQuestionSnapshots: mockReadSnapshots,
 }))
 
 import { POST } from '../route'
+import {
+  ACTIVATION_REWARD_COOKIE,
+  activationActorKey,
+  createActivationRewardToken,
+  verifyActivationRewardToken,
+} from '@/lib/activation/server-reward'
 
 const QUESTION_ID = '10000000-0000-4000-8000-000000000001'
 const ATTEMPT_ID = '20000000-0000-4000-8000-000000000002'
@@ -231,6 +232,45 @@ describe('POST /api/questions/grade', () => {
 
     expect(res.status).toBe(200)
     expect(await res.json()).toMatchObject({ isCorrect: false, correctOption: 2 })
+  })
+
+  it('binds guest grading to the signed activation question set instead of the IP', async () => {
+    const token = createActivationRewardToken([QUESTION_ID])
+    const session = verifyActivationRewardToken(token)
+    expect(token).toBeTruthy()
+    expect(session).toBeTruthy()
+
+    const res = await POST(request(
+      { questionId: QUESTION_ID, selectedOption: 2 },
+      { cookie: `${ACTIVATION_REWARD_COOKIE}=${encodeURIComponent(token!)}` },
+    ))
+
+    expect(res.status).toBe(200)
+    expect(mockRecordAttempt).toHaveBeenCalledWith(
+      activationActorKey(session!.sessionId),
+      QUESTION_ID,
+      2,
+    )
+  })
+
+  it('allows a signed-in user to finish a signed activation question without a quiz attempt', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
+    const token = createActivationRewardToken([QUESTION_ID])
+    const session = verifyActivationRewardToken(token)
+
+    const res = await POST(request(
+      { questionId: QUESTION_ID, selectedOption: 2 },
+      { cookie: `${ACTIVATION_REWARD_COOKIE}=${encodeURIComponent(token!)}` },
+    ))
+
+    expect(res.status).toBe(200)
+    expect(mockUserLimiter.check).toHaveBeenCalledWith('user-42')
+    expect(mockReadSnapshots).not.toHaveBeenCalled()
+    expect(mockRecordAttempt).toHaveBeenCalledWith(
+      activationActorKey(session!.sessionId),
+      QUESTION_ID,
+      2,
+    )
   })
 
   it('records server-receipt answer telemetry best-effort without breaking grading', async () => {
