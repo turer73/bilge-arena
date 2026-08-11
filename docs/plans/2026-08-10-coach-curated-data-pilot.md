@@ -1,12 +1,16 @@
 # Koç Küratörlü Veri: Pilot ve Yayına Alma Kararı
 
 **Karar tarihi:** 2026-08-10
-**Durum:** Kabul edildi; üretim verisi yazımı pilot kabulünden önce yasak.
+**Durum:** Altyapı ve 20'lik manifest hazır; model üretimi ve iki bağımsız insan
+incelemesi bekleniyor. Üretim verisi yazımı pilot kabulünden önce yasak.
 
 ## Kapsam ve mevcut durum
 
 - 2026-08-09 keşif anlık görüntüsünde **636 uygun soru** bulundu. Bu sayı pilot
   seçimi öncesinde salt-okunur keşifle yeniden ölçülür; sabit ürün gerçeği sayılmaz.
+- 2026-08-11 salt-okunur üretim ölçümü yeniden **636 uygun soru** buldu. Mevcut
+  uygun havuzun tamamı TYT matematik ve 5 seçeneklidir; 6 kategori ile zorluk
+  1-5'in tamamını kapsar. Bu dağılım pilot manifestine soru metni olmadan bağlandı.
 - `COACH_AI_ENABLED` kapalı kalır. Küratörlü statik ipuçlarının kullanımı üçüncü
   taraf modeli çalışma zamanında açmayı gerektirmez.
 - Mevcut commit edilmemiş `database/generate-coach-hints.mjs` üretimde
@@ -72,13 +76,23 @@ Pilot geçerse partiler sırasıyla **50 → 100 → kalan havuz** olur.
 
 ## Uygulama önkoşulları
 
-- [ ] Salt-okunur keşifle uygun havuz sayısını yeniden doğrula.
-- [ ] Mevcut betiği varsayılan staging-only, `--manifest` zorunlu ve soru metni
+- [x] Salt-okunur keşifle uygun havuz sayısını yeniden doğrula.
+- [x] Mevcut betiği varsayılan staging-only, `--manifest` zorunlu ve soru metni
       loglamayan hale getir.
-- [ ] Doğru seçenek için `null`, yanlış seçenekler için dolu metin sözleşmesini
+- [x] Doğru seçenek için `null`, yanlış seçenekler için dolu metin sözleşmesini
       uygulama validatorü ve testlerinde eşitle.
-- [ ] 20 soruluk manifesti ve hash'ini üret; iki incelemeciyi kaydet.
+- [x] 20 soruluk manifesti ve hash'ini üret. 2026-08-11 manifest SHA-256:
+      `5653e137555f5a7f7ff5dc51bf1dc0293c21ae27d4763c89fbb2cfab66112433`.
+- [ ] Ayrı ve dar izinli yürütücüde staging JSONL üret; konu küratörü ile bağımsız
+      sözleşme/güvenlik incelemecisini kaydet ve 0/20 kritik hata kapısını geçir.
 - [ ] Yalnız iki onaylı governed revision'ları yayımla; pilot raporunu sakla.
+
+Migration 106 legacy revision'ları oluşturmuş ancak legacy outcome bağlarını
+`question_revision_outcomes` tablosuna taşımamış ve `coach` alanını revision
+payload'ında reddetmiştir. Migration 110 yalnız tam, aktif ve tek-primary outcome
+setlerini idempotent backfill eder; `coach` nesnesini doğru seçenek `null`, yanlış
+seçenekler dolu metin olacak şekilde fail-closed doğrular. 110 üretime uygulanmadan
+source bundle dışa aktarımı veya governed hazırlık yapılmaz.
 
 Bu maddeler tamamlanmadan 636 soruluk toplu üretim veya üretim veritabanına yazım
 "tamamlandı" sayılmaz.

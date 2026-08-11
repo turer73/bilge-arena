@@ -346,7 +346,8 @@ export async function GET(request: NextRequest) {
     p_user_id: user.id,
     p_game: game,
     p_plan_date: planDate,
-    p_exam_ref: examRef,
+    // The SQL contract uses NULL for games without an exam scope.
+    p_exam_ref: examRef as string,
     p_items: rpcItems as Json,
   })
   if (createError) {

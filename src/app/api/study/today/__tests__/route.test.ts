@@ -122,6 +122,7 @@ function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): Ques
     times_correct: 0,
     source: null,
     exam_ref: 'TYT',
+    published_revision_id: null,
     created_at: null,
     updated_at: null,
     ...overrides,

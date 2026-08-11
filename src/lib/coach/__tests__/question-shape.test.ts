@@ -24,7 +24,7 @@ describe('staged coach question shape', () => {
       answer: 1,
       solution: 'İki ile iki toplanır.',
       coach: {
-        misconceptions: ['Bir eksik sayılmış olabilir.', 'Toplama doğru kurulmuş olabilir.'],
+        misconceptions: ['Bir eksik sayılmış olabilir.', null],
         hint1: 'İki grubu birleştir.',
       },
     })).toBe(true)
@@ -34,6 +34,31 @@ describe('staged coach question shape', () => {
       answer: 1,
       solution: 'Çözüm',
       coach: { misconceptions: ['Tek kayıt'] },
+    })).toBe(false)
+  })
+
+  test('doğru seçenekte yalnız null, yanlış seçeneklerde dolu metin kabul eder', () => {
+    const base = {
+      ...publicContent,
+      answer: 1,
+      solution: 'İki ile iki toplanır.',
+    }
+
+    expect(supportsGuidedCoachQuestion({
+      ...base,
+      coach: { misconceptions: ['Yanlış seçenek açıklaması.', null] },
+    })).toBe(true)
+    expect(supportsGuidedCoachQuestion({
+      ...base,
+      coach: { misconceptions: ['Yanlış seçenek açıklaması.', 'Doğru seçenek açıklaması.'] },
+    })).toBe(false)
+    expect(supportsGuidedCoachQuestion({
+      ...base,
+      coach: { misconceptions: [null, null] },
+    })).toBe(false)
+    expect(supportsGuidedCoachQuestion({
+      ...base,
+      coach: { misconceptions: ['', null] },
     })).toBe(false)
   })
 })

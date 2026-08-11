@@ -219,8 +219,10 @@ export async function POST(request: Request) {
     p_client_request_id: clientRequestId,
     p_game: game,
     p_mode: mode,
-    p_category: category || null,
-    p_filter_difficulty: filterDifficulty || null,
+    // These SQL arguments are nullable scope filters. Supabase's generated
+    // function types model PostgreSQL input types without their NULL semantics.
+    p_category: (category || null) as string,
+    p_filter_difficulty: (filterDifficulty || null) as number,
     p_answers: verifiedAnswers.map(a => ({
       question_id: a.question_id,
       selected_option: a.selected_option,

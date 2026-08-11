@@ -121,7 +121,7 @@ function questionRow(over: Record<string, unknown> = {}) {
       coach: {
         misconceptions: [
           'Toplama işlemi çarpmadan önce yapılmış olabilir.',
-          'İşlem sırası doğru kurulmuş olabilir.',
+          null,
           'Ara işlemde fazla değer eklenmiş olabilir.',
           'Çarpma sonucu iki kez kullanılmış olabilir.',
         ],
