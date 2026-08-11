@@ -27,13 +27,14 @@ import { QuickPlayPanel } from '../QuickPlayPanel'
 const formAction = vi.fn()
 
 describe('QuickPlayPanel', () => {
-  test('1) render: kategori select + Hızlı Oyun button', () => {
+  test('1) render: kategori select + dürüst Hızlı Antrenman CTA', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     render(<QuickPlayPanel />)
-    expect(screen.getByLabelText(/Hızlı oyun kategorisi/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Hızlı antrenman kategorisi/i)).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /Hızlı Oyun.*3 bot rakip/i }),
+      screen.getByRole('button', { name: /Antrenmanı Başlat/i }),
     ).toBeInTheDocument()
+    expect(screen.getByText(/Deneme botları yanıt vermez/i)).toBeInTheDocument()
   })
 
   test('2) 19 alt-kategori secenegi var (DB taxonomy ile uyumlu)', () => {
@@ -49,7 +50,7 @@ describe('QuickPlayPanel', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     render(<QuickPlayPanel />)
     const select = screen.getByLabelText(
-      /Hızlı oyun kategorisi/i,
+      /Hızlı antrenman kategorisi/i,
     ) as HTMLSelectElement
     expect(select.value).toBe('paragraf')
   })
@@ -96,11 +97,11 @@ describe('QuickPlayPanel', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Giris yapmalisin')
   })
 
-  test('7) data-testid="quick-play-panel" + bot emoji header', () => {
+  test('7) data-testid="quick-play-panel" + Hızlı Antrenman başlığı', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     render(<QuickPlayPanel />)
     expect(screen.getByTestId('quick-play-panel')).toBeInTheDocument()
-    expect(screen.getByText(/🤖 Hızlı Oyun/i)).toBeInTheDocument()
+    expect(screen.getByText(/Hızlı Antrenman/i)).toBeInTheDocument()
   })
 
   test('8) Codex P3 #3: fieldErrors.category role=alert + aria-invalid', () => {
@@ -112,7 +113,7 @@ describe('QuickPlayPanel', () => {
     render(<QuickPlayPanel />)
     const alerts = screen.getAllByRole('alert')
     expect(alerts.some((a) => a.textContent === 'Geçersiz kategori')).toBe(true)
-    const select = screen.getByLabelText(/Hızlı oyun kategorisi/i)
+    const select = screen.getByLabelText(/Hızlı antrenman kategorisi/i)
     expect(select.getAttribute('aria-invalid')).toBe('true')
   })
 
@@ -133,5 +134,13 @@ describe('QuickPlayPanel', () => {
       // Sosyal (5)
       'tarih', 'cografya', 'felsefe', 'sosyoloji', 'din_kulturu',
     ])
+  })
+
+  test('10) anonim kullanıcıyı niyeti korunarak girişe yönlendirir', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(<QuickPlayPanel authenticated={false} />)
+    const link = screen.getByRole('link', { name: /Giriş Yap ve Başla/i })
+    expect(link).toHaveAttribute('href', '/giris?redirect=/oda')
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

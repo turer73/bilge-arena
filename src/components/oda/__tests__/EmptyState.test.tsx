@@ -3,18 +3,14 @@ import { render, screen } from '@testing-library/react'
 import { EmptyState } from '../EmptyState'
 
 describe('EmptyState', () => {
-  test('1) "Henuz aktif odan yok" copy render', () => {
+  test('1) devam eden oda olmadığını ve üç üst seçeneği açıklar', () => {
     render(<EmptyState />)
-    expect(screen.getByText(/Henuz aktif odan yok/)).toBeInTheDocument()
+    expect(screen.getByText(/Henüz devam eden odan yok/)).toBeInTheDocument()
+    expect(screen.getByText(/hızlı antrenman başlatabilir/i)).toBeInTheDocument()
   })
 
-  test('2) Yeni Oda link + Kod ile Katil link aktif', () => {
+  test('2) üst karar alanını tekrar eden CTA içermez', () => {
     render(<EmptyState />)
-    const newLink = screen.getByText(/Yeni Oda Kur/) as HTMLAnchorElement
-    expect(newLink.getAttribute('href')).toBe('/oda/yeni')
-    // 2026-05-03 fix: Kod ile Katil artik disabled buton degil, /oda/kod link
-    const kodLink = screen.getByText(/Kod ile Katil/).closest('a') as HTMLAnchorElement
-    expect(kodLink).toBeInTheDocument()
-    expect(kodLink.getAttribute('href')).toBe('/oda/kod')
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 })

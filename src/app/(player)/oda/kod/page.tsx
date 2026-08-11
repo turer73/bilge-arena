@@ -29,12 +29,17 @@ export default async function Page() {
           <span aria-hidden="true">←</span>
           <span>Odalarıma Dön</span>
         </Link>
-        <h1 className="mt-3 text-xl font-bold">Kod ile Katıl</h1>
-        <p className="mt-1 text-sm text-[var(--text-sub)]">
-          Arkadaşının paylaştığı 6 karakterli oda kodunu yaz.
+        <p className="mt-5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--wisdom-text)]">
+          KODLA KATIL
+        </p>
+        <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
+          Arkadaşının odasına gir
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">
+          Paylaşılan 6 karakterli kodu yaz. Büyük-küçük harf fark etmez.
         </p>
       </header>
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-sm sm:p-6">
         <JoinRoomForm />
       </div>
     </>

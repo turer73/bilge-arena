@@ -21,8 +21,8 @@ export default function PlayerLayout({
 }) {
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      {/* Mobilde alt tab-bar yüksekliği kadar boşluk bırak (içerik altta kalmasın) */}
-      <main className="mx-auto max-w-3xl px-4 pt-8 pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-8">
+      {/* Mobilde gerçek alt-nav tokenı kadar içerik ve odak kaydırma boşluğu bırak. */}
+      <main className="mx-auto max-w-3xl scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] px-4 pt-8 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] md:scroll-pb-0 md:pb-8">
         {children}
       </main>
       <BottomNav />

@@ -17,7 +17,9 @@ interface NumFieldProps {
   name: string
   min: number
   max: number
-  defaultValue: number
+  defaultValue?: number
+  value?: number
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void
   step?: number
   error?: string
 }
@@ -28,6 +30,8 @@ export function NumField({
   min,
   max,
   defaultValue,
+  value,
+  onChange,
   step = 1,
   error,
 }: NumFieldProps) {
@@ -42,7 +46,10 @@ export function NumField({
         max={max}
         step={step}
         defaultValue={defaultValue}
-        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
+        value={value}
+        onChange={onChange}
+        aria-invalid={error ? 'true' : 'false'}
+        className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus:border-[var(--focus)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]/30"
       />
     </Field>
   )

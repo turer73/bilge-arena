@@ -27,7 +27,16 @@ export default async function Page() {
           <span aria-hidden="true">←</span>
           <span>Odalarıma Dön</span>
         </Link>
-        <h1 className="mt-3 text-xl font-bold">Yeni Oda</h1>
+        <p className="mt-5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--growth-text)]">
+          ODA KUR
+        </p>
+        <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
+          Bir ayar seç, arkadaşlarını davet et
+        </h1>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-sub)]">
+          Hazır seçeneklerden biriyle saniyeler içinde başla. Tüm ayrıntıları
+          daha sonra değiştirebilirsin.
+        </p>
       </header>
       <CreateRoomForm />
     </>
