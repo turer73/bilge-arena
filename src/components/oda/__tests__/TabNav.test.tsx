@@ -11,23 +11,23 @@ describe('TabNav', () => {
   test('1) activeTab=mine -> Odalarim aria-current=page, public degil', () => {
     render(<TabNav activeTab="mine" />)
     const mine = screen.getByText('Odalarım')
-    const publicLink = screen.getByText('Aktif Odalar')
+    const publicLink = screen.getByText('Açık Odalar')
     expect(mine.getAttribute('aria-current')).toBe('page')
     expect(publicLink.getAttribute('aria-current')).toBeNull()
   })
 
-  test('2) activeTab=public -> Aktif Odalar aria-current=page', () => {
+  test('2) activeTab=public -> Açık Odalar aria-current=page', () => {
     render(<TabNav activeTab="public" />)
-    const publicLink = screen.getByText('Aktif Odalar')
+    const publicLink = screen.getByText('Açık Odalar')
     const mine = screen.getByText('Odalarım')
     expect(publicLink.getAttribute('aria-current')).toBe('page')
     expect(mine.getAttribute('aria-current')).toBeNull()
   })
 
-  test('3) Odalarim href /oda, Aktif Odalar href /oda?tab=public', () => {
+  test('3) Odalarim href /oda, Açık Odalar href /oda?tab=public', () => {
     render(<TabNav activeTab="mine" />)
     expect(screen.getByText('Odalarım').getAttribute('href')).toBe('/oda')
-    expect(screen.getByText('Aktif Odalar').getAttribute('href')).toBe(
+    expect(screen.getByText('Açık Odalar').getAttribute('href')).toBe(
       '/oda?tab=public',
     )
   })

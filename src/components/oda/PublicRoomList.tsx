@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { PublicRoomCard } from '@/lib/rooms/server-fetch'
 import { ROOM_CATEGORIES, slugToLabel } from '@/lib/rooms/categories'
+import { ArrowRight, Search, Users } from 'lucide-react'
 
 interface PublicRoomListProps {
   rooms: PublicRoomCard[]
@@ -41,16 +42,17 @@ export function PublicRoomList({
 
   return (
     <div className="space-y-4" data-testid="public-room-list">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-semibold" htmlFor="public-category">
-          Kategori:
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
+        <label className="mb-2 flex items-center gap-2 text-xs font-bold text-[var(--text-sub)] sm:mb-0" htmlFor="public-category">
+          <Search aria-hidden="true" className="h-4 w-4" />
+          Kategoriye göre filtrele
         </label>
         <select
           id="public-category"
           name="category"
           value={selectedCategory}
           onChange={handleCategoryChange}
-          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm focus:border-[var(--focus)] focus:outline-none"
+          className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus:border-[var(--focus)] focus:outline-none sm:w-auto"
         >
           <option value="">Tüm Kategoriler</option>
           {ROOM_CATEGORIES.map((slug) => (
@@ -62,15 +64,16 @@ export function PublicRoomList({
       </div>
 
       {rooms.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-8 text-center">
-          <p className="text-sm text-[var(--text-sub)]">
-            Şu anda aktif açık oda yok. Yeni bir tane sen oluşturabilirsin!
+        <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--card)] p-7 text-center">
+          <h3 className="text-sm font-extrabold">Şu anda katılabileceğin açık oda yok</h3>
+          <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">
+            İlk odayı sen kurabilir ve kodunu arkadaşlarınla paylaşabilirsin.
           </p>
           <Link
             href="/oda/yeni"
-            className="btn-primary mt-4 inline-block px-4 py-2 text-sm"
+            className="btn-primary mt-4 min-h-11 px-4 text-sm"
           >
-            + Yeni Oda
+            Oda Kur
           </Link>
         </div>
       ) : (
@@ -78,11 +81,11 @@ export function PublicRoomList({
           {rooms.map((r) => (
             <li
               key={r.id}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--card)] transition-colors hover:border-[var(--focus)]"
+              className="rounded-2xl"
             >
               <Link
                 href={`/oda/${r.code}`}
-                className="block p-4"
+                className="group block min-h-24 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 transition-colors hover:border-[var(--focus)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
                 aria-label={`${r.title} odasına katıl`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -96,10 +99,18 @@ export function PublicRoomList({
                       {r.question_count} soru
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--growth-bg)] px-3 py-1 text-xs font-bold text-[var(--growth-text)]">
+                    <Users aria-hidden="true" className="h-3.5 w-3.5" />
                     {r.member_count}/{r.max_players}
                   </span>
                 </div>
+                <span className="mt-3 flex items-center justify-end gap-1 text-xs font-extrabold text-[var(--focus-text)]">
+                  Odaya katıl
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                  />
+                </span>
               </Link>
             </li>
           ))}

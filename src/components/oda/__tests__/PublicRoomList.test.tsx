@@ -52,13 +52,13 @@ describe('PublicRoomList', () => {
     expect(screen.getByText('1/4')).toBeInTheDocument()
   })
 
-  test('2) empty rooms -> "Şu anda aktif açık oda yok" + Yeni Oda CTA', () => {
+  test('2) empty rooms -> açık oda yok + Oda Kur CTA', () => {
     render(<PublicRoomList rooms={[]} />)
     expect(
-      screen.getByText(/Şu anda aktif açık oda yok/i),
+      screen.getByText(/Şu anda katılabileceğin açık oda yok/i),
     ).toBeInTheDocument()
     // Yeni Oda link
-    const cta = screen.getByText(/\+ Yeni Oda/i)
+    const cta = screen.getByText(/^Oda Kur$/i)
     expect(cta).toBeInTheDocument()
     expect(cta.closest('a')?.getAttribute('href')).toBe('/oda/yeni')
   })

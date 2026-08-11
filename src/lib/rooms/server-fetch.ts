@@ -194,13 +194,14 @@ export async function fetchLobbyPreviewQuestion(
 // =============================================================================
 
 /**
- * Kullanicinin host veya member oldugu aktif odalari (lobby + in_progress)
+ * Kullanicinin host veya member oldugu devam edilebilir odalari
+ * (lobby + active + reveal)
  * created_at DESC sirayla doner. RLS otomatik filtreler:
  * `rooms_select_host_or_member` policy host_id veya room_members'e gore filter.
  */
 export async function fetchMyRooms(jwt: string): Promise<RoomListItem[]> {
   const url = new URL(`${RPC_URL}/rooms`)
-  url.searchParams.set('state', 'in.(lobby,in_progress)')
+  url.searchParams.set('state', 'in.(lobby,active,reveal)')
   url.searchParams.set(
     'select',
     'id,code,title,state,created_at,room_members(count)',

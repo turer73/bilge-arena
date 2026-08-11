@@ -30,17 +30,32 @@ export function JoinRoomForm() {
       aria-label="Oda kodu ile katilma formu"
     >
       <Field
-        label="Oda Kodu (6 karakter)"
+        label="Oda Kodu"
         name="code"
-        required
-        maxLength={6}
         error={state.fieldErrors?.code?.[0]}
-      />
+      >
+        <input
+          id="field-code"
+          name="code"
+          type="text"
+          required
+          minLength={6}
+          maxLength={6}
+          autoComplete="one-time-code"
+          autoCapitalize="characters"
+          spellCheck={false}
+          inputMode="text"
+          placeholder="Örn. BIL2GE"
+          aria-invalid={state.fieldErrors?.code?.[0] ? 'true' : 'false'}
+          aria-describedby={state.fieldErrors?.code?.[0] ? 'field-code-error' : undefined}
+          className="min-h-14 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 text-center font-mono text-xl font-extrabold uppercase tracking-[0.28em] placeholder:text-sm placeholder:font-medium placeholder:normal-case placeholder:tracking-normal focus:border-[var(--focus)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]/30"
+        />
+      </Field>
 
       {state.error && (
         <p
           role="alert"
-          className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300"
+          className="rounded-lg bg-[var(--urgency-bg)] px-3 py-2 text-sm text-[var(--urgency-text)]"
         >
           {state.error}
         </p>
@@ -49,7 +64,7 @@ export function JoinRoomForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="btn-primary w-full px-6 py-3 text-base disabled:opacity-50"
+        className="btn-primary min-h-12 w-full px-6 text-base disabled:opacity-50"
       >
         {isPending ? 'Katılıyor…' : 'Odaya Katıl'}
       </button>

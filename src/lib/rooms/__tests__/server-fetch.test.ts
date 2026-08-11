@@ -53,7 +53,7 @@ describe('fetchMyRooms', () => {
           id: 'b',
           code: 'BIL2B',
           title: 'B',
-          state: 'in_progress',
+          state: 'active',
           created_at: '2026-04-29',
           room_members: [{ count: 6 }],
         },
@@ -74,12 +74,14 @@ describe('fetchMyRooms', () => {
     expect(await fetchMyRooms('jwt')).toEqual([])
   })
 
-  test('4) URL params: state in lobby/in_progress + order desc', async () => {
+  test('4) URL params: devam edilebilir lobby/active/reveal + order desc', async () => {
     mockFetch.mockReturnValue(ok([]))
     await fetchMyRooms('jwt')
     const url = String(mockFetch.mock.calls[0][0])
     // URLSearchParams encode'lar comma'yi %2C, parantezi de encode edebilir
-    expect(url).toMatch(/state=in\.(\(|%28)lobby(%2C|,)in_progress(\)|%29)/)
+    expect(url).toMatch(
+      /state=in\.(\(|%28)lobby(%2C|,)active(%2C|,)reveal(\)|%29)/,
+    )
     expect(url).toMatch(/order=created_at\.desc/)
   })
 

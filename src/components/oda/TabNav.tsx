@@ -13,32 +13,29 @@ interface TabNavProps {
 }
 
 export function TabNav({ activeTab }: TabNavProps) {
+  const linkClass = (tab: TabNavProps['activeTab']) =>
+    tab === activeTab
+      ? 'flex min-h-11 flex-1 items-center justify-center rounded-xl bg-[var(--card)] px-4 text-sm font-extrabold text-[var(--focus-text)] shadow-sm'
+      : 'flex min-h-11 flex-1 items-center justify-center rounded-xl px-4 text-sm font-bold text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]'
+
   return (
     <nav
       aria-label="Oda sekmeleri"
-      className="mb-6 flex gap-1 border-b border-[var(--border)]"
+      className="mb-5 grid grid-cols-2 gap-1 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1"
     >
       <Link
         href="/oda"
-        className={
-          activeTab === 'mine'
-            ? 'border-b-2 border-[var(--focus)] px-4 py-2 text-sm font-bold'
-            : 'px-4 py-2 text-sm text-[var(--text-sub)] transition-colors hover:text-[var(--text)]'
-        }
+        className={linkClass('mine')}
         aria-current={activeTab === 'mine' ? 'page' : undefined}
       >
         Odalarım
       </Link>
       <Link
         href="/oda?tab=public"
-        className={
-          activeTab === 'public'
-            ? 'border-b-2 border-[var(--focus)] px-4 py-2 text-sm font-bold'
-            : 'px-4 py-2 text-sm text-[var(--text-sub)] transition-colors hover:text-[var(--text)]'
-        }
+        className={linkClass('public')}
         aria-current={activeTab === 'public' ? 'page' : undefined}
       >
-        Aktif Odalar
+        Açık Odalar
       </Link>
     </nav>
   )

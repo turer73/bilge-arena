@@ -12,7 +12,7 @@
  */
 
 import { describe, test, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 
 // vi.hoisted ile spy ref (React 19 useActionState mock)
 const { mockUseActionState } = vi.hoisted(() => ({
@@ -46,7 +46,7 @@ describe('CreateRoomForm', () => {
     expect(screen.getByLabelText(/Soru Sayısı/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Maksimum Oyuncu/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Soru Süresi/)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Otomatik Geçiş Süresi/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Otomatik Geçiş/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Mod/)).toBeInTheDocument()
   })
 
@@ -71,30 +71,30 @@ describe('CreateRoomForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Yetkisiz')
   })
 
-  test('4) Defaults: difficulty=2, max_players=8, mode=sync, auto_advance_seconds=5', () => {
+  test('4) Hızlı Düello varsayılanı mevcut action alanlarını doldurur', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     render(<CreateRoomForm />)
     expect(
-      (screen.getByLabelText(/Zorluk/) as HTMLInputElement).defaultValue,
+      (screen.getByLabelText(/Zorluk/) as HTMLInputElement).value,
     ).toBe('2')
     expect(
       (screen.getByLabelText(/Maksimum Oyuncu/) as HTMLInputElement)
-        .defaultValue,
-    ).toBe('8')
+        .value,
+    ).toBe('4')
     expect((screen.getByLabelText(/Mod/) as HTMLSelectElement).value).toBe(
       'sync',
     )
     // Sprint 2A Task 1
     expect(
-      (screen.getByLabelText(/Otomatik Geçiş Süresi/) as HTMLInputElement)
-        .defaultValue,
+      (screen.getByLabelText(/Otomatik Geçiş/) as HTMLInputElement)
+        .value,
     ).toBe('5')
   })
 
   test('5) isPending=true -> button disabled + Olusturuluyor label', () => {
     mockUseActionState.mockReturnValue([{}, formAction, true])
     render(<CreateRoomForm />)
-    const btn = screen.getByRole('button')
+    const btn = screen.getByRole('button', { name: /Oluşturuluyor/i })
     expect(btn).toBeDisabled()
     // Turkce diakritik (TDK feedback memory: UI metni Turkce)
     expect(btn.textContent).toMatch(/Oluşturuluyor/)
@@ -134,6 +134,45 @@ describe('CreateRoomForm', () => {
     mockUseActionState.mockReturnValue([{}, formAction, false])
     render(<CreateRoomForm />)
     expect(screen.getByText(/Herkese Açık/i)).toBeInTheDocument()
-    expect(screen.getByText(/max 6 oyuncu/i)).toBeInTheDocument()
+    expect(screen.getByText(/En fazla 6 oyuncu/i)).toBeInTheDocument()
+  })
+
+  test('9) üç preset görünür ve seçili preset aria-pressed ile belirtilir', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(<CreateRoomForm />)
+    expect(screen.getByRole('button', { name: /Hızlı Düello/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: /Arkadaşlarla/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Kendi Hızında/i })).toBeInTheDocument()
+  })
+
+  test('10) Arkadaşlarla preset action alanlarını 15 soru, 6 oyuncu ve sync yapar', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(<CreateRoomForm />)
+    fireEvent.click(screen.getByRole('button', { name: /Arkadaşlarla/i }))
+    expect((screen.getByLabelText(/Soru Sayısı/) as HTMLInputElement).value).toBe('15')
+    expect((screen.getByLabelText(/Maksimum Oyuncu/) as HTMLInputElement).value).toBe('6')
+    expect((screen.getByLabelText(/Mod/) as HTMLSelectElement).value).toBe('sync')
+  })
+
+  test('11) Kendi Hızında preset async ve manuel geçiş değerlerini yazar', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(<CreateRoomForm />)
+    fireEvent.click(screen.getByRole('button', { name: /Kendi Hızında/i }))
+    expect((screen.getByLabelText(/Mod/) as HTMLSelectElement).value).toBe('async')
+    expect(
+      (screen.getByLabelText(/Otomatik Geçiş/) as HTMLInputElement).value,
+    ).toBe('0')
+  })
+
+  test('12) public seçiminde oyuncu üst sınırı 6 olur', () => {
+    mockUseActionState.mockReturnValue([{}, formAction, false])
+    render(<CreateRoomForm />)
+    const checkbox = screen.getByRole('checkbox', { name: /Herkese Açık/i })
+    fireEvent.click(checkbox)
+    const maxPlayers = screen.getByLabelText(/Maksimum Oyuncu/) as HTMLInputElement
+    expect(maxPlayers.max).toBe('6')
   })
 })
