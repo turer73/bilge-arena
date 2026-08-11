@@ -3,9 +3,8 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { GameSlug } from '@/lib/constants/games'
-import { useMasteryMap } from '@/lib/hooks/use-mastery-map'
+import { useMasteryMap, type MasteryOutcome } from '@/lib/hooks/use-mastery-map'
 import { useGameStore } from '@/stores/game-store'
-import { MasteryMapCard } from '@/components/game/mastery-map-card'
 
 interface MasteryActionCardProps {
   game: GameSlug
@@ -13,13 +12,10 @@ interface MasteryActionCardProps {
   examRef?: string | null
 }
 
-/**
- * Aksiyon-odaklı mastery kartı — opak-yüzde yerine "en zayıf kazanımdan pratik
- * yap" CTA'sı (araştırma 1: dashboard'u eyleme-çevir, opak-skor değil).
- *
- * Görsel gösterim mevcut MasteryMapCard'ı tekrar kullanır; pratik CTA'sı
- * mevcut oyun/kategori filtresini kurar ve tam soru sayısı garantisi vermez.
- */
+function byLowestReliableScore(a: MasteryOutcome, b: MasteryOutcome) {
+  return a.score - b.score || b.attempts - a.attempts
+}
+
 export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardProps) {
   const router = useRouter()
   const gameStore = useGameStore()
@@ -27,54 +23,106 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
 
   if (!userId || loading || outcomes.length === 0) return null
 
-  const weakest = outcomes
-    .filter((o) => o.status !== 'mastered')
-    .sort((a, b) => {
-      if (a.status === 'insufficient' && b.status !== 'insufficient') return -1
-      if (b.status === 'insufficient' && a.status !== 'insufficient') return 1
-      return a.score - b.score || a.attempts - b.attempts
-    })[0]
+  const strongCount = outcomes.filter((outcome) => outcome.status === 'mastered').length
+  const developing = outcomes
+    .filter((outcome) => outcome.status === 'developing')
+    .sort(byLowestReliableScore)
+  const collectingEvidence = outcomes
+    .filter((outcome) => outcome.status === 'insufficient')
+    .sort((a, b) => b.attempts - a.attempts || a.title.localeCompare(b.title, 'tr'))
+  // Yeterli kanıtı olan gelişen kazanım önce gelir. Kanıtı yetersiz konu “zayıf” diye sunulmaz.
+  const nextAction = developing[0] ?? collectingEvidence[0]
 
   const mapParams = new URLSearchParams({ game })
   if (examRef) mapParams.set('exam_ref', examRef)
   const mapHref = `/arena/hakimiyet?${mapParams}`
 
-  if (!weakest) {
+  if (!nextAction) {
     return (
-      <div className="animate-fadeUp overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)]" style={{ animationDelay: '0.34s', animationFillMode: 'both' }}>
-        <div className="px-4 py-4 text-center text-[11px] text-[var(--text-sub)]">
-          🎉 Şu an takip edilen kazanımların hepsinde ustalaştın.
-          <Link href={mapHref} className="mt-2 block font-bold text-[var(--focus)]">
-            Hâkimiyet haritanı aç
-          </Link>
-        </div>
-      </div>
+      <article
+        className="animate-fadeUp rounded-2xl border border-[var(--growth)]/30 bg-[var(--growth)]/5 p-4"
+        style={{ animationDelay: '0.34s', animationFillMode: 'both' }}
+      >
+        <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--growth-text)]">GÜÇLÜ</p>
+        <h2 className="mt-1 text-sm font-extrabold text-[var(--text)]">Takip edilen kazanımların güçlü görünüyor</h2>
+        <p className="mt-1 text-xs text-[var(--text-sub)]">Planını tamamlayarak seviyeni koruyabilirsin.</p>
+        <Link href={mapHref} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-[var(--focus-text)] hover:underline">
+          Hâkimiyet haritanı aç
+        </Link>
+      </article>
     )
   }
 
+  const needsEvidence = nextAction.status === 'insufficient'
+  const statusLabel = needsEvidence ? 'KANIT TOPLA' : 'GELİŞİYOR'
+  const progress = needsEvidence ? nextAction.evidenceCompleteness : nextAction.score
+
   const handlePractice = () => {
-    gameStore.setGame(weakest.game as GameSlug)
-    gameStore.setCategory(weakest.category)
-    gameStore.setExamRef(weakest.examRef)
+    gameStore.setGame(nextAction.game as GameSlug)
+    gameStore.setCategory(nextAction.category)
+    gameStore.setExamRef(nextAction.examRef)
     gameStore.setMode('practice')
-    router.push(`/arena/${weakest.game}`)
+    router.push(`/arena/${nextAction.game}`)
   }
 
   return (
-    <div className="space-y-2">
-      <MasteryMapCard outcomes={[weakest]} loading={false} />
-      <button
-        onClick={handlePractice}
-        className="btn-primary w-full rounded-[10px] py-2 text-xs font-bold tracking-wide transition-transform hover:scale-[1.02]"
-      >
-        🎯 Bu kazanımı çalış
-      </button>
-      <Link
-        href={mapHref}
-        className="block text-center text-[10px] font-bold text-[var(--focus)] hover:underline"
-      >
-        Tüm hâkimiyet haritasını aç
-      </Link>
-    </div>
+    <article
+      className="animate-fadeUp overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-sm"
+      style={{ animationDelay: '0.34s', animationFillMode: 'both' }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
+        <div>
+          <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--focus-text)]">SIRADAKİ EN İYİ ADIM</p>
+          <p className="mt-0.5 text-[10px] text-[var(--text-sub)]">Planından sonra buna odaklan</p>
+        </div>
+        <div className="flex gap-1.5" aria-label="Kazanım durumları">
+          {strongCount > 0 && (
+            <span className="rounded-full bg-[var(--growth)]/10 px-2 py-1 text-[9px] font-bold text-[var(--growth-text)]">
+              {strongCount} güçlü
+            </span>
+          )}
+          {developing.length > 0 && (
+            <span className="rounded-full bg-[var(--focus)]/10 px-2 py-1 text-[9px] font-bold text-[var(--focus-text)]">
+              {developing.length} gelişiyor
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 md:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className={`text-[10px] font-extrabold tracking-[0.14em] ${needsEvidence ? 'text-[var(--wisdom-text)]' : 'text-[var(--focus-text)]'}`}>
+              {statusLabel}
+            </p>
+            <h2 className="mt-1 text-sm font-extrabold text-[var(--text)] md:text-base">{nextAction.title}</h2>
+          </div>
+          <span className="shrink-0 text-sm font-extrabold text-[var(--focus-text)]">
+            {needsEvidence ? `${nextAction.attempts}/3` : `%${nextAction.score}`}
+          </span>
+        </div>
+
+        <p className="mt-2 text-xs leading-relaxed text-[var(--text-sub)]">
+          {needsEvidence
+            ? 'Bu kazanım hakkında güvenilir bir yönlendirme için birkaç cevap daha gerekiyor.'
+            : 'Kısa bir pratik, bu kazanımı güçlü seviyeye yaklaştıracak.'}
+        </p>
+
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]" aria-hidden="true">
+          <div className="h-full rounded-full bg-[var(--focus)]" style={{ width: `${progress}%` }} />
+        </div>
+
+        <button
+          type="button"
+          onClick={handlePractice}
+          className="mt-4 min-h-12 w-full rounded-xl border border-[var(--focus)]/35 bg-[var(--focus)]/10 px-4 text-sm font-extrabold text-[var(--focus-text)] transition-colors hover:bg-[var(--focus)]/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+        >
+          {needsEvidence ? 'Kanıt İçin Pratik Yap' : 'Bu Kazanımı Çalış'}
+        </button>
+        <Link href={mapHref} className="mt-2 flex min-h-11 items-center justify-center text-xs font-bold text-[var(--text-sub)] hover:text-[var(--focus-text)] hover:underline">
+          Tüm hâkimiyet haritasını aç
+        </Link>
+      </div>
+    </article>
   )
 }

@@ -1,18 +1,12 @@
-/**
- * CalismaClient — ders çalışma hub'ının auth-dalları + kompozisyon smoke testi.
- * Codecov patch-coverage: PR#278 review turu. Cocuk bilesenler izole-mock:
- * burada test edilen sey hub'in dallanmasi, cocuklarin ici kendi testlerinde.
- */
-
 import { describe, test, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import CalismaClient from '../calisma-client'
 import { useAuthStore } from '@/stores/auth-store'
+import { useGameStore } from '@/stores/game-store'
 
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: vi.fn(),
 }))
-// Lazy StudyAssistant (next/dynamic) — stub'a indirger, chat bundle'i test-disi
 vi.mock('next/dynamic', () => ({
   default: () => {
     const DynamicStub = () => <div data-testid="study-assistant-stub" />
@@ -31,33 +25,87 @@ const mockedUseAuthStore = vi.mocked(useAuthStore)
 describe('CalismaClient', () => {
   beforeEach(() => {
     mockedUseAuthStore.mockReset()
+    useGameStore.setState({
+      selectedGame: null,
+      selectedMode: 'classic',
+      selectedCategory: null,
+      selectedDifficulty: null,
+      selectedExamRef: null,
+    })
   })
 
-  test('loading durumunda yukleniyor gosterir', () => {
+  test('loading durumunda erişilebilir yükleme durumu gösterir', () => {
     mockedUseAuthStore.mockReturnValue({ user: null, profile: null, loading: true } as never)
     render(<CalismaClient />)
-    expect(screen.getByText(/Yükleniyor/)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Yükleniyor')
   })
 
-  test('giris yoksa giris-CTA gosterir (hub icerigi render edilmez)', () => {
+  test('giriş yoksa kişisel hub yerine giriş CTA gösterir', () => {
     mockedUseAuthStore.mockReturnValue({ user: null, profile: null, loading: false } as never)
     render(<CalismaClient />)
-    expect(screen.getByText('Giriş Yapmanız Gerekiyor')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Giriş Yap/ })).toHaveAttribute('href', '/giris')
+    expect(screen.getByText('Giriş Yapman Gerekiyor')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Giriş Yap' })).toHaveAttribute('href', '/giris')
     expect(screen.queryByTestId('today-plan-focus')).not.toBeInTheDocument()
   })
 
-  test('giris varsa baslik + odak-CTA + mastery + inline asistan kompoze edilir', () => {
+  test('YKS kullanıcısında görünür ders/sınav bağlamı ve tek plan odağı render edilir', () => {
     mockedUseAuthStore.mockReturnValue({
       user: { id: 'u1' },
       profile: { exam_type: 'yks' },
       loading: false,
     } as never)
     render(<CalismaClient />)
-    expect(screen.getByText('Ders Çalışma Ortamı')).toBeInTheDocument()
+
+    expect(screen.getByRole('heading', { name: 'Bugün neyi ilerletelim?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Matematik/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'TYT' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
     expect(screen.getByTestId('today-plan-focus')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /10 soruluk kısa tanılama/i })).toHaveAttribute('href', '/arena/tani')
     expect(screen.getByTestId('mastery-action-card')).toBeInTheDocument()
+  })
+
+  test('LGS profilinde stale TYT/WordQuest seçimini güvenli bağlama düşürür', () => {
+    useGameStore.setState({ selectedGame: 'wordquest', selectedExamRef: 'TYT' })
+    mockedUseAuthStore.mockReturnValue({
+      user: { id: 'u1' },
+      profile: { exam_type: 'lgs' },
+      loading: false,
+    } as never)
+    render(<CalismaClient />)
+
+    expect(screen.queryByRole('button', { name: /İngilizce/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Matematik/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'LGS' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('ders değişimi stale kategori temizler ve geçerli sınavı korur', () => {
+    useGameStore.setState({ selectedCategory: 'problemler', selectedExamRef: 'TYT' })
+    mockedUseAuthStore.mockReturnValue({
+      user: { id: 'u1' },
+      profile: { exam_type: 'yks' },
+      loading: false,
+    } as never)
+    render(<CalismaClient />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Türkçe/ }))
+    expect(useGameStore.getState().selectedGame).toBe('turkce')
+    expect(useGameStore.getState().selectedExamRef).toBe('TYT')
+    expect(useGameStore.getState().selectedCategory).toBeNull()
+  })
+
+  test('mobil asistan paketi kullanıcı açana kadar mount edilmez', () => {
+    mockedUseAuthStore.mockReturnValue({
+      user: { id: 'u1' },
+      profile: { exam_type: 'yks' },
+      loading: false,
+    } as never)
+    render(<CalismaClient />)
+
+    expect(screen.queryByTestId('study-assistant-stub')).not.toBeInTheDocument()
+    const button = screen.getByRole('button', { name: 'Asistanı aç' })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(button)
     expect(screen.getByTestId('study-assistant-stub')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Kapat' })).toHaveAttribute('aria-expanded', 'true')
   })
 })

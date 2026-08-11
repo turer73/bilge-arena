@@ -4,6 +4,7 @@
  * Ağır çocuklar/hook'lar stub'lanır; yalnızca DOM sırası test edilir.
  */
 
+import { StrictMode } from 'react'
 import { describe, test, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
@@ -298,6 +299,112 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
     } finally {
       authStoreValue.user = null
       todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('kısmi planda Devam Et yalnız tamamlanmamış soruları başlatır', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    const questions = [{ id: 'q-done' }, { id: 'q-left-1' }, { id: 'q-left-2' }]
+    todayPlanValue.plan = {
+      planDate: '2026-07-21',
+      game: 'matematik',
+      examRef: 'TYT',
+      questions,
+      completedIds: ['q-done'],
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }
+    quizGame.handleStartPlanned.mockClear()
+
+    try {
+      render(<QuizEngine game="matematik" />)
+      fireEvent.click(screen.getByTestId('today-plan-start'))
+      expect(quizGame.handleStartPlanned).toHaveBeenCalledWith(
+        [{ id: 'q-left-1' }, { id: 'q-left-2' }],
+        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      )
+    } finally {
+      authStoreValue.user = null
+      todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('Ders Çalış niyetini plan yüklendikten sonra bir kez tüketip doğrudan başlatır', async () => {
+    window.history.replaceState({}, '', '/arena/matematik?start=today-plan')
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    todayPlanValue.plan = {
+      planDate: '2026-07-21',
+      game: 'matematik',
+      examRef: 'TYT',
+      questions: [{ id: 'q-plan' }],
+      completedIds: [],
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }
+    quizGame.handleStartPlanned.mockClear()
+    gameStoreValue.setExamRef.mockClear()
+    gameStoreValue.selectedExamRef = 'AYT-SAY'
+
+    try {
+      const { rerender } = render(
+        <StrictMode>
+          <QuizEngine game="matematik" />
+        </StrictMode>,
+      )
+      await waitFor(() => expect(quizGame.handleStartPlanned).toHaveBeenCalledOnce())
+      expect(gameStoreValue.setExamRef).toHaveBeenCalledWith('TYT')
+      expect(window.location.search).toBe('')
+      rerender(
+        <StrictMode>
+          <QuizEngine game="matematik" />
+        </StrictMode>,
+      )
+      expect(quizGame.handleStartPlanned).toHaveBeenCalledOnce()
+    } finally {
+      window.history.replaceState({}, '', '/')
+      gameStoreValue.selectedExamRef = 'TYT'
+      authStoreValue.user = null
+      todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('doğrudan başlangıç niyeti loading bitip plan hazır olana kadar bekler', async () => {
+    window.history.replaceState({}, '', '/arena/matematik?start=today-plan')
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    todayPlanValue.loading = true
+    todayPlanValue.plan = null
+    quizGame.handleStartPlanned.mockClear()
+
+    try {
+      const { rerender } = render(<QuizEngine game="matematik" />)
+      expect(quizGame.handleStartPlanned).not.toHaveBeenCalled()
+      expect(window.location.search).toBe('?start=today-plan')
+
+      todayPlanValue.loading = false
+      todayPlanValue.plan = {
+        planDate: '2026-07-21',
+        game: 'matematik',
+        examRef: 'TYT',
+        questions: [{ id: 'q-ready' }],
+        completedIds: [],
+        attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        expiresAt: '2099-01-01T00:00:00.000Z',
+      }
+      rerender(<QuizEngine game="matematik" />)
+
+      await waitFor(() => expect(quizGame.handleStartPlanned).toHaveBeenCalledOnce())
+      expect(window.location.search).toBe('')
+    } finally {
+      window.history.replaceState({}, '', '/')
+      todayPlanValue.loading = false
+      todayPlanValue.plan = null
+      authStoreValue.user = null
       quizGame.screen = 'game'
     }
   })
