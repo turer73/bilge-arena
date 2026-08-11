@@ -92,6 +92,7 @@ const GENERATED_ROW = {
   times_correct: null,
   source: null,
   exam_ref: null,
+  published_revision_id: null,
   created_at: null,
   updated_at: null,
 } satisfies QuestionRow

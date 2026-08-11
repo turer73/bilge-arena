@@ -461,7 +461,9 @@ export async function POST(request: Request) {
     p_user_id: user.id,
     p_stage: stageNumber,
     p_request_id: requestId,
-    p_response_text: candidateText,
+    // PostgreSQL intentionally requires NULL for the solution stage; generated
+    // RPC types cannot express nullable function arguments.
+    p_response_text: candidateText as string,
     p_source: candidateSource,
     p_evaluation_passed: true,
     p_policy_version: COACH_POLICY_VERSION,

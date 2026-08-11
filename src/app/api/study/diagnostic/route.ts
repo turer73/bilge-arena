@@ -588,7 +588,8 @@ export async function POST(request: NextRequest) {
         p_is_correct: isCorrect,
         p_response_time_ms: responseTimeMs,
         p_request_id: body.requestId,
-        p_next_question_id: nextQuestionId,
+        // NULL marks the server-authoritative end of the adaptive sequence.
+        p_next_question_id: nextQuestionId as string,
       })
       if (error) throw error
       const result = parseRecordRpc(data)

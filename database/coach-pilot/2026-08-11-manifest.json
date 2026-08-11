@@ -1,0 +1,210 @@
+{
+  "schemaVersion": "coach-curation-manifest.v1",
+  "selectionPolicy": "coverage-round-robin-v1",
+  "eligibleCount": 636,
+  "poolSha256": "f44259424871e2f6975abfb9c0f604cfc205960601ce38314c455fcd82d71f18",
+  "sampleSize": 20,
+  "items": [
+    {
+      "questionId": "62a42d77-6f16-4b0f-9fd6-cf25af8eac79",
+      "revisionId": "a41df11b-6ea8-4ed7-9774-d145aad1ac36",
+      "contentSha256": "fc8d25a6737d1445c0fb96001ae5510193648d415e81d72076c662627ff021a8",
+      "game": "matematik",
+      "category": "problemler",
+      "difficulty": 3,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "b7f0b695-9400-43df-be59-d99ece51ad80",
+      "revisionId": "52e7db56-36e3-4ebe-9ad4-94e1051d04ac",
+      "contentSha256": "3783d17959ae065656b2168bbf09c95f303b616e1f03078c836f89630650e7c8",
+      "game": "matematik",
+      "category": "geometri",
+      "difficulty": 2,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "61ff8ebe-34b3-45a0-bf98-76dcd49a28e5",
+      "revisionId": "d9cfbdd3-d1ea-49c1-9574-2f827a00f9ae",
+      "contentSha256": "139caf5dac4757512b07a1d5cb28c69d86403d4cbf26744b9b814252260198e4",
+      "game": "matematik",
+      "category": "denklemler",
+      "difficulty": 4,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "50557657-dc6c-4032-9f35-f9a23108f396",
+      "revisionId": "07b984b8-cfac-4168-81d6-1f4ae4b90f82",
+      "contentSha256": "be4a528022f9084cf2ba73bcae089e353af6f292f4793cca7f6886f84cfd2773",
+      "game": "matematik",
+      "category": "fonksiyonlar",
+      "difficulty": 5,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "63e8d545-10a8-4ea9-a16d-6b0a5c390a90",
+      "revisionId": "60540f71-a2d2-46ef-8c07-07e6cca2e650",
+      "contentSha256": "ad8cd151a44acf90a2d553955c1c0ea8bf362d172d5946dd2b09bc81035fdd57",
+      "game": "matematik",
+      "category": "sayilar",
+      "difficulty": 1,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "ed30b363-7c26-4a7b-b46c-c2a15f6cc483",
+      "revisionId": "d3c7640d-bf60-4b34-a423-7bb06dbd2169",
+      "contentSha256": "d9d9359871504aceeb8128f31dbac464f59fa555377d4822afd03a95e94f6595",
+      "game": "matematik",
+      "category": "olasilik",
+      "difficulty": 2,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "6e12be1d-e75b-417a-8af2-fff65949dce6",
+      "revisionId": "b4019f3b-6747-438b-88d8-77f7dacaf1bd",
+      "contentSha256": "9263e4369697651426b17833079c279035c7f6a4e332130e1fc8c56c773398f8",
+      "game": "matematik",
+      "category": "problemler",
+      "difficulty": 3,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "7d615fbe-2a30-4b4d-819b-9108ec29af70",
+      "revisionId": "e1c5bff4-b0b2-46b8-9fe0-b8d5b32315f4",
+      "contentSha256": "e427908774d0d59f20917e7975582fa268893b400cf3076835186fff8156a889",
+      "game": "matematik",
+      "category": "sayilar",
+      "difficulty": 5,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "fbd2ed7f-d714-4ef5-a194-11365755d100",
+      "revisionId": "7543b9e4-1fe9-49fa-9f25-5b9277c12992",
+      "contentSha256": "0220c7f9ed15f9e16f051e0da7e5f6af2bd914c04219f7f120fa2d46509d1c31",
+      "game": "matematik",
+      "category": "denklemler",
+      "difficulty": 1,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "ec0e60aa-fb94-4cc5-a316-717eae3b4f0b",
+      "revisionId": "4cdd2380-aafa-433d-a25c-00fae58810ee",
+      "contentSha256": "5d658fb99117d6ecb468b131a3ed5fe23cbe912cff40ed8fbed85b0aed805df6",
+      "game": "matematik",
+      "category": "olasilik",
+      "difficulty": 4,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "91274688-ac74-4b34-a5ea-44e82362c65a",
+      "revisionId": "47f17e4e-cb3a-4736-867b-b97160909516",
+      "contentSha256": "33c24629915891b980c6f674017b8b68ee174d98b4e67fd569f2142cbde82be9",
+      "game": "matematik",
+      "category": "fonksiyonlar",
+      "difficulty": 2,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "5d709c16-3ef0-413f-a692-47ac7c0bdc58",
+      "revisionId": "4779961f-4c1f-4136-aad8-df28427356cf",
+      "contentSha256": "5e7445dee284cdd421a187955e027055e6bc030b3d5e42871c862dbe208b7eef",
+      "game": "matematik",
+      "category": "geometri",
+      "difficulty": 5,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "918a1600-6bdf-43be-bc8b-0937ae97126b",
+      "revisionId": "8edcd381-51aa-4085-a441-a3551397d3d9",
+      "contentSha256": "44a26a396abdd8e2be35c86079c0d6de53297d9259984b68dcc08ee6d0b8bed3",
+      "game": "matematik",
+      "category": "problemler",
+      "difficulty": 4,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "d29bbb54-eeeb-4497-8216-70a9b69add52",
+      "revisionId": "4ceb6f93-ac6f-45ed-be2d-93cc38647595",
+      "contentSha256": "88e0c82577d905e8c7f5659b16df00c71b945c6d2745fd058ef21d3dd36d0633",
+      "game": "matematik",
+      "category": "denklemler",
+      "difficulty": 3,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "13e78f3a-404b-4f38-a204-7ae94dd48d66",
+      "revisionId": "8d0e803d-3063-411e-be52-c19789b33d78",
+      "contentSha256": "7ca931f67151bc568324409288f43024816e14408664d820709b01c42d3e6924",
+      "game": "matematik",
+      "category": "sayilar",
+      "difficulty": 1,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "25d60bf7-8400-4959-902e-7bfe61aba868",
+      "revisionId": "dc24abc8-429f-4e03-b5ab-c48913c6eb9d",
+      "contentSha256": "2f00b5f35253a7d3281bdd173ebd782c289a3d1f8ca5ac1200915a9147a7d4a4",
+      "game": "matematik",
+      "category": "olasilik",
+      "difficulty": 2,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "97fd82e0-7cbe-4fdd-b90c-53de963148fc",
+      "revisionId": "26d5496f-8190-40a9-9fd7-650212d59480",
+      "contentSha256": "e5743f58ff228d9aedcaa423728cd676fe920d56ea290ea0e24ba12edca54404",
+      "game": "matematik",
+      "category": "fonksiyonlar",
+      "difficulty": 3,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "747cc0bf-a0eb-457f-8cb2-1d20a02b344e",
+      "revisionId": "1b2cd690-66b3-48a1-a2b6-b8d58f80a7d3",
+      "contentSha256": "8491c1d76d846a9fc676344747360d35053965dcec6c85aaaa366ddf48e50786",
+      "game": "matematik",
+      "category": "geometri",
+      "difficulty": 1,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "76f088ff-8b67-4294-b691-b0de849ab33c",
+      "revisionId": "58856d05-a388-4e0b-bd56-d8ea466aa7c5",
+      "contentSha256": "c8e8d673b107a1b719d488fe1e94d2ea7647ee314313a861258aedb7658269cf",
+      "game": "matematik",
+      "category": "denklemler",
+      "difficulty": 5,
+      "examRef": "TYT",
+      "optionCount": 5
+    },
+    {
+      "questionId": "f5cdc827-6a8f-434a-8370-4b9275306627",
+      "revisionId": "570bb288-3476-46c1-af7f-8a51c2f028ba",
+      "contentSha256": "6e7d2a2e0ee61e6531fcd3d8981c261ab28c4908c8da4aa9752d4218a70b13c3",
+      "game": "matematik",
+      "category": "olasilik",
+      "difficulty": 4,
+      "examRef": "TYT",
+      "optionCount": 5
+    }
+  ],
+  "manifestSha256": "5653e137555f5a7f7ff5dc51bf1dc0293c21ae27d4763c89fbb2cfab66112433"
+}

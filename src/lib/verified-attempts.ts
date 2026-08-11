@@ -213,7 +213,8 @@ export async function issueVerifiedExamAttempt(
   const { data, error } = await admin.rpc('issue_verified_exam_attempt', {
     p_user_id: input.userId,
     p_game: input.game,
-    p_exam_ref: input.examRef,
+    // PostgreSQL uses NULL as a first-class unscoped exam identity.
+    p_exam_ref: input.examRef as string,
     p_blueprint_version: input.blueprintVersion,
     p_items: input.items.map((item, position) => ({
       position,

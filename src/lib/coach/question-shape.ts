@@ -11,7 +11,7 @@ export interface StagedCoachQuestionContent {
   hint?: string
   solution?: string
   coach?: {
-    misconceptions?: string[]
+    misconceptions?: Array<string | null>
     hint1?: string
     hint2?: string
     miniExample?: string
@@ -57,7 +57,11 @@ export function supportsGuidedCoachQuestion(
   if (misconceptions !== undefined && (
     !Array.isArray(misconceptions)
     || misconceptions.length !== content.options.length
-    || misconceptions.some((item) => typeof item !== 'string' || !item.trim())
+    || misconceptions.some((item, index) => (
+      index === content.answer
+        ? item !== null
+        : typeof item !== 'string' || !item.trim()
+    ))
   )) return false
 
   return [hint1, hint2, miniExample].every(

@@ -58,7 +58,7 @@ describe('Bilge Koç hint guard', () => {
       answer: 1,
       solution: 'İki ile iki toplanır.',
       coach: {
-        misconceptions: ['Toplama yerine çıkarma yapılmış olabilir.', 'İşlem doğru kurulmuş olabilir.'],
+        misconceptions: ['Toplama yerine çıkarma yapılmış olabilir.', null],
         hint1: 'İki grubu birlikte say.',
         hint2: 'Toplama işlemini yaz.',
         miniExample: '1 + 2 = 3 örneğini düşün.',
