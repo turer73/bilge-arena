@@ -63,6 +63,15 @@ export type EventName =
   | 'OutcomeStatusVerified'
   | 'CoachStageViewed'
   | 'CoachTransferResult'
+  // Retention deneyi - yalniz anonim urun davranisi, PII gonderilmez.
+  | 'ActivationExperimentViewed'
+  | 'ActivationGoalSelected'
+  | 'ActivationQuestionShown'
+  | 'ActivationAnswerSubmitted'
+  | 'ActivationExplanationViewed'
+  | 'ActivationMicroSessionCompleted'
+  | 'ActivationSaveStarted'
+  | 'ActivationRewardClaimed'
 
 /**
  * Plausible custom event gonder. Sessizce basarisiz olur (hic fırlatmaz).

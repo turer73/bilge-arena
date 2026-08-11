@@ -2,6 +2,7 @@
 
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
 import { DailyLoginChecker } from '@/components/game/daily-login-checker'
+import { ActivationRewardNotice } from '@/components/landing/activation-reward-notice'
 
 /**
  * Arena layout'un yardımcı bileşenlerini izole error boundary'lerle sarar.
@@ -14,8 +15,13 @@ import { DailyLoginChecker } from '@/components/game/daily-login-checker'
  */
 export function ArenaAuxiliaries() {
   return (
-    <ComponentErrorBoundary label="Günlük Giriş" variant="minimal">
-      <DailyLoginChecker />
-    </ComponentErrorBoundary>
+    <>
+      <ComponentErrorBoundary label="Aktivasyon Ödülü" variant="minimal">
+        <ActivationRewardNotice />
+      </ComponentErrorBoundary>
+      <ComponentErrorBoundary label="Günlük Giriş" variant="minimal">
+        <DailyLoginChecker />
+      </ComponentErrorBoundary>
+    </>
   )
 }

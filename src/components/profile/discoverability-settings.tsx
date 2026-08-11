@@ -52,15 +52,20 @@ export function DiscoverabilitySettings() {
           aria-label="Aramada görünürlük"
           disabled={saving}
           onClick={toggle}
-          className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
-            isDiscoverable ? 'bg-[var(--growth)]' : 'bg-[var(--border)]'
-          }`}
+          className="relative -my-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-50"
         >
           <span
-            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-              isDiscoverable ? 'translate-x-5' : 'translate-x-0.5'
+            aria-hidden
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              isDiscoverable ? 'bg-[var(--growth)]' : 'bg-[var(--border)]'
             }`}
-          />
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                isDiscoverable ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </span>
         </button>
       </div>
     </div>

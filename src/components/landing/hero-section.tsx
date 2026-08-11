@@ -2,11 +2,48 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import dynamic from 'next/dynamic'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Zap, ArrowRight, Flame } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ArenaBackground } from './arena-background'
 import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
+import { trackEvent } from '@/lib/utils/plausible'
+import {
+  ACTIVATION_EXPERIMENT,
+  getActivationVariant,
+  markActivationExposure,
+} from '@/lib/experiments/activation'
+
+const ActivationMicroQuiz = dynamic(
+  () => import('./activation-micro-quiz').then((mod) => ({ default: mod.ActivationMicroQuiz })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-72 w-full items-center justify-center rounded-3xl border border-[var(--focus-border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-sub)]" role="status">
+        Hızlı başlangıç hazırlanıyor…
+      </div>
+    ),
+  },
+)
+
+function ActivationMicroQuizSlot() {
+  const enabled = useSyncExternalStore(
+    () => () => {},
+    () => getActivationVariant() === 'micro',
+    () => false,
+  )
+
+  if (!enabled) {
+    return (
+      <div className="flex min-h-72 w-full items-center justify-center rounded-3xl border border-[var(--focus-border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-sub)]" role="status">
+        Hızlı başlangıç hazırlanıyor…
+      </div>
+    )
+  }
+
+  return <ActivationMicroQuiz />
+}
 
 /** Orbit etrafında süzen mini kart — tüm breakpoint'lere uyumlu */
 function FloatCard({
@@ -74,6 +111,14 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
   const ctaSecondary = (config?.cta_secondary as { text?: string; href?: string }) || {}
   const miniStats = (config?.mini_stats as string[]) || null
 
+  useEffect(() => {
+    const variant = getActivationVariant()
+    markActivationExposure(variant)
+    trackEvent('ActivationExperimentViewed', {
+      props: { experiment: ACTIVATION_EXPERIMENT, variant },
+    })
+  }, [])
+
   // Anasayfa görseli: marka logosu (logoUrl = /logo/icon-512-transparent.png),
   // dairesel parlayan çerçevede. Bilge Chan maskotu kullanıcı isteğiyle
   // anasayfadan kaldırıldı (hasMascot=false) — mekanizma korundu, gerekirse
@@ -94,7 +139,7 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
         <div className="grid items-center gap-8 md:gap-12 lg:grid-cols-2 lg:gap-16">
 
           {/* ── Maskot / Arena görseli ── */}
-          <div className="relative order-first flex h-[220px] items-center justify-center
+          <div className="activation-control relative order-first flex h-[220px] items-center justify-center
             md:h-[320px]
             lg:order-last lg:h-[520px]
             xl:h-[620px]
@@ -221,6 +266,11 @@ export function HeroSection({ config }: HeroSectionProps = {}) {
                 2xl:bottom-36 2xl:left-[-60px]"
             />
 
+          </div>
+
+          {/* A/B varyanti: logo alani yerine ilk degeri uyelikten once yasatir. */}
+          <div className="activation-micro relative order-first w-full items-center justify-center lg:order-last lg:min-h-[620px] 2xl:min-h-[720px]">
+            <ActivationMicroQuizSlot />
           </div>
 
           {/* ── Sol — Metin ── */}

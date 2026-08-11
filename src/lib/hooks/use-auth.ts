@@ -177,11 +177,14 @@ export function useAuth() {
     }
   }
 
-  async function signInWithGoogle() {
+  async function signInWithGoogle(next = '/arena') {
+    const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/arena'
+    const callbackUrl = new URL('/auth/callback', window.location.origin)
+    callbackUrl.searchParams.set('next', safeNext)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: callbackUrl.toString(),
       },
     })
   }

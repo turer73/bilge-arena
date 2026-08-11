@@ -11,6 +11,7 @@ import { OfflineIndicator } from '@/components/layout/offline-indicator'
 import { GlobalBackground } from '@/components/layout/global-background'
 import { GoogleAnalytics } from '@/components/analytics/google-analytics'
 import { TEACHER_INVITE_BOOTSTRAP_SCRIPT } from '@/lib/teacher-classroom/invite-bootstrap'
+import { ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT } from '@/lib/experiments/activation'
 import './globals.css'
 
 /* ─── Lokal fontlar (next/font/local) — build artik Google Fonts agina BAGIMLI DEGIL.
@@ -131,6 +132,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* Ana sayfa A/B varyantini boyamadan once sabitle; flicker/CLS olusmasin. */}
+        <script
+          id="activation-experiment-bootstrap"
+          dangerouslySetInnerHTML={{ __html: ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT }}
+        />
         {/* Davet fragmentini analytics betiklerinden önce first-party belleğe al ve URL'den sil. */}
         <script
           id="teacher-invite-bootstrap"

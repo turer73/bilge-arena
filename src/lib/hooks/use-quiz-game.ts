@@ -19,6 +19,8 @@ import { gradeQuestion } from '@/lib/questions/grade-question'
 import { toast } from '@/stores/toast-store'
 import type { GameMode } from '@/types/database'
 import { recordMockStrategyQuestionOpened } from '@/lib/mock-strategy/client'
+import { trackEvent } from '@/lib/utils/plausible'
+import { ACTIVATION_EXPERIMENT, getActivationExposure } from '@/lib/experiments/activation'
 
 // ---------- Hook return tipi ----------
 
@@ -252,6 +254,18 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       setIsGuestMode(true)
       questionStartedAtRef.current = Date.now()
       setScreen('game')
+      const activationVariant = getActivationExposure()
+      if (activationVariant) {
+        trackEvent('ActivationQuestionShown', {
+          props: {
+            experiment: ACTIVATION_EXPERIMENT,
+            variant: activationVariant,
+            exam: gameStore.selectedExamRef ?? 'all',
+            game,
+            position: 1,
+          },
+        })
+      }
       if (!isDeneme && mode.timePerQuestion > 0) {
         timer.reset(mode.timePerQuestion)
         timer.start()
@@ -467,6 +481,25 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
           grade.solution,
         )
 
+        if (!userId) {
+          const activationVariant = getActivationExposure()
+          if (activationVariant) {
+            const activationProps = {
+              experiment: ACTIVATION_EXPERIMENT,
+              variant: activationVariant,
+              exam: gameStore.selectedExamRef ?? 'all',
+              game,
+              position: current.currentIndex + 1,
+            }
+            trackEvent('ActivationAnswerSubmitted', {
+              props: { ...activationProps, correct: grade.isCorrect },
+            })
+            if (grade.solution) {
+              trackEvent('ActivationExplanationViewed', { props: activationProps })
+            }
+          }
+        }
+
         if (grade.isCorrect) {
           playSound(newStreak >= 3 ? 'streak' : 'correct')
           setShowBurst(true)
@@ -496,7 +529,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
           setScreen('result')
         }
       })
-  }, [quizStore, timer, mode.timePerQuestion, isDeneme, attemptId, strategyTracked])
+  }, [quizStore, timer, mode.timePerQuestion, isDeneme, attemptId, strategyTracked, userId, gameStore.selectedExamRef, game])
 
   // --- Sonraki soru ---
 
