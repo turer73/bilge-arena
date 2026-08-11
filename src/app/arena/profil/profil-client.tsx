@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { XPBar } from '@/components/game/xp-bar'
 import { StreakBadge, StreakMilestoneBanner } from '@/components/game/streak-badge'
@@ -24,6 +24,7 @@ import { isStaff } from '@/lib/utils/is-staff'
 import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-ring'
 import { AvatarDecoration } from '@/components/profile/avatar-decoration'
 import { ContentQualityStatus } from '@/components/profile/content-quality-status'
+import { ProfileActions } from '@/components/profile/profile-actions'
 import Link from 'next/link'
 
 // Mod isimleri
@@ -180,7 +181,6 @@ export default function ProfilClient() {
   }
 
   const mainStats = [
-    { label: 'TOPLAM XP', value: totalXP, icon: '⚡', color: 'var(--reward)', featured: true },
     { label: 'COIN', value: coinBalance, icon: '🪙', color: 'var(--reward-light)' },
     { label: 'OYUN', value: totalSessions, icon: '🎮', color: 'var(--focus)' },
     { label: 'BAŞARI', value: `%${accuracy}`, icon: '🎯', color: 'var(--growth)' },
@@ -225,11 +225,11 @@ export default function ProfilClient() {
   })
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-6 pb-8 md:max-w-3xl md:py-8 xl:max-w-4xl xl:px-6 xl:py-10 2xl:max-w-5xl">
+    <div className="mx-auto max-w-2xl px-3 pt-4 pb-8 sm:px-4 sm:pt-6 md:max-w-3xl md:py-8 xl:max-w-4xl xl:px-6 xl:py-10 2xl:max-w-5xl">
       {/* Profil basligi — magazadan secilen arka planla (none=standart kart) */}
       <div
         data-testid="profil-header-card"
-        className={`relative isolate mb-4 animate-fadeUp overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4 md:mb-6 md:rounded-2xl md:p-6 xl:p-7 2xl:p-8 ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
+        className={`relative isolate mb-4 animate-fadeUp overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-sm md:mb-6 md:p-6 xl:p-7 2xl:p-8 ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
         style={isCssBg ? { background: activeBackground.css } : undefined}
       >
         <CardBackgroundLayer
@@ -248,18 +248,18 @@ export default function ProfilClient() {
 
           {/* Avatar + Çerçeve */}
           <div className="relative flex-shrink-0">
-            <AvatarDecoration decorationIds={decorationIds} size={48}>
-              <ProfileFrameRing frame={activeFrame} size={48}>
+            <AvatarDecoration decorationIds={decorationIds} size={52}>
+              <ProfileFrameRing frame={activeFrame} size={52}>
                 {profile.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt={displayName}
-                    className="h-12 w-12 rounded-full object-cover"
+                    className="h-[52px] w-[52px] rounded-full object-cover"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
                   <div
-                    className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
+                    className="flex h-[52px] w-[52px] items-center justify-center rounded-full text-2xl"
                     style={{ background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))' }}
                   >
                     {level.badge}
@@ -276,31 +276,40 @@ export default function ProfilClient() {
               aria-expanded={framePickerOpen}
               className="absolute -bottom-3 -right-3 flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] text-[10px] shadow-sm transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] text-xs shadow-sm transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]">
                 🖼
               </span>
             </button>
           </div>
 
           <div className="min-w-0 self-center">
-            <h1 className="truncate text-lg font-bold md:text-xl xl:text-2xl">
+            <h1 className="truncate text-base font-bold sm:text-lg md:text-xl xl:text-2xl">
               <Nameplate nameplateId={profile.selected_nameplate}>{displayName}</Nameplate>
             </h1>
+            <p className="mt-0.5 truncate text-[11px] font-semibold text-[var(--text-sub)] sm:text-xs">
+              {level.badge} {level.name}
+            </p>
+            <p className="truncate text-[10px] text-[var(--text-muted)] sm:text-[11px]">
+              {memberSince}&apos;dan beri üye
+            </p>
           </div>
 
           <div className="justify-self-end">
             <StreakBadge streak={currentStreak} />
           </div>
 
-          <div className="col-span-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-sub)] md:text-sm">
-            <span className="whitespace-nowrap">{level.badge} {level.name}</span>
-            <span aria-hidden>·</span>
-            <span className="whitespace-nowrap">{totalXP.toLocaleString('tr-TR')} XP</span>
-            <span aria-hidden>·</span>
-            <span className="whitespace-nowrap">Üye: {memberSince}</span>
-          </div>
-
-          <div className="col-span-3">
+          <div
+            data-testid="profile-xp-summary"
+            className="col-span-3 rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-secondary)_82%,transparent)] p-3"
+          >
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <span className="text-[10px] font-extrabold tracking-[0.12em] text-[var(--text-sub)]">
+                SEVİYE İLERLEMESİ
+              </span>
+              <span className="shrink-0 font-display text-sm font-black tabular-nums text-[var(--reward)]">
+                {totalXP.toLocaleString('tr-TR')} XP
+              </span>
+            </div>
             <XPBar
               xp={totalXP - level.minXP}
               level={level.level}
@@ -308,25 +317,8 @@ export default function ProfilClient() {
             />
           </div>
 
-          <div className="col-span-3 grid grid-cols-3 gap-2 border-t border-[var(--border)] pt-3">
-            <Link
-              href="/arena/magaza"
-              className="flex min-h-11 items-center justify-center rounded-lg border border-[var(--border)] px-2 text-center text-xs font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--reward-border)] hover:text-[var(--reward)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
-            >
-              <span aria-hidden>🛍️</span>&nbsp;Mağaza
-            </Link>
-            <Link
-              href="/arena/kisisellestir"
-              className="flex min-h-11 items-center justify-center rounded-lg border border-[var(--border)] px-1 text-center text-xs font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
-            >
-              <span aria-hidden>🎨</span>&nbsp;Kişiselleştir
-            </Link>
-            <button
-              onClick={() => setEditOpen(true)}
-              className="min-h-11 rounded-lg border border-[var(--border)] px-2 text-xs font-semibold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
-            >
-              Düzenle
-            </button>
+          <div className="col-span-3">
+            <ProfileActions onEdit={() => setEditOpen(true)} />
           </div>
         </div>
 
@@ -434,9 +426,7 @@ export default function ProfilClient() {
       {/* Oyun bazli istatistikler */}
       {stats && stats.gameStats.length > 0 && (
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
-          <h3 className="mb-3 text-xs font-extrabold tracking-[0.14em] text-[var(--text-sub)]">
-            OYUN ISTATISTIKLERI
-          </h3>
+          <ProfileSectionTitle>OYUN İSTATİSTİKLERİ</ProfileSectionTitle>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
             {stats.gameStats.map((gs) => {
               const gameDef = GAMES[gs.game]
@@ -471,9 +461,7 @@ export default function ProfilClient() {
       {/* Son oyunlar */}
       {stats && stats.recentGames.length > 0 && (
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
-          <h3 className="mb-3 text-xs font-extrabold tracking-[0.14em] text-[var(--text-sub)]">
-            SON OYUNLAR
-          </h3>
+          <ProfileSectionTitle>SON OYUNLAR</ProfileSectionTitle>
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] divide-y divide-[var(--border)]">
             {stats.recentGames.map((g) => {
               const gameDef = GAMES[g.game]
@@ -548,12 +536,12 @@ export default function ProfilClient() {
       {/* Konu ilerleme */}
       <ComponentErrorBoundary label="Konu İlerlemesi" variant="inline">
         <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-          <h3 className="mb-3 text-xs font-extrabold tracking-[0.14em] text-[var(--text-sub)]">
-            KONU ILERLEMESI
+          <ProfileSectionTitle>
+            KONU İLERLEMESİ
             {statsLoading && (
               <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-[var(--focus)]" />
             )}
-          </h3>
+          </ProfileSectionTitle>
           <div className="grid gap-2 sm:grid-cols-2 md:gap-3 xl:gap-4">
             {gameProgressData.map(({ game, categories, totalAnswered, accuracy: gameAcc }) => (
               <ProgressChart
@@ -572,6 +560,14 @@ export default function ProfilClient() {
 }
 
 // ---------- Yardimci ----------
+
+function ProfileSectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h3 className="mb-3 inline-flex min-h-7 items-center rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-2.5 py-1 text-[10px] font-extrabold tracking-[0.14em] text-[var(--text-sub)] shadow-sm sm:text-xs">
+      {children}
+    </h3>
+  )
+}
 
 function getTimeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
