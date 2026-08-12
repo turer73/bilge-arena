@@ -92,14 +92,24 @@ export function OnboardingOverlay() {
   const handleComplete = async () => {
     setSaving(true)
     try {
-      await fetch('/api/profile', {
+      // grade state'i string (GRADES dizisi), API ise number bekliyor
+      // (profileUpdateSchema: z.number().int().min(9).max(13)). String gonderilince
+      // PATCH 400 donduruyor, onboarding_completed DB'de false kaliyor ve overlay
+      // arena sayfasinda tekrar aciliyordu. Burada number'a ceviriyoruz.
+      const res = await fetch('/api/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           onboarding_completed: true,
-          ...(grade ? { grade } : {}),
+          ...(grade ? { grade: Number(grade) } : {}),
         }),
       })
+      if (!res.ok) {
+        // PATCH basarisizsa oyuna gecme: profile hâlâ onboarding_completed=false,
+        // navigate etmek overlay'in yeniden acilmasindan baska ise yaramaz.
+        setSaving(false)
+        return
+      }
       await refreshProfile()
       router.push(selectedGame ? `/arena/${selectedGame}` : '/arena')
     } catch {

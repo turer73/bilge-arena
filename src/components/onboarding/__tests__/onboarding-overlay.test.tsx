@@ -103,6 +103,43 @@ describe('OnboardingOverlay', () => {
     expect(document.activeElement).toBe(last)
   })
 
+  test('grade string degil number olarak gonderilir (PATCH 400 regresyonu)', async () => {
+    render(<OnboardingOverlay />)
+
+    // Adim 0 -> 1
+    fireEvent.click(screen.getByRole('button', { name: /Ba.*layal.*m/ }))
+    // Adim 1: sinif sec
+    fireEvent.click(screen.getByRole('button', { name: '9. Sınıf' }))
+    fireEvent.click(screen.getByRole('button', { name: /Devam/ }))
+    // Adim 2: ders sec + oyna
+    fireEvent.click(screen.getByRole('button', { name: /Matematik/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Hemen Oyna/ }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/profile', expect.objectContaining({
+      method: 'PATCH',
+    })))
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body)
+    expect(body.onboarding_completed).toBe(true)
+    // Grade number olmali — string gonderilirse Zod (z.number().int()) 400 doner,
+    // onboarding_completed DB'de false kalir ve overlay arena'da tekrar acilir.
+    expect(body.grade).toBe(9)
+    expect(typeof body.grade).toBe('number')
+  })
+
+  test('PATCH basarisiz olursa oyuna gecmez (navigate yok)', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 400, json: () => Promise.resolve({ error: 'x' }) })
+    render(<OnboardingOverlay />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Ba.*layal.*m/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Devam/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Hemen Oyna/ }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/profile', expect.objectContaining({
+      method: 'PATCH',
+    })))
+    expect(routerMock.push).not.toHaveBeenCalled()
+  })
+
   test('kapaninca sayfa kaydirmasini geri verir', () => {
     const { unmount } = render(<OnboardingOverlay />)
     expect(document.body.style.overflow).toBe('hidden')
