@@ -37,15 +37,22 @@ jobs:
         run: |
           if ! git diff --quiet -- src/types/database.generated.ts; then
             echo "Database type drift detected. Download the production-database-types artifact and commit the reviewed result."
-            exit 1
+            git diff --stat -- src/types/database.generated.ts
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Database types match the production public schema."
+            echo "drift=false" >> "$GITHUB_OUTPUT"
           fi
-          echo "Database types match the production public schema."
 
       - name: Upload generated production types on drift
-        if: steps.compare.outcome == 'failure'
+        if: steps.compare.outputs.drift == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: production-database-types-${{ github.sha }}
           path: src/types/database.generated.ts
           if-no-files-found: error
           retention-days: 7
+
+      - name: Fail when production types drift
+        if: steps.compare.outputs.drift == 'true'
+        run: exit 1
