@@ -918,6 +918,8 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Tek toplam puanı reddeden beş boyutlu öğretmen gösterge sözleşmesi.
 - [x] Aktivasyon, D1/D7/D30, WAU ve gözlemsel streak dönüş saf hesaplayıcıları.
 - [x] Uygun kullanıcı, olgunlaşmış cohort, doğrulanmış aktivite, idempotent event kimliği, küçük örneklem ve Wilson aralığı testleri.
-- [ ] Mevcut production tablolarından salt-okunur kaynak adapter'ı ve veri kalite raporu.
+- [x] Doğrulanmış answer/session/program satırlarını kimlik-minimal aktivite sözleşmesine çeviren salt-okunur kaynak adapter'ı.
+- [x] Demo/test/sentetik hesap envanteri onaylanmadan metrik üretimini durduran fail-closed veri kalite raporu.
+- [ ] Production kaynak sorgusu ve yalnız toplu sonuç veren ilk canlı veri kalite çalıştırması.
 - [ ] Kaynak sorgular doğrulandıktan sonra gerekli olup olmadığına karar verilecek günlük agrega migration'ı.
 - [ ] Tenant-sınırlı kurum analiz API'leri ve UI.

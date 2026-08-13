@@ -229,8 +229,8 @@ function prepare(input: ProductHealthInput): {
     seenLearners.add(learner.learnerKey)
     const registeredAtMs = instant(learner.registeredAt, 'registeredAt')
     if (learner.accountType !== 'learner') excluded.nonLearner += 1
-    else if (learner.environment !== environment) excluded.otherEnvironment += 1
     else if (learner.synthetic) excluded.synthetic += 1
+    else if (learner.environment !== environment) excluded.otherEnvironment += 1
     else if (!learner.dataIncluded) excluded.dataExcluded += 1
     else if (
       (learner.deletedAt !== null && instant(learner.deletedAt, 'deletedAt') <= asOfMs)
