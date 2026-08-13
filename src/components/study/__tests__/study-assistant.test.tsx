@@ -4,6 +4,8 @@ import { StudyAssistant } from '../study-assistant'
 import { useChatStore } from '@/stores/chat-store'
 
 const oldBoardUiEnabled = process.env.NEXT_PUBLIC_BILGE_TAHTA_ENABLED
+const trackBilgeBoardEvent = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/bilge-tahta/analytics', () => ({ trackBilgeBoardEvent }))
 
 describe('StudyAssistant', () => {
   beforeEach(() => {
@@ -11,6 +13,7 @@ describe('StudyAssistant', () => {
     Element.prototype.scrollIntoView = vi.fn()
     useChatStore.getState().clearMessages()
     useChatStore.getState().setQuestionContext(null)
+    trackBilgeBoardEvent.mockClear()
   })
 
   afterEach(() => {
@@ -92,6 +95,12 @@ describe('StudyAssistant', () => {
     expect(within(dialog).getByTestId('bilge-tahta-text')).toHaveTextContent(/Asal sayılar/)
     expect(within(dialog).getByText(/Kaynak: Bilge Asistan yanıtı/)).toBeInTheDocument()
     expect(within(dialog).getByText('Doğrulanmış ders içeriği değildir')).toBeInTheDocument()
+    expect(trackBilgeBoardEvent).toHaveBeenCalledWith('BilgeBoardOpened', {
+      surface: 'study', game: 'matematik', entryPoint: 'study_assistant', examRef: 'TYT',
+    })
+    expect(trackBilgeBoardEvent).toHaveBeenCalledWith('BilgeBoardStageViewed', {
+      surface: 'study', game: 'matematik', stage: 'concept', stepIndex: 0,
+    })
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Bilge Asistan’a dön' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

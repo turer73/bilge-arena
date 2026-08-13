@@ -8,6 +8,7 @@ import { BilgeTahtaDialog } from '@/components/bilge-tahta'
 import { isBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
 import type { BilgeTahtaLesson } from '@/lib/bilge-tahta/contract'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
 
 interface StudyAssistantProps {
   /** CalismaClient kendi responsive kabuğunu çizdiğinde yalnız chat gövdesini render eder. */
@@ -116,6 +117,16 @@ export function StudyAssistant({ embedded = false, game, examRef = null }: Study
     }
   }, [messages, questionContext, addMessage, updateLastAssistant, setLoading])
 
+  const handleBoardOpen = () => {
+    trackBilgeBoardEvent('BilgeBoardOpened', {
+      surface: 'study',
+      ...(game ? { game } : {}),
+      entryPoint: 'study_assistant',
+      examRef,
+    })
+    setBoardOpen(true)
+  }
+
   const body = (
     <div className="flex h-[320px] flex-col md:h-[340px]">
       <ChatMessages messages={messages} isLoading={isLoading} onQuickAction={handleSend} />
@@ -123,7 +134,7 @@ export function StudyAssistant({ embedded = false, game, examRef = null }: Study
         <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2">
           <button
             type="button"
-            onClick={() => setBoardOpen(true)}
+            onClick={handleBoardOpen}
             className="min-h-11 w-full rounded-xl bg-emerald-700 px-4 py-2 text-xs font-extrabold text-white transition hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
           >
             🧑‍🏫 Tahtada anlat
@@ -136,6 +147,17 @@ export function StudyAssistant({ embedded = false, game, examRef = null }: Study
           open={boardOpen}
           lesson={boardLesson}
           onOpenChange={setBoardOpen}
+          onStepViewed={(index) => trackBilgeBoardEvent('BilgeBoardStageViewed', {
+            surface: 'study',
+            ...(game ? { game } : {}),
+            stage: boardLesson.steps[index].stage,
+            stepIndex: index,
+          })}
+          onComplete={() => trackBilgeBoardEvent('BilgeBoardCompleted', {
+            surface: 'study',
+            ...(game ? { game } : {}),
+            stepCount: boardLesson.steps.length,
+          })}
         />
       )}
     </div>

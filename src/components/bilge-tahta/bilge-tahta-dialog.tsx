@@ -39,6 +39,7 @@ export function BilgeTahtaDialog({
   const descriptionId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
+  const viewedStepRef = useRef<string | null>(null)
   const [stepIndex, setStepIndex] = useState(() => Math.min(Math.max(initialStep, 0), lesson.steps.length - 1))
   const currentStepIndex = Math.min(stepIndex, lesson.steps.length - 1)
 
@@ -83,8 +84,15 @@ export function BilgeTahtaDialog({
   }, [onOpenChange, open])
 
   useEffect(() => {
-    if (open) onStepViewed?.(currentStepIndex)
-  }, [currentStepIndex, onStepViewed, open])
+    if (!open) {
+      viewedStepRef.current = null
+      return
+    }
+    const viewedKey = `${lesson.title}:${lesson.steps[currentStepIndex].id}`
+    if (viewedStepRef.current === viewedKey) return
+    viewedStepRef.current = viewedKey
+    onStepViewed?.(currentStepIndex)
+  }, [currentStepIndex, lesson.steps, lesson.title, onStepViewed, open])
 
   if (!open) return null
 
@@ -100,7 +108,8 @@ export function BilgeTahtaDialog({
   const next = () => {
     if (lastStep) {
       onComplete?.()
-      closeAndReturn()
+      if (!onComplete) onReturn?.()
+      onOpenChange(false)
       return
     }
     setStepIndex((current) => current + 1)

@@ -12,6 +12,7 @@ import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-
 import { BilgeTahtaDialog } from '@/components/bilge-tahta'
 import { isBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
 import type { BilgeTahtaLesson, BilgeTahtaStage } from '@/lib/bilge-tahta/contract'
+import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
 
 function Typewriter({ text, speed = 18 }: { text: string; speed?: number }) {
   const [shown, setShown] = useState('')
@@ -95,6 +96,7 @@ export function BilgeChanCompanion({
   const retryRef = useRef<{ stage: CoachRequestStage; selectedOption?: number } | null>(null)
   const [ttsReady, setTtsReady] = useState(false)
   const [boardOpen, setBoardOpen] = useState(false)
+  const boardOpenedAtRef = useRef<number | null>(null)
 
   useEffect(() => {
     setTtsReady(isTtsSupported())
@@ -242,7 +244,6 @@ export function BilgeChanCompanion({
     const retry = retryRef.current
     if (retry) void requestCoach(retry.stage, retry.selectedOption)
   }
-
   if (!question) return null
 
   let pose: ChanPose
@@ -294,6 +295,31 @@ export function BilgeChanCompanion({
         }],
       }
     : null
+  const handleBoardOpen = () => {
+    boardOpenedAtRef.current = Date.now()
+    trackBilgeBoardEvent('BilgeBoardOpened', {
+      surface: 'game',
+      game: question.game,
+      entryPoint: 'coach_stage',
+    })
+    setBoardOpen(true)
+  }
+  const handleBoardReturn = () => {
+    trackBilgeBoardEvent('BilgeBoardReturnedToQuestion', {
+      surface: 'game',
+      game: question.game,
+      elapsedMs: boardOpenedAtRef.current === null ? -1 : Date.now() - boardOpenedAtRef.current,
+    })
+    handleContinue()
+  }
+  const handleBoardComplete = () => {
+    trackBilgeBoardEvent('BilgeBoardCompleted', {
+      surface: 'game',
+      game: question.game,
+      stepCount: boardLesson?.steps.length ?? 0,
+    })
+    handleContinue()
+  }
 
   return (
     <div className={`flex ${compact ? 'flex-row items-center gap-2' : 'flex-col items-center'} ${className ?? ''}`}>
@@ -323,7 +349,7 @@ export function BilgeChanCompanion({
           {boardEnabled && boardLesson && playing && (
             <button
               type="button"
-              onClick={() => setBoardOpen(true)}
+              onClick={handleBoardOpen}
               className="mt-2 min-h-11 w-full rounded-lg border border-emerald-300/30 bg-emerald-700 px-2 py-2 text-[11px] font-bold text-white transition hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
               🧑‍🏫 Tahtada anlat
@@ -454,8 +480,14 @@ export function BilgeChanCompanion({
           open={boardOpen && playing}
           lesson={boardLesson}
           onOpenChange={setBoardOpen}
-          onReturn={handleContinue}
-          onComplete={handleContinue}
+          onReturn={handleBoardReturn}
+          onComplete={handleBoardComplete}
+          onStepViewed={(index) => trackBilgeBoardEvent('BilgeBoardStageViewed', {
+            surface: 'game',
+            game: question.game,
+            stage: boardLesson.steps[index].stage,
+            stepIndex: index,
+          })}
         />
       )}
     </div>

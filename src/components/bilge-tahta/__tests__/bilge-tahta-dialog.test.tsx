@@ -76,7 +76,7 @@ describe('BilgeTahtaDialog', () => {
     expect(onStepViewed).toHaveBeenCalledWith(1)
     fireEvent.click(screen.getByRole('button', { name: /Tamamla/ }))
     expect(onComplete).toHaveBeenCalledTimes(1)
-    expect(onReturn).toHaveBeenCalledTimes(1)
+    expect(onReturn).not.toHaveBeenCalled()
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 

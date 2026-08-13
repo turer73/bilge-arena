@@ -63,6 +63,11 @@ export type EventName =
   | 'OutcomeStatusVerified'
   | 'CoachStageViewed'
   | 'CoachTransferResult'
+  // Bilge Tahta analytics — payloads must go through trackBilgeBoardEvent.
+  | 'BilgeBoardOpened'
+  | 'BilgeBoardStageViewed'
+  | 'BilgeBoardReturnedToQuestion'
+  | 'BilgeBoardCompleted'
   // Retention deneyi - yalniz anonim urun davranisi, PII gonderilmez.
   | 'ActivationExperimentViewed'
   | 'ActivationGoalSelected'

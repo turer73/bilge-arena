@@ -19,6 +19,8 @@ vi.mock('@/lib/utils/chan-tts', () => ({
 
 const trackLearningEvent = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/analytics/learning-events', () => ({ trackLearningEvent }))
+const trackBilgeBoardEvent = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/bilge-tahta/analytics', () => ({ trackBilgeBoardEvent }))
 
 import { BilgeChanCompanion as BilgeChanCompanionImpl } from '../bilge-chan-companion'
 
@@ -146,6 +148,7 @@ beforeEach(() => {
   })
   vi.stubGlobal('fetch', fetchMock)
   trackLearningEvent.mockClear()
+  trackBilgeBoardEvent.mockClear()
   tts.speak.mockClear()
   tts.stop.mockClear()
 })
@@ -306,10 +309,19 @@ describe('BilgeChanCompanion R2.2', () => {
     expect(within(dialog).getByText('Koruyucu kontrol geçti')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).not.toHaveProperty('correctOption')
+    expect(trackBilgeBoardEvent).toHaveBeenCalledWith('BilgeBoardOpened', {
+      surface: 'game', game: 'matematik', entryPoint: 'coach_stage',
+    })
+    expect(trackBilgeBoardEvent).toHaveBeenCalledWith('BilgeBoardStageViewed', {
+      surface: 'game', game: 'matematik', stage: 'hint1', stepIndex: 0,
+    })
 
     fireEvent.click(screen.getByRole('button', { name: 'Soruyu çözmeye dön' }))
     expect(onHelpToggle).toHaveBeenLastCalledWith(false)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(trackBilgeBoardEvent).toHaveBeenCalledWith('BilgeBoardReturnedToQuestion', expect.objectContaining({
+      surface: 'game', game: 'matematik',
+    }))
   })
 
   test('Bilge Tahta kill switch kapalıysa açma eylemi gösterilmez', async () => {

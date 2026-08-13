@@ -1,7 +1,16 @@
 # Bilge Tahta — Ortak Konu Anlatımı Yüzeyi
 
 **Tarih:** 2026-08-13
-**Durum:** Planlandı; uygulama başlamadı. Institution Lite temel diliminin kabul kapısını kesmez.
+**Durum:** Dilim A–D kodlandı ve yerelde doğrulandı; feature flag varsayılan kapalı. Yetkili kullanıcıyla production smoke yapılmadığı için canlı tamamlandı sayılmaz.
+
+## 2026-08-13 uygulama kanıtı
+
+- Ortak `BilgeTahtaDialog`, güvenli içerik sözleşmesi ve metin/formül renderer eklendi.
+- Oyun modu yalnız sunucudan açılmış mevcut `/api/coach/hint` aşamasını taşır; soru kökü, seçenekler ve doğru cevap tahta modeline alınmaz.
+- Ders Çalış modu yalnız başarıyla tamamlanmış `/api/chat` yanıtını taşır ve içeriği “Doğrulanmış ders içeriği değildir” etiketiyle gösterir.
+- Analitik olayları kapalı alan listesiyle çalışır; PII, soru, cevap ve sohbet metni göndermez.
+- Gerçek tarayıcı ölçümü: 320/375/390 px genişliklerde belge, dialog ve footer yatay taşmadı; uzun formül alanı `overflow-x: auto` ile kendi içinde kaydı.
+- Hedefli test, type-check ve lint kapıları geçti. Production rollout ve yetkili smoke ayrı onay kapısıdır.
 
 ## Amaç
 
