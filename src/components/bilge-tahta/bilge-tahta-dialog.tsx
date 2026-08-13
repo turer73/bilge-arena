@@ -1,7 +1,8 @@
 'use client'
 
 import { ChevronLeft, ChevronRight, RotateCcw, X } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 import { BilgeTahtaContent } from './bilge-tahta-content'
 import type { BilgeTahtaLesson } from '@/lib/bilge-tahta/contract'
 
@@ -26,6 +27,8 @@ const focusableSelector = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',')
 
+const subscribeToClientReady = () => () => {}
+
 export function BilgeTahtaDialog({
   open,
   lesson,
@@ -42,6 +45,7 @@ export function BilgeTahtaDialog({
   const dialogRef = useRef<HTMLDivElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const viewedStepRef = useRef<string | null>(null)
+  const clientReady = useSyncExternalStore(subscribeToClientReady, () => true, () => false)
   const [stepIndex, setStepIndex] = useState(() => Math.min(Math.max(initialStep, 0), lesson.steps.length - 1))
   const currentStepIndex = Math.min(stepIndex, lesson.steps.length - 1)
 
@@ -97,7 +101,9 @@ export function BilgeTahtaDialog({
     onStepViewed?.(currentStepIndex)
   }, [busy, currentStepIndex, lesson.steps, lesson.title, onStepViewed, open])
 
-  if (!open) return null
+  const portalTarget = clientReady ? document.body : null
+
+  if (!open || !portalTarget) return null
 
   const step = lesson.steps[currentStepIndex]
   const lastStep = currentStepIndex === lesson.steps.length - 1
@@ -118,9 +124,9 @@ export function BilgeTahtaDialog({
     setStepIndex((current) => current + 1)
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[1000] flex items-end justify-center bg-slate-950/85 backdrop-blur-sm sm:items-center sm:p-5"
+      className="fixed inset-0 z-[2147483647] flex items-end justify-center bg-slate-950/90 backdrop-blur-sm sm:items-center sm:p-5"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onOpenChange(false)
       }}
@@ -222,6 +228,7 @@ export function BilgeTahtaDialog({
         </div>
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-1 left-1/2 hidden h-3 w-64 -translate-x-1/2 rounded bg-[#2d1606] shadow-lg sm:block" />
       </div>
-    </div>
+    </div>,
+    portalTarget,
   )
 }
