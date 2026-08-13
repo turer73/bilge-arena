@@ -922,4 +922,17 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Demo/test/sentetik hesap envanteri onaylanmadan metrik üretimini durduran fail-closed veri kalite raporu.
 - [ ] Production kaynak sorgusu ve yalnız toplu sonuç veren ilk canlı veri kalite çalıştırması.
 - [ ] Kaynak sorgular doğrulandıktan sonra gerekli olup olmadığına karar verilecek günlük agrega migration'ı.
-- [ ] Tenant-sınırlı kurum analiz API'leri ve UI.
+- [x] Tenant-sınırlı ilk öğrenci analiz API sözleşmesi.
+- [ ] Kurum analiz UI ve diğer kurum agregaları.
+
+### 19.2 Kurum öğrenci analiz dilimi — 2026-08-13
+
+- [x] Aktif aynı-kurum yöneticisi veya sınıfın sahibi öğretmenle sınırlı salt-okunur analiz RPC'si.
+- [x] Öğrencinin sınıf üyeliğini kabul etmesinden önceki kanıtı dışlayan zaman penceresi.
+- [x] Yalnız doğrulanmış, idempotent mastery evidence v2 kanıtını kullanan outcome agregasyonu.
+- [x] Eksik kanıtı sıfır başarıya çevirmeyen güven/status builder'ı.
+- [x] Ham kullanıcı, cevap, soru, oturum ve attempt kimliklerini reddeden public API sözleşmesi.
+- [x] Varsayılan kapalı server feature flag, route/SQL güvenlik ve contract testleri.
+- [ ] Migration 114'ün hedef Supabase projesine uygulanması ve şema tiplerinin canlı şemadan yeniden üretilmesi.
+- [ ] Sentetik tenant/classroom fixture ile canlı RPC smoke testi.
+- [ ] Kurum, sınıf ve öğrenci takip arayüzü.

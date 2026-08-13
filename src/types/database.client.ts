@@ -535,6 +535,17 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
+      get_institution_student_learning_analysis: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_exam_ref: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
       issue_verified_exam_attempt: {
         Args: {
           p_user_id: string
