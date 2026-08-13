@@ -1861,6 +1861,140 @@ export type Database = {
         }
         Relationships: []
       }
+      pilot_institution_memberships: {
+        Row: {
+          assigned_by: string
+          ended_at: string | null
+          id: string
+          institution_id: string
+          joined_at: string
+          member_ref: string
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by: string
+          ended_at?: string | null
+          id?: string
+          institution_id: string
+          joined_at?: string
+          member_ref?: string
+          role: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string
+          ended_at?: string | null
+          id?: string
+          institution_id?: string
+          joined_at?: string
+          member_ref?: string
+          role?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_institution_memberships_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_institution_memberships_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_institution_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pilot_institution_requests: {
+        Row: {
+          created_at: string
+          operation: string
+          payload_hash: string
+          request_id: string
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          operation: string
+          payload_hash: string
+          request_id: string
+          result: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          operation?: string
+          payload_hash?: string
+          request_id?: string
+          result?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_institution_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pilot_institutions: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          staff_limit: number
+          status: string
+          student_limit: number
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          staff_limit?: number
+          status?: string
+          student_limit?: number
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          staff_limit?: number
+          status?: string
+          student_limit?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_institutions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -3688,6 +3822,7 @@ export type Database = {
           archived_at: string | null
           created_at: string
           id: string
+          institution_id: string
           name: string
           status: string
           teacher_id: string
@@ -3696,6 +3831,7 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           id?: string
+          institution_id: string
           name: string
           status?: string
           teacher_id: string
@@ -3704,11 +3840,19 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           id?: string
+          institution_id?: string
           name?: string
           status?: string
           teacher_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "teacher_classrooms_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "teacher_classrooms_teacher_id_fkey"
             columns: ["teacher_id"]
@@ -5167,6 +5311,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      get_my_pilot_institution: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_my_teacher_classroom_overview: {
         Args: { p_classroom_id: string; p_user_id: string }
         Returns: Json
@@ -5278,6 +5426,33 @@ export type Database = {
           p_request_id: string
           p_token_digest: string
           p_user_id: string
+        }
+        Returns: Json
+      }
+      add_pilot_institution_teacher: {
+        Args: {
+          p_user_id: string
+          p_institution_id: string
+          p_teacher_user_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      provision_pilot_institution: {
+        Args: {
+          p_user_id: string
+          p_name: string
+          p_manager_user_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      remove_pilot_institution_teacher: {
+        Args: {
+          p_user_id: string
+          p_institution_id: string
+          p_member_ref: string
+          p_request_id: string
         }
         Returns: Json
       }
