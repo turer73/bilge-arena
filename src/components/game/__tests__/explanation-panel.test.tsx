@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import type { Question } from '@/types/database'
 
 vi.mock('@/components/social/like-button', () => ({ LikeButton: () => null }))
@@ -80,10 +80,10 @@ describe('ExplanationPanel', () => {
   })
 
   test('"Konu Anlatımı": passage dahil ayrıntılı DeepSeek isteği Bilge Tahta penceresini açar', async () => {
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(
-      'Öğrenme hedefi\nKavramın mantığı\nAdım adım örnek',
-      { status: 200 },
-    ))
+    let resolveFetch!: (response: Response) => void
+    const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) => new Promise<Response>((resolve) => {
+      resolveFetch = resolve
+    }))
     global.fetch = fetchMock as unknown as typeof fetch
     const Q = {
       ...QUESTION,
@@ -91,6 +91,8 @@ describe('ExplanationPanel', () => {
     } as unknown as Question
     renderPanel({ question: Q, isCorrect: false, selectedOption: 0 })
     fireEvent.click(screen.getByRole('button', { name: /Konu Anlat/ }))
+    expect(screen.getByRole('dialog', { name: /problemler/i })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText(/Bilge Asistan ayrıntılı anlatımı tahtaya hazırlıyor/)).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/chat',
       expect.objectContaining({
@@ -100,7 +102,13 @@ describe('ExplanationPanel', () => {
     const sent = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string)
     expect(sent.mode).toBe('topic_explanation')
     expect(sent.messages[0].content).toContain('yüzeysel özetleme')
-    expect(await screen.findByRole('dialog', { name: /problemler/i })).toBeInTheDocument()
+    await act(async () => {
+      resolveFetch(new Response(
+        'Öğrenme hedefi\nKavramın mantığı\nAdım adım örnek',
+        { status: 200 },
+      ))
+    })
+    expect(screen.getByRole('dialog', { name: /problemler/i })).not.toHaveAttribute('aria-busy')
     expect(screen.getByText(/Adım adım örnek/)).toBeInTheDocument()
   })
 })

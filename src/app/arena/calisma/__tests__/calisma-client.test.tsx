@@ -7,12 +7,6 @@ import { useGameStore } from '@/stores/game-store'
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: vi.fn(),
 }))
-vi.mock('next/dynamic', () => ({
-  default: () => {
-    const DynamicStub = () => <div data-testid="study-assistant-stub" />
-    return DynamicStub
-  },
-}))
 vi.mock('@/components/study/today-plan-focus', () => ({
   TodayPlanFocus: () => <div data-testid="today-plan-focus" />,
 }))
@@ -93,7 +87,9 @@ describe('CalismaClient', () => {
     expect(useGameStore.getState().selectedCategory).toBeNull()
   })
 
-  test('dört eylem düğmesi asistanı açılır pencerede başlatır', () => {
+  test('dört eylem düğmesi Ders Çalış tahta modunu doğrudan açar', () => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => undefined))
+    vi.stubGlobal('fetch', fetchMock)
     mockedUseAuthStore.mockReturnValue({
       user: { id: 'u1' },
       profile: { exam_type: 'yks' },
@@ -101,10 +97,13 @@ describe('CalismaClient', () => {
     } as never)
     render(<CalismaClient />)
 
-    expect(screen.queryByTestId('study-assistant-stub')).not.toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /Bu soruyu çöz|Konu anlat|Örnek soru sor|Çalışma önerisi/ })).toHaveLength(4)
     const button = screen.getByRole('button', { name: 'Konu anlat' })
     fireEvent.click(button)
-    expect(screen.getByTestId('study-assistant-stub')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Konu anlat' })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText(/Bilge Asistan tahtayı hazırlıyor/)).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith('/api/chat', expect.objectContaining({
+      body: expect.stringContaining('"mode":"topic_explanation"'),
+    }))
   })
 })

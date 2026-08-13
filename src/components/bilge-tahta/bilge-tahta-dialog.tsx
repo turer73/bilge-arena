@@ -14,6 +14,7 @@ interface BilgeTahtaDialogProps {
   onComplete?: () => void
   initialStep?: number
   animate?: boolean
+  busy?: boolean
 }
 
 const focusableSelector = [
@@ -34,6 +35,7 @@ export function BilgeTahtaDialog({
   onComplete,
   initialStep = 0,
   animate = true,
+  busy = false,
 }: BilgeTahtaDialogProps) {
   const titleId = useId()
   const descriptionId = useId()
@@ -88,17 +90,18 @@ export function BilgeTahtaDialog({
       viewedStepRef.current = null
       return
     }
+    if (busy) return
     const viewedKey = `${lesson.title}:${lesson.steps[currentStepIndex].id}`
     if (viewedStepRef.current === viewedKey) return
     viewedStepRef.current = viewedKey
     onStepViewed?.(currentStepIndex)
-  }, [currentStepIndex, lesson.steps, lesson.title, onStepViewed, open])
+  }, [busy, currentStepIndex, lesson.steps, lesson.title, onStepViewed, open])
 
   if (!open) return null
 
   const step = lesson.steps[currentStepIndex]
   const lastStep = currentStepIndex === lesson.steps.length - 1
-  const returnLabel = lesson.mode === 'game' ? 'Soruyu çözmeye dön' : 'Bilge Asistan’a dön'
+  const returnLabel = lesson.mode === 'game' ? 'Soruyu çözmeye dön' : 'Ders Çalış’a dön'
 
   const closeAndReturn = () => {
     onReturn?.()
@@ -127,6 +130,7 @@ export function BilgeTahtaDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-busy={busy || undefined}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
         className="relative flex max-h-[88dvh] w-full min-w-0 flex-col overflow-hidden rounded-t-2xl border-x-4 border-t-4 border-[#2d1606] bg-[#3d200a] p-1.5 shadow-2xl sm:max-w-[900px] sm:rounded-3xl sm:border-4 sm:p-3"
@@ -141,7 +145,7 @@ export function BilgeTahtaDialog({
                 {lesson.title}
               </h2>
               <p id={descriptionId} className="sr-only">
-                {lesson.steps.length} adımlı Bilge Tahta konu anlatımı
+                {busy ? 'Bilge Tahta anlatımı hazırlanıyor' : `${lesson.steps.length} adımlı Bilge Tahta konu anlatımı`}
               </p>
             </div>
             <button
@@ -156,8 +160,8 @@ export function BilgeTahtaDialog({
           </header>
 
           <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-7 sm:py-7">
-            <p className="mb-4 text-xs font-bold text-emerald-200">
-              Adım {currentStepIndex + 1} / {lesson.steps.length}
+            <p className="mb-4 text-xs font-bold text-emerald-200" aria-live="polite">
+              {busy ? 'Bilge Asistan tahtayı hazırlıyor…' : `Adım ${currentStepIndex + 1} / ${lesson.steps.length}`}
             </p>
             <BilgeTahtaContent key={step.id} step={step} animate={animate} />
           </main>
@@ -184,7 +188,7 @@ export function BilgeTahtaDialog({
             <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-between">
               <button
                 type="button"
-                disabled={currentStepIndex === 0}
+                disabled={busy || currentStepIndex === 0}
                 onClick={() => setStepIndex((current) => Math.max(0, current - 1))}
                 className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200"
               >
@@ -192,8 +196,9 @@ export function BilgeTahtaDialog({
               </button>
               <button
                 type="button"
+                disabled={busy}
                 onClick={() => setStepIndex(0)}
-                className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200 sm:order-3"
+                className="flex min-h-11 items-center justify-center gap-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200 sm:order-3"
               >
                 <RotateCcw aria-hidden="true" size={16} /> Baştan
               </button>
@@ -206,8 +211,9 @@ export function BilgeTahtaDialog({
               </button>
               <button
                 type="button"
+                disabled={busy}
                 onClick={next}
-                className="col-span-2 flex min-h-11 items-center justify-center gap-1 rounded-xl bg-yellow-200 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-yellow-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:order-2 sm:col-auto"
+                className="col-span-2 flex min-h-11 items-center justify-center gap-1 rounded-xl bg-yellow-200 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-yellow-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:order-2 sm:col-auto"
               >
                 {lastStep ? 'Tamamla' : 'Sonraki'} <ChevronRight aria-hidden="true" size={18} />
               </button>
