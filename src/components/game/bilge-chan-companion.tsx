@@ -10,7 +10,7 @@ import type { PublicQuestion } from '@/lib/utils/question-public'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-tts'
 import { BilgeTahtaDialog } from '@/components/bilge-tahta'
-import { isBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
+import { useBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
 import type { BilgeTahtaLesson, BilgeTahtaStage } from '@/lib/bilge-tahta/contract'
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
 
@@ -109,7 +109,7 @@ export function BilgeChanCompanion({
   const easy = question?.difficulty === 1
   const answered = quizState === 'answered'
   const coachEnabled = process.env.NEXT_PUBLIC_COACH_ENABLED === 'true'
-  const boardEnabled = isBilgeTahtaEnabled()
+  const boardEnabled = useBilgeTahtaEnabled()
 
   useEffect(() => {
     if (!coachEnabled || !attemptId || phase !== 'intro' || quizState !== 'playing'

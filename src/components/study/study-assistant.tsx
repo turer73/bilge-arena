@@ -5,7 +5,7 @@ import { useChatStore } from '@/stores/chat-store'
 import { ChatMessages } from '@/components/chat/chat-messages'
 import { ChatInput } from '@/components/chat/chat-input'
 import { BilgeTahtaDialog } from '@/components/bilge-tahta'
-import { isBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
+import { useBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
 import type { BilgeTahtaLesson } from '@/lib/bilge-tahta/contract'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
@@ -38,7 +38,7 @@ export function StudyAssistant({ embedded = false, game, examRef = null }: Study
     updateLastAssistant,
     setLoading,
   } = useChatStore()
-  const boardEnabled = isBilgeTahtaEnabled()
+  const boardEnabled = useBilgeTahtaEnabled()
 
   const boardLesson = useMemo<BilgeTahtaLesson | null>(() => {
     if (!boardAnswer) return null
