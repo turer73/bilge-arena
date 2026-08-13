@@ -92,6 +92,35 @@ export type Database = {
         }
         Relationships: []
       }
+      activation_reward_claims: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          xp_amount: number
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          user_id: string
+          xp_amount: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activation_reward_claims_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       adaptive_diagnostic_answers: {
         Row: {
           covered_outcomes_after: number
@@ -1796,42 +1825,6 @@ export type Database = {
           },
         ]
       }
-      premium_waitlist: {
-        Row: {
-          contacted_at: string | null
-          created_at: string
-          email: string
-          id: string
-          ip_address: string | null
-          kvkk_consent_at: string
-          plan: string
-          source: string | null
-          user_agent: string | null
-        }
-        Insert: {
-          contacted_at?: string | null
-          created_at?: string
-          email: string
-          id?: string
-          ip_address?: string | null
-          kvkk_consent_at: string
-          plan: string
-          source?: string | null
-          user_agent?: string | null
-        }
-        Update: {
-          contacted_at?: string | null
-          created_at?: string
-          email?: string
-          id?: string
-          ip_address?: string | null
-          kvkk_consent_at?: string
-          plan?: string
-          source?: string | null
-          user_agent?: string | null
-        }
-        Relationships: []
-      }
       pilot_institution_memberships: {
         Row: {
           assigned_by: string
@@ -1965,6 +1958,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      premium_waitlist: {
+        Row: {
+          contacted_at: string | null
+          created_at: string
+          email: string
+          id: string
+          ip_address: string | null
+          kvkk_consent_at: string
+          plan: string
+          source: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          contacted_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: string | null
+          kvkk_consent_at: string
+          plan: string
+          source?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          contacted_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+          kvkk_consent_at?: string
+          plan?: string
+          source?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -5067,6 +5096,15 @@ export type Database = {
         }
         Returns: Json
       }
+      add_pilot_institution_teacher: {
+        Args: {
+          p_institution_id: string
+          p_request_id: string
+          p_teacher_user_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       advance_verified_coach_stage: {
         Args: {
           p_content_sha256: string
@@ -5133,6 +5171,10 @@ export type Database = {
           honeypot_xp: number
           message: string
         }[]
+      }
+      claim_activation_reward: {
+        Args: { p_amount: number; p_claim_id: string; p_user_id: string }
+        Returns: Json
       }
       claim_daily_quest_reward: {
         Args: { p_user_id: string; p_user_quest_id: string }
@@ -5264,6 +5306,7 @@ export type Database = {
         Args: { p_pack_id: string; p_user_id: string }
         Returns: Json
       }
+      get_my_pilot_institution: { Args: { p_user_id: string }; Returns: Json }
       get_my_question_appeals: { Args: { p_user_id: string }; Returns: Json }
       get_my_question_result_corrections: {
         Args: { p_user_id: string }
@@ -5275,10 +5318,6 @@ export type Database = {
       }
       get_my_teacher_assignments: { Args: { p_user_id: string }; Returns: Json }
       get_my_teacher_classroom_memberships: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
-      get_my_pilot_institution: {
         Args: { p_user_id: string }
         Returns: Json
       }
@@ -5380,6 +5419,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      institution_pilot_active_institution: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
+      institution_pilot_has_role: {
+        Args: { p_institution_id: string; p_roles: string[]; p_user_id: string }
+        Returns: boolean
+      }
+      institution_pilot_is_platform_admin: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      institution_pilot_payload_hash: {
+        Args: { p_payload: Json }
+        Returns: string
+      }
       is_disposable_email: { Args: { p_email: string }; Returns: boolean }
       issue_paper_study_pack: {
         Args: { p_plan_id: string; p_request_id: string; p_user_id: string }
@@ -5393,33 +5448,6 @@ export type Database = {
           p_request_id: string
           p_token_digest: string
           p_user_id: string
-        }
-        Returns: Json
-      }
-      add_pilot_institution_teacher: {
-        Args: {
-          p_user_id: string
-          p_institution_id: string
-          p_teacher_user_id: string
-          p_request_id: string
-        }
-        Returns: Json
-      }
-      provision_pilot_institution: {
-        Args: {
-          p_user_id: string
-          p_name: string
-          p_manager_user_id: string
-          p_request_id: string
-        }
-        Returns: Json
-      }
-      remove_pilot_institution_teacher: {
-        Args: {
-          p_user_id: string
-          p_institution_id: string
-          p_member_ref: string
-          p_request_id: string
         }
         Returns: Json
       }
@@ -5462,6 +5490,15 @@ export type Database = {
       }
       preview_teacher_classroom_invite: {
         Args: { p_token_digest: string; p_user_id: string }
+        Returns: Json
+      }
+      provision_pilot_institution: {
+        Args: {
+          p_manager_user_id: string
+          p_name: string
+          p_request_id: string
+          p_user_id: string
+        }
         Returns: Json
       }
       publish_question_content_revision: {
@@ -5570,6 +5607,15 @@ export type Database = {
           p_attempt_id: string
           p_question_id: string
           p_stage: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      remove_pilot_institution_teacher: {
+        Args: {
+          p_institution_id: string
+          p_member_ref: string
+          p_request_id: string
           p_user_id: string
         }
         Returns: Json
