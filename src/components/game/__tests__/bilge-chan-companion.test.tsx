@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import type { Question } from '@/types/database'
@@ -19,6 +19,8 @@ vi.mock('@/lib/utils/chan-tts', () => ({
 
 const trackLearningEvent = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/analytics/learning-events', () => ({ trackLearningEvent }))
+const trackBilgeBoardEvent = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/bilge-tahta/analytics', () => ({ trackBilgeBoardEvent }))
 
 import { BilgeChanCompanion as BilgeChanCompanionImpl } from '../bilge-chan-companion'
 
@@ -27,6 +29,7 @@ const SESSION_ID = '11111111-2222-4333-8444-555555555555'
 const TRANSFER_ID = '99999999-8888-4777-8666-555555555555'
 const TYPE_MS = 5000
 const oldCoachUiEnabled = process.env.NEXT_PUBLIC_COACH_ENABLED
+const oldBoardUiEnabled = process.env.NEXT_PUBLIC_BILGE_TAHTA_ENABLED
 
 function BilgeChanCompanion(props: ComponentProps<typeof BilgeChanCompanionImpl>) {
   return <BilgeChanCompanionImpl attemptId={ATTEMPT_ID} {...props} />
@@ -127,6 +130,7 @@ async function flushPromises() {
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_COACH_ENABLED = 'true'
+  process.env.NEXT_PUBLIC_BILGE_TAHTA_ENABLED = 'true'
   vi.useFakeTimers()
   vi.spyOn(Math, 'random').mockReturnValue(0)
   let requestCounter = 0
@@ -144,6 +148,7 @@ beforeEach(() => {
   })
   vi.stubGlobal('fetch', fetchMock)
   trackLearningEvent.mockClear()
+  trackBilgeBoardEvent.mockClear()
   tts.speak.mockClear()
   tts.stop.mockClear()
 })
@@ -151,6 +156,8 @@ beforeEach(() => {
 afterEach(() => {
   if (oldCoachUiEnabled === undefined) delete process.env.NEXT_PUBLIC_COACH_ENABLED
   else process.env.NEXT_PUBLIC_COACH_ENABLED = oldCoachUiEnabled
+  if (oldBoardUiEnabled === undefined) delete process.env.NEXT_PUBLIC_BILGE_TAHTA_ENABLED
+  else process.env.NEXT_PUBLIC_BILGE_TAHTA_ENABLED = oldBoardUiEnabled
   vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -275,6 +282,57 @@ describe('BilgeChanCompanion R2.2', () => {
     expect(secondId).toBe(firstId)
     act(() => vi.advanceTimersByTime(TYPE_MS))
     expect(screen.getByText(/Olası yanılgı/)).toBeInTheDocument()
+  })
+
+  test('yalnız sunucudan açılmış Koç aşamasını Bilge Tahta dialogunda gösterir', async () => {
+    const onHelpToggle = vi.fn()
+    render(
+      <BilgeChanCompanion
+        quizState="playing"
+        lastIsCorrect={null}
+        question={makeQuestion({ topic: 'Dört İşlem Problemleri' })}
+        onHelpToggle={onHelpToggle}
+      />,
+    )
+    act(() => vi.advanceTimersByTime(6000))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+    fireEvent.click(screen.getByRole('button', { name: 'İlk deneme A: a' }))
+    await flushPromises()
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+
+    fireEvent.click(screen.getByRole('button', { name: /Tahtada anlat/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Dört İşlem Problemleri' })
+    expect(dialog).toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(within(dialog).getByTestId('bilge-tahta-text')).toHaveTextContent(/Olası yanılgı/)
+    expect(within(dialog).getByText(/Kaynak: Küratörlü Koç içeriği/)).toBeInTheDocument()
+    expect(within(dialog).getByText('Koruyucu kontrol geçti')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).not.toHaveProperty('correctOption')
+    expect(trackBilgeBoardEvent).toHaveBeenCalledWith('BilgeBoardOpened', {
+      surface: 'game', game: 'matematik', entryPoint: 'coach_stage',
+    })
+    expect(trackBilgeBoardEvent).toHaveBeenCalledWith('BilgeBoardStageViewed', {
+      surface: 'game', game: 'matematik', stage: 'hint1', stepIndex: 0,
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Soruyu çözmeye dön' }))
+    expect(onHelpToggle).toHaveBeenLastCalledWith(false)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(trackBilgeBoardEvent).toHaveBeenCalledWith('BilgeBoardReturnedToQuestion', expect.objectContaining({
+      surface: 'game', game: 'matematik',
+    }))
+  })
+
+  test('Bilge Tahta kill switch kapalıysa açma eylemi gösterilmez', async () => {
+    process.env.NEXT_PUBLIC_BILGE_TAHTA_ENABLED = 'false'
+    render(<BilgeChanCompanion quizState="playing" lastIsCorrect={null} question={makeQuestion()} />)
+    act(() => vi.advanceTimersByTime(6000))
+    fireEvent.click(screen.getByRole('button', { name: 'Evet' }))
+    fireEvent.click(screen.getByRole('button', { name: 'İlk deneme A: a' }))
+    await flushPromises()
+    act(() => vi.advanceTimersByTime(TYPE_MS))
+    expect(screen.queryByRole('button', { name: /Tahtada anlat/ })).not.toBeInTheDocument()
   })
 
   test('loading sırasında soruya dönülürse geç kalan yanıt fazı geri getirmez', async () => {
