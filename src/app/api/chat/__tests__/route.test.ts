@@ -176,6 +176,8 @@ describe('POST /api/chat', () => {
     expect(insertCall).toMatchObject({
       action: 'chat_safety_blocked',
     })
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ choices: [{ message: { content: null } }] }) })
+    expect((await POST(makeReq(VALID_BODY))).status).toBe(502)
   })
 
   it('returns 200 streaming on DeepSeek success path', async () => {
@@ -233,8 +235,7 @@ describe('POST /api/chat', () => {
 
     const call = mockFetch.mock.calls[0] as [string, { body: string }]
     const sentBody = JSON.parse(call[1].body)
-    expect(sentBody.max_tokens).toBe(1400)
-    expect(sentBody.temperature).toBe(0.45)
+    expect(sentBody).toMatchObject({ max_tokens: 1400, temperature: 0.45, thinking: { type: 'disabled' } })
     expect(sentBody.messages[0].content).toContain('KONU ANLATIMI MODU')
     expect(sentBody.messages[0].content).toContain('Adım adım çözümlü örnek')
     expect(sentBody.messages[0].content).toContain('Sık yapılan hata')
