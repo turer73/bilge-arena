@@ -31,25 +31,34 @@ export function TopicExplanationButton({
   const [answer, setAnswer] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  const lesson = useMemo<BilgeTahtaLesson | null>(() => answer ? ({
+  const lesson = useMemo<BilgeTahtaLesson>(() => ({
     mode: 'game',
     subjectLabel: [subject, examRef].filter(Boolean).join(' · '),
     title: topic,
     steps: [{
-      id: 'deepseek-topic-explanation',
+      id: loading ? 'deepseek-topic-loading' : error ? 'deepseek-topic-error' : 'deepseek-topic-explanation',
       stage: 'concept',
-      title: 'Ayrıntılı konu anlatımı',
-      content: answer,
-      sourceLabel: 'DeepSeek destekli Bilge Asistan yanıtı',
-      guardrailLabel: 'Doğrulanmış ders içeriği değildir',
+      title: loading ? 'Konu anlatımı hazırlanıyor' : 'Ayrıntılı konu anlatımı',
+      content: loading
+        ? 'Sorunun konusu belirlendi. Bilge Asistan ayrıntılı anlatımı tahtaya hazırlıyor…'
+        : error || answer || 'Konu anlatımını başlatmak için düğmeye dokun.',
+      ...(answer ? {
+        sourceLabel: 'Oyun içi Bilge Asistan yanıtı',
+        guardrailLabel: 'Doğrulanmış ders içeriği değildir',
+      } : {}),
     }],
-  }) : null, [answer, examRef, subject, topic])
+  }), [answer, error, examRef, loading, subject, topic])
 
   const explain = async () => {
     if (disabled || loading) return
     setError('')
+    setOpen(true)
+    trackBilgeBoardEvent('BilgeBoardOpened', {
+      surface,
+      entryPoint: surface === 'classroom' ? 'classroom_result' : 'game_result',
+      examRef,
+    })
     if (answer) {
-      setOpen(true)
       return
     }
     setLoading(true)
@@ -70,14 +79,8 @@ export function TopicExplanationButton({
       const text = await response.text()
       if (!text.trim()) throw new Error('topic_explanation_empty')
       setAnswer(text)
-      setOpen(true)
-      trackBilgeBoardEvent('BilgeBoardOpened', {
-        surface,
-        entryPoint: surface === 'classroom' ? 'classroom_result' : 'game_result',
-        examRef,
-      })
     } catch {
-      setError('Konu anlatımı şu anda hazırlanamadı. Lütfen tekrar dene.')
+      setError('Konu anlatımı şu anda hazırlanamadı. Tahtayı kapatıp lütfen tekrar dene.')
     } finally {
       setLoading(false)
     }
@@ -103,23 +106,25 @@ export function TopicExplanationButton({
         </button>
         {error && <p role="alert" className="mt-1 max-w-52 text-[10px] leading-4 text-[var(--urgency)]">{error}</p>}
       </div>
-      {lesson && (
-        <BilgeTahtaDialog
-          open={open}
-          lesson={lesson}
-          animate={false}
-          onOpenChange={setOpen}
-          onStepViewed={(index) => trackBilgeBoardEvent('BilgeBoardStageViewed', {
+      <BilgeTahtaDialog
+        open={open}
+        busy={loading}
+        lesson={lesson}
+        animate={false}
+        onOpenChange={setOpen}
+        onStepViewed={(index) => {
+          if (!answer) return
+          trackBilgeBoardEvent('BilgeBoardStageViewed', {
             surface,
             stage: lesson.steps[index].stage,
             stepIndex: index,
-          })}
-          onComplete={() => trackBilgeBoardEvent('BilgeBoardCompleted', {
-            surface,
-            stepCount: lesson.steps.length,
-          })}
-        />
-      )}
+          })
+        }}
+        onComplete={() => trackBilgeBoardEvent('BilgeBoardCompleted', {
+          surface,
+          stepCount: lesson.steps.length,
+        })}
+      />
     </>
   )
 }

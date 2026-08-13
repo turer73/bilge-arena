@@ -146,7 +146,7 @@ describe('StudyAssistant', () => {
       surface: 'study', game: 'matematik', stage: 'concept', stepIndex: 0,
     })
 
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Bilge Asistan’a dön' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ders Çalış’a dön' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByText('Asal sayılar yalnız 1 ve kendisine bölünür.')).toBeInTheDocument()
   })

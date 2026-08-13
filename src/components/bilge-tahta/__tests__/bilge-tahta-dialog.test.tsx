@@ -112,6 +112,26 @@ describe('BilgeTahtaDialog', () => {
     expect(screen.getByRole('button', { name: 'Soruyu çözmeye dön' })).toBeInTheDocument()
   })
 
+  test('Ders Çalış modunda hazırlık sürerken tahta hemen açılır ve ilerleme eylemlerini kilitler', () => {
+    const onStepViewed = vi.fn()
+    render(
+      <BilgeTahtaDialog
+        open
+        busy
+        lesson={lesson}
+        onOpenChange={vi.fn()}
+        onStepViewed={onStepViewed}
+        animate={false}
+      />,
+    )
+    expect(screen.getByRole('dialog', { name: lesson.title })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText('Bilge Asistan tahtayı hazırlıyor…')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Sonraki/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Baştan' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Ders Çalış’a dön' })).toBeEnabled()
+    expect(onStepViewed).not.toHaveBeenCalled()
+  })
+
   test('Tab odağını dialog içinde döndürür', async () => {
     render(<BilgeTahtaDialog open lesson={lesson} onOpenChange={vi.fn()} animate={false} />)
     const close = screen.getByRole('button', { name: 'Bilge Tahta’yı kapat' })
