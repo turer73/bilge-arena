@@ -48,6 +48,7 @@ export function ChatInput({ onSend, disabled = false, placeholder = 'Sorunuzu ya
         style={{ minHeight: '20px', maxHeight: '100px' }}
       />
       <button
+        type="button"
         onClick={handleSubmit}
         disabled={disabled || !value.trim()}
         className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--focus)] text-white transition-opacity hover:opacity-90 disabled:opacity-30"
