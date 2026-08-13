@@ -235,10 +235,7 @@ export async function POST(request: Request) {
     const text = typeof choice?.message?.content === 'string' ? choice.message.content.trim() : ''
     if (!text) {
       console.error('[Chat API] DeepSeek returned an empty assistant message:', choice?.finish_reason ?? null, json.model ?? DEEPSEEK_MODEL, mode ?? 'chat')
-      return NextResponse.json(
-        { error: 'AI servisi bos bir yanit dondurdu. Lutfen tekrar deneyin.' },
-        { status: 502 },
-      )
+      return NextResponse.json({ error: 'AI servisi bos bir yanit dondurdu. Lutfen tekrar deneyin.' }, { status: 502 })
     }
 
     // Streaming uyumlu response (mevcut fake-stream deseni korunur — tek
