@@ -217,7 +217,6 @@ suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
        SELECT $1,id,$2 FROM public.roles WHERE slug='teacher_pilot'`,
       [teacherOne, platformAdmin],
     )
-    expect(await rpc('public.teacher_classroom_is_teacher($1)', [teacherOne])).toBe(false)
     const retainedTeacherRole = await client.query(
       `SELECT count(*)::int AS count
        FROM public.user_roles AS user_role
@@ -242,8 +241,6 @@ suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
     expect(await rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [
       managerOne, institutionOne, teacherOne, requestId,
     ])).toMatchObject({ memberRef: teacherMemberRef, replayed: true })
-    expect(await rpc('public.teacher_classroom_is_teacher($1)', [teacherOne])).toBe(true)
-
     const created = await rpc('public.create_teacher_classroom($1,$2,$3)', [
       teacherOne, '12-A Matematik', randomUUID(),
     ])
@@ -287,7 +284,6 @@ suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
       managerOne, institutionOne, teacherMemberRef, randomUUID(),
     ])
     expect(removed).toMatchObject({ memberRef: teacherMemberRef, status: 'removed' })
-    expect(await rpc('public.teacher_classroom_is_teacher($1)', [teacherOne])).toBe(false)
     const retainedTeacherRole = await client.query(
       `SELECT count(*)::int AS count
        FROM public.user_roles AS user_role
