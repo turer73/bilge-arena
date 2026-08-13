@@ -35,6 +35,7 @@
     "test:learning-spotlights:pg": "vitest run --config vitest.database.config.ts database/__tests__/positive-learning-spotlights-postgres.integration.test.mjs",
     "test:team-boss:pg": "vitest run --config vitest.database.config.ts database/__tests__/cohort-team-boss-postgres.integration.test.mjs",
     "test:paper-packs:pg": "vitest run --config vitest.database.config.ts database/__tests__/paper-study-packs-postgres.integration.test.mjs",
+    "test:institution-pilot:pg": "vitest run --config vitest.database.config.ts database/__tests__/institution-pilot-foundation-postgres.integration.test.mjs",
     "test:db:watch": "vitest --config vitest.database.config.ts",
     "audit:judge": "node database/audit-llm-judge.mjs",
     "audit:judge:eval": "node database/__tests__/eval-judge.mjs",
