@@ -68,6 +68,7 @@ Tamamlanan PR/CI kapıları:
 
 Henüz yapılmayan dış kapılar:
 
+- Production salt-okunur preflight'ta `public.teacher_classrooms` sayısı `0` olarak doğrulandı; migration'ın eski sınıf satırı korumasına takılacak veri yok.
 - Migration 112 production'a uygulanmadı.
 - Feature flag açılmadı.
 - Yetkili kurum yöneticisi/öğretmen ile production smoke yapılmadı.
