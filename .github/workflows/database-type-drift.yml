@@ -29,5 +29,22 @@ jobs:
 
       - run: npm ci
 
-      - name: Compare generated types with production schema
-        run: npm run db:types:check
+      - name: Generate types from production schema
+        run: npm run db:types
+
+      - name: Compare generated types with checked-in schema
+        run: |
+          if ! git diff --quiet -- src/types/database.generated.ts; then
+            echo "Database type drift detected. Download the production-database-types artifact and commit the reviewed result."
+            exit 1
+          fi
+          echo "Database types match the production public schema."
+
+      - name: Upload generated production types on drift
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-database-types-${{ github.sha }}
+          path: src/types/database.generated.ts
+          if-no-files-found: error
+          retention-days: 7
