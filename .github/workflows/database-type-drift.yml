@@ -33,6 +33,7 @@ jobs:
         run: npm run db:types
 
       - name: Compare generated types with checked-in schema
+        id: compare
         run: |
           if ! git diff --quiet -- src/types/database.generated.ts; then
             echo "Database type drift detected. Download the production-database-types artifact and commit the reviewed result."
@@ -41,7 +42,7 @@ jobs:
           echo "Database types match the production public schema."
 
       - name: Upload generated production types on drift
-        if: failure()
+        if: steps.compare.outcome == 'failure'
         uses: actions/upload-artifact@v7
         with:
           name: production-database-types-${{ github.sha }}

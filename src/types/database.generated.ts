@@ -92,6 +92,35 @@ export type Database = {
         }
         Relationships: []
       }
+      activation_reward_claims: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          xp_amount: number
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          user_id: string
+          xp_amount: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          xp_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activation_reward_claims_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       adaptive_diagnostic_answers: {
         Row: {
           covered_outcomes_after: number
@@ -4989,6 +5018,10 @@ export type Database = {
           honeypot_xp: number
           message: string
         }[]
+      }
+      claim_activation_reward: {
+        Args: { p_amount: number; p_claim_id: string; p_user_id: string }
+        Returns: Json
       }
       claim_daily_quest_reward: {
         Args: { p_user_id: string; p_user_quest_id: string }
