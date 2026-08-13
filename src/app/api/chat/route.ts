@@ -174,9 +174,6 @@ export async function POST(request: Request) {
         messages: deepseekMessages,
         max_tokens: mode === 'topic_explanation' ? 1400 : 500,
         temperature: mode === 'topic_explanation' ? 0.45 : 0.7,
-        // V4 modellerinde thinking varsayilan olarak acik. Kisa cevap butcesini
-        // reasoning tokenlarinin tuketip message.content'i bos birakmamasi icin
-        // ogrenciye donen sohbeti acikca non-thinking modunda calistir.
         thinking: { type: 'disabled' },
         // GUVENLIK SERHI (konu#7 ders-hub plani, Faz 3): Gemini'nin
         // safetySettings (NSFW/hakaret/siddet/illegal kategori bloklama)

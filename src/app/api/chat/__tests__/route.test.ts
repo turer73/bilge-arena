@@ -176,21 +176,13 @@ describe('POST /api/chat', () => {
     expect(insertCall).toMatchObject({
       action: 'chat_safety_blocked',
     })
-  })
-
-  it('returns 502 instead of a fake success when DeepSeek content is empty', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({
-        model: 'deepseek-v4-flash',
-        choices: [{ finish_reason: 'length', message: { role: 'assistant', content: '' } }],
-      }),
+      json: async () => ({ choices: [{ finish_reason: 'length', message: { content: '' } }] }),
     })
-
-    const res = await POST(makeReq({ ...VALID_BODY, mode: 'topic_explanation' }))
-    expect(res.status).toBe(502)
-    await expect(res.json()).resolves.toMatchObject({ error: expect.stringMatching(/bos bir yanit/i) })
+    const emptyRes = await POST(makeReq({ ...VALID_BODY, mode: 'topic_explanation' }))
+    expect(emptyRes.status).toBe(502)
+    await expect(emptyRes.json()).resolves.toMatchObject({ error: expect.stringMatching(/bos bir yanit/i) })
   })
 
   it('returns 200 streaming on DeepSeek success path', async () => {
