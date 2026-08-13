@@ -955,5 +955,6 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Kanıtı yetersiz outcome'ları başarı/başarısızlık saymadan kısa durum tespitine yönlendirme.
 - [x] Güçlü outcome'larda kalıcılık tekrarı; tek haftada en fazla dokuz açıklanabilir görev.
 - [x] Pazartesi başlangıcı, günlük süre limiti ve ardışık görev sırası değişmezleri.
-- [ ] Taslağın öğretmen tarafından düzenlenmesi, kalıcılaştırılması ve açık onayla yayınlanması.
+- [x] Taslağın atanmış sınıf öğretmeni tarafından idempotent kalıcılaştırılması ve ayrı istekle açık yayın onayı.
+- [ ] Taslağın öğretmen tarafından görev bazında düzenlenmesi.
 - [ ] Öğrenci çalışma ekranı ve yazdırılabilir haftalık görünüm.

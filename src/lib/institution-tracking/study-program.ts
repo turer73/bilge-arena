@@ -25,6 +25,38 @@ export const institutionStudyProgramGenerationInputSchema = z.object({
   }
 })
 
+export const institutionStudyProgramDraftInputSchema = z.object({
+  classroomId: z.string().uuid(),
+  memberRef: z.string().regex(/^[0-9a-f]{32}$/),
+  weekStart: dateSchema,
+  dailyMinuteLimit: z.number().int().min(20).max(120),
+  requestId: z.string().uuid(),
+}).strict()
+
+export const institutionStudyProgramMutationResultSchema = z.object({
+  programRef: z.string().regex(/^[0-9a-f]{32}$/),
+  status: z.enum(['draft', 'published']),
+  weekStart: dateSchema,
+  dailyMinuteLimit: z.number().int().min(20).max(120),
+  modelVersion: z.literal('institution-program-v1'),
+  itemCount: z.number().int().min(1).max(21),
+  createdAt: timestampSchema,
+  reviewedAt: timestampSchema.nullable(),
+  publishedAt: timestampSchema.nullable(),
+  replayed: z.boolean(),
+}).strict().superRefine((value, context) => {
+  if (value.status === 'draft' && (value.reviewedAt !== null || value.publishedAt !== null)) {
+    context.addIssue({ code: 'custom', message: 'draft program cannot be reviewed or published' })
+  }
+  if (value.status === 'published' && (value.reviewedAt === null || value.publishedAt === null)) {
+    context.addIssue({ code: 'custom', message: 'published program requires teacher review' })
+  }
+})
+
+export const institutionStudyProgramPublishInputSchema = z.object({
+  requestId: z.string().uuid(),
+}).strict()
+
 type Candidate = {
   outcomeCode: string
   title: string
