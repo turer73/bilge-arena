@@ -37,8 +37,15 @@ describe('112 institution pilot foundation SQL contract', () => {
     expect(sql).toContain('student_limit smallint NOT NULL DEFAULT 200')
     expect(sql).toMatch(/pilot_institution_one_active_tenant_per_staff[\s\S]+\(user_id\)[\s\S]+WHERE status = 'active'/)
     expect(sql).toMatch(/pilot_institution_one_active_manager[\s\S]+WHERE status = 'active' AND role = 'manager'/)
-    expect(functionBody('add_pilot_institution_teacher', 'remove_pilot_institution_teacher'))
-      .toMatch(/v_staff_count >= v_institution\.staff_limit/)
+    const addTeacher = functionBody(
+      'add_pilot_institution_teacher',
+      'remove_pilot_institution_teacher',
+    )
+    expect(addTeacher).toMatch(/v_staff_count >= v_institution\.staff_limit/)
+    expect(addTeacher).toMatch(
+      /teacher_id = p_teacher_user_id[\s\S]+institution_id <> p_institution_id/,
+    )
+    expect(addTeacher).toContain('teacher classrooms require an explicit tenant transfer')
   })
 
   it('requires platform permission for provision and manager scope for staff changes', () => {

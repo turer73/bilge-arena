@@ -374,6 +374,18 @@ BEGIN
     RAISE EXCEPTION 'teacher already belongs to an active institution'
       USING ERRCODE = '23505';
   END IF;
+  -- Existing classroom RPCs authorize teacher-owned objects by teacher_id.
+  -- Until an explicit classroom ownership-transfer flow exists, fail closed
+  -- instead of letting a teacher carry stale object ids across tenants.
+  IF EXISTS (
+    SELECT 1
+    FROM public.teacher_classrooms
+    WHERE teacher_id = p_teacher_user_id
+      AND institution_id <> p_institution_id
+  ) THEN
+    RAISE EXCEPTION 'teacher classrooms require an explicit tenant transfer'
+      USING ERRCODE = '23514';
+  END IF;
 
   INSERT INTO public.pilot_institution_memberships(
     institution_id, user_id, role, assigned_by

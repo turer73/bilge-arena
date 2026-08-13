@@ -21,6 +21,7 @@
 ## Bilinçli sınırlar
 
 - Tek kullanıcı aynı anda yalnız bir pilot kurumda personel olabilir.
+- Üzerinde öğretmen sınıfı bulunan personel, açık bir sınıf sahipliği/transfer süreci olmadan başka kuruma taşınamaz.
 - İlk provision edilen kişi tek kurum yöneticisidir; yönetici yalnız öğretmen ekleyebilir.
 - Öğrenciler kurum personeli tablosuna alınmaz; kurum bağı sınıf üyeliklerinden türetilir.
 - Öğrenci CSV aktarımı, marka ayarları, yönetici analitiği, kampanya/turnuva ve çok şube bu dilimde yoktur.
@@ -35,6 +36,7 @@
 5. Kurum yöneticisi başka kurumun üyeliğini okuyamaz veya değiştiremez.
 6. Ham e-posta, telefon veya öğrenci cevap ayrıntısı kurum çalışma alanı yanıtına girmez.
 7. Provision ve personel değişiklikleri owner/payload bağlı idempotency anahtarıyla çalışır.
+8. Eski sınıf kimlikleri tenant değişimi üzerinden yeniden yetki kazandıramaz; ilk pilotta sınıfı olan öğretmenin kurumlar arası geçişi kapalıdır.
 
 ## Kabul kapısı
 

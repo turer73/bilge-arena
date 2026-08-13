@@ -6,10 +6,14 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const url = process.env.INSTITUTION_PILOT_TEST_DATABASE_URL
+const parsedUrl = url ? new URL(url) : null
 if (url && process.env.INSTITUTION_PILOT_TEST_DATABASE_DISPOSABLE !== '1') {
   throw new Error('Set INSTITUTION_PILOT_TEST_DATABASE_DISPOSABLE=1')
 }
-if (url && !/^bilge_inst_test_[a-z0-9_]+$/i.test(new URL(url).pathname.slice(1))) {
+if (parsedUrl && !['localhost', '127.0.0.1', '::1'].includes(parsedUrl.hostname)) {
+  throw new Error('Refusing non-local institution-pilot database')
+}
+if (parsedUrl && !/^bilge_inst_test_[a-z0-9_]+$/i.test(parsedUrl.pathname.slice(1))) {
   throw new Error('Refusing non-disposable institution-pilot database')
 }
 
@@ -27,6 +31,7 @@ suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
   let managerTwo
   let teacherOne
   let institutionOne
+  let institutionTwo
   let teacherMemberRef
   const capacityTeachers = []
 
@@ -128,6 +133,30 @@ suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
       CREATE TABLE public.weekly_learning_league_contributions(id uuid PRIMARY KEY);
     `)
     await client.query(classroomSql)
+
+    // Migration 112 must stop before inventing a tenant for any legacy row.
+    // The failing transaction is rolled back, then the disposable fixture is
+    // cleared so the normal acceptance path can continue.
+    const legacyTeacher = randomUUID()
+    await client.query(
+      'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
+      [legacyTeacher, 'legacy-teacher', 'Legacy Teacher'],
+    )
+    await client.query(
+      'INSERT INTO public.teacher_classrooms(teacher_id,name) VALUES($1,$2)',
+      [legacyTeacher, 'Legacy Classroom'],
+    )
+    let legacyFailure
+    try {
+      await client.query(institutionSql)
+    } catch (error) {
+      legacyFailure = error
+    }
+    expect(legacyFailure?.code).toBe('23514')
+    expect(legacyFailure?.message).toContain('explicit migration required')
+    await client.query('ROLLBACK')
+    await client.query('DELETE FROM public.teacher_classrooms WHERE teacher_id=$1', [legacyTeacher])
+    await client.query('DELETE FROM public.profiles WHERE id=$1', [legacyTeacher])
     await client.query(institutionSql)
 
     platformAdmin = randomUUID()
@@ -229,6 +258,7 @@ suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
     const second = await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
       platformAdmin, 'Bilge Pilot İki', managerTwo, randomUUID(),
     ])
+    institutionTwo = second.institution.id
     await expectPgError(
       () => rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [
         managerTwo, institutionOne, capacityTeachers[0], randomUUID(),
@@ -258,6 +288,20 @@ suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
     ])
     expect(removed).toMatchObject({ memberRef: teacherMemberRef, status: 'removed' })
     expect(await rpc('public.teacher_classroom_is_teacher($1)', [teacherOne])).toBe(false)
+    const retainedTeacherRole = await client.query(
+      `SELECT count(*)::int AS count
+       FROM public.user_roles AS user_role
+       JOIN public.roles AS role ON role.id = user_role.role_id
+       WHERE user_role.user_id = $1 AND role.slug = 'teacher_pilot'`,
+      [teacherOne],
+    )
+    expect(retainedTeacherRole.rows[0].count).toBe(1)
+    await expectPgError(
+      () => rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [
+        managerTwo, institutionTwo, teacherOne, randomUUID(),
+      ]),
+      '23514',
+    )
     await expectPgError(
       () => rpc('public.get_my_teacher_classrooms($1)', [teacherOne]),
       '42501',
