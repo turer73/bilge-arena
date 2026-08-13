@@ -3,6 +3,8 @@ import {
   fetchInstitutionStudentLearningAnalysis,
   fetchInstitutionTrackingDirectory,
   InstitutionTrackingClientError,
+  createInstitutionStudyProgramDraft,
+  publishInstitutionStudyProgram,
 } from '../client'
 
 const directory = {
@@ -37,5 +39,25 @@ describe('institution tracking client', () => {
     expect(error).toBeInstanceOf(InstitutionTrackingClientError)
     expect(error).toMatchObject({ status: 403, message: 'institution_tracking_request_403' })
     expect(String(error)).not.toContain('database secret')
+  })
+
+  it('uses distinct idempotency ids for draft and publish writes', async () => {
+    const randomUUID = vi.fn()
+      .mockReturnValueOnce('11111111-1111-4111-8111-111111111111')
+      .mockReturnValueOnce('22222222-2222-4222-8222-222222222222')
+    vi.stubGlobal('crypto', { randomUUID })
+    const draftResponse = {
+      program: { programRef: 'a'.repeat(32), status: 'draft', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 1, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: null, publishedAt: null, replayed: false },
+      draft: { status: 'draft', weekStart: '2026-08-17', modelVersion: 'institution-program-v1', generatedAt: '2026-08-14T00:00:00.000Z', dailyMinuteLimit: 45, items: [{ position: 1, scheduledDate: '2026-08-17', taskType: 'diagnostic', title: 'Temel kavramlar durum tespiti', reasonCode: 'diagnostic_gap', outcomeCode: 'MAT-01', durationMinutes: 20, targetQuestionCount: 10 }] },
+    }
+    const published = { ...draftResponse.program, status: 'published', reviewedAt: '2026-08-14T00:05:00.000Z', publishedAt: '2026-08-14T00:05:00.000Z' }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(draftResponse), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(published), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await createInstitutionStudyProgramDraft({ classroomId: 'c', memberRef: 'm', weekStart: '2026-08-17', dailyMinuteLimit: 45 })
+    await publishInstitutionStudyProgram('a'.repeat(32))
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ requestId: '11111111-1111-4111-8111-111111111111' })
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ requestId: '22222222-2222-4222-8222-222222222222' })
   })
 })

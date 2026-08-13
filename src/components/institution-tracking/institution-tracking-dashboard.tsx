@@ -6,19 +6,24 @@ import {
   BarChart3,
   BookOpenCheck,
   Building2,
+  CalendarDays,
   ChevronRight,
   RefreshCw,
+  Send,
   ShieldCheck,
   Users,
 } from 'lucide-react'
 import {
   fetchInstitutionStudentLearningAnalysis,
   fetchInstitutionTrackingDirectory,
+  createInstitutionStudyProgramDraft,
+  publishInstitutionStudyProgram,
   InstitutionTrackingClientError,
   isInstitutionTrackingUiEnabled,
 } from '@/lib/institution-tracking/client'
 import type { InstitutionTrackingDirectory } from '@/lib/institution-tracking/directory'
 import type { InstitutionStudentLearningAnalysis } from '@/lib/institution-tracking/student-analysis'
+import type { InstitutionStudyProgramDraftResponse } from '@/lib/institution-tracking/study-program'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -41,6 +46,13 @@ function formatDate(value: string | null): string {
     month: 'short',
     year: 'numeric',
   }).format(new Date(value))
+}
+
+function nextMonday(): string {
+  const date = new Date()
+  const days = (8 - date.getUTCDay()) % 7 || 7
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
 }
 
 function DashboardSkeleton() {
@@ -280,7 +292,11 @@ export function InstitutionTrackingDashboard() {
                 </button>
               </section>
             ) : (
-              <AnalysisPanel analysis={analysis} />
+              <AnalysisPanel
+                analysis={analysis}
+                classroomId={selectedClassroomId!}
+                canManagePrograms={directory.membership.role === 'teacher'}
+              />
             )}
           </main>
         </div>
@@ -289,7 +305,47 @@ export function InstitutionTrackingDashboard() {
   )
 }
 
-function AnalysisPanel({ analysis }: { analysis: InstitutionStudentLearningAnalysis }) {
+function AnalysisPanel({
+  analysis,
+  classroomId,
+  canManagePrograms,
+}: {
+  analysis: InstitutionStudentLearningAnalysis
+  classroomId: string
+  canManagePrograms: boolean
+}) {
+  const [program, setProgram] = useState<InstitutionStudyProgramDraftResponse | null>(null)
+  const [programBusy, setProgramBusy] = useState(false)
+  const [programError, setProgramError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setProgram(null)
+    setProgramError(null)
+  }, [analysis.student.memberRef])
+
+  async function createProgram() {
+    setProgramBusy(true); setProgramError(null)
+    try {
+      setProgram(await createInstitutionStudyProgramDraft({
+        classroomId, memberRef: analysis.student.memberRef, weekStart: nextMonday(), dailyMinuteLimit: 45,
+      }))
+    } catch (error) {
+      setProgramError(error instanceof InstitutionTrackingClientError && error.status === 409
+        ? 'Bu hafta için taslak zaten var veya güvenilir kapsam yetersiz.'
+        : 'Program taslağı oluşturulamadı.')
+    } finally { setProgramBusy(false) }
+  }
+
+  async function publishProgram() {
+    if (!program) return
+    setProgramBusy(true); setProgramError(null)
+    try {
+      const published = await publishInstitutionStudyProgram(program.program.programRef)
+      setProgram({ ...program, program: published })
+    } catch { setProgramError('Program yayınlanamadı.') }
+    finally { setProgramBusy(false) }
+  }
+
   return (
     <div className="min-w-0 space-y-4">
       <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
@@ -312,6 +368,31 @@ function AnalysisPanel({ analysis }: { analysis: InstitutionStudentLearningAnaly
           <SummaryCard label="Kanıt yetersiz" value={analysis.summary.insufficientOutcomeCount} tone="amber" icon={<AlertTriangle />} />
         </div>
       </section>
+
+      {canManagePrograms && (
+        <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="flex items-center gap-2 text-lg font-black"><CalendarDays className="h-5 w-5 text-[var(--primary)]" /> Haftalık çalışma programı</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Taslak analizden üretilir; siz inceleyip yayınlamadan öğrenciye açılmaz.</p>
+            </div>
+            {!program && <button type="button" disabled={programBusy} onClick={createProgram} className="btn-primary min-h-11 rounded-xl px-4 text-sm font-bold disabled:opacity-60">{programBusy ? 'Hazırlanıyor…' : 'Taslak oluştur'}</button>}
+          </div>
+          {programError && <p role="alert" className="mt-3 rounded-xl border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-200">{programError}</p>}
+          {program && (
+            <div className="mt-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-xs">
+                <span><strong>{program.draft.weekStart}</strong> haftası · {program.program.itemCount} görev · günlük en fazla {program.program.dailyMinuteLimit} dk</span>
+                <span className={`rounded-lg px-2 py-1 font-black ${program.program.status === 'published' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200'}`}>{program.program.status === 'published' ? 'Yayınlandı' : 'Taslak'}</span>
+              </div>
+              <ol className="space-y-2">
+                {program.draft.items.map((item) => <li key={item.position} className="grid gap-1 rounded-xl border border-white/10 p-3 text-sm sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center"><span className="text-xs text-[var(--text-sub)]">{item.scheduledDate}</span><span className="min-w-0 break-words font-bold">{item.title}<small className="mt-1 block font-normal text-[var(--text-sub)]">{item.reasonCode} · {item.targetQuestionCount ?? 0} soru</small></span><span className="text-xs font-bold text-[var(--primary)]">{item.durationMinutes} dk</span></li>)}
+              </ol>
+              {program.program.status === 'draft' && <button type="button" disabled={programBusy} onClick={publishProgram} className="btn-primary inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold disabled:opacity-60"><Send className="h-4 w-4" /> {programBusy ? 'Yayınlanıyor…' : 'İnceledim, yayınla'}</button>}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3">

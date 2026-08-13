@@ -957,4 +957,5 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Pazartesi başlangıcı, günlük süre limiti ve ardışık görev sırası değişmezleri.
 - [x] Taslağın atanmış sınıf öğretmeni tarafından idempotent kalıcılaştırılması ve ayrı istekle açık yayın onayı.
 - [ ] Taslağın öğretmen tarafından görev bazında düzenlenmesi.
+- [x] Öğretmen çalışma alanında taslağı görev, gerekçe, süre ve tarih bazında inceleyip ayrı eylemle yayınlama.
 - [ ] Öğrenci çalışma ekranı ve yazdırılabilir haftalık görünüm.

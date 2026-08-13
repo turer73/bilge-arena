@@ -6,11 +6,15 @@ const mocks = vi.hoisted(() => ({
   enabled: vi.fn(),
   directory: vi.fn(),
   analysis: vi.fn(),
+  createProgram: vi.fn(),
+  publishProgram: vi.fn(),
 }))
 vi.mock('@/lib/institution-tracking/client', () => ({
   isInstitutionTrackingUiEnabled: mocks.enabled,
   fetchInstitutionTrackingDirectory: mocks.directory,
   fetchInstitutionStudentLearningAnalysis: mocks.analysis,
+  createInstitutionStudyProgramDraft: mocks.createProgram,
+  publishInstitutionStudyProgram: mocks.publishProgram,
   InstitutionTrackingClientError: class InstitutionTrackingClientError extends Error {
     constructor(readonly status: number) { super(`institution_tracking_request_${status}`) }
   },
@@ -99,6 +103,11 @@ beforeEach(() => {
   mocks.analysis.mockImplementation(async (_classroomId: string, memberRef: string) => (
     memberRef === MEMBER_TWO ? analysis(MEMBER_TWO, 'Öğrenci İki') : analysis()
   ))
+  mocks.createProgram.mockResolvedValue({
+    program: { programRef: 'c'.repeat(32), status: 'draft', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 1, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: null, publishedAt: null, replayed: false },
+    draft: { status: 'draft', weekStart: '2026-08-17', modelVersion: 'institution-program-v1', generatedAt: '2026-08-14T00:00:00.000Z', dailyMinuteLimit: 45, items: [{ position: 1, scheduledDate: '2026-08-17', taskType: 'diagnostic', title: 'Temel kavramlar durum tespiti', reasonCode: 'diagnostic_gap', outcomeCode: 'MAT-01', durationMinutes: 20, targetQuestionCount: 10 }] },
+  })
+  mocks.publishProgram.mockResolvedValue({ programRef: 'c'.repeat(32), status: 'published', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 1, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: '2026-08-14T00:05:00.000Z', publishedAt: '2026-08-14T00:05:00.000Z', replayed: false })
 })
 
 describe('InstitutionTrackingDashboard', () => {
@@ -133,5 +142,18 @@ describe('InstitutionTrackingDashboard', () => {
     expect(await screen.findByRole('heading', { name: 'Öğrenci İki' })).toBeInTheDocument()
     expect(container.textContent).not.toContain(CLASSROOM_ID)
     expect(container.textContent).not.toContain(MEMBER_TWO)
+  })
+
+  it.each([320, 375, 390])('lets a teacher inspect and publish a generated draft at %ipx', async (width) => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+    mocks.directory.mockResolvedValue({ ...directory, membership: { role: 'teacher' as const } })
+    const user = userEvent.setup()
+    render(<InstitutionTrackingDashboard />)
+    await screen.findByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })
+    await user.click(screen.getByRole('button', { name: 'Taslak oluştur' }))
+    expect(await screen.findByText('Temel kavramlar durum tespiti')).toBeInTheDocument()
+    expect(mocks.publishProgram).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: /İnceledim, yayınla/i }))
+    expect(await screen.findByText('Yayınlandı')).toBeInTheDocument()
   })
 })

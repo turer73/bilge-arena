@@ -57,6 +57,13 @@ export const institutionStudyProgramPublishInputSchema = z.object({
   requestId: z.string().uuid(),
 }).strict()
 
+export const institutionStudyProgramDraftResponseSchema = z.object({
+  program: institutionStudyProgramMutationResultSchema,
+  draft: weeklyStudyProgramDraftSchema,
+}).strict()
+
+export type InstitutionStudyProgramDraftResponse = z.infer<typeof institutionStudyProgramDraftResponseSchema>
+
 type Candidate = {
   outcomeCode: string
   title: string
