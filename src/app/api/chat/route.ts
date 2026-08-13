@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { chatRequestSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { TOPIC_EXPLANATION_SYSTEM_INSTRUCTION } from '@/lib/bilge-tahta/topic-explanation'
 
 // Rate limit dusuruldu (konu#7 ders-hub plani, Faz 3): Gemini free-tier'a gore
 // daha maliyetli/dar DeepSeek kotasi + hub'da chat artik tek merkezi surface
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { messages, questionContext } = parsed.data
+  const { messages, questionContext, mode } = parsed.data
 
   // 3.5) Prompt-injection guard — jailbreak/role-swap/system-leak girisimlerini engelle
   // DeepSeek gecisiyle bu denylist erken-reddetme + audit log'un OTESINDE asil
@@ -141,9 +142,13 @@ export async function POST(request: Request) {
     )
   }
 
-  const systemInstruction = questionContext
-    ? `${SYSTEM_PROMPT}\n\nOgrencinin su anda calistigi soru:\n${questionContext}`
-    : SYSTEM_PROMPT
+  const modeInstruction = mode === 'topic_explanation'
+    ? `\n\n${TOPIC_EXPLANATION_SYSTEM_INSTRUCTION}`
+    : ''
+  const questionInstruction = questionContext
+    ? `\n\nÖğrencinin şu anda çalıştığı soru:\n${questionContext}`
+    : ''
+  const systemInstruction = `${SYSTEM_PROMPT}${modeInstruction}${questionInstruction}`
 
   // Mesajlari OpenAI-uyumlu (DeepSeek) formatina cevir — role isimleri zaten
   // ayni ('user'/'assistant'), Gemini'deki 'model' remap'i gerekmiyor.
@@ -167,8 +172,8 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
         messages: deepseekMessages,
-        max_tokens: 500,
-        temperature: 0.7,
+        max_tokens: mode === 'topic_explanation' ? 1400 : 500,
+        temperature: mode === 'topic_explanation' ? 0.45 : 0.7,
         // GUVENLIK SERHI (konu#7 ders-hub plani, Faz 3): Gemini'nin
         // safetySettings (NSFW/hakaret/siddet/illegal kategori bloklama)
         // katmani DeepSeek'te YOK — OpenAI-uyumlu Chat Completions API'si

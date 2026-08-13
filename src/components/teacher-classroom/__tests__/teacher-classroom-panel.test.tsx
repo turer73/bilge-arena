@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const clientMocks = vi.hoisted(() => ({
   fetchClasses: vi.fn(),
   fetchOverview: vi.fn(),
+  fetchBilgeTahtaAccess: vi.fn(),
+  updateBilgeTahtaAccess: vi.fn(),
   createClass: vi.fn(),
   issueInvite: vi.fn(),
   revokeInvite: vi.fn(),
@@ -20,6 +22,8 @@ vi.mock('@/lib/teacher-classroom/client', async () => ({
   ...(await vi.importActual<typeof import('@/lib/teacher-classroom/client')>('@/lib/teacher-classroom/client')),
   fetchTeacherClassrooms: clientMocks.fetchClasses,
   fetchTeacherClassroomOverview: clientMocks.fetchOverview,
+  fetchClassroomBilgeTahtaAccess: clientMocks.fetchBilgeTahtaAccess,
+  updateClassroomBilgeTahtaAccess: clientMocks.updateBilgeTahtaAccess,
   createTeacherClassroom: clientMocks.createClass,
   issueTeacherClassroomInvite: clientMocks.issueInvite,
   revokeTeacherClassroomInvite: clientMocks.revokeInvite,
@@ -95,6 +99,12 @@ describe('TeacherClassroomPanel', () => {
     authState.value = { user: { id: 'teacher-1' }, loading: false }
     clientMocks.fetchClasses.mockResolvedValue(classes)
     clientMocks.fetchOverview.mockResolvedValue(overview)
+    clientMocks.fetchBilgeTahtaAccess.mockResolvedValue({ enabled: false })
+    clientMocks.updateBilgeTahtaAccess.mockResolvedValue({
+      classroomId: CLASSROOM_ID,
+      enabled: true,
+      replayed: false,
+    })
     clientMocks.issueInvite.mockResolvedValue({
       inviteRef: 'f'.repeat(32),
       expiresAt: '2026-08-10T10:00:00.000Z',
@@ -124,6 +134,15 @@ describe('TeacherClassroomPanel', () => {
     expect(screen.getByText('2 yanıt · 1 doğru')).toBeInTheDocument()
     expect(screen.getByText(/1 geçmiş\/gizli üyelik kimliği/i)).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/student-1|@|11111111-2222/)
+
+    const bilgeTahtaSwitch = screen.getByRole('switch', { name: 'Kapalı' })
+    expect(bilgeTahtaSwitch).toHaveAttribute('aria-checked', 'false')
+    await user.click(bilgeTahtaSwitch)
+    await waitFor(() => expect(clientMocks.updateBilgeTahtaAccess).toHaveBeenCalledWith(
+      CLASSROOM_ID,
+      { enabled: true, requestId: expect.any(String) },
+    ))
+    expect(screen.getByRole('switch', { name: 'Açık' })).toHaveAttribute('aria-checked', 'true')
 
     expect(document.body.textContent).not.toContain(TOKEN)
     await user.click(screen.getByRole('button', { name: 'Davet oluştur' }))

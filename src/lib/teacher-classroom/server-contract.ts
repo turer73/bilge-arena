@@ -66,6 +66,21 @@ export const teacherClassroomCreateResultSchema = z.object({
   replayed: z.boolean(),
 }).strict()
 
+export const classroomBilgeTahtaAccessSchema = z.object({
+  enabled: z.boolean(),
+}).strict()
+
+export const classroomBilgeTahtaUpdateInputSchema = z.object({
+  enabled: z.boolean(),
+  requestId: uuidSchema,
+}).strict()
+
+export const classroomBilgeTahtaUpdateResultSchema = z.object({
+  classroomId: uuidSchema,
+  enabled: z.boolean(),
+  replayed: z.boolean(),
+}).strict()
+
 export const teacherInviteIssueInputSchema = z.object({
   expiresAt: timestampSchema,
   maxUses: z.number().int().min(1).max(40),
@@ -412,6 +427,8 @@ export type TeacherClassroomList = z.infer<typeof teacherClassroomListSchema>
 export type TeacherClassroomOverview = z.infer<typeof teacherClassroomOverviewSchema>
 export type TeacherClassroomCreateInput = z.infer<typeof teacherClassroomCreateInputSchema>
 export type TeacherClassroomCreateResult = z.infer<typeof teacherClassroomCreateResultSchema>
+export type ClassroomBilgeTahtaAccess = z.infer<typeof classroomBilgeTahtaAccessSchema>
+export type ClassroomBilgeTahtaUpdateInput = z.infer<typeof classroomBilgeTahtaUpdateInputSchema>
 export type TeacherInviteIssueInput = z.infer<typeof teacherInviteIssueInputSchema>
 export type TeacherInviteIssueResponse = z.infer<typeof teacherInviteIssueResponseSchema>
 export type TeacherInvitationPreview = z.infer<typeof teacherInvitationPreviewResponseSchema>

@@ -654,6 +654,20 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string }
         Returns: Json
       }
+      get_my_classroom_bilge_tahta_access: {
+        Args: { p_user_id: string; p_classroom_id: string; p_institution_id: string }
+        Returns: Json
+      }
+      set_teacher_classroom_bilge_tahta: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_enabled: boolean
+          p_institution_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       issue_teacher_classroom_invite: {
         Args: {
           p_user_id: string

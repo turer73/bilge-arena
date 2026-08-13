@@ -12,6 +12,10 @@ vi.mock('@/lib/teacher-classroom/route-context', () => ({
 
 import { GET as listClasses, POST as createClass } from '../classrooms/route'
 import { GET as getOverview } from '../classrooms/[classroomId]/route'
+import {
+  GET as getBilgeTahtaAccess,
+  PATCH as updateBilgeTahtaAccess,
+} from '../classrooms/[classroomId]/bilge-tahta/route'
 import { POST as issueInvite } from '../classrooms/[classroomId]/invites/route'
 import { POST as publishAssignment } from '../classrooms/[classroomId]/assignments/route'
 import { POST as removeMember } from '../classrooms/[classroomId]/members/[memberRef]/remove/route'
@@ -98,6 +102,8 @@ beforeEach(() => {
     admin: { rpc: mocks.rpc, from: mocks.from },
     config,
   })
+  process.env.BILGE_TAHTA_PILOT_ENABLED = 'true'
+  process.env.BILGE_TAHTA_PILOT_INSTITUTION_ID = CLASS_ID
 })
 
 describe('R4.2 teacher classroom API routes', () => {
@@ -174,6 +180,63 @@ describe('R4.2 teacher classroom API routes', () => {
       new Request(`http://localhost/api/teacher/classrooms/${CLASS_ID}`),
       { params: Promise.resolve({ classroomId: CLASS_ID }) },
     )).status).toBe(500)
+  })
+
+  it('reads class-scoped Bilge Tahta access and requires a strict teacher update', async () => {
+    mocks.rpc.mockImplementation(async (name: string) => {
+      if (name === 'get_my_classroom_bilge_tahta_access') {
+        return { data: { enabled: false }, error: null }
+      }
+      if (name === 'set_teacher_classroom_bilge_tahta') {
+        return {
+          data: { classroomId: CLASS_ID, enabled: true, replayed: false },
+          error: null,
+        }
+      }
+      throw new Error(`unexpected rpc ${name}`)
+    })
+
+    const read = await getBilgeTahtaAccess(
+      new Request(`http://localhost/api/teacher/classrooms/${CLASS_ID}/bilge-tahta`),
+      { params: Promise.resolve({ classroomId: CLASS_ID }) },
+    )
+    expect(read.status).toBe(200)
+    expect(await read.json()).toEqual({ enabled: false })
+    expect(mocks.rpc).toHaveBeenCalledWith('get_my_classroom_bilge_tahta_access', {
+      p_user_id: USER_ID,
+      p_classroom_id: CLASS_ID,
+      p_institution_id: CLASS_ID,
+    })
+
+    mocks.context.mockClear()
+    const updated = await updateBilgeTahtaAccess(
+      jsonRequest(`/api/teacher/classrooms/${CLASS_ID}/bilge-tahta`, {
+        enabled: true,
+        requestId: REQUEST_ID,
+      }),
+      { params: Promise.resolve({ classroomId: CLASS_ID }) },
+    )
+    expect(updated.status).toBe(200)
+    expect(mocks.context.mock.calls[0]?.[2]).toBe(true)
+    expect(mocks.rpc).toHaveBeenLastCalledWith('set_teacher_classroom_bilge_tahta', {
+      p_user_id: USER_ID,
+      p_classroom_id: CLASS_ID,
+      p_institution_id: CLASS_ID,
+      p_enabled: true,
+      p_request_id: REQUEST_ID,
+    })
+
+    mocks.rpc.mockClear()
+    const leaked = await updateBilgeTahtaAccess(
+      jsonRequest(`/api/teacher/classrooms/${CLASS_ID}/bilge-tahta`, {
+        enabled: true,
+        requestId: REQUEST_ID,
+        studentId: USER_ID,
+      }),
+      { params: Promise.resolve({ classroomId: CLASS_ID }) },
+    )
+    expect(leaked.status).toBe(400)
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('returns a deterministic raw invite only from issue while RPC receives only its digest', async () => {

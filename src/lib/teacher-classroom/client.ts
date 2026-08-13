@@ -8,6 +8,8 @@ import {
   teacherClassroomCreateResultSchema,
   teacherClassroomListSchema,
   teacherClassroomOverviewSchema,
+  classroomBilgeTahtaAccessSchema,
+  classroomBilgeTahtaUpdateResultSchema,
   teacherInvitationAcceptResultSchema,
   teacherInvitationPreviewResponseSchema,
   teacherInviteIssueResponseSchema,
@@ -24,6 +26,8 @@ import {
   type TeacherClassroomCreateResult,
   type TeacherClassroomList,
   type TeacherClassroomOverview,
+  type ClassroomBilgeTahtaAccess,
+  type ClassroomBilgeTahtaUpdateInput,
   type TeacherInvitationAcceptInput,
   type TeacherInvitationAcceptResult,
   type TeacherInvitationPreview,
@@ -83,6 +87,28 @@ export function fetchTeacherClassroomOverview(
     `/api/teacher/classrooms/${encodeURIComponent(classroomId)}`,
     teacherClassroomOverviewSchema,
     { signal },
+  )
+}
+
+export function fetchClassroomBilgeTahtaAccess(
+  classroomId: string,
+  signal?: AbortSignal,
+): Promise<ClassroomBilgeTahtaAccess> {
+  return requestJson(
+    `/api/teacher/classrooms/${encodeURIComponent(classroomId)}/bilge-tahta`,
+    classroomBilgeTahtaAccessSchema,
+    { signal },
+  )
+}
+
+export function updateClassroomBilgeTahtaAccess(
+  classroomId: string,
+  input: ClassroomBilgeTahtaUpdateInput,
+) {
+  return requestJson(
+    `/api/teacher/classrooms/${encodeURIComponent(classroomId)}/bilge-tahta`,
+    classroomBilgeTahtaUpdateResultSchema,
+    { method: 'PATCH', body: JSON.stringify(input) },
   )
 }
 

@@ -220,4 +220,24 @@ describe('POST /api/chat', () => {
     expect(sentBody.messages[0].role).toBe('system')
     expect(sentBody.messages.at(-1)).toMatchObject({ role: 'user', content: 'Asal sayilar nedir?' })
   })
+
+  it('konu anlatımı modunda ayrıntılı pedagojik sistem mesajı ve geniş yanıt bütçesi kullanır', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'ayrıntılı ders' } }],
+      }),
+    })
+    await POST(makeReq({ ...VALID_BODY, mode: 'topic_explanation' }))
+
+    const call = mockFetch.mock.calls[0] as [string, { body: string }]
+    const sentBody = JSON.parse(call[1].body)
+    expect(sentBody.max_tokens).toBe(1400)
+    expect(sentBody.temperature).toBe(0.45)
+    expect(sentBody.messages[0].content).toContain('KONU ANLATIMI MODU')
+    expect(sentBody.messages[0].content).toContain('Adım adım çözümlü örnek')
+    expect(sentBody.messages[0].content).toContain('Sık yapılan hata')
+    expect(sentBody.messages[0].content).toContain('Mini kontrol')
+  })
 })
