@@ -947,3 +947,13 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Eksik kanıtta sayısal sıfır yerine `Kanıt yetersiz` gösterimi.
 - [x] 320, 375 ve 390 px fixture render testleri; uzun kurum, sınıf, öğrenci ve kazanım metinleri.
 - [ ] Migration 114/115 ve iki server/client feature flag production'da kapalıdır; deploy/canlı smoke yapılmadı.
+
+### 19.4 Haftalık program üretim çekirdeği — 2026-08-14
+
+- [x] Yalnız doğrulanmış öğrenci/outcome analizini kabul eden saf program üretici.
+- [x] Gelişiyor durumundaki en düşük skorlu outcome'ları önceleyen hedefli soru görevleri.
+- [x] Kanıtı yetersiz outcome'ları başarı/başarısızlık saymadan kısa durum tespitine yönlendirme.
+- [x] Güçlü outcome'larda kalıcılık tekrarı; tek haftada en fazla dokuz açıklanabilir görev.
+- [x] Pazartesi başlangıcı, günlük süre limiti ve ardışık görev sırası değişmezleri.
+- [ ] Taslağın öğretmen tarafından düzenlenmesi, kalıcılaştırılması ve açık onayla yayınlanması.
+- [ ] Öğrenci çalışma ekranı ve yazdırılabilir haftalık görünüm.
