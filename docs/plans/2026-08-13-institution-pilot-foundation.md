@@ -1,7 +1,7 @@
 # Bilge Arena Kurumsal — Pilot Temel Dilimi
 
 **Tarih:** 2026-08-13
-**Durum:** Yerel uygulama ve statik kabul kapıları ilerliyor. Canlı migration, pilot ve deploy yapılmış sayılmaz.
+**Durum:** Yerel uygulama ve PR kabul kapıları tamamlandı. Canlı migration, pilot ve production deploy yapılmış sayılmaz.
 
 ## Amaç
 
@@ -59,13 +59,16 @@ Tamamlanan yerel kapılar:
 - Personel yazma uçları dar yazma rate limiter'ına bağlandı.
 - Üyelikten çıkarma yalnız kuruma ait erişim rolünü geri alıyor; bağımsız verilmiş genel öğretmen rolünü silmiyor. Aktif tenant üyeliği kalktığı için öğretmen RPC erişimi yine anında kesiliyor.
 
-Kalan yerel kabul kapısı:
+Tamamlanan PR/CI kapıları:
 
-- Gerçek PostgreSQL kabul paketi, yalnız `INSTITUTION_PILOT_TEST_DATABASE_URL` ile açıkça disposable bir veritabanı sağlandığında çalışır. Bu oturumda böyle bir veritabanı bulunmadığı için 6 test güvenli biçimde atlandı; geçmiş sayılmaz.
+- Taslak PR [#355](https://github.com/turer73/bilge-arena/pull/355), restore-point disipliniyle kapsamlı commitler halinde push edildi.
+- CI run `31686900990` üzerinde disposable `postgres:16` servisiyle 6 gerçek PostgreSQL tenant kabul testi geçti.
+- Aynı HEAD (`db76cb9`) üzerinde genel test/coverage, lint, type-check, migration lint, Chromium E2E ve production build geçti.
+- Vercel preview ve Codecov patch kontrolleri geçti; PR `MERGEABLE/CLEAN` durumuna ulaştı.
 
 Henüz yapılmayan dış kapılar:
 
 - Migration 112 production'a uygulanmadı.
 - Feature flag açılmadı.
 - Yetkili kurum yöneticisi/öğretmen ile production smoke yapılmadı.
-- PR, CI ve deploy kanıtı oluşmadı.
+- PR henüz taslak; merge edilmedi ve production deploy kanıtı oluşmadı.
