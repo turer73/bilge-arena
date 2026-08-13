@@ -546,6 +546,10 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
+      get_institution_tracking_directory: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       issue_verified_exam_attempt: {
         Args: {
           p_user_id: string

@@ -1,0 +1,16 @@
+import type { Metadata } from 'next'
+import { InstitutionTrackingDashboard } from '@/components/institution-tracking/institution-tracking-dashboard'
+
+export const metadata: Metadata = {
+  title: 'Kurum Takibi | Bilge Arena',
+  description: 'Açıklanabilir sınıf ve öğrenci kazanım takibi.',
+  robots: { index: false, follow: false },
+}
+
+export default function InstitutionTrackingPage() {
+  return (
+    <div className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-5 sm:py-8 lg:px-8">
+      <InstitutionTrackingDashboard />
+    </div>
+  )
+}

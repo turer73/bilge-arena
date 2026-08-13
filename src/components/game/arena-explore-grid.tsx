@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import {
   ArrowUpRight,
+  Building2,
   Castle,
   GraduationCap,
   PenLine,
@@ -64,17 +65,38 @@ const CLASSROOM_ITEM: ExploreItem = {
   color: 'var(--growth)',
 }
 
-interface ArenaExploreGridProps {
-  classroomEnabled?: boolean
+const INSTITUTION_ITEM: ExploreItem = {
+  href: '/arena/kurum',
+  title: 'Kurum Takibi',
+  description: 'Sınıf ve kazanım analizi',
+  badge: 'KURUM',
+  icon: Building2,
+  color: 'var(--focus)',
 }
 
-export function ArenaExploreGrid({ classroomEnabled = false }: ArenaExploreGridProps) {
-  const items = classroomEnabled ? [CLASSROOM_ITEM, ...EXPLORE_ITEMS] : EXPLORE_ITEMS
+interface ArenaExploreGridProps {
+  classroomEnabled?: boolean
+  institutionEnabled?: boolean
+}
+
+export function ArenaExploreGrid({
+  classroomEnabled = false,
+  institutionEnabled = false,
+}: ArenaExploreGridProps) {
+  const items = [
+    ...(institutionEnabled ? [INSTITUTION_ITEM] : []),
+    ...(classroomEnabled ? [CLASSROOM_ITEM] : []),
+    ...EXPLORE_ITEMS,
+  ]
 
   return (
     <div
       data-testid="arena-explore-grid"
-      className={`grid grid-cols-2 gap-2.5 md:gap-3 ${items.length === 5 ? 'sm:grid-cols-3 lg:grid-cols-5' : 'sm:grid-cols-2 lg:grid-cols-4'}`}
+      className={`grid grid-cols-2 gap-2.5 md:gap-3 ${items.length === 6
+        ? 'sm:grid-cols-3 lg:grid-cols-6'
+        : items.length === 5
+          ? 'sm:grid-cols-3 lg:grid-cols-5'
+          : 'sm:grid-cols-2 lg:grid-cols-4'}`}
     >
       {items.map((item) => {
         const Icon = item.icon

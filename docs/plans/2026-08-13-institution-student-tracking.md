@@ -923,7 +923,8 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [ ] Production kaynak sorgusu ve yalnız toplu sonuç veren ilk canlı veri kalite çalıştırması.
 - [ ] Kaynak sorgular doğrulandıktan sonra gerekli olup olmadığına karar verilecek günlük agrega migration'ı.
 - [x] Tenant-sınırlı ilk öğrenci analiz API sözleşmesi.
-- [ ] Kurum analiz UI ve diğer kurum agregaları.
+- [x] İlk kurum öğrenci analiz UI.
+- [ ] Sınıf/kurum agregaları ve öğretmen gösterge UI.
 
 ### 19.2 Kurum öğrenci analiz dilimi — 2026-08-13
 
@@ -935,4 +936,14 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Varsayılan kapalı server feature flag, route/SQL güvenlik ve contract testleri.
 - [ ] Migration 114'ün hedef Supabase projesine uygulanması ve şema tiplerinin canlı şemadan yeniden üretilmesi.
 - [ ] Sentetik tenant/classroom fixture ile canlı RPC smoke testi.
-- [ ] Kurum, sınıf ve öğrenci takip arayüzü.
+- [x] İlk kurum, sınıf ve öğrenci takip arayüzü.
+
+### 19.3 İlk kurum takip arayüzü — 2026-08-14
+
+- [x] Manager için kurumdaki bütün aktif sınıfları, teacher için yalnız sahip olduğu sınıfları döndüren takip dizini.
+- [x] Silinmiş, ayrılmış veya bloklanmış öğrenci kimliklerini dizinden çıkaran SQL sınırı.
+- [x] Ayrı `/arena/kurum` çalışma alanı ve Arena feature-flag kartı.
+- [x] Sınıf ve öğrenci seçimi; TYT Matematik outcome durum, güven, payda ve son kanıt görünümü.
+- [x] Eksik kanıtta sayısal sıfır yerine `Kanıt yetersiz` gösterimi.
+- [x] 320, 375 ve 390 px fixture render testleri; uzun kurum, sınıf, öğrenci ve kazanım metinleri.
+- [ ] Migration 114/115 ve iki server/client feature flag production'da kapalıdır; deploy/canlı smoke yapılmadı.

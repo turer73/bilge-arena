@@ -32,4 +32,17 @@ describe('ArenaExploreGrid', () => {
     expect(screen.getByRole('link', { name: /Sınıflarım/i })).toHaveAttribute('href', '/arena/sinif')
     expect(screen.getByTestId('arena-explore-grid')).toHaveClass('sm:grid-cols-3', 'lg:grid-cols-5')
   })
+
+  test('kurum takibi yalnız ayrı feature flag ile görünür', () => {
+    const { rerender } = render(<ArenaExploreGrid />)
+    expect(screen.queryByRole('link', { name: /Kurum Takibi/i })).not.toBeInTheDocument()
+    rerender(<ArenaExploreGrid institutionEnabled />)
+    expect(screen.getByRole('link', { name: /Kurum Takibi/i })).toHaveAttribute('href', '/arena/kurum')
+    expect(screen.getByTestId('arena-explore-grid')).toHaveClass('sm:grid-cols-3', 'lg:grid-cols-5')
+  })
+
+  test('sınıf ve kurum kartları birlikte altı kartlı masaüstü düzeni kullanır', () => {
+    render(<ArenaExploreGrid classroomEnabled institutionEnabled />)
+    expect(screen.getByTestId('arena-explore-grid')).toHaveClass('sm:grid-cols-3', 'lg:grid-cols-6')
+  })
 })
