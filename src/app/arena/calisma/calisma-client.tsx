@@ -181,7 +181,7 @@ export default function CalismaClient() {
               id="study-assistant-body"
               className={assistantOpen ? 'block' : 'hidden md:block'}
             >
-              {assistantMounted && <StudyAssistant embedded />}
+              {assistantMounted && <StudyAssistant embedded game={game} examRef={examRef} />}
             </div>
           </section>
         </aside>
