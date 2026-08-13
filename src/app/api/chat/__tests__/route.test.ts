@@ -178,6 +178,21 @@ describe('POST /api/chat', () => {
     })
   })
 
+  it('returns 502 instead of a fake success when DeepSeek content is empty', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        model: 'deepseek-v4-flash',
+        choices: [{ finish_reason: 'length', message: { role: 'assistant', content: '' } }],
+      }),
+    })
+
+    const res = await POST(makeReq({ ...VALID_BODY, mode: 'topic_explanation' }))
+    expect(res.status).toBe(502)
+    await expect(res.json()).resolves.toMatchObject({ error: expect.stringMatching(/bos bir yanit/i) })
+  })
+
   it('returns 200 streaming on DeepSeek success path', async () => {
     mockGetUser.mockResolvedValue({ data: { user: VALID_USER }, error: null })
     mockFetch.mockResolvedValueOnce({
@@ -235,6 +250,7 @@ describe('POST /api/chat', () => {
     const sentBody = JSON.parse(call[1].body)
     expect(sentBody.max_tokens).toBe(1400)
     expect(sentBody.temperature).toBe(0.45)
+    expect(sentBody.thinking).toEqual({ type: 'disabled' })
     expect(sentBody.messages[0].content).toContain('KONU ANLATIMI MODU')
     expect(sentBody.messages[0].content).toContain('Adım adım çözümlü örnek')
     expect(sentBody.messages[0].content).toContain('Sık yapılan hata')

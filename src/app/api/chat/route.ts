@@ -174,6 +174,10 @@ export async function POST(request: Request) {
         messages: deepseekMessages,
         max_tokens: mode === 'topic_explanation' ? 1400 : 500,
         temperature: mode === 'topic_explanation' ? 0.45 : 0.7,
+        // V4 modellerinde thinking varsayilan olarak acik. Kisa cevap butcesini
+        // reasoning tokenlarinin tuketip message.content'i bos birakmamasi icin
+        // ogrenciye donen sohbeti acikca non-thinking modunda calistir.
+        thinking: { type: 'disabled' },
         // GUVENLIK SERHI (konu#7 ders-hub plani, Faz 3): Gemini'nin
         // safetySettings (NSFW/hakaret/siddet/illegal kategori bloklama)
         // katmani DeepSeek'te YOK — OpenAI-uyumlu Chat Completions API'si
@@ -228,7 +232,20 @@ export async function POST(request: Request) {
       )
     }
 
-    const text = choice?.message?.content || 'Cevap alinamadi.'
+    const text = typeof choice?.message?.content === 'string'
+      ? choice.message.content.trim()
+      : ''
+    if (!text) {
+      console.error('[Chat API] DeepSeek returned an empty assistant message:', {
+        finishReason: choice?.finish_reason ?? null,
+        model: json.model ?? DEEPSEEK_MODEL,
+        mode: mode ?? 'chat',
+      })
+      return NextResponse.json(
+        { error: 'AI servisi bos bir yanit dondurdu. Lutfen tekrar deneyin.' },
+        { status: 502 },
+      )
+    }
 
     // Streaming uyumlu response (mevcut fake-stream deseni korunur — tek
     // parca halinde encode edilip tek seferde enqueue edilir; gercek
