@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { BilgeTahtaMarkdown, stripBilgeTahtaMarkdown } from './bilge-tahta-markdown'
 import type { BilgeTahtaStep } from '@/lib/bilge-tahta/contract'
 
 interface BilgeTahtaContentProps {
@@ -15,24 +16,25 @@ function prefersReducedMotion(): boolean {
 }
 
 export function BilgeTahtaContent({ step, animate = true }: BilgeTahtaContentProps) {
+  const plainContent = stripBilgeTahtaMarkdown(step.content)
   const [visibleLength, setVisibleLength] = useState(() => (
-    animate && !prefersReducedMotion() ? 0 : step.content.length
+    animate && !prefersReducedMotion() ? 0 : plainContent.length
   ))
-  const animationActive = animate && visibleLength < step.content.length
+  const animationActive = animate && visibleLength < plainContent.length
 
   useEffect(() => {
     if (!animate || prefersReducedMotion()) return
 
     const timer = window.setInterval(() => {
       setVisibleLength((current) => {
-        const next = Math.min(current + 3, step.content.length)
-        if (next === step.content.length) window.clearInterval(timer)
+        const next = Math.min(current + 3, plainContent.length)
+        if (next === plainContent.length) window.clearInterval(timer)
         return next
       })
     }, 24)
 
     return () => window.clearInterval(timer)
-  }, [animate, step.content, step.id])
+  }, [animate, plainContent.length, step.id])
 
   return (
     <div className="min-w-0">
@@ -43,7 +45,7 @@ export function BilgeTahtaContent({ step, animate = true }: BilgeTahtaContentPro
         {animationActive && (
           <button
             type="button"
-            onClick={() => setVisibleLength(step.content.length)}
+            onClick={() => setVisibleLength(plainContent.length)}
             className="min-h-11 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200"
           >
             Yazıyı hemen göster
@@ -51,18 +53,22 @@ export function BilgeTahtaContent({ step, animate = true }: BilgeTahtaContentPro
         )}
       </div>
 
-      <p
-        className="min-h-24 whitespace-pre-wrap break-words text-base font-medium leading-7 text-slate-50 sm:text-lg sm:leading-8"
+      <div
+        className="min-h-24"
         data-testid="bilge-tahta-text"
       >
-        {step.content.slice(0, visibleLength)}
-        {animationActive && (
-          <span
-            aria-hidden="true"
-            className="ml-1 inline-block h-5 w-1.5 animate-pulse bg-slate-100 motion-reduce:hidden"
-          />
+        {animationActive ? (
+          <p className="whitespace-pre-wrap break-words text-base font-medium leading-7 text-slate-50 sm:text-lg sm:leading-8">
+            {plainContent.slice(0, visibleLength)}
+            <span
+              aria-hidden="true"
+              className="ml-1 inline-block h-5 w-1.5 animate-pulse bg-slate-100 motion-reduce:hidden"
+            />
+          </p>
+        ) : (
+          <BilgeTahtaMarkdown content={step.content} />
         )}
-      </p>
+      </div>
 
       {step.formula && (
         <div
