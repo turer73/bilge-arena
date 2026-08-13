@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { BilgeTahtaDialog } from '@/components/bilge-tahta'
+import { useBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
 import type { BilgeTahtaLesson, BilgeTahtaStage } from '@/lib/bilge-tahta/contract'
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
 import type { GameSlug } from '@/lib/constants/games'
@@ -21,11 +22,16 @@ const ACTION_STAGE: Record<StudyAssistantAction['id'], BilgeTahtaStage> = {
 }
 
 export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; examRef: string | null }) {
+  const targetId = useId()
+  const boardEnabled = useBilgeTahtaEnabled()
   const [boardOpen, setBoardOpen] = useState(false)
   const [activeAction, setActiveAction] = useState<StudyAssistantAction | null>(null)
   const [status, setStatus] = useState<BoardStatus>('idle')
   const [content, setContent] = useState('')
+  const [studyTarget, setStudyTarget] = useState('')
+  const [targetError, setTargetError] = useState('')
   const requestRef = useRef<AbortController | null>(null)
+  const targetRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => () => requestRef.current?.abort(), [])
 
@@ -52,11 +58,19 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
   }, [activeAction, content, examRef, game, status])
 
   const openBoard = async (action: StudyAssistantAction) => {
+    const target = studyTarget.trim()
+    if (!target) {
+      setTargetError('Önce çalışmak istediğin konuyu veya soruyu yaz.')
+      targetRef.current?.focus()
+      return
+    }
+
     requestRef.current?.abort()
     const controller = new AbortController()
     requestRef.current = controller
     setActiveAction(action)
     setContent('')
+    setTargetError('')
     setStatus('loading')
     setBoardOpen(true)
     trackBilgeBoardEvent('BilgeBoardOpened', {
@@ -73,11 +87,15 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
         signal: controller.signal,
         body: JSON.stringify({
           mode: action.mode,
-          messages: [{ role: 'user', content: action.prompt }],
+          messages: [{
+            role: 'user',
+            content: [`Çalışma hedefi: ${target}`, action.prompt].join('\n\n'),
+          }],
           questionContext: [
             'Yüzey: Ders Çalış',
             `Ders: ${GAMES[game].name}`,
             examRef ? `Sınav: ${examRef}` : null,
+            `Konu veya soru: ${target}`,
             `İstenen yardım: ${action.label}`,
           ].filter(Boolean).join('\n'),
         }),
@@ -111,6 +129,8 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
     if (!open && status === 'loading') requestRef.current?.abort()
   }
 
+  if (!boardEnabled) return null
+
   return (
     <>
       <section
@@ -133,19 +153,49 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 p-3 min-[360px]:grid-cols-2 sm:p-4">
-          {STUDY_ASSISTANT_ACTIONS.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              aria-label={action.label}
-              onClick={() => void openBoard(action)}
-              className="min-h-[76px] rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--focus)] hover:bg-[var(--focus)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
-            >
-              <span className="block text-sm font-black text-[var(--text)]">{action.label}</span>
-              <span className="mt-1 block text-[11px] leading-4 text-[var(--text-sub)]">{action.description}</span>
-            </button>
-          ))}
+        <div className="p-3 sm:p-4">
+          <label htmlFor={targetId} className="mb-1.5 block text-[11px] font-extrabold text-[var(--text)]">
+            Hangi konu veya soruda yardım istiyorsun?
+          </label>
+          <textarea
+            ref={targetRef}
+            id={targetId}
+            value={studyTarget}
+            rows={2}
+            maxLength={600}
+            onChange={(event) => {
+              setStudyTarget(event.target.value)
+              if (targetError) setTargetError('')
+            }}
+            aria-invalid={Boolean(targetError)}
+            aria-describedby={targetError ? `${targetId}-error` : `${targetId}-hint`}
+            placeholder="Örn. İkinci dereceden denklemler veya soru metni"
+            className="min-h-[72px] w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm leading-5 text-[var(--text)] outline-none transition placeholder:text-[var(--text-sub)] focus:border-[var(--focus)] focus:ring-2 focus:ring-[var(--focus)]/20"
+          />
+          {targetError ? (
+            <p id={`${targetId}-error`} role="alert" className="mt-1.5 text-[11px] font-semibold text-[var(--urgency-text)]">
+              {targetError}
+            </p>
+          ) : (
+            <p id={`${targetId}-hint`} className="mt-1.5 text-[10px] leading-4 text-[var(--text-sub)]">
+              Yanıt seçtiğin {GAMES[game].name} ve {examRef ?? 'sınav'} bağlamına göre hazırlanır.
+            </p>
+          )}
+
+          <div className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
+            {STUDY_ASSISTANT_ACTIONS.map((action) => (
+              <button
+                key={action.id}
+                type="button"
+                aria-label={action.label}
+                onClick={() => void openBoard(action)}
+                className="min-h-[76px] rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--focus)] hover:bg-[var(--focus)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+              >
+                <span className="block text-sm font-black text-[var(--text)]">{action.label}</span>
+                <span className="mt-1 block text-[11px] leading-4 text-[var(--text-sub)]">{action.description}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -165,11 +215,13 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
               stepIndex: index,
             })
           }}
-          onComplete={() => trackBilgeBoardEvent('BilgeBoardCompleted', {
-            surface: 'study',
-            game,
-            stepCount: lesson.steps.length,
-          })}
+          onComplete={status === 'ready'
+            ? () => trackBilgeBoardEvent('BilgeBoardCompleted', {
+                surface: 'study',
+                game,
+                stepCount: lesson.steps.length,
+              })
+            : undefined}
         />
       )}
     </>
