@@ -959,3 +959,11 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [ ] Taslağın öğretmen tarafından görev bazında düzenlenmesi.
 - [x] Öğretmen çalışma alanında taslağı görev, gerekçe, süre ve tarih bazında inceleyip ayrı eylemle yayınlama.
 - [ ] Öğrenci çalışma ekranı ve yazdırılabilir haftalık görünüm.
+
+### 19.5 Öğretmen gösterge hesaplama çekirdeği — 2026-08-14
+
+- [x] Tek performans puanı veya sıralama üretmeyen beş ayrı boyut.
+- [x] Her boyutta görünür pay, payda, uygun öğrenci ve hariç tutulan yetersiz veri sayısı.
+- [x] Üçten az öğrenci veya gözlemde yüzdelik değeri gizleyen küçük örneklem kapısı.
+- [x] Kaynağı henüz olmayan takip/müdahale boyutlarında sahte sıfır yerine `veri yetersiz`.
+- [ ] Kurumsal program ve takip kaynak adapter'ı ile tenant-sınırlı öğretmen API/UI.
