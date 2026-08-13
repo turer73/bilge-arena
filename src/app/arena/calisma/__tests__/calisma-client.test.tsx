@@ -93,7 +93,7 @@ describe('CalismaClient', () => {
     expect(useGameStore.getState().selectedCategory).toBeNull()
   })
 
-  test('mobil asistan paketi kullanıcı açana kadar mount edilmez', () => {
+  test('dört eylem düğmesi asistanı açılır pencerede başlatır', () => {
     mockedUseAuthStore.mockReturnValue({
       user: { id: 'u1' },
       profile: { exam_type: 'yks' },
@@ -102,10 +102,9 @@ describe('CalismaClient', () => {
     render(<CalismaClient />)
 
     expect(screen.queryByTestId('study-assistant-stub')).not.toBeInTheDocument()
-    const button = screen.getByRole('button', { name: 'Asistanı aç' })
-    expect(button).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getAllByRole('button', { name: /Bu soruyu çöz|Konu anlat|Örnek soru sor|Çalışma önerisi/ })).toHaveLength(4)
+    const button = screen.getByRole('button', { name: 'Konu anlat' })
     fireEvent.click(button)
     expect(screen.getByTestId('study-assistant-stub')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Kapat' })).toHaveAttribute('aria-expanded', 'true')
   })
 })

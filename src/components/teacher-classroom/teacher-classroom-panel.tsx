@@ -7,6 +7,7 @@ import {
   Check,
   Clipboard,
   GraduationCap,
+  Presentation,
   Link2,
   RefreshCw,
   ShieldCheck,
@@ -17,6 +18,7 @@ import {
 import { useAuthStore } from '@/stores/auth-store'
 import {
   createTeacherClassroom,
+  fetchClassroomBilgeTahtaAccess,
   fetchTeacherClassroomOverview,
   fetchTeacherClassrooms,
   issueTeacherClassroomInvite,
@@ -24,6 +26,7 @@ import {
   removeTeacherClassroomMember,
   revokeTeacherClassroomInvite,
   TeacherClassroomClientError,
+  updateClassroomBilgeTahtaAccess,
 } from '@/lib/teacher-classroom/client'
 import type {
   TeacherClassroomList,
@@ -56,6 +59,9 @@ export function TeacherClassroomPanel() {
   const [overviewLoading, setOverviewLoading] = useState(false)
   const [errorStatus, setErrorStatus] = useState<number | null>(null)
   const [announcement, setAnnouncement] = useState('')
+  const [bilgeTahtaEnabled, setBilgeTahtaEnabled] = useState(false)
+  const [bilgeTahtaSaving, setBilgeTahtaSaving] = useState(false)
+  const bilgeTahtaRef = useRef<StableRequest | null>(null)
 
   const [className, setClassName] = useState('')
   const [creating, setCreating] = useState(false)
@@ -113,7 +119,12 @@ export function TeacherClassroomPanel() {
     if (signal?.aborted) return
     setOverviewLoading(true)
     try {
-      setOverview(await fetchTeacherClassroomOverview(classroomId, signal))
+      const [nextOverview, access] = await Promise.all([
+        fetchTeacherClassroomOverview(classroomId, signal),
+        fetchClassroomBilgeTahtaAccess(classroomId, signal),
+      ])
+      setOverview(nextOverview)
+      setBilgeTahtaEnabled(access.enabled)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
       setOverview(null)
@@ -122,6 +133,33 @@ export function TeacherClassroomPanel() {
       if (!signal?.aborted) setOverviewLoading(false)
     }
   }, [])
+
+  const toggleBilgeTahta = async () => {
+    if (!selectedId || bilgeTahtaSaving) return
+    const nextEnabled = !bilgeTahtaEnabled
+    const fingerprint = `${selectedId}:${nextEnabled}`
+    const pending = bilgeTahtaRef.current?.fingerprint === fingerprint
+      ? bilgeTahtaRef.current
+      : { fingerprint, requestId: crypto.randomUUID() }
+    bilgeTahtaRef.current = pending
+    setBilgeTahtaSaving(true)
+    setAnnouncement('')
+    try {
+      const result = await updateClassroomBilgeTahtaAccess(selectedId, {
+        enabled: nextEnabled,
+        requestId: pending.requestId,
+      })
+      bilgeTahtaRef.current = null
+      setBilgeTahtaEnabled(result.enabled)
+      setAnnouncement(result.enabled
+        ? 'Bilge Tahta bu sınıfın teslim edilmiş ödevlerinde açıldı.'
+        : 'Bilge Tahta bu sınıf için kapatıldı.')
+    } catch {
+      setAnnouncement('Bilge Tahta ayarı kaydedilemedi. Aynı seçimle güvenle yeniden deneyebilirsin.')
+    } finally {
+      setBilgeTahtaSaving(false)
+    }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -407,6 +445,28 @@ export function TeacherClassroomPanel() {
                     {overview.classroom.hiddenRecipientCount} geçmiş/gizli üyelik kimliği mahremiyet nedeniyle gösterilmiyor.
                   </p>
                 )}
+                <div className="mt-4 flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <Presentation className="mt-0.5 h-5 w-5 shrink-0 text-[var(--wisdom-text)]" aria-hidden="true" />
+                    <div>
+                      <p className="text-sm font-black">Sınıf Bilge Tahta</p>
+                      <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">
+                        Açıkken öğrenciler teslimden sonra her sorunun ayrıntılı konu anlatımını açabilir.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={bilgeTahtaEnabled}
+                    disabled={bilgeTahtaSaving}
+                    onClick={() => void toggleBilgeTahta()}
+                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl px-4 text-sm font-black text-white disabled:opacity-60"
+                    style={{ background: bilgeTahtaEnabled ? 'var(--growth)' : 'var(--text-muted)' }}
+                  >
+                    {bilgeTahtaSaving ? 'Kaydediliyor…' : bilgeTahtaEnabled ? 'Açık' : 'Kapalı'}
+                  </button>
+                </div>
               </section>
 
               <section aria-labelledby="invite-title" className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5 md:p-6">

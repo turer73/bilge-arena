@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, CircleSlash2, RefreshCw, Send, XCircle } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
-import { renderRichText } from '@/lib/utils/rich-text'
+import { renderRichText, stripRichText } from '@/lib/utils/rich-text'
 import {
   fetchStudentTeacherAssignment,
+  fetchClassroomBilgeTahtaAccess,
   submitStudentTeacherAssignment,
 } from '@/lib/teacher-classroom/client'
 import type {
@@ -17,6 +18,7 @@ import {
   assignmentStatusLabels,
   formatIstanbulDateTime,
 } from '@/lib/teacher-classroom/view-utils'
+import { TopicExplanationButton } from '@/components/bilge-tahta/topic-explanation-button'
 
 const OPTION_LETTERS = 'ABCDEFGHIJ'.split('')
 
@@ -35,6 +37,7 @@ export function StudentAssignmentClient({ assignmentId }: { assignmentId: string
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitFailed, setSubmitFailed] = useState(false)
+  const [bilgeTahtaEnabled, setBilgeTahtaEnabled] = useState(false)
   const pendingRef = useRef<{ fingerprint: string; requestId: string } | null>(null)
 
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -43,7 +46,10 @@ export function StudentAssignmentClient({ assignmentId }: { assignmentId: string
     setLoading(true)
     setLoadFailed(false)
     try {
-      setAssignment(await fetchStudentTeacherAssignment(assignmentId, signal))
+      const loaded = await fetchStudentTeacherAssignment(assignmentId, signal)
+      setAssignment(loaded)
+      const access = await fetchClassroomBilgeTahtaAccess(loaded.classroom.id, signal)
+      setBilgeTahtaEnabled(access.enabled)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
       setLoadFailed(true)
@@ -175,9 +181,17 @@ export function StudentAssignmentClient({ assignmentId }: { assignmentId: string
             ? selections[item.position]
             : null
           const result = resultByPosition.get(item.position)
+          const topic = item.question.topic || item.question.category || 'Sorunun temel konusu'
+          const questionText = stripRichText(item.question.content.question)
+          const options = item.question.content.options
+            .map((option, optionIndex) => `${OPTION_LETTERS[optionIndex]}) ${stripRichText(option)}`)
+            .join('\n')
+          const questionContext = result
+            ? `[${item.question.game.toUpperCase()} - ${topic}]\n\nSoru: ${questionText}\n\n${options}\n\nDoğru cevap: ${OPTION_LETTERS[result.correctOption]}) ${stripRichText(item.question.content.options[result.correctOption] ?? '')}`
+            : ''
           return (
+            <Fragment key={item.position}>
             <fieldset
-              key={item.position}
               disabled={!editable || submitting}
               className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5 disabled:opacity-90 md:p-6"
             >
@@ -236,6 +250,18 @@ export function StudentAssignmentClient({ assignmentId }: { assignmentId: string
                 </label>
               </div>
             </fieldset>
+            {result && bilgeTahtaEnabled && (
+              <div className="-mt-2 flex justify-end rounded-b-2xl border-x border-b border-[var(--border)] bg-[var(--card-bg)] px-5 pb-4 pt-3 md:px-6">
+                <TopicExplanationButton
+                  topic={topic}
+                  subject={item.question.game}
+                  difficulty={item.question.difficulty}
+                  questionContext={questionContext}
+                  surface="classroom"
+                />
+              </div>
+            )}
+            </Fragment>
           )
         })}
 

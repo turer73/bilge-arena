@@ -13,6 +13,7 @@ export const chatMessageSchema = z.object({
 export const chatRequestSchema = z.object({
   messages: z.array(chatMessageSchema).min(1).max(50),
   questionContext: z.string().max(1000).nullish(),
+  mode: z.enum(['chat', 'topic_explanation']).optional().default('chat'),
 })
 
 // ============================================================

@@ -3820,6 +3820,7 @@ export type Database = {
       teacher_classrooms: {
         Row: {
           archived_at: string | null
+          bilge_tahta_enabled: boolean
           created_at: string
           id: string
           institution_id: string
@@ -3829,6 +3830,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          bilge_tahta_enabled?: boolean
           created_at?: string
           id?: string
           institution_id: string
@@ -3838,6 +3840,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          bilge_tahta_enabled?: boolean
           created_at?: string
           id?: string
           institution_id?: string
@@ -5316,6 +5319,10 @@ export type Database = {
         Args: { p_assignment_id: string; p_user_id: string }
         Returns: Json
       }
+      get_my_classroom_bilge_tahta_access: {
+        Args: { p_classroom_id: string; p_institution_id: string; p_user_id: string }
+        Returns: Json
+      }
       get_my_teacher_assignments: { Args: { p_user_id: string }; Returns: Json }
       get_my_teacher_classroom_memberships: {
         Args: { p_user_id: string }
@@ -5326,6 +5333,16 @@ export type Database = {
         Returns: Json
       }
       get_my_teacher_classrooms: { Args: { p_user_id: string }; Returns: Json }
+      set_teacher_classroom_bilge_tahta: {
+        Args: {
+          p_classroom_id: string
+          p_enabled: boolean
+          p_institution_id: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_my_weekly_learning_league: {
         Args: { p_user_id: string }
         Returns: Json

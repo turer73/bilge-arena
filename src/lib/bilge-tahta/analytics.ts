@@ -9,13 +9,13 @@ export type BilgeBoardEventName =
   | 'BilgeBoardCompleted'
 
 interface SharedPayload {
-  surface: 'study' | 'game'
+  surface: 'study' | 'game' | 'classroom'
   game?: GameSlug
 }
 
 export interface BilgeBoardEventPayloads {
   BilgeBoardOpened: SharedPayload & {
-    entryPoint: 'study_assistant' | 'coach_stage'
+    entryPoint: 'study_assistant' | 'coach_stage' | 'game_result' | 'classroom_result'
     examRef?: string | null
   }
   BilgeBoardStageViewed: SharedPayload & {
@@ -40,7 +40,7 @@ const STAGES = new Set<BilgeTahtaStage>([
 ])
 
 function shared(payload: SharedPayload): AnalyticsProps | null {
-  if (payload.surface !== 'study' && payload.surface !== 'game') return null
+  if (payload.surface !== 'study' && payload.surface !== 'game' && payload.surface !== 'classroom') return null
   if (payload.game !== undefined && !GAMES.has(payload.game)) return null
   return {
     surface: payload.surface,
@@ -77,7 +77,7 @@ export function trackBilgeBoardEvent<Name extends BilgeBoardEventName>(
   switch (name) {
     case 'BilgeBoardOpened': {
       const value = payload as BilgeBoardEventPayloads['BilgeBoardOpened']
-      if (value.entryPoint !== 'study_assistant' && value.entryPoint !== 'coach_stage') return
+      if (!['study_assistant', 'coach_stage', 'game_result', 'classroom_result'].includes(value.entryPoint)) return
       trackEvent(name, { props: { ...base, entry_point: value.entryPoint, exam_ref: examScope(value.examRef) } })
       return
     }

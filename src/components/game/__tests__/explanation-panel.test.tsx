@@ -8,19 +8,6 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import type { Question } from '@/types/database'
 
 vi.mock('@/components/social/like-button', () => ({ LikeButton: () => null }))
-vi.mock('@/stores/chat-store', () => ({
-  useChatStore: Object.assign(() => ({}), {
-    getState: () => ({
-      setQuestionContext: vi.fn(),
-      clearMessages: vi.fn(),
-      addMessage: vi.fn(),
-      setLoading: vi.fn(),
-      setOpen: vi.fn(),
-      updateLastAssistant: vi.fn(),
-    }),
-  }),
-}))
-
 import { ExplanationPanel } from '../explanation-panel'
 
 const QUESTION = {
@@ -92,8 +79,11 @@ describe('ExplanationPanel', () => {
     expect(() => renderPanel()).not.toThrow()
   })
 
-  test('"Konu Anlatımı": passage dahil bağlam asistan fetch gövdesine girer', () => {
-    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, body: null } as unknown as Response))
+  test('"Konu Anlatımı": passage dahil ayrıntılı DeepSeek isteği Bilge Tahta penceresini açar', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(
+      'Öğrenme hedefi\nKavramın mantığı\nAdım adım örnek',
+      { status: 200 },
+    ))
     global.fetch = fetchMock as unknown as typeof fetch
     const Q = {
       ...QUESTION,
@@ -103,7 +93,14 @@ describe('ExplanationPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /Konu Anlat/ }))
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/chat',
-      expect.objectContaining({ body: expect.stringContaining('I. Bir.') }),
+      expect.objectContaining({
+        body: expect.stringContaining('I. Bir.'),
+      }),
     )
+    const sent = JSON.parse(fetchMock.mock.calls[0]![1]!.body as string)
+    expect(sent.mode).toBe('topic_explanation')
+    expect(sent.messages[0].content).toContain('yüzeysel özetleme')
+    expect(await screen.findByRole('dialog', { name: /problemler/i })).toBeInTheDocument()
+    expect(screen.getByText(/Adım adım örnek/)).toBeInTheDocument()
   })
 })

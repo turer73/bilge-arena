@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useChatStore } from '@/stores/chat-store'
 import { ChatMessages } from '@/components/chat/chat-messages'
 import { ChatInput } from '@/components/chat/chat-input'
@@ -15,6 +15,11 @@ interface StudyAssistantProps {
   embedded?: boolean
   game?: GameSlug
   examRef?: string | null
+  initialRequest?: {
+    id: string
+    prompt: string
+    mode: 'chat' | 'topic_explanation'
+  } | null
 }
 
 function boardTopic(prompt: string, questionContext: string | null): string {
@@ -27,7 +32,7 @@ function boardTopic(prompt: string, questionContext: string | null): string {
   return value.length > 120 ? `${value.slice(0, 117)}…` : value
 }
 
-export function StudyAssistant({ embedded = false, game, examRef = null }: StudyAssistantProps) {
+export function StudyAssistant({ embedded = false, game, examRef = null, initialRequest = null }: StudyAssistantProps) {
   const [boardOpen, setBoardOpen] = useState(false)
   const [boardAnswer, setBoardAnswer] = useState<{ topic: string; content: string } | null>(null)
   const {
@@ -39,6 +44,7 @@ export function StudyAssistant({ embedded = false, game, examRef = null }: Study
     setLoading,
   } = useChatStore()
   const boardEnabled = useBilgeTahtaEnabled()
+  const handledInitialRequest = useRef<string | null>(null)
 
   const boardLesson = useMemo<BilgeTahtaLesson | null>(() => {
     if (!boardAnswer) return null
@@ -57,7 +63,10 @@ export function StudyAssistant({ embedded = false, game, examRef = null }: Study
     }
   }, [boardAnswer, examRef, game])
 
-  const handleSend = useCallback(async (text: string) => {
+  const handleSend = useCallback(async (
+    text: string,
+    mode: 'chat' | 'topic_explanation' = 'chat',
+  ) => {
     setBoardOpen(false)
     setBoardAnswer(null)
     addMessage('user', text)
@@ -73,7 +82,7 @@ export function StudyAssistant({ embedded = false, game, examRef = null }: Study
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, questionContext }),
+        body: JSON.stringify({ messages: apiMessages, questionContext, mode }),
       })
 
       if (!response.ok) {
@@ -116,6 +125,12 @@ export function StudyAssistant({ embedded = false, game, examRef = null }: Study
       setLoading(false)
     }
   }, [messages, questionContext, addMessage, updateLastAssistant, setLoading])
+
+  useEffect(() => {
+    if (!initialRequest || handledInitialRequest.current === initialRequest.id) return
+    handledInitialRequest.current = initialRequest.id
+    void handleSend(initialRequest.prompt, initialRequest.mode)
+  }, [handleSend, initialRequest])
 
   const handleBoardOpen = () => {
     trackBilgeBoardEvent('BilgeBoardOpened', {

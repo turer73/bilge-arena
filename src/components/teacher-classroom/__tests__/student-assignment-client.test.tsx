@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const clientMocks = vi.hoisted(() => ({
   fetchAssignment: vi.fn(),
   submitAssignment: vi.fn(),
+  fetchBilgeTahtaAccess: vi.fn(),
 }))
 const authState = vi.hoisted(() => ({
   value: { user: { id: 'student-1' }, loading: false },
@@ -15,6 +16,7 @@ vi.mock('@/lib/teacher-classroom/client', async () => ({
   ...(await vi.importActual<typeof import('@/lib/teacher-classroom/client')>('@/lib/teacher-classroom/client')),
   fetchStudentTeacherAssignment: clientMocks.fetchAssignment,
   submitStudentTeacherAssignment: clientMocks.submitAssignment,
+  fetchClassroomBilgeTahtaAccess: clientMocks.fetchBilgeTahtaAccess,
 }))
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: React.ComponentProps<'a'>) => (
@@ -83,6 +85,7 @@ describe('StudentAssignmentClient', () => {
     vi.clearAllMocks()
     authState.value = { user: { id: 'student-1' }, loading: false }
     clientMocks.fetchAssignment.mockResolvedValue(activeAssignment)
+    clientMocks.fetchBilgeTahtaAccess.mockResolvedValue({ enabled: true })
     clientMocks.submitAssignment.mockResolvedValue({
       assignment: submittedAssignment,
       replayed: false,
@@ -120,5 +123,6 @@ describe('StudentAssignmentClient', () => {
     expect(document.body).toHaveTextContent('Doğru · Doğru cevap A')
     expect(document.body).toHaveTextContent('Boş bırakıldı · Doğru cevap B')
     expect(screen.queryByRole('button', { name: 'Final teslimi yap' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Konu Anlatımı' })).toHaveLength(2)
   })
 })

@@ -3,19 +3,13 @@
 import { useEffect, useRef } from 'react'
 import type { ChatMessage } from '@/stores/chat-store'
 import { useChatStore } from '@/stores/chat-store'
+import { STUDY_ASSISTANT_ACTIONS } from '@/lib/bilge-tahta/topic-explanation'
 
 interface ChatMessagesProps {
   messages: ChatMessage[]
   isLoading: boolean
-  onQuickAction?: (message: string) => void
+  onQuickAction?: (message: string, mode: 'chat' | 'topic_explanation') => void
 }
-
-const QUICK_ACTIONS = [
-  { label: 'Bu soruyu çöz', prompt: 'Bu soruyu adım adım çözer misin? Çözümü detaylı açıkla.' },
-  { label: 'Konu anlat', prompt: 'Bu sorunun konusunu kısa ve net bir şekilde anlatır mısın? Günlük hayattan örnek ver.' },
-  { label: 'Örnek soru sor', prompt: 'Bu konuyla ilgili bana benzer bir örnek soru sorabilir misin?' },
-  { label: 'Çalışma önerisi', prompt: 'Bu konu için etkili çalışma stratejisi önerir misin? Hangi konulara öncelik vermeliyim?' },
-]
 
 export function ChatMessages({ messages, isLoading, onQuickAction }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -44,10 +38,10 @@ export function ChatMessages({ messages, isLoading, onQuickAction }: ChatMessage
           </div>
         )}
         <div className="flex flex-wrap justify-center gap-1.5">
-          {QUICK_ACTIONS.map((action) => (
+          {STUDY_ASSISTANT_ACTIONS.map((action) => (
             <button
               key={action.label}
-              onClick={() => onQuickAction?.(action.prompt)}
+              onClick={() => onQuickAction?.(action.prompt, action.mode)}
               disabled={isLoading}
               className="rounded-full border border-[var(--border)] px-2.5 py-1 text-[10px] text-[var(--text-sub)] transition-all hover:border-[var(--focus-border)] hover:bg-[var(--focus-bg)] hover:text-[var(--focus)] active:scale-95 disabled:opacity-40"
             >

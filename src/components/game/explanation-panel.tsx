@@ -5,7 +5,7 @@ import type { PublicQuestion } from '@/lib/utils/question-public'
 import { getOptionLetter } from '@/lib/utils/question'
 import { stripRichText } from '@/lib/utils/rich-text'
 import { LikeButton } from '@/components/social/like-button'
-import { useChatStore } from '@/stores/chat-store'
+import { TopicExplanationButton } from '@/components/bilge-tahta/topic-explanation-button'
 
 interface ExplanationPanelProps {
   question: PublicQuestion
@@ -40,8 +40,8 @@ export function ExplanationPanel({
     rootRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
   }, [])
 
-  const handleTopicExplain = async () => {
-    const topic = question.subcategory || question.category
+  const topic = question.subcategory || question.category
+  const topicContext = (() => {
     const opts = question.content.options
       .map((o, i) => `${'ABCDE'[i]}) ${o}`)
       .join('\n')
@@ -51,54 +51,8 @@ export function ExplanationPanel({
     const answerContext = correctText
       ? `${getOptionLetter(correctAnswer)}) ${correctText}`
       : 'Sunucudan alınamadı'
-    const ctx = `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}\n\nDoğru cevap: ${answerContext}${solution ? '\nÇözüm: ' + solution : ''}`
-
-    const userMsg = `"${topic}" konusunu kısaca anlat. Bu soruyla ilgili temel kavramları ve formülleri özetle.`
-
-    const store = useChatStore.getState()
-    store.setQuestionContext(ctx)
-    store.clearMessages()
-    store.addMessage('user', userMsg)
-    store.addMessage('assistant', '')
-    store.setLoading(true)
-    store.setOpen(true)
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: userMsg }],
-          questionContext: ctx,
-        }),
-      })
-
-      if (!res.ok) {
-        useChatStore.getState().updateLastAssistant('Bir hata oluştu. Lütfen tekrar deneyin.')
-        useChatStore.getState().setLoading(false)
-        return
-      }
-
-      const reader = res.body?.getReader()
-      const decoder = new TextDecoder()
-      let fullText = ''
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          fullText += decoder.decode(value, { stream: true })
-          useChatStore.getState().updateLastAssistant(fullText)
-        }
-      }
-      if (!fullText) {
-        useChatStore.getState().updateLastAssistant('Cevap alınamadı.')
-      }
-    } catch {
-      useChatStore.getState().updateLastAssistant('Bağlantı hatası.')
-    } finally {
-      useChatStore.getState().setLoading(false)
-    }
-  }
+    return `[${question.game.toUpperCase()} - ${question.category}${question.subcategory ? ' / ' + question.subcategory : ''}]\n\nSoru: ${body}\n\n${opts}\n\nDoğru cevap: ${answerContext}${solution ? '\nÇözüm: ' + solution : ''}`
+  })()
 
   return (
     <div
@@ -150,20 +104,12 @@ export function ExplanationPanel({
         {/* Aksiyon ikonları */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Konu Anlatımı — belirgin buton */}
-          <button
-            type="button"
-            onClick={handleTopicExplain}
-            className="flex min-h-11 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-95"
-            style={{
-              borderColor: 'color-mix(in srgb, var(--wisdom) 35%, transparent)',
-              background: 'color-mix(in srgb, var(--wisdom) 10%, transparent)',
-              color: 'var(--wisdom-text)',
-            }}
-            title="Bu konunun anlatımını Bilge Asistan'dan iste"
-          >
-            <span className="text-sm">📖</span>
-            Konu Anlatımı
-          </button>
+          <TopicExplanationButton
+            topic={topic}
+            subject={question.game}
+            difficulty={question.difficulty}
+            questionContext={topicContext}
+          />
 
           <LikeButton initialCount={0} size="sm" />
 

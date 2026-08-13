@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
 import { defaultExamRefForType, gamesForExamType } from '@/lib/constants/exam-types'
@@ -11,12 +10,7 @@ import { BilgeChan } from '@/components/ui/bilge-chan'
 import { TodayPlanFocus } from '@/components/study/today-plan-focus'
 import { MasteryActionCard } from '@/components/study/mastery-action-card'
 import { StudyContextSelector } from '@/components/study/study-context-selector'
-
-// Ağır AI-chat paketini kullanıcı açana veya masaüstü yerleşimi hazır olana kadar yükleme.
-const StudyAssistant = dynamic(
-  () => import('@/components/study/study-assistant').then((module) => ({ default: module.StudyAssistant })),
-  { ssr: false },
-)
+import { StudyAssistantLauncher } from '@/components/study/study-assistant-launcher'
 
 function examRefsForGame(game: GameSlug, examType: string | null | undefined): string[] {
   const refs = [...GAMES[game].examTags]
@@ -28,8 +22,6 @@ function examRefsForGame(game: GameSlug, examType: string | null | undefined): s
 export default function CalismaClient() {
   const { user, profile, loading } = useAuthStore()
   const gameStore = useGameStore()
-  const [assistantOpen, setAssistantOpen] = useState(false)
-  const [assistantMounted, setAssistantMounted] = useState(false)
 
   const availableGames = useMemo(
     () => gamesForExamType(profile?.exam_type),
@@ -49,17 +41,6 @@ export default function CalismaClient() {
     : profileDefaultExamRef && examRefs.includes(profileDefaultExamRef)
       ? profileDefaultExamRef
       : examRefs[0] ?? null
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const media = window.matchMedia('(min-width: 768px)')
-    const mountForDesktop = () => {
-      if (media.matches) setAssistantMounted(true)
-    }
-    mountForDesktop()
-    media.addEventListener?.('change', mountForDesktop)
-    return () => media.removeEventListener?.('change', mountForDesktop)
-  }, [])
 
   if (loading) {
     return (
@@ -106,11 +87,6 @@ export default function CalismaClient() {
     gameStore.setCategory(null)
   }
 
-  const toggleAssistant = () => {
-    setAssistantMounted(true)
-    setAssistantOpen((open) => !open)
-  }
-
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-32 pt-5 md:px-6 md:pb-10 md:pt-8 xl:px-8">
       <header className="mb-5 flex animate-fadeUp items-center gap-3 md:mb-6">
@@ -148,42 +124,7 @@ export default function CalismaClient() {
         </section>
 
         <aside className="lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
-          <section
-            aria-labelledby="study-assistant-title"
-            className="animate-fadeUp overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-sm"
-            style={{ animationDelay: '0.4s', animationFillMode: 'both' }}
-          >
-            <div className="flex min-h-14 items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="text-xl" aria-hidden="true">🦉</span>
-                <div className="min-w-0">
-                  <h2 id="study-assistant-title" className="text-xs font-extrabold tracking-wide text-[var(--text)]">
-                    Bilge Asistan
-                  </h2>
-                  <p className="truncate text-[10px] text-[var(--text-sub)]">Takıldığın yerde kısa yardım al</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                aria-expanded={assistantOpen}
-                aria-controls="study-assistant-body"
-                onClick={toggleAssistant}
-                className="min-h-11 rounded-lg border border-[var(--border)] px-3 text-xs font-bold text-[var(--focus-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)] md:hidden"
-              >
-                {assistantOpen ? 'Kapat' : 'Asistanı aç'}
-              </button>
-              <span className="hidden rounded-full bg-[var(--focus)]/10 px-2 py-1 text-[10px] font-bold text-[var(--focus-text)] md:inline">
-                Hazır
-              </span>
-            </div>
-
-            <div
-              id="study-assistant-body"
-              className={assistantOpen ? 'block' : 'hidden md:block'}
-            >
-              {assistantMounted && <StudyAssistant embedded game={game} examRef={examRef} />}
-            </div>
-          </section>
+          <StudyAssistantLauncher game={game} examRef={examRef} />
         </aside>
       </div>
     </div>
