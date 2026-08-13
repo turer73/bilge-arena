@@ -5,13 +5,26 @@ import { REVIEW_ERROR_REASON_CODES } from '@/lib/review/error-reasons'
 // Chat API
 // ============================================================
 
-export const chatMessageSchema = z.object({
-  role: z.enum(['user', 'assistant']),
-  content: z.string().min(1).max(2000),
-})
+const CHAT_USER_MAX_LENGTH = 2000
+const CHAT_ASSISTANT_MAX_LENGTH = 8000
+const CHAT_HISTORY_MAX_LENGTH = 40_000
+
+export const chatMessageSchema = z.discriminatedUnion('role', [
+  z.object({
+    role: z.literal('user'),
+    content: z.string().min(1).max(CHAT_USER_MAX_LENGTH),
+  }),
+  z.object({
+    role: z.literal('assistant'),
+    content: z.string().min(1).max(CHAT_ASSISTANT_MAX_LENGTH),
+  }),
+])
 
 export const chatRequestSchema = z.object({
-  messages: z.array(chatMessageSchema).min(1).max(50),
+  messages: z.array(chatMessageSchema).min(1).max(50).refine(
+    (messages) => messages.reduce((total, message) => total + message.content.length, 0) <= CHAT_HISTORY_MAX_LENGTH,
+    { message: 'Sohbet gecmisi cok uzun' }
+  ),
   questionContext: z.string().max(1000).nullish(),
   mode: z.enum(['chat', 'topic_explanation']).optional().default('chat'),
 })
@@ -326,7 +339,9 @@ export type PremiumWaitlistInput = z.infer<typeof premiumWaitlistSchema>
 
 export const LIMITS = {
   COMMENT_MAX_LENGTH: 500,
-  CHAT_MAX_LENGTH: 2000,
+  CHAT_MAX_LENGTH: CHAT_USER_MAX_LENGTH,
+  CHAT_ASSISTANT_MAX_LENGTH,
+  CHAT_HISTORY_MAX_LENGTH,
   REPORT_DESCRIPTION_MAX_LENGTH: 1000,
   CHAT_MAX_MESSAGES: 50,
 } as const

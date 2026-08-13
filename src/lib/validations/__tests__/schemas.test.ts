@@ -34,6 +34,11 @@ describe('chatMessageSchema', () => {
     const result = chatMessageSchema.safeParse({ role: 'user', content: longContent })
     expect(result.success).toBe(false)
   })
+
+  it('ayrintili asistan yanitini kabul eder ancak kontrollu siniri korur', () => {
+    expect(chatMessageSchema.safeParse({ role: 'assistant', content: 'a'.repeat(8000) }).success).toBe(true)
+    expect(chatMessageSchema.safeParse({ role: 'assistant', content: 'a'.repeat(8001) }).success).toBe(false)
+  })
 })
 
 describe('chatRequestSchema', () => {
@@ -64,6 +69,11 @@ describe('chatRequestSchema', () => {
       questionContext: 'Matematik sorusu',
     })
     expect(result.success).toBe(true)
+  })
+
+  it('toplam sohbet gecmisi sinirini uygular', () => {
+    const messages = Array.from({ length: 6 }, () => ({ role: 'assistant' as const, content: 'a'.repeat(7000) }))
+    expect(chatRequestSchema.safeParse({ messages }).success).toBe(false)
   })
 })
 
@@ -252,6 +262,8 @@ describe('LIMITS sabitleri', () => {
   it('beklenen degerlere sahip', () => {
     expect(LIMITS.COMMENT_MAX_LENGTH).toBe(500)
     expect(LIMITS.CHAT_MAX_LENGTH).toBe(2000)
+    expect(LIMITS.CHAT_ASSISTANT_MAX_LENGTH).toBe(8000)
+    expect(LIMITS.CHAT_HISTORY_MAX_LENGTH).toBe(40_000)
     expect(LIMITS.REPORT_DESCRIPTION_MAX_LENGTH).toBe(1000)
     expect(LIMITS.CHAT_MAX_MESSAGES).toBe(50)
   })

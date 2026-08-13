@@ -231,14 +231,23 @@ describe('POST /api/chat', () => {
         choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: 'ayrıntılı ders' } }],
       }),
     })
-    await POST(makeReq({ ...VALID_BODY, mode: 'topic_explanation' }))
+    const response = await POST(makeReq({
+      mode: 'topic_explanation',
+      messages: [
+        ...VALID_BODY.messages,
+        { role: 'assistant', content: 'a'.repeat(5000) },
+        { role: 'user', content: 'Birinci dereceden denklemleri anlat.' },
+      ],
+    }))
 
     const call = mockFetch.mock.calls[0] as [string, { body: string }]
     const sentBody = JSON.parse(call[1].body)
+    expect(response.status).toBe(200)
     expect(sentBody).toMatchObject({ max_tokens: 1400, temperature: 0.45, thinking: { type: 'disabled' } })
     expect(sentBody.messages[0].content).toContain('KONU ANLATIMI MODU')
     expect(sentBody.messages[0].content).toContain('Adım adım çözümlü örnek')
     expect(sentBody.messages[0].content).toContain('Sık yapılan hata')
     expect(sentBody.messages[0].content).toContain('Mini kontrol')
+    expect(sentBody.messages.at(-1)).toMatchObject({ role: 'user', content: 'Birinci dereceden denklemleri anlat.' })
   })
 })
