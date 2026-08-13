@@ -176,8 +176,8 @@ describe('POST /api/chat', () => {
     expect(insertCall).toMatchObject({
       action: 'chat_safety_blocked',
     })
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ choices: [{ message: { content: '' } }] }) })
-    expect((await POST(makeReq({ ...VALID_BODY, mode: 'topic_explanation' }))).status).toBe(502)
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ choices: [{ message: { content: null } }] }) })
+    expect((await POST(makeReq(VALID_BODY))).status).toBe(502)
   })
 
   it('returns 200 streaming on DeepSeek success path', async () => {
