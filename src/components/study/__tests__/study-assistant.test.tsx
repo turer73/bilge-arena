@@ -63,6 +63,50 @@ describe('StudyAssistant', () => {
         message.role === 'assistant' && message.content === 'Merhaba!'
       ))).toBe(true)
     })
+    expect(screen.getByLabelText('Gonder')).toHaveAttribute('type', 'button')
+  })
+
+  test('konu anlatımı penceresindeki takip mesajları ayrıntılı modu korur', async () => {
+    const encoder = new TextEncoder()
+    const streamedResponse = (text: string) => ({
+      ok: true,
+      body: {
+        getReader: () => {
+          let sent = false
+          return {
+            read: async () => {
+              if (sent) return { done: true, value: undefined }
+              sent = true
+              return { done: false, value: encoder.encode(text) }
+            },
+          }
+        },
+      },
+    })
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce(streamedResponse('Hangi konuyu anlatayım?'))
+      .mockResolvedValueOnce(streamedResponse('Ayrıntılı mini ders'))
+    vi.stubGlobal('fetch', mockFetch)
+
+    render(<StudyAssistant initialRequest={{
+      id: 'topic-request-1',
+      prompt: 'Konu anlat',
+      mode: 'topic_explanation',
+    }} />)
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(useChatStore.getState().isLoading).toBe(false))
+    fireEvent.change(screen.getByPlaceholderText('Sorunuzu yazin...'), {
+      target: { value: 'Birinci dereceden denklemler' },
+    })
+    fireEvent.click(screen.getByLabelText('Gonder'))
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2))
+    const requestBodies = mockFetch.mock.calls.map(([, init]) => JSON.parse(String(init.body)))
+    expect(requestBodies).toEqual([
+      expect.objectContaining({ mode: 'topic_explanation' }),
+      expect.objectContaining({ mode: 'topic_explanation' }),
+    ])
   })
 
   test('başarılı yanıtı seçili ders ve sınav bağlamıyla Bilge Tahta’da açar', async () => {

@@ -142,9 +142,15 @@ export function StudyAssistant({ embedded = false, game, examRef = null, initial
     setBoardOpen(true)
   }
 
+  const conversationMode = initialRequest?.mode ?? 'chat'
+  const handleConversationSend = useCallback(
+    (text: string) => handleSend(text, conversationMode),
+    [conversationMode, handleSend],
+  )
+
   const body = (
     <div className="flex h-[320px] flex-col md:h-[340px]">
-      <ChatMessages messages={messages} isLoading={isLoading} onQuickAction={handleSend} />
+      <ChatMessages messages={messages} isLoading={isLoading} onQuickAction={handleConversationSend} />
       {boardEnabled && boardLesson && !isLoading && (
         <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2">
           <button
@@ -156,7 +162,7 @@ export function StudyAssistant({ embedded = false, game, examRef = null, initial
           </button>
         </div>
       )}
-      <ChatInput onSend={handleSend} disabled={isLoading} />
+      <ChatInput onSend={handleConversationSend} disabled={isLoading} />
       {boardLesson && (
         <BilgeTahtaDialog
           open={boardOpen}
