@@ -9,6 +9,9 @@ import { trackLearningEvent } from '@/lib/analytics/learning-events'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-tts'
+import { BilgeTahtaDialog } from '@/components/bilge-tahta'
+import { isBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
+import type { BilgeTahtaLesson, BilgeTahtaStage } from '@/lib/bilge-tahta/contract'
 
 function Typewriter({ text, speed = 18 }: { text: string; speed?: number }) {
   const [shown, setShown] = useState('')
@@ -54,6 +57,14 @@ type Phase =
 
 const OFFER_DELAY = 6000
 
+const BOARD_STAGE: Partial<Record<Phase, { stage: BilgeTahtaStage; title: string }>> = {
+  hint1: { stage: 'hint1', title: 'İlk ipucu' },
+  hint2: { stage: 'hint2', title: 'İkinci ipucu' },
+  hint3: { stage: 'small-example', title: 'Küçük örnek' },
+  solution: { stage: 'solution', title: 'Çözüm' },
+  transferResult: { stage: 'transfer-result', title: 'Transfer sonucu' },
+}
+
 function secureRequestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -83,6 +94,7 @@ export function BilgeChanCompanion({
   const requestIdsRef = useRef<Partial<Record<CoachRequestStage, string>>>({})
   const retryRef = useRef<{ stage: CoachRequestStage; selectedOption?: number } | null>(null)
   const [ttsReady, setTtsReady] = useState(false)
+  const [boardOpen, setBoardOpen] = useState(false)
 
   useEffect(() => {
     setTtsReady(isTtsSupported())
@@ -95,6 +107,7 @@ export function BilgeChanCompanion({
   const easy = question?.difficulty === 1
   const answered = quizState === 'answered'
   const coachEnabled = process.env.NEXT_PUBLIC_COACH_ENABLED === 'true'
+  const boardEnabled = isBilgeTahtaEnabled()
 
   useEffect(() => {
     if (!coachEnabled || !attemptId || phase !== 'intro' || quizState !== 'playing'
@@ -265,6 +278,22 @@ export function BilgeChanCompanion({
   const showGuidanceActions = ['hint1', 'hint2', 'hint3', 'solution'].includes(phase) && playing
   const showReturn = ['loading', 'transferResult', 'error'].includes(phase) && playing
   const bubbleWidth = compact ? 'max-w-[220px]' : 'max-w-[300px]'
+  const boardStage = BOARD_STAGE[phase]
+  const boardLesson: BilgeTahtaLesson | null = boardStage && helpMsg
+    ? {
+        mode: 'game',
+        subjectLabel: [question.category, question.topic].filter(Boolean).join(' · ') || question.game,
+        title: question.topic || question.category || 'Konu anlatımı',
+        steps: [{
+          id: `coach-${phase}`,
+          stage: boardStage.stage,
+          title: boardStage.title,
+          content: helpMsg,
+          ...(sourceLabel ? { sourceLabel } : {}),
+          ...(policyVersion ? { guardrailLabel: 'Koruyucu kontrol geçti' } : {}),
+        }],
+      }
+    : null
 
   return (
     <div className={`flex ${compact ? 'flex-row items-center gap-2' : 'flex-col items-center'} ${className ?? ''}`}>
@@ -289,6 +318,16 @@ export function BilgeChanCompanion({
             <div className="mt-2 rounded-md bg-[var(--surface)] px-2 py-1 text-[10px] text-[var(--text-sub)]">
               Kaynak: {sourceLabel} · Koruyucu kontrol geçti
             </div>
+          )}
+
+          {boardEnabled && boardLesson && playing && (
+            <button
+              type="button"
+              onClick={() => setBoardOpen(true)}
+              className="mt-2 min-h-11 w-full rounded-lg border border-emerald-300/30 bg-emerald-700 px-2 py-2 text-[11px] font-bold text-white transition hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+            >
+              🧑‍🏫 Tahtada anlat
+            </button>
           )}
 
           {showOfferButtons && (
@@ -410,6 +449,15 @@ export function BilgeChanCompanion({
         priority={priority}
         className={`animate-chan-idle motion-reduce:animate-none ${compact ? 'order-1' : ''}`}
       />
+      {boardLesson && (
+        <BilgeTahtaDialog
+          open={boardOpen && playing}
+          lesson={boardLesson}
+          onOpenChange={setBoardOpen}
+          onReturn={handleContinue}
+          onComplete={handleContinue}
+        />
+      )}
     </div>
   )
 }
