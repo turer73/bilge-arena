@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { getCategoryLabel } from '@/lib/constants/games'
 import { gamesForExamType } from '@/lib/constants/exam-types'
 import { useAuthStore } from '@/stores/auth-store'
 import { getLevelFromXP, LEVELS } from '@/lib/constants/levels'
@@ -16,6 +15,8 @@ import { ProfileFrameRing } from '@/components/profile/profile-frame-ring'
 import { AvatarDecoration } from '@/components/profile/avatar-decoration'
 import { Nameplate } from '@/components/profile/nameplate'
 import { getFrameById, FRAME_STORAGE_KEY } from '@/lib/constants/profile-frames'
+import { GameSelectGrid } from '@/components/game/game-select-grid'
+import { ArenaExploreGrid } from '@/components/game/arena-explore-grid'
 
 interface SidebarLeaderRow {
   name: string
@@ -27,14 +28,6 @@ interface MiniLeader {
   avatar: string
   avatarUrl: string | null
   xp: string
-}
-
-const GAME_EMOJI: Record<string, string> = {
-  matematik: '🧮',
-  turkce: '📝',
-  fen: '🔬',
-  sosyal: '🌍',
-  wordquest: '🌐',
 }
 
 export default function ArenaClient() {
@@ -211,161 +204,41 @@ export default function ArenaClient() {
         </div>
       )}
 
-      {/* ── Başlık ── */}
-      <div className="mb-5 text-center md:mb-7 xl:mb-8">
-        <h1 className="font-display text-2xl font-black md:text-3xl xl:text-4xl 2xl:text-5xl">
-          <span className="bg-gradient-to-r from-[var(--focus)] to-[var(--reward)] bg-clip-text text-transparent">
-            Bilge Arena
-          </span>
-        </h1>
-        <p className="mt-1.5 text-xs text-[var(--text-sub)] md:mt-2 md:text-sm xl:text-base">
-          Bir oyun konsolu seç ve maceraya başla
-        </p>
-      </div>
+      {/* ── Ders seçimi: ana eylem ── */}
+      <section aria-labelledby="subject-select-title">
+        <div className="mb-5 md:mb-7 xl:mb-8">
+          <div className="mb-2 flex items-center gap-2 text-[10px] font-black tracking-[0.18em] text-[var(--focus)] md:text-xs">
+            <span aria-hidden="true" className="h-px w-6 bg-[var(--focus)]" />
+            DERS ARENALARI
+          </div>
+          <h1 id="subject-select-title" className="max-w-2xl font-display text-2xl font-black leading-tight text-[var(--text)] md:text-3xl xl:text-4xl 2xl:text-5xl">
+            Bugün ne çalışmak istersin?
+          </h1>
+          <p className="mt-2 max-w-2xl text-xs leading-5 text-[var(--text-sub)] md:text-sm xl:text-base">
+            Dersini seç, oyun modunu belirle ve hemen başla.
+          </p>
+        </div>
 
-      {/* ── Özel Modlar ── */}
-      <div className="mb-4 flex flex-wrap gap-2 md:mb-5">
-        {process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true' && (
-          <Link
-            href="/arena/sinif"
-            className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-bold text-[var(--text-sub)] transition-all hover:-translate-y-0.5 hover:border-[var(--growth-border)] hover:text-[var(--growth)] hover:shadow-sm md:px-4 md:text-sm"
-          >
-            <span aria-hidden="true">🎓</span>
-            <span>Sınıflarım</span>
-            <span
-              className="rounded-full px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider"
-              style={{ background: 'var(--growth-bg)', color: 'var(--growth)' }}
-            >
-              PİLOT
-            </span>
-          </Link>
-        )}
-        <Link
-          href="/arena/fethet"
-          className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-bold text-[var(--text-sub)] transition-all hover:-translate-y-0.5 hover:border-[var(--reward-border)] hover:text-[var(--reward)] hover:shadow-sm md:px-4 md:text-sm"
-        >
-          <span>⚔️</span>
-          <span>Bil ve Fethet</span>
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider"
-            style={{ background: 'var(--reward-bg)', color: 'var(--reward)' }}
-          >
-            YENİ
-          </span>
-        </Link>
-        <Link
-          href="/arena/kule"
-          className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-bold text-[var(--text-sub)] transition-all hover:-translate-y-0.5 hover:border-[var(--focus-border)] hover:text-[var(--focus)] hover:shadow-sm md:px-4 md:text-sm"
-        >
-          <span>🗼</span>
-          <span>Kule Modu</span>
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider"
-            style={{ background: 'var(--focus-bg)', color: 'var(--focus)' }}
-          >
-            YENİ
-          </span>
-        </Link>
-        <Link
-          href="/arena/soru-gonder"
-          className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-bold text-[var(--text-sub)] transition-all hover:-translate-y-0.5 hover:border-[var(--growth-border)] hover:text-[var(--growth)] hover:shadow-sm md:px-4 md:text-sm"
-        >
-          <span>✍️</span>
-          <span>Soru Gönder</span>
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider"
-            style={{ background: 'var(--growth-bg)', color: 'var(--growth)' }}
-          >
-            KATKI
-          </span>
-        </Link>
-        <Link
-          href="/arena/magaza"
-          className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-xs font-bold text-[var(--text-sub)] transition-all hover:-translate-y-0.5 hover:border-[var(--reward-border)] hover:text-[var(--reward)] hover:shadow-sm md:px-4 md:text-sm"
-        >
-          <span>🛍️</span>
-          <span>Mağaza</span>
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider"
-            style={{ background: 'var(--reward-bg)', color: 'var(--reward)' }}
-          >
-            YENİ
-          </span>
-        </Link>
-      </div>
+        <GameSelectGrid
+          games={gamesForExamType(profile?.exam_type)}
+          examType={profile?.exam_type}
+        />
+      </section>
 
-      {/* ── Oyun konsollari ── */}
-      <div className="grid gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:gap-5 2xl:gap-6">
-        {gamesForExamType(profile?.exam_type).map((game) => (
-          <Link
-            key={game.slug}
-            href={`/arena/${game.slug}`}
-            className="group relative overflow-hidden rounded-xl border-[1.5px] border-[var(--border)] bg-[var(--card-bg)] p-4 transition-all duration-200 hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--border)_50%,white)] hover:shadow-lg md:rounded-2xl md:p-6 xl:p-7 2xl:p-8"
-          >
-            {/* Glow */}
-            <div
-              className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-10 blur-2xl transition-opacity duration-300 group-hover:opacity-20 xl:h-40 xl:w-40"
-              style={{ background: game.colorHex }}
-            />
-
-            {/* Emoji */}
-            <div className="mb-2 text-3xl md:mb-3 md:text-4xl xl:text-5xl 2xl:text-6xl">
-              {GAME_EMOJI[game.slug] || '📋'}
-            </div>
-
-            {/* Başlık */}
-            <h2
-              className="mb-1 font-display text-base font-bold md:text-lg xl:text-xl 2xl:text-2xl"
-              style={{ color: game.colorHex }}
-            >
-              {game.name}
-            </h2>
-
-            {/* Sınav etiketleri */}
-            <div className="mb-2 flex flex-wrap gap-1 xl:gap-1.5">
-              {game.examTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide md:text-[10px] xl:px-2.5 xl:text-[11px]"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, ${game.colorHex} 12%, transparent)`,
-                    borderColor: `color-mix(in srgb, ${game.colorHex} 30%, transparent)`,
-                    color: game.colorHex,
-                  }}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            {/* Açıklama */}
-            <p className="mb-3 text-[11px] text-[var(--text-sub)] md:mb-4 md:text-xs xl:text-sm">
-              {game.description}
-            </p>
-
-            {/* Kategori badge'leri */}
-            <div className="flex flex-wrap gap-1 xl:gap-1.5">
-              {game.categories.map((cat) => (
-                <span
-                  key={cat}
-                  className="rounded-full px-2 py-0.5 text-[9px] font-medium md:text-[10px] xl:px-2.5 xl:text-xs"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, ${game.colorHex} 10%, transparent)`,
-                    color: `color-mix(in srgb, ${game.colorHex} 70%, var(--text-sub))`,
-                  }}
-                >
-                  {getCategoryLabel(cat)}
-                </span>
-              ))}
-            </div>
-
-            {/* Ok */}
-            <div className="absolute bottom-3 right-3 text-[var(--text-muted)] transition-all duration-200 group-hover:translate-x-1 group-hover:text-[var(--text-sub)] md:bottom-4 md:right-4 xl:text-lg">
-              →
-            </div>
-          </Link>
-        ))}
-      </div>
+      {/* ── İkincil modlar ── */}
+      <section aria-labelledby="explore-title" className="mt-8 md:mt-10">
+        <div className="mb-4">
+          <h2 id="explore-title" className="font-display text-lg font-black text-[var(--text)] md:text-xl">
+            Daha fazlasını keşfet
+          </h2>
+          <p className="mt-1 text-xs text-[var(--text-sub)] md:text-sm">
+            Farklı bir meydan okuma ya da kişiselleştirme seç.
+          </p>
+        </div>
+        <ArenaExploreGrid
+          classroomEnabled={process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'}
+        />
+      </section>
 
       {/* ── Mini sıralama + Arena CTA ── */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 md:mt-8 md:gap-4">

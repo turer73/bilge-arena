@@ -65,6 +65,9 @@ describe('ArenaClient (mobil home)', () => {
     expect(screen.getByText(/ilerlemeyi kaydet/i)).toBeInTheDocument()
     expect(screen.getByText('Matematik')).toBeInTheDocument()
     expect(screen.getByText(/Arena.?da yarış/i)).toBeInTheDocument()
+    const subjectGrid = screen.getByTestId('game-select-grid')
+    const exploreGrid = screen.getByTestId('arena-explore-grid')
+    expect(subjectGrid.compareDocumentPosition(exploreGrid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // XP bar (Sv.) ve gorev gosterilmemeli
     expect(screen.queryByText(/^Sv\./)).not.toBeInTheDocument()
   })
