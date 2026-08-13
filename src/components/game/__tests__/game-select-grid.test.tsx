@@ -19,6 +19,7 @@ describe('GameSelectGrid', () => {
       .toHaveAttribute('href', '/arena/wordquest')
 
     expect(screen.getByTestId('game-card-matematik')).toHaveClass('lg:col-span-2')
+    expect(screen.getByTestId('game-card-matematik')).toHaveClass('flex-col')
     expect(screen.getByTestId('game-card-sosyal')).toHaveClass('lg:col-span-3')
     expect(screen.getByTestId('game-card-wordquest')).toHaveClass('lg:col-span-3')
   })

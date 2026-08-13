@@ -79,7 +79,7 @@ export function GameSelectGrid({ games, examType }: GameSelectGridProps) {
             href={`/arena/${game.slug}`}
             aria-label={`${presentation.cta} — ${game.name} oyun konsolunu aç`}
             data-testid={`game-card-${game.slug}`}
-            className={`group relative isolate flex min-h-[272px] overflow-hidden rounded-2xl border p-4 pl-5 transition duration-200 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)] sm:min-h-[294px] md:p-5 md:pl-6 ${gameCardGridSpan(games.length, index)}`}
+            className={`group relative isolate flex min-h-[272px] flex-col overflow-hidden rounded-2xl border p-4 pl-5 transition duration-200 hover:-translate-y-1 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)] sm:min-h-[294px] md:p-5 md:pl-6 ${gameCardGridSpan(games.length, index)}`}
             style={{
               borderColor: `color-mix(in srgb, ${game.colorHex} 34%, var(--border))`,
               background: `radial-gradient(circle at 88% 6%, color-mix(in srgb, ${game.colorHex} 24%, transparent) 0%, transparent 36%), linear-gradient(145deg, color-mix(in srgb, ${game.colorHex} 21%, var(--card-bg)) 0%, var(--card-bg) 56%, color-mix(in srgb, ${game.colorHex} 9%, var(--card-bg)) 100%)`,
