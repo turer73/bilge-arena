@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchInstitutionStudentLearningAnalysis,
   fetchInstitutionTrackingDirectory,
+  fetchInstitutionClassroomOverview,
   InstitutionTrackingClientError,
   createInstitutionStudyProgramDraft,
   publishInstitutionStudyProgram,
@@ -31,6 +32,15 @@ describe('institution tracking client', () => {
     vi.stubGlobal('fetch', fetchMock)
     await expect(fetchInstitutionStudentLearningAnalysis('class/id', 'member ref')).rejects.toMatchObject({ status: 500 })
     expect(fetchMock.mock.calls[0][0]).toContain('class%2Fid/students/member%20ref')
+  })
+
+  it('requests a no-store classroom aggregate without leaking ids in query parameters', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ invalid: true }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(fetchInstitutionClassroomOverview('class/id')).rejects.toMatchObject({ status: 500 })
+    expect(fetchMock).toHaveBeenCalledWith('/api/institution/tracking/classrooms/class%2Fid/overview', {
+      cache: 'no-store', signal: undefined,
+    })
   })
 
   it('preserves only the HTTP status in client errors', async () => {

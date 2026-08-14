@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import {
   fetchInstitutionStudentLearningAnalysis,
+  fetchInstitutionClassroomOverview,
   fetchInstitutionTrackingDirectory,
   createInstitutionStudyProgramDraft,
   publishInstitutionStudyProgram,
@@ -24,6 +25,8 @@ import {
 import type { InstitutionTrackingDirectory } from '@/lib/institution-tracking/directory'
 import type { InstitutionStudentLearningAnalysis } from '@/lib/institution-tracking/student-analysis'
 import type { InstitutionStudyProgramDraftResponse } from '@/lib/institution-tracking/study-program'
+import type { InstitutionClassroomOverview } from '@/lib/institution-tracking/classroom-overview'
+import { ClassroomOverviewPanel } from './classroom-overview-panel'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -70,6 +73,9 @@ export function InstitutionTrackingDashboard() {
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null)
   const [selectedMemberRef, setSelectedMemberRef] = useState<string | null>(null)
   const [analysis, setAnalysis] = useState<InstitutionStudentLearningAnalysis | null>(null)
+  const [classroomOverview, setClassroomOverview] = useState<InstitutionClassroomOverview | null>(null)
+  const [classroomOverviewLoading, setClassroomOverviewLoading] = useState(false)
+  const [classroomOverviewError, setClassroomOverviewError] = useState(false)
   const [directoryLoading, setDirectoryLoading] = useState(enabled)
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [errorStatus, setErrorStatus] = useState<number | null>(null)
@@ -116,6 +122,32 @@ export function InstitutionTrackingDashboard() {
         : selectedClassroom.students[0]?.memberRef ?? null
     ))
   }, [selectedClassroom])
+
+  useEffect(() => {
+    if (!selectedClassroomId) {
+      setClassroomOverview(null)
+      setClassroomOverviewError(false)
+      return
+    }
+    const controller = new AbortController()
+    queueMicrotask(async () => {
+      setClassroomOverviewLoading(true)
+      setClassroomOverviewError(false)
+      try {
+        const next = await fetchInstitutionClassroomOverview(selectedClassroomId, controller.signal)
+        if (!controller.signal.aborted) setClassroomOverview(next)
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        if (!controller.signal.aborted) {
+          setClassroomOverview(null)
+          setClassroomOverviewError(true)
+        }
+      } finally {
+        if (!controller.signal.aborted) setClassroomOverviewLoading(false)
+      }
+    })
+    return () => controller.abort()
+  }, [selectedClassroomId, refreshKey])
 
   useEffect(() => {
     if (!selectedClassroomId || !selectedMemberRef) {
@@ -266,7 +298,16 @@ export function InstitutionTrackingDashboard() {
             )}
           </aside>
 
-          <main className="min-w-0" aria-live="polite">
+          <main className="min-w-0 space-y-4" aria-live="polite">
+            {classroomOverviewLoading && !classroomOverview ? (
+              <div className="h-64 animate-pulse rounded-2xl bg-white/5" aria-label="Sınıf özeti yükleniyor" />
+            ) : classroomOverview ? (
+              <ClassroomOverviewPanel overview={classroomOverview} />
+            ) : classroomOverviewError ? (
+              <section className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
+                Sınıf özeti eksiksiz doğrulanamadığı için gösterilmiyor. Öğrenci analizi ayrı olarak kullanılabilir.
+              </section>
+            ) : null}
             {!selectedMemberRef ? (
               <section className="rounded-2xl border border-dashed border-white/15 bg-[var(--surface)] p-8 text-center">
                 <Users className="mx-auto h-9 w-9 text-[var(--text-sub)]" aria-hidden="true" />

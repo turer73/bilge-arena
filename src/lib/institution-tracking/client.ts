@@ -14,6 +14,10 @@ import {
   institutionStudyProgramMutationResultSchema,
   type InstitutionStudyProgramDraftResponse,
 } from './study-program'
+import {
+  institutionClassroomOverviewSchema,
+  type InstitutionClassroomOverview,
+} from './classroom-overview'
 
 export function isInstitutionTrackingUiEnabled(): boolean {
   return process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
@@ -59,6 +63,17 @@ export function fetchInstitutionStudentLearningAnalysis(
   return requestJson(
     `/api/institution/tracking/classrooms/${encodeURIComponent(classroomId)}/students/${encodeURIComponent(memberRef)}?game=matematik&exam_ref=TYT`,
     institutionStudentLearningAnalysisSchema,
+    signal,
+  )
+}
+
+export function fetchInstitutionClassroomOverview(
+  classroomId: string,
+  signal?: AbortSignal,
+): Promise<InstitutionClassroomOverview> {
+  return requestJson(
+    `/api/institution/tracking/classrooms/${encodeURIComponent(classroomId)}/overview`,
+    institutionClassroomOverviewSchema,
     signal,
   )
 }

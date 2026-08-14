@@ -978,4 +978,5 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Seçili sınıfta en fazla 40 analiz çağrısını dörtlü eşzamanlılıkla sınırlayan fail-closed pilot adapter.
 - [x] Yalnız aynı tenant/sınıfta yayınlanmış programların opak üye referanslarını döndüren salt-okunur RPC.
 - [ ] 100+ öğrenci veya ölçülen p95 bütçesi aşılırsa N+1 pilot adapter yerine tek batch RPC.
-- [ ] Kurum sınıf/öğretmen ekranı.
+- [x] Kurum çalışma alanında sınıf özeti, gizlilik eşikli outcome öncelikleri ve beş ayrı öğretmen gösterge kartı.
+- [x] Sınıf agregası alınamazsa geçerli öğrenci analizini ayrı tutan kısmi ekran hata sınırı.

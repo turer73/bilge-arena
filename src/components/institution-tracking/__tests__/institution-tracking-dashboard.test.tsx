@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   enabled: vi.fn(),
   directory: vi.fn(),
   analysis: vi.fn(),
+  overview: vi.fn(),
   createProgram: vi.fn(),
   publishProgram: vi.fn(),
 }))
@@ -13,6 +14,7 @@ vi.mock('@/lib/institution-tracking/client', () => ({
   isInstitutionTrackingUiEnabled: mocks.enabled,
   fetchInstitutionTrackingDirectory: mocks.directory,
   fetchInstitutionStudentLearningAnalysis: mocks.analysis,
+  fetchInstitutionClassroomOverview: mocks.overview,
   createInstitutionStudyProgramDraft: mocks.createProgram,
   publishInstitutionStudyProgram: mocks.publishProgram,
   InstitutionTrackingClientError: class InstitutionTrackingClientError extends Error {
@@ -38,6 +40,19 @@ const directory = {
       { memberRef: MEMBER_TWO, alias: 'Öğrenci İki', joinedAt: '2026-08-02T09:00:00.000Z' },
     ],
   }],
+}
+
+const indicator = (value: number | null, numerator = 0, denominator = 0) => ({
+  status: value === null ? 'insufficient' as const : 'available' as const,
+  value, eligibleStudentCount: 5, excludedInsufficientCount: 1,
+  evidence: denominator ? [{ code: 'explained_indicator', numerator, denominator }] : [],
+})
+const classroomOverview = {
+  classroom: { id: CLASSROOM_ID, name: directory.classrooms[0].name, teacherAlias: 'Öğretmen Bir', activeStudentCount: 5 },
+  scope: { game: 'matematik' as const, examRef: 'TYT' as const, taxonomyVersion: 'ba-tyt-math-v1' as const, modelVersion: 'institution-classroom-overview-v1' as const, windowStart: '2026-08-01T00:00:00.000Z', windowEnd: '2026-08-14T00:00:00.000Z', minimumGroupSize: 3 as const },
+  summary: { activeStudentCount: 5, studentsWithDecisionSafeEvidence: 4, studentsNeedingSupport: 3, studentsWithoutDecisionSafeEvidence: 1, eligibleStudentOutcomeCount: 4, developingStudentOutcomeCount: 3, masteredStudentOutcomeCount: 1 },
+  priorityOutcomes: [{ code: 'MAT-SAY-01', title: 'Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı', studentCount: 3, evidenceCount: 18, averageScore: 49.5 }],
+  teacherIndicators: { modelVersion: 'institution-teacher-indicators-v1', windowStart: '2026-08-01T00:00:00.000Z', windowEnd: '2026-08-14T00:00:00.000Z', dimensions: { studentGrowth: indicator(null), followUpDiscipline: indicator(null), programManagement: indicator(66.7, 2, 3), interventionResponsiveness: indicator(null), dataReliability: indicator(80, 4, 5) } },
 }
 
 function analysis(memberRef = MEMBER_ONE, alias = 'Öğrenci Bir Çok Uzun Ad') {
@@ -100,6 +115,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.enabled.mockReturnValue(true)
   mocks.directory.mockResolvedValue(directory)
+  mocks.overview.mockResolvedValue(classroomOverview)
   mocks.analysis.mockImplementation(async (_classroomId: string, memberRef: string) => (
     memberRef === MEMBER_TWO ? analysis(MEMBER_TWO, 'Öğrenci İki') : analysis()
   ))
@@ -127,6 +143,15 @@ describe('InstitutionTrackingDashboard', () => {
     expect(screen.getAllByText('Kanıt yetersiz').length).toBeGreaterThan(0)
     expect(screen.getByText('—')).toBeInTheDocument()
     expect(screen.getByText('Bağımsız oturum')).toBeInTheDocument()
+    expect(screen.getByText('Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı')).toBeInTheDocument()
+    expect(screen.getByText('Tek puan ve sıralama yoktur')).toBeInTheDocument()
+  })
+
+  it('keeps a failed aggregate separate from the valid selected-student analysis', async () => {
+    mocks.overview.mockRejectedValue(new Error('partial roster'))
+    render(<InstitutionTrackingDashboard />)
+    expect(await screen.findByText(/Sınıf özeti eksiksiz doğrulanamadığı için gösterilmiyor/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })).toBeInTheDocument()
   })
 
   it('loads the selected opaque student without exposing internal ids', async () => {
