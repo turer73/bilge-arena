@@ -961,7 +961,9 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Kaydedilmemiş taslak değişikliği varken yayınlamayı engelleyen UI değişmezi.
 - [x] Öğretmen çalışma alanında taslağı görev, gerekçe, süre ve tarih bazında inceleyip ayrı eylemle yayınlama.
 - [x] Yalnız haftalık program kartını A4 yazdırma/PDF çıktısına alan öğretmen görünümü.
-- [ ] Öğrenci çalışma ekranı.
+- [x] Öğrencinin yalnız kendi aktif üyeliğindeki yayınlanmış güncel-hafta programlarını okuyan service-only RPC/API.
+- [x] Taslakları ve program/öğretmen/üyelik UUID'lerini öğrenci yanıtından çıkaran strict sözleşme.
+- [ ] `/arena/calisma` haftalık kurum programı kartı.
 
 ### 19.5 Öğretmen gösterge hesaplama çekirdeği — 2026-08-14
 
