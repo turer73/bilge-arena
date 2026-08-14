@@ -1348,6 +1348,487 @@ export type Database = {
         }
         Relationships: []
       }
+      institution_student_followups: {
+        Row: {
+          classroom_id: string
+          followup_ref: string
+          id: string
+          institution_id: string
+          membership_id: string
+          note: string | null
+          opened_at: string
+          reason_code: string
+          resolved_at: string | null
+          status: string
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          classroom_id: string
+          followup_ref?: string
+          id?: string
+          institution_id: string
+          membership_id: string
+          note?: string | null
+          opened_at?: string
+          reason_code: string
+          resolved_at?: string | null
+          status?: string
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          classroom_id?: string
+          followup_ref?: string
+          id?: string
+          institution_id?: string
+          membership_id?: string
+          note?: string | null
+          opened_at?: string
+          reason_code?: string
+          resolved_at?: string | null
+          status?: string
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_student_followups_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_student_followups_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_student_followups_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classroom_memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_student_followups_membership_id_student_id_cla_fkey"
+            columns: ["membership_id", "student_id", "classroom_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classroom_memberships"
+            referencedColumns: ["id", "student_id", "classroom_id"]
+          },
+          {
+            foreignKeyName: "institution_student_followups_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_student_followups_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institution_student_reports: {
+        Row: {
+          classroom_id: string
+          created_at: string
+          id: string
+          institution_id: string
+          membership_id: string
+          model_version: string
+          period_end: string
+          period_start: string
+          report_ref: string
+          snapshot: Json
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          classroom_id: string
+          created_at?: string
+          id?: string
+          institution_id: string
+          membership_id: string
+          model_version: string
+          period_end: string
+          period_start: string
+          report_ref?: string
+          snapshot: Json
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          classroom_id?: string
+          created_at?: string
+          id?: string
+          institution_id?: string
+          membership_id?: string
+          model_version?: string
+          period_end?: string
+          period_start?: string
+          report_ref?: string
+          snapshot?: Json
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_student_reports_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_student_reports_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_student_reports_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classroom_memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_student_reports_membership_id_student_id_class_fkey"
+            columns: ["membership_id", "student_id", "classroom_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classroom_memberships"
+            referencedColumns: ["id", "student_id", "classroom_id"]
+          },
+          {
+            foreignKeyName: "institution_student_reports_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_student_reports_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institution_study_program_items: {
+        Row: {
+          completed_at: string | null
+          duration_minutes: number
+          outcome_code: string | null
+          position: number
+          program_id: string
+          reason_code: string
+          scheduled_date: string
+          status: string
+          target_question_count: number | null
+          task_type: string
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          duration_minutes: number
+          outcome_code?: string | null
+          position: number
+          program_id: string
+          reason_code: string
+          scheduled_date: string
+          status?: string
+          target_question_count?: number | null
+          task_type: string
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          duration_minutes?: number
+          outcome_code?: string | null
+          position?: number
+          program_id?: string
+          reason_code?: string
+          scheduled_date?: string
+          status?: string
+          target_question_count?: number | null
+          task_type?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_study_program_items_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "institution_study_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institution_study_program_reviews: {
+        Row: {
+          classroom_id: string
+          evidence: Json
+          id: string
+          institution_id: string
+          membership_id: string
+          note: string | null
+          program_id: string
+          review_ref: string
+          reviewed_at: string
+          student_id: string
+          system_suggestion: string
+          teacher_id: string
+          teacher_result: string
+        }
+        Insert: {
+          classroom_id: string
+          evidence: Json
+          id?: string
+          institution_id: string
+          membership_id: string
+          note?: string | null
+          program_id: string
+          review_ref?: string
+          reviewed_at?: string
+          student_id: string
+          system_suggestion: string
+          teacher_id: string
+          teacher_result: string
+        }
+        Update: {
+          classroom_id?: string
+          evidence?: Json
+          id?: string
+          institution_id?: string
+          membership_id?: string
+          note?: string | null
+          program_id?: string
+          review_ref?: string
+          reviewed_at?: string
+          student_id?: string
+          system_suggestion?: string
+          teacher_id?: string
+          teacher_result?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_study_program_reviews_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_program_reviews_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_program_reviews_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classroom_memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_program_reviews_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: true
+            referencedRelation: "institution_study_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_program_reviews_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_program_reviews_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institution_study_programs: {
+        Row: {
+          archived_at: string | null
+          classroom_id: string
+          completed_at: string | null
+          created_at: string
+          daily_minute_limit: number
+          id: string
+          institution_id: string
+          item_count: number
+          membership_id: string
+          model_version: string
+          program_ref: string
+          published_at: string | null
+          reviewed_at: string | null
+          status: string
+          student_id: string
+          teacher_id: string
+          week_start: string
+        }
+        Insert: {
+          archived_at?: string | null
+          classroom_id: string
+          completed_at?: string | null
+          created_at?: string
+          daily_minute_limit: number
+          id?: string
+          institution_id: string
+          item_count: number
+          membership_id: string
+          model_version: string
+          program_ref?: string
+          published_at?: string | null
+          reviewed_at?: string | null
+          status?: string
+          student_id: string
+          teacher_id: string
+          week_start: string
+        }
+        Update: {
+          archived_at?: string | null
+          classroom_id?: string
+          completed_at?: string | null
+          created_at?: string
+          daily_minute_limit?: number
+          id?: string
+          institution_id?: string
+          item_count?: number
+          membership_id?: string
+          model_version?: string
+          program_ref?: string
+          published_at?: string | null
+          reviewed_at?: string | null
+          status?: string
+          student_id?: string
+          teacher_id?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_study_programs_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_programs_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_programs_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classroom_memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_programs_membership_id_student_id_classr_fkey"
+            columns: ["membership_id", "student_id", "classroom_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classroom_memberships"
+            referencedColumns: ["id", "student_id", "classroom_id"]
+          },
+          {
+            foreignKeyName: "institution_study_programs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_programs_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institution_support_grants: {
+        Row: {
+          expires_at: string
+          grant_ref: string
+          granted_at: string
+          granted_by: string
+          id: string
+          institution_id: string
+          reason: string
+          revoked_at: string | null
+          revoked_by: string | null
+          scope: string
+        }
+        Insert: {
+          expires_at: string
+          grant_ref?: string
+          granted_at?: string
+          granted_by: string
+          id?: string
+          institution_id: string
+          reason: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scope?: string
+        }
+        Update: {
+          expires_at?: string
+          grant_ref?: string
+          granted_at?: string
+          granted_by?: string
+          id?: string
+          institution_id?: string
+          reason?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scope?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_support_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_support_grants_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_support_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leaderboard_weekly: {
         Row: {
           accuracy_pct: number | null
@@ -5253,6 +5734,29 @@ export type Database = {
         Args: { p_payload: Json; p_request_id: string; p_user_id: string }
         Returns: Json
       }
+      create_institution_student_report: {
+        Args: {
+          p_classroom_id: string
+          p_member_ref: string
+          p_request_id: string
+          p_snapshot: Json
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      create_institution_study_program_draft: {
+        Args: {
+          p_classroom_id: string
+          p_daily_minute_limit: number
+          p_items: Json
+          p_member_ref: string
+          p_model_version: string
+          p_request_id: string
+          p_user_id: string
+          p_week_start: string
+        }
+        Returns: Json
+      }
       create_question_content_revision: {
         Args: {
           p_base_revision_id: string
@@ -5305,6 +5809,91 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      get_institution_classroom_followup_metrics: {
+        Args: {
+          p_classroom_id: string
+          p_user_id: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: Json
+      }
+      get_institution_classroom_growth_metrics: {
+        Args: {
+          p_classroom_id: string
+          p_user_id: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
+      get_institution_classroom_published_program_members: {
+        Args: {
+          p_classroom_id: string
+          p_user_id: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: Json
+      }
+      get_institution_student_followups: {
+        Args: {
+          p_classroom_id: string
+          p_member_ref: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_institution_student_learning_analysis: {
+        Args: {
+          p_classroom_id: string
+          p_exam_ref: string
+          p_game: string
+          p_member_ref: string
+          p_user_id: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
+      get_institution_student_program_history: {
+        Args: {
+          p_classroom_id: string
+          p_member_ref: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_institution_student_reports: {
+        Args: {
+          p_classroom_id: string
+          p_member_ref: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_institution_support_directory: {
+        Args: { p_admin_user_id: string; p_institution_id: string }
+        Returns: Json
+      }
+      get_institution_tracking_directory: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_my_classroom_bilge_tahta_access: {
+        Args: {
+          p_classroom_id: string
+          p_institution_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_my_institution_study_programs: {
+        Args: { p_as_of_date: string; p_user_id: string }
+        Returns: Json
+      }
+      get_my_institution_support_access: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_my_paper_study_pack: {
         Args: { p_pack_id: string; p_user_id: string }
         Returns: Json
@@ -5319,10 +5908,6 @@ export type Database = {
         Args: { p_assignment_id: string; p_user_id: string }
         Returns: Json
       }
-      get_my_classroom_bilge_tahta_access: {
-        Args: { p_classroom_id: string; p_institution_id: string; p_user_id: string }
-        Returns: Json
-      }
       get_my_teacher_assignments: { Args: { p_user_id: string }; Returns: Json }
       get_my_teacher_classroom_memberships: {
         Args: { p_user_id: string }
@@ -5333,16 +5918,6 @@ export type Database = {
         Returns: Json
       }
       get_my_teacher_classrooms: { Args: { p_user_id: string }; Returns: Json }
-      set_teacher_classroom_bilge_tahta: {
-        Args: {
-          p_classroom_id: string
-          p_enabled: boolean
-          p_institution_id: string
-          p_request_id: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
       get_my_weekly_learning_league: {
         Args: { p_user_id: string }
         Returns: Json
@@ -5412,6 +5987,15 @@ export type Database = {
         Args: { p_first_place: boolean; p_room_id: string; p_user_id: string }
         Returns: Json
       }
+      grant_my_institution_support_access: {
+        Args: {
+          p_duration_minutes: number
+          p_reason: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       hard_delete_expired_users: { Args: never; Returns: number }
       has_any_role: { Args: { p_user_id: string }; Returns: boolean }
       has_permission: {
@@ -5452,6 +6036,14 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: string
       }
+      institution_study_program_review_evidence: {
+        Args: { p_program_id: string }
+        Returns: Json
+      }
+      institution_support_has_access: {
+        Args: { p_admin_user_id: string; p_institution_id: string }
+        Returns: boolean
+      }
       is_disposable_email: { Args: { p_email: string }; Returns: boolean }
       issue_paper_study_pack: {
         Args: { p_plan_id: string; p_request_id: string; p_user_id: string }
@@ -5491,6 +6083,7 @@ export type Database = {
         }
         Returns: Json
       }
+      list_pilot_institutions: { Args: { p_user_id: string }; Returns: Json }
       materialize_question_revision_psychometrics: {
         Args: {
           p_request_id: string
@@ -5505,6 +6098,21 @@ export type Database = {
         Args: { p_attempt_id: string }
         Returns: undefined
       }
+      open_institution_student_followup: {
+        Args: {
+          p_classroom_id: string
+          p_member_ref: string
+          p_note: string
+          p_reason_code: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      preview_institution_study_program_review: {
+        Args: { p_program_ref: string; p_user_id: string }
+        Returns: Json
+      }
       preview_teacher_classroom_invite: {
         Args: { p_token_digest: string; p_user_id: string }
         Returns: Json
@@ -5516,6 +6124,10 @@ export type Database = {
           p_request_id: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      publish_institution_study_program: {
+        Args: { p_program_ref: string; p_request_id: string; p_user_id: string }
         Returns: Json
       }
       publish_question_content_revision: {
@@ -5653,6 +6265,14 @@ export type Database = {
           outcome_id: string
         }[]
       }
+      resolve_institution_student_followup: {
+        Args: {
+          p_followup_ref: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       resolve_question_appeal: {
         Args: {
           p_appeal_id: string
@@ -5660,6 +6280,16 @@ export type Database = {
           p_public_message: string
           p_request_id: string
           p_status: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      review_institution_study_program: {
+        Args: {
+          p_note: string
+          p_program_ref: string
+          p_request_id: string
+          p_teacher_result: string
           p_user_id: string
         }
         Returns: Json
@@ -5673,6 +6303,10 @@ export type Database = {
           p_stage: number
           p_user_id: string
         }
+        Returns: Json
+      }
+      revoke_my_institution_support_access: {
+        Args: { p_request_id: string; p_user_id: string }
         Returns: Json
       }
       revoke_teacher_classroom_invite: {
@@ -5787,6 +6421,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_teacher_classroom_bilge_tahta: {
+        Args: {
+          p_classroom_id: string
+          p_enabled: boolean
+          p_institution_id: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       set_weekly_learning_league_preference: {
         Args: { p_opted_in: boolean; p_request_id: string; p_user_id: string }
         Returns: Json
@@ -5880,6 +6524,17 @@ export type Database = {
         Returns: string
       }
       unaccent: { Args: { "": string }; Returns: string }
+      update_institution_study_program_draft: {
+        Args: {
+          p_daily_minute_limit: number
+          p_items: Json
+          p_program_ref: string
+          p_request_id: string
+          p_user_id: string
+          p_week_start: string
+        }
+        Returns: Json
+      }
       update_streak: { Args: { p_user_id: string }; Returns: undefined }
       verified_attempt_private_snapshot: {
         Args: { p_attempt_id: string }
