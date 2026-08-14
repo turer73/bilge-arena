@@ -36,6 +36,7 @@ beforeEach(() => {
     if (name === 'get_institution_tracking_directory') return { data: directory, error: null }
     if (name === 'get_institution_student_learning_analysis') return { data: { memberRef: args.p_member_ref }, error: null }
     if (name === 'get_institution_classroom_published_program_members') return { data: { memberRefs: refs.slice(0, 3) }, error: null }
+    if (name === 'get_institution_classroom_followup_metrics') return { data: { followedMemberRefs: refs.slice(0, 2), interventionEligibleCount: 2, timelyInterventionCount: 1, interventionStudentCount: 2 }, error: null }
     return { data: null, error: { code: 'P0002' } }
   })
 })
@@ -59,6 +60,7 @@ describe('institution classroom overview route', () => {
     expect(mocks.buildOverview).toHaveBeenCalledWith(expect.objectContaining({
       analyses: expect.arrayContaining([expect.objectContaining({ student: { memberRef: refs[0] } })]),
       publishedProgramMemberRefs: refs.slice(0, 3),
+      followupMetrics: { followedMemberRefs: refs.slice(0, 2), interventionEligibleCount: 2, timelyInterventionCount: 1, interventionStudentCount: 2 },
     }))
     expect(await response.json()).toEqual(overview)
   })

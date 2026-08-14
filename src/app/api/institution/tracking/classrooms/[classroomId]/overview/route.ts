@@ -5,6 +5,7 @@ import { buildInstitutionClassroomOverview } from '@/lib/institution-tracking/cl
 import { institutionTrackingDirectorySchema } from '@/lib/institution-tracking/directory'
 import { isInstitutionTrackingEnabled } from '@/lib/institution-tracking/server-security'
 import { buildInstitutionStudentLearningAnalysis } from '@/lib/institution-tracking/student-analysis'
+import { institutionFollowupMetricsSchema } from '@/lib/institution-tracking/followup'
 
 const paramsSchema = z.object({ classroomId: z.string().uuid() }).strict()
 const programMembersSchema = z.object({
@@ -91,6 +92,15 @@ export async function GET(
     if (programsRpc.error) throw programsRpc.error
     const programs = programMembersSchema.safeParse(programsRpc.data)
     if (!programs.success) throw new Error('invalid program coverage')
+    const followupsRpc = await context.admin.rpc('get_institution_classroom_followup_metrics', {
+      p_user_id: context.userId,
+      p_classroom_id: classroom.id,
+      p_window_start: windowStart,
+      p_window_end: windowEnd,
+    })
+    if (followupsRpc.error) throw followupsRpc.error
+    const followupMetrics = institutionFollowupMetricsSchema.safeParse(followupsRpc.data)
+    if (!followupMetrics.success) throw new Error('invalid follow-up metrics')
     const overview = buildInstitutionClassroomOverview({
       classroom: {
         id: classroom.id,
@@ -102,6 +112,7 @@ export async function GET(
       windowEnd,
       analyses,
       publishedProgramMemberRefs: programs.data.memberRefs,
+      followupMetrics: followupMetrics.data,
     })
     return overview
       ? institutionPilotNoStoreJson(overview)
