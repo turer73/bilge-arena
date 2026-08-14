@@ -832,6 +832,16 @@ html[data-activation-variant='micro'] .activation-micro {
   }
 }
 
+@media print {
+  body.institution-report-print-page { background: #fff !important; color: #0f172a !important; }
+  body.institution-report-print-page * { visibility: hidden !important; }
+  body.institution-report-print-page .institution-report-print-root,
+  body.institution-report-print-page .institution-report-print-root * { visibility: visible !important; }
+  body.institution-report-print-page .institution-report-print-root { position: absolute; inset: 0; width: 100%; margin: 0; border: 0; border-radius: 0; padding: 12mm; }
+  body.institution-report-print-page .institution-report-screen-only { display: none !important; }
+  body.institution-report-print-page .institution-report-print-root article { break-inside: avoid; }
+}
+
 /* Kurum haftalik programi: yalniz program karti A4/PDF ciktisina girer. */
 @media print {
   body.institution-program-print-page {

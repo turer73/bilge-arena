@@ -36,6 +36,7 @@ import { ClassroomOverviewPanel } from './classroom-overview-panel'
 import { buildGuardianStatusEmailDraft } from '@/lib/institution-tracking/guardian-email-draft'
 import { StudentFollowupPanel } from './student-followup-panel'
 import { ProgramReviewPanel } from './program-review-panel'
+import { StudentReportPanel } from './student-report-panel'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -380,12 +381,6 @@ function AnalysisPanel({
     setProgramDirty(false)
   }, [analysis.student.memberRef])
 
-  useEffect(() => {
-    if (!program) return
-    document.body.classList.add('institution-program-print-page')
-    return () => document.body.classList.remove('institution-program-print-page')
-  }, [program])
-
   async function createProgram() {
     setProgramBusy(true); setProgramError(null)
     try {
@@ -443,6 +438,12 @@ function AnalysisPanel({
     } catch { setEmailDraftStatus('error') }
   }
 
+  function printProgram() {
+    document.body.classList.add('institution-program-print-page')
+    try { window.print() }
+    finally { document.body.classList.remove('institution-program-print-page') }
+  }
+
   return (
     <div className="min-w-0 space-y-4">
       <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
@@ -485,6 +486,10 @@ function AnalysisPanel({
       )}
 
       {canManagePrograms && (
+        <StudentReportPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
+      )}
+
+      {canManagePrograms && (
         <section className="institution-program-print-root rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -498,7 +503,7 @@ function AnalysisPanel({
             <div className="mt-4 space-y-3">
               <div className="flex flex-col gap-2 border-b border-white/10 pb-3 sm:flex-row sm:items-center sm:justify-between">
                 <div><p className="text-xs text-[var(--text-sub)]">Öğrenci</p><strong className="block text-base">{analysis.student.alias}</strong></div>
-                <button type="button" onClick={() => window.print()} className="institution-program-screen-only inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold"><Printer className="h-4 w-4" /> Yazdır / PDF</button>
+                <button type="button" onClick={printProgram} className="institution-program-screen-only inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold"><Printer className="h-4 w-4" /> Yazdır / PDF</button>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-xs">
                 <span><strong>{program.draft.weekStart}</strong> haftası · {program.draft.items.length} görev · günlük en fazla {program.program.dailyMinuteLimit} dk</span>

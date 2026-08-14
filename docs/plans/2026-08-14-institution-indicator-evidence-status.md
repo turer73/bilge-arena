@@ -11,4 +11,4 @@
 | Müdahale etkinliği | Takipten sonra yayınlanan çalışma programı | 14 gün içinde program yayınlanan öğrenci | Takibinin üzerinden 14 gün geçmiş öğrenci | Henüz fırsat süresi dolmayan takip paydaya girmez |
 | Veri güvenilirliği | Öğrenci outcome analizleri | Karar-güvenli kanıtı olan öğrenci | Aktif sınıf öğrencisi | Eksik veri sıfır başarı sayılmaz; minimum 3 öğrenci |
 
-Bu göstergeler öğretmenin ücret, görev, disiplin veya iş akdi hakkında otomatik karar üretmek için kullanılamaz. Her kart pay/payda, uygun öğrenci ve yetersiz kanıt sayısını ayrı gösterir. Migration 114–122 production'a uygulanıp sentetik tenant smoke testi geçmeden canlı özellik tamamlanmış sayılmaz.
+Bu göstergeler öğretmenin ücret, görev, disiplin veya iş akdi hakkında otomatik karar üretmek için kullanılamaz. Her kart pay/payda, uygun öğrenci ve yetersiz kanıt sayısını ayrı gösterir. Migration 114–124 production'a uygulanıp sentetik tenant smoke testi geçmeden canlı özellik tamamlanmış sayılmaz.

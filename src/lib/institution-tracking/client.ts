@@ -31,6 +31,12 @@ import {
   type InstitutionProgramReviewMutation,
   type InstitutionStudentProgramHistory,
 } from './program-review'
+import {
+  institutionStudentReportListSchema,
+  institutionStudentReportMutationSchema,
+  type InstitutionStudentReportList,
+  type InstitutionStudentReportMutation,
+} from './student-report'
 
 export function isInstitutionTrackingUiEnabled(): boolean {
   return process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
@@ -181,4 +187,22 @@ export function reviewInstitutionStudyProgram(
     { ...input, requestId: crypto.randomUUID() },
     institutionProgramReviewMutationSchema,
   )
+}
+
+export function fetchInstitutionStudentReports(
+  classroomId: string,
+  memberRef: string,
+  signal?: AbortSignal,
+): Promise<InstitutionStudentReportList> {
+  const query = new URLSearchParams({ classroomId, memberRef })
+  return requestJson(`/api/institution/tracking/reports?${query}`, institutionStudentReportListSchema, signal)
+}
+
+export function createInstitutionStudentReport(
+  classroomId: string,
+  memberRef: string,
+): Promise<InstitutionStudentReportMutation> {
+  return postJson('/api/institution/tracking/reports', {
+    classroomId, memberRef, requestId: crypto.randomUUID(),
+  }, institutionStudentReportMutationSchema)
 }

@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   fetchProgramHistory: vi.fn(),
   previewProgramReview: vi.fn(),
   reviewProgram: vi.fn(),
+  fetchReports: vi.fn(),
+  createReport: vi.fn(),
 }))
 vi.mock('@/lib/institution-tracking/client', () => ({
   isInstitutionTrackingUiEnabled: mocks.enabled,
@@ -31,6 +33,8 @@ vi.mock('@/lib/institution-tracking/client', () => ({
   fetchInstitutionStudentProgramHistory: mocks.fetchProgramHistory,
   previewInstitutionStudyProgramReview: mocks.previewProgramReview,
   reviewInstitutionStudyProgram: mocks.reviewProgram,
+  fetchInstitutionStudentReports: mocks.fetchReports,
+  createInstitutionStudentReport: mocks.createReport,
   InstitutionTrackingClientError: class InstitutionTrackingClientError extends Error {
     constructor(readonly status: number) { super(`institution_tracking_request_${status}`) }
   },
@@ -143,6 +147,7 @@ beforeEach(() => {
   mocks.openFollowup.mockResolvedValue({ followupRef: 'd'.repeat(32), reasonCode: 'support_needed', status: 'open', openedAt: '2026-08-14T09:00:00.000Z', resolvedAt: null, replayed: false })
   mocks.resolveFollowup.mockResolvedValue({ followupRef: 'd'.repeat(32), reasonCode: 'support_needed', status: 'resolved', openedAt: '2026-08-14T09:00:00.000Z', resolvedAt: '2026-08-14T10:00:00.000Z', replayed: false })
   mocks.fetchProgramHistory.mockResolvedValue({ programs: [] })
+  mocks.fetchReports.mockResolvedValue({ reports: [] })
 })
 
 describe('InstitutionTrackingDashboard', () => {
@@ -202,7 +207,6 @@ describe('InstitutionTrackingDashboard', () => {
     expect(screen.getByRole('button', { name: 'Kopyalandı' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Taslak oluştur' }))
     expect(await screen.findByText('Temel kavramlar durum tespiti')).toBeInTheDocument()
-    expect(document.body).toHaveClass('institution-program-print-page')
     await user.click(screen.getByRole('button', { name: 'Yazdır / PDF' }))
     expect(print).toHaveBeenCalledOnce()
     expect(mocks.publishProgram).not.toHaveBeenCalled()
