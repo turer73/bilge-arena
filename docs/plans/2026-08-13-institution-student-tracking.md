@@ -920,11 +920,11 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Uygun kullanıcı, olgunlaşmış cohort, doğrulanmış aktivite, idempotent event kimliği, küçük örneklem ve Wilson aralığı testleri.
 - [x] Doğrulanmış answer/session/program satırlarını kimlik-minimal aktivite sözleşmesine çeviren salt-okunur kaynak adapter'ı.
 - [x] Demo/test/sentetik hesap envanteri onaylanmadan metrik üretimini durduran fail-closed veri kalite raporu.
-- [ ] Production kaynak sorgusu ve yalnız toplu sonuç veren ilk canlı veri kalite çalıştırması.
+- [ ] Production kaynak sorgusu ve yalnız toplu sonuç veren ilk canlı veri kalite çalıştırması. Hedef `lvnmzdowhfzmpkueurih` doğrulandı; mevcut Vercel CLI oturumu listede bulunan service-role değerini indiremediği için sayım çalıştırılmadı.
 - [ ] Kaynak sorgular doğrulandıktan sonra gerekli olup olmadığına karar verilecek günlük agrega migration'ı.
 - [x] Tenant-sınırlı ilk öğrenci analiz API sözleşmesi.
 - [x] İlk kurum öğrenci analiz UI.
-- [ ] Sınıf/kurum agregaları ve öğretmen gösterge UI.
+- [x] Sınıf agregaları ve öğretmen gösterge UI.
 
 ### 19.2 Kurum öğrenci analiz dilimi — 2026-08-13
 
@@ -934,7 +934,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Eksik kanıtı sıfır başarıya çevirmeyen güven/status builder'ı.
 - [x] Ham kullanıcı, cevap, soru, oturum ve attempt kimliklerini reddeden public API sözleşmesi.
 - [x] Varsayılan kapalı server feature flag, route/SQL güvenlik ve contract testleri.
-- [ ] Migration 114'ün hedef Supabase projesine uygulanması ve şema tiplerinin canlı şemadan yeniden üretilmesi.
+- [ ] Migration 114–119'un hedef Supabase projesine uygulanması ve şema tiplerinin canlı şemadan yeniden üretilmesi.
 - [ ] Sentetik tenant/classroom fixture ile canlı RPC smoke testi.
 - [x] İlk kurum, sınıf ve öğrenci takip arayüzü.
 
@@ -946,7 +946,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Sınıf ve öğrenci seçimi; TYT Matematik outcome durum, güven, payda ve son kanıt görünümü.
 - [x] Eksik kanıtta sayısal sıfır yerine `Kanıt yetersiz` gösterimi.
 - [x] 320, 375 ve 390 px fixture render testleri; uzun kurum, sınıf, öğrenci ve kazanım metinleri.
-- [ ] Migration 114/115 ve iki server/client feature flag production'da kapalıdır; deploy/canlı smoke yapılmadı.
+- [ ] Migration 114–119 ve üç server/client feature flag production'da uygulanmadı/açılmadı; deploy/canlı smoke yapılmadı.
 
 ### 19.4 Haftalık program üretim çekirdeği — 2026-08-14
 
@@ -971,7 +971,8 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Her boyutta görünür pay, payda, uygun öğrenci ve hariç tutulan yetersiz veri sayısı.
 - [x] Üçten az öğrenci veya gözlemde yüzdelik değeri gizleyen küçük örneklem kapısı.
 - [x] Kaynağı henüz olmayan takip/müdahale boyutlarında sahte sıfır yerine `veri yetersiz`.
-- [ ] Kurumsal program ve takip kaynak adapter'ı ile tenant-sınırlı öğretmen API/UI.
+- [x] Kurumsal program kaynak adapter'ı ile tenant-sınırlı öğretmen API/UI.
+- [ ] Takip/müdahale kayıt kaynağı ve bu iki öğretmen gösterge boyutunun adapter'ı.
 
 ### 19.6 Sınıf agregası hesaplama çekirdeği — 2026-08-14
 
@@ -993,3 +994,11 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Yalnız öğretmen görünümünde, adres toplamadan ve gönderim yapmadan panoya kopyalama.
 - [x] Metinde öğretmen incelemesi ve kişiselleştirmesi gerektiğini açıkça belirtme.
 - [ ] Hukuki/teknik kabul sonrası tekil manuel e-posta gönderimi ve audit kaydı.
+
+### 19.8 Production salt-okunur doğrulama denemesi — 2026-08-14
+
+- [x] Vercel proje adı/kimliği ve Supabase proje referansı çapraz doğrulandı: `bilge-arena` → `lvnmzdowhfzmpkueurih`.
+- [x] `vercel env pull` ve `vercel pull --environment=production` geçici dosyalarla denendi; dosyalar işlem sonunda silindi.
+- [x] Değişken listesinde `SUPABASE_SERVICE_ROLE_KEY` bulunduğu doğrulandı; mevcut CLI oturumu encrypted değeri indirmedi.
+- [x] Anahtarsız durumda anon/RLS atlatması veya production yazması denenmedi.
+- [ ] Yetkili service-role aktarımı veya Supabase tarafında yalnız toplu sonuç döndüren onaylı RPC sonrası canlı veri kalite sayımı.
