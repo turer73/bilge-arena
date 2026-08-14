@@ -237,6 +237,7 @@ export default function ArenaClient() {
         </div>
         <ArenaExploreGrid
           classroomEnabled={process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'}
+          institutionEnabled={process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'}
         />
       </section>
 

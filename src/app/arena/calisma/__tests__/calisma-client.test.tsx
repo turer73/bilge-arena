@@ -19,6 +19,9 @@ vi.mock('@/components/study/today-plan-focus', () => ({
 vi.mock('@/components/study/mastery-action-card', () => ({
   MasteryActionCard: () => <div data-testid="mastery-action-card" />,
 }))
+vi.mock('@/components/study/institution-weekly-program-card', () => ({
+  InstitutionWeeklyProgramCard: () => <div data-testid="institution-weekly-program" />,
+}))
 
 const mockedUseAuthStore = vi.mocked(useAuthStore)
 
@@ -65,6 +68,7 @@ describe('CalismaClient', () => {
     expect(screen.getByRole('button', { name: 'TYT' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
     expect(screen.getByTestId('today-plan-focus')).toBeInTheDocument()
+    expect(screen.getByTestId('institution-weekly-program')).toBeInTheDocument()
     expect(screen.getByTestId('mastery-action-card')).toBeInTheDocument()
   })
 

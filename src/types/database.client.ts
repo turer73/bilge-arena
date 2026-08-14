@@ -535,6 +535,81 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
+      get_institution_student_learning_analysis: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_exam_ref: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
+      get_institution_tracking_directory: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      create_institution_study_program_draft: {
+        Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_week_start: string; p_daily_minute_limit: number; p_model_version: string; p_items: Json; p_request_id: string }
+        Returns: Json
+      }
+      publish_institution_study_program: {
+        Args: { p_user_id: string; p_program_ref: string; p_request_id: string }
+        Returns: Json
+      }
+      get_institution_classroom_published_program_members: {
+        Args: { p_user_id: string; p_classroom_id: string; p_window_start: string; p_window_end: string }
+        Returns: Json
+      }
+      update_institution_study_program_draft: {
+        Args: { p_user_id: string; p_program_ref: string; p_week_start: string; p_daily_minute_limit: number; p_items: Json; p_request_id: string }
+        Returns: Json
+      }
+      get_my_institution_study_programs: {
+        Args: { p_user_id: string; p_as_of_date: string }
+        Returns: Json
+      }
+      open_institution_student_followup: {
+        Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_reason_code: string; p_note: string | null; p_request_id: string }
+        Returns: Json
+      }
+      resolve_institution_student_followup: {
+        Args: { p_user_id: string; p_followup_ref: string; p_request_id: string }
+        Returns: Json
+      }
+      get_institution_classroom_followup_metrics: {
+        Args: { p_user_id: string; p_classroom_id: string; p_window_start: string; p_window_end: string }
+        Returns: Json
+      }
+      get_institution_student_followups: {
+        Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string }
+        Returns: Json
+      }
+      get_institution_classroom_growth_metrics: {
+        Args: { p_user_id: string; p_classroom_id: string; p_window_end: string }
+        Returns: Json
+      }
+      get_institution_student_program_history: {
+        Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string }
+        Returns: Json
+      }
+      preview_institution_study_program_review: {
+        Args: { p_user_id: string; p_program_ref: string }
+        Returns: Json
+      }
+      review_institution_study_program: {
+        Args: { p_user_id: string; p_program_ref: string; p_teacher_result: string; p_note: string | null; p_request_id: string }
+        Returns: Json
+      }
+      create_institution_student_report: {
+        Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_snapshot: Json; p_request_id: string }
+        Returns: Json
+      }
+      get_institution_student_reports: {
+        Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string }
+        Returns: Json
+      }
       issue_verified_exam_attempt: {
         Args: {
           p_user_id: string

@@ -64,7 +64,6 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
       targetRef.current?.focus()
       return
     }
-
     requestRef.current?.abort()
     const controller = new AbortController()
     requestRef.current = controller
