@@ -13,6 +13,8 @@ import {
   Save,
   Trash2,
   Printer,
+  Mail,
+  ClipboardCheck,
   ShieldCheck,
   Users,
 } from 'lucide-react'
@@ -31,6 +33,7 @@ import type { InstitutionStudentLearningAnalysis } from '@/lib/institution-track
 import type { InstitutionStudyProgramDraftResponse } from '@/lib/institution-tracking/study-program'
 import type { InstitutionClassroomOverview } from '@/lib/institution-tracking/classroom-overview'
 import { ClassroomOverviewPanel } from './classroom-overview-panel'
+import { buildGuardianStatusEmailDraft } from '@/lib/institution-tracking/guardian-email-draft'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -363,6 +366,8 @@ function AnalysisPanel({
   const [programBusy, setProgramBusy] = useState(false)
   const [programError, setProgramError] = useState<string | null>(null)
   const [programDirty, setProgramDirty] = useState(false)
+  const [emailDraftStatus, setEmailDraftStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+  const guardianEmailDraft = useMemo(() => buildGuardianStatusEmailDraft(analysis), [analysis])
 
   useEffect(() => {
     setProgram(null)
@@ -425,6 +430,14 @@ function AnalysisPanel({
     finally { setProgramBusy(false) }
   }
 
+  async function copyGuardianEmailDraft() {
+    if (!guardianEmailDraft) return
+    try {
+      await navigator.clipboard.writeText(`Konu: ${guardianEmailDraft.subject}\n\n${guardianEmailDraft.body}`)
+      setEmailDraftStatus('copied')
+    } catch { setEmailDraftStatus('error') }
+  }
+
   return (
     <div className="min-w-0 space-y-4">
       <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
@@ -446,6 +459,12 @@ function AnalysisPanel({
           <SummaryCard label="Gelişiyor" value={analysis.summary.developingOutcomeCount} tone="sky" icon={<BarChart3 />} />
           <SummaryCard label="Kanıt yetersiz" value={analysis.summary.insufficientOutcomeCount} tone="amber" icon={<AlertTriangle />} />
         </div>
+        {canManagePrograms && guardianEmailDraft && (
+          <div className="mt-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0"><p className="flex items-center gap-2 text-sm font-black"><Mail className="h-4 w-4 text-[var(--primary)]" /> Veli bilgilendirme taslağı</p><p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Adres saklanmaz ve sistem gönderim yapmaz. Metni inceleyip kendi e-posta aracında kullanın.</p></div>
+            <button type="button" onClick={copyGuardianEmailDraft} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold"><ClipboardCheck className="h-4 w-4" /> {emailDraftStatus === 'copied' ? 'Kopyalandı' : emailDraftStatus === 'error' ? 'Kopyalanamadı' : 'E-posta taslağını kopyala'}</button>
+          </div>
+        )}
       </section>
 
       {canManagePrograms && (

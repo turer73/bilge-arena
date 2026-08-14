@@ -985,3 +985,11 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [ ] 100+ öğrenci veya ölçülen p95 bütçesi aşılırsa N+1 pilot adapter yerine tek batch RPC.
 - [x] Kurum çalışma alanında sınıf özeti, gizlilik eşikli outcome öncelikleri ve beş ayrı öğretmen gösterge kartı.
 - [x] Sınıf agregası alınamazsa geçerli öğrenci analizini ayrı tutan kısmi ekran hata sınırı.
+
+### 19.7 Veli bilgilendirme ilk güvenli akışı — 2026-08-14
+
+- [x] Güçlü/gelişen/yetersiz kanıt ayrımını koruyan, başarısızlık hükmü üretmeyen Türkçe e-posta taslağı.
+- [x] Ham kullanıcı, sınıf, program, üyelik ve outcome kodlarını metinden çıkaran strict sözleşme.
+- [x] Yalnız öğretmen görünümünde, adres toplamadan ve gönderim yapmadan panoya kopyalama.
+- [x] Metinde öğretmen incelemesi ve kişiselleştirmesi gerektiğini açıkça belirtme.
+- [ ] Hukuki/teknik kabul sonrası tekil manuel e-posta gönderimi ve audit kaydı.
