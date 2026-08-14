@@ -18,6 +18,12 @@ import {
   institutionClassroomOverviewSchema,
   type InstitutionClassroomOverview,
 } from './classroom-overview'
+import {
+  institutionFollowupListSchema,
+  institutionFollowupMutationSchema,
+  type InstitutionFollowupList,
+  type InstitutionFollowupMutation,
+} from './followup'
 
 export function isInstitutionTrackingUiEnabled(): boolean {
   return process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
@@ -107,4 +113,38 @@ export function updateInstitutionStudyProgramDraft(
     if (!parsed.success) throw new InstitutionTrackingClientError(500)
     return parsed.data
   })
+}
+
+export function fetchInstitutionStudentFollowups(
+  classroomId: string,
+  memberRef: string,
+  signal?: AbortSignal,
+): Promise<InstitutionFollowupList> {
+  const query = new URLSearchParams({ classroomId, memberRef })
+  return requestJson(`/api/institution/tracking/followups?${query}`, institutionFollowupListSchema, signal)
+}
+
+export function openInstitutionStudentFollowup(input: {
+  classroomId: string
+  memberRef: string
+  reasonCode: 'support_needed' | 'inactivity' | 'learning_decline' | 'program_review'
+  note: string | null
+}): Promise<InstitutionFollowupMutation> {
+  return postJson('/api/institution/tracking/followups', {
+    ...input,
+    requestId: crypto.randomUUID(),
+  }, institutionFollowupMutationSchema)
+}
+
+export async function resolveInstitutionStudentFollowup(
+  followupRef: string,
+): Promise<InstitutionFollowupMutation> {
+  const response = await fetch(`/api/institution/tracking/followups/${encodeURIComponent(followupRef)}`, {
+    method: 'PATCH', cache: 'no-store', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ requestId: crypto.randomUUID() }),
+  })
+  if (!response.ok) throw new InstitutionTrackingClientError(response.status)
+  const parsed = institutionFollowupMutationSchema.safeParse(await response.json().catch(() => null))
+  if (!parsed.success) throw new InstitutionTrackingClientError(500)
+  return parsed.data
 }

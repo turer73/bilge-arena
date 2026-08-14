@@ -31,12 +31,15 @@ export const institutionFollowupOpenInputSchema = z.object({
   requestId: z.string().uuid(),
 }).strict()
 
-export const institutionFollowupMutationSchema = z.object({
+const institutionFollowupBaseSchema = z.object({
   followupRef: refSchema,
   reasonCode: institutionFollowupReasonSchema,
   status: z.enum(['open', 'resolved']),
   openedAt: timestampSchema,
   resolvedAt: timestampSchema.nullable(),
+}).strict()
+
+export const institutionFollowupMutationSchema = institutionFollowupBaseSchema.extend({
   replayed: z.boolean(),
 }).strict().superRefine((value, context) => {
   if ((value.status === 'open' && value.resolvedAt !== null)
@@ -45,9 +48,23 @@ export const institutionFollowupMutationSchema = z.object({
   }
 })
 
+export const institutionFollowupRecordSchema = institutionFollowupBaseSchema.extend({
+  note: z.string().trim().min(1).max(500).nullable(),
+}).strict().superRefine((value, context) => {
+  if ((value.status === 'open' && value.resolvedAt !== null)
+    || (value.status === 'resolved' && value.resolvedAt === null)) {
+    context.addIssue({ code: 'custom', message: 'follow-up status mismatch' })
+  }
+})
+
+export const institutionFollowupListSchema = z.object({
+  followups: z.array(institutionFollowupRecordSchema).max(20),
+}).strict()
+
 export const institutionFollowupResolveInputSchema = z.object({
   requestId: z.string().uuid(),
 }).strict()
 
 export type InstitutionFollowupMetrics = z.infer<typeof institutionFollowupMetricsSchema>
 export type InstitutionFollowupMutation = z.infer<typeof institutionFollowupMutationSchema>
+export type InstitutionFollowupList = z.infer<typeof institutionFollowupListSchema>

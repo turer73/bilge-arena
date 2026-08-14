@@ -34,6 +34,7 @@ import type { InstitutionStudyProgramDraftResponse } from '@/lib/institution-tra
 import type { InstitutionClassroomOverview } from '@/lib/institution-tracking/classroom-overview'
 import { ClassroomOverviewPanel } from './classroom-overview-panel'
 import { buildGuardianStatusEmailDraft } from '@/lib/institution-tracking/guardian-email-draft'
+import { StudentFollowupPanel } from './student-followup-panel'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -344,6 +345,7 @@ export function InstitutionTrackingDashboard() {
                 analysis={analysis}
                 classroomId={selectedClassroomId!}
                 canManagePrograms={directory.membership.role === 'teacher'}
+                onFollowupChanged={() => setRefreshKey((value) => value + 1)}
               />
             )}
           </main>
@@ -357,10 +359,12 @@ function AnalysisPanel({
   analysis,
   classroomId,
   canManagePrograms,
+  onFollowupChanged,
 }: {
   analysis: InstitutionStudentLearningAnalysis
   classroomId: string
   canManagePrograms: boolean
+  onFollowupChanged: () => void
 }) {
   const [program, setProgram] = useState<InstitutionStudyProgramDraftResponse | null>(null)
   const [programBusy, setProgramBusy] = useState(false)
@@ -466,6 +470,14 @@ function AnalysisPanel({
           </div>
         )}
       </section>
+
+      {canManagePrograms && (
+        <StudentFollowupPanel
+          classroomId={classroomId}
+          memberRef={analysis.student.memberRef}
+          onChanged={onFollowupChanged}
+        />
+      )}
 
       {canManagePrograms && (
         <section className="institution-program-print-root rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">

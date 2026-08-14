@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   createProgram: vi.fn(),
   publishProgram: vi.fn(),
   updateProgram: vi.fn(),
+  fetchFollowups: vi.fn(),
+  openFollowup: vi.fn(),
+  resolveFollowup: vi.fn(),
 }))
 vi.mock('@/lib/institution-tracking/client', () => ({
   isInstitutionTrackingUiEnabled: mocks.enabled,
@@ -19,6 +22,9 @@ vi.mock('@/lib/institution-tracking/client', () => ({
   createInstitutionStudyProgramDraft: mocks.createProgram,
   publishInstitutionStudyProgram: mocks.publishProgram,
   updateInstitutionStudyProgramDraft: mocks.updateProgram,
+  fetchInstitutionStudentFollowups: mocks.fetchFollowups,
+  openInstitutionStudentFollowup: mocks.openFollowup,
+  resolveInstitutionStudentFollowup: mocks.resolveFollowup,
   InstitutionTrackingClientError: class InstitutionTrackingClientError extends Error {
     constructor(readonly status: number) { super(`institution_tracking_request_${status}`) }
   },
@@ -127,6 +133,9 @@ beforeEach(() => {
   })
   mocks.updateProgram.mockResolvedValue({ programRef: 'c'.repeat(32), status: 'draft', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 1, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: null, publishedAt: null, replayed: false })
   mocks.publishProgram.mockResolvedValue({ programRef: 'c'.repeat(32), status: 'published', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 1, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: '2026-08-14T00:05:00.000Z', publishedAt: '2026-08-14T00:05:00.000Z', replayed: false })
+  mocks.fetchFollowups.mockResolvedValue({ followups: [] })
+  mocks.openFollowup.mockResolvedValue({ followupRef: 'd'.repeat(32), reasonCode: 'support_needed', status: 'open', openedAt: '2026-08-14T09:00:00.000Z', resolvedAt: null, replayed: false })
+  mocks.resolveFollowup.mockResolvedValue({ followupRef: 'd'.repeat(32), reasonCode: 'support_needed', status: 'resolved', openedAt: '2026-08-14T09:00:00.000Z', resolvedAt: '2026-08-14T10:00:00.000Z', replayed: false })
 })
 
 describe('InstitutionTrackingDashboard', () => {

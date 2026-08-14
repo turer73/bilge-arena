@@ -582,6 +582,10 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_classroom_id: string; p_window_start: string; p_window_end: string }
         Returns: Json
       }
+      get_institution_student_followups: {
+        Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string }
+        Returns: Json
+      }
       issue_verified_exam_attempt: {
         Args: {
           p_user_id: string
