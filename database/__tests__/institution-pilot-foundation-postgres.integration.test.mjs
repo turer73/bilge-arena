@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import pg from 'pg'
 import { randomUUID } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -23,8 +23,12 @@ const suite = url && process.env.INSTITUTION_PILOT_TEST_DATABASE_DISPOSABLE === 
 const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations')
 const classroomSql = readFileSync(join(migrationsDir, '105_teacher_classroom_privacy.sql'), 'utf8')
 const institutionSql = readFileSync(join(migrationsDir, '112_institution_pilot_foundation.sql'), 'utf8')
+const institutionTrackingSql = readdirSync(migrationsDir)
+  .filter((name) => /^(11[4-9]|12[0-4])_.*\.sql$/.test(name))
+  .sort()
+  .map((name) => ({ name, sql: readFileSync(join(migrationsDir, name), 'utf8') }))
 
-suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
+suite('112-124 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -158,6 +162,13 @@ suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
     await client.query('DELETE FROM public.teacher_classrooms WHERE teacher_id=$1', [legacyTeacher])
     await client.query('DELETE FROM public.profiles WHERE id=$1', [legacyTeacher])
     await client.query(institutionSql)
+    for (const migration of institutionTrackingSql) {
+      try {
+        await client.query(migration.sql)
+      } catch (error) {
+        throw new Error(`Failed to compile ${migration.name}: ${error.message}`, { cause: error })
+      }
+    }
 
     platformAdmin = randomUUID()
     managerOne = randomUUID()
