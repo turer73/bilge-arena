@@ -24,11 +24,11 @@ const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'migra
 const classroomSql = readFileSync(join(migrationsDir, '105_teacher_classroom_privacy.sql'), 'utf8')
 const institutionSql = readFileSync(join(migrationsDir, '112_institution_pilot_foundation.sql'), 'utf8')
 const institutionTrackingSql = readdirSync(migrationsDir)
-  .filter((name) => /^(11[4-9]|12[0-5])_.*\.sql$/.test(name))
+  .filter((name) => /^(11[4-9]|12[0-6])_.*\.sql$/.test(name))
   .sort()
   .map((name) => ({ name, sql: readFileSync(join(migrationsDir, name), 'utf8') }))
 
-suite('112-125 institution pilot real PostgreSQL acceptance', () => {
+suite('112-126 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -37,6 +37,7 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
   let institutionOne
   let institutionTwo
   let teacherMemberRef
+  let customRoleRef
   const capacityTeachers = []
 
   async function service(query, values = []) {
@@ -323,6 +324,60 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
     expect(row.rows[0]).toEqual({ institution_id: institutionOne, teacher_id: teacherOne })
   })
 
+  it('keeps tenant roles manager-owned, delegable-only and effective on the directory', async () => {
+    const managerClassroom = await rpc('public.create_teacher_classroom($1,$2,$3)', [
+      managerOne, 'Kurum Yöneticisi Sınıfı', randomUUID(),
+    ])
+    expect((await rpc('public.get_institution_tracking_directory($1)', [teacherOne])).classrooms)
+      .toHaveLength(1)
+
+    const requestId = randomUUID()
+    const created = await rpc('public.create_my_institution_role($1,$2,$3,$4,$5)', [
+      managerOne,
+      'Rehberlik Koordinatörü',
+      'Kurumun bütün aktif sınıflarını takip eder.',
+      ['institution.classrooms.view_all'],
+      requestId,
+    ])
+    customRoleRef = created.roleRef
+    expect(await rpc('public.create_my_institution_role($1,$2,$3,$4,$5)', [
+      managerOne,
+      'Rehberlik Koordinatörü',
+      'Kurumun bütün aktif sınıflarını takip eder.',
+      ['institution.classrooms.view_all'],
+      requestId,
+    ])).toMatchObject({ roleRef: customRoleRef, replayed: true })
+
+    await expectPgError(
+      () => rpc('public.create_my_institution_role($1,$2,$3,$4,$5)', [
+        managerOne, 'Yetki Yükseltme', 'Yönetici yetkisi alınmamalı.',
+        ['institution.roles.manage'], randomUUID(),
+      ]),
+      '42501',
+    )
+    await expectPgError(
+      () => rpc('public.get_my_institution_role_directory($1)', [teacherOne]),
+      '42501',
+    )
+
+    const roleDirectory = await rpc('public.get_my_institution_role_directory($1)', [managerOne])
+    expect(roleDirectory.roles).toEqual(expect.arrayContaining([
+      expect.objectContaining({ roleRef: customRoleRef, system: false, memberCount: 0 }),
+      expect.objectContaining({ roleKey: 'manager', system: true }),
+      expect.objectContaining({ roleKey: 'teacher', system: true }),
+    ]))
+    await rpc('public.set_my_institution_role_assignment($1,$2,$3,$4,$5)', [
+      managerOne, customRoleRef, teacherMemberRef, true, randomUUID(),
+    ])
+    expect(await rpc('public.institution_member_has_permission($1,$2,$3)', [
+      teacherOne, institutionOne, 'institution.classrooms.view_all',
+    ])).toBe(true)
+    expect((await rpc('public.get_institution_tracking_directory($1)', [teacherOne])).classrooms)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: managerClassroom.classroom.id }),
+      ]))
+  })
+
   it('blocks cross-tenant management and enforces the six-person capacity', async () => {
     const second = await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
       platformAdmin, 'Bilge Pilot İki', managerTwo, randomUUID(),
@@ -336,6 +391,12 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
     )
     expect((await rpc('public.get_my_pilot_institution($1)', [managerTwo])).institution.id)
       .toBe(second.institution.id)
+    await expectPgError(
+      () => rpc('public.set_my_institution_role_assignment($1,$2,$3,$4,$5)', [
+        managerTwo, customRoleRef, teacherMemberRef, true, randomUUID(),
+      ]),
+      'P0002',
+    )
 
     // manager + teacherOne + four more teachers = six active staff.
     for (const teacherId of capacityTeachers.slice(0, 4)) {
@@ -385,6 +446,13 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
       () => service(
         'INSERT INTO public.pilot_institutions(name,created_by) VALUES($1,$2)',
         ['Direct', platformAdmin],
+      ),
+      '42501',
+    )
+    await expectPgError(
+      () => service(
+        'INSERT INTO public.institution_roles(institution_id,name,created_by) VALUES($1,$2,$3)',
+        [institutionOne, 'Direct Role', managerOne],
       ),
       '42501',
     )

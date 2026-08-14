@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
@@ -16,6 +17,7 @@ import {
   Mail,
   ClipboardCheck,
   ShieldCheck,
+  UserRoundCog,
   Users,
 } from 'lucide-react'
 import { TR_TIME_ZONE } from '@/lib/utils/tr-date'
@@ -122,6 +124,7 @@ export function InstitutionTrackingDashboard() {
   const selectedClassroom = useMemo(() => directory?.classrooms.find(
     (classroom) => classroom.id === selectedClassroomId,
   ) ?? null, [directory, selectedClassroomId])
+  const canAnalyzeSelectedClassroom = selectedClassroom?.canAnalyze !== false
 
   useEffect(() => {
     if (!selectedClassroom) {
@@ -136,7 +139,7 @@ export function InstitutionTrackingDashboard() {
   }, [selectedClassroom])
 
   useEffect(() => {
-    if (!selectedClassroomId) {
+    if (!selectedClassroomId || !canAnalyzeSelectedClassroom) {
       setClassroomOverview(null)
       setClassroomOverviewError(false)
       return
@@ -159,10 +162,10 @@ export function InstitutionTrackingDashboard() {
       }
     })
     return () => controller.abort()
-  }, [selectedClassroomId, refreshKey])
+  }, [canAnalyzeSelectedClassroom, selectedClassroomId, refreshKey])
 
   useEffect(() => {
-    if (!selectedClassroomId || !selectedMemberRef) {
+    if (!selectedClassroomId || !selectedMemberRef || !canAnalyzeSelectedClassroom) {
       setAnalysis(null)
       return
     }
@@ -188,7 +191,7 @@ export function InstitutionTrackingDashboard() {
       }
     })
     return () => controller.abort()
-  }, [selectedClassroomId, selectedMemberRef, refreshKey])
+  }, [canAnalyzeSelectedClassroom, selectedClassroomId, selectedMemberRef, refreshKey])
 
   if (!enabled) {
     return (
@@ -236,8 +239,15 @@ export function InstitutionTrackingDashboard() {
               {directory.membership.role === 'manager' ? 'Kurum yöneticisi görünümü' : 'Öğretmen görünümü'} · Açıklanabilir öğrenci takibi
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200">
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Doğrulanmış kanıt
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {directory.membership.role === 'manager' && (
+              <Link href="/arena/kurum/roller" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-400/10 px-3 text-xs font-black text-sky-100 hover:bg-sky-400/15">
+                <UserRoundCog className="h-4 w-4" aria-hidden="true" /> Kurum Rolleri
+              </Link>
+            )}
+            <div className="flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Doğrulanmış kanıt
+            </div>
           </div>
         </div>
       </header>
@@ -313,7 +323,17 @@ export function InstitutionTrackingDashboard() {
           </aside>
 
           <main className="min-w-0 space-y-4" aria-live="polite">
-            {classroomOverviewLoading && !classroomOverview ? (
+            {!canAnalyzeSelectedClassroom ? (
+              <section className="rounded-2xl border border-sky-400/20 bg-sky-400/[0.06] p-5">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-sky-300" aria-hidden="true" />
+                  <div>
+                    <h2 className="text-base font-black">Dizin erişimi açık, öğrenme analizi sınırlı</h2>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">Atanan kurum rolü bu sınıfın kadro ve öğrenci dizinini görmenizi sağlar. Ayrıntılı kazanım analizi, program ve rapor işlemleri sınıfın kendi öğretmeni ile kurum yöneticisinde kalır.</p>
+                  </div>
+                </div>
+              </section>
+            ) : classroomOverviewLoading && !classroomOverview ? (
               <div className="h-64 animate-pulse rounded-2xl bg-white/5" aria-label="Sınıf özeti yükleniyor" />
             ) : classroomOverview ? (
               <ClassroomOverviewPanel overview={classroomOverview} />
@@ -322,7 +342,7 @@ export function InstitutionTrackingDashboard() {
                 Sınıf özeti eksiksiz doğrulanamadığı için gösterilmiyor. Öğrenci analizi ayrı olarak kullanılabilir.
               </section>
             ) : null}
-            {!selectedMemberRef ? (
+            {!canAnalyzeSelectedClassroom ? null : !selectedMemberRef ? (
               <section className="rounded-2xl border border-dashed border-white/15 bg-[var(--surface)] p-8 text-center">
                 <Users className="mx-auto h-9 w-9 text-[var(--text-sub)]" aria-hidden="true" />
                 <p className="mt-3 text-sm text-[var(--text-sub)]">Analiz için aktif bir öğrenci seçin.</p>
