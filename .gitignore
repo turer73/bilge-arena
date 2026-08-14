@@ -1,9 +1,10 @@
 # Node
 node_modules/
 .next/
-.env
-.env.local
-.env.*.local
+# Butun .env varyantlari (.env.vercel, .env.production vb. dahil); yalniz
+# ornek dosya izlenir. Tek tek desen yazmak .env.vercel'i disarida birakmisti.
+.env*
+!.env.example
 
 # OS
 .DS_Store
