@@ -11,6 +11,7 @@ import { TodayPlanFocus } from '@/components/study/today-plan-focus'
 import { MasteryActionCard } from '@/components/study/mastery-action-card'
 import { StudyContextSelector } from '@/components/study/study-context-selector'
 import { StudyAssistantLauncher } from '@/components/study/study-assistant-launcher'
+import { InstitutionWeeklyProgramCard } from '@/components/study/institution-weekly-program-card'
 
 function examRefsForGame(game: GameSlug, examType: string | null | undefined): string[] {
   const refs = [...GAMES[game].examTags]
@@ -113,6 +114,7 @@ export default function CalismaClient() {
 
       <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] lg:gap-6">
         <section aria-label="Çalışma planın" className="min-w-0 space-y-4">
+          <InstitutionWeeklyProgramCard />
           <TodayPlanFocus
             game={game}
             userId={user.id}

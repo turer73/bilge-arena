@@ -963,7 +963,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Yalnız haftalık program kartını A4 yazdırma/PDF çıktısına alan öğretmen görünümü.
 - [x] Öğrencinin yalnız kendi aktif üyeliğindeki yayınlanmış güncel-hafta programlarını okuyan service-only RPC/API.
 - [x] Taslakları ve program/öğretmen/üyelik UUID'lerini öğrenci yanıtından çıkaran strict sözleşme.
-- [ ] `/arena/calisma` haftalık kurum programı kartı.
+- [x] `/arena/calisma` haftalık kurum programı kartı; program yoksa boş alan bırakmayan, hata halinde kişisel planı engellemeyen görünüm.
 
 ### 19.5 Öğretmen gösterge hesaplama çekirdeği — 2026-08-14
 
