@@ -38,4 +38,18 @@ describe('institution role contract', () => {
     expect(institutionRoleWriteSchema.safeParse({ ...base, permissions: ['institution.roles.manage'] }).success).toBe(false)
     expect(institutionRoleWriteSchema.safeParse({ ...base, permissions: ['institution.unknown'] }).success).toBe(false)
   })
+
+  it('rejects duplicate role refs and assignments to unknown roles', () => {
+    const role = { roleRef: managerRoleRef, name: 'Kurum Yöneticisi', description: 'Sistem yöneticisi.', system: true, roleKey: 'manager', permissions: [], memberCount: 1 }
+    const base = {
+      permissions: [],
+      roles: [role],
+      members: [{ memberRef, alias: 'Öğretmen Bir', membershipRole: 'teacher', roleRefs: [managerRoleRef] }],
+    }
+    expect(institutionRoleDirectorySchema.safeParse({ ...base, roles: [role, role] }).success).toBe(false)
+    expect(institutionRoleDirectorySchema.safeParse({
+      ...base,
+      members: [{ ...base.members[0], roleRefs: [customRoleRef] }],
+    }).success).toBe(false)
+  })
 })

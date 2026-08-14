@@ -81,7 +81,10 @@ export function InstitutionRoleManager() {
     setName(role.name)
     setDescription(role.description ?? '')
     setPermissions(role.permissions.filter((permission) => delegable.some((item) => item.permission === permission)))
-    document.getElementById('create-role-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const editor = document.getElementById('create-role-title')
+    if (typeof editor?.scrollIntoView === 'function') {
+      editor.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }
 
   async function saveRole() {

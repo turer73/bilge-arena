@@ -53,4 +53,18 @@ describe('institution role routes', () => {
     mocks.rpc.mockResolvedValueOnce({ data: { roleRef: ROLE_REF, memberRef: MEMBER_REF, assigned: false, replayed: false }, error: null })
     expect((await REVOKE(request('x', 'DELETE', { requestId: REQUEST_ID }), { params: Promise.resolve({ roleRef: ROLE_REF, memberRef: MEMBER_REF }) })).status).toBe(200)
   })
+
+  it('fails closed on auth denial, invalid refs, RPC errors and malformed database output', async () => {
+    mocks.context.mockResolvedValueOnce({ ok: false, response: Response.json({ error: 'Yetkisiz' }, { status: 401 }) })
+    expect((await GET(request('/api/institution/roles'))).status).toBe(401)
+
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { code: '42501' } })
+    expect((await GET(request('/api/institution/roles'))).status).toBe(403)
+    mocks.rpc.mockResolvedValueOnce({ data: { roles: [] }, error: null })
+    expect((await GET(request('/api/institution/roles'))).status).toBe(500)
+
+    expect((await PATCH(request('/api/institution/roles/not-valid', 'PATCH', {}), { params: Promise.resolve({ roleRef: 'not-valid' }) })).status).toBe(400)
+    expect((await DELETE(request('/api/institution/roles/not-valid', 'DELETE', { requestId: REQUEST_ID }), { params: Promise.resolve({ roleRef: 'not-valid' }) })).status).toBe(400)
+    expect((await ASSIGN(request('x', 'POST', { requestId: REQUEST_ID }), { params: Promise.resolve({ roleRef: ROLE_REF, memberRef: 'not-valid' }) })).status).toBe(400)
+  })
 })
