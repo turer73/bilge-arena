@@ -57,6 +57,20 @@ export const institutionStudyProgramPublishInputSchema = z.object({
   requestId: z.string().uuid(),
 }).strict()
 
+export const institutionStudyProgramUpdateInputSchema = z.object({
+  weekStart: dateSchema,
+  dailyMinuteLimit: z.number().int().min(20).max(120),
+  items: weeklyStudyProgramDraftSchema.shape.items,
+  requestId: z.string().uuid(),
+}).strict().superRefine((value, context) => {
+  const draft = weeklyStudyProgramDraftSchema.safeParse({
+    status: 'draft', weekStart: value.weekStart, modelVersion: 'institution-program-v1',
+    generatedAt: '2026-01-01T00:00:00.000Z', dailyMinuteLimit: value.dailyMinuteLimit,
+    items: value.items,
+  })
+  if (!draft.success) context.addIssue({ code: 'custom', message: 'invalid updated study program draft' })
+})
+
 export const institutionStudyProgramDraftResponseSchema = z.object({
   program: institutionStudyProgramMutationResultSchema,
   draft: weeklyStudyProgramDraftSchema,
