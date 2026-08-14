@@ -105,7 +105,7 @@ export async function logAdminAction(
   const ip = opts.request ? getClientIp(opts.request.headers) : null
   const userAgent = opts.request?.headers.get('user-agent')?.slice(0, 256) || null
 
-  await supabase.from('admin_logs').insert({
+  return supabase.from('admin_logs').insert({
     admin_id: opts.adminId,
     action: opts.action,
     target_type: opts.targetType,

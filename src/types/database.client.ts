@@ -550,6 +550,30 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string }
         Returns: Json
       }
+      list_pilot_institutions: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_institution_support_directory: {
+        Args: { p_admin_user_id: string; p_institution_id: string }
+        Returns: Json
+      }
+      institution_support_has_access: {
+        Args: { p_admin_user_id: string; p_institution_id: string }
+        Returns: boolean
+      }
+      get_my_institution_support_access: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      grant_my_institution_support_access: {
+        Args: { p_user_id: string; p_duration_minutes: number; p_reason: string; p_request_id: string }
+        Returns: Json
+      }
+      revoke_my_institution_support_access: {
+        Args: { p_user_id: string; p_request_id: string }
+        Returns: Json
+      }
       create_institution_study_program_draft: {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_week_start: string; p_daily_minute_limit: number; p_model_version: string; p_items: Json; p_request_id: string }
         Returns: Json

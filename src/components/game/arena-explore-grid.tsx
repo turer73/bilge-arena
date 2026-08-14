@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import {
   ArrowUpRight,
   Building2,
@@ -83,8 +84,24 @@ export function ArenaExploreGrid({
   classroomEnabled = false,
   institutionEnabled = false,
 }: ArenaExploreGridProps) {
+  const [institutionVisible, setInstitutionVisible] = useState(false)
+
+  useEffect(() => {
+    if (!institutionEnabled) return
+    const controller = new AbortController()
+    fetch('/api/institution/workspace', {
+      cache: 'no-store',
+      signal: controller.signal,
+    }).then((response) => {
+      if (!controller.signal.aborted) setInstitutionVisible(response.ok)
+    }).catch(() => {
+      if (!controller.signal.aborted) setInstitutionVisible(false)
+    })
+    return () => controller.abort()
+  }, [institutionEnabled])
+
   const items = [
-    ...(institutionEnabled ? [INSTITUTION_ITEM] : []),
+    ...(institutionEnabled && institutionVisible ? [INSTITUTION_ITEM] : []),
     ...(classroomEnabled ? [CLASSROOM_ITEM] : []),
     ...EXPLORE_ITEMS,
   ]

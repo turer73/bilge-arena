@@ -24,11 +24,11 @@ const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'migra
 const classroomSql = readFileSync(join(migrationsDir, '105_teacher_classroom_privacy.sql'), 'utf8')
 const institutionSql = readFileSync(join(migrationsDir, '112_institution_pilot_foundation.sql'), 'utf8')
 const institutionTrackingSql = readdirSync(migrationsDir)
-  .filter((name) => /^(11[4-9]|12[0-4])_.*\.sql$/.test(name))
+  .filter((name) => /^(11[4-9]|12[0-5])_.*\.sql$/.test(name))
   .sort()
   .map((name) => ({ name, sql: readFileSync(join(migrationsDir, name), 'utf8') }))
 
-suite('112-124 institution pilot real PostgreSQL acceptance', () => {
+suite('112-125 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -219,6 +219,67 @@ suite('112-124 institution pilot real PostgreSQL acceptance', () => {
         platformAdmin, 'Farklı İsim', managerOne, requestId,
       ]),
       '22023',
+    )
+  })
+
+  it('lists tenants for platform admins without exposing the directory to managers', async () => {
+    await expectPgError(
+      () => rpc('public.list_pilot_institutions($1)', [managerOne]),
+      '42501',
+    )
+    const directory = await rpc('public.list_pilot_institutions($1)', [platformAdmin])
+    expect(directory.institutions).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: institutionOne,
+        name: 'Bilge Pilot Bir',
+        staffCount: 1,
+        classroomCount: 0,
+        studentCount: 0,
+        supportAccess: expect.objectContaining({ active: false }),
+      }),
+    ]))
+  })
+
+  it('keeps support access manager-controlled, read-only, expiring and replay-safe', async () => {
+    expect(await rpc('public.get_my_institution_support_access($1)', [managerOne]))
+      .toMatchObject({ institutionId: institutionOne, active: false, scope: 'read_only' })
+
+    const requestId = randomUUID()
+    const granted = await rpc(
+      'public.grant_my_institution_support_access($1,$2,$3,$4)',
+      [managerOne, 60, 'Kurum kurulumunu birlikte kontrol etmek icin.', requestId],
+    )
+    expect(granted).toMatchObject({
+      institutionId: institutionOne,
+      active: true,
+      scope: 'read_only',
+      replayed: false,
+    })
+    expect(await rpc(
+      'public.grant_my_institution_support_access($1,$2,$3,$4)',
+      [managerOne, 60, 'Kurum kurulumunu birlikte kontrol etmek icin.', requestId],
+    )).toMatchObject({ grantRef: granted.grantRef, replayed: true })
+    expect(await rpc('public.institution_support_has_access($1,$2)', [platformAdmin, institutionOne]))
+      .toBe(true)
+    expect(await rpc('public.institution_support_has_access($1,$2)', [managerOne, institutionOne]))
+      .toBe(false)
+    expect(await rpc('public.get_institution_support_directory($1,$2)', [platformAdmin, institutionOne]))
+      .toMatchObject({
+        institution: { id: institutionOne, name: 'Bilge Pilot Bir' },
+        access: { scope: 'read_only' },
+        classrooms: [],
+      })
+
+    const revoked = await rpc(
+      'public.revoke_my_institution_support_access($1,$2)',
+      [managerOne, randomUUID()],
+    )
+    expect(revoked).toMatchObject({ active: false, scope: 'read_only', replayed: false })
+    expect(await rpc('public.institution_support_has_access($1,$2)', [platformAdmin, institutionOne]))
+      .toBe(false)
+    await expectPgError(
+      () => rpc('public.get_institution_support_directory($1,$2)', [platformAdmin, institutionOne]),
+      '42501',
     )
   })
 
