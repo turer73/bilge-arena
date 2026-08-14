@@ -174,12 +174,16 @@ describe('InstitutionTrackingDashboard', () => {
 
   it.each([320, 375, 390])('lets a teacher inspect and publish a generated draft at %ipx', async (width) => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined)
     mocks.directory.mockResolvedValue({ ...directory, membership: { role: 'teacher' as const } })
     const user = userEvent.setup()
     render(<InstitutionTrackingDashboard />)
     await screen.findByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })
     await user.click(screen.getByRole('button', { name: 'Taslak oluştur' }))
     expect(await screen.findByText('Temel kavramlar durum tespiti')).toBeInTheDocument()
+    expect(document.body).toHaveClass('institution-program-print-page')
+    await user.click(screen.getByRole('button', { name: 'Yazdır / PDF' }))
+    expect(print).toHaveBeenCalledOnce()
     expect(mocks.publishProgram).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: /Sayı kümeleri hedefli soru çalışması görevini çıkar/i }))
     expect(screen.getByText('Kaydedilmemiş değişiklik')).toBeInTheDocument()

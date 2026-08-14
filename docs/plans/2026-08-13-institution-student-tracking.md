@@ -960,7 +960,8 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Öğretmen arayüzünde görev çıkarma, otomatik yeniden sıralama ve değişiklik kaydetme.
 - [x] Kaydedilmemiş taslak değişikliği varken yayınlamayı engelleyen UI değişmezi.
 - [x] Öğretmen çalışma alanında taslağı görev, gerekçe, süre ve tarih bazında inceleyip ayrı eylemle yayınlama.
-- [ ] Öğrenci çalışma ekranı ve yazdırılabilir haftalık görünüm.
+- [x] Yalnız haftalık program kartını A4 yazdırma/PDF çıktısına alan öğretmen görünümü.
+- [ ] Öğrenci çalışma ekranı.
 
 ### 19.5 Öğretmen gösterge hesaplama çekirdeği — 2026-08-14
 

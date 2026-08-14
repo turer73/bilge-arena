@@ -12,6 +12,7 @@ import {
   Send,
   Save,
   Trash2,
+  Printer,
   ShieldCheck,
   Users,
 } from 'lucide-react'
@@ -369,6 +370,12 @@ function AnalysisPanel({
     setProgramDirty(false)
   }, [analysis.student.memberRef])
 
+  useEffect(() => {
+    if (!program) return
+    document.body.classList.add('institution-program-print-page')
+    return () => document.body.classList.remove('institution-program-print-page')
+  }, [program])
+
   async function createProgram() {
     setProgramBusy(true); setProgramError(null)
     try {
@@ -442,25 +449,29 @@ function AnalysisPanel({
       </section>
 
       {canManagePrograms && (
-        <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
+        <section className="institution-program-print-root rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="flex items-center gap-2 text-lg font-black"><CalendarDays className="h-5 w-5 text-[var(--primary)]" /> Haftalık çalışma programı</h3>
               <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Taslak analizden üretilir; siz inceleyip yayınlamadan öğrenciye açılmaz.</p>
             </div>
-            {!program && <button type="button" disabled={programBusy} onClick={createProgram} className="btn-primary min-h-11 rounded-xl px-4 text-sm font-bold disabled:opacity-60">{programBusy ? 'Hazırlanıyor…' : 'Taslak oluştur'}</button>}
+            {!program && <button type="button" disabled={programBusy} onClick={createProgram} className="institution-program-screen-only btn-primary min-h-11 rounded-xl px-4 text-sm font-bold disabled:opacity-60">{programBusy ? 'Hazırlanıyor…' : 'Taslak oluştur'}</button>}
           </div>
           {programError && <p role="alert" className="mt-3 rounded-xl border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-200">{programError}</p>}
           {program && (
             <div className="mt-4 space-y-3">
+              <div className="flex flex-col gap-2 border-b border-white/10 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                <div><p className="text-xs text-[var(--text-sub)]">Öğrenci</p><strong className="block text-base">{analysis.student.alias}</strong></div>
+                <button type="button" onClick={() => window.print()} className="institution-program-screen-only inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold"><Printer className="h-4 w-4" /> Yazdır / PDF</button>
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-xs">
                 <span><strong>{program.draft.weekStart}</strong> haftası · {program.draft.items.length} görev · günlük en fazla {program.program.dailyMinuteLimit} dk</span>
                 <span className={`rounded-lg px-2 py-1 font-black ${program.program.status === 'published' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200'}`}>{program.program.status === 'published' ? 'Yayınlandı' : programDirty ? 'Kaydedilmemiş değişiklik' : 'Taslak'}</span>
               </div>
               <ol className="space-y-2">
-                {program.draft.items.map((item) => <li key={item.position} className="grid gap-2 rounded-xl border border-white/10 p-3 text-sm sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center"><span className="text-xs text-[var(--text-sub)]">{item.scheduledDate}</span><span className="min-w-0 break-words font-bold">{item.title}<small className="mt-1 block font-normal text-[var(--text-sub)]">{item.reasonCode} · {item.targetQuestionCount ?? 0} soru</small></span><span className="flex items-center gap-2 sm:justify-end"><span className="text-xs font-bold text-[var(--primary)]">{item.durationMinutes} dk</span>{program.program.status === 'draft' && <button type="button" disabled={programBusy || program.draft.items.length <= 1} onClick={() => removeProgramItem(item.position)} aria-label={`${item.title} görevini çıkar`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/20 text-red-200 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>}</span></li>)}
+                {program.draft.items.map((item) => <li key={item.position} className="grid gap-2 rounded-xl border border-white/10 p-3 text-sm sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center"><span className="text-xs text-[var(--text-sub)]">{item.scheduledDate}</span><span className="min-w-0 break-words font-bold">{item.title}<small className="mt-1 block font-normal text-[var(--text-sub)]">{item.reasonCode} · {item.targetQuestionCount ?? 0} soru</small></span><span className="flex items-center gap-2 sm:justify-end"><span className="text-xs font-bold text-[var(--primary)]">{item.durationMinutes} dk</span>{program.program.status === 'draft' && <button type="button" disabled={programBusy || program.draft.items.length <= 1} onClick={() => removeProgramItem(item.position)} aria-label={`${item.title} görevini çıkar`} className="institution-program-screen-only inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/20 text-red-200 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>}</span></li>)}
               </ol>
-              {program.program.status === 'draft' && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" disabled={programBusy || !programDirty} onClick={saveProgram} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold disabled:opacity-40"><Save className="h-4 w-4" /> Değişiklikleri kaydet</button><button type="button" disabled={programBusy || programDirty} onClick={publishProgram} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold disabled:opacity-60"><Send className="h-4 w-4" /> {programDirty ? 'Önce değişiklikleri kaydet' : programBusy ? 'Yayınlanıyor…' : 'İnceledim, yayınla'}</button></div>}
+              {program.program.status === 'draft' && <div className="institution-program-screen-only flex flex-col gap-2 sm:flex-row"><button type="button" disabled={programBusy || !programDirty} onClick={saveProgram} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold disabled:opacity-40"><Save className="h-4 w-4" /> Değişiklikleri kaydet</button><button type="button" disabled={programBusy || programDirty} onClick={publishProgram} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold disabled:opacity-60"><Send className="h-4 w-4" /> {programDirty ? 'Önce değişiklikleri kaydet' : programBusy ? 'Yayınlanıyor…' : 'İnceledim, yayınla'}</button></div>}
             </div>
           )}
         </section>
