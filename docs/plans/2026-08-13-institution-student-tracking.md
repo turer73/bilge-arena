@@ -967,3 +967,12 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Üçten az öğrenci veya gözlemde yüzdelik değeri gizleyen küçük örneklem kapısı.
 - [x] Kaynağı henüz olmayan takip/müdahale boyutlarında sahte sıfır yerine `veri yetersiz`.
 - [ ] Kurumsal program ve takip kaynak adapter'ı ile tenant-sınırlı öğretmen API/UI.
+
+### 19.6 Sınıf agregası hesaplama çekirdeği — 2026-08-14
+
+- [x] Aktif roster ile öğrenci analizlerinin bire bir eşleşmesini zorunlu tutan fail-closed sınıf sözleşmesi.
+- [x] Karar güvenli kanıtı olan, desteğe ihtiyaç duyan ve kanıtı yetersiz öğrenci sayıları.
+- [x] Yalnız en az üç öğrencide görülen outcome ihtiyacını sınıf önceliği olarak gösteren gizlilik eşiği.
+- [x] Program yönetimini yalnız desteğe ihtiyacı doğrulanmış öğrencilerde yayınlanan program kapsamıyla ölçme.
+- [x] Baseline ve takip kaynağı yokken öğrenci gelişimi/takip/müdahale boyutlarını açıkça yetersiz bırakma.
+- [ ] Salt-okunur tenant adapter'ı, performans bütçesi ve kurum sınıf/öğretmen ekranı.
