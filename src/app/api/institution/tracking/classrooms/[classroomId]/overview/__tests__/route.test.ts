@@ -37,6 +37,7 @@ beforeEach(() => {
     if (name === 'get_institution_student_learning_analysis') return { data: { memberRef: args.p_member_ref }, error: null }
     if (name === 'get_institution_classroom_published_program_members') return { data: { memberRefs: refs.slice(0, 3) }, error: null }
     if (name === 'get_institution_classroom_followup_metrics') return { data: { followedMemberRefs: refs.slice(0, 2), interventionEligibleCount: 2, timelyInterventionCount: 1, interventionStudentCount: 2 }, error: null }
+    if (name === 'get_institution_classroom_growth_metrics') return { data: { modelVersion: 'institution-growth-v1', baselineWindowStart: '2026-06-19T00:00:00.000Z', baselineWindowEnd: '2026-07-17T00:00:00.000Z', currentWindowStart: '2026-07-17T00:00:00.000Z', currentWindowEnd: args.p_window_end, eligibleStudentCount: 3, positiveGrowthStudentCount: 2, excludedInsufficientCount: 2 }, error: null }
     return { data: null, error: { code: 'P0002' } }
   })
 })
@@ -61,6 +62,7 @@ describe('institution classroom overview route', () => {
       analyses: expect.arrayContaining([expect.objectContaining({ student: { memberRef: refs[0] } })]),
       publishedProgramMemberRefs: refs.slice(0, 3),
       followupMetrics: { followedMemberRefs: refs.slice(0, 2), interventionEligibleCount: 2, timelyInterventionCount: 1, interventionStudentCount: 2 },
+      growthMetrics: expect.objectContaining({ modelVersion: 'institution-growth-v1', eligibleStudentCount: 3, positiveGrowthStudentCount: 2 }),
     }))
     expect(await response.json()).toEqual(overview)
   })

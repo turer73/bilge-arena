@@ -3,6 +3,7 @@ import { institutionStudentLearningAnalysisSchema } from './student-analysis'
 import { buildTeacherIndicatorSet } from './teacher-indicators'
 import { teacherIndicatorSetSchema } from './contracts'
 import { institutionFollowupMetricsSchema } from './followup'
+import { institutionGrowthMetricsSchema } from './growth'
 
 const memberRefSchema = z.string().regex(/^[0-9a-f]{32}$/)
 const timestampSchema = z.string().datetime({ offset: true })
@@ -19,6 +20,7 @@ const inputSchema = z.object({
   analyses: z.array(institutionStudentLearningAnalysisSchema).max(40),
   publishedProgramMemberRefs: z.array(memberRefSchema).max(40),
   followupMetrics: institutionFollowupMetricsSchema,
+  growthMetrics: institutionGrowthMetricsSchema,
 }).strict().superRefine((value, context) => {
   if (Date.parse(value.windowStart) >= Date.parse(value.windowEnd)) {
     context.addIssue({ code: 'custom', message: 'classroom overview window must be increasing' })
@@ -36,6 +38,10 @@ const inputSchema = z.object({
   }
   if (value.followupMetrics.followedMemberRefs.some((ref) => !refs.includes(ref))) {
     context.addIssue({ code: 'custom', message: 'follow-up roster mismatch' })
+  }
+  if (value.growthMetrics.currentWindowEnd !== value.windowEnd
+    || value.growthMetrics.eligibleStudentCount + value.growthMetrics.excludedInsufficientCount !== refs.length) {
+    context.addIssue({ code: 'custom', message: 'growth roster mismatch' })
   }
 })
 
@@ -119,7 +125,7 @@ export function buildInstitutionClassroomOverview(value: unknown) {
     windowStart: parsed.data.windowStart,
     windowEnd: parsed.data.windowEnd,
     dimensions: {
-      studentGrowth: { supported: false, code: 'baseline_adjusted_growth', numerator: 0, denominator: 0, eligibleStudentCount: studentsWithEvidence.length, excludedInsufficientCount: analyses.length - studentsWithEvidence.length },
+      studentGrowth: { supported: true, code: 'baseline_adjusted_growth', numerator: parsed.data.growthMetrics.positiveGrowthStudentCount, denominator: parsed.data.growthMetrics.eligibleStudentCount, eligibleStudentCount: parsed.data.growthMetrics.eligibleStudentCount, excludedInsufficientCount: parsed.data.growthMetrics.excludedInsufficientCount },
       followUpDiscipline: { supported: true, code: 'reviewed_followups', numerator: followedForNeed, denominator: studentsNeedingSupport.length, eligibleStudentCount: studentsNeedingSupport.length, excludedInsufficientCount: analyses.length - studentsWithEvidence.length },
       programManagement: { supported: true, code: 'published_program_need_coverage', numerator: publishedForNeed, denominator: studentsNeedingSupport.length, eligibleStudentCount: studentsNeedingSupport.length, excludedInsufficientCount: analyses.length - studentsWithEvidence.length },
       interventionResponsiveness: { supported: true, code: 'timely_interventions', numerator: parsed.data.followupMetrics.timelyInterventionCount, denominator: parsed.data.followupMetrics.interventionEligibleCount, eligibleStudentCount: parsed.data.followupMetrics.interventionStudentCount, excludedInsufficientCount: parsed.data.followupMetrics.followedMemberRefs.length - parsed.data.followupMetrics.interventionStudentCount },

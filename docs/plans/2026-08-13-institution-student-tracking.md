@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-13
 **Hedef kullanıcı:** 50–100 öğrencili küçük dershaneler
-**Durum:** Plan onaylandı. İlk saf istatistik sözleşmeleri, ürün sağlığı hesaplayıcıları ve birim test fixture'ları çalışma dalında uygulandı. Veri kaynağı adapter'ları, migration, API, UI, canlı pilot ve production doğrulaması henüz yapılmadı.
+**Durum:** Plan onaylandı. Saf istatistik sözleşmeleri, kurum/sınıf/öğrenci analizleri, çalışma programı, takip/müdahale akışı ve beş boyutlu öğretmen göstergeleri çalışma dalında uygulandı. Migration 114–122 henüz production'a uygulanmadı; feature flag, canlı sentetik pilot ve production veri doğrulaması yapılmadı.
 
 ## 1. Ürün kararı
 
@@ -934,7 +934,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Eksik kanıtı sıfır başarıya çevirmeyen güven/status builder'ı.
 - [x] Ham kullanıcı, cevap, soru, oturum ve attempt kimliklerini reddeden public API sözleşmesi.
 - [x] Varsayılan kapalı server feature flag, route/SQL güvenlik ve contract testleri.
-- [ ] Migration 114–119'un hedef Supabase projesine uygulanması ve şema tiplerinin canlı şemadan yeniden üretilmesi.
+- [ ] Migration 114–122'nin hedef Supabase projesine uygulanması ve şema tiplerinin canlı şemadan yeniden üretilmesi.
 - [ ] Sentetik tenant/classroom fixture ile canlı RPC smoke testi.
 - [x] İlk kurum, sınıf ve öğrenci takip arayüzü.
 
@@ -946,7 +946,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Sınıf ve öğrenci seçimi; TYT Matematik outcome durum, güven, payda ve son kanıt görünümü.
 - [x] Eksik kanıtta sayısal sıfır yerine `Kanıt yetersiz` gösterimi.
 - [x] 320, 375 ve 390 px fixture render testleri; uzun kurum, sınıf, öğrenci ve kazanım metinleri.
-- [ ] Migration 114–119 ve üç server/client feature flag production'da uygulanmadı/açılmadı; deploy/canlı smoke yapılmadı.
+- [ ] Migration 114–122 ve üç server/client feature flag production'da uygulanmadı/açılmadı; deploy/canlı smoke yapılmadı.
 
 ### 19.4 Haftalık program üretim çekirdeği — 2026-08-14
 
@@ -970,9 +970,11 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Tek performans puanı veya sıralama üretmeyen beş ayrı boyut.
 - [x] Her boyutta görünür pay, payda, uygun öğrenci ve hariç tutulan yetersiz veri sayısı.
 - [x] Üçten az öğrenci veya gözlemde yüzdelik değeri gizleyen küçük örneklem kapısı.
-- [x] Kaynağı henüz olmayan takip/müdahale boyutlarında sahte sıfır yerine `veri yetersiz`.
+- [x] Kaynağı henüz olmayan boyutlarda sahte sıfır yerine `veri yetersiz`.
 - [x] Kurumsal program kaynak adapter'ı ile tenant-sınırlı öğretmen API/UI.
-- [ ] Takip/müdahale kayıt kaynağı ve bu iki öğretmen gösterge boyutunun adapter'ı.
+- [x] Atanmış öğretmenle sınırlı, idempotent takip açma/kapatma kaynağı ve son 20 kayıtlık öğrenci destek görünümü.
+- [x] Desteğe ihtiyaç duyan öğrenci takip kapsamı ile 14 günlük olgunlaşma pencereli müdahale göstergeleri.
+- [x] Ardışık iki 28 günlük pencere, minimum kanıt/attempt eşiği ve başlangıç düzeyi koruması kullanan öğrenci gelişimi adapter'ı.
 
 ### 19.6 Sınıf agregası hesaplama çekirdeği — 2026-08-14
 
@@ -980,7 +982,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Karar güvenli kanıtı olan, desteğe ihtiyaç duyan ve kanıtı yetersiz öğrenci sayıları.
 - [x] Yalnız en az üç öğrencide görülen outcome ihtiyacını sınıf önceliği olarak gösteren gizlilik eşiği.
 - [x] Program yönetimini yalnız desteğe ihtiyacı doğrulanmış öğrencilerde yayınlanan program kapsamıyla ölçme.
-- [x] Baseline ve takip kaynağı yokken öğrenci gelişimi/takip/müdahale boyutlarını açıkça yetersiz bırakma.
+- [x] Baseline/takip kanıtı yetersizken öğrenci gelişimi/takip/müdahale boyutlarını açıkça yetersiz bırakma.
 - [x] Seçili sınıfta en fazla 40 analiz çağrısını dörtlü eşzamanlılıkla sınırlayan fail-closed pilot adapter.
 - [x] Yalnız aynı tenant/sınıfta yayınlanmış programların opak üye referanslarını döndüren salt-okunur RPC.
 - [ ] 100+ öğrenci veya ölçülen p95 bütçesi aşılırsa N+1 pilot adapter yerine tek batch RPC.

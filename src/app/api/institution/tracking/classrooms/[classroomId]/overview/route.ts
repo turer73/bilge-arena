@@ -6,6 +6,7 @@ import { institutionTrackingDirectorySchema } from '@/lib/institution-tracking/d
 import { isInstitutionTrackingEnabled } from '@/lib/institution-tracking/server-security'
 import { buildInstitutionStudentLearningAnalysis } from '@/lib/institution-tracking/student-analysis'
 import { institutionFollowupMetricsSchema } from '@/lib/institution-tracking/followup'
+import { institutionGrowthMetricsSchema } from '@/lib/institution-tracking/growth'
 
 const paramsSchema = z.object({ classroomId: z.string().uuid() }).strict()
 const programMembersSchema = z.object({
@@ -101,6 +102,14 @@ export async function GET(
     if (followupsRpc.error) throw followupsRpc.error
     const followupMetrics = institutionFollowupMetricsSchema.safeParse(followupsRpc.data)
     if (!followupMetrics.success) throw new Error('invalid follow-up metrics')
+    const growthRpc = await context.admin.rpc('get_institution_classroom_growth_metrics', {
+      p_user_id: context.userId,
+      p_classroom_id: classroom.id,
+      p_window_end: windowEnd,
+    })
+    if (growthRpc.error) throw growthRpc.error
+    const growthMetrics = institutionGrowthMetricsSchema.safeParse(growthRpc.data)
+    if (!growthMetrics.success) throw new Error('invalid growth metrics')
     const overview = buildInstitutionClassroomOverview({
       classroom: {
         id: classroom.id,
@@ -113,6 +122,7 @@ export async function GET(
       analyses,
       publishedProgramMemberRefs: programs.data.memberRefs,
       followupMetrics: followupMetrics.data,
+      growthMetrics: growthMetrics.data,
     })
     return overview
       ? institutionPilotNoStoreJson(overview)
