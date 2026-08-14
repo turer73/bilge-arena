@@ -1,8 +1,14 @@
-import { describe, test, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { afterEach, describe, test, expect, beforeEach, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import CalismaClient from '../calisma-client'
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
+
+const useBilgeTahtaEnabled = vi.hoisted(() => vi.fn(() => true))
+const trackBilgeBoardEvent = vi.hoisted(() => vi.fn())
+
+vi.mock('@/lib/bilge-tahta/client', () => ({ useBilgeTahtaEnabled }))
+vi.mock('@/lib/bilge-tahta/analytics', () => ({ trackBilgeBoardEvent }))
 
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: vi.fn(),
@@ -29,7 +35,11 @@ describe('CalismaClient', () => {
       selectedDifficulty: null,
       selectedExamRef: null,
     })
+    useBilgeTahtaEnabled.mockReturnValue(true)
+    trackBilgeBoardEvent.mockClear()
   })
+
+  afterEach(() => vi.unstubAllGlobals())
 
   test('loading durumunda erişilebilir yükleme durumu gösterir', () => {
     mockedUseAuthStore.mockReturnValue({ user: null, profile: null, loading: true } as never)
@@ -102,6 +112,9 @@ describe('CalismaClient', () => {
     render(<CalismaClient />)
 
     expect(screen.getAllByRole('button', { name: /Bu soruyu çöz|Konu anlat|Örnek soru sor|Çalışma önerisi/ })).toHaveLength(4)
+    fireEvent.change(screen.getByLabelText('Hangi konu veya soruda yardım istiyorsun?'), {
+      target: { value: 'İkinci dereceden denklemler' },
+    })
     const button = screen.getByRole('button', { name: 'Konu anlat' })
     fireEvent.click(button)
     expect(screen.getByRole('dialog', { name: 'Konu anlat' })).toHaveAttribute('aria-busy', 'true')
@@ -109,5 +122,61 @@ describe('CalismaClient', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/chat', expect.objectContaining({
       body: expect.stringContaining('"mode":"topic_explanation"'),
     }))
+    expect(fetchMock).toHaveBeenCalledWith('/api/chat', expect.objectContaining({
+      body: expect.stringContaining('Konu veya soru: İkinci dereceden denklemler'),
+    }))
+  })
+
+  test('somut çalışma hedefi yoksa istek göndermez ve alanı odağa alır', () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    mockedUseAuthStore.mockReturnValue({
+      user: { id: 'u1' },
+      profile: { exam_type: 'yks' },
+      loading: false,
+    } as never)
+    render(<CalismaClient />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bu soruyu çöz' }))
+    expect(screen.getByRole('alert')).toHaveTextContent(/Önce çalışmak istediğin konuyu veya soruyu yaz/)
+    expect(screen.getByLabelText('Hangi konu veya soruda yardım istiyorsun?')).toHaveFocus()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  test('Bilge Tahta erişimi yoksa doğrudan tahta başlatıcısını göstermez', () => {
+    useBilgeTahtaEnabled.mockReturnValue(false)
+    mockedUseAuthStore.mockReturnValue({
+      user: { id: 'u1' },
+      profile: { exam_type: 'yks' },
+      loading: false,
+    } as never)
+    render(<CalismaClient />)
+
+    expect(screen.queryByRole('heading', { name: 'Bilge Asistan' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Konu anlat' })).not.toBeInTheDocument()
+  })
+
+  test('hata adımı kapatılırken tamamlanma analitiği yazmaz', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: 'Yanıt hazırlanamadı.' }),
+    }))
+    mockedUseAuthStore.mockReturnValue({
+      user: { id: 'u1' },
+      profile: { exam_type: 'yks' },
+      loading: false,
+    } as never)
+    render(<CalismaClient />)
+    fireEvent.change(screen.getByLabelText('Hangi konu veya soruda yardım istiyorsun?'), {
+      target: { value: 'Asal sayılar' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Konu anlat' }))
+
+    expect(await screen.findByText('Yanıt hazırlanamadı.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Tamamla' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(trackBilgeBoardEvent).not.toHaveBeenCalledWith('BilgeBoardCompleted', expect.anything())
   })
 })

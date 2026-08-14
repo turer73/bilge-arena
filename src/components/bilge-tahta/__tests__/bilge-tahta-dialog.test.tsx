@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { hydrateRoot } from 'react-dom/client'
+import { renderToString } from 'react-dom/server'
 import { BilgeTahtaDialog } from '../bilge-tahta-dialog'
 import { BilgeTahtaContent } from '../bilge-tahta-content'
 import type { BilgeTahtaLesson } from '@/lib/bilge-tahta/contract'
@@ -42,8 +44,11 @@ describe('BilgeTahtaDialog', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(dialog.className).toContain('max-h-[88dvh]')
     expect(dialog.className).toContain('w-full')
+    const overlay = screen.getByTestId('bilge-tahta-overlay')
+    expect(overlay.className).toContain('z-[2147483647]')
+    expect(container).not.toContainElement(overlay)
     expect(screen.getByText('<img src=x onerror="window.__unsafe=true">', { exact: false })).toBeInTheDocument()
-    expect(container.querySelector('img')).toBeNull()
+    expect(document.body.querySelector('img')).toBeNull()
 
     const formula = screen.getByRole('math')
     expect(formula.className).toContain('overflow-x-auto')
@@ -142,6 +147,25 @@ describe('BilgeTahtaDialog', () => {
     fireEvent.keyDown(document, { key: 'Tab' })
     expect(close).toHaveFocus()
   })
+
+  test('sunucu renderından sonra dialogu body portalında güvenle hydrate eder', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    host.innerHTML = renderToString(
+      <BilgeTahtaDialog open lesson={lesson} onOpenChange={vi.fn()} animate={false} />,
+    )
+    expect(host).toBeEmptyDOMElement()
+
+    const root = hydrateRoot(
+      host,
+      <BilgeTahtaDialog open lesson={lesson} onOpenChange={vi.fn()} animate={false} />,
+    )
+    await waitFor(() => expect(screen.getByRole('dialog', { name: lesson.title })).toBeInTheDocument())
+    expect(host).not.toContainElement(screen.getByRole('dialog', { name: lesson.title }))
+
+    await act(async () => root.unmount())
+    host.remove()
+  })
 })
 
 describe('BilgeTahtaContent', () => {
@@ -156,5 +180,26 @@ describe('BilgeTahtaContent', () => {
     render(<BilgeTahtaContent step={lesson.steps[0]} />)
     expect(screen.queryByRole('button', { name: 'Yazıyı hemen göster' })).not.toBeInTheDocument()
     expect(screen.getByTestId('bilge-tahta-text').textContent).toBe(lesson.steps[0].content)
+  })
+
+  test('Markdown başlıklarını, vurguyu ve listeleri biçimlendirip işaretleri gizler', () => {
+    render(
+      <BilgeTahtaContent
+        animate={false}
+        step={{
+          id: 'markdown',
+          stage: 'concept',
+          title: 'Felsefe',
+          content: '# Descartes\n\n## Öğrenme Hedefi\n\n**Hedef:** Temeli kavramak.\n\n- Akılcılık\n- Şüphe',
+        }}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Descartes' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 4, name: 'Öğrenme Hedefi' })).toBeInTheDocument()
+    expect(screen.getByText('Hedef:').tagName).toBe('STRONG')
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByTestId('bilge-tahta-text')).not.toHaveTextContent('# Descartes')
+    expect(screen.getByTestId('bilge-tahta-text')).not.toHaveTextContent('**Hedef:**')
   })
 })
