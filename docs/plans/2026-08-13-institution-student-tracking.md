@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-13
 **Hedef kullanıcı:** 50–100 öğrencili küçük dershaneler
-**Durum:** Plan onaylandı. Saf istatistik sözleşmeleri, kurum/sınıf/öğrenci analizleri, çalışma programı ve sonuç değerlendirmesi, takip/müdahale akışı, değişmez öğrenci raporu ve beş boyutlu öğretmen göstergeleri çalışma dalında uygulandı. Migration 114–124 henüz production'a uygulanmadı; feature flag, canlı sentetik pilot ve production veri doğrulaması yapılmadı.
+**Durum:** Plan onaylandı. Saf istatistik sözleşmeleri, kurum/sınıf/öğrenci analizleri, çalışma programı ve sonuç değerlendirmesi, takip/müdahale akışı, değişmez öğrenci raporu, beş boyutlu öğretmen göstergeleri ve yazmasız yerel sentetik demo çalışma dalında uygulandı. Migration 114–124 henüz production'a uygulanmadı; feature flag, canlı sentetik pilot ve production veri doğrulaması yapılmadı.
 
 ## 1. Ürün kararı
 
@@ -706,7 +706,7 @@ Tablolar RLS altında, client ve service-role doğrudan DML'ine kapalı olacakt�
 - `POST /api/institution/tracking/programs/:programId/publish`
 - `POST /api/institution/tracking/programs/:programId/review`
 - `POST /api/institution/tracking/reports`
-- `POST /api/institution/tracking/reports/:reportId/send-email`
+- Pilot sonrası hukuki/teknik kabul kapısı: `POST /api/institution/tracking/reports/:reportId/send-email`
 
 Tüm yazmalar `requestId` ve canonical payload hash ile idempotent olacaktır. HTTP yanıtları `private, no-store`; hata gövdeleri PII ve iç kimlik içermez.
 
@@ -921,7 +921,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Doğrulanmış answer/session/program satırlarını kimlik-minimal aktivite sözleşmesine çeviren salt-okunur kaynak adapter'ı.
 - [x] Demo/test/sentetik hesap envanteri onaylanmadan metrik üretimini durduran fail-closed veri kalite raporu.
 - [ ] Production kaynak sorgusu ve yalnız toplu sonuç veren ilk canlı veri kalite çalıştırması. Hedef `lvnmzdowhfzmpkueurih` doğrulandı; mevcut Vercel CLI oturumu listede bulunan service-role değerini indiremediği için sayım çalıştırılmadı.
-- [ ] Kaynak sorgular doğrulandıktan sonra gerekli olup olmadığına karar verilecek günlük agrega migration'ı.
+- [x] 50–100 kişilik pilotta günlük agrega migration'ı ertelendi; yalnız ölçülen kaynak sorgu p95 bütçeyi aşarsa yeniden açılacak.
 - [x] Tenant-sınırlı ilk öğrenci analiz API sözleşmesi.
 - [x] İlk kurum öğrenci analiz UI.
 - [x] Sınıf agregaları ve öğretmen gösterge UI.
@@ -988,7 +988,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Baseline/takip kanıtı yetersizken öğrenci gelişimi/takip/müdahale boyutlarını açıkça yetersiz bırakma.
 - [x] Seçili sınıfta en fazla 40 analiz çağrısını dörtlü eşzamanlılıkla sınırlayan fail-closed pilot adapter.
 - [x] Yalnız aynı tenant/sınıfta yayınlanmış programların opak üye referanslarını döndüren salt-okunur RPC.
-- [ ] 100+ öğrenci veya ölçülen p95 bütçesi aşılırsa N+1 pilot adapter yerine tek batch RPC.
+- [x] 100+ öğrenci veya ölçülen p95 bütçesi aşılana kadar batch RPC pilot dışında bırakıldı; eşik oluştuğunda N+1 adapter tek RPC ile değiştirilecek.
 - [x] Kurum çalışma alanında sınıf özeti, gizlilik eşikli outcome öncelikleri ve beş ayrı öğretmen gösterge kartı.
 - [x] Sınıf agregası alınamazsa geçerli öğrenci analizini ayrı tutan kısmi ekran hata sınırı.
 
@@ -1000,7 +1000,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Metinde öğretmen incelemesi ve kişiselleştirmesi gerektiğini açıkça belirtme.
 - [x] Öğretmenin doğrulanmış güncel analizden kimlik-minimal, değişmez öğrenci durum raporu oluşturabilmesi.
 - [x] Kurum içi takip notları ve iletişim alanlarını dışlayan A4/PDF yazdırma görünümü.
-- [ ] Hukuki/teknik kabul sonrası tekil manuel e-posta gönderimi ve audit kaydı.
+- [x] Pilot ürün kararı: platform e-posta göndermeyecek; öğretmen hazır taslağı kopyalayıp kendi kanalından manuel gönderecek. Tekil gönderim ve audit ancak ayrıca onaylanan sonraki fazda açılacak.
 
 ### 19.8 Production salt-okunur doğrulama denemesi — 2026-08-14
 
@@ -1009,3 +1009,11 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Değişken listesinde `SUPABASE_SERVICE_ROLE_KEY` bulunduğu doğrulandı; mevcut CLI oturumu encrypted değeri indirmedi.
 - [x] Anahtarsız durumda anon/RLS atlatması veya production yazması denenmedi.
 - [ ] Yetkili service-role aktarımı veya Supabase tarafında yalnız toplu sonuç döndüren onaylı RPC sonrası canlı veri kalite sayımı.
+
+### 19.9 Yazmasız küçük kurum demosu — 2026-08-14
+
+- [x] Yalnız `INSTITUTION_DEMO_ENABLED=true` olduğunda açılan, varsayılan durumda 404 veren server kapısı.
+- [x] Sede Dilara Ürer sentetik adı dahil dört kişilik demo sınıfı; hiçbir gerçek hesap, öğrenci kaydı veya production yazması yok.
+- [x] Sınıf özeti, öğrenci ayrıntısı, takip açma, program hazırlama ve rapor oluşturma akışlarının yerel etkileşimli gösterimi.
+- [x] 320, 375 ve 390 px genişliklerde etkileşim testi; 390 px gerçek tarayıcı kontrolünde yatay taşma `380/380` olarak doğrulandı.
+- [x] Yerel başlatma ve güvenlik sınırlarını açıklayan demo kullanım belgesi.
