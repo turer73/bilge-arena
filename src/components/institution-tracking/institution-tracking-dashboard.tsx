@@ -38,6 +38,7 @@ import { buildGuardianStatusEmailDraft } from '@/lib/institution-tracking/guardi
 import { StudentFollowupPanel } from './student-followup-panel'
 import { ProgramReviewPanel } from './program-review-panel'
 import { StudentReportPanel } from './student-report-panel'
+import { SupportAccessPanel } from './support-access-panel'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -240,6 +241,8 @@ export function InstitutionTrackingDashboard() {
           </div>
         </div>
       </header>
+
+      {directory.membership.role === 'manager' && <SupportAccessPanel />}
 
       {directory.classrooms.length === 0 ? (
         <section className="rounded-2xl border border-dashed border-white/15 bg-[var(--surface)] p-8 text-center">

@@ -71,4 +71,11 @@ describe('AdminSidebar (mobil drawer)', () => {
     expect(screen.getByText('Soru Kalitesi')).toBeInTheDocument()
     expect(screen.queryByText('Sorular')).not.toBeInTheDocument()
   })
+
+  test('kurum yönetimi izni olan admin Kurumlar menüsünü görür', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ permissions: ['institution.pilots.manage'], roles: [{ name: 'Süper Admin' }] }) }) as unknown as typeof fetch
+    render(<AdminSidebar />)
+    await waitFor(() => expect(screen.getByText('Kurumlar')).toBeInTheDocument())
+    expect(screen.queryByText('Kullanıcılar')).not.toBeInTheDocument()
+  })
 })

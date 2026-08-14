@@ -22,6 +22,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/admin/arka-planlar', label: 'Arka Planlar', icon: '🎬', permission: 'admin.backgrounds.view' },
   { href: '/admin/rozetler', label: 'Rozetler', icon: '🏅', permission: 'admin.badges.view' },
   { href: '/admin/kullanicilar', label: 'Kullanıcılar', icon: '👥', permission: 'admin.users.view' },
+  { href: '/admin/kurumlar', label: 'Kurumlar', icon: '🏫', permission: 'institution.pilots.manage' },
   { href: '/admin/raporlar', label: 'Raporlar', icon: '🐛', permission: 'admin.reports.view' },
   { href: '/admin/loglar', label: 'Loglar', icon: '📜', permission: 'admin.logs.view' },
   { href: '/admin/ayarlar', label: 'Ayarlar', icon: '⚙️', permission: 'admin.settings.view' },
