@@ -6,6 +6,7 @@ import {
   InstitutionTrackingClientError,
   createInstitutionStudyProgramDraft,
   publishInstitutionStudyProgram,
+  updateInstitutionStudyProgramDraft,
 } from '../client'
 
 const directory = {
@@ -69,5 +70,16 @@ describe('institution tracking client', () => {
     await publishInstitutionStudyProgram('a'.repeat(32))
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ requestId: '11111111-1111-4111-8111-111111111111' })
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ requestId: '22222222-2222-4222-8222-222222222222' })
+  })
+
+  it('patches a teacher-edited draft with a fresh idempotency id', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => '33333333-3333-4333-8333-333333333333' })
+    const result = { programRef: 'a'.repeat(32), status: 'draft', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 1, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: null, publishedAt: null, replayed: false }
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(result), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const items = [{ position: 1, scheduledDate: '2026-08-17', taskType: 'diagnostic' as const, title: 'Temel kavramlar durum tespiti', reasonCode: 'diagnostic_gap' as const, outcomeCode: 'MAT-01', durationMinutes: 20, targetQuestionCount: 10 }]
+    await updateInstitutionStudyProgramDraft('a'.repeat(32), { weekStart: '2026-08-17', dailyMinuteLimit: 45, items })
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'PATCH', cache: 'no-store' })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ items, requestId: '33333333-3333-4333-8333-333333333333' })
   })
 })

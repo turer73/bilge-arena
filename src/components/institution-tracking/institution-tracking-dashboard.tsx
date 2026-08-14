@@ -10,6 +10,8 @@ import {
   ChevronRight,
   RefreshCw,
   Send,
+  Save,
+  Trash2,
   ShieldCheck,
   Users,
 } from 'lucide-react'
@@ -19,6 +21,7 @@ import {
   fetchInstitutionTrackingDirectory,
   createInstitutionStudyProgramDraft,
   publishInstitutionStudyProgram,
+  updateInstitutionStudyProgramDraft,
   InstitutionTrackingClientError,
   isInstitutionTrackingUiEnabled,
 } from '@/lib/institution-tracking/client'
@@ -358,10 +361,12 @@ function AnalysisPanel({
   const [program, setProgram] = useState<InstitutionStudyProgramDraftResponse | null>(null)
   const [programBusy, setProgramBusy] = useState(false)
   const [programError, setProgramError] = useState<string | null>(null)
+  const [programDirty, setProgramDirty] = useState(false)
 
   useEffect(() => {
     setProgram(null)
     setProgramError(null)
+    setProgramDirty(false)
   }, [analysis.student.memberRef])
 
   async function createProgram() {
@@ -370,6 +375,7 @@ function AnalysisPanel({
       setProgram(await createInstitutionStudyProgramDraft({
         classroomId, memberRef: analysis.student.memberRef, weekStart: nextMonday(), dailyMinuteLimit: 45,
       }))
+      setProgramDirty(false)
     } catch (error) {
       setProgramError(error instanceof InstitutionTrackingClientError && error.status === 409
         ? 'Bu hafta için taslak zaten var veya güvenilir kapsam yetersiz.'
@@ -378,12 +384,37 @@ function AnalysisPanel({
   }
 
   async function publishProgram() {
-    if (!program) return
+    if (!program || programDirty) return
     setProgramBusy(true); setProgramError(null)
     try {
       const published = await publishInstitutionStudyProgram(program.program.programRef)
       setProgram({ ...program, program: published })
     } catch { setProgramError('Program yayınlanamadı.') }
+    finally { setProgramBusy(false) }
+  }
+
+  function removeProgramItem(position: number) {
+    if (!program || program.program.status !== 'draft' || program.draft.items.length <= 1) return
+    const items = program.draft.items
+      .filter((item) => item.position !== position)
+      .map((item, index) => ({ ...item, position: index + 1 }))
+    setProgram({ ...program, draft: { ...program.draft, items } })
+    setProgramDirty(true)
+    setProgramError(null)
+  }
+
+  async function saveProgram() {
+    if (!program || !programDirty || program.program.status !== 'draft') return
+    setProgramBusy(true); setProgramError(null)
+    try {
+      const updated = await updateInstitutionStudyProgramDraft(program.program.programRef, {
+        weekStart: program.draft.weekStart,
+        dailyMinuteLimit: program.draft.dailyMinuteLimit,
+        items: program.draft.items,
+      })
+      setProgram({ ...program, program: updated })
+      setProgramDirty(false)
+    } catch { setProgramError('Program değişiklikleri kaydedilemedi.') }
     finally { setProgramBusy(false) }
   }
 
@@ -423,13 +454,13 @@ function AnalysisPanel({
           {program && (
             <div className="mt-4 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-xs">
-                <span><strong>{program.draft.weekStart}</strong> haftası · {program.program.itemCount} görev · günlük en fazla {program.program.dailyMinuteLimit} dk</span>
-                <span className={`rounded-lg px-2 py-1 font-black ${program.program.status === 'published' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200'}`}>{program.program.status === 'published' ? 'Yayınlandı' : 'Taslak'}</span>
+                <span><strong>{program.draft.weekStart}</strong> haftası · {program.draft.items.length} görev · günlük en fazla {program.program.dailyMinuteLimit} dk</span>
+                <span className={`rounded-lg px-2 py-1 font-black ${program.program.status === 'published' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200'}`}>{program.program.status === 'published' ? 'Yayınlandı' : programDirty ? 'Kaydedilmemiş değişiklik' : 'Taslak'}</span>
               </div>
               <ol className="space-y-2">
-                {program.draft.items.map((item) => <li key={item.position} className="grid gap-1 rounded-xl border border-white/10 p-3 text-sm sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center"><span className="text-xs text-[var(--text-sub)]">{item.scheduledDate}</span><span className="min-w-0 break-words font-bold">{item.title}<small className="mt-1 block font-normal text-[var(--text-sub)]">{item.reasonCode} · {item.targetQuestionCount ?? 0} soru</small></span><span className="text-xs font-bold text-[var(--primary)]">{item.durationMinutes} dk</span></li>)}
+                {program.draft.items.map((item) => <li key={item.position} className="grid gap-2 rounded-xl border border-white/10 p-3 text-sm sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center"><span className="text-xs text-[var(--text-sub)]">{item.scheduledDate}</span><span className="min-w-0 break-words font-bold">{item.title}<small className="mt-1 block font-normal text-[var(--text-sub)]">{item.reasonCode} · {item.targetQuestionCount ?? 0} soru</small></span><span className="flex items-center gap-2 sm:justify-end"><span className="text-xs font-bold text-[var(--primary)]">{item.durationMinutes} dk</span>{program.program.status === 'draft' && <button type="button" disabled={programBusy || program.draft.items.length <= 1} onClick={() => removeProgramItem(item.position)} aria-label={`${item.title} görevini çıkar`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/20 text-red-200 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>}</span></li>)}
               </ol>
-              {program.program.status === 'draft' && <button type="button" disabled={programBusy} onClick={publishProgram} className="btn-primary inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold disabled:opacity-60"><Send className="h-4 w-4" /> {programBusy ? 'Yayınlanıyor…' : 'İnceledim, yayınla'}</button>}
+              {program.program.status === 'draft' && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" disabled={programBusy || !programDirty} onClick={saveProgram} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold disabled:opacity-40"><Save className="h-4 w-4" /> Değişiklikleri kaydet</button><button type="button" disabled={programBusy || programDirty} onClick={publishProgram} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold disabled:opacity-60"><Send className="h-4 w-4" /> {programDirty ? 'Önce değişiklikleri kaydet' : programBusy ? 'Yayınlanıyor…' : 'İnceledim, yayınla'}</button></div>}
             </div>
           )}
         </section>

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   overview: vi.fn(),
   createProgram: vi.fn(),
   publishProgram: vi.fn(),
+  updateProgram: vi.fn(),
 }))
 vi.mock('@/lib/institution-tracking/client', () => ({
   isInstitutionTrackingUiEnabled: mocks.enabled,
@@ -17,6 +18,7 @@ vi.mock('@/lib/institution-tracking/client', () => ({
   fetchInstitutionClassroomOverview: mocks.overview,
   createInstitutionStudyProgramDraft: mocks.createProgram,
   publishInstitutionStudyProgram: mocks.publishProgram,
+  updateInstitutionStudyProgramDraft: mocks.updateProgram,
   InstitutionTrackingClientError: class InstitutionTrackingClientError extends Error {
     constructor(readonly status: number) { super(`institution_tracking_request_${status}`) }
   },
@@ -120,9 +122,10 @@ beforeEach(() => {
     memberRef === MEMBER_TWO ? analysis(MEMBER_TWO, 'Öğrenci İki') : analysis()
   ))
   mocks.createProgram.mockResolvedValue({
-    program: { programRef: 'c'.repeat(32), status: 'draft', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 1, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: null, publishedAt: null, replayed: false },
-    draft: { status: 'draft', weekStart: '2026-08-17', modelVersion: 'institution-program-v1', generatedAt: '2026-08-14T00:00:00.000Z', dailyMinuteLimit: 45, items: [{ position: 1, scheduledDate: '2026-08-17', taskType: 'diagnostic', title: 'Temel kavramlar durum tespiti', reasonCode: 'diagnostic_gap', outcomeCode: 'MAT-01', durationMinutes: 20, targetQuestionCount: 10 }] },
+    program: { programRef: 'c'.repeat(32), status: 'draft', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 2, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: null, publishedAt: null, replayed: false },
+    draft: { status: 'draft', weekStart: '2026-08-17', modelVersion: 'institution-program-v1', generatedAt: '2026-08-14T00:00:00.000Z', dailyMinuteLimit: 45, items: [{ position: 1, scheduledDate: '2026-08-17', taskType: 'diagnostic', title: 'Temel kavramlar durum tespiti', reasonCode: 'diagnostic_gap', outcomeCode: 'MAT-01', durationMinutes: 20, targetQuestionCount: 10 }, { position: 2, scheduledDate: '2026-08-18', taskType: 'verified_questions', title: 'Sayı kümeleri hedefli soru çalışması', reasonCode: 'weak_outcome', outcomeCode: 'MAT-02', durationMinutes: 25, targetQuestionCount: 15 }] },
   })
+  mocks.updateProgram.mockResolvedValue({ programRef: 'c'.repeat(32), status: 'draft', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 1, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: null, publishedAt: null, replayed: false })
   mocks.publishProgram.mockResolvedValue({ programRef: 'c'.repeat(32), status: 'published', weekStart: '2026-08-17', dailyMinuteLimit: 45, modelVersion: 'institution-program-v1', itemCount: 1, createdAt: '2026-08-14T00:00:00.000Z', reviewedAt: '2026-08-14T00:05:00.000Z', publishedAt: '2026-08-14T00:05:00.000Z', replayed: false })
 })
 
@@ -178,6 +181,11 @@ describe('InstitutionTrackingDashboard', () => {
     await user.click(screen.getByRole('button', { name: 'Taslak oluştur' }))
     expect(await screen.findByText('Temel kavramlar durum tespiti')).toBeInTheDocument()
     expect(mocks.publishProgram).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: /Sayı kümeleri hedefli soru çalışması görevini çıkar/i }))
+    expect(screen.getByText('Kaydedilmemiş değişiklik')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Önce değişiklikleri kaydet/i })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Değişiklikleri kaydet' }))
+    await waitFor(() => expect(mocks.updateProgram).toHaveBeenCalledWith('c'.repeat(32), expect.objectContaining({ items: [expect.objectContaining({ position: 1, title: 'Temel kavramlar durum tespiti' })] })))
     await user.click(screen.getByRole('button', { name: /İnceledim, yayınla/i }))
     expect(await screen.findByText('Yayınlandı')).toBeInTheDocument()
   })

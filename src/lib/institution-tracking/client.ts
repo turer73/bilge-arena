@@ -93,3 +93,18 @@ export function publishInstitutionStudyProgram(programRef: string) {
     institutionStudyProgramMutationResultSchema,
   )
 }
+
+export function updateInstitutionStudyProgramDraft(
+  programRef: string,
+  input: Pick<InstitutionStudyProgramDraftResponse['draft'], 'weekStart' | 'dailyMinuteLimit' | 'items'>,
+) {
+  return fetch(`/api/institution/tracking/programs/${encodeURIComponent(programRef)}`, {
+    method: 'PATCH', cache: 'no-store', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ...input, requestId: crypto.randomUUID() }),
+  }).then(async (response) => {
+    if (!response.ok) throw new InstitutionTrackingClientError(response.status)
+    const parsed = institutionStudyProgramMutationResultSchema.safeParse(await response.json().catch(() => null))
+    if (!parsed.success) throw new InstitutionTrackingClientError(500)
+    return parsed.data
+  })
+}
