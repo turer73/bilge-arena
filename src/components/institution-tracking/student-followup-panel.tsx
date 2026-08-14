@@ -9,6 +9,7 @@ import {
   resolveInstitutionStudentFollowup,
 } from '@/lib/institution-tracking/client'
 import type { InstitutionFollowupList } from '@/lib/institution-tracking/followup'
+import { TR_TIME_ZONE } from '@/lib/utils/tr-date'
 
 const reasonCopy = {
   support_needed: 'Öğrenme desteği gerekli',
@@ -21,7 +22,7 @@ type ReasonCode = keyof typeof reasonCopy
 
 function dateLabel(value: string) {
   return new Intl.DateTimeFormat('tr-TR', {
-    timeZone: 'Europe/Istanbul', day: '2-digit', month: 'short', year: 'numeric',
+    timeZone: TR_TIME_ZONE, day: '2-digit', month: 'short', year: 'numeric',
   }).format(new Date(value))
 }
 

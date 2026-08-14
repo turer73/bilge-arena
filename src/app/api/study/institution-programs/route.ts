@@ -4,18 +4,11 @@ import { institutionPilotNoStoreJson, institutionPilotRpcStatus } from '@/lib/in
 import { isInstitutionStudyProgramEnabled, isInstitutionTrackingEnabled } from '@/lib/institution-tracking/server-security'
 import { institutionStudentProgramsSchema } from '@/lib/institution-tracking/student-program'
 import { checkTeacherClassroomRateLimit, teacherClassroomReadLimiter } from '@/lib/teacher-classroom/rate-limits'
-
-function currentIstanbulDate(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date())
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  return `${value.year}-${value.month}-${value.day}`
-}
+import { trDayString } from '@/lib/utils/tr-date'
 
 export async function GET(request: Request) {
   if (!isInstitutionTrackingEnabled() || !isInstitutionStudyProgramEnabled()) {
-    return institutionPilotNoStoreJson({ asOfDate: currentIstanbulDate(), programs: [] }, { status: 200 })
+    return institutionPilotNoStoreJson({ asOfDate: trDayString(), programs: [] }, { status: 200 })
   }
   const cookieClient = await createClient()
   const { data: { user } } = await cookieClient.auth.getUser()
@@ -31,7 +24,7 @@ export async function GET(request: Request) {
   catch { return institutionPilotNoStoreJson({ error: 'Kurum programı yapılandırılmadı' }, { status: 503 }) }
   const { data, error } = await admin.rpc('get_my_institution_study_programs', {
     p_user_id: user.id,
-    p_as_of_date: currentIstanbulDate(),
+    p_as_of_date: trDayString(),
   })
   if (error) {
     return institutionPilotNoStoreJson({ error: 'Kurum çalışma programı alınamadı' }, { status: institutionPilotRpcStatus(error.code) })

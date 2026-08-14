@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react'
+import { TR_TIME_ZONE } from '@/lib/utils/tr-date'
 import {
   fetchInstitutionStudentLearningAnalysis,
   fetchInstitutionClassroomOverview,
@@ -54,7 +55,7 @@ const confidenceCopy = {
 function formatDate(value: string | null): string {
   if (!value) return 'Henüz kanıt yok'
   return new Intl.DateTimeFormat('tr-TR', {
-    timeZone: 'Europe/Istanbul',
+    timeZone: TR_TIME_ZONE,
     day: '2-digit',
     month: 'short',
     year: 'numeric',

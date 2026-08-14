@@ -4,9 +4,10 @@ import {useEffect,useState} from 'react'
 import {FileText,Printer} from 'lucide-react'
 import {createInstitutionStudentReport,fetchInstitutionStudentReports} from '@/lib/institution-tracking/client'
 import type {InstitutionStudentReportMutation,InstitutionStudentReportSnapshot} from '@/lib/institution-tracking/student-report'
+import {TR_TIME_ZONE} from '@/lib/utils/tr-date'
 
 const statusCopy={insufficient:'Kanıt yetersiz',developing:'Gelişiyor',mastered:'Güçlü'} as const
-function dateLabel(value:string){return new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'long',year:'numeric'}).format(new Date(value))}
+function dateLabel(value:string){return new Intl.DateTimeFormat('tr-TR',{timeZone:TR_TIME_ZONE,day:'2-digit',month:'long',year:'numeric'}).format(new Date(value))}
 
 export function StudentReportPanel({classroomId,memberRef}:{classroomId:string;memberRef:string}){
   const [reports,setReports]=useState<Array<Omit<InstitutionStudentReportMutation,'replayed'>>>([])

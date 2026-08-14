@@ -6,14 +6,7 @@ import {
   institutionStudentProgramsSchema,
   type InstitutionStudentPrograms,
 } from '@/lib/institution-tracking/student-program'
-
-function todayIstanbul(): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  return `${values.year}-${values.month}-${values.day}`
-}
+import { trDayString } from '@/lib/utils/tr-date'
 
 export function InstitutionWeeklyProgramCard() {
   const enabled = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
@@ -50,7 +43,7 @@ export function InstitutionWeeklyProgramCard() {
     </section>
   )
   if (!data || data.programs.length === 0) return null
-  const today = todayIstanbul()
+  const today = trDayString()
 
   return (
     <section className="rounded-2xl border border-[var(--primary)]/25 bg-[var(--primary)]/[0.06] p-4 sm:p-5" aria-labelledby="institution-weekly-program-title">
