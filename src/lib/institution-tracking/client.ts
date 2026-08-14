@@ -24,6 +24,13 @@ import {
   type InstitutionFollowupList,
   type InstitutionFollowupMutation,
 } from './followup'
+import {
+  institutionProgramReviewEvidenceSchema,
+  institutionProgramReviewMutationSchema,
+  institutionStudentProgramHistorySchema,
+  type InstitutionProgramReviewMutation,
+  type InstitutionStudentProgramHistory,
+} from './program-review'
 
 export function isInstitutionTrackingUiEnabled(): boolean {
   return process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
@@ -147,4 +154,31 @@ export async function resolveInstitutionStudentFollowup(
   const parsed = institutionFollowupMutationSchema.safeParse(await response.json().catch(() => null))
   if (!parsed.success) throw new InstitutionTrackingClientError(500)
   return parsed.data
+}
+
+export function fetchInstitutionStudentProgramHistory(
+  classroomId: string,
+  memberRef: string,
+  signal?: AbortSignal,
+): Promise<InstitutionStudentProgramHistory> {
+  const query = new URLSearchParams({ classroomId, memberRef })
+  return requestJson(`/api/institution/tracking/programs/history?${query}`, institutionStudentProgramHistorySchema, signal)
+}
+
+export function previewInstitutionStudyProgramReview(programRef: string) {
+  return requestJson(
+    `/api/institution/tracking/programs/${encodeURIComponent(programRef)}/review`,
+    institutionProgramReviewEvidenceSchema,
+  )
+}
+
+export function reviewInstitutionStudyProgram(
+  programRef: string,
+  input: { teacherResult: 'effective' | 'partial' | 'ineffective' | 'insufficient'; note: string | null },
+): Promise<InstitutionProgramReviewMutation> {
+  return postJson(
+    `/api/institution/tracking/programs/${encodeURIComponent(programRef)}/review`,
+    { ...input, requestId: crypto.randomUUID() },
+    institutionProgramReviewMutationSchema,
+  )
 }

@@ -35,6 +35,7 @@ import type { InstitutionClassroomOverview } from '@/lib/institution-tracking/cl
 import { ClassroomOverviewPanel } from './classroom-overview-panel'
 import { buildGuardianStatusEmailDraft } from '@/lib/institution-tracking/guardian-email-draft'
 import { StudentFollowupPanel } from './student-followup-panel'
+import { ProgramReviewPanel } from './program-review-panel'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -477,6 +478,10 @@ function AnalysisPanel({
           memberRef={analysis.student.memberRef}
           onChanged={onFollowupChanged}
         />
+      )}
+
+      {canManagePrograms && (
+        <ProgramReviewPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
       )}
 
       {canManagePrograms && (

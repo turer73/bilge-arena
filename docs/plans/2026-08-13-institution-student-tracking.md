@@ -964,6 +964,9 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Öğrencinin yalnız kendi aktif üyeliğindeki yayınlanmış güncel-hafta programlarını okuyan service-only RPC/API.
 - [x] Taslakları ve program/öğretmen/üyelik UUID'lerini öğrenci yanıtından çıkaran strict sözleşme.
 - [x] `/arena/calisma` haftalık kurum programı kartı; program yoksa boş alan bırakmayan, hata halinde kişisel planı engellemeyen görünüm.
+- [x] Program başlangıcından önceki ve sonraki 14 günlük hedef-outcome kanıtını karşılaştıran sonuç değerlendirme kaynağı.
+- [x] Yetersiz kanıtı etki yokluğuna çevirmeyen sistem önerisi ve bundan ayrı, değişmez öğretmen değerlendirmesi.
+- [x] Atanmış öğretmenin seçili öğrencide son sekiz yayınlanmış/tamamlanmış programı görüp olgunlaşmış programı değerlendirebilmesi.
 
 ### 19.5 Öğretmen gösterge hesaplama çekirdeği — 2026-08-14
 

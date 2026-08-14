@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
   fetchFollowups: vi.fn(),
   openFollowup: vi.fn(),
   resolveFollowup: vi.fn(),
+  fetchProgramHistory: vi.fn(),
+  previewProgramReview: vi.fn(),
+  reviewProgram: vi.fn(),
 }))
 vi.mock('@/lib/institution-tracking/client', () => ({
   isInstitutionTrackingUiEnabled: mocks.enabled,
@@ -25,6 +28,9 @@ vi.mock('@/lib/institution-tracking/client', () => ({
   fetchInstitutionStudentFollowups: mocks.fetchFollowups,
   openInstitutionStudentFollowup: mocks.openFollowup,
   resolveInstitutionStudentFollowup: mocks.resolveFollowup,
+  fetchInstitutionStudentProgramHistory: mocks.fetchProgramHistory,
+  previewInstitutionStudyProgramReview: mocks.previewProgramReview,
+  reviewInstitutionStudyProgram: mocks.reviewProgram,
   InstitutionTrackingClientError: class InstitutionTrackingClientError extends Error {
     constructor(readonly status: number) { super(`institution_tracking_request_${status}`) }
   },
@@ -136,6 +142,7 @@ beforeEach(() => {
   mocks.fetchFollowups.mockResolvedValue({ followups: [] })
   mocks.openFollowup.mockResolvedValue({ followupRef: 'd'.repeat(32), reasonCode: 'support_needed', status: 'open', openedAt: '2026-08-14T09:00:00.000Z', resolvedAt: null, replayed: false })
   mocks.resolveFollowup.mockResolvedValue({ followupRef: 'd'.repeat(32), reasonCode: 'support_needed', status: 'resolved', openedAt: '2026-08-14T09:00:00.000Z', resolvedAt: '2026-08-14T10:00:00.000Z', replayed: false })
+  mocks.fetchProgramHistory.mockResolvedValue({ programs: [] })
 })
 
 describe('InstitutionTrackingDashboard', () => {
