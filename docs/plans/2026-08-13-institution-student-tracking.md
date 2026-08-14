@@ -2,7 +2,7 @@
 
 **Tarih:** 2026-08-13
 **Hedef kullanıcı:** 50–100 öğrencili küçük dershaneler
-**Durum:** Plan onaylandı. Saf istatistik sözleşmeleri, kurum/sınıf/öğrenci analizleri, çalışma programı ve sonuç değerlendirmesi, takip/müdahale akışı, değişmez öğrenci raporu, beş boyutlu öğretmen göstergeleri ve yazmasız yerel sentetik demo çalışma dalında uygulandı. Migration 114–124 henüz production'a uygulanmadı; feature flag, canlı sentetik pilot ve production veri doğrulaması yapılmadı.
+**Durum:** Plan onaylandı. Saf istatistik sözleşmeleri, kurum/sınıf/öğrenci analizleri, çalışma programı ve sonuç değerlendirmesi, takip/müdahale akışı, değişmez öğrenci raporu, beş boyutlu öğretmen göstergeleri ve yazmasız yerel sentetik demo çalışma dalında uygulandı. Migration 114–125 production'a uygulandı ve kurum feature flag'leri açıldı (bkz. 19.2/19.3). Akış yine de çalışmıyor: ön koşul olan öğretmen sınıfı katmanı production'da kapalı olduğu için sınıf açılamıyor, dolayısıyla canlı sentetik pilot ve production veri doğrulaması hâlâ yapılmadı.
 
 ## 1. Ürün kararı
 
@@ -934,7 +934,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Eksik kanıtı sıfır başarıya çevirmeyen güven/status builder'ı.
 - [x] Ham kullanıcı, cevap, soru, oturum ve attempt kimliklerini reddeden public API sözleşmesi.
 - [x] Varsayılan kapalı server feature flag, route/SQL güvenlik ve contract testleri.
-- [ ] Migration 114–124'ün hedef Supabase projesine uygulanması ve şema tiplerinin canlı şemadan yeniden üretilmesi.
+- [x] Migration 114–125 production'a uygulandı (`supabase_migrations` defterinde `20260814135314`–`20260814135325` kayıtları) ve şema tipleri canlı şemadan yeniden üretildi: 6 tablo + 24 fonksiyon eklendi, hiçbir nesne düşmedi.
 - [ ] Sentetik tenant/classroom fixture ile canlı RPC smoke testi.
 - [x] İlk kurum, sınıf ve öğrenci takip arayüzü.
 
@@ -946,7 +946,9 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Sınıf ve öğrenci seçimi; TYT Matematik outcome durum, güven, payda ve son kanıt görünümü.
 - [x] Eksik kanıtta sayısal sıfır yerine `Kanıt yetersiz` gösterimi.
 - [x] 320, 375 ve 390 px fixture render testleri; uzun kurum, sınıf, öğrenci ve kazanım metinleri.
-- [ ] Migration 114–124 ve üç server/client feature flag production'da uygulanmadı/açılmadı; deploy/canlı smoke yapılmadı.
+- [x] Migration 114–125 uygulandı; `INSTITUTION_PILOT_ENABLED` ve `INSTITUTION_TRACKING_ENABLED` production'da açık (`/api/institution/workspace` ve `/api/institution/tracking/directory` kimliksiz istekte `503` değil `401` dönüyor).
+- [ ] **Zincir sınıf katmanında kapalı.** `/api/teacher/classrooms` `503 "Sınıf pilotu yapılandırılmadı"` döndürüyor; `/arena/sinif` ve `/arena/sinif/ogretmen` "pilotu henüz kapalı" ekranını basıyor. Sınıfın tek oluşturma yolu `POST /api/teacher/classrooms` → `create_teacher_classroom` olduğu için kurum yöneticisi/öğretmen sınıf açamıyor: production'da 2 kurum ve 6 aktif personel üyeliği var ama 0 sınıf, 0 sınıf üyesi, 0 program, 0 takip, 0 rapor. `getTeacherClassroomServerConfig()` üç nedenle `null` dönebilir (`TEACHER_CLASSROOM_ENABLED`, ≥32 baytlık `TEACHER_CLASSROOM_INVITE_SECRET`, dört hukuki `NOTICE`/`CONSENT` değişkeni); hangisinin eksik olduğu env okunmadan ayrıştırılamaz.
+- [ ] Canlı sentetik smoke: sınıf katmanı açılmadan çalıştırılamaz.
 
 ### 19.4 Haftalık program üretim çekirdeği — 2026-08-14
 

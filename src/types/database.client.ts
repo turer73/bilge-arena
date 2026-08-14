@@ -395,7 +395,16 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Relationships: []
       }
     }
-    Functions: Omit<GeneratedFunctions, 'complete_game_session'> & {
+    // Supabase tip ureticisi PostgreSQL fonksiyon imzasindan nullability
+    // okuyamaz ve her `text` parametresini `string` uretir. Asagidaki iki RPC
+    // `p_note` icin NULL kabul eder (`NULLIF(btrim(p_note), '')`), bu yuzden
+    // uretilen imza yerine elle yazilan nullable imza gecerli olmalidir.
+    Functions: Omit<
+      GeneratedFunctions,
+      | 'complete_game_session'
+      | 'open_institution_student_followup'
+      | 'review_institution_study_program'
+    > & {
       complete_game_session: Omit<CompleteGameSession, 'Args'> & {
         Args: CompleteGameSessionArgs
       }
