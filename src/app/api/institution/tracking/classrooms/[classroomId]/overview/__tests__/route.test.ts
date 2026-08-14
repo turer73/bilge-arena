@@ -1,0 +1,80 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mocks = vi.hoisted(() => ({ enabled: vi.fn(), context: vi.fn(), rpc: vi.fn(), buildStudent: vi.fn(), buildOverview: vi.fn() }))
+vi.mock('@/lib/institution-tracking/server-security', () => ({ isInstitutionTrackingEnabled: mocks.enabled }))
+vi.mock('@/lib/institution-pilot/route-context', () => ({ requireInstitutionPilotRouteContext: mocks.context }))
+vi.mock('@/lib/institution-tracking/student-analysis', () => ({ buildInstitutionStudentLearningAnalysis: mocks.buildStudent }))
+vi.mock('@/lib/institution-tracking/classroom-overview', () => ({ buildInstitutionClassroomOverview: mocks.buildOverview }))
+
+import { GET } from '../route'
+
+const USER_ID = '11111111-1111-4111-8111-111111111111'
+const CLASSROOM_ID = '22222222-2222-4222-8222-222222222222'
+const refs = ['a'.repeat(32), 'b'.repeat(32), 'c'.repeat(32), 'd'.repeat(32), 'e'.repeat(32)]
+const directory = {
+  institution: { name: 'Bilge Pilot Kursu', status: 'pilot' }, membership: { role: 'manager' },
+  classrooms: [{ id: CLASSROOM_ID, name: 'TYT A Sınıfı', teacherAlias: 'Öğretmen Bir', activeStudentCount: 5,
+    students: refs.map((memberRef, index) => ({ memberRef, alias: `Öğrenci ${index + 1}`, joinedAt: '2026-08-01T09:00:00.000Z' })) }],
+}
+const overview = {
+  classroom: { id: CLASSROOM_ID, name: 'TYT A Sınıfı', teacherAlias: 'Öğretmen Bir', activeStudentCount: 5 },
+  summary: { activeStudentCount: 5 },
+}
+
+function request() { return new Request(`http://localhost/api/institution/tracking/classrooms/${CLASSROOM_ID}/overview`) }
+function routeContext(classroomId = CLASSROOM_ID) { return { params: Promise.resolve({ classroomId }) } }
+
+beforeEach(() => {
+  vi.clearAllMocks(); mocks.enabled.mockReturnValue(true)
+  mocks.context.mockResolvedValue({ ok: true, userId: USER_ID, admin: { rpc: mocks.rpc } })
+  mocks.buildStudent.mockImplementation((raw) => ({
+    classroom: { id: CLASSROOM_ID }, student: { memberRef: raw.memberRef },
+    scope: { windowStart: raw.memberRef === refs[0] ? '2026-07-01T00:00:00.000Z' : '2026-08-01T00:00:00.000Z' },
+  }))
+  mocks.buildOverview.mockReturnValue(overview)
+  mocks.rpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+    if (name === 'get_institution_tracking_directory') return { data: directory, error: null }
+    if (name === 'get_institution_student_learning_analysis') return { data: { memberRef: args.p_member_ref }, error: null }
+    if (name === 'get_institution_classroom_published_program_members') return { data: { memberRefs: refs.slice(0, 3) }, error: null }
+    return { data: null, error: { code: 'P0002' } }
+  })
+})
+
+describe('institution classroom overview route', () => {
+  it('fails closed before auth when tracking is disabled', async () => {
+    mocks.enabled.mockReturnValue(false)
+    expect((await GET(request(), routeContext())).status).toBe(503)
+    expect(mocks.context).not.toHaveBeenCalled()
+  })
+
+  it('loads every roster analysis before program coverage and emits one aggregate', async () => {
+    const response = await GET(request(), routeContext())
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    const calls = mocks.rpc.mock.calls
+    expect(calls.filter(([name]) => name === 'get_institution_student_learning_analysis')).toHaveLength(5)
+    expect(calls.find(([name]) => name === 'get_institution_classroom_published_program_members')?.[1]).toMatchObject({
+      p_user_id: USER_ID, p_classroom_id: CLASSROOM_ID, p_window_start: '2026-07-01T00:00:00.000Z',
+    })
+    expect(mocks.buildOverview).toHaveBeenCalledWith(expect.objectContaining({
+      analyses: expect.arrayContaining([expect.objectContaining({ student: { memberRef: refs[0] } })]),
+      publishedProgramMemberRefs: refs.slice(0, 3),
+    }))
+    expect(await response.json()).toEqual(overview)
+  })
+
+  it('rejects unknown classes and never returns a partial aggregate', async () => {
+    expect((await GET(request(), routeContext('33333333-3333-4333-8333-333333333333'))).status).toBe(404)
+    mocks.buildStudent.mockReturnValueOnce(null)
+    const partial = await GET(request(), routeContext())
+    expect(partial.status).toBe(500)
+    expect(mocks.rpc.mock.calls.filter(([name]) => name === 'get_institution_classroom_published_program_members')).toHaveLength(0)
+  })
+
+  it('maps tenant denial without exposing database details', async () => {
+    mocks.rpc.mockImplementationOnce(async () => ({ data: null, error: { code: '42501', message: 'private row' } }))
+    const response = await GET(request(), routeContext())
+    expect(response.status).toBe(403)
+    expect(JSON.stringify(await response.json())).not.toContain('private row')
+  })
+})

@@ -975,4 +975,7 @@ Bu dilim geçmeden UI, e-posta veya geniş migration yazılmayacaktır.
 - [x] Yalnız en az üç öğrencide görülen outcome ihtiyacını sınıf önceliği olarak gösteren gizlilik eşiği.
 - [x] Program yönetimini yalnız desteğe ihtiyacı doğrulanmış öğrencilerde yayınlanan program kapsamıyla ölçme.
 - [x] Baseline ve takip kaynağı yokken öğrenci gelişimi/takip/müdahale boyutlarını açıkça yetersiz bırakma.
-- [ ] Salt-okunur tenant adapter'ı, performans bütçesi ve kurum sınıf/öğretmen ekranı.
+- [x] Seçili sınıfta en fazla 40 analiz çağrısını dörtlü eşzamanlılıkla sınırlayan fail-closed pilot adapter.
+- [x] Yalnız aynı tenant/sınıfta yayınlanmış programların opak üye referanslarını döndüren salt-okunur RPC.
+- [ ] 100+ öğrenci veya ölçülen p95 bütçesi aşılırsa N+1 pilot adapter yerine tek batch RPC.
+- [ ] Kurum sınıf/öğretmen ekranı.
