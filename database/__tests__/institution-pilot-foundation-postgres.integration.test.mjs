@@ -23,6 +23,7 @@ const suite = url && process.env.INSTITUTION_PILOT_TEST_DATABASE_DISPOSABLE === 
 const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations')
 const classroomSql = readFileSync(join(migrationsDir, '105_teacher_classroom_privacy.sql'), 'utf8')
 const institutionSql = readFileSync(join(migrationsDir, '112_institution_pilot_foundation.sql'), 'utf8')
+const trackingDirectorySql = readFileSync(join(migrationsDir, '115_institution_tracking_directory.sql'), 'utf8')
 
 suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
   let client
@@ -158,6 +159,7 @@ suite('112 institution pilot foundation real PostgreSQL acceptance', () => {
     await client.query('DELETE FROM public.teacher_classrooms WHERE teacher_id=$1', [legacyTeacher])
     await client.query('DELETE FROM public.profiles WHERE id=$1', [legacyTeacher])
     await client.query(institutionSql)
+    await client.query(trackingDirectorySql)
 
     platformAdmin = randomUUID()
     managerOne = randomUUID()

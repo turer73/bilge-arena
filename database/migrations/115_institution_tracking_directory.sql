@@ -11,8 +11,10 @@ SECURITY DEFINER
 SET search_path = pg_catalog
 AS $fn$
 DECLARE
-  v_membership public.pilot_institution_memberships%ROWTYPE;
-  v_institution public.pilot_institutions%ROWTYPE;
+  v_institution_id uuid;
+  v_membership_role text;
+  v_institution_name text;
+  v_institution_status text;
   v_classrooms jsonb;
 BEGIN
   IF p_user_id IS NULL THEN
@@ -22,8 +24,8 @@ BEGIN
     RAISE EXCEPTION 'institution tracking actor mismatch' USING ERRCODE = '42501';
   END IF;
 
-  SELECT membership, institution
-  INTO v_membership, v_institution
+  SELECT membership.institution_id, membership.role, institution.name, institution.status
+  INTO v_institution_id, v_membership_role, v_institution_name, v_institution_status
   FROM public.pilot_institution_memberships AS membership
   JOIN public.pilot_institutions AS institution
     ON institution.id = membership.institution_id
@@ -68,16 +70,16 @@ BEGIN
   ) ORDER BY classroom.created_at, classroom.id), '[]'::jsonb)
   INTO v_classrooms
   FROM public.teacher_classrooms AS classroom
-  WHERE classroom.institution_id = v_membership.institution_id
+  WHERE classroom.institution_id = v_institution_id
     AND classroom.status = 'active'
-    AND (v_membership.role = 'manager' OR classroom.teacher_id = p_user_id);
+    AND (v_membership_role = 'manager' OR classroom.teacher_id = p_user_id);
 
   RETURN jsonb_build_object(
     'institution', jsonb_build_object(
-      'name', v_institution.name,
-      'status', v_institution.status
+      'name', v_institution_name,
+      'status', v_institution_status
     ),
-    'membership', jsonb_build_object('role', v_membership.role),
+    'membership', jsonb_build_object('role', v_membership_role),
     'classrooms', v_classrooms
   );
 END;

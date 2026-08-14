@@ -19,8 +19,8 @@ describe('115 institution tracking directory SQL contract', () => {
   it('gives managers their tenant and teachers only their own classrooms', () => {
     expect(sql).toContain("membership.status = 'active'")
     expect(sql).toContain("membership.role IN ('manager', 'teacher')")
-    expect(sql).toContain('classroom.institution_id = v_membership.institution_id')
-    expect(sql).toContain("v_membership.role = 'manager' OR classroom.teacher_id = p_user_id")
+    expect(sql).toContain('classroom.institution_id = v_institution_id')
+    expect(sql).toContain("v_membership_role = 'manager' OR classroom.teacher_id = p_user_id")
   })
 
   it('removes inactive, deleted and blocked students', () => {
