@@ -144,7 +144,13 @@ describe('CalismaClient', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  test('Bilge Tahta erişimi yoksa doğrudan tahta başlatıcısını göstermez', () => {
+  // Bu test eskiden tersini bekliyordu: tahta erişimi yokken Bilge Asistan
+  // kartının hiç çizilmemesi. Global asistan FAB'ı arena-auxiliaries'ten
+  // kaldırıldığı için o davranış asistanı platformda tamamen erişilemez
+  // yapıyordu. Ders çalışma hub'ındaki asistan/tahta artık bayrağa bağlı
+  // değildir; sınav ve ortak çalışma için kapatılabilirlik yalnız oyun içi
+  // tahtaya aittir.
+  test('Bilge Tahta erişimi yokken de ders çalışma asistanı sunulur', () => {
     useBilgeTahtaEnabled.mockReturnValue(false)
     mockedUseAuthStore.mockReturnValue({
       user: { id: 'u1' },
@@ -153,8 +159,8 @@ describe('CalismaClient', () => {
     } as never)
     render(<CalismaClient />)
 
-    expect(screen.queryByRole('heading', { name: 'Bilge Asistan' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Konu anlat' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Bilge Asistan' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Konu anlat' })).toBeInTheDocument()
   })
 
   test('hata adımı kapatılırken tamamlanma analitiği yazmaz', async () => {
