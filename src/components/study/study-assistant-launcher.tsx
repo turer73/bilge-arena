@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { BilgeTahtaDialog } from '@/components/bilge-tahta'
-import { useBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
 import type { BilgeTahtaLesson, BilgeTahtaStage } from '@/lib/bilge-tahta/contract'
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
 import type { GameSlug } from '@/lib/constants/games'
@@ -23,7 +22,6 @@ const ACTION_STAGE: Record<StudyAssistantAction['id'], BilgeTahtaStage> = {
 
 export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; examRef: string | null }) {
   const targetId = useId()
-  const boardEnabled = useBilgeTahtaEnabled()
   const [boardOpen, setBoardOpen] = useState(false)
   const [activeAction, setActiveAction] = useState<StudyAssistantAction | null>(null)
   const [status, setStatus] = useState<BoardStatus>('idle')
@@ -128,8 +126,10 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
     if (!open && status === 'loading') requestRef.current?.abort()
   }
 
-  if (!boardEnabled) return null
-
+  // Ders calisma hub'indaki tahta bayraga baglanmaz: ogrenci zaten calisiyor,
+  // asistan burada tek giristir (global FAB arena-auxiliaries'ten kaldirildi).
+  // Sinav/ortak-calisma icin kapatilabilirlik yalniz OYUN ICI tahtaya aittir
+  // (bkz. bilge-chan-companion.tsx ve explanation-panel.tsx).
   return (
     <>
       <section
