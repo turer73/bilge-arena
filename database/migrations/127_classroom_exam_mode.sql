@@ -67,6 +67,51 @@ BEGIN
 END;
 $fn$;
 
+-- Ogretmenin kendi sinifinin sinav modu durumunu okumasi. Ogretmen paneli
+-- sayfa yenilendiginde acik pencereyi ve kalan sureyi gosterebilsin diye
+-- gerekli; yazma ucunun donusu tek basina yeterli degildir.
+CREATE OR REPLACE FUNCTION public.get_my_classroom_exam_mode(
+  p_user_id uuid,
+  p_classroom_id uuid,
+  p_institution_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_classroom public.teacher_classrooms%ROWTYPE;
+BEGIN
+  IF p_user_id IS NULL OR p_classroom_id IS NULL OR p_institution_id IS NULL THEN
+    RAISE EXCEPTION 'user and classroom required' USING ERRCODE = '22023';
+  END IF;
+  IF auth.uid() IS NOT NULL AND auth.uid() IS DISTINCT FROM p_user_id THEN
+    RAISE EXCEPTION 'classroom actor mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_classroom
+  FROM public.teacher_classrooms
+  WHERE id = p_classroom_id
+    AND teacher_id = p_user_id
+    AND institution_id = p_institution_id
+    AND status = 'active';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'classroom not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  RETURN jsonb_build_object(
+    'classroomId', v_classroom.id,
+    'examMode', v_classroom.exam_mode_expires_at IS NOT NULL
+      AND v_classroom.exam_mode_expires_at > now(),
+    'until', CASE
+      WHEN v_classroom.exam_mode_expires_at > now() THEN v_classroom.exam_mode_expires_at
+      ELSE NULL
+    END
+  );
+END;
+$fn$;
+
 -- Ogretmenin sinif icin sinav modunu acip kapatmasi. Migration 113'teki
 -- set_teacher_classroom_bilge_tahta ile ayni idempotency ve yetki kalibi.
 CREATE OR REPLACE FUNCTION public.set_teacher_classroom_exam_mode(
@@ -161,11 +206,13 @@ $fn$;
 
 REVOKE ALL ON FUNCTION
   public.get_my_assistance_policy(uuid),
+  public.get_my_classroom_exam_mode(uuid, uuid, uuid),
   public.set_teacher_classroom_exam_mode(uuid, uuid, uuid, boolean, uuid)
 FROM PUBLIC, anon, authenticated, service_role;
 
 GRANT EXECUTE ON FUNCTION
   public.get_my_assistance_policy(uuid),
+  public.get_my_classroom_exam_mode(uuid, uuid, uuid),
   public.set_teacher_classroom_exam_mode(uuid, uuid, uuid, boolean, uuid)
 TO service_role;
 

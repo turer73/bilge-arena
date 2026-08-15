@@ -52,9 +52,18 @@ export const examModeToggleInputSchema = z.object({
   requestId: z.string().uuid(),
 }).strict()
 
+export type ExamModeToggleInput = z.infer<typeof examModeToggleInputSchema>
+
 export const examModeToggleResultSchema = z.object({
   classroomId: z.string().uuid(),
   examMode: z.boolean(),
   until: z.string().datetime({ offset: true }).nullable(),
   replayed: z.boolean(),
+}).strict()
+
+/** Ogretmen panelinin okudugu sinif bazli sinav modu durumu. */
+export const classroomExamModeSchema = z.object({
+  classroomId: z.string().uuid(),
+  examMode: z.boolean(),
+  until: z.string().datetime({ offset: true }).nullable(),
 }).strict()

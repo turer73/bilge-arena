@@ -55,8 +55,19 @@ describe('127 classroom exam mode SQL contract', () => {
     expect(update).toMatch(/CASE WHEN p_enabled THEN now\(\) \+ c_max_window ELSE now\(\) END/)
   })
 
-  it('exposes both functions only to service_role with fixed search paths', () => {
-    expect(sql.match(/SECURITY DEFINER\s+SET search_path = pg_catalog/g)).toHaveLength(2)
+  it('lets the owning teacher read the classroom window and hides expired ones', () => {
+    const read = body(
+      'get_my_classroom_exam_mode',
+      'CREATE OR REPLACE FUNCTION public.set_teacher_classroom_exam_mode',
+    )
+    expect(read).toMatch(/teacher_id = p_user_id[\s\S]+institution_id = p_institution_id[\s\S]+status = 'active'/)
+    expect(read).toContain("RAISE EXCEPTION 'classroom not found'")
+    // Suresi dolmus pencere acik gosterilmez.
+    expect(read).toContain('exam_mode_expires_at > now()')
+  })
+
+  it('exposes every function only to service_role with fixed search paths', () => {
+    expect(sql.match(/SECURITY DEFINER\s+SET search_path = pg_catalog/g)).toHaveLength(3)
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION[\s\S]+FROM PUBLIC, anon, authenticated, service_role/)
     expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION[\s\S]+TO service_role/)
   })
