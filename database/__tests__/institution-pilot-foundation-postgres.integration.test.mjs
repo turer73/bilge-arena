@@ -24,7 +24,7 @@ const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'migra
 const classroomSql = readFileSync(join(migrationsDir, '105_teacher_classroom_privacy.sql'), 'utf8')
 const institutionSql = readFileSync(join(migrationsDir, '112_institution_pilot_foundation.sql'), 'utf8')
 const institutionTrackingSql = readdirSync(migrationsDir)
-  .filter((name) => /^(11[4-9]|12[0-5])_.*\.sql$/.test(name))
+  .filter((name) => /^(11[3-9]|12[0-7])_.*\.sql$/.test(name))
   .sort()
   .map((name) => ({ name, sql: readFileSync(join(migrationsDir, name), 'utf8') }))
 
@@ -349,6 +349,82 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
       ]),
       'P0003',
     )
+  })
+
+  it('closes every helper for the whole classroom while exam mode is on', async () => {
+    const examStudent = randomUUID()
+    const outsideStudent = randomUUID()
+    await client.query(
+      'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3),($4,$5,$6)',
+      [examStudent, 'exam-student', 'Sinav Ogrencisi', outsideStudent, 'free-student', 'Serbest Ogrenci'],
+    )
+    const examClass = await rpc('public.create_teacher_classroom($1,$2,$3)', [
+      teacherOne, '11-B Sinav', randomUUID(),
+    ])
+    await client.query(
+      'INSERT INTO public.teacher_classroom_memberships(classroom_id,student_id) VALUES($1,$2)',
+      [examClass.classroom.id, examStudent],
+    )
+
+    // Sinav modu kapaliyken ucu de acik.
+    expect(await rpc('public.get_my_assistance_policy($1)', [examStudent])).toMatchObject({
+      examMode: false, board: true, coach: true, assistant: true,
+    })
+
+    // Ogretmen acinca sinifin tamami icin ucu birden kapanir.
+    const requestId = randomUUID()
+    expect(await rpc('public.set_teacher_classroom_exam_mode($1,$2,$3,$4,$5)', [
+      teacherOne, examClass.classroom.id, institutionOne, true, requestId,
+    ])).toMatchObject({ examMode: true, replayed: false })
+    expect(await rpc('public.get_my_assistance_policy($1)', [examStudent])).toMatchObject({
+      examMode: true, board: false, coach: false, assistant: false,
+    })
+
+    // Ayni istek tekrarlanirsa yeni pencere acilmaz.
+    expect(await rpc('public.set_teacher_classroom_exam_mode($1,$2,$3,$4,$5)', [
+      teacherOne, examClass.classroom.id, institutionOne, true, requestId,
+    ])).toMatchObject({ replayed: true })
+
+    // Baska sinifin ogrencisi etkilenmez.
+    expect(await rpc('public.get_my_assistance_policy($1)', [outsideStudent])).toMatchObject({
+      examMode: false, board: true,
+    })
+
+    // Sinifin sahibi olmayan ayni kurum ogretmeni degistiremez.
+    await expectPgError(
+      () => rpc('public.set_teacher_classroom_exam_mode($1,$2,$3,$4,$5)', [
+        capacityTeachers[0], examClass.classroom.id, institutionOne, false, randomUUID(),
+      ]),
+      'P0002',
+    )
+    // Yanlis tenant kimligiyle cagri reddedilir.
+    await expectPgError(
+      () => rpc('public.set_teacher_classroom_exam_mode($1,$2,$3,$4,$5)', [
+        teacherOne, examClass.classroom.id, institutionTwo, false, randomUUID(),
+      ]),
+      '42501',
+    )
+
+    // Ogretmen kapatmayi unutursa pencere kendiliginden duser.
+    await client.query(
+      "UPDATE public.teacher_classrooms SET exam_mode_expires_at = now() - interval '1 minute' WHERE id=$1",
+      [examClass.classroom.id],
+    )
+    expect(await rpc('public.get_my_assistance_policy($1)', [examStudent])).toMatchObject({
+      examMode: false, board: true, coach: true, assistant: true,
+    })
+
+    // Acik pencere ogretmen tarafindan da kapatilabilir.
+    await rpc('public.set_teacher_classroom_exam_mode($1,$2,$3,$4,$5)', [
+      teacherOne, examClass.classroom.id, institutionOne, true, randomUUID(),
+    ])
+    expect(await rpc('public.get_my_assistance_policy($1)', [examStudent])).toMatchObject({ examMode: true })
+    await rpc('public.set_teacher_classroom_exam_mode($1,$2,$3,$4,$5)', [
+      teacherOne, examClass.classroom.id, institutionOne, false, randomUUID(),
+    ])
+    expect(await rpc('public.get_my_assistance_policy($1)', [examStudent])).toMatchObject({
+      examMode: false, board: true, coach: true, assistant: true,
+    })
   })
 
   it('cuts teacher RPC access when the tenant manager removes membership', async () => {
