@@ -12,6 +12,9 @@ const {
   mockUpdateEq,
   mockUpdateResult,
   mockInsert,
+  mockRpc,
+  mockReportRow,
+  mockCreateNotification,
 } = vi.hoisted(() => ({
   mockCheckPermission: vi.fn(),
   mockEq: vi.fn(),
@@ -21,6 +24,9 @@ const {
   mockUpdateEq: vi.fn(),
   mockUpdateResult: vi.fn(),
   mockInsert: vi.fn(),
+  mockRpc: vi.fn(),
+  mockReportRow: vi.fn(),
+  mockCreateNotification: vi.fn(),
 }))
 
 // User-scoped client — permission check + GET listing query.
@@ -47,8 +53,13 @@ vi.mock('@/lib/supabase/server', () => ({
 
 // Service-role client — PATCH update + admin_logs insert.
 // Branches on table name because the route hits two tables on one client.
+vi.mock('@/lib/notifications/create', () => ({
+  createNotification: mockCreateNotification,
+}))
+
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
+    rpc: mockRpc,
     from: vi.fn((table: string) => {
       if (table === 'admin_logs') {
         return {
@@ -68,6 +79,11 @@ vi.mock('@/lib/supabase/service-role', () => ({
             }),
           }
         }),
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn(async () => mockReportRow()),
+          })),
+        })),
       }
     }),
   })),
@@ -197,6 +213,12 @@ describe('PATCH /api/admin/reports', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUpdateResult.mockReturnValue({ error: null })
+    // Varsayilan: odul verildi, raporlayan belli.
+    mockRpc.mockResolvedValue({
+      data: { reportId: REPORT_ID, awarded: true, replayed: false, coins: 250 },
+      error: null,
+    })
+    mockReportRow.mockResolvedValue({ data: { user_id: 'student-1' } })
   })
 
   it('returns 403 without admin.reports.manage permission', async () => {
@@ -234,7 +256,7 @@ describe('PATCH /api/admin/reports', () => {
     )
     expect(res.status).toBe(200)
     const json = await res.json()
-    expect(json).toEqual({ success: true })
+    expect(json).toMatchObject({ success: true })
     expect(mockUpdateEq).toHaveBeenCalledWith('id', REPORT_ID)
   })
 
@@ -283,7 +305,7 @@ describe('PATCH /api/admin/reports', () => {
       action: 'report_resolved',
       target_type: 'report',
       target_id: REPORT_ID,
-      details: { status: 'resolved', adminNote: 'ok' },
+      details: { status: 'resolved', adminNote: 'ok', rewardedCoins: 250 },
     })
   })
 
@@ -296,5 +318,67 @@ describe('PATCH /api/admin/reports', () => {
     expect(res.status).toBe(500)
     const json = await res.json()
     expect(json.error).toBe('Bir hata oluştu.')
+  })
+})
+
+// ─── Hata raporu odulu ───────────────────────────
+
+describe('PATCH /api/admin/reports — kabul edilen rapor ödülü', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
+    mockUpdateResult.mockReturnValue({ error: null })
+    mockRpc.mockResolvedValue({
+      data: { reportId: REPORT_ID, awarded: true, replayed: false, coins: 250 },
+      error: null,
+    })
+    mockReportRow.mockResolvedValue({ data: { user_id: 'student-1' } })
+  })
+
+  it('resolved yapılınca ödül RPC çağrılır ve bildirim gider', async () => {
+    const res = await PATCH(makePatchRequest({ reportId: REPORT_ID, status: 'resolved' }))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ success: true, rewardedCoins: 250 })
+    expect(mockRpc).toHaveBeenCalledWith('award_error_report_reward', expect.objectContaining({
+      p_admin_id: 'admin-1',
+      p_report_id: REPORT_ID,
+    }))
+    expect(mockCreateNotification).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ userId: 'student-1', type: 'error_report_rewarded' }),
+    )
+  })
+
+  it('reddedilen raporda ödül verilmez ve bildirim gitmez', async () => {
+    await PATCH(makePatchRequest({ reportId: REPORT_ID, status: 'rejected' }))
+    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockCreateNotification).not.toHaveBeenCalled()
+  })
+
+  it('aynı rapor ikinci kez ödüllendirilmez (replayed) — bildirim de gitmez', async () => {
+    mockRpc.mockResolvedValue({
+      data: { reportId: REPORT_ID, awarded: false, replayed: true, coins: 250 },
+      error: null,
+    })
+    const res = await PATCH(makePatchRequest({ reportId: REPORT_ID, status: 'resolved' }))
+    expect(await res.json()).toMatchObject({ rewardedCoins: 0 })
+    expect(mockCreateNotification).not.toHaveBeenCalled()
+  })
+
+  it('ödül RPC hata verirse rapor yine çözülmüş sayılır, bildirim gitmez', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: { code: '42501', message: 'denied' } })
+    const res = await PATCH(makePatchRequest({ reportId: REPORT_ID, status: 'resolved' }))
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ success: true, rewardedCoins: 0 })
+    expect(mockCreateNotification).not.toHaveBeenCalled()
+  })
+
+  it('anonim raporda (user_id yok) bildirim gitmez', async () => {
+    mockRpc.mockResolvedValue({
+      data: { reportId: REPORT_ID, awarded: false, replayed: false, coins: 0 },
+      error: null,
+    })
+    await PATCH(makePatchRequest({ reportId: REPORT_ID, status: 'resolved' }))
+    expect(mockCreateNotification).not.toHaveBeenCalled()
   })
 })

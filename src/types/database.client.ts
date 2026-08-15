@@ -408,6 +408,12 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       complete_game_session: Omit<CompleteGameSession, 'Args'> & {
         Args: CompleteGameSessionArgs
       }
+      // Migration 128. Uretilen tiplere ancak canliya uygulandiktan sonra
+      // girecegi icin sozlesme burada elle tutuluyor.
+      award_error_report_reward: {
+        Args: { p_admin_id: string; p_report_id: string; p_coins: number }
+        Returns: Json
+      }
       issue_verified_attempt: {
         Args: {
           p_user_id: string
