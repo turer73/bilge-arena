@@ -3,6 +3,7 @@ import type { createServiceRoleClient } from '@/lib/supabase/service-role'
 export type NotificationType =
   | 'submission_approved'
   | 'submission_rejected'
+  | 'error_report_rewarded'
 
 export interface NewNotification {
   userId: string
