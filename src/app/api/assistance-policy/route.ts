@@ -37,7 +37,16 @@ export async function GET() {
     const { data, error } = await admin.rpc('get_my_assistance_policy', {
       p_user_id: user.id,
     })
-    if (error) return policyResponse(CLOSED_ASSISTANCE_POLICY, 503)
+    if (error) {
+      // Migration 127 heniz uygulanmadiysa fonksiyon yoktur (42883 /
+      // PGRST202). Bu durumda kapatilacak bir sinav da yoktur; fail-closed
+      // uygulanirsa ozellik yokken butun platformda yardimcilar kapanirdi.
+      // Diger hatalar (yetki, baglanti, sozlesme) fail-closed kalir.
+      if (error.code === '42883' || error.code === 'PGRST202') {
+        return policyResponse(OPEN_ASSISTANCE_POLICY)
+      }
+      return policyResponse(CLOSED_ASSISTANCE_POLICY, 503)
+    }
 
     const parsed = assistancePolicySchema.safeParse(data)
     return parsed.success
