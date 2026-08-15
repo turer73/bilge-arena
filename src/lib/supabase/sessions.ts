@@ -25,6 +25,9 @@ export interface SavedGameSession {
   correctCount: number
   wrongCount: number
   newBadges: string[]
+  /** Bu oturumun kazandirdigi altin. null = sunucu okuyamadi (UI gostermez),
+   * 0 = gunluk tavan dolu (UI bunu ayrica bildirir). */
+  coinsEarned: number | null
 }
 
 /**
@@ -92,6 +95,10 @@ export async function saveGameSession({
       newBadges: Array.isArray(data.newBadges)
         ? data.newBadges.filter((code: unknown): code is string => typeof code === 'string')
         : [],
+      // Eski/bozuk cevapta null'a duser -- UI o zaman altin rozetini hic gostermez.
+      coinsEarned: Number.isInteger(data.coinsEarned) && data.coinsEarned >= 0
+        ? data.coinsEarned
+        : null,
     }
   } catch (err) {
     console.error('[saveGameSession] Fetch hatasi:', err)

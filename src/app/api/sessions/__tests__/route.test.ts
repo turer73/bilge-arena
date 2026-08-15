@@ -9,6 +9,7 @@ const mockProfileSelect = vi.fn()
 const mockSessionCountGte = vi.fn()
 const mockRpc = vi.fn()
 const mockAchievementSourceEq = vi.fn()
+const mockCoinLedgerMaybeSingle = vi.fn()
 const featureState = vi.hoisted(() => ({ QUIZ_LIMIT: false }))
 const mockGetFirstAttempt = vi.hoisted(() => vi.fn())
 const mockReadSnapshots = vi.hoisted(() => vi.fn())
@@ -60,6 +61,17 @@ const mockFrom = vi.fn((table: string) => {
       select: vi.fn(() => ({
         eq: vi.fn(() => ({ eq: mockAchievementSourceEq })),
       })),
+    }
+  }
+  if (table === 'reward_ledger') {
+    // .select('amount').eq(x4).maybeSingle()
+    return {
+      select: vi.fn(() => {
+        const chain: Record<string, ReturnType<typeof vi.fn>> = {}
+        chain.eq = vi.fn(() => chain)
+        chain.maybeSingle = mockCoinLedgerMaybeSingle
+        return chain
+      }),
     }
   }
   return makeChain()
@@ -166,6 +178,7 @@ describe('POST /api/sessions', () => {
       error: null,
     }))
     mockAchievementSourceEq.mockResolvedValue({ data: [], error: null })
+    mockCoinLedgerMaybeSingle.mockResolvedValue({ data: { amount: 40 }, error: null })
     // Gate defaults: free (non-premium) kullanici, bugun 0 oturum -> gate gecer
     mockProfilesSingle.mockResolvedValue({ data: { is_premium: false, premium_until: null }, error: null })
     mockSessionCountGte.mockResolvedValue({ count: 0, error: null })
@@ -422,6 +435,42 @@ describe('POST /api/sessions', () => {
     expect(mockRpc.mock.calls[0][0]).toBe('complete_verified_game_session')
     expect(mockAchievementSourceEq).toHaveBeenCalledWith('source_session_id', 'session-1')
     expect((await res.json()).newBadges).toEqual(['first_game', 'first_correct'])
+  })
+
+  // ─── Kazanilan altin (migration 129 sonrasi tek dogru kaynak: reward_ledger) ──
+
+  it('kazanilan altini bu oturumun ledger satirindan okuyup cevapta doner', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+
+    const res = await POST(makeRequest(validBody))
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).coinsEarned).toBe(40)
+    // Odeme uygulamada DEGIL, apply_verified_session_rewards icinde yapilir;
+    // route yalniz okur. Ikinci bir odul RPC'si cagrilmamali.
+    expect(mockRpc).toHaveBeenCalledOnce()
+  })
+
+  it('gunluk tavan dolu oturumda 0 doner (null degil) — UI ayri mesaj gosterebilsin', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockCoinLedgerMaybeSingle.mockResolvedValue({ data: { amount: 0 }, error: null })
+
+    const res = await POST(makeRequest(validBody))
+
+    expect((await res.json()).coinsEarned).toBe(0)
+  })
+
+  it('ledger okunamazsa coinsEarned null doner ve oturum yine de 200 kaydedilir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockCoinLedgerMaybeSingle.mockResolvedValue({ data: null, error: { code: '42501' } })
+
+    const res = await POST(makeRequest(validBody))
+
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.coinsEarned).toBeNull()
+    // Altin okunamamasi oturum kaydini bozmamali.
+    expect(json.sessionId).toBe('session-1')
   })
 
   it('does not evaluate badge stats or mutate rewards in the app process', async () => {
