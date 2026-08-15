@@ -78,3 +78,16 @@ vi.mock('@/lib/supabase/client', () => ({
     },
   }),
 }))
+
+// Sinav modu politikasi: testlerde varsayilan olarak butun yardimcilar acik.
+// Gercek hook fetch'e bagli oldugu icin mock'lanmazsa her bilesen sonsuza
+// kadar "loading" kalir ve fail-closed davranisla gorunmez olur. Sinav modu
+// davranisini test eden dosyalar bu mock'u kendi icinde ezer; hook'un kendi
+// testi vi.unmock ile gercek uygulamayi kullanir.
+vi.mock('@/lib/assistance-policy/client', () => ({
+  useAssistancePolicy: () => ({
+    policy: { examMode: false, board: true, coach: true, assistant: true, until: null },
+    loading: false,
+  }),
+  canUseHelper: () => true,
+}))

@@ -11,6 +11,7 @@ import { CHAN_LINES, pickLine } from '@/lib/constants/chan-dialogue'
 import { isTtsSupported, speakChanLine, stopChanSpeech } from '@/lib/utils/chan-tts'
 import { BilgeTahtaDialog } from '@/components/bilge-tahta'
 import { useBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
+import { canUseHelper, useAssistancePolicy } from '@/lib/assistance-policy/client'
 import type { BilgeTahtaLesson, BilgeTahtaStage } from '@/lib/bilge-tahta/contract'
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
 
@@ -108,8 +109,12 @@ export function BilgeChanCompanion({
 
   const easy = question?.difficulty === 1
   const answered = quizState === 'answered'
+  // Sinav modu: ogrencinin aktif uyeligi bulunan herhangi bir sinifta sinav
+  // aciksa koc da tahta da kapanir. Politika okunana kadar ikisi de kapalidir.
+  const assistance = useAssistancePolicy()
   const coachEnabled = process.env.NEXT_PUBLIC_COACH_ENABLED === 'true'
-  const boardEnabled = useBilgeTahtaEnabled()
+    && canUseHelper(assistance, 'coach')
+  const boardEnabled = useBilgeTahtaEnabled() && canUseHelper(assistance, 'board')
 
   useEffect(() => {
     if (!coachEnabled || !attemptId || phase !== 'intro' || quizState !== 'playing'
