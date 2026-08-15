@@ -6,6 +6,7 @@ import { BilgeTahtaDialog } from './bilge-tahta-dialog'
 import type { BilgeTahtaLesson } from '@/lib/bilge-tahta/contract'
 import { buildTopicExplanationPrompt } from '@/lib/bilge-tahta/topic-explanation'
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
+import { canUseHelper, useAssistancePolicy } from '@/lib/assistance-policy/client'
 
 interface TopicExplanationButtonProps {
   topic: string
@@ -30,6 +31,9 @@ export function TopicExplanationButton({
   const [loading, setLoading] = useState(false)
   const [answer, setAnswer] = useState<string | null>(null)
   const [error, setError] = useState('')
+  // Sinav modu bu dugmenin iki cagri noktasini da (oyun ici aciklama paneli
+  // ve ogrenci odev ekrani) kapsasin diye kontrol bilesenin icinde.
+  const assistance = useAssistancePolicy()
 
   const lesson = useMemo<BilgeTahtaLesson>(() => ({
     mode: 'game',
@@ -85,6 +89,9 @@ export function TopicExplanationButton({
       setLoading(false)
     }
   }
+
+  // Sinav suresince tahta girisi hic cizilmez.
+  if (!canUseHelper(assistance, 'board')) return null
 
   return (
     <>

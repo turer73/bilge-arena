@@ -6,6 +6,8 @@ const clientMocks = vi.hoisted(() => ({
   fetchClasses: vi.fn(),
   fetchOverview: vi.fn(),
   fetchBilgeTahtaAccess: vi.fn(),
+  fetchExamMode: vi.fn(),
+  updateExamMode: vi.fn(),
   updateBilgeTahtaAccess: vi.fn(),
   createClass: vi.fn(),
   issueInvite: vi.fn(),
@@ -23,6 +25,8 @@ vi.mock('@/lib/teacher-classroom/client', async () => ({
   fetchTeacherClassrooms: clientMocks.fetchClasses,
   fetchTeacherClassroomOverview: clientMocks.fetchOverview,
   fetchClassroomBilgeTahtaAccess: clientMocks.fetchBilgeTahtaAccess,
+  fetchClassroomExamMode: clientMocks.fetchExamMode,
+  updateClassroomExamMode: clientMocks.updateExamMode,
   updateClassroomBilgeTahtaAccess: clientMocks.updateBilgeTahtaAccess,
   createTeacherClassroom: clientMocks.createClass,
   issueTeacherClassroomInvite: clientMocks.issueInvite,
@@ -100,6 +104,7 @@ describe('TeacherClassroomPanel', () => {
     clientMocks.fetchClasses.mockResolvedValue(classes)
     clientMocks.fetchOverview.mockResolvedValue(overview)
     clientMocks.fetchBilgeTahtaAccess.mockResolvedValue({ enabled: false })
+    clientMocks.fetchExamMode.mockResolvedValue({ classroomId: 'class-1', examMode: false, until: null })
     clientMocks.updateBilgeTahtaAccess.mockResolvedValue({
       classroomId: CLASSROOM_ID,
       enabled: true,
@@ -135,14 +140,14 @@ describe('TeacherClassroomPanel', () => {
     expect(screen.getByText(/1 geçmiş\/gizli üyelik kimliği/i)).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/student-1|@|11111111-2222/)
 
-    const bilgeTahtaSwitch = screen.getByRole('switch', { name: 'Kapalı' })
+    const bilgeTahtaSwitch = screen.getByRole('switch', { name: 'Sınıf Bilge Tahta' })
     expect(bilgeTahtaSwitch).toHaveAttribute('aria-checked', 'false')
     await user.click(bilgeTahtaSwitch)
     await waitFor(() => expect(clientMocks.updateBilgeTahtaAccess).toHaveBeenCalledWith(
       CLASSROOM_ID,
       { enabled: true, requestId: expect.any(String) },
     ))
-    expect(screen.getByRole('switch', { name: 'Açık' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('switch', { name: 'Sınıf Bilge Tahta' })).toHaveAttribute('aria-checked', 'true')
 
     expect(document.body.textContent).not.toContain(TOKEN)
     await user.click(screen.getByRole('button', { name: 'Davet oluştur' }))

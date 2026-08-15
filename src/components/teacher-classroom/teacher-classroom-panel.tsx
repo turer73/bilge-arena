@@ -8,6 +8,7 @@ import {
   Clipboard,
   GraduationCap,
   Presentation,
+  ShieldAlert,
   Link2,
   RefreshCw,
   ShieldCheck,
@@ -19,6 +20,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import {
   createTeacherClassroom,
   fetchClassroomBilgeTahtaAccess,
+  fetchClassroomExamMode,
   fetchTeacherClassroomOverview,
   fetchTeacherClassrooms,
   issueTeacherClassroomInvite,
@@ -27,6 +29,7 @@ import {
   revokeTeacherClassroomInvite,
   TeacherClassroomClientError,
   updateClassroomBilgeTahtaAccess,
+  updateClassroomExamMode,
 } from '@/lib/teacher-classroom/client'
 import type {
   TeacherClassroomList,
@@ -62,6 +65,10 @@ export function TeacherClassroomPanel() {
   const [bilgeTahtaEnabled, setBilgeTahtaEnabled] = useState(false)
   const [bilgeTahtaSaving, setBilgeTahtaSaving] = useState(false)
   const bilgeTahtaRef = useRef<StableRequest | null>(null)
+  const [examModeEnabled, setExamModeEnabled] = useState(false)
+  const [examModeUntil, setExamModeUntil] = useState<string | null>(null)
+  const [examModeSaving, setExamModeSaving] = useState(false)
+  const examModeRef = useRef<StableRequest | null>(null)
 
   const [className, setClassName] = useState('')
   const [creating, setCreating] = useState(false)
@@ -119,12 +126,15 @@ export function TeacherClassroomPanel() {
     if (signal?.aborted) return
     setOverviewLoading(true)
     try {
-      const [nextOverview, access] = await Promise.all([
+      const [nextOverview, access, exam] = await Promise.all([
         fetchTeacherClassroomOverview(classroomId, signal),
         fetchClassroomBilgeTahtaAccess(classroomId, signal),
+        fetchClassroomExamMode(classroomId, signal),
       ])
       setOverview(nextOverview)
       setBilgeTahtaEnabled(access.enabled)
+      setExamModeEnabled(exam.examMode)
+      setExamModeUntil(exam.until)
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return
       setOverview(null)
@@ -158,6 +168,35 @@ export function TeacherClassroomPanel() {
       setAnnouncement('Bilge Tahta ayarı kaydedilemedi. Aynı seçimle güvenle yeniden deneyebilirsin.')
     } finally {
       setBilgeTahtaSaving(false)
+    }
+  }
+
+  const toggleExamMode = async () => {
+    if (!selectedId || examModeSaving) return
+    const nextEnabled = !examModeEnabled
+    const fingerprint = `${selectedId}:${nextEnabled}`
+    // Ayni secim tekrar gonderilirse RPC replay olarak doner; yeni pencere acilmaz.
+    const pending = examModeRef.current?.fingerprint === fingerprint
+      ? examModeRef.current
+      : { fingerprint, requestId: crypto.randomUUID() }
+    examModeRef.current = pending
+    setExamModeSaving(true)
+    setAnnouncement('')
+    try {
+      const result = await updateClassroomExamMode(selectedId, {
+        enabled: nextEnabled,
+        requestId: pending.requestId,
+      })
+      examModeRef.current = null
+      setExamModeEnabled(result.examMode)
+      setExamModeUntil(result.until)
+      setAnnouncement(result.examMode
+        ? 'Sınav modu açıldı. Bu sınıftaki öğrencilerde bütün yardımcılar kapandı.'
+        : 'Sınav modu kapatıldı. Yardımcılar yeniden kullanılabilir.')
+    } catch {
+      setAnnouncement('Sınav modu kaydedilemedi. Aynı seçimle güvenle yeniden deneyebilirsin.')
+    } finally {
+      setExamModeSaving(false)
     }
   }
 
@@ -458,6 +497,7 @@ export function TeacherClassroomPanel() {
                   <button
                     type="button"
                     role="switch"
+                    aria-label="Sınıf Bilge Tahta"
                     aria-checked={bilgeTahtaEnabled}
                     disabled={bilgeTahtaSaving}
                     onClick={() => void toggleBilgeTahta()}
@@ -465,6 +505,37 @@ export function TeacherClassroomPanel() {
                     style={{ background: bilgeTahtaEnabled ? 'var(--growth)' : 'var(--text-muted)' }}
                   >
                     {bilgeTahtaSaving ? 'Kaydediliyor…' : bilgeTahtaEnabled ? 'Açık' : 'Kapalı'}
+                  </button>
+                </div>
+
+                <div className="mt-3 flex flex-col gap-3 rounded-xl border border-[var(--urgency)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-[var(--urgency-text)]" aria-hidden="true" />
+                    <div>
+                      <p className="text-sm font-black">Sınav modu</p>
+                      <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">
+                        Açıkken bu sınıftaki bütün öğrencilerde Bilge Tahta, Bilge Çan ve Bilge Asistan
+                        kapanır — sadece ödev ekranında değil, uygulamanın her yerinde. En fazla 4 saat
+                        sonra kendiliğinden kapanır.
+                      </p>
+                      {examModeUntil && (
+                        <p className="mt-1 text-xs font-bold text-[var(--urgency-text)]">
+                          Kendiliğinden kapanış: {formatIstanbulDateTime(examModeUntil)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-label="Sınav modu"
+                    aria-checked={examModeEnabled}
+                    disabled={examModeSaving}
+                    onClick={() => void toggleExamMode()}
+                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl px-4 text-sm font-black text-white disabled:opacity-60"
+                    style={{ background: examModeEnabled ? 'var(--urgency-text)' : 'var(--text-muted)' }}
+                  >
+                    {examModeSaving ? 'Kaydediliyor…' : examModeEnabled ? 'Sınav açık' : 'Kapalı'}
                   </button>
                 </div>
               </section>

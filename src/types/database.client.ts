@@ -776,6 +776,26 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
+      // Migration 127. Uretilen tiplere ancak canliya uygulandiktan sonra
+      // girecegi icin sozlesme burada elle tutuluyor.
+      get_my_assistance_policy: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_my_classroom_exam_mode: {
+        Args: { p_user_id: string; p_classroom_id: string; p_institution_id: string }
+        Returns: Json
+      }
+      set_teacher_classroom_exam_mode: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_institution_id: string
+          p_enabled: boolean
+          p_request_id: string
+        }
+        Returns: Json
+      }
       issue_teacher_classroom_invite: {
         Args: {
           p_user_id: string
