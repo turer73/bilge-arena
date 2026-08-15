@@ -275,6 +275,27 @@ export async function POST(request: Request) {
     }
   }
 
+  // Kazanilan altin, rozetlerle ayni desende salt-okunur: odeme migration 129'da
+  // apply_verified_session_rewards icinde yapiliyor ve o fonksiyon void donuyor,
+  // yani tutar cagri zincirinde yukari cikmiyor. Tek dogru kaynak ledger satiri.
+  // Rozetlerden farkli olarak replay'de de okunur: tekrar odeme yapilmaz, ama
+  // ayni sonuc ekrani ayni oturumun kazancini gostermeye devam etmeli.
+  // null = okunamadi (UI hicbir sey gostermez); 0 = gunluk tavan dolu.
+  let coinsEarned: number | null = null
+  const { data: coinRow, error: coinReadError } = await svc
+    .from('reward_ledger')
+    .select('amount')
+    .eq('user_id', user.id)
+    .eq('source_type', 'session')
+    .eq('source_id', sessionId)
+    .eq('reward_type', 'coin')
+    .maybeSingle()
+  if (coinReadError) {
+    console.error('[Sessions API] session coin read hatasi:', coinReadError.code)
+  } else if (coinRow) {
+    coinsEarned = coinRow.amount
+  }
+
   return NextResponse.json({
     sessionId,
     // Always return the transaction's persisted values. On an idempotent
@@ -284,5 +305,6 @@ export async function POST(request: Request) {
     wrongCount: persistedWrongCount,
     maxStreak,
     newBadges,
+    coinsEarned,
   })
 }

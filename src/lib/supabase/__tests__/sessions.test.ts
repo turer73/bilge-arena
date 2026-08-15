@@ -27,7 +27,11 @@ const baseParams = {
   clientRequestId: '00000000-0000-4000-8000-000000000001',
 }
 
-function mockFetchSuccess(sessionId = 'session-123', newBadges: string[] = []) {
+function mockFetchSuccess(
+  sessionId = 'session-123',
+  newBadges: string[] = [],
+  coinsEarned: unknown = 40,
+) {
   mockFetch.mockResolvedValueOnce({
     ok: true,
     json: async () => ({
@@ -37,6 +41,7 @@ function mockFetchSuccess(sessionId = 'session-123', newBadges: string[] = []) {
       wrongCount: 1,
       maxStreak: 1,
       newBadges,
+      coinsEarned,
     }),
   })
 }
@@ -58,7 +63,7 @@ describe('saveGameSession', () => {
     vi.restoreAllMocks()
   })
 
-  it('session ID ve atomik olarak kazanilan rozet kodlarini dondurmeli', async () => {
+  it('session ID, atomik kazanilan rozet kodlarini ve kazanilan altini dondurmeli', async () => {
     mockFetchSuccess('session-123', ['first_game'])
     const result = await saveGameSession(baseParams)
     expect(result).toEqual({
@@ -67,7 +72,33 @@ describe('saveGameSession', () => {
       correctCount: 2,
       wrongCount: 1,
       newBadges: ['first_game'],
+      coinsEarned: 40,
     })
+  })
+
+  it('gunluk tavan dolu oturumda coinsEarned 0 korunur (null a dusurulmez)', async () => {
+    // 0 gecerli bir kazanim sonucudur: "tavan doldu". null ile karistirilirsa
+    // UI yanlis dala girer ve sinir mesajini hic gostermez.
+    mockFetchSuccess('session-123', [], 0)
+    expect((await saveGameSession(baseParams))?.coinsEarned).toBe(0)
+  })
+
+  it('coinsEarned gecersizse null a duser — UI rozeti gostermez', async () => {
+    for (const invalid of [null, 'kirk', -5, 12.5]) {
+      mockFetchSuccess('session-123', [], invalid)
+      expect((await saveGameSession(baseParams))?.coinsEarned).toBeNull()
+    }
+  })
+
+  it('alani hic gondermeyen eski cevapta da null a duser', async () => {
+    // Deploy sirasi: yeni client, coinsEarned bilmeyen eski API surumu.
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        sessionId: 'session-123', totalXP: 33, correctCount: 2, wrongCount: 1, newBadges: [],
+      }),
+    })
+    expect((await saveGameSession(baseParams))?.coinsEarned).toBeNull()
   })
 
   it('/api/sessions endpointine POST yapmali', async () => {

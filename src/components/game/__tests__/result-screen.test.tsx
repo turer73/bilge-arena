@@ -69,4 +69,24 @@ describe('ResultScreen', () => {
     render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} />)
     expect(screen.getByAltText('Bilge Chan üzgün')).toBeInTheDocument()
   })
+
+  // ─── Kazanilan altin ─────────────────────────────────
+
+  test('kazanilan altini ve magaza baglantisini gosterir', () => {
+    render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} coinsEarned={40} />)
+    expect(screen.getByText(/\+40 altın kazandın/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Mağaza/ })).toHaveAttribute('href', '/arena/magaza')
+  })
+
+  test('altin bilinmiyorken (oturum kaydi surerken/misafir) rozet hic cikmaz', () => {
+    // Sonuc ekrani, oturum kaydi tamamlanmadan once render olur; o an null gelir.
+    render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} coinsEarned={null} />)
+    expect(screen.queryByText(/altın/)).not.toBeInTheDocument()
+  })
+
+  test('gunluk tavan dolu (0 altin): kazanim degil sinir mesaji gosterir', () => {
+    render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} coinsEarned={0} />)
+    expect(screen.getByText(/altın sınırına ulaştın/)).toBeInTheDocument()
+    expect(screen.queryByText(/\+0 altın/)).not.toBeInTheDocument()
+  })
 })
