@@ -203,18 +203,56 @@ describe('KisisellestirClient', () => {
     expect(screen.getByText('Altın Hale').closest('button')).not.toBeDisabled()
   })
 
-  test('sahiplik filtresi: normal kullanıcı sahip-olmadığı ücretli temayı görmez', () => {
+  // DAVRANIŞ DEĞİŞİKLİĞİ (2026-08-16, İP-3a): sahip olunmayan ürünler artık
+  // GİZLENMİYOR, kilitli gösteriliyor. Sahiplik guard'ı duruyor (seçilemez),
+  // değişen yalnız görünürlük — kullanıcı neyi alabileceğini göremiyordu.
+  test('sahip olunmayan ücretli tema GÖRÜNÜR ama kilitli (seçilemez)', () => {
     render(<KisisellestirClient />)
     fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
-    // Nebula (400 coin) owned_backgrounds'ta yok → grid'de görünmez
-    expect(screen.queryByLabelText('Nebula')).not.toBeInTheDocument()
+    const nebula = screen.getByLabelText('Nebula')
+    expect(nebula).toBeInTheDocument()
+    expect(nebula).toBeDisabled()
   })
 
-  test('personel bypass: admin tüm ücretli temaları görür', () => {
+  test('bakiye yetiyorsa kilit-açık fiyat etiketi gösterilir', () => {
+    // Bakiye 5000 → 400'lük temalar alınabilir (birden fazla tema aynı fiyatta)
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    expect(screen.getAllByText('🔓 🪙400').length).toBeGreaterThan(0)
+  })
+
+  test('bakiye yetmiyorsa "ne kadar eksik" yazar', () => {
+    auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), coin_balance: 150 }
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    // 400 - 150 = 250 daha gerekiyor
+    expect(screen.getAllByText('🔒 🪙250 daha').length).toBeGreaterThan(0)
+  })
+
+  test('çerçeve alanı: sahip olunmayan çerçeve kilit etiketiyle listelenir', () => {
+    auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), coin_balance: 0 }
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: /Çerçeve/ }))
+    // Alev Çemberi (30) sahip değil, bakiye 0 → "30 daha"
+    expect(screen.getByText('Alev Çemberi')).toBeInTheDocument()
+    expect(screen.getByText('🔒 🪙30 daha')).toBeInTheDocument()
+  })
+
+  test('isim paneli: sahip olunmayan panel kilitli ve seçilemez', () => {
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: /İsim Paneli/ }))
+    // 'gece' owned; başka ücretli bir panel owned değil → disabled
+    const kilitli = screen.getAllByRole('button').filter((b) => b.hasAttribute('disabled'))
+    expect(kilitli.length).toBeGreaterThan(0)
+  })
+
+  test('personel bypass: admin tüm ücretli temaları seçebilir', () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), role: 'admin' }
     render(<KisisellestirClient />)
     fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
-    expect(screen.getByLabelText('Nebula')).toBeInTheDocument()
+    const nebula = screen.getByLabelText('Nebula')
+    expect(nebula).toBeInTheDocument()
+    expect(nebula).not.toBeDisabled()
   })
 
   test('misafir: giriş yönlendirmesi gösterir', () => {
