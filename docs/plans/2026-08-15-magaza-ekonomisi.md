@@ -16,9 +16,24 @@ Aşağıdaki sayıların tamamı 2026-08-15'te production veritabanından okundu
 | Medyan bakiye | **5.5** |
 | En yüksek bakiye | **209** |
 | Mağazadaki en ucuz ürün | **1200** |
-| **Toplam satın alma** | **0** |
+| **Toplam satın alma** | **1** |
 
 Platformdaki bütün altın toplansa bir tek ürün alınabiliyor.
+
+> **Düzeltme (2026-08-16).** Bu satır ilk yazımda **0** idi ve planın "sıfır satış"
+> anlatısı ona dayanıyordu. Yanlıştı: 396 kullanıcıdan biri `gunes-patlamasi` arka
+> planını satın almış. Ölçüm hatasının sebebi, satın almanın kendi kaydının
+> **hiç tutulmaması** — sahiplik `profiles.owned_backgrounds` gibi `text[]`
+> dizilerinde duruyor, zaman damgası yok, bu yüzden alımın ne zaman yapıldığı da
+> bilinemiyor. Doğru sorgu, varsayılanları dışlayarak diziyi açmak:
+>
+> ```sql
+> SELECT count(*) FROM (SELECT unnest(owned_backgrounds) i FROM profiles) x
+> WHERE i NOT IN ('none','gece-mavisi');
+> ```
+>
+> Teşhis değişmiyor — 26 ürünlük mağazada tek alım da ölü demektir — ama
+> **Faz 4'ün başarı kriteri değişiyor** (bkz. bölüm 3).
 
 ### Kazanım kaynakları
 
@@ -43,12 +58,12 @@ Kişi başı ortalama oturum 5.5 iken 133 oturum ulaşılamaz. Fiyatlar, oturum 
 
 | Kategori | Durum |
 |---|---|
-| Profil arka planı | 26 ürün, 1200–2000 altın (lofi/manzara/cyberpunk/pixel/çizgi-roman/kozmik) |
+| Profil arka planı | 26 ürün, 1200–2000 altın (lofi/manzara/cyberpunk/pixel/çizgi-roman/kozmik) — **tek satılan kategori: 1 alım** |
 | Kozmetik rozet | tablo **boş** |
 | Avatar süsü | sahip olan **0** kullanıcı |
-| Nameplate / çerçeve | varsayılanlar dışında satın alınan yok |
+| Nameplate / çerçeve | varsayılanlar dışında satın alınan yok (0 / 0) |
 
-Fiilen tek kategori var.
+Fiilen tek kategori var — ve o kategoride de 396 kullanıcıdan yalnız biri alım yapmış.
 
 ### Aktivite
 
@@ -69,13 +84,23 @@ Sorun teknik değil. Satın alma altyapısı sağlam: dört ayrı uç (`backgrou
 2. **Fiyatlar kazanımdan bağımsız konmuş.** Oturum kazanımı 9 Ağustos'ta (migration 093) geldi; fiyatlar ondan öncesine ait ve hiç güncellenmedi.
 3. **Vitrin tek kategoriye düşmüş.** Rozet tablosu boş, avatar süsü sahibi yok. Hedef çeşitliliği yok.
 
-Sonuç: 26 ürünlük mağaza sıfır satış görüyor ve altın oyunda hiçbir anlam taşımıyor.
+Sonuç: 26 ürünlük mağaza 396 kullanıcıya karşılık **tek bir satış** görmüş ve altın oyunda pratikte hiçbir anlam taşımıyor.
 
 ## 3. Hedef
 
 Düzenli çalışan bir öğrenci **iki-dört hafta içinde** ilk ürününü alabilmeli. Bu, hem ulaşılabilir hem de değerini koruyan bir aralık: bir haftada alınırsa ödül anlamsızlaşır, üç ayda alınırsa kimse denemez.
 
-Bunun ölçülebilir karşılığı: ilk satın almanın gerçekleşmesi ve 30 gün içinde en az bir kullanıcının ikinci ürünü alması.
+Bunun ölçülebilir karşılığı — 2026-08-16'da düzeltildi, çünkü ilk satın alma zaten
+gerçekleşmişti (bkz. bölüm 1):
+
+1. **Faz 1 sonrası en az bir yeni alım.** Baseline: tüm zamanlarda 1 alım, tek kullanıcı.
+2. **En az bir kullanıcının ikinci ürünü alması.** Bugün hiçbir kullanıcının birden
+   fazla ürünü yok.
+
+**Ölçüm sınırı:** satın almanın kendi kaydı tutulmuyor (sahiplik zaman damgasız `text[]`),
+bu yüzden "30 gün içinde" ifadesi ancak ölçüm anları arasındaki farkla yaklaşık
+değerlendirilebilir. Kalıcı çözüm bir satın alma defteri (`reward_ledger` deseninde);
+bu planın kapsamı değil ama Faz 3 ile birlikte düşünülmeli.
 
 ## 4. Tasarım
 
@@ -127,7 +152,18 @@ Migration 093'teki `amount = v_correct_count` hesabını katsayı + prim ile de�
 Kozmetik rozet içeriği + düşük fiyatlı giriş ürünleri.
 
 **Faz 4 — Ölçüm ve ayar**
-30 gün sonra: ilk satın alma gerçekleşti mi, medyan bakiye nereye geldi, hangi kademe satılıyor. Buna göre kazanım veya fiyat ayarlanır. `rewards.ts` tek dosya olduğu için ayar tek yerden yapılır.
+30 gün sonra: Faz 1 sonrası yeni alım oldu mu, medyan bakiye nereye geldi, hangi kademe satılıyor, günlük tavana takılan var mı. Buna göre kazanım veya fiyat ayarlanır.
+
+Ayarın nerede olduğu konusunda dikkat — **tek bir dosya değil, üç ayrı yer**:
+
+| Ayar | Yeri | Değiştirmek için |
+|---|---|---|
+| Oturum altın ölçeği (3 / 10 / 15 / tavan 80) | migration 129 içindeki SQL sabitleri (`c_coin_per_correct` vb.) | **yeni migration** |
+| UGC ve hata raporu ödülü (50 / 250) | `src/lib/constants/rewards.ts` | TS değişikliği |
+| Ürün fiyatları | CSS arka planlar `src/lib/constants/profile-backgrounds.ts`, video arka planlar `background_assets.coin_cost` | ikisi birden |
+
+(Planın ilk yazımı "`rewards.ts` tek dosya olduğu için ayar tek yerden yapılır" diyordu;
+bu yalnız ödül sabitleri için doğru, oturum ölçeği ve fiyatlar için değil.)
 
 ## 6. Bu planın etkilediği mevcut kararlar
 
