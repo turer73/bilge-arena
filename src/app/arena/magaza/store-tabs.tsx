@@ -5,19 +5,23 @@ import { StoreClient } from './store-client'
 import { NameplateStoreClient } from './nameplate-store-client'
 import { BadgeStoreClient } from './badge-store-client'
 import { AvatarDecorationStoreClient } from './avatar-decoration-store-client'
+import { FrameStoreClient } from './frame-store-client'
 
-type Tab = 'bg' | 'np' | 'sus' | 'badge'
+type Tab = 'cerceve' | 'bg' | 'np' | 'sus' | 'badge'
 
+// Çerçeve ilk sırada: mağazanın en ucuz ürünleri (30–300) orada ve yeni
+// gelen kullanıcının ilk alım yapabileceği tek kademe o.
 const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'cerceve', label: 'Çerçeve', icon: '⭕' },
   { id: 'bg', label: 'Arka Plan', icon: '🖼️' },
   { id: 'np', label: 'İsim Paneli', icon: '🏷️' },
   { id: 'sus', label: 'Avatar Süsü', icon: '🪽' },
   { id: 'badge', label: 'Rozet', icon: '🏅' },
 ]
 
-/** Mağaza kategori sekmeleri: Arka Plan (CSS+video) · İsim Paneli · Avatar Süsü · Rozet. */
+/** Mağaza kategori sekmeleri: Çerçeve · Arka Plan (CSS+video) · İsim Paneli · Avatar Süsü · Rozet. */
 export function StoreTabs() {
-  const [tab, setTab] = useState<Tab>('bg')
+  const [tab, setTab] = useState<Tab>('cerceve')
   return (
     <div className="mt-4">
       <div className="flex gap-1 border-b border-[var(--border)]">
@@ -35,7 +39,9 @@ export function StoreTabs() {
           </button>
         ))}
       </div>
-      {tab === 'bg' ? (
+      {tab === 'cerceve' ? (
+        <FrameStoreClient />
+      ) : tab === 'bg' ? (
         <StoreClient />
       ) : tab === 'np' ? (
         <NameplateStoreClient />

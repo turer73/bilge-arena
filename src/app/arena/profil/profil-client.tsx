@@ -46,10 +46,6 @@ export default function ProfilClient() {
   const [selectedFrameId, setSelectedFrameId] = useState<string>('none')
   const [framePickerOpen, setFramePickerOpen] = useState(false)
   const [ownedFrames, setOwnedFrames] = useState<string[]>(['none', 'mavi'])
-  const [purchasing, setPurchasing] = useState<string | null>(null)
-  const [purchaseMsg, setPurchaseMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null)
-  // localCoinBalance: auth store'dan bağımsız anlık bakiye (satın alım sonrası güncellenir)
-  const [localCoinDelta, setLocalCoinDelta] = useState(0)
 
   // Çerçeve seçimini localStorage'dan yükle
   useEffect(() => {
@@ -134,7 +130,7 @@ export default function ProfilClient() {
   const totalSessions = profile.total_sessions ?? 0
   const correctAnswers = profile.correct_answers ?? 0
   const totalQuestions = profile.total_questions ?? 0
-  const coinBalance = Math.max(0, (profile.coin_balance ?? 0) - localCoinDelta)
+  const coinBalance = Math.max(0, profile.coin_balance ?? 0)
   const displayName = profile.username || profile.display_name || 'Arenaci'
 
   const level = getLevelFromXP(totalXP)
@@ -150,35 +146,11 @@ export default function ProfilClient() {
     try { localStorage.setItem(FRAME_STORAGE_KEY, id) } catch {}
   }
 
-  async function purchaseFrame(frameId: string) {
-    const frame = PROFILE_FRAMES.find((f) => f.id === frameId)
-    if (!frame || frame.coinCost === undefined) return
-    if (ownedFrames.includes(frameId)) return
-
-    setPurchasing(frameId)
-    setPurchaseMsg(null)
-    try {
-      const res = await fetch('/api/profile/frames/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frameId }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setOwnedFrames(data.owned_frames ?? [...ownedFrames, frameId])
-        setLocalCoinDelta((prev) => prev + (frame.coinCost ?? 0))
-        setPurchaseMsg({ id: frameId, ok: true, text: `${frame.name} satın alındı!` })
-        // Otomatik seç
-        selectFrame(frameId)
-      } else {
-        setPurchaseMsg({ id: frameId, ok: false, text: data.error ?? 'Satın alım başarısız' })
-      }
-    } catch {
-      setPurchaseMsg({ id: frameId, ok: false, text: 'Bağlantı hatası' })
-    } finally {
-      setPurchasing(null)
-    }
-  }
+  // Satın alma buradan KALDIRILDI (2026-08-16): çerçeveler artık mağazanın
+  // Çerçeve sekmesinde satılıyor. Bu panel yalnız SAHİP OLUNANI seçer; sahip
+  // olunmayanlar mağazaya yönlendirir. Gerekçe: satın alma üç ayrı sayfaya
+  // dağılmıştı ve en ucuz kademe mağazada hiç görünmüyordu
+  // (docs/plans/2026-08-16-kozmetik-ekonomi-yol-haritasi.md, İP-2).
 
   const mainStats = [
     { label: 'COIN', value: coinBalance, icon: '🪙', color: 'var(--reward-light)' },
@@ -334,25 +306,10 @@ export default function ProfilClient() {
               </span>
             </div>
 
-            {/* Mesaj */}
-            {purchaseMsg && (
-              <p
-                className="mb-2 rounded-lg px-2 py-1.5 text-xs font-medium"
-                style={{
-                  background: purchaseMsg.ok ? 'var(--growth-bg)' : 'var(--urgency-bg)',
-                  color: purchaseMsg.ok ? 'var(--growth)' : 'var(--urgency)',
-                }}
-              >
-                {purchaseMsg.ok ? '✓ ' : '✗ '}{purchaseMsg.text}
-              </p>
-            )}
-
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
               {PROFILE_FRAMES.map((frm) => {
                 const owned = ownedFrames.includes(frm.id)
                 const locked = !owned && frm.coinCost !== undefined
-                const canAfford = coinBalance >= (frm.coinCost ?? 0)
-                const isBuying = purchasing === frm.id
 
                 return (
                   <div key={frm.id} className="flex flex-col items-center gap-1">
@@ -376,19 +333,18 @@ export default function ProfilClient() {
                     </span>
 
                     {locked && (
-                      <button
-                        onClick={() => purchaseFrame(frm.id)}
-                        disabled={!canAfford || isBuying}
-                        className="mt-0.5 min-h-11 min-w-11 rounded-md px-1.5 py-1 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-40"
+                      <Link
+                        href="/arena/magaza"
+                        className="mt-0.5 flex min-h-11 min-w-11 items-center justify-center rounded-md px-1.5 py-1 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
                         style={{
-                          background: canAfford ? 'var(--reward-bg)' : 'var(--card-bg)',
-                          color: canAfford ? 'var(--reward-light)' : 'var(--text-muted)',
+                          background: 'var(--reward-bg)',
+                          color: 'var(--reward-light)',
                           border: '1px solid var(--reward-border)',
                         }}
-                        title={canAfford ? `${frm.coinCost} coin harca` : `${frm.coinCost} coin gerekli`}
+                        title={`${frm.name} — mağazada ${frm.coinCost} coin`}
                       >
-                        {isBuying ? '…' : `🪙${frm.coinCost}`}
-                      </button>
+                        🪙{frm.coinCost}
+                      </Link>
                     )}
                   </div>
                 )
