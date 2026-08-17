@@ -57,9 +57,19 @@ ALTER TABLE public.purchase_ledger ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS purchase_ledger_self_read ON public.purchase_ledger;
 CREATE POLICY purchase_ledger_self_read ON public.purchase_ledger
   FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+  -- (SELECT auth.uid()) sarmali ZORUNLU: ciplak auth.uid() RLS'te satir basina
+  -- yeniden degerlendirilir, sarmalli hali InitPlan olarak bir kez hesaplanir
+  -- (migration 035 auth-rls-initplan; 093 satir 50 ayni deseni kullaniyor).
+  USING ((SELECT auth.uid()) = user_id);
 
 REVOKE ALL ON public.purchase_ledger FROM PUBLIC, anon, authenticated;
+-- Defter APPEND-ONLY: reward_ledger (093 satir 44-45) ile ayni koruma.
+-- service_role DAHIL kimse satir degistiremez/silemez; yazma yalnizca
+-- SECURITY DEFINER RPC'lerin INSERT'inden gecer. Bu satir olmazsa Supabase'in
+-- varsayilan grant'i service_role'e UPDATE/DELETE de verir ve denetim izi
+-- sessizce degistirilebilir hale gelir.
+REVOKE UPDATE, DELETE, TRUNCATE ON public.purchase_ledger
+  FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON public.purchase_ledger TO authenticated;
 
 -- ── Bes satin alma RPC'si: ayni islemde defter kaydi ──────────────────
@@ -86,7 +96,7 @@ BEGIN
       AND coin_balance >= p_cost
     RETURNING coin_balance, owned_backgrounds
   ), logged AS (
-    INSERT INTO purchase_ledger (user_id, category, item_id, cost, purchased_at)
+    INSERT INTO public.purchase_ledger (user_id, category, item_id, cost, purchased_at)
     SELECT p_user_id, 'background', p_background_id, p_cost, clock_timestamp()
     FROM purchased
     ON CONFLICT (user_id, category, item_id) DO NOTHING
@@ -116,7 +126,7 @@ BEGIN
       AND coin_balance >= p_cost
     RETURNING coin_balance, owned_frames
   ), logged AS (
-    INSERT INTO purchase_ledger (user_id, category, item_id, cost, purchased_at)
+    INSERT INTO public.purchase_ledger (user_id, category, item_id, cost, purchased_at)
     SELECT p_user_id, 'frame', p_frame_id, p_cost, clock_timestamp()
     FROM purchased
     ON CONFLICT (user_id, category, item_id) DO NOTHING
@@ -146,7 +156,7 @@ BEGIN
       AND coin_balance >= p_cost
     RETURNING coin_balance, owned_nameplates
   ), logged AS (
-    INSERT INTO purchase_ledger (user_id, category, item_id, cost, purchased_at)
+    INSERT INTO public.purchase_ledger (user_id, category, item_id, cost, purchased_at)
     SELECT p_user_id, 'nameplate', p_nameplate_id, p_cost, clock_timestamp()
     FROM purchased
     ON CONFLICT (user_id, category, item_id) DO NOTHING
@@ -176,7 +186,7 @@ BEGIN
       AND coin_balance >= p_cost
     RETURNING coin_balance, owned_cosmetic_badges
   ), logged AS (
-    INSERT INTO purchase_ledger (user_id, category, item_id, cost, purchased_at)
+    INSERT INTO public.purchase_ledger (user_id, category, item_id, cost, purchased_at)
     SELECT p_user_id, 'cosmetic_badge', p_badge_id, p_cost, clock_timestamp()
     FROM purchased
     ON CONFLICT (user_id, category, item_id) DO NOTHING
@@ -206,7 +216,7 @@ BEGIN
       AND coin_balance >= p_cost
     RETURNING coin_balance, owned_avatar_decorations
   ), logged AS (
-    INSERT INTO purchase_ledger (user_id, category, item_id, cost, purchased_at)
+    INSERT INTO public.purchase_ledger (user_id, category, item_id, cost, purchased_at)
     SELECT p_user_id, 'avatar_decoration', p_decoration_id, p_cost, clock_timestamp()
     FROM purchased
     ON CONFLICT (user_id, category, item_id) DO NOTHING
