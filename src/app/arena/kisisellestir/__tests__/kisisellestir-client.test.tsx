@@ -206,12 +206,43 @@ describe('KisisellestirClient', () => {
   // DAVRANIŞ DEĞİŞİKLİĞİ (2026-08-16, İP-3a): sahip olunmayan ürünler artık
   // GİZLENMİYOR, kilitli gösteriliyor. Sahiplik guard'ı duruyor (seçilemez),
   // değişen yalnız görünürlük — kullanıcı neyi alabileceğini göremiyordu.
-  test('sahip olunmayan ücretli tema GÖRÜNÜR ama kilitli (seçilemez)', () => {
+  test('sahip olunmayan ücretli tema GÖRÜNÜR; bakiye yetiyorsa satın alınabilir', () => {
+    // Bakiye 5000, Nebula 400 → kilitli ama alınabilir: tıklanabilir olmalı
     render(<KisisellestirClient />)
     fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
     const nebula = screen.getByLabelText('Nebula')
     expect(nebula).toBeInTheDocument()
-    expect(nebula).toBeDisabled()
+    expect(nebula).not.toBeDisabled()
+  })
+
+  test('bakiye yetmiyorsa kilitli ürün seçilemez (disabled)', () => {
+    auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), coin_balance: 10 }
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    expect(screen.getByLabelText('Nebula')).toBeDisabled()
+  })
+
+  test('kilitli ürüne tıklayınca satın alma onayı açılır ve onaylanınca API çağrılır', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        success: true,
+        coin_balance: 4600,
+        owned_backgrounds: ['none', 'gece-mavisi', 'nebula'],
+      }),
+    })
+    render(<KisisellestirClient />)
+    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByLabelText('Nebula'))
+
+    // Onay modalı açıldı
+    expect(screen.getByRole('dialog', { name: 'Satın almayı onayla' })).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Onayla'))
+
+    await waitFor(() => {
+      const calls = fetchMock.mock.calls.map((c) => String(c[0]))
+      expect(calls.some((u) => u.includes('/api/profile/backgrounds/purchase'))).toBe(true)
+    })
   })
 
   test('bakiye yetiyorsa kilit-açık fiyat etiketi gösterilir', () => {
@@ -238,10 +269,10 @@ describe('KisisellestirClient', () => {
     expect(screen.getByText('🔒 🪙30 daha')).toBeInTheDocument()
   })
 
-  test('isim paneli: sahip olunmayan panel kilitli ve seçilemez', () => {
+  test('isim paneli: bakiye yetmiyorsa sahip olunmayan panel seçilemez', () => {
+    auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), coin_balance: 0 }
     render(<KisisellestirClient />)
     fireEvent.click(screen.getByRole('button', { name: /İsim Paneli/ }))
-    // 'gece' owned; başka ücretli bir panel owned değil → disabled
     const kilitli = screen.getAllByRole('button').filter((b) => b.hasAttribute('disabled'))
     expect(kilitli.length).toBeGreaterThan(0)
   })

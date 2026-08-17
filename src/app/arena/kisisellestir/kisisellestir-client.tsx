@@ -39,6 +39,8 @@ import {
 } from '@/lib/constants/avatar-decorations'
 import { AVATAR_GROUPS, avatarMinLevel } from '@/lib/constants/avatars'
 import { StudioPreview } from './studio-preview'
+import { useCosmeticPurchase, type CosmeticCategory } from '@/lib/hooks/use-cosmetic-purchase'
+import { CosmeticPurchaseDialog } from '@/components/profile/cosmetic-purchase-dialog'
 
 type Area = 'avatar' | 'zemin' | 'kart' | 'panel' | 'cerceve' | 'rozet' | 'sus'
 
@@ -141,6 +143,32 @@ export function KisisellestirClient() {
   const balance = profile?.coin_balance ?? 0
   const isBgOwned = (b: StoreBackgroundItem) =>
     b.coinCost === undefined || bgOwnedIds.includes(b.id)
+
+  // İP-3b: kilitli ama bakiyesi yeten ürün YERİNDE alınır — mağazaya gidip
+  // geri dönmek bağlamı koparıyordu. Bakiye yetmiyorsa satın alma açılmaz,
+  // etiket "🔒 🪙N daha" olarak kalır ve mağaza CTA'sı yönlendirir.
+  const { purchase, busyId } = useCosmeticPurchase()
+  const [buyTarget, setBuyTarget] = useState<{
+    category: CosmeticCategory
+    id: string
+    name: string
+    cost: number
+    onOwned: (id: string) => void
+  } | null>(null)
+
+  /** Satın alınabilir mi (kilitli + fiyatı var + bakiye yetiyor). */
+  const canBuy = (cost: number | undefined) => cost !== undefined && balance >= cost
+
+  async function confirmPurchase() {
+    if (!buyTarget) return
+    const ok = await purchase({
+      category: buyTarget.category,
+      itemId: buyTarget.id,
+      itemName: buyTarget.name,
+    })
+    if (ok) buyTarget.onOwned(buyTarget.id) // satın alındı → otomatik uygula
+    setBuyTarget(null)
+  }
 
   const frameOwnedIds = staff
     ? PROFILE_FRAMES.map((f) => f.id)
@@ -261,7 +289,11 @@ export function KisisellestirClient() {
         toast.error('Uygulanamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      setProfile({ ...profile, selected_nameplate: id })
+      // EN GÜNCEL profili oku (Codex PR#243 avatar-clobber dersi). Satın alma
+      // hemen öncesinde bakiyeyi ve sahiplik dizisini güncellemiş olabilir;
+      // closure'daki eski `profile` yazılırsa o güncelleme ezilir.
+      const latest = useAuthStore.getState().profile ?? profile
+      setProfile({ ...latest, selected_nameplate: id })
       toast.success('İsim paneli uygulandı', 'Sıralama ve profilinde görünecek ✨')
     } catch {
       toast.error('Bağlantı hatası', 'Tekrar dene')
@@ -477,6 +509,17 @@ export function KisisellestirClient() {
                 onSelect={area === 'zemin' ? applyZemin : applyCardBg}
                 isOwned={isBgOwned}
                 balance={balance}
+                onBuy={(b) =>
+                  setBuyTarget({
+                    category: 'background',
+                    id: b.id,
+                    name: b.name,
+                    cost: b.coinCost ?? 0,
+                    onOwned: area === 'zemin' ? applyZemin : applyCardBg,
+                  })
+                }
+                canBuy={canBuy}
+                busy={busyId !== null}
               />
             )}
 
@@ -487,10 +530,21 @@ export function KisisellestirClient() {
                   return (
                     <button
                       key={np.id}
-                      onClick={() => owned && applyNameplate(np.id)}
-                      disabled={npBusy || !owned}
+                      onClick={() => {
+                        if (owned) return applyNameplate(np.id)
+                        if (canBuy(np.coinCost)) {
+                          setBuyTarget({
+                            category: 'nameplate',
+                            id: np.id,
+                            name: np.name,
+                            cost: np.coinCost ?? 0,
+                            onOwned: applyNameplate,
+                          })
+                        }
+                      }}
+                      disabled={npBusy || busyId !== null || (!owned && !canBuy(np.coinCost))}
                       aria-pressed={nameplateId === np.id}
-                      title={owned ? undefined : 'Mağazadan satın al'}
+                      title={owned ? undefined : canBuy(np.coinCost) ? 'Satın al' : 'Mağazadan satın al'}
                       className={`flex flex-col gap-2 rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 disabled:hover:translate-y-0 ${
                         nameplateId === np.id ? 'border-[var(--focus)] shadow-lg' : 'border-[var(--border)]'
                       } bg-[var(--card-bg)] ${owned ? '' : 'opacity-60'}`}
@@ -536,12 +590,30 @@ export function KisisellestirClient() {
                         {frm.id === 'none' ? 'Yok' : frm.name}
                       </span>
                       {!owned && (
-                        <Link
-                          href="/arena/magaza"
-                          className="text-center text-[8px] font-bold leading-none text-[var(--reward)] hover:underline"
-                        >
-                          {lockLabel(frm.coinCost ?? 0, balance)}
-                        </Link>
+                        canBuy(frm.coinCost) ? (
+                          <button
+                            onClick={() =>
+                              setBuyTarget({
+                                category: 'frame',
+                                id: frm.id,
+                                name: frm.name,
+                                cost: frm.coinCost ?? 0,
+                                onOwned: applyFrame,
+                              })
+                            }
+                            disabled={busyId !== null}
+                            className="text-center text-[8px] font-bold leading-none text-[var(--reward)] hover:underline disabled:opacity-50"
+                          >
+                            {lockLabel(frm.coinCost ?? 0, balance)}
+                          </button>
+                        ) : (
+                          <Link
+                            href="/arena/magaza"
+                            className="text-center text-[8px] font-bold leading-none text-[var(--reward)] hover:underline"
+                          >
+                            {lockLabel(frm.coinCost ?? 0, balance)}
+                          </Link>
+                        )
                       )}
                     </div>
                   )
@@ -613,6 +685,17 @@ export function KisisellestirClient() {
           </div>
         </div>
       </div>
+
+      {/* Yerinde satın alma onayı — kilitli ama bakiyesi yeten ürüne tıklanınca */}
+      <CosmeticPurchaseDialog
+        open={buyTarget !== null}
+        itemName={buyTarget?.name ?? ''}
+        cost={buyTarget?.cost ?? 0}
+        balance={balance}
+        busy={busyId !== null}
+        onCancel={() => setBuyTarget(null)}
+        onConfirm={confirmPurchase}
+      />
     </div>
   )
 }
@@ -625,6 +708,9 @@ function BackgroundGrid({
   onSelect,
   isOwned,
   balance,
+  onBuy,
+  canBuy,
+  busy,
 }: {
   items: StoreBackgroundItem[]
   selectedId: string
@@ -633,6 +719,10 @@ function BackgroundGrid({
   /** Sahip olunmayanlar da listelenir; kilitli görünür ve seçilemez. */
   isOwned: (b: StoreBackgroundItem) => boolean
   balance: number
+  /** Kilitli + bakiyesi yeten ürüne tıklanınca satın alma onayını açar. */
+  onBuy: (b: StoreBackgroundItem) => void
+  canBuy: (cost: number | undefined) => boolean
+  busy: boolean
 }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -642,11 +732,14 @@ function BackgroundGrid({
         return (
           <button
             key={b.id}
-            onClick={() => owned && onSelect(b.id)}
-            disabled={!owned}
+            onClick={() => {
+              if (owned) return onSelect(b.id)
+              if (canBuy(b.coinCost)) onBuy(b)
+            }}
+            disabled={busy || (!owned && !canBuy(b.coinCost))}
             aria-pressed={selected}
             aria-label={b.id === 'none' ? noneLabel : b.name}
-            title={owned ? undefined : 'Mağazadan satın al'}
+            title={owned ? undefined : canBuy(b.coinCost) ? 'Satın al' : 'Mağazadan satın al'}
             className={`group flex flex-col gap-2 rounded-xl border-2 p-2 text-left transition-all hover:-translate-y-0.5 disabled:hover:translate-y-0 ${
               selected ? 'border-[var(--focus)] shadow-lg' : 'border-[var(--border)]'
             } bg-[var(--card-bg)] ${owned ? '' : 'opacity-60'}`}
