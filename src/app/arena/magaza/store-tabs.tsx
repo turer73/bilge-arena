@@ -6,6 +6,7 @@ import { NameplateStoreClient } from './nameplate-store-client'
 import { BadgeStoreClient } from './badge-store-client'
 import { AvatarDecorationStoreClient } from './avatar-decoration-store-client'
 import { FrameStoreClient } from './frame-store-client'
+import { StoreBudgetStrip } from './store-budget-strip'
 
 type Tab = 'cerceve' | 'bg' | 'np' | 'sus' | 'badge'
 
@@ -24,7 +25,11 @@ export function StoreTabs() {
   const [tab, setTab] = useState<Tab>('cerceve')
   return (
     <div className="mt-4">
-      <div className="flex gap-1 border-b border-[var(--border)]">
+      {/* Butce seridi: "su an ne alabilirim" sorusunu kategoriden bagimsiz
+          cevaplar; sekmeleri tek tek gezme zorunlulugunu kaldirir. */}
+      <StoreBudgetStrip onJump={setTab} />
+
+      <div className="mt-4 flex gap-1 border-b border-[var(--border)]">
         {TABS.map((t) => (
           <button
             key={t.id}
