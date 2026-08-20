@@ -52,6 +52,17 @@ export const institutionPilotTeacherRemoveResultSchema = z.object({
   replayed: z.boolean(),
 }).strict()
 
+export const institutionPilotManagerTeacherInputSchema = z.object({
+  enabled: z.boolean(),
+  requestId: uuidSchema,
+}).strict()
+
+export const institutionPilotManagerTeacherResultSchema = z.object({
+  memberRef: memberRefSchema,
+  enabled: z.boolean(),
+  replayed: z.boolean(),
+}).strict()
+
 export function institutionPilotRpcStatus(code?: string): number {
   if (code === '42501') return 403
   if (code === 'P0002') return 404

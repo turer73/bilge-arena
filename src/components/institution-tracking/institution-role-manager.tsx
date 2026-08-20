@@ -186,7 +186,11 @@ export function InstitutionRoleManager() {
         </div>
       ) : directory ? (
         <>
-          <InstitutionStaffManager members={directory.members} onChanged={load} />
+          <InstitutionStaffManager
+            members={directory.members}
+            roles={directory.roles}
+            onChanged={load}
+          />
 
           <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-5" aria-labelledby="create-role-title">
             <div className="flex items-center gap-2">

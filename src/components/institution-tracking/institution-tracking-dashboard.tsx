@@ -242,7 +242,11 @@ export function InstitutionTrackingDashboard() {
             </div>
             <h1 className="mt-2 truncate text-2xl font-black sm:text-3xl">{directory.institution.name}</h1>
             <p className="mt-1 text-sm text-[var(--text-sub)]">
-              {directory.membership.role === 'manager' ? 'Kurum yöneticisi görünümü' : 'Öğretmen görünümü'} · Açıklanabilir öğrenci takibi
+              {directory.membership.role === 'manager'
+                ? directory.membership.teacherEnabled
+                  ? 'Kurum yöneticisi ve öğretmen görünümü'
+                  : 'Kurum yöneticisi görünümü'
+                : 'Öğretmen görünümü'} · Açıklanabilir öğrenci takibi
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
@@ -418,7 +422,7 @@ export function InstitutionTrackingDashboard() {
               <AnalysisPanel
                 analysis={analysis}
                 classroomId={selectedClassroomId!}
-                canManagePrograms={directory.membership.role === 'teacher'}
+                canManagePrograms={selectedClassroom?.canManagePrograms === true}
                 onFollowupChanged={() => setRefreshKey((value) => value + 1)}
               />
             )}
