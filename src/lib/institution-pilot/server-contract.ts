@@ -28,7 +28,7 @@ export const institutionPilotWorkspaceSchema = z.object({
 export type InstitutionPilotWorkspace = z.infer<typeof institutionPilotWorkspaceSchema>
 
 export const institutionPilotTeacherAddInputSchema = z.object({
-  teacherUserId: uuidSchema,
+  teacherEmail: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
   requestId: uuidSchema,
 }).strict()
 

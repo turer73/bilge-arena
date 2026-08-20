@@ -35,8 +35,12 @@ const institutionPanelSql = readFileSync(
   join(migrationsDir, '133_institution_panel_classroom_management.sql'),
   'utf8',
 )
+const teacherLifecycleSql = readFileSync(
+  join(migrationsDir, '134_institution_teacher_lifecycle_guards.sql'),
+  'utf8',
+)
 
-suite('112-127 and 131-133 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127 and 131-134 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -98,6 +102,12 @@ suite('112-127 and 131-133 institution pilot real PostgreSQL acceptance', () => 
       GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, service_role;
       CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE
         AS $$ SELECT NULLIF(current_setting('app.uid', true), '')::uuid $$;
+      CREATE TABLE auth.users (
+        id uuid PRIMARY KEY,
+        email text UNIQUE,
+        email_confirmed_at timestamptz,
+        deleted_at timestamptz
+      );
       CREATE TABLE public.profiles (
         id uuid PRIMARY KEY,
         username varchar(64),
@@ -200,6 +210,10 @@ suite('112-127 and 131-133 institution pilot real PostgreSQL acceptance', () => 
         'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
         [userId, `pilot-${index}`, `Pilot ${index}`],
       )
+      await client.query(
+        'INSERT INTO auth.users(id,email,email_confirmed_at) VALUES($1,$2,now())',
+        [userId, `pilot-${index}@example.com`],
+      )
     }
     await client.query(
       `INSERT INTO public.user_roles(user_id,role_id)
@@ -242,6 +256,7 @@ suite('112-127 and 131-133 institution pilot real PostgreSQL acceptance', () => 
 
     await client.query(roleSeparationSql)
     await client.query(institutionPanelSql)
+    await client.query(teacherLifecycleSql)
 
     const separatedManagerRoles = await client.query(
       `SELECT role.slug, array_agg(permission.permission ORDER BY permission.permission) AS permissions
@@ -357,14 +372,20 @@ suite('112-127 and 131-133 institution pilot real PostgreSQL acceptance', () => 
   })
 
   it('lets the scoped manager add a teacher and atomically binds new classrooms', async () => {
+    await expectPgError(
+      () => rpc('public.add_my_institution_teacher_by_email($1,$2,$3)', [
+        managerOne, 'kayitli-degil@example.com', randomUUID(),
+      ]),
+      'P0002',
+    )
     const requestId = randomUUID()
-    const added = await rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [
-      managerOne, institutionOne, teacherOne, requestId,
+    const added = await rpc('public.add_my_institution_teacher_by_email($1,$2,$3)', [
+      managerOne, 'PILOT-3@EXAMPLE.COM', requestId,
     ])
     teacherMemberRef = added.memberRef
     expect(added).toMatchObject({ role: 'teacher', replayed: false })
-    expect(await rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [
-      managerOne, institutionOne, teacherOne, requestId,
+    expect(await rpc('public.add_my_institution_teacher_by_email($1,$2,$3)', [
+      managerOne, 'pilot-3@example.com', requestId,
     ])).toMatchObject({ memberRef: teacherMemberRef, replayed: true })
 
     const managerRequestId = randomUUID()
@@ -615,10 +636,51 @@ suite('112-127 and 131-133 institution pilot real PostgreSQL acceptance', () => 
   })
 
   it('cuts teacher RPC access when the tenant manager removes membership', async () => {
-    const removed = await rpc('public.remove_pilot_institution_teacher($1,$2,$3,$4)', [
-      managerOne, institutionOne, teacherMemberRef, randomUUID(),
-    ])
+    await expectPgError(
+      () => rpc('public.remove_pilot_institution_teacher($1,$2,$3,$4)', [
+        managerOne, institutionOne, teacherMemberRef, randomUUID(),
+      ]),
+      'P0003',
+    )
+    await client.query(
+      `UPDATE public.teacher_classrooms
+       SET status='archived', archived_at=now()
+       WHERE institution_id=$1 AND teacher_id=$2 AND status='active'`,
+      [institutionOne, teacherOne],
+    )
+
+    const remover = new pg.Client({ connectionString: url })
+    const competingWriter = new pg.Client({ connectionString: url })
+    await remover.connect()
+    await competingWriter.connect()
+    let removed
+    let competing
+    try {
+      await remover.query('BEGIN')
+      removed = await rpcOn(
+        remover,
+        'public.remove_pilot_institution_teacher($1,$2,$3,$4)',
+        [managerOne, institutionOne, teacherMemberRef, randomUUID()],
+      )
+      competing = rpcOn(
+        competingWriter,
+        'public.create_teacher_classroom($1,$2,$3)',
+        [teacherOne, 'Kaldırma Yarışı', randomUUID()],
+      ).then(
+        (result) => ({ result, error: null }),
+        (error) => ({ result: null, error }),
+      )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      await remover.query('COMMIT')
+    } finally {
+      await remover.query('ROLLBACK').catch(() => undefined)
+      await remover.end()
+    }
+    const competingOutcome = await competing
+    await competingWriter.end()
     expect(removed).toMatchObject({ memberRef: teacherMemberRef, status: 'removed' })
+    expect(competingOutcome.result).toBeNull()
+    expect(competingOutcome.error?.code).toBe('42501')
     const retainedTeacherRole = await client.query(
       `SELECT count(*)::int AS count
        FROM public.user_roles AS user_role

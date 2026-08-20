@@ -43,15 +43,16 @@ describe('institution pilot server contract', () => {
     expect(institutionPilotRpcStatus('unexpected')).toBe(500)
   })
 
-  it('keeps manager teacher mutations UUID/ref-only and strict', () => {
+  it('accepts a normalized teacher email at the server boundary but never a client user id', () => {
     const requestId = '33333333-3333-4333-8333-333333333333'
-    const teacherUserId = '44444444-4444-4444-8444-444444444444'
-    expect(institutionPilotTeacherAddInputSchema.parse({ teacherUserId, requestId }))
-      .toEqual({ teacherUserId, requestId })
-    expect(institutionPilotTeacherAddInputSchema.safeParse({
-      teacherUserId,
+    expect(institutionPilotTeacherAddInputSchema.parse({
+      teacherEmail: ' Teacher@Example.com ',
       requestId,
-      email: 'leak@example.com',
+    })).toEqual({ teacherEmail: 'teacher@example.com', requestId })
+    expect(institutionPilotTeacherAddInputSchema.safeParse({
+      teacherEmail: 'teacher@example.com',
+      requestId,
+      teacherUserId: '44444444-4444-4444-8444-444444444444',
     }).success).toBe(false)
     expect(institutionPilotTeacherAddResultSchema.safeParse({
       institutionId: workspace.institution.id,
