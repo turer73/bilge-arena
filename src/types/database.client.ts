@@ -587,6 +587,11 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_teacher_email: string; p_request_id: string }
         Returns: Json
       }
+      // Migration 135. Yonetici uyeligine ayni tenant icinde ogretmen sistem rolu ekler.
+      set_my_institution_manager_teacher_role: {
+        Args: { p_user_id: string; p_enabled: boolean; p_request_id: string }
+        Returns: Json
+      }
       update_my_institution_role: {
         Args: { p_user_id: string; p_role_ref: string; p_name: string; p_description: string; p_permissions: string[]; p_request_id: string }
         Returns: Json

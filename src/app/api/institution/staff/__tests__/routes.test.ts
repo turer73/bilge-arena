@@ -13,7 +13,7 @@ vi.mock('@/lib/institution-pilot/manager-workspace', () => ({
   getInstitutionManagerWorkspace: mocks.manager,
 }))
 
-import { POST as addTeacher } from '../route'
+import { PATCH as setManagerTeaching, POST as addTeacher } from '../route'
 import { DELETE as removeTeacher } from '../[memberRef]/route'
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
@@ -23,7 +23,7 @@ const REQUEST_ID = '44444444-4444-4444-8444-444444444444'
 const MEMBER_REF = 'a'.repeat(32)
 const NOW = '2026-08-13T10:00:00.000Z'
 
-function request(path: string, method: 'POST' | 'DELETE', body: unknown) {
+function request(path: string, method: 'POST' | 'PATCH' | 'DELETE', body: unknown) {
   return new Request(`http://localhost${path}`, {
     method,
     headers: { 'Content-Type': 'application/json' },
@@ -102,6 +102,43 @@ describe('institution staff routes', () => {
     expect(mocks.rpc).toHaveBeenCalledWith('add_my_institution_teacher_by_email', expect.objectContaining({
       p_teacher_email: TEACHER_EMAIL,
     }))
+  })
+
+  it('toggles the authenticated manager teacher role without accepting a member id', async () => {
+    mocks.rpc.mockResolvedValueOnce({
+      data: { memberRef: MEMBER_REF, enabled: true, replayed: false },
+      error: null,
+    })
+    const response = await setManagerTeaching(request('/api/institution/staff', 'PATCH', {
+      enabled: true,
+      requestId: REQUEST_ID,
+    }))
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('set_my_institution_manager_teacher_role', {
+      p_user_id: USER_ID,
+      p_enabled: true,
+      p_request_id: REQUEST_ID,
+    })
+
+    mocks.rpc.mockClear()
+    expect((await setManagerTeaching(request('/api/institution/staff', 'PATCH', {
+      enabled: true,
+      requestId: REQUEST_ID,
+      memberRef: MEMBER_REF,
+    }))).status).toBe(400)
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('blocks manager teacher disable while active classrooms exist', async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { code: 'P0003' } })
+    const response = await setManagerTeaching(request('/api/institution/staff', 'PATCH', {
+      enabled: false,
+      requestId: REQUEST_ID,
+    }))
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Aktif sınıflarınız varken öğretmenlik rolü kapatılamaz',
+    })
   })
 
   it('removes only an opaque teacher member ref from the manager workspace', async () => {

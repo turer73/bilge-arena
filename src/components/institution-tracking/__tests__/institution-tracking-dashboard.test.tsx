@@ -266,7 +266,11 @@ describe('InstitutionTrackingDashboard', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
     const print = vi.spyOn(window, 'print').mockImplementation(() => undefined)
     const writeText = vi.fn().mockResolvedValue(undefined)
-    mocks.directory.mockResolvedValue({ ...directory, membership: { role: 'teacher' as const } })
+    mocks.directory.mockResolvedValue({
+      ...directory,
+      membership: { role: 'teacher' as const, teacherEnabled: true },
+      classrooms: [{ ...directory.classrooms[0], canManagePrograms: true }],
+    })
     const user = userEvent.setup()
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     render(<InstitutionTrackingDashboard />)
@@ -286,5 +290,17 @@ describe('InstitutionTrackingDashboard', () => {
     await waitFor(() => expect(mocks.updateProgram).toHaveBeenCalledWith('c'.repeat(32), expect.objectContaining({ items: [expect.objectContaining({ position: 1, title: 'Temel kavramlar durum tespiti' })] })))
     await user.click(screen.getByRole('button', { name: /İnceledim, yayınla/i }))
     expect(await screen.findByText('Yayınlandı')).toBeInTheDocument()
+  })
+
+  it('shows dual-role manager copy and enables programs only for the managers own classroom', async () => {
+    mocks.directory.mockResolvedValue({
+      ...directory,
+      membership: { role: 'manager' as const, teacherEnabled: true },
+      classrooms: [{ ...directory.classrooms[0], canManagePrograms: true }],
+    })
+    render(<InstitutionTrackingDashboard />)
+
+    expect(await screen.findByText(/Kurum yöneticisi ve öğretmen görünümü/)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Taslak oluştur' })).toBeInTheDocument()
   })
 })

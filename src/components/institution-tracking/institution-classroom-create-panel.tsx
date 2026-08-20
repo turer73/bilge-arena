@@ -36,8 +36,14 @@ export function InstitutionClassroomCreatePanel({
         if (!parsed.success) throw new Error('Öğretmen listesi doğrulanamadı')
         if (!controller.signal.aborted) {
           setDirectory(parsed.data)
+          const teacherRoleRef = parsed.data.roles.find(
+            (role) => role.system && role.roleKey === 'teacher',
+          )?.roleRef
           setTeacherMemberRef(
-            parsed.data.members.find((member) => member.membershipRole === 'teacher')?.memberRef ?? '',
+            parsed.data.members.find((member) => (
+              member.membershipRole === 'teacher'
+              || Boolean(teacherRoleRef && member.roleRefs.includes(teacherRoleRef))
+            ))?.memberRef ?? '',
           )
         }
       })
@@ -52,7 +58,13 @@ export function InstitutionClassroomCreatePanel({
     return () => controller.abort()
   }, [])
 
-  const teachers = directory?.members.filter((member) => member.membershipRole === 'teacher') ?? []
+  const teacherRoleRef = directory?.roles.find(
+    (role) => role.system && role.roleKey === 'teacher',
+  )?.roleRef
+  const teachers = directory?.members.filter((member) => (
+    member.membershipRole === 'teacher'
+    || Boolean(teacherRoleRef && member.roleRefs.includes(teacherRoleRef))
+  )) ?? []
 
   async function createClassroom(event: FormEvent) {
     event.preventDefault()
@@ -115,7 +127,7 @@ export function InstitutionClassroomCreatePanel({
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" aria-hidden="true" />
           <div>
             <strong className="block">Aktif kurum öğretmeni bulunamadı</strong>
-            <p className="mt-1 text-[var(--text-sub)]">Sınıf açmadan önce kuruma bir öğretmen hesabı eklenmelidir. Yönetici hesabı otomatik olarak öğretmen yapılmaz.</p>
+            <p className="mt-1 text-[var(--text-sub)]">Sınıf açmadan önce kuruma bir öğretmen ekleyin veya kurum yöneticisi için öğretmenlik rolünü açın.</p>
             <Link href="/arena/kurum/roller" className="mt-2 inline-flex min-h-10 items-center rounded-lg font-black text-amber-200 underline decoration-amber-300/50 underline-offset-4 hover:text-amber-100">
               Öğretmen ve rol yönetimine git
             </Link>

@@ -5,6 +5,7 @@ import { AlertTriangle, Loader2, MailPlus, ShieldCheck, UserMinus, Users } from 
 import type { InstitutionRoleDirectory } from '@/lib/institution-pilot/role-contract'
 
 type Member = InstitutionRoleDirectory['members'][number]
+type Role = InstitutionRoleDirectory['roles'][number]
 
 async function staffApi(path: string, init: RequestInit) {
   const response = await fetch(path, { cache: 'no-store', ...init })
@@ -19,15 +20,20 @@ async function staffApi(path: string, init: RequestInit) {
 
 export function InstitutionStaffManager({
   members,
+  roles,
   onChanged,
 }: {
   members: Member[]
+  roles: Role[]
   onChanged: () => Promise<void>
 }) {
   const [teacherEmail, setTeacherEmail] = useState('')
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const teacherRoleRef = roles.find(
+    (role) => role.system && role.roleKey === 'teacher',
+  )?.roleRef
 
   async function addTeacher() {
     const email = teacherEmail.trim().toLowerCase()
@@ -71,6 +77,28 @@ export function InstitutionStaffManager({
     }
   }
 
+  async function setManagerTeaching(member: Member, enabled: boolean) {
+    const key = `manager-teacher:${member.memberRef}`
+    setSavingKey(key)
+    setError(null)
+    setSuccess(null)
+    try {
+      await staffApi('/api/institution/staff', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ enabled, requestId: crypto.randomUUID() }),
+      })
+      setSuccess(enabled
+        ? 'Kurum yöneticisi artık sınıflara öğretmen olarak atanabilir.'
+        : 'Kurum yöneticisinin öğretmenlik rolü kapatıldı.')
+      await onChanged()
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : 'Yönetici öğretmenliği güncellenemedi')
+    } finally {
+      setSavingKey(null)
+    }
+  }
+
   return (
     <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-5" aria-labelledby="institution-staff-title">
       <div className="flex items-start gap-3">
@@ -79,6 +107,9 @@ export function InstitutionStaffManager({
           <h2 id="institution-staff-title" className="text-lg font-black">Kurum personeli</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--text-sub)]">
             Bilge Arena hesabı bulunan öğretmeni kayıtlı e-posta adresiyle kuruma ekleyin. E-posta adresi kurum dizininde gösterilmez.
+          </p>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-[var(--text-sub)]">
+            Kurum yöneticisi de ders veriyorsa kendi hesabı için öğretmenlik rolünü ayrıca açabilirsiniz.
           </p>
         </div>
       </div>
@@ -113,12 +144,31 @@ export function InstitutionStaffManager({
         <div className="grid gap-2 md:grid-cols-2">
           {members.map((member) => {
             const removing = savingKey === `remove:${member.memberRef}`
+            const managerTeaching = member.membershipRole === 'manager'
+              && Boolean(teacherRoleRef && member.roleRefs.includes(teacherRoleRef))
+            const togglingManager = savingKey === `manager-teacher:${member.memberRef}`
             return (
               <div key={member.memberRef} className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2">
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-bold">{member.alias}</span>
-                  <span className="text-[11px] text-[var(--text-sub)]">{member.membershipRole === 'manager' ? 'Kurum yöneticisi' : 'Öğretmen'}</span>
+                  <span className="text-[11px] text-[var(--text-sub)]">
+                    {member.membershipRole === 'manager'
+                      ? managerTeaching ? 'Kurum yöneticisi · Öğretmen' : 'Kurum yöneticisi'
+                      : 'Öğretmen'}
+                  </span>
                 </span>
+                {member.membershipRole === 'manager' && teacherRoleRef && (
+                  <button
+                    type="button"
+                    onClick={() => void setManagerTeaching(member, !managerTeaching)}
+                    disabled={savingKey !== null}
+                    aria-pressed={managerTeaching}
+                    className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-sky-400/25 px-3 text-xs font-bold text-sky-200 hover:bg-sky-400/10 disabled:opacity-50"
+                  >
+                    {togglingManager && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {managerTeaching ? 'Öğretmenliği kapat' : 'Öğretmenliği aç'}
+                  </button>
+                )}
                 {member.membershipRole === 'teacher' && (
                   <button
                     type="button"

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   institutionPilotNoStoreJson,
+  institutionPilotManagerTeacherInputSchema,
+  institutionPilotManagerTeacherResultSchema,
   institutionPilotRpcStatus,
   institutionPilotTeacherAddInputSchema,
   institutionPilotTeacherAddResultSchema,
@@ -66,6 +68,22 @@ describe('institution pilot server contract', () => {
       memberRef: 'b'.repeat(32),
       status: 'removed',
       endedAt: workspace.membership.joinedAt,
+      replayed: false,
+    }).success).toBe(true)
+  })
+
+  it('accepts only a boolean manager teacher toggle and opaque result', () => {
+    const requestId = '33333333-3333-4333-8333-333333333333'
+    expect(institutionPilotManagerTeacherInputSchema.parse({ enabled: true, requestId }))
+      .toEqual({ enabled: true, requestId })
+    expect(institutionPilotManagerTeacherInputSchema.safeParse({
+      enabled: true,
+      requestId,
+      memberRef: 'b'.repeat(32),
+    }).success).toBe(false)
+    expect(institutionPilotManagerTeacherResultSchema.safeParse({
+      memberRef: 'b'.repeat(32),
+      enabled: true,
       replayed: false,
     }).success).toBe(true)
   })
