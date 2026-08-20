@@ -243,7 +243,11 @@ suite('112-127 and 131-132 institution pilot real PostgreSQL acceptance', () => 
         permissions: ['institution.pilot.access', 'teacher.classrooms.manage'],
       },
     ])
-    expect(await rpc('public.teacher_classroom_is_teacher($1)', [managerOne])).toBe(true)
+    const managerTeacherGuard = await client.query(
+      'SELECT public.teacher_classroom_is_teacher($1) AS allowed',
+      [managerOne],
+    )
+    expect(managerTeacherGuard.rows[0].allowed).toBe(true)
 
     expect(await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
       platformAdmin, 'Bilge Pilot Bir', managerOne, requestId,
