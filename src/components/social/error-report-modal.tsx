@@ -2,6 +2,7 @@
 
 import { useId, useState } from 'react'
 import { errorReportSchema, LIMITS } from '@/lib/validations/schemas'
+import { ERROR_REPORT_COIN_REWARD } from '@/lib/constants/rewards'
 
 const REPORT_TYPES = [
   { value: 'wrong_answer', label: 'Yanlis cevap', icon: '❌' },
@@ -95,9 +96,11 @@ export function ErrorReportModal({
           /* Basarili mesaji */
           <div className="flex flex-col items-center gap-3 py-6">
             <div className="text-4xl">✅</div>
-            <div id={titleId} role="status" className="text-sm font-bold">Raporun gonderildi!</div>
-            <div className="text-xs text-[var(--text-sub)]">
-              Ekibimiz en kisa surede inceleyecek. Tesekkurler!
+            <div id={titleId} role="status" className="text-sm font-bold">Bildirimin bize ulaştı!</div>
+            <div className="text-center text-xs leading-5 text-[var(--text-sub)]">
+              Ekibimiz inceleyecek. Haklı çıkarsan hesabına{' '}
+              <strong className="text-[var(--gold-text,var(--text))]">{ERROR_REPORT_COIN_REWARD} altın</strong>{' '}
+              eklenecek ve bildirimin sonucunu bildirim olarak göreceksin.
             </div>
           </div>
         ) : (
@@ -116,6 +119,20 @@ export function ErrorReportModal({
               >
                 ✕
               </button>
+            </div>
+
+            {/* Odul duyurusu: ogrenci bildirmenin ne ise yaradigini ve
+                kazandigi altinla ne yapabilecegini bilmeden motive olmuyor. */}
+            <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+              <p className="text-[11px] font-extrabold text-[var(--text)]">
+                🎯 Hata avcılığı ödüllü
+              </p>
+              <p className="mt-1 text-[10px] leading-4 text-[var(--text-sub)]">
+                Bildirimin doğru çıkarsa <strong>{ERROR_REPORT_COIN_REWARD} altın</strong> kazanırsın.
+                Altınla mağazadan profil arka planı alabilirsin; en uygunu 1200 altın, yani beş doğru
+                bildirim bir arka plan eder. Üstelik senin fark ettiğin hata, o soruyu çözecek
+                herkes için düzelmiş olur.
+              </p>
             </div>
 
             {/* Tip secimi */}

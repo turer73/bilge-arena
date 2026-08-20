@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const sql = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '126_institution_tenant_rbac.sql'),
+  join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '131_institution_tenant_rbac.sql'),
   'utf8',
 )
 

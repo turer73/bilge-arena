@@ -1,4 +1,4 @@
--- Migration 126: tenant-scoped institution roles and permissions.
+-- Migration 131: tenant-scoped institution roles and permissions.
 -- Platform roles remain global; institution roles are owned and managed only
 -- inside one active pilot institution. System roles are immutable.
 BEGIN;

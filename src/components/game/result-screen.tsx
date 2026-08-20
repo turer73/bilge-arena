@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { calculateRank, RANK_CONFIG } from '@/lib/utils/xp'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useAuthStore } from '@/stores/auth-store'
@@ -13,9 +14,13 @@ import { BilgeChan } from '@/components/ui/bilge-chan'
 interface ResultScreenProps {
   onRestart: () => void
   onExit: () => void
+  /** Bu oturumun kazandirdigi altin (sunucudan, reward_ledger). Oturum kaydi
+   * sonuc ekrani acildiktan SONRA tamamlandigi icin ilk render'da null gelir ve
+   * rozet o an gizlidir. null = bilinmiyor/misafir, 0 = gunluk tavan dolu. */
+  coinsEarned?: number | null
 }
 
-export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
+export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultScreenProps) {
   const { score, questions, answers, xpEarned, maxStreak, lives, livesEnabled } = useQuizStore()
   const { user } = useAuthStore()
   const { incrementQuizCount } = useGuestSession()
@@ -123,6 +128,29 @@ export function ResultScreen({ onRestart, onExit }: ResultScreenProps) {
           </div>
         ))}
       </div>
+
+      {/* Kazanilan altin — oturum kaydi tamamlaninca gorunur. Altin XP'den ayri
+          bir para birimi: XP seviye ilerlemesi, altin magaza alimi. Kullanici
+          kazandigini burada gormezse magazaya yonelmiyor. */}
+      {coinsEarned !== null && (
+        <div
+          className="rounded-[10px] border border-[var(--reward-border)] bg-[var(--reward-bg)] px-5 py-2.5 text-center animate-fadeUp"
+          style={{ animationDelay: '0.6s', animationFillMode: 'both' }}
+        >
+          {coinsEarned > 0 ? (
+            <span className="text-[13px] font-semibold text-[var(--reward)]">
+              🪙 +{coinsEarned} altın kazandın!{' '}
+              <Link href="/arena/magaza" className="underline underline-offset-2 hover:opacity-80">
+                Mağaza →
+              </Link>
+            </span>
+          ) : (
+            <span className="text-[13px] font-semibold text-[var(--text-sub)]">
+              🪙 Bugünlük altın sınırına ulaştın — yarın kazanmaya devam!
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Max streak */}
       {maxStreak >= 3 && (

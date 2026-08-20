@@ -1,5 +1,10 @@
 import type { z } from 'zod'
 import {
+  classroomExamModeSchema,
+  examModeToggleResultSchema,
+  type ExamModeToggleInput,
+} from '@/lib/assistance-policy/contract'
+import {
   studentAssignmentSubmitResponseSchema,
   studentTeacherAssignmentSchema,
   studentTeacherAssignmentsSchema,
@@ -108,6 +113,27 @@ export function updateClassroomBilgeTahtaAccess(
   return requestJson(
     `/api/teacher/classrooms/${encodeURIComponent(classroomId)}/bilge-tahta`,
     classroomBilgeTahtaUpdateResultSchema,
+    { method: 'PATCH', body: JSON.stringify(input) },
+  )
+}
+
+/** Ogretmen panelinin sayfa acilisinda okudugu sinav modu durumu. */
+export function fetchClassroomExamMode(classroomId: string, signal?: AbortSignal) {
+  return requestJson(
+    `/api/teacher/classrooms/${encodeURIComponent(classroomId)}/exam-mode`,
+    classroomExamModeSchema,
+    { signal },
+  )
+}
+
+/** Sinif bazli sinav modu: acikken butun AI yardimcilari kapanir. */
+export function updateClassroomExamMode(
+  classroomId: string,
+  input: ExamModeToggleInput,
+) {
+  return requestJson(
+    `/api/teacher/classrooms/${encodeURIComponent(classroomId)}/exam-mode`,
+    examModeToggleResultSchema,
     { method: 'PATCH', body: JSON.stringify(input) },
   )
 }

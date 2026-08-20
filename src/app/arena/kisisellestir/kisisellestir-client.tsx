@@ -39,6 +39,8 @@ import {
 } from '@/lib/constants/avatar-decorations'
 import { AVATAR_GROUPS, avatarMinLevel } from '@/lib/constants/avatars'
 import { StudioPreview } from './studio-preview'
+import { useCosmeticPurchase, type CosmeticCategory } from '@/lib/hooks/use-cosmetic-purchase'
+import { CosmeticPurchaseDialog } from '@/components/profile/cosmetic-purchase-dialog'
 
 type Area = 'avatar' | 'zemin' | 'kart' | 'panel' | 'cerceve' | 'rozet' | 'sus'
 
@@ -133,26 +135,54 @@ export function KisisellestirClient() {
     () => (staff ? bgCatalog.map((b) => b.id) : profile?.owned_backgrounds ?? []),
     [staff, bgCatalog, profile?.owned_backgrounds],
   )
-  const ownedBackgrounds = useMemo(
-    () => bgCatalog.filter((b) => b.coinCost === undefined || bgOwnedIds.includes(b.id)),
-    [bgCatalog, bgOwnedIds],
-  )
+  // Katalog ARTIK FILTRELENMIYOR (2026-08-16, İP-3a). Önceden yalnız sahip
+  // olunanlar listeleniyordu; kullanıcı neyi alabileceğini ve bir ürüne ne kadar
+  // kaldığını hiçbir ekranda göremiyordu. Ölçülen sonuç: bakiyesi en ucuz ürüne
+  // yeten 10 kullanıcı vardı ve toplam 1 satın alma yapılmıştı.
+  // Süs alanı bu deseni zaten uyguluyordu; diğer alanlar ona hizalandı.
+  const balance = profile?.coin_balance ?? 0
+  const isBgOwned = (b: StoreBackgroundItem) =>
+    b.coinCost === undefined || bgOwnedIds.includes(b.id)
+
+  // İP-3b: kilitli ama bakiyesi yeten ürün YERİNDE alınır — mağazaya gidip
+  // geri dönmek bağlamı koparıyordu. Bakiye yetmiyorsa satın alma açılmaz,
+  // etiket "🔒 🪙N daha" olarak kalır ve mağaza CTA'sı yönlendirir.
+  const { purchase, busyId } = useCosmeticPurchase()
+  const [buyTarget, setBuyTarget] = useState<{
+    category: CosmeticCategory
+    id: string
+    name: string
+    cost: number
+    onOwned: (id: string) => void
+  } | null>(null)
+
+  /** Satın alınabilir mi (kilitli + fiyatı var + bakiye yetiyor). */
+  const canBuy = (cost: number | undefined) => cost !== undefined && balance >= cost
+
+  async function confirmPurchase() {
+    if (!buyTarget) return
+    const ok = await purchase({
+      category: buyTarget.category,
+      itemId: buyTarget.id,
+      itemName: buyTarget.name,
+    })
+    if (ok) buyTarget.onOwned(buyTarget.id) // satın alındı → otomatik uygula
+    setBuyTarget(null)
+  }
 
   const frameOwnedIds = staff
     ? PROFILE_FRAMES.map((f) => f.id)
     : profile?.owned_frames?.length
       ? profile.owned_frames
       : ['none', 'mavi']
-  const ownedFrames = PROFILE_FRAMES.filter(
-    (f) => f.coinCost === undefined || frameOwnedIds.includes(f.id),
-  )
+  const isFrameOwned = (f: { id: string; coinCost?: number }) =>
+    f.coinCost === undefined || frameOwnedIds.includes(f.id)
 
   const npOwnedIds = staff
     ? PROFILE_NAMEPLATES.map((n) => n.id)
     : profile?.owned_nameplates ?? ['none']
-  const ownedNameplates = PROFILE_NAMEPLATES.filter(
-    (n) => n.coinCost === undefined || npOwnedIds.includes(n.id),
-  )
+  const isNameplateOwned = (n: { id: string; coinCost?: number }) =>
+    n.coinCost === undefined || npOwnedIds.includes(n.id)
 
   // Süs sahipliği: personel hepsini, diğerleri owned + ücretsiz. Sahipsiz ücretli
   // süs takılamaz (kilitli kart → Mağaza). isDecorationFree zaten ücretsizi açar.
@@ -259,7 +289,11 @@ export function KisisellestirClient() {
         toast.error('Uygulanamadı', data.error ?? 'Bir şeyler ters gitti')
         return
       }
-      setProfile({ ...profile, selected_nameplate: id })
+      // EN GÜNCEL profili oku (Codex PR#243 avatar-clobber dersi). Satın alma
+      // hemen öncesinde bakiyeyi ve sahiplik dizisini güncellemiş olabilir;
+      // closure'daki eski `profile` yazılırsa o güncelleme ezilir.
+      const latest = useAuthStore.getState().profile ?? profile
+      setProfile({ ...latest, selected_nameplate: id })
       toast.success('İsim paneli uygulandı', 'Sıralama ve profilinde görünecek ✨')
     } catch {
       toast.error('Bağlantı hatası', 'Tekrar dene')
@@ -469,55 +503,122 @@ export function KisisellestirClient() {
 
             {(area === 'zemin' || area === 'kart') && (
               <BackgroundGrid
-                items={ownedBackgrounds}
+                items={bgCatalog}
                 selectedId={area === 'zemin' ? zeminId : cardBgId}
                 noneLabel={area === 'zemin' ? 'Zemin Yok' : 'Sade'}
                 onSelect={area === 'zemin' ? applyZemin : applyCardBg}
+                isOwned={isBgOwned}
+                balance={balance}
+                onBuy={(b) =>
+                  setBuyTarget({
+                    category: 'background',
+                    id: b.id,
+                    name: b.name,
+                    cost: b.coinCost ?? 0,
+                    onOwned: area === 'zemin' ? applyZemin : applyCardBg,
+                  })
+                }
+                canBuy={canBuy}
+                busy={busyId !== null}
               />
             )}
 
             {area === 'panel' && (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {ownedNameplates.map((np) => (
-                  <button
-                    key={np.id}
-                    onClick={() => applyNameplate(np.id)}
-                    disabled={npBusy}
-                    aria-pressed={nameplateId === np.id}
-                    className={`flex flex-col gap-2 rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 disabled:opacity-50 ${
-                      nameplateId === np.id ? 'border-[var(--focus)] shadow-lg' : 'border-[var(--border)]'
-                    } bg-[var(--card-bg)]`}
-                  >
-                    <div className="flex min-h-[28px] items-center">
-                      <Nameplate nameplateId={np.id} className="text-xs font-bold">
-                        {displayName}
-                      </Nameplate>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="truncate text-[11px] font-bold text-[var(--text)]">{np.name}</span>
-                      <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                        {nameplateId === np.id ? '✓ Aktif' : NAMEPLATE_RARITY_LABEL[np.rarity]}
-                      </span>
-                    </div>
-                  </button>
-                ))}
+                {PROFILE_NAMEPLATES.map((np) => {
+                  const owned = isNameplateOwned(np)
+                  return (
+                    <button
+                      key={np.id}
+                      onClick={() => {
+                        if (owned) return applyNameplate(np.id)
+                        if (canBuy(np.coinCost)) {
+                          setBuyTarget({
+                            category: 'nameplate',
+                            id: np.id,
+                            name: np.name,
+                            cost: np.coinCost ?? 0,
+                            onOwned: applyNameplate,
+                          })
+                        }
+                      }}
+                      disabled={npBusy || busyId !== null || (!owned && !canBuy(np.coinCost))}
+                      aria-pressed={nameplateId === np.id}
+                      title={owned ? undefined : canBuy(np.coinCost) ? 'Satın al' : 'Mağazadan satın al'}
+                      className={`flex flex-col gap-2 rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 disabled:hover:translate-y-0 ${
+                        nameplateId === np.id ? 'border-[var(--focus)] shadow-lg' : 'border-[var(--border)]'
+                      } bg-[var(--card-bg)] ${owned ? '' : 'opacity-60'}`}
+                    >
+                      <div className="flex min-h-[28px] items-center">
+                        <Nameplate nameplateId={np.id} className="text-xs font-bold">
+                          {displayName}
+                        </Nameplate>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="truncate text-[11px] font-bold text-[var(--text)]">{np.name}</span>
+                        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                          {nameplateId === np.id
+                            ? '✓ Aktif'
+                            : owned
+                              ? NAMEPLATE_RARITY_LABEL[np.rarity]
+                              : lockLabel(np.coinCost ?? 0, balance)}
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
                 <StoreCta />
               </div>
             )}
 
             {area === 'cerceve' && (
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-                {ownedFrames.map((frm) => (
-                  <div key={frm.id} className="flex flex-col items-center gap-1.5">
-                    <FrameDot frame={frm} active={frameId === frm.id} onClick={() => applyFrame(frm.id)} />
-                    <span
-                      className="text-center text-[8px] font-bold leading-none"
-                      style={{ color: FRAME_RARITY_COLOR[frm.rarity] }}
-                    >
-                      {frm.id === 'none' ? 'Yok' : frm.name}
-                    </span>
-                  </div>
-                ))}
+                {PROFILE_FRAMES.map((frm) => {
+                  const owned = isFrameOwned(frm)
+                  return (
+                    <div key={frm.id} className="flex flex-col items-center gap-1.5">
+                      <FrameDot
+                        frame={frm}
+                        active={frameId === frm.id}
+                        onClick={() => owned && applyFrame(frm.id)}
+                        className={owned ? '' : 'opacity-50'}
+                      />
+                      <span
+                        className="text-center text-[8px] font-bold leading-none"
+                        style={{ color: FRAME_RARITY_COLOR[frm.rarity] }}
+                      >
+                        {frm.id === 'none' ? 'Yok' : frm.name}
+                      </span>
+                      {!owned && (
+                        canBuy(frm.coinCost) ? (
+                          <button
+                            onClick={() =>
+                              setBuyTarget({
+                                category: 'frame',
+                                id: frm.id,
+                                name: frm.name,
+                                cost: frm.coinCost ?? 0,
+                                onOwned: applyFrame,
+                              })
+                            }
+                            disabled={busyId !== null}
+                            className="text-center text-[8px] font-bold leading-none text-[var(--reward)] hover:underline disabled:opacity-50"
+                          >
+                            {lockLabel(frm.coinCost ?? 0, balance)}
+                          </button>
+                        ) : (
+                          <Link
+                            href="/arena/magaza"
+                            className="text-center text-[8px] font-bold leading-none text-[var(--reward)] hover:underline"
+                          >
+                            {lockLabel(frm.coinCost ?? 0, balance)}
+                          </Link>
+                        )
+                      )}
+                    </div>
+                  )
+                })}
+                <StoreCta />
               </div>
             )}
 
@@ -584,6 +685,17 @@ export function KisisellestirClient() {
           </div>
         </div>
       </div>
+
+      {/* Yerinde satın alma onayı — kilitli ama bakiyesi yeten ürüne tıklanınca */}
+      <CosmeticPurchaseDialog
+        open={buyTarget !== null}
+        itemName={buyTarget?.name ?? ''}
+        cost={buyTarget?.cost ?? 0}
+        balance={balance}
+        busy={busyId !== null}
+        onCancel={() => setBuyTarget(null)}
+        onConfirm={confirmPurchase}
+      />
     </div>
   )
 }
@@ -594,25 +706,43 @@ function BackgroundGrid({
   selectedId,
   noneLabel,
   onSelect,
+  isOwned,
+  balance,
+  onBuy,
+  canBuy,
+  busy,
 }: {
   items: StoreBackgroundItem[]
   selectedId: string
   noneLabel: string
   onSelect: (id: string) => void
+  /** Sahip olunmayanlar da listelenir; kilitli görünür ve seçilemez. */
+  isOwned: (b: StoreBackgroundItem) => boolean
+  balance: number
+  /** Kilitli + bakiyesi yeten ürüne tıklanınca satın alma onayını açar. */
+  onBuy: (b: StoreBackgroundItem) => void
+  canBuy: (cost: number | undefined) => boolean
+  busy: boolean
 }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {items.map((b) => {
         const selected = selectedId === b.id
+        const owned = isOwned(b)
         return (
           <button
             key={b.id}
-            onClick={() => onSelect(b.id)}
+            onClick={() => {
+              if (owned) return onSelect(b.id)
+              if (canBuy(b.coinCost)) onBuy(b)
+            }}
+            disabled={busy || (!owned && !canBuy(b.coinCost))}
             aria-pressed={selected}
             aria-label={b.id === 'none' ? noneLabel : b.name}
-            className={`group flex flex-col gap-2 rounded-xl border-2 p-2 text-left transition-all hover:-translate-y-0.5 ${
+            title={owned ? undefined : canBuy(b.coinCost) ? 'Satın al' : 'Mağazadan satın al'}
+            className={`group flex flex-col gap-2 rounded-xl border-2 p-2 text-left transition-all hover:-translate-y-0.5 disabled:hover:translate-y-0 ${
               selected ? 'border-[var(--focus)] shadow-lg' : 'border-[var(--border)]'
-            } bg-[var(--card-bg)]`}
+            } bg-[var(--card-bg)] ${owned ? '' : 'opacity-60'}`}
           >
             <div className="relative h-16 w-full overflow-hidden rounded-lg">
               {b.id === 'none' ? (
@@ -638,7 +768,13 @@ function BackgroundGrid({
               <span className="truncate text-[11px] font-bold text-[var(--text)]">
                 {b.id === 'none' ? noneLabel : b.name}
               </span>
-              {selected && <span className="shrink-0 text-[10px] font-bold text-[var(--growth)]">✓</span>}
+              {selected ? (
+                <span className="shrink-0 text-[10px] font-bold text-[var(--growth)]">✓</span>
+              ) : !owned ? (
+                <span className="shrink-0 text-[9px] font-bold text-[var(--reward)]">
+                  {lockLabel(b.coinCost ?? 0, balance)}
+                </span>
+              ) : null}
             </div>
           </button>
         )
@@ -646,6 +782,18 @@ function BackgroundGrid({
       <StoreCta />
     </div>
   )
+}
+
+/**
+ * Kilitli ürün etiketi — üç durumun üçüncüsü.
+ *
+ * Bakiye yetiyorsa fiyatı, yetmiyorsa NE KADAR EKSİK olduğunu yazar. İkincisi
+ * bu değişikliğin çekirdeği: kullanıcı bugüne kadar bir ürüne ne kadar uzakta
+ * olduğunu hiçbir ekranda göremiyordu.
+ */
+function lockLabel(coinCost: number, balance: number): string {
+  const missing = coinCost - balance
+  return missing > 0 ? `🔒 🪙${missing} daha` : `🔓 🪙${coinCost}`
 }
 
 /* ── Mağaza yönlendirme kartı ── */

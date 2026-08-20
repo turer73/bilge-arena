@@ -395,9 +395,24 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Relationships: []
       }
     }
-    Functions: Omit<GeneratedFunctions, 'complete_game_session'> & {
+    // Supabase tip ureticisi PostgreSQL fonksiyon imzasindan nullability
+    // okuyamaz ve her `text` parametresini `string` uretir. Asagidaki iki RPC
+    // `p_note` icin NULL kabul eder (`NULLIF(btrim(p_note), '')`), bu yuzden
+    // uretilen imza yerine elle yazilan nullable imza gecerli olmalidir.
+    Functions: Omit<
+      GeneratedFunctions,
+      | 'complete_game_session'
+      | 'open_institution_student_followup'
+      | 'review_institution_study_program'
+    > & {
       complete_game_session: Omit<CompleteGameSession, 'Args'> & {
         Args: CompleteGameSessionArgs
+      }
+      // Migration 128. Uretilen tiplere ancak canliya uygulandiktan sonra
+      // girecegi icin sozlesme burada elle tutuluyor.
+      award_error_report_reward: {
+        Args: { p_admin_id: string; p_report_id: string; p_coins: number }
+        Returns: Json
       }
       issue_verified_attempt: {
         Args: {
@@ -787,6 +802,26 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
           p_classroom_id: string
           p_enabled: boolean
           p_institution_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      // Migration 127. Uretilen tiplere ancak canliya uygulandiktan sonra
+      // girecegi icin sozlesme burada elle tutuluyor.
+      get_my_assistance_policy: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_my_classroom_exam_mode: {
+        Args: { p_user_id: string; p_classroom_id: string; p_institution_id: string }
+        Returns: Json
+      }
+      set_teacher_classroom_exam_mode: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_institution_id: string
+          p_enabled: boolean
           p_request_id: string
         }
         Returns: Json

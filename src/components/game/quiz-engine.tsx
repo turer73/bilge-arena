@@ -431,7 +431,11 @@ export function QuizEngine({ game }: QuizEngineProps) {
     }
     return (
       <>
-        <ResultScreen onRestart={quiz.handleRestart} onExit={quiz.handleRestart} />
+        <ResultScreen
+          onRestart={quiz.handleRestart}
+          onExit={quiz.handleRestart}
+          coinsEarned={sessionSaver.savedSession?.coinsEarned ?? null}
+        />
         <ComponentErrorBoundary label="Reklam" variant="minimal">
           <div className="mx-auto max-w-[728px] px-4 pb-6">
             <AdBanner slot="result" />

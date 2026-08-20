@@ -21,7 +21,7 @@ describe('ErrorReportModal — P1 sahte-başarı düzeltmesi', () => {
     fireEvent.click(screen.getByText('Gonder'))
 
     await waitFor(() => expect(screen.getByText('Rapor göndermek için giriş yapmalısın.')).toBeTruthy())
-    expect(screen.queryByText('Raporun gonderildi!')).toBeNull() // sahte başarı YOK
+    expect(screen.queryByText('Bildirimin bize ulaştı!')).toBeNull() // sahte başarı YOK
     expect(onSubmit).toHaveBeenCalledTimes(1)
   })
 
@@ -32,6 +32,6 @@ describe('ErrorReportModal — P1 sahte-başarı düzeltmesi', () => {
     fireEvent.click(screen.getByText('Yanlis cevap'))
     fireEvent.click(screen.getByText('Gonder'))
 
-    await waitFor(() => expect(screen.getByText('Raporun gonderildi!')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('Bildirimin bize ulaştı!')).toBeTruthy())
   })
 })

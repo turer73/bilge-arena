@@ -6,6 +6,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { reportUpdateSchema } from '@/lib/validations/schemas'
 import { dbErrorResponse } from '@/lib/utils/api-error'
 import type { TablesUpdate } from '@/types/database.generated'
+import { createNotification } from '@/lib/notifications/create'
+import { ERROR_REPORT_COIN_REWARD } from '@/lib/constants/rewards'
+import { errorReportRewardResultSchema } from '@/lib/rewards/error-report-contract'
 
 type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'rejected'
 
@@ -79,14 +82,55 @@ export async function PATCH(request: NextRequest) {
     return dbErrorResponse('admin/reports', error)
   }
 
+  // Kabul edilen rapor odullendirilir. Odul + odul izi RPC icinde atomik
+  // yazilir ve ayni rapor ikinci kez odullendirilemez (migration 128).
+  // Odul YAN ETKIDIR: basarisiz olursa raporun cozulmus olmasi geri alinmaz.
+  let rewarded: { awarded: boolean; coins: number; userId: string | null } | null = null
+  if (status === 'resolved') {
+    const { data: rewardData, error: rewardErr } = await svc.rpc('award_error_report_reward', {
+      p_admin_id: admin.id,
+      p_report_id: reportId,
+      p_coins: ERROR_REPORT_COIN_REWARD,
+    })
+    if (rewardErr) {
+      console.error('[admin/reports] ödül hatası:', rewardErr.code)
+    } else {
+      const parsed = errorReportRewardResultSchema.safeParse(rewardData)
+      if (parsed.success && parsed.data.awarded) {
+        const { data: reportRow } = await svc
+          .from('error_reports')
+          .select('user_id')
+          .eq('id', reportId)
+          .maybeSingle()
+        rewarded = {
+          awarded: true,
+          coins: parsed.data.coins,
+          userId: reportRow?.user_id ?? null,
+        }
+      }
+    }
+  }
+
+  // Bildirim yalniz odul GERCEKTEN islendiyse gonderilir; aksi halde
+  // ogrenciye tutmayacagimiz bir vaat verilmis olurdu.
+  if (rewarded?.awarded && rewarded.userId) {
+    await createNotification(svc, {
+      userId: rewarded.userId,
+      type: 'error_report_rewarded',
+      title: '🦉 Teşekkürler, gözünden kaçmadı!',
+      body: `Bildirdiğin soruyu kontrol ettik ve haklıydın — düzelttik. Senin sayende o soruyu çözecek herkes daha net bir metin görecek. Hesabına ${rewarded.coins} altın eklendi; mağazadan profil arka planı almak için kullanabilirsin. Böyle hataları bildirmeye devam et! 💪`,
+      link: '/arena/magaza',
+    })
+  }
+
   // Admin log
   await svc.from('admin_logs').insert({
     admin_id: admin.id,
     action: `report_${status}`,
     target_type: 'report',
     target_id: reportId,
-    details: { status, adminNote },
+    details: { status, adminNote, rewardedCoins: rewarded?.coins ?? 0 },
   })
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, rewardedCoins: rewarded?.coins ?? 0 })
 }
