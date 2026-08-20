@@ -4,6 +4,7 @@ import {
   userHasAnyPlatformPermissionViaRest,
   userHasPlatformAdminAccess,
 } from '../platform-access'
+import { PLATFORM_ADMIN_ENTRY_PERMISSIONS } from '@/lib/admin/platform-permissions'
 
 const ROLE_ID = '11111111-1111-4111-8111-111111111111'
 
@@ -41,6 +42,11 @@ function serviceClient({
 }
 
 describe('platform access boundary', () => {
+  it('keeps institution classroom management outside the platform admin boundary', () => {
+    expect(PLATFORM_ADMIN_ENTRY_PERMISSIONS).not.toContain('teacher.classrooms.manage')
+    expect(PLATFORM_ADMIN_ENTRY_PERMISSIONS).not.toContain('institution.pilot.access')
+  })
+
   it('does not treat an arbitrary role assignment as platform admin access', async () => {
     expect(await userHasPlatformAdminAccess(serviceClient(), 'user-1')).toBe(false)
   })

@@ -27,8 +27,12 @@ const institutionTrackingSql = readdirSync(migrationsDir)
   .filter((name) => /^(11[3-9]|12[0-7])_.*\.sql$/.test(name) || name === '131_institution_tenant_rbac.sql')
   .sort()
   .map((name) => ({ name, sql: readFileSync(join(migrationsDir, name), 'utf8') }))
+const roleSeparationSql = readFileSync(
+  join(migrationsDir, '132_institution_platform_role_separation.sql'),
+  'utf8',
+)
 
-suite('112-127 and 131 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127 and 131-132 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -212,6 +216,35 @@ suite('112-127 and 131 institution pilot real PostgreSQL acceptance', () => {
       institution: { name: 'Bilge Pilot Bir', staffLimit: 6, studentLimit: 200 },
       membership: { role: 'manager' },
     })
+
+    const legacyManagerRole = await client.query(
+      `SELECT count(*)::int AS count
+       FROM public.user_roles AS user_role
+       JOIN public.roles AS role ON role.id = user_role.role_id
+       WHERE user_role.user_id = $1 AND role.slug = 'teacher_pilot'`,
+      [managerOne],
+    )
+    expect(legacyManagerRole.rows[0].count).toBe(1)
+
+    await client.query(roleSeparationSql)
+
+    const separatedManagerRoles = await client.query(
+      `SELECT role.slug, array_agg(permission.permission ORDER BY permission.permission) AS permissions
+       FROM public.user_roles AS user_role
+       JOIN public.roles AS role ON role.id = user_role.role_id
+       LEFT JOIN public.role_permissions AS permission ON permission.role_id = role.id
+       WHERE user_role.user_id = $1
+       GROUP BY role.slug`,
+      [managerOne],
+    )
+    expect(separatedManagerRoles.rows).toEqual([
+      {
+        slug: 'institution_pilot_staff',
+        permissions: ['institution.pilot.access', 'teacher.classrooms.manage'],
+      },
+    ])
+    expect(await rpc('public.teacher_classroom_is_teacher($1)', [managerOne])).toBe(true)
+
     expect(await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
       platformAdmin, 'Bilge Pilot Bir', managerOne, requestId,
     ])).toMatchObject({ replayed: true, institution: { id: institutionOne } })
