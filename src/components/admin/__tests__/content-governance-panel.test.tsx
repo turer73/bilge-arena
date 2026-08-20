@@ -14,6 +14,12 @@ const detail = () => ({ revision: {
   revisionId: OLD, questionId: QUESTION, revisionNo: 1, status: 'superseded', summary: 'Hatalı anahtar',
   content: { question: 'Eski soru', options: ['A', 'B'], answer: 1 }, metadata: { game: 'matematik', category: 'Temel', difficulty: 2 },
   source: { title: 'İç kaynak', licenseCode: 'INTERNAL' }, outcomes: [], approvals: [], psychometrics: [],
+  validation: {
+    policyVersion: 'question-quality@1', verdict: 'NEEDS_REVIEW',
+    findings: [{ code: 'AMBIGUOUS_WORDING', evidence: 'İki farklı okuma farklı seçeneklere götürüyor.' }],
+    rationale: 'İnsan incelemesi gerekli', blindConsensusIndex: 1, blindAgreementRatio: 1,
+    decidedAt: '2026-08-09T09:00:00.000Z',
+  },
   incidents: incidentCreated ? [{ incidentId: INCIDENT, erroneousRevisionId: OLD, correctedRevisionId: CURRENT, errorType: 'wrong_key', status: 'open', eligibleCount: 4, changedCount: 0, manualRequiredCount: 1, createdAt: '2026-08-09T10:00:00.000Z', closedAt: null }] : [],
 } })
 
@@ -32,6 +38,14 @@ beforeEach(() => {
 })
 
 describe('ContentGovernancePanel', () => {
+  it('otomatik karar ve kaniti revizyon detayinda gosterir', async () => {
+    render(<ContentGovernancePanel />)
+    fireEvent.click(await screen.findByText('Eski revizyon'))
+    expect(await screen.findByText(/İnsan incelemesi gerekli · question-quality@1/)).toBeInTheDocument()
+    expect(screen.getByText('AMBIGUOUS_WORDING')).toBeInTheDocument()
+    expect(screen.getByText(/İki farklı okuma/)).toBeInTheDocument()
+  })
+
   it('creates a correction preview against the current published revision and can apply it', async () => {
     render(<ContentGovernancePanel />)
     fireEvent.click(await screen.findByText('Eski revizyon'))
