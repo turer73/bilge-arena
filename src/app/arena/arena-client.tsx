@@ -17,6 +17,7 @@ import { Nameplate } from '@/components/profile/nameplate'
 import { getFrameById, FRAME_STORAGE_KEY } from '@/lib/constants/profile-frames'
 import { GameSelectGrid } from '@/components/game/game-select-grid'
 import { ArenaExploreGrid } from '@/components/game/arena-explore-grid'
+import { MobileHomeDemo, type MobileSubjectId } from '@/app/mobil-demo/mobile-home-demo'
 
 interface SidebarLeaderRow {
   name: string
@@ -32,6 +33,16 @@ interface MiniLeader {
 
 export default function ArenaClient() {
   const { user, profile } = useAuthStore()
+  const [isMobileHome, setIsMobileHome] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(max-width: 767px)')
+    const update = () => setIsMobileHome(media.matches)
+    update()
+    media.addEventListener?.('change', update)
+    return () => media.removeEventListener?.('change', update)
+  }, [])
   // Profil kartıyla ORTAK kart arka planı (kullanıcının seçtiği tema burada da)
   const { activeBackground, activeBgVideoUrl, isCssBg, reducedMotion } = useCardBackground()
 
@@ -92,6 +103,30 @@ export default function ArenaClient() {
       cancelled = true
     }
   }, [user?.id])
+
+  if (isMobileHome) {
+    const availableSubjects = gamesForExamType(profile?.exam_type).map((game) =>
+      (game.slug === 'wordquest' ? 'ingilizce' : game.slug) as MobileSubjectId,
+    )
+    const questionGoal = quests.find((quest) => quest.quest?.quest_type === 'correct_answers')
+
+    return (
+      <MobileHomeDemo
+        mode="live"
+        examLabel={profile?.exam_type === 'lgs' ? 'LGS' : 'YKS'}
+        availableSubjects={availableSubjects}
+        currentStreak={currentStreak}
+        coinBalance={profile?.coin_balance ?? 0}
+        totalXP={totalXP}
+        displayName={displayName}
+        dailyGoal={questionGoal?.quest ? {
+          current: questionGoal.current_value,
+          target: questionGoal.quest.target_value,
+        } : null}
+        showBottomNav={false}
+      />
+    )
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 md:py-8 xl:max-w-5xl xl:px-6 2xl:max-w-6xl 2xl:py-10">

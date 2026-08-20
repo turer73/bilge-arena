@@ -138,4 +138,46 @@ describe('ArenaClient (mobil home)', () => {
     // leaderboard fetch currentUserId ile cagrildi
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(expect.stringContaining(`currentUserId=${UUID}`))
   })
+
+  test('mobil: öğrenme yolu gerçek profil ve günlük soru hedefini kullanır', async () => {
+    const originalMatchMedia = window.matchMedia
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width: 767px)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: {
+        total_xp: 2340,
+        current_streak: 12,
+        coin_balance: 480,
+        username: 'arenaci',
+        avatar_url: null,
+        exam_type: 'lgs',
+      },
+    }
+    mockQuestState.value = [{
+      id: 'q1', current_value: 3, is_completed: false, xp_claimed: false,
+      quest: { title: '5 soru çöz', icon: '🎯', target_value: 5, quest_type: 'correct_answers', xp_reward: 50 },
+    }]
+
+    const { unmount } = render(<ArenaClient />)
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeVisible())
+
+    expect(screen.getByLabelText('Günlük seri: 12')).toBeVisible()
+    expect(screen.getByLabelText('Altın: 480')).toBeVisible()
+    expect(screen.getByText('3 / 5 soru')).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Hazırsın, arenaci!' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'İngilizce' })).not.toBeInTheDocument()
+    expect(screen.queryByText('GÜNLÜK GÖREV')).not.toBeInTheDocument()
+
+    unmount()
+    window.matchMedia = originalMatchMedia
+  })
 })

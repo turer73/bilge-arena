@@ -184,7 +184,7 @@ describe('Service Worker Navigation Safety', () => {
     expect(env.cache.put).toHaveBeenCalledWith(request, response)
   })
 
-  it('opens v2 cache on install and deletes old v1 caches on activate', async () => {
+  it('opens v3 cache on install and deletes old v1/v2 caches on activate', async () => {
     let installPromise: Promise<unknown> | undefined
     env.listeners['install'][0]({
       waitUntil: (promise: Promise<unknown>) => {
@@ -194,13 +194,15 @@ describe('Service Worker Navigation Safety', () => {
     if (!installPromise) throw new Error('install waitUntil was not called')
     await installPromise
 
-    expect(env.caches.open).toHaveBeenCalledWith('bilge-arena-static-v2')
+    expect(env.caches.open).toHaveBeenCalledWith('bilge-arena-static-v3')
 
     env.caches.keys.mockResolvedValue([
       'bilge-arena-static-v1',
       'bilge-arena-runtime-v1',
       'bilge-arena-static-v2',
       'bilge-arena-runtime-v2',
+      'bilge-arena-static-v3',
+      'bilge-arena-runtime-v3',
     ])
 
     let activatePromise: Promise<unknown> | undefined
@@ -214,8 +216,10 @@ describe('Service Worker Navigation Safety', () => {
 
     expect(env.caches.delete).toHaveBeenCalledWith('bilge-arena-static-v1')
     expect(env.caches.delete).toHaveBeenCalledWith('bilge-arena-runtime-v1')
-    expect(env.caches.delete).not.toHaveBeenCalledWith('bilge-arena-static-v2')
-    expect(env.caches.delete).not.toHaveBeenCalledWith('bilge-arena-runtime-v2')
+    expect(env.caches.delete).toHaveBeenCalledWith('bilge-arena-static-v2')
+    expect(env.caches.delete).toHaveBeenCalledWith('bilge-arena-runtime-v2')
+    expect(env.caches.delete).not.toHaveBeenCalledWith('bilge-arena-static-v3')
+    expect(env.caches.delete).not.toHaveBeenCalledWith('bilge-arena-runtime-v3')
   })
 
   it.each([

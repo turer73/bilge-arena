@@ -31,7 +31,20 @@ import {
 } from 'lucide-react'
 import { BottomNav } from '@/components/layout/bottom-nav'
 
-type SubjectId = 'matematik' | 'turkce' | 'fen' | 'sosyal' | 'ingilizce'
+export type MobileSubjectId = 'matematik' | 'turkce' | 'fen' | 'sosyal' | 'ingilizce'
+type SubjectId = MobileSubjectId
+
+interface MobileHomeDemoProps {
+  mode?: 'demo' | 'live'
+  examLabel?: 'YKS' | 'LGS'
+  availableSubjects?: MobileSubjectId[]
+  currentStreak?: number
+  coinBalance?: number
+  totalXP?: number
+  displayName?: string
+  dailyGoal?: { current: number; target: number } | null
+  showBottomNav?: boolean
+}
 
 interface Subject {
   id: SubjectId
@@ -119,11 +132,11 @@ function Resource({ icon: Icon, value, color, label }: {
   )
 }
 
-function PathStep({ index, topic, subject }: { index: number; topic: string; subject: Subject }) {
-  const done = index < 2
-  const current = index === 2
+function PathStep({ index, topic, subject, currentIndex }: { index: number; topic: string; subject: Subject; currentIndex: number }) {
+  const done = index < currentIndex
+  const current = index === currentIndex
   const exam = index === 5
-  const locked = index > 2
+  const locked = index > currentIndex
   const Icon = done ? Check : current ? Star : exam ? Trophy : locked ? Lock : BookOpenText
   const column = [1, 2, 2, 1, 1, 2][index]
   const row = Math.floor(index / 2) + 1
@@ -132,6 +145,11 @@ function PathStep({ index, topic, subject }: { index: number; topic: string; sub
     <Link
       href={`/arena/${subject.id === 'ingilizce' ? 'wordquest' : subject.id}`}
       aria-label={`${topic} dersini aç`}
+      aria-disabled={locked || undefined}
+      tabIndex={locked ? -1 : undefined}
+      onClick={(event) => {
+        if (locked) event.preventDefault()
+      }}
       className="group relative z-10 flex min-h-16 items-center gap-2 rounded-[18px] border-2 bg-white p-2 outline-none transition-transform active:translate-y-1 focus-visible:ring-4 focus-visible:ring-[#93c5fd]"
       style={{
         gridColumn: column,
@@ -158,15 +176,50 @@ function PathStep({ index, topic, subject }: { index: number; topic: string; sub
   )
 }
 
-export function MobileHomeDemo() {
-  const [subjectId, setSubjectId] = useState<SubjectId>('matematik')
+function compactNumber(value: number) {
+  return new Intl.NumberFormat('tr-TR', { notation: value >= 1000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value)
+}
+
+export function MobileHomeDemo({
+  mode = 'demo',
+  examLabel = 'YKS',
+  availableSubjects,
+  currentStreak = 12,
+  coinBalance = 480,
+  totalXP = 2300,
+  displayName = 'Bilgin',
+  dailyGoal = { current: 6, target: 10 },
+  showBottomNav = true,
+}: MobileHomeDemoProps = {}) {
+  const visibleSubjects = useMemo(
+    () => SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id)),
+    [availableSubjects],
+  )
+  const [subjectId, setSubjectId] = useState<SubjectId>(visibleSubjects[0]?.id ?? 'matematik')
   const [coachOpen, setCoachOpen] = useState(true)
   const [coachMessage, setCoachMessage] = useState(0)
-  const subject = useMemo(() => SUBJECTS.find((item) => item.id === subjectId) ?? SUBJECTS[0], [subjectId])
+  const subject = useMemo(() => visibleSubjects.find((item) => item.id === subjectId) ?? visibleSubjects[0] ?? SUBJECTS[0], [subjectId, visibleSubjects])
+  const currentIndex = mode === 'demo' ? 2 : 0
+  const completedCount = currentIndex
   const gameHref = `/arena/${subject.id === 'ingilizce' ? 'wordquest' : subject.id}`
   const message = COACH_MESSAGES[coachMessage]
   const MessageIcon = message.icon
   const bubbleRadius = '30px 30px 30px 16px'
+  const goalRemaining = dailyGoal ? Math.max(0, dailyGoal.target - dailyGoal.current) : null
+  const coachTitle = coachMessage === 0
+    ? `Hazırsın, ${displayName}!`
+    : coachMessage === 2
+      ? goalRemaining === null
+        ? 'Bugünkü rotayı tamamla!'
+        : goalRemaining > 0
+          ? `Yalnızca ${goalRemaining} soru kaldı!`
+          : 'Günlük hedef tamam!'
+      : message.title
+  const coachBody = coachMessage === 0
+    ? `${subject.topics[currentIndex]} için 10 soruluk kısa dersin hazır. Yaklaşık 4 dakikada tamamlayabilirsin.`
+    : coachMessage === 1
+      ? 'Önce soru kökündeki ipucunu yakala. Bildiklerini küçük adımlara bölmek sana zaman kazandırır.'
+      : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
 
   useEffect(() => {
     if (!coachOpen) return
@@ -191,28 +244,28 @@ export function MobileHomeDemo() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#f7f8fa] pb-28 text-[#45494e] md:mx-auto md:max-w-[440px] md:border-x md:border-[#e5e7eb]">
+    <div className={`min-h-[100dvh] bg-[#f7f8fa] pb-28 text-[#45494e] md:mx-auto md:max-w-[440px] md:border-x md:border-[#e5e7eb] ${mode === 'live' ? '-mt-[var(--navbar-h)]' : ''}`}>
       <style>{`html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } nextjs-portal { display: none !important; }`}</style>
       <header className="sticky top-0 z-30 border-b-2 border-[#eceff2] bg-white/95 backdrop-blur-xl">
         <div className="flex h-14 items-center justify-between px-3">
-          <button aria-label="Sınav türünü değiştir" className="flex min-h-11 items-center gap-1 rounded-xl text-[#64748b]">
+          <Link href="/arena/profil" aria-label="Sınav türünü değiştir" className="flex min-h-11 items-center gap-1 rounded-xl text-[#64748b]">
             <ShieldCheck size={24} fill="#dbeafe" className="text-[#2563eb]" strokeWidth={2.5} />
-            <span className="text-xs font-black">TYT</span>
+            <span className="text-xs font-black">{examLabel}</span>
             <ChevronDown size={14} strokeWidth={3} />
-          </button>
+          </Link>
           <div className="flex items-center gap-4">
-            <Resource icon={Flame} value={12} color="#f97316" label="Günlük seri" />
-            <Resource icon={Gem} value="480" color="#06b6d4" label="Bilge puanı" />
-            <Resource icon={Sparkles} value="2.3K" color="#8b5cf6" label="Toplam XP" />
+            <Resource icon={Flame} value={currentStreak} color="#f97316" label="Günlük seri" />
+            <Resource icon={Gem} value={compactNumber(coinBalance)} color="#06b6d4" label="Altın" />
+            <Resource icon={Sparkles} value={compactNumber(totalXP)} color="#8b5cf6" label="Toplam XP" />
           </div>
-          <button aria-label="Ayarlar" className="flex h-11 w-9 items-center justify-center rounded-xl text-[#9aa1a9] active:bg-[#eef1f4]"><Settings size={20} strokeWidth={2.5} /></button>
+          <Link href="/arena/profil" aria-label="Ayarlar" className="flex h-11 w-9 items-center justify-center rounded-xl text-[#9aa1a9] active:bg-[#eef1f4]"><Settings size={20} strokeWidth={2.5} /></Link>
         </div>
       </header>
 
       <main>
         <section aria-label="Ders seçimi" className="border-b-2 border-[#eceff2] bg-white px-3 py-2.5">
           <div className="scrollbar-none flex snap-x gap-2 overflow-x-auto pb-1">
-            {SUBJECTS.map((item) => {
+            {visibleSubjects.map((item) => {
               const Icon = item.icon
               const active = item.id === subject.id
               return (
@@ -242,9 +295,9 @@ export function MobileHomeDemo() {
                 <h1 className="mt-1 text-lg font-black leading-tight">{subject.label} Yolu</h1>
                 <p className="mt-1 truncate text-[11px] font-semibold text-white/80">{subject.description}</p>
               </div>
-              <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">2 / 6</span>
+              <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">{completedCount} / 6</span>
             </div>
-            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px]"><div className="h-full w-[38%] rounded-full bg-white" /></div>
+            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px]"><div className="h-full rounded-full bg-white" style={{ width: `${(completedCount / 6) * 100}%` }} /></div>
           </div>
         </section>
 
@@ -252,7 +305,7 @@ export function MobileHomeDemo() {
           <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[#e3e7eb] bg-white p-4 shadow-[0_6px_0_#e3e7eb]">
             <div className="relative z-10 max-w-[64%]">
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Bugünkü ders</div>
-              <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[#3f4449]">{subject.topics[2]}</h2>
+              <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[#3f4449]">{subject.topics[currentIndex]}</h2>
               <div className="mt-2 flex items-center gap-3 text-[11px] font-bold text-[#7d858d]">
                 <span className="flex items-center gap-1"><BookOpenText size={14} />10 soru</span>
                 <span className="flex items-center gap-1"><Clock3 size={14} />4 dk</span>
@@ -276,28 +329,28 @@ export function MobileHomeDemo() {
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Ünite planı</div>
               <h2 className="text-[15px] font-black">Öğrenme yolu</h2>
             </div>
-            <div className="rounded-xl bg-white px-2.5 py-1.5 text-[10px] font-black text-[#69717a] shadow-[0_2px_0_#dfe3e7]">2 / 6</div>
+            <div className="rounded-xl bg-white px-2.5 py-1.5 text-[10px] font-black text-[#69717a] shadow-[0_2px_0_#dfe3e7]">{completedCount} / 6</div>
           </div>
           <div className="relative grid grid-cols-2 grid-rows-3 gap-x-8 gap-y-1.5">
             <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
               <path d="M25 16.5 H75 V50 H25 V83.5 H75" fill="none" stroke="#cfd5db" strokeWidth="1.8" strokeDasharray="2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {subject.topics.map((topic, index) => <PathStep key={`${subject.id}-${topic}`} index={index} topic={topic} subject={subject} />)}
+            {subject.topics.map((topic, index) => <PathStep key={`${subject.id}-${topic}`} index={index} topic={topic} subject={subject} currentIndex={currentIndex} />)}
           </div>
         </section>
 
-        <section className="mx-4 mb-7 rounded-[22px] border-2 border-[#e5e7eb] bg-white p-4 shadow-[0_5px_0_#e5e7eb]">
+        {dailyGoal && <section className="mx-4 mb-7 rounded-[22px] border-2 border-[#e5e7eb] bg-white p-4 shadow-[0_5px_0_#e5e7eb]">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fff7ed] text-[#f97316]"><Flame size={24} fill="currentColor" strokeWidth={2.6} /></div>
             <div className="min-w-0 flex-1">
-              <div className="flex justify-between text-xs font-black"><span>Günlük hedef</span><span className="text-[#f97316]">6 / 10 soru</span></div>
-              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#edf0f2] p-[2px]"><div className="h-full w-3/5 rounded-full bg-[#f97316]" /></div>
+              <div className="flex justify-between text-xs font-black"><span>Günlük hedef</span><span className="text-[#f97316]">{dailyGoal.current} / {dailyGoal.target} soru</span></div>
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#edf0f2] p-[2px]"><div className="h-full rounded-full bg-[#f97316]" style={{ width: `${Math.min(100, (dailyGoal.current / Math.max(1, dailyGoal.target)) * 100)}%` }} /></div>
             </div>
           </div>
-        </section>
+        </section>}
       </main>
 
-      <BottomNav activeOverride="learn" appearance="learning" />
+      {showBottomNav && <BottomNav activeOverride="learn" appearance="learning" />}
 
       {coachOpen && (
         <div
@@ -342,8 +395,8 @@ export function MobileHomeDemo() {
                   <span className="text-[10px] font-black uppercase tracking-[0.13em]" style={{ color: message.color }}>{message.eyebrow}</span>
                 </div>
 
-                <h2 id="coach-dialog-title" className="max-w-[220px] text-xl font-black leading-7 tracking-[-0.02em]">{message.title}</h2>
-                <p id="coach-dialog-description" className="mt-2 text-[12px] font-semibold leading-[19px] text-[#64707b]">{message.body}</p>
+                <h2 id="coach-dialog-title" className="max-w-[220px] text-xl font-black leading-7 tracking-[-0.02em]">{coachTitle}</h2>
+                <p id="coach-dialog-description" className="mt-2 text-[12px] font-semibold leading-[19px] text-[#64707b]">{coachBody}</p>
 
                 <div className="mt-4 flex items-center justify-between gap-2 border-t-2 border-[#edf0f3] pt-4">
                   <button
