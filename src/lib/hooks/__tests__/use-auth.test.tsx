@@ -147,6 +147,23 @@ describe('useAuth', () => {
     expect(store.signOut).toHaveBeenCalledOnce()
   })
 
+  test('kurum girisi: Google hesap secicisini zorlar', async () => {
+    const { result } = renderHook(() => useAuth())
+
+    await act(() => result.current.signInWithGoogle(
+      '/arena/kurum',
+      { forceAccountSelection: true },
+    ))
+
+    expect(supa.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=%2Farena%2Fkurum`,
+        queryParams: { prompt: 'select_account' },
+      },
+    })
+  })
+
   test('unmount: auth aboneliği bırakılır', async () => {
     const { unmount } = renderHook(() => useAuth())
     await waitFor(() => expect(supa.authStateCb).not.toBeNull())
