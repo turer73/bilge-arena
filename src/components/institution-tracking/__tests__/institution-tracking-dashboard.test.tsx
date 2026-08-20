@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   reviewProgram: vi.fn(),
   fetchReports: vi.fn(),
   createReport: vi.fn(),
+  issueInvite: vi.fn(),
+  revokeInvite: vi.fn(),
 }))
 vi.mock('@/lib/institution-tracking/client', () => ({
   isInstitutionTrackingUiEnabled: mocks.enabled,
@@ -39,6 +41,10 @@ vi.mock('@/lib/institution-tracking/client', () => ({
   InstitutionTrackingClientError: class InstitutionTrackingClientError extends Error {
     constructor(readonly status: number) { super(`institution_tracking_request_${status}`) }
   },
+}))
+vi.mock('@/lib/teacher-classroom/client', () => ({
+  issueTeacherClassroomInvite: mocks.issueInvite,
+  revokeTeacherClassroomInvite: mocks.revokeInvite,
 }))
 
 import { InstitutionTrackingDashboard } from '../institution-tracking-dashboard'
@@ -260,6 +266,56 @@ describe('InstitutionTrackingDashboard', () => {
     expect(await screen.findByRole('heading', { name: 'Öğrenci İki' })).toBeInTheDocument()
     expect(container.textContent).not.toContain(CLASSROOM_ID)
     expect(container.textContent).not.toContain(MEMBER_TWO)
+  })
+
+  it('links each institution classroom to its own workspace', async () => {
+    render(<InstitutionTrackingDashboard />)
+
+    expect(await screen.findByRole('link', { name: /TYT Çok Uzun Sınıf Adı A/i })).toHaveAttribute(
+      'href',
+      `/arena/kurum/sinif/${CLASSROOM_ID}`,
+    )
+  })
+
+  it('renders the dedicated classroom workspace and offers invites only to its owner', async () => {
+    mocks.directory.mockResolvedValue({
+      ...directory,
+      membership: { role: 'manager' as const, teacherEnabled: true },
+      classrooms: [{ ...directory.classrooms[0], canManagePrograms: true }],
+    })
+    const user = userEvent.setup()
+    render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} />)
+
+    expect(await screen.findByText('Sınıf Çalışma Alanı')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: directory.classrooms[0].name })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Genel bakış' })).toHaveAttribute('href', '/arena/kurum')
+    expect(screen.queryByRole('button', { name: 'Sınıf oluştur' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Öğrenci ekle' }))
+    expect(screen.getByRole('dialog', { name: directory.classrooms[0].name })).toBeInTheDocument()
+  })
+
+  it('does not query or reveal an unseen classroom workspace', async () => {
+    const unseenClassroomId = '33333333-3333-4333-8333-333333333333'
+    render(<InstitutionTrackingDashboard initialClassroomId={unseenClassroomId} />)
+
+    expect(await screen.findByRole('heading', { name: 'Sınıf çalışma alanı bulunamadı' })).toBeInTheDocument()
+    expect(mocks.overview).not.toHaveBeenCalled()
+    expect(mocks.analysis).not.toHaveBeenCalled()
+    expect(screen.getByText(/aktif olmayabilir veya hesabınız/i)).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain(unseenClassroomId)
+  })
+
+  it('keeps the student invite action hidden from delegated classroom roles', async () => {
+    mocks.directory.mockResolvedValue({
+      ...directory,
+      membership: { role: 'teacher' as const, teacherEnabled: true },
+      classrooms: [{ ...directory.classrooms[0], canAnalyze: false, canManagePrograms: false }],
+    })
+    render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} />)
+
+    expect(await screen.findByRole('heading', { name: directory.classrooms[0].name })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Öğrenci ekle' })).not.toBeInTheDocument()
+    expect(mocks.overview).not.toHaveBeenCalled()
   })
 
   it.each([320, 375, 390])('lets a teacher inspect and publish a generated draft at %ipx', async (width) => {

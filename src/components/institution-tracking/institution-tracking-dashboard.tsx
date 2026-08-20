@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import {
+  ArrowLeft,
   AlertTriangle,
   BarChart3,
   BookOpenCheck,
@@ -17,7 +18,9 @@ import {
   Mail,
   ClipboardCheck,
   Plus,
+  School,
   ShieldCheck,
+  UserPlus,
   UserRoundCog,
   Users,
 } from 'lucide-react'
@@ -44,6 +47,7 @@ import { StudentReportPanel } from './student-report-panel'
 import { SupportAccessPanel } from './support-access-panel'
 import { InstitutionClassroomCreatePanel } from './institution-classroom-create-panel'
 import { InstitutionPanelNav } from './institution-panel-nav'
+import { InstitutionStudentInviteDialog } from './institution-student-invite-dialog'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -84,8 +88,9 @@ function DashboardSkeleton() {
   )
 }
 
-export function InstitutionTrackingDashboard() {
+export function InstitutionTrackingDashboard({ initialClassroomId }: { initialClassroomId?: string } = {}) {
   const enabled = isInstitutionTrackingUiEnabled()
+  const classroomPage = Boolean(initialClassroomId)
   const [directory, setDirectory] = useState<InstitutionTrackingDirectory | null>(null)
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null)
   const [selectedMemberRef, setSelectedMemberRef] = useState<string | null>(null)
@@ -99,6 +104,7 @@ export function InstitutionTrackingDashboard() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [classroomCreatorOpen, setClassroomCreatorOpen] = useState(false)
   const [classroomAnnouncement, setClassroomAnnouncement] = useState<string | null>(null)
+  const [studentInviteOpen, setStudentInviteOpen] = useState(false)
 
   useEffect(() => {
     if (!enabled) return
@@ -110,11 +116,16 @@ export function InstitutionTrackingDashboard() {
         const next = await fetchInstitutionTrackingDirectory(controller.signal)
         if (controller.signal.aborted) return
         setDirectory(next)
-        setSelectedClassroomId((current) => (
-          current && next.classrooms.some((classroom) => classroom.id === current)
+        setSelectedClassroomId((current) => {
+          if (initialClassroomId) {
+            return next.classrooms.some((classroom) => classroom.id === initialClassroomId)
+              ? initialClassroomId
+              : null
+          }
+          return current && next.classrooms.some((classroom) => classroom.id === current)
             ? current
             : next.classrooms[0]?.id ?? null
-        ))
+        })
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return
         setDirectory(null)
@@ -124,12 +135,17 @@ export function InstitutionTrackingDashboard() {
       }
     })
     return () => controller.abort()
-  }, [enabled, refreshKey])
+  }, [enabled, initialClassroomId, refreshKey])
 
   const selectedClassroom = useMemo(() => directory?.classrooms.find(
     (classroom) => classroom.id === selectedClassroomId,
   ) ?? null, [directory, selectedClassroomId])
   const canAnalyzeSelectedClassroom = selectedClassroom?.canAnalyze !== false
+  const canInviteStudents = classroomPage && selectedClassroom?.canManagePrograms === true
+
+  useEffect(() => {
+    setStudentInviteOpen(false)
+  }, [selectedClassroomId])
 
   useEffect(() => {
     if (!selectedClassroom) {
@@ -231,6 +247,27 @@ export function InstitutionTrackingDashboard() {
     )
   }
 
+  if (classroomPage && !selectedClassroom) {
+    return (
+      <div className="space-y-5">
+        <InstitutionPanelNav canManageRoles={directory.membership.role === 'manager'} />
+        <section className="mx-auto max-w-3xl rounded-2xl border border-amber-400/20 bg-[var(--surface)] p-6 text-center sm:p-10">
+          <School className="mx-auto h-10 w-10 text-amber-300" aria-hidden="true" />
+          <h1 className="mt-4 text-2xl font-black">Sınıf çalışma alanı bulunamadı</h1>
+          <p className="mt-3 text-sm leading-6 text-[var(--text-sub)]">
+            Bu sınıf aktif olmayabilir veya hesabınız bu kurum sınıfını görmeye yetkili olmayabilir.
+          </p>
+          <Link
+            href="/arena/kurum"
+            className="btn-primary mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-black"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Kurum genel bakışına dön
+          </Link>
+        </section>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
       <InstitutionPanelNav canManageRoles={directory.membership.role === 'manager'} />
@@ -238,19 +275,45 @@ export function InstitutionTrackingDashboard() {
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
-              <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" /> Kurum Paneli
+              {classroomPage ? (
+                <><School className="h-4 w-4 shrink-0" aria-hidden="true" /> Sınıf Çalışma Alanı</>
+              ) : (
+                <><Building2 className="h-4 w-4 shrink-0" aria-hidden="true" /> Kurum Paneli</>
+              )}
             </div>
-            <h1 className="mt-2 truncate text-2xl font-black sm:text-3xl">{directory.institution.name}</h1>
+            <h1 className="mt-2 truncate text-2xl font-black sm:text-3xl">
+              {classroomPage ? selectedClassroom?.name : directory.institution.name}
+            </h1>
             <p className="mt-1 text-sm text-[var(--text-sub)]">
-              {directory.membership.role === 'manager'
-                ? directory.membership.teacherEnabled
-                  ? 'Kurum yöneticisi ve öğretmen görünümü'
-                  : 'Kurum yöneticisi görünümü'
-                : 'Öğretmen görünümü'} · Açıklanabilir öğrenci takibi
+              {classroomPage && selectedClassroom
+                ? `${directory.institution.name} · ${selectedClassroom.teacherAlias} · ${selectedClassroom.activeStudentCount} öğrenci`
+                : <>{directory.membership.role === 'manager'
+                    ? directory.membership.teacherEnabled
+                      ? 'Kurum yöneticisi ve öğretmen görünümü'
+                      : 'Kurum yöneticisi görünümü'
+                    : 'Öğretmen görünümü'} · Açıklanabilir öğrenci takibi</>}
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            {directory.membership.role === 'manager' && (
+            {classroomPage ? (
+              <>
+                <Link
+                  href="/arena/kurum"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 px-3 text-xs font-black hover:bg-white/5"
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Genel bakış
+                </Link>
+                {canInviteStudents && (
+                  <button
+                    type="button"
+                    onClick={() => setStudentInviteOpen(true)}
+                    className="btn-primary inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-black"
+                  >
+                    <UserPlus className="h-4 w-4" aria-hidden="true" /> Öğrenci ekle
+                  </button>
+                )}
+              </>
+            ) : directory.membership.role === 'manager' && (
               <>
                 <button
                   type="button"
@@ -275,9 +338,18 @@ export function InstitutionTrackingDashboard() {
         </div>
       </header>
 
-      {directory.membership.role === 'manager' && <SupportAccessPanel />}
+      {selectedClassroom && (
+        <InstitutionStudentInviteDialog
+          classroomId={selectedClassroom.id}
+          classroomName={selectedClassroom.name}
+          open={studentInviteOpen}
+          onOpenChange={setStudentInviteOpen}
+        />
+      )}
 
-      {directory.membership.role === 'manager' && classroomCreatorOpen && (
+      {!classroomPage && directory.membership.role === 'manager' && <SupportAccessPanel />}
+
+      {!classroomPage && directory.membership.role === 'manager' && classroomCreatorOpen && (
         <InstitutionClassroomCreatePanel
           onCancel={() => setClassroomCreatorOpen(false)}
           onCreated={(result) => {
@@ -288,13 +360,13 @@ export function InstitutionTrackingDashboard() {
         />
       )}
 
-      {classroomAnnouncement && (
+      {!classroomPage && classroomAnnouncement && (
         <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-3 text-sm font-bold text-emerald-200">
           {classroomAnnouncement}
         </p>
       )}
 
-      {directory.classrooms.length === 0 ? (
+      {!classroomPage && directory.classrooms.length === 0 ? (
         <section className="rounded-2xl border border-dashed border-white/15 bg-[var(--surface)] p-8 text-center">
           <Users className="mx-auto h-9 w-9 text-[var(--text-sub)]" aria-hidden="true" />
           <h2 className="mt-3 text-lg font-black">Aktif sınıf bulunamadı</h2>
@@ -321,11 +393,10 @@ export function InstitutionTrackingDashboard() {
                 {directory.classrooms.map((classroom) => {
                   const selected = classroom.id === selectedClassroomId
                   return (
-                    <button
+                    <Link
                       key={classroom.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setSelectedClassroomId(classroom.id)}
+                      href={`/arena/kurum/sinif/${classroom.id}`}
+                      aria-current={classroomPage && selected ? 'page' : undefined}
                       className={`min-w-[14rem] rounded-xl border p-3 text-left transition lg:min-w-0 ${selected
                         ? 'border-[var(--primary)] bg-[var(--primary)]/10'
                         : 'border-white/10 bg-white/[0.02] hover:bg-white/5'}`}
@@ -335,7 +406,7 @@ export function InstitutionTrackingDashboard() {
                       <span className="mt-2 flex items-center gap-1 text-xs font-bold text-[var(--primary)]">
                         <Users className="h-3.5 w-3.5" aria-hidden="true" /> {classroom.activeStudentCount} öğrenci
                       </span>
-                    </button>
+                    </Link>
                   )
                 })}
               </div>
@@ -345,7 +416,11 @@ export function InstitutionTrackingDashboard() {
               <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-3">
                 <h2 className="px-2 pb-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-sub)]">Öğrenciler</h2>
                 {selectedClassroom.students.length === 0 ? (
-                  <p className="rounded-xl bg-white/[0.03] p-3 text-sm text-[var(--text-sub)]">Bu sınıfta görünür aktif öğrenci yok.</p>
+                  <p className="rounded-xl bg-white/[0.03] p-3 text-sm text-[var(--text-sub)]">
+                    {canInviteStudents
+                      ? 'Bu sınıfta aktif öğrenci yok. Öğrenci ekle düğmesiyle güvenli katılım bağlantısı oluşturun.'
+                      : 'Bu sınıfta görünür aktif öğrenci yok.'}
+                  </p>
                 ) : (
                   <div className="flex max-h-80 gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-y-auto lg:overflow-x-visible" aria-label="Sınıf öğrencileri">
                     {selectedClassroom.students.map((student) => {
