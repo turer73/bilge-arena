@@ -10,6 +10,11 @@ const clientMocks = vi.hoisted(() => ({
 vi.mock('@/lib/teacher-classroom/client', () => ({
   issueTeacherClassroomInvite: clientMocks.issueInvite,
   revokeTeacherClassroomInvite: clientMocks.revokeInvite,
+  TeacherClassroomClientError: class TeacherClassroomClientError extends Error {
+    constructor(readonly status: number) {
+      super(`teacher_classroom_request_${status}`)
+    }
+  },
 }))
 
 import { InstitutionStudentInviteDialog } from '../institution-student-invite-dialog'
@@ -101,5 +106,23 @@ describe('InstitutionStudentInviteDialog', () => {
     unmount()
     expect(launcher).toHaveFocus()
     launcher.remove()
+  })
+
+  it('explains when production classroom invites are not configured', async () => {
+    const user = userEvent.setup()
+    const { TeacherClassroomClientError } = await import('@/lib/teacher-classroom/client')
+    clientMocks.issueInvite.mockRejectedValueOnce(new TeacherClassroomClientError(503))
+
+    render(
+      <InstitutionStudentInviteDialog
+        classroomId={CLASSROOM_ID}
+        classroomName="TYT Matematik A"
+        open
+        onOpenChange={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Davet bağlantısı oluştur' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Sınıf davetleri henüz etkinleştirilmedi')
   })
 })

@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import {
   issueTeacherClassroomInvite,
   revokeTeacherClassroomInvite,
+  TeacherClassroomClientError,
 } from '@/lib/teacher-classroom/client'
 import type { TeacherInviteIssueResponse } from '@/lib/teacher-classroom/server-contract'
 
@@ -28,6 +29,18 @@ const focusableSelector = [
 ].join(',')
 
 const subscribeToClientReady = () => () => {}
+
+function inviteErrorMessage(error: unknown) {
+  if (!(error instanceof TeacherClassroomClientError)) {
+    return 'Davet oluşturulamadı. Aynı ayarlarla güvenle yeniden deneyebilirsiniz.'
+  }
+  if (error.status === 400) return 'Davet ayarları geçersiz. Süreyi ve kullanım sınırını kontrol edin.'
+  if (error.status === 401) return 'Oturumunuz yenilenmeli. Sayfayı yenileyip tekrar deneyin.'
+  if (error.status === 403) return 'Bu sınıfta davet oluşturma yetkiniz yok. Daveti sınıfın atanmış öğretmeni oluşturabilir.'
+  if (error.status === 429) return 'Çok sayıda deneme yapıldı. Bir dakika sonra yeniden deneyin.'
+  if (error.status === 503) return 'Sınıf davetleri henüz etkinleştirilmedi. Sistem yöneticisi pilot ayarlarını kontrol etmeli.'
+  return 'Davet oluşturulamadı. Aynı ayarlarla güvenle yeniden deneyebilirsiniz.'
+}
 
 export function InstitutionStudentInviteDialog({
   classroomId,
@@ -117,8 +130,8 @@ export function InstitutionStudentInviteDialog({
       })
       setInvite(result)
       setAnnouncement('Öğrenci davet bağlantısı hazır. Bu ekrandan ayrılmadan kopyalayın.')
-    } catch {
-      setAnnouncement('Davet oluşturulamadı. Aynı ayarlarla güvenle yeniden deneyebilirsiniz.')
+    } catch (error) {
+      setAnnouncement(inviteErrorMessage(error))
     } finally {
       setBusy(false)
     }
