@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+vi.mock('next/navigation', () => ({ usePathname: () => '/arena/kurum/roller' }))
 import { InstitutionRoleManager } from '../institution-role-manager'
 
 const MANAGER_ROLE = 'a'.repeat(32)
@@ -13,12 +14,13 @@ const directory = {
   permissions: [
     { permission: 'institution.workspace.view', label: 'Kurum alanını görüntüleme', description: 'Kişinin kendi kurum alanını görüntülemesini sağlar.', delegable: false },
     { permission: 'institution.classrooms.view_all', label: 'Tüm sınıfları görüntüleme', description: 'Kurumdaki bütün aktif sınıfları ve öğrenci dizinini görüntüler.', delegable: true },
+    { permission: 'institution.classrooms.manage', label: 'Sınıf yönetimi', description: 'Kurum yöneticisinin aktif öğretmene sınıf atamasını sağlar.', delegable: false },
     { permission: 'institution.staff.manage', label: 'Personel yönetimi', description: 'Kurum personelini ekler veya kurumdan çıkarır.', delegable: false },
     { permission: 'institution.roles.manage', label: 'Rol ve yetki yönetimi', description: 'Kurum rollerini oluşturur ve personele atar.', delegable: false },
     { permission: 'institution.support.manage', label: 'Destek erişimi yönetimi', description: 'Süreli destek erişimini kurum içinde yönetir.', delegable: false },
   ],
   roles: [
-    { roleRef: MANAGER_ROLE, name: 'Kurum Yöneticisi', description: 'Değiştirilemeyen sistem rolü.', system: true, roleKey: 'manager', permissions: ['institution.workspace.view', 'institution.classrooms.view_all', 'institution.staff.manage', 'institution.roles.manage', 'institution.support.manage'], memberCount: 1 },
+    { roleRef: MANAGER_ROLE, name: 'Kurum Yöneticisi', description: 'Değiştirilemeyen sistem rolü.', system: true, roleKey: 'manager', permissions: ['institution.workspace.view', 'institution.classrooms.view_all', 'institution.classrooms.manage', 'institution.staff.manage', 'institution.roles.manage', 'institution.support.manage'], memberCount: 1 },
     { roleRef: TEACHER_ROLE, name: 'Öğretmen', description: 'Temel öğretmen sistem rolü.', system: true, roleKey: 'teacher', permissions: ['institution.workspace.view'], memberCount: 1 },
     { roleRef: CUSTOM_ROLE, name: 'Rehberlik Koordinatörü', description: 'Tüm sınıfları takip eder.', system: false, roleKey: null, permissions: ['institution.classrooms.view_all'], memberCount: 0 },
   ],
@@ -46,6 +48,8 @@ describe('InstitutionRoleManager', () => {
     expect(screen.queryByRole('button', { name: /Kurum Yöneticisi rolünü sil/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Rehberlik Koordinatörü rolünü düzenle/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Rehberlik Koordinatörü rolünü sil/i })).toBeInTheDocument()
+    expect(screen.getByText('Sınıf yönetimi')).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /Sınıf yönetimi/i })).not.toBeInTheDocument()
   })
 
   it('assigns a custom role using only opaque role and member references', async () => {

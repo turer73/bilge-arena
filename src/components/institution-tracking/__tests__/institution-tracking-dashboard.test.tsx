@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+vi.mock('next/navigation', () => ({ usePathname: () => '/arena/kurum' }))
 
 const mocks = vi.hoisted(() => ({
   enabled: vi.fn(),
@@ -150,6 +151,8 @@ beforeEach(() => {
   mocks.fetchReports.mockResolvedValue({ reports: [] })
 })
 
+afterEach(() => vi.unstubAllGlobals())
+
 describe('InstitutionTrackingDashboard', () => {
   it('shows a closed pilot surface without fetching when the UI flag is off', () => {
     mocks.enabled.mockReturnValue(false)
@@ -189,6 +192,59 @@ describe('InstitutionTrackingDashboard', () => {
     expect(mocks.overview).not.toHaveBeenCalled()
     expect(mocks.analysis).not.toHaveBeenCalled()
     expect(screen.getByText('Öğrenci Bir Çok Uzun Ad')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Roller ve Yetkiler' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sınıf oluştur' })).not.toBeInTheDocument()
+  })
+
+  it('lets a manager create the first teacher-owned classroom and refreshes the directory', async () => {
+    const emptyDirectory = { ...directory, classrooms: [] }
+    const createdDirectory = {
+      ...directory,
+      classrooms: [{
+        id: '33333333-3333-4333-8333-333333333333',
+        name: 'TYT Matematik A',
+        teacherAlias: 'Öğretmen Bir',
+        activeStudentCount: 0,
+        students: [],
+      }],
+    }
+    mocks.directory
+      .mockResolvedValueOnce(emptyDirectory)
+      .mockResolvedValueOnce(createdDirectory)
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input)
+      if (path === '/api/institution/support-access') {
+        return Response.json({ active: false, scope: 'read_only', expiresAt: null, reason: null })
+      }
+      if (path === '/api/institution/roles') {
+        return Response.json({
+          permissions: [],
+          roles: [],
+          members: [{ memberRef: 'd'.repeat(32), alias: 'Öğretmen Bir', membershipRole: 'teacher', roleRefs: [] }],
+        })
+      }
+      if (path === '/api/institution/classrooms' && init?.method === 'POST') {
+        return Response.json({
+          classroom: { id: createdDirectory.classrooms[0].id, name: 'TYT Matematik A', status: 'active', createdAt: '2026-08-20T12:00:00.000Z' },
+          teacher: { memberRef: 'd'.repeat(32), alias: 'Öğretmen Bir' },
+          replayed: false,
+        }, { status: 201 })
+      }
+      return Response.json({ error: 'unexpected request' }, { status: 500 })
+    }))
+
+    const user = userEvent.setup()
+    render(<InstitutionTrackingDashboard />)
+    expect(await screen.findByRole('heading', { name: 'Aktif sınıf bulunamadı' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Roller ve Yetkiler' })).toHaveAttribute('href', '/arena/kurum/roller')
+    await user.click(screen.getByRole('button', { name: 'İlk sınıfı oluştur' }))
+    await screen.findByRole('option', { name: 'Öğretmen Bir' })
+    await user.type(screen.getByLabelText('Sınıf adı'), 'TYT Matematik A')
+    await user.click(screen.getByRole('button', { name: 'Sınıfı oluştur' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('TYT Matematik A, Öğretmen Bir öğretmenine atandı.')
+    await waitFor(() => expect(mocks.directory).toHaveBeenCalledTimes(2))
+    expect(await screen.findByText('TYT Matematik A')).toBeInTheDocument()
   })
 
   it('loads the selected opaque student without exposing internal ids', async () => {

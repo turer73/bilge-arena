@@ -3,12 +3,13 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap } from 'lucide-react'
+import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap, Building2 } from 'lucide-react'
 import { Logo } from './logo'
 import { ThemeToggle } from './theme-toggle'
 import { NotificationBell } from './notification-bell'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { institutionPilotWorkspaceSchema } from '@/lib/institution-pilot/server-contract'
 import { trUpper } from '@/lib/utils/tr-text'
 
 const NAV_LINKS = [
@@ -25,9 +26,11 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [institutionPanelVisible, setInstitutionPanelVisible] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
   const { user, profile, signOut } = useAuth()
+  const userId = user?.id
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40)
@@ -40,6 +43,27 @@ export function Navbar() {
     setMobileOpen(false)
     setDropdownOpen(false)
   }, [pathname])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    if (!userId) {
+      queueMicrotask(() => {
+        if (!controller.signal.aborted) setInstitutionPanelVisible(false)
+      })
+      return () => controller.abort()
+    }
+    fetch('/api/institution/workspace', { cache: 'no-store', signal: controller.signal })
+      .then(async (response) => {
+        const workspace = response.ok
+          ? institutionPilotWorkspaceSchema.safeParse(await response.json().catch(() => null))
+          : null
+        if (!controller.signal.aborted) setInstitutionPanelVisible(workspace?.success === true)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setInstitutionPanelVisible(false)
+    })
+    return () => controller.abort()
+  }, [userId])
 
   // Dropdown disina tiklaninca kapat
   useEffect(() => {
@@ -198,6 +222,18 @@ export function Navbar() {
                       <Swords size={14} />
                       Duello
                     </Link>
+                    {institutionPanelVisible && (
+                      <>
+                        <div className="my-1 border-t border-[var(--border)]" />
+                        <Link
+                          href="/arena/kurum"
+                          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-sky-300 transition-colors hover:bg-sky-400/10"
+                        >
+                          <Building2 size={14} />
+                          Kurum Paneli
+                        </Link>
+                      </>
+                    )}
                     {profile?.role === 'admin' && (
                       <>
                         <div className="my-1 border-t border-[var(--border)]" />
@@ -267,6 +303,15 @@ export function Navbar() {
                 {label}
               </Link>
             ))}
+            {user && institutionPanelVisible && (
+              <Link
+                href="/arena/kurum"
+                className="mt-2 flex min-h-11 items-center gap-2 rounded-lg border border-sky-400/20 bg-sky-400/10 px-4 py-2.5 text-sm font-bold text-sky-200"
+              >
+                <Building2 size={16} />
+                Kurum Paneli
+              </Link>
+            )}
             <div className="mt-2 flex gap-2">
               {user ? (
                 <>

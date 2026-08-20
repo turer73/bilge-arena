@@ -22,6 +22,7 @@ import {
   type InstitutionPermission,
   type InstitutionRoleDirectory,
 } from '@/lib/institution-pilot/role-contract'
+import { InstitutionPanelNav } from './institution-panel-nav'
 
 type Role = InstitutionRoleDirectory['roles'][number]
 
@@ -144,6 +145,7 @@ export function InstitutionRoleManager() {
 
   return (
     <div className="space-y-5">
+      <InstitutionPanelNav canManageRoles />
       <header className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
         <Link href="/arena/kurum" className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-bold text-[var(--text-sub)] hover:bg-white/5 hover:text-[var(--text)]">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Kurum takibine dön

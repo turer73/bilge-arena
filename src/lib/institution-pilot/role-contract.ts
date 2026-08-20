@@ -7,6 +7,7 @@ const uuidSchema = z.string().uuid()
 export const institutionPermissionSchema = z.enum([
   'institution.workspace.view',
   'institution.classrooms.view_all',
+  'institution.classrooms.manage',
   'institution.staff.manage',
   'institution.roles.manage',
   'institution.support.manage',
