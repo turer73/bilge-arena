@@ -34,6 +34,9 @@ interface MiniLeader {
 export default function ArenaClient() {
   const { user, profile } = useAuthStore()
   const [isMobileHome, setIsMobileHome] = useState(false)
+  const [institutionMobileVisible, setInstitutionMobileVisible] = useState(false)
+  const classroomEnabled = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'
+  const institutionEnabled = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
@@ -43,6 +46,19 @@ export default function ArenaClient() {
     media.addEventListener?.('change', update)
     return () => media.removeEventListener?.('change', update)
   }, [])
+
+  useEffect(() => {
+    if (!isMobileHome) return
+    const controller = new AbortController()
+    fetch('/api/institution/workspace', { cache: 'no-store', signal: controller.signal })
+      .then((response) => {
+        if (!controller.signal.aborted) setInstitutionMobileVisible(response.ok)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setInstitutionMobileVisible(false)
+      })
+    return () => controller.abort()
+  }, [isMobileHome])
   // Profil kartıyla ORTAK kart arka planı (kullanıcının seçtiği tema burada da)
   const { activeBackground, activeBgVideoUrl, isCssBg, reducedMotion } = useCardBackground()
 
@@ -123,6 +139,8 @@ export default function ArenaClient() {
           current: questionGoal.current_value,
           target: questionGoal.quest.target_value,
         } : null}
+        classroomEnabled={classroomEnabled}
+        institutionEnabled={institutionMobileVisible}
         showBottomNav={false}
       />
     )
@@ -271,8 +289,8 @@ export default function ArenaClient() {
           </p>
         </div>
         <ArenaExploreGrid
-          classroomEnabled={process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'}
-          institutionEnabled={process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'}
+          classroomEnabled={classroomEnabled}
+          institutionEnabled={institutionEnabled}
         />
       </section>
 

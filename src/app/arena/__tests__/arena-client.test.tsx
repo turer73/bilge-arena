@@ -141,6 +141,10 @@ describe('ArenaClient (mobil home)', () => {
 
   test('mobil: öğrenme yolu gerçek profil ve günlük soru hedefini kullanır', async () => {
     const originalMatchMedia = window.matchMedia
+    const previousClassroomFlag = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
+    const previousInstitutionFlag = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+    process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED = 'true'
+    process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: query === '(max-width: 767px)',
       media: query,
@@ -176,8 +180,15 @@ describe('ArenaClient (mobil home)', () => {
     expect(screen.getByRole('heading', { name: 'Hazırsın, arenaci!' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'İngilizce' })).not.toBeInTheDocument()
     expect(screen.queryByText('GÜNLÜK GÖREV')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Mağaza/ })).toHaveAttribute('href', '/arena/magaza')
+    expect(screen.getByRole('link', { name: /Sınıflarım/ })).toHaveAttribute('href', '/arena/sinif')
+    expect(await screen.findByRole('link', { name: /Kurum paneli/ })).toHaveAttribute('href', '/arena/kurum')
 
     unmount()
     window.matchMedia = originalMatchMedia
+    if (previousClassroomFlag === undefined) delete process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
+    else process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED = previousClassroomFlag
+    if (previousInstitutionFlag === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+    else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previousInstitutionFlag
   })
 })

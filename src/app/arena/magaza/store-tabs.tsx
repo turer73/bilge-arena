@@ -24,12 +24,12 @@ export function StoreTabs() {
   const [tab, setTab] = useState<Tab>('cerceve')
   return (
     <div className="mt-4">
-      <div className="flex gap-1 border-b border-[var(--border)]">
+      <div className="scrollbar-none flex snap-x gap-1 overflow-x-auto border-b border-[var(--border)] pb-0.5">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`-mb-px rounded-t-lg border-b-2 px-4 py-2 text-sm font-bold transition-colors ${
+            className={`-mb-px min-h-12 shrink-0 snap-start whitespace-nowrap rounded-t-lg border-b-2 px-3 py-2 text-sm font-bold transition-colors sm:px-4 ${
               tab === t.id
                 ? 'border-[var(--focus)] text-[var(--focus)]'
                 : 'border-transparent text-[var(--text-sub)] hover:text-[var(--text)]'

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import {
   BookOpenText,
+  Building2,
   Calculator,
   Check,
   ChevronDown,
@@ -15,12 +16,14 @@ import {
   FlaskConical,
   Gem,
   Globe2,
+  GraduationCap,
   Languages,
   Lightbulb,
   Lock,
   MessageCircle,
   Play,
   Settings,
+  ShoppingBag,
   ShieldCheck,
   Sparkles,
   Star,
@@ -43,6 +46,8 @@ interface MobileHomeDemoProps {
   totalXP?: number
   displayName?: string
   dailyGoal?: { current: number; target: number } | null
+  classroomEnabled?: boolean
+  institutionEnabled?: boolean
   showBottomNav?: boolean
 }
 
@@ -189,6 +194,8 @@ export function MobileHomeDemo({
   totalXP = 2300,
   displayName = 'Bilgin',
   dailyGoal = { current: 6, target: 10 },
+  classroomEnabled = false,
+  institutionEnabled = false,
   showBottomNav = true,
 }: MobileHomeDemoProps = {}) {
   const visibleSubjects = useMemo(
@@ -336,6 +343,35 @@ export function MobileHomeDemo({
               <path d="M25 16.5 H75 V50 H25 V83.5 H75" fill="none" stroke="#cfd5db" strokeWidth="1.8" strokeDasharray="2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             {subject.topics.map((topic, index) => <PathStep key={`${subject.id}-${topic}`} index={index} topic={topic} subject={subject} currentIndex={currentIndex} />)}
+          </div>
+        </section>
+
+        <section aria-labelledby="mobile-tools-title" className="mx-4 mt-4">
+          <div className="mb-2 flex items-end justify-between">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.15em] text-[#2563eb]">Bilge Arena</div>
+              <h2 id="mobile-tools-title" className="text-[15px] font-black">Diğer alanlar</h2>
+            </div>
+            <span className="text-[10px] font-bold text-[#8b949e]">Tüm işlevler</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <Link href="/arena/magaza" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[#fde2c5] bg-white p-3 text-[#4b5157] shadow-[0_4px_0_#fde2c5] active:translate-y-0.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[#fff7ed] text-[#f97316]"><ShoppingBag size={19} strokeWidth={2.7} /></span>
+              <span><span className="block text-xs font-black">Mağaza</span><span className="mt-0.5 block text-[10px] font-semibold text-[#7d858d]">Altınlarını kullan</span></span>
+            </Link>
+            {classroomEnabled && (
+              <Link href="/arena/sinif" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[#d5f1df] bg-white p-3 text-[#4b5157] shadow-[0_4px_0_#d5f1df] active:translate-y-0.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[#f0fdf4] text-[#16a34a]"><GraduationCap size={20} strokeWidth={2.7} /></span>
+                <span><span className="block text-xs font-black">Sınıflarım</span><span className="mt-0.5 block text-[10px] font-semibold text-[#7d858d]">Ödev, davet, öğretmen</span></span>
+              </Link>
+            )}
+            {institutionEnabled && (
+              <Link href="/arena/kurum" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[#dbeafe] bg-white p-3 text-[#4b5157] shadow-[0_4px_0_#dbeafe] active:translate-y-0.5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[#eff6ff] text-[#2563eb]"><Building2 size={22} strokeWidth={2.7} /></span>
+                <span className="min-w-0 flex-1"><span className="block text-xs font-black">Kurum paneli</span><span className="mt-0.5 block text-[10px] font-semibold text-[#7d858d]">Sınıf, rol ve rapor akışları</span></span>
+                <ChevronRight size={18} className="text-[#94a3b8]" strokeWidth={3} />
+              </Link>
+            )}
           </div>
         </section>
 
