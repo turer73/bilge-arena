@@ -178,6 +178,19 @@ describe('InstitutionTrackingDashboard', () => {
     expect(await screen.findByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })).toBeInTheDocument()
   })
 
+  it('keeps delegated directory access read-only outside the teacher classroom', async () => {
+    mocks.directory.mockResolvedValue({
+      ...directory,
+      membership: { role: 'teacher' as const },
+      classrooms: [{ ...directory.classrooms[0], canAnalyze: false }],
+    })
+    render(<InstitutionTrackingDashboard />)
+    expect(await screen.findByRole('heading', { name: 'Dizin erişimi açık, öğrenme analizi sınırlı' })).toBeInTheDocument()
+    expect(mocks.overview).not.toHaveBeenCalled()
+    expect(mocks.analysis).not.toHaveBeenCalled()
+    expect(screen.getByText('Öğrenci Bir Çok Uzun Ad')).toBeInTheDocument()
+  })
+
   it('loads the selected opaque student without exposing internal ids', async () => {
     const user = userEvent.setup()
     const { container } = render(<InstitutionTrackingDashboard />)

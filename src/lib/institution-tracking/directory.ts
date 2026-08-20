@@ -11,6 +11,7 @@ const classroomSchema = z.object({
   id: z.string().uuid(),
   name: z.string().trim().min(2).max(60),
   teacherAlias: z.string().trim().min(1).max(80),
+  canAnalyze: z.boolean().optional(),
   activeStudentCount: z.number().int().min(0).max(40),
   students: z.array(studentSchema).max(40),
 }).strict().superRefine((value, context) => {
