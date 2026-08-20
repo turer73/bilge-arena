@@ -23,6 +23,7 @@ import {
   type InstitutionRoleDirectory,
 } from '@/lib/institution-pilot/role-contract'
 import { InstitutionPanelNav } from './institution-panel-nav'
+import { InstitutionStaffManager } from './institution-staff-manager'
 
 type Role = InstitutionRoleDirectory['roles'][number]
 
@@ -185,6 +186,8 @@ export function InstitutionRoleManager() {
         </div>
       ) : directory ? (
         <>
+          <InstitutionStaffManager members={directory.members} onChanged={load} />
+
           <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-5" aria-labelledby="create-role-title">
             <div className="flex items-center gap-2">
               <Plus className="h-5 w-5 text-[var(--primary)]" aria-hidden="true" />
