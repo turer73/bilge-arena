@@ -42,17 +42,12 @@ export function AdminSidebar() {
         return r.json()
       })
       .then(data => {
-        if (data.permissions && Array.isArray(data.permissions) && data.permissions.length > 0) {
-          setPermissions(data.permissions)
-        } else {
-          // İzin yoksa veya boş döndüyse → tüm menüleri göster (eski davranış)
-          setPermissions(null)
-        }
+        // Boş/bozuk izin cevabı tüm menüleri açmamalı; fail closed.
+        setPermissions(Array.isArray(data.permissions) ? data.permissions : [])
         setRoleName(data.roles?.[0]?.name || '')
       })
       .catch(() => {
-        // RBAC tabloları yoksa veya hata olduysa → tüm menüleri göster (geriye uyumlu)
-        setPermissions(null)
+        setPermissions([])
       })
   }, [])
 
@@ -72,11 +67,10 @@ export function AdminSidebar() {
     return () => document.removeEventListener('keydown', onKey)
   }, [open])
 
-  // permissions null ise → RBAC henüz aktif değil, tüm menüleri göster
-  // permissions dolu ise → izne göre filtrele
-  const visibleNav = permissions
-    ? ADMIN_NAV.filter(item => (Array.isArray(item.permission) ? item.permission : [item.permission]).some(permission => permissions.includes(permission)))
-    : ADMIN_NAV
+  // Yükleme sırasında ve hata/boş cevapta hiçbir yönetim menüsü gösterme.
+  const visibleNav = permissions === null
+    ? []
+    : ADMIN_NAV.filter(item => (Array.isArray(item.permission) ? item.permission : [item.permission]).some(permission => permissions.includes(permission)))
 
   return (
     <>

@@ -7,11 +7,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { NextRequest } from 'next/server'
 
-const { mockGetUser, mockUpdate, mockEq, mockRoles, mockProfile } = vi.hoisted(() => ({
+const { mockGetUser, mockUpdate, mockEq, mockPlatformAdmin, mockProfile } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockUpdate: vi.fn(),
   mockEq: vi.fn(),
-  mockRoles: vi.fn(),
+  mockPlatformAdmin: vi.fn(),
   mockProfile: vi.fn(),
 }))
 
@@ -22,9 +22,12 @@ vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
     from: vi.fn(() => ({
       update: mockUpdate,
-      select: vi.fn(() => ({ eq: vi.fn(() => ({ limit: mockRoles, single: mockProfile })) })),
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ single: mockProfile })) })),
     })),
   })),
+}))
+vi.mock('@/lib/supabase/platform-access', () => ({
+  userHasPlatformAdminAccess: mockPlatformAdmin,
 }))
 
 import { POST } from '../route'
@@ -42,7 +45,7 @@ beforeEach(() => {
   mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
   mockUpdate.mockReturnValue({ eq: mockEq })
   mockEq.mockResolvedValue({ error: null })
-  mockRoles.mockResolvedValue({ data: [] })
+  mockPlatformAdmin.mockResolvedValue(false)
   mockProfile.mockResolvedValue({ data: { total_xp: 999999 } }) // varsayılan: Lv5 (kilit açık)
 })
 
@@ -93,8 +96,8 @@ describe('POST /api/profile/avatar/preset', () => {
     expect((await POST(makeReq({ presetId: 'chan-fairy' }))).status).toBe(200)
   })
 
-  it('rarity: personel → kilitli avatar düşük seviyede de açılır', async () => {
-    mockRoles.mockResolvedValue({ data: [{ role_id: 'r1' }] })
+  it('rarity: platform personeli → kilitli avatar düşük seviyede de açılır', async () => {
+    mockPlatformAdmin.mockResolvedValue(true)
     mockProfile.mockResolvedValue({ data: { total_xp: 0 } })
     expect((await POST(makeReq({ presetId: 'chan-fairy' }))).status).toBe(200)
   })

@@ -5,6 +5,7 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { profileUpdateSchema } from '@/lib/validations/schemas'
 import type { TablesUpdate } from '@/types/database.generated'
+import { userHasPlatformAdminAccess } from '@/lib/supabase/platform-access'
 
 // Cift kalkan rate limit (Madde 9 #5 pattern — topic-strengths icin de ayni):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -56,11 +57,12 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // 4) Service-role query — paralel profile + roles
+  // 4) Service-role query — platform admin, "herhangi bir rol" demek değildir.
+  // Kurum ve öğretmen pilot rolleri de user_roles içinde tutulur.
   const admin = createServiceRoleClient()
-  const [profileRes, rolesRes] = await Promise.all([
+  const [profileRes, isAdmin] = await Promise.all([
     admin.from('profiles').select('*').eq('id', user.id).single(),
-    admin.from('user_roles').select('role_id').eq('user_id', user.id).limit(1),
+    userHasPlatformAdminAccess(admin, user.id),
   ])
 
   if (profileRes.error || !profileRes.data) {
@@ -68,8 +70,6 @@ export async function GET(request: NextRequest) {
     console.error('[Profile GET] profil bulunamadi:', profileRes.error?.code)
     return NextResponse.json({ error: 'Profil bulunamadi' }, { status: 404 })
   }
-
-  const isAdmin = !!(rolesRes.data && rolesRes.data.length > 0)
 
   return NextResponse.json(
     { profile: profileRes.data, isAdmin },

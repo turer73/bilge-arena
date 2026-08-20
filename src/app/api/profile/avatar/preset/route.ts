@@ -5,6 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { avatarPath, avatarMinLevel } from '@/lib/constants/avatars'
 import { getLevelFromXP } from '@/lib/constants/levels'
+import { userHasPlatformAdminAccess } from '@/lib/supabase/platform-access'
 
 const limiter = createRateLimiter('avatar-preset', 20, 60_000)
 const schema = z.object({ presetId: z.string().min(1).max(64) })
@@ -45,15 +46,11 @@ export async function POST(req: NextRequest) {
   const admin = createServiceRoleClient()
 
   // Rarity — seviye kilidi. Gerekli seviye > 1 ise kullanıcının seviyesini
-  // (total_xp'den) doğrula. Personel (RBAC rolü) tüm avatarları açar.
+  // (total_xp'den) doğrula. Yalnız platform personeli tüm avatarları açar;
+  // kurum/öğretmen pilot rolleri bu ayrıcalığı vermez.
   const minLevel = avatarMinLevel(parsed.data.presetId)
   if (minLevel > 1) {
-    const { data: roles } = await admin
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', user.id)
-      .limit(1)
-    const staff = !!(roles && roles.length > 0)
+    const staff = await userHasPlatformAdminAccess(admin, user.id)
     if (!staff) {
       const { data: prof } = await admin
         .from('profiles')

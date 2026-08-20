@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getUserPermissions, getUserRoles } from '@/lib/supabase/admin'
+import { PLATFORM_ADMIN_ENTRY_PERMISSIONS } from '@/lib/admin/platform-permissions'
+
+const platformAdminEntryPermissionSet = new Set<string>(PLATFORM_ADMIN_ENTRY_PERMISSIONS)
 
 /**
  * GET /api/admin/me/permissions
@@ -20,7 +23,10 @@ export async function GET() {
       getUserRoles(supabase, user.id),
     ])
 
-    if (roles.length === 0) {
+    const hasAdminEntry = permissions.some((permission) =>
+      platformAdminEntryPermissionSet.has(permission),
+    )
+    if (!hasAdminEntry) {
       return NextResponse.json({ error: 'Admin yetkisi bulunamadı' }, { status: 403 })
     }
 

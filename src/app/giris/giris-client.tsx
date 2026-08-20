@@ -6,17 +6,21 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Logo } from '@/components/layout/logo'
 import { Button } from '@/components/ui/button'
-import { Zap } from 'lucide-react'
+import { Building2, Zap } from 'lucide-react'
 import { logConsent } from '@/lib/consent'
+import { safeAuthNext } from '@/lib/auth/safe-next'
 
 export default function GirisClient() {
   const router = useRouter()
   const { signInWithGoogle } = useAuth()
   const [accepted, setAccepted] = useState(false)
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (nextOverride?: string) => {
+    const requestedNext = typeof window === 'undefined'
+      ? '/arena'
+      : safeAuthNext(new URLSearchParams(window.location.search).get('next'))
     // Once giris yap, sonra consent logla
-    await signInWithGoogle()
+    await signInWithGoogle(nextOverride ?? requestedNext)
     // Not: signInWithGoogle redirect yapar, bu satir sadece popup modunda calisir.
     // Consent log'u auth callback'te de yakalanabilir ama
     // burada da fire-and-forget olarak cagiralim.
@@ -66,7 +70,7 @@ export default function GirisClient() {
           size="lg"
           className="w-full"
           disabled={!accepted}
-          onClick={handleGoogleLogin}
+          onClick={() => void handleGoogleLogin()}
         >
           <svg viewBox="0 0 24 24" width={18} height={18} className="mr-1">
             <path
@@ -88,6 +92,20 @@ export default function GirisClient() {
           </svg>
           Google ile Giriş Yap
         </Button>
+
+        <Button
+          variant="ghost"
+          size="md"
+          className="mt-3 w-full border border-[var(--border)]"
+          disabled={!accepted}
+          onClick={() => void handleGoogleLogin('/arena/kurum')}
+        >
+          <Building2 size={16} />
+          Kurum Hesabıyla Giriş
+        </Button>
+        <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+          Kurum yöneticisi veya öğretmenseniz, kuruma tanımlı Google hesabını seçin.
+        </p>
 
         {/* Misafir olarak devam */}
         <div className="mt-4">

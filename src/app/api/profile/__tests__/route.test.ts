@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockGetUser, mockProfileSelect, mockRolesSelect, mockProfileUpdate } = vi.hoisted(() => ({
+const { mockGetUser, mockProfileSelect, mockPlatformAdmin, mockProfileUpdate } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockProfileSelect: vi.fn(),
-  mockRolesSelect: vi.fn(),
+  mockPlatformAdmin: vi.fn(),
   mockProfileUpdate: vi.fn(),
 }))
 
@@ -30,16 +30,13 @@ vi.mock('@/lib/supabase/service-role', () => ({
           })),
         }
       }
-      if (table === 'user_roles') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({ limit: mockRolesSelect })),
-          })),
-        }
-      }
       return {}
     }),
   })),
+}))
+
+vi.mock('@/lib/supabase/platform-access', () => ({
+  userHasPlatformAdminAccess: mockPlatformAdmin,
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
@@ -68,7 +65,10 @@ function makePatch(body: Record<string, unknown>) {
 }
 
 describe('GET /api/profile', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockPlatformAdmin.mockResolvedValue(false)
+  })
 
   it('returns 401 if not authenticated', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
@@ -82,8 +82,6 @@ describe('GET /api/profile', () => {
       data: { id: 'u1', username: 'ali', total_xp: 100 },
       error: null,
     })
-    mockRolesSelect.mockResolvedValue({ data: [], error: null })
-
     const res = await GET(makeGet() as never)
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -91,16 +89,13 @@ describe('GET /api/profile', () => {
     expect(body.isAdmin).toBe(false)
   })
 
-  it('returns isAdmin=true when role exists', async () => {
+  it('returns isAdmin=true only when a platform admin permission exists', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockProfileSelect.mockResolvedValue({
       data: { id: 'u1', username: 'admin' },
       error: null,
     })
-    mockRolesSelect.mockResolvedValue({
-      data: [{ role_id: 'admin-role-id' }],
-      error: null,
-    })
+    mockPlatformAdmin.mockResolvedValue(true)
 
     const res = await GET(makeGet() as never)
     const body = await res.json()
@@ -113,8 +108,6 @@ describe('GET /api/profile', () => {
       data: null,
       error: { code: 'PGRST116' },
     })
-    mockRolesSelect.mockResolvedValue({ data: [], error: null })
-
     const res = await GET(makeGet() as never)
     expect(res.status).toBe(404)
   })
@@ -122,8 +115,6 @@ describe('GET /api/profile', () => {
   it('sets Cache-Control no-store', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockProfileSelect.mockResolvedValue({ data: { id: 'u1' }, error: null })
-    mockRolesSelect.mockResolvedValue({ data: [], error: null })
-
     const res = await GET(makeGet() as never)
     expect(res.headers.get('Cache-Control')).toBe('no-store')
   })

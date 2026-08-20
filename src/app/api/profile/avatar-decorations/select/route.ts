@@ -9,6 +9,7 @@ import {
   getDecorationById,
   isDecorationFree,
 } from '@/lib/constants/avatar-decorations'
+import { userHasPlatformAdminAccess } from '@/lib/supabase/platform-access'
 
 const ipLimiter = createRateLimiter('decoration-select-ip', 40, 60_000)
 const userLimiter = createRateLimiter('decoration-select-user', 30, 60_000)
@@ -66,16 +67,11 @@ export async function POST(request: NextRequest) {
 
   const svc = createServiceRoleClient()
 
-  // Ücretli süsler için sahiplik guard. Personel (RBAC rolü olan) hepsini
-  // ücretsiz kullanır → owned sorgusunu atla.
+  // Ücretli süsler için sahiplik guard. Yalnız gerçek platform personeli
+  // ücretsiz kullanır; kurum/öğretmen pilot rolleri owned sorgusunu atlayamaz.
   const paidIds = ids.filter((id) => !isDecorationFree(id))
   if (paidIds.length > 0) {
-    const { data: roles } = await svc
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', user.id)
-      .limit(1)
-    const staff = !!(roles && roles.length > 0)
+    const staff = await userHasPlatformAdminAccess(svc, user.id)
     if (!staff) {
       const { data: prof } = await svc
         .from('profiles')
