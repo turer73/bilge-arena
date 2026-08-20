@@ -16,6 +16,7 @@ import {
   Printer,
   Mail,
   ClipboardCheck,
+  Plus,
   ShieldCheck,
   UserRoundCog,
   Users,
@@ -41,6 +42,8 @@ import { StudentFollowupPanel } from './student-followup-panel'
 import { ProgramReviewPanel } from './program-review-panel'
 import { StudentReportPanel } from './student-report-panel'
 import { SupportAccessPanel } from './support-access-panel'
+import { InstitutionClassroomCreatePanel } from './institution-classroom-create-panel'
+import { InstitutionPanelNav } from './institution-panel-nav'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -94,6 +97,8 @@ export function InstitutionTrackingDashboard() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [errorStatus, setErrorStatus] = useState<number | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [classroomCreatorOpen, setClassroomCreatorOpen] = useState(false)
+  const [classroomAnnouncement, setClassroomAnnouncement] = useState<string | null>(null)
 
   useEffect(() => {
     if (!enabled) return
@@ -228,11 +233,12 @@ export function InstitutionTrackingDashboard() {
 
   return (
     <div className="space-y-5">
+      <InstitutionPanelNav canManageRoles={directory.membership.role === 'manager'} />
       <header className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
-              <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" /> Kurum çalışma alanı
+              <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" /> Kurum Paneli
             </div>
             <h1 className="mt-2 truncate text-2xl font-black sm:text-3xl">{directory.institution.name}</h1>
             <p className="mt-1 text-sm text-[var(--text-sub)]">
@@ -241,9 +247,22 @@ export function InstitutionTrackingDashboard() {
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             {directory.membership.role === 'manager' && (
-              <Link href="/arena/kurum/roller" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-400/10 px-3 text-xs font-black text-sky-100 hover:bg-sky-400/15">
-                <UserRoundCog className="h-4 w-4" aria-hidden="true" /> Kurum Rolleri
-              </Link>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClassroomCreatorOpen((current) => !current)
+                    setClassroomAnnouncement(null)
+                  }}
+                  aria-expanded={classroomCreatorOpen}
+                  className="btn-primary inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-black"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" /> Sınıf oluştur
+                </button>
+                <Link href="/arena/kurum/roller" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-400/10 px-3 text-xs font-black text-sky-100 hover:bg-sky-400/15">
+                  <UserRoundCog className="h-4 w-4" aria-hidden="true" /> Kurum Rolleri
+                </Link>
+              </>
             )}
             <div className="flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200">
               <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Doğrulanmış kanıt
@@ -254,11 +273,40 @@ export function InstitutionTrackingDashboard() {
 
       {directory.membership.role === 'manager' && <SupportAccessPanel />}
 
+      {directory.membership.role === 'manager' && classroomCreatorOpen && (
+        <InstitutionClassroomCreatePanel
+          onCancel={() => setClassroomCreatorOpen(false)}
+          onCreated={(result) => {
+            setClassroomAnnouncement(`${result.classroom.name}, ${result.teacher.alias} öğretmenine atandı.`)
+            setClassroomCreatorOpen(false)
+            setRefreshKey((value) => value + 1)
+          }}
+        />
+      )}
+
+      {classroomAnnouncement && (
+        <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-3 text-sm font-bold text-emerald-200">
+          {classroomAnnouncement}
+        </p>
+      )}
+
       {directory.classrooms.length === 0 ? (
         <section className="rounded-2xl border border-dashed border-white/15 bg-[var(--surface)] p-8 text-center">
           <Users className="mx-auto h-9 w-9 text-[var(--text-sub)]" aria-hidden="true" />
           <h2 className="mt-3 text-lg font-black">Aktif sınıf bulunamadı</h2>
-          <p className="mt-2 text-sm text-[var(--text-sub)]">Önce kuruma bağlı aktif bir sınıf ve öğrenci üyeliği gerekir.</p>
+          <p className="mt-2 text-sm text-[var(--text-sub)]">İlk sınıfı kurumunuzdaki aktif bir öğretmene atayarak başlayın.</p>
+          {directory.membership.role === 'manager' && (
+            <button
+              type="button"
+              onClick={() => {
+                setClassroomCreatorOpen(true)
+                setClassroomAnnouncement(null)
+              }}
+              className="btn-primary mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-black"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" /> İlk sınıfı oluştur
+            </button>
+          )}
         </section>
       ) : (
         <div className="grid min-w-0 gap-5 lg:grid-cols-[19rem_minmax(0,1fr)]">

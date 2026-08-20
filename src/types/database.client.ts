@@ -577,6 +577,11 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_name: string; p_description: string; p_permissions: string[]; p_request_id: string }
         Returns: Json
       }
+      // Migration 133. Uretilen tiplere canli sema guncellendikten sonra girecek.
+      create_my_institution_classroom: {
+        Args: { p_user_id: string; p_teacher_member_ref: string; p_name: string; p_request_id: string }
+        Returns: Json
+      }
       update_my_institution_role: {
         Args: { p_user_id: string; p_role_ref: string; p_name: string; p_description: string; p_permissions: string[]; p_request_id: string }
         Returns: Json

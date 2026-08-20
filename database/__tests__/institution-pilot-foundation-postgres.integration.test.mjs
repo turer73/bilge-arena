@@ -31,8 +31,12 @@ const roleSeparationSql = readFileSync(
   join(migrationsDir, '132_institution_platform_role_separation.sql'),
   'utf8',
 )
+const institutionPanelSql = readFileSync(
+  join(migrationsDir, '133_institution_panel_classroom_management.sql'),
+  'utf8',
+)
 
-suite('112-127 and 131-132 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127 and 131-133 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -56,6 +60,16 @@ suite('112-127 and 131-132 institution pilot real PostgreSQL acceptance', () => 
   async function rpc(expression, values = []) {
     const result = await service(`SELECT ${expression} AS result`, values)
     return result.rows[0].result
+  }
+
+  async function rpcOn(connection, expression, values = []) {
+    await connection.query('SET ROLE service_role')
+    try {
+      const result = await connection.query(`SELECT ${expression} AS result`, values)
+      return result.rows[0].result
+    } finally {
+      await connection.query('RESET ROLE')
+    }
   }
 
   async function expectPgError(action, code) {
@@ -227,6 +241,7 @@ suite('112-127 and 131-132 institution pilot real PostgreSQL acceptance', () => 
     expect(legacyManagerRole.rows[0].count).toBe(1)
 
     await client.query(roleSeparationSql)
+    await client.query(institutionPanelSql)
 
     const separatedManagerRoles = await client.query(
       `SELECT role.slug, array_agg(permission.permission ORDER BY permission.permission) AS permissions
@@ -351,6 +366,74 @@ suite('112-127 and 131-132 institution pilot real PostgreSQL acceptance', () => 
     expect(await rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [
       managerOne, institutionOne, teacherOne, requestId,
     ])).toMatchObject({ memberRef: teacherMemberRef, replayed: true })
+
+    const managerRequestId = randomUUID()
+    const managed = await rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+      managerOne, teacherMemberRef, 'TYT Matematik A', managerRequestId,
+    ])
+    expect(managed).toMatchObject({
+      classroom: { name: 'TYT Matematik A', status: 'active' },
+      teacher: { memberRef: teacherMemberRef },
+      replayed: false,
+    })
+    expect(await rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+      managerOne, teacherMemberRef, 'TYT Matematik A', managerRequestId,
+    ])).toMatchObject({ classroom: { id: managed.classroom.id }, replayed: true })
+    await expectPgError(
+      () => rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+        managerOne, teacherMemberRef, 'Farklı Sınıf', managerRequestId,
+      ]),
+      '22023',
+    )
+    await expectPgError(
+      () => rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+        teacherOne, teacherMemberRef, 'Yetkisiz Sınıf', randomUUID(),
+      ]),
+      '42501',
+    )
+    const managedRow = await client.query(
+      'SELECT institution_id,teacher_id FROM public.teacher_classrooms WHERE id=$1',
+      [managed.classroom.id],
+    )
+    expect(managedRow.rows[0]).toEqual({ institution_id: institutionOne, teacher_id: teacherOne })
+
+    const remover = new pg.Client({ connectionString: url })
+    const competingWriter = new pg.Client({ connectionString: url })
+    await remover.connect()
+    await competingWriter.connect()
+    try {
+      await remover.query('BEGIN')
+      await remover.query(
+        `UPDATE public.pilot_institution_memberships
+         SET status='removed', ended_at=now()
+         WHERE institution_id=$1 AND user_id=$2`,
+        [institutionOne, teacherOne],
+      )
+      const competing = rpcOn(
+        competingWriter,
+        'public.create_my_institution_classroom($1,$2,$3,$4)',
+        [managerOne, teacherMemberRef, 'Eşzamanlı Kaldırma', randomUUID()],
+      ).then(
+        (result) => ({ result, error: null }),
+        (error) => ({ result: null, error }),
+      )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      await remover.query('COMMIT')
+      const outcome = await competing
+      expect(outcome.result).toBeNull()
+      expect(outcome.error?.code).toBe('P0002')
+    } finally {
+      await remover.query('ROLLBACK').catch(() => undefined)
+      await remover.end()
+      await competingWriter.end()
+      await client.query(
+        `UPDATE public.pilot_institution_memberships
+         SET status='active', ended_at=NULL
+         WHERE institution_id=$1 AND user_id=$2`,
+        [institutionOne, teacherOne],
+      )
+    }
+
     const created = await rpc('public.create_teacher_classroom($1,$2,$3)', [
       teacherOne, '12-A Matematik', randomUUID(),
     ])
@@ -366,7 +449,7 @@ suite('112-127 and 131-132 institution pilot real PostgreSQL acceptance', () => 
       managerOne, 'Kurum Yöneticisi Sınıfı', randomUUID(),
     ])
     expect((await rpc('public.get_institution_tracking_directory($1)', [teacherOne])).classrooms)
-      .toHaveLength(1)
+      .toHaveLength(2)
 
     const requestId = randomUUID()
     const created = await rpc('public.create_my_institution_role($1,$2,$3,$4,$5)', [
@@ -431,6 +514,12 @@ suite('112-127 and 131-132 institution pilot real PostgreSQL acceptance', () => 
     await expectPgError(
       () => rpc('public.set_my_institution_role_assignment($1,$2,$3,$4,$5)', [
         managerTwo, customRoleRef, teacherMemberRef, true, randomUUID(),
+      ]),
+      'P0002',
+    )
+    await expectPgError(
+      () => rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+        managerTwo, teacherMemberRef, 'Kiracılar Arası Sınıf', randomUUID(),
       ]),
       'P0002',
     )
