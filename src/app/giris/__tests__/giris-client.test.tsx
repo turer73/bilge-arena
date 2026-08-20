@@ -29,7 +29,10 @@ describe('GirisClient institution flow', () => {
     fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(institutionButton)
 
-    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith('/arena/kurum'))
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
+      '/arena/kurum',
+      { forceAccountSelection: true },
+    ))
     expect(mockLogConsent).toHaveBeenCalledWith('terms', { accepted: true })
     expect(mockLogConsent).toHaveBeenCalledWith('kvkk', { accepted: true })
   })

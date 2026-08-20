@@ -15,12 +15,20 @@ export default function GirisClient() {
   const { signInWithGoogle } = useAuth()
   const [accepted, setAccepted] = useState(false)
 
-  const handleGoogleLogin = async (nextOverride?: string) => {
+  const handleGoogleLogin = async (
+    nextOverride?: string,
+    forceAccountSelection = false,
+  ) => {
     const requestedNext = typeof window === 'undefined'
       ? '/arena'
       : safeAuthNext(new URLSearchParams(window.location.search).get('next'))
     // Once giris yap, sonra consent logla
-    await signInWithGoogle(nextOverride ?? requestedNext)
+    const next = nextOverride ?? requestedNext
+    if (forceAccountSelection) {
+      await signInWithGoogle(next, { forceAccountSelection: true })
+    } else {
+      await signInWithGoogle(next)
+    }
     // Not: signInWithGoogle redirect yapar, bu satir sadece popup modunda calisir.
     // Consent log'u auth callback'te de yakalanabilir ama
     // burada da fire-and-forget olarak cagiralim.
@@ -98,7 +106,7 @@ export default function GirisClient() {
           size="md"
           className="mt-3 w-full border border-[var(--border)]"
           disabled={!accepted}
-          onClick={() => void handleGoogleLogin('/arena/kurum')}
+          onClick={() => void handleGoogleLogin('/arena/kurum', true)}
         >
           <Building2 size={16} />
           Kurum Hesabıyla Giriş

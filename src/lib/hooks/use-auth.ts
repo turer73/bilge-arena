@@ -180,7 +180,10 @@ export function useAuth() {
     }
   }
 
-  async function signInWithGoogle(next = '/arena') {
+  async function signInWithGoogle(
+    next = '/arena',
+    options?: { forceAccountSelection?: boolean },
+  ) {
     const safeNext = safeAuthNext(next)
     const callbackUrl = new URL('/auth/callback', window.location.origin)
     callbackUrl.searchParams.set('next', safeNext)
@@ -188,6 +191,9 @@ export function useAuth() {
       provider: 'google',
       options: {
         redirectTo: callbackUrl.toString(),
+        queryParams: options?.forceAccountSelection
+          ? { prompt: 'select_account' }
+          : undefined,
       },
     })
   }
