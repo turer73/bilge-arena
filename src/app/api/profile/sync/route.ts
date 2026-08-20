@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import type { TablesUpdate } from '@/types/database.generated'
+import { userHasPlatformAdminAccess } from '@/lib/supabase/platform-access'
 
 const ipLimiter = createRateLimiter('profile-sync-ip', 30, 60_000)
 const userLimiter = createRateLimiter('profile-sync-user', 5, 60_000)
@@ -82,14 +83,8 @@ export async function POST(request: NextRequest) {
     updates.avatar_url = googleAvatar
   }
 
-  // 6) Roller (paralel olabilirdi ama sync nadiren cagrildigi icin onemli degil)
-  const { data: roles } = await admin
-    .from('user_roles')
-    .select('role_id')
-    .eq('user_id', user.id)
-    .limit(1)
-
-  const isAdmin = !!(roles && roles.length > 0)
+  // 6) Kurum/öğretmen pilot rolleri platform admin sayılmaz.
+  const isAdmin = await userHasPlatformAdminAccess(admin, user.id)
 
   // 7) Degisiklik yoksa direkt don
   if (Object.keys(updates).length === 0) {

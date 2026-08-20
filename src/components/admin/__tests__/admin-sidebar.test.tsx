@@ -26,15 +26,15 @@ beforeEach(() => {
   mockUsePathname.mockReturnValue('/admin')
   global.fetch = vi.fn().mockResolvedValue({
     ok: true,
-    json: () => Promise.resolve({ permissions: [], roles: [] }),
+    json: () => Promise.resolve({ permissions: ['admin.dashboard.view', 'admin.users.view'], roles: [] }),
   }) as unknown as typeof fetch
 })
 
 describe('AdminSidebar (mobil drawer)', () => {
-  test('nav + hamburger render; varsayilan kapali (off-canvas), lg+ sabit', () => {
+  test('izinli nav + hamburger render; varsayilan kapali (off-canvas), lg+ sabit', async () => {
     render(<AdminSidebar />)
     expect(screen.getByRole('button', { name: /menüyü aç/i })).toBeInTheDocument()
-    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('Dashboard')).toBeInTheDocument())
     expect(screen.getByText('Kullanıcılar')).toBeInTheDocument()
     // kapali: mobilde off-canvas; lg'de her zaman gorunur
     expect(asideEl().className).toContain('-translate-x-full')
@@ -76,6 +76,23 @@ describe('AdminSidebar (mobil drawer)', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ permissions: ['institution.pilots.manage'], roles: [{ name: 'Süper Admin' }] }) }) as unknown as typeof fetch
     render(<AdminSidebar />)
     await waitFor(() => expect(screen.getByText('Kurumlar')).toBeInTheDocument())
+    expect(screen.queryByText('Kullanıcılar')).not.toBeInTheDocument()
+  })
+
+  test('yalnız kurum pilotu erişimi olan kullanıcıya admin menüsü göstermez', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ permissions: ['institution.pilot.access'], roles: [{ name: 'Kurum Pilotu Personeli' }] }) }) as unknown as typeof fetch
+    render(<AdminSidebar />)
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
+    expect(screen.queryByText('Kurumlar')).not.toBeInTheDocument()
+    expect(screen.queryByText('Kullanıcılar')).not.toBeInTheDocument()
+  })
+
+  test('izin isteği başarısızsa menüler fail-closed kalır', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('network')) as unknown as typeof fetch
+    render(<AdminSidebar />)
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument()
     expect(screen.queryByText('Kullanıcılar')).not.toBeInTheDocument()
   })
 })
