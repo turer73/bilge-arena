@@ -18,6 +18,7 @@ import {
   questionBankExists,
   extractSolutionValue,
   isNumericOption,
+  expectedOptionCounts,
 } from '../validate-question-bank.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -36,6 +37,12 @@ describe('validator MANTIĞI — tracked-fixture (CI-deterministik)', () => {
 
   it('temiz soru (clean1) hiçbir ERROR üretmez', () => {
     expect(errIds.some((l) => l.includes('clean1'))).toBe(false)
+  })
+
+  it('LGS dört seçenekli soru geçerlidir', () => {
+    expect(errIds.some((l) => l.includes('clean_lgs_4'))).toBe(false)
+    expect(expectedOptionCounts('LGS')).toEqual([4])
+    expect(expectedOptionCounts('TYT')).toEqual([5])
   })
 
   it('solution-answer tutarsızlık WARN olarak yakalanır (ERROR değil)', () => {

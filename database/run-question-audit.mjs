@@ -1,0 +1,178 @@
+#!/usr/bin/env node
+/**
+ * Kalibrasyon kosucusu koprusu.
+ *
+ * NEDEN BU KOPRU VAR:
+ *   Kosucu mantigi src/lib/question-audit/ altinda TypeScript. Node ESM
+ *   uzantisiz import ('./types') cozmez, `@/` alias'ini hic bilmez. Vite'in
+ *   ssrLoadModule'u ikisini de UYGULAMANIN KENDISIYLE ayni sekilde cozer.
+ *
+ *   Alternatifler ve neden secilmediler:
+ *   - tsx devDep: ~10-25MB esbuild indirir ve kendi cozumleme kurallarini
+ *     getirir (uygulamayla birebir ayni olmaz).
+ *   - vitest harness: 30 dakikalik batch isi test degil; timeout, worker
+ *     omru, stdout tamponlama ve `npm test`'in kazara toplamasi sorun olur.
+ *   - vite: vitest@4 ile zaten diskte, ek indirme YOK.
+ *
+ * DIKKAT: `vite` su an TRANSITIF bagimlilik (vitest uzerinden). Kalici
+ *   kullanim icin `npm install --save-dev vite@8` ile acikca sabitlenmeli —
+ *   sifir indirme, ama package.json'a elle satir eklemek `npm ci`'i bozar
+ *   (lockfile senkronu), o yuzden install komutuyla yapilmali.
+ *
+ * Kullanim:
+ *   npm run audit:calibrate                          # dry-run (plan + maliyet)
+ *   npm run audit:calibrate -- --limit 50 --confirm
+ *   npm run audit:calibrate -- --category matematik --samples 3 --confirm
+ *   npm run audit:calibrate -- --revision-id <uuid> --persist --confirm
+ *   npm run audit:calibrate -- --governance-ready --persist --confirm
+ */
+
+import { existsSync, readFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createServer } from 'vite'
+import { createClient } from '@supabase/supabase-js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const root = join(__dirname, '..')
+
+// .env.local yukle (repo'daki mevcut script deseni)
+const envPath = join(root, '.env.local')
+if (existsSync(envPath)) {
+  for (const line of readFileSync(envPath, 'utf-8').split(/\r?\n/)) {
+    const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"(.*)"$/, '$1')
+  }
+}
+if (process.env.GOOGLE_GENERATIVE_AI_API_KEY && !process.env.GEMINI_API_KEY) {
+  process.env.GEMINI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+}
+
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+if (!supabaseUrl || !serviceKey) {
+  console.error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY yok — .env.local kontrol et.')
+  process.exit(1)
+}
+const sb = createClient(supabaseUrl, serviceKey)
+
+const PAGE = 1000 // Supabase tek istekte en fazla bu kadar satir doner
+
+/**
+ * Aktif sorulari ceker. Kalibrasyon salt-okuma: hicbir yazma yapilmaz.
+ *
+ * SAYFALAMA SART: banka 4434 aktif soru tasiyor, tek istek 1000'de kesiliyor.
+ * Sayfalamasiz "tam banka kosusu" sessizce ilk 1000 soruyu olcup tam sanilirdi.
+ */
+async function fetchRows(args) {
+  if (args.revisionId || args.governanceReady) {
+    let q = sb
+      .from('question_content_revisions')
+      .select('id, question_id, game, category, subcategory, topic, exam_ref, difficulty, content, content_sha256, status')
+    if (args.revisionId) q = q.eq('id', args.revisionId)
+    else q = q.eq('status', 'stage2_approved')
+    if (args.category) q = q.eq('category', args.category)
+    if (args.game) q = q.eq('game', args.game)
+    const { data, error } = await q.order('id', { ascending: true }).limit(args.limit)
+    if (error) throw new Error(`supabase revisions: ${error.message}`)
+    return (data ?? []).map((r) => ({
+      id: r.question_id,
+      game: r.game,
+      category: r.category,
+      subcategory: r.subcategory,
+      topic: r.topic,
+      exam_ref: r.exam_ref,
+      difficulty: r.difficulty,
+      content: r.content,
+      published_revision_id: r.id,
+      content_sha256: r.content_sha256,
+    }))
+  }
+  const rows = []
+  for (let from = 0; from < args.limit; from += PAGE) {
+    const to = Math.min(from + PAGE, args.limit) - 1
+    let q = sb
+      .from('questions')
+      .select('id, game, category, subcategory, topic, exam_ref, difficulty, content, published_revision_id')
+      .eq('is_active', true)
+    if (args.category) q = q.eq('category', args.category)
+    if (args.game) q = q.eq('game', args.game)
+    // ORDER BY sart: Postgres siralamasiz sorguda satir sirasini garanti etmez.
+    // Onsuz iki kosu FARKLI kumeler ceker ve sonuclar karsilastirilamaz
+    // (ilk pilotta tam bu oldu: --limit 3 ve --limit 50 ortusmeyen kumeler verdi).
+    // Sayfalamada ayrica sayfa sinirlarinin kaymamasi icin zorunlu.
+    const { data, error } = await q.order('id', { ascending: true }).range(from, to)
+    if (error) throw new Error(`supabase: ${error.message}`)
+    if (!data || data.length === 0) break
+    rows.push(...data)
+    if (data.length < to - from + 1) break
+  }
+  return rows
+}
+
+/**
+ * Ham kosuyu question_validation_runs'a yazar (migration 134).
+ * Yalniz --persist verilince aktif: migration canliya uygulanmadan cagrilirsa
+ * her satir hata verir ve kosu gurultuye bogulur.
+ */
+async function persistRun(rows) {
+  const { error } = await sb.from('question_validation_runs').upsert(rows, {
+    // Basarisiz onceki deneme yeni kosuda iyilestiyse satiri guncelle.
+    onConflict: 'question_id,content_sha256,agent,sample_index,provider_id,model_id,prompt_version,generation_config_sha256',
+    ignoreDuplicates: false,
+  })
+  if (error) throw new Error(error.message)
+}
+
+async function persistDecision(decision) {
+  const { error: decisionError } = await sb.from('question_validation_decisions').upsert(decision, {
+    onConflict: 'revision_id,content_sha256,policy_version',
+    ignoreDuplicates: false,
+  })
+  if (decisionError) throw new Error(`decision: ${decisionError.message}`)
+}
+
+const server = await createServer({
+  root,
+  server: { middlewareMode: true },
+  appType: 'custom',
+  logLevel: 'error',
+})
+try {
+  const mod = await server.ssrLoadModule('/src/lib/question-audit/runner.ts')
+  const persistence = await server.ssrLoadModule('/src/lib/question-audit/persistence.ts')
+  const deps = { fetchRows }
+  if (process.argv.includes('--persist')) {
+    deps.persistRun = persistRun
+    deps.persistDecision = persistDecision
+    deps.loadCachedRun = async (draft, identity) => {
+      const { data, error } = await sb
+        .from('question_validation_runs')
+        .select('*')
+        .eq('question_id', draft.questionId)
+        .eq('content_sha256', draft.contentSha256)
+        .eq('generation_config_sha256', identity.generationConfigSha256)
+      if (error) throw new Error(`onbellek sorgusu: ${error.message}`)
+      const rows = (data ?? []).filter((row) => {
+        const role = row.agent === 'blind_solver' ? 'blind' : row.agent === 'adversarial' ? 'adversarial' : 'verifier'
+        return row.provider_id === identity.providerIds[role]
+          && row.model_id === identity.modelIds[role]
+          && row.prompt_version === identity.promptVersions[role]
+      })
+      if (rows.length === 0 || rows.some((row) => row.status === 'failed')) return null
+      try {
+        return persistence.fromValidationRunRows(rows)
+      } catch {
+        // Eksik/eski satir grubu cache miss'tir; ucretli kosu onu tamamlar.
+        return null
+      }
+    }
+  }
+  const report = await mod.main(process.argv.slice(2), deps)
+  process.exitCode = report ? 0 : 0
+} catch (e) {
+  console.error('KOSU HATASI:', e?.stack || e)
+  process.exitCode = 1
+} finally {
+  await server.close()
+}
