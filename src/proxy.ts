@@ -2,6 +2,11 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isCsrfOriginAllowed, CSRF_PROTECTED_METHODS } from '@/lib/utils/csrf'
 import type { Database } from '@/types/database.client'
+import {
+  INSTITUTION_PILOT_ENTRY_PERMISSION,
+  PLATFORM_ADMIN_ENTRY_PERMISSIONS,
+} from '@/lib/admin/platform-permissions'
+import { userHasAnyPlatformPermissionViaRest } from '@/lib/supabase/platform-access'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
@@ -52,45 +57,30 @@ export async function proxy(request: NextRequest) {
   // Oturumu yenile + kullanici bilgisini al (tek cagri)
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Admin koruması — RBAC: en az 1 rolü olmalı
+  // Admin koruması — kurum/öğretmen pilot rolleri de user_roles tablosunda
+  // tutuluyor. Bu nedenle "herhangi bir rol" admin yetkisi değildir; yalnız
+  // gerçek bir admin yüzeyi izni /admin kabuğunu açabilir.
   if (request.nextUrl.pathname.startsWith('/admin')) {
     if (!user) {
       return NextResponse.redirect(new URL('/giris', request.url))
     }
-    // RLS bypass: once session-based dene, bos donerse service key ile dene
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', user.id)
-      .limit(1)
+    const serviceKey =
+      process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const hasAdminAccess = await userHasAnyPlatformPermissionViaRest({
+      supabaseUrl: SUPABASE_URL,
+      serviceKey,
+      userId: user.id,
+      permissions: PLATFORM_ADMIN_ENTRY_PERMISSIONS,
+    })
 
-    let hasRole = !!userRoles && userRoles.length > 0
-
-    // Session-based bos donduyse service key ile REST API dene
-    if (!hasRole) {
-      const serviceKey =
-        process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-      if (serviceKey) {
-        try {
-          const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${user.id}&select=role_id&limit=1`,
-            {
-              headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
-              cache: 'no-store',
-            }
-          )
-          if (res.ok) {
-            const roles = await res.json()
-            hasRole = Array.isArray(roles) && roles.length > 0
-          }
-        } catch {
-          // Service key fetch failed, rely on session result
-        }
-      }
-    }
-
-    if (!hasRole) {
-      return NextResponse.redirect(new URL('/arena', request.url))
+    if (!hasAdminAccess) {
+      const hasInstitutionAccess = await userHasAnyPlatformPermissionViaRest({
+        supabaseUrl: SUPABASE_URL,
+        serviceKey,
+        userId: user.id,
+        permissions: [INSTITUTION_PILOT_ENTRY_PERMISSION],
+      })
+      return NextResponse.redirect(new URL(hasInstitutionAccess ? '/arena/kurum' : '/arena', request.url))
     }
 
     // Admin sayfaları Cloudflare'da cache'lenmemeli

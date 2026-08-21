@@ -177,8 +177,9 @@ export function TeacherInvitationClient() {
           <div className="flex items-start gap-3 rounded-2xl border border-[var(--growth)]/30 bg-[var(--growth)]/5 p-4 text-sm leading-6">
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--growth)]" aria-hidden="true" />
             <p>
-              Öğretmen yalnız ödev gönderim durumunu ve toplu doğru/yanıtlanan sayılarını görür. Ham cevaplarını,
-              yanlış soru ayrıntını, e-postanı, profil UUID&apos;ni, XP&apos;ni veya hâkimiyet verini göremez.
+              Kurum yöneticisi ve sınıfın öğretmeni, katılımından sonraki çalışmalarından konu ve kazanım bazlı
+              durum, skor, güven ve toplu çalışma göstergelerini görebilir. Ham cevaplarını, tek tek yanlış soru
+              ayrıntılarını, e-postanı, profil UUID&apos;ni, telefonunu veya XP&apos;ni göremez.
             </p>
           </div>
 

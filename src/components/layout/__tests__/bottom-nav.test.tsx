@@ -1,12 +1,12 @@
 /**
  * Bilge Arena: BottomNav (mobil alt tab-bar) testleri
  *
- * Kapsam: 4 sekme render, aktiflik (activeOverride + usePathname),
+ * Kapsam: 5 sekme render, aktiflik (activeOverride + usePathname),
  *   /arena tam-eslesme guard'i, alt-rota startsWith, aria-current.
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 // usePathname mock (hoisted — vi.mock factory'den once tanimlanmali)
 const mockUsePathname = vi.hoisted(() => vi.fn<() => string>())
@@ -20,7 +20,7 @@ vi.mock('next/link', () => ({
 
 import { BottomNav } from '../bottom-nav'
 
-const TABS = ['Oyunlar', 'Arena', 'Sıralama', 'Profil']
+const TABS = ['Öğren', 'Pratik', 'Arena', 'Lig', 'Profil']
 
 function linkFor(label: string): HTMLAnchorElement {
   return screen.getByText(label).closest('a') as HTMLAnchorElement
@@ -32,12 +32,13 @@ beforeEach(() => {
 })
 
 describe('BottomNav', () => {
-  test('4 sekmeyi dogru href ile render eder', () => {
+  test('5 sekmeyi dogru href ile render eder', () => {
     render(<BottomNav />)
     for (const t of TABS) expect(screen.getByText(t)).toBeInTheDocument()
-    expect(linkFor('Oyunlar')).toHaveAttribute('href', '/arena')
+    expect(linkFor('Öğren')).toHaveAttribute('href', '/arena')
+    expect(linkFor('Pratik')).toHaveAttribute('href', '/arena/calisma')
     expect(linkFor('Arena')).toHaveAttribute('href', '/oda')
-    expect(linkFor('Sıralama')).toHaveAttribute('href', '/arena/siralama')
+    expect(linkFor('Lig')).toHaveAttribute('href', '/arena/siralama')
     expect(linkFor('Profil')).toHaveAttribute('href', '/arena/profil')
   })
 
@@ -46,29 +47,30 @@ describe('BottomNav', () => {
     const nav = screen.getByRole('navigation', { name: /mobil gezinme/i })
     expect(nav.className).toContain('md:hidden')
     expect(nav.style.minHeight).toBe('calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))')
-    expect(linkFor('Oyunlar').className).toContain('min-h-12')
+    expect(linkFor('Öğren').className).toContain('min-h-12')
   })
 
-  test('activeOverride="lobby" → sadece Oyunlar aria-current', () => {
-    render(<BottomNav activeOverride="lobby" />)
-    expect(linkFor('Oyunlar')).toHaveAttribute('aria-current', 'page')
+  test('activeOverride="learn" → sadece Öğren aria-current', () => {
+    render(<BottomNav activeOverride="learn" />)
+    expect(linkFor('Öğren')).toHaveAttribute('aria-current', 'page')
+    expect(linkFor('Pratik')).not.toHaveAttribute('aria-current')
     expect(linkFor('Arena')).not.toHaveAttribute('aria-current')
-    expect(linkFor('Sıralama')).not.toHaveAttribute('aria-current')
+    expect(linkFor('Lig')).not.toHaveAttribute('aria-current')
     expect(linkFor('Profil')).not.toHaveAttribute('aria-current')
   })
 
-  test('usePathname=/arena → Oyunlar aktif (tam eslesme)', () => {
+  test('usePathname=/arena → Öğren aktif (tam eslesme)', () => {
     mockUsePathname.mockReturnValue('/arena')
     render(<BottomNav />)
-    expect(linkFor('Oyunlar')).toHaveAttribute('aria-current', 'page')
+    expect(linkFor('Öğren')).toHaveAttribute('aria-current', 'page')
   })
 
-  test('usePathname=/arena/siralama → Siralama aktif, Oyunlar DEGIL (tam-eslesme guard)', () => {
+  test('usePathname=/arena/siralama → Lig aktif, Öğren DEGIL (tam-eslesme guard)', () => {
     mockUsePathname.mockReturnValue('/arena/siralama')
     render(<BottomNav />)
-    expect(linkFor('Sıralama')).toHaveAttribute('aria-current', 'page')
+    expect(linkFor('Lig')).toHaveAttribute('aria-current', 'page')
     // /arena yalnizca tam eslesmede aktif olmali — alt rotada degil
-    expect(linkFor('Oyunlar')).not.toHaveAttribute('aria-current')
+    expect(linkFor('Öğren')).not.toHaveAttribute('aria-current')
   })
 
   test('usePathname=/oda/kod → Arena aktif (startsWith)', () => {
@@ -80,7 +82,7 @@ describe('BottomNav', () => {
   test('activeOverride usePathname\'i ezer', () => {
     mockUsePathname.mockReturnValue('/arena/profil')
     render(<BottomNav activeOverride="leaderboard" />)
-    expect(linkFor('Sıralama')).toHaveAttribute('aria-current', 'page')
+    expect(linkFor('Lig')).toHaveAttribute('aria-current', 'page')
     expect(linkFor('Profil')).not.toHaveAttribute('aria-current')
   })
 })

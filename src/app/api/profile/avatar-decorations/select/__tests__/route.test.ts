@@ -11,7 +11,7 @@ const m = vi.hoisted(() => ({
   userCheck: vi.fn(),
   getUser: vi.fn(),
   profileRead: vi.fn(),
-  rolesRead: vi.fn(),
+  platformAdmin: vi.fn(),
   update: vi.fn(),
   updateEq: vi.fn(),
 }))
@@ -25,17 +25,17 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({
-    from: (table: string) =>
-      table === 'user_roles'
-        ? { select: () => ({ eq: () => ({ limit: m.rolesRead }) }) }
-        : {
-            select: () => ({ eq: () => ({ single: m.profileRead }) }),
-            update: (payload: unknown) => {
-              m.update(payload)
-              return { eq: m.updateEq }
-            },
-          },
+    from: () => ({
+      select: () => ({ eq: () => ({ single: m.profileRead }) }),
+      update: (payload: unknown) => {
+        m.update(payload)
+        return { eq: m.updateEq }
+      },
+    }),
   }),
+}))
+vi.mock('@/lib/supabase/platform-access', () => ({
+  userHasPlatformAdminAccess: m.platformAdmin,
 }))
 
 import { POST } from '../route'
@@ -54,7 +54,7 @@ beforeEach(() => {
   m.userCheck.mockResolvedValue({ success: true })
   m.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
   m.profileRead.mockResolvedValue({ data: { owned_avatar_decorations: ['aura'] } })
-  m.rolesRead.mockResolvedValue({ data: [] })
+  m.platformAdmin.mockResolvedValue(false)
   m.updateEq.mockResolvedValue({ error: null })
 })
 
@@ -115,8 +115,8 @@ describe('POST /api/profile/avatar-decorations/select', () => {
     expect(m.update).toHaveBeenCalledWith({ selected_avatar_decorations: ['konfeti'] })
   })
 
-  it('personel (rol sahibi): sahipsiz ücretli süs seçilebilir', async () => {
-    m.rolesRead.mockResolvedValue({ data: [{ role_id: 'r1' }] })
+  it('platform personeli: sahipsiz ücretli süs seçilebilir', async () => {
+    m.platformAdmin.mockResolvedValue(true)
     m.profileRead.mockResolvedValue({ data: { owned_avatar_decorations: [] } })
     const res = await POST(req({ decorationIds: ['crown', 'kanat'] }))
     expect(res.status).toBe(200)

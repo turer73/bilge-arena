@@ -15,6 +15,15 @@ interface RevisionDetail {
   source?: { kind?: string; title?: string; licenseCode?: string; attribution?: string }
   outcomes?: Array<{ outcomeId: string; weight: number; primary: boolean }>
   approvals?: Array<{ stage: number; decision: string; decidedAt: string }>
+  validation?: {
+    policyVersion: string
+    verdict: 'APPROVED' | 'REJECTED' | 'NEEDS_REVIEW' | 'INCONCLUSIVE'
+    findings: Array<{ code: string; evidence: string; optionIndexes?: number[] }>
+    rationale: string
+    blindConsensusIndex: number | null
+    blindAgreementRatio: number | null
+    decidedAt: string
+  } | null
   psychometrics?: Array<{ windowStart: string; windowEnd: string; sampleN: number; correctN: number; pCorrect: number | null; wilsonLow: number | null; wilsonHigh: number | null; discrimination: number | null; materializedAt: string }>
   incidents?: Array<{ incidentId: string; erroneousRevisionId: string; correctedRevisionId: string; errorType: 'wrong_key' | 'ambiguous' | 'invalid_content' | 'outcome_mismatch'; status: string; eligibleCount: number; changedCount: number; manualRequiredCount: number; createdAt: string; closedAt: string | null }>
 }
@@ -22,6 +31,11 @@ interface RevisionDetail {
 const statusLabel: Record<string, string> = {
   draft: 'Taslak', stage1_approved: '1. aşama onaylı', stage2_approved: '2. aşama onaylı',
   published: 'Yayında', rejected: 'Reddedildi', superseded: 'Eski revizyon',
+}
+
+const validationLabel: Record<string, string> = {
+  APPROVED: 'Otomatik kontrol geçti', REJECTED: 'Yayın engeli',
+  NEEDS_REVIEW: 'İnsan incelemesi gerekli', INCONCLUSIVE: 'Kontrol tekrarlanmalı',
 }
 
 export function ContentGovernancePanel() {
@@ -172,8 +186,16 @@ export function ContentGovernancePanel() {
                   <div><dt className="font-bold text-[var(--text-sub)]">Kapsam</dt><dd>{detail.metadata?.game} / {detail.metadata?.category} / zorluk {detail.metadata?.difficulty}</dd></div>
                   <div><dt className="font-bold text-[var(--text-sub)]">Kazanım kanıtı</dt><dd>{detail.outcomes?.length ?? 0} eşleme · {(detail.outcomes ?? []).filter((outcome) => outcome.primary).length} birincil</dd></div>
                   <div><dt className="font-bold text-[var(--text-sub)]">Kararlar</dt><dd>{detail.approvals?.map((approval) => `${approval.stage}. aşama ${approval.decision}`).join(' · ') || 'Henüz yok'}</dd></div>
+                  <div><dt className="font-bold text-[var(--text-sub)]">Otomatik doğrulama</dt><dd>{detail.validation ? `${validationLabel[detail.validation.verdict]} · ${detail.validation.policyVersion}` : 'Henüz çalıştırılmadı'}</dd></div>
                   <div><dt className="font-bold text-[var(--text-sub)]">Son 30 gün psikometri</dt><dd>{detail.psychometrics?.[0] ? `n=${detail.psychometrics[0].sampleN} · başarı ${detail.psychometrics[0].pCorrect === null ? '—' : `%${Math.round(detail.psychometrics[0].pCorrect * 100)}`} · ayırıcılık ${detail.psychometrics[0].discrimination === null ? 'n<30 / hesaplanamadı' : detail.psychometrics[0].discrimination.toFixed(2)}` : 'Henüz hesaplanmadı'}</dd></div>
                 </dl>
+                {detail.validation && detail.validation.findings.length > 0 && <div className="space-y-2 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] p-3" aria-label="Otomatik doğrulama kanıtları">
+                  <p className="text-xs font-bold">Otomatik doğrulama kanıtları</p>
+                  {detail.validation.findings.map((finding, index) => <div key={`${finding.code}-${index}`} className="text-xs">
+                    <p className="font-bold">{finding.code}</p>
+                    <p className="mt-1 text-[var(--text-sub)]">{finding.evidence}</p>
+                  </div>)}
+                </div>}
                 {(detail.incidents?.length ?? 0) > 0 && <div className="space-y-2 rounded-lg border border-[var(--border)] p-3" aria-label="Sonuç düzeltme etkileri">
                   <p className="text-xs font-bold">Sonuç düzeltme etkileri</p>
                   {detail.incidents?.map((incident) => <div key={incident.incidentId} className="rounded-lg bg-[var(--surface)] p-3 text-xs">

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { userHasPlatformAdminAccess } from '@/lib/supabase/platform-access'
 
 // Limitler stats ile ayni (en agir sorgu stats) — H3
 const ipLimiter = createRateLimiter('profile-bootstrap-ip', 60, 60_000)
@@ -76,11 +77,11 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // 4) Paralel: profile + roles + session_answers + game_sessions
+  // 4) Paralel: profile + gerçek platform admin izni + cevaplar + oturumlar
   const admin = createServiceRoleClient()
-  const [profileRes, rolesRes, answersRes, sessionsRes] = await Promise.all([
+  const [profileRes, isAdmin, answersRes, sessionsRes] = await Promise.all([
     admin.from('profiles').select('*').eq('id', user.id).single(),
-    admin.from('user_roles').select('role_id').eq('user_id', user.id).limit(1),
+    userHasPlatformAdminAccess(admin, user.id),
     admin
       .from('session_answers')
       .select('is_correct, questions!inner(game, category)')
@@ -157,8 +158,6 @@ export async function GET(request: NextRequest) {
     total_xp: s.total_xp ?? 0,
     completed_at: s.completed_at,
   }))
-
-  const isAdmin = !!(rolesRes.data && rolesRes.data.length > 0)
 
   return NextResponse.json(
     { profile: profileRes.data, isAdmin, gameStats, recentGames },

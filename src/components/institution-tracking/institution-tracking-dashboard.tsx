@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  ArrowLeft,
   AlertTriangle,
   BarChart3,
   BookOpenCheck,
   Building2,
   CalendarDays,
-  ChevronRight,
   RefreshCw,
   Send,
   Save,
@@ -15,7 +16,10 @@ import {
   Printer,
   Mail,
   ClipboardCheck,
+  Plus,
+  School,
   ShieldCheck,
+  UserPlus,
   Users,
 } from 'lucide-react'
 import { TR_TIME_ZONE } from '@/lib/utils/tr-date'
@@ -38,7 +42,11 @@ import { buildGuardianStatusEmailDraft } from '@/lib/institution-tracking/guardi
 import { StudentFollowupPanel } from './student-followup-panel'
 import { ProgramReviewPanel } from './program-review-panel'
 import { StudentReportPanel } from './student-report-panel'
-import { SupportAccessPanel } from './support-access-panel'
+import { InstitutionClassroomCreatePanel } from './institution-classroom-create-panel'
+import { InstitutionPanelNav } from './institution-panel-nav'
+import { InstitutionStudentInviteDialog } from './institution-student-invite-dialog'
+import { EvidenceDistributionChart, PercentBar } from './analytics-charts'
+import { InstitutionOverviewPanel } from './institution-overview-panel'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -79,8 +87,15 @@ function DashboardSkeleton() {
   )
 }
 
-export function InstitutionTrackingDashboard() {
+export function InstitutionTrackingDashboard({
+  initialClassroomId,
+  initialMemberRef,
+}: {
+  initialClassroomId?: string
+  initialMemberRef?: string
+} = {}) {
   const enabled = isInstitutionTrackingUiEnabled()
+  const classroomPage = Boolean(initialClassroomId)
   const [directory, setDirectory] = useState<InstitutionTrackingDirectory | null>(null)
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null)
   const [selectedMemberRef, setSelectedMemberRef] = useState<string | null>(null)
@@ -88,10 +103,16 @@ export function InstitutionTrackingDashboard() {
   const [classroomOverview, setClassroomOverview] = useState<InstitutionClassroomOverview | null>(null)
   const [classroomOverviewLoading, setClassroomOverviewLoading] = useState(false)
   const [classroomOverviewError, setClassroomOverviewError] = useState(false)
+  const [institutionOverviews, setInstitutionOverviews] = useState<Record<string, InstitutionClassroomOverview | null>>({})
+  const [institutionOverviewsLoading, setInstitutionOverviewsLoading] = useState(false)
   const [directoryLoading, setDirectoryLoading] = useState(enabled)
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [errorStatus, setErrorStatus] = useState<number | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [classroomCreatorOpen, setClassroomCreatorOpen] = useState(false)
+  const [classroomAnnouncement, setClassroomAnnouncement] = useState<string | null>(null)
+  const [studentInviteOpen, setStudentInviteOpen] = useState(false)
+  const classroomCreatorButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (!enabled) return
@@ -103,11 +124,9 @@ export function InstitutionTrackingDashboard() {
         const next = await fetchInstitutionTrackingDirectory(controller.signal)
         if (controller.signal.aborted) return
         setDirectory(next)
-        setSelectedClassroomId((current) => (
-          current && next.classrooms.some((classroom) => classroom.id === current)
-            ? current
-            : next.classrooms[0]?.id ?? null
-        ))
+        setSelectedClassroomId(initialClassroomId && next.classrooms.some((classroom) => classroom.id === initialClassroomId)
+          ? initialClassroomId
+          : null)
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return
         setDirectory(null)
@@ -117,26 +136,62 @@ export function InstitutionTrackingDashboard() {
       }
     })
     return () => controller.abort()
-  }, [enabled, refreshKey])
+  }, [enabled, initialClassroomId, refreshKey])
 
   const selectedClassroom = useMemo(() => directory?.classrooms.find(
     (classroom) => classroom.id === selectedClassroomId,
   ) ?? null, [directory, selectedClassroomId])
+  const canAnalyzeSelectedClassroom = selectedClassroom?.canAnalyze !== false
+  const canInviteStudents = classroomPage && selectedClassroom?.canManagePrograms === true
+
+  useEffect(() => {
+    setStudentInviteOpen(false)
+  }, [selectedClassroomId])
 
   useEffect(() => {
     if (!selectedClassroom) {
       setSelectedMemberRef(null)
       return
     }
-    setSelectedMemberRef((current) => (
-      current && selectedClassroom.students.some((student) => student.memberRef === current)
+    setSelectedMemberRef((current) => {
+      if (initialMemberRef && selectedClassroom.students.some((student) => student.memberRef === initialMemberRef)) {
+        return initialMemberRef
+      }
+      return current && selectedClassroom.students.some((student) => student.memberRef === current)
         ? current
         : selectedClassroom.students[0]?.memberRef ?? null
-    ))
-  }, [selectedClassroom])
+    })
+  }, [initialMemberRef, selectedClassroom])
 
   useEffect(() => {
-    if (!selectedClassroomId) {
+    if (classroomPage || !directory || directory.classrooms.length === 0) {
+      setInstitutionOverviews({})
+      setInstitutionOverviewsLoading(false)
+      return
+    }
+    const controller = new AbortController()
+    queueMicrotask(async () => {
+      setInstitutionOverviewsLoading(true)
+      const analyzable = directory.classrooms.filter((classroom) => classroom.canAnalyze !== false)
+      const entries = await Promise.all(analyzable.map(async (classroom) => {
+        try {
+          const overview = await fetchInstitutionClassroomOverview(classroom.id, controller.signal)
+          return [classroom.id, overview] as const
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return null
+          return [classroom.id, null] as const
+        }
+      }))
+      if (!controller.signal.aborted) {
+        setInstitutionOverviews(Object.fromEntries(entries.filter((entry): entry is readonly [string, InstitutionClassroomOverview | null] => entry !== null)))
+        setInstitutionOverviewsLoading(false)
+      }
+    })
+    return () => controller.abort()
+  }, [classroomPage, directory, refreshKey])
+
+  useEffect(() => {
+    if (!classroomPage || !selectedClassroomId || !canAnalyzeSelectedClassroom) {
       setClassroomOverview(null)
       setClassroomOverviewError(false)
       return
@@ -159,10 +214,10 @@ export function InstitutionTrackingDashboard() {
       }
     })
     return () => controller.abort()
-  }, [selectedClassroomId, refreshKey])
+  }, [canAnalyzeSelectedClassroom, classroomPage, selectedClassroomId, refreshKey])
 
   useEffect(() => {
-    if (!selectedClassroomId || !selectedMemberRef) {
+    if (!classroomPage || !selectedClassroomId || !selectedMemberRef || !canAnalyzeSelectedClassroom) {
       setAnalysis(null)
       return
     }
@@ -188,7 +243,12 @@ export function InstitutionTrackingDashboard() {
       }
     })
     return () => controller.abort()
-  }, [selectedClassroomId, selectedMemberRef, refreshKey])
+  }, [canAnalyzeSelectedClassroom, classroomPage, selectedClassroomId, selectedMemberRef, refreshKey])
+
+  function closeClassroomCreator() {
+    setClassroomCreatorOpen(false)
+    window.setTimeout(() => classroomCreatorButtonRef.current?.focus(), 0)
+  }
 
   if (!enabled) {
     return (
@@ -223,77 +283,167 @@ export function InstitutionTrackingDashboard() {
     )
   }
 
+  if (classroomPage && !selectedClassroom) {
+    return (
+      <div className="space-y-5">
+        <InstitutionPanelNav canManageRoles={directory.membership.role === 'manager'} />
+        <section className="mx-auto max-w-3xl rounded-2xl border border-amber-400/20 bg-[var(--surface)] p-6 text-center sm:p-10">
+          <School className="mx-auto h-10 w-10 text-amber-300" aria-hidden="true" />
+          <h1 className="mt-4 text-2xl font-black">Sınıf çalışma alanı bulunamadı</h1>
+          <p className="mt-3 text-sm leading-6 text-[var(--text-sub)]">
+            Bu sınıf aktif olmayabilir veya hesabınız bu kurum sınıfını görmeye yetkili olmayabilir.
+          </p>
+          <Link
+            href="/arena/kurum"
+            className="btn-primary mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-black"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Kurum genel bakışına dön
+          </Link>
+        </section>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
+      <InstitutionPanelNav canManageRoles={directory.membership.role === 'manager'} />
       <header className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[var(--primary)]">
-              <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" /> Kurum çalışma alanı
+              {classroomPage ? (
+                <><School className="h-4 w-4 shrink-0" aria-hidden="true" /> Sınıf Çalışma Alanı</>
+              ) : (
+                <><Building2 className="h-4 w-4 shrink-0" aria-hidden="true" /> Kurum Paneli</>
+              )}
             </div>
-            <h1 className="mt-2 truncate text-2xl font-black sm:text-3xl">{directory.institution.name}</h1>
+            <h1 className="mt-2 truncate text-2xl font-black sm:text-3xl">
+              {classroomPage ? selectedClassroom?.name : directory.institution.name}
+            </h1>
             <p className="mt-1 text-sm text-[var(--text-sub)]">
-              {directory.membership.role === 'manager' ? 'Kurum yöneticisi görünümü' : 'Öğretmen görünümü'} · Açıklanabilir öğrenci takibi
+              {classroomPage && selectedClassroom
+                ? `${directory.institution.name} · ${selectedClassroom.teacherAlias} · ${selectedClassroom.activeStudentCount} öğrenci`
+                : <>{directory.membership.role === 'manager'
+                    ? directory.membership.teacherEnabled
+                      ? 'Kurum yöneticisi ve öğretmen görünümü'
+                      : 'Kurum yöneticisi görünümü'
+                    : 'Öğretmen görünümü'} · Açıklanabilir öğrenci takibi</>}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200">
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Doğrulanmış kanıt
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {classroomPage ? (
+              <>
+                <Link
+                  href="/arena/kurum"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 px-3 text-xs font-black hover:bg-white/5"
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Genel bakış
+                </Link>
+                {canInviteStudents && (
+                  <button
+                    type="button"
+                    onClick={() => setStudentInviteOpen(true)}
+                    className="btn-primary inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-black"
+                  >
+                    <UserPlus className="h-4 w-4" aria-hidden="true" /> Öğrenci ekle
+                  </button>
+                )}
+              </>
+            ) : directory.membership.role === 'manager' && (
+              <>
+                <button
+                  ref={classroomCreatorButtonRef}
+                  type="button"
+                  onClick={() => {
+                    setClassroomCreatorOpen((current) => !current)
+                    setClassroomAnnouncement(null)
+                  }}
+                  aria-expanded={classroomCreatorOpen}
+                  className="btn-primary inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-black"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" /> Sınıf oluştur
+                </button>
+              </>
+            )}
+            <div className="flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Doğrulanmış kanıt
+            </div>
           </div>
         </div>
       </header>
 
-      {directory.membership.role === 'manager' && <SupportAccessPanel />}
+      {selectedClassroom && (
+        <InstitutionStudentInviteDialog
+          classroomId={selectedClassroom.id}
+          classroomName={selectedClassroom.name}
+          open={studentInviteOpen}
+          onOpenChange={setStudentInviteOpen}
+        />
+      )}
 
-      {directory.classrooms.length === 0 ? (
+      {!classroomPage && directory.membership.role === 'manager' && classroomCreatorOpen && (
+        <InstitutionClassroomCreatePanel
+          onCancel={closeClassroomCreator}
+          onCreated={(result) => {
+            setClassroomAnnouncement(`${result.classroom.name}, ${result.teacher.alias} öğretmenine atandı.`)
+            closeClassroomCreator()
+            setRefreshKey((value) => value + 1)
+          }}
+        />
+      )}
+
+      {!classroomPage && classroomAnnouncement && (
+        <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.08] px-4 py-3 text-sm font-bold text-emerald-200">
+          {classroomAnnouncement}
+        </p>
+      )}
+
+      {!classroomPage && directory.classrooms.length === 0 ? (
         <section className="rounded-2xl border border-dashed border-white/15 bg-[var(--surface)] p-8 text-center">
           <Users className="mx-auto h-9 w-9 text-[var(--text-sub)]" aria-hidden="true" />
           <h2 className="mt-3 text-lg font-black">Aktif sınıf bulunamadı</h2>
-          <p className="mt-2 text-sm text-[var(--text-sub)]">Önce kuruma bağlı aktif bir sınıf ve öğrenci üyeliği gerekir.</p>
+          <p className="mt-2 text-sm text-[var(--text-sub)]">İlk sınıfı kurumunuzdaki aktif bir öğretmene atayarak başlayın.</p>
+          {directory.membership.role === 'manager' && (
+            <button
+              type="button"
+              onClick={() => {
+                classroomCreatorButtonRef.current?.focus()
+                setClassroomCreatorOpen(true)
+                setClassroomAnnouncement(null)
+              }}
+              className="btn-primary mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-black"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" /> İlk sınıfı oluştur
+            </button>
+          )}
         </section>
+      ) : !classroomPage ? (
+        <InstitutionOverviewPanel
+          directory={directory}
+          overviews={institutionOverviews}
+          loading={institutionOverviewsLoading}
+        />
       ) : (
         <div className="grid min-w-0 gap-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
           <aside className="min-w-0 space-y-4">
-            <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-3">
-              <h2 className="px-2 pb-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-sub)]">Sınıflar</h2>
-              <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible" aria-label="Kurum sınıfları">
-                {directory.classrooms.map((classroom) => {
-                  const selected = classroom.id === selectedClassroomId
-                  return (
-                    <button
-                      key={classroom.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setSelectedClassroomId(classroom.id)}
-                      className={`min-w-[14rem] rounded-xl border p-3 text-left transition lg:min-w-0 ${selected
-                        ? 'border-[var(--primary)] bg-[var(--primary)]/10'
-                        : 'border-white/10 bg-white/[0.02] hover:bg-white/5'}`}
-                    >
-                      <span className="block truncate text-sm font-black">{classroom.name}</span>
-                      <span className="mt-1 block truncate text-xs text-[var(--text-sub)]">{classroom.teacherAlias}</span>
-                      <span className="mt-2 flex items-center gap-1 text-xs font-bold text-[var(--primary)]">
-                        <Users className="h-3.5 w-3.5" aria-hidden="true" /> {classroom.activeStudentCount} öğrenci
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </section>
-
             {selectedClassroom && (
               <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-3">
                 <h2 className="px-2 pb-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-sub)]">Öğrenciler</h2>
                 {selectedClassroom.students.length === 0 ? (
-                  <p className="rounded-xl bg-white/[0.03] p-3 text-sm text-[var(--text-sub)]">Bu sınıfta görünür aktif öğrenci yok.</p>
+                  <p className="rounded-xl bg-white/[0.03] p-3 text-sm text-[var(--text-sub)]">
+                    {canInviteStudents
+                      ? 'Bu sınıfta aktif öğrenci yok. Öğrenci ekle düğmesiyle güvenli katılım bağlantısı oluşturun.'
+                      : 'Bu sınıfta görünür aktif öğrenci yok.'}
+                  </p>
                 ) : (
                   <div className="flex max-h-80 gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-y-auto lg:overflow-x-visible" aria-label="Sınıf öğrencileri">
                     {selectedClassroom.students.map((student) => {
                       const selected = student.memberRef === selectedMemberRef
                       return (
-                        <button
+                        <Link
                           key={student.memberRef}
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() => setSelectedMemberRef(student.memberRef)}
+                          href={`/arena/kurum/sinif/${selectedClassroom.id}?ogrenci=${student.memberRef}`}
+                          aria-current={selected ? 'true' : undefined}
                           className={`flex min-w-[13rem] items-center justify-between gap-2 rounded-xl border px-3 py-3 text-left lg:min-w-0 ${selected
                             ? 'border-[var(--primary)] bg-[var(--primary)]/10'
                             : 'border-white/10 bg-white/[0.02] hover:bg-white/5'}`}
@@ -302,8 +452,8 @@ export function InstitutionTrackingDashboard() {
                             <span className="block truncate text-sm font-bold">{student.alias}</span>
                             <span className="mt-0.5 block text-xs text-[var(--text-sub)]">Katılım {formatDate(student.joinedAt)}</span>
                           </span>
-                          <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        </button>
+                          <span className="text-xs font-black text-[var(--primary)]">Aç</span>
+                        </Link>
                       )
                     })}
                   </div>
@@ -313,16 +463,30 @@ export function InstitutionTrackingDashboard() {
           </aside>
 
           <main className="min-w-0 space-y-4" aria-live="polite">
-            {classroomOverviewLoading && !classroomOverview ? (
+            {!canAnalyzeSelectedClassroom ? (
+              <section className="rounded-2xl border border-sky-400/20 bg-sky-400/[0.06] p-5">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-sky-300" aria-hidden="true" />
+                  <div>
+                    <h2 className="text-base font-black">Dizin erişimi açık, öğrenme analizi sınırlı</h2>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">Atanan kurum rolü bu sınıfın kadro ve öğrenci dizinini görmenizi sağlar. Ayrıntılı kazanım analizi, program ve rapor işlemleri sınıfın kendi öğretmeni ile kurum yöneticisinde kalır.</p>
+                  </div>
+                </div>
+              </section>
+            ) : classroomOverviewLoading && !classroomOverview ? (
               <div className="h-64 animate-pulse rounded-2xl bg-white/5" aria-label="Sınıf özeti yükleniyor" />
             ) : classroomOverview ? (
               <ClassroomOverviewPanel overview={classroomOverview} />
+            ) : classroomOverviewError && (selectedClassroom?.activeStudentCount ?? 0) < 3 ? (
+              <section className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
+                Toplu sınıf grafikleri için en az 3 aktif öğrenci gerekir. Öğrenci analizi ayrı olarak kullanılabilir.
+              </section>
             ) : classroomOverviewError ? (
               <section className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
                 Sınıf özeti eksiksiz doğrulanamadığı için gösterilmiyor. Öğrenci analizi ayrı olarak kullanılabilir.
               </section>
             ) : null}
-            {!selectedMemberRef ? (
+            {!canAnalyzeSelectedClassroom ? null : !selectedMemberRef ? (
               <section className="rounded-2xl border border-dashed border-white/15 bg-[var(--surface)] p-8 text-center">
                 <Users className="mx-auto h-9 w-9 text-[var(--text-sub)]" aria-hidden="true" />
                 <p className="mt-3 text-sm text-[var(--text-sub)]">Analiz için aktif bir öğrenci seçin.</p>
@@ -350,7 +514,7 @@ export function InstitutionTrackingDashboard() {
               <AnalysisPanel
                 analysis={analysis}
                 classroomId={selectedClassroomId!}
-                canManagePrograms={directory.membership.role === 'teacher'}
+                canManagePrograms={selectedClassroom?.canManagePrograms === true}
                 onFollowupChanged={() => setRefreshKey((value) => value + 1)}
               />
             )}
@@ -463,19 +627,34 @@ function AnalysisPanel({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <SummaryCard label="Ölçülen" value={analysis.summary.assessedOutcomeCount} icon={<BarChart3 />} />
-          <SummaryCard label="Güçlü" value={analysis.summary.masteredOutcomeCount} tone="emerald" icon={<BookOpenCheck />} />
-          <SummaryCard label="Gelişiyor" value={analysis.summary.developingOutcomeCount} tone="sky" icon={<BarChart3 />} />
-          <SummaryCard label="Kanıt yetersiz" value={analysis.summary.insufficientOutcomeCount} tone="amber" icon={<AlertTriangle />} />
-        </div>
-        {canManagePrograms && guardianEmailDraft && (
-          <div className="mt-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0"><p className="flex items-center gap-2 text-sm font-black"><Mail className="h-4 w-4 text-[var(--primary)]" /> Veli bilgilendirme taslağı</p><p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Adres saklanmaz ve sistem gönderim yapmaz. Metni inceleyip kendi e-posta aracında kullanın.</p></div>
-            <button type="button" onClick={copyGuardianEmailDraft} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold"><ClipboardCheck className="h-4 w-4" /> {emailDraftStatus === 'copied' ? 'Kopyalandı' : emailDraftStatus === 'error' ? 'Kopyalanamadı' : 'E-posta taslağını kopyala'}</button>
+        <div className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.045] to-transparent p-4 lg:grid-cols-[minmax(16rem,0.9fr)_minmax(0,1.1fr)] lg:items-center">
+          <div>
+            <h3 className="text-sm font-black">Kazanım durumu</h3>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Ölçülen ve kanıt bekleyen kazanımların görsel dağılımı.</p>
+            <div className="mt-4">
+              <EvidenceDistributionChart
+                total={analysis.summary.outcomeCount}
+                centerValue={analysis.summary.assessedOutcomeCount}
+                centerLabel="ölçülen"
+                ariaLabel={`${analysis.summary.outcomeCount} kazanımın ${analysis.summary.masteredOutcomeCount} tanesi güçlü, ${analysis.summary.developingOutcomeCount} tanesi gelişiyor ve ${analysis.summary.insufficientOutcomeCount} tanesinde kanıt yetersiz`}
+                segments={[
+                  { label: 'Güçlü', value: analysis.summary.masteredOutcomeCount, colorClass: 'text-emerald-400', barClass: 'bg-emerald-400' },
+                  { label: 'Gelişiyor', value: analysis.summary.developingOutcomeCount, colorClass: 'text-sky-400', barClass: 'bg-sky-400' },
+                  { label: 'Kanıt yetersiz', value: analysis.summary.insufficientOutcomeCount, colorClass: 'text-amber-400', barClass: 'bg-amber-400' },
+                ]}
+              />
+            </div>
           </div>
-        )}
+          <div className="grid grid-cols-2 gap-2">
+            <SummaryCard label="Ölçülen" value={analysis.summary.assessedOutcomeCount} total={analysis.summary.outcomeCount} icon={<BarChart3 />} />
+            <SummaryCard label="Güçlü" value={analysis.summary.masteredOutcomeCount} total={analysis.summary.outcomeCount} tone="emerald" icon={<BookOpenCheck />} />
+            <SummaryCard label="Gelişiyor" value={analysis.summary.developingOutcomeCount} total={analysis.summary.outcomeCount} tone="sky" icon={<BarChart3 />} />
+            <SummaryCard label="Kanıt yetersiz" value={analysis.summary.insufficientOutcomeCount} total={analysis.summary.outcomeCount} tone="amber" icon={<AlertTriangle />} />
+          </div>
+        </div>
       </section>
+
+      <OutcomeAnalysisPanel analysis={analysis} />
 
       {canManagePrograms && (
         <StudentFollowupPanel
@@ -483,14 +662,6 @@ function AnalysisPanel({
           memberRef={analysis.student.memberRef}
           onChanged={onFollowupChanged}
         />
-      )}
-
-      {canManagePrograms && (
-        <ProgramReviewPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
-      )}
-
-      {canManagePrograms && (
-        <StudentReportPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
       )}
 
       {canManagePrograms && (
@@ -522,7 +693,32 @@ function AnalysisPanel({
         </section>
       )}
 
-      <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
+      {canManagePrograms && (
+        <ProgramReviewPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
+      )}
+
+      {canManagePrograms && (
+        <StudentReportPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
+      )}
+
+      {canManagePrograms && guardianEmailDraft && (
+        <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-2 text-lg font-black"><Mail className="h-5 w-5 text-[var(--primary)]" aria-hidden="true" /> Veli bilgilendirme taslağı</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Adres saklanmaz ve sistem gönderim yapmaz. Kanıt, takip ve programı inceledikten sonra metni kendi e-posta aracınızda kullanın.</p>
+            </div>
+            <button type="button" onClick={copyGuardianEmailDraft} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold"><ClipboardCheck className="h-4 w-4" aria-hidden="true" /> {emailDraftStatus === 'copied' ? 'Kopyalandı' : emailDraftStatus === 'error' ? 'Kopyalanamadı' : 'E-posta taslağını kopyala'}</button>
+          </div>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function OutcomeAnalysisPanel({ analysis }: { analysis: InstitutionStudentLearningAnalysis }) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-black">Kazanım analizi</h3>
@@ -550,10 +746,11 @@ function AnalysisPanel({
                       <span className="text-[var(--text-sub)]">Açıklanabilir skor</span>
                       <strong>{outcome.assessment.score === null ? '—' : `%${outcome.assessment.score}`}</strong>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
-                      <div
-                        className="h-full rounded-full bg-[var(--primary)]"
-                        style={{ width: `${outcome.assessment.score ?? 0}%` }}
+                    <div className="mt-2">
+                      <PercentBar
+                        value={outcome.assessment.score}
+                        tone={outcome.assessment.status === 'mastered' ? 'emerald' : outcome.assessment.status === 'developing' ? 'sky' : 'amber'}
+                        label={`${outcome.title} açıklanabilir skoru`}
                       />
                     </div>
                   </div>
@@ -573,18 +770,19 @@ function AnalysisPanel({
           })}
         </div>
       </section>
-    </div>
   )
 }
 
 function SummaryCard({
   label,
   value,
+  total,
   tone = 'primary',
   icon,
 }: {
   label: string
   value: number
+  total: number
   tone?: 'primary' | 'emerald' | 'sky' | 'amber'
   icon: React.ReactElement
 }) {
@@ -594,11 +792,24 @@ function SummaryCard({
     sky: 'text-sky-300',
     amber: 'text-amber-300',
   }
+  const bars = {
+    primary: 'bg-[var(--primary)]',
+    emerald: 'bg-emerald-400',
+    sky: 'bg-sky-400',
+    amber: 'bg-amber-400',
+  }
+  const ratio = total > 0 ? Math.round((value / total) * 100) : 0
   return (
-    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.025] p-3">
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.035] p-3">
       <div className={`[&>svg]:h-4 [&>svg]:w-4 ${tones[tone]}`} aria-hidden="true">{icon}</div>
-      <strong className="mt-2 block text-xl font-black">{value}</strong>
+      <div className="mt-2 flex items-end justify-between gap-2">
+        <strong className="block text-xl font-black leading-none">{value}</strong>
+        <span className="text-[10px] font-bold text-[var(--text-sub)]">%{ratio}</span>
+      </div>
       <span className="mt-0.5 block truncate text-[11px] text-[var(--text-sub)] sm:text-xs">{label}</span>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+        <div className={`h-full rounded-full ${bars[tone]}`} style={{ width: `${ratio}%` }} />
+      </div>
     </div>
   )
 }

@@ -7,6 +7,7 @@ import {
   ACTIVATION_REWARD_COOKIE,
   claimActivationReward,
 } from '@/lib/activation/server-reward'
+import { safeAuthNext } from '@/lib/auth/safe-next'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
@@ -14,13 +15,8 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placehol
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // Open redirect onleme: sadece relative path kabul et, // ile baslayanları reddet
-  const rawNext = searchParams.get('next') ?? '/arena'
-  const next = rawNext.startsWith('/')
-    && !rawNext.startsWith('//')
-    && !rawNext.includes('\\')
-    ? rawNext
-    : '/arena'
+  // Open redirect önleme: yalnız güvenli relative path kabul edilir.
+  const next = safeAuthNext(searchParams.get('next'))
 
   if (code) {
     const cookieStore = await cookies()

@@ -43,9 +43,14 @@ export async function DELETE(
     p_request_id: body.data.requestId,
   })
   if (error) {
+    const status = institutionPilotRpcStatus(error.code)
     return institutionPilotNoStoreJson(
-      { error: 'Kurum öğretmeni çıkarılamadı' },
-      { status: institutionPilotRpcStatus(error.code) },
+      {
+        error: status === 409
+          ? 'Aktif sınıfı bulunan öğretmen kurumdan çıkarılamaz'
+          : 'Kurum öğretmeni çıkarılamadı',
+      },
+      { status },
     )
   }
 

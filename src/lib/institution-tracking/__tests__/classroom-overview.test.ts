@@ -32,18 +32,19 @@ describe('institution classroom overview', () => {
     const result = buildInstitutionClassroomOverview(base)
     expect(result?.summary).toEqual({ activeStudentCount: 5, studentsWithDecisionSafeEvidence: 4, studentsNeedingSupport: 3, studentsWithoutDecisionSafeEvidence: 1, eligibleStudentOutcomeCount: 4, developingStudentOutcomeCount: 3, masteredStudentOutcomeCount: 1 })
     expect(result?.priorityOutcomes).toEqual([{ code: 'MAT-01', title: 'Temel Kavramlar', studentCount: 3, evidenceCount: 18, averageScore: 50 }])
-    expect(result?.teacherIndicators.dimensions.programManagement).toMatchObject({ status: 'available', value: 100, evidence: [{ numerator: 3, denominator: 3 }] })
-    expect(result?.teacherIndicators.dimensions.followUpDiscipline).toMatchObject({ status: 'available', value: 100, evidence: [{ numerator: 3, denominator: 3 }] })
-    expect(result?.teacherIndicators.dimensions.interventionResponsiveness).toMatchObject({ status: 'available', value: 66.7, evidence: [{ numerator: 2, denominator: 3 }] })
-    expect(result?.teacherIndicators.dimensions.studentGrowth).toMatchObject({ status: 'available', value: 75, evidence: [{ numerator: 3, denominator: 4 }] })
+    expect(result?.teacherIndicators?.modelVersion).toBe('institution-teacher-indicators-v2')
+    expect(result?.teacherIndicators?.dimensions.programManagement).toMatchObject({ status: 'available', value: 100, evidence: [{ numerator: 3, denominator: 3 }] })
+    expect(result?.teacherIndicators?.dimensions.followUpDiscipline).toMatchObject({ status: 'available', value: 100, evidence: [{ numerator: 3, denominator: 3 }] })
+    expect(result?.teacherIndicators?.dimensions.interventionResponsiveness).toMatchObject({ status: 'available', value: 66.7, evidence: [{ numerator: 2, denominator: 3 }] })
+    expect(result?.teacherIndicators?.dimensions.studentGrowth).toMatchObject({ status: 'insufficient', value: null, evidence: [{ numerator: 3, denominator: 4 }] })
   })
 
   it('suppresses outcome aggregates below three affected students', () => {
     const input = { ...base, classroom: { ...base.classroom, activeStudentCount: 2 }, analyses: base.analyses.slice(0, 2), publishedProgramMemberRefs: [], followupMetrics: { followedMemberRefs: [], interventionEligibleCount: 0, timelyInterventionCount: 0, interventionStudentCount: 0 }, growthMetrics: { ...base.growthMetrics, eligibleStudentCount: 2, positiveGrowthStudentCount: 1, excludedInsufficientCount: 0 } }
     const result = buildInstitutionClassroomOverview(input)
     expect(result?.priorityOutcomes).toEqual([])
-    expect(result?.teacherIndicators.dimensions.programManagement.value).toBeNull()
-    expect(result?.teacherIndicators.dimensions.dataReliability.value).toBeNull()
+    expect(result?.teacherIndicators?.dimensions.programManagement.value).toBeNull()
+    expect(result?.teacherIndicators?.dimensions.dataReliability.value).toBeNull()
   })
 
   it('rejects missing roster rows, cross-classroom data and unknown program refs', () => {

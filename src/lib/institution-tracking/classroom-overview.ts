@@ -73,7 +73,7 @@ export const institutionClassroomOverviewSchema = z.object({
     evidenceCount: countSchema,
     averageScore: z.number().min(0).max(100),
   }).strict()).max(10),
-  teacherIndicators: teacherIndicatorSetSchema,
+  teacherIndicators: teacherIndicatorSetSchema.optional(),
 }).strict().superRefine((value, context) => {
   const summary = value.summary
   if (summary.studentsWithDecisionSafeEvidence + summary.studentsWithoutDecisionSafeEvidence !== summary.activeStudentCount
@@ -121,7 +121,7 @@ export function buildInstitutionClassroomOverview(value: unknown) {
   const publishedForNeed = parsed.data.publishedProgramMemberRefs.filter((ref) => needsRefs.has(ref)).length
   const followedForNeed = parsed.data.followupMetrics.followedMemberRefs.filter((ref) => needsRefs.has(ref)).length
   const teacherIndicators = buildTeacherIndicatorSet({
-    modelVersion: 'institution-teacher-indicators-v1',
+    modelVersion: 'institution-teacher-indicators-v2',
     windowStart: parsed.data.windowStart,
     windowEnd: parsed.data.windowEnd,
     dimensions: {

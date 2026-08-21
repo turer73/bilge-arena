@@ -86,21 +86,26 @@ function* iterRecords(dir) {
   for (const f of readdirSync(dir)) {
     if (!f.endsWith('.json') || f === 'soru-deposu-schema.json') continue
     const d = JSON.parse(readFileSync(join(dir, f), 'utf-8'))
-    yield* walk(d, f, '')
+    yield* walk(d, f, '', {})
   }
 }
-function* walk(node, file, prefix) {
+function* walk(node, file, prefix, inherited) {
   if (Array.isArray(node)) {
     for (const q of node) {
       if (!q || typeof q !== 'object') continue
       const id = q.id ?? q.number ?? '?'
       const loc = `${file}:${prefix}:${id}`
+      const context = {
+        examRef: q.exam_ref ?? q.examRef ?? inherited.examRef ?? null,
+        game: q.game ?? inherited.game ?? null,
+      }
       // nested passage/dialogue: passage/dialogue + questions[]
       if (Array.isArray(q.questions)) {
         for (const sub of q.questions) {
           yield {
             file, section: prefix, id: `${id}#${sub.number ?? '?'}`, loc: `${loc}#${sub.number ?? '?'}`,
             text: '[NESTED]', options: sub.options ?? [], answer: sub.answer, solution: '', raw: sub, nested: true,
+            examRef: sub.exam_ref ?? sub.examRef ?? context.examRef, game: sub.game ?? context.game,
           }
         }
         continue
@@ -109,14 +114,29 @@ function* walk(node, file, prefix) {
         file, section: prefix, id, loc,
         text: q.question ?? q.sentence ?? (Array.isArray(q.dialogue) ? '[DIALOGUE]' : ''),
         options: q.options ?? [], answer: q.answer, solution: q.solution ?? '', raw: q, nested: false,
+        examRef: context.examRef, game: context.game,
       }
     }
   } else if (node && typeof node === 'object') {
+    const meta = node.meta ?? node._meta ?? {}
+    const context = {
+      examRef: node.exam_ref ?? node.examRef ?? meta.exam_ref ?? meta.examRef ?? inherited.examRef ?? null,
+      game: node.game ?? meta.game ?? inherited.game ?? null,
+    }
     for (const [k, v] of Object.entries(node)) {
       if (k === 'meta' || k === '_meta') continue
-      yield* walk(v, file, prefix ? `${prefix}/${k}` : k)
+      yield* walk(v, file, prefix ? `${prefix}/${k}` : k, context)
     }
   }
+}
+
+export function expectedOptionCounts(examRef, game) {
+  const exam = String(examRef ?? '').trim().toUpperCase()
+  if (exam.includes('LGS')) return [4]
+  if (exam.includes('TYT') || exam.includes('AYT') || exam.includes('YDT')) return [5]
+  // Eski kayitlarda sinav metadata'si yok. Bu durumda bankada gercekten
+  // kullanilan iki formati kabul et; 5'i sessizce evrensel varsayma.
+  return [4, 5]
 }
 
 export function validateQuestionBank(dir = DEFAULT_DIR) {
@@ -152,8 +172,11 @@ export function validateQuestionBank(dir = DEFAULT_DIR) {
 
     if (!opts) { addErr('options_not_array', r.loc, `options dizi değil: ${typeof r.options}`); continue }
 
-    // seçenek sayısı
-    if (opts.length !== 5) addErr('option_count', r.loc, `${opts.length} seçenek (5 beklenir)`)
+    // seçenek sayısı: LGS=4, TYT/AYT/YDT=5; metadata yoksa 4 veya 5.
+    const expectedCounts = expectedOptionCounts(r.examRef, r.game)
+    if (!expectedCounts.includes(opts.length)) {
+      addErr('option_count', r.loc, `${opts.length} seçenek (${expectedCounts.join(' veya ')} beklenir)`)
+    }
     // boş seçenek
     opts.forEach((o, i) => { if (!String(o).trim()) addErr('empty_option', r.loc, `boş şık idx${i}`) })
     // EXACT dup (case-sensitive, FP-güvenli)

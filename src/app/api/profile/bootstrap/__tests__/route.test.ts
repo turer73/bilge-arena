@@ -6,14 +6,14 @@ const {
   mockGetUser,
   mockRateLimitCheck,
   mockProfileSingle,
-  mockRolesLimit,
+  mockPlatformAdmin,
   mockAnswersReturns,
   mockSessionsLimit,
 } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockRateLimitCheck: vi.fn(async () => ({ success: true })),
   mockProfileSingle: vi.fn(),
-  mockRolesLimit: vi.fn(),
+  mockPlatformAdmin: vi.fn(),
   mockAnswersReturns: vi.fn(),
   mockSessionsLimit: vi.fn(),
 }))
@@ -27,7 +27,6 @@ vi.mock('@/lib/supabase/server', () => ({
 /**
  * Service-role mock — 4 tablo:
  *   profiles  → .select('*').eq().single()
- *   user_roles → .select('role_id').eq().limit()
  *   session_answers → .select(...).eq().returns()
  *   game_sessions → .select(...).eq().eq().order().limit()
  */
@@ -38,13 +37,6 @@ vi.mock('@/lib/supabase/service-role', () => ({
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({ single: mockProfileSingle })),
-          })),
-        }
-      }
-      if (table === 'user_roles') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({ limit: mockRolesLimit })),
           })),
         }
       }
@@ -71,6 +63,10 @@ vi.mock('@/lib/supabase/service-role', () => ({
       return {}
     }),
   })),
+}))
+
+vi.mock('@/lib/supabase/platform-access', () => ({
+  userHasPlatformAdminAccess: mockPlatformAdmin,
 }))
 
 vi.mock('@/lib/utils/rate-limit', () => ({
@@ -100,7 +96,7 @@ describe('GET /api/profile/bootstrap', () => {
     // Defaults: auth OK, rate limit OK, empty data
     mockRateLimitCheck.mockResolvedValue({ success: true })
     mockProfileSingle.mockResolvedValue({ data: PROFILE, error: null })
-    mockRolesLimit.mockResolvedValue({ data: [], error: null })
+    mockPlatformAdmin.mockResolvedValue(false)
     mockAnswersReturns.mockResolvedValue({ data: [], error: null })
     mockSessionsLimit.mockResolvedValue({ data: [], error: null })
   })
@@ -155,9 +151,9 @@ describe('GET /api/profile/bootstrap', () => {
     expect(body.recentGames).toEqual([])
   })
 
-  it('sets isAdmin true when user_roles returns a row', async () => {
+  it('sets isAdmin true only for a real platform admin permission', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockRolesLimit.mockResolvedValue({ data: [{ role_id: 'admin' }], error: null })
+    mockPlatformAdmin.mockResolvedValue(true)
 
     const res = await GET(makeGet() as never)
     const body = await res.json()

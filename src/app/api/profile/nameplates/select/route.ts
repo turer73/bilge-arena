@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { z } from 'zod'
 import { PROFILE_NAMEPLATES } from '@/lib/constants/profile-nameplates'
+import { userHasPlatformAdminAccess } from '@/lib/supabase/platform-access'
 
 const userLimiter = createRateLimiter('nameplate-select-user', 30, 60_000)
 
@@ -46,14 +47,9 @@ export async function POST(request: NextRequest) {
   const svc = createServiceRoleClient()
 
   // Sahiplik guard: ücretsiz (coinCost undefined) herkese açık; ücretli ise owned
-  // olmalı. İSTİSNA: personel (RBAC rolü olan) tüm panelleri ücretsiz kullanır.
+  // olmalı. İSTİSNA: gerçek platform personeli tüm panelleri ücretsiz kullanır.
   if (npDef.coinCost !== undefined) {
-    const { data: roles } = await svc
-      .from('user_roles')
-      .select('role_id')
-      .eq('user_id', user.id)
-      .limit(1)
-    const staff = !!(roles && roles.length > 0)
+    const staff = await userHasPlatformAdminAccess(svc, user.id)
     if (!staff) {
       const { data: prof } = await svc
         .from('profiles')

@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { trackEvent } from '@/lib/utils/plausible'
 import { resetGuestQuizCount } from '@/lib/hooks/use-guest-session'
 import type { Profile } from '@/types/database'
+import { safeAuthNext } from '@/lib/auth/safe-next'
 
 interface ProfileApiResponse {
   profile: Profile
@@ -50,6 +51,8 @@ async function syncProfileFromApi(): Promise<ProfileSyncResponse | null> {
 
 /**
  * API'den gelen profile + isAdmin'i Profile tipine bind eder.
+ * isAdmin yalnız gerçek platform yönetim izinlerini temsil eder; kurum pilotu
+ * veya öğretmen pilotu erişimi bu alanı yükseltmez.
  * role alani UI'da kullanildigi icin 'admin' | 'user' string'ine map ediliyor.
  */
 function applyRole(profile: Profile, isAdmin: boolean): Profile {
@@ -177,14 +180,20 @@ export function useAuth() {
     }
   }
 
-  async function signInWithGoogle(next = '/arena') {
-    const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/arena'
+  async function signInWithGoogle(
+    next = '/arena',
+    options?: { forceAccountSelection?: boolean },
+  ) {
+    const safeNext = safeAuthNext(next)
     const callbackUrl = new URL('/auth/callback', window.location.origin)
     callbackUrl.searchParams.set('next', safeNext)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: callbackUrl.toString(),
+        queryParams: options?.forceAccountSelection
+          ? { prompt: 'select_account' }
+          : undefined,
       },
     })
   }

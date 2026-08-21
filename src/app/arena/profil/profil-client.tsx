@@ -95,11 +95,17 @@ export default function ProfilClient() {
       .finally(() => setStatsLoading(false))
   }, [user])
 
+  useEffect(() => {
+    document.body.classList.add('mobile-profile-active')
+    return () => document.body.classList.remove('mobile-profile-active')
+  }, [])
+
   // Yukleniyor
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-[var(--focus)]" />
+      <div className="mx-auto flex min-h-dvh w-full max-w-[440px] items-center justify-center bg-[#f7f8fa]">
+        <ProfileShellStyle />
+        <div className="h-10 w-10 animate-spin rounded-full border-[4px] border-[#dbeafe] border-t-[#2563eb]" />
       </div>
     )
   }
@@ -107,18 +113,26 @@ export default function ProfilClient() {
   // Giris yapilmamis
   if (!user || !profile) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <div className="mb-4 text-5xl">🔒</div>
-        <h1 className="mb-2 text-xl font-bold">Giris Yapmaniz Gerekiyor</h1>
-        <p className="mb-6 text-sm text-[var(--text-sub)]">
-          Profilinizi gormek ve ilerlemenizi takip etmek icin giris yapin.
-        </p>
-        <Link
-          href="/giris"
-          className="btn-primary inline-block rounded-[10px] px-8 py-3 font-display text-sm font-bold tracking-wider"
-        >
-          Giris Yap
-        </Link>
+      <div className="mx-auto min-h-dvh w-full max-w-[440px] bg-[#f7f8fa] px-4 py-5 text-center text-[#172554]">
+        <ProfileShellStyle />
+        <div className="mb-5 flex items-center justify-between rounded-2xl border-2 border-[#e2e8f0] bg-white px-3 py-2.5 shadow-[0_4px_0_#dbe2ea]">
+          <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[#dbeafe] bg-[#eff6ff] text-xl font-black text-[#2563eb]">‹</Link>
+          <span className="font-display text-base font-black">Profil</span>
+          <span className="h-11 w-11" />
+        </div>
+        <div className="rounded-[28px] border-2 border-[#dbeafe] bg-white px-6 py-8 shadow-[0_6px_0_#bfdbfe]">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#eff6ff] text-4xl">🔒</div>
+          <h1 className="mb-2 text-xl font-black">Profilin seni bekliyor</h1>
+          <p className="mb-6 text-sm font-semibold leading-relaxed text-[#64748b]">
+            İlerlemeni, serini ve kazandığın rozetleri görmek için giriş yap.
+          </p>
+          <Link
+            href="/giris"
+            className="block min-h-12 rounded-2xl border-2 border-[#1d4ed8] bg-[#2563eb] px-8 py-3 font-display text-sm font-black tracking-wide text-white shadow-[0_5px_0_#1e40af] active:translate-y-1 active:shadow-none"
+          >
+            Giriş Yap
+          </Link>
+        </div>
       </div>
     )
   }
@@ -153,10 +167,10 @@ export default function ProfilClient() {
   // (docs/plans/2026-08-16-kozmetik-ekonomi-yol-haritasi.md, İP-2).
 
   const mainStats = [
-    { label: 'COIN', value: coinBalance, icon: '🪙', color: 'var(--reward-light)' },
-    { label: 'OYUN', value: totalSessions, icon: '🎮', color: 'var(--focus)' },
-    { label: 'BAŞARI', value: `%${accuracy}`, icon: '🎯', color: 'var(--growth)' },
-    { label: 'EN İYİ SERİ', value: longestStreak, icon: '🔥', color: 'var(--reward-light)' },
+    { label: 'ALTIN', value: coinBalance, icon: '🪙', color: '#d97706' },
+    { label: 'OYUN', value: totalSessions, icon: '🎮', color: '#2563eb' },
+    { label: 'BAŞARI', value: `%${accuracy}`, icon: '🎯', color: '#16a34a' },
+    { label: 'EN İYİ SERİ', value: longestStreak, icon: '🔥', color: '#ea580c' },
   ]
 
   // Kategori ilerleme verisini hazirla (gercek veya bos)
@@ -197,11 +211,20 @@ export default function ProfilClient() {
   })
 
   return (
-    <div className="mx-auto max-w-2xl px-3 pt-4 pb-8 sm:px-4 sm:pt-6 md:max-w-3xl md:py-8 xl:max-w-4xl xl:px-6 xl:py-10 2xl:max-w-5xl">
+    <div className="mx-auto min-h-dvh w-full max-w-[440px] bg-[#f7f8fa] px-4 pb-28 pt-4 text-[#172554]">
+      <ProfileShellStyle />
+      <div className="mb-4 flex items-center justify-between rounded-2xl border-2 border-[#e2e8f0] bg-white px-3 py-2.5 shadow-[0_4px_0_#dbe2ea]">
+        <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[#dbeafe] bg-[#eff6ff] text-xl font-black text-[#2563eb]">‹</Link>
+        <div className="text-center">
+          <div className="font-display text-base font-black">Profil</div>
+          <div className="text-[10px] font-bold text-[#64748b]">Öğrenme yolculuğun</div>
+        </div>
+        <Link href="/arena/magaza" aria-label="Mağazaya git" className="flex h-11 min-w-11 items-center justify-center rounded-xl border-2 border-[#fde68a] bg-[#fffbeb] px-2 text-xs font-black text-[#b45309]">🪙 {coinBalance}</Link>
+      </div>
       {/* Profil basligi — magazadan secilen arka planla (none=standart kart) */}
       <div
         data-testid="profil-header-card"
-        className={`relative isolate mb-4 animate-fadeUp overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 shadow-sm md:mb-6 md:p-6 xl:p-7 2xl:p-8 ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
+        className={`relative isolate mb-5 animate-fadeUp overflow-hidden rounded-[28px] border-2 border-[#dbeafe] bg-white p-4 shadow-[0_6px_0_#bfdbfe] ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
         style={isCssBg ? { background: activeBackground.css } : undefined}
       >
         <CardBackgroundLayer
@@ -248,7 +271,7 @@ export default function ProfilClient() {
               aria-expanded={framePickerOpen}
               className="absolute -bottom-3 -right-3 flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card-bg)] text-xs shadow-sm transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#dbeafe] bg-white text-xs shadow-sm transition-colors hover:border-[#2563eb] hover:text-[#2563eb]">
                 🖼
               </span>
             </button>
@@ -258,10 +281,10 @@ export default function ProfilClient() {
             <h1 className="truncate text-base font-bold sm:text-lg md:text-xl xl:text-2xl">
               <Nameplate nameplateId={profile.selected_nameplate}>{displayName}</Nameplate>
             </h1>
-            <p className="mt-0.5 truncate text-[11px] font-semibold text-[var(--text-sub)] sm:text-xs">
+            <p className="mt-0.5 truncate text-[11px] font-semibold text-[#475569] sm:text-xs">
               {level.badge} {level.name}
             </p>
-            <p className="truncate text-[10px] text-[var(--text-muted)] sm:text-[11px]">
+            <p className="truncate text-[10px] text-[#64748b] sm:text-[11px]">
               {memberSince}&apos;dan beri üye
             </p>
           </div>
@@ -272,13 +295,13 @@ export default function ProfilClient() {
 
           <div
             data-testid="profile-xp-summary"
-            className="col-span-3 rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg-secondary)_82%,transparent)] p-3"
+            className="col-span-3 rounded-2xl border-2 border-[#dbeafe] bg-[#eff6ff] p-3"
           >
             <div className="mb-2 flex items-center justify-between gap-3">
-              <span className="text-[10px] font-extrabold tracking-[0.12em] text-[var(--text-sub)]">
+              <span className="text-[10px] font-extrabold tracking-[0.12em] text-[#475569]">
                 SEVİYE İLERLEMESİ
               </span>
-              <span className="shrink-0 font-display text-sm font-black tabular-nums text-[var(--reward)]">
+              <span className="shrink-0 font-display text-sm font-black tabular-nums text-[#d97706]">
                 {totalXP.toLocaleString('tr-TR')} XP
               </span>
             </div>
@@ -296,9 +319,9 @@ export default function ProfilClient() {
 
         {/* Çerçeve seçici paneli */}
         {framePickerOpen && (
-          <div className="relative z-10 mt-3 animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] p-3">
+          <div className="relative z-10 mt-3 animate-fadeUp rounded-2xl border-2 border-[#e2e8f0] bg-white p-3 shadow-[0_4px_0_#dbe2ea]">
             <div className="mb-2.5 flex items-center justify-between">
-              <p className="text-xs font-extrabold uppercase tracking-widest text-[var(--text-muted)]">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-[#475569]">
                 Profil Çerçevesi
               </p>
               <span className="text-xs font-bold text-[var(--reward-light)]">
@@ -352,7 +375,7 @@ export default function ProfilClient() {
             </div>
 
             {activeFrame.id !== 'none' && (
-              <p className="mt-2.5 border-t border-[var(--border)] pt-2 text-xs text-[var(--text-muted)]">
+              <p className="mt-2.5 border-t-2 border-[#e2e8f0] pt-2 text-xs text-[#64748b]">
                 <span className="font-bold" style={{ color: FRAME_RARITY_COLOR[activeFrame.rarity] }}>
                   {activeFrame.name}
                 </span>
@@ -383,7 +406,7 @@ export default function ProfilClient() {
       {stats && stats.gameStats.length > 0 && (
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
           <ProfileSectionTitle>OYUN İSTATİSTİKLERİ</ProfileSectionTitle>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {stats.gameStats.map((gs) => {
               const gameDef = GAMES[gs.game]
               if (!gameDef) return null
@@ -391,7 +414,7 @@ export default function ProfilClient() {
                 <Link
                   key={gs.game}
                   href={`/arena/${gs.game}`}
-                  className="group rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3 text-center transition-all hover:border-[var(--focus-border)] hover:shadow-sm"
+                  className="group rounded-2xl border-2 border-[#e2e8f0] bg-white p-3 text-center shadow-[0_4px_0_#dbe2ea] transition-all hover:border-[#93c5fd]"
                 >
                   <div
                     className="mx-auto mb-1.5 h-1 w-8 rounded-full"
@@ -404,7 +427,7 @@ export default function ProfilClient() {
                   >
                     %{gs.percentage}
                   </div>
-                  <div className="text-xs text-[var(--text-muted)]">
+                  <div className="text-xs text-[#64748b]">
                     {gs.correct}/{gs.total} dogru
                   </div>
                 </Link>
@@ -418,7 +441,7 @@ export default function ProfilClient() {
       {stats && stats.recentGames.length > 0 && (
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
           <ProfileSectionTitle>SON OYUNLAR</ProfileSectionTitle>
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] divide-y divide-[var(--border)]">
+          <div className="divide-y-2 divide-[#e2e8f0] overflow-hidden rounded-2xl border-2 border-[#e2e8f0] bg-white shadow-[0_4px_0_#dbe2ea]">
             {stats.recentGames.map((g) => {
               const gameDef = GAMES[g.game]
               if (!gameDef) return null
@@ -438,11 +461,11 @@ export default function ProfilClient() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold truncate">{gameDef.name}</span>
-                      <span className="rounded-md bg-[var(--bg-secondary)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--text-muted)]">
+                      <span className="rounded-md bg-[#f1f5f9] px-1.5 py-0.5 text-[9px] font-bold text-[#64748b]">
                         {MODE_LABELS[g.mode] || g.mode}
                       </span>
                     </div>
-                    <div className="text-xs text-[var(--text-muted)]">
+                    <div className="text-xs text-[#64748b]">
                       {g.correct_count}/{g.total_questions} dogru · {timeAgo}
                     </div>
                   </div>
@@ -459,7 +482,7 @@ export default function ProfilClient() {
                     >
                       %{gameAccuracy}
                     </div>
-                    <div className="text-xs text-[var(--reward)]">+{g.total_xp} XP</div>
+                    <div className="text-xs font-bold text-[#d97706]">+{g.total_xp} XP</div>
                   </div>
                 </div>
               )
@@ -477,7 +500,7 @@ export default function ProfilClient() {
       </ComponentErrorBoundary>
 
       {/* Bildirim + Referral */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 animate-fadeUp" style={{ animationDelay: '0.28s', animationFillMode: 'both' }}>
+      <div className="mb-6 grid gap-3 animate-fadeUp" style={{ animationDelay: '0.28s', animationFillMode: 'both' }}>
         <NotificationSettings />
         <ReferralCard />
       </div>
@@ -498,7 +521,7 @@ export default function ProfilClient() {
               <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-[var(--focus)]" />
             )}
           </ProfileSectionTitle>
-          <div className="grid gap-2 sm:grid-cols-2 md:gap-3 xl:gap-4">
+          <div className="grid gap-3">
             {gameProgressData.map(({ game, categories, totalAnswered, accuracy: gameAcc }) => (
               <ProgressChart
                 key={game}
@@ -519,9 +542,23 @@ export default function ProfilClient() {
 
 function ProfileSectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h3 className="mb-3 inline-flex min-h-7 items-center rounded-lg border border-[var(--border)] bg-[var(--card-bg)] px-2.5 py-1 text-[10px] font-extrabold tracking-[0.14em] text-[var(--text-sub)] shadow-sm sm:text-xs">
+    <h3 className="mb-3 inline-flex min-h-8 items-center rounded-xl border-2 border-[#dbeafe] bg-white px-3 py-1 text-[10px] font-extrabold tracking-[0.14em] text-[#475569] shadow-[0_3px_0_#dbe2ea]">
       {children}
     </h3>
+  )
+}
+
+function ProfileShellStyle() {
+  return (
+    <style jsx global>{`
+      body.mobile-profile-active [data-app-navbar] {
+        display: none !important;
+      }
+      body.mobile-profile-active [data-arena-main] {
+        background: #f7f8fa !important;
+        padding: 0 !important;
+      }
+    `}</style>
   )
 }
 

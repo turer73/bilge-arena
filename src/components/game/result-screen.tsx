@@ -68,61 +68,62 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
   }, [isGuest, incrementQuizCount])
 
   const stats = [
-    { label: 'DOĞRU', value: `${score}/${answeredCount}`, color: 'var(--growth)' },
-    { label: 'BAŞARI', value: `%${pct}`, color: config.color },
-    { label: 'XP +', value: String(xpEarned), color: 'var(--reward)' },
+    { label: 'DOĞRU', value: `${score}/${answeredCount}`, color: '#16a34a', tint: '#f0fdf4' },
+    { label: 'BAŞARI', value: `%${pct}`, color: config.color, tint: '#eff6ff' },
+    { label: 'XP KAZANCI', value: String(xpEarned), color: '#d97706', tint: '#fffbeb' },
   ]
 
   return (
-    <div className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center gap-3 p-4 md:min-h-[calc(100dvh-5rem)] md:gap-4 md:p-6 xl:gap-5 xl:p-8">
+    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[440px] flex-col justify-center gap-4 bg-[#f7f8fa] px-4 py-5 text-[#172554] md:min-h-[calc(100dvh-5rem)]">
       {/* Can bitti uyarisi */}
       {gameOver && (
-        <div className="animate-fadeUp rounded-xl border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-5 py-3 text-center">
-          <div className="text-lg font-bold text-[var(--urgency)]">💔 Canlar Bitti!</div>
-          <div className="mt-1 text-[11px] text-[var(--text-sub)]">
+        <div className="animate-fadeUp rounded-2xl border-2 border-[#fecaca] bg-[#fff1f2] px-5 py-3 text-center shadow-[0_4px_0_#fecaca]">
+          <div className="text-base font-black text-[#dc2626]">💔 Canlar bitti</div>
+          <div className="mt-1 text-xs font-semibold text-[#64748b]">
             {answeredCount}/{totalQuestions} soru cevaplanabildi
           </div>
         </div>
       )}
 
-      {/* Bilge Chan sonuc reaksiyonu */}
-      <BilgeChan
-        pose={gameOver ? 'sad' : 'victory'}
-        height={128}
-        className="animate-fadeUp"
-      />
-
-      {/* Rank */}
-      <div
-        className="animate-rankReveal font-display text-[80px] font-black leading-none md:text-[120px] xl:text-[150px] 2xl:text-[180px]"
-        style={{
-          color: config.color,
-          textShadow: `0 0 30px color-mix(in srgb, ${config.color} 53%, transparent), 0 0 80px color-mix(in srgb, ${config.color} 27%, transparent)`,
-        }}
-      >
-        {rank}
-      </div>
-
-      {/* Mesaj */}
-      <div className="animate-fadeUp font-display text-lg font-bold md:text-[22px] xl:text-2xl 2xl:text-3xl" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-        {config.message}
+      <div className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[#1d4ed8] bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#1e40af] p-5 text-white shadow-[0_6px_0_#1e3a8a] animate-fadeUp">
+        <div className="relative z-10 max-w-[58%] pt-2">
+          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#bfdbfe]">
+            Tur tamamlandı
+          </div>
+          <div
+            className="mt-1 animate-rankReveal font-display text-[72px] font-black leading-none"
+            style={{ color: '#fef08a', textShadow: '0 3px 0 rgba(120,53,15,.35)' }}
+          >
+            {rank}
+          </div>
+          <div className="mt-2 text-xl font-black leading-tight">{config.message}</div>
+          <p className="mt-2 text-xs font-semibold leading-relaxed text-[#dbeafe]">
+            {gameOver ? 'Bir sonraki turda daha güçlü döneceğiz.' : 'Harika iş! İlerlemen kaydedildi.'}
+          </p>
+        </div>
+        <BilgeChan
+          pose={gameOver ? 'sad' : 'victory'}
+          height={168}
+          className="absolute -bottom-2 -right-2 z-10 animate-fadeUp"
+        />
+        <div aria-hidden className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
       </div>
 
       {/* Stat kartlari */}
-      <div className="grid w-full max-w-[360px] grid-cols-3 gap-2 animate-fadeUp md:max-w-[420px] md:gap-3 xl:max-w-[520px] xl:gap-4 2xl:max-w-[600px]" style={{ animationDelay: '0.5s', animationFillMode: 'both' }}>
+      <div className="grid w-full grid-cols-3 gap-2.5 animate-fadeUp" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
         {stats.map((s, i) => (
           <div
             key={i}
-            className="rounded-lg border p-2.5 text-center md:rounded-xl md:p-3.5 xl:p-4 2xl:p-5"
+            className="rounded-2xl border-2 p-3 text-center shadow-[0_4px_0_#dbe2ea]"
             style={{
-              background: 'var(--card-bg)',
-              borderColor: `color-mix(in srgb, ${s.color} 20%, transparent)`,
+              background: s.tint,
+              borderColor: '#e2e8f0',
             }}
           >
-            <div className="font-display text-xl font-black md:text-2xl xl:text-3xl 2xl:text-4xl" style={{ color: s.color }}>
+            <div className="font-display text-xl font-black" style={{ color: s.color }}>
               {s.value}
             </div>
-            <div className="mt-1 text-[9px] font-extrabold tracking-wider text-[var(--text-sub)]">
+            <div className="mt-1 text-[9px] font-extrabold tracking-wider text-[#64748b]">
               {s.label}
             </div>
           </div>
@@ -134,18 +135,18 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
           kazandigini burada gormezse magazaya yonelmiyor. */}
       {coinsEarned !== null && (
         <div
-          className="rounded-[10px] border border-[var(--reward-border)] bg-[var(--reward-bg)] px-5 py-2.5 text-center animate-fadeUp"
+          className="rounded-2xl border-2 border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-center shadow-[0_4px_0_#fde68a] animate-fadeUp"
           style={{ animationDelay: '0.6s', animationFillMode: 'both' }}
         >
           {coinsEarned > 0 ? (
-            <span className="text-[13px] font-semibold text-[var(--reward)]">
+            <span className="text-[13px] font-bold text-[#b45309]">
               🪙 +{coinsEarned} altın kazandın!{' '}
               <Link href="/arena/magaza" className="underline underline-offset-2 hover:opacity-80">
                 Mağaza →
               </Link>
             </span>
           ) : (
-            <span className="text-[13px] font-semibold text-[var(--text-sub)]">
+            <span className="text-[13px] font-semibold text-[#64748b]">
               🪙 Bugünlük altın sınırına ulaştın — yarın kazanmaya devam!
             </span>
           )}
@@ -155,31 +156,31 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
       {/* Max streak */}
       {maxStreak >= 3 && (
         <div
-          className="rounded-[10px] border border-[var(--reward-border)] bg-[var(--reward-bg)] px-5 py-2.5 animate-fadeUp"
+          className="rounded-2xl border-2 border-[#fed7aa] bg-[#fff7ed] px-4 py-3 text-center shadow-[0_4px_0_#fed7aa] animate-fadeUp"
           style={{ animationDelay: '0.7s', animationFillMode: 'both' }}
         >
-          <span className="text-[13px] font-semibold text-[var(--reward)]">
+          <span className="text-[13px] font-bold text-[#c2410c]">
             🔥 En yüksek seri: {maxStreak} soru doğru!
           </span>
         </div>
       )}
 
       {/* Sosyal medya paylasim */}
-      <div className="animate-fadeUp" style={{ animationDelay: '0.9s', animationFillMode: 'both' }}>
+      <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-3 shadow-[0_4px_0_#dbe2ea] animate-fadeUp" style={{ animationDelay: '0.55s', animationFillMode: 'both' }}>
         <ShareButtons rank={rank} score={score} total={totalQuestions} xp={xpEarned} />
       </div>
 
       {/* Butonlar */}
-      <div className="flex gap-3 animate-fadeUp" style={{ animationDelay: '1.1s', animationFillMode: 'both' }}>
+      <div className="grid grid-cols-2 gap-3 animate-fadeUp" style={{ animationDelay: '0.7s', animationFillMode: 'both' }}>
         <button
           onClick={onRestart}
-          className="btn-primary rounded-[10px] px-6 py-3 font-display text-xs font-bold tracking-wider shadow-lg transition-transform hover:scale-[1.03] md:px-9 md:py-[13px] md:text-sm xl:text-base xl:px-10 xl:py-4"
+          className="min-h-12 rounded-2xl border-2 border-[#1d4ed8] bg-[#2563eb] px-4 py-3 font-display text-sm font-black tracking-wide text-white shadow-[0_5px_0_#1e40af] transition-transform active:translate-y-1 active:shadow-none"
         >
           Tekrar Oyna →
         </button>
         <button
           onClick={onExit}
-          className="btn-ghost rounded-[10px] px-4 py-3 text-xs font-bold md:px-6 md:py-[13px] md:text-sm xl:text-base xl:py-4"
+          className="min-h-12 rounded-2xl border-2 border-[#cbd5e1] bg-white px-4 py-3 text-sm font-black text-[#334155] shadow-[0_5px_0_#cbd5e1] transition-transform active:translate-y-1 active:shadow-none"
         >
           Lobiye Dön
         </button>

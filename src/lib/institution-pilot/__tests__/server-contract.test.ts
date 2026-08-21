@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   institutionPilotNoStoreJson,
+  institutionPilotManagerTeacherInputSchema,
+  institutionPilotManagerTeacherResultSchema,
   institutionPilotRpcStatus,
   institutionPilotTeacherAddInputSchema,
   institutionPilotTeacherAddResultSchema,
@@ -43,15 +45,16 @@ describe('institution pilot server contract', () => {
     expect(institutionPilotRpcStatus('unexpected')).toBe(500)
   })
 
-  it('keeps manager teacher mutations UUID/ref-only and strict', () => {
+  it('accepts a normalized teacher email at the server boundary but never a client user id', () => {
     const requestId = '33333333-3333-4333-8333-333333333333'
-    const teacherUserId = '44444444-4444-4444-8444-444444444444'
-    expect(institutionPilotTeacherAddInputSchema.parse({ teacherUserId, requestId }))
-      .toEqual({ teacherUserId, requestId })
-    expect(institutionPilotTeacherAddInputSchema.safeParse({
-      teacherUserId,
+    expect(institutionPilotTeacherAddInputSchema.parse({
+      teacherEmail: ' Teacher@Example.com ',
       requestId,
-      email: 'leak@example.com',
+    })).toEqual({ teacherEmail: 'teacher@example.com', requestId })
+    expect(institutionPilotTeacherAddInputSchema.safeParse({
+      teacherEmail: 'teacher@example.com',
+      requestId,
+      teacherUserId: '44444444-4444-4444-8444-444444444444',
     }).success).toBe(false)
     expect(institutionPilotTeacherAddResultSchema.safeParse({
       institutionId: workspace.institution.id,
@@ -65,6 +68,22 @@ describe('institution pilot server contract', () => {
       memberRef: 'b'.repeat(32),
       status: 'removed',
       endedAt: workspace.membership.joinedAt,
+      replayed: false,
+    }).success).toBe(true)
+  })
+
+  it('accepts only a boolean manager teacher toggle and opaque result', () => {
+    const requestId = '33333333-3333-4333-8333-333333333333'
+    expect(institutionPilotManagerTeacherInputSchema.parse({ enabled: true, requestId }))
+      .toEqual({ enabled: true, requestId })
+    expect(institutionPilotManagerTeacherInputSchema.safeParse({
+      enabled: true,
+      requestId,
+      memberRef: 'b'.repeat(32),
+    }).success).toBe(false)
+    expect(institutionPilotManagerTeacherResultSchema.safeParse({
+      memberRef: 'b'.repeat(32),
+      enabled: true,
       replayed: false,
     }).success).toBe(true)
   })

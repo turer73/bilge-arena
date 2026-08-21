@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Gamepad2, Swords, Trophy, User, type LucideIcon } from 'lucide-react'
+import { BookOpen, Dumbbell, Swords, Trophy, User, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 /**
@@ -23,19 +23,26 @@ interface NavItem {
 }
 
 const ITEMS: NavItem[] = [
-  { id: 'lobby', href: '/arena', label: 'Oyunlar', Icon: Gamepad2 },
+  { id: 'learn', href: '/arena', label: 'Öğren', Icon: BookOpen },
+  { id: 'practice', href: '/arena/calisma', label: 'Pratik', Icon: Dumbbell },
   { id: 'oda', href: '/oda', label: 'Arena', Icon: Swords },
-  { id: 'leaderboard', href: '/arena/siralama', label: 'Sıralama', Icon: Trophy },
+  { id: 'leaderboard', href: '/arena/siralama', label: 'Lig', Icon: Trophy },
   { id: 'profile', href: '/arena/profil', label: 'Profil', Icon: User },
 ]
 
 interface BottomNavProps {
   /** Demo/storybook icin rota yerine sabit aktif sekme. */
   activeOverride?: string
+  /** Öğrenme yolu ekranındaki açık renk, uygulama-benzeri kabuk. */
+  appearance?: 'default' | 'learning'
 }
 
-export function BottomNav({ activeOverride }: BottomNavProps) {
+export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavProps) {
   const pathname = usePathname()
+  const learningAppearance = appearance === 'learning'
+    || pathname === '/arena'
+    || pathname.startsWith('/arena/')
+    || pathname === '/mobil-demo'
 
   const isActive = (item: NavItem) => {
     if (activeOverride) return activeOverride === item.id
@@ -46,16 +53,22 @@ export function BottomNav({ activeOverride }: BottomNavProps) {
 
   return (
     <nav
+      data-bottom-nav
       aria-label="Mobil gezinme"
-      className="fixed inset-x-0 bottom-0 z-40 flex justify-around md:hidden"
+      className={cn(
+        'fixed inset-x-0 bottom-0 z-40 flex justify-around',
+        appearance !== 'learning' && 'md:hidden',
+      )}
       style={{
+        maxWidth: appearance === 'learning' ? 440 : undefined,
+        marginInline: appearance === 'learning' ? 'auto' : undefined,
         minHeight: 'calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))',
         paddingTop: 8,
         paddingBottom: 'calc(10px + env(safe-area-inset-bottom))',
-        background: 'color-mix(in srgb, var(--surface) 90%, transparent)',
+        background: learningAppearance ? 'rgba(255,255,255,.96)' : 'color-mix(in srgb, var(--surface) 90%, transparent)',
         backdropFilter: 'blur(16px) saturate(180%)',
         WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-        borderTop: '1px solid var(--border)',
+        borderTop: learningAppearance ? '2px solid #e5e7eb' : '1px solid var(--border)',
       }}
     >
       {ITEMS.map((item) => {
@@ -70,7 +83,7 @@ export function BottomNav({ activeOverride }: BottomNavProps) {
               'group relative flex min-h-12 flex-1 flex-col items-center justify-center gap-1 px-2 py-1',
               'transition-transform duration-150 active:scale-90',
             )}
-            style={{ color: active ? 'var(--focus)' : 'var(--text-muted)' }}
+            style={{ color: active ? (learningAppearance ? '#2563eb' : 'var(--focus)') : (learningAppearance ? '#9aa1a9' : 'var(--text-muted)') }}
           >
             {/* ust gosterge cubugu — aktifte genisler */}
             <span
@@ -79,8 +92,8 @@ export function BottomNav({ activeOverride }: BottomNavProps) {
               style={{
                 width: active ? 22 : 0,
                 opacity: active ? 1 : 0,
-                background: 'var(--focus)',
-                boxShadow: '0 0 8px var(--focus-glow)',
+                background: learningAppearance ? '#2563eb' : 'var(--focus)',
+                boxShadow: learningAppearance ? '0 0 8px rgba(37,99,235,.32)' : '0 0 8px var(--focus-glow)',
               }}
             />
 
@@ -91,7 +104,7 @@ export function BottomNav({ activeOverride }: BottomNavProps) {
                   aria-hidden
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: 'var(--focus-glow)',
+                    background: learningAppearance ? 'rgba(37,99,235,.22)' : 'var(--focus-glow)',
                     filter: 'blur(7px)',
                     opacity: 0.7,
                   }}
@@ -102,7 +115,7 @@ export function BottomNav({ activeOverride }: BottomNavProps) {
                 strokeWidth={active ? 2.4 : 2}
                 className="relative transition-all duration-200"
                 style={{
-                  fill: active ? 'color-mix(in srgb, var(--focus) 20%, transparent)' : 'transparent',
+                  fill: active ? (learningAppearance ? 'rgba(37,99,235,.16)' : 'color-mix(in srgb, var(--focus) 20%, transparent)') : 'transparent',
                 }}
               />
             </span>

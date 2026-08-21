@@ -28,7 +28,7 @@ export const institutionPilotWorkspaceSchema = z.object({
 export type InstitutionPilotWorkspace = z.infer<typeof institutionPilotWorkspaceSchema>
 
 export const institutionPilotTeacherAddInputSchema = z.object({
-  teacherUserId: uuidSchema,
+  teacherEmail: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
   requestId: uuidSchema,
 }).strict()
 
@@ -49,6 +49,17 @@ export const institutionPilotTeacherRemoveResultSchema = z.object({
   memberRef: memberRefSchema,
   status: z.literal('removed'),
   endedAt: timestampSchema,
+  replayed: z.boolean(),
+}).strict()
+
+export const institutionPilotManagerTeacherInputSchema = z.object({
+  enabled: z.boolean(),
+  requestId: uuidSchema,
+}).strict()
+
+export const institutionPilotManagerTeacherResultSchema = z.object({
+  memberRef: memberRefSchema,
+  enabled: z.boolean(),
   replayed: z.boolean(),
 }).strict()
 

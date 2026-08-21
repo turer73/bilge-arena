@@ -62,6 +62,9 @@ describe('TeacherInvitationClient', () => {
     render(<TeacherInvitationClient />)
 
     expect(await screen.findByRole('heading', { name: '12-A Matematik' })).toBeInTheDocument()
+    expect(screen.getByText(/konu ve kazanım bazlı durum, skor, güven/i)).toBeInTheDocument()
+    expect(screen.getByText(/profil UUID.*telefonunu.*XP/i)).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('hâkimiyet verini göremez')
     await waitFor(() => expect(window.location.hash).toBe(''))
     expect(window.sessionStorage.getItem(TEACHER_INVITE_SESSION_KEY)).toBeNull()
     expect(document.body.textContent).not.toContain(TOKEN)

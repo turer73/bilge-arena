@@ -409,7 +409,8 @@ describe('BilgeChanCompanion R2.2', () => {
     expect(chan.className).toContain('motion-reduce:animate-none')
     const root = container.firstChild as HTMLElement
     expect(root.className).toContain('flex-row')
-    expect((root.querySelector('div.relative') as HTMLElement).className).toContain('max-w-[220px]')
+    expect(screen.getByTestId('chan-waist-crop')).toHaveClass('overflow-hidden')
+    expect((root.querySelector('[aria-live="polite"]') as HTMLElement).className).toContain('max-w-[220px]')
   })
 
   test('TTS desteklenmiyorsa buton yoktur ve unmount konuşmayı keser', () => {

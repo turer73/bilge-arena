@@ -12,25 +12,25 @@ export function NotificationSettings() {
   if (status === 'unsupported') return null
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-      <h3 className="text-sm font-semibold text-[var(--foreground)]">Bildirimler</h3>
-      <p className="mt-1 text-xs text-[var(--muted)]">
-        Seri hatirlatmalari ve onemli guncellemeler icin bildirim al.
+    <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-4 shadow-[0_4px_0_#dbe2ea]">
+      <h3 className="text-sm font-black text-[#1e293b]">🔔 Bildirimler</h3>
+      <p className="mt-1 text-xs font-medium leading-relaxed text-[#64748b]">
+        Seri hatırlatmaları ve önemli güncellemeler için bildirim al.
       </p>
 
       <div className="mt-3">
         {status === 'denied' && (
           <p className="text-xs text-[var(--urgency)]">
-            Bildirimler tarayici tarafindan engellendi. Tarayici ayarlarindan izin verin.
+            Bildirimler tarayıcı tarafından engellendi. Tarayıcı ayarlarından izin verin.
           </p>
         )}
 
         {status === 'prompt' && (
           <button
             onClick={subscribe}
-            className="min-h-11 rounded-lg bg-[var(--focus)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--focus)]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+            className="min-h-11 rounded-xl border-2 border-[#1d4ed8] bg-[#2563eb] px-4 py-2 text-sm font-black text-white shadow-[0_3px_0_#1e40af] active:translate-y-0.5 active:shadow-none"
           >
-            Bildirimleri Ac
+            Bildirimleri Aç
           </button>
         )}
 

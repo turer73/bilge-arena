@@ -29,12 +29,14 @@ export function StoreTabs() {
           cevaplar; sekmeleri tek tek gezme zorunlulugunu kaldirir. */}
       <StoreBudgetStrip onJump={setTab} />
 
-      <div className="mt-4 flex gap-1 border-b border-[var(--border)]">
+      {/* Sekme cubugu mobilde yatay kaydirilir (#391) — bes sekme dar ekrana
+          sigmiyordu. Butce seridi eklenince araya mt-4 kondu. */}
+      <div className="scrollbar-none mt-4 flex snap-x gap-1 overflow-x-auto border-b border-[var(--border)] pb-0.5">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`-mb-px rounded-t-lg border-b-2 px-4 py-2 text-sm font-bold transition-colors ${
+            className={`-mb-px min-h-12 shrink-0 snap-start whitespace-nowrap rounded-t-lg border-b-2 px-3 py-2 text-sm font-bold transition-colors sm:px-4 ${
               tab === t.id
                 ? 'border-[var(--focus)] text-[var(--focus)]'
                 : 'border-transparent text-[var(--text-sub)] hover:text-[var(--text)]'

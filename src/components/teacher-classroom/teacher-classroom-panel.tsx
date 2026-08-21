@@ -379,7 +379,7 @@ export function TeacherClassroomPanel() {
         <h1 className="text-xl font-black">{forbidden ? 'Pilot öğretmen yetkisi gerekli' : 'Öğretmen paneli açılamadı'}</h1>
         <p role="alert" className="mt-2 text-sm leading-6 text-[var(--text-sub)]">
           {forbidden
-            ? 'Bu panel yalnız yönetici tarafından doğrulanmış teacher_pilot rolüne açıktır.'
+            ? 'Bu panel yalnız aktif kurum üyeliği ve sınıf yönetimi yetkisi bulunan öğretmenlere açıktır.'
             : 'Pilot yapılandırması kapalı veya geçici bir bağlantı sorunu var.'}
         </p>
         {!forbidden && (

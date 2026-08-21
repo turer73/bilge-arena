@@ -24,11 +24,27 @@ const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'migra
 const classroomSql = readFileSync(join(migrationsDir, '105_teacher_classroom_privacy.sql'), 'utf8')
 const institutionSql = readFileSync(join(migrationsDir, '112_institution_pilot_foundation.sql'), 'utf8')
 const institutionTrackingSql = readdirSync(migrationsDir)
-  .filter((name) => /^(11[3-9]|12[0-7])_.*\.sql$/.test(name))
+  .filter((name) => /^(11[3-9]|12[0-7])_.*\.sql$/.test(name) || name === '131_institution_tenant_rbac.sql')
   .sort()
   .map((name) => ({ name, sql: readFileSync(join(migrationsDir, name), 'utf8') }))
+const roleSeparationSql = readFileSync(
+  join(migrationsDir, '132_institution_platform_role_separation.sql'),
+  'utf8',
+)
+const institutionPanelSql = readFileSync(
+  join(migrationsDir, '133_institution_panel_classroom_management.sql'),
+  'utf8',
+)
+const teacherLifecycleSql = readFileSync(
+  join(migrationsDir, '134_institution_teacher_lifecycle_guards.sql'),
+  'utf8',
+)
+const managerTeacherRoleSql = readFileSync(
+  join(migrationsDir, '135_institution_manager_teacher_role.sql'),
+  'utf8',
+)
 
-suite('112-125 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127 and 131-135 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -36,7 +52,9 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
   let teacherOne
   let institutionOne
   let institutionTwo
+  let managerMemberRef
   let teacherMemberRef
+  let customRoleRef
   const capacityTeachers = []
 
   async function service(query, values = []) {
@@ -51,6 +69,16 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
   async function rpc(expression, values = []) {
     const result = await service(`SELECT ${expression} AS result`, values)
     return result.rows[0].result
+  }
+
+  async function rpcOn(connection, expression, values = []) {
+    await connection.query('SET ROLE service_role')
+    try {
+      const result = await connection.query(`SELECT ${expression} AS result`, values)
+      return result.rows[0].result
+    } finally {
+      await connection.query('RESET ROLE')
+    }
   }
 
   async function expectPgError(action, code) {
@@ -79,6 +107,12 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
       GRANT USAGE ON SCHEMA public, auth TO anon, authenticated, service_role;
       CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE
         AS $$ SELECT NULLIF(current_setting('app.uid', true), '')::uuid $$;
+      CREATE TABLE auth.users (
+        id uuid PRIMARY KEY,
+        email text UNIQUE,
+        email_confirmed_at timestamptz,
+        deleted_at timestamptz
+      );
       CREATE TABLE public.profiles (
         id uuid PRIMARY KEY,
         username varchar(64),
@@ -181,6 +215,10 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
         'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
         [userId, `pilot-${index}`, `Pilot ${index}`],
       )
+      await client.query(
+        'INSERT INTO auth.users(id,email,email_confirmed_at) VALUES($1,$2,now())',
+        [userId, `pilot-${index}@example.com`],
+      )
     }
     await client.query(
       `INSERT INTO public.user_roles(user_id,role_id)
@@ -206,11 +244,48 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
       platformAdmin, 'Bilge Pilot Bir', managerOne, requestId,
     ])
     institutionOne = provisioned.institution.id
+    managerMemberRef = provisioned.membership.memberRef
     expect(provisioned).toMatchObject({
       replayed: false,
       institution: { name: 'Bilge Pilot Bir', staffLimit: 6, studentLimit: 200 },
       membership: { role: 'manager' },
     })
+
+    const legacyManagerRole = await client.query(
+      `SELECT count(*)::int AS count
+       FROM public.user_roles AS user_role
+       JOIN public.roles AS role ON role.id = user_role.role_id
+       WHERE user_role.user_id = $1 AND role.slug = 'teacher_pilot'`,
+      [managerOne],
+    )
+    expect(legacyManagerRole.rows[0].count).toBe(1)
+
+    await client.query(roleSeparationSql)
+    await client.query(institutionPanelSql)
+    await client.query(teacherLifecycleSql)
+    await client.query(managerTeacherRoleSql)
+
+    const separatedManagerRoles = await client.query(
+      `SELECT role.slug, array_agg(permission.permission ORDER BY permission.permission) AS permissions
+       FROM public.user_roles AS user_role
+       JOIN public.roles AS role ON role.id = user_role.role_id
+       LEFT JOIN public.role_permissions AS permission ON permission.role_id = role.id
+       WHERE user_role.user_id = $1
+       GROUP BY role.slug`,
+      [managerOne],
+    )
+    expect(separatedManagerRoles.rows).toEqual([
+      {
+        slug: 'institution_pilot_staff',
+        permissions: ['institution.pilot.access', 'teacher.classrooms.manage'],
+      },
+    ])
+    const managerTeacherGuard = await client.query(
+      'SELECT public.teacher_classroom_is_teacher($1) AS allowed',
+      [managerOne],
+    )
+    expect(managerTeacherGuard.rows[0].allowed).toBe(false)
+
     expect(await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
       platformAdmin, 'Bilge Pilot Bir', managerOne, requestId,
     ])).toMatchObject({ replayed: true, institution: { id: institutionOne } })
@@ -238,6 +313,48 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
         supportAccess: expect.objectContaining({ active: false }),
       }),
     ]))
+  })
+
+  it('explicitly gives one manager the teacher system role without a duplicate membership', async () => {
+    await expectPgError(
+      () => rpc('public.create_teacher_classroom($1,$2,$3)', [
+        managerOne, 'Rol Öncesi Sınıf', randomUUID(),
+      ]),
+      '42501',
+    )
+
+    const requestId = randomUUID()
+    expect(await rpc('public.set_my_institution_manager_teacher_role($1,$2,$3)', [
+      managerOne, true, requestId,
+    ])).toMatchObject({ memberRef: managerMemberRef, enabled: true, replayed: false })
+    expect(await rpc('public.set_my_institution_manager_teacher_role($1,$2,$3)', [
+      managerOne, true, requestId,
+    ])).toMatchObject({ memberRef: managerMemberRef, enabled: true, replayed: true })
+    await expectPgError(
+      () => rpc('public.set_my_institution_manager_teacher_role($1,$2,$3)', [
+        managerOne, false, requestId,
+      ]),
+      '22023',
+    )
+
+    const membershipCount = await client.query(
+      `SELECT count(*)::int AS count
+       FROM public.pilot_institution_memberships
+       WHERE institution_id=$1 AND user_id=$2 AND status='active'`,
+      [institutionOne, managerOne],
+    )
+    expect(membershipCount.rows[0].count).toBe(1)
+    expect(await rpc('public.teacher_classroom_is_teacher($1)', [managerOne])).toBe(true)
+
+    const roleDirectory = await rpc('public.get_my_institution_role_directory($1)', [managerOne])
+    const manager = roleDirectory.members.find((member) => member.memberRef === managerMemberRef)
+    const teacherRole = roleDirectory.roles.find((role) => role.roleKey === 'teacher')
+    expect(manager.roleRefs).toContain(teacherRole.roleRef)
+    expect(teacherRole.memberCount).toBe(1)
+
+    const tracking = await rpc('public.get_institution_tracking_directory($1)', [managerOne])
+    expect(tracking.membership).toEqual({ role: 'manager', teacherEnabled: true })
+    expect(tracking.classrooms).toEqual([])
   })
 
   it('keeps support access manager-controlled, read-only, expiring and replay-safe', async () => {
@@ -304,15 +421,89 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
   })
 
   it('lets the scoped manager add a teacher and atomically binds new classrooms', async () => {
+    await expectPgError(
+      () => rpc('public.add_my_institution_teacher_by_email($1,$2,$3)', [
+        managerOne, 'kayitli-degil@example.com', randomUUID(),
+      ]),
+      'P0002',
+    )
     const requestId = randomUUID()
-    const added = await rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [
-      managerOne, institutionOne, teacherOne, requestId,
+    const added = await rpc('public.add_my_institution_teacher_by_email($1,$2,$3)', [
+      managerOne, 'PILOT-3@EXAMPLE.COM', requestId,
     ])
     teacherMemberRef = added.memberRef
     expect(added).toMatchObject({ role: 'teacher', replayed: false })
-    expect(await rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [
-      managerOne, institutionOne, teacherOne, requestId,
+    expect(await rpc('public.add_my_institution_teacher_by_email($1,$2,$3)', [
+      managerOne, 'pilot-3@example.com', requestId,
     ])).toMatchObject({ memberRef: teacherMemberRef, replayed: true })
+
+    const managerRequestId = randomUUID()
+    const managed = await rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+      managerOne, teacherMemberRef, 'TYT Matematik A', managerRequestId,
+    ])
+    expect(managed).toMatchObject({
+      classroom: { name: 'TYT Matematik A', status: 'active' },
+      teacher: { memberRef: teacherMemberRef },
+      replayed: false,
+    })
+    expect(await rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+      managerOne, teacherMemberRef, 'TYT Matematik A', managerRequestId,
+    ])).toMatchObject({ classroom: { id: managed.classroom.id }, replayed: true })
+    await expectPgError(
+      () => rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+        managerOne, teacherMemberRef, 'Farklı Sınıf', managerRequestId,
+      ]),
+      '22023',
+    )
+    await expectPgError(
+      () => rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+        teacherOne, teacherMemberRef, 'Yetkisiz Sınıf', randomUUID(),
+      ]),
+      '42501',
+    )
+    const managedRow = await client.query(
+      'SELECT institution_id,teacher_id FROM public.teacher_classrooms WHERE id=$1',
+      [managed.classroom.id],
+    )
+    expect(managedRow.rows[0]).toEqual({ institution_id: institutionOne, teacher_id: teacherOne })
+
+    const remover = new pg.Client({ connectionString: url })
+    const competingWriter = new pg.Client({ connectionString: url })
+    await remover.connect()
+    await competingWriter.connect()
+    try {
+      await remover.query('BEGIN')
+      await remover.query(
+        `UPDATE public.pilot_institution_memberships
+         SET status='removed', ended_at=now()
+         WHERE institution_id=$1 AND user_id=$2`,
+        [institutionOne, teacherOne],
+      )
+      const competing = rpcOn(
+        competingWriter,
+        'public.create_my_institution_classroom($1,$2,$3,$4)',
+        [managerOne, teacherMemberRef, 'Eşzamanlı Kaldırma', randomUUID()],
+      ).then(
+        (result) => ({ result, error: null }),
+        (error) => ({ result: null, error }),
+      )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      await remover.query('COMMIT')
+      const outcome = await competing
+      expect(outcome.result).toBeNull()
+      expect(outcome.error?.code).toBe('P0002')
+    } finally {
+      await remover.query('ROLLBACK').catch(() => undefined)
+      await remover.end()
+      await competingWriter.end()
+      await client.query(
+        `UPDATE public.pilot_institution_memberships
+         SET status='active', ended_at=NULL
+         WHERE institution_id=$1 AND user_id=$2`,
+        [institutionOne, teacherOne],
+      )
+    }
+
     const created = await rpc('public.create_teacher_classroom($1,$2,$3)', [
       teacherOne, '12-A Matematik', randomUUID(),
     ])
@@ -321,6 +512,71 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
       [created.classroom.id],
     )
     expect(row.rows[0]).toEqual({ institution_id: institutionOne, teacher_id: teacherOne })
+  })
+
+  it('keeps tenant roles manager-owned, delegable-only and effective on the directory', async () => {
+    const managerClassroom = await rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+      managerOne, managerMemberRef, 'Kurum Yöneticisi Sınıfı', randomUUID(),
+    ])
+    expect(managerClassroom.teacher.memberRef).toBe(managerMemberRef)
+    expect((await rpc('public.get_institution_tracking_directory($1)', [managerOne])).classrooms)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: managerClassroom.classroom.id, canManagePrograms: true }),
+      ]))
+    await expectPgError(
+      () => rpc('public.set_my_institution_manager_teacher_role($1,$2,$3)', [
+        managerOne, false, randomUUID(),
+      ]),
+      'P0003',
+    )
+    expect((await rpc('public.get_institution_tracking_directory($1)', [teacherOne])).classrooms)
+      .toHaveLength(2)
+
+    const requestId = randomUUID()
+    const created = await rpc('public.create_my_institution_role($1,$2,$3,$4,$5)', [
+      managerOne,
+      'Rehberlik Koordinatörü',
+      'Kurumun bütün aktif sınıflarını takip eder.',
+      ['institution.classrooms.view_all'],
+      requestId,
+    ])
+    customRoleRef = created.roleRef
+    expect(await rpc('public.create_my_institution_role($1,$2,$3,$4,$5)', [
+      managerOne,
+      'Rehberlik Koordinatörü',
+      'Kurumun bütün aktif sınıflarını takip eder.',
+      ['institution.classrooms.view_all'],
+      requestId,
+    ])).toMatchObject({ roleRef: customRoleRef, replayed: true })
+
+    await expectPgError(
+      () => rpc('public.create_my_institution_role($1,$2,$3,$4,$5)', [
+        managerOne, 'Yetki Yükseltme', 'Yönetici yetkisi alınmamalı.',
+        ['institution.roles.manage'], randomUUID(),
+      ]),
+      '42501',
+    )
+    await expectPgError(
+      () => rpc('public.get_my_institution_role_directory($1)', [teacherOne]),
+      '42501',
+    )
+
+    const roleDirectory = await rpc('public.get_my_institution_role_directory($1)', [managerOne])
+    expect(roleDirectory.roles).toEqual(expect.arrayContaining([
+      expect.objectContaining({ roleRef: customRoleRef, system: false, memberCount: 0 }),
+      expect.objectContaining({ roleKey: 'manager', system: true }),
+      expect.objectContaining({ roleKey: 'teacher', system: true }),
+    ]))
+    await rpc('public.set_my_institution_role_assignment($1,$2,$3,$4,$5)', [
+      managerOne, customRoleRef, teacherMemberRef, true, randomUUID(),
+    ])
+    expect(await rpc('public.institution_member_has_permission($1,$2,$3)', [
+      teacherOne, institutionOne, 'institution.classrooms.view_all',
+    ])).toBe(true)
+    expect((await rpc('public.get_institution_tracking_directory($1)', [teacherOne])).classrooms)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: managerClassroom.classroom.id }),
+      ]))
   })
 
   it('blocks cross-tenant management and enforces the six-person capacity', async () => {
@@ -336,6 +592,18 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
     )
     expect((await rpc('public.get_my_pilot_institution($1)', [managerTwo])).institution.id)
       .toBe(second.institution.id)
+    await expectPgError(
+      () => rpc('public.set_my_institution_role_assignment($1,$2,$3,$4,$5)', [
+        managerTwo, customRoleRef, teacherMemberRef, true, randomUUID(),
+      ]),
+      'P0002',
+    )
+    await expectPgError(
+      () => rpc('public.create_my_institution_classroom($1,$2,$3,$4)', [
+        managerTwo, teacherMemberRef, 'Kiracılar Arası Sınıf', randomUUID(),
+      ]),
+      'P0002',
+    )
 
     // manager + teacherOne + four more teachers = six active staff.
     for (const teacherId of capacityTeachers.slice(0, 4)) {
@@ -428,10 +696,51 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
   })
 
   it('cuts teacher RPC access when the tenant manager removes membership', async () => {
-    const removed = await rpc('public.remove_pilot_institution_teacher($1,$2,$3,$4)', [
-      managerOne, institutionOne, teacherMemberRef, randomUUID(),
-    ])
+    await expectPgError(
+      () => rpc('public.remove_pilot_institution_teacher($1,$2,$3,$4)', [
+        managerOne, institutionOne, teacherMemberRef, randomUUID(),
+      ]),
+      'P0003',
+    )
+    await client.query(
+      `UPDATE public.teacher_classrooms
+       SET status='archived', archived_at=now()
+       WHERE institution_id=$1 AND teacher_id=$2 AND status='active'`,
+      [institutionOne, teacherOne],
+    )
+
+    const remover = new pg.Client({ connectionString: url })
+    const competingWriter = new pg.Client({ connectionString: url })
+    await remover.connect()
+    await competingWriter.connect()
+    let removed
+    let competing
+    try {
+      await remover.query('BEGIN')
+      removed = await rpcOn(
+        remover,
+        'public.remove_pilot_institution_teacher($1,$2,$3,$4)',
+        [managerOne, institutionOne, teacherMemberRef, randomUUID()],
+      )
+      competing = rpcOn(
+        competingWriter,
+        'public.create_teacher_classroom($1,$2,$3)',
+        [teacherOne, 'Kaldırma Yarışı', randomUUID()],
+      ).then(
+        (result) => ({ result, error: null }),
+        (error) => ({ result: null, error }),
+      )
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      await remover.query('COMMIT')
+    } finally {
+      await remover.query('ROLLBACK').catch(() => undefined)
+      await remover.end()
+    }
+    const competingOutcome = await competing
+    await competingWriter.end()
     expect(removed).toMatchObject({ memberRef: teacherMemberRef, status: 'removed' })
+    expect(competingOutcome.result).toBeNull()
+    expect(competingOutcome.error?.code).toBe('42501')
     const retainedTeacherRole = await client.query(
       `SELECT count(*)::int AS count
        FROM public.user_roles AS user_role
@@ -461,6 +770,13 @@ suite('112-125 institution pilot real PostgreSQL acceptance', () => {
       () => service(
         'INSERT INTO public.pilot_institutions(name,created_by) VALUES($1,$2)',
         ['Direct', platformAdmin],
+      ),
+      '42501',
+    )
+    await expectPgError(
+      () => service(
+        'INSERT INTO public.institution_roles(institution_id,name,created_by) VALUES($1,$2,$3)',
+        [institutionOne, 'Direct Role', managerOne],
       ),
       '42501',
     )

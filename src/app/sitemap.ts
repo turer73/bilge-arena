@@ -25,6 +25,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/gizlilik-politikasi`, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${BASE}/kullanim-kosullari`, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${BASE}/kvkk`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${BASE}/hukuk/sinif-aydinlatma`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${BASE}/hukuk/sinif-paylasim-rizasi`, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${BASE}/cerez-politikasi`, changeFrequency: 'yearly', priority: 0.3 },
   ]
 

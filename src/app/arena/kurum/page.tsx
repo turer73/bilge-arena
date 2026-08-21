@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { InstitutionTrackingDashboard } from '@/components/institution-tracking/institution-tracking-dashboard'
 
 export const metadata: Metadata = {
-  title: 'Kurum Takibi | Bilge Arena',
+  title: 'Kurum Paneli | Bilge Arena',
   description: 'Açıklanabilir sınıf ve öğrenci kazanım takibi.',
   robots: { index: false, follow: false },
 }

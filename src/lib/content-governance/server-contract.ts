@@ -71,6 +71,8 @@ export const psychometricResultSchema = z.object({
   replayed: z.boolean(), revisionId: uuid, sampleN: z.number().int().nonnegative(), correctN: z.number().int().nonnegative(),
   pCorrect: z.number().min(0).max(1).nullable(), wilsonLow: z.number().min(0).max(1).nullable(),
   wilsonHigh: z.number().min(0).max(1).nullable(), discrimination: z.number().min(-1).max(1).nullable(),
+  omittedN: z.number().int().nonnegative().optional(), medianResponseTimeSec: z.number().nonnegative().nullable().optional(),
+  fastResponseRate: z.number().min(0).max(1).nullable().optional(), eligibilityPolicy: z.string().max(120).optional(),
 }).strip().refine((value) => value.correctN <= value.sampleN)
 export const enforcementResultSchema = z.object({ enforced: z.boolean(), replayed: z.boolean().optional(), updatedAt: timestamp.optional() }).strip()
 export const appealListSchema = z.object({ appeals: z.array(z.object({
@@ -117,6 +119,16 @@ const revisionDetailSchema = z.object({
   }).strict(),
   outcomes: z.array(z.object({ outcomeId: uuid, weight: z.number().positive().max(1), primary: z.boolean() }).strict()).max(5),
   approvals: z.array(z.object({ stage: z.union([z.literal(1), z.literal(2)]), decision: z.enum(['approved', 'rejected']), decidedAt: timestamp }).strict()).max(2),
+  validation: z.object({
+    policyVersion: z.string().max(100),
+    verdict: z.enum(['APPROVED', 'REJECTED', 'NEEDS_REVIEW', 'INCONCLUSIVE']),
+    findings: z.array(z.object({
+      code: z.enum(['WRONG_KEY_SUSPECTED', 'NO_CORRECT_OPTION', 'MULTIPLE_CORRECT', 'MISSING_PREMISE', 'AMBIGUOUS_WORDING', 'SOLUTION_CONTRADICTS_ANSWER', 'INCOMPLETE_SOLUTION', 'LOGICAL_FALLACY']),
+      evidence: z.string().max(4_000), optionIndexes: z.array(z.number().int().min(0).max(4)).max(5).optional(),
+    }).strict()).max(50),
+    rationale: z.string().max(8_000), blindConsensusIndex: z.number().int().min(0).max(4).nullable(),
+    blindAgreementRatio: z.number().min(0).max(1).nullable(), decidedAt: timestamp,
+  }).strict().nullable().optional(),
   psychometrics: z.array(z.object({
     windowStart: timestamp, windowEnd: timestamp, sampleN: z.number().int().nonnegative(), correctN: z.number().int().nonnegative(),
     pCorrect: z.number().min(0).max(1).nullable(), wilsonLow: z.number().min(0).max(1).nullable(), wilsonHigh: z.number().min(0).max(1).nullable(),
