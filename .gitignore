@@ -67,6 +67,12 @@ database/generated/*
 !database/generated/ayt-*.json
 database/backup-*.json
 database/_*.json
+database/_*.log
+# Otomatik soru dogrulama kosu ciktilari (question-audit hatti).
+# Bulgu kanitlari soru kokunu ve TUM sik metinlerini birebir tasir; soru
+# bankasi bilerek git gecmisinden temizlenmisti, geri sizmamali.
+# Kosucunun varsayilan ciktisi da bu desene girer (runner.ts `out`).
+database/question-audit-*.json
 .env*.local
 
 # Lokal denetim/dogrulama artiklari (ekran goruntuleri, handoff, audit run ciktilari)
