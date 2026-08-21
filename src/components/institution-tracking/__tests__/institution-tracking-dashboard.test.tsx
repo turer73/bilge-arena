@@ -178,12 +178,15 @@ describe('InstitutionTrackingDashboard', () => {
     expect(screen.getByText('Bağımsız oturum')).toBeInTheDocument()
     expect(screen.getByText('Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı')).toBeInTheDocument()
     expect(screen.getByText('Tek puan ve sıralama yoktur')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /5 aktif öğrencinin 4 tanesinde karar güvenli kanıt var/i })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /1 kazanımın 0 tanesi güçlü/i })).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: /Sayı Kümeleri ve Çok Uzun Kazanım Açıklaması açıklanabilir skoru/i })).toHaveAttribute('aria-valuetext', 'Veri yetersiz')
   })
 
-  it('keeps a failed aggregate separate from the valid selected-student analysis', async () => {
+  it('explains the privacy threshold while keeping the valid selected-student analysis', async () => {
     mocks.overview.mockRejectedValue(new Error('partial roster'))
     render(<InstitutionTrackingDashboard />)
-    expect(await screen.findByText(/Sınıf özeti eksiksiz doğrulanamadığı için gösterilmiyor/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Toplu sınıf grafikleri için en az 3 aktif öğrenci gerekir/i)).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })).toBeInTheDocument()
   })
 
