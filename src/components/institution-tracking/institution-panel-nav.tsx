@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Building2, LayoutDashboard, UserRoundCog } from 'lucide-react'
 
 const overviewLink = { href: '/arena/kurum', label: 'Genel Bakış', icon: LayoutDashboard }
-const rolesLink = { href: '/arena/kurum/roller', label: 'Roller ve Yetkiler', icon: UserRoundCog }
+const rolesLink = { href: '/arena/kurum/roller', label: 'Roller ve Destek', icon: UserRoundCog }
 
 export function InstitutionPanelNav({ canManageRoles }: { canManageRoles: boolean }) {
   const pathname = usePathname()

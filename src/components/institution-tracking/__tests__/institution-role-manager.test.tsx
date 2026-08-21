@@ -43,7 +43,8 @@ afterEach(() => vi.unstubAllGlobals())
 describe('InstitutionRoleManager', () => {
   it('shows immutable system roles and editable tenant roles', async () => {
     render(<InstitutionRoleManager />)
-    expect(await screen.findByRole('heading', { name: 'Kurum Rolleri' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Roller ve Destek' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Bilge Arena destek erişimi' })).toBeInTheDocument()
     expect(await screen.findByText('Kurum Yöneticisi')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Kurum Yöneticisi rolünü sil/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Rehberlik Koordinatörü rolünü düzenle/i })).toBeInTheDocument()
