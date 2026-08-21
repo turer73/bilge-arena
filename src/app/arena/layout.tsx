@@ -20,7 +20,7 @@ export default function ArenaLayout({
     <>
       <Navbar />
       {/* Mobilde alt tab-bar yuksekligi kadar bosluk birak ki icerik altta kalmasin */}
-      <main className="min-h-screen scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] pt-[var(--navbar-h)] pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] md:scroll-pb-0 md:pb-0">
+      <main data-arena-main className="min-h-screen scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] pt-[var(--navbar-h)] pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] md:scroll-pb-0 md:pb-0">
         {children}
       </main>
       <ArenaAuxiliaries />

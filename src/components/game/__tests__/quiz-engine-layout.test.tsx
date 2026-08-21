@@ -16,6 +16,7 @@ const quizStoreValue: Record<string, unknown> = {
   answers: [{ questionId: 'q1', selectedOption: 2, isCorrect: true }],
   maxLives: 3,
   lives: 3,
+  livesEnabled: true,
   streak: 1,
   maxStreak: 1,
   xpEarned: 10,
@@ -70,6 +71,7 @@ const quizGame = vi.hoisted(() => ({
   handleStart: vi.fn(),
   handleStartPlanned: vi.fn(),
   handleStartPreparedDeneme: vi.fn(),
+  handleRestart: vi.fn(),
 }))
 vi.mock('@/lib/hooks/use-quiz-game', () => ({ useQuizGame: () => quizGame }))
 vi.mock('@/lib/hooks/use-sidebar-data', () => ({
@@ -180,6 +182,18 @@ vi.mock('next/dynamic', () => ({
 import { QuizEngine } from '../quiz-engine'
 
 describe('QuizEngine yerleşim', () => {
+  test('mobil odak kabuğu ilerleme, süre, can, seri ve çıkış eylemini tek başlıkta toplar', () => {
+    render(<QuizEngine game="matematik" />)
+
+    expect(document.body).toHaveClass('mobile-quiz-active')
+    expect(screen.getByRole('button', { name: 'Oyundan çık' })).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Oyun ilerlemesi' })).toHaveAttribute('aria-valuenow', '1')
+    expect(screen.getByLabelText('Kalan süre: 24 saniye')).toBeInTheDocument()
+    expect(screen.getByLabelText('3 can')).toBeInTheDocument()
+    expect(screen.getByLabelText('1 seri')).toBeInTheDocument()
+    expect(screen.getByLabelText('10 oturum XP')).toBeInTheDocument()
+  })
+
   test('answered: açıklama paneli soru kartının ÜSTÜNDE', () => {
     render(<QuizEngine game="matematik" />)
     const panel = screen.getByTestId('explanation-panel')

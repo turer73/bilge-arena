@@ -11,6 +11,11 @@ import {
   readActivationRewardCookie,
   verifyActivationRewardToken,
 } from '@/lib/activation/server-reward'
+import {
+  guestGradingActorKey,
+  readGuestGradingCookie,
+  verifyGuestGradingToken,
+} from '@/lib/questions/guest-grading-session'
 
 const userLimiter = createRateLimiter('questions-grade-user', 120, 60_000)
 const ipLimiter = createRateLimiter('questions-grade-ip', 30, 60_000)
@@ -73,14 +78,21 @@ export async function POST(request: Request) {
   let actorKey: string
   let verifiedQuestionIds: string[] | null = null
   let contentValue: unknown = null
+  const cookieHeader = request.headers.get('cookie')
   const activationToken = parsed.data.attemptId === null
-    ? verifyActivationRewardToken(readActivationRewardCookie(request.headers.get('cookie')))
+    ? verifyActivationRewardToken(readActivationRewardCookie(cookieHeader))
     : null
   const activationSessionId = activationToken?.questionIds.includes(parsed.data.questionId)
     ? activationToken.sessionId
     : null
+  const guestToken = parsed.data.attemptId === null
+    ? verifyGuestGradingToken(readGuestGradingCookie(cookieHeader))
+    : null
+  const guestSessionId = guestToken?.questionIds.includes(parsed.data.questionId)
+    ? guestToken.sessionId
+    : null
 
-  if (user && !activationSessionId) {
+  if (user && !activationSessionId && !guestSessionId) {
     if (!parsed.data.attemptId) {
       return NextResponse.json({ error: 'Deneme dogrulanamadi' }, { status: 403 })
     }
@@ -120,9 +132,13 @@ export async function POST(request: Request) {
     if (parsed.data.attemptId !== null) {
       return NextResponse.json({ error: 'Deneme dogrulanamadi' }, { status: 403 })
     }
-    actorKey = activationSessionId
-      ? activationActorKey(activationSessionId)
-      : `ip:${identity}`
+    if (activationSessionId) {
+      actorKey = activationActorKey(activationSessionId)
+    } else if (guestSessionId) {
+      actorKey = guestGradingActorKey(guestSessionId)
+    } else {
+      return NextResponse.json({ error: 'Deneme dogrulanamadi' }, { status: 403 })
+    }
     const { data, error } = await admin
       .from('questions')
       .select('id, content')

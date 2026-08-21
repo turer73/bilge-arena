@@ -13,6 +13,12 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   })),
 }))
 
+vi.mock('@/lib/questions/guest-grading-session', () => ({
+  createGuestGradingToken: vi.fn(() => 'signed-guest-token'),
+  GUEST_GRADING_COOKIE: 'ba_guest_grading',
+  GUEST_GRADING_TTL_SECONDS: 7200,
+}))
+
 import { GET } from '../route'
 
 const oldActivationFlag = process.env.ACTIVATION_EXPERIMENT_ENABLED
@@ -156,6 +162,23 @@ describe('GET /api/questions/preview exam scope', () => {
     expect(setCookie).toContain('HttpOnly')
     expect(setCookie).toContain('SameSite=lax')
     expect(setCookie).toContain('Max-Age=7200')
+  })
+
+  it('normal guest preview issues a separate HttpOnly grading session', async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: [makeQuestionRow('10000000-0000-4000-8000-000000000001')],
+      error: null,
+    })
+
+    const response = await GET(makeRequest({ game: 'fen', examRef: 'TYT' }) as never)
+    const setCookie = response.headers.get('set-cookie')
+
+    expect(response.status).toBe(200)
+    expect(setCookie).toContain('ba_guest_grading=signed-guest-token')
+    expect(setCookie).toContain('HttpOnly')
+    expect(setCookie).toContain('SameSite=lax')
+    expect(setCookie).toContain('Max-Age=7200')
+    expect(setCookie).not.toContain('ba_activation_reward=')
   })
 
   it('fails closed before the database when the activation kill switch is off', async () => {

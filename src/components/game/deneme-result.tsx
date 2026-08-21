@@ -11,6 +11,7 @@ import { SignupPromptModal } from './signup-prompt-modal'
 import { useGuestSession, computePromptLevel } from '@/lib/hooks/use-guest-session'
 import type { MockStrategyAnalysis } from '@/lib/mock-strategy/analysis'
 import { MockStrategyPanel } from './mock-strategy-panel'
+import { BilgeChan } from '@/components/ui/bilge-chan'
 
 interface DenemeResultProps {
   gameName: string
@@ -115,65 +116,62 @@ export function DenemeResult({
 
   // Konu bazli renk
   const getPctColor = (p: number) => {
-    if (p >= 80) return 'var(--growth)'
-    if (p >= 60) return 'var(--focus)'
-    if (p >= 40) return 'var(--reward)'
-    return 'var(--urgency)'
+    if (p >= 80) return '#16a34a'
+    if (p >= 60) return '#2563eb'
+    if (p >= 40) return '#d97706'
+    return '#dc2626'
   }
 
   // Konu ismi: ortak map'ten gelsin
   const formatCategory = (cat: string) => getCategoryLabel(cat)
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-4 p-4 md:max-w-lg md:gap-5 md:p-6 xl:max-w-xl xl:gap-6 xl:p-8 2xl:max-w-2xl">
-      {/* Baslik */}
-      <div className="text-center animate-fadeUp">
-        <div className="mb-1 text-[10px] font-bold tracking-widest text-[var(--text-sub)]">
-          DENEME SINAVI SONUCU
+    <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-4 bg-[#f7f8fa] px-4 py-5 text-[#172554]">
+      <div className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[#1d4ed8] bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#1e40af] p-5 text-white shadow-[0_6px_0_#1e3a8a] animate-fadeUp">
+        <div className="relative z-10 max-w-[60%]">
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[#bfdbfe]">
+            Deneme sonucu
+          </div>
+          <h1 className="mt-1 font-display text-lg font-black leading-tight">{gameName}</h1>
+          <div
+            className="mt-2 font-display text-[68px] font-black leading-none"
+            style={{ color: '#fef08a', textShadow: '0 3px 0 rgba(120,53,15,.35)' }}
+          >
+            {rank}
+          </div>
+          <p className="mt-1 text-xs font-bold text-[#dbeafe]">{config.message}</p>
         </div>
-        <h1 className="font-display text-xl font-black md:text-2xl xl:text-3xl 2xl:text-4xl">{gameName}</h1>
-      </div>
-
-      {/* Rank */}
-      <div className="flex justify-center animate-fadeUp" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
-        <div
-          className="font-display text-[60px] font-black leading-none md:text-[80px] xl:text-[100px] 2xl:text-[120px]"
-          style={{
-            color: config.color,
-            textShadow: `0 0 20px color-mix(in srgb, ${config.color} 40%, transparent)`,
-          }}
-        >
-          {rank}
-        </div>
+        <BilgeChan pose={pct >= 50 ? 'victory' : 'tutor'} height={166} className="absolute -bottom-2 -right-2 z-10" />
+        <div aria-hidden className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
       </div>
 
       {/* Genel istatistikler */}
-      <div className="grid grid-cols-4 gap-1.5 animate-fadeUp md:gap-2 xl:gap-3" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+      <div className="grid grid-cols-4 gap-2 animate-fadeUp" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
         {[
-          { label: 'DOĞRU', value: String(score), color: 'var(--growth)' },
-          { label: 'YANLIŞ', value: String(wrongCount), color: 'var(--urgency)' },
-          { label: 'NET', value: net, color: 'var(--focus)' },
-          { label: 'SÜRE', value: formatTime(elapsedTime), color: 'var(--wisdom)' },
+          { label: 'DOĞRU', value: String(score), color: '#16a34a' },
+          { label: 'YANLIŞ', value: String(wrongCount), color: '#dc2626' },
+          { label: 'NET', value: net, color: '#2563eb' },
+          { label: 'SÜRE', value: formatTime(elapsedTime), color: '#7c3aed' },
         ].map((s) => (
           <div
             key={s.label}
-            className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-2 text-center md:rounded-xl md:p-2.5 xl:p-3.5"
+            className="min-w-0 rounded-2xl border-2 border-[#e2e8f0] bg-white p-2.5 text-center shadow-[0_4px_0_#dbe2ea]"
           >
-            <div className="font-display text-sm font-black md:text-lg xl:text-xl 2xl:text-2xl" style={{ color: s.color }}>
+            <div className="truncate font-display text-base font-black" style={{ color: s.color }}>
               {s.value}
             </div>
-            <div className="text-[8px] font-bold tracking-wider text-[var(--text-sub)]">{s.label}</div>
+            <div className="text-[8px] font-black tracking-wider text-[#64748b]">{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Basari cubugu */}
-      <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-        <div className="mb-1 flex justify-between text-[10px] text-[var(--text-sub)]">
-          <span>Genel Başarı</span>
+      <div className="rounded-2xl border-2 border-[#dbeafe] bg-white p-4 shadow-[0_4px_0_#bfdbfe] animate-fadeUp" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
+        <div className="mb-2 flex justify-between text-xs font-bold text-[#64748b]">
+          <span>Genel başarı</span>
           <span className="font-bold" style={{ color: config.color }}>%{pct}</span>
         </div>
-        <div className="h-3 overflow-hidden rounded-full bg-[var(--card-bg)]">
+        <div className="h-3 overflow-hidden rounded-full bg-[#e2e8f0]">
           <div
             className="h-full rounded-full transition-all duration-1000"
             style={{
@@ -185,20 +183,20 @@ export function DenemeResult({
       </div>
 
       {/* Konu bazli analiz */}
-      <div className="animate-fadeUp" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
-        <h2 className="mb-3 text-[10px] font-bold tracking-widest text-[var(--text-sub)]">
+      <div className="animate-fadeUp" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
+        <h2 className="mb-3 text-[11px] font-black tracking-[0.14em] text-[#475569]">
           KONU BAZLI ANALİZ
         </h2>
         <div className="space-y-2">
           {categoryStats.map((cat) => (
-            <div key={cat.category} className="rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-3">
+            <div key={cat.category} className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-3.5 shadow-[0_3px_0_#dbe2ea]">
               <div className="mb-1.5 flex items-center justify-between">
-                <span className="text-xs font-bold">{formatCategory(cat.category)}</span>
-                <span className="text-xs" style={{ color: getPctColor(cat.pct) }}>
+                <span className="text-xs font-black text-[#1e293b]">{formatCategory(cat.category)}</span>
+                <span className="text-xs font-bold" style={{ color: getPctColor(cat.pct) }}>
                   {cat.correct}/{cat.total} (%{cat.pct})
                 </span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface)]">
+              <div className="h-2 overflow-hidden rounded-full bg-[#e2e8f0]">
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
@@ -213,9 +211,9 @@ export function DenemeResult({
       </div>
 
       {/* Yorum */}
-      <div className="animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4" style={{ animationDelay: '0.5s', animationFillMode: 'both' }}>
-        <div className="mb-1 text-[10px] font-bold text-[var(--text-sub)]">DEĞERLENDİRME</div>
-        <p className="text-xs leading-relaxed text-[var(--text)]">
+      <div className="animate-fadeUp rounded-2xl border-2 border-[#c7d2fe] bg-[#eef2ff] p-4 shadow-[0_4px_0_#c7d2fe]" style={{ animationDelay: '0.45s', animationFillMode: 'both' }}>
+        <div className="mb-1 text-[10px] font-black tracking-wider text-[#4338ca]">BİLGE CHAN&apos;IN NOTU</div>
+        <p className="text-xs font-semibold leading-relaxed text-[#334155]">
           {pct >= 80
             ? 'Mükemmel performans! Bu seviyeyi koruyarak sınava hazırlanmaya devam et.'
             : pct >= 60
@@ -225,37 +223,41 @@ export function DenemeResult({
                 : 'Temel konuları tekrar etmen gerekiyor. Konu anlatımlarından faydalanabilirsin.'}
         </p>
         {categoryStats.filter(c => c.pct < 50).length > 0 && (
-          <div className="mt-2 text-[10px] text-[var(--urgency)]">
+          <div className="mt-2 text-[10px] font-bold text-[#dc2626]">
             Zayıf konular: {categoryStats.filter(c => c.pct < 50).map(c => formatCategory(c.category)).join(', ')}
           </div>
         )}
       </div>
 
-      {strategyAnalysis && <MockStrategyPanel analysis={strategyAnalysis} />}
+      {strategyAnalysis && (
+        <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-3 shadow-[0_4px_0_#dbe2ea]">
+          <MockStrategyPanel analysis={strategyAnalysis} />
+        </div>
+      )}
 
       {/* XP */}
-      <div className="animate-fadeUp text-center" style={{ animationDelay: '0.6s', animationFillMode: 'both' }}>
-        <span className="rounded-full bg-[var(--reward-bg)] px-4 py-1.5 text-sm font-bold text-[var(--reward)]">
+      <div className="animate-fadeUp text-center" style={{ animationDelay: '0.55s', animationFillMode: 'both' }}>
+        <span className="inline-flex rounded-full border-2 border-[#fde68a] bg-[#fffbeb] px-4 py-2 text-sm font-black text-[#b45309] shadow-[0_3px_0_#fde68a]">
           +{xpEarned} XP Kazanıldı
         </span>
       </div>
 
       {/* Paylasim */}
-      <div className="animate-fadeUp" style={{ animationDelay: '0.7s', animationFillMode: 'both' }}>
+      <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-3 shadow-[0_4px_0_#dbe2ea] animate-fadeUp" style={{ animationDelay: '0.65s', animationFillMode: 'both' }}>
         <ShareButtons rank={rank} score={score} total={totalQuestions} xp={xpEarned} gameName={gameName} />
       </div>
 
       {/* Butonlar */}
-      <div className="flex gap-3 animate-fadeUp" style={{ animationDelay: '0.8s', animationFillMode: 'both' }}>
+      <div className="grid grid-cols-2 gap-3 pb-3 animate-fadeUp" style={{ animationDelay: '0.75s', animationFillMode: 'both' }}>
         <button
           onClick={onRestart}
-          className="btn-primary flex-1 rounded-[10px] py-3 font-display text-sm font-bold tracking-wider"
+          className="min-h-12 rounded-2xl border-2 border-[#1d4ed8] bg-[#2563eb] px-4 py-3 font-display text-sm font-black tracking-wide text-white shadow-[0_5px_0_#1e40af] active:translate-y-1 active:shadow-none"
         >
           Yeni Deneme
         </button>
         <button
           onClick={onExit}
-          className="btn-ghost flex-1 rounded-[10px] py-3 text-sm font-bold"
+          className="min-h-12 rounded-2xl border-2 border-[#cbd5e1] bg-white px-4 py-3 text-sm font-black text-[#334155] shadow-[0_5px_0_#cbd5e1] active:translate-y-1 active:shadow-none"
         >
           Lobiye Dön
         </button>

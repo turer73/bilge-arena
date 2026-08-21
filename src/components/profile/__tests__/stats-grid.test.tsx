@@ -18,13 +18,13 @@ describe('StatsGrid', () => {
     }
   })
 
-  test('mobilde 2x2, geniş ekranda tek satır yerleşim kullanır', () => {
+  test('uygulama kabuğunda tüm ekranlarda 2x2 yerleşim kullanır', () => {
     const { container } = render(<StatsGrid stats={STATS} />)
     const grid = container.firstElementChild as HTMLElement
     const streakCard = screen.getByText('EN İYİ SERİ').parentElement?.parentElement as HTMLElement
 
     expect(grid.className).toContain('grid-cols-2')
-    expect(grid.className).toContain('sm:grid-cols-4')
+    expect(grid.className).not.toContain('sm:grid-cols-4')
     expect(streakCard.className).toContain('min-h-[5.25rem]')
   })
 })

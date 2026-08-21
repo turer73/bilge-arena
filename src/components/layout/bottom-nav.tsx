@@ -39,7 +39,10 @@ interface BottomNavProps {
 
 export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavProps) {
   const pathname = usePathname()
-  const learningAppearance = appearance === 'learning' || pathname === '/arena' || pathname === '/mobil-demo'
+  const learningAppearance = appearance === 'learning'
+    || pathname === '/arena'
+    || pathname.startsWith('/arena/')
+    || pathname === '/mobil-demo'
 
   const isActive = (item: NavItem) => {
     if (activeOverride) return activeOverride === item.id
@@ -50,6 +53,7 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
 
   return (
     <nav
+      data-bottom-nav
       aria-label="Mobil gezinme"
       className={cn(
         'fixed inset-x-0 bottom-0 z-40 flex justify-around',

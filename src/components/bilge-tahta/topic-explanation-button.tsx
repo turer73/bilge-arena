@@ -15,6 +15,7 @@ interface TopicExplanationButtonProps {
   difficulty?: number | null
   questionContext: string
   surface?: 'game' | 'classroom'
+  appearance?: 'default' | 'learning'
   disabled?: boolean
 }
 
@@ -25,6 +26,7 @@ export function TopicExplanationButton({
   difficulty = null,
   questionContext,
   surface = 'game',
+  appearance = 'default',
   disabled = false,
 }: TopicExplanationButtonProps) {
   const [open, setOpen] = useState(false)
@@ -100,12 +102,16 @@ export function TopicExplanationButton({
           type="button"
           onClick={() => void explain()}
           disabled={disabled || loading}
-          className="flex min-h-11 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-          style={{
+          className={`flex min-h-11 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+            appearance === 'learning'
+              ? 'border-[#c4b5fd] bg-[#f5f3ff] text-[#6d28d9] shadow-[0_3px_0_#ddd6fe]'
+              : ''
+          }`}
+          style={appearance === 'default' ? {
             borderColor: 'color-mix(in srgb, var(--wisdom) 35%, transparent)',
             background: 'color-mix(in srgb, var(--wisdom) 10%, transparent)',
             color: 'var(--wisdom-text)',
-          }}
+          } : undefined}
           title="Bu konuyu ayrıntılı olarak Bilge Tahta'da öğren"
         >
           <BookOpen className="h-4 w-4 shrink-0" aria-hidden="true" />

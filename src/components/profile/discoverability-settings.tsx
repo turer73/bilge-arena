@@ -36,11 +36,11 @@ export function DiscoverabilitySettings() {
   }
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+    <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-4 shadow-[0_4px_0_#dbe2ea]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-[var(--foreground)]">Aramada Görünürlük</h3>
-          <p className="mt-1 text-xs text-[var(--muted)]">
+          <h3 className="text-sm font-black text-[#1e293b]">🔎 Aramada Görünürlük</h3>
+          <p className="mt-1 text-xs font-medium leading-relaxed text-[#64748b]">
             Açıkken diğer arenacılar seni kullanıcı aramasında bulup arkadaş ekleyebilir.
             Kapalıyken aramada çıkmazsın (mevcut arkadaşların etkilenmez).
           </p>
@@ -57,7 +57,7 @@ export function DiscoverabilitySettings() {
           <span
             aria-hidden
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              isDiscoverable ? 'bg-[var(--growth)]' : 'bg-[var(--border)]'
+              isDiscoverable ? 'bg-[#16a34a]' : 'bg-[#cbd5e1]'
             }`}
           >
             <span

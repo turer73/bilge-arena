@@ -9,6 +9,11 @@ import {
   ACTIVATION_REWARD_TTL_SECONDS,
   createActivationRewardToken,
 } from '@/lib/activation/server-reward'
+import {
+  createGuestGradingToken,
+  GUEST_GRADING_COOKIE,
+  GUEST_GRADING_TTL_SECONDS,
+} from '@/lib/questions/guest-grading-session'
 
 // Misafir önizlemesi için kısıtlı IP rate limit: 20/saat
 const ipLimiter = createRateLimiter('questions-preview-ip', 20, 3_600_000)
@@ -134,6 +139,21 @@ export async function GET(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: ACTIVATION_REWARD_TTL_SECONDS,
+    })
+  } else if (publicQuestions.length > 0) {
+    const gradingToken = createGuestGradingToken(publicQuestions.map((item) => item.id))
+    if (!gradingToken) {
+      return NextResponse.json(
+        { error: 'Misafir oturumu hazırlanamadı' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+    response.cookies.set(GUEST_GRADING_COOKIE, gradingToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: GUEST_GRADING_TTL_SECONDS,
     })
   }
 
