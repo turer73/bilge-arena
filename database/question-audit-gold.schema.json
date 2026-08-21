@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bilgearena.com/schemas/question-audit-gold.schema.json",
+  "title": "Bilge Arena human-adjudicated question audit gold labels",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["questionId", "contentSha256", "flawCodes", "reviewerCount", "adjudication"],
+    "properties": {
+      "questionId": { "type": "string", "minLength": 1 },
+      "contentSha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+      "flawCodes": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "enum": [
+            "WRONG_KEY_SUSPECTED",
+            "NO_CORRECT_OPTION",
+            "MULTIPLE_CORRECT",
+            "MISSING_PREMISE",
+            "AMBIGUOUS_WORDING",
+            "SOLUTION_CONTRADICTS_ANSWER",
+            "INCOMPLETE_SOLUTION",
+            "LOGICAL_FALLACY"
+          ]
+        }
+      },
+      "reviewerCount": { "type": "integer", "minimum": 2 },
+      "adjudication": { "enum": ["consensus", "adjudicated"] }
+    }
+  }
+}

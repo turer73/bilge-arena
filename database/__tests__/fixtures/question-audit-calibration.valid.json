@@ -1,0 +1,22 @@
+{
+  "policyVersion": "question-quality@1",
+  "providerIds": { "blind": "fixture", "adversarial": "fixture", "verifier": "fixture" },
+  "modelIds": { "blind": "fixture-model", "adversarial": "fixture-model", "verifier": "fixture-model" },
+  "promptVersions": { "blind": "blind-solver@2", "adversarial": "adversarial@2", "verifier": "solution-verifier@3" },
+  "config": { "blindSamples": 3 },
+  "reliability": { "failureRate": 0 },
+  "items": [
+    {
+      "questionId": "clean-question",
+      "contentSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "verdict": "APPROVED",
+      "findings": []
+    },
+    {
+      "questionId": "wrong-key-question",
+      "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "verdict": "REJECTED",
+      "findings": [{ "code": "WRONG_KEY_SUSPECTED", "evidence": "fixture" }]
+    }
+  ]
+}

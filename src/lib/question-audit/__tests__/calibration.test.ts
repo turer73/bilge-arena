@@ -22,12 +22,8 @@ function draft(id: string, opts: Partial<QuestionDraft> = {}): QuestionDraft {
 }
 
 function parseShown(userPrompt: string): string[] {
-  const out: string[] = []
-  for (const line of userPrompt.split('\n')) {
-    const m = /^(\d+) \([A-H?]\): (.*)$/.exec(line)
-    if (m) out[Number(m[1])] = m[2]
-  }
-  return out
+  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<{ index: number; text: string }> }
+  return payload.options.sort((a, b) => a.index - b.index).map((option) => option.text)
 }
 
 /** Kor cozucu her zaman `pickText` metnini secer; ekran indeksini prompt'tan bulur. */
@@ -68,6 +64,7 @@ describe('mutabakat orani', () => {
     const drafts = ['a', 'b', 'c'].map((id) => draft(id))
     const r = await runCalibration({ drafts, categoryOf, providers: makeProviders({}), config: cfg })
     expect(r.total).toBe(3)
+    expect(r.items.map((item) => item.questionId)).toEqual(['a', 'b', 'c'])
     expect(r.blindAgreement).toMatchObject({ agreed: 3, disagreed: 0, noConsensus: 0, ratio: 1 })
     expect(r.byVerdict.APPROVED).toBe(3)
     expect(r.disagreements).toHaveLength(0)
@@ -178,7 +175,7 @@ describe('kosu mekanigi', () => {
     expect(replay.cache).toEqual({ hits: 1, misses: 0 })
     expect(replay.cost).toEqual({ inputTokens: 0, outputTokens: 0, totalLatencyMs: 0 })
     expect(replay.promptVersions).toEqual({
-      blind: 'blind-solver@1', adversarial: 'adversarial@2', verifier: 'solution-verifier@2',
+      blind: 'blind-solver@2', adversarial: 'adversarial@2', verifier: 'solution-verifier@3',
     })
     expect(persistedAgain).toBe(false)
     expect(decisions).toBe(1)

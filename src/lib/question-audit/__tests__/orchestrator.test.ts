@@ -22,12 +22,8 @@ function draft(overrides: Partial<QuestionDraft> = {}): QuestionDraft {
 
 /** Prompt'taki "N (X): metin" satirlarindan ekranda gosterilen sik listesini cikarir. */
 function parseShownOptions(userPrompt: string): string[] {
-  const out: string[] = []
-  for (const line of userPrompt.split('\n')) {
-    const m = /^(\d+) \([A-H?]\): (.*)$/.exec(line)
-    if (m) out[Number(m[1])] = m[2]
-  }
-  return out
+  const payload = JSON.parse(userPrompt.split('\n')[1]) as { options: Array<{ index: number; text: string }> }
+  return payload.options.sort((a, b) => a.index - b.index).map((option) => option.text)
 }
 
 interface FakeOptions {
