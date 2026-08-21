@@ -48,6 +48,7 @@ import { SupportAccessPanel } from './support-access-panel'
 import { InstitutionClassroomCreatePanel } from './institution-classroom-create-panel'
 import { InstitutionPanelNav } from './institution-panel-nav'
 import { InstitutionStudentInviteDialog } from './institution-student-invite-dialog'
+import { EvidenceDistributionChart, PercentBar } from './analytics-charts'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -464,6 +465,10 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
               <div className="h-64 animate-pulse rounded-2xl bg-white/5" aria-label="Sınıf özeti yükleniyor" />
             ) : classroomOverview ? (
               <ClassroomOverviewPanel overview={classroomOverview} />
+            ) : classroomOverviewError && (selectedClassroom?.activeStudentCount ?? 0) < 3 ? (
+              <section className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
+                Toplu sınıf grafikleri için en az 3 aktif öğrenci gerekir. Öğrenci analizi ayrı olarak kullanılabilir.
+              </section>
             ) : classroomOverviewError ? (
               <section className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
                 Sınıf özeti eksiksiz doğrulanamadığı için gösterilmiyor. Öğrenci analizi ayrı olarak kullanılabilir.
@@ -610,11 +615,30 @@ function AnalysisPanel({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <SummaryCard label="Ölçülen" value={analysis.summary.assessedOutcomeCount} icon={<BarChart3 />} />
-          <SummaryCard label="Güçlü" value={analysis.summary.masteredOutcomeCount} tone="emerald" icon={<BookOpenCheck />} />
-          <SummaryCard label="Gelişiyor" value={analysis.summary.developingOutcomeCount} tone="sky" icon={<BarChart3 />} />
-          <SummaryCard label="Kanıt yetersiz" value={analysis.summary.insufficientOutcomeCount} tone="amber" icon={<AlertTriangle />} />
+        <div className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.045] to-transparent p-4 lg:grid-cols-[minmax(16rem,0.9fr)_minmax(0,1.1fr)] lg:items-center">
+          <div>
+            <h3 className="text-sm font-black">Kazanım durumu</h3>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Ölçülen ve kanıt bekleyen kazanımların görsel dağılımı.</p>
+            <div className="mt-4">
+              <EvidenceDistributionChart
+                total={analysis.summary.outcomeCount}
+                centerValue={analysis.summary.assessedOutcomeCount}
+                centerLabel="ölçülen"
+                ariaLabel={`${analysis.summary.outcomeCount} kazanımın ${analysis.summary.masteredOutcomeCount} tanesi güçlü, ${analysis.summary.developingOutcomeCount} tanesi gelişiyor ve ${analysis.summary.insufficientOutcomeCount} tanesinde kanıt yetersiz`}
+                segments={[
+                  { label: 'Güçlü', value: analysis.summary.masteredOutcomeCount, colorClass: 'text-emerald-400', barClass: 'bg-emerald-400' },
+                  { label: 'Gelişiyor', value: analysis.summary.developingOutcomeCount, colorClass: 'text-sky-400', barClass: 'bg-sky-400' },
+                  { label: 'Kanıt yetersiz', value: analysis.summary.insufficientOutcomeCount, colorClass: 'text-amber-400', barClass: 'bg-amber-400' },
+                ]}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <SummaryCard label="Ölçülen" value={analysis.summary.assessedOutcomeCount} total={analysis.summary.outcomeCount} icon={<BarChart3 />} />
+            <SummaryCard label="Güçlü" value={analysis.summary.masteredOutcomeCount} total={analysis.summary.outcomeCount} tone="emerald" icon={<BookOpenCheck />} />
+            <SummaryCard label="Gelişiyor" value={analysis.summary.developingOutcomeCount} total={analysis.summary.outcomeCount} tone="sky" icon={<BarChart3 />} />
+            <SummaryCard label="Kanıt yetersiz" value={analysis.summary.insufficientOutcomeCount} total={analysis.summary.outcomeCount} tone="amber" icon={<AlertTriangle />} />
+          </div>
         </div>
         {canManagePrograms && guardianEmailDraft && (
           <div className="mt-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -697,10 +721,11 @@ function AnalysisPanel({
                       <span className="text-[var(--text-sub)]">Açıklanabilir skor</span>
                       <strong>{outcome.assessment.score === null ? '—' : `%${outcome.assessment.score}`}</strong>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
-                      <div
-                        className="h-full rounded-full bg-[var(--primary)]"
-                        style={{ width: `${outcome.assessment.score ?? 0}%` }}
+                    <div className="mt-2">
+                      <PercentBar
+                        value={outcome.assessment.score}
+                        tone={outcome.assessment.status === 'mastered' ? 'emerald' : outcome.assessment.status === 'developing' ? 'sky' : 'amber'}
+                        label={`${outcome.title} açıklanabilir skoru`}
                       />
                     </div>
                   </div>
@@ -727,11 +752,13 @@ function AnalysisPanel({
 function SummaryCard({
   label,
   value,
+  total,
   tone = 'primary',
   icon,
 }: {
   label: string
   value: number
+  total: number
   tone?: 'primary' | 'emerald' | 'sky' | 'amber'
   icon: React.ReactElement
 }) {
@@ -741,11 +768,24 @@ function SummaryCard({
     sky: 'text-sky-300',
     amber: 'text-amber-300',
   }
+  const bars = {
+    primary: 'bg-[var(--primary)]',
+    emerald: 'bg-emerald-400',
+    sky: 'bg-sky-400',
+    amber: 'bg-amber-400',
+  }
+  const ratio = total > 0 ? Math.round((value / total) * 100) : 0
   return (
-    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.025] p-3">
+    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.035] p-3">
       <div className={`[&>svg]:h-4 [&>svg]:w-4 ${tones[tone]}`} aria-hidden="true">{icon}</div>
-      <strong className="mt-2 block text-xl font-black">{value}</strong>
+      <div className="mt-2 flex items-end justify-between gap-2">
+        <strong className="block text-xl font-black leading-none">{value}</strong>
+        <span className="text-[10px] font-bold text-[var(--text-sub)]">%{ratio}</span>
+      </div>
       <span className="mt-0.5 block truncate text-[11px] text-[var(--text-sub)] sm:text-xs">{label}</span>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+        <div className={`h-full rounded-full ${bars[tone]}`} style={{ width: `${ratio}%` }} />
+      </div>
     </div>
   )
 }
