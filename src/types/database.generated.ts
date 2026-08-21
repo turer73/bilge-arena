@@ -1104,6 +1104,8 @@ export type Database = {
           question_id: string
           report_type: Database["public"]["Enums"]["report_type"]
           resolved_by: string | null
+          rewarded_at: string | null
+          rewarded_coins: number | null
           status: Database["public"]["Enums"]["report_status"] | null
           updated_at: string | null
           user_id: string
@@ -1116,6 +1118,8 @@ export type Database = {
           question_id: string
           report_type: Database["public"]["Enums"]["report_type"]
           resolved_by?: string | null
+          rewarded_at?: string | null
+          rewarded_coins?: number | null
           status?: Database["public"]["Enums"]["report_status"] | null
           updated_at?: string | null
           user_id: string
@@ -1128,6 +1132,8 @@ export type Database = {
           question_id?: string
           report_type?: Database["public"]["Enums"]["report_type"]
           resolved_by?: string | null
+          rewarded_at?: string | null
+          rewarded_coins?: number | null
           status?: Database["public"]["Enums"]["report_status"] | null
           updated_at?: string | null
           user_id?: string
@@ -1347,6 +1353,163 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      institution_membership_roles: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          institution_id: string
+          membership_id: string
+          role_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          institution_id: string
+          membership_id: string
+          role_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          institution_id?: string
+          membership_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_membership_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_membership_roles_membership_id_institution_id_fkey"
+            columns: ["membership_id", "institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institution_memberships"
+            referencedColumns: ["id", "institution_id"]
+          },
+          {
+            foreignKeyName: "institution_membership_roles_role_id_institution_id_fkey"
+            columns: ["role_id", "institution_id"]
+            isOneToOne: false
+            referencedRelation: "institution_roles"
+            referencedColumns: ["id", "institution_id"]
+          },
+        ]
+      }
+      institution_permission_catalog: {
+        Row: {
+          delegable: boolean
+          description: string
+          label: string
+          permission: string
+        }
+        Insert: {
+          delegable?: boolean
+          description: string
+          label: string
+          permission: string
+        }
+        Update: {
+          delegable?: boolean
+          description?: string
+          label?: string
+          permission?: string
+        }
+        Relationships: []
+      }
+      institution_role_permissions: {
+        Row: {
+          created_at: string
+          institution_id: string
+          permission: string
+          role_id: string
+        }
+        Insert: {
+          created_at?: string
+          institution_id: string
+          permission: string
+          role_id: string
+        }
+        Update: {
+          created_at?: string
+          institution_id?: string
+          permission?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_role_permissions_permission_fkey"
+            columns: ["permission"]
+            isOneToOne: false
+            referencedRelation: "institution_permission_catalog"
+            referencedColumns: ["permission"]
+          },
+          {
+            foreignKeyName: "institution_role_permissions_role_id_institution_id_fkey"
+            columns: ["role_id", "institution_id"]
+            isOneToOne: false
+            referencedRelation: "institution_roles"
+            referencedColumns: ["id", "institution_id"]
+          },
+        ]
+      }
+      institution_roles: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          institution_id: string
+          is_system: boolean
+          name: string
+          role_key: string | null
+          role_ref: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          institution_id: string
+          is_system?: boolean
+          name: string
+          role_key?: string | null
+          role_ref?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          institution_id?: string
+          is_system?: boolean
+          name?: string
+          role_key?: string | null
+          role_ref?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_roles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_roles_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       institution_student_followups: {
         Row: {
@@ -3029,6 +3192,53 @@ export type Database = {
           },
         ]
       }
+      question_option_statistics: {
+        Row: {
+          discrimination: number | null
+          eligibility_policy: string
+          is_correct_option: boolean
+          materialized_at: string
+          option_index: number
+          revision_id: string
+          selected_n: number
+          selected_rate: number | null
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          discrimination?: number | null
+          eligibility_policy: string
+          is_correct_option: boolean
+          materialized_at?: string
+          option_index: number
+          revision_id: string
+          selected_n: number
+          selected_rate?: number | null
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          discrimination?: number | null
+          eligibility_policy?: string
+          is_correct_option?: boolean
+          materialized_at?: string
+          option_index?: number
+          revision_id?: string
+          selected_n?: number
+          selected_rate?: number | null
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_option_statistics_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_outcomes: {
         Row: {
           created_at: string
@@ -3228,8 +3438,12 @@ export type Database = {
         Row: {
           correct_n: number
           discrimination: number | null
+          eligibility_policy: string
+          fast_response_rate: number | null
           materialization_hash: string
           materialized_at: string
+          median_response_time_sec: number | null
+          omitted_n: number
           p_correct: number | null
           revision_id: string
           sample_n: number
@@ -3241,8 +3455,12 @@ export type Database = {
         Insert: {
           correct_n: number
           discrimination?: number | null
+          eligibility_policy?: string
+          fast_response_rate?: number | null
           materialization_hash: string
           materialized_at?: string
+          median_response_time_sec?: number | null
+          omitted_n?: number
           p_correct?: number | null
           revision_id: string
           sample_n: number
@@ -3254,8 +3472,12 @@ export type Database = {
         Update: {
           correct_n?: number
           discrimination?: number | null
+          eligibility_policy?: string
+          fast_response_rate?: number | null
           materialization_hash?: string
           materialized_at?: string
+          median_response_time_sec?: number | null
+          omitted_n?: number
           p_correct?: number | null
           revision_id?: string
           sample_n?: number
@@ -3384,6 +3606,195 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      question_validation_decisions: {
+        Row: {
+          blind_agreement_ratio: number | null
+          blind_consensus_index: number | null
+          content_sha256: string
+          created_at: string
+          decided_at: string
+          findings: Json
+          id: string
+          policy_version: string
+          question_id: string
+          rationale: string
+          revision_id: string
+          run_id: string
+          verdict: string
+        }
+        Insert: {
+          blind_agreement_ratio?: number | null
+          blind_consensus_index?: number | null
+          content_sha256: string
+          created_at?: string
+          decided_at: string
+          findings: Json
+          id?: string
+          policy_version: string
+          question_id: string
+          rationale: string
+          revision_id: string
+          run_id: string
+          verdict: string
+        }
+        Update: {
+          blind_agreement_ratio?: number | null
+          blind_consensus_index?: number | null
+          content_sha256?: string
+          created_at?: string
+          decided_at?: string
+          findings?: Json
+          id?: string
+          policy_version?: string
+          question_id?: string
+          rationale?: string
+          revision_id?: string
+          run_id?: string
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_validation_decisions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_validation_decisions_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_validation_runs: {
+        Row: {
+          agent: string
+          content_sha256: string
+          created_at: string
+          error_kind: string | null
+          error_message: string | null
+          error_retryable: boolean | null
+          executed_at: string | null
+          finish_reason: string | null
+          generation_config: Json | null
+          generation_config_sha256: string | null
+          id: string
+          input_snapshot: Json | null
+          input_tokens: number | null
+          latency_ms: number | null
+          model_id: string
+          output_tokens: number | null
+          parsed_output: Json | null
+          policy_version: string | null
+          prompt_version: string
+          provider_id: string | null
+          question_id: string
+          raw_output: string | null
+          revision_id: string | null
+          run_id: string
+          sample_index: number
+          skip_reason: string | null
+          status: string
+        }
+        Insert: {
+          agent: string
+          content_sha256: string
+          created_at?: string
+          error_kind?: string | null
+          error_message?: string | null
+          error_retryable?: boolean | null
+          executed_at?: string | null
+          finish_reason?: string | null
+          generation_config?: Json | null
+          generation_config_sha256?: string | null
+          id?: string
+          input_snapshot?: Json | null
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model_id: string
+          output_tokens?: number | null
+          parsed_output?: Json | null
+          policy_version?: string | null
+          prompt_version: string
+          provider_id?: string | null
+          question_id: string
+          raw_output?: string | null
+          revision_id?: string | null
+          run_id: string
+          sample_index?: number
+          skip_reason?: string | null
+          status: string
+        }
+        Update: {
+          agent?: string
+          content_sha256?: string
+          created_at?: string
+          error_kind?: string | null
+          error_message?: string | null
+          error_retryable?: boolean | null
+          executed_at?: string | null
+          finish_reason?: string | null
+          generation_config?: Json | null
+          generation_config_sha256?: string | null
+          id?: string
+          input_snapshot?: Json | null
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model_id?: string
+          output_tokens?: number | null
+          parsed_output?: Json | null
+          policy_version?: string | null
+          prompt_version?: string
+          provider_id?: string | null
+          question_id?: string
+          raw_output?: string | null
+          revision_id?: string | null
+          run_id?: string
+          sample_index?: number
+          skip_reason?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_validation_runs_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_validation_runs_revision_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_validation_runtime: {
+        Row: {
+          enforce_publish_gate: boolean
+          required_policy_version: string
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          enforce_publish_gate?: boolean
+          required_policy_version?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          enforce_publish_gate?: boolean
+          required_policy_version?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       questions: {
         Row: {
@@ -4303,6 +4714,8 @@ export type Database = {
           archived_at: string | null
           bilge_tahta_enabled: boolean
           created_at: string
+          exam_mode_expires_at: string | null
+          exam_mode_started_by: string | null
           id: string
           institution_id: string
           name: string
@@ -4313,6 +4726,8 @@ export type Database = {
           archived_at?: string | null
           bilge_tahta_enabled?: boolean
           created_at?: string
+          exam_mode_expires_at?: string | null
+          exam_mode_started_by?: string | null
           id?: string
           institution_id: string
           name: string
@@ -4323,6 +4738,8 @@ export type Database = {
           archived_at?: string | null
           bilge_tahta_enabled?: boolean
           created_at?: string
+          exam_mode_expires_at?: string | null
+          exam_mode_started_by?: string | null
           id?: string
           institution_id?: string
           name?: string
@@ -4330,6 +4747,13 @@ export type Database = {
           teacher_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "teacher_classrooms_exam_mode_started_by_fkey"
+            columns: ["exam_mode_started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "teacher_classrooms_institution_id_fkey"
             columns: ["institution_id"]
@@ -5580,6 +6004,14 @@ export type Database = {
         }
         Returns: Json
       }
+      add_my_institution_teacher_by_email: {
+        Args: {
+          p_request_id: string
+          p_teacher_email: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       add_pilot_institution_teacher: {
         Args: {
           p_institution_id: string
@@ -5627,6 +6059,10 @@ export type Database = {
           awarded_codes: string[]
           total_xp_earned: number
         }[]
+      }
+      award_error_report_reward: {
+        Args: { p_admin_id: string; p_coins: number; p_report_id: string }
+        Returns: Json
       }
       backfill_review_cards: {
         Args: {
@@ -5757,6 +6193,25 @@ export type Database = {
         }
         Returns: Json
       }
+      create_my_institution_classroom: {
+        Args: {
+          p_name: string
+          p_request_id: string
+          p_teacher_member_ref: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      create_my_institution_role: {
+        Args: {
+          p_description: string
+          p_name: string
+          p_permissions: string[]
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       create_question_content_revision: {
         Args: {
           p_base_revision_id: string
@@ -5783,6 +6238,10 @@ export type Database = {
         Returns: Json
       }
       curriculum_graph_integrity: { Args: never; Returns: Json }
+      delete_my_institution_role: {
+        Args: { p_request_id: string; p_role_ref: string; p_user_id: string }
+        Returns: Json
+      }
       finalize_verified_exam_attempt: {
         Args: { p_attempt_id: string; p_request_id: string; p_user_id: string }
         Returns: Json
@@ -5878,12 +6337,25 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      get_my_assistance_policy: { Args: { p_user_id: string }; Returns: Json }
       get_my_classroom_bilge_tahta_access: {
         Args: {
           p_classroom_id: string
           p_institution_id: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      get_my_classroom_exam_mode: {
+        Args: {
+          p_classroom_id: string
+          p_institution_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_my_institution_role_directory: {
+        Args: { p_user_id: string }
         Returns: Json
       }
       get_my_institution_study_programs: {
@@ -6019,6 +6491,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      institution_member_has_permission: {
+        Args: {
+          p_institution_id: string
+          p_permission: string
+          p_user_id: string
+        }
+        Returns: boolean
       }
       institution_pilot_active_institution: {
         Args: { p_user_id: string }
@@ -6413,6 +6893,20 @@ export type Database = {
         Args: { p_enforced: boolean; p_request_id: string; p_user_id: string }
         Returns: Json
       }
+      set_my_institution_manager_teacher_role: {
+        Args: { p_enabled: boolean; p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
+      set_my_institution_role_assignment: {
+        Args: {
+          p_assigned: boolean
+          p_member_ref: string
+          p_request_id: string
+          p_role_ref: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       set_review_error_reason: {
         Args: {
           p_reason_code: string
@@ -6422,6 +6916,16 @@ export type Database = {
         Returns: undefined
       }
       set_teacher_classroom_bilge_tahta: {
+        Args: {
+          p_classroom_id: string
+          p_enabled: boolean
+          p_institution_id: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      set_teacher_classroom_exam_mode: {
         Args: {
           p_classroom_id: string
           p_enabled: boolean
@@ -6532,6 +7036,17 @@ export type Database = {
           p_request_id: string
           p_user_id: string
           p_week_start: string
+        }
+        Returns: Json
+      }
+      update_my_institution_role: {
+        Args: {
+          p_description: string
+          p_name: string
+          p_permissions: string[]
+          p_request_id: string
+          p_role_ref: string
+          p_user_id: string
         }
         Returns: Json
       }

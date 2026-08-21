@@ -1,17 +1,22 @@
 {
-  "name": "Bilge Arena — YKS Hazırlık",
+  "name": "Bilge Arena — YKS ve LGS Hazırlık",
   "short_name": "Bilge Arena",
-  "description": "Oyunlaştırılmış YKS hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çöz, XP kazan, yüksel!",
+  "description": "Oyunlaştırılmış YKS ve LGS hazırlık uygulaması. Günlük öğrenme yolunda ilerle, soru çöz, XP kazan!",
   "start_url": "/arena",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#080C14",
+  "background_color": "#F7F8FA",
   "theme_color": "#2563EB",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "/icon-512-transparent.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Öğren", "short_name": "Öğren", "url": "/arena", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Pratik", "short_name": "Pratik", "url": "/arena/calisma", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Canlı Arena", "short_name": "Arena", "url": "/oda", "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
   ],
   "categories": ["education", "games"],
   "lang": "tr",

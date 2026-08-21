@@ -15,7 +15,7 @@
  * Eski cache'ler activate sirasinda temizlenir.
  */
 
-const STATIC_CACHE_VERSION = 'v2'
+const STATIC_CACHE_VERSION = 'v3'
 const STATIC_CACHE = `bilge-arena-static-${STATIC_CACHE_VERSION}`
 const RUNTIME_CACHE = `bilge-arena-runtime-${STATIC_CACHE_VERSION}`
 
