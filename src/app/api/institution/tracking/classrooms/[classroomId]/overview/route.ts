@@ -124,9 +124,14 @@ export async function GET(
       followupMetrics: followupMetrics.data,
       growthMetrics: growthMetrics.data,
     })
-    return overview
-      ? institutionPilotNoStoreJson(overview)
-      : institutionPilotNoStoreJson({ error: 'Sınıf özeti üretilemedi' }, { status: 500 })
+    if (!overview) {
+      return institutionPilotNoStoreJson({ error: 'Sınıf özeti üretilemedi' }, { status: 500 })
+    }
+    if (directory.data.membership.role !== 'manager') {
+      const { teacherIndicators: _managerOnly, ...classroomOverview } = overview
+      return institutionPilotNoStoreJson(classroomOverview)
+    }
+    return institutionPilotNoStoreJson(overview)
   } catch (error) {
     const code = typeof error === 'object' && error && 'code' in error && typeof error.code === 'string'
       ? error.code : undefined

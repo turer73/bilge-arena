@@ -19,6 +19,7 @@ const directory = {
 const overview = {
   classroom: { id: CLASSROOM_ID, name: 'TYT A Sınıfı', teacherAlias: 'Öğretmen Bir', activeStudentCount: 5 },
   summary: { activeStudentCount: 5 },
+  teacherIndicators: { modelVersion: 'institution-teacher-indicators-v2', managerOnly: true },
 }
 
 function request() { return new Request(`http://localhost/api/institution/tracking/classrooms/${CLASSROOM_ID}/overview`) }
@@ -73,6 +74,18 @@ describe('institution classroom overview route', () => {
     const partial = await GET(request(), routeContext())
     expect(partial.status).toBe(500)
     expect(mocks.rpc.mock.calls.filter(([name]) => name === 'get_institution_classroom_published_program_members')).toHaveLength(0)
+  })
+
+  it('removes manager-only teacher indicators from a teacher response', async () => {
+    mocks.rpc.mockImplementationOnce(async () => ({
+      data: { ...directory, membership: { role: 'teacher' } },
+      error: null,
+    }))
+    const response = await GET(request(), routeContext())
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.teacherIndicators).toBeUndefined()
+    expect(body.classroom).toEqual(overview.classroom)
   })
 
   it('maps tenant denial without exposing database details', async () => {

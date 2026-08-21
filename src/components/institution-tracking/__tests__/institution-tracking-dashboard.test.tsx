@@ -77,7 +77,7 @@ const classroomOverview = {
   scope: { game: 'matematik' as const, examRef: 'TYT' as const, taxonomyVersion: 'ba-tyt-math-v1' as const, modelVersion: 'institution-classroom-overview-v1' as const, windowStart: '2026-08-01T00:00:00.000Z', windowEnd: '2026-08-14T00:00:00.000Z', minimumGroupSize: 3 as const },
   summary: { activeStudentCount: 5, studentsWithDecisionSafeEvidence: 4, studentsNeedingSupport: 3, studentsWithoutDecisionSafeEvidence: 1, eligibleStudentOutcomeCount: 4, developingStudentOutcomeCount: 3, masteredStudentOutcomeCount: 1 },
   priorityOutcomes: [{ code: 'MAT-SAY-01', title: 'Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı', studentCount: 3, evidenceCount: 18, averageScore: 49.5 }],
-  teacherIndicators: { modelVersion: 'institution-teacher-indicators-v1', windowStart: '2026-08-01T00:00:00.000Z', windowEnd: '2026-08-14T00:00:00.000Z', dimensions: { studentGrowth: indicator(null), followUpDiscipline: indicator(null), programManagement: indicator(66.7, 2, 3), interventionResponsiveness: indicator(null), dataReliability: indicator(80, 4, 5) } },
+  teacherIndicators: { modelVersion: 'institution-teacher-indicators-v2', windowStart: '2026-08-01T00:00:00.000Z', windowEnd: '2026-08-14T00:00:00.000Z', dimensions: { studentGrowth: indicator(null), followUpDiscipline: indicator(null), programManagement: indicator(66.7, 2, 3), interventionResponsiveness: indicator(null), dataReliability: indicator(80, 4, 5) } },
 }
 
 function analysis(memberRef = MEMBER_ONE, alias = 'Öğrenci Bir Çok Uzun Ad') {
@@ -178,6 +178,8 @@ describe('InstitutionTrackingDashboard', () => {
     expect(screen.getByText('Bağımsız oturum')).toBeInTheDocument()
     expect(screen.getByText('Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı')).toBeInTheDocument()
     expect(screen.getByText('Tek puan ve sıralama yoktur')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Öğretmen Takibi' })).toBeInTheDocument()
+    expect(screen.getByText('Kurum yöneticisi görünümü')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /5 aktif öğrencinin 4 tanesinde karar güvenli kanıt var/i })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /1 kazanımın 0 tanesi güçlü/i })).toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: /Sayı Kümeleri ve Çok Uzun Kazanım Açıklaması açıklanabilir skoru/i })).toHaveAttribute('aria-valuetext', 'Veri yetersiz')
@@ -293,6 +295,7 @@ describe('InstitutionTrackingDashboard', () => {
     expect(screen.getByRole('heading', { level: 1, name: directory.classrooms[0].name })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Genel bakış' })).toHaveAttribute('href', '/arena/kurum')
     expect(screen.queryByRole('button', { name: 'Sınıf oluştur' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Öğretmen Takibi' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Öğrenci ekle' }))
     expect(screen.getByRole('dialog', { name: directory.classrooms[0].name })).toBeInTheDocument()
   })
