@@ -171,23 +171,18 @@ describe('InstitutionTrackingDashboard', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
     render(<InstitutionTrackingDashboard />)
     expect(await screen.findByText(directory.institution.name)).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })).toBeInTheDocument()
-    expect(screen.getByText('Sayı Kümeleri ve Çok Uzun Kazanım Açıklaması')).toBeInTheDocument()
-    expect(screen.getAllByText('Kanıt yetersiz').length).toBeGreaterThan(0)
-    expect(screen.getByText('—')).toBeInTheDocument()
-    expect(screen.getByText('Bağımsız oturum')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Bugünkü akademik görünüm' })).toBeInTheDocument()
     expect(screen.getByText('Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı')).toBeInTheDocument()
     expect(screen.getByText('Tek puan ve sıralama yoktur')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Öğretmen Takibi' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Öğretmen takip göstergeleri' })).toBeInTheDocument()
     expect(screen.getByText('Kurum yöneticisi görünümü')).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: /5 aktif öğrencinin 4 tanesinde karar güvenli kanıt var/i })).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: /1 kazanımın 0 tanesi güçlü/i })).toBeInTheDocument()
-    expect(screen.getByRole('progressbar', { name: /Sayı Kümeleri ve Çok Uzun Kazanım Açıklaması açıklanabilir skoru/i })).toHaveAttribute('aria-valuetext', 'Veri yetersiz')
+    expect(screen.queryByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })).not.toBeInTheDocument()
+    expect(mocks.analysis).not.toHaveBeenCalled()
   })
 
   it('explains the privacy threshold while keeping the valid selected-student analysis', async () => {
     mocks.overview.mockRejectedValue(new Error('partial roster'))
-    render(<InstitutionTrackingDashboard />)
+    render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} />)
     expect(await screen.findByText(/Toplu sınıf grafikleri için en az 3 aktif öğrenci gerekir/i)).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })).toBeInTheDocument()
   })
@@ -198,7 +193,7 @@ describe('InstitutionTrackingDashboard', () => {
       membership: { role: 'teacher' as const },
       classrooms: [{ ...directory.classrooms[0], canAnalyze: false }],
     })
-    render(<InstitutionTrackingDashboard />)
+    render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} />)
     expect(await screen.findByRole('heading', { name: 'Dizin erişimi açık, öğrenme analizi sınırlı' })).toBeInTheDocument()
     expect(mocks.overview).not.toHaveBeenCalled()
     expect(mocks.analysis).not.toHaveBeenCalled()
@@ -247,7 +242,7 @@ describe('InstitutionTrackingDashboard', () => {
     const user = userEvent.setup()
     render(<InstitutionTrackingDashboard />)
     expect(await screen.findByRole('heading', { name: 'Aktif sınıf bulunamadı' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Roller ve Yetkiler' })).toHaveAttribute('href', '/arena/kurum/roller')
+    expect(screen.getAllByRole('link', { name: 'Roller ve Destek' })[0]).toHaveAttribute('href', '/arena/kurum/roller')
     await user.click(screen.getByRole('button', { name: 'İlk sınıfı oluştur' }))
     await screen.findByRole('option', { name: 'Öğretmen Bir' })
     await user.type(screen.getByLabelText('Sınıf adı'), 'TYT Matematik A')
@@ -255,20 +250,42 @@ describe('InstitutionTrackingDashboard', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent('TYT Matematik A, Öğretmen Bir öğretmenine atandı.')
     await waitFor(() => expect(mocks.directory).toHaveBeenCalledTimes(2))
-    expect(await screen.findByText('TYT Matematik A')).toBeInTheDocument()
+    expect((await screen.findAllByText('TYT Matematik A')).length).toBeGreaterThan(0)
+  })
+
+  it('returns keyboard focus to the class creator trigger when the inline panel closes', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/institution/roles') {
+        return Response.json({
+          permissions: [],
+          roles: [],
+          members: [{ memberRef: 'd'.repeat(32), alias: 'Öğretmen Bir', membershipRole: 'teacher', roleRefs: [] }],
+        })
+      }
+      return Response.json({ error: 'unexpected request' }, { status: 500 })
+    }))
+    const user = userEvent.setup()
+    render(<InstitutionTrackingDashboard />)
+    const trigger = await screen.findByRole('button', { name: 'Sınıf oluştur' })
+    await user.click(trigger)
+    expect(await screen.findByRole('heading', { name: 'Yeni sınıf oluştur' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Sınıf oluşturmayı kapat' }))
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Yeni sınıf oluştur' })).not.toBeInTheDocument())
+    await waitFor(() => expect(trigger).toHaveFocus())
   })
 
   it('loads the selected opaque student without exposing internal ids', async () => {
-    const user = userEvent.setup()
-    const { container } = render(<InstitutionTrackingDashboard />)
-    await screen.findByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })
-    await user.click(screen.getByRole('button', { name: /Öğrenci İki/i }))
+    const { container } = render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} initialMemberRef={MEMBER_TWO} />)
     await waitFor(() => expect(mocks.analysis).toHaveBeenLastCalledWith(
       CLASSROOM_ID,
       MEMBER_TWO,
       expect.any(AbortSignal),
     ))
     expect(await screen.findByRole('heading', { name: 'Öğrenci İki' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Öğrenci İki/i })).toHaveAttribute(
+      'href',
+      `/arena/kurum/sinif/${CLASSROOM_ID}?ogrenci=${MEMBER_TWO}`,
+    )
     expect(container.textContent).not.toContain(CLASSROOM_ID)
     expect(container.textContent).not.toContain(MEMBER_TWO)
   })
@@ -276,7 +293,7 @@ describe('InstitutionTrackingDashboard', () => {
   it('links each institution classroom to its own workspace', async () => {
     render(<InstitutionTrackingDashboard />)
 
-    expect(await screen.findByRole('link', { name: /TYT Çok Uzun Sınıf Adı A/i })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: /Sınıf çalışma alanına git/i })).toHaveAttribute(
       'href',
       `/arena/kurum/sinif/${CLASSROOM_ID}`,
     )
@@ -296,6 +313,17 @@ describe('InstitutionTrackingDashboard', () => {
     expect(screen.getByRole('link', { name: 'Genel bakış' })).toHaveAttribute('href', '/arena/kurum')
     expect(screen.queryByRole('button', { name: 'Sınıf oluştur' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Öğretmen Takibi' })).not.toBeInTheDocument()
+    const outcomeHeading = await screen.findByRole('heading', { name: 'Kazanım analizi' })
+    const followupHeading = screen.getByRole('heading', { name: 'Öğrenci destek takibi' })
+    const programHeading = screen.getByRole('heading', { name: 'Haftalık çalışma programı' })
+    const resultsHeading = screen.getByRole('heading', { name: 'Program sonuçları' })
+    const reportHeading = screen.getByRole('heading', { name: 'Öğrenci durum raporu' })
+    const guardianHeading = screen.getByRole('heading', { name: 'Veli bilgilendirme taslağı' })
+    expect(outcomeHeading.compareDocumentPosition(followupHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(followupHeading.compareDocumentPosition(programHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(programHeading.compareDocumentPosition(resultsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(resultsHeading.compareDocumentPosition(reportHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(reportHeading.compareDocumentPosition(guardianHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Öğrenci ekle' }))
     expect(screen.getByRole('dialog', { name: directory.classrooms[0].name })).toBeInTheDocument()
   })
@@ -335,7 +363,7 @@ describe('InstitutionTrackingDashboard', () => {
     })
     const user = userEvent.setup()
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
-    render(<InstitutionTrackingDashboard />)
+    render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} />)
     await screen.findByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })
     await user.click(screen.getByRole('button', { name: 'E-posta taslağını kopyala' }))
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('otomatik gönderim değildir'))
@@ -360,9 +388,12 @@ describe('InstitutionTrackingDashboard', () => {
       membership: { role: 'manager' as const, teacherEnabled: true },
       classrooms: [{ ...directory.classrooms[0], canManagePrograms: true }],
     })
-    render(<InstitutionTrackingDashboard />)
-
+    const view = render(<InstitutionTrackingDashboard />)
     expect(await screen.findByText(/Kurum yöneticisi ve öğretmen görünümü/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Taslak oluştur' })).not.toBeInTheDocument()
+    view.unmount()
+
+    render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} />)
     expect(await screen.findByRole('button', { name: 'Taslak oluştur' })).toBeInTheDocument()
   })
 })

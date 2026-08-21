@@ -24,6 +24,7 @@ import {
 } from '@/lib/institution-pilot/role-contract'
 import { InstitutionPanelNav } from './institution-panel-nav'
 import { InstitutionStaffManager } from './institution-staff-manager'
+import { SupportAccessPanel } from './support-access-panel'
 
 type Role = InstitutionRoleDirectory['roles'][number]
 
@@ -156,7 +157,7 @@ export function InstitutionRoleManager() {
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-[var(--primary)]">
               <UserRoundCog className="h-4 w-4" aria-hidden="true" /> Kurum içi yetkilendirme
             </div>
-            <h1 className="mt-2 text-2xl font-black sm:text-3xl">Kurum Rolleri</h1>
+            <h1 className="mt-2 text-2xl font-black sm:text-3xl">Roller ve Destek</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-sub)]">
               Bu roller yalnız bu kuruma aittir. Bilge Arena platform rollerini değiştirmez ve başka kurumlara taşınmaz.
             </p>
@@ -173,6 +174,8 @@ export function InstitutionRoleManager() {
           <p><strong>Pilot güvenlik sınırı:</strong> personel, rol ve destek erişimi yetkileri kurum yöneticisinde sabittir. Özel rollere yalnız aşağıdaki açıkça devredilebilir izinler verilebilir.</p>
         </div>
       </section>
+
+      <SupportAccessPanel />
 
       {error && (
         <div role="alert" className="flex items-start gap-2 rounded-xl border border-red-400/25 bg-red-400/10 p-3 text-sm font-semibold text-red-200">

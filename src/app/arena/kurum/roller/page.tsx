@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import { InstitutionRoleManager } from '@/components/institution-tracking/institution-role-manager'
 
 export const metadata: Metadata = {
-  title: 'Kurum Rolleri | Bilge Arena',
-  description: 'Kuruma özel personel rolleri ve yetkilendirme.',
+  title: 'Roller ve Destek | Bilge Arena',
+  description: 'Kuruma özel personel rolleri, yetkilendirme ve süreli destek erişimi.',
   robots: { index: false, follow: false },
 }
 export default function InstitutionRolesPage() {

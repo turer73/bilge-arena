@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   AlertTriangle,
@@ -9,7 +9,6 @@ import {
   BookOpenCheck,
   Building2,
   CalendarDays,
-  ChevronRight,
   RefreshCw,
   Send,
   Save,
@@ -21,7 +20,6 @@ import {
   School,
   ShieldCheck,
   UserPlus,
-  UserRoundCog,
   Users,
 } from 'lucide-react'
 import { TR_TIME_ZONE } from '@/lib/utils/tr-date'
@@ -44,12 +42,11 @@ import { buildGuardianStatusEmailDraft } from '@/lib/institution-tracking/guardi
 import { StudentFollowupPanel } from './student-followup-panel'
 import { ProgramReviewPanel } from './program-review-panel'
 import { StudentReportPanel } from './student-report-panel'
-import { SupportAccessPanel } from './support-access-panel'
 import { InstitutionClassroomCreatePanel } from './institution-classroom-create-panel'
 import { InstitutionPanelNav } from './institution-panel-nav'
 import { InstitutionStudentInviteDialog } from './institution-student-invite-dialog'
 import { EvidenceDistributionChart, PercentBar } from './analytics-charts'
-import { TeacherTrackingPanel } from './teacher-tracking-panel'
+import { InstitutionOverviewPanel } from './institution-overview-panel'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -90,7 +87,13 @@ function DashboardSkeleton() {
   )
 }
 
-export function InstitutionTrackingDashboard({ initialClassroomId }: { initialClassroomId?: string } = {}) {
+export function InstitutionTrackingDashboard({
+  initialClassroomId,
+  initialMemberRef,
+}: {
+  initialClassroomId?: string
+  initialMemberRef?: string
+} = {}) {
   const enabled = isInstitutionTrackingUiEnabled()
   const classroomPage = Boolean(initialClassroomId)
   const [directory, setDirectory] = useState<InstitutionTrackingDirectory | null>(null)
@@ -100,6 +103,8 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
   const [classroomOverview, setClassroomOverview] = useState<InstitutionClassroomOverview | null>(null)
   const [classroomOverviewLoading, setClassroomOverviewLoading] = useState(false)
   const [classroomOverviewError, setClassroomOverviewError] = useState(false)
+  const [institutionOverviews, setInstitutionOverviews] = useState<Record<string, InstitutionClassroomOverview | null>>({})
+  const [institutionOverviewsLoading, setInstitutionOverviewsLoading] = useState(false)
   const [directoryLoading, setDirectoryLoading] = useState(enabled)
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [errorStatus, setErrorStatus] = useState<number | null>(null)
@@ -107,6 +112,7 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
   const [classroomCreatorOpen, setClassroomCreatorOpen] = useState(false)
   const [classroomAnnouncement, setClassroomAnnouncement] = useState<string | null>(null)
   const [studentInviteOpen, setStudentInviteOpen] = useState(false)
+  const classroomCreatorButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (!enabled) return
@@ -118,16 +124,9 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
         const next = await fetchInstitutionTrackingDirectory(controller.signal)
         if (controller.signal.aborted) return
         setDirectory(next)
-        setSelectedClassroomId((current) => {
-          if (initialClassroomId) {
-            return next.classrooms.some((classroom) => classroom.id === initialClassroomId)
-              ? initialClassroomId
-              : null
-          }
-          return current && next.classrooms.some((classroom) => classroom.id === current)
-            ? current
-            : next.classrooms[0]?.id ?? null
-        })
+        setSelectedClassroomId(initialClassroomId && next.classrooms.some((classroom) => classroom.id === initialClassroomId)
+          ? initialClassroomId
+          : null)
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return
         setDirectory(null)
@@ -154,15 +153,45 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
       setSelectedMemberRef(null)
       return
     }
-    setSelectedMemberRef((current) => (
-      current && selectedClassroom.students.some((student) => student.memberRef === current)
+    setSelectedMemberRef((current) => {
+      if (initialMemberRef && selectedClassroom.students.some((student) => student.memberRef === initialMemberRef)) {
+        return initialMemberRef
+      }
+      return current && selectedClassroom.students.some((student) => student.memberRef === current)
         ? current
         : selectedClassroom.students[0]?.memberRef ?? null
-    ))
-  }, [selectedClassroom])
+    })
+  }, [initialMemberRef, selectedClassroom])
 
   useEffect(() => {
-    if (!selectedClassroomId || !canAnalyzeSelectedClassroom) {
+    if (classroomPage || !directory || directory.classrooms.length === 0) {
+      setInstitutionOverviews({})
+      setInstitutionOverviewsLoading(false)
+      return
+    }
+    const controller = new AbortController()
+    queueMicrotask(async () => {
+      setInstitutionOverviewsLoading(true)
+      const analyzable = directory.classrooms.filter((classroom) => classroom.canAnalyze !== false)
+      const entries = await Promise.all(analyzable.map(async (classroom) => {
+        try {
+          const overview = await fetchInstitutionClassroomOverview(classroom.id, controller.signal)
+          return [classroom.id, overview] as const
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return null
+          return [classroom.id, null] as const
+        }
+      }))
+      if (!controller.signal.aborted) {
+        setInstitutionOverviews(Object.fromEntries(entries.filter((entry): entry is readonly [string, InstitutionClassroomOverview | null] => entry !== null)))
+        setInstitutionOverviewsLoading(false)
+      }
+    })
+    return () => controller.abort()
+  }, [classroomPage, directory, refreshKey])
+
+  useEffect(() => {
+    if (!classroomPage || !selectedClassroomId || !canAnalyzeSelectedClassroom) {
       setClassroomOverview(null)
       setClassroomOverviewError(false)
       return
@@ -185,10 +214,10 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
       }
     })
     return () => controller.abort()
-  }, [canAnalyzeSelectedClassroom, selectedClassroomId, refreshKey])
+  }, [canAnalyzeSelectedClassroom, classroomPage, selectedClassroomId, refreshKey])
 
   useEffect(() => {
-    if (!selectedClassroomId || !selectedMemberRef || !canAnalyzeSelectedClassroom) {
+    if (!classroomPage || !selectedClassroomId || !selectedMemberRef || !canAnalyzeSelectedClassroom) {
       setAnalysis(null)
       return
     }
@@ -214,7 +243,12 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
       }
     })
     return () => controller.abort()
-  }, [canAnalyzeSelectedClassroom, selectedClassroomId, selectedMemberRef, refreshKey])
+  }, [canAnalyzeSelectedClassroom, classroomPage, selectedClassroomId, selectedMemberRef, refreshKey])
+
+  function closeClassroomCreator() {
+    setClassroomCreatorOpen(false)
+    window.setTimeout(() => classroomCreatorButtonRef.current?.focus(), 0)
+  }
 
   if (!enabled) {
     return (
@@ -318,6 +352,7 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
             ) : directory.membership.role === 'manager' && (
               <>
                 <button
+                  ref={classroomCreatorButtonRef}
                   type="button"
                   onClick={() => {
                     setClassroomCreatorOpen((current) => !current)
@@ -328,9 +363,6 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
                 >
                   <Plus className="h-4 w-4" aria-hidden="true" /> Sınıf oluştur
                 </button>
-                <Link href="/arena/kurum/roller" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-400/10 px-3 text-xs font-black text-sky-100 hover:bg-sky-400/15">
-                  <UserRoundCog className="h-4 w-4" aria-hidden="true" /> Kurum Rolleri
-                </Link>
               </>
             )}
             <div className="flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200">
@@ -349,14 +381,12 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
         />
       )}
 
-      {!classroomPage && directory.membership.role === 'manager' && <SupportAccessPanel />}
-
       {!classroomPage && directory.membership.role === 'manager' && classroomCreatorOpen && (
         <InstitutionClassroomCreatePanel
-          onCancel={() => setClassroomCreatorOpen(false)}
+          onCancel={closeClassroomCreator}
           onCreated={(result) => {
             setClassroomAnnouncement(`${result.classroom.name}, ${result.teacher.alias} öğretmenine atandı.`)
-            setClassroomCreatorOpen(false)
+            closeClassroomCreator()
             setRefreshKey((value) => value + 1)
           }}
         />
@@ -377,6 +407,7 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
             <button
               type="button"
               onClick={() => {
+                classroomCreatorButtonRef.current?.focus()
                 setClassroomCreatorOpen(true)
                 setClassroomAnnouncement(null)
               }}
@@ -386,34 +417,15 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
             </button>
           )}
         </section>
+      ) : !classroomPage ? (
+        <InstitutionOverviewPanel
+          directory={directory}
+          overviews={institutionOverviews}
+          loading={institutionOverviewsLoading}
+        />
       ) : (
         <div className="grid min-w-0 gap-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
           <aside className="min-w-0 space-y-4">
-            <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-3">
-              <h2 className="px-2 pb-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-sub)]">Sınıflar</h2>
-              <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible" aria-label="Kurum sınıfları">
-                {directory.classrooms.map((classroom) => {
-                  const selected = classroom.id === selectedClassroomId
-                  return (
-                    <Link
-                      key={classroom.id}
-                      href={`/arena/kurum/sinif/${classroom.id}`}
-                      aria-current={classroomPage && selected ? 'page' : undefined}
-                      className={`min-w-[14rem] rounded-xl border p-3 text-left transition lg:min-w-0 ${selected
-                        ? 'border-[var(--primary)] bg-[var(--primary)]/10'
-                        : 'border-white/10 bg-white/[0.02] hover:bg-white/5'}`}
-                    >
-                      <span className="block truncate text-sm font-black">{classroom.name}</span>
-                      <span className="mt-1 block truncate text-xs text-[var(--text-sub)]">{classroom.teacherAlias}</span>
-                      <span className="mt-2 flex items-center gap-1 text-xs font-bold text-[var(--primary)]">
-                        <Users className="h-3.5 w-3.5" aria-hidden="true" /> {classroom.activeStudentCount} öğrenci
-                      </span>
-                    </Link>
-                  )
-                })}
-              </div>
-            </section>
-
             {selectedClassroom && (
               <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-3">
                 <h2 className="px-2 pb-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--text-sub)]">Öğrenciler</h2>
@@ -428,11 +440,10 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
                     {selectedClassroom.students.map((student) => {
                       const selected = student.memberRef === selectedMemberRef
                       return (
-                        <button
+                        <Link
                           key={student.memberRef}
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() => setSelectedMemberRef(student.memberRef)}
+                          href={`/arena/kurum/sinif/${selectedClassroom.id}?ogrenci=${student.memberRef}`}
+                          aria-current={selected ? 'true' : undefined}
                           className={`flex min-w-[13rem] items-center justify-between gap-2 rounded-xl border px-3 py-3 text-left lg:min-w-0 ${selected
                             ? 'border-[var(--primary)] bg-[var(--primary)]/10'
                             : 'border-white/10 bg-white/[0.02] hover:bg-white/5'}`}
@@ -441,8 +452,8 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
                             <span className="block truncate text-sm font-bold">{student.alias}</span>
                             <span className="mt-0.5 block text-xs text-[var(--text-sub)]">Katılım {formatDate(student.joinedAt)}</span>
                           </span>
-                          <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        </button>
+                          <span className="text-xs font-black text-[var(--primary)]">Aç</span>
+                        </Link>
                       )
                     })}
                   </div>
@@ -465,16 +476,7 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
             ) : classroomOverviewLoading && !classroomOverview ? (
               <div className="h-64 animate-pulse rounded-2xl bg-white/5" aria-label="Sınıf özeti yükleniyor" />
             ) : classroomOverview ? (
-              <div className="space-y-4">
-                <ClassroomOverviewPanel overview={classroomOverview} />
-                {!classroomPage && directory.membership.role === 'manager' && classroomOverview.teacherIndicators && (
-                  <TeacherTrackingPanel
-                    classroomName={classroomOverview.classroom.name}
-                    teacherAlias={classroomOverview.classroom.teacherAlias}
-                    indicators={classroomOverview.teacherIndicators}
-                  />
-                )}
-              </div>
+              <ClassroomOverviewPanel overview={classroomOverview} />
             ) : classroomOverviewError && (selectedClassroom?.activeStudentCount ?? 0) < 3 ? (
               <section className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
                 Toplu sınıf grafikleri için en az 3 aktif öğrenci gerekir. Öğrenci analizi ayrı olarak kullanılabilir.
@@ -650,13 +652,9 @@ function AnalysisPanel({
             <SummaryCard label="Kanıt yetersiz" value={analysis.summary.insufficientOutcomeCount} total={analysis.summary.outcomeCount} tone="amber" icon={<AlertTriangle />} />
           </div>
         </div>
-        {canManagePrograms && guardianEmailDraft && (
-          <div className="mt-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0"><p className="flex items-center gap-2 text-sm font-black"><Mail className="h-4 w-4 text-[var(--primary)]" /> Veli bilgilendirme taslağı</p><p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Adres saklanmaz ve sistem gönderim yapmaz. Metni inceleyip kendi e-posta aracında kullanın.</p></div>
-            <button type="button" onClick={copyGuardianEmailDraft} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold"><ClipboardCheck className="h-4 w-4" /> {emailDraftStatus === 'copied' ? 'Kopyalandı' : emailDraftStatus === 'error' ? 'Kopyalanamadı' : 'E-posta taslağını kopyala'}</button>
-          </div>
-        )}
       </section>
+
+      <OutcomeAnalysisPanel analysis={analysis} />
 
       {canManagePrograms && (
         <StudentFollowupPanel
@@ -664,14 +662,6 @@ function AnalysisPanel({
           memberRef={analysis.student.memberRef}
           onChanged={onFollowupChanged}
         />
-      )}
-
-      {canManagePrograms && (
-        <ProgramReviewPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
-      )}
-
-      {canManagePrograms && (
-        <StudentReportPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
       )}
 
       {canManagePrograms && (
@@ -703,7 +693,32 @@ function AnalysisPanel({
         </section>
       )}
 
-      <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
+      {canManagePrograms && (
+        <ProgramReviewPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
+      )}
+
+      {canManagePrograms && (
+        <StudentReportPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
+      )}
+
+      {canManagePrograms && guardianEmailDraft && (
+        <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-2 text-lg font-black"><Mail className="h-5 w-5 text-[var(--primary)]" aria-hidden="true" /> Veli bilgilendirme taslağı</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Adres saklanmaz ve sistem gönderim yapmaz. Kanıt, takip ve programı inceledikten sonra metni kendi e-posta aracınızda kullanın.</p>
+            </div>
+            <button type="button" onClick={copyGuardianEmailDraft} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold"><ClipboardCheck className="h-4 w-4" aria-hidden="true" /> {emailDraftStatus === 'copied' ? 'Kopyalandı' : emailDraftStatus === 'error' ? 'Kopyalanamadı' : 'E-posta taslağını kopyala'}</button>
+          </div>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function OutcomeAnalysisPanel({ analysis }: { analysis: InstitutionStudentLearningAnalysis }) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-black">Kazanım analizi</h3>
@@ -755,7 +770,6 @@ function AnalysisPanel({
           })}
         </div>
       </section>
-    </div>
   )
 }
 
