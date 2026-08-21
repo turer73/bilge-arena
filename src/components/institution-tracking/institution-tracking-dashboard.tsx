@@ -49,6 +49,7 @@ import { InstitutionClassroomCreatePanel } from './institution-classroom-create-
 import { InstitutionPanelNav } from './institution-panel-nav'
 import { InstitutionStudentInviteDialog } from './institution-student-invite-dialog'
 import { EvidenceDistributionChart, PercentBar } from './analytics-charts'
+import { TeacherTrackingPanel } from './teacher-tracking-panel'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -464,7 +465,16 @@ export function InstitutionTrackingDashboard({ initialClassroomId }: { initialCl
             ) : classroomOverviewLoading && !classroomOverview ? (
               <div className="h-64 animate-pulse rounded-2xl bg-white/5" aria-label="Sınıf özeti yükleniyor" />
             ) : classroomOverview ? (
-              <ClassroomOverviewPanel overview={classroomOverview} />
+              <div className="space-y-4">
+                <ClassroomOverviewPanel overview={classroomOverview} />
+                {!classroomPage && directory.membership.role === 'manager' && classroomOverview.teacherIndicators && (
+                  <TeacherTrackingPanel
+                    classroomName={classroomOverview.classroom.name}
+                    teacherAlias={classroomOverview.classroom.teacherAlias}
+                    indicators={classroomOverview.teacherIndicators}
+                  />
+                )}
+              </div>
             ) : classroomOverviewError && (selectedClassroom?.activeStudentCount ?? 0) < 3 ? (
               <section className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-4 text-sm text-amber-100">
                 Toplu sınıf grafikleri için en az 3 aktif öğrenci gerekir. Öğrenci analizi ayrı olarak kullanılabilir.

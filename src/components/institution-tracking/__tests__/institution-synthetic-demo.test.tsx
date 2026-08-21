@@ -23,6 +23,9 @@ describe('InstitutionSyntheticDemo', () => {
           /Gerçek hesap, öğrenci verisi veya production yazması kullanılmaz/
         )
       ).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Öğretmen Takibi' })).toBeInTheDocument()
+      expect(screen.getByText('Henüz değerlendirilemez')).toBeInTheDocument()
+      expect(screen.getByText(/En az 8 uygun öğrenci gerekir/)).toBeInTheDocument()
 
       await user.click(screen.getByRole('button', { name: 'Takip aç' }))
       await user.click(screen.getByRole('button', { name: 'Program hazırla' }))

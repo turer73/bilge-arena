@@ -2,14 +2,6 @@ import { AlertTriangle, BarChart3, BookOpenCheck, ShieldCheck, Users } from 'luc
 import type { InstitutionClassroomOverview } from '@/lib/institution-tracking/classroom-overview'
 import { EvidenceDistributionChart, PercentBar, SegmentedBar } from './analytics-charts'
 
-const indicatorLabels = {
-  studentGrowth: 'Öğrenci gelişimi',
-  followUpDiscipline: 'Takip düzeni',
-  programManagement: 'Program yönetimi',
-  interventionResponsiveness: 'Müdahale etkinliği',
-  dataReliability: 'Veri güvenilirliği',
-} as const
-
 export function ClassroomOverviewPanel({ overview }: { overview: InstitutionClassroomOverview }) {
   return (
     <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-6">
@@ -64,8 +56,7 @@ export function ClassroomOverviewPanel({ overview }: { overview: InstitutionClas
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-        <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:p-4">
+      <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:p-4">
           <h3 className="flex items-center gap-2 text-sm font-black"><BookOpenCheck className="h-4 w-4 text-[var(--primary)]" /> Sınıf öncelikleri</h3>
           {overview.priorityOutcomes.length === 0 ? (
             <p className="mt-3 text-sm leading-6 text-[var(--text-sub)]">En az üç öğrencide ortaklaşan, karar güvenli bir kazanım ihtiyacı henüz yok.</p>
@@ -85,33 +76,6 @@ export function ClassroomOverviewPanel({ overview }: { overview: InstitutionClas
               ))}
             </ul>
           )}
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:p-4">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-sm font-black">Öğretmen takip göstergeleri</h3>
-            <span className="text-[11px] font-bold text-[var(--text-sub)]">Tek puan ve sıralama yoktur</span>
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {Object.entries(overview.teacherIndicators.dimensions).map(([key, indicator]) => {
-              const evidence = indicator.evidence[0]
-              return (
-                <article key={key} className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
-                  <p className="text-xs font-bold text-[var(--text-sub)]">{indicatorLabels[key as keyof typeof indicatorLabels]}</p>
-                  <strong className={`mt-1 block text-lg font-black ${indicator.value === null ? 'text-amber-200' : 'text-emerald-200'}`}>
-                    {indicator.value === null ? 'Veri yetersiz' : `%${indicator.value}`}
-                  </strong>
-                  <div className="mt-2">
-                    <PercentBar value={indicator.value} tone={indicator.value === null ? 'amber' : 'emerald'} label={indicatorLabels[key as keyof typeof indicatorLabels]} />
-                  </div>
-                  <p className="mt-1 text-[11px] text-[var(--text-sub)]">
-                    {evidence ? `${evidence.numerator}/${evidence.denominator} gözlem` : 'Kaynak henüz oluşturulmadı'} · {indicator.eligibleStudentCount} uygun öğrenci
-                  </p>
-                </article>
-              )
-            })}
-          </div>
-        </div>
       </div>
     </section>
   )

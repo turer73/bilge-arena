@@ -1,8 +1,14 @@
 import { z } from 'zod'
 import { teacherIndicatorSetSchema, type TeacherIndicatorSet } from './contracts'
+import {
+  TEACHER_GROWTH_MIN_ELIGIBLE_STUDENTS,
+  TEACHER_GROWTH_MIN_WINDOW_DAYS,
+  TEACHER_PROCESS_MIN_OBSERVATIONS,
+} from './teacher-indicator-policy'
 
 const timestampSchema = z.string().datetime({ offset: true })
 const countSchema = z.number().int().nonnegative()
+const DAY_MS = 86_400_000
 
 const dimensionInputSchema = z.object({
   supported: z.boolean(),
@@ -18,7 +24,7 @@ const dimensionInputSchema = z.object({
 })
 
 export const teacherIndicatorInputSchema = z.object({
-  modelVersion: z.literal('institution-teacher-indicators-v1'),
+  modelVersion: z.literal('institution-teacher-indicators-v2'),
   windowStart: timestampSchema,
   windowEnd: timestampSchema,
   dimensions: z.object({
@@ -34,8 +40,14 @@ export const teacherIndicatorInputSchema = z.object({
   }
 })
 
-function buildDimension(value: z.infer<typeof dimensionInputSchema>) {
-  const available = value.supported && value.denominator >= 3 && value.eligibleStudentCount >= 3
+function buildDimension(
+  value: z.infer<typeof dimensionInputSchema>,
+  options: { minimumEligible: number; minimumObservations: number; windowDays?: number; minimumWindowDays?: number },
+) {
+  const available = value.supported
+    && value.denominator >= options.minimumObservations
+    && value.eligibleStudentCount >= options.minimumEligible
+    && (options.minimumWindowDays === undefined || (options.windowDays ?? 0) >= options.minimumWindowDays)
   return {
     status: available ? 'available' as const : 'insufficient' as const,
     value: available ? Math.round((1000 * value.numerator) / value.denominator) / 10 : null,
@@ -52,16 +64,26 @@ function buildDimension(value: z.infer<typeof dimensionInputSchema>) {
 export function buildTeacherIndicatorSet(value: unknown): TeacherIndicatorSet | null {
   const parsed = teacherIndicatorInputSchema.safeParse(value)
   if (!parsed.success) return null
+  const windowDays = (Date.parse(parsed.data.windowEnd) - Date.parse(parsed.data.windowStart)) / DAY_MS
+  const processOptions = {
+    minimumEligible: TEACHER_PROCESS_MIN_OBSERVATIONS,
+    minimumObservations: TEACHER_PROCESS_MIN_OBSERVATIONS,
+  }
   const result = {
     modelVersion: parsed.data.modelVersion,
     windowStart: parsed.data.windowStart,
     windowEnd: parsed.data.windowEnd,
     dimensions: {
-      studentGrowth: buildDimension(parsed.data.dimensions.studentGrowth),
-      followUpDiscipline: buildDimension(parsed.data.dimensions.followUpDiscipline),
-      programManagement: buildDimension(parsed.data.dimensions.programManagement),
-      interventionResponsiveness: buildDimension(parsed.data.dimensions.interventionResponsiveness),
-      dataReliability: buildDimension(parsed.data.dimensions.dataReliability),
+      studentGrowth: buildDimension(parsed.data.dimensions.studentGrowth, {
+        minimumEligible: TEACHER_GROWTH_MIN_ELIGIBLE_STUDENTS,
+        minimumObservations: TEACHER_GROWTH_MIN_ELIGIBLE_STUDENTS,
+        windowDays,
+        minimumWindowDays: TEACHER_GROWTH_MIN_WINDOW_DAYS,
+      }),
+      followUpDiscipline: buildDimension(parsed.data.dimensions.followUpDiscipline, processOptions),
+      programManagement: buildDimension(parsed.data.dimensions.programManagement, processOptions),
+      interventionResponsiveness: buildDimension(parsed.data.dimensions.interventionResponsiveness, processOptions),
+      dataReliability: buildDimension(parsed.data.dimensions.dataReliability, processOptions),
     },
   }
   const validated = teacherIndicatorSetSchema.safeParse(result)

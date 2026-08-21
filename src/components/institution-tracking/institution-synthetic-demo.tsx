@@ -12,6 +12,7 @@ import {
 import type { InstitutionClassroomOverview } from '@/lib/institution-tracking/classroom-overview'
 
 import { ClassroomOverviewPanel } from './classroom-overview-panel'
+import { TeacherTrackingPanel } from './teacher-tracking-panel'
 
 const students = [
   {
@@ -44,9 +45,9 @@ const students = [
   },
 ]
 
-function indicator(value: number, numerator: number, denominator: number) {
+function indicator(value: number | null, numerator: number, denominator: number) {
   return {
-    status: 'available' as const,
+    status: value === null ? 'insufficient' as const : 'available' as const,
     value,
     eligibleStudentCount: 4,
     excludedInsufficientCount: 0,
@@ -89,11 +90,11 @@ const overview: InstitutionClassroomOverview = {
     },
   ],
   teacherIndicators: {
-    modelVersion: 'institution-teacher-indicators-v1',
+    modelVersion: 'institution-teacher-indicators-v2',
     windowStart: '2026-07-17T00:00:00.000Z',
     windowEnd: '2026-08-14T00:00:00.000Z',
     dimensions: {
-      studentGrowth: indicator(75, 3, 4),
+      studentGrowth: indicator(null, 3, 4),
       followUpDiscipline: indicator(100, 3, 3),
       programManagement: indicator(66.7, 2, 3),
       interventionResponsiveness: indicator(66.7, 2, 3),
@@ -143,6 +144,14 @@ export function InstitutionSyntheticDemo() {
       </header>
 
       <ClassroomOverviewPanel overview={overview} />
+
+      {overview.teacherIndicators && (
+        <TeacherTrackingPanel
+          classroomName={overview.classroom.name}
+          teacherAlias={overview.classroom.teacherAlias}
+          indicators={overview.teacherIndicators}
+        />
+      )}
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="min-w-0 rounded-2xl border border-white/10 bg-[var(--surface)] p-3">
