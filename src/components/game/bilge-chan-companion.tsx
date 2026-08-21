@@ -327,11 +327,16 @@ export function BilgeChanCompanion({
   }
 
   return (
-    <div className={`flex ${compact ? 'flex-row items-center gap-2' : 'flex-col items-center'} ${className ?? ''}`}>
+    <div className={`flex ${compact ? 'relative min-h-[88px] flex-row items-end gap-1 px-1 pt-2' : 'flex-col items-center'} ${className ?? ''}`}>
+      {compact && (
+        <span className="absolute left-[68px] top-0 z-10 -rotate-2 rounded-lg border-2 border-white bg-[#2563eb] px-2 py-1 text-[8px] font-black uppercase tracking-[0.08em] text-white shadow-[0_3px_8px_rgba(37,99,235,.24)]">
+          Bilge Çan
+        </span>
+      )}
       {message && (
         <div
           aria-live="polite"
-          className={`relative ${compact ? 'order-2' : 'mb-2'} w-full ${bubbleWidth} rounded-2xl border border-[var(--focus-border)] bg-[var(--card)] px-3 py-2 text-xs leading-relaxed text-[var(--text)] shadow-md`}
+          className={`relative ${compact ? 'order-2 mb-1 rounded-[24px_24px_24px_12px] border-2 border-[#dfe3e7] bg-white text-[#4b5157] shadow-[0_4px_0_#dfe3e7]' : 'mb-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--card)] text-[var(--text)] shadow-md'} w-full ${bubbleWidth} px-3 py-2.5 text-xs font-semibold leading-relaxed`}
         >
           <Typewriter key={message} text={message} />
           {ttsReady && message && (
@@ -474,12 +479,26 @@ export function BilgeChanCompanion({
           )}
         </div>
       )}
-      <BilgeChan
-        pose={pose}
-        height={height}
-        priority={priority}
-        className={`animate-chan-idle motion-reduce:animate-none ${compact ? 'order-1' : ''}`}
-      />
+      {compact ? (
+        <div
+          data-testid="chan-waist-crop"
+          className="relative order-1 h-[88px] w-[72px] shrink-0 overflow-hidden"
+        >
+          <BilgeChan
+            pose={pose}
+            height={Math.max(height, 156)}
+            priority={priority}
+            className="absolute left-1/2 top-0 max-w-none -translate-x-1/2 animate-chan-idle drop-shadow-[0_6px_8px_rgba(31,41,55,.16)] motion-reduce:animate-none"
+          />
+        </div>
+      ) : (
+        <BilgeChan
+          pose={pose}
+          height={height}
+          priority={priority}
+          className="animate-chan-idle motion-reduce:animate-none"
+        />
+      )}
       {boardLesson && (
         <BilgeTahtaDialog
           open={boardOpen && playing}

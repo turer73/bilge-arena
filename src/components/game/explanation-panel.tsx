@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { Bug, MessageCircle } from 'lucide-react'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { getOptionLetter } from '@/lib/utils/question'
 import { stripRichText } from '@/lib/utils/rich-text'
@@ -57,25 +58,20 @@ export function ExplanationPanel({
   return (
     <div
       ref={rootRef}
-      className="animate-fadeUp rounded-xl border-[1.5px] p-4 md:p-5"
-      style={{
-        // Opak taban (transparent DEĞİL) — video zeminde panel saydam kalıp
-        // açıklama metnini okunmaz yapıyordu; tinti card-bg ile karıştır.
-        background: isCorrect
-          ? 'color-mix(in srgb, var(--growth) 12%, var(--card-bg))'
-          : 'color-mix(in srgb, var(--urgency) 10%, var(--card-bg))',
-        borderColor: isCorrect
-          ? 'color-mix(in srgb, var(--growth) 33%, transparent)'
-          : 'color-mix(in srgb, var(--urgency) 27%, transparent)',
-      }}
+      className={`animate-fadeUp rounded-[22px] border-2 p-4 ${
+        isCorrect
+          ? 'border-[#86efac] bg-[#f0fdf4] shadow-[0_5px_0_#86efac]'
+          : 'border-[#fda4af] bg-[#fff1f2] shadow-[0_5px_0_#fda4af]'
+      }`}
     >
       {/* Sonuc mesaji */}
       <div
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className="mb-2 text-base font-bold leading-6"
-        style={{ color: isCorrect ? 'var(--growth-text)' : 'var(--urgency-text)' }}
+        className={`mb-2 text-base font-bold leading-6 ${
+          isCorrect ? 'text-[#15803d]' : 'text-[#be123c]'
+        }`}
       >
         {isCorrect
           ? '✓ Doğru! Mükemmel 🎉'
@@ -86,7 +82,7 @@ export function ExplanationPanel({
 
       {/* Aciklama */}
       {solution && (
-        <div className="mb-4 text-[15px] leading-7 text-[var(--text-sub)]">
+        <div className="mb-4 text-[15px] leading-7 text-[#4b5157]">
           📌 {solution}
         </div>
       )}
@@ -96,7 +92,7 @@ export function ExplanationPanel({
         <button
           type="button"
           onClick={onNext}
-          className="min-h-11 w-full rounded-xl bg-[var(--focus)] px-5 py-2.5 text-sm font-bold tracking-wide text-white transition-colors hover:bg-[var(--focus-light)] sm:w-auto"
+          className="min-h-11 w-full rounded-xl bg-[var(--focus)] px-5 py-2.5 text-sm font-bold tracking-wide text-white shadow-[0_4px_0_#1d4ed8] transition-all hover:bg-[var(--focus-light)] active:translate-y-1 active:shadow-none sm:w-auto"
         >
           {isLastQuestion ? 'Sonucu Gor →' : 'Sonraki Soru →'}
         </button>
@@ -109,18 +105,19 @@ export function ExplanationPanel({
             subject={question.game}
             difficulty={question.difficulty}
             questionContext={topicContext}
+            appearance="learning"
           />
 
-          <LikeButton initialCount={0} size="sm" />
+          <LikeButton initialCount={0} size="sm" appearance="learning" />
 
           {onOpenComments && (
             <button
               type="button"
               onClick={onOpenComments}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--focus-text)]"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-white/80 text-[#64748b] transition-colors hover:bg-white hover:text-[#2563eb]"
               aria-label="Yorumlar"
             >
-              <span className="text-xs">💬</span>
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
             </button>
           )}
 
@@ -128,10 +125,10 @@ export function ExplanationPanel({
             <button
               type="button"
               onClick={onOpenReport}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--reward-text)]"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-white/80 text-[#f97316] transition-colors hover:bg-white hover:text-[#ea580c]"
               aria-label="Hata bildir"
             >
-              <span className="text-xs">🐛</span>
+              <Bug className="h-4 w-4" aria-hidden="true" />
             </button>
           )}
         </div>

@@ -11,6 +11,8 @@ const {
   mockRecordAttempt,
   mockRpc,
   mockReadSnapshots,
+  mockReadGuestCookie,
+  mockVerifyGuestToken,
 } = vi.hoisted(() => {
   const mockAttemptQuery = vi.fn()
   const mockAttemptGt = vi.fn(() => ({ maybeSingle: mockAttemptQuery }))
@@ -38,6 +40,8 @@ const {
     mockRecordAttempt: vi.fn(),
     mockRpc: vi.fn(),
     mockReadSnapshots: vi.fn(),
+    mockReadGuestCookie: vi.fn(),
+    mockVerifyGuestToken: vi.fn(),
   }
 })
 
@@ -61,6 +65,11 @@ vi.mock('@/lib/questions/attempt-store', () => ({
   recordFirstQuestionAttempt: mockRecordAttempt,
   getFirstQuestionAttempt: vi.fn(),
 }))
+vi.mock('@/lib/questions/guest-grading-session', () => ({
+  guestGradingActorKey: (sessionId: string) => `guest:${sessionId}`,
+  readGuestGradingCookie: mockReadGuestCookie,
+  verifyGuestGradingToken: mockVerifyGuestToken,
+}))
 vi.mock('@/lib/verified-attempts', () => ({
   readVerifiedAttemptQuestionSnapshots: mockReadSnapshots,
 }))
@@ -77,6 +86,7 @@ const QUESTION_ID = '10000000-0000-4000-8000-000000000001'
 const ATTEMPT_ID = '20000000-0000-4000-8000-000000000002'
 const STRATEGY_EVENT_ID = '30000000-0000-4000-8000-000000000003'
 const oldStrategyFlag = process.env.MOCK_STRATEGY_ENABLED
+const GUEST_SESSION_ID = '50000000-0000-4000-8000-000000000005'
 
 function request(body: unknown, headers?: HeadersInit) {
   const payload = body && typeof body === 'object' && !Array.isArray(body)
@@ -84,7 +94,7 @@ function request(body: unknown, headers?: HeadersInit) {
     : body
   return new Request('http://localhost/api/questions/grade', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
+    headers: { 'Content-Type': 'application/json', cookie: 'ba_guest_grading=guest-token', ...headers },
     body: JSON.stringify(payload),
   })
 }
@@ -107,6 +117,16 @@ describe('POST /api/questions/grade', () => {
       correctOption: 2,
       metadata: { game: 'matematik', category: 'cebir', difficulty: 2, basePoints: 20 },
     }])
+    mockReadGuestCookie.mockImplementation((header: string | null) =>
+      header?.includes('ba_guest_grading=') ? 'guest-token' : null
+    )
+    mockVerifyGuestToken.mockImplementation((raw: string | null) => raw ? {
+      version: 1,
+      sessionId: GUEST_SESSION_ID,
+      questionIds: [QUESTION_ID],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 7_200_000,
+    } : null)
     mockAttemptQuery.mockResolvedValue({
       data: { id: ATTEMPT_ID, question_ids: [QUESTION_ID] },
       error: null,
@@ -182,6 +202,24 @@ describe('POST /api/questions/grade', () => {
     const wrong = await POST(request({ questionId: QUESTION_ID, selectedOption: 1 }))
     expect(wrong.status).toBe(200)
     expect(await wrong.json()).toEqual({ isCorrect: false, correctOption: 2, solution: 'Co\u0308zu\u0308m' })
+  })
+
+  it('isolates two guest sessions behind the same IP', async () => {
+    const secondSessionId = '60000000-0000-4000-8000-000000000006'
+
+    await POST(request({ questionId: QUESTION_ID, selectedOption: 2 }))
+    mockVerifyGuestToken.mockReturnValueOnce({
+      version: 1,
+      sessionId: secondSessionId,
+      questionIds: [QUESTION_ID],
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 7_200_000,
+    })
+    await POST(request({ questionId: QUESTION_ID, selectedOption: 1 }))
+
+    expect(mockGetClientIp).toHaveBeenCalledWith(expect.any(Headers))
+    expect(mockRecordAttempt).toHaveBeenNthCalledWith(1, `guest:${GUEST_SESSION_ID}`, QUESTION_ID, 2)
+    expect(mockRecordAttempt).toHaveBeenNthCalledWith(2, `guest:${secondSessionId}`, QUESTION_ID, 1)
   })
 
   it('reveals feedback after a timed-out skip without marking it correct', async () => {
@@ -306,10 +344,24 @@ describe('POST /api/questions/grade', () => {
   it('authenticated request without an attempt fails closed before question lookup', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'user-42' } } })
 
-    const res = await POST(request({ questionId: QUESTION_ID, selectedOption: 2 }))
+    const res = await POST(request(
+      { questionId: QUESTION_ID, selectedOption: 2 },
+      { cookie: '' },
+    ))
 
     expect(res.status).toBe(403)
     expect(await res.json()).toEqual({ error: 'Deneme dogrulanamadi' })
+    expect(mockQuestionQuery).not.toHaveBeenCalled()
+  })
+
+  it('rejects an anonymous grade without a signed guest session', async () => {
+    const res = await POST(request(
+      { questionId: QUESTION_ID, selectedOption: 2 },
+      { cookie: '' },
+    ))
+
+    expect(res.status).toBe(403)
+    expect(mockRecordAttempt).not.toHaveBeenCalled()
     expect(mockQuestionQuery).not.toHaveBeenCalled()
   })
 

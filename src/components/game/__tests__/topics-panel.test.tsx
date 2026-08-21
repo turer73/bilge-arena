@@ -32,12 +32,12 @@ describe('TopicsPanel', () => {
     expect(grid.className).toContain('lg:grid-cols-4')
   })
 
-  test('eşik renkleri: >=70 growth, >=40 reward, <40 urgency', () => {
+  test('eşik renkleri: başlanmamış konu nötr, diğerleri başarı düzeyine göre', () => {
     render(<TopicsPanel topics={TOPICS} />)
     expect(screen.getByText('%85')).toHaveStyle({ color: 'var(--growth)' })
     expect(screen.getByText('%50')).toHaveStyle({ color: 'var(--reward)' })
     expect(screen.getByText('%20')).toHaveStyle({ color: 'var(--urgency)' })
-    expect(screen.getByText('%0')).toHaveStyle({ color: 'var(--urgency)' })
+    expect(screen.getByText('%0')).toHaveStyle({ color: '#94a3b8' })
   })
 
   test('bar genişliği yüzdeye eşit', () => {

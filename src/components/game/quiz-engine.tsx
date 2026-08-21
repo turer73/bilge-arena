@@ -19,6 +19,7 @@ import { isMockStrategyUiEnabled, startMockStrategyAttempt } from '@/lib/mock-st
 import { isPaperModeUiEnabled, paperPackCreateHref } from '@/lib/paper-mode/client'
 import { useMockStrategyResult } from '@/lib/hooks/use-mock-strategy-result'
 import { toast } from '@/stores/toast-store'
+import { Clock3, Flame, Heart, Sparkles, X } from 'lucide-react'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
@@ -246,6 +247,25 @@ export function QuizEngine({ game }: QuizEngineProps) {
     }
   }, [quiz.screen])
 
+  // Mobil lobi ve aktif oyunda masaustu ust navigasyonu yerine ekrana ozel,
+  // dikkat dagitmayan uygulama kabugunu kullan. Cleanup rota/ekran degisiminde
+  // global gezinmeyi geri getirir.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const shellClass = quiz.screen === 'game'
+      ? 'mobile-quiz-active'
+      : quiz.screen === 'lobby'
+        ? 'mobile-quiz-lobby'
+        : quiz.screen === 'loading'
+          ? 'mobile-quiz-loading'
+          : quiz.screen === 'result'
+            ? 'mobile-quiz-result'
+        : null
+    if (!shellClass) return
+    document.body.classList.add(shellClass)
+    return () => document.body.classList.remove(shellClass)
+  }, [quiz.screen])
+
   // Kullanicinin gercek XP ve streak degerleri
   const userXP = profile?.total_xp ?? 0
   const userStreak = profile?.current_streak ?? 0
@@ -254,6 +274,13 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (quiz.screen === 'lobby') {
     return (
       <>
+        <style>{`
+          body.mobile-quiz-lobby [data-app-navbar] { display: none !important; }
+          body.mobile-quiz-lobby [data-arena-main] {
+            padding-top: 0 !important;
+            background: #f7f8fa;
+          }
+        `}</style>
         {user && (
           <div className="mx-auto max-w-md space-y-3 px-4 pt-4 md:max-w-lg md:px-6 xl:max-w-xl xl:px-8 2xl:max-w-2xl">
             <TodayPlanCard
@@ -365,72 +392,113 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // --- LOADING ---
   if (quiz.screen === 'loading') {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-4">
-        <BilgeChan pose="reading" height={120} className="animate-float" priority />
-        <p className="text-sm text-[var(--text-sub)] animate-pulse">
-          Sorular hazırlanıyor...
-        </p>
-      </div>
+      <>
+        <style>{`
+          body.mobile-quiz-loading [data-app-navbar],
+          body.mobile-quiz-loading [data-bottom-nav] { display: none !important; }
+          body.mobile-quiz-loading [data-arena-main] {
+            padding: 0 !important;
+            background: #f7f8fa;
+          }
+        `}</style>
+        <div className="mx-auto flex min-h-[100dvh] max-w-[520px] flex-col items-center justify-center gap-5 bg-[#f7f8fa] p-5 text-center text-[#45494e]">
+          <div className="relative flex h-48 w-full max-w-[340px] items-center justify-center overflow-hidden rounded-[28px] border-2 border-[#dbeafe] bg-white shadow-[0_6px_0_#bfdbfe]">
+            <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] border-[#2563eb]/5" />
+            <div className="absolute left-5 top-5 flex items-center gap-1.5 rounded-xl bg-[#eff6ff] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#2563eb]">
+              <Sparkles size={13} fill="currentColor" /> Bilge Çan hazırlıyor
+            </div>
+            <BilgeChan pose="reading" height={128} className="mt-8 animate-float" priority />
+          </div>
+          <div>
+            <h1 className="text-xl font-black">Sorular hazırlanıyor</h1>
+            <p className="mt-1 text-xs font-semibold text-[#7d858d]">Seçtiğin moda uygun soruları getiriyoruz.</p>
+          </div>
+          <div aria-label="Sorular yükleniyor" role="progressbar" className="flex w-full max-w-[280px] gap-2">
+            {[0, 1, 2].map((step) => (
+              <span
+                key={step}
+                className="h-2 flex-1 animate-pulse rounded-full bg-[#2563eb]"
+                style={{ animationDelay: `${step * 180}ms`, opacity: 1 - step * 0.22 }}
+              />
+            ))}
+          </div>
+        </div>
+      </>
     )
   }
 
   // --- RESULT ---
   if (quiz.screen === 'result') {
+    const resultShellStyle = (
+      <style>{`
+        body.mobile-quiz-result [data-app-navbar],
+        body.mobile-quiz-result [data-bottom-nav] { display: none !important; }
+        body.mobile-quiz-result [data-arena-main] {
+          padding: 0 !important;
+          background: #f3f6fa;
+        }
+      `}</style>
+    )
     // Misafir önizleme: 1 soru sonrası kayıt CTA
     if (quiz.isGuestMode) {
       const redirectPath = `/arena/${game}`
       return (
-        <div className="mx-auto flex max-w-md flex-col items-center gap-5 px-4 py-16 text-center animate-scaleIn">
-          <div className="text-6xl">🎯</div>
-          <h2 className="font-display text-2xl font-black">
-            Nasıl buldun?
-          </h2>
-          <p className="text-sm text-[var(--text-sub)]">
-            <span className="font-bold" style={{ color: gameDef.colorHex }}>{gameDef.name}</span>
-            {' '}arenasında yüzlerce soru seni bekliyor. Ücretsiz hesap oluştur, ilerlemeyi kaydet, sıralamada yüksel.
-          </p>
-          <div className="flex w-full flex-col gap-2 sm:flex-row">
-            <a
-              href={`/giris?redirect=${encodeURIComponent(redirectPath)}`}
-              className="flex-1 rounded-[10px] py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
-              style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}cc)` }}
-            >
-              🚀 Ücretsiz Kayıt Ol
-            </a>
-            <button
-              onClick={quiz.handleRestart}
-              className="flex-1 rounded-[10px] border border-[var(--border)] py-3 text-sm font-medium text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
-            >
-              Tekrar Dene
-            </button>
+        <>
+          {resultShellStyle}
+          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[#f3f6fa] p-4 text-center text-[#45494e] animate-scaleIn">
+            <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] p-5 pb-7 text-white shadow-[0_7px_0_#1e40af]">
+              <div className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
+              <BilgeChan pose="wave" height={148} priority className="mx-auto drop-shadow-[0_8px_10px_rgba(15,23,42,.18)]" />
+              <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/70">İlk turun tamam</p>
+              <h2 className="mt-1 text-2xl font-black">Nasıl buldun?</h2>
+            </div>
+            <div className="rounded-[22px] border-2 border-[#dbeafe] bg-white p-5 shadow-[0_5px_0_#bfdbfe]">
+              <p className="text-sm font-semibold leading-6 text-[#69717a]">
+                <span className="font-black" style={{ color: gameDef.colorHex }}>{gameDef.name}</span>
+                {' '}arenasında yüzlerce soru seni bekliyor. İlerlemeni kaydetmek ve serini korumak için ücretsiz hesap oluştur.
+              </p>
+              <div className="mt-5 flex w-full flex-col gap-3">
+                <a
+                  href={`/giris?redirect=${encodeURIComponent(redirectPath)}`}
+                  className="flex min-h-[52px] items-center justify-center rounded-2xl bg-[#2563eb] px-4 text-sm font-black text-white shadow-[0_5px_0_#1d4ed8] active:translate-y-1 active:shadow-none"
+                >
+                  Ücretsiz Kayıt Ol
+                </a>
+                <button
+                  onClick={quiz.handleRestart}
+                  className="min-h-12 rounded-2xl border-2 border-[#e5e7eb] bg-white text-sm font-black text-[#69717a] shadow-[0_4px_0_#dfe3e7] active:translate-y-1 active:shadow-none"
+                >
+                  Tekrar Dene
+                </button>
+              </div>
+              <p className="mt-4 text-xs font-semibold text-[#9aa1a9]">
+                Zaten hesabın var mı?{' '}
+                <a href={`/giris?redirect=${encodeURIComponent(redirectPath)}`} className="font-black text-[#2563eb] underline underline-offset-2">Giriş yap</a>
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-[var(--text-muted)]">
-            Zaten hesabın var mı?{' '}
-            <a
-              href={`/giris?redirect=${encodeURIComponent(redirectPath)}`}
-              className="underline hover:text-[var(--focus)]"
-            >
-              Giriş yap
-            </a>
-          </p>
-        </div>
+        </>
       )
     }
 
     if (quiz.isDeneme && quiz.denemeConfig) {
       return (
-        <DenemeResult
-          gameName={gameDef.name}
-          totalTime={quiz.denemeConfig.totalTime}
-          elapsedTime={quiz.elapsed.getElapsed()}
-          strategyAnalysis={strategyResult.result?.analysis ?? null}
-          onRestart={quiz.handleRestart}
-          onExit={quiz.handleRestart}
-        />
+        <>
+          {resultShellStyle}
+          <DenemeResult
+            gameName={gameDef.name}
+            totalTime={quiz.denemeConfig.totalTime}
+            elapsedTime={quiz.elapsed.getElapsed()}
+            strategyAnalysis={strategyResult.result?.analysis ?? null}
+            onRestart={quiz.handleRestart}
+            onExit={quiz.handleRestart}
+          />
+        </>
       )
     }
     return (
       <>
+        {resultShellStyle}
         <ResultScreen
           onRestart={quiz.handleRestart}
           onExit={quiz.handleRestart}
@@ -451,6 +519,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
   const lastAnswer = quizStore.answers[quizStore.answers.length - 1]
   const level = getLevelFromXP(quizStore.xpEarned)
+  const questionProgress = ((quizStore.currentIndex + 1) / Math.max(1, quizStore.questions.length)) * 100
 
   // Sidebar görev verileri — gerçek günlük görevler varsa onları kullan
   const fallbackQuests = [
@@ -469,13 +538,89 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
   return (
     <>
+    <style>{`
+      body.mobile-quiz-active [data-app-navbar],
+      body.mobile-quiz-active [data-bottom-nav] { display: none !important; }
+      body.mobile-quiz-active [data-arena-main] {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        background: #f3f6fa;
+      }
+    `}</style>
     {/* Can kaybi kirmizi flash */}
     {quiz.showLifeLost && <LifeLostOverlay />}
 
-    <div className="mx-auto max-w-[940px] p-3 md:p-4 lg:p-5 xl:max-w-[1100px] xl:p-6 2xl:max-w-[1280px] 2xl:p-8">
-      <div className="grid grid-cols-1 gap-3 md:gap-4 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_320px] xl:gap-5 2xl:grid-cols-[1fr_360px]">
+    <div className="mx-auto min-h-[100dvh] max-w-[440px] bg-[#f3f6fa] p-3 text-[#45494e]">
+      {/* Mobil odak modu: ilerleme, süre ve oturum kaynakları tek bakışta. */}
+      <header
+        className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)]"
+        style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}d9)` }}
+      >
+        <div className="pointer-events-none absolute -right-8 -top-12 h-28 w-28 rounded-full border-[20px] border-white/10" />
+        <div className="flex min-h-12 items-center gap-2.5">
+          <button
+            type="button"
+            onClick={quiz.handleRestart}
+            aria-label="Oyundan çık"
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 border-white/30 bg-white/15 text-white shadow-[0_3px_0_rgba(15,23,42,.14)] active:translate-y-0.5"
+          >
+            <X size={20} strokeWidth={3} />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-[0.1em]">
+              <span className="truncate text-white">{gameDef.name} · {quiz.mode.name}</span>
+              <span className="shrink-0 text-white/80">{quizStore.currentIndex + 1} / {quizStore.questions.length}</span>
+            </div>
+            <div
+              role="progressbar"
+              aria-label="Oyun ilerlemesi"
+              aria-valuemin={1}
+              aria-valuemax={quizStore.questions.length}
+              aria-valuenow={quizStore.currentIndex + 1}
+              className="h-3 overflow-hidden rounded-full bg-black/15 p-[2px]"
+            >
+              <div
+                className="h-full rounded-full transition-[width] duration-500"
+                style={{ width: `${questionProgress}%`, background: '#ffffff' }}
+              />
+            </div>
+          </div>
+
+          {!quiz.isDeneme && quiz.mode.timePerQuestion > 0 && (
+            <div
+              aria-label={`Kalan süre: ${quiz.timer.seconds} saniye`}
+              className="relative flex h-11 min-w-12 shrink-0 flex-col items-center justify-center rounded-2xl border-2 border-white/30 bg-white/15 px-2 text-white shadow-[0_3px_0_rgba(15,23,42,.14)]"
+            >
+              <span className="flex items-center gap-1 text-[9px] font-black uppercase"><Clock3 size={11} /> sn</span>
+              <span className="text-sm font-black tabular-nums">{quiz.timer.seconds}</span>
+            </div>
+          )}
+        </div>
+
+        {!quiz.isDeneme && (
+          <div className="relative mt-1 flex items-center justify-between rounded-2xl bg-black/10 px-3 py-1.5 text-[11px] font-black">
+            <div className="flex items-center gap-3">
+              {quizStore.livesEnabled && (
+                <span aria-label={`${quizStore.lives} can`} className="flex items-center gap-1 text-white">
+                  <Heart size={15} fill="currentColor" />{quizStore.lives}
+                </span>
+              )}
+              <span aria-label={`${quizStore.streak} seri`} className="flex items-center gap-1 text-[#fed7aa]">
+                <Flame size={15} fill="currentColor" />{quizStore.streak}
+              </span>
+              <span aria-label={`${quizStore.xpEarned} oturum XP`} className="flex items-center gap-1 text-[#ede9fe]">
+                <Sparkles size={15} fill="currentColor" />+{quizStore.xpEarned} XP
+              </span>
+            </div>
+            <SoundToggle />
+          </div>
+        )}
+      </header>
+
+      <div className="grid grid-cols-1 gap-3">
       {/* Sol sutun */}
-      <div className="flex flex-col gap-3 md:gap-4 xl:gap-5">
+      <div className="flex flex-col gap-3">
         {/* Mobil companion (lg altinda, yatay-compact) */}
         {!quiz.isDeneme && (
           <BilgeChanCompanion
@@ -487,13 +632,12 @@ export function QuizEngine({ game }: QuizEngineProps) {
             correctOption={lastAnswer?.correctOption ?? null}
             onHelpToggle={quiz.setHelpPaused}
             compact
-            height={104}
-            className="lg:hidden"
+            height={108}
           />
         )}
         {/* Deneme timer */}
         {quiz.isDeneme && quiz.denemeConfig && (
-          <div className="animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
+          <div className="animate-fadeUp rounded-[20px] border-2 border-[#dbeafe] bg-white p-3 text-[#45494e] shadow-[0_4px_0_#bfdbfe]">
             <div className="mb-1 flex items-center justify-between">
               <span className="text-xs font-bold tracking-widest text-[var(--text-sub)]">
                 DENEME SINAVI — {trUpper(gameDef.name)}
@@ -512,7 +656,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
         {/* Profil seridi (normal mod) */}
         {!quiz.isDeneme && (
-          <div className="animate-fadeUp rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3">
+          <div className="hidden">
             <div className="flex items-center gap-2.5">
               <div
                 className="flex h-[38px] w-[38px] items-center justify-center rounded-full border-2 text-lg"
@@ -612,7 +756,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
         </ComponentErrorBoundary>
 
         {/* Soru + Timer */}
-        <div className="flex flex-col-reverse gap-3 animate-fadeUp sm:flex-row" style={{ animationDelay: '0.08s', animationFillMode: 'both' }}>
+          <div className="flex flex-col-reverse gap-3 animate-fadeUp" style={{ animationDelay: '0.08s', animationFillMode: 'both' }}>
           <div className="flex-1">
             <QuestionCard
               question={question}
@@ -626,7 +770,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
           {/* Per-question timer kutusu */}
           {!quiz.isDeneme && quiz.mode.timePerQuestion > 0 && (
-            <div className="flex min-h-12 items-center gap-2 self-end rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 sm:flex-col sm:self-stretch sm:py-3">
+            <div className="hidden">
               <Timer seconds={quiz.timer.seconds} total={quiz.mode.timePerQuestion} />
               <span className="text-xs font-bold tracking-wider text-[var(--text-sub)]">SN</span>
             </div>
@@ -664,7 +808,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
       {/* Sag sidebar */}
       {!quiz.isDeneme && (
-        <div className="hidden flex-col gap-3 lg:flex">
+        <div className="hidden">
           <BilgeChanCompanion
             key={quizStore.currentIndex}
             attemptId={quiz.attemptId}
@@ -692,7 +836,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
       {/* Konu gucu — tam genislik alt bant (mobilde de gorunur) */}
       {!quiz.isDeneme && (
-        <div className="mt-3 md:mt-4 xl:mt-5">
+        <div className="mt-3">
           <ComponentErrorBoundary label="Konu Gücü" variant="inline">
             <TopicsPanel topics={sidebarTopics} />
           </ComponentErrorBoundary>

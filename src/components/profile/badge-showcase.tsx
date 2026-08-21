@@ -39,11 +39,11 @@ export function BadgeShowcase({ earnedBadgeCodes }: BadgeShowcaseProps) {
   const progress = total > 0 ? (totalEarned / total) * 100 : 0
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
+    <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-4 shadow-[0_4px_0_#dbe2ea]">
 
       {/* ─── Başlık + Genel İlerleme ─── */}
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+        <h3 className="text-[9px] font-extrabold tracking-[0.18em] text-[#475569]">
           ROZET KASASİ
         </h3>
         <div className="flex items-center gap-2">
