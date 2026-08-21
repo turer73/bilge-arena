@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function StorePage() {
   return (
-    <div className="mx-auto w-full max-w-[860px] overflow-x-clip px-3 py-4 sm:px-4 md:p-6">
+    <div className="mx-auto w-full max-w-[860px] scroll-mt-[var(--navbar-h)] overflow-x-clip px-3 py-4 sm:px-4 md:p-6">
       <h1 className="font-display text-2xl font-black text-[var(--text)]">🛍️ Mağaza</h1>
       <p className="mt-1 text-sm text-[var(--text-sub)]">
         Quiz&apos;lerden kazandığın coinlerle profiline özel kozmetikler seç.
