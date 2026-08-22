@@ -40,11 +40,14 @@ const VERDICT_HINT: Record<Verdict, string> = {
   APPROVED: 'Bilinen kusur sınıflarından temiz. "Kanıtlandı" anlamına gelmez.',
 }
 
+const PAGE_SIZE = 50
+
 export function ValidationVerdictPanel() {
   const [verdict, setVerdict] = useState<Verdict>('NEEDS_REVIEW')
   const [activeOnly, setActiveOnly] = useState<'all' | 'true' | 'false'>('all')
   const [items, setItems] = useState<Item[]>([])
   const [total, setTotal] = useState(0)
+  const [offset, setOffset] = useState(0)
   const [policyVersion, setPolicyVersion] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -54,7 +57,7 @@ export function ValidationVerdictPanel() {
     setLoading(true)
     setError('')
     try {
-      const params = new URLSearchParams({ verdict, limit: '50' })
+      const params = new URLSearchParams({ verdict, limit: String(PAGE_SIZE), offset: String(offset) })
       if (activeOnly !== 'all') params.set('activeOnly', activeOnly)
       const res = await fetch(`/api/admin/content-quality/validation?${params}`, { signal })
       if (res.status === 503) { setError('Içerik yönetişimi kapalı (CONTENT_GOVERNANCE_ENABLED).'); setItems([]); setTotal(0); return }
@@ -68,7 +71,7 @@ export function ValidationVerdictPanel() {
     } finally {
       setLoading(false)
     }
-  }, [verdict, activeOnly])
+  }, [verdict, activeOnly, offset])
 
   useEffect(() => {
     const ctrl = new AbortController()
@@ -86,7 +89,7 @@ export function ValidationVerdictPanel() {
           Sonuç
           <select
             value={verdict}
-            onChange={(e) => setVerdict(e.target.value as Verdict)}
+            onChange={(e) => { setVerdict(e.target.value as Verdict); setOffset(0) }}
             className="min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
           >
             {(Object.keys(VERDICT_LABEL) as Verdict[]).map((v) => (
@@ -99,7 +102,7 @@ export function ValidationVerdictPanel() {
           Durum
           <select
             value={activeOnly}
-            onChange={(e) => setActiveOnly(e.target.value as 'all' | 'true' | 'false')}
+            onChange={(e) => { setActiveOnly(e.target.value as 'all' | 'true' | 'false'); setOffset(0) }}
             className="min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
           >
             <option value="all">Hepsi</option>
@@ -109,7 +112,7 @@ export function ValidationVerdictPanel() {
         </label>
 
         <span className="text-xs text-[var(--text-sub)]">
-          {loading ? 'Yükleniyor…' : `${total} soru`}
+          {loading ? 'Yükleniyor…' : items.length > 0 ? `${offset + 1}-${offset + items.length} / ${total} soru` : `${total} soru`}
           {policyVersion && ` · ${policyVersion}`}
         </span>
       </div>
@@ -123,8 +126,9 @@ export function ValidationVerdictPanel() {
       )}
 
       {items.length > 0 && (
-        <ul className="mt-3 space-y-2">
-          {items.map((item) => (
+        <>
+          <ul className="mt-3 space-y-2">
+            {items.map((item) => (
             <li key={item.questionId} className="rounded-lg border border-[var(--border)] p-3 text-xs">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-bold">{item.category ?? '—'}</span>
@@ -160,8 +164,27 @@ export function ValidationVerdictPanel() {
                 </div>
               )}
             </li>
-          ))}
-        </ul>
+            ))}
+          </ul>
+          <nav aria-label="Doğrulama sonuçları sayfaları" className="mt-3 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              disabled={loading || offset === 0}
+              onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
+              className="min-h-[44px] rounded-lg border border-[var(--border)] px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Önceki
+            </button>
+            <button
+              type="button"
+              disabled={loading || offset + items.length >= total}
+              onClick={() => setOffset((current) => current + PAGE_SIZE)}
+              className="min-h-[44px] rounded-lg border border-[var(--border)] px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Sonraki
+            </button>
+          </nav>
+        </>
       )}
     </section>
   )
