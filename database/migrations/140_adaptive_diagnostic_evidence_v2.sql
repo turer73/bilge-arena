@@ -109,8 +109,8 @@ BEGIN
       OR NEW.current_question_revision_id IS NULL;
   END IF;
   IF v_refresh THEN
-    SELECT revision,COALESCE(question.base_points,revision.difficulty*10)::smallint
-    INTO v_revision,v_base_points
+    SELECT revision.*
+    INTO v_revision
     FROM public.questions question
     JOIN public.question_content_revisions revision
       ON revision.id=question.published_revision_id
@@ -125,6 +125,10 @@ BEGIN
       RAISE EXCEPTION 'diagnostic question requires a valid published revision snapshot'
         USING ERRCODE='23514';
     END IF;
+    SELECT COALESCE(question.base_points,v_revision.difficulty*10)::smallint
+    INTO v_base_points
+    FROM public.questions question
+    WHERE question.id=NEW.current_question_id;
     SELECT resolved.outcome_id,resolved.difficulty
     INTO v_outcome_id,v_difficulty
     FROM public.resolve_adaptive_diagnostic_question(NEW.current_question_id) resolved;

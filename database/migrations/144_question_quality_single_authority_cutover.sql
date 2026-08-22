@@ -29,6 +29,7 @@ GRANT EXECUTE ON FUNCTION public.legacy_error_report_intake_enabled()
   TO authenticated;
 
 DROP POLICY IF EXISTS "error_reports_insert" ON public.error_reports;
+ALTER TABLE public.error_reports ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "error_reports_insert" ON public.error_reports
   FOR INSERT TO authenticated
   WITH CHECK (
