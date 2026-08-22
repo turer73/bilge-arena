@@ -7,8 +7,13 @@ export const ACTIVATION_REWARD_COOKIE = 'ba_activation_reward'
 export const ACTIVATION_REWARD_TTL_SECONDS = 2 * 60 * 60
 export const ACTIVATION_XP_PER_CORRECT = 50
 
+/** Alan ayrimi etiketi (bkz. lib/questions/guest-grading-session.ts). */
+const TOKEN_PURPOSE = 'activation-reward'
+const SIGNING_DOMAIN = `${TOKEN_PURPOSE}.v1`
+
 const tokenSchema = z.object({
   version: z.literal(1),
+  purpose: z.literal(TOKEN_PURPOSE),
   sessionId: z.string().uuid(),
   questionIds: z.array(z.string().uuid()).min(1).max(3),
   issuedAt: z.number().int().positive(),
@@ -48,7 +53,7 @@ function rewardSecret(): string | null {
 }
 
 function signature(encoded: string, secret: string): Buffer {
-  return createHmac('sha256', secret).update(encoded).digest()
+  return createHmac('sha256', secret).update(`${SIGNING_DOMAIN}|${encoded}`).digest()
 }
 
 export function createActivationRewardToken(questionIds: string[]): string | null {
@@ -62,6 +67,7 @@ export function createActivationRewardToken(questionIds: string[]): string | nul
   const now = Date.now()
   const payload: ActivationRewardToken = {
     version: 1,
+    purpose: TOKEN_PURPOSE,
     sessionId: randomUUID(),
     questionIds: parsedQuestionIds.data,
     issuedAt: now,

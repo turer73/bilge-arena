@@ -4,8 +4,13 @@ import { z } from 'zod'
 export const GUEST_GRADING_COOKIE = 'ba_guest_grading'
 export const GUEST_GRADING_TTL_SECONDS = 2 * 60 * 60
 
+/** Alan ayrimi etiketi: imza girdisine karisir, semada da dogrulanir. */
+const TOKEN_PURPOSE = 'guest-grading'
+const SIGNING_DOMAIN = `${TOKEN_PURPOSE}.v1`
+
 const tokenSchema = z.object({
   version: z.literal(1),
+  purpose: z.literal(TOKEN_PURPOSE),
   sessionId: z.string().uuid(),
   questionIds: z.array(z.string().uuid()).min(1).max(3),
   issuedAt: z.number().int().positive(),
@@ -27,8 +32,15 @@ function gradingSecret(): string | null {
   return null
 }
 
+/**
+ * Imza girdisi alan etiketiyle baslar. Bu olmadan misafir-puanlama ve
+ * activation-odul token'lari BIREBIR takas edilebiliyordu: iki sema ayni
+ * alanlara sahip (.strict()), iki imza ayni ham `encoded` uzerinden
+ * uretiliyordu ve gizli anahtar zinciri ACTIVATION_REWARD_SECRET'i
+ * paylasabiliyordu. Etiket + semadaki `purpose` alani iki katmanli kapatir.
+ */
 function signature(encoded: string, secret: string): Buffer {
-  return createHmac('sha256', secret).update(encoded).digest()
+  return createHmac('sha256', secret).update(`${SIGNING_DOMAIN}|${encoded}`).digest()
 }
 
 export function createGuestGradingToken(questionIds: string[]): string | null {
@@ -40,6 +52,7 @@ export function createGuestGradingToken(questionIds: string[]): string | null {
   const now = Date.now()
   const payload: GuestGradingToken = {
     version: 1,
+    purpose: TOKEN_PURPOSE,
     sessionId: randomUUID(),
     questionIds: parsedQuestionIds.data,
     issuedAt: now,
