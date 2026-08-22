@@ -119,24 +119,24 @@ export function Lobby({
     `min-h-11 rounded-xl border-2 px-3 py-2 text-xs font-extrabold transition-all active:translate-y-0.5 ${
       active
         ? 'border-transparent text-white shadow-[0_3px_0_rgba(15,23,42,.14)]'
-        : 'border-[#e5e7eb] bg-white text-[#69717a] shadow-[0_2px_0_#e5e7eb] hover:border-[#bfdbfe]'
+        : 'border-[var(--app-border)] bg-[var(--app-card)] text-[var(--app-text-sub)] shadow-[0_2px_0_var(--app-border)] hover:border-[var(--app-shadow-accent)]'
     }`
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-var(--navbar-h))] max-w-[520px] animate-scaleIn flex-col gap-3 bg-[#f7f8fa] p-3 pb-28 text-[#45494e] md:my-6 md:min-h-0 md:gap-4 md:rounded-[32px] md:border-2 md:border-[#e5e7eb] md:p-5 md:pb-6 md:shadow-[0_8px_0_#dfe3e7]">
-      <div className="-mx-3 -mt-3 flex h-14 items-center gap-1 border-b-2 border-[#eceff2] bg-white px-2">
-        <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-2xl text-[#69717a] active:bg-[#eef1f4]">
+    <div className="mx-auto flex min-h-[calc(100dvh-var(--navbar-h))] max-w-[520px] animate-scaleIn flex-col gap-3 bg-[var(--app-bg)] p-3 pb-28 text-[var(--app-text)] md:my-6 md:min-h-0 md:gap-4 md:rounded-[32px] md:border-2 md:border-[var(--app-border)] md:p-5 md:pb-6 md:shadow-[0_8px_0_var(--app-shadow)]">
+      <div className="-mx-3 -mt-3 flex h-14 items-center gap-1 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-2">
+        <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--app-text-sub)] active:bg-[var(--app-hover)]">
           <ChevronLeft size={23} strokeWidth={3} aria-hidden="true" />
         </Link>
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] bg-[#eff6ff] text-[#2563eb]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]">
             <GameIcon size={18} strokeWidth={2.8} aria-hidden="true" />
           </span>
-          <span className="truncate text-sm font-black text-[#45494e]">{gameDef.name}</span>
+          <span className="truncate text-sm font-black text-[var(--app-text)]">{gameDef.name}</span>
         </div>
         <div className="flex items-center gap-2.5 pr-1 text-xs font-black">
-          <span aria-label={`${userStreak} günlük seri`} className="flex items-center gap-1 text-[#f97316]"><Flame size={18} fill="currentColor" />{userStreak}</span>
-          <span aria-label={`${userXP} toplam XP`} className="flex items-center gap-1 text-[#8b5cf6]"><Sparkles size={18} fill="currentColor" />{userXP}</span>
+          <span aria-label={`${userStreak} günlük seri`} className="flex items-center gap-1 text-[var(--app-warn)]"><Flame size={18} fill="currentColor" />{userStreak}</span>
+          <span aria-label={`${userXP} toplam XP`} className="flex items-center gap-1 text-[var(--wisdom-text)]"><Sparkles size={18} fill="currentColor" />{userXP}</span>
           <SoundToggle />
         </div>
       </div>
@@ -155,11 +155,11 @@ export function Lobby({
         </div>
       </header>
 
-      <div className="relative min-h-[142px] animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[#e5e7eb] bg-white p-4 shadow-[0_5px_0_#dfe3e7]" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
+      <div className="relative min-h-[142px] animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow)]" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
         <div className="relative z-10 max-w-[66%]">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#2563eb]">Bilge Çan</p>
-          <h2 className="mt-1 text-lg font-black leading-6 text-[#3f4449]">Turun hazır!</h2>
-          <p className="mt-1 text-[11px] font-semibold leading-4 text-[#7d858d]">{mode.questionCount} soruda ritmini bul, serini koru ve XP kazan.</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-accent-text)]">Bilge Çan</p>
+          <h2 className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">Turun hazır!</h2>
+          <p className="mt-1 text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">{mode.questionCount} soruda ritmini bul, serini koru ve XP kazan.</p>
           <div className="mt-3">
             <XPBar
               xp={userXP - level.minXP}
@@ -168,24 +168,24 @@ export function Lobby({
             />
           </div>
         </div>
-        <div className="absolute right-3 top-3 z-10 rounded-xl border-2 border-[#e5e7eb] bg-white px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-[#5d646b] shadow-[0_3px_0_#e5e7eb]">{level.badge} {level.name}</div>
+        <div className="absolute right-3 top-3 z-10 rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-[var(--app-text-sub)] shadow-[0_3px_0_var(--app-border)]">{level.badge} {level.name}</div>
         <BilgeChan pose="wave" height={122} priority className="absolute -bottom-8 right-5 drop-shadow-[0_7px_8px_rgba(31,41,55,.14)]" />
       </div>
 
       <section
         aria-labelledby="mode-selection-title"
-        className="animate-fadeUp rounded-[22px] border-2 border-[#dbeafe] bg-white p-3 shadow-[0_5px_0_#bfdbfe] md:p-4"
+        className="animate-fadeUp rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-shadow-accent)] md:p-4"
         style={{ animationDelay: '0.25s', animationFillMode: 'both' }}
       >
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#2563eb]">Oyun modu</p>
-            <h2 id="mode-selection-title" className="mt-0.5 text-[15px] font-black text-[#45494e] md:text-base">
+            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Oyun modu</p>
+            <h2 id="mode-selection-title" className="mt-0.5 text-[15px] font-black text-[var(--app-text)] md:text-base">
               Nasıl oynamak istersin?
             </h2>
-            <p className="mt-1 text-[11px] font-semibold text-[#8b949e]">Sana uygun tempoyu seç.</p>
+            <p className="mt-1 text-[11px] font-semibold text-[var(--app-text-muted)]">Sana uygun tempoyu seç.</p>
           </div>
-          <span className="shrink-0 rounded-xl bg-[#eff6ff] px-2.5 py-1.5 text-[11px] font-black text-[#2563eb]">
+          <span className="shrink-0 rounded-xl bg-[var(--app-accent-tint)] px-2.5 py-1.5 text-[11px] font-black text-[var(--app-accent-text)]">
             {mode.name}
           </span>
         </div>
@@ -198,18 +198,18 @@ export function Lobby({
       </section>
 
       {!mode.isDeneme && (
-        <section className="animate-fadeUp rounded-[20px] border-2 border-[#e5e7eb] bg-white shadow-[0_4px_0_#dfe3e7]" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
+        <section className="animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-shadow)]" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
           <button
             type="button"
             onClick={() => setShowFilters((current) => !current)}
             aria-expanded={showFilters}
             aria-controls="quiz-filters"
-            className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left transition-colors hover:bg-[#f8fafc]"
+            className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left transition-colors hover:bg-[var(--app-hover)]"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eff6ff] text-[#2563eb]"><SlidersHorizontal size={18} /></span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><SlidersHorizontal size={18} /></span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-black text-[#45494e]">Soru ayarları</span>
-              <span className="mt-0.5 block truncate text-[11px] font-semibold text-[#8b949e]">
+              <span className="block text-sm font-black text-[var(--app-text)]">Soru ayarları</span>
+              <span className="mt-0.5 block truncate text-[11px] font-semibold text-[var(--app-text-muted)]">
                 {game !== 'wordquest' ? `${examLabel} · ` : ''}{categoryLabel} · {difficultyLabel}
               </span>
             </span>
@@ -217,10 +217,10 @@ export function Lobby({
           </button>
 
           {showFilters && (
-            <div id="quiz-filters" className="flex flex-col gap-5 border-t-2 border-[#eef1f4] px-4 py-4">
+            <div id="quiz-filters" className="flex flex-col gap-5 border-t-2 border-[var(--app-hover)] px-4 py-4">
               {game !== 'wordquest' && (
                 <div role="group" aria-labelledby="exam-filter-title">
-                  <h3 id="exam-filter-title" className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#69717a]">
+                  <h3 id="exam-filter-title" className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--app-text-sub)]">
                     Sınav
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -244,7 +244,7 @@ export function Lobby({
               )}
 
               <div role="group" aria-labelledby="category-filter-title">
-                <h3 id="category-filter-title" className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#69717a]">
+                <h3 id="category-filter-title" className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--app-text-sub)]">
                   Konu
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -276,7 +276,7 @@ export function Lobby({
               </div>
 
               <div role="group" aria-labelledby="difficulty-filter-title">
-                <h3 id="difficulty-filter-title" className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-[#69717a]">
+                <h3 id="difficulty-filter-title" className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--app-text-sub)]">
                   Zorluk
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -303,23 +303,23 @@ export function Lobby({
       )}
 
       {mode.isDeneme && denemeConfig && (
-        <section className="animate-fadeUp rounded-[20px] border-2 border-[#e5e7eb] bg-white p-4 shadow-[0_4px_0_#dfe3e7]" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
+        <section className="animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-shadow)]" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-black text-[#45494e]">Deneme formatı</h2>
-            <span className="flex items-center gap-1.5 text-xs font-black text-[#2563eb]">
+            <h2 className="text-sm font-black text-[var(--app-text)]">Deneme formatı</h2>
+            <span className="flex items-center gap-1.5 text-xs font-black text-[var(--app-accent-text)]">
               <Clock3 size={15} />
               {Math.ceil(denemeConfig.totalTime / 60)} dakika
             </span>
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {Object.entries(denemeConfig.questionDistribution).map(([category, count]) => (
-              <div key={category} className="flex min-h-10 items-center justify-between rounded-xl bg-[#f7f8fa] px-3 text-xs">
-                <span className="text-[#69717a]">{getCategoryLabel(category)}</span>
-                <span className="font-bold text-[#45494e]">{count} soru</span>
+              <div key={category} className="flex min-h-10 items-center justify-between rounded-xl bg-[var(--app-bg)] px-3 text-xs">
+                <span className="text-[var(--app-text-sub)]">{getCategoryLabel(category)}</span>
+                <span className="font-bold text-[var(--app-text)]">{count} soru</span>
               </div>
             ))}
           </div>
-          <p className="mt-3 border-t border-[#e5e7eb] pt-3 text-xs leading-relaxed text-[#69717a]">
+          <p className="mt-3 border-t border-[var(--app-border)] pt-3 text-xs leading-relaxed text-[var(--app-text-sub)]">
             TYT formatında · Net hesabı: Doğru − (Yanlış / 4)
           </p>
         </section>
@@ -340,18 +340,18 @@ export function Lobby({
           role="alert"
           className="animate-fadeUp rounded-xl border px-4 py-3 text-sm font-medium"
           style={{
-            background: 'var(--urgency-bg, #7f1d1d20)',
-            borderColor: 'var(--urgency, #ef4444)',
-            color: 'var(--urgency-text, #ef4444)',
+            background: 'var(--urgency-bg, var(--app-danger-strong)20)',
+            borderColor: 'var(--urgency, var(--app-danger))',
+            color: 'var(--urgency-text, var(--app-danger))',
           }}
         >
           ⚠️ {loadError}
         </div>
       )}
 
-      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 -mx-1 rounded-[20px] border-2 border-[#dbeafe] bg-white/95 p-2 shadow-[0_5px_0_#bfdbfe] backdrop-blur-xl md:static md:mx-0">
-        <div className="flex items-center justify-between gap-3 px-2 pb-2 text-[11px] font-bold text-[#7d858d]">
-          <span className="font-black text-[#45494e]">{mode.name}</span>
+      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 -mx-1 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)]/95 p-2 shadow-[0_5px_0_var(--app-shadow-accent)] backdrop-blur-xl md:static md:mx-0">
+        <div className="flex items-center justify-between gap-3 px-2 pb-2 text-[11px] font-bold text-[var(--app-text-sub)]">
+          <span className="font-black text-[var(--app-text)]">{mode.name}</span>
           <span className="flex items-center gap-1.5">
             <Clock3 size={14} />
             {durationMinutes ? `Yaklaşık ${durationMinutes} dk` : 'Zamansız'}
@@ -366,7 +366,7 @@ export function Lobby({
               ? onLimitReached
                 ? 'border border-[var(--reward-border)] bg-[var(--reward-bg)] text-[var(--reward-text)] hover:bg-[color-mix(in_srgb,var(--reward)_18%,var(--card-bg))]'
                 : 'cursor-not-allowed bg-[var(--surface)] text-[var(--text-muted)] opacity-60'
-              : 'bg-[#2563eb] text-white shadow-[0_5px_0_#1d4ed8] hover:bg-[#1d4ed8]'
+              : 'bg-[var(--app-accent)] text-white shadow-[0_5px_0_var(--app-accent-strong)] hover:bg-[var(--app-accent-strong)]'
           }`}
         >
           {quizLimit && !quizLimit.canPlay

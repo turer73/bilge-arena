@@ -278,7 +278,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           body.mobile-quiz-lobby [data-app-navbar] { display: none !important; }
           body.mobile-quiz-lobby [data-arena-main] {
             padding-top: 0 !important;
-            background: #f7f8fa;
+            background: var(--app-bg);
           }
         `}</style>
         {user && (
@@ -398,26 +398,26 @@ export function QuizEngine({ game }: QuizEngineProps) {
           body.mobile-quiz-loading [data-bottom-nav] { display: none !important; }
           body.mobile-quiz-loading [data-arena-main] {
             padding: 0 !important;
-            background: #f7f8fa;
+            background: var(--app-bg);
           }
         `}</style>
-        <div className="mx-auto flex min-h-[100dvh] max-w-[520px] flex-col items-center justify-center gap-5 bg-[#f7f8fa] p-5 text-center text-[#45494e]">
-          <div className="relative flex h-48 w-full max-w-[340px] items-center justify-center overflow-hidden rounded-[28px] border-2 border-[#dbeafe] bg-white shadow-[0_6px_0_#bfdbfe]">
-            <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] border-[#2563eb]/5" />
-            <div className="absolute left-5 top-5 flex items-center gap-1.5 rounded-xl bg-[#eff6ff] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#2563eb]">
+        <div className="mx-auto flex min-h-[100dvh] max-w-[520px] flex-col items-center justify-center gap-5 bg-[var(--app-bg)] p-5 text-center text-[var(--app-text)]">
+          <div className="relative flex h-48 w-full max-w-[340px] items-center justify-center overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_6px_0_var(--app-shadow-accent)]">
+            <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] border-[var(--app-accent)]/5" />
+            <div className="absolute left-5 top-5 flex items-center gap-1.5 rounded-xl bg-[var(--app-accent-tint)] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--app-accent-text)]">
               <Sparkles size={13} fill="currentColor" /> Bilge Çan hazırlıyor
             </div>
             <BilgeChan pose="reading" height={128} className="mt-8 animate-float" priority />
           </div>
           <div>
             <h1 className="text-xl font-black">Sorular hazırlanıyor</h1>
-            <p className="mt-1 text-xs font-semibold text-[#7d858d]">Seçtiğin moda uygun soruları getiriyoruz.</p>
+            <p className="mt-1 text-xs font-semibold text-[var(--app-text-sub)]">Seçtiğin moda uygun soruları getiriyoruz.</p>
           </div>
           <div aria-label="Sorular yükleniyor" role="progressbar" className="flex w-full max-w-[280px] gap-2">
             {[0, 1, 2].map((step) => (
               <span
                 key={step}
-                className="h-2 flex-1 animate-pulse rounded-full bg-[#2563eb]"
+                className="h-2 flex-1 animate-pulse rounded-full bg-[var(--app-accent)]"
                 style={{ animationDelay: `${step * 180}ms`, opacity: 1 - step * 0.22 }}
               />
             ))}
@@ -435,7 +435,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
         body.mobile-quiz-result [data-bottom-nav] { display: none !important; }
         body.mobile-quiz-result [data-arena-main] {
           padding: 0 !important;
-          background: #f3f6fa;
+          background: var(--app-bg);
         }
       `}</style>
     )
@@ -445,35 +445,35 @@ export function QuizEngine({ game }: QuizEngineProps) {
       return (
         <>
           {resultShellStyle}
-          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[#f3f6fa] p-4 text-center text-[#45494e] animate-scaleIn">
-            <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] p-5 pb-7 text-white shadow-[0_7px_0_#1e40af]">
+          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] p-4 text-center text-[var(--app-text)] animate-scaleIn">
+            <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-5 pb-7 text-white shadow-[0_7px_0_var(--app-accent-strong)]">
               <div className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
               <BilgeChan pose="wave" height={148} priority className="mx-auto drop-shadow-[0_8px_10px_rgba(15,23,42,.18)]" />
               <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/70">İlk turun tamam</p>
               <h2 className="mt-1 text-2xl font-black">Nasıl buldun?</h2>
             </div>
-            <div className="rounded-[22px] border-2 border-[#dbeafe] bg-white p-5 shadow-[0_5px_0_#bfdbfe]">
-              <p className="text-sm font-semibold leading-6 text-[#69717a]">
+            <div className="rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-5 shadow-[0_5px_0_var(--app-shadow-accent)]">
+              <p className="text-sm font-semibold leading-6 text-[var(--app-text-sub)]">
                 <span className="font-black" style={{ color: gameDef.colorHex }}>{gameDef.name}</span>
                 {' '}arenasında yüzlerce soru seni bekliyor. İlerlemeni kaydetmek ve serini korumak için ücretsiz hesap oluştur.
               </p>
               <div className="mt-5 flex w-full flex-col gap-3">
                 <a
                   href={`/giris?redirect=${encodeURIComponent(redirectPath)}`}
-                  className="flex min-h-[52px] items-center justify-center rounded-2xl bg-[#2563eb] px-4 text-sm font-black text-white shadow-[0_5px_0_#1d4ed8] active:translate-y-1 active:shadow-none"
+                  className="flex min-h-[52px] items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
                 >
                   Ücretsiz Kayıt Ol
                 </a>
                 <button
                   onClick={quiz.handleRestart}
-                  className="min-h-12 rounded-2xl border-2 border-[#e5e7eb] bg-white text-sm font-black text-[#69717a] shadow-[0_4px_0_#dfe3e7] active:translate-y-1 active:shadow-none"
+                  className="min-h-12 rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] text-sm font-black text-[var(--app-text-sub)] shadow-[0_4px_0_var(--app-shadow)] active:translate-y-1 active:shadow-none"
                 >
                   Tekrar Dene
                 </button>
               </div>
-              <p className="mt-4 text-xs font-semibold text-[#9aa1a9]">
+              <p className="mt-4 text-xs font-semibold text-[var(--app-text-muted)]">
                 Zaten hesabın var mı?{' '}
-                <a href={`/giris?redirect=${encodeURIComponent(redirectPath)}`} className="font-black text-[#2563eb] underline underline-offset-2">Giriş yap</a>
+                <a href={`/giris?redirect=${encodeURIComponent(redirectPath)}`} className="font-black text-[var(--app-accent-text)] underline underline-offset-2">Giriş yap</a>
               </p>
             </div>
           </div>
@@ -544,13 +544,13 @@ export function QuizEngine({ game }: QuizEngineProps) {
       body.mobile-quiz-active [data-arena-main] {
         padding-top: 0 !important;
         padding-bottom: 0 !important;
-        background: #f3f6fa;
+        background: var(--app-bg);
       }
     `}</style>
     {/* Can kaybi kirmizi flash */}
     {quiz.showLifeLost && <LifeLostOverlay />}
 
-    <div className="mx-auto min-h-[100dvh] max-w-[440px] bg-[#f3f6fa] p-3 text-[#45494e]">
+    <div className="mx-auto min-h-[100dvh] max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)]">
       {/* Mobil odak modu: ilerleme, süre ve oturum kaynakları tek bakışta. */}
       <header
         className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)]"
@@ -606,10 +606,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
                   <Heart size={15} fill="currentColor" />{quizStore.lives}
                 </span>
               )}
-              <span aria-label={`${quizStore.streak} seri`} className="flex items-center gap-1 text-[#fed7aa]">
+              <span aria-label={`${quizStore.streak} seri`} className="flex items-center gap-1 text-[var(--app-warn-border)]">
                 <Flame size={15} fill="currentColor" />{quizStore.streak}
               </span>
-              <span aria-label={`${quizStore.xpEarned} oturum XP`} className="flex items-center gap-1 text-[#ede9fe]">
+              <span aria-label={`${quizStore.xpEarned} oturum XP`} className="flex items-center gap-1 text-[var(--wisdom-bg)]">
                 <Sparkles size={15} fill="currentColor" />+{quizStore.xpEarned} XP
               </span>
             </div>
@@ -637,7 +637,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
         )}
         {/* Deneme timer */}
         {quiz.isDeneme && quiz.denemeConfig && (
-          <div className="animate-fadeUp rounded-[20px] border-2 border-[#dbeafe] bg-white p-3 text-[#45494e] shadow-[0_4px_0_#bfdbfe]">
+          <div className="animate-fadeUp rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-shadow-accent)]">
             <div className="mb-1 flex items-center justify-between">
               <span className="text-xs font-bold tracking-widest text-[var(--text-sub)]">
                 DENEME SINAVI — {trUpper(gameDef.name)}

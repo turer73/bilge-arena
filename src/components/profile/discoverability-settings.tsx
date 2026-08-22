@@ -36,11 +36,11 @@ export function DiscoverabilitySettings() {
   }
 
   return (
-    <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-4 shadow-[0_4px_0_#dbe2ea]">
+    <div className="rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-black text-[#1e293b]">🔎 Aramada Görünürlük</h3>
-          <p className="mt-1 text-xs font-medium leading-relaxed text-[#64748b]">
+          <h3 className="text-sm font-black text-[var(--app-text)]">🔎 Aramada Görünürlük</h3>
+          <p className="mt-1 text-xs font-medium leading-relaxed text-[var(--app-text-sub)]">
             Açıkken diğer arenacılar seni kullanıcı aramasında bulup arkadaş ekleyebilir.
             Kapalıyken aramada çıkmazsın (mevcut arkadaşların etkilenmez).
           </p>
@@ -57,11 +57,11 @@ export function DiscoverabilitySettings() {
           <span
             aria-hidden
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              isDiscoverable ? 'bg-[#16a34a]' : 'bg-[#cbd5e1]'
+              isDiscoverable ? 'bg-[var(--app-success)]' : 'bg-[var(--app-disabled)]'
             }`}
           >
             <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+              className={`inline-block h-5 w-5 transform rounded-full bg-[var(--app-card)] shadow transition-transform ${
                 isDiscoverable ? 'translate-x-5' : 'translate-x-0.5'
               }`}
             />

@@ -47,7 +47,7 @@ export function QuestionCard({
   return (
     <section
       aria-labelledby={questionTextId}
-      className="relative animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[#bfdbfe] bg-white p-4 shadow-[0_5px_0_#bfdbfe]"
+      className="relative animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-shadow-accent)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow-accent)]"
     >
       {/* Glow */}
       <div className="pointer-events-none absolute -right-[50px] -top-[50px] hidden h-[180px] w-[180px] rounded-full bg-[radial-gradient(circle,var(--focus-bg)_0%,transparent_70%)]" />
@@ -71,8 +71,8 @@ export function QuestionCard({
           <span
             className="rounded-md px-2 py-1 text-xs font-semibold text-[var(--text-sub)]"
             style={{
-              backgroundColor: `color-mix(in srgb, ${game?.colorHex || '#3B82F6'} 10%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${game?.colorHex || '#3B82F6'} 20%, transparent)`,
+              backgroundColor: `color-mix(in srgb, ${game?.colorHex || 'var(--app-accent)'} 10%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${game?.colorHex || 'var(--app-accent)'} 20%, transparent)`,
             }}
           >
             {question.subcategory}
@@ -87,7 +87,7 @@ export function QuestionCard({
           <button
             type="button"
             onClick={onReport}
-            className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold text-[#8b949e] transition-all hover:bg-[#fff7ed] hover:text-[#f97316] active:scale-95"
+            className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-semibold text-[var(--app-text-muted)] transition-all hover:bg-[var(--app-warn-tint)] hover:text-[var(--app-warn)] active:scale-95"
             title="Soruyu raporla (hata/eksik içerik)"
             aria-label="Soruyu raporla"
           >
@@ -121,13 +121,13 @@ export function QuestionCard({
           korunur (I. / II. / III. alt alta). Eksikse soru "Yukarıdaki ifadeler..."
           deyip boş görünüyordu (Ensar 06-16). */}
       {question.content.passage && (
-        <p className="mb-4 whitespace-pre-line text-[15px] leading-7 text-[#69717a]">
+        <p className="mb-4 whitespace-pre-line text-[15px] leading-7 text-[var(--app-text-sub)]">
           {renderRichText(question.content.passage)}
         </p>
       )}
 
       {/* Soru metni — <u>...</u> markup'i altcizili render edilir (alti cizili sozcuk sorulari) */}
-      <h2 id={questionTextId} className="text-[17px] font-extrabold leading-7 text-[#3f4449]">
+      <h2 id={questionTextId} className="text-[17px] font-extrabold leading-7 text-[var(--app-text)]">
         {renderRichText(question.content.question || question.content.sentence)}
       </h2>
 

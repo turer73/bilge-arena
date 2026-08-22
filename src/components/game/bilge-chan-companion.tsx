@@ -329,14 +329,14 @@ export function BilgeChanCompanion({
   return (
     <div className={`flex ${compact ? 'relative min-h-[88px] flex-row items-end gap-1 px-1 pt-2' : 'flex-col items-center'} ${className ?? ''}`}>
       {compact && (
-        <span className="absolute left-[68px] top-0 z-10 -rotate-2 rounded-lg border-2 border-white bg-[#2563eb] px-2 py-1 text-[8px] font-black uppercase tracking-[0.08em] text-white shadow-[0_3px_8px_rgba(37,99,235,.24)]">
+        <span className="absolute left-[68px] top-0 z-10 -rotate-2 rounded-lg border-2 border-white bg-[var(--app-accent)] px-2 py-1 text-[8px] font-black uppercase tracking-[0.08em] text-white shadow-[0_3px_8px_rgba(37,99,235,.24)]">
           Bilge Çan
         </span>
       )}
       {message && (
         <div
           aria-live="polite"
-          className={`relative ${compact ? 'order-2 mb-1 rounded-[24px_24px_24px_12px] border-2 border-[#dfe3e7] bg-white text-[#4b5157] shadow-[0_4px_0_#dfe3e7]' : 'mb-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--card)] text-[var(--text)] shadow-md'} w-full ${bubbleWidth} px-3 py-2.5 text-xs font-semibold leading-relaxed`}
+          className={`relative ${compact ? 'order-2 mb-1 rounded-[24px_24px_24px_12px] border-2 border-[var(--app-shadow)] bg-[var(--app-card)] text-[var(--app-text)] shadow-[0_4px_0_var(--app-shadow)]' : 'mb-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--card)] text-[var(--text)] shadow-md'} w-full ${bubbleWidth} px-3 py-2.5 text-xs font-semibold leading-relaxed`}
         >
           <Typewriter key={message} text={message} />
           {ttsReady && message && (

@@ -19,7 +19,7 @@ export function ProgressChart({ game, categories, totalAnswered = 0, accuracy = 
   const hasData = totalAnswered > 0
 
   return (
-    <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-4 shadow-[0_4px_0_#dbe2ea]">
+    <div className="rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
@@ -33,16 +33,16 @@ export function ProgressChart({ game, categories, totalAnswered = 0, accuracy = 
           </span>
         </div>
         {hasData && (
-          <div className="flex items-center gap-2 text-[9px] text-[#64748b]">
+          <div className="flex items-center gap-2 text-[9px] text-[var(--app-text-sub)]">
             <span>{totalAnswered} soru</span>
             <span
               className="font-bold"
               style={{
                 color: accuracy >= 70
-                  ? '#16a34a'
+                  ? 'var(--app-success)'
                   : accuracy >= 40
-                  ? '#d97706'
-                  : '#dc2626',
+                  ? 'var(--app-warn)'
+                  : 'var(--app-danger)',
               }}
             >
               %{accuracy}
@@ -52,25 +52,25 @@ export function ProgressChart({ game, categories, totalAnswered = 0, accuracy = 
       </div>
 
       {!hasData ? (
-        <div className="py-3 text-center text-[10px] font-semibold text-[#64748b]">
+        <div className="py-3 text-center text-[10px] font-semibold text-[var(--app-text-sub)]">
           Henüz soru çözülmedi
         </div>
       ) : (
         <div className="flex flex-col gap-2.5">
           {categories.map((cat) => {
             const color = cat.percentage >= 70
-              ? '#16a34a'
+              ? 'var(--app-success)'
               : cat.percentage >= 40
-              ? '#d97706'
-              : '#dc2626'
+              ? 'var(--app-warn)'
+              : 'var(--app-danger)'
 
             return (
               <div key={cat.category}>
                 <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#475569]">{cat.category}</span>
+                  <span className="text-xs font-semibold text-[var(--app-text-sub)]">{cat.category}</span>
                   <span className="text-xs font-bold" style={{ color }}>%{cat.percentage}</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-[#e2e8f0]">
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--app-border)]">
                   <div
                     className="h-full rounded-full transition-[width] duration-700"
                     style={{ width: `${cat.percentage}%`, background: color }}

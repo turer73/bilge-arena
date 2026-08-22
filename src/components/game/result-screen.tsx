@@ -68,36 +68,36 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
   }, [isGuest, incrementQuizCount])
 
   const stats = [
-    { label: 'DOĞRU', value: `${score}/${answeredCount}`, color: '#16a34a', tint: '#f0fdf4' },
-    { label: 'BAŞARI', value: `%${pct}`, color: config.color, tint: '#eff6ff' },
-    { label: 'XP KAZANCI', value: String(xpEarned), color: '#d97706', tint: '#fffbeb' },
+    { label: 'DOĞRU', value: `${score}/${answeredCount}`, color: 'var(--app-success)', tint: 'var(--app-success-tint)' },
+    { label: 'BAŞARI', value: `%${pct}`, color: config.color, tint: 'var(--app-accent-tint)' },
+    { label: 'XP KAZANCI', value: String(xpEarned), color: 'var(--app-warn)', tint: 'var(--app-warn-tint)' },
   ]
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[440px] flex-col justify-center gap-4 bg-[#f7f8fa] px-4 py-5 text-[#172554] md:min-h-[calc(100dvh-5rem)]">
+    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] px-4 py-5 text-[var(--app-accent-ink)] md:min-h-[calc(100dvh-5rem)]">
       {/* Can bitti uyarisi */}
       {gameOver && (
-        <div className="animate-fadeUp rounded-2xl border-2 border-[#fecaca] bg-[#fff1f2] px-5 py-3 text-center shadow-[0_4px_0_#fecaca]">
-          <div className="text-base font-black text-[#dc2626]">💔 Canlar bitti</div>
-          <div className="mt-1 text-xs font-semibold text-[#64748b]">
+        <div className="animate-fadeUp rounded-2xl border-2 border-[var(--app-danger-border)] bg-[var(--app-danger-tint)] px-5 py-3 text-center shadow-[0_4px_0_var(--app-danger-border)]">
+          <div className="text-base font-black text-[var(--app-danger)]">💔 Canlar bitti</div>
+          <div className="mt-1 text-xs font-semibold text-[var(--app-text-sub)]">
             {answeredCount}/{totalQuestions} soru cevaplanabildi
           </div>
         </div>
       )}
 
-      <div className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[#1d4ed8] bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#1e40af] p-5 text-white shadow-[0_6px_0_#1e3a8a] animate-fadeUp">
+      <div className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-strong)] bg-gradient-to-br from-[var(--app-accent)] via-[var(--app-accent-strong)] to-[var(--app-accent-strong)] p-5 text-white shadow-[0_6px_0_var(--app-accent-strong)] animate-fadeUp">
         <div className="relative z-10 max-w-[58%] pt-2">
-          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#bfdbfe]">
+          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--app-shadow-accent)]">
             Tur tamamlandı
           </div>
           <div
             className="mt-1 animate-rankReveal font-display text-[72px] font-black leading-none"
-            style={{ color: '#fef08a', textShadow: '0 3px 0 rgba(120,53,15,.35)' }}
+            style={{ color: 'var(--app-warn-border)', textShadow: '0 3px 0 rgba(120,53,15,.35)' }}
           >
             {rank}
           </div>
           <div className="mt-2 text-xl font-black leading-tight">{config.message}</div>
-          <p className="mt-2 text-xs font-semibold leading-relaxed text-[#dbeafe]">
+          <p className="mt-2 text-xs font-semibold leading-relaxed text-[var(--app-accent-border)]">
             {gameOver ? 'Bir sonraki turda daha güçlü döneceğiz.' : 'Harika iş! İlerlemen kaydedildi.'}
           </p>
         </div>
@@ -114,16 +114,16 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
         {stats.map((s, i) => (
           <div
             key={i}
-            className="rounded-2xl border-2 p-3 text-center shadow-[0_4px_0_#dbe2ea]"
+            className="rounded-2xl border-2 p-3 text-center shadow-[0_4px_0_var(--app-border)]"
             style={{
               background: s.tint,
-              borderColor: '#e2e8f0',
+              borderColor: 'var(--app-border)',
             }}
           >
             <div className="font-display text-xl font-black" style={{ color: s.color }}>
               {s.value}
             </div>
-            <div className="mt-1 text-[9px] font-extrabold tracking-wider text-[#64748b]">
+            <div className="mt-1 text-[9px] font-extrabold tracking-wider text-[var(--app-text-sub)]">
               {s.label}
             </div>
           </div>
@@ -135,18 +135,18 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
           kazandigini burada gormezse magazaya yonelmiyor. */}
       {coinsEarned !== null && (
         <div
-          className="rounded-2xl border-2 border-[#fde68a] bg-[#fffbeb] px-4 py-3 text-center shadow-[0_4px_0_#fde68a] animate-fadeUp"
+          className="rounded-2xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3 text-center shadow-[0_4px_0_var(--app-warn-border)] animate-fadeUp"
           style={{ animationDelay: '0.6s', animationFillMode: 'both' }}
         >
           {coinsEarned > 0 ? (
-            <span className="text-[13px] font-bold text-[#b45309]">
+            <span className="text-[13px] font-bold text-[var(--app-warn-ink)]">
               🪙 +{coinsEarned} altın kazandın!{' '}
               <Link href="/arena/magaza" className="underline underline-offset-2 hover:opacity-80">
                 Mağaza →
               </Link>
             </span>
           ) : (
-            <span className="text-[13px] font-semibold text-[#64748b]">
+            <span className="text-[13px] font-semibold text-[var(--app-text-sub)]">
               🪙 Bugünlük altın sınırına ulaştın — yarın kazanmaya devam!
             </span>
           )}
@@ -156,17 +156,17 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
       {/* Max streak */}
       {maxStreak >= 3 && (
         <div
-          className="rounded-2xl border-2 border-[#fed7aa] bg-[#fff7ed] px-4 py-3 text-center shadow-[0_4px_0_#fed7aa] animate-fadeUp"
+          className="rounded-2xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3 text-center shadow-[0_4px_0_var(--app-warn-border)] animate-fadeUp"
           style={{ animationDelay: '0.7s', animationFillMode: 'both' }}
         >
-          <span className="text-[13px] font-bold text-[#c2410c]">
+          <span className="text-[13px] font-bold text-[var(--app-warn-ink)]">
             🔥 En yüksek seri: {maxStreak} soru doğru!
           </span>
         </div>
       )}
 
       {/* Sosyal medya paylasim */}
-      <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-3 shadow-[0_4px_0_#dbe2ea] animate-fadeUp" style={{ animationDelay: '0.55s', animationFillMode: 'both' }}>
+      <div className="rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_4px_0_var(--app-border)] animate-fadeUp" style={{ animationDelay: '0.55s', animationFillMode: 'both' }}>
         <ShareButtons rank={rank} score={score} total={totalQuestions} xp={xpEarned} />
       </div>
 
@@ -174,13 +174,13 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
       <div className="grid grid-cols-2 gap-3 animate-fadeUp" style={{ animationDelay: '0.7s', animationFillMode: 'both' }}>
         <button
           onClick={onRestart}
-          className="min-h-12 rounded-2xl border-2 border-[#1d4ed8] bg-[#2563eb] px-4 py-3 font-display text-sm font-black tracking-wide text-white shadow-[0_5px_0_#1e40af] transition-transform active:translate-y-1 active:shadow-none"
+          className="min-h-12 rounded-2xl border-2 border-[var(--app-accent-strong)] bg-[var(--app-accent)] px-4 py-3 font-display text-sm font-black tracking-wide text-white shadow-[0_5px_0_var(--app-accent-strong)] transition-transform active:translate-y-1 active:shadow-none"
         >
           Tekrar Oyna →
         </button>
         <button
           onClick={onExit}
-          className="min-h-12 rounded-2xl border-2 border-[#cbd5e1] bg-white px-4 py-3 text-sm font-black text-[#334155] shadow-[0_5px_0_#cbd5e1] transition-transform active:translate-y-1 active:shadow-none"
+          className="min-h-12 rounded-2xl border-2 border-[var(--app-disabled)] bg-[var(--app-card)] px-4 py-3 text-sm font-black text-[var(--app-text)] shadow-[0_5px_0_var(--app-disabled)] transition-transform active:translate-y-1 active:shadow-none"
         >
           Lobiye Dön
         </button>

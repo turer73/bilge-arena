@@ -318,6 +318,118 @@
 }
 
 /* ============================================================
+   Uygulama Kabugu (app shell) Token Katmani
+   ------------------------------------------------------------
+   Mobil-oncelikli "uygulama" ekranlari (arena anasayfa, lobi, oyun,
+   sonuc, profil) Duolingo-vari acik bir yuzey dili kullaniyor: beyaz
+   kart, 2px kenarlik, `0 Npx 0` sert golge. Bu ekranlar ilk surumde
+   sabit hex ile yazilmisti; sonuc olarak 6 temanin 5'i (varsayilan
+   `dark` dahil) devre disi kaliyor, uygulama yari-koyu yari-beyaz
+   goruntu veriyordu.
+   Cozum: yuzey/metin/kenarlik/golge rollerini asagidaki --app-*
+   token'lariyla adlandir. Koyu temalarda roller mevcut tema
+   token'larindan turetilir; acik temada ilk tasarimin birebir
+   hex degerleri korunur (Gun Isigi kullanicisi hicbir fark gormez).
+   Ders/oyun markasi renkleri (GAMES.colorHex, SUBJECTS[].color)
+   BILEREK token disidir - onlar temaya degil icerige aittir.
+   ============================================================ */
+
+[data-theme] {
+  /* Yuzeyler */
+  --app-bg: var(--bg);
+  --app-card: var(--card);
+  --app-card-sunken: var(--surface);
+  --app-hover: var(--cardHover);
+
+  /* Kenarlik + sert golge */
+  --app-border: var(--border);
+  --app-border-soft: var(--border);
+  --app-shadow: rgba(0, 0, 0, 0.55);
+  --app-shadow-accent: var(--focus-dark);
+
+  /* Metin */
+  --app-text: var(--text);
+  --app-text-sub: var(--text-sub);
+  --app-text-muted: var(--text-muted);
+  --app-disabled: var(--border-strong);
+
+  /* Vurgu (focus ailesi) */
+  --app-accent: var(--focus);
+  --app-accent-strong: var(--focus-dark);
+  --app-accent-text: var(--focus-text);
+  --app-accent-ink: var(--focus-xl);
+  --app-accent-tint: var(--focus-bg);
+  --app-accent-border: var(--focus-border);
+  /* Dolu vurgu butonlari uzerindeki metin - her temada beyaz */
+  --app-on-accent: #ffffff;
+
+  /* Durum renkleri (app yuzeyleri uzerinde) */
+  --app-success: var(--growth-text);
+  --app-success-solid: var(--growth);
+  --app-success-strong: var(--growth-dark);
+  --app-success-ink: var(--growth-xl);
+  --app-success-tint: var(--growth-bg);
+  --app-success-border: var(--growth-border);
+  --app-warn: var(--reward-text);
+  --app-warn-strong: var(--reward);
+  --app-warn-ink: var(--reward-xl);
+  --app-warn-tint: var(--reward-bg);
+  --app-warn-border: var(--reward-border);
+  --app-danger: var(--urgency-text);
+  --app-danger-strong: var(--urgency);
+  --app-danger-ink: var(--urgency-xl);
+  --app-danger-tint: var(--urgency-bg);
+  --app-danger-border: var(--urgency-border);
+
+  /* Modal arkaplani */
+  --app-overlay: rgba(2, 6, 18, 0.68);
+}
+
+/* Gun Isigi: ilk tasarimin birebir degerleri. */
+[data-theme="light"] {
+  --app-bg: #f3f6fa;
+  --app-card: #ffffff;
+  --app-card-sunken: #f9fafb;
+  --app-hover: #f8fafc;
+
+  --app-border: #e5e7eb;
+  --app-border-soft: #eceff2;
+  --app-shadow: #dfe3e7;
+  --app-shadow-accent: #bfdbfe;
+
+  --app-text: #45494e;
+  --app-text-sub: #69717a;
+  --app-text-muted: #8b949e;
+  --app-disabled: #cbd0d6;
+
+  --app-accent: #2563eb;
+  --app-accent-strong: #1d4ed8;
+  --app-accent-text: #2563eb;
+  --app-accent-ink: #1d4ed8;
+  --app-accent-tint: #eff6ff;
+  --app-accent-border: #dbeafe;
+
+  --app-success: #16a34a;
+  --app-success-solid: #22c55e;
+  --app-success-strong: #15803d;
+  --app-success-ink: #15803d;
+  --app-success-tint: #f0fdf4;
+  --app-success-border: #d5f1df;
+  --app-warn: #f97316;
+  --app-warn-strong: #ea580c;
+  --app-warn-ink: #b45309;
+  --app-warn-tint: #fff7ed;
+  --app-warn-border: #fde2c5;
+  --app-danger: #dc2626;
+  --app-danger-strong: #be123c;
+  --app-danger-ink: #be123c;
+  --app-danger-tint: #fff1f2;
+  --app-danger-border: #fecaca;
+
+  --app-overlay: rgba(15, 23, 42, 0.45);
+}
+
+/* ============================================================
    Base Styles — Template birebir
    ============================================================ */
 

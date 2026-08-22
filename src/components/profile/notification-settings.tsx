@@ -12,9 +12,9 @@ export function NotificationSettings() {
   if (status === 'unsupported') return null
 
   return (
-    <div className="rounded-2xl border-2 border-[#e2e8f0] bg-white p-4 shadow-[0_4px_0_#dbe2ea]">
-      <h3 className="text-sm font-black text-[#1e293b]">🔔 Bildirimler</h3>
-      <p className="mt-1 text-xs font-medium leading-relaxed text-[#64748b]">
+    <div className="rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
+      <h3 className="text-sm font-black text-[var(--app-text)]">🔔 Bildirimler</h3>
+      <p className="mt-1 text-xs font-medium leading-relaxed text-[var(--app-text-sub)]">
         Seri hatırlatmaları ve önemli güncellemeler için bildirim al.
       </p>
 
@@ -28,7 +28,7 @@ export function NotificationSettings() {
         {status === 'prompt' && (
           <button
             onClick={subscribe}
-            className="min-h-11 rounded-xl border-2 border-[#1d4ed8] bg-[#2563eb] px-4 py-2 text-sm font-black text-white shadow-[0_3px_0_#1e40af] active:translate-y-0.5 active:shadow-none"
+            className="min-h-11 rounded-xl border-2 border-[var(--app-accent-strong)] bg-[var(--app-accent)] px-4 py-2 text-sm font-black text-white shadow-[0_3px_0_var(--app-accent-strong)] active:translate-y-0.5 active:shadow-none"
           >
             Bildirimleri Aç
           </button>

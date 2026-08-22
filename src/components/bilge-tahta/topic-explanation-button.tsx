@@ -104,7 +104,7 @@ export function TopicExplanationButton({
           disabled={disabled || loading}
           className={`flex min-h-11 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
             appearance === 'learning'
-              ? 'border-[#c4b5fd] bg-[#f5f3ff] text-[#6d28d9] shadow-[0_3px_0_#ddd6fe]'
+              ? 'border-[var(--wisdom-border)] bg-[var(--wisdom-bg)] text-[var(--wisdom-text)] shadow-[0_3px_0_var(--wisdom-border)]'
               : ''
           }`}
           style={appearance === 'default' ? {

@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils/cn'
 
 /**
  * Mobil alt navigasyon (tab bar). Masaustunde Navbar var; mobilde
- * (`md:hidden`) ekranin altinda 4 sekme: Oyunlar / Arena / Siralama / Profil.
+ * (`md:hidden`) ekranin altinda 5 sekme:
+ * Ogren / Pratik / Arena / Lig / Profil.
  *
  * Prototip (Bilge Arena - Mobil) duotone aktif-pill dilini birebir tasir:
  * aktif sekme --focus rengine doner, ikonun arkasinda yumusak bir glow ve
@@ -65,10 +66,12 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
         minHeight: 'calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))',
         paddingTop: 8,
         paddingBottom: 'calc(10px + env(safe-area-inset-bottom))',
-        background: learningAppearance ? 'rgba(255,255,255,.96)' : 'color-mix(in srgb, var(--surface) 90%, transparent)',
+        background: learningAppearance
+          ? 'color-mix(in srgb, var(--app-card) 96%, transparent)'
+          : 'color-mix(in srgb, var(--surface) 90%, transparent)',
         backdropFilter: 'blur(16px) saturate(180%)',
         WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-        borderTop: learningAppearance ? '2px solid #e5e7eb' : '1px solid var(--border)',
+        borderTop: learningAppearance ? '2px solid var(--app-border)' : '1px solid var(--border)',
       }}
     >
       {ITEMS.map((item) => {
@@ -83,7 +86,11 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
               'group relative flex min-h-12 flex-1 flex-col items-center justify-center gap-1 px-2 py-1',
               'transition-transform duration-150 active:scale-90',
             )}
-            style={{ color: active ? (learningAppearance ? '#2563eb' : 'var(--focus)') : (learningAppearance ? '#9aa1a9' : 'var(--text-muted)') }}
+            style={{
+              color: active
+                ? (learningAppearance ? 'var(--app-accent-text)' : 'var(--focus)')
+                : (learningAppearance ? 'var(--app-text-muted)' : 'var(--text-muted)'),
+            }}
           >
             {/* ust gosterge cubugu — aktifte genisler */}
             <span
@@ -92,8 +99,10 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
               style={{
                 width: active ? 22 : 0,
                 opacity: active ? 1 : 0,
-                background: learningAppearance ? '#2563eb' : 'var(--focus)',
-                boxShadow: learningAppearance ? '0 0 8px rgba(37,99,235,.32)' : '0 0 8px var(--focus-glow)',
+                background: learningAppearance ? 'var(--app-accent)' : 'var(--focus)',
+                boxShadow: learningAppearance
+                  ? '0 0 8px color-mix(in srgb, var(--app-accent) 32%, transparent)'
+                  : '0 0 8px var(--focus-glow)',
               }}
             />
 
@@ -104,7 +113,9 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
                   aria-hidden
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: learningAppearance ? 'rgba(37,99,235,.22)' : 'var(--focus-glow)',
+                    background: learningAppearance
+                      ? 'color-mix(in srgb, var(--app-accent) 22%, transparent)'
+                      : 'var(--focus-glow)',
                     filter: 'blur(7px)',
                     opacity: 0.7,
                   }}
@@ -115,7 +126,11 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
                 strokeWidth={active ? 2.4 : 2}
                 className="relative transition-all duration-200"
                 style={{
-                  fill: active ? (learningAppearance ? 'rgba(37,99,235,.16)' : 'color-mix(in srgb, var(--focus) 20%, transparent)') : 'transparent',
+                  fill: active
+                    ? (learningAppearance
+                      ? 'color-mix(in srgb, var(--app-accent) 16%, transparent)'
+                      : 'color-mix(in srgb, var(--focus) 20%, transparent)')
+                    : 'transparent',
                 }}
               />
             </span>
