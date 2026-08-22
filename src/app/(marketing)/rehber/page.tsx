@@ -8,13 +8,13 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').t
 export const metadata: Metadata = {
   title: 'Sınav Rehberi — YKS · LGS Çalışma Yöntemleri ve İpuçları',
   description:
-    'YKS ve LGS hazırlığı için ücretsiz rehber: sınav sistemi, verimli çalışma yöntemleri, TYT · AYT farkı ve daha fazlası.',
-  keywords: ['yks rehberi', 'lgs rehberi', 'verimli çalışma', 'tyt ayt farkı', 'sınav taktikleri'],
+    'YKS ve LGS hazırlığı, öğrenme bilimi, adaptif öğrenme, soru kalitesi ve verimli çalışma yöntemleri üzerine ücretsiz rehber.',
+  keywords: ['yks rehberi', 'lgs rehberi', 'öğrenme bilimi', 'adaptif öğrenme', 'soru kalitesi', 'verimli çalışma', 'tyt ayt farkı'],
   alternates: { canonical: `${siteUrl}/rehber` },
   openGraph: {
     ...OG_DEFAULTS,
     title: 'Sınav Rehberi | Bilge Arena',
-    description: 'YKS · LGS çalışma yöntemleri ve sınav sistemi rehberi.',
+    description: 'YKS · LGS çalışma yöntemleri, öğrenme bilimi ve adaptif öğrenme rehberi.',
     url: `${siteUrl}/rehber`,
   },
 }
@@ -45,8 +45,8 @@ export default function RehberPage() {
       <section className="mb-12 text-center">
         <h1 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">Sınav Rehberi</h1>
         <p className="mx-auto max-w-[560px] text-base text-[var(--text-sub)]">
-          YKS ve LGS hazırlığı için ücretsiz rehber yazıları: sınav sistemi, çalışma
-          yöntemleri ve pratik ipuçları.
+          YKS ve LGS hazırlığı için sınav sistemi, öğrenme bilimi, soru kalitesi,
+          çalışma yöntemleri ve pratik ipuçları.
         </p>
       </section>
 

@@ -9,6 +9,8 @@
 export interface RehberArticle {
   slug: string
   title: string
+  /** Uzun H1'den farklı, arama sonucu için kısa ve marka tekrarsız başlık */
+  seoTitle?: string
   description: string
   category: string
   readingMinutes: number
@@ -18,6 +20,8 @@ export interface RehberArticle {
   body: string[]
   /** Makaledeki zamana duyarlı bilgilerin doğrulandığı birincil kaynaklar */
   sources?: Array<{ label: string; url: string }>
+  /** Kaynak kutusunda makaleye özel yöntem/güncellik açıklaması */
+  sourceNote?: string
 }
 
 export const REHBER_ARTICLES: RehberArticle[] = [
@@ -71,6 +75,116 @@ export const REHBER_ARTICLES: RehberArticle[] = [
       {
         label: 'ÖSYM — 2026 TYT ve AYT temel soru kitapçıkları',
         url: 'https://www.osym.gov.tr/2026yks-tyt-ayt-ve-ydt-temel-soru-kitapciklari-ve-cevap-anahtarlari',
+      },
+    ],
+  },
+  {
+    slug: 'bilge-arena-ogrenme-sistemi',
+    title: 'Bir Soru Sitesinden Öğrenme Sistemine: Bilge Arena’nın Bilimsel ve Teknik Mimarisi',
+    seoTitle: 'Adaptif Öğrenme ve Soru Kalitesi | Bilge Arena',
+    description:
+      'Bilge Arena’nın soru üretimi, kalite güvencesi, adaptif tanılama, kazanım modeli ve kurumsal öğrenme takibini tek sistemde nasıl birleştirdiğini inceleyin.',
+    category: 'Öğrenme Bilimi',
+    readingMinutes: 18,
+    updated: '2026-08-23',
+    body: [
+      'Bilge Arena ilk bakışta öğrencinin ders seçip soru çözdüğü oyunlaştırılmış bir web platformu gibi görülebilir. Fakat bugün ürünün asıl değeri ekrandaki soru sayısından değil, sorunun üretiminden yayın kararına; öğrencinin ilk cevabından gecikmeli tekrarına; bireysel kanıttan öğretmen müdahalesine kadar uzanan ölçülebilir bir öğrenme döngüsü kurmasından gelir. Bu nedenle Bilge Arena’yı yalnız “soru sitesi” olarak tanımlamak, bir laboratuvarı içindeki mikroskoplardan ibaret saymaya benzer: görünen araç doğrudur, fakat sistemin amacı ve karar mekanizması eksik kalır.',
+      'Bu yazı Bilge Arena’nın mevcut teknik sözleşmelerini, ürün ilkelerini ve bilimsel dayanaklarını birlikte açıklıyor. Buradaki “bilimsel” sözcüğü başarı garantisi veya öğrenciyi tek bir puanla kesin biçimde tanıma iddiası değildir. Tam tersine; ölçümün belirsizliğini göstermek, az veride hüküm vermemek, modelleri insan-altın verisiyle sınamak, müdahaleyi izlenebilir kılmak ve yeni kanıt geldiğinde önceki kararı güncelleyebilmek demektir.',
+      '## Temel tez: Öğrenme, kapalı bir kanıt döngüsüdür',
+      'Geleneksel soru uygulamalarında akış çoğu zaman “soruyu göster, doğruyu söyle, puanı artır” çizgisinde biter. Bilge Arena’nın hedef mimarisi ise yedi bağlantılı aşamadan oluşur: ölçülmek istenen kazanımı tanımla; bu kazanıma uygun soruyu üret veya seç; sorunun kalitesini doğrula; öğrencinin cevabını güvenli biçimde değerlendir; kanıt miktarı ve güven düzeyiyle öğrenci durumunu güncelle; bir sonraki uygun çalışmayı öner; gecikmeli sonuçlarla önerinin işe yarayıp yaramadığını yeniden ölç.',
+      'Bu döngüde hiçbir katman tek başına “öğrenci öğrendi” diyemez. Bir doğru cevap yalnız bir gözlemdir. Aynı kazanımda farklı zorluklarda, farklı zamanlarda ve mümkün olduğunca bağımsız biçimde oluşan cevaplar birlikte anlam kazanır. Benzer şekilde yüksek soru çözme sayısı, doğruluk ve kalıcılık yoksa gelişme kanıtı değildir; görev tamamlama da hedef kazanımdaki değişimden ayrı izlenmelidir.',
+      '## 1. Soru üretimi: Hızlı üretmek değil, izlenebilir bir madde yaşam döngüsü kurmak',
+      'Yapay zekâ soru üretiminde ölçek sağlar: farklı ders, konu, sınav kapsamı ve zorluk düzeyleri için taslaklar oluşturabilir. Ancak dilsel olarak düzgün görünen bir soru; yanlış cevap anahtarı, çözüm–cevap çelişkisi, birden fazla doğru seçenek, kazanım dışı içerik, zayıf çeldirici veya telif riski taşıyabilir. Bu nedenle Bilge Arena’da üretim, yayınla eş anlamlı değildir. Yapay zekâ bir taslak üreticisidir; yayın otoritesi değildir.',
+      'Her soru yalnız metin ve seçeneklerden ibaret görülmez. Sınav kapsamı, ders, konu, kazanım, zorluk, kaynak, üretim kimliği ve içerik revizyonu gibi metadata ile birlikte ele alınır. Bu bağ, “bu soru güzel mi?” gibi öznel bir soruyu daha denetlenebilir alt sorulara ayırır: Hangi öğrenme çıktısını ölçüyor? Öğrenciden beklenen bilişsel işlem ne? Çözüm doğru seçeneği gerçekten kanıtlıyor mu? Zorluk etiketi saha verisiyle uyuşuyor mu? İçerik değiştiğinde eski kalite kararı hâlâ geçerli mi?',
+      'İlk kapı deterministik kontrollerdir. Boş soru, yetersiz seçenek, geçersiz cevap indeksi, tekrar eden seçenek, bozuk şema ve temel içerik tutarsızlıkları modele gönderilmeden reddedilir. Bu yaklaşım hem maliyeti düşürür hem de yapısal bir hatayı olasılıksal bir modele “yorumlatma” riskini azaltır. Üretken model yalnız gerçekten anlamsal inceleme gerektiren aşamada devreye girer.',
+      '## 2. Soru kalitesi: Tek model yargısı yerine katmanlı güvence',
+      'Bilge Arena’nın soru kalite yaklaşımı tek bir yapay zekâya “bu soru doğru mu?” diye sormaz. Kör çözücü, çeldirici ve belirsizlik arayan karşıt inceleyici, çözüm–cevap tutarlılığı denetçisi ve deterministik kurallar farklı hata türleri için ayrı kanıt üretir. Seçenek sırası kör çözücüye göre değiştirilerek kayıtlı cevabın modele istemeden ipucu vermesi engellenir. Nihai otomatik verdict, serbest model metni değil, sürümlü kurallarla çalışan saf bir karar fonksiyonudur.',
+      'Bununla birlikte birden fazla modelin aynı sonuca varması, o modellerin doğru olduğu anlamına gelmez. Aynı veri veya benzer eğitim dağılımı ortak yanlılık üretebilir. Bu yüzden otomatik kalite hattının üretime terfi etmesi için held-out insan-altın benchmark gerekir. Etiket, soru kimliğiyle birlikte içeriğin SHA-256 özetine bağlanır; soru değiştiğinde eski etiket yeni revizyona taşınamaz. En az iki bağımsız uzman uzlaşmalı, ayrışmada üçüncü bir uzman adjudikasyon yapmalıdır.',
+      'Kalibrasyon yalnız genel doğrulukla değerlendirilmez. Kusurlu ve temiz soruları dengeli ölçmek için confusion matrix, dengeli doğruluk, yanlış-pozitif ve yanlış-negatif oranları, kapsam, transport hatası ve yüzde 95 Wilson sınırları birlikte kullanılır. Küçük veya sentetik bir örneklem yüksek skor üretse bile terfi kanıtı sayılmaz. Böylece “model birkaç örnekte iyi çalıştı” ile “bu politika yayın kapısında kullanılabilir” birbirinden ayrılır.',
+      'Otomatik onay da nihai yayın değildir. Yönetimli içerik akışı taslak, bağımsız insan incelemeleri, yayın ve gerektiğinde karantina aşamalarını ayırır. Kullanıcı hata bildirimi, itiraz, cevap dağılımı, süre, ilk maruziyet ve revizyon psikometrisi üretim sonrası yeni kanıt sağlar. Sorun görüldüğünde içerik sessizce değiştirilmek yerine karantinaya alınır; düzeltme yeni revizyon olarak aynı güvence hattından geçer. Bu, hata olmayacağı vaadi değil; hatanın izlenebilir ve düzeltilebilir olacağı taahhüdüdür.',
+      '## 3. Öğrenci seviyesi: Tek sayı değil, kazanım bazlı ve belirsizliği görünen bir model',
+      'Bir öğrenciyi “orta seviye” diye etiketlemek kolay ama pedagojik olarak çoğu zaman yetersizdir. Aynı öğrenci problem çözmede güçlü, fonksiyonlarda gelişiyor, temel cebirsel işlemlerde ise desteğe ihtiyaç duyuyor olabilir. Bilge Arena bu nedenle analiz birimini genel puandan Ders → Ünite → Konu → Kazanım hiyerarşisine indirir. Amaç öğrenciyi sınıflandırmak değil, bir sonraki öğrenme kararını daha anlamlı kılmaktır.',
+      'Her kazanım için yalnız ham doğruluk değil; kanıt sayısı, bağımsız cevaplar, soru zorluğu, gecikmeli doğru cevap, süre, hızlı yanlış, ipucu kullanımı ve öğrencinin kendi belirttiği tahmin/dikkatsizlik sinyalleri değerlendirilebilir. Bu bileşenler tek bir “zeka” veya “yetenek” puanı üretmek için kullanılmaz. Sistem, gözlenen çalışma davranışından sınırlı bir öğrenme durumu çıkarır ve gözlem kapsamını sonuçla birlikte taşır.',
+      'Kanıt yetersizse en doğru sonuç “veri yetersiz”dir. Bilge Arena’nın kurumsal analiz sözleşmelerinde bir kazanım hakkında karar verebilmek için asgari kanıt ve bağımsızlık koşulları aranır; düşük güvende güçlü görünen sonuç bile daha temkinli banda çekilebilir. Güven seviyesi durum etiketinden ayrı gösterilir. Böylece 90 puanlık tek gözlem ile farklı günlere yayılan çoklu kanıtın aynı kesinlikte sunulması önlenir.',
+      '## 4. Adaptif tanılama: Açıklanabilir bir başlangıç tahmini',
+      'Kısa adaptif tanılama, öğrencinin bütün akademik seviyesini ölçen yüksek riskli bir sınav değildir. İlk dar kapsam TYT Matematik kazanımlarını en fazla on soruda örnekleyen, her kazanımı en az bir kez yoklamaya çalışan açıklanabilir bir durum tespitidir. İlk hedef zorluk orta seviyeden başlar; doğru cevapta bir kademe yükselir, yanlış cevapta bir kademe düşer. Sonraki soru, hedef zorluğa en yakın ve daha önce gösterilmemiş uygun sorular arasından seçilir.',
+      'Bu politika iki önemli güvenlik sınırı taşır. Birincisi, soru havuzu bütün hedef kazanımları karşılamıyorsa sistem eksik tanılamayı başarı gibi göstermez. İkincisi, sonuç normal çalışma kanıtından ayrı tutulur ve düşük güvenli başlangıç tahmini olarak sunulur. Öğrenci daha sonra çalıştıkça gerçek öğrenme kanıtı bu ilk tahmini günceller.',
+      'Bilge Arena bu aşamada tam ölçekli Item Response Theory veya Computerized Adaptive Testing kullandığını iddia etmez. IRT/CAT için kalibre edilmiş geniş madde havuzu, parametre kararlılığı, maruziyet kontrolü, ölçek eşitleme ve yeterli örneklem gerekir. Mevcut yaklaşım kural tabanlı, dar kapsamlı ve açıklanabilirdir. İleride psikometrik olgunluk oluşursa daha gelişmiş modeller ancak mevcut güvence katmanlarıyla birlikte değerlendirilebilir.',
+      '## 5. Bir sonraki soruyu düzenlemek: Zayıfı cezalandırmak değil, üretken güçlük kurmak',
+      'Kişiselleştirme yalnız “yanlış yaptı, daha kolay soru ver” değildir. Çok kolay içerik yanıltıcı akıcılık yaratabilir; sürekli zor içerik ise öğrenciyi çalışmadan uzaklaştırabilir. Hedef, öğrencinin mevcut kanıtına yakın ama düşünme gerektiren üretken bir güçlük düzeyi kurmaktır. Adaptif tanılamada zorluk bir kademe değişirken, normal pratikte kazanım durumu, geçmiş yanlışlar ve zamanı gelen tekrarlar bir sonraki oturumun bileşimini etkileyebilir.',
+      'Yanlış soruların yeniden gösterimi de rastgele değildir. Aralıklı tekrar katmanı, soru bazında hatırlanabilirlik ve tekrar geçmişini kullanarak öğrencinin ne zaman yeniden karşılaşması gerektiğine dair bir takvim oluşturur. Buradaki amaç öğrenciyi aynı soruya boğmak değil, unutmanın başlamasıyla geri çağırma çabasını verimli bir aralıkta buluşturmaktır.',
+      '## 6. Öğrenme bilimi: Soru çözmek hem ölçüm hem öğrenme olayıdır',
+      'Aktif hatırlama araştırmaları, bilgiyi bellekten geri çağırmanın yalnız ölçüm olmadığını; sonraki hatırlamayı güçlendirebilen bir öğrenme etkinliği olduğunu gösterir. Sınıf çalışmalarını birleştiren geniş meta-analizler de kısa sınav ve geri çağırma uygulamalarının, koşullara bağlı olmakla birlikte, akademik başarı üzerinde anlamlı bir ortalama etki üretebildiğini raporlar. Bu nedenle Bilge Arena’da soru, öğrenciyi yargılayan son nokta değil; öğrenme döngüsünün aktif bir parçasıdır.',
+      'Aralıklı çalışma için de benzer bir ilke geçerlidir. Yüzlerce deneyin nicel sentezi, tekrarlar arasındaki uygun boşluğun hedeflenen hatırlama süresiyle birlikte düşünülmesi gerektiğini gösterir. “Her öğrenci için tek ideal aralık” yoktur. Bilge Arena’nın tekrar planlaması bu nedenle sabit takvim yerine cevap geçmişinden türeyen soru bazlı bir durum kullanır; yine de algoritmik tarih, öğretmenin pedagojik kararı veya öğrencinin gerçek yaşam koşulları üzerinde mutlak otorite değildir.',
+      'Düzeltici geri bildirim öğrenme değerini artırır; fakat yalnız doğru seçeneği göstermek çoğu zaman yeterli değildir. Çözümün hangi kavramı kullandığını, çeldiricinin neden yanlış olduğunu ve öğrencinin hata türünü görünür kılmak gerekir. Bilgi eksiği, yöntem seçimi, işlem, dikkat, süre ve tahmin gibi farklı nedenler aynı “yanlış” sonucunun altında saklanabilir. Bu ayrım, bir sonraki müdahaleyi daha isabetli hale getirir.',
+      'Oyunlaştırma ise pedagojinin yerine geçmez. XP, seri, lig ve rozetler öğrencinin başlama eşiğini küçültebilir ve ilerlemeyi görünür kılabilir; fakat doğru öğrenme göstergesi değildir. Ürün sağlığı metrikleri ile kazanım kanıtı bu yüzden ayrılmalıdır. Bir öğrencinin platforma dönmesi değerlidir, ancak dönüşün hedef kazanımda gelişme yaratıp yaratmadığı ayrıca ölçülmelidir.',
+      '## 7. Kurumsal öğrenme takip sistemi: Liste değil, müdahale altyapısı',
+      'Bilge Arena Kurumsal’ın amacı bir dershane ERP’si, muhasebe yazılımı veya yoklama sistemi olmak değildir. Ürünün özgün rolü öğrenci bağlılığı ve akademik çalışma takibi katmanı olmaktır: öğrencinin hangi kazanımda ne kadar ve ne güvenilirlikte kanıt ürettiğini göstermek, öğretmenin uygun çalışma programını hazırlamasını kolaylaştırmak ve müdahalenin sonucunu izlemek.',
+      'Öğretmen görünümü ham bir doğru–yanlış tablosundan daha fazlasını sunabilir: değerlendirilebilir kazanım sayısı, destek gereken alanlar, gecikmeli öğrenme kanıtı, ipucu bağımlılığı, hızlı yanlış oranı, son çalışma zamanı ve güven seviyesi. Sınıf görünümünde en az belirli sayıda öğrencide ortaklaşan zayıf kazanımlar öne çıkar; küçük gruplar veya yetersiz kanıt kesin oranlarla teşhir edilmez.',
+      'Bu verinin eyleme dönüşmesi için çalışma programı ayrı bir yönetişim akışına sahiptir. Sistem kanıta dayalı bir taslak önerebilir; öğretmen düzenler, gerekçeyi görür, onaylar ve yayınlar. Öğrenci yalnız yayınlanmış programı görür. Program sonrasında yalnız görevlerin tamamlanması değil, hedef kazanımdaki yeni kanıt ve değişim değerlendirilir. Böylece “ödev verildi” ile “öğrenme gelişti” ayrılır.',
+      'Kurum yöneticisi de öğretmeni öğrencilerin ham ortalamasına göre sıralamamalıdır. Sınıfın başlangıç düzeyi, örneklem büyüklüğü ve veri kapsamı hesaba katılmadan yapılan sıralama adaletsizdir. Bilge Arena’nın açıklanabilir gösterge yaklaşımı öğrenci gelişimi, takip disiplini, program yönetimi, zamanında müdahale ve veri güvenilirliğini ayrı boyutlarda ele alır; yeterli gözlem yoksa gösterge “veri yetersiz” kalır.',
+      '## 8. Ölçüm güvenilirliği: Sonuç kadar payda, pencere ve sürüm de önemlidir',
+      'Bir eğitim metriği yalnız yüzde değildir. “Öğrencilerin yüzde 70’i gelişti” diyebilmek için paydanın kimlerden oluştuğu, hangi zaman penceresinin kullanıldığı, kaç öğrencinin yetersiz kanıt nedeniyle dışarıda kaldığı, gelişmenin hangi başlangıca göre hesaplandığı ve model sürümü bilinmelidir. Bilge Arena bu nedenle sonuçlarla birlikte numerator, denominator, zaman aralığı, kapsam ve model kimliği taşımayı hedefler.',
+      'Küçük örneklemlerde nokta tahmini yanıltıcıdır. Wilson güven aralıkları ve asgari grup büyüklükleri hem soru psikometrisinde hem kurum raporlarında sahte kesinliği azaltır. Aktivasyon, D1/D7/D30 geri dönüş ve haftalık aktif öğrenci gibi ürün metrikleri ise akademik ustalıkla karıştırılmaz. Bir özelliğin geri dönüşle ilişkili olması, öğrenmeye neden olduğunu kanıtlamaz; nedensel iddia için önceden tanımlanmış ve etik kontrollü deney gerekir.',
+      '## 9. Gizlilik, adalet ve insan otoritesi',
+      'Öğrenme analitiği öğrencinin yararına güçlü bir araç olabilir; aynı veri yanlış yorumlandığında gözetim ve etiketleme mekanizmasına dönüşebilir. Bu nedenle veri minimizasyonu teknik bir ayrıntı değil, ürün tasarımıdır. Öğretmen ve kurum API’lerine ham cevap anahtarı, öğrencinin seçtiği seçenek, gereksiz kimlik bilgileri veya serbest yapay zekâ istemleri taşınmamalıdır. Tenant ve rol sınırları başka kurum veya sınıf verisine erişimi engellemelidir.',
+      'Bilge Arena psikolojik değerlendirme, zekâ puanı, sağlık çıkarımı veya öğrencinin gelecekteki başarısına ilişkin kesin hüküm üretmez. Yapay zekâ öğrenci ya da öğretmen hakkında tek başına yüksek etkili karar vermez. Demografik gruplara göre adalet analizi yapılacaksa hukuki amaç, veri minimizasyonu, yeterli örneklem ve eğitimli insan incelemesi gerekir; veri yokluğunda sistem “adil” sonucu çıkaramaz.',
+      'Öğrencinin kendi kanıtını ve gerekçeyi görebilmesi önemlidir. Açıklanabilirlik, yalnız algoritmanın teknik formülünü yayımlamak değildir; “Bu kazanım neden gelişiyor görünüyor?”, “Neden tekrar önerildi?”, “Hangi veri eksik?” ve “Bu karara nasıl itiraz edilir?” sorularına kullanıcı düzeyinde cevap verebilmektir. İnsan müdahalesi, düzeltme ve veri paylaşımını durdurma yolları bu nedenle sistemin parçasıdır.',
+      '## 10. Bilge Arena’yı farklılaştıran teknik ilke: Fail-closed öğrenme altyapısı',
+      'Eğitim sistemlerinde eksik veri çoğu zaman görünmez biçimde varsayılan değere dönüşür. Bilge Arena’nın güvenli sözleşmeleri bunun tersini hedefler: kapsam eksikse tanılama başlamaz; kanıt yetersizse ustalık kararı çıkmaz; kalite politikasının sürümü uyuşmuyorsa soru yayınlanmaz; kurum yetkisi doğrulanmıyorsa veri dönmez; model yanıtı şemaya uymuyorsa güvenli geri dönüş kullanılır. Yani sistem belirsizliği başarı gibi göstermemelidir.',
+      'Sürümlendirme ve denetim izi bu ilkenin tamamlayıcısıdır. Soru revizyonu, kalite politikası, kazanım taksonomisi, öğrenci durum modeli ve kurum metriği değiştiğinde eski sonuçların hangi kurala göre üretildiği korunur. Yeni model geçmiş seriyi sessizce yeniden yazmaz. Bu yaklaşım, ürün büyüdükçe “neden böyle karar verdi?” sorusuna geriye dönük cevap verebilmenin temelidir.',
+      '## 11. Bundan sonra hangi bilimsel olgunluk katmanları gerekir?',
+      'Birinci ihtiyaç, soru bankasında dönemler arası parametre sürüklenmesini ve maruziyeti izlemektir. Bir soru zamanla ezberlenebilir, müfredat değişebilir veya farklı kullanıcı gruplarında beklenmedik davranabilir. Zorluk, ayırıcılık, seçenek dağılımı ve cevap süresi sabit kabul edilmemeli; yeterli örneklemde pencere bazlı karşılaştırılmalıdır.',
+      'İkinci ihtiyaç, kapsam büyüdükçe geçerlik argümanını güçlendirmektir. Her ders ve soru tipi için “hangi kanıt hangi öğrenme iddiasını destekler?” sorusu açıkça belgelenmeli; erişilebilirlik ve adalet uzman incelemesinin parçası olmalıdır. QTI gibi birlikte çalışabilirlik standartları, gerçek kurum entegrasyonu ihtiyacı doğduğunda conformance testleriyle ele alınabilir.',
+      'Üçüncü ihtiyaç, önerilerin etkisini kontrollü biçimde ölçmektir. Adaptif seçim, tekrar zamanlaması veya öğretmen program önerisi kullanan öğrencilerde gözlenen gelişme doğrudan algoritmaya atfedilemez; başlangıç farkları ve bağlılık yanlılığı vardır. Önceden kayıtlı hipotezler, etik deney tasarımı, yeterli örneklem ve etki büyüklüğü–belirsizlik raporu olmadan “sistem başarıyı artırdı” denmemelidir.',
+      'Dördüncü ihtiyaç, insan yönetişimini ürün ölçeğiyle birlikte büyütmektir. Alan uzmanları, ölçme-değerlendirme uzmanları, öğretmenler, erişilebilirlik uzmanları, güvenlik ve veri koruma sorumluları aynı yaşam döngüsünde rol almalıdır. İyi bir eğitim yapay zekâsı insanı denklemden çıkaran değil, uzman kararının kanıtını ve etkisini daha görünür kılan sistemdir.',
+      '## Sonuç: Bilge Arena’nın ürünü soru değil, güvenilir bir sonraki adımdır',
+      'Bilge Arena’nın dönüşümü daha fazla özellik eklemekten ibaret değildir. Asıl değişim, soruyu bir içerik kartı olmaktan çıkarıp ölçüm ve öğrenme kanıtına; cevabı puandan çıkarıp güncellenebilir öğrenci modeline; kurum panelini listeden çıkarıp açıklanabilir müdahale döngüsüne dönüştürmektir.',
+      'Bu vizyonda yapay zekâ üretimi hızlandırır ama yayın kararını tek başına vermez. Adaptasyon öğrenciyi etiketlemez, bir sonraki uygun güçlüğü seçmeye çalışır. Kurumsal analitik gözetim üretmez, öğretmenin nerede ve neden destek vermesi gerektiğini görünür kılar. Bilimsel yaklaşım da büyük sözler söylemek değil; her iddiayı ölçülebilir kanıta, belirsizliğe, insan denetimine ve düzeltilebilir bir sürece bağlamaktır.',
+      'Bilge Arena böylece basit bir soru sitesinden; öğrenci, öğretmen ve kurum için aynı temel soruya cevap arayan bir öğrenme altyapısına dönüşür: Elimizdeki kanıtla bugün ne biliyoruz, neyi henüz bilmiyoruz ve öğrenmeyi ilerletmek için sıradaki en güvenilir adım nedir?',
+    ],
+    sourceNote:
+      'Bu inceleme, Bilge Arena’nın mevcut ürün ve kod sözleşmeleri ile aşağıdaki akademik ve kurumsal kaynaklar birlikte değerlendirilerek hazırlanmıştır. Kaynaklar tasarım ilkelerine dayanak sağlar; platformun her öğrenci için başarı garantisi verdiği anlamına gelmez.',
+    sources: [
+      {
+        label: 'Cepeda ve diğerleri — Aralıklı çalışmanın 317 deneylik nicel sentezi (PubMed)',
+        url: 'https://pubmed.ncbi.nlm.nih.gov/16719566/',
+      },
+      {
+        label: 'Yang ve diğerleri — Sınıfta test etkisi, 48.478 öğrenci ve 222 çalışma (PubMed)',
+        url: 'https://pubmed.ncbi.nlm.nih.gov/33683913/',
+      },
+      {
+        label: 'McDermott — Aktif geri çağırmanın öğrenmedeki rolü (PubMed)',
+        url: 'https://pubmed.ncbi.nlm.nih.gov/33006925/',
+      },
+      {
+        label: 'Corbett ve Anderson — Knowledge Tracing araştırma kaydı (Carnegie Mellon University)',
+        url: 'https://pact.cs.cmu.edu/corbett/corbettpubs.htm',
+      },
+      {
+        label: 'ETS — Evidence-Centered Design in Assessment Development',
+        url: 'https://www.ets.org/research/policy_research_reports/publications/chapter/2012/jogv.html',
+      },
+      {
+        label: 'ETS — Bilgisayar tabanlı ve adaptif testler için pratik ilkeler',
+        url: 'https://www.ets.org/Media/Research/pdf/CBT-2011.pdf',
+      },
+      {
+        label: 'OECD — PISA ölçme ve uygulama araçları',
+        url: 'https://www.oecd.org/en/about/programmes/pisa/pisa-survey-implementation-tools.html',
+      },
+      {
+        label: '1EdTech — Question and Test Interoperability (QTI) standardı',
+        url: 'https://www.1edtech.org/standards/qti/index',
+      },
+      {
+        label: 'UNESCO IITE — Çevrim içi öğrenmede kişisel veri ve gizlilik rehberi',
+        url: 'https://iite.unesco.org/publications/personal-data-and-privacy-protection-in-online-learning/',
+      },
+      {
+        label: 'KVKK — Uzaktan eğitim platformlarında kişisel veri duyurusu',
+        url: 'https://www.kvkk.gov.tr/Icerik/6723/Uzaktan-Egitim-Platformlari-Hakkinda-Kamuoyu-Duyurusu',
       },
     ],
   },

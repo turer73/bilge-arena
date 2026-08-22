@@ -28,10 +28,14 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').t
 export const metadata: Metadata = {
   title: 'Hakkımızda: Bilge Arena Nedir?',
   description:
-    'Bilge Arena’nın amacı, yaklaşımı ve çalışma ilkeleri: TYT, AYT, LGS ve YDT öğrencileri için oyunlaştırılmış soru pratiği, içerik sorumluluğu ve iletişim bilgileri.',
+    'Bilge Arena’nın adaptif öğrenme, soru kalite güvencesi, kazanım bazlı öğrenci analizi ve kurumsal öğrenme takibi yaklaşımını keşfedin.',
   keywords: [
     'Bilge Arena nedir',
     'Bilge Arena hakkında',
+    'adaptif öğrenme platformu',
+    'soru kalite sistemi',
+    'öğrenci seviye belirleme',
+    'kurumsal öğrenme takip sistemi',
     'oyunlaştırılmış eğitim platformu',
     'YKS çalışma platformu',
     'LGS çalışma platformu',
@@ -53,7 +57,7 @@ export const metadata: Metadata = {
     ...OG_DEFAULTS,
     title: 'Bilge Arena Hakkında',
     description:
-      'Bilge Arena’nın neden var olduğunu, öğrencilere ne sunduğunu ve hangi ilkelerle çalıştığını keşfet.',
+      'Soru kalitesi, adaptif öğrenme ve kurumsal takip altyapısının arkasındaki amacı keşfet.',
     url: `${siteUrl}/hakkinda`,
     images: [
       {
@@ -67,7 +71,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Bilge Arena Hakkında',
-    description: 'Oyunlaştırılmış soru pratiğinin arkasındaki amaç, yaklaşım ve ilkeler.',
+    description: 'Oyunlaştırılmış pratiğin ötesindeki adaptif öğrenme ve kalite mimarisi.',
     images: [`${siteUrl}/og-image.png`],
   },
 }
@@ -103,6 +107,29 @@ const PRINCIPLES = [
   },
 ]
 
+const SYSTEM_PILLARS = [
+  {
+    icon: BookOpenCheck,
+    title: 'Soru yaşam döngüsü',
+    desc: 'Yapay zekâ destekli taslaktan deterministik kontrollere, bağımsız incelemelerden yayın ve karantinaya uzanan izlenebilir içerik yönetişimi.',
+  },
+  {
+    icon: Target,
+    title: 'Kazanım bazlı öğrenci modeli',
+    desc: 'Tek bir genel seviye yerine kanıt sayısı, zorluk, gecikmeli doğru, süre ve ipucu davranışıyla gelişen kazanım profili.',
+  },
+  {
+    icon: GraduationCap,
+    title: 'Açıklanabilir adaptasyon',
+    desc: 'Kısa tanılama, uygun zorluk seçimi ve zamanı gelen tekrarlarla öğrenciyi sıradaki anlamlı çalışmaya götüren kapalı döngü.',
+  },
+  {
+    icon: Users,
+    title: 'Kurumsal öğrenme takibi',
+    desc: 'Öğretmenin kanıtı yorumlayıp program hazırladığı; kurumun gelişim, takip ve veri güvenilirliğini ayrı ayrı görebildiği yapı.',
+  },
+]
+
 const AUDIENCES = [
   {
     icon: GraduationCap,
@@ -122,7 +149,7 @@ const AUDIENCES = [
 ]
 
 const FACTS = [
-  ['Hizmet', 'Web tabanlı, oyunlaştırılmış soru pratiği'],
+  ['Hizmet', 'Kanıta dayalı, oyunlaştırılmış öğrenme ve soru pratiği altyapısı'],
   ['Kapsam', 'TYT · AYT · LGS · YDT'],
   ['Ders alanları', 'Matematik · Türkçe · Fen · Sosyal · İngilizce'],
   ['Dil ve bölge', 'Türkçe · Türkiye odaklı'],
@@ -141,7 +168,7 @@ const jsonLd = {
       url: `${siteUrl}/hakkinda`,
       name: 'Bilge Arena Hakkında',
       description:
-        'Bilge Arena’nın amacı, çalışma ilkeleri, ürün kapsamı ve iletişim bilgileri.',
+        'Bilge Arena’nın adaptif öğrenme, soru kalite güvencesi, kurumsal takip yaklaşımı, ürün kapsamı ve iletişim bilgileri.',
       inLanguage: 'tr-TR',
       isPartOf: { '@id': `${siteUrl}/#website` },
       about: { '@id': `${siteUrl}/#organization` },
@@ -157,7 +184,7 @@ const jsonLd = {
         url: `${siteUrl}/logo-horizontal.png`,
       },
       description:
-        'TYT, AYT, LGS ve YDT öğrencileri için web tabanlı, oyunlaştırılmış soru pratiği platformu.',
+        'TYT, AYT, LGS ve YDT öğrencileri için soru kalite güvencesi, kazanım bazlı analiz, adaptif pratik ve kurumsal öğrenme takibi sunan eğitim teknolojisi platformu.',
       areaServed: { '@type': 'Country', name: 'Türkiye' },
       knowsLanguage: 'tr-TR',
       email: 'iletisim@bilgearena.com',
@@ -212,9 +239,10 @@ export default function HakkindaPage() {
               <span className="mt-2 block text-[var(--focus-light)]">ilerleme hissi yapan arena.</span>
             </h1>
             <p className="mt-6 max-w-[690px] text-base leading-8 text-[var(--text-sub)] sm:text-lg">
-              Bilge Arena, sınava hazırlanan öğrencilerin soru pratiğine başlamasını
-              kolaylaştırmak ve düzenli çalışmayı sürdürülebilir kılmak için geliştirilen
-              Türkiye odaklı bir eğitim teknolojisi projesidir.
+              Bilge Arena; nitelikli soruyu, öğrencinin kazanım kanıtını ve öğretmenin
+              müdahalesini aynı öğrenme döngüsünde buluşturan Türkiye odaklı bir eğitim
+              teknolojisi projesidir. Oyunlaştırma görünen yüzüdür; soru kalitesi,
+              açıklanabilir adaptasyon ve ilerleme takibi sistemin omurgasıdır.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <TrackedCtaLink href="/nasil-calisir" page="hakkinda" placement="hero_how" className="w-full sm:w-auto">Nasıl çalıştığını gör <ArrowRight size={17} /></TrackedCtaLink>
@@ -261,6 +289,32 @@ export default function HakkindaPage() {
             <p>Sınava hazırlık çoğu zaman “nereden başlayacağım?” sorusunda tıkanır. Büyük hedefler ve uzun konu listeleri öğrencinin ilk adımı atmasını zorlaştırabilir.</p>
             <p>Bilge Arena bu eşiği küçük ve anlaşılır bir akışa dönüştürür: dersini seç, bir oturum başlat, cevabını gör ve sonucundan bir sonraki adımı çıkar.</p>
             <p>Oyunlaştırmayı eğitimin yerine koymuyoruz. Onu, çalışmaya başlamayı ve geri dönmeyi kolaylaştıran bir motivasyon katmanı olarak kullanıyoruz.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="sistem-baslik">
+        <div className="mx-auto max-w-[1200px]">
+          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--wisdom-light)]">Bir soru sitesinin ötesinde</p>
+              <h2 id="sistem-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">Öğrenmeyi kanıta dönüştüren sistem</h2>
+            </div>
+            <div>
+              <p className="leading-8 text-[var(--text-sub)]">Bilge Arena’nın hedefi daha çok soru göstermek değil; doğru soruyu güvenilir biçimde yayınlamak, öğrencinin hangi kazanımda ne kadar kanıt ürettiğini anlamak ve sıradaki çalışmayı bu kanıta göre düzenlemektir.</p>
+              <Link href="/rehber/bilge-arena-ogrenme-sistemi" className="mt-5 inline-flex items-center gap-2 font-bold text-[var(--focus-light)] hover:underline">
+                Bilimsel ve teknik mimariyi oku <ArrowRight size={17} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            {SYSTEM_PILLARS.map(({ icon: Icon, title, desc }) => (
+              <article key={title} className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 sm:p-7">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--wisdom-bg)] text-[var(--wisdom-light)]"><Icon size={23} aria-hidden="true" /></div>
+                <h3 className="mt-5 text-lg font-black">{title}</h3>
+                <p className="mt-2 text-sm leading-7 text-[var(--text-sub)]">{desc}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
