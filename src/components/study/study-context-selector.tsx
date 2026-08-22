@@ -32,10 +32,10 @@ export function StudyContextSelector({
   return (
     <section
       aria-labelledby="study-context-title"
-      className="animate-fadeUp rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-border)] md:p-4"
+      className="min-w-0 overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-border)] md:p-4"
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
+      <div className="mb-3 flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">
             ÇALIŞMA ODAĞIN
           </p>
@@ -43,14 +43,14 @@ export function StudyContextSelector({
             Dersini ve sınavını seç
           </h2>
         </div>
-        <span className="text-right text-[10px] font-semibold leading-snug text-[var(--app-text-muted)]">
+        <span className="hidden max-w-28 shrink-0 text-right text-[10px] font-semibold leading-snug text-[var(--app-text-muted)] min-[400px]:block">
           İstediğin zaman değiştirebilirsin
         </span>
       </div>
 
       <fieldset>
         <legend className="sr-only">Ders seçimi</legend>
-        <div className="scrollbar-none flex snap-x gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-5 lg:overflow-visible">
+        <div data-study-game-grid className="grid min-w-0 grid-cols-2 gap-2 min-[420px]:grid-cols-3 lg:grid-cols-5">
           {games.map((game) => {
             const selected = game.slug === selectedGame
             const Icon = GAME_ICONS[game.slug]
@@ -60,7 +60,7 @@ export function StudyContextSelector({
                 type="button"
                 aria-pressed={selected}
                 onClick={() => onGameChange(game.slug)}
-                className="flex min-h-12 min-w-[116px] shrink-0 snap-start items-center gap-2 rounded-2xl border-2 px-3 py-2 text-left text-xs font-black transition-[border-color,background-color,transform] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)] lg:min-w-0"
+                className="flex min-h-[52px] w-full min-w-0 items-center gap-2 rounded-2xl border-2 px-2.5 py-2 text-left text-[11px] font-black transition-[border-color,background-color,transform] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)] sm:px-3 sm:text-xs"
                 style={{
                   borderColor: selected ? `var(--${game.color})` : 'var(--app-border)',
                   background: selected
@@ -71,7 +71,7 @@ export function StudyContextSelector({
                 }}
               >
                 <Icon size={19} strokeWidth={2.7} aria-hidden="true" />
-                <span className="min-w-0 truncate">{game.name}</span>
+                <span className="min-w-0 break-words leading-tight">{game.name}</span>
               </button>
             )
           })}

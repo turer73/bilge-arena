@@ -48,6 +48,9 @@ describe('BottomNav', () => {
     expect(nav.className).toContain('md:hidden')
     expect(nav.style.minHeight).toBe('calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))')
     expect(linkFor('Öğren').className).toContain('min-h-12')
+    expect(nav.className).toContain('overflow-x-clip')
+    expect(nav.querySelector('[data-bottom-nav-inner]')).toHaveClass('min-w-0', 'max-w-[440px]')
+    for (const tab of TABS) expect(linkFor(tab)).toHaveClass('min-w-0', 'flex-1')
   })
 
   test('activeOverride="learn" → sadece Öğren aria-current', () => {

@@ -57,7 +57,7 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
       data-bottom-nav
       aria-label="Mobil gezinme"
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 flex justify-around',
+        'fixed inset-x-0 bottom-0 z-40 box-border overflow-x-clip',
         appearance !== 'learning' && 'md:hidden',
       )}
       style={{
@@ -74,76 +74,78 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
         borderTop: learningAppearance ? '2px solid var(--app-border)' : '1px solid var(--border)',
       }}
     >
-      {ITEMS.map((item) => {
-        const active = isActive(item)
-        const { Icon } = item
-        return (
-          <Link
-            key={item.id}
-            href={item.href}
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              'group relative flex min-h-12 flex-1 flex-col items-center justify-center gap-1 px-2 py-1',
-              'transition-transform duration-150 active:scale-90',
-            )}
-            style={{
-              color: active
-                ? (learningAppearance ? 'var(--app-accent-text)' : 'var(--focus)')
-                : (learningAppearance ? 'var(--app-text-muted)' : 'var(--text-muted)'),
-            }}
-          >
-            {/* ust gosterge cubugu — aktifte genisler */}
-            <span
-              aria-hidden
-              className="absolute top-0 h-[3px] rounded-full transition-all duration-300"
-              style={{
-                width: active ? 22 : 0,
-                opacity: active ? 1 : 0,
-                background: learningAppearance ? 'var(--app-accent)' : 'var(--focus)',
-                boxShadow: learningAppearance
-                  ? '0 0 8px color-mix(in srgb, var(--app-accent) 32%, transparent)'
-                  : '0 0 8px var(--focus-glow)',
-              }}
-            />
-
-            {/* ikon + arkada duotone glow */}
-            <span className="relative flex h-7 w-7 items-center justify-center">
-              {active && (
-                <span
-                  aria-hidden
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: learningAppearance
-                      ? 'color-mix(in srgb, var(--app-accent) 22%, transparent)'
-                      : 'var(--focus-glow)',
-                    filter: 'blur(7px)',
-                    opacity: 0.7,
-                  }}
-                />
+      <div data-bottom-nav-inner className="mx-auto flex w-full min-w-0 max-w-[440px] items-stretch">
+        {ITEMS.map((item) => {
+          const active = isActive(item)
+          const { Icon } = item
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'group relative flex min-h-12 min-w-0 basis-0 flex-1 flex-col items-center justify-center gap-1 px-0.5 py-1',
+                'transition-transform duration-150 active:scale-90',
               )}
-              <Icon
-                size={23}
-                strokeWidth={active ? 2.4 : 2}
-                className="relative transition-all duration-200"
+              style={{
+                color: active
+                  ? (learningAppearance ? 'var(--app-accent-text)' : 'var(--focus)')
+                  : (learningAppearance ? 'var(--app-text-muted)' : 'var(--text-muted)'),
+              }}
+            >
+              {/* ust gosterge cubugu — aktifte genisler */}
+              <span
+                aria-hidden
+                className="absolute top-0 h-[3px] rounded-full transition-all duration-300"
                 style={{
-                  fill: active
-                    ? (learningAppearance
-                      ? 'color-mix(in srgb, var(--app-accent) 16%, transparent)'
-                      : 'color-mix(in srgb, var(--focus) 20%, transparent)')
-                    : 'transparent',
+                  width: active ? 22 : 0,
+                  opacity: active ? 1 : 0,
+                  background: learningAppearance ? 'var(--app-accent)' : 'var(--focus)',
+                  boxShadow: learningAppearance
+                    ? '0 0 8px color-mix(in srgb, var(--app-accent) 32%, transparent)'
+                    : '0 0 8px var(--focus-glow)',
                 }}
               />
-            </span>
 
-            <span
-              className="text-xs leading-none transition-all"
-              style={{ fontWeight: active ? 700 : 600 }}
-            >
-              {item.label}
-            </span>
-          </Link>
-        )
-      })}
+              {/* ikon + arkada duotone glow */}
+              <span className="relative flex h-7 w-7 items-center justify-center">
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      background: learningAppearance
+                        ? 'color-mix(in srgb, var(--app-accent) 22%, transparent)'
+                        : 'var(--focus-glow)',
+                      filter: 'blur(7px)',
+                      opacity: 0.7,
+                    }}
+                  />
+                )}
+                <Icon
+                  size={23}
+                  strokeWidth={active ? 2.4 : 2}
+                  className="relative transition-all duration-200"
+                  style={{
+                    fill: active
+                      ? (learningAppearance
+                        ? 'color-mix(in srgb, var(--app-accent) 16%, transparent)'
+                        : 'color-mix(in srgb, var(--focus) 20%, transparent)')
+                      : 'transparent',
+                  }}
+                />
+              </span>
+
+              <span
+                className="max-w-full truncate text-[11px] leading-none transition-all min-[380px]:text-xs"
+                style={{ fontWeight: active ? 700 : 600 }}
+              >
+                {item.label}
+              </span>
+            </Link>
+          )
+        })}
+      </div>
     </nav>
   )
 }
