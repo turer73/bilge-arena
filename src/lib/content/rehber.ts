@@ -16,26 +16,62 @@ export interface RehberArticle {
   updated: string
   /** Paragraf dizisi; '## ' ile baslayan satir alt-baslik olarak render edilir */
   body: string[]
+  /** Makaledeki zamana duyarlı bilgilerin doğrulandığı birincil kaynaklar */
+  sources?: Array<{ label: string; url: string }>
 }
 
 export const REHBER_ARTICLES: RehberArticle[] = [
   {
     slug: 'tyt-ayt-farki',
-    title: 'TYT ve AYT Arasındaki Fark Nedir?',
+    title: 'TYT ve AYT Arasındaki Fark Nedir? 2026 Karşılaştırması',
     description:
-      'YKS iki oturumdan oluşur: TYT ve AYT. İkisinin kapsamı, amacı ve puana etkisi nasıl farklılaşır? Sade bir karşılaştırma.',
+      '2026 YKS için TYT ve AYT farkları: soru dağılımı, süre, puana etkisi, puan türüne göre çözülmesi gereken testler ve örnek çalışma planı.',
     category: 'Sınav Sistemi',
-    readingMinutes: 4,
-    updated: '2026-06-20',
+    readingMinutes: 8,
+    updated: '2026-08-23',
     body: [
-      'YKS (Yükseköğretim Kurumları Sınavı) iki temel oturumdan oluşur: TYT ve AYT. Bu iki sınav farklı amaçlara hizmet eder ve birlikte üniversite yerleştirme puanını belirler.',
-      '## TYT — Temel Yeterlilik Testi',
-      'TYT, tüm adayların girdiği ilk oturumdur. Türkçe, temel matematik, sosyal bilimler ve fen bilimlerinden temel düzeyde sorular içerir. Amacı, lise boyunca kazanılan temel becerileri ölçmektir. TYT puanı hem ön lisans tercihlerinde tek başına kullanılır hem de lisans yerleştirme puanına katkı sağlar.',
-      '## AYT — Alan Yeterlilik Testi',
-      'AYT, lisans programlarına yerleşmek isteyen adayların girdiği ikinci oturumdur. Sayısal, Eşit Ağırlık ve Sözel alanlarına göre matematik, fen bilimleri, edebiyat-sosyal gibi alan derslerinden daha derin sorular sorulur. Hedeflenen bölüm hangi puan türündeyse, o türe karşılık gelen testlere ağırlık verilir.',
-      '## Hangisine Nasıl Çalışmalı?',
-      'TYT geniş ama temel düzeydedir; konuların tamamına yayılan düzenli tekrar ve bol soru çözümü işe yarar. AYT ise alana özgü ve derindir; hedeflenen puan türündeki derslere odaklanmak daha verimlidir. İki sınav da aynı dönemde hazırlandığı için zaman planlaması kritik önemdedir.',
-      'Bilge Arena beş dersi de TYT temelinden AYT düzeyine kadar kategorilere ayırır; böylece hangi oturuma hazırlanırsan hazırlan ilgili konularda pratik yapabilirsin.',
+      'YKS (Yükseköğretim Kurumları Sınavı) tek bir sınav gibi anılsa da farklı amaçları olan oturumlardan oluşur. TYT temel yeterlilikleri ve süre altında akıl yürütmeyi; AYT ise seçtiğin alandaki lise kazanımlarını daha derin biçimde ölçer. Bu nedenle “önce TYT tamamen bitsin, sonra AYT başlarım” yaklaşımı çoğu lisans adayı için risklidir: iki oturumun çalışması aynı dönemde, farklı ağırlıklarla yürütülmelidir.',
+      'Bu rehberdeki tarih ve sınav yapısı bilgileri 2026 ÖSYM YKS kılavuzu ile 20–21 Haziran 2026 tarihinde uygulanan resmî soru kitapçıklarına göre güncellenmiştir. Gelecek sınav döneminde süre, kapsam veya hesaplama kuralları değişebileceğinden son sözü her zaman ilgili yılın ÖSYM kılavuzu söyler.',
+      '## Hızlı Karşılaştırma',
+      'TYT, 120 soruluk ve 165 dakikalık ilk oturumdur. Türkçe 40, Temel Matematik 40, Sosyal Bilimler 20 ve Fen Bilimleri 20 sorudan oluşur. AYT ise 180 dakikalık ikinci oturumdur; Türk Dili ve Edebiyatı–Sosyal Bilimler-1, Sosyal Bilimler-2, Matematik ve Fen Bilimleri testlerini içerir. Aday her AYT testini çözmek zorunda değildir; hedeflediği puan türünü oluşturan testlere odaklanır.',
+      'TYT’de soru başına ortalama süre yaklaşık 82,5 saniyedir. Bu ortalama her soruya eşit süre ayırman gerektiği anlamına gelmez: kısa Türkçe ve temel işlem sorularından kazanılan zaman, uzun paragraf veya problem sorularına aktarılır. AYT’de ise alan bilgisi daha derin olduğu için yalnız hız değil, konu hâkimiyeti ve çok adımlı çözüm disiplini belirleyicidir.',
+      '## TYT — Temel Yeterlilik Testi Ne Ölçer?',
+      'TYT tüm adaylar için ortak başlangıç oturumudur. Sorular yalnızca bilgiyi hatırlamayı değil; okuduğunu anlama, temel matematiksel akıl yürütme, grafik ve tablo yorumlama, farklı bilgiler arasında ilişki kurma becerilerini ölçer. Özellikle Türkçe ve Temel Matematik, puan türünden bağımsız biçimde bütün adayların planında yer alır.',
+      'İki yıllık ön lisans programlarında TYT puanı temel yerleştirme ölçütüdür. Dört yıllık lisans programlarında ise TYT, ilgili AYT veya YDT puanıyla birlikte değerlendirilir. Bu yüzden lisans hedefleyen bir aday için TYT “yalnızca barajı geçme oturumu” değildir; yerleştirme puanının önemli bir parçasıdır.',
+      'TYT çalışmasının pratik hedefi, önce doğruluğu kurmak sonra aynı doğruluğu süre baskısı altında korumaktır. Örneğin matematikte bir konuyu yeni öğrenirken süresiz ve çözümlü çalışmak; konu oturduktan sonra 20–30 soruluk zamanlı setlere geçmek daha sağlıklıdır. Sadece hız için erken kronometre kullanmak, yanlış çözüm alışkanlığını kalıcılaştırabilir.',
+      '## AYT — Alan Yeterlilik Testi Ne Ölçer?',
+      'AYT, dört yıllık lisans programlarını hedefleyen adayların alan bilgisini ölçer. Sorular TYT’ye göre daha konu-özel ve çok adımlıdır. Bir formülü bilmek tek başına yetmeyebilir; hangi koşulda uygulanacağını seçmek, birden fazla kazanımı aynı soruda kullanmak ve çeldiricileri ayırmak gerekir.',
+      'Sayısal puan için AYT Matematik ve Fen Bilimleri; Eşit Ağırlık için AYT Matematik ile Türk Dili ve Edebiyatı–Sosyal Bilimler-1; Sözel için Türk Dili ve Edebiyatı–Sosyal Bilimler-1 ile Sosyal Bilimler-2 testleri belirleyicidir. Dil programları içinse AYT’den ayrı uygulanan YDT kullanılır. Tercih etmeyi düşündüğün bölümün hangi puan türüyle öğrenci aldığını YÖK Atlas ve güncel tercih kılavuzundan doğrulamalısın.',
+      'Somut örnek: bilgisayar mühendisliği hedefleyen bir aday TYT’nin ardından AYT Matematik ve Fen Bilimleri testlerine; hukuk hedefleyen bir aday AYT Matematik ile Türk Dili ve Edebiyatı–Sosyal Bilimler-1 testlerine ağırlık verir. Bölüm adı benzer görünse bile puan türü değişebileceği için çalışma planı bölüm varsayımına değil, resmî puan türüne dayanmalıdır.',
+      '## TYT ve AYT Puana Nasıl Etki Eder?',
+      'Sayısal, Eşit Ağırlık ve Sözel puan türlerinde yaygın biçimde kullanılan “TYT yüzde 40, AYT yüzde 60 etkiler” özeti, iki oturumun ağırlığını anlamak için yararlıdır; ancak kişisel puan hesabı ham netleri doğrudan 0,40 ve 0,60 ile çarpmak kadar basit değildir. ÖSYM standart puanları sınava giren kitlenin ortalama ve dağılımına göre hesaplar; Ortaöğretim Başarı Puanı da yerleştirme puanına ayrıca eklenir.',
+      'Bu nedenle “bir TYT neti kaç AYT netine eşittir?” sorusunun herkes için sabit bir cevabı yoktur. En güvenli yaklaşım, netleri ayrı ayrı izlemek ve hedef programın önceki yıl başarı sırası ile puan türünü referans almaktır. Puan tahmin araçları senaryo kurmaya yardım eder ama resmî sonuç yerine geçmez.',
+      'Dört yanlışın bir doğruyu götürdüğü ham puan hesabı her iki oturumda da geçerlidir. Rastgele işaretlemek yerine iki seçeneğe indirebildiğin sorularla hiçbir fikrin olmayan soruları ayırmak; deneme analizinde yanlışın bilgi, işlem, dikkat veya süre kaynaklı olduğunu kaydetmek daha yüksek getirili bir stratejidir.',
+      '## TYT mi AYT mi Öncelikli Olmalı?',
+      'Öncelik takvime ve mevcut netlerine göre değişir. 11. sınıfta veya hazırlığın erken döneminde alan dersleri okulda ilerlerken TYT temelini haftalık kısa oturumlarla sürdürmek dengeli bir başlangıçtır. Son sınıfta ise “TYT bitmeden AYT’ye geçmem” demek AYT’deki derin konuları son aylara sıkıştırabilir.',
+      'Örnek bir haftalık dağılım: TYT netleri hedefe uzak, AYT konuları da yeni başlıyorsa çalışma süresinin yaklaşık yarısını TYT’ye, yarısını AYT’ye ayır. TYT doğruluğu ve süresi istikrara kavuştuğunda ağırlığı AYT’ye kaydır; fakat haftalık TYT denemesi ve yanlış tekrarıyla temeli koru. Bu oran bir kural değil, deneme sonuçlarına göre her iki haftada bir güncellenmesi gereken başlangıç noktasıdır.',
+      '## 12 Haftalık Uygulanabilir Plan',
+      '1–4. haftalarda bir TYT ve bir alan denemesiyle başlangıç seviyeni ölç. En fazla net kaybettiren üç TYT ve üç AYT konusunu belirle. Her çalışma oturumunda kısa konu tekrarı, seviyeli soru seti ve yanlışların yeniden çözümü olsun. Bu dönemde amaç soru sayısı rekoru değil, eksik haritası çıkarmaktır.',
+      '5–8. haftalarda konu setlerini zamanlı mini denemelere dönüştür. Haftada en az bir tam TYT denemesi ve hedef puan türüne uygun bir AYT denemesi çöz. Her yanlış için “bilgi eksiği, yöntem seçimi, işlem, dikkat, süre” etiketlerinden birini kullan. Aynı etiket iki hafta üst üste artıyorsa çalışma biçimini değiştir.',
+      '9–12. haftalarda gerçek oturum süresine yakın tam denemeleri artır. Deneme gününün ertesi oturumunu yalnız analize ayır: çözümü okumakla yetinme, soruyu kapatıp yeniden çöz. Son hafta yeni ve ağır konu yığmak yerine sık tekrarlanan hata türlerini, formül/kavram özetlerini ve uyku düzenini korumaya odaklan.',
+      '## En Sık Yapılan Dört Hata',
+      'Birincisi, TYT konularının “tamamen bitmesini” bekleyip AYT’yi ertelemektir. İkincisi, yalnız net toplamına bakıp yanlışın nedenini kaydetmemektir. Üçüncüsü, hedef puan türünde etkisiz testlere gereğinden fazla zaman ayırmaktır. Dördüncüsü ise her gün farklı kaynağa geçerek aynı konu üzerinde ölçülebilir ilerleme biriktirememektir.',
+      'Daha sağlıklı ölçüm için her hafta test bazında doğru, yanlış, boş, harcanan süre ve tekrar eden hata türünü yaz. Bir konu için doğruluk yükseliyor ama süre düşmüyorsa zamanlı set; süre iyi ama doğruluk düşükse konu ve yöntem tekrarı gerekir. Böylece çalışma planın duyguya değil kanıta dayanır.',
+      '## Kısa Cevaplar',
+      'AYT’ye girmeden dört yıllık bölüm kazanılır mı? SAY, EA ve SÖZ puanıyla öğrenci alan lisans programları için ilgili AYT testlerine girmek gerekir. Yalnız TYT puanıyla çoğunlukla ön lisans programları değerlendirilir; özel yetenek ve diğer istisnalar için güncel kılavuz kontrol edilmelidir.',
+      'AYT’de bütün testleri çözmek gerekir mi? Hayır. Hedef puan türünü oluşturan testler önceliklidir. Birden fazla puan türüyle tercih düşünüyorsan ilgili test kombinasyonlarını birlikte planlayabilirsin.',
+      'TYT neti ne zaman sabitlenir? Netler tamamen sabitlenmez; denemenin zorluğu ve gün koşulları değişir. Tek bir sonuca değil, son dört–beş denemenin ortalamasına ve hata dağılımına bakmak daha güvenilir bir göstergedir.',
+      'Bilge Arena’da Matematik, Türkçe, Fen ve Sosyal alanlarını sınav kapsamına göre filtreleyerek kısa soru setleri çözebilir; yanlışlarını tekrar ederek çalışma planındaki konu oturumlarını destekleyebilirsin. Platform resmî ÖSYM kaynağı veya puan hesaplama hizmeti değildir; sınav kuralları için güncel ÖSYM kılavuzunu esas al.',
+    ],
+    sources: [
+      {
+        label: 'ÖSYM — 2026 Yükseköğretim Kurumları Sınavı Kılavuzu',
+        url: 'https://www.osym.gov.tr/2026yuksekogretim-kurumlari-sinavi-yks-kilavuzu',
+      },
+      {
+        label: 'ÖSYM — 2026 TYT ve AYT temel soru kitapçıkları',
+        url: 'https://www.osym.gov.tr/2026yks-tyt-ayt-ve-ydt-temel-soru-kitapciklari-ve-cevap-anahtarlari',
+      },
     ],
   },
   {

@@ -23,4 +23,13 @@ describe('rehber yazilari kontrati', () => {
     expect(getArticle(REHBER_SLUGS[0])?.slug).toBe(REHBER_SLUGS[0])
     expect(getArticle('boyle-bir-yazi-yok')).toBeUndefined()
   })
+
+  it('AdSense orneklenen TYT-AYT rehberi doyurucu ve birincil kaynakli kalir', () => {
+    const article = getArticle('tyt-ayt-farki')
+    const wordCount = article?.body.join(' ').split(/\s+/u).length ?? 0
+
+    expect(wordCount).toBeGreaterThan(900)
+    expect(article?.sources?.length).toBeGreaterThanOrEqual(2)
+    expect(article?.sources?.every((source) => source.url.startsWith('https://www.osym.gov.tr/'))).toBe(true)
+  })
 })

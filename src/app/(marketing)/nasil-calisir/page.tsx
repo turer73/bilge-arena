@@ -1,321 +1,455 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import {
+  ArrowRight,
+  BarChart3,
+  BookOpen,
+  Check,
+  ChevronRight,
+  CircleHelp,
+  Clock3,
+  Gamepad2,
+  Laptop,
+  Medal,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  Trophy,
+  Users,
+  Zap,
+} from 'lucide-react'
+import { TrackedCtaLink } from '@/components/marketing/tracked-cta-link'
+import { GAME_LIST } from '@/lib/constants/games'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
 export const metadata: Metadata = {
-  title: 'Nasıl Çalışır — Adım Adım YKS · LGS · AYT Hazırlık',
+  title: 'Nasıl Çalışır? YKS, LGS ve YDT Pratiği',
   description:
-    'Bilge Arena nasıl çalışır? Kayıt ol, oyun seç, soruları çöz, XP kazan ve sıralamalarda yüksel! YKS, LGS ve AYT için.',
-  alternates: {
-    canonical: `${siteUrl}/nasil-calisir`,
+    'Bilge Arena ile TYT, AYT, LGS ve YDT pratiğinin nasıl çalıştığını keşfet: dersini ve oyun modunu seç, soru çöz, açıklamaları incele ve ilerlemeni takip et.',
+  keywords: [
+    'Bilge Arena nasıl çalışır',
+    'YKS soru çözme',
+    'TYT online test',
+    'AYT soru pratiği',
+    'LGS soru çöz',
+    'YDT İngilizce',
+    'oyunlaştırılmış eğitim',
+  ],
+  alternates: { canonical: `${siteUrl}/nasil-calisir` },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
   },
   openGraph: {
     ...OG_DEFAULTS,
-    title: 'Nasıl Çalışır | Bilge Arena',
-    description: 'Bilge Arena\'da YKS, LGS ve AYT hazırlık süreci adım adım.',
+    title: 'Bilge Arena Nasıl Çalışır?',
+    description:
+      'Dersini seç, oyun modunu belirle, soruları çöz ve gelişimini takip et. TYT, AYT, LGS ve YDT pratiği adım adım.',
     url: `${siteUrl}/nasil-calisir`,
+    images: [
+      {
+        url: `${siteUrl}/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: 'Bilge Arena nasıl çalışır?',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Bilge Arena Nasıl Çalışır?',
+    description: 'TYT, AYT, LGS ve YDT soru pratiğini oyunlaştıran akışı keşfet.',
+    images: [`${siteUrl}/og-image.png`],
   },
 }
 
 const STEPS = [
   {
     num: '01',
-    icon: '🚀',
-    title: 'Hesap Oluştur',
-    desc: 'Google hesabınla tek tıkla kayıt ol. Misafir olarak da oynayabilirsin — ama ilerlemen kaydedilmez.',
-    detail: 'Google OAuth ile güvenli giriş. Ek bilgi istenmez.',
+    icon: Target,
+    title: 'Hedefini ve dersini seç',
+    desc: 'Matematik, Türkçe, Fen, Sosyal veya İngilizce alanlarından çalışmak istediğini seç. Ders sayfasında kapsamı ve sınav etiketlerini görebilirsin.',
+    note: 'TYT · AYT · LGS · YDT kapsamları derslere göre değişir.',
+    color: 'var(--focus)',
+    background: 'var(--focus-bg)',
   },
   {
     num: '02',
-    icon: '🎮',
-    title: 'Oyun Seç',
-    desc: '5 farklı oyun konsolundan birini seç: Matematik, Türkçe, Fen, Sosyal veya İngilizce (WordQuest).',
-    detail: 'Her konsol kendi tema rengine, kategorilerine ve liderboard\'una sahiptir.',
+    icon: Gamepad2,
+    title: 'Çalışma biçimini belirle',
+    desc: 'Klasik ve Pratik ile başlayabilir; tempo istediğinde Blitz, Maraton veya Boss modlarını açabilirsin.',
+    note: 'Modlar soru sayısı, süre ve zorluk yapısına göre farklılaşır.',
+    color: 'var(--reward)',
+    background: 'var(--reward-bg)',
   },
   {
     num: '03',
-    icon: '⚡',
-    title: 'Mod Belirle',
-    desc: 'Klasik, Blitz, Maraton, Boss ve Pratik modlarından seviyene uygun olanı seç.',
-    detail: 'Klasik: 10 soru / 30sn. Blitz: 5 soru / 15sn. Boss: 5 zor soru / 45sn.',
+    icon: Zap,
+    title: 'Soruyu çöz, anında dönüt al',
+    desc: 'Cevabını verdikten sonra doğru seçeneği ve mevcutsa çözüm açıklamasını incele. Tartışmalı bir içerik görürsen hata bildirimi oluştur.',
+    note: 'Amaç yalnızca skoru değil, yanlışın nedenini de görünür kılmak.',
+    color: 'var(--growth)',
+    background: 'var(--growth-bg)',
   },
   {
     num: '04',
-    icon: '🧠',
-    title: 'Soruları Çöz',
-    desc: 'Zamanlı soruları çöz, doğru cevaplarla seri oluştur ve bonus XP kazan.',
-    detail: '3+ seri: +5 XP bonus. 5+ seri: +10 XP bonus. 10+ seri: "YANGIN!" modu!',
-  },
-  {
-    num: '05',
-    icon: '📊',
-    title: 'Sonuçları İncele',
-    desc: 'Her oturum sonunda rank (S/A/B/C/D), toplam XP ve detaylı çözüm analizini gör.',
-    detail: '%90+ = S rank. Her soru için detaylı açıklama + yorum + hata raporlama.',
-  },
-  {
-    num: '06',
-    icon: '🏆',
-    title: 'Yüksel & Rekabet Et',
-    desc: 'XP biriktir, seviye atla, rozetler topla ve haftalık sıralama listesinde yerinizi alın.',
-    detail: '5 seviye: Acemi → Çırak → Bilge → Usta → Efsane. 14 rozet kazanılabilir.',
+    icon: BarChart3,
+    title: 'Sonucunu gör ve tekrar et',
+    desc: 'Oturum sonunda doğruluk oranını, XP sonucunu ve performans özetini gör. Hesapla giriş yaptığında ilerlemeni saklayıp sonraki çalışmalarına taşı.',
+    note: 'Misafir deneyimi hızlı deneme içindir; kalıcı ilerleme için hesap gerekir.',
+    color: 'var(--wisdom)',
+    background: 'var(--wisdom-bg)',
   },
 ]
 
-const FEATURES = [
-  { icon: '🦉', title: 'Bilge Asistan', desc: 'AI destekli soru çözümü ve konu anlatımı' },
-  { icon: '💬', title: 'Soru Yorumları', desc: 'Sorular hakkında yorum yap, tartış, öğren' },
-  { icon: '📱', title: 'Her Cihazda', desc: 'Telefon, tablet ve bilgisayarda çalışır' },
-  { icon: '🆓', title: 'Tamamen Ücretsiz', desc: 'Sınav bankası dahil her şey ücretsiz' },
+const BENEFITS = [
+  {
+    icon: Clock3,
+    title: 'Kısa ve odaklı oturumlar',
+    desc: 'Uzun konu listeleri yerine seçtiğin ders ve mod üzerinden doğrudan soru pratiğine geçersin.',
+  },
+  {
+    icon: BookOpen,
+    title: 'Cevaptan sonra öğrenme',
+    desc: 'Doğru seçeneği ve sunulan açıklamayı birlikte görerek yalnız sonucu değil çözüm yaklaşımını da incelersin.',
+  },
+  {
+    icon: Trophy,
+    title: 'Motivasyonu görünür kılan sistem',
+    desc: 'XP, seri, rozet ve sıralama gibi oyun öğeleri düzenli pratiği daha takip edilebilir hale getirir.',
+  },
+  {
+    icon: Users,
+    title: 'Tek başına veya arkadaşlarla',
+    desc: 'Bireysel çalışabilir ya da oda kodu paylaşarak arkadaşlarınla aynı sorular üzerinde yarışabilirsin.',
+  },
+  {
+    icon: Laptop,
+    title: 'Kurulum gerektirmeyen web deneyimi',
+    desc: 'Bilge Arena modern telefon, tablet ve bilgisayar tarayıcılarında çalışır; ayrıca uygulama indirmen gerekmez.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Şeffaf başlangıç',
+    desc: 'Hesap açmadan sınırlı bir önizleme yapabilir, kayıt ve kullanım koşullarını başlamadan önce inceleyebilirsin.',
+  },
 ]
 
-const faqJsonLd = {
+const SAMPLE_FLOW = [
+  ['Ders', 'Matematik', Target],
+  ['Mod', 'Klasik', Gamepad2],
+  ['Oturum', '10 soru', Clock3],
+  ['Sonuç', 'Açıklama + performans özeti', BarChart3],
+] as const
+
+const FAQ = [
+  {
+    q: 'Bilge Arena nedir?',
+    a: 'Bilge Arena; TYT, AYT, LGS ve YDT kapsamında soru pratiğini oyun öğeleriyle destekleyen web tabanlı bir alıştırma platformudur. Resmî sınav kurumu veya okulun yerine geçen bir eğitim kurumu değildir.',
+  },
+  {
+    q: 'Bilge Arena ücretsiz mi?',
+    a: 'Kayıt olmak ve temel deneyime başlamak ücretsizdir. Bazı kullanım limitleri veya ek özellikler planlara göre değişebilir; güncel kapsam için Premium sayfasını inceleyebilirsin.',
+  },
+  {
+    q: 'Üye olmadan soru çözebilir miyim?',
+    a: 'Evet. Misafir olarak kısa bir önizleme yapabilirsin. İlerlemenin, seri ve sonuçlarının kalıcı olarak saklanması için Google hesabınla giriş yapman gerekir.',
+  },
+  {
+    q: 'Hangi dersler ve sınavlar var?',
+    a: 'Matematik, Türkçe, Fen Bilimleri ve Sosyal Bilimler alanlarında TYT, AYT ve LGS kapsamları; İngilizce alanında YDT odaklı içerikler bulunur. Her dersin kapsadığı sınavlar kendi sayfasında gösterilir.',
+  },
+  {
+    q: 'Yanlış veya eksik bir soru görürsem ne yapabilirim?',
+    a: 'Soru deneyimindeki hata bildirimi kanalını kullanabilirsin. Bildirimde sorunu açıkça belirtmen, içeriğin incelenmesini kolaylaştırır.',
+  },
+  {
+    q: 'Bilge Arena başarı garantisi verir mi?',
+    a: 'Hayır. Bilge Arena düzenli soru pratiğine yardımcı bir araçtır; sınav sonucu veya puan garantisi vermez. Çalışma planını okul, öğretmen ve güvenilir resmî kaynaklarla birlikte yürütmelisin.',
+  },
+]
+
+const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
+  '@graph': [
     {
-      '@type': 'Question',
-      name: 'Bilge Arena nedir?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Bilge Arena, YKS, LGS ve AYT\'ye hazırlanan öğrenciler için oyunlaştırılmış bir öğrenme platformudur. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularını çözerek XP kazanır, seviye atlar ve sıralamada yükselirsiniz.',
-      },
+      '@type': 'WebPage',
+      '@id': `${siteUrl}/nasil-calisir#webpage`,
+      url: `${siteUrl}/nasil-calisir`,
+      name: 'Bilge Arena Nasıl Çalışır?',
+      description:
+        'Bilge Arena ile TYT, AYT, LGS ve YDT soru pratiğinin adım adım nasıl çalıştığını anlatan rehber.',
+      inLanguage: 'tr-TR',
+      isPartOf: { '@id': `${siteUrl}/#website` },
+      about: { '@id': `${siteUrl}/#organization` },
     },
     {
-      '@type': 'Question',
-      name: 'Bilge Arena ücretli mi?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Hayır, Bilge Arena tamamen ücretsizdir. Soru bankası, AI asistan ve tüm özellikler ücretsiz olarak sunulmaktadır.',
-      },
+      '@type': 'BreadcrumbList',
+      '@id': `${siteUrl}/nasil-calisir#breadcrumb`,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: siteUrl },
+        { '@type': 'ListItem', position: 2, name: 'Nasıl Çalışır', item: `${siteUrl}/nasil-calisir` },
+      ],
     },
     {
-      '@type': 'Question',
-      name: 'Nasıl kayıt olabilirim?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Google hesabınızla tek tıkla giriş yapabilirsiniz. Ek bilgi istenmez. Misafir olarak da oynayabilirsiniz ancak ilerlemeniz kaydedilmez.',
-      },
+      '@type': 'HowTo',
+      '@id': `${siteUrl}/nasil-calisir#howto`,
+      name: 'Bilge Arena ile soru pratiğine nasıl başlanır?',
+      description: 'Ders seçiminden sonuç incelemeye uzanan dört adımlı Bilge Arena akışı.',
+      totalTime: 'PT5M',
+      step: STEPS.map((step, index) => ({
+        '@type': 'HowToStep',
+        position: index + 1,
+        name: step.title,
+        text: step.desc,
+        url: `${siteUrl}/nasil-calisir#adim-${index + 1}`,
+      })),
     },
     {
-      '@type': 'Question',
-      name: 'Hangi dersler mevcut?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Matematik, Türkçe, Fen Bilimleri (Fizik, Kimya, Biyoloji), Sosyal Bilimler (Tarih, Coğrafya, Felsefe) ve İngilizce (WordQuest) oyun konsolları mevcuttur.',
-      },
+      '@type': 'FAQPage',
+      '@id': `${siteUrl}/nasil-calisir#faq`,
+      mainEntity: FAQ.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
     },
   ],
 }
 
 export default function NasilCalisirPage() {
   return (
-    <div className="mx-auto max-w-[900px] px-6 py-12 lg:px-8">
+    <div className="overflow-hidden">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      {/* Hero */}
-      <section className="mb-16 text-center">
-        <h1 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
-          Nasıl Çalışır?
-        </h1>
-        <p className="mx-auto max-w-[520px] text-base text-[var(--text-sub)]">
-          6 adımda YKS, LGS ve AYT hazırlığını oyuna dönüştür. Kayıt ol, oyna, öğren, yüksel!
-        </p>
-      </section>
 
-      {/* Adımlar */}
-      <section className="mb-16 space-y-6">
-        {STEPS.map((s) => (
-          <div
-            key={s.num}
-            className="group flex gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:border-[var(--focus)]/30"
-          >
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--focus-bg)] text-2xl">
-              {s.icon}
+      <section className="relative border-b border-[var(--border)] px-6 py-16 sm:py-20 lg:px-8 lg:py-24">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          style={{
+            background:
+              'radial-gradient(circle at 18% 10%, var(--focus-bg), transparent 34%), radial-gradient(circle at 82% 76%, var(--wisdom-bg), transparent 30%)',
+          }}
+        />
+        <div className="relative mx-auto grid max-w-[1200px] items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <nav aria-label="Sayfa yolu" className="mb-7 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+              <Link href="/" className="transition-colors hover:text-[var(--focus-light)]">Ana Sayfa</Link>
+              <ChevronRight size={13} aria-hidden="true" />
+              <span aria-current="page">Nasıl Çalışır</span>
+            </nav>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-1.5 text-xs font-bold text-[var(--focus-light)]">
+              <Sparkles size={14} aria-hidden="true" />
+              Soru pratiği, adım adım
             </div>
-            <div className="flex-1">
-              <div className="mb-0.5 text-[10px] font-bold tracking-widest text-[var(--focus)]">
-                ADIM {s.num}
+            <h1 className="font-display text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+              Çalışma hedefini seç.
+              <span className="mt-2 block text-[var(--focus-light)]">Pratiğe hemen başla.</span>
+            </h1>
+            <p className="mt-6 max-w-[650px] text-base leading-8 text-[var(--text-sub)] sm:text-lg">
+              Bilge Arena; TYT, AYT, LGS ve YDT için soru çözmeyi kısa oturumlar,
+              anında geri bildirim ve oyun öğeleriyle daha takip edilebilir hale getirir.
+              Başlamak için önce dersini, sonra çalışma biçimini seçersin.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <TrackedCtaLink href="/arena" page="nasil-calisir" placement="hero_try" className="w-full sm:w-auto">
+                Ücretsiz dene
+                <ArrowRight size={17} />
+              </TrackedCtaLink>
+              <TrackedCtaLink href="/konular" page="nasil-calisir" placement="hero_topics" variant="ghost" className="w-full sm:w-auto">
+                Ders kapsamlarını incele
+              </TrackedCtaLink>
+            </div>
+            <p className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+              <Check size={14} className="text-[var(--growth-light)]" aria-hidden="true" />
+              Kredi kartı gerekmez · Misafir önizlemesi vardır · Başarı garantisi verilmez
+            </p>
+          </div>
+
+          <div className="relative mx-auto w-full max-w-[520px]">
+            <div className="absolute -inset-6 rounded-[40px] bg-[var(--focus-bg)] blur-3xl" />
+            <div className="relative rounded-[28px] border border-[var(--focus-border)] bg-[var(--surface)] p-5 shadow-2xl sm:p-7">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--focus-light)]">Örnek akış</p>
+                  <h2 className="mt-1 text-xl font-black">Bugünkü Matematik pratiği</h2>
+                </div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--reward-bg)] text-[var(--reward-light)]">
+                  <Medal size={22} aria-hidden="true" />
+                </div>
               </div>
-              <h3 className="mb-1.5 text-lg font-bold">{s.title}</h3>
-              <p className="mb-2 text-sm leading-relaxed text-[var(--text-sub)]">{s.desc}</p>
-              <p className="text-xs text-[var(--text-muted)] italic">{s.detail}</p>
+              <div className="space-y-3">
+                {SAMPLE_FLOW.map(([label, value, Icon]) => (
+                  <div key={label} className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--focus-bg)] text-[var(--focus-light)]">
+                      <Icon size={17} aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">{label}</p>
+                      <p className="truncate text-sm font-semibold text-[var(--text)]">{value}</p>
+                    </div>
+                    <Check size={17} className="text-[var(--growth-light)]" aria-hidden="true" />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        ))}
-      </section>
-
-      {/* Soru Bankasi */}
-      <section className="mb-16">
-        <h2 className="mb-3 text-center text-2xl font-bold">Soru Bankası</h2>
-        <p className="mb-8 text-center text-sm text-[var(--text-sub)]">
-          3700+ özgün soru, 5 ders, 20+ kategori. Sürekli büyüyor.
-        </p>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {[
-            { name: 'Matematik', count: 960, cats: 'Sayılar, Problemler, Geometri, Denklemler, Fonksiyonlar, Olasılık', color: '#2563EB', icon: '🧮' },
-            { name: 'Türkçe', count: 920, cats: 'Paragraf, Dil Bilgisi, Sözcük, Anlam, Yazım', color: '#D97706', icon: '📖' },
-            { name: 'Fen', count: 600, cats: 'Fizik, Kimya, Biyoloji', color: '#059669', icon: '🔬' },
-            { name: 'Sosyal', count: 604, cats: 'Tarih, Coğrafya, Felsefe', color: '#7C3AED', icon: '🌍' },
-            { name: 'İngilizce', count: 635, cats: 'Vocabulary, Grammar, Cloze, Dialogue', color: '#3B82F6', icon: '🌐' },
-          ].map((d) => (
-            <div
-              key={d.name}
-              className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 text-center"
-            >
-              <div className="mb-2 text-2xl">{d.icon}</div>
-              <div className="text-sm font-bold">{d.name}</div>
-              <div className="font-display text-2xl font-black" style={{ color: d.color }}>
-                {d.count}
-              </div>
-              <div className="text-[10px] text-[var(--text-muted)]">soru</div>
-              <div className="mt-2 text-[10px] leading-relaxed text-[var(--text-sub)]">
-                {d.cats}
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
-      {/* Zorluk Sistemi */}
-      <section className="mb-16">
-        <h2 className="mb-3 text-center text-2xl font-bold">Zorluk Sistemi</h2>
-        <p className="mb-8 text-center text-sm text-[var(--text-sub)]">
-          Her soru 5 kademeli zorluk seviyesinde. Sistem başarına göre otomatik ayarlar.
-        </p>
+      <section className="px-6 py-20 lg:px-8" aria-labelledby="adimlar-baslik">
+        <div className="mx-auto max-w-[1200px]">
+          <div className="mx-auto mb-12 max-w-[680px] text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--reward-light)]">Dört temel adım</p>
+            <h2 id="adimlar-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">İlk sorudan sonuç ekranına</h2>
+            <p className="mt-4 leading-7 text-[var(--text-sub)]">Her adımın ne yaptığını ve senden ne beklediğini başlamadan önce gör.</p>
+          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
+            {STEPS.map((step, index) => {
+              const Icon = step.icon
+              return (
+                <article id={`adim-${index + 1}`} key={step.num} className="group rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:border-[var(--focus-border)] sm:p-7">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: step.background, color: step.color }}>
+                      <Icon size={23} aria-hidden="true" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black tracking-[0.16em]" style={{ color: step.color }}>ADIM {step.num}</p>
+                      <h3 className="mt-1 text-xl font-black">{step.title}</h3>
+                    </div>
+                  </div>
+                  <p className="mt-5 text-sm leading-7 text-[var(--text-sub)]">{step.desc}</p>
+                  <p className="mt-4 border-t border-[var(--border)] pt-4 text-xs leading-6 text-[var(--text-muted)]">{step.note}</p>
+                </article>
+              )
+            })}
+          </div>
+        </div>
+      </section>
 
-        <div className="space-y-3">
-          {[
-            { level: 1, name: 'Kolay', color: '#22C55E', desc: 'Temel bilgi ve doğrudan hatırlatma. Konuya yeni başlayanlar için.', xp: '10 XP', example: '"Aşağıdakilerden hangisi asal sayıdır?"' },
-            { level: 2, name: 'Orta', color: '#3B82F6', desc: 'Basit uygulama gerektiren tek adımlı sorular. Konuyu bilenler için.', xp: '20 XP', example: '"3 basamaklı 5A7 sayısı 9\'a bölünüyorsa A kaçtır?"' },
-            { level: 3, name: 'Zor', color: '#F59E0B', desc: 'Birden fazla adım ve işlem gerektiren sorular. Pratik yapmak isteyenler için.', xp: '30 XP', example: '"Bir işin 1/3\'ü yapılmış, kalanın 2/5\'i daha yapılırsa tamamlanma oranı nedir?"' },
-            { level: 4, name: 'Çok Zor', color: '#EF4444', desc: 'Analiz ve sentez gerektiren, tuzak seçenekli sorular. Sınava hazırlananlar için.', xp: '40 XP', example: '"f(x)=2x+1 ve g(x)=x²-3 ise (fog)(2) kaçtır?"' },
-            { level: 5, name: 'Uzman', color: '#DC2626', desc: 'Çok adımlı, derin düşünce gerektiren sorular. Ustalar için.', xp: '50 XP', example: '"Dairesel bir havuzun çevresi 62.8m ise alanı kaç m²?"' },
-          ].map((d) => (
-            <div
-              key={d.level}
-              className="flex items-start gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5"
-            >
-              <div
-                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-sm font-black text-white"
-                style={{ backgroundColor: d.color }}
-              >
-                {d.level}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold" style={{ color: d.color }}>{d.name}</h3>
-                  <span className="rounded-md bg-[var(--bg-secondary)] px-2 py-0.5 text-[10px] font-bold text-[var(--reward)]">
-                    {d.xp}
-                  </span>
+      <section className="border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="kapsam-baslik">
+        <div className="mx-auto max-w-[1200px]">
+          <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div className="max-w-[720px]">
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--growth-light)]">Ders ve sınav kapsamı</p>
+              <h2 id="kapsam-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">Hangi alanda pratik yapabilirsin?</h2>
+              <p className="mt-4 leading-7 text-[var(--text-sub)]">Her dersin sınav kapsamı farklıdır. Ayrıntılı konu başlıkları için ilgili ders sayfasına geçebilirsin.</p>
+            </div>
+            <Link href="/konular" className="inline-flex items-center gap-2 text-sm font-bold text-[var(--focus-light)] hover:underline">
+              Tüm konuları gör <ArrowRight size={15} />
+            </Link>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            {GAME_LIST.map((game) => (
+              <Link key={game.slug} href={`/konular/${game.slug}`} className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 transition-all hover:-translate-y-0.5 hover:border-[var(--focus-border)]">
+                <div className="mb-5 h-1.5 w-12 rounded-full" style={{ backgroundColor: game.colorHex }} />
+                <h3 className="font-black">{game.name}</h3>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {game.examTags.map((tag) => (
+                    <span key={tag} className="rounded-md bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-bold text-[var(--text-sub)]">{tag}</span>
+                  ))}
                 </div>
-                <p className="mt-1 text-sm text-[var(--text-sub)]">{d.desc}</p>
-                <p className="mt-1.5 text-xs italic text-[var(--text-muted)]">Örnek: {d.example}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6 rounded-xl border border-[var(--focus)]/20 bg-[var(--focus-bg)] p-5">
-          <h3 className="mb-2 text-sm font-bold text-[var(--focus)]">Adaptif Zorluk</h3>
-          <p className="text-xs leading-relaxed text-[var(--text-sub)]">
-            Bilge Arena, başarı oranına göre zorluğu otomatik ayarlar. Çok başarılıysan zorlar,
-            zorlanıyorsan kolaylaştırır. Ayrıca yanlış yaptığın soruları tekrar karşılar —
-            böylece zayıf noktalarını güçlendirir. Zorluk seçimini kendin de yapabilirsin.
-          </p>
+                <p className="mt-4 line-clamp-3 text-xs leading-6 text-[var(--text-muted)]">{game.description}</p>
+                <span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-[var(--focus-light)]">Kapsamı incele <ArrowRight size={13} /></span>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Oda Modu — Cok Oyunculu */}
-      <section className="mb-16">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <span className="rounded-full bg-[var(--urgency)] px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider text-white">
-            YENİ
-          </span>
-          <h2 className="text-2xl font-bold">Oda Modu — Arkadaşlarınla Yarış</h2>
-        </div>
-        <p className="mb-8 text-center text-sm text-[var(--text-sub)]">
-          Eş zamanlı çoklu oyuncu turnuva sistemi. Oda kur, arkadaşlarına kod paylaş, aynı soruları aynı anda çözün.
-        </p>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { num: '1', icon: '🎯', title: 'Oda Aç', desc: 'Ders, mod, soru sayısı seç. Sistem 6 haneli oda kodu üretir.' },
-            { num: '2', icon: '🔗', title: 'Kodu Paylaş', desc: 'Arkadaşlarına kodu gönder, /oda/kod sayfasından girsinler.' },
-            { num: '3', icon: '⚔️', title: 'Eş Zamanlı Çöz', desc: 'Tüm oyuncular aynı soruyu aynı anda görür, hızlı doğru = yüksek puan.' },
-            { num: '4', icon: '🏆', title: 'Sonucu Gör', desc: 'Her tur sonunda doğru cevap + skor tablosu, oyun sonunda kazanan ilan edilir.' },
-          ].map((s) => (
-            <div
-              key={s.num}
-              className="rounded-xl border border-[var(--focus)]/20 bg-[var(--focus-bg)] p-5 text-center"
-            >
-              <div className="mb-2 text-3xl">{s.icon}</div>
-              <div className="mb-1 text-[10px] font-bold tracking-widest text-[var(--focus)]">
-                ADIM {s.num}
-              </div>
-              <h3 className="mb-2 font-bold">{s.title}</h3>
-              <p className="text-xs leading-relaxed text-[var(--text-sub)]">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6 flex flex-wrap justify-center gap-3 text-xs text-[var(--text-muted)]">
-          <span className="flex items-center gap-1.5">⚡ Hızlı doğru = bonus puan</span>
-          <span className="flex items-center gap-1.5">👥 2-8 oyuncu</span>
-          <span className="flex items-center gap-1.5">📲 Realtime sync</span>
-          <span className="flex items-center gap-1.5">🔁 Tekrar oyna</span>
-        </div>
-
-        <div className="mt-6 text-center">
-          <Link href="/oda/yeni">
-            <Button variant="primary" size="md">
-              Oda Aç
-            </Button>
-          </Link>
-          <Link href="/oda/kod" className="ml-2">
-            <Button variant="ghost" size="md">
-              Odaya Katıl
-            </Button>
-          </Link>
+      <section className="px-6 py-20 lg:px-8" aria-labelledby="faydalar-baslik">
+        <div className="mx-auto max-w-[1200px]">
+          <div className="mx-auto mb-12 max-w-[680px] text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[var(--wisdom-light)]">Deneyimin içinde</p>
+            <h2 id="faydalar-baslik" className="mt-3 font-display text-3xl font-black sm:text-4xl">Bir soru ekranından fazlası</h2>
+          </div>
+          <div className="grid gap-px overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--border)] md:grid-cols-2 lg:grid-cols-3">
+            {BENEFITS.map(({ icon: Icon, title, desc }) => (
+              <article key={title} className="bg-[var(--surface)] p-6 sm:p-7">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--focus-bg)] text-[var(--focus-light)]">
+                  <Icon size={21} aria-hidden="true" />
+                </div>
+                <h3 className="mt-5 font-black">{title}</h3>
+                <p className="mt-2 text-sm leading-7 text-[var(--text-sub)]">{desc}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Ekstra Özellikler */}
-      <section className="mb-16">
-        <h2 className="mb-8 text-center text-2xl font-bold">Ekstra Özellikler</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-5"
-            >
-              <span className="text-2xl">{f.icon}</span>
-              <div>
-                <div className="mb-1 font-bold text-sm">{f.title}</div>
-                <div className="text-xs text-[var(--text-sub)]">{f.desc}</div>
-              </div>
+      <section className="border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="seffaflik-baslik">
+        <div className="mx-auto grid max-w-[1100px] gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--growth-bg)] text-[var(--growth-light)]">
+              <ShieldCheck size={24} aria-hidden="true" />
             </div>
-          ))}
+            <h2 id="seffaflik-baslik" className="mt-5 font-display text-3xl font-black">Başlamadan önce bilmen gerekenler</h2>
+            <p className="mt-4 leading-7 text-[var(--text-sub)]">Google’dan, bir reklamdan veya doğrudan geldiğinde aynı açık bilgilerle karşılaşırsın.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              ['Ücretsiz başlangıç', 'Kayıt ve temel başlangıç ücretsizdir; limitler ve ek planlar değişebilir.'],
+              ['Hesap gereksinimi', 'Misafir önizlemesi vardır; kalıcı ilerleme için Google ile giriş gerekir.'],
+              ['Bağımsız platform', 'Bilge Arena, ÖSYM veya MEB tarafından işletilen resmî bir hizmet değildir.'],
+              ['Sonuç beklentisi', 'Düzenli pratiğe yardımcı olur; sınav puanı veya başarı garantisi vermez.'],
+            ].map(([title, desc]) => (
+              <div key={title} className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
+                <div className="flex items-center gap-2 font-bold"><Check size={16} className="text-[var(--growth-light)]" />{title}</div>
+                <p className="mt-2 text-xs leading-6 text-[var(--text-muted)]">{desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm lg:col-start-2">
+            <Link href="/arena/premium" className="font-semibold text-[var(--focus-light)] hover:underline">Plan ve limitleri incele</Link>
+            <Link href="/gizlilik-politikasi" className="font-semibold text-[var(--focus-light)] hover:underline">Gizlilik politikası</Link>
+            <Link href="/kullanim-kosullari" className="font-semibold text-[var(--focus-light)] hover:underline">Kullanım koşulları</Link>
+          </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="text-center">
-        <h2 className="mb-4 text-2xl font-bold">Hazır mısın?</h2>
-        <p className="mb-6 text-sm text-[var(--text-sub)]">
-          Hemen kaydol ve ilk oyununu oynamaya başla!
-        </p>
-        <Link href="/arena">
-          <Button variant="primary" size="lg">
-            Oynamaya Başla
-          </Button>
-        </Link>
+      <section className="px-6 py-20 lg:px-8" aria-labelledby="sss-baslik">
+        <div className="mx-auto grid max-w-[1100px] gap-10 lg:grid-cols-[0.7fr_1.3fr]">
+          <div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--reward-bg)] text-[var(--reward-light)]">
+              <CircleHelp size={24} aria-hidden="true" />
+            </div>
+            <h2 id="sss-baslik" className="mt-5 font-display text-3xl font-black">Sık sorulan sorular</h2>
+            <p className="mt-4 leading-7 text-[var(--text-sub)]">Karar vermeden önce en çok merak edilen yanıtlar.</p>
+          </div>
+          <div className="space-y-3">
+            {FAQ.map((item) => (
+              <details key={item.q} className="group rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 open:border-[var(--focus-border)]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold marker:hidden">
+                  {item.q}
+                  <span className="text-[var(--focus-light)] transition-transform group-open:rotate-90"><ChevronRight size={18} /></span>
+                </summary>
+                <p className="mt-4 border-t border-[var(--border)] pt-4 text-sm leading-7 text-[var(--text-sub)]">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 pb-24 lg:px-8">
+        <div className="mx-auto max-w-[1100px] overflow-hidden rounded-[28px] border border-[var(--focus-border)] bg-[var(--focus-bg)] p-8 text-center sm:p-12">
+          <h2 className="font-display text-3xl font-black sm:text-4xl">İlk oturumunu şimdi başlat</h2>
+          <p className="mx-auto mt-4 max-w-[620px] leading-7 text-[var(--text-sub)]">Dersini seç, çalışma biçimini belirle ve ilk sorunu gör. Devam etmek isteyip istemediğine deneyimden sonra karar ver.</p>
+          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+            <TrackedCtaLink href="/arena" page="nasil-calisir" placement="final_arena" className="w-full sm:w-auto">Arena’ya gir <ArrowRight size={17} /></TrackedCtaLink>
+            <TrackedCtaLink href="/rehber" page="nasil-calisir" placement="final_guides" variant="ghost" className="w-full sm:w-auto">Çalışma rehberlerini oku</TrackedCtaLink>
+          </div>
+        </div>
       </section>
     </div>
   )

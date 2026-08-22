@@ -26,6 +26,8 @@ describe('/rehber/[slug]', () => {
     expect(
       screen.getByRole('heading', { name: REHBER_ARTICLES[0].title, level: 1 })
     ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Kaynaklar ve güncellik' })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /ÖSYM/u })).toHaveLength(2)
   })
 
   it('generateMetadata baslik + canonical uretir', async () => {
