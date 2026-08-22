@@ -172,7 +172,7 @@ describe('InstitutionTrackingDashboard', () => {
     render(<InstitutionTrackingDashboard />)
     expect(await screen.findByText(directory.institution.name)).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Bugünkü akademik görünüm' })).toBeInTheDocument()
-    expect(screen.getByText('Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı')).toBeInTheDocument()
+    expect(await screen.findByText('Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı')).toBeInTheDocument()
     expect(screen.getByText('Tek puan ve sıralama yoktur')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Öğretmen takip göstergeleri' })).toBeInTheDocument()
     expect(screen.getByText('Kurum yöneticisi görünümü')).toBeInTheDocument()
