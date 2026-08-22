@@ -2,7 +2,8 @@ name: Migration idempotency
 
 # Migration zinciri prod'a SIRALI uygulanir; biri re-run'da (db reset / preview
 # branch / yeni ortam) patlarsa sonraki tum migration'lar bloke olur ve Supabase'de
-# down-SQL yoktur. Bu guard, korumasiz DDL ekleyen PR'lari yakalar.
+# down-SQL yoktur. Bu guard, korumasiz DDL ve yinelenen migration sira numarasi
+# ekleyen PR'lari yakalar.
 # Linter sadece Node built-in kullanir -> npm install GEREKMEZ (hizli).
 
 on:
@@ -27,5 +28,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Lint migrations for idempotency
+      - name: Lint migrations for idempotency and unique ordinals
         run: node database/lint-migrations.mjs

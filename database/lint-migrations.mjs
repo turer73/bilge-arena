@@ -19,14 +19,55 @@
 // Yorum (-- ve /* */), string literal ('...') ve dollar-quoted blok ($$...$$,
 // $tag$...$tag$ — fonksiyon govdesi ve DO blogu) tarama disi birakilir; satir
 // numaralari korunur. Eski (grandfathered) ihlaller baseline JSON'da tutulur.
+// Migration sira numaralari da benzersiz olmali. Tarihsel 017 cakismasi prod
+// gecmisini yeniden yazmamak icin dosya adlariyla sabitlenmistir; yeni bir
+// cakisma CI'i durdurur.
 
 import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
-import { dirname, join, basename } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const MIGRATIONS_DIR = join(__dirname, 'migrations');
 export const BASELINE_PATH = join(__dirname, 'migration-idempotency-baseline.json');
+export const GRANDFATHERED_DUPLICATE_ORDINALS = {
+  '017': ['017_homepage_editor.sql', '017_question_text_search_index.sql'],
+};
+
+function migrationFiles(dir = MIGRATIONS_DIR) {
+  return readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
+}
+
+// Ayni sayisal on eke sahip migration dosyalarini dondur: { ordinal -> files }.
+export function duplicateMigrationOrdinals(files = migrationFiles()) {
+  const grouped = {};
+  for (const file of files) {
+    const match = /^(\d+)_/.exec(file);
+    if (!match) continue;
+    (grouped[match[1]] ??= []).push(file);
+  }
+  return Object.fromEntries(
+    Object.entries(grouped)
+      .filter(([, names]) => names.length > 1)
+      .map(([ordinal, names]) => [ordinal, names.sort()]),
+  );
+}
+
+// Sadece birebir kayitli tarihsel cakismalari kabul et. Ayni ordinal'e ucuncu
+// dosya eklemek de dahil her fark yeni bir ihlaldir.
+export function unexpectedDuplicateMigrationOrdinals(
+  duplicates = duplicateMigrationOrdinals(),
+  grandfathered = GRANDFATHERED_DUPLICATE_ORDINALS,
+) {
+  const unexpected = {};
+  for (const [ordinal, files] of Object.entries(duplicates)) {
+    const allowed = grandfathered[ordinal];
+    if (!allowed || files.join('\0') !== [...allowed].sort().join('\0')) {
+      unexpected[ordinal] = files;
+    }
+  }
+  return unexpected;
+}
 
 // Stripped bolgeleri ayni sayida bosluk/newline ile degistir -> satir no korunur.
 function blank(match) {
@@ -101,7 +142,7 @@ export function lintSql(sql) {
 
 // Tum migration dosyalarini tara. Donen: { file -> [violation] } (sadece ihlalliler).
 export function lintAll(dir = MIGRATIONS_DIR) {
-  const files = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
+  const files = migrationFiles(dir);
   const out = {};
   for (const f of files) {
     const v = lintSql(readFileSync(join(dir, f), 'utf8'));
@@ -142,7 +183,8 @@ export function newViolations(all = lintAll(), baseline = loadBaseline()) {
 function main() {
   const args = process.argv.slice(2);
   const all = lintAll();
-  const totalFiles = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).length;
+  const files = migrationFiles();
+  const totalFiles = files.length;
 
   if (args.includes('--write-baseline')) {
     const grandfathered = {};
@@ -161,20 +203,33 @@ function main() {
 
   const showAll = args.includes('--all');
   const result = showAll ? all : newViolations(all);
+  const allDuplicateOrdinals = duplicateMigrationOrdinals(files);
+  const duplicateOrdinals = showAll
+    ? allDuplicateOrdinals
+    : unexpectedDuplicateMigrationOrdinals(allDuplicateOrdinals);
   const fileCount = Object.keys(result).length;
   const vioCount = Object.values(result).reduce((n, a) => n + a.length, 0);
+  const duplicateCount = Object.keys(duplicateOrdinals).length;
 
-  if (!fileCount) {
-    console.log(`OK: ${totalFiles} migration tarandi, ${showAll ? '' : 'baseline-disi '}ihlal yok.`);
+  if (!fileCount && !duplicateCount) {
+    console.log(`OK: ${totalFiles} migration tarandi, ${showAll ? '' : 'baseline-disi '}idempotency veya sira numarasi ihlali yok.`);
     return;
   }
-  console.error(`\nMIGRATION IDEMPOTENCY ${showAll ? '(tum ihlaller)' : 'IHLALI (baseline-disi)'}: ${vioCount} ihlal / ${fileCount} dosya\n`);
-  for (const [file, vios] of Object.entries(result)) {
-    console.error(`  ${file}`);
-    for (const v of vios) console.error(`    L${v.line}  [${v.rule}]  ${v.detail}`);
+  if (fileCount) {
+    console.error(`\nMIGRATION IDEMPOTENCY ${showAll ? '(tum ihlaller)' : 'IHLALI (baseline-disi)'}: ${vioCount} ihlal / ${fileCount} dosya\n`);
+    for (const [file, vios] of Object.entries(result)) {
+      console.error(`  ${file}`);
+      for (const v of vios) console.error(`    L${v.line}  [${v.rule}]  ${v.detail}`);
+    }
+  }
+  if (duplicateCount) {
+    console.error(`\nMIGRATION SIRA NUMARASI CAKISMASI: ${duplicateCount} ordinal\n`);
+    for (const [ordinal, names] of Object.entries(duplicateOrdinals)) {
+      console.error(`  ${ordinal}: ${names.join(', ')}`);
+    }
   }
   if (!showAll) {
-    console.error(`\nDuzelt: ilgili DDL'i idempotent yap (IF NOT EXISTS / DROP ... IF EXISTS / DO-EXCEPTION).`);
+    console.error(`\nDuzelt: ilgili DDL'i idempotent yap veya yeni migration'a benzersiz bir sira numarasi ver.`);
     console.error(`Eski ihlali kabul ettiysen: node database/lint-migrations.mjs --write-baseline > database/migration-idempotency-baseline.json\n`);
     process.exitCode = 1;
   }

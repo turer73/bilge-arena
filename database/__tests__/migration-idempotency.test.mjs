@@ -4,7 +4,13 @@
 // Bu test DB baglantisi GEREKTIRMEZ (sadece .sql dosyalarini okur), node env'de
 // vitest.database.config.ts ile kosar.
 import { describe, it, expect } from 'vitest';
-import { lintSql, lintAll, newViolations } from '../lint-migrations.mjs';
+import {
+  duplicateMigrationOrdinals,
+  lintSql,
+  lintAll,
+  newViolations,
+  unexpectedDuplicateMigrationOrdinals,
+} from '../lint-migrations.mjs';
 
 describe('lint-migrations (linter self-check)', () => {
   it('korumasiz DDL ihlal olarak yakalanir', () => {
@@ -67,5 +73,38 @@ describe('migration repo idempotency', () => {
     const fresh = newViolations();
     // Hata olursa ihlalleri okunabilir bicimde goster
     expect(fresh, `Yeni idempotency ihlali bulundu:\n${JSON.stringify(fresh, null, 2)}\n\nDuzelt (IF NOT EXISTS / DROP ... IF EXISTS / DO-EXCEPTION) ya da bilerek ise baseline'i guncelle: npm run lint:migrations -- --write-baseline`).toEqual({});
+  });
+
+  it('tarihsel 017 disinda yinelenen migration sira numarasi yok', () => {
+    expect(unexpectedDuplicateMigrationOrdinals()).toEqual({});
+  });
+});
+
+describe('migration ordinal guard', () => {
+  it('kayitli tarihsel 017 dosya cifti birebir eslestiginde kabul edilir', () => {
+    const duplicates = duplicateMigrationOrdinals([
+      '017_question_text_search_index.sql',
+      '018_next.sql',
+      '017_homepage_editor.sql',
+    ]);
+    expect(unexpectedDuplicateMigrationOrdinals(duplicates)).toEqual({});
+  });
+
+  it('yeni ordinal cakismasini ve tarihsel ordinalde ucuncu dosyayi reddeder', () => {
+    const duplicates = duplicateMigrationOrdinals([
+      '017_homepage_editor.sql',
+      '017_question_text_search_index.sql',
+      '017_new_collision.sql',
+      '139_first.sql',
+      '139_second.sql',
+    ]);
+    expect(unexpectedDuplicateMigrationOrdinals(duplicates)).toEqual({
+      '017': [
+        '017_homepage_editor.sql',
+        '017_new_collision.sql',
+        '017_question_text_search_index.sql',
+      ],
+      '139': ['139_first.sql', '139_second.sql'],
+    });
   });
 });
