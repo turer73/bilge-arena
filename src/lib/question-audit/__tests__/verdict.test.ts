@@ -211,12 +211,20 @@ describe('kor cozucu bulgulari', () => {
     expect(r.blindAgreementRatio).toBeCloseTo(2 / 3)
   })
 
+  it('varsayilan esik 2/3: uc ornekten ikisi yeterli', () => {
+    // 2/3 = 0.667 >= varsayilan 2/3 -> mutabakat GECERLI sayilir.
+    // Esik 1.0 iken bu kosu NEEDS_REVIEW'du; olcum 1.0'in bir gercek hatayi
+    // kacirdigini gosterdi (bkz. DEFAULT_DERIVE_OPTIONS yorumu).
+    const r = deriveVerdict(run({ blind: [blind(2), blind(2), blind(4)] }))
+    expect(r.verdict).toBe('APPROVED')
+    expect(r.blindAgreementRatio).toBeCloseTo(2 / 3)
+  })
+
   it('esik degisince AYNI kosu farkli verdict verir — gecmis para harcamadan yeniden puanlanir', () => {
-    // 2/3 ornek anahtarla UYUSUYOR. Esik 1.0'da mutabakat yetersiz sayilir,
-    // 0.6'da yeterli. Ayni saklanmis kosu, iki farkli politika, iki sonuc.
-    const sameRun = run({ blind: [blind(2), blind(2), blind(4)] })
+    // 5 ornekten 3'u uyusuyor -> oran 0.6, varsayilan 2/3'un ALTINDA.
+    const sameRun = run({ blind: [blind(2), blind(2), blind(2), blind(4), blind(1)] })
     expect(deriveVerdict(sameRun).verdict).toBe('NEEDS_REVIEW')
-    expect(deriveVerdict(sameRun, { minBlindAgreement: 0.6 }).verdict).toBe('APPROVED')
+    expect(deriveVerdict(sameRun, { minBlindAgreement: 0.5 }).verdict).toBe('APPROVED')
   })
 })
 

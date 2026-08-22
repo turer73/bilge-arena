@@ -52,14 +52,44 @@ function consensus(indexes: readonly (number | null)[]): { index: number | null;
 
 export interface DeriveOptions {
   /**
-   * Kor cozucu mutabakati bunun altindaysa REJECTED yerine NEEDS_REVIEW.
-   * Turkce paragraf / sosyoloji gibi kategorilerde tek-ornek uyusmazligi
-   * yaygindir; tek stokastik ornekle soru reddetmek yuksek FP uretir.
+   * Kor cozucu mutabakati bunun altindaysa bulgu URETILMEZ; soru
+   * NEEDS_REVIEW'a duser. Turkce paragraf / sosyoloji gibi kategorilerde
+   * tek-ornek uyusmazligi yaygindir; tek stokastik ornekle soru reddetmek
+   * yuksek FP uretir.
    */
   minBlindAgreement: number
 }
 
-export const DEFAULT_DERIVE_OPTIONS: DeriveOptions = { minBlindAgreement: 1 }
+/**
+ * 2/3 cogunluk (0.66), 3/3 birlik (1.0) DEGIL.
+ *
+ * OLCUM (2026-08-21, 146 soruluk kararsiz altkume, ayni model/prompt, her
+ * kurulum iki kez kosuldu; tekrarlanabilirlik = iki kosuda ayni sorunun
+ * isaretlenmesi):
+ *
+ *   3 ornek + esik 1.0    42/43 isaret, 19 ortak -> %29
+ *   3 ornek + esik 0.66   84/89 isaret, 65 ortak -> %60   <- secilen
+ *   5 ornek + esik 1.0    30/25 isaret, 18 ortak -> %49
+ *   5 ornek + esik 0.66   60/49 isaret, 38 ortak -> %54
+ *
+ * Esik, ornek sayisindan daha guclu kaldirac: 3+0.66 kurulumu 5+1.0'i geciyor
+ * ve %40 daha ucuz. 5 ornek + katı birlik ayrica SINYALI BASTIRIYOR (isaret
+ * 42 -> 30), cunku 5/5 birlik nadir.
+ *
+ * Tam banka verisinde (4434 soru) esigi 1.0 -> 0.66 indirmenin etkisi:
+ *   - kor cozucu bulgusu tekrarlanabilirligi %38 -> %55
+ *   - bloklayan (iki-ajan) sinyal 6-7 adaydan 10 adaya cikiyor
+ *   - elle adjudike edilen 6 dogrulanmis hatanin TAMAMI iki kosuda da
+ *     yakalaniyor (esik 1.0'da bir kosuda ee84140f kaciyordu)
+ *   - yeni 4 adayin 1'i gercek hata cikti (ca76ec70 geometri: cevre 52,
+ *     alan 126,75 fakat isaretli 117 -- cozum metni bile "126,75 ~ 127"
+ *     deyip yarida kesiliyor), 3'u yanlis pozitif
+ *
+ * Yani kesinlik ~%100'den ~%70'e duserken bir gercek hata daha bulunuyor.
+ * 4434 soruluk bankada toplam aday sayisi 10 oldugu icin insan hepsini zaten
+ * inceliyor; bu hacimde kacirmamak, kesinlikten degerli.
+ */
+export const DEFAULT_DERIVE_OPTIONS: DeriveOptions = { minBlindAgreement: 2 / 3 }
 
 export function deriveVerdict(run: AuditRun, opts: DeriveOptions = DEFAULT_DERIVE_OPTIONS): VerdictResult {
   const findings: Finding[] = []
