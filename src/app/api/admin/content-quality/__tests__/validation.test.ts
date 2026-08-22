@@ -101,6 +101,7 @@ describe('listeleme', () => {
     const { admin, calls } = fakeAdmin([])
     mocks.context.mockResolvedValue({ ok: true, userId: USER, admin })
     await GET(req('verdict=REJECTED&activeOnly=true'))
+    expect(calls.select[0]?.[0]).toContain('questions!inner(')
     expect(calls.eq).toEqual(expect.arrayContaining([['questions.is_active', true]]))
   })
 
@@ -118,11 +119,7 @@ describe('listeleme', () => {
     expect(calls.range).toEqual([[50, 74]])
   })
 
-  it('soru satiri silinmisse null alanlarla doner, patlamaz', async () => {
-    const { admin } = fakeAdmin([row({ questions: null })])
-    mocks.context.mockResolvedValue({ ok: true, userId: USER, admin })
-    const [item] = (await (await GET(req('verdict=NEEDS_REVIEW'))).json()).items
-    expect(item.game).toBeNull()
-    expect(item.isActive).toBeNull()
-  })
+  // Kararlar questions FK'sine ON DELETE CASCADE ile bagli; inner join hem bu
+  // invarianti yansitir hem de activeOnly filtresinin ust satirlari elemesini
+  // garanti eder.
 })

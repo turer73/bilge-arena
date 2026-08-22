@@ -41,7 +41,7 @@ const rowSchema = z.object({
   decided_at: z.string(),
   questions: z.object({
     game: z.string(), category: z.string(), is_active: z.boolean(),
-  }).nullable(),
+  }),
 }).passthrough()
 
 export async function GET(request: Request) {
@@ -57,7 +57,9 @@ export async function GET(request: Request) {
 
   let query = context.admin
     .from('question_validation_decisions')
-    .select('question_id,verdict,policy_version,rationale,findings,blind_agreement_ratio,decided_at,questions(game,category,is_active)', { count: 'exact' })
+    // `!inner` activeOnly filtresinin yalniz gomulu `questions` nesnesini null
+    // yapmak yerine ust seviye karar satirlarini da gercekten elemesini saglar.
+    .select('question_id,verdict,policy_version,rationale,findings,blind_agreement_ratio,decided_at,questions!inner(game,category,is_active)', { count: 'exact' })
     .eq('verdict', verdict)
     .eq('policy_version', policyVersion ?? QUESTION_QUALITY_POLICY_VERSION)
     .order('decided_at', { ascending: false })
@@ -82,9 +84,9 @@ export async function GET(request: Request) {
     items: rows.data.map((r) => ({
       questionId: r.question_id,
       verdict: r.verdict,
-      game: r.questions?.game ?? null,
-      category: r.questions?.category ?? null,
-      isActive: r.questions?.is_active ?? null,
+      game: r.questions.game,
+      category: r.questions.category,
+      isActive: r.questions.is_active,
       findingCodes: r.findings.map((f) => f.code),
       findings: r.findings,
       rationale: r.rationale,

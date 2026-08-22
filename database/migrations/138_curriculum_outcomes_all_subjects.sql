@@ -321,13 +321,22 @@ ON CONFLICT (code) DO UPDATE SET
   description=EXCLUDED.description, exam_ref=EXCLUDED.exam_ref, sort_order=EXCLUDED.sort_order,
   is_active=EXCLUDED.is_active, node_id=EXCLUDED.node_id, taxonomy_version=EXCLUDED.taxonomy_version;
 
--- Dogrulama: 21 yeni kategori kazanimi + mevcut 6 matematik = 27 aktif kazanim.
+-- Dogrulama: 21 yeni kategori kazanimi + mevcut 6 matematik = en az 27 aktif kazanim.
 DO $$
-DECLARE v_count integer; v_orphan integer;
+DECLARE v_count integer; v_new_count integer; v_orphan integer;
 BEGIN
   SELECT count(*) INTO v_count FROM public.curriculum_outcomes WHERE is_active;
   IF v_count < 27 THEN
     RAISE EXCEPTION 'Migration 138 dogrulama basarisiz: aktif kazanim=%, en az 27 beklenir', v_count;
+  END IF;
+  SELECT count(*) INTO v_new_count
+  FROM public.curriculum_outcomes
+  WHERE is_active
+    AND taxonomy_version IN (
+      'ba-tyt-turkce-v1', 'ba-tyt-sosyal-v1', 'ba-tyt-fen-v1', 'ba-ydt-eng-v1'
+    );
+  IF v_new_count <> 21 THEN
+    RAISE EXCEPTION 'Migration 138 dogrulama basarisiz: yeni taksonomilerde aktif kazanim=%, tam 21 beklenir', v_new_count;
   END IF;
   -- Her kazanim bir outcome dugumune bagli olmali; yoksa create_question_content_revision
   -- JOIN'i sessizce bos doner ve "outcomes must be active and unique" hatasi alinir.
