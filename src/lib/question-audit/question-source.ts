@@ -35,6 +35,51 @@ export interface QuestionRow {
 }
 
 /**
+ * Sik metnini sayiya cevirir; cevrilemezse null.
+ *
+ * NEDEN VAR: birebir metin karsilastirmasi "1/5" ile "4/20"yi farkli gorur, ama
+ * ogrenci icin ikisi de DOGRU cevaptir. Canli bankada bu 6 soruda vardi ve
+ * dordunde esdeger sikkin biri isaretli anahtardi — yani sorunun IKI dogru
+ * cevabi vardi ve esdeger kesri isaretleyen ogrenci haksiz yere yanlis
+ * sayiliyordu. Iki tam banka LLM kosusu (22135 + 22088 cagri, iki FARKLI
+ * saglayici) bunlarin hicbirini bulamadi; bu kontrol sifir maliyetle buluyor.
+ *
+ * BILINCLI OLARAK DAR: yanlis-pozitif saglam bir soruyu denetim disi birakir,
+ * o yuzden supheli her bicim null doner:
+ *   - virgul iceren        -> koordinat/ikili: "(-3,-7)"
+ *   - iki rakam arasi tire -> aralik/dizilim: "1914-1918", "2-8-8-1"
+ *   - harf iceren          -> birimli deger: "5 mol"
+ * Turkce binlik ayraci ozel ele alinir: "100.000" JS ondaligi olarak 100 okunur
+ * ve "100" sikkiyla sahte esitlik uretirdi (ilk canli taramada tam bu oldu).
+ */
+function optionNumericValue(raw: string): number | null {
+  const text = raw.trim()
+  if (!text || text.length > 40) return null
+  if (text.includes(',')) return null
+  if (/\d\s*[-–]\s*\d/.test(text)) return null
+  if (/[a-zA-Z]/.test(text.replace(/sqrt|pi/gi, ''))) return null
+  if (/^-?\d{1,3}(\.\d{3})+$/.test(text)) return Number(text.replace(/\./g, ''))
+
+  let e = text.replace(/\s+/g, '').replace(/√/g, 'sqrt').replace(/π/g, '(pi)')
+  if (!/^-?[0-9+*/().sqrtpi^]+$/.test(e)) return null
+  if (!/\d/.test(e)) return null
+  // ARA BELIRTEC SART: dogrudan 'Math.sqrt(' yazmak ikinci gecisin kendi
+  // ciktisini yeniden yakalamasina yol acar ('Math.sqrt(' icinde 'sqrt(' vardir)
+  // ve 'Math.Math.sqrt(' uretir. Once notasyonu tekillestir, en sonda cevir.
+  e = e.replace(/sqrt\(/g, 'SQRT(').replace(/sqrt(\d+(?:\.\d+)?)/g, 'SQRT($1)')
+  e = e.replace(/(\d)\(/g, '$1*(').replace(/\)(\d)/g, ')*$1')
+  e = e.replace(/(\d)SQRT/g, '$1*SQRT').replace(/\)SQRT/g, ')*SQRT')
+  e = e.replace(/SQRT/g, 'Math.sqrt')
+  e = e.replace(/\(pi\)/g, 'Math.PI').replace(/\^/g, '**')
+  try {
+    const v = Function('"use strict";return(' + e + ')')() as unknown
+    return typeof v === 'number' && Number.isFinite(v) ? v : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * DENETLENEMEZ kusurlar. Bunlar LLM'e gonderilmez: cevap indeksi bozuk bir
  * soruda "kor cozucu anahtarla uyusmadi" cikar ve MODEL hatasi gibi gorunur.
  */
@@ -45,6 +90,7 @@ export type RejectReason =
   | 'option_count_invalid'
   | 'option_empty'
   | 'option_duplicate'
+  | 'option_value_equivalent'
   | 'answer_not_integer'
   | 'answer_out_of_range'
   | 'option_count_exam_mismatch'
@@ -135,6 +181,25 @@ export function toDraft(row: QuestionRow, policy: { strictExamOptionCount?: bool
   const trimmed = options.map((o) => o.trim())
   const dupIndex = trimmed.findIndex((o, i) => trimmed.indexOf(o) !== i)
   if (dupIndex >= 0) return reject('option_duplicate', `birebir ayni sik: ${trimmed[dupIndex]}`)
+
+  // Metni farkli ama DEGERI ayni siklar (or. "1/5" ve "4/20", ya da
+  // 21/(2√5) ve 21√5/10). Yukaridaki EXACT kontrol bunlari goremez.
+  const values = trimmed.map(optionNumericValue)
+  for (let i = 0; i < values.length; i++) {
+    const vi = values[i]
+    if (vi === null) continue
+    for (let j = 0; j < i; j++) {
+      const vj = values[j]
+      if (vj === null) continue
+      const scale = Math.max(Math.abs(vi), Math.abs(vj), 1e-9)
+      if (Math.abs(vi - vj) / scale < 1e-9) {
+        return reject(
+          'option_value_equivalent',
+          `idx${j} "${trimmed[j]}" ile idx${i} "${trimmed[i]}" ayni deger (${vi})`,
+        )
+      }
+    }
+  }
 
   const answer = c.answer ?? c.correct
   if (!Number.isInteger(answer)) return reject('answer_not_integer', `answer=${JSON.stringify(answer)}`)

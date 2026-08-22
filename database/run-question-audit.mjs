@@ -25,6 +25,7 @@
  *   npm run audit:calibrate -- --category matematik --samples 3 --confirm
  *   npm run audit:calibrate -- --revision-id <uuid> --persist --confirm
  *   npm run audit:calibrate -- --governance-ready --persist --confirm
+ *   npm run audit:calibrate -- --provider deepseek --persist --no-decisions --confirm
  */
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -144,7 +145,19 @@ try {
   const deps = { fetchRows }
   if (process.argv.includes('--persist')) {
     deps.persistRun = persistRun
-    deps.persistDecision = persistDecision
+    // --no-decisions: ham kosulari yaz ama YETKILI KARARI EZME.
+    //
+    // question_validation_runs dedup'i provider_id iceriyor, yani iki
+    // saglayicinin ham ciktilari yan yana durabilir. Fakat
+    // question_validation_decisions UNIQUE(revision_id, content_sha256,
+    // policy_version) — saglayici TASIMIYOR — ve kopru ignoreDuplicates:false
+    // ile upsert ediyor. Yani ikincil bir saglayiciyla --persist kosmak
+    // birincil saglayicinin TUM kararlarini ezer ve yayin kapisi onun
+    // verdict'lerine doner.
+    //
+    // Capraz-model karsilastirmasinda ikincil saglayici KANIT uretmeli,
+    // yetkili karari degistirmemeli. Bu bayrak o ayrimi saglar.
+    if (!process.argv.includes('--no-decisions')) deps.persistDecision = persistDecision
     deps.loadCachedRun = async (draft, identity) => {
       const { data, error } = await sb
         .from('question_validation_runs')
