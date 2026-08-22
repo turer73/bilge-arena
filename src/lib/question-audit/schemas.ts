@@ -6,7 +6,7 @@
  * Gemini `responseSchema` ile `Type.INTEGER` dayatabilirsin — ama bu bir TIP
  * kisitidir, ARALIK kisiti degil. `description: "sadece 0-4"` bir kisit degil
  * serbest metindir; model 7 donebilir. Repo bu bugu zaten yasamis ve ona karsi
- * elle kontrol yazmis (audit-llm-judge.mjs, `self_answer_out_of_range`).
+ * eski prototipte elle kontrol gerektiriyordu (`self_answer_out_of_range`).
  *
  * DeepSeek/OpenAI-uyumlu provider'larda durum daha da zayif: `response_format:
  * json_object` yalniz "gecerli JSON" garanti eder, sema uyumu DEGIL. Yani

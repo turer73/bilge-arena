@@ -7,7 +7,6 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['database/__tests__/**/*.test.mjs'],
-    // eval-judge.mjs gerçek API çağırıyor, CI'da çalışmasın
-    exclude: ['database/__tests__/eval-judge.mjs', 'node_modules/**'],
+    exclude: ['node_modules/**'],
   },
 })

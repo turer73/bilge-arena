@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Soru bankası kalite-audit (tüm havuz, spend-gerektirmez).
+ * DIAGNOSTIC ONLY: question_validation_decisions yazmaz ve yayin karari degildir.
  *
  * 3 sinyal:
  *  (1) YAPISAL: 5-şık değil / answer 0-4 dışı / solution kısa / öncül-bölünme / dup
