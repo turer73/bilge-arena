@@ -103,7 +103,7 @@ export default function ProfilClient() {
   // Yukleniyor
   if (loading) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-[440px] items-center justify-center bg-[var(--app-bg)]">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[440px] md:max-w-[560px] items-center justify-center bg-[var(--app-bg)]">
         <ProfileShellStyle />
         <div className="h-10 w-10 animate-spin rounded-full border-[4px] border-[var(--app-accent-border)] border-t-[var(--app-accent)]" />
       </div>
@@ -113,7 +113,7 @@ export default function ProfilClient() {
   // Giris yapilmamis
   if (!user || !profile) {
     return (
-      <div className="mx-auto min-h-dvh w-full max-w-[440px] bg-[var(--app-bg)] px-4 py-5 text-center text-[var(--app-accent-ink)]">
+      <div className="mx-auto min-h-dvh w-full max-w-[440px] md:max-w-[560px] bg-[var(--app-bg)] px-4 py-5 text-center text-[var(--app-accent-ink)]">
         <ProfileShellStyle />
         <div className="mb-5 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)]">
           <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-xl font-black text-[var(--app-accent-text)]">‹</Link>
@@ -211,7 +211,7 @@ export default function ProfilClient() {
   })
 
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-[440px] bg-[var(--app-bg)] px-4 pb-28 pt-4 text-[var(--app-accent-ink)]">
+    <div className="mx-auto min-h-dvh w-full max-w-[440px] md:max-w-[560px] bg-[var(--app-bg)] px-4 pb-28 pt-4 text-[var(--app-accent-ink)]">
       <ProfileShellStyle />
       <div className="mb-4 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)]">
         <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-xl font-black text-[var(--app-accent-text)]">‹</Link>
@@ -551,12 +551,15 @@ function ProfileSectionTitle({ children }: { children: ReactNode }) {
 function ProfileShellStyle() {
   return (
     <style jsx global>{`
-      body.mobile-profile-active [data-app-navbar] {
-        display: none !important;
-      }
-      body.mobile-profile-active [data-arena-main] {
-        background: var(--app-bg) !important;
-        padding: 0 !important;
+      /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+      @media (max-width: 767px) {
+        body.mobile-profile-active [data-app-navbar] {
+          display: none !important;
+        }
+        body.mobile-profile-active [data-arena-main] {
+          background: var(--app-bg) !important;
+          padding: 0 !important;
+        }
       }
     `}</style>
   )

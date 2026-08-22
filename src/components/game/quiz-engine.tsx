@@ -10,7 +10,6 @@ import { useSidebarData } from '@/lib/hooks/use-sidebar-data'
 import { submitQuestionReport } from '@/lib/questions/submit-report'
 import { useSessionSaver } from '@/lib/hooks/use-session-saver'
 import { useQuizLimit } from '@/lib/hooks/use-quiz-limit'
-import { getLevelFromXP } from '@/lib/constants/levels'
 import { defaultExamRefForType } from '@/lib/constants/exam-types'
 import { trackLearningEvent } from '@/lib/analytics/learning-events'
 import { trackEvent } from '@/lib/utils/plausible'
@@ -27,11 +26,9 @@ import { usePersonalizedMock } from '@/lib/hooks/use-personalized-mock'
 import { useMasteryMap } from '@/lib/hooks/use-mastery-map'
 
 import { Lobby } from './lobby'
-import { Timer } from './timer'
 import { DenemeTimer } from './deneme-timer'
 import { QuestionCard } from './question-card'
 import { OptionButton } from './option-button'
-import { StreakBadge } from './streak-badge'
 import { SoundToggle } from './sound-toggle'
 import { XPPopup } from './xp-popup'
 import { ExplanationPanel } from './explanation-panel'
@@ -50,8 +47,6 @@ const DenemeResult = dynamic(
   () => import('./deneme-result').then(m => ({ default: m.DenemeResult })),
   { ssr: false },
 )
-import { MiniLeaderboard } from './mini-leaderboard'
-import { DailyQuests } from './daily-quests'
 import { TodayPlanCard } from './today-plan-card'
 import { PersonalizedMockCard } from './personalized-mock-card'
 import { MasteryMapCard } from './mastery-map-card'
@@ -275,10 +270,13 @@ export function QuizEngine({ game }: QuizEngineProps) {
     return (
       <>
         <style>{`
-          body.mobile-quiz-lobby [data-app-navbar] { display: none !important; }
-          body.mobile-quiz-lobby [data-arena-main] {
-            padding-top: 0 !important;
-            background: var(--app-bg);
+          /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+          @media (max-width: 767px) {
+            body.mobile-quiz-lobby [data-app-navbar] { display: none !important; }
+            body.mobile-quiz-lobby [data-arena-main] {
+              padding-top: 0 !important;
+              background: var(--app-bg);
+            }
           }
         `}</style>
         {user && (
@@ -394,11 +392,14 @@ export function QuizEngine({ game }: QuizEngineProps) {
     return (
       <>
         <style>{`
-          body.mobile-quiz-loading [data-app-navbar],
-          body.mobile-quiz-loading [data-bottom-nav] { display: none !important; }
-          body.mobile-quiz-loading [data-arena-main] {
-            padding: 0 !important;
-            background: var(--app-bg);
+          /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+          @media (max-width: 767px) {
+            body.mobile-quiz-loading [data-app-navbar],
+            body.mobile-quiz-loading [data-bottom-nav] { display: none !important; }
+            body.mobile-quiz-loading [data-arena-main] {
+              padding: 0 !important;
+              background: var(--app-bg);
+            }
           }
         `}</style>
         <div className="mx-auto flex min-h-[100dvh] max-w-[520px] flex-col items-center justify-center gap-5 bg-[var(--app-bg)] p-5 text-center text-[var(--app-text)]">
@@ -431,11 +432,14 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (quiz.screen === 'result') {
     const resultShellStyle = (
       <style>{`
-        body.mobile-quiz-result [data-app-navbar],
-        body.mobile-quiz-result [data-bottom-nav] { display: none !important; }
-        body.mobile-quiz-result [data-arena-main] {
-          padding: 0 !important;
-          background: var(--app-bg);
+        /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+        @media (max-width: 767px) {
+          body.mobile-quiz-result [data-app-navbar],
+          body.mobile-quiz-result [data-bottom-nav] { display: none !important; }
+          body.mobile-quiz-result [data-arena-main] {
+            padding: 0 !important;
+            background: var(--app-bg);
+          }
         }
       `}</style>
     )
@@ -445,7 +449,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
       return (
         <>
           {resultShellStyle}
-          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] p-4 text-center text-[var(--app-text)] animate-scaleIn">
+          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] p-4 text-center text-[var(--app-text)] animate-scaleIn md:max-w-[560px]">
             <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-5 pb-7 text-white shadow-[0_7px_0_var(--app-accent-strong)]">
               <div className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
               <BilgeChan pose="wave" height={148} priority className="mx-auto drop-shadow-[0_8px_10px_rgba(15,23,42,.18)]" />
@@ -518,15 +522,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (!question) return null
 
   const lastAnswer = quizStore.answers[quizStore.answers.length - 1]
-  const level = getLevelFromXP(quizStore.xpEarned)
   const questionProgress = ((quizStore.currentIndex + 1) / Math.max(1, quizStore.questions.length)) * 100
 
-  // Sidebar görev verileri — gerçek günlük görevler varsa onları kullan
-  const fallbackQuests = [
-    { label: '10 soru çöz', done: quizStore.currentIndex + 1, total: 10, color: 'var(--focus)' },
-    { label: '3 seri yap', done: Math.min(quizStore.maxStreak, 3), total: 3, color: 'var(--reward)' },
-    { label: `${gameDef.name} oyna`, done: 1, total: 1, color: 'var(--growth)' },
-  ]
 
   // Konu gucu: gercek veri varsa onu kullan, yoksa kategorileri %0 goster
   const sidebarTopics = sidebar.topicData.length > 0
@@ -539,21 +536,24 @@ export function QuizEngine({ game }: QuizEngineProps) {
   return (
     <>
     <style>{`
-      body.mobile-quiz-active [data-app-navbar],
-      body.mobile-quiz-active [data-bottom-nav] { display: none !important; }
-      body.mobile-quiz-active [data-arena-main] {
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        background: var(--app-bg);
+      /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+      @media (max-width: 767px) {
+        body.mobile-quiz-active [data-app-navbar],
+        body.mobile-quiz-active [data-bottom-nav] { display: none !important; }
+        body.mobile-quiz-active [data-arena-main] {
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+          background: var(--app-bg);
+        }
       }
     `}</style>
     {/* Can kaybi kirmizi flash */}
     {quiz.showLifeLost && <LifeLostOverlay />}
 
-    <div className="mx-auto min-h-[100dvh] max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)]">
+    <div className="mx-auto min-h-[100dvh] max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:my-6 md:min-h-0 md:max-w-[560px] md:rounded-[32px] md:border-2 md:border-[var(--app-border)] md:p-5 md:shadow-[0_8px_0_var(--app-shadow)]">
       {/* Mobil odak modu: ilerleme, süre ve oturum kaynakları tek bakışta. */}
       <header
-        className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)]"
+        className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)] md:-mx-5 md:-mt-5 md:top-[var(--navbar-h)] md:rounded-t-[30px] md:px-5 md:pt-4"
         style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}d9)` }}
       >
         <div className="pointer-events-none absolute -right-8 -top-12 h-28 w-28 rounded-full border-[20px] border-white/10" />
@@ -654,67 +654,6 @@ export function QuizEngine({ game }: QuizEngineProps) {
           </div>
         )}
 
-        {/* Profil seridi (normal mod) */}
-        {!quiz.isDeneme && (
-          <div className="hidden">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="flex h-[38px] w-[38px] items-center justify-center rounded-full border-2 text-lg"
-                style={{
-                  background: `linear-gradient(135deg, ${gameDef.colorHex}44, ${gameDef.colorHex})`,
-                  borderColor: `${gameDef.colorHex}55`,
-                }}
-              >
-                {level.badge}
-              </div>
-              <div>
-                <div className="text-[13px] font-bold">{gameDef.name}</div>
-                <div className="text-xs text-[var(--text-sub)]">
-                  {quizStore.xpEarned} XP kazanildi
-                </div>
-              </div>
-              <div className="flex-1" />
-
-              {/* Can gösterimi — son can pulse, kayıp can heartbreak */}
-              {quizStore.livesEnabled && (
-                <div className="flex items-center gap-0.5" title={`${quizStore.lives}/${quizStore.maxLives} can`}>
-                  {Array.from({ length: quizStore.maxLives }).map((_, i) => {
-                    const isAlive = i < quizStore.lives
-                    const isLastLife = isAlive && quizStore.lives === 1 && i === 0
-                    const justLost = !isAlive && i === quizStore.lives && quiz.showLifeLost
-
-                    return (
-                      <span
-                        key={i}
-                        className={`text-sm ${
-                          justLost
-                            ? 'animate-heart-break'
-                            : isLastLife
-                              ? 'animate-last-life-pulse'
-                              : isAlive
-                                ? 'scale-100 opacity-100 transition-all duration-300'
-                                : 'scale-75 opacity-30 grayscale transition-all duration-300'
-                        }`}
-                      >
-                        {isAlive ? '❤️' : '🖤'}
-                      </span>
-                    )
-                  })}
-                </div>
-              )}
-
-              <SoundToggle />
-              <StreakBadge streak={quizStore.streak} />
-              <div className="text-right">
-                <div className="text-xs tracking-wider text-[var(--text-sub)]">OTURUM</div>
-                <div className="font-display text-base font-black text-[var(--reward-text)]">
-                  +{quizStore.xpEarned}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Aciklama paneli — cevap sonrasi sorunun USTUNDE: "Sonraki Soru"
             kaydirmadan erisilebilir (mobil/desktop). Deneme'de de gosterilir:
             otomatik ilerleme kaldirildi, kullanici butonla gecer (Ensar 06-16). */}
@@ -768,13 +707,6 @@ export function QuizEngine({ game }: QuizEngineProps) {
             </QuestionCard>
           </div>
 
-          {/* Per-question timer kutusu */}
-          {!quiz.isDeneme && quiz.mode.timePerQuestion > 0 && (
-            <div className="hidden">
-              <Timer seconds={quiz.timer.seconds} total={quiz.mode.timePerQuestion} />
-              <span className="text-xs font-bold tracking-wider text-[var(--text-sub)]">SN</span>
-            </div>
-          )}
         </div>
 
         {/* Secenekler */}
@@ -806,32 +738,6 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
       </div>
 
-      {/* Sag sidebar */}
-      {!quiz.isDeneme && (
-        <div className="hidden">
-          <BilgeChanCompanion
-            key={quizStore.currentIndex}
-            attemptId={quiz.attemptId}
-            quizState={quizStore.state}
-            lastIsCorrect={lastAnswer?.isCorrect ?? null}
-            question={question}
-            correctOption={lastAnswer?.correctOption ?? null}
-            onHelpToggle={quiz.setHelpPaused}
-            height={340}
-            className="sticky top-4"
-          />
-          <ComponentErrorBoundary label="Sıralama" variant="inline">
-            <MiniLeaderboard players={sidebar.leaderboard} myRank={sidebar.myRank} />
-          </ComponentErrorBoundary>
-          <ComponentErrorBoundary label="Günlük Görevler" variant="inline">
-            <DailyQuests
-              quests={dailyQuests.quests.length === 0 ? fallbackQuests : undefined}
-              userQuests={dailyQuests.quests.length > 0 ? dailyQuests.quests : undefined}
-              onClaimXP={dailyQuests.claimXP}
-            />
-          </ComponentErrorBoundary>
-        </div>
-      )}
       </div>
 
       {/* Konu gucu — tam genislik alt bant (mobilde de gorunur) */}

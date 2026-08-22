@@ -74,7 +74,7 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
   ]
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] px-4 py-5 text-[var(--app-accent-ink)] md:min-h-[calc(100dvh-5rem)]">
+    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] w-full max-w-[440px] md:max-w-[560px] flex-col justify-center gap-4 bg-[var(--app-bg)] px-4 py-5 text-[var(--app-accent-ink)] md:min-h-[calc(100dvh-5rem)]">
       {/* Can bitti uyarisi */}
       {gameOver && (
         <div className="animate-fadeUp rounded-2xl border-2 border-[var(--app-danger-border)] bg-[var(--app-danger-tint)] px-5 py-3 text-center shadow-[0_4px_0_var(--app-danger-border)]">

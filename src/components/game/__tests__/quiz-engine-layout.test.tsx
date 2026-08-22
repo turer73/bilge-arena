@@ -164,7 +164,7 @@ vi.mock('../mastery-map-card', () => ({ MasteryMapCard: () => null }))
 vi.mock('../topics-panel', () => ({ TopicsPanel: () => <div data-testid="topics-band" /> }))
 vi.mock('../life-lost-overlay', () => ({ LifeLostOverlay: () => null }))
 vi.mock('@/components/ui/bilge-chan', () => ({ BilgeChan: () => null }))
-vi.mock('../bilge-chan-companion', () => ({ BilgeChanCompanion: () => null }))
+vi.mock('../bilge-chan-companion', () => ({ BilgeChanCompanion: () => <div data-testid="chan-companion" /> }))
 vi.mock('@/components/premium/premium-gate-modal', () => ({
   PremiumGateModal: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div data-testid="premium-modal" /> : null,
 }))
@@ -192,6 +192,27 @@ describe('QuizEngine yerleşim', () => {
     expect(screen.getByLabelText('3 can')).toBeInTheDocument()
     expect(screen.getByLabelText('1 seri')).toBeInTheDocument()
     expect(screen.getByLabelText('10 oturum XP')).toBeInTheDocument()
+  })
+
+  test('uygulama kabugu CSS yalnizca mobil genislige uygulanir (masaustunde navbar kalir)', () => {
+    const { container } = render(<QuizEngine game="matematik" />)
+
+    const shellStyle = Array.from(container.querySelectorAll('style'))
+      .map((node) => node.textContent ?? '')
+      .find((text) => text.includes('mobile-quiz-active'))
+
+    expect(shellStyle).toBeDefined()
+    expect(shellStyle).toContain('@media (max-width: 767px)')
+    // Medya sorgusu, navbar'i gizleyen kuraldan ONCE gelmeli
+    expect(shellStyle!.indexOf('@media (max-width: 767px)'))
+      .toBeLessThan(shellStyle!.indexOf('[data-app-navbar]'))
+  })
+
+  test('gorunmeyen masaustu sidebar kaldirildi: koc bileseni tek kopya', () => {
+    render(<QuizEngine game="matematik" />)
+    // Ikinci (gizli) BilgeChanCompanion her soruda remount olup
+    // /api/assistance-policy istegini bosa tekrarliyordu.
+    expect(screen.getAllByTestId('chan-companion')).toHaveLength(1)
   })
 
   test('answered: açıklama paneli soru kartının ÜSTÜNDE', () => {
