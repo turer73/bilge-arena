@@ -13,7 +13,7 @@ import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runCalibration, type CalibrationItem, type CalibrationReport } from './calibration'
 import { auditExecutionIdentity, DEFAULT_AUDIT_CONFIG, QUESTION_QUALITY_POLICY_VERSION, type AuditConfig, type AuditProviders } from './orchestrator'
-import { createGeminiProvider } from './provider'
+import { createGeminiProvider, createOpenAiCompatibleProvider } from './provider'
 import {
   toValidationDecisionRow,
   toValidationRunRows,
@@ -31,6 +31,7 @@ export interface RunnerArgs {
   confirm: boolean
   blindSamples: number
   model: string
+  provider: 'gemini' | 'deepseek'
   /** Ardisik iki cagri arasi min bekleme (ms). Free tier icin yukselt. */
   minIntervalMs: number
   out: string
@@ -47,6 +48,7 @@ export function parseArgs(argv: readonly string[]): RunnerArgs {
     confirm: false,
     blindSamples: DEFAULT_AUDIT_CONFIG.blindSamples,
     model: process.env.BLIND_SOLVER_MODEL_ID || 'gemini-2.5-flash-lite',
+    provider: (process.env.AUDIT_PROVIDER as 'gemini' | 'deepseek') || 'gemini',
     minIntervalMs: Number(process.env.AUDIT_MIN_INTERVAL_MS || 0),
     out: 'database/question-audit-calibration-report.json',
     revisionId: null,
@@ -60,6 +62,7 @@ export function parseArgs(argv: readonly string[]): RunnerArgs {
     else if (k === '--concurrency') a.concurrency = Number(argv[++i])
     else if (k === '--samples') a.blindSamples = Number(argv[++i])
     else if (k === '--model') a.model = argv[++i]
+    else if (k === '--provider') a.provider = argv[++i] === 'deepseek' ? 'deepseek' : 'gemini'
     else if (k === '--min-interval') a.minIntervalMs = Number(argv[++i])
     else if (k === '--out') a.out = argv[++i]
     else if (k === '--revision-id') a.revisionId = argv[++i]
@@ -109,6 +112,7 @@ export async function main(argv: readonly string[], deps: RunnerDeps): Promise<C
   if (Object.keys(byWarning).length) log(`  metadata uyarisi : ${JSON.stringify(byWarning)}`)
 
   const calls = callsPerQuestion(drafts, args.blindSamples)
+  log(`Saglayici          : ${args.provider}${args.provider === 'deepseek' ? ' (sema dayatmaz — Zod tek garanti)' : ''}`)
   log(`Model              : ${args.model}`)
   log(`Kor ornek / soru   : ${args.blindSamples}`)
   log(`Toplam LLM cagrisi : ${calls}`)
@@ -122,12 +126,24 @@ export async function main(argv: readonly string[], deps: RunnerDeps): Promise<C
     return null
   }
 
-  const providerFor = (role: string) =>
-    createGeminiProvider({
+  // Saglayici secimi. DIKKAT: saglayici degistirmek `provider_id`'yi degistirir,
+  // o da onbellek anahtarinin parcasidir -> tum banka yeniden kosulur. Bu
+  // bilincli: farkli saglayicinin ciktisi digerinin yerine gecemez.
+  const providerFor = (role: string) => {
+    const modelId = process.env[`${role}_MODEL_ID`] || args.model
+    if (args.provider === 'deepseek') {
+      return createOpenAiCompatibleProvider({
+        apiKey: process.env.DEEPSEEK_API_KEY ?? '',
+        modelId,
+        minIntervalMs: args.minIntervalMs,
+      })
+    }
+    return createGeminiProvider({
       apiKey: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? '',
-      modelId: process.env[`${role}_MODEL_ID`] || args.model,
+      modelId,
       minIntervalMs: args.minIntervalMs,
     })
+  }
 
   const providers: AuditProviders = {
     blind: providerFor('BLIND_SOLVER'),

@@ -123,7 +123,7 @@ const revisionDetailSchema = z.object({
     policyVersion: z.string().max(100),
     verdict: z.enum(['APPROVED', 'REJECTED', 'NEEDS_REVIEW', 'INCONCLUSIVE']),
     findings: z.array(z.object({
-      code: z.enum(['WRONG_KEY_SUSPECTED', 'NO_CORRECT_OPTION', 'MULTIPLE_CORRECT', 'MISSING_PREMISE', 'AMBIGUOUS_WORDING', 'SOLUTION_CONTRADICTS_ANSWER', 'INCOMPLETE_SOLUTION', 'LOGICAL_FALLACY']),
+      code: z.enum(['WRONG_KEY_SUSPECTED', 'NO_CORRECT_OPTION', 'MULTIPLE_CORRECT', 'MISSING_PREMISE', 'AMBIGUOUS_WORDING', 'STEM_MISSING_TOKEN', 'SOLUTION_CONTRADICTS_ANSWER', 'INCOMPLETE_SOLUTION', 'LOGICAL_FALLACY']),
       evidence: z.string().max(4_000), optionIndexes: z.array(z.number().int().min(0).max(4)).max(5).optional(),
     }).strict()).max(50),
     rationale: z.string().max(8_000), blindConsensusIndex: z.number().int().min(0).max(4).nullable(),

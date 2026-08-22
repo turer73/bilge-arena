@@ -51,7 +51,7 @@ function run(overrides: Partial<AuditRun> = {}): AuditRun {
     markedAnswerIndex: 2,
     inputSnapshot,
     execution: {
-      policyVersion: 'question-quality@1', generationConfigSha256: 'b'.repeat(64), generationConfig: {},
+      policyVersion: 'question-quality@2', generationConfigSha256: 'b'.repeat(64), generationConfig: {},
       providerIds: { blind: 'test-provider', adversarial: 'test-provider', verifier: 'test-provider' },
       modelIds: { blind: 'test-model', adversarial: 'test-model', verifier: 'test-model' },
       promptVersions: { blind: 'test@1', adversarial: 'test@1', verifier: 'test@1' },
@@ -211,12 +211,20 @@ describe('kor cozucu bulgulari', () => {
     expect(r.blindAgreementRatio).toBeCloseTo(2 / 3)
   })
 
+  it('varsayilan esik 2/3: uc ornekten ikisi yeterli', () => {
+    // 2/3 = 0.667 >= varsayilan 2/3 -> mutabakat GECERLI sayilir.
+    // Esik 1.0 iken bu kosu NEEDS_REVIEW'du; olcum 1.0'in bir gercek hatayi
+    // kacirdigini gosterdi (bkz. DEFAULT_DERIVE_OPTIONS yorumu).
+    const r = deriveVerdict(run({ blind: [blind(2), blind(2), blind(4)] }))
+    expect(r.verdict).toBe('APPROVED')
+    expect(r.blindAgreementRatio).toBeCloseTo(2 / 3)
+  })
+
   it('esik degisince AYNI kosu farkli verdict verir — gecmis para harcamadan yeniden puanlanir', () => {
-    // 2/3 ornek anahtarla UYUSUYOR. Esik 1.0'da mutabakat yetersiz sayilir,
-    // 0.6'da yeterli. Ayni saklanmis kosu, iki farkli politika, iki sonuc.
-    const sameRun = run({ blind: [blind(2), blind(2), blind(4)] })
+    // 5 ornekten 3'u uyusuyor -> oran 0.6, varsayilan 2/3'un ALTINDA.
+    const sameRun = run({ blind: [blind(2), blind(2), blind(2), blind(4), blind(1)] })
     expect(deriveVerdict(sameRun).verdict).toBe('NEEDS_REVIEW')
-    expect(deriveVerdict(sameRun, { minBlindAgreement: 0.6 }).verdict).toBe('APPROVED')
+    expect(deriveVerdict(sameRun, { minBlindAgreement: 0.5 }).verdict).toBe('APPROVED')
   })
 })
 
@@ -284,5 +292,34 @@ describe('4 sikli soru', () => {
       run({ optionCount: 4, markedAnswerIndex: 3, blind: [blind(3), blind(3)], verifier: verifierOk(3) }),
     )
     expect(r.verdict).toBe('APPROVED')
+  })
+})
+
+/**
+ * STEM_MISSING_TOKEN: soru kokunden kelime dusmesi.
+ * Canli bankada 3 dogrulanmis ornek (weigh / account / bear), hepsi
+ * ai_gemini_gaps partisinden. ADVISORY cunku FP orani henuz olculmedi.
+ */
+describe('STEM_MISSING_TOKEN', () => {
+  it('advisory: tek basina reddetmez, insana gider', () => {
+    const adv: AgentOutcome<AdversarialPayload> = ok({
+      reasoning: 'r',
+      findings: [{ code: 'STEM_MISSING_TOKEN', evidence: "kokte fiil yok; siklar yalniz edat" }],
+    })
+    const r = deriveVerdict(run({ adversarial: adv }))
+    expect(r.verdict).toBe('NEEDS_REVIEW')
+    expect(r.findings.map((f) => f.code)).toEqual(['STEM_MISSING_TOKEN'])
+  })
+
+  it('blocking bir bulguyla birlikte gelirse REJECTED\'i engellemez', () => {
+    const adv: AgentOutcome<AdversarialPayload> = ok({
+      reasoning: 'r',
+      findings: [{ code: 'STEM_MISSING_TOKEN', evidence: 'kokte fiil yok' }],
+    })
+    const r = deriveVerdict(run({
+      blind: [blind(4), blind(4), blind(4)], verifier: verifierOk(4), adversarial: adv,
+    }))
+    expect(r.verdict).toBe('REJECTED')
+    expect(r.findings.map((f) => f.code)).toContain('STEM_MISSING_TOKEN')
   })
 })

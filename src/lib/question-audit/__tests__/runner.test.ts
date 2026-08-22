@@ -20,6 +20,12 @@ describe('parseArgs', () => {
     expect(a.confirm).toBe(false)
     expect(a.limit).toBe(25)
     expect(a.blindSamples).toBe(3)
+    expect(a.provider).toBe('gemini')
+  })
+
+  it('--provider deepseek secilebilir, bilinmeyen deger gemini olur', () => {
+    expect(parseArgs(['--provider', 'deepseek']).provider).toBe('deepseek')
+    expect(parseArgs(['--provider', 'bilinmeyen']).provider).toBe('gemini')
   })
 
   it('bayraklari okur', () => {

@@ -64,7 +64,7 @@ export function adversarialShape(): GeminiSchema {
         items: {
           type: 'OBJECT',
           properties: {
-            code: { type: 'STRING', enum: ['MULTIPLE_CORRECT', 'MISSING_PREMISE', 'AMBIGUOUS_WORDING'] },
+            code: { type: 'STRING', enum: ['MULTIPLE_CORRECT', 'MISSING_PREMISE', 'AMBIGUOUS_WORDING', 'STEM_MISSING_TOKEN'] },
             evidence: { type: 'STRING', description: 'Somut, gosterilebilir kanit.' },
             optionIndexes: {
               type: 'ARRAY',

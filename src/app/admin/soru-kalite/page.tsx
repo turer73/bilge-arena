@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { GAMES } from '@/lib/constants/games'
 import { stripRichText } from '@/lib/utils/rich-text'
 import { ContentGovernancePanel } from '@/components/admin/content-governance-panel'
+import { ValidationVerdictPanel } from '@/components/admin/validation-verdict-panel'
 import { ContentAppealsPanel } from '@/components/admin/content-appeals-panel'
 
 // #378 Tier 2: gercek cevap verisinden dusuk-basarili ("production drift")
@@ -109,6 +110,7 @@ export default function AdminQuestionQualityPage() {
         </p>
       </div>
 
+      <ValidationVerdictPanel />
       <ContentGovernancePanel />
       <ContentAppealsPanel />
 

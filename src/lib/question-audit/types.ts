@@ -60,6 +60,7 @@ export type FlawCode =
   | 'MULTIPLE_CORRECT'
   | 'MISSING_PREMISE'
   | 'AMBIGUOUS_WORDING'
+  | 'STEM_MISSING_TOKEN'
   // Cozum Denetcisi uretir
   | 'SOLUTION_CONTRADICTS_ANSWER'
   | 'INCOMPLETE_SOLUTION'
@@ -91,6 +92,12 @@ export const FLAW_SEVERITY: Record<FlawCode, Severity> = {
   MULTIPLE_CORRECT: 'advisory',
   MISSING_PREMISE: 'advisory',
   AMBIGUOUS_WORDING: 'advisory',
+  // Soru kokunden kelime dusmesi (or. phrasal-verb sorusunda fiil yok, siklar
+  // yalniz edat -> cumle hicbir sikla gramatik olmuyor). Canli bankada 3 ornek
+  // dogrulandi, ucu de ai_gemini_gaps partisinden. ADVISORY: kod yeni, yanlis
+  // pozitif orani HENUZ OLCULMEDI. Olcmeden blocking yapmak, bu oturumda
+  // MULTIPLE_CORRECT ile yasanan hatanin (%75 FP ile kapi kurmak) tekrari olur.
+  STEM_MISSING_TOKEN: 'advisory',
   INCOMPLETE_SOLUTION: 'advisory',
   LOGICAL_FALLACY: 'advisory',
 }
