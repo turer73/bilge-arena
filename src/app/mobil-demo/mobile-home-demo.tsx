@@ -33,6 +33,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { BottomNav } from '@/components/layout/bottom-nav'
+import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
 
 export type MobileSubjectId = 'matematik' | 'turkce' | 'fen' | 'sosyal' | 'ingilizce'
 type SubjectId = MobileSubjectId
@@ -49,6 +50,8 @@ interface MobileHomeDemoProps {
   classroomEnabled?: boolean
   institutionEnabled?: boolean
   showBottomNav?: boolean
+  /** Canli modda gercek ilerlemeyi cekmek icin; demo modunda gerekmez. */
+  userId?: string | null
 }
 
 interface Subject {
@@ -137,19 +140,45 @@ function Resource({ icon: Icon, value, color, label }: {
   )
 }
 
-function PathStep({ index, topic, subject, currentIndex }: { index: number; topic: string; subject: Subject; currentIndex: number }) {
-  const done = index < currentIndex
-  const current = index === currentIndex
-  const exam = index === 5
-  const locked = index > currentIndex
+interface PathStepModel {
+  key: string
+  label: string
+  href: string
+  index: number
+  done: boolean
+  current: boolean
+  exam: boolean
+  locked: boolean
+}
+
+/** Yilan (boustrophedon) yerlesim: 1. satir soldan saga, 2. satir sagdan sola. */
+function snakeColumn(index: number) {
+  const evenRow = Math.floor(index / 2) % 2 === 0
+  const leftFirst = index % 2 === 0
+  return evenRow === leftFirst ? 1 : 2
+}
+
+/** Adim sayisina gore kesikli baglanti yolunu uretir (viewBox 0 0 100 100). */
+function snakePath(count: number) {
+  const rows = Math.max(1, Math.ceil(count / 2))
+  const rowY = (row: number) => ((row + 0.5) / rows) * 100
+  let d = `M25 ${rowY(0).toFixed(1)}`
+  for (let row = 0; row < rows; row += 1) {
+    const endsRight = row % 2 === 0
+    d += ` H${endsRight ? 75 : 25}`
+    if (row < rows - 1) d += ` V${rowY(row + 1).toFixed(1)}`
+  }
+  return d
+}
+
+function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) {
+  const { done, current, exam, locked } = step
   const Icon = done ? Check : current ? Star : exam ? Trophy : locked ? Lock : BookOpenText
-  const column = [1, 2, 2, 1, 1, 2][index]
-  const row = Math.floor(index / 2) + 1
 
   return (
     <Link
-      href={`/arena/${subject.id === 'ingilizce' ? 'wordquest' : subject.id}`}
-      aria-label={`${topic} dersini aç`}
+      href={step.href}
+      aria-label={`${step.label} dersini aç`}
       aria-disabled={locked || undefined}
       tabIndex={locked ? -1 : undefined}
       onClick={(event) => {
@@ -157,10 +186,10 @@ function PathStep({ index, topic, subject, currentIndex }: { index: number; topi
       }}
       className="group relative z-10 flex min-h-16 items-center gap-2 rounded-[18px] border-2 bg-[var(--app-card)] p-2 outline-none transition-transform active:translate-y-1 focus-visible:ring-4 focus-visible:ring-[var(--app-accent)]"
       style={{
-        gridColumn: column,
-        gridRow: row,
+        gridColumn: snakeColumn(step.index),
+        gridRow: Math.floor(step.index / 2) + 1,
         borderColor: current ? subject.color : 'var(--app-border)',
-        background: current ? `${subject.color}0d` : '#fff',
+        background: current ? `${subject.color}0d` : 'var(--app-card)',
         boxShadow: `0 4px 0 ${current ? subject.shadow : 'var(--app-shadow)'}`,
       }}
     >
@@ -173,9 +202,9 @@ function PathStep({ index, topic, subject, currentIndex }: { index: number; topi
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[9px] font-black uppercase tracking-[0.08em]" style={{ color: current ? subject.color : done ? 'var(--app-success)' : 'var(--app-text-muted)' }}>
-          {current ? 'Sıradaki' : done ? 'Tamamlandı' : exam ? 'Ünite sonu' : `${index + 1}. ders`}
+          {current ? 'Sıradaki' : done ? 'Tamamlandı' : exam ? 'Ünite sonu' : `${step.index + 1}. ders`}
         </span>
-        <span className={`mt-0.5 block text-[11px] font-extrabold leading-[13px] ${locked ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text)]'}`}>{topic}</span>
+        <span className={`mt-0.5 block text-[11px] font-extrabold leading-[13px] ${locked ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text)]'}`}>{step.label}</span>
       </span>
     </Link>
   )
@@ -197,6 +226,7 @@ export function MobileHomeDemo({
   classroomEnabled = false,
   institutionEnabled = false,
   showBottomNav = true,
+  userId = null,
 }: MobileHomeDemoProps = {}) {
   const visibleSubjects = useMemo(
     () => SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id)),
@@ -206,9 +236,49 @@ export function MobileHomeDemo({
   const [coachOpen, setCoachOpen] = useState(true)
   const [coachMessage, setCoachMessage] = useState(0)
   const subject = useMemo(() => visibleSubjects.find((item) => item.id === subjectId) ?? visibleSubjects[0] ?? SUBJECTS[0], [subjectId, visibleSubjects])
-  const currentIndex = mode === 'demo' ? 2 : 0
-  const completedCount = currentIndex
-  const gameHref = `/arena/${subject.id === 'ingilizce' ? 'wordquest' : subject.id}`
+  const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
+  const gameHref = `/arena/${gameSlug}`
+
+  // Canli modda yol, oyunun kanonik kategori listesi + kullanicinin gercek
+  // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
+  // yok; sabit ornek icerik gosterilir.
+  const progress = useTopicProgress(mode === 'live' ? gameSlug : null, userId)
+  const isLivePath = mode === 'live' && progress.topics.length > 0
+
+  const steps: PathStepModel[] = useMemo(() => {
+    if (isLivePath) {
+      return progress.topics.map((topic, index) => ({
+        key: `${gameSlug}-${topic.category}`,
+        label: topic.label,
+        // Adim gercekten o konuya goturur: lobi ?category ile acilir.
+        href: `${gameHref}?category=${encodeURIComponent(topic.category)}`,
+        index,
+        done: topic.completed,
+        current: index === progress.currentIndex,
+        exam: false,
+        // Canli yolda kilit YOK: her konu her zaman calisilabilir olmali.
+        locked: false,
+      }))
+    }
+    const demoCurrent = 2
+    return subject.topics.map((topic, index) => ({
+      key: `${subject.id}-${topic}`,
+      label: topic,
+      href: gameHref,
+      index,
+      done: index < demoCurrent,
+      current: index === demoCurrent,
+      exam: index === subject.topics.length - 1,
+      locked: index > demoCurrent,
+    }))
+  }, [gameHref, gameSlug, isLivePath, progress.currentIndex, progress.topics, subject.id, subject.topics])
+
+  const currentStep = steps.find((step) => step.current) ?? steps[0]
+  const completedCount = steps.filter((step) => step.done).length
+  const stepCount = Math.max(1, steps.length)
+  const unitLabel = isLivePath
+    ? `${examLabel} ${subject.label} · ${steps.length} konu`
+    : subject.unit
   const message = COACH_MESSAGES[coachMessage]
   const MessageIcon = message.icon
   const bubbleRadius = '30px 30px 30px 16px'
@@ -223,7 +293,7 @@ export function MobileHomeDemo({
           : 'Günlük hedef tamam!'
       : message.title
   const coachBody = coachMessage === 0
-    ? `${subject.topics[currentIndex]} için 10 soruluk kısa dersin hazır. Yaklaşık 4 dakikada tamamlayabilirsin.`
+    ? `${currentStep?.label ?? subject.label} için 10 soruluk kısa dersin hazır. Yaklaşık 4 dakikada tamamlayabilirsin.`
     : coachMessage === 1
       ? 'Önce soru kökündeki ipucunu yakala. Bildiklerini küçük adımlara bölmek sana zaman kazandırır.'
       : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
@@ -298,13 +368,13 @@ export function MobileHomeDemo({
             <div className="pointer-events-none absolute -right-8 -top-14 h-32 w-32 rounded-full border-[22px] border-white/10" />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/75">{subject.unit}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/75">{unitLabel}</p>
                 <h1 className="mt-1 text-lg font-black leading-tight">{subject.label} Yolu</h1>
                 <p className="mt-1 truncate text-[11px] font-semibold text-white/80">{subject.description}</p>
               </div>
-              <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">{completedCount} / 6</span>
+              <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">{completedCount} / {steps.length}</span>
             </div>
-            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px]"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / 6) * 100}%` }} /></div>
+            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px]"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
           </div>
         </section>
 
@@ -312,12 +382,12 @@ export function MobileHomeDemo({
           <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)]">
             <div className="relative z-10 max-w-[64%]">
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Bugünkü ders</div>
-              <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{subject.topics[currentIndex]}</h2>
+              <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{currentStep?.label ?? subject.label}</h2>
               <div className="mt-2 flex items-center gap-3 text-[11px] font-bold text-[var(--app-text-sub)]">
                 <span className="flex items-center gap-1"><BookOpenText size={14} />10 soru</span>
                 <span className="flex items-center gap-1"><Clock3 size={14} />4 dk</span>
               </div>
-              <Link href={gameHref} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-white active:translate-y-1" style={{ background: subject.color, boxShadow: `0 5px 0 ${subject.shadow}` }}>
+              <Link href={currentStep?.href ?? gameHref} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-white active:translate-y-1" style={{ background: subject.color, boxShadow: `0 5px 0 ${subject.shadow}` }}>
                 <Play size={17} fill="currentColor" /> DEVAM ET
               </Link>
             </div>
@@ -336,13 +406,16 @@ export function MobileHomeDemo({
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Ünite planı</div>
               <h2 className="text-[15px] font-black">Öğrenme yolu</h2>
             </div>
-            <div className="rounded-xl bg-[var(--app-card)] px-2.5 py-1.5 text-[10px] font-black text-[var(--app-text-sub)] shadow-[0_2px_0_var(--app-shadow)]">{completedCount} / 6</div>
+            <div className="rounded-xl bg-[var(--app-card)] px-2.5 py-1.5 text-[10px] font-black text-[var(--app-text-sub)] shadow-[0_2px_0_var(--app-shadow)]">{completedCount} / {steps.length}</div>
           </div>
-          <div className="relative grid grid-cols-2 grid-rows-3 gap-x-8 gap-y-1.5">
+          <div
+            className="relative grid grid-cols-2 gap-x-8 gap-y-1.5"
+            style={{ gridTemplateRows: `repeat(${Math.ceil(stepCount / 2)}, minmax(0, 1fr))` }}
+          >
             <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path d="M25 16.5 H75 V50 H25 V83.5 H75" fill="none" stroke="var(--app-shadow)" strokeWidth="1.8" strokeDasharray="2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d={snakePath(stepCount)} fill="none" stroke="var(--app-shadow)" strokeWidth="1.8" strokeDasharray="2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {subject.topics.map((topic, index) => <PathStep key={`${subject.id}-${topic}`} index={index} topic={topic} subject={subject} currentIndex={currentIndex} />)}
+            {steps.map((step) => <PathStep key={step.key} step={step} subject={subject} />)}
           </div>
         </section>
 
@@ -468,7 +541,7 @@ export function MobileHomeDemo({
                     </button>
                   ) : (
                     <Link
-                      href={gameHref}
+                      href={currentStep?.href ?? gameHref}
                       onClick={() => setCoachOpen(false)}
                       className="flex min-h-10 items-center gap-1 rounded-xl bg-[var(--app-success-solid)] px-3 text-[10px] font-black text-white shadow-[0_4px_0_var(--app-success-strong)] active:translate-y-0.5 active:shadow-none"
                     >

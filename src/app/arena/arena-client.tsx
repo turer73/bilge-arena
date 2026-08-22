@@ -142,6 +142,7 @@ export default function ArenaClient() {
         classroomEnabled={classroomEnabled}
         institutionEnabled={institutionMobileVisible}
         showBottomNav={false}
+        userId={user?.id ?? null}
       />
     )
   }

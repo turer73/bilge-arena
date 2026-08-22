@@ -90,9 +90,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
-  // Eski sozlesme korunur: yalniz label+percentage disari sizar (category/total
-  // helper'in ic kullanimi icin, plan-uretimi bunlari dogrudan helper'dan okur).
-  const topics = strengths.map(({ label, percentage }) => ({ label, percentage }))
+  // label+percentage eski sozlesme; category+total EK alanlar (additive).
+  // Mobil ogrenme yolu kanonik mufredat listesiyle (GAMES[game].categories)
+  // eslestirme yapabilmek icin slug'a, "hic baslanmadi" ile "denendi ama %0"
+  // ayrimi icin de orneklem sayisina ihtiyac duyar. Ikisi de kullanicinin
+  // KENDI verisi ve kategori taksonomisi zaten istemci sabitlerinde public.
+  const topics = strengths.map(({ label, percentage, category, total }) => ({
+    label,
+    percentage,
+    category,
+    total,
+  }))
 
   return NextResponse.json(
     { topics, game },

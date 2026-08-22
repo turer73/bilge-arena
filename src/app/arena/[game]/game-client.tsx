@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams, useRouter } from 'next/navigation'
-import { type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
+import { GAMES, type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
 import { defaultExamRefForType } from '@/lib/constants/exam-types'
@@ -25,6 +25,7 @@ export default function GameClient() {
   const router = useRouter()
   const { profile } = useAuthStore()
   const setExamRef = useGameStore((s) => s.setExamRef)
+  const setCategory = useGameStore((s) => s.setCategory)
   const gameSlug = params.game as string
   const isValidSlug = GAME_SLUGS.includes(gameSlug as GameSlug)
 
@@ -42,6 +43,18 @@ export default function GameClient() {
       setExamRef(defaultExamRefForType(profile.exam_type))
     }
   }, [isValidSlug, profile?.exam_type, setExamRef])
+
+  // Mobil ogrenme yolu adimlari ?category=<slug> ile gelir: lobi o konuyla
+  // acilsin. Ayni sayfa icinde sonradan degisen query'yi izlemeye gerek yok,
+  // her adim yeni bir mount uretiyor. useSearchParams Suspense gerektirir;
+  // client effect'te window.location yeter (siralama-client ile ayni kalip).
+  useEffect(() => {
+    if (!isValidSlug || typeof window === 'undefined') return
+    const requested = new URLSearchParams(window.location.search).get('category')
+    if (!requested) return
+    if (!GAMES[gameSlug as GameSlug].categories.includes(requested)) return
+    setCategory(requested)
+  }, [gameSlug, isValidSlug, setCategory])
 
   if (!isValidSlug) return null
 
