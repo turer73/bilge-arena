@@ -40,13 +40,13 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
   if (!nextAction) {
     return (
       <article
-        className="animate-fadeUp rounded-2xl border border-[var(--growth)]/30 bg-[var(--growth)]/5 p-4"
+        className="animate-fadeUp rounded-[22px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-success-border)]"
         style={{ animationDelay: '0.34s', animationFillMode: 'both' }}
       >
-        <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--growth-text)]">GÜÇLÜ</p>
-        <h2 className="mt-1 text-sm font-extrabold text-[var(--text)]">Takip edilen kazanımların güçlü görünüyor</h2>
-        <p className="mt-1 text-xs text-[var(--text-sub)]">Planını tamamlayarak seviyeni koruyabilirsin.</p>
-        <Link href={mapHref} className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-[var(--focus-text)] hover:underline">
+        <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-success-ink)]">GÜÇLÜ</p>
+        <h2 className="mt-1 text-sm font-black text-[var(--app-text)]">Takip edilen kazanımların güçlü görünüyor</h2>
+        <p className="mt-1 text-xs font-semibold text-[var(--app-text-sub)]">Planını tamamlayarak seviyeni koruyabilirsin.</p>
+        <Link href={mapHref} className="mt-2 inline-flex min-h-11 items-center text-xs font-black text-[var(--app-accent-text)] hover:underline">
           Hâkimiyet haritanı aç
         </Link>
       </article>
@@ -67,13 +67,13 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
 
   return (
     <article
-      className="animate-fadeUp overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-sm"
+      className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-border)]"
       style={{ animationDelay: '0.34s', animationFillMode: 'both' }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card-sunken)] px-4 py-3">
         <div>
-          <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--focus-text)]">SIRADAKİ EN İYİ ADIM</p>
-          <p className="mt-0.5 text-[10px] text-[var(--text-sub)]">Planından sonra buna odaklan</p>
+          <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">SIRADAKİ EN İYİ ADIM</p>
+          <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">Planından sonra buna odaklan</p>
         </div>
         <div className="flex gap-1.5" aria-label="Kazanım durumları">
           {strongCount > 0 && (
@@ -95,31 +95,31 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
             <p className={`text-[10px] font-extrabold tracking-[0.14em] ${needsEvidence ? 'text-[var(--wisdom-text)]' : 'text-[var(--focus-text)]'}`}>
               {statusLabel}
             </p>
-            <h2 className="mt-1 text-sm font-extrabold text-[var(--text)] md:text-base">{nextAction.title}</h2>
+            <h2 className="mt-1 text-sm font-black text-[var(--app-text)] md:text-base">{nextAction.title}</h2>
           </div>
           <span className="shrink-0 text-sm font-extrabold text-[var(--focus-text)]">
             {needsEvidence ? `${nextAction.attempts}/3` : `%${nextAction.score}`}
           </span>
         </div>
 
-        <p className="mt-2 text-xs leading-relaxed text-[var(--text-sub)]">
+        <p className="mt-2 text-xs font-semibold leading-relaxed text-[var(--app-text-sub)]">
           {needsEvidence
             ? 'Bu kazanım hakkında güvenilir bir yönlendirme için birkaç cevap daha gerekiyor.'
             : 'Kısa bir pratik, bu kazanımı güçlü seviyeye yaklaştıracak.'}
         </p>
 
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]" aria-hidden="true">
-          <div className="h-full rounded-full bg-[var(--focus)]" style={{ width: `${progress}%` }} />
+        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[var(--app-border-soft)] p-[2px]" aria-hidden="true">
+          <div className="h-full rounded-full bg-[var(--app-accent)]" style={{ width: `${progress}%` }} />
         </div>
 
         <button
           type="button"
           onClick={handlePractice}
-          className="mt-4 min-h-12 w-full rounded-xl border border-[var(--focus)]/35 bg-[var(--focus)]/10 px-4 text-sm font-extrabold text-[var(--focus-text)] transition-colors hover:bg-[var(--focus)]/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+          className="mt-4 min-h-12 w-full rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)]"
         >
           {needsEvidence ? 'Kanıt İçin Pratik Yap' : 'Bu Kazanımı Çalış'}
         </button>
-        <Link href={mapHref} className="mt-2 flex min-h-11 items-center justify-center text-xs font-bold text-[var(--text-sub)] hover:text-[var(--focus-text)] hover:underline">
+        <Link href={mapHref} className="mt-2 flex min-h-11 items-center justify-center text-xs font-black text-[var(--app-text-sub)] hover:text-[var(--app-accent-text)] hover:underline">
           Tüm hâkimiyet haritasını aç
         </Link>
       </div>

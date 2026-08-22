@@ -138,26 +138,26 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
     <>
       <section
         aria-labelledby="study-assistant-title"
-        className="animate-fadeUp overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] shadow-sm"
+        className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-accent-border)]"
         style={{ animationDelay: '0.4s', animationFillMode: 'both' }}
       >
-        <div className="flex min-h-14 items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
+        <div className="flex min-h-14 items-center justify-between gap-3 border-b-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             <span className="text-xl" aria-hidden="true">🦉</span>
             <div className="min-w-0">
-              <h2 id="study-assistant-title" className="text-xs font-extrabold tracking-wide text-[var(--text)]">
+              <h2 id="study-assistant-title" className="text-xs font-black tracking-wide text-[var(--app-text)]">
                 Bilge Asistan
               </h2>
-              <p className="truncate text-[10px] text-[var(--text-sub)]">Takıldığın yerde ayrıntılı yardım al</p>
+              <p className="truncate text-[10px] font-semibold text-[var(--app-text-sub)]">Takıldığın yerde ayrıntılı yardım al</p>
             </div>
           </div>
-          <span className="rounded-full bg-[var(--focus)]/10 px-2 py-1 text-[10px] font-bold text-[var(--focus-text)]">
+          <span className="rounded-xl bg-[var(--app-card)] px-2.5 py-1 text-[10px] font-black text-[var(--app-accent-text)] shadow-[0_2px_0_var(--app-accent-border)]">
             Hazır
           </span>
         </div>
 
         <div className="p-3 sm:p-4">
-          <label htmlFor={targetId} className="mb-1.5 block text-[11px] font-extrabold text-[var(--text)]">
+          <label htmlFor={targetId} className="mb-1.5 block text-[11px] font-black text-[var(--app-text)]">
             Hangi konu veya soruda yardım istiyorsun?
           </label>
           <textarea
@@ -173,14 +173,14 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
             aria-invalid={Boolean(targetError)}
             aria-describedby={targetError ? `${targetId}-error` : `${targetId}-hint`}
             placeholder="Örn. İkinci dereceden denklemler veya soru metni"
-            className="min-h-[72px] w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm leading-5 text-[var(--text)] outline-none transition placeholder:text-[var(--text-sub)] focus:border-[var(--focus)] focus:ring-2 focus:ring-[var(--focus)]/20"
+            className="min-h-[76px] w-full resize-y rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] px-3 py-2.5 text-sm font-semibold leading-5 text-[var(--app-text)] outline-none transition placeholder:text-[var(--app-text-muted)] focus:border-[var(--app-accent)] focus:ring-2 focus:ring-[var(--app-accent)]/20"
           />
           {targetError ? (
             <p id={`${targetId}-error`} role="alert" className="mt-1.5 text-[11px] font-semibold text-[var(--urgency-text)]">
               {targetError}
             </p>
           ) : (
-            <p id={`${targetId}-hint`} className="mt-1.5 text-[10px] leading-4 text-[var(--text-sub)]">
+            <p id={`${targetId}-hint`} className="mt-1.5 text-[10px] font-semibold leading-4 text-[var(--app-text-sub)]">
               Yanıt seçtiğin {GAMES[game].name} ve {examRef ?? 'sınav'} bağlamına göre hazırlanır.
             </p>
           )}
@@ -192,10 +192,10 @@ export function StudyAssistantLauncher({ game, examRef }: { game: GameSlug; exam
                 type="button"
                 aria-label={action.label}
                 onClick={() => void openBoard(action)}
-                className="min-h-[76px] rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--focus)] hover:bg-[var(--focus)]/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+                className="min-h-[78px] rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-3 text-left shadow-[0_3px_0_var(--app-border)] transition active:translate-y-0.5 active:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)]"
               >
-                <span className="block text-sm font-black text-[var(--text)]">{action.label}</span>
-                <span className="mt-1 block text-[11px] leading-4 text-[var(--text-sub)]">{action.description}</span>
+                <span className="block text-sm font-black text-[var(--app-text)]">{action.label}</span>
+                <span className="mt-1 block text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">{action.description}</span>
               </button>
             ))}
           </div>

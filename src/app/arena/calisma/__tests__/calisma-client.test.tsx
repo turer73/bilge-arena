@@ -44,7 +44,7 @@ describe('CalismaClient', () => {
   test('loading durumunda erişilebilir yükleme durumu gösterir', () => {
     mockedUseAuthStore.mockReturnValue({ user: null, profile: null, loading: true } as never)
     render(<CalismaClient />)
-    expect(screen.getByRole('status')).toHaveTextContent('Yükleniyor')
+    expect(screen.getByRole('status')).toHaveTextContent('Çalışma planın hazırlanıyor')
   })
 
   test('giriş yoksa kişisel hub yerine giriş CTA gösterir', () => {

@@ -49,7 +49,9 @@ describe('SiralamaClient social league gate', () => {
     expect(screen.queryByLabelText('Yakın Rakip Ligi fixture')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Olumlu Öğrenme Spotları fixture')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Takım Bossu fixture')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Haftalık Sıralama/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Lig' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Haftalık sıralamada yerini al/ })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Sıralama dönemi' })).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText(/Henüz kimse/)).toBeInTheDocument())
   })
 
@@ -60,8 +62,8 @@ describe('SiralamaClient social league gate', () => {
     expect(screen.getByLabelText('Yakın Rakip Ligi fixture')).toBeInTheDocument()
     expect(screen.queryByLabelText('Olumlu Öğrenme Spotları fixture')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Takım Bossu fixture')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /XP Sıralaması/ })).toBeInTheDocument()
-    expect(screen.getByText(/Yakın Rakip Ligi puanından ayrıdır/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Öğren, puan topla, yüksel/ })).toBeInTheDocument()
+    expect(screen.getByText(/XP tablosu ile yakın rakip ligin ayrı hesaplanır/i)).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText(/Henüz kimse/)).toBeInTheDocument())
   })
 
