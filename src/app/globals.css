@@ -360,8 +360,6 @@
   --app-accent-ink: var(--focus-xl);
   --app-accent-tint: var(--focus-bg);
   --app-accent-border: var(--focus-border);
-  /* Dolu vurgu butonlari uzerindeki metin - her temada beyaz */
-  --app-on-accent: #ffffff;
 
   /* Durum renkleri (app yuzeyleri uzerinde) */
   --app-success: var(--growth-text);

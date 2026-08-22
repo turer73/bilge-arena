@@ -87,7 +87,7 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
 
       <div className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-strong)] bg-gradient-to-br from-[var(--app-accent)] via-[var(--app-accent-strong)] to-[var(--app-accent-strong)] p-5 text-white shadow-[0_6px_0_var(--app-accent-strong)] animate-fadeUp">
         <div className="relative z-10 max-w-[58%] pt-2">
-          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--app-shadow-accent)]">
+          <div className="text-[11px] font-black uppercase tracking-[0.16em] text-white/75">
             Tur tamamlandı
           </div>
           <div

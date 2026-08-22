@@ -129,7 +129,7 @@ export function DenemeResult({
     <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-4 bg-[var(--app-bg)] px-4 py-5 text-[var(--app-accent-ink)]">
       <div className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-strong)] bg-gradient-to-br from-[var(--app-accent)] via-[var(--app-accent-strong)] to-[var(--app-accent-strong)] p-5 text-white shadow-[0_6px_0_var(--app-accent-strong)] animate-fadeUp">
         <div className="relative z-10 max-w-[60%]">
-          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-shadow-accent)]">
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/75">
             Deneme sonucu
           </div>
           <h1 className="mt-1 font-display text-lg font-black leading-tight">{gameName}</h1>

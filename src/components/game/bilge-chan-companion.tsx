@@ -336,7 +336,7 @@ export function BilgeChanCompanion({
       {message && (
         <div
           aria-live="polite"
-          className={`relative ${compact ? 'order-2 mb-1 rounded-[24px_24px_24px_12px] border-2 border-[var(--app-shadow)] bg-[var(--app-card)] text-[var(--app-text)] shadow-[0_4px_0_var(--app-shadow)]' : 'mb-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--card)] text-[var(--text)] shadow-md'} w-full ${bubbleWidth} px-3 py-2.5 text-xs font-semibold leading-relaxed`}
+          className={`relative ${compact ? 'order-2 mb-1 rounded-[24px_24px_24px_12px] border-2 border-[var(--app-border)] bg-[var(--app-card)] text-[var(--app-text)] shadow-[0_4px_0_var(--app-shadow)]' : 'mb-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--card)] text-[var(--text)] shadow-md'} w-full ${bubbleWidth} px-3 py-2.5 text-xs font-semibold leading-relaxed`}
         >
           <Typewriter key={message} text={message} />
           {ttsReady && message && (
