@@ -26,12 +26,16 @@ describe('/rehber/[slug]', () => {
     expect(
       screen.getByRole('heading', { name: REHBER_ARTICLES[0].title, level: 1 })
     ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Kaynaklar ve güncellik' })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /ÖSYM/u })).toHaveLength(2)
   })
 
   it('generateMetadata baslik + canonical uretir', async () => {
     const slug = REHBER_SLUGS[0]
     const m = await generateMetadata({ params: Promise.resolve({ slug }) })
-    expect(m.title).toBeTruthy()
+    expect(m.title).toEqual({
+      absolute: `${REHBER_ARTICLES[0].title} | Bilge Arena Rehber`,
+    })
     expect(m.alternates?.canonical).toContain(`/rehber/${slug}`)
   })
 })

@@ -77,6 +77,8 @@ export type EventName =
   | 'ActivationMicroSessionCompleted'
   | 'ActivationSaveStarted'
   | 'ActivationRewardClaimed'
+  // Pazarlama sayfalari — anonim CTA performansi, PII yok.
+  | 'MarketingCtaClicked'
 
 /**
  * Plausible custom event gonder. Sessizce basarisiz olur (hic fırlatmaz).

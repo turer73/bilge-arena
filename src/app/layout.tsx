@@ -76,7 +76,18 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').t
 const jsonLd = [
   {
     '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/#website`,
+    name: 'Bilge Arena',
+    alternateName: 'BilgeArena',
+    url: siteUrl,
+    inLanguage: 'tr-TR',
+    publisher: { '@id': `${siteUrl}/#organization` },
+  },
+  {
+    '@context': 'https://schema.org',
     '@type': 'WebApplication',
+    '@id': `${siteUrl}/#webapp`,
     name: 'Bilge Arena',
     description: 'Oyunlaştırılmış YKS, LGS ve AYT hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularıyla öğren, kazan, yüksel!',
     url: siteUrl,
@@ -90,11 +101,12 @@ const jsonLd = [
     inLanguage: 'tr',
     // aggregateRating KALDIRILDI: sitede gorunur puanlama mekanizmasi yok;
     // dogrulanamayan rating markup'i Google manuel-aksiyon sebebi
-    author: { '@type': 'Organization', name: 'Bilge Arena' },
+    author: { '@id': `${siteUrl}/#organization` },
   },
   {
     '@context': 'https://schema.org',
     '@type': 'EducationalOrganization',
+    '@id': `${siteUrl}/#organization`,
     name: 'Bilge Arena',
     url: siteUrl,
     logo: `${siteUrl}/logo-horizontal.png`,
