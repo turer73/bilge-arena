@@ -98,7 +98,7 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
-      - name: Run database/__tests__ (LLM judge unit tests)
+      - name: Run database contract tests
         run: npm run test:db
 
       - name: Upload coverage to Codecov

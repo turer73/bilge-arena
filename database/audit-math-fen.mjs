@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * matematik + fen aktif sorularin kalite denetimi.
+ * DIAGNOSTIC ONLY: question_validation_decisions yazmaz ve yayin karari degildir.
  * Kontroller:
  *  1. Cevap dagilimi (A/B/C/D/E — ideal ~%20 her biri)
  *  2. Garbled/encoding hatasi (ASCII Turkce)

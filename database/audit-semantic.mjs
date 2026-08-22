@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Semantic Audit — risk-pattern tarayici
+ * DIAGNOSTIC ONLY: question_validation_decisions yazmaz ve yayin karari degildir.
  * --------------------------------------------------------------
  * audit-claude-batch.json'u oku, semantik risk tasiyan sorulari isaretle:
  *   - Tarihsel iddia (yil + olay)
