@@ -18,7 +18,8 @@ import { isMockStrategyUiEnabled, startMockStrategyAttempt } from '@/lib/mock-st
 import { isPaperModeUiEnabled, paperPackCreateHref } from '@/lib/paper-mode/client'
 import { useMockStrategyResult } from '@/lib/hooks/use-mock-strategy-result'
 import { toast } from '@/stores/toast-store'
-import { Clock3, Flame, Heart, Sparkles, X } from 'lucide-react'
+import { Clock3, Flame, Heart, Pause, Play, Sparkles, X } from 'lucide-react'
+import { useGameAutoPause } from '@/lib/hooks/use-game-auto-pause'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
@@ -95,6 +96,19 @@ export function QuizEngine({ game }: QuizEngineProps) {
   )
   const personalizedMock = usePersonalizedMock(game, user?.id, gameStore.selectedExamRef)
   const masteryMap = useMasteryMap(game, user?.id, gameStore.selectedExamRef)
+  const autoPauseSessionKey = quiz.attemptId ?? quizStore.questions[0]?.id ?? null
+  const autoPauseActive = quiz.screen === 'game' && !quiz.isDeneme && quizStore.state === 'playing'
+  const { autoPaused, resume: clearAutoPause } = useGameAutoPause({
+    active: autoPauseActive,
+    sessionKey: autoPauseSessionKey,
+    onPause: quiz.timer.pause,
+  })
+  const resumeAutoPausedGame = useCallback(() => {
+    clearAutoPause()
+    if (!quiz.helpOpen && quiz.mode.timePerQuestion > 0 && useQuizStore.getState().state === 'playing') {
+      quiz.timer.start()
+    }
+  }, [clearAutoPause, quiz.helpOpen, quiz.mode.timePerQuestion, quiz.timer])
   const sessionSaver = useSessionSaver({
     screen: quiz.screen,
     userId: user?.id,
@@ -546,11 +560,27 @@ export function QuizEngine({ game }: QuizEngineProps) {
           background: var(--app-bg);
         }
       }
+      .game-auto-paused *, .game-auto-paused *::before, .game-auto-paused *::after {
+        animation-play-state: paused !important;
+      }
     `}</style>
     {/* Can kaybi kirmizi flash */}
     {quiz.showLifeLost && <LifeLostOverlay />}
 
-    <div className="mx-auto min-h-[100dvh] max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:my-6 md:min-h-0 md:max-w-[560px] md:rounded-[32px] md:border-2 md:border-[var(--app-border)] md:p-5 md:shadow-[0_8px_0_var(--app-shadow)]">
+    <div className={`relative mx-auto min-h-[100dvh] max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:my-6 md:min-h-0 md:max-w-[560px] md:rounded-[32px] md:border-2 md:border-[var(--app-border)] md:p-5 md:shadow-[0_8px_0_var(--app-shadow)] ${autoPaused ? 'game-auto-paused' : ''}`}>
+      {autoPaused && (
+        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[var(--app-overlay)] px-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="auto-pause-title">
+          <section className="w-full max-w-sm rounded-[26px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-5 text-center shadow-[0_8px_0_rgba(15,23,42,.18)]">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><Pause size={28} fill="currentColor" /></span>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-accent-text)]">Pil koruması</p>
+            <h2 id="auto-pause-title" className="mt-1 text-xl font-black text-[var(--app-text)]">Oyun duraklatıldı</h2>
+            <p className="mt-2 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">Sekme arka plana geçti veya bir süredir işlem yapılmadı. Süre ve hareketler sen dönene kadar durdu.</p>
+            <button type="button" onClick={resumeAutoPausedGame} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none">
+              <Play size={17} fill="currentColor" /> Devam Et
+            </button>
+          </section>
+        </div>
+      )}
       {/* Mobil odak modu: ilerleme, süre ve oturum kaynakları tek bakışta. */}
       <header
         className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)] md:-mx-5 md:-mt-5 md:top-[var(--navbar-h)] md:rounded-t-[30px] md:px-5 md:pt-4"
