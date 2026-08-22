@@ -294,3 +294,32 @@ describe('4 sikli soru', () => {
     expect(r.verdict).toBe('APPROVED')
   })
 })
+
+/**
+ * STEM_MISSING_TOKEN: soru kokunden kelime dusmesi.
+ * Canli bankada 3 dogrulanmis ornek (weigh / account / bear), hepsi
+ * ai_gemini_gaps partisinden. ADVISORY cunku FP orani henuz olculmedi.
+ */
+describe('STEM_MISSING_TOKEN', () => {
+  it('advisory: tek basina reddetmez, insana gider', () => {
+    const adv: AgentOutcome<AdversarialPayload> = ok({
+      reasoning: 'r',
+      findings: [{ code: 'STEM_MISSING_TOKEN', evidence: "kokte fiil yok; siklar yalniz edat" }],
+    })
+    const r = deriveVerdict(run({ adversarial: adv }))
+    expect(r.verdict).toBe('NEEDS_REVIEW')
+    expect(r.findings.map((f) => f.code)).toEqual(['STEM_MISSING_TOKEN'])
+  })
+
+  it('blocking bir bulguyla birlikte gelirse REJECTED\'i engellemez', () => {
+    const adv: AgentOutcome<AdversarialPayload> = ok({
+      reasoning: 'r',
+      findings: [{ code: 'STEM_MISSING_TOKEN', evidence: 'kokte fiil yok' }],
+    })
+    const r = deriveVerdict(run({
+      blind: [blind(4), blind(4), blind(4)], verifier: verifierOk(4), adversarial: adv,
+    }))
+    expect(r.verdict).toBe('REJECTED')
+    expect(r.findings.map((f) => f.code)).toContain('STEM_MISSING_TOKEN')
+  })
+})

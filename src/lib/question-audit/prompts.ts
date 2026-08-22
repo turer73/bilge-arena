@@ -14,7 +14,7 @@ import type { QuestionDraft } from './types'
 
 export const PROMPT_VERSION = {
   blindSolver: 'blind-solver@1',
-  adversarial: 'adversarial@1',
+  adversarial: 'adversarial@2',
   // @2: `terse` tanimi soru turune baglandi. @1'de model UZUNLUGU olcuyordu,
   // YETERLILIGI degil: 200 soruluk kalibrasyonda 64/200 (%32) terse geldi ve
   // ornekler incelendiginde tanim/hatirlama sorulari cikti — "Tree = agac.",
@@ -103,13 +103,19 @@ Arayacagin kusurlar YALNIZ sunlar:
   var (or. "x tam sayidir" denmemis ve sonuc buna bagli).
 - AMBIGUOUS_WORDING: ifade iki farkli okumaya izin veriyor ve bu okumalar FARKLI
   siklara goturuyor. Sadece "biraz mugah" yeterli degil.
+- STEM_MISSING_TOKEN: soru kokunden bir kelime dusmus ve bu yuzden HICBIR sik
+  cumleyi gramatik yapmiyor. Tipik ornek: phrasal-verb sorusunda siklar yalniz
+  edat (up/out/for/off) ama kokte fiil yok -> "trying to ___ the readings"
+  hicbir edatla gramatik olmaz. DIKKAT: siklar TAM fiil iceriyorsa (take off,
+  give up) kokte fiil OLMAMASI dogrudur, bu kusur DEGILDIR. Once siklarin
+  seklini kontrol et.
 
 Cevap anahtarini gormuyorsun; hangi sikkin dogru sayildigini bilmiyorsun.
 Kusur yoksa findings bos dizi olsun.
 
 ${jsonOnly([
       '"reasoning": <string — hangi acilari denedin, neden gectiler/kaldilar>',
-      '"findings": <dizi; her eleman {"code": "MULTIPLE_CORRECT"|"MISSING_PREMISE"|"AMBIGUOUS_WORDING", "evidence": string, "optionIndexes"?: integer[]}>',
+      '"findings": <dizi; her eleman {"code": "MULTIPLE_CORRECT"|"MISSING_PREMISE"|"AMBIGUOUS_WORDING"|"STEM_MISSING_TOKEN", "evidence": string, "optionIndexes"?: integer[]}>',
     ])}`,
     user: renderContext(v),
   }

@@ -22,7 +22,7 @@ import { FLAW_SEVERITY, type FlawCode } from './types'
 const FLAW_CODES = Object.keys(FLAW_SEVERITY) as [FlawCode, ...FlawCode[]]
 
 /** Adversarial'in uretmesine izin verilen kodlar. Digerleri baska ajanin isi. */
-const ADVERSARIAL_CODES = ['MULTIPLE_CORRECT', 'MISSING_PREMISE', 'AMBIGUOUS_WORDING'] as const
+const ADVERSARIAL_CODES = ['MULTIPLE_CORRECT', 'MISSING_PREMISE', 'AMBIGUOUS_WORDING', 'STEM_MISSING_TOKEN'] as const
 
 const findingSchema = (optionCount: number) =>
   z.object({

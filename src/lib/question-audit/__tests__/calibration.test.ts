@@ -178,7 +178,7 @@ describe('kosu mekanigi', () => {
     expect(replay.cache).toEqual({ hits: 1, misses: 0 })
     expect(replay.cost).toEqual({ inputTokens: 0, outputTokens: 0, totalLatencyMs: 0 })
     expect(replay.promptVersions).toEqual({
-      blind: 'blind-solver@1', adversarial: 'adversarial@1', verifier: 'solution-verifier@2',
+      blind: 'blind-solver@1', adversarial: 'adversarial@2', verifier: 'solution-verifier@2',
     })
     expect(persistedAgain).toBe(false)
     expect(decisions).toBe(1)
