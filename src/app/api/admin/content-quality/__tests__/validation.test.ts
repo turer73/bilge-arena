@@ -101,7 +101,8 @@ describe('listeleme', () => {
     const { admin, calls } = fakeAdmin([])
     mocks.context.mockResolvedValue({ ok: true, userId: USER, admin })
     await GET(req('verdict=REJECTED&activeOnly=true'))
-    expect(calls.select[0]?.[0]).toContain('questions!inner(')
+    const selectArgs = calls.select[0] as unknown[]
+    expect(selectArgs[0]).toEqual(expect.stringContaining('questions!inner('))
     expect(calls.eq).toEqual(expect.arrayContaining([['questions.is_active', true]]))
   })
 
