@@ -23,7 +23,7 @@ export async function generateMetadata({
   if (!a) return {}
   const ogImage = `${siteUrl}/og?title=${encodeURIComponent(a.title)}&subtitle=${encodeURIComponent(a.description.slice(0, 80))}`
   return {
-    title: `${a.title} | Bilge Arena Rehber`,
+    title: { absolute: `${a.title} | Bilge Arena Rehber` },
     description: a.description,
     alternates: { canonical: `${siteUrl}/rehber/${slug}` },
     openGraph: {

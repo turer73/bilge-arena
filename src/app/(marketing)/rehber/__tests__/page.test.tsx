@@ -33,7 +33,9 @@ describe('/rehber/[slug]', () => {
   it('generateMetadata baslik + canonical uretir', async () => {
     const slug = REHBER_SLUGS[0]
     const m = await generateMetadata({ params: Promise.resolve({ slug }) })
-    expect(m.title).toBeTruthy()
+    expect(m.title).toEqual({
+      absolute: `${REHBER_ARTICLES[0].title} | Bilge Arena Rehber`,
+    })
     expect(m.alternates?.canonical).toContain(`/rehber/${slug}`)
   })
 })
