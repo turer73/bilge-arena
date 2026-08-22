@@ -2,14 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { NextResponse, type NextRequest } from 'next/server'
+import { z } from 'zod'
+import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
+import { contentRpc } from '@/lib/content-governance/route-context'
 
 /**
  * GET /api/admin/question-quality — "Production drift" soru kalite kuyrugu (#378 Tier 2).
  *
  * Gercek kullanici cevap verisinden (questions.times_answered/times_correct
- * sayaclari) DUSUK BASARILI sorulari yuzeye cikarir + soru basina bekleyen
- * error_reports sayisini ekler. Iki kalite sinyalini (istatistik + kullanici
- * raporu) tek admin ekraninda birlestirir.
+ * sayaclari) DUSUK BASARILI sorulari yuzeye cikarir + soru basina acik
+ * yonetisim itirazi sayisini ekler. Bayrak kapali rollback penceresinde legacy
+ * error_reports okunur; bayrak acikken tek otorite question_appeals'tir.
  *
  * Query: minAnswered (varsayilan 20), maxRate (% varsayilan 50), limit (50).
  * Yetki: admin.questions.view. Veri service-role ile okunur (admin gate sonrasi).
@@ -18,6 +21,14 @@ import { NextResponse, type NextRequest } from 'next/server'
 // PostgREST hesaplanan oran uzerinden ORDER BY yapamaz; aday havuzunu en cok
 // oynanan (en guvenilir ornekleme) ile sinirlandirip JS tarafinda siralariz.
 const CANDIDATE_CAP = 500
+const appealCountsSchema = z.object({
+  items: z.array(z.object({
+    questionId: z.string().uuid(),
+    openCount: z.number().int().positive(),
+    verifiedOpenCount: z.number().int().nonnegative(),
+  }).strict()).max(CANDIDATE_CAP),
+  capped: z.boolean(),
+}).strict()
 
 function clampInt(raw: string | null, min: number, max: number, fallback: number): number {
   const n = parseInt(raw ?? String(fallback))
@@ -63,18 +74,34 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
-  // Bekleyen rapor sayilari (soru basina) — ikinci kalite sinyali.
-  const { data: reps, error: repErr } = await svc
-    .from('error_reports')
-    .select('question_id')
-    .eq('status', 'pending')
-  if (repErr) {
-    console.error('[admin/question-quality] reports error:', repErr.message)
-    return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
-  }
   const reportCounts = new Map<string, number>()
-  for (const r of (reps ?? []) as Array<{ question_id: string }>) {
-    reportCounts.set(r.question_id, (reportCounts.get(r.question_id) ?? 0) + 1)
+  let governedSignalsCapped = false
+  if (contentGovernanceEnabled()) {
+    const { data, error: signalError } = await contentRpc(
+      svc,
+      'get_question_quality_appeal_counts',
+      { p_user_id: admin.id, p_limit: CANDIDATE_CAP },
+    )
+    const parsed = appealCountsSchema.safeParse(data)
+    if (signalError || !parsed.success) {
+      console.error('[admin/question-quality] governed appeal signals unavailable')
+      return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
+    }
+    governedSignalsCapped = parsed.data.capped
+    for (const signal of parsed.data.items) reportCounts.set(signal.questionId, signal.openCount)
+  } else {
+    // Rollback window only: legacy reports remain readable until governance is enabled.
+    const { data: reps, error: repErr } = await svc
+      .from('error_reports')
+      .select('question_id')
+      .eq('status', 'pending')
+    if (repErr) {
+      console.error('[admin/question-quality] reports error:', repErr.message)
+      return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
+    }
+    for (const report of (reps ?? []) as Array<{ question_id: string }>) {
+      reportCounts.set(report.question_id, (reportCounts.get(report.question_id) ?? 0) + 1)
+    }
   }
 
   // P2a fix (Codex PR#242): rapor edilen sorular drift-örneklemesinin (times_answered
@@ -145,6 +172,6 @@ export async function GET(request: NextRequest) {
     // kalmis olabilir — UI bunu bildirir (sessiz kesme yok). NOT: rapor-soru
     // ek satırları capped sinyalini şişirmesin → yalnız drift örneklemesine bak.
     // P2 (Codex PR#245): rapor-id'leri de CAP'lendiyse (>CANDIDATE_CAP) bunu da bildir.
-    capped: driftRows.length >= CANDIDATE_CAP || reportedCapped,
+    capped: driftRows.length >= CANDIDATE_CAP || reportedCapped || governedSignalsCapped,
   })
 }

@@ -8,6 +8,29 @@ ALTER TABLE public.question_appeals
   ADD COLUMN IF NOT EXISTS attempt_id uuid REFERENCES public.verified_attempts(id) ON DELETE RESTRICT,
   ADD COLUMN IF NOT EXISTS evidence_kind text;
 
+CREATE OR REPLACE FUNCTION public.tg_question_appeal_evidence_default()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+BEGIN
+  IF NEW.evidence_kind IS NULL THEN
+    NEW.evidence_kind:=CASE
+      WHEN NEW.legacy_error_report_id IS NOT NULL THEN 'legacy_report'
+      WHEN NEW.session_answer_id IS NOT NULL THEN 'legacy_session'
+      ELSE 'current_revision'
+    END;
+  END IF;
+  RETURN NEW;
+END
+$fn$;
+
+DROP TRIGGER IF EXISTS trg_question_appeal_evidence_default ON public.question_appeals;
+CREATE TRIGGER trg_question_appeal_evidence_default
+  BEFORE INSERT ON public.question_appeals
+  FOR EACH ROW EXECUTE FUNCTION public.tg_question_appeal_evidence_default();
+
 CREATE INDEX IF NOT EXISTS question_appeals_revision_signal_idx
   ON public.question_appeals(revision_id,status,reason_code)
   WHERE revision_id IS NOT NULL;
@@ -43,6 +66,17 @@ BEGIN
 
 END
 $body$;
+
+-- Open-report dedup is revision scoped: a learner may report a genuinely new
+-- revision while an older revision is still under review.
+DROP INDEX IF EXISTS public.question_appeals_one_open_owner_question;
+CREATE UNIQUE INDEX IF NOT EXISTS question_appeals_one_open_owner_revision
+  ON public.question_appeals(user_id,question_id,revision_id)
+  WHERE status IN ('submitted','acknowledged','investigating');
+CREATE UNIQUE INDEX IF NOT EXISTS question_appeals_one_open_owner_legacy
+  ON public.question_appeals(user_id,question_id)
+  WHERE revision_id IS NULL
+    AND status IN ('submitted','acknowledged','investigating');
 
 CREATE OR REPLACE FUNCTION public.submit_question_appeal_v2(
   p_user_id uuid,
@@ -158,6 +192,36 @@ BEGIN
     v_evidence_kind := 'current_revision';
   END IF;
 
+  -- Resource-level serialization distinguishes an already-open appeal from a
+  -- request replay. Arbitrary unique violations must still escape as errors.
+  PERFORM pg_advisory_xact_lock(hashtextextended(
+    'question-appeal-open:'||p_user_id::text||':'||p_question_id::text||':'||v_revision_id::text,
+    0
+  ));
+  SELECT * INTO v_appeal
+  FROM public.question_appeals
+  WHERE user_id=p_user_id
+    AND question_id=p_question_id
+    AND revision_id=v_revision_id
+    AND status IN ('submitted','acknowledged','investigating')
+  ORDER BY submitted_at DESC,id DESC
+  LIMIT 1
+  FOR UPDATE;
+  IF FOUND THEN
+    v_result := jsonb_build_object(
+      'appealId',v_appeal.id,
+      'status',v_appeal.status,
+      'evidenceKind',v_appeal.evidence_kind,
+      'ackDueAt',v_appeal.ack_due_at,
+      'resolveDueAt',v_appeal.resolve_due_at,
+      'alreadyReported',true,
+      'replayed',false
+    );
+    INSERT INTO public.content_governance_requests
+    VALUES(p_user_id,'submit_appeal_v2',p_request_id,v_payload_hash,v_result,clock_timestamp());
+    RETURN v_result;
+  END IF;
+
   INSERT INTO public.question_appeals(
     user_id,question_id,session_answer_id,attempt_id,revision_id,evidence_kind,reason_code,description
   ) VALUES (
@@ -173,6 +237,7 @@ BEGIN
     'evidenceKind',v_evidence_kind,
     'ackDueAt',v_appeal.ack_due_at,
     'resolveDueAt',v_appeal.resolve_due_at,
+    'alreadyReported',false,
     'replayed',false
   );
   INSERT INTO public.content_governance_requests
@@ -194,7 +259,9 @@ BEGIN
   INSERT INTO public.question_appeals(user_id,question_id,session_answer_id,revision_id,evidence_kind,reason_code,description) VALUES(p_user_id,p_question_id,p_session_answer_id,r,CASE WHEN p_session_answer_id IS NULL THEN 'current_revision' ELSE 'legacy_session' END,p_reason,p_description) RETURNING * INTO appeal; INSERT INTO public.question_appeal_events(appeal_id,actor_id,event_type,public_message) VALUES(appeal.id,p_user_id,'submitted','Your appeal was received.'); out:=jsonb_build_object('appealId',appeal.id,'status','submitted','ackDueAt',appeal.ack_due_at,'resolveDueAt',appeal.resolve_due_at,'replayed',false); INSERT INTO public.content_governance_requests VALUES(p_user_id,'submit_appeal',p_request_id,h,out,clock_timestamp()); RETURN out;
 END $fn$;
 
-CREATE OR REPLACE FUNCTION public.get_question_appeal_queue(p_user_id uuid,p_status text,p_limit integer,p_cursor text)
+-- Keep the v1 queue response byte-compatible while the migration is applied
+-- before the application deploy. New evidence labels are exposed only by v2.
+CREATE OR REPLACE FUNCTION public.get_question_appeal_queue_v2(p_user_id uuid,p_status text,p_limit integer,p_cursor text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog AS $fn$
 DECLARE v_limit integer:=GREATEST(1,LEAST(COALESCE(p_limit,50),100)); v_cursor_time timestamptz; v_cursor_id uuid;
 BEGIN
@@ -215,6 +282,7 @@ BEGIN
         a.ack_due_at,a.resolve_due_at,a.sla_breached_at,
         a.evidence_kind='verified_session' AS has_session_evidence,
         a.evidence_kind IN ('verified_session','issued_attempt') AS has_verified_evidence,
+        (SELECT answer.selected_option FROM public.session_answers answer WHERE answer.id=a.session_answer_id) AS selected_option,
         (SELECT e.public_message FROM public.question_appeal_events e WHERE e.appeal_id=a.id AND e.public_message IS NOT NULL ORDER BY e.created_at DESC,e.id DESC LIMIT 1) AS latest_public_message,
         (SELECT e.internal_note FROM public.question_appeal_events e WHERE e.appeal_id=a.id AND e.internal_note IS NOT NULL ORDER BY e.created_at DESC,e.id DESC LIMIT 1) AS latest_internal_note
       FROM public.question_appeals a
@@ -228,6 +296,7 @@ BEGIN
         'description',s.description,'status',s.status,'submittedAt',s.submitted_at,'ackDueAt',s.ack_due_at,
         'resolveDueAt',s.resolve_due_at,'slaBreachedAt',s.sla_breached_at,
         'evidenceKind',s.evidence_kind,'hasVerifiedEvidence',s.has_verified_evidence,
+        'selectedOption',s.selected_option,
         'hasSessionEvidence',s.has_session_evidence,
         'latestPublicMessage',s.latest_public_message,'latestInternalNote',s.latest_internal_note
       ) ORDER BY s.submitted_at DESC,s.id DESC) FROM shown s),'[]'::jsonb),
@@ -239,6 +308,12 @@ END $fn$;
 REVOKE ALL ON FUNCTION public.submit_question_appeal_v2(uuid,uuid,uuid,uuid,text,text,uuid)
   FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION public.submit_question_appeal_v2(uuid,uuid,uuid,uuid,text,text,uuid)
+  TO service_role;
+REVOKE ALL ON FUNCTION public.tg_question_appeal_evidence_default()
+  FROM PUBLIC,anon,authenticated,service_role;
+REVOKE ALL ON FUNCTION public.get_question_appeal_queue_v2(uuid,text,integer,text)
+  FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.get_question_appeal_queue_v2(uuid,text,integer,text)
   TO service_role;
 
 NOTIFY pgrst,'reload schema';

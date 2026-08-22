@@ -28,7 +28,7 @@ describe('ErrorReportModal — P1 sahte-başarı düzeltmesi', () => {
   })
 
   it('onSubmit {ok:true} dönerse başarı gösterir', async () => {
-    const onSubmit = vi.fn().mockResolvedValue({ ok: true })
+    const onSubmit = vi.fn().mockResolvedValue({ ok: true, rewardEligible: false })
     render(<ErrorReportModal questionId="q1" isOpen onClose={() => {}} onSubmit={onSubmit} />)
 
     fireEvent.click(screen.getByText('Yanlis cevap'))
@@ -38,13 +38,21 @@ describe('ErrorReportModal — P1 sahte-başarı düzeltmesi', () => {
   })
 
   it('governance itirazında uygulanmayan altın ödülünü vaat etmez', async () => {
-    vi.stubEnv('NEXT_PUBLIC_CONTENT_APPEALS_ENABLED', 'true')
-    const onSubmit = vi.fn().mockResolvedValue({ ok: true })
+    const onSubmit = vi.fn().mockResolvedValue({ ok: true, rewardEligible: false })
     render(<ErrorReportModal questionId="q1" isOpen onClose={() => {}} onSubmit={onSubmit} />)
-    expect(screen.queryByText(/Hata avcılığı ödüllü/)).toBeNull()
+    expect(screen.getByText(/sorunun gördüğün revizyonuyla/)).toBeInTheDocument()
     fireEvent.click(screen.getByText('Yanlis cevap'))
     fireEvent.click(screen.getByText('Gonder'))
     await waitFor(() => expect(screen.getByText(/revizyon kanıtıyla/)).toBeInTheDocument())
     expect(document.body.textContent).not.toContain(`${ERROR_REPORT_COIN_REWARD} altın`)
+  })
+
+  it('legacy yol ödüle uygunluk döndürürse ödülü yalnız başarıdan sonra gösterir', async () => {
+    const onSubmit = vi.fn().mockResolvedValue({ ok: true, rewardEligible: true })
+    render(<ErrorReportModal questionId="q1" isOpen onClose={() => {}} onSubmit={onSubmit} />)
+    expect(document.body.textContent).not.toContain(`${ERROR_REPORT_COIN_REWARD} altın`)
+    fireEvent.click(screen.getByText('Yanlis cevap'))
+    fireEvent.click(screen.getByText('Gonder'))
+    await waitFor(() => expect(screen.getByText(new RegExp(`${ERROR_REPORT_COIN_REWARD} altın`))).toBeInTheDocument())
   })
 })

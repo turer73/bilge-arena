@@ -58,11 +58,20 @@ describe('139 question appeal evidence v2 SQL contract', () => {
   })
 
   it('projects evidenceKind and hasVerifiedEvidence in the admin queue without raw evidence identifiers', () => {
-    const queue = body('get_question_appeal_queue', 'CREATE OR REPLACE FUNCTION')
+    const queue = body('get_question_appeal_queue_v2', 'CREATE OR REPLACE FUNCTION')
     expect(queue).toContain("'evidenceKind'")
     expect(queue).toContain("'hasVerifiedEvidence'")
+    expect(queue).toContain("'selectedOption'")
     expect(queue).not.toContain("'attemptId'")
     expect(queue).not.toContain("'sessionAnswerId'")
+  })
+
+  it('keeps the v1 queue compatible during migration-first rollout and derives legacy insert labels', () => {
+    expect(sql).not.toContain('CREATE OR REPLACE FUNCTION public.get_question_appeal_queue(')
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.get_question_appeal_queue_v2(')
+    expect(sql).toContain('tg_question_appeal_evidence_default')
+    expect(sql).toMatch(/legacy_error_report_id IS NOT NULL THEN 'legacy_report'/)
+    expect(sql).toMatch(/session_answer_id IS NOT NULL THEN 'legacy_session'/)
   })
 
   it('uses request payload hashing and replay-safe governance persistence', () => {
@@ -73,5 +82,16 @@ describe('139 question appeal evidence v2 SQL contract', () => {
     expect(submit).toMatch(/appeal request payload mismatch/)
     expect(submit).toMatch(/replayed.*true|true.*replayed/s)
     expect(submit).toMatch(/content_governance_requests/)
+  })
+
+  it('serializes open appeals by owner, question and revision without masking arbitrary unique violations', () => {
+    expect(sql).toContain('question_appeals_one_open_owner_revision')
+    expect(sql).toMatch(/ON public\.question_appeals\(user_id,question_id,revision_id\)/)
+    expect(sql).toContain('question_appeals_one_open_owner_legacy')
+    const submit = body('submit_question_appeal_v2', 'CREATE OR REPLACE FUNCTION')
+    expect(submit).toContain("'question-appeal-open:'")
+    expect(submit).toMatch(/pg_advisory_xact_lock/)
+    expect(submit).toMatch(/'alreadyReported',true/)
+    expect(submit).not.toMatch(/EXCEPTION\s+WHEN\s+unique_violation/i)
   })
 })

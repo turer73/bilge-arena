@@ -22,12 +22,16 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
   const user = randomUUID()
   const other = randomUUID()
   const expiringUser = randomUUID()
+  const migrationLegacyUser = randomUUID()
+  const v2ExpiryUser = randomUUID()
   const categories = ['sayilar', 'denklemler', 'fonksiyonlar', 'problemler', 'geometri', 'olasilik']
   const questions = Object.fromEntries(categories.map((category) => [category, {
     base: randomUUID(),
     follow: randomUUID(),
   }]))
   const mainSession = randomUUID()
+  const migrationLegacySession = randomUUID()
+  const v2EvidenceSession = randomUUID()
 
   beforeAll(async () => {
     client = new Client({ connectionString: url })
@@ -52,9 +56,28 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
         id uuid PRIMARY KEY,
         game varchar(20) NOT NULL,
         category varchar(30) NOT NULL,
+        subcategory text,
+        topic text,
         difficulty smallint NOT NULL CHECK(difficulty BETWEEN 1 AND 5),
+        level_tag text,
         exam_ref varchar(20),
-        is_active boolean NOT NULL DEFAULT true
+        is_active boolean NOT NULL DEFAULT true,
+        content jsonb,
+        base_points smallint DEFAULT 30,
+        published_revision_id uuid
+      );
+      CREATE TABLE public.question_content_revisions(
+        id uuid PRIMARY KEY,
+        question_id uuid NOT NULL REFERENCES public.questions(id),
+        status text NOT NULL,
+        game text NOT NULL,
+        category text NOT NULL,
+        subcategory text,
+        topic text,
+        difficulty smallint NOT NULL,
+        level_tag text,
+        content jsonb NOT NULL,
+        content_sha256 text NOT NULL
       );
       CREATE TABLE public.session_answers(
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -65,7 +88,9 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
         answered_at timestamptz NOT NULL DEFAULT clock_timestamp()
       );
     `)
-    await client.query('INSERT INTO public.profiles(id) VALUES($1),($2),($3)', [user, other, expiringUser])
+    await client.query('INSERT INTO public.profiles(id) VALUES($1),($2),($3),($4),($5)', [
+      user, other, expiringUser, migrationLegacyUser, v2ExpiryUser,
+    ])
     const values = []
     const parameters = []
     for (const category of categories) {
@@ -80,6 +105,34 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
     for (const migration of ['086_outcome_mastery_pilot.sql', '096_curriculum_graph_v1.sql', '098_adaptive_diagnostic.sql']) {
       await client.query(read(migration))
     }
+    await client.query(`
+      WITH payload AS (
+        SELECT question.id AS question_id,
+          jsonb_build_object(
+            'question','Soru '||question.id::text,
+            'options',jsonb_build_array('A','B','C','D'),
+            'answer',1
+          ) AS content
+        FROM public.questions question
+      ), inserted AS (
+        INSERT INTO public.question_content_revisions(
+          id,question_id,status,game,category,subcategory,topic,difficulty,level_tag,content,content_sha256
+        )
+        SELECT gen_random_uuid(),question.id,'published',question.game,question.category,
+          question.subcategory,question.topic,question.difficulty,question.level_tag,
+          payload.content,encode(digest(payload.content::text,'sha256'),'hex')
+        FROM public.questions question JOIN payload ON payload.question_id=question.id
+        RETURNING id,question_id,content
+      )
+      UPDATE public.questions question
+      SET published_revision_id=inserted.id,content=inserted.content
+      FROM inserted WHERE question.id=inserted.question_id
+    `)
+    await client.query(
+      'SELECT public.start_adaptive_diagnostic($1,$2,$3)',
+      [migrationLegacyUser, migrationLegacySession, questions.sayilar.base],
+    )
+    await client.query(read('140_adaptive_diagnostic_evidence_v2.sql'))
   })
 
   afterAll(async () => {
@@ -110,6 +163,15 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
     )).rows[0].result
   }
 
+  async function recordV2(connection, {
+    userId, sessionId, questionId, selectedOption, requestId, nextQuestionId, responseTimeMs = 1200,
+  }) {
+    return (await connection.query(
+      'SELECT public.record_adaptive_diagnostic_answer_v2($1,$2,$3,$4,$5,$6,$7) result',
+      [userId, sessionId, questionId, selectedOption, responseTimeMs, requestId, nextQuestionId],
+    )).rows[0].result
+  }
+
   it('requires ten candidates, starts once, and resumes the locked active session', async () => {
     for (const category of categories.slice(3)) {
       await client.query('UPDATE public.questions SET is_active=false WHERE id=$1', [questions[category].follow])
@@ -135,8 +197,119 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
     })
 
     const outside = randomUUID()
-    await client.query("INSERT INTO public.questions VALUES($1,'matematik','sayilar',3,'LGS',true)", [outside])
+    await client.query("INSERT INTO public.questions(id,game,category,difficulty,exam_ref,is_active) VALUES($1,'matematik','sayilar',3,'LGS',true)", [outside])
     await expect(start(other, randomUUID(), outside)).rejects.toMatchObject({ code: '22023' })
+  })
+
+  it('stores selected option, immutable revision and separate server elapsed evidence in v2', async () => {
+    const sessionId = v2EvidenceSession
+    const started = await start(other, sessionId, questions.sayilar.base)
+    const snapshot = (await client.query(
+      'SELECT public.get_adaptive_diagnostic_question_v2($1,$2) result',
+      [other,sessionId],
+    )).rows[0].result
+    expect(snapshot).toMatchObject({ id:questions.sayilar.base, content:{ options:['A','B','C','D'] } })
+    expect(JSON.stringify(snapshot)).not.toMatch(/answer|solution/i)
+    const requestId = randomUUID()
+    const result = await recordV2(client, {
+      userId:other,sessionId,questionId:started.currentQuestionId,selectedOption:1,
+      requestId,nextQuestionId:questions.denklemler.base,
+    })
+    expect(result).toMatchObject({ status:'active', answeredCount:1 })
+    const evidence = (await client.query(
+      'SELECT selected_option,question_revision_id,question_content_sha256,server_response_time_ms,response_time_source,evidence_kind,is_correct FROM public.adaptive_diagnostic_answers WHERE session_id=$1',
+      [sessionId],
+    )).rows[0]
+    expect(evidence).toEqual(expect.objectContaining({
+      selected_option:1,response_time_source:'client_reported_with_server_elapsed',
+      evidence_kind:'revision_snapshot',is_correct:true,
+    }))
+    expect(evidence.question_revision_id).toMatch(/[0-9a-f-]{36}/)
+    expect(evidence.question_content_sha256).toMatch(/^[0-9a-f]{64}$/)
+    expect(Number(evidence.server_response_time_ms)).toBeGreaterThanOrEqual(0)
+    await expect(recordV2(client, {
+      userId:other,sessionId,questionId:started.currentQuestionId,selectedOption:0,
+      requestId,nextQuestionId:questions.denklemler.base,
+    })).rejects.toMatchObject({ code:'22023' })
+    await expect(recordV2(client, {
+      userId:other,sessionId,questionId:started.currentQuestionId,selectedOption:1,
+      responseTimeMs:1300,requestId,nextQuestionId:questions.denklemler.base,
+    })).rejects.toMatchObject({ code:'22023' })
+  })
+
+  it('abandons only pre-v2 active sessions and remains safe to re-run', async () => {
+    expect((await client.query(
+      'SELECT status,current_question_id,current_question_revision_id FROM public.adaptive_diagnostic_sessions WHERE id=$1',
+      [migrationLegacySession],
+    )).rows[0]).toEqual({ status:'abandoned', current_question_id:null, current_question_revision_id:null })
+
+    await client.query(read('140_adaptive_diagnostic_evidence_v2.sql'))
+    expect((await client.query(
+      'SELECT status,current_question_id,current_question_revision_id IS NOT NULL AS revision_bound FROM public.adaptive_diagnostic_sessions WHERE id=$1',
+      [v2EvidenceSession],
+    )).rows[0]).toEqual({ status:'active', current_question_id:questions.denklemler.base, revision_bound:true })
+  })
+
+  it('abandons an expired v2 session before inserting answer evidence', async () => {
+    const sessionId = randomUUID()
+    const started = await start(v2ExpiryUser, sessionId, questions.sayilar.base)
+    await client.query(`UPDATE public.adaptive_diagnostic_sessions
+      SET expires_at=clock_timestamp()-interval '1 second' WHERE id=$1`, [sessionId])
+    expect(await recordV2(client, {
+      userId:v2ExpiryUser,sessionId,questionId:started.currentQuestionId,selectedOption:1,
+      requestId:randomUUID(),nextQuestionId:questions.denklemler.base,
+    })).toEqual(expect.objectContaining({ status:'abandoned', answeredCount:0, coveredOutcomes:0 }))
+    expect((await client.query(
+      'SELECT count(*)::int AS answer_count FROM public.adaptive_diagnostic_answers WHERE session_id=$1',
+      [sessionId],
+    )).rows[0]).toEqual({ answer_count:0 })
+  })
+
+  it('binds outcome and difficulty when the question is issued, not when it is answered', async () => {
+    const driftUser = randomUUID()
+    const sessionId = randomUUID()
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [driftUser])
+    const started = await start(driftUser, sessionId, questions.sayilar.base)
+    const issued = (await client.query(
+      'SELECT current_question_outcome_id,current_question_difficulty FROM public.adaptive_diagnostic_sessions WHERE id=$1',
+      [sessionId],
+    )).rows[0]
+    await client.query('UPDATE public.questions SET difficulty=5 WHERE id=$1', [questions.sayilar.base])
+    try {
+      await recordV2(client, {
+        userId:driftUser,sessionId,questionId:started.currentQuestionId,selectedOption:1,
+        requestId:randomUUID(),nextQuestionId:questions.denklemler.base,
+      })
+      const answer = (await client.query(
+        'SELECT outcome_id,difficulty FROM public.adaptive_diagnostic_answers WHERE session_id=$1',
+        [sessionId],
+      )).rows[0]
+      expect(answer).toEqual({ outcome_id:issued.current_question_outcome_id, difficulty:issued.current_question_difficulty })
+    } finally {
+      await client.query('UPDATE public.questions SET difficulty=3 WHERE id=$1', [questions.sayilar.base])
+    }
+  })
+
+  it('replays a legacy-unbound answer without fabricating its selected option', async () => {
+    const legacyUser = randomUUID()
+    const sessionId = randomUUID()
+    const requestId = randomUUID()
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [legacyUser])
+    await start(legacyUser, sessionId, questions.sayilar.base)
+    const outcome = (await client.query(
+      'SELECT current_question_outcome_id FROM public.adaptive_diagnostic_sessions WHERE id=$1',
+      [sessionId],
+    )).rows[0].current_question_outcome_id
+    await client.query(`INSERT INTO public.adaptive_diagnostic_answers(
+      session_id,user_id,question_id,outcome_id,sequence,difficulty,is_correct,response_time_ms,
+      request_id,next_question_id,covered_outcomes_after,status_after
+    ) VALUES($1,$2,$3,$4,1,3,true,1200,$5,$6,1,'active')`, [
+      sessionId,legacyUser,questions.sayilar.base,outcome,requestId,questions.denklemler.base,
+    ])
+    expect(await recordV2(client, {
+      userId:legacyUser,sessionId,questionId:questions.sayilar.base,selectedOption:1,
+      requestId,nextQuestionId:questions.denklemler.base,
+    })).toEqual(expect.objectContaining({ alreadyProcessed:true, status:'active' }))
   })
 
   it('serializes answer replay and enforces coverage before confirmations', async () => {

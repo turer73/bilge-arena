@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({ context: vi.fn(), rpc: vi.fn() }))
+const mocks = vi.hoisted(() => ({ context: vi.fn(), rpc: vi.fn(), notify: vi.fn() }))
 vi.mock('@/lib/content-governance/route-context', () => ({ requireContentGovernanceContext: mocks.context, contentRpc: mocks.rpc }))
+vi.mock('@/lib/notifications/create', () => ({ createNotification: mocks.notify }))
 
 import { GET as appeals, POST as submitAppeal } from '@/app/api/questions/appeals/route'
 import { GET as corrections } from '@/app/api/questions/corrections/route'
@@ -29,7 +30,13 @@ const REVISION = {
 }
 const context = { ok: true as const, userId: USER, admin: {} }
 const post = (path: string, body: unknown) => new Request(`http://localhost${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-beforeEach(() => { vi.clearAllMocks(); mocks.context.mockResolvedValue(context); mocks.rpc.mockResolvedValue({ data: { replayed: false }, error: null }) })
+beforeEach(() => {
+  vi.clearAllMocks()
+  mocks.context.mockResolvedValue(context)
+  mocks.rpc.mockImplementation((_admin: unknown, name: string) => Promise.resolve(name === 'finalize_legacy_question_appeal_transition'
+    ? { data: { legacy: false, awarded: false, replayed: false, coins: 0, userId: null }, error: null }
+    : { data: { replayed: false }, error: null }))
+})
 
 describe('R4.3 content governance routes', () => {
   it('uses server auth as actor and rejects forged or unknown request fields', async () => {
@@ -70,14 +77,26 @@ describe('R4.3 content governance routes', () => {
     })
     expect((await submitAppeal(post('/api/questions/appeals', { questionId: ID, sessionAnswerId: null, attemptId: null, reason: 'wrong_key', explanation: '', requestId: REQUEST, userId: 'forged' }))).status).toBe(400)
   })
-  it('treats an already-open appeal as an idempotent success', async () => {
+  it('does not mask an arbitrary unique violation as an idempotent success', async () => {
     mocks.rpc.mockResolvedValueOnce({ data: null, error: { code: '23505' } })
     const response = await submitAppeal(post('/api/questions/appeals', {
       questionId: ID, sessionAnswerId: null, attemptId: null,
       reason: 'ambiguous', explanation: '', requestId: REQUEST,
     }))
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({ error: 'İtiraz gönderilemedi' })
+  })
+  it('returns 200 only when SQL explicitly identifies an already-open appeal', async () => {
+    mocks.rpc.mockResolvedValueOnce({
+      data: { appealId: ID, status: 'submitted', alreadyReported: true, replayed: false, evidenceKind: 'current_revision' },
+      error: null,
+    })
+    const response = await submitAppeal(post('/api/questions/appeals', {
+      questionId: ID, sessionAnswerId: null, attemptId: null,
+      reason: 'ambiguous', explanation: 'Aynı revizyon için açık kayıt var.', requestId: REQUEST,
+    }))
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ status: 'submitted', replayed: true })
+    expect(await response.json()).toEqual(expect.objectContaining({ appealId: ID, alreadyReported: true }))
   })
   it('returns a privacy-scoped admin appeal queue and resolves with the server actor', async () => {
     mocks.rpc.mockResolvedValueOnce({ data: { items: [{ appealId: ID, questionId: REQUEST, revisionId: null, reasonCode: 'ambiguous', description: 'İki seçenek de doğru.', status: 'submitted', submittedAt: '2026-08-09T10:00:00.000Z', ackDueAt: '2026-08-11T10:00:00.000Z', resolveDueAt: '2026-08-23T10:00:00.000Z', slaBreachedAt: null, hasSessionEvidence: true, latestPublicMessage: 'Alındı.', latestInternalNote: null }], nextCursor: null }, error: null })
@@ -85,14 +104,30 @@ describe('R4.3 content governance routes', () => {
     expect(response.status).toBe(200)
     expect(JSON.stringify(await response.json())).not.toMatch(/userId|sessionAnswerId/)
     expect(mocks.context).toHaveBeenLastCalledWith(expect.any(Request), expect.anything(), 'content.appeals.manage')
-    expect(mocks.rpc).toHaveBeenLastCalledWith(context.admin, 'get_question_appeal_queue', {
+    expect(mocks.rpc).toHaveBeenLastCalledWith(context.admin, 'get_question_appeal_queue_v2', {
       p_user_id: USER, p_status: 'submitted', p_limit: 25, p_cursor: '',
     })
 
     mocks.rpc.mockResolvedValueOnce({ data: { appealId: ID, status: 'acknowledged', replayed: false }, error: null })
     const resolved = await resolveAppeal(post(`/api/admin/content-quality/appeals/${ID}/resolve`, { status: 'acknowledged', publicMessage: 'İnceleme başladı.', internalNote: '', requestId: REQUEST }), { params: Promise.resolve({ appealId: ID }) })
     expect(resolved.status).toBe(200)
-    expect(mocks.rpc).toHaveBeenLastCalledWith(context.admin, 'resolve_question_appeal', expect.objectContaining({ p_user_id: USER, p_appeal_id: ID, p_status: 'acknowledged' }))
+    expect(mocks.rpc).toHaveBeenCalledWith(context.admin, 'resolve_question_appeal', expect.objectContaining({ p_user_id: USER, p_appeal_id: ID, p_status: 'acknowledged' }))
+    expect(mocks.rpc).toHaveBeenLastCalledWith(context.admin, 'finalize_legacy_question_appeal_transition', {
+      p_user_id: USER, p_appeal_id: ID, p_coins: expect.any(Number),
+    })
+  })
+  it('pays only a promised legacy reward and keeps transition details private', async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({ data: { appealId: ID, status: 'resolved', replayed: false }, error: null })
+      .mockResolvedValueOnce({ data: { legacy: true, awarded: true, replayed: false, coins: 250, userId: REQUEST }, error: null })
+    const response = await resolveAppeal(post(`/api/admin/content-quality/appeals/${ID}/resolve`, {
+      status: 'resolved', publicMessage: 'Haklı bildirim.', internalNote: '', requestId: REQUEST,
+    }), { params: Promise.resolve({ appealId: ID }) })
+    expect(response.status).toBe(200)
+    expect(JSON.stringify(await response.json())).not.toMatch(/legacy|coins|userId/)
+    expect(mocks.notify).toHaveBeenCalledWith(context.admin, expect.objectContaining({
+      userId: REQUEST, type: 'error_report_rewarded',
+    }))
   })
   it('lists every revision by default and can resolve the published revision by question id', async () => {
     mocks.rpc.mockResolvedValueOnce({ data: { items: [], nextCursor: null }, error: null })

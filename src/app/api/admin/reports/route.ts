@@ -9,6 +9,7 @@ import type { TablesUpdate } from '@/types/database.generated'
 import { createNotification } from '@/lib/notifications/create'
 import { ERROR_REPORT_COIN_REWARD } from '@/lib/constants/rewards'
 import { errorReportRewardResultSchema } from '@/lib/rewards/error-report-contract'
+import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
 
 type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'rejected'
 
@@ -21,6 +22,13 @@ export async function GET(request: NextRequest) {
   const admin = await checkPermission(supabase, 'admin.reports.view')
   if (!admin) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
+  }
+  if (contentGovernanceEnabled()) {
+    return NextResponse.json({
+      error: 'Eski rapor kuyruğu kapatıldı; soru kalitesi yönetişim kuyruğunu kullanın.',
+      code: 'CONTENT_GOVERNANCE_REQUIRED',
+      redirect: '/admin/soru-kalite',
+    }, { status: 409 })
   }
 
   const { searchParams } = new URL(request.url)
@@ -53,6 +61,13 @@ export async function PATCH(request: NextRequest) {
   const admin = await checkPermission(supabase, 'admin.reports.manage')
   if (!admin) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
+  }
+  if (contentGovernanceEnabled()) {
+    return NextResponse.json({
+      error: 'Eski rapor karar yolu kapatıldı.',
+      code: 'CONTENT_GOVERNANCE_REQUIRED',
+      redirect: '/admin/soru-kalite',
+    }, { status: 409 })
   }
 
   const rlRes = await checkAdminMutationRl(admin.id)

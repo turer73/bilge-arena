@@ -26,6 +26,7 @@ export default function AdminReportsPage() {
   const [filterStatus, setFilterStatus] = useState<ReportStatus | 'all'>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [adminNoteInput, setAdminNoteInput] = useState('')
+  const [governanceRedirect, setGovernanceRedirect] = useState<string | null>(null)
 
   const fetchReports = useCallback(async () => {
     setLoading(true)
@@ -33,8 +34,13 @@ export default function AdminReportsPage() {
       const params = new URLSearchParams()
       if (filterStatus !== 'all') params.set('status', filterStatus)
       const res = await fetch(`/api/admin/reports?${params}`)
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 409 && data.code === 'CONTENT_GOVERNANCE_REQUIRED') {
+        setGovernanceRedirect(typeof data.redirect === 'string' ? data.redirect : '/admin/soru-kalite')
+        return
+      }
       if (!res.ok) throw new Error('Raporlar yuklenemedi')
-      const data = await res.json()
+      setGovernanceRedirect(null)
       setReports(data.reports ?? [])
       setTotal(data.total ?? 0)
     } catch (err) {
@@ -67,6 +73,18 @@ export default function AdminReportsPage() {
       console.error('Durum guncelleme hatasi:', err)
     }
   }
+
+  if (governanceRedirect) return (
+    <div className="mx-auto max-w-2xl rounded-xl border border-[var(--focus-border)] bg-[var(--focus-bg)] p-6">
+      <h1 className="text-xl font-bold">Raporlar tek kalite kuyruğuna taşındı</h1>
+      <p className="mt-2 text-sm text-[var(--text-sub)]">
+        Öğrenci soru bildirimleri artık revizyon kanıtı, psikometri ve doğrulama sonucu ile birlikte inceleniyor.
+      </p>
+      <a href={governanceRedirect} className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-[var(--focus)] px-4 text-sm font-bold text-white">
+        Soru Kalitesi kuyruğunu aç
+      </a>
+    </div>
+  )
 
   return (
     <div className="mx-auto max-w-5xl">

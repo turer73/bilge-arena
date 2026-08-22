@@ -25,12 +25,9 @@ export async function POST(request: Request) {
     p_description: body.data.explanation,
     p_request_id: body.data.requestId,
   })
-  if (error?.code === '23505') {
-    return contentNoStoreJson({ status: 'submitted', replayed: true }, { status: 200 })
-  }
   if (error) return contentNoStoreJson({ error: 'İtiraz gönderilemedi' }, { status: contentGovernanceRpcStatus(error.code) })
   const result = appealSubmitResultSchema.safeParse(data)
   return result.success
-    ? contentNoStoreJson(result.data, { status: result.data.replayed ? 200 : 201 })
+    ? contentNoStoreJson(result.data, { status: result.data.replayed || result.data.alreadyReported ? 200 : 201 })
     : contentNoStoreJson({ error: 'İtiraz gönderilemedi' }, { status: 500 })
 }

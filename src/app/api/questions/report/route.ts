@@ -17,10 +17,9 @@ const APPEAL_REASON = {
 /**
  * POST /api/questions/report — Soru hatasi bildir (#379 Tier 3).
  *
- * Quiz icindeki "Hata Bildir" modali buraya POST eder; kayit error_reports'a
- * status='pending' duser ve admin moderasyon kuyruguna (#378 / /admin/raporlar)
- * girer. RLS insert policy `auth.uid() = user_id` oldugu icin user-scoped
- * client ile user_id = oturum kullanicisi yazilir.
+ * Quiz icindeki "Hata Bildir" modali her zaman buraya POST eder. Server bayragi
+ * rollback penceresinde legacy error_reports, cutover sonrasinda revizyon-bagli
+ * question_appeals yolunu secer; istemci hangi otoriteye yazdigini belirleyemez.
  *
  * Body: { questionId: uuid, report_type: enum, description?: string<=1000 }
  */
@@ -58,18 +57,20 @@ export async function POST(req: Request) {
       p_description: description,
       p_request_id: requestId ?? randomUUID(),
     })
-    if (error?.code === '23505') return contentNoStoreJson({ status: 'already_reported' })
     if (error) {
       const status = error.code === '42501' ? 403
         : error.code === '23503' || error.code === 'P0002' ? 400
-          : error.code === '22023' ? 409 : 500
+          : error.code === '22023' || error.code === '23505' || error.code === '23514' ? 409 : 500
       return contentNoStoreJson({ error: 'Rapor gonderilemedi' }, { status })
     }
     const result = appealSubmitResultSchema.safeParse(data)
     if (!result.success) return contentNoStoreJson({ error: 'Rapor gonderilemedi' }, { status: 500 })
     return contentNoStoreJson(
-      { status: result.data.replayed ? 'already_reported' : 'reported' },
-      { status: result.data.replayed ? 200 : 201 },
+      {
+        status: result.data.replayed || result.data.alreadyReported ? 'already_reported' : 'reported',
+        rewardEligible: false,
+      },
+      { status: result.data.replayed || result.data.alreadyReported ? 200 : 201 },
     )
   }
 
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
     .eq('question_id', questionId)
     .eq('status', 'pending')
     .maybeSingle()
-  if (existing) return NextResponse.json({ status: 'already_reported' })
+  if (existing) return NextResponse.json({ status: 'already_reported', rewardEligible: true })
 
   const { error } = await supabase.from('error_reports').insert({
     user_id: user.id,
@@ -96,17 +97,15 @@ export async function POST(req: Request) {
     if (error.code === '23503') {
       return NextResponse.json({ error: 'Soru bulunamadi' }, { status: 400 })
     }
-    // P2c fix (Codex PR#242): 23505 = unique-violation. Yukaridaki read-before-insert
-    // ATOMIK degil — eszamanli istekler (hizli tiklama/coklu sekme/retry) ikisi de "yok"
-    // gorup ikisi de insert edebilir. Migration 076 partial-unique index (user_id,
-    // question_id WHERE status='pending') bunu DB-seviyesinde garanti eder; ihlali
-    // idempotent already_reported olarak ele al (index henuz uygulanmamissa no-op).
+    // A SQLSTATE class is not an idempotency proof. Only the explicit read above
+    // or a named RPC result may produce already_reported; an arbitrary unique
+    // violation remains visible as a conflict.
     if (error.code === '23505') {
-      return NextResponse.json({ status: 'already_reported' })
+      return NextResponse.json({ error: 'Rapor gonderilemedi' }, { status: 409 })
     }
     console.error('[questions/report] insert hatasi:', error.message)
     return NextResponse.json({ error: 'Rapor gonderilemedi' }, { status: 500 })
   }
 
-  return NextResponse.json({ status: 'reported' }, { status: 201 })
+  return NextResponse.json({ status: 'reported', rewardEligible: true }, { status: 201 })
 }

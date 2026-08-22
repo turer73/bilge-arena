@@ -24,7 +24,9 @@ interface RevisionDetail {
     blindAgreementRatio: number | null
     decidedAt: string
   } | null
-  psychometrics?: Array<{ windowStart: string; windowEnd: string; sampleN: number; correctN: number; pCorrect: number | null; wilsonLow: number | null; wilsonHigh: number | null; discrimination: number | null; materializedAt: string }>
+  psychometrics?: Array<{ windowStart: string; windowEnd: string; sampleN: number; correctN: number; omittedN?: number; pCorrect: number | null; wilsonLow: number | null; wilsonHigh: number | null; discrimination: number | null; medianResponseTimeSec?: number | null; fastResponseRate?: number | null; eligibilityPolicy?: string; materializedAt: string }>
+  optionStatistics?: Array<{ optionIndex: number; selectedN: number; selectedRate: number | null; correctOption: boolean; discrimination: number | null; eligibilityPolicy: string }>
+  appealSignals?: { openCount: number; verifiedOpenCount: number; byReason: Record<string, number> }
   incidents?: Array<{ incidentId: string; erroneousRevisionId: string; correctedRevisionId: string; errorType: 'wrong_key' | 'ambiguous' | 'invalid_content' | 'outcome_mismatch'; status: string; eligibleCount: number; changedCount: number; manualRequiredCount: number; createdAt: string; closedAt: string | null }>
 }
 
@@ -187,8 +189,17 @@ export function ContentGovernancePanel() {
                   <div><dt className="font-bold text-[var(--text-sub)]">Kazanım kanıtı</dt><dd>{detail.outcomes?.length ?? 0} eşleme · {(detail.outcomes ?? []).filter((outcome) => outcome.primary).length} birincil</dd></div>
                   <div><dt className="font-bold text-[var(--text-sub)]">Kararlar</dt><dd>{detail.approvals?.map((approval) => `${approval.stage}. aşama ${approval.decision}`).join(' · ') || 'Henüz yok'}</dd></div>
                   <div><dt className="font-bold text-[var(--text-sub)]">Otomatik doğrulama</dt><dd>{detail.validation ? `${validationLabel[detail.validation.verdict]} · ${detail.validation.policyVersion}` : 'Henüz çalıştırılmadı'}</dd></div>
-                  <div><dt className="font-bold text-[var(--text-sub)]">Son 30 gün psikometri</dt><dd>{detail.psychometrics?.[0] ? `n=${detail.psychometrics[0].sampleN} · başarı ${detail.psychometrics[0].pCorrect === null ? '—' : `%${Math.round(detail.psychometrics[0].pCorrect * 100)}`} · ayırıcılık ${detail.psychometrics[0].discrimination === null ? 'n<30 / hesaplanamadı' : detail.psychometrics[0].discrimination.toFixed(2)}` : 'Henüz hesaplanmadı'}</dd></div>
+                  <div><dt className="font-bold text-[var(--text-sub)]">Son psikometri</dt><dd>{detail.psychometrics?.[0] ? `n=${detail.psychometrics[0].sampleN} · dışlanan ${detail.psychometrics[0].omittedN ?? '—'} · başarı ${detail.psychometrics[0].pCorrect === null ? '—' : `%${Math.round(detail.psychometrics[0].pCorrect * 100)}`} · ayırıcılık ${detail.psychometrics[0].discrimination === null ? 'n<30 / hesaplanamadı' : detail.psychometrics[0].discrimination.toFixed(2)} · ${detail.psychometrics[0].eligibilityPolicy ?? 'legacy'}` : 'Henüz hesaplanmadı'}</dd></div>
+                  <div><dt className="font-bold text-[var(--text-sub)]">Öğrenci sinyali</dt><dd>{detail.appealSignals ? `${detail.appealSignals.openCount} açık · ${detail.appealSignals.verifiedOpenCount} doğrulanmış kanıtlı` : 'Henüz yok'}</dd></div>
                 </dl>
+                {(detail.optionStatistics?.length ?? 0) > 0 && <div className="rounded-lg border border-[var(--border)] p-3" aria-label="Seçenek ve çeldirici istatistikleri">
+                  <p className="text-xs font-bold">Seçenek ve çeldirici istatistikleri</p>
+                  <ul className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
+                    {detail.optionStatistics?.map((option) => <li key={option.optionIndex} className={option.correctOption ? 'font-bold text-[var(--growth)]' : 'text-[var(--text-sub)]'}>
+                      {String.fromCharCode(65 + option.optionIndex)}) {option.selectedN} seçim · {option.selectedRate === null ? '—' : `%${Math.round(option.selectedRate * 100)}`} · ayırıcılık {option.discrimination === null ? '—' : option.discrimination.toFixed(2)}
+                    </li>)}
+                  </ul>
+                </div>}
                 {detail.validation && detail.validation.findings.length > 0 && <div className="space-y-2 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] p-3" aria-label="Otomatik doğrulama kanıtları">
                   <p className="text-xs font-bold">Otomatik doğrulama kanıtları</p>
                   {detail.validation.findings.map((finding, index) => <div key={`${finding.code}-${index}`} className="text-xs">
