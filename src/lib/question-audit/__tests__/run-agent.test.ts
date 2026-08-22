@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
-import { ProviderHttpError, createGeminiProvider, type LlmProvider, type LlmRawResponse } from '../provider'
+import { ProviderHttpError, createGeminiProvider, createOpenAiCompatibleProvider, type LlmProvider, type LlmRawResponse } from '../provider'
 import { blindSolverShape } from '../response-shapes'
 import { runAgent } from '../run-agent'
 
@@ -207,5 +207,70 @@ describe('gemini provider — istek govdesi', () => {
       status: 429,
       retryable: true,
     })
+  })
+})
+
+describe('OpenAI uyumlu provider (DeepSeek)', () => {
+  const call = async (body: unknown, status = 200) => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch
+    const p = createOpenAiCompatibleProvider({ apiKey: 'k', modelId: 'deepseek-chat', fetchImpl })
+    return { res: await p.call(request, new AbortController().signal), fetchImpl, p }
+  }
+
+  it('sema DAYATMADIGINI bildirir — Zod tek garanti kalir', () => {
+    const p = createOpenAiCompatibleProvider({ apiKey: 'k', modelId: 'deepseek-chat' })
+    expect(p.capabilities).toEqual({ responseSchema: false, propertyOrdering: false })
+    expect(p.id).toBe('deepseek:deepseek-chat')
+  })
+
+  it('istek govdesi OpenAI sozlesmesine uyar', async () => {
+    const { fetchImpl } = await call({
+      choices: [{ message: { content: good.text }, finish_reason: 'stop' }],
+      usage: { prompt_tokens: 12, completion_tokens: 34 },
+    })
+    const init = vi.mocked(fetchImpl).mock.calls[0][1] as RequestInit
+    const body = JSON.parse(init.body as string)
+    expect(body.response_format).toEqual({ type: 'json_object' })
+    expect(body.messages.map((m: { role: string }) => m.role)).toEqual(['system', 'user'])
+    expect(body.max_tokens).toBe(2048)
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer k')
+  })
+
+  /**
+   * finish_reason 'length' -> MAX_TOKENS. Cevrilmezse kesik JSON generic
+   * `schema` hatasi gibi gorunur ve truncation teshisi kaybolur.
+   */
+  it('finish_reason Gemini terimlerine cevrilir', async () => {
+    expect((await call({ choices: [{ message: { content: '{}' }, finish_reason: 'length' }] })).res.finishReason).toBe('MAX_TOKENS')
+    expect((await call({ choices: [{ message: { content: '{}' }, finish_reason: 'content_filter' }] })).res.finishReason).toBe('SAFETY')
+    expect((await call({ choices: [{ message: { content: '{}' }, finish_reason: 'stop' }] })).res.finishReason).toBe('STOP')
+  })
+
+  it('kesik yanit runAgent tarafindan truncated olarak siniflanir', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      choices: [{ message: { content: '{"reasoning":"yar' }, finish_reason: 'length' }],
+    }), { status: 200 })) as unknown as typeof fetch
+    const provider = createOpenAiCompatibleProvider({ apiKey: 'k', modelId: 'deepseek-chat', fetchImpl })
+    const out = await runAgent({ provider, promptVersion: 'v', request, schema, maxAttempts: 1, sleep: noSleep })
+    expect(out.status).toBe('failed')
+    if (out.status !== 'failed') return
+    expect(out.error.kind).toBe('truncated')
+  })
+
+  it('HTTP hatasi retryable siniflamasiyla firlatilir', async () => {
+    const fetchImpl = vi.fn(async () => new Response('rate', { status: 429 })) as unknown as typeof fetch
+    const p = createOpenAiCompatibleProvider({ apiKey: 'k', modelId: 'deepseek-chat', fetchImpl })
+    await expect(p.call(request, new AbortController().signal)).rejects.toMatchObject({ status: 429, retryable: true })
+  })
+
+  it('sema dayatilmadigi icin aralik disi cikti Zod ile yakalanir', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({ reasoning: 'r', predictedAnswerIndex: 9 }) }, finish_reason: 'stop' }],
+    }), { status: 200 })) as unknown as typeof fetch
+    const provider = createOpenAiCompatibleProvider({ apiKey: 'k', modelId: 'deepseek-chat', fetchImpl })
+    const out = await runAgent({ provider, promptVersion: 'v', request, schema, maxAttempts: 1, sleep: noSleep })
+    expect(out.status).toBe('failed')
+    if (out.status !== 'failed') return
+    expect(out.error.kind).toBe('schema')
   })
 })
