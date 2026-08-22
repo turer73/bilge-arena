@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BookOpenText,
   Building2,
@@ -34,6 +34,26 @@ import {
 } from 'lucide-react'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
+
+export const COACH_SEEN_STORAGE_KEY = 'ba-coach-seen'
+
+/** Koc penceresi gunde bir kez karsilar; ayni gun tekrar acilmaz. */
+function coachSeenToday() {
+  try {
+    return window.localStorage.getItem(COACH_SEEN_STORAGE_KEY) === new Date().toDateString()
+  } catch {
+    // localStorage kapaliysa (gizli sekme/kisitli tarayici) koc gosterilir.
+    return false
+  }
+}
+
+function markCoachSeen() {
+  try {
+    window.localStorage.setItem(COACH_SEEN_STORAGE_KEY, new Date().toDateString())
+  } catch {
+    // sessiz gec: kayit edilemezse en fazla bir kez daha gosterilir
+  }
+}
 
 export type MobileSubjectId = 'matematik' | 'turkce' | 'fen' | 'sosyal' | 'ingilizce'
 type SubjectId = MobileSubjectId
@@ -233,7 +253,11 @@ export function MobileHomeDemo({
     [availableSubjects],
   )
   const [subjectId, setSubjectId] = useState<SubjectId>(visibleSubjects[0]?.id ?? 'matematik')
-  const [coachOpen, setCoachOpen] = useState(true)
+  // Demo rotasi bir vitrin: pencere hep acik baslar. Canli modda karar
+  // efekte birakilir (SSR'da kapali render edilir, hydration uyusmazligi yok).
+  const [coachOpen, setCoachOpen] = useState(mode === 'demo')
+  const coachDialogRef = useRef<HTMLElement | null>(null)
+  const coachReturnFocusRef = useRef<HTMLElement | null>(null)
   const [coachMessage, setCoachMessage] = useState(0)
   const subject = useMemo(() => visibleSubjects.find((item) => item.id === subjectId) ?? visibleSubjects[0] ?? SUBJECTS[0], [subjectId, visibleSubjects])
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
@@ -299,6 +323,12 @@ export function MobileHomeDemo({
       : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
 
   useEffect(() => {
+    if (mode !== 'live' || coachSeenToday()) return
+    markCoachSeen()
+    setCoachOpen(true)
+  }, [mode])
+
+  useEffect(() => {
     if (!coachOpen) return
 
     const previousOverflow = document.body.style.overflow
@@ -306,24 +336,54 @@ export function MobileHomeDemo({
       if (event.key === 'Escape') setCoachOpen(false)
     }
 
+    // aria-modal tek basina odagi tutmuyor: Tab dongusu elle kapatilir,
+    // arka plan `inert` ile okuyuculardan ve klavyeden cikarilir.
+    const focusables = () => Array.from(
+      coachDialogRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    )
+
+    const trapTab = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return
+      const items = focusables()
+      if (items.length === 0) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      const active = document.activeElement
+      if (event.shiftKey && (active === first || !coachDialogRef.current?.contains(active))) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    coachReturnFocusRef.current = document.activeElement as HTMLElement | null
     document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', closeOnEscape)
+    window.addEventListener('keydown', trapTab, true)
+    focusables()[0]?.focus()
 
     return () => {
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', closeOnEscape)
+      window.removeEventListener('keydown', trapTab, true)
+      // Odak, pencereyi acan ogeye geri doner (WCAG 2.4.3).
+      coachReturnFocusRef.current?.focus?.()
     }
   }, [coachOpen])
 
-  const openCoach = () => {
+  const openCoach = useCallback(() => {
     setCoachMessage(0)
     setCoachOpen(true)
-  }
+  }, [])
 
   return (
     <div className={`min-h-[100dvh] bg-[var(--app-bg)] pb-28 text-[var(--app-text)] md:mx-auto md:max-w-[440px] md:border-x md:border-[var(--app-border)] ${mode === 'live' ? '-mt-[var(--navbar-h)]' : ''}`}>
       <style>{`html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } nextjs-portal { display: none !important; }`}</style>
-      <header className="sticky top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl">
+      <header inert={coachOpen} className="sticky top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl">
         <div className="flex h-14 items-center justify-between px-3">
           <Link href="/arena/profil" aria-label="Sınav türünü değiştir" className="flex min-h-11 items-center gap-1 rounded-xl text-[var(--app-text-sub)]">
             <ShieldCheck size={24} fill="var(--app-accent-border)" className="text-[var(--app-accent-text)]" strokeWidth={2.5} />
@@ -335,11 +395,11 @@ export function MobileHomeDemo({
             <Resource icon={Gem} value={compactNumber(coinBalance)} color="#06b6d4" label="Altın" />
             <Resource icon={Sparkles} value={compactNumber(totalXP)} color="var(--wisdom-light)" label="Toplam XP" />
           </div>
-          <Link href="/arena/profil" aria-label="Ayarlar" className="flex h-11 w-9 items-center justify-center rounded-xl text-[var(--app-text-muted)] active:bg-[var(--app-hover)]"><Settings size={20} strokeWidth={2.5} /></Link>
+          <Link href="/arena/profil" aria-label="Ayarlar" className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--app-text-muted)] active:bg-[var(--app-hover)]"><Settings size={20} strokeWidth={2.5} /></Link>
         </div>
       </header>
 
-      <main>
+      <main inert={coachOpen}>
         <section aria-label="Ders seçimi" className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-3 py-2.5">
           <div className="scrollbar-none flex snap-x gap-2 overflow-x-auto pb-1">
             {visibleSubjects.map((item) => {
@@ -459,7 +519,7 @@ export function MobileHomeDemo({
         </section>}
       </main>
 
-      {showBottomNav && <BottomNav activeOverride="learn" appearance="learning" />}
+      {showBottomNav && <div inert={coachOpen}><BottomNav activeOverride="learn" appearance="learning" /></div>}
 
       {coachOpen && (
         <div
@@ -469,6 +529,7 @@ export function MobileHomeDemo({
           }}
         >
           <section
+            ref={coachDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="coach-dialog-title"
@@ -525,9 +586,19 @@ export function MobileHomeDemo({
                         onClick={() => setCoachMessage(index)}
                         aria-label={`${index + 1}. koç mesajını göster`}
                         aria-current={coachMessage === index ? 'step' : undefined}
-                        className="h-2.5 rounded-full transition-all"
-                        style={{ width: coachMessage === index ? 24 : 10, background: coachMessage === index ? message.color : 'var(--app-disabled)' }}
-                      />
+                        // Gorsel nokta kucuk kalir; dokunma alani WCAG 2.5.8
+                        // (AA, 24x24) icin seffaf dolguyla buyutulur.
+                        className="flex h-6 w-6 items-center justify-center rounded-full"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="block h-2.5 rounded-full transition-all"
+                          style={{
+                            width: coachMessage === index ? 24 : 10,
+                            background: coachMessage === index ? message.color : 'var(--app-disabled)',
+                          }}
+                        />
+                      </button>
                     ))}
                   </div>
 

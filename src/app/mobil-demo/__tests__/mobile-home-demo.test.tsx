@@ -15,7 +15,7 @@ vi.mock('next/image', () => ({
   ),
 }))
 
-import { MobileHomeDemo } from '../mobile-home-demo'
+import { COACH_SEEN_STORAGE_KEY, MobileHomeDemo } from '../mobile-home-demo'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -75,6 +75,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
 
   beforeEach(() => {
     mockUsePathname.mockReturnValue('/arena')
+    window.localStorage.clear()
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,
       json: async () => ({ topics: strengths, game: 'matematik' }),
@@ -109,5 +110,53 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     // Sıradaki konu = tamamlanmamis ilk konu (problemler)
     expect(screen.getByRole('link', { name: /DEVAM ET/ }))
       .toHaveAttribute('href', '/arena/matematik?category=problemler')
+  })
+})
+
+
+describe('MobileHomeDemo koç penceresi davranışı', () => {
+  beforeEach(() => {
+    mockUsePathname.mockReturnValue('/arena')
+    window.localStorage.clear()
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ topics: [], game: 'matematik' }) })))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  test('canlı modda günde bir kez karşılar, aynı gün tekrar açılmaz', () => {
+    const first = render(<MobileHomeDemo mode="live" userId="user-1" />)
+    expect(screen.getByRole('dialog')).toBeVisible()
+    expect(window.localStorage.getItem(COACH_SEEN_STORAGE_KEY)).toBe(new Date().toDateString())
+    first.unmount()
+
+    render(<MobileHomeDemo mode="live" userId="user-1" />)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  test('otomatik açılmadığında Chan düğmesinden elle açılabilir', () => {
+    window.localStorage.setItem(COACH_SEEN_STORAGE_KEY, new Date().toDateString())
+    render(<MobileHomeDemo mode="live" userId="user-1" />)
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
+    expect(screen.getByRole('dialog')).toBeVisible()
+  })
+
+  test('açılınca odak pencereye taşınır ve arka plan inert olur', () => {
+    render(<MobileHomeDemo mode="live" userId="user-1" />)
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    expect(document.querySelector('main')).toHaveAttribute('inert')
+  })
+
+  test('kapanınca arka plandaki inert kalkar', () => {
+    render(<MobileHomeDemo mode="live" userId="user-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(document.querySelector('main')).not.toHaveAttribute('inert')
   })
 })
