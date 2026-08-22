@@ -63,7 +63,11 @@ export default async function RehberArticlePage({
       inLanguage: 'tr',
       datePublished: a.updated,
       dateModified: a.updated,
-      author: { '@type': 'Organization', name: 'Bilge Arena' },
+      author: {
+        '@type': 'Organization',
+        name: 'Bilge Arena İçerik Ekibi',
+        url: `${siteUrl}/hakkinda#icerik-sorumlulugu`,
+      },
       publisher: { '@type': 'Organization', name: 'Bilge Arena', url: siteUrl },
       mainEntityOfPage: `${siteUrl}/rehber/${slug}`,
       citation: a.sources?.map((source) => source.url),
@@ -105,6 +109,21 @@ export default async function RehberArticlePage({
         </div>
         <h1 className="text-3xl font-bold leading-tight tracking-tight">{a.title}</h1>
         <p className="mt-3 text-base text-[var(--text-sub)]">{a.description}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
+          <span>Hazırlayan</span>
+          <Link
+            href="/hakkinda#icerik-sorumlulugu"
+            className="font-semibold text-[var(--text-sub)] hover:text-[var(--focus)] hover:underline"
+          >
+            Bilge Arena İçerik Ekibi
+          </Link>
+          {a.sources && a.sources.length > 0 && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>Birincil kaynaklarla doğrulandı</span>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Govde */}

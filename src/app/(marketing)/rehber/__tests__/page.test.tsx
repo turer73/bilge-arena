@@ -28,6 +28,10 @@ describe('/rehber/[slug]', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Kaynaklar ve güncellik' })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /ÖSYM/u })).toHaveLength(2)
+    expect(screen.getByRole('link', { name: 'Bilge Arena İçerik Ekibi' })).toHaveAttribute(
+      'href',
+      '/hakkinda#icerik-sorumlulugu'
+    )
   })
 
   it('generateMetadata baslik + canonical uretir', async () => {

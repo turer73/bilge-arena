@@ -304,7 +304,7 @@ export default function HakkindaPage() {
         </div>
       </section>
 
-      <section className="border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="icerik-baslik">
+      <section id="icerik-sorumlulugu" className="scroll-mt-24 border-y border-[var(--border)] bg-[var(--surface)] px-6 py-20 lg:px-8" aria-labelledby="icerik-baslik">
         <div className="mx-auto grid max-w-[1100px] gap-8 lg:grid-cols-2">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-7 sm:p-8">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--wisdom-bg)] text-[var(--wisdom-light)]"><BookOpenCheck size={24} aria-hidden="true" /></div>
