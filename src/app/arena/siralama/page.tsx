@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import SiralamaClient from './siralama-client'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
+import { Suspense } from 'react'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -19,5 +20,5 @@ export const metadata: Metadata = {
 }
 
 export default function SiralamaPage() {
-  return <SiralamaClient />
+  return <Suspense fallback={null}><SiralamaClient /></Suspense>
 }

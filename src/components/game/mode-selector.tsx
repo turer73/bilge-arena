@@ -45,15 +45,15 @@ export function ModeSelector({
               className={cn(
                 'flex min-h-14 min-w-[104px] snap-start items-center gap-1.5 rounded-[17px] border-2 px-2 py-2 text-left transition-all duration-200 active:translate-y-0.5',
                 active
-                  ? 'border-[#2563eb] bg-[#eff6ff] shadow-[0_4px_0_#bfdbfe]'
-                  : 'border-[#e5e7eb] bg-white shadow-[0_3px_0_#dfe3e7] hover:border-[#bfdbfe]'
+                  ? 'border-[var(--app-accent)] bg-[var(--app-accent-tint)] shadow-[0_4px_0_var(--app-shadow-accent)]'
+                  : 'border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_3px_0_var(--app-shadow)] hover:border-[var(--app-shadow-accent)]'
               )}
             >
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg ${active ? 'bg-white' : 'bg-[#f7f8fa]'}`} aria-hidden="true">{mode.icon}</span>
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg ${active ? 'bg-[var(--app-card)]' : 'bg-[var(--app-bg)]'}`} aria-hidden="true">{mode.icon}</span>
               <span
                 className={cn(
                   'text-[12px] font-black leading-tight',
-                  active ? 'text-[#2563eb]' : 'text-[#45494e]'
+                  active ? 'text-[var(--app-accent-text)]' : 'text-[var(--app-text)]'
                 )}
               >
                 {mode.name}
@@ -63,19 +63,19 @@ export function ModeSelector({
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-[#f7f8fa] px-3 py-2.5">
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-[var(--app-bg)] px-3 py-2.5">
         <div>
-          <p className="text-xs font-black text-[#45494e]">{activeMode.name}</p>
-          <p className="mt-0.5 text-[10px] font-semibold text-[#7d858d]">{activeMode.description}</p>
+          <p className="text-xs font-black text-[var(--app-text)]">{activeMode.name}</p>
+          <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">{activeMode.description}</p>
         </div>
-        <span className="shrink-0 rounded-xl bg-white px-2 py-1 text-[10px] font-black text-[#2563eb] shadow-[0_2px_0_#dfe3e7]">{activeMode.questionCount} soru</span>
+        <span className="shrink-0 rounded-xl bg-[var(--app-card)] px-2 py-1 text-[10px] font-black text-[var(--app-accent-text)] shadow-[0_2px_0_var(--app-shadow)]">{activeMode.questionCount} soru</span>
       </div>
 
       <button
         type="button"
         onClick={() => onShowAllChange(!showAll)}
         aria-expanded={showAll}
-        className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-xs font-extrabold text-[#2563eb] transition-colors hover:bg-[#eff6ff] sm:text-sm"
+        className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl text-xs font-extrabold text-[var(--app-accent-text)] transition-colors hover:bg-[var(--app-accent-tint)] sm:text-sm"
       >
         {showAll ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         {showAll ? 'Daha az mod göster' : 'Blitz, Maraton ve Boss modlarını göster'}

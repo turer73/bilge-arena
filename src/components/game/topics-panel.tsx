@@ -15,9 +15,9 @@ interface TopicsPanelProps {
  */
 export function TopicsPanel({ topics }: TopicsPanelProps) {
   return (
-    <div className="overflow-hidden rounded-[20px] border-2 border-[#dbeafe] bg-white shadow-[0_4px_0_#bfdbfe]">
-      <div className="border-b border-[#dbeafe] bg-[#eff6ff] px-3 py-2">
-        <span className="text-[9px] font-extrabold tracking-[0.18em] text-[#2563eb]">
+    <div className="overflow-hidden rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-shadow-accent)]">
+      <div className="border-b border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] px-3 py-2">
+        <span className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--app-accent-text)]">
           KONU GUCU
         </span>
       </div>
@@ -25,7 +25,7 @@ export function TopicsPanel({ topics }: TopicsPanelProps) {
       <div className="grid grid-cols-2 gap-x-5 gap-y-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:gap-x-6">
         {topics.map((topic, i) => {
           const color = topic.percentage === 0
-            ? '#94a3b8'
+            ? 'var(--app-text-muted)'
             : topic.percentage >= 70
             ? 'var(--growth)'
             : topic.percentage >= 40
@@ -35,12 +35,12 @@ export function TopicsPanel({ topics }: TopicsPanelProps) {
           return (
             <div key={i}>
               <div className="mb-[3px] flex items-center justify-between gap-2">
-                <span className="truncate text-[10px] font-semibold text-[#69717a]">{topic.label}</span>
+                <span className="truncate text-[10px] font-semibold text-[var(--app-text-sub)]">{topic.label}</span>
                 <span className="shrink-0 text-[10px] font-bold" style={{ color }}>
                   %{topic.percentage}
                 </span>
               </div>
-              <div className="h-[3px] overflow-hidden rounded-full bg-[#e5e7eb]">
+              <div className="h-[3px] overflow-hidden rounded-full bg-[var(--app-border)]">
                 <div
                   className="h-full rounded-full transition-[width] duration-700"
                   style={{ width: `${topic.percentage}%`, background: color }}

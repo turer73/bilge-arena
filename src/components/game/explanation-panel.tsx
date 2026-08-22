@@ -60,8 +60,8 @@ export function ExplanationPanel({
       ref={rootRef}
       className={`animate-fadeUp rounded-[22px] border-2 p-4 ${
         isCorrect
-          ? 'border-[#86efac] bg-[#f0fdf4] shadow-[0_5px_0_#86efac]'
-          : 'border-[#fda4af] bg-[#fff1f2] shadow-[0_5px_0_#fda4af]'
+          ? 'border-[var(--app-success-border)] bg-[var(--app-success-tint)] shadow-[0_5px_0_var(--app-success-border)]'
+          : 'border-[var(--app-danger-border)] bg-[var(--app-danger-tint)] shadow-[0_5px_0_var(--app-danger-border)]'
       }`}
     >
       {/* Sonuc mesaji */}
@@ -70,7 +70,7 @@ export function ExplanationPanel({
         aria-live="polite"
         aria-atomic="true"
         className={`mb-2 text-base font-bold leading-6 ${
-          isCorrect ? 'text-[#15803d]' : 'text-[#be123c]'
+          isCorrect ? 'text-[var(--app-success-ink)]' : 'text-[var(--app-danger-ink)]'
         }`}
       >
         {isCorrect
@@ -82,7 +82,7 @@ export function ExplanationPanel({
 
       {/* Aciklama */}
       {solution && (
-        <div className="mb-4 text-[15px] leading-7 text-[#4b5157]">
+        <div className="mb-4 text-[15px] leading-7 text-[var(--app-text)]">
           📌 {solution}
         </div>
       )}
@@ -92,7 +92,7 @@ export function ExplanationPanel({
         <button
           type="button"
           onClick={onNext}
-          className="min-h-11 w-full rounded-xl bg-[var(--focus)] px-5 py-2.5 text-sm font-bold tracking-wide text-white shadow-[0_4px_0_#1d4ed8] transition-all hover:bg-[var(--focus-light)] active:translate-y-1 active:shadow-none sm:w-auto"
+          className="min-h-11 w-full rounded-xl bg-[var(--focus)] px-5 py-2.5 text-sm font-bold tracking-wide text-white shadow-[0_4px_0_var(--app-accent-strong)] transition-all hover:bg-[var(--focus-light)] active:translate-y-1 active:shadow-none sm:w-auto"
         >
           {isLastQuestion ? 'Sonucu Gor →' : 'Sonraki Soru →'}
         </button>
@@ -114,7 +114,7 @@ export function ExplanationPanel({
             <button
               type="button"
               onClick={onOpenComments}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-white/80 text-[#64748b] transition-colors hover:bg-white hover:text-[#2563eb]"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-[var(--app-card)]/80 text-[var(--app-text-sub)] transition-colors hover:bg-[var(--app-card)] hover:text-[var(--app-accent-text)]"
               aria-label="Yorumlar"
             >
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
@@ -125,7 +125,7 @@ export function ExplanationPanel({
             <button
               type="button"
               onClick={onOpenReport}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-white/80 text-[#f97316] transition-colors hover:bg-white hover:text-[#ea580c]"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-[var(--app-card)]/80 text-[var(--app-warn)] transition-colors hover:bg-[var(--app-card)] hover:text-[var(--app-warn-ink)]"
               aria-label="Hata bildir"
             >
               <Bug className="h-4 w-4" aria-hidden="true" />

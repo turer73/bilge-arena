@@ -24,36 +24,36 @@ const stateStyles: Record<OptionState, {
   shadow: string
 }> = {
   idle: {
-    bg: 'bg-white',
-    border: 'border-[#dfe3e7]',
-    text: 'text-[#45494e]',
-    badgeBg: 'bg-[#eff6ff]',
-    badgeText: 'text-[#2563eb]',
-    shadow: 'shadow-[0_4px_0_#dfe3e7]',
+    bg: 'bg-[var(--app-card)]',
+    border: 'border-[var(--app-border)]',
+    text: 'text-[var(--app-text)]',
+    badgeBg: 'bg-[var(--app-accent-tint)]',
+    badgeText: 'text-[var(--app-accent-text)]',
+    shadow: 'shadow-[0_4px_0_var(--app-shadow)]',
   },
   correct: {
     // OPAK (transparent DEĞİL): video zeminde şık saydam kalıp metni okunmaz yapıyordu
-    bg: 'bg-[#f0fdf4]',
-    border: 'border-[#22c55e]',
-    text: 'text-[#15803d]',
-    badgeBg: 'bg-[#dcfce7]',
-    badgeText: 'text-[#15803d]',
-    shadow: 'shadow-[0_4px_0_#16a34a]',
+    bg: 'bg-[var(--app-success-tint)]',
+    border: 'border-[var(--app-success-solid)]',
+    text: 'text-[var(--app-success-ink)]',
+    badgeBg: 'bg-[var(--app-success-border)]',
+    badgeText: 'text-[var(--app-success-ink)]',
+    shadow: 'shadow-[0_4px_0_var(--app-success)]',
   },
   wrong: {
-    bg: 'bg-[#fff1f2]',
-    border: 'border-[#fb7185]',
-    text: 'text-[#be123c]',
-    badgeBg: 'bg-[#ffe4e6]',
-    badgeText: 'text-[#be123c]',
-    shadow: 'shadow-[0_4px_0_#e11d48]',
+    bg: 'bg-[var(--app-danger-tint)]',
+    border: 'border-[var(--app-danger)]',
+    text: 'text-[var(--app-danger-ink)]',
+    badgeBg: 'bg-[var(--app-danger-border)]',
+    badgeText: 'text-[var(--app-danger-ink)]',
+    shadow: 'shadow-[0_4px_0_var(--app-danger)]',
   },
   // Duello: cevap gosterilmeden secilen sikki vurgular (notr — dogru/yanlis belli etmez)
   selected: {
-    bg: 'bg-[#eff6ff]',
-    border: 'border-[#3b82f6]',
-    text: 'text-[#1d4ed8]',
-    badgeBg: 'bg-[#2563eb]',
+    bg: 'bg-[var(--app-accent-tint)]',
+    border: 'border-[var(--app-accent)]',
+    text: 'text-[var(--app-accent-ink)]',
+    badgeBg: 'bg-[var(--app-accent)]',
     badgeText: 'text-white',
     shadow: '',
   },
@@ -61,12 +61,12 @@ const stateStyles: Record<OptionState, {
   // video zeminde tüm butonu yarı-saydam yapıp metni okunmaz kılıyordu. Opak
   // kalsın, sönükleştirme metin/badge rengiyle (muted) yapılsın.
   dim: {
-    bg: 'bg-[#f8fafc]',
-    border: 'border-[#e5e7eb]',
-    text: 'text-[#94a3b8]',
-    badgeBg: 'bg-[#e5e7eb]',
-    badgeText: 'text-[#94a3b8]',
-    shadow: 'shadow-[0_3px_0_#e5e7eb]',
+    bg: 'bg-[var(--app-hover)]',
+    border: 'border-[var(--app-border)]',
+    text: 'text-[var(--app-text-muted)]',
+    badgeBg: 'bg-[var(--app-border)]',
+    badgeText: 'text-[var(--app-text-muted)]',
+    shadow: 'shadow-[0_3px_0_var(--app-border)]',
   },
 }
 
@@ -116,10 +116,10 @@ export const OptionButton = memo(function OptionButton({ index, text, state, onC
 
       {/* Dogru/yanlis ikonu */}
       {state === 'correct' && (
-        <span className="ml-auto shrink-0 text-lg text-[#15803d]" aria-hidden="true">✓</span>
+        <span className="ml-auto shrink-0 text-lg text-[var(--app-success-ink)]" aria-hidden="true">✓</span>
       )}
       {state === 'wrong' && (
-        <span className="ml-auto shrink-0 text-lg text-[#be123c]" aria-hidden="true">✗</span>
+        <span className="ml-auto shrink-0 text-lg text-[var(--app-danger-ink)]" aria-hidden="true">✗</span>
       )}
     </button>
   )

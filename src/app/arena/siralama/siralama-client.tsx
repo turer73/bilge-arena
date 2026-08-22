@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { Crown, Sparkles, Trophy, Users } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { getLevelFromXP } from '@/lib/constants/levels'
 import { LeaderboardTable } from '@/components/leaderboard/leaderboard-table'
@@ -32,15 +35,16 @@ interface ApiResponse {
 
 export default function SiralamaClient() {
   const { user } = useAuthStore()
+  const searchParams = useSearchParams()
+  const requestedAllTime = searchParams.get('period') === 'all'
   const [entries, setEntries] = useState<
     { rank: number; name: string; avatar: string; xp: number; level: string; isCurrentUser: boolean; nameplate: string; decorations: string[] }[]
   >([])
   const [loading, setLoading] = useState(true)
   const [isAllTime, setIsAllTime] = useState(false)
   // Ana sayfa 'Tum Zamanlarin Liderleri' CTA'si ?period=all ile gelir -> tum-zaman
-  // gorunumunu ACIKCA iste (haftalik-bos fallback'ten ayri). useSearchParams Suspense
-  // gerektirir; client effect'te window.location yeter (Codex #196 P2 cozumu).
-  const [explicitAllTime, setExplicitAllTime] = useState(false)
+  // gorunumunu ACIKCA iste (haftalik-bos fallback'ten ayri). useSearchParams
+  // ayni sayfadaki sekme degisimlerini de izler; page Suspense siniri saglar.
   const showRelativeLeague = Boolean(user) && isSocialLeagueUiEnabled()
   const showLearningSpotlights = Boolean(user) && isLearningSpotlightsUiEnabled()
   const showTeamBoss = Boolean(user) && isTeamBossUiEnabled()
@@ -50,10 +54,7 @@ export default function SiralamaClient() {
 
     async function fetchLeaderboard() {
       setLoading(true)
-      const allTimeMode =
-        typeof window !== 'undefined' &&
-        new URLSearchParams(window.location.search).get('period') === 'all'
-      setExplicitAllTime(allTimeMode)
+      const allTimeMode = requestedAllTime
       try {
         // Browser->Supabase direkt cagri yerine API proxy uzerinden
         // (Madde 9 — pentest raporu, CF Rate Limit + service-role + edge cache).
@@ -100,57 +101,77 @@ export default function SiralamaClient() {
     return () => {
       cancelled = true
     }
-  }, [user?.id])
+  }, [requestedAllTime, user?.id])
+
+  const currentEntry = entries.find((entry) => entry.isCurrentUser)
+  const allTimeView = requestedAllTime || isAllTime
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-6 md:max-w-2xl md:py-8 xl:max-w-3xl xl:px-6 xl:py-10 2xl:max-w-4xl">
-      {showRelativeLeague && <WeeklyLearningLeague />}
-      {showLearningSpotlights && <WeeklyLearningSpotlights />}
-      {showTeamBoss && <WeeklyTeamBoss />}
-      <div className="mb-4 text-center md:mb-6 xl:mb-8">
-        <h1 className="font-display text-xl font-black md:text-2xl xl:text-3xl 2xl:text-4xl">
-          <span className="bg-gradient-to-r from-[var(--reward)] to-[var(--reward-light)] bg-clip-text text-transparent">
-            🏆 {isAllTime
-              ? 'Tüm Zamanlar Sıralaması'
-              : showRelativeLeague ? 'XP Sıralaması' : 'Haftalık Sıralama'}
-          </span>
-        </h1>
-        <p className="mt-1 text-xs text-[var(--text-sub)] md:text-sm xl:text-base">
-          {isAllTime
-            ? 'En yüksek XP sahibi arenacıların genel sıralaması'
-            : showRelativeLeague
-              ? 'Bu tablo XP’yi gösterir; Yakın Rakip Ligi puanından ayrıdır'
-              : 'Bu haftanın en başarılı arenacıları'}
-        </p>
-      </div>
+    <div className="min-h-[100dvh] bg-[var(--app-bg)] pb-8 text-[var(--app-text)] md:bg-transparent md:pb-10">
+      <style>{`@media (max-width: 767px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }`}</style>
+      <header className="sticky top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
+        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4 md:h-auto md:px-6 md:pb-5 md:pt-8">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Trophy size={22} strokeWidth={2.8} /></span>
+            <div><p className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--app-warn-ink)]">Haftalık rekabet</p><h1 className="text-lg font-black leading-5 md:text-2xl">Lig</h1></div>
+          </div>
+          <Link href="/arena/profil" aria-label="Lig profiline git" className="flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--app-text-muted)] active:bg-[var(--app-hover)]"><Crown size={21} strokeWidth={2.5} /></Link>
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-4xl px-3 pt-3 md:px-6 md:pt-0">
+        <section className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--app-warn-strong)] to-[var(--app-warn)] p-4 text-white shadow-[0_6px_0_var(--app-warn-border)] md:p-6">
+          <div className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
+          <div className="relative z-10">
+            <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75"><Sparkles size={14} /> {allTimeView ? 'Efsaneler tablosu' : 'Bu haftanın arenası'}</p>
+            <h2 className="mt-1.5 max-w-md text-xl font-black leading-6 md:text-2xl">{allTimeView ? 'Tüm zamanların liderleri' : showRelativeLeague ? 'Öğren, puan topla, yüksel' : 'Haftalık sıralamada yerini al'}</h2>
+            <p className="mt-1.5 max-w-lg text-xs font-semibold leading-5 text-white/80">{allTimeView ? 'En yüksek XP sahibi arenacıların genel sıralaması.' : showRelativeLeague ? 'XP tablosu ile yakın rakip ligin ayrı hesaplanır.' : 'Her Pazartesi yeni bir yarış başlar.'}</p>
+            <div className="mt-3 flex gap-2 text-[10px] font-black">
+              <span className="rounded-lg bg-black/15 px-2.5 py-1.5">{currentEntry ? `Sıran #${currentEntry.rank}` : 'Sıranı oluştur'}</span>
+              <span className="rounded-lg bg-black/15 px-2.5 py-1.5"><Users size={12} className="mr-1 inline" />{entries.length} oyuncu</span>
+            </div>
+          </div>
+        </section>
+
+        <nav aria-label="Sıralama dönemi" className="mt-4 grid grid-cols-2 rounded-[18px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-1.5 shadow-[0_4px_0_var(--app-border)]">
+          <Link href="/arena/siralama" aria-current={!requestedAllTime ? 'page' : undefined} className={`flex min-h-11 items-center justify-center rounded-[14px] text-xs font-black transition-colors ${!requestedAllTime ? 'bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]' : 'text-[var(--app-text-sub)]'}`}>Bu hafta</Link>
+          <Link href="/arena/siralama?period=all" aria-current={requestedAllTime ? 'page' : undefined} className={`flex min-h-11 items-center justify-center rounded-[14px] text-xs font-black transition-colors ${requestedAllTime ? 'bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]' : 'text-[var(--app-text-sub)]'}`}>Tüm zamanlar</Link>
+        </nav>
+
+        <div className="mt-4">
+          {!requestedAllTime && showRelativeLeague && <WeeklyLearningLeague />}
+          {!requestedAllTime && showLearningSpotlights && <WeeklyLearningSpotlights />}
+          {!requestedAllTime && showTeamBoss && <WeeklyTeamBoss />}
+        </div>
 
       {loading ? (
-        <div className="flex min-h-[200px] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-[var(--focus)]" />
+        <div className="flex min-h-[220px] items-center justify-center rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)]">
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--app-border)] border-t-[var(--app-accent)]" />
         </div>
       ) : entries.length === 0 ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] py-16 text-center">
-          <div className="mb-3 text-4xl">🏟️</div>
-          <p className="text-sm text-[var(--text-sub)]">
+        <div className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] py-14 text-center shadow-[0_5px_0_var(--app-border)]">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-3xl">🏟️</div>
+          <p className="text-sm font-bold text-[var(--app-text-sub)]">
             Henüz kimse oyun oynamadı. İlk sen başla!
           </p>
         </div>
       ) : (
         <LeaderboardTable
           entries={entries}
-          title={isAllTime
+          title={allTimeView
             ? 'Genel Sıralama — Tüm Zamanlar'
             : showRelativeLeague ? 'XP Sıralaması — Bu Hafta' : 'Global Sıralama — Bu Hafta'}
         />
       )}
 
-      <div className="mt-4 text-center text-xs text-[var(--text-muted)]">
-        {isAllTime
-          ? explicitAllTime
+      <div className="mt-5 text-center text-[10px] font-bold text-[var(--app-text-muted)]">
+        {allTimeView
+          ? requestedAllTime
             ? 'Tüm zamanların en yüksek XP sahibi arenacıları'
             : 'Haftalık sıralama yeterli veri olunca otomatik gösterilir'
           : 'Sıralama her Pazartesi sıfırlanır'}
       </div>
+      </main>
     </div>
   )
 }

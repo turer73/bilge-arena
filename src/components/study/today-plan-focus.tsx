@@ -40,30 +40,30 @@ export function TodayPlanFocus({
     const showDiagnostic = game === 'matematik' && examRef === 'TYT'
     return (
       <div
-        className="animate-fadeUp overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)]"
+        className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-border)]"
         style={{ animationDelay: '0.28s', animationFillMode: 'both' }}
       >
-        <div className="border-b border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
-          <span className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">
+        <div className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card-sunken)] px-4 py-3">
+          <span className="text-[10px] font-black tracking-[0.16em] text-[var(--app-text-sub)]">
             BUGÜNÜN PLANI
           </span>
         </div>
         <div className="px-4 py-6 text-center">
-          <p className="text-sm font-bold text-[var(--text)]">Bu bağlam için hazır plan bulunamadı</p>
-          <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-[var(--text-sub)]">
+          <p className="text-sm font-black text-[var(--app-text)]">Bu bağlam için hazır plan bulunamadı</p>
+          <p className="mx-auto mt-1 max-w-sm text-xs font-semibold leading-relaxed text-[var(--app-text-sub)]">
             Derse girerek bir çalışma oturumu başlatabilir ve sonraki planını oluşturabilirsin.
           </p>
           <button
             type="button"
             onClick={openGame}
-            className="btn-primary mt-4 min-h-12 rounded-xl px-6 text-sm font-bold tracking-wide"
+            className="mt-4 min-h-12 rounded-2xl bg-[var(--app-accent)] px-6 text-sm font-black tracking-wide text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
           >
             Derse Başla
           </button>
           {showDiagnostic && (
             <Link
               href="/arena/tani"
-              className="mx-auto mt-2 flex min-h-11 w-fit items-center px-3 text-xs font-bold text-[var(--focus-text)] hover:underline"
+              className="mx-auto mt-2 flex min-h-11 w-fit items-center px-3 text-xs font-black text-[var(--app-accent-text)] hover:underline"
             >
               Önce 10 soruluk kısa tanılama yap
             </Link>

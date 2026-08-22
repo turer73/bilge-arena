@@ -37,7 +37,7 @@ describe('TopicsPanel', () => {
     expect(screen.getByText('%85')).toHaveStyle({ color: 'var(--growth)' })
     expect(screen.getByText('%50')).toHaveStyle({ color: 'var(--reward)' })
     expect(screen.getByText('%20')).toHaveStyle({ color: 'var(--urgency)' })
-    expect(screen.getByText('%0')).toHaveStyle({ color: '#94a3b8' })
+    expect(screen.getByText('%0')).toHaveStyle({ color: 'var(--app-text-muted)' })
   })
 
   test('bar genişliği yüzdeye eşit', () => {

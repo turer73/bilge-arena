@@ -103,9 +103,9 @@ export default function ProfilClient() {
   // Yukleniyor
   if (loading) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-[440px] items-center justify-center bg-[#f7f8fa]">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[440px] md:max-w-[560px] items-center justify-center bg-[var(--app-bg)]">
         <ProfileShellStyle />
-        <div className="h-10 w-10 animate-spin rounded-full border-[4px] border-[#dbeafe] border-t-[#2563eb]" />
+        <div className="h-10 w-10 animate-spin rounded-full border-[4px] border-[var(--app-accent-border)] border-t-[var(--app-accent)]" />
       </div>
     )
   }
@@ -113,22 +113,22 @@ export default function ProfilClient() {
   // Giris yapilmamis
   if (!user || !profile) {
     return (
-      <div className="mx-auto min-h-dvh w-full max-w-[440px] bg-[#f7f8fa] px-4 py-5 text-center text-[#172554]">
+      <div className="mx-auto min-h-dvh w-full max-w-[440px] md:max-w-[560px] bg-[var(--app-bg)] px-4 py-5 text-center text-[var(--app-accent-ink)]">
         <ProfileShellStyle />
-        <div className="mb-5 flex items-center justify-between rounded-2xl border-2 border-[#e2e8f0] bg-white px-3 py-2.5 shadow-[0_4px_0_#dbe2ea]">
-          <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[#dbeafe] bg-[#eff6ff] text-xl font-black text-[#2563eb]">‹</Link>
+        <div className="mb-5 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)]">
+          <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-xl font-black text-[var(--app-accent-text)]">‹</Link>
           <span className="font-display text-base font-black">Profil</span>
           <span className="h-11 w-11" />
         </div>
-        <div className="rounded-[28px] border-2 border-[#dbeafe] bg-white px-6 py-8 shadow-[0_6px_0_#bfdbfe]">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#eff6ff] text-4xl">🔒</div>
+        <div className="rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] px-6 py-8 shadow-[0_6px_0_var(--app-shadow-accent)]">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--app-accent-tint)] text-4xl">🔒</div>
           <h1 className="mb-2 text-xl font-black">Profilin seni bekliyor</h1>
-          <p className="mb-6 text-sm font-semibold leading-relaxed text-[#64748b]">
+          <p className="mb-6 text-sm font-semibold leading-relaxed text-[var(--app-text-sub)]">
             İlerlemeni, serini ve kazandığın rozetleri görmek için giriş yap.
           </p>
           <Link
             href="/giris"
-            className="block min-h-12 rounded-2xl border-2 border-[#1d4ed8] bg-[#2563eb] px-8 py-3 font-display text-sm font-black tracking-wide text-white shadow-[0_5px_0_#1e40af] active:translate-y-1 active:shadow-none"
+            className="block min-h-12 rounded-2xl border-2 border-[var(--app-accent-strong)] bg-[var(--app-accent)] px-8 py-3 font-display text-sm font-black tracking-wide text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
           >
             Giriş Yap
           </Link>
@@ -167,10 +167,10 @@ export default function ProfilClient() {
   // (docs/plans/2026-08-16-kozmetik-ekonomi-yol-haritasi.md, İP-2).
 
   const mainStats = [
-    { label: 'ALTIN', value: coinBalance, icon: '🪙', color: '#d97706' },
-    { label: 'OYUN', value: totalSessions, icon: '🎮', color: '#2563eb' },
-    { label: 'BAŞARI', value: `%${accuracy}`, icon: '🎯', color: '#16a34a' },
-    { label: 'EN İYİ SERİ', value: longestStreak, icon: '🔥', color: '#ea580c' },
+    { label: 'ALTIN', value: coinBalance, icon: '🪙', color: 'var(--app-warn)' },
+    { label: 'OYUN', value: totalSessions, icon: '🎮', color: 'var(--app-accent-text)' },
+    { label: 'BAŞARI', value: `%${accuracy}`, icon: '🎯', color: 'var(--app-success)' },
+    { label: 'EN İYİ SERİ', value: longestStreak, icon: '🔥', color: 'var(--app-warn-ink)' },
   ]
 
   // Kategori ilerleme verisini hazirla (gercek veya bos)
@@ -211,20 +211,20 @@ export default function ProfilClient() {
   })
 
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-[440px] bg-[#f7f8fa] px-4 pb-28 pt-4 text-[#172554]">
+    <div className="mx-auto min-h-dvh w-full max-w-[440px] md:max-w-[560px] bg-[var(--app-bg)] px-4 pb-28 pt-4 text-[var(--app-accent-ink)]">
       <ProfileShellStyle />
-      <div className="mb-4 flex items-center justify-between rounded-2xl border-2 border-[#e2e8f0] bg-white px-3 py-2.5 shadow-[0_4px_0_#dbe2ea]">
-        <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[#dbeafe] bg-[#eff6ff] text-xl font-black text-[#2563eb]">‹</Link>
+      <div className="mb-4 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)]">
+        <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-xl font-black text-[var(--app-accent-text)]">‹</Link>
         <div className="text-center">
           <div className="font-display text-base font-black">Profil</div>
-          <div className="text-[10px] font-bold text-[#64748b]">Öğrenme yolculuğun</div>
+          <div className="text-[10px] font-bold text-[var(--app-text-sub)]">Öğrenme yolculuğun</div>
         </div>
-        <Link href="/arena/magaza" aria-label="Mağazaya git" className="flex h-11 min-w-11 items-center justify-center rounded-xl border-2 border-[#fde68a] bg-[#fffbeb] px-2 text-xs font-black text-[#b45309]">🪙 {coinBalance}</Link>
+        <Link href="/arena/magaza" aria-label="Mağazaya git" className="flex h-11 min-w-11 items-center justify-center rounded-xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-2 text-xs font-black text-[var(--app-warn-ink)]">🪙 {coinBalance}</Link>
       </div>
       {/* Profil basligi — magazadan secilen arka planla (none=standart kart) */}
       <div
         data-testid="profil-header-card"
-        className={`relative isolate mb-5 animate-fadeUp overflow-hidden rounded-[28px] border-2 border-[#dbeafe] bg-white p-4 shadow-[0_6px_0_#bfdbfe] ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
+        className={`relative isolate mb-5 animate-fadeUp overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-shadow-accent)] ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
         style={isCssBg ? { background: activeBackground.css } : undefined}
       >
         <CardBackgroundLayer
@@ -271,7 +271,7 @@ export default function ProfilClient() {
               aria-expanded={framePickerOpen}
               className="absolute -bottom-3 -right-3 flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#dbeafe] bg-white text-xs shadow-sm transition-colors hover:border-[#2563eb] hover:text-[#2563eb]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] text-xs shadow-sm transition-colors hover:border-[var(--app-accent)] hover:text-[var(--app-accent-text)]">
                 🖼
               </span>
             </button>
@@ -281,10 +281,10 @@ export default function ProfilClient() {
             <h1 className="truncate text-base font-bold sm:text-lg md:text-xl xl:text-2xl">
               <Nameplate nameplateId={profile.selected_nameplate}>{displayName}</Nameplate>
             </h1>
-            <p className="mt-0.5 truncate text-[11px] font-semibold text-[#475569] sm:text-xs">
+            <p className="mt-0.5 truncate text-[11px] font-semibold text-[var(--app-text-sub)] sm:text-xs">
               {level.badge} {level.name}
             </p>
-            <p className="truncate text-[10px] text-[#64748b] sm:text-[11px]">
+            <p className="truncate text-[10px] text-[var(--app-text-sub)] sm:text-[11px]">
               {memberSince}&apos;dan beri üye
             </p>
           </div>
@@ -295,13 +295,13 @@ export default function ProfilClient() {
 
           <div
             data-testid="profile-xp-summary"
-            className="col-span-3 rounded-2xl border-2 border-[#dbeafe] bg-[#eff6ff] p-3"
+            className="col-span-3 rounded-2xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] p-3"
           >
             <div className="mb-2 flex items-center justify-between gap-3">
-              <span className="text-[10px] font-extrabold tracking-[0.12em] text-[#475569]">
+              <span className="text-[10px] font-extrabold tracking-[0.12em] text-[var(--app-text-sub)]">
                 SEVİYE İLERLEMESİ
               </span>
-              <span className="shrink-0 font-display text-sm font-black tabular-nums text-[#d97706]">
+              <span className="shrink-0 font-display text-sm font-black tabular-nums text-[var(--app-warn)]">
                 {totalXP.toLocaleString('tr-TR')} XP
               </span>
             </div>
@@ -319,9 +319,9 @@ export default function ProfilClient() {
 
         {/* Çerçeve seçici paneli */}
         {framePickerOpen && (
-          <div className="relative z-10 mt-3 animate-fadeUp rounded-2xl border-2 border-[#e2e8f0] bg-white p-3 shadow-[0_4px_0_#dbe2ea]">
+          <div className="relative z-10 mt-3 animate-fadeUp rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_4px_0_var(--app-border)]">
             <div className="mb-2.5 flex items-center justify-between">
-              <p className="text-xs font-extrabold uppercase tracking-widest text-[#475569]">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-[var(--app-text-sub)]">
                 Profil Çerçevesi
               </p>
               <span className="text-xs font-bold text-[var(--reward-light)]">
@@ -375,7 +375,7 @@ export default function ProfilClient() {
             </div>
 
             {activeFrame.id !== 'none' && (
-              <p className="mt-2.5 border-t-2 border-[#e2e8f0] pt-2 text-xs text-[#64748b]">
+              <p className="mt-2.5 border-t-2 border-[var(--app-border)] pt-2 text-xs text-[var(--app-text-sub)]">
                 <span className="font-bold" style={{ color: FRAME_RARITY_COLOR[activeFrame.rarity] }}>
                   {activeFrame.name}
                 </span>
@@ -414,7 +414,7 @@ export default function ProfilClient() {
                 <Link
                   key={gs.game}
                   href={`/arena/${gs.game}`}
-                  className="group rounded-2xl border-2 border-[#e2e8f0] bg-white p-3 text-center shadow-[0_4px_0_#dbe2ea] transition-all hover:border-[#93c5fd]"
+                  className="group rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 text-center shadow-[0_4px_0_var(--app-border)] transition-all hover:border-[var(--app-accent)]"
                 >
                   <div
                     className="mx-auto mb-1.5 h-1 w-8 rounded-full"
@@ -427,7 +427,7 @@ export default function ProfilClient() {
                   >
                     %{gs.percentage}
                   </div>
-                  <div className="text-xs text-[#64748b]">
+                  <div className="text-xs text-[var(--app-text-sub)]">
                     {gs.correct}/{gs.total} dogru
                   </div>
                 </Link>
@@ -441,7 +441,7 @@ export default function ProfilClient() {
       {stats && stats.recentGames.length > 0 && (
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
           <ProfileSectionTitle>SON OYUNLAR</ProfileSectionTitle>
-          <div className="divide-y-2 divide-[#e2e8f0] overflow-hidden rounded-2xl border-2 border-[#e2e8f0] bg-white shadow-[0_4px_0_#dbe2ea]">
+          <div className="divide-y-2 divide-[var(--app-border)] overflow-hidden rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-border)]">
             {stats.recentGames.map((g) => {
               const gameDef = GAMES[g.game]
               if (!gameDef) return null
@@ -461,11 +461,11 @@ export default function ProfilClient() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold truncate">{gameDef.name}</span>
-                      <span className="rounded-md bg-[#f1f5f9] px-1.5 py-0.5 text-[9px] font-bold text-[#64748b]">
+                      <span className="rounded-md bg-[var(--app-hover)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--app-text-sub)]">
                         {MODE_LABELS[g.mode] || g.mode}
                       </span>
                     </div>
-                    <div className="text-xs text-[#64748b]">
+                    <div className="text-xs text-[var(--app-text-sub)]">
                       {g.correct_count}/{g.total_questions} dogru · {timeAgo}
                     </div>
                   </div>
@@ -482,7 +482,7 @@ export default function ProfilClient() {
                     >
                       %{gameAccuracy}
                     </div>
-                    <div className="text-xs font-bold text-[#d97706]">+{g.total_xp} XP</div>
+                    <div className="text-xs font-bold text-[var(--app-warn)]">+{g.total_xp} XP</div>
                   </div>
                 </div>
               )
@@ -542,7 +542,7 @@ export default function ProfilClient() {
 
 function ProfileSectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h3 className="mb-3 inline-flex min-h-8 items-center rounded-xl border-2 border-[#dbeafe] bg-white px-3 py-1 text-[10px] font-extrabold tracking-[0.14em] text-[#475569] shadow-[0_3px_0_#dbe2ea]">
+    <h3 className="mb-3 inline-flex min-h-8 items-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] px-3 py-1 text-[10px] font-extrabold tracking-[0.14em] text-[var(--app-text-sub)] shadow-[0_3px_0_var(--app-border)]">
       {children}
     </h3>
   )
@@ -551,12 +551,15 @@ function ProfileSectionTitle({ children }: { children: ReactNode }) {
 function ProfileShellStyle() {
   return (
     <style jsx global>{`
-      body.mobile-profile-active [data-app-navbar] {
-        display: none !important;
-      }
-      body.mobile-profile-active [data-arena-main] {
-        background: #f7f8fa !important;
-        padding: 0 !important;
+      /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+      @media (max-width: 767px) {
+        body.mobile-profile-active [data-app-navbar] {
+          display: none !important;
+        }
+        body.mobile-profile-active [data-arena-main] {
+          background: var(--app-bg) !important;
+          padding: 0 !important;
+        }
       }
     `}</style>
   )

@@ -37,8 +37,8 @@ export function LikeButton({
       className={`flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-xl px-2 py-1 transition-all ${
         appearance === 'learning'
           ? liked
-            ? 'bg-[#ffe4e6] text-[#be123c]'
-            : 'bg-white/80 text-[#64748b] hover:bg-white hover:text-[#be123c]'
+            ? 'bg-[var(--app-danger-tint)] text-[var(--app-danger-ink)]'
+            : 'bg-[var(--app-card)]/80 text-[var(--app-text-sub)] hover:bg-[var(--app-card)] hover:text-[var(--app-danger-ink)]'
           : liked
             ? 'bg-[color-mix(in_srgb,var(--urgency)_12%,transparent)] text-[var(--urgency)]'
             : 'text-[var(--text-sub)] hover:bg-[var(--card)] hover:text-[var(--urgency)]'

@@ -10,7 +10,6 @@ import { useSidebarData } from '@/lib/hooks/use-sidebar-data'
 import { submitQuestionReport } from '@/lib/questions/submit-report'
 import { useSessionSaver } from '@/lib/hooks/use-session-saver'
 import { useQuizLimit } from '@/lib/hooks/use-quiz-limit'
-import { getLevelFromXP } from '@/lib/constants/levels'
 import { defaultExamRefForType } from '@/lib/constants/exam-types'
 import { trackLearningEvent } from '@/lib/analytics/learning-events'
 import { trackEvent } from '@/lib/utils/plausible'
@@ -19,7 +18,8 @@ import { isMockStrategyUiEnabled, startMockStrategyAttempt } from '@/lib/mock-st
 import { isPaperModeUiEnabled, paperPackCreateHref } from '@/lib/paper-mode/client'
 import { useMockStrategyResult } from '@/lib/hooks/use-mock-strategy-result'
 import { toast } from '@/stores/toast-store'
-import { Clock3, Flame, Heart, Sparkles, X } from 'lucide-react'
+import { Clock3, Flame, Heart, Pause, Play, Sparkles, X } from 'lucide-react'
+import { useGameAutoPause } from '@/lib/hooks/use-game-auto-pause'
 
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
@@ -27,11 +27,9 @@ import { usePersonalizedMock } from '@/lib/hooks/use-personalized-mock'
 import { useMasteryMap } from '@/lib/hooks/use-mastery-map'
 
 import { Lobby } from './lobby'
-import { Timer } from './timer'
 import { DenemeTimer } from './deneme-timer'
 import { QuestionCard } from './question-card'
 import { OptionButton } from './option-button'
-import { StreakBadge } from './streak-badge'
 import { SoundToggle } from './sound-toggle'
 import { XPPopup } from './xp-popup'
 import { ExplanationPanel } from './explanation-panel'
@@ -50,8 +48,6 @@ const DenemeResult = dynamic(
   () => import('./deneme-result').then(m => ({ default: m.DenemeResult })),
   { ssr: false },
 )
-import { MiniLeaderboard } from './mini-leaderboard'
-import { DailyQuests } from './daily-quests'
 import { TodayPlanCard } from './today-plan-card'
 import { PersonalizedMockCard } from './personalized-mock-card'
 import { MasteryMapCard } from './mastery-map-card'
@@ -100,6 +96,19 @@ export function QuizEngine({ game }: QuizEngineProps) {
   )
   const personalizedMock = usePersonalizedMock(game, user?.id, gameStore.selectedExamRef)
   const masteryMap = useMasteryMap(game, user?.id, gameStore.selectedExamRef)
+  const autoPauseSessionKey = quiz.attemptId ?? quizStore.questions[0]?.id ?? null
+  const autoPauseActive = quiz.screen === 'game' && !quiz.isDeneme && quizStore.state === 'playing'
+  const { autoPaused, resume: clearAutoPause } = useGameAutoPause({
+    active: autoPauseActive,
+    sessionKey: autoPauseSessionKey,
+    onPause: quiz.timer.pause,
+  })
+  const resumeAutoPausedGame = useCallback(() => {
+    clearAutoPause()
+    if (!quiz.helpOpen && quiz.mode.timePerQuestion > 0 && useQuizStore.getState().state === 'playing') {
+      quiz.timer.start()
+    }
+  }, [clearAutoPause, quiz.helpOpen, quiz.mode.timePerQuestion, quiz.timer])
   const sessionSaver = useSessionSaver({
     screen: quiz.screen,
     userId: user?.id,
@@ -275,10 +284,13 @@ export function QuizEngine({ game }: QuizEngineProps) {
     return (
       <>
         <style>{`
-          body.mobile-quiz-lobby [data-app-navbar] { display: none !important; }
-          body.mobile-quiz-lobby [data-arena-main] {
-            padding-top: 0 !important;
-            background: #f7f8fa;
+          /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+          @media (max-width: 767px) {
+            body.mobile-quiz-lobby [data-app-navbar] { display: none !important; }
+            body.mobile-quiz-lobby [data-arena-main] {
+              padding-top: 0 !important;
+              background: var(--app-bg);
+            }
           }
         `}</style>
         {user && (
@@ -394,30 +406,33 @@ export function QuizEngine({ game }: QuizEngineProps) {
     return (
       <>
         <style>{`
-          body.mobile-quiz-loading [data-app-navbar],
-          body.mobile-quiz-loading [data-bottom-nav] { display: none !important; }
-          body.mobile-quiz-loading [data-arena-main] {
-            padding: 0 !important;
-            background: #f7f8fa;
+          /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+          @media (max-width: 767px) {
+            body.mobile-quiz-loading [data-app-navbar],
+            body.mobile-quiz-loading [data-bottom-nav] { display: none !important; }
+            body.mobile-quiz-loading [data-arena-main] {
+              padding: 0 !important;
+              background: var(--app-bg);
+            }
           }
         `}</style>
-        <div className="mx-auto flex min-h-[100dvh] max-w-[520px] flex-col items-center justify-center gap-5 bg-[#f7f8fa] p-5 text-center text-[#45494e]">
-          <div className="relative flex h-48 w-full max-w-[340px] items-center justify-center overflow-hidden rounded-[28px] border-2 border-[#dbeafe] bg-white shadow-[0_6px_0_#bfdbfe]">
-            <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] border-[#2563eb]/5" />
-            <div className="absolute left-5 top-5 flex items-center gap-1.5 rounded-xl bg-[#eff6ff] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#2563eb]">
+        <div className="mx-auto flex min-h-[100dvh] max-w-[520px] flex-col items-center justify-center gap-5 bg-[var(--app-bg)] p-5 text-center text-[var(--app-text)]">
+          <div className="relative flex h-48 w-full max-w-[340px] items-center justify-center overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_6px_0_var(--app-shadow-accent)]">
+            <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] border-[var(--app-accent)]/5" />
+            <div className="absolute left-5 top-5 flex items-center gap-1.5 rounded-xl bg-[var(--app-accent-tint)] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--app-accent-text)]">
               <Sparkles size={13} fill="currentColor" /> Bilge Çan hazırlıyor
             </div>
             <BilgeChan pose="reading" height={128} className="mt-8 animate-float" priority />
           </div>
           <div>
             <h1 className="text-xl font-black">Sorular hazırlanıyor</h1>
-            <p className="mt-1 text-xs font-semibold text-[#7d858d]">Seçtiğin moda uygun soruları getiriyoruz.</p>
+            <p className="mt-1 text-xs font-semibold text-[var(--app-text-sub)]">Seçtiğin moda uygun soruları getiriyoruz.</p>
           </div>
           <div aria-label="Sorular yükleniyor" role="progressbar" className="flex w-full max-w-[280px] gap-2">
             {[0, 1, 2].map((step) => (
               <span
                 key={step}
-                className="h-2 flex-1 animate-pulse rounded-full bg-[#2563eb]"
+                className="h-2 flex-1 animate-pulse rounded-full bg-[var(--app-accent)]"
                 style={{ animationDelay: `${step * 180}ms`, opacity: 1 - step * 0.22 }}
               />
             ))}
@@ -431,11 +446,14 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (quiz.screen === 'result') {
     const resultShellStyle = (
       <style>{`
-        body.mobile-quiz-result [data-app-navbar],
-        body.mobile-quiz-result [data-bottom-nav] { display: none !important; }
-        body.mobile-quiz-result [data-arena-main] {
-          padding: 0 !important;
-          background: #f3f6fa;
+        /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+        @media (max-width: 767px) {
+          body.mobile-quiz-result [data-app-navbar],
+          body.mobile-quiz-result [data-bottom-nav] { display: none !important; }
+          body.mobile-quiz-result [data-arena-main] {
+            padding: 0 !important;
+            background: var(--app-bg);
+          }
         }
       `}</style>
     )
@@ -445,35 +463,35 @@ export function QuizEngine({ game }: QuizEngineProps) {
       return (
         <>
           {resultShellStyle}
-          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[#f3f6fa] p-4 text-center text-[#45494e] animate-scaleIn">
-            <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] p-5 pb-7 text-white shadow-[0_7px_0_#1e40af]">
+          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] p-4 text-center text-[var(--app-text)] animate-scaleIn md:max-w-[560px]">
+            <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-5 pb-7 text-white shadow-[0_7px_0_var(--app-accent-strong)]">
               <div className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
               <BilgeChan pose="wave" height={148} priority className="mx-auto drop-shadow-[0_8px_10px_rgba(15,23,42,.18)]" />
               <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/70">İlk turun tamam</p>
               <h2 className="mt-1 text-2xl font-black">Nasıl buldun?</h2>
             </div>
-            <div className="rounded-[22px] border-2 border-[#dbeafe] bg-white p-5 shadow-[0_5px_0_#bfdbfe]">
-              <p className="text-sm font-semibold leading-6 text-[#69717a]">
+            <div className="rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-5 shadow-[0_5px_0_var(--app-shadow-accent)]">
+              <p className="text-sm font-semibold leading-6 text-[var(--app-text-sub)]">
                 <span className="font-black" style={{ color: gameDef.colorHex }}>{gameDef.name}</span>
                 {' '}arenasında yüzlerce soru seni bekliyor. İlerlemeni kaydetmek ve serini korumak için ücretsiz hesap oluştur.
               </p>
               <div className="mt-5 flex w-full flex-col gap-3">
                 <a
                   href={`/giris?redirect=${encodeURIComponent(redirectPath)}`}
-                  className="flex min-h-[52px] items-center justify-center rounded-2xl bg-[#2563eb] px-4 text-sm font-black text-white shadow-[0_5px_0_#1d4ed8] active:translate-y-1 active:shadow-none"
+                  className="flex min-h-[52px] items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
                 >
                   Ücretsiz Kayıt Ol
                 </a>
                 <button
                   onClick={quiz.handleRestart}
-                  className="min-h-12 rounded-2xl border-2 border-[#e5e7eb] bg-white text-sm font-black text-[#69717a] shadow-[0_4px_0_#dfe3e7] active:translate-y-1 active:shadow-none"
+                  className="min-h-12 rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] text-sm font-black text-[var(--app-text-sub)] shadow-[0_4px_0_var(--app-shadow)] active:translate-y-1 active:shadow-none"
                 >
                   Tekrar Dene
                 </button>
               </div>
-              <p className="mt-4 text-xs font-semibold text-[#9aa1a9]">
+              <p className="mt-4 text-xs font-semibold text-[var(--app-text-muted)]">
                 Zaten hesabın var mı?{' '}
-                <a href={`/giris?redirect=${encodeURIComponent(redirectPath)}`} className="font-black text-[#2563eb] underline underline-offset-2">Giriş yap</a>
+                <a href={`/giris?redirect=${encodeURIComponent(redirectPath)}`} className="font-black text-[var(--app-accent-text)] underline underline-offset-2">Giriş yap</a>
               </p>
             </div>
           </div>
@@ -518,15 +536,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (!question) return null
 
   const lastAnswer = quizStore.answers[quizStore.answers.length - 1]
-  const level = getLevelFromXP(quizStore.xpEarned)
   const questionProgress = ((quizStore.currentIndex + 1) / Math.max(1, quizStore.questions.length)) * 100
 
-  // Sidebar görev verileri — gerçek günlük görevler varsa onları kullan
-  const fallbackQuests = [
-    { label: '10 soru çöz', done: quizStore.currentIndex + 1, total: 10, color: 'var(--focus)' },
-    { label: '3 seri yap', done: Math.min(quizStore.maxStreak, 3), total: 3, color: 'var(--reward)' },
-    { label: `${gameDef.name} oyna`, done: 1, total: 1, color: 'var(--growth)' },
-  ]
 
   // Konu gucu: gercek veri varsa onu kullan, yoksa kategorileri %0 goster
   const sidebarTopics = sidebar.topicData.length > 0
@@ -539,21 +550,40 @@ export function QuizEngine({ game }: QuizEngineProps) {
   return (
     <>
     <style>{`
-      body.mobile-quiz-active [data-app-navbar],
-      body.mobile-quiz-active [data-bottom-nav] { display: none !important; }
-      body.mobile-quiz-active [data-arena-main] {
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        background: #f3f6fa;
+      /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
+      @media (max-width: 767px) {
+        body.mobile-quiz-active [data-app-navbar],
+        body.mobile-quiz-active [data-bottom-nav] { display: none !important; }
+        body.mobile-quiz-active [data-arena-main] {
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+          background: var(--app-bg);
+        }
+      }
+      .game-auto-paused *, .game-auto-paused *::before, .game-auto-paused *::after {
+        animation-play-state: paused !important;
       }
     `}</style>
     {/* Can kaybi kirmizi flash */}
     {quiz.showLifeLost && <LifeLostOverlay />}
 
-    <div className="mx-auto min-h-[100dvh] max-w-[440px] bg-[#f3f6fa] p-3 text-[#45494e]">
+    <div className={`relative mx-auto min-h-[100dvh] max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:my-6 md:min-h-0 md:max-w-[560px] md:rounded-[32px] md:border-2 md:border-[var(--app-border)] md:p-5 md:shadow-[0_8px_0_var(--app-shadow)] ${autoPaused ? 'game-auto-paused' : ''}`}>
+      {autoPaused && (
+        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[var(--app-overlay)] px-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="auto-pause-title">
+          <section className="w-full max-w-sm rounded-[26px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-5 text-center shadow-[0_8px_0_rgba(15,23,42,.18)]">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[20px] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><Pause size={28} fill="currentColor" /></span>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-accent-text)]">Pil koruması</p>
+            <h2 id="auto-pause-title" className="mt-1 text-xl font-black text-[var(--app-text)]">Oyun duraklatıldı</h2>
+            <p className="mt-2 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">Sekme arka plana geçti veya bir süredir işlem yapılmadı. Süre ve hareketler sen dönene kadar durdu.</p>
+            <button type="button" onClick={resumeAutoPausedGame} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none">
+              <Play size={17} fill="currentColor" /> Devam Et
+            </button>
+          </section>
+        </div>
+      )}
       {/* Mobil odak modu: ilerleme, süre ve oturum kaynakları tek bakışta. */}
       <header
-        className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)]"
+        className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)] md:-mx-5 md:-mt-5 md:top-[var(--navbar-h)] md:rounded-t-[30px] md:px-5 md:pt-4"
         style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}d9)` }}
       >
         <div className="pointer-events-none absolute -right-8 -top-12 h-28 w-28 rounded-full border-[20px] border-white/10" />
@@ -606,10 +636,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
                   <Heart size={15} fill="currentColor" />{quizStore.lives}
                 </span>
               )}
-              <span aria-label={`${quizStore.streak} seri`} className="flex items-center gap-1 text-[#fed7aa]">
+              <span aria-label={`${quizStore.streak} seri`} className="flex items-center gap-1 text-[var(--app-warn-border)]">
                 <Flame size={15} fill="currentColor" />{quizStore.streak}
               </span>
-              <span aria-label={`${quizStore.xpEarned} oturum XP`} className="flex items-center gap-1 text-[#ede9fe]">
+              <span aria-label={`${quizStore.xpEarned} oturum XP`} className="flex items-center gap-1 text-[var(--wisdom-bg)]">
                 <Sparkles size={15} fill="currentColor" />+{quizStore.xpEarned} XP
               </span>
             </div>
@@ -637,7 +667,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
         )}
         {/* Deneme timer */}
         {quiz.isDeneme && quiz.denemeConfig && (
-          <div className="animate-fadeUp rounded-[20px] border-2 border-[#dbeafe] bg-white p-3 text-[#45494e] shadow-[0_4px_0_#bfdbfe]">
+          <div className="animate-fadeUp rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-shadow-accent)]">
             <div className="mb-1 flex items-center justify-between">
               <span className="text-xs font-bold tracking-widest text-[var(--text-sub)]">
                 DENEME SINAVI — {trUpper(gameDef.name)}
@@ -651,67 +681,6 @@ export function QuizEngine({ game }: QuizEngineProps) {
               onTimeUp={quiz.handleDenemeTimeUp}
               isPaused={quiz.screen !== 'game'}
             />
-          </div>
-        )}
-
-        {/* Profil seridi (normal mod) */}
-        {!quiz.isDeneme && (
-          <div className="hidden">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="flex h-[38px] w-[38px] items-center justify-center rounded-full border-2 text-lg"
-                style={{
-                  background: `linear-gradient(135deg, ${gameDef.colorHex}44, ${gameDef.colorHex})`,
-                  borderColor: `${gameDef.colorHex}55`,
-                }}
-              >
-                {level.badge}
-              </div>
-              <div>
-                <div className="text-[13px] font-bold">{gameDef.name}</div>
-                <div className="text-xs text-[var(--text-sub)]">
-                  {quizStore.xpEarned} XP kazanildi
-                </div>
-              </div>
-              <div className="flex-1" />
-
-              {/* Can gösterimi — son can pulse, kayıp can heartbreak */}
-              {quizStore.livesEnabled && (
-                <div className="flex items-center gap-0.5" title={`${quizStore.lives}/${quizStore.maxLives} can`}>
-                  {Array.from({ length: quizStore.maxLives }).map((_, i) => {
-                    const isAlive = i < quizStore.lives
-                    const isLastLife = isAlive && quizStore.lives === 1 && i === 0
-                    const justLost = !isAlive && i === quizStore.lives && quiz.showLifeLost
-
-                    return (
-                      <span
-                        key={i}
-                        className={`text-sm ${
-                          justLost
-                            ? 'animate-heart-break'
-                            : isLastLife
-                              ? 'animate-last-life-pulse'
-                              : isAlive
-                                ? 'scale-100 opacity-100 transition-all duration-300'
-                                : 'scale-75 opacity-30 grayscale transition-all duration-300'
-                        }`}
-                      >
-                        {isAlive ? '❤️' : '🖤'}
-                      </span>
-                    )
-                  })}
-                </div>
-              )}
-
-              <SoundToggle />
-              <StreakBadge streak={quizStore.streak} />
-              <div className="text-right">
-                <div className="text-xs tracking-wider text-[var(--text-sub)]">OTURUM</div>
-                <div className="font-display text-base font-black text-[var(--reward-text)]">
-                  +{quizStore.xpEarned}
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
@@ -768,13 +737,6 @@ export function QuizEngine({ game }: QuizEngineProps) {
             </QuestionCard>
           </div>
 
-          {/* Per-question timer kutusu */}
-          {!quiz.isDeneme && quiz.mode.timePerQuestion > 0 && (
-            <div className="hidden">
-              <Timer seconds={quiz.timer.seconds} total={quiz.mode.timePerQuestion} />
-              <span className="text-xs font-bold tracking-wider text-[var(--text-sub)]">SN</span>
-            </div>
-          )}
         </div>
 
         {/* Secenekler */}
@@ -806,32 +768,6 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
       </div>
 
-      {/* Sag sidebar */}
-      {!quiz.isDeneme && (
-        <div className="hidden">
-          <BilgeChanCompanion
-            key={quizStore.currentIndex}
-            attemptId={quiz.attemptId}
-            quizState={quizStore.state}
-            lastIsCorrect={lastAnswer?.isCorrect ?? null}
-            question={question}
-            correctOption={lastAnswer?.correctOption ?? null}
-            onHelpToggle={quiz.setHelpPaused}
-            height={340}
-            className="sticky top-4"
-          />
-          <ComponentErrorBoundary label="Sıralama" variant="inline">
-            <MiniLeaderboard players={sidebar.leaderboard} myRank={sidebar.myRank} />
-          </ComponentErrorBoundary>
-          <ComponentErrorBoundary label="Günlük Görevler" variant="inline">
-            <DailyQuests
-              quests={dailyQuests.quests.length === 0 ? fallbackQuests : undefined}
-              userQuests={dailyQuests.quests.length > 0 ? dailyQuests.quests : undefined}
-              onClaimXP={dailyQuests.claimXP}
-            />
-          </ComponentErrorBoundary>
-        </div>
-      )}
       </div>
 
       {/* Konu gucu — tam genislik alt bant (mobilde de gorunur) */}

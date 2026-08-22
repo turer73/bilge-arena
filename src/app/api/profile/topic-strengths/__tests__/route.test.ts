@@ -5,6 +5,7 @@ const {
   mockGetUser,
   mockIpCheck,
   mockUserCheck,
+  mockQueryEq,
 } = vi.hoisted(() => ({
   mockAnswersRes: vi.fn(),
   mockGetUser: vi.fn(async () => ({
@@ -12,6 +13,7 @@ const {
   })),
   mockIpCheck: vi.fn(async () => ({ success: true, retryAfter: 0 })),
   mockUserCheck: vi.fn(async () => ({ success: true, retryAfter: 0 })),
+  mockQueryEq: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -24,15 +26,11 @@ vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
       if (table === 'session_answers') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                returns: vi.fn(() => mockAnswersRes()),
-              })),
-            })),
-          })),
-        }
+        const chain: Record<string, ReturnType<typeof vi.fn>> = {}
+        chain.select = vi.fn(() => chain)
+        chain.eq = vi.fn((...args: unknown[]) => { mockQueryEq(...args); return chain })
+        chain.returns = vi.fn(() => mockAnswersRes())
+        return chain
       }
       return {}
     }),
@@ -84,6 +82,22 @@ describe('GET /api/profile/topic-strengths', () => {
     headers.set('x-forwarded-for', '1.2.3.4')
     const res = await GET(new Request('http://localhost/api/profile/topic-strengths', { headers }) as never)
     expect(res.status).toBe(400)
+  })
+
+  it('rejects an exam scope that does not belong to the game', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
+    const res = await GET(makeRequest('matematik&exam_ref=YDT') as never)
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toContain('sinav')
+  })
+
+  it('filters topic progress by the requested exam scope', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
+    mockAnswersRes.mockResolvedValueOnce({ data: [], error: null })
+    const res = await GET(makeRequest('matematik&exam_ref=AYT-SAY') as never)
+    expect(res.status).toBe(200)
+    expect(mockQueryEq).toHaveBeenCalledWith('questions.exam_ref', 'AYT-SAY')
+    expect((await res.json()).examRef).toBe('AYT-SAY')
   })
 
   it('returns empty topics when no answers exist', async () => {

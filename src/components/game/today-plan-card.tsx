@@ -28,8 +28,8 @@ export function TodayPlanCard({
 }: TodayPlanCardProps) {
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card-bg)]" role="status">
-        <div className="px-4 py-6 text-center text-xs text-[var(--text-sub)]">
+      <div className="overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-border)]" role="status">
+        <div className="px-4 py-6 text-center text-xs font-bold text-[var(--app-text-sub)]">
           Bugünün planı hazırlanıyor...
         </div>
       </div>
@@ -58,26 +58,26 @@ export function TodayPlanCard({
   return (
     <>
       <article
-        className="animate-fadeUp overflow-hidden rounded-2xl border border-[var(--reward)]/30 bg-[var(--card-bg)] shadow-sm"
+        className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-warn-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-warn-border)]"
         style={{ animationDelay: '0.28s', animationFillMode: 'both' }}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--reward)]/10 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 border-b-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3">
           <div>
-            <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--reward-text)]">{title}</p>
-            <p className="mt-0.5 text-[10px] text-[var(--text-sub)]">
+            <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-warn-ink)]">{title}</p>
+            <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">
               {actionCount} soru · yaklaşık {estimatedMinutes} dk
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-[var(--reward)]/15 px-3 py-1 text-xs font-extrabold text-[var(--reward-text)]">
+          <span className="shrink-0 rounded-xl bg-[var(--app-card)] px-3 py-1.5 text-xs font-black text-[var(--app-warn-ink)] shadow-[0_2px_0_var(--app-warn-border)]">
             {completed}/{total}{isDone ? ' ✓' : ''}
           </span>
         </div>
 
         <div className="p-4 md:p-5">
-          <h2 className="text-base font-extrabold text-[var(--text)] md:text-lg">
+          <h2 className="text-base font-black text-[var(--app-text)] md:text-lg">
             {isDone ? 'Bugünkü hedef tamamlandı' : completed > 0 ? 'Kaldığın yerden devam et' : 'Dengeli planın hazır'}
           </h2>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--text-sub)]">
+          <p className="mt-1 text-xs font-semibold leading-relaxed text-[var(--app-text-sub)]">
             Tekrar zamanı gelenler, gelişmekte olan konular ve yeni sorular tek oturumda dengelendi.
           </p>
 
@@ -86,7 +86,7 @@ export function TodayPlanCard({
               {composition.map((entry) => (
                 <span
                   key={entry.label}
-                  className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-sub)]"
+                  className="rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] px-2.5 py-1 text-[10px] font-bold text-[var(--app-text-sub)]"
                 >
                   {entry.count} {entry.label}
                 </span>
@@ -94,31 +94,31 @@ export function TodayPlanCard({
             </div>
           )}
 
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--border)]" aria-hidden="true">
+          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[var(--app-border-soft)] p-[2px]" aria-hidden="true">
             <div
               className="h-full rounded-full transition-[width] duration-500"
               style={{
                 width: `${pct}%`,
-                background: 'var(--reward)',
+                background: 'var(--app-warn-strong)',
                 boxShadow: isDone ? '0 0 8px color-mix(in srgb, var(--reward) 50%, transparent)' : undefined,
               }}
             />
           </div>
-          <p className="mt-1.5 text-right text-[10px] font-semibold text-[var(--text-sub)]">
+          <p className="mt-1.5 text-right text-[10px] font-bold text-[var(--app-text-sub)]">
             %{pct} tamamlandı
           </p>
 
           <button
             type="button"
             onClick={onStart}
-            className={`btn-primary mt-4 min-h-12 w-full rounded-xl px-4 text-sm font-extrabold tracking-wide transition-transform hover:scale-[1.01] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)] ${showStickyMobileAction ? 'hidden md:block' : ''}`}
+            className={`mt-4 min-h-12 w-full rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black tracking-wide text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)] ${showStickyMobileAction ? 'hidden md:block' : ''}`}
           >
             {actionLabel} · {actionCount} Soru
           </button>
           {paperHref && (
             <Link
               href={paperHref}
-              className="mt-2 flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 text-xs font-bold text-[var(--text)] transition-colors hover:bg-[var(--cardHover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+              className="mt-2 flex min-h-11 w-full items-center justify-center rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] px-4 text-xs font-black text-[var(--app-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)]"
             >
               🖨️ Kağıt / PDF paketi
             </Link>
@@ -131,16 +131,16 @@ export function TodayPlanCard({
           className="pointer-events-none fixed inset-x-3 z-30 md:hidden"
           style={{ bottom: 'calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 0.75rem)' }}
         >
-          <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-[var(--reward)]/30 bg-[var(--card-bg)]/95 p-2.5 shadow-2xl backdrop-blur-xl">
+          <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-3 rounded-[20px] border-2 border-[var(--app-warn-border)] bg-[var(--app-card)]/96 p-2.5 shadow-[0_5px_0_var(--app-warn-border),0_12px_30px_rgba(15,23,42,.18)] backdrop-blur-xl">
             <div className="min-w-0 flex-1 pl-1">
-              <p className="truncate text-[10px] font-extrabold tracking-wide text-[var(--reward-text)]">BUGÜNÜN PLANI</p>
-              <p className="truncate text-[10px] text-[var(--text-sub)]">{actionCount} soru · yaklaşık {estimatedMinutes} dk</p>
+              <p className="truncate text-[10px] font-black tracking-wide text-[var(--app-warn-ink)]">BUGÜNÜN PLANI</p>
+              <p className="truncate text-[10px] font-semibold text-[var(--app-text-sub)]">{actionCount} soru · yaklaşık {estimatedMinutes} dk</p>
             </div>
             <button
               type="button"
               onClick={onStart}
               aria-label={`${actionLabel}: ${actionCount} soru`}
-              className="btn-primary min-h-11 shrink-0 rounded-xl px-4 text-xs font-extrabold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+              className="min-h-11 shrink-0 rounded-2xl bg-[var(--app-accent)] px-4 text-xs font-black text-white shadow-[0_4px_0_var(--app-accent-strong)] active:translate-y-0.5 active:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)]"
             >
               {actionLabel}
             </button>

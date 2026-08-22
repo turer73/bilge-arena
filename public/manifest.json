@@ -5,7 +5,7 @@
   "start_url": "/arena",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F8FA",
+  "background_color": "#070D1A",
   "theme_color": "#2563EB",
   "orientation": "portrait-primary",
   "icons": [

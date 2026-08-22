@@ -51,6 +51,8 @@ export interface UseQuizGameReturn {
   showLifeLost: boolean
   showComments: boolean
   showReportModal: boolean
+  /** Bilge Chan yardim veya sohbet paneli acikken true. */
+  helpOpen: boolean
   setShowComments: (v: boolean) => void
   setShowReportModal: (v: boolean) => void
   /** Bilge Chan companion 'yardim' balonu acik/kapali — sayaci duraklatir */
@@ -601,6 +603,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     showLifeLost,
     showComments,
     showReportModal,
+    helpOpen,
     setShowComments,
     setShowReportModal,
     setHelpPaused,

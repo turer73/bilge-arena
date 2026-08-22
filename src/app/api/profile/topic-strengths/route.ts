@@ -16,7 +16,7 @@ const ipLimiter = createRateLimiter('topic-strengths-ip', 120, 60_000)
 const userLimiter = createRateLimiter('topic-strengths-user', 60, 60_000)
 
 /**
- * GET /api/profile/topic-strengths?game=<slug>
+ * GET /api/profile/topic-strengths?game=<slug>&exam_ref=<TYT|AYT-SAY|...>
  *
  * Auth'lu kullanicinin belirli bir oyundaki konu bazli basari yuzdelerini
  * doner. Sidebar konu gucu paneli icin (game pages, sidebar render).
@@ -77,6 +77,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Gecerli oyun belirtilmedi' }, { status: 400 })
   }
   const game = gameRaw as GameSlug
+  const examRefRaw = searchParams.get('exam_ref')?.trim().toUpperCase() || null
+  if (examRefRaw && !GAMES[game].examTags.includes(examRefRaw)) {
+    return NextResponse.json({ error: 'Gecersiz sinav kapsami' }, { status: 400 })
+  }
 
   // 5-6. Service-role query + aggregation — extract edilmis paylasilan helper
   // (src/lib/review/topic-strengths.ts, /api/study/today plan-uretimi de
@@ -84,18 +88,26 @@ export async function GET(request: NextRequest) {
   const supabase = createServiceRoleClient()
   let strengths
   try {
-    strengths = await computeTopicStrengths(supabase, user.id, game)
+    strengths = await computeTopicStrengths(supabase, user.id, game, examRefRaw)
   } catch (error) {
     console.error('[TopicStrengths] sorgu hatasi:', (error as { code?: string } | null)?.code)
     return NextResponse.json({ error: 'Sorgu basarisiz' }, { status: 500 })
   }
 
-  // Eski sozlesme korunur: yalniz label+percentage disari sizar (category/total
-  // helper'in ic kullanimi icin, plan-uretimi bunlari dogrudan helper'dan okur).
-  const topics = strengths.map(({ label, percentage }) => ({ label, percentage }))
+  // label+percentage eski sozlesme; category+total EK alanlar (additive).
+  // Mobil ogrenme yolu kanonik mufredat listesiyle (GAMES[game].categories)
+  // eslestirme yapabilmek icin slug'a, "hic baslanmadi" ile "denendi ama %0"
+  // ayrimi icin de orneklem sayisina ihtiyac duyar. Ikisi de kullanicinin
+  // KENDI verisi ve kategori taksonomisi zaten istemci sabitlerinde public.
+  const topics = strengths.map(({ label, percentage, category, total }) => ({
+    label,
+    percentage,
+    category,
+    total,
+  }))
 
   return NextResponse.json(
-    { topics, game },
+    { topics, game, examRef: examRefRaw },
     { headers: { 'Cache-Control': 'no-store' } },
   )
 }
