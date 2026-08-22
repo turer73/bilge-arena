@@ -38,7 +38,7 @@ function run(overrides: Partial<AuditRun> = {}): AuditRun {
     markedAnswerIndex: 2,
     inputSnapshot,
     execution: {
-      policyVersion: 'question-quality@1', generationConfigSha256: 'b'.repeat(64), generationConfig: { blindSamples: 3 },
+      policyVersion: 'question-quality@2', generationConfigSha256: 'b'.repeat(64), generationConfig: { blindSamples: 3 },
       providerIds: { blind: 'gemini:test', adversarial: 'gemini:test', verifier: 'gemini:test' },
       modelIds: { blind: 'gemini-2.5-flash-lite', adversarial: 'gemini-2.5-flash-lite', verifier: 'gemini-2.5-flash-lite' },
       promptVersions: { blind: 'blind-solver@1', adversarial: 'adversarial@1', verifier: 'solution-verifier@2' },
@@ -141,7 +141,7 @@ describe('toValidationRunRows', () => {
     const row = toValidationDecisionRow(auditRun, deriveVerdict(auditRun), 'run-1')
     expect(row).toMatchObject({
       question_id: 'q1', revision_id: 'rev1', content_sha256: 'a'.repeat(64),
-      policy_version: 'question-quality@1', verdict: 'APPROVED', run_id: 'run-1',
+      policy_version: 'question-quality@2', verdict: 'APPROVED', run_id: 'run-1',
     })
   })
 })

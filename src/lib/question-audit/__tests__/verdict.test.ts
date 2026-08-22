@@ -51,7 +51,7 @@ function run(overrides: Partial<AuditRun> = {}): AuditRun {
     markedAnswerIndex: 2,
     inputSnapshot,
     execution: {
-      policyVersion: 'question-quality@1', generationConfigSha256: 'b'.repeat(64), generationConfig: {},
+      policyVersion: 'question-quality@2', generationConfigSha256: 'b'.repeat(64), generationConfig: {},
       providerIds: { blind: 'test-provider', adversarial: 'test-provider', verifier: 'test-provider' },
       modelIds: { blind: 'test-model', adversarial: 'test-model', verifier: 'test-model' },
       promptVersions: { blind: 'test@1', adversarial: 'test@1', verifier: 'test@1' },

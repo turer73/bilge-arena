@@ -72,7 +72,24 @@ export interface AuditProviders {
   verifier: LlmProvider
 }
 
-export const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@1'
+/**
+ * Karar POLITIKASININ surumu. Model/prompt surumlerinden AYRI: bunlar
+ * degismeden de politika degisebilir (esik, severity eslemesi, dogrulama
+ * kurali). Migration 136'nin yayin kapisi karari TAM ESLESME ile ariyor
+ * (`policy_version = required_policy_version`), yani farkli politikayla
+ * uretilmis kararlar birbirinin yerine gecemez.
+ *
+ * @2 (2026-08-21): minBlindAgreement 1.0 -> 2/3.
+ *   Olcum verdict.ts icindeki DEFAULT_DERIVE_OPTIONS yorumunda. Ayni etiket
+ *   altinda birakilsaydi, @1 damgali bir kararin hangi esikle uretildigi
+ *   ayirt edilemezdi.
+ *
+ * DIKKAT: bu deger degistiginde `question_validation_runtime`.
+ * `required_policy_version` de guncellenmeli, aksi halde yayin kapisi eski
+ * surumu arar ve HICBIR yayin gecmez (fail-closed). Sira: once yeni surumle
+ * kosup kararlari yaz, sonra runtime'i cevir.
+ */
+export const QUESTION_QUALITY_POLICY_VERSION = 'question-quality@2'
 
 /** Yalniz model ciktisini etkileyen ayarlar hash'e girer; retry/rate ayarlari girmez. */
 export function auditExecutionIdentity(
