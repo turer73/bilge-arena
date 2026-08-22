@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 const validation = readFileSync(new URL('../migrations/136_question_validation_pipeline.sql', import.meta.url), 'utf8')
 const psychometrics = readFileSync(new URL('../migrations/137_question_revision_psychometrics_v2.sql', import.meta.url), 'utf8')
 const benchmarkRunner = readFileSync(new URL('../run-question-benchmark.mjs', import.meta.url), 'utf8')
+const auditRunner = readFileSync(new URL('../run-question-audit.mjs', import.meta.url), 'utf8')
 
 describe('question validation persistence and publish gate SQL', () => {
   it('stores the exact replay and cache identity', () => {
@@ -54,6 +55,12 @@ describe('human-gold benchmark release gate', () => {
     expect(benchmarkRunner).toContain('promptVersions: calibration.promptVersions')
     expect(benchmarkRunner).toContain('evaluateBenchmark')
     expect(benchmarkRunner).toContain('process.exitCode = 2')
+  })
+
+  it('does not persist authoritative decisions without matching promotion evidence', () => {
+    expect(auditRunner).toContain('--promotion-report')
+    expect(auditRunner).toContain('deps.promotionEvidence')
+    expect(auditRunner).toContain('--no-decisions')
   })
 
   it('runs without an LLM or database and returns exit 2 for an undersized gold set', () => {

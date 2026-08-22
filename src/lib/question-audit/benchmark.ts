@@ -7,7 +7,7 @@
  * bir üçüncü uzmanın adjudike ettiği, içerik hash'ine bağlı etiketlerle verilir.
  */
 
-import { FLAW_SEVERITY, type FlawCode, type Verdict } from './types'
+import { FLAW_SEVERITY, type AuditExecutionIdentity, type FlawCode, type Verdict } from './types'
 import type { CalibrationItem } from './calibration'
 
 const FLAW_CODES = Object.keys(FLAW_SEVERITY) as FlawCode[]
@@ -82,6 +82,22 @@ export interface BenchmarkReport {
   }
 }
 
+export interface PromotionEvidence {
+  subject: {
+    policyVersion: string
+    providerIds: AuditExecutionIdentity['providerIds']
+    modelIds: AuditExecutionIdentity['modelIds']
+    promptVersions: AuditExecutionIdentity['promptVersions']
+    config: Record<string, unknown>
+  }
+  benchmark: {
+    promotion: {
+      passed: boolean
+      policy: PromotionPolicy
+    }
+  }
+}
+
 interface Pair {
   label: GoldLabel
   item: CalibrationItem
@@ -144,6 +160,66 @@ function metrics(expected: readonly boolean[], actual: readonly boolean[]): Bina
 
 function uniqueCodes(codes: readonly FlawCode[]): FlawCode[] {
   return [...new Set(codes)].sort()
+}
+
+function canonicalJson(value: unknown): string {
+  const normalize = (input: unknown): unknown => {
+    if (Array.isArray(input)) return input.map(normalize)
+    if (input && typeof input === 'object') {
+      const valueRecord = input as Record<string, unknown>
+      return Object.fromEntries(Object.keys(valueRecord).sort().map((key) => [key, normalize(valueRecord[key])]))
+    }
+    return input
+  }
+  return JSON.stringify(normalize(value))
+}
+
+function record(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('terfi kaniti gecersiz')
+  }
+  return value as Record<string, unknown>
+}
+
+/**
+ * Yetkili karar yazmadan ONCE, insan-altin benchmark kanitinin kosulacak
+ * provider/model/prompt/ayar kimligiyle birebir ayni oldugunu kanitlar.
+ * Yalniz `passed:true` yeterli degildir: baska modelin veya gevsetilmis esigin
+ * raporu bu kosuya tasinamaz.
+ */
+export function assertPromotionEvidence(
+  evidence: unknown,
+  identity: AuditExecutionIdentity,
+): asserts evidence is PromotionEvidence {
+  const root = record(evidence)
+  const subject = record(root.subject)
+  const benchmark = record(root.benchmark)
+  const promotion = record(benchmark.promotion)
+  if (promotion.passed !== true) throw new Error('terfi kaniti benchmark kapisini gecmemis')
+  if (canonicalJson(promotion.policy) !== canonicalJson(DEFAULT_PROMOTION_POLICY)) {
+    throw new Error('terfi kaniti varsayilan guvence politikasini kullanmiyor')
+  }
+
+  const config = record(subject.config)
+  const evidenceGenerationConfig = {
+    blindSamples: config.blindSamples,
+    blindTemperature: config.blindTemperature,
+    adversarialTemperature: config.adversarialTemperature,
+    verifierTemperature: config.verifierTemperature,
+    maxOutputTokens: config.maxOutputTokens,
+  }
+  const checks: Array<[string, unknown, unknown]> = [
+    ['policyVersion', subject.policyVersion, identity.policyVersion],
+    ['providerIds', subject.providerIds, identity.providerIds],
+    ['modelIds', subject.modelIds, identity.modelIds],
+    ['promptVersions', subject.promptVersions, identity.promptVersions],
+    ['generationConfig', evidenceGenerationConfig, identity.generationConfig],
+  ]
+  for (const [label, actual, expected] of checks) {
+    if (canonicalJson(actual) !== canonicalJson(expected)) {
+      throw new Error(`terfi kaniti kosu kimligiyle uyusmuyor: ${label}`)
+    }
+  }
 }
 
 function validateLabels(labels: readonly GoldLabel[]): void {

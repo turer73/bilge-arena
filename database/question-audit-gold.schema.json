@@ -20,6 +20,7 @@
             "MULTIPLE_CORRECT",
             "MISSING_PREMISE",
             "AMBIGUOUS_WORDING",
+            "STEM_MISSING_TOKEN",
             "SOLUTION_CONTRADICTS_ANSWER",
             "INCOMPLETE_SOLUTION",
             "LOGICAL_FALLACY"

@@ -63,13 +63,17 @@ kod incelemesi gerektirir; model çıktısı eşiği değiştiremez.
 Çalıştırma:
 
 ```sh
-npm run audit:calibrate -- --limit 100 --confirm --out database/calibration.json
+npm run audit:calibrate -- --limit 100 --persist --no-decisions --confirm --out database/calibration.json
 npm run audit:benchmark -- --labels secure/gold-labels.json --report database/calibration.json --out database/benchmark.json
+npm run audit:calibrate -- --limit 100 --persist --promotion-report database/benchmark.json --confirm
 ```
 
 İkinci komut LLM veya veritabanı çağrısı yapmaz. Kapı başarısızsa çıkış kodu
-`2` olur. Altın etiket dosyası erişim kontrollü tutulmalı; gerçek soru içeriği
-ve öğrenci kişisel verisi bu dosyaya yazılmamalıdır.
+`2` olur. İlk koşu ham çıktıları saklar ama yetkili kararı değiştirmez. Üçüncü
+koşu aynı provider/model/prompt/ayar kimliğini kanıtlayan başarılı benchmark
+olmadan karar yazmaz; saklanan koşuyu kullandığı için yeni LLM ücreti doğurmaz.
+Altın etiket dosyası erişim kontrollü tutulmalı; gerçek soru içeriği ve öğrenci
+kişisel verisi bu dosyaya yazılmamalıdır.
 
 ## Bilerek otomatikleştirilmeyenler
 

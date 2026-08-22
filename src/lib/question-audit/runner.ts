@@ -11,6 +11,7 @@
 
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { assertPromotionEvidence } from './benchmark'
 import { runCalibration, type CalibrationItem, type CalibrationReport } from './calibration'
 import { auditExecutionIdentity, DEFAULT_AUDIT_CONFIG, QUESTION_QUALITY_POLICY_VERSION, type AuditConfig, type AuditProviders } from './orchestrator'
 import { createGeminiProvider, createOpenAiCompatibleProvider } from './provider'
@@ -86,6 +87,8 @@ export interface RunnerDeps {
    */
   persistRun?: (rows: ValidationRunRow[]) => Promise<void>
   persistDecision?: (decision: ValidationDecisionRow) => Promise<void>
+  /** Yetkili karar yazimi icin ayni execution identity'yi gecmis insan-altin rapor. */
+  promotionEvidence?: unknown
   loadCachedRun?: (draft: QuestionDraft, identity: AuditExecutionIdentity) => Promise<AuditRun | null>
   log?: (line: string) => void
   writeReport?: (path: string, report: CalibrationReport) => void
@@ -153,6 +156,10 @@ export async function main(argv: readonly string[], deps: RunnerDeps): Promise<C
 
   const config: AuditConfig = { ...DEFAULT_AUDIT_CONFIG, blindSamples: args.blindSamples }
   const identity = auditExecutionIdentity(providers, config)
+  // Ham kosular benchmark oncesi saklanabilir; ancak yayin kapisini etkileyen
+  // kararlar yalniz AYNI provider/model/prompt/ayar kimliginin insan-altin
+  // terfi kanitiyla yazilir. Kontrol LLM cagrisindan once fail-closed calisir.
+  if (deps.persistDecision) assertPromotionEvidence(deps.promotionEvidence, identity)
   const categoryById = new Map(rows.map((r) => [r.id, r.category || r.game]))
 
   // Kismi sonuclari biriktir: uzun kosuda cokme olursa odenen cagrilar kaybolmasin.

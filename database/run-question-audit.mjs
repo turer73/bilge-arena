@@ -26,10 +26,11 @@
  *   npm run audit:calibrate -- --revision-id <uuid> --persist --confirm
  *   npm run audit:calibrate -- --governance-ready --persist --confirm
  *   npm run audit:calibrate -- --provider deepseek --persist --no-decisions --confirm
+ *   npm run audit:calibrate -- --persist --promotion-report benchmark.json --confirm
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createServer } from 'vite'
 import { createClient } from '@supabase/supabase-js'
@@ -157,7 +158,15 @@ try {
     //
     // Capraz-model karsilastirmasinda ikincil saglayici KANIT uretmeli,
     // yetkili karari degistirmemeli. Bu bayrak o ayrimi saglar.
-    if (!process.argv.includes('--no-decisions')) deps.persistDecision = persistDecision
+    if (!process.argv.includes('--no-decisions')) {
+      const promotionIndex = process.argv.indexOf('--promotion-report')
+      const promotionPath = promotionIndex === -1 ? null : process.argv[promotionIndex + 1]
+      if (!promotionPath || promotionPath.startsWith('--')) {
+        throw new Error('yetkili karar yazimi --promotion-report <benchmark.json> ister; benchmark oncesi --no-decisions kullanin')
+      }
+      deps.promotionEvidence = JSON.parse(readFileSync(resolve(promotionPath), 'utf8'))
+      deps.persistDecision = persistDecision
+    }
     deps.loadCachedRun = async (draft, identity) => {
       const { data, error } = await sb
         .from('question_validation_runs')

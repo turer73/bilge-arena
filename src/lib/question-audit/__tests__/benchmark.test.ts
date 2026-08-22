@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateBenchmark, type GoldLabel, type PromotionPolicy } from '../benchmark'
+import {
+  assertPromotionEvidence,
+  DEFAULT_PROMOTION_POLICY,
+  evaluateBenchmark,
+  type GoldLabel,
+  type PromotionEvidence,
+  type PromotionPolicy,
+} from '../benchmark'
 import type { CalibrationItem } from '../calibration'
-import type { Finding, Verdict } from '../types'
+import type { AuditExecutionIdentity, Finding, Verdict } from '../types'
 
 const permissive: PromotionPolicy = {
   minLabels: 2,
@@ -42,6 +49,38 @@ function label(id: string, flawCodes: GoldLabel['flawCodes']): GoldLabel {
     flawCodes,
     reviewerCount: 2,
     adjudication: 'consensus',
+  }
+}
+
+const identity: AuditExecutionIdentity = {
+  policyVersion: 'question-quality@2',
+  generationConfig: {
+    blindSamples: 3,
+    blindTemperature: 0.7,
+    adversarialTemperature: 0.2,
+    verifierTemperature: 0,
+    maxOutputTokens: { blind: 2048, adversarial: 2048, verifier: 1536 },
+  },
+  generationConfigSha256: 'a'.repeat(64),
+  providerIds: { blind: 'gemini:x', adversarial: 'gemini:x', verifier: 'gemini:x' },
+  modelIds: { blind: 'x', adversarial: 'x', verifier: 'x' },
+  promptVersions: { blind: 'blind-solver@2', adversarial: 'adversarial@2', verifier: 'solution-verifier@3' },
+}
+
+function promotionEvidence(): PromotionEvidence {
+  return {
+    subject: {
+      policyVersion: identity.policyVersion,
+      providerIds: identity.providerIds,
+      modelIds: identity.modelIds,
+      promptVersions: identity.promptVersions,
+      config: {
+        ...identity.generationConfig,
+        timeoutMs: 60_000,
+        maxAttempts: 3,
+      },
+    },
+    benchmark: { promotion: { passed: true, policy: DEFAULT_PROMOTION_POLICY } },
   }
 }
 
@@ -105,5 +144,23 @@ describe('insan-altin benchmark', () => {
     )
     expect(report.promotion.passed).toBe(false)
     expect(report.promotion.failures[0]).toContain('label_count')
+  })
+})
+
+describe('terfi kaniti kimlik bagi', () => {
+  it('ayni policy/provider/model/prompt/ayar raporunu kabul eder', () => {
+    expect(() => assertPromotionEvidence(promotionEvidence(), identity)).not.toThrow()
+  })
+
+  it('baska prompt surumunun raporunu reddeder', () => {
+    const evidence = promotionEvidence()
+    evidence.subject.promptVersions = { ...evidence.subject.promptVersions, blind: 'blind-solver@1' }
+    expect(() => assertPromotionEvidence(evidence, identity)).toThrow('promptVersions')
+  })
+
+  it('gevsetilmis benchmark esigini reddeder', () => {
+    const evidence = promotionEvidence()
+    evidence.benchmark.promotion.policy = { ...DEFAULT_PROMOTION_POLICY, minLabels: 2 }
+    expect(() => assertPromotionEvidence(evidence, identity)).toThrow('varsayilan guvence')
   })
 })
