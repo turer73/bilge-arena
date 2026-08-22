@@ -118,15 +118,31 @@ describe('POST /api/questions/report', () => {
     const res = await POST(makeRequest({ questionId: QID, report_type: 'wrong_answer', description: ' Anahtar yanlis. ', requestId }))
     expect(res.status).toBe(201)
     expect(await res.json()).toEqual({ status: 'reported' })
-    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal', {
+    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal_v2', {
       p_user_id: USER.id,
       p_question_id: QID,
       p_session_answer_id: null,
+      p_attempt_id: null,
       p_reason: 'wrong_key',
       p_description: 'Anahtar yanlis.',
       p_request_id: requestId,
     })
     expect(mockInsert).not.toHaveBeenCalled()
+  })
+
+  it('forwards the verified attempt reference to governed evidence binding', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
+    const attemptId = '44444444-4444-4444-8444-444444444444'
+    const res = await POST(makeRequest({
+      questionId: QID,
+      attemptId,
+      report_type: 'unclear',
+      requestId: '33333333-3333-4333-8333-333333333333',
+    }))
+    expect(res.status).toBe(201)
+    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal_v2', expect.objectContaining({
+      p_attempt_id: attemptId,
+    }))
   })
 
   it('treats an already-open governed appeal as an idempotent legacy report', async () => {

@@ -62,13 +62,22 @@ describe('R4.3 content governance routes', () => {
     expect(mocks.rpc).toHaveBeenCalledWith(context.admin, 'get_my_question_appeals', { p_user_id: USER })
   })
   it('submits an owner-bound appeal through the service-only RPC', async () => {
-    const response = await submitAppeal(post('/api/questions/appeals', { questionId: ID, sessionAnswerId: null, reason: 'wrong_key', explanation: '', requestId: REQUEST }))
+    const response = await submitAppeal(post('/api/questions/appeals', { questionId: ID, sessionAnswerId: null, attemptId: null, reason: 'wrong_key', explanation: '', requestId: REQUEST }))
     expect(response.status).toBe(201)
     expect(response.headers.get('Cache-Control')).toBe('private, no-store')
-    expect(mocks.rpc).toHaveBeenCalledWith(context.admin, 'submit_question_appeal', {
-      p_user_id: USER, p_question_id: ID, p_session_answer_id: null, p_reason: 'wrong_key', p_description: '', p_request_id: REQUEST,
+    expect(mocks.rpc).toHaveBeenCalledWith(context.admin, 'submit_question_appeal_v2', {
+      p_user_id: USER, p_question_id: ID, p_session_answer_id: null, p_attempt_id: null, p_reason: 'wrong_key', p_description: '', p_request_id: REQUEST,
     })
-    expect((await submitAppeal(post('/api/questions/appeals', { questionId: ID, sessionAnswerId: null, reason: 'wrong_key', explanation: '', requestId: REQUEST, userId: 'forged' }))).status).toBe(400)
+    expect((await submitAppeal(post('/api/questions/appeals', { questionId: ID, sessionAnswerId: null, attemptId: null, reason: 'wrong_key', explanation: '', requestId: REQUEST, userId: 'forged' }))).status).toBe(400)
+  })
+  it('treats an already-open appeal as an idempotent success', async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { code: '23505' } })
+    const response = await submitAppeal(post('/api/questions/appeals', {
+      questionId: ID, sessionAnswerId: null, attemptId: null,
+      reason: 'ambiguous', explanation: '', requestId: REQUEST,
+    }))
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ status: 'submitted', replayed: true })
   })
   it('returns a privacy-scoped admin appeal queue and resolves with the server actor', async () => {
     mocks.rpc.mockResolvedValueOnce({ data: { items: [{ appealId: ID, questionId: REQUEST, revisionId: null, reasonCode: 'ambiguous', description: 'İki seçenek de doğru.', status: 'submitted', submittedAt: '2026-08-09T10:00:00.000Z', ackDueAt: '2026-08-11T10:00:00.000Z', resolveDueAt: '2026-08-23T10:00:00.000Z', slaBreachedAt: null, hasSessionEvidence: true, latestPublicMessage: 'Alındı.', latestInternalNote: null }], nextCursor: null }, error: null })

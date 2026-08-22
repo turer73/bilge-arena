@@ -32,6 +32,9 @@ export function ErrorReportModal({
   onClose,
   onSubmit,
 }: ErrorReportModalProps) {
+  // Legacy error_reports can award coins. Governed appeals intentionally do
+  // not promise a reward until the reward ledger is migrated to that queue.
+  const rewardsEnabled = process.env.NEXT_PUBLIC_CONTENT_APPEALS_ENABLED !== 'true'
   const [selectedType, setSelectedType] = useState<ReportType | null>(null)
   const [description, setDescription] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -98,9 +101,14 @@ export function ErrorReportModal({
             <div className="text-4xl">✅</div>
             <div id={titleId} role="status" className="text-sm font-bold">Bildirimin bize ulaştı!</div>
             <div className="text-center text-xs leading-5 text-[var(--text-sub)]">
-              Ekibimiz inceleyecek. Haklı çıkarsan hesabına{' '}
-              <strong className="text-[var(--gold-text,var(--text))]">{ERROR_REPORT_COIN_REWARD} altın</strong>{' '}
-              eklenecek ve bildirimin sonucunu bildirim olarak göreceksin.
+              {rewardsEnabled ? <>
+                Ekibimiz inceleyecek. Haklı çıkarsan hesabına{' '}
+                <strong className="text-[var(--gold-text,var(--text))]">{ERROR_REPORT_COIN_REWARD} altın</strong>{' '}
+                eklenecek ve bildirimin sonucunu bildirim olarak göreceksin.
+              </> : <>
+                Ekibimiz revizyon kanıtıyla birlikte inceleyecek. İtiraz durumunu profilindeki
+                soru bildirimlerinden takip edebilirsin.
+              </>}
             </div>
           </div>
         ) : (
@@ -123,7 +131,7 @@ export function ErrorReportModal({
 
             {/* Odul duyurusu: ogrenci bildirmenin ne ise yaradigini ve
                 kazandigi altinla ne yapabilecegini bilmeden motive olmuyor. */}
-            <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
+            {rewardsEnabled && <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
               <p className="text-[11px] font-extrabold text-[var(--text)]">
                 🎯 Hata avcılığı ödüllü
               </p>
@@ -133,7 +141,7 @@ export function ErrorReportModal({
                 bildirim bir arka plan eder. Üstelik senin fark ettiğin hata, o soruyu çözecek
                 herkes için düzelmiş olur.
               </p>
-            </div>
+            </div>}
 
             {/* Tip secimi */}
             <fieldset className="mb-4">

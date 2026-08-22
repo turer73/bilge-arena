@@ -61,6 +61,7 @@ export const errorReportSchema = z.object({
 // In-app "soru hatali" bildirimi (#379): modal report'una questionId eklenir.
 export const errorReportSubmitSchema = errorReportSchema.extend({
   questionId: z.string().uuid(),
+  attemptId: z.string().uuid().nullable().optional(),
   requestId: z.string().uuid().optional(),
 })
 

@@ -47,7 +47,7 @@ describe('submitQuestionReport (Codex PR#242 P1: res.ok bazlı sonuç)', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/questions/report', expect.objectContaining({ method: 'POST' }))
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
     expect(body).toEqual({
-      questionId: 'q-42', report_type: 'wrong_answer', description: 'yanlis',
+      questionId: 'q-42', attemptId: null, report_type: 'wrong_answer', description: 'yanlis',
       requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
     })
   })
@@ -60,7 +60,21 @@ describe('submitQuestionReport (Codex PR#242 P1: res.ok bazlı sonuç)', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
     expect(body).toEqual(expect.objectContaining({
       questionId: '11111111-1111-4111-8111-111111111111', sessionAnswerId: null,
+      attemptId: null,
       reason: 'wrong_key', explanation: 'Anahtar yanlis.', requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
     }))
+  })
+
+  it('aktif doğrulanmış deneme kimliğini revizyon kanıtı için taşır', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTENT_APPEALS_ENABLED', 'true')
+    fetchMock.mockResolvedValue({ ok: true, status: 201 })
+    const attemptId = '33333333-3333-4333-8333-333333333333'
+    await submitQuestionReport(
+      '11111111-1111-4111-8111-111111111111',
+      DATA,
+      { attemptId },
+    )
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body.attemptId).toBe(attemptId)
   })
 })

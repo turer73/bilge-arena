@@ -9,7 +9,8 @@ const item = {
   appealId: '11111111-1111-4111-8111-111111111111', questionId: '22222222-2222-4222-8222-222222222222', revisionId: null,
   reasonCode: 'ambiguous', description: 'İki seçenek de doğru görünüyor.', status: 'submitted',
   submittedAt: '2026-08-09T10:00:00.000Z', ackDueAt: '2026-08-11T10:00:00.000Z', resolveDueAt: '2026-08-23T10:00:00.000Z',
-  slaBreachedAt: null, hasSessionEvidence: true, latestPublicMessage: null, latestInternalNote: null,
+  slaBreachedAt: null, hasSessionEvidence: false, evidenceKind: 'issued_attempt', hasVerifiedEvidence: true,
+  latestPublicMessage: null, latestInternalNote: null,
 }
 
 beforeEach(() => {
@@ -22,6 +23,7 @@ beforeEach(() => {
 describe('ContentAppealsPanel', () => {
   it('shows privacy-scoped evidence and sends a server-actor resolution payload', async () => {
     render(<ContentAppealsPanel />)
+    expect(await screen.findByText(/Doğrulanmış soru sunumu kanıtı/)).toBeInTheDocument()
     fireEvent.click(await screen.findByText('İki seçenek de doğru görünüyor.'))
     fireEvent.change(screen.getByLabelText('Yeni durum'), { target: { value: 'investigating' } })
     fireEvent.change(screen.getByLabelText('Öğrenciye mesaj'), { target: { value: 'Kanıtlar inceleniyor.' } })

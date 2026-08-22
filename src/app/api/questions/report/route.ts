@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
   const parsed = errorReportSubmitSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: 'Gecersiz veri' }, { status: 400 })
-  const { questionId, report_type, description, requestId } = parsed.data
+  const { questionId, attemptId, report_type, description, requestId } = parsed.data
 
   // During the staged rollout the old client endpoint can remain active after
   // server governance is enabled. Route those writes into the owner-bound SLA
@@ -49,10 +49,11 @@ export async function POST(req: Request) {
     let admin: ReturnType<typeof createServiceRoleClient>
     try { admin = createServiceRoleClient() }
     catch { return contentNoStoreJson({ error: 'Rapor sistemi kullanilamiyor' }, { status: 503 }) }
-    const { data, error } = await contentRpc(admin, 'submit_question_appeal', {
+    const { data, error } = await contentRpc(admin, 'submit_question_appeal_v2', {
       p_user_id: user.id,
       p_question_id: questionId,
       p_session_answer_id: null,
+      p_attempt_id: attemptId ?? null,
       p_reason: APPEAL_REASON[report_type],
       p_description: description,
       p_request_id: requestId ?? randomUUID(),

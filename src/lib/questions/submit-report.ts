@@ -16,6 +16,7 @@ const APPEAL_REASONS: Record<string, 'wrong_key' | 'ambiguous' | 'invalid_conten
 export async function submitQuestionReport(
   questionId: string,
   data: { type: string; description: string },
+  context: { attemptId?: string | null } = {},
 ): Promise<ReportSubmitResult> {
   try {
     const appealsEnabled = process.env.NEXT_PUBLIC_CONTENT_APPEALS_ENABLED === 'true'
@@ -27,12 +28,14 @@ export async function submitQuestionReport(
         ? {
             questionId,
             sessionAnswerId: null,
+            attemptId: context.attemptId ?? null,
             reason: APPEAL_REASONS[data.type] ?? 'other',
             explanation: data.description,
             requestId,
           }
         : {
             questionId,
+            attemptId: context.attemptId ?? null,
             report_type: data.type,
             description: data.description,
             requestId,

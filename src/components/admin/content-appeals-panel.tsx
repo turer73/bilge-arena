@@ -16,8 +16,20 @@ interface AppealItem {
   resolveDueAt: string
   slaBreachedAt: string | null
   hasSessionEvidence: boolean
+  evidenceKind?: 'legacy_report' | 'legacy_session' | 'current_revision' | 'issued_attempt' | 'verified_session'
+  hasVerifiedEvidence?: boolean
   latestPublicMessage: string | null
   latestInternalNote: string | null
+}
+
+function evidenceLabel(item: AppealItem): string {
+  if (item.evidenceKind === 'verified_session') return 'Doğrulanmış tamamlanmış oturum kanıtı'
+  if (item.evidenceKind === 'issued_attempt') return 'Doğrulanmış soru sunumu kanıtı'
+  if (item.evidenceKind === 'legacy_report' || item.evidenceKind === 'legacy_session') {
+    return 'Eski bildirim · revizyon kanıtı sınırlı'
+  }
+  if (item.evidenceKind === 'current_revision') return 'Bildirilen andaki yayın revizyonu'
+  return item.hasSessionEvidence ? 'Doğrulanmış oturum kanıtı var' : 'Genel soru bildirimi'
 }
 
 const reasonLabel: Record<AppealItem['reasonCode'], string> = {
@@ -109,7 +121,7 @@ export function ContentAppealsPanel() {
             {items.map((item) => <button key={item.appealId} onClick={() => open(item)} className="min-h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-left focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
               <span className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold"><span>{reasonLabel[item.reasonCode]}</span><span>{statusLabel[item.status]}</span></span>
               <span className="mt-1 block text-xs text-[var(--text-sub)]">{item.description || 'Açıklama eklenmedi.'}</span>
-              <span className="mt-2 block text-[10px] text-[var(--text-sub)]">{item.hasSessionEvidence ? 'Doğrulanmış oturum kanıtı var' : 'Genel soru bildirimi'} · çözüm {new Date(item.resolveDueAt).toLocaleString('tr-TR')}</span>
+              <span className="mt-2 block text-[10px] text-[var(--text-sub)]">{evidenceLabel(item)} · çözüm {new Date(item.resolveDueAt).toLocaleString('tr-TR')}</span>
               {item.slaBreachedAt && <span className="mt-1 block text-[10px] font-bold text-[var(--urgency)]">SLA aşıldı</span>}
             </button>)}
             {items.length === 0 && <p className="rounded-lg border border-dashed border-[var(--border)] p-5 text-center text-xs text-[var(--text-sub)]">Bu filtrede itiraz yok.</p>}

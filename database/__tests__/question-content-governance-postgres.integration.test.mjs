@@ -10,6 +10,7 @@ if (url && process.env.CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE !== '1') thro
 if (url && !/^bilge_r43_test_[a-z0-9_]+$/i.test(new URL(url).pathname.slice(1))) throw new Error('Refusing non-disposable content-governance database')
 const suite = url && process.env.CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE === '1' ? describe : describe.skip
 const migration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '106_question_content_governance.sql'), 'utf8')
+const appealEvidenceMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '139_question_appeal_evidence_v2.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
   let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let legacyRevision
@@ -45,6 +46,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content) VALUES($1,'matematik','Temel',2,$2)`, [question,{ question:'legacy',options:['A','B'],answer:0 }])
     await client.query("INSERT INTO public.error_reports(id,user_id,question_id,report_type,description,status,created_at) VALUES($1,$2,$3,'typo','Eski yazım bildirimi','pending','2026-07-01T10:00:00Z')",[randomUUID(),legacyLearner,question])
     await client.query(migration)
+    await client.query(appealEvidenceMigration)
     const roles = [['author','content.prepare',author],['author-r1','content.review.stage1',author],['r1','content.review.stage1',reviewer1],['r1-stage2','content.review.stage2',reviewer1],['r2','content.review.stage2',reviewer2],['pub','content.publish',publisher],['correct','content.corrections.apply',publisher],['psy','content.psychometrics.refresh',publisher],['appeal','content.appeals.manage',publisher],['enforce','content.enforcement.manage',publisher]]
     for (const [slug, permission, user] of roles) { const role = randomUUID(); await client.query('INSERT INTO public.roles(id,slug,name,is_system) VALUES($1,$2,$2,true)', [role,slug]); await client.query('INSERT INTO public.role_permissions(role_id,permission) VALUES($1,$2)', [role,permission]); await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)', [user,role]) }
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
@@ -105,6 +107,34 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     const concurrentLearner = randomUUID(); await client.query('INSERT INTO public.profiles(id) VALUES($1)',[concurrentLearner]); const concurrentAppealRequest = randomUUID(); const [firstAppeal,replayedAppeal] = await concurrentReplay('public.submit_question_appeal($1,$2,$3,$4,$5,$6)',[concurrentLearner,question,null,'wrong_key','Parallel retry.',concurrentAppealRequest]); expect(firstAppeal).toEqual(expect.objectContaining({ replayed:false })); expect(replayedAppeal).toEqual(expect.objectContaining({ appealId:firstAppeal.appealId, replayed:true })); expect((await client.query("SELECT count(*)::int AS n FROM public.question_appeals WHERE user_id=$1 AND question_id=$2 AND status IN ('submitted','acknowledged','investigating')",[concurrentLearner,question])).rows[0].n).toBe(1)
     expect((await rpc("public.sweep_question_appeal_sla(clock_timestamp()+interval '15 days')",[])).breached).toBe(3); expect((await rpc("public.sweep_question_appeal_sla(clock_timestamp()+interval '15 days')",[])).breached).toBe(0); expect((await client.query('SELECT count(*)::int AS n FROM public.question_appeal_events WHERE event_type=$1',['sla_breached'])).rows[0].n).toBe(3)
     expect((await client.query("SELECT has_table_privilege('service_role','public.question_appeals','INSERT') AS allowed,(SELECT relrowsecurity FROM pg_class WHERE oid='public.question_appeals'::regclass) AS rls")).rows[0]).toEqual({ allowed:false, rls:true })
+  })
+  it('binds v2 appeals to issued and completed attempt snapshots without exposing raw evidence ids', async () => {
+    const issuedLearner = randomUUID(); const completedLearner = randomUUID(); const outsider = randomUUID()
+    await client.query('INSERT INTO public.profiles SELECT unnest($1::uuid[])', [[issuedLearner,completedLearner,outsider]])
+
+    const issuedAttempt = randomUUID()
+    await client.query("INSERT INTO public.verified_attempts(id,user_id,game,question_ids) VALUES($1,$2,'matematik',$3)", [issuedAttempt,issuedLearner,[question]])
+    await err(() => rpc('public.submit_question_appeal_v2($1,$2,$3,$4,$5,$6,$7)',[outsider,question,null,issuedAttempt,'ambiguous','Bana ait değil.',randomUUID()]), '42501')
+    const issued = await rpc('public.submit_question_appeal_v2($1,$2,$3,$4,$5,$6,$7)',[issuedLearner,question,null,issuedAttempt,'ambiguous','Sunulan soru belirsiz.',randomUUID()])
+    expect(issued).toEqual(expect.objectContaining({ status:'submitted', evidenceKind:'issued_attempt', replayed:false }))
+
+    const completedAttempt = randomUUID(); const completedSession = randomUUID(); const completedAnswer = randomUUID()
+    await client.query("INSERT INTO public.verified_attempts(id,user_id,game,question_ids) VALUES($1,$2,'matematik',$3)", [completedAttempt,completedLearner,[question]])
+    await client.query("INSERT INTO public.game_sessions(id,user_id,status,total_questions,correct_count,wrong_count,base_xp,bonus_xp,total_xp,completed_at) VALUES($1,$2,'completed',1,0,1,0,0,0,clock_timestamp())", [completedSession,completedLearner])
+    await client.query('INSERT INTO public.session_answers(id,session_id,user_id,question_id,question_order,selected_option,is_correct,xp_earned) VALUES($1,$2,$3,$4,0,0,false,0)', [completedAnswer,completedSession,completedLearner,question])
+    await client.query('UPDATE public.verified_attempts SET session_id=$1,completed_at=clock_timestamp() WHERE id=$2',[completedSession,completedAttempt])
+    const boundRevision = (await client.query('SELECT question_revision_id FROM public.session_answers WHERE id=$1',[completedAnswer])).rows[0].question_revision_id
+    const completed = await rpc('public.submit_question_appeal_v2($1,$2,$3,$4,$5,$6,$7)',[completedLearner,question,completedAnswer,null,'wrong_key','Cevap anahtarı uyuşmuyor.',randomUUID()])
+    expect(completed).toEqual(expect.objectContaining({ status:'submitted', evidenceKind:'verified_session', replayed:false }))
+    await err(() => rpc('public.submit_question_appeal_v2($1,$2,$3,$4,$5,$6,$7)',[completedLearner,question,completedAnswer,completedAttempt,'wrong_key','Çifte kanıt.',randomUUID()]), '22023')
+
+    const queue = await rpc('public.get_question_appeal_queue($1,$2::text,$3,$4::text)',[publisher,'submitted',100,''])
+    expect(queue.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ appealId:issued.appealId, revisionId:boundRevision, evidenceKind:'issued_attempt', hasVerifiedEvidence:true, hasSessionEvidence:false }),
+      expect.objectContaining({ appealId:completed.appealId, revisionId:boundRevision, evidenceKind:'verified_session', hasVerifiedEvidence:true, hasSessionEvidence:true }),
+    ]))
+    expect(JSON.stringify(queue)).not.toMatch(/attemptId|sessionAnswerId/)
+    expect((await client.query("SELECT has_function_privilege('authenticated','public.submit_question_appeal_v2(uuid,uuid,uuid,uuid,text,text,uuid)','EXECUTE') AS authenticated_allowed,has_function_privilege('service_role','public.submit_question_appeal_v2(uuid,uuid,uuid,uuid,text,text,uuid)','EXECUTE') AS service_allowed")).rows[0]).toEqual({ authenticated_allowed:false, service_allowed:true })
   })
   it('materializes only verified revision snapshots and suppresses discrimination below n=30', async () => {
     const revision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id

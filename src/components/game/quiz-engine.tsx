@@ -720,7 +720,11 @@ export function QuizEngine({ game }: QuizEngineProps) {
             onClose={() => quiz.setShowReportModal(false)}
             // #379 + P1 fix (Codex PR#242): AWAIT'li gönderim, res.ok'a göre {ok,error}
             // → modal sahte başarı göstermez. Mantık test-edilebilir helper'a çıkarıldı.
-            onSubmit={(data: { type: string; description: string }) => submitQuestionReport(question.id, data)}
+            onSubmit={(data: { type: string; description: string }) => submitQuestionReport(
+              question.id,
+              data,
+              { attemptId: quiz.attemptId },
+            )}
           />
         </ComponentErrorBoundary>
 

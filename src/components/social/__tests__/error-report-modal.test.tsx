@@ -1,11 +1,13 @@
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
 import { ErrorReportModal } from '../error-report-modal'
+import { ERROR_REPORT_COIN_REWARD } from '@/lib/constants/rewards'
 
 // P1 fix (Codex PR#242): modal eskiden onSubmit'i await ETMEDEN hemen "gönderildi"
 // gösteriyordu → guest (401) sahte başarı görüp raporu sessizce kaybediyordu.
 describe('ErrorReportModal — P1 sahte-başarı düzeltmesi', () => {
+  beforeEach(() => vi.unstubAllEnvs())
   it('uses an accessible dialog, labelled controls and 44px action targets', () => {
     render(<ErrorReportModal questionId="q1" isOpen onClose={() => {}} />)
     expect(screen.getByRole('dialog', { name: 'Hata Bildir' })).toHaveAttribute('aria-modal', 'true')
@@ -33,5 +35,16 @@ describe('ErrorReportModal — P1 sahte-başarı düzeltmesi', () => {
     fireEvent.click(screen.getByText('Gonder'))
 
     await waitFor(() => expect(screen.getByText('Bildirimin bize ulaştı!')).toBeTruthy())
+  })
+
+  it('governance itirazında uygulanmayan altın ödülünü vaat etmez', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTENT_APPEALS_ENABLED', 'true')
+    const onSubmit = vi.fn().mockResolvedValue({ ok: true })
+    render(<ErrorReportModal questionId="q1" isOpen onClose={() => {}} onSubmit={onSubmit} />)
+    expect(screen.queryByText(/Hata avcılığı ödüllü/)).toBeNull()
+    fireEvent.click(screen.getByText('Yanlis cevap'))
+    fireEvent.click(screen.getByText('Gonder'))
+    await waitFor(() => expect(screen.getByText(/revizyon kanıtıyla/)).toBeInTheDocument())
+    expect(document.body.textContent).not.toContain(`${ERROR_REPORT_COIN_REWARD} altın`)
   })
 })
