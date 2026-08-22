@@ -34,22 +34,27 @@ import {
 } from 'lucide-react'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
+import { GAMES } from '@/lib/constants/games'
 
 export const COACH_SEEN_STORAGE_KEY = 'ba-coach-seen'
 
+export function coachSeenStorageKey(userId?: string | null) {
+  return `${COACH_SEEN_STORAGE_KEY}:${userId ?? 'guest'}`
+}
+
 /** Koc penceresi gunde bir kez karsilar; ayni gun tekrar acilmaz. */
-function coachSeenToday() {
+function coachSeenToday(userId?: string | null) {
   try {
-    return window.localStorage.getItem(COACH_SEEN_STORAGE_KEY) === new Date().toDateString()
+    return window.localStorage.getItem(coachSeenStorageKey(userId)) === new Date().toDateString()
   } catch {
     // localStorage kapaliysa (gizli sekme/kisitli tarayici) koc gosterilir.
     return false
   }
 }
 
-function markCoachSeen() {
+function markCoachSeen(userId?: string | null) {
   try {
-    window.localStorage.setItem(COACH_SEEN_STORAGE_KEY, new Date().toDateString())
+    window.localStorage.setItem(coachSeenStorageKey(userId), new Date().toDateString())
   } catch {
     // sessiz gec: kayit edilemezse en fazla bir kez daha gosterilir
   }
@@ -61,6 +66,8 @@ type SubjectId = MobileSubjectId
 interface MobileHomeDemoProps {
   mode?: 'demo' | 'live'
   examLabel?: 'YKS' | 'LGS'
+  /** Canli yoldaki cevaplari TYT/AYT/LGS kapsaminda ayirir. */
+  examRef?: string | null
   availableSubjects?: MobileSubjectId[]
   currentStreak?: number
   coinBalance?: number
@@ -237,6 +244,7 @@ function compactNumber(value: number) {
 export function MobileHomeDemo({
   mode = 'demo',
   examLabel = 'YKS',
+  examRef = null,
   availableSubjects,
   currentStreak = 12,
   coinBalance = 480,
@@ -262,11 +270,18 @@ export function MobileHomeDemo({
   const subject = useMemo(() => visibleSubjects.find((item) => item.id === subjectId) ?? visibleSubjects[0] ?? SUBJECTS[0], [subjectId, visibleSubjects])
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
   const gameHref = `/arena/${gameSlug}`
+  const progressExamRef = examRef && GAMES[gameSlug].examTags.includes(examRef)
+    ? examRef
+    : examLabel === 'LGS'
+      ? 'LGS'
+      : GAMES[gameSlug].examTags.includes('TYT')
+        ? 'TYT'
+        : GAMES[gameSlug].examTags[0] ?? null
 
   // Canli modda yol, oyunun kanonik kategori listesi + kullanicinin gercek
   // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
   // yok; sabit ornek icerik gosterilir.
-  const progress = useTopicProgress(mode === 'live' ? gameSlug : null, userId)
+  const progress = useTopicProgress(mode === 'live' ? gameSlug : null, userId, progressExamRef)
   const isLivePath = mode === 'live' && progress.topics.length > 0
 
   const steps: PathStepModel[] = useMemo(() => {
@@ -297,18 +312,20 @@ export function MobileHomeDemo({
     }))
   }, [gameHref, gameSlug, isLivePath, progress.currentIndex, progress.topics, subject.id, subject.topics])
 
-  const currentStep = steps.find((step) => step.current) ?? steps[0]
   const completedCount = steps.filter((step) => step.done).length
   const stepCount = Math.max(1, steps.length)
+  const pathComplete = isLivePath && steps.length > 0 && completedCount === steps.length
+  const currentStep = steps.find((step) => step.current) ?? (pathComplete ? steps.at(-1) : steps[0])
+  const primaryHref = pathComplete ? gameHref : currentStep?.href ?? gameHref
   const unitLabel = isLivePath
-    ? `${examLabel} ${subject.label} · ${steps.length} konu`
+    ? `${progressExamRef ?? examLabel} ${subject.label} · ${steps.length} konu`
     : subject.unit
   const message = COACH_MESSAGES[coachMessage]
   const MessageIcon = message.icon
   const bubbleRadius = '30px 30px 30px 16px'
   const goalRemaining = dailyGoal ? Math.max(0, dailyGoal.target - dailyGoal.current) : null
   const coachTitle = coachMessage === 0
-    ? `Hazırsın, ${displayName}!`
+    ? pathComplete ? `Yol tamam, ${displayName}!` : `Hazırsın, ${displayName}!`
     : coachMessage === 2
       ? goalRemaining === null
         ? 'Bugünkü rotayı tamamla!'
@@ -317,16 +334,22 @@ export function MobileHomeDemo({
           : 'Günlük hedef tamam!'
       : message.title
   const coachBody = coachMessage === 0
-    ? `${currentStep?.label ?? subject.label} için 10 soruluk kısa dersin hazır. Yaklaşık 4 dakikada tamamlayabilirsin.`
+    ? pathComplete
+      ? `${subject.label} yolundaki tüm konuları tamamladın. Bilgini korumak için karışık tekrar yapabilirsin.`
+      : `${currentStep?.label ?? subject.label} için 10 soruluk kısa dersin hazır. Yaklaşık 4 dakikada tamamlayabilirsin.`
     : coachMessage === 1
       ? 'Önce soru kökündeki ipucunu yakala. Bildiklerini küçük adımlara bölmek sana zaman kazandırır.'
       : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
 
   useEffect(() => {
-    if (mode !== 'live' || coachSeenToday()) return
-    markCoachSeen()
-    setCoachOpen(true)
-  }, [mode])
+    if (mode !== 'live' || coachSeenToday(userId)) return
+    markCoachSeen(userId)
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) setCoachOpen(true)
+    })
+    return () => { cancelled = true }
+  }, [mode, userId])
 
   useEffect(() => {
     if (!coachOpen) return
@@ -442,13 +465,13 @@ export function MobileHomeDemo({
           <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)]">
             <div className="relative z-10 max-w-[64%]">
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Bugünkü ders</div>
-              <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{currentStep?.label ?? subject.label}</h2>
+              <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{pathComplete ? 'Yol tamamlandı' : currentStep?.label ?? subject.label}</h2>
               <div className="mt-2 flex items-center gap-3 text-[11px] font-bold text-[var(--app-text-sub)]">
                 <span className="flex items-center gap-1"><BookOpenText size={14} />10 soru</span>
                 <span className="flex items-center gap-1"><Clock3 size={14} />4 dk</span>
               </div>
-              <Link href={currentStep?.href ?? gameHref} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-white active:translate-y-1" style={{ background: subject.color, boxShadow: `0 5px 0 ${subject.shadow}` }}>
-                <Play size={17} fill="currentColor" /> DEVAM ET
+              <Link href={primaryHref} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-white active:translate-y-1" style={{ background: subject.color, boxShadow: `0 5px 0 ${subject.shadow}` }}>
+                <Play size={17} fill="currentColor" /> {pathComplete ? 'TEKRAR ET' : 'DEVAM ET'}
               </Link>
             </div>
             <button onClick={openCoach} className="absolute right-3 top-3 z-10 flex min-h-8 items-center gap-1 rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-2 py-1 text-[10px] font-extrabold text-[var(--app-text-sub)] shadow-[0_3px_0_var(--app-border)] active:translate-y-0.5" aria-label="Bilge Chan mesajlarını aç">
@@ -612,7 +635,7 @@ export function MobileHomeDemo({
                     </button>
                   ) : (
                     <Link
-                      href={currentStep?.href ?? gameHref}
+                       href={primaryHref}
                       onClick={() => setCoachOpen(false)}
                       className="flex min-h-10 items-center gap-1 rounded-xl bg-[var(--app-success-solid)] px-3 text-[10px] font-black text-white shadow-[0_4px_0_var(--app-success-strong)] active:translate-y-0.5 active:shadow-none"
                     >

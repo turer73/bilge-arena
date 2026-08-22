@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { createHmac, randomUUID } from 'node:crypto'
 import {
   createGuestGradingToken,
   verifyGuestGradingToken,
@@ -47,11 +48,20 @@ describe('token alan ayrimi (cross-protocol confusion)', () => {
   })
 
   it('amac alani olmayan eski token kabul edilmez', () => {
-    const guestToken = createGuestGradingToken([QUESTION_ID]) ?? ''
-    const [encoded, signature] = guestToken.split('.')
-    const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'))
-    delete payload.purpose
-    const tampered = Buffer.from(JSON.stringify(payload)).toString('base64url')
-    expect(verifyGuestGradingToken(`${tampered}.${signature}`)).toBeNull()
+    const now = Date.now()
+    const legacyPayload = {
+      version: 1,
+      sessionId: randomUUID(),
+      questionIds: [QUESTION_ID],
+      issuedAt: now,
+      expiresAt: now + 60_000,
+    }
+    const encoded = Buffer.from(JSON.stringify(legacyPayload)).toString('base64url')
+    // Eski algoritma alan etiketi olmadan yalnizca encoded yuku imzaliyordu.
+    const legacySignature = createHmac('sha256', SHARED_SECRET)
+      .update(encoded)
+      .digest('base64url')
+
+    expect(verifyGuestGradingToken(`${encoded}.${legacySignature}`)).toBeNull()
   })
 })

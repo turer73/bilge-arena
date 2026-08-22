@@ -2,7 +2,7 @@ import type { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 interface AnswerWithQuestion {
   is_correct: boolean
-  questions: { game: string; category: string }
+  questions: { game: string; category: string; exam_ref?: string | null }
 }
 
 export interface TopicStrength {
@@ -31,13 +31,17 @@ export async function computeTopicStrengths(
   admin: ReturnType<typeof createServiceRoleClient>,
   userId: string,
   game: string,
+  examRef?: string | null,
 ): Promise<TopicStrength[]> {
-  const { data, error } = await admin
+  let query = admin
     .from('session_answers')
-    .select('is_correct, questions!inner(game, category)')
+    .select('is_correct, questions!inner(game, category, exam_ref)')
     .eq('user_id', userId)
     .eq('questions.game', game)
-    .returns<AnswerWithQuestion[]>()
+
+  if (examRef) query = query.eq('questions.exam_ref', examRef)
+
+  const { data, error } = await query.returns<AnswerWithQuestion[]>()
 
   if (error) throw error
   if (!data || data.length === 0) return []

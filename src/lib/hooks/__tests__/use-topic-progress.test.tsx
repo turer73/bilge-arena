@@ -35,7 +35,7 @@ describe('useTopicProgress', () => {
       { label: 'Problemler', percentage: 75, category: 'problemler', total: 8 },
       { label: 'Geometri', percentage: 40, category: 'geometri', total: 10 },
     ])
-    const { result } = renderHook(() => useTopicProgress('matematik', 'user-1'))
+    const { result } = renderHook(() => useTopicProgress('matematik', 'user-1', 'TYT'))
 
     await waitFor(() => expect(result.current.hasProgress).toBe(true))
     // API yalniz denenen kategorileri doner; yol yine de TAM mufredati gosterir
@@ -50,7 +50,7 @@ describe('useTopicProgress', () => {
 
   it('yuzde yuksek olsa da orneklem yetersizse tamamlanmis saymaz', async () => {
     mockTopics([{ label: 'Sayılar', percentage: 100, category: 'sayilar', total: 2 }])
-    const { result } = renderHook(() => useTopicProgress('matematik', 'user-1'))
+    const { result } = renderHook(() => useTopicProgress('matematik', 'user-1', 'TYT'))
 
     await waitFor(() => expect(result.current.hasProgress).toBe(true))
     expect(result.current.topics[0].completed).toBe(false)
@@ -59,20 +59,30 @@ describe('useTopicProgress', () => {
 
   it('istek basarisizsa yol cizilmeye devam eder', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline') }))
-    const { result } = renderHook(() => useTopicProgress('matematik', 'user-1'))
+    const { result } = renderHook(() => useTopicProgress('matematik', 'user-1', 'TYT'))
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.topics).toHaveLength(6)
     expect(result.current.hasProgress).toBe(false)
   })
 
-  it('tum konular bittiyse son adimda kalir', async () => {
+  it('tum konular bittiyse siradaki adim kalmaz', async () => {
     mockTopics(['sayilar', 'problemler', 'geometri', 'denklemler', 'fonksiyonlar', 'olasilik'].map((category) => ({
       label: category, percentage: 95, category, total: 20,
     })))
-    const { result } = renderHook(() => useTopicProgress('matematik', 'user-1'))
+    const { result } = renderHook(() => useTopicProgress('matematik', 'user-1', 'TYT'))
 
     await waitFor(() => expect(result.current.completedCount).toBe(6))
-    expect(result.current.currentIndex).toBe(5)
+    expect(result.current.currentIndex).toBe(-1)
+  })
+
+  it('sinav kapsamını API istegine ekler', async () => {
+    mockTopics([])
+    renderHook(() => useTopicProgress('matematik', 'user-1', 'AYT-SAY'))
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/profile/topic-strengths?game=matematik&exam_ref=AYT-SAY',
+      expect.any(Object),
+    )
   })
 })

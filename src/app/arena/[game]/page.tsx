@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
 import { notFound } from 'next/navigation'
 import GameClient from './game-client'
+import { Suspense } from 'react'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
 
 interface GamePageProps {
@@ -89,5 +90,5 @@ export default async function GameConsolePage({ params }: GamePageProps) {
     notFound()
   }
 
-  return <GameClient />
+  return <Suspense fallback={null}><GameClient /></Suspense>
 }

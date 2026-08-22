@@ -36,7 +36,7 @@ interface TopicStrengthRow {
 
 export interface TopicProgressState {
   topics: TopicProgress[]
-  /** Sirada olan adim: tamamlanmamis ilk konu. Hepsi bittiyse son adim. */
+  /** Sirada olan adim: tamamlanmamis ilk konu. Hepsi bittiyse -1. */
   currentIndex: number
   completedCount: number
   loading: boolean
@@ -44,41 +44,46 @@ export interface TopicProgressState {
   hasProgress: boolean
 }
 
-export function useTopicProgress(game: GameSlug | null, userId?: string | null): TopicProgressState {
-  const [rows, setRows] = useState<TopicStrengthRow[] | null>(null)
-  const [loading, setLoading] = useState(false)
+interface TopicRequestState {
+  key: string | null
+  rows: TopicStrengthRow[] | null
+}
+
+export function useTopicProgress(
+  game: GameSlug | null,
+  userId?: string | null,
+  examRef?: string | null,
+): TopicProgressState {
+  const requestKey = game && userId ? `${game}:${userId}:${examRef ?? 'all'}` : null
+  const [request, setRequest] = useState<TopicRequestState>({ key: null, rows: null })
 
   useEffect(() => {
-    if (!game || !userId) {
-      setRows(null)
-      setLoading(false)
-      return
-    }
+    if (!game || !userId || !requestKey) return
 
     const controller = new AbortController()
-    setLoading(true)
-    fetch(`/api/profile/topic-strengths?game=${encodeURIComponent(game)}`, {
+    const params = new URLSearchParams({ game })
+    if (examRef) params.set('exam_ref', examRef)
+    fetch(`/api/profile/topic-strengths?${params}`, {
       cache: 'no-store',
       signal: controller.signal,
     })
       .then((response) => (response.ok ? response.json() : null))
       .then((body: { topics?: TopicStrengthRow[] } | null) => {
         if (controller.signal.aborted) return
-        setRows(Array.isArray(body?.topics) ? body.topics : [])
-        setLoading(false)
+        setRequest({ key: requestKey, rows: Array.isArray(body?.topics) ? body.topics : [] })
       })
       .catch(() => {
         // Ilerleme opsiyonel: hata halinde yol "hic baslanmadi" olarak cizilir.
         if (controller.signal.aborted) return
-        setRows(null)
-        setLoading(false)
+        setRequest({ key: requestKey, rows: null })
       })
 
     return () => controller.abort()
-  }, [game, userId])
+  }, [examRef, game, requestKey, userId])
 
   return useMemo(() => {
     const categories = game ? GAMES[game]?.categories ?? [] : []
+    const rows = requestKey && request.key === requestKey ? request.rows : null
     const byCategory = new Map<string, TopicStrengthRow>()
     for (const row of rows ?? []) {
       if (typeof row?.category === 'string') byCategory.set(row.category, row)
@@ -100,10 +105,10 @@ export function useTopicProgress(game: GameSlug | null, userId?: string | null):
     const firstUnfinished = topics.findIndex((topic) => !topic.completed)
     return {
       topics,
-      currentIndex: firstUnfinished === -1 ? Math.max(0, topics.length - 1) : firstUnfinished,
+      currentIndex: firstUnfinished,
       completedCount: topics.filter((topic) => topic.completed).length,
-      loading,
+      loading: Boolean(requestKey && request.key !== requestKey),
       hasProgress: byCategory.size > 0,
     }
-  }, [game, rows, loading])
+  }, [game, request, requestKey])
 }

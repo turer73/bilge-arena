@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const mockUsePathname = vi.hoisted(() => vi.fn<() => string>())
@@ -15,7 +15,7 @@ vi.mock('next/image', () => ({
   ),
 }))
 
-import { COACH_SEEN_STORAGE_KEY, MobileHomeDemo } from '../mobile-home-demo'
+import { coachSeenStorageKey, MobileHomeDemo } from '../mobile-home-demo'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -23,19 +23,19 @@ beforeEach(() => {
 })
 
 describe('MobileHomeDemo Bilge Chan koç balonu', () => {
-  test('ilk mesajla açılır ve kapatma düğmesiyle kapanır', () => {
+  test('ilk mesajla açılır ve kapatma düğmesiyle kapanır', async () => {
     render(<MobileHomeDemo />)
 
-    expect(screen.getByRole('dialog')).toBeVisible()
+    expect(await screen.findByRole('dialog')).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Hazırsın, Bilgin!' })).toBeVisible()
 
     fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  test('Chan çağrısından yeniden açılır ve Escape ile kapanır', () => {
+  test('Chan çağrısından yeniden açılır ve Escape ile kapanır', async () => {
     render(<MobileHomeDemo />)
-    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
     expect(screen.getByRole('dialog')).toBeVisible()
@@ -44,10 +44,10 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  test('üç koç mesajında ilerler ve son adımda ders bağlantısını gösterir', () => {
+  test('üç koç mesajında ilerler ve son adımda ders bağlantısını gösterir', async () => {
     render(<MobileHomeDemo />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'İleri' }))
     expect(screen.getByRole('heading', { name: 'Önce kuralı yakala' })).toBeVisible()
 
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
@@ -55,10 +55,10 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/matematik')
   })
 
-  test('ders seçimi içeriği ve hedef bağlantısını günceller', () => {
+  test('ders seçimi içeriği ve hedef bağlantısını günceller', async () => {
     render(<MobileHomeDemo />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
     fireEvent.click(screen.getByRole('button', { name: 'Türkçe' }))
 
     expect(screen.getByRole('heading', { name: 'Türkçe Yolu' })).toBeVisible()
@@ -88,7 +88,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
 
   test('canlı modda adımlar gerçek müfredattan gelir ve ilerleme sayılır', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
 
     // Sabit "Ünite 3" metni yerine gercek konu adlari
     expect(await screen.findByRole('link', { name: 'Sayılar dersini aç' })).toBeVisible()
@@ -101,7 +101,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
 
   test('adımlar ilgili konuya derin bağlantı verir ve kilitli değildir', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
 
     const step = await screen.findByRole('link', { name: 'Olasılık dersini aç' })
     expect(step).toHaveAttribute('href', '/arena/matematik?category=olasilik')
@@ -125,18 +125,18 @@ describe('MobileHomeDemo koç penceresi davranışı', () => {
     vi.unstubAllGlobals()
   })
 
-  test('canlı modda günde bir kez karşılar, aynı gün tekrar açılmaz', () => {
+  test('canlı modda günde bir kez karşılar, aynı gün tekrar açılmaz', async () => {
     const first = render(<MobileHomeDemo mode="live" userId="user-1" />)
-    expect(screen.getByRole('dialog')).toBeVisible()
-    expect(window.localStorage.getItem(COACH_SEEN_STORAGE_KEY)).toBe(new Date().toDateString())
+    expect(await screen.findByRole('dialog')).toBeVisible()
+    expect(window.localStorage.getItem(coachSeenStorageKey('user-1'))).toBe(new Date().toDateString())
     first.unmount()
 
     render(<MobileHomeDemo mode="live" userId="user-1" />)
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   test('otomatik açılmadığında Chan düğmesinden elle açılabilir', () => {
-    window.localStorage.setItem(COACH_SEEN_STORAGE_KEY, new Date().toDateString())
+    window.localStorage.setItem(coachSeenStorageKey('user-1'), new Date().toDateString())
     render(<MobileHomeDemo mode="live" userId="user-1" />)
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -144,19 +144,25 @@ describe('MobileHomeDemo koç penceresi davranışı', () => {
     expect(screen.getByRole('dialog')).toBeVisible()
   })
 
-  test('açılınca odak pencereye taşınır ve arka plan inert olur', () => {
+  test('açılınca odak pencereye taşınır ve arka plan inert olur', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" />)
 
-    const dialog = screen.getByRole('dialog')
+    const dialog = await screen.findByRole('dialog')
     expect(dialog.contains(document.activeElement)).toBe(true)
     expect(document.querySelector('main')).toHaveAttribute('inert')
   })
 
-  test('kapanınca arka plandaki inert kalkar', () => {
+  test('kapanınca arka plandaki inert kalkar', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" />)
-    fireEvent.click(screen.getByRole('button', { name: 'Koç penceresini kapat' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(document.querySelector('main')).not.toHaveAttribute('inert')
+  })
+
+  test('günlük koç kaydı kullanıcılar arasında paylaşılmaz', async () => {
+    window.localStorage.setItem(coachSeenStorageKey('user-1'), new Date().toDateString())
+    render(<MobileHomeDemo mode="live" userId="user-2" />)
+    expect(await screen.findByRole('dialog')).toBeVisible()
   })
 })

@@ -18,6 +18,7 @@ import { getFrameById, FRAME_STORAGE_KEY } from '@/lib/constants/profile-frames'
 import { GameSelectGrid } from '@/components/game/game-select-grid'
 import { ArenaExploreGrid } from '@/components/game/arena-explore-grid'
 import { MobileHomeDemo, type MobileSubjectId } from '@/app/mobil-demo/mobile-home-demo'
+import { useGameStore } from '@/stores/game-store'
 
 interface SidebarLeaderRow {
   name: string
@@ -33,6 +34,7 @@ interface MiniLeader {
 
 export default function ArenaClient() {
   const { user, profile } = useAuthStore()
+  const selectedExamRef = useGameStore((state) => state.selectedExamRef)
   const [isMobileHome, setIsMobileHome] = useState(false)
   const [institutionMobileVisible, setInstitutionMobileVisible] = useState(false)
   const classroomEnabled = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'
@@ -130,6 +132,7 @@ export default function ArenaClient() {
       <MobileHomeDemo
         mode="live"
         examLabel={profile?.exam_type === 'lgs' ? 'LGS' : 'YKS'}
+        examRef={selectedExamRef ?? (profile?.exam_type === 'lgs' ? 'LGS' : 'TYT')}
         availableSubjects={availableSubjects}
         currentStreak={currentStreak}
         coinBalance={profile?.coin_balance ?? 0}
