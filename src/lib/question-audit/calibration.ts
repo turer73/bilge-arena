@@ -18,7 +18,7 @@
  */
 
 import type { AuditConfig, AuditProviders } from './orchestrator'
-import { auditQuestion } from './orchestrator'
+import { auditQuestion, QUESTION_QUALITY_POLICY_VERSION } from './orchestrator'
 import { PROMPT_VERSION } from './prompts'
 import type { AgentOutcome, AuditRun, Finding, QuestionDraft, Verdict, VerdictResult } from './types'
 import type { DeriveOptions } from './verdict'
@@ -26,6 +26,8 @@ import { DEFAULT_DERIVE_OPTIONS, deriveVerdict } from './verdict'
 
 export interface CalibrationItem {
   questionId: string
+  /** Altın etiketi değişmiş bir revizyona yanlışlıkla bağlamayı engeller. */
+  contentSha256: string
   category: string
   verdict: Verdict
   markedAnswerIndex: number
@@ -53,10 +55,15 @@ export interface CalibrationItem {
 export interface CalibrationReport {
   startedAt: string
   finishedAt: string
+  policyVersion: string
+  providerIds: { blind: string; adversarial: string; verifier: string }
   modelIds: { blind: string; adversarial: string; verifier: string }
   promptVersions: Record<string, string>
   config: AuditConfig
   total: number
+
+  /** İnsan-altın benchmark'ın tüm soruları ölçebilmesi için türetilmiş özetler. */
+  items: CalibrationItem[]
 
   /** Verdict dagilimi. */
   byVerdict: Record<Verdict, number>
@@ -190,6 +197,7 @@ export async function runCalibration(input: CalibrationInput): Promise<Calibrati
 
     const item: CalibrationItem = {
       questionId: draft.questionId,
+      contentSha256: draft.contentSha256,
       category: input.categoryOf(draft),
       verdict: verdict.verdict,
       markedAnswerIndex: draft.markedAnswerIndex,
@@ -255,6 +263,12 @@ export async function runCalibration(input: CalibrationInput): Promise<Calibrati
   return {
     startedAt,
     finishedAt: new Date().toISOString(),
+    policyVersion: QUESTION_QUALITY_POLICY_VERSION,
+    providerIds: {
+      blind: input.providers.blind.id,
+      adversarial: input.providers.adversarial.id,
+      verifier: input.providers.verifier.id,
+    },
     modelIds: {
       blind: input.providers.blind.modelId,
       adversarial: input.providers.adversarial.modelId,
@@ -267,6 +281,7 @@ export async function runCalibration(input: CalibrationInput): Promise<Calibrati
     },
     config: input.config,
     total: items.length,
+    items,
     byVerdict,
     blindAgreement: { agreed, disagreed, noConsensus, ratio: denom > 0 ? agreed / denom : null },
     byCategory,

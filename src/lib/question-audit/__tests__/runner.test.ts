@@ -116,3 +116,15 @@ describe('dry-run kapisi', () => {
     expect(lines.join('\n')).toMatch(/tahmini sure ~1\.3 dk/)
   })
 })
+
+describe('insan-altin terfi kapisi', () => {
+  it('yetkili karar yazimini promotion evidence olmadan LLM oncesi durdurur', async () => {
+    const persistDecision = vi.fn()
+    await expect(main(['--confirm'], {
+      fetchRows: async () => [row('a')],
+      persistDecision,
+      log: () => undefined,
+    })).rejects.toThrow('terfi kaniti')
+    expect(persistDecision).not.toHaveBeenCalled()
+  })
+})

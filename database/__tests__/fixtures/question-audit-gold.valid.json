@@ -1,0 +1,16 @@
+[
+  {
+    "questionId": "clean-question",
+    "contentSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "flawCodes": [],
+    "reviewerCount": 2,
+    "adjudication": "consensus"
+  },
+  {
+    "questionId": "wrong-key-question",
+    "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "flawCodes": ["WRONG_KEY_SUSPECTED"],
+    "reviewerCount": 3,
+    "adjudication": "adjudicated"
+  }
+]

@@ -1,8 +1,12 @@
 import { readFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const validation = readFileSync(new URL('../migrations/136_question_validation_pipeline.sql', import.meta.url), 'utf8')
 const psychometrics = readFileSync(new URL('../migrations/137_question_revision_psychometrics_v2.sql', import.meta.url), 'utf8')
+const benchmarkRunner = readFileSync(new URL('../run-question-benchmark.mjs', import.meta.url), 'utf8')
+const auditRunner = readFileSync(new URL('../run-question-audit.mjs', import.meta.url), 'utf8')
 
 describe('question validation persistence and publish gate SQL', () => {
   it('stores the exact replay and cache identity', () => {
@@ -42,5 +46,35 @@ describe('revision psychometrics v2 SQL', () => {
     expect(psychometrics).toContain('time_taken_sec BETWEEN 2 AND 600')
     expect(psychometrics).toContain('CREATE TABLE IF NOT EXISTS public.question_option_statistics')
     expect(psychometrics).toContain('generate_series(0,r.option_count-1)')
+  })
+})
+
+describe('human-gold benchmark release gate', () => {
+  it('requires a full item report and fails a rejected promotion', () => {
+    expect(benchmarkRunner).toContain('calibration.items')
+    expect(benchmarkRunner).toContain('promptVersions: calibration.promptVersions')
+    expect(benchmarkRunner).toContain('evaluateBenchmark')
+    expect(benchmarkRunner).toContain('process.exitCode = 2')
+  })
+
+  it('does not persist authoritative decisions without matching promotion evidence', () => {
+    expect(auditRunner).toContain('--promotion-report')
+    expect(auditRunner).toContain('deps.promotionEvidence')
+    expect(auditRunner).toContain('--no-decisions')
+  })
+
+  it('runs without an LLM or database and returns exit 2 for an undersized gold set', () => {
+    const root = fileURLToPath(new URL('../..', import.meta.url))
+    const result = spawnSync(process.execPath, [
+      'database/run-question-benchmark.mjs',
+      '--labels', 'database/__tests__/fixtures/question-audit-gold.valid.json',
+      '--report', 'database/__tests__/fixtures/question-audit-calibration.valid.json',
+    ], { cwd: root, encoding: 'utf8' })
+    expect(result.status).toBe(2)
+    const output = JSON.parse(result.stdout)
+    expect(output.subject.promptVersions.blind).toBe('blind-solver@2')
+    expect(output.benchmark.overall.balancedAccuracy).toBe(1)
+    expect(output.benchmark.promotion.passed).toBe(false)
+    expect(output.benchmark.promotion.failures.join(' ')).toContain('label_count')
   })
 })
