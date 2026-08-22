@@ -79,7 +79,7 @@ describe('AdminQuestionQualityPage', () => {
     render(<AdminQuestionQualityPage />)
     await screen.findByText('Kotu soru bir')
     // q1 aktif → "Aktif" butonu; tikla → is_active:false PATCH
-    fireEvent.click(screen.getByText('Aktif'))
+    fireEvent.click(screen.getByRole('button', { name: 'Aktif' }))
     await waitFor(() => {
       const call = fetchMock.mock.calls.find((c) => c[0] === '/api/questions')
       expect(call).toBeTruthy()
@@ -99,7 +99,7 @@ describe('AdminQuestionQualityPage', () => {
     })
     render(<AdminQuestionQualityPage />)
     await screen.findByText('Kotu soru bir')
-    fireEvent.click(screen.getByText('Aktif'))
+    fireEvent.click(screen.getByRole('button', { name: 'Aktif' }))
     await waitFor(() => expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/quarantine'))).toBe(true))
     expect(fetchMock.mock.calls.some((call) => call[0] === '/api/questions')).toBe(false)
   })

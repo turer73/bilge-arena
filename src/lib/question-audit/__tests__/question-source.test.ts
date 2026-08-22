@@ -67,8 +67,6 @@ describe('deterministik kapi — LLM den ONCE eler', () => {
     ['birebir ayni sik', { ...validContent, options: ['3', '6', '6', '9', '12'] }, 'option_duplicate'],
     ['esdeger kesir', { ...validContent, options: ['1/4', '1/5', '3/20', '4/20', '1/20'] }, 'option_value_equivalent'],
     ['rasyonellestirilmis kok', { ...validContent, options: ['21/(2√5)', '21√5/10', '9√5/4', '21/√5', '9/√5'] }, 'option_value_equivalent'],
-    ['esdeger kesir', { ...validContent, options: ['1/4', '1/5', '3/20', '4/20', '1/20'] }, 'option_value_equivalent'],
-    ['rasyonellestirilmis kok', { ...validContent, options: ['21/(2√5)', '21√5/10', '9√5/4', '21/√5', '9/√5'] }, 'option_value_equivalent'],
     ['answer tam sayi degil', { ...validContent, answer: '2' }, 'answer_not_integer'],
     ['answer aralik disi', { ...validContent, answer: 7 }, 'answer_out_of_range'],
     ['answer negatif', { ...validContent, answer: -1 }, 'answer_out_of_range'],
@@ -97,28 +95,6 @@ describe('deterministik kapi — LLM den ONCE eler', () => {
  * saglam sorulari olcumden dusururdu. Ilk canli taramada tam bu oldu:
  * "1914-1918" tire eksi sanilip -4, "2-8-8-1" elektron dizilimi -15,
  * "(-3,-7)" koordinat ikilisi bozularak sahte esitlik uretti.
- */
-describe('esdeger-deger kontrolu supheli bicimlere DOKUNMAZ', () => {
-  const safe: Array<[string, string[]]> = [
-    ['tarih araliklari', ['1912-1916', '1914-1918', '1918-1922', '1923-1927', '1930-1934']],
-    ['elektron dizilimleri', ['2-8-8-1', '2-8-9', '2-8-7-2', '2-8-8-2', '2-8-6-3']],
-    ['koordinat ikilileri', ['(-3,-7)', '(3,7)', '(-7,-3)', '(7,3)', '(0,0)']],
-    ['binlik ayracli sayilar', ['100', '1.000', '10.000', '100.000', '1.000.000']],
-    ['birimli degerler', ['5 mol', '10 mol', '15 mol', '20 mol', '25 mol']],
-  ]
-  for (const [label, options] of safe) {
-    it(`${label} -> gecer`, () => {
-      expect(toDraft(row({ ...validContent, options })).ok).toBe(true)
-    })
-  }
-})
-
-/**
- * Bu blok kapinin YANLIS-POZITIF uretmedigini kilitler. Esdeger-deger kontrolu
- * reddettigi soruyu denetim disi birakir; asiri hevesli bir sayisallastirici
- * saglam sorulari olcumden dusururdu. Ilk canli taramada tam bu oldu: tarih
- * araliklarinda tire eksi sanildi ("1914-1918" -> -4), elektron dizilimleri
- * ("2-8-8-1" -> -15) ve koordinat ikilileri ("(-3,-7)") sahte esitlik uretti.
  */
 describe('esdeger-deger kontrolu supheli bicimlere DOKUNMAZ', () => {
   const safe: Array<[string, string[]]> = [

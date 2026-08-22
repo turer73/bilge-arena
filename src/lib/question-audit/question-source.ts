@@ -38,7 +38,7 @@ export interface QuestionRow {
  * Sik metnini sayiya cevirir; cevrilemezse null.
  *
  * NEDEN VAR: birebir metin karsilastirmasi "1/5" ile "4/20"yi farkli gorur, ama
- * ogrenci icin ikisi de DOGRU cevaptir. Canli bankada bu 6 soruda vardi ve
+ * ogrenci icin ikisi de DOGRU cevaptir. Canli bankada bu 9 soruda vardi ve
  * dordunde esdeger sikkin biri isaretli anahtardi — yani sorunun IKI dogru
  * cevabi vardi ve esdeger kesri isaretleyen ogrenci haksiz yere yanlis
  * sayiliyordu. Iki tam banka LLM kosusu (22135 + 22088 cagri, iki FARKLI
