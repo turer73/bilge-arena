@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash, randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import { createServer } from 'vite'
@@ -53,7 +53,6 @@ const outDir = resolve(valueOf('--out-dir') ?? 'secure/question-audit-gold-v1')
 const seed = valueOf('--seed')
 const policyVersion = valueOf('--policy-version', 'question-quality@2')
 if (!seed) throw new Error('--seed <sabit-deger> zorunlu')
-if (existsSync(outDir)) throw new Error(`cikti dizini zaten var; ustune yazilmadi: ${outDir}`)
 
 const env = loadEnv(envPath)
 const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL
@@ -69,12 +68,15 @@ const [questions, revisions, decisions] = await Promise.all([
     query.eq('status', 'published').order('id')
   )),
   all(db, 'question_validation_decisions', 'revision_id,content_sha256,policy_version,verdict,decided_at', (query) => (
-    query.eq('policy_version', policyVersion).order('decided_at')
+    query.eq('policy_version', policyVersion).order('decided_at').order('revision_id').order('content_sha256')
   )),
 ])
 
 const revisionById = new Map(revisions.map((revision) => [revision.id, revision]))
-const decisionByRevision = new Map(decisions.map((decision) => [`${decision.revision_id}:${decision.content_sha256}`, decision]))
+const decisionByRevision = new Map(decisions.map((decision) => [
+  `${decision.revision_id}:${String(decision.content_sha256).toLowerCase()}`,
+  decision,
+]))
 let excludedWithoutContentBoundSignal = 0
 const candidates = questions.flatMap((question) => {
   const revision = revisionById.get(question.published_revision_id)
@@ -117,7 +119,8 @@ try {
     })),
   })
 
-  mkdirSync(outDir, { recursive: true })
+  const createdDir = mkdirSync(outDir, { recursive: true })
+  if (!createdDir) throw new Error(`cikti dizini zaten var; ustune yazilmadi: ${outDir}`)
   writeJson(resolve(outDir, 'coordinator-manifest.json'), {
     schemaVersion: 'question-audit-review-coordinator@1',
     createdAt: new Date().toISOString(),

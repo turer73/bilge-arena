@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createServer } from 'vite'
 
@@ -18,7 +18,6 @@ function writeJson(path, value) {
 const packet = JSON.parse(readFileSync(resolve(valueOf('--packet')), 'utf8'))
 const reviews = [valueOf('--review'), valueOf('--review-b')].map((path) => JSON.parse(readFileSync(resolve(path), 'utf8')))
 const outDir = resolve(valueOf('--out-dir'))
-if (existsSync(outDir)) throw new Error(`cikti dizini zaten var; ustune yazilmadi: ${outDir}`)
 if (!packet || packet.schemaVersion !== 'question-audit-blind-pack@1' || !Array.isArray(packet.items)) {
   throw new Error('blind review packet gecersiz')
 }
@@ -54,7 +53,8 @@ try {
   do reviewerRef = randomBytes(32).toString('hex')
   while (existingRefs.has(reviewerRef))
 
-  mkdirSync(outDir, { recursive: true })
+  const createdDir = mkdirSync(outDir, { recursive: true })
+  if (!createdDir) throw new Error(`cikti dizini zaten var; ustune yazilmadi: ${outDir}`)
   writeJson(resolve(outDir, 'adjudicator-packet.json'), {
     schemaVersion: 'question-audit-blind-pack@1',
     selectionId: packet.selectionId,
