@@ -16,6 +16,12 @@ export interface ExpertReviewFile {
   labels: ExpertReviewLabel[]
 }
 
+export interface HumanGoldDispute {
+  questionId: string
+  contentSha256: string
+  reviewerFlawCodes: [FlawCode[], FlawCode[]]
+}
+
 function canonicalCodes(codes: readonly FlawCode[]): FlawCode[] {
   return [...new Set(codes)].sort()
 }
@@ -52,6 +58,31 @@ function validateReview(file: ExpertReviewFile): void {
 
 function labelMap(file: ExpertReviewFile): Map<string, ExpertReviewLabel> {
   return new Map(file.labels.map((label) => [`${label.questionId}:${label.contentSha256.toLowerCase()}`, label]))
+}
+
+export function findHumanGoldDisputes(files: readonly ExpertReviewFile[]): HumanGoldDispute[] {
+  for (const file of files) validateReview(file)
+  if (files.length !== 2 || files.some((file) => file.role !== 'reviewer')) {
+    throw new Error('ayrisma tespiti tam iki reviewer dosyasi ister')
+  }
+  if (files[0].reviewerRef.toLowerCase() === files[1].reviewerRef.toLowerCase()) {
+    throw new Error('reviewer referanslari farkli olmali')
+  }
+  const left = labelMap(files[0])
+  const right = labelMap(files[1])
+  if (left.size !== right.size || [...left.keys()].some((key) => !right.has(key))) {
+    throw new Error('iki reviewer ayni soru ve revision hash listesini etiketlemeli')
+  }
+  return [...left.keys()].sort().flatMap((key) => {
+    const first = left.get(key)!
+    const second = right.get(key)!
+    if (sameCodes(first.flawCodes, second.flawCodes)) return []
+    return [{
+      questionId: first.questionId,
+      contentSha256: first.contentSha256.toLowerCase(),
+      reviewerFlawCodes: [canonicalCodes(first.flawCodes), canonicalCodes(second.flawCodes)],
+    }]
+  })
 }
 
 /**

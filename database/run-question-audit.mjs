@@ -61,6 +61,35 @@ const sb = createClient(supabaseUrl, serviceKey)
 
 const PAGE = 1000 // Supabase tek istekte en fazla bu kadar satir doner
 
+async function attachPublishedRevisionHashes(rows) {
+  const withoutPointer = rows.filter((row) => !row.published_revision_id)
+  if (withoutPointer.length > 0) {
+    throw new Error(`aktif soru published revision pointer tasimiyor: ${withoutPointer.length}/${rows.length}`)
+  }
+  const revisionIds = [...new Set(rows.map((row) => row.published_revision_id).filter(Boolean))]
+  const revisions = new Map()
+  for (let offset = 0; offset < revisionIds.length; offset += 100) {
+    const { data, error } = await sb
+      .from('question_content_revisions')
+      .select('id, question_id, content_sha256, status')
+      .in('id', revisionIds.slice(offset, offset + 100))
+    if (error) throw new Error(`supabase published revision hashes: ${error.message}`)
+    for (const revision of data ?? []) revisions.set(revision.id, revision)
+  }
+  const missing = rows.filter((row) => !revisions.has(row.published_revision_id))
+  if (missing.length > 0) throw new Error(`published revision hash bulunamadi: ${missing.length}/${revisionIds.length}`)
+  return rows.map((row) => {
+    const revision = revisions.get(row.published_revision_id)
+    if (revision.question_id !== row.id || revision.status !== 'published') {
+      throw new Error(`published revision pointer gecersiz: ${row.id}:${row.published_revision_id}`)
+    }
+    if (!/^[a-f0-9]{64}$/i.test(String(revision.content_sha256))) {
+      throw new Error(`published revision DB hash gecersiz: ${row.id}:${row.published_revision_id}`)
+    }
+    return { ...row, content_sha256: revision.content_sha256 }
+  })
+}
+
 /**
  * Aktif sorulari ceker. Kalibrasyon salt-okuma: hicbir yazma yapilmaz.
  *
@@ -158,7 +187,7 @@ async function fetchRows(args) {
     rows.push(...data)
     if (data.length < to - from + 1) break
   }
-  return rows
+  return attachPublishedRevisionHashes(rows)
 }
 
 /**

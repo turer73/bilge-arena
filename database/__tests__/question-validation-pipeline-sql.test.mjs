@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -10,6 +10,8 @@ const psychometrics = readFileSync(new URL('../migrations/137_question_revision_
 const benchmarkRunner = readFileSync(new URL('../run-question-benchmark.mjs', import.meta.url), 'utf8')
 const auditRunner = readFileSync(new URL('../run-question-audit.mjs', import.meta.url), 'utf8')
 const goldBuilder = readFileSync(new URL('../build-question-audit-gold-set.mjs', import.meta.url), 'utf8')
+const reviewPackBuilder = readFileSync(new URL('../build-question-audit-review-pack.mjs', import.meta.url), 'utf8')
+const adjudicationPackBuilder = readFileSync(new URL('../build-question-audit-adjudication-pack.mjs', import.meta.url), 'utf8')
 const promotionWorkflow = readFileSync(new URL('../../.github/workflows/question-quality-promotion.yml', import.meta.url), 'utf8')
 
 describe('question validation persistence and publish gate SQL', () => {
@@ -67,6 +69,14 @@ describe('human-gold benchmark release gate', () => {
     expect(goldBuilder).toContain("--adjudication")
   })
 
+  it('prepares a read-only blind review pack without exposing prediction metadata', () => {
+    expect(reviewPackBuilder).toContain(".eq('is_active', true)")
+    expect(reviewPackBuilder).toContain(".eq('policy_version', policyVersion)")
+    expect(reviewPackBuilder).toContain('toBlindReviewPacket')
+    expect(reviewPackBuilder).toContain('flawCodes: null')
+    expect(reviewPackBuilder).not.toMatch(/\.from\([^)]+\)\.(?:insert|update|upsert|delete)\(/)
+  })
+
   it('materializes consensus and adjudicated labels through the CLI', () => {
     const root = fileURLToPath(new URL('../..', import.meta.url))
     const temp = mkdtempSync(join(tmpdir(), 'bilge-gold-'))
@@ -88,6 +98,41 @@ describe('human-gold benchmark release gate', () => {
     }
   })
 
+  it('gives the adjudicator only disputed blind items, not reviewer decisions', () => {
+    expect(adjudicationPackBuilder).toContain('findHumanGoldDisputes')
+    expect(adjudicationPackBuilder).toContain("'adjudicator-packet.json'")
+    expect(adjudicationPackBuilder).toContain("'coordinator-disputes.json'")
+    const root = fileURLToPath(new URL('../..', import.meta.url))
+    const temp = mkdtempSync(join(tmpdir(), 'bilge-adjudication-'))
+    const packet = join(temp, 'packet.json')
+    const outDir = join(temp, 'out')
+    writeFileSync(packet, JSON.stringify({
+      schemaVersion: 'question-audit-blind-pack@1',
+      selectionId: 'selection-1',
+      items: [
+        { questionId: 'clean-question', contentSha256: 'a'.repeat(64), content: { question: 'clean' } },
+        { questionId: 'wrong-key-question', contentSha256: 'b'.repeat(64), content: { question: 'disputed' } },
+      ],
+    }))
+    try {
+      const result = spawnSync(process.execPath, [
+        'database/build-question-audit-adjudication-pack.mjs',
+        '--packet', packet,
+        '--review', 'database/__tests__/fixtures/question-audit-review-a.valid.json',
+        '--review-b', 'database/__tests__/fixtures/question-audit-review-b.valid.json',
+        '--out-dir', outDir,
+      ], { cwd: root, encoding: 'utf8' })
+      expect(result.status, result.stderr).toBe(0)
+      const blind = JSON.parse(readFileSync(join(outDir, 'adjudicator-packet.json'), 'utf8'))
+      const privateCoordinator = JSON.parse(readFileSync(join(outDir, 'coordinator-disputes.json'), 'utf8'))
+      expect(blind.items.map((item) => item.questionId)).toEqual(['wrong-key-question'])
+      expect(JSON.stringify(blind)).not.toContain('reviewerFlawCodes')
+      expect(privateCoordinator.disputes[0].reviewerFlawCodes).toEqual([[], ['WRONG_KEY_SUSPECTED']])
+    } finally {
+      rmSync(temp, { recursive: true, force: true })
+    }
+  })
+
   it('does not persist authoritative decisions without matching promotion evidence', () => {
     expect(auditRunner).toContain('--promotion-report')
     expect(auditRunner).toContain('deps.promotionEvidence')
@@ -100,6 +145,15 @@ describe('human-gold benchmark release gate', () => {
     expect(auditRunner).toContain('gold revision bulunamadi')
     expect(auditRunner).toContain('content_sha256')
     expect(auditRunner).toContain('validateGoldLabels')
+  })
+
+  it('binds ordinary full-bank audits to the published revision DB hash', () => {
+    expect(auditRunner).toContain('attachPublishedRevisionHashes')
+    expect(auditRunner).toContain('aktif soru published revision pointer tasimiyor')
+    expect(auditRunner).toContain('published revision hash bulunamadi')
+    expect(auditRunner).toContain('revision.question_id !== row.id')
+    expect(auditRunner).toContain('published revision DB hash gecersiz')
+    expect(auditRunner).toContain('content_sha256: revision.content_sha256')
   })
 
   it('runs without an LLM or database and returns exit 2 for an undersized gold set', () => {
