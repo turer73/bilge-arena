@@ -125,7 +125,7 @@ export function Lobby({
     }`
 
   return (
-    <div data-responsive-game-lobby className="mx-auto grid min-h-[100dvh] w-full max-w-[1180px] animate-scaleIn grid-cols-1 gap-3 bg-[var(--app-bg)] p-3 pb-28 text-[var(--app-text)] md:grid-cols-[minmax(0,1fr)_300px] md:gap-5 md:p-5 lg:min-h-[calc(100dvh-var(--navbar-h))] lg:grid-cols-[minmax(0,1fr)_340px] lg:pb-6 xl:px-6">
+    <div data-responsive-game-lobby className="mx-auto grid min-h-[100dvh] w-full max-w-[1180px] animate-scaleIn grid-cols-1 gap-3 bg-[var(--app-bg)] p-3 pb-28 text-[var(--app-text)] md:grid-cols-[minmax(0,1fr)_300px] md:gap-5 md:p-5 lg:min-h-[calc(100dvh-var(--navbar-h))] lg:grid-cols-[minmax(0,1fr)_340px] lg:bg-transparent lg:pb-6 xl:px-6">
       <div className="-mx-3 -mt-3 flex h-14 items-center gap-1 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-2 md:col-span-2 md:mx-0 md:mt-0 md:rounded-[22px] md:border-2 md:border-[var(--app-border)] md:px-3 md:shadow-[0_4px_0_var(--app-shadow)]">
         <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--app-text-sub)] active:bg-[var(--app-hover)]">
           <ChevronLeft size={23} strokeWidth={3} aria-hidden="true" />

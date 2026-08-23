@@ -32,6 +32,7 @@ describe('Lobby', () => {
     expect(shell).toHaveClass('md:grid-cols-[minmax(0,1fr)_300px]')
     expect(shell).toHaveClass('lg:grid-cols-[minmax(0,1fr)_340px]')
     expect(shell).toHaveClass('max-w-[1180px]')
+    expect(shell).toHaveClass('bg-[var(--app-bg)]', 'lg:bg-transparent')
   })
 
   it('varsayılan filtreleri özetler ve ayrıntıları kapalı tutar', () => {

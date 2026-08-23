@@ -120,8 +120,8 @@ export default function SiralamaClient() {
       </header>
 
       <main className="mx-auto w-full max-w-[1180px] px-3 pt-3 md:px-5 lg:px-6 lg:pt-0">
-        <div data-ranking-overview className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
-        <section className="relative min-h-[176px] overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--app-warn-strong)] to-[var(--app-warn)] p-4 text-white shadow-[0_6px_0_var(--app-warn-border)] md:p-6">
+        <div data-ranking-overview className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
+        <section data-ranking-hero className="relative min-h-[176px] overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--app-warn-strong)] to-[var(--app-warn)] p-4 text-white shadow-[0_6px_0_var(--app-warn-border)] md:p-6 lg:min-h-[156px]">
           <div className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
           <div className="relative z-10">
             <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75"><Sparkles size={14} /> {allTimeView ? 'Efsaneler tablosu' : 'Bu haftanın arenası'}</p>
@@ -134,14 +134,16 @@ export default function SiralamaClient() {
           </div>
         </section>
 
-        <aside className="hidden min-h-[176px] flex-col justify-between rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-5 shadow-[0_6px_0_var(--app-border)] lg:flex">
-          <div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Crown size={24} strokeWidth={2.8} /></span>
-            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-text-muted)]">Senin lig durumun</p>
-            <p className="mt-1 text-2xl font-black text-[var(--app-text)]">{currentEntry ? `#${currentEntry.rank}` : 'İlk sıranı al'}</p>
-            <p className="mt-1 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">{currentEntry ? `${currentEntry.xp.toLocaleString()} XP ile yarıştasın.` : 'Bir oyun tamamla, haftalık lige katıl.'}</p>
+        <aside data-ranking-status className="hidden min-h-[156px] flex-col justify-between rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] lg:flex">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Crown size={22} strokeWidth={2.8} /></span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-text-muted)]">Senin lig durumun</p>
+              <p className="mt-0.5 text-xl font-black text-[var(--app-text)]">{currentEntry ? `#${currentEntry.rank}` : 'İlk sıranı al'}</p>
+              <p className="mt-0.5 text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">{currentEntry ? `${currentEntry.xp.toLocaleString()} XP ile yarıştasın.` : 'Bir oyun tamamla, haftalık lige katıl.'}</p>
+            </div>
           </div>
-          <Link href="/arena" className="mt-4 inline-flex min-h-11 items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-xs font-black text-white shadow-[0_4px_0_var(--app-accent-strong)] active:translate-y-0.5 active:shadow-none">XP kazanmaya başla</Link>
+          <Link href="/arena" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-xs font-black text-white shadow-[0_4px_0_var(--app-accent-strong)] active:translate-y-0.5 active:shadow-none">XP kazanmaya başla</Link>
         </aside>
         </div>
 
