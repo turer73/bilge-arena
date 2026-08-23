@@ -1,5 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "env": {
+    "CONTENT_GOVERNANCE_ENABLED": "true"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_CONTENT_APPEALS_ENABLED": "true"
+    }
+  },
   "regions": [
     "fra1"
   ],
