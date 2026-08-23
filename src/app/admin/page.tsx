@@ -122,7 +122,7 @@ export default function AdminDashboard() {
             {[
               { label: 'Soru Yonetimi', href: '/admin/sorular', icon: '📝', desc: 'Sorulari goruntule ve duzenle' },
               { label: 'Kullanicilar', href: '/admin/kullanicilar', icon: '👥', desc: 'Kullanici listesi ve yonetimi' },
-              { label: 'Hata Raporlari', href: '/admin/raporlar', icon: '🐛', desc: 'Bekleyen raporlari incele' },
+              { label: 'Soru Kalitesi', href: '/admin/soru-kalite', icon: '🐛', desc: 'Raporlari ve kalite kanitlarini incele' },
               { label: 'Site Ayarlari', href: '/admin/ayarlar', icon: '⚙️', desc: 'Platform yapilandirmasi' },
             ].map((link) => (
               <a

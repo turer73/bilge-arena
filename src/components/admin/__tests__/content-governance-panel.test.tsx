@@ -13,7 +13,10 @@ let incidentCreated = false
 const detail = () => ({ revision: {
   revisionId: OLD, questionId: QUESTION, revisionNo: 1, status: 'superseded', summary: 'Hatalı anahtar',
   content: { question: 'Eski soru', options: ['A', 'B'], answer: 1 }, metadata: { game: 'matematik', category: 'Temel', difficulty: 2 },
-  source: { title: 'İç kaynak', licenseCode: 'INTERNAL' }, outcomes: [], approvals: [], psychometrics: [],
+  source: { title: 'İç kaynak', licenseCode: 'INTERNAL' }, outcomes: [], approvals: [],
+  psychometrics: [{ windowStart: '2026-07-01T00:00:00.000Z', windowEnd: '2026-08-01T00:00:00.000Z', sampleN: 40, correctN: 24, omittedN: 5, pCorrect: 0.6, wilsonLow: 0.45, wilsonHigh: 0.73, discrimination: 0.31, medianResponseTimeSec: 18, fastResponseRate: 0.1, eligibilityPolicy: 'verified-v2', materializedAt: '2026-08-01T01:00:00.000Z' }],
+  optionStatistics: [{ optionIndex: 0, selectedN: 16, selectedRate: 0.4, correctOption: false, discrimination: -0.2, eligibilityPolicy: 'verified-v2' }, { optionIndex: 1, selectedN: 24, selectedRate: 0.6, correctOption: true, discrimination: 0.31, eligibilityPolicy: 'verified-v2' }],
+  appealSignals: { openCount: 3, verifiedOpenCount: 2, byReason: { wrong_key: 3 } },
   validation: {
     policyVersion: 'question-quality@1', verdict: 'NEEDS_REVIEW',
     findings: [{ code: 'AMBIGUOUS_WORDING', evidence: 'İki farklı okuma farklı seçeneklere götürüyor.' }],
@@ -44,6 +47,8 @@ describe('ContentGovernancePanel', () => {
     expect(await screen.findByText(/İnsan incelemesi gerekli · question-quality@1/)).toBeInTheDocument()
     expect(screen.getByText('AMBIGUOUS_WORDING')).toBeInTheDocument()
     expect(screen.getByText(/İki farklı okuma/)).toBeInTheDocument()
+    expect(screen.getByText(/3 açık · 2 doğrulanmış kanıtlı/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Seçenek ve çeldirici istatistikleri')).toHaveTextContent('A) 16 seçim')
   })
 
   it('creates a correction preview against the current published revision and can apply it', async () => {

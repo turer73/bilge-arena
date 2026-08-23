@@ -230,6 +230,14 @@ type AdaptiveDiagnosticSessionsRow = {
   kind: 'initial' | 'recheck'
   status: 'active' | 'completed' | 'abandoned'
   current_question_id: string | null
+  current_question_revision_id: string | null
+  current_question_content_sha256: string | null
+  current_question_correct_option: number | null
+  current_question_option_count: number | null
+  current_question_base_points: number | null
+  current_question_outcome_id: string | null
+  current_question_difficulty: number | null
+  current_question_issued_at: string | null
   answered_count: number
   covered_outcomes: number
   started_at: string
@@ -254,6 +262,12 @@ type AdaptiveDiagnosticAnswersRow = {
   covered_outcomes_after: number
   status_after: 'active' | 'completed' | 'abandoned'
   created_at: string
+  selected_option: number | null
+  question_revision_id: string | null
+  question_content_sha256: string | null
+  server_response_time_ms: number | null
+  response_time_source: string
+  evidence_kind: string
 }
 
 type UserDiagnosticOutcomeStateRow = {

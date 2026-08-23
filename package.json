@@ -29,6 +29,7 @@
     "test:curriculum-graph:pg": "vitest run --config vitest.database.config.ts database/__tests__/curriculum-graph-v1-postgres.integration.test.mjs",
     "test:mastery-evidence:pg": "vitest run --config vitest.database.config.ts database/__tests__/mastery-evidence-v2-postgres.integration.test.mjs",
     "test:adaptive-diagnostic:pg": "vitest run --config vitest.database.config.ts database/__tests__/adaptive-diagnostic-postgres.integration.test.mjs",
+    "test:question-quality:pg": "vitest run --config vitest.database.config.ts database/__tests__/adaptive-diagnostic-postgres.integration.test.mjs database/__tests__/question-content-governance-postgres.integration.test.mjs",
     "test:coach-flow:pg": "vitest run --config vitest.database.config.ts database/__tests__/verified-coach-flow-postgres.integration.test.mjs",
     "test:exam-strategy:pg": "vitest run --config vitest.database.config.ts database/__tests__/verified-exam-strategy-postgres.integration.test.mjs",
     "test:relative-leagues:pg": "vitest run --config vitest.database.config.ts database/__tests__/relative-weekly-leagues-postgres.integration.test.mjs",

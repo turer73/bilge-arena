@@ -96,14 +96,14 @@ describe('POST /api/questions/report', () => {
     mockMaybeSingle.mockReturnValue({ data: { id: 'existing' } })
     const res = await POST(makeRequest({ questionId: QID, report_type: 'typo' }))
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ status: 'already_reported' })
+    expect(await res.json()).toEqual({ status: 'already_reported', rewardEligible: true })
     expect(mockInsert).not.toHaveBeenCalled()
   })
 
   it('returns 201 and inserts the report with the session user_id', async () => {
     const res = await POST(makeRequest({ questionId: QID, report_type: 'wrong_answer', description: ' kotu ' }))
     expect(res.status).toBe(201)
-    expect(await res.json()).toEqual({ status: 'reported' })
+    expect(await res.json()).toEqual({ status: 'reported', rewardEligible: true })
     expect(mockInsert).toHaveBeenCalledWith({
       user_id: USER.id,
       question_id: QID,
@@ -117,11 +117,12 @@ describe('POST /api/questions/report', () => {
     const requestId = '33333333-3333-4333-8333-333333333333'
     const res = await POST(makeRequest({ questionId: QID, report_type: 'wrong_answer', description: ' Anahtar yanlis. ', requestId }))
     expect(res.status).toBe(201)
-    expect(await res.json()).toEqual({ status: 'reported' })
-    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal', {
+    expect(await res.json()).toEqual({ status: 'reported', rewardEligible: false })
+    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal_v2', {
       p_user_id: USER.id,
       p_question_id: QID,
       p_session_answer_id: null,
+      p_attempt_id: null,
       p_reason: 'wrong_key',
       p_description: 'Anahtar yanlis.',
       p_request_id: requestId,
@@ -129,12 +130,27 @@ describe('POST /api/questions/report', () => {
     expect(mockInsert).not.toHaveBeenCalled()
   })
 
-  it('treats an already-open governed appeal as an idempotent legacy report', async () => {
+  it('forwards the verified attempt reference to governed evidence binding', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
+    const attemptId = '44444444-4444-4444-8444-444444444444'
+    const res = await POST(makeRequest({
+      questionId: QID,
+      attemptId,
+      report_type: 'unclear',
+      requestId: '33333333-3333-4333-8333-333333333333',
+    }))
+    expect(res.status).toBe(201)
+    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal_v2', expect.objectContaining({
+      p_attempt_id: attemptId,
+    }))
+  })
+
+  it('does not mask an arbitrary governed unique violation as an idempotent report', async () => {
     vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
     mockContentRpc.mockResolvedValue({ data: null, error: { code: '23505' } })
     const res = await POST(makeRequest({ questionId: QID, report_type: 'unclear' }))
-    expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ status: 'already_reported' })
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({ error: 'Rapor gonderilemedi' })
     expect(mockInsert).not.toHaveBeenCalled()
   })
 
@@ -142,6 +158,13 @@ describe('POST /api/questions/report', () => {
     mockInsert.mockReturnValue({ error: { code: '23503', message: 'fk' } })
     const res = await POST(makeRequest({ questionId: QID, report_type: 'other' }))
     expect(res.status).toBe(400)
+  })
+
+  it('does not turn an arbitrary legacy unique violation into a reward-eligible success', async () => {
+    mockInsert.mockReturnValue({ error: { code: '23505', message: 'unrelated unique violation' } })
+    const res = await POST(makeRequest({ questionId: QID, report_type: 'other' }))
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({ error: 'Rapor gonderilemedi' })
   })
 
   it('returns GENERIC 500 (no PG leak) on other insert errors', async () => {

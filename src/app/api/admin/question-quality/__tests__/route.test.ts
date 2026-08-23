@@ -3,12 +3,13 @@ import type { NextRequest } from 'next/server'
 
 // ─── Mock setup ──────────────────────────────────
 
-const { mockCheckPermission, mockGte, mockQuestions, mockReports, mockExtra } = vi.hoisted(() => ({
+const { mockCheckPermission, mockGte, mockQuestions, mockReports, mockExtra, mockRpc } = vi.hoisted(() => ({
   mockCheckPermission: vi.fn(),
   mockGte: vi.fn(),
   mockQuestions: vi.fn(),
   mockReports: vi.fn(),
   mockExtra: vi.fn(), // P2a: sample-dışı rapor-soru .in() sorgusu
+  mockRpc: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -22,6 +23,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 // Service-role: questions (select.gte.order.limit) + error_reports (select.eq).
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
+    rpc: mockRpc,
     from: vi.fn((table: string) => {
       if (table === 'questions') {
         const chain: Record<string, unknown> = {}
@@ -61,10 +63,12 @@ function q(id: string, answered: number, correct: number) {
 describe('GET /api/admin/question-quality', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    delete process.env.CONTENT_GOVERNANCE_ENABLED
     mockCheckPermission.mockResolvedValue(ADMIN)
     mockQuestions.mockReturnValue({ data: [], error: null })
     mockReports.mockReturnValue({ data: [], error: null })
     mockExtra.mockReturnValue({ data: [], error: null })
+    mockRpc.mockResolvedValue({ data: { items: [], capped: false }, error: null })
   })
 
   it('returns 403 without admin.questions.view permission', async () => {
@@ -106,6 +110,22 @@ describe('GET /api/admin/question-quality', () => {
     expect(ids).toContain('z') // sample-dışı rapor yüzeye çıktı (eskiden kaybolurdu)
     expect(ids[0]).toBe('z') // raporlu önce (P2b)
     expect(mockExtra).toHaveBeenCalled() // .in() ile ayrı çekildi
+  })
+
+  it('uses governed appeal counts as the only report signal after cutover', async () => {
+    process.env.CONTENT_GOVERNANCE_ENABLED = 'true'
+    mockQuestions.mockReturnValue({ data: [q('11111111-1111-4111-8111-111111111111', 100, 80)], error: null })
+    mockRpc.mockResolvedValue({ data: { items: [{
+      questionId: '11111111-1111-4111-8111-111111111111', openCount: 2, verifiedOpenCount: 1,
+    }], capped: false }, error: null })
+
+    const res = await GET(makeRequest())
+    expect(res.status).toBe(200)
+    expect((await res.json()).questions[0]).toMatchObject({ pending_reports: 2 })
+    expect(mockRpc).toHaveBeenCalledWith('get_question_quality_appeal_counts', {
+      p_user_id: ADMIN.id, p_limit: 500,
+    })
+    expect(mockReports).not.toHaveBeenCalled()
   })
 
   it('caps the reported-question IN-filter at CANDIDATE_CAP=500 (P2 Codex#245)', async () => {

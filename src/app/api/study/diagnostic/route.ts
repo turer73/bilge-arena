@@ -51,6 +51,25 @@ const answerSchema = z.object({
   requestId: z.string().uuid(),
 }).strict()
 
+const snapshotQuestionSchema = z.object({
+  id: z.string().uuid(),
+  game: z.enum(GAME_SLUGS),
+  category: z.string(),
+  subcategory: z.string().nullable(),
+  topic: z.string().nullable(),
+  difficulty: z.number().int().min(1).max(5),
+  level_tag: z.string().nullable(),
+  base_points: z.number().int().nonnegative(),
+  content: z.object({
+    question: z.string(),
+    options: z.array(z.string()).min(2).max(10),
+    sentence: z.string().optional(),
+    passage: z.string().optional(),
+    context: z.string().optional(),
+    type: z.string().optional(),
+  }).strict(),
+}).strict()
+
 type AdminClient = ReturnType<typeof createServiceRoleClient>
 
 interface SessionRow {
@@ -59,6 +78,11 @@ interface SessionRow {
   kind: DiagnosticKind
   status: 'active' | 'completed' | 'abandoned'
   current_question_id: string | null
+  current_question_revision_id: string | null
+  current_question_correct_option: number | null
+  current_question_option_count: number | null
+  current_question_outcome_id: string | null
+  current_question_difficulty: number | null
   answered_count: number
   covered_outcomes: number
   expires_at: string
@@ -87,6 +111,7 @@ interface AnswerRow {
   outcome_id: string
   difficulty: number
   is_correct: boolean
+  selected_option: number | null
   sequence: number
   response_time_ms: number
   request_id: string
@@ -119,6 +144,24 @@ interface RecordRpcResult {
   nextQuestionId: string | null
   answeredCount: number
   coveredOutcomes: number
+}
+
+function bindPolicyQuestionsToRecordedEvidence(
+  questions: readonly DiagnosticQuestionInput[],
+  answers: readonly DiagnosticAnswerInput[],
+): DiagnosticQuestionInput[] {
+  const evidenceByQuestionId = new Map(
+    answers.map((answer) => [answer.questionId, {
+      id: answer.questionId,
+      outcomeId: answer.outcomeId,
+      difficulty: answer.difficulty,
+    }]),
+  )
+
+  return [
+    ...questions.filter((question) => !evidenceByQuestionId.has(question.id)),
+    ...evidenceByQuestionId.values(),
+  ]
 }
 
 type AuthenticationResult =
@@ -335,7 +378,7 @@ async function loadCatalog(admin: AdminClient, userId: string): Promise<Catalog>
 async function loadSession(admin: AdminClient, userId: string, sessionId: string): Promise<SessionRow | null> {
   const { data, error } = await admin
     .from('adaptive_diagnostic_sessions')
-    .select('id,user_id,kind,status,current_question_id,answered_count,covered_outcomes,expires_at,created_at')
+    .select('id,user_id,kind,status,current_question_id,current_question_revision_id,current_question_correct_option,current_question_option_count,current_question_outcome_id,current_question_difficulty,answered_count,covered_outcomes,expires_at,created_at')
     .eq('id', sessionId)
     .eq('user_id', userId)
     .maybeSingle()
@@ -346,13 +389,28 @@ async function loadSession(admin: AdminClient, userId: string, sessionId: string
 async function loadAnswers(admin: AdminClient, userId: string, sessionId: string): Promise<AnswerRow[]> {
   const { data, error } = await admin
     .from('adaptive_diagnostic_answers')
-    .select('question_id,outcome_id,difficulty,is_correct,sequence,response_time_ms,request_id,next_question_id,status_after,covered_outcomes_after')
+    .select('question_id,outcome_id,difficulty,is_correct,selected_option,sequence,response_time_ms,request_id,next_question_id,status_after,covered_outcomes_after')
     .eq('session_id', sessionId)
     .eq('user_id', userId)
     .order('sequence', { ascending: true })
     .limit(10)
   if (error) throw error
   return (data ?? []) as AnswerRow[]
+}
+
+async function loadSnapshotQuestion(
+  admin: AdminClient,
+  userId: string,
+  sessionId: string,
+): Promise<PublicQuestion> {
+  const { data, error } = await admin.rpc('get_adaptive_diagnostic_question_v2', {
+    p_user_id: userId,
+    p_session_id: sessionId,
+  })
+  if (error) throw error
+  const parsed = snapshotQuestionSchema.safeParse(data)
+  if (!parsed.success) throw new Error('diagnostic_question_snapshot_invalid')
+  return parsed.data as PublicQuestion
 }
 
 async function authenticate(request: NextRequest): Promise<AuthenticationResult> {
@@ -398,7 +456,7 @@ export async function GET(request: NextRequest) {
     const [{ data: latest, error: latestError }, summary] = await Promise.all([
       admin
         .from('adaptive_diagnostic_sessions')
-        .select('id,user_id,kind,status,current_question_id,answered_count,covered_outcomes,expires_at,created_at')
+        .select('id,user_id,kind,status,current_question_id,current_question_revision_id,current_question_correct_option,current_question_option_count,current_question_outcome_id,current_question_difficulty,answered_count,covered_outcomes,expires_at,created_at')
         .eq('user_id', auth.user.id)
         .eq('game', PILOT_GAME)
         .eq('exam_ref', PILOT_EXAM_REF)
@@ -416,10 +474,7 @@ export async function GET(request: NextRequest) {
       const expired = session.status === 'active' && Date.parse(session.expires_at) <= Date.now()
       let question: PublicQuestion | null = null
       if (session.status === 'active' && !expired && session.current_question_id) {
-        const catalog = await loadCatalog(admin, auth.user.id)
-        const matches = catalog.policyQuestions.filter((candidate) => candidate.id === session.current_question_id)
-        if (matches.length !== 1) throw new Error('diagnostic_current_mapping_invalid')
-        question = catalog.publicQuestionById.get(session.current_question_id) ?? null
+        question = await loadSnapshotQuestion(admin, auth.user.id, session.id)
       }
       if (session.status === 'active' && !expired && !question) {
         throw new Error('diagnostic_current_question_invalid')
@@ -491,8 +546,8 @@ export async function POST(request: NextRequest) {
       const result = parseStartRpc(data)
       if (!result) throw new Error('diagnostic_start_result_invalid')
       const resultMappings = catalog.policyQuestions.filter((question) => question.id === result.currentQuestionId)
-      const question = catalog.publicQuestionById.get(result.currentQuestionId) ?? null
-      if (!question || resultMappings.length !== 1) throw new Error('diagnostic_start_question_invalid')
+      const question = await loadSnapshotQuestion(admin, auth.user.id, result.sessionId)
+      if (question.id !== result.currentQuestionId || resultMappings.length !== 1) throw new Error('diagnostic_start_question_invalid')
       const summary = await loadSummary(admin, auth.user.id, catalog.outcomes)
 
       return noStoreJson({
@@ -533,30 +588,34 @@ export async function POST(request: NextRequest) {
       ))
 
       let isCorrect: boolean
+      let selectedOption = body.selectedOption
       let responseTimeMs = body.responseTimeMs
       let nextQuestionId: string | null
       if (replay) {
         isCorrect = replay.is_correct
+        selectedOption = replay.selected_option ?? body.selectedOption
         responseTimeMs = replay.response_time_ms
         nextQuestionId = replay.next_question_id
-      } else if (session.status === 'active' && Date.parse(session.expires_at) <= Date.now()) {
-        isCorrect = false
-        nextQuestionId = null
       } else {
         if (session.status !== 'active' || session.current_question_id !== body.questionId) {
           return noStoreJson({ error: 'Soru artık geçerli değil' }, { status: 409 })
         }
-        const publicQuestion = catalog.publicQuestionById.get(body.questionId)
-        const policyMatches = catalog.policyQuestions.filter((question) => question.id === body.questionId)
-        if (!publicQuestion || policyMatches.length !== 1) throw new Error('diagnostic_question_mapping_invalid')
-        if (body.selectedOption >= publicQuestion.content.options.length) {
+        const publicQuestion = await loadSnapshotQuestion(admin, auth.user.id, session.id)
+        if (publicQuestion.id !== body.questionId) throw new Error('diagnostic_question_snapshot_invalid')
+        if (
+          !session.current_question_revision_id
+          || session.current_question_correct_option === null
+          || session.current_question_option_count === null
+          || !session.current_question_outcome_id
+          || session.current_question_difficulty === null
+        ) throw new Error('diagnostic_question_snapshot_missing')
+        if (
+          session.current_question_option_count !== publicQuestion.content.options.length
+          || body.selectedOption >= session.current_question_option_count
+        ) {
           return noStoreJson({ error: 'Gecersiz secenek' }, { status: 400 })
         }
-        const domainQuestionResult = await admin.from('questions').select('*').eq('id', body.questionId).maybeSingle()
-        if (domainQuestionResult.error) throw domainQuestionResult.error
-        const domainQuestion = parseQuestionRows(domainQuestionResult.data ? [domainQuestionResult.data] : [])[0]
-        if (!domainQuestion) throw new Error('diagnostic_grade_question_invalid')
-        isCorrect = domainQuestion.content.answer === body.selectedOption
+        isCorrect = session.current_question_correct_option === body.selectedOption
 
         const policyAnswers: DiagnosticAnswerInput[] = recordedAnswers.map((answer) => ({
           questionId: answer.question_id,
@@ -564,28 +623,31 @@ export async function POST(request: NextRequest) {
           difficulty: Number(answer.difficulty),
           isCorrect: answer.is_correct,
         }))
-        const currentPolicyQuestion = policyMatches[0]
+        const answersWithCurrentEvidence: DiagnosticAnswerInput[] = [...policyAnswers, {
+          questionId: body.questionId,
+          outcomeId: session.current_question_outcome_id,
+          difficulty: session.current_question_difficulty,
+          isCorrect,
+        }]
         const next = selectNextDiagnosticQuestion({
           kind: session.kind,
           seed: session.id,
           outcomes: catalog.policyOutcomes,
-          questions: catalog.policyQuestions,
+          questions: bindPolicyQuestionsToRecordedEvidence(
+            catalog.policyQuestions,
+            answersWithCurrentEvidence,
+          ),
           priorStates: catalog.priorStates,
-          answers: [...policyAnswers, {
-            questionId: body.questionId,
-            outcomeId: currentPolicyQuestion.outcomeId,
-            difficulty: currentPolicyQuestion.difficulty,
-            isCorrect,
-          }],
+          answers: answersWithCurrentEvidence,
         })
         nextQuestionId = next?.questionId ?? null
       }
 
-      const { data, error } = await admin.rpc('record_adaptive_diagnostic_answer', {
+      const { data, error } = await admin.rpc('record_adaptive_diagnostic_answer_v2', {
         p_user_id: auth.user.id,
         p_session_id: body.sessionId,
         p_question_id: body.questionId,
-        p_is_correct: isCorrect,
+        p_selected_option: selectedOption,
         p_response_time_ms: responseTimeMs,
         p_request_id: body.requestId,
         // NULL marks the server-authoritative end of the adaptive sequence.
@@ -595,8 +657,9 @@ export async function POST(request: NextRequest) {
       const result = parseRecordRpc(data)
       if (!result) throw new Error('diagnostic_record_result_invalid')
       const question = result.nextQuestionId
-        ? (catalog.publicQuestionById.get(result.nextQuestionId) ?? null)
+        ? await loadSnapshotQuestion(admin, auth.user.id, session.id)
         : null
+      if (question && question.id !== result.nextQuestionId) throw new Error('diagnostic_next_question_snapshot_mismatch')
       if (result.status === 'active' && !question) throw new Error('diagnostic_next_question_invalid')
       const summary = await loadSummary(admin, auth.user.id, catalog.outcomes)
 

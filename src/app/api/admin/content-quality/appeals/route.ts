@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   if (!context.ok) return context.response
   const parsed = querySchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
   if (!parsed.success) return contentNoStoreJson({ error: 'Geçersiz itiraz kuyruğu sorgusu' }, { status: 400 })
-  const { data, error } = await contentRpc(context.admin, 'get_question_appeal_queue', {
+  const { data, error } = await contentRpc(context.admin, 'get_question_appeal_queue_v2', {
     p_user_id: context.userId,
     p_status: parsed.data.status ?? null,
     p_limit: parsed.data.limit,

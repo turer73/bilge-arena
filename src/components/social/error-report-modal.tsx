@@ -17,7 +17,7 @@ type ReportType = typeof REPORT_TYPES[number]['value']
 
 // onSubmit artık sonucu döndürebilir: {ok:false} -> modal HATA gösterir (sahte
 // başarı YOK). void/undefined dönerse (eski çağıranlar) başarı sayılır (geri-uyum).
-type ReportSubmitResult = { ok: boolean; error?: string } | void
+type ReportSubmitResult = { ok: boolean; error?: string; rewardEligible?: boolean } | void
 
 interface ErrorReportModalProps {
   questionId: string
@@ -35,6 +35,7 @@ export function ErrorReportModal({
   const [selectedType, setSelectedType] = useState<ReportType | null>(null)
   const [description, setDescription] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [rewardEligible, setRewardEligible] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const titleId = useId()
@@ -65,6 +66,7 @@ export function ErrorReportModal({
         setSubmitting(false)
         return
       }
+      setRewardEligible(result?.rewardEligible === true)
     } catch {
       setErrorMsg('Rapor gönderilemedi. Tekrar dene.')
       setSubmitting(false)
@@ -78,6 +80,7 @@ export function ErrorReportModal({
       setSubmitting(false)
       setSelectedType(null)
       setDescription('')
+      setRewardEligible(false)
       onClose()
     }, 2000)
   }
@@ -98,9 +101,14 @@ export function ErrorReportModal({
             <div className="text-4xl">✅</div>
             <div id={titleId} role="status" className="text-sm font-bold">Bildirimin bize ulaştı!</div>
             <div className="text-center text-xs leading-5 text-[var(--text-sub)]">
-              Ekibimiz inceleyecek. Haklı çıkarsan hesabına{' '}
-              <strong className="text-[var(--gold-text,var(--text))]">{ERROR_REPORT_COIN_REWARD} altın</strong>{' '}
-              eklenecek ve bildirimin sonucunu bildirim olarak göreceksin.
+              {rewardEligible ? <>
+                Ekibimiz inceleyecek. Haklı çıkarsan hesabına{' '}
+                <strong className="text-[var(--gold-text,var(--text))]">{ERROR_REPORT_COIN_REWARD} altın</strong>{' '}
+                eklenecek ve bildirimin sonucunu bildirim olarak göreceksin.
+              </> : <>
+                Ekibimiz revizyon kanıtıyla birlikte inceleyecek. İtiraz durumunu profilindeki
+                soru bildirimlerinden takip edebilirsin.
+              </>}
             </div>
           </div>
         ) : (
@@ -121,19 +129,10 @@ export function ErrorReportModal({
               </button>
             </div>
 
-            {/* Odul duyurusu: ogrenci bildirmenin ne ise yaradigini ve
-                kazandigi altinla ne yapabilecegini bilmeden motive olmuyor. */}
-            <div className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
-              <p className="text-[11px] font-extrabold text-[var(--text)]">
-                🎯 Hata avcılığı ödüllü
-              </p>
-              <p className="mt-1 text-[10px] leading-4 text-[var(--text-sub)]">
-                Bildirimin doğru çıkarsa <strong>{ERROR_REPORT_COIN_REWARD} altın</strong> kazanırsın.
-                Altınla mağazadan profil arka planı alabilirsin; en uygunu 1200 altın, yani beş doğru
-                bildirim bir arka plan eder. Üstelik senin fark ettiğin hata, o soruyu çözecek
-                herkes için düzelmiş olur.
-              </p>
-            </div>
+            <p className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-[11px] leading-5 text-[var(--text-sub)]">
+              Bildirimin, sorunun gördüğün revizyonuyla birlikte incelenir. Ödül uygunluğu
+              yalnız sunucunun kullandığı bildirim kanalına göre belirlenir.
+            </p>
 
             {/* Tip secimi */}
             <fieldset className="mb-4">

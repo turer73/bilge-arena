@@ -7,6 +7,7 @@ describe('content governance server contract', () => {
     expect(revisionReviewInputSchema.safeParse({ stage: 3, decision: 'approved', rationale: 'Uygun', requestId: '11111111-1111-4111-8111-111111111111' }).success).toBe(false)
     expect(appealSubmitInputSchema.safeParse({ questionId: '11111111-1111-4111-8111-111111111111', sessionAnswerId: null, reason: 'wrong_key', explanation: 'Anahtar yanlış.', requestId: '22222222-2222-4222-8222-222222222222', correctOption: 1 }).success).toBe(false)
     expect(appealSubmitInputSchema.safeParse({ questionId: '11111111-1111-4111-8111-111111111111', sessionAnswerId: null, reason: 'other', explanation: '', requestId: '22222222-2222-4222-8222-222222222222' }).success).toBe(true)
+    expect(appealSubmitInputSchema.safeParse({ questionId: '11111111-1111-4111-8111-111111111111', sessionAnswerId: null, attemptId: '33333333-3333-4333-8333-333333333333', reason: 'other', explanation: '', requestId: '22222222-2222-4222-8222-222222222222' }).success).toBe(true)
   })
   it('only accepts generic owner correction records and marks all responses private', () => {
     expect(correctionsSchema.safeParse({ corrections: [{ sessionDate: '2026-08-09', reason: 'wrong_key', scoreDelta: 1, correctedAt: '2026-08-09T10:00:00.000Z', correctOption: 1 }] }).success).toBe(false)

@@ -128,12 +128,18 @@ export type Database = {
           difficulty: number
           id: string
           is_correct: boolean
+          evidence_kind: string
           next_question_id: string | null
           outcome_id: string
           question_id: string
+          question_content_sha256: string | null
+          question_revision_id: string | null
           request_id: string
           response_time_ms: number
+          response_time_source: string
+          selected_option: number | null
           sequence: number
+          server_response_time_ms: number | null
           session_id: string
           status_after: string
           user_id: string
@@ -144,12 +150,18 @@ export type Database = {
           difficulty: number
           id?: string
           is_correct: boolean
+          evidence_kind?: string
           next_question_id?: string | null
           outcome_id: string
           question_id: string
+          question_content_sha256?: string | null
+          question_revision_id?: string | null
           request_id: string
           response_time_ms: number
+          response_time_source?: string
+          selected_option?: number | null
           sequence: number
+          server_response_time_ms?: number | null
           session_id: string
           status_after: string
           user_id: string
@@ -160,12 +172,18 @@ export type Database = {
           difficulty?: number
           id?: string
           is_correct?: boolean
+          evidence_kind?: string
           next_question_id?: string | null
           outcome_id?: string
           question_id?: string
+          question_content_sha256?: string | null
+          question_revision_id?: string | null
           request_id?: string
           response_time_ms?: number
+          response_time_source?: string
+          selected_option?: number | null
           sequence?: number
+          server_response_time_ms?: number | null
           session_id?: string
           status_after?: string
           user_id?: string
@@ -215,6 +233,14 @@ export type Database = {
           covered_outcomes: number
           created_at: string
           current_question_id: string | null
+          current_question_base_points: number | null
+          current_question_content_sha256: string | null
+          current_question_correct_option: number | null
+          current_question_difficulty: number | null
+          current_question_issued_at: string | null
+          current_question_option_count: number | null
+          current_question_outcome_id: string | null
+          current_question_revision_id: string | null
           exam_ref: string
           expires_at: string
           game: string
@@ -232,6 +258,14 @@ export type Database = {
           covered_outcomes?: number
           created_at?: string
           current_question_id?: string | null
+          current_question_base_points?: number | null
+          current_question_content_sha256?: string | null
+          current_question_correct_option?: number | null
+          current_question_difficulty?: number | null
+          current_question_issued_at?: string | null
+          current_question_option_count?: number | null
+          current_question_outcome_id?: string | null
+          current_question_revision_id?: string | null
           exam_ref: string
           expires_at: string
           game: string
@@ -249,6 +283,14 @@ export type Database = {
           covered_outcomes?: number
           created_at?: string
           current_question_id?: string | null
+          current_question_base_points?: number | null
+          current_question_content_sha256?: string | null
+          current_question_correct_option?: number | null
+          current_question_difficulty?: number | null
+          current_question_issued_at?: string | null
+          current_question_option_count?: number | null
+          current_question_outcome_id?: string | null
+          current_question_revision_id?: string | null
           exam_ref?: string
           expires_at?: string
           game?: string
@@ -261,6 +303,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "adaptive_diagnostic_sessions_current_question_outcome_id_fkey"
+            columns: ["current_question_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_outcomes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "adaptive_diagnostic_sessions_current_question_id_fkey"
             columns: ["current_question_id"]
@@ -642,18 +691,21 @@ export type Database = {
       content_governance_runtime: {
         Row: {
           enforce_direct_mutation: boolean
+          legacy_report_intake_enabled: boolean
           singleton: boolean
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           enforce_direct_mutation?: boolean
+          legacy_report_intake_enabled?: boolean
           singleton?: boolean
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           enforce_direct_mutation?: boolean
+          legacy_report_intake_enabled?: boolean
           singleton?: boolean
           updated_at?: string
           updated_by?: string | null
@@ -6242,6 +6294,10 @@ export type Database = {
         Args: { p_request_id: string; p_role_ref: string; p_user_id: string }
         Returns: Json
       }
+      finalize_legacy_question_appeal_transition: {
+        Args: { p_appeal_id: string; p_coins: number; p_user_id: string }
+        Returns: Json
+      }
       finalize_verified_exam_attempt: {
         Args: { p_attempt_id: string; p_request_id: string; p_user_id: string }
         Returns: Json
@@ -6430,6 +6486,19 @@ export type Database = {
         }
         Returns: Json
       }
+      get_question_appeal_queue_v2: {
+        Args: {
+          p_cursor: string
+          p_limit: number
+          p_status: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_question_quality_appeal_counts: {
+        Args: { p_limit: number; p_user_id: string }
+        Returns: Json
+      }
       get_question_content_governance_queue: {
         Args: {
           p_cursor: string
@@ -6479,6 +6548,7 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
       }
+      legacy_error_report_intake_enabled: { Args: never; Returns: boolean }
       increment_question_stats: {
         Args: { answered_inc?: number; correct_inc?: number; q_id: string }
         Returns: undefined
@@ -6688,6 +6758,22 @@ export type Database = {
           p_session_id: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      record_adaptive_diagnostic_answer_v2: {
+        Args: {
+          p_next_question_id: string
+          p_question_id: string
+          p_request_id: string
+          p_response_time_ms: number
+          p_selected_option: number
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_adaptive_diagnostic_question_v2: {
+        Args: { p_session_id: string; p_user_id: string }
         Returns: Json
       }
       record_verified_exam_exposure: {

@@ -18,7 +18,8 @@ export const revisionReviewInputSchema = z.object({
 export const requestIdInputSchema = z.object({ requestId: uuid }).strict()
 export const quarantineInputSchema = z.object({ reason: text(500), requestId: uuid }).strict()
 export const appealSubmitInputSchema = z.object({
-  questionId: uuid, sessionAnswerId: uuid.nullable(), reason: z.enum(['wrong_key', 'ambiguous', 'invalid_content', 'other']),
+  questionId: uuid, sessionAnswerId: uuid.nullable(), attemptId: uuid.nullable().optional().default(null),
+  reason: z.enum(['wrong_key', 'ambiguous', 'invalid_content', 'other']),
   explanation: z.string().trim().max(1000), requestId: uuid,
 }).strict()
 export const appealResolveInputSchema = z.object({
@@ -54,6 +55,7 @@ export const appealResolveResultSchema = z.object({
 }).strip()
 export const appealSubmitResultSchema = z.object({
   replayed: z.boolean(), appealId: uuid.optional(), status: z.string().max(40).optional(),
+  alreadyReported: z.boolean().optional(), evidenceKind: z.string().max(40).optional(),
   ackDueAt: timestamp.optional(), resolveDueAt: timestamp.optional(),
 }).strip()
 export const incidentCreateResultSchema = z.object({
@@ -87,6 +89,9 @@ export const appealAdminQueueSchema = z.object({ items: z.array(z.object({
   status: z.enum(['submitted', 'acknowledged', 'investigating', 'resolved', 'rejected', 'withdrawn']),
   submittedAt: timestamp, ackDueAt: timestamp, resolveDueAt: timestamp,
   slaBreachedAt: timestamp.nullable(), hasSessionEvidence: z.boolean(),
+  evidenceKind: z.enum(['legacy_report', 'legacy_session', 'current_revision', 'issued_attempt', 'verified_session']).optional(),
+  hasVerifiedEvidence: z.boolean().optional(),
+  selectedOption: z.number().int().min(0).max(9).nullable().optional(),
   latestPublicMessage: z.string().max(1000).nullable(), latestInternalNote: z.string().max(2000).nullable(),
 }).strict()).max(100), nextCursor: z.string().max(200).nullable() }).strict()
 export const correctionsSchema = z.object({ corrections: z.array(z.object({
@@ -132,8 +137,20 @@ const revisionDetailSchema = z.object({
   psychometrics: z.array(z.object({
     windowStart: timestamp, windowEnd: timestamp, sampleN: z.number().int().nonnegative(), correctN: z.number().int().nonnegative(),
     pCorrect: z.number().min(0).max(1).nullable(), wilsonLow: z.number().min(0).max(1).nullable(), wilsonHigh: z.number().min(0).max(1).nullable(),
-    discrimination: z.number().min(-1).max(1).nullable(), materializedAt: timestamp,
+    discrimination: z.number().min(-1).max(1).nullable(), omittedN: z.number().int().nonnegative().optional(),
+    medianResponseTimeSec: z.number().nonnegative().nullable().optional(), fastResponseRate: z.number().min(0).max(1).nullable().optional(),
+    eligibilityPolicy: z.string().max(200).optional(), materializedAt: timestamp,
   }).strict()).max(12),
+  optionStatistics: z.array(z.object({
+    windowStart: timestamp, windowEnd: timestamp, optionIndex: z.number().int().min(0).max(9),
+    selectedN: z.number().int().nonnegative(), selectedRate: z.number().min(0).max(1).nullable(),
+    correctOption: z.boolean(), discrimination: z.number().min(-1).max(1).nullable(),
+    eligibilityPolicy: z.string().max(200),
+  }).strict()).max(10).optional(),
+  appealSignals: z.object({
+    openCount: z.number().int().nonnegative(), verifiedOpenCount: z.number().int().nonnegative(),
+    byReason: z.record(z.string(), z.number().int().nonnegative()),
+  }).strict().optional(),
   incidents: z.array(z.object({
     incidentId: uuid, erroneousRevisionId: uuid, correctedRevisionId: uuid,
     errorType: z.enum(['wrong_key', 'ambiguous', 'invalid_content', 'outcome_mismatch']), status: z.enum(['open', 'applied', 'superseded', 'closed']),
@@ -144,6 +161,7 @@ const revisionDetailSchema = z.object({
 export const revisionSchema = z.object({ revision: revisionDetailSchema }).strict()
 
 export function contentGovernanceRpcStatus(code?: string): number {
+  if (code === '23503') return 400
   if (code === '42501') return 403
   if (code === 'P0002') return 404
   if (code === '22023' || code === '23505' || code === '23514' || code === 'P0003') return 409

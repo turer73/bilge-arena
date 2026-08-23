@@ -11,6 +11,7 @@ const {
   tableSingles,
   tableErrors,
   rpcResults,
+  rpcQueues,
 } = vi.hoisted(() => ({
   mockGetUser: vi.fn(async () => ({ data: { user: null as null | { id: string } } })),
   mockIpCheck: vi.fn(async () => ({ success: true, retryAfter: 0 })),
@@ -22,6 +23,7 @@ const {
   tableSingles: {} as Record<string, unknown>,
   tableErrors: {} as Record<string, unknown>,
   rpcResults: {} as Record<string, { data: unknown; error: unknown }>,
+  rpcQueues: {} as Record<string, Array<{ data: unknown; error: unknown }>>,
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -56,7 +58,7 @@ vi.mock('@/lib/supabase/service-role', () => ({
       return builder
     }),
     rpc: mockRpc.mockImplementation((name: string, args: unknown) => {
-      const result = rpcResults[name] ?? { data: null, error: null }
+      const result = rpcQueues[name]?.shift() ?? rpcResults[name] ?? { data: null, error: null }
       return Promise.resolve({ ...result, args })
     }),
   })),
@@ -115,6 +117,21 @@ const mappings = questions.map((row, index) => ({
   outcome_id: outcomeIds[index < 6 ? index : index - 6],
 }))
 
+function snapshotQuestion(index: number) {
+  const row = questions[index]
+  return {
+    id: row.id,
+    game: row.game,
+    category: row.category,
+    subcategory: row.subcategory,
+    topic: row.topic,
+    difficulty: row.difficulty,
+    level_tag: row.level_tag,
+    base_points: row.base_points,
+    content: { question: row.content.question, options: row.content.options },
+  }
+}
+
 function session(overrides: Record<string, unknown> = {}) {
   return {
     id: SESSION_ID,
@@ -122,6 +139,11 @@ function session(overrides: Record<string, unknown> = {}) {
     kind: 'initial',
     status: 'active',
     current_question_id: questionIds[0],
+    current_question_revision_id: '50000000-0000-4000-8000-000000000000',
+    current_question_correct_option: 1,
+    current_question_option_count: 4,
+    current_question_outcome_id: outcomeIds[0],
+    current_question_difficulty: 3,
     answered_count: 0,
     covered_outcomes: 0,
     expires_at: '2099-08-08T12:00:00.000Z',
@@ -148,6 +170,7 @@ function recordedAnswer(index: number) {
     outcome_id: mappings[index].outcome_id,
     difficulty: row.difficulty,
     is_correct: index % 2 === 0,
+    selected_option: index % 2 === 0 ? 1 : 0,
     sequence: index + 1,
     response_time_ms: 1200,
     request_id: index === 0 ? REQUEST_ID : `30000000-0000-4000-8000-0000000000${String(index).padStart(2, '0')}`,
@@ -178,6 +201,7 @@ describe('/api/study/diagnostic', () => {
     for (const key of Object.keys(tableSingles)) delete tableSingles[key]
     for (const key of Object.keys(tableErrors)) delete tableErrors[key]
     for (const key of Object.keys(rpcResults)) delete rpcResults[key]
+    for (const key of Object.keys(rpcQueues)) delete rpcQueues[key]
     mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
     mockIpCheck.mockResolvedValue({ success: true, retryAfter: 0 })
     mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })
@@ -200,7 +224,8 @@ describe('/api/study/diagnostic', () => {
       },
       error: null,
     }
-    rpcResults.record_adaptive_diagnostic_answer = {
+    rpcResults.get_adaptive_diagnostic_question_v2 = { data: snapshotQuestion(0), error: null }
+    rpcResults.record_adaptive_diagnostic_answer_v2 = {
       data: {
         alreadyProcessed: false,
         status: 'active',
@@ -268,6 +293,10 @@ describe('/api/study/diagnostic', () => {
   })
 
   it('grades only on the server, advances adaptively, and does not disclose correctness', async () => {
+    rpcQueues.get_adaptive_diagnostic_question_v2 = [
+      { data: snapshotQuestion(0), error: null },
+      { data: snapshotQuestion(1), error: null },
+    ]
     const response = await POST(postRequest({
       action: 'answer',
       sessionId: SESSION_ID,
@@ -277,9 +306,9 @@ describe('/api/study/diagnostic', () => {
       requestId: REQUEST_ID,
     }) as never)
     expect(response.status).toBe(200)
-    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer', expect.objectContaining({
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.objectContaining({
       p_question_id: questionIds[0],
-      p_is_correct: true,
+      p_selected_option: 1,
       p_next_question_id: questionIds[1],
     }))
     const payload = await response.json()
@@ -290,12 +319,33 @@ describe('/api/study/diagnostic', () => {
     expect(serialized).not.toContain('solution')
   })
 
+  it('selects the next question from issued outcome and difficulty despite live catalog drift', async () => {
+    tableLists.questions = [{ ...questions[0], difficulty: 5 }, ...questions.slice(1)]
+    tableLists.question_outcomes = [
+      { question_id: questionIds[0], outcome_id: outcomeIds[1] },
+      ...mappings.slice(1),
+    ]
+    rpcQueues.get_adaptive_diagnostic_question_v2 = [
+      { data: snapshotQuestion(0), error: null },
+      { data: snapshotQuestion(1), error: null },
+    ]
+    const response = await POST(postRequest({
+      action: 'answer', sessionId: SESSION_ID, questionId: questionIds[0],
+      selectedOption: 1, responseTimeMs: 1200, requestId: REQUEST_ID,
+    }) as never)
+    expect(response.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.objectContaining({
+      p_next_question_id: questionIds[1],
+    }))
+  })
+
   it('replays a recorded answer without regrading or changing its next snapshot', async () => {
     tableSingles.adaptive_diagnostic_sessions = session({
       current_question_id: questionIds[1], answered_count: 1, covered_outcomes: 1,
     })
     tableLists.adaptive_diagnostic_answers = [recordedAnswer(0)]
-    rpcResults.record_adaptive_diagnostic_answer.data = {
+    rpcResults.get_adaptive_diagnostic_question_v2 = { data: snapshotQuestion(1), error: null }
+    rpcResults.record_adaptive_diagnostic_answer_v2.data = {
       alreadyProcessed: true,
       status: 'active',
       nextQuestionId: questionIds[1],
@@ -311,8 +361,8 @@ describe('/api/study/diagnostic', () => {
       requestId: REQUEST_ID,
     }) as never)
     expect(response.status).toBe(200)
-    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer', expect.objectContaining({
-      p_is_correct: true,
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.objectContaining({
+      p_selected_option: 1,
       p_response_time_ms: 1200,
       p_next_question_id: questionIds[1],
     }))
@@ -336,7 +386,7 @@ describe('/api/study/diagnostic', () => {
 
   it('persists expiry as abandoned without grading a question', async () => {
     tableSingles.adaptive_diagnostic_sessions = session({ expires_at: '2000-01-01T00:00:00.000Z' })
-    rpcResults.record_adaptive_diagnostic_answer.data = {
+    rpcResults.record_adaptive_diagnostic_answer_v2.data = {
       alreadyProcessed: false,
       status: 'abandoned',
       nextQuestionId: null,
@@ -349,19 +399,23 @@ describe('/api/study/diagnostic', () => {
     }) as never)
     expect(response.status).toBe(200)
     expect((await response.json()).session.status).toBe('abandoned')
-    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer', expect.objectContaining({
-      p_is_correct: false, p_next_question_id: null,
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.objectContaining({
+      p_selected_option: 1,
     }))
   })
 
   it('returns an ID-free six-outcome summary only after the tenth answer', async () => {
     tableSingles.adaptive_diagnostic_sessions = session({
-      current_question_id: questionIds[9], answered_count: 9, covered_outcomes: 6,
+      current_question_id: questionIds[9],
+      current_question_revision_id: '50000000-0000-4000-8000-000000000009',
+      answered_count: 9,
+      covered_outcomes: 6,
     })
     tableSingles.questions = questions[9]
     tableLists.adaptive_diagnostic_answers = Array.from({ length: 9 }, (_, index) => recordedAnswer(index))
     tableLists.user_diagnostic_outcome_state = stateRows()
-    rpcResults.record_adaptive_diagnostic_answer.data = {
+    rpcResults.get_adaptive_diagnostic_question_v2 = { data: snapshotQuestion(9), error: null }
+    rpcResults.record_adaptive_diagnostic_answer_v2.data = {
       alreadyProcessed: false,
       status: 'completed',
       nextQuestionId: null,
