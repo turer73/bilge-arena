@@ -27,6 +27,7 @@
  *   npm run audit:calibrate -- --governance-ready --persist --confirm
  *   npm run audit:calibrate -- --provider deepseek --persist --no-decisions --confirm
  *   npm run audit:calibrate -- --persist --promotion-report benchmark.json --confirm
+ *   npm run audit:calibrate -- --gold-labels secure/gold-labels.json --confirm
  */
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -67,6 +68,54 @@ const PAGE = 1000 // Supabase tek istekte en fazla bu kadar satir doner
  * Sayfalamasiz "tam banka kosusu" sessizce ilk 1000 soruyu olcup tam sanilirdi.
  */
 async function fetchRows(args) {
+  if (args.goldLabelsPath) {
+    const labels = JSON.parse(readFileSync(resolve(args.goldLabelsPath), 'utf8'))
+    if (!Array.isArray(labels) || labels.length === 0) throw new Error('gold label listesi bos veya gecersiz')
+    const wanted = new Map()
+    for (const label of labels) {
+      if (
+        !label || typeof label.questionId !== 'string'
+        || typeof label.contentSha256 !== 'string'
+        || !/^[a-f0-9]{64}$/i.test(label.contentSha256)
+      ) throw new Error('gold label questionId/contentSha256 gecersiz')
+      const key = `${label.questionId}:${label.contentSha256.toLowerCase()}`
+      if (wanted.has(key)) throw new Error(`yinelenen gold label secimi: ${key}`)
+      wanted.set(key, label)
+    }
+
+    const matched = new Map()
+    for (let offset = 0; offset < labels.length; offset += 100) {
+      const batch = labels.slice(offset, offset + 100)
+      const { data, error } = await sb
+        .from('question_content_revisions')
+        .select('id, question_id, game, category, subcategory, topic, exam_ref, difficulty, content, content_sha256, status')
+        .in('question_id', batch.map((label) => label.questionId))
+        .in('content_sha256', batch.map((label) => label.contentSha256.toLowerCase()))
+        .order('id', { ascending: true })
+      if (error) throw new Error(`supabase gold revisions: ${error.message}`)
+      for (const revision of data ?? []) {
+        const key = `${revision.question_id}:${String(revision.content_sha256).toLowerCase()}`
+        if (wanted.has(key) && !matched.has(key)) matched.set(key, revision)
+      }
+    }
+    const missing = [...wanted.keys()].filter((key) => !matched.has(key))
+    if (missing.length > 0) throw new Error(`gold revision bulunamadi: ${missing.length}/${wanted.size}`)
+    return [...wanted.keys()].map((key) => {
+      const r = matched.get(key)
+      return {
+        id: r.question_id,
+        game: r.game,
+        category: r.category,
+        subcategory: r.subcategory,
+        topic: r.topic,
+        exam_ref: r.exam_ref,
+        difficulty: r.difficulty,
+        content: r.content,
+        published_revision_id: r.id,
+        content_sha256: r.content_sha256,
+      }
+    })
+  }
   if (args.revisionId || args.governanceReady) {
     let q = sb
       .from('question_content_revisions')
@@ -142,7 +191,15 @@ const server = await createServer({
 })
 try {
   const mod = await server.ssrLoadModule('/src/lib/question-audit/runner.ts')
+  const benchmark = await server.ssrLoadModule('/src/lib/question-audit/benchmark.ts')
   const persistence = await server.ssrLoadModule('/src/lib/question-audit/persistence.ts')
+  const goldIndex = process.argv.indexOf('--gold-labels')
+  if (goldIndex !== -1) {
+    const goldPath = process.argv[goldIndex + 1]
+    if (!goldPath || goldPath.startsWith('--')) throw new Error('--gold-labels <json> ister')
+    const labels = JSON.parse(readFileSync(resolve(goldPath), 'utf8'))
+    benchmark.validateGoldLabels(labels)
+  }
   const deps = { fetchRows }
   if (process.argv.includes('--persist')) {
     deps.persistRun = persistRun

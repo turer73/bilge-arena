@@ -29,8 +29,8 @@ describe('parseArgs', () => {
   })
 
   it('bayraklari okur', () => {
-    const a = parseArgs(['--limit', '100', '--category', 'fizik', '--samples', '5', '--concurrency', '8', '--revision-id', 'r1', '--governance-ready', '--confirm'])
-    expect(a).toMatchObject({ limit: 100, category: 'fizik', blindSamples: 5, concurrency: 8, revisionId: 'r1', governanceReady: true, confirm: true })
+    const a = parseArgs(['--limit', '100', '--category', 'fizik', '--samples', '5', '--concurrency', '8', '--revision-id', 'r1', '--governance-ready', '--gold-labels', 'gold.json', '--confirm'])
+    expect(a).toMatchObject({ limit: 100, category: 'fizik', blindSamples: 5, concurrency: 8, revisionId: 'r1', governanceReady: true, goldLabelsPath: 'gold.json', confirm: true })
   })
 })
 

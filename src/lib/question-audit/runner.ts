@@ -38,6 +38,8 @@ export interface RunnerArgs {
   out: string
   revisionId: string | null
   governanceReady: boolean
+  /** İnsan-altın listedeki questionId + content SHA çiftlerini birebir seçer. */
+  goldLabelsPath: string | null
 }
 
 export function parseArgs(argv: readonly string[]): RunnerArgs {
@@ -54,6 +56,7 @@ export function parseArgs(argv: readonly string[]): RunnerArgs {
     out: 'database/question-audit-calibration-report.json',
     revisionId: null,
     governanceReady: false,
+    goldLabelsPath: null,
   }
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]
@@ -68,6 +71,7 @@ export function parseArgs(argv: readonly string[]): RunnerArgs {
     else if (k === '--out') a.out = argv[++i]
     else if (k === '--revision-id') a.revisionId = argv[++i]
     else if (k === '--governance-ready') a.governanceReady = true
+    else if (k === '--gold-labels') a.goldLabelsPath = argv[++i]
     else if (k === '--confirm') a.confirm = true
   }
   return a
@@ -105,7 +109,7 @@ export async function main(argv: readonly string[], deps: RunnerDeps): Promise<C
 
   const rows = await deps.fetchRows(args)
   const { drafts, rejected, byReason, byWarning } = partitionRows(rows, {
-    strictExamOptionCount: args.governanceReady || args.revisionId !== null,
+    strictExamOptionCount: args.governanceReady || args.revisionId !== null || args.goldLabelsPath !== null,
   })
 
   log(`Cekilen satir      : ${rows.length}`)

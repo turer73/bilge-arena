@@ -73,6 +73,8 @@ database/_*.log
 # bankasi bilerek git gecmisinden temizlenmisti, geri sizmamali.
 # Kosucunun varsayilan ciktisi da bu desene girer (runner.ts `out`).
 database/question-audit-*.json
+# İnsan uzman etiketleri ve held-out gold set repo dışında tutulur.
+/secure/
 .env*.local
 
 # Lokal denetim/dogrulama artiklari (ekran goruntuleri, handoff, audit run ciktilari)
