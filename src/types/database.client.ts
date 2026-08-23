@@ -606,6 +606,15 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_enabled: boolean; p_request_id: string }
         Returns: Json
       }
+      // Migration 145. Kurum yoneticisi ayni tenant'taki aktif bir ogretmene devreder.
+      transfer_my_pilot_institution_manager: {
+        Args: { p_user_id: string; p_new_manager_member_ref: string; p_request_id: string }
+        Returns: Json
+      }
+      get_my_institution_operation_events: {
+        Args: { p_user_id: string; p_limit?: number }
+        Returns: Json
+      }
       update_my_institution_role: {
         Args: { p_user_id: string; p_role_ref: string; p_name: string; p_description: string; p_permissions: string[]; p_request_id: string }
         Returns: Json

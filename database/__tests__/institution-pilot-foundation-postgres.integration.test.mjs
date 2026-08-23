@@ -43,8 +43,12 @@ const managerTeacherRoleSql = readFileSync(
   join(migrationsDir, '135_institution_manager_teacher_role.sql'),
   'utf8',
 )
+const institutionOperationsSql = readFileSync(
+  join(migrationsDir, '145_institution_operations_governance.sql'),
+  'utf8',
+)
 
-suite('112-127 and 131-135 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135 and 145 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -264,6 +268,7 @@ suite('112-127 and 131-135 institution pilot real PostgreSQL acceptance', () => 
     await client.query(institutionPanelSql)
     await client.query(teacherLifecycleSql)
     await client.query(managerTeacherRoleSql)
+    await client.query(institutionOperationsSql)
 
     const separatedManagerRoles = await client.query(
       `SELECT role.slug, array_agg(permission.permission ORDER BY permission.permission) AS permissions
@@ -762,6 +767,97 @@ suite('112-127 and 131-135 institution pilot real PostgreSQL acceptance', () => 
     await expectPgError(
       () => rpc('public.get_my_pilot_institution($1)', [teacherOne]),
       'P0002',
+    )
+  })
+
+  it('enforces tenant-wide student seats, records immutable events and transfers the manager', async () => {
+    const nextManager = capacityTeachers[5]
+    const added = await rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [
+      managerTwo, institutionTwo, nextManager, randomUUID(),
+    ])
+    const firstClass = await rpc('public.create_teacher_classroom($1,$2,$3)', [
+      nextManager, 'Kota Sınıfı A', randomUUID(),
+    ])
+    const secondClass = await rpc('public.create_teacher_classroom($1,$2,$3)', [
+      nextManager, 'Kota Sınıfı B', randomUUID(),
+    ])
+    await client.query(
+      'UPDATE public.pilot_institutions SET student_limit=1 WHERE id=$1',
+      [institutionTwo],
+    )
+
+    const firstStudent = randomUUID()
+    const secondStudent = randomUUID()
+    await client.query(
+      'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3),($4,$5,$6)',
+      [firstStudent, 'quota-student-one', 'Kota Öğrencisi Bir', secondStudent, 'quota-student-two', 'Kota Öğrencisi İki'],
+    )
+    const firstDigest = 'a'.repeat(64)
+    await rpc('public.issue_teacher_classroom_invite($1,$2,$3,$4,$5,$6)', [
+      nextManager, firstClass.classroom.id, firstDigest,
+      new Date(Date.now() + 60 * 60 * 1000), 3, randomUUID(),
+    ])
+    const firstAcceptRequest = randomUUID()
+    expect(await rpc('public.accept_teacher_classroom_invite($1,$2,$3,$4,$5)', [
+      firstStudent, firstDigest, 'notice-v1', 'consent-v1', firstAcceptRequest,
+    ])).toMatchObject({ membershipStatus: 'active', replayed: false })
+    expect(await rpc('public.accept_teacher_classroom_invite($1,$2,$3,$4,$5)', [
+      firstStudent, firstDigest, 'notice-v1', 'consent-v1', firstAcceptRequest,
+    ])).toMatchObject({ replayed: true })
+    await expectPgError(
+      () => rpc('public.accept_teacher_classroom_invite($1,$2,$3,$4,$5)', [
+        secondStudent, firstDigest, 'notice-v1', 'consent-v1', randomUUID(),
+      ]),
+      '23514',
+    )
+
+    const secondDigest = 'b'.repeat(64)
+    await rpc('public.issue_teacher_classroom_invite($1,$2,$3,$4,$5,$6)', [
+      nextManager, secondClass.classroom.id, secondDigest,
+      new Date(Date.now() + 60 * 60 * 1000), 1, randomUUID(),
+    ])
+    expect(await rpc('public.accept_teacher_classroom_invite($1,$2,$3,$4,$5)', [
+      firstStudent, secondDigest, 'notice-v1', 'consent-v1', randomUUID(),
+    ])).toMatchObject({ membershipStatus: 'active' })
+    expect((await rpc('public.get_my_pilot_institution($1)', [managerTwo])).institution)
+      .toMatchObject({ studentCount: 1, studentLimit: 1 })
+
+    const transferRequest = randomUUID()
+    const transferred = await rpc('public.transfer_my_pilot_institution_manager($1,$2,$3)', [
+      managerTwo, added.memberRef, transferRequest,
+    ])
+    expect(transferred).toMatchObject({
+      previousManagerRef: expect.any(String),
+      managerRef: added.memberRef,
+      replayed: false,
+    })
+    expect(await rpc('public.transfer_my_pilot_institution_manager($1,$2,$3)', [
+      managerTwo, added.memberRef, transferRequest,
+    ])).toMatchObject({ managerRef: added.memberRef, replayed: true })
+    await expectPgError(
+      () => rpc('public.get_my_institution_role_directory($1)', [managerTwo]),
+      '42501',
+    )
+    expect((await rpc('public.get_my_institution_role_directory($1)', [nextManager])).members)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ memberRef: added.memberRef, membershipRole: 'manager' }),
+      ]))
+
+    const audit = await rpc('public.get_my_institution_operation_events($1,$2)', [nextManager, 100])
+    expect(audit.events).toEqual(expect.arrayContaining([
+      expect.objectContaining({ eventType: 'manager_transferred', subjectAlias: expect.any(String) }),
+      expect.objectContaining({ eventType: 'student_joined', classroomName: 'Kota Sınıfı A' }),
+      expect.objectContaining({ eventType: 'student_joined', classroomName: 'Kota Sınıfı B' }),
+    ]))
+    expect(audit.events.filter((event) => event.eventType === 'student_joined')).toHaveLength(2)
+
+    const eventRow = await client.query(
+      'SELECT id FROM public.institution_operation_events WHERE institution_id=$1 LIMIT 1',
+      [institutionTwo],
+    )
+    await expectPgError(
+      () => client.query('DELETE FROM public.institution_operation_events WHERE id=$1', [eventRow.rows[0].id]),
+      '42501',
     )
   })
 

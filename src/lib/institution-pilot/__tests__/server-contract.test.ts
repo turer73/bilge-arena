@@ -3,6 +3,9 @@ import {
   institutionPilotNoStoreJson,
   institutionPilotManagerTeacherInputSchema,
   institutionPilotManagerTeacherResultSchema,
+  institutionPilotManagerTransferInputSchema,
+  institutionPilotManagerTransferResultSchema,
+  institutionOperationEventsSchema,
   institutionPilotRpcStatus,
   institutionPilotTeacherAddInputSchema,
   institutionPilotTeacherAddResultSchema,
@@ -16,6 +19,7 @@ const workspace = {
     name: 'Bilge Pilot Kursu',
     status: 'pilot',
     studentLimit: 200,
+    studentCount: 0,
     staffLimit: 6,
     staffCount: 2,
     createdAt: '2026-08-13T10:00:00.000Z',
@@ -35,6 +39,10 @@ describe('institution pilot server contract', () => {
     expect(institutionPilotWorkspaceSchema.safeParse({
       ...workspace,
       institution: { ...workspace.institution, staffCount: 7 },
+    }).success).toBe(false)
+    expect(institutionPilotWorkspaceSchema.safeParse({
+      ...workspace,
+      institution: { ...workspace.institution, studentCount: 201 },
     }).success).toBe(false)
   })
 
@@ -85,6 +93,35 @@ describe('institution pilot server contract', () => {
       memberRef: 'b'.repeat(32),
       enabled: true,
       replayed: false,
+    }).success).toBe(true)
+  })
+
+  it('accepts only an opaque same-tenant manager transfer and bounded audit events', () => {
+    const requestId = '33333333-3333-4333-8333-333333333333'
+    expect(institutionPilotManagerTransferInputSchema.safeParse({
+      newManagerMemberRef: 'b'.repeat(32),
+      requestId,
+    }).success).toBe(true)
+    expect(institutionPilotManagerTransferInputSchema.safeParse({
+      newManagerMemberRef: 'b'.repeat(32),
+      requestId,
+      institutionId: workspace.institution.id,
+    }).success).toBe(false)
+    expect(institutionPilotManagerTransferResultSchema.safeParse({
+      institutionId: workspace.institution.id,
+      previousManagerRef: 'a'.repeat(32),
+      managerRef: 'b'.repeat(32),
+      replayed: false,
+    }).success).toBe(true)
+    expect(institutionOperationEventsSchema.safeParse({
+      events: [{
+        eventRef: 'c'.repeat(32),
+        eventType: 'manager_transferred',
+        actorAlias: 'Yönetici Bir',
+        subjectAlias: 'Öğretmen Bir',
+        classroomName: null,
+        createdAt: workspace.institution.createdAt,
+      }],
     }).success).toBe(true)
   })
 
