@@ -294,7 +294,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           }
         `}</style>
         {user && (
-          <div className="mx-auto grid w-full max-w-[720px] gap-3 px-4 pt-4 md:px-5 lg:max-w-[1180px] lg:grid-cols-3 lg:px-6 lg:pt-6">
+          <div className="mx-auto grid w-full max-w-[720px] gap-3 px-4 pt-4 md:grid-cols-2 md:px-5 lg:max-w-[1180px] lg:px-6 lg:pt-6">
             <TodayPlanCard
               plan={todayPlan.plan}
               loading={todayPlan.loading}
@@ -303,6 +303,14 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 : null}
               onStart={startTodayPlan}
             />
+            <MasteryMapCard outcomes={masteryMap.outcomes} loading={masteryMap.loading} />
+          </div>
+        )}
+        <Lobby
+          game={game}
+          selectedMode={gameStore.selectedMode}
+          onSelectMode={(m) => gameStore.setMode(m.id)}
+          personalizedMockCard={user ? (
             <PersonalizedMockCard
               loading={personalizedMock.loading}
               error={personalizedMock.error}
@@ -354,13 +362,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 }
               }}
             />
-            <MasteryMapCard outcomes={masteryMap.outcomes} loading={masteryMap.loading} />
-          </div>
-        )}
-        <Lobby
-          game={game}
-          selectedMode={gameStore.selectedMode}
-          onSelectMode={(m) => gameStore.setMode(m.id)}
+          ) : null}
           onStart={() => {
             if (personalizedMock.loading) return
             setVerifiedExamAttemptId(null)

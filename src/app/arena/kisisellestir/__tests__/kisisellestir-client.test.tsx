@@ -82,8 +82,13 @@ beforeEach(() => {
 
 describe('KisisellestirClient', () => {
   test('başlık + alan sekmeleri render olur, varsayılan alan avatar', () => {
-    render(<KisisellestirClient />)
+    const { container } = render(<KisisellestirClient />)
     expect(screen.getByText('🎨 Kişiselleştirme Stüdyosu')).toBeInTheDocument()
+    const page = container.querySelector('[data-studio-screen]')
+    const layout = container.querySelector('[data-studio-layout]')
+    expect(page).toHaveClass('max-w-[1180px]', 'md:px-5', 'lg:px-6')
+    expect(layout).toHaveClass('md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]')
+    expect(layout).toHaveClass('lg:grid-cols-[360px_minmax(0,1fr)]')
     // Avatar artık ilk + varsayılan alan (en sık aranan kişiselleştirme — kullanıcı
     // "Kişiselleştir"e tıklayınca avatar seçici hemen önünde olsun).
     expect(screen.getByRole('button', { name: '🧑 Avatar' })).toHaveAttribute('aria-pressed', 'true')

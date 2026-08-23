@@ -64,7 +64,9 @@ describe('CalismaClient', () => {
     render(<CalismaClient />)
 
     expect(document.querySelector('[data-practice-screen]')).toHaveClass('overflow-x-clip', 'min-w-0', 'touch-pan-y')
-    expect(document.querySelector('[data-practice-overview]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_360px]')
+    expect(document.querySelector('[data-practice-overview]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_420px]')
+    expect(document.querySelector('[data-practice-focus]')).toHaveClass('lg:min-h-[154px]', 'self-start')
+    expect(document.querySelector('[data-practice-focus]')).not.toHaveClass('lg:h-full')
     expect(screen.getByRole('heading', { name: 'Küçük bir adım seç, hemen başla.' })).toBeInTheDocument()
     const gameGrid = document.querySelector('[data-study-game-grid]')
     expect(gameGrid).toHaveClass('grid', 'grid-cols-2', 'min-w-0', 'lg:grid-cols-2')

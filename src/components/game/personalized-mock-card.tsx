@@ -9,25 +9,25 @@ interface PersonalizedMockCardProps {
 export function PersonalizedMockCard({ loading, error, onStart }: PersonalizedMockCardProps) {
   return (
     <div
-      className="animate-fadeUp overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)]"
+      className="animate-fadeUp overflow-hidden rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-shadow-accent)]"
       style={{ animationDelay: '0.32s', animationFillMode: 'both' }}
     >
-      <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2">
-        <span className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+      <div className="flex items-center justify-between border-b-2 border-[var(--app-border-soft)] bg-[var(--app-accent-tint)] px-3 py-2.5">
+        <span className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--app-text-sub)]">
           AKILLI DENEME
         </span>
-        <span className="text-[10px] font-bold text-[var(--focus)]">40 SORU</span>
+        <span className="rounded-lg bg-[var(--app-card)] px-2 py-1 text-[10px] font-black text-[var(--app-accent-text)]">40 SORU</span>
       </div>
 
       <div className="px-3 py-3">
-        <p className="mb-3 text-[11px] text-[var(--text-sub)]">
+        <p className="mb-3 text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">
           Açık yanlışların, zayıf konuların ve sınav kapsamın dengelenerek sana özel hazırlanır.
         </p>
         <button
           type="button"
           onClick={onStart}
           disabled={loading}
-          className="btn-primary w-full rounded-[10px] py-2 text-xs font-bold tracking-wide transition-transform hover:scale-[1.02] disabled:cursor-wait disabled:opacity-60"
+          className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-[var(--app-accent)] px-3 py-2 text-xs font-black tracking-wide text-white shadow-[0_4px_0_var(--app-accent-strong)] transition-all active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-60"
         >
           {loading ? 'Deneme hazırlanıyor...' : '🎯 Akıllı Denemeyi Başlat'}
         </button>

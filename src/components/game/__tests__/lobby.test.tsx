@@ -78,6 +78,19 @@ describe('Lobby', () => {
     expect(onStart).toHaveBeenCalledOnce()
   })
 
+  it('akıllı denemeyi klasik başlat alanının altında sağ sütuna yerleştirir', () => {
+    const { container } = render(
+      <Lobby {...baseProps} personalizedMockCard={<div>Akıllı Deneme</div>} />
+    )
+
+    const startButton = screen.getByRole('button', { name: /Klasik Başlat/ })
+    const slot = container.querySelector('[data-personalized-mock-slot]')
+
+    expect(slot).toHaveClass('md:col-start-2', 'md:row-start-4')
+    expect(slot).toHaveTextContent('Akıllı Deneme')
+    expect(startButton.compareDocumentPosition(slot as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('limit dolduğunda premium akışını erişilebilir bırakır', () => {
     const onLimitReached = vi.fn()
     render(

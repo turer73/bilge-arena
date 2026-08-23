@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   BookOpenText,
@@ -49,6 +49,7 @@ interface LobbyProps {
     isGuest: boolean
   }
   loadError?: string | null
+  personalizedMockCard?: ReactNode
 }
 
 const DIFFICULTY_OPTIONS = [
@@ -95,6 +96,7 @@ export function Lobby({
   onSelectExamRef,
   quizLimit,
   loadError,
+  personalizedMockCard,
 }: LobbyProps) {
   const gameDef = GAMES[game]
   const GameIcon = GAME_ICONS[game]
@@ -326,7 +328,7 @@ export function Lobby({
       )}
 
       {quizLimit && (
-        <div className="animate-fadeUp md:col-start-2 md:row-start-4" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+        <div className={`animate-fadeUp md:col-start-2 ${personalizedMockCard ? 'md:row-start-5' : 'md:row-start-4'}`} style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
           <QuizLimitBanner
             remaining={quizLimit.remaining}
             isPremium={quizLimit.isPremium}
@@ -338,7 +340,7 @@ export function Lobby({
       {loadError && (
         <div
           role="alert"
-          className="animate-fadeUp rounded-xl border px-4 py-3 text-sm font-medium md:col-start-2 md:row-start-5"
+          className={`animate-fadeUp rounded-xl border px-4 py-3 text-sm font-medium md:col-start-2 ${personalizedMockCard ? 'md:row-start-6' : 'md:row-start-5'}`}
           style={{
             background: 'var(--urgency-bg, var(--app-danger-strong)20)',
             borderColor: 'var(--urgency, var(--app-danger))',
@@ -374,6 +376,16 @@ export function Lobby({
             : <><Play size={18} fill="currentColor" aria-hidden="true" />{mode.name} Başlat · {mode.questionCount} Soru</>}
         </button>
       </div>
+
+      {personalizedMockCard && (
+        <div
+          data-personalized-mock-slot
+          className="animate-fadeUp md:col-start-2 md:row-start-4 md:self-start"
+          style={{ animationDelay: '0.35s', animationFillMode: 'both' }}
+        >
+          {personalizedMockCard}
+        </div>
+      )}
 
       <AdBanner slot="lobby" className="mx-auto mt-1 md:col-span-2" />
     </div>
