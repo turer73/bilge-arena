@@ -117,8 +117,8 @@ export default function CalismaClient() {
       </header>
 
       <div className="mx-auto w-full min-w-0 max-w-[1180px] px-3 pt-3 md:px-5 lg:px-6 lg:pt-0">
-        <div data-practice-overview className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
-        <section aria-labelledby="practice-hero-title" className="relative min-h-[168px] min-w-0 overflow-hidden rounded-[26px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-4 text-white shadow-[0_6px_0_var(--app-shadow-accent)] md:min-h-[176px] md:p-6 lg:h-full">
+        <div data-practice-overview className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6">
+        <section data-practice-focus aria-labelledby="practice-hero-title" className="relative min-h-[168px] min-w-0 self-start overflow-hidden rounded-[26px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-4 text-white shadow-[0_6px_0_var(--app-shadow-accent)] md:min-h-[176px] md:p-6 lg:min-h-[154px] lg:py-5">
           <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full border-[26px] border-white/10" />
           <div className="relative z-10 min-w-0 pr-24 md:max-w-[72%] md:pr-0">
             <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75"><Sparkles size={14} /> Bugünün odağı</p>
@@ -130,8 +130,8 @@ export default function CalismaClient() {
               <span className="rounded-lg bg-black/15 px-2 py-1"><Clock3 size={11} className="mr-1 inline" />15 dk</span>
             </div>
           </div>
-          <div className="absolute -bottom-7 -right-1 h-[148px] w-[112px] overflow-hidden md:right-5 md:w-[130px]">
-            <BilgeChan pose="reading" height={172} />
+          <div className="absolute -bottom-7 -right-1 h-[148px] w-[112px] overflow-hidden md:right-5 md:w-[130px] lg:h-[132px] lg:w-[112px]">
+            <BilgeChan pose="reading" height={156} />
           </div>
         </section>
 
@@ -148,7 +148,7 @@ export default function CalismaClient() {
         </div>
         </div>
 
-        <div className="mt-4 grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] lg:gap-6">
+        <div className="mt-4 grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6">
           <section aria-label="Çalışma planın" className="min-w-0 space-y-4">
             <TodayPlanFocus
               game={game}

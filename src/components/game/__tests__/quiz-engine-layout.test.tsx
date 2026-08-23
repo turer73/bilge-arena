@@ -145,7 +145,12 @@ vi.mock('../option-button', () => ({
   ),
 }))
 vi.mock('../lobby', () => ({
-  Lobby: ({ onStart }: { onStart: () => void }) => <button data-testid="normal-quiz-start" onClick={onStart} />,
+  Lobby: ({ onStart, personalizedMockCard }: { onStart: () => void; personalizedMockCard?: React.ReactNode }) => (
+    <>
+      <button data-testid="normal-quiz-start" onClick={onStart} />
+      {personalizedMockCard}
+    </>
+  ),
 }))
 vi.mock('../timer', () => ({ Timer: () => null }))
 vi.mock('../deneme-timer', () => ({ DenemeTimer: () => null }))

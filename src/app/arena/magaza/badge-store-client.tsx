@@ -96,7 +96,7 @@ export function BadgeStoreClient() {
   return (
     <div className="mt-5 flex flex-col gap-5">
       {/* Katalog grid'i */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
         {items.map((b) => {
           const isOwned = owned.has(b.id)
           return (

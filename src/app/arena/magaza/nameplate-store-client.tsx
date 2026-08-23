@@ -127,7 +127,7 @@ export function NameplateStoreClient() {
       </div>
 
       {/* Katalog grid'i */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {visible.map((np) => {
           const isOwned = owned.has(np.id) || np.coinCost === undefined
           return (
