@@ -1,0 +1,82 @@
+name: Question quality promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Exact model id to benchmark
+        required: true
+        default: gemini-2.5-flash-lite
+        type: string
+      blind_samples:
+        description: Blind solver samples per question
+        required: true
+        default: '3'
+        type: choice
+        options: ['3', '5']
+
+concurrency:
+  group: question-quality-promotion
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  human-gold-release-gate:
+    name: Human-gold release gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: question-quality-promotion
+    env:
+      SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GOLD_LABELS_GZIP_B64: ${{ secrets.QUESTION_AUDIT_GOLD_LABELS_GZIP_B64 }}
+      AUDIT_MODEL: ${{ inputs.model }}
+      BLIND_SAMPLES: ${{ inputs.blind_samples }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Materialize access-controlled human-gold labels
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GOLD_LABELS_GZIP_B64" || { echo "::error::QUESTION_AUDIT_GOLD_LABELS_GZIP_B64 is required"; exit 1; }
+          printf '%s' "$GOLD_LABELS_GZIP_B64" | base64 --decode | gzip --decompress > "$RUNNER_TEMP/gold-labels.json"
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/gold-labels.json','utf8')); const flawed=Array.isArray(x)?x.filter(v=>Array.isArray(v.flawCodes)&&v.flawCodes.length>0).length:0; const clean=Array.isArray(x)?x.length-flawed:0; if(!Array.isArray(x)||x.length<100||flawed<20||clean<50) throw new Error('held-out gold set needs >=100 labels, >=20 flawed, >=50 clean'); console.log({labels:x.length,flawed,clean})"
+
+      - name: Audit exact held-out revisions
+        run: >-
+          npm run audit:calibrate --
+          --gold-labels "$RUNNER_TEMP/gold-labels.json"
+          --model "$AUDIT_MODEL"
+          --samples "$BLIND_SAMPLES"
+          --concurrency 4
+          --confirm
+          --out database/question-audit-calibration-report.json
+
+      - name: Enforce promotion thresholds
+        run: >-
+          npm run audit:benchmark --
+          --labels "$RUNNER_TEMP/gold-labels.json"
+          --report database/question-audit-calibration-report.json
+          --out database/question-audit-promotion-report.json
+
+      - name: Upload access-controlled evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: question-quality-promotion-${{ github.run_id }}
+          path: |
+            database/question-audit-calibration-report.json
+            database/question-audit-promotion-report.json
+          if-no-files-found: warn
+          retention-days: 90

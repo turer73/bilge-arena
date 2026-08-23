@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -7,6 +9,8 @@ const validation = readFileSync(new URL('../migrations/136_question_validation_p
 const psychometrics = readFileSync(new URL('../migrations/137_question_revision_psychometrics_v2.sql', import.meta.url), 'utf8')
 const benchmarkRunner = readFileSync(new URL('../run-question-benchmark.mjs', import.meta.url), 'utf8')
 const auditRunner = readFileSync(new URL('../run-question-audit.mjs', import.meta.url), 'utf8')
+const goldBuilder = readFileSync(new URL('../build-question-audit-gold-set.mjs', import.meta.url), 'utf8')
+const promotionWorkflow = readFileSync(new URL('../../.github/workflows/question-quality-promotion.yml', import.meta.url), 'utf8')
 
 describe('question validation persistence and publish gate SQL', () => {
   it('stores the exact replay and cache identity', () => {
@@ -57,10 +61,45 @@ describe('human-gold benchmark release gate', () => {
     expect(benchmarkRunner).toContain('process.exitCode = 2')
   })
 
+  it('builds gold labels only from two reviewer files and optional adjudication', () => {
+    expect(goldBuilder).toContain("reviewPaths.length !== 2")
+    expect(goldBuilder).toContain('buildHumanGoldSet')
+    expect(goldBuilder).toContain("--adjudication")
+  })
+
+  it('materializes consensus and adjudicated labels through the CLI', () => {
+    const root = fileURLToPath(new URL('../..', import.meta.url))
+    const temp = mkdtempSync(join(tmpdir(), 'bilge-gold-'))
+    const out = join(temp, 'gold.json')
+    try {
+      const result = spawnSync(process.execPath, [
+        'database/build-question-audit-gold-set.mjs',
+        '--review', 'database/__tests__/fixtures/question-audit-review-a.valid.json',
+        '--review', 'database/__tests__/fixtures/question-audit-review-b.valid.json',
+        '--adjudication', 'database/__tests__/fixtures/question-audit-adjudicator.valid.json',
+        '--out', out,
+      ], { cwd: root, encoding: 'utf8' })
+      expect(result.status, result.stderr).toBe(0)
+      const labels = JSON.parse(readFileSync(out, 'utf8'))
+      expect(labels).toHaveLength(2)
+      expect(labels.map((label) => label.adjudication)).toEqual(['consensus', 'adjudicated'])
+    } finally {
+      rmSync(temp, { recursive: true, force: true })
+    }
+  })
+
   it('does not persist authoritative decisions without matching promotion evidence', () => {
     expect(auditRunner).toContain('--promotion-report')
     expect(auditRunner).toContain('deps.promotionEvidence')
     expect(auditRunner).toContain('--no-decisions')
+  })
+
+  it('audits the exact question and revision hashes from the held-out gold set', () => {
+    expect(auditRunner).toContain('args.goldLabelsPath')
+    expect(auditRunner).toContain(".from('question_content_revisions')")
+    expect(auditRunner).toContain('gold revision bulunamadi')
+    expect(auditRunner).toContain('content_sha256')
+    expect(auditRunner).toContain('validateGoldLabels')
   })
 
   it('runs without an LLM or database and returns exit 2 for an undersized gold set', () => {
@@ -76,5 +115,16 @@ describe('human-gold benchmark release gate', () => {
     expect(output.benchmark.overall.balancedAccuracy).toBe(1)
     expect(output.benchmark.promotion.passed).toBe(false)
     expect(output.benchmark.promotion.failures.join(' ')).toContain('label_count')
+  })
+
+  it('runs the paid promotion audit only by manual environment-gated dispatch', () => {
+    expect(promotionWorkflow).toContain('workflow_dispatch:')
+    expect(promotionWorkflow).toContain('environment: question-quality-promotion')
+    expect(promotionWorkflow).toContain('QUESTION_AUDIT_GOLD_LABELS_GZIP_B64')
+    expect(promotionWorkflow).toContain('--gold-labels "$RUNNER_TEMP/gold-labels.json"')
+    expect(promotionWorkflow).toContain('npm run audit:benchmark')
+    expect(promotionWorkflow).toContain('--model "$AUDIT_MODEL"')
+    expect(promotionWorkflow).not.toContain('--model "${{ inputs.model }}"')
+    expect(promotionWorkflow).not.toContain('--persist')
   })
 })
