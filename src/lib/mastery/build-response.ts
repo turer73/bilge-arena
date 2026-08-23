@@ -4,6 +4,7 @@ import {
   type CurriculumNodeInput,
 } from './graph'
 import { summarizeMasteryEvidenceV2 } from './evidence-v2'
+import { buildMasteryDiscovery } from './discovery'
 import type { MasteryCoveragePublic, MasteryMapResponsePublic } from './public-contract'
 
 export interface MasteryOutcomeRowInput {
@@ -44,6 +45,7 @@ interface BuildMasteryMapResponseInput {
   nodes: CurriculumNodeInput[]
   outcomes: MasteryOutcomeRowInput[]
   states: MasteryStateRowInput[]
+  diagnosticOutcomeIds?: string[]
 }
 
 export function buildMasteryMapResponse({
@@ -53,9 +55,10 @@ export function buildMasteryMapResponse({
   nodes,
   outcomes,
   states,
+  diagnosticOutcomeIds = [],
 }: BuildMasteryMapResponseInput): MasteryMapResponsePublic | null {
   if (!coverage.supported) {
-    return { game, examRef, coverage, graph: null, outcomes: [] }
+    return { game, examRef, coverage, discovery: null, graph: null, outcomes: [] }
   }
 
   const graph = buildPublicCurriculumGraph(
@@ -110,14 +113,22 @@ export function buildMasteryMapResponse({
   })
 
   if (publicOutcomes.some((outcome) => outcome === null)) return null
+  const publicOutcomeValues = publicOutcomes
+    .filter((outcome): outcome is NonNullable<typeof outcome> => outcome !== null)
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .map((outcome) => outcome.value)
+  const diagnosticIds = new Set(diagnosticOutcomeIds)
+  const diagnosticCompleted = outcomes.length > 0
+    && outcomes.every((outcome) => diagnosticIds.has(outcome.id))
+  const discovery = buildMasteryDiscovery(publicOutcomeValues, diagnosticCompleted)
+  if (!discovery) return null
+
   return {
     game,
     examRef,
     coverage,
+    discovery,
     graph,
-    outcomes: publicOutcomes
-      .filter((outcome): outcome is NonNullable<typeof outcome> => outcome !== null)
-      .sort((left, right) => left.sortOrder - right.sortOrder)
-      .map((outcome) => outcome.value),
+    outcomes: publicOutcomeValues,
   }
 }

@@ -1,11 +1,13 @@
 'use client'
 
 import type { MasteryCoveragePublic, MasteryOutcomePublic } from '@/lib/mastery/public-contract'
+import type { MasteryDiscoveryPublic } from '@/lib/mastery/discovery'
 import type { PublicCurriculumNode } from '@/lib/mastery/graph'
 
 interface MasteryGraphProps {
   graph: PublicCurriculumNode | null
   coverage: MasteryCoveragePublic
+  discovery: MasteryDiscoveryPublic | null
   outcomes: MasteryOutcomePublic[]
   onPractice?: (outcome: MasteryOutcomePublic) => void
 }
@@ -53,12 +55,18 @@ function OutcomeLeaf({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[var(--text-sub)]">
-        <span>Zorluk doğruluğu %{outcome.difficultyAccuracy}</span>
-        <span>Gecikmeli doğru {outcome.delayedCorrect}</span>
-        <span>İpucu oranı %{outcome.hintRate}</span>
-        <span>Hızlı yanlış riski %{outcome.fastWrongRate}</span>
-      </div>
+      {outcome.status === 'insufficient' ? (
+        <p className="rounded-lg bg-[var(--bg-secondary)] px-2.5 py-2 text-[9px] leading-4 text-[var(--text-sub)]">
+          Hüküm yok: {outcome.attempts}/3 doğrulanmış kanıt toplandı. Doğruluk ve risk metrikleri ilk değerlendirme hazır olduğunda açılır.
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[var(--text-sub)]">
+          <span>Zorluk doğruluğu %{outcome.difficultyAccuracy}</span>
+          <span>Gecikmeli doğru {outcome.delayedCorrect}</span>
+          <span>İpucu oranı %{outcome.hintRate}</span>
+          <span>Hızlı yanlış riski %{outcome.fastWrongRate}</span>
+        </div>
+      )}
 
       {onPractice && outcome.status !== 'mastered' && (
         <button
@@ -72,7 +80,7 @@ function OutcomeLeaf({
     </article>
   )
 }
-export function MasteryGraph({ graph, coverage, outcomes, onPractice }: MasteryGraphProps) {
+export function MasteryGraph({ graph, coverage, discovery, outcomes, onPractice }: MasteryGraphProps) {
   if (!coverage.supported) {
     return (
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-center text-xs text-[var(--text-sub)]">
@@ -92,6 +100,30 @@ export function MasteryGraph({ graph, coverage, outcomes, onPractice }: MasteryG
   const outcomeByCode = new Map(outcomes.map((outcome) => [outcome.code, outcome]))
   return (
     <section aria-labelledby="mastery-graph-title" className="space-y-4">
+      {discovery && (
+        <div className="rounded-xl border border-[var(--focus)]/25 bg-[var(--focus)]/5 p-4" aria-label="Keşif seviyesi">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--focus)]">KEŞİF SEVİYESİ {discovery.level}/3</p>
+              <p className="mt-1 text-sm font-bold text-[var(--text)]">
+                {discovery.stage === 'estimate'
+                  ? 'Başlangıç tahmini bekleniyor'
+                  : discovery.stage === 'evidence'
+                    ? 'Kanıt ağı kuruluyor'
+                    : 'İlk hâkimiyet haritası hazır'}
+              </p>
+            </div>
+            <span className="text-sm font-black tabular-nums text-[var(--focus)]">%{discovery.journeyPercentage}</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]" role="progressbar" aria-label="Keşif ilerlemesi" aria-valuemin={0} aria-valuemax={100} aria-valuenow={discovery.journeyPercentage}>
+            <div className="h-full rounded-full bg-[var(--focus)]" style={{ width: `${discovery.journeyPercentage}%` }} />
+          </div>
+          <p className="mt-2 text-[10px] leading-4 text-[var(--text-sub)]">
+            {discovery.diagnosticCompleted ? 'Başlangıç tahmini hazır. ' : 'Başlangıç tanılaması henüz tamamlanmadı. '}
+            {discovery.evidenceCollected}/{discovery.evidenceTarget} doğrulanmış kanıt · {discovery.readyOutcomes}/{discovery.totalOutcomes} kazanım ilk değerlendirmeye hazır. Kanıtı yetersiz alanlar başarısız sayılmaz.
+          </p>
+        </div>
+      )}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
         <div className="flex items-start justify-between gap-3">
           <div>

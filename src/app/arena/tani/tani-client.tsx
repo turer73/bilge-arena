@@ -85,7 +85,7 @@ function SummaryCard({
     <section aria-labelledby="diagnostic-summary-title" className="space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">BAŞLANGIÇ TAHMİNİ</p>
+          <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">KEŞİF ADIMI TAMAM · BAŞLANGIÇ TAHMİNİ</p>
           <h2 id="diagnostic-summary-title" className="mt-1 text-lg font-bold text-[var(--text)]">Kazanım özeti</h2>
         </div>
         <Link href="/arena/hakimiyet?game=matematik&exam_ref=TYT" className="text-xs font-bold text-[var(--focus)] hover:underline">
@@ -93,7 +93,7 @@ function SummaryCard({
         </Link>
       </div>
       <p className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-xs leading-5 text-[var(--text-sub)]">
-        Bu sonuç yalnız kısa tanılama tahminidir. Kalıcı hâkimiyet, farklı günlerdeki doğrulanmış tekrarlarla oluşur.
+        Bu sonuç yalnız kısa tanılama tahminidir. Keşif Seviyesi 2, farklı günlerdeki doğrulanmış pratik kanıtlarıyla ilerler; kalıcı hâkimiyet bu kanıtlarla oluşur.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         {outcomes.map((outcome) => (

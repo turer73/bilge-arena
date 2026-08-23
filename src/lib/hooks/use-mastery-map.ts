@@ -77,6 +77,7 @@ export function useMasteryMap(
 
   return {
     response: mastery,
+    discovery: mastery?.discovery ?? null,
     outcomes: mastery?.outcomes ?? [],
     graph: mastery?.graph ?? null,
     coverage: mastery?.coverage ?? EMPTY_COVERAGE,

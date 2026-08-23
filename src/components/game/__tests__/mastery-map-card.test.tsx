@@ -36,14 +36,14 @@ const outcome: MasteryOutcome = {
 
 describe('MasteryMapCard', () => {
   it('bos ve yuklenen durumda sessizce gizlenir', () => {
-    const { container, rerender } = render(<MasteryMapCard outcomes={[]} loading={false} />)
+    const { container, rerender } = render(<MasteryMapCard outcomes={[]} discovery={null} loading={false} />)
     expect(container).toBeEmptyDOMElement()
-    rerender(<MasteryMapCard outcomes={[outcome]} loading />)
+    rerender(<MasteryMapCard outcomes={[outcome]} discovery={null} loading />)
     expect(container).toBeEmptyDOMElement()
   })
 
   it('ham kaniti, durumu ve pilot uyarisi birlikte gosterir', () => {
-    render(<MasteryMapCard outcomes={[outcome]} loading={false} />)
+    render(<MasteryMapCard outcomes={[outcome]} discovery={null} loading={false} />)
     expect(screen.getByText('Ustalaştın')).toBeInTheDocument()
     expect(screen.getByText('%84')).toBeInTheDocument()
     expect(screen.getByText('4/5 doğru')).toBeInTheDocument()
@@ -63,8 +63,19 @@ describe('MasteryMapCard', () => {
       evidenceCompleteness: 40,
       score: 100,
       status: 'insufficient',
-    }]} loading={false} />)
+    }]} discovery={null} loading={false} />)
     expect(screen.getByText('2/3 kanıt')).toBeInTheDocument()
     expect(screen.queryByText('%100')).not.toBeInTheDocument()
+  })
+
+  it('ilk günde sahte skor yerine keşif seviyesini ve tanılama aksiyonunu gösterir', () => {
+    render(<MasteryMapCard
+      outcomes={[{ ...outcome, attempts: 0, correctAttempts: 0, delayedCorrect: 0, status: 'insufficient' }]}
+      discovery={{ level: 1, stage: 'estimate', diagnosticCompleted: false, evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 0 }}
+      loading={false}
+    />)
+    expect(screen.getByText('KEŞİF SEVİYESİ 1/3')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /keşif turunu başlat/i })).toHaveAttribute('href', '/arena/tani')
+    expect(screen.queryByText('%84')).not.toBeInTheDocument()
   })
 })
