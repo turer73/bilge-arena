@@ -210,6 +210,30 @@ export default function ProfilClient() {
     month: 'long',
   })
 
+  const renderTopicProgress = () => (
+    <ComponentErrorBoundary label="Konu İlerlemesi" variant="inline">
+      <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+        <ProfileSectionTitle>
+          KONU İLERLEMESİ
+          {statsLoading && (
+            <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-[var(--focus)]" />
+          )}
+        </ProfileSectionTitle>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          {gameProgressData.map(({ game, categories, totalAnswered, accuracy: gameAcc }) => (
+            <ProgressChart
+              key={game}
+              game={game}
+              categories={categories}
+              totalAnswered={totalAnswered}
+              accuracy={gameAcc}
+            />
+          ))}
+        </div>
+      </div>
+    </ComponentErrorBoundary>
+  )
+
   return (
     <div data-profile-screen className="mx-auto min-h-dvh w-full max-w-[440px] bg-[var(--app-bg)] px-4 pb-28 pt-4 text-[var(--app-accent-ink)] md:max-w-[760px] md:px-5 md:pt-5 lg:max-w-[1180px] lg:px-6 lg:pb-10 lg:pt-8">
       <ProfileShellStyle />
@@ -396,7 +420,7 @@ export default function ProfilClient() {
       )}
 
       <div data-profile-layout className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
-        <section className="min-w-0">
+        <section data-profile-main-column className="min-w-0">
 
       {/* Istatistikler */}
       <ComponentErrorBoundary label="İstatistikler" variant="inline">
@@ -494,9 +518,14 @@ export default function ProfilClient() {
         </div>
       )}
 
+      {/* Masaustunde sol sutun kendi akisinda devam eder; sag sutunun boyu bosluk olusturmaz. */}
+      <section data-profile-topic-desktop className="hidden min-w-0 lg:block">
+        {renderTopicProgress()}
+      </section>
+
         </section>
 
-        <aside className="min-w-0 lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
+        <aside data-profile-sidebar className="min-w-0 lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
 
       {/* Rozetler */}
       <ComponentErrorBoundary label="Rozetler" variant="inline">
@@ -522,28 +551,8 @@ export default function ProfilClient() {
         </aside>
 
       {/* Konu ilerleme */}
-        <section className="min-w-0 lg:col-start-1">
-          <ComponentErrorBoundary label="Konu İlerlemesi" variant="inline">
-            <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-              <ProfileSectionTitle>
-                KONU İLERLEMESİ
-                {statsLoading && (
-                  <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-[var(--focus)]" />
-                )}
-              </ProfileSectionTitle>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                {gameProgressData.map(({ game, categories, totalAnswered, accuracy: gameAcc }) => (
-                  <ProgressChart
-                    key={game}
-                    game={game}
-                    categories={categories}
-                    totalAnswered={totalAnswered}
-                    accuracy={gameAcc}
-                  />
-                ))}
-              </div>
-            </div>
-          </ComponentErrorBoundary>
+        <section data-profile-topic-mobile className="min-w-0 lg:hidden">
+          {renderTopicProgress()}
         </section>
       </div>
     </div>

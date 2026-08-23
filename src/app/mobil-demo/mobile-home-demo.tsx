@@ -404,7 +404,7 @@ export function MobileHomeDemo({
   }, [])
 
   return (
-    <div className={`min-h-[100dvh] bg-[var(--app-bg)] pb-28 text-[var(--app-text)] lg:pb-10 ${mode === 'live' ? '-mt-[var(--navbar-h)] lg:mt-0' : ''}`}>
+    <div data-arena-home-surface className={`min-h-[100dvh] bg-[var(--app-bg)] pb-28 text-[var(--app-text)] lg:bg-transparent lg:pb-10 ${mode === 'live' ? '-mt-[var(--navbar-h)] lg:mt-0' : ''}`}>
       <style>{`html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } nextjs-portal { display: none !important; }`}</style>
       <header inert={coachOpen} className="sticky top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center justify-between px-3 md:h-16 md:px-5 xl:px-6">

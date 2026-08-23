@@ -83,8 +83,10 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 
   test('üst ders sekmeleri masaüstünde ortalanır, mobil kısa adları korunur', () => {
     const { container } = render(<MobileHomeDemo />)
+    const surface = container.querySelector('[data-arena-home-surface]')
     const tabs = container.querySelector('[data-subject-tabs]')
 
+    expect(surface).toHaveClass('bg-[var(--app-bg)]', 'lg:bg-transparent')
     expect(tabs).toHaveClass('md:justify-center')
     const mathTab = within(tabs as HTMLElement).getByRole('button', { name: 'Mat' })
     expect(mathTab).toHaveAttribute('title', 'Matematik')
