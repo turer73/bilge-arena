@@ -79,7 +79,7 @@ export function Navbar() {
   return (
     <nav
       data-app-navbar
-      className={`fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,border-color,box-shadow] duration-500 ${pathname === '/arena' ? 'max-md:hidden' : ''} ${
+      className={`fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,border-color,box-shadow] duration-500 ${pathname === '/arena' ? 'max-lg:hidden' : ''} ${
         scrolled || mobileOpen
           ? 'border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl shadow-sm'
           : 'bg-transparent backdrop-blur-none border-transparent'

@@ -14,7 +14,7 @@ import { StudyAssistantLauncher } from '@/components/study/study-assistant-launc
 import { InstitutionWeeklyProgramCard } from '@/components/study/institution-weekly-program-card'
 import { BookOpenCheck, ChevronRight, Clock3, Settings2, Sparkles, Target } from 'lucide-react'
 
-const MOBILE_APP_SHELL_STYLE = '@media (max-width: 767px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }'
+const MOBILE_APP_SHELL_STYLE = '@media (max-width: 1023px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }'
 
 function examRefsForGame(game: GameSlug, examType: string | null | undefined): string[] {
   const refs = [...GAMES[game].examTags]
@@ -48,7 +48,7 @@ export default function CalismaClient() {
 
   if (loading) {
     return (
-      <div className="min-h-[100dvh] bg-[var(--app-bg)] px-4 py-24 text-center text-sm font-bold text-[var(--app-text-sub)]" role="status">
+      <div data-practice-screen className="min-h-[100dvh] bg-[var(--app-bg)] px-4 py-24 text-center text-sm font-bold text-[var(--app-text-sub)]" role="status">
         <style>{MOBILE_APP_SHELL_STYLE}</style>
         Çalışma planın hazırlanıyor...
       </div>
@@ -57,7 +57,7 @@ export default function CalismaClient() {
 
   if (!user) {
     return (
-      <div className="min-h-[100dvh] bg-[var(--app-bg)] px-4 py-20 text-center text-[var(--app-text)]">
+      <div data-practice-screen className="min-h-[100dvh] bg-[var(--app-bg)] px-4 py-20 text-center text-[var(--app-text)]">
         <style>{MOBILE_APP_SHELL_STYLE}</style>
         <div className="mx-auto max-w-sm rounded-[26px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-[0_6px_0_var(--app-border)]">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--app-accent-tint)] text-2xl" aria-hidden="true">🔒</div>
@@ -96,11 +96,11 @@ export default function CalismaClient() {
   }
 
   return (
-    <div data-practice-screen className="min-h-[100dvh] w-full min-w-0 touch-pan-y overflow-x-clip bg-[var(--app-bg)] pb-6 text-[var(--app-text)] md:bg-transparent md:pb-10">
+    <div data-practice-screen className="min-h-[100dvh] w-full min-w-0 touch-pan-y overflow-x-clip bg-[var(--app-bg)] pb-24 text-[var(--app-text)] lg:bg-transparent lg:pb-10">
       <style>{MOBILE_APP_SHELL_STYLE}</style>
 
-      <header className="sticky inset-x-0 top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 md:h-auto md:px-6 md:pb-5 md:pt-8 xl:px-8">
+      <header className="sticky inset-x-0 top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl lg:static lg:border-0 lg:bg-transparent lg:backdrop-blur-none">
+        <div className="mx-auto flex h-14 max-w-[1180px] items-center justify-between px-4 lg:h-auto lg:px-6 lg:pb-5 lg:pt-8 xl:px-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--app-accent-tint)] text-[var(--app-accent-text)] md:h-12 md:w-12">
               <BookOpenCheck size={22} strokeWidth={2.8} />
@@ -116,8 +116,9 @@ export default function CalismaClient() {
         </div>
       </header>
 
-      <div className="mx-auto w-full min-w-0 max-w-6xl px-3 pt-3 md:px-6 md:pt-0 xl:px-8">
-        <section aria-labelledby="practice-hero-title" className="relative min-h-[168px] min-w-0 overflow-hidden rounded-[26px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-4 text-white shadow-[0_6px_0_var(--app-shadow-accent)] md:min-h-[176px] md:p-6">
+      <div className="mx-auto w-full min-w-0 max-w-[1180px] px-3 pt-3 md:px-5 lg:px-6 lg:pt-0">
+        <div data-practice-overview className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
+        <section aria-labelledby="practice-hero-title" className="relative min-h-[168px] min-w-0 overflow-hidden rounded-[26px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-4 text-white shadow-[0_6px_0_var(--app-shadow-accent)] md:min-h-[176px] md:p-6 lg:h-full">
           <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full border-[26px] border-white/10" />
           <div className="relative z-10 min-w-0 pr-24 md:max-w-[72%] md:pr-0">
             <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75"><Sparkles size={14} /> Bugünün odağı</p>
@@ -134,7 +135,7 @@ export default function CalismaClient() {
           </div>
         </section>
 
-        <div className="mt-4">
+        <div className="min-w-0 lg:h-full">
           <StudyContextSelector
             games={availableGames}
             selectedGame={game}
@@ -142,7 +143,9 @@ export default function CalismaClient() {
             selectedExamRef={examRef}
             onGameChange={handleGameChange}
             onExamRefChange={handleExamRefChange}
+            compact
           />
+        </div>
         </div>
 
         <div className="mt-4 grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] lg:gap-6">

@@ -17,10 +17,11 @@ export default function SiralamaError({
   }, [error])
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center md:gap-6">
-      <div className="text-5xl">🏆</div>
-      <h1 className="text-xl font-bold md:text-2xl">Sıralama Yüklenemedi</h1>
-      <p className="max-w-[360px] text-xs leading-relaxed text-[var(--text-sub)] md:text-sm">
+    <div className="flex min-h-[calc(100dvh-8rem)] items-center justify-center bg-[var(--app-bg)] px-4 py-8 text-center lg:min-h-[60vh] lg:bg-transparent">
+      <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-[26px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-6 shadow-[0_6px_0_var(--app-border)] md:gap-5">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-4xl">🏆</div>
+      <h1 className="text-xl font-black md:text-2xl">Sıralama Yüklenemedi</h1>
+      <p className="max-w-[360px] text-xs font-semibold leading-relaxed text-[var(--app-text-sub)] md:text-sm">
         Sıralama tablosu yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.
       </p>
       {error.digest && (
@@ -35,6 +36,7 @@ export default function SiralamaError({
             Arena&apos;ya Dön
           </Button>
         </Link>
+      </div>
       </div>
     </div>
   )

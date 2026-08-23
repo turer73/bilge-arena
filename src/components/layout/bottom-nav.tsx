@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils/cn'
 
 /**
  * Mobil alt navigasyon (tab bar). Masaustunde Navbar var; mobilde
- * (`md:hidden`) ekranin altinda 5 sekme:
+ * (`lg:hidden`) mobil ve tablette ekranin altinda 5 sekme:
  * Ogren / Pratik / Arena / Lig / Profil.
  *
  * Prototip (Bilge Arena - Mobil) duotone aktif-pill dilini birebir tasir:
@@ -58,7 +58,7 @@ export function BottomNav({ activeOverride, appearance = 'default' }: BottomNavP
       aria-label="Mobil gezinme"
       className={cn(
         'fixed inset-x-0 bottom-0 z-40 box-border overflow-x-clip',
-        appearance !== 'learning' && 'md:hidden',
+        appearance !== 'learning' && 'lg:hidden',
       )}
       style={{
         maxWidth: appearance === 'learning' ? 440 : undefined,

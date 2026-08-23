@@ -52,11 +52,12 @@ describe('ResultScreen', () => {
     expect(screen.queryByText(/En yüksek seri/)).not.toBeInTheDocument()
   })
 
-  test('mobilde dikeyde ortalanir (min-h calc + justify-center)', () => {
+  test('mobilde dikeyde ortalanir, tablette genisler', () => {
     const { container } = render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} />)
     const root = container.firstChild as HTMLElement
     expect(root.className).toContain('min-h-[calc(100dvh-8rem)]')
     expect(root.className).toContain('justify-center')
+    expect(root.className).toContain('md:max-w-[720px]')
   })
 
   test('normal bitiş: Bilge Chan victory pose', () => {

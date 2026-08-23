@@ -1,14 +1,13 @@
 export default function LeaderboardLoading() {
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      {/* Title skeleton */}
-      <div className="mb-6 text-center">
-        <div className="mx-auto h-8 w-52 animate-pulse rounded-lg bg-[var(--border)]" />
-        <div className="mx-auto mt-2 h-4 w-72 animate-pulse rounded bg-[var(--border)]" />
+    <div className="mx-auto min-h-[100dvh] w-full max-w-[1180px] bg-[var(--app-bg)] px-3 py-4 md:px-5 lg:bg-transparent lg:px-6 lg:py-8">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+      <div className="h-44 animate-pulse rounded-[24px] bg-[var(--app-border)]" />
+      <div className="hidden h-44 animate-pulse rounded-[24px] bg-[var(--app-border)] lg:block" />
       </div>
 
-      {/* Leaderboard rows skeleton */}
-      <div className="flex flex-col gap-2">
+      <div className="mt-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+      <div className="order-2 flex flex-col gap-2 lg:order-1">
         {Array.from({ length: 10 }).map((_, i) => (
           <div
             key={i}
@@ -16,6 +15,8 @@ export default function LeaderboardLoading() {
             style={{ animationDelay: `${i * 40}ms` }}
           />
         ))}
+      </div>
+      <div className="order-1 h-16 animate-pulse rounded-[18px] bg-[var(--app-border)] lg:order-2 lg:h-36" />
       </div>
     </div>
   )
