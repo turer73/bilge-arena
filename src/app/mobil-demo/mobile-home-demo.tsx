@@ -435,7 +435,8 @@ export function MobileHomeDemo({
                 <button
                   key={item.id}
                   onClick={() => setSubjectId(item.id)}
-                  aria-label={item.label}
+                  aria-label={item.shortLabel}
+                  title={item.label}
                   aria-pressed={active}
                   className="flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-2xl border-2 px-3 text-xs font-extrabold transition-transform hover:-translate-y-0.5 active:scale-95 md:min-h-12 md:px-4 md:text-sm"
                   style={{

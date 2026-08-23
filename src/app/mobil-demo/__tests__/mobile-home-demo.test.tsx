@@ -86,9 +86,10 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     const tabs = container.querySelector('[data-subject-tabs]')
 
     expect(tabs).toHaveClass('md:justify-center')
-    expect(screen.getByRole('button', { name: 'Matematik' })).toHaveTextContent('MatMatematik')
-    expect(within(tabs as HTMLElement).getByText('Mat')).toHaveClass('md:hidden')
-    expect(within(tabs as HTMLElement).getByText('Matematik')).toHaveClass('hidden', 'md:inline')
+    const mathTab = within(tabs as HTMLElement).getByRole('button', { name: 'Mat' })
+    expect(mathTab).toHaveAttribute('title', 'Matematik')
+    expect(within(mathTab).getByText('Mat')).toHaveClass('md:hidden')
+    expect(within(mathTab).getByText('Matematik')).toHaveClass('hidden', 'md:inline')
   })
 })
 
