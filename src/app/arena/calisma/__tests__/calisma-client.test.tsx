@@ -64,10 +64,12 @@ describe('CalismaClient', () => {
     render(<CalismaClient />)
 
     expect(document.querySelector('[data-practice-screen]')).toHaveClass('overflow-x-clip', 'min-w-0', 'touch-pan-y')
+    expect(document.querySelector('[data-practice-overview]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_360px]')
     expect(screen.getByRole('heading', { name: 'Küçük bir adım seç, hemen başla.' })).toBeInTheDocument()
     const gameGrid = document.querySelector('[data-study-game-grid]')
-    expect(gameGrid).toHaveClass('grid', 'grid-cols-2', 'min-w-0')
+    expect(gameGrid).toHaveClass('grid', 'grid-cols-2', 'min-w-0', 'lg:grid-cols-2')
     expect(gameGrid).not.toHaveClass('overflow-x-auto')
+    expect(document.querySelector('style')?.textContent).toContain('max-width: 1023px')
     expect(screen.getByRole('button', { name: /Matematik/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'TYT' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()

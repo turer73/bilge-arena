@@ -10,6 +10,7 @@ interface StudyContextSelectorProps {
   selectedExamRef: string | null
   onGameChange: (game: GameSlug) => void
   onExamRefChange: (examRef: string) => void
+  compact?: boolean
 }
 
 const GAME_ICONS: Record<GameSlug, LucideIcon> = {
@@ -28,11 +29,12 @@ export function StudyContextSelector({
   selectedExamRef,
   onGameChange,
   onExamRefChange,
+  compact = false,
 }: StudyContextSelectorProps) {
   return (
     <section
       aria-labelledby="study-context-title"
-      className="min-w-0 overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-border)] md:p-4"
+      className={`min-w-0 overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-border)] md:p-4 ${compact ? 'lg:h-full' : ''}`}
     >
       <div className="mb-3 flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
@@ -50,7 +52,10 @@ export function StudyContextSelector({
 
       <fieldset>
         <legend className="sr-only">Ders seçimi</legend>
-        <div data-study-game-grid className="grid min-w-0 grid-cols-2 gap-2 min-[420px]:grid-cols-3 lg:grid-cols-5">
+        <div
+          data-study-game-grid
+          className={`grid min-w-0 grid-cols-2 gap-2 min-[420px]:grid-cols-3 ${compact ? 'lg:grid-cols-2' : 'lg:grid-cols-5'}`}
+        >
           {games.map((game) => {
             const selected = game.slug === selectedGame
             const Icon = GAME_ICONS[game.slug]

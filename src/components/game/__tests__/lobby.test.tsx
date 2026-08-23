@@ -24,6 +24,16 @@ const baseProps = {
 }
 
 describe('Lobby', () => {
+  it('mobil tek sütun, tablet ve bilgisayarda iki sütunlu oyun kabuğu kullanır', () => {
+    const { container } = render(<Lobby {...baseProps} />)
+    const shell = container.querySelector('[data-responsive-game-lobby]')
+
+    expect(shell).toHaveClass('grid-cols-1')
+    expect(shell).toHaveClass('md:grid-cols-[minmax(0,1fr)_300px]')
+    expect(shell).toHaveClass('lg:grid-cols-[minmax(0,1fr)_340px]')
+    expect(shell).toHaveClass('max-w-[1180px]')
+  })
+
   it('varsayılan filtreleri özetler ve ayrıntıları kapalı tutar', () => {
     render(<Lobby {...baseProps} />)
 

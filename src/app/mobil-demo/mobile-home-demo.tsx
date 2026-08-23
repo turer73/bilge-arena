@@ -211,7 +211,7 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
       onClick={(event) => {
         if (locked) event.preventDefault()
       }}
-      className="group relative z-10 flex min-h-16 items-center gap-2 rounded-[18px] border-2 bg-[var(--app-card)] p-2 outline-none transition-transform active:translate-y-1 focus-visible:ring-4 focus-visible:ring-[var(--app-accent)]"
+      className="group relative z-10 flex min-h-16 items-center gap-2 rounded-[18px] border-2 bg-[var(--app-card)] p-2 outline-none transition-transform hover:-translate-y-0.5 active:translate-y-1 focus-visible:ring-4 focus-visible:ring-[var(--app-accent)] md:min-h-[76px] md:gap-3 md:p-3"
       style={{
         gridColumn: snakeColumn(step.index),
         gridRow: Math.floor(step.index / 2) + 1,
@@ -221,7 +221,7 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
       }}
     >
       <span
-        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white"
+        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white md:h-11 md:w-11"
         style={{ background: locked ? 'var(--app-disabled)' : subject.color }}
       >
         <Icon aria-hidden="true" size={21} fill={current || exam ? 'currentColor' : 'none'} strokeWidth={3} />
@@ -231,7 +231,7 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
         <span className="block text-[9px] font-black uppercase tracking-[0.08em]" style={{ color: current ? subject.color : done ? 'var(--app-success)' : 'var(--app-text-muted)' }}>
           {current ? 'Sıradaki' : done ? 'Tamamlandı' : exam ? 'Ünite sonu' : `${step.index + 1}. ders`}
         </span>
-        <span className={`mt-0.5 block text-[11px] font-extrabold leading-[13px] ${locked ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text)]'}`}>{step.label}</span>
+        <span className={`mt-0.5 block text-[11px] font-extrabold leading-[13px] md:text-xs md:leading-4 ${locked ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text)]'}`}>{step.label}</span>
       </span>
     </Link>
   )
@@ -404,10 +404,10 @@ export function MobileHomeDemo({
   }, [])
 
   return (
-    <div className={`min-h-[100dvh] bg-[var(--app-bg)] pb-28 text-[var(--app-text)] md:mx-auto md:max-w-[440px] md:border-x md:border-[var(--app-border)] ${mode === 'live' ? '-mt-[var(--navbar-h)]' : ''}`}>
+    <div className={`min-h-[100dvh] bg-[var(--app-bg)] pb-28 text-[var(--app-text)] lg:pb-10 ${mode === 'live' ? '-mt-[var(--navbar-h)] lg:mt-0' : ''}`}>
       <style>{`html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } nextjs-portal { display: none !important; }`}</style>
       <header inert={coachOpen} className="sticky top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl">
-        <div className="flex h-14 items-center justify-between px-3">
+        <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center justify-between px-3 md:h-16 md:px-5 xl:px-6">
           <Link href="/arena/profil" aria-label="Sınav türünü değiştir" className="flex min-h-11 items-center gap-1 rounded-xl text-[var(--app-text-sub)]">
             <ShieldCheck size={24} fill="var(--app-accent-border)" className="text-[var(--app-accent-text)]" strokeWidth={2.5} />
             <span className="text-xs font-black">{examLabel}</span>
@@ -424,7 +424,7 @@ export function MobileHomeDemo({
 
       <main inert={coachOpen}>
         <section aria-label="Ders seçimi" className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-3 py-2.5">
-          <div className="scrollbar-none flex snap-x gap-2 overflow-x-auto pb-1">
+          <div className="scrollbar-none mx-auto flex max-w-[1180px] snap-x gap-2 overflow-x-auto pb-1 md:flex-wrap md:gap-3 md:overflow-visible md:px-2 md:py-1">
             {visibleSubjects.map((item) => {
               const Icon = item.icon
               const active = item.id === subject.id
@@ -433,10 +433,10 @@ export function MobileHomeDemo({
                   key={item.id}
                   onClick={() => setSubjectId(item.id)}
                   aria-pressed={active}
-                  className="flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-2xl border-2 px-3 text-xs font-extrabold active:scale-95"
+                  className="flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-2xl border-2 px-3 text-xs font-extrabold transition-transform hover:-translate-y-0.5 active:scale-95 md:min-h-12 md:px-4 md:text-sm"
                   style={{
                     color: active ? item.color : 'var(--app-text-muted)', borderColor: active ? item.color : 'var(--app-border)',
-                    background: active ? `${item.color}10` : '#fff', boxShadow: active ? `0 3px 0 ${item.color}35` : '0 3px 0 var(--app-border)',
+                    background: active ? `${item.color}10` : 'var(--app-card)', boxShadow: active ? `0 3px 0 ${item.color}35` : '0 3px 0 var(--app-border)',
                   }}
                 >
                   <Icon size={18} strokeWidth={2.7} />{item.shortLabel}
@@ -446,23 +446,24 @@ export function MobileHomeDemo({
           </div>
         </section>
 
-        <section className="px-4 pt-4">
-          <div className="relative overflow-hidden rounded-[22px] p-4 text-white" style={{ background: `linear-gradient(135deg, ${subject.color}, ${subject.shadow})`, boxShadow: `0 6px 0 ${subject.shadow}` }}>
+        <div data-responsive-arena-grid className="mx-auto grid w-full max-w-[1180px] grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)] md:gap-x-5 md:gap-y-5 md:px-5 md:py-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-x-7 xl:px-6">
+        <section className="px-4 pt-4 md:col-start-1 md:row-start-1 md:px-0 md:pt-0">
+          <div className="relative overflow-hidden rounded-[22px] p-4 text-white md:min-h-[168px] md:rounded-[28px] md:p-6" style={{ background: `linear-gradient(135deg, ${subject.color}, ${subject.shadow})`, boxShadow: `0 6px 0 ${subject.shadow}` }}>
             <div className="pointer-events-none absolute -right-8 -top-14 h-32 w-32 rounded-full border-[22px] border-white/10" />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/75">{unitLabel}</p>
-                <h1 className="mt-1 text-lg font-black leading-tight">{subject.label} Yolu</h1>
-                <p className="mt-1 truncate text-[11px] font-semibold text-white/80">{subject.description}</p>
+                <h1 className="mt-1 text-lg font-black leading-tight md:mt-2 md:text-2xl lg:text-3xl">{subject.label} Yolu</h1>
+                <p className="mt-1 truncate text-[11px] font-semibold text-white/80 md:mt-2 md:text-sm">{subject.description}</p>
               </div>
               <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">{completedCount} / {steps.length}</span>
             </div>
-            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px]"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
+            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px] md:mt-6 md:h-3"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
           </div>
         </section>
 
-        <section className="px-4 pt-4" aria-labelledby="continue-title">
-          <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)]">
+        <section className="px-4 pt-4 md:col-start-2 md:row-start-1 md:px-0 md:pt-0" aria-labelledby="continue-title">
+          <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] md:h-full md:min-h-[168px]">
             <div className="relative z-10 max-w-[64%]">
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Bugünkü ders</div>
               <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{pathComplete ? 'Yol tamamlandı' : currentStep?.label ?? subject.label}</h2>
@@ -483,16 +484,16 @@ export function MobileHomeDemo({
           </div>
         </section>
 
-        <section aria-label={`${subject.label} öğrenme yolu`} className="relative mx-4 mt-4 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-2.5 shadow-[0_5px_0_var(--app-border)]">
-          <div className="mb-2 flex items-center justify-between">
+        <section aria-label={`${subject.label} öğrenme yolu`} className="relative mx-4 mt-4 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-2.5 shadow-[0_5px_0_var(--app-border)] md:col-start-1 md:row-start-2 md:row-span-2 md:mx-0 md:mt-0 md:rounded-[28px] md:p-5">
+          <div className="mb-2 flex items-center justify-between md:mb-4">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Ünite planı</div>
-              <h2 className="text-[15px] font-black">Öğrenme yolu</h2>
+              <h2 className="text-[15px] font-black md:text-xl">Öğrenme yolu</h2>
             </div>
             <div className="rounded-xl bg-[var(--app-card)] px-2.5 py-1.5 text-[10px] font-black text-[var(--app-text-sub)] shadow-[0_2px_0_var(--app-shadow)]">{completedCount} / {steps.length}</div>
           </div>
           <div
-            className="relative grid grid-cols-2 gap-x-8 gap-y-1.5"
+            className="relative grid grid-cols-2 gap-x-8 gap-y-1.5 md:gap-x-12 md:gap-y-3"
             style={{ gridTemplateRows: `repeat(${Math.ceil(stepCount / 2)}, minmax(0, 1fr))` }}
           >
             <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -502,7 +503,7 @@ export function MobileHomeDemo({
           </div>
         </section>
 
-        <section aria-labelledby="mobile-tools-title" className="mx-4 mt-4">
+        <section aria-labelledby="mobile-tools-title" className={`mx-4 mt-4 md:col-start-2 md:mx-0 md:mt-0 ${dailyGoal ? 'md:row-start-3' : 'md:row-start-2'}`}>
           <div className="mb-2 flex items-end justify-between">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-accent-text)]">Bilge Arena</div>
@@ -510,7 +511,7 @@ export function MobileHomeDemo({
             </div>
             <span className="text-[10px] font-bold text-[var(--app-text-muted)]">Tüm işlevler</span>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-1">
             <Link href="/arena/magaza" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[var(--app-warn-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-warn-border)] active:translate-y-0.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><ShoppingBag size={19} strokeWidth={2.7} /></span>
               <span><span className="block text-xs font-black">Mağaza</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Altınlarını kullan</span></span>
@@ -522,7 +523,7 @@ export function MobileHomeDemo({
               </Link>
             )}
             {institutionEnabled && (
-              <Link href="/arena/kurum" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-accent-border)] active:translate-y-0.5">
+              <Link href="/arena/kurum" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-accent-border)] active:translate-y-0.5 md:col-span-1">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><Building2 size={22} strokeWidth={2.7} /></span>
                 <span className="min-w-0 flex-1"><span className="block text-xs font-black">Kurum paneli</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Sınıf, rol ve rapor akışları</span></span>
                 <ChevronRight size={18} className="text-[var(--app-text-muted)]" strokeWidth={3} />
@@ -531,7 +532,7 @@ export function MobileHomeDemo({
           </div>
         </section>
 
-        {dailyGoal && <section className="mx-4 mb-7 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-border)]">
+        {dailyGoal && <section className="mx-4 mb-7 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-border)] md:col-start-2 md:row-start-2 md:mx-0 md:mb-0">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Flame size={24} fill="currentColor" strokeWidth={2.6} /></div>
             <div className="min-w-0 flex-1">
@@ -540,13 +541,14 @@ export function MobileHomeDemo({
             </div>
           </div>
         </section>}
+        </div>
       </main>
 
       {showBottomNav && <div inert={coachOpen}><BottomNav activeOverride="learn" appearance="learning" /></div>}
 
       {coachOpen && (
         <div
-          className="fixed inset-y-0 left-1/2 z-[150] flex w-full max-w-[440px] -translate-x-1/2 items-center bg-[var(--app-overlay)] px-3 py-16 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[150] flex w-full items-center bg-[var(--app-overlay)] px-3 py-16 backdrop-blur-[2px]"
           onMouseDown={(event) => {
             if (event.currentTarget === event.target) setCoachOpen(false)
           }}
@@ -557,7 +559,7 @@ export function MobileHomeDemo({
             aria-modal="true"
             aria-labelledby="coach-dialog-title"
             aria-describedby="coach-dialog-description"
-            className="relative min-h-[400px] w-full"
+            className="relative mx-auto min-h-[400px] w-full max-w-[440px]"
           >
             <div className="absolute bottom-0 -left-1 z-20 w-[126px]">
               <div className="absolute left-1 top-1 rotate-[-2deg] rounded-lg border-2 border-white bg-[var(--app-accent)] px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_12px_rgba(37,99,235,.28)]">Bilge Chan</div>

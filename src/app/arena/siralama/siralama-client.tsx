@@ -107,10 +107,10 @@ export default function SiralamaClient() {
   const allTimeView = requestedAllTime || isAllTime
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--app-bg)] pb-8 text-[var(--app-text)] md:bg-transparent md:pb-10">
-      <style>{`@media (max-width: 767px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }`}</style>
-      <header className="sticky top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
-        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4 md:h-auto md:px-6 md:pb-5 md:pt-8">
+    <div data-ranking-screen className="min-h-[100dvh] bg-[var(--app-bg)] pb-24 text-[var(--app-text)] lg:bg-transparent lg:pb-10">
+      <style>{`@media (max-width: 1023px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }`}</style>
+      <header className="sticky top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl lg:static lg:border-0 lg:bg-transparent lg:backdrop-blur-none">
+        <div className="mx-auto flex h-14 max-w-[1180px] items-center justify-between px-4 lg:h-auto lg:px-6 lg:pb-5 lg:pt-8">
           <div className="flex items-center gap-2.5">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Trophy size={22} strokeWidth={2.8} /></span>
             <div><p className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--app-warn-ink)]">Haftalık rekabet</p><h1 className="text-lg font-black leading-5 md:text-2xl">Lig</h1></div>
@@ -119,8 +119,9 @@ export default function SiralamaClient() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-4xl px-3 pt-3 md:px-6 md:pt-0">
-        <section className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--app-warn-strong)] to-[var(--app-warn)] p-4 text-white shadow-[0_6px_0_var(--app-warn-border)] md:p-6">
+      <main className="mx-auto w-full max-w-[1180px] px-3 pt-3 md:px-5 lg:px-6 lg:pt-0">
+        <div data-ranking-overview className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+        <section className="relative min-h-[176px] overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--app-warn-strong)] to-[var(--app-warn)] p-4 text-white shadow-[0_6px_0_var(--app-warn-border)] md:p-6">
           <div className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
           <div className="relative z-10">
             <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75"><Sparkles size={14} /> {allTimeView ? 'Efsaneler tablosu' : 'Bu haftanın arenası'}</p>
@@ -133,18 +134,36 @@ export default function SiralamaClient() {
           </div>
         </section>
 
-        <nav aria-label="Sıralama dönemi" className="mt-4 grid grid-cols-2 rounded-[18px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-1.5 shadow-[0_4px_0_var(--app-border)]">
-          <Link href="/arena/siralama" aria-current={!requestedAllTime ? 'page' : undefined} className={`flex min-h-11 items-center justify-center rounded-[14px] text-xs font-black transition-colors ${!requestedAllTime ? 'bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]' : 'text-[var(--app-text-sub)]'}`}>Bu hafta</Link>
-          <Link href="/arena/siralama?period=all" aria-current={requestedAllTime ? 'page' : undefined} className={`flex min-h-11 items-center justify-center rounded-[14px] text-xs font-black transition-colors ${requestedAllTime ? 'bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]' : 'text-[var(--app-text-sub)]'}`}>Tüm zamanlar</Link>
-        </nav>
+        <aside className="hidden min-h-[176px] flex-col justify-between rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-5 shadow-[0_6px_0_var(--app-border)] lg:flex">
+          <div>
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Crown size={24} strokeWidth={2.8} /></span>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-text-muted)]">Senin lig durumun</p>
+            <p className="mt-1 text-2xl font-black text-[var(--app-text)]">{currentEntry ? `#${currentEntry.rank}` : 'İlk sıranı al'}</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">{currentEntry ? `${currentEntry.xp.toLocaleString()} XP ile yarıştasın.` : 'Bir oyun tamamla, haftalık lige katıl.'}</p>
+          </div>
+          <Link href="/arena" className="mt-4 inline-flex min-h-11 items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-xs font-black text-white shadow-[0_4px_0_var(--app-accent-strong)] active:translate-y-0.5 active:shadow-none">XP kazanmaya başla</Link>
+        </aside>
+        </div>
 
-        <div className="mt-4">
+        <div data-ranking-layout className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+        <aside className="order-1 min-w-0 space-y-4 lg:order-2 lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
+          <nav aria-label="Sıralama dönemi" className="grid grid-cols-2 rounded-[18px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-1.5 shadow-[0_4px_0_var(--app-border)]">
+            <Link href="/arena/siralama" aria-current={!requestedAllTime ? 'page' : undefined} className={`flex min-h-11 items-center justify-center rounded-[14px] text-xs font-black transition-colors ${!requestedAllTime ? 'bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]' : 'text-[var(--app-text-sub)]'}`}>Bu hafta</Link>
+            <Link href="/arena/siralama?period=all" aria-current={requestedAllTime ? 'page' : undefined} className={`flex min-h-11 items-center justify-center rounded-[14px] text-xs font-black transition-colors ${requestedAllTime ? 'bg-[var(--app-accent)] text-white shadow-[0_3px_0_var(--app-accent-strong)]' : 'text-[var(--app-text-sub)]'}`}>Tüm zamanlar</Link>
+          </nav>
+          <section className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-border)]">
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-warn-ink)]">Lig nasıl işler?</p>
+            <h2 className="mt-1 text-sm font-black">Her hafta yeniden yarış</h2>
+            <p className="mt-2 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">Oyunlardan kazandığın XP haftalık sıranı yükseltir. Pazartesi yeni tur başlar; tüm zamanlar puanın korunur.</p>
+          </section>
+        </aside>
+
+        <section aria-label="Lig sonuçları" className="order-2 min-w-0 space-y-4 lg:order-1">
           {!requestedAllTime && showRelativeLeague && <WeeklyLearningLeague />}
           {!requestedAllTime && showLearningSpotlights && <WeeklyLearningSpotlights />}
           {!requestedAllTime && showTeamBoss && <WeeklyTeamBoss />}
-        </div>
 
-      {loading ? (
+        {loading ? (
         <div className="flex min-h-[220px] items-center justify-center rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)]">
           <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--app-border)] border-t-[var(--app-accent)]" />
         </div>
@@ -171,6 +190,8 @@ export default function SiralamaClient() {
             : 'Haftalık sıralama yeterli veri olunca otomatik gösterilir'
           : 'Sıralama her Pazartesi sıfırlanır'}
       </div>
+        </section>
+        </div>
       </main>
     </div>
   )

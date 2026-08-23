@@ -194,7 +194,7 @@ describe('QuizEngine yerleşim', () => {
     expect(screen.getByLabelText('10 oturum XP')).toBeInTheDocument()
   })
 
-  test('uygulama kabugu CSS yalnizca mobil genislige uygulanir (masaustunde navbar kalir)', () => {
+  test('uygulama kabugu CSS mobil ve tablette uygulanir (bilgisayarda navbar kalir)', () => {
     const { container } = render(<QuizEngine game="matematik" />)
 
     const shellStyle = Array.from(container.querySelectorAll('style'))
@@ -202,9 +202,9 @@ describe('QuizEngine yerleşim', () => {
       .find((text) => text.includes('mobile-quiz-active'))
 
     expect(shellStyle).toBeDefined()
-    expect(shellStyle).toContain('@media (max-width: 767px)')
+    expect(shellStyle).toContain('@media (max-width: 1023px)')
     // Medya sorgusu, navbar'i gizleyen kuraldan ONCE gelmeli
-    expect(shellStyle!.indexOf('@media (max-width: 767px)'))
+    expect(shellStyle!.indexOf('@media (max-width: 1023px)'))
       .toBeLessThan(shellStyle!.indexOf('[data-app-navbar]'))
   })
 
@@ -213,6 +213,17 @@ describe('QuizEngine yerleşim', () => {
     // Ikinci (gizli) BilgeChanCompanion her soruda remount olup
     // /api/assistance-policy istegini bosa tekrarliyordu.
     expect(screen.getAllByTestId('chan-companion')).toHaveLength(1)
+  })
+
+  test('aktif oyun tablette genisler, bilgisayarda soru ve yardim paneline ayrilir', () => {
+    const { container } = render(<QuizEngine game="matematik" />)
+    const shell = container.querySelector('[data-responsive-quiz-shell]')
+    const companionAside = screen.getByTestId('chan-companion').closest('aside')
+    const topicsAside = screen.getByTestId('topics-band').closest('aside')
+
+    expect(shell).toHaveClass('md:max-w-[720px]', 'lg:max-w-[1120px]')
+    expect(companionAside).toHaveClass('lg:col-start-2', 'lg:row-start-1')
+    expect(topicsAside).toHaveClass('lg:col-start-2', 'lg:row-start-2')
   })
 
   test('answered: açıklama paneli soru kartının ÜSTÜNDE', () => {
@@ -259,7 +270,7 @@ describe('QuizEngine yerleşim', () => {
     expect(quizGame.setShowReportModal).toHaveBeenCalledWith(false)
   })
 
-  test('Konu Gücü bandı şıklardan sonra (tam genişlik alt bant korunur)', () => {
+  test('Konu Gücü DOM sırasında şıklardan sonra kalır', () => {
     render(<QuizEngine game="matematik" />)
     const band = screen.getByTestId('topics-band')
     const lastOption = screen.getByTestId('option-3')

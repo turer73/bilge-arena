@@ -284,8 +284,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
     return (
       <>
         <style>{`
-          /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
-          @media (max-width: 767px) {
+          /* Mobil ve tablette uygulama kabugu; bilgisayarda global navigasyon. */
+          @media (max-width: 1023px) {
             body.mobile-quiz-lobby [data-app-navbar] { display: none !important; }
             body.mobile-quiz-lobby [data-arena-main] {
               padding-top: 0 !important;
@@ -294,7 +294,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           }
         `}</style>
         {user && (
-          <div className="mx-auto max-w-md space-y-3 px-4 pt-4 md:max-w-lg md:px-6 xl:max-w-xl xl:px-8 2xl:max-w-2xl">
+          <div className="mx-auto grid w-full max-w-[720px] gap-3 px-4 pt-4 md:px-5 lg:max-w-[1180px] lg:grid-cols-3 lg:px-6 lg:pt-6">
             <TodayPlanCard
               plan={todayPlan.plan}
               loading={todayPlan.loading}
@@ -406,8 +406,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
     return (
       <>
         <style>{`
-          /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
-          @media (max-width: 767px) {
+          /* Mobil ve tablette uygulama kabugu; bilgisayarda global navigasyon. */
+          @media (max-width: 1023px) {
             body.mobile-quiz-loading [data-app-navbar],
             body.mobile-quiz-loading [data-bottom-nav] { display: none !important; }
             body.mobile-quiz-loading [data-arena-main] {
@@ -416,7 +416,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             }
           }
         `}</style>
-        <div className="mx-auto flex min-h-[100dvh] max-w-[520px] flex-col items-center justify-center gap-5 bg-[var(--app-bg)] p-5 text-center text-[var(--app-text)]">
+        <div className="mx-auto flex min-h-[100dvh] max-w-[720px] flex-col items-center justify-center gap-5 bg-[var(--app-bg)] p-5 text-center text-[var(--app-text)]">
           <div className="relative flex h-48 w-full max-w-[340px] items-center justify-center overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_6px_0_var(--app-shadow-accent)]">
             <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] border-[var(--app-accent)]/5" />
             <div className="absolute left-5 top-5 flex items-center gap-1.5 rounded-xl bg-[var(--app-accent-tint)] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[var(--app-accent-text)]">
@@ -446,8 +446,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
   if (quiz.screen === 'result') {
     const resultShellStyle = (
       <style>{`
-        /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
-        @media (max-width: 767px) {
+        /* Mobil ve tablette uygulama kabugu; bilgisayarda global navigasyon. */
+        @media (max-width: 1023px) {
           body.mobile-quiz-result [data-app-navbar],
           body.mobile-quiz-result [data-bottom-nav] { display: none !important; }
           body.mobile-quiz-result [data-arena-main] {
@@ -463,7 +463,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
       return (
         <>
           {resultShellStyle}
-          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] p-4 text-center text-[var(--app-text)] animate-scaleIn md:max-w-[560px]">
+          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] p-4 text-center text-[var(--app-text)] animate-scaleIn md:max-w-[680px]">
             <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-5 pb-7 text-white shadow-[0_7px_0_var(--app-accent-strong)]">
               <div className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
               <BilgeChan pose="wave" height={148} priority className="mx-auto drop-shadow-[0_8px_10px_rgba(15,23,42,.18)]" />
@@ -550,8 +550,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
   return (
     <>
     <style>{`
-      /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
-      @media (max-width: 767px) {
+      /* Mobil ve tablette uygulama kabugu; bilgisayarda global navigasyon. */
+      @media (max-width: 1023px) {
         body.mobile-quiz-active [data-app-navbar],
         body.mobile-quiz-active [data-bottom-nav] { display: none !important; }
         body.mobile-quiz-active [data-arena-main] {
@@ -567,7 +567,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     {/* Can kaybi kirmizi flash */}
     {quiz.showLifeLost && <LifeLostOverlay />}
 
-    <div className={`relative mx-auto min-h-[100dvh] max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:my-6 md:min-h-0 md:max-w-[560px] md:rounded-[32px] md:border-2 md:border-[var(--app-border)] md:p-5 md:shadow-[0_8px_0_var(--app-shadow)] ${autoPaused ? 'game-auto-paused' : ''}`}>
+    <div data-responsive-quiz-shell className={`relative mx-auto min-h-[100dvh] w-full max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:max-w-[720px] md:p-5 lg:my-6 lg:min-h-0 lg:max-w-[1120px] lg:rounded-[32px] lg:border-2 lg:border-[var(--app-border)] lg:shadow-[0_8px_0_var(--app-shadow)] ${autoPaused ? 'game-auto-paused' : ''}`}>
       {autoPaused && (
         <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[var(--app-overlay)] px-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="auto-pause-title">
           <section className="w-full max-w-sm rounded-[26px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-5 text-center shadow-[0_8px_0_rgba(15,23,42,.18)]">
@@ -583,7 +583,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
       )}
       {/* Mobil odak modu: ilerleme, süre ve oturum kaynakları tek bakışta. */}
       <header
-        className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)] md:-mx-5 md:-mt-5 md:top-[var(--navbar-h)] md:rounded-t-[30px] md:px-5 md:pt-4"
+        className="sticky top-0 z-30 -mx-3 -mt-3 mb-3 overflow-hidden rounded-b-[24px] px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] text-white shadow-[0_5px_0_rgba(29,78,216,.28)] md:-mx-5 md:-mt-5 md:px-5 md:pt-4 lg:top-[var(--navbar-h)] lg:rounded-t-[30px]"
         style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}d9)` }}
       >
         <div className="pointer-events-none absolute -right-8 -top-12 h-28 w-28 rounded-full border-[20px] border-white/10" />
@@ -648,23 +648,26 @@ export function QuizEngine({ game }: QuizEngineProps) {
         )}
       </header>
 
-      <div className="grid grid-cols-1 gap-3">
-      {/* Sol sutun */}
-      <div className="flex flex-col gap-3">
-        {/* Mobil companion (lg altinda, yatay-compact) */}
+      <div className={`grid grid-cols-1 gap-3 ${!quiz.isDeneme ? 'lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-5' : ''}`}>
+        {/* Mobilde sorudan once, bilgisayarda sag yardim panelinde. */}
         {!quiz.isDeneme && (
-          <BilgeChanCompanion
-            key={`m-${quizStore.currentIndex}`}
-            attemptId={quiz.attemptId}
-            quizState={quizStore.state}
-            lastIsCorrect={lastAnswer?.isCorrect ?? null}
-            question={question}
-            correctOption={lastAnswer?.correctOption ?? null}
-            onHelpToggle={quiz.setHelpPaused}
-            compact
-            height={108}
-          />
+          <aside className="order-first lg:col-start-2 lg:row-start-1">
+            <BilgeChanCompanion
+              key={`m-${quizStore.currentIndex}`}
+              attemptId={quiz.attemptId}
+              quizState={quizStore.state}
+              lastIsCorrect={lastAnswer?.isCorrect ?? null}
+              question={question}
+              correctOption={lastAnswer?.correctOption ?? null}
+              onHelpToggle={quiz.setHelpPaused}
+              compact
+              height={108}
+            />
+          </aside>
         )}
+
+      {/* Ana soru sutunu */}
+      <div className="flex flex-col gap-3 lg:col-start-1 lg:row-start-1 lg:row-span-2">
         {/* Deneme timer */}
         {quiz.isDeneme && quiz.denemeConfig && (
           <div className="animate-fadeUp rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-shadow-accent)]">
@@ -772,16 +775,15 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
       </div>
 
-      </div>
-
-      {/* Konu gucu — tam genislik alt bant (mobilde de gorunur) */}
-      {!quiz.isDeneme && (
-        <div className="mt-3">
+        {/* Konu gucu mobilde sorularin altinda, bilgisayarda sag panelde. */}
+        {!quiz.isDeneme && (
+          <aside className="order-last lg:col-start-2 lg:row-start-2">
           <ComponentErrorBoundary label="Konu Gücü" variant="inline">
             <TopicsPanel topics={sidebarTopics} />
           </ComponentErrorBoundary>
-        </div>
-      )}
+          </aside>
+        )}
+      </div>
     </div>
     </>
   )

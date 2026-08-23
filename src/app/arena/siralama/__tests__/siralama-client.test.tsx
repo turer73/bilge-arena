@@ -52,6 +52,10 @@ describe('SiralamaClient social league gate', () => {
     expect(screen.getByRole('heading', { name: 'Lig' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Haftalık sıralamada yerini al/ })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Sıralama dönemi' })).toBeInTheDocument()
+    expect(document.querySelector('[data-ranking-screen]')).toHaveClass('pb-24', 'lg:pb-10')
+    expect(document.querySelector('[data-ranking-overview]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_320px]')
+    expect(document.querySelector('[data-ranking-layout]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_320px]')
+    expect(document.querySelector('style')?.textContent).toContain('max-width: 1023px')
     await waitFor(() => expect(screen.queryByText(/Henüz kimse/)).toBeInTheDocument())
   })
 
