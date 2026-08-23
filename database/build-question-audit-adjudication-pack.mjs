@@ -23,10 +23,29 @@ if (!packet || packet.schemaVersion !== 'question-audit-blind-pack@1' || !Array.
   throw new Error('blind review packet gecersiz')
 }
 
+const packetKeys = new Set()
+const packetQuestions = new Set()
+for (const item of packet.items) {
+  if (
+    !item || typeof item.questionId !== 'string' || !item.questionId.trim()
+    || typeof item.revisionId !== 'string' || !item.revisionId.trim()
+    || !/^[a-f0-9]{64}$/i.test(String(item.contentSha256))
+    || !item.content || typeof item.content !== 'object' || Array.isArray(item.content)
+  ) throw new Error('blind review packet item gecersiz')
+  const key = `${item.questionId}:${String(item.contentSha256).toLowerCase()}`
+  if (packetKeys.has(key) || packetQuestions.has(item.questionId)) throw new Error(`blind review packet item yineleniyor: ${item.questionId}`)
+  packetKeys.add(key)
+  packetQuestions.add(item.questionId)
+}
+
 const server = await createServer({ root: resolve('.'), server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' })
 try {
   const mod = await server.ssrLoadModule('/src/lib/question-audit/gold-set.ts')
   const disputes = mod.findHumanGoldDisputes(reviews)
+  const reviewKeys = new Set(reviews[0].labels.map((item) => `${item.questionId}:${String(item.contentSha256).toLowerCase()}`))
+  if (reviewKeys.size !== packetKeys.size || [...packetKeys].some((key) => !reviewKeys.has(key))) {
+    throw new Error('reviewer etiketleri blind packet soru ve revision hash listesiyle tam eslesmiyor')
+  }
   const disputeKeys = new Set(disputes.map((item) => `${item.questionId}:${item.contentSha256}`))
   const items = packet.items.filter((item) => disputeKeys.has(`${item.questionId}:${String(item.contentSha256).toLowerCase()}`))
   if (items.length !== disputes.length) throw new Error('ayrisan maddeler blind packet ile tam eslesmiyor')
@@ -46,11 +65,6 @@ try {
     reviewerRef,
     role: 'adjudicator',
     labels: items.map((item) => ({ questionId: item.questionId, contentSha256: item.contentSha256, flawCodes: null })),
-  })
-  writeJson(resolve(outDir, 'coordinator-disputes.json'), {
-    schemaVersion: 'question-audit-disputes@1',
-    selectionId: packet.selectionId,
-    disputes,
   })
   console.log(JSON.stringify({ outDir, disputes: disputes.length, adjudicationRequired: disputes.length > 0 }))
 } finally {

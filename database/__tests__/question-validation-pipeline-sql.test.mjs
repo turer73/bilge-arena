@@ -73,6 +73,7 @@ describe('human-gold benchmark release gate', () => {
     expect(reviewPackBuilder).toContain(".eq('is_active', true)")
     expect(reviewPackBuilder).toContain(".eq('policy_version', policyVersion)")
     expect(reviewPackBuilder).toContain('toBlindReviewPacket')
+    expect(reviewPackBuilder).toContain('items: packet.items.map')
     expect(reviewPackBuilder).toContain('flawCodes: null')
     expect(reviewPackBuilder).not.toMatch(/\.from\([^)]+\)\.(?:insert|update|upsert|delete)\(/)
   })
@@ -101,7 +102,8 @@ describe('human-gold benchmark release gate', () => {
   it('gives the adjudicator only disputed blind items, not reviewer decisions', () => {
     expect(adjudicationPackBuilder).toContain('findHumanGoldDisputes')
     expect(adjudicationPackBuilder).toContain("'adjudicator-packet.json'")
-    expect(adjudicationPackBuilder).toContain("'coordinator-disputes.json'")
+    expect(adjudicationPackBuilder).toContain('reviewer etiketleri blind packet soru ve revision hash listesiyle tam eslesmiyor')
+    expect(adjudicationPackBuilder).not.toContain('coordinator-disputes.json')
     const root = fileURLToPath(new URL('../..', import.meta.url))
     const temp = mkdtempSync(join(tmpdir(), 'bilge-adjudication-'))
     const packet = join(temp, 'packet.json')
@@ -110,8 +112,8 @@ describe('human-gold benchmark release gate', () => {
       schemaVersion: 'question-audit-blind-pack@1',
       selectionId: 'selection-1',
       items: [
-        { questionId: 'clean-question', contentSha256: 'a'.repeat(64), content: { question: 'clean' } },
-        { questionId: 'wrong-key-question', contentSha256: 'b'.repeat(64), content: { question: 'disputed' } },
+        { questionId: 'clean-question', revisionId: 'revision-clean', contentSha256: 'a'.repeat(64), content: { question: 'clean' } },
+        { questionId: 'wrong-key-question', revisionId: 'revision-wrong-key', contentSha256: 'b'.repeat(64), content: { question: 'disputed' } },
       ],
     }))
     try {
@@ -124,10 +126,38 @@ describe('human-gold benchmark release gate', () => {
       ], { cwd: root, encoding: 'utf8' })
       expect(result.status, result.stderr).toBe(0)
       const blind = JSON.parse(readFileSync(join(outDir, 'adjudicator-packet.json'), 'utf8'))
-      const privateCoordinator = JSON.parse(readFileSync(join(outDir, 'coordinator-disputes.json'), 'utf8'))
       expect(blind.items.map((item) => item.questionId)).toEqual(['wrong-key-question'])
       expect(JSON.stringify(blind)).not.toContain('reviewerFlawCodes')
-      expect(privateCoordinator.disputes[0].reviewerFlawCodes).toEqual([[], ['WRONG_KEY_SUSPECTED']])
+    } finally {
+      rmSync(temp, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects matching reviewer files that do not cover the exact blind packet hashes', () => {
+    const root = fileURLToPath(new URL('../..', import.meta.url))
+    const temp = mkdtempSync(join(tmpdir(), 'bilge-adjudication-mismatch-'))
+    const packet = join(temp, 'packet.json')
+    const outDir = join(temp, 'out')
+    writeFileSync(packet, JSON.stringify({
+      schemaVersion: 'question-audit-blind-pack@1',
+      selectionId: 'selection-1',
+      items: [{
+        questionId: 'clean-question',
+        revisionId: 'revision-clean-question',
+        contentSha256: 'f'.repeat(64),
+        content: { question: 'clean' },
+      }],
+    }))
+    try {
+      const result = spawnSync(process.execPath, [
+        'database/build-question-audit-adjudication-pack.mjs',
+        '--packet', packet,
+        '--review', 'database/__tests__/fixtures/question-audit-review-a.valid.json',
+        '--review-b', 'database/__tests__/fixtures/question-audit-review-b.valid.json',
+        '--out-dir', outDir,
+      ], { cwd: root, encoding: 'utf8' })
+      expect(result.status).not.toBe(0)
+      expect(result.stderr).toContain('blind packet soru ve revision hash listesiyle tam eslesmiyor')
     } finally {
       rmSync(temp, { recursive: true, force: true })
     }

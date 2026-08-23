@@ -136,7 +136,7 @@ try {
       note: 'Prediction-stratified audit sample; not a prevalence estimate. Reviewers never receive the prediction stratum.',
     },
     reviewerRefs,
-    items: selected.map(({ content: _content, verdict: _verdict, ...item }, index) => ({ itemNumber: index + 1, ...item })),
+    items: packet.items.map(({ content: _content, ...item }) => item),
   })
   writeJson(resolve(outDir, 'blind-review-packet.json'), packet)
   writeJson(resolve(outDir, 'reviewer-a.labels.json'), template(reviewerRefs.reviewerA))
