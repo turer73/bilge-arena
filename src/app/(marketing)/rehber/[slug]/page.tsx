@@ -23,7 +23,7 @@ export async function generateMetadata({
   if (!a) return {}
   const ogImage = `${siteUrl}/og?title=${encodeURIComponent(a.title)}&subtitle=${encodeURIComponent(a.description.slice(0, 80))}`
   return {
-    title: { absolute: `${a.title} | Bilge Arena Rehber` },
+    title: { absolute: a.seoTitle ?? `${a.title} | Bilge Arena Rehber` },
     description: a.description,
     alternates: { canonical: `${siteUrl}/rehber/${slug}` },
     openGraph: {
@@ -143,10 +143,12 @@ export default async function RehberArticlePage({
 
       {a.sources && a.sources.length > 0 && (
         <aside className="mt-10 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
-          <h2 className="text-base font-bold">Kaynaklar ve güncellik</h2>
+          <h2 className="text-base font-bold">
+            {a.sourceNote ? 'Kaynaklar ve yöntem notu' : 'Kaynaklar ve güncellik'}
+          </h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--text-sub)]">
-            Sınav yapısı ve tarihler için birincil kaynaklar kullanılmıştır. Kurallar değişebileceği
-            için başvuru yapacağın yılın güncel ÖSYM kılavuzunu ayrıca kontrol et.
+            {a.sourceNote
+              ?? 'Sınav yapısı ve tarihler için birincil kaynaklar kullanılmıştır. Kurallar değişebileceği için başvuru yapacağın yılın güncel ÖSYM kılavuzunu ayrıca kontrol et.'}
           </p>
           <ul className="mt-3 space-y-2 text-sm">
             {a.sources.map((source) => (
