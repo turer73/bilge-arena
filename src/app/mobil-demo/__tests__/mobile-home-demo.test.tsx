@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const mockUsePathname = vi.hoisted(() => vi.fn<() => string>())
@@ -64,6 +64,32 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(screen.getByRole('heading', { name: 'Türkçe Yolu' })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Paragrafın Yapısı' })).toBeVisible()
     expect(screen.getByRole('link', { name: /DEVAM ET/ })).toHaveAttribute('href', '/arena/turkce')
+  })
+
+  test('tablet ve masaüstü koç penceresinde tüm oyunlar seçilebilir', async () => {
+    render(<MobileHomeDemo />)
+
+    const dialog = await screen.findByRole('dialog')
+    const subjectPicker = within(dialog).getByLabelText('Bilge Chan ders seçimi')
+    expect(subjectPicker).toHaveClass('hidden', 'md:flex')
+
+    fireEvent.click(within(subjectPicker).getByRole('button', { name: 'Fen Bilimleri rotasını seç' }))
+    expect(screen.getByText(/Atomun Yapısı için 10 soruluk kısa dersin hazır/)).toBeVisible()
+
+    fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
+    fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
+    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/fen')
+  })
+
+  test('üst ders sekmeleri masaüstünde ortalanır, mobil kısa adları korunur', () => {
+    const { container } = render(<MobileHomeDemo />)
+    const tabs = container.querySelector('[data-subject-tabs]')
+
+    expect(tabs).toHaveClass('md:justify-center')
+    const mathTab = within(tabs as HTMLElement).getByRole('button', { name: 'Mat' })
+    expect(mathTab).toHaveAttribute('title', 'Matematik')
+    expect(within(mathTab).getByText('Mat')).toHaveClass('md:hidden')
+    expect(within(mathTab).getByText('Matematik')).toHaveClass('hidden', 'md:inline')
   })
 })
 

@@ -424,7 +424,10 @@ export function MobileHomeDemo({
 
       <main inert={coachOpen}>
         <section aria-label="Ders seçimi" className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-3 py-2.5">
-          <div className="scrollbar-none mx-auto flex max-w-[1180px] snap-x gap-2 overflow-x-auto pb-1 md:flex-wrap md:gap-3 md:overflow-visible md:px-2 md:py-1">
+          <div
+            data-subject-tabs
+            className="scrollbar-none mx-auto flex max-w-[1180px] snap-x gap-2 overflow-x-auto pb-1 md:flex-wrap md:justify-center md:gap-3 md:overflow-visible md:px-2 md:py-1"
+          >
             {visibleSubjects.map((item) => {
               const Icon = item.icon
               const active = item.id === subject.id
@@ -432,6 +435,8 @@ export function MobileHomeDemo({
                 <button
                   key={item.id}
                   onClick={() => setSubjectId(item.id)}
+                  aria-label={item.shortLabel}
+                  title={item.label}
                   aria-pressed={active}
                   className="flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-2xl border-2 px-3 text-xs font-extrabold transition-transform hover:-translate-y-0.5 active:scale-95 md:min-h-12 md:px-4 md:text-sm"
                   style={{
@@ -439,7 +444,9 @@ export function MobileHomeDemo({
                     background: active ? `${item.color}10` : 'var(--app-card)', boxShadow: active ? `0 3px 0 ${item.color}35` : '0 3px 0 var(--app-border)',
                   }}
                 >
-                  <Icon size={18} strokeWidth={2.7} />{item.shortLabel}
+                  <Icon size={18} strokeWidth={2.7} />
+                  <span className="md:hidden">{item.shortLabel}</span>
+                  <span className="hidden md:inline">{item.label}</span>
                 </button>
               )
             })}
@@ -559,16 +566,16 @@ export function MobileHomeDemo({
             aria-modal="true"
             aria-labelledby="coach-dialog-title"
             aria-describedby="coach-dialog-description"
-            className="relative mx-auto min-h-[400px] w-full max-w-[440px]"
+            className="relative mx-auto min-h-[400px] w-full max-w-[440px] md:min-h-[430px] md:max-w-[600px]"
           >
             <div className="absolute bottom-0 -left-1 z-20 w-[126px]">
               <div className="absolute left-1 top-1 rotate-[-2deg] rounded-lg border-2 border-white bg-[var(--app-accent)] px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_12px_rgba(37,99,235,.28)]">Bilge Chan</div>
               <Image src="/chan/chan-wave.webp" alt="Bilge Arena öğrenme koçu Chan" width={150} height={206} className="mt-7 h-auto w-[126px] drop-shadow-[0_10px_10px_rgba(15,23,42,.22)]" />
             </div>
 
-            <div className="absolute right-0 top-7 z-10 w-[calc(100%-64px)] max-w-[306px]">
+            <div className="absolute right-0 top-7 z-10 w-[calc(100%-64px)] max-w-[306px] md:max-w-[470px]">
               <div
-                className="relative z-10 min-h-[302px] border-2 border-[var(--app-text)] bg-[var(--app-card)] px-5 pb-4 pt-5 text-[var(--app-text)]"
+                className="relative z-10 min-h-[302px] border-2 border-[var(--app-text)] bg-[var(--app-card)] px-5 pb-4 pt-5 text-[var(--app-text)] md:min-h-[350px]"
                 style={{ borderRadius: bubbleRadius, boxShadow: '6px 8px 0 rgba(15,23,42,.16), 0 18px 42px rgba(15,23,42,.20)' }}
               >
                 <span aria-hidden="true" className="absolute -left-[34px] bottom-[112px] h-10 w-10 bg-[var(--app-text)]" style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 52%)' }} />
@@ -588,6 +595,38 @@ export function MobileHomeDemo({
                     <MessageIcon size={20} strokeWidth={2.8} />
                   </span>
                   <span className="text-[10px] font-black uppercase tracking-[0.13em]" style={{ color: message.color }}>{message.eyebrow}</span>
+                </div>
+
+                <div
+                  data-desktop-coach-subjects
+                  aria-label="Bilge Chan ders seçimi"
+                  className="mb-4 hidden items-center gap-1.5 overflow-x-auto border-b-2 border-[var(--app-border-soft)] pb-4 md:flex"
+                >
+                  {visibleSubjects.map((item) => {
+                    const Icon = item.icon
+                    const active = item.id === subject.id
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setSubjectId(item.id)
+                          setCoachMessage(0)
+                        }}
+                        aria-label={`${item.label} rotasını seç`}
+                        aria-pressed={active}
+                        className="flex min-h-10 shrink-0 items-center gap-1 rounded-xl border-2 px-2 text-[10px] font-black transition-transform hover:-translate-y-0.5 active:scale-95"
+                        style={{
+                          color: active ? item.color : 'var(--app-text-muted)',
+                          borderColor: active ? item.color : 'var(--app-border)',
+                          background: active ? `${item.color}10` : 'var(--app-card)',
+                        }}
+                      >
+                        <Icon size={14} strokeWidth={2.8} />
+                        {item.shortLabel}
+                      </button>
+                    )
+                  })}
                 </div>
 
                 <h2 id="coach-dialog-title" className="max-w-[220px] text-xl font-black leading-7 tracking-[-0.02em]">{coachTitle}</h2>
