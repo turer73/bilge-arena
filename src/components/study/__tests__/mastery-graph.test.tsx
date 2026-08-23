@@ -30,6 +30,7 @@ describe('MasteryGraph', () => {
     render(<MasteryGraph
       graph={graph}
       coverage={{ supported: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 120, mappedQuestions: 120, percentage: 100 }}
+      discovery={null}
       outcomes={[outcome]}
     />)
 
@@ -45,6 +46,7 @@ describe('MasteryGraph', () => {
     render(<MasteryGraph
       graph={graph}
       coverage={{ supported: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 120, mappedQuestions: 120, percentage: 100 }}
+      discovery={null}
       outcomes={[outcome]}
       onPractice={onPractice}
     />)
@@ -57,10 +59,24 @@ describe('MasteryGraph', () => {
     render(<MasteryGraph
       graph={null}
       coverage={{ supported: false, taxonomyVersion: null, totalQuestions: 0, mappedQuestions: 0, percentage: 0 }}
+      discovery={null}
       outcomes={[]}
     />)
 
     expect(screen.getByText(/haritası hazırlanıyor/i)).toBeInTheDocument()
     expect(screen.queryByText(/%0 kapsam/)).not.toBeInTheDocument()
+  })
+
+  it('yetersiz kanıtta sıfır metrikleri başarı sonucu gibi göstermez', () => {
+    render(<MasteryGraph
+      graph={graph}
+      coverage={{ supported: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 120, mappedQuestions: 120, percentage: 100 }}
+      discovery={{ level: 2, stage: 'evidence', diagnosticCompleted: true, evidenceCollected: 1, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 50 }}
+      outcomes={[{ ...outcome, attempts: 1, correctAttempts: 0, status: 'insufficient', difficultyAccuracy: 0, fastWrongRate: 0 }]}
+    />)
+
+    expect(screen.getByText(/Hüküm yok: 1\/3 doğrulanmış kanıt/i)).toBeInTheDocument()
+    expect(screen.queryByText('Zorluk doğruluğu %0')).not.toBeInTheDocument()
+    expect(screen.getByText('KEŞİF SEVİYESİ 2/3')).toBeInTheDocument()
   })
 })

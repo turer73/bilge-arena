@@ -7,6 +7,7 @@ const {
   mockNodeResult,
   mockOutcomeResult,
   mockStateResult,
+  mockDiagnosticResult,
   mockIntegrityResult,
   mockFrom,
   mockRpc,
@@ -19,6 +20,7 @@ const {
   mockNodeResult: vi.fn(),
   mockOutcomeResult: vi.fn(),
   mockStateResult: vi.fn(),
+  mockDiagnosticResult: vi.fn(),
   mockIntegrityResult: vi.fn(),
   mockFrom: vi.fn(),
   mockRpc: vi.fn(),
@@ -43,7 +45,9 @@ vi.mock('@/lib/supabase/service-role', () => ({
         ? mockNodeResult
         : table === 'curriculum_outcomes'
           ? mockOutcomeResult
-          : mockStateResult
+          : table === 'user_diagnostic_outcome_state'
+            ? mockDiagnosticResult
+            : mockStateResult
       const builder: Record<string, unknown> = {}
       builder.select = vi.fn((columns: string) => {
         mockSelect(table, columns)
@@ -106,6 +110,7 @@ describe('GET /api/profile/mastery', () => {
     mockNodeResult.mockReturnValue({ data: NODES, error: null })
     mockOutcomeResult.mockReturnValue({ data: OUTCOMES, error: null })
     mockStateResult.mockReturnValue({ data: [], error: null })
+    mockDiagnosticResult.mockReturnValue({ data: [], error: null })
     mockIntegrityResult.mockReturnValue({
       data: { total: 1, mapped: 1, unmapped: 0, scopeMismatch: 0, nodeOrphan: 0, outcomeOrphan: 0 },
       error: null,
@@ -138,6 +143,7 @@ describe('GET /api/profile/mastery', () => {
         mappedQuestions: 0,
         percentage: 0,
       },
+      discovery: null,
       graph: null,
       outcomes: [],
     })
@@ -169,6 +175,7 @@ describe('GET /api/profile/mastery', () => {
       }],
       error: null,
     })
+    mockDiagnosticResult.mockReturnValue({ data: [{ outcome_id: OUTCOME_ID }], error: null })
 
     const response = await GET(request() as never)
     const body = await response.json()
@@ -184,6 +191,16 @@ describe('GET /api/profile/mastery', () => {
       code: 'course',
       nodeType: 'course',
       children: [{ children: [{ children: [{ outcomeCode: 'MAT-SAY-01' }] }] }],
+    })
+    expect(body.discovery).toEqual({
+      level: 3,
+      stage: 'ready',
+      diagnosticCompleted: true,
+      evidenceCollected: 3,
+      evidenceTarget: 3,
+      readyOutcomes: 1,
+      totalOutcomes: 1,
+      journeyPercentage: 100,
     })
     expect(body.outcomes[0]).toMatchObject({
       code: 'MAT-SAY-01',
@@ -208,6 +225,7 @@ describe('GET /api/profile/mastery', () => {
     expect(mockEq).toHaveBeenCalledWith('curriculum_outcomes', 'exam_ref', 'TYT')
     expect(mockEq).toHaveBeenCalledWith('curriculum_nodes', 'taxonomy_version', 'ba-tyt-math-v1')
     expect(mockEq).toHaveBeenCalledWith('curriculum_outcomes', 'taxonomy_version', 'ba-tyt-math-v1')
+    expect(mockEq).toHaveBeenCalledWith('user_diagnostic_outcome_state', 'user_id', USER_ID)
   })
 
   it('coverage veya graph butunlugu bozuksa fail-closed 500 doner', async () => {
@@ -261,5 +279,6 @@ describe('GET /api/profile/mastery', () => {
     await GET(request() as never)
     const selections = mockSelect.mock.calls.map((call) => String(call[1])).join(' ')
     expect(selections).not.toMatch(/selected_option|content|answer_id|session_id|attempt_id/)
+    expect(mockSelect).toHaveBeenCalledWith('user_diagnostic_outcome_state', 'outcome_id')
   })
 })

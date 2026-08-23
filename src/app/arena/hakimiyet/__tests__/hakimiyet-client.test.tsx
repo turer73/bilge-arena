@@ -36,6 +36,7 @@ describe('HakimiyetClient', () => {
     mockedUseMasteryMap.mockReset()
     mockedUseMasteryMap.mockReturnValue({
       response: null,
+      discovery: null,
       graph: null,
       outcomes: [],
       coverage: { supported: false, taxonomyVersion: null, totalQuestions: 0, mappedQuestions: 0, percentage: 0 },
@@ -54,6 +55,7 @@ describe('HakimiyetClient', () => {
     authState.user = { id: 'u1' }
     mockedUseMasteryMap.mockReturnValue({
       response: { game: 'matematik' } as never,
+      discovery: null,
       graph: { code: 'course' } as never,
       outcomes: [],
       coverage: { supported: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 1, mappedQuestions: 1, percentage: 100 },

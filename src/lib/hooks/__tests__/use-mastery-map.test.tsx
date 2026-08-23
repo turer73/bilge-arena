@@ -44,6 +44,7 @@ function mastery(game = 'matematik', examRef: string | null = 'TYT') {
       mappedQuestions: 10,
       percentage: 100,
     },
+    discovery: { level: 3, stage: 'ready', diagnosticCompleted: true, evidenceCollected: 3, evidenceTarget: 3, readyOutcomes: 1, totalOutcomes: 1, journeyPercentage: 100 },
     graph: {
       code: 'course',
       title: 'TYT Matematik',
@@ -95,6 +96,7 @@ describe('useMasteryMap', () => {
     )
     expect(result.current.graph?.nodeType).toBe('course')
     expect(result.current.coverage.percentage).toBe(100)
+    expect(result.current.discovery?.stage).toBe('ready')
     expect(result.current.outcomes[0]?.code).toBe('MAT-SAY-01')
   })
 

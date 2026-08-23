@@ -303,7 +303,11 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 : null}
               onStart={startTodayPlan}
             />
-            <MasteryMapCard outcomes={masteryMap.outcomes} loading={masteryMap.loading} />
+            <MasteryMapCard
+              outcomes={masteryMap.outcomes}
+              discovery={masteryMap.discovery}
+              loading={masteryMap.loading}
+            />
           </div>
         )}
         <Lobby

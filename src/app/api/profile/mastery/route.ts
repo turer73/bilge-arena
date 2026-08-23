@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (game !== PILOT_GAME || examRef !== PILOT_EXAM_REF) {
-    return noStoreJson({ game, examRef, coverage: unsupportedCoverage(), graph: null, outcomes: [] })
+    return noStoreJson({ game, examRef, coverage: unsupportedCoverage(), discovery: null, graph: null, outcomes: [] })
   }
 
   const supabase = createServiceRoleClient()
@@ -180,14 +180,22 @@ export async function GET(request: NextRequest) {
 
     const outcomes = (outcomeResult.data ?? []) as OutcomeRow[]
     const outcomeIds = outcomes.map((outcome) => outcome.id)
-    const stateResult = outcomeIds.length > 0
-      ? await supabase
-        .from('user_outcome_state')
-        .select('outcome_id, attempts, correct_attempts, weighted_earned, weighted_possible, delayed_correct, v2_attempts, difficulty_weighted_earned, difficulty_weighted_possible, timed_attempts, total_time_sec, fast_wrong, hinted_attempts, hint_stage_sum, guess_annotations, careless_annotations, last_answered_at')
-        .eq('user_id', user.id)
-        .in('outcome_id', outcomeIds)
-      : { data: [], error: null }
+    const [stateResult, diagnosticStateResult] = outcomeIds.length > 0
+      ? await Promise.all([
+        supabase
+          .from('user_outcome_state')
+          .select('outcome_id, attempts, correct_attempts, weighted_earned, weighted_possible, delayed_correct, v2_attempts, difficulty_weighted_earned, difficulty_weighted_possible, timed_attempts, total_time_sec, fast_wrong, hinted_attempts, hint_stage_sum, guess_annotations, careless_annotations, last_answered_at')
+          .eq('user_id', user.id)
+          .in('outcome_id', outcomeIds),
+        supabase
+          .from('user_diagnostic_outcome_state')
+          .select('outcome_id')
+          .eq('user_id', user.id)
+          .in('outcome_id', outcomeIds),
+      ])
+      : [{ data: [], error: null }, { data: [], error: null }]
     if (stateResult.error) throw stateResult.error
+    if (diagnosticStateResult.error) throw diagnosticStateResult.error
 
     const coverage: MasteryCoveragePublic = {
       supported: true,
@@ -237,6 +245,8 @@ export async function GET(request: NextRequest) {
         carelessAnnotations: Number(state.careless_annotations),
         lastAnsweredAt: state.last_answered_at,
       })),
+      diagnosticOutcomeIds: ((diagnosticStateResult.data ?? []) as Array<{ outcome_id: string }>)
+        .map((state) => state.outcome_id),
     })
     if (!response) throw new Error('curriculum_graph_invalid')
 

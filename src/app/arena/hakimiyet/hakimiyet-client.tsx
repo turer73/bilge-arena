@@ -72,6 +72,7 @@ export default function HakimiyetClient() {
         <MasteryGraph
           graph={mastery.graph}
           coverage={mastery.coverage}
+          discovery={mastery.discovery}
           outcomes={mastery.outcomes}
           onPractice={handlePractice}
         />

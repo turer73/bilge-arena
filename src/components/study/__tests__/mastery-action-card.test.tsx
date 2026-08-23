@@ -110,4 +110,41 @@ describe('MasteryActionCard', () => {
     expect(state.selectedMode).toBe('practice')
     expect(pushMock).toHaveBeenCalledWith('/arena/matematik')
   })
+
+  test('ilk kullanımda skor yerine keşif turuna yönlendirir', () => {
+    mockedUseMasteryMap.mockReturnValue({
+      outcomes: [mkOutcome({ status: 'insufficient', attempts: 0, score: 0 })],
+      discovery: {
+        level: 1, stage: 'estimate', diagnosticCompleted: false,
+        evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0,
+        totalOutcomes: 1, journeyPercentage: 0,
+      },
+      loading: false,
+    } as never)
+    render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
+
+    expect(screen.getByText('KEŞİF SEVİYESİ 1/3')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Keşif Turunu Başlat' })).toHaveAttribute('href', '/arena/tani')
+    expect(screen.queryByText(/zayıf/i)).not.toBeInTheDocument()
+  })
+
+  test('kanıt evresinde en az denenmiş kazanımı sıraya alır', () => {
+    mockedUseMasteryMap.mockReturnValue({
+      outcomes: [
+        mkOutcome({ code: 'IKI', title: 'İki kez denendi', status: 'insufficient', attempts: 2 }),
+        mkOutcome({ code: 'SIFIR', title: 'Henüz denenmedi', status: 'insufficient', attempts: 0 }),
+      ],
+      discovery: {
+        level: 2, stage: 'evidence', diagnosticCompleted: true,
+        evidenceCollected: 2, evidenceTarget: 6, readyOutcomes: 0,
+        totalOutcomes: 2, journeyPercentage: 50,
+      },
+      loading: false,
+    } as never)
+    render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
+
+    expect(screen.getByText('KEŞİF SEVİYESİ 2/3')).toBeInTheDocument()
+    expect(screen.getByText('Henüz denenmedi')).toBeInTheDocument()
+    expect(screen.queryByText('İki kez denendi')).not.toBeInTheDocument()
+  })
 })

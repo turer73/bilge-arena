@@ -19,7 +19,7 @@ function byLowestReliableScore(a: MasteryOutcome, b: MasteryOutcome) {
 export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardProps) {
   const router = useRouter()
   const gameStore = useGameStore()
-  const { outcomes, loading } = useMasteryMap(game, userId, examRef)
+  const { outcomes, discovery, loading } = useMasteryMap(game, userId, examRef)
 
   if (!userId || loading || outcomes.length === 0) return null
 
@@ -29,13 +29,42 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
     .sort(byLowestReliableScore)
   const collectingEvidence = outcomes
     .filter((outcome) => outcome.status === 'insufficient')
-    .sort((a, b) => b.attempts - a.attempts || a.title.localeCompare(b.title, 'tr'))
+    .sort((a, b) => a.attempts - b.attempts || a.title.localeCompare(b.title, 'tr'))
   // Yeterli kanıtı olan gelişen kazanım önce gelir. Kanıtı yetersiz konu “zayıf” diye sunulmaz.
   const nextAction = developing[0] ?? collectingEvidence[0]
 
   const mapParams = new URLSearchParams({ game })
   if (examRef) mapParams.set('exam_ref', examRef)
   const mapHref = `/arena/hakimiyet?${mapParams}`
+
+  if (discovery?.stage === 'estimate') {
+    return (
+      <article
+        className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-shadow-accent)]"
+        style={{ animationDelay: '0.34s', animationFillMode: 'both' }}
+      >
+        <div className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-accent-tint)] px-4 py-3">
+          <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">KEŞİF SEVİYESİ 1/3</p>
+          <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">Henüz not vermiyoruz; başlangıç yönünü arıyoruz.</p>
+        </div>
+        <div className="p-4 md:p-5">
+          <h2 className="text-base font-black text-[var(--app-text)]">Nereden başlayacağını birlikte bulalım</h2>
+          <p className="mt-2 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
+            8 dakikalık tanılama altı çekirdek kazanım için düşük güvenli bir başlangıç tahmini üretir. Kalıcı hâkimiyet kararı yalnız doğrulanmış pratik kanıtlarıyla açılır.
+          </p>
+          <Link
+            href="/arena/tani"
+            className="mt-4 flex min-h-12 w-full items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
+          >
+            Keşif Turunu Başlat
+          </Link>
+          <Link href={mapHref} className="mt-2 flex min-h-11 items-center justify-center text-xs font-black text-[var(--app-text-sub)] hover:text-[var(--app-accent-text)] hover:underline">
+            Boş kanıt haritasını gör
+          </Link>
+        </div>
+      </article>
+    )
+  }
 
   if (!nextAction) {
     return (
@@ -72,8 +101,14 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card-sunken)] px-4 py-3">
         <div>
-          <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">SIRADAKİ EN İYİ ADIM</p>
-          <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">Planından sonra buna odaklan</p>
+          <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">
+            {discovery?.stage === 'evidence' ? 'KEŞİF SEVİYESİ 2/3' : 'SIRADAKİ EN İYİ ADIM'}
+          </p>
+          <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">
+            {discovery?.stage === 'evidence'
+              ? `${discovery.evidenceCollected}/${discovery.evidenceTarget} doğrulanmış kanıt · ${discovery.readyOutcomes}/${discovery.totalOutcomes} kazanım hazır`
+              : 'Planından sonra buna odaklan'}
+          </p>
         </div>
         <div className="flex gap-1.5" aria-label="Kazanım durumları">
           {strongCount > 0 && (
