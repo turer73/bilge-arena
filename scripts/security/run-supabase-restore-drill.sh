@@ -265,6 +265,10 @@ VALIDATION_GATE="$(docker exec -i "$CONTAINER_NAME" psql \
 SELECT (
   current_setting('server_version') LIKE '17.%'
   AND (SELECT count(*) FROM pg_catalog.pg_tables WHERE schemaname = 'public') > 0
+  AND (SELECT count(*) FROM auth.users) > 0
+  AND (SELECT count(*) FROM public.profiles) > 0
+  AND (SELECT count(*) FROM public.questions) > 0
+  AND (SELECT count(*) FROM public.pilot_institutions) > 0
   AND (
     SELECT count(*)
     FROM supabase_migrations.schema_migrations

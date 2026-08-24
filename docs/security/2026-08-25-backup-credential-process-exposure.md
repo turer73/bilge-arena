@@ -20,7 +20,10 @@ yerine geçmez; veri sorumlusu ve hukukçu log/erişim kapsamını ayrıca değe
   olmadığı doğrulandı.
 - Canlı `/opt/backup/bilge-arena/bilge-arena-backup.sh` düzeltildi. URI artık
   komut argümanına veya Docker environment metadata'sına verilmez; `0600`
-  geçici dosya konteynere salt-okunur bağlanır ve yalnız konteyner içinde okunur.
+  geçici dosya konteynere salt-okunur bağlanır, URI konteyner içinde ayrıştırılır
+  ve parola [libpq password-file](https://www.postgresql.org/docs/17/libpq-pgpass.html)
+  mekanizmasıyla sağlanır. `pg_dump` argv'sinde yalnız gizli olmayan host, port,
+  kullanıcı ve veritabanı alanları bulunur; `--no-password` etkindir.
 - Betik çıkışında geçici dump ve secret dosyası trap ile silinir. Tatbikat sonunda
   eşleşen secret geçici dosyası sayısı sıfırdı.
 - Önceki betik geri dönüş kanıtı için tutuldu fakat modu `0600` yapılarak çalıştırma

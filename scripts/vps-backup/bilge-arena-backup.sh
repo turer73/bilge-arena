@@ -108,8 +108,97 @@ timeout 600 docker run --rm --network host \
   --env PGCONNECT_TIMEOUT=30 \
   --volume "$DB_URL_FILE:/run/secrets/bilge-arena-dburl:ro" \
   postgres:17-alpine \
-  sh -c 'DBURL="$(cat /run/secrets/bilge-arena-dburl)"; exec pg_dump \
-    --dbname="$DBURL" \
+  sh -c '
+    set -eu
+
+    uri_decode() {
+      encoded="$(printf "%s" "$1" | sed -E "s/\\\\/\\\\\\\\/g; s/%([0-9A-Fa-f]{2})/\\\\x\\1/g")"
+      printf "%b" "$encoded"
+    }
+
+    pgpass_escape() {
+      printf "%s" "$1" | sed "s/\\\\/\\\\\\\\/g; s/:/\\\\:/g"
+    }
+
+    DBURL="$(cat /run/secrets/bilge-arena-dburl)"
+    case "$DBURL" in
+      postgres://*|postgresql://*) ;;
+      *) printf "invalid database URI scheme\\n" >&2; exit 41 ;;
+    esac
+
+    target="${DBURL#*://}"
+    case "$target" in
+      *@*/*) ;;
+      *) printf "database URI is missing userinfo or database\\n" >&2; exit 42 ;;
+    esac
+
+    userinfo="${target%@*}"
+    host_path="${target##*@}"
+    case "$userinfo" in
+      *:*) ;;
+      *) printf "database URI is missing password\\n" >&2; exit 43 ;;
+    esac
+
+    user_encoded="${userinfo%%:*}"
+    password_encoded="${userinfo#*:}"
+    authority="${host_path%%/*}"
+    database_query="${host_path#*/}"
+    database_encoded="${database_query%%\?*}"
+
+    case "$authority" in
+      \[*\]:*)
+        host_encoded="${authority%%]*}"
+        host_encoded="${host_encoded#[}"
+        port="${authority##*:}"
+        ;;
+      *:*)
+        host_encoded="${authority%:*}"
+        port="${authority##*:}"
+        ;;
+      *)
+        host_encoded="$authority"
+        port=5432
+        ;;
+    esac
+
+    case "$port" in
+      ""|*[!0-9]*) printf "invalid database port\\n" >&2; exit 44 ;;
+    esac
+
+    host="$(uri_decode "$host_encoded")"
+    user="$(uri_decode "$user_encoded")"
+    password="$(uri_decode "$password_encoded")"
+    database="$(uri_decode "$database_encoded")"
+    if [ -z "$host" ] || [ -z "$user" ] || [ -z "$password" ] || [ -z "$database" ]; then
+      printf "database URI contains an empty required field\\n" >&2
+      exit 45
+    fi
+
+    for value in "$host" "$user" "$password" "$database"; do
+      cleaned="$(printf "%s" "$value" | tr -d "\\r\\n")"
+      if [ "$cleaned" != "$value" ]; then
+        printf "database URI contains a control newline\\n" >&2
+        exit 46
+      fi
+    done
+
+    passfile=/tmp/bilge-arena.pgpass
+    printf "%s:%s:%s:%s:%s\\n" \
+      "$(pgpass_escape "$host")" \
+      "$(pgpass_escape "$port")" \
+      "$(pgpass_escape "$database")" \
+      "$(pgpass_escape "$user")" \
+      "$(pgpass_escape "$password")" > "$passfile"
+    chmod 0600 "$passfile"
+
+    unset DBURL target userinfo host_path password password_encoded cleaned value encoded
+    export PGPASSFILE="$passfile" PGSSLMODE=require
+    exec pg_dump \
+    --host="$host" \
+    --port="$port" \
+    --username="$user" \
+    --dbname="$database" \
+    --no-password \
     --no-owner \
     --no-publications \
     --no-subscriptions \
