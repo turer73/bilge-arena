@@ -29,6 +29,7 @@ describe('/gizlilik-politikasi', () => {
   it('gizlilik metninde calismayi ihlal bildirimi olarak adlandirmaz', () => {
     render(<PrivacyPage />)
 
+    expect(screen.getByText('Son güncelleme: 24 Ağustos 2026')).toBeInTheDocument()
     expect(screen.getByText(/Geçmiş yetkili iç güvenlik testinin sınıflandırması/u)).toBeInTheDocument()
     expect(screen.queryByText(/son ihlal bildirimi/u)).not.toBeInTheDocument()
   })

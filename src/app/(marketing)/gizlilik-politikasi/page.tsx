@@ -12,7 +12,7 @@ export default function GizlilikPolitikasiPage() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
       <h1 className="mb-2 text-3xl font-bold">Gizlilik Politikası</h1>
-      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 17 Mayıs 2026</p>
+      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 24 Ağustos 2026</p>
 
       <div className="prose-custom space-y-8 text-sm leading-relaxed text-[var(--text-muted)]">
         <section>
