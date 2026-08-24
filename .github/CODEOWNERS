@@ -1,0 +1,10 @@
+# Repository-wide fallback owner.
+* @turer73
+
+# Security-sensitive and release-critical surfaces.
+/.github/ @turer73
+/database/migrations/ @turer73
+/src/app/api/ @turer73
+/src/lib/supabase/ @turer73
+/package.json @turer73
+/package-lock.json @turer73

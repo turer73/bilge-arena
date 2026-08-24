@@ -5,9 +5,13 @@ const mocks = vi.hoisted(() => ({
   logAdminAction: vi.fn(),
   rpc: vi.fn(),
   limiter: vi.fn(),
+  onboardingEnabled: vi.fn(),
 }))
 
-vi.mock('@/lib/institution-pilot/server-security', () => ({ isInstitutionPilotEnabled: () => true }))
+vi.mock('@/lib/institution-pilot/server-security', () => ({
+  isInstitutionPilotEnabled: () => true,
+  isInstitutionOnboardingEnabled: mocks.onboardingEnabled,
+}))
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie' })) }))
 vi.mock('@/lib/supabase/admin', () => ({
   checkPermission: mocks.checkPermission,
@@ -36,9 +40,21 @@ beforeEach(() => {
   mocks.checkPermission.mockResolvedValue(ADMIN)
   mocks.limiter.mockResolvedValue({ success: true })
   mocks.logAdminAction.mockResolvedValue(undefined)
+  mocks.onboardingEnabled.mockReturnValue(true)
 })
 
 describe('admin institution routes', () => {
+  it('keeps new paid institution onboarding fail-closed without its explicit switch', async () => {
+    mocks.onboardingEnabled.mockReturnValue(false)
+
+    const response = await POST(post({ name: 'Bilge Kurs', managerUserId: MANAGER_ID }))
+
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({ error: 'Yeni kurum kabulü kapalı' })
+    expect(mocks.checkPermission).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
   it('denies callers without the institution management permission', async () => {
     mocks.checkPermission.mockResolvedValue(null)
     expect((await GET()).status).toBe(403)

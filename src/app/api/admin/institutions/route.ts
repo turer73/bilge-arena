@@ -9,7 +9,10 @@ import {
   provisionInstitutionResultSchema,
 } from '@/lib/institution-admin/contracts'
 import { institutionPilotRpcStatus } from '@/lib/institution-pilot/server-contract'
-import { isInstitutionPilotEnabled } from '@/lib/institution-pilot/server-security'
+import {
+  isInstitutionOnboardingEnabled,
+  isInstitutionPilotEnabled,
+} from '@/lib/institution-pilot/server-security'
 
 const provisionLimiter = createRateLimiter('admin-institution-provision', 5, 60_000)
 
@@ -49,6 +52,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isInstitutionOnboardingEnabled()) {
+    return noStore({ error: 'Yeni kurum kabulü kapalı' }, 503)
+  }
+
   const context = await requireInstitutionAdmin()
   if (!context.ok) return context.response
 
