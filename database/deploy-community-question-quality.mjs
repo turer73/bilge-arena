@@ -20,6 +20,11 @@ const migrations = [
     name: '147_community_question_quality_worker_role',
     file: new URL('./migrations/147_community_question_quality_worker_role.sql', import.meta.url),
   },
+  {
+    version: '20260824083000',
+    name: '148_community_question_quality_control_seed',
+    file: new URL('./migrations/148_community_question_quality_control_seed.sql', import.meta.url),
+  },
 ]
 
 if (!token) throw new Error('SUPABASE_ACCESS_TOKEN is required')
@@ -80,7 +85,8 @@ async function state() {
         FROM supabase_migrations.schema_migrations
         WHERE name IN (
           '146_community_question_quality_consensus',
-          '147_community_question_quality_worker_role'
+          '147_community_question_quality_worker_role',
+          '148_community_question_quality_control_seed'
         )
       ), '{}'::json),
       'latestMigration', (SELECT max(version) FROM supabase_migrations.schema_migrations),
@@ -98,6 +104,15 @@ async function state() {
           AND (SELECT count(*) FROM public.role_permissions permission
                WHERE permission.role_id=role.id
                  AND permission.permission IN ('content.appeals.manage','content.corrections.apply'))=2
+      ),
+      'controls', json_build_object(
+        'active', (SELECT count(*) FROM public.question_quality_controls WHERE active),
+        'seededDeterministic', (
+          SELECT count(*) FROM public.question_quality_controls
+          WHERE active
+            AND proof_kind='deterministic'
+            AND proof_evidence->>'seed'='community-quality-control-seed-v1'
+        )
       ),
       'controlCandidates', json_build_object(
         'officialExamPublished', (
@@ -160,7 +175,8 @@ console.log(JSON.stringify({ action, phase: 'after', ...after }, null, 2))
 if (action === 'apply') {
   const missingHistory = migrations.filter((migration) => !after.recorded?.[migration.name])
   const missingObjects = Object.entries(after.objects).filter(([, present]) => !present)
-  if (missingHistory.length || missingObjects.length || !after.workerRole) {
-    throw new Error(`Production verification failed: ${JSON.stringify({ missingHistory, missingObjects, workerRole: after.workerRole })}`)
+  const missingControls = Number(after.controls?.active ?? 0) < 5 || Number(after.controls?.seededDeterministic ?? 0) !== 5
+  if (missingHistory.length || missingObjects.length || !after.workerRole || missingControls) {
+    throw new Error(`Production verification failed: ${JSON.stringify({ missingHistory, missingObjects, workerRole: after.workerRole, controls: after.controls })}`)
   }
 }
