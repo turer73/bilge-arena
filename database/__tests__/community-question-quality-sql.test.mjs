@@ -15,6 +15,7 @@ describe('community question-quality SQL contract', () => {
       expect(functionBody).toMatch(/END;\s*\$fn\$;$/)
     }
     expect(migration).not.toMatch(/IS DISTINCT FROM CASE\b/)
+    expect(migration).not.toMatch(/\bleading\s+AS\s*\(/i)
   })
 
   it('requires a server-side immutable answer lock before claim submission', () => {

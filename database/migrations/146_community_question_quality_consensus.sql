@@ -881,7 +881,7 @@ BEGIN
     FROM public.question_quality_claims cl
     LEFT JOIN public.question_quality_worker_profiles w ON w.user_id=cl.user_id AND w.domain=domain_name
     WHERE cl.case_id=p_case_id
-  ), leading AS (
+  ), leading_group AS (
     SELECT reason_code,correction_fingerprint,count(*)::integer AS total,
       count(DISTINCT independence_key)::integer AS clusters,
       count(*) FILTER(WHERE trusted)::integer AS trusted_total
@@ -891,7 +891,7 @@ BEGIN
     LIMIT 1
   )
   SELECT reason_code,correction_fingerprint,total,clusters,trusted_total
-  INTO leading_reason,leading_fingerprint,leading_total,leading_clusters,trusted_flaw FROM leading;
+  INTO leading_reason,leading_fingerprint,leading_total,leading_clusters,trusted_flaw FROM leading_group;
 
   WITH scored AS (
     SELECT cl.*,
