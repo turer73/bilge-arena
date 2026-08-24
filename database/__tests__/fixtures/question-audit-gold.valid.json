@@ -3,6 +3,8 @@
     "questionId": "clean-question",
     "contentSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "flawCodes": [],
+    "evidenceClass": "curator_adjudicated",
+    "proofRef": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "reviewerCount": 2,
     "adjudication": "consensus",
     "reviewerRefs": [
@@ -14,6 +16,8 @@
     "questionId": "wrong-key-question",
     "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "flawCodes": ["WRONG_KEY_SUSPECTED"],
+    "evidenceClass": "curator_adjudicated",
+    "proofRef": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "reviewerCount": 3,
     "adjudication": "adjudicated",
     "reviewerRefs": [

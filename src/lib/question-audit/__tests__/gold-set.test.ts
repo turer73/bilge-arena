@@ -17,6 +17,7 @@ describe('buildHumanGoldSet', () => {
   it('iki ayni kor etiketi consensus gold kaydina donusturur', () => {
     expect(buildHumanGoldSet([review(A, []), review(B, [])])).toEqual([{
       questionId: 'q1', contentSha256: HASH, flawCodes: [], reviewerCount: 2,
+      evidenceClass: 'curator_adjudicated', proofRef: HASH,
       adjudication: 'consensus', reviewerRefs: [A, B],
     }])
   })
@@ -36,6 +37,7 @@ describe('buildHumanGoldSet', () => {
       review(A, []), review(B, ['WRONG_KEY_SUSPECTED']), adjudicator,
     ])[0]).toMatchObject({
       flawCodes: ['WRONG_KEY_SUSPECTED'], reviewerCount: 3,
+      evidenceClass: 'curator_adjudicated', proofRef: HASH,
       adjudication: 'adjudicated', reviewerRefs: [A, B, C],
     })
   })

@@ -8,6 +8,7 @@ import {
   Castle,
   GraduationCap,
   PenLine,
+  BadgeCheck,
   ShoppingBag,
   Swords,
   type LucideIcon,
@@ -45,6 +46,14 @@ const EXPLORE_ITEMS: ExploreItem[] = [
     description: 'Topluluğa katkı yap',
     badge: 'KATKI',
     icon: PenLine,
+    color: 'var(--growth)',
+  },
+  {
+    href: '/arena/kalite-gorevleri',
+    title: 'Kalite Görevleri',
+    description: 'Soruları doğrula, katkı yap',
+    badge: 'PİLOT',
+    icon: BadgeCheck,
     color: 'var(--growth)',
   },
   {

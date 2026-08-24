@@ -23,8 +23,8 @@ permissions:
   contents: read
 
 jobs:
-  human-gold-release-gate:
-    name: Human-gold release gate
+  hybrid-gold-release-gate:
+    name: Independent hybrid-gold release gate
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment: question-quality-promotion
@@ -45,13 +45,13 @@ jobs:
 
       - run: npm ci
 
-      - name: Materialize access-controlled human-gold labels
+      - name: Materialize access-controlled hybrid-gold labels
         shell: bash
         run: |
           set -euo pipefail
           test -n "$GOLD_LABELS_GZIP_B64" || { echo "::error::QUESTION_AUDIT_GOLD_LABELS_GZIP_B64 is required"; exit 1; }
           printf '%s' "$GOLD_LABELS_GZIP_B64" | base64 --decode | gzip --decompress > "$RUNNER_TEMP/gold-labels.json"
-          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/gold-labels.json','utf8')); const flawed=Array.isArray(x)?x.filter(v=>Array.isArray(v.flawCodes)&&v.flawCodes.length>0).length:0; const clean=Array.isArray(x)?x.length-flawed:0; if(!Array.isArray(x)||x.length<100||flawed<20||clean<50) throw new Error('held-out gold set needs >=100 labels, >=20 flawed, >=50 clean'); console.log({labels:x.length,flawed,clean})"
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/gold-labels.json','utf8')); const flawed=Array.isArray(x)?x.filter(v=>Array.isArray(v.flawCodes)&&v.flawCodes.length>0).length:0; const clean=Array.isArray(x)?x.length-flawed:0; const by=Array.isArray(x)?Object.fromEntries(['deterministic_gold','official_source_gold','curator_adjudicated'].map(k=>[k,x.filter(v=>v.evidenceClass===k).length])):{}; if(!Array.isArray(x)||x.length<100||flawed<20||clean<50||by.deterministic_gold<60||by.official_source_gold<20||by.curator_adjudicated<20) throw new Error('held-out hybrid gold needs >=100 labels, >=20 flawed, >=50 clean, and 60/20/20 independent evidence composition'); console.log({labels:x.length,flawed,clean,by})"
 
       - name: Audit exact held-out revisions
         run: >-

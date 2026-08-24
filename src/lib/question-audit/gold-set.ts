@@ -121,6 +121,8 @@ export function buildHumanGoldSet(files: readonly ExpertReviewFile[]): GoldLabel
       questionId: first.questionId,
       contentSha256: first.contentSha256.toLowerCase(),
       flawCodes: canonicalCodes(finalCodes),
+      evidenceClass: 'curator_adjudicated',
+      proofRef: first.contentSha256.toLowerCase(),
       reviewerCount: disputed ? 3 : 2,
       adjudication: disputed ? 'adjudicated' : 'consensus',
       reviewerRefs: disputed

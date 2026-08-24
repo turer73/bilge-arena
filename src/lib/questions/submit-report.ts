@@ -8,7 +8,13 @@ export type ReportSubmitResult =
 
 export async function submitQuestionReport(
   questionId: string,
-  data: { type: string; description: string },
+  data: {
+    type: string
+    description: string
+    proposedAnswerIndex?: number
+    correctionText?: string
+    confidence?: number
+  },
   context: { attemptId?: string | null } = {},
 ): Promise<ReportSubmitResult> {
   try {
@@ -21,6 +27,9 @@ export async function submitQuestionReport(
         attemptId: context.attemptId ?? null,
         report_type: data.type,
         description: data.description,
+        ...(data.proposedAnswerIndex !== undefined ? { proposed_answer_index: data.proposedAnswerIndex } : {}),
+        ...(data.correctionText?.trim() ? { correction_text: data.correctionText.trim() } : {}),
+        ...(data.confidence !== undefined ? { confidence: data.confidence } : {}),
         requestId,
       }),
     })

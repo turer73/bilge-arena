@@ -1,5 +1,5 @@
 /**
- * İnsan-adjudikasyonlu altın küme karşısında denetim hattını ölçer.
+ * Bağımsız kanıtlı hibrit altın küme karşısında denetim hattını ölçer.
  *
  * Bu dosya soru bankasını değil, LLM hakemini değerlendirir. Modelin mevcut
  * cevap anahtarıyla mutabakatı bir altın standart değildir: banka ve model aynı
@@ -17,9 +17,12 @@ export interface GoldLabel {
   contentSha256: string
   /** Nihai insan bulguları. Boş dizi = bilinen kusur sınıflarından temiz. */
   flawCodes: FlawCode[]
-  /** En az iki bağımsız uzman veya anlaşmazlık halinde adjudikatör. */
+  evidenceClass: 'deterministic_gold' | 'official_source_gold' | 'curator_adjudicated'
+  /** Kanıt gövdesini açmadan bütünlüğünü bağlayan 64-hex referans. */
+  proofRef: string
+  /** Curator sınıfında 2/3; biçimsel ve resmî kanıtta 0. */
   reviewerCount: number
-  adjudication: 'consensus' | 'adjudicated'
+  adjudication: 'deterministic' | 'official_source' | 'consensus' | 'adjudicated'
   /** Kimlik taşımayan, 64 hex karakterli farklı uzman referansları. */
   reviewerRefs: string[]
 }
@@ -233,21 +236,36 @@ export function validateGoldLabels(labels: readonly GoldLabel[]): void {
       throw new Error('gecersiz gold etiket yapisi')
     }
     if (typeof label.contentSha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(label.contentSha256)) throw new Error(`gecersiz gold content hash: ${label.questionId}`)
-    if (!Number.isInteger(label.reviewerCount) || label.reviewerCount < 2) throw new Error(`gold etiket en az iki reviewer ister: ${label.questionId}`)
+    if (!['deterministic_gold','official_source_gold','curator_adjudicated'].includes(label.evidenceClass)) {
+      throw new Error(`gold kanit sinifi gecersiz: ${label.questionId}`)
+    }
+    if (typeof label.proofRef !== 'string' || !/^[a-f0-9]{64}$/i.test(label.proofRef)) {
+      throw new Error(`gold proofRef gecersiz: ${label.questionId}`)
+    }
+    if (!Number.isInteger(label.reviewerCount) || label.reviewerCount < 0) throw new Error(`gold reviewer sayisi gecersiz: ${label.questionId}`)
     if (
       !Array.isArray(label.reviewerRefs)
       || label.reviewerRefs.length !== label.reviewerCount
       || new Set(label.reviewerRefs.map((ref: unknown) => typeof ref === 'string' ? ref.toLowerCase() : ref)).size !== label.reviewerRefs.length
       || label.reviewerRefs.some((ref: unknown) => typeof ref !== 'string' || !/^[a-f0-9]{64}$/i.test(ref))
     ) throw new Error(`gold etiket farkli ve anonim reviewer referanslari ister: ${label.questionId}`)
-    if (label.adjudication !== 'consensus' && label.adjudication !== 'adjudicated') {
+    if (!['deterministic','official_source','consensus','adjudicated'].includes(label.adjudication)) {
       throw new Error(`gold adjudikasyon tamamlanmamis: ${label.questionId}`)
     }
-    if (label.adjudication === 'consensus' && label.reviewerCount !== 2) {
+    if (label.evidenceClass==='deterministic_gold' && (label.adjudication!=='deterministic' || label.reviewerCount!==0 || label.reviewerRefs.length!==0)) {
+      throw new Error(`deterministic gold insan reviewer tasiyamaz: ${label.questionId}`)
+    }
+    if (label.evidenceClass==='official_source_gold' && (label.adjudication!=='official_source' || label.reviewerCount!==0 || label.reviewerRefs.length!==0)) {
+      throw new Error(`official source gold insan reviewer tasiyamaz: ${label.questionId}`)
+    }
+    if (label.evidenceClass==='curator_adjudicated' && label.adjudication === 'consensus' && label.reviewerCount !== 2) {
       throw new Error(`gold consensus tam iki reviewer ister: ${label.questionId}`)
     }
-    if (label.adjudication === 'adjudicated' && label.reviewerCount !== 3) {
+    if (label.evidenceClass==='curator_adjudicated' && label.adjudication === 'adjudicated' && label.reviewerCount !== 3) {
       throw new Error(`gold adjudikasyon tam uc reviewer ister: ${label.questionId}`)
+    }
+    if (label.evidenceClass==='curator_adjudicated' && !['consensus','adjudicated'].includes(label.adjudication)) {
+      throw new Error(`curator gold insan adjudikasyonu ister: ${label.questionId}`)
     }
     const key = `${label.questionId}:${label.contentSha256.toLowerCase()}`
     if (seen.has(key)) throw new Error(`yinelenen gold etiket: ${key}`)

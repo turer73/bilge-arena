@@ -56,6 +56,11 @@ const REPORT_TYPES = [
 export const errorReportSchema = z.object({
   report_type: z.enum(REPORT_TYPES),
   description: z.string().trim().max(1000).optional().default(''),
+  // Community quality claims are optional at the legacy boundary. The
+  // governed route applies the stricter academic-claim schema below.
+  proposed_answer_index: z.number().int().min(0).max(4).optional(),
+  correction_text: z.string().trim().max(1000).optional(),
+  confidence: z.number().int().min(0).max(100).optional(),
 })
 
 // In-app "soru hatali" bildirimi (#379): modal report'una questionId eklenir.
@@ -63,6 +68,58 @@ export const errorReportSubmitSchema = errorReportSchema.extend({
   questionId: z.string().uuid(),
   attemptId: z.string().uuid().nullable().optional(),
   requestId: z.string().uuid().optional(),
+})
+
+/**
+ * Governed community-quality claim. Academic claims must be bound to an
+ * issued attempt (the quiz has already been answered) and carry enough
+ * structured evidence for later weighted consensus. Legacy report types keep
+ * their old, deliberately lightweight contract.
+ */
+export const qualityClaimSubmitSchema = errorReportSubmitSchema.superRefine((value, ctx) => {
+  if (!['wrong_answer', 'unclear'].includes(value.report_type)) return
+  if (!value.attemptId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['attemptId'], message: 'Cevaplanmis soru kaniti gerekli' })
+  }
+  if ((value.description ?? '').trim().length < 20) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['description'], message: 'Gerekce en az 20 karakter olmali' })
+  }
+  if (value.proposed_answer_index === undefined && !(value.correction_text ?? '').trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['correction_text'], message: 'Onerilen cevap veya duzeltme gerekli' })
+  }
+  if (value.confidence === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['confidence'], message: 'Guven duzeyi gerekli' })
+  }
+})
+
+export const qualityMissionAnswerLockSchema = z.object({
+  missionId: z.string().uuid(),
+  selectedAnswerIndex: z.number().int().min(0).max(4),
+  requestId: z.string().uuid(),
+})
+
+export const qualityMissionSubmitSchema = z.object({
+  missionId: z.string().uuid(),
+  selectedAnswerIndex: z.number().int().min(0).max(4),
+  verdict: z.enum(['clean', 'flawed']),
+  reasonCode: z.enum(['wrong_key', 'ambiguous', 'invalid_content', 'outcome_mismatch', 'other']).nullable().optional(),
+  proposedAnswerIndex: z.number().int().min(0).max(4).nullable().optional(),
+  correctionText: z.string().trim().max(1000).nullable().optional(),
+  explanation: z.string().trim().max(2000).default(''),
+  confidence: z.number().int().min(0).max(100),
+  requestId: z.string().uuid(),
+}).superRefine((value, ctx) => {
+  if (value.verdict === 'clean') {
+    if (value.reasonCode || value.proposedAnswerIndex != null || value.correctionText) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Temiz karari duzeltme tasiyamaz' })
+    }
+    return
+  }
+  if (!value.reasonCode) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['reasonCode'], message: 'Hata turu gerekli' })
+  if (value.explanation.length < 20) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['explanation'], message: 'Gerekce en az 20 karakter olmali' })
+  if (value.proposedAnswerIndex == null && !value.correctionText) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['correctionText'], message: 'Onerilen cevap veya duzeltme gerekli' })
+  }
 })
 
 // Yanlis Defteri hata nedeni: serbest metin yok, yalniz dusuk kardinalli katalog.
