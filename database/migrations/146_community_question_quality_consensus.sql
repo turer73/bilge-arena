@@ -385,9 +385,9 @@ BEGIN
     SELECT * INTO claim FROM public.question_quality_claims WHERE mission_id=mission.id;
     IF claim.solved_answer_index IS DISTINCT FROM p_solved_answer_index
       OR claim.verdict IS DISTINCT FROM p_verdict
-      OR claim.reason_code IS DISTINCT FROM CASE WHEN p_verdict='flawed' THEN p_reason_code ELSE NULL END
-      OR claim.proposed_answer_index IS DISTINCT FROM CASE WHEN p_verdict='flawed' THEN p_proposed_answer_index ELSE NULL END
-      OR claim.correction_text IS DISTINCT FROM CASE WHEN p_verdict='flawed' THEN NULLIF(btrim(COALESCE(p_correction_text,'')),'') ELSE NULL END
+      OR claim.reason_code IS DISTINCT FROM (CASE WHEN p_verdict='flawed' THEN p_reason_code ELSE NULL END)
+      OR claim.proposed_answer_index IS DISTINCT FROM (CASE WHEN p_verdict='flawed' THEN p_proposed_answer_index ELSE NULL END)
+      OR claim.correction_text IS DISTINCT FROM (CASE WHEN p_verdict='flawed' THEN NULLIF(btrim(COALESCE(p_correction_text,'')),'') ELSE NULL END)
       OR claim.explanation IS DISTINCT FROM btrim(COALESCE(p_explanation,''))
       OR claim.confidence IS DISTINCT FROM p_confidence THEN
       RAISE EXCEPTION 'quality appeal already has different evidence' USING ERRCODE='P0003';
@@ -633,9 +633,9 @@ BEGIN
     SELECT * INTO claim FROM public.question_quality_claims WHERE mission_id=mission.id;
     IF claim.solved_answer_index IS DISTINCT FROM p_selected_answer_index
       OR claim.verdict IS DISTINCT FROM p_verdict
-      OR claim.reason_code IS DISTINCT FROM CASE WHEN p_verdict='flawed' THEN p_reason_code ELSE NULL END
-      OR claim.proposed_answer_index IS DISTINCT FROM CASE WHEN p_verdict='flawed' THEN p_proposed_answer_index ELSE NULL END
-      OR claim.correction_text IS DISTINCT FROM CASE WHEN p_verdict='flawed' THEN NULLIF(btrim(COALESCE(p_correction_text,'')),'') ELSE NULL END
+      OR claim.reason_code IS DISTINCT FROM (CASE WHEN p_verdict='flawed' THEN p_reason_code ELSE NULL END)
+      OR claim.proposed_answer_index IS DISTINCT FROM (CASE WHEN p_verdict='flawed' THEN p_proposed_answer_index ELSE NULL END)
+      OR claim.correction_text IS DISTINCT FROM (CASE WHEN p_verdict='flawed' THEN NULLIF(btrim(COALESCE(p_correction_text,'')),'') ELSE NULL END)
       OR claim.explanation IS DISTINCT FROM btrim(COALESCE(p_explanation,''))
       OR claim.confidence IS DISTINCT FROM p_confidence THEN
       RAISE EXCEPTION 'quality mission is already submitted with different evidence' USING ERRCODE='P0003';

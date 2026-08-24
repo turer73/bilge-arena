@@ -14,6 +14,7 @@ describe('community question-quality SQL contract', () => {
     for (const functionBody of plpgsqlFunctions) {
       expect(functionBody).toMatch(/END;\s*\$fn\$;$/)
     }
+    expect(migration).not.toMatch(/IS DISTINCT FROM CASE\b/)
   })
 
   it('requires a server-side immutable answer lock before claim submission', () => {
