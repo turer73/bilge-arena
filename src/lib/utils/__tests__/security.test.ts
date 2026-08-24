@@ -24,6 +24,10 @@ describe('escapeForLike', () => {
     expect(escapeForLike('normal text')).toBe('normal text')
   })
 
+  it('escapes the escape character before wildcards', () => {
+    expect(escapeForLike('path\\100%_done')).toBe('path\\\\100\\%\\_done')
+  })
+
   it('handles empty string', () => {
     expect(escapeForLike('')).toBe('')
   })

@@ -101,7 +101,6 @@ Her soru için passage'daki 3 ifade ${topic} konusuna ait olmalı.`
     cleaned = cleaned
       .replace(/,\s*([}\]])/g, '$1')          // trailing comma
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // control chars
-      .replace(/\\n/g, '\\n')                  // normalize escaped newlines
       .replace(/\n/g, '\\n')                   // escape real newlines in values
     try { parsed = JSON.parse(cleaned) } catch {
       // Son çare: her { } bloğunu ayrı parse et

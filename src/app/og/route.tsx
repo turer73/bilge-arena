@@ -6,14 +6,15 @@ import { NextRequest } from 'next/server'
 export const runtime = 'edge'
 
 let interBoldPromise: Promise<ArrayBuffer> | null = null
+const INTER_BOLD_URL = 'https://bilgearena.com/fonts/Inter-Bold.woff'
 
 export async function GET(request: NextRequest) {
-  const { origin, searchParams } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
   const title = searchParams.get('title') || 'Bilge Arena'
   const subtitle = searchParams.get('subtitle') || 'YKS · LGS · AYT Hazırlık Platformu'
 
   if (!interBoldPromise) {
-    interBoldPromise = fetch(`${origin}/fonts/Inter-Bold.woff`).then((res) =>
+    interBoldPromise = fetch(INTER_BOLD_URL).then((res) =>
       res.arrayBuffer(),
     )
   }

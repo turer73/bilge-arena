@@ -32,17 +32,17 @@ if (
   process.stderr.write('Usage: node database/build-coach-review-template.mjs --manifest <json> --source <json|jsonl> --staging <jsonl> --output <review.json>\n')
   process.exit(2)
 }
-if (existsSync(outputPath)) {
-  process.stderr.write(`Refusing to overwrite review file: ${outputPath}\n`)
-  process.exit(2)
-}
-
 try {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   const template = buildReviewTemplate(manifest, readRows(sourcePath), readRows(stagingPath))
-  writeFileSync(outputPath, `${JSON.stringify(template, null, 2)}\n`, 'utf8')
+  writeFileSync(outputPath, `${JSON.stringify(template, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 })
   process.stdout.write(`Review template bound to ${template.items.length} validated staging records.\n`)
 } catch (error) {
-  process.stderr.write(`Review template build failed: ${error.message}\n`)
-  process.exitCode = 1
+  if (error?.code === 'EEXIST') {
+    process.stderr.write(`Refusing to overwrite review file: ${outputPath}\n`)
+    process.exitCode = 2
+  } else {
+    process.stderr.write(`Review template build failed: ${error.message}\n`)
+    process.exitCode = 1
+  }
 }

@@ -132,11 +132,10 @@ async function main() {
       '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease', '-q:v', '5', poster,
     ], { stdio: 'ignore' })
 
-    const hdMB = (fs.statSync(hd).size / 1048576).toFixed(2)
-    console.log(`  hd=${hdMB}MB`)
-
     const hdBuf = fs.readFileSync(hd)
     const posterBuf = fs.readFileSync(poster)
+    const hdMB = (hdBuf.byteLength / 1048576).toFixed(2)
+    console.log(`  hd=${hdMB}MB`)
     const up1 = await supabase.storage.from('video-backgrounds').upload(`${it.slug}/hd.mp4`, hdBuf, { contentType: 'video/mp4', upsert: true })
     const up2 = await supabase.storage.from('video-backgrounds').upload(`${it.slug}/poster.jpg`, posterBuf, { contentType: 'image/jpeg', upsert: true })
     if (up1.error || up2.error) {

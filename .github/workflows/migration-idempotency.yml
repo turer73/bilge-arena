@@ -20,6 +20,9 @@ on:
       - 'database/lint-migrations.mjs'
       - 'database/migration-idempotency-baseline.json'
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest

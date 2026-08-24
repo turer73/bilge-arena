@@ -23,6 +23,7 @@ import { NextRequest } from 'next/server'
 export const runtime = 'edge'
 
 let interBoldPromise: Promise<ArrayBuffer> | null = null
+const INTER_BOLD_URL = 'https://bilgearena.com/fonts/Inter-Bold.woff'
 
 /**
  * Inter-Bold.woff fetch with cache + fail-state reset.
@@ -31,11 +32,11 @@ let interBoldPromise: Promise<ArrayBuffer> | null = null
  * sonraki request'lerde de bozuk doner — edge worker recycle olana kadar
  * kalici outage. Fix: reject path'inde cache reset (transient hata recoverable).
  */
-async function getInterBold(origin: string): Promise<ArrayBuffer> {
+async function getInterBold(): Promise<ArrayBuffer> {
   if (!interBoldPromise) {
     interBoldPromise = (async () => {
       try {
-        const res = await fetch(`${origin}/fonts/Inter-Bold.woff`)
+        const res = await fetch(INTER_BOLD_URL)
         if (!res.ok) {
           throw new Error(
             `Inter-Bold.woff fetch failed: ${res.status} ${res.statusText}`,
@@ -57,12 +58,12 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> },
 ) {
   const { code } = await params
-  const { origin, searchParams } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
   const title = searchParams.get('title') || 'Bilge Arena Yarışması'
   const score = searchParams.get('score')
   const category = searchParams.get('category')
 
-  const interBold = await getInterBold(origin)
+  const interBold = await getInterBold()
 
   return new ImageResponse(
     (
