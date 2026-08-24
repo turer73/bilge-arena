@@ -372,10 +372,14 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
 
   it('lists tenants for platform admins without exposing the directory to managers', async () => {
     await expectPgError(
-      () => rpc('public.list_pilot_institutions($1)', [managerOne]),
+      () => authenticatedRpc(managerOne, 'public.list_pilot_institutions($1)', [managerOne]),
       '42501',
     )
-    const directory = await rpc('public.list_pilot_institutions($1)', [platformAdmin])
+    const directory = await authenticatedRpc(
+      platformAdmin,
+      'public.list_pilot_institutions($1)',
+      [platformAdmin],
+    )
     expect(directory.institutions).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: institutionOne,
