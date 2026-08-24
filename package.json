@@ -92,7 +92,7 @@
     "eslint": "^9.27.0",
     "eslint-config-next": "^16.3.2",
     "husky": "^9.1.7",
-    "jsdom": "^28.1.0",
+    "jsdom": "^30.0.1",
     "pg": "^8.23.0",
     "postcss": "^8.5.26",
     "supabase": "2.111.0",
