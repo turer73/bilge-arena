@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { randomUUID } from 'node:crypto'
+import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import { createServer } from 'vite'
 
@@ -34,7 +35,14 @@ const rpc = async (name, args) => {
   return data
 }
 
-const vite = await createServer({ root: process.cwd(), server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' })
+const sourceRoot = fileURLToPath(new URL('../src', import.meta.url))
+const vite = await createServer({
+  root: process.cwd(),
+  resolve: { alias: { '@': sourceRoot } },
+  server: { middlewareMode: true },
+  appType: 'custom',
+  logLevel: 'error',
+})
 let processed = 0
 let consensusProcessed = 0
 let failures = 0

@@ -23,8 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -40,4 +40,3 @@ jobs:
           QUESTION_QUALITY_MODEL_B: ${{ vars.QUESTION_QUALITY_MODEL_B }}
           QUESTION_QUALITY_RESEARCH_MODEL: ${{ vars.QUESTION_QUALITY_RESEARCH_MODEL }}
         run: npm run quality:community-verify -- --confirm --limit ${{ inputs.limit || '10' }}
-
