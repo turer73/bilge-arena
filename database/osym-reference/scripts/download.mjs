@@ -51,8 +51,8 @@ for (const pdf of targets) {
   try {
     await download(pdf.url, dest)
     console.log('✓')
-  } catch (e) {
-    console.log(`✗ ${e.message}`)
+  } catch {
+    console.log('✗ indirme başarısız')
   }
 }
 console.log('Bitti.')
