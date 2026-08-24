@@ -22,7 +22,7 @@ export default function GirisClient() {
     const rawNext = typeof window === 'undefined'
       ? null
       : new URLSearchParams(window.location.search).get('next')
-    const requestedNext = rawNext === null ? fallbackNext : safeAuthNext(rawNext)
+    const requestedNext = safeAuthNext(rawNext ?? fallbackNext)
     // Once giris yap, sonra consent logla
     if (forceAccountSelection) {
       await signInWithGoogle(requestedNext, { forceAccountSelection: true })
