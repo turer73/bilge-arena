@@ -1,4 +1,3 @@
-import Script from 'next/script'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import dynamic from 'next/dynamic'
@@ -9,7 +8,7 @@ import { SWRegister } from '@/components/layout/sw-register'
 import { PWAInstallPrompt } from '@/components/layout/pwa-install-prompt'
 import { OfflineIndicator } from '@/components/layout/offline-indicator'
 import { GlobalBackground } from '@/components/layout/global-background'
-import { GoogleAnalytics } from '@/components/analytics/google-analytics'
+import { PrivacySafeThirdPartyScripts } from '@/components/analytics/privacy-safe-third-party-scripts'
 import { TEACHER_INVITE_BOOTSTRAP_SCRIPT } from '@/lib/teacher-classroom/invite-bootstrap'
 import { ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT } from '@/lib/experiments/activation'
 import './globals.css'
@@ -157,8 +156,6 @@ export default function RootLayout({
         {/* Preconnect — Supabase API + Storage (fontlar artik lokal; Google Fonts CDN gerekmiyor) */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
-        {/* Plausible Analytics — SSR-rendered so the domain-verify crawler (static HTML fetch) can detect it */}
-        <script defer data-domain="bilgearena.com" src="https://analytics.panola.app/js/script.js" />
       </head>
       <body className="min-h-screen bg-[var(--bg)] font-body text-[var(--text)] antialiased">
         <script
@@ -172,16 +169,7 @@ export default function RootLayout({
         <CookieBanner />
         <SWRegister />
         <PWAInstallPrompt />
-        <GoogleAnalytics />
-        {process.env.NEXT_PUBLIC_ADSENSE_ID && (
-          <Script
-            {...{
-              src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`,
-              strategy: 'afterInteractive' as const,
-              crossOrigin: 'anonymous',
-            }}
-          />
-        )}
+        <PrivacySafeThirdPartyScripts />
       </body>
     </html>
   )

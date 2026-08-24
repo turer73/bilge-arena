@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { trackEvent } from '@/lib/utils/plausible'
+import { isCurrentBrowserPathSensitive } from '@/lib/privacy/telemetry-policy'
 
 type TrackedCtaVariant = 'primary' | 'ghost'
 
@@ -34,7 +35,7 @@ export function TrackedCtaLink({
 
     trackEvent('MarketingCtaClicked', { props })
 
-    if (typeof window.gtag === 'function') {
+    if (!isCurrentBrowserPathSensitive() && typeof window.gtag === 'function') {
       window.gtag('event', 'marketing_cta_click', props)
     }
   }

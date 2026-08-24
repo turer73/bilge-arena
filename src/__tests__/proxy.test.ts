@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockGetUser, mockPermissionViaRest } = vi.hoisted(() => ({
+const { mockGetUser, mockGetAal, mockPermissionViaRest } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
+  mockGetAal: vi.fn(),
   mockPermissionViaRest: vi.fn(),
 }))
 
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({
-    auth: { getUser: mockGetUser },
+    auth: {
+      getUser: mockGetUser,
+      mfa: { getAuthenticatorAssuranceLevel: mockGetAal },
+    },
   })),
 }))
 
@@ -26,6 +30,7 @@ describe('admin proxy permission boundary', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key'
+    mockGetAal.mockResolvedValue({ data: { currentLevel: 'aal2', nextLevel: 'aal2' }, error: null })
   })
 
   it('redirects an unauthenticated request to login', async () => {
@@ -60,5 +65,16 @@ describe('admin proxy permission boundary', () => {
 
     const response = await proxy(request())
     expect(response.headers.get('location')).toBe('https://bilgearena.com/arena')
+  })
+
+  it('redirects an AAL1 admin session to TOTP verification before permission lookup', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: '11111111-1111-4111-8111-111111111111' } } })
+    mockGetAal.mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal2' }, error: null })
+
+    const response = await proxy(request('/admin/kurumlar'))
+    expect(response.headers.get('location')).toBe(
+      'https://bilgearena.com/hesap/guvenlik?next=%2Fadmin%2Fkurumlar',
+    )
+    expect(mockPermissionViaRest).not.toHaveBeenCalled()
   })
 })

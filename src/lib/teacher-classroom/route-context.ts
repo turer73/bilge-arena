@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import {
   checkTeacherClassroomRateLimit,
@@ -10,11 +9,12 @@ import {
   getTeacherClassroomServerConfig,
   type TeacherClassroomServerConfig,
 } from './server-security'
+import { getAal2Status } from '@/lib/auth/aal2'
 
 export type TeacherClassroomRouteContext = {
   ok: true
   userId: string
-  admin: ReturnType<typeof createServiceRoleClient>
+  admin: Awaited<ReturnType<typeof createClient>>
   config: TeacherClassroomServerConfig
 }
 
@@ -45,13 +45,28 @@ export async function requireTeacherClassroomRouteContext(
     }
   }
 
-  const rateLimit = await checkTeacherClassroomRateLimit(limiter, user.id, request.headers)
-  if (!rateLimit.success) {
+  if (teacherOnly && !(await getAal2Status(cookieClient)).isAal2) {
     return {
       ok: false,
       response: teacherClassroomNoStoreJson(
-        { error: 'Çok fazla istek' },
-        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter ?? 60) } },
+        {
+          error: 'İki adımlı doğrulama gerekli',
+          code: 'aal2_required',
+          mfaUrl: '/hesap/guvenlik?next=/arena/sinif/ogretmen',
+        },
+        { status: 428 },
+      ),
+    }
+  }
+
+  const rateLimit = await checkTeacherClassroomRateLimit(limiter, user.id, request.headers)
+  if (!rateLimit.success) {
+    const backendUnavailable = rateLimit.reason === 'backend_unavailable'
+    return {
+      ok: false,
+      response: teacherClassroomNoStoreJson(
+        { error: backendUnavailable ? 'Güvenlik servisi geçici olarak kullanılamıyor' : 'Çok fazla istek' },
+        { status: backendUnavailable ? 503 : 429, headers: { 'Retry-After': String(rateLimit.retryAfter ?? 60) } },
       ),
     }
   }
@@ -63,15 +78,5 @@ export async function requireTeacherClassroomRouteContext(
     }
   }
 
-  try {
-    return { ok: true, userId: user.id, admin: createServiceRoleClient(), config }
-  } catch {
-    return {
-      ok: false,
-      response: teacherClassroomNoStoreJson(
-        { error: 'Sınıf pilotu yapılandırılmadı' },
-        { status: 503 },
-      ),
-    }
-  }
+  return { ok: true, userId: user.id, admin: cookieClient, config }
 }
