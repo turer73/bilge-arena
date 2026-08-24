@@ -61,7 +61,7 @@ tamamlanana kadar ücretli kurum kabulü kapalı kalır.
 | Migration 136 trigger grant kaçağı | Canlıda kapandı | Migration 152 forward revoke + migration 136 sonrası SECURITY DEFINER CI linteri |
 | Idempotency ledger'ları süresiz | Canlı şema tamam, cron deploy bekliyor | 30–730 gün güvenli aralık; varsayılan 90 gün; günlük service-role cron |
 | Platform kurum RPC'leri service-role taşıyıcılı | Canlı grant tamam, route deploy bekliyor | Listeleme, provisioning, destek görünümü ve durum değişimi caller JWT ile çalışır |
-| Beş eski fonksiyonda mutable `search_path` | Migration/deploy bekliyor | Migration 153, fonksiyon OID ve trigger bağlarını değiştirmeden `pg_catalog, public` pinler |
+| Beş eski fonksiyonda mutable `search_path` | Canlıda kapandı | Migration 153, fonksiyon OID ve trigger bağlarını değiştirmeden `pg_catalog, public` pinledi |
 
 Opus'un `pg_trgm` ve `unaccent` extension'larının `public` şemasında olması notu
 ayrı bir bakım değişikliğidir. Extension taşıma; wrapper fonksiyonu, expression
@@ -74,14 +74,17 @@ kanıtı tamamlanmadan “canlıda kapandı” denmez.
 
 ### 24 Ağustos canlı şema kanıtı
 
-- Migration 149–152 ayrı transaction'lar halinde başarıyla uygulandı ve
-  `supabase_migrations.schema_migrations` ledger'ında 4/4 kayıt doğrulandı.
+- Migration 149–153 ayrı transaction'lar halinde başarıyla uygulandı ve
+  `supabase_migrations.schema_migrations` ledger'ında 5/5 kayıt doğrulandı.
 - `set_pilot_institution_status`: `authenticated=true`, `service_role=false`.
 - `provision_pilot_institution`: `authenticated=true`, `anon=false`.
 - `prune_institution_request_ledgers`: `service_role=true`, `authenticated=false`.
 - `tg_require_question_validation_decision`: `anon=false`.
 - `institution_operation_events_event_type_check`,
   `institution_status_changed` olayını kabul ediyor.
+- Opus/Supabase Advisor'da kalan beş eski fonksiyonun tamamında
+  `proconfig=["search_path=pg_catalog, public"]` ve migration 153 ledger kaydı
+  canlı sorguyla doğrulandı.
 
 ## Yedek ve geri dönüş tatbikatı
 
