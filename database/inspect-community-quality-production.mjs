@@ -10,7 +10,9 @@ if (!token || !projectRef) {
 const query = `
 SELECT json_build_object(
   'migration146Recorded', EXISTS (
-    SELECT 1 FROM supabase_migrations.schema_migrations WHERE version = '146'
+    SELECT 1
+    FROM supabase_migrations.schema_migrations
+    WHERE version = '146' OR name = 'community_question_quality_consensus'
   ),
   'latestMigration', (
     SELECT max(version) FROM supabase_migrations.schema_migrations
@@ -24,6 +26,15 @@ SELECT json_build_object(
     FROM information_schema.columns
     WHERE table_schema = 'supabase_migrations'
       AND table_name = 'schema_migrations'
+  ),
+  'recentMigrations', (
+    SELECT json_agg(row_to_json(recent) ORDER BY recent.version)
+    FROM (
+      SELECT version, name
+      FROM supabase_migrations.schema_migrations
+      ORDER BY version DESC
+      LIMIT 12
+    ) recent
   ),
   'dependencies', json_build_object(
     'profiles', to_regclass('public.profiles') IS NOT NULL,
