@@ -29,6 +29,10 @@ jobs:
 
       - run: npm ci
 
+      - name: Inspect community quality production prerequisites
+        if: github.event_name == 'workflow_dispatch'
+        run: node database/inspect-community-quality-production.mjs
+
       - name: Generate types from production schema
         run: npm run db:types
 
