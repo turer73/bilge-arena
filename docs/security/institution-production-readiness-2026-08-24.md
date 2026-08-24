@@ -13,7 +13,7 @@ insan/tedarikçi kararı bekleyen kapıları birbirinden ayırır.
 | Personel AAL2 | Canlı şema tamam, uygulama deploy bekliyor | TOTP enrollment/challenge ve proxy kapısına ek olarak migration 155, doğrudan Supabase RPC çağrılarında JWT `aal=aal2` şartını veritabanında uygular |
 | Tenant audit | Canlı şema tamam, uygulama deploy bekliyor | Migration 145 + 149 + 154 + 155; kritik kurum/sınıf işlemleri immutable event, davet/review/exam-mode hedef ve sonuç alanları doğrulandı |
 | JWT-bound RPC | Canlı şema tamam, deploy bekliyor | Migration 150 + 155 canlıda; kurum, öğretmen ve platform kurum RPC'leri caller JWT, AAL2 ve aktif tenant durumuna bağlı; anon kapalı. Route'ların kullanıcı JWT'sine geçişi merge/deploy bekliyor |
-| DSAR export | Canlı şema tamam, deploy bekliyor | Migration 154 + 155 canlıda; kimliği doğrulanmış `/api/account/export`; katalogdan yalnız veri sahibini işaret eden UUID sütunlarını ve ilişkili answer/submission-item satırlarını derleyen service-role-only RPC; öğretmenin öğrencilerine ait satırlar dışarıda; no-store JSON; production rate limit |
+| DSAR export | Canlı şema tamam, deploy bekliyor | Migration 154 + 155 + 156 canlıda; kimliği doğrulanmış `/api/account/export`; katalogdan yalnız veri sahibini işaret eden UUID sütunlarını ve ilişkili answer/submission-item satırlarını derleyen service-role-only RPC; öğretmenin öğrencilerine ait satırlar ve rapor edilen kullanıcıya ait olmayan moderasyon/raportör verileri dışarıda; no-store JSON; production rate limit |
 | İstek ledger imhası | Canlı şema tamam, cron deploy bekliyor | Migration 152 + 155 canlıda; günlük cron idempotency ledger'larını varsayılan 90 gün sonunda silmeden önce kalıcı hash tombstone üretir, request UUID tekrar kullanımını reddeder ve immutable audit event'leri korur. 30 günden yeni cutoff SQL'de reddedilir |
 | Genel otomatik imha | Kısmi / hukuk kararı bekliyor | Hesap, sınıf üyeliği, rapor ve audit kategorilerinin tamamını kapsayan onaylı saklama matrisi henüz yok. Ledger kontrolü genel KVKK imha politikası yerine geçmez |
 | Tenant A/B gerçek oturum | Bloke | İki ayrı yetkili test hesabı ve izole test tenant'ı tahsis edilmedi |
@@ -64,6 +64,7 @@ tamamlanana kadar ücretli kurum kabulü kapalı kalır.
 | Beş eski fonksiyonda mutable `search_path` | Canlıda kapandı | Migration 153, fonksiyon OID ve trigger bağlarını değiştirmeden `pg_catalog, public` pinledi |
 | PR agent review birinci tur kapanışı | Canlı şema tamam, deploy bekliyor | Migration 154 canlıda: davet audit çözümleme, arşiv tenant görünürlüğü ve DSAR katalog kapsamı; API telemetri filtresi, SPA document boundary, overload-duyarlı grant linteri, MFA cookie aktarımı ve doğru idempotent durum yanıtı merge/deploy bekliyor |
 | PR agent review ikinci tur kapanışı | Canlı şema tamam, deploy bekliyor | Migration 155 canlıda: RPC içi AAL2, askıya alınan tenant classroom blokajı, öğretmen/öğrenci DSAR izolasyonu, request tombstone'ları, review/exam audit alanları; admin limiter backend kesintisinde 503 uygulama deploy'unu bekliyor |
+| PR agent review üçüncü tur kapanışı | Canlı şema tamam, deploy bekliyor | Migration 156 canlıda: `user_reports` genel subject katalogundan çıkarıldı; yalnız reporter-owned ve minimize edilmiş projection döner, rapor edilen kullanıcı reporter/moderasyon satırını alamaz |
 
 Opus'un `pg_trgm` ve `unaccent` extension'larının `public` şemasında olması notu
 ayrı bir bakım değişikliğidir. Extension taşıma; wrapper fonksiyonu, expression
@@ -76,8 +77,8 @@ kanıtı tamamlanmadan “canlıda kapandı” denmez.
 
 ### 24 Ağustos canlı şema kanıtı
 
-- Migration 149–155 ayrı transaction'lar halinde başarıyla uygulandı ve
-  `supabase_migrations.schema_migrations` ledger'ında 7/7 kayıt doğrulandı.
+- Migration 149–156 ayrı transaction'lar halinde başarıyla uygulandı ve
+  `supabase_migrations.schema_migrations` ledger'ında 8/8 kayıt doğrulandı.
 - `set_pilot_institution_status`: `authenticated=true`, `service_role=false`.
 - `provision_pilot_institution`: `authenticated=true`, `anon=false`.
 - `prune_institution_request_ledgers`: `service_role=true`, `authenticated=false`.
@@ -99,6 +100,13 @@ kanıtı tamamlanmadan “canlıda kapandı” denmez.
   service rolüne doğrudan `SELECT` vermiyor. Review hedefi ve exam-mode audit
   alanı kaynak kontrolleri `true`, migration ledger kaydı mevcut ve 149–155
   toplamı canlı sorguda 7 olarak döndü.
+- Migration 156 için `export_account_data(uuid)` fonksiyonunun `user_reports`
+  tablosunu genel katalog export'undan çıkardığı, yalnız `reporter_id=$1`
+  satırlarını açık alan projection'ıyla döndürdüğü; tam satır, `admin_note` ve
+  `resolved_by` projection'ı içermediği canlı fonksiyon kaynağında doğrulandı.
+  RPC `anon=false`, `authenticated=false`, `service_role=true`, sabit
+  `search_path=pg_catalog`; migration ledger kaydı mevcut ve 149–156 toplamı
+  canlı sorguda 8 olarak döndü.
 
 ## Yedek ve geri dönüş tatbikatı
 
