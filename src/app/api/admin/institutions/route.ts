@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { checkPermission, logAdminAction } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import {
   institutionAdminDirectorySchema,
+  institutionStatusInputSchema,
+  institutionStatusResultSchema,
   provisionInstitutionInputSchema,
   provisionInstitutionResultSchema,
 } from '@/lib/institution-admin/contracts'
@@ -15,12 +16,26 @@ import {
 } from '@/lib/institution-pilot/server-security'
 
 const provisionLimiter = createRateLimiter('admin-institution-provision', 5, 60_000)
+const statusLimiter = createRateLimiter('admin-institution-status', 20, 60_000)
 
-function noStore(body: unknown, status = 200) {
+function noStore(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return NextResponse.json(body, {
     status,
-    headers: { 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer' },
+    headers: {
+      'Cache-Control': 'private, no-store',
+      'Referrer-Policy': 'no-referrer',
+      ...headers,
+    },
   })
+}
+
+function rateLimitFailure(result: { reason?: string; retryAfter?: number }) {
+  const unavailable = result.reason === 'backend_unavailable'
+  return noStore(
+    { error: unavailable ? 'İstek sınırı altyapısı kullanılamıyor' : 'Çok fazla kurum isteği' },
+    unavailable ? 503 : 429,
+    { 'Retry-After': String(result.retryAfter ?? 60) },
+  )
 }
 
 type InstitutionAdminContext =
@@ -40,8 +55,7 @@ export async function GET() {
   const context = await requireInstitutionAdmin()
   if (!context.ok) return context.response
 
-  const service = createServiceRoleClient()
-  const { data, error } = await service.rpc('list_pilot_institutions', {
+  const { data, error } = await context.supabase.rpc('list_pilot_institutions', {
     p_user_id: context.admin.id,
   })
   if (error) return noStore({ error: 'Kurum listesi alınamadı' }, institutionPilotRpcStatus(error.code))
@@ -60,7 +74,7 @@ export async function POST(request: NextRequest) {
   if (!context.ok) return context.response
 
   const rateLimit = await provisionLimiter.check(context.admin.id)
-  if (!rateLimit.success) return noStore({ error: 'Çok fazla kurum oluşturma isteği' }, 429)
+  if (!rateLimit.success) return rateLimitFailure(rateLimit)
 
   let body: unknown
   try {
@@ -71,8 +85,7 @@ export async function POST(request: NextRequest) {
   const input = provisionInstitutionInputSchema.safeParse(body)
   if (!input.success) return noStore({ error: 'Kurum adı ve yönetici seçimi geçersiz' }, 400)
 
-  const service = createServiceRoleClient()
-  const { data, error } = await service.rpc('provision_pilot_institution', {
+  const { data, error } = await context.supabase.rpc('provision_pilot_institution', {
     p_user_id: context.admin.id,
     p_name: input.data.name,
     p_manager_user_id: input.data.managerUserId,
@@ -91,4 +104,53 @@ export async function POST(request: NextRequest) {
     request,
   })
   return noStore(parsed.data, 201)
+}
+
+export async function PATCH(request: NextRequest) {
+  const context = await requireInstitutionAdmin()
+  if (!context.ok) return context.response
+
+  const rateLimit = await statusLimiter.check(context.admin.id)
+  if (!rateLimit.success) return rateLimitFailure(rateLimit)
+
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return noStore({ error: 'Geçersiz istek' }, 400)
+  }
+  const input = institutionStatusInputSchema.safeParse(body)
+  if (!input.success) return noStore({ error: 'Kurum durumu veya gerekçe geçersiz' }, 400)
+
+  const { data, error } = await context.supabase.rpc('set_pilot_institution_status', {
+    p_user_id: context.admin.id,
+    p_institution_id: input.data.institutionId,
+    p_status: input.data.status,
+    p_reason: input.data.reason,
+    p_request_id: input.data.requestId,
+  })
+  if (error) return noStore({ error: 'Kurum durumu güncellenemedi' }, institutionPilotRpcStatus(error.code))
+
+  const parsed = institutionStatusResultSchema.safeParse(data)
+  if (!parsed.success) return noStore({ error: 'Kurum durumu sonucu doğrulanamadı' }, 500)
+  const { error: auditError } = await logAdminAction(context.supabase, {
+    adminId: context.admin.id,
+    action: 'set_institution_status',
+    targetType: 'pilot_institution',
+    targetId: parsed.data.institutionId,
+    details: {
+      previousStatus: parsed.data.previousStatus,
+      status: parsed.data.status,
+      reason: input.data.reason,
+      changed: parsed.data.changed,
+    },
+    request,
+  })
+  // The RPC has already committed both the lifecycle mutation and its immutable
+  // institution_operation_events evidence. admin_logs is a redundant platform
+  // log; its failure must not make the caller retry a successful mutation.
+  if (auditError) {
+    console.error('[Institution Status] ikincil admin günlüğü yazılamadı:', auditError.message)
+  }
+  return noStore(parsed.data)
 }

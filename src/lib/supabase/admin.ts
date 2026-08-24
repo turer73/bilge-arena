@@ -2,6 +2,7 @@ import { createClient } from './server'
 import { getClientIp } from '@/lib/utils/client-ip'
 import type { Role } from '@/types/database'
 import type { User } from '@supabase/supabase-js'
+import { getAal2Status, permissionRequiresAal2 } from '@/lib/auth/aal2'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
@@ -16,6 +17,11 @@ export async function checkPermission(
 ): Promise<User | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+
+  if (permissionRequiresAal2(requiredPermission)) {
+    const aal = await getAal2Status(supabase)
+    if (!aal.isAal2) return null
+  }
 
   const { data } = await supabase
     .from('role_permissions')

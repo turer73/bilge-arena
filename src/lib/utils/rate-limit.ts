@@ -1,8 +1,9 @@
 /**
- * Hybrid rate limiter: Upstash Redis varsa kullan, yoksa in-memory fallback.
+ * Hybrid rate limiter: Upstash Redis varsa kullan, yalnizca development/test
+ * ortaminda in-memory fallback'e izin ver.
  *
  * Production'da KV_REST_API_URL + KV_REST_API_TOKEN env var'lari
- * set edilmeli. Yoksa in-memory limiter calismaya devam eder (burst korumasi).
+ * set edilmelidir. Production'da eksik/erisilemez Redis fail-closed davranir.
  */
 
 import { Ratelimit } from '@upstash/ratelimit'
@@ -23,10 +24,6 @@ function getRedis(): Redis | null {
 
   if (url && token) {
     redis = new Redis({ url, token })
-  } else if (process.env.NODE_ENV === 'production') {
-    // Serverless/multi-instance'da in-memory limiter her instance icin AYRI sayar →
-    // rate limit etkisi zayiflar. Prod'da Upstash/KV env var'lari set EDILMELI.
-    console.warn('[rate-limit] Redis yok (UPSTASH_REDIS_REST_* / KV_REST_API_*) — in-memory fallback aktif; multi-instance prod icin guvenilir DEGIL.')
   }
   redisChecked = true
   return redis
@@ -82,6 +79,12 @@ function createInMemoryLimiter(name: string, limit: number, windowMs: number) {
 
 // ─── Public API ──────────────────────────────────────────────
 
+export type RateLimitResult = {
+  success: boolean
+  retryAfter?: number
+  reason?: 'limit_exceeded' | 'backend_unavailable'
+}
+
 // Limiter cache — Ratelimit instance'larini yeniden olusturma
 const redisLimiterCache = new Map<string, Ratelimit>()
 const memoryLimiterCache = new Map<string, ReturnType<typeof createInMemoryLimiter>>()
@@ -96,7 +99,7 @@ const memoryLimiterCache = new Map<string, ReturnType<typeof createInMemoryLimit
  */
 export function createRateLimiter(name: string, limit: number, windowMs = 60_000) {
   return {
-    async check(key: string): Promise<{ success: boolean; retryAfter?: number }> {
+    async check(key: string): Promise<RateLimitResult> {
       const redisClient = getRedis()
 
       if (redisClient) {
@@ -109,16 +112,37 @@ export function createRateLimiter(name: string, limit: number, windowMs = 60_000
             prefix: `rl:${name}`,
           }))
         }
-        const limiter = redisLimiterCache.get(name)!
-        const result = await limiter.limit(key)
-        if (result.success) {
-          return { success: true }
+        try {
+          const limiter = redisLimiterCache.get(name)!
+          const result = await limiter.limit(key)
+          if (result.success) {
+            return { success: true }
+          }
+          const retryAfter = Math.ceil((result.reset - Date.now()) / 1000)
+          return {
+            success: false,
+            retryAfter: Math.max(1, retryAfter),
+            reason: 'limit_exceeded',
+          }
+        } catch (error) {
+          console.error('[rate-limit] Redis erisilemez; production istegi fail-closed reddedildi.', {
+            limiter: name,
+            error: error instanceof Error ? error.message : 'unknown',
+          })
+          if (process.env.NODE_ENV === 'production') {
+            return { success: false, retryAfter: 60, reason: 'backend_unavailable' }
+          }
         }
-        const retryAfter = Math.ceil((result.reset - Date.now()) / 1000)
-        return { success: false, retryAfter: Math.max(1, retryAfter) }
       }
 
-      // Fallback: in-memory
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[rate-limit] Redis yapilandirmasi yok; production istegi fail-closed reddedildi.', {
+          limiter: name,
+        })
+        return { success: false, retryAfter: 60, reason: 'backend_unavailable' }
+      }
+
+      // In-memory yalnizca development/test fallback'idir.
       if (!memoryLimiterCache.has(name)) {
         memoryLimiterCache.set(name, createInMemoryLimiter(name, limit, windowMs))
       }

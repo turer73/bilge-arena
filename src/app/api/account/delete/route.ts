@@ -15,7 +15,13 @@ export async function POST() {
   }
 
   const rl = await deleteLimiter.check(user.id)
-  if (!rl.success) return NextResponse.json({ error: 'Cok hizli istek' }, { status: 429 })
+  if (!rl.success) {
+    const unavailable = rl.reason === 'backend_unavailable'
+    return NextResponse.json(
+      { error: unavailable ? 'Güvenlik servisi geçici olarak kullanılamıyor' : 'Çok hızlı istek' },
+      { status: unavailable ? 503 : 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } },
+    )
+  }
 
   const svc = createServiceRoleClient()
 
@@ -29,5 +35,5 @@ export async function POST() {
   // Supabase oturumunu sonlandir
   await supabase.auth.signOut()
 
-  return NextResponse.json({ message: 'Hesabiniz 30 gun icinde kalici olarak silinecektir.' })
+  return NextResponse.json({ message: 'Silme talebiniz alındı ve hesabınız anonimleştirildi.' })
 }

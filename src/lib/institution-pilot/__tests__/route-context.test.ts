@@ -4,16 +4,15 @@ const mocks = vi.hoisted(() => ({
   enabled: vi.fn(),
   getUser: vi.fn(),
   checkPermission: vi.fn(),
+  getAal2: vi.fn(),
   rate: vi.fn(),
-  createService: vi.fn(),
+  rpc: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({ auth: { getUser: mocks.getUser } })),
+  createClient: vi.fn(async () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc })),
 }))
-vi.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: mocks.createService,
-}))
+vi.mock('@/lib/auth/aal2', () => ({ getAal2Status: mocks.getAal2 }))
 vi.mock('@/lib/supabase/admin', () => ({ checkPermission: mocks.checkPermission }))
 vi.mock('@/lib/teacher-classroom/rate-limits', () => ({
   teacherClassroomReadLimiter: { kind: 'read' },
@@ -30,7 +29,7 @@ beforeEach(() => {
   mocks.getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
   mocks.rate.mockResolvedValue({ success: true })
   mocks.checkPermission.mockResolvedValue({ id: 'user-1' })
-  mocks.createService.mockReturnValue({ rpc: vi.fn() })
+  mocks.getAal2.mockResolvedValue({ isAal2: true })
 })
 
 describe('institution pilot route context', () => {
@@ -73,6 +72,8 @@ describe('institution pilot route context', () => {
       new Request('http://localhost/api/institution/workspace'),
     )
     expect(success).toMatchObject({ ok: true, userId: 'user-1' })
+    if (!success.ok) throw new Error('expected success')
+    expect(success.admin.rpc).toBe(mocks.rpc)
 
     mocks.rate.mockResolvedValueOnce({ success: false, retryAfter: 17 })
     const limited = await requireInstitutionPilotRouteContext(

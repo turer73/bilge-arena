@@ -1,10 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createRateLimiter } from '../rate-limit'
 
 describe('createRateLimiter', () => {
   beforeEach(() => {
     // Her testte temiz bir limiter adi kullan
     vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllEnvs()
   })
 
   it('limit dahilinde success: true doner', async () => {
@@ -56,5 +61,22 @@ describe('createRateLimiter', () => {
 
     expect(result.retryAfter).toBeLessThanOrEqual(60)
     expect(result.retryAfter).toBeGreaterThan(0)
+  })
+
+  it('production ortaminda Redis yoksa in-memory yerine fail-closed davranir', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', '')
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', '')
+    vi.stubEnv('KV_REST_API_URL', '')
+    vi.stubEnv('KV_REST_API_TOKEN', '')
+
+    const limiter = createRateLimiter('test-production-fail-closed', 100, 60_000)
+    const result = await limiter.check('user1')
+
+    expect(result).toEqual({
+      success: false,
+      retryAfter: 60,
+      reason: 'backend_unavailable',
+    })
   })
 })

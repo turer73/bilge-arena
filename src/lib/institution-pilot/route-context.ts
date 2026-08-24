@@ -1,5 +1,4 @@
 import { checkPermission } from '@/lib/supabase/admin'
-import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createClient } from '@/lib/supabase/server'
 import {
   checkTeacherClassroomRateLimit,
@@ -8,11 +7,12 @@ import {
 } from '@/lib/teacher-classroom/rate-limits'
 import { institutionPilotNoStoreJson } from './server-contract'
 import { isInstitutionPilotEnabled } from './server-security'
+import { getAal2Status } from '@/lib/auth/aal2'
 
 export type InstitutionPilotRouteContext = {
   ok: true
   userId: string
-  admin: ReturnType<typeof createServiceRoleClient>
+  admin: Awaited<ReturnType<typeof createClient>>
 }
 
 export type InstitutionPilotRouteFailure = { ok: false; response: Response }
@@ -40,17 +40,32 @@ export async function requireInstitutionPilotRouteContext(
     }
   }
 
+  if (!(await getAal2Status(cookieClient)).isAal2) {
+    return {
+      ok: false,
+      response: institutionPilotNoStoreJson(
+        {
+          error: 'İki adımlı doğrulama gerekli',
+          code: 'aal2_required',
+          mfaUrl: '/hesap/guvenlik?next=/arena/kurum',
+        },
+        { status: 428 },
+      ),
+    }
+  }
+
   const rateLimit = await checkTeacherClassroomRateLimit(
     limiter,
     user.id,
     request.headers,
   )
   if (!rateLimit.success) {
+    const backendUnavailable = rateLimit.reason === 'backend_unavailable'
     return {
       ok: false,
       response: institutionPilotNoStoreJson(
-        { error: 'Çok fazla istek' },
-        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter ?? 60) } },
+        { error: backendUnavailable ? 'Güvenlik servisi geçici olarak kullanılamıyor' : 'Çok fazla istek' },
+        { status: backendUnavailable ? 503 : 429, headers: { 'Retry-After': String(rateLimit.retryAfter ?? 60) } },
       ),
     }
   }
@@ -65,15 +80,5 @@ export async function requireInstitutionPilotRouteContext(
     }
   }
 
-  try {
-    return { ok: true, userId: user.id, admin: createServiceRoleClient() }
-  } catch {
-    return {
-      ok: false,
-      response: institutionPilotNoStoreJson(
-        { error: 'Kurum pilotu yapılandırılmadı' },
-        { status: 503 },
-      ),
-    }
-  }
+  return { ok: true, userId: user.id, admin: cookieClient }
 }

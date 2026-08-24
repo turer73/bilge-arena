@@ -3,17 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   checkPermission: vi.fn(),
+  getAal2: vi.fn(),
   rate: vi.fn(),
   getConfig: vi.fn(),
-  createService: vi.fn(),
+  rpc: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({ auth: { getUser: mocks.getUser } })),
+  createClient: vi.fn(async () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc })),
 }))
-vi.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: mocks.createService,
-}))
+vi.mock('@/lib/auth/aal2', () => ({ getAal2Status: mocks.getAal2 }))
 vi.mock('@/lib/supabase/admin', () => ({ checkPermission: mocks.checkPermission }))
 vi.mock('../rate-limits', () => ({ checkTeacherClassroomRateLimit: mocks.rate }))
 vi.mock('../server-security', () => ({ getTeacherClassroomServerConfig: mocks.getConfig }))
@@ -35,7 +34,7 @@ beforeEach(() => {
   mocks.getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
   mocks.rate.mockResolvedValue({ success: true })
   mocks.checkPermission.mockResolvedValue({ id: 'user-1' })
-  mocks.createService.mockReturnValue({ rpc: vi.fn() })
+  mocks.getAal2.mockResolvedValue({ isAal2: true })
 })
 
 describe('teacher classroom route context', () => {
@@ -62,7 +61,6 @@ describe('teacher classroom route context', () => {
     if (result.ok) throw new Error('expected failure')
     expect(result.response.status).toBe(401)
     expect(mocks.rate).not.toHaveBeenCalled()
-    expect(mocks.createService).not.toHaveBeenCalled()
   })
 
   it('applies the combined user/IP limiter and preserves Retry-After', async () => {
@@ -90,24 +88,16 @@ describe('teacher classroom route context', () => {
     expect(result.ok).toBe(false)
     if (result.ok) throw new Error('expected failure')
     expect(result.response.status).toBe(403)
-    expect(mocks.createService).not.toHaveBeenCalled()
   })
 
-  it('returns an authenticated, permission-checked service context and fails closed without key', async () => {
+  it('returns the authenticated JWT client as the RPC context', async () => {
     const success = await requireTeacherClassroomRouteContext(
       new Request('http://localhost/api/teacher/classrooms'),
       limiter,
       true,
     )
     expect(success).toMatchObject({ ok: true, userId: 'user-1', config })
-
-    mocks.createService.mockImplementationOnce(() => { throw new Error('missing service key') })
-    const failed = await requireTeacherClassroomRouteContext(
-      new Request('http://localhost/api/teacher/assignments'),
-      limiter,
-    )
-    expect(failed.ok).toBe(false)
-    if (failed.ok) throw new Error('expected failure')
-    expect(failed.response.status).toBe(503)
+    if (!success.ok) throw new Error('expected success')
+    expect(success.admin.rpc).toBe(mocks.rpc)
   })
 })

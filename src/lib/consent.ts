@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { Json } from '@/types/database.generated'
+import { isCurrentBrowserPathSensitive } from '@/lib/privacy/telemetry-policy'
 
 // ─── Types ───────────────────────────────────────────────
 export interface CookieConsent {
@@ -61,7 +62,7 @@ export function setCookieConsent(analytics: boolean): CookieConsent {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(consent))
 
   // GA Consent Mode v2 guncelle — analytics + reklam depolama birlikte
-  if (typeof window.gtag === 'function') {
+  if (!isCurrentBrowserPathSensitive() && typeof window.gtag === 'function') {
     window.gtag('consent', 'update', {
       analytics_storage: analytics ? 'granted' : 'denied',
       ad_storage: analytics ? 'granted' : 'denied',

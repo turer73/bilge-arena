@@ -60,16 +60,22 @@ describe('teacher invitation head bootstrap', () => {
   it('keeps the bootstrap before Plausible and applies the analytics-free private CSP last', () => {
     const root = process.cwd()
     const layout = fs.readFileSync(path.join(root, 'src/app/layout.tsx'), 'utf8')
+    const thirdPartyScripts = fs.readFileSync(
+      path.join(root, 'src/components/analytics/privacy-safe-third-party-scripts.tsx'),
+      'utf8',
+    )
     const config = fs.readFileSync(path.join(root, 'next.config.mjs'), 'utf8')
     const bootstrapIndex = layout.indexOf('id="teacher-invite-bootstrap"')
-    const plausibleIndex = layout.indexOf('src="https://analytics.panola.app/js/script.js"')
+    const thirdPartyMountIndex = layout.indexOf('<PrivacySafeThirdPartyScripts />')
     const globalHeadersIndex = config.indexOf("source: '/(.*)'")
     const privateHeadersIndex = config.indexOf("source: '/arena/sinif/:path*'")
     const privateBlockEnd = config.indexOf('// Statik asset', privateHeadersIndex)
     const privateBlock = config.slice(privateHeadersIndex, privateBlockEnd)
 
     expect(bootstrapIndex).toBeGreaterThan(-1)
-    expect(bootstrapIndex).toBeLessThan(plausibleIndex)
+    expect(bootstrapIndex).toBeLessThan(thirdPartyMountIndex)
+    expect(thirdPartyScripts).toContain('https://analytics.panola.app/js/script.js')
+    expect(thirdPartyScripts).toContain('isSensitiveWorkspacePath(pathname)')
     expect(privateHeadersIndex).toBeGreaterThan(globalHeadersIndex)
     expect(privateBlock).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'")
     expect(privateBlock).not.toMatch(/analytics\.panola|googletagmanager|googlesyndication|sentry/i)

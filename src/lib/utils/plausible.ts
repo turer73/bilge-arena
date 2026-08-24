@@ -86,6 +86,7 @@ export type EventName =
 export function trackEvent(name: EventName, options?: PlausibleOptions): void {
   // SSR guard
   if (typeof window === 'undefined') return
+  if (isCurrentBrowserPathSensitive()) return
 
   try {
     if (typeof window.plausible === 'function') {
@@ -101,3 +102,4 @@ export function trackEvent(name: EventName, options?: PlausibleOptions): void {
  * Shortcut: sadece isim, prop yok
  */
 export const track = trackEvent
+import { isCurrentBrowserPathSensitive } from '@/lib/privacy/telemetry-policy'

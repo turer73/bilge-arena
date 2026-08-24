@@ -2,7 +2,6 @@ import { type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { checkPermission, logAdminAction } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { institutionSupportDirectorySchema } from '@/lib/institution-admin/contracts'
 import { institutionPilotNoStoreJson, institutionPilotRpcStatus } from '@/lib/institution-pilot/server-contract'
 import { isInstitutionPilotEnabled } from '@/lib/institution-pilot/server-security'
@@ -23,8 +22,7 @@ export async function GET(
   const id = uuidSchema.safeParse((await params).institutionId)
   if (!id.success) return institutionPilotNoStoreJson({ error: 'Geçersiz kurum' }, { status: 400 })
 
-  const service = createServiceRoleClient()
-  const { data, error } = await service.rpc('get_institution_support_directory', {
+  const { data, error } = await supabase.rpc('get_institution_support_directory', {
     p_admin_user_id: admin.id,
     p_institution_id: id.data,
   })

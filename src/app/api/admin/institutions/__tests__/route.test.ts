@@ -12,15 +12,14 @@ vi.mock('@/lib/institution-pilot/server-security', () => ({
   isInstitutionPilotEnabled: () => true,
   isInstitutionOnboardingEnabled: mocks.onboardingEnabled,
 }))
-vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie' })) }))
+vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie', rpc: mocks.rpc })) }))
 vi.mock('@/lib/supabase/admin', () => ({
   checkPermission: mocks.checkPermission,
   logAdminAction: mocks.logAdminAction,
 }))
-vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: () => ({ rpc: mocks.rpc }) }))
 vi.mock('@/lib/utils/rate-limit', () => ({ createRateLimiter: () => ({ check: mocks.limiter }) }))
 
-import { GET, POST } from '../route'
+import { GET, PATCH, POST } from '../route'
 
 const ADMIN = { id: '11111111-1111-4111-8111-111111111111' }
 const MANAGER_ID = '22222222-2222-4222-8222-222222222222'
@@ -35,11 +34,19 @@ function post(body: unknown) {
   }) as import('next/server').NextRequest
 }
 
+function patch(body: unknown) {
+  return new Request('http://localhost/api/admin/institutions', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }) as import('next/server').NextRequest
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.checkPermission.mockResolvedValue(ADMIN)
   mocks.limiter.mockResolvedValue({ success: true })
-  mocks.logAdminAction.mockResolvedValue(undefined)
+  mocks.logAdminAction.mockResolvedValue({ error: null })
   mocks.onboardingEnabled.mockReturnValue(true)
 })
 
@@ -98,5 +105,83 @@ describe('admin institution routes', () => {
     const response = await POST(post({ name: 'x', managerUserId: 'not-a-uuid', requestId: 'bad' }))
     expect(response.status).toBe(400)
     expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('changes institution status through the caller JWT and audits the reason', async () => {
+    const requestId = '55555555-5555-4555-8555-555555555555'
+    const payload = {
+      institutionId: INSTITUTION_ID,
+      previousStatus: 'pilot',
+      status: 'suspended',
+      changed: true,
+      replayed: false,
+    }
+    mocks.rpc.mockResolvedValue({ data: payload, error: null })
+    const response = await PATCH(patch({
+      institutionId: INSTITUTION_ID,
+      status: 'suspended',
+      reason: 'Ödeme ve güvenlik incelemesi tamamlanana kadar.',
+      requestId,
+    }))
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('set_pilot_institution_status', {
+      p_user_id: ADMIN.id,
+      p_institution_id: INSTITUTION_ID,
+      p_status: 'suspended',
+      p_reason: 'Ödeme ve güvenlik incelemesi tamamlanana kadar.',
+      p_request_id: requestId,
+    })
+    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      action: 'set_institution_status', targetId: INSTITUTION_ID,
+    }))
+  })
+
+  it('reports a status limiter backend outage as retryable infrastructure failure', async () => {
+    mocks.limiter.mockResolvedValue({
+      success: false,
+      reason: 'backend_unavailable',
+      retryAfter: 17,
+    })
+    const response = await PATCH(patch({
+      institutionId: INSTITUTION_ID,
+      status: 'suspended',
+      reason: 'Güvenlik incelemesi tamamlanana kadar.',
+      requestId: '77777777-7777-4777-8777-777777777777',
+    }))
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get('Retry-After')).toBe('17')
+    expect(await response.json()).toEqual({ error: 'İstek sınırı altyapısı kullanılamıyor' })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('does not report a committed status mutation as failed when the secondary log fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mocks.rpc.mockResolvedValue({
+      data: {
+        institutionId: INSTITUTION_ID,
+        previousStatus: 'pilot',
+        status: 'suspended',
+        changed: true,
+        replayed: false,
+      },
+      error: null,
+    })
+    mocks.logAdminAction.mockResolvedValue({ error: { message: 'admin log unavailable' } })
+
+    const response = await PATCH(patch({
+      institutionId: INSTITUTION_ID,
+      status: 'suspended',
+      reason: 'İnceleme tamamlanana kadar askıya alındı.',
+      requestId: '66666666-6666-4666-8666-666666666666',
+    }))
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ status: 'suspended', changed: true })
+    expect(consoleError).toHaveBeenCalledWith(
+      '[Institution Status] ikincil admin günlüğü yazılamadı:',
+      'admin log unavailable',
+    )
+    consoleError.mockRestore()
   })
 })

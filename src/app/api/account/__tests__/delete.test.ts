@@ -42,7 +42,7 @@ describe('POST /api/account/delete', () => {
     expect(res.status).toBe(200)
 
     const json = await res.json()
-    expect(json.message).toContain('30 gun')
+    expect(json.message).toContain('anonimleştirildi')
     expect(mockRpc).toHaveBeenCalledWith('soft_delete_user', { p_user_id: 'u1' })
     expect(mockSignOut).toHaveBeenCalled()
   })
