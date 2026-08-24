@@ -493,7 +493,7 @@ BEGIN
 END;
 $fn$;
 
-CREATE OR REPLACE FUNCTION public.audit_institution_pilot_request()
+CREATE OR REPLACE FUNCTION public.audit_pilot_institution_request()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -680,7 +680,7 @@ REVOKE ALL ON FUNCTION
   public.teacher_classroom_is_teacher(uuid),
   public.teacher_classroom_is_blocked(uuid,uuid),
   public.reject_reused_institution_request_id(),
-  public.audit_institution_pilot_request(),
+  public.audit_pilot_institution_request(),
   public.audit_teacher_classroom_request()
 FROM PUBLIC, anon, authenticated, service_role;
 

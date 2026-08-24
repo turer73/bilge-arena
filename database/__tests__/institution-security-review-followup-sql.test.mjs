@@ -22,7 +22,7 @@ describe('institution security review follow-up SQL', () => {
   it('exports subject-linked rows without treating teacher and author columns as ownership', () => {
     const exportBody = sql.slice(
       sql.indexOf('CREATE OR REPLACE FUNCTION public.export_account_data'),
-      sql.indexOf('CREATE OR REPLACE FUNCTION public.audit_institution_pilot_request'),
+      sql.indexOf('CREATE OR REPLACE FUNCTION public.audit_pilot_institution_request'),
     )
     expect(exportBody).not.toMatch(/'teacher_id'|'created_by'|'admin_id'|'actor_user_id'/)
     expect(exportBody).toContain("'user_id','student_id','owner_id','target_user_id','manager_user_id'")
