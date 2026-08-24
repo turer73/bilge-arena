@@ -48,6 +48,12 @@ describe('institution request ledger retention cron', () => {
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
+  it('keeps one day of headroom below the SQL two-year boundary', async () => {
+    process.env.INSTITUTION_REQUEST_LEDGER_RETENTION_DAYS = '730'
+    expect((await GET(request())).status).toBe(500)
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
   it('prunes only the idempotency ledgers with a 90-day default cutoff', async () => {
     const cutoff = '2026-05-26T12:00:00.000Z'
     mocks.rpc.mockResolvedValue({

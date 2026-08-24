@@ -12,6 +12,11 @@ import { safeMfaReturnPath } from '@/lib/auth/aal2'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
 
+function preserveRefreshedCookies(source: NextResponse, target: NextResponse): NextResponse {
+  for (const cookie of source.cookies.getAll()) target.cookies.set(cookie)
+  return target
+}
+
 export async function proxy(request: NextRequest) {
   // Health endpoint — Uptime Kuma icin auth bypass
   if (request.nextUrl.pathname === '/api/health/ping') {
@@ -75,18 +80,18 @@ export async function proxy(request: NextRequest) {
     const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     if (aalError || aal.currentLevel !== 'aal2') {
       if (pathname.startsWith('/api/')) {
-        return NextResponse.json(
+        return preserveRefreshedCookies(response, NextResponse.json(
           {
             error: 'İki adımlı doğrulama gerekli',
             code: 'aal2_required',
             mfaUrl: `/hesap/guvenlik?next=${encodeURIComponent(safeMfaReturnPath(pathname))}`,
           },
           { status: 428, headers: { 'Cache-Control': 'no-store' } },
-        )
+        ))
       }
       const mfaUrl = new URL('/hesap/guvenlik', request.url)
       mfaUrl.searchParams.set('next', safeMfaReturnPath(`${pathname}${request.nextUrl.search}`))
-      return NextResponse.redirect(mfaUrl)
+      return preserveRefreshedCookies(response, NextResponse.redirect(mfaUrl))
     }
   }
 
@@ -95,7 +100,7 @@ export async function proxy(request: NextRequest) {
   // gerçek bir admin yüzeyi izni /admin kabuğunu açabilir.
   if (isAdminSurface) {
     if (!user) {
-      return NextResponse.redirect(new URL('/giris', request.url))
+      return preserveRefreshedCookies(response, NextResponse.redirect(new URL('/giris', request.url)))
     }
     const serviceKey =
       process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -113,7 +118,10 @@ export async function proxy(request: NextRequest) {
         userId: user.id,
         permissions: [INSTITUTION_PILOT_ENTRY_PERMISSION],
       })
-      return NextResponse.redirect(new URL(hasInstitutionAccess ? '/arena/kurum' : '/arena', request.url))
+      return preserveRefreshedCookies(
+        response,
+        NextResponse.redirect(new URL(hasInstitutionAccess ? '/arena/kurum' : '/arena', request.url)),
+      )
     }
 
     // Admin sayfaları Cloudflare'da cache'lenmemeli

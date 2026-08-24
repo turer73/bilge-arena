@@ -21,4 +21,10 @@ describe('institution critical operation audit migration', () => {
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.audit_pilot_institution_request\(\) FROM PUBLIC, anon, authenticated/)
     expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.audit_teacher_classroom_request\(\) FROM PUBLIC, anon, authenticated/)
   })
+
+  it('resolves invite-only request results to their classroom before auditing', () => {
+    expect(sql).toContain("NEW.result ->> 'inviteRef' ~* '^[0-9a-f]{32}$'")
+    expect(sql).toContain('FROM public.teacher_classroom_invites')
+    expect(sql).toContain("WHERE invite_ref = NEW.result ->> 'inviteRef'")
+  })
 })

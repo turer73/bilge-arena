@@ -8,12 +8,12 @@ insan/tedarikçi kararı bekleyen kapıları birbirinden ayırır.
 | Kapı | Durum | Kanıt / reddetme koşulu |
 |---|---|---|
 | Ücretli kurum onboarding | Kapalı | `INSTITUTION_ONBOARDING_ENABLED=false`; açık değilse route 503 |
-| Hassas yüzey telemetrisi | Kodda tamam | `/admin`, `/arena/kurum`, `/arena/sinif`, MFA sayfasında reklam, GA, Plausible ve Sentry event yok; replay global 0 |
+| Hassas yüzey telemetrisi | Kodda tamam | Hassas sayfa ve API namespace'lerinde reklam, GA, Plausible ve Sentry event yok; kamusal document'tan hassas alana SPA geçişi native document boundary'ye çevrilir; replay global 0 |
 | Dağıtık rate limit | Canlı config + kodda tamam | Production'da Upstash ve KV env adları mevcut; eksik/erişilemez backend 503/fail-closed |
 | Personel AAL2 | Kodda tamam | TOTP enrollment/challenge; admin/kurum/öğretmen izin ve proxy katmanında AAL2 |
 | Tenant audit | Kodda tamam | Migration 145 + 149; kritik kurum/sınıf işlemleri immutable event |
 | JWT-bound RPC | Canlı şema tamam, deploy bekliyor | Migration 150 canlıda; kurum, öğretmen ve platform kurum RPC'leri authenticated rolüne açıldı, anon kapalı. Route'ların kullanıcı JWT'sine geçişi merge/deploy bekliyor |
-| DSAR export | Kodda tamam | Kimliği doğrulanmış `/api/account/export`; no-store JSON; production rate limit |
+| DSAR export | Migration 154/deploy bekliyor | Kimliği doğrulanmış `/api/account/export`; katalogdan tüm doğrudan subject UUID sütunlarını ve ilişkili answer/submission-item satırlarını derleyen service-role-only RPC; no-store JSON; production rate limit |
 | İstek ledger imhası | Canlı şema tamam, cron deploy bekliyor | Migration 152 canlıda; günlük cron yalnız idempotency ledger'larını varsayılan 90 gün sonunda siler ve immutable audit event'leri korur. 30 günden yeni cutoff SQL'de reddedilir |
 | Genel otomatik imha | Kısmi / hukuk kararı bekliyor | Hesap, sınıf üyeliği, rapor ve audit kategorilerinin tamamını kapsayan onaylı saklama matrisi henüz yok. Ledger kontrolü genel KVKK imha politikası yerine geçmez |
 | Tenant A/B gerçek oturum | Bloke | İki ayrı yetkili test hesabı ve izole test tenant'ı tahsis edilmedi |
@@ -59,9 +59,10 @@ tamamlanana kadar ücretli kurum kabulü kapalı kalır.
 | Öğretmen gizlilik PG testi CI dışında | Kapandı | CI ayrı disposable PostgreSQL veritabanında suite'i çalıştırır |
 | Haftalık lig cron'u kayıtlı değil | Kapandı | `vercel.json` Pazartesi 00:05 UTC tetikleyicisi |
 | Migration 136 trigger grant kaçağı | Canlıda kapandı | Migration 152 forward revoke + migration 136 sonrası SECURITY DEFINER CI linteri |
-| Idempotency ledger'ları süresiz | Canlı şema tamam, cron deploy bekliyor | 30–730 gün güvenli aralık; varsayılan 90 gün; günlük service-role cron |
+| Idempotency ledger'ları süresiz | Canlı şema tamam, cron deploy bekliyor | 30–729 gün güvenli aralık; varsayılan 90 gün; günlük service-role cron |
 | Platform kurum RPC'leri service-role taşıyıcılı | Canlı grant tamam, route deploy bekliyor | Listeleme, provisioning, destek görünümü ve durum değişimi caller JWT ile çalışır |
 | Beş eski fonksiyonda mutable `search_path` | Canlıda kapandı | Migration 153, fonksiyon OID ve trigger bağlarını değiştirmeden `pg_catalog, public` pinledi |
+| PR agent review kapanışı | Migration 154/deploy bekliyor | Davet audit çözümleme, arşiv tenant görünürlüğü, DSAR katalog kapsamı; API telemetri filtresi, SPA document boundary, overload-duyarlı grant linteri, MFA cookie aktarımı ve doğru idempotent durum yanıtı |
 
 Opus'un `pg_trgm` ve `unaccent` extension'larının `public` şemasında olması notu
 ayrı bir bakım değişikliğidir. Extension taşıma; wrapper fonksiyonu, expression

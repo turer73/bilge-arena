@@ -15,6 +15,9 @@ describe('sensitive workspace telemetry policy', () => {
     '/arena/kurum/sinif/abc?tab=ogrenciler',
     '/arena/sinif/ogretmen',
     '/arena/sinif/odev/abc#sonuc',
+    '/api/admin/institutions',
+    '/api/institution/workspace',
+    '/api/teacher/classrooms/abc',
   ])('%s yolunda ucuncu taraf telemetriyi engeller', (pathname) => {
     expect(isSensitiveWorkspacePath(pathname)).toBe(true)
   })
@@ -27,6 +30,7 @@ describe('sensitive workspace telemetry policy', () => {
   it('tam URL icindeki hassas rotayi tanir', () => {
     expect(isSensitiveTelemetryUrl('https://bilgearena.com/admin/loglar?x=1')).toBe(true)
     expect(isSensitiveTelemetryUrl('https://bilgearena.com/hakkinda')).toBe(false)
+    expect(isSensitiveTelemetryUrl('https://bilgearena.com/api/institution/workspace')).toBe(true)
   })
 
   it('browser konumunu uygulama ici gecislerde yeniden degerlendirir', () => {

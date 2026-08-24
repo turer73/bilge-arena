@@ -149,6 +149,11 @@ BEGIN
     SELECT classroom_id INTO v_classroom_id
     FROM public.teacher_assignments WHERE id = v_assignment_id;
   END IF;
+  IF v_classroom_id IS NULL AND NEW.result ->> 'inviteRef' ~* '^[0-9a-f]{32}$' THEN
+    SELECT classroom_id INTO v_classroom_id
+    FROM public.teacher_classroom_invites
+    WHERE invite_ref = NEW.result ->> 'inviteRef';
+  END IF;
   IF v_classroom_id IS NULL THEN RETURN NEW; END IF;
   SELECT institution_id INTO v_institution_id
   FROM public.teacher_classrooms WHERE id = v_classroom_id;

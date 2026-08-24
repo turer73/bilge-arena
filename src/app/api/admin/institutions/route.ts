@@ -133,6 +133,11 @@ export async function PATCH(request: NextRequest) {
     },
     request,
   })
-  if (auditError) return noStore({ error: 'Kurum durumu günlüğü yazılamadı' }, 500)
+  // The RPC has already committed both the lifecycle mutation and its immutable
+  // institution_operation_events evidence. admin_logs is a redundant platform
+  // log; its failure must not make the caller retry a successful mutation.
+  if (auditError) {
+    console.error('[Institution Status] ikincil admin günlüğü yazılamadı:', auditError.message)
+  }
   return noStore(parsed.data)
 }

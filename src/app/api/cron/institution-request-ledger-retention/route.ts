@@ -20,7 +20,10 @@ export async function GET(request: Request) {
   }
 
   const configuredDays = Number(process.env.INSTITUTION_REQUEST_LEDGER_RETENTION_DAYS ?? '90')
-  if (!Number.isInteger(configuredDays) || configuredDays < 30 || configuredDays > 730) {
+  // SQL uses a moving clock_timestamp() and rejects cutoffs older than two
+  // calendar years. Keep one full day of headroom so network/transaction time
+  // can never turn an accepted edge value into a rejected RPC call.
+  if (!Number.isInteger(configuredDays) || configuredDays < 30 || configuredDays > 729) {
     return noStore({ error: 'Kurum istek kaydı saklama süresi geçersiz' }, 500)
   }
   const cutoff = new Date(Date.now() - configuredDays * 86_400_000).toISOString()

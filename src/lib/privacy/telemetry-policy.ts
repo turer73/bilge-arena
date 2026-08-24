@@ -3,6 +3,9 @@ const SENSITIVE_WORKSPACE_PREFIXES = [
   '/arena/kurum',
   '/arena/sinif',
   '/hesap/guvenlik',
+  '/api/admin',
+  '/api/institution',
+  '/api/teacher',
 ] as const
 
 function normalizePathname(pathname: string): string {

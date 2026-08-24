@@ -63,8 +63,12 @@ const institutionRetentionSql = readFileSync(
   join(migrationsDir, '152_institution_request_ledger_retention.sql'),
   'utf8',
 )
+const institutionReviewClosureSql = readFileSync(
+  join(migrationsDir, '154_institution_review_closure.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145 and 149-152 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -309,6 +313,7 @@ suite('112-127, 131-135, 145 and 149-152 institution pilot real PostgreSQL accep
       AS $$ BEGIN RETURN NEW; END $$
     `)
     await client.query(institutionRetentionSql)
+    await client.query(institutionReviewClosureSql)
 
     const authenticatedBoundary = await client.query(`
       SELECT
@@ -895,10 +900,20 @@ suite('112-127, 131-135, 145 and 149-152 institution pilot real PostgreSQL accep
       [firstStudent, 'quota-student-one', 'Kota Öğrencisi Bir', secondStudent, 'quota-student-two', 'Kota Öğrencisi İki'],
     )
     const firstDigest = 'a'.repeat(64)
-    await rpc('public.issue_teacher_classroom_invite($1,$2,$3,$4,$5,$6)', [
+    const firstInviteRequest = randomUUID()
+    const issuedInvite = await rpc('public.issue_teacher_classroom_invite($1,$2,$3,$4,$5,$6)', [
       nextManager, firstClass.classroom.id, firstDigest,
-      new Date(Date.now() + 60 * 60 * 1000), 3, randomUUID(),
+      new Date(Date.now() + 60 * 60 * 1000), 3, firstInviteRequest,
     ])
+    const inviteAudit = await client.query(
+      `SELECT classroom_id,target_ref FROM public.institution_operation_events
+       WHERE event_type='invite_issued' AND request_id=$1`,
+      [firstInviteRequest],
+    )
+    expect(inviteAudit.rows[0]).toMatchObject({
+      classroom_id: firstClass.classroom.id,
+      target_ref: issuedInvite.inviteRef,
+    })
     const firstAcceptRequest = randomUUID()
     expect(await rpc('public.accept_teacher_classroom_invite($1,$2,$3,$4,$5)', [
       firstStudent, firstDigest, 'notice-v1', 'consent-v1', firstAcceptRequest,
@@ -1011,5 +1026,22 @@ suite('112-127, 131-135, 145 and 149-152 institution pilot real PostgreSQL accep
       'SELECT count(*)::int AS count FROM public.institution_operation_events',
     )
     expect(eventCountAfter.rows[0].count).toBe(eventCountBefore.rows[0].count)
+  })
+
+  it('keeps a terminally archived tenant visible in the platform directory', async () => {
+    await authenticatedRpc(
+      platformAdmin,
+      'public.set_pilot_institution_status($1,$2,$3,$4,$5)',
+      [platformAdmin, institutionTwo, 'archived', 'Pilot sözleşmesi kapatıldı ve kayıt arşivlendi.', randomUUID()],
+    )
+
+    const directory = await authenticatedRpc(
+      platformAdmin,
+      'public.list_pilot_institutions($1)',
+      [platformAdmin],
+    )
+    expect(directory.institutions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: institutionTwo, status: 'archived' }),
+    ]))
   })
 })

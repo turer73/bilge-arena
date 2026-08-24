@@ -135,4 +135,34 @@ describe('admin institution routes', () => {
       action: 'set_institution_status', targetId: INSTITUTION_ID,
     }))
   })
+
+  it('does not report a committed status mutation as failed when the secondary log fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mocks.rpc.mockResolvedValue({
+      data: {
+        institutionId: INSTITUTION_ID,
+        previousStatus: 'pilot',
+        status: 'suspended',
+        changed: true,
+        replayed: false,
+      },
+      error: null,
+    })
+    mocks.logAdminAction.mockResolvedValue({ error: { message: 'admin log unavailable' } })
+
+    const response = await PATCH(patch({
+      institutionId: INSTITUTION_ID,
+      status: 'suspended',
+      reason: 'İnceleme tamamlanana kadar askıya alındı.',
+      requestId: '66666666-6666-4666-8666-666666666666',
+    }))
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({ status: 'suspended', changed: true })
+    expect(consoleError).toHaveBeenCalledWith(
+      '[Institution Status] ikincil admin günlüğü yazılamadı:',
+      'admin log unavailable',
+    )
+    consoleError.mockRestore()
+  })
 })

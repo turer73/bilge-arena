@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 
 const exportLimiter = createRateLimiter('account-data-export', 2, 3_600_000)
+const accountExportSchema = z.object({
+  tables: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))),
+  coverage: z.object({
+    directSubjectColumns: z.literal(true),
+    relatedTables: z.array(z.string()),
+  }).strict(),
+}).strict()
 
 export const dynamic = 'force-dynamic'
 
@@ -33,34 +41,17 @@ export async function GET() {
   }
 
   const db = createServiceRoleClient()
-  const [
-    profile, consents, gameSessions, achievements, topicProgress, questionHistory,
-    classroomMemberships, institutionMemberships, ownedClassrooms,
-    ownedAssignments, studyPrograms, followups, reports,
-  ] = await Promise.all([
-    db.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-    db.from('consent_logs').select('*').eq('user_id', user.id).order('created_at'),
-    db.from('game_sessions').select('*').eq('user_id', user.id).order('created_at'),
-    db.from('user_achievements').select('*').eq('user_id', user.id),
-    db.from('user_topic_progress').select('*').eq('user_id', user.id),
-    db.from('user_question_history').select('*').eq('user_id', user.id).order('created_at'),
-    db.from('teacher_classroom_memberships').select('*').eq('student_id', user.id),
-    db.from('pilot_institution_memberships').select('*').eq('user_id', user.id),
-    db.from('teacher_classrooms').select('*').eq('teacher_id', user.id),
-    db.from('teacher_assignments').select('*').eq('teacher_id', user.id),
-    db.from('institution_study_programs').select('*').or(`student_id.eq.${user.id},teacher_id.eq.${user.id}`),
-    db.from('institution_student_followups').select('*').or(`student_id.eq.${user.id},teacher_id.eq.${user.id}`),
-    db.from('institution_student_reports').select('*').or(`student_id.eq.${user.id},teacher_id.eq.${user.id}`),
-  ])
-
-  const results = [
-    profile, consents, gameSessions, achievements, topicProgress, questionHistory,
-    classroomMemberships, institutionMemberships, ownedClassrooms,
-    ownedAssignments, studyPrograms, followups, reports,
-  ]
-  const firstError = results.find((result) => result.error)?.error
-  if (firstError) {
-    console.error('[Account Export] veri derleme hatasi:', firstError.message)
+  const { data, error } = await db.rpc('export_account_data', { p_user_id: user.id })
+  if (error) {
+    console.error('[Account Export] veri derleme hatası:', error.message)
+    return NextResponse.json({ error: 'Veri dışa aktarılamadı' }, {
+      status: 500,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+  const parsed = accountExportSchema.safeParse(data)
+  if (!parsed.success) {
+    console.error('[Account Export] RPC sözleşmesi doğrulanamadı')
     return NextResponse.json({ error: 'Veri dışa aktarılamadı' }, {
       status: 500,
       headers: { 'Cache-Control': 'no-store' },
@@ -69,7 +60,7 @@ export async function GET() {
 
   const exportedAt = new Date().toISOString()
   const payload = {
-    schemaVersion: 'bilge-arena-dsar-v1',
+    schemaVersion: 'bilge-arena-dsar-v2',
     exportedAt,
     account: {
       id: user.id,
@@ -77,21 +68,8 @@ export async function GET() {
       createdAt: user.created_at,
       lastSignInAt: user.last_sign_in_at ?? null,
     },
-    data: {
-      profile: profile.data,
-      consentLogs: consents.data ?? [],
-      gameSessions: gameSessions.data ?? [],
-      achievements: achievements.data ?? [],
-      topicProgress: topicProgress.data ?? [],
-      questionHistory: questionHistory.data ?? [],
-      classroomMemberships: classroomMemberships.data ?? [],
-      institutionMemberships: institutionMemberships.data ?? [],
-      ownedClassrooms: ownedClassrooms.data ?? [],
-      ownedAssignments: ownedAssignments.data ?? [],
-      institutionStudyPrograms: studyPrograms.data ?? [],
-      institutionFollowups: followups.data ?? [],
-      institutionReports: reports.data ?? [],
-    },
+    coverage: parsed.data.coverage,
+    data: parsed.data.tables,
   }
 
   return new Response(JSON.stringify(payload, null, 2), {

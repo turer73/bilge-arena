@@ -630,6 +630,10 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_cutoff: string }
         Returns: Json
       }
+      export_account_data: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       update_my_institution_role: {
         Args: { p_user_id: string; p_role_ref: string; p_name: string; p_description: string; p_permissions: string[]; p_request_id: string }
         Returns: Json
