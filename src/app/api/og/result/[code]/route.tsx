@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
+import { getInterBoldUrl } from '@/lib/og/font-url'
 
 /**
  * Bilge Arena Oda: /api/og/result/[code] OG image dynamic route
@@ -23,7 +24,6 @@ import { NextRequest } from 'next/server'
 export const runtime = 'edge'
 
 let interBoldPromise: Promise<ArrayBuffer> | null = null
-const INTER_BOLD_URL = 'https://bilgearena.com/fonts/Inter-Bold.woff'
 
 /**
  * Inter-Bold.woff fetch with cache + fail-state reset.
@@ -36,7 +36,7 @@ async function getInterBold(): Promise<ArrayBuffer> {
   if (!interBoldPromise) {
     interBoldPromise = (async () => {
       try {
-        const res = await fetch(INTER_BOLD_URL)
+        const res = await fetch(getInterBoldUrl())
         if (!res.ok) {
           throw new Error(
             `Inter-Bold.woff fetch failed: ${res.status} ${res.statusText}`,
