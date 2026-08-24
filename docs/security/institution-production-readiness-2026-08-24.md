@@ -16,7 +16,7 @@ insan/tedarikçi kararı bekleyen kapıları birbirinden ayırır.
 | JWT-bound RPC | Canlıda tamam | Migration 150 + 155 ve PR #428 canlıda; kurum, öğretmen ve platform kurum RPC'leri caller JWT, AAL2 ve aktif tenant durumuna bağlı; anon kapalı |
 | DSAR export | Canlıda tamam | Migration 154 + 155 + 156 ve PR #428 canlıda; kimliği doğrulanmış `/api/account/export`; katalogdan yalnız veri sahibini işaret eden UUID sütunlarını ve ilişkili answer/submission-item satırlarını derleyen service-role-only RPC; öğretmenin öğrencilerine ait satırlar ve rapor edilen kullanıcıya ait olmayan moderasyon/raportör verileri dışarıda; no-store JSON; production rate limit |
 | İstek ledger imhası | Canlıda tamam | Migration 152 + 155 ve günlük Vercel cron canlıda; varsayılan 90 gün sonunda ledger silinmeden kalıcı hash tombstone üretir, request UUID tekrar kullanımını reddeder ve immutable audit event'leri korur. 30 günden yeni cutoff SQL'de reddedilir |
-| DB yedek/restore | Canlı betik + ölçülmüş DB restore | [25 Ağustos tatbikatında](./institution-restore-drill-2026-08-25.md) ACL korumalı 24.672.294 bayt dump ağsız Supabase PG17 imajına 67 saniyede restore edildi; kritik veri agregaları, 11/11 migration, RPC grant sınırları ve extension seti geçti. Tam servis cutover RTO'su değildir |
+| DB yedek/restore | Canlı betik + ölçülmüş DB restore | [25 Ağustos tatbikatında](./institution-restore-drill-2026-08-25.md) ACL korumalı 24.672.285 bayt dump ağsız Supabase PG17 imajına 77 saniyede restore edildi; kritik veri agregaları, dinamik keşfedilen 11/11 migration, RPC grant sınırları ve extension seti geçti. Tam servis cutover RTO'su değildir |
 | Yedek DB parolası rotasyonu | Bloke / hesap sahibi gerekli | Eski süreç-argümanı sızıntısı çevrelendi ve canlı betik düzeltildi; [olay kaydındaki](./2026-08-25-backup-credential-process-exposure.md) Supabase parola rotasyonu panel girişi olmadan tamamlanamaz |
 | Genel otomatik imha | Kısmi / hukuk kararı bekliyor | [Karar kaydı](./institution-retention-decision-record-2026-08-25.md) mevcut teknik davranışı ve doldurulması gereken hukuk alanlarını ayırır; onaylı süre olmadan genel silme cron'u açılmaz |
 | Tenant A/B gerçek oturum | Bloke | [Kanıt matrisi](./institution-canary-and-tenant-proof-runbook-2026-08-25.md) hazır; iki tenant ve AAL2'li gerçek test hesapları tahsis edilmedi |
@@ -117,11 +117,11 @@ kanıtı tamamlanmadan “canlıda kapandı” denmez.
 
 ## Yedek ve geri dönüş tatbikatı
 
-- 25 Ağustos 01:08'de güncel üretim mantıksal yedeği bildirim kapalı ve salt-okuma
-  alınarak `gzip -t` ile doğrulandı: 24.672.294 bayt, 175 tablo, 48 saniye.
+- 25 Ağustos 01:23'te güncel üretim mantıksal yedeği bildirim kapalı ve salt-okuma
+  alınarak `gzip -t` ile doğrulandı: 24.672.285 bayt, 175 tablo, 45 saniye.
 - Yedek `supabase/postgres:17.6.1.136` imajında, ağsız tek kullanımlık konteynere
-  restore edildi. Başlangıç 25, SQL restore 34, migration doğrulaması 8; toplam
-  ölçülen DB kurtarma süresi **67 saniye**.
+  restore edildi. Başlangıç 27, SQL restore 30, dinamik migration doğrulaması 20;
+  toplam ölçülen DB kurtarma süresi **77 saniye**.
 - 133 public tablo, 410 auth kullanıcısı/profil, 4.473 soru, 2 pilot kurum,
   migration 146–156 için 11/11 kayıt ve altı zorunlu extension doğrulandı.
   JWT-bound kurum RPC'si ve service-role-only DSAR ACL kontrolleri geçti.
@@ -130,4 +130,4 @@ kanıtı tamamlanmadan “canlıda kapandı” denmez.
   worker kimliğini taşımaması bu veri kaybı penceresini somut olarak gösterdi.
 - [Ayrıntılı kanıt](./institution-restore-drill-2026-08-25.md) tam uygulama,
   DNS, Auth/Storage/Realtime secret ve kullanıcı kabul cutover'ını kapsamaz;
-  67 saniye yalnız ölçülmüş veritabanı restore RTO'sudur.
+  77 saniye yalnız ölçülmüş veritabanı restore RTO'sudur.

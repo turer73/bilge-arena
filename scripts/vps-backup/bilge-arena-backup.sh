@@ -144,6 +144,10 @@ timeout 600 docker run --rm --network host \
     authority="${host_path%%/*}"
     database_query="${host_path#*/}"
     database_encoded="${database_query%%\?*}"
+    query=""
+    case "$database_query" in
+      *\?*) query="${database_query#*\?}" ;;
+    esac
 
     case "$authority" in
       \[*\]:*)
@@ -182,6 +186,68 @@ timeout 600 docker run --rm --network host \
       fi
     done
 
+    # Preserve security-relevant libpq URI options through an explicit
+    # allowlist. Unknown options fail instead of being silently discarded.
+    sslmode=require
+    target_session_attrs=""
+    connect_timeout=""
+    channel_binding=""
+    sslrootcert=""
+    if [ -n "$query" ]; then
+      set -f
+      old_ifs="$IFS"
+      IFS="&"
+      for pair in $query; do
+        case "$pair" in
+          *=*) ;;
+          *) printf "database URI has a malformed query parameter\\n" >&2; exit 47 ;;
+        esac
+        key="$(uri_decode "${pair%%=*}")"
+        query_value="$(uri_decode "${pair#*=}")"
+        case "$key" in
+          sslmode)
+            case "$query_value" in
+              require|verify-ca|verify-full) sslmode="$query_value" ;;
+              *) printf "database URI requests an unsupported TLS mode\\n" >&2; exit 48 ;;
+            esac
+            ;;
+          sslrootcert)
+            if [ "$query_value" != "system" ]; then
+              printf "database URI sslrootcert must be system or explicitly mounted\\n" >&2
+              exit 49
+            fi
+            sslrootcert="$query_value"
+            ;;
+          target_session_attrs)
+            case "$query_value" in
+              any|read-write|read-only|primary|standby|prefer-standby)
+                target_session_attrs="$query_value"
+                ;;
+              *) printf "unsupported target_session_attrs value\\n" >&2; exit 50 ;;
+            esac
+            ;;
+          connect_timeout)
+            case "$query_value" in
+              ""|*[!0-9]*) printf "invalid connect_timeout value\\n" >&2; exit 51 ;;
+              *) connect_timeout="$query_value" ;;
+            esac
+            ;;
+          channel_binding)
+            case "$query_value" in
+              disable|prefer|require) channel_binding="$query_value" ;;
+              *) printf "unsupported channel_binding value\\n" >&2; exit 52 ;;
+            esac
+            ;;
+          *)
+            printf "unsupported database URI query parameter: %s\\n" "$key" >&2
+            exit 53
+            ;;
+        esac
+      done
+      IFS="$old_ifs"
+      set +f
+    fi
+
     passfile=/tmp/bilge-arena.pgpass
     printf "%s:%s:%s:%s:%s\\n" \
       "$(pgpass_escape "$host")" \
@@ -191,8 +257,14 @@ timeout 600 docker run --rm --network host \
       "$(pgpass_escape "$password")" > "$passfile"
     chmod 0600 "$passfile"
 
-    unset DBURL target userinfo host_path password password_encoded cleaned value encoded
-    export PGPASSFILE="$passfile" PGSSLMODE=require
+    unset DBURL target userinfo host_path password password_encoded cleaned value encoded query pair key query_value old_ifs
+    export PGPASSFILE="$passfile"
+    PGSSLMODE="$sslmode"
+    export PGSSLMODE
+    if [ -n "$sslrootcert" ]; then export PGSSLROOTCERT="$sslrootcert"; fi
+    if [ -n "$target_session_attrs" ]; then export PGTARGETSESSIONATTRS="$target_session_attrs"; fi
+    if [ -n "$connect_timeout" ]; then export PGCONNECT_TIMEOUT="$connect_timeout"; fi
+    if [ -n "$channel_binding" ]; then export PGCHANNELBINDING="$channel_binding"; fi
     exec pg_dump \
     --host="$host" \
     --port="$port" \

@@ -9,14 +9,14 @@ veritabanı kurtarma aşamasının ölçümüdür.
 
 | Ölçüm | Sonuç |
 |---|---:|
-| Yedek zamanı | 2026-08-25 01:08 Europe/Istanbul |
-| Yedek oluşturma | 48 saniye |
-| Sıkıştırılmış dump | 24.672.294 bayt; `gzip -t` başarılı |
+| Yedek zamanı | 2026-08-25 01:23 Europe/Istanbul |
+| Yedek oluşturma | 45 saniye |
+| Sıkıştırılmış dump | 24.672.285 bayt; `gzip -t` başarılı |
 | Restore image | `supabase/postgres:17.6.1.136` |
-| Postgres başlangıcı | 25 saniye |
-| SQL restore | 34 saniye |
-| Migration doğrulaması | 8 saniye |
-| Ölçülen DB kurtarma süresi | **67 saniye** |
+| Postgres başlangıcı | 27 saniye |
+| SQL restore | 30 saniye |
+| Dinamik migration doğrulaması | 20 saniye |
+| Ölçülen DB kurtarma süresi | **77 saniye** |
 
 Konteyner `--network none` ile çalıştırıldı; dump ve migration dizini
 salt-okunur bağlandı. Tatbikat bitince konteyner ve volume otomatik silindi.
@@ -39,6 +39,12 @@ Restore betiği bu güvenlik sözleşmelerinden biri yanlışsa veya kritik kull
 profil, soru ya da kurum agregalarından biri boşsa artık `status=failed` ve
 `reason=security_contract_validation` ile kapanır; yalnız SQL'in/şemanın açılması
 başarı sayılmaz.
+
+Migration ileri-sarım listesi 156'da sabitlenmez. Betik migration dizinindeki
+146 ve üzeri tüm sayısal sürümleri version-sort ile keşfeder, yinelenen sürümü
+reddeder, eksik olanı uygular ve her güncel dosyanın ledger kaydını yeniden
+doğrular. Böylece daha yeni bir migration eklendiğinde eski snapshot sessizce
+başarılı sayılamaz.
 
 ## Tatbikatta bulunan ve kapatılan kusurlar
 
@@ -65,7 +71,7 @@ başarı sayılmaz.
 - Buna göre **ölçülen/kanıtlanan DB RPO penceresi en fazla yaklaşık 24 saattir**.
   Bu sıfır veri kaybı taahhüdü değildir; daha düşük hedef için WAL/PITR veya daha
   sık doğrulanmış yedek gerekir.
-- İzole DB restore aşaması için ölçülen **RTO 67 saniyedir**. DNS, Vercel,
+- İzole DB restore aşaması için ölçülen **RTO 77 saniyedir**. DNS, Vercel,
   Supabase Auth/Storage/Realtime secret'ları, uygulama smoke ve kullanıcı kabulü
   dahil tam servis RTO'su henüz ölçülmemiştir.
 

@@ -24,6 +24,10 @@ yerine geçmez; veri sorumlusu ve hukukçu log/erişim kapsamını ayrıca değe
   ve parola [libpq password-file](https://www.postgresql.org/docs/17/libpq-pgpass.html)
   mekanizmasıyla sağlanır. `pg_dump` argv'sinde yalnız gizli olmayan host, port,
   kullanıcı ve veritabanı alanları bulunur; `--no-password` etkindir.
+- URI query'sindeki güçlü TLS modları (`require`, `verify-ca`, `verify-full`),
+  `sslrootcert=system`, channel binding, connect timeout ve target-session
+  koşulları açık allowlist ile libpq ortamına aktarılır. Daha zayıf veya
+  desteklenmeyen seçenek sessizce düşürülmez; yedek fail-closed kapanır.
 - Betik çıkışında geçici dump ve secret dosyası trap ile silinir. Tatbikat sonunda
   eşleşen secret geçici dosyası sayısı sıfırdı.
 - Önceki betik geri dönüş kanıtı için tutuldu fakat modu `0600` yapılarak çalıştırma

@@ -140,22 +140,17 @@ fi
 MIGRATIONS_STARTED_AT="$(date +%s)"
 MIGRATIONS_APPLIED=0
 MIGRATIONS_SKIPPED=0
-for VERSION in $(seq 146 156); do
-  mapfile -t MATCHES < <(find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name "${VERSION}_*.sql" -print)
-  if [[ "${#MATCHES[@]}" -ne 1 ]]; then
-    printf 'status=failed\nreason=migration_file_count\nversion=%s\ncount=%s\n' \
-      "$VERSION" "${#MATCHES[@]}" >&2
-    exit 9
-  fi
+MIGRATIONS_VERIFIED=0
 
-  MIGRATION_FILE="${MATCHES[0]}"
-  MIGRATION_NAME="$(basename "$MIGRATION_FILE" .sql)"
-  MIGRATION_PRESENT="$(docker exec -i "$CONTAINER_NAME" psql \
+migration_present() {
+  local version="$1"
+  local name="$2"
+  docker exec -i "$CONTAINER_NAME" psql \
     --username supabase_admin \
     --dbname "$DATABASE_NAME" \
     --variable ON_ERROR_STOP=1 \
-    --set "migration_version=$VERSION" \
-    --set "migration_name=$MIGRATION_NAME" \
+    --set "migration_version=$version" \
+    --set "migration_name=$name" \
     --tuples-only \
     --no-align <<'SQL'
 SELECT EXISTS(
@@ -164,7 +159,42 @@ SELECT EXISTS(
   WHERE version = :'migration_version' OR name = :'migration_name'
 );
 SQL
-)"
+}
+
+mapfile -d '' -t DISCOVERED_MIGRATIONS < <(
+  find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name '*.sql' -print0 | sort -z -V
+)
+MIGRATION_FILES=()
+declare -A SEEN_MIGRATION_VERSIONS=()
+for MIGRATION_FILE in "${DISCOVERED_MIGRATIONS[@]}"; do
+  MIGRATION_NAME="$(basename "$MIGRATION_FILE" .sql)"
+  if [[ ! "$MIGRATION_NAME" =~ ^([0-9]+)_ ]]; then
+    continue
+  fi
+  VERSION="${BASH_REMATCH[1]}"
+  VERSION_NUMBER=$((10#$VERSION))
+  if (( VERSION_NUMBER < 146 )); then
+    continue
+  fi
+  if [[ -n "${SEEN_MIGRATION_VERSIONS[$VERSION_NUMBER]:-}" ]]; then
+    printf 'status=failed\nreason=duplicate_forward_migration\nversion=%s\n' \
+      "$VERSION" >&2
+    exit 9
+  fi
+  SEEN_MIGRATION_VERSIONS[$VERSION_NUMBER]="$MIGRATION_NAME"
+  MIGRATION_FILES+=("$MIGRATION_FILE")
+done
+
+MIGRATIONS_REQUIRED="${#MIGRATION_FILES[@]}"
+if [[ "$MIGRATIONS_REQUIRED" -eq 0 ]]; then
+  printf 'status=failed\nreason=no_forward_migrations_discovered\n' >&2
+  exit 9
+fi
+
+for MIGRATION_FILE in "${MIGRATION_FILES[@]}"; do
+  MIGRATION_NAME="$(basename "$MIGRATION_FILE" .sql)"
+  VERSION="${MIGRATION_NAME%%_*}"
+  MIGRATION_PRESENT="$(migration_present "$VERSION" "$MIGRATION_NAME")"
   if [[ "$MIGRATION_PRESENT" == "t" ]]; then
     MIGRATIONS_SKIPPED=$((MIGRATIONS_SKIPPED + 1))
     continue
@@ -192,6 +222,17 @@ ON CONFLICT (version) DO NOTHING;
 SQL
   MIGRATIONS_APPLIED=$((MIGRATIONS_APPLIED + 1))
 done
+
+for MIGRATION_FILE in "${MIGRATION_FILES[@]}"; do
+  MIGRATION_NAME="$(basename "$MIGRATION_FILE" .sql)"
+  VERSION="${MIGRATION_NAME%%_*}"
+  if [[ "$(migration_present "$VERSION" "$MIGRATION_NAME")" != "t" ]]; then
+    printf 'status=failed\nreason=forward_migration_ledger_validation\nversion=%s\n' \
+      "$VERSION" >&2
+    exit 9
+  fi
+  MIGRATIONS_VERIFIED=$((MIGRATIONS_VERIFIED + 1))
+done
 MIGRATIONS_FINISHED_AT="$(date +%s)"
 
 printf 'restore_sql=passed\n'
@@ -201,8 +242,10 @@ printf 'dump_bytes=%s\n' "$(stat -c %s -- "$DUMP_PATH")"
 printf 'startup_seconds=%s\n' "$((RESTORE_STARTED_AT - STARTED_AT))"
 printf 'restore_seconds=%s\n' "$((RESTORE_FINISHED_AT - RESTORE_STARTED_AT))"
 printf 'migration_seconds=%s\n' "$((MIGRATIONS_FINISHED_AT - MIGRATIONS_STARTED_AT))"
+printf 'migrations_required=%s\n' "$MIGRATIONS_REQUIRED"
 printf 'migrations_applied=%s\n' "$MIGRATIONS_APPLIED"
 printf 'migrations_skipped=%s\n' "$MIGRATIONS_SKIPPED"
+printf 'migrations_verified=%s\n' "$MIGRATIONS_VERIFIED"
 printf 'total_seconds=%s\n' "$((MIGRATIONS_FINISHED_AT - STARTED_AT))"
 
 docker exec -i "$CONTAINER_NAME" psql \
