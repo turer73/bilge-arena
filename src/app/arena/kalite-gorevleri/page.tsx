@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
+import { communityQuestionQualityEnabled } from '@/lib/content-governance/server-security'
 import QualityMissionsClient from './quality-missions-client'
 
 export const metadata: Metadata = {
@@ -8,6 +10,6 @@ export const metadata: Metadata = {
 }
 
 export default function QualityMissionsPage() {
+  if (!communityQuestionQualityEnabled()) notFound()
   return <QualityMissionsClient />
 }
-

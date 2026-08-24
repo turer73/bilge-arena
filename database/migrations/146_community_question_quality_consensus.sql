@@ -160,7 +160,7 @@ BEGIN
     RAISE EXCEPTION 'quality mission answer cannot be locked' USING ERRCODE='42501';
   END IF;
   RETURN NEW;
-END
+END;
 $fn$;
 
 DROP TRIGGER IF EXISTS trg_question_quality_mission_immutable ON public.question_quality_missions;
@@ -172,7 +172,7 @@ CREATE OR REPLACE FUNCTION public.tg_question_quality_claim_append_only()
 RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fn$
 BEGIN
   RAISE EXCEPTION 'question quality claims are append-only' USING ERRCODE='42501';
-END
+END;
 $fn$;
 
 DROP TRIGGER IF EXISTS trg_question_quality_claim_append_only ON public.question_quality_claims;
@@ -414,7 +414,7 @@ BEGIN
     p_user_id,'quality_appeal_claim',p_request_id,payload_hash,result,clock_timestamp()
   );
   RETURN result;
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.get_next_question_quality_mission(
@@ -506,7 +506,7 @@ BEGIN
     p_user_id,'quality_mission_assign',p_request_id,payload_hash,result,clock_timestamp()
   );
   RETURN result;
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.lock_question_quality_mission_answer(
@@ -572,7 +572,7 @@ BEGIN
     p_user_id,'quality_mission_answer_lock',p_request_id,payload_hash,result,clock_timestamp()
   );
   RETURN result;
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.submit_assigned_question_quality_mission(
@@ -722,7 +722,7 @@ BEGIN
   result:=jsonb_build_object('missionId',mission.id,'claimId',claim.id,'status','submitted','rewardEligible',false,'replayed',false);
   INSERT INTO public.content_governance_requests VALUES(p_user_id,'quality_mission_submit',p_request_id,payload_hash,result,clock_timestamp());
   RETURN result;
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.get_question_quality_case_evidence(
@@ -767,7 +767,7 @@ BEGIN
   WHERE c.id=p_case_id;
   IF result IS NULL THEN RAISE EXCEPTION 'quality case not found' USING ERRCODE='P0002'; END IF;
   RETURN result;
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.claim_question_quality_verification(
@@ -795,7 +795,7 @@ BEGIN
     'contentSha256',quality_case.content_sha256,'content',revision.content,
     'game',revision.game,'category',revision.category,'topic',revision.topic,'examRef',revision.exam_ref
   );
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.complete_question_quality_verification(
@@ -823,7 +823,7 @@ BEGIN
   WHERE id=p_verification_id AND status='running' RETURNING * INTO verification;
   IF NOT FOUND THEN RAISE EXCEPTION 'verification is not running' USING ERRCODE='P0003'; END IF;
   RETURN jsonb_build_object('verificationId',verification.id,'caseId',verification.case_id,'status',verification.status);
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.claim_question_quality_consensus_job(p_actor_id uuid)
@@ -841,7 +841,7 @@ BEGIN
     claimed_at=clock_timestamp(),claimed_by=p_actor_id,attempts=attempts+1
   WHERE case_id=queued.case_id RETURNING * INTO queued;
   RETURN jsonb_build_object('caseId',queued.case_id,'dirtyAt',queued.dirty_at,'attempts',queued.attempts);
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.compute_question_quality_consensus(p_case_id uuid)
@@ -946,7 +946,7 @@ BEGIN
   );
   inputs_sha:=encode(extensions.digest(snapshot::text,'sha256'),'hex');
   RETURN snapshot||jsonb_build_object('inputsSha256',inputs_sha);
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.record_question_quality_external_proof(
@@ -990,7 +990,7 @@ BEGIN
     p_actor_id,'record_quality_proof',p_request_id,payload_hash,result,clock_timestamp()
   );
   RETURN result;
-END
+END;
 $fn$;
 
 CREATE OR REPLACE FUNCTION public.record_question_quality_consensus(
@@ -1136,7 +1136,7 @@ BEGIN
     p_actor_id,'record_quality_consensus',p_request_id,payload_hash,result,clock_timestamp()
   );
   RETURN result;
-END
+END;
 $fn$;
 
 REVOKE ALL ON FUNCTION public.submit_question_quality_claim(uuid,uuid,integer,text,text,integer,text,text,integer,text,uuid)

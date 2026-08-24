@@ -8,6 +8,14 @@ const workerRunner = readFileSync(new URL('../run-community-question-quality.mjs
 const pgAcceptance = readFileSync(new URL('./question-content-governance-postgres.integration.test.mjs', import.meta.url), 'utf8')
 
 describe('community question-quality SQL contract', () => {
+  it('terminates every PL/pgSQL function body with valid PostgreSQL syntax', () => {
+    const plpgsqlFunctions = migration.match(/LANGUAGE plpgsql[\s\S]*?AS \$fn\$[\s\S]*?\$fn\$;/g) ?? []
+    expect(plpgsqlFunctions).toHaveLength(13)
+    for (const functionBody of plpgsqlFunctions) {
+      expect(functionBody).toMatch(/END;\s*\$fn\$;$/)
+    }
+  })
+
   it('requires a server-side immutable answer lock before claim submission', () => {
     expect(migration).toContain('CREATE OR REPLACE FUNCTION public.lock_question_quality_mission_answer(')
     expect(migration).toContain("operation='quality_mission_answer_lock'")

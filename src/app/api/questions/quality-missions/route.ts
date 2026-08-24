@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { contentRpc } from '@/lib/content-governance/route-context'
 import { contentNoStoreJson } from '@/lib/content-governance/server-contract'
-import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
+import { communityQuestionQualityEnabled } from '@/lib/content-governance/server-security'
 import { questionQualityIndependenceKey } from '@/lib/question-quality/server-risk'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { qualityMissionAnswerLockSchema, qualityMissionSubmitSchema } from '@/lib/validations/schemas'
@@ -12,7 +12,7 @@ const missionReadLimiter = createRateLimiter('question-quality-mission-read', 20
 const missionWriteLimiter = createRateLimiter('question-quality-mission-write', 10, 60_000)
 
 async function context(request: Request, write = false) {
-  if (!contentGovernanceEnabled()) return { response: contentNoStoreJson({ error: 'Kalite görevleri etkin değil' }, { status: 503 }) }
+  if (!communityQuestionQualityEnabled()) return { response: contentNoStoreJson({ error: 'Kalite görevleri etkin değil' }, { status: 503 }) }
   const client = await createClient()
   const { data: { user } } = await client.auth.getUser()
   if (!user) return { response: contentNoStoreJson({ error: 'Yetkisiz' }, { status: 401 }) }

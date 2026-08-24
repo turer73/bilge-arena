@@ -11,7 +11,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: vi.fn(() => ({})) }))
 vi.mock('@/lib/content-governance/route-context', () => ({ contentRpc: mockContentRpc }))
-vi.mock('@/lib/content-governance/server-security', () => ({ contentGovernanceEnabled: vi.fn(() => true) }))
+vi.mock('@/lib/content-governance/server-security', () => ({ communityQuestionQualityEnabled: vi.fn(() => true) }))
 vi.mock('@/lib/question-quality/server-risk', () => ({ questionQualityIndependenceKey: vi.fn(() => 'a'.repeat(64)) }))
 vi.mock('@/lib/utils/rate-limit', () => ({ createRateLimiter: vi.fn(() => ({ check: mockRateCheck })) }))
 

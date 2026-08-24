@@ -22,6 +22,7 @@ export default function ArenaClient() {
 
   const classroomEnabled = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'
   const institutionEnabled = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
+  const communityQualityEnabled = process.env.NEXT_PUBLIC_COMMUNITY_QUESTION_QUALITY_ENABLED === 'true'
 
   useEffect(() => {
     if (!institutionEnabled) return
@@ -60,6 +61,7 @@ export default function ArenaClient() {
       } : null}
       classroomEnabled={classroomEnabled}
       institutionEnabled={institutionVisible}
+      communityQualityEnabled={communityQualityEnabled}
       showBottomNav={false}
       userId={user?.id ?? null}
     />
