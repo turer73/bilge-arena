@@ -34,6 +34,14 @@
     {
       "path": "/api/cron/honeypot-check",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-learning-leagues",
+      "schedule": "5 0 * * 1"
+    },
+    {
+      "path": "/api/cron/institution-request-ledger-retention",
+      "schedule": "20 1 * * *"
     }
   ]
 }

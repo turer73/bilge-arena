@@ -615,6 +615,21 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_limit?: number }
         Returns: Json
       }
+      // Migrations 151-152. Generated types are refreshed after production schema promotion.
+      set_pilot_institution_status: {
+        Args: {
+          p_user_id: string
+          p_institution_id: string
+          p_status: string
+          p_reason: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      prune_institution_request_ledgers: {
+        Args: { p_cutoff: string }
+        Returns: Json
+      }
       update_my_institution_role: {
         Args: { p_user_id: string; p_role_ref: string; p_name: string; p_description: string; p_permissions: string[]; p_request_id: string }
         Returns: Json

@@ -26,10 +26,25 @@ export const provisionInstitutionResultSchema = z.object({
   replayed: z.boolean(),
 }).strict()
 
+export const institutionStatusInputSchema = z.object({
+  institutionId: uuidSchema,
+  status: z.enum(['pilot', 'active', 'suspended', 'archived']),
+  reason: z.string().trim().min(10).max(500),
+  requestId: uuidSchema,
+}).strict()
+
+export const institutionStatusResultSchema = z.object({
+  institutionId: uuidSchema,
+  previousStatus: z.enum(['pilot', 'active', 'suspended', 'archived']),
+  status: z.enum(['pilot', 'active', 'suspended', 'archived']),
+  changed: z.boolean(),
+  replayed: z.boolean(),
+}).strict()
+
 const institutionSummarySchema = z.object({
   id: uuidSchema,
   name: z.string().trim().min(2).max(120),
-  status: z.enum(['pilot', 'active', 'suspended']),
+  status: z.enum(['pilot', 'active', 'suspended', 'archived']),
   studentLimit: z.number().int().positive(),
   staffLimit: z.number().int().positive(),
   staffCount: z.number().int().nonnegative(),

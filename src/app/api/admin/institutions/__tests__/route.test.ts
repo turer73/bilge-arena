@@ -12,15 +12,14 @@ vi.mock('@/lib/institution-pilot/server-security', () => ({
   isInstitutionPilotEnabled: () => true,
   isInstitutionOnboardingEnabled: mocks.onboardingEnabled,
 }))
-vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie' })) }))
+vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie', rpc: mocks.rpc })) }))
 vi.mock('@/lib/supabase/admin', () => ({
   checkPermission: mocks.checkPermission,
   logAdminAction: mocks.logAdminAction,
 }))
-vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: () => ({ rpc: mocks.rpc }) }))
 vi.mock('@/lib/utils/rate-limit', () => ({ createRateLimiter: () => ({ check: mocks.limiter }) }))
 
-import { GET, POST } from '../route'
+import { GET, PATCH, POST } from '../route'
 
 const ADMIN = { id: '11111111-1111-4111-8111-111111111111' }
 const MANAGER_ID = '22222222-2222-4222-8222-222222222222'
@@ -35,11 +34,19 @@ function post(body: unknown) {
   }) as import('next/server').NextRequest
 }
 
+function patch(body: unknown) {
+  return new Request('http://localhost/api/admin/institutions', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }) as import('next/server').NextRequest
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.checkPermission.mockResolvedValue(ADMIN)
   mocks.limiter.mockResolvedValue({ success: true })
-  mocks.logAdminAction.mockResolvedValue(undefined)
+  mocks.logAdminAction.mockResolvedValue({ error: null })
   mocks.onboardingEnabled.mockReturnValue(true)
 })
 
@@ -98,5 +105,34 @@ describe('admin institution routes', () => {
     const response = await POST(post({ name: 'x', managerUserId: 'not-a-uuid', requestId: 'bad' }))
     expect(response.status).toBe(400)
     expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('changes institution status through the caller JWT and audits the reason', async () => {
+    const requestId = '55555555-5555-4555-8555-555555555555'
+    const payload = {
+      institutionId: INSTITUTION_ID,
+      previousStatus: 'pilot',
+      status: 'suspended',
+      changed: true,
+      replayed: false,
+    }
+    mocks.rpc.mockResolvedValue({ data: payload, error: null })
+    const response = await PATCH(patch({
+      institutionId: INSTITUTION_ID,
+      status: 'suspended',
+      reason: 'Ödeme ve güvenlik incelemesi tamamlanana kadar.',
+      requestId,
+    }))
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('set_pilot_institution_status', {
+      p_user_id: ADMIN.id,
+      p_institution_id: INSTITUTION_ID,
+      p_status: 'suspended',
+      p_reason: 'Ödeme ve güvenlik incelemesi tamamlanana kadar.',
+      p_request_id: requestId,
+    })
+    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      action: 'set_institution_status', targetId: INSTITUTION_ID,
+    }))
   })
 })

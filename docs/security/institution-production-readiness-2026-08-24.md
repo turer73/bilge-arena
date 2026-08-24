@@ -12,9 +12,10 @@ insan/tedarikçi kararı bekleyen kapıları birbirinden ayırır.
 | Dağıtık rate limit | Canlı config + kodda tamam | Production'da Upstash ve KV env adları mevcut; eksik/erişilemez backend 503/fail-closed |
 | Personel AAL2 | Kodda tamam | TOTP enrollment/challenge; admin/kurum/öğretmen izin ve proxy katmanında AAL2 |
 | Tenant audit | Kodda tamam | Migration 145 + 149; kritik kurum/sınıf işlemleri immutable event |
-| JWT-bound RPC | Migration/deploy sırası bekliyor | Migration 150 önce uygulanmalı; sonra route context kullanıcı JWT'siyle çağırır. `auth.uid()` bağlaması olmayan fonksiyonda migration durur |
+| JWT-bound RPC | Migration/deploy sırası bekliyor | Migration 150 kurum, öğretmen ve platform kurum RPC'lerini kullanıcı JWT'sine bağlar. `auth.uid()` bağlaması olmayan fonksiyonda migration durur |
 | DSAR export | Kodda tamam | Kimliği doğrulanmış `/api/account/export`; no-store JSON; production rate limit |
-| Otomatik imha | Bloke | Onaylı saklama matrisi ve güncel tüm FK'leri kapsayan deletion job yok. Onaylanmadan 30 gün garantisi verilmez |
+| İstek ledger imhası | Kodda tamam, migration/deploy bekliyor | Migration 152 ve günlük cron yalnız idempotency ledger'larını varsayılan 90 gün sonunda siler; immutable audit event'leri korur. 30 günden yeni cutoff SQL'de reddedilir |
+| Genel otomatik imha | Kısmi / hukuk kararı bekliyor | Hesap, sınıf üyeliği, rapor ve audit kategorilerinin tamamını kapsayan onaylı saklama matrisi henüz yok. Ledger kontrolü genel KVKK imha politikası yerine geçmez |
 | Tenant A/B gerçek oturum | Bloke | İki ayrı yetkili test hesabı ve izole test tenant'ı tahsis edilmedi |
 | Gerçek kurum canary | Bloke | Kurum, DPA/aydınlatma onayı ve sorumlu kişi seçilmedi |
 
@@ -28,6 +29,7 @@ insan/tedarikçi kararı bekleyen kapıları birbirinden ayırır.
 | Rate-limit backend kesintisi | Production fail-closed | Redis yok/timeout: ayrı instance belleğine düşmeden 503 |
 | Personel ekranından veri sızıntısı | Üçüncü taraf script/event/replay yasağı | Hassas rota HTML/DOM/network'te GA, Plausible, AdSense ve replay bulunmamalı |
 | İnkâr edilebilir yönetim işlemi | Immutable tenant audit | UPDATE/DELETE reddi; request replay tek event |
+| Kurum yöneticisi kaybı / sözleşme durması | Yönetici devri + platform askıya alma/terminal arşiv | JWT-bound olmayan aktör reddi; askıya alınan tenant RPC'leri kapanır; gerekçe immutable event'e yazılır |
 | Fazla veri içeren export | Yalnız oturum sahibine service-side derleme, no-store | Başka user id parametresi yok; response cache edilemez |
 
 ## Alt işleyen ve yurt dışı aktarım envanteri
@@ -45,6 +47,23 @@ insan/tedarikçi kararı bekleyen kapıları birbirinden ayırır.
 
 Bu satırlardaki “doğrulanmalı” maddeleri imzalanmış DPA yerine geçmez. Bunlar
 tamamlanana kadar ücretli kurum kabulü kapalı kalır.
+
+## Opus denetimi kapanış karşılaştırması
+
+| Eski bulgu | Güncel durum | Kanıt |
+|---|---|---|
+| Yönetici devri yok | Kapandı | Migration 145 ve manager-transfer route/testleri |
+| Kurum askıya alma/arşiv yok | Kodda kapandı, canlı migration bekliyor | Migration 151, JWT-bound platform RPC, gerekçeli admin UI ve immutable event |
+| `student_limit` uygulanmıyor | Kapandı | Migration 145; tenant genelinde distinct aktif öğrenci sayımı ve advisory lock |
+| Kurum işlem audit'i yok | Kapandı | Migration 145 + 149 + 151 |
+| Öğretmen gizlilik PG testi CI dışında | Kapandı | CI ayrı disposable PostgreSQL veritabanında suite'i çalıştırır |
+| Haftalık lig cron'u kayıtlı değil | Kapandı | `vercel.json` Pazartesi 00:05 UTC tetikleyicisi |
+| Migration 136 trigger grant kaçağı | Kodda kapandı, canlı migration bekliyor | Migration 152 forward revoke + migration 136 sonrası SECURITY DEFINER CI linteri |
+| Idempotency ledger'ları süresiz | Kodda kapandı, canlı migration bekliyor | 30–730 gün güvenli aralık; varsayılan 90 gün; günlük service-role cron |
+| Platform kurum RPC'leri service-role taşıyıcılı | Kodda kapandı, canlı migration bekliyor | Listeleme, provisioning, destek görünümü ve durum değişimi caller JWT ile çalışır |
+
+Bu tablo yalnız kod/CI durumunu gösterir. Migration, merge, deploy ve canlı sorgu
+kanıtı tamamlanmadan “canlıda kapandı” denmez.
 
 ## Yedek ve geri dönüş tatbikatı
 

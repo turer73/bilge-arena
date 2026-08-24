@@ -47,8 +47,24 @@ const institutionOperationsSql = readFileSync(
   join(migrationsDir, '145_institution_operations_governance.sql'),
   'utf8',
 )
+const institutionAuditSql = readFileSync(
+  join(migrationsDir, '149_institution_critical_operation_audit.sql'),
+  'utf8',
+)
+const authenticatedBoundarySql = readFileSync(
+  join(migrationsDir, '150_authenticated_institution_rpc_boundary.sql'),
+  'utf8',
+)
+const institutionLifecycleSql = readFileSync(
+  join(migrationsDir, '151_institution_lifecycle_control.sql'),
+  'utf8',
+)
+const institutionRetentionSql = readFileSync(
+  join(migrationsDir, '152_institution_request_ledger_retention.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135 and 145 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145 and 149-152 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -82,6 +98,18 @@ suite('112-127, 131-135 and 145 institution pilot real PostgreSQL acceptance', (
       return result.rows[0].result
     } finally {
       await connection.query('RESET ROLE')
+    }
+  }
+
+  async function authenticatedRpc(userId, expression, values = []) {
+    await client.query('SET ROLE authenticated')
+    await client.query("SELECT set_config('app.uid',$1,false)", [userId])
+    try {
+      const result = await client.query(`SELECT ${expression} AS result`, values)
+      return result.rows[0].result
+    } finally {
+      await client.query('RESET ROLE')
+      await client.query("SELECT set_config('app.uid','',false)")
     }
   }
 
@@ -269,6 +297,41 @@ suite('112-127, 131-135 and 145 institution pilot real PostgreSQL acceptance', (
     await client.query(teacherLifecycleSql)
     await client.query(managerTeacherRoleSql)
     await client.query(institutionOperationsSql)
+    await client.query(institutionAuditSql)
+    await client.query(authenticatedBoundarySql)
+    await client.query(institutionLifecycleSql)
+    // Migration 136 belongs to the question-governance chain and is not loaded
+    // by this focused suite. Its trigger function is stubbed so migration 152's
+    // forward REVOKE and retention function still compile on real PostgreSQL.
+    await client.query(`
+      CREATE FUNCTION public.tg_require_question_validation_decision()
+      RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog
+      AS $$ BEGIN RETURN NEW; END $$
+    `)
+    await client.query(institutionRetentionSql)
+
+    const authenticatedBoundary = await client.query(`
+      SELECT
+        count(*) FILTER (WHERE has_function_privilege('authenticated', p.oid, 'EXECUTE'))::int
+          AS authenticated_count,
+        count(*) FILTER (WHERE has_function_privilege('anon', p.oid, 'EXECUTE'))::int
+          AS anon_count,
+        count(*) FILTER (WHERE has_function_privilege('public', p.oid, 'EXECUTE'))::int
+          AS public_count
+      FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.proname IN (
+          'get_my_pilot_institution',
+          'get_my_teacher_classrooms',
+          'create_my_institution_classroom'
+        )
+    `)
+    expect(authenticatedBoundary.rows[0]).toEqual({
+      authenticated_count: 3,
+      anon_count: 0,
+      public_count: 0,
+    })
 
     const separatedManagerRoles = await client.query(
       `SELECT role.slug, array_agg(permission.permission ORDER BY permission.permission) AS permissions
@@ -318,6 +381,45 @@ suite('112-127, 131-135 and 145 institution pilot real PostgreSQL acceptance', (
         supportAccess: expect.objectContaining({ active: false }),
       }),
     ]))
+  })
+
+  it('lets only a JWT-bound platform admin suspend and reactivate a tenant with immutable evidence', async () => {
+    const suspendRequest = randomUUID()
+    const suspended = await authenticatedRpc(
+      platformAdmin,
+      'public.set_pilot_institution_status($1,$2,$3,$4,$5)',
+      [platformAdmin, institutionOne, 'suspended', 'Security review in progress.', suspendRequest],
+    )
+    expect(suspended).toMatchObject({
+      institutionId: institutionOne,
+      previousStatus: 'pilot',
+      status: 'suspended',
+      changed: true,
+      replayed: false,
+    })
+    await expectPgError(
+      () => authenticatedRpc(managerOne, 'public.set_pilot_institution_status($1,$2,$3,$4,$5)', [
+        managerOne, institutionOne, 'active', 'Unauthorized lifecycle attempt.', randomUUID(),
+      ]),
+      '42501',
+    )
+    const activated = await authenticatedRpc(
+      platformAdmin,
+      'public.set_pilot_institution_status($1,$2,$3,$4,$5)',
+      [platformAdmin, institutionOne, 'active', 'Security review completed successfully.', randomUUID()],
+    )
+    expect(activated).toMatchObject({ previousStatus: 'suspended', status: 'active', changed: true })
+    const event = await client.query(
+      `SELECT metadata FROM public.institution_operation_events
+       WHERE institution_id=$1 AND event_type='institution_status_changed' AND request_id=$2`,
+      [institutionOne, suspendRequest],
+    )
+    expect(event.rows[0].metadata).toMatchObject({
+      previousStatus: 'pilot',
+      status: 'suspended',
+      reason: 'Security review in progress.',
+      changed: true,
+    })
   })
 
   it('explicitly gives one manager the teacher system role without a duplicate membership', async () => {
@@ -876,5 +978,38 @@ suite('112-127, 131-135 and 145 institution pilot real PostgreSQL acceptance', (
       ),
       '42501',
     )
+  })
+
+  it('prunes old idempotency rows without touching immutable institution events', async () => {
+    const oldRequest = randomUUID()
+    const teacherRequest = randomUUID()
+    const eventCountBefore = await client.query(
+      'SELECT count(*)::int AS count FROM public.institution_operation_events',
+    )
+    await client.query(
+      `INSERT INTO public.pilot_institution_requests(
+         user_id,operation,request_id,payload_hash,result,created_at
+       ) VALUES($1,'retention_fixture',$2,$3,'{}'::jsonb,clock_timestamp()-interval '100 days')`,
+      [platformAdmin, oldRequest, 'a'.repeat(64)],
+    )
+    await client.query(
+      `INSERT INTO public.teacher_classroom_requests(
+         user_id,operation,request_id,payload_hash,result,created_at
+       ) VALUES($1,'retention_fixture',$2,$3,'{}'::jsonb,clock_timestamp()-interval '100 days')`,
+      [platformAdmin, teacherRequest, 'b'.repeat(64)],
+    )
+    const result = await service(
+      `SELECT public.prune_institution_request_ledgers(
+         clock_timestamp()-interval '90 days'
+       ) AS result`,
+    )
+    expect(result.rows[0].result).toMatchObject({
+      pilotInstitutionRequestsDeleted: 1,
+      teacherClassroomRequestsDeleted: 1,
+    })
+    const eventCountAfter = await client.query(
+      'SELECT count(*)::int AS count FROM public.institution_operation_events',
+    )
+    expect(eventCountAfter.rows[0].count).toBe(eventCountBefore.rows[0].count)
   })
 })

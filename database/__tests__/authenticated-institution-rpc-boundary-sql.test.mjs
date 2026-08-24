@@ -18,6 +18,9 @@ describe('authenticated institution RPC boundary', () => {
   })
 
   it.each([
+    'list_pilot_institutions',
+    'provision_pilot_institution',
+    'get_institution_support_directory',
     'get_my_pilot_institution',
     'create_my_institution_classroom',
     'set_teacher_classroom_exam_mode',

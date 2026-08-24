@@ -2,12 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ checkPermission: vi.fn(), logAdminAction: vi.fn(), rpc: vi.fn() }))
 vi.mock('@/lib/institution-pilot/server-security', () => ({ isInstitutionPilotEnabled: () => true }))
-vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie' })) }))
+vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie', rpc: mocks.rpc })) }))
 vi.mock('@/lib/supabase/admin', () => ({
   checkPermission: mocks.checkPermission,
   logAdminAction: mocks.logAdminAction,
 }))
-vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: () => ({ rpc: mocks.rpc }) }))
 
 import { GET } from '../route'
 

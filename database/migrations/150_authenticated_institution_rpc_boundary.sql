@@ -8,6 +8,8 @@ DECLARE
   v_name text;
   v_proc record;
   v_names text[] := ARRAY[
+    'list_pilot_institutions','provision_pilot_institution',
+    'get_institution_support_directory',
     'get_my_institution_operation_events','create_my_institution_classroom',
     'set_my_institution_role_assignment','update_my_institution_role',
     'delete_my_institution_role','get_my_institution_role_directory',
