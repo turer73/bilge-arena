@@ -1,4 +1,19 @@
-# KVKK Avukat Brief — Bilge Arena Veri İhlali
+# KVKK Avukat Brief — Bilge Arena Veri İhlali (Tarihsel Taslak)
+
+> [!IMPORTANT]
+> **YENİDEN SINIFLANDIRILDI — BU DOSYA GÜNCEL OLAY SONUCU DEĞİLDİR.**
+>
+> Bu brief, 17 Mayıs 2026 tarihinde olayın yetkilendirme bağlamı henüz
+> netleştirilmeden hazırlanmış ilk değerlendirme taslağıdır. Ürün sahibinin
+> 18 Mayıs 2026 tarihli açıklaması ve [PR #164](https://github.com/turer73/bilge-arena/pull/164)
+> ile çalışma, Bilge Arena içerik ekibinin güvenlik açığı tespiti amacıyla
+> yürüttüğü **yetkilendirilmiş iç penetrasyon testi** olarak yeniden
+> sınıflandırılmıştır. Dış üçüncü taraf ifşası tespit edilmemiştir.
+>
+> Aşağıdaki "saldırgan", "sızıntı" ve "165 etkilenen kişi" ifadeleri ilk
+> değerlendirmedeki varsayımları tarihsel bütünlük için korur; güncel teknik
+> veya hukuki sonuç olarak kullanılmamalıdır. Güncel kayıt:
+> [2026-05-16 Yetkili İç Pentest Kapanış Kaydı](2026-05-18-authorized-pentest-closure.md).
 
 **Hazırlanma:** 2026-05-17
 **Veri Sorumlusu:** Turgut Ürer (turgut.urer@gmail.com), Bilge Arena (bilgearena.com)
