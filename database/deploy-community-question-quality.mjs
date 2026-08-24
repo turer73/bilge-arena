@@ -98,6 +98,38 @@ async function state() {
           AND (SELECT count(*) FROM public.role_permissions permission
                WHERE permission.role_id=role.id
                  AND permission.permission IN ('content.appeals.manage','content.corrections.apply'))=2
+      ),
+      'controlCandidates', json_build_object(
+        'officialExamPublished', (
+          SELECT count(*)
+          FROM public.question_content_revisions revision
+          JOIN public.questions question ON question.published_revision_id=revision.id
+          JOIN public.question_revision_sources source ON source.revision_id=revision.id
+          WHERE revision.status='published'
+            AND source.source_kind='official_exam'
+            AND jsonb_typeof(revision.content->'options')='array'
+            AND COALESCE(revision.content->>'answer',revision.content->>'correct') ~ '^[0-4]$'
+            AND COALESCE(revision.content->>'answer',revision.content->>'correct')::integer
+              < jsonb_array_length(revision.content->'options')
+        ),
+        'officialDomainTwoStageApproved', (
+          SELECT count(*)
+          FROM public.question_content_revisions revision
+          JOIN public.questions question ON question.published_revision_id=revision.id
+          JOIN public.question_revision_sources source ON source.revision_id=revision.id
+          WHERE revision.status='published'
+            AND source.source_kind='official_exam'
+            AND source.source_url ~* '^https://([a-z0-9-]+\\.)*(osym|meb)\\.gov\\.tr(/|$)'
+            AND jsonb_typeof(revision.content->'options')='array'
+            AND COALESCE(revision.content->>'answer',revision.content->>'correct') ~ '^[0-4]$'
+            AND COALESCE(revision.content->>'answer',revision.content->>'correct')::integer
+              < jsonb_array_length(revision.content->'options')
+            AND (SELECT count(DISTINCT approval.stage)
+                 FROM public.question_revision_approvals approval
+                 WHERE approval.revision_id=revision.id
+                   AND approval.decision='approved'
+                   AND approval.stage IN (1,2))=2
+        )
       )
     ) AS state;
   `)
