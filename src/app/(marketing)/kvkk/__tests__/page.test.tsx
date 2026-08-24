@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import KVKKPage from '../page'
+import PrivacyPage from '../../gizlilik-politikasi/page'
 
 describe('/kvkk', () => {
   it('16 Mayis calismasini yetkilendirilmis ic pentest olarak siniflandirir', () => {
@@ -21,5 +22,14 @@ describe('/kvkk', () => {
 
     expect(screen.getByText(/Kurulu'na en geç 72 saat içinde/u)).toBeInTheDocument()
     expect(screen.getByText(/ilgili kişilere makul olan en kısa süre içinde/u)).toBeInTheDocument()
+  })
+})
+
+describe('/gizlilik-politikasi', () => {
+  it('gizlilik metninde calismayi ihlal bildirimi olarak adlandirmaz', () => {
+    render(<PrivacyPage />)
+
+    expect(screen.getByText(/Geçmiş yetkili iç güvenlik testinin sınıflandırması/u)).toBeInTheDocument()
+    expect(screen.queryByText(/son ihlal bildirimi/u)).not.toBeInTheDocument()
   })
 })

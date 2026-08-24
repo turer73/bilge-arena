@@ -82,7 +82,7 @@ export default function GizlilikPolitikasiPage() {
             endüstri standardı bcrypt ile yapılır. Sunucu erişim kayıtları (edge log) 14 gün
             sonra IP adresi tek yönlü kriptografik özet ile takma adlandırılır, 90 gün sonra
             tamamen silinir. Veri ihlali tespit edildiğinde KVKK Madde 12 kapsamında 72 saat
-            içinde bildirim yapılır — son ihlal bildirimi için bkz.{' '}
+            içinde bildirim yapılır. Geçmiş yetkili iç güvenlik testinin sınıflandırması için bkz.{' '}
             <a href="/kvkk" className="text-[var(--focus)] underline">KVKK aydınlatma metni Madde 9</a>.
           </p>
         </section>
