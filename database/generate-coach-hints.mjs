@@ -78,6 +78,15 @@ function readJsonl(path) {
   return text.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line))
 }
 
+function readJsonlIfExists(path) {
+  try {
+    return readJsonl(path)
+  } catch (error) {
+    if (error?.code === 'ENOENT') return []
+    throw error
+  }
+}
+
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
@@ -111,10 +120,6 @@ async function main() {
   for (const path of [args.manifest, args.source]) {
     if (!existsSync(path)) usage(`Required input does not exist: ${path}`)
   }
-  const outputExists = existsSync(args.output)
-  if (outputExists && !args.resume && !args.dryRun) {
-    usage(`Refusing to overwrite ${args.output}; use --resume or choose a new staging path`)
-  }
   if (!args.dryRun && !process.env.DEEPSEEK_API_KEY) {
     usage('DEEPSEEK_API_KEY must be injected by the external narrow executor')
   }
@@ -131,24 +136,29 @@ async function main() {
     sourceByRevision.set(item.revisionId, source)
   }
 
-  const completed = new Set()
-  if (outputExists) {
-    for (const record of readJsonl(args.output)) {
+  const outputFd = args.dryRun
+    ? null
+    : openSync(args.output, args.resume ? 'a+' : 'wx+', 0o600)
+  try {
+    const existingRecords = args.dryRun
+      ? readJsonlIfExists(args.output)
+      : args.resume
+        ? readJsonl(outputFd)
+        : []
+    const completed = new Set()
+    for (const record of existingRecords) {
       validateStagingRecord(record, manifest, sourceByRevision)
       if (completed.has(record.revisionId)) throw new Error('staging output repeats a revision')
       completed.add(record.revisionId)
     }
-  }
 
-  process.stdout.write(`Manifest ${manifest.manifestSha256}; immutable rows ${sourceByRevision.size}; already staged ${completed.size}.\n`)
-  if (args.dryRun) {
-    process.stdout.write('Dry run passed. No model call or file write occurred.\n')
-    return
-  }
+    process.stdout.write(`Manifest ${manifest.manifestSha256}; immutable rows ${sourceByRevision.size}; already staged ${completed.size}.\n`)
+    if (args.dryRun) {
+      process.stdout.write('Dry run passed. No model call or file write occurred.\n')
+      return
+    }
 
-  let failed = 0
-  const outputFd = openSync(args.output, args.resume ? 'a' : 'wx', 0o600)
-  try {
+    let failed = 0
     for (let index = 0; index < manifest.items.length; index += 1) {
       const item = manifest.items[index]
       if (completed.has(item.revisionId)) continue
@@ -176,12 +186,11 @@ async function main() {
       }
       await sleep(300)
     }
+    process.stdout.write(`Staging finished: ${manifest.items.length - completed.size - failed} new, ${completed.size} resumed, ${failed} failed.\n`)
+    if (failed > 0) process.exitCode = 1
   } finally {
-    closeSync(outputFd)
+    if (outputFd !== null) closeSync(outputFd)
   }
-
-  process.stdout.write(`Staging finished: ${manifest.items.length - completed.size - failed} new, ${completed.size} resumed, ${failed} failed.\n`)
-  if (failed > 0) process.exitCode = 1
 }
 
 main().catch((error) => {

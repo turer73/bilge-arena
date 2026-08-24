@@ -22,8 +22,8 @@ listed below; the queries remain enabled for future code.
 - `js/regex/missing-regexp-anchor` (alert 29): the test asserts an exact URL
   substring instead of applying an unsafe host-shaped regular expression.
 - `js/identity-replacement` (alert 16): the no-op replacement was removed.
-- `js/log-injection` (alert 33): downloaded error messages are reduced to one
-  log line before output.
+- `js/log-injection` (alert 33): downloader failures emit a static message;
+  untrusted error text is not written to the terminal log.
 
 ## Expected, narrowly scoped data flows
 

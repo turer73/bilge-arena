@@ -51,9 +51,8 @@ for (const pdf of targets) {
   try {
     await download(pdf.url, dest)
     console.log('✓')
-  } catch (e) {
-    const safeMessage = String(e?.message || e).replace(/[\r\n]/g, ' ')
-    console.log(`✗ ${safeMessage}`)
+  } catch {
+    console.log('✗ indirme başarısız')
   }
 }
 console.log('Bitti.')
