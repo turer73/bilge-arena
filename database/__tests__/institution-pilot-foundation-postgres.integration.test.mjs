@@ -67,8 +67,12 @@ const institutionReviewClosureSql = readFileSync(
   join(migrationsDir, '154_institution_review_closure.sql'),
   'utf8',
 )
+const institutionSecurityFollowupSql = readFileSync(
+  join(migrationsDir, '155_institution_security_review_followup.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145 and 149-155 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -105,15 +109,17 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
     }
   }
 
-  async function authenticatedRpc(userId, expression, values = []) {
+  async function authenticatedRpc(userId, expression, values = [], aal = 'aal2') {
     await client.query('SET ROLE authenticated')
     await client.query("SELECT set_config('app.uid',$1,false)", [userId])
+    await client.query("SELECT set_config('request.jwt.claims',$1,false)", [JSON.stringify({ sub: userId, aal })])
     try {
       const result = await client.query(`SELECT ${expression} AS result`, values)
       return result.rows[0].result
     } finally {
       await client.query('RESET ROLE')
       await client.query("SELECT set_config('app.uid','',false)")
+      await client.query("SELECT set_config('request.jwt.claims','{}',false)")
     }
   }
 
@@ -194,11 +200,11 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
         content jsonb NOT NULL,
         is_active boolean NOT NULL DEFAULT true
       );
-      CREATE TABLE public.verified_attempts(id uuid PRIMARY KEY);
-      CREATE TABLE public.game_sessions(id uuid PRIMARY KEY);
-      CREATE TABLE public.session_answers(id uuid PRIMARY KEY);
-      CREATE TABLE public.review_cards(id uuid PRIMARY KEY);
-      CREATE TABLE public.review_logs(id uuid PRIMARY KEY);
+      CREATE TABLE public.verified_attempts(id uuid PRIMARY KEY, user_id uuid);
+      CREATE TABLE public.game_sessions(id uuid PRIMARY KEY, user_id uuid);
+      CREATE TABLE public.session_answers(id uuid PRIMARY KEY, session_id uuid);
+      CREATE TABLE public.review_cards(id uuid PRIMARY KEY, user_id uuid);
+      CREATE TABLE public.review_logs(id uuid PRIMARY KEY, user_id uuid);
       CREATE TABLE public.user_outcome_state(id uuid PRIMARY KEY);
       CREATE TABLE public.xp_log(id uuid PRIMARY KEY);
       CREATE TABLE public.reward_ledger(id uuid PRIMARY KEY);
@@ -314,6 +320,7 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
     `)
     await client.query(institutionRetentionSql)
     await client.query(institutionReviewClosureSql)
+    await client.query(institutionSecurityFollowupSql)
 
     const authenticatedBoundary = await client.query(`
       SELECT
@@ -358,6 +365,15 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
       [managerOne],
     )
     expect(managerTeacherGuard.rows[0].allowed).toBe(false)
+    await expectPgError(
+      () => authenticatedRpc(
+        platformAdmin,
+        'public.list_pilot_institutions($1)',
+        [platformAdmin],
+        'aal1',
+      ),
+      '42501',
+    )
 
     expect(await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
       platformAdmin, 'Bilge Pilot Bir', managerOne, requestId,
@@ -460,7 +476,11 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
       [institutionOne, managerOne],
     )
     expect(membershipCount.rows[0].count).toBe(1)
-    expect(await rpc('public.teacher_classroom_is_teacher($1)', [managerOne])).toBe(true)
+    const managerTeacher = await client.query(
+      'SELECT public.teacher_classroom_is_teacher($1) AS allowed',
+      [managerOne],
+    )
+    expect(managerTeacher.rows[0].allowed).toBe(true)
 
     const roleDirectory = await rpc('public.get_my_institution_role_directory($1)', [managerOne])
     const manager = roleDirectory.members.find((member) => member.memberRef === managerMemberRef)
@@ -471,6 +491,36 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
     const tracking = await rpc('public.get_institution_tracking_directory($1)', [managerOne])
     expect(tracking.membership).toEqual({ role: 'manager', teacherEnabled: true })
     expect(tracking.classrooms).toEqual([])
+    await expectPgError(
+      () => authenticatedRpc(
+        managerOne,
+        'public.get_my_teacher_classrooms($1)',
+        [managerOne],
+        'aal1',
+      ),
+      '42501',
+    )
+  })
+
+  it('blocks legacy classroom RPCs while the linked institution is suspended', async () => {
+    await authenticatedRpc(
+      platformAdmin,
+      'public.set_pilot_institution_status($1,$2,$3,$4,$5)',
+      [platformAdmin, institutionOne, 'suspended', 'Tenant access regression check.', randomUUID()],
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        managerOne,
+        'public.create_teacher_classroom($1,$2,$3)',
+        [managerOne, 'Askıda Sınıf', randomUUID()],
+      ),
+      '42501',
+    )
+    await authenticatedRpc(
+      platformAdmin,
+      'public.set_pilot_institution_status($1,$2,$3,$4,$5)',
+      [platformAdmin, institutionOne, 'active', 'Tenant access regression check completed.', randomUUID()],
+    )
   })
 
   it('keeps support access manager-controlled, read-only, expiring and replay-safe', async () => {
@@ -492,10 +542,30 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
       'public.grant_my_institution_support_access($1,$2,$3,$4)',
       [managerOne, 60, 'Kurum kurulumunu birlikte kontrol etmek icin.', requestId],
     )).toMatchObject({ grantRef: granted.grantRef, replayed: true })
-    expect(await rpc('public.institution_support_has_access($1,$2)', [platformAdmin, institutionOne]))
-      .toBe(true)
-    expect(await rpc('public.institution_support_has_access($1,$2)', [managerOne, institutionOne]))
-      .toBe(false)
+    await expectPgError(
+      () => authenticatedRpc(
+        managerOne,
+        'public.grant_my_institution_support_access($1,$2,$3,$4)',
+        [managerOne, 60, 'Kurum kurulumunu birlikte kontrol etmek icin.', requestId],
+        'aal1',
+      ),
+      '42501',
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        managerOne,
+        'public.get_my_institution_support_access($1)',
+        [managerOne],
+        'aal1',
+      ),
+      '42501',
+    )
+    const supportAccess = await client.query(
+      `SELECT public.institution_support_has_access($1,$3) AS platform,
+              public.institution_support_has_access($2,$3) AS manager`,
+      [platformAdmin, managerOne, institutionOne],
+    )
+    expect(supportAccess.rows[0]).toEqual({ platform: true, manager: false })
     expect(await rpc('public.get_institution_support_directory($1,$2)', [platformAdmin, institutionOne]))
       .toMatchObject({
         institution: { id: institutionOne, name: 'Bilge Pilot Bir' },
@@ -508,8 +578,11 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
       [managerOne, randomUUID()],
     )
     expect(revoked).toMatchObject({ active: false, scope: 'read_only', replayed: false })
-    expect(await rpc('public.institution_support_has_access($1,$2)', [platformAdmin, institutionOne]))
-      .toBe(false)
+    const revokedSupportAccess = await client.query(
+      'SELECT public.institution_support_has_access($1,$2) AS allowed',
+      [platformAdmin, institutionOne],
+    )
+    expect(revokedSupportAccess.rows[0].allowed).toBe(false)
     await expectPgError(
       () => rpc('public.get_institution_support_directory($1,$2)', [platformAdmin, institutionOne]),
       '42501',
@@ -686,9 +759,11 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
     await rpc('public.set_my_institution_role_assignment($1,$2,$3,$4,$5)', [
       managerOne, customRoleRef, teacherMemberRef, true, randomUUID(),
     ])
-    expect(await rpc('public.institution_member_has_permission($1,$2,$3)', [
-      teacherOne, institutionOne, 'institution.classrooms.view_all',
-    ])).toBe(true)
+    const teacherPermission = await client.query(
+      'SELECT public.institution_member_has_permission($1,$2,$3) AS allowed',
+      [teacherOne, institutionOne, 'institution.classrooms.view_all'],
+    )
+    expect(teacherPermission.rows[0].allowed).toBe(true)
     expect((await rpc('public.get_institution_tracking_directory($1)', [teacherOne])).classrooms)
       .toEqual(expect.arrayContaining([
         expect.objectContaining({ id: managerClassroom.classroom.id }),
@@ -760,6 +835,15 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
     expect(await rpc('public.set_teacher_classroom_exam_mode($1,$2,$3,$4,$5)', [
       teacherOne, examClass.classroom.id, institutionOne, true, requestId,
     ])).toMatchObject({ examMode: true, replayed: false })
+    const examModeAudit = await client.query(
+      `SELECT metadata FROM public.institution_operation_events
+       WHERE event_type='exam_mode_changed' AND request_id=$1`,
+      [requestId],
+    )
+    expect(examModeAudit.rows[0].metadata).toMatchObject({
+      enabled: true,
+      expiresAt: expect.any(String),
+    })
     expect(await rpc('public.get_my_assistance_policy($1)', [examStudent])).toMatchObject({
       examMode: true, board: false, coach: false, assistant: false,
     })
@@ -999,6 +1083,45 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
     )
   })
 
+  it('uses reviewRef as the immutable study-program review target', async () => {
+    const requestId = randomUUID()
+    const reviewRef = 'c'.repeat(32)
+    await client.query(
+      `INSERT INTO public.pilot_institution_requests(
+         user_id,operation,request_id,payload_hash,result
+       ) VALUES($1,'review_study_program',$2,$3,jsonb_build_object('reviewRef',$4::text))`,
+      [managerOne, requestId, 'c'.repeat(64), reviewRef],
+    )
+    const event = await client.query(
+      `SELECT target_ref FROM public.institution_operation_events
+       WHERE event_type='study_program_reviewed' AND request_id=$1`,
+      [requestId],
+    )
+    expect(event.rows[0].target_ref).toBe(reviewRef)
+  })
+
+  it('does not export student-owned rows merely because the requester is their teacher', async () => {
+    await client.query(`
+      CREATE TABLE public.dsar_teacher_student_fixture(
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        student_id uuid NOT NULL,
+        teacher_id uuid NOT NULL,
+        private_student_note text NOT NULL
+      )
+    `)
+    await client.query(
+      `INSERT INTO public.dsar_teacher_student_fixture(student_id,teacher_id,private_student_note)
+       VALUES($1,$2,'student-only')`,
+      [platformAdmin, teacherOne],
+    )
+    const teacherExport = await rpc('public.export_account_data($1)', [teacherOne])
+    const studentExport = await rpc('public.export_account_data($1)', [platformAdmin])
+    expect(teacherExport.tables.dsar_teacher_student_fixture).toBeUndefined()
+    expect(studentExport.tables.dsar_teacher_student_fixture).toEqual([
+      expect.objectContaining({ student_id: platformAdmin, private_student_note: 'student-only' }),
+    ])
+  })
+
   it('prunes old idempotency rows without touching immutable institution events', async () => {
     const oldRequest = randomUUID()
     const teacherRequest = randomUUID()
@@ -1025,11 +1148,21 @@ suite('112-127, 131-135, 145 and 149-154 institution pilot real PostgreSQL accep
     expect(result.rows[0].result).toMatchObject({
       pilotInstitutionRequestsDeleted: 1,
       teacherClassroomRequestsDeleted: 1,
+      requestTombstonesCreated: 2,
     })
     const eventCountAfter = await client.query(
       'SELECT count(*)::int AS count FROM public.institution_operation_events',
     )
     expect(eventCountAfter.rows[0].count).toBe(eventCountBefore.rows[0].count)
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institution_requests(
+           user_id,operation,request_id,payload_hash,result
+         ) VALUES($1,'retention_fixture_reuse',$2,$3,'{}'::jsonb)`,
+        [platformAdmin, oldRequest, 'd'.repeat(64)],
+      ),
+      '23505',
+    )
   })
 
   it('keeps a terminally archived tenant visible in the platform directory', async () => {

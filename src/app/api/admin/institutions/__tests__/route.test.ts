@@ -136,6 +136,25 @@ describe('admin institution routes', () => {
     }))
   })
 
+  it('reports a status limiter backend outage as retryable infrastructure failure', async () => {
+    mocks.limiter.mockResolvedValue({
+      success: false,
+      reason: 'backend_unavailable',
+      retryAfter: 17,
+    })
+    const response = await PATCH(patch({
+      institutionId: INSTITUTION_ID,
+      status: 'suspended',
+      reason: 'Güvenlik incelemesi tamamlanana kadar.',
+      requestId: '77777777-7777-4777-8777-777777777777',
+    }))
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get('Retry-After')).toBe('17')
+    expect(await response.json()).toEqual({ error: 'İstek sınırı altyapısı kullanılamıyor' })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
   it('does not report a committed status mutation as failed when the secondary log fails', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     mocks.rpc.mockResolvedValue({

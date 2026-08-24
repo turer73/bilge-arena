@@ -18,11 +18,24 @@ import {
 const provisionLimiter = createRateLimiter('admin-institution-provision', 5, 60_000)
 const statusLimiter = createRateLimiter('admin-institution-status', 20, 60_000)
 
-function noStore(body: unknown, status = 200) {
+function noStore(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return NextResponse.json(body, {
     status,
-    headers: { 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer' },
+    headers: {
+      'Cache-Control': 'private, no-store',
+      'Referrer-Policy': 'no-referrer',
+      ...headers,
+    },
   })
+}
+
+function rateLimitFailure(result: { reason?: string; retryAfter?: number }) {
+  const unavailable = result.reason === 'backend_unavailable'
+  return noStore(
+    { error: unavailable ? 'İstek sınırı altyapısı kullanılamıyor' : 'Çok fazla kurum isteği' },
+    unavailable ? 503 : 429,
+    { 'Retry-After': String(result.retryAfter ?? 60) },
+  )
 }
 
 type InstitutionAdminContext =
@@ -61,7 +74,7 @@ export async function POST(request: NextRequest) {
   if (!context.ok) return context.response
 
   const rateLimit = await provisionLimiter.check(context.admin.id)
-  if (!rateLimit.success) return noStore({ error: 'Çok fazla kurum oluşturma isteği' }, 429)
+  if (!rateLimit.success) return rateLimitFailure(rateLimit)
 
   let body: unknown
   try {
@@ -98,7 +111,7 @@ export async function PATCH(request: NextRequest) {
   if (!context.ok) return context.response
 
   const rateLimit = await statusLimiter.check(context.admin.id)
-  if (!rateLimit.success) return noStore({ error: 'Çok fazla kurum durumu isteği' }, 429)
+  if (!rateLimit.success) return rateLimitFailure(rateLimit)
 
   let body: unknown
   try {
