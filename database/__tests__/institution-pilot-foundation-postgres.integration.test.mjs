@@ -71,8 +71,12 @@ const institutionSecurityFollowupSql = readFileSync(
   join(migrationsDir, '155_institution_security_review_followup.sql'),
   'utf8',
 )
+const accountExportReportPrivacySql = readFileSync(
+  join(migrationsDir, '156_account_export_report_privacy.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145 and 149-155 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -321,6 +325,7 @@ suite('112-127, 131-135, 145 and 149-155 institution pilot real PostgreSQL accep
     await client.query(institutionRetentionSql)
     await client.query(institutionReviewClosureSql)
     await client.query(institutionSecurityFollowupSql)
+    await client.query(accountExportReportPrivacySql)
 
     const authenticatedBoundary = await client.query(`
       SELECT
@@ -1120,6 +1125,44 @@ suite('112-127, 131-135, 145 and 149-155 institution pilot real PostgreSQL accep
     expect(studentExport.tables.dsar_teacher_student_fixture).toEqual([
       expect.objectContaining({ student_id: platformAdmin, private_student_note: 'student-only' }),
     ])
+  })
+
+  it('exports a minimized reporter-owned report without disclosing it to the reported user', async () => {
+    await client.query(`
+      CREATE TABLE public.user_reports (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        reporter_id uuid NOT NULL,
+        reported_user_id uuid NOT NULL,
+        report_type text NOT NULL,
+        reason text,
+        status text,
+        admin_note text,
+        resolved_by uuid,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `)
+    await client.query(
+      `INSERT INTO public.user_reports(
+         reporter_id,reported_user_id,report_type,reason,status,admin_note,resolved_by
+       ) VALUES($1,$2,'spam','repeated messages','resolved','internal moderation note',$3)`,
+      [teacherOne, platformAdmin, managerOne],
+    )
+
+    const reporterExport = await rpc('public.export_account_data($1)', [teacherOne])
+    const reportedUserExport = await rpc('public.export_account_data($1)', [platformAdmin])
+    expect(reporterExport.tables.user_reports).toEqual([
+      expect.objectContaining({
+        reportedUserId: platformAdmin,
+        reportType: 'spam',
+        reason: 'repeated messages',
+        status: 'resolved',
+      }),
+    ])
+    expect(reporterExport.tables.user_reports[0]).not.toHaveProperty('reporter_id')
+    expect(reporterExport.tables.user_reports[0]).not.toHaveProperty('admin_note')
+    expect(reporterExport.tables.user_reports[0]).not.toHaveProperty('resolved_by')
+    expect(reportedUserExport.tables.user_reports).toBeUndefined()
   })
 
   it('prunes old idempotency rows without touching immutable institution events', async () => {
