@@ -45,4 +45,20 @@ describe('GirisClient institution flow', () => {
 
     await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith('/arena/kurum/roller'))
   })
+
+  it('preserves the nested MFA target when institution account selection is forced', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/giris?next=%2Fhesap%2Fguvenlik%3Fnext%3D%252Fadmin%252Fkurumlar',
+    )
+    render(<GirisClient />)
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'Kurum Hesabıyla Giriş' }))
+
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
+      '/hesap/guvenlik?next=%2Fadmin%2Fkurumlar',
+      { forceAccountSelection: true },
+    ))
+  })
 })

@@ -38,3 +38,11 @@ export function safeMfaReturnPath(value: string | null | undefined): string {
     return '/arena'
   }
 }
+
+export function mfaSecurityPath(returnPath: string | null | undefined): string {
+  return `/hesap/guvenlik?next=${encodeURIComponent(safeMfaReturnPath(returnPath))}`
+}
+
+export function mfaLoginPath(returnPath: string | null | undefined): string {
+  return `/giris?next=${encodeURIComponent(mfaSecurityPath(returnPath))}`
+}
