@@ -57,6 +57,8 @@ describe('community question-quality SQL contract', () => {
     for (const name of ['SUPABASE_SERVICE_ROLE_KEY','QUESTION_QUALITY_WORKER_ACTOR_ID','GEMINI_API_KEY','DEEPSEEK_API_KEY']) {
       expect(workerWorkflow).toContain(`secrets.${name}`)
     }
+    expect(workerRunner).toContain("resolve: { alias: { '@': sourceRoot } }")
+    expect(workerRunner).toContain("new URL('../src', import.meta.url)")
   })
 
   it('runs migration 146 inside the disposable PostgreSQL acceptance suite', () => {

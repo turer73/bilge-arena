@@ -13,6 +13,9 @@ describe('community quality production rollout', () => {
     expect(deploy).toContain('supabase_migrations.schema_migrations')
     expect(deploy).toContain("ON CONFLICT(version) DO NOTHING")
     expect(deploy).toContain("Production verification failed")
+    expect(deploy).toContain("'controlCandidates'")
+    expect(deploy).toContain("(osym|meb)")
+    expect(deploy).toContain("count(DISTINCT approval.stage)")
   })
 
   it('creates a least-privilege worker role', () => {
