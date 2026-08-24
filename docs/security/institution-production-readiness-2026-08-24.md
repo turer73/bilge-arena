@@ -61,6 +61,13 @@ tamamlanana kadar ücretli kurum kabulü kapalı kalır.
 | Migration 136 trigger grant kaçağı | Canlıda kapandı | Migration 152 forward revoke + migration 136 sonrası SECURITY DEFINER CI linteri |
 | Idempotency ledger'ları süresiz | Canlı şema tamam, cron deploy bekliyor | 30–730 gün güvenli aralık; varsayılan 90 gün; günlük service-role cron |
 | Platform kurum RPC'leri service-role taşıyıcılı | Canlı grant tamam, route deploy bekliyor | Listeleme, provisioning, destek görünümü ve durum değişimi caller JWT ile çalışır |
+| Beş eski fonksiyonda mutable `search_path` | Migration/deploy bekliyor | Migration 153, fonksiyon OID ve trigger bağlarını değiştirmeden `pg_catalog, public` pinler |
+
+Opus'un `pg_trgm` ve `unaccent` extension'larının `public` şemasında olması notu
+ayrı bir bakım değişikliğidir. Extension taşıma; wrapper fonksiyonu, expression
+indexleri ve arama RPC'leriyle birlikte prova edilmeden canlıda otomatik
+uygulanmayacaktır. HIBP sızmış parola kontrolü de Supabase planı/hesap ayarıdır;
+kod migration'ı gibi tamamlanmış sayılmaz.
 
 Bu tablo yalnız kod/CI durumunu gösterir. Migration, merge, deploy ve canlı sorgu
 kanıtı tamamlanmadan “canlıda kapandı” denmez.
