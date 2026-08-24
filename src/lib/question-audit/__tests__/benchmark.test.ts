@@ -47,6 +47,8 @@ function label(id: string, flawCodes: GoldLabel['flawCodes']): GoldLabel {
     questionId: id,
     contentSha256: id.repeat(64).slice(0, 64),
     flawCodes,
+    evidenceClass: 'curator_adjudicated',
+    proofRef: 'f'.repeat(64),
     reviewerCount: 2,
     adjudication: 'consensus',
     reviewerRefs: ['a'.repeat(64), 'b'.repeat(64)],
@@ -140,7 +142,7 @@ describe('insan-altin benchmark', () => {
 
   it('tek-reviewer etiketi altin standart diye kabul etmez', () => {
     const bad = { ...label('a', []), reviewerCount: 1, reviewerRefs: ['a'.repeat(64)] }
-    expect(() => evaluateBenchmark([bad], [item('a', 'APPROVED')], 0, permissive)).toThrow('en az iki reviewer')
+    expect(() => evaluateBenchmark([bad], [item('a', 'APPROVED')], 0, permissive)).toThrow('consensus tam iki reviewer')
   })
 
   it('yinelenen anonim reviewer referansini bagimsiz uzman saymaz', () => {

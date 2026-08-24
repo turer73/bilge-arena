@@ -69,11 +69,23 @@ kod incelemesi gerektirir; model çıktısı eşiği değiştiremez.
 Çalıştırma:
 
 ```sh
-npm run audit:build-gold -- --review secure/reviewer-a.json --review secure/reviewer-b.json --adjudication secure/adjudicator.json --out secure/gold-labels.json
+npm run audit:prepare-gold-review -- --env .env.local --seed human-gold-v1 --out-dir secure/question-audit-gold-v1
+npm run audit:prepare-gold-adjudication -- --packet secure/question-audit-gold-v1/blind-review-packet.json --review secure/question-audit-gold-v1/reviewer-a.labels.json --review-b secure/question-audit-gold-v1/reviewer-b.labels.json --out-dir secure/question-audit-gold-v1/adjudication
+npm run audit:build-gold -- --review secure/question-audit-gold-v1/reviewer-a.labels.json --review secure/question-audit-gold-v1/reviewer-b.labels.json --adjudication secure/question-audit-gold-v1/adjudication/adjudicator.labels.json --out secure/gold-labels.json
 npm run audit:calibrate -- --gold-labels secure/gold-labels.json --persist --no-decisions --confirm --out database/question-audit-calibration-report.json
 npm run audit:benchmark -- --labels secure/gold-labels.json --report database/question-audit-calibration-report.json --out database/question-audit-promotion-report.json
 npm run audit:calibrate -- --gold-labels secure/gold-labels.json --persist --promotion-report database/question-audit-promotion-report.json --confirm
 ```
+
+`audit:prepare-gold-review`, beş içerik alanının her birinden 20 güncel ve exact
+published revision seçer. Her alanda 10 model-onaylı ve 10 model-şüpheli madde
+bulunur; kategori, zorluk ve sınav metadatası içinde deterministik çeşitlendirme
+yapılır. Bu prediction-stratified küme hata yaygınlığını tahmin etmez; FPR/FNR
+kalibrasyonu için hem alarm hem sessiz bölgeyi zorunlu olarak kapsar. Reviewer
+paketi model verdict'ini, finding'leri ve seçim stratum'unu içermez. Eski toplu
+karar yalnız aday tabakalama sinyalidir ve aynı revision ID + canonical içerik
+hash'iyle doğrulanır; nihai gold etiketi ve promotion koşusu her zaman
+`question_content_revisions.content_sha256` değerine bağlanır.
 
 `audit:build-gold` iki reviewer dosyasının aynı soru ve revision hash listesini
 taşımasını, uzman referanslarının farklı olmasını ve her ayrışmanın üçüncü uzman

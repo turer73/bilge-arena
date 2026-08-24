@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildHumanGoldSet, type ExpertReviewFile } from '../gold-set'
+import { buildHumanGoldSet, findHumanGoldDisputes, type ExpertReviewFile } from '../gold-set'
 
 const A = 'a'.repeat(64)
 const B = 'b'.repeat(64)
@@ -17,6 +17,7 @@ describe('buildHumanGoldSet', () => {
   it('iki ayni kor etiketi consensus gold kaydina donusturur', () => {
     expect(buildHumanGoldSet([review(A, []), review(B, [])])).toEqual([{
       questionId: 'q1', contentSha256: HASH, flawCodes: [], reviewerCount: 2,
+      evidenceClass: 'curator_adjudicated', proofRef: HASH,
       adjudication: 'consensus', reviewerRefs: [A, B],
     }])
   })
@@ -36,6 +37,7 @@ describe('buildHumanGoldSet', () => {
       review(A, []), review(B, ['WRONG_KEY_SUSPECTED']), adjudicator,
     ])[0]).toMatchObject({
       flawCodes: ['WRONG_KEY_SUSPECTED'], reviewerCount: 3,
+      evidenceClass: 'curator_adjudicated', proofRef: HASH,
       adjudication: 'adjudicated', reviewerRefs: [A, B, C],
     })
   })
@@ -48,5 +50,16 @@ describe('buildHumanGoldSet', () => {
     const first = review(A, [])
     first.labels.push({ ...first.labels[0], contentSha256: 'f'.repeat(64) })
     expect(() => buildHumanGoldSet([first, review(B, [])])).toThrow('yalniz bir revizyon')
+  })
+
+  it('yalniz farkli etiketlenen maddeleri adjudication listesine alir', () => {
+    const left = review(A, [])
+    const right = review(B, ['WRONG_KEY_SUSPECTED'])
+    expect(findHumanGoldDisputes([left, right])).toEqual([{
+      questionId: 'q1',
+      contentSha256: HASH,
+      reviewerFlawCodes: [[], ['WRONG_KEY_SUSPECTED']],
+    }])
+    expect(findHumanGoldDisputes([left, review(B, [])])).toEqual([])
   })
 })

@@ -21,7 +21,7 @@
   "items": {
     "type": "object",
     "additionalProperties": false,
-    "required": ["questionId", "contentSha256", "flawCodes", "reviewerCount", "adjudication", "reviewerRefs"],
+    "required": ["questionId", "contentSha256", "flawCodes", "evidenceClass", "proofRef", "reviewerCount", "adjudication", "reviewerRefs"],
     "properties": {
       "questionId": { "type": "string", "minLength": 1 },
       "contentSha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
@@ -30,18 +30,40 @@
         "uniqueItems": true,
         "items": { "$ref": "#/$defs/flawCode" }
       },
-      "reviewerCount": { "type": "integer", "minimum": 2 },
-      "adjudication": { "enum": ["consensus", "adjudicated"] },
+      "evidenceClass": { "enum": ["deterministic_gold", "official_source_gold", "curator_adjudicated"] },
+      "proofRef": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+      "reviewerCount": { "type": "integer", "minimum": 0 },
+      "adjudication": { "enum": ["deterministic", "official_source", "consensus", "adjudicated"] },
       "reviewerRefs": {
         "type": "array",
-        "minItems": 2,
+        "minItems": 0,
         "uniqueItems": true,
         "items": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
       }
     },
     "allOf": [
       {
-        "if": { "properties": { "adjudication": { "const": "consensus" } } },
+        "if": { "properties": { "evidenceClass": { "const": "deterministic_gold" } } },
+        "then": {
+          "properties": {
+            "reviewerCount": { "const": 0 },
+            "adjudication": { "const": "deterministic" },
+            "reviewerRefs": { "maxItems": 0 }
+          }
+        }
+      },
+      {
+        "if": { "properties": { "evidenceClass": { "const": "official_source_gold" } } },
+        "then": {
+          "properties": {
+            "reviewerCount": { "const": 0 },
+            "adjudication": { "const": "official_source" },
+            "reviewerRefs": { "maxItems": 0 }
+          }
+        }
+      },
+      {
+        "if": { "properties": { "evidenceClass": { "const": "curator_adjudicated" }, "adjudication": { "const": "consensus" } }, "required": ["evidenceClass", "adjudication"] },
         "then": {
           "properties": {
             "reviewerCount": { "const": 2 },
@@ -50,7 +72,7 @@
         }
       },
       {
-        "if": { "properties": { "adjudication": { "const": "adjudicated" } } },
+        "if": { "properties": { "evidenceClass": { "const": "curator_adjudicated" }, "adjudication": { "const": "adjudicated" } }, "required": ["evidenceClass", "adjudication"] },
         "then": {
           "properties": {
             "reviewerCount": { "const": 3 },

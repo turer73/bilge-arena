@@ -96,6 +96,14 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 })
 
 describe('MobileHomeDemo canlı öğrenme yolu', () => {
+  test('kalite görevlerini yalnız ayrı yayın kapısı açıkken gösterir', () => {
+    const { rerender } = render(<MobileHomeDemo mode="live" />)
+    expect(screen.queryByRole('link', { name: /Kalite görevleri/i })).not.toBeInTheDocument()
+
+    rerender(<MobileHomeDemo mode="live" communityQualityEnabled />)
+    expect(screen.getByRole('link', { name: /Kalite görevleri/i })).toHaveAttribute('href', '/arena/kalite-gorevleri')
+  })
+
   const strengths = [
     { label: 'Sayılar', percentage: 90, category: 'sayilar', total: 12 },
     { label: 'Problemler', percentage: 30, category: 'problemler', total: 9 },

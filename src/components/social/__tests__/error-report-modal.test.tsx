@@ -15,6 +15,26 @@ describe('ErrorReportModal — P1 sahte-başarı düzeltmesi', () => {
     expect(screen.getByRole('button', { name: 'Hata bildirimini kapat' })).toHaveClass('h-11')
     expect(screen.getByRole('button', { name: 'Gonder' })).toHaveClass('min-h-11')
   })
+  it('cevaplanmamis soruda akademik iddiayi gondermeyi engeller', () => {
+    const onSubmit = vi.fn()
+    render(<ErrorReportModal questionId="q1" isOpen onClose={() => {}} hasAnswered={false} onSubmit={onSubmit} />)
+    fireEvent.click(screen.getByText('Yanlis cevap'))
+    expect(screen.getByRole('button', { name: 'Gonder' })).toBeDisabled()
+    expect(screen.getByText(/önce bu soruyu cevaplamalısın/)).toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('cevap sonrasi yapilandirilmis kalite iddiasini gonderir', async () => {
+    const onSubmit = vi.fn().mockResolvedValue({ ok: true, rewardEligible: false })
+    render(<ErrorReportModal questionId="q1" isOpen onClose={() => {}} hasAnswered optionCount={4} onSubmit={onSubmit} />)
+    fireEvent.click(screen.getByText('Yanlis cevap'))
+    fireEvent.change(screen.getByLabelText(/GEREKÇE/), { target: { value: 'Anahtar ve çözüm birbirini tutmuyor.' } })
+    fireEvent.change(screen.getByLabelText(/ÖNERİLEN DOĞRU SEÇENEK/), { target: { value: '2' } })
+    fireEvent.click(screen.getByText('Gonder'))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'wrong_answer', proposedAnswerIndex: 1, confidence: 70,
+    })))
+  })
   it('onSubmit {ok:false} dönerse HATA gösterir, sahte başarı YOK', async () => {
     const onSubmit = vi.fn().mockResolvedValue({ ok: false, error: 'Rapor göndermek için giriş yapmalısın.' })
     render(<ErrorReportModal questionId="q1" isOpen onClose={() => {}} onSubmit={onSubmit} />)

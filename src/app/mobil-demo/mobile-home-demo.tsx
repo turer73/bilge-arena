@@ -76,6 +76,7 @@ interface MobileHomeDemoProps {
   dailyGoal?: { current: number; target: number } | null
   classroomEnabled?: boolean
   institutionEnabled?: boolean
+  communityQualityEnabled?: boolean
   showBottomNav?: boolean
   /** Canli modda gercek ilerlemeyi cekmek icin; demo modunda gerekmez. */
   userId?: string | null
@@ -253,6 +254,7 @@ export function MobileHomeDemo({
   dailyGoal = { current: 6, target: 10 },
   classroomEnabled = false,
   institutionEnabled = false,
+  communityQualityEnabled = false,
   showBottomNav = true,
   userId = null,
 }: MobileHomeDemoProps = {}) {
@@ -533,6 +535,13 @@ export function MobileHomeDemo({
               <Link href="/arena/kurum" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-accent-border)] active:translate-y-0.5 md:col-span-1">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><Building2 size={22} strokeWidth={2.7} /></span>
                 <span className="min-w-0 flex-1"><span className="block text-xs font-black">Kurum paneli</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Sınıf, rol ve rapor akışları</span></span>
+                <ChevronRight size={18} className="text-[var(--app-text-muted)]" strokeWidth={3} />
+              </Link>
+            )}
+            {communityQualityEnabled && (
+              <Link href="/arena/kalite-gorevleri" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-success-border)] active:translate-y-0.5 md:col-span-1">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-success-tint)] text-[var(--app-success)]"><ShieldCheck size={22} strokeWidth={2.7} /></span>
+                <span className="min-w-0 flex-1"><span className="block text-xs font-black">Kalite görevleri</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Soruları çöz, hataları doğrula</span></span>
                 <ChevronRight size={18} className="text-[var(--app-text-muted)]" strokeWidth={3} />
               </Link>
             )}

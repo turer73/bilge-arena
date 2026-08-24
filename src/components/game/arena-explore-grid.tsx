@@ -8,6 +8,7 @@ import {
   Castle,
   GraduationCap,
   PenLine,
+  BadgeCheck,
   ShoppingBag,
   Swords,
   type LucideIcon,
@@ -22,7 +23,7 @@ interface ExploreItem {
   color: string
 }
 
-const EXPLORE_ITEMS: ExploreItem[] = [
+const PUBLIC_EXPLORE_ITEMS: ExploreItem[] = [
   {
     href: '/arena/fethet',
     title: 'Bil ve Fethet',
@@ -57,6 +58,15 @@ const EXPLORE_ITEMS: ExploreItem[] = [
   },
 ]
 
+const COMMUNITY_QUALITY_ITEM: ExploreItem = {
+  href: '/arena/kalite-gorevleri',
+  title: 'Kalite Görevleri',
+  description: 'Soruları doğrula, katkı yap',
+  badge: 'PİLOT',
+  icon: BadgeCheck,
+  color: 'var(--growth)',
+}
+
 const CLASSROOM_ITEM: ExploreItem = {
   href: '/arena/sinif',
   title: 'Sınıflarım',
@@ -78,11 +88,13 @@ const INSTITUTION_ITEM: ExploreItem = {
 interface ArenaExploreGridProps {
   classroomEnabled?: boolean
   institutionEnabled?: boolean
+  communityQualityEnabled?: boolean
 }
 
 export function ArenaExploreGrid({
   classroomEnabled = false,
   institutionEnabled = false,
+  communityQualityEnabled = false,
 }: ArenaExploreGridProps) {
   const [institutionVisible, setInstitutionVisible] = useState(false)
 
@@ -103,7 +115,8 @@ export function ArenaExploreGrid({
   const items = [
     ...(institutionEnabled && institutionVisible ? [INSTITUTION_ITEM] : []),
     ...(classroomEnabled ? [CLASSROOM_ITEM] : []),
-    ...EXPLORE_ITEMS,
+    ...(communityQualityEnabled ? [COMMUNITY_QUALITY_ITEM] : []),
+    ...PUBLIC_EXPLORE_ITEMS,
   ]
 
   return (

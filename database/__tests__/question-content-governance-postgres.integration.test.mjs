@@ -17,6 +17,7 @@ const psychometricsV2Migration = readFileSync(join(dirname(fileURLToPath(import.
 const psychometricsV3Migration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '143_question_revision_psychometrics_v3.sql'), 'utf8')
 const qualityProjectionMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '141_question_quality_evidence_projection.sql'), 'utf8')
 const singleAuthorityMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '144_question_quality_single_authority_cutover.sql'), 'utf8')
+const communityQualityMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '146_community_question_quality_consensus.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
   let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let legacyRevision
@@ -46,7 +47,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
   beforeAll(async () => {
     client = new pg.Client({ connectionString: url }); await client.connect()
     await client.query(`DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA auth; CREATE SCHEMA public; CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions; DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; GRANT USAGE ON SCHEMA public,auth TO anon,authenticated,service_role; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub',true),'')::uuid $$; CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),slug text UNIQUE,name text,description text,is_system boolean); CREATE TABLE public.role_permissions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),role_id uuid REFERENCES public.roles(id),permission text,UNIQUE(role_id,permission)); CREATE TABLE public.user_roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES public.profiles(id),role_id uuid REFERENCES public.roles(id),UNIQUE(user_id,role_id)); CREATE FUNCTION public.has_permission(uuid,text) RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles u JOIN public.role_permissions p ON p.role_id=u.role_id WHERE u.user_id=$1 AND p.permission=$2) $$; CREATE TABLE public.curriculum_outcomes(id uuid PRIMARY KEY,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.questions(id uuid PRIMARY KEY,game text NOT NULL,category text NOT NULL,subcategory text,topic text,difficulty smallint NOT NULL,level_tag text,exam_ref text,is_boss boolean NOT NULL DEFAULT false,content jsonb NOT NULL,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.question_outcomes(question_id uuid,outcome_id uuid,weight numeric,is_primary boolean); CREATE TABLE public.game_sessions(id uuid PRIMARY KEY,user_id uuid,status text,total_questions smallint,correct_count smallint,wrong_count smallint,base_xp integer,bonus_xp integer,total_xp integer,completed_at timestamptz); CREATE TABLE public.verified_attempts(id uuid PRIMARY KEY,user_id uuid NOT NULL,game text NOT NULL,mode text NOT NULL DEFAULT 'classic',question_ids uuid[] NOT NULL,duration_sec integer NOT NULL DEFAULT 60,started_at timestamptz DEFAULT clock_timestamp(),expires_at timestamptz DEFAULT clock_timestamp()+interval '1 hour',completed_at timestamptz,session_id uuid); CREATE TABLE public.verified_exam_attempts(attempt_id uuid PRIMARY KEY,user_id uuid,game text,exam_ref text,blueprint_version text,question_set_hash text,planned_duration_sec integer,issue_request_id uuid,status text DEFAULT 'issued',deadline_at timestamptz); CREATE TABLE public.verified_exam_attempt_items(attempt_id uuid,position smallint,question_id uuid,source_bucket text,PRIMARY KEY(attempt_id,position)); CREATE TABLE public.session_answers(id uuid PRIMARY KEY,session_id uuid,user_id uuid,question_id uuid,question_order smallint,is_correct boolean NOT NULL,is_skipped boolean DEFAULT false,selected_option smallint,time_taken_sec numeric,is_fast boolean DEFAULT false,xp_earned smallint NOT NULL DEFAULT 0,answered_at timestamptz DEFAULT clock_timestamp()); CREATE TABLE public.error_reports(id uuid PRIMARY KEY,user_id uuid NOT NULL,question_id uuid NOT NULL,report_type text NOT NULL,description text,status text NOT NULL,created_at timestamptz NOT NULL); GRANT INSERT ON public.error_reports TO authenticated; CREATE TABLE public.verified_attempt_hint_events(attempt_id uuid,user_id uuid,question_id uuid,stage smallint); CREATE TABLE public.adaptive_diagnostic_answers(user_id uuid,question_id uuid,created_at timestamptz NOT NULL DEFAULT clock_timestamp());`)
-    await client.query(`CREATE TYPE public.report_status AS ENUM('pending','reviewed','resolved','rejected'); ALTER TABLE public.profiles ADD COLUMN coins integer NOT NULL DEFAULT 0; ALTER TABLE public.error_reports ALTER COLUMN status TYPE public.report_status USING status::public.report_status, ADD COLUMN admin_note text, ADD COLUMN resolved_by uuid, ADD COLUMN updated_at timestamptz NOT NULL DEFAULT clock_timestamp(), ADD COLUMN rewarded_at timestamptz, ADD COLUMN rewarded_coins integer; CREATE FUNCTION public.increment_coins(uuid,integer) RETURNS void LANGUAGE sql SECURITY DEFINER AS $$ UPDATE public.profiles SET coins=coins+$2 WHERE id=$1 $$;`)
+    await client.query(`CREATE TYPE public.report_status AS ENUM('pending','reviewed','resolved','rejected'); ALTER TABLE public.profiles ADD COLUMN coins integer NOT NULL DEFAULT 0; ALTER TABLE public.error_reports ALTER COLUMN status TYPE public.report_status USING status::public.report_status, ADD COLUMN admin_note text, ADD COLUMN resolved_by uuid, ADD COLUMN updated_at timestamptz NOT NULL DEFAULT clock_timestamp(), ADD COLUMN rewarded_at timestamptz, ADD COLUMN rewarded_coins integer; CREATE FUNCTION public.increment_coins(uuid,integer) RETURNS void LANGUAGE sql SECURITY DEFINER AS $$ UPDATE public.profiles SET coins=coins+$2 WHERE id=$1 $$; CREATE TABLE public.reward_ledger(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES public.profiles(id),source_type text NOT NULL,source_id uuid NOT NULL,reward_type text NOT NULL,reward_key text NOT NULL,amount integer NOT NULL CHECK(amount>=0),metadata jsonb NOT NULL DEFAULT '{}'::jsonb,created_at timestamptz NOT NULL DEFAULT clock_timestamp(),UNIQUE(source_type,source_id,reward_type,reward_key));`)
     ;[author, reviewer1, reviewer2, publisher, learner, legacyLearner, question, outcome] = Array.from({ length: 8 }, randomUUID)
     await client.query('INSERT INTO public.profiles SELECT unnest($1::uuid[])', [[author,reviewer1,reviewer2,publisher,learner,legacyLearner]])
     await client.query('INSERT INTO public.curriculum_outcomes(id) VALUES($1)', [outcome])
@@ -60,6 +61,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(qualityProjectionMigration)
     await client.query(writeContextMigration)
     await client.query(singleAuthorityMigration)
+    await client.query(communityQualityMigration)
     const roles = [['author','content.prepare',author],['author-r1','content.review.stage1',author],['r1','content.review.stage1',reviewer1],['r1-stage2','content.review.stage2',reviewer1],['r2','content.review.stage2',reviewer2],['pub','content.publish',publisher],['correct','content.corrections.apply',publisher],['psy','content.psychometrics.refresh',publisher],['appeal','content.appeals.manage',publisher],['enforce','content.enforcement.manage',publisher]]
     for (const [slug, permission, user] of roles) { const role = randomUUID(); await client.query('INSERT INTO public.roles(id,slug,name,is_system) VALUES($1,$2,$2,true)', [role,slug]); await client.query('INSERT INTO public.role_permissions(role_id,permission) VALUES($1,$2)', [role,permission]); await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)', [user,role]) }
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
@@ -233,5 +235,71 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect(detail.revision.appealSignals.byReason).toEqual(expect.objectContaining({ ambiguous:expect.any(Number), wrong_key:expect.any(Number) }))
     expect(JSON.stringify(detail)).not.toMatch(/userId|attemptId|sessionAnswerId|selectedOption/)
     await err(() => rpc('public.materialize_question_revision_psychometrics($1,$2,$3::timestamptz,$4::timestamptz,$5)',[learner,revision,windowStart,windowEnd,randomUUID()]), '42501')
+  })
+  it('locks independent answers server-side and recomputes weighted consensus from private evidence', async () => {
+    const revision = (await client.query(`SELECT r.id,r.content_sha256,r.game FROM public.questions q JOIN public.question_content_revisions r ON r.id=q.published_revision_id WHERE q.id=$1`,[question])).rows[0]
+    const qualityCase = (await client.query('INSERT INTO public.question_quality_cases(question_id,revision_id,content_sha256) VALUES($1,$2,$3) RETURNING id',[question,revision.id,revision.content_sha256])).rows[0].id
+    const voters = Array.from({ length: 6 }, () => randomUUID())
+    await client.query('INSERT INTO public.profiles SELECT unnest($1::uuid[])',[voters])
+    for (const voter of voters) {
+      await client.query(`INSERT INTO public.question_quality_worker_profiles(user_id,domain,resolved_total,flawed_controls,flawed_controls_correct,clean_controls,clean_controls_correct,correction_checks,correction_checks_correct,trust_state) VALUES($1,$2,40,20,20,20,20,20,20,'trusted')`,[voter,revision.game])
+    }
+
+    const assign = async (voter,index) => rpc('public.get_next_question_quality_mission($1,$2,$3)',[voter,index.toString(16).padStart(64,'0'),randomUUID()])
+    const invalidMission = (await assign(voters[5],6)).mission
+    expect(invalidMission.content).not.toHaveProperty('answer')
+    expect(invalidMission.content).not.toHaveProperty('solution')
+    expect(JSON.stringify(invalidMission)).not.toMatch(/controlId|correctOption|expectedVerdict/)
+    await err(() => rpc('public.lock_question_quality_mission_answer($1,$2,$3::integer,$4)',[voters[5],invalidMission.missionId,4,randomUUID()]),'22023')
+
+    let firstClaim
+    for (let index=0; index<5; index+=1) {
+      const assigned = (await assign(voters[index],index+1)).mission
+      const lockRequest = randomUUID()
+      const locked = await rpc('public.lock_question_quality_mission_answer($1,$2,$3::integer,$4)',[voters[index],assigned.missionId,1,lockRequest])
+      expect(locked).toEqual(expect.objectContaining({ status:'answer_locked',replayed:false }))
+      expect(await rpc('public.lock_question_quality_mission_answer($1,$2,$3::integer,$4)',[voters[index],assigned.missionId,1,lockRequest])).toEqual(expect.objectContaining({ replayed:true }))
+      await err(() => rpc('public.lock_question_quality_mission_answer($1,$2,$3::integer,$4)',[voters[index],assigned.missionId,2,randomUUID()]),'P0003')
+      const submitted = await rpc('public.submit_assigned_question_quality_mission($1,$2,$3::integer,$4,$5,$6::integer,$7,$8,$9::integer,$10)',[
+        voters[index],assigned.missionId,1,'flawed','wrong_key',1,null,'Bağımsız çözüm cevap anahtarının hatalı olduğunu gösteriyor.',95,randomUUID(),
+      ])
+      expect(submitted).toEqual(expect.objectContaining({ status:'submitted',rewardEligible:false }))
+      if (index===0) firstClaim=submitted.claimId
+      await err(() => rpc('public.submit_assigned_question_quality_mission($1,$2,$3::integer,$4,$5,$6::integer,$7,$8,$9::integer,$10)',[
+        voters[index],assigned.missionId,1,'clean',null,null,null,'',60,randomUUID(),
+      ]),'P0003')
+    }
+
+    expect((await client.query('SELECT solved_answer_index,proposed_answer_index,revision_id FROM public.question_quality_claims WHERE id=$1',[firstClaim])).rows[0]).toEqual({ solved_answer_index:1,proposed_answer_index:1,revision_id:revision.id })
+    await err(() => client.query('UPDATE public.question_quality_claims SET solved_answer_index=2 WHERE id=$1',[firstClaim]),'42501')
+    await err(() => client.query('UPDATE public.question_quality_missions SET locked_answer_index=2 WHERE id=(SELECT mission_id FROM public.question_quality_claims WHERE id=$1)',[firstClaim]),'42501')
+
+    const consensus = (await client.query('SELECT public.compute_question_quality_consensus($1) AS result',[qualityCase])).rows[0].result
+    expect(consensus).toEqual(expect.objectContaining({
+      decision:'quarantine',independentUserCount:5,independentClusterCount:5,trustedAgreementCount:5,
+      leadingReasonCode:'wrong_key',inputsSha256:expect.stringMatching(/^[0-9a-f]{64}$/),
+    }))
+    const quarantine = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@1',randomUUID()])
+    expect(quarantine).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
+    expect((await client.query('SELECT is_active FROM public.questions WHERE id=$1',[question])).rows[0].is_active).toBe(false)
+    expect((await client.query('SELECT count(*)::int AS n FROM public.question_quality_consensus_queue WHERE case_id=$1',[qualityCase])).rows[0].n).toBe(0)
+
+    await rpc('public.record_question_quality_external_proof($1,$2,$3,$4,$5::jsonb,$6)',[publisher,qualityCase,'deterministic','supports_flaw',JSON.stringify({ rule:'independent arithmetic proof',version:1 }),randomUUID()])
+    const confirmRequest = randomUUID()
+    const confirmed = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@1',confirmRequest])
+    expect(confirmed).toEqual(expect.objectContaining({ state:'confirmed',replayed:false }))
+    expect(await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@1',confirmRequest])).toEqual(expect.objectContaining({ state:'confirmed',replayed:true }))
+    expect((await client.query("SELECT count(*)::int AS n,sum(amount)::int AS total FROM public.reward_ledger WHERE source_type='question_quality_claim' AND metadata->>'caseId'=$1",[qualityCase])).rows[0]).toEqual({ n:6,total:240 })
+    expect((await client.query('SELECT coins FROM public.profiles WHERE id=$1',[voters[0]])).rows[0].coins).toBe(200)
+
+    const controlRevision = (await client.query('SELECT id,content_sha256 FROM public.question_content_revisions WHERE question_id=$1 AND id<>$2 ORDER BY revision_no LIMIT 1',[question,revision.id])).rows[0]
+    const controlUser = randomUUID(); await client.query('INSERT INTO public.profiles(id) VALUES($1)',[controlUser])
+    await client.query(`INSERT INTO public.question_quality_controls(revision_id,question_id,content_sha256,expected_verdict,expected_answer_index,proof_kind,proof_evidence,created_by) VALUES($1,$2,$3,'clean',1,'deterministic',$4::jsonb,$5)`,[controlRevision.id,question,controlRevision.content_sha256,JSON.stringify({ rule:'known clean control' }),publisher])
+    const controlMission = (await assign(controlUser,15)).mission
+    expect(JSON.stringify(controlMission)).not.toMatch(/controlId|expectedVerdict|expectedAnswer/)
+    await rpc('public.lock_question_quality_mission_answer($1,$2,$3::integer,$4)',[controlUser,controlMission.missionId,1,randomUUID()])
+    await rpc('public.submit_assigned_question_quality_mission($1,$2,$3::integer,$4,$5,$6::integer,$7,$8,$9::integer,$10)',[controlUser,controlMission.missionId,1,'clean',null,null,null,'',80,randomUUID()])
+    expect((await client.query('SELECT clean_controls,clean_controls_correct,trust_state FROM public.question_quality_worker_profiles WHERE user_id=$1',[controlUser])).rows[0]).toEqual({ clean_controls:1,clean_controls_correct:1,trust_state:'new' })
+    expect((await client.query("SELECT has_table_privilege('authenticated','public.question_quality_claims','SELECT') AS claims_read,has_table_privilege('service_role','public.question_quality_consensus_queue','SELECT') AS queue_read,has_function_privilege('service_role','public.claim_question_quality_consensus_job(uuid)','EXECUTE') AS queue_rpc")).rows[0]).toEqual({ claims_read:false,queue_read:false,queue_rpc:true })
   })
 })

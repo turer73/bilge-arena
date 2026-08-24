@@ -28,7 +28,14 @@ describe('ArenaExploreGrid', () => {
   test('sınıf özelliği kapalıyken dört kartlı düzeni kullanır', () => {
     render(<ArenaExploreGrid />)
     expect(screen.queryByRole('link', { name: /Sınıflarım/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Kalite Görevleri/i })).not.toBeInTheDocument()
     expect(screen.getByTestId('arena-explore-grid')).toHaveClass('lg:grid-cols-4')
+  })
+
+  test('kalite görevlerini yalnız ayrı yayın kapısı açıkken gösterir', () => {
+    render(<ArenaExploreGrid communityQualityEnabled />)
+    expect(screen.getByRole('link', { name: /Kalite Görevleri/i })).toHaveAttribute('href', '/arena/kalite-gorevleri')
+    expect(screen.getByTestId('arena-explore-grid')).toHaveClass('sm:grid-cols-3', 'lg:grid-cols-5')
   })
 
   test('sınıf özelliği açıkken pilot kartını ve beş kartlı düzeni gösterir', () => {

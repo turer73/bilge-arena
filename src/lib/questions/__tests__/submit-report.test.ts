@@ -52,6 +52,20 @@ describe('submitQuestionReport (Codex PR#242 P1: res.ok bazlı sonuç)', () => {
     })
   })
 
+  it('structured quality claim alanlarini sunucuya tasir', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 201, json: async () => ({ rewardEligible: false }) })
+    await submitQuestionReport('q-42', {
+      type: 'wrong_answer', description: 'Anahtar ve çözüm birbirini tutmuyor.',
+      proposedAnswerIndex: 1, correctionText: 'İkinci seçenek doğru olmalı.', confidence: 90,
+    }, { attemptId: '33333333-3333-4333-8333-333333333333' })
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body).toEqual(expect.objectContaining({
+      proposed_answer_index: 1,
+      correction_text: 'İkinci seçenek doğru olmalı.',
+      confidence: 90,
+    }))
+  })
+
   it('tarayıcı bayrağından bağımsız tek sunucu yazma yolunu kullanır', async () => {
     vi.stubEnv('NEXT_PUBLIC_CONTENT_APPEALS_ENABLED', 'true')
     fetchMock.mockResolvedValue({ ok: true, status: 201, json: async () => ({ rewardEligible: false }) })
