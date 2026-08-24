@@ -12,9 +12,9 @@ insan/tedarikçi kararı bekleyen kapıları birbirinden ayırır.
 | Dağıtık rate limit | Canlı config + kodda tamam | Production'da Upstash ve KV env adları mevcut; eksik/erişilemez backend 503/fail-closed |
 | Personel AAL2 | Kodda tamam | TOTP enrollment/challenge; admin/kurum/öğretmen izin ve proxy katmanında AAL2 |
 | Tenant audit | Kodda tamam | Migration 145 + 149; kritik kurum/sınıf işlemleri immutable event |
-| JWT-bound RPC | Migration/deploy sırası bekliyor | Migration 150 kurum, öğretmen ve platform kurum RPC'lerini kullanıcı JWT'sine bağlar. `auth.uid()` bağlaması olmayan fonksiyonda migration durur |
+| JWT-bound RPC | Canlı şema tamam, deploy bekliyor | Migration 150 canlıda; kurum, öğretmen ve platform kurum RPC'leri authenticated rolüne açıldı, anon kapalı. Route'ların kullanıcı JWT'sine geçişi merge/deploy bekliyor |
 | DSAR export | Kodda tamam | Kimliği doğrulanmış `/api/account/export`; no-store JSON; production rate limit |
-| İstek ledger imhası | Kodda tamam, migration/deploy bekliyor | Migration 152 ve günlük cron yalnız idempotency ledger'larını varsayılan 90 gün sonunda siler; immutable audit event'leri korur. 30 günden yeni cutoff SQL'de reddedilir |
+| İstek ledger imhası | Canlı şema tamam, cron deploy bekliyor | Migration 152 canlıda; günlük cron yalnız idempotency ledger'larını varsayılan 90 gün sonunda siler ve immutable audit event'leri korur. 30 günden yeni cutoff SQL'de reddedilir |
 | Genel otomatik imha | Kısmi / hukuk kararı bekliyor | Hesap, sınıf üyeliği, rapor ve audit kategorilerinin tamamını kapsayan onaylı saklama matrisi henüz yok. Ledger kontrolü genel KVKK imha politikası yerine geçmez |
 | Tenant A/B gerçek oturum | Bloke | İki ayrı yetkili test hesabı ve izole test tenant'ı tahsis edilmedi |
 | Gerçek kurum canary | Bloke | Kurum, DPA/aydınlatma onayı ve sorumlu kişi seçilmedi |
@@ -53,17 +53,28 @@ tamamlanana kadar ücretli kurum kabulü kapalı kalır.
 | Eski bulgu | Güncel durum | Kanıt |
 |---|---|---|
 | Yönetici devri yok | Kapandı | Migration 145 ve manager-transfer route/testleri |
-| Kurum askıya alma/arşiv yok | Kodda kapandı, canlı migration bekliyor | Migration 151, JWT-bound platform RPC, gerekçeli admin UI ve immutable event |
+| Kurum askıya alma/arşiv yok | Canlı şema tamam, UI deploy bekliyor | Migration 151, JWT-bound platform RPC, gerekçeli admin UI ve immutable event |
 | `student_limit` uygulanmıyor | Kapandı | Migration 145; tenant genelinde distinct aktif öğrenci sayımı ve advisory lock |
 | Kurum işlem audit'i yok | Kapandı | Migration 145 + 149 + 151 |
 | Öğretmen gizlilik PG testi CI dışında | Kapandı | CI ayrı disposable PostgreSQL veritabanında suite'i çalıştırır |
 | Haftalık lig cron'u kayıtlı değil | Kapandı | `vercel.json` Pazartesi 00:05 UTC tetikleyicisi |
-| Migration 136 trigger grant kaçağı | Kodda kapandı, canlı migration bekliyor | Migration 152 forward revoke + migration 136 sonrası SECURITY DEFINER CI linteri |
-| Idempotency ledger'ları süresiz | Kodda kapandı, canlı migration bekliyor | 30–730 gün güvenli aralık; varsayılan 90 gün; günlük service-role cron |
-| Platform kurum RPC'leri service-role taşıyıcılı | Kodda kapandı, canlı migration bekliyor | Listeleme, provisioning, destek görünümü ve durum değişimi caller JWT ile çalışır |
+| Migration 136 trigger grant kaçağı | Canlıda kapandı | Migration 152 forward revoke + migration 136 sonrası SECURITY DEFINER CI linteri |
+| Idempotency ledger'ları süresiz | Canlı şema tamam, cron deploy bekliyor | 30–730 gün güvenli aralık; varsayılan 90 gün; günlük service-role cron |
+| Platform kurum RPC'leri service-role taşıyıcılı | Canlı grant tamam, route deploy bekliyor | Listeleme, provisioning, destek görünümü ve durum değişimi caller JWT ile çalışır |
 
 Bu tablo yalnız kod/CI durumunu gösterir. Migration, merge, deploy ve canlı sorgu
 kanıtı tamamlanmadan “canlıda kapandı” denmez.
+
+### 24 Ağustos canlı şema kanıtı
+
+- Migration 149–152 ayrı transaction'lar halinde başarıyla uygulandı ve
+  `supabase_migrations.schema_migrations` ledger'ında 4/4 kayıt doğrulandı.
+- `set_pilot_institution_status`: `authenticated=true`, `service_role=false`.
+- `provision_pilot_institution`: `authenticated=true`, `anon=false`.
+- `prune_institution_request_ledgers`: `service_role=true`, `authenticated=false`.
+- `tg_require_question_validation_decision`: `anon=false`.
+- `institution_operation_events_event_type_check`,
+  `institution_status_changed` olayını kabul ediyor.
 
 ## Yedek ve geri dönüş tatbikatı
 

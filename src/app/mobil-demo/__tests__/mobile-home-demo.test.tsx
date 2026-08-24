@@ -184,7 +184,7 @@ describe('MobileHomeDemo koç penceresi davranışı', () => {
     render(<MobileHomeDemo mode="live" userId="user-1" />)
 
     const dialog = await screen.findByRole('dialog')
-    expect(dialog.contains(document.activeElement)).toBe(true)
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true))
     expect(document.querySelector('main')).toHaveAttribute('inert')
   })
 
