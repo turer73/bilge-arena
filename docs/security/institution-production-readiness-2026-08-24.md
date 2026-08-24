@@ -13,7 +13,7 @@ insan/tedarikçi kararı bekleyen kapıları birbirinden ayırır.
 | Personel AAL2 | Kodda tamam | TOTP enrollment/challenge; admin/kurum/öğretmen izin ve proxy katmanında AAL2 |
 | Tenant audit | Kodda tamam | Migration 145 + 149; kritik kurum/sınıf işlemleri immutable event |
 | JWT-bound RPC | Canlı şema tamam, deploy bekliyor | Migration 150 canlıda; kurum, öğretmen ve platform kurum RPC'leri authenticated rolüne açıldı, anon kapalı. Route'ların kullanıcı JWT'sine geçişi merge/deploy bekliyor |
-| DSAR export | Migration 154/deploy bekliyor | Kimliği doğrulanmış `/api/account/export`; katalogdan tüm doğrudan subject UUID sütunlarını ve ilişkili answer/submission-item satırlarını derleyen service-role-only RPC; no-store JSON; production rate limit |
+| DSAR export | Canlı şema tamam, deploy bekliyor | Migration 154 canlıda; kimliği doğrulanmış `/api/account/export`; katalogdan tüm doğrudan subject UUID sütunlarını ve ilişkili answer/submission-item satırlarını derleyen service-role-only RPC; no-store JSON; production rate limit |
 | İstek ledger imhası | Canlı şema tamam, cron deploy bekliyor | Migration 152 canlıda; günlük cron yalnız idempotency ledger'larını varsayılan 90 gün sonunda siler ve immutable audit event'leri korur. 30 günden yeni cutoff SQL'de reddedilir |
 | Genel otomatik imha | Kısmi / hukuk kararı bekliyor | Hesap, sınıf üyeliği, rapor ve audit kategorilerinin tamamını kapsayan onaylı saklama matrisi henüz yok. Ledger kontrolü genel KVKK imha politikası yerine geçmez |
 | Tenant A/B gerçek oturum | Bloke | İki ayrı yetkili test hesabı ve izole test tenant'ı tahsis edilmedi |
@@ -62,7 +62,7 @@ tamamlanana kadar ücretli kurum kabulü kapalı kalır.
 | Idempotency ledger'ları süresiz | Canlı şema tamam, cron deploy bekliyor | 30–729 gün güvenli aralık; varsayılan 90 gün; günlük service-role cron |
 | Platform kurum RPC'leri service-role taşıyıcılı | Canlı grant tamam, route deploy bekliyor | Listeleme, provisioning, destek görünümü ve durum değişimi caller JWT ile çalışır |
 | Beş eski fonksiyonda mutable `search_path` | Canlıda kapandı | Migration 153, fonksiyon OID ve trigger bağlarını değiştirmeden `pg_catalog, public` pinledi |
-| PR agent review kapanışı | Migration 154/deploy bekliyor | Davet audit çözümleme, arşiv tenant görünürlüğü, DSAR katalog kapsamı; API telemetri filtresi, SPA document boundary, overload-duyarlı grant linteri, MFA cookie aktarımı ve doğru idempotent durum yanıtı |
+| PR agent review kapanışı | Canlı şema tamam, deploy bekliyor | Migration 154 canlıda: davet audit çözümleme, arşiv tenant görünürlüğü ve DSAR katalog kapsamı; API telemetri filtresi, SPA document boundary, overload-duyarlı grant linteri, MFA cookie aktarımı ve doğru idempotent durum yanıtı merge/deploy bekliyor |
 
 Opus'un `pg_trgm` ve `unaccent` extension'larının `public` şemasında olması notu
 ayrı bir bakım değişikliğidir. Extension taşıma; wrapper fonksiyonu, expression
@@ -75,8 +75,8 @@ kanıtı tamamlanmadan “canlıda kapandı” denmez.
 
 ### 24 Ağustos canlı şema kanıtı
 
-- Migration 149–153 ayrı transaction'lar halinde başarıyla uygulandı ve
-  `supabase_migrations.schema_migrations` ledger'ında 5/5 kayıt doğrulandı.
+- Migration 149–154 ayrı transaction'lar halinde başarıyla uygulandı ve
+  `supabase_migrations.schema_migrations` ledger'ında 6/6 kayıt doğrulandı.
 - `set_pilot_institution_status`: `authenticated=true`, `service_role=false`.
 - `provision_pilot_institution`: `authenticated=true`, `anon=false`.
 - `prune_institution_request_ledgers`: `service_role=true`, `authenticated=false`.
@@ -86,6 +86,11 @@ kanıtı tamamlanmadan “canlıda kapandı” denmez.
 - Opus/Supabase Advisor'da kalan beş eski fonksiyonun tamamında
   `proconfig=["search_path=pg_catalog, public"]` ve migration 153 ledger kaydı
   canlı sorguyla doğrulandı.
+- Migration 154 için `audit_teacher_classroom_request()` hiçbir browser rolüne
+  açık değil; `list_pilot_institutions(uuid)` yalnız `authenticated`,
+  `export_account_data(uuid)` yalnız `service_role` rolüne açık. Üç fonksiyonda
+  `search_path=pg_catalog`, review düzeltme işareti ve ledger kaydı canlı sorguda
+  `true` doğrulandı.
 
 ## Yedek ve geri dönüş tatbikatı
 
