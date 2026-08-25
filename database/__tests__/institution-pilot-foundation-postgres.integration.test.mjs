@@ -153,6 +153,26 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     expect(caught?.code).toBe(code)
   }
 
+  async function setProvisioningControl(controlKey, enabled, changeReference) {
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        [changeReference],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=$2
+         WHERE control_key=$1`,
+        [controlKey, enabled],
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
+  }
+
   function directTenantRpcCalls(userId, institutionId) {
     const classroomId = randomUUID()
     const requestId = randomUUID()
@@ -574,9 +594,9 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
         `INSERT INTO public.pilot_institutions(
            name,created_by,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
          ) VALUES($1,$2,30,2,'invitation_free',now() + interval '30 days',NULL)`,
-        ['Onaysız ücretsiz canary', platformAdmin],
+        ['Kapalı kapıda doğrudan canary', platformAdmin],
       ),
-      '23514',
+      '55000',
     )
 
     const expression = 'public.provision_free_pilot_institution($1,$2,$3,$4,$5,$6,$7,$8)'
@@ -647,6 +667,42 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     }])
 
     const requestId = randomUUID()
+    await expectPgError(
+      () => rpc(
+        'public.provision_pilot_institution($1,$2,$3,$4)',
+        [
+          platformAdmin,
+          'DB Kapısı Kapalı Ticari Pilot',
+          paidPilotManagerAfterMigration,
+          requestId,
+        ],
+      ),
+      '55000',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(name,created_by,pilot_kind)
+         VALUES($1,$2,'commercial')`,
+        ['Doğrudan ticari tenant', platformAdmin],
+      ),
+      '55000',
+    )
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-COMMERCIAL-ENABLE-001'],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=true
+         WHERE control_key='commercial_provisioning'`,
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
     const paidAfterMigration = await rpc(
       'public.provision_pilot_institution($1,$2,$3,$4)',
       [
@@ -661,6 +717,117 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       [paidAfterMigration.institution.id],
     )
     expect(paidKind.rows).toEqual([{ pilot_kind: 'commercial' }])
+    await expectPgError(
+      () => client.query(
+        "UPDATE public.pilot_institutions SET pilot_kind='legacy' WHERE id=$1",
+        [paidAfterMigration.institution.id],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        "UPDATE public.pilot_institutions SET pilot_kind='commercial' WHERE id=$1",
+        [institutionOne],
+      ),
+      '23514',
+    )
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-COMMERCIAL-DISABLE-001'],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=false
+         WHERE control_key='commercial_provisioning'`,
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
+    const commercialControlEvents = await client.query(
+      `SELECT previous_enabled,enabled,change_reference
+       FROM public.institution_pilot_control_events
+       WHERE control_key='commercial_provisioning'
+       ORDER BY changed_at`,
+    )
+    expect(commercialControlEvents.rows).toEqual([
+      {
+        previous_enabled: false,
+        enabled: true,
+        change_reference: 'CONTROL-COMMERCIAL-ENABLE-001',
+      },
+      {
+        previous_enabled: true,
+        enabled: false,
+        change_reference: 'CONTROL-COMMERCIAL-DISABLE-001',
+      },
+    ])
+
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,30,2,'invitation_free',now() + interval '30 days',NULL)`,
+        ['Onaysız ücretsiz canary', platformAdmin],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,'archived',41,2,'invitation_free',now() + interval '30 days',$3)`,
+        ['Öğrenci sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-STUDENT-001'],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,'archived',40,3,'invitation_free',now() + interval '30 days',$3)`,
+        ['Personel sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-STAFF-001'],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,'archived',40,2,'invitation_free',now() + interval '13 days',$3)`,
+        ['Alt süre sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-MIN-DAYS-001'],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,'archived',40,2,'invitation_free',now() + interval '61 days',$3)`,
+        ['Süre sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-DAYS-001'],
+      ),
+      '23514',
+    )
+    const boundaryCreatedAt = new Date()
+    const boundaryPilot = await client.query(
+      `INSERT INTO public.pilot_institutions(
+         name,created_by,status,student_limit,staff_limit,pilot_kind,
+         review_due_at,approval_ref,created_at
+       ) VALUES(
+         $1,$2,'archived',40,2,'invitation_free',
+         $3::timestamptz + interval '60 days',$4,$3
+       ) RETURNING id`,
+      [
+        'Tam sınırda arşivli canary',
+        platformAdmin,
+        boundaryCreatedAt,
+        'PILOT-LIMIT-BOUNDARY-001',
+      ],
+    )
+    await client.query('DELETE FROM public.pilot_institutions WHERE id=$1', [boundaryPilot.rows[0].id])
 
     const before = Date.now()
     const provisioned = await authenticatedRpc(platformAdmin, expression, [
@@ -933,6 +1100,10 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       'public.list_pilot_institutions($1)',
       [platformAdmin],
     )
+    expect(directory.databaseControls).toEqual({
+      freePilotProvisioningEnabled: true,
+      commercialProvisioningEnabled: false,
+    })
     expect(directory.institutions).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: provisioned.institution.id,
@@ -1470,9 +1641,23 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
   })
 
   it('blocks cross-tenant management and enforces the six-person capacity', async () => {
-    const second = await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
-      platformAdmin, 'Bilge Pilot İki', managerTwo, randomUUID(),
-    ])
+    await setProvisioningControl(
+      'commercial_provisioning',
+      true,
+      'CONTROL-COMMERCIAL-TENANT2-ENABLE-001',
+    )
+    let second
+    try {
+      second = await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
+        platformAdmin, 'Bilge Pilot İki', managerTwo, randomUUID(),
+      ])
+    } finally {
+      await setProvisioningControl(
+        'commercial_provisioning',
+        false,
+        'CONTROL-COMMERCIAL-TENANT2-DISABLE-001',
+      )
+    }
     institutionTwo = second.institution.id
     await expectPgError(
       () => rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [

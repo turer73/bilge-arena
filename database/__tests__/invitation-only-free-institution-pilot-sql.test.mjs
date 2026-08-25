@@ -16,6 +16,13 @@ describe('invitation-only free institution pilot SQL boundary', () => {
     expect(sql).toContain('pilot_institutions_free_approval_ref_unique')
     expect(sql).toContain("ALTER COLUMN pilot_kind SET DEFAULT 'commercial'")
     expect(sql).toContain('approval_ref IS NOT NULL')
+    expect(sql).toContain('pilot_institutions_free_limits')
+    expect(sql).toContain('student_limit BETWEEN 1 AND 40')
+    expect(sql).toContain('staff_limit BETWEEN 1 AND 2')
+    expect(sql).toContain('review_due_at > created_at')
+    expect(sql).toContain("review_due_at + interval '1 second'")
+    expect(sql).toContain(">= created_at + interval '14 days'")
+    expect(sql).toContain("review_due_at <= created_at + interval '60 days'")
     expect(sql).not.toContain('INSTITUTION_ONBOARDING_ENABLED')
   })
 
@@ -33,8 +40,22 @@ describe('invitation-only free institution pilot SQL boundary', () => {
     expect(sql).toContain('auth.uid() IS DISTINCT FROM p_user_id')
     expect(sql).toContain('NOT public.institution_rpc_actor_has_aal2(p_user_id)')
     expect(sql).toContain('public.institution_pilot_is_platform_admin(p_user_id)')
-    expect(sql).toContain("control.control_key = 'free_provisioning' AND control.enabled")
+    expect(sql).toContain("WHERE control.control_key = 'free_provisioning'")
     expect(sql).toContain('institution actor mismatch or AAL2 required')
+  })
+
+  it('keeps free and commercial provisioning behind locked database controls', () => {
+    expect(sql).toContain("'free_provisioning', 'commercial_provisioning'")
+    expect(sql).toContain('public.enforce_institution_provisioning_control()')
+    expect(sql).toContain('CREATE TRIGGER institution_provisioning_control_guard')
+    expect(sql).toContain('BEFORE INSERT OR UPDATE OF pilot_kind')
+    expect(sql).toContain('institution pilot kind is immutable')
+    expect(sql).toMatch(
+      /WHERE control\.control_key = 'free_provisioning'[\s\S]*?FOR UPDATE;[\s\S]*?v_free_provisioning_enabled IS DISTINCT FROM true/,
+    )
+    expect(sql).toMatch(
+      /WHERE control\.control_key = v_control_key[\s\S]*?FOR UPDATE;[\s\S]*?v_enabled IS DISTINCT FROM true/,
+    )
   })
 
   it('uses the retained request ledger and writes immutable non-PII audit metadata', () => {

@@ -151,8 +151,8 @@ describe('admin institution free-pilot page', () => {
 
     render(<AdminInstitutionsPage />)
 
-    expect(await screen.findByText(/ücretsiz pilot oluşturma şu anda kapalı/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Ücretsiz pilot kapalı' })).toBeDisabled()
+    expect(await screen.findByText(/ücretsiz pilot ve ücretli kurum onboarding akışları şu anda kapalı/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Kurum oluşturma kapalı' })).toBeDisabled()
     expect(screen.getByLabelText(/Kurum adı/i)).toBeDisabled()
     expect(screen.getByLabelText(/İlk kurum yöneticisi/i)).toBeDisabled()
   })
@@ -190,5 +190,90 @@ describe('admin institution free-pilot page', () => {
     expect(screen.queryByRole('button', { name: 'Aktifleştir' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /destek görünümünü aç/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Askıya al' })).toBeInTheDocument()
+  })
+
+  it('uses the paid onboarding endpoint and only asks for name, manager and request ID', async () => {
+    let paidAttempts = 0
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.startsWith('/api/admin/users?')) return Response.json({ users: [manager] })
+      if (url === '/api/admin/institutions' && init?.method === 'POST') {
+        paidAttempts += 1
+        if (paidAttempts === 1) {
+          return Response.json({ error: 'Yanıt alınamadı; tekrar deneyin.' }, { status: 503 })
+        }
+        return Response.json({ institution: { name: 'Ticari Dershane' } }, { status: 201 })
+      }
+      if (url === '/api/admin/institutions') {
+        return Response.json({ institutions: [], provisioning: { invitationFreePilotEnabled: false, commercialOnboardingEnabled: true } })
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('66666666-6666-4666-8666-666666666666')
+
+    render(<AdminInstitutionsPage />)
+    expect(await screen.findByText('Ücretli kurum onboarding')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Onay \/ pilot dosyası referansı/i)).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(/Kurum adı/i), { target: { value: 'Ticari Dershane' } })
+    fireEvent.change(screen.getByLabelText(/İlk kurum yöneticisi/i), { target: { value: 'Kurum' } })
+    fireEvent.click(await screen.findByRole('option', { name: /Kurum Yöneticisi/i }))
+    const submit = screen.getByRole('button', { name: 'Ücretli onboarding başlat' })
+    fireEvent.click(submit)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/tekrar deneyin/i)
+    fireEvent.click(submit)
+
+    await waitFor(() => expect(paidAttempts).toBe(2))
+    const calls = fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/admin/institutions' && init?.method === 'POST')
+    const expectedBody = {
+      name: 'Ticari Dershane',
+      managerUserId: manager.id,
+      requestId: '66666666-6666-4666-8666-666666666666',
+    }
+    expect(calls.map(([, init]) => JSON.parse(String(init?.body)))).toEqual([
+      expectedBody,
+      expectedBody,
+    ])
+    expect(fetchMock.mock.calls.some(([url]) => String(url) === '/api/admin/institutions/free-pilots')).toBe(false)
+  })
+
+  it('keeps paid and free retry UUID namespaces separate when both capabilities are open', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.startsWith('/api/admin/users?')) return Response.json({ users: [manager] })
+      if (url === '/api/admin/institutions' && init?.method === 'POST') {
+        return Response.json({ error: 'Ticari akış geçici olarak kapalı.' }, { status: 503 })
+      }
+      if (url === '/api/admin/institutions/free-pilots' && init?.method === 'POST') {
+        return Response.json({ institution: { name: 'Canary Dershane' } }, { status: 201 })
+      }
+      if (url === '/api/admin/institutions') {
+        return Response.json({ institutions: [], provisioning: { invitationFreePilotEnabled: true, commercialOnboardingEnabled: true } })
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.spyOn(globalThis.crypto, 'randomUUID')
+      .mockReturnValueOnce('77777777-7777-4777-8777-777777777777')
+      .mockReturnValueOnce('88888888-8888-4888-8888-888888888888')
+
+    render(<AdminInstitutionsPage />)
+    expect(await screen.findByRole('radio', { name: 'Ücretli onboarding' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('radio', { name: 'Ücretli onboarding' }))
+    fireEvent.change(screen.getByLabelText(/Kurum adı/i), { target: { value: 'Ticari Dershane' } })
+    fireEvent.change(screen.getByLabelText(/İlk kurum yöneticisi/i), { target: { value: 'Kurum' } })
+    fireEvent.click(await screen.findByRole('option', { name: /Kurum Yöneticisi/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ücretli onboarding başlat' }))
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/admin/institutions' && init?.method === 'POST')).toHaveLength(1))
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Ücretsiz pilot' }))
+    fireEvent.change(screen.getByLabelText(/Onay \/ pilot dosyası referansı/i), { target: { value: 'PILOT-2026-NS-01' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ücretsiz pilotu oluştur' }))
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/admin/institutions/free-pilots' && init?.method === 'POST')).toHaveLength(1))
+
+    const paidBody = JSON.parse(String(fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/admin/institutions' && init?.method === 'POST')?.[1]?.body))
+    const freeBody = JSON.parse(String(fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/admin/institutions/free-pilots' && init?.method === 'POST')?.[1]?.body))
+    expect(paidBody.requestId).toBe('77777777-7777-4777-8777-777777777777')
+    expect(freeBody.requestId).toBe('88888888-8888-4888-8888-888888888888')
   })
 })

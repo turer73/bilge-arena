@@ -99,9 +99,11 @@ export const institutionAdminDirectorySchema = z.object({
   institutions: z.array(institutionSummarySchema),
   databaseControls: z.object({
     freePilotProvisioningEnabled: z.boolean(),
+    commercialProvisioningEnabled: z.boolean().optional(),
   }).strict().optional(),
   provisioning: z.object({
     invitationFreePilotEnabled: z.boolean(),
+    commercialOnboardingEnabled: z.boolean(),
   }).strict().optional(),
 }).strict()
 

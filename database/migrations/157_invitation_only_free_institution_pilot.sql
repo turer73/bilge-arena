@@ -18,20 +18,38 @@ ALTER TABLE public.pilot_institutions
 ALTER TABLE public.pilot_institutions
   ADD COLUMN IF NOT EXISTS approval_ref text;
 
-DO $block$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_catalog.pg_constraint
-    WHERE conrelid = 'public.pilot_institutions'::regclass
-      AND conname = 'pilot_institutions_free_review_due'
-  ) THEN
-    ALTER TABLE public.pilot_institutions
-      ADD CONSTRAINT pilot_institutions_free_review_due
-      CHECK (pilot_kind <> 'invitation_free' OR review_due_at IS NOT NULL);
-  END IF;
-END;
-$block$;
+-- Recreate these named constraints so rerunning this migration also repairs an
+-- earlier revision that only checked review_due_at for NULL. The RPC validates
+-- the same bounds, while these invariants cover privileged/manual future paths.
+ALTER TABLE public.pilot_institutions
+  DROP CONSTRAINT IF EXISTS pilot_institutions_free_limits;
+ALTER TABLE public.pilot_institutions
+  ADD CONSTRAINT pilot_institutions_free_limits
+  CHECK (
+    pilot_kind <> 'invitation_free'
+    OR (
+      student_limit BETWEEN 1 AND 40
+      AND staff_limit BETWEEN 1 AND 2
+    )
+  );
+
+ALTER TABLE public.pilot_institutions
+  DROP CONSTRAINT IF EXISTS pilot_institutions_free_review_due;
+ALTER TABLE public.pilot_institutions
+  ADD CONSTRAINT pilot_institutions_free_review_due
+  CHECK (
+    pilot_kind <> 'invitation_free'
+    OR (
+      review_due_at IS NOT NULL
+      AND review_due_at > created_at
+      -- Earlier revisions evaluated two clock_timestamp() calls separately.
+      -- One second only absorbs that sub-second storage skew; business inputs
+      -- remain bounded to a minimum of fourteen days by both RPC and table.
+      AND review_due_at + interval '1 second'
+        >= created_at + interval '14 days'
+      AND review_due_at <= created_at + interval '60 days'
+    )
+  );
 
 -- Recreate the named constraint so a retry also repairs an earlier version
 -- whose CHECK expression accepted NULL through SQL three-valued logic.
@@ -69,13 +87,19 @@ ALTER TABLE public.institution_operation_events
   CHECK (source IN ('institution_request', 'free_pilot_request', 'classroom_request'));
 
 CREATE TABLE IF NOT EXISTS public.institution_pilot_controls (
-  control_key text PRIMARY KEY CHECK (control_key IN ('free_provisioning')),
+  control_key text PRIMARY KEY,
   enabled boolean NOT NULL DEFAULT false,
   updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
 
+ALTER TABLE public.institution_pilot_controls
+  DROP CONSTRAINT IF EXISTS institution_pilot_controls_control_key_check;
+ALTER TABLE public.institution_pilot_controls
+  ADD CONSTRAINT institution_pilot_controls_control_key_check
+  CHECK (control_key IN ('free_provisioning', 'commercial_provisioning'));
+
 INSERT INTO public.institution_pilot_controls(control_key, enabled)
-VALUES ('free_provisioning', false)
+VALUES ('free_provisioning', false), ('commercial_provisioning', false)
 ON CONFLICT (control_key) DO NOTHING;
 
 ALTER TABLE public.institution_pilot_controls ENABLE ROW LEVEL SECURITY;
@@ -84,7 +108,7 @@ FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE TABLE IF NOT EXISTS public.institution_pilot_control_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  control_key text NOT NULL CHECK (control_key = 'free_provisioning'),
+  control_key text NOT NULL,
   previous_enabled boolean NOT NULL,
   enabled boolean NOT NULL,
   change_reference text NOT NULL
@@ -94,6 +118,12 @@ CREATE TABLE IF NOT EXISTS public.institution_pilot_control_events (
   CHECK (previous_enabled IS DISTINCT FROM enabled),
   UNIQUE (control_key, change_reference)
 );
+
+ALTER TABLE public.institution_pilot_control_events
+  DROP CONSTRAINT IF EXISTS institution_pilot_control_events_control_key_check;
+ALTER TABLE public.institution_pilot_control_events
+  ADD CONSTRAINT institution_pilot_control_events_control_key_check
+  CHECK (control_key IN ('free_provisioning', 'commercial_provisioning'));
 
 ALTER TABLE public.institution_pilot_control_events ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.institution_pilot_control_events
@@ -135,6 +165,59 @@ BEFORE UPDATE ON public.institution_pilot_controls
 FOR EACH ROW EXECUTE FUNCTION public.audit_institution_pilot_control_change();
 
 REVOKE ALL ON FUNCTION public.audit_institution_pilot_control_change()
+FROM PUBLIC, anon, authenticated, service_role;
+
+-- Both institution creation paths have an audited database-owner kill switch.
+-- The row lock makes a concurrent disable operation linearizable with INSERT,
+-- and the trigger also covers privileged/manual paths that bypass an RPC.
+CREATE OR REPLACE FUNCTION public.enforce_institution_provisioning_control()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_control_key text;
+  v_enabled boolean;
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.pilot_kind IS DISTINCT FROM OLD.pilot_kind THEN
+      RAISE EXCEPTION 'institution pilot kind is immutable'
+        USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF NEW.pilot_kind = 'legacy' THEN
+    RETURN NEW;
+  END IF;
+
+  v_control_key := CASE NEW.pilot_kind
+    WHEN 'invitation_free' THEN 'free_provisioning'
+    WHEN 'commercial' THEN 'commercial_provisioning'
+  END;
+
+  SELECT control.enabled
+  INTO v_enabled
+  FROM public.institution_pilot_controls AS control
+  WHERE control.control_key = v_control_key
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_enabled IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'institution provisioning database gate is closed'
+      USING ERRCODE = '55000';
+  END IF;
+  RETURN NEW;
+END;
+$fn$;
+
+DROP TRIGGER IF EXISTS institution_provisioning_control_guard
+  ON public.pilot_institutions;
+CREATE TRIGGER institution_provisioning_control_guard
+BEFORE INSERT OR UPDATE OF pilot_kind ON public.pilot_institutions
+FOR EACH ROW EXECUTE FUNCTION public.enforce_institution_provisioning_control();
+
+REVOKE ALL ON FUNCTION public.enforce_institution_provisioning_control()
 FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.institution_pilot_is_operational(
@@ -416,6 +499,8 @@ DECLARE
   v_institution public.pilot_institutions%ROWTYPE;
   v_membership public.pilot_institution_memberships%ROWTYPE;
   v_result jsonb;
+  v_free_provisioning_enabled boolean;
+  v_created_at timestamptz;
 BEGIN
   IF p_user_id IS NULL OR p_manager_user_id IS NULL OR p_request_id IS NULL
     OR p_manager_user_id = p_user_id
@@ -439,11 +524,12 @@ BEGIN
   IF NOT public.institution_pilot_is_platform_admin(p_user_id) THEN
     RAISE EXCEPTION 'institution platform permission required' USING ERRCODE = '42501';
   END IF;
-  IF NOT EXISTS (
-    SELECT 1
-    FROM public.institution_pilot_controls AS control
-    WHERE control.control_key = 'free_provisioning' AND control.enabled
-  ) THEN
+  SELECT control.enabled
+  INTO v_free_provisioning_enabled
+  FROM public.institution_pilot_controls AS control
+  WHERE control.control_key = 'free_provisioning'
+  FOR UPDATE;
+  IF NOT FOUND OR v_free_provisioning_enabled IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'free institution pilot database gate is closed'
       USING ERRCODE = '55000';
   END IF;
@@ -511,17 +597,19 @@ BEGIN
       USING ERRCODE = '23505';
   END IF;
 
+  v_created_at := clock_timestamp();
   INSERT INTO public.pilot_institutions(
     name, created_by, student_limit, staff_limit, pilot_kind, review_due_at,
-    approval_ref
+    approval_ref, created_at
   ) VALUES (
     v_name,
     p_user_id,
     p_student_limit,
     p_staff_limit,
     'invitation_free',
-    clock_timestamp() + (p_trial_days::integer * interval '1 day'),
-    v_approval_ref
+    v_created_at + (p_trial_days::integer * interval '1 day'),
+    v_approval_ref,
+    v_created_at
   )
   RETURNING * INTO v_institution;
 
@@ -697,6 +785,11 @@ BEGIN
         SELECT control.enabled
         FROM public.institution_pilot_controls AS control
         WHERE control.control_key = 'free_provisioning'
+      ), false),
+      'commercialProvisioningEnabled', COALESCE((
+        SELECT control.enabled
+        FROM public.institution_pilot_controls AS control
+        WHERE control.control_key = 'commercial_provisioning'
       ), false)
     )
   );

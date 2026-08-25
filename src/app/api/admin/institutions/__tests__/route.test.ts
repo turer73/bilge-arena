@@ -84,7 +84,7 @@ describe('admin institution routes', () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
       ...payload,
-      provisioning: { invitationFreePilotEnabled: false },
+      provisioning: { invitationFreePilotEnabled: false, commercialOnboardingEnabled: false },
     })
     expect(mocks.rpc).toHaveBeenCalledWith('list_pilot_institutions', { p_user_id: ADMIN.id })
   })
@@ -103,7 +103,7 @@ describe('admin institution routes', () => {
 
     expect(await response.json()).toEqual({
       institutions: [],
-      provisioning: { invitationFreePilotEnabled: true },
+      provisioning: { invitationFreePilotEnabled: true, commercialOnboardingEnabled: false },
     })
   })
 
@@ -121,7 +121,34 @@ describe('admin institution routes', () => {
 
     expect(await response.json()).toEqual({
       institutions: [],
-      provisioning: { invitationFreePilotEnabled: false },
+      provisioning: { invitationFreePilotEnabled: false, commercialOnboardingEnabled: false },
+    })
+  })
+
+  it('exposes commercial onboarding only when both app and database controls are open', async () => {
+    mocks.rpc.mockResolvedValue({
+      data: {
+        institutions: [],
+        databaseControls: {
+          freePilotProvisioningEnabled: false,
+          commercialProvisioningEnabled: true,
+        },
+      },
+      error: null,
+    })
+
+    const response = await GET()
+
+    expect(await response.json()).toEqual({
+      institutions: [],
+      provisioning: { invitationFreePilotEnabled: false, commercialOnboardingEnabled: true },
+    })
+
+    mocks.onboardingEnabled.mockReturnValue(false)
+    const closedResponse = await GET()
+    expect((await closedResponse.json()).provisioning).toEqual({
+      invitationFreePilotEnabled: false,
+      commercialOnboardingEnabled: false,
     })
   })
 

@@ -6,12 +6,13 @@ tenant izolasyonu, sözleşme veya operasyon hazırlığı kanıtı değildir.
 
 ## Başlatma ön koşulları
 
-- Ücretli onboarding kill-switch kapalı kalır.
+- Ücretli onboarding'in uygulama bayrağı ve bağımsız DB
+  `commercial_provisioning` kontrolü kapalı kalır.
 - Platform kontrollü ücretsiz canary yalnız gerektiği pencerede iki bağımsız kontrolle
   açılır: DB `institution_pilot_controls.free_provisioning=true` ve uygulama
   `INSTITUTION_FREE_PILOT_ENABLED=true`. Uygulama bayrağı yalnız UI/API yüzeyini,
-  DB kontrolü doğrudan authenticated RPC'yi de kapatır; ücretli veya public
-  onboarding açılmaz.
+  DB kontrolü doğrudan authenticated RPC'yi ve privileged/manual INSERT'i de
+  kapatır; ücretli veya public onboarding açılmaz.
 - KVKK olayının teknik kapanış kaydı ile nihai hukuk kararı tutarlıdır.
 - Kurum aydınlatması, sözleşme/DPA, saklama-imha kararı ve sorumlu kişi imzalıdır.
 - İki ayrı test tenant'ı ve her tenant için yönetici, öğretmen ve öğrenci hesabı
@@ -75,7 +76,8 @@ otomatik verilmez.
    WHERE control_key = 'free_provisioning' AND enabled = false;
    SELECT control_key, enabled, updated_at
    FROM public.institution_pilot_controls
-   WHERE control_key = 'free_provisioning';
+   WHERE control_key IN ('free_provisioning', 'commercial_provisioning')
+   ORDER BY control_key;
    SELECT previous_enabled, enabled, change_reference, changed_at
    FROM public.institution_pilot_control_events
    WHERE control_key = 'free_provisioning'
@@ -83,6 +85,9 @@ otomatik verilmez.
    LIMIT 1;
    COMMIT;
    ```
+
+   Postflight sonucunda `free_provisioning=true` ve
+   `commercial_provisioning=false` görülmeden uygulama bayrağı açılmaz.
 
 5. Audit satırı ve DB kontrolü doğrulandıktan sonra
    `INSTITUTION_FREE_PILOT_ENABLED=true` uygulama bayrağını açıp yeni production

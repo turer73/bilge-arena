@@ -209,7 +209,7 @@ yenilemeyi ya da fiyatı doğruladığı ileri sürülemez.
 | Öğrenci | En fazla 40 davetli öğrenci |
 | Personel | 1 kurum yöneticisi ve en fazla 1 öğretmen |
 | Ücret | Sistem canary'si boyunca 0 TL; özel geliştirme ve ticari taahhüt yok |
-| Teknik kapı | Uygulama bayrağı ve DB `free_provisioning` kontrolü birlikte açık; ücretli onboarding kapalı |
+| Teknik kapı | Uygulama bayrağı ve DB `free_provisioning` kontrolü birlikte açık; DB `commercial_provisioning` ve ücretli onboarding kapalı |
 | Denetim bağı | Kişisel veri içermeyen zorunlu harici onay/pilot dosyası referansı |
 | Bitiş | Süre dolunca tenant erişimi DB'de fail-closed; platform yöneticisi kurumu auditli biçimde askıya alır |
 

@@ -69,6 +69,9 @@ export async function GET() {
       invitationFreePilotEnabled:
         isInstitutionFreePilotEnabled()
         && databaseControls?.freePilotProvisioningEnabled === true,
+      commercialOnboardingEnabled:
+        isInstitutionOnboardingEnabled()
+        && databaseControls?.commercialProvisioningEnabled === true,
     },
   })
 }
