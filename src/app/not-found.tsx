@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
 

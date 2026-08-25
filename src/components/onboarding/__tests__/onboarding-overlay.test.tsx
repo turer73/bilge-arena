@@ -19,7 +19,11 @@ const refreshMock = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/hooks/use-auth', () => ({ refreshProfile: refreshMock }))
 
 const routerMock = vi.hoisted(() => ({ push: vi.fn() }))
-vi.mock('next/navigation', () => ({ useRouter: () => routerMock }))
+const pathnameMock = vi.hoisted(() => vi.fn<() => string>())
+vi.mock('next/navigation', () => ({
+  usePathname: pathnameMock,
+  useRouter: () => routerMock,
+}))
 
 vi.mock('@/components/ui/bilge-chan', () => ({
   BilgeChan: () => <div data-testid="bilge-chan" />,
@@ -32,12 +36,46 @@ global.fetch = fetchMock as unknown as typeof fetch
 
 beforeEach(() => {
   vi.clearAllMocks()
+  pathnameMock.mockReturnValue('/arena')
   document.body.style.overflow = ''
   auth.value.profile = { onboarding_completed: false }
   fetchMock.mockResolvedValue({ ok: true, json: () => Promise.resolve({ success: true }) })
 })
 
 describe('OnboardingOverlay', () => {
+  test('hassas dokumandan public arenaya tam dokuman navigasyonu yapar', async () => {
+    pathnameMock.mockReturnValue('/arena/sinif')
+    const navigateDocument = vi.fn()
+    render(<OnboardingOverlay navigateDocument={navigateDocument} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Atla' }))
+
+    await waitFor(() => expect(navigateDocument).toHaveBeenCalledWith('/arena'))
+    expect(routerMock.push).not.toHaveBeenCalled()
+  })
+
+  test('public dokuman icinde App Router navigasyonunu korur', async () => {
+    const navigateDocument = vi.fn()
+    render(<OnboardingOverlay navigateDocument={navigateDocument} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Atla' }))
+
+    await waitFor(() => expect(routerMock.push).toHaveBeenCalledWith('/arena'))
+    expect(navigateDocument).not.toHaveBeenCalled()
+  })
+
+  test('hassas dokumanda ag hatasi sonrasi da tam dokuman navigasyonu yapar', async () => {
+    pathnameMock.mockReturnValue('/arena/kurum')
+    fetchMock.mockRejectedValueOnce(new Error('network'))
+    const navigateDocument = vi.fn()
+    render(<OnboardingOverlay navigateDocument={navigateDocument} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Atla' }))
+
+    await waitFor(() => expect(navigateDocument).toHaveBeenCalledWith('/arena'))
+    expect(routerMock.push).not.toHaveBeenCalled()
+  })
+
   test('onboarding tamamlanmissa hicbir sey render etmez', () => {
     auth.value.profile = { onboarding_completed: true }
     const { container } = render(<OnboardingOverlay />)

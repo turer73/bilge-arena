@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import Image from 'next/image'
 import { useUIStore, DARK_THEMES } from '@/stores/ui-store'
 

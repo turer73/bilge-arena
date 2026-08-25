@@ -14,7 +14,7 @@ vi.mock('next/navigation', () => ({ usePathname: mockUsePathname }))
 // next/link → düz <a> (jsdom'da app-router context gerektirmesin)
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} data-next-link="true" {...props}>{children}</a>
   ),
 }))
 
@@ -80,6 +80,12 @@ describe('BottomNav', () => {
     mockUsePathname.mockReturnValue('/oda/kod')
     render(<BottomNav />)
     expect(linkFor('Arena')).toHaveAttribute('aria-current', 'page')
+  })
+
+  test('hassas dokumanda tum public sekmeleri native anchor olarak render eder', () => {
+    mockUsePathname.mockReturnValue('/arena/sinif')
+    render(<BottomNav />)
+    for (const tab of TABS) expect(linkFor(tab)).not.toHaveAttribute('data-next-link')
   })
 
   test('activeOverride usePathname\'i ezer', () => {

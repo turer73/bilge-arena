@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import Link from 'next/link'
+import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, BarChart3, ChevronDown, ChevronUp } from 'lucide-react'
 import { getCookieConsent, setCookieConsent } from '@/lib/consent'
