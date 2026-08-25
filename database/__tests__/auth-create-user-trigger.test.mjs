@@ -29,6 +29,14 @@ describe('089 handle_new_user regression guard', () => {
     expect(migration).not.toMatch(/CREATE\s+TRIGGER/i);
   });
 
+  it('creates only a normal profile and never grants institution membership or roles', () => {
+    const executableSql = migration.replace(/--.*$/gm, '');
+    expect(executableSql).toMatch(/INSERT INTO public\.profiles/i);
+    expect(executableSql).not.toMatch(/pilot_institution_memberships/i);
+    expect(executableSql).not.toMatch(/\buser_roles\b/i);
+    expect(executableSql).not.toMatch(/institution_pilot_staff|teacher_pilot/i);
+  });
+
   it('bounds display_name and retries username or referral-code unique collisions', () => {
     expect(migration).toMatch(/pg_catalog\.left\([\s\S]*64\s*\)/is);
     expect(migration).toMatch(/FOR v_attempt IN 1\.\.12 LOOP/i);

@@ -1,0 +1,96 @@
+import { readFileSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
+
+const sql = readFileSync(
+  new URL('../migrations/158_invitation_only_free_institution_pilot.sql', import.meta.url),
+  'utf8',
+)
+
+describe('invitation-only free institution pilot SQL boundary', () => {
+  it('keeps the pilot bounded and distinct from paid onboarding', () => {
+    expect(sql).toContain("'invitation_free'")
+    expect(sql).toContain('p_student_limit NOT BETWEEN 1 AND 40')
+    expect(sql).toContain('p_staff_limit NOT BETWEEN 1 AND 2')
+    expect(sql).toContain('p_trial_days NOT BETWEEN 14 AND 60')
+    expect(sql).toContain("v_approval_ref !~ '^[A-Z0-9][A-Z0-9._/-]{5,63}$'")
+    expect(sql).toContain('pilot_institutions_free_approval_ref_unique')
+    expect(sql).toContain("ALTER COLUMN pilot_kind SET DEFAULT 'commercial'")
+    expect(sql).toContain('approval_ref IS NOT NULL')
+    expect(sql).toContain('pilot_institutions_free_limits')
+    expect(sql).toContain('student_limit BETWEEN 1 AND 40')
+    expect(sql).toContain('staff_limit BETWEEN 1 AND 2')
+    expect(sql).toContain('review_due_at > created_at')
+    expect(sql).toContain("review_due_at + interval '1 second'")
+    expect(sql).toContain(">= created_at + interval '14 days'")
+    expect(sql).toContain("review_due_at <= created_at + interval '60 days'")
+    expect(sql).not.toContain('INSTITUTION_ONBOARDING_ENABLED')
+  })
+
+  it('enforces one open free canary atomically across request IDs and managers', () => {
+    expect(sql).toContain('pilot_institutions_one_open_free_pilot')
+    expect(sql).toMatch(
+      /WHERE pilot_kind = 'invitation_free'[\s\S]*?status IN \('pilot', 'active'\)/,
+    )
+    expect(sql).toContain("'institution-free-pilot-open-slot'")
+    expect(sql).toContain('another open invitation-free institution pilot already exists')
+  })
+
+  it('requires a JWT-bound AAL2 platform administrator', () => {
+    expect(sql).toContain('IF auth.uid() IS NULL')
+    expect(sql).toContain('auth.uid() IS DISTINCT FROM p_user_id')
+    expect(sql).toContain('NOT public.institution_rpc_actor_has_aal2(p_user_id)')
+    expect(sql).toContain('public.institution_pilot_is_platform_admin(p_user_id)')
+    expect(sql).toContain("WHERE control.control_key = 'free_provisioning'")
+    expect(sql).toContain('institution actor mismatch or AAL2 required')
+  })
+
+  it('keeps free and commercial provisioning behind locked database controls', () => {
+    expect(sql).toContain("'free_provisioning', 'commercial_provisioning'")
+    expect(sql).toContain('public.enforce_institution_provisioning_control()')
+    expect(sql).toContain('CREATE TRIGGER institution_provisioning_control_guard')
+    expect(sql).toContain('BEFORE INSERT OR UPDATE OF pilot_kind')
+    expect(sql).toContain('institution pilot kind is immutable')
+    expect(sql).toMatch(
+      /WHERE control\.control_key = 'free_provisioning'[\s\S]*?FOR UPDATE;[\s\S]*?v_free_provisioning_enabled IS DISTINCT FROM true/,
+    )
+    expect(sql).toMatch(
+      /WHERE control\.control_key = v_control_key[\s\S]*?FOR UPDATE;[\s\S]*?v_enabled IS DISTINCT FROM true/,
+    )
+  })
+
+  it('uses the retained request ledger and writes immutable non-PII audit metadata', () => {
+    expect(sql).toContain("operation = 'provision_free_pilot'")
+    expect(sql).toContain("p_user_id, 'provision_free_pilot', p_request_id, v_hash, v_result")
+    expect(sql).toContain("'institution_provisioned'")
+    expect(sql).toContain("'free_pilot_request'")
+    expect(sql).toContain(
+      "source IN ('institution_request', 'free_pilot_request', 'classroom_request')",
+    )
+    expect(sql).toContain("'studentLimit'")
+    expect(sql).toContain("'reviewDueAt'")
+    expect(sql).not.toMatch(/metadata[\s\S]{0,500}managerUserId/i)
+  })
+
+  it('requires a non-PII change reference for the separate database gate', () => {
+    expect(sql).toContain('public.institution_pilot_control_events')
+    expect(sql).toContain("current_setting('app.institution_control_change_ref', true)")
+    expect(sql).toContain('institution pilot control change reference required')
+    expect(sql).toContain('CREATE TRIGGER institution_pilot_control_change_audit')
+    expect(sql).toMatch(
+      /REVOKE ALL ON TABLE public\.institution_pilot_control_events[\s\S]*?FROM PUBLIC, anon, authenticated, service_role;/,
+    )
+  })
+
+  it('fails tenant access closed after the review deadline', () => {
+    expect(sql).toContain('public.institution_pilot_is_operational(institution.id)')
+    expect(sql).toContain('institution.review_due_at > statement_timestamp()')
+    expect(sql).toContain('expired free institution pilot cannot be active')
+    expect(sql).toContain('CREATE TRIGGER pilot_institutions_free_lifecycle_guard')
+  })
+
+  it('revokes default execution and grants only the authenticated browser role', () => {
+    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.provision_free_pilot_institution\([\s\S]*?FROM PUBLIC, anon, authenticated, service_role;/)
+    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.provision_free_pilot_institution\([\s\S]*?TO authenticated;/)
+    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.audit_free_pilot_institution_request\(\)[\s\S]*?FROM PUBLIC, anon, authenticated, service_role;/)
+  })
+})

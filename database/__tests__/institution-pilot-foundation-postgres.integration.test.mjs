@@ -75,12 +75,28 @@ const accountExportReportPrivacySql = readFileSync(
   join(migrationsDir, '156_account_export_report_privacy.sql'),
   'utf8',
 )
+const invitationOnlyFreePilotSql = readFileSync(
+  join(migrationsDir, '158_invitation_only_free_institution_pilot.sql'),
+  'utf8',
+)
+const freePilotExpiryRpcClosureSql = readFileSync(
+  join(migrationsDir, '159_free_pilot_expiry_rpc_closure.sql'),
+  'utf8',
+)
+const freePilotReplayAndStudentSurfaceSql = readFileSync(
+  join(migrationsDir, '160_free_pilot_replay_and_student_surface_closure.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
   let managerTwo
+  let freePilotManager
+  let freePilotManagerTwo
+  let freePilotStudent
+  let paidPilotManagerAfterMigration
   let teacherOne
   let institutionOne
   let institutionTwo
@@ -135,6 +151,69 @@ suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL accep
       caught = error
     }
     expect(caught?.code).toBe(code)
+  }
+
+  async function setProvisioningControl(controlKey, enabled, changeReference) {
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        [changeReference],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=$2
+         WHERE control_key=$1`,
+        [controlKey, enabled],
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
+  }
+
+  function directTenantRpcCalls(userId, institutionId) {
+    const classroomId = randomUUID()
+    const requestId = randomUUID()
+    const now = new Date()
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+    return [
+      ['public.get_institution_tracking_directory($1)', [userId]],
+      [
+        'public.get_institution_student_learning_analysis($1,$2,$3,$4,$5,$6)',
+        [userId, classroomId, 'a'.repeat(32), 'matematik', 'TYT', now],
+      ],
+      [
+        'public.get_institution_classroom_published_program_members($1,$2,$3,$4)',
+        [userId, classroomId, oneHourAgo, now],
+      ],
+      [
+        'public.get_institution_classroom_growth_metrics($1,$2,$3)',
+        [userId, classroomId, now],
+      ],
+      [
+        'public.get_institution_classroom_followup_metrics($1,$2,$3,$4)',
+        [userId, classroomId, oneHourAgo, now],
+      ],
+      ['public.get_my_institution_support_access($1)', [userId]],
+      [
+        'public.grant_my_institution_support_access($1,$2,$3,$4)',
+        [userId, 30, 'Kontrollü destek erişimi', requestId],
+      ],
+      [
+        'public.publish_institution_study_program($1,$2,$3)',
+        [userId, 'b'.repeat(32), requestId],
+      ],
+      [
+        'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+        [userId, 'b'.repeat(32), '2026-08-24', 30, '[]', requestId],
+      ],
+      [
+        'public.get_my_classroom_exam_mode($1,$2,$3)',
+        [userId, classroomId, institutionId],
+      ],
+    ]
   }
 
   beforeAll(async () => {
@@ -253,9 +332,25 @@ suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL accep
     platformAdmin = randomUUID()
     managerOne = randomUUID()
     managerTwo = randomUUID()
+    freePilotManager = randomUUID()
+    freePilotManagerTwo = randomUUID()
+    freePilotStudent = randomUUID()
+    paidPilotManagerAfterMigration = randomUUID()
     teacherOne = randomUUID()
     for (let index = 0; index < 6; index += 1) capacityTeachers.push(randomUUID())
-    const users = [platformAdmin, managerOne, managerTwo, teacherOne, ...capacityTeachers]
+    // Preserve the historical fixture indexes/e-mails used by later tests;
+    // the free-pilot manager is appended so existing pilot-N addresses do not shift.
+    const users = [
+      platformAdmin,
+      managerOne,
+      managerTwo,
+      teacherOne,
+      ...capacityTeachers,
+      freePilotManager,
+      freePilotStudent,
+      freePilotManagerTwo,
+      paidPilotManagerAfterMigration,
+    ]
     for (const [index, userId] of users.entries()) {
       await client.query(
         'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
@@ -326,6 +421,90 @@ suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL accep
     await client.query(institutionReviewClosureSql)
     await client.query(institutionSecurityFollowupSql)
     await client.query(accountExportReportPrivacySql)
+    await client.query(invitationOnlyFreePilotSql)
+    await client.query(freePilotExpiryRpcClosureSql)
+    await client.query(freePilotReplayAndStudentSurfaceSql)
+    // A committed migration whose ledger write was lost must be safe to retry.
+    await client.query(invitationOnlyFreePilotSql)
+    await client.query(freePilotExpiryRpcClosureSql)
+    await client.query(freePilotReplayAndStudentSurfaceSql)
+
+    const legacyRpcPrivileges = await client.query(`
+      SELECT
+        p.proname,
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
+        has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role,
+        has_function_privilege('anon', p.oid, 'EXECUTE') AS anon,
+        has_function_privilege('public', p.oid, 'EXECUTE') AS public
+      FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname LIKE 'free_pilot_legacy_%'
+      ORDER BY p.proname
+    `)
+    expect(legacyRpcPrivileges.rows).toHaveLength(15)
+    for (const privilege of legacyRpcPrivileges.rows) {
+      expect(privilege).toMatchObject({
+        authenticated: false,
+        service_role: false,
+        anon: false,
+        public: false,
+      })
+    }
+
+    const guardedRpcNames = [
+      'get_institution_tracking_directory',
+      'get_institution_student_learning_analysis',
+      'get_institution_classroom_published_program_members',
+      'get_institution_classroom_growth_metrics',
+      'get_institution_classroom_followup_metrics',
+      'get_my_institution_support_access',
+      'grant_my_institution_support_access',
+      'publish_institution_study_program',
+      'update_institution_study_program_draft',
+      'get_my_classroom_exam_mode',
+      'transfer_my_pilot_institution_manager',
+      'resolve_institution_student_followup',
+      'review_institution_study_program',
+      'submit_teacher_assignment',
+      'accept_teacher_classroom_invite',
+    ]
+    const guardedRpcPrivileges = await client.query(`
+      SELECT
+        p.proname,
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
+        has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role,
+        has_function_privilege('anon', p.oid, 'EXECUTE') AS anon,
+        has_function_privilege('public', p.oid, 'EXECUTE') AS public
+      FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = ANY($1::text[])
+      ORDER BY p.proname
+    `, [guardedRpcNames])
+    expect(guardedRpcPrivileges.rows).toHaveLength(guardedRpcNames.length)
+    for (const privilege of guardedRpcPrivileges.rows) {
+      expect(privilege).toMatchObject({
+        authenticated: true,
+        service_role: true,
+        anon: false,
+        public: false,
+      })
+    }
+
+    const serviceOnlyStudentPrivileges = await client.query(`
+      SELECT
+        p.proname,
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
+        has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role
+      FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.proname IN ('get_my_institution_study_programs', 'get_my_assistance_policy')
+      ORDER BY p.proname
+    `)
+    expect(serviceOnlyStudentPrivileges.rows).toEqual([
+      { proname: 'get_my_assistance_policy', authenticated: false, service_role: true },
+      { proname: 'get_my_institution_study_programs', authenticated: false, service_role: true },
+    ])
 
     const authenticatedBoundary = await client.query(`
       SELECT
@@ -389,6 +568,693 @@ suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL accep
       ]),
       '22023',
     )
+  })
+
+  it('provisions only a bounded JWT/AAL2 invitation-free pilot with one immutable audit event', async () => {
+    const privileges = await client.query(`
+      SELECT
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
+        has_function_privilege('anon', p.oid, 'EXECUTE') AS anon,
+        has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role,
+        has_function_privilege('public', p.oid, 'EXECUTE') AS public
+      FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.proname = 'provision_free_pilot_institution'
+    `)
+    expect(privileges.rows).toEqual([{
+      authenticated: true,
+      anon: false,
+      service_role: false,
+      public: false,
+    }])
+
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,30,2,'invitation_free',now() + interval '30 days',NULL)`,
+        ['Kapalı kapıda doğrudan canary', platformAdmin],
+      ),
+      '55000',
+    )
+
+    const expression = 'public.provision_free_pilot_institution($1,$2,$3,$4,$5,$6,$7,$8)'
+    await expectPgError(
+      () => rpc(expression, [
+        platformAdmin, 'Service Role Kurumu', freePilotManager, 'PILOT-SERVICE-001', 30, 2, 30, randomUUID(),
+      ]),
+      '42501',
+    )
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'AAL1 Kurumu', freePilotManager, 'PILOT-AAL1-001', 30, 2, 30, randomUUID(),
+      ], 'aal1'),
+      '42501',
+    )
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        managerOne, 'Aktör Sapması', freePilotManager, 'PILOT-ACTOR-001', 30, 2, 30, randomUUID(),
+      ]),
+      '42501',
+    )
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'Aşırı Kapasite', freePilotManager, 'PILOT-QUOTA-001', 41, 2, 30, randomUUID(),
+      ]),
+      '22023',
+    )
+
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'Kapalı DB Kapısı', freePilotManager, 'PILOT-GATE-001', 30, 2, 30, randomUUID(),
+      ]),
+      '55000',
+    )
+    await expectPgError(
+      () => client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=true
+         WHERE control_key='free_provisioning'`,
+      ),
+      '22023',
+    )
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-TEST-ENABLE-001'],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=true
+         WHERE control_key='free_provisioning'`,
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
+    const controlEvents = await client.query(
+      `SELECT previous_enabled,enabled,change_reference
+       FROM public.institution_pilot_control_events
+       WHERE control_key='free_provisioning'`,
+    )
+    expect(controlEvents.rows).toEqual([{
+      previous_enabled: false,
+      enabled: true,
+      change_reference: 'CONTROL-TEST-ENABLE-001',
+    }])
+
+    const requestId = randomUUID()
+    await expectPgError(
+      () => rpc(
+        'public.provision_pilot_institution($1,$2,$3,$4)',
+        [
+          platformAdmin,
+          'DB Kapısı Kapalı Ticari Pilot',
+          paidPilotManagerAfterMigration,
+          requestId,
+        ],
+      ),
+      '55000',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(name,created_by,pilot_kind)
+         VALUES($1,$2,'commercial')`,
+        ['Doğrudan ticari tenant', platformAdmin],
+      ),
+      '55000',
+    )
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-COMMERCIAL-ENABLE-001'],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=true
+         WHERE control_key='commercial_provisioning'`,
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
+    const paidAfterMigration = await rpc(
+      'public.provision_pilot_institution($1,$2,$3,$4)',
+      [
+        platformAdmin,
+        'Migration Sonrası Ticari Pilot',
+        paidPilotManagerAfterMigration,
+        requestId,
+      ],
+    )
+    const paidKind = await client.query(
+      'SELECT pilot_kind FROM public.pilot_institutions WHERE id=$1',
+      [paidAfterMigration.institution.id],
+    )
+    expect(paidKind.rows).toEqual([{ pilot_kind: 'commercial' }])
+    await expectPgError(
+      () => client.query(
+        "UPDATE public.pilot_institutions SET pilot_kind='legacy' WHERE id=$1",
+        [paidAfterMigration.institution.id],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        "UPDATE public.pilot_institutions SET pilot_kind='commercial' WHERE id=$1",
+        [institutionOne],
+      ),
+      '23514',
+    )
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-COMMERCIAL-DISABLE-001'],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=false
+         WHERE control_key='commercial_provisioning'`,
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
+    const commercialControlEvents = await client.query(
+      `SELECT previous_enabled,enabled,change_reference
+       FROM public.institution_pilot_control_events
+       WHERE control_key='commercial_provisioning'
+       ORDER BY changed_at`,
+    )
+    expect(commercialControlEvents.rows).toEqual([
+      {
+        previous_enabled: false,
+        enabled: true,
+        change_reference: 'CONTROL-COMMERCIAL-ENABLE-001',
+      },
+      {
+        previous_enabled: true,
+        enabled: false,
+        change_reference: 'CONTROL-COMMERCIAL-DISABLE-001',
+      },
+    ])
+
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,30,2,'invitation_free',now() + interval '30 days',NULL)`,
+        ['Onaysız ücretsiz canary', platformAdmin],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,'suspended',41,2,'invitation_free',now() + interval '30 days',$3)`,
+        ['Öğrenci sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-STUDENT-001'],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,'suspended',40,3,'invitation_free',now() + interval '30 days',$3)`,
+        ['Personel sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-STAFF-001'],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,'suspended',40,2,'invitation_free',now() + interval '13 days',$3)`,
+        ['Alt süre sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-MIN-DAYS-001'],
+      ),
+      '23514',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,'suspended',40,2,'invitation_free',now() + interval '61 days',$3)`,
+        ['Süre sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-DAYS-001'],
+      ),
+      '23514',
+    )
+    const boundaryCreatedAt = new Date()
+    const boundaryPilot = await client.query(
+      `INSERT INTO public.pilot_institutions(
+         name,created_by,status,student_limit,staff_limit,pilot_kind,
+         review_due_at,approval_ref,created_at
+       ) VALUES(
+         $1,$2,'suspended',40,2,'invitation_free',
+         $3::timestamptz + interval '60 days',$4,$3
+       ) RETURNING id`,
+      [
+        'Tam sınırda askıya alınmış canary',
+        platformAdmin,
+        boundaryCreatedAt,
+        'PILOT-LIMIT-BOUNDARY-001',
+      ],
+    )
+    await client.query('DELETE FROM public.pilot_institutions WHERE id=$1', [boundaryPilot.rows[0].id])
+
+    const before = Date.now()
+    const provisioned = await authenticatedRpc(platformAdmin, expression, [
+      platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
+      'PILOT-2026-001', 30, 2, 30, requestId,
+    ])
+    const reviewDueAt = new Date(provisioned.institution.reviewDueAt).getTime()
+    expect(provisioned).toMatchObject({
+      replayed: false,
+      institution: {
+        name: 'Davetli Ücretsiz Canary',
+        status: 'pilot',
+        studentLimit: 30,
+        staffLimit: 2,
+        pilotKind: 'invitation_free',
+        approvalReference: 'PILOT-2026-001',
+      },
+      membership: { role: 'manager' },
+    })
+    expect(reviewDueAt).toBeGreaterThanOrEqual(before + 29 * 24 * 60 * 60 * 1000)
+    expect(reviewDueAt).toBeLessThanOrEqual(Date.now() + 31 * 24 * 60 * 60 * 1000)
+
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin,
+        'İkinci Eşzamanlı Canary',
+        freePilotManagerTwo,
+        'PILOT-2026-002',
+        30,
+        2,
+        30,
+        randomUUID(),
+      ]),
+      '23505',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,30,2,'invitation_free',now() + interval '30 days',$3)`,
+        ['Doğrudan ikinci canary', platformAdmin, 'PILOT-2026-DIRECT-002'],
+      ),
+      '23505',
+    )
+
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.get_my_pilot_institution($1)',
+        [freePilotManager],
+        'aal1',
+      ),
+      '42501',
+    )
+    for (const [directExpression, directValues] of directTenantRpcCalls(
+      freePilotManager,
+      provisioned.institution.id,
+    )) {
+      await expectPgError(
+        () => authenticatedRpc(
+          freePilotManager,
+          directExpression,
+          directValues,
+          'aal1',
+        ),
+        '42501',
+      )
+    }
+
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.set_my_institution_manager_teacher_role($1,$2,$3)',
+      [freePilotManager, true, randomUUID()],
+    )).toMatchObject({ enabled: true, replayed: false })
+    const freeClassroom = await authenticatedRpc(
+      freePilotManager,
+      'public.create_my_institution_classroom($1,$2,$3,$4)',
+      [
+        freePilotManager,
+        provisioned.membership.memberRef,
+        'Ücretsiz Canary Sınıfı',
+        randomUUID(),
+      ],
+    )
+    const freeClassroomId = freeClassroom.classroom.id
+    const freeInviteDigest = 'f'.repeat(64)
+    await authenticatedRpc(
+      freePilotManager,
+      'public.issue_teacher_classroom_invite($1,$2,$3,$4,$5,$6)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        freeInviteDigest,
+        new Date(Date.now() + 60 * 60 * 1000),
+        1,
+        randomUUID(),
+      ],
+    )
+    const freeInviteAcceptRequest = randomUUID()
+    expect(await authenticatedRpc(
+      freePilotStudent,
+      'public.accept_teacher_classroom_invite($1,$2,$3,$4,$5)',
+      [
+        freePilotStudent,
+        freeInviteDigest,
+        'notice-v1',
+        'consent-v1',
+        freeInviteAcceptRequest,
+      ],
+      'aal1',
+    )).toMatchObject({ membershipStatus: 'active', replayed: false })
+
+    await authenticatedRpc(
+      freePilotManager,
+      'public.set_teacher_classroom_exam_mode($1,$2,$3,$4,$5)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        provisioned.institution.id,
+        true,
+        randomUUID(),
+      ],
+    )
+    expect(await rpc('public.get_my_assistance_policy($1)', [freePilotStudent]))
+      .toMatchObject({ examMode: true, board: false, coach: false, assistant: false })
+
+    const freeQuestionId = randomUUID()
+    await client.query(
+      `INSERT INTO public.questions(id,game,category,topic,difficulty,content,is_active)
+       VALUES($1,'matematik','Temel','Toplama',1,$2::jsonb,true)`,
+      [
+        freeQuestionId,
+        JSON.stringify({ question: 'İki artı iki kaçtır?', options: ['3', '4'], answer: 1 }),
+      ],
+    )
+    const freeAssignment = await authenticatedRpc(
+      freePilotManager,
+      'public.publish_teacher_assignment($1,$2,$3,$4,$5,$6,$7)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        'Canary ödevi',
+        JSON.stringify([{ position: 1, questionId: freeQuestionId }]),
+        new Date(Date.now() - 60 * 1000),
+        new Date(Date.now() + 60 * 60 * 1000),
+        randomUUID(),
+      ],
+    )
+    const freeAssignmentAnswers = JSON.stringify([{ position: 1, selectedOption: 1 }])
+    const freeAssignmentSubmitRequest = randomUUID()
+    expect(await authenticatedRpc(
+      freePilotStudent,
+      'public.submit_teacher_assignment($1,$2,$3,$4)',
+      [
+        freePilotStudent,
+        freeAssignment.assignmentId,
+        freeAssignmentAnswers,
+        freeAssignmentSubmitRequest,
+      ],
+      'aal1',
+    )).toMatchObject({ assignmentId: freeAssignment.assignmentId, replayed: false })
+    expect(await authenticatedRpc(
+      freePilotStudent,
+      'public.submit_teacher_assignment($1,$2,$3,$4)',
+      [
+        freePilotStudent,
+        freeAssignment.assignmentId,
+        freeAssignmentAnswers,
+        freeAssignmentSubmitRequest,
+      ],
+      'aal1',
+    )).toMatchObject({ assignmentId: freeAssignment.assignmentId, replayed: true })
+
+    const membership = await client.query(
+      `SELECT id,member_ref FROM public.teacher_classroom_memberships
+       WHERE classroom_id=$1 AND student_id=$2 AND status='active'`,
+      [freeClassroomId, freePilotStudent],
+    )
+    const weekStart = (await client.query(
+      "SELECT to_char(date_trunc('week',current_date)::date,'YYYY-MM-DD') AS value",
+    )).rows[0].value
+    const programItems = JSON.stringify([{
+      position: 1,
+      scheduledDate: weekStart,
+      taskType: 'verified_questions',
+      title: 'Canary tekrar çalışması',
+      reasonCode: 'current_target',
+      durationMinutes: 20,
+      targetQuestionCount: 10,
+    }])
+    const freeProgram = await authenticatedRpc(
+      freePilotManager,
+      'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        membership.rows[0].member_ref,
+        weekStart,
+        30,
+        'institution-program-v1',
+        programItems,
+        randomUUID(),
+      ],
+    )
+    await authenticatedRpc(
+      freePilotManager,
+      'public.publish_institution_study_program($1,$2,$3)',
+      [freePilotManager, freeProgram.programRef, randomUUID()],
+    )
+    expect((await rpc(
+      'public.get_my_institution_study_programs($1,$2)',
+      [freePilotStudent, weekStart],
+    )).programs).toHaveLength(1)
+
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.grant_my_institution_support_access($1,$2,$3,$4)',
+      [freePilotManager, 30, 'Canary süresince kontrollü destek', randomUUID()],
+    )).toMatchObject({ active: true, replayed: false })
+
+    expect(await authenticatedRpc(platformAdmin, expression, [
+      platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
+      'PILOT-2026-001', 30, 2, 30, requestId,
+    ])).toMatchObject({ replayed: true, institution: { id: provisioned.institution.id } })
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
+        'PILOT-2026-001', 31, 2, 30, requestId,
+      ]),
+      '22023',
+    )
+
+    const audit = await client.query(
+      `SELECT metadata
+       FROM public.institution_operation_events
+       WHERE institution_id=$1 AND event_type='institution_provisioned' AND request_id=$2`,
+      [provisioned.institution.id, requestId],
+    )
+    expect(audit.rows).toEqual([{
+      metadata: {
+        pilotKind: 'invitation_free',
+        approvalReference: 'PILOT-2026-001',
+        studentLimit: 30,
+        staffLimit: 2,
+        reviewDueAt: provisioned.institution.reviewDueAt,
+      },
+    }])
+    const crossOperationAudit = await client.query(
+      `SELECT institution_id,source
+       FROM public.institution_operation_events
+       WHERE actor_user_id=$1
+         AND event_type='institution_provisioned'
+         AND request_id=$2
+       ORDER BY source`,
+      [platformAdmin, requestId],
+    )
+    expect(crossOperationAudit.rows).toEqual([
+      {
+        institution_id: provisioned.institution.id,
+        source: 'free_pilot_request',
+      },
+      {
+        institution_id: paidAfterMigration.institution.id,
+        source: 'institution_request',
+      },
+    ])
+
+    const directory = await authenticatedRpc(
+      platformAdmin,
+      'public.list_pilot_institutions($1)',
+      [platformAdmin],
+    )
+    expect(directory.databaseControls).toEqual({
+      freePilotProvisioningEnabled: true,
+      commercialProvisioningEnabled: false,
+    })
+    expect(directory.institutions).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: provisioned.institution.id,
+        pilotKind: 'invitation_free',
+        approvalReference: 'PILOT-2026-001',
+        reviewDueAt: provisioned.institution.reviewDueAt,
+        studentLimit: 30,
+        staffLimit: 2,
+      }),
+    ]))
+
+    // Simulate wall-clock passage without weakening the production trigger:
+    // move the fixture's creation and deadline together so the original pilot
+    // duration remains valid while authorization observes an elapsed deadline.
+    await client.query(
+      'ALTER TABLE public.pilot_institutions DISABLE TRIGGER pilot_institutions_free_lifecycle_guard',
+    )
+    try {
+      await client.query(
+        `UPDATE public.pilot_institutions
+         SET created_at=clock_timestamp() - interval '31 days',
+             review_due_at=clock_timestamp() - interval '1 minute'
+         WHERE id=$1`,
+        [provisioned.institution.id],
+      )
+    } finally {
+      await client.query(
+        'ALTER TABLE public.pilot_institutions ENABLE TRIGGER pilot_institutions_free_lifecycle_guard',
+      )
+    }
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.get_my_pilot_institution($1)',
+        [freePilotManager],
+      ),
+      'P0002',
+    )
+    const expiredOperational = await client.query(
+      'SELECT public.institution_pilot_is_operational($1) AS allowed',
+      [provisioned.institution.id],
+    )
+    expect(expiredOperational.rows[0].allowed).toBe(false)
+    for (const [directExpression, directValues] of directTenantRpcCalls(
+      freePilotManager,
+      provisioned.institution.id,
+    )) {
+      await expectPgError(
+        () => authenticatedRpc(freePilotManager, directExpression, directValues),
+        '42501',
+      )
+    }
+    for (const [replayExpression, replayValues] of [
+      [
+        'public.transfer_my_pilot_institution_manager($1,$2,$3)',
+        [freePilotManager, 'c'.repeat(32), randomUUID()],
+      ],
+      [
+        'public.resolve_institution_student_followup($1,$2,$3)',
+        [freePilotManager, 'd'.repeat(32), randomUUID()],
+      ],
+      [
+        'public.review_institution_study_program($1,$2,$3,$4,$5)',
+        [freePilotManager, 'e'.repeat(32), 'effective', null, randomUUID()],
+      ],
+    ]) {
+      await expectPgError(
+        () => authenticatedRpc(freePilotManager, replayExpression, replayValues),
+        '42501',
+      )
+    }
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotStudent,
+        'public.accept_teacher_classroom_invite($1,$2,$3,$4,$5)',
+        [
+          freePilotStudent,
+          freeInviteDigest,
+          'notice-v1',
+          'consent-v1',
+          freeInviteAcceptRequest,
+        ],
+        'aal1',
+      ),
+      'P0003',
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotStudent,
+        'public.submit_teacher_assignment($1,$2,$3,$4)',
+        [
+          freePilotStudent,
+          freeAssignment.assignmentId,
+          freeAssignmentAnswers,
+          freeAssignmentSubmitRequest,
+        ],
+        'aal1',
+      ),
+      'P0002',
+    )
+    expect((await rpc(
+      'public.get_my_institution_study_programs($1,$2)',
+      [freePilotStudent, weekStart],
+    )).programs).toEqual([])
+    expect(await rpc('public.get_my_assistance_policy($1)', [freePilotStudent]))
+      .toMatchObject({ examMode: false, board: true, coach: true, assistant: true })
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.revoke_my_institution_support_access($1,$2)',
+      [freePilotManager, randomUUID()],
+    )).toMatchObject({ active: false, replayed: false })
+    expect(await authenticatedRpc(
+      freePilotStudent,
+      'public.withdraw_teacher_classroom_membership($1,$2,$3)',
+      [freePilotStudent, freeClassroomId, randomUUID()],
+      'aal1',
+    )).toMatchObject({ membershipStatus: 'withdrawn', replayed: false })
+
+    const suspendRequestId = randomUUID()
+    expect(await authenticatedRpc(
+      platformAdmin,
+      'public.set_pilot_institution_status($1,$2,$3,$4,$5)',
+      [
+        platformAdmin,
+        provisioned.institution.id,
+        'suspended',
+        'Ücretsiz canary değerlendirme süresi tamamlandı.',
+        suspendRequestId,
+      ],
+    )).toMatchObject({ status: 'suspended', changed: true })
+    await expectPgError(
+      () => authenticatedRpc(
+        platformAdmin,
+        'public.set_pilot_institution_status($1,$2,$3,$4,$5)',
+        [
+          platformAdmin,
+          provisioned.institution.id,
+          'active',
+          'Süresi geçmiş canary yeniden açılmamalıdır.',
+          randomUUID(),
+        ],
+      ),
+      '23514',
+    )
+    const lifecycleAudit = await client.query(
+      `SELECT count(*)::int AS count
+       FROM public.institution_operation_events
+       WHERE institution_id=$1 AND event_type='institution_status_changed' AND request_id=$2`,
+      [provisioned.institution.id, suspendRequestId],
+    )
+    expect(lifecycleAudit.rows[0].count).toBe(1)
   })
 
   it('lists tenants for platform admins without exposing the directory to managers', async () => {
@@ -776,9 +1642,23 @@ suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL accep
   })
 
   it('blocks cross-tenant management and enforces the six-person capacity', async () => {
-    const second = await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
-      platformAdmin, 'Bilge Pilot İki', managerTwo, randomUUID(),
-    ])
+    await setProvisioningControl(
+      'commercial_provisioning',
+      true,
+      'CONTROL-COMMERCIAL-TENANT2-ENABLE-001',
+    )
+    let second
+    try {
+      second = await rpc('public.provision_pilot_institution($1,$2,$3,$4)', [
+        platformAdmin, 'Bilge Pilot İki', managerTwo, randomUUID(),
+      ])
+    } finally {
+      await setProvisioningControl(
+        'commercial_provisioning',
+        false,
+        'CONTROL-COMMERCIAL-TENANT2-DISABLE-001',
+      )
+    }
     institutionTwo = second.institution.id
     await expectPgError(
       () => rpc('public.add_pilot_institution_teacher($1,$2,$3,$4)', [

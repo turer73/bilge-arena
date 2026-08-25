@@ -11,6 +11,7 @@ import {
 } from '@/lib/institution-admin/contracts'
 import { institutionPilotRpcStatus } from '@/lib/institution-pilot/server-contract'
 import {
+  isInstitutionFreePilotEnabled,
   isInstitutionOnboardingEnabled,
   isInstitutionPilotEnabled,
 } from '@/lib/institution-pilot/server-security'
@@ -60,9 +61,19 @@ export async function GET() {
   })
   if (error) return noStore({ error: 'Kurum listesi alınamadı' }, institutionPilotRpcStatus(error.code))
   const parsed = institutionAdminDirectorySchema.safeParse(data)
-  return parsed.success
-    ? noStore(parsed.data)
-    : noStore({ error: 'Kurum listesi doğrulanamadı' }, 500)
+  if (!parsed.success) return noStore({ error: 'Kurum listesi doğrulanamadı' }, 500)
+  const { databaseControls, ...directory } = parsed.data
+  return noStore({
+    ...directory,
+    provisioning: {
+      invitationFreePilotEnabled:
+        isInstitutionFreePilotEnabled()
+        && databaseControls?.freePilotProvisioningEnabled === true,
+      commercialOnboardingEnabled:
+        isInstitutionOnboardingEnabled()
+        && databaseControls?.commercialProvisioningEnabled === true,
+    },
+  })
 }
 
 export async function POST(request: NextRequest) {

@@ -9,6 +9,19 @@ export const provisionInstitutionInputSchema = z.object({
   requestId: uuidSchema,
 }).strict()
 
+export const provisionFreePilotInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  managerUserId: uuidSchema,
+  approvalReference: z.string()
+    .trim()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{5,63}$/)
+    .transform((value) => value.toUpperCase()),
+  studentLimit: z.number().int().min(1).max(40),
+  staffLimit: z.number().int().min(1).max(2),
+  trialDays: z.number().int().min(14).max(60),
+  requestId: uuidSchema,
+}).strict()
+
 export const provisionInstitutionResultSchema = z.object({
   institution: z.object({
     id: uuidSchema,
@@ -16,6 +29,26 @@ export const provisionInstitutionResultSchema = z.object({
     status: z.enum(['pilot', 'active']),
     studentLimit: z.number().int().positive(),
     staffLimit: z.number().int().positive(),
+    createdAt: timestampSchema,
+  }).strict(),
+  membership: z.object({
+    memberRef: z.string().regex(/^[0-9a-f]{32}$/),
+    role: z.literal('manager'),
+    joinedAt: timestampSchema,
+  }).strict(),
+  replayed: z.boolean(),
+}).strict()
+
+export const provisionFreePilotResultSchema = z.object({
+  institution: z.object({
+    id: uuidSchema,
+    name: z.string().trim().min(2).max(120),
+    status: z.literal('pilot'),
+    studentLimit: z.number().int().min(1).max(40),
+    staffLimit: z.number().int().min(1).max(2),
+    pilotKind: z.literal('invitation_free'),
+    approvalReference: z.string().regex(/^[A-Z0-9][A-Z0-9._/-]{5,63}$/),
+    reviewDueAt: timestampSchema,
     createdAt: timestampSchema,
   }).strict(),
   membership: z.object({
@@ -50,6 +83,9 @@ const institutionSummarySchema = z.object({
   staffCount: z.number().int().nonnegative(),
   classroomCount: z.number().int().nonnegative(),
   studentCount: z.number().int().nonnegative(),
+  pilotKind: z.enum(['legacy', 'invitation_free', 'commercial']).optional(),
+  approvalReference: z.string().regex(/^[A-Z0-9][A-Z0-9._/-]{5,63}$/).nullable().optional(),
+  reviewDueAt: timestampSchema.nullable().optional(),
   manager: z.object({ userId: uuidSchema, alias: z.string().min(1).max(80) }).strict().nullable(),
   supportAccess: z.object({
     active: z.boolean(),
@@ -61,6 +97,14 @@ const institutionSummarySchema = z.object({
 
 export const institutionAdminDirectorySchema = z.object({
   institutions: z.array(institutionSummarySchema),
+  databaseControls: z.object({
+    freePilotProvisioningEnabled: z.boolean(),
+    commercialProvisioningEnabled: z.boolean().optional(),
+  }).strict().optional(),
+  provisioning: z.object({
+    invitationFreePilotEnabled: z.boolean(),
+    commercialOnboardingEnabled: z.boolean(),
+  }).strict().optional(),
 }).strict()
 
 export type InstitutionAdminDirectory = z.infer<typeof institutionAdminDirectorySchema>
