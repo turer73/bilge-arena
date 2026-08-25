@@ -7,10 +7,11 @@ const auth = vi.hoisted(() => ({
   profile: { username: 'kurum-yoneticisi', role: 'user', coin_balance: 0 },
   signOut: vi.fn(),
 }))
-vi.mock('next/navigation', () => ({ usePathname: () => '/arena' }))
+const mockUsePathname = vi.hoisted(() => vi.fn<() => string>())
+vi.mock('next/navigation', () => ({ usePathname: mockUsePathname }))
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} data-next-link="true" {...props}>{children}</a>
   ),
 }))
 vi.mock('@/lib/hooks/use-auth', () => ({ useAuth: () => auth }))
@@ -38,10 +39,27 @@ const workspace = {
   },
 }
 
-beforeEach(() => vi.stubGlobal('fetch', vi.fn()))
+beforeEach(() => {
+  mockUsePathname.mockReturnValue('/arena')
+  vi.stubGlobal('fetch', vi.fn())
+})
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Navbar institution panel entry', () => {
+  it('uses native anchors for public links while a sensitive document is active', async () => {
+    mockUsePathname.mockReturnValue('/arena/sinif')
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    for (const link of screen.getAllByRole('link', { name: 'Ana Sayfa' })) {
+      expect(link).not.toHaveAttribute('data-next-link')
+    }
+    for (const link of screen.getAllByRole('link', { name: 'Oyunlar' })) {
+      expect(link).not.toHaveAttribute('data-next-link')
+    }
+  })
+
   it('keeps a persistent institution-panel return link for scoped users', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(Response.json(workspace))
     const user = userEvent.setup()
