@@ -3009,6 +3009,7 @@ export type Database = {
           id: string
           is_boss: boolean
           level_tag: string | null
+          outcomes_prepared_by: string | null
           prepared_at: string
           prepared_by: string | null
           published_at: string | null
@@ -3031,6 +3032,7 @@ export type Database = {
           id?: string
           is_boss?: boolean
           level_tag?: string | null
+          outcomes_prepared_by?: string | null
           prepared_at?: string
           prepared_by?: string | null
           published_at?: string | null
@@ -3053,6 +3055,7 @@ export type Database = {
           id?: string
           is_boss?: boolean
           level_tag?: string | null
+          outcomes_prepared_by?: string | null
           prepared_at?: string
           prepared_by?: string | null
           published_at?: string | null
@@ -3068,6 +3071,13 @@ export type Database = {
             columns: ["base_revision_id"]
             isOneToOne: false
             referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_content_revisions_outcomes_prepared_by_fkey"
+            columns: ["outcomes_prepared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -6508,6 +6518,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_question_outcome_coverage: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_question_content_revision: {
         Args: { p_revision_id: string; p_user_id: string }
         Returns: Json
@@ -6977,6 +6991,15 @@ export type Database = {
       }
       set_content_governance_enforcement: {
         Args: { p_enforced: boolean; p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
+      set_question_revision_outcomes: {
+        Args: {
+          p_outcomes: Json
+          p_request_id: string
+          p_revision_id: string
+          p_user_id: string
+        }
         Returns: Json
       }
       set_my_institution_manager_teacher_role: {

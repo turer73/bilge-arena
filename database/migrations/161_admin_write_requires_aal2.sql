@@ -163,7 +163,9 @@ CREATE POLICY "role_permissions_manage_delete" ON public.role_permissions
 
 -- ---------------------------------------------------------------------------
 -- Dogrulama: migration kendi iddiasini ispatlamadan commit etmesin.
--- Gercek bir admin.questions.edit sahibi uzerinde iki senaryo kosulur.
+-- Atanmis bir admin varsa iki gercek claim senaryosu da kosulur. Bos/fresh
+-- ortamlarda kullanici verisi migration on kosulu degildir; politika yapisi
+-- yine deterministik olarak dogrulanir.
 -- ---------------------------------------------------------------------------
 
 DO $verify$
@@ -178,22 +180,22 @@ BEGIN
   LIMIT 1;
 
   IF v_admin IS NULL THEN
-    RAISE EXCEPTION '161 dogrulama: admin.questions.edit izni olan kullanici bulunamadi';
-  END IF;
+    RAISE NOTICE '161 dogrulama: atanmis admin yok; veri-bagimli claim simulasyonu atlandi';
+  ELSE
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_admin, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+    IF public.has_admin_write_access('admin.questions.edit') THEN
+      RAISE EXCEPTION '161 dogrulama: aal1 oturumu hala admin yazma hakki aliyor';
+    END IF;
 
-  PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', v_admin, 'role', 'authenticated', 'aal', 'aal1')::text, true);
-  IF public.has_admin_write_access('admin.questions.edit') THEN
-    RAISE EXCEPTION '161 dogrulama: aal1 oturumu hala admin yazma hakki aliyor';
-  END IF;
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_admin, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+    IF NOT public.has_admin_write_access('admin.questions.edit') THEN
+      RAISE EXCEPTION '161 dogrulama: aal2 admini reddedildi (mesru yol kirilirdi)';
+    END IF;
 
-  PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', v_admin, 'role', 'authenticated', 'aal', 'aal2')::text, true);
-  IF NOT public.has_admin_write_access('admin.questions.edit') THEN
-    RAISE EXCEPTION '161 dogrulama: aal2 admini reddedildi (mesru yol kirilirdi)';
+    PERFORM set_config('request.jwt.claims', '', true);
   END IF;
-
-  PERFORM set_config('request.jwt.claims', '', true);
 
   SELECT count(*) INTO v_policy_count
   FROM pg_policies

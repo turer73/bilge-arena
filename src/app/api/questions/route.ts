@@ -8,21 +8,14 @@ import { GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { parsePublicQuestionContent } from '@/lib/utils/question-public'
-import type { Database, Json, TablesUpdate } from '@/types/database.generated'
+import type { Database, TablesUpdate } from '@/types/database.generated'
 import { issueVerifiedAttempt, toPublicVerifiedQuestions } from '@/lib/verified-attempts'
-import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // anon: IP bazli (50 öğrenci × ~2 req/dk)
 const questionsAuthLimiter = createRateLimiter('questions-auth', 240, 60_000) // authed: user-id bazli (daha yüksek ama sınırsız değil)
 const VALID_GAMES = new Set(GAME_SLUGS)
 
 type SearchQuestionsArgs = Database['public']['Functions']['search_questions']['Args']
-
-function isJson(value: unknown): value is Json {
-  if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) return true
-  if (Array.isArray(value)) return value.every(isJson)
-  return typeof value === 'object' && Object.values(value as Record<string, unknown>).every(isJson)
-}
 
 /** parseInt ile boundary kontrolu: min <= val <= max */
 function safeInt(value: string | null, fallback: number, min: number, max: number): number {
@@ -191,29 +184,15 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
   }
 
-  if (contentGovernanceEnabled()) {
-    return NextResponse.json(
-      {
-        error: 'Dogrudan soru guncellemesi kapatildi. Revizyon veya karantina akislarini kullanin.',
-        code: 'CONTENT_GOVERNANCE_REQUIRED',
-        questionId,
-      },
-      { status: 409, headers: { 'Cache-Control': 'private, no-store' } },
-    )
-  }
-
-  const { error } = await supabase.from('questions').update(safeUpdates).eq('id', questionId)
-  if (error) {
-    console.error('[/api/questions PATCH] update error:', error.message)
-    return NextResponse.json({ error: 'Guncelleme basarisiz' }, { status: 500 })
-  }
-  const logDetails: Json = isJson(updates) ? updates : {}
-  await supabase.from('admin_logs').insert({
-    admin_id: admin.id,
-    action: 'update_question',
-    target_type: 'question',
-    target_id: questionId,
-    details: logDetails,
-  })
-  return NextResponse.json({ success: true })
+  // Fail-closed: feature flag kapatilsa bile bu route tabloyu dogrudan yazmaz.
+  // Karantina, revizyon ve yayin RPC'leri mutasyon + audit'i tek transaction'da
+  // gerceklestirir. Migration 163 istemci DML grantlerini de tamamen kaldirir.
+  return NextResponse.json(
+    {
+      error: 'Dogrudan soru guncellemesi kapatildi. Revizyon veya karantina akislarini kullanin.',
+      code: 'CONTENT_GOVERNANCE_REQUIRED',
+      questionId,
+    },
+    { status: 409, headers: { 'Cache-Control': 'private, no-store' } },
+  )
 }

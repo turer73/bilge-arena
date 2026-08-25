@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { GAMES, GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { AIQuestionGenerator } from '@/components/admin/ai-question-generator'
 import type { Question, Difficulty } from '@/types/database'
@@ -12,6 +12,15 @@ interface GovernanceRevisionDetail {
   content: Record<string, unknown>
   source: Record<string, unknown>
   outcomes: Array<{ outcomeId: string; weight: number; primary: boolean }>
+}
+
+interface OutcomeOption {
+  id: string
+  code: string
+  title: string
+  category: string
+  examRef: string | null
+  taxonomyVersion: string
 }
 
 export default function AdminQuestionsPage() {
@@ -32,6 +41,11 @@ export default function AdminQuestionsPage() {
   const [saving, setSaving] = useState(false)
   const [governanceDetail, setGovernanceDetail] = useState<GovernanceRevisionDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [editOutcomeOptions, setEditOutcomeOptions] = useState<OutcomeOption[]>([])
+  const [editOutcomeId, setEditOutcomeId] = useState('')
+  const [outcomesLoading, setOutcomesLoading] = useState(false)
+  const [outcomeCatalogState, setOutcomeCatalogState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle')
+  const editRequestRef = useRef<AbortController | null>(null)
   const [notice, setNotice] = useState('')
 
   const fetchQuestions = useCallback(async () => {
@@ -71,6 +85,58 @@ export default function AdminQuestionsPage() {
     return () => window.clearTimeout(timer)
   }, [fetchQuestions])
 
+  // Legacy yayin revizyonlarinin cogunda outcomes=[] olabilir. Kategoriye ve,
+  // varsa, sinav kapsamına uyan aktif leaf'leri getirip editorden acik bir
+  // akademik secim isteriz; kategori adindan sessiz otomatik backfill yapmayiz.
+  useEffect(() => {
+    if (!editQ || !governanceDetail || !editCategory.trim()) {
+      setEditOutcomeOptions([])
+      setOutcomesLoading(false)
+      setOutcomeCatalogState('idle')
+      return
+    }
+
+    const controller = new AbortController()
+    const timer = window.setTimeout(async () => {
+      setOutcomesLoading(true)
+      setOutcomeCatalogState('loading')
+      const game = typeof governanceDetail.metadata.game === 'string'
+        ? governanceDetail.metadata.game
+        : editQ.game
+      const examRef = typeof governanceDetail.metadata.examRef === 'string'
+        ? governanceDetail.metadata.examRef
+        : null
+      const params = new URLSearchParams({ game, category: editCategory.trim() })
+      if (examRef) params.set('examRef', examRef)
+
+      try {
+        const response = await fetch(`/api/admin/content-quality/outcomes?${params}`, {
+          cache: 'no-store', signal: controller.signal,
+        })
+        if (!response.ok) throw new Error('outcomes_unavailable')
+        const body = await response.json()
+        const options = (body.outcomes ?? []) as OutcomeOption[]
+        setEditOutcomeOptions(options)
+        setEditOutcomeId((current) => options.some((option) => option.id === current) ? current : '')
+        setOutcomeCatalogState('ready')
+      } catch {
+        if (!controller.signal.aborted) {
+          setEditOutcomeOptions([])
+          setEditOutcomeId('')
+          setNotice('Bu kapsam için kazanım kataloğu alınamadı; taslak oluşturulmadı.')
+          setOutcomeCatalogState('failed')
+        }
+      } finally {
+        if (!controller.signal.aborted) setOutcomesLoading(false)
+      }
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [editQ, governanceDetail, editCategory])
+
   // Server-side arama — client filtreye gerek yok
   const filtered = questions
 
@@ -90,31 +156,26 @@ export default function AdminQuestionsPage() {
           setNotice('Soru karantinaya alındı.')
           return
         }
-        if (quarantine.status !== 503) {
-          const body = await quarantine.json().catch(() => ({}))
-          throw new Error(body.error ?? 'Soru karantinaya alınamadı')
-        }
+        const body = await quarantine.json().catch(() => ({}))
+        throw new Error(quarantine.status === 503
+          ? 'Karantina hizmeti geçici olarak kullanılamıyor; soru güvenli biçimde değiştirilmedi.'
+          : (body.error ?? 'Soru karantinaya alınamadı'))
       }
-      const res = await fetch('/api/questions', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: id, updates: { is_active: !question.is_active } }),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.code === 'CONTENT_GOVERNANCE_REQUIRED'
-          ? 'Pasif soru yalnız iki aşamalı onaylı revizyon yayınlanarak etkinleştirilebilir.'
-          : (body.error ?? 'Durum güncellenemedi'))
-      }
-      setQuestions((prev) => prev.map((item) => item.id === id ? { ...item, is_active: !question.is_active } : item))
+      setNotice('Pasif soru yalnız iki aşamalı onaylı revizyon yayınlanarak etkinleştirilebilir.')
     } catch (cause) {
       setNotice(cause instanceof Error ? cause.message : 'Durum güncellenemedi')
     }
   }
 
   const openEdit = async (q: Question) => {
+    editRequestRef.current?.abort()
+    const controller = new AbortController()
+    editRequestRef.current = controller
     setNotice('')
     setGovernanceDetail(null)
+    setEditOutcomeOptions([])
+    setEditOutcomeId('')
+    setOutcomeCatalogState('idle')
     setEditQ(q)
     setEditContent({
       question: q.content.question || q.content.sentence || '',
@@ -126,62 +187,142 @@ export default function AdminQuestionsPage() {
     setEditCategory(q.category)
     setDetailLoading(true)
     try {
-      const response = await fetch(`/api/admin/content-quality?questionId=${encodeURIComponent(q.id)}`, { cache: 'no-store' })
+      const response = await fetch(`/api/admin/content-quality?questionId=${encodeURIComponent(q.id)}`, {
+        cache: 'no-store', signal: controller.signal,
+      })
+      if (controller.signal.aborted || editRequestRef.current !== controller) return
       if (response.ok) {
         const data = await response.json()
-        setGovernanceDetail(data.revision ?? null)
-      } else if (response.status !== 503) {
-        setNotice('Yayın revizyonu alınamadı; düzenleme taslağı oluşturulamaz.')
+        if (controller.signal.aborted || editRequestRef.current !== controller) return
+        const detail = (data.revision ?? null) as GovernanceRevisionDetail | null
+        if (!detail) {
+          setEditQ(null)
+          setNotice('Yayın revizyonu bulunamadı; soru güvenli biçimde değiştirilmedi.')
+          return
+        }
+        setOutcomesLoading(true)
+        setGovernanceDetail(detail)
+        setEditOutcomeId(detail?.outcomes.find((outcome) => outcome.primary)?.outcomeId ?? '')
+      } else {
+        setEditQ(null)
+        setNotice(response.status === 503
+          ? 'İçerik yönetişimi geçici olarak kullanılamıyor; soru güvenli biçimde değiştirilmedi.'
+          : 'Yayın revizyonu alınamadı; düzenleme taslağı oluşturulamaz.')
       }
     } catch {
-      setNotice('Yayın revizyonu alınamadı; legacy düzenleme kullanılacak.')
-    } finally { setDetailLoading(false) }
+      if (controller.signal.aborted) return
+      setEditQ(null)
+      setNotice('Yayın revizyonu alınamadı; soru güvenli biçimde değiştirilmedi.')
+    } finally {
+      if (editRequestRef.current === controller) {
+        editRequestRef.current = null
+        setDetailLoading(false)
+      }
+    }
   }
 
   const saveEdit = async () => {
     if (!editQ) return
+    if (!governanceDetail) {
+      setNotice('Yayın revizyonu alınmadan düzenleme taslağı oluşturulamaz.')
+      return
+    }
+    const nextCategory = editCategory.trim()
+    if (!nextCategory) {
+      setNotice('Kategori boş bırakılamaz.')
+      return
+    }
+    const selectedOutcome = editOutcomeOptions.find((outcome) => outcome.id === editOutcomeId)
+    if (outcomeCatalogState !== 'ready') {
+      setNotice('Kazanım kataloğu doğrulanmadan taslak oluşturulamaz.')
+      return
+    }
+    if (editOutcomeOptions.length > 0 && !selectedOutcome) {
+      setNotice('Taslak için kapsamla eşleşen birincil kazanımı seçin.')
+      return
+    }
     setSaving(true)
     try {
       const updates = {
         content: {
-          ...editQ.content,
           question: editContent.question,
           options: editContent.options,
           answer: editContent.answer,
           solution: editContent.solution || undefined,
         },
         difficulty: editDifficulty,
-        category: editCategory,
+        category: nextCategory,
       }
       const preserved = Object.fromEntries(
         ['explanation', 'hint', 'sentence', 'passage', 'context', 'type']
           .filter((key) => governanceDetail?.content[key] !== undefined)
           .map((key) => [key, governanceDetail!.content[key]]),
       )
-      const res = governanceDetail
-        ? await fetch('/api/admin/content-quality/revisions', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              questionId: editQ.id,
-              baseRevisionId: governanceDetail.revisionId,
-              requestId: crypto.randomUUID(),
-              payload: {
-                content: { ...preserved, ...updates.content },
-                metadata: { ...governanceDetail.metadata, category: editCategory, difficulty: editDifficulty },
-                outcomes: governanceDetail.outcomes,
-                source: governanceDetail.source,
-                changeKind: 'edit',
-                summary: 'Soru yönetimi ekranından içerik düzenleme taslağı oluşturuldu.',
-              },
-            }),
-          })
-        : await fetch('/api/questions', {
-            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ questionId: editQ.id, updates }),
-          })
+      // Detail responses deliberately include reviewer-facing catalog evidence
+      // (code/title/path/scopeValid). The write contract is narrower: never
+      // reflect those enriched fields back into the governance RPC payload.
+      const existingOutcomes = governanceDetail.outcomes.map(({ outcomeId, weight, primary }) => ({
+        outcomeId, weight, primary,
+      }))
+      const priorExamRef = typeof governanceDetail.metadata.examRef === 'string'
+        ? governanceDetail.metadata.examRef
+        : null
+      const priorCategory = typeof governanceDetail.metadata.category === 'string'
+        ? governanceDetail.metadata.category
+        : editQ.category
+      const nextExamRef = selectedOutcome ? selectedOutcome.examRef : priorExamRef
+      const scopeChanged = priorCategory !== nextCategory
+        || priorExamRef !== nextExamRef
+      const scopeChangeSummary = [
+        priorCategory !== nextCategory ? `Kategori: ${priorCategory} -> ${nextCategory}` : null,
+        priorExamRef !== nextExamRef ? `Sınav kapsamı: ${priorExamRef ?? 'genel'} -> ${nextExamRef ?? 'genel'}` : null,
+      ].filter(Boolean).join('; ')
+      const selectedExisting = existingOutcomes.find((outcome) => outcome.outcomeId === editOutcomeId)
+
+      // The compact question editor cannot safely reconstruct a multi-outcome
+      // evidence set after an academic scope change. Preserve/promote within
+      // the existing set, but fail closed instead of silently deleting
+      // secondary mappings.
+      if (existingOutcomes.length > 1 && (scopeChanged || !selectedExisting)) {
+        setNotice('Bu soruda birden fazla kazanım var. Bu basit editör kapsamı veya kazanım kümesini güvenle değiştiremez; mevcut eşlemeler korunarak taslak oluşturulmadı.')
+        return
+      }
+
+      const revisionOutcomes = !scopeChanged && selectedExisting
+        ? existingOutcomes.map((outcome) => ({
+            ...outcome,
+            primary: outcome.outcomeId === selectedExisting.outcomeId,
+          }))
+        : selectedOutcome
+          ? [{ outcomeId: selectedOutcome.id, weight: 1, primary: true }]
+          : []
+      const res = await fetch('/api/admin/content-quality/revisions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: editQ.id,
+          baseRevisionId: governanceDetail.revisionId,
+          requestId: crypto.randomUUID(),
+          payload: {
+            content: { ...preserved, ...updates.content },
+            metadata: {
+              ...governanceDetail.metadata,
+              category: nextCategory,
+              difficulty: editDifficulty,
+              ...(selectedOutcome ? { examRef: selectedOutcome.examRef } : {}),
+            },
+            outcomes: revisionOutcomes,
+            source: governanceDetail.source,
+            changeKind: 'edit',
+            summary: scopeChanged
+              ? `Soru yönetimi ekranından içerik düzenleme taslağı oluşturuldu. ${scopeChangeSummary}.`
+              : 'Soru yönetimi ekranından içerik düzenleme taslağı oluşturuldu.',
+          },
+        }),
+      })
       if (res.ok) {
-        if (!governanceDetail) setQuestions((prev) => prev.map((q) => q.id === editQ.id ? { ...q, ...updates, content: updates.content } : q))
-        setNotice(governanceDetail ? 'Düzenleme taslağı oluşturuldu; yayın için iki bağımsız onay bekliyor.' : 'Soru güncellendi.')
+        setNotice(revisionOutcomes.length === 0
+          ? 'Düzenleme taslağı güvenle kaydedildi; kazanım eşlemesi yapılana kadar 2. aşama ve yayın kapalı.'
+          : 'Düzenleme taslağı oluşturuldu; yayın için iki bağımsız onay bekliyor.')
         setEditQ(null)
       } else {
         const body = await res.json().catch(() => ({}))
@@ -460,14 +601,71 @@ export default function AdminQuestionsPage() {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Kategori</label>
+                <label htmlFor="edit-category" className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Kategori</label>
                 <input
+                  id="edit-category"
                   value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
+                  onChange={(e) => { setEditCategory(e.target.value); setEditOutcomeId('') }}
                   className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
                 />
               </div>
             </div>
+
+            {governanceDetail && (
+              <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+                <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]" htmlFor="edit-primary-outcome">
+                  Birincil kazanım
+                </label>
+                <select
+                  id="edit-primary-outcome"
+                  value={editOutcomeId}
+                  onChange={(event) => setEditOutcomeId(event.target.value)}
+                  disabled={outcomesLoading}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none disabled:opacity-60"
+                >
+                  <option value="">Kazanımı doğrulayarak seçin</option>
+                  {editOutcomeOptions.map((outcome) => (
+                    <option key={outcome.id} value={outcome.id}>
+                      {outcome.code} — {outcome.title} ({outcome.examRef ?? 'genel'})
+                    </option>
+                  ))}
+                </select>
+                {outcomesLoading ? (
+                  <p className="mt-1 text-[10px] text-[var(--text-sub)]">Kapsam doğrulanıyor…</p>
+                ) : outcomeCatalogState === 'failed' ? (
+                  <p className="mt-1 text-[10px] text-[var(--urgency)]">
+                    Katalog doğrulanamadı; güvenlik gereği taslak oluşturulamaz.
+                  </p>
+                ) : editOutcomeOptions.length === 0 ? (
+                  <p className="mt-1 text-[10px] text-[var(--urgency)]">
+                    Bu kapsam için aktif kazanım yok. Düzeltme taslak olarak saklanabilir; kazanım eklenene kadar 2. aşama ve yayın kapalı kalır.
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[10px] text-[var(--text-sub)]">
+                    Seçim insan onayıdır; kategori adı kazanım kanıtı olarak otomatik atanmaz.
+                  </p>
+                )}
+                {(() => {
+                  const selected = editOutcomeOptions.find((outcome) => outcome.id === editOutcomeId)
+                  const priorExam = typeof governanceDetail.metadata.examRef === 'string'
+                    ? governanceDetail.metadata.examRef
+                    : null
+                  const priorCategory = typeof governanceDetail.metadata.category === 'string'
+                    ? governanceDetail.metadata.category
+                    : editQ.category
+                  const nextCategory = editCategory.trim()
+                  const changes = [
+                    priorCategory !== nextCategory ? `kategori ${priorCategory} → ${nextCategory}` : null,
+                    selected && selected.examRef !== priorExam ? `sınav ${priorExam ?? 'genel'} → ${selected.examRef ?? 'genel'}` : null,
+                  ].filter(Boolean)
+                  return changes.length > 0 ? (
+                    <p role="status" className="mt-2 rounded-md border border-[var(--reward-border)] bg-[var(--reward-bg)] p-2 text-[10px] font-bold">
+                      Kapsam değişikliği: {changes.join('; ')}. Bu değişiklik revizyon özetinde bağımsız inceleyiciye gösterilecek.
+                    </p>
+                  ) : null
+                })()}
+              </div>
+            )}
 
             {/* Butonlar */}
             <div className="flex justify-end gap-2">
@@ -479,10 +677,10 @@ export default function AdminQuestionsPage() {
               </button>
               <button
                 onClick={saveEdit}
-                disabled={saving || detailLoading || !editContent.question.trim()}
+                disabled={saving || detailLoading || outcomesLoading || (!!governanceDetail && outcomeCatalogState !== 'ready') || !editContent.question.trim() || (!!governanceDetail && editOutcomeOptions.length > 0 && !editOutcomeOptions.some((outcome) => outcome.id === editOutcomeId))}
                 className="rounded-lg bg-[var(--focus)] px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                {saving ? 'Kaydediliyor...' : detailLoading ? 'Revizyon okunuyor…' : governanceDetail ? 'Taslak Oluştur' : 'Kaydet'}
+                {saving ? 'Kaydediliyor...' : detailLoading ? 'Revizyon okunuyor…' : governanceDetail && outcomeCatalogState === 'ready' && editOutcomeOptions.length === 0 ? 'Kazanım Bekleyen Taslağı Kaydet' : governanceDetail ? 'Taslak Oluştur' : 'Kaydet'}
               </button>
             </div>
           </div>
