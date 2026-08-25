@@ -94,7 +94,9 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
   let managerOne
   let managerTwo
   let freePilotManager
+  let freePilotManagerTwo
   let freePilotStudent
+  let paidPilotManagerAfterMigration
   let teacherOne
   let institutionOne
   let institutionTwo
@@ -311,7 +313,9 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     managerOne = randomUUID()
     managerTwo = randomUUID()
     freePilotManager = randomUUID()
+    freePilotManagerTwo = randomUUID()
     freePilotStudent = randomUUID()
+    paidPilotManagerAfterMigration = randomUUID()
     teacherOne = randomUUID()
     for (let index = 0; index < 6; index += 1) capacityTeachers.push(randomUUID())
     // Preserve the historical fixture indexes/e-mails used by later tests;
@@ -324,6 +328,8 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       ...capacityTeachers,
       freePilotManager,
       freePilotStudent,
+      freePilotManagerTwo,
+      paidPilotManagerAfterMigration,
     ]
     for (const [index, userId] of users.entries()) {
       await client.query(
@@ -399,6 +405,7 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     await client.query(freePilotExpiryRpcClosureSql)
     await client.query(freePilotReplayAndStudentSurfaceSql)
     // A committed migration whose ledger write was lost must be safe to retry.
+    await client.query(invitationOnlyFreePilotSql)
     await client.query(freePilotExpiryRpcClosureSql)
     await client.query(freePilotReplayAndStudentSurfaceSql)
 
@@ -562,6 +569,16 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       public: false,
     }])
 
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,30,2,'invitation_free',now() + interval '30 days',NULL)`,
+        ['Onaysız ücretsiz canary', platformAdmin],
+      ),
+      '23514',
+    )
+
     const expression = 'public.provision_free_pilot_institution($1,$2,$3,$4,$5,$6,$7,$8)'
     await expectPgError(
       () => rpc(expression, [
@@ -630,6 +647,21 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     }])
 
     const requestId = randomUUID()
+    const paidAfterMigration = await rpc(
+      'public.provision_pilot_institution($1,$2,$3,$4)',
+      [
+        platformAdmin,
+        'Migration Sonrası Ticari Pilot',
+        paidPilotManagerAfterMigration,
+        requestId,
+      ],
+    )
+    const paidKind = await client.query(
+      'SELECT pilot_kind FROM public.pilot_institutions WHERE id=$1',
+      [paidAfterMigration.institution.id],
+    )
+    expect(paidKind.rows).toEqual([{ pilot_kind: 'commercial' }])
+
     const before = Date.now()
     const provisioned = await authenticatedRpc(platformAdmin, expression, [
       platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
@@ -650,6 +682,29 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     })
     expect(reviewDueAt).toBeGreaterThanOrEqual(before + 29 * 24 * 60 * 60 * 1000)
     expect(reviewDueAt).toBeLessThanOrEqual(Date.now() + 31 * 24 * 60 * 60 * 1000)
+
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin,
+        'İkinci Eşzamanlı Canary',
+        freePilotManagerTwo,
+        'PILOT-2026-002',
+        30,
+        2,
+        30,
+        randomUUID(),
+      ]),
+      '55000',
+    )
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
+         ) VALUES($1,$2,30,2,'invitation_free',now() + interval '30 days',$3)`,
+        ['Doğrudan ikinci canary', platformAdmin, 'PILOT-2026-DIRECT-002'],
+      ),
+      '23505',
+    )
 
     await expectPgError(
       () => authenticatedRpc(
@@ -853,6 +908,25 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
         reviewDueAt: provisioned.institution.reviewDueAt,
       },
     }])
+    const crossOperationAudit = await client.query(
+      `SELECT institution_id,source
+       FROM public.institution_operation_events
+       WHERE actor_user_id=$1
+         AND event_type='institution_provisioned'
+         AND request_id=$2
+       ORDER BY source`,
+      [platformAdmin, requestId],
+    )
+    expect(crossOperationAudit.rows).toEqual([
+      {
+        institution_id: provisioned.institution.id,
+        source: 'free_pilot_request',
+      },
+      {
+        institution_id: paidAfterMigration.institution.id,
+        source: 'institution_request',
+      },
+    ])
 
     const directory = await authenticatedRpc(
       platformAdmin,

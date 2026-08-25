@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Building2, Plus, Search, ShieldCheck, ShieldOff, Users } from 'lucide-react'
 import type { InstitutionAdminDirectory } from '@/lib/institution-admin/contracts'
@@ -34,6 +34,8 @@ export default function AdminInstitutionsPage() {
   const [saving, setSaving] = useState(false)
   const [statusReasons, setStatusReasons] = useState<Record<string, string>>({})
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
+  const provisionAttemptRef = useRef<{ payloadKey: string; requestId: string } | null>(null)
+  const provisionInFlightRef = useRef(false)
   const freePilotEnabled = directory.provisioning?.invitationFreePilotEnabled === true
 
   const load = useCallback(async () => {
@@ -65,26 +67,35 @@ export default function AdminInstitutionsPage() {
 
   async function createInstitution(event: React.FormEvent) {
     event.preventDefault()
-    if (!manager) return
+    if (!manager || provisionInFlightRef.current) return
+    provisionInFlightRef.current = true
     setSaving(true)
     setError(null)
     setNotice(null)
     try {
+      const payload = {
+        name,
+        managerUserId: manager.id,
+        approvalReference,
+        studentLimit,
+        staffLimit,
+        trialDays,
+      }
+      const payloadKey = JSON.stringify(payload)
+      if (provisionAttemptRef.current?.payloadKey !== payloadKey) {
+        provisionAttemptRef.current = { payloadKey, requestId: crypto.randomUUID() }
+      }
       const response = await fetch('/api/admin/institutions/free-pilots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          managerUserId: manager.id,
-          approvalReference,
-          studentLimit,
-          staffLimit,
-          trialDays,
-          requestId: crypto.randomUUID(),
+          ...payload,
+          requestId: provisionAttemptRef.current.requestId,
         }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Ücretsiz kurum pilotu oluşturulamadı')
+      provisionAttemptRef.current = null
       setName('')
       setSearch('')
       setManager(null)
@@ -94,7 +105,10 @@ export default function AdminInstitutionsPage() {
       setNotice(`${data.institution?.name || name} ücretsiz pilotu oluşturuldu.`)
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Ücretsiz kurum pilotu oluşturulamadı')
-    } finally { setSaving(false) }
+    } finally {
+      provisionInFlightRef.current = false
+      setSaving(false)
+    }
   }
 
   async function updateInstitutionStatus(

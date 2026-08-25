@@ -14,7 +14,18 @@ describe('invitation-only free institution pilot SQL boundary', () => {
     expect(sql).toContain('p_trial_days NOT BETWEEN 14 AND 60')
     expect(sql).toContain("v_approval_ref !~ '^[A-Z0-9][A-Z0-9._/-]{5,63}$'")
     expect(sql).toContain('pilot_institutions_free_approval_ref_unique')
+    expect(sql).toContain("ALTER COLUMN pilot_kind SET DEFAULT 'commercial'")
+    expect(sql).toContain('approval_ref IS NOT NULL')
     expect(sql).not.toContain('INSTITUTION_ONBOARDING_ENABLED')
+  })
+
+  it('enforces one open free canary atomically across request IDs and managers', () => {
+    expect(sql).toContain('pilot_institutions_one_open_free_pilot')
+    expect(sql).toMatch(
+      /WHERE pilot_kind = 'invitation_free'[\s\S]*?status IN \('pilot', 'active'\)/,
+    )
+    expect(sql).toContain("'institution-free-pilot-open-slot'")
+    expect(sql).toContain('another open invitation-free institution pilot already exists')
   })
 
   it('requires a JWT-bound AAL2 platform administrator', () => {
@@ -30,6 +41,10 @@ describe('invitation-only free institution pilot SQL boundary', () => {
     expect(sql).toContain("operation = 'provision_free_pilot'")
     expect(sql).toContain("p_user_id, 'provision_free_pilot', p_request_id, v_hash, v_result")
     expect(sql).toContain("'institution_provisioned'")
+    expect(sql).toContain("'free_pilot_request'")
+    expect(sql).toContain(
+      "source IN ('institution_request', 'free_pilot_request', 'classroom_request')",
+    )
     expect(sql).toContain("'studentLimit'")
     expect(sql).toContain("'reviewDueAt'")
     expect(sql).not.toMatch(/metadata[\s\S]{0,500}managerUserId/i)

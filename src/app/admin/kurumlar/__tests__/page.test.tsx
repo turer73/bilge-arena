@@ -78,6 +78,71 @@ describe('admin institution free-pilot page', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(/ücretsiz pilotu oluşturuldu/i)
   })
 
+  it('reuses the request ID for the same failed payload and rotates it when the payload changes', async () => {
+    let provisionAttempts = 0
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.startsWith('/api/admin/users?')) {
+        return Response.json({ users: [manager] })
+      }
+      if (url === '/api/admin/institutions/free-pilots' && init?.method === 'POST') {
+        provisionAttempts += 1
+        if (provisionAttempts < 3) {
+          return Response.json({ error: 'Yanıt alınamadı; tekrar deneyin.' }, { status: 503 })
+        }
+        return Response.json({ institution: { name: 'Değişen Dershane' } }, { status: 201 })
+      }
+      if (url === '/api/admin/institutions') {
+        return Response.json({
+          institutions: [],
+          provisioning: { invitationFreePilotEnabled: true },
+        })
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.spyOn(globalThis.crypto, 'randomUUID')
+      .mockReturnValueOnce('44444444-4444-4444-8444-444444444444')
+      .mockReturnValueOnce('55555555-5555-4555-8555-555555555555')
+
+    render(<AdminInstitutionsPage />)
+    expect(await screen.findByText('Henüz kurum oluşturulmadı.')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
+      target: { value: 'İlk Dershane' },
+    })
+    fireEvent.change(screen.getByLabelText(/İlk kurum yöneticisi/i), {
+      target: { value: 'Kurum' },
+    })
+    fireEvent.click(await screen.findByRole('option', { name: /Kurum Yöneticisi/i }))
+    fireEvent.change(screen.getByLabelText(/Onay \/ pilot dosyası referansı/i), {
+      target: { value: 'PILOT-2026-RETRY' },
+    })
+
+    const submit = screen.getByRole('button', { name: 'Ücretsiz pilotu oluştur' })
+    fireEvent.click(submit)
+    await waitFor(() => expect(provisionAttempts).toBe(1))
+    expect(await screen.findByRole('alert')).toHaveTextContent(/tekrar deneyin/i)
+
+    fireEvent.click(submit)
+    await waitFor(() => expect(provisionAttempts).toBe(2))
+
+    fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
+      target: { value: 'Değişen Dershane' },
+    })
+    fireEvent.click(submit)
+    expect(await screen.findByRole('status')).toHaveTextContent(/Değişen Dershane ücretsiz pilotu/i)
+
+    const requestIds = fetchMock.mock.calls
+      .filter(([url, init]) => String(url) === '/api/admin/institutions/free-pilots' && init?.method === 'POST')
+      .map(([, init]) => JSON.parse(String(init?.body)).requestId)
+    expect(requestIds).toEqual([
+      '44444444-4444-4444-8444-444444444444',
+      '44444444-4444-4444-8444-444444444444',
+      '55555555-5555-4555-8555-555555555555',
+    ])
+  })
+
   it('disables provisioning controls when the dedicated switch is off', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({
       institutions: [],

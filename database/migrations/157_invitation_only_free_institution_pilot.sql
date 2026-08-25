@@ -6,6 +6,12 @@ ALTER TABLE public.pilot_institutions
   ADD COLUMN IF NOT EXISTS pilot_kind text NOT NULL DEFAULT 'legacy'
     CHECK (pilot_kind IN ('legacy', 'invitation_free', 'commercial'));
 
+-- Existing rows are intentionally backfilled as legacy by the ADD COLUMN
+-- default above. Future calls to the paid provisioning RPC omit pilot_kind,
+-- so their database default must be commercial.
+ALTER TABLE public.pilot_institutions
+  ALTER COLUMN pilot_kind SET DEFAULT 'commercial';
+
 ALTER TABLE public.pilot_institutions
   ADD COLUMN IF NOT EXISTS review_due_at timestamptz;
 
@@ -27,27 +33,40 @@ BEGIN
 END;
 $block$;
 
-DO $block$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_catalog.pg_constraint
-    WHERE conrelid = 'public.pilot_institutions'::regclass
-      AND conname = 'pilot_institutions_free_approval_ref'
-  ) THEN
-    ALTER TABLE public.pilot_institutions
-      ADD CONSTRAINT pilot_institutions_free_approval_ref
-      CHECK (
-        pilot_kind <> 'invitation_free'
-        OR approval_ref ~ '^[A-Z0-9][A-Z0-9._/-]{5,63}$'
-      );
-  END IF;
-END;
-$block$;
+-- Recreate the named constraint so a retry also repairs an earlier version
+-- whose CHECK expression accepted NULL through SQL three-valued logic.
+ALTER TABLE public.pilot_institutions
+  DROP CONSTRAINT IF EXISTS pilot_institutions_free_approval_ref;
+ALTER TABLE public.pilot_institutions
+  ADD CONSTRAINT pilot_institutions_free_approval_ref
+  CHECK (
+    pilot_kind <> 'invitation_free'
+    OR (
+      approval_ref IS NOT NULL
+      AND approval_ref ~ '^[A-Z0-9][A-Z0-9._/-]{5,63}$'
+    )
+  );
 
 CREATE UNIQUE INDEX IF NOT EXISTS pilot_institutions_free_approval_ref_unique
   ON public.pilot_institutions (approval_ref)
   WHERE pilot_kind = 'invitation_free';
+
+-- The canary program deliberately has one open slot. This index is the final
+-- race-safe invariant even for privileged/manual inserts. An expired row must
+-- first be suspended or archived through the audited lifecycle flow.
+CREATE UNIQUE INDEX IF NOT EXISTS pilot_institutions_one_open_free_pilot
+  ON public.pilot_institutions (pilot_kind)
+  WHERE pilot_kind = 'invitation_free'
+    AND status IN ('pilot', 'active');
+
+-- Paid and free provisioning use separate request-ledger operations. Preserve
+-- that namespace in the immutable event key so reusing the same UUID across
+-- the two domains cannot suppress either audit event.
+ALTER TABLE public.institution_operation_events
+  DROP CONSTRAINT IF EXISTS institution_operation_events_source_check;
+ALTER TABLE public.institution_operation_events
+  ADD CONSTRAINT institution_operation_events_source_check
+  CHECK (source IN ('institution_request', 'free_pilot_request', 'classroom_request'));
 
 CREATE TABLE IF NOT EXISTS public.institution_pilot_controls (
   control_key text PRIMARY KEY CHECK (control_key IN ('free_provisioning')),
@@ -466,6 +485,22 @@ BEGIN
     RETURN v_request.result || jsonb_build_object('replayed', true);
   END IF;
 
+  -- Serialize different managers/request IDs against the single canary slot.
+  -- The unique partial index above remains the database-level backstop.
+  PERFORM pg_advisory_xact_lock(hashtextextended(
+    'institution-free-pilot-open-slot',
+    0
+  ));
+  IF EXISTS (
+    SELECT 1
+    FROM public.pilot_institutions AS institution
+    WHERE institution.pilot_kind = 'invitation_free'
+      AND institution.status IN ('pilot', 'active')
+  ) THEN
+    RAISE EXCEPTION 'another open invitation-free institution pilot already exists'
+      USING ERRCODE = '55000';
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM public.pilot_institution_memberships
@@ -557,7 +592,7 @@ BEGIN
     v_institution_id,
     NEW.user_id,
     'institution_provisioned',
-    'institution_request',
+    'free_pilot_request',
     NEW.request_id,
     jsonb_build_object(
       'pilotKind', 'invitation_free',
