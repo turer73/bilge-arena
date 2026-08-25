@@ -211,7 +211,15 @@ export default function AdminQuestionsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Soru Yonetimi</h1>
-          <p className="text-sm text-[var(--text-sub)]">{total} soru kayitli</p>
+          {/* `total` filtreli sonuc sayisidir (search_questions total_count),
+              bankanin tamami degil. "kayitli" etiketi filtre aciktayken
+              yaniltiyordu: "Pasif" secildiginde 4409 soruluk bankada "64 soru
+              kayitli" yaziyordu. */}
+          <p className="text-sm text-[var(--text-sub)]">
+            {filterGame === 'all' && filterActive === 'all' && !search
+              ? `${total} soru kayitli`
+              : `Filtreye uyan: ${total} soru`}
+          </p>
         </div>
       </div>
 

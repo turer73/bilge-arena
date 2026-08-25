@@ -170,6 +170,57 @@ const nextConfig = {
               "form-action 'self'",
             ].join('; '),
           },
+          {
+            // Kademeli sikilastirma (guvenlik denetimi 2026-08-25, B6).
+            // Global blokta 'unsafe-eval' gerekcesi AdSense; bu yuzeyde reklam
+            // ve analitik script'i zaten yok, yani gerekce burada gecerli degil.
+            // Once Report-Only ile olcuyoruz: bu surumde ihlal raporu gelmezse
+            // yukaridaki enforcing bloktan 'unsafe-eval' tek satirda cikarilir.
+            // Report-Only kirilma uretmez, yalniz ihlali gorunur kilar.
+            key: 'Content-Security-Policy-Report-Only',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'",
+              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
+              "media-src 'self' blob: data: https://*.supabase.co",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com",
+              "frame-src 'self'",
+              "worker-src 'self' blob:",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "report-uri https://csp.3d-labx.com/csp-report",
+            ].join('; '),
+          },
+        ],
+      },
+      {
+        // Admin yuzeyi global (reklam/analitik iceren) CSP'yi aliyordu; oysa
+        // yonetim panelinde ne AdSense ne GA calisiyor. Yuksek degerli hedef
+        // oldugu icin daha dar bir politika hak ediyor. Ayni kademeli yaklasim:
+        // once Report-Only, ihlalsiz gecerse enforcing'e cevrilir.
+        source: '/admin/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
+              "media-src 'self' blob: data: https://*.supabase.co",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.de.sentry.io",
+              "frame-src 'none'",
+              "worker-src 'self' blob:",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "report-uri https://csp.3d-labx.com/csp-report",
+            ].join('; '),
+          },
         ],
       },
       {
