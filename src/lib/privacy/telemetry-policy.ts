@@ -9,7 +9,15 @@ const SENSITIVE_WORKSPACE_PREFIXES = [
 ] as const
 
 function normalizePathname(pathname: string): string {
-  const pathOnly = pathname.split(/[?#]/, 1)[0] || '/'
+  const rawPath = pathname.split(/[?#]/, 1)[0] || '/'
+  let pathOnly = rawPath
+  try {
+    // URL.pathname preserves percent escapes. Decode conservatively so an
+    // encoded `/admin` or `/arena/kurum` path cannot bypass the privacy gate.
+    pathOnly = decodeURIComponent(rawPath)
+  } catch {
+    // Malformed escapes are not a valid way to opt out of the boundary.
+  }
   return pathOnly.length > 1 ? pathOnly.replace(/\/+$/, '') : pathOnly
 }
 
