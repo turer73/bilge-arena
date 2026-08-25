@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import {
   BookOpenText,
   Building2,
@@ -526,17 +527,17 @@ export function MobileHomeDemo({
               <span><span className="block text-xs font-black">Mağaza</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Altınlarını kullan</span></span>
             </Link>
             {classroomEnabled && (
-              <Link href="/arena/sinif" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-success-border)] active:translate-y-0.5">
+              <DocumentBoundaryLink href="/arena/sinif" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-success-border)] active:translate-y-0.5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--app-success-tint)] text-[var(--app-success)]"><GraduationCap size={20} strokeWidth={2.7} /></span>
                 <span><span className="block text-xs font-black">Sınıflarım</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Ödev, davet, öğretmen</span></span>
-              </Link>
+              </DocumentBoundaryLink>
             )}
             {institutionEnabled && (
-              <Link href="/arena/kurum" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-accent-border)] active:translate-y-0.5 md:col-span-1">
+              <DocumentBoundaryLink href="/arena/kurum" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-accent-border)] active:translate-y-0.5 md:col-span-1">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><Building2 size={22} strokeWidth={2.7} /></span>
                 <span className="min-w-0 flex-1"><span className="block text-xs font-black">Kurum paneli</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Sınıf, rol ve rapor akışları</span></span>
                 <ChevronRight size={18} className="text-[var(--app-text-muted)]" strokeWidth={3} />
-              </Link>
+              </DocumentBoundaryLink>
             )}
             {communityQualityEnabled && (
               <Link href="/arena/kalite-gorevleri" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-success-border)] active:translate-y-0.5 md:col-span-1">

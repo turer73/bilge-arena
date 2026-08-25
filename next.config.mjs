@@ -9,6 +9,13 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })
 
+// Next/Turbopack development runtime installs HMR updates with eval(). Keep
+// production sensitive documents eval-free while allowing the local dev
+// runtime to work on the same routes.
+const sensitiveScriptSource = process.env.NODE_ENV === 'development'
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'"
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // `output: 'standalone'` SADECE Docker self-host (Dockerfile) icin gerekli.
@@ -93,15 +100,6 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Admin paneli — Cloudflare cache'lememeli
-        source: '/admin/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
-          { key: 'CDN-Cache-Control', value: 'no-store' },
-          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
-        ],
-      },
-      {
         // Admin API — PWA service worker ve CDN cache'lemesin (canli sayilar)
         source: '/api/admin/:path*',
         headers: [
@@ -157,7 +155,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              sensitiveScriptSource,
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self'",
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
@@ -168,46 +166,81 @@ const nextConfig = {
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
-            ].join('; '),
-          },
-          {
-            // Kademeli sikilastirma (guvenlik denetimi 2026-08-25, B6).
-            // Global blokta 'unsafe-eval' gerekcesi AdSense; bu yuzeyde reklam
-            // ve analitik script'i zaten yok, yani gerekce burada gecerli degil.
-            // Once Report-Only ile olcuyoruz: bu surumde ihlal raporu gelmezse
-            // yukaridaki enforcing bloktan 'unsafe-eval' tek satirda cikarilir.
-            // Report-Only kirilma uretmez, yalniz ihlali gorunur kilar.
-            key: 'Content-Security-Policy-Report-Only',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline'",
-              "font-src 'self'",
-              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
-              "media-src 'self' blob: data: https://*.supabase.co",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com",
-              "frame-src 'self'",
-              "worker-src 'self' blob:",
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "report-uri https://csp.3d-labx.com/csp-report",
             ].join('; '),
           },
         ],
       },
       {
-        // Admin yuzeyi global (reklam/analitik iceren) CSP'yi aliyordu; oysa
-        // yonetim panelinde ne AdSense ne GA calisiyor. Yuksek degerli hedef
-        // oldugu icin daha dar bir politika hak ediyor. Ayni kademeli yaklasim:
-        // once Report-Only, ihlalsiz gecerse enforcing'e cevrilir.
-        source: '/admin/:path*',
+        // Kurum calisma alani reklam/analitik document boundary'sinin arkasinda
+        // calisir. Global AdSense/GA izinlerini ve unsafe-eval'i burada enforce
+        // edilen daha dar politika ile kaldir.
+        source: '/arena/kurum/:path*',
         headers: [
+          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
           {
-            key: 'Content-Security-Policy-Report-Only',
+            key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              sensitiveScriptSource,
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'",
+              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
+              "media-src 'self' blob: data: https://*.supabase.co",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com",
+              "frame-src 'self'",
+              "worker-src 'self' blob:",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; '),
+          },
+        ],
+      },
+      {
+        // Hesap guvenligi parola/MFA islemleri tasir ve telemetry-policy'de
+        // hassas sayilir; kurum yuzeyleriyle ayni reklamsiz document boundary.
+        source: '/hesap/guvenlik/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              sensitiveScriptSource,
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'",
+              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
+              "media-src 'self' blob: data: https://*.supabase.co",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+              "frame-src 'self'",
+              "worker-src 'self' blob:",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; '),
+          },
+        ],
+      },
+      {
+        // Admin yuzeyinde reklam/analitik yoktur. Global AdSense izinlerini ve
+        // unsafe-eval'i report-only gozleminden sonra enforcing olarak kaldir.
+        source: '/admin/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              sensitiveScriptSource,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
@@ -218,7 +251,6 @@ const nextConfig = {
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
-              "report-uri https://csp.3d-labx.com/csp-report",
             ].join('; '),
           },
         ],

@@ -58,6 +58,26 @@ describe('NotificationBell', () => {
     expect(JSON.parse(readCall[1].body)).toEqual({ id: 'n1' })
   })
 
+  test('hassas bildirim hedefini RSC fetch baslamadan yeni document ile acar', async () => {
+    const navigateDocument = vi.fn()
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return Promise.resolve({ ok: true })
+      return listResponse([{
+        ...NOTIFS[0],
+        link: '/arena/sinif/odev/11111111-2222-4333-8444-555555555555',
+      }])
+    })
+    render(<NotificationBell navigateDocument={navigateDocument} />)
+    await waitFor(() => expect(screen.getByText('1')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Bildirimler/ }))
+    fireEvent.click(await screen.findByText('Sorun onaylandı! 🎉'))
+
+    await waitFor(() => expect(navigateDocument).toHaveBeenCalledWith(
+      '/arena/sinif/odev/11111111-2222-4333-8444-555555555555',
+    ))
+    expect(pushMock).not.toHaveBeenCalled()
+  })
+
   test('tümünü okundu: POST {all:true} + rozet kaybolur', async () => {
     render(<NotificationBell />)
     await waitFor(() => expect(screen.getByText('1')).toBeInTheDocument())

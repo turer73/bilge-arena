@@ -84,35 +84,71 @@ describe('teacher invitation head bootstrap', () => {
     expect(thirdPartyScripts).toContain('https://analytics.panola.app/js/script.js')
     expect(thirdPartyScripts).toContain('isSensitiveWorkspacePath(pathname)')
     expect(privateHeadersIndex).toBeGreaterThan(globalHeadersIndex)
-    expect(privateBlock).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'")
+    expect(privateBlock).toContain('sensitiveScriptSource')
+    expect(privateBlock).not.toContain("'unsafe-eval'")
     expect(privateBlock).not.toMatch(/analytics\.panola|googletagmanager|googlesyndication|sentry/i)
     expect(privateBlock).toContain("{ key: 'Referrer-Policy', value: 'no-referrer' }")
   })
 
   /**
-   * Guvenlik denetimi 2026-08-25 (B6): 'unsafe-eval' global blokta AdSense
-   * gerekcesiyle duruyor, ama admin ve ogretmen yuzeylerinde reklam yok.
-   * Kademeli sikilastirma icin once Report-Only olcum konuldu; bu test o
-   * olcumun sessizce kaybolmasini engeller.
+   * Guvenlik denetimi 2026-08-25 (B6): 'unsafe-eval' global public blokta
+   * AdSense gerekcesiyle duruyor. Reklamsiz kurum, sinif ve admin document
+   * boundary'lerinde daha dar politika artik enforcing olmalidir.
    */
-  it('measures the eval-free policy with Report-Only on ad-free surfaces', () => {
+  it('enforces the production eval-free policy on ad-free sensitive surfaces', () => {
     const config = fs.readFileSync(path.join(process.cwd(), 'next.config.mjs'), 'utf8')
+    const sensitiveSourceIndex = config.indexOf('const sensitiveScriptSource')
+    const sensitiveSourceEnd = config.indexOf('/** @type', sensitiveSourceIndex)
+    const sensitiveSourceDefinition = config.slice(sensitiveSourceIndex, sensitiveSourceEnd)
+
+    expect(sensitiveSourceIndex).toBeGreaterThan(-1)
+    expect(sensitiveSourceDefinition).toContain("process.env.NODE_ENV === 'development'")
+    expect(sensitiveSourceDefinition).toContain("? \"script-src 'self' 'unsafe-inline' 'unsafe-eval'\"")
+    expect(sensitiveSourceDefinition).toContain(": \"script-src 'self' 'unsafe-inline'\"")
 
     const adminIndex = config.indexOf("source: '/admin/:path*'", config.indexOf("source: '/(.*)'"))
     const adminBlockEnd = config.indexOf('source:', adminIndex + 1)
     const adminBlock = config.slice(adminIndex, adminBlockEnd > -1 ? adminBlockEnd : undefined)
 
     expect(adminIndex).toBeGreaterThan(-1)
-    expect(adminBlock).toContain("key: 'Content-Security-Policy-Report-Only'")
+    expect(adminBlock).toContain("key: 'Content-Security-Policy'")
+    expect(adminBlock).toContain('sensitiveScriptSource')
+    expect(adminBlock).not.toContain("Content-Security-Policy-Report-Only")
     expect(adminBlock).not.toContain("'unsafe-eval'")
     expect(adminBlock).not.toMatch(/googlesyndication|googletagmanager|plausible/i)
-    expect(adminBlock).toContain('report-uri https://csp.3d-labx.com/csp-report')
+    expect(adminBlock).not.toContain('report-uri')
+
+    const adminCacheIndex = config.indexOf("source: '/admin/:path*'")
+    const adminCacheBlock = config.slice(adminCacheIndex, config.indexOf('source:', adminCacheIndex + 1))
+    expect(adminCacheBlock).toContain("{ key: 'Referrer-Policy', value: 'no-referrer' }")
 
     const sinifIndex = config.indexOf("source: '/arena/sinif/:path*'")
     const sinifBlock = config.slice(sinifIndex, config.indexOf('source:', sinifIndex + 1))
-    const reportOnlyIndex = sinifBlock.indexOf("key: 'Content-Security-Policy-Report-Only'")
-    expect(reportOnlyIndex).toBeGreaterThan(-1)
-    // Report-Only kismi enforcing kismin ardindan gelir ve eval icermez.
-    expect(sinifBlock.slice(reportOnlyIndex)).not.toContain("'unsafe-eval'")
+    expect(sinifBlock).toContain("key: 'Content-Security-Policy'")
+    expect(sinifBlock).toContain('sensitiveScriptSource')
+    expect(sinifBlock).not.toContain("Content-Security-Policy-Report-Only")
+    expect(sinifBlock).not.toContain("'unsafe-eval'")
+    expect(sinifBlock).not.toContain('report-uri')
+
+    const kurumIndex = config.indexOf("source: '/arena/kurum/:path*'")
+    const kurumBlock = config.slice(kurumIndex, config.indexOf('source:', kurumIndex + 1))
+    expect(kurumIndex).toBeGreaterThan(-1)
+    expect(kurumBlock).toContain("key: 'Content-Security-Policy'")
+    expect(kurumBlock).toContain('sensitiveScriptSource')
+    expect(kurumBlock).not.toContain("Content-Security-Policy-Report-Only")
+    expect(kurumBlock).not.toContain("'unsafe-eval'")
+    expect(kurumBlock).not.toMatch(/googlesyndication|googletagmanager|plausible/i)
+    expect(kurumBlock).not.toContain('report-uri')
+
+    const accountSecurityIndex = config.indexOf("source: '/hesap/guvenlik/:path*'")
+    const accountSecurityBlock = config.slice(
+      accountSecurityIndex,
+      config.indexOf('source:', accountSecurityIndex + 1),
+    )
+    expect(accountSecurityIndex).toBeGreaterThan(-1)
+    expect(accountSecurityBlock).toContain("key: 'Content-Security-Policy'")
+    expect(accountSecurityBlock).toContain('sensitiveScriptSource')
+    expect(accountSecurityBlock).not.toContain("'unsafe-eval'")
+    expect(accountSecurityBlock).not.toMatch(/googlesyndication|googletagmanager|plausible|report-uri/i)
   })
 })
