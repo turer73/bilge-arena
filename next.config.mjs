@@ -9,6 +9,13 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })
 
+// Next/Turbopack development runtime installs HMR updates with eval(). Keep
+// production sensitive documents eval-free while allowing the local dev
+// runtime to work on the same routes.
+const sensitiveScriptSource = process.env.NODE_ENV === 'development'
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'"
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // `output: 'standalone'` SADECE Docker self-host (Dockerfile) icin gerekli.
@@ -148,7 +155,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              sensitiveScriptSource,
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self'",
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
@@ -177,7 +184,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              sensitiveScriptSource,
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self'",
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
@@ -205,7 +212,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              sensitiveScriptSource,
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self'",
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
@@ -233,7 +240,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              sensitiveScriptSource,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",

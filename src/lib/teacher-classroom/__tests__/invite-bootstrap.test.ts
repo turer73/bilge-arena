@@ -84,7 +84,7 @@ describe('teacher invitation head bootstrap', () => {
     expect(thirdPartyScripts).toContain('https://analytics.panola.app/js/script.js')
     expect(thirdPartyScripts).toContain('isSensitiveWorkspacePath(pathname)')
     expect(privateHeadersIndex).toBeGreaterThan(globalHeadersIndex)
-    expect(privateBlock).toContain("script-src 'self' 'unsafe-inline'")
+    expect(privateBlock).toContain('sensitiveScriptSource')
     expect(privateBlock).not.toContain("'unsafe-eval'")
     expect(privateBlock).not.toMatch(/analytics\.panola|googletagmanager|googlesyndication|sentry/i)
     expect(privateBlock).toContain("{ key: 'Referrer-Policy', value: 'no-referrer' }")
@@ -95,8 +95,16 @@ describe('teacher invitation head bootstrap', () => {
    * AdSense gerekcesiyle duruyor. Reklamsiz kurum, sinif ve admin document
    * boundary'lerinde daha dar politika artik enforcing olmalidir.
    */
-  it('enforces the eval-free policy on ad-free sensitive surfaces', () => {
+  it('enforces the production eval-free policy on ad-free sensitive surfaces', () => {
     const config = fs.readFileSync(path.join(process.cwd(), 'next.config.mjs'), 'utf8')
+    const sensitiveSourceIndex = config.indexOf('const sensitiveScriptSource')
+    const sensitiveSourceEnd = config.indexOf('/** @type', sensitiveSourceIndex)
+    const sensitiveSourceDefinition = config.slice(sensitiveSourceIndex, sensitiveSourceEnd)
+
+    expect(sensitiveSourceIndex).toBeGreaterThan(-1)
+    expect(sensitiveSourceDefinition).toContain("process.env.NODE_ENV === 'development'")
+    expect(sensitiveSourceDefinition).toContain("? \"script-src 'self' 'unsafe-inline' 'unsafe-eval'\"")
+    expect(sensitiveSourceDefinition).toContain(": \"script-src 'self' 'unsafe-inline'\"")
 
     const adminIndex = config.indexOf("source: '/admin/:path*'", config.indexOf("source: '/(.*)'"))
     const adminBlockEnd = config.indexOf('source:', adminIndex + 1)
@@ -104,6 +112,7 @@ describe('teacher invitation head bootstrap', () => {
 
     expect(adminIndex).toBeGreaterThan(-1)
     expect(adminBlock).toContain("key: 'Content-Security-Policy'")
+    expect(adminBlock).toContain('sensitiveScriptSource')
     expect(adminBlock).not.toContain("Content-Security-Policy-Report-Only")
     expect(adminBlock).not.toContain("'unsafe-eval'")
     expect(adminBlock).not.toMatch(/googlesyndication|googletagmanager|plausible/i)
@@ -116,6 +125,7 @@ describe('teacher invitation head bootstrap', () => {
     const sinifIndex = config.indexOf("source: '/arena/sinif/:path*'")
     const sinifBlock = config.slice(sinifIndex, config.indexOf('source:', sinifIndex + 1))
     expect(sinifBlock).toContain("key: 'Content-Security-Policy'")
+    expect(sinifBlock).toContain('sensitiveScriptSource')
     expect(sinifBlock).not.toContain("Content-Security-Policy-Report-Only")
     expect(sinifBlock).not.toContain("'unsafe-eval'")
     expect(sinifBlock).not.toContain('report-uri')
@@ -124,6 +134,7 @@ describe('teacher invitation head bootstrap', () => {
     const kurumBlock = config.slice(kurumIndex, config.indexOf('source:', kurumIndex + 1))
     expect(kurumIndex).toBeGreaterThan(-1)
     expect(kurumBlock).toContain("key: 'Content-Security-Policy'")
+    expect(kurumBlock).toContain('sensitiveScriptSource')
     expect(kurumBlock).not.toContain("Content-Security-Policy-Report-Only")
     expect(kurumBlock).not.toContain("'unsafe-eval'")
     expect(kurumBlock).not.toMatch(/googlesyndication|googletagmanager|plausible/i)
@@ -136,6 +147,7 @@ describe('teacher invitation head bootstrap', () => {
     )
     expect(accountSecurityIndex).toBeGreaterThan(-1)
     expect(accountSecurityBlock).toContain("key: 'Content-Security-Policy'")
+    expect(accountSecurityBlock).toContain('sensitiveScriptSource')
     expect(accountSecurityBlock).not.toContain("'unsafe-eval'")
     expect(accountSecurityBlock).not.toMatch(/googlesyndication|googletagmanager|plausible|report-uri/i)
   })
