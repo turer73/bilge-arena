@@ -66,7 +66,7 @@ const TOPICS = [
   {
     icon: '🏫',
     title: 'Okul & Kurum',
-    desc: 'Okulunuzda ya da dershanenizde Bilge Arena\'yı kullanmak mı istiyorsunuz? Kurumsal kullanım ve toplu hesap seçenekleri için iletişime geçin.',
+    desc: 'Davetli küçük dershane canary’si için kurum türünüzü, yaklaşık öğrenci/personel sayısını ve hedefinizi iletin. Erişim otomatik açılmaz; uygunluk, KVKK ve operasyon kapıları birlikte değerlendirilir.',
   },
   {
     icon: '📣',
@@ -86,7 +86,7 @@ const FAQ = [
   },
   {
     q: 'Platform tamamen ücretsiz mi?',
-    a: 'Evet, Bilge Arena tamamen ücretsizdir. Kayıt, tüm oyun modları, soru bankası ve yapay zeka asistanı — hepsi ücretsiz. Herhangi bir ücretli abonelik planımız yoktur.',
+    a: 'Bireysel öğrenci başlangıcı ücretsizdir. Kurumsal kullanım herkese açık veya self-servis değildir: küçük dershane sistem canary’si davetli ve sınırlı olarak ücretsiz yürütülebilir; ücretli kurum onboarding’i şu anda kapalıdır.',
   },
   {
     q: 'Hesabımı nasıl silebilirim?',
@@ -137,7 +137,8 @@ export default function IletisimPage() {
           {TOPICS.map((topic) => (
             <div
               key={topic.title}
-              className="flex gap-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-5"
+              id={topic.title === 'Okul & Kurum' ? 'kurumsal-pilot' : undefined}
+              className="flex scroll-mt-24 gap-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-5"
             >
               <span className="text-2xl">{topic.icon}</span>
               <div>
