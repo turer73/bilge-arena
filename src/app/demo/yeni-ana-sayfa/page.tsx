@@ -12,8 +12,14 @@ export const metadata: Metadata = {
 export default function NewHomeDemoPage() {
   return (
     <>
+      <a
+        href="#demo-main"
+        className="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-[var(--focus)] px-4 py-3 font-bold text-white focus:not-sr-only"
+      >
+        Ana içeriğe geç
+      </a>
       <Navbar />
-      <main className="pt-[var(--navbar-h)]">
+      <main id="demo-main" className="pt-[var(--navbar-h)]">
         <NewHomeDemo />
       </main>
       <Footer />
