@@ -7,7 +7,7 @@ tenant izolasyonu, sözleşme veya operasyon hazırlığı kanıtı değildir.
 ## Başlatma ön koşulları
 
 - Ücretli onboarding kill-switch kapalı kalır.
-- Davetli ücretsiz canary yalnız gerektiği pencerede iki bağımsız kontrolle
+- Platform kontrollü ücretsiz canary yalnız gerektiği pencerede iki bağımsız kontrolle
   açılır: DB `institution_pilot_controls.free_provisioning=true` ve uygulama
   `INSTITUTION_FREE_PILOT_ENABLED=true`. Uygulama bayrağı yalnız UI/API yüzeyini,
   DB kontrolü doğrudan authenticated RPC'yi de kapatır; ücretli veya public
@@ -54,7 +54,7 @@ yalnız AAL2'li platform-admin akışı ve
 doğrulanmış normal Bilge Arena hesabıdır; normal kayıt sırasında kurum yetkisi
 otomatik verilmez.
 
-## Davetli ücretsiz canary açılış sırası
+## Platform kontrollü ücretsiz canary açılış sırası
 
 1. Kurum sorumlusu, değerlendirme süresi, öğrenci/personel sınırı ve
    aydınlatma-DPA kanıtını pilot dosyasına ekle; kişisel veri içermeyen benzersiz
@@ -62,15 +62,38 @@ otomatik verilmez.
 2. Yöneticinin doğrulanmış normal hesabı ve TOTP/AAL2 kurulumu hazır olsun.
 3. `INSTITUTION_PILOT_ENABLED=true` kalırken ücretsiz pilot migration'ını ve
    uygulama sürümünü kapalı bayrakla dağıt.
-4. Önce DB `free_provisioning` kontrolünü, sonra
+4. DB sahibi, aşağıdaki auditli transaction ile `free_provisioning` kontrolünü
+   açar. Değişiklik referansı kişisel veri içermez ve harici change/pilot
+   kaydına bağlanır. Bu tabloyu uygulama yöneticisi veya service-role
+   güncelleyemez.
+
+   ```sql
+   BEGIN;
+   SET LOCAL app.institution_control_change_ref = 'CHANGE-2026-PILOT-001';
+   UPDATE public.institution_pilot_controls
+   SET enabled = true
+   WHERE control_key = 'free_provisioning' AND enabled = false;
+   SELECT control_key, enabled, updated_at
+   FROM public.institution_pilot_controls
+   WHERE control_key = 'free_provisioning';
+   SELECT previous_enabled, enabled, change_reference, changed_at
+   FROM public.institution_pilot_control_events
+   WHERE control_key = 'free_provisioning'
+   ORDER BY changed_at DESC
+   LIMIT 1;
+   COMMIT;
+   ```
+
+5. Audit satırı ve DB kontrolü doğrulandıktan sonra
    `INSTITUTION_FREE_PILOT_ENABLED=true` uygulama bayrağını açıp yeni production
-   deploy al. Geri almada sıra tersidir: önce DB kontrolünü kapat.
-5. Platform admin ekranından kurumu oluştur; immutable
+   deploy al. Kapatmada önce farklı bir change referansıyla DB kontrolünü
+   `false` yap; ardından uygulama bayrağını kapatıp yeniden deploy et.
+6. Platform admin ekranından kurumu oluştur; immutable
    `institution_provisioned` event'inde `pilotKind=invitation_free`, onay
    referansı, kotalar ve değerlendirme tarihini doğrula.
-6. Bir öğretmen, iki kontrollü öğrenci ve süreli/tek kullanımlık davetlerle
+7. Bir öğretmen, iki kontrollü öğrenci ve süreli/tek kullanımlık davetlerle
    AAL2, tenant izolasyonu, kota ve audit smoke'unu tamamla.
-7. Değerlendirme tarihinde DB erişiminin kapandığını doğrula ve tenant'ı auditli
+8. Değerlendirme tarihinde DB erişiminin kapandığını doğrula ve tenant'ı auditli
    `suspended` durumuna geçir; süre uzatımı yalnız yeni yazılı onay ve ayrı
    kontrollü DB işlemiyle yapılır. Veri silmeyi yalnız onaylı saklama-imha
    prosedürüyle yürüt.

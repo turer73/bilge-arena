@@ -194,7 +194,7 @@ Bu soruların hiçbirine cevap vermeyen özellik çekirdek yol haritasına alın
 
 ## 8. İlk ücretli pilot MVP'si
 
-### 8.0 Ücretli pilot öncesi davetli sistem canary'si
+### 8.0 Ücretli pilot öncesi platform kontrollü sistem canary'si
 
 Ürün, güvenlik ve kurum operasyonunu gerçek kullanımda düşük riskle ölçmek için
 ticari pilottan ayrı bir **ücretsiz mühendislik canary'si** yürütülebilir. Bu

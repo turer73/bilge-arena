@@ -12,6 +12,12 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat('tr-TR', { timeZone: TR_TIME_ZONE, dateStyle: 'medium' }).format(new Date(value))
 }
 
+function isExpiredFreePilot(institution: InstitutionAdminDirectory['institutions'][number]) {
+  return institution.pilotKind === 'invitation_free'
+    && Boolean(institution.reviewDueAt)
+    && new Date(institution.reviewDueAt!).getTime() <= Date.now()
+}
+
 export default function AdminInstitutionsPage() {
   const [directory, setDirectory] = useState<InstitutionAdminDirectory>({ institutions: [] })
   const [loading, setLoading] = useState(true)
@@ -130,8 +136,8 @@ export default function AdminInstitutionsPage() {
       </header>
 
       <form onSubmit={createInstitution} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5">
-        <h2 className="flex items-center gap-2 font-black"><Plus className="h-4 w-4" /> Davetli ücretsiz pilot</h2>
-        <p className={`mt-2 rounded-xl border p-3 text-xs font-semibold leading-5 ${freePilotEnabled ? 'border-amber-400/25 bg-amber-400/10 text-amber-100' : 'border-white/10 bg-[var(--surface)] text-[var(--text-sub)]'}`}>{freePilotEnabled ? 'Bu akış genel kurum kaydı veya ücretli onboarding değildir. Yalnız sözleşme/KVKK ön koşulları ve sorumlusu doğrulanmış, mevcut hesabı bulunan kurum yöneticileri için kullanın.' : 'Davetli ücretsiz pilot oluşturma şu anda kapalı. Mevcut kurumları ve yaşam döngüsü işlemlerini yönetmeye devam edebilirsiniz.'}</p>
+        <h2 className="flex items-center gap-2 font-black"><Plus className="h-4 w-4" /> Platform kontrollü ücretsiz pilot</h2>
+        <p className={`mt-2 rounded-xl border p-3 text-xs font-semibold leading-5 ${freePilotEnabled ? 'border-amber-400/25 bg-amber-400/10 text-amber-100' : 'border-white/10 bg-[var(--surface)] text-[var(--text-sub)]'}`}>{freePilotEnabled ? 'Bu akış genel kurum kaydı veya ücretli onboarding değildir. Yalnız sözleşme/KVKK ön koşulları ve sorumlusu doğrulanmış, mevcut hesabı bulunan kurum yöneticileri için kullanın.' : 'Platform kontrollü ücretsiz pilot oluşturma şu anda kapalı. Mevcut kurumları ve yaşam döngüsü işlemlerini yönetmeye devam edebilirsiniz.'}</p>
         <fieldset disabled={!freePilotEnabled || saving} className="mt-4 grid gap-4 disabled:opacity-60 lg:grid-cols-2">
           <label className="text-xs font-bold text-[var(--text-sub)]">Kurum adı
             <input value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} required placeholder="Örn. Bilge Eğitim Merkezi" className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
@@ -171,22 +177,26 @@ export default function AdminInstitutionsPage() {
       {notice && <p role="status" className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3 text-sm font-semibold text-emerald-200">{notice}</p>}
       {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm font-semibold text-red-200">{error}</p>}
       {loading ? <div className="h-40 animate-pulse rounded-2xl bg-[var(--card-bg)]" /> : directory.institutions.length === 0 ? <div className="rounded-2xl border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--text-sub)]">Henüz kurum oluşturulmadı.</div> : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{directory.institutions.map((institution) => <article key={institution.id} className="min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
-          <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h2 className="truncate text-lg font-black">{institution.name}</h2><p className="mt-1 text-xs text-[var(--text-sub)]">{institution.manager?.alias || 'Yönetici atanmamış'} · {formatDate(institution.createdAt)}</p>{institution.pilotKind === 'invitation_free' && <p className={`mt-1 text-[10px] font-black uppercase tracking-wide ${institution.reviewDueAt && new Date(institution.reviewDueAt).getTime() <= Date.now() ? 'text-red-300' : 'text-amber-300'}`}>Davetli ücretsiz pilot{institution.approvalReference ? ` · ${institution.approvalReference}` : ''}{institution.reviewDueAt ? ` · ${new Date(institution.reviewDueAt).getTime() <= Date.now() ? 'süresi doldu' : `değerlendirme ${formatDate(institution.reviewDueAt)}`}` : ''}</p>}</div><span className="rounded-full bg-[var(--focus-bg)] px-2 py-1 text-[10px] font-black uppercase text-[var(--focus)]">{institution.status}</span></div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{directory.institutions.map((institution) => {
+          const expiredFreePilot = isExpiredFreePilot(institution)
+          const supportAccessActive = institution.supportAccess.active && !expiredFreePilot
+          return <article key={institution.id} className="min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
+          <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h2 className="truncate text-lg font-black">{institution.name}</h2><p className="mt-1 text-xs text-[var(--text-sub)]">{institution.manager?.alias || 'Yönetici atanmamış'} · {formatDate(institution.createdAt)}</p>{institution.pilotKind === 'invitation_free' && <p className={`mt-1 text-[10px] font-black uppercase tracking-wide ${expiredFreePilot ? 'text-red-300' : 'text-amber-300'}`}>Platform kontrollü ücretsiz pilot{institution.approvalReference ? ` · ${institution.approvalReference}` : ''}{institution.reviewDueAt ? ` · ${expiredFreePilot ? 'süresi doldu' : `değerlendirme ${formatDate(institution.reviewDueAt)}`}` : ''}</p>}</div><span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${expiredFreePilot ? 'bg-red-400/10 text-red-300' : 'bg-[var(--focus-bg)] text-[var(--focus)]'}`}>{expiredFreePilot ? 'erişim kapalı' : institution.status}</span></div>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-[var(--surface)] p-2"><strong className="block text-lg">{institution.studentCount}</strong><span className="text-[10px] text-[var(--text-sub)]">Öğrenci</span></div><div className="rounded-xl bg-[var(--surface)] p-2"><strong className="block text-lg">{institution.classroomCount}</strong><span className="text-[10px] text-[var(--text-sub)]">Sınıf</span></div><div className="rounded-xl bg-[var(--surface)] p-2"><strong className="block text-lg">{institution.staffCount}</strong><span className="text-[10px] text-[var(--text-sub)]">Personel</span></div></div>
-          <div className={`mt-4 flex items-start gap-2 rounded-xl border p-3 text-xs ${institution.supportAccess.active ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-200' : 'border-white/10 bg-[var(--surface)] text-[var(--text-sub)]'}`}>{institution.supportAccess.active ? <ShieldCheck className="h-4 w-4 shrink-0" /> : <ShieldOff className="h-4 w-4 shrink-0" />}<span>{institution.supportAccess.active ? `Kurum desteği ${formatDate(institution.supportAccess.expiresAt!)} tarihine kadar açık.` : 'Kurum desteği kapalı. Yalnız kurum yöneticisi açabilir.'}</span></div>
-          {institution.supportAccess.active && <Link href={`/admin/kurumlar/${institution.id}`} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 text-sm font-black text-emerald-200">Salt-okunur destek görünümünü aç</Link>}
+          <div className={`mt-4 flex items-start gap-2 rounded-xl border p-3 text-xs ${supportAccessActive ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-200' : 'border-white/10 bg-[var(--surface)] text-[var(--text-sub)]'}`}>{supportAccessActive ? <ShieldCheck className="h-4 w-4 shrink-0" /> : <ShieldOff className="h-4 w-4 shrink-0" />}<span>{supportAccessActive ? `Kurum desteği ${formatDate(institution.supportAccess.expiresAt!)} tarihine kadar açık.` : expiredFreePilot ? 'Pilot süresi dolduğu için kurum desteği ve tenant erişimi kapalı.' : 'Kurum desteği kapalı. Yalnız kurum yöneticisi açabilir.'}</span></div>
+          {supportAccessActive && <Link href={`/admin/kurumlar/${institution.id}`} className="mt-3 flex min-h-11 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 text-sm font-black text-emerald-200">Salt-okunur destek görünümünü aç</Link>}
           {institution.status !== 'archived' ? <div className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
             <label className="text-[11px] font-bold text-[var(--text-sub)]">Durum değişikliği gerekçesi
               <textarea value={statusReasons[institution.id] ?? ''} onChange={(event) => setStatusReasons((current) => ({ ...current, [institution.id]: event.target.value }))} minLength={10} maxLength={500} rows={2} placeholder="Denetim kaydına yazılacak gerekçe" className="mt-1 w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--card-bg)] p-2 text-xs text-[var(--text)]" />
             </label>
+            {expiredFreePilot && <p className="mt-2 rounded-lg border border-red-400/20 bg-red-400/10 p-2 text-[11px] font-bold text-red-200">Değerlendirme süresi doldu; tenant erişimi kapalıdır. Bu kaydı askıya alın veya arşivleyin. Yeniden deneme için yeni onay referansıyla yeni pilot açın.</p>}
             <div className="mt-2 flex flex-wrap gap-2">
-              {institution.status !== 'active' && <button type="button" disabled={updatingStatus === institution.id} onClick={() => void updateInstitutionStatus(institution.id, 'active')} className="min-h-10 rounded-lg border border-emerald-400/30 px-3 text-xs font-black text-emerald-300 disabled:opacity-50">Aktifleştir</button>}
+              {institution.status !== 'active' && !expiredFreePilot && <button type="button" disabled={updatingStatus === institution.id} onClick={() => void updateInstitutionStatus(institution.id, 'active')} className="min-h-10 rounded-lg border border-emerald-400/30 px-3 text-xs font-black text-emerald-300 disabled:opacity-50">Aktifleştir</button>}
               {institution.status !== 'suspended' && <button type="button" disabled={updatingStatus === institution.id} onClick={() => void updateInstitutionStatus(institution.id, 'suspended')} className="min-h-10 rounded-lg border border-amber-400/30 px-3 text-xs font-black text-amber-300 disabled:opacity-50">Askıya al</button>}
               <button type="button" disabled={updatingStatus === institution.id} onClick={() => void updateInstitutionStatus(institution.id, 'archived')} className="min-h-10 rounded-lg border border-red-400/30 px-3 text-xs font-black text-red-300 disabled:opacity-50">Arşivle</button>
             </div>
           </div> : <p className="mt-3 rounded-xl border border-white/10 bg-[var(--surface)] p-3 text-xs text-[var(--text-sub)]">Bu kurum arşivlendi; yaşam döngüsü terminaldir.</p>}
-        </article>)}</div>
+        </article>})}</div>
       )}
       <p className="flex items-center gap-2 text-xs text-[var(--text-sub)]"><Users className="h-4 w-4" /> Bu ekran normal kullanıcı kaydını değiştirmez; ödeme, veli yönetimi veya herkese açık kurum oluşturma sunmaz.</p>
     </div>

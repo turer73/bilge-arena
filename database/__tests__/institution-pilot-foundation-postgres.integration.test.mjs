@@ -79,13 +79,22 @@ const invitationOnlyFreePilotSql = readFileSync(
   join(migrationsDir, '157_invitation_only_free_institution_pilot.sql'),
   'utf8',
 )
+const freePilotExpiryRpcClosureSql = readFileSync(
+  join(migrationsDir, '158_free_pilot_expiry_rpc_closure.sql'),
+  'utf8',
+)
+const freePilotReplayAndStudentSurfaceSql = readFileSync(
+  join(migrationsDir, '159_free_pilot_replay_and_student_surface_closure.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145 and 149-157 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
   let managerTwo
   let freePilotManager
+  let freePilotStudent
   let teacherOne
   let institutionOne
   let institutionTwo
@@ -140,6 +149,49 @@ suite('112-127, 131-135, 145 and 149-157 institution pilot real PostgreSQL accep
       caught = error
     }
     expect(caught?.code).toBe(code)
+  }
+
+  function directTenantRpcCalls(userId, institutionId) {
+    const classroomId = randomUUID()
+    const requestId = randomUUID()
+    const now = new Date()
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+    return [
+      ['public.get_institution_tracking_directory($1)', [userId]],
+      [
+        'public.get_institution_student_learning_analysis($1,$2,$3,$4,$5,$6)',
+        [userId, classroomId, 'a'.repeat(32), 'matematik', 'TYT', now],
+      ],
+      [
+        'public.get_institution_classroom_published_program_members($1,$2,$3,$4)',
+        [userId, classroomId, oneHourAgo, now],
+      ],
+      [
+        'public.get_institution_classroom_growth_metrics($1,$2,$3)',
+        [userId, classroomId, now],
+      ],
+      [
+        'public.get_institution_classroom_followup_metrics($1,$2,$3,$4)',
+        [userId, classroomId, oneHourAgo, now],
+      ],
+      ['public.get_my_institution_support_access($1)', [userId]],
+      [
+        'public.grant_my_institution_support_access($1,$2,$3,$4)',
+        [userId, 30, 'Kontrollü destek erişimi', requestId],
+      ],
+      [
+        'public.publish_institution_study_program($1,$2,$3)',
+        [userId, 'b'.repeat(32), requestId],
+      ],
+      [
+        'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+        [userId, 'b'.repeat(32), '2026-08-24', 30, '[]', requestId],
+      ],
+      [
+        'public.get_my_classroom_exam_mode($1,$2,$3)',
+        [userId, classroomId, institutionId],
+      ],
+    ]
   }
 
   beforeAll(async () => {
@@ -259,9 +311,20 @@ suite('112-127, 131-135, 145 and 149-157 institution pilot real PostgreSQL accep
     managerOne = randomUUID()
     managerTwo = randomUUID()
     freePilotManager = randomUUID()
+    freePilotStudent = randomUUID()
     teacherOne = randomUUID()
     for (let index = 0; index < 6; index += 1) capacityTeachers.push(randomUUID())
-    const users = [platformAdmin, managerOne, managerTwo, freePilotManager, teacherOne, ...capacityTeachers]
+    // Preserve the historical fixture indexes/e-mails used by later tests;
+    // the free-pilot manager is appended so existing pilot-N addresses do not shift.
+    const users = [
+      platformAdmin,
+      managerOne,
+      managerTwo,
+      teacherOne,
+      ...capacityTeachers,
+      freePilotManager,
+      freePilotStudent,
+    ]
     for (const [index, userId] of users.entries()) {
       await client.query(
         'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
@@ -333,6 +396,88 @@ suite('112-127, 131-135, 145 and 149-157 institution pilot real PostgreSQL accep
     await client.query(institutionSecurityFollowupSql)
     await client.query(accountExportReportPrivacySql)
     await client.query(invitationOnlyFreePilotSql)
+    await client.query(freePilotExpiryRpcClosureSql)
+    await client.query(freePilotReplayAndStudentSurfaceSql)
+    // A committed migration whose ledger write was lost must be safe to retry.
+    await client.query(freePilotExpiryRpcClosureSql)
+    await client.query(freePilotReplayAndStudentSurfaceSql)
+
+    const legacyRpcPrivileges = await client.query(`
+      SELECT
+        p.proname,
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
+        has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role,
+        has_function_privilege('anon', p.oid, 'EXECUTE') AS anon,
+        has_function_privilege('public', p.oid, 'EXECUTE') AS public
+      FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname LIKE 'free_pilot_legacy_%'
+      ORDER BY p.proname
+    `)
+    expect(legacyRpcPrivileges.rows).toHaveLength(15)
+    for (const privilege of legacyRpcPrivileges.rows) {
+      expect(privilege).toMatchObject({
+        authenticated: false,
+        service_role: false,
+        anon: false,
+        public: false,
+      })
+    }
+
+    const guardedRpcNames = [
+      'get_institution_tracking_directory',
+      'get_institution_student_learning_analysis',
+      'get_institution_classroom_published_program_members',
+      'get_institution_classroom_growth_metrics',
+      'get_institution_classroom_followup_metrics',
+      'get_my_institution_support_access',
+      'grant_my_institution_support_access',
+      'publish_institution_study_program',
+      'update_institution_study_program_draft',
+      'get_my_classroom_exam_mode',
+      'transfer_my_pilot_institution_manager',
+      'resolve_institution_student_followup',
+      'review_institution_study_program',
+      'submit_teacher_assignment',
+      'accept_teacher_classroom_invite',
+    ]
+    const guardedRpcPrivileges = await client.query(`
+      SELECT
+        p.proname,
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
+        has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role,
+        has_function_privilege('anon', p.oid, 'EXECUTE') AS anon,
+        has_function_privilege('public', p.oid, 'EXECUTE') AS public
+      FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = ANY($1::text[])
+      ORDER BY p.proname
+    `, [guardedRpcNames])
+    expect(guardedRpcPrivileges.rows).toHaveLength(guardedRpcNames.length)
+    for (const privilege of guardedRpcPrivileges.rows) {
+      expect(privilege).toMatchObject({
+        authenticated: true,
+        service_role: true,
+        anon: false,
+        public: false,
+      })
+    }
+
+    const serviceOnlyStudentPrivileges = await client.query(`
+      SELECT
+        p.proname,
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
+        has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role
+      FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.proname IN ('get_my_institution_study_programs', 'get_my_assistance_policy')
+      ORDER BY p.proname
+    `)
+    expect(serviceOnlyStudentPrivileges.rows).toEqual([
+      { proname: 'get_my_assistance_policy', authenticated: false, service_role: true },
+      { proname: 'get_my_institution_study_programs', authenticated: false, service_role: true },
+    ])
 
     const authenticatedBoundary = await client.query(`
       SELECT
@@ -449,11 +594,40 @@ suite('112-127, 131-135, 145 and 149-157 institution pilot real PostgreSQL accep
       ]),
       '55000',
     )
-    await client.query(
-      `UPDATE public.institution_pilot_controls
-       SET enabled=true,updated_at=clock_timestamp()
+    await expectPgError(
+      () => client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=true
+         WHERE control_key='free_provisioning'`,
+      ),
+      '22023',
+    )
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-TEST-ENABLE-001'],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=true
+         WHERE control_key='free_provisioning'`,
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
+    const controlEvents = await client.query(
+      `SELECT previous_enabled,enabled,change_reference
+       FROM public.institution_pilot_control_events
        WHERE control_key='free_provisioning'`,
     )
+    expect(controlEvents.rows).toEqual([{
+      previous_enabled: false,
+      enabled: true,
+      change_reference: 'CONTROL-TEST-ENABLE-001',
+    }])
 
     const requestId = randomUUID()
     const before = Date.now()
@@ -476,6 +650,181 @@ suite('112-127, 131-135, 145 and 149-157 institution pilot real PostgreSQL accep
     })
     expect(reviewDueAt).toBeGreaterThanOrEqual(before + 29 * 24 * 60 * 60 * 1000)
     expect(reviewDueAt).toBeLessThanOrEqual(Date.now() + 31 * 24 * 60 * 60 * 1000)
+
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.get_my_pilot_institution($1)',
+        [freePilotManager],
+        'aal1',
+      ),
+      '42501',
+    )
+    for (const [directExpression, directValues] of directTenantRpcCalls(
+      freePilotManager,
+      provisioned.institution.id,
+    )) {
+      await expectPgError(
+        () => authenticatedRpc(
+          freePilotManager,
+          directExpression,
+          directValues,
+          'aal1',
+        ),
+        '42501',
+      )
+    }
+
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.set_my_institution_manager_teacher_role($1,$2,$3)',
+      [freePilotManager, true, randomUUID()],
+    )).toMatchObject({ enabled: true, replayed: false })
+    const freeClassroom = await authenticatedRpc(
+      freePilotManager,
+      'public.create_my_institution_classroom($1,$2,$3,$4)',
+      [
+        freePilotManager,
+        provisioned.membership.memberRef,
+        'Ücretsiz Canary Sınıfı',
+        randomUUID(),
+      ],
+    )
+    const freeClassroomId = freeClassroom.classroom.id
+    const freeInviteDigest = 'f'.repeat(64)
+    await authenticatedRpc(
+      freePilotManager,
+      'public.issue_teacher_classroom_invite($1,$2,$3,$4,$5,$6)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        freeInviteDigest,
+        new Date(Date.now() + 60 * 60 * 1000),
+        1,
+        randomUUID(),
+      ],
+    )
+    const freeInviteAcceptRequest = randomUUID()
+    expect(await authenticatedRpc(
+      freePilotStudent,
+      'public.accept_teacher_classroom_invite($1,$2,$3,$4,$5)',
+      [
+        freePilotStudent,
+        freeInviteDigest,
+        'notice-v1',
+        'consent-v1',
+        freeInviteAcceptRequest,
+      ],
+      'aal1',
+    )).toMatchObject({ membershipStatus: 'active', replayed: false })
+
+    await authenticatedRpc(
+      freePilotManager,
+      'public.set_teacher_classroom_exam_mode($1,$2,$3,$4,$5)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        provisioned.institution.id,
+        true,
+        randomUUID(),
+      ],
+    )
+    expect(await rpc('public.get_my_assistance_policy($1)', [freePilotStudent]))
+      .toMatchObject({ examMode: true, board: false, coach: false, assistant: false })
+
+    const freeQuestionId = randomUUID()
+    await client.query(
+      `INSERT INTO public.questions(id,game,category,topic,difficulty,content,is_active)
+       VALUES($1,'matematik','Temel','Toplama',1,$2::jsonb,true)`,
+      [
+        freeQuestionId,
+        JSON.stringify({ question: 'İki artı iki kaçtır?', options: ['3', '4'], answer: 1 }),
+      ],
+    )
+    const freeAssignment = await authenticatedRpc(
+      freePilotManager,
+      'public.publish_teacher_assignment($1,$2,$3,$4,$5,$6,$7)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        'Canary ödevi',
+        JSON.stringify([{ position: 1, questionId: freeQuestionId }]),
+        new Date(Date.now() - 60 * 1000),
+        new Date(Date.now() + 60 * 60 * 1000),
+        randomUUID(),
+      ],
+    )
+    const freeAssignmentAnswers = JSON.stringify([{ position: 1, selectedOption: 1 }])
+    const freeAssignmentSubmitRequest = randomUUID()
+    expect(await authenticatedRpc(
+      freePilotStudent,
+      'public.submit_teacher_assignment($1,$2,$3,$4)',
+      [
+        freePilotStudent,
+        freeAssignment.assignmentId,
+        freeAssignmentAnswers,
+        freeAssignmentSubmitRequest,
+      ],
+      'aal1',
+    )).toMatchObject({ assignmentId: freeAssignment.assignmentId, replayed: false })
+    expect(await authenticatedRpc(
+      freePilotStudent,
+      'public.submit_teacher_assignment($1,$2,$3,$4)',
+      [
+        freePilotStudent,
+        freeAssignment.assignmentId,
+        freeAssignmentAnswers,
+        freeAssignmentSubmitRequest,
+      ],
+      'aal1',
+    )).toMatchObject({ assignmentId: freeAssignment.assignmentId, replayed: true })
+
+    const membership = await client.query(
+      `SELECT id,member_ref FROM public.teacher_classroom_memberships
+       WHERE classroom_id=$1 AND student_id=$2 AND status='active'`,
+      [freeClassroomId, freePilotStudent],
+    )
+    const weekStart = (await client.query(
+      "SELECT to_char(date_trunc('week',current_date)::date,'YYYY-MM-DD') AS value",
+    )).rows[0].value
+    const programItems = JSON.stringify([{
+      position: 1,
+      scheduledDate: weekStart,
+      taskType: 'verified_questions',
+      title: 'Canary tekrar çalışması',
+      reasonCode: 'current_target',
+      durationMinutes: 20,
+      targetQuestionCount: 10,
+    }])
+    const freeProgram = await authenticatedRpc(
+      freePilotManager,
+      'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        membership.rows[0].member_ref,
+        weekStart,
+        30,
+        'institution-program-v1',
+        programItems,
+        randomUUID(),
+      ],
+    )
+    await authenticatedRpc(
+      freePilotManager,
+      'public.publish_institution_study_program($1,$2,$3)',
+      [freePilotManager, freeProgram.programRef, randomUUID()],
+    )
+    expect((await rpc(
+      'public.get_my_institution_study_programs($1,$2)',
+      [freePilotStudent, weekStart],
+    )).programs).toHaveLength(1)
+
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.grant_my_institution_support_access($1,$2,$3,$4)',
+      [freePilotManager, 30, 'Canary süresince kontrollü destek', randomUUID()],
+    )).toMatchObject({ active: true, replayed: false })
 
     expect(await authenticatedRpc(platformAdmin, expression, [
       platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
@@ -552,6 +901,80 @@ suite('112-127, 131-135, 145 and 149-157 institution pilot real PostgreSQL accep
       [provisioned.institution.id],
     )
     expect(expiredOperational.rows[0].allowed).toBe(false)
+    for (const [directExpression, directValues] of directTenantRpcCalls(
+      freePilotManager,
+      provisioned.institution.id,
+    )) {
+      await expectPgError(
+        () => authenticatedRpc(freePilotManager, directExpression, directValues),
+        '42501',
+      )
+    }
+    for (const [replayExpression, replayValues] of [
+      [
+        'public.transfer_my_pilot_institution_manager($1,$2,$3)',
+        [freePilotManager, 'c'.repeat(32), randomUUID()],
+      ],
+      [
+        'public.resolve_institution_student_followup($1,$2,$3)',
+        [freePilotManager, 'd'.repeat(32), randomUUID()],
+      ],
+      [
+        'public.review_institution_study_program($1,$2,$3,$4,$5)',
+        [freePilotManager, 'e'.repeat(32), 'effective', null, randomUUID()],
+      ],
+    ]) {
+      await expectPgError(
+        () => authenticatedRpc(freePilotManager, replayExpression, replayValues),
+        '42501',
+      )
+    }
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotStudent,
+        'public.accept_teacher_classroom_invite($1,$2,$3,$4,$5)',
+        [
+          freePilotStudent,
+          freeInviteDigest,
+          'notice-v1',
+          'consent-v1',
+          freeInviteAcceptRequest,
+        ],
+        'aal1',
+      ),
+      'P0003',
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotStudent,
+        'public.submit_teacher_assignment($1,$2,$3,$4)',
+        [
+          freePilotStudent,
+          freeAssignment.assignmentId,
+          freeAssignmentAnswers,
+          freeAssignmentSubmitRequest,
+        ],
+        'aal1',
+      ),
+      'P0002',
+    )
+    expect((await rpc(
+      'public.get_my_institution_study_programs($1,$2)',
+      [freePilotStudent, weekStart],
+    )).programs).toEqual([])
+    expect(await rpc('public.get_my_assistance_policy($1)', [freePilotStudent]))
+      .toMatchObject({ examMode: false, board: true, coach: true, assistant: true })
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.revoke_my_institution_support_access($1,$2)',
+      [freePilotManager, randomUUID()],
+    )).toMatchObject({ active: false, replayed: false })
+    expect(await authenticatedRpc(
+      freePilotStudent,
+      'public.withdraw_teacher_classroom_membership($1,$2,$3)',
+      [freePilotStudent, freeClassroomId, randomUUID()],
+      'aal1',
+    )).toMatchObject({ membershipStatus: 'withdrawn', replayed: false })
 
     const suspendRequestId = randomUUID()
     expect(await authenticatedRpc(

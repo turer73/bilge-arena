@@ -91,4 +91,39 @@ describe('admin institution free-pilot page', () => {
     expect(screen.getByLabelText(/Kurum adı/i)).toBeDisabled()
     expect(screen.getByLabelText(/İlk kurum yöneticisi/i)).toBeDisabled()
   })
+
+  it('shows expired free pilots as access-closed and prevents reactivation', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      institutions: [{
+        id: '11111111-1111-4111-8111-111111111111',
+        name: 'Süresi Dolan Dershane',
+        status: 'pilot',
+        studentLimit: 30,
+        studentCount: 4,
+        staffLimit: 2,
+        staffCount: 1,
+        classroomCount: 1,
+        pilotKind: 'invitation_free',
+        approvalReference: 'PILOT-2026-EXPIRED',
+        reviewDueAt: '2026-01-01T00:00:00.000Z',
+        manager: null,
+        supportAccess: {
+          active: true,
+          expiresAt: '2099-01-01T00:00:00.000Z',
+          reason: 'Eski destek izni',
+        },
+        createdAt: '2025-12-01T00:00:00.000Z',
+      }],
+      provisioning: { invitationFreePilotEnabled: true },
+    })))
+
+    render(<AdminInstitutionsPage />)
+
+    expect(await screen.findByText('erişim kapalı')).toBeInTheDocument()
+    expect(screen.getByText(/tenant erişimi kapalıdır/i)).toBeInTheDocument()
+    expect(screen.getByText(/kurum desteği ve tenant erişimi kapalı/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aktifleştir' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /destek görünümünü aç/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Askıya al' })).toBeInTheDocument()
+  })
 })

@@ -45,6 +45,10 @@ BEGIN
 END;
 $block$;
 
+CREATE UNIQUE INDEX IF NOT EXISTS pilot_institutions_free_approval_ref_unique
+  ON public.pilot_institutions (approval_ref)
+  WHERE pilot_kind = 'invitation_free';
+
 CREATE TABLE IF NOT EXISTS public.institution_pilot_controls (
   control_key text PRIMARY KEY CHECK (control_key IN ('free_provisioning')),
   enabled boolean NOT NULL DEFAULT false,
@@ -57,6 +61,61 @@ ON CONFLICT (control_key) DO NOTHING;
 
 ALTER TABLE public.institution_pilot_controls ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.institution_pilot_controls
+FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE TABLE IF NOT EXISTS public.institution_pilot_control_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  control_key text NOT NULL CHECK (control_key = 'free_provisioning'),
+  previous_enabled boolean NOT NULL,
+  enabled boolean NOT NULL,
+  change_reference text NOT NULL
+    CHECK (change_reference ~ '^[A-Z0-9][A-Z0-9._/-]{5,63}$'),
+  database_actor text NOT NULL,
+  changed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  CHECK (previous_enabled IS DISTINCT FROM enabled),
+  UNIQUE (control_key, change_reference)
+);
+
+ALTER TABLE public.institution_pilot_control_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.institution_pilot_control_events
+FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.audit_institution_pilot_control_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_change_reference text := upper(btrim(
+    current_setting('app.institution_control_change_ref', true)
+  ));
+BEGIN
+  NEW.updated_at := clock_timestamp();
+  IF NEW.enabled IS NOT DISTINCT FROM OLD.enabled THEN
+    RETURN NEW;
+  END IF;
+  IF v_change_reference IS NULL
+    OR v_change_reference !~ '^[A-Z0-9][A-Z0-9._/-]{5,63}$' THEN
+    RAISE EXCEPTION 'institution pilot control change reference required'
+      USING ERRCODE = '22023';
+  END IF;
+  INSERT INTO public.institution_pilot_control_events(
+    control_key, previous_enabled, enabled, change_reference, database_actor
+  ) VALUES (
+    NEW.control_key, OLD.enabled, NEW.enabled, v_change_reference, session_user
+  );
+  RETURN NEW;
+END;
+$fn$;
+
+DROP TRIGGER IF EXISTS institution_pilot_control_change_audit
+  ON public.institution_pilot_controls;
+CREATE TRIGGER institution_pilot_control_change_audit
+BEFORE UPDATE ON public.institution_pilot_controls
+FOR EACH ROW EXECUTE FUNCTION public.audit_institution_pilot_control_change();
+
+REVOKE ALL ON FUNCTION public.audit_institution_pilot_control_change()
 FROM PUBLIC, anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.institution_pilot_is_operational(
@@ -266,8 +325,10 @@ BEGIN
   IF p_user_id IS NULL THEN
     RAISE EXCEPTION 'user required' USING ERRCODE = '22023';
   END IF;
-  IF auth.uid() IS NOT NULL AND auth.uid() IS DISTINCT FROM p_user_id THEN
-    RAISE EXCEPTION 'institution actor mismatch' USING ERRCODE = '42501';
+  IF (auth.uid() IS NOT NULL AND auth.uid() IS DISTINCT FROM p_user_id)
+    OR NOT public.institution_rpc_actor_has_aal2(p_user_id) THEN
+    RAISE EXCEPTION 'institution actor mismatch or AAL2 required'
+      USING ERRCODE = '42501';
   END IF;
   SELECT membership.* INTO v_membership
   FROM public.pilot_institution_memberships AS membership
@@ -586,6 +647,7 @@ BEGIN
     SELECT support_grant.expires_at, support_grant.reason
     FROM public.institution_support_grants AS support_grant
     WHERE support_grant.institution_id = institution.id
+      AND public.institution_pilot_is_operational(institution.id)
       AND support_grant.revoked_at IS NULL
       AND support_grant.expires_at > clock_timestamp()
     ORDER BY support_grant.expires_at DESC LIMIT 1
@@ -626,8 +688,9 @@ REVOKE ALL ON FUNCTION
 FROM PUBLIC, anon, authenticated, service_role;
 
 REVOKE ALL ON FUNCTION public.get_my_pilot_institution(uuid)
-FROM PUBLIC, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.get_my_pilot_institution(uuid) TO authenticated;
+FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.get_my_pilot_institution(uuid)
+TO authenticated, service_role;
 
 REVOKE ALL ON FUNCTION public.list_pilot_institutions(uuid)
 FROM PUBLIC, anon, service_role;

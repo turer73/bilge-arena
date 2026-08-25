@@ -13,6 +13,7 @@ describe('invitation-only free institution pilot SQL boundary', () => {
     expect(sql).toContain('p_staff_limit NOT BETWEEN 1 AND 2')
     expect(sql).toContain('p_trial_days NOT BETWEEN 14 AND 60')
     expect(sql).toContain("v_approval_ref !~ '^[A-Z0-9][A-Z0-9._/-]{5,63}$'")
+    expect(sql).toContain('pilot_institutions_free_approval_ref_unique')
     expect(sql).not.toContain('INSTITUTION_ONBOARDING_ENABLED')
   })
 
@@ -22,6 +23,7 @@ describe('invitation-only free institution pilot SQL boundary', () => {
     expect(sql).toContain('NOT public.institution_rpc_actor_has_aal2(p_user_id)')
     expect(sql).toContain('public.institution_pilot_is_platform_admin(p_user_id)')
     expect(sql).toContain("control.control_key = 'free_provisioning' AND control.enabled")
+    expect(sql).toContain('institution actor mismatch or AAL2 required')
   })
 
   it('uses the retained request ledger and writes immutable non-PII audit metadata', () => {
@@ -31,6 +33,16 @@ describe('invitation-only free institution pilot SQL boundary', () => {
     expect(sql).toContain("'studentLimit'")
     expect(sql).toContain("'reviewDueAt'")
     expect(sql).not.toMatch(/metadata[\s\S]{0,500}managerUserId/i)
+  })
+
+  it('requires a non-PII change reference for the separate database gate', () => {
+    expect(sql).toContain('public.institution_pilot_control_events')
+    expect(sql).toContain("current_setting('app.institution_control_change_ref', true)")
+    expect(sql).toContain('institution pilot control change reference required')
+    expect(sql).toContain('CREATE TRIGGER institution_pilot_control_change_audit')
+    expect(sql).toMatch(
+      /REVOKE ALL ON TABLE public\.institution_pilot_control_events[\s\S]*?FROM PUBLIC, anon, authenticated, service_role;/,
+    )
   })
 
   it('fails tenant access closed after the review deadline', () => {
