@@ -52,7 +52,9 @@ karari uretemez.
 - `database/audit-validate.mjs`: daha once `validate-question-bank.mjs` lehine
   emekliye ayrilmistir.
 
-Tarihsel uretim/seed betikleri dogrudan insert kodu tasiyabilir. Canlida
-`content_governance_runtime.enforce_direct_mutation=true` oldugunda DB bunlari
-reddeder; yeni otomasyonlar bu betikleri ornek almamali, yonetimli taslak RPC'sini
-kullanmalidir.
+Tarihsel uretim/seed betikleri dogrudan `questions` DML kodu tasiyabilir.
+Migration 163 sonrasinda `anon`, `authenticated` ve `service_role` rollerinin
+INSERT/UPDATE/DELETE yetkisi yoktur; bu betikler servis anahtariyla fail-closed
+olur. Yeni otomasyonlar yonetimli taslak RPC'sini kullanmalidir. Acil bakim
+gerekiyorsa API anahtari bir "break glass" yolu degildir: owner yetkili,
+incelemeli ve kayitli bir SQL migration'i gerekir.

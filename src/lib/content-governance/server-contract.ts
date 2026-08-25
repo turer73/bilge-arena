@@ -15,6 +15,16 @@ export const revisionReviewInputSchema = z.object({
   stage: z.union([z.literal(1), z.literal(2)]), decision: z.enum(['approved', 'rejected']),
   rationale: text(500), requestId: uuid,
 }).strict()
+const revisionOutcomeInputSchema = z.object({
+  outcomeId: uuid, weight: z.number().positive().max(1).multipleOf(0.001), primary: z.boolean(),
+}).strict()
+export const revisionOutcomesInputSchema = z.object({
+  outcomes: z.array(revisionOutcomeInputSchema).min(1).max(5), requestId: uuid,
+}).strict().refine(
+  (value) => value.outcomes.filter((outcome) => outcome.primary).length === 1
+    && new Set(value.outcomes.map((outcome) => outcome.outcomeId)).size === value.outcomes.length,
+  { message: 'Exactly one unique primary outcome is required' },
+)
 export const requestIdInputSchema = z.object({ requestId: uuid }).strict()
 export const quarantineInputSchema = z.object({ reason: text(500), requestId: uuid }).strict()
 export const appealSubmitInputSchema = z.object({
@@ -43,6 +53,10 @@ const revisionMutationResultSchema = z.object({
   replayed: z.boolean(),
   revisionId: uuid.optional(),
   status: z.string().max(40).optional(),
+  mappingRequired: z.boolean().optional(),
+  outcomeCount: z.number().int().min(1).max(5).optional(),
+  mappingChanged: z.boolean().optional(),
+  stage1ApprovalInvalidated: z.boolean().optional(),
 }).strip()
 export const revisionCreateResultSchema = revisionMutationResultSchema
 export const revisionReviewResultSchema = revisionMutationResultSchema
@@ -122,7 +136,14 @@ const revisionDetailSchema = z.object({
     url: z.string().url().optional(), licenseCode: z.string().max(80), licenseUrl: z.string().url().optional(),
     attribution: z.string().max(1000).optional(), provenanceRef: z.string().max(500).optional(),
   }).strict(),
-  outcomes: z.array(z.object({ outcomeId: uuid, weight: z.number().positive().max(1), primary: z.boolean() }).strict()).max(5),
+  outcomes: z.array(z.object({
+    outcomeId: uuid, weight: z.number().positive().max(1), primary: z.boolean(),
+    code: z.string().max(80).optional(), title: z.string().max(200).optional(),
+    examRef: z.string().max(20).nullable().optional(), taxonomyVersion: z.string().max(80).optional(),
+    scopeValid: z.boolean().optional(), path: z.array(z.object({
+      code: z.string().max(80), title: z.string().max(200), nodeType: z.enum(['course', 'unit', 'topic', 'outcome']),
+    }).strict()).max(4).optional(),
+  }).strict()).max(5),
   approvals: z.array(z.object({ stage: z.union([z.literal(1), z.literal(2)]), decision: z.enum(['approved', 'rejected']), decidedAt: timestamp }).strict()).max(2),
   validation: z.object({
     policyVersion: z.string().max(100),

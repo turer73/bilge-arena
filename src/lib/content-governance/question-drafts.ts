@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import type { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { contentRpc } from './route-context'
+import { loadValidatedOutcomeScopes, type OutcomeScopeRow } from './curriculum-scope'
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
 type SourceKind = 'original' | 'licensed' | 'public_domain' | 'user_generated' | 'official_exam'
@@ -40,9 +41,38 @@ const resultSchema = z.object({
 }).strip()
 
 export async function createGovernedQuestionDraft(admin: ServiceClient, input: GovernedQuestionDraftInput) {
+  // Outcome kimligi istemciden gelir, fakat akademik kapsam istemciye
+  // guvenilerek payload'a kopyalanmaz. Aktif leaf'in game/category/exam
+  // kapsamini sunucu okur ve metadata'yi ona baglar. Migration 164 ayni
+  // sozlesmeyi DB trigger'i ile de zorunlu tutar.
+  const { data: outcome, error: outcomeError } = await admin
+    .from('curriculum_outcomes')
+    .select('id,game,category,exam_ref,is_active,node_id,taxonomy_version')
+    .eq('id', input.outcomeId)
+    .maybeSingle()
+  if (
+    outcomeError
+    || !outcome
+    || !outcome.is_active
+    || !outcome.node_id
+    || !outcome.taxonomy_version
+    || outcome.game !== input.metadata.game
+    || outcome.category !== input.metadata.category
+  ) return { data: null, error: { code: '22023' } }
+
+  const validated = await loadValidatedOutcomeScopes(admin, [outcome as OutcomeScopeRow])
+  if (validated.error || !validated.data?.has(outcome.id)) {
+    return { data: null, error: { code: '22023' } }
+  }
+
+  const requestedExamRef = input.metadata.examRef?.trim() || null
+  if (requestedExamRef && requestedExamRef !== outcome.exam_ref) {
+    return { data: null, error: { code: '22023' } }
+  }
+
   const payload = {
     content: input.content,
-    metadata: input.metadata,
+    metadata: { ...input.metadata, examRef: requestedExamRef ?? outcome.exam_ref },
     outcomes: [{ outcomeId: input.outcomeId, weight: 1, primary: true }],
     source: input.source,
     changeKind: 'create',
