@@ -69,7 +69,14 @@ describe('teacher invitation head bootstrap', () => {
     const thirdPartyMountIndex = layout.indexOf('<PrivacySafeThirdPartyScripts />')
     const globalHeadersIndex = config.indexOf("source: '/(.*)'")
     const privateHeadersIndex = config.indexOf("source: '/arena/sinif/:path*'")
-    const privateBlockEnd = config.indexOf('// Statik asset', privateHeadersIndex)
+    // Blok sinirini BIR SONRAKI `source:` kaydinda kes. Onceden '// Statik asset'
+    // isaretine kadar dilimleniyordu; araya baska bir kural blogu (ornegin admin
+    // CSP'si) girdiginde onun icerigi de bu bloga sayiliyor ve asagidaki
+    // "analitik/reklam gecmesin" iddiasi yanlis yere bakiyordu.
+    const nextSourceIndex = config.indexOf('source:', privateHeadersIndex + 1)
+    const privateBlockEnd = nextSourceIndex > -1
+      ? nextSourceIndex
+      : config.indexOf('// Statik asset', privateHeadersIndex)
     const privateBlock = config.slice(privateHeadersIndex, privateBlockEnd)
 
     expect(bootstrapIndex).toBeGreaterThan(-1)
@@ -80,5 +87,32 @@ describe('teacher invitation head bootstrap', () => {
     expect(privateBlock).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'")
     expect(privateBlock).not.toMatch(/analytics\.panola|googletagmanager|googlesyndication|sentry/i)
     expect(privateBlock).toContain("{ key: 'Referrer-Policy', value: 'no-referrer' }")
+  })
+
+  /**
+   * Guvenlik denetimi 2026-08-25 (B6): 'unsafe-eval' global blokta AdSense
+   * gerekcesiyle duruyor, ama admin ve ogretmen yuzeylerinde reklam yok.
+   * Kademeli sikilastirma icin once Report-Only olcum konuldu; bu test o
+   * olcumun sessizce kaybolmasini engeller.
+   */
+  it('measures the eval-free policy with Report-Only on ad-free surfaces', () => {
+    const config = fs.readFileSync(path.join(process.cwd(), 'next.config.mjs'), 'utf8')
+
+    const adminIndex = config.indexOf("source: '/admin/:path*'", config.indexOf("source: '/(.*)'"))
+    const adminBlockEnd = config.indexOf('source:', adminIndex + 1)
+    const adminBlock = config.slice(adminIndex, adminBlockEnd > -1 ? adminBlockEnd : undefined)
+
+    expect(adminIndex).toBeGreaterThan(-1)
+    expect(adminBlock).toContain("key: 'Content-Security-Policy-Report-Only'")
+    expect(adminBlock).not.toContain("'unsafe-eval'")
+    expect(adminBlock).not.toMatch(/googlesyndication|googletagmanager|plausible/i)
+    expect(adminBlock).toContain('report-uri https://csp.3d-labx.com/csp-report')
+
+    const sinifIndex = config.indexOf("source: '/arena/sinif/:path*'")
+    const sinifBlock = config.slice(sinifIndex, config.indexOf('source:', sinifIndex + 1))
+    const reportOnlyIndex = sinifBlock.indexOf("key: 'Content-Security-Policy-Report-Only'")
+    expect(reportOnlyIndex).toBeGreaterThan(-1)
+    // Report-Only kismi enforcing kismin ardindan gelir ve eval icermez.
+    expect(sinifBlock.slice(reportOnlyIndex)).not.toContain("'unsafe-eval'")
   })
 })
