@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { trackEvent } from '@/lib/utils/plausible'
 import { validateEmail, getEmailErrorMessage } from '@/lib/utils/email'
+import { safeAuthNext } from '@/lib/auth/safe-next'
 
 interface SignupPromptModalProps {
   level: 1 | 2 | 3
@@ -53,6 +54,11 @@ type MagicLinkState =
 
 const COOLDOWN_MS = 60_000 // Supabase server-side limit ile senkron
 
+function currentSignupReturnPath(): string {
+  if (typeof window === 'undefined') return '/arena'
+  return safeAuthNext(`${window.location.pathname}${window.location.search}${window.location.hash}`)
+}
+
 export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: SignupPromptModalProps) {
   const { signInWithGoogle, signInWithMagicLink } = useAuth()
   const tracked = useRef(false)
@@ -101,7 +107,7 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
 
   const handlePrimary = async () => {
     trackEvent('PromptCtaClicked', { props: { level, outcome: 'signup' } })
-    await signInWithGoogle()
+    await signInWithGoogle(currentSignupReturnPath())
   }
 
   const handleSecondary = () => {
@@ -139,7 +145,7 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
     trackEvent('MagicLinkRequested', { props: { level } })
     setMl({ status: 'sending', email: validation.normalized })
 
-    const result = await signInWithMagicLink(validation.normalized)
+    const result = await signInWithMagicLink(validation.normalized, currentSignupReturnPath())
     if (result.ok) {
       trackEvent('MagicLinkSent', { props: { level } })
       setMl({
@@ -156,7 +162,7 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
   const handleResend = async () => {
     if (ml.status !== 'sent' || cooldownRemaining > 0) return
     setMl({ status: 'sending', email: ml.email })
-    const result = await signInWithMagicLink(ml.email)
+    const result = await signInWithMagicLink(ml.email, currentSignupReturnPath())
     if (result.ok) {
       trackEvent('MagicLinkSent', { props: { level, resend: true } })
       setMl({

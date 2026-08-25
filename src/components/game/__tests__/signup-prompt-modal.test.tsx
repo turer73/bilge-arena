@@ -26,6 +26,7 @@ describe('SignupPromptModal', () => {
     signInWithGoogleMock.mockClear()
     signInWithMagicLinkMock.mockClear()
     trackEventMock.mockClear()
+    window.history.replaceState({}, '', '/arena/matematik?source=guest')
   })
 
   it('open=false iken render etmez', () => {
@@ -70,7 +71,7 @@ describe('SignupPromptModal', () => {
     render(<SignupPromptModal level={2} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
     fireEvent.click(screen.getByText('Google ile Kaydet'))
     expect(trackEventMock).toHaveBeenCalledWith('PromptCtaClicked', { props: { level: 2, outcome: 'signup' } })
-    expect(signInWithGoogleMock).toHaveBeenCalled()
+    expect(signInWithGoogleMock).toHaveBeenCalledWith('/arena/matematik?source=guest')
   })
 
   it('Level 1 secondary button: onDismiss cagrilir, dismissed event fire', () => {
@@ -153,7 +154,10 @@ describe('SignupPromptModal', () => {
         fireEvent.click(screen.getByText('Giris Linki Gonder'))
       })
       expect(trackEventMock).toHaveBeenCalledWith('MagicLinkRequested', { props: { level: 1 } })
-      expect(signInWithMagicLinkMock).toHaveBeenCalledWith('test@example.com')
+      expect(signInWithMagicLinkMock).toHaveBeenCalledWith(
+        'test@example.com',
+        '/arena/matematik?source=guest',
+      )
     })
 
     it('basarili gonderim: MagicLinkSent event + success UI', async () => {

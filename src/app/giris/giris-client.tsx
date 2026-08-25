@@ -19,9 +19,13 @@ export default function GirisClient() {
     fallbackNext = '/arena',
     forceAccountSelection = false,
   ) => {
-    const rawNext = typeof window === 'undefined'
+    const searchParams = typeof window === 'undefined'
       ? null
-      : new URLSearchParams(window.location.search).get('next')
+      : new URLSearchParams(window.location.search)
+    // `next` yeni ve kanonik parametredir. Eski uygulama yuzeylerinden veya
+    // paylasilmis baglantilardan gelen `redirect` de guvenli relative-path
+    // denetiminden gecirilerek geriye donuk uyumluluk icin kabul edilir.
+    const rawNext = searchParams?.get('next') ?? searchParams?.get('redirect')
     const requestedNext = safeAuthNext(rawNext ?? fallbackNext)
     // Once giris yap, sonra consent logla
     if (forceAccountSelection) {
