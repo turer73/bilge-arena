@@ -208,12 +208,15 @@ export function useAuth() {
    */
   async function signInWithMagicLink(
     email: string,
+    next = '/arena',
   ): Promise<{ ok: true } | { ok: false; error: string }> {
     try {
+      const callbackUrl = new URL('/auth/callback', window.location.origin)
+      callbackUrl.searchParams.set('next', safeAuthNext(next))
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: callbackUrl.toString(),
           shouldCreateUser: true,
         },
       })

@@ -42,10 +42,25 @@ describe('admin proxy permission boundary', () => {
     mockGetAal.mockResolvedValue({ data: { currentLevel: 'aal2', nextLevel: 'aal2' }, error: null })
   })
 
-  it('redirects an unauthenticated request to login', async () => {
+  it('redirects an unauthenticated request to login without losing the admin target', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } })
-    const response = await proxy(request())
-    expect(response.headers.get('location')).toBe('https://bilgearena.com/giris')
+    const response = await proxy(request('/admin/kurumlar?tab=active'))
+    expect(response.headers.get('location')).toBe(
+      'https://bilgearena.com/giris?next=%2Fadmin%2Fkurumlar%3Ftab%3Dactive',
+    )
+    expect(mockPermissionViaRest).not.toHaveBeenCalled()
+  })
+
+  it('preserves encoded admin query values and refreshed cookies on the login redirect', async () => {
+    mockCookieRefresh.enabled = true
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+
+    const response = await proxy(request('/admin/kurumlar?tab=active&filter=a%2Fb'))
+    const location = new URL(response.headers.get('location')!)
+
+    expect(location.pathname).toBe('/giris')
+    expect(location.searchParams.get('next')).toBe('/admin/kurumlar?tab=active&filter=a%2Fb')
+    expect(response.cookies.get('sb-access-token')?.value).toBe('refreshed')
     expect(mockPermissionViaRest).not.toHaveBeenCalled()
   })
 

@@ -100,7 +100,12 @@ export async function proxy(request: NextRequest) {
   // gerçek bir admin yüzeyi izni /admin kabuğunu açabilir.
   if (isAdminSurface) {
     if (!user) {
-      return preserveRefreshedCookies(response, NextResponse.redirect(new URL('/giris', request.url)))
+      const loginUrl = new URL('/giris', request.url)
+      loginUrl.searchParams.set(
+        'next',
+        safeMfaReturnPath(`${pathname}${request.nextUrl.search}`),
+      )
+      return preserveRefreshedCookies(response, NextResponse.redirect(loginUrl))
     }
     const serviceKey =
       process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
