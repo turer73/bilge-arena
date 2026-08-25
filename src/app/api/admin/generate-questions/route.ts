@@ -241,9 +241,15 @@ export async function POST(req: Request) {
   }
 
   // ── Few-shot: Artık Altın Örnekler kullanılıyor (yukarıda enjekte edildi) ───────
+  // Ornek/duplicate okumalari service-role ile yapilir: `questions.content`
+  // uzerindeki SELECT hakki migration 157'de `authenticated` rolunden alindi
+  // (cevap anahtari sizintisi). Yetki kapisi zaten yukaridaki checkPermission.
+  // Bu iki okuma try/catch icinde oldugundan cookie client'ta kalsalardi hata
+  // vermeden sessizce bosalirlardi (few-shot ve duplicate kontrolu olurdu).
+  const questionReader = createServiceRoleClient()
   let fewShotText = ''
   try {
-    let query = supabase.from('questions').select('content').eq('game', game).eq('category', category).eq('is_active', true).limit(3)
+    let query = questionReader.from('questions').select('content').eq('game', game).eq('category', category).eq('is_active', true).limit(3)
     if (topic) query = query.eq('topic', topic)
     const { data: examples } = await query
     if (examples && examples.length > 0) {
@@ -261,7 +267,7 @@ export async function POST(req: Request) {
   // ── Mevcut soru metinlerini duplicate kontrolu icin cek ──
   const existingPrefixes: Set<string> = new Set()
   try {
-    const { data: existing } = await supabase
+    const { data: existing } = await questionReader
       .from('questions')
       .select('content')
       .eq('game', game)

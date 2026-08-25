@@ -5,7 +5,13 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import { parseQuestionContent, parseQuestionRows, toDomainQuestion, toPublicQuestion } from '../question-public'
+import {
+  parsePublicQuestionContent,
+  parseQuestionContent,
+  parseQuestionRows,
+  toDomainQuestion,
+  toPublicQuestion,
+} from '../question-public'
 import type { Question } from '@/types/database'
 import type { QuestionRow } from '../question-public'
 
@@ -114,5 +120,49 @@ describe('generated question boundary', () => {
   test('rejects malformed JSON content instead of casting it', () => {
     expect(parseQuestionContent({ question: 'Broken', options: ['only-one'], answer: 4 })).toBeNull()
     expect(parseQuestionRows([{ ...GENERATED_ROW, content: { unexpected: true } }])).toEqual([])
+  })
+})
+
+/**
+ * Migration 157: `search_questions` admin olmayan dalda cevap anahtarını
+ * veritabanında kırpıyor. Listeleme yolu bu kırpılmış içerikle çalışmak
+ * zorunda; `answer` zorunlu tutulursa her satır sessizce düşerdi.
+ */
+describe('parsePublicQuestionContent', () => {
+  test('cevap anahtarı kırpılmış içeriği kabul eder (migration 157 şekli)', () => {
+    expect(parsePublicQuestionContent({
+      question: 'Soru?',
+      options: ['a', 'b', 'c', 'd'],
+      sentence: 'Cümle',
+      type: 'multiple_choice',
+    })).toEqual({
+      question: 'Soru?',
+      options: ['a', 'b', 'c', 'd'],
+      sentence: 'Cümle',
+      type: 'multiple_choice',
+    })
+  })
+
+  test('cevap anahtarı hâlâ gelse bile dışarı taşımaz (ikinci katman)', () => {
+    const pub = parsePublicQuestionContent({
+      question: 'Soru?',
+      options: ['a', 'b', 'c', 'd'],
+      answer: 2,
+      solution: 'Çözüm.',
+      explanation: 'Açıklama.',
+      hint: 'İpucu.',
+    })
+    expect(pub).toEqual({ question: 'Soru?', options: ['a', 'b', 'c', 'd'] })
+    expect(pub).not.toHaveProperty('answer')
+    expect(pub).not.toHaveProperty('solution')
+    expect(pub).not.toHaveProperty('explanation')
+    expect(pub).not.toHaveProperty('hint')
+  })
+
+  test('bozuk içeriği reddeder', () => {
+    expect(parsePublicQuestionContent({ question: 'Broken', options: ['only-one'] })).toBeNull()
+    expect(parsePublicQuestionContent({ unexpected: true })).toBeNull()
+    // answer geldiyse hâlâ seçenek sınırını aşmamalı
+    expect(parsePublicQuestionContent({ question: 'S', options: ['a', 'b'], answer: 5 })).toBeNull()
   })
 })
