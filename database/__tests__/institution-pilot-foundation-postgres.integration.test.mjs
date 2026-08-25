@@ -779,7 +779,7 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       () => client.query(
         `INSERT INTO public.pilot_institutions(
            name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
-         ) VALUES($1,$2,'archived',41,2,'invitation_free',now() + interval '30 days',$3)`,
+         ) VALUES($1,$2,'suspended',41,2,'invitation_free',now() + interval '30 days',$3)`,
         ['Öğrenci sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-STUDENT-001'],
       ),
       '23514',
@@ -788,7 +788,7 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       () => client.query(
         `INSERT INTO public.pilot_institutions(
            name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
-         ) VALUES($1,$2,'archived',40,3,'invitation_free',now() + interval '30 days',$3)`,
+         ) VALUES($1,$2,'suspended',40,3,'invitation_free',now() + interval '30 days',$3)`,
         ['Personel sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-STAFF-001'],
       ),
       '23514',
@@ -797,7 +797,7 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       () => client.query(
         `INSERT INTO public.pilot_institutions(
            name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
-         ) VALUES($1,$2,'archived',40,2,'invitation_free',now() + interval '13 days',$3)`,
+         ) VALUES($1,$2,'suspended',40,2,'invitation_free',now() + interval '13 days',$3)`,
         ['Alt süre sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-MIN-DAYS-001'],
       ),
       '23514',
@@ -806,7 +806,7 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       () => client.query(
         `INSERT INTO public.pilot_institutions(
            name,created_by,status,student_limit,staff_limit,pilot_kind,review_due_at,approval_ref
-         ) VALUES($1,$2,'archived',40,2,'invitation_free',now() + interval '61 days',$3)`,
+         ) VALUES($1,$2,'suspended',40,2,'invitation_free',now() + interval '61 days',$3)`,
         ['Süre sınırı aşılmış canary', platformAdmin, 'PILOT-LIMIT-DAYS-001'],
       ),
       '23514',
@@ -817,11 +817,11 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
          name,created_by,status,student_limit,staff_limit,pilot_kind,
          review_due_at,approval_ref,created_at
        ) VALUES(
-         $1,$2,'archived',40,2,'invitation_free',
+         $1,$2,'suspended',40,2,'invitation_free',
          $3::timestamptz + interval '60 days',$4,$3
        ) RETURNING id`,
       [
-        'Tam sınırda arşivli canary',
+        'Tam sınırda askıya alınmış canary',
         platformAdmin,
         boundaryCreatedAt,
         'PILOT-LIMIT-BOUNDARY-001',
