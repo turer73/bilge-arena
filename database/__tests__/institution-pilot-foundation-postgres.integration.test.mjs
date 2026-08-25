@@ -1116,15 +1116,16 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     ]))
 
     // Simulate wall-clock passage without weakening the production trigger:
-    // the deadline can pass without an UPDATE, leaving status='pilot' while
-    // all tenant authorization helpers must already fail closed.
+    // move the fixture's creation and deadline together so the original pilot
+    // duration remains valid while authorization observes an elapsed deadline.
     await client.query(
       'ALTER TABLE public.pilot_institutions DISABLE TRIGGER pilot_institutions_free_lifecycle_guard',
     )
     try {
       await client.query(
         `UPDATE public.pilot_institutions
-         SET review_due_at=clock_timestamp() - interval '1 minute'
+         SET created_at=clock_timestamp() - interval '31 days',
+             review_due_at=clock_timestamp() - interval '1 minute'
          WHERE id=$1`,
         [provisioned.institution.id],
       )
