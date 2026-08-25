@@ -13,6 +13,27 @@ type Setup = {
   verified: boolean
 }
 
+/**
+ * Kullanici bu sayfaya kendi istegiyle degil, AAL2 kapisina takildigi icin
+ * yonlendirilmis olabilir. Nereden geldigini soylemezsek "tikliyorum ama
+ * acilmiyor" hissi kaliyor; hedefi acikca yaziyoruz.
+ */
+function gateLabel(returnPath: string): string | null {
+  if (returnPath.startsWith('/admin')) return 'Yönetim paneline'
+  if (returnPath.startsWith('/arena/kurum')) return 'Kurum paneline'
+  if (returnPath.startsWith('/arena/sinif/ogretmen')) return 'Öğretmen paneline'
+  return null
+}
+
+/**
+ * Dogrulama sonrasi TAM SAYFA gezinme yapariz: yeni aal2 oturum cerezi ancak
+ * gercek bir istekle sunucuya gider. Soft navigation'da router onbellekteki
+ * eski RSC yanitini kullanip kullaniciyi ayni kapiya geri dusurebiliyor.
+ */
+function hardNavigate(path: string) {
+  window.location.assign(path)
+}
+
 export function MfaSecurityClient({ returnPath }: { returnPath: string }) {
   const router = useRouter()
   const [setup, setSetup] = useState<Setup | null>(null)
@@ -113,8 +134,7 @@ export function MfaSecurityClient({ returnPath }: { returnPath: string }) {
     }
     setIsAal2(true)
     setSubmitting(false)
-    router.replace(returnPath)
-    router.refresh()
+    hardNavigate(returnPath)
   }
 
   if (loading) {
@@ -132,6 +152,13 @@ export function MfaSecurityClient({ returnPath }: { returnPath: string }) {
           </div>
         </div>
 
+        {!isAal2 && gateLabel(returnPath) && (
+          <p className="mb-6 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-sm leading-6 text-blue-200">
+            <strong>{gateLabel(returnPath)}</strong> erişmek için bu adım gerekli. Doğrulama
+            uygulamandaki 6 haneli kodu girdiğinde otomatik olarak oraya döneceksin.
+          </p>
+        )}
+
         <ol className="mb-6 list-decimal space-y-2 pl-5 text-sm leading-6 text-[var(--text-muted)]">
           <li>Google Authenticator veya Microsoft Authenticator uygulamasını açın.</li>
           <li>QR kodunu tarayın; ardından uygulamadaki 6 haneli kodu girin.</li>
@@ -141,7 +168,7 @@ export function MfaSecurityClient({ returnPath }: { returnPath: string }) {
         {isAal2 ? (
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-300">
             <div className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-5 w-5" /> Bu oturum AAL2 ile doğrulandı.</div>
-            <button type="button" onClick={() => router.replace(returnPath)} className="mt-4 rounded-xl bg-emerald-500 px-4 py-2 font-semibold text-slate-950">Devam et</button>
+            <button type="button" onClick={() => hardNavigate(returnPath)} className="mt-4 rounded-xl bg-emerald-500 px-4 py-2 font-semibold text-slate-950">Devam et</button>
           </div>
         ) : !setup ? (
           <div>
@@ -169,7 +196,7 @@ export function MfaSecurityClient({ returnPath }: { returnPath: string }) {
             )}
             <label className="block text-sm font-medium">
               6 haneli doğrulama kodu
-              <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-lg tracking-[0.35em]" />
+              <input autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--bg)] px-4 py-3 text-lg tracking-[0.35em]" />
             </label>
             <button type="button" disabled={submitting || code.length !== 6} onClick={verify} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white disabled:opacity-60">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />} Doğrula ve devam et
