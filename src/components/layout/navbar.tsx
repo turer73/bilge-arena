@@ -226,25 +226,32 @@ export function Navbar() {
                     {institutionPanelVisible && (
                       <>
                         <div className="my-1 border-t border-[var(--border)]" />
-                        <Link
+                        {/* AAL2 kapili yuzey: proxy 2FA yoksa /hesap/guvenlik'e 307 doner.
+                            Soft navigation'da bu yonlendirme kullaniciya gorunmeden
+                            yutulabiliyor (prefetch edilen RSC yaniti) — kullanici
+                            "tikliyorum ama acilmiyor" yasiyor. Tam sayfa gezinme
+                            tarayiciyi yonlendirme zincirini izlemeye zorlar. */}
+                        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- AAL2 kapisi tam sayfa gezinme gerektiriyor */}
+                        <a
                           href="/arena/kurum"
                           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-sky-300 transition-colors hover:bg-sky-400/10"
                         >
                           <Building2 size={14} />
                           Kurum Paneli
-                        </Link>
+                        </a>
                       </>
                     )}
                     {profile?.role === 'admin' && (
                       <>
                         <div className="my-1 border-t border-[var(--border)]" />
-                        <Link
+                        {/* AAL2 kapili yuzey — yukaridaki gerekcenin aynisi. */}
+                        <a
                           href="/admin"
                           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--reward)] transition-colors hover:bg-[var(--reward-bg)]"
                         >
                           <Shield size={14} />
                           Admin Panel
-                        </Link>
+                        </a>
                       </>
                     )}
                     <button
@@ -305,13 +312,15 @@ export function Navbar() {
               </Link>
             ))}
             {user && institutionPanelVisible && (
-              <Link
+              /* AAL2 kapili yuzey — tam sayfa gezinme (bkz. masaustu menusu). */
+              // eslint-disable-next-line @next/next/no-html-link-for-pages -- AAL2 kapisi tam sayfa gezinme gerektiriyor
+              <a
                 href="/arena/kurum"
                 className="mt-2 flex min-h-11 items-center gap-2 rounded-lg border border-sky-400/20 bg-sky-400/10 px-4 py-2.5 text-sm font-bold text-sky-200"
               >
                 <Building2 size={16} />
                 Kurum Paneli
-              </Link>
+              </a>
             )}
             <div className="mt-2 flex gap-2">
               {user ? (
@@ -323,12 +332,13 @@ export function Navbar() {
                     </Button>
                   </Link>
                   {profile?.role === 'admin' && (
-                    <Link href="/admin" className="flex-1">
+                    /* AAL2 kapili yuzey — tam sayfa gezinme (bkz. masaustu menusu). */
+                    <a href="/admin" className="flex-1">
                       <Button variant="ghost" size="sm" className="w-full text-[var(--reward)]">
                         <Shield size={14} />
                         Admin
                       </Button>
-                    </Link>
+                    </a>
                   )}
                   <Button variant="ghost" size="sm" className="flex-1 text-red-400" onClick={signOut}>
                     <LogOut size={14} />

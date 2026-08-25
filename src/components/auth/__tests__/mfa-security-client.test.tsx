@@ -74,3 +74,48 @@ describe('MfaSecurityClient recovery flow', () => {
     expect(await screen.findByRole('button', { name: 'Doğrulamayı kur' })).toBeInTheDocument()
   })
 })
+
+describe('MfaSecurityClient AAL2 kapisi', () => {
+  const verifiedFactor = {
+    data: {
+      all: [{ id: 'factor-1', factor_type: 'totp', status: 'verified' }],
+      totp: [{ id: 'factor-1', status: 'verified' }],
+      phone: [],
+    },
+    error: null,
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getAal.mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal2' }, error: null })
+    mocks.getUser.mockResolvedValue({ data: { user: { id: 'admin-1' } }, error: null })
+    mocks.listFactors.mockResolvedValue(verifiedFactor)
+  })
+
+  it('kullaniciya hangi kapiya takildigini soyler', async () => {
+    render(<MfaSecurityClient returnPath="/admin/sorular" />)
+    expect(await screen.findByText(/Yönetim paneline/)).toBeInTheDocument()
+  })
+
+  it('kurum paneli hedefini de adiyla gosterir', async () => {
+    render(<MfaSecurityClient returnPath="/arena/kurum" />)
+    expect(await screen.findByText(/Kurum paneline/)).toBeInTheDocument()
+  })
+
+  it('dogrulama sonrasi tam sayfa gezinme yapar (soft nav eski cerezi tasir)', async () => {
+    const assign = vi.fn()
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, assign },
+    })
+    mocks.challengeAndVerify.mockResolvedValue({ data: {}, error: null })
+
+    render(<MfaSecurityClient returnPath="/admin" />)
+    const input = await screen.findByLabelText(/6 haneli doğrulama kodu/)
+    fireEvent.change(input, { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: /Doğrula ve devam et/ }))
+
+    await waitFor(() => expect(assign).toHaveBeenCalledWith('/admin'))
+    expect(mocks.replace).not.toHaveBeenCalledWith('/admin')
+  })
+})
