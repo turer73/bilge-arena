@@ -422,6 +422,21 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       complete_game_session: Omit<CompleteGameSession, 'Args'> & {
         Args: CompleteGameSessionArgs
       }
+      // Migration 158. Canli tip uretimi migration uygulandiktan sonra bu
+      // elle tutulan sozlesmeyle yeniden uzlastirilacak.
+      provision_free_pilot_institution: {
+        Args: {
+          p_user_id: string
+          p_name: string
+          p_manager_user_id: string
+          p_approval_ref: string
+          p_student_limit: number
+          p_staff_limit: number
+          p_trial_days: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
       // Migration 128. Uretilen tiplere ancak canliya uygulandiktan sonra
       // girecegi icin sozlesme burada elle tutuluyor.
       award_error_report_reward: {
@@ -613,6 +628,25 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       }
       get_my_institution_operation_events: {
         Args: { p_user_id: string; p_limit?: number }
+        Returns: Json
+      }
+      // Migrations 151-152. Generated types are refreshed after production schema promotion.
+      set_pilot_institution_status: {
+        Args: {
+          p_user_id: string
+          p_institution_id: string
+          p_status: string
+          p_reason: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      prune_institution_request_ledgers: {
+        Args: { p_cutoff: string }
+        Returns: Json
+      }
+      export_account_data: {
+        Args: { p_user_id: string }
         Returns: Json
       }
       update_my_institution_role: {

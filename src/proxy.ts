@@ -7,9 +7,15 @@ import {
   PLATFORM_ADMIN_ENTRY_PERMISSIONS,
 } from '@/lib/admin/platform-permissions'
 import { userHasAnyPlatformPermissionViaRest } from '@/lib/supabase/platform-access'
+import { safeMfaReturnPath } from '@/lib/auth/aal2'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+
+function preserveRefreshedCookies(source: NextResponse, target: NextResponse): NextResponse {
+  for (const cookie of source.cookies.getAll()) target.cookies.set(cookie)
+  return target
+}
 
 export async function proxy(request: NextRequest) {
   // Health endpoint — Uptime Kuma icin auth bypass
@@ -57,12 +63,49 @@ export async function proxy(request: NextRequest) {
   // Oturumu yenile + kullanici bilgisini al (tek cagri)
   const { data: { user } } = await supabase.auth.getUser()
 
+  const pathname = request.nextUrl.pathname
+  const isAdminSurface = pathname === '/admin' || pathname.startsWith('/admin/')
+  const isAdminApi = pathname === '/api/admin' || pathname.startsWith('/api/admin/')
+  const isInstitutionSurface = pathname === '/arena/kurum' || pathname.startsWith('/arena/kurum/')
+  const isInstitutionApi = pathname === '/api/institution' || pathname.startsWith('/api/institution/')
+  const isTeacherStaffSurface = pathname === '/arena/sinif/ogretmen'
+    || pathname.startsWith('/arena/sinif/ogretmen/')
+  const needsAal2 = isAdminSurface
+    || isAdminApi
+    || isInstitutionSurface
+    || isInstitutionApi
+    || isTeacherStaffSurface
+
+  if (needsAal2 && user) {
+    const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (aalError || aal.currentLevel !== 'aal2') {
+      if (pathname.startsWith('/api/')) {
+        return preserveRefreshedCookies(response, NextResponse.json(
+          {
+            error: 'İki adımlı doğrulama gerekli',
+            code: 'aal2_required',
+            mfaUrl: `/hesap/guvenlik?next=${encodeURIComponent(safeMfaReturnPath(pathname))}`,
+          },
+          { status: 428, headers: { 'Cache-Control': 'no-store' } },
+        ))
+      }
+      const mfaUrl = new URL('/hesap/guvenlik', request.url)
+      mfaUrl.searchParams.set('next', safeMfaReturnPath(`${pathname}${request.nextUrl.search}`))
+      return preserveRefreshedCookies(response, NextResponse.redirect(mfaUrl))
+    }
+  }
+
   // Admin koruması — kurum/öğretmen pilot rolleri de user_roles tablosunda
   // tutuluyor. Bu nedenle "herhangi bir rol" admin yetkisi değildir; yalnız
   // gerçek bir admin yüzeyi izni /admin kabuğunu açabilir.
-  if (request.nextUrl.pathname.startsWith('/admin')) {
+  if (isAdminSurface) {
     if (!user) {
-      return NextResponse.redirect(new URL('/giris', request.url))
+      const loginUrl = new URL('/giris', request.url)
+      loginUrl.searchParams.set(
+        'next',
+        safeMfaReturnPath(`${pathname}${request.nextUrl.search}`),
+      )
+      return preserveRefreshedCookies(response, NextResponse.redirect(loginUrl))
     }
     const serviceKey =
       process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -80,7 +123,10 @@ export async function proxy(request: NextRequest) {
         userId: user.id,
         permissions: [INSTITUTION_PILOT_ENTRY_PERMISSION],
       })
-      return NextResponse.redirect(new URL(hasInstitutionAccess ? '/arena/kurum' : '/arena', request.url))
+      return preserveRefreshedCookies(
+        response,
+        NextResponse.redirect(new URL(hasInstitutionAccess ? '/arena/kurum' : '/arena', request.url)),
+      )
     }
 
     // Admin sayfaları Cloudflare'da cache'lenmemeli

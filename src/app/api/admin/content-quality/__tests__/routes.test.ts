@@ -8,6 +8,7 @@ import { GET as appeals, POST as submitAppeal } from '@/app/api/questions/appeal
 import { GET as corrections } from '@/app/api/questions/corrections/route'
 import { POST as createRevision } from '../revisions/route'
 import { POST as review } from '../revisions/[revisionId]/review/route'
+import { POST as mapOutcomes } from '../revisions/[revisionId]/outcomes/route'
 import { POST as publish } from '../revisions/[revisionId]/publish/route'
 import { GET as contentQuality } from '../route'
 import { GET as adminAppeals } from '../appeals/route'
@@ -50,6 +51,24 @@ describe('R4.3 content governance routes', () => {
     expect(response.status).toBe(200)
     expect(mocks.context).toHaveBeenCalledWith(expect.any(Request), expect.anything(), 'content.review.stage2')
     expect(mocks.rpc).toHaveBeenCalledWith(context.admin, 'review_question_content_revision', expect.objectContaining({ p_user_id: USER, p_stage: 2 }))
+  })
+  it('maps only a validated unique primary outcome through the server actor', async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: { revisionId: ID, status: 'draft', outcomeCount: 1, mappingRequired: false, replayed: false }, error: null })
+    const response = await mapOutcomes(post(`/api/admin/content-quality/revisions/${ID}/outcomes`, {
+      outcomes: [{ outcomeId: CORRECTED, weight: 1, primary: true }], requestId: REQUEST,
+    }), { params: Promise.resolve({ revisionId: ID }) })
+    expect(response.status).toBe(200)
+    expect(mocks.context).toHaveBeenLastCalledWith(expect.any(Request), expect.anything(), 'content.prepare')
+    expect(mocks.rpc).toHaveBeenLastCalledWith(context.admin, 'set_question_revision_outcomes', {
+      p_user_id: USER, p_revision_id: ID,
+      p_outcomes: [{ outcomeId: CORRECTED, weight: 1, primary: true }], p_request_id: REQUEST,
+    })
+    expect((await mapOutcomes(post(`/api/admin/content-quality/revisions/${ID}/outcomes`, {
+      outcomes: [{ outcomeId: CORRECTED, weight: 1, primary: false }], requestId: REQUEST,
+    }), { params: Promise.resolve({ revisionId: ID }) })).status).toBe(400)
+    expect((await mapOutcomes(post(`/api/admin/content-quality/revisions/${ID}/outcomes`, {
+      outcomes: [{ outcomeId: CORRECTED, weight: 0.1234, primary: true }], requestId: REQUEST,
+    }), { params: Promise.resolve({ revisionId: ID }) })).status).toBe(400)
   })
   it('passes only canonical publish arguments and hides malformed RPC output', async () => {
     expect((await publish(post(`/api/admin/content-quality/revisions/${ID}/publish`, { requestId: REQUEST }), { params: Promise.resolve({ revisionId: ID }) })).status).toBe(200)
@@ -140,6 +159,37 @@ describe('R4.3 content governance routes', () => {
     expect(mocks.rpc).toHaveBeenLastCalledWith(context.admin, 'get_published_question_content_revision', { p_user_id: USER, p_question_id: ID })
     mocks.rpc.mockResolvedValueOnce({ data: { revision: { ...REVISION, source: { ...REVISION.source, reviewerId: USER } } }, error: null })
     expect((await contentQuality(new Request(`http://localhost/api/admin/content-quality?revisionId=${ID}`))).status).toBe(500)
+  })
+  it('does not label a lineage-valid outcome as valid for a mismatched revision scope', async () => {
+    const nodes = [
+      { id: 'outcome-node', code: 'FEN-O', title: 'Outcome', game: 'fen', category: 'Temel', exam_ref: null, parent_id: 'topic-node', node_type: 'outcome', taxonomy_version: 'v1', is_active: true },
+      { id: 'topic-node', code: 'FEN-T', title: 'Topic', game: 'fen', category: 'Temel', exam_ref: null, parent_id: 'unit-node', node_type: 'topic', taxonomy_version: 'v1', is_active: true },
+      { id: 'unit-node', code: 'FEN-U', title: 'Unit', game: 'fen', category: null, exam_ref: null, parent_id: 'course-node', node_type: 'unit', taxonomy_version: 'v1', is_active: true },
+      { id: 'course-node', code: 'FEN-C', title: 'Course', game: 'fen', category: null, exam_ref: null, parent_id: null, node_type: 'course', taxonomy_version: 'v1', is_active: true },
+    ]
+    const outcome = { id: CORRECTED, code: 'FEN-O', title: 'Fen outcome', game: 'fen', category: 'Temel', exam_ref: null, node_id: 'outcome-node', taxonomy_version: 'v1', is_active: true }
+    const admin = { from: (table: string) => {
+      const chain = {
+        select: () => chain,
+        in: async (_column: string, ids: string[]) => ({
+          data: table === 'curriculum_outcomes' ? [outcome] : nodes.filter((node) => ids.includes(node.id)),
+          error: null,
+        }),
+      }
+      return chain
+    } }
+    mocks.context.mockResolvedValueOnce({ ...context, admin })
+    mocks.rpc.mockResolvedValueOnce({ data: { revision: {
+      ...REVISION,
+      outcomes: [{ outcomeId: CORRECTED, weight: 1, primary: true }],
+    } }, error: null })
+
+    const response = await contentQuality(new Request(`http://localhost/api/admin/content-quality?revisionId=${ID}`))
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.revision.outcomes[0]).toEqual(expect.objectContaining({
+      outcomeId: CORRECTED, scopeValid: false,
+    }))
   })
   it('refreshes a bounded psychometric window without accepting a forged actor', async () => {
     mocks.rpc.mockResolvedValueOnce({ data: { revisionId: ID, sampleN: 30, correctN: 18, pCorrect: 0.6, wilsonLow: 0.43, wilsonHigh: 0.77, discrimination: 0.4, replayed: false }, error: null })

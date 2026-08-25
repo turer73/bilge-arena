@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
+import { getInterBoldUrl } from '@/lib/og/font-url'
 
 // Edge runtime — font public/fonts/ altında static asset olarak servis ediliyor,
 // bundle'a embed edilmediği için 1 MB limiti aşılmıyor. Runtime fetch CDN cached.
@@ -8,12 +9,12 @@ export const runtime = 'edge'
 let interBoldPromise: Promise<ArrayBuffer> | null = null
 
 export async function GET(request: NextRequest) {
-  const { origin, searchParams } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
   const title = searchParams.get('title') || 'Bilge Arena'
   const subtitle = searchParams.get('subtitle') || 'YKS · LGS · AYT Hazırlık Platformu'
 
   if (!interBoldPromise) {
-    interBoldPromise = fetch(`${origin}/fonts/Inter-Bold.woff`).then((res) =>
+    interBoldPromise = fetch(getInterBoldUrl()).then((res) =>
       res.arrayBuffer(),
     )
   }

@@ -2,11 +2,12 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { GAMES, GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { useAuthStore } from '@/stores/auth-store'
 import { refreshProfile } from '@/lib/hooks/use-auth'
 import { BilgeChan } from '@/components/ui/bilge-chan'
+import { requiresDocumentNavigation } from '@/components/privacy/document-boundary-link'
 
 const GAME_EMOJIS: Record<GameSlug, string> = {
   matematik: '🧮',
@@ -33,7 +34,11 @@ const FEATURES = [
   { icon: '🎯', label: '3700+ Soru', desc: 'YKS · LGS · AYT kapsamlı' },
 ]
 
-export function OnboardingOverlay() {
+export function OnboardingOverlay({
+  navigateDocument = (path) => window.location.assign(path),
+}: {
+  navigateDocument?: (path: string) => void
+} = {}) {
   const [step, setStep] = useState(0)
   const [grade, setGrade] = useState<string>('')
   const [selectedGame, setSelectedGame] = useState<GameSlug | null>(null)
@@ -43,6 +48,7 @@ export function OnboardingOverlay() {
   // süre birlikte DOM'da kalıyor, tek sabit id duplicate olup aria-labelledby'yi
   // belirsizleştiriyordu.
   const titleBaseId = useId()
+  const pathname = usePathname()
   const router = useRouter()
   const { profile } = useAuthStore()
   const onboardingOpen = Boolean(profile && !profile.onboarding_completed)
@@ -89,6 +95,14 @@ export function OnboardingOverlay() {
     }
   }
 
+  const navigateAfterCompletion = (target: string) => {
+    if (requiresDocumentNavigation(pathname, target)) {
+      navigateDocument(target)
+      return
+    }
+    router.push(target)
+  }
+
   const handleComplete = async () => {
     setSaving(true)
     try {
@@ -111,9 +125,9 @@ export function OnboardingOverlay() {
         return
       }
       await refreshProfile()
-      router.push(selectedGame ? `/arena/${selectedGame}` : '/arena')
+      navigateAfterCompletion(selectedGame ? `/arena/${selectedGame}` : '/arena')
     } catch {
-      router.push('/arena')
+      navigateAfterCompletion('/arena')
     }
     setSaving(false)
   }

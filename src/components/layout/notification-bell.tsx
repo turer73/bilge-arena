@@ -3,6 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell } from 'lucide-react'
+import {
+  isCurrentBrowserPathSensitive,
+  isSensitiveWorkspacePath,
+} from '@/lib/privacy/telemetry-policy'
 
 interface NotificationRow {
   id: string
@@ -19,7 +23,21 @@ interface NotificationRow {
  * Mount'ta + panel açılışında /api/notifications çeker. Bildirime tıklayınca
  * okundu işaretler ve link'e gider; "tümünü okundu" toplu işaretler.
  */
-export function NotificationBell() {
+function localNotificationPath(link: string): string | null {
+  try {
+    const target = new URL(link, window.location.href)
+    if (target.origin !== window.location.origin) return null
+    return `${target.pathname}${target.search}${target.hash}`
+  } catch {
+    return null
+  }
+}
+
+export function NotificationBell({
+  navigateDocument = (path) => window.location.assign(path),
+}: {
+  navigateDocument?: (path: string) => void
+} = {}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<NotificationRow[]>([])
@@ -84,7 +102,15 @@ export function NotificationBell() {
       } catch {}
     }
     setOpen(false)
-    if (n.link) router.push(n.link)
+    if (n.link) {
+      const localPath = localNotificationPath(n.link)
+      if (!localPath) return
+      if (isSensitiveWorkspacePath(localPath) !== isCurrentBrowserPathSensitive()) {
+        navigateDocument(localPath)
+      } else {
+        router.push(localPath)
+      }
+    }
   }
 
   return (

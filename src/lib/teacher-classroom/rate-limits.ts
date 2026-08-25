@@ -1,4 +1,4 @@
-import { createRateLimiter } from '@/lib/utils/rate-limit'
+import { createRateLimiter, type RateLimitResult } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 
 function createDualLimiter(name: string, userLimit: number, ipLimit: number) {
@@ -19,7 +19,7 @@ export async function checkTeacherClassroomRateLimit(
   limiter: ReturnType<typeof createDualLimiter>,
   userId: string,
   headers: Headers,
-): Promise<{ success: boolean; retryAfter?: number }> {
+): Promise<RateLimitResult> {
   const [userResult, ipResult] = await Promise.all([
     limiter.user.check(userId),
     limiter.ip.check(getClientIp(headers)),
@@ -28,5 +28,9 @@ export async function checkTeacherClassroomRateLimit(
   return {
     success: false,
     retryAfter: Math.max(userResult.retryAfter ?? 0, ipResult.retryAfter ?? 0, 1),
+    reason:
+      userResult.reason === 'backend_unavailable' || ipResult.reason === 'backend_unavailable'
+        ? 'backend_unavailable'
+        : 'limit_exceeded',
   }
 }

@@ -16,18 +16,22 @@ export default function GirisClient() {
   const [accepted, setAccepted] = useState(false)
 
   const handleGoogleLogin = async (
-    nextOverride?: string,
+    fallbackNext = '/arena',
     forceAccountSelection = false,
   ) => {
-    const requestedNext = typeof window === 'undefined'
-      ? '/arena'
-      : safeAuthNext(new URLSearchParams(window.location.search).get('next'))
+    const searchParams = typeof window === 'undefined'
+      ? null
+      : new URLSearchParams(window.location.search)
+    // `next` yeni ve kanonik parametredir. Eski uygulama yuzeylerinden veya
+    // paylasilmis baglantilardan gelen `redirect` de guvenli relative-path
+    // denetiminden gecirilerek geriye donuk uyumluluk icin kabul edilir.
+    const rawNext = searchParams?.get('next') ?? searchParams?.get('redirect')
+    const requestedNext = safeAuthNext(rawNext ?? fallbackNext)
     // Once giris yap, sonra consent logla
-    const next = nextOverride ?? requestedNext
     if (forceAccountSelection) {
-      await signInWithGoogle(next, { forceAccountSelection: true })
+      await signInWithGoogle(requestedNext, { forceAccountSelection: true })
     } else {
-      await signInWithGoogle(next)
+      await signInWithGoogle(requestedNext)
     }
     // Not: signInWithGoogle redirect yapar, bu satir sadece popup modunda calisir.
     // Consent log'u auth callback'te de yakalanabilir ama
@@ -78,7 +82,7 @@ export default function GirisClient() {
           size="lg"
           className="w-full"
           disabled={!accepted}
-          onClick={() => void handleGoogleLogin()}
+          onClick={() => void handleGoogleLogin('/arena')}
         >
           <svg viewBox="0 0 24 24" width={18} height={18} className="mr-1">
             <path

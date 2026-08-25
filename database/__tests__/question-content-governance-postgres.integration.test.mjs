@@ -18,9 +18,12 @@ const psychometricsV3Migration = readFileSync(join(dirname(fileURLToPath(import.
 const qualityProjectionMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '141_question_quality_evidence_projection.sql'), 'utf8')
 const singleAuthorityMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '144_question_quality_single_authority_cutover.sql'), 'utf8')
 const communityQualityMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '146_community_question_quality_consensus.sql'), 'utf8')
+const outcomeScopeMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '164_question_revision_outcome_scope.sql'), 'utf8')
+const questionsDmlLockdownMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '163_questions_client_dml_lockdown.sql'), 'utf8')
+const searchAdminAal2Migration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '165_question_search_admin_aal2.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
-  let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let legacyRevision
+  let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision
   const rpc = async (call, values = []) => { await client.query('SET ROLE service_role'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
   const concurrentReplay = async (call, values = []) => {
     const firstClient = new pg.Client({ connectionString: url }); const secondClient = new pg.Client({ connectionString: url })
@@ -46,11 +49,16 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
   const payload = (answer = 1) => ({ content: { question: '2 + 2 kac eder?', options: ['3','4','5','6'], answer, solution: 'Dort.' }, metadata: { game: 'matematik', category: 'Temel', difficulty: 2 }, outcomes: [{ outcomeId: outcome, weight: 1, primary: true }], source: { kind: 'original', title: 'Ogretmen notu', licenseCode: 'INTERNAL' }, changeKind: 'correct_answer', summary: 'Answer key reviewed' })
   beforeAll(async () => {
     client = new pg.Client({ connectionString: url }); await client.connect()
-    await client.query(`DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA auth; CREATE SCHEMA public; CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions; DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; GRANT USAGE ON SCHEMA public,auth TO anon,authenticated,service_role; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub',true),'')::uuid $$; CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),slug text UNIQUE,name text,description text,is_system boolean); CREATE TABLE public.role_permissions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),role_id uuid REFERENCES public.roles(id),permission text,UNIQUE(role_id,permission)); CREATE TABLE public.user_roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES public.profiles(id),role_id uuid REFERENCES public.roles(id),UNIQUE(user_id,role_id)); CREATE FUNCTION public.has_permission(uuid,text) RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles u JOIN public.role_permissions p ON p.role_id=u.role_id WHERE u.user_id=$1 AND p.permission=$2) $$; CREATE TABLE public.curriculum_outcomes(id uuid PRIMARY KEY,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.questions(id uuid PRIMARY KEY,game text NOT NULL,category text NOT NULL,subcategory text,topic text,difficulty smallint NOT NULL,level_tag text,exam_ref text,is_boss boolean NOT NULL DEFAULT false,content jsonb NOT NULL,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.question_outcomes(question_id uuid,outcome_id uuid,weight numeric,is_primary boolean); CREATE TABLE public.game_sessions(id uuid PRIMARY KEY,user_id uuid,status text,total_questions smallint,correct_count smallint,wrong_count smallint,base_xp integer,bonus_xp integer,total_xp integer,completed_at timestamptz); CREATE TABLE public.verified_attempts(id uuid PRIMARY KEY,user_id uuid NOT NULL,game text NOT NULL,mode text NOT NULL DEFAULT 'classic',question_ids uuid[] NOT NULL,duration_sec integer NOT NULL DEFAULT 60,started_at timestamptz DEFAULT clock_timestamp(),expires_at timestamptz DEFAULT clock_timestamp()+interval '1 hour',completed_at timestamptz,session_id uuid); CREATE TABLE public.verified_exam_attempts(attempt_id uuid PRIMARY KEY,user_id uuid,game text,exam_ref text,blueprint_version text,question_set_hash text,planned_duration_sec integer,issue_request_id uuid,status text DEFAULT 'issued',deadline_at timestamptz); CREATE TABLE public.verified_exam_attempt_items(attempt_id uuid,position smallint,question_id uuid,source_bucket text,PRIMARY KEY(attempt_id,position)); CREATE TABLE public.session_answers(id uuid PRIMARY KEY,session_id uuid,user_id uuid,question_id uuid,question_order smallint,is_correct boolean NOT NULL,is_skipped boolean DEFAULT false,selected_option smallint,time_taken_sec numeric,is_fast boolean DEFAULT false,xp_earned smallint NOT NULL DEFAULT 0,answered_at timestamptz DEFAULT clock_timestamp()); CREATE TABLE public.error_reports(id uuid PRIMARY KEY,user_id uuid NOT NULL,question_id uuid NOT NULL,report_type text NOT NULL,description text,status text NOT NULL,created_at timestamptz NOT NULL); GRANT INSERT ON public.error_reports TO authenticated; CREATE TABLE public.verified_attempt_hint_events(attempt_id uuid,user_id uuid,question_id uuid,stage smallint); CREATE TABLE public.adaptive_diagnostic_answers(user_id uuid,question_id uuid,created_at timestamptz NOT NULL DEFAULT clock_timestamp());`)
+    await client.query(`DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA auth; CREATE SCHEMA public; CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions; DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; GRANT USAGE ON SCHEMA public,auth TO anon,authenticated,service_role; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub',true),'')::uuid $$; CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT COALESCE(NULLIF(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb) $$; CREATE FUNCTION public.immutable_unaccent(text) RETURNS text LANGUAGE sql IMMUTABLE AS $$ SELECT $1 $$; CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),slug text UNIQUE,name text,description text,is_system boolean); CREATE TABLE public.role_permissions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),role_id uuid REFERENCES public.roles(id),permission text,UNIQUE(role_id,permission)); CREATE TABLE public.user_roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES public.profiles(id),role_id uuid REFERENCES public.roles(id),UNIQUE(user_id,role_id)); CREATE FUNCTION public.has_permission(uuid,text) RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles u JOIN public.role_permissions p ON p.role_id=u.role_id WHERE u.user_id=$1 AND p.permission=$2) $$; CREATE TABLE public.curriculum_nodes(id uuid PRIMARY KEY,game text NOT NULL,category text,exam_ref text,parent_id uuid REFERENCES public.curriculum_nodes(id),node_type text NOT NULL,taxonomy_version text NOT NULL,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.curriculum_outcomes(id uuid PRIMARY KEY,game text,category text,exam_ref text,node_id uuid REFERENCES public.curriculum_nodes(id),taxonomy_version text,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.questions(id uuid PRIMARY KEY,external_id varchar,game varchar NOT NULL,category varchar NOT NULL,subcategory varchar,topic varchar,difficulty smallint NOT NULL,level_tag varchar,exam_ref varchar,is_boss boolean NOT NULL DEFAULT false,content jsonb NOT NULL,is_active boolean NOT NULL DEFAULT true,source varchar,times_answered integer NOT NULL DEFAULT 0,times_correct integer NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT clock_timestamp()); CREATE TABLE public.question_outcomes(question_id uuid,outcome_id uuid,weight numeric,is_primary boolean); CREATE TABLE public.game_sessions(id uuid PRIMARY KEY,user_id uuid,status text,total_questions smallint,correct_count smallint,wrong_count smallint,base_xp integer,bonus_xp integer,total_xp integer,completed_at timestamptz); CREATE TABLE public.verified_attempts(id uuid PRIMARY KEY,user_id uuid NOT NULL,game text NOT NULL,mode text NOT NULL DEFAULT 'classic',question_ids uuid[] NOT NULL,duration_sec integer NOT NULL DEFAULT 60,started_at timestamptz DEFAULT clock_timestamp(),expires_at timestamptz DEFAULT clock_timestamp()+interval '1 hour',completed_at timestamptz,session_id uuid); CREATE TABLE public.verified_exam_attempts(attempt_id uuid PRIMARY KEY,user_id uuid,game text,exam_ref text,blueprint_version text,question_set_hash text,planned_duration_sec integer,issue_request_id uuid,status text DEFAULT 'issued',deadline_at timestamptz); CREATE TABLE public.verified_exam_attempt_items(attempt_id uuid,position smallint,question_id uuid,source_bucket text,PRIMARY KEY(attempt_id,position)); CREATE TABLE public.session_answers(id uuid PRIMARY KEY,session_id uuid,user_id uuid,question_id uuid,question_order smallint,is_correct boolean NOT NULL,is_skipped boolean DEFAULT false,selected_option smallint,time_taken_sec numeric,is_fast boolean DEFAULT false,xp_earned smallint NOT NULL DEFAULT 0,answered_at timestamptz DEFAULT clock_timestamp()); CREATE TABLE public.error_reports(id uuid PRIMARY KEY,user_id uuid NOT NULL,question_id uuid NOT NULL,report_type text NOT NULL,description text,status text NOT NULL,created_at timestamptz NOT NULL); GRANT INSERT ON public.error_reports TO authenticated; CREATE TABLE public.verified_attempt_hint_events(attempt_id uuid,user_id uuid,question_id uuid,stage smallint); CREATE TABLE public.adaptive_diagnostic_answers(user_id uuid,question_id uuid,created_at timestamptz NOT NULL DEFAULT clock_timestamp());`)
     await client.query(`CREATE TYPE public.report_status AS ENUM('pending','reviewed','resolved','rejected'); ALTER TABLE public.profiles ADD COLUMN coins integer NOT NULL DEFAULT 0; ALTER TABLE public.error_reports ALTER COLUMN status TYPE public.report_status USING status::public.report_status, ADD COLUMN admin_note text, ADD COLUMN resolved_by uuid, ADD COLUMN updated_at timestamptz NOT NULL DEFAULT clock_timestamp(), ADD COLUMN rewarded_at timestamptz, ADD COLUMN rewarded_coins integer; CREATE FUNCTION public.increment_coins(uuid,integer) RETURNS void LANGUAGE sql SECURITY DEFINER AS $$ UPDATE public.profiles SET coins=coins+$2 WHERE id=$1 $$; CREATE TABLE public.reward_ledger(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES public.profiles(id),source_type text NOT NULL,source_id uuid NOT NULL,reward_type text NOT NULL,reward_key text NOT NULL,amount integer NOT NULL CHECK(amount>=0),metadata jsonb NOT NULL DEFAULT '{}'::jsonb,created_at timestamptz NOT NULL DEFAULT clock_timestamp(),UNIQUE(source_type,source_id,reward_type,reward_key));`)
-    ;[author, reviewer1, reviewer2, publisher, learner, legacyLearner, question, outcome] = Array.from({ length: 8 }, randomUUID)
+    ;[author, reviewer1, reviewer2, publisher, learner, legacyLearner, question, outcome, outcome2, outcomeCourse, outcomeUnit, outcomeTopic, outcomeNode] = Array.from({ length: 13 }, randomUUID)
     await client.query('INSERT INTO public.profiles SELECT unnest($1::uuid[])', [[author,reviewer1,reviewer2,publisher,learner,legacyLearner]])
-    await client.query('INSERT INTO public.curriculum_outcomes(id) VALUES($1)', [outcome])
+    await client.query(`INSERT INTO public.curriculum_nodes(id,game,category,exam_ref,parent_id,node_type,taxonomy_version) VALUES
+      ($1,'matematik',NULL,NULL,NULL,'course','test-v1'),
+      ($2,'matematik',NULL,NULL,$1,'unit','test-v1'),
+      ($3,'matematik','Temel',NULL,$2,'topic','test-v1'),
+      ($4,'matematik','Temel',NULL,$3,'outcome','test-v1')`, [outcomeCourse,outcomeUnit,outcomeTopic,outcomeNode])
+    await client.query("INSERT INTO public.curriculum_outcomes(id,game,category,exam_ref,node_id,taxonomy_version) VALUES($1,'matematik','Temel',NULL,$3,'test-v1'),($2,'matematik','Temel',NULL,$3,'test-v1')", [outcome,outcome2,outcomeNode])
     await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content) VALUES($1,'matematik','Temel',2,$2)`, [question,{ question:'legacy',options:['A','B'],answer:0 }])
     await client.query("INSERT INTO public.error_reports(id,user_id,question_id,report_type,description,status,created_at) VALUES($1,$2,$3,'typo','Eski yazım bildirimi','pending','2026-07-01T10:00:00Z')",[randomUUID(),legacyLearner,question])
     await client.query(migration)
@@ -62,13 +70,35 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(writeContextMigration)
     await client.query(singleAuthorityMigration)
     await client.query(communityQualityMigration)
-    const roles = [['author','content.prepare',author],['author-r1','content.review.stage1',author],['r1','content.review.stage1',reviewer1],['r1-stage2','content.review.stage2',reviewer1],['r2','content.review.stage2',reviewer2],['pub','content.publish',publisher],['correct','content.corrections.apply',publisher],['psy','content.psychometrics.refresh',publisher],['appeal','content.appeals.manage',publisher],['enforce','content.enforcement.manage',publisher]]
+    await client.query('GRANT SELECT (id,game,category,difficulty,is_active) ON TABLE public.questions TO authenticated; GRANT INSERT,UPDATE,DELETE ON TABLE public.questions TO authenticated')
+    await client.query(questionsDmlLockdownMigration)
+    await client.query(outcomeScopeMigration)
+    await client.query(searchAdminAal2Migration)
+    const roles = [['author','content.prepare',author],['author-r1','content.review.stage1',author],['author-admin-view','admin.dashboard.view',author],['r1-prepare','content.prepare',reviewer1],['r1','content.review.stage1',reviewer1],['r1-stage2','content.review.stage2',reviewer1],['r2','content.review.stage2',reviewer2],['pub','content.publish',publisher],['correct','content.corrections.apply',publisher],['psy','content.psychometrics.refresh',publisher],['appeal','content.appeals.manage',publisher],['enforce','content.enforcement.manage',publisher]]
     for (const [slug, permission, user] of roles) { const role = randomUUID(); await client.query('INSERT INTO public.roles(id,slug,name,is_system) VALUES($1,$2,$2,true)', [role,slug]); await client.query('INSERT INTO public.role_permissions(role_id,permission) VALUES($1,$2)', [role,permission]); await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)', [user,role]) }
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
   })
   afterAll(async () => { await client?.end() })
   it('backfills legacy pointers, denies direct content mutation, and requires independent approval', async () => {
     expect(legacyRevision).toMatch(/[0-9a-f-]{36}/)
+    expect((await client.query("SELECT has_table_privilege('authenticated','public.questions','UPDATE') AS client_update,has_column_privilege('authenticated','public.questions','id','SELECT') AS id_read,has_column_privilege('authenticated','public.questions','content','SELECT') AS content_read,has_table_privilege('service_role','public.questions','UPDATE') AS server_update,has_function_privilege('authenticated','public.publish_question_content_revision(uuid,uuid,uuid)','EXECUTE') AS client_publish_rpc,has_function_privilege('service_role','public.publish_question_content_revision(uuid,uuid,uuid)','EXECUTE') AS server_publish_rpc")).rows[0]).toEqual({ client_update:false,id_read:true,content_read:false,server_update:false,client_publish_rpc:false,server_publish_rpc:true })
+    for (const aal of ['aal1','aal2']) {
+      await client.query("SELECT set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claims',$2,false)", [author,JSON.stringify({ sub:author,role:'authenticated',aal })])
+      await client.query('SET ROLE authenticated'); await err(() => client.query("UPDATE public.questions SET category=$2 WHERE id=$1",[question,`${aal}-bypass`]),'42501'); await client.query('RESET ROLE')
+    }
+    await client.query("SELECT set_config('request.jwt.claim.sub','',false),set_config('request.jwt.claims','',false)")
+    await client.query('SET ROLE service_role'); await err(() => client.query("UPDATE public.questions SET category='service-bypass' WHERE id=$1",[question]),'42501'); await client.query('RESET ROLE')
+    const invalidScopes = [
+      [randomUUID(),'fen','Temel',null,'test-v1'],
+      [randomUUID(),'matematik','geometri',null,'test-v1'],
+      [randomUUID(),'matematik','Temel','TYT','test-v1'],
+      [randomUUID(),'matematik','Temel',null,'other-v1'],
+    ]
+    for (const [invalidOutcome,game,category,examRef,taxonomyVersion] of invalidScopes) {
+      await client.query('INSERT INTO public.curriculum_outcomes(id,game,category,exam_ref,node_id,taxonomy_version) VALUES($1,$2,$3,$4,$5,$6)',[invalidOutcome,game,category,examRef,outcomeNode,taxonomyVersion])
+      const invalidPayload = { ...payload(1), outcomes:[{ outcomeId:invalidOutcome,weight:1,primary:true }], summary:`Reject invalid scope ${game}/${category}/${examRef ?? 'general'}/${taxonomyVersion}` }
+      await err(() => rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,legacyRevision,JSON.stringify(invalidPayload),randomUUID()]),'22023')
+    }
     const importedAppeals = await rpc('public.get_my_question_appeals($1)',[legacyLearner]); expect(importedAppeals.appeals[0]).toEqual(expect.objectContaining({ status:'submitted', publicMessage:'Önceki soru bildiriminiz inceleme kuyruğuna taşındı.' })); expect((await client.query('SELECT count(*)::int AS n FROM public.error_reports WHERE status=$1',['pending'])).rows[0].n).toBe(1)
     expect((await rpc('public.get_content_governance_enforcement($1)',[publisher])).enforced).toBe(false)
     await client.query("UPDATE public.questions SET category='Geçiş modu' WHERE id=$1",[question]); await client.query("UPDATE public.questions SET category='Temel' WHERE id=$1",[question])
@@ -93,6 +123,20 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await err(() => rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)', [reviewer1,draft.revisionId,2,'approved','same person',randomUUID()]), '22023')
     await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)', [reviewer2,draft.revisionId,2,'approved','pedagogy valid',randomUUID()])
     await err(() => rpc('public.publish_question_content_revision($1,$2,$3)', [author,draft.revisionId,randomUUID()]), '42501')
+    const taxonomyWriter = new pg.Client({ connectionString: url })
+    await taxonomyWriter.connect()
+    try {
+      await client.query('BEGIN')
+      await client.query('SELECT public.lock_question_revision_outcome_scope($1)', [draft.revisionId])
+      await taxonomyWriter.query("SET lock_timeout='150ms'")
+      await err(() => taxonomyWriter.query('UPDATE public.curriculum_nodes SET is_active=false WHERE id=$1',[outcomeTopic]), '55P03')
+    } finally {
+      await client.query('ROLLBACK')
+      await taxonomyWriter.end()
+    }
+    await client.query('UPDATE public.curriculum_nodes SET is_active=false WHERE id=$1',[outcomeTopic])
+    await err(() => rpc('public.publish_question_content_revision($1,$2,$3)', [publisher,draft.revisionId,randomUUID()]), '22023')
+    await client.query('UPDATE public.curriculum_nodes SET is_active=true WHERE id=$1',[outcomeTopic])
     const published = await rpc('public.publish_question_content_revision($1,$2,$3)', [publisher,draft.revisionId,randomUUID()]); expect(published.status).toBe('published')
     const detail = await rpc('public.get_question_content_revision($1,$2)', [author,draft.revisionId])
     expect(detail.revision).toEqual(expect.objectContaining({
@@ -100,11 +144,82 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
       source: expect.objectContaining({ kind: 'original', licenseCode: 'INTERNAL' }),
       outcomes: [expect.objectContaining({ outcomeId: outcome, weight: 1, primary: true })],
     }))
+    const unmappedPayload = { ...payload(1), outcomes: [], summary: 'Legacy correction kept pending curriculum mapping' }
+    const unmapped = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)', [author,question,published.revisionId,JSON.stringify(unmappedPayload),randomUUID()])
+    expect(unmapped).toEqual(expect.objectContaining({ status:'draft', mappingRequired:true }))
+    await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)', [reviewer1,unmapped.revisionId,1,'approved','content valid',randomUUID()])
+    await err(() => rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)', [reviewer2,unmapped.revisionId,2,'approved','scope missing',randomUUID()]), '22023')
+    const pendingCoverage = await rpc('public.get_question_outcome_coverage($1)', [author])
+    expect(pendingCoverage.openRevisionUnmappedOrInvalid).toBeGreaterThanOrEqual(1)
+    const mapped = await rpc('public.set_question_revision_outcomes($1,$2,$3::jsonb,$4)', [author,unmapped.revisionId,JSON.stringify([{ outcomeId:outcome,weight:1,primary:true }]),randomUUID()])
+    expect(mapped).toEqual(expect.objectContaining({ status:'draft', mappingRequired:false, outcomeCount:1, mappingChanged:true, stage1ApprovalInvalidated:true }))
+    await err(() => rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)', [reviewer2,unmapped.revisionId,2,'approved','stale stage one cannot survive mapping',randomUUID()]), '22023')
+    await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)', [reviewer1,unmapped.revisionId,1,'approved','content and final mapping valid',randomUUID()])
+    const unchangedMapping = await rpc('public.set_question_revision_outcomes($1,$2,$3::jsonb,$4)', [author,unmapped.revisionId,JSON.stringify([{ outcomeId:outcome,weight:1,primary:true }]),randomUUID()])
+    expect(unchangedMapping).toEqual(expect.objectContaining({ status:'stage1_approved', mappingChanged:false, stage1ApprovalInvalidated:false }))
+    await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)', [reviewer2,unmapped.revisionId,2,'approved','scope valid',randomUUID()])
+
+    const crossActorDraft = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)', [author,question,published.revisionId,JSON.stringify({ ...unmappedPayload, summary:'Cross-actor outcome independence proof' }),randomUUID()])
+    await rpc('public.set_question_revision_outcomes($1,$2,$3::jsonb,$4)', [reviewer1,crossActorDraft.revisionId,JSON.stringify([{ outcomeId:outcome,weight:1,primary:true }]),randomUUID()])
+    expect((await client.query('SELECT prepared_by,outcomes_prepared_by FROM public.question_content_revisions WHERE id=$1',[crossActorDraft.revisionId])).rows[0]).toEqual({ prepared_by:author,outcomes_prepared_by:reviewer1 })
+    await err(() => rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)', [reviewer1,crossActorDraft.revisionId,1,'approved','must not self-review mapped evidence',randomUUID()]), '22023')
+    await err(() => rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)', [author,crossActorDraft.revisionId,1,'approved','must not self-review authored content',randomUUID()]), '22023')
+
+    const concurrentPayload = { ...payload(1), outcomes: [], summary: 'Concurrent mapping lock order proof' }
+    const [mappingDraftA,mappingDraftB] = await Promise.all([
+      rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)', [author,question,published.revisionId,JSON.stringify(concurrentPayload),randomUUID()]),
+      rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)', [author,question,published.revisionId,JSON.stringify({ ...concurrentPayload, summary:'Concurrent mapping lock order proof B' }),randomUUID()]),
+    ])
+    const mappingClientA = new pg.Client({ connectionString:url }); const mappingClientB = new pg.Client({ connectionString:url })
+    await Promise.all([mappingClientA.connect(),mappingClientB.connect()])
+    try {
+      await Promise.all([
+        mappingClientA.query("SET ROLE service_role; SET statement_timeout='5s'"),
+        mappingClientB.query("SET ROLE service_role; SET statement_timeout='5s'"),
+      ])
+      const [mappingA,mappingB] = await Promise.all([
+        mappingClientA.query('SELECT public.set_question_revision_outcomes($1,$2,$3::jsonb,$4) AS result',[author,mappingDraftA.revisionId,JSON.stringify([{ outcomeId:outcome,weight:0.6,primary:true },{ outcomeId:outcome2,weight:0.4,primary:false }]),randomUUID()]),
+        mappingClientB.query('SELECT public.set_question_revision_outcomes($1,$2,$3::jsonb,$4) AS result',[author,mappingDraftB.revisionId,JSON.stringify([{ outcomeId:outcome2,weight:0.4,primary:false },{ outcomeId:outcome,weight:0.6,primary:true }]),randomUUID()]),
+      ])
+      expect([mappingA.rows[0].result,mappingB.rows[0].result]).toEqual([
+        expect.objectContaining({ outcomeCount:2, mappingChanged:true }),
+        expect.objectContaining({ outcomeCount:2, mappingChanged:true }),
+      ])
+    } finally {
+      await Promise.allSettled([mappingClientA.end(),mappingClientB.end()])
+    }
+    await err(() => rpc('public.create_governed_question($1,$2::jsonb,$3)', [author,JSON.stringify({ ...unmappedPayload, changeKind:'create' }),randomUUID()]), '22023')
     expect((await rpc('public.get_published_question_content_revision($1,$2)', [author,question])).revision.revisionId).toBe(draft.revisionId)
     const firstPage = await rpc('public.get_question_content_governance_queue($1,$2::text,$3,$4::text)',[author,null,1,'']); expect(firstPage.items).toHaveLength(1); expect(firstPage.nextCursor).toMatch(/\|[0-9a-f-]{36}$/); const secondPage = await rpc('public.get_question_content_governance_queue($1,$2::text,$3,$4::text)',[author,null,1,firstPage.nextCursor]); expect(secondPage.items).toHaveLength(1); expect(secondPage.items[0].revisionId).not.toBe(firstPage.items[0].revisionId)
     await err(() => rpc('public.get_question_content_governance_queue($1,$2::text,$3,$4::text)',[author,null,1,'not-a-cursor']), '22023')
     await err(() => rpc('public.get_question_content_revision($1,$2)', [author,randomUUID()]), 'P0002')
     const crossTargetRequest = randomUUID(); await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)', [author,question,published.revisionId,JSON.stringify(payload(1)),crossTargetRequest]); const secondQuestion = (await rpc('public.create_governed_question($1,$2::jsonb,$3)',[author,JSON.stringify({ ...payload(1), changeKind:'create' }),randomUUID()])).questionId; await err(() => rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,secondQuestion,null,JSON.stringify(payload(1)),crossTargetRequest]),'22023'); expect((await client.query('SELECT count(*)::int AS n FROM public.question_content_revisions WHERE question_id=$1',[secondQuestion])).rows[0].n).toBe(1)
+  })
+  it('requires AAL2 for the raw search projection while keeping public content redacted', async () => {
+    const setJwt = async (aal) => client.query(
+      "SELECT set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claims',$2,false)",
+      [author,JSON.stringify({ sub:author,role:'authenticated',aal })],
+    )
+    await setJwt('aal1')
+    await client.query('SET ROLE authenticated')
+    try {
+      await err(() => client.query('SELECT content FROM public.search_questions(NULL::text,NULL::text,NULL::text,NULL::integer,NULL::boolean,true,0,20)'), '42501')
+      const publicRows = await client.query('SELECT content FROM public.search_questions(NULL::text,NULL::text,NULL::text,NULL::integer,NULL::boolean,false,0,20)')
+      expect(publicRows.rows.length).toBeGreaterThan(0)
+      expect(publicRows.rows.every((row) => !('answer' in row.content) && !('solution' in row.content))).toBe(true)
+    } finally {
+      await client.query('RESET ROLE')
+    }
+
+    await setJwt('aal2')
+    await client.query('SET ROLE authenticated')
+    try {
+      const adminRows = await client.query('SELECT content FROM public.search_questions(NULL::text,NULL::text,NULL::text,NULL::integer,NULL::boolean,true,0,20)')
+      expect(adminRows.rows.some((row) => 'answer' in row.content)).toBe(true)
+    } finally {
+      await client.query('RESET ROLE')
+      await client.query("SELECT set_config('request.jwt.claim.sub','',false),set_config('request.jwt.claims','',false)")
+    }
   })
   it('does not reuse a governed write context in another transaction or backend', async () => {
     await client.query('UPDATE public.content_governance_runtime SET enforce_direct_mutation=true')
@@ -301,5 +416,10 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await rpc('public.submit_assigned_question_quality_mission($1,$2,$3::integer,$4,$5,$6::integer,$7,$8,$9::integer,$10)',[controlUser,controlMission.missionId,1,'clean',null,null,null,'',80,randomUUID()])
     expect((await client.query('SELECT clean_controls,clean_controls_correct,trust_state FROM public.question_quality_worker_profiles WHERE user_id=$1',[controlUser])).rows[0]).toEqual({ clean_controls:1,clean_controls_correct:1,trust_state:'new' })
     expect((await client.query("SELECT has_table_privilege('authenticated','public.question_quality_claims','SELECT') AS claims_read,has_table_privilege('service_role','public.question_quality_consensus_queue','SELECT') AS queue_read,has_function_privilege('service_role','public.claim_question_quality_consensus_job(uuid)','EXECUTE') AS queue_rpc")).rows[0]).toEqual({ claims_read:false,queue_read:false,queue_rpc:true })
+  })
+  it('reapplies the outcome-scope migration over populated governed data', async () => {
+    await client.query(outcomeScopeMigration)
+    expect((await client.query("SELECT convalidated FROM pg_constraint WHERE conrelid='public.questions'::regclass AND conname='questions_published_revision_question_fkey'")).rows[0]).toEqual({ convalidated:true })
+    expect((await client.query("SELECT has_function_privilege('authenticated','public.set_question_revision_outcomes(uuid,uuid,jsonb,uuid)','EXECUTE') AS client_exec,has_function_privilege('service_role','public.set_question_revision_outcomes(uuid,uuid,jsonb,uuid)','EXECUTE') AS server_exec")).rows[0]).toEqual({ client_exec:false,server_exec:true })
   })
 })

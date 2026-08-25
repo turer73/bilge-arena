@@ -20,6 +20,12 @@ export async function checkAdminMutationRl(
   const limiter = kind === 'upload' ? uploadLimiter : mutationLimiter
   const rl = await limiter.check(adminId)
   if (!rl.success) {
+    if (rl.reason === 'backend_unavailable') {
+      return NextResponse.json(
+        { error: 'Güvenlik servisi geçici olarak kullanılamıyor' },
+        { status: 503, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } },
+      )
+    }
     return NextResponse.json(
       { error: 'Çok fazla istek' },
       { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } },

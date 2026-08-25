@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import {
   ArrowUpRight,
   Building2,
@@ -131,7 +131,7 @@ export function ArenaExploreGrid({
       {items.map((item) => {
         const Icon = item.icon
         return (
-          <Link
+          <DocumentBoundaryLink
             key={item.href}
             href={item.href}
             className="group relative flex min-h-[116px] flex-col justify-between overflow-hidden rounded-2xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--card-bg)_92%,transparent)] p-3 transition duration-200 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--focus)] md:min-h-[124px] md:p-4"
@@ -170,7 +170,7 @@ export function ArenaExploreGrid({
                 {item.description}
               </p>
             </div>
-          </Link>
+          </DocumentBoundaryLink>
         )
       })}
     </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { usePathname } from 'next/navigation'
 import { BookOpen, Dumbbell, Swords, Trophy, User, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'

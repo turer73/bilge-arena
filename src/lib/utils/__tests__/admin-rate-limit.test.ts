@@ -48,4 +48,18 @@ describe('checkAdminMutationRl', () => {
     const res = await checkAdminMutationRl('admin-1')
     expect(res!.headers.get('Retry-After')).toBe('60')
   })
+
+  test('Redis kullanilamiyorsa 503 ile fail-closed doner', async () => {
+    checks['admin-mutation'].mockResolvedValue({
+      success: false,
+      retryAfter: 60,
+      reason: 'backend_unavailable',
+    })
+    const res = await checkAdminMutationRl('admin-1')
+
+    expect(res!.status).toBe(503)
+    await expect(res!.json()).resolves.toEqual({
+      error: 'Güvenlik servisi geçici olarak kullanılamıyor',
+    })
+  })
 })

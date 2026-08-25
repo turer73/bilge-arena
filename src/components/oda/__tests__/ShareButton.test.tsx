@@ -75,7 +75,7 @@ describe('ShareButton', () => {
     // X'in documented web-intent endpoint twitter.com/intent/tweet
     // (x.com/intent/post documented DEGIL, prefilled composer calismaz)
     expect(href).toMatch(/^https:\/\/twitter\.com\/intent\/tweet/)
-    expect(href).not.toMatch(/x\.com\/intent\/post/)
+    expect(href).not.toContain('https://x.com/intent/post')
     expect(href).toContain('text=' + encodeURIComponent('Tweet'))
   })
 
