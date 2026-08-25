@@ -6,11 +6,13 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   limiter: vi.fn(),
   onboardingEnabled: vi.fn(),
+  freePilotEnabled: vi.fn(),
 }))
 
 vi.mock('@/lib/institution-pilot/server-security', () => ({
   isInstitutionPilotEnabled: () => true,
   isInstitutionOnboardingEnabled: mocks.onboardingEnabled,
+  isInstitutionFreePilotEnabled: mocks.freePilotEnabled,
 }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie', rpc: mocks.rpc })) }))
 vi.mock('@/lib/supabase/admin', () => ({
@@ -48,6 +50,7 @@ beforeEach(() => {
   mocks.limiter.mockResolvedValue({ success: true })
   mocks.logAdminAction.mockResolvedValue({ error: null })
   mocks.onboardingEnabled.mockReturnValue(true)
+  mocks.freePilotEnabled.mockReturnValue(false)
 })
 
 describe('admin institution routes', () => {
@@ -79,8 +82,47 @@ describe('admin institution routes', () => {
     mocks.rpc.mockResolvedValue({ data: payload, error: null })
     const response = await GET()
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual(payload)
+    expect(await response.json()).toEqual({
+      ...payload,
+      provisioning: { invitationFreePilotEnabled: false },
+    })
     expect(mocks.rpc).toHaveBeenCalledWith('list_pilot_institutions', { p_user_id: ADMIN.id })
+  })
+
+  it('exposes only the dedicated free-pilot capability to the protected admin UI', async () => {
+    mocks.freePilotEnabled.mockReturnValue(true)
+    mocks.rpc.mockResolvedValue({
+      data: {
+        institutions: [],
+        databaseControls: { freePilotProvisioningEnabled: true },
+      },
+      error: null,
+    })
+
+    const response = await GET()
+
+    expect(await response.json()).toEqual({
+      institutions: [],
+      provisioning: { invitationFreePilotEnabled: true },
+    })
+  })
+
+  it('keeps the admin form disabled unless both app and database controls are open', async () => {
+    mocks.freePilotEnabled.mockReturnValue(true)
+    mocks.rpc.mockResolvedValue({
+      data: {
+        institutions: [],
+        databaseControls: { freePilotProvisioningEnabled: false },
+      },
+      error: null,
+    })
+
+    const response = await GET()
+
+    expect(await response.json()).toEqual({
+      institutions: [],
+      provisioning: { invitationFreePilotEnabled: false },
+    })
   })
 
   it('provisions a manager-bound institution and writes an audit event', async () => {

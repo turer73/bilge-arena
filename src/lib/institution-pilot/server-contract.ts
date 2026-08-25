@@ -112,6 +112,7 @@ export const institutionOperationEventsSchema = z.object({
 export type InstitutionOperationEvents = z.infer<typeof institutionOperationEventsSchema>
 
 export function institutionPilotRpcStatus(code?: string): number {
+  if (code === '55000') return 503
   if (code === '42501') return 403
   if (code === 'P0002') return 404
   if (code === 'P0003' || code === '22023' || code === '23505' || code === '23514') return 409

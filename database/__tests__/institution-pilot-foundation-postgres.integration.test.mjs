@@ -75,12 +75,17 @@ const accountExportReportPrivacySql = readFileSync(
   join(migrationsDir, '156_account_export_report_privacy.sql'),
   'utf8',
 )
+const invitationOnlyFreePilotSql = readFileSync(
+  join(migrationsDir, '157_invitation_only_free_institution_pilot.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145 and 149-157 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
   let managerTwo
+  let freePilotManager
   let teacherOne
   let institutionOne
   let institutionTwo
@@ -253,9 +258,10 @@ suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL accep
     platformAdmin = randomUUID()
     managerOne = randomUUID()
     managerTwo = randomUUID()
+    freePilotManager = randomUUID()
     teacherOne = randomUUID()
     for (let index = 0; index < 6; index += 1) capacityTeachers.push(randomUUID())
-    const users = [platformAdmin, managerOne, managerTwo, teacherOne, ...capacityTeachers]
+    const users = [platformAdmin, managerOne, managerTwo, freePilotManager, teacherOne, ...capacityTeachers]
     for (const [index, userId] of users.entries()) {
       await client.query(
         'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
@@ -326,6 +332,7 @@ suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL accep
     await client.query(institutionReviewClosureSql)
     await client.query(institutionSecurityFollowupSql)
     await client.query(accountExportReportPrivacySql)
+    await client.query(invitationOnlyFreePilotSql)
 
     const authenticatedBoundary = await client.query(`
       SELECT
@@ -389,6 +396,196 @@ suite('112-127, 131-135, 145 and 149-156 institution pilot real PostgreSQL accep
       ]),
       '22023',
     )
+  })
+
+  it('provisions only a bounded JWT/AAL2 invitation-free pilot with one immutable audit event', async () => {
+    const privileges = await client.query(`
+      SELECT
+        has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated,
+        has_function_privilege('anon', p.oid, 'EXECUTE') AS anon,
+        has_function_privilege('service_role', p.oid, 'EXECUTE') AS service_role,
+        has_function_privilege('public', p.oid, 'EXECUTE') AS public
+      FROM pg_catalog.pg_proc AS p
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.proname = 'provision_free_pilot_institution'
+    `)
+    expect(privileges.rows).toEqual([{
+      authenticated: true,
+      anon: false,
+      service_role: false,
+      public: false,
+    }])
+
+    const expression = 'public.provision_free_pilot_institution($1,$2,$3,$4,$5,$6,$7,$8)'
+    await expectPgError(
+      () => rpc(expression, [
+        platformAdmin, 'Service Role Kurumu', freePilotManager, 'PILOT-SERVICE-001', 30, 2, 30, randomUUID(),
+      ]),
+      '42501',
+    )
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'AAL1 Kurumu', freePilotManager, 'PILOT-AAL1-001', 30, 2, 30, randomUUID(),
+      ], 'aal1'),
+      '42501',
+    )
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        managerOne, 'Aktör Sapması', freePilotManager, 'PILOT-ACTOR-001', 30, 2, 30, randomUUID(),
+      ]),
+      '42501',
+    )
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'Aşırı Kapasite', freePilotManager, 'PILOT-QUOTA-001', 41, 2, 30, randomUUID(),
+      ]),
+      '22023',
+    )
+
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'Kapalı DB Kapısı', freePilotManager, 'PILOT-GATE-001', 30, 2, 30, randomUUID(),
+      ]),
+      '55000',
+    )
+    await client.query(
+      `UPDATE public.institution_pilot_controls
+       SET enabled=true,updated_at=clock_timestamp()
+       WHERE control_key='free_provisioning'`,
+    )
+
+    const requestId = randomUUID()
+    const before = Date.now()
+    const provisioned = await authenticatedRpc(platformAdmin, expression, [
+      platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
+      'PILOT-2026-001', 30, 2, 30, requestId,
+    ])
+    const reviewDueAt = new Date(provisioned.institution.reviewDueAt).getTime()
+    expect(provisioned).toMatchObject({
+      replayed: false,
+      institution: {
+        name: 'Davetli Ücretsiz Canary',
+        status: 'pilot',
+        studentLimit: 30,
+        staffLimit: 2,
+        pilotKind: 'invitation_free',
+        approvalReference: 'PILOT-2026-001',
+      },
+      membership: { role: 'manager' },
+    })
+    expect(reviewDueAt).toBeGreaterThanOrEqual(before + 29 * 24 * 60 * 60 * 1000)
+    expect(reviewDueAt).toBeLessThanOrEqual(Date.now() + 31 * 24 * 60 * 60 * 1000)
+
+    expect(await authenticatedRpc(platformAdmin, expression, [
+      platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
+      'PILOT-2026-001', 30, 2, 30, requestId,
+    ])).toMatchObject({ replayed: true, institution: { id: provisioned.institution.id } })
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
+        'PILOT-2026-001', 31, 2, 30, requestId,
+      ]),
+      '22023',
+    )
+
+    const audit = await client.query(
+      `SELECT metadata
+       FROM public.institution_operation_events
+       WHERE institution_id=$1 AND event_type='institution_provisioned' AND request_id=$2`,
+      [provisioned.institution.id, requestId],
+    )
+    expect(audit.rows).toEqual([{
+      metadata: {
+        pilotKind: 'invitation_free',
+        approvalReference: 'PILOT-2026-001',
+        studentLimit: 30,
+        staffLimit: 2,
+        reviewDueAt: provisioned.institution.reviewDueAt,
+      },
+    }])
+
+    const directory = await authenticatedRpc(
+      platformAdmin,
+      'public.list_pilot_institutions($1)',
+      [platformAdmin],
+    )
+    expect(directory.institutions).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: provisioned.institution.id,
+        pilotKind: 'invitation_free',
+        approvalReference: 'PILOT-2026-001',
+        reviewDueAt: provisioned.institution.reviewDueAt,
+        studentLimit: 30,
+        staffLimit: 2,
+      }),
+    ]))
+
+    // Simulate wall-clock passage without weakening the production trigger:
+    // the deadline can pass without an UPDATE, leaving status='pilot' while
+    // all tenant authorization helpers must already fail closed.
+    await client.query(
+      'ALTER TABLE public.pilot_institutions DISABLE TRIGGER pilot_institutions_free_lifecycle_guard',
+    )
+    try {
+      await client.query(
+        `UPDATE public.pilot_institutions
+         SET review_due_at=clock_timestamp() - interval '1 minute'
+         WHERE id=$1`,
+        [provisioned.institution.id],
+      )
+    } finally {
+      await client.query(
+        'ALTER TABLE public.pilot_institutions ENABLE TRIGGER pilot_institutions_free_lifecycle_guard',
+      )
+    }
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.get_my_pilot_institution($1)',
+        [freePilotManager],
+      ),
+      'P0002',
+    )
+    const expiredOperational = await client.query(
+      'SELECT public.institution_pilot_is_operational($1) AS allowed',
+      [provisioned.institution.id],
+    )
+    expect(expiredOperational.rows[0].allowed).toBe(false)
+
+    const suspendRequestId = randomUUID()
+    expect(await authenticatedRpc(
+      platformAdmin,
+      'public.set_pilot_institution_status($1,$2,$3,$4,$5)',
+      [
+        platformAdmin,
+        provisioned.institution.id,
+        'suspended',
+        'Ücretsiz canary değerlendirme süresi tamamlandı.',
+        suspendRequestId,
+      ],
+    )).toMatchObject({ status: 'suspended', changed: true })
+    await expectPgError(
+      () => authenticatedRpc(
+        platformAdmin,
+        'public.set_pilot_institution_status($1,$2,$3,$4,$5)',
+        [
+          platformAdmin,
+          provisioned.institution.id,
+          'active',
+          'Süresi geçmiş canary yeniden açılmamalıdır.',
+          randomUUID(),
+        ],
+      ),
+      '23514',
+    )
+    const lifecycleAudit = await client.query(
+      `SELECT count(*)::int AS count
+       FROM public.institution_operation_events
+       WHERE institution_id=$1 AND event_type='institution_status_changed' AND request_id=$2`,
+      [provisioned.institution.id, suspendRequestId],
+    )
+    expect(lifecycleAudit.rows[0].count).toBe(1)
   })
 
   it('lists tenants for platform admins without exposing the directory to managers', async () => {
