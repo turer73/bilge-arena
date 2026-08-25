@@ -1,4 +1,4 @@
--- Migration 157: bounded, invitation-only free institution canary.
+-- Migration 158: bounded, invitation-only free institution canary.
 -- This does not open paid onboarding or public/self-service tenant creation.
 BEGIN;
 

@@ -1,9 +1,9 @@
--- Migration 159: close replay-first mutations and student-facing tenant reads
+-- Migration 160: close replay-first mutations and student-facing tenant reads
 -- when a bounded free canary expires.
 --
 -- Student privacy exits remain available. Student learning actions stay AAL1,
 -- but may target only an operational institution. Privileged staff replay
--- paths use the AAL2 operational guard introduced in migration 158.
+-- paths use the AAL2 operational guard introduced in migration 159.
 BEGIN;
 
 DO $block$

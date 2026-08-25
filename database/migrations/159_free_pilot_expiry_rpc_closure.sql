@@ -1,9 +1,9 @@
--- Migration 158: close direct RPC paths when a bounded free canary expires.
+-- Migration 159: close direct RPC paths when a bounded free canary expires.
 --
 -- Migration 150 intentionally made tenant RPCs callable with user JWTs. A few
 -- older SECURITY DEFINER functions still checked only status='pilot|active'
 -- and therefore did not inherit the operational review_due_at boundary added
--- in migration 157. Keep their established implementations, but place a
+-- in migration 158. Keep their established implementations, but place a
 -- single fail-closed AAL2 + operational-tenant guard in front of every direct
 -- path. The renamed implementations are private and cannot be invoked through
 -- PostgREST.

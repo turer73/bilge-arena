@@ -76,15 +76,15 @@ const accountExportReportPrivacySql = readFileSync(
   'utf8',
 )
 const invitationOnlyFreePilotSql = readFileSync(
-  join(migrationsDir, '157_invitation_only_free_institution_pilot.sql'),
+  join(migrationsDir, '158_invitation_only_free_institution_pilot.sql'),
   'utf8',
 )
 const freePilotExpiryRpcClosureSql = readFileSync(
-  join(migrationsDir, '158_free_pilot_expiry_rpc_closure.sql'),
+  join(migrationsDir, '159_free_pilot_expiry_rpc_closure.sql'),
   'utf8',
 )
 const freePilotReplayAndStudentSurfaceSql = readFileSync(
-  join(migrationsDir, '159_free_pilot_replay_and_student_surface_closure.sql'),
+  join(migrationsDir, '160_free_pilot_replay_and_student_surface_closure.sql'),
   'utf8',
 )
 

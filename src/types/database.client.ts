@@ -422,7 +422,7 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       complete_game_session: Omit<CompleteGameSession, 'Args'> & {
         Args: CompleteGameSessionArgs
       }
-      // Migration 157. Canli tip uretimi migration uygulandiktan sonra bu
+      // Migration 158. Canli tip uretimi migration uygulandiktan sonra bu
       // elle tutulan sozlesmeyle yeniden uzlastirilacak.
       provision_free_pilot_institution: {
         Args: {

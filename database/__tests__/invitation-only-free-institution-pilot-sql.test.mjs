@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const sql = readFileSync(
-  new URL('../migrations/157_invitation_only_free_institution_pilot.sql', import.meta.url),
+  new URL('../migrations/158_invitation_only_free_institution_pilot.sql', import.meta.url),
   'utf8',
 )
 

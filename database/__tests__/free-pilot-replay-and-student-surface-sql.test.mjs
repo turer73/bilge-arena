@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 const sql = readFileSync(
   new URL(
-    '../migrations/159_free_pilot_replay_and_student_surface_closure.sql',
+    '../migrations/160_free_pilot_replay_and_student_surface_closure.sql',
     import.meta.url,
   ),
   'utf8',
