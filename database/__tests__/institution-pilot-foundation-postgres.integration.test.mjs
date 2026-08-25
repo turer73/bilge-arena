@@ -609,7 +609,7 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       () => authenticatedRpc(platformAdmin, expression, [
         platformAdmin, 'Kapalı DB Kapısı', freePilotManager, 'PILOT-GATE-001', 30, 2, 30, randomUUID(),
       ]),
-      '55000',
+      '23505',
     )
     await expectPgError(
       () => client.query(

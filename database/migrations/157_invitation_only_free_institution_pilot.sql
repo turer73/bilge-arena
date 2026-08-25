@@ -498,7 +498,8 @@ BEGIN
       AND institution.status IN ('pilot', 'active')
   ) THEN
     RAISE EXCEPTION 'another open invitation-free institution pilot already exists'
-      USING ERRCODE = '55000';
+      USING ERRCODE = '23505',
+        CONSTRAINT = 'pilot_institutions_one_open_free_pilot';
   END IF;
 
   IF EXISTS (
