@@ -54,34 +54,44 @@ BEGIN;
 -- politika yolunda auth.uid() = p_user_id oldugu icin davranis degismez.
 -- ---------------------------------------------------------------------------
 
+-- search_path = pg_catalog + tam nitelikli referanslar: migration 136 sonrasi
+-- repo konvansiyonu (database/lint-function-grants.mjs bunu zorluyor).
 CREATE OR REPLACE FUNCTION public.has_permission(p_user_id uuid, p_permission text)
 RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path TO 'public'
+SET search_path = pg_catalog
 AS $fn$
   SELECT (auth.uid() IS NULL OR auth.uid() = p_user_id)
     AND EXISTS (
       SELECT 1
-      FROM user_roles ur
-      JOIN role_permissions rp ON rp.role_id = ur.role_id
+      FROM public.user_roles ur
+      JOIN public.role_permissions rp ON rp.role_id = ur.role_id
       WHERE ur.user_id = p_user_id AND rp.permission = p_permission
     );
 $fn$;
+
+-- authenticated EXECUTE korunuyor: RLS politikalari bu fonksiyonu cagiriyor.
+-- anon'da bugun de yok (canli dogrulama: anon_exec=false), oyle kaliyor.
+REVOKE ALL ON FUNCTION public.has_permission(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.has_permission(uuid, text) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.has_any_role(p_user_id uuid)
 RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path TO 'public'
+SET search_path = pg_catalog
 AS $fn$
   SELECT (auth.uid() IS NULL OR auth.uid() = p_user_id)
     AND EXISTS (
-      SELECT 1 FROM user_roles WHERE user_id = p_user_id
+      SELECT 1 FROM public.user_roles WHERE user_id = p_user_id
     );
 $fn$;
+
+REVOKE ALL ON FUNCTION public.has_any_role(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.has_any_role(uuid) TO authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 2) search_questions: admin olmayan dalda cevap anahtarini kirp
@@ -114,15 +124,15 @@ RETURNS TABLE(
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path TO 'public'
+SET search_path = pg_catalog
 AS $fn$
 BEGIN
   -- Defense-in-depth: admin_view=TRUE requires admin.dashboard.view permission
   IF admin_view = TRUE THEN
     IF auth.uid() IS NULL OR NOT EXISTS (
       SELECT 1
-      FROM user_roles ur
-      JOIN role_permissions rp ON rp.role_id = ur.role_id
+      FROM public.user_roles ur
+      JOIN public.role_permissions rp ON rp.role_id = ur.role_id
       WHERE ur.user_id = auth.uid()
         AND rp.permission = 'admin.dashboard.view'
     ) THEN
@@ -153,7 +163,7 @@ BEGIN
       q.times_correct,
       q.created_at,
       COUNT(*) OVER() AS total_count
-    FROM questions q
+    FROM public.questions q
     WHERE
       (game_filter IS NULL OR q.game = game_filter)
       AND (category_filter IS NULL OR q.category = category_filter)
@@ -164,8 +174,8 @@ BEGIN
       AND (admin_view = TRUE OR q.is_active = TRUE)
       AND (
         search_q IS NULL OR search_q = ''
-        OR immutable_unaccent(q.content->>'question') ILIKE immutable_unaccent('%' || search_q || '%')
-        OR immutable_unaccent(q.content->>'sentence') ILIKE immutable_unaccent('%' || search_q || '%')
+        OR public.immutable_unaccent(q.content->>'question') ILIKE public.immutable_unaccent('%' || search_q || '%')
+        OR public.immutable_unaccent(q.content->>'sentence') ILIKE public.immutable_unaccent('%' || search_q || '%')
       )
     ORDER BY q.created_at DESC
     OFFSET GREATEST(result_offset, 0)
@@ -173,8 +183,12 @@ BEGIN
 END
 $fn$;
 
+-- Once PUBLIC temizlenir (yeni fonksiyon olusturuldugunda Postgres varsayilan
+-- olarak PUBLIC'e EXECUTE verir), sonra ihtiyac duyulan roller acikca verilir.
 -- Icerik artik kirpildigi icin misafir listelemesi guvenle geri aciliyor
 -- (disc#1627: canlida HTTP 500 veriyordu).
+REVOKE ALL ON FUNCTION public.search_questions(text,text,text,integer,boolean,boolean,integer,integer)
+  FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.search_questions(text,text,text,integer,boolean,boolean,integer,integer)
   TO anon, authenticated;
 
@@ -183,7 +197,7 @@ GRANT EXECUTE ON FUNCTION public.search_questions(text,text,text,integer,boolean
 --    service-role. anon/authenticated'in bu fonksiyona hic ihtiyaci yok.
 -- ---------------------------------------------------------------------------
 
-REVOKE EXECUTE ON FUNCTION public.select_random_questions(text,integer,text,integer,uuid[],text)
+REVOKE ALL ON FUNCTION public.select_random_questions(text,integer,text,integer,uuid[],text)
   FROM PUBLIC, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
