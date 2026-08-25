@@ -164,6 +164,38 @@ describe('useAuth', () => {
     })
   })
 
+  test('magic link kaydi: guvenli donus hedefini callback URL icinde korur', async () => {
+    const { result } = renderHook(() => useAuth())
+
+    await act(() => result.current.signInWithMagicLink(
+      'student@example.com',
+      '/arena/matematik?source=guest',
+    ))
+
+    expect(supa.signInWithOtp).toHaveBeenCalledWith({
+      email: 'student@example.com',
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Farena%2Fmatematik%3Fsource%3Dguest`,
+        shouldCreateUser: true,
+      },
+    })
+  })
+
+  test('magic link kaydi: guvensiz donus hedefini arena ile degistirir', async () => {
+    const { result } = renderHook(() => useAuth())
+
+    await act(() => result.current.signInWithMagicLink(
+      'student@example.com',
+      'https://evil.example',
+    ))
+
+    expect(supa.signInWithOtp).toHaveBeenCalledWith(expect.objectContaining({
+      options: expect.objectContaining({
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Farena`,
+      }),
+    }))
+  })
+
   test('unmount: auth aboneliği bırakılır', async () => {
     const { unmount } = renderHook(() => useAuth())
     await waitFor(() => expect(supa.authStateCb).not.toBeNull())
