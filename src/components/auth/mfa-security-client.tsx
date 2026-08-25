@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { CheckCircle2, KeyRound, Loader2, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { mfaLoginPath } from '@/lib/auth/aal2'
@@ -34,8 +33,17 @@ function hardNavigate(path: string) {
   window.location.assign(path)
 }
 
-export function MfaSecurityClient({ returnPath }: { returnPath: string }) {
-  const router = useRouter()
+function hardReplace(path: string) {
+  window.location.replace(path)
+}
+
+export function MfaSecurityClient({
+  returnPath,
+  replaceDocument = hardReplace,
+}: {
+  returnPath: string
+  replaceDocument?: (path: string) => void
+}) {
   const [setup, setSetup] = useState<Setup | null>(null)
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(true)
@@ -55,7 +63,7 @@ export function MfaSecurityClient({ returnPath }: { returnPath: string }) {
       ])
       if (!active) return
       if (!userResult.data.user) {
-        router.replace(mfaLoginPath(returnPath))
+        replaceDocument(mfaLoginPath(returnPath))
         return
       }
       if (aalResult.error || factorsResult.error) {
@@ -78,7 +86,7 @@ export function MfaSecurityClient({ returnPath }: { returnPath: string }) {
     }
     void load()
     return () => { active = false }
-  }, [router])
+  }, [replaceDocument, returnPath])
 
   const enroll = async () => {
     setSubmitting(true)

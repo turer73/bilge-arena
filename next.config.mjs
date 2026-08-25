@@ -93,16 +93,6 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Admin paneli — Cloudflare cache'lememeli
-        source: '/admin/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
-          { key: 'CDN-Cache-Control', value: 'no-store' },
-          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
-          { key: 'Referrer-Policy', value: 'no-referrer' },
-        ],
-      },
-      {
         // Admin API — PWA service worker ve CDN cache'lemesin (canli sayilar)
         source: '/api/admin/:path*',
         headers: [
@@ -235,6 +225,10 @@ const nextConfig = {
         // unsafe-eval'i report-only gozleminden sonra enforcing olarak kaldir.
         source: '/admin/:path*',
         headers: [
+          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
           {
             key: 'Content-Security-Policy',
             value: [

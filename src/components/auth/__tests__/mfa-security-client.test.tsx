@@ -2,12 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {
-  const replace = vi.fn()
-  const refresh = vi.fn()
   return {
-    replace,
-    refresh,
-    router: { replace, refresh },
     getUser: vi.fn(),
     getAal: vi.fn(),
     listFactors: vi.fn(),
@@ -16,10 +11,6 @@ const mocks = vi.hoisted(() => {
     challengeAndVerify: vi.fn(),
   }
 })
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => mocks.router,
-}))
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
@@ -46,10 +37,11 @@ describe('MfaSecurityClient recovery flow', () => {
   })
 
   it('preserves the original admin target across a fresh login', async () => {
+    const replaceDocument = vi.fn()
     mocks.getUser.mockResolvedValue({ data: { user: null }, error: null })
-    render(<MfaSecurityClient returnPath="/admin/kurumlar" />)
+    render(<MfaSecurityClient returnPath="/admin/kurumlar" replaceDocument={replaceDocument} />)
 
-    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith(
+    await waitFor(() => expect(replaceDocument).toHaveBeenCalledWith(
       '/giris?next=%2Fhesap%2Fguvenlik%3Fnext%3D%252Fadmin%252Fkurumlar',
     ))
   })
@@ -116,6 +108,5 @@ describe('MfaSecurityClient AAL2 kapisi', () => {
     fireEvent.click(screen.getByRole('button', { name: /Doğrula ve devam et/ }))
 
     await waitFor(() => expect(assign).toHaveBeenCalledWith('/admin'))
-    expect(mocks.replace).not.toHaveBeenCalledWith('/admin')
   })
 })

@@ -16,6 +16,16 @@ function reloadCurrentDocument() {
   window.location.reload()
 }
 
+function assignDocument(target: string | URL) {
+  disableLoadedTelemetry()
+  window.location.assign(new URL(String(target), window.location.href).href)
+}
+
+function replaceDocument(target: string | URL) {
+  disableLoadedTelemetry()
+  window.location.replace(new URL(String(target), window.location.href).href)
+}
+
 export function isSensitiveNavigationTarget(target: string | URL | null | undefined): boolean {
   if (target == null || typeof window === 'undefined') return false
   try {
@@ -59,28 +69,33 @@ function disableLoadedTelemetry() {
   })
 }
 
-export function installSensitiveNavigationBoundary(
-  hardNavigate: (target: string | URL) => void = (target) => {
-    disableLoadedTelemetry()
-    window.location.assign(new URL(String(target), window.location.href).href)
-  },
-  currentSensitive = isCurrentBrowserPathSensitive(),
-  hardReload: () => void = () => {
+interface SensitiveNavigationBoundaryOptions {
+  assignDocument?: (target: string | URL) => void
+  replaceDocument?: (target: string | URL) => void
+  reloadDocument?: () => void
+  currentSensitive?: boolean
+}
+
+export function installSensitiveNavigationBoundary({
+  assignDocument: hardAssign = assignDocument,
+  replaceDocument: hardReplace = replaceDocument,
+  reloadDocument: hardReload = () => {
     disableLoadedTelemetry()
     window.location.reload()
   },
-): () => void {
+  currentSensitive = isCurrentBrowserPathSensitive(),
+}: SensitiveNavigationBoundaryOptions = {}): () => void {
   const originalPushState = window.history.pushState
   const originalReplaceState = window.history.replaceState
   window.history.pushState = (data, unused, url) => {
     if (crossesSensitiveDocumentBoundary(url, currentSensitive)) {
-      return hardNavigate(url as string | URL)
+      return hardAssign(url as string | URL)
     }
     return originalPushState.call(window.history, data, unused, url)
   }
   window.history.replaceState = (data, unused, url) => {
     if (crossesSensitiveDocumentBoundary(url, currentSensitive)) {
-      return hardNavigate(url as string | URL)
+      return hardReplace(url as string | URL)
     }
     return originalReplaceState.call(window.history, data, unused, url)
   }
@@ -103,11 +118,11 @@ export function installSensitiveNavigationBoundary(
 
 /**
  * Ucuncu taraf reklam ve analitik betiklerinin tek yukleme noktasi.
- * Hassas çalışma alanları ayrı bir document boundary arkasındadır. Next.js'in
- * pushState/replaceState geçişi hassas bir hedefe yönelirse URL değişmeden önce
- * native navigasyona çevrilir; böylece kamusal sayfada çalışmış SDK kodu kurum
- * document'ına taşınamaz. Layout-effect fallback programatik/olağandışı bir
- * geçişi de ilk paint'ten önce tam yenilemeye zorlar.
+ * Hassas çalışma alanları ayrı bir document boundary arkasındadır. Görünür
+ * girişler DocumentBoundaryLink/native anchor kullanarak RSC prefetch başlamadan
+ * yeni belge açar. Bu history sarmalayıcısı programatik/olağandışı geçişler için
+ * ikinci savunma hattıdır; layout-effect fallback de sınır uyuşmazlığını üçüncü
+ * taraf script mount edilmeden tam yenilemeye zorlar.
  */
 export function PrivacySafeThirdPartyScripts({
   reloadDocument = reloadCurrentDocument,
@@ -143,7 +158,7 @@ export function PrivacySafeThirdPartyScripts({
 
   useLayoutEffect(() => {
     if (!documentBoundaryReady || !documentBoundaryMatches) return
-    return installSensitiveNavigationBoundary(undefined, sensitive)
+    return installSensitiveNavigationBoundary({ currentSensitive: sensitive })
   }, [documentBoundaryMatches, documentBoundaryReady, sensitive])
 
   // Scripts stay absent during hydration and any unexpected cross-boundary

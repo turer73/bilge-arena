@@ -55,7 +55,7 @@ describe('privacy-safe third-party document boundary', () => {
   it('replaces SPA history navigation to a sensitive workspace with a document navigation', () => {
     const hardNavigate = vi.fn()
     const originalPushState = window.history.pushState
-    const restore = installSensitiveNavigationBoundary(hardNavigate)
+    const restore = installSensitiveNavigationBoundary({ assignDocument: hardNavigate })
 
     window.history.pushState({}, '', '/arena/kurum')
 
@@ -68,7 +68,10 @@ describe('privacy-safe third-party document boundary', () => {
   it('replaces SPA history navigation from a sensitive workspace to a public page', () => {
     const hardNavigate = vi.fn()
     const originalPushState = window.history.pushState
-    const restore = installSensitiveNavigationBoundary(hardNavigate, true)
+    const restore = installSensitiveNavigationBoundary({
+      assignDocument: hardNavigate,
+      currentSensitive: true,
+    })
 
     window.history.pushState({}, '', '/hakkinda')
 
@@ -79,13 +82,19 @@ describe('privacy-safe third-party document boundary', () => {
   })
 
   it('replaces sensitive-to-public replaceState before mutating the URL', () => {
-    const hardNavigate = vi.fn()
+    const hardReplace = vi.fn()
+    const hardAssign = vi.fn()
     const originalReplaceState = window.history.replaceState
-    const restore = installSensitiveNavigationBoundary(hardNavigate, true)
+    const restore = installSensitiveNavigationBoundary({
+      assignDocument: hardAssign,
+      replaceDocument: hardReplace,
+      currentSensitive: true,
+    })
 
     window.history.replaceState({}, '', '/arena')
 
-    expect(hardNavigate).toHaveBeenCalledWith('/arena')
+    expect(hardReplace).toHaveBeenCalledWith('/arena')
+    expect(hardAssign).not.toHaveBeenCalled()
     restore()
     expect(window.history.replaceState).toBe(originalReplaceState)
   })
@@ -93,7 +102,11 @@ describe('privacy-safe third-party document boundary', () => {
   it('reloads a legacy cross-boundary browser-history entry on popstate', () => {
     const originalReplaceState = window.history.replaceState
     const hardReload = vi.fn()
-    const restore = installSensitiveNavigationBoundary(vi.fn(), false, hardReload)
+    const restore = installSensitiveNavigationBoundary({
+      assignDocument: vi.fn(),
+      currentSensitive: false,
+      reloadDocument: hardReload,
+    })
     const laterTelemetryListener = vi.fn()
     window.addEventListener('popstate', laterTelemetryListener)
 

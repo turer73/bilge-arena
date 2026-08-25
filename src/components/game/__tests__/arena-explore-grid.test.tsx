@@ -4,9 +4,10 @@ import { ArenaExploreGrid } from '../arena-explore-grid'
 
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} data-next-link="true" {...props}>{children}</a>
   ),
 }))
+vi.mock('next/navigation', () => ({ usePathname: () => '/arena' }))
 
 const PUBLIC_ITEMS = [
   ['Bil ve Fethet', '/arena/fethet'],
@@ -40,7 +41,9 @@ describe('ArenaExploreGrid', () => {
 
   test('sınıf özelliği açıkken pilot kartını ve beş kartlı düzeni gösterir', () => {
     render(<ArenaExploreGrid classroomEnabled />)
-    expect(screen.getByRole('link', { name: /Sınıflarım/i })).toHaveAttribute('href', '/arena/sinif')
+    const classroomLink = screen.getByRole('link', { name: /Sınıflarım/i })
+    expect(classroomLink).toHaveAttribute('href', '/arena/sinif')
+    expect(classroomLink).not.toHaveAttribute('data-next-link')
     expect(screen.getByTestId('arena-explore-grid')).toHaveClass('sm:grid-cols-3', 'lg:grid-cols-5')
   })
 
@@ -48,7 +51,9 @@ describe('ArenaExploreGrid', () => {
     const { rerender } = render(<ArenaExploreGrid />)
     expect(screen.queryByRole('link', { name: /Kurum Takibi/i })).not.toBeInTheDocument()
     rerender(<ArenaExploreGrid institutionEnabled />)
-    await waitFor(() => expect(screen.getByRole('link', { name: /Kurum Takibi/i })).toHaveAttribute('href', '/arena/kurum'))
+    const institutionLink = await screen.findByRole('link', { name: /Kurum Takibi/i })
+    expect(institutionLink).toHaveAttribute('href', '/arena/kurum')
+    expect(institutionLink).not.toHaveAttribute('data-next-link')
     expect(global.fetch).toHaveBeenCalledWith('/api/institution/workspace', expect.objectContaining({ cache: 'no-store' }))
     expect(screen.getByTestId('arena-explore-grid')).toHaveClass('sm:grid-cols-3', 'lg:grid-cols-5')
   })
