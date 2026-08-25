@@ -4,7 +4,7 @@ import type { Tables } from '@/types/database.generated'
 
 export type QuestionRow = Tables<'questions'>
 
-const questionContentSchema = z.object({
+const questionContentBase = z.object({
   question: z.string(),
   options: z.array(z.string()).min(2),
   answer: z.number().int().nonnegative(),
@@ -15,9 +15,28 @@ const questionContentSchema = z.object({
   hint: z.string().optional(),
   type: z.string().optional(),
   explanation: z.string().optional(),
-}).refine((content) => content.answer < content.options.length, {
-  message: 'answer must point to an option',
 })
+
+const questionContentSchema = questionContentBase.refine(
+  (content) => content.answer < content.options.length,
+  { message: 'answer must point to an option' },
+)
+
+/**
+ * Listeleme projeksiyonu semasi: `answer` OPSIYONEL.
+ *
+ * Migration 157 sonrasi `search_questions` admin olmayan dalda cevap anahtarini
+ * (answer/solution/explanation/hint) veritabani icinde kirpip donuyor. Tam
+ * icerik bekleyen `questionContentSchema` bu satirlari sessizce dusururdu
+ * (flatMap -> bos liste). Bu sema iki sekli de kabul eder; cevap anahtari
+ * gelse bile projeksiyon onu disari tasimaz.
+ */
+const publicQuestionContentSchema = questionContentBase
+  .extend({ answer: z.number().int().nonnegative().optional() })
+  .refine(
+    (content) => content.answer === undefined || content.answer < content.options.length,
+    { message: 'answer must point to an option' },
+  )
 
 const gameSchema = z.enum(['wordquest', 'matematik', 'turkce', 'fen', 'sosyal'])
 const difficultySchema = z.union([
@@ -86,7 +105,7 @@ export type PublicQuestionContent = Pick<
   | 'type'
 >
 
-export function toPublicQuestionContent(content: QuestionContent): PublicQuestionContent {
+export function toPublicQuestionContent(content: PublicQuestionContent): PublicQuestionContent {
   const { question, options, sentence, passage, context, type } = content
   return {
     question,
@@ -96,6 +115,20 @@ export function toPublicQuestionContent(content: QuestionContent): PublicQuestio
     ...(context !== undefined ? { context } : {}),
     ...(type !== undefined ? { type } : {}),
   }
+}
+
+/**
+ * Ham satir icerigini dogrudan public projeksiyona cevirir.
+ *
+ * `parseQuestionContent` + `toPublicQuestionContent` ikilisinin yerine gecer:
+ * cevap anahtari kirpilmis icerikte de calisir ve dogru cevap hicbir kosulda
+ * cagirana donmez. Listeleme uclari (grade/submit disi) bunu kullanmali.
+ */
+export function parsePublicQuestionContent(
+  content: QuestionRow['content'],
+): PublicQuestionContent | null {
+  const parsed = publicQuestionContentSchema.safeParse(content)
+  return parsed.success ? toPublicQuestionContent(parsed.data) : null
 }
 
 /** Soru API yanıtları için public alan whitelist'i. */

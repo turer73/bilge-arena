@@ -7,7 +7,7 @@ import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { questionUpdateSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
-import { parseQuestionContent, toPublicQuestionContent } from '@/lib/utils/question-public'
+import { parsePublicQuestionContent } from '@/lib/utils/question-public'
 import type { Database, Json, TablesUpdate } from '@/types/database.generated'
 import { issueVerifiedAttempt, toPublicVerifiedQuestions } from '@/lib/verified-attempts'
 import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
@@ -100,7 +100,10 @@ export async function GET(request: NextRequest) {
   let data: Array<{ id: string }> = adminProjection
     ? rawRows.map(({ total_count: _tc, ...rest }) => rest)
     : rawRows.flatMap((row) => {
-        const content = parseQuestionContent(row.content)
+        // Cevap anahtari bu dalda hicbir zaman elimize gecmemeli: migration 157
+        // sonrasi RPC zaten kirpip gonderiyor, parse de kirpik icerigi kabul edip
+        // yalniz public alanlari cikariyor (cift katman).
+        const content = parsePublicQuestionContent(row.content)
         if (!content) return []
         return [{
           id: row.id,
@@ -110,7 +113,7 @@ export async function GET(request: NextRequest) {
           topic: row.topic,
           difficulty: row.difficulty,
           level_tag: row.level_tag,
-          content: toPublicQuestionContent(content),
+          content,
           base_points: row.difficulty * 10,
         }]
       })
