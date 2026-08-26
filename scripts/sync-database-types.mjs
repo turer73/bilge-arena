@@ -34,8 +34,9 @@ if (!tokenExpiresAt) {
     process.exit(1)
   }
 
-  const remainingDays = Math.ceil((expiryMs - Date.now()) / 86_400_000)
-  if (remainingDays < 0) {
+  const nowMs = Date.now()
+  const remainingDays = Math.ceil((expiryMs - nowMs) / 86_400_000)
+  if (expiryMs <= nowMs) {
     console.error('Supabase schema-read token is expired; rotate SUPABASE_ACCESS_TOKEN.')
     process.exit(1)
   }
