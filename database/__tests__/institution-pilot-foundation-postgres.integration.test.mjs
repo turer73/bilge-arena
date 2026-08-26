@@ -1450,6 +1450,27 @@ suite('112-127, 131-135, 145, 149-160 and 167 institution pilot real PostgreSQL 
       [provisioned.institution.id, suspendRequestId],
     )
     expect(lifecycleAudit.rows[0].count).toBe(1)
+
+    // A lost-ledger retry after an opening must close provisioning once and
+    // remain idempotent on the next retry. Existing tenant rows stay intact.
+    await client.query(freePilotReadinessEvidenceGateSql)
+    await client.query(freePilotReadinessEvidenceGateSql)
+    const retryClosure = await client.query(`
+      SELECT
+        (SELECT enabled FROM public.institution_pilot_controls
+         WHERE control_key='free_provisioning') AS enabled,
+        (SELECT count(*)::int
+         FROM public.institution_pilot_control_events
+         WHERE control_key='free_provisioning'
+           AND change_reference LIKE 'MIGRATION-167-READINESS-GATE-%') AS event_count,
+        (SELECT count(*)::int FROM public.pilot_institutions
+         WHERE id=$1) AS institution_count
+    `, [provisioned.institution.id])
+    expect(retryClosure.rows[0]).toEqual({
+      enabled: false,
+      event_count: 1,
+      institution_count: 1,
+    })
   })
 
   it('lists tenants for platform admins without exposing the directory to managers', async () => {
