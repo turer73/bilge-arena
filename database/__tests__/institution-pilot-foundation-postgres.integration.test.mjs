@@ -87,8 +87,12 @@ const freePilotReplayAndStudentSurfaceSql = readFileSync(
   join(migrationsDir, '160_free_pilot_replay_and_student_surface_closure.sql'),
   'utf8',
 )
+const freePilotReadinessEvidenceGateSql = readFileSync(
+  join(migrationsDir, '167_free_pilot_readiness_evidence_gate.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145, 149-160 and 167 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -428,6 +432,8 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     await client.query(invitationOnlyFreePilotSql)
     await client.query(freePilotExpiryRpcClosureSql)
     await client.query(freePilotReplayAndStudentSurfaceSql)
+    await client.query(freePilotReadinessEvidenceGateSql)
+    await client.query(freePilotReadinessEvidenceGateSql)
 
     const legacyRpcPrivileges = await client.query(`
       SELECT
@@ -600,6 +606,7 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     )
 
     const expression = 'public.provision_free_pilot_institution($1,$2,$3,$4,$5,$6,$7,$8)'
+    const readinessRef = 'READINESS-TEST-001'
     await expectPgError(
       () => rpc(expression, [
         platformAdmin, 'Service Role Kurumu', freePilotManager, 'PILOT-SERVICE-001', 30, 2, 30, randomUUID(),
@@ -639,11 +646,169 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       ),
       '22023',
     )
+
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-TEST-NO-EVIDENCE-001'],
+      )
+      await expectPgError(
+        () => client.query(
+          `UPDATE public.institution_pilot_controls
+           SET enabled=true
+           WHERE control_key='free_provisioning'`,
+        ),
+        '55000',
+      )
+    } finally {
+      await client.query('ROLLBACK')
+    }
+
+    const emptyReadiness = await client.query(
+      `SELECT count(*)::int AS count
+       FROM public.institution_free_pilot_readiness_attestations`,
+    )
+    expect(emptyReadiness.rows[0].count).toBe(0)
+    await expectPgError(
+      () => client.query(
+        `INSERT INTO public.institution_free_pilot_readiness_attestations(
+           readiness_ref,
+           legal_approval_ref,
+           institution_dpa_ref,
+           retention_decision_ref,
+           vendor_register_ref,
+           tenant_ab_evidence_ref,
+           credential_rotation_ref,
+           backup_restore_ref,
+           account_readiness_ref,
+           accountable_owner_ref,
+           valid_until
+         ) VALUES(
+           'READINESS-TOO-LONG-001',
+           'LEGAL-TEST-EXPIRY-001',
+           'DPA-TEST-EXPIRY-001',
+           'RETENTION-TEST-EXPIRY-001',
+           'VENDORS-TEST-EXPIRY-001',
+           'TENANT-AB-TEST-EXPIRY-001',
+           'DB-CREDENTIAL-TEST-EXPIRY-001',
+           'RESTORE-TEST-EXPIRY-001',
+           'ACCOUNTS-TEST-EXPIRY-001',
+           'OWNER-TEST-EXPIRY-001',
+           clock_timestamp() + interval '8 days'
+         )`,
+      ),
+      '22023',
+    )
+
+    await client.query(
+      `INSERT INTO public.institution_free_pilot_readiness_attestations(
+         readiness_ref,
+         legal_approval_ref,
+         institution_dpa_ref,
+         retention_decision_ref,
+         vendor_register_ref,
+         tenant_ab_evidence_ref,
+         credential_rotation_ref,
+         backup_restore_ref,
+         account_readiness_ref,
+         accountable_owner_ref,
+         valid_until
+       ) VALUES(
+         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,clock_timestamp() + interval '2 hours'
+       )`,
+      [
+        readinessRef,
+        'LEGAL-TEST-001',
+        'DPA-TEST-001',
+        'RETENTION-TEST-001',
+        'VENDORS-TEST-001',
+        'TENANT-AB-TEST-001',
+        'DB-CREDENTIAL-TEST-001',
+        'RESTORE-TEST-001',
+        'ACCOUNTS-TEST-001',
+        'OWNER-TEST-001',
+      ],
+    )
+
+    const readinessPrivileges = await client.query(`
+      SELECT
+        has_table_privilege(
+          'authenticated',
+          'public.institution_free_pilot_readiness_attestations',
+          'SELECT'
+        ) AS authenticated_attestations,
+        has_table_privilege(
+          'service_role',
+          'public.institution_free_pilot_readiness_attestations',
+          'SELECT'
+        ) AS service_attestations,
+        has_table_privilege(
+          'authenticated',
+          'public.institution_free_pilot_readiness_consumptions',
+          'SELECT'
+        ) AS authenticated_consumptions,
+        has_table_privilege(
+          'service_role',
+          'public.institution_free_pilot_readiness_consumptions',
+          'SELECT'
+        ) AS service_consumptions
+    `)
+    expect(readinessPrivileges.rows[0]).toEqual({
+      authenticated_attestations: false,
+      service_attestations: false,
+      authenticated_consumptions: false,
+      service_consumptions: false,
+    })
+    await expectPgError(
+      () => client.query(
+        `UPDATE public.institution_free_pilot_readiness_attestations
+         SET valid_until=valid_until + interval '1 hour'
+         WHERE readiness_ref=$1`,
+        [readinessRef],
+      ),
+      '42501',
+    )
+    await expectPgError(
+      () => client.query(
+        `DELETE FROM public.institution_free_pilot_readiness_attestations
+         WHERE readiness_ref=$1`,
+        [readinessRef],
+      ),
+      '42501',
+    )
+
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-TEST-UNKNOWN-EVIDENCE-001'],
+      )
+      await client.query(
+        "SELECT set_config('app.institution_readiness_ref',$1,true)",
+        ['READINESS-UNKNOWN-001'],
+      )
+      await expectPgError(
+        () => client.query(
+          `UPDATE public.institution_pilot_controls
+           SET enabled=true
+           WHERE control_key='free_provisioning'`,
+        ),
+        '55000',
+      )
+    } finally {
+      await client.query('ROLLBACK')
+    }
+
     await client.query('BEGIN')
     try {
       await client.query(
         "SELECT set_config('app.institution_control_change_ref',$1,true)",
         ['CONTROL-TEST-ENABLE-001'],
+      )
+      await client.query(
+        "SELECT set_config('app.institution_readiness_ref',$1,true)",
+        [readinessRef],
       )
       await client.query(
         `UPDATE public.institution_pilot_controls
@@ -656,7 +821,7 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       throw controlError
     }
     const controlEvents = await client.query(
-      `SELECT previous_enabled,enabled,change_reference
+      `SELECT previous_enabled,enabled,change_reference,readiness_ref
        FROM public.institution_pilot_control_events
        WHERE control_key='free_provisioning'`,
     )
@@ -664,6 +829,7 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       previous_enabled: false,
       enabled: true,
       change_reference: 'CONTROL-TEST-ENABLE-001',
+      readiness_ref: readinessRef,
     }])
 
     const requestId = randomUUID()
@@ -812,22 +978,27 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
       '23514',
     )
     const boundaryCreatedAt = new Date()
-    const boundaryPilot = await client.query(
-      `INSERT INTO public.pilot_institutions(
-         name,created_by,status,student_limit,staff_limit,pilot_kind,
-         review_due_at,approval_ref,created_at
-       ) VALUES(
-         $1,$2,'suspended',40,2,'invitation_free',
-         $3::timestamptz + interval '60 days',$4,$3
-       ) RETURNING id`,
-      [
-        'Tam sınırda askıya alınmış canary',
-        platformAdmin,
-        boundaryCreatedAt,
-        'PILOT-LIMIT-BOUNDARY-001',
-      ],
-    )
-    await client.query('DELETE FROM public.pilot_institutions WHERE id=$1', [boundaryPilot.rows[0].id])
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,
+           review_due_at,approval_ref,created_at
+         ) VALUES(
+           $1,$2,'suspended',40,2,'invitation_free',
+           $3::timestamptz + interval '60 days',$4,$3
+         )`,
+        [
+          'Tam sınırda askıya alınmış canary',
+          platformAdmin,
+          boundaryCreatedAt,
+          'PILOT-LIMIT-BOUNDARY-001',
+        ],
+      )
+    } finally {
+      // A valid boundary fixture would consume the one-shot readiness package.
+      await client.query('ROLLBACK')
+    }
 
     const before = Date.now()
     const provisioned = await authenticatedRpc(platformAdmin, expression, [
@@ -849,6 +1020,17 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
     })
     expect(reviewDueAt).toBeGreaterThanOrEqual(before + 29 * 24 * 60 * 60 * 1000)
     expect(reviewDueAt).toBeLessThanOrEqual(Date.now() + 31 * 24 * 60 * 60 * 1000)
+
+    const readinessConsumption = await client.query(
+      `SELECT readiness_ref,institution_id
+       FROM public.institution_free_pilot_readiness_consumptions
+       WHERE readiness_ref=$1`,
+      [readinessRef],
+    )
+    expect(readinessConsumption.rows).toEqual([{
+      readiness_ref: readinessRef,
+      institution_id: provisioned.institution.id,
+    }])
 
     await expectPgError(
       () => authenticatedRpc(platformAdmin, expression, [
@@ -1234,6 +1416,19 @@ suite('112-127, 131-135, 145 and 149-159 institution pilot real PostgreSQL accep
         suspendRequestId,
       ],
     )).toMatchObject({ status: 'suspended', changed: true })
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin,
+        'Tüketilmiş readiness yeniden kullanılamaz',
+        freePilotManagerTwo,
+        'PILOT-REUSE-001',
+        30,
+        2,
+        30,
+        randomUUID(),
+      ]),
+      '55000',
+    )
     await expectPgError(
       () => authenticatedRpc(
         platformAdmin,
