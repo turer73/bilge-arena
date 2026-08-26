@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { NextResponse } from 'next/server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { logSchema } from '@/lib/validations/schemas'
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     console.error(`[${logEntry.type}] ${logEntry.message}`, logEntry.meta)
 
     // Supabase'e kaydet (client_logs tablosu yoksa sessizce devam et)
-    await supabase
+    await createServiceRoleClient()
       .from('client_logs')
       .insert(logEntry)
       .then(({ error }) => {

@@ -437,6 +437,17 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
+      // Migration 169. Generated types are refreshed after the production
+      // schema promotion; until then routes use this explicit RPC contract.
+      mutate_admin_homepage: {
+        Args: {
+          p_user_id: string
+          p_request_id: string
+          p_operation: string
+          p_payload: Json
+        }
+        Returns: Json
+      }
       // Migration 128. Uretilen tiplere ancak canliya uygulandiktan sonra
       // girecegi icin sozlesme burada elle tutuluyor.
       award_error_report_reward: {

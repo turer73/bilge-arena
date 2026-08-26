@@ -4,6 +4,12 @@ import { useHomepageEditorStore } from '@/stores/homepage-editor-store'
 import { cn } from '@/lib/utils/cn'
 import { useCallback } from 'react'
 
+async function requireMutationSuccess(request: Promise<Response>) {
+  const response = await request
+  if (!response.ok) throw new Error(`Ana sayfa mutasyonu başarısız (${response.status})`)
+  return response
+}
+
 export function PublishBar() {
   const isDirty = useHomepageEditorStore((s) => s.isDirty)
   const isSaving = useHomepageEditorStore((s) => s.isSaving)
@@ -19,11 +25,14 @@ export function PublishBar() {
       const sectionEntries = Object.entries(sections || {})
       await Promise.all(
         sectionEntries.map(([key, section]) =>
-          fetch(`/api/admin/homepage/sections/${key}`, {
+          requireMutationSuccess(fetch(`/api/admin/homepage/sections/${key}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ config: section?.config || {} }),
-          })
+            body: JSON.stringify({
+              requestId: crypto.randomUUID(),
+              config: section?.config || {},
+            }),
+          }))
         )
       )
 
@@ -38,11 +47,15 @@ export function PublishBar() {
 
       await Promise.all(
         Array.from(sectionGroups.entries()).map(([sectionKey, ids]) =>
-          fetch(`/api/admin/homepage/elements/reorder`, {
+          requireMutationSuccess(fetch(`/api/admin/homepage/elements/reorder`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ section_key: sectionKey, ordered_ids: ids }),
-          })
+            body: JSON.stringify({
+              requestId: crypto.randomUUID(),
+              section_key: sectionKey,
+              ordered_ids: ids,
+            }),
+          }))
         )
       )
 
@@ -57,11 +70,11 @@ export function PublishBar() {
   const handlePublish = useCallback(async () => {
     setSaving(true)
     try {
-      await fetch('/api/admin/homepage/publish', {
+      await requireMutationSuccess(fetch('/api/admin/homepage/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'publish' }),
-      })
+        body: JSON.stringify({ action: 'publish', requestId: crypto.randomUUID() }),
+      }))
     } catch (err) {
       console.error('Yayınlama hatası:', err)
     } finally {
@@ -72,11 +85,11 @@ export function PublishBar() {
   const handleUnpublish = useCallback(async () => {
     setSaving(true)
     try {
-      await fetch('/api/admin/homepage/publish', {
+      await requireMutationSuccess(fetch('/api/admin/homepage/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'unpublish' }),
-      })
+        body: JSON.stringify({ action: 'unpublish', requestId: crypto.randomUUID() }),
+      }))
     } catch (err) {
       console.error('Taslağa alma hatası:', err)
     } finally {

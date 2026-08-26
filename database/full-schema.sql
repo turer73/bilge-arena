@@ -625,27 +625,37 @@ CREATE POLICY "questions_select_all" ON questions FOR SELECT USING (is_active = 
 
 -- Oturumlar
 DROP POLICY IF EXISTS "sessions_own" ON game_sessions;
-CREATE POLICY "sessions_own" ON game_sessions FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "sessions_own" ON game_sessions FOR SELECT TO authenticated USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "answers_own" ON session_answers;
-CREATE POLICY "answers_own" ON session_answers FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "answers_own" ON session_answers FOR SELECT TO authenticated USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "badges_own" ON user_badges;
-CREATE POLICY "badges_own" ON user_badges FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "badges_own" ON user_badges FOR SELECT TO authenticated USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "topic_own" ON user_topic_progress;
-CREATE POLICY "topic_own" ON user_topic_progress FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "topic_own" ON user_topic_progress FOR SELECT TO authenticated USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "daily_own" ON user_daily_quests;
-CREATE POLICY "daily_own" ON user_daily_quests FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "daily_own" ON user_daily_quests FOR SELECT TO authenticated USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "xp_own" ON xp_log;
-CREATE POLICY "xp_own" ON xp_log FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "xp_own" ON xp_log FOR SELECT TO authenticated USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "qhist_own" ON user_question_history;
-CREATE POLICY "qhist_own" ON user_question_history FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "qhist_own" ON user_question_history FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON
+  game_sessions, session_answers, user_badges, user_topic_progress,
+  user_daily_quests, xp_log, user_question_history
+FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON
+  game_sessions, session_answers, user_badges, user_topic_progress,
+  user_daily_quests, xp_log, user_question_history
+TO service_role;
+GRANT INSERT ON user_daily_quests TO service_role;
 
 -- Liderboard
 DROP POLICY IF EXISTS "lb_select_all" ON leaderboard_weekly;
 CREATE POLICY "lb_select_all" ON leaderboard_weekly FOR SELECT USING (TRUE);
 DROP POLICY IF EXISTS "lb_own" ON leaderboard_weekly;
-CREATE POLICY "lb_own" ON leaderboard_weekly FOR INSERT WITH CHECK (auth.uid() = user_id);
 DROP POLICY IF EXISTS "lb_own_update" ON leaderboard_weekly;
-CREATE POLICY "lb_own_update" ON leaderboard_weekly FOR UPDATE USING (auth.uid() = user_id);
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON leaderboard_weekly
+  FROM PUBLIC, anon, authenticated, service_role;
 
 -- Rozetler & Gorevler
 DROP POLICY IF EXISTS "badges_read" ON badges;
@@ -664,11 +674,11 @@ DROP POLICY IF EXISTS "comments_delete" ON comments;
 CREATE POLICY "comments_delete" ON comments FOR DELETE USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "comment_likes_select" ON comment_likes;
-CREATE POLICY "comment_likes_select" ON comment_likes FOR SELECT USING (true);
+CREATE POLICY "comment_likes_select" ON comment_likes
+  FOR SELECT USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "comment_likes_insert" ON comment_likes;
-CREATE POLICY "comment_likes_insert" ON comment_likes FOR INSERT WITH CHECK (auth.uid() = user_id);
 DROP POLICY IF EXISTS "comment_likes_delete" ON comment_likes;
-CREATE POLICY "comment_likes_delete" ON comment_likes FOR DELETE USING (auth.uid() = user_id);
+REVOKE ALL ON comment_likes FROM anon, authenticated;
 
 DROP POLICY IF EXISTS "question_likes_select" ON question_likes;
 CREATE POLICY "question_likes_select" ON question_likes FOR SELECT USING (true);
@@ -687,9 +697,6 @@ CREATE POLICY "error_reports_select_admin" ON error_reports FOR SELECT USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 DROP POLICY IF EXISTS "error_reports_update_admin" ON error_reports;
-CREATE POLICY "error_reports_update_admin" ON error_reports FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
 
 -- Admin tablolari
 DROP POLICY IF EXISTS "admin_logs_select" ON admin_logs;
@@ -697,20 +704,17 @@ CREATE POLICY "admin_logs_select" ON admin_logs FOR SELECT USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 DROP POLICY IF EXISTS "admin_logs_insert" ON admin_logs;
-CREATE POLICY "admin_logs_insert" ON admin_logs FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+REVOKE INSERT, UPDATE, DELETE ON admin_logs FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON admin_logs TO service_role;
 
 DROP POLICY IF EXISTS "site_settings_select" ON site_settings;
 CREATE POLICY "site_settings_select" ON site_settings FOR SELECT USING (true);
 DROP POLICY IF EXISTS "site_settings_update" ON site_settings;
-CREATE POLICY "site_settings_update" ON site_settings FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
 DROP POLICY IF EXISTS "site_settings_insert" ON site_settings;
-CREATE POLICY "site_settings_insert" ON site_settings FOR INSERT WITH CHECK (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
+REVOKE INSERT, UPDATE, DELETE ON site_settings FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON site_settings TO service_role;
+REVOKE UPDATE, DELETE ON error_reports FROM PUBLIC, anon, authenticated;
+GRANT SELECT, UPDATE ON error_reports TO service_role;
 
 -- ============================================================
 -- BASLANGIC VERILERI
@@ -771,8 +775,12 @@ CREATE INDEX IF NOT EXISTS idx_consent_logs_user_id ON consent_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_consent_logs_type ON consent_logs(consent_type);
 
 ALTER TABLE consent_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anyone can insert consent logs" ON consent_logs FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Anyone can insert consent logs" ON consent_logs;
+CREATE POLICY "Service can insert consent logs" ON consent_logs
+  FOR INSERT TO service_role WITH CHECK (true);
 CREATE POLICY "Users can read own consent logs" ON consent_logs FOR SELECT USING (auth.uid() = user_id);
+REVOKE INSERT, UPDATE, DELETE ON consent_logs FROM PUBLIC, anon, authenticated;
+GRANT INSERT ON consent_logs TO service_role;
 
 -- ============================================================
 -- Premium trigger (Migration 009)
@@ -824,11 +832,13 @@ CREATE TABLE IF NOT EXISTS client_logs (
 ALTER TABLE client_logs ENABLE ROW LEVEL SECURITY;
 
 -- Kimse okuyamaz (admin Supabase dashboard'dan okur)
--- INSERT sadece authenticated + service_role
+-- INSERT yalniz route tarafindaki service-role istemcisinden gelir.
 CREATE POLICY "Service can insert logs"
   ON client_logs FOR INSERT
-  TO authenticated
+  TO service_role
   WITH CHECK (true);
+REVOKE INSERT, UPDATE, DELETE ON client_logs FROM PUBLIC, anon, authenticated;
+GRANT INSERT ON client_logs TO service_role;
 
 -- Index: zamana gore sorgulama
 CREATE INDEX IF NOT EXISTS idx_client_logs_created
@@ -865,9 +875,9 @@ BEGIN
 END;
 $$;
 
--- RPC'yi sadece authenticated kullanicilar cagirabilsin
-REVOKE ALL ON FUNCTION increment_xp(uuid, integer) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION increment_xp(uuid, integer) TO authenticated;
+-- Eski iki-parametreli XP writer'i browser rollerine acilmaz. Yeni migration
+-- zinciri bu imzayi ledger-bagli dort-parametreli fonksiyonla degistirir.
+REVOKE ALL ON FUNCTION increment_xp(uuid, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION increment_xp(uuid, integer) TO service_role;
 
 -- ============================================================

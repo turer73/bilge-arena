@@ -4,10 +4,19 @@ import { checkPermission, logAdminAction } from '@/lib/supabase/admin'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@/types/database.generated'
+import { z } from 'zod'
+import { adminRbacErrorResponse, callAdminRbacRpc } from '@/lib/admin-rbac/mutations'
 
 type SearchProfilesAdminArgs = Database['public']['Functions']['search_profiles_admin']['Args']
 
 const adminUserLimiter = createRateLimiter('admin-users-create', 10, 60_000) // 10/dk
+
+const adminInviteSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  displayName: z.string().trim().max(100).optional(),
+  roleId: z.string().uuid().optional(),
+  requestId: z.string().uuid(),
+}).strict()
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -71,52 +80,21 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ users: usersWithRoles, total: count, page, limit })
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(_request: NextRequest) {
   const supabase = await createClient()
   const admin = await checkPermission(supabase, 'admin.users.manage')
   if (!admin) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
   }
 
-  const body = await request.json()
-  const { userId, action } = body
-
-  if (!userId || !action) {
-    return NextResponse.json({ error: 'Missing userId or action' }, { status: 400 })
-  }
-
-  // Gecerli action kontrolu
-  if (!['promote', 'demote'].includes(action)) {
-    return NextResponse.json({ error: 'Gecersiz action' }, { status: 400 })
-  }
-
-  // Admin kendini demote edemez
-  if (action === 'demote' && userId === admin.id) {
-    return NextResponse.json({ error: 'Kendinizi demote edemezsiniz' }, { status: 400 })
-  }
-
-  const newRole = action === 'promote' ? 'admin' : 'user'
-  const { data: affected } = await supabase
-    .from('profiles')
-    .update({ role: newRole })
-    .eq('id', userId)
-    .select('id')
-
-  if (!affected || affected.length === 0) {
-    return NextResponse.json({ error: 'Kullanici bulunamadi' }, { status: 404 })
-  }
-
-  // Admin log kaydet (IP + user-agent dahil)
-  await logAdminAction(supabase, {
-    adminId: admin.id,
-    action,
-    targetType: 'user',
-    targetId: userId,
-    details: { action, newRole },
-    request,
-  })
-
-  return NextResponse.json({ success: true })
+  // profiles.role was the pre-RBAC authorization source. Mutating it here
+  // would create two competing sources of truth and the browser client no
+  // longer has profile UPDATE privileges. Role changes must use the governed
+  // /api/admin/roles/assign RPC path.
+  return NextResponse.json(
+    { error: 'Eski profil rolü mutasyonu kapatıldı; RBAC rol yönetimini kullanın' },
+    { status: 405, headers: { Allow: 'GET, POST' } },
+  )
 }
 
 export async function POST(request: NextRequest) {
@@ -133,20 +111,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json()
-    const { email, displayName, roleId } = body
-
-    if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'E-posta adresi gerekli' }, { status: 400 })
+    const body = await request.json().catch(() => null)
+    const parsed = adminInviteSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Geçersiz davet bilgisi' }, { status: 400 })
     }
+    const { email: validEmail, displayName, roleId, requestId } = parsed.data
 
-    // RFC uyumlu email doğrulama + uzunluk limiti
-    const { z } = await import('zod')
-    const emailResult = z.string().email().max(254).safeParse(email.trim().toLowerCase())
-    if (!emailResult.success) {
-      return NextResponse.json({ error: 'Geçersiz e-posta formatı' }, { status: 400 })
+    // Creating an account and assigning an authorization role are distinct
+    // privileges. Reject before sending an invitation email if the actor only
+    // has user-management permission.
+    if (roleId && !await checkPermission(supabase, 'admin.roles.manage')) {
+      return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
     }
-    const validEmail = emailResult.data
 
     // Service role client ile kullanıcı davet et
     const serviceClient = createServiceRoleClient()
@@ -170,21 +147,31 @@ export async function POST(request: NextRequest) {
 
     // Opsiyonel: Rol ata
     if (roleId) {
-      const svc = createServiceRoleClient()
-      await svc.from('user_roles').insert({
-        user_id: newUserId,
-        role_id: roleId,
-        assigned_by: admin.id,
+      const { error: roleError } = await callAdminRbacRpc(serviceClient, 'admin_assign_role', {
+        p_actor_id: admin.id,
+        p_user_id: newUserId,
+        p_role_id: roleId,
+        p_request_id: requestId,
       })
+      if (roleError) {
+        // Auth invitation and Postgres cannot share one transaction. Remove only
+        // the just-created user so a failed RBAC assignment is never reported as
+        // a successful role-bearing invitation.
+        const { error: compensationError } = await serviceClient.auth.admin.deleteUser(newUserId)
+        if (compensationError) {
+          return NextResponse.json({ error: 'Davet geri alma işlemi tamamlanamadı' }, { status: 500 })
+        }
+        return adminRbacErrorResponse(roleError)
+      }
     }
 
     // Admin log kaydet (IP + user-agent dahil)
-    await logAdminAction(supabase, {
+    await logAdminAction({
       adminId: admin.id,
       action: 'create_user',
       targetType: 'user',
       targetId: newUserId,
-      details: { email: validEmail, displayName, roleId },
+      details: { email: validEmail, displayName, roleId, requestId },
       request,
     })
 

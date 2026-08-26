@@ -151,7 +151,10 @@ export default function AdminRolesPage() {
       const res = await fetch(`/api/admin/roles/${selectedRole.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ permissions: Array.from(editPerms) }),
+        body: JSON.stringify({
+          permissions: Array.from(editPerms),
+          requestId: crypto.randomUUID(),
+        }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -206,7 +209,11 @@ export default function AdminRolesPage() {
       const res = await fetch('/api/admin/roles/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, roleId: selectedRole.id }),
+        body: JSON.stringify({
+          userId,
+          roleId: selectedRole.id,
+          requestId: crypto.randomUUID(),
+        }),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -239,7 +246,11 @@ export default function AdminRolesPage() {
       const res = await fetch('/api/admin/roles/assign', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, roleId: selectedRole.id }),
+        body: JSON.stringify({
+          userId,
+          roleId: selectedRole.id,
+          requestId: crypto.randomUUID(),
+        }),
       })
       if (!res.ok) {
         const data = await res.json()

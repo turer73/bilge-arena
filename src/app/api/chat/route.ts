@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { chatRequestSchema } from '@/lib/validations/schemas'
 import { getClientIp } from '@/lib/utils/client-ip'
+import type { Json } from '@/types/database.generated'
 import { TOPIC_EXPLANATION_SYSTEM_INSTRUCTION } from '@/lib/bilge-tahta/topic-explanation'
 
 // Rate limit dusuruldu (konu#7 ders-hub plani, Faz 3): Gemini free-tier'a gore
@@ -68,6 +70,22 @@ const INJECTION_PATTERNS: RegExp[] = [
   /act\s+as\s+(a\s+)?(hacker|criminal|adult|nsfw)/i,
 ]
 
+function writeChatSecurityLog(payload: {
+  admin_id: string
+  action: 'chat_injection_blocked' | 'chat_safety_blocked'
+  target_type: 'chat'
+  target_id: string
+  details: Json
+}) {
+  try {
+    const service = createServiceRoleClient()
+    void service.from('admin_logs').insert(payload).then(() => null, () => null)
+  } catch {
+    // Security logging stays best-effort so an unavailable audit dependency
+    // cannot turn a blocked prompt into an accepted request.
+  }
+}
+
 export async function POST(request: Request) {
   // 1) Auth kontrolu
   const supabase = await createClient()
@@ -124,7 +142,7 @@ export async function POST(request: Request) {
   const matchedPattern = INJECTION_PATTERNS.find((re) => re.test(userText))
   if (matchedPattern) {
     // Abuse log — best-effort, hata atmasin
-    void supabase.from('admin_logs').insert({
+    writeChatSecurityLog({
       admin_id: user.id,
       action: 'chat_injection_blocked',
       target_type: 'chat',
@@ -134,7 +152,7 @@ export async function POST(request: Request) {
         excerpt: userText.slice(0, 200),
         ip,
       },
-    }).then(() => null, () => null)
+    })
 
     return NextResponse.json(
       { error: 'Isteginiz guvenlik kontrolunden gecemedi.' },
@@ -212,7 +230,7 @@ export async function POST(request: Request) {
     // kontrolunun analogu — OpenAI-uyumlu API'lerde finish_reason='content_filter'.)
     const choice = json.choices?.[0]
     if (choice?.finish_reason === 'content_filter') {
-      void supabase.from('admin_logs').insert({
+      writeChatSecurityLog({
         admin_id: user.id,
         action: 'chat_safety_blocked',
         target_type: 'chat',
@@ -222,7 +240,7 @@ export async function POST(request: Request) {
           excerpt: userText.slice(0, 200),
           ip,
         },
-      }).then(() => null, () => null)
+      })
       return NextResponse.json(
         { error: 'AI yaniti guvenlik filtresine takildi. Lutfen sorunuzu farkli sekilde sorun.' },
         { status: 502 }

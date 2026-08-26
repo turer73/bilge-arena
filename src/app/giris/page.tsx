@@ -7,6 +7,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 }
 
-export default function GirisPage() {
-  return <GirisClient />
+export default async function GirisPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error } = await searchParams
+  return (
+    <GirisClient
+      initialConsentError={error === 'consent_required'
+        ? 'Giriş onayı doğrulanamadı veya süresi doldu. Koşulları işaretleyip yeniden deneyin.'
+        : null}
+    />
+  )
 }

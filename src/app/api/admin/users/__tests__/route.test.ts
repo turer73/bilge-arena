@@ -5,6 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockGetUser = vi.fn()
 const mockCheckPermission = vi.fn()
 const mockInviteUserByEmail = vi.fn()
+const mockDeleteUser = vi.fn()
+const mockServiceRpc = vi.fn()
+const { mockInviteRateLimit } = vi.hoisted(() => ({ mockInviteRateLimit: vi.fn() }))
 const mockInsert = vi.fn()
 const mockRpc = vi.fn()
 const mockUserRolesIn = vi.fn()
@@ -44,23 +47,23 @@ vi.mock('@/lib/supabase/admin', () => ({
   logAdminAction: vi.fn().mockResolvedValue(undefined),
 }))
 
+vi.mock('@/lib/utils/rate-limit', () => ({
+  createRateLimiter: () => ({ check: mockInviteRateLimit }),
+}))
+
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({
     auth: {
       admin: {
         inviteUserByEmail: mockInviteUserByEmail,
+        deleteUser: mockDeleteUser,
       },
     },
-    from: vi.fn(() => ({
-      insert: vi.fn().mockResolvedValue({ error: null }),
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { id: 'test-role-id' }, error: null }),
-    })),
+    rpc: mockServiceRpc,
   }),
 }))
 
-import { POST, GET } from '../route'
+import { POST, GET, PATCH } from '../route'
 
 // ─── Helpers ────────────────────────────────────────
 
@@ -72,23 +75,59 @@ function makeRequest(body: Record<string, unknown>) {
   }) as import('next/server').NextRequest
 }
 
-const ADMIN_USER = { id: 'admin-123', email: 'admin@test.com' }
+const ADMIN_USER = { id: '30000000-0000-4000-8000-000000000001', email: 'admin@test.com' }
+const REQUEST_ID = '40000000-0000-4000-8000-000000000001'
+const ROLE_ID = '50000000-0000-4000-8000-000000000001'
 
 // ─── Tests ──────────────────────────────────────────
+
+describe('PATCH /api/admin/users', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('retires the legacy profiles.role mutation in favor of governed RBAC', async () => {
+    mockCheckPermission.mockResolvedValue(ADMIN_USER)
+    const request = new Request('http://localhost/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: 'legacy-user', action: 'promote' }),
+    }) as import('next/server').NextRequest
+
+    const res = await PATCH(request)
+
+    expect(res.status).toBe(405)
+    expect(res.headers.get('allow')).toBe('GET, POST')
+    expect(mockFrom).not.toHaveBeenCalledWith('profiles')
+  })
+})
 
 describe('POST /api/admin/users', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockInviteRateLimit.mockResolvedValue({ success: true })
+    mockServiceRpc.mockResolvedValue({ data: { success: true }, error: null })
+    mockDeleteUser.mockResolvedValue({ data: {}, error: null })
   })
 
   it('returns 403 if not authorized', async () => {
     mockCheckPermission.mockResolvedValue(null)
 
-    const res = await POST(makeRequest({ email: 'test@test.com' }))
+    const res = await POST(makeRequest({ email: 'test@test.com', requestId: REQUEST_ID }))
     expect(res.status).toBe(403)
 
     const data = await res.json()
     expect(data.error).toBe('Yetkisiz erişim')
+  })
+
+  it('rate-limits invitations before calling the external auth API', async () => {
+    mockCheckPermission.mockResolvedValue(ADMIN_USER)
+    mockInviteRateLimit.mockResolvedValue({ success: false, retryAfter: 30 })
+
+    const res = await POST(makeRequest({ email: 'rate@test.com', requestId: REQUEST_ID }))
+    expect(res.status).toBe(429)
+    expect(mockInviteUserByEmail).not.toHaveBeenCalled()
+    expect(mockServiceRpc).not.toHaveBeenCalled()
   })
 
   it('returns 400 if email is missing', async () => {
@@ -98,17 +137,17 @@ describe('POST /api/admin/users', () => {
     expect(res.status).toBe(400)
 
     const data = await res.json()
-    expect(data.error).toBe('E-posta adresi gerekli')
+    expect(data.error).toBe('Geçersiz davet bilgisi')
   })
 
   it('returns 400 for invalid email format', async () => {
     mockCheckPermission.mockResolvedValue(ADMIN_USER)
 
-    const res = await POST(makeRequest({ email: 'not-an-email' }))
+    const res = await POST(makeRequest({ email: 'not-an-email', requestId: REQUEST_ID }))
     expect(res.status).toBe(400)
 
     const data = await res.json()
-    expect(data.error).toBe('Geçersiz e-posta formatı')
+    expect(data.error).toBe('Geçersiz davet bilgisi')
   })
 
   it('creates user successfully via invite', async () => {
@@ -121,6 +160,7 @@ describe('POST /api/admin/users', () => {
     const res = await POST(makeRequest({
       email: 'yeni@kullanici.com',
       displayName: 'Yeni Kullanıcı',
+      requestId: REQUEST_ID,
     }))
     expect(res.status).toBe(200)
 
@@ -148,10 +188,43 @@ describe('POST /api/admin/users', () => {
 
     const res = await POST(makeRequest({
       email: 'rollu@kullanici.com',
-      roleId: 'role-editor-123',
+      roleId: ROLE_ID,
+      requestId: REQUEST_ID,
     }))
     expect(res.status).toBe(200)
-    // user_roles insert artik service role client uzerinden yapiliyor
+    expect(mockServiceRpc).toHaveBeenCalledWith('admin_assign_role', {
+      p_actor_id: ADMIN_USER.id,
+      p_user_id: 'new-user-789',
+      p_role_id: ROLE_ID,
+      p_request_id: REQUEST_ID,
+    })
+  })
+
+  it('requires role-management permission before sending a role-bearing invite', async () => {
+    mockCheckPermission
+      .mockResolvedValueOnce(ADMIN_USER)
+      .mockResolvedValueOnce(null)
+
+    const res = await POST(makeRequest({
+      email: 'yetkisiz@kullanici.com', roleId: ROLE_ID, requestId: REQUEST_ID,
+    }))
+    expect(res.status).toBe(403)
+    expect(mockInviteUserByEmail).not.toHaveBeenCalled()
+    expect(mockServiceRpc).not.toHaveBeenCalled()
+  })
+
+  it('compensates the just-created invitation when governed role assignment fails', async () => {
+    mockCheckPermission.mockResolvedValue(ADMIN_USER)
+    mockInviteUserByEmail.mockResolvedValue({
+      data: { user: { id: 'new-user-rollback' } }, error: null,
+    })
+    mockServiceRpc.mockResolvedValue({ data: null, error: { code: 'P0002' } })
+
+    const res = await POST(makeRequest({
+      email: 'rollback@kullanici.com', roleId: ROLE_ID, requestId: REQUEST_ID,
+    }))
+    expect(res.status).toBe(404)
+    expect(mockDeleteUser).toHaveBeenCalledWith('new-user-rollback')
   })
 
   it('returns 409 for duplicate email', async () => {
@@ -161,7 +234,7 @@ describe('POST /api/admin/users', () => {
       error: { message: 'A user with this email address has already been registered' },
     })
 
-    const res = await POST(makeRequest({ email: 'var@olan.com' }))
+    const res = await POST(makeRequest({ email: 'var@olan.com', requestId: REQUEST_ID }))
     expect(res.status).toBe(409)
 
     const data = await res.json()

@@ -707,6 +707,113 @@ suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real Postgre
       '22023',
     )
 
+    // Prove the readiness package is truly single-use under concurrency, not
+    // only across sequential calls. Both suspended inserts bypass the separate
+    // one-open-pilot index, so the control-row lock + consumption PK are the
+    // only mechanisms allowed to serialize them.
+    const raceReadinessRef = 'READINESS-RACE-001'
+    await client.query(
+      `INSERT INTO public.institution_free_pilot_readiness_attestations(
+         readiness_ref,legal_approval_ref,institution_dpa_ref,
+         retention_decision_ref,vendor_register_ref,tenant_ab_evidence_ref,
+         credential_rotation_ref,backup_restore_ref,account_readiness_ref,
+         accountable_owner_ref,valid_until
+       ) VALUES(
+         $1,'LEGAL-RACE-001','DPA-RACE-001','RETENTION-RACE-001',
+         'VENDORS-RACE-001','TENANT-AB-RACE-001','DB-CREDENTIAL-RACE-001',
+         'RESTORE-RACE-001','ACCOUNTS-RACE-001','OWNER-RACE-001',
+         clock_timestamp() + interval '2 hours'
+       )`,
+      [raceReadinessRef],
+    )
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-RACE-ENABLE-001'],
+      )
+      await client.query(
+        "SELECT set_config('app.institution_readiness_ref',$1,true)",
+        [raceReadinessRef],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=true WHERE control_key='free_provisioning'`,
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
+
+    const raceWriterOne = new pg.Client({ connectionString: url })
+    const raceWriterTwo = new pg.Client({ connectionString: url })
+    await raceWriterOne.connect()
+    await raceWriterTwo.connect()
+    let firstRaceInstitutionId
+    try {
+      await raceWriterOne.query('BEGIN')
+      await raceWriterTwo.query('BEGIN')
+      firstRaceInstitutionId = (await raceWriterOne.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,
+           review_due_at,approval_ref
+         ) VALUES(
+           'Readiness Race One',$1,'suspended',1,1,'invitation_free',
+           clock_timestamp() + interval '14 days','PILOT-RACE-001'
+         ) RETURNING id`,
+        [platformAdmin],
+      )).rows[0].id
+
+      let secondSettled = false
+      const secondRace = raceWriterTwo.query(
+        `INSERT INTO public.pilot_institutions(
+           name,created_by,status,student_limit,staff_limit,pilot_kind,
+           review_due_at,approval_ref
+         ) VALUES(
+           'Readiness Race Two',$1,'suspended',1,1,'invitation_free',
+           clock_timestamp() + interval '14 days','PILOT-RACE-002'
+         ) RETURNING id`,
+        [platformAdmin],
+      ).then(
+        (result) => ({ result, error: null }),
+        (error) => ({ result: null, error }),
+      ).finally(() => { secondSettled = true })
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      expect(secondSettled).toBe(false)
+      await raceWriterOne.query('COMMIT')
+      const secondOutcome = await secondRace
+      expect(secondOutcome.result).toBeNull()
+      expect(secondOutcome.error?.code).toBe('55000')
+    } finally {
+      await raceWriterOne.query('ROLLBACK').catch(() => undefined)
+      await raceWriterTwo.query('ROLLBACK').catch(() => undefined)
+      await raceWriterOne.end()
+      await raceWriterTwo.end()
+    }
+    expect((await client.query(
+      `SELECT institution_id FROM public.institution_free_pilot_readiness_consumptions
+       WHERE readiness_ref=$1`,
+      [raceReadinessRef],
+    )).rows).toEqual([{ institution_id: firstRaceInstitutionId }])
+
+    await client.query('BEGIN')
+    try {
+      await client.query(
+        "SELECT set_config('app.institution_control_change_ref',$1,true)",
+        ['CONTROL-RACE-DISABLE-001'],
+      )
+      await client.query(
+        `UPDATE public.institution_pilot_controls
+         SET enabled=false WHERE control_key='free_provisioning'`,
+      )
+      await client.query('COMMIT')
+    } catch (controlError) {
+      await client.query('ROLLBACK')
+      throw controlError
+    }
+
     await client.query(
       `INSERT INTO public.institution_free_pilot_readiness_attestations(
          readiness_ref,
@@ -829,14 +936,29 @@ suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real Postgre
     const controlEvents = await client.query(
       `SELECT previous_enabled,enabled,change_reference,readiness_ref
        FROM public.institution_pilot_control_events
-       WHERE control_key='free_provisioning'`,
+       WHERE control_key='free_provisioning'
+       ORDER BY changed_at,id`,
     )
-    expect(controlEvents.rows).toEqual([{
-      previous_enabled: false,
-      enabled: true,
-      change_reference: 'CONTROL-TEST-ENABLE-001',
-      readiness_ref: readinessRef,
-    }])
+    expect(controlEvents.rows).toEqual([
+      {
+        previous_enabled: false,
+        enabled: true,
+        change_reference: 'CONTROL-RACE-ENABLE-001',
+        readiness_ref: raceReadinessRef,
+      },
+      {
+        previous_enabled: true,
+        enabled: false,
+        change_reference: 'CONTROL-RACE-DISABLE-001',
+        readiness_ref: null,
+      },
+      {
+        previous_enabled: false,
+        enabled: true,
+        change_reference: 'CONTROL-TEST-ENABLE-001',
+        readiness_ref: readinessRef,
+      },
+    ])
 
     const requestId = randomUUID()
     await expectPgError(

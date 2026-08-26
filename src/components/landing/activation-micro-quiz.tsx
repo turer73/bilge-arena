@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { ArrowRight, CheckCircle2, LoaderCircle, Sparkles, Trophy, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 import { QuestionCard } from '@/components/game/question-card'
 import { OptionButton, type OptionState } from '@/components/game/option-button'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -12,6 +13,7 @@ import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
 import { renderRichText } from '@/lib/utils/rich-text'
 import { playSound } from '@/lib/utils/sounds'
 import { trackEvent } from '@/lib/utils/plausible'
+import { beginLegalConsentIntent } from '@/lib/consent'
 import {
   ACTIVATION_EXPERIMENT,
   ACTIVATION_RESULT_STORAGE_KEY,
@@ -84,6 +86,9 @@ export function ActivationMicroQuiz() {
   const [grading, setGrading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [completed, setCompleted] = useState(false)
+  const [legalConsentAccepted, setLegalConsentAccepted] = useState(false)
+  const [legalConsentError, setLegalConsentError] = useState<string | null>(null)
+  const [creatingConsentIntent, setCreatingConsentIntent] = useState(false)
 
   const variant = getActivationVariant()
   const prepared = questions[currentIndex]
@@ -210,14 +215,31 @@ export function ActivationMicroQuiz() {
   }
 
   const startSaving = async () => {
-    trackEvent('ActivationSaveStarted', {
-      props: { experiment: ACTIVATION_EXPERIMENT, variant, exam: goal ?? 'unknown' },
-    })
     if (user) {
+      trackEvent('ActivationSaveStarted', {
+        props: { experiment: ACTIVATION_EXPERIMENT, variant, exam: goal ?? 'unknown' },
+      })
       window.location.assign('/arena/turkce')
       return
     }
-    await signInWithGoogle('/arena/turkce')
+    if (!legalConsentAccepted) return
+
+    setLegalConsentError(null)
+    setCreatingConsentIntent(true)
+    let legalConsentToken: string
+    try {
+      legalConsentToken = await beginLegalConsentIntent()
+    } catch {
+      setLegalConsentError('Onay kaydı hazırlanamadı. Lütfen tekrar dene.')
+      return
+    } finally {
+      setCreatingConsentIntent(false)
+    }
+
+    trackEvent('ActivationSaveStarted', {
+      props: { experiment: ACTIVATION_EXPERIMENT, variant, exam: goal ?? 'unknown' },
+    })
+    await signInWithGoogle('/arena/turkce', { legalConsentToken })
   }
 
   const optionState = (displayIndex: number): OptionState => {
@@ -251,10 +273,33 @@ export function ActivationMicroQuiz() {
             Google ile giriş yaptığında hesabına tek seferlik eklenecek.
           </p>
         </div>
-        <Button type="button" size="lg" className="mt-5 min-h-12 w-full" onClick={startSaving}>
+        {!user && (
+          <label className="mt-5 flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-left">
+            <input
+              type="checkbox"
+              checked={legalConsentAccepted}
+              onChange={(event) => setLegalConsentAccepted(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--focus)]"
+            />
+            <span className="text-xs leading-5 text-[var(--text-sub)]">
+              <Link href="/kullanim-kosullari" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">Kullanım Koşullarını</Link>
+              {' '}kabul ediyorum ve{' '}
+              <Link href="/kvkk" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">KVKK Aydınlatma Metni</Link>
+              {' '}kapsamında bilgilendirildim.
+            </span>
+          </label>
+        )}
+        <Button
+          type="button"
+          size="lg"
+          className="mt-5 min-h-12 w-full"
+          onClick={startSaving}
+          disabled={!user && (!legalConsentAccepted || creatingConsentIntent)}
+        >
           {user ? 'Türkçe arenasında devam et' : 'Google ile ücretsiz devam et'}
           <ArrowRight size={18} aria-hidden="true" />
         </Button>
+        {legalConsentError && <p className="mt-3 text-xs text-[var(--urgency-text)]" role="alert">{legalConsentError}</p>}
         <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">
           {user
             ? 'Sonraki turların XP ve seri ilerlemesine eklenir.'

@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { Json } from '@/types/database.generated'
 import { isCurrentBrowserPathSensitive } from '@/lib/privacy/telemetry-policy'
 
@@ -10,7 +9,7 @@ export interface CookieConsent {
   date: string
 }
 
-export type ConsentType = 'cookie' | 'terms' | 'kvkk'
+export type ConsentType = 'cookie'
 
 const STORAGE_KEY = 'bilge-arena-cookie-consent'
 const CONSENT_VERSION = 1
@@ -92,19 +91,46 @@ export function openConsentBanner() {
 export async function logConsent(
   type: ConsentType,
   value: Record<string, unknown>,
-  userId?: string
 ) {
   try {
     if (!isJson(value)) return
 
-    const supabase = createClient()
-    await supabase.from('consent_logs').insert({
-      user_id: userId ?? null,
-      consent_type: type,
-      consent_value: value,
-      user_agent: navigator.userAgent,
+    await fetch('/api/consent', {
+      method: 'POST',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type,
+        value,
+      }),
     })
   } catch {
     // Consent log basarisiz olursa kullanici deneyimini bozma
   }
+}
+
+/**
+ * Sunucunun imzaladığı, kısa ömürlü hukuki kabul niyetini oluşturur. Token
+ * yalnız OAuth/magic-link callback'inde gerçek oturum kullanıcısına bağlanır.
+ */
+export async function beginLegalConsentIntent(): Promise<string> {
+  const response = await fetch('/api/consent/intent', {
+    method: 'POST',
+    credentials: 'same-origin',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!response.ok) throw new Error('legal_consent_intent_unavailable')
+  const body: unknown = await response.json()
+  if (
+    !body
+    || typeof body !== 'object'
+    || !('token' in body)
+    || typeof body.token !== 'string'
+    || body.token.length < 32
+  ) {
+    throw new Error('legal_consent_intent_invalid')
+  }
+  return body.token
 }

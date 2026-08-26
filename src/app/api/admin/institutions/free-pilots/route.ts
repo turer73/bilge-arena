@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { error: auditError } = await logAdminAction(supabase, {
+  const { error: auditError } = await logAdminAction({
     adminId: admin.id,
     action: 'provision_free_institution_pilot',
     targetType: 'pilot_institution',

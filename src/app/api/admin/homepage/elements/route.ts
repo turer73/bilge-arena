@@ -79,7 +79,12 @@ export async function POST(request: NextRequest) {
     const rlRes = await checkAdminMutationRl(admin.id)
     if (rlRes) return rlRes
 
-    const body = await request.json()
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+    }
     const parsed = homepageElementCreateSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json(
@@ -88,6 +93,7 @@ export async function POST(request: NextRequest) {
       )
     }
     const {
+      requestId,
       section_key,
       element_type,
       content,
@@ -99,46 +105,39 @@ export async function POST(request: NextRequest) {
       styles,
     } = parsed.data
 
-    if (content != null && typeof content !== 'string') {
-      return NextResponse.json({ error: 'content metin olmalidir' }, { status: 400 })
-    }
-
     if (styles != null && !isJson(styles)) {
       return NextResponse.json({ error: 'styles gecerli JSON olmalidir' }, { status: 400 })
     }
 
     const svc = createServiceRoleClient()
-    const { data: element, error } = await svc
-      .from('homepage_elements')
-      .insert({
-        section_key,
-        element_type,
+    const { data, error } = await svc.rpc('mutate_admin_homepage', {
+      p_user_id: admin.id,
+      p_request_id: requestId,
+      p_operation: 'element_create',
+      p_payload: {
+        sectionKey: section_key,
+        elementType: element_type,
         content: content ?? null,
-        image_url: image_url ?? null,
-        alt_text: alt_text ?? undefined,
-        placement: placement ?? undefined,
-        alignment: alignment ?? undefined,
-        size: size ?? undefined,
-        styles: styles ?? undefined,
-        created_by: admin.id,
-      })
-      .select()
-      .single()
+        imageUrl: image_url ?? null,
+        altText: alt_text ?? '',
+        placement: placement ?? 'below',
+        alignment: alignment ?? 'center',
+        size: size ?? 'md',
+        styles: (styles ?? {}) as Json,
+      },
+    })
 
     if (error) {
       return dbErrorResponse('admin/homepage/elements', error)
     }
 
-    // Admin log
-    await svc.from('admin_logs').insert({
-      admin_id: admin.id,
-      action: 'create_homepage_element',
-      target_type: 'homepage_element',
-      target_id: element.id,
-      details: { section_key, element_type },
-    })
+    const result = data && typeof data === 'object' && !Array.isArray(data) ? data : null
+    const element = result?.element
+    if (!element || typeof element !== 'object' || Array.isArray(element)) {
+      return NextResponse.json({ error: 'Öğe sonucu doğrulanamadı' }, { status: 500 })
+    }
 
-    return NextResponse.json({ element })
+    return NextResponse.json({ element, replayed: result?.replayed === true })
   } catch {
     return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 })
   }

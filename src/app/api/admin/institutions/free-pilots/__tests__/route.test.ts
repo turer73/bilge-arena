@@ -141,7 +141,7 @@ describe('admin invitation-only free institution pilot route', () => {
       p_trial_days: 30,
       p_request_id: REQUEST_ID,
     })
-    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.objectContaining({
       action: 'provision_free_institution_pilot',
       targetId: INSTITUTION_ID,
       details: expect.objectContaining({

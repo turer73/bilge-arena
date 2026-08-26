@@ -70,7 +70,7 @@ export default function AdminUsersPage() {
       const res = await fetch('/api/admin/roles/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, roleId }),
+        body: JSON.stringify({ userId, roleId, requestId: crypto.randomUUID() }),
       })
       if (res.ok) {
         // Modal kullanıcısının rollerini güncelle
@@ -104,7 +104,7 @@ export default function AdminUsersPage() {
       const res = await fetch('/api/admin/roles/assign', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, roleId }),
+        body: JSON.stringify({ userId, roleId, requestId: crypto.randomUUID() }),
       })
       if (res.ok) {
         if (roleModalUser) {
@@ -141,6 +141,7 @@ export default function AdminUsersPage() {
           email: createForm.email,
           displayName: createForm.displayName || undefined,
           roleId: createForm.roleId || undefined,
+          requestId: crypto.randomUUID(),
         }),
       })
       const data = await res.json()
