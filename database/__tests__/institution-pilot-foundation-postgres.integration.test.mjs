@@ -1052,7 +1052,7 @@ suite('112-127, 131-135, 145, 149-160 and 167 institution pilot real PostgreSQL 
          ) VALUES($1,$2,30,2,'invitation_free',now() + interval '30 days',$3)`,
         ['Doğrudan ikinci canary', platformAdmin, 'PILOT-2026-DIRECT-002'],
       ),
-      '23505',
+      '55000',
     )
 
     await expectPgError(
