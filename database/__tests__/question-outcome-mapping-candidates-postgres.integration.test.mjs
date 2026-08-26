@@ -415,15 +415,15 @@ suite('166 question outcome candidate queue disposable PostgreSQL acceptance', (
     expect(Number((await client.query('SELECT count(*) FROM public.question_outcomes')).rows[0].count)).toBe(activeBefore)
 
     await err(() => rpc(
-      'public.review_question_content_revision($1,$2,1,$3,$4)',
+      'public.review_question_content_revision($1,$2,1::smallint,$3,$4)',
       [actor, exactDraft, 'approved', 'Kendi outcome kanıtını review edemez.'],
     ), '22023')
     expect(await rpc(
-      'public.review_question_content_revision($1,$2,1,$3,$4)',
+      'public.review_question_content_revision($1,$2,1::smallint,$3,$4)',
       [reviewer1, exactDraft, 'approved', 'Bağımsız akademik birinci inceleme.'],
     )).toEqual({ stage: 1, decision: 'approved' })
     expect(await rpc(
-      'public.review_question_content_revision($1,$2,2,$3,$4)',
+      'public.review_question_content_revision($1,$2,2::smallint,$3,$4)',
       [reviewer2, exactDraft, 'approved', 'Bağımsız akademik ikinci inceleme.'],
     )).toEqual({ stage: 2, decision: 'approved' })
   })
