@@ -8,6 +8,11 @@ const sql = readFileSync(
 )
 
 describe('migration 169 admin homepage mutation governance', () => {
+  it('uses PostgreSQL-supported JSONB key counting', () => {
+    expect(sql).not.toContain('jsonb_object_length')
+    expect(sql).toContain('SELECT count(*) FROM jsonb_object_keys(p_payload)')
+  })
+
   it('removes direct client DML and every historical mutation policy', () => {
     expect(sql).toMatch(/REVOKE INSERT, UPDATE, DELETE ON TABLE[\s\S]*public\.homepage_sections,[\s\S]*public\.homepage_elements[\s\S]*FROM PUBLIC, anon, authenticated, service_role/)
     for (const table of ['sections', 'elements']) {

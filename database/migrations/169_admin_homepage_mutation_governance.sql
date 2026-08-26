@@ -146,7 +146,7 @@ BEGIN
   END IF;
 
   IF p_operation = 'section_update' THEN
-    IF jsonb_object_length(p_payload) <> 2
+    IF (SELECT count(*) FROM jsonb_object_keys(p_payload)) <> 2
        OR NOT (p_payload ?& ARRAY['config', 'sectionKey']::text[])
        OR jsonb_typeof(p_payload -> 'sectionKey') <> 'string'
        OR jsonb_typeof(p_payload -> 'config') <> 'object'
@@ -178,7 +178,7 @@ BEGIN
     v_target_type := 'homepage_section';
 
   ELSIF p_operation = 'element_create' THEN
-    IF jsonb_object_length(p_payload) <> 9
+    IF (SELECT count(*) FROM jsonb_object_keys(p_payload)) <> 9
        OR NOT (p_payload ?& ARRAY[
          'alignment','altText','content','elementType','imageUrl',
          'placement','sectionKey','size','styles'
@@ -240,7 +240,7 @@ BEGIN
     v_target_type := 'homepage_element';
 
   ELSIF p_operation = 'element_update' THEN
-    IF jsonb_object_length(p_payload) <> 2
+    IF (SELECT count(*) FROM jsonb_object_keys(p_payload)) <> 2
        OR NOT (p_payload ?& ARRAY['id', 'updates']::text[])
        OR jsonb_typeof(p_payload -> 'id') <> 'string'
        OR (p_payload ->> 'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
@@ -325,7 +325,7 @@ BEGIN
     v_target_type := 'homepage_element';
 
   ELSIF p_operation = 'element_delete' THEN
-    IF jsonb_object_length(p_payload) <> 1
+    IF (SELECT count(*) FROM jsonb_object_keys(p_payload)) <> 1
        OR NOT (p_payload ? 'id')
        OR jsonb_typeof(p_payload -> 'id') <> 'string'
        OR (p_payload ->> 'id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' THEN
@@ -350,7 +350,7 @@ BEGIN
     v_target_type := 'homepage_element';
 
   ELSIF p_operation = 'elements_reorder' THEN
-    IF jsonb_object_length(p_payload) <> 2
+    IF (SELECT count(*) FROM jsonb_object_keys(p_payload)) <> 2
        OR NOT (p_payload ?& ARRAY['orderedIds', 'sectionKey']::text[])
        OR jsonb_typeof(p_payload -> 'sectionKey') <> 'string'
        OR jsonb_typeof(p_payload -> 'orderedIds') <> 'array'
@@ -414,7 +414,7 @@ BEGIN
 
   ELSE
     -- publish
-    IF jsonb_object_length(p_payload) <> 4
+    IF (SELECT count(*) FROM jsonb_object_keys(p_payload)) <> 4
        OR NOT (p_payload ?& ARRAY['action','elementIds','scope','sectionKeys']::text[])
        OR jsonb_typeof(p_payload -> 'action') <> 'string'
        OR jsonb_typeof(p_payload -> 'scope') <> 'string'
