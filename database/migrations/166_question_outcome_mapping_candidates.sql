@@ -184,7 +184,43 @@ AS $fn$
         ORDER BY outcome.id
       ) AS candidate_ids,
       COALESCE((
-        SELECT jsonb_agg(to_jsonb(outcome) ORDER BY outcome.id)
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'outcome',to_jsonb(outcome),
+            'lineage',COALESCE((
+              WITH RECURSIVE lineage AS (
+                SELECT node.id,node.code,node.taxonomy_version,node.game,
+                  node.exam_ref,node.node_type,node.parent_id,node.category,
+                  node.title,node.sort_order,node.is_active,0 AS depth
+                FROM public.curriculum_nodes node
+                WHERE node.id=outcome.node_id
+                UNION ALL
+                SELECT parent.id,parent.code,parent.taxonomy_version,parent.game,
+                  parent.exam_ref,parent.node_type,parent.parent_id,parent.category,
+                  parent.title,parent.sort_order,parent.is_active,child.depth+1
+                FROM public.curriculum_nodes parent
+                JOIN lineage child ON child.parent_id=parent.id
+                WHERE child.depth<8
+              )
+              SELECT jsonb_agg(jsonb_build_object(
+                'id',lineage.id,
+                'code',lineage.code,
+                'taxonomyVersion',lineage.taxonomy_version,
+                'game',lineage.game,
+                'examRef',lineage.exam_ref,
+                'nodeType',lineage.node_type,
+                'parentId',lineage.parent_id,
+                'category',lineage.category,
+                'title',lineage.title,
+                'sortOrder',lineage.sort_order,
+                'active',lineage.is_active,
+                'depth',lineage.depth
+              ) ORDER BY lineage.depth,lineage.id)
+              FROM lineage
+            ),'[]'::jsonb)
+          )
+          ORDER BY outcome.id
+        )
         FROM public.curriculum_outcomes outcome
         WHERE public.curriculum_outcome_scope_valid(
           outcome.id,eligible.scope_game,eligible.scope_category,eligible.scope_exam_ref
@@ -200,8 +236,9 @@ AS $fn$
         ELSE 'ambiguous'
       END AS candidate_kind,
       CASE WHEN cardinality(candidate_ids)=1 THEN candidate_ids[1] END AS proposed_outcome_id,
-      -- ID kadar code/title/taxonomy/node ve aktivasyon metadatasını da hash'e
-      -- bağla; katalog anlamı değişirse eski insan kararı taşınamasın.
+      -- Outcome satırına ek olarak outcome→topic→unit→course üst-soyunun
+      -- anlam taşıyan alanlarını da hash'e bağla; parent/title/taxonomy
+      -- değişirse eski insan kararı taşınamasın.
       public.content_governance_hash(candidate_evidence) AS candidate_set_sha256
     FROM candidate_sets
   )

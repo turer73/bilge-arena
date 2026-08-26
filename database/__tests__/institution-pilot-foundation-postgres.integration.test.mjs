@@ -91,8 +91,12 @@ const freePilotReadinessEvidenceGateSql = readFileSync(
   join(migrationsDir, '167_free_pilot_readiness_evidence_gate.sql'),
   'utf8',
 )
+const freePilotClosedGateReplaySql = readFileSync(
+  join(migrationsDir, '168_free_pilot_closed_gate_replay.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145, 149-160 and 167 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -434,6 +438,8 @@ suite('112-127, 131-135, 145, 149-160 and 167 institution pilot real PostgreSQL 
     await client.query(freePilotReplayAndStudentSurfaceSql)
     await client.query(freePilotReadinessEvidenceGateSql)
     await client.query(freePilotReadinessEvidenceGateSql)
+    await client.query(freePilotClosedGateReplaySql)
+    await client.query(freePilotClosedGateReplaySql)
 
     const legacyRpcPrivileges = await client.query(`
       SELECT
@@ -1471,6 +1477,28 @@ suite('112-127, 131-135, 145, 149-160 and 167 institution pilot real PostgreSQL 
       event_count: 1,
       institution_count: 1,
     })
+
+    // Closing the one-shot gate blocks new provisioning, but the exact
+    // historical request remains a safe idempotent replay. A payload mismatch
+    // must still fail before any gate-dependent behavior is considered.
+    expect(await authenticatedRpc(platformAdmin, expression, [
+      platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
+      'PILOT-2026-001', 30, 2, 30, requestId,
+    ])).toMatchObject({ replayed: true, institution: { id: provisioned.institution.id } })
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'Davetli Ücretsiz Canary', freePilotManager,
+        'PILOT-2026-001', 31, 2, 30, requestId,
+      ]),
+      '22023',
+    )
+    await expectPgError(
+      () => authenticatedRpc(platformAdmin, expression, [
+        platformAdmin, 'Yeni Kapalı Gate İsteği', freePilotManagerTwo,
+        'PILOT-2026-NEW', 10, 1, 14, randomUUID(),
+      ]),
+      '55000',
+    )
   })
 
   it('lists tenants for platform admins without exposing the directory to managers', async () => {

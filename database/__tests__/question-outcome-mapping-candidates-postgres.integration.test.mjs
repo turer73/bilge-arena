@@ -48,6 +48,7 @@ suite('166 question outcome candidate queue disposable PostgreSQL acceptance', (
   let staleDraft
   let partialDraft
   let exactOutcome
+  let exactOutcomeNode
   const published = new Map()
 
   const rpc = async (call, values = []) => {
@@ -142,11 +143,17 @@ suite('166 question outcome candidate queue disposable PostgreSQL acceptance', (
           WHERE ur.user_id=p_user_id AND rp.permission=p_permission
         )
       $$;
+      CREATE TABLE public.curriculum_nodes(
+        id uuid PRIMARY KEY,code text NOT NULL,taxonomy_version text NOT NULL,
+        game text NOT NULL,exam_ref text,node_type text NOT NULL,parent_id uuid,
+        category text,title text NOT NULL,sort_order integer NOT NULL DEFAULT 0,
+        is_active boolean NOT NULL DEFAULT true
+      );
       CREATE TABLE public.curriculum_outcomes(
         id uuid PRIMARY KEY,code text,title text,game text,category text,exam_ref text,
-        taxonomy_version text,is_active boolean NOT NULL DEFAULT true
+        taxonomy_version text,node_id uuid REFERENCES public.curriculum_nodes(id),
+        is_active boolean NOT NULL DEFAULT true
       );
-      CREATE TABLE public.curriculum_nodes(id uuid PRIMARY KEY);
       CREATE TABLE public.questions(
         id uuid PRIMARY KEY,game text NOT NULL,category text NOT NULL,exam_ref text,
         content jsonb NOT NULL,is_active boolean NOT NULL DEFAULT true,published_revision_id uuid
@@ -267,14 +274,26 @@ suite('166 question outcome candidate queue disposable PostgreSQL acceptance', (
 
     const ambiguousOutcomes = [randomUUID(), randomUUID()]
     const mappedOutcome = randomUUID()
+    const outcomeNodes = Array.from({ length: 4 }, randomUUID)
+    exactOutcomeNode = outcomeNodes[0]
+    await client.query(
+      `INSERT INTO public.curriculum_nodes
+       (id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active) VALUES
+       ($1,'NODE-MAT-SAY-01','fixture-v1','matematik','TYT','outcome',NULL,'sayilar','Sayılar düğümü',1,true),
+       ($2,'NODE-FEN-FIZ-01','fixture-v1','fen','TYT','outcome',NULL,'fizik','Fizik 1 düğümü',1,true),
+       ($3,'NODE-FEN-FIZ-02','fixture-v1','fen','TYT','outcome',NULL,'fizik','Fizik 2 düğümü',2,true),
+       ($4,'NODE-SOS-TAR-01','fixture-v1','sosyal','TYT','outcome',NULL,'tarih','Tarih düğümü',1,true)`,
+      outcomeNodes,
+    )
     await client.query(
       `INSERT INTO public.curriculum_outcomes
-       (id,code,title,game,category,exam_ref,taxonomy_version,is_active) VALUES
-       ($1,'MAT-SAY-01','Sayılar','matematik','sayilar','TYT','fixture-v1',true),
-       ($2,'FEN-FIZ-01','Fizik 1','fen','fizik','TYT','fixture-v1',true),
-       ($3,'FEN-FIZ-02','Fizik 2','fen','fizik','TYT','fixture-v1',true),
-       ($4,'SOS-TAR-01','Tarih','sosyal','tarih','TYT','fixture-v1',true)`,
-      [exactOutcome, ...ambiguousOutcomes, mappedOutcome],
+       (id,code,title,game,category,exam_ref,taxonomy_version,node_id,is_active) VALUES
+       ($1,'MAT-SAY-01','Sayılar','matematik','sayilar','TYT','fixture-v1',$2,true),
+       ($3,'FEN-FIZ-01','Fizik 1','fen','fizik','TYT','fixture-v1',$4,true),
+       ($5,'FEN-FIZ-02','Fizik 2','fen','fizik','TYT','fixture-v1',$6,true),
+       ($7,'SOS-TAR-01','Tarih','sosyal','tarih','TYT','fixture-v1',$8,true)`,
+      [exactOutcome, outcomeNodes[0], ambiguousOutcomes[0], outcomeNodes[1],
+        ambiguousOutcomes[1], outcomeNodes[2], mappedOutcome, outcomeNodes[3]],
     )
     const baseContent = { question: 'fixture', options: ['a', 'b'], answer: 0 }
     await addQuestion({ id: exactQuestion, game: 'matematik', category: 'sayilar', examRef: 'TYT', content: baseContent })
@@ -377,6 +396,43 @@ suite('166 question outcome candidate queue disposable PostgreSQL acceptance', (
     for (const forbidden of ['content', 'contentSha256', 'answer', 'solution', 'explanation', 'hint']) {
       expect(Object.keys(list.items[0])).not.toContain(forbidden)
     }
+  })
+
+  it('invalidates pending evidence when curriculum lineage meaning changes', async () => {
+    const candidate = (await client.query(
+      `SELECT id,evidence_sha256 FROM public.question_outcome_mapping_candidates
+       WHERE question_id=$1 AND status='pending'`,
+      [exactQuestion],
+    )).rows[0]
+
+    await client.query(
+      "UPDATE public.curriculum_nodes SET title='Sayılar düğümü revize' WHERE id=$1",
+      [exactOutcomeNode],
+    )
+    try {
+      const changedEvidence = (await client.query(
+        `SELECT evidence_sha256 FROM public.question_outcome_mapping_candidate_snapshot()
+         WHERE question_id=$1`,
+        [exactQuestion],
+      )).rows[0].evidence_sha256
+      expect(changedEvidence).not.toBe(candidate.evidence_sha256)
+      await err(() => userRpc(actor,
+        'public.transfer_question_outcome_mapping_candidate($1,$2,$3,$4,$5)',
+        [actor, candidate.id, exactDraft, 'Eski müfredat anlamı aktarılamaz.', randomUUID()],
+      ), '22023')
+    } finally {
+      await client.query(
+        "UPDATE public.curriculum_nodes SET title='Sayılar düğümü' WHERE id=$1",
+        [exactOutcomeNode],
+      )
+    }
+
+    const restoredEvidence = (await client.query(
+      `SELECT evidence_sha256 FROM public.question_outcome_mapping_candidate_snapshot()
+       WHERE question_id=$1`,
+      [exactQuestion],
+    )).rows[0].evidence_sha256
+    expect(restoredEvidence).toBe(candidate.evidence_sha256)
   })
 
   it('transfers only fresh exact evidence into an empty draft and preserves independent review', async () => {

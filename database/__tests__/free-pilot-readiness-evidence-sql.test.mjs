@@ -5,6 +5,10 @@ const sql = readFileSync(
   new URL('../migrations/167_free_pilot_readiness_evidence_gate.sql', import.meta.url),
   'utf8',
 )
+const replaySql = readFileSync(
+  new URL('../migrations/168_free_pilot_closed_gate_replay.sql', import.meta.url),
+  'utf8',
+)
 
 describe('free pilot readiness evidence SQL boundary', () => {
   it('creates no evidence while requiring every external readiness reference', () => {
@@ -69,5 +73,23 @@ describe('free pilot readiness evidence SQL boundary', () => {
         new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}\\(\\)[\\s\\S]*?FROM PUBLIC, anon, authenticated, service_role;`),
       )
     }
+  })
+
+  it('returns only an actor-bound exact replay before consulting the closed gate', () => {
+    const actorCheck = replaySql.indexOf('auth.uid() IS DISTINCT FROM p_user_id')
+    const replayLookup = replaySql.indexOf('SELECT * INTO v_request')
+    const payloadCheck = replaySql.indexOf('v_request.payload_hash <> v_hash')
+    const gateLookup = replaySql.indexOf('SELECT control.enabled')
+    expect(actorCheck).toBeGreaterThan(-1)
+    expect(actorCheck).toBeLessThan(replayLookup)
+    expect(replayLookup).toBeLessThan(payloadCheck)
+    expect(payloadCheck).toBeLessThan(gateLookup)
+    expect(replaySql).toContain("RETURN v_request.result || jsonb_build_object('replayed', true)")
+    expect(replaySql).toMatch(
+      /REVOKE ALL ON FUNCTION public\.provision_free_pilot_institution\([\s\S]*?FROM PUBLIC, anon, authenticated, service_role;/,
+    )
+    expect(replaySql).toMatch(
+      /GRANT EXECUTE ON FUNCTION public\.provision_free_pilot_institution\([\s\S]*?TO authenticated;/,
+    )
   })
 })
