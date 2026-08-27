@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { isPublicLeaderboardPrivacyReady } from '@/lib/leaderboard/privacy'
 
 // Cift kalkan rate limit (sidebar pattern, daha dusuk esikler):
 //   - siralama dedicated page; sidebar gibi her render'da gelmiyor.
@@ -27,7 +28,6 @@ interface FullLeader {
 interface ProfileRow {
   id: string
   username: string | null
-  display_name: string | null
   avatar_url: string | null
   total_xp: number | null
   level_name: string | null
@@ -36,7 +36,7 @@ interface ProfileRow {
 }
 
 /**
- * GET /api/leaderboard/full?currentUserId=<uuid>
+ * GET /api/leaderboard/full
  *
  * /arena/siralama sayfasinda gosterilen tam liderboard (top 50 + my rank).
  * Browser->Supabase direkt cagri yerine bu proxy uzerinden gecer
@@ -51,13 +51,13 @@ interface ProfileRow {
  *   - 'profiles_fallback'  — view bos, profiles fallback (tum zamanlar)
  *   - 'empty'              — ikisi de bos (henuz oyuncu yok)
  *
- * currentUserId verilmisse + ilk 50'de degilse, ayri sorgu ile rank getir.
+ * Giris yapan kullanici ilk 50'de degilse, ayri sorgu ile rank getir.
+ * Kullanici kimligi sorgu parametresinden alinmaz; dogrulanmis oturumdan gelir.
  *
- * Cache:
- *   - anon (currentUserId yok): public s-maxage=120 (lower frequency, daha
- *     uzun cache'leyebiliriz, sidebar 60s)
- *   - auth (currentUserId var): private max-age=60 (is_me + myRank
- *     user-specific payload)
+ * Cache: no-store. Liderlik gorunurlugu geri alinabilir bir onaydir ve
+ * oturumlu yanit is_me/myRank ile kisiye ozeldir. Ortak ya da tarayici
+ * cache'i, vazgecen bir kullaniciyi gostermeye veya oturumlar arasinda
+ * kisiye ozel siralama tasimaya devam edebilir.
  *
  * Rate limit (sidebar PR #75 + #78 P1 paterni, daha dusuk esikler):
  *   1. IP limit her zaman ONCE (anon flood'u erken kes — auth API
@@ -99,27 +99,29 @@ export async function GET(request: NextRequest) {
   // period=all -> haftalik view'i atla, dogrudan tum-zaman (profiles.total_xp).
   // Ana sayfa 'Tum Zamanlarin Liderleri' vitrini buraya yonlendirir (CTA tutarliligi).
   const allTime = searchParams.get('period') === 'all'
-  const currentUserId = searchParams.get('currentUserId')
-  // UUID format guard — kanonik 8-4-4-4-12 (sidebar review LOW: tighten edildi)
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  const isValidUuid = !!currentUserId && UUID_RE.test(currentUserId)
-  const safeUserId = isValidUuid ? currentUserId : null
+  const safeUserId = user?.id ?? null
 
-  // Cache strategy (sidebar paterni):
-  //   - currentUserId yoksa: public cache OK (anonim leaderboard)
-  //   - currentUserId varsa: is_me + myRank user-specific -> private cache
-  const cacheControl = safeUserId
-    ? 'private, max-age=60'
-    : 'public, s-maxage=120, stale-while-revalidate=60'
+  // Opt-out hemen etkili olmali; ayrica is_me/myRank cookie ile kisilesir.
+  // URL-keyed browser/edge cache bu iki gizlilik sozlesmesini de bozar.
+  const cacheControl = 'no-store'
 
   const supabase = createServiceRoleClient()
+
+  // App-first rollout guard: migration 177 yoksa legacy tablo/view'i okumak
+  // yerine bos don. Boylece deploy araliginda gizlilik geriye dusmez.
+  if (!(await isPublicLeaderboardPrivacyReady(supabase))) {
+    return NextResponse.json(
+      { players: [], myRank: 0, source: 'privacy_pending' },
+      { headers: { 'Cache-Control': cacheControl } },
+    )
+  }
 
   // Haftalik view'i dene (top 50) — period=all istenmediyse. allTime ise
   // dogrudan profiles (tum-zaman) yoluna gec (CTA tutarliligi, Codex #196 P2).
   if (!allTime) {
     const { data: weeklyData, error: weeklyError } = await supabase
       .from('leaderboard_weekly_ranked')
-      .select('user_id, username, display_name, avatar_url, xp_earned, current_rank, level_name')
+      .select('user_id, username, avatar_url, xp_earned, current_rank, level_name')
       .order('current_rank', { ascending: true })
       .limit(50)
 
@@ -153,7 +155,7 @@ export async function GET(request: NextRequest) {
         if (isMe) myRank = rank
         return {
           rank,
-          name: row.username || row.display_name || `Oyuncu ${rank}`,
+          name: row.username || `Oyuncu ${rank}`,
           avatar_url: row.avatar_url,
           xp: Number(row.xp_earned || 0),
           level_name: row.level_name,
@@ -183,7 +185,8 @@ export async function GET(request: NextRequest) {
   // Tum-zaman: profiles tablosu (period=all istegi) VEYA haftalik view bos (fallback)
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, total_xp, level_name, selected_nameplate, selected_avatar_decorations')
+    .select('id, username, avatar_url, total_xp, level_name, selected_nameplate, selected_avatar_decorations')
+    .eq('leaderboard_opt_in', true)
     .gt('total_xp', 0)
     .is('deleted_at', null)
     .order('total_xp', { ascending: false })
@@ -212,7 +215,7 @@ export async function GET(request: NextRequest) {
     if (isMe) myRank = rank
     return {
       rank,
-      name: p.username || p.display_name || `Oyuncu ${rank}`,
+      name: p.username || `Oyuncu ${rank}`,
       avatar_url: p.avatar_url,
       xp: Number(p.total_xp || 0),
       level_name: p.level_name,
@@ -227,14 +230,15 @@ export async function GET(request: NextRequest) {
   if (myRank === 0 && safeUserId) {
     const { data: me } = await supabase
       .from('profiles')
-      .select('total_xp')
+      .select('total_xp, leaderboard_opt_in')
       .eq('id', safeUserId)
       .single()
     const myXp = Number(me?.total_xp || 0)
-    if (myXp > 0) {
+    if (me?.leaderboard_opt_in && myXp > 0) {
       const { count } = await supabase
         .from('profiles')
         .select('id', { count: 'exact', head: true })
+        .eq('leaderboard_opt_in', true)
         .is('deleted_at', null)
         .gt('total_xp', myXp)
       myRank = (count ?? 0) + 1

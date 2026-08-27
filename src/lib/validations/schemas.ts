@@ -155,6 +155,7 @@ export const profileUpdateSchema = z.object({
   onboarding_completed: z.literal(true).optional(),
   preferred_theme: z.enum(['dark', 'light', 'okyanus', 'orman', 'gunbatimi', 'mor-gece']).optional(),
   is_discoverable: z.boolean().optional(),
+  leaderboard_opt_in: z.boolean().optional(),
 }).refine(data => Object.keys(data).length > 0, {
   message: 'Guncellenecek alan yok',
 })

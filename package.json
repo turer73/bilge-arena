@@ -35,6 +35,7 @@
     "test:coach-flow:pg": "vitest run --config vitest.database.config.ts database/__tests__/verified-coach-flow-postgres.integration.test.mjs",
     "test:exam-strategy:pg": "vitest run --config vitest.database.config.ts database/__tests__/verified-exam-strategy-postgres.integration.test.mjs",
     "test:relative-leagues:pg": "vitest run --config vitest.database.config.ts database/__tests__/relative-weekly-leagues-postgres.integration.test.mjs",
+    "test:leaderboard-privacy:pg": "vitest run --config vitest.database.config.ts database/__tests__/private-leaderboard-opt-in-postgres.integration.test.mjs",
     "test:learning-spotlights:pg": "vitest run --config vitest.database.config.ts database/__tests__/positive-learning-spotlights-postgres.integration.test.mjs",
     "test:team-boss:pg": "vitest run --config vitest.database.config.ts database/__tests__/cohort-team-boss-postgres.integration.test.mjs",
     "test:paper-packs:pg": "vitest run --config vitest.database.config.ts database/__tests__/paper-study-packs-postgres.integration.test.mjs",

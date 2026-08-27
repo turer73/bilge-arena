@@ -9,7 +9,6 @@ interface LeaderUser {
   rank: number
   name: string
   xp: number
-  streak: number
   badge: string
 }
 
@@ -17,7 +16,6 @@ interface ApiLeader {
   rank: number
   username: string
   total_xp: number
-  current_streak: number
 }
 
 const BADGES = ['👑', '🥈', '🥉', '4', '5']
@@ -29,7 +27,7 @@ interface LeaderboardPreviewProps {
 export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
   const [users, setUsers] = useState<LeaderUser[]>([])
   const title = (config?.title as string) || undefined
-  const description = (config?.description as string) || 'Tüm zamanların en çok XP toplayan öğrencileri. Sen de soru çözüp sıralamada yüksel.'
+  const description = (config?.description as string) || 'Açık sıralamaya katılmayı seçen öğrenciler XP yolculuklarını burada paylaşır. Katılım varsayılan olarak kapalıdır.'
   const buttonText = (config?.button_text as string) || 'Sıralamayı Gör'
 
   // Madde 9 (pentest raporu) refactor: Browser->Supabase direkt cagri yerine
@@ -46,7 +44,6 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
             rank: p.rank,
             name: p.username,
             xp: p.total_xp,
-            streak: p.current_streak,
             badge: BADGES[p.rank - 1] || String(p.rank),
           })),
         )
@@ -97,14 +94,14 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
           <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
             <span className="text-sm font-bold">Tüm Zamanların Liderleri</span>
             <span className="rounded-full bg-[var(--focus-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--focus-light)]">
-              Canlı
+              İsteğe bağlı
             </span>
           </div>
 
           {/* Satirlar */}
           {users.length === 0 && (
             <div className="px-6 py-8 text-center text-sm text-[var(--text-muted)]">
-              Henüz oyuncu yok — ilk sen ol!
+              Henüz açık sıralamaya katılan yok.
             </div>
           )}
           {users.map((u) => (
@@ -127,7 +124,7 @@ export function LeaderboardPreview({ config }: LeaderboardPreviewProps = {}) {
               <div className="flex-1">
                 <div className="text-sm font-bold">{u.name}</div>
                 <div className="text-xs text-[var(--text-muted)]">
-                  {u.streak > 0 ? `${u.streak}🔥 seri` : 'Yeni oyuncu'}
+                  Açık sıralama katılımcısı
                 </div>
               </div>
 

@@ -6,8 +6,11 @@ const mockRpc = vi.fn()
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mockGetUser },
-    rpc: mockRpc,
   })),
+}))
+
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => ({ rpc: mockRpc })),
 }))
 
 import { GET } from '../route'

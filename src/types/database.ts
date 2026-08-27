@@ -59,6 +59,8 @@ export interface Profile {
   notifications: boolean
   /** Opt-in keşif: kullanıcı aramasında görünür mü (migration 072; yeni kullanıcılar FALSE) */
   is_discoverable: boolean
+  /** Açık sıralamada görünürlük (migration 177; tüm kullanıcılar varsayılan FALSE) */
+  leaderboard_opt_in?: boolean
   // Referral
   referral_code: string | null
   referred_by: string | null

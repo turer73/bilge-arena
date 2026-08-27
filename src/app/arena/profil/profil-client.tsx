@@ -11,6 +11,7 @@ import { ProgressChart } from '@/components/profile/progress-chart'
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
 import { NotificationSettings } from '@/components/profile/notification-settings'
 import { DiscoverabilitySettings } from '@/components/profile/discoverability-settings'
+import { LeaderboardVisibilitySettings } from '@/components/profile/leaderboard-visibility-settings'
 import { ReferralCard } from '@/components/profile/referral-card'
 import { EditProfileModal } from '@/components/profile/edit-profile-modal'
 import { getLevelFromXP } from '@/lib/constants/levels'
@@ -545,7 +546,10 @@ export default function ProfilClient() {
 
       {/* Gizlilik — opt-in keşif */}
       <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-        <DiscoverabilitySettings />
+        <div className="grid gap-3">
+          <DiscoverabilitySettings />
+          <LeaderboardVisibilitySettings />
+        </div>
       </div>
 
         </aside>

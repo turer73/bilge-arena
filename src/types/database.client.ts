@@ -7,6 +7,16 @@ type UserAchievements = PublicSchema['Tables']['user_achievements']
 type CurriculumOutcomes = PublicSchema['Tables']['curriculum_outcomes']
 type QuestionOutcomes = PublicSchema['Tables']['question_outcomes']
 type UserOutcomeState = PublicSchema['Tables']['user_outcome_state']
+type Profiles = PublicSchema['Tables']['profiles']
+
+// Migration 177 is intentionally app-first. Keep the deploy-compatible shape
+// here until the production schema is migrated and generated types are synced.
+type ProfilesWithLeaderboardOptIn = {
+  Row: Profiles['Row'] & { leaderboard_opt_in: boolean }
+  Insert: Profiles['Insert'] & { leaderboard_opt_in?: boolean }
+  Update: Profiles['Update'] & { leaderboard_opt_in?: boolean }
+  Relationships: Profiles['Relationships']
+}
 
 type CompleteGameSessionArgs = Omit<
   CompleteGameSession['Args'],
@@ -318,8 +328,9 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
   public: Omit<PublicSchema, 'Functions' | 'Tables'> & {
     Tables: Omit<
       PublicSchema['Tables'],
-      'user_achievements' | 'curriculum_outcomes' | 'question_outcomes' | 'user_outcome_state'
+      'profiles' | 'user_achievements' | 'curriculum_outcomes' | 'question_outcomes' | 'user_outcome_state'
     > & {
+      profiles: ProfilesWithLeaderboardOptIn
       user_achievements: UserAchievementsWithSource
       curriculum_nodes: {
         Row: CurriculumNodesRow

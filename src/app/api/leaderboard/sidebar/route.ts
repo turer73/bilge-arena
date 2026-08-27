@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { isPublicLeaderboardPrivacyReady } from '@/lib/leaderboard/privacy'
 
 // Cift kalkan rate limit (Codex PR #75 P1 + PR #78 P1):
 //   1. IP limit (her hit'te ONCE): 300 req/dk
@@ -26,7 +27,7 @@ interface SidebarLeader {
 }
 
 /**
- * GET /api/leaderboard/sidebar?currentUserId=<uuid>
+ * GET /api/leaderboard/sidebar
  *
  * Sidebar mini liderboard (top 5 + my rank). Browser->Supabase direkt
  * cagri yerine bu proxy uzerinden gecer (Madde 9 — pentest raporu
@@ -37,9 +38,11 @@ interface SidebarLeader {
  * Migration 040 city kaldirildi).
  * Fallback: profiles tablosu (toplam XP'ye gore).
  *
- * currentUserId verilmisse + ilk 5'te degilse, ayri sorgu ile rank getir.
+ * Giris yapan kullanici ilk 5'te degilse, ayri sorgu ile rank getir.
+ * Kullanici kimligi sorgu parametresinden alinmaz; dogrulanmis oturumdan gelir.
  *
- * Cache: 60 saniye edge (sidebar her sayfa render'inda gosterilir).
+ * Cache: no-store. Geri alinabilir gorunurluk onayi ve cookie ile kisilesen
+ * is_me/myRank yaniti edge veya tarayici cache'inde tutulmaz.
  *
  * Rate limit (Codex PR #75 + PR #78 P1 fix'leri):
  *   1. IP limit her zaman ONCE (anon flood'u erken kes — auth API roundtrip
@@ -77,26 +80,25 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const { searchParams } = new URL(request.url)
-  const currentUserId = searchParams.get('currentUserId')
-  // UUID format guard — kanonik 8-4-4-4-12 (review LOW: tighten edildi)
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  const isValidUuid = !!currentUserId && UUID_RE.test(currentUserId)
-  const safeUserId = isValidUuid ? currentUserId : null
+  const safeUserId = user?.id ?? null
 
-  // Cache strategy (review LOW: user-specific payload fragility):
-  //   - currentUserId yoksa: public cache OK (anonim leaderboard)
-  //   - currentUserId varsa: is_me + myRank user-specific -> private cache
-  const cacheControl = safeUserId
-    ? 'private, max-age=60'
-    : 'public, s-maxage=60, stale-while-revalidate=30'
+  // Opt-out hemen etkili olmali; ayrica is_me/myRank cookie ile kisilesir.
+  // URL-keyed browser/edge cache bu iki gizlilik sozlesmesini de bozar.
+  const cacheControl = 'no-store'
 
   const supabase = createServiceRoleClient()
+
+  if (!(await isPublicLeaderboardPrivacyReady(supabase))) {
+    return NextResponse.json(
+      { players: [], myRank: 0, source: 'privacy_pending' },
+      { headers: { 'Cache-Control': cacheControl } },
+    )
+  }
 
   // Haftalik view'i dene
   const { data: weeklyData, error: weeklyError } = await supabase
     .from('leaderboard_weekly_ranked')
-    .select('user_id, display_name, username, avatar_url, xp_earned, current_rank')
+    .select('user_id, username, avatar_url, xp_earned, current_rank')
     .order('current_rank', { ascending: true })
     .limit(5)
 
@@ -109,13 +111,13 @@ export async function GET(request: NextRequest) {
     let myRank = 0
     const players: SidebarLeader[] = weeklyData.map((row, i) => {
       const isMe = !!safeUserId && row.user_id === safeUserId
-      if (isMe) myRank = i + 1
+      const rank = row.current_rank ?? i + 1
+      if (isMe) myRank = rank
       const name =
         ((row as Record<string, unknown>).username as string | null) ||
-        row.display_name ||
         `Oyuncu ${i + 1}`
       return {
-        rank: i + 1,
+        rank,
         name,
         avatar_url: row.avatar_url,
         xp_earned: Number(row.xp_earned || 0),
@@ -142,7 +144,10 @@ export async function GET(request: NextRequest) {
   // Fallback: profiles tablosu
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, total_xp')
+    .select('id, username, avatar_url, total_xp')
+    .eq('leaderboard_opt_in', true)
+    .gt('total_xp', 0)
+    .is('deleted_at', null)
     .order('total_xp', { ascending: false })
     .limit(5)
 
@@ -164,7 +169,7 @@ export async function GET(request: NextRequest) {
     if (isMe) myRank = i + 1
     return {
       rank: i + 1,
-      name: p.username || p.display_name || `Oyuncu ${i + 1}`,
+      name: p.username || `Oyuncu ${i + 1}`,
       avatar_url: p.avatar_url,
       xp_earned: Number(p.total_xp || 0),
       is_me: isMe,
