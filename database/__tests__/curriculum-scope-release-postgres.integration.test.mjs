@@ -289,7 +289,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     expect(mappings).toEqual([
       { category: 'biyoloji', code: 'FEN-BIY-01', mapping_source: 'taxonomy_auto', is_primary: true },
       { category: 'fizik', code: 'FEN-FIZ-01', mapping_source: 'taxonomy_auto', is_primary: true },
-      { category: 'kimya', code: 'FEN-KIM-01', mapping_source: 'taxonomy_auto', is_primary: true },
+      { category: 'kimya', code: 'FEN-KIM-01', mapping_source: 'manual', is_primary: true },
     ])
   })
 
