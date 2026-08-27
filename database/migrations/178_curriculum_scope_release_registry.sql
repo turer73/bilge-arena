@@ -189,6 +189,10 @@ BEGIN
             WHEN 'topic' THEN 'unit'
             WHEN 'outcome' THEN 'topic'
           END
+          OR (
+            child.node_type = 'outcome'
+            AND parent.category IS DISTINCT FROM child.category
+          )
         ))
       )
   ),
@@ -340,19 +344,31 @@ DO $fn$
 DECLARE
   v_integrity jsonb;
 BEGIN
-  v_integrity := public.curriculum_scope_integrity('matematik', 'TYT', 'ba-tyt-math-v1');
-  IF v_integrity IS NULL
-    OR jsonb_typeof(v_integrity) <> 'object'
-    OR COALESCE((v_integrity->>'total')::integer, 0) <= 0
-    OR COALESCE((v_integrity->>'mapped')::integer, -1) <> (v_integrity->>'total')::integer
-    OR COALESCE((v_integrity->>'unmapped')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'scopeMismatch')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'nodeOrphan')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'outcomeOrphan')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'primaryMismatch')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'emptyOutcome')::integer, -1) <> 0 THEN
-    RAISE EXCEPTION 'TYT Mathematics curriculum scope failed registry integrity: %', v_integrity
-      USING ERRCODE = '23514';
+  -- Re-prove only the legacy release this migration owns. An operator-retired
+  -- scope or a later taxonomy is deliberately preserved by the seed above and
+  -- must not be forced through the obsolete v1 proof during a routine replay.
+  IF EXISTS (
+    SELECT 1
+    FROM public.curriculum_scope_releases
+    WHERE game = 'matematik'
+      AND display_exam_ref = 'TYT'
+      AND taxonomy_version = 'ba-tyt-math-v1'
+      AND release_status = 'released'
+  ) THEN
+    v_integrity := public.curriculum_scope_integrity('matematik', 'TYT', 'ba-tyt-math-v1');
+    IF v_integrity IS NULL
+      OR jsonb_typeof(v_integrity) <> 'object'
+      OR COALESCE((v_integrity->>'total')::integer, 0) <= 0
+      OR COALESCE((v_integrity->>'mapped')::integer, -1) <> (v_integrity->>'total')::integer
+      OR COALESCE((v_integrity->>'unmapped')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'scopeMismatch')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'nodeOrphan')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'outcomeOrphan')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'primaryMismatch')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'emptyOutcome')::integer, -1) <> 0 THEN
+      RAISE EXCEPTION 'TYT Mathematics curriculum scope failed registry integrity: %', v_integrity
+        USING ERRCODE = '23514';
+    END IF;
   END IF;
 END $fn$;
 

@@ -1,5 +1,5 @@
 // Opt-in disposable PostgreSQL coverage for 086 -> 091 -> 094 -> 096 -> 097
-// -> 138 -> 178 -> historical verified Fen attempt -> 179 -> 180.
+// -> 138 -> 178 -> historical verified Fen attempts -> 179 -> 180 -> 181.
 // Requires VERIFIED_ATTEMPTS_TEST_DATABASE_URL=.../bilge_r02_test_* and
 // VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE=1. Normal CI does not run it.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -29,15 +29,23 @@ const foundationMigrations = [
 const registryMigration = migration('178_curriculum_scope_release_registry.sql')
 const fenReleaseMigration = migration('179_release_tyt_fen_mastery_scope.sql')
 const fenRepairMigration = migration('180_backfill_released_tyt_fen_mastery_evidence.sql')
+const completeRepairMigration = migration('181_curriculum_scope_repair_and_parent_integrity.sql')
 const { Client } = pg
 
-describePg('178-180 curriculum scope release real PostgreSQL', () => {
+describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let client
+  let releaseClient
   let historicalUser
   let historicalAttempt
   let historicalSession
   let historicalAnswers
+  let raceUser
+  let raceAttempt
+  let raceSession
+  let raceAnswer
   let preRepair
+  let postLegacyRepair
+  let preCompleteRepair
   const mathCategories = ['sayilar', 'denklemler', 'fonksiyonlar', 'problemler', 'geometri', 'olasilik']
   const fenCategories = ['fizik', 'kimya', 'biyoloji']
   const questionIds = new Map([...mathCategories, ...fenCategories]
@@ -140,11 +148,102 @@ describePg('178-180 curriculum scope release real PostgreSQL', () => {
       (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence`,
     [historicalAttempt])).rows[0]
 
-    await client.query(fenReleaseMigration)
+    // A governed manual mapping published after the historical answer must be
+    // preserved by 179 and repaired even though 180 intentionally handled only
+    // taxonomy-owned post-answer mappings.
+    const manualOutcome = (await client.query(
+      "SELECT id FROM public.curriculum_outcomes WHERE code='FEN-KIM-01'",
+    )).rows[0].id
+    await client.query(`INSERT INTO public.question_outcomes(
+      question_id,outcome_id,weight,is_primary,mapping_source
+    ) VALUES($1,$2,1,true,'manual')`, [questionIds.get('kimya'), manualOutcome])
+
+    raceUser = randomUUID()
+    raceAttempt = randomUUID()
+    raceSession = randomUUID()
+    raceAnswer = randomUUID()
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [raceUser])
+    await client.query(
+      `INSERT INTO public.game_sessions(id,user_id,client_request_id) VALUES($1,$2,$3)`,
+      [raceSession, raceUser, randomUUID()],
+    )
+    await client.query(
+      `INSERT INTO public.verified_attempts(
+        id,user_id,game,mode,question_ids,duration_sec,expires_at
+      ) VALUES($1,$2,'fen','classic',$3,180,clock_timestamp()+interval '1 hour')`,
+      [raceAttempt, raceUser, [questionIds.get('fizik')]],
+    )
+
+    // Hold migration 179 immediately before commit. The mapping rows now have
+    // an early transaction timestamp but remain invisible to this connection.
+    // Completing the attempt in that window reproduces the exact review race:
+    // marker present, no base state/evidence, mapping.created_at <= answered_at.
+    releaseClient = new Client({ connectionString: url })
+    await releaseClient.connect()
+    const releasePid = (await releaseClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
+    const barrierKey = 181454
+    await client.query('SELECT pg_advisory_lock($1)', [barrierKey])
+    const gatedReleaseMigration = fenReleaseMigration.replace(
+      "NOTIFY pgrst, 'reload schema';",
+      `SELECT pg_advisory_lock(${barrierKey});
+       SELECT pg_advisory_unlock(${barrierKey});
+       NOTIFY pgrst, 'reload schema';`,
+    )
+    const releasePromise = releaseClient.query(gatedReleaseMigration)
+    let setupError
+    try {
+      let waitingOnBarrier = false
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const activity = (await client.query(
+          `SELECT wait_event_type,wait_event FROM pg_stat_activity WHERE pid=$1`,
+          [releasePid],
+        )).rows[0]
+        if (activity?.wait_event_type === 'Lock' && /advisory/i.test(activity?.wait_event ?? '')) {
+          waitingOnBarrier = true
+          break
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      if (!waitingOnBarrier) throw new Error('Fen release did not reach the advisory barrier')
+
+      await client.query(
+        `INSERT INTO public.session_answers(
+          id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
+        ) VALUES($1,$2,$3,$4,true,14,false,clock_timestamp())`,
+        [raceAnswer, raceSession, raceUser, questionIds.get('fizik')],
+      )
+      await client.query(
+        `UPDATE public.verified_attempts
+         SET completed_at=clock_timestamp(),session_id=$2
+         WHERE id=$1`,
+        [raceAttempt, raceSession],
+      )
+      preCompleteRepair = (await client.query(`SELECT
+        (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS markers,
+        (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence,
+        (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS base_attempts`,
+      [raceAttempt, raceUser])).rows[0]
+    } catch (error) {
+      setupError = error
+    } finally {
+      await client.query('SELECT pg_advisory_unlock($1)', [barrierKey])
+    }
+    await releasePromise
+    if (setupError) throw setupError
+
     await client.query(fenRepairMigration)
+    postLegacyRepair = (await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS historical_evidence,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$2) AS race_evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$3) AS historical_attempts,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$4) AS race_attempts`,
+    [historicalAttempt, raceAttempt, historicalUser, raceUser])).rows[0]
+    await client.query(completeRepairMigration)
   })
 
-  afterAll(async () => client?.end())
+  afterAll(async () => {
+    await Promise.allSettled([client?.end(), releaseClient?.end()])
+  })
 
   async function asRole(role, work) {
     await client.query(`SET ROLE ${role}`)
@@ -194,8 +293,49 @@ describePg('178-180 curriculum scope release real PostgreSQL', () => {
     ])
   })
 
-  it('repairs historical verified Fen evidence once and records the exact scope ledger', async () => {
+  it('rejects cross-category outcome parents and detects legacy drift fail-closed', async () => {
+    const outcomeNode = (await client.query(`SELECT id,parent_id
+      FROM public.curriculum_nodes
+      WHERE taxonomy_version='ba-tyt-fen-v1' AND node_type='outcome' AND category='fizik'`)).rows[0]
+    const wrongTopic = (await client.query(`SELECT id
+      FROM public.curriculum_nodes
+      WHERE taxonomy_version='ba-tyt-fen-v1' AND node_type='topic' AND category='kimya'`)).rows[0]
+
+    await expect(client.query(
+      'UPDATE public.curriculum_nodes SET parent_id=$2 WHERE id=$1',
+      [outcomeNode.id, wrongTopic.id],
+    )).rejects.toMatchObject({ code: '22023' })
+
+    await client.query('ALTER TABLE public.curriculum_nodes DISABLE TRIGGER trg_curriculum_node_parent_guard')
+    try {
+      await client.query(
+        'UPDATE public.curriculum_nodes SET parent_id=$2 WHERE id=$1',
+        [outcomeNode.id, wrongTopic.id],
+      )
+      expect((await client.query(
+        `SELECT public.curriculum_scope_integrity('fen','TYT','ba-tyt-fen-v1') AS result`,
+      )).rows[0].result).toMatchObject({ nodeOrphan: 1 })
+    } finally {
+      await client.query(
+        'UPDATE public.curriculum_nodes SET parent_id=$2 WHERE id=$1',
+        [outcomeNode.id, outcomeNode.parent_id],
+      )
+      await client.query('ALTER TABLE public.curriculum_nodes ENABLE TRIGGER trg_curriculum_node_parent_guard')
+    }
+    expect((await client.query(
+      `SELECT public.curriculum_scope_integrity('fen','TYT','ba-tyt-fen-v1') AS result`,
+    )).rows[0].result).toMatchObject({ nodeOrphan: 0 })
+  })
+
+  it('repairs legacy, manual, and release-race Fen evidence exactly once', async () => {
     expect(preRepair).toEqual({ markers: 1, evidence: 0 })
+    expect(preCompleteRepair).toEqual({ markers: 1, evidence: 0, base_attempts: 0 })
+    expect(postLegacyRepair).toEqual({
+      historical_evidence: 2,
+      race_evidence: 0,
+      historical_attempts: 2,
+      race_attempts: 0,
+    })
     const evidence = (await client.query(`SELECT evidence.base_already_recorded,evidence.is_correct,
       outcome.category
       FROM public.mastery_outcome_evidence AS evidence
@@ -206,24 +346,53 @@ describePg('178-180 curriculum scope release real PostgreSQL', () => {
       { base_already_recorded: false, is_correct: true, category: 'fizik' },
       { base_already_recorded: false, is_correct: false, category: 'kimya' },
     ])
+    expect((await client.query(`SELECT evidence.base_already_recorded,evidence.is_correct,
+      outcome.category
+      FROM public.mastery_outcome_evidence AS evidence
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=evidence.outcome_id
+      WHERE evidence.attempt_id=$1`, [raceAttempt])).rows).toEqual([
+      { base_already_recorded: false, is_correct: true, category: 'fizik' },
+    ])
     const aggregate = (await client.query(`SELECT
       sum(attempts)::integer AS attempts,
       sum(v2_attempts)::integer AS v2_attempts,
       sum(correct_attempts)::integer AS correct_attempts
       FROM public.user_outcome_state WHERE user_id=$1`, [historicalUser])).rows[0]
     expect(aggregate).toEqual({ attempts: 3, v2_attempts: 3, correct_attempts: 2 })
+    expect((await client.query(`SELECT
+      sum(attempts)::integer AS attempts,
+      sum(v2_attempts)::integer AS v2_attempts,
+      sum(correct_attempts)::integer AS correct_attempts
+      FROM public.user_outcome_state WHERE user_id=$1`, [raceUser])).rows[0]).toEqual({
+      attempts: 1, v2_attempts: 1, correct_attempts: 1,
+    })
     expect((await client.query(`SELECT candidate_attempts,candidate_answers,
       candidate_evidence_rows,inserted_evidence_rows,affected_users
       FROM public.curriculum_scope_evidence_repairs
       WHERE game='fen' AND display_exam_ref='TYT' AND taxonomy_version='ba-tyt-fen-v1'`)).rows[0]).toEqual({
       candidate_attempts: 1,
-      candidate_answers: 3,
-      candidate_evidence_rows: 3,
-      inserted_evidence_rows: 3,
+      candidate_answers: 2,
+      candidate_evidence_rows: 2,
+      inserted_evidence_rows: 2,
       affected_users: 1,
+    })
+    expect((await client.query(`SELECT candidate_attempts,candidate_answers,
+      candidate_evidence_rows,inserted_evidence_rows,affected_users,
+      manual_mapping_rows,mapping_at_or_before_answer_rows,mapping_after_answer_rows
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='181_tyt_fen_complete_primary_mappings_v1'`)).rows[0]).toEqual({
+      candidate_attempts: 2,
+      candidate_answers: 2,
+      candidate_evidence_rows: 2,
+      inserted_evidence_rows: 2,
+      affected_users: 2,
+      manual_mapping_rows: 1,
+      mapping_at_or_before_answer_rows: 1,
+      mapping_after_answer_rows: 1,
     })
 
     await client.query(fenRepairMigration)
+    await client.query(completeRepairMigration)
     expect((await client.query(`SELECT
       count(*)::integer AS evidence,
       (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
@@ -232,6 +401,15 @@ describePg('178-180 curriculum scope release real PostgreSQL', () => {
       evidence: 3,
       attempts: 3,
       v2_attempts: 3,
+    })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [raceUser, raceAttempt])).rows[0]).toEqual({
+      evidence: 1,
+      attempts: 1,
+      v2_attempts: 1,
     })
   })
 
@@ -278,19 +456,25 @@ describePg('178-180 curriculum scope release real PostgreSQL', () => {
     const privileges = (await client.query(`SELECT
       has_table_privilege('authenticated','public.curriculum_scope_releases','SELECT') AS auth_registry,
       has_table_privilege('service_role','public.curriculum_scope_releases','SELECT') AS service_registry,
+      has_table_privilege('authenticated','public.curriculum_scope_evidence_repair_runs','SELECT') AS auth_repair_runs,
+      has_table_privilege('service_role','public.curriculum_scope_evidence_repair_runs','SELECT') AS service_repair_runs,
       has_function_privilege('authenticated','public.resolve_released_curriculum_scope(text,text)','EXECUTE') AS auth_resolve,
       has_function_privilege('service_role','public.resolve_released_curriculum_scope(text,text)','EXECUTE') AS service_resolve,
       has_function_privilege('authenticated','public.curriculum_scope_integrity(text,text,text)','EXECUTE') AS auth_integrity,
       has_function_privilege('service_role','public.curriculum_scope_integrity(text,text,text)','EXECUTE') AS service_integrity,
-      has_function_privilege('service_role','public.sync_taxonomy_auto_question_outcomes(uuid,text,text,text,boolean)','EXECUTE') AS service_sync`)).rows[0]
+      has_function_privilege('service_role','public.sync_taxonomy_auto_question_outcomes(uuid,text,text,text,boolean)','EXECUTE') AS service_sync,
+      has_function_privilege('service_role','public.curriculum_node_parent_guard()','EXECUTE') AS service_parent_guard`)).rows[0]
     expect(privileges).toEqual({
       auth_registry: false,
       service_registry: false,
+      auth_repair_runs: false,
+      service_repair_runs: false,
       auth_resolve: false,
       service_resolve: true,
       auth_integrity: false,
       service_integrity: true,
       service_sync: false,
+      service_parent_guard: false,
     })
     await asRole('authenticated', async () => {
       await expect(client.query('SELECT * FROM public.curriculum_scope_releases')).rejects.toMatchObject({ code: '42501' })
@@ -324,8 +508,18 @@ describePg('178-180 curriculum scope release real PostgreSQL', () => {
       release_status: 'released', taxonomy_version: 'ba-tyt-sosyal-v2',
     })
 
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET release_status='released',taxonomy_version='ba-tyt-math-v2',released_at=clock_timestamp()
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
+    await client.query(registryMigration)
+    expect((await client.query(`SELECT release_status,taxonomy_version
+      FROM public.curriculum_scope_releases WHERE game='matematik' AND display_exam_ref='TYT'`)).rows[0]).toEqual({
+      release_status: 'released', taxonomy_version: 'ba-tyt-math-v2',
+    })
+
     await client.query(fenReleaseMigration)
     await client.query(fenRepairMigration)
+    await client.query(completeRepairMigration)
     expect((await client.query(`SELECT release_status FROM public.curriculum_scope_releases
       WHERE game='fen' AND display_exam_ref='TYT'`)).rows[0].release_status).toBe('released')
     expect((await client.query(

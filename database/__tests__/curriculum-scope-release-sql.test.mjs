@@ -7,8 +7,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations')
 const registrySql = readFileSync(join(root, '178_curriculum_scope_release_registry.sql'), 'utf8')
 const fenReleaseSql = readFileSync(join(root, '179_release_tyt_fen_mastery_scope.sql'), 'utf8')
 const fenRepairSql = readFileSync(join(root, '180_backfill_released_tyt_fen_mastery_evidence.sql'), 'utf8')
+const completeRepairSql = readFileSync(join(root, '181_curriculum_scope_repair_and_parent_integrity.sql'), 'utf8')
 
-describe('178-180 curriculum scope release migrations', () => {
+describe('178-181 curriculum scope release migrations', () => {
   it('keeps the release registry private and resolves only released scopes', () => {
     expect(registrySql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_releases/)
     expect(registrySql).toMatch(/release_status IN \('draft','validating','released','retired'\)/)
@@ -41,9 +42,10 @@ describe('178-180 curriculum scope release migrations', () => {
     ]) expect(registrySql).toContain(`'${field}'`)
     expect(registrySql).toMatch(/HAVING count\(\*\) FILTER \(WHERE mapping\.is_primary\) <> 1/)
     expect(registrySql).toMatch(/NOT EXISTS \([\s\S]*FROM valid_mapping_rows AS mapping[\s\S]*mapping\.outcome_id = outcome\.id/)
+    expect(registrySql).toMatch(/child\.node_type = 'outcome'[\s\S]*parent\.category IS DISTINCT FROM child\.category/)
     expect(registrySql).toMatch(/CREATE OR REPLACE FUNCTION public\.curriculum_graph_integrity\(\)[\s\S]*curriculum_scope_integrity\('matematik', 'TYT', 'ba-tyt-math-v1'\)/)
     expect(registrySql).toMatch(/TYT Mathematics curriculum scope failed registry integrity/)
-    expect(registrySql).toMatch(/curriculum_scope_integrity\('matematik', 'TYT', 'ba-tyt-math-v1'\)[\s\S]*v_integrity->>'primaryMismatch'[\s\S]*v_integrity->>'emptyOutcome'/)
+    expect(registrySql).toMatch(/taxonomy_version = 'ba-tyt-math-v1'[\s\S]*release_status = 'released'[\s\S]*curriculum_scope_integrity\('matematik', 'TYT', 'ba-tyt-math-v1'\)[\s\S]*v_integrity->>'primaryMismatch'[\s\S]*v_integrity->>'emptyOutcome'/)
     expect(registrySql).toMatch(/REVOKE ALL ON FUNCTION public\.curriculum_graph_integrity\(\) FROM PUBLIC, anon, authenticated/)
   })
 
@@ -82,5 +84,21 @@ describe('178-180 curriculum scope release migrations', () => {
     expect(fenRepairSql).toMatch(/ON CONFLICT \(answer_id, outcome_id\) DO NOTHING/)
     expect(fenRepairSql).toMatch(/ON CONFLICT \(user_id, outcome_id\) DO UPDATE SET/)
     expect(fenRepairSql).toMatch(/v_candidates <> v_inserted[\s\S]*TYT Fen evidence repair lost rows/)
+  })
+
+  it('repairs all missing primary Fen evidence and hardens parent-category integrity', () => {
+    expect(completeRepairSql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_evidence_repair_runs/)
+    expect(completeRepairSql).toMatch(/ALTER TABLE public\.curriculum_scope_evidence_repair_runs ENABLE ROW LEVEL SECURITY/)
+    expect(completeRepairSql).toMatch(/REVOKE ALL ON TABLE public\.curriculum_scope_evidence_repair_runs[\s\S]*PUBLIC, anon, authenticated, service_role/)
+    expect(completeRepairSql).toMatch(/JOIN public\.mastery_materialized_attempts AS marker ON marker\.attempt_id = attempt\.id/)
+    expect(completeRepairSql).toMatch(/JOIN public\.question_outcomes AS mapping[\s\S]*mapping\.is_primary/)
+    expect(completeRepairSql).not.toMatch(/mapping\.mapping_source\s*=\s*'taxonomy_auto'/)
+    expect(completeRepairSql).not.toMatch(/mapping\.created_at\s*>\s*answer\.answered_at\s*\n\s*AND existing\.answer_id IS NULL/)
+    expect(completeRepairSql).toMatch(/manual_mapping_rows[\s\S]*mapping_at_or_before_answer_rows[\s\S]*mapping_after_answer_rows/)
+    expect(completeRepairSql).toMatch(/BEFORE INSERT OR UPDATE OF node_type, parent_id, game, exam_ref, taxonomy_version, category/)
+    expect(completeRepairSql).toMatch(/NEW\.node_type = 'outcome'[\s\S]*v_parent\.category IS DISTINCT FROM NEW\.category/)
+    expect(completeRepairSql).toMatch(/child\.node_type = 'outcome'[\s\S]*parent\.category IS DISTINCT FROM child\.category/)
+    expect(completeRepairSql).toMatch(/v_node\.category IS DISTINCT FROM NEW\.category/)
+    expect(completeRepairSql).toMatch(/v_candidates <> v_inserted[\s\S]*TYT Fen complete evidence repair lost rows/)
   })
 })
