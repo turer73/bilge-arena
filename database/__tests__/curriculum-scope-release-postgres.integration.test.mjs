@@ -36,6 +36,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let client
   let releaseClient
   let completionClient
+  let answerWriterClient
   let questionWriterClient
   let repairClient
   let inFlightClient
@@ -47,6 +48,10 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let raceAttempt
   let raceSession
   let raceAnswer
+  let answerWriterUser
+  let answerWriterAttempt
+  let answerWriterSession
+  let answerWriterAnswer
   let drainUser
   let drainAttempt
   let drainSession
@@ -57,6 +62,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let supersededAnswer
   let releaseWriterQuestion
   let completionWasBlocked = false
+  let answerWriterWasBlocked = false
   let questionWriterWasBlocked = false
   let repairWasBlocked = false
   let preRepair
@@ -211,18 +217,43 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       ) VALUES($1,$2,'fen','classic',$3,180,clock_timestamp()+interval '1 hour')`,
       [raceAttempt, raceUser, [questionIds.get('fizik')]],
     )
+    await client.query(
+      `INSERT INTO public.session_answers(
+        id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
+      ) VALUES($1,$2,$3,$4,true,14,false,clock_timestamp())`,
+      [raceAnswer, raceSession, raceUser, questionIds.get('fizik')],
+    )
+
+    answerWriterUser = randomUUID()
+    answerWriterAttempt = randomUUID()
+    answerWriterSession = randomUUID()
+    answerWriterAnswer = randomUUID()
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [answerWriterUser])
+    await client.query(
+      `INSERT INTO public.game_sessions(id,user_id,client_request_id) VALUES($1,$2,$3)`,
+      [answerWriterSession, answerWriterUser, randomUUID()],
+    )
+    await client.query(
+      `INSERT INTO public.verified_attempts(
+        id,user_id,game,mode,question_ids,duration_sec,expires_at
+      ) VALUES($1,$2,'fen','classic',$3,180,clock_timestamp()+interval '1 hour')`,
+      [answerWriterAttempt, answerWriterUser, [questionIds.get('fizik')]],
+    )
 
     // Hold migration 179 immediately before commit. Completion and question
     // writers started in this window must wait behind the release locks, then
     // resume against the committed released scope.
     releaseClient = new Client({ connectionString: url })
     completionClient = new Client({ connectionString: url })
+    answerWriterClient = new Client({ connectionString: url })
     questionWriterClient = new Client({ connectionString: url })
     await releaseClient.connect()
     await completionClient.connect()
+    await answerWriterClient.connect()
     await questionWriterClient.connect()
     const releasePid = (await releaseClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
     const completionPid = (await completionClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
+    const answerWriterPid = (await answerWriterClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
     const questionWriterPid = (await questionWriterClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
     const barrierKey = 181454
     await client.query('SELECT pg_advisory_lock($1)', [barrierKey])
@@ -234,6 +265,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     )
     const releasePromise = releaseClient.query(gatedReleaseMigration)
     let completionPromise
+    let answerWriterPromise
     let questionWriterPromise
     let setupError
     try {
@@ -251,17 +283,17 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       }
       if (!waitingOnBarrier) throw new Error('Fen release did not reach the advisory barrier')
 
-      await client.query(
-        `INSERT INTO public.session_answers(
-          id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
-        ) VALUES($1,$2,$3,$4,true,14,false,clock_timestamp())`,
-        [raceAnswer, raceSession, raceUser, questionIds.get('fizik')],
-      )
       completionPromise = completionClient.query(
         `UPDATE public.verified_attempts
          SET completed_at=clock_timestamp(),session_id=$2
          WHERE id=$1`,
         [raceAttempt, raceSession],
+      )
+      answerWriterPromise = answerWriterClient.query(
+        `INSERT INTO public.session_answers(
+          id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
+        ) VALUES($1,$2,$3,$4,true,12,false,clock_timestamp())`,
+        [answerWriterAnswer, answerWriterSession, answerWriterUser, questionIds.get('fizik')],
       )
       questionWriterPromise = questionWriterClient.query(
         'UPDATE public.questions SET is_active=true WHERE id=$1',
@@ -271,15 +303,16 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       for (let attempt = 0; attempt < 100; attempt += 1) {
         const rows = (await client.query(
           `SELECT pid,wait_event_type,wait_event FROM pg_stat_activity WHERE pid=ANY($1::integer[])`,
-          [[completionPid, questionWriterPid]],
+          [[completionPid, answerWriterPid, questionWriterPid]],
         )).rows
         completionWasBlocked = rows.some((row) => row.pid === completionPid && row.wait_event_type === 'Lock')
+        answerWriterWasBlocked = rows.some((row) => row.pid === answerWriterPid && row.wait_event_type === 'Lock')
         questionWriterWasBlocked = rows.some((row) => row.pid === questionWriterPid && row.wait_event_type === 'Lock')
-        if (completionWasBlocked && questionWriterWasBlocked) break
+        if (completionWasBlocked && answerWriterWasBlocked && questionWriterWasBlocked) break
         await new Promise((resolve) => setTimeout(resolve, 50))
       }
-      if (!completionWasBlocked || !questionWriterWasBlocked) {
-        throw new Error('Fen release did not serialize completion and question writers')
+      if (!completionWasBlocked || !answerWriterWasBlocked || !questionWriterWasBlocked) {
+        throw new Error('Fen release did not serialize answer, completion, and question writers')
       }
     } catch (error) {
       setupError = error
@@ -287,8 +320,15 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       await client.query('SELECT pg_advisory_unlock($1)', [barrierKey])
     }
     await releasePromise
-    await Promise.all([completionPromise, questionWriterPromise].filter(Boolean))
+    await Promise.all([completionPromise, answerWriterPromise, questionWriterPromise].filter(Boolean))
     if (setupError) throw setupError
+
+    await answerWriterClient.query(
+      `UPDATE public.verified_attempts
+       SET completed_at=clock_timestamp(),session_id=$2
+       WHERE id=$1`,
+      [answerWriterAttempt, answerWriterSession],
+    )
 
     preCompleteRepair = (await client.query(`SELECT
       (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS markers,
@@ -403,7 +443,8 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
 
   afterAll(async () => {
     await Promise.allSettled([
-      client?.end(), releaseClient?.end(), completionClient?.end(), questionWriterClient?.end(),
+      client?.end(), releaseClient?.end(), completionClient?.end(), answerWriterClient?.end(),
+      questionWriterClient?.end(),
       repairClient?.end(), inFlightClient?.end(),
     ])
   })
@@ -456,6 +497,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       { category: 'kimya', code: 'FEN-KIM-01', mapping_source: 'manual', is_primary: true },
     ])
     expect(completionWasBlocked).toBe(true)
+    expect(answerWriterWasBlocked).toBe(true)
     expect(questionWriterWasBlocked).toBe(true)
   })
 
@@ -580,6 +622,11 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       WHERE evidence.attempt_id=$1`, [raceAttempt])).rows).toEqual([
       { base_already_recorded: false, is_correct: true, category: 'fizik' },
     ])
+    expect((await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS attempts,
+      (SELECT COALESCE(sum(v2_attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS v2_attempts`,
+    [answerWriterAttempt, answerWriterUser])).rows[0]).toEqual({ evidence: 1, attempts: 1, v2_attempts: 1 })
     expect((await client.query(`SELECT difficulty,difficulty_weighted_possible
       FROM public.mastery_outcome_evidence WHERE attempt_id=$1`, [drainAttempt])).rows).toEqual([
       { difficulty: 4, difficulty_weighted_possible: '4.000' },

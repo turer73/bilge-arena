@@ -8,6 +8,10 @@ const registrySql = readFileSync(join(root, '178_curriculum_scope_release_regist
 const fenReleaseSql = readFileSync(join(root, '179_release_tyt_fen_mastery_scope.sql'), 'utf8')
 const fenRepairSql = readFileSync(join(root, '180_backfill_released_tyt_fen_mastery_evidence.sql'), 'utf8')
 const completeRepairSql = readFileSync(join(root, '181_curriculum_scope_repair_and_parent_integrity.sql'), 'utf8')
+const materializerDefinition = (sql) => sql.slice(
+  sql.indexOf('CREATE OR REPLACE FUNCTION public.materialize_verified_attempt_mastery'),
+  sql.indexOf('REVOKE ALL ON FUNCTION public.materialize_verified_attempt_mastery'),
+)
 
 describe('178-181 curriculum scope release migrations', () => {
   it('keeps the release registry private and resolves only released scopes', () => {
@@ -60,7 +64,10 @@ describe('178-181 curriculum scope release migrations', () => {
   })
 
   it('releases TYT Fen only after every integrity field is clean', () => {
-    expect(fenReleaseSql).toMatch(/LOCK TABLE[\s\S]*public\.questions,[\s\S]*public\.question_outcomes,[\s\S]*public\.verified_attempts[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+    expect(fenReleaseSql).toMatch(/LOCK TABLE[\s\S]*public\.questions,[\s\S]*public\.question_outcomes,[\s\S]*public\.session_answers,[\s\S]*public\.verified_attempts[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+    expect(fenReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.materialize_verified_attempt_mastery[\s\S]*mapping\.mapping_source = 'taxonomy_auto'[\s\S]*GREATEST\(mapping\.created_at, scope\.released_at\)/)
+    expect(fenReleaseSql).toMatch(/LEFT JOIN public\.verified_attempt_question_revisions AS snapshot[\s\S]*snapshot\.attempt_id = p_attempt_id/)
+    expect(materializerDefinition(fenReleaseSql)).toBe(materializerDefinition(completeRepairSql))
     expect(fenReleaseSql).toMatch(/release_status = CASE WHEN release_status = 'released' THEN 'released' ELSE 'validating' END/)
     expect(fenReleaseSql).toMatch(/WHERE game = 'fen'[\s\S]*display_exam_ref = 'TYT'[\s\S]*taxonomy_version = 'ba-tyt-fen-v1'/)
     expect(fenReleaseSql).toMatch(/FOR v_question IN[\s\S]*FROM public\.questions[\s\S]*WHERE game = 'fen'[\s\S]*is_active/)
@@ -89,6 +96,7 @@ describe('178-181 curriculum scope release migrations', () => {
 
   it('repairs all missing primary Fen evidence and hardens parent-category integrity', () => {
     expect(completeRepairSql).toMatch(/LOCK TABLE[\s\S]*public\.question_outcomes,[\s\S]*public\.verified_attempts,[\s\S]*public\.mastery_materialized_attempts,[\s\S]*public\.user_outcome_state[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+    expect(completeRepairSql).toMatch(/CREATE OR REPLACE FUNCTION public\.materialize_verified_attempt_mastery[\s\S]*mapping\.mapping_source = 'taxonomy_auto'[\s\S]*GREATEST\(mapping\.created_at, scope\.released_at\)/)
     expect(completeRepairSql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_evidence_repair_runs/)
     expect(completeRepairSql).toMatch(/run_id uuid PRIMARY KEY DEFAULT gen_random_uuid\(\)/)
     expect(completeRepairSql).toMatch(/repair_key text NOT NULL/)
@@ -96,8 +104,12 @@ describe('178-181 curriculum scope release migrations', () => {
     expect(completeRepairSql).toMatch(/REVOKE ALL ON TABLE public\.curriculum_scope_evidence_repair_runs[\s\S]*PUBLIC, anon, authenticated, service_role/)
     expect(completeRepairSql).toMatch(/JOIN public\.mastery_materialized_attempts AS marker ON marker\.attempt_id = attempt\.id/)
     expect(completeRepairSql).toMatch(/JOIN public\.question_outcomes AS mapping[\s\S]*mapping\.is_primary/)
-    expect(completeRepairSql).not.toMatch(/mapping\.mapping_source\s*=\s*'taxonomy_auto'/)
-    expect(completeRepairSql).not.toMatch(/mapping\.created_at\s*>\s*answer\.answered_at\s*\n\s*AND existing\.answer_id IS NULL/)
+    const candidateSql = completeRepairSql.slice(
+      completeRepairSql.indexOf('CREATE TEMP TABLE fen_scope_complete_evidence_candidates'),
+      completeRepairSql.indexOf('CREATE TEMP TABLE fen_scope_complete_inserted_evidence'),
+    )
+    expect(candidateSql).not.toMatch(/mapping\.mapping_source\s*=\s*'taxonomy_auto'/)
+    expect(candidateSql).not.toMatch(/mapping\.created_at\s*>\s*answer\.answered_at\s*\n\s*AND existing\.answer_id IS NULL/)
     expect(completeRepairSql).toMatch(/COALESCE\(snapshot\.difficulty, question\.difficulty\)/)
     expect(completeRepairSql).toMatch(/LEFT JOIN public\.verified_attempt_question_revisions AS snapshot[\s\S]*snapshot\.attempt_id = attempt\.id[\s\S]*snapshot\.question_id = answer\.question_id/)
     expect(completeRepairSql).toMatch(/NOT EXISTS \([\s\S]*mastery_outcome_evidence AS existing[\s\S]*existing\.question_id = answer\.question_id[\s\S]*existing_outcome\.taxonomy_version = 'ba-tyt-fen-v1'/)
