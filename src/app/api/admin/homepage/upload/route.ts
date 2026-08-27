@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { dbErrorResponse } from '@/lib/utils/api-error'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
@@ -53,7 +54,11 @@ export async function POST(request: NextRequest) {
 
     const filePath = `logos/${Date.now()}-${sanitizedFilename}.png`
 
-    const { error: uploadError } = await supabase.storage
+    // Authorization is bound to the caller above. Storage mutation itself is
+    // server-owned so public/authenticated storage policies never become an
+    // alternate admin upload path.
+    const service = createServiceRoleClient()
+    const { error: uploadError } = await service.storage
       .from('homepage-assets')
       .upload(filePath, buffer, {
         contentType: ALLOWED_MIME,
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
       return dbErrorResponse('admin/homepage/upload', uploadError)
     }
 
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = service.storage
       .from('homepage-assets')
       .getPublicUrl(filePath)
 
