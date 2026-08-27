@@ -9,13 +9,6 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })
 
-// Next/Turbopack development runtime installs HMR updates with eval(). Keep
-// production sensitive documents eval-free while allowing the local dev
-// runtime to work on the same routes.
-const sensitiveScriptSource = process.env.NODE_ENV === 'development'
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self' 'unsafe-inline'"
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // `output: 'standalone'` SADECE Docker self-host (Dockerfile) icin gerekli.
@@ -143,60 +136,26 @@ const nextConfig = {
         ],
       },
       {
-        // Öğretmen sınıfları özel üye/ödev verisi taşır. Bu daha özel ve daha
-        // geç kural, global CSP'deki analytics/reklam sağlayıcılarını çıkarır.
+        // Öğretmen sınıfları özel üye/ödev verisi taşır. Nonce tabanli CSP
+        // src/proxy.ts tarafindan istek basina uretilir; burada yalniz cache ve
+        // referrer siniri tutulur.
         source: '/arena/sinif/:path*',
         headers: [
           { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
           { key: 'CDN-Cache-Control', value: 'no-store' },
           { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
           { key: 'Referrer-Policy', value: 'no-referrer' },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              sensitiveScriptSource,
-              "style-src 'self' 'unsafe-inline'",
-              "font-src 'self'",
-              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
-              "media-src 'self' blob: data: https://*.supabase.co",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com",
-              "frame-src 'self'",
-              "worker-src 'self' blob:",
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; '),
-          },
         ],
       },
       {
         // Kurum calisma alani reklam/analitik document boundary'sinin arkasinda
-        // calisir. Global AdSense/GA izinlerini ve unsafe-eval'i burada enforce
-        // edilen daha dar politika ile kaldir.
+        // calisir. Istek-bazli nonce CSP src/proxy.ts tarafindan uygulanir.
         source: '/arena/kurum/:path*',
         headers: [
           { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
           { key: 'CDN-Cache-Control', value: 'no-store' },
           { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
           { key: 'Referrer-Policy', value: 'no-referrer' },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              sensitiveScriptSource,
-              "style-src 'self' 'unsafe-inline'",
-              "font-src 'self'",
-              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
-              "media-src 'self' blob: data: https://*.supabase.co",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com",
-              "frame-src 'self'",
-              "worker-src 'self' blob:",
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; '),
-          },
         ],
       },
       {
@@ -208,51 +167,17 @@ const nextConfig = {
           { key: 'CDN-Cache-Control', value: 'no-store' },
           { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
           { key: 'Referrer-Policy', value: 'no-referrer' },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              sensitiveScriptSource,
-              "style-src 'self' 'unsafe-inline'",
-              "font-src 'self'",
-              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
-              "media-src 'self' blob: data: https://*.supabase.co",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-              "frame-src 'self'",
-              "worker-src 'self' blob:",
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; '),
-          },
         ],
       },
       {
-        // Admin yuzeyinde reklam/analitik yoktur. Global AdSense izinlerini ve
-        // unsafe-eval'i report-only gozleminden sonra enforcing olarak kaldir.
+        // Admin yuzeyinde reklam/analitik yoktur. Istek-bazli nonce CSP
+        // src/proxy.ts tarafindan uygulanir.
         source: '/admin/:path*',
         headers: [
           { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
           { key: 'CDN-Cache-Control', value: 'no-store' },
           { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
           { key: 'Referrer-Policy', value: 'no-referrer' },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              sensitiveScriptSource,
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
-              "media-src 'self' blob: data: https://*.supabase.co",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.de.sentry.io",
-              "frame-src 'none'",
-              "worker-src 'self' blob:",
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; '),
-          },
         ],
       },
       {

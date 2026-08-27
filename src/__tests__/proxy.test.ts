@@ -81,6 +81,19 @@ describe('admin proxy permission boundary', () => {
     const response = await proxy(request('/admin/kurumlar'))
     expect(response.headers.get('location')).toBeNull()
     expect(response.headers.get('x-middleware-next')).toBe('1')
+    const csp = response.headers.get('Content-Security-Policy')
+    expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/)
+    expect(csp).toContain("script-src-attr 'none'")
+    expect(csp).not.toContain("'unsafe-inline' 'unsafe-eval'")
+    expect(csp).not.toMatch(/googlesyndication|googletagmanager|analytics\.panola|plausible/i)
+  })
+
+  it('does not add the private nonce policy to a public document', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+
+    const response = await proxy(request('/arena'))
+
+    expect(response.headers.get('Content-Security-Policy')).toBeNull()
   })
 
   it('fails closed to the arena when permission checks fail', async () => {

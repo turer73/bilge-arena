@@ -78,7 +78,11 @@ export async function GET(request: NextRequest) {
   if (difficulty) searchArgs.difficulty_filter = parseInt(difficulty)
   if (activeFilter !== null) searchArgs.active_filter = activeFilter
 
-  const { data: rows, error } = await supabase.rpc('search_questions', searchArgs)
+  // Public projection is an application API, not a direct anonymous PostgREST
+  // contract. Use the server-only client so migration 173 can revoke anon RPC
+  // execution. Admin projection keeps the caller JWT for the DB-level AAL2 gate.
+  const questionReader = adminProjection ? supabase : createServiceRoleClient()
+  const { data: rows, error } = await questionReader.rpc('search_questions', searchArgs)
 
   if (error) {
     // PR #74 review LOW: raw error.message Postgres permission/schema bilgisini

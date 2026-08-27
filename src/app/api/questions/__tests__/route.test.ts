@@ -11,17 +11,18 @@ const {
   mockIssueVerifiedAttempt,
   mockServiceClient,
 } = vi.hoisted(() => {
+  const mockRpc = vi.fn()
   const mockUpdateEq = vi.fn()
   const mockFrom = vi.fn(() => ({
     update: vi.fn(() => ({ eq: mockUpdateEq })),
     insert: vi.fn().mockResolvedValue({ error: null }),
   }))
-  const mockServiceClient = { role: 'service' }
+  const mockServiceClient = { role: 'service', rpc: mockRpc }
 
   return {
     mockGetUser: vi.fn(),
     mockCheckAdmin: vi.fn(),
-    mockRpc: vi.fn(),
+    mockRpc,
     mockFrom,
     mockUpdateEq,
     mockAdminMutationRl: vi.fn(),

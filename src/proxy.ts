@@ -8,6 +8,12 @@ import {
 } from '@/lib/admin/platform-permissions'
 import { userHasAnyPlatformPermissionViaRest } from '@/lib/supabase/platform-access'
 import { safeMfaReturnPath } from '@/lib/auth/aal2'
+import { isSensitiveWorkspacePath } from '@/lib/privacy/telemetry-policy'
+import {
+  buildSensitiveDocumentCsp,
+  createCspNonce,
+  SENSITIVE_CSP_HEADER,
+} from '@/lib/security/csp'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
@@ -18,8 +24,10 @@ function preserveRefreshedCookies(source: NextResponse, target: NextResponse): N
 }
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
   // Health endpoint — Uptime Kuma icin auth bypass
-  if (request.nextUrl.pathname === '/api/health/ping') {
+  if (pathname === '/api/health/ping') {
     return NextResponse.next()
   }
 
@@ -27,7 +35,7 @@ export async function proxy(request: NextRequest) {
   // State-changing istekler icin Origin/Referer kontrol; SameSite=Lax'in
   // defense-in-depth katmani. Auth callback ve health istisna.
   if (CSRF_PROTECTED_METHODS.has(request.method)) {
-    const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/callback')
+    const isAuthCallback = pathname.startsWith('/auth/callback')
     if (!isAuthCallback && !isCsrfOriginAllowed(request.headers)) {
       return NextResponse.json(
         { error: 'CSRF: Origin reddedildi' },
@@ -36,9 +44,28 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Private documents receive a fresh nonce in both the request (so Next can
+  // attach it to framework/inline scripts) and response policy. API responses
+  // do not render documents and stay outside this dynamic CSP boundary.
+  const isSensitiveDocument = !pathname.startsWith('/api/')
+    && isSensitiveWorkspacePath(pathname)
+  const requestHeaders = new Headers(request.headers)
+  const nonce = isSensitiveDocument ? createCspNonce() : null
+  const sensitiveCsp = nonce
+    ? buildSensitiveDocumentCsp(nonce, {
+        development: process.env.NODE_ENV === 'development',
+      })
+    : null
+
+  if (sensitiveCsp && nonce) {
+    requestHeaders.set('x-nonce', nonce)
+    requestHeaders.set(SENSITIVE_CSP_HEADER, sensitiveCsp)
+  }
+
   // Response'u bir kez olustur — setAll icinde yeniden olusturmak
   // Next.js internal header'larini (Next-Router-State-Tree vb.) kaybettirir
-  const response = NextResponse.next({ request })
+  const response = NextResponse.next({ request: { headers: requestHeaders } })
+  if (sensitiveCsp) response.headers.set(SENSITIVE_CSP_HEADER, sensitiveCsp)
 
   const supabase = createServerClient<Database>(
     SUPABASE_URL,
@@ -63,7 +90,6 @@ export async function proxy(request: NextRequest) {
   // Oturumu yenile + kullanici bilgisini al (tek cagri)
   const { data: { user } } = await supabase.auth.getUser()
 
-  const pathname = request.nextUrl.pathname
   const isAdminSurface = pathname === '/admin' || pathname.startsWith('/admin/')
   const isAdminApi = pathname === '/api/admin' || pathname.startsWith('/api/admin/')
   const isInstitutionSurface = pathname === '/arena/kurum' || pathname.startsWith('/arena/kurum/')
