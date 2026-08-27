@@ -4,7 +4,10 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
 import { roleUpdateSchema } from '@/lib/validations/schemas'
-import type { TablesUpdate } from '@/types/database.generated'
+import { adminRbacErrorResponse, callAdminRbacRpc } from '@/lib/admin-rbac/mutations'
+import { z } from 'zod'
+
+const roleIdSchema = z.string().uuid()
 
 /**
  * PATCH /api/admin/roles/[id]
@@ -22,56 +25,29 @@ export async function PATCH(
     const rlRes = await checkAdminMutationRl(admin.id)
     if (rlRes) return rlRes
 
-    const { id } = await params
-    const body = await request.json()
+    const id = roleIdSchema.safeParse((await params).id)
+    if (!id.success) {
+      return NextResponse.json({ error: 'Geçersiz rol kimliği' }, { status: 400 })
+    }
+    const body = await request.json().catch(() => null)
     const parsed = roleUpdateSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ error: 'Guncellenecek alan yok' }, { status: 400 })
     }
-    const { name, description, permissions } = parsed.data
+    const { name, description, permissions, requestId } = parsed.data
+    const payload: Record<string, unknown> = {}
+    if (name !== undefined) payload.name = name
+    if (description !== undefined) payload.description = description
+    if (permissions !== undefined) payload.permissions = permissions
 
-    // Rolün var olduğunu kontrol et
-    const { data: role } = await supabase
-      .from('roles')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (!role) {
-      return NextResponse.json({ error: 'Rol bulunamadı' }, { status: 404 })
-    }
-
-    // Rol bilgilerini güncelle
     const svc = createServiceRoleClient()
-    const updates: TablesUpdate<'roles'> = {}
-    if (name !== undefined) updates.name = name
-    if (description !== undefined) updates.description = description
-
-    if (Object.keys(updates).length > 0) {
-      await svc.from('roles').update(updates).eq('id', id)
-    }
-
-    // İzinleri güncelle (mevcut izinleri sil, yenileri ekle)
-    if (permissions && Array.isArray(permissions)) {
-      await svc.from('role_permissions').delete().eq('role_id', id)
-
-      if (permissions.length > 0) {
-        const permRows = permissions.map((p: string) => ({
-          role_id: id,
-          permission: p,
-        }))
-        await svc.from('role_permissions').insert(permRows)
-      }
-    }
-
-    // Admin log
-    await svc.from('admin_logs').insert({
-      admin_id: admin.id,
-      action: 'update_role',
-      target_type: 'role',
-      target_id: id,
-      details: { name, description, permissions },
+    const { error } = await callAdminRbacRpc(svc, 'admin_update_role', {
+      p_actor_id: admin.id,
+      p_role_id: id.data,
+      p_request_id: requestId,
+      p_payload: payload,
     })
+    if (error) return adminRbacErrorResponse(error)
 
     return NextResponse.json({ success: true })
   } catch {
@@ -84,7 +60,7 @@ export async function PATCH(
  * Sistem rolü olmayan rolleri sil.
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -95,48 +71,21 @@ export async function DELETE(
     const rlRes = await checkAdminMutationRl(admin.id)
     if (rlRes) return rlRes
 
-    const { id } = await params
-
-    // Rolü kontrol et
-    const { data: role } = await supabase
-      .from('roles')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (!role) {
-      return NextResponse.json({ error: 'Rol bulunamadı' }, { status: 404 })
+    const id = roleIdSchema.safeParse((await params).id)
+    if (!id.success) {
+      return NextResponse.json({ error: 'Geçersiz rol kimliği' }, { status: 400 })
     }
-
-    if (role.is_system) {
-      return NextResponse.json({ error: 'Sistem rolleri silinemez' }, { status: 400 })
+    const requestId = request.headers.get('x-request-id')
+    if (!z.string().uuid().safeParse(requestId).success) {
+      return NextResponse.json({ error: 'Geçersiz istek kimliği' }, { status: 400 })
     }
-
-    // Atanmış kullanıcı var mı kontrol et
-    const { data: assignments } = await supabase
-      .from('user_roles')
-      .select('id')
-      .eq('role_id', id)
-      .limit(1)
-
-    if (assignments && assignments.length > 0) {
-      return NextResponse.json({
-        error: 'Bu role atanmış kullanıcılar var. Önce kullanıcıları başka role taşıyın.',
-      }, { status: 400 })
-    }
-
-    // Sil (cascade ile izinler de silinir)
     const svc = createServiceRoleClient()
-    await svc.from('roles').delete().eq('id', id)
-
-    // Admin log
-    await svc.from('admin_logs').insert({
-      admin_id: admin.id,
-      action: 'delete_role',
-      target_type: 'role',
-      target_id: id,
-      details: { slug: role.slug, name: role.name },
+    const { error } = await callAdminRbacRpc(svc, 'admin_delete_role', {
+      p_actor_id: admin.id,
+      p_role_id: id.data,
+      p_request_id: requestId,
     })
+    if (error) return adminRbacErrorResponse(error)
 
     return NextResponse.json({ success: true })
   } catch {

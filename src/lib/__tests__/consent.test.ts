@@ -5,24 +5,18 @@ import {
   clearCookieConsent,
   openConsentBanner,
   logConsent,
+  beginLegalConsentIntent,
 } from '../consent'
 
-const supabaseMocks = vi.hoisted(() => ({
-  insert: vi.fn(),
-}))
-
-vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => ({
-    from: () => ({ insert: supabaseMocks.insert }),
-  }),
-}))
+const fetchMock = vi.fn()
 
 // ─── localStorage mock ─────────────────────────────────
 
 const store: Record<string, string> = {}
 
 beforeEach(() => {
-  supabaseMocks.insert.mockReset().mockResolvedValue({ error: null })
+  fetchMock.mockReset().mockResolvedValue(new Response(null, { status: 200 }))
+  vi.stubGlobal('fetch', fetchMock)
   Object.keys(store).forEach(key => delete store[key])
 
   vi.stubGlobal('localStorage', {
@@ -141,20 +135,54 @@ describe('openConsentBanner', () => {
 })
 
 describe('logConsent', () => {
-  it('gecerli nested JSON degerini consent_logs tablosuna yazmali', async () => {
-    await logConsent('kvkk', { accepted: true, context: [null, 'signup', { version: 1 }] }, 'user-1')
+  it('gecerli cerez tercihini server consent sinirina gondermeli', async () => {
+    await logConsent('cookie', { essential: true, analytics: false })
 
-    expect(supabaseMocks.insert).toHaveBeenCalledWith({
-      user_id: 'user-1',
-      consent_type: 'kvkk',
-      consent_value: { accepted: true, context: [null, 'signup', { version: 1 }] },
-      user_agent: 'test-agent',
+    expect(fetchMock).toHaveBeenCalledWith('/api/consent', {
+      method: 'POST',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'cookie',
+        value: { essential: true, analytics: false },
+      }),
     })
   })
 
   it('JSON olmayan degerleri veritabanina gondermemeli', async () => {
-    await logConsent('terms', { invalid: () => true })
+    await logConsent('cookie', { invalid: () => true })
 
-    expect(supabaseMocks.insert).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('beginLegalConsentIntent', () => {
+  it('returns only a valid server-issued token', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify({ ok: true, token: 'signed-legal-consent-token-that-is-long-enough' }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    ))
+
+    await expect(beginLegalConsentIntent()).resolves.toBe(
+      'signed-legal-consent-token-that-is-long-enough',
+    )
+    expect(fetchMock).toHaveBeenCalledWith('/api/consent/intent', {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+    })
+  })
+
+  it('fails closed for unavailable or malformed intent responses', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }))
+    await expect(beginLegalConsentIntent()).rejects.toThrow('legal_consent_intent_unavailable')
+
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify({ ok: true, token: 'short' }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    ))
+    await expect(beginLegalConsentIntent()).rejects.toThrow('legal_consent_intent_invalid')
   })
 })

@@ -81,6 +81,34 @@ const fixtureSql = `
     achievement_id text NOT NULL, earned_at timestamptz NOT NULL DEFAULT clock_timestamp(),
     UNIQUE (user_id, achievement_id)
   );
+  CREATE TABLE public.badges (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), is_active boolean NOT NULL DEFAULT true);
+  CREATE TABLE public.client_logs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), message text);
+  CREATE TABLE public.consent_logs (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid, consent_type text, consent_value jsonb);
+  CREATE TABLE public.leaderboard_weekly (
+    user_id uuid NOT NULL REFERENCES public.profiles(id), week_start date NOT NULL,
+    xp_earned integer NOT NULL DEFAULT 0, PRIMARY KEY (user_id, week_start)
+  );
+  CREATE TABLE public.premium_waitlist (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email text);
+  CREATE TABLE public.user_badges (
+    user_id uuid NOT NULL REFERENCES public.profiles(id), badge_id uuid NOT NULL,
+    PRIMARY KEY (user_id, badge_id)
+  );
+  CREATE TABLE public.user_reports (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(), reporter_id uuid NOT NULL,
+    reported_user_id uuid NOT NULL, status text NOT NULL DEFAULT 'pending'
+  );
+
+  ALTER TABLE public.user_daily_quests ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE public.leaderboard_weekly ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE public.user_badges ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY daily_own ON public.user_daily_quests FOR ALL USING (auth.uid() = user_id);
+  CREATE POLICY lb_own ON public.leaderboard_weekly FOR INSERT WITH CHECK (auth.uid() = user_id);
+  CREATE POLICY lb_own_update ON public.leaderboard_weekly FOR UPDATE USING (auth.uid() = user_id);
+  CREATE POLICY badges_own ON public.user_badges FOR ALL USING (auth.uid() = user_id);
+  GRANT ALL ON TABLE public.badges, public.client_logs, public.consent_logs,
+    public.daily_quests, public.leaderboard_weekly, public.premium_waitlist,
+    public.user_achievements, public.user_badges, public.user_daily_quests,
+    public.user_reports TO PUBLIC, anon, authenticated, service_role;
 
   CREATE FUNCTION public.batch_increment_question_stats(uuid[], boolean[]) RETURNS void LANGUAGE plpgsql AS $$ BEGIN END; $$;
   CREATE FUNCTION public.increment_coins(p_user_id uuid, p_amount integer) RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
@@ -159,7 +187,7 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
     // Guards above run before this reset; roles are cluster-wide and recreated idempotently.
     await client.query('DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE SCHEMA auth;');
     await client.query(fixtureSql);
-    for (const migration of ['081_atomic_complete_game_session.sql', '091_verified_attempts.sql', '092_complete_verified_game_session.sql', '093_reward_integrity.sql']) {
+    for (const migration of ['081_atomic_complete_game_session.sql', '091_verified_attempts.sql', '092_complete_verified_game_session.sql', '093_reward_integrity.sql', '172_trusted_state_and_consent_dml_lockdown.sql']) {
       await client.query(migrationSql(migration));
     }
     userOne = randomUUID(); userTwo = randomUUID(); questionOne = randomUUID(); questionTwo = randomUUID();
@@ -177,7 +205,7 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
 
   afterAll(async () => { await client?.end(); });
 
-  it('applies 093 catalog, RLS, ACL, definer and trigger contracts', async () => {
+  it('applies reward and 172 trusted-state ACL, definer and trigger contracts', async () => {
     const catalog = await client.query(`
       SELECT
         (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.reward_ledger'::regclass) AS ledger_rls,
@@ -185,6 +213,13 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
         has_table_privilege('authenticated', 'public.reward_ledger', 'SELECT') AS ledger_select,
         has_table_privilege('authenticated', 'public.xp_log', 'UPDATE') AS xp_update,
         has_table_privilege('authenticated', 'public.xp_log', 'SELECT') AS xp_select,
+        has_table_privilege('authenticated', 'public.user_daily_quests', 'INSERT') AS quest_insert,
+        has_any_column_privilege('authenticated', 'public.user_daily_quests', 'UPDATE') AS quest_column_update,
+        has_table_privilege('authenticated', 'public.leaderboard_weekly', 'UPDATE') AS leaderboard_update,
+        has_table_privilege('authenticated', 'public.consent_logs', 'INSERT') AS consent_insert,
+        has_table_privilege('service_role', 'public.consent_logs', 'SELECT') AS consent_service_select,
+        has_table_privilege('service_role', 'public.consent_logs', 'INSERT') AS consent_service_insert,
+        has_table_privilege('service_role', 'public.user_daily_quests', 'INSERT') AS quest_service_insert,
         has_function_privilege('service_role', 'public.claim_daily_quest_reward(uuid,uuid)', 'EXECUTE') AS claim_service,
         has_function_privilege('authenticated', 'public.claim_daily_quest_reward(uuid,uuid)', 'EXECUTE') AS claim_auth,
         has_function_privilege('service_role', 'public.apply_verified_session_rewards(uuid,uuid)', 'EXECUTE') AS helper_service,
@@ -194,6 +229,9 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
     `);
     expect(catalog.rows[0]).toMatchObject({
       ledger_rls: true, ledger_insert: false, ledger_select: true, xp_update: false, xp_select: true,
+      quest_insert: false, quest_column_update: false, leaderboard_update: false,
+      consent_insert: false, consent_service_select: true, consent_service_insert: true,
+      quest_service_insert: true,
       claim_service: true, claim_auth: false, helper_service: false, helper_definer: true, trigger_count: '1',
     });
     expect(catalog.rows[0].helper_config).toContain('search_path=pg_catalog');
@@ -202,6 +240,43 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
       WHERE conrelid = 'public.user_achievements'::regclass AND conname = 'user_achievements_source_session_id_fkey'
     `);
     expect(foreignKey.rows[0].target).toBe('game_sessions');
+  });
+
+  it('keeps consent evidence service-readable and rejects browser writes and intent replay', async () => {
+    const intentId = randomUUID();
+    await client.query('SET ROLE authenticated');
+    try {
+      await expect(client.query(
+        `INSERT INTO public.consent_logs (user_id, consent_type, consent_value)
+         VALUES ($1, 'terms', jsonb_build_object('intentId', $2::text))`,
+        [userOne, intentId],
+      )).rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await client.query('RESET ROLE');
+    }
+
+    await withServiceRole(client, () => client.query(
+      `INSERT INTO public.consent_logs (user_id, consent_type, consent_value)
+       VALUES
+         ($1, 'terms', jsonb_build_object('intentId', $2::text)),
+         ($1, 'kvkk', jsonb_build_object('intentId', $2::text))`,
+      [userOne, intentId],
+    ));
+    const evidence = await withServiceRole(client, () => client.query(
+      `SELECT user_id, consent_type FROM public.consent_logs
+       WHERE consent_value ->> 'intentId' = $1 ORDER BY consent_type`,
+      [intentId],
+    ));
+    expect(evidence.rows).toEqual([
+      { user_id: userOne, consent_type: 'kvkk' },
+      { user_id: userOne, consent_type: 'terms' },
+    ]);
+
+    await expect(withServiceRole(client, () => client.query(
+      `INSERT INTO public.consent_logs (user_id, consent_type, consent_value)
+       VALUES ($1, 'terms', jsonb_build_object('intentId', $2::text))`,
+      [userTwo, intentId],
+    ))).rejects.toMatchObject({ code: '23505' });
   });
 
   it('awards one fresh verified session through actual 081/092 and records quests and exact new badges', async () => {
@@ -294,6 +369,43 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
     expect(state.rows[0]).toMatchObject({ sessions: '1', session_id: null, completed_at: null });
   });
 
+  it('denies direct trusted-state writes and rejects a forged completed quest without evidence', async () => {
+    const quest = await client.query(`
+      INSERT INTO public.daily_quests (slug, quest_type, target_value, xp_reward)
+      VALUES ($1, 'play_sessions', 1, 40) RETURNING id
+    `, [`r172-forged-${randomUUID()}`]);
+    const userQuest = await client.query(`
+      INSERT INTO public.user_daily_quests (
+        user_id, quest_id, date, current_value, is_completed, completed_at
+      ) VALUES (
+        $1, $2, (clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date,
+        1, true, clock_timestamp()
+      ) RETURNING id
+    `, [userOne, quest.rows[0].id]);
+
+    await client.query('SET ROLE authenticated');
+    try {
+      await expect(client.query(
+        'UPDATE public.user_daily_quests SET xp_claimed=false WHERE id=$1',
+        [userQuest.rows[0].id],
+      )).rejects.toMatchObject({ code: '42501' });
+      await expect(client.query(
+        `INSERT INTO public.leaderboard_weekly(user_id,week_start,xp_earned)
+         VALUES($1,current_date,999999)`,
+        [userOne],
+      )).rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await client.query('RESET ROLE');
+    }
+
+    const before = await profileState(client, userOne);
+    await expect(withServiceRole(client, () => client.query(
+      'SELECT public.claim_daily_quest_reward($1,$2)',
+      [userOne, userQuest.rows[0].id],
+    ))).rejects.toMatchObject({ code: '22023' });
+    expect(await profileState(client, userOne)).toEqual(before);
+  });
+
   it('allows exactly one concurrent service-role quest claim and replays original camelCase amounts', async () => {
     // This claim is deliberately independent of the fresh-completion test.
     const quest = await client.query(`
@@ -309,6 +421,11 @@ describePostgres('reward integrity on actual PostgreSQL migrations', () => {
       ) RETURNING id
     `, [userOne, quest.rows[0].id]);
     const claimUserQuestId = userQuest.rows[0].id;
+    await client.query(`
+      INSERT INTO public.reward_ledger (
+        user_id, source_type, source_id, reward_type, reward_key, amount, metadata
+      ) VALUES ($1, 'daily_quest_completion', $2, 'progress', 'completed', 0, '{}'::jsonb)
+    `, [userOne, claimUserQuestId]);
     const before = await profileState(client, userOne);
     const first = new Client({ connectionString: databaseUrl });
     const second = new Client({ connectionString: databaseUrl });

@@ -165,7 +165,7 @@ describe('admin institution routes', () => {
     expect(mocks.rpc).toHaveBeenCalledWith('provision_pilot_institution', {
       p_user_id: ADMIN.id, p_name: 'Bilge Kurs', p_manager_user_id: MANAGER_ID, p_request_id: requestId,
     })
-    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.objectContaining({
       action: 'provision_institution', targetId: INSTITUTION_ID,
     }))
   })
@@ -200,7 +200,7 @@ describe('admin institution routes', () => {
       p_reason: 'Ödeme ve güvenlik incelemesi tamamlanana kadar.',
       p_request_id: requestId,
     })
-    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.objectContaining({
       action: 'set_institution_status', targetId: INSTITUTION_ID,
     }))
   })

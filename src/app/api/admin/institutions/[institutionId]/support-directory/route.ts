@@ -35,7 +35,7 @@ export async function GET(
   const parsed = institutionSupportDirectorySchema.safeParse(data)
   if (!parsed.success) return institutionPilotNoStoreJson({ error: 'Destek görünümü doğrulanamadı' }, { status: 500 })
 
-  const { error: auditError } = await logAdminAction(supabase, {
+  const { error: auditError } = await logAdminAction({
     adminId: admin.id,
     action: 'view_institution_support_directory',
     targetType: 'pilot_institution',

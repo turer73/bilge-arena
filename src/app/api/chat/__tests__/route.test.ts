@@ -43,6 +43,11 @@ const {
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mockGetUser },
+  })),
+}))
+
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => ({
     from: vi.fn(() => ({ insert: mockAdminLogsInsert })),
   })),
 }))

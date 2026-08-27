@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dbErrorResponse } from '@/lib/utils/api-error'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
 import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
-import { homepageSectionUpdateSchema } from '@/lib/validations/schemas'
+import {
+  homepageSectionKeySchema,
+  homepageSectionUpdateSchema,
+} from '@/lib/validations/schemas'
 import type { Json } from '@/types/database.generated'
 
 function isJson(value: unknown): value is Json {
@@ -45,31 +49,44 @@ export async function PATCH(
     const rlRes = await checkAdminMutationRl(admin.id)
     if (rlRes) return rlRes
 
-    const { key } = await params
-    const body = await request.json()
+    const key = homepageSectionKeySchema.safeParse((await params).key)
+    if (!key.success) {
+      return NextResponse.json({ error: 'Geçersiz bölüm anahtarı' }, { status: 400 })
+    }
+
+    let body: unknown
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Geçersiz istek' }, { status: 400 })
+    }
     const parsed = homepageSectionUpdateSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json({ error: 'Geçersiz config verisi' }, { status: 400 })
     }
-    const { config } = parsed.data
+    const { config, requestId } = parsed.data
 
     if (!isJson(config)) {
       return NextResponse.json({ error: 'Config gecerli JSON olmalidir' }, { status: 400 })
     }
 
-    const { error } = await supabase
-      .from('homepage_sections')
-      .update({ config, updated_by: admin.id })
-      // Sutun adi 'section_key' (migration 017). Eskiden 'key' yaziyordu ve
-      // PostgREST "column does not exist" dondugu icin bu endpoint hic
-      // calismiyordu; supabase-js tip sikilastirmasi ortaya cikardi.
-      .eq('section_key', key)
+    const { data, error } = await createServiceRoleClient().rpc('mutate_admin_homepage', {
+      p_user_id: admin.id,
+      p_request_id: requestId,
+      p_operation: 'section_update',
+      p_payload: { sectionKey: key.data, config },
+    })
 
     if (error) {
       return dbErrorResponse('admin/homepage/sections/[key]', error)
     }
 
-    return NextResponse.json({ success: true })
+    const result = data && typeof data === 'object' && !Array.isArray(data) ? data : null
+    if (!result || result.success !== true) {
+      return NextResponse.json({ error: 'Bölüm sonucu doğrulanamadı' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, replayed: result.replayed === true })
   } catch {
     return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 })
   }

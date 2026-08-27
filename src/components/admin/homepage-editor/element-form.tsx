@@ -1,7 +1,13 @@
 'use client'
 
 import { useHomepageEditorStore } from '@/stores/homepage-editor-store'
-import type { HomepageElementType, HomepagePlacement, HomepageAlignment, HomepageSize } from '@/types/database'
+import type {
+  HomepageElement,
+  HomepageElementType,
+  HomepagePlacement,
+  HomepageAlignment,
+  HomepageSize,
+} from '@/types/database'
 import { ImageUploader } from './image-uploader'
 import { useCallback, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils/cn'
@@ -73,9 +79,7 @@ export function ElementForm({ onClose }: ElementFormProps) {
         }
       }
 
-      const body = {
-        section_key: activeSection,
-        element_type: elementType,
+      const fields = {
         content: elementType !== 'logo' ? content : null,
         image_url: elementType === 'logo' ? imageUrl : null,
         alt_text: altText,
@@ -89,22 +93,27 @@ export function ElementForm({ onClose }: ElementFormProps) {
         const res = await fetch(`/api/admin/homepage/elements/${selectedElementId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify({ requestId: crypto.randomUUID(), ...fields }),
         })
-        if (res.ok) {
-          const data = await res.json()
-          updateElement(selectedElementId, data)
-        }
+        if (!res.ok) throw new Error(`Öğe güncellenemedi (${res.status})`)
+        const data = await res.json() as { element?: HomepageElement }
+        if (!data.element) throw new Error('Öğe güncelleme sonucu geçersiz')
+        updateElement(selectedElementId, data.element)
       } else {
         const res = await fetch('/api/admin/homepage/elements', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            requestId: crypto.randomUUID(),
+            section_key: activeSection,
+            element_type: elementType,
+            ...fields,
+          }),
         })
-        if (res.ok) {
-          const data = await res.json()
-          addElement(data)
-        }
+        if (!res.ok) throw new Error(`Öğe oluşturulamadı (${res.status})`)
+        const data = await res.json() as { element?: HomepageElement }
+        if (!data.element) throw new Error('Öğe oluşturma sonucu geçersiz')
+        addElement(data.element)
       }
 
       onClose()

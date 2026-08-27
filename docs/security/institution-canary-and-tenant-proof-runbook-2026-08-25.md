@@ -13,6 +13,11 @@ tenant izolasyonu, sözleşme veya operasyon hazırlığı kanıtı değildir.
   `INSTITUTION_FREE_PILOT_ENABLED=true`. Uygulama bayrağı yalnız UI/API yüzeyini,
   DB kontrolü doğrudan authenticated RPC'yi ve privileged/manual INSERT'i de
   kapatır; ücretli veya public onboarding açılmaz.
+- Migration 167 sonrasında DB kontrolü tek başına açılamaz. DB sahibi; hukuk,
+  kurum DPA'sı, retention kararı, vendor register, gerçek oturumlu Tenant A/B,
+  DB parola rotasyonu, güncel backup/restore, AAL2 hesap hazırlığı ve sorumlu
+  owner kanıtlarının **kişisel veri içermeyen referanslarını** kısa ömürlü bir
+  readiness kaydına bağlar. Migration hiçbir readiness kaydı üretmez.
 - KVKK olayının teknik kapanış kaydı ile nihai hukuk kararı tutarlıdır.
 - Kurum aydınlatması, sözleşme/DPA, saklama-imha kararı ve sorumlu kişi imzalıdır.
 - İki ayrı test tenant'ı ve her tenant için yönetici, öğretmen ve öğrenci hesabı
@@ -25,6 +30,11 @@ tenant izolasyonu, sözleşme veya operasyon hazırlığı kanıtı değildir.
 
 Her istek gerçek browser/Auth session cookie veya kullanıcı JWT'siyle yapılır.
 Service-role ile kullanıcı taklidi kanıt sayılmaz.
+
+Tek açık ücretsiz canary sınırı iki ücretsiz production tenant'ı kurmaya izin
+vermez. A/B güvenlik kabulü, gerçek Auth oturumlarıyla ayrılmış QA tenant'larında
+veya daha önce onaylanmış kalıcı bir test/sentinel tenant'ıyla yapılır. İkinci
+tenant hazırlamak için production `commercial_provisioning` kontrolü açılmaz.
 
 | Aktör | Hedef | Beklenen sonuç |
 |---|---|---|
@@ -58,27 +68,65 @@ otomatik verilmez.
 ## Platform kontrollü ücretsiz canary açılış sırası
 
 1. Kurum sorumlusu, değerlendirme süresi, öğrenci/personel sınırı ve
-   aydınlatma-DPA kanıtını pilot dosyasına ekle; kişisel veri içermeyen benzersiz
-   onay referansını belirle.
+   aydınlatma-DPA kanıtını pilot dosyasına ekle. KVKK/hukuk, retention, vendor,
+   Tenant A/B, parola rotasyonu, backup/restore, hesap-AAL2 ve sorumlu owner
+   kayıtlarının her biri için kişisel veri içermeyen benzersiz referans belirle.
 2. Yöneticinin doğrulanmış normal hesabı ve TOTP/AAL2 kurulumu hazır olsun.
-3. `INSTITUTION_PILOT_ENABLED=true` kalırken ücretsiz pilot migration'ını ve
-   uygulama sürümünü kapalı bayrakla dağıt.
-4. DB sahibi, aşağıdaki auditli transaction ile `free_provisioning` kontrolünü
-   açar. Değişiklik referansı kişisel veri içermez ve harici change/pilot
-   kaydına bağlanır. Bu tabloyu uygulama yöneticisi veya service-role
-   güncelleyemez.
+3. `INSTITUTION_PILOT_ENABLED=true` kalırken migration 158–160 ve 167'yi,
+   ardından uygulama sürümünü ücretsiz-pilot bayrağı kapalıyken dağıt. Migration
+   167 tekrar çalıştırılırsa açık kalmış `free_provisioning` kontrolünü auditli
+   biçimde kapatır; mevcut tenant erişimini değiştirmez.
+4. DB sahibi, aşağıdaki auditli transaction ile önce append-only readiness
+   kaydını oluşturur, sonra `free_provisioning` kontrolünü bu kayda bağlayarak
+   açar. Açılış en çok yedi gün geçerli olabilir; normal operasyon için saatlik
+   dar pencere kullanılmalıdır. Tabloya ad, e-posta, JWT, cookie, sözleşme metni
+   veya başka kişisel veri yazılmaz. Aşağıdaki `<...>` değerleri bilerek DB
+   desenini geçmez; gerçek harici kanıt referanslarıyla değiştirilmeden işlem
+   commit olamaz.
 
    ```sql
    BEGIN;
-   SET LOCAL app.institution_control_change_ref = 'CHANGE-2026-PILOT-001';
+
+   INSERT INTO public.institution_free_pilot_readiness_attestations(
+     readiness_ref,
+     legal_approval_ref,
+     institution_dpa_ref,
+     retention_decision_ref,
+     vendor_register_ref,
+     tenant_ab_evidence_ref,
+     credential_rotation_ref,
+     backup_restore_ref,
+     account_readiness_ref,
+     accountable_owner_ref,
+     valid_until
+   ) VALUES (
+     '<READINESS-REF>',
+     '<LEGAL-APPROVAL-REF>',
+     '<INSTITUTION-DPA-REF>',
+     '<RETENTION-DECISION-REF>',
+     '<VENDOR-REGISTER-REF>',
+     '<TENANT-AB-EVIDENCE-REF>',
+     '<DB-CREDENTIAL-ROTATION-REF>',
+     '<BACKUP-RESTORE-REF>',
+     '<ACCOUNT-AAL2-READINESS-REF>',
+     '<ACCOUNTABLE-OWNER-REF>',
+     clock_timestamp() + interval '2 hours'
+   );
+
+   SET LOCAL app.institution_control_change_ref = '<CHANGE-REF>';
+   SET LOCAL app.institution_readiness_ref = '<READINESS-REF>';
    UPDATE public.institution_pilot_controls
    SET enabled = true
    WHERE control_key = 'free_provisioning' AND enabled = false;
+
+   SELECT readiness_ref, valid_until, database_actor
+   FROM public.institution_free_pilot_readiness_attestations
+   WHERE readiness_ref = '<READINESS-REF>';
    SELECT control_key, enabled, updated_at
    FROM public.institution_pilot_controls
    WHERE control_key IN ('free_provisioning', 'commercial_provisioning')
    ORDER BY control_key;
-   SELECT previous_enabled, enabled, change_reference, changed_at
+   SELECT previous_enabled, enabled, change_reference, readiness_ref, changed_at
    FROM public.institution_pilot_control_events
    WHERE control_key = 'free_provisioning'
    ORDER BY changed_at DESC
@@ -86,22 +134,28 @@ otomatik verilmez.
    COMMIT;
    ```
 
-   Postflight sonucunda `free_provisioning=true` ve
-   `commercial_provisioning=false` görülmeden uygulama bayrağı açılmaz.
+   Postflight sonucunda fresh readiness ref'i, `free_provisioning=true` ve
+   `commercial_provisioning=false` birlikte görülmeden uygulama bayrağı açılmaz.
 
 5. Audit satırı ve DB kontrolü doğrulandıktan sonra
    `INSTITUTION_FREE_PILOT_ENABLED=true` uygulama bayrağını açıp yeni production
-   deploy al. Kapatmada önce farklı bir change referansıyla DB kontrolünü
-   `false` yap; ardından uygulama bayrağını kapatıp yeniden deploy et.
-6. Platform admin ekranından kurumu oluştur; immutable
+   deploy al.
+6. Platform admin ekranından **tek** kurumu oluştur; immutable
    `institution_provisioned` event'inde `pilotKind=invitation_free`, onay
-   referansı, kotalar ve değerlendirme tarihini doğrula.
-7. Bir öğretmen, iki kontrollü öğrenci ve süreli/tek kullanımlık davetlerle
+   referansı, kotalar ve değerlendirme tarihini doğrula. Aynı transaction'da
+   `institution_free_pilot_readiness_consumptions` kaydının readiness ref'ini
+   bu kurum ID'sine tek kullanımlı bağladığını kontrol et.
+7. Başarılı provisioning doğrulanır doğrulanmaz farklı bir change referansıyla
+   önce DB `free_provisioning=false` yap. Sonra
+   `INSTITUTION_FREE_PILOT_ENABLED=false` ile yeniden deploy et. Provisioning
+   kapısının kapanması mevcut tenant'ı kapatmaz; doğrudan PostgREST tekrarlarını,
+   route rate-limit'ini atlayan yeni provisioning çağrılarını durdurur.
+8. Bir öğretmen, iki kontrollü öğrenci ve süreli/tek kullanımlık davetlerle
    AAL2, tenant izolasyonu, kota ve audit smoke'unu tamamla.
-8. Değerlendirme tarihinde DB erişiminin kapandığını doğrula ve tenant'ı auditli
-   `suspended` durumuna geçir; süre uzatımı yalnız yeni yazılı onay ve ayrı
-   kontrollü DB işlemiyle yapılır. Veri silmeyi yalnız onaylı saklama-imha
-   prosedürüyle yürüt.
+9. Değerlendirme tarihinde DB erişiminin kapandığını doğrula ve tenant'ı auditli
+   `suspended` durumuna geçir. Readiness kaydı yeniden kullanılamaz; yeni deneme
+   ancak yeni kanıt paketi, yeni readiness/onay referansı ve yeni kontrollü
+   açılışla yapılır. Veri silmeyi yalnız onaylı saklama-imha prosedürüyle yürüt.
 
 Canary şu durumlardan birinde derhal durdurulur:
 

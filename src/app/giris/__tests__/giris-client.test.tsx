@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
-const { mockSignInWithGoogle, mockPush, mockLogConsent } = vi.hoisted(() => ({
+const { mockSignInWithGoogle, mockPush, mockBeginLegalConsentIntent } = vi.hoisted(() => ({
   mockSignInWithGoogle: vi.fn(),
   mockPush: vi.fn(),
-  mockLogConsent: vi.fn(),
+  mockBeginLegalConsentIntent: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }))
 vi.mock('@/lib/hooks/use-auth', () => ({ useAuth: () => ({ signInWithGoogle: mockSignInWithGoogle }) }))
 vi.mock('@/components/layout/logo', () => ({ Logo: () => <div data-testid="logo" /> }))
-vi.mock('@/lib/consent', () => ({ logConsent: mockLogConsent }))
+vi.mock('@/lib/consent', () => ({ beginLegalConsentIntent: mockBeginLegalConsentIntent }))
 
 import GirisClient from '../giris-client'
 
@@ -19,6 +19,7 @@ describe('GirisClient institution flow', () => {
     vi.clearAllMocks()
     window.history.replaceState({}, '', '/giris')
     mockSignInWithGoogle.mockResolvedValue(undefined)
+    mockBeginLegalConsentIntent.mockResolvedValue('legal-intent-token')
   })
 
   it('requires consent and sends institution accounts directly to the institution workspace', async () => {
@@ -31,10 +32,8 @@ describe('GirisClient institution flow', () => {
 
     await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
       '/arena/kurum',
-      { forceAccountSelection: true },
+      { forceAccountSelection: true, legalConsentToken: 'legal-intent-token' },
     ))
-    expect(mockLogConsent).toHaveBeenCalledWith('terms', { accepted: true })
-    expect(mockLogConsent).toHaveBeenCalledWith('kvkk', { accepted: true })
   })
 
   it('preserves a safe next path for the regular Google button', async () => {
@@ -43,7 +42,10 @@ describe('GirisClient institution flow', () => {
     fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(screen.getByRole('button', { name: 'Google ile Giriş Yap' }))
 
-    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith('/arena/kurum/roller'))
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
+      '/arena/kurum/roller',
+      { legalConsentToken: 'legal-intent-token' },
+    ))
   })
 
   it('preserves a safe legacy redirect path for regular user registration', async () => {
@@ -52,7 +54,10 @@ describe('GirisClient institution flow', () => {
     fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(screen.getByRole('button', { name: 'Google ile Giriş Yap' }))
 
-    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith('/arena/matematik'))
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
+      '/arena/matematik',
+      { legalConsentToken: 'legal-intent-token' },
+    ))
   })
 
   it('prefers canonical next over a legacy redirect target', async () => {
@@ -65,7 +70,10 @@ describe('GirisClient institution flow', () => {
     fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(screen.getByRole('button', { name: 'Google ile Giriş Yap' }))
 
-    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith('/arena/turkce'))
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
+      '/arena/turkce',
+      { legalConsentToken: 'legal-intent-token' },
+    ))
   })
 
   it('rejects an unsafe legacy redirect target for regular user registration', async () => {
@@ -74,7 +82,10 @@ describe('GirisClient institution flow', () => {
     fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(screen.getByRole('button', { name: 'Google ile Giriş Yap' }))
 
-    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith('/arena'))
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
+      '/arena',
+      { legalConsentToken: 'legal-intent-token' },
+    ))
   })
 
   it('preserves the nested MFA target when institution account selection is forced', async () => {
@@ -89,7 +100,22 @@ describe('GirisClient institution flow', () => {
 
     await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
       '/hesap/guvenlik?next=%2Fadmin%2Fkurumlar',
-      { forceAccountSelection: true },
+      { forceAccountSelection: true, legalConsentToken: 'legal-intent-token' },
     ))
+  })
+
+  it('onay niyeti olusturulamazsa OAuth baslatmaz ve hatayi gosterir', async () => {
+    mockBeginLegalConsentIntent.mockRejectedValueOnce(new Error('backend unavailable'))
+    render(<GirisClient />)
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'Google ile Giriş Yap' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Onay kaydı hazırlanamadı')
+    expect(mockSignInWithGoogle).not.toHaveBeenCalled()
+  })
+
+  it('callback hukuki kaniti reddettiginde yeniden onay istemini aciklar', () => {
+    render(<GirisClient initialConsentError="Giriş onayı doğrulanamadı veya süresi doldu." />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Giriş onayı doğrulanamadı')
   })
 })

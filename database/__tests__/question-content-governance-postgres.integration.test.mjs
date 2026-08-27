@@ -21,10 +21,12 @@ const communityQualityMigration = readFileSync(join(dirname(fileURLToPath(import
 const outcomeScopeMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '164_question_revision_outcome_scope.sql'), 'utf8')
 const questionsDmlLockdownMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '163_questions_client_dml_lockdown.sql'), 'utf8')
 const searchAdminAal2Migration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '165_question_search_admin_aal2.sql'), 'utf8')
+const outcomeCandidatesMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '166_question_outcome_mapping_candidates.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
-  let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision
-  const rpc = async (call, values = []) => { await client.query('SET ROLE service_role'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
+  let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision; let candidateQuestion; let candidateOutcome; let candidateLegacyRevision
+  const rpc = async (call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub','',false),set_config('request.jwt.claims',$1,false)",[JSON.stringify({ role:'service_role' })]); await client.query('SET ROLE service_role'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
+  const userRpc = async (userId, aal, call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claims',$2,false)",[userId,JSON.stringify({ sub:userId,role:'authenticated',aal })]); await client.query('SET ROLE authenticated'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
   const concurrentReplay = async (call, values = []) => {
     const firstClient = new pg.Client({ connectionString: url }); const secondClient = new pg.Client({ connectionString: url })
     await Promise.all([firstClient.connect(), secondClient.connect()])
@@ -49,9 +51,10 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
   const payload = (answer = 1) => ({ content: { question: '2 + 2 kac eder?', options: ['3','4','5','6'], answer, solution: 'Dort.' }, metadata: { game: 'matematik', category: 'Temel', difficulty: 2 }, outcomes: [{ outcomeId: outcome, weight: 1, primary: true }], source: { kind: 'original', title: 'Ogretmen notu', licenseCode: 'INTERNAL' }, changeKind: 'correct_answer', summary: 'Answer key reviewed' })
   beforeAll(async () => {
     client = new pg.Client({ connectionString: url }); await client.connect()
-    await client.query(`DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA auth; CREATE SCHEMA public; CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions; DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; GRANT USAGE ON SCHEMA public,auth TO anon,authenticated,service_role; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub',true),'')::uuid $$; CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT COALESCE(NULLIF(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb) $$; CREATE FUNCTION public.immutable_unaccent(text) RETURNS text LANGUAGE sql IMMUTABLE AS $$ SELECT $1 $$; CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),slug text UNIQUE,name text,description text,is_system boolean); CREATE TABLE public.role_permissions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),role_id uuid REFERENCES public.roles(id),permission text,UNIQUE(role_id,permission)); CREATE TABLE public.user_roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES public.profiles(id),role_id uuid REFERENCES public.roles(id),UNIQUE(user_id,role_id)); CREATE FUNCTION public.has_permission(uuid,text) RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles u JOIN public.role_permissions p ON p.role_id=u.role_id WHERE u.user_id=$1 AND p.permission=$2) $$; CREATE TABLE public.curriculum_nodes(id uuid PRIMARY KEY,game text NOT NULL,category text,exam_ref text,parent_id uuid REFERENCES public.curriculum_nodes(id),node_type text NOT NULL,taxonomy_version text NOT NULL,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.curriculum_outcomes(id uuid PRIMARY KEY,game text,category text,exam_ref text,node_id uuid REFERENCES public.curriculum_nodes(id),taxonomy_version text,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.questions(id uuid PRIMARY KEY,external_id varchar,game varchar NOT NULL,category varchar NOT NULL,subcategory varchar,topic varchar,difficulty smallint NOT NULL,level_tag varchar,exam_ref varchar,is_boss boolean NOT NULL DEFAULT false,content jsonb NOT NULL,is_active boolean NOT NULL DEFAULT true,source varchar,times_answered integer NOT NULL DEFAULT 0,times_correct integer NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT clock_timestamp()); CREATE TABLE public.question_outcomes(question_id uuid,outcome_id uuid,weight numeric,is_primary boolean); CREATE TABLE public.game_sessions(id uuid PRIMARY KEY,user_id uuid,status text,total_questions smallint,correct_count smallint,wrong_count smallint,base_xp integer,bonus_xp integer,total_xp integer,completed_at timestamptz); CREATE TABLE public.verified_attempts(id uuid PRIMARY KEY,user_id uuid NOT NULL,game text NOT NULL,mode text NOT NULL DEFAULT 'classic',question_ids uuid[] NOT NULL,duration_sec integer NOT NULL DEFAULT 60,started_at timestamptz DEFAULT clock_timestamp(),expires_at timestamptz DEFAULT clock_timestamp()+interval '1 hour',completed_at timestamptz,session_id uuid); CREATE TABLE public.verified_exam_attempts(attempt_id uuid PRIMARY KEY,user_id uuid,game text,exam_ref text,blueprint_version text,question_set_hash text,planned_duration_sec integer,issue_request_id uuid,status text DEFAULT 'issued',deadline_at timestamptz); CREATE TABLE public.verified_exam_attempt_items(attempt_id uuid,position smallint,question_id uuid,source_bucket text,PRIMARY KEY(attempt_id,position)); CREATE TABLE public.session_answers(id uuid PRIMARY KEY,session_id uuid,user_id uuid,question_id uuid,question_order smallint,is_correct boolean NOT NULL,is_skipped boolean DEFAULT false,selected_option smallint,time_taken_sec numeric,is_fast boolean DEFAULT false,xp_earned smallint NOT NULL DEFAULT 0,answered_at timestamptz DEFAULT clock_timestamp()); CREATE TABLE public.error_reports(id uuid PRIMARY KEY,user_id uuid NOT NULL,question_id uuid NOT NULL,report_type text NOT NULL,description text,status text NOT NULL,created_at timestamptz NOT NULL); GRANT INSERT ON public.error_reports TO authenticated; CREATE TABLE public.verified_attempt_hint_events(attempt_id uuid,user_id uuid,question_id uuid,stage smallint); CREATE TABLE public.adaptive_diagnostic_answers(user_id uuid,question_id uuid,created_at timestamptz NOT NULL DEFAULT clock_timestamp());`)
+    await client.query(`DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA auth; CREATE SCHEMA public; CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions; DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL; END $$; GRANT USAGE ON SCHEMA public,auth TO anon,authenticated,service_role; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub',true),'')::uuid $$; CREATE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT COALESCE(NULLIF(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb) $$; CREATE FUNCTION public.immutable_unaccent(text) RETURNS text LANGUAGE sql IMMUTABLE AS $$ SELECT $1 $$; CREATE TABLE public.profiles(id uuid PRIMARY KEY); CREATE TABLE public.roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),slug text UNIQUE,name text,description text,is_system boolean); CREATE TABLE public.role_permissions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),role_id uuid REFERENCES public.roles(id),permission text,UNIQUE(role_id,permission)); CREATE TABLE public.user_roles(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES public.profiles(id),role_id uuid REFERENCES public.roles(id),UNIQUE(user_id,role_id)); CREATE FUNCTION public.has_permission(uuid,text) RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$ SELECT EXISTS(SELECT 1 FROM public.user_roles u JOIN public.role_permissions p ON p.role_id=u.role_id WHERE u.user_id=$1 AND p.permission=$2) $$; CREATE TABLE public.curriculum_nodes(id uuid PRIMARY KEY,code text NOT NULL DEFAULT '',title text NOT NULL DEFAULT '',game text NOT NULL,category text,exam_ref text,parent_id uuid REFERENCES public.curriculum_nodes(id),node_type text NOT NULL,sort_order integer NOT NULL DEFAULT 0,taxonomy_version text NOT NULL,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.curriculum_outcomes(id uuid PRIMARY KEY,game text,category text,exam_ref text,node_id uuid REFERENCES public.curriculum_nodes(id),taxonomy_version text,is_active boolean NOT NULL DEFAULT true); CREATE TABLE public.questions(id uuid PRIMARY KEY,external_id varchar,game varchar NOT NULL,category varchar NOT NULL,subcategory varchar,topic varchar,difficulty smallint NOT NULL,level_tag varchar,exam_ref varchar,is_boss boolean NOT NULL DEFAULT false,content jsonb NOT NULL,is_active boolean NOT NULL DEFAULT true,source varchar,times_answered integer NOT NULL DEFAULT 0,times_correct integer NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT clock_timestamp()); CREATE TABLE public.question_outcomes(question_id uuid,outcome_id uuid,weight numeric,is_primary boolean); CREATE TABLE public.game_sessions(id uuid PRIMARY KEY,user_id uuid,status text,total_questions smallint,correct_count smallint,wrong_count smallint,base_xp integer,bonus_xp integer,total_xp integer,completed_at timestamptz); CREATE TABLE public.verified_attempts(id uuid PRIMARY KEY,user_id uuid NOT NULL,game text NOT NULL,mode text NOT NULL DEFAULT 'classic',question_ids uuid[] NOT NULL,duration_sec integer NOT NULL DEFAULT 60,started_at timestamptz DEFAULT clock_timestamp(),expires_at timestamptz DEFAULT clock_timestamp()+interval '1 hour',completed_at timestamptz,session_id uuid); CREATE TABLE public.verified_exam_attempts(attempt_id uuid PRIMARY KEY,user_id uuid,game text,exam_ref text,blueprint_version text,question_set_hash text,planned_duration_sec integer,issue_request_id uuid,status text DEFAULT 'issued',deadline_at timestamptz); CREATE TABLE public.verified_exam_attempt_items(attempt_id uuid,position smallint,question_id uuid,source_bucket text,PRIMARY KEY(attempt_id,position)); CREATE TABLE public.session_answers(id uuid PRIMARY KEY,session_id uuid,user_id uuid,question_id uuid,question_order smallint,is_correct boolean NOT NULL,is_skipped boolean DEFAULT false,selected_option smallint,time_taken_sec numeric,is_fast boolean DEFAULT false,xp_earned smallint NOT NULL DEFAULT 0,answered_at timestamptz DEFAULT clock_timestamp()); CREATE TABLE public.error_reports(id uuid PRIMARY KEY,user_id uuid NOT NULL,question_id uuid NOT NULL,report_type text NOT NULL,description text,status text NOT NULL,created_at timestamptz NOT NULL); GRANT INSERT ON public.error_reports TO authenticated; CREATE TABLE public.verified_attempt_hint_events(attempt_id uuid,user_id uuid,question_id uuid,stage smallint); CREATE TABLE public.adaptive_diagnostic_answers(user_id uuid,question_id uuid,created_at timestamptz NOT NULL DEFAULT clock_timestamp());`)
     await client.query(`CREATE TYPE public.report_status AS ENUM('pending','reviewed','resolved','rejected'); ALTER TABLE public.profiles ADD COLUMN coins integer NOT NULL DEFAULT 0; ALTER TABLE public.error_reports ALTER COLUMN status TYPE public.report_status USING status::public.report_status, ADD COLUMN admin_note text, ADD COLUMN resolved_by uuid, ADD COLUMN updated_at timestamptz NOT NULL DEFAULT clock_timestamp(), ADD COLUMN rewarded_at timestamptz, ADD COLUMN rewarded_coins integer; CREATE FUNCTION public.increment_coins(uuid,integer) RETURNS void LANGUAGE sql SECURITY DEFINER AS $$ UPDATE public.profiles SET coins=coins+$2 WHERE id=$1 $$; CREATE TABLE public.reward_ledger(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES public.profiles(id),source_type text NOT NULL,source_id uuid NOT NULL,reward_type text NOT NULL,reward_key text NOT NULL,amount integer NOT NULL CHECK(amount>=0),metadata jsonb NOT NULL DEFAULT '{}'::jsonb,created_at timestamptz NOT NULL DEFAULT clock_timestamp(),UNIQUE(source_type,source_id,reward_type,reward_key));`)
-    ;[author, reviewer1, reviewer2, publisher, learner, legacyLearner, question, outcome, outcome2, outcomeCourse, outcomeUnit, outcomeTopic, outcomeNode] = Array.from({ length: 13 }, randomUUID)
+    await client.query('ALTER TABLE public.curriculum_outcomes ADD COLUMN code text, ADD COLUMN title text')
+    ;[author, reviewer1, reviewer2, publisher, learner, legacyLearner, question, outcome, outcome2, outcomeCourse, outcomeUnit, outcomeTopic, outcomeNode, candidateQuestion, candidateOutcome] = Array.from({ length: 15 }, randomUUID)
     await client.query('INSERT INTO public.profiles SELECT unnest($1::uuid[])', [[author,reviewer1,reviewer2,publisher,learner,legacyLearner]])
     await client.query(`INSERT INTO public.curriculum_nodes(id,game,category,exam_ref,parent_id,node_type,taxonomy_version) VALUES
       ($1,'matematik',NULL,NULL,NULL,'course','test-v1'),
@@ -59,7 +62,13 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
       ($3,'matematik','Temel',NULL,$2,'topic','test-v1'),
       ($4,'matematik','Temel',NULL,$3,'outcome','test-v1')`, [outcomeCourse,outcomeUnit,outcomeTopic,outcomeNode])
     await client.query("INSERT INTO public.curriculum_outcomes(id,game,category,exam_ref,node_id,taxonomy_version) VALUES($1,'matematik','Temel',NULL,$3,'test-v1'),($2,'matematik','Temel',NULL,$3,'test-v1')", [outcome,outcome2,outcomeNode])
+    const candidateTopic=randomUUID(); const candidateNode=randomUUID()
+    await client.query(`INSERT INTO public.curriculum_nodes(id,game,category,exam_ref,parent_id,node_type,taxonomy_version) VALUES
+      ($1,'matematik','Aday',NULL,$3,'topic','test-v1'),
+      ($2,'matematik','Aday',NULL,$1,'outcome','test-v1')`,[candidateTopic,candidateNode,outcomeUnit])
+    await client.query("INSERT INTO public.curriculum_outcomes(id,code,title,game,category,exam_ref,node_id,taxonomy_version) VALUES($1,'MAT-ADAY-01','Aday kazanımı','matematik','Aday',NULL,$2,'test-v1')",[candidateOutcome,candidateNode])
     await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content) VALUES($1,'matematik','Temel',2,$2)`, [question,{ question:'legacy',options:['A','B'],answer:0 }])
+    await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content) VALUES($1,'matematik','Aday',2,$2)`, [candidateQuestion,{ question:'aday legacy',options:['A','B'],answer:0 }])
     await client.query("INSERT INTO public.error_reports(id,user_id,question_id,report_type,description,status,created_at) VALUES($1,$2,$3,'typo','Eski yazım bildirimi','pending','2026-07-01T10:00:00Z')",[randomUUID(),legacyLearner,question])
     await client.query(migration)
     await client.query(validationPipelineMigration)
@@ -76,7 +85,9 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(searchAdminAal2Migration)
     const roles = [['author','content.prepare',author],['author-r1','content.review.stage1',author],['author-admin-view','admin.dashboard.view',author],['r1-prepare','content.prepare',reviewer1],['r1','content.review.stage1',reviewer1],['r1-stage2','content.review.stage2',reviewer1],['r2','content.review.stage2',reviewer2],['pub','content.publish',publisher],['correct','content.corrections.apply',publisher],['psy','content.psychometrics.refresh',publisher],['appeal','content.appeals.manage',publisher],['enforce','content.enforcement.manage',publisher]]
     for (const [slug, permission, user] of roles) { const role = randomUUID(); await client.query('INSERT INTO public.roles(id,slug,name,is_system) VALUES($1,$2,$2,true)', [role,slug]); await client.query('INSERT INTO public.role_permissions(role_id,permission) VALUES($1,$2)', [role,permission]); await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)', [user,role]) }
+    await client.query(outcomeCandidatesMigration)
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
+    candidateLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[candidateQuestion])).rows[0].published_revision_id
   })
   afterAll(async () => { await client?.end() })
   it('backfills legacy pointers, denies direct content mutation, and requires independent approval', async () => {
@@ -416,6 +427,76 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await rpc('public.submit_assigned_question_quality_mission($1,$2,$3::integer,$4,$5,$6::integer,$7,$8,$9::integer,$10)',[controlUser,controlMission.missionId,1,'clean',null,null,null,'',80,randomUUID()])
     expect((await client.query('SELECT clean_controls,clean_controls_correct,trust_state FROM public.question_quality_worker_profiles WHERE user_id=$1',[controlUser])).rows[0]).toEqual({ clean_controls:1,clean_controls_correct:1,trust_state:'new' })
     expect((await client.query("SELECT has_table_privilege('authenticated','public.question_quality_claims','SELECT') AS claims_read,has_table_privilege('service_role','public.question_quality_consensus_queue','SELECT') AS queue_read,has_function_privilege('service_role','public.claim_question_quality_consensus_job(uuid)','EXECUTE') AS queue_rpc")).rows[0]).toEqual({ claims_read:false,queue_read:false,queue_rpc:true })
+  })
+  it('routes a fresh outcome candidate through the real 164 review and publish chain', async () => {
+    const draftPayload={
+      content:{ question:'Aday sorusu güncellendi.',options:['A','B'],answer:0,solution:'A seçeneği.' },
+      metadata:{ game:'matematik',category:'Aday',difficulty:2 },
+      outcomes:[],
+      source:{ kind:'original',title:'Aday fixture',licenseCode:'INTERNAL' },
+      changeKind:'edit',summary:'Kazanım adayı için yönetişimli revizyon',
+    }
+    const draft=await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[
+      author,candidateQuestion,candidateLegacyRevision,JSON.stringify(draftPayload),randomUUID(),
+    ])
+    expect(draft).toEqual(expect.objectContaining({ status:'draft',mappingRequired:true }))
+    expect((await rpc('public.enqueue_question_outcome_mapping_candidates($1,$2)',[author,randomUUID()])))
+      .toEqual(expect.objectContaining({ inserted:1,pendingExact:1,replayed:false }))
+    const candidate=(await client.query(
+      "SELECT id FROM public.question_outcome_mapping_candidates WHERE question_id=$1 AND status='pending'",
+      [candidateQuestion],
+    )).rows[0]
+    expect(candidate?.id).toMatch(/[0-9a-f-]{36}/)
+    await err(() => userRpc(reviewer1,'aal1',
+      'public.transfer_question_outcome_mapping_candidate($1,$2,$3,$4,$5)',[
+        reviewer1,candidate.id,draft.revisionId,'Kapsam eşleşmesi insan tarafından doğrulandı.',randomUUID(),
+      ]), '42501')
+    const transferRequest=randomUUID()
+    expect(await userRpc(reviewer1,'aal2',
+      'public.transfer_question_outcome_mapping_candidate($1,$2,$3,$4,$5)',[
+        reviewer1,candidate.id,draft.revisionId,'Kapsam eşleşmesi insan tarafından doğrulandı.',transferRequest,
+      ])).toEqual(expect.objectContaining({ status:'transferred',replayed:false }))
+    expect((await client.query(
+      `SELECT revision.outcomes_prepared_by,mapping.outcome_id
+       FROM public.question_content_revisions revision
+       JOIN public.question_revision_outcomes mapping ON mapping.revision_id=revision.id
+       WHERE revision.id=$1`,[draft.revisionId],
+    )).rows[0]).toEqual({ outcomes_prepared_by:reviewer1,outcome_id:candidateOutcome })
+    expect((await client.query(
+      'SELECT count(*)::integer AS count FROM public.question_outcomes WHERE question_id=$1',
+      [candidateQuestion],
+    )).rows[0].count).toBe(0)
+    await err(() => rpc(
+      'public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',
+      [reviewer1,draft.revisionId,1,'approved','Kendi outcome kanıtını inceleyemez.',randomUUID()],
+    ), '22023')
+
+    for (const [slug,permission,user] of [
+      ['candidate-review-stage1','content.review.stage1',reviewer2],
+      ['candidate-review-stage2','content.review.stage2',publisher],
+    ]) {
+      const role=randomUUID()
+      await client.query('INSERT INTO public.roles(id,slug,name,is_system) VALUES($1,$2,$2,true)',[role,slug])
+      await client.query('INSERT INTO public.role_permissions(role_id,permission) VALUES($1,$2)',[role,permission])
+      await client.query('INSERT INTO public.user_roles(user_id,role_id) VALUES($1,$2)',[user,role])
+    }
+    await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',[
+      reviewer2,draft.revisionId,1,'approved','Bağımsız akademik ilk inceleme.',randomUUID(),
+    ])
+    await rpc('public.review_question_content_revision($1,$2,$3::smallint,$4,$5,$6)',[
+      publisher,draft.revisionId,2,'approved','Bağımsız akademik ikinci inceleme.',randomUUID(),
+    ])
+    expect((await client.query(
+      'SELECT count(*)::integer AS count FROM public.question_outcomes WHERE question_id=$1',
+      [candidateQuestion],
+    )).rows[0].count).toBe(0)
+    await rpc('public.publish_question_content_revision($1,$2,$3)',[publisher,draft.revisionId,randomUUID()])
+    expect((await client.query(
+      `SELECT mapping.outcome_id,candidate.status
+       FROM public.question_outcomes mapping
+       JOIN public.question_outcome_mapping_candidates candidate ON candidate.question_id=mapping.question_id
+       WHERE mapping.question_id=$1`,[candidateQuestion],
+    )).rows[0]).toEqual({ outcome_id:candidateOutcome,status:'transferred' })
   })
   it('reapplies the outcome-scope migration over populated governed data', async () => {
     await client.query(outcomeScopeMigration)

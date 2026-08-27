@@ -154,7 +154,12 @@ export function ElementsList({ onAdd }: { onAdd: () => void }) {
   const handleDelete = useCallback(
     async (id: string) => {
       try {
-        await fetch(`/api/admin/homepage/elements/${id}`, { method: 'DELETE' })
+        const response = await fetch(`/api/admin/homepage/elements/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestId: crypto.randomUUID() }),
+        })
+        if (!response.ok) throw new Error(`Öğe silinemedi (${response.status})`)
         removeElement(id)
       } catch (err) {
         console.error('Silme hatası:', err)

@@ -182,11 +182,17 @@ export function useAuth() {
 
   async function signInWithGoogle(
     next = '/arena',
-    options?: { forceAccountSelection?: boolean },
+    options?: {
+      forceAccountSelection?: boolean
+      legalConsentToken?: string
+    },
   ) {
     const safeNext = safeAuthNext(next)
     const callbackUrl = new URL('/auth/callback', window.location.origin)
     callbackUrl.searchParams.set('next', safeNext)
+    if (options?.legalConsentToken) {
+      callbackUrl.searchParams.set('legalConsent', options.legalConsentToken)
+    }
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -209,10 +215,14 @@ export function useAuth() {
   async function signInWithMagicLink(
     email: string,
     next = '/arena',
+    options?: { legalConsentToken?: string },
   ): Promise<{ ok: true } | { ok: false; error: string }> {
     try {
       const callbackUrl = new URL('/auth/callback', window.location.origin)
       callbackUrl.searchParams.set('next', safeAuthNext(next))
+      if (options?.legalConsentToken) {
+        callbackUrl.searchParams.set('legalConsent', options.legalConsentToken)
+      }
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {

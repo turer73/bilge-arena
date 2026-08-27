@@ -164,6 +164,22 @@ describe('useAuth', () => {
     })
   })
 
+  test('Google callback URL hukuki kabul niyetini tasir', async () => {
+    const { result } = renderHook(() => useAuth())
+
+    await act(() => result.current.signInWithGoogle('/arena', {
+      legalConsentToken: 'signed.intent',
+    }))
+
+    expect(supa.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=%2Farena&legalConsent=signed.intent`,
+        queryParams: undefined,
+      },
+    })
+  })
+
   test('magic link kaydi: guvenli donus hedefini callback URL icinde korur', async () => {
     const { result } = renderHook(() => useAuth())
 
@@ -176,6 +192,24 @@ describe('useAuth', () => {
       email: 'student@example.com',
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Farena%2Fmatematik%3Fsource%3Dguest`,
+        shouldCreateUser: true,
+      },
+    })
+  })
+
+  test('magic-link callback URL hukuki kabul niyetini tasir', async () => {
+    const { result } = renderHook(() => useAuth())
+
+    await act(() => result.current.signInWithMagicLink(
+      'student@example.com',
+      '/arena',
+      { legalConsentToken: 'signed.intent' },
+    ))
+
+    expect(supa.signInWithOtp).toHaveBeenCalledWith({
+      email: 'student@example.com',
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Farena&legalConsent=signed.intent`,
         shouldCreateUser: true,
       },
     })

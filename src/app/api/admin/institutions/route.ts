@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
   const parsed = provisionInstitutionResultSchema.safeParse(data)
   if (!parsed.success) return noStore({ error: 'Kurum sonucu doğrulanamadı' }, 500)
-  await logAdminAction(context.supabase, {
+  await logAdminAction({
     adminId: context.admin.id,
     action: 'provision_institution',
     targetType: 'pilot_institution',
@@ -144,7 +144,7 @@ export async function PATCH(request: NextRequest) {
 
   const parsed = institutionStatusResultSchema.safeParse(data)
   if (!parsed.success) return noStore({ error: 'Kurum durumu sonucu doğrulanamadı' }, 500)
-  const { error: auditError } = await logAdminAction(context.supabase, {
+  const { error: auditError } = await logAdminAction({
     adminId: context.admin.id,
     action: 'set_institution_status',
     targetType: 'pilot_institution',

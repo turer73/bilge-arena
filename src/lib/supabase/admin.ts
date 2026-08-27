@@ -1,4 +1,5 @@
 import { createClient } from './server'
+import { createServiceRoleClient } from './service-role'
 import { getClientIp } from '@/lib/utils/client-ip'
 import type { Role } from '@/types/database'
 import type { User } from '@supabase/supabase-js'
@@ -92,7 +93,6 @@ export async function getUserRoles(
  * Tüm admin operasyonlarında tutarlı log formatı sağlar.
  */
 export async function logAdminAction(
-  supabase: SupabaseClient,
   opts: {
     adminId: string
     action: string
@@ -111,7 +111,11 @@ export async function logAdminAction(
   const ip = opts.request ? getClientIp(opts.request.headers) : null
   const userAgent = opts.request?.headers.get('user-agent')?.slice(0, 256) || null
 
-  return supabase.from('admin_logs').insert({
+  // admin_logs is deliberately not writable by browser JWTs. Keeping client
+  // construction inside this helper prevents a future route from accidentally
+  // reintroducing a cookie-client write that either bypasses governance or
+  // starts failing after the route-only ACL migration.
+  return createServiceRoleClient().from('admin_logs').insert({
     admin_id: opts.adminId,
     action: opts.action,
     target_type: opts.targetType,
