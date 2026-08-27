@@ -1,21 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockProfilesRes } = vi.hoisted(() => ({
+const { mockProfilesRes, mockPrivacyReadyRes } = vi.hoisted(() => ({
   mockProfilesRes: vi.fn(),
+  mockPrivacyReadyRes: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
     from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        order: vi.fn(() => ({
-          gt: vi.fn(() => ({
-            is: vi.fn(() => ({
-              limit: vi.fn(() => mockProfilesRes()),
+      select: vi.fn((columns: string) => columns === 'leaderboard_opt_in'
+        ? { limit: vi.fn(() => mockPrivacyReadyRes()) }
+        : ({ eq: vi.fn(() => ({
+          order: vi.fn(() => ({
+            gt: vi.fn(() => ({
+              is: vi.fn(() => ({
+                limit: vi.fn(() => mockProfilesRes()),
+              })),
             })),
           })),
-        })),
-      })),
+        })) })),
     })),
   })),
 }))
@@ -35,7 +38,10 @@ function makeRequest(ip = '1.2.3.4') {
 }
 
 describe('GET /api/leaderboard/landing', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockPrivacyReadyRes.mockResolvedValue({ data: [], error: null })
+  })
 
   it('returns top 5 leaders with rank assigned', async () => {
     mockProfilesRes.mockResolvedValueOnce({
@@ -51,8 +57,10 @@ describe('GET /api/leaderboard/landing', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.leaders).toHaveLength(3)
-    expect(body.leaders[0]).toMatchObject({ rank: 1, username: 'Ali', total_xp: 5000, current_streak: 7 })
-    expect(body.leaders[2]).toMatchObject({ rank: 3, username: 'Ayşe', total_xp: 3000 })
+    expect(body.leaders[0]).toMatchObject({ rank: 1, username: 'Ali', total_xp: 5000 })
+    expect(body.leaders[2]).toMatchObject({ rank: 3, username: 'Oyuncu 3', total_xp: 3000 })
+    expect(body.leaders[0]).not.toHaveProperty('current_streak')
+    expect(JSON.stringify(body)).not.toContain('Ayşe')
   })
 
   it('returns empty array when no profiles', async () => {
@@ -61,6 +69,14 @@ describe('GET /api/leaderboard/landing', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.leaders).toEqual([])
+  })
+
+  it('fails closed with a short cache before migration 177', async () => {
+    mockPrivacyReadyRes.mockResolvedValueOnce({ data: null, error: { code: '42703' } })
+    const res = await GET(makeRequest() as never)
+    expect(await res.json()).toEqual({ leaders: [], privacyReady: false })
+    expect(res.headers.get('Cache-Control')).toContain('s-maxage=30')
+    expect(mockProfilesRes).not.toHaveBeenCalled()
   })
 
   it('returns 500 on query error', async () => {

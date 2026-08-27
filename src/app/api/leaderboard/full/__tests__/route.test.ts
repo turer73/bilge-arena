@@ -7,6 +7,7 @@ const {
   mockNameplatesRes,
   mockProfilesSingleRes,
   mockProfilesCountRes,
+  mockPrivacyReadyRes,
   mockGetUser,
   mockIpCheck,
   mockUserCheck,
@@ -16,8 +17,9 @@ const {
   mockProfilesRes: vi.fn(),
   // Weekly path nameplate toplu sorgusu: profiles.select('id, selected_nameplate').in('id', ids)
   mockNameplatesRes: vi.fn(async () => ({ data: [] as { id: string; selected_nameplate: string }[], error: null })),
-  mockProfilesSingleRes: vi.fn((): { data: { total_xp: number } | null; error: unknown } => ({ data: null, error: null })),
+  mockProfilesSingleRes: vi.fn((): { data: { total_xp: number; leaderboard_opt_in: boolean } | null; error: unknown } => ({ data: null, error: null })),
   mockProfilesCountRes: vi.fn((): { count: number; error: unknown } => ({ count: 0, error: null })),
+  mockPrivacyReadyRes: vi.fn(),
   mockGetUser: vi.fn(async () => ({
     data: { user: null as null | { id: string; email?: string } },
   })),
@@ -49,16 +51,20 @@ vi.mock('@/lib/supabase/service-role', () => ({
       if (table === 'profiles') {
         return {
           select: vi.fn((_cols: string, opts?: { count?: string; head?: boolean }) => {
+            if (_cols === 'leaderboard_opt_in') {
+              return { limit: vi.fn(() => mockPrivacyReadyRes()) }
+            }
             // Tum-zaman my-rank COUNT sorgusu: select('id',{count,head}).is().gt()
             if (opts?.head) {
               const countChain = {
+                eq: vi.fn(() => countChain),
                 is: vi.fn(() => countChain),
                 gt: vi.fn(() => mockProfilesCountRes()),
               }
               return countChain
             }
             // Liste: .gt().is().order().limit()  |  my total_xp: .eq().single()
-            return {
+            const listChain = {
               gt: vi.fn(() => ({
                 is: vi.fn(() => ({
                   order: vi.fn(() => ({
@@ -66,9 +72,11 @@ vi.mock('@/lib/supabase/service-role', () => ({
                   })),
                 })),
               })),
-              eq: vi.fn(() => ({
-                single: vi.fn(() => mockProfilesSingleRes()),
-              })),
+            }
+            return {
+              eq: vi.fn((column: string) => column === 'leaderboard_opt_in'
+                ? listChain
+                : { single: vi.fn(() => mockProfilesSingleRes()) }),
               // Weekly path nameplate toplu çek: select('id, selected_nameplate').in('id', ids)
               in: vi.fn(() => mockNameplatesRes()),
             }
@@ -106,6 +114,8 @@ describe('GET /api/leaderboard/full', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetUser.mockResolvedValue({ data: { user: null } })
+    mockWeeklySingleRes.mockResolvedValue({ data: null, error: null })
+    mockPrivacyReadyRes.mockResolvedValue({ data: [], error: null })
     mockIpCheck.mockResolvedValue({ success: true, retryAfter: 0 })
     mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })
   })
@@ -127,7 +137,18 @@ describe('GET /api/leaderboard/full', () => {
     expect(body.myRank).toBe(0)
   })
 
-  it('marks is_me=true when currentUserId matches', async () => {
+  it('fails closed before migration 177 instead of reading the legacy leaderboard', async () => {
+    mockPrivacyReadyRes.mockResolvedValueOnce({ data: null, error: { code: '42703' } })
+
+    const res = await GET(makeRequest() as never)
+    const body = await res.json()
+    expect(body).toMatchObject({ players: [], myRank: 0, source: 'privacy_pending' })
+    expect(mockWeeklyRes).not.toHaveBeenCalled()
+    expect(mockProfilesRes).not.toHaveBeenCalled()
+  })
+
+  it('marks is_me=true only when the authenticated session matches', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
     mockWeeklyRes.mockResolvedValueOnce({
       data: [
         { user_id: 'u1', username: 'Ali', display_name: null, avatar_url: null, xp_earned: 500, current_rank: 1, level_name: null },
@@ -135,13 +156,14 @@ describe('GET /api/leaderboard/full', () => {
       ],
       error: null,
     })
-    const res = await GET(makeRequest(VALID_UUID) as never)
+    const res = await GET(makeRequest() as never)
     const body = await res.json()
     expect(body.players[1].is_me).toBe(true)
     expect(body.myRank).toBe(2)
   })
 
   it('queries my rank separately when not in top 50', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
     mockWeeklyRes.mockResolvedValueOnce({
       data: [
         { user_id: 'u1', username: 'A', display_name: null, avatar_url: null, xp_earned: 500, current_rank: 1, level_name: null },
@@ -149,7 +171,7 @@ describe('GET /api/leaderboard/full', () => {
       error: null,
     })
     mockWeeklySingleRes.mockResolvedValueOnce({ data: { current_rank: 142 }, error: null })
-    const res = await GET(makeRequest(VALID_UUID) as never)
+    const res = await GET(makeRequest() as never)
     const body = await res.json()
     expect(body.myRank).toBe(142)
   })
@@ -177,7 +199,7 @@ describe('GET /api/leaderboard/full', () => {
     expect(body.players).toEqual([])
   })
 
-  it('rejects invalid currentUserId (not UUID format)', async () => {
+  it('ignores a query-string identity when the request is anonymous', async () => {
     mockWeeklyRes.mockResolvedValueOnce({
       data: [
         { user_id: 'attacker', username: 'X', display_name: null, avatar_url: null, xp_earned: 100, current_rank: 1, level_name: null },
@@ -189,16 +211,17 @@ describe('GET /api/leaderboard/full', () => {
     expect(body.players[0].is_me).toBe(false)
   })
 
-  it('rejects non-canonical UUID format (e.g. all dashes)', async () => {
+  it('uses the authenticated identity even when a different query identity is supplied', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
     mockWeeklyRes.mockResolvedValueOnce({
       data: [
-        { user_id: 'u1', username: 'X', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1, level_name: null },
+        { user_id: VALID_UUID, username: 'X', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1, level_name: null },
       ],
       error: null,
     })
-    const res = await GET(makeRequest('------------------------------------') as never)
+    const res = await GET(makeRequest('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee') as never)
     const body = await res.json()
-    expect(body.players[0].is_me).toBe(false)
+    expect(body.players[0].is_me).toBe(true)
   })
 
   it('returns 500 on weekly view query error', async () => {
@@ -227,7 +250,8 @@ describe('GET /api/leaderboard/full', () => {
     expect(cc).toContain('s-maxage=120')
   })
 
-  it('sets private cache when currentUserId provided', async () => {
+  it('sets private cache for an authenticated request', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
     mockWeeklyRes.mockResolvedValueOnce({
       data: [
         { user_id: 'u1', username: 'A', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1, level_name: null },
@@ -235,7 +259,7 @@ describe('GET /api/leaderboard/full', () => {
       error: null,
     })
     mockWeeklySingleRes.mockResolvedValueOnce({ data: { current_rank: 99 }, error: null })
-    const res = await GET(makeRequest(VALID_UUID) as never)
+    const res = await GET(makeRequest() as never)
     const cc = res.headers.get('Cache-Control') ?? ''
     expect(cc).toContain('private')
     expect(cc).toContain('max-age=60')
@@ -284,6 +308,7 @@ describe('GET /api/leaderboard/full', () => {
   })
 
   it('period=all: top-50 disindaki kullanici sirasini COUNT ile hesaplar', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
     // Liste top-2 (kullanici yok) -> myRank=0 -> total_xp + count yoluna gir
     mockProfilesRes.mockResolvedValueOnce({
       data: [
@@ -292,13 +317,26 @@ describe('GET /api/leaderboard/full', () => {
       ],
       error: null,
     })
-    mockProfilesSingleRes.mockReturnValueOnce({ data: { total_xp: 1200 }, error: null })
+    mockProfilesSingleRes.mockReturnValueOnce({ data: { total_xp: 1200, leaderboard_opt_in: true }, error: null })
     // 141 kisi benden cok XP'ye sahip -> sira 142
     mockProfilesCountRes.mockReturnValueOnce({ count: 141, error: null })
-    const res = await GET(makeRequest(VALID_UUID, '1.2.3.4', 'all') as never)
+    const res = await GET(makeRequest(undefined, '1.2.3.4', 'all') as never)
     const body = await res.json()
     expect(body.source).toBe('all_time')
     expect(body.myRank).toBe(142)
+  })
+
+  it('does not calculate a public rank for an opted-out authenticated user', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
+    mockProfilesRes.mockResolvedValueOnce({
+      data: [{ id: 'u1', username: 'A', display_name: null, avatar_url: null, total_xp: 5000, level_name: null }],
+      error: null,
+    })
+    mockProfilesSingleRes.mockReturnValueOnce({ data: { total_xp: 1200, leaderboard_opt_in: false }, error: null })
+
+    const res = await GET(makeRequest(undefined, '1.2.3.4', 'all') as never)
+    expect((await res.json()).myRank).toBe(0)
+    expect(mockProfilesCountRes).not.toHaveBeenCalled()
   })
 
   it('uses current_rank from view (not array index) for rank field', async () => {
@@ -321,6 +359,8 @@ describe('GET /api/leaderboard/full rate limit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetUser.mockResolvedValue({ data: { user: null } })
+    mockWeeklySingleRes.mockResolvedValue({ data: null, error: null })
+    mockPrivacyReadyRes.mockResolvedValue({ data: [], error: null })
     mockIpCheck.mockResolvedValue({ success: true, retryAfter: 0 })
     mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })
   })

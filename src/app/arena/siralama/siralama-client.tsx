@@ -10,6 +10,7 @@ import { LeaderboardTable } from '@/components/leaderboard/leaderboard-table'
 import { WeeklyLearningLeague } from '@/components/leaderboard/weekly-learning-league'
 import { WeeklyLearningSpotlights } from '@/components/leaderboard/weekly-learning-spotlights'
 import { WeeklyTeamBoss } from '@/components/leaderboard/weekly-team-boss'
+import { LeaderboardVisibilitySettings } from '@/components/profile/leaderboard-visibility-settings'
 import {
   isLearningSpotlightsUiEnabled,
   isSocialLeagueUiEnabled,
@@ -30,11 +31,11 @@ interface ApiPlayer {
 interface ApiResponse {
   players: ApiPlayer[]
   myRank: number
-  source: 'weekly' | 'profiles_fallback' | 'all_time' | 'empty'
+  source: 'weekly' | 'profiles_fallback' | 'all_time' | 'empty' | 'privacy_pending'
 }
 
 export default function SiralamaClient() {
-  const { user } = useAuthStore()
+  const { user, profile } = useAuthStore()
   const searchParams = useSearchParams()
   const requestedAllTime = searchParams.get('period') === 'all'
   const [entries, setEntries] = useState<
@@ -42,6 +43,7 @@ export default function SiralamaClient() {
   >([])
   const [loading, setLoading] = useState(true)
   const [isAllTime, setIsAllTime] = useState(false)
+  const [privacyPending, setPrivacyPending] = useState(false)
   // Ana sayfa 'Tum Zamanlarin Liderleri' CTA'si ?period=all ile gelir -> tum-zaman
   // gorunumunu ACIKCA iste (haftalik-bos fallback'ten ayri). useSearchParams
   // ayni sayfadaki sekme degisimlerini de izler; page Suspense siniri saglar.
@@ -59,7 +61,6 @@ export default function SiralamaClient() {
         // Browser->Supabase direkt cagri yerine API proxy uzerinden
         // (Madde 9 — pentest raporu, CF Rate Limit + service-role + edge cache).
         const params = new URLSearchParams()
-        if (user?.id) params.set('currentUserId', user.id)
         if (allTimeMode) params.set('period', 'all')
         const qs = params.toString()
         const url = `/api/leaderboard/full${qs ? `?${qs}` : ''}`
@@ -88,6 +89,7 @@ export default function SiralamaClient() {
           decorations: p.decorations ?? [],
         }))
         setEntries(mapped)
+        setPrivacyPending(json.source === 'privacy_pending')
         // Tum-zaman: acik istek (all_time) VEYA haftalik-bos dususu (profiles_fallback)
         setIsAllTime(json.source === 'all_time' || json.source === 'profiles_fallback')
       } catch {
@@ -101,10 +103,21 @@ export default function SiralamaClient() {
     return () => {
       cancelled = true
     }
-  }, [requestedAllTime, user?.id])
+  }, [profile?.leaderboard_opt_in, requestedAllTime, user?.id])
 
   const currentEntry = entries.find((entry) => entry.isCurrentUser)
   const allTimeView = requestedAllTime || isAllTime
+  const privacyPreferenceReady = profile?.leaderboard_opt_in !== undefined
+  const viewerOptedIn = profile?.leaderboard_opt_in ?? false
+  const viewerStatus = !user
+    ? 'Giriş yap ve seç'
+    : !privacyPreferenceReady
+      ? 'Tercihin yükleniyor'
+    : !viewerOptedIn
+      ? 'Katılım kapalı'
+      : currentEntry
+        ? `Sıran #${currentEntry.rank}`
+        : 'İlk sıranı al'
 
   return (
     <div data-ranking-screen className="min-h-[100dvh] bg-[var(--app-bg)] pb-24 text-[var(--app-text)] lg:bg-transparent lg:pb-10">
@@ -126,10 +139,10 @@ export default function SiralamaClient() {
           <div className="relative z-10">
             <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/75"><Sparkles size={14} /> {allTimeView ? 'Efsaneler tablosu' : 'Bu haftanın arenası'}</p>
             <h2 className="mt-1.5 max-w-md text-xl font-black leading-6 md:text-2xl">{allTimeView ? 'Tüm zamanların liderleri' : showRelativeLeague ? 'Öğren, puan topla, yüksel' : 'Haftalık sıralamada yerini al'}</h2>
-            <p className="mt-1.5 max-w-lg text-xs font-semibold leading-5 text-white/80">{allTimeView ? 'En yüksek XP sahibi arenacıların genel sıralaması.' : showRelativeLeague ? 'XP tablosu ile yakın rakip ligin ayrı hesaplanır.' : 'Her Pazartesi yeni bir yarış başlar.'}</p>
+            <p className="mt-1.5 max-w-lg text-xs font-semibold leading-5 text-white/80">{allTimeView ? 'Katılmayı seçen arenacıların genel XP sıralaması.' : showRelativeLeague ? 'XP tablosu isteğe bağlıdır; yakın rakip ligin ayrı hesaplanır.' : 'Katılım isteğe bağlıdır; her Pazartesi yeni bir yarış başlar.'}</p>
             <div className="mt-3 flex gap-2 text-[10px] font-black">
-              <span className="rounded-lg bg-black/15 px-2.5 py-1.5">{currentEntry ? `Sıran #${currentEntry.rank}` : 'Sıranı oluştur'}</span>
-              <span className="rounded-lg bg-black/15 px-2.5 py-1.5"><Users size={12} className="mr-1 inline" />{entries.length} oyuncu</span>
+              <span className="rounded-lg bg-black/15 px-2.5 py-1.5">{viewerStatus}</span>
+              <span className="rounded-lg bg-black/15 px-2.5 py-1.5"><Users size={12} className="mr-1 inline" />{entries.length} katılımcı</span>
             </div>
           </div>
         </section>
@@ -139,8 +152,8 @@ export default function SiralamaClient() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Crown size={22} strokeWidth={2.8} /></span>
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-text-muted)]">Senin lig durumun</p>
-              <p className="mt-0.5 text-xl font-black text-[var(--app-text)]">{currentEntry ? `#${currentEntry.rank}` : 'İlk sıranı al'}</p>
-              <p className="mt-0.5 text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">{currentEntry ? `${currentEntry.xp.toLocaleString()} XP ile yarıştasın.` : 'Bir oyun tamamla, haftalık lige katıl.'}</p>
+              <p className="mt-0.5 text-xl font-black text-[var(--app-text)]">{viewerStatus}</p>
+              <p className="mt-0.5 text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">{currentEntry ? `${currentEntry.xp.toLocaleString()} XP ile yarıştasın.` : user && !privacyPreferenceReady ? 'Gizlilik tercihin güvenli biçimde yükleniyor.' : user && !viewerOptedIn ? 'İlerlemen gizli; katılımı yalnız sen açabilirsin.' : 'Bir oyun tamamla, haftalık sıranı oluştur.'}</p>
             </div>
           </div>
           <Link href="/arena" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-xs font-black text-white shadow-[0_4px_0_var(--app-accent-strong)] active:translate-y-0.5 active:shadow-none">XP kazanmaya başla</Link>
@@ -158,6 +171,7 @@ export default function SiralamaClient() {
             <h2 className="mt-1 text-sm font-black">Her hafta yeniden yarış</h2>
             <p className="mt-2 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">Oyunlardan kazandığın XP haftalık sıranı yükseltir. Pazartesi yeni tur başlar; tüm zamanlar puanın korunur.</p>
           </section>
+          {user && <LeaderboardVisibilitySettings compact />}
         </aside>
 
         <section aria-label="Lig sonuçları" className="order-2 min-w-0 space-y-4 lg:order-1">
@@ -173,7 +187,9 @@ export default function SiralamaClient() {
         <div className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] py-14 text-center shadow-[0_5px_0_var(--app-border)]">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-3xl">🏟️</div>
           <p className="text-sm font-bold text-[var(--app-text-sub)]">
-            Henüz kimse oyun oynamadı. İlk sen başla!
+            {privacyPending
+              ? 'Sıralama gizlilik ayarları hazırlanıyor.'
+              : 'Henüz açık sıralamaya katılan yok. Katılım her zaman isteğe bağlıdır.'}
           </p>
         </div>
       ) : (

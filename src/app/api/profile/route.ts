@@ -4,7 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { profileUpdateSchema } from '@/lib/validations/schemas'
-import type { TablesUpdate } from '@/types/database.generated'
+import type { Database } from '@/types/database.client'
 import { userHasPlatformAdminAccess } from '@/lib/supabase/platform-access'
 
 // Cift kalkan rate limit (Madde 9 #5 pattern — topic-strengths icin de ayni):
@@ -118,8 +118,8 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { username, display_name, city, grade, exam_type, onboarding_completed, preferred_theme, is_discoverable } = parsed.data
-  const updates: TablesUpdate<'profiles'> = {}
+  const { username, display_name, city, grade, exam_type, onboarding_completed, preferred_theme, is_discoverable, leaderboard_opt_in } = parsed.data
+  const updates: Database['public']['Tables']['profiles']['Update'] = {}
   if (username) updates.username = username
   if (display_name !== undefined) updates.display_name = display_name || null
   if (city !== undefined) updates.city = city || null
@@ -128,6 +128,7 @@ export async function PATCH(request: NextRequest) {
   if (onboarding_completed) updates.onboarding_completed = true
   if (preferred_theme !== undefined) updates.preferred_theme = preferred_theme
   if (is_discoverable !== undefined) updates.is_discoverable = is_discoverable
+  if (leaderboard_opt_in !== undefined) updates.leaderboard_opt_in = leaderboard_opt_in
 
   // 5) Service-role update — sahip kontrolu auth.uid() = user.id ile yapildi
   const admin = createServiceRoleClient()
@@ -135,7 +136,7 @@ export async function PATCH(request: NextRequest) {
     .from('profiles')
     .update(updates)
     .eq('id', user.id)
-    .select('id, username, display_name, city, grade, exam_type, avatar_url, onboarding_completed, is_discoverable')
+    .select('id, username, display_name, city, grade, exam_type, avatar_url, onboarding_completed, is_discoverable, leaderboard_opt_in')
     .single()
 
   if (error) {

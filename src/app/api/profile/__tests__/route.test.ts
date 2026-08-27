@@ -183,4 +183,22 @@ describe('PATCH /api/profile', () => {
     const res = await PATCH(makePatch({ is_discoverable: 'yes' }) as never)
     expect(res.status).toBe(400)
   })
+
+  it('accepts a boolean public leaderboard opt-in', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockProfileUpdate.mockResolvedValue({
+      data: { id: 'u1', leaderboard_opt_in: true },
+      error: null,
+    })
+
+    const res = await PATCH(makePatch({ leaderboard_opt_in: true }) as never)
+    expect(res.status).toBe(200)
+    expect((await res.json()).leaderboard_opt_in).toBe(true)
+  })
+
+  it('rejects a non-boolean public leaderboard preference', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await PATCH(makePatch({ leaderboard_opt_in: 'yes' }) as never)
+    expect(res.status).toBe(400)
+  })
 })

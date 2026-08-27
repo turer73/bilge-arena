@@ -2,10 +2,16 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import SiralamaClient from '../siralama-client'
 
-const mocks = vi.hoisted(() => ({ user: { id: '11111111-2222-4333-8444-555555555555' } }))
+const mocks = vi.hoisted(() => ({
+  user: { id: '11111111-2222-4333-8444-555555555555' },
+  profile: { leaderboard_opt_in: false },
+}))
 
 vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: () => ({ user: mocks.user }),
+  useAuthStore: (selector?: (state: unknown) => unknown) => {
+    const state = { user: mocks.user, profile: mocks.profile, setProfile: vi.fn() }
+    return selector ? selector(state) : state
+  },
 }))
 vi.mock('@/components/leaderboard/weekly-learning-league', () => ({
   WeeklyLearningLeague: () => <section aria-label="Yakın Rakip Ligi fixture" />,
@@ -58,7 +64,9 @@ describe('SiralamaClient social league gate', () => {
     expect(document.querySelector('[data-ranking-status]')).toHaveClass('min-h-[156px]')
     expect(document.querySelector('[data-ranking-layout]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_320px]')
     expect(document.querySelector('style')?.textContent).toContain('max-width: 1023px')
-    await waitFor(() => expect(screen.queryByText(/Henüz kimse/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText(/Henüz açık sıralamaya katılan/)).toBeInTheDocument())
+    expect(screen.getByRole('switch', { name: 'Açık sıralamaya katılım' })).not.toBeChecked()
+    expect(fetch).toHaveBeenCalledWith('/api/leaderboard/full')
   })
 
   it('shows the relative league first and labels XP as a separate metric', async () => {
@@ -69,8 +77,8 @@ describe('SiralamaClient social league gate', () => {
     expect(screen.queryByLabelText('Olumlu Öğrenme Spotları fixture')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Takım Bossu fixture')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Öğren, puan topla, yüksel/ })).toBeInTheDocument()
-    expect(screen.getByText(/XP tablosu ile yakın rakip ligin ayrı hesaplanır/i)).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText(/Henüz kimse/)).toBeInTheDocument())
+    expect(screen.getByText(/XP tablosu isteğe bağlıdır; yakın rakip ligin ayrı hesaplanır/i)).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText(/Henüz açık sıralamaya katılan/)).toBeInTheDocument())
   })
 
   it('shows positive spotlights only when both public gates are on', async () => {
@@ -80,7 +88,7 @@ describe('SiralamaClient social league gate', () => {
     expect(screen.getByLabelText('Yakın Rakip Ligi fixture')).toBeInTheDocument()
     expect(screen.getByLabelText('Olumlu Öğrenme Spotları fixture')).toBeInTheDocument()
     expect(screen.queryByLabelText('Takım Bossu fixture')).not.toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText(/Henüz kimse/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText(/Henüz açık sıralamaya katılan/)).toBeInTheDocument())
   })
 
   it('shows the team boss only when its public gate and the league gate are on', async () => {
@@ -89,6 +97,6 @@ describe('SiralamaClient social league gate', () => {
     render(<SiralamaClient />)
     expect(screen.getByLabelText('Yakın Rakip Ligi fixture')).toBeInTheDocument()
     expect(screen.getByLabelText('Takım Bossu fixture')).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText(/Henüz kimse/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText(/Henüz açık sıralamaya katılan/)).toBeInTheDocument())
   })
 })

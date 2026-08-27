@@ -137,6 +137,8 @@ jobs:
       INSTITUTION_PILOT_TEST_DATABASE_DISPOSABLE: '1'
       TEACHER_CLASSROOM_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_r42_test_ci
       TEACHER_CLASSROOM_TEST_DATABASE_DISPOSABLE: '1'
+      LEADERBOARD_PRIVACY_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_inst_test_ci
+      LEADERBOARD_PRIVACY_TEST_DATABASE_DISPOSABLE: '1'
     steps:
       - uses: actions/checkout@v6
 
@@ -160,6 +162,9 @@ jobs:
 
       - name: Run teacher classroom privacy acceptance tests
         run: npm run test:teacher-classroom:pg
+
+      - name: Run public leaderboard privacy acceptance tests
+        run: npm run test:leaderboard-privacy:pg
 
   question-quality-postgres:
     name: 🧭 Question quality PostgreSQL
