@@ -39,8 +39,9 @@ describe('HakimiyetClient', () => {
       discovery: null,
       graph: null,
       outcomes: [],
-      coverage: { supported: false, taxonomyVersion: null, totalQuestions: 0, mappedQuestions: 0, percentage: 0 },
+      coverage: { supported: false, diagnosticAvailable: false, taxonomyVersion: null, totalQuestions: 0, mappedQuestions: 0, percentage: 0 },
       loading: false,
+      error: false,
       fetchMastery: vi.fn(),
     })
   })
@@ -58,8 +59,9 @@ describe('HakimiyetClient', () => {
       discovery: null,
       graph: { code: 'course' } as never,
       outcomes: [],
-      coverage: { supported: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 1, mappedQuestions: 1, percentage: 100 },
+      coverage: { supported: true, diagnosticAvailable: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 1, mappedQuestions: 1, percentage: 100 },
       loading: false,
+      error: false,
       fetchMastery: vi.fn(),
     })
 

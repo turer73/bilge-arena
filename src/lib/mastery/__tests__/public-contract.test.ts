@@ -4,7 +4,7 @@ import { parseMasteryMapResponse } from '../public-contract'
 const RESPONSE = {
   game: 'matematik',
   examRef: 'TYT',
-  coverage: { supported: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 120, mappedQuestions: 120, percentage: 100 },
+  coverage: { supported: true, diagnosticAvailable: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 120, mappedQuestions: 120, percentage: 100 },
   discovery: { level: 3, stage: 'ready', diagnosticCompleted: true, evidenceCollected: 3, evidenceTarget: 3, readyOutcomes: 1, totalOutcomes: 1, journeyPercentage: 100 },
   graph: {
     code: 'MAT-TYT', title: 'TYT Matematik', nodeType: 'course', children: [{
@@ -51,7 +51,7 @@ describe('parseMasteryMapResponse', () => {
     expect(parseMasteryMapResponse({
       game: 'fen',
       examRef: 'TYT',
-      coverage: { supported: false, taxonomyVersion: null, totalQuestions: 0, mappedQuestions: 0, percentage: 0 },
+      coverage: { supported: false, diagnosticAvailable: false, taxonomyVersion: null, totalQuestions: 0, mappedQuestions: 0, percentage: 0 },
       discovery: null,
       graph: null,
       outcomes: [],
@@ -72,7 +72,7 @@ describe('parseMasteryMapResponse', () => {
   it('desteklenmeyen kapsamda graph/veri ve desteklenen kapsamda path sapmasini reddeder', () => {
     expect(parseMasteryMapResponse({
       ...RESPONSE,
-      coverage: { supported: false, taxonomyVersion: null, totalQuestions: 0, mappedQuestions: 0, percentage: 0 },
+      coverage: { supported: false, diagnosticAvailable: false, taxonomyVersion: null, totalQuestions: 0, mappedQuestions: 0, percentage: 0 },
     })).toBeNull()
     expect(parseMasteryMapResponse({
       ...RESPONSE,

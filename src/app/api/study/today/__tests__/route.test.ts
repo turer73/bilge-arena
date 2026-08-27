@@ -143,8 +143,29 @@ function makePatchRequest(body: unknown) {
   })
 }
 
+function releasedScope(args: Record<string, unknown>) {
+  if (args.p_game !== 'matematik' || args.p_display_exam_ref !== 'TYT') {
+    return { data: null, error: null }
+  }
+  return {
+    data: {
+      game: 'matematik', displayExamRef: 'TYT', questionExamRef: 'TYT',
+      taxonomyVersion: 'ba-tyt-math-v1', mappingMode: 'category_proxy', diagnosticEnabled: true,
+    },
+    error: null,
+  }
+}
+
+function installDefaultRpc() {
+  mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+    if (name === 'resolve_released_curriculum_scope') return releasedScope(args)
+    throw new Error(`unexpected RPC: ${name}`)
+  })
+}
+
 function installCreateRpcSuccess() {
   mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+    if (name === 'resolve_released_curriculum_scope') return releasedScope(args)
     if (name !== 'create_daily_plan_v2') throw new Error(`unexpected RPC: ${name}`)
     const items = args.p_items as Array<Record<string, unknown>>
     return {
@@ -189,6 +210,7 @@ beforeEach(() => {
     })),
   }))
   mockRpc.mockReset()
+  installDefaultRpc()
 })
 
 describe('GET /api/study/today', () => {
@@ -346,7 +368,8 @@ describe('GET /api/study/today', () => {
 
     const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
     expect(response.status).toBe(200)
-    const items = (mockRpc.mock.calls[0][1] as { p_items: Array<{ source_type: string; position: number }> }).p_items
+    const createCall = mockRpc.mock.calls.find(([name]) => name === 'create_daily_plan_v2')
+    const items = (createCall?.[1] as { p_items: Array<{ source_type: string; position: number }> }).p_items
     expect(items).toHaveLength(15)
     expect(items.every((item) => item.source_type === 'fresh')).toBe(true)
     expect(items.map((item) => item.position)).toEqual(Array.from({ length: 15 }, (_, index) => index + 1))
@@ -375,7 +398,7 @@ describe('GET /api/study/today', () => {
 
     expect(response.status).toBe(400)
     expect(mockFetchDue).not.toHaveBeenCalled()
-    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockRpc.mock.calls.some(([name]) => name === 'create_daily_plan_v2')).toBe(false)
   })
 
   it('tum havuzlar bossa bos snapshot yazmadan null bilet doner', async () => {
@@ -397,7 +420,7 @@ describe('GET /api/study/today', () => {
       attemptId: null,
       expiresAt: null,
     })
-    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockRpc.mock.calls.some(([name]) => name === 'create_daily_plan_v2')).toBe(false)
     expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
   })
 
@@ -407,7 +430,7 @@ describe('GET /api/study/today', () => {
     tableMocks.curriculum_outcomes.push({ data: [] })
     tableMocks.user_question_history.push({ data: [] })
     expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).status).toBe(500)
-    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockRpc.mock.calls.map(([name]) => name)).toEqual(['resolve_released_curriculum_scope'])
 
     for (const mock of Object.values(tableMocks)) mock.reset()
     tableMocks.daily_plan.push({ data: null })
@@ -415,7 +438,11 @@ describe('GET /api/study/today', () => {
     tableMocks.questions.push({ data: [question] })
     tableMocks.curriculum_outcomes.push({ data: [] })
     tableMocks.user_question_history.push({ data: [] })
-    mockRpc.mockResolvedValue({ data: null, error: { code: '22023' } })
+    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => (
+      name === 'resolve_released_curriculum_scope'
+        ? releasedScope(args)
+        : { data: null, error: { code: '22023' } }
+    ))
     expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).status).toBe(500)
     expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
   })
@@ -426,7 +453,11 @@ describe('GET /api/study/today', () => {
     tableMocks.questions.push({ data: [question] })
     tableMocks.curriculum_outcomes.push({ data: [] })
     tableMocks.user_question_history.push({ data: [] })
-    mockRpc.mockResolvedValue({ data: { planId: 'not-a-uuid' }, error: null })
+    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => (
+      name === 'resolve_released_curriculum_scope'
+        ? releasedScope(args)
+        : { data: { planId: 'not-a-uuid' }, error: null }
+    ))
     expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).status).toBe(500)
 
     for (const mock of Object.values(tableMocks)) mock.reset()

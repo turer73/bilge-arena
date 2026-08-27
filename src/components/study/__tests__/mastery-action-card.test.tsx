@@ -13,6 +13,29 @@ vi.mock('@/lib/hooks/use-mastery-map', () => ({
 }))
 
 const mockedUseMasteryMap = vi.mocked(useMasteryMap)
+const fetchMasteryMock = vi.fn()
+
+const supportedCoverage = {
+  supported: true,
+  diagnosticAvailable: true,
+  taxonomyVersion: 'ba-tyt-math-v1',
+  totalQuestions: 10,
+  mappedQuestions: 10,
+  percentage: 100,
+}
+
+function hookResult(overrides: Record<string, unknown> = {}) {
+  return {
+    response: { coverage: supportedCoverage },
+    outcomes: [],
+    discovery: null,
+    coverage: supportedCoverage,
+    loading: false,
+    error: false,
+    fetchMastery: fetchMasteryMock,
+    ...overrides,
+  }
+}
 
 function mkOutcome(overrides: Partial<MasteryOutcome> = {}): MasteryOutcome {
   return {
@@ -51,6 +74,7 @@ function mkOutcome(overrides: Partial<MasteryOutcome> = {}): MasteryOutcome {
 describe('MasteryActionCard', () => {
   beforeEach(() => {
     pushMock.mockClear()
+    fetchMasteryMock.mockClear()
     mockedUseMasteryMap.mockReset()
     useGameStore.setState({
       selectedGame: null,
@@ -61,30 +85,48 @@ describe('MasteryActionCard', () => {
     })
   })
 
-  test('loading veya outcome yoksa render etmez', () => {
-    mockedUseMasteryMap.mockReturnValue({ outcomes: [], loading: false } as never)
+  test('loading sirasinda render etmez', () => {
+    mockedUseMasteryMap.mockReturnValue(hookResult({ loading: true }) as never)
     const { container } = render(<MasteryActionCard game="matematik" userId="u1" />)
     expect(container.innerHTML).toBe('')
   })
 
+  test('release edilmemis kapsamda sessizce kaybolmak yerine hazirlaniyor durumunu gosterir', () => {
+    const coverage = {
+      supported: false, diagnosticAvailable: false, taxonomyVersion: null,
+      totalQuestions: 0, mappedQuestions: 0, percentage: 0,
+    }
+    mockedUseMasteryMap.mockReturnValue(hookResult({
+      response: { coverage }, coverage,
+    }) as never)
+    render(<MasteryActionCard game="turkce" userId="u1" examRef="TYT" />)
+    expect(screen.getByText('KEŞİF SEVİYESİ HAZIRLANIYOR')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Serbest pratikle devam et' })).toHaveAttribute('href', '/arena/turkce')
+  })
+
+  test('yukleme hatasinda tekrar deneme sunar', () => {
+    mockedUseMasteryMap.mockReturnValue(hookResult({ response: null, error: true }) as never)
+    render(<MasteryActionCard game="fen" userId="u1" examRef="TYT" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Tekrar Dene' }))
+    expect(fetchMasteryMock).toHaveBeenCalledTimes(1)
+  })
+
   test('tüm kazanımlar mastered ise güçlü durumunu gösterir', () => {
-    mockedUseMasteryMap.mockReturnValue({
+    mockedUseMasteryMap.mockReturnValue(hookResult({
       outcomes: [mkOutcome({ status: 'mastered', accuracy: 92, score: 92 })],
-      loading: false,
-    } as never)
+    }) as never)
     render(<MasteryActionCard game="matematik" userId="u1" />)
     expect(screen.getByText('GÜÇLÜ')).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   test('güvenilir developing kazanımı insufficient kanıttan önce next-best seçer', () => {
-    mockedUseMasteryMap.mockReturnValue({
+    mockedUseMasteryMap.mockReturnValue(hookResult({
       outcomes: [
         mkOutcome({ code: 'KANIT', title: 'Yeni konu', status: 'insufficient', attempts: 2, evidenceCompleteness: 66 }),
         mkOutcome({ code: 'GELISEN', title: 'Gelişen konu', status: 'developing', score: 32 }),
       ],
-      loading: false,
-    } as never)
+    }) as never)
     render(<MasteryActionCard game="matematik" userId="u1" />)
 
     expect(screen.getByText('Gelişen konu')).toBeInTheDocument()
@@ -93,10 +135,9 @@ describe('MasteryActionCard', () => {
   })
 
   test('yalnız insufficient varsa zayıf demeden kanıt toplama aksiyonu verir', () => {
-    mockedUseMasteryMap.mockReturnValue({
+    mockedUseMasteryMap.mockReturnValue(hookResult({
       outcomes: [mkOutcome({ status: 'insufficient', attempts: 1, evidenceCompleteness: 34 })],
-      loading: false,
-    } as never)
+    }) as never)
     render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
 
     expect(screen.getByText('KANIT TOPLA')).toBeInTheDocument()
@@ -112,15 +153,14 @@ describe('MasteryActionCard', () => {
   })
 
   test('ilk kullanımda skor yerine keşif turuna yönlendirir', () => {
-    mockedUseMasteryMap.mockReturnValue({
+    mockedUseMasteryMap.mockReturnValue(hookResult({
       outcomes: [mkOutcome({ status: 'insufficient', attempts: 0, score: 0 })],
       discovery: {
         level: 1, stage: 'estimate', diagnosticCompleted: false,
         evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0,
         totalOutcomes: 1, journeyPercentage: 0,
       },
-      loading: false,
-    } as never)
+    }) as never)
     render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
 
     expect(screen.getByText('KEŞİF SEVİYESİ 1/3')).toBeInTheDocument()
@@ -128,8 +168,37 @@ describe('MasteryActionCard', () => {
     expect(screen.queryByText(/zayıf/i)).not.toBeInTheDocument()
   })
 
+  test('tanilamasi olmayan released derste dogrudan kanit pratigine baslar', () => {
+    const fenCoverage = {
+      ...supportedCoverage,
+      diagnosticAvailable: false,
+      taxonomyVersion: 'ba-tyt-fen-v1',
+    }
+    mockedUseMasteryMap.mockReturnValue(hookResult({
+      response: { coverage: fenCoverage },
+      coverage: fenCoverage,
+      outcomes: [mkOutcome({
+        code: 'FEN-FIZ-01', game: 'fen', category: 'fizik', examRef: 'TYT',
+        title: 'Fiziksel akıl yürütme', status: 'insufficient', attempts: 0, score: 0,
+      })],
+      discovery: {
+        level: 1, stage: 'estimate', diagnosticCompleted: false,
+        evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0,
+        totalOutcomes: 1, journeyPercentage: 0,
+      },
+    }) as never)
+    render(<MasteryActionCard game="fen" userId="u1" examRef="TYT" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keşif Pratiğini Başlat' }))
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'fen', selectedCategory: 'fizik', selectedExamRef: 'TYT', selectedMode: 'practice',
+    })
+    expect(pushMock).toHaveBeenCalledWith('/arena/fen')
+    expect(screen.queryByRole('link', { name: 'Keşif Turunu Başlat' })).not.toBeInTheDocument()
+  })
+
   test('kanıt evresinde en az denenmiş kazanımı sıraya alır', () => {
-    mockedUseMasteryMap.mockReturnValue({
+    mockedUseMasteryMap.mockReturnValue(hookResult({
       outcomes: [
         mkOutcome({ code: 'IKI', title: 'İki kez denendi', status: 'insufficient', attempts: 2 }),
         mkOutcome({ code: 'SIFIR', title: 'Henüz denenmedi', status: 'insufficient', attempts: 0 }),
@@ -139,8 +208,7 @@ describe('MasteryActionCard', () => {
         evidenceCollected: 2, evidenceTarget: 6, readyOutcomes: 0,
         totalOutcomes: 2, journeyPercentage: 50,
       },
-      loading: false,
-    } as never)
+    }) as never)
     render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
 
     expect(screen.getByText('KEŞİF SEVİYESİ 2/3')).toBeInTheDocument()

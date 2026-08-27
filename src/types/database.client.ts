@@ -540,6 +540,21 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: never
         Returns: Json
       }
+      curriculum_scope_integrity: {
+        Args: {
+          p_game: string
+          p_display_exam_ref: string
+          p_taxonomy_version: string
+        }
+        Returns: Json
+      }
+      resolve_released_curriculum_scope: {
+        Args: {
+          p_game: string
+          p_display_exam_ref: string
+        }
+        Returns: Json
+      }
       record_verified_hint_event: {
         Args: {
           p_attempt_id: string
