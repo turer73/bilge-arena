@@ -28,6 +28,7 @@
     "test:persistent-fsrs:pg": "vitest run --config vitest.database.config.ts database/__tests__/persistent-fsrs-postgres.integration.test.mjs",
     "test:daily-plan:pg": "vitest run --config vitest.database.config.ts database/__tests__/daily-plan-items-v2-postgres.integration.test.mjs",
     "test:curriculum-graph:pg": "vitest run --config vitest.database.config.ts database/__tests__/curriculum-graph-v1-postgres.integration.test.mjs",
+    "test:curriculum-scope:pg": "vitest run --config vitest.database.config.ts database/__tests__/curriculum-scope-release-postgres.integration.test.mjs",
     "test:mastery-evidence:pg": "vitest run --config vitest.database.config.ts database/__tests__/mastery-evidence-v2-postgres.integration.test.mjs",
     "test:adaptive-diagnostic:pg": "vitest run --config vitest.database.config.ts database/__tests__/adaptive-diagnostic-postgres.integration.test.mjs",
     "test:question-quality:pg": "vitest run --config vitest.database.config.ts --no-file-parallelism database/__tests__/adaptive-diagnostic-postgres.integration.test.mjs database/__tests__/question-content-governance-postgres.integration.test.mjs database/__tests__/question-outcome-mapping-candidates-postgres.integration.test.mjs database/__tests__/admin-homepage-mutation-governance-postgres.integration.test.mjs database/__tests__/admin-rbac-mutation-governance-postgres.integration.test.mjs database/__tests__/reward-integrity-postgres.integration.test.mjs",
