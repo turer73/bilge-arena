@@ -17,12 +17,15 @@ import type {
 } from '@/types/database'
 import type { Database, Json } from '@/types/database.generated'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
+import { createSiteJsonLd } from '@/lib/seo/site-json-ld'
+import { ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT } from '@/lib/experiments/activation'
 
 // ISR: Her 5 dakikada bir yeniden oluştur (Supabase sorgularını cache'le)
 export const revalidate = 300
 
 /* ─── SEO: Ana sayfa metadata ─── */
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
+const siteJsonLd = createSiteJsonLd(siteUrl)
 
 export const metadata: Metadata = {
   // SERP limitleri: title ~60 char, description 120-160 char (bug #582)
@@ -183,6 +186,15 @@ export default async function Home() {
 
   return (
     <>
+      {/* Homepage-only scripts stay on the public, AdSense-compatible document. */}
+      <script
+        id="activation-experiment-bootstrap"
+        dangerouslySetInnerHTML={{ __html: ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
+      />
       <Navbar />
       <main>
         <SectionWrapper section="hero" elements={elements}>

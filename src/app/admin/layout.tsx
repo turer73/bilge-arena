@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { connection } from 'next/server'
 import { AdminSidebar } from '@/components/admin/admin-sidebar'
 
 export const metadata: Metadata = {
@@ -6,7 +7,11 @@ export const metadata: Metadata = {
   title: 'Admin Panel — Bilge Arena',
 }
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  // The private CSP nonce is generated per request in Proxy. Dynamic rendering
+  // is therefore required so Next can attach that nonce to framework scripts.
+  await connection()
+
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />

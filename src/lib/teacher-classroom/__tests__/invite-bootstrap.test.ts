@@ -57,98 +57,63 @@ describe('teacher invitation head bootstrap', () => {
     expect(result.location.hash).toBe('')
   })
 
-  it('keeps the bootstrap before Plausible and applies the analytics-free private CSP last', () => {
+  it('keeps the bootstrap before third-party scripts and routes private pages through nonce CSP', () => {
     const root = process.cwd()
     const layout = fs.readFileSync(path.join(root, 'src/app/layout.tsx'), 'utf8')
     const thirdPartyScripts = fs.readFileSync(
       path.join(root, 'src/components/analytics/privacy-safe-third-party-scripts.tsx'),
       'utf8',
     )
+    const inviteLayout = fs.readFileSync(
+      path.join(root, 'src/app/arena/sinif/davet/layout.tsx'),
+      'utf8',
+    )
+    const homepage = fs.readFileSync(path.join(root, 'src/app/page.tsx'), 'utf8')
     const config = fs.readFileSync(path.join(root, 'next.config.mjs'), 'utf8')
-    const bootstrapIndex = layout.indexOf('id="teacher-invite-bootstrap"')
+    const proxy = fs.readFileSync(path.join(root, 'src/proxy.ts'), 'utf8')
+    const csp = fs.readFileSync(path.join(root, 'src/lib/security/csp.ts'), 'utf8')
+    const childrenIndex = layout.indexOf('{children}')
     const thirdPartyMountIndex = layout.indexOf('<PrivacySafeThirdPartyScripts />')
-    const globalHeadersIndex = config.indexOf("source: '/(.*)'")
     const privateHeadersIndex = config.indexOf("source: '/arena/sinif/:path*'")
-    // Blok sinirini BIR SONRAKI `source:` kaydinda kes. Onceden '// Statik asset'
-    // isaretine kadar dilimleniyordu; araya baska bir kural blogu (ornegin admin
-    // CSP'si) girdiginde onun icerigi de bu bloga sayiliyor ve asagidaki
-    // "analitik/reklam gecmesin" iddiasi yanlis yere bakiyordu.
     const nextSourceIndex = config.indexOf('source:', privateHeadersIndex + 1)
-    const privateBlockEnd = nextSourceIndex > -1
-      ? nextSourceIndex
-      : config.indexOf('// Statik asset', privateHeadersIndex)
-    const privateBlock = config.slice(privateHeadersIndex, privateBlockEnd)
+    const privateBlock = config.slice(privateHeadersIndex, nextSourceIndex)
 
-    expect(bootstrapIndex).toBeGreaterThan(-1)
-    expect(bootstrapIndex).toBeLessThan(thirdPartyMountIndex)
+    expect(childrenIndex).toBeGreaterThan(-1)
+    expect(childrenIndex).toBeLessThan(thirdPartyMountIndex)
+    expect(layout).not.toContain('id="teacher-invite-bootstrap"')
+    expect(layout).not.toContain('id="activation-experiment-bootstrap"')
+    expect(inviteLayout).toContain('id="teacher-invite-bootstrap"')
+    expect(inviteLayout).toContain("(await headers()).get('x-nonce')")
+    expect(inviteLayout).toContain('nonce={nonce}')
+    expect(homepage).toContain('id="activation-experiment-bootstrap"')
+    expect(homepage).toContain('type="application/ld+json"')
     expect(thirdPartyScripts).toContain('https://analytics.panola.app/js/script.js')
     expect(thirdPartyScripts).toContain('isSensitiveWorkspacePath(pathname)')
-    expect(privateHeadersIndex).toBeGreaterThan(globalHeadersIndex)
-    expect(privateBlock).toContain('sensitiveScriptSource')
-    expect(privateBlock).not.toContain("'unsafe-eval'")
-    expect(privateBlock).not.toMatch(/analytics\.panola|googletagmanager|googlesyndication|sentry/i)
     expect(privateBlock).toContain("{ key: 'Referrer-Policy', value: 'no-referrer' }")
+    expect(privateBlock).not.toContain("key: 'Content-Security-Policy'")
+    expect(proxy).toContain('isSensitiveWorkspacePath(pathname)')
+    expect(proxy).toContain("requestHeaders.set('x-nonce', nonce)")
+    expect(csp).toContain("'strict-dynamic'")
+    expect(csp).not.toMatch(/analytics\.panola|googletagmanager|googlesyndication|plausible/i)
   })
 
   /**
-   * Guvenlik denetimi 2026-08-25 (B6): 'unsafe-eval' global public blokta
-   * AdSense gerekcesiyle duruyor. Reklamsiz kurum, sinif ve admin document
-   * boundary'lerinde daha dar politika artik enforcing olmalidir.
+   * Public monetized pages retain the AdSense-compatible policy. Private
+   * documents are dynamically rendered and receive a per-request nonce.
    */
-  it('enforces the production eval-free policy on ad-free sensitive surfaces', () => {
-    const config = fs.readFileSync(path.join(process.cwd(), 'next.config.mjs'), 'utf8')
-    const sensitiveSourceIndex = config.indexOf('const sensitiveScriptSource')
-    const sensitiveSourceEnd = config.indexOf('/** @type', sensitiveSourceIndex)
-    const sensitiveSourceDefinition = config.slice(sensitiveSourceIndex, sensitiveSourceEnd)
+  it('forces dynamic rendering for every private nonce boundary', () => {
+    const root = process.cwd()
+    const privateLayouts = [
+      'src/app/admin/layout.tsx',
+      'src/app/arena/sinif/layout.tsx',
+      'src/app/arena/kurum/layout.tsx',
+      'src/app/hesap/guvenlik/layout.tsx',
+    ]
 
-    expect(sensitiveSourceIndex).toBeGreaterThan(-1)
-    expect(sensitiveSourceDefinition).toContain("process.env.NODE_ENV === 'development'")
-    expect(sensitiveSourceDefinition).toContain("? \"script-src 'self' 'unsafe-inline' 'unsafe-eval'\"")
-    expect(sensitiveSourceDefinition).toContain(": \"script-src 'self' 'unsafe-inline'\"")
-
-    const adminIndex = config.indexOf("source: '/admin/:path*'", config.indexOf("source: '/(.*)'"))
-    const adminBlockEnd = config.indexOf('source:', adminIndex + 1)
-    const adminBlock = config.slice(adminIndex, adminBlockEnd > -1 ? adminBlockEnd : undefined)
-
-    expect(adminIndex).toBeGreaterThan(-1)
-    expect(adminBlock).toContain("key: 'Content-Security-Policy'")
-    expect(adminBlock).toContain('sensitiveScriptSource')
-    expect(adminBlock).not.toContain("Content-Security-Policy-Report-Only")
-    expect(adminBlock).not.toContain("'unsafe-eval'")
-    expect(adminBlock).not.toMatch(/googlesyndication|googletagmanager|plausible/i)
-    expect(adminBlock).not.toContain('report-uri')
-
-    const adminCacheIndex = config.indexOf("source: '/admin/:path*'")
-    const adminCacheBlock = config.slice(adminCacheIndex, config.indexOf('source:', adminCacheIndex + 1))
-    expect(adminCacheBlock).toContain("{ key: 'Referrer-Policy', value: 'no-referrer' }")
-
-    const sinifIndex = config.indexOf("source: '/arena/sinif/:path*'")
-    const sinifBlock = config.slice(sinifIndex, config.indexOf('source:', sinifIndex + 1))
-    expect(sinifBlock).toContain("key: 'Content-Security-Policy'")
-    expect(sinifBlock).toContain('sensitiveScriptSource')
-    expect(sinifBlock).not.toContain("Content-Security-Policy-Report-Only")
-    expect(sinifBlock).not.toContain("'unsafe-eval'")
-    expect(sinifBlock).not.toContain('report-uri')
-
-    const kurumIndex = config.indexOf("source: '/arena/kurum/:path*'")
-    const kurumBlock = config.slice(kurumIndex, config.indexOf('source:', kurumIndex + 1))
-    expect(kurumIndex).toBeGreaterThan(-1)
-    expect(kurumBlock).toContain("key: 'Content-Security-Policy'")
-    expect(kurumBlock).toContain('sensitiveScriptSource')
-    expect(kurumBlock).not.toContain("Content-Security-Policy-Report-Only")
-    expect(kurumBlock).not.toContain("'unsafe-eval'")
-    expect(kurumBlock).not.toMatch(/googlesyndication|googletagmanager|plausible/i)
-    expect(kurumBlock).not.toContain('report-uri')
-
-    const accountSecurityIndex = config.indexOf("source: '/hesap/guvenlik/:path*'")
-    const accountSecurityBlock = config.slice(
-      accountSecurityIndex,
-      config.indexOf('source:', accountSecurityIndex + 1),
-    )
-    expect(accountSecurityIndex).toBeGreaterThan(-1)
-    expect(accountSecurityBlock).toContain("key: 'Content-Security-Policy'")
-    expect(accountSecurityBlock).toContain('sensitiveScriptSource')
-    expect(accountSecurityBlock).not.toContain("'unsafe-eval'")
-    expect(accountSecurityBlock).not.toMatch(/googlesyndication|googletagmanager|plausible|report-uri/i)
+    for (const relativePath of privateLayouts) {
+      const privateLayout = fs.readFileSync(path.join(root, relativePath), 'utf8')
+      expect(privateLayout, relativePath).toContain("from 'next/server'")
+      expect(privateLayout, relativePath).toContain('await connection()')
+    }
   })
 })
