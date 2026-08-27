@@ -11,10 +11,19 @@ type Profiles = PublicSchema['Tables']['profiles']
 
 // Migration 177 is intentionally app-first. Keep the deploy-compatible shape
 // here until the production schema is migrated and generated types are synced.
-type ProfilesWithLeaderboardOptIn = {
-  Row: Profiles['Row'] & { leaderboard_opt_in: boolean }
-  Insert: Profiles['Insert'] & { leaderboard_opt_in?: boolean }
-  Update: Profiles['Update'] & { leaderboard_opt_in?: boolean }
+type ProfilesWithPrivacyPreferences = {
+  Row: Profiles['Row'] & {
+    leaderboard_opt_in: boolean
+    profile_visibility: 'private' | 'friends' | 'public'
+  }
+  Insert: Profiles['Insert'] & {
+    leaderboard_opt_in?: boolean
+    profile_visibility?: 'private' | 'friends' | 'public'
+  }
+  Update: Profiles['Update'] & {
+    leaderboard_opt_in?: boolean
+    profile_visibility?: 'private' | 'friends' | 'public'
+  }
   Relationships: Profiles['Relationships']
 }
 
@@ -330,7 +339,7 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       PublicSchema['Tables'],
       'profiles' | 'user_achievements' | 'curriculum_outcomes' | 'question_outcomes' | 'user_outcome_state'
     > & {
-      profiles: ProfilesWithLeaderboardOptIn
+      profiles: ProfilesWithPrivacyPreferences
       user_achievements: UserAchievementsWithSource
       curriculum_nodes: {
         Row: CurriculumNodesRow

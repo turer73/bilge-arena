@@ -17,6 +17,7 @@ import { useGameStore } from '@/stores/game-store'
 export default function ArenaClient() {
   const { user, profile } = useAuthStore()
   const selectedExamRef = useGameStore((state) => state.selectedExamRef)
+  const setExamRef = useGameStore((state) => state.setExamRef)
   const { quests } = useDailyQuests()
   const [institutionVisible, setInstitutionVisible] = useState(false)
 
@@ -38,10 +39,10 @@ export default function ArenaClient() {
   }, [institutionEnabled, user?.id])
 
   const availableSubjects = useMemo(
-    () => gamesForExamType(profile?.exam_type).map((game) =>
-      (game.slug === 'wordquest' ? 'ingilizce' : game.slug) as MobileSubjectId,
-    ),
-    [profile?.exam_type],
+    () => gamesForExamType(profile?.exam_type)
+      .filter((game) => !selectedExamRef || game.examTags.includes(selectedExamRef))
+      .map((game) => (game.slug === 'wordquest' ? 'ingilizce' : game.slug) as MobileSubjectId),
+    [profile?.exam_type, selectedExamRef],
   )
   const questionGoal = quests.find((quest) => quest.quest?.quest_type === 'correct_answers')
 
@@ -50,11 +51,13 @@ export default function ArenaClient() {
       mode="live"
       examLabel={profile?.exam_type === 'lgs' ? 'LGS' : 'YKS'}
       examRef={selectedExamRef ?? (profile?.exam_type === 'lgs' ? 'LGS' : 'TYT')}
+      onExamRefChange={setExamRef}
       availableSubjects={availableSubjects}
       currentStreak={profile?.current_streak ?? 0}
       coinBalance={profile?.coin_balance ?? 0}
       totalXP={profile?.total_xp ?? 0}
       displayName={profile?.username || profile?.display_name || 'Arenacı'}
+      avatarUrl={profile?.avatar_url ?? null}
       dailyGoal={questionGoal?.quest ? {
         current: questionGoal.current_value,
         target: questionGoal.quest.target_value,

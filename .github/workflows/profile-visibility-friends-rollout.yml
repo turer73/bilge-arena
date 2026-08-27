@@ -1,0 +1,44 @@
+name: Profile visibility and friends production rollout
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Inspect is read-only; apply runs migrations 185 and 186
+        required: true
+        default: inspect
+        type: choice
+        options: [inspect, apply]
+      confirmation:
+        description: Type APPLY_PROFILE_FRIENDS when action is apply
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: profile-visibility-friends-production-rollout
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Validate production confirmation
+        if: inputs.action == 'apply' && inputs.confirmation != 'APPLY_PROFILE_FRIENDS'
+        run: |
+          echo '::error::Apply requires exact confirmation APPLY_PROFILE_FRIENDS'
+          exit 1
+      - name: Inspect or apply profile visibility and friends migrations
+        run: >-
+          node database/deploy-profile-visibility-friends.mjs
+          ${{ inputs.action == 'apply' && '--apply --confirm-production' || '' }}

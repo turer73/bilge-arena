@@ -118,7 +118,7 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { username, display_name, city, grade, exam_type, onboarding_completed, preferred_theme, is_discoverable, leaderboard_opt_in } = parsed.data
+  const { username, display_name, city, grade, exam_type, onboarding_completed, preferred_theme, is_discoverable, profile_visibility, leaderboard_opt_in } = parsed.data
   const updates: Database['public']['Tables']['profiles']['Update'] = {}
   if (username) updates.username = username
   if (display_name !== undefined) updates.display_name = display_name || null
@@ -128,6 +128,7 @@ export async function PATCH(request: NextRequest) {
   if (onboarding_completed) updates.onboarding_completed = true
   if (preferred_theme !== undefined) updates.preferred_theme = preferred_theme
   if (is_discoverable !== undefined) updates.is_discoverable = is_discoverable
+  if (profile_visibility !== undefined) updates.profile_visibility = profile_visibility
   if (leaderboard_opt_in !== undefined) updates.leaderboard_opt_in = leaderboard_opt_in
 
   // 5) Service-role update — sahip kontrolu auth.uid() = user.id ile yapildi
@@ -136,7 +137,7 @@ export async function PATCH(request: NextRequest) {
     .from('profiles')
     .update(updates)
     .eq('id', user.id)
-    .select('id, username, display_name, city, grade, exam_type, avatar_url, onboarding_completed, is_discoverable, leaderboard_opt_in')
+    .select('id, username, display_name, city, grade, exam_type, avatar_url, onboarding_completed, is_discoverable, profile_visibility, leaderboard_opt_in')
     .single()
 
   if (error) {

@@ -12,7 +12,7 @@ import { MasteryActionCard } from '@/components/study/mastery-action-card'
 import { StudyContextSelector } from '@/components/study/study-context-selector'
 import { StudyAssistantLauncher } from '@/components/study/study-assistant-launcher'
 import { InstitutionWeeklyProgramCard } from '@/components/study/institution-weekly-program-card'
-import { BookOpenCheck, ChevronRight, Clock3, Settings2, Sparkles, Target } from 'lucide-react'
+import { BookOpenCheck, ChevronRight, Clock3, Sparkles, Target } from 'lucide-react'
 
 const MOBILE_APP_SHELL_STYLE = '@media (max-width: 1023px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }'
 
@@ -110,8 +110,10 @@ export default function CalismaClient() {
               <h1 className="text-lg font-black leading-5 md:text-2xl">Pratik</h1>
             </div>
           </div>
-          <Link href="/arena/profil" aria-label="Çalışma ayarları" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 border-transparent text-[var(--app-text-muted)] active:border-[var(--app-border)] active:bg-[var(--app-hover)]">
-            <Settings2 size={21} strokeWidth={2.5} />
+          <Link href="/arena/profil" aria-label={`${profile?.display_name || profile?.username || 'Profil'} sayfasını aç`} className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-sm font-black text-[var(--app-accent-text)] shadow-[0_2px_0_var(--app-shadow-accent)] active:translate-y-0.5">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            ) : (profile?.display_name || profile?.username || 'B').trim().charAt(0).toLocaleUpperCase('tr-TR')}
           </Link>
         </div>
       </header>

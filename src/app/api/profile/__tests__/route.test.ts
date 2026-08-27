@@ -184,6 +184,24 @@ describe('PATCH /api/profile', () => {
     expect(res.status).toBe(400)
   })
 
+  it('accepts private/friends/public profile visibility', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockProfileUpdate.mockResolvedValue({
+      data: { id: 'u1', profile_visibility: 'friends' },
+      error: null,
+    })
+
+    const res = await PATCH(makePatch({ profile_visibility: 'friends' }) as never)
+    expect(res.status).toBe(200)
+    expect((await res.json()).profile_visibility).toBe('friends')
+  })
+
+  it('rejects an unknown profile visibility value', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await PATCH(makePatch({ profile_visibility: 'classroom' }) as never)
+    expect(res.status).toBe(400)
+  })
+
   it('accepts a boolean public leaderboard opt-in', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockProfileUpdate.mockResolvedValue({
