@@ -1,4 +1,5 @@
-// Opt-in disposable PostgreSQL coverage for 086 -> 096 -> 138 -> 178 -> 179.
+// Opt-in disposable PostgreSQL coverage for 086 -> 091 -> 094 -> 096 -> 097
+// -> 138 -> 178 -> historical verified Fen attempt -> 179 -> 180.
 // Requires VERIFIED_ATTEMPTS_TEST_DATABASE_URL=.../bilge_r02_test_* and
 // VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE=1. Normal CI does not run it.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -16,17 +17,27 @@ if (url && !/^bilge_r02_test_[a-z0-9_]+$/i.test(new URL(url).pathname.slice(1)))
 const describePg = enabled ? describe : describe.skip
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations')
 const migration = (name) => readFileSync(join(root, name), 'utf8')
-const migrations = [
+const foundationMigrations = [
   '086_outcome_mastery_pilot.sql',
+  '091_verified_attempts.sql',
+  '094_persistent_fsrs.sql',
   '096_curriculum_graph_v1.sql',
+  '097_mastery_evidence_v2.sql',
   '138_curriculum_outcomes_all_subjects.sql',
   '178_curriculum_scope_release_registry.sql',
-  '179_release_tyt_fen_mastery_scope.sql',
 ].map(migration)
+const registryMigration = migration('178_curriculum_scope_release_registry.sql')
+const fenReleaseMigration = migration('179_release_tyt_fen_mastery_scope.sql')
+const fenRepairMigration = migration('180_backfill_released_tyt_fen_mastery_evidence.sql')
 const { Client } = pg
 
-describePg('178-179 curriculum scope release real PostgreSQL', () => {
+describePg('178-180 curriculum scope release real PostgreSQL', () => {
   let client
+  let historicalUser
+  let historicalAttempt
+  let historicalSession
+  let historicalAnswers
+  let preRepair
   const mathCategories = ['sayilar', 'denklemler', 'fonksiyonlar', 'problemler', 'geometri', 'olasilik']
   const fenCategories = ['fizik', 'kimya', 'biyoloji']
   const questionIds = new Map([...mathCategories, ...fenCategories]
@@ -54,15 +65,27 @@ describePg('178-179 curriculum scope release real PostgreSQL', () => {
         id uuid PRIMARY KEY,
         game varchar(20) NOT NULL,
         category varchar(30) NOT NULL,
+        difficulty smallint NOT NULL DEFAULT 3 CHECK (difficulty BETWEEN 1 AND 5),
         exam_ref varchar(20),
         is_active boolean NOT NULL DEFAULT true
       );
+      CREATE TABLE public.game_sessions (
+        id uuid PRIMARY KEY,
+        user_id uuid NOT NULL REFERENCES public.profiles(id),
+        client_request_id uuid,
+        total_xp integer DEFAULT 0,
+        correct_count smallint DEFAULT 0,
+        wrong_count smallint DEFAULT 0
+      );
       CREATE TABLE public.session_answers (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        session_id uuid NOT NULL REFERENCES public.game_sessions(id),
         user_id uuid NOT NULL REFERENCES public.profiles(id),
         question_id uuid NOT NULL REFERENCES public.questions(id),
         is_correct boolean NOT NULL,
         is_skipped boolean,
+        time_taken_sec numeric,
+        is_fast boolean,
         answered_at timestamptz NOT NULL DEFAULT clock_timestamp()
       );
     `)
@@ -80,7 +103,45 @@ describePg('178-179 curriculum scope release real PostgreSQL', () => {
         [questionIds.get(category), category],
       )
     }
-    for (const sql of migrations) await client.query(sql)
+    historicalUser = randomUUID()
+    historicalAttempt = randomUUID()
+    historicalSession = randomUUID()
+    historicalAnswers = fenCategories.map(() => randomUUID())
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [historicalUser])
+
+    for (const sql of foundationMigrations) await client.query(sql)
+
+    await client.query(
+      `INSERT INTO public.game_sessions(id,user_id,client_request_id) VALUES($1,$2,$3)`,
+      [historicalSession, historicalUser, randomUUID()],
+    )
+    await client.query(
+      `INSERT INTO public.verified_attempts(
+        id,user_id,game,mode,question_ids,duration_sec,expires_at
+      ) VALUES($1,$2,'fen','classic',$3,180,clock_timestamp()+interval '1 hour')`,
+      [historicalAttempt, historicalUser, fenCategories.map((category) => questionIds.get(category))],
+    )
+    for (const [index, category] of fenCategories.entries()) {
+      await client.query(
+        `INSERT INTO public.session_answers(
+          id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,clock_timestamp()-interval '3 hours')`,
+        [historicalAnswers[index], historicalSession, historicalUser, questionIds.get(category), index !== 1, 10 + index, false],
+      )
+    }
+    await client.query(
+      `UPDATE public.verified_attempts
+       SET completed_at=clock_timestamp()-interval '2 hours',session_id=$2
+       WHERE id=$1`,
+      [historicalAttempt, historicalSession],
+    )
+    preRepair = (await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS markers,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence`,
+    [historicalAttempt])).rows[0]
+
+    await client.query(fenReleaseMigration)
+    await client.query(fenRepairMigration)
   })
 
   afterAll(async () => client?.end())
@@ -131,6 +192,47 @@ describePg('178-179 curriculum scope release real PostgreSQL', () => {
       { category: 'fizik', code: 'FEN-FIZ-01', mapping_source: 'taxonomy_auto', is_primary: true },
       { category: 'kimya', code: 'FEN-KIM-01', mapping_source: 'taxonomy_auto', is_primary: true },
     ])
+  })
+
+  it('repairs historical verified Fen evidence once and records the exact scope ledger', async () => {
+    expect(preRepair).toEqual({ markers: 1, evidence: 0 })
+    const evidence = (await client.query(`SELECT evidence.base_already_recorded,evidence.is_correct,
+      outcome.category
+      FROM public.mastery_outcome_evidence AS evidence
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=evidence.outcome_id
+      WHERE evidence.attempt_id=$1 ORDER BY outcome.category`, [historicalAttempt])).rows
+    expect(evidence).toEqual([
+      { base_already_recorded: false, is_correct: true, category: 'biyoloji' },
+      { base_already_recorded: false, is_correct: true, category: 'fizik' },
+      { base_already_recorded: false, is_correct: false, category: 'kimya' },
+    ])
+    const aggregate = (await client.query(`SELECT
+      sum(attempts)::integer AS attempts,
+      sum(v2_attempts)::integer AS v2_attempts,
+      sum(correct_attempts)::integer AS correct_attempts
+      FROM public.user_outcome_state WHERE user_id=$1`, [historicalUser])).rows[0]
+    expect(aggregate).toEqual({ attempts: 3, v2_attempts: 3, correct_attempts: 2 })
+    expect((await client.query(`SELECT candidate_attempts,candidate_answers,
+      candidate_evidence_rows,inserted_evidence_rows,affected_users
+      FROM public.curriculum_scope_evidence_repairs
+      WHERE game='fen' AND display_exam_ref='TYT' AND taxonomy_version='ba-tyt-fen-v1'`)).rows[0]).toEqual({
+      candidate_attempts: 1,
+      candidate_answers: 3,
+      candidate_evidence_rows: 3,
+      inserted_evidence_rows: 3,
+      affected_users: 1,
+    })
+
+    await client.query(fenRepairMigration)
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [historicalUser, historicalAttempt])).rows[0]).toEqual({
+      evidence: 3,
+      attempts: 3,
+      v2_attempts: 3,
+    })
   })
 
   it('resolves released scopes, but never exposes draft scopes', async () => {
@@ -205,9 +307,25 @@ describePg('178-179 curriculum scope release real PostgreSQL', () => {
     })
   })
 
-  it('is replay-safe without downgrading Fen', async () => {
-    await client.query(migrations[3])
-    await client.query(migrations[4])
+  it('preserves operator retirement and later taxonomy metadata on replay', async () => {
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET release_status='retired' WHERE game='matematik' AND display_exam_ref='TYT'`)
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET release_status='released',taxonomy_version='ba-tyt-sosyal-v2',released_at=clock_timestamp()
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)
+
+    await client.query(registryMigration)
+    expect((await client.query(`SELECT release_status,taxonomy_version
+      FROM public.curriculum_scope_releases WHERE game='matematik' AND display_exam_ref='TYT'`)).rows[0]).toEqual({
+      release_status: 'retired', taxonomy_version: 'ba-tyt-math-v1',
+    })
+    expect((await client.query(`SELECT release_status,taxonomy_version
+      FROM public.curriculum_scope_releases WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0]).toEqual({
+      release_status: 'released', taxonomy_version: 'ba-tyt-sosyal-v2',
+    })
+
+    await client.query(fenReleaseMigration)
+    await client.query(fenRepairMigration)
     expect((await client.query(`SELECT release_status FROM public.curriculum_scope_releases
       WHERE game='fen' AND display_exam_ref='TYT'`)).rows[0].release_status).toBe('released')
     expect((await client.query(

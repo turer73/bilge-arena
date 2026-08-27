@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations')
 const registrySql = readFileSync(join(root, '178_curriculum_scope_release_registry.sql'), 'utf8')
 const fenReleaseSql = readFileSync(join(root, '179_release_tyt_fen_mastery_scope.sql'), 'utf8')
+const fenRepairSql = readFileSync(join(root, '180_backfill_released_tyt_fen_mastery_evidence.sql'), 'utf8')
 
-describe('178-179 curriculum scope release migrations', () => {
+describe('178-180 curriculum scope release migrations', () => {
   it('keeps the release registry private and resolves only released scopes', () => {
     expect(registrySql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_releases/)
     expect(registrySql).toMatch(/release_status IN \('draft','validating','released','retired'\)/)
@@ -25,8 +26,11 @@ describe('178-179 curriculum scope release migrations', () => {
     expect(registrySql).toContain("('turkce', 'TYT', 'TYT', 'ba-tyt-turkce-v1', 'draft'")
     expect(registrySql).toContain("('sosyal', 'TYT', 'TYT', 'ba-tyt-sosyal-v1', 'draft'")
     expect(registrySql).toContain("('wordquest', 'YDT', NULL, 'ba-ydt-eng-v1', 'draft'")
+    expect(registrySql).toMatch(/'matematik', 'TYT', 'TYT', 'ba-tyt-math-v1',[\s\S]*ON CONFLICT \(game, display_exam_ref\) DO NOTHING/)
     const draftUpsert = registrySql.slice(registrySql.indexOf('-- Graphs exist for these scopes'))
     expect(draftUpsert).not.toMatch(/ON CONFLICT[\s\S]{0,500}release_status\s*=\s*EXCLUDED\.release_status/)
+    expect(draftUpsert).toMatch(/WHERE public\.curriculum_scope_releases\.release_status IN \('draft', 'validating'\)/)
+    expect(draftUpsert).toMatch(/curriculum_scope_releases\.taxonomy_version = EXCLUDED\.taxonomy_version/)
   })
 
   it('uses a generic, fail-closed integrity contract', () => {
@@ -64,5 +68,19 @@ describe('178-179 curriculum scope release migrations', () => {
     ]) expect(fenReleaseSql).toMatch(new RegExp(`v_integrity->>'${field}'`))
     expect(fenReleaseSql).toMatch(/COALESCE\(\(v_integrity->>'total'\)::integer, 0\) <= 0/)
     expect(fenReleaseSql).toMatch(/SET release_status = 'released'[\s\S]*resolve_released_curriculum_scope\('fen', 'TYT'\)/)
+  })
+
+  it('repairs only missing historical verified Fen evidence with a private replay ledger', () => {
+    expect(fenRepairSql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_evidence_repairs/)
+    expect(fenRepairSql).toMatch(/ALTER TABLE public\.curriculum_scope_evidence_repairs ENABLE ROW LEVEL SECURITY/)
+    expect(fenRepairSql).toMatch(/REVOKE ALL ON TABLE public\.curriculum_scope_evidence_repairs[\s\S]*PUBLIC, anon, authenticated, service_role/)
+    expect(fenRepairSql).toMatch(/release_status = 'released'[\s\S]*curriculum_scope_integrity\('fen', 'TYT', 'ba-tyt-fen-v1'\)/)
+    expect(fenRepairSql).toMatch(/attempt\.game = 'fen'/)
+    expect(fenRepairSql).toMatch(/mapping\.mapping_source = 'taxonomy_auto'/)
+    expect(fenRepairSql).toMatch(/mapping\.created_at > answer\.answered_at/)
+    expect(fenRepairSql).toMatch(/LEFT JOIN public\.mastery_outcome_evidence AS existing[\s\S]*existing\.answer_id IS NULL/)
+    expect(fenRepairSql).toMatch(/ON CONFLICT \(answer_id, outcome_id\) DO NOTHING/)
+    expect(fenRepairSql).toMatch(/ON CONFLICT \(user_id, outcome_id\) DO UPDATE SET/)
+    expect(fenRepairSql).toMatch(/v_candidates <> v_inserted[\s\S]*TYT Fen evidence repair lost rows/)
   })
 })

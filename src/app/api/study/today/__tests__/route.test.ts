@@ -156,9 +156,20 @@ function releasedScope(args: Record<string, unknown>) {
   }
 }
 
+function cleanScopeIntegrity() {
+  return {
+    data: {
+      total: 630, mapped: 630, unmapped: 0, scopeMismatch: 0,
+      nodeOrphan: 0, outcomeOrphan: 0, primaryMismatch: 0, emptyOutcome: 0,
+    },
+    error: null,
+  }
+}
+
 function installDefaultRpc() {
   mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
     if (name === 'resolve_released_curriculum_scope') return releasedScope(args)
+    if (name === 'curriculum_scope_integrity') return cleanScopeIntegrity()
     throw new Error(`unexpected RPC: ${name}`)
   })
 }
@@ -166,6 +177,7 @@ function installDefaultRpc() {
 function installCreateRpcSuccess() {
   mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
     if (name === 'resolve_released_curriculum_scope') return releasedScope(args)
+    if (name === 'curriculum_scope_integrity') return cleanScopeIntegrity()
     if (name !== 'create_daily_plan_v2') throw new Error(`unexpected RPC: ${name}`)
     const items = args.p_items as Array<Record<string, unknown>>
     return {
@@ -375,6 +387,44 @@ describe('GET /api/study/today', () => {
     expect(items.map((item) => item.position)).toEqual(Array.from({ length: 15 }, (_, index) => index + 1))
   })
 
+  it('release satiri kalsa bile bozulan bütünlükte outcome kisilestirmesini kapatir', async () => {
+    tableMocks.daily_plan.push({ data: null })
+    const questions = Array.from({ length: 15 }, (_, index) => makeQuestionRow(uid(300 + index), { difficulty: 3 }))
+    tableMocks.questions.push({ data: questions })
+    tableMocks.user_question_history.push({ data: [] })
+    tableMocks.questions.push({ data: questions })
+    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+      if (name === 'resolve_released_curriculum_scope') return releasedScope(args)
+      if (name === 'curriculum_scope_integrity') {
+        return {
+          data: { ...cleanScopeIntegrity().data, scopeMismatch: 1 },
+          error: null,
+        }
+      }
+      if (name !== 'create_daily_plan_v2') throw new Error(`unexpected RPC: ${name}`)
+      const items = args.p_items as Array<Record<string, unknown>>
+      return {
+        data: {
+          planId: uid(901), game: args.p_game, planDate: args.p_plan_date,
+          examRef: args.p_exam_ref, questionIds: items.map((item) => item.question_id),
+          completedIds: [], items: items.map((item) => ({
+            questionId: item.question_id, position: item.position, slotType: item.slot_type,
+            sourceType: item.source_type, completed: false,
+          })),
+        },
+        error: null,
+      }
+    })
+
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(200)
+    expect(tableMocks.curriculum_outcomes.calls).toHaveLength(0)
+    const createCall = mockRpc.mock.calls.find(([name]) => name === 'create_daily_plan_v2')
+    const items = (createCall?.[1] as { p_items: Array<{ source_type: string }> }).p_items
+    expect(items).toHaveLength(15)
+    expect(items.every((item) => item.source_type === 'fresh')).toBe(true)
+  })
+
   it('aday sorgularini sinirli tutar ve profilin LGS varsayilanini uygular', async () => {
     tableMocks.profiles.push({ data: { exam_type: 'lgs' } })
     tableMocks.daily_plan.push({ data: null })
@@ -430,7 +480,9 @@ describe('GET /api/study/today', () => {
     tableMocks.curriculum_outcomes.push({ data: [] })
     tableMocks.user_question_history.push({ data: [] })
     expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).status).toBe(500)
-    expect(mockRpc.mock.calls.map(([name]) => name)).toEqual(['resolve_released_curriculum_scope'])
+    expect(mockRpc.mock.calls.map(([name]) => name)).toEqual([
+      'resolve_released_curriculum_scope', 'curriculum_scope_integrity',
+    ])
 
     for (const mock of Object.values(tableMocks)) mock.reset()
     tableMocks.daily_plan.push({ data: null })
@@ -438,11 +490,11 @@ describe('GET /api/study/today', () => {
     tableMocks.questions.push({ data: [question] })
     tableMocks.curriculum_outcomes.push({ data: [] })
     tableMocks.user_question_history.push({ data: [] })
-    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => (
-      name === 'resolve_released_curriculum_scope'
-        ? releasedScope(args)
-        : { data: null, error: { code: '22023' } }
-    ))
+    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+      if (name === 'resolve_released_curriculum_scope') return releasedScope(args)
+      if (name === 'curriculum_scope_integrity') return cleanScopeIntegrity()
+      return { data: null, error: { code: '22023' } }
+    })
     expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).status).toBe(500)
     expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
   })
@@ -453,11 +505,11 @@ describe('GET /api/study/today', () => {
     tableMocks.questions.push({ data: [question] })
     tableMocks.curriculum_outcomes.push({ data: [] })
     tableMocks.user_question_history.push({ data: [] })
-    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => (
-      name === 'resolve_released_curriculum_scope'
-        ? releasedScope(args)
-        : { data: { planId: 'not-a-uuid' }, error: null }
-    ))
+    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+      if (name === 'resolve_released_curriculum_scope') return releasedScope(args)
+      if (name === 'curriculum_scope_integrity') return cleanScopeIntegrity()
+      return { data: { planId: 'not-a-uuid' }, error: null }
+    })
     expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).status).toBe(500)
 
     for (const mock of Object.values(tableMocks)) mock.reset()

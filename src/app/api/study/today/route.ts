@@ -19,7 +19,11 @@ import {
 } from '@/lib/study/today-plan-contract'
 import type { Question } from '@/types/database'
 import type { Json } from '@/types/database.generated'
-import { resolveReleasedMasteryScope } from '@/lib/mastery/scope'
+import {
+  isMasteryScopeIntegrityClean,
+  parseMasteryScopeIntegrity,
+  resolveReleasedMasteryScope,
+} from '@/lib/mastery/scope'
 
 const ipLimiter = createRateLimiter('study-today-ip', 120, 60_000)
 const userLimiter = createRateLimiter('study-today-user', 60, 60_000)
@@ -230,7 +234,22 @@ export async function GET(request: NextRequest) {
     console.error('[/api/study/today] curriculum scope resolution failed:', scopeResolution.code ?? 'invalid')
     return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
   }
-  const masteryScope = scopeResolution.scope
+  let masteryScope = scopeResolution.scope
+  if (masteryScope) {
+    const integrityResult = await admin.rpc('curriculum_scope_integrity', {
+      p_game: game,
+      p_display_exam_ref: masteryScope.displayExamRef,
+      p_taxonomy_version: masteryScope.taxonomyVersion,
+    })
+    if (integrityResult.error) {
+      console.error('[/api/study/today] curriculum scope integrity failed:', integrityResult.error.code ?? 'invalid')
+      return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+    }
+    if (!isMasteryScopeIntegrityClean(parseMasteryScopeIntegrity(integrityResult.data))) {
+      console.warn('[/api/study/today] released curriculum scope failed integrity; outcome personalization disabled')
+      masteryScope = null
+    }
+  }
 
   let baseQuery = admin
     .from('questions')

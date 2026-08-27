@@ -39,14 +39,7 @@ VALUES (
   'matematik', 'TYT', 'TYT', 'ba-tyt-math-v1',
   'released', 'category_proxy', true, clock_timestamp()
 )
-ON CONFLICT (game, display_exam_ref) DO UPDATE SET
-  question_exam_ref = EXCLUDED.question_exam_ref,
-  taxonomy_version = EXCLUDED.taxonomy_version,
-  release_status = 'released',
-  mapping_mode = EXCLUDED.mapping_mode,
-  diagnostic_enabled = EXCLUDED.diagnostic_enabled,
-  released_at = COALESCE(public.curriculum_scope_releases.released_at, clock_timestamp()),
-  updated_at = clock_timestamp();
+ON CONFLICT (game, display_exam_ref) DO NOTHING;
 
 -- Graphs exist for these scopes, but they remain draft until a dedicated data
 -- migration maps the bank and passes the generic integrity gate. Replaying this
@@ -65,7 +58,9 @@ ON CONFLICT (game, display_exam_ref) DO UPDATE SET
   taxonomy_version = EXCLUDED.taxonomy_version,
   mapping_mode = EXCLUDED.mapping_mode,
   diagnostic_enabled = EXCLUDED.diagnostic_enabled,
-  updated_at = clock_timestamp();
+  updated_at = clock_timestamp()
+WHERE public.curriculum_scope_releases.release_status IN ('draft', 'validating')
+  AND public.curriculum_scope_releases.taxonomy_version = EXCLUDED.taxonomy_version;
 
 CREATE OR REPLACE FUNCTION public.resolve_released_curriculum_scope(
   p_game text,

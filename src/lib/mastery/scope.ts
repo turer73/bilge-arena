@@ -9,6 +9,17 @@ export interface ReleasedMasteryScope {
   diagnosticEnabled: boolean
 }
 
+export interface MasteryScopeIntegrity {
+  total: number
+  mapped: number
+  unmapped: number
+  scopeMismatch: number
+  nodeOrphan: number
+  outcomeOrphan: number
+  primaryMismatch: number
+  emptyOutcome: number
+}
+
 interface ScopeRpcResult {
   data: unknown
   error: { code?: string } | null
@@ -48,6 +59,37 @@ export function parseReleasedMasteryScope(value: unknown): ReleasedMasteryScope 
     || typeof value.diagnosticEnabled !== 'boolean'
   ) return null
   return value as unknown as ReleasedMasteryScope
+}
+
+export function parseMasteryScopeIntegrity(value: unknown): MasteryScopeIntegrity | null {
+  if (!isRecord(value)) return null
+  const keys = [
+    'total', 'mapped', 'unmapped', 'scopeMismatch', 'nodeOrphan',
+    'outcomeOrphan', 'primaryMismatch', 'emptyOutcome',
+  ] as const
+  if (Object.keys(value).sort().join(',') !== [...keys].sort().join(',')) return null
+  if (keys.some((key) => !Number.isInteger(value[key]) || Number(value[key]) < 0)) return null
+  const integrity = Object.fromEntries(
+    keys.map((key) => [key, Number(value[key])]),
+  ) as unknown as MasteryScopeIntegrity
+  if (integrity.mapped > integrity.total || integrity.unmapped !== integrity.total - integrity.mapped) {
+    return null
+  }
+  return integrity
+}
+
+export function isMasteryScopeIntegrityClean(integrity: MasteryScopeIntegrity | null): integrity is MasteryScopeIntegrity {
+  return Boolean(
+    integrity
+    && integrity.total > 0
+    && integrity.mapped === integrity.total
+    && integrity.unmapped === 0
+    && integrity.scopeMismatch === 0
+    && integrity.nodeOrphan === 0
+    && integrity.outcomeOrphan === 0
+    && integrity.primaryMismatch === 0
+    && integrity.emptyOutcome === 0,
+  )
 }
 
 export async function resolveReleasedMasteryScope(

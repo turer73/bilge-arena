@@ -7,7 +7,11 @@ import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { buildMasteryMapResponse } from '@/lib/mastery/build-response'
 import type { CurriculumNodeType } from '@/lib/mastery/graph'
 import type { MasteryCoveragePublic } from '@/lib/mastery/public-contract'
-import { resolveReleasedMasteryScope } from '@/lib/mastery/scope'
+import {
+  isMasteryScopeIntegrityClean,
+  parseMasteryScopeIntegrity,
+  resolveReleasedMasteryScope,
+} from '@/lib/mastery/scope'
 
 const ipLimiter = createRateLimiter('mastery-map-ip', 120, 60_000)
 const userLimiter = createRateLimiter('mastery-map-user', 60, 60_000)
@@ -52,17 +56,6 @@ interface StateRow {
   last_answered_at: string | null
 }
 
-interface IntegrityResult {
-  total: number
-  mapped: number
-  unmapped: number
-  scopeMismatch: number
-  nodeOrphan: number
-  outcomeOrphan: number
-  primaryMismatch: number
-  emptyOutcome: number
-}
-
 function unsupportedCoverage(): MasteryCoveragePublic {
   return {
     supported: false,
@@ -72,19 +65,6 @@ function unsupportedCoverage(): MasteryCoveragePublic {
     mappedQuestions: 0,
     percentage: 0,
   }
-}
-
-function parseIntegrity(value: unknown): IntegrityResult | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  const record = value as Record<string, unknown>
-  const keys = [
-    'total', 'mapped', 'unmapped', 'scopeMismatch', 'nodeOrphan',
-    'outcomeOrphan', 'primaryMismatch', 'emptyOutcome',
-  ] as const
-  if (keys.some((key) => !Number.isInteger(record[key]) || Number(record[key]) < 0)) return null
-  const result = Object.fromEntries(keys.map((key) => [key, Number(record[key])])) as unknown as IntegrityResult
-  if (result.mapped > result.total || result.unmapped !== result.total - result.mapped) return null
-  return result
 }
 
 function noStoreJson(body: unknown, init?: { status?: number }) {
@@ -186,16 +166,8 @@ export async function GET(request: NextRequest) {
     if (outcomeResult.error) throw outcomeResult.error
     if (integrityResult.error) throw integrityResult.error
 
-    const integrity = parseIntegrity(integrityResult.data)
-    if (
-      !integrity
-      || integrity.unmapped !== 0
-      || integrity.scopeMismatch !== 0
-      || integrity.nodeOrphan !== 0
-      || integrity.outcomeOrphan !== 0
-      || integrity.primaryMismatch !== 0
-      || integrity.emptyOutcome !== 0
-    ) throw new Error('curriculum_integrity_failed')
+    const integrity = parseMasteryScopeIntegrity(integrityResult.data)
+    if (!isMasteryScopeIntegrityClean(integrity)) throw new Error('curriculum_integrity_failed')
 
     const outcomes = (outcomeResult.data ?? []) as OutcomeRow[]
     const outcomeIds = outcomes.map((outcome) => outcome.id)

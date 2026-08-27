@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { parseReleasedMasteryScope, resolveReleasedMasteryScope } from '../scope'
+import {
+  isMasteryScopeIntegrityClean,
+  parseMasteryScopeIntegrity,
+  parseReleasedMasteryScope,
+  resolveReleasedMasteryScope,
+} from '../scope'
 
 const FEN_SCOPE = {
   game: 'fen',
@@ -15,6 +20,19 @@ describe('released mastery scope contract', () => {
     expect(parseReleasedMasteryScope(FEN_SCOPE)).toEqual(FEN_SCOPE)
     expect(parseReleasedMasteryScope({ ...FEN_SCOPE, secret: true })).toBeNull()
     expect(parseReleasedMasteryScope({ ...FEN_SCOPE, taxonomyVersion: '../bad' })).toBeNull()
+  })
+
+  it('bütünlük payloadini katı ayrıştırır ve yalnız tam kapsamı temiz sayar', () => {
+    const clean = {
+      total: 757, mapped: 757, unmapped: 0, scopeMismatch: 0,
+      nodeOrphan: 0, outcomeOrphan: 0, primaryMismatch: 0, emptyOutcome: 0,
+    }
+    expect(parseMasteryScopeIntegrity(clean)).toEqual(clean)
+    expect(isMasteryScopeIntegrityClean(parseMasteryScopeIntegrity(clean))).toBe(true)
+    expect(isMasteryScopeIntegrityClean(parseMasteryScopeIntegrity({ ...clean, scopeMismatch: 1 }))).toBe(false)
+    expect(isMasteryScopeIntegrityClean(parseMasteryScopeIntegrity({ ...clean, total: 0, mapped: 0 }))).toBe(false)
+    expect(parseMasteryScopeIntegrity({ ...clean, extra: 1 })).toBeNull()
+    expect(parseMasteryScopeIntegrity({ ...clean, mapped: 756 })).toBeNull()
   })
 
   it('release edilmemis scope ile RPC/contract hatasini ayirir', async () => {
