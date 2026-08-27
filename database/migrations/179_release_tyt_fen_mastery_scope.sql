@@ -6,6 +6,18 @@
 
 BEGIN;
 
+-- Freeze both question/mapping writers and verified-attempt completions for the
+-- whole release proof. SHARE ROW EXCLUSIVE waits for in-flight writers and
+-- prevents a stale snapshot from committing an unmapped question or an empty
+-- mastery marker after the proof has started.
+LOCK TABLE
+  public.curriculum_nodes,
+  public.curriculum_outcomes,
+  public.questions,
+  public.question_outcomes,
+  public.verified_attempts
+IN SHARE ROW EXCLUSIVE MODE;
+
 DO $fn$
 DECLARE
   v_updated integer;

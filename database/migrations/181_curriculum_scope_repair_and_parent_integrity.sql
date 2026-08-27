@@ -11,6 +11,23 @@
 
 BEGIN;
 
+-- Drain writers that can change the released graph or materialize an attempt,
+-- then keep them behind the final evidence scan until COMMIT. This closes both
+-- the release-time stale-snapshot window and mapping changes during repair.
+LOCK TABLE
+  public.curriculum_scope_releases,
+  public.curriculum_nodes,
+  public.curriculum_outcomes,
+  public.questions,
+  public.question_outcomes,
+  public.verified_attempts,
+  public.verified_attempt_question_revisions,
+  public.session_answers,
+  public.mastery_materialized_attempts,
+  public.mastery_outcome_evidence,
+  public.user_outcome_state
+IN SHARE ROW EXCLUSIVE MODE;
+
 CREATE OR REPLACE FUNCTION public.curriculum_node_parent_guard()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -37,7 +54,8 @@ BEGIN
     END IF;
     SELECT * INTO v_parent
     FROM public.curriculum_nodes
-    WHERE id = NEW.parent_id;
+    WHERE id = NEW.parent_id
+    FOR UPDATE;
     IF NOT FOUND
       OR v_parent.node_type IS DISTINCT FROM v_expected_parent_type
       OR v_parent.game IS DISTINCT FROM NEW.game
@@ -117,7 +135,8 @@ BEGIN
   END IF;
   SELECT * INTO v_node
   FROM public.curriculum_nodes
-  WHERE id = NEW.node_id;
+  WHERE id = NEW.node_id
+  FOR UPDATE;
   IF NOT FOUND
     OR v_node.node_type <> 'outcome'
     OR v_node.game IS DISTINCT FROM NEW.game
@@ -305,7 +324,7 @@ DO $fn$
 DECLARE
   v_integrity jsonb;
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
     SELECT 1
     FROM public.curriculum_scope_releases
     WHERE game = 'fen'
@@ -313,28 +332,26 @@ BEGIN
       AND taxonomy_version = 'ba-tyt-fen-v1'
       AND release_status = 'released'
   ) THEN
-    RAISE EXCEPTION 'TYT Fen scope must be released before complete evidence repair'
-      USING ERRCODE = '55000';
-  END IF;
-
-  v_integrity := public.curriculum_scope_integrity('fen', 'TYT', 'ba-tyt-fen-v1');
-  IF v_integrity IS NULL
-    OR jsonb_typeof(v_integrity) <> 'object'
-    OR COALESCE((v_integrity->>'total')::integer, 0) <= 0
-    OR COALESCE((v_integrity->>'mapped')::integer, -1) <> (v_integrity->>'total')::integer
-    OR COALESCE((v_integrity->>'unmapped')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'scopeMismatch')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'nodeOrphan')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'outcomeOrphan')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'primaryMismatch')::integer, -1) <> 0
-    OR COALESCE((v_integrity->>'emptyOutcome')::integer, -1) <> 0 THEN
-    RAISE EXCEPTION 'TYT Fen complete evidence repair requires clean scope integrity: %', v_integrity
-      USING ERRCODE = '23514';
+    v_integrity := public.curriculum_scope_integrity('fen', 'TYT', 'ba-tyt-fen-v1');
+    IF v_integrity IS NULL
+      OR jsonb_typeof(v_integrity) <> 'object'
+      OR COALESCE((v_integrity->>'total')::integer, 0) <= 0
+      OR COALESCE((v_integrity->>'mapped')::integer, -1) <> (v_integrity->>'total')::integer
+      OR COALESCE((v_integrity->>'unmapped')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'scopeMismatch')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'nodeOrphan')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'outcomeOrphan')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'primaryMismatch')::integer, -1) <> 0
+      OR COALESCE((v_integrity->>'emptyOutcome')::integer, -1) <> 0 THEN
+      RAISE EXCEPTION 'TYT Fen complete evidence repair requires clean scope integrity: %', v_integrity
+        USING ERRCODE = '23514';
+    END IF;
   END IF;
 END $fn$;
 
 CREATE TABLE IF NOT EXISTS public.curriculum_scope_evidence_repair_runs (
-  repair_key text PRIMARY KEY CHECK (char_length(repair_key) BETWEEN 1 AND 120),
+  run_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  repair_key text NOT NULL CHECK (char_length(repair_key) BETWEEN 1 AND 120),
   game varchar(20) NOT NULL,
   display_exam_ref varchar(20) NOT NULL,
   taxonomy_version text NOT NULL,
@@ -354,6 +371,9 @@ CREATE TABLE IF NOT EXISTS public.curriculum_scope_evidence_repair_runs (
   CHECK (mapping_at_or_before_answer_rows + mapping_after_answer_rows = candidate_evidence_rows)
 );
 
+CREATE INDEX IF NOT EXISTS idx_curriculum_scope_evidence_repair_runs_key
+  ON public.curriculum_scope_evidence_repair_runs(repair_key, repaired_at DESC);
+
 ALTER TABLE public.curriculum_scope_evidence_repair_runs ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.curriculum_scope_evidence_repair_runs
   FROM PUBLIC, anon, authenticated, service_role;
@@ -370,10 +390,14 @@ SELECT
   mapping.weight AS mapping_weight,
   mapping.mapping_source,
   mapping.created_at > answer.answered_at AS mapping_after_answer,
-  question.difficulty,
-  CASE WHEN answer.is_correct THEN mapping.weight * question.difficulty ELSE 0 END
+  COALESCE(snapshot.difficulty, question.difficulty)::smallint AS difficulty,
+  CASE WHEN answer.is_correct
+    THEN mapping.weight * COALESCE(snapshot.difficulty, question.difficulty)
+    ELSE 0
+  END
     AS difficulty_weighted_earned,
-  mapping.weight * question.difficulty AS difficulty_weighted_possible,
+  mapping.weight * COALESCE(snapshot.difficulty, question.difficulty)
+    AS difficulty_weighted_possible,
   answer.time_taken_sec,
   COALESCE(NOT answer.is_correct AND answer.is_fast, false) AS fast_wrong,
   COALESCE((
@@ -393,10 +417,18 @@ SELECT
   false AS base_already_recorded
 FROM public.verified_attempts AS attempt
 JOIN public.mastery_materialized_attempts AS marker ON marker.attempt_id = attempt.id
+JOIN public.curriculum_scope_releases AS release
+  ON release.game = 'fen'
+ AND release.display_exam_ref = 'TYT'
+ AND release.taxonomy_version = 'ba-tyt-fen-v1'
+ AND release.release_status = 'released'
 JOIN public.session_answers AS answer
   ON answer.session_id = attempt.session_id
  AND answer.user_id = attempt.user_id
 JOIN public.questions AS question ON question.id = answer.question_id
+LEFT JOIN public.verified_attempt_question_revisions AS snapshot
+  ON snapshot.attempt_id = attempt.id
+ AND snapshot.question_id = answer.question_id
 JOIN public.question_outcomes AS mapping
   ON mapping.question_id = question.id
  AND mapping.is_primary
@@ -414,9 +446,6 @@ JOIN public.curriculum_nodes AS node
  AND node.exam_ref IS NOT DISTINCT FROM outcome.exam_ref
  AND node.taxonomy_version IS NOT DISTINCT FROM outcome.taxonomy_version
  AND node.category IS NOT DISTINCT FROM outcome.category
-LEFT JOIN public.mastery_outcome_evidence AS existing
-  ON existing.answer_id = answer.id
- AND existing.outcome_id = mapping.outcome_id
 WHERE attempt.game = 'fen'
   AND attempt.completed_at IS NOT NULL
   AND attempt.session_id IS NOT NULL
@@ -426,7 +455,19 @@ WHERE attempt.game = 'fen'
   AND upper(COALESCE(question.exam_ref, '')) = 'TYT'
   AND question.is_active
   AND outcome.category IS NOT DISTINCT FROM question.category
-  AND existing.answer_id IS NULL;
+  -- A governed mapping replacement must not make one historical answer count
+  -- toward both the superseded and current primary outcome.
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.mastery_outcome_evidence AS existing
+    JOIN public.curriculum_outcomes AS existing_outcome
+      ON existing_outcome.id = existing.outcome_id
+    WHERE existing.answer_id = answer.id
+      AND existing.question_id = answer.question_id
+      AND existing_outcome.game = 'fen'
+      AND upper(COALESCE(existing_outcome.exam_ref, '')) = 'TYT'
+      AND existing_outcome.taxonomy_version = 'ba-tyt-fen-v1'
+  );
 
 CREATE TEMP TABLE fen_scope_complete_inserted_evidence ON COMMIT DROP AS
 WITH inserted AS (
@@ -512,37 +553,69 @@ ON CONFLICT (user_id, outcome_id) DO UPDATE SET
   guess_annotations = public.user_outcome_state.guess_annotations + EXCLUDED.guess_annotations,
   careless_annotations = public.user_outcome_state.careless_annotations + EXCLUDED.careless_annotations;
 
-INSERT INTO public.curriculum_scope_evidence_repair_runs (
-  repair_key, game, display_exam_ref, taxonomy_version,
-  candidate_attempts, candidate_answers, candidate_evidence_rows,
-  inserted_evidence_rows, affected_users, manual_mapping_rows,
-  mapping_at_or_before_answer_rows, mapping_after_answer_rows
+CREATE TEMP TABLE fen_scope_complete_repair_run ON COMMIT DROP AS
+WITH inserted_run AS (
+  INSERT INTO public.curriculum_scope_evidence_repair_runs (
+    repair_key, game, display_exam_ref, taxonomy_version,
+    candidate_attempts, candidate_answers, candidate_evidence_rows,
+    inserted_evidence_rows, affected_users, manual_mapping_rows,
+    mapping_at_or_before_answer_rows, mapping_after_answer_rows
+  )
+  SELECT
+    '181_tyt_fen_complete_primary_mappings_v1',
+    'fen',
+    'TYT',
+    'ba-tyt-fen-v1',
+    count(DISTINCT attempt_id)::integer,
+    count(DISTINCT answer_id)::integer,
+    count(*)::integer,
+    (SELECT count(*)::integer FROM fen_scope_complete_inserted_evidence),
+    count(DISTINCT user_id)::integer,
+    count(*) FILTER (WHERE mapping_source = 'manual')::integer,
+    count(*) FILTER (WHERE NOT mapping_after_answer)::integer,
+    count(*) FILTER (WHERE mapping_after_answer)::integer
+  FROM fen_scope_complete_evidence_candidates
+  HAVING EXISTS (
+    SELECT 1
+    FROM public.curriculum_scope_releases
+    WHERE game = 'fen'
+      AND display_exam_ref = 'TYT'
+      AND taxonomy_version = 'ba-tyt-fen-v1'
+      AND release_status = 'released'
+  )
+  RETURNING *
 )
-SELECT
-  '181_tyt_fen_complete_primary_mappings_v1',
-  'fen',
-  'TYT',
-  'ba-tyt-fen-v1',
-  count(DISTINCT attempt_id)::integer,
-  count(DISTINCT answer_id)::integer,
-  count(*)::integer,
-  (SELECT count(*)::integer FROM fen_scope_complete_inserted_evidence),
-  count(DISTINCT user_id)::integer,
-  count(*) FILTER (WHERE mapping_source = 'manual')::integer,
-  count(*) FILTER (WHERE NOT mapping_after_answer)::integer,
-  count(*) FILTER (WHERE mapping_after_answer)::integer
-FROM fen_scope_complete_evidence_candidates
-ON CONFLICT (repair_key) DO NOTHING;
+SELECT * FROM inserted_run;
 
 DO $fn$
 DECLARE
   v_candidates integer;
   v_inserted integer;
+  v_runs integer;
+  v_scope_released boolean;
 BEGIN
   SELECT count(*)::integer INTO v_candidates
   FROM fen_scope_complete_evidence_candidates;
   SELECT count(*)::integer INTO v_inserted
   FROM fen_scope_complete_inserted_evidence;
+  SELECT count(*)::integer INTO v_runs
+  FROM fen_scope_complete_repair_run;
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.curriculum_scope_releases
+    WHERE game = 'fen'
+      AND display_exam_ref = 'TYT'
+      AND taxonomy_version = 'ba-tyt-fen-v1'
+      AND release_status = 'released'
+  ) INTO v_scope_released;
+
+  IF NOT v_scope_released THEN
+    IF v_candidates <> 0 OR v_inserted <> 0 OR v_runs <> 0 THEN
+      RAISE EXCEPTION 'obsolete TYT Fen v1 repair mutated rows'
+        USING ERRCODE = '23514';
+    END IF;
+    RETURN;
+  END IF;
 
   IF v_candidates <> v_inserted THEN
     RAISE EXCEPTION 'TYT Fen complete evidence repair lost rows: candidates %, inserted %',
@@ -561,10 +634,11 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
 
-  IF NOT EXISTS (
+  IF v_runs <> 1 OR NOT EXISTS (
     SELECT 1
-    FROM public.curriculum_scope_evidence_repair_runs
+    FROM fen_scope_complete_repair_run
     WHERE repair_key = '181_tyt_fen_complete_primary_mappings_v1'
+      AND inserted_evidence_rows = v_inserted
   ) THEN
     RAISE EXCEPTION 'TYT Fen complete evidence repair ledger was not persisted'
       USING ERRCODE = '55000';
