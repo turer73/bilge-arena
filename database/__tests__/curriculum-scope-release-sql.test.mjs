@@ -44,6 +44,8 @@ describe('178-179 curriculum scope release migrations', () => {
   })
 
   it('maps only validating or released scopes and preserves manual ownership', () => {
+    expect(registrySql).toContain('min(outcome.id::text)::uuid')
+    expect(registrySql).not.toContain('min(outcome.id),')
     expect(registrySql).toMatch(/DELETE FROM public\.question_outcomes[\s\S]*mapping_source = 'taxonomy_auto'/)
     expect(registrySql).toMatch(/release_status IN \('validating', 'released'\)/)
     expect(registrySql).toMatch(/NOT EXISTS \([\s\S]*existing\.question_id = p_question_id AND existing\.is_primary/)

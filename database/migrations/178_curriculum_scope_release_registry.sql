@@ -302,7 +302,9 @@ BEGIN
     RETURN;
   END IF;
 
-  SELECT min(outcome.id), count(*)::integer
+  -- PostgreSQL has no built-in min(uuid); cast through text only to choose a
+  -- deterministic representative when a category resolves to one outcome.
+  SELECT min(outcome.id::text)::uuid, count(*)::integer
   INTO v_outcome_id, v_outcome_count
   FROM public.curriculum_outcomes AS outcome
   JOIN public.curriculum_nodes AS node ON node.id = outcome.node_id
