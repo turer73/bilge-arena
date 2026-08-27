@@ -4,6 +4,16 @@
 
 BEGIN;
 
+-- These two buckets predate the migration stream and were originally created
+-- in the dashboard. Recreate their production constraints only when missing so
+-- clean/restore environments have the same contract without mutating existing
+-- bucket configuration.
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES
+  ('avatars', 'avatars', true, 1048576, ARRAY['image/png', 'image/jpeg']),
+  ('homepage-assets', 'homepage-assets', true, 2097152, ARRAY['image/png', 'image/jpeg'])
+ON CONFLICT (id) DO NOTHING;
+
 DROP POLICY IF EXISTS avatar_public_read ON storage.objects;
 DROP POLICY IF EXISTS badge_assets_public_read ON storage.objects;
 DROP POLICY IF EXISTS homepage_public_read ON storage.objects;

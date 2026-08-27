@@ -20,6 +20,12 @@ const unsafeHomepagePolicies = [
 ]
 
 describe('storage public listing lockdown SQL', () => {
+  it('materializes the two dashboard-created buckets on clean databases', () => {
+    expect(sql).toContain("('avatars', 'avatars', true, 1048576")
+    expect(sql).toContain("('homepage-assets', 'homepage-assets', true, 2097152")
+    expect(sql).toContain('ON CONFLICT (id) DO NOTHING;')
+  })
+
   it('drops every broad public listing policy', () => {
     for (const policy of listingPolicies) {
       expect(sql).toContain(`DROP POLICY IF EXISTS ${policy} ON storage.objects;`)

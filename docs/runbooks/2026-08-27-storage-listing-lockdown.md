@@ -15,6 +15,10 @@ Reference: <https://supabase.com/docs/reference/javascript/file-buckets-getpubli
    caller permission and rate-limit checks pass.
 2. Smoke the deployed route as an unauthorized caller and confirm HTTP 403.
 3. Apply `database/migrations/176_storage_public_listing_lockdown.sql`.
+   On clean/restore databases it also creates the two historically
+   dashboard-managed `avatars` and `homepage-assets` buckets with the verified
+   production size and MIME constraints; existing bucket configuration is not
+   changed.
 4. Confirm the seven broad policies are absent and all four buckets remain
    public.
 5. Simulate `anon` and `authenticated` reads against `storage.objects`; neither
