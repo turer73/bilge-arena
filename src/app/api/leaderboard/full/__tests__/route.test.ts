@@ -237,7 +237,7 @@ describe('GET /api/leaderboard/full', () => {
     expect(res.status).toBe(500)
   })
 
-  it('sets public cache (s-maxage=120) when no currentUserId', async () => {
+  it('does not cache an anonymous public leaderboard response', async () => {
     mockWeeklyRes.mockResolvedValueOnce({
       data: [
         { user_id: 'u1', username: 'A', display_name: null, avatar_url: null, xp_earned: 1, current_rank: 1, level_name: null },
@@ -245,12 +245,10 @@ describe('GET /api/leaderboard/full', () => {
       error: null,
     })
     const res = await GET(makeRequest() as never)
-    const cc = res.headers.get('Cache-Control') ?? ''
-    expect(cc).toContain('public')
-    expect(cc).toContain('s-maxage=120')
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
   })
 
-  it('sets private cache for an authenticated request', async () => {
+  it('does not cache a cookie-personalized authenticated response', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
     mockWeeklyRes.mockResolvedValueOnce({
       data: [
@@ -260,10 +258,7 @@ describe('GET /api/leaderboard/full', () => {
     })
     mockWeeklySingleRes.mockResolvedValueOnce({ data: { current_rank: 99 }, error: null })
     const res = await GET(makeRequest() as never)
-    const cc = res.headers.get('Cache-Control') ?? ''
-    expect(cc).toContain('private')
-    expect(cc).toContain('max-age=60')
-    expect(cc).not.toContain('public')
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
   })
 
   it('does NOT include user_id in response (data minimization)', async () => {

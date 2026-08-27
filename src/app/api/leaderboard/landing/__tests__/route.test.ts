@@ -71,11 +71,11 @@ describe('GET /api/leaderboard/landing', () => {
     expect(body.leaders).toEqual([])
   })
 
-  it('fails closed with a short cache before migration 177', async () => {
+  it('fails closed without caching before migration 177', async () => {
     mockPrivacyReadyRes.mockResolvedValueOnce({ data: null, error: { code: '42703' } })
     const res = await GET(makeRequest() as never)
     expect(await res.json()).toEqual({ leaders: [], privacyReady: false })
-    expect(res.headers.get('Cache-Control')).toContain('s-maxage=30')
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
     expect(mockProfilesRes).not.toHaveBeenCalled()
   })
 
@@ -95,10 +95,10 @@ describe('GET /api/leaderboard/landing', () => {
     expect(body.leaders[0].username).toBe('Oyuncu 1')
   })
 
-  it('sets Cache-Control with s-maxage=300', async () => {
+  it('does not cache revocable public leaderboard data', async () => {
     mockProfilesRes.mockResolvedValueOnce({ data: [], error: null })
     const res = await GET(makeRequest() as never)
-    expect(res.headers.get('Cache-Control')).toContain('s-maxage=300')
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
   })
 })
 

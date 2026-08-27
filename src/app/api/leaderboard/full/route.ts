@@ -54,11 +54,10 @@ interface ProfileRow {
  * Giris yapan kullanici ilk 50'de degilse, ayri sorgu ile rank getir.
  * Kullanici kimligi sorgu parametresinden alinmaz; dogrulanmis oturumdan gelir.
  *
- * Cache:
- *   - anon: public s-maxage=120 (lower frequency, daha
- *     uzun cache'leyebiliriz, sidebar 60s)
- *   - auth: private max-age=60 (is_me + myRank
- *     user-specific payload)
+ * Cache: no-store. Liderlik gorunurlugu geri alinabilir bir onaydir ve
+ * oturumlu yanit is_me/myRank ile kisiye ozeldir. Ortak ya da tarayici
+ * cache'i, vazgecen bir kullaniciyi gostermeye veya oturumlar arasinda
+ * kisiye ozel siralama tasimaya devam edebilir.
  *
  * Rate limit (sidebar PR #75 + #78 P1 paterni, daha dusuk esikler):
  *   1. IP limit her zaman ONCE (anon flood'u erken kes — auth API
@@ -102,12 +101,9 @@ export async function GET(request: NextRequest) {
   const allTime = searchParams.get('period') === 'all'
   const safeUserId = user?.id ?? null
 
-  // Cache strategy (sidebar paterni):
-  //   - anonim oturum: public cache OK
-  //   - dogrulanmis oturum: is_me + myRank user-specific -> private cache
-  const cacheControl = safeUserId
-    ? 'private, max-age=60'
-    : 'public, s-maxage=120, stale-while-revalidate=60'
+  // Opt-out hemen etkili olmali; ayrica is_me/myRank cookie ile kisilesir.
+  // URL-keyed browser/edge cache bu iki gizlilik sozlesmesini de bozar.
+  const cacheControl = 'no-store'
 
   const supabase = createServiceRoleClient()
 

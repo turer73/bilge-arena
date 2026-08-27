@@ -41,7 +41,8 @@ interface SidebarLeader {
  * Giris yapan kullanici ilk 5'te degilse, ayri sorgu ile rank getir.
  * Kullanici kimligi sorgu parametresinden alinmaz; dogrulanmis oturumdan gelir.
  *
- * Cache: 60 saniye edge (sidebar her sayfa render'inda gosterilir).
+ * Cache: no-store. Geri alinabilir gorunurluk onayi ve cookie ile kisilesen
+ * is_me/myRank yaniti edge veya tarayici cache'inde tutulmaz.
  *
  * Rate limit (Codex PR #75 + PR #78 P1 fix'leri):
  *   1. IP limit her zaman ONCE (anon flood'u erken kes — auth API roundtrip
@@ -81,12 +82,9 @@ export async function GET(request: NextRequest) {
 
   const safeUserId = user?.id ?? null
 
-  // Cache strategy (review LOW: user-specific payload fragility):
-  //   - anonim oturum: public cache OK
-  //   - dogrulanmis oturum: is_me + myRank user-specific -> private cache
-  const cacheControl = safeUserId
-    ? 'private, max-age=60'
-    : 'public, s-maxage=60, stale-while-revalidate=30'
+  // Opt-out hemen etkili olmali; ayrica is_me/myRank cookie ile kisilesir.
+  // URL-keyed browser/edge cache bu iki gizlilik sozlesmesini de bozar.
+  const cacheControl = 'no-store'
 
   const supabase = createServiceRoleClient()
 

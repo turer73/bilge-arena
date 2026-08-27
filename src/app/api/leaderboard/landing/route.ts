@@ -24,7 +24,8 @@ interface LandingLeader {
  * `deleted_at` sutununa erisemez (column-level GRANT yok). Filter atmak
  * icin RLS bypass gerek.
  *
- * Cache: 5 dakika edge (frequently visited landing page).
+ * Cache: no-store. Liderlik gorunurlugu geri alinabilir bir onay oldugu icin
+ * opt-out sonrasi eski kisi verisi edge veya tarayici cache'inde kalmamalidir.
  * Rate limit: 60 req/dk per IP (anon erisim icin).
  */
 export async function GET(request: NextRequest) {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
   if (!(await isPublicLeaderboardPrivacyReady(supabase))) {
     return NextResponse.json(
       { leaders: [], privacyReady: false },
-      { headers: { 'Cache-Control': 'public, s-maxage=30' } },
+      { headers: { 'Cache-Control': 'no-store' } },
     )
   }
 
@@ -67,12 +68,12 @@ export async function GET(request: NextRequest) {
     total_xp: p.total_xp || 0,
   }))
 
-  // Edge cache 5 dk (s-maxage), browser cache yok
+  // Geri alinabilir onay nedeniyle ortak veya tarayici cache'i kullanma.
   return NextResponse.json(
     { leaders, privacyReady: true },
     {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+        'Cache-Control': 'no-store',
       },
     },
   )
