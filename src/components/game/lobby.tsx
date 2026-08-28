@@ -159,6 +159,7 @@ export function Lobby({
         selectedDifficulty={selectedDifficulty}
         onSelectDifficulty={onSelectDifficulty}
         selectedExamRef={selectedExamRef}
+        onSelectExamRef={onSelectExamRef}
         onStart={onStart}
         onLimitReached={onLimitReached}
         quizLimit={quizLimit}

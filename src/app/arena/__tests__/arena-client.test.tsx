@@ -117,6 +117,19 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
     await waitFor(() => expect(useGameStore.getState().selectedExamRef).toBe('TYT'))
   })
 
+  test('sinav turu belirlenmemis eski profilde secili kapsami korur', async () => {
+    useGameStore.setState({ selectedExamRef: 'LGS' })
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'legacy', exam_type: null },
+    }
+
+    render(<ArenaClient />)
+
+    expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+    await waitFor(() => expect(useGameStore.getState().selectedExamRef).toBe('LGS'))
+  })
+
   test('AYT esit agirlik kapsaminda matematigi gosterir', () => {
     useGameStore.setState({ selectedExamRef: 'AYT-EA' })
     mockAuth.value = {

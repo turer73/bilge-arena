@@ -24,12 +24,14 @@ export default function ArenaClient() {
   const classroomEnabled = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'
   const institutionEnabled = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
   const communityQualityEnabled = process.env.NEXT_PUBLIC_COMMUNITY_QUESTION_QUALITY_ENABLED === 'true'
-  const activeExamType: ExamType = profile?.exam_type === 'lgs' ? 'lgs' : 'yks'
-  const allowedExamRefs = examRefsForType(activeExamType)
-  const effectiveExamRef = !selectedExamRef || allowedExamRefs.includes(selectedExamRef)
+  const profileExamType: ExamType | null = profile?.exam_type === 'yks' || profile?.exam_type === 'lgs'
+    ? profile.exam_type
+    : null
+  const allowedExamRefs = profileExamType ? examRefsForType(profileExamType) : null
+  const effectiveExamRef = !selectedExamRef || !allowedExamRefs || allowedExamRefs.includes(selectedExamRef)
     ? selectedExamRef
-    : DEFAULT_EXAM_REF[activeExamType]
-  const displayedExamRef = effectiveExamRef ?? DEFAULT_EXAM_REF[activeExamType]
+    : DEFAULT_EXAM_REF[profileExamType ?? 'yks']
+  const displayedExamRef = effectiveExamRef ?? DEFAULT_EXAM_REF[profileExamType ?? 'yks']
 
   useEffect(() => {
     if (selectedExamRef !== effectiveExamRef) setExamRef(effectiveExamRef)

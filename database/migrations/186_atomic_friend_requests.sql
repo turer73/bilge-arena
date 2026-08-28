@@ -66,6 +66,51 @@ REVOKE ALL ON FUNCTION public.request_friendship(uuid, uuid)
 GRANT EXECUTE ON FUNCTION public.request_friendship(uuid, uuid)
   TO service_role;
 
+-- block_user ile request_friendship ayni siralanmis kullanici cifti icin ayni
+-- transaction kilidini almak zorundadir. Aksi halde blok ve ters yonlu istek
+-- eszamanli calisip ayni ciftte blocked + pending kaydi birakabilir.
+CREATE OR REPLACE FUNCTION public.block_user(p_target uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $function$
+DECLARE
+  v_me uuid := auth.uid();
+  v_pair_key text;
+BEGIN
+  IF v_me IS NULL THEN
+    RAISE EXCEPTION 'auth required' USING ERRCODE = '28000';
+  END IF;
+  IF p_target IS NULL OR p_target = v_me THEN
+    RAISE EXCEPTION 'invalid target' USING ERRCODE = '22023';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles AS target
+    WHERE target.id = p_target AND target.deleted_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'target not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  v_pair_key := CASE
+    WHEN v_me::text < p_target::text
+      THEN v_me::text || ':' || p_target::text
+    ELSE p_target::text || ':' || v_me::text
+  END;
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_pair_key, 0));
+
+  DELETE FROM public.friendships AS friendship
+  WHERE (friendship.user_id = v_me AND friendship.friend_id = p_target)
+     OR (friendship.user_id = p_target AND friendship.friend_id = v_me);
+
+  INSERT INTO public.friendships(user_id, friend_id, status)
+  VALUES (v_me, p_target, 'blocked');
+END
+$function$;
+
+REVOKE ALL ON FUNCTION public.block_user(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.block_user(uuid) TO authenticated;
+
 -- Arkadaslik mutasyonlari yalnız kimlik dogrulayan server route/RPC'lerden
 -- gecsin. SECURITY DEFINER block_user kendi owner yetkisiyle calismaya devam eder.
 REVOKE ALL ON TABLE public.friendships FROM PUBLIC, anon, authenticated;
@@ -82,6 +127,11 @@ BEGIN
      OR has_table_privilege('authenticated', 'public.friendships', 'UPDATE')
      OR has_table_privilege('authenticated', 'public.friendships', 'DELETE') THEN
     RAISE EXCEPTION '186 verification: browser friendship DML still enabled';
+  END IF;
+
+  IF NOT has_function_privilege('authenticated', 'public.block_user(uuid)', 'EXECUTE')
+     OR has_function_privilege('anon', 'public.block_user(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION '186 verification: block RPC grants invalid';
   END IF;
 END
 $verify_atomic_friend_requests$;

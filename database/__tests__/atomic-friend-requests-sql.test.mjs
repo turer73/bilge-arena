@@ -8,9 +8,16 @@ const sql = readFileSync(
 
 describe('atomic friend request SQL', () => {
   it('serializes both directions of the same user pair', () => {
-    expect(sql).toContain('pg_advisory_xact_lock')
+    expect(sql.match(/pg_advisory_xact_lock/g)).toHaveLength(2)
     expect(sql).toContain("p_requester::text || ':' || p_target::text")
     expect(sql).toContain("p_target::text || ':' || p_requester::text")
+  })
+
+  it('serializes blocking with friend requests using the same canonical pair key', () => {
+    expect(sql).toContain('CREATE OR REPLACE FUNCTION public.block_user(p_target uuid)')
+    expect(sql).toContain("v_me::text || ':' || p_target::text")
+    expect(sql).toContain("p_target::text || ':' || v_me::text")
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.block_user(uuid) TO authenticated;')
   })
 
   it('keeps search discovery independent and checks existing relationships', () => {

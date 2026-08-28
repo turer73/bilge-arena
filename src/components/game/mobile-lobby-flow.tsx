@@ -14,6 +14,7 @@ interface MobileLobbyFlowProps {
   selectedDifficulty: number | null
   onSelectDifficulty: (difficulty: number | null) => void
   selectedExamRef: string | null
+  onSelectExamRef: (examRef: string | null) => void
   loadError?: string | null
   onStart: () => void
   onLimitReached?: () => void
@@ -25,7 +26,16 @@ interface MobileLobbyFlowProps {
   }
 }
 
-type FlowStep = 'mode' | 'topic' | 'difficulty' | 'summary'
+type FlowStep = 'mode' | 'scope' | 'topic' | 'difficulty' | 'summary'
+
+const EXAM_SCOPE_LABELS: Record<string, string> = {
+  TYT: 'TYT',
+  LGS: 'LGS',
+  'AYT-SAY': 'AYT Sayısal',
+  'AYT-EA': 'AYT Eşit Ağırlık',
+  'AYT-SOZ': 'AYT Sözel',
+  YDT: 'YDT',
+}
 
 const DIFFICULTIES = [
   { value: null, label: 'Karma', description: 'Seviyeler karışık gelir' },
@@ -41,6 +51,11 @@ const STEP_COPY: Record<FlowStep, { eyebrow: string; title: string; description:
     eyebrow: 'Oyun biçimi',
     title: 'Nasıl oynamak istersin?',
     description: 'Bugünkü tempona uygun turu seç.',
+  },
+  scope: {
+    eyebrow: 'Sınav kapsamı',
+    title: 'Hangi sınava hazırlanıyorsun?',
+    description: 'Bu turda kullanmak istediğin soru kapsamını seç.',
   },
   topic: {
     eyebrow: 'Konu seçimi',
@@ -76,6 +91,7 @@ export function MobileLobbyFlow({
   selectedDifficulty,
   onSelectDifficulty,
   selectedExamRef,
+  onSelectExamRef,
   loadError,
   onStart,
   onLimitReached,
@@ -91,14 +107,16 @@ export function MobileLobbyFlow({
   const [stepIndex, setStepIndex] = useState(0)
 
   const steps = useMemo<FlowStep[]>(() => {
-    if (mode.isDeneme) return ['mode', 'summary']
+    const scopeStep = game === 'wordquest' ? [] : ['scope' as const]
+    if (mode.isDeneme) return ['mode', ...scopeStep, 'summary']
     return [
       'mode',
+      ...scopeStep,
       ...(askTopic ? ['topic' as const] : []),
       ...(askDifficulty ? ['difficulty' as const] : []),
       'summary',
     ]
-  }, [askDifficulty, askTopic, mode.isDeneme])
+  }, [askDifficulty, askTopic, game, mode.isDeneme])
 
   const safeStepIndex = Math.min(stepIndex, steps.length - 1)
   const step = steps[safeStepIndex]
@@ -174,6 +192,27 @@ export function MobileLobbyFlow({
                   </span>
                   <span className="mt-1.5 block text-sm font-black text-[var(--app-text)]">{item.name}</span>
                   <span className="mt-0.5 block text-[10px] font-semibold leading-4 text-[var(--app-text-sub)]">{item.description}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {step === 'scope' && (
+          <div className="grid grid-cols-2 gap-2.5" role="group" aria-label="Sınav kapsamı">
+            <button type="button" onClick={() => onSelectExamRef(null)} aria-pressed={selectedExamRef === null} className={optionClass(selectedExamRef === null)}>
+              <span className="block text-sm font-black text-[var(--app-text)]">Tüm kapsamlar</span>
+              <span className="mt-1 block text-[10px] font-semibold text-[var(--app-text-sub)]">Karışık ilerle</span>
+            </button>
+            {gameDef.examTags.map((examRef) => {
+              const active = selectedExamRef === examRef
+              return (
+                <button type="button" key={examRef} onClick={() => onSelectExamRef(examRef)} aria-pressed={active} className={optionClass(active)}>
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-black text-[var(--app-text)]">{EXAM_SCOPE_LABELS[examRef] ?? examRef}</span>
+                    {active && <Check size={17} strokeWidth={3.5} className="text-[var(--app-accent-text)]" />}
+                  </span>
+                  <span className="mt-1 block text-[10px] font-semibold text-[var(--app-text-sub)]">Bu kapsamdaki sorular</span>
                 </button>
               )
             })}
