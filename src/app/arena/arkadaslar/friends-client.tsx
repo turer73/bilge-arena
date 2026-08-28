@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { toast } from '@/stores/toast-store'
 import Link from 'next/link'
@@ -36,6 +36,7 @@ interface SearchUser {
   display_name: string | null
   avatar_url: string | null
   total_xp: number
+  profile_viewable?: boolean
 }
 
 type ReportType = 'harassment' | 'inappropriate' | 'impersonation' | 'spam' | 'other'
@@ -62,20 +63,33 @@ export default function FriendsClient() {
   const [searchResults, setSearchResults] = useState<SearchUser[]>([])
   const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [searchError, setSearchError] = useState('')
+  const [requestingId, setRequestingId] = useState<string | null>(null)
   const [challengeTarget, setChallengeTarget] = useState<string | null>(null)
   const [sendingChallenge, setSendingChallenge] = useState(false)
   const [blocked, setBlocked] = useState<BlockedItem[]>([])
   const [reportTarget, setReportTarget] = useState<{ id: string; name: string } | null>(null)
 
   const fetchFriends = useCallback(async () => {
-    const res = await fetch('/api/friends')
-    if (!res.ok) return
-    const data = await res.json()
-    setFriends(data.friends || [])
-    setPendingReceived(data.pendingReceived || [])
-    setPendingSent(data.pendingSent || [])
-    setBlocked(data.blocked || [])
-    setLoading(false)
+    setLoading(true)
+    setLoadError('')
+    try {
+      const res = await fetch('/api/friends')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setLoadError(data.error || 'Arkadaşlar yüklenemedi')
+        return
+      }
+      setFriends(data.friends || [])
+      setPendingReceived(data.pendingReceived || [])
+      setPendingSent(data.pendingSent || [])
+      setBlocked(data.blocked || [])
+    } catch {
+      setLoadError('Bağlantı kurulamadı. Tekrar deneyebilirsin.')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -85,57 +99,100 @@ export default function FriendsClient() {
 
   // Kullanici arama (debounce)
   useEffect(() => {
-    if (searchQuery.length < 2) { setSearchResults([]); return }
+    if (searchQuery.length < 2) {
+      setSearchResults([])
+      setSearchError('')
+      setSearching(false)
+      return
+    }
+    const controller = new AbortController()
     const timer = setTimeout(async () => {
       setSearching(true)
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`)
-      if (res.ok) {
-        const data = await res.json()
+      setSearchError('')
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQuery)}`, { signal: controller.signal })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setSearchResults([])
+          setSearchError(data.error || 'Arama şu anda kullanılamıyor')
+          return
+        }
         setSearchResults(data.users || [])
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          setSearchResults([])
+          setSearchError('Arama bağlantısı kurulamadı')
+        }
+      } finally {
+        if (!controller.signal.aborted) setSearching(false)
       }
-      setSearching(false)
     }, 400)
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [searchQuery])
 
   const sendRequest = async (friendId: string) => {
-    const res = await fetch('/api/friends', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ friendId }),
-    })
-    if (res.ok) {
-      toast.success('Arkadaş isteği gönderildi!')
-      setSearchQuery('')
-      setSearchResults([])
-      fetchFriends()
-    } else {
-      const err = await res.json()
-      toast.error(err.error || 'İstek gönderilemedi')
+    if (requestingId) return
+    setRequestingId(friendId)
+    try {
+      const res = await fetch('/api/friends', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendId }),
+      })
+      if (res.ok) {
+        toast.success('Arkadaş isteği gönderildi!')
+        setSearchQuery('')
+        setSearchResults([])
+        await fetchFriends()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'İstek gönderilemedi')
+      }
+    } catch {
+      toast.error('Bağlantı kurulamadı')
+    } finally {
+      setRequestingId(null)
     }
   }
 
   const acceptRequest = async (friendshipId: string) => {
-    const res = await fetch('/api/friends', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ friendshipId }),
-    })
-    if (res.ok) {
-      toast.success('Arkadaş isteği kabul edildi!')
-      fetchFriends()
+    try {
+      const res = await fetch('/api/friends', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendshipId }),
+      })
+      if (res.ok) {
+        toast.success('Arkadaş isteği kabul edildi!')
+        await fetchFriends()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'İstek kabul edilemedi')
+      }
+    } catch {
+      toast.error('Bağlantı kurulamadı')
     }
   }
 
   const removeFriend = async (friendshipId: string, label: string) => {
-    const res = await fetch('/api/friends', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ friendshipId }),
-    })
-    if (res.ok) {
-      toast.info(label)
-      fetchFriends()
+    try {
+      const res = await fetch('/api/friends', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendshipId }),
+      })
+      if (res.ok) {
+        toast.info(label)
+        await fetchFriends()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'İşlem tamamlanamadı')
+      }
+    } catch {
+      toast.error('Bağlantı kurulamadı')
     }
   }
 
@@ -214,6 +271,13 @@ export default function FriendsClient() {
     <div className="mx-auto max-w-xl px-4 py-6">
       <h1 className="mb-6 text-xl font-bold">Arkadaşlar</h1>
 
+      {loadError && (
+        <div role="alert" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[var(--urgency)] bg-[var(--urgency)]/10 p-3 text-xs font-semibold text-[var(--urgency)]">
+          <span>{loadError}</span>
+          <button type="button" onClick={fetchFriends} className="min-h-11 shrink-0 rounded-lg border border-current px-3 font-bold">Tekrar dene</button>
+        </div>
+      )}
+
       {/* Arama */}
       <div className="mb-6">
         <input
@@ -224,6 +288,7 @@ export default function FriendsClient() {
           className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2.5 text-sm outline-none focus:border-[var(--focus)]"
         />
         {searching && <p className="mt-2 text-xs text-[var(--muted)]">Aranıyor...</p>}
+        {searchError && <p role="alert" className="mt-2 text-xs font-semibold text-[var(--urgency)]">{searchError}</p>}
         {searchResults.length > 0 && (
           <div className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--card)] divide-y divide-[var(--border)]">
             {searchResults.map((u) => (
@@ -232,21 +297,22 @@ export default function FriendsClient() {
                   {trUpper(displayName(u).charAt(0))}
                 </div>
                 <div className="flex-1 min-w-0">
-                  {u.username ? (
+                  {u.username && u.profile_viewable ? (
                     <Link href={`/u/${u.username}`} className="block truncate text-sm font-semibold hover:underline">{displayName(u)}</Link>
                   ) : (
                     <div className="text-sm font-semibold truncate">{displayName(u)}</div>
                   )}
-                  <div className="text-[10px] text-[var(--muted)]">{u.total_xp} XP</div>
+                  {u.total_xp > 0 && <div className="text-[10px] text-[var(--muted)]">{u.total_xp} XP</div>}
                 </div>
                 {existingIds.has(u.id) ? (
                   <span className="text-[10px] text-[var(--muted)]">Eklendi</span>
                 ) : (
                   <button
                     onClick={() => sendRequest(u.id)}
-                    className="rounded-lg bg-[var(--focus)] px-3 py-1.5 text-xs font-medium text-white"
+                    disabled={requestingId !== null}
+                    className="min-h-11 rounded-lg bg-[var(--focus)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
                   >
-                    Ekle
+                    {requestingId === u.id ? 'Gönderiliyor…' : 'Ekle'}
                   </button>
                 )}
               </div>
@@ -483,14 +549,47 @@ function ReportModal({
   const [type, setType] = useState<ReportType>('harassment')
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const returnFocus = document.activeElement as HTMLElement | null
+    const focusables = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ) ?? [])
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Tab') return
+      const items = focusables()
+      if (items.length === 0) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    focusables()[0]?.focus()
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      returnFocus?.focus()
+    }
+  }, [onClose])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-dialog-title"
         className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="mb-1 text-base font-bold">Kullanıcıyı şikayet et</h3>
+        <h3 id="report-dialog-title" className="mb-1 text-base font-bold">Kullanıcıyı şikayet et</h3>
         <p className="mb-4 truncate text-xs text-[var(--muted)]">{name}</p>
 
         <div className="mb-4 space-y-1.5">

@@ -2,10 +2,13 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { createClient } from '@/lib/supabase/server'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
+import { FriendRequestButton } from '@/components/profile/friend-request-button'
 
-// ISR: public profil 5 dk cache (RPC yükü + tazelik dengesi)
-export const revalidate = 300
+// Arkadaslara ozel profiller cookie'deki izleyiciye baglidir; ortak ISR cache'i
+// kullanmak yetki sonucunu baska ziyaretcilere sizdirabilir.
+export const dynamic = 'force-dynamic'
 
 interface PublicProfile {
   id: string
@@ -21,14 +24,27 @@ interface PublicProfile {
   selected_nameplate: string | null
   selected_avatar_decorations: string[] | null
   created_at: string
+  relationship_status?: string | null
 }
 
-/** get_public_profile RPC (migration 073) — yalnız güvenli kolonlar, is_discoverable-gate'li */
-async function fetchPublicProfile(username: string): Promise<PublicProfile | null> {
+/** Migration 185: whitelist kolonlar + private/friends/public hedef kitle kapisi. */
+async function fetchVisibleProfile(username: string, viewerId: string | null): Promise<PublicProfile | null> {
   // username basit guard (RPC zaten lower-match + parametreli; injection yok)
   if (!username || username.length > 40) return null
   const svc = createServiceRoleClient()
-  const { data } = await svc.rpc('get_public_profile', { p_username: username })
+  let { data, error } = await svc.rpc('get_public_profile', {
+    p_username: username,
+    p_viewer_id: viewerId,
+  })
+
+  // App-first rollout: migration 185 uygulanana kadar eski public-only RPC ile
+  // sadece daha once paylasilabilir olan profiller calismaya devam eder.
+  if (error) {
+    const legacy = await svc.rpc('get_public_profile', { p_username: username })
+    data = legacy.data
+    error = legacy.error
+  }
+  if (error) return null
   return (data && data[0]) || null
 }
 
@@ -36,7 +52,8 @@ export async function generateMetadata(
   { params }: { params: Promise<{ username: string }> },
 ): Promise<Metadata> {
   const { username } = await params
-  const p = await fetchPublicProfile(decodeURIComponent(username))
+  // Metadata herkese aciktir; arkadas/ozel profil bilgisi baslikta sizmaz.
+  const p = await fetchVisibleProfile(decodeURIComponent(username), null)
   if (!p) {
     return { title: 'Profil bulunamadı — Bilge Arena', robots: { index: false } }
   }
@@ -55,7 +72,9 @@ export default async function PublicProfilePage(
   { params }: { params: Promise<{ username: string }> },
 ) {
   const { username } = await params
-  const p = await fetchPublicProfile(decodeURIComponent(username))
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const p = await fetchVisibleProfile(decodeURIComponent(username), user?.id ?? null)
   if (!p) notFound()
 
   const accuracy = p.total_questions > 0
@@ -92,6 +111,21 @@ export default async function PublicProfilePage(
         <p className="mt-4 text-[11px] text-[var(--text-muted)]">
           {`${memberSince}'ten beri arenada · En uzun seri: ${p.longest_streak} gün`}
         </p>
+
+        {user?.id && user.id !== p.id && p.relationship_status === 'accepted' && (
+          <p className="mt-5 rounded-xl bg-[var(--growth)]/15 px-4 py-3 text-sm font-bold text-[var(--growth)]">✓ Arkadaşsınız</p>
+        )}
+        {user?.id && user.id !== p.id && p.relationship_status === 'pending' && (
+          <p className="mt-5 rounded-xl bg-[var(--reward)]/15 px-4 py-3 text-sm font-bold text-[var(--reward)]">Arkadaşlık isteği bekliyor</p>
+        )}
+        {user?.id && user.id !== p.id && !p.relationship_status && (
+          <FriendRequestButton targetId={p.id} />
+        )}
+        {!user && (
+          <Link href="/giris" className="mt-5 inline-flex min-h-11 items-center rounded-xl border-2 border-[var(--border)] px-4 text-sm font-bold">
+            Arkadaş eklemek için giriş yap
+          </Link>
+        )}
 
         <Link
           href="/arena"

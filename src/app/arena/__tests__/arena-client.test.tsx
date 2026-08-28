@@ -24,6 +24,7 @@ vi.mock('next/link', () => ({
 }))
 
 import ArenaClient from '../arena-client'
+import { useGameStore } from '@/stores/game-store'
 
 const UUID = '11111111-1111-4111-8111-111111111111'
 
@@ -31,6 +32,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockAuth.value = { user: null, profile: null }
   mockQuestState.value = []
+  useGameStore.setState({ selectedExamRef: null })
   localStorage.clear()
   localStorage.setItem('ba-coach-seen:guest', new Date().toDateString())
   localStorage.setItem(`ba-coach-seen:${UUID}`, new Date().toDateString())
@@ -100,6 +102,43 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     render(<ArenaClient />)
     expect(screen.getByRole('button', { name: 'YDT' })).toBeInTheDocument()
+  })
+
+  test('profil turu degisince onceki sinavin gecersiz kapsamını varsayilana dondurur', async () => {
+    useGameStore.setState({ selectedExamRef: 'LGS' })
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'yksci', exam_type: 'yks' },
+    }
+
+    render(<ArenaClient />)
+
+    expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+    await waitFor(() => expect(useGameStore.getState().selectedExamRef).toBe('TYT'))
+  })
+
+  test('sinav turu belirlenmemis eski profilde secili kapsami korur', async () => {
+    useGameStore.setState({ selectedExamRef: 'LGS' })
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'legacy', exam_type: null },
+    }
+
+    render(<ArenaClient />)
+
+    expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+    await waitFor(() => expect(useGameStore.getState().selectedExamRef).toBe('LGS'))
+  })
+
+  test('AYT esit agirlik kapsaminda matematigi gosterir', () => {
+    useGameStore.setState({ selectedExamRef: 'AYT-EA' })
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'eaci', exam_type: 'yks' },
+    }
+
+    render(<ArenaClient />)
+    expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
   })
 
   test('kurum alanını yalnız etkin bayrak ve yetkili çalışma alanı yanıtıyla gösterir', async () => {

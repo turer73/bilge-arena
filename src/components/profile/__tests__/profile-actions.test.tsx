@@ -6,6 +6,8 @@ describe('ProfileActions', () => {
   test('dar ekrana uygun kısa eylem etiketlerini ve hedefleri gösterir', () => {
     render(<ProfileActions onEdit={() => {}} />)
 
+    expect(screen.getByRole('link', { name: 'Yanlışlarım' })).toHaveAttribute('href', '/arena/yanlislarim')
+    expect(screen.getByRole('link', { name: 'Arkadaşlar' })).toHaveAttribute('href', '/arena/arkadaslar')
     expect(screen.getByRole('link', { name: 'Mağaza' })).toHaveAttribute('href', '/arena/magaza')
     expect(screen.getByRole('link', { name: 'Stüdyo' })).toHaveAttribute('href', '/arena/kisisellestir')
     expect(screen.getByRole('button', { name: 'Düzenle' })).toBeInTheDocument()

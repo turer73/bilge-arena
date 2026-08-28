@@ -2720,6 +2720,7 @@ export type Database = {
           owned_frames: string[]
           owned_nameplates: string[]
           preferred_theme: string | null
+          profile_visibility: "friends" | "private" | "public"
           premium_until: string | null
           referral_code: string | null
           referred_by: string | null
@@ -2761,6 +2762,7 @@ export type Database = {
           owned_frames?: string[]
           owned_nameplates?: string[]
           preferred_theme?: string | null
+          profile_visibility?: "friends" | "private" | "public"
           premium_until?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -2802,6 +2804,7 @@ export type Database = {
           owned_frames?: string[]
           owned_nameplates?: string[]
           preferred_theme?: string | null
+          profile_visibility?: "friends" | "private" | "public"
           premium_until?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -6466,7 +6469,7 @@ export type Database = {
       }
       get_my_weekly_team_boss: { Args: { p_user_id: string }; Returns: Json }
       get_public_profile: {
-        Args: { p_username: string }
+        Args: { p_username: string; p_viewer_id?: string | null }
         Returns: {
           avatar_url: string
           correct_answers: number
@@ -6476,6 +6479,7 @@ export type Database = {
           level: number
           level_name: string
           longest_streak: number
+          relationship_status: string | null
           selected_avatar_decorations: string[]
           selected_nameplate: string
           total_questions: number
@@ -6899,6 +6903,7 @@ export type Database = {
           avatar_url: string
           display_name: string
           id: string
+          profile_viewable: boolean
           total_xp: number
           username: string
         }[]
@@ -6920,6 +6925,10 @@ export type Database = {
           total_xp: number
           username: string
         }[]
+      }
+      request_friendship: {
+        Args: { p_requester: string; p_target: string }
+        Returns: string
       }
       search_questions: {
         Args: {

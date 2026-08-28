@@ -59,6 +59,8 @@ export interface Profile {
   notifications: boolean
   /** Opt-in keşif: kullanıcı aramasında görünür mü (migration 072; yeni kullanıcılar FALSE) */
   is_discoverable: boolean
+  /** Paylaşılan profil hedef kitlesi (migration 185); arama keşfinden bağımsızdır. */
+  profile_visibility?: 'private' | 'friends' | 'public'
   /** Açık sıralamada görünürlük (migration 177; tüm kullanıcılar varsayılan FALSE) */
   leaderboard_opt_in?: boolean
   // Referral

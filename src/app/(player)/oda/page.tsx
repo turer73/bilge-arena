@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/oda/EmptyState'
 import { TabNav } from '@/components/oda/TabNav'
 import { PublicRoomList } from '@/components/oda/PublicRoomList'
 import { QuickPlayPanel } from '@/components/oda/QuickPlayPanel'
+import { ArenaModeCards } from '@/components/oda/ArenaModeCards'
 import { ArrowRight, KeyRound, Plus, UsersRound } from 'lucide-react'
 
 /**
@@ -62,6 +63,8 @@ export default async function Page({
           kur.
         </p>
       </header>
+
+      <ArenaModeCards />
 
       <section aria-labelledby="room-entry-title" className="mb-8">
         <h2 id="room-entry-title" className="sr-only">
