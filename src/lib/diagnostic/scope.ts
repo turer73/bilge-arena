@@ -1,6 +1,7 @@
 export const ADAPTIVE_DIAGNOSTIC_SCOPE = {
   game: 'matematik',
   examRef: 'TYT',
+  questionExamRef: 'TYT',
   taxonomyVersion: 'ba-tyt-math-v1',
   outcomeCount: 6,
 } as const
@@ -8,6 +9,7 @@ export const ADAPTIVE_DIAGNOSTIC_SCOPE = {
 interface DiagnosticScopeInput {
   game: string
   examRef: string
+  questionExamRef: string | null
   taxonomyVersion: string
 }
 
@@ -20,5 +22,6 @@ interface DiagnosticScopeInput {
 export function supportsAdaptiveDiagnosticScope(scope: DiagnosticScopeInput): boolean {
   return scope.game === ADAPTIVE_DIAGNOSTIC_SCOPE.game
     && scope.examRef === ADAPTIVE_DIAGNOSTIC_SCOPE.examRef
+    && scope.questionExamRef === ADAPTIVE_DIAGNOSTIC_SCOPE.questionExamRef
     && scope.taxonomyVersion === ADAPTIVE_DIAGNOSTIC_SCOPE.taxonomyVersion
 }

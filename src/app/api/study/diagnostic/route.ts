@@ -257,6 +257,7 @@ async function isAdaptiveDiagnosticReleased(admin: AdminClient): Promise<boolean
     && supportsAdaptiveDiagnosticScope({
       game: scope.game,
       examRef: scope.displayExamRef,
+      questionExamRef: scope.questionExamRef,
       taxonomyVersion: scope.taxonomyVersion,
     }),
   )

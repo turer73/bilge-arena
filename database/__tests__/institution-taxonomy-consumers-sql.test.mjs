@@ -21,7 +21,9 @@ describe('institution taxonomy consumer alignment migration', () => {
     expect(sql).toContain('outcome.taxonomy_version = v_program.taxonomy_version')
     expect(sql).toContain("'taxonomyVersion', v_taxonomy_version")
     expect(sql).toContain("v_taxonomy_version IS DISTINCT FROM 'ba-tyt-math-v1'")
+    expect(sql).toContain("v_question_exam_ref IS DISTINCT FROM 'TYT'")
     expect(sql).toContain('NOT COALESCE(v_diagnostic_enabled, false)')
+    expect(sql).toContain("scope.question_exam_ref = 'TYT'")
     expect(sql).toContain("item.task_type = 'diagnostic'")
     expect(sql).toContain('public.free_pilot_legacy_program_publish')
     expect(sql).toContain('v_request.payload_hash = v_legacy_hash')
@@ -32,6 +34,25 @@ describe('institution taxonomy consumer alignment migration', () => {
     expect(replayLookup).toBeGreaterThan(createStart)
     expect(releaseLookup).toBeGreaterThan(createStart)
     expect(replayLookup).toBeLessThan(releaseLookup)
+    const createEnd = sql.indexOf('CREATE OR REPLACE FUNCTION public.update_institution_study_program_draft', createStart)
+    expect(sql.slice(releaseLookup, createEnd)).toContain('FOR SHARE')
+
+    const updateStart = createEnd
+    const updateEnd = sql.indexOf('CREATE OR REPLACE FUNCTION public.publish_institution_study_program', updateStart)
+    const updateSql = sql.slice(updateStart, updateEnd)
+    const updateReplay = updateSql.indexOf("operation = 'update_study_program_draft'")
+    const updateGate = updateSql.indexOf("scope.question_exam_ref = 'TYT'")
+    expect(updateReplay).toBeGreaterThanOrEqual(0)
+    expect(updateReplay).toBeLessThan(updateGate)
+    expect(updateSql).toContain("':program-update:'")
+    expect(updateSql).toContain('FOR SHARE')
+
+    const publishStart = updateEnd
+    const publishEnd = sql.indexOf('CREATE OR REPLACE FUNCTION public.institution_study_program_review_evidence', publishStart)
+    const publishSql = sql.slice(publishStart, publishEnd)
+    expect(publishSql).toContain("scope.question_exam_ref = 'TYT'")
+    expect(publishSql).toContain('FOR UPDATE')
+    expect(publishSql).toContain('FOR SHARE')
   })
 
   it('reviews a program against its generation taxonomy even after retirement', () => {

@@ -50,6 +50,7 @@ function analysis(outcomes: ReturnType<typeof assessment>[]) {
     student: { memberRef: 'a'.repeat(32), alias: 'Bilge Öğrenci', joinedAt: '2026-08-01T09:00:00.000Z' },
     scope: {
       game: 'matematik', examRef: 'TYT', taxonomyVersion: 'ba-tyt-math-v1',
+      questionExamRef: 'TYT',
       diagnosticEnabled: true,
       modelVersion: 'institution-evidence-v1', windowStart: '2026-08-01T09:00:00.000Z',
       windowEnd: '2026-08-13T12:00:00.000Z',

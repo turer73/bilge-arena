@@ -97,6 +97,7 @@ function candidates(analysis: InstitutionStudentLearningAnalysis): Candidate[] {
   const diagnosticSupported = analysis.scope.diagnosticEnabled && supportsAdaptiveDiagnosticScope({
     game: analysis.scope.game,
     examRef: analysis.scope.examRef,
+    questionExamRef: analysis.scope.questionExamRef,
     taxonomyVersion: analysis.scope.taxonomyVersion,
   })
   const weak = analysis.outcomes

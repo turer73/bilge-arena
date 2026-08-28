@@ -71,6 +71,7 @@ export const institutionStudentAnalysisRpcSchema = z.object({
   scope: z.object({
     game: z.literal('matematik'),
     examRef: z.literal('TYT'),
+    questionExamRef: z.string().regex(/^[A-Z0-9-]{2,10}$/).nullable().default(null),
     taxonomyVersion: institutionTaxonomyVersionSchema,
     diagnosticEnabled: z.boolean().default(false),
     modelVersion: z.literal('institution-evidence-v1'),

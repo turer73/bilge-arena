@@ -235,6 +235,7 @@ BEGIN
     'scope', jsonb_build_object(
       'game', v_scope.game,
       'examRef', v_scope.display_exam_ref,
+      'questionExamRef', v_scope.question_exam_ref,
       'taxonomyVersion', v_scope.taxonomy_version,
       'diagnosticEnabled', v_scope.diagnostic_enabled,
       'modelVersion', 'institution-evidence-v1',

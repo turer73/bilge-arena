@@ -474,14 +474,15 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
     await client.query(`CREATE TABLE public.curriculum_scope_releases (
       game text NOT NULL,
       display_exam_ref text NOT NULL,
+      question_exam_ref text,
       taxonomy_version text NOT NULL,
       release_status text NOT NULL,
       diagnostic_enabled boolean NOT NULL DEFAULT false,
       PRIMARY KEY(game, display_exam_ref)
     )`)
     await client.query(`INSERT INTO public.curriculum_scope_releases(
-      game,display_exam_ref,taxonomy_version,release_status,diagnostic_enabled
-    ) VALUES('matematik','TYT','ba-tyt-math-v1','released',true)`)
+      game,display_exam_ref,question_exam_ref,taxonomy_version,release_status,diagnostic_enabled
+    ) VALUES('matematik','TYT','TYT','ba-tyt-math-v1','released',true)`)
     await client.query(`INSERT INTO public.curriculum_outcomes(
       code,game,exam_ref,taxonomy_version,is_active
     ) VALUES('MAT-TEST-01','matematik','TYT','ba-tyt-math-v1',true)`)
@@ -1415,6 +1416,19 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
       WHERE program_ref=$1`, [freeProgram.programRef])).rows[0]).toEqual({
       taxonomy_version: 'ba-tyt-math-v1',
     })
+    const successfulProgramUpdateRequest = randomUUID()
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+      [
+        freePilotManager,
+        freeProgram.programRef,
+        weekStart,
+        30,
+        programItems,
+        successfulProgramUpdateRequest,
+      ],
+    )).toMatchObject({ programRef: freeProgram.programRef, replayed: false })
     await client.query(`UPDATE public.curriculum_scope_releases
       SET taxonomy_version='ba-tyt-math-v2'
       WHERE game='matematik' AND display_exam_ref='TYT'`)
@@ -1449,6 +1463,18 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
       ),
       '22023',
     )
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+      [
+        freePilotManager,
+        freeProgram.programRef,
+        weekStart,
+        30,
+        programItems,
+        successfulProgramUpdateRequest,
+      ],
+    )).toMatchObject({ programRef: freeProgram.programRef, replayed: true })
     await expectPgError(
       () => authenticatedRpc(
         freePilotManager,
@@ -1474,7 +1500,50 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
       '22023',
     )
     await client.query(`UPDATE public.curriculum_scope_releases
-      SET taxonomy_version='ba-tyt-math-v1'
+      SET taxonomy_version='ba-tyt-math-v1',question_exam_ref='LGS'
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
+        [
+          freePilotManager,
+          freeClassroomId,
+          membership.rows[0].member_ref,
+          weekStart,
+          30,
+          'institution-program-v1',
+          programItems,
+          randomUUID(),
+        ],
+      ),
+      '22023',
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+        [
+          freePilotManager,
+          freeProgram.programRef,
+          weekStart,
+          30,
+          programItems,
+          randomUUID(),
+        ],
+      ),
+      '22023',
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.publish_institution_study_program($1,$2,$3)',
+        [freePilotManager, freeProgram.programRef, blockedProgramPublishRequest],
+      ),
+      '22023',
+    )
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET question_exam_ref='TYT'
       WHERE game='matematik' AND display_exam_ref='TYT'`)
     await authenticatedRpc(
       freePilotManager,

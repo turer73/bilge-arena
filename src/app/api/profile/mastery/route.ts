@@ -175,6 +175,7 @@ export async function GET(request: NextRequest) {
     const diagnosticAvailable = scope.diagnosticEnabled && supportsAdaptiveDiagnosticScope({
       game,
       examRef: scope.displayExamRef,
+      questionExamRef: scope.questionExamRef,
       taxonomyVersion: scope.taxonomyVersion,
     })
     const [stateResult, diagnosticStateResult] = outcomeIds.length > 0

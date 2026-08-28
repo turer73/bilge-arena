@@ -24,6 +24,9 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
   const expiringUser = randomUUID()
   const migrationLegacyUser = randomUUID()
   const v2ExpiryUser = randomUUID()
+  const registryReplayUser = randomUUID()
+  const registryStartUser = randomUUID()
+  const registryLockUser = randomUUID()
   const categories = ['sayilar', 'denklemler', 'fonksiyonlar', 'problemler', 'geometri', 'olasilik']
   const questions = Object.fromEntries(categories.map((category) => [category, {
     base: randomUUID(),
@@ -88,8 +91,9 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
         answered_at timestamptz NOT NULL DEFAULT clock_timestamp()
       );
     `)
-    await client.query('INSERT INTO public.profiles(id) VALUES($1),($2),($3),($4),($5)', [
+    await client.query('INSERT INTO public.profiles(id) VALUES($1),($2),($3),($4),($5),($6),($7),($8)', [
       user, other, expiringUser, migrationLegacyUser, v2ExpiryUser,
+      registryReplayUser, registryStartUser, registryLockUser,
     ])
     const values = []
     const parameters = []
@@ -133,6 +137,19 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
       [migrationLegacyUser, migrationLegacySession, questions.sayilar.base],
     )
     await client.query(read('140_adaptive_diagnostic_evidence_v2.sql'))
+    await client.query(`CREATE TABLE public.curriculum_scope_releases (
+      game text NOT NULL,
+      display_exam_ref text NOT NULL,
+      question_exam_ref text,
+      taxonomy_version text NOT NULL,
+      release_status text NOT NULL,
+      diagnostic_enabled boolean NOT NULL DEFAULT false,
+      PRIMARY KEY(game, display_exam_ref)
+    )`)
+    await client.query(`INSERT INTO public.curriculum_scope_releases(
+      game,display_exam_ref,question_exam_ref,taxonomy_version,release_status,diagnostic_enabled
+    ) VALUES('matematik','TYT','TYT','ba-tyt-math-v1','released',true)`)
+    await client.query(read('184_adaptive_diagnostic_registry_write_gate.sql'))
   })
 
   afterAll(async () => {
@@ -265,6 +282,73 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
       'SELECT count(*)::int AS answer_count FROM public.adaptive_diagnostic_answers WHERE session_id=$1',
       [sessionId],
     )).rows[0]).toEqual({ answer_count:0 })
+  })
+
+  it('fails closed on registry drift while preserving exact answer replay', async () => {
+    const sessionId = randomUUID()
+    const requestId = randomUUID()
+    const started = await start(registryReplayUser, sessionId, questions.sayilar.base)
+    const recorded = await recordV2(client, {
+      userId:registryReplayUser,sessionId,questionId:started.currentQuestionId,selectedOption:1,
+      requestId,nextQuestionId:questions.denklemler.base,
+    })
+    expect(recorded).toMatchObject({ alreadyProcessed:false, status:'active', answeredCount:1 })
+
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET diagnostic_enabled=false
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
+    expect(await recordV2(client, {
+      userId:registryReplayUser,sessionId,questionId:started.currentQuestionId,selectedOption:1,
+      requestId,nextQuestionId:questions.denklemler.base,
+    })).toMatchObject({ alreadyProcessed:true, status:'active', answeredCount:1 })
+    await expect(recordV2(client, {
+      userId:registryReplayUser,sessionId,questionId:questions.denklemler.base,selectedOption:1,
+      requestId:randomUUID(),nextQuestionId:questions.fonksiyonlar.base,
+    })).rejects.toMatchObject({ code:'22023' })
+    await expect(start(registryStartUser, randomUUID(), questions.sayilar.base))
+      .rejects.toMatchObject({ code:'22023' })
+
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET diagnostic_enabled=true,question_exam_ref='LGS'
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
+    await expect(start(registryStartUser, randomUUID(), questions.sayilar.base))
+      .rejects.toMatchObject({ code:'22023' })
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET question_exam_ref='TYT'
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
+  })
+
+  it('holds the registry capability lock through the diagnostic transaction', async () => {
+    const sessionId = randomUUID()
+    let transactionOpen = false
+    try {
+      await secondClient.query('BEGIN')
+      transactionOpen = true
+      const started = (await secondClient.query(
+        'SELECT public.start_adaptive_diagnostic($1,$2,$3) result',
+        [registryLockUser, sessionId, questions.sayilar.base],
+      )).rows[0].result
+      expect(started).toMatchObject({ sessionId, resumed:false })
+
+      await client.query("SET statement_timeout = '100ms'")
+      await expect(client.query(`UPDATE public.curriculum_scope_releases
+        SET diagnostic_enabled=false
+        WHERE game='matematik' AND display_exam_ref='TYT'`))
+        .rejects.toMatchObject({ code:'57014' })
+      await client.query('RESET statement_timeout')
+      await secondClient.query('COMMIT')
+      transactionOpen = false
+
+      await client.query(`UPDATE public.curriculum_scope_releases
+        SET diagnostic_enabled=false
+        WHERE game='matematik' AND display_exam_ref='TYT'`)
+      await client.query(`UPDATE public.curriculum_scope_releases
+        SET diagnostic_enabled=true
+        WHERE game='matematik' AND display_exam_ref='TYT'`)
+    } finally {
+      await client.query('RESET statement_timeout').catch(() => undefined)
+      if (transactionOpen) await secondClient.query('ROLLBACK')
+    }
   })
 
   it('binds outcome and difficulty when the question is issued, not when it is answered', async () => {

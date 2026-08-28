@@ -283,6 +283,14 @@ describe('/api/study/diagnostic', () => {
     expect(mockFrom).not.toHaveBeenCalled()
 
     rpcResults.resolve_released_curriculum_scope = {
+      data: { ...releasedDiagnosticScope, questionExamRef: 'LGS' },
+      error: null,
+    }
+    const storageScopeResponse = await GET(getRequest() as never)
+    expect(storageScopeResponse.status).toBe(200)
+    await expect(storageScopeResponse.json()).resolves.toMatchObject({ supported: false })
+
+    rpcResults.resolve_released_curriculum_scope = {
       data: { ...releasedDiagnosticScope, taxonomyVersion: 'ba-tyt-math-v2' },
       error: null,
     }

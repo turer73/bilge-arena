@@ -242,6 +242,7 @@ DECLARE
   v_request public.pilot_institution_requests%ROWTYPE;
   v_operational_institution_id uuid;
   v_taxonomy_version text;
+  v_question_exam_ref text;
   v_diagnostic_enabled boolean;
   v_hash text;
   v_legacy_hash text;
@@ -322,12 +323,13 @@ BEGIN
     RETURN v_request.result || jsonb_build_object('replayed', true);
   END IF;
 
-  SELECT scope.taxonomy_version, scope.diagnostic_enabled
-  INTO v_taxonomy_version, v_diagnostic_enabled
+  SELECT scope.taxonomy_version, scope.question_exam_ref, scope.diagnostic_enabled
+  INTO v_taxonomy_version, v_question_exam_ref, v_diagnostic_enabled
   FROM public.curriculum_scope_releases AS scope
   WHERE scope.game = 'matematik'
     AND scope.display_exam_ref = 'TYT'
-    AND scope.release_status = 'released';
+    AND scope.release_status = 'released'
+  FOR SHARE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'released institution curriculum scope is required'
       USING ERRCODE = 'P0002';
@@ -337,6 +339,7 @@ BEGIN
     WHERE value->>'taskType' = 'diagnostic'
   ) AND (
     v_taxonomy_version IS DISTINCT FROM 'ba-tyt-math-v1'
+    OR v_question_exam_ref IS DISTINCT FROM 'TYT'
     OR NOT COALESCE(v_diagnostic_enabled, false)
   ) THEN
     RAISE EXCEPTION 'adaptive diagnostic is unavailable for released taxonomy'
@@ -397,15 +400,39 @@ SET search_path = pg_catalog
 AS $fn$
 DECLARE
   v_program public.institution_study_programs%ROWTYPE;
+  v_request public.pilot_institution_requests%ROWTYPE;
   v_operational_institution_id uuid;
+  v_hash text;
 BEGIN
   v_operational_institution_id := public.institution_pilot_assert_operational_actor(p_user_id);
   IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' THEN
     RAISE EXCEPTION 'invalid institution study program update' USING ERRCODE = '22023';
   END IF;
+  v_hash := public.institution_pilot_payload_hash(jsonb_build_object(
+    'programRef', p_program_ref,
+    'weekStart', p_week_start,
+    'dailyMinuteLimit', p_daily_minute_limit,
+    'items', p_items
+  ));
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended(p_user_id::text || ':program-update:' || p_request_id::text, 0)
+  );
+  SELECT * INTO v_request
+  FROM public.pilot_institution_requests
+  WHERE user_id = p_user_id
+    AND operation = 'update_study_program_draft'
+    AND request_id = p_request_id
+  FOR UPDATE;
+  IF FOUND THEN
+    IF v_request.payload_hash IS DISTINCT FROM v_hash THEN
+      RAISE EXCEPTION 'program update request payload mismatch' USING ERRCODE = '22023';
+    END IF;
+    RETURN v_request.result || jsonb_build_object('replayed', true);
+  END IF;
   SELECT * INTO v_program
   FROM public.institution_study_programs
-  WHERE program_ref = p_program_ref AND teacher_id = p_user_id;
+  WHERE program_ref = p_program_ref AND teacher_id = p_user_id
+  FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'study program not found' USING ERRCODE = 'P0002'; END IF;
   IF v_operational_institution_id IS DISTINCT FROM v_program.institution_id THEN
     RAISE EXCEPTION 'operational institution mismatch' USING ERRCODE = '42501';
@@ -413,18 +440,21 @@ BEGIN
   IF v_program.status = 'draft' AND EXISTS (
     SELECT 1 FROM jsonb_array_elements(p_items) AS item(value)
     WHERE value->>'taskType' = 'diagnostic'
-  ) AND NOT EXISTS (
-    SELECT 1
+  ) THEN
+    PERFORM 1
     FROM public.curriculum_scope_releases AS scope
     WHERE scope.game = 'matematik'
       AND scope.display_exam_ref = 'TYT'
+      AND scope.question_exam_ref = 'TYT'
       AND scope.taxonomy_version = v_program.taxonomy_version
       AND scope.taxonomy_version = 'ba-tyt-math-v1'
       AND scope.release_status = 'released'
       AND scope.diagnostic_enabled
-  ) THEN
-    RAISE EXCEPTION 'adaptive diagnostic is unavailable for program taxonomy'
-      USING ERRCODE = '22023';
+    FOR SHARE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'adaptive diagnostic is unavailable for program taxonomy'
+        USING ERRCODE = '22023';
+    END IF;
   END IF;
   IF EXISTS (
     SELECT 1
@@ -462,25 +492,29 @@ BEGIN
   v_operational_institution_id := public.institution_pilot_assert_operational_actor(p_user_id);
   SELECT * INTO v_program
   FROM public.institution_study_programs
-  WHERE program_ref = p_program_ref AND teacher_id = p_user_id;
+  WHERE program_ref = p_program_ref AND teacher_id = p_user_id
+  FOR UPDATE;
   IF FOUND AND v_operational_institution_id IS DISTINCT FROM v_program.institution_id THEN
     RAISE EXCEPTION 'operational institution mismatch' USING ERRCODE = '42501';
   END IF;
   IF FOUND AND v_program.status = 'draft' AND EXISTS (
     SELECT 1 FROM public.institution_study_program_items AS item
     WHERE item.program_id = v_program.id AND item.task_type = 'diagnostic'
-  ) AND NOT EXISTS (
-    SELECT 1
+  ) THEN
+    PERFORM 1
     FROM public.curriculum_scope_releases AS scope
     WHERE scope.game = 'matematik'
       AND scope.display_exam_ref = 'TYT'
+      AND scope.question_exam_ref = 'TYT'
       AND scope.taxonomy_version = v_program.taxonomy_version
       AND scope.taxonomy_version = 'ba-tyt-math-v1'
       AND scope.release_status = 'released'
       AND scope.diagnostic_enabled
-  ) THEN
-    RAISE EXCEPTION 'adaptive diagnostic is unavailable for program taxonomy'
-      USING ERRCODE = '22023';
+    FOR SHARE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'adaptive diagnostic is unavailable for program taxonomy'
+        USING ERRCODE = '22023';
+    END IF;
   END IF;
   RETURN public.free_pilot_legacy_program_publish(
     p_user_id, p_program_ref, p_request_id
