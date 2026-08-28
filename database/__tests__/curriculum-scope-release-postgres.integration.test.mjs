@@ -60,6 +60,8 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let supersededAttempt
   let supersededSession
   let supersededAnswer
+  let secondaryNode
+  let secondaryOutcome
   let releaseWriterQuestion
   let completionWasBlocked = false
   let answerWriterWasBlocked = false
@@ -201,8 +203,8 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     await client.query(`INSERT INTO public.question_outcomes(
       question_id,outcome_id,weight,is_primary,mapping_source
     ) VALUES($1,$2,1,true,'manual')`, [questionIds.get('kimya'), manualOutcome])
-    const secondaryNode = randomUUID()
-    const secondaryOutcome = randomUUID()
+    secondaryNode = randomUUID()
+    secondaryOutcome = randomUUID()
 
     raceUser = randomUUID()
     raceAttempt = randomUUID()
@@ -874,6 +876,12 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       attempts: 1,
       v2_attempts: 1,
     })
+
+    // The fixture's richer secondary mapping has now proven the repair path.
+    // Retire it before later tests replay the category-proxy release, whose
+    // contract deliberately requires one active outcome per category.
+    await client.query('UPDATE public.curriculum_outcomes SET is_active=false WHERE id=$1', [secondaryOutcome])
+    await client.query('UPDATE public.curriculum_nodes SET is_active=false WHERE id=$1', [secondaryNode])
   })
 
   it('resolves released scopes, but never exposes draft scopes', async () => {
