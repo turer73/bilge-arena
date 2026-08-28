@@ -7,6 +7,7 @@ import { isInstitutionTrackingEnabled } from '@/lib/institution-tracking/server-
 import { buildInstitutionStudentLearningAnalysis } from '@/lib/institution-tracking/student-analysis'
 import { institutionFollowupMetricsSchema } from '@/lib/institution-tracking/followup'
 import { institutionGrowthMetricsSchema } from '@/lib/institution-tracking/growth'
+import { resolveReleasedMasteryScope } from '@/lib/mastery/scope'
 
 const paramsSchema = z.object({ classroomId: z.string().uuid() }).strict()
 const programMembersSchema = z.object({
@@ -60,6 +61,19 @@ export async function GET(
   const classroom = directory.data.classrooms.find((item) => item.id === params.data.classroomId)
   if (!classroom) {
     return institutionPilotNoStoreJson({ error: 'Aktif sınıf bulunamadı' }, { status: 404 })
+  }
+
+  const scopeResolution = await resolveReleasedMasteryScope(
+    (args) => context.admin.rpc('resolve_released_curriculum_scope', args),
+    'matematik',
+    'TYT',
+  )
+  if (scopeResolution.error || !scopeResolution.scope) {
+    return institutionPilotNoStoreJson(
+      { error: 'Kurum öğrenme kapsamı kullanıma hazır değil' },
+      { status: scopeResolution.error && scopeResolution.code
+        ? institutionPilotRpcStatus(scopeResolution.code) : 503 },
+    )
   }
 
   const windowEnd = new Date().toISOString()
@@ -119,6 +133,7 @@ export async function GET(
       },
       windowStart,
       windowEnd,
+      taxonomyVersion: scopeResolution.scope.taxonomyVersion,
       analyses,
       publishedProgramMemberRefs: programs.data.memberRefs,
       followupMetrics: followupMetrics.data,

@@ -95,8 +95,12 @@ const freePilotClosedGateReplaySql = readFileSync(
   join(migrationsDir, '168_free_pilot_closed_gate_replay.sql'),
   'utf8',
 )
+const institutionScopeAlignmentSql = readFileSync(
+  join(migrationsDir, '182_institution_math_scope_registry_alignment.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145, 149-160, 167-168 and 182 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -440,6 +444,27 @@ suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real Postgre
     await client.query(freePilotReadinessEvidenceGateSql)
     await client.query(freePilotClosedGateReplaySql)
     await client.query(freePilotClosedGateReplaySql)
+    // Migration 178 owns this registry in the full schema. This institution-
+    // focused fixture needs the row type so migration 182 can compile and
+    // replay against the real migration-159 wrapper contract.
+    await client.query(`CREATE TABLE public.curriculum_scope_releases (
+      game text NOT NULL,
+      display_exam_ref text NOT NULL,
+      taxonomy_version text NOT NULL,
+      release_status text NOT NULL,
+      PRIMARY KEY(game, display_exam_ref)
+    )`)
+    await client.query(institutionScopeAlignmentSql)
+    await client.query(institutionScopeAlignmentSql)
+
+    const alignedDefinitions = (await client.query(`SELECT
+      pg_get_functiondef('public.get_institution_student_learning_analysis(uuid,uuid,text,text,text,timestamptz)'::regprocedure) AS guarded,
+      pg_get_functiondef('public.free_pilot_legacy_learning_analysis(uuid,uuid,text,text,text,timestamptz)'::regprocedure) AS projection
+    `)).rows[0]
+    expect(alignedDefinitions.guarded).toContain('institution_pilot_assert_operational_actor')
+    expect(alignedDefinitions.guarded).toContain('free_pilot_legacy_learning_analysis')
+    expect(alignedDefinitions.projection).toContain('curriculum_scope_releases')
+    expect(alignedDefinitions.projection).toContain('v_scope.taxonomy_version')
 
     const legacyRpcPrivileges = await client.query(`
       SELECT

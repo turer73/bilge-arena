@@ -8,6 +8,7 @@ const registrySql = readFileSync(join(root, '178_curriculum_scope_release_regist
 const fenReleaseSql = readFileSync(join(root, '179_release_tyt_fen_mastery_scope.sql'), 'utf8')
 const fenRepairSql = readFileSync(join(root, '180_backfill_released_tyt_fen_mastery_evidence.sql'), 'utf8')
 const completeRepairSql = readFileSync(join(root, '181_curriculum_scope_repair_and_parent_integrity.sql'), 'utf8')
+const institutionAlignmentSql = readFileSync(join(root, '182_institution_math_scope_registry_alignment.sql'), 'utf8')
 const materializerDefinition = (sql) => sql.slice(
   sql.indexOf('CREATE OR REPLACE FUNCTION public.materialize_verified_attempt_mastery'),
   sql.indexOf('REVOKE ALL ON FUNCTION public.materialize_verified_attempt_mastery'),
@@ -17,7 +18,7 @@ const graphIntegrityDefinition = (sql) => sql.slice(
   sql.indexOf('REVOKE ALL ON FUNCTION public.curriculum_graph_integrity'),
 )
 
-describe('178-181 curriculum scope release migrations', () => {
+describe('178-182 curriculum scope release migrations', () => {
   it('keeps the release registry private and resolves only released scopes', () => {
     expect(registrySql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_releases/)
     expect(registrySql).toMatch(/release_status IN \('draft','validating','released','retired'\)/)
@@ -141,5 +142,23 @@ describe('178-181 curriculum scope release migrations', () => {
     expect(completeRepairSql).toMatch(/WHERE id = NEW\.node_id[\s\S]*FOR UPDATE[\s\S]*v_node\.category IS DISTINCT FROM NEW\.category/)
     expect(completeRepairSql).toMatch(/IF NOT v_scope_released THEN[\s\S]*obsolete TYT Fen v1 repair mutated rows/)
     expect(completeRepairSql).toMatch(/v_candidates <> v_inserted[\s\S]*TYT Fen complete evidence repair lost rows/)
+  })
+
+  it('keeps institution Mathematics analysis on the released registry taxonomy', () => {
+    const definition = institutionAlignmentSql.slice(
+      institutionAlignmentSql.indexOf('CREATE OR REPLACE FUNCTION public.free_pilot_legacy_learning_analysis'),
+      institutionAlignmentSql.indexOf('REVOKE ALL ON FUNCTION public.free_pilot_legacy_learning_analysis'),
+    )
+    expect(definition).toMatch(/v_scope public\.curriculum_scope_releases%ROWTYPE/)
+    expect(definition).toMatch(/scope\.game = p_game[\s\S]*scope\.display_exam_ref = p_exam_ref[\s\S]*scope\.release_status = 'released'/)
+    expect(definition).toMatch(/curriculum_scope_integrity\([\s\S]*v_scope\.game,[\s\S]*v_scope\.display_exam_ref,[\s\S]*v_scope\.taxonomy_version/)
+    expect(definition).toMatch(/v_integrity->>'primaryMismatch'[\s\S]*v_integrity->>'emptyOutcome'/)
+    expect(definition).toMatch(/outcome\.game = v_scope\.game[\s\S]*outcome\.exam_ref = v_scope\.display_exam_ref[\s\S]*outcome\.taxonomy_version = v_scope\.taxonomy_version/)
+    expect(definition).toMatch(/'taxonomyVersion', v_scope\.taxonomy_version/)
+    expect(definition).not.toContain("'ba-tyt-math-v1'")
+    expect(definition).not.toMatch(/\b(?:INSERT INTO|UPDATE|DELETE FROM|TRUNCATE)\b/i)
+    expect(institutionAlignmentSql).toMatch(/REVOKE ALL ON FUNCTION public\.free_pilot_legacy_learning_analysis\([\s\S]*FROM PUBLIC, anon, authenticated, service_role/)
+    expect(institutionAlignmentSql).not.toContain('CREATE OR REPLACE FUNCTION public.get_institution_student_learning_analysis')
+    expect(institutionAlignmentSql).toMatch(/pg_get_functiondef\(v_wrapper\)[\s\S]*institution_pilot_assert_operational_actor[\s\S]*free_pilot_legacy_learning_analysis/)
   })
 })
