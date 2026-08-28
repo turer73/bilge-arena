@@ -1,7 +1,9 @@
 // Opt-in disposable PostgreSQL coverage for 086 -> 091 -> 094 -> 096 -> 097
-// -> 138 -> 178 -> historical verified Fen attempts -> 179 -> 180 -> 181.
+// -> 138 -> 178 -> historical verified Fen attempts -> 179 -> 180 -> 181
+// -> historical verified YDT English attempts -> 185 -> 186.
 // Requires VERIFIED_ATTEMPTS_TEST_DATABASE_URL=.../bilge_r02_test_* and
-// VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE=1. Normal CI does not run it.
+// VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE=1. The dedicated PostgreSQL CI
+// job runs it; the normal local/unit-test command deliberately does not.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -30,9 +32,11 @@ const registryMigration = migration('178_curriculum_scope_release_registry.sql')
 const fenReleaseMigration = migration('179_release_tyt_fen_mastery_scope.sql')
 const fenRepairMigration = migration('180_backfill_released_tyt_fen_mastery_evidence.sql')
 const completeRepairMigration = migration('181_curriculum_scope_repair_and_parent_integrity.sql')
+const ydtEnglishReleaseMigration = migration('185_release_ydt_english_mastery_scope.sql')
+const ydtEnglishRepairMigration = migration('186_backfill_released_ydt_english_mastery_evidence.sql')
 const { Client } = pg
 
-describePg('178-181 curriculum scope release real PostgreSQL', () => {
+describePg('178-186 curriculum scope release real PostgreSQL', () => {
   let client
   let releaseClient
   let completionClient
@@ -70,6 +74,11 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let replacementOldNode
   let replacementOldOutcome
   let releaseWriterQuestion
+  let ydtEnglishUser
+  let ydtEnglishAttempt
+  let ydtEnglishSession
+  let ydtEnglishAnswers
+  let preYdtEnglishRelease
   let completionWasBlocked = false
   let answerWriterWasBlocked = false
   let questionWriterWasBlocked = false
@@ -79,7 +88,11 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let preCompleteRepair
   const mathCategories = ['sayilar', 'denklemler', 'fonksiyonlar', 'problemler', 'geometri', 'olasilik']
   const fenCategories = ['fizik', 'kimya', 'biyoloji']
-  const questionIds = new Map([...mathCategories, ...fenCategories]
+  const ydtEnglishCategories = [
+    'vocabulary', 'phrasal_verbs', 'grammar', 'sentence_completion',
+    'cloze_test', 'restatement', 'dialogue',
+  ]
+  const questionIds = new Map([...mathCategories, ...fenCategories, ...ydtEnglishCategories]
     .map((category) => [category, randomUUID()]))
 
   beforeAll(async () => {
@@ -139,6 +152,13 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       await client.query(
         `INSERT INTO public.questions(id,game,category,exam_ref,is_active)
          VALUES ($1,'fen',$2,'TYT',true)`,
+        [questionIds.get(category), category],
+      )
+    }
+    for (const category of ydtEnglishCategories) {
+      await client.query(
+        `INSERT INTO public.questions(id,game,category,exam_ref,is_active)
+         VALUES ($1,'wordquest',$2,NULL,true)`,
         [questionIds.get(category), category],
       )
     }
@@ -549,6 +569,46 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     }
     await repairPromise
     if (repairSetupError) throw repairSetupError
+
+    // Build a production-shaped historical YDT English attempt while its
+    // registry scope is still draft. Completion creates the immutable marker,
+    // but correctly has no outcome mapping/evidence to materialize yet.
+    ydtEnglishUser = randomUUID()
+    ydtEnglishAttempt = randomUUID()
+    ydtEnglishSession = randomUUID()
+    ydtEnglishAnswers = ydtEnglishCategories.map(() => randomUUID())
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [ydtEnglishUser])
+    await client.query(`INSERT INTO public.game_sessions(id,user_id,client_request_id)
+      VALUES($1,$2,$3)`, [ydtEnglishSession, ydtEnglishUser, randomUUID()])
+    await client.query(`INSERT INTO public.verified_attempts(
+      id,user_id,game,mode,question_ids,duration_sec,expires_at
+    ) VALUES($1,$2,'wordquest','classic',$3,180,clock_timestamp()+interval '1 hour')`, [
+      ydtEnglishAttempt,
+      ydtEnglishUser,
+      ydtEnglishCategories.map((category) => questionIds.get(category)),
+    ])
+    for (const [index, category] of ydtEnglishCategories.entries()) {
+      await client.query(`INSERT INTO public.verified_attempt_question_revisions(
+        attempt_id,question_id,difficulty
+      ) VALUES($1,$2,$3)`, [ydtEnglishAttempt, questionIds.get(category), (index % 5) + 1])
+      await client.query(`INSERT INTO public.session_answers(
+        id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
+      ) VALUES($1,$2,$3,$4,$5,$6,false,clock_timestamp()-interval '4 hours')`, [
+        ydtEnglishAnswers[index], ydtEnglishSession, ydtEnglishUser,
+        questionIds.get(category), index % 2 === 0, 12 + index,
+      ])
+    }
+    await client.query(`UPDATE public.verified_attempts
+      SET completed_at=clock_timestamp()-interval '3 hours',session_id=$2
+      WHERE id=$1`, [ydtEnglishAttempt, ydtEnglishSession])
+    preYdtEnglishRelease = (await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS markers,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS attempts`,
+    [ydtEnglishAttempt, ydtEnglishUser])).rows[0]
+
+    await client.query(ydtEnglishReleaseMigration)
+    await client.query(ydtEnglishRepairMigration)
   })
 
   afterAll(async () => {
@@ -988,6 +1048,141 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     expect((await client.query(
       `SELECT public.resolve_released_curriculum_scope('turkce','TYT') AS scope`,
     )).rows[0].scope).toBeNull()
+  })
+
+  it('releases, repairs, and safely replays the YDT English scope', async () => {
+    expect(preYdtEnglishRelease).toEqual({ markers: 1, evidence: 0, attempts: 0 })
+
+    const scope = (await client.query(
+      `SELECT public.resolve_released_curriculum_scope('wordquest','ydt') AS scope`,
+    )).rows[0].scope
+    expect(scope).toEqual({
+      game: 'wordquest',
+      displayExamRef: 'YDT',
+      questionExamRef: null,
+      taxonomyVersion: 'ba-ydt-eng-v1',
+      mappingMode: 'category_proxy',
+      diagnosticEnabled: false,
+    })
+    expect((await client.query(
+      `SELECT public.curriculum_scope_integrity('wordquest','YDT','ba-ydt-eng-v1') AS result`,
+    )).rows[0].result).toEqual({
+      total: 7,
+      mapped: 7,
+      unmapped: 0,
+      scopeMismatch: 0,
+      nodeOrphan: 0,
+      outcomeOrphan: 0,
+      primaryMismatch: 0,
+      emptyOutcome: 0,
+    })
+    expect((await client.query(`SELECT outcome.code
+      FROM public.question_outcomes AS mapping
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      JOIN public.questions AS question ON question.id=mapping.question_id
+      WHERE question.game='wordquest'
+      ORDER BY outcome.code`)).rows).toEqual([
+      { code: 'ENG-CLZ-01' },
+      { code: 'ENG-DLG-01' },
+      { code: 'ENG-GRM-01' },
+      { code: 'ENG-PHR-01' },
+      { code: 'ENG-RES-01' },
+      { code: 'ENG-SEN-01' },
+      { code: 'ENG-VOC-01' },
+    ])
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      count(*) FILTER (WHERE is_correct)::integer AS correct,
+      sum(difficulty_weighted_earned)::integer AS earned,
+      sum(difficulty_weighted_possible)::integer AS possible
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$1`,
+    [ydtEnglishAttempt])).rows[0]).toEqual({ evidence: 7, correct: 4, earned: 11, possible: 18 })
+    expect((await client.query(`SELECT
+      sum(attempts)::integer AS attempts,
+      sum(correct_attempts)::integer AS correct_attempts,
+      sum(v2_attempts)::integer AS v2_attempts,
+      sum(timed_attempts)::integer AS timed_attempts,
+      sum(total_time_sec)::integer AS total_time_sec
+      FROM public.user_outcome_state WHERE user_id=$1`, [ydtEnglishUser])).rows[0]).toEqual({
+      attempts: 7,
+      correct_attempts: 4,
+      v2_attempts: 7,
+      timed_attempts: 7,
+      total_time_sec: 105,
+    })
+    expect((await client.query(`SELECT candidate_attempts,candidate_answers,
+      candidate_evidence_rows,inserted_evidence_rows,affected_users,
+      manual_mapping_rows,mapping_at_or_before_answer_rows,mapping_after_answer_rows
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='186_ydt_english_complete_mappings_v1'
+      ORDER BY repaired_at,run_id LIMIT 1`)).rows[0]).toEqual({
+      candidate_attempts: 1,
+      candidate_answers: 7,
+      candidate_evidence_rows: 7,
+      inserted_evidence_rows: 7,
+      affected_users: 1,
+      manual_mapping_rows: 0,
+      mapping_at_or_before_answer_rows: 0,
+      mapping_after_answer_rows: 7,
+    })
+
+    await client.query(ydtEnglishReleaseMigration)
+    await client.query(ydtEnglishRepairMigration)
+    expect((await client.query(`SELECT candidate_evidence_rows,inserted_evidence_rows
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='186_ydt_english_complete_mappings_v1'
+      ORDER BY repaired_at DESC,run_id DESC LIMIT 1`)).rows[0]).toEqual({
+      candidate_evidence_rows: 0,
+      inserted_evidence_rows: 0,
+    })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
+      ydtEnglishUser, ydtEnglishAttempt,
+    ])).rows[0]).toEqual({ evidence: 7, attempts: 7, v2_attempts: 7 })
+
+    const futureQuestion = randomUUID()
+    await client.query(`INSERT INTO public.questions(id,game,category,exam_ref,is_active)
+      VALUES($1,'wordquest','vocabulary','',true)`, [futureQuestion])
+    expect((await client.query(`SELECT outcome.code
+      FROM public.question_outcomes AS mapping
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      WHERE mapping.question_id=$1`, [futureQuestion])).rows).toEqual([{ code: 'ENG-VOC-01' }])
+    await expect(client.query(
+      `UPDATE public.questions SET category='unknown_ydt_category' WHERE id=$1`, [futureQuestion],
+    )).rejects.toMatchObject({ code: '22023' })
+
+    const runsBeforeNoOp = (await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='186_ydt_english_complete_mappings_v1'`)).rows[0].count
+    await client.query(`UPDATE public.curriculum_scope_releases SET release_status='retired'
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)
+    await client.query(ydtEnglishReleaseMigration)
+    await client.query(ydtEnglishRepairMigration)
+    expect((await client.query(`SELECT release_status FROM public.curriculum_scope_releases
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)).rows[0]).toEqual({ release_status: 'retired' })
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='186_ydt_english_complete_mappings_v1'`)).rows[0].count).toBe(runsBeforeNoOp)
+
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET release_status='released',taxonomy_version='ba-ydt-eng-v2'
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)
+    await client.query(ydtEnglishReleaseMigration)
+    await client.query(ydtEnglishRepairMigration)
+    expect((await client.query(`SELECT release_status,taxonomy_version
+      FROM public.curriculum_scope_releases WHERE game='wordquest' AND display_exam_ref='YDT'`)).rows[0]).toEqual({
+      release_status: 'released', taxonomy_version: 'ba-ydt-eng-v2',
+    })
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='186_ydt_english_complete_mappings_v1'`)).rows[0].count).toBe(runsBeforeNoOp)
+
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET taxonomy_version='ba-ydt-eng-v1'
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)
   })
 
   it('maps future released Fen questions, ignores draft scopes, and fails closed on unknown Fen categories', async () => {

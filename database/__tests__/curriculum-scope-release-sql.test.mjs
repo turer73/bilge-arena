@@ -9,6 +9,8 @@ const fenReleaseSql = readFileSync(join(root, '179_release_tyt_fen_mastery_scope
 const fenRepairSql = readFileSync(join(root, '180_backfill_released_tyt_fen_mastery_evidence.sql'), 'utf8')
 const completeRepairSql = readFileSync(join(root, '181_curriculum_scope_repair_and_parent_integrity.sql'), 'utf8')
 const institutionAlignmentSql = readFileSync(join(root, '182_institution_math_scope_registry_alignment.sql'), 'utf8')
+const ydtEnglishReleaseSql = readFileSync(join(root, '185_release_ydt_english_mastery_scope.sql'), 'utf8')
+const ydtEnglishRepairSql = readFileSync(join(root, '186_backfill_released_ydt_english_mastery_evidence.sql'), 'utf8')
 const materializerDefinition = (sql) => sql.slice(
   sql.indexOf('CREATE OR REPLACE FUNCTION public.materialize_verified_attempt_mastery'),
   sql.indexOf('REVOKE ALL ON FUNCTION public.materialize_verified_attempt_mastery'),
@@ -18,7 +20,7 @@ const graphIntegrityDefinition = (sql) => sql.slice(
   sql.indexOf('REVOKE ALL ON FUNCTION public.curriculum_graph_integrity'),
 )
 
-describe('178-182 curriculum scope release migrations', () => {
+describe('178-186 curriculum scope release migrations', () => {
   it('keeps the release registry private and resolves only released scopes', () => {
     expect(registrySql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_releases/)
     expect(registrySql).toMatch(/release_status IN \('draft','validating','released','retired'\)/)
@@ -162,5 +164,44 @@ describe('178-182 curriculum scope release migrations', () => {
     expect(institutionAlignmentSql).toMatch(/REVOKE ALL ON FUNCTION public\.free_pilot_legacy_learning_analysis\([\s\S]*FROM PUBLIC, anon, authenticated, service_role/)
     expect(institutionAlignmentSql).not.toContain('CREATE OR REPLACE FUNCTION public.get_institution_student_learning_analysis')
     expect(institutionAlignmentSql).toMatch(/pg_get_functiondef\(v_wrapper\)[\s\S]*institution_pilot_assert_operational_actor[\s\S]*free_pilot_legacy_learning_analysis/)
+  })
+
+  it('releases the NULL-exam-ref YDT English bank only after a complete proof', () => {
+    expect(ydtEnglishReleaseSql).toMatch(/LOCK TABLE[\s\S]*public\.curriculum_scope_releases,[\s\S]*public\.session_answers,[\s\S]*public\.questions,[\s\S]*public\.question_outcomes,[\s\S]*public\.verified_attempts[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE TEMP TABLE ydt_english_scope_release_control[\s\S]*question_exam_ref IS NULL[\s\S]*release_status IN \('draft', 'validating', 'released'\)/)
+    expect(ydtEnglishReleaseSql).toMatch(/IF NOT \(SELECT should_apply FROM ydt_english_scope_release_control\) THEN[\s\S]*RETURN/)
+    expect(ydtEnglishReleaseSql).toMatch(/WHERE game = 'wordquest'[\s\S]*NULLIF\(upper\(btrim\(COALESCE\(exam_ref, ''\)\)\), ''\) IS NULL[\s\S]*is_active/)
+    expect(ydtEnglishReleaseSql).toMatch(/sync_taxonomy_auto_question_outcomes\([\s\S]*v_question\.exam_ref/)
+    expect(ydtEnglishReleaseSql).toMatch(/curriculum_scope_integrity\([\s\S]*'wordquest', 'YDT', 'ba-ydt-eng-v1'/)
+    for (const field of [
+      'unmapped', 'scopeMismatch', 'nodeOrphan', 'outcomeOrphan',
+      'primaryMismatch', 'emptyOutcome',
+    ]) expect(ydtEnglishReleaseSql).toMatch(new RegExp(`v_integrity->>'${field}'`))
+    expect(ydtEnglishReleaseSql).toMatch(/COALESCE\(\(v_integrity->>'total'\)::integer, 0\) <= 0/)
+    expect(ydtEnglishReleaseSql).toMatch(/SET release_status = 'released'[\s\S]*resolve_released_curriculum_scope\('wordquest', 'YDT'\)/)
+    expect(ydtEnglishReleaseSql).toMatch(/v_scope->'questionExamRef' IS DISTINCT FROM 'null'::jsonb/)
+    expect(ydtEnglishReleaseSql).toMatch(/taxonomyVersion' <> 'ba-ydt-eng-v1'/)
+    expect(ydtEnglishReleaseSql).toMatch(/diagnosticEnabled'[\s\S]*::boolean, true/)
+  })
+
+  it('repairs only pre-release verified YDT English evidence and is replay-safe', () => {
+    expect(ydtEnglishRepairSql).toMatch(/LOCK TABLE[\s\S]*public\.question_revision_outcomes,[\s\S]*public\.session_answers,[\s\S]*public\.verified_attempts,[\s\S]*public\.verified_attempt_hint_events,[\s\S]*public\.review_logs,[\s\S]*public\.mastery_materialized_attempts,[\s\S]*public\.mastery_outcome_evidence,[\s\S]*public\.curriculum_scope_evidence_repair_runs[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+    expect(ydtEnglishRepairSql).toMatch(/release_status = 'released'[\s\S]*curriculum_scope_integrity\([\s\S]*'wordquest', 'YDT', 'ba-ydt-eng-v1'/)
+    expect(ydtEnglishRepairSql).toMatch(/JOIN public\.mastery_materialized_attempts AS marker ON marker\.attempt_id = attempt\.id/)
+    expect(ydtEnglishRepairSql).toMatch(/JOIN public\.question_outcomes AS mapping[\s\S]*mapping\.mapping_source = 'taxonomy_auto'[\s\S]*mapping\.is_primary/)
+    expect(ydtEnglishRepairSql).toMatch(/attempt\.game = 'wordquest'/)
+    expect(ydtEnglishRepairSql).toMatch(/question\.game = 'wordquest'[\s\S]*NULLIF\(upper\(btrim\(COALESCE\(question\.exam_ref, ''\)\)\), ''\) IS NULL/)
+    expect(ydtEnglishRepairSql).toMatch(/answer\.answered_at < release\.released_at/)
+    expect(ydtEnglishRepairSql).toMatch(/mapping\.created_at > answer\.answered_at/)
+    expect(ydtEnglishRepairSql).toMatch(/LEFT JOIN public\.verified_attempt_question_revisions AS snapshot[\s\S]*snapshot\.attempt_id = attempt\.id[\s\S]*snapshot\.question_id = answer\.question_id/)
+    expect(ydtEnglishRepairSql).toMatch(/COALESCE\(snapshot\.difficulty, question\.difficulty\)/)
+    expect(ydtEnglishRepairSql).toMatch(/NOT EXISTS \([\s\S]*mastery_outcome_evidence AS existing[\s\S]*existing\.answer_id = answer\.id[\s\S]*existing\.outcome_id = mapping\.outcome_id/)
+    expect(ydtEnglishRepairSql).toMatch(/question_revision_outcomes AS historical_mapping[\s\S]*historical_mapping\.revision_id = snapshot\.revision_id/)
+    expect(ydtEnglishRepairSql).toMatch(/ON CONFLICT \(answer_id, outcome_id\) DO NOTHING/)
+    expect(ydtEnglishRepairSql).toMatch(/ON CONFLICT \(user_id, outcome_id\) DO UPDATE SET/)
+    expect(ydtEnglishRepairSql).toContain("'186_ydt_english_complete_mappings_v1'")
+    expect(ydtEnglishRepairSql).toMatch(/mapping_at_or_before_answer_rows[\s\S]*mapping_after_answer_rows/)
+    expect(ydtEnglishRepairSql).toMatch(/IF NOT v_scope_released THEN[\s\S]*obsolete YDT English v1 repair mutated rows/)
+    expect(ydtEnglishRepairSql).toMatch(/v_candidates <> v_inserted[\s\S]*YDT English evidence repair lost rows/)
   })
 })
