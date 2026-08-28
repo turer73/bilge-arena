@@ -1389,9 +1389,9 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
     const programItems = JSON.stringify([{
       position: 1,
       scheduledDate: weekStart,
-      taskType: 'verified_questions',
-      title: 'Canary tekrar çalışması',
-      reasonCode: 'current_target',
+      taskType: 'diagnostic',
+      title: 'Canary tanı çalışması',
+      reasonCode: 'diagnostic_gap',
       outcomeCode: 'MAT-TEST-01',
       durationMinutes: 20,
       targetQuestionCount: 10,
