@@ -637,7 +637,7 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
       { game: 'matematik', display_exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-math-v1', release_status: 'released', diagnostic_enabled: true, has_released_at: true },
       { game: 'sosyal', display_exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-sosyal-v1', release_status: 'draft', diagnostic_enabled: false, has_released_at: false },
       { game: 'turkce', display_exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-turkce-v1', release_status: 'draft', diagnostic_enabled: false, has_released_at: false },
-      { game: 'wordquest', display_exam_ref: 'YDT', question_exam_ref: null, taxonomy_version: 'ba-ydt-eng-v1', release_status: 'draft', diagnostic_enabled: false, has_released_at: false },
+      { game: 'wordquest', display_exam_ref: 'YDT', question_exam_ref: null, taxonomy_version: 'ba-ydt-eng-v1', release_status: 'released', diagnostic_enabled: false, has_released_at: true },
     ])
   })
 
