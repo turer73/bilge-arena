@@ -1,5 +1,8 @@
 import { z } from 'zod'
-import { institutionStudentLearningAnalysisSchema } from './student-analysis'
+import {
+  institutionStudentLearningAnalysisSchema,
+  institutionTaxonomyVersionSchema,
+} from './student-analysis'
 import { buildTeacherIndicatorSet } from './teacher-indicators'
 import { teacherIndicatorSetSchema } from './contracts'
 import { institutionFollowupMetricsSchema } from './followup'
@@ -17,6 +20,7 @@ const inputSchema = z.object({
   }).strict(),
   windowStart: timestampSchema,
   windowEnd: timestampSchema,
+  taxonomyVersion: institutionTaxonomyVersionSchema,
   analyses: z.array(institutionStudentLearningAnalysisSchema).max(40),
   publishedProgramMemberRefs: z.array(memberRefSchema).max(40),
   followupMetrics: institutionFollowupMetricsSchema,
@@ -31,6 +35,9 @@ const inputSchema = z.object({
   }
   if (value.analyses.some((analysis) => analysis.classroom.id !== value.classroom.id)) {
     context.addIssue({ code: 'custom', message: 'cross-classroom analysis rejected' })
+  }
+  if (value.analyses.some((analysis) => analysis.scope.taxonomyVersion !== value.taxonomyVersion)) {
+    context.addIssue({ code: 'custom', message: 'mixed curriculum taxonomy rejected' })
   }
   if (new Set(value.publishedProgramMemberRefs).size !== value.publishedProgramMemberRefs.length
     || value.publishedProgramMemberRefs.some((ref) => !refs.includes(ref))) {
@@ -51,7 +58,7 @@ export const institutionClassroomOverviewSchema = z.object({
   scope: z.object({
     game: z.literal('matematik'),
     examRef: z.literal('TYT'),
-    taxonomyVersion: z.literal('ba-tyt-math-v1'),
+    taxonomyVersion: institutionTaxonomyVersionSchema,
     modelVersion: z.literal('institution-classroom-overview-v1'),
     windowStart: timestampSchema,
     windowEnd: timestampSchema,
@@ -138,7 +145,7 @@ export function buildInstitutionClassroomOverview(value: unknown) {
     scope: {
       game: 'matematik' as const,
       examRef: 'TYT' as const,
-      taxonomyVersion: 'ba-tyt-math-v1' as const,
+      taxonomyVersion: parsed.data.taxonomyVersion,
       modelVersion: 'institution-classroom-overview-v1' as const,
       windowStart: parsed.data.windowStart,
       windowEnd: parsed.data.windowEnd,

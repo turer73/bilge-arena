@@ -40,6 +40,7 @@ export interface MasteryOutcomePublic {
 
 export interface MasteryCoveragePublic {
   supported: boolean
+  diagnosticAvailable: boolean
   taxonomyVersion: string | null
   totalQuestions: number
   mappedQuestions: number
@@ -163,8 +164,9 @@ export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePubli
     typeof value.game !== 'string'
     || (value.examRef !== null && typeof value.examRef !== 'string')
     || !isRecord(value.coverage)
-    || !hasOnlyKeys(value.coverage, ['supported', 'taxonomyVersion', 'totalQuestions', 'mappedQuestions', 'percentage'])
+    || !hasOnlyKeys(value.coverage, ['supported', 'diagnosticAvailable', 'taxonomyVersion', 'totalQuestions', 'mappedQuestions', 'percentage'])
     || typeof value.coverage.supported !== 'boolean'
+    || typeof value.coverage.diagnosticAvailable !== 'boolean'
     || (value.coverage.taxonomyVersion !== null && typeof value.coverage.taxonomyVersion !== 'string')
     || typeof value.coverage.totalQuestions !== 'number'
     || typeof value.coverage.mappedQuestions !== 'number'
@@ -186,6 +188,7 @@ export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePubli
   if (!value.coverage.supported) {
     if (
       value.coverage.taxonomyVersion !== null
+      || value.coverage.diagnosticAvailable
       || value.coverage.totalQuestions !== 0
       || value.coverage.mappedQuestions !== 0
       || value.discovery !== null

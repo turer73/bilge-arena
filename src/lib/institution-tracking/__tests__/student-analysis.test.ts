@@ -129,4 +129,22 @@ describe('institution student learning analysis', () => {
       outcomes: [{ ...base.outcomes[0], answerId: 'raw-answer-id' }],
     })).toBeNull()
   })
+
+  it('accepts a registry-shaped taxonomy upgrade and propagates it into evidence', () => {
+    const upgraded = {
+      ...base,
+      scope: { ...base.scope, taxonomyVersion: 'ba-tyt-math-v2' },
+      outcomes: base.outcomes.map((outcome) => ({
+        ...outcome,
+        nodeCode: outcome.nodeCode.replace('ba-tyt-math-v1', 'ba-tyt-math-v2'),
+      })),
+    }
+    const result = buildInstitutionStudentLearningAnalysis(upgraded)
+    expect(result?.scope.taxonomyVersion).toBe('ba-tyt-math-v2')
+    expect(result?.outcomes[0].assessment.evidence.taxonomyVersion).toBe('ba-tyt-math-v2')
+    expect(buildInstitutionStudentLearningAnalysis({
+      ...upgraded,
+      scope: { ...upgraded.scope, taxonomyVersion: 'math-v2' },
+    })).toBeNull()
+  })
 })

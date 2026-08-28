@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { GameSlug } from '@/lib/constants/games'
+import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { useMasteryMap, type MasteryOutcome } from '@/lib/hooks/use-mastery-map'
 import { useGameStore } from '@/stores/game-store'
 
@@ -19,9 +19,53 @@ function byLowestReliableScore(a: MasteryOutcome, b: MasteryOutcome) {
 export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardProps) {
   const router = useRouter()
   const gameStore = useGameStore()
-  const { outcomes, discovery, loading } = useMasteryMap(game, userId, examRef)
+  const {
+    response,
+    outcomes,
+    discovery,
+    coverage,
+    loading,
+    error,
+    fetchMastery,
+  } = useMasteryMap(game, userId, examRef)
 
-  if (!userId || loading || outcomes.length === 0) return null
+  if (!userId || loading) return null
+
+  if (error || (coverage.supported && outcomes.length === 0)) {
+    return (
+      <article className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
+        <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-text-muted)]">KEŞİF SEVİYESİ</p>
+        <h2 className="mt-1 text-sm font-black text-[var(--app-text)]">Kanıt haritası şu anda yüklenemedi</h2>
+        <p className="mt-1 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
+          Serbest pratiğe devam edebilirsin; bu durum puanını veya ilerlemeni etkilemez.
+        </p>
+        <button
+          type="button"
+          onClick={() => void fetchMastery()}
+          className="mt-3 min-h-11 rounded-xl border-2 border-[var(--app-border)] px-4 text-xs font-black text-[var(--app-text)]"
+        >
+          Tekrar Dene
+        </button>
+      </article>
+    )
+  }
+
+  if (response && !coverage.supported) {
+    return (
+      <article className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
+        <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">KEŞİF SEVİYESİ HAZIRLANIYOR</p>
+        <h2 className="mt-1 text-sm font-black text-[var(--app-text)]">{GAMES[game].name} kanıt haritası doğrulanıyor</h2>
+        <p className="mt-1 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
+          Bu ders ve sınav kapsamı tam eşleşmeden seviye göstermiyoruz. Serbest pratik güvenle kullanılabilir.
+        </p>
+        <Link href={`/arena/${game}`} className="mt-2 inline-flex min-h-11 items-center text-xs font-black text-[var(--app-accent-text)] hover:underline">
+          Serbest pratikle devam et
+        </Link>
+      </article>
+    )
+  }
+
+  if (!response || outcomes.length === 0) return null
 
   const strongCount = outcomes.filter((outcome) => outcome.status === 'mastered').length
   const developing = outcomes
@@ -37,7 +81,16 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
   if (examRef) mapParams.set('exam_ref', examRef)
   const mapHref = `/arena/hakimiyet?${mapParams}`
 
-  if (discovery?.stage === 'estimate') {
+  const handlePractice = () => {
+    if (!nextAction) return
+    gameStore.setGame(nextAction.game as GameSlug)
+    gameStore.setCategory(nextAction.category)
+    gameStore.setExamRef(nextAction.examRef)
+    gameStore.setMode('practice')
+    router.push(`/arena/${nextAction.game}`)
+  }
+
+  if (discovery?.stage === 'estimate' && nextAction) {
     return (
       <article
         className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-shadow-accent)]"
@@ -50,14 +103,26 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
         <div className="p-4 md:p-5">
           <h2 className="text-base font-black text-[var(--app-text)]">Nereden başlayacağını birlikte bulalım</h2>
           <p className="mt-2 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
-            8 dakikalık tanılama altı çekirdek kazanım için düşük güvenli bir başlangıç tahmini üretir. Kalıcı hâkimiyet kararı yalnız doğrulanmış pratik kanıtlarıyla açılır.
+            {coverage.diagnosticAvailable
+              ? '8 dakikalık tanılama çekirdek kazanımlar için düşük güvenli bir başlangıç tahmini üretir. Kalıcı hâkimiyet kararı yalnız doğrulanmış pratik kanıtlarıyla açılır.'
+              : 'Kısa pratiklerde verdiğin doğrulanmış cevaplarla başlangıç rotan oluşur. Yeterli kanıt olmadan güçlü veya zayıf etiketi göstermeyiz.'}
           </p>
-          <Link
-            href="/arena/tani"
-            className="mt-4 flex min-h-12 w-full items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
-          >
-            Keşif Turunu Başlat
-          </Link>
+          {coverage.diagnosticAvailable ? (
+            <Link
+              href="/arena/tani"
+              className="mt-4 flex min-h-12 w-full items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
+            >
+              Keşif Turunu Başlat
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={handlePractice}
+              className="mt-4 min-h-12 w-full rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
+            >
+              Keşif Pratiğini Başlat
+            </button>
+          )}
           <Link href={mapHref} className="mt-2 flex min-h-11 items-center justify-center text-xs font-black text-[var(--app-text-sub)] hover:text-[var(--app-accent-text)] hover:underline">
             Boş kanıt haritasını gör
           </Link>
@@ -85,14 +150,6 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
   const needsEvidence = nextAction.status === 'insufficient'
   const statusLabel = needsEvidence ? 'KANIT TOPLA' : 'GELİŞİYOR'
   const progress = needsEvidence ? nextAction.evidenceCompleteness : nextAction.score
-
-  const handlePractice = () => {
-    gameStore.setGame(nextAction.game as GameSlug)
-    gameStore.setCategory(nextAction.category)
-    gameStore.setExamRef(nextAction.examRef)
-    gameStore.setMode('practice')
-    router.push(`/arena/${nextAction.game}`)
-  }
 
   return (
     <article

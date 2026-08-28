@@ -6,6 +6,8 @@ const timestampSchema = z.string().datetime({ offset: true })
 const countSchema = z.number().int().nonnegative()
 const amountSchema = z.number().nonnegative()
 const memberRefSchema = z.string().regex(/^[0-9a-f]{32}$/)
+export const institutionTaxonomyVersionSchema = z.string().trim().min(1).max(80)
+  .regex(/^ba-[a-z0-9-]+-v[0-9]+$/)
 
 const rawOutcomeSchema = z.object({
   code: z.string().trim().min(1).max(120),
@@ -69,7 +71,9 @@ export const institutionStudentAnalysisRpcSchema = z.object({
   scope: z.object({
     game: z.literal('matematik'),
     examRef: z.literal('TYT'),
-    taxonomyVersion: z.literal('ba-tyt-math-v1'),
+    questionExamRef: z.string().regex(/^[A-Z0-9-]{2,10}$/).nullable().default(null),
+    taxonomyVersion: institutionTaxonomyVersionSchema,
+    diagnosticEnabled: z.boolean().default(false),
     modelVersion: z.literal('institution-evidence-v1'),
     windowStart: timestampSchema,
     windowEnd: timestampSchema,
@@ -143,6 +147,9 @@ export const institutionStudentLearningAnalysisSchema = z.object({
     || value.summary.developingOutcomeCount !== counts.developing
     || value.summary.masteredOutcomeCount !== counts.mastered
     || value.summary.assessedOutcomeCount !== counts.developing + counts.mastered
+    || value.outcomes.some((outcome) => (
+      outcome.assessment.evidence.taxonomyVersion !== value.scope.taxonomyVersion
+    ))
   ) context.addIssue({ code: 'custom', message: 'student analysis summary mismatch' })
 })
 

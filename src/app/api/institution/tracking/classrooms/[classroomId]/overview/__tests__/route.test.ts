@@ -30,11 +30,15 @@ beforeEach(() => {
   mocks.context.mockResolvedValue({ ok: true, userId: USER_ID, admin: { rpc: mocks.rpc } })
   mocks.buildStudent.mockImplementation((raw) => ({
     classroom: { id: CLASSROOM_ID }, student: { memberRef: raw.memberRef },
-    scope: { windowStart: raw.memberRef === refs[0] ? '2026-07-01T00:00:00.000Z' : '2026-08-01T00:00:00.000Z' },
+    scope: {
+      game: 'matematik', examRef: 'TYT', taxonomyVersion: 'ba-tyt-math-v1',
+      windowStart: raw.memberRef === refs[0] ? '2026-07-01T00:00:00.000Z' : '2026-08-01T00:00:00.000Z',
+    },
   }))
   mocks.buildOverview.mockReturnValue(overview)
   mocks.rpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
     if (name === 'get_institution_tracking_directory') return { data: directory, error: null }
+    if (name === 'resolve_released_curriculum_scope') return { data: { game: 'matematik', displayExamRef: 'TYT', questionExamRef: 'TYT', taxonomyVersion: 'ba-tyt-math-v1', mappingMode: 'category_proxy', diagnosticEnabled: true }, error: null }
     if (name === 'get_institution_student_learning_analysis') return { data: { memberRef: args.p_member_ref }, error: null }
     if (name === 'get_institution_classroom_published_program_members') return { data: { memberRefs: refs.slice(0, 3) }, error: null }
     if (name === 'get_institution_classroom_followup_metrics') return { data: { followedMemberRefs: refs.slice(0, 2), interventionEligibleCount: 2, timelyInterventionCount: 1, interventionStudentCount: 2 }, error: null }
@@ -59,8 +63,14 @@ describe('institution classroom overview route', () => {
     expect(calls.find(([name]) => name === 'get_institution_classroom_published_program_members')?.[1]).toMatchObject({
       p_user_id: USER_ID, p_classroom_id: CLASSROOM_ID, p_window_start: '2026-07-01T00:00:00.000Z',
     })
+    expect(calls.find(([name]) => name === 'get_institution_classroom_growth_metrics')?.[1]).toMatchObject({
+      p_user_id: USER_ID,
+      p_classroom_id: CLASSROOM_ID,
+      p_taxonomy_version: 'ba-tyt-math-v1',
+    })
     expect(mocks.buildOverview).toHaveBeenCalledWith(expect.objectContaining({
       analyses: expect.arrayContaining([expect.objectContaining({ student: { memberRef: refs[0] } })]),
+      taxonomyVersion: 'ba-tyt-math-v1',
       publishedProgramMemberRefs: refs.slice(0, 3),
       followupMetrics: { followedMemberRefs: refs.slice(0, 2), interventionEligibleCount: 2, timelyInterventionCount: 1, interventionStudentCount: 2 },
       growthMetrics: expect.objectContaining({ modelVersion: 'institution-growth-v1', eligibleStudentCount: 3, positiveGrowthStudentCount: 2 }),
@@ -74,6 +84,17 @@ describe('institution classroom overview route', () => {
     const partial = await GET(request(), routeContext())
     expect(partial.status).toBe(500)
     expect(mocks.rpc.mock.calls.filter(([name]) => name === 'get_institution_classroom_published_program_members')).toHaveLength(0)
+  })
+
+  it('fails closed before student analysis when Mathematics has no released scope', async () => {
+    mocks.rpc.mockImplementation(async (name: string) => {
+      if (name === 'get_institution_tracking_directory') return { data: directory, error: null }
+      if (name === 'resolve_released_curriculum_scope') return { data: null, error: null }
+      return { data: null, error: { code: 'P0002' } }
+    })
+    const response = await GET(request(), routeContext())
+    expect(response.status).toBe(503)
+    expect(mocks.rpc.mock.calls.filter(([name]) => name === 'get_institution_student_learning_analysis')).toHaveLength(0)
   })
 
   it('removes manager-only teacher indicators from a teacher response', async () => {

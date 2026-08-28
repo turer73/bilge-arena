@@ -209,6 +209,9 @@ jobs:
       - name: Run revision-bound diagnostic and governance acceptance tests
         run: npm run test:question-quality:pg
 
+      - name: Run curriculum scope release acceptance test
+        run: npm run test:curriculum-scope:pg
+
   build:
     name: 🏗️ Build
     runs-on: ubuntu-latest

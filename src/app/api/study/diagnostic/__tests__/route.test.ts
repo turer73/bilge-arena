@@ -116,6 +116,14 @@ const mappings = questions.map((row, index) => ({
   question_id: row.id,
   outcome_id: outcomeIds[index < 6 ? index : index - 6],
 }))
+const releasedDiagnosticScope = {
+  game: 'matematik',
+  displayExamRef: 'TYT',
+  questionExamRef: 'TYT',
+  taxonomyVersion: 'ba-tyt-math-v1',
+  mappingMode: 'category_proxy',
+  diagnosticEnabled: true,
+}
 
 function snapshotQuestion(index: number) {
   const row = questions[index]
@@ -212,6 +220,10 @@ describe('/api/study/diagnostic', () => {
     tableLists.adaptive_diagnostic_answers = []
     tableSingles.adaptive_diagnostic_sessions = session()
     tableSingles.questions = questions[0]
+    rpcResults.resolve_released_curriculum_scope = {
+      data: releasedDiagnosticScope,
+      error: null,
+    }
     rpcResults.start_adaptive_diagnostic = {
       data: {
         sessionId: SESSION_ID,
@@ -256,6 +268,46 @@ describe('/api/study/diagnostic', () => {
     })
     expect(mockFrom).not.toHaveBeenCalled()
     expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when the exact diagnostic scope is not released and enabled', async () => {
+    rpcResults.resolve_released_curriculum_scope = {
+      data: { ...releasedDiagnosticScope, diagnosticEnabled: false },
+      error: null,
+    }
+    const getResponse = await GET(getRequest() as never)
+    expect(getResponse.status).toBe(200)
+    await expect(getResponse.json()).resolves.toEqual({
+      supported: false, game: 'matematik', examRef: 'TYT', session: null, summary: null,
+    })
+    expect(mockFrom).not.toHaveBeenCalled()
+
+    rpcResults.resolve_released_curriculum_scope = {
+      data: { ...releasedDiagnosticScope, questionExamRef: 'LGS' },
+      error: null,
+    }
+    const storageScopeResponse = await GET(getRequest() as never)
+    expect(storageScopeResponse.status).toBe(200)
+    await expect(storageScopeResponse.json()).resolves.toMatchObject({ supported: false })
+
+    rpcResults.resolve_released_curriculum_scope = {
+      data: { ...releasedDiagnosticScope, taxonomyVersion: 'ba-tyt-math-v2' },
+      error: null,
+    }
+    const startResponse = await POST(postRequest({
+      action: 'start', game: 'matematik', examRef: 'TYT',
+    }) as never)
+    expect(startResponse.status).toBe(200)
+    await expect(startResponse.json()).resolves.toMatchObject({ supported: false })
+    expect(mockRpc).not.toHaveBeenCalledWith('start_adaptive_diagnostic', expect.anything())
+
+    const answerResponse = await POST(postRequest({
+      action: 'answer', sessionId: SESSION_ID, questionId: questionIds[0],
+      selectedOption: 1, responseTimeMs: 1200, requestId: REQUEST_ID,
+    }) as never)
+    expect(answerResponse.status).toBe(200)
+    await expect(answerResponse.json()).resolves.toMatchObject({ supported: false })
+    expect(mockRpc).not.toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.anything())
   })
 
   it('rejects malformed query and strict POST bodies', async () => {

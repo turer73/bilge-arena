@@ -7,13 +7,15 @@ import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { buildMasteryMapResponse } from '@/lib/mastery/build-response'
 import type { CurriculumNodeType } from '@/lib/mastery/graph'
 import type { MasteryCoveragePublic } from '@/lib/mastery/public-contract'
+import { supportsAdaptiveDiagnosticScope } from '@/lib/diagnostic/scope'
+import {
+  isMasteryScopeIntegrityClean,
+  parseMasteryScopeIntegrity,
+  resolveReleasedMasteryScope,
+} from '@/lib/mastery/scope'
 
 const ipLimiter = createRateLimiter('mastery-map-ip', 120, 60_000)
 const userLimiter = createRateLimiter('mastery-map-user', 60, 60_000)
-
-const PILOT_GAME: GameSlug = 'matematik'
-const PILOT_EXAM_REF = 'TYT'
-const PILOT_TAXONOMY = 'ba-tyt-math-v1'
 
 interface NodeRow {
   id: string
@@ -55,33 +57,15 @@ interface StateRow {
   last_answered_at: string | null
 }
 
-interface IntegrityResult {
-  total: number
-  mapped: number
-  unmapped: number
-  scopeMismatch: number
-  nodeOrphan: number
-  outcomeOrphan: number
-}
-
 function unsupportedCoverage(): MasteryCoveragePublic {
   return {
     supported: false,
+    diagnosticAvailable: false,
     taxonomyVersion: null,
     totalQuestions: 0,
     mappedQuestions: 0,
     percentage: 0,
   }
-}
-
-function parseIntegrity(value: unknown): IntegrityResult | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  const record = value as Record<string, unknown>
-  const keys = ['total', 'mapped', 'unmapped', 'scopeMismatch', 'nodeOrphan', 'outcomeOrphan'] as const
-  if (keys.some((key) => !Number.isInteger(record[key]) || Number(record[key]) < 0)) return null
-  const result = Object.fromEntries(keys.map((key) => [key, Number(record[key])])) as unknown as IntegrityResult
-  if (result.mapped > result.total || result.unmapped !== result.total - result.mapped) return null
-  return result
 }
 
 function noStoreJson(body: unknown, init?: { status?: number }) {
@@ -95,8 +79,8 @@ function noStoreJson(body: unknown, init?: { status?: number }) {
  * GET /api/profile/mastery?game=matematik&exam_ref=TYT
  *
  * Yalnız auth kullanıcısının güvenli, UUID'siz öğrenme grafiğini döndürür.
- * İlk tam kapsam Bilge Arena iç TYT Matematik taksonomisidir; diğer scope'lar
- * sahte kapsama üretmek yerine açıkça unsupported döner.
+ * Yalnız release registry'de yayınlanmış ve bütünlük kapısını geçen kapsamlar
+ * döner; diğer scope'lar sahte seviye üretmek yerine açıkça unsupported olur.
  */
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request.headers)
@@ -136,18 +120,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Gecersiz sinav referansi' }, { status: 400 })
   }
 
-  if (game !== PILOT_GAME || examRef !== PILOT_EXAM_REF) {
-    return noStoreJson({ game, examRef, coverage: unsupportedCoverage(), discovery: null, graph: null, outcomes: [] })
-  }
-
   const supabase = createServiceRoleClient()
   try {
+    if (!examRef) {
+      return noStoreJson({ game, examRef, coverage: unsupportedCoverage(), discovery: null, graph: null, outcomes: [] })
+    }
+    const scopeResolution = await resolveReleasedMasteryScope(
+      (args) => supabase.rpc('resolve_released_curriculum_scope', args),
+      game,
+      examRef,
+    )
+    if (scopeResolution.error) throw new Error('curriculum_scope_resolution_failed')
+    const scope = scopeResolution.scope
+    if (!scope) {
+      return noStoreJson({ game, examRef, coverage: unsupportedCoverage(), discovery: null, graph: null, outcomes: [] })
+    }
+
     const nodeRequest = supabase
       .from('curriculum_nodes')
       .select('id, code, node_type, title, parent_id, sort_order')
       .eq('game', game)
-      .eq('exam_ref', examRef)
-      .eq('taxonomy_version', PILOT_TAXONOMY)
+      .eq('exam_ref', scope.displayExamRef)
+      .eq('taxonomy_version', scope.taxonomyVersion)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
 
@@ -155,31 +149,35 @@ export async function GET(request: NextRequest) {
       .from('curriculum_outcomes')
       .select('id, node_id, code, game, category, title, description, exam_ref')
       .eq('game', game)
-      .eq('exam_ref', examRef)
-      .eq('taxonomy_version', PILOT_TAXONOMY)
+      .eq('exam_ref', scope.displayExamRef)
+      .eq('taxonomy_version', scope.taxonomyVersion)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
 
     const [nodeResult, outcomeResult, integrityResult] = await Promise.all([
       nodeRequest,
       outcomeRequest,
-      supabase.rpc('curriculum_graph_integrity'),
+      supabase.rpc('curriculum_scope_integrity', {
+        p_game: game,
+        p_display_exam_ref: scope.displayExamRef,
+        p_taxonomy_version: scope.taxonomyVersion,
+      }),
     ])
     if (nodeResult.error) throw nodeResult.error
     if (outcomeResult.error) throw outcomeResult.error
     if (integrityResult.error) throw integrityResult.error
 
-    const integrity = parseIntegrity(integrityResult.data)
-    if (
-      !integrity
-      || integrity.unmapped !== 0
-      || integrity.scopeMismatch !== 0
-      || integrity.nodeOrphan !== 0
-      || integrity.outcomeOrphan !== 0
-    ) throw new Error('curriculum_integrity_failed')
+    const integrity = parseMasteryScopeIntegrity(integrityResult.data)
+    if (!isMasteryScopeIntegrityClean(integrity)) throw new Error('curriculum_integrity_failed')
 
     const outcomes = (outcomeResult.data ?? []) as OutcomeRow[]
     const outcomeIds = outcomes.map((outcome) => outcome.id)
+    const diagnosticAvailable = scope.diagnosticEnabled && supportsAdaptiveDiagnosticScope({
+      game,
+      examRef: scope.displayExamRef,
+      questionExamRef: scope.questionExamRef,
+      taxonomyVersion: scope.taxonomyVersion,
+    })
     const [stateResult, diagnosticStateResult] = outcomeIds.length > 0
       ? await Promise.all([
         supabase
@@ -187,11 +185,13 @@ export async function GET(request: NextRequest) {
           .select('outcome_id, attempts, correct_attempts, weighted_earned, weighted_possible, delayed_correct, v2_attempts, difficulty_weighted_earned, difficulty_weighted_possible, timed_attempts, total_time_sec, fast_wrong, hinted_attempts, hint_stage_sum, guess_annotations, careless_annotations, last_answered_at')
           .eq('user_id', user.id)
           .in('outcome_id', outcomeIds),
-        supabase
-          .from('user_diagnostic_outcome_state')
-          .select('outcome_id')
-          .eq('user_id', user.id)
-          .in('outcome_id', outcomeIds),
+        diagnosticAvailable
+          ? supabase
+            .from('user_diagnostic_outcome_state')
+            .select('outcome_id')
+            .eq('user_id', user.id)
+            .in('outcome_id', outcomeIds)
+          : Promise.resolve({ data: [], error: null }),
       ])
       : [{ data: [], error: null }, { data: [], error: null }]
     if (stateResult.error) throw stateResult.error
@@ -199,7 +199,8 @@ export async function GET(request: NextRequest) {
 
     const coverage: MasteryCoveragePublic = {
       supported: true,
-      taxonomyVersion: PILOT_TAXONOMY,
+      diagnosticAvailable,
+      taxonomyVersion: scope.taxonomyVersion,
       totalQuestions: integrity.total,
       mappedQuestions: integrity.mapped,
       percentage: integrity.total > 0 ? Math.round((integrity.mapped / integrity.total) * 100) : 0,

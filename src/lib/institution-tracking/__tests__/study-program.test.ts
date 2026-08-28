@@ -50,6 +50,8 @@ function analysis(outcomes: ReturnType<typeof assessment>[]) {
     student: { memberRef: 'a'.repeat(32), alias: 'Bilge Öğrenci', joinedAt: '2026-08-01T09:00:00.000Z' },
     scope: {
       game: 'matematik', examRef: 'TYT', taxonomyVersion: 'ba-tyt-math-v1',
+      questionExamRef: 'TYT',
+      diagnosticEnabled: true,
       modelVersion: 'institution-evidence-v1', windowStart: '2026-08-01T09:00:00.000Z',
       windowEnd: '2026-08-13T12:00:00.000Z',
     },
@@ -99,6 +101,27 @@ describe('institution weekly study program generator', () => {
     expect(generateInstitutionStudyProgramDraft(analysis(outcomes), {
       weekStart: '2026-08-18', dailyMinuteLimit: 25, generatedAt: '2026-08-14T00:00:00.000Z',
     })).toBeNull()
+  })
+
+  it('translates diagnostic gaps into verified baseline work outside the supported taxonomy', () => {
+    const upgraded = analysis([assessment('MAT-V2-01', 'insufficient', null, 1)])
+    upgraded.scope.taxonomyVersion = 'ba-tyt-math-v2'
+    upgraded.outcomes = upgraded.outcomes.map((outcome) => ({
+      ...outcome,
+      nodeCode: outcome.nodeCode.replace('ba-tyt-math-v1', 'ba-tyt-math-v2'),
+      assessment: {
+        ...outcome.assessment,
+        evidence: { ...outcome.assessment.evidence, taxonomyVersion: 'ba-tyt-math-v2' },
+      },
+    }))
+    const result = generateInstitutionStudyProgramDraft(upgraded, {
+      weekStart: '2026-08-17', dailyMinuteLimit: 25, generatedAt: '2026-08-14T00:00:00.000Z',
+    })
+    expect(result?.items).toEqual([
+      expect.objectContaining({
+        taskType: 'verified_questions', reasonCode: 'current_target', outcomeCode: 'MAT-V2-01',
+      }),
+    ])
   })
 
   it('returns no definitive plan when no curriculum outcomes are available', () => {

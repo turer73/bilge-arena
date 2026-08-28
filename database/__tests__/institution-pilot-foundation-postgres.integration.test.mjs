@@ -95,8 +95,16 @@ const freePilotClosedGateReplaySql = readFileSync(
   join(migrationsDir, '168_free_pilot_closed_gate_replay.sql'),
   'utf8',
 )
+const institutionScopeAlignmentSql = readFileSync(
+  join(migrationsDir, '182_institution_math_scope_registry_alignment.sql'),
+  'utf8',
+)
+const institutionTaxonomyConsumersSql = readFileSync(
+  join(migrationsDir, '183_institution_taxonomy_consumer_alignment.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -293,7 +301,27 @@ suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real Postgre
       );
       CREATE TABLE public.verified_attempts(id uuid PRIMARY KEY, user_id uuid);
       CREATE TABLE public.game_sessions(id uuid PRIMARY KEY, user_id uuid);
-      CREATE TABLE public.session_answers(id uuid PRIMARY KEY, session_id uuid);
+      CREATE TABLE public.session_answers(
+        id uuid PRIMARY KEY,
+        session_id uuid,
+        answered_at timestamptz NOT NULL DEFAULT clock_timestamp()
+      );
+      CREATE TABLE public.curriculum_outcomes(
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        code text UNIQUE NOT NULL,
+        game text NOT NULL,
+        exam_ref text,
+        taxonomy_version text,
+        is_active boolean NOT NULL DEFAULT true
+      );
+      CREATE TABLE public.mastery_outcome_evidence(
+        answer_id uuid NOT NULL,
+        attempt_id uuid NOT NULL,
+        user_id uuid NOT NULL,
+        outcome_id uuid NOT NULL,
+        difficulty_weighted_earned numeric NOT NULL DEFAULT 0,
+        difficulty_weighted_possible numeric NOT NULL DEFAULT 0
+      );
       CREATE TABLE public.review_cards(id uuid PRIMARY KEY, user_id uuid);
       CREATE TABLE public.review_logs(id uuid PRIMARY KEY, user_id uuid);
       CREATE TABLE public.user_outcome_state(id uuid PRIMARY KEY);
@@ -440,6 +468,37 @@ suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real Postgre
     await client.query(freePilotReadinessEvidenceGateSql)
     await client.query(freePilotClosedGateReplaySql)
     await client.query(freePilotClosedGateReplaySql)
+    // Migration 178 owns this registry in the full schema. This institution-
+    // focused fixture needs the row type so migrations 182-183 can compile and
+    // replay against the real migration-159 wrapper contract.
+    await client.query(`CREATE TABLE public.curriculum_scope_releases (
+      game text NOT NULL,
+      display_exam_ref text NOT NULL,
+      question_exam_ref text,
+      taxonomy_version text NOT NULL,
+      release_status text NOT NULL,
+      diagnostic_enabled boolean NOT NULL DEFAULT false,
+      PRIMARY KEY(game, display_exam_ref)
+    )`)
+    await client.query(`INSERT INTO public.curriculum_scope_releases(
+      game,display_exam_ref,question_exam_ref,taxonomy_version,release_status,diagnostic_enabled
+    ) VALUES('matematik','TYT','TYT','ba-tyt-math-v1','released',true)`)
+    await client.query(`INSERT INTO public.curriculum_outcomes(
+      code,game,exam_ref,taxonomy_version,is_active
+    ) VALUES('MAT-TEST-01','matematik','TYT','ba-tyt-math-v1',true)`)
+    await client.query(institutionScopeAlignmentSql)
+    await client.query(institutionScopeAlignmentSql)
+    await client.query(institutionTaxonomyConsumersSql)
+    await client.query(institutionTaxonomyConsumersSql)
+
+    const alignedDefinitions = (await client.query(`SELECT
+      pg_get_functiondef('public.get_institution_student_learning_analysis(uuid,uuid,text,text,text,timestamptz)'::regprocedure) AS guarded,
+      pg_get_functiondef('public.free_pilot_legacy_learning_analysis(uuid,uuid,text,text,text,timestamptz)'::regprocedure) AS projection
+    `)).rows[0]
+    expect(alignedDefinitions.guarded).toContain('institution_pilot_assert_operational_actor')
+    expect(alignedDefinitions.guarded).toContain('free_pilot_legacy_learning_analysis')
+    expect(alignedDefinitions.projection).toContain('curriculum_scope_releases')
+    expect(alignedDefinitions.projection).toContain('v_scope.taxonomy_version')
 
     const legacyRpcPrivileges = await client.query(`
       SELECT
@@ -490,6 +549,7 @@ suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real Postgre
       FROM pg_catalog.pg_proc AS p
       JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public' AND p.proname = ANY($1::text[])
+        AND NOT (p.proname = 'get_institution_classroom_growth_metrics' AND p.pronargs = 4)
       ORDER BY p.proname
     `, [guardedRpcNames])
     expect(guardedRpcPrivileges.rows).toHaveLength(guardedRpcNames.length)
@@ -501,6 +561,14 @@ suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real Postgre
         public: false,
       })
     }
+    expect((await client.query(`SELECT
+      has_function_privilege('authenticated',
+        'public.get_institution_classroom_growth_metrics(uuid,uuid,timestamptz,text)', 'EXECUTE') AS authenticated,
+      has_function_privilege('service_role',
+        'public.get_institution_classroom_growth_metrics(uuid,uuid,timestamptz,text)', 'EXECUTE') AS service_role,
+      has_function_privilege('anon',
+        'public.get_institution_classroom_growth_metrics(uuid,uuid,timestamptz,text)', 'EXECUTE') AS anon
+    `)).rows[0]).toEqual({ authenticated: false, service_role: true, anon: false })
 
     const serviceOnlyStudentPrivileges = await client.query(`
       SELECT
@@ -1322,12 +1390,14 @@ suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real Postgre
     const programItems = JSON.stringify([{
       position: 1,
       scheduledDate: weekStart,
-      taskType: 'verified_questions',
-      title: 'Canary tekrar çalışması',
-      reasonCode: 'current_target',
+      taskType: 'diagnostic',
+      title: 'Canary tanı çalışması',
+      reasonCode: 'diagnostic_gap',
+      outcomeCode: 'MAT-TEST-01',
       durationMinutes: 20,
       targetQuestionCount: 10,
     }])
+    const freeProgramRequest = randomUUID()
     const freeProgram = await authenticatedRpc(
       freePilotManager,
       'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
@@ -1339,13 +1409,146 @@ suite('112-127, 131-135, 145, 149-160 and 167-168 institution pilot real Postgre
         30,
         'institution-program-v1',
         programItems,
-        randomUUID(),
+        freeProgramRequest,
       ],
     )
+    expect((await client.query(`SELECT taxonomy_version FROM public.institution_study_programs
+      WHERE program_ref=$1`, [freeProgram.programRef])).rows[0]).toEqual({
+      taxonomy_version: 'ba-tyt-math-v1',
+    })
+    const successfulProgramUpdateRequest = randomUUID()
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+      [
+        freePilotManager,
+        freeProgram.programRef,
+        weekStart,
+        30,
+        programItems,
+        successfulProgramUpdateRequest,
+      ],
+    )).toMatchObject({ programRef: freeProgram.programRef, replayed: false })
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET taxonomy_version='ba-tyt-math-v2'
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        membership.rows[0].member_ref,
+        weekStart,
+        30,
+        'institution-program-v1',
+        programItems,
+        freeProgramRequest,
+      ],
+    )).toMatchObject({ programRef: freeProgram.programRef, replayed: true })
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
+        [
+          freePilotManager,
+          freeClassroomId,
+          membership.rows[0].member_ref,
+          weekStart,
+          35,
+          'institution-program-v1',
+          programItems,
+          freeProgramRequest,
+        ],
+      ),
+      '22023',
+    )
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+      [
+        freePilotManager,
+        freeProgram.programRef,
+        weekStart,
+        30,
+        programItems,
+        successfulProgramUpdateRequest,
+      ],
+    )).toMatchObject({ programRef: freeProgram.programRef, replayed: true })
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+        [
+          freePilotManager,
+          freeProgram.programRef,
+          weekStart,
+          30,
+          programItems,
+          randomUUID(),
+        ],
+      ),
+      '22023',
+    )
+    const blockedProgramPublishRequest = randomUUID()
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.publish_institution_study_program($1,$2,$3)',
+        [freePilotManager, freeProgram.programRef, blockedProgramPublishRequest],
+      ),
+      '22023',
+    )
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET taxonomy_version='ba-tyt-math-v1',question_exam_ref='LGS'
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
+        [
+          freePilotManager,
+          freeClassroomId,
+          membership.rows[0].member_ref,
+          weekStart,
+          30,
+          'institution-program-v1',
+          programItems,
+          randomUUID(),
+        ],
+      ),
+      '22023',
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+        [
+          freePilotManager,
+          freeProgram.programRef,
+          weekStart,
+          30,
+          programItems,
+          randomUUID(),
+        ],
+      ),
+      '22023',
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.publish_institution_study_program($1,$2,$3)',
+        [freePilotManager, freeProgram.programRef, blockedProgramPublishRequest],
+      ),
+      '22023',
+    )
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET question_exam_ref='TYT'
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
     await authenticatedRpc(
       freePilotManager,
       'public.publish_institution_study_program($1,$2,$3)',
-      [freePilotManager, freeProgram.programRef, randomUUID()],
+      [freePilotManager, freeProgram.programRef, blockedProgramPublishRequest],
     )
     expect((await rpc(
       'public.get_my_institution_study_programs($1,$2)',

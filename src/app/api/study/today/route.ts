@@ -19,6 +19,11 @@ import {
 } from '@/lib/study/today-plan-contract'
 import type { Question } from '@/types/database'
 import type { Json } from '@/types/database.generated'
+import {
+  isMasteryScopeIntegrityClean,
+  parseMasteryScopeIntegrity,
+  resolveReleasedMasteryScope,
+} from '@/lib/mastery/scope'
 
 const ipLimiter = createRateLimiter('study-today-ip', 120, 60_000)
 const userLimiter = createRateLimiter('study-today-user', 60, 60_000)
@@ -217,6 +222,35 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const masteryDisplayExamRef = game === 'wordquest' ? 'YDT' : examRef
+  const scopeResolution = masteryDisplayExamRef
+    ? await resolveReleasedMasteryScope(
+      (args) => admin.rpc('resolve_released_curriculum_scope', args),
+      game,
+      masteryDisplayExamRef,
+    )
+    : { scope: null, error: false as const }
+  if (scopeResolution.error) {
+    console.error('[/api/study/today] curriculum scope resolution failed:', scopeResolution.code ?? 'invalid')
+    return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+  }
+  let masteryScope = scopeResolution.scope
+  if (masteryScope) {
+    const integrityResult = await admin.rpc('curriculum_scope_integrity', {
+      p_game: game,
+      p_display_exam_ref: masteryScope.displayExamRef,
+      p_taxonomy_version: masteryScope.taxonomyVersion,
+    })
+    if (integrityResult.error) {
+      console.error('[/api/study/today] curriculum scope integrity failed:', integrityResult.error.code ?? 'invalid')
+      return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+    }
+    if (!isMasteryScopeIntegrityClean(parseMasteryScopeIntegrity(integrityResult.data))) {
+      console.warn('[/api/study/today] released curriculum scope failed integrity; outcome personalization disabled')
+      masteryScope = null
+    }
+  }
+
   let baseQuery = admin
     .from('questions')
     .select('*')
@@ -226,14 +260,18 @@ export async function GET(request: NextRequest) {
     ? baseQuery.is('exam_ref', null)
     : baseQuery.eq('exam_ref', examRef)
 
-  let outcomeQuery = admin
-    .from('curriculum_outcomes')
-    .select('id,code,category,sort_order')
-    .eq('game', game)
-    .eq('is_active', true)
-  outcomeQuery = examRef === null
-    ? outcomeQuery.is('exam_ref', null)
-    : outcomeQuery.eq('exam_ref', examRef)
+  const outcomePromise = masteryScope
+    ? admin
+      .from('curriculum_outcomes')
+      .select('id,code,category,sort_order')
+      .eq('game', game)
+      .eq('exam_ref', masteryScope.displayExamRef)
+      .eq('taxonomy_version', masteryScope.taxonomyVersion)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(OUTCOME_LIMIT)
+    : Promise.resolve({ data: [], error: null })
 
   const duePromise = fetchDueQuestions(admin, user.id, game, null, null, examRef, 'exact')
     .then((data) => ({ data, error: null as unknown }))
@@ -241,7 +279,7 @@ export async function GET(request: NextRequest) {
   const [dueResult, baseResult, outcomeResult, historyResult] = await Promise.all([
     duePromise,
     baseQuery.order('id', { ascending: true }).limit(BASE_QUESTION_LIMIT),
-    outcomeQuery.order('sort_order', { ascending: true }).order('id', { ascending: true }).limit(OUTCOME_LIMIT),
+    outcomePromise,
     admin
       .from('user_question_history')
       .select('question_id')
