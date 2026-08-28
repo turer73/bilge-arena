@@ -188,11 +188,21 @@ describe('178-186 curriculum scope release migrations', () => {
     expect(ydtEnglishRepairSql).toMatch(/LOCK TABLE[\s\S]*public\.question_revision_outcomes,[\s\S]*public\.session_answers,[\s\S]*public\.verified_attempts,[\s\S]*public\.verified_attempt_hint_events,[\s\S]*public\.review_logs,[\s\S]*public\.mastery_materialized_attempts,[\s\S]*public\.mastery_outcome_evidence,[\s\S]*public\.curriculum_scope_evidence_repair_runs[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
     expect(ydtEnglishRepairSql).toMatch(/release_status = 'released'[\s\S]*curriculum_scope_integrity\([\s\S]*'wordquest', 'YDT', 'ba-ydt-eng-v1'/)
     expect(ydtEnglishRepairSql).toMatch(/JOIN public\.mastery_materialized_attempts AS marker ON marker\.attempt_id = attempt\.id/)
-    expect(ydtEnglishRepairSql).toMatch(/JOIN public\.question_outcomes AS mapping[\s\S]*mapping\.mapping_source = 'taxonomy_auto'[\s\S]*mapping\.is_primary/)
+    const candidateSql = ydtEnglishRepairSql.slice(
+      ydtEnglishRepairSql.indexOf('CREATE TEMP TABLE ydt_english_evidence_candidates'),
+      ydtEnglishRepairSql.indexOf('CREATE TEMP TABLE ydt_english_inserted_evidence'),
+    )
+    const mappingJoinSql = candidateSql.slice(
+      candidateSql.indexOf('JOIN public.question_outcomes AS mapping'),
+      candidateSql.indexOf('JOIN public.curriculum_outcomes AS outcome'),
+    )
+    expect(mappingJoinSql).toMatch(/ON mapping\.question_id = question\.id/)
+    expect(mappingJoinSql).not.toMatch(/mapping\.mapping_source/)
+    expect(mappingJoinSql).not.toMatch(/mapping\.is_primary/)
     expect(ydtEnglishRepairSql).toMatch(/attempt\.game = 'wordquest'/)
     expect(ydtEnglishRepairSql).toMatch(/question\.game = 'wordquest'[\s\S]*NULLIF\(upper\(btrim\(COALESCE\(question\.exam_ref, ''\)\)\), ''\) IS NULL/)
     expect(ydtEnglishRepairSql).toMatch(/answer\.answered_at < release\.released_at/)
-    expect(ydtEnglishRepairSql).toMatch(/mapping\.created_at > answer\.answered_at/)
+    expect(candidateSql).not.toMatch(/AND\s+mapping\.created_at\s*>\s*answer\.answered_at/)
     expect(ydtEnglishRepairSql).toMatch(/LEFT JOIN public\.verified_attempt_question_revisions AS snapshot[\s\S]*snapshot\.attempt_id = attempt\.id[\s\S]*snapshot\.question_id = answer\.question_id/)
     expect(ydtEnglishRepairSql).toMatch(/COALESCE\(snapshot\.difficulty, question\.difficulty\)/)
     expect(ydtEnglishRepairSql).toMatch(/NOT EXISTS \([\s\S]*mastery_outcome_evidence AS existing[\s\S]*existing\.answer_id = answer\.id[\s\S]*existing\.outcome_id = mapping\.outcome_id/)

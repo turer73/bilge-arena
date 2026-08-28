@@ -79,10 +79,16 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
   let ydtEnglishSession
   let ydtEnglishAnswers
   let preYdtEnglishRelease
+  let ydtEnglishRaceUser
+  let ydtEnglishRaceAttempt
+  let ydtEnglishRaceSession
+  let ydtEnglishRaceAnswer
+  let preYdtEnglishRaceRelease
   let completionWasBlocked = false
   let answerWriterWasBlocked = false
   let questionWriterWasBlocked = false
   let repairWasBlocked = false
+  let ydtReleaseRaceWasBlocked = false
   let preRepair
   let postLegacyRepair
   let preCompleteRepair
@@ -607,7 +613,91 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
       (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS attempts`,
     [ydtEnglishAttempt, ydtEnglishUser])).rows[0]
 
-    await client.query(ydtEnglishReleaseMigration)
+    // A reviewed manual mapping can be added after an old attempt already has
+    // its immutable marker. Migration 185 preserves that ownership, so 186
+    // must repair it even though it is not taxonomy_auto.
+    const ydtEnglishManualOutcome = (await client.query(
+      "SELECT id FROM public.curriculum_outcomes WHERE code='ENG-VOC-01'",
+    )).rows[0].id
+    await client.query(`INSERT INTO public.question_outcomes(
+      question_id,outcome_id,weight,is_primary,mapping_source
+    ) VALUES($1,$2,1,true,'manual')`, [
+      questionIds.get('vocabulary'), ydtEnglishManualOutcome,
+    ])
+
+    // Start migration 185's transaction before this answer is committed, but
+    // pause it before table locks/mapping creation. question_outcomes.created_at
+    // uses transaction-start NOW(), so the resulting mapping timestamp is at
+    // or before the answer even though the mapping itself is created later.
+    ydtEnglishRaceUser = randomUUID()
+    ydtEnglishRaceAttempt = randomUUID()
+    ydtEnglishRaceSession = randomUUID()
+    ydtEnglishRaceAnswer = randomUUID()
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [ydtEnglishRaceUser])
+    await client.query(`INSERT INTO public.game_sessions(id,user_id,client_request_id)
+      VALUES($1,$2,$3)`, [ydtEnglishRaceSession, ydtEnglishRaceUser, randomUUID()])
+    await client.query(`INSERT INTO public.verified_attempts(
+      id,user_id,game,mode,question_ids,duration_sec,expires_at
+    ) VALUES($1,$2,'wordquest','classic',$3,180,clock_timestamp()+interval '1 hour')`, [
+      ydtEnglishRaceAttempt, ydtEnglishRaceUser, [questionIds.get('grammar')],
+    ])
+    await client.query(`INSERT INTO public.verified_attempt_question_revisions(
+      attempt_id,question_id,difficulty
+    ) VALUES($1,$2,4)`, [ydtEnglishRaceAttempt, questionIds.get('grammar')])
+
+    const ydtBarrierKey = 185186
+    await client.query('SELECT pg_advisory_lock($1)', [ydtBarrierKey])
+    const gatedYdtReleaseMigration = ydtEnglishReleaseMigration.replace(
+      'BEGIN;',
+      `BEGIN;
+       SELECT pg_advisory_lock(${ydtBarrierKey});
+       SELECT pg_advisory_unlock(${ydtBarrierKey});`,
+    )
+    const ydtReleasePromise = releaseClient.query(gatedYdtReleaseMigration)
+    let ydtRaceSetupError
+    try {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const activity = (await client.query(
+          `SELECT wait_event_type,wait_event FROM pg_stat_activity WHERE pid=$1`,
+          [releasePid],
+        )).rows[0]
+        if (activity?.wait_event_type === 'Lock' && /advisory/i.test(activity?.wait_event ?? '')) {
+          ydtReleaseRaceWasBlocked = true
+          break
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      if (!ydtReleaseRaceWasBlocked) throw new Error('YDT release did not reach the pre-lock barrier')
+
+      await completionClient.query('BEGIN')
+      try {
+        await completionClient.query(`INSERT INTO public.session_answers(
+          id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
+        ) VALUES($1,$2,$3,$4,true,9,false,clock_timestamp())`, [
+          ydtEnglishRaceAnswer, ydtEnglishRaceSession, ydtEnglishRaceUser,
+          questionIds.get('grammar'),
+        ])
+        await completionClient.query(`UPDATE public.verified_attempts
+          SET completed_at=clock_timestamp(),session_id=$2 WHERE id=$1`, [
+          ydtEnglishRaceAttempt, ydtEnglishRaceSession,
+        ])
+        await completionClient.query('COMMIT')
+      } catch (error) {
+        await completionClient.query('ROLLBACK').catch(() => undefined)
+        throw error
+      }
+      preYdtEnglishRaceRelease = (await client.query(`SELECT
+        (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS markers,
+        (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence,
+        (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS attempts`,
+      [ydtEnglishRaceAttempt, ydtEnglishRaceUser])).rows[0]
+    } catch (error) {
+      ydtRaceSetupError = error
+    } finally {
+      await client.query('SELECT pg_advisory_unlock($1)', [ydtBarrierKey])
+    }
+    await ydtReleasePromise
+    if (ydtRaceSetupError) throw ydtRaceSetupError
     await client.query(ydtEnglishRepairMigration)
   })
 
@@ -1052,6 +1142,8 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
 
   it('releases, repairs, and safely replays the YDT English scope', async () => {
     expect(preYdtEnglishRelease).toEqual({ markers: 1, evidence: 0, attempts: 0 })
+    expect(preYdtEnglishRaceRelease).toEqual({ markers: 1, evidence: 0, attempts: 0 })
+    expect(ydtReleaseRaceWasBlocked).toBe(true)
 
     const scope = (await client.query(
       `SELECT public.resolve_released_curriculum_scope('wordquest','ydt') AS scope`,
@@ -1090,6 +1182,11 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
       { code: 'ENG-SEN-01' },
       { code: 'ENG-VOC-01' },
     ])
+    expect((await client.query(`SELECT mapping.mapping_source,mapping.is_primary
+      FROM public.question_outcomes AS mapping
+      WHERE mapping.question_id=$1`, [questionIds.get('vocabulary')])).rows).toEqual([
+      { mapping_source: 'manual', is_primary: true },
+    ])
     expect((await client.query(`SELECT
       count(*)::integer AS evidence,
       count(*) FILTER (WHERE is_correct)::integer AS correct,
@@ -1110,19 +1207,36 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
       timed_attempts: 7,
       total_time_sec: 105,
     })
+    expect((await client.query(`SELECT
+      count(evidence.*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts,
+      bool_and(mapping.created_at <= answer.answered_at) AS mapping_at_or_before_answer
+      FROM public.mastery_outcome_evidence AS evidence
+      JOIN public.session_answers AS answer ON answer.id=evidence.answer_id
+      JOIN public.question_outcomes AS mapping
+        ON mapping.question_id=evidence.question_id AND mapping.outcome_id=evidence.outcome_id
+      WHERE evidence.attempt_id=$2`, [
+      ydtEnglishRaceUser, ydtEnglishRaceAttempt,
+    ])).rows[0]).toEqual({
+      evidence: 1,
+      attempts: 1,
+      v2_attempts: 1,
+      mapping_at_or_before_answer: true,
+    })
     expect((await client.query(`SELECT candidate_attempts,candidate_answers,
       candidate_evidence_rows,inserted_evidence_rows,affected_users,
       manual_mapping_rows,mapping_at_or_before_answer_rows,mapping_after_answer_rows
       FROM public.curriculum_scope_evidence_repair_runs
       WHERE repair_key='186_ydt_english_complete_mappings_v1'
       ORDER BY repaired_at,run_id LIMIT 1`)).rows[0]).toEqual({
-      candidate_attempts: 1,
-      candidate_answers: 7,
-      candidate_evidence_rows: 7,
-      inserted_evidence_rows: 7,
-      affected_users: 1,
-      manual_mapping_rows: 0,
-      mapping_at_or_before_answer_rows: 0,
+      candidate_attempts: 2,
+      candidate_answers: 8,
+      candidate_evidence_rows: 8,
+      inserted_evidence_rows: 8,
+      affected_users: 2,
+      manual_mapping_rows: 1,
+      mapping_at_or_before_answer_rows: 1,
       mapping_after_answer_rows: 7,
     })
 
@@ -1142,6 +1256,13 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
       FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
       ydtEnglishUser, ydtEnglishAttempt,
     ])).rows[0]).toEqual({ evidence: 7, attempts: 7, v2_attempts: 7 })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
+      ydtEnglishRaceUser, ydtEnglishRaceAttempt,
+    ])).rows[0]).toEqual({ evidence: 1, attempts: 1, v2_attempts: 1 })
 
     const futureQuestion = randomUUID()
     await client.query(`INSERT INTO public.questions(id,game,category,exam_ref,is_active)

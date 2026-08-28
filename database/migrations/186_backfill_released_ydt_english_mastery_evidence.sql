@@ -112,8 +112,6 @@ LEFT JOIN public.verified_attempt_question_revisions AS snapshot
  AND snapshot.question_id = answer.question_id
 JOIN public.question_outcomes AS mapping
   ON mapping.question_id = question.id
- AND mapping.mapping_source = 'taxonomy_auto'
- AND mapping.is_primary
 JOIN public.curriculum_outcomes AS outcome
   ON outcome.id = mapping.outcome_id
  AND outcome.is_active
@@ -137,10 +135,12 @@ WHERE attempt.game = 'wordquest'
   AND NULLIF(upper(btrim(COALESCE(question.exam_ref, ''))), '') IS NULL
   AND question.is_active
   AND outcome.category IS NOT DISTINCT FROM question.category
-  -- This release owns only historical rows for which the taxonomy mapping did
-  -- not exist when the answer and base aggregate were written.
+  -- This release owns only answers completed before the released scope became
+  -- visible. Repair every missing current mapping independently: a governed
+  -- manual mapping must not be skipped, and question_outcomes.created_at uses
+  -- transaction-start NOW(), so it cannot safely order an in-flight answer
+  -- against migration 185.
   AND answer.answered_at < release.released_at
-  AND mapping.created_at > answer.answered_at
   AND NOT EXISTS (
     SELECT 1
     FROM public.mastery_outcome_evidence AS existing
