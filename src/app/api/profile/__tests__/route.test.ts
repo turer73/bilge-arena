@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockGetUser, mockProfileSelect, mockPlatformAdmin, mockProfileUpdate } = vi.hoisted(() => ({
+const { mockGetUser, mockProfileSelect, mockPlatformAdmin, mockProfileUpdate, mockProfileUpdateSelect } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockProfileSelect: vi.fn(),
   mockPlatformAdmin: vi.fn(),
   mockProfileUpdate: vi.fn(),
+  mockProfileUpdateSelect: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -25,7 +26,10 @@ vi.mock('@/lib/supabase/service-role', () => ({
           // PATCH: .update(x).eq('id', y).select(...).single()
           update: vi.fn(() => ({
             eq: vi.fn(() => ({
-              select: vi.fn(() => ({ single: mockProfileUpdate })),
+              select: vi.fn((columns: string) => {
+                mockProfileUpdateSelect(columns)
+                return { single: mockProfileUpdate }
+              }),
             })),
           })),
         }
@@ -158,6 +162,7 @@ describe('PATCH /api/profile', () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.display_name).toBe('Ali')
+    expect(mockProfileUpdateSelect).toHaveBeenCalledWith(expect.not.stringContaining('profile_visibility'))
   })
 
   it('returns 500 on db error', async () => {
@@ -187,7 +192,7 @@ describe('PATCH /api/profile', () => {
   it('accepts private/friends/public profile visibility', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockProfileUpdate.mockResolvedValue({
-      data: { id: 'u1', profile_visibility: 'friends' },
+      data: { id: 'u1' },
       error: null,
     })
 

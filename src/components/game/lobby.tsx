@@ -144,6 +144,12 @@ export function Lobby({
         </div>
       </div>
 
+      {personalizedMockCard && (
+        <div data-personalized-mock-mobile-slot className="md:hidden">
+          {personalizedMockCard}
+        </div>
+      )}
+
       <MobileLobbyFlow
         game={game}
         selectedMode={selectedMode}

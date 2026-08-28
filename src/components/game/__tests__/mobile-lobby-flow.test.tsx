@@ -57,6 +57,28 @@ describe('MobileLobbyFlow', () => {
     expect(screen.queryByRole('heading', { name: 'Neye odaklanalım?' })).not.toBeInTheDocument()
   })
 
+  it('baska dersten kalan gecersiz konuyu temizleyip konu adimini yeniden gosterir', () => {
+    const onSelectCategory = vi.fn()
+    render(
+      <MobileLobbyFlow
+        game="turkce"
+        selectedMode="classic"
+        onSelectMode={vi.fn()}
+        selectedCategory="geometri"
+        onSelectCategory={onSelectCategory}
+        selectedDifficulty={2}
+        onSelectDifficulty={vi.fn()}
+        selectedExamRef="TYT"
+        onStart={vi.fn()}
+      />
+    )
+
+    expect(onSelectCategory).toHaveBeenCalledWith(null)
+    expect(screen.getByLabelText('1 / 3 adım')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
+    expect(screen.getByRole('heading', { name: 'Neye odaklanalım?' })).toBeInTheDocument()
+  })
+
   it('deneme seçilince gereksiz konu ve zorluk adımlarını atlar', () => {
     render(<FlowHarness />)
 

@@ -6903,6 +6903,7 @@ export type Database = {
           avatar_url: string
           display_name: string
           id: string
+          profile_viewable: boolean
           total_xp: number
           username: string
         }[]

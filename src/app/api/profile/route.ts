@@ -137,7 +137,10 @@ export async function PATCH(request: NextRequest) {
     .from('profiles')
     .update(updates)
     .eq('id', user.id)
-    .select('id, username, display_name, city, grade, exam_type, avatar_url, onboarding_completed, is_discoverable, profile_visibility, leaderboard_opt_in')
+    // Migration 185 app'ten sonra uygulanir. Yeni kolonu donus projeksiyonuna
+    // kosulsuz eklemek, migration araliginda ilgisiz tum profil PATCH'lerini
+    // PGRST204 ile kirardi. Yalniz eski semada da bulunan kolonlari sec.
+    .select('id, username, display_name, city, grade, exam_type, avatar_url, onboarding_completed, is_discoverable, leaderboard_opt_in')
     .single()
 
   if (error) {
@@ -145,5 +148,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Profil guncellenemedi' }, { status: 500 })
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json(
+    profile_visibility === undefined ? data : { ...data, profile_visibility },
+  )
 }

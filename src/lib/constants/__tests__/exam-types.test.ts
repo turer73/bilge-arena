@@ -3,7 +3,7 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import { gamesForExamType, defaultExamRefForType, EXAM_TYPE_LABELS } from '../exam-types'
+import { gamesForExamType, defaultExamRefForType, examRefsForType, EXAM_TYPE_LABELS } from '../exam-types'
 
 describe('gamesForExamType', () => {
   test('LGS -> İngilizce (YDT-only) HARİÇ; matematik/türkçe/fen/sosyal DAHİL', () => {
@@ -38,4 +38,9 @@ describe('defaultExamRefForType', () => {
 test('etiketler tanımlı', () => {
   expect(EXAM_TYPE_LABELS.yks).toMatch(/YKS/)
   expect(EXAM_TYPE_LABELS.lgs).toMatch(/LGS/)
+})
+
+test('AYT esit agirlik kapsaminda matematik bulunur', () => {
+  expect(examRefsForType('yks')).toContain('AYT-EA')
+  expect(gamesForExamType('yks').find((game) => game.slug === 'matematik')?.examTags).toContain('AYT-EA')
 })

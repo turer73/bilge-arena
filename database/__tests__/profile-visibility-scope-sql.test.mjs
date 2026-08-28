@@ -34,8 +34,10 @@ describe('profile visibility scope SQL', () => {
   })
 
   it('keeps discovery useful without leaking private learning stats', () => {
+    expect(sql).toContain('DROP FUNCTION IF EXISTS public.search_profiles(text, uuid, integer)')
     expect(sql).toContain('NULL::varchar AS display_name')
     expect(sql).toContain("CASE WHEN p.profile_visibility = 'public' THEN p.total_xp ELSE 0 END")
+    expect(sql).toContain("(p.profile_visibility = 'public') AS profile_viewable")
     expect(sql).toContain('AND p.is_discoverable')
   })
 })

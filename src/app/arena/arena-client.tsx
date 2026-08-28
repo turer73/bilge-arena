@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { MobileHomeDemo, type MobileSubjectId } from '@/app/mobil-demo/mobile-home-demo'
-import { gamesForExamType } from '@/lib/constants/exam-types'
+import { DEFAULT_EXAM_REF, examRefsForType, gamesForExamType, type ExamType } from '@/lib/constants/exam-types'
 import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
@@ -24,6 +24,16 @@ export default function ArenaClient() {
   const classroomEnabled = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED === 'true'
   const institutionEnabled = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
   const communityQualityEnabled = process.env.NEXT_PUBLIC_COMMUNITY_QUESTION_QUALITY_ENABLED === 'true'
+  const activeExamType: ExamType = profile?.exam_type === 'lgs' ? 'lgs' : 'yks'
+  const allowedExamRefs = examRefsForType(activeExamType)
+  const effectiveExamRef = !selectedExamRef || allowedExamRefs.includes(selectedExamRef)
+    ? selectedExamRef
+    : DEFAULT_EXAM_REF[activeExamType]
+  const displayedExamRef = effectiveExamRef ?? DEFAULT_EXAM_REF[activeExamType]
+
+  useEffect(() => {
+    if (selectedExamRef !== effectiveExamRef) setExamRef(effectiveExamRef)
+  }, [effectiveExamRef, selectedExamRef, setExamRef])
 
   useEffect(() => {
     if (!institutionEnabled) return
@@ -40,9 +50,9 @@ export default function ArenaClient() {
 
   const availableSubjects = useMemo(
     () => gamesForExamType(profile?.exam_type)
-      .filter((game) => !selectedExamRef || game.examTags.includes(selectedExamRef))
+      .filter((game) => !effectiveExamRef || game.examTags.includes(effectiveExamRef))
       .map((game) => (game.slug === 'wordquest' ? 'ingilizce' : game.slug) as MobileSubjectId),
-    [profile?.exam_type, selectedExamRef],
+    [effectiveExamRef, profile?.exam_type],
   )
   const questionGoal = quests.find((quest) => quest.quest?.quest_type === 'correct_answers')
 
@@ -50,7 +60,7 @@ export default function ArenaClient() {
     <MobileHomeDemo
       mode="live"
       examLabel={profile?.exam_type === 'lgs' ? 'LGS' : 'YKS'}
-      examRef={selectedExamRef ?? (profile?.exam_type === 'lgs' ? 'LGS' : 'TYT')}
+      examRef={displayedExamRef}
       onExamRefChange={setExamRef}
       availableSubjects={availableSubjects}
       currentStreak={profile?.current_streak ?? 0}

@@ -36,6 +36,7 @@ interface SearchUser {
   display_name: string | null
   avatar_url: string | null
   total_xp: number
+  profile_viewable?: boolean
 }
 
 type ReportType = 'harassment' | 'inappropriate' | 'impersonation' | 'spam' | 'other'
@@ -296,7 +297,7 @@ export default function FriendsClient() {
                   {trUpper(displayName(u).charAt(0))}
                 </div>
                 <div className="flex-1 min-w-0">
-                  {u.username ? (
+                  {u.username && u.profile_viewable ? (
                     <Link href={`/u/${u.username}`} className="block truncate text-sm font-semibold hover:underline">{displayName(u)}</Link>
                   ) : (
                     <div className="text-sm font-semibold truncate">{displayName(u)}</div>

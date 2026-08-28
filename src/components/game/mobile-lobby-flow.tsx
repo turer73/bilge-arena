@@ -83,9 +83,10 @@ export function MobileLobbyFlow({
 }: MobileLobbyFlowProps) {
   const gameDef = GAMES[game]
   const mode = MODES.find((candidate) => candidate.id === selectedMode) ?? MODES[0]
+  const selectedCategoryIsValid = selectedCategory === null || gameDef.categories.includes(selectedCategory)
   // Derin bağlantıdan gelen konu ve önceki bilinçli zorluk seçimi yeniden sorulmaz.
   // Bu karar ilk açılışta sabitlenir; kullanıcının adım içindeki seçimi akışı kaydırmaz.
-  const [askTopic] = useState(() => selectedCategory === null)
+  const [askTopic] = useState(() => selectedCategory === null || !selectedCategoryIsValid)
   const [askDifficulty] = useState(() => selectedDifficulty === null)
   const [stepIndex, setStepIndex] = useState(0)
 
@@ -110,6 +111,10 @@ export function MobileLobbyFlow({
       ? Math.max(1, Math.ceil((mode.questionCount * mode.timePerQuestion) / 60))
       : null
   const startAction = quizLimit && !quizLimit.canPlay ? onLimitReached : onStart
+
+  useEffect(() => {
+    if (!selectedCategoryIsValid) onSelectCategory(null)
+  }, [onSelectCategory, selectedCategoryIsValid])
 
   // Bir adımın seçenek sayısı değiştiğinde tarayıcı odaktaki Devam düğmesini
   // korumak için sayfayı aşağı kaydırabilir. Her yeni ekran baştan görünür.

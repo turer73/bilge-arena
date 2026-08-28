@@ -64,4 +64,27 @@ describe('FriendsClient', () => {
     const postCalls = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'POST')
     expect(postCalls).toHaveLength(1)
   })
+
+  it('yalniz goruntulenebilir arama sonucunu profil baglantisi yapar', async () => {
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      if (String(input).startsWith('/api/users/search')) {
+        return {
+          ok: true,
+          json: async () => ({ users: [
+            { id: 'private-1', username: 'kapali', avatar_url: null, total_xp: 0, profile_viewable: false },
+            { id: 'public-1', username: 'acik', avatar_url: null, total_xp: 10, profile_viewable: true },
+          ] }),
+        } as Response
+      }
+      return { ok: true, json: async () => emptyFriends } as Response
+    })
+
+    render(<FriendsClient />)
+    await screen.findByText('Henüz arkadaşın yok. Yukarıdaki arama ile kullanıcı bul!')
+    fireEvent.change(screen.getByPlaceholderText('Kullanıcı ara...'), { target: { value: 'kullanici' } })
+
+    expect(await screen.findByText('kapali', {}, { timeout: 1500 })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'kapali' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'acik' })).toHaveAttribute('href', '/u/acik')
+  })
 })

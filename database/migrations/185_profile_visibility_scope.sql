@@ -121,7 +121,11 @@ GRANT EXECUTE ON FUNCTION public.get_public_profile(text, uuid)
 
 -- Arkadas aramasi bulunabilirligi korur fakat private/friends profillerin
 -- gercek adini ve ogrenme istatistiklerini arama sonucunda acmaz.
-CREATE OR REPLACE FUNCTION public.search_profiles(
+-- Donus satirina profile_viewable eklendigi icin PostgreSQL mevcut fonksiyonun
+-- return tipini CREATE OR REPLACE ile degistiremez; ayni imzayi once kaldir.
+DROP FUNCTION IF EXISTS public.search_profiles(text, uuid, integer);
+
+CREATE FUNCTION public.search_profiles(
   q text,
   exclude_id uuid DEFAULT NULL,
   result_limit integer DEFAULT 10
@@ -131,7 +135,8 @@ RETURNS TABLE(
   username varchar,
   display_name varchar,
   avatar_url text,
-  total_xp integer
+  total_xp integer,
+  profile_viewable boolean
 )
 LANGUAGE sql
 STABLE
@@ -143,7 +148,8 @@ AS $function$
     p.username,
     NULL::varchar AS display_name,
     p.avatar_url,
-    CASE WHEN p.profile_visibility = 'public' THEN p.total_xp ELSE 0 END AS total_xp
+    CASE WHEN p.profile_visibility = 'public' THEN p.total_xp ELSE 0 END AS total_xp,
+    (p.profile_visibility = 'public') AS profile_viewable
   FROM public.profiles AS p
   WHERE (
     public.immutable_unaccent(p.username) ILIKE public.immutable_unaccent('%' || q || '%')
