@@ -201,6 +201,23 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     await client.query(`INSERT INTO public.question_outcomes(
       question_id,outcome_id,weight,is_primary,mapping_source
     ) VALUES($1,$2,1,true,'manual')`, [questionIds.get('kimya'), manualOutcome])
+    const secondaryNode = randomUUID()
+    const secondaryOutcome = randomUUID()
+    await client.query(`INSERT INTO public.curriculum_nodes(
+      id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+    ) SELECT $1,'ba-tyt-fen-v1:outcome:kimya-secondary','ba-tyt-fen-v1','fen','TYT',
+      'outcome',topic.id,'kimya','Kimyasal ilişki kurma becerisi',20,true
+      FROM public.curriculum_nodes AS topic
+      WHERE topic.code='ba-tyt-fen-v1:topic:kimya'`, [secondaryNode])
+    await client.query(`INSERT INTO public.curriculum_outcomes(
+      id,code,game,category,title,description,exam_ref,sort_order,is_active,node_id,taxonomy_version
+    ) VALUES($1,'FEN-KIM-02','fen','kimya','Kimyasal ilişki kurma becerisi',
+      'Disposable secondary mapping fixture','TYT',21,true,$2,'ba-tyt-fen-v1')`, [
+      secondaryOutcome, secondaryNode,
+    ])
+    await client.query(`INSERT INTO public.question_outcomes(
+      question_id,outcome_id,weight,is_primary,mapping_source
+    ) VALUES($1,$2,0.5,false,'manual')`, [questionIds.get('kimya'), secondaryOutcome])
 
     raceUser = randomUUID()
     raceAttempt = randomUUID()
@@ -531,6 +548,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       { category: 'fizik', code: 'FEN-FIZ-01', mapping_source: 'taxonomy_auto', is_primary: true },
       { category: 'fizik', code: 'FEN-FIZ-01', mapping_source: 'taxonomy_auto', is_primary: true },
       { category: 'kimya', code: 'FEN-KIM-01', mapping_source: 'manual', is_primary: true },
+      { category: 'kimya', code: 'FEN-KIM-02', mapping_source: 'manual', is_primary: false },
     ])
     expect(completionWasBlocked).toBe(true)
     expect(answerWriterWasBlocked).toBe(true)
@@ -755,14 +773,15 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     })
     expect(repairWasBlocked).toBe(true)
     const evidence = (await client.query(`SELECT evidence.base_already_recorded,evidence.is_correct,evidence.difficulty,
-      outcome.category
+      outcome.category,outcome.code
       FROM public.mastery_outcome_evidence AS evidence
       JOIN public.curriculum_outcomes AS outcome ON outcome.id=evidence.outcome_id
-      WHERE evidence.attempt_id=$1 ORDER BY outcome.category`, [historicalAttempt])).rows
+      WHERE evidence.attempt_id=$1 ORDER BY outcome.category,outcome.code`, [historicalAttempt])).rows
     expect(evidence).toEqual([
-      { base_already_recorded: false, is_correct: true, difficulty: 2, category: 'biyoloji' },
-      { base_already_recorded: false, is_correct: true, difficulty: 4, category: 'fizik' },
-      { base_already_recorded: false, is_correct: false, difficulty: 5, category: 'kimya' },
+      { base_already_recorded: false, is_correct: true, difficulty: 2, category: 'biyoloji', code: 'FEN-BIY-01' },
+      { base_already_recorded: false, is_correct: true, difficulty: 4, category: 'fizik', code: 'FEN-FIZ-01' },
+      { base_already_recorded: false, is_correct: false, difficulty: 5, category: 'kimya', code: 'FEN-KIM-01' },
+      { base_already_recorded: false, is_correct: false, difficulty: 5, category: 'kimya', code: 'FEN-KIM-02' },
     ])
     expect((await client.query(`SELECT evidence.base_already_recorded,evidence.is_correct,
       outcome.category
@@ -787,7 +806,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       sum(v2_attempts)::integer AS v2_attempts,
       sum(correct_attempts)::integer AS correct_attempts
       FROM public.user_outcome_state WHERE user_id=$1`, [historicalUser])).rows[0]
-    expect(aggregate).toEqual({ attempts: 3, v2_attempts: 3, correct_attempts: 2 })
+    expect(aggregate).toEqual({ attempts: 4, v2_attempts: 4, correct_attempts: 2 })
     expect((await client.query(`SELECT
       sum(attempts)::integer AS attempts,
       sum(v2_attempts)::integer AS v2_attempts,
@@ -809,26 +828,26 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       candidate_evidence_rows,inserted_evidence_rows,affected_users,
       manual_mapping_rows,mapping_at_or_before_answer_rows,mapping_after_answer_rows
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='181_tyt_fen_complete_primary_mappings_v1'
+      WHERE repair_key='181_tyt_fen_complete_mappings_v1'
       ORDER BY repaired_at,run_id LIMIT 1`)).rows[0]).toEqual({
       candidate_attempts: 1,
       candidate_answers: 1,
-      candidate_evidence_rows: 1,
-      inserted_evidence_rows: 1,
+      candidate_evidence_rows: 2,
+      inserted_evidence_rows: 2,
       affected_users: 1,
-      manual_mapping_rows: 1,
+      manual_mapping_rows: 2,
       mapping_at_or_before_answer_rows: 0,
-      mapping_after_answer_rows: 1,
+      mapping_after_answer_rows: 2,
     })
 
     await client.query(fenRepairMigration)
     await client.query(completeRepairMigration)
     expect((await client.query(`SELECT count(*)::integer AS runs
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='181_tyt_fen_complete_primary_mappings_v1'`)).rows[0]).toEqual({ runs: 2 })
+      WHERE repair_key='181_tyt_fen_complete_mappings_v1'`)).rows[0]).toEqual({ runs: 2 })
     expect((await client.query(`SELECT candidate_evidence_rows,inserted_evidence_rows
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='181_tyt_fen_complete_primary_mappings_v1'
+      WHERE repair_key='181_tyt_fen_complete_mappings_v1'
       ORDER BY repaired_at DESC,run_id DESC LIMIT 1`)).rows[0]).toEqual({
       candidate_evidence_rows: 0,
       inserted_evidence_rows: 0,
@@ -838,9 +857,9 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
       (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
       FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [historicalUser, historicalAttempt])).rows[0]).toEqual({
-      evidence: 3,
-      attempts: 3,
-      v2_attempts: 3,
+      evidence: 4,
+      attempts: 4,
+      v2_attempts: 4,
     })
     expect((await client.query(`SELECT
       count(*)::integer AS evidence,
@@ -1051,7 +1070,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
 
     const repairRunsBeforeRetirement = (await client.query(`SELECT count(*)::integer AS count
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='181_tyt_fen_complete_primary_mappings_v1'`)).rows[0].count
+      WHERE repair_key='181_tyt_fen_complete_mappings_v1'`)).rows[0].count
     await client.query(`UPDATE public.curriculum_scope_releases
       SET release_status='retired' WHERE game='fen' AND display_exam_ref='TYT'`)
     await client.query(fenReleaseMigration)
@@ -1061,7 +1080,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       WHERE game='fen' AND display_exam_ref='TYT'`)).rows[0]).toEqual({ release_status: 'retired' })
     expect((await client.query(`SELECT count(*)::integer AS count
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='181_tyt_fen_complete_primary_mappings_v1'`)).rows[0].count).toBe(repairRunsBeforeRetirement)
+      WHERE repair_key='181_tyt_fen_complete_mappings_v1'`)).rows[0].count).toBe(repairRunsBeforeRetirement)
 
     await client.query(`UPDATE public.curriculum_scope_releases
       SET release_status='released',taxonomy_version='ba-tyt-fen-v2',released_at=clock_timestamp()
@@ -1075,7 +1094,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     })
     expect((await client.query(`SELECT count(*)::integer AS count
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='181_tyt_fen_complete_primary_mappings_v1'`)).rows[0].count).toBe(repairRunsBeforeRetirement)
+      WHERE repair_key='181_tyt_fen_complete_mappings_v1'`)).rows[0].count).toBe(repairRunsBeforeRetirement)
 
     await client.query(`UPDATE public.curriculum_scope_releases
       SET release_status='released',taxonomy_version='ba-tyt-fen-v1',released_at=clock_timestamp()

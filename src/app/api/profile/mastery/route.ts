@@ -7,6 +7,7 @@ import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { buildMasteryMapResponse } from '@/lib/mastery/build-response'
 import type { CurriculumNodeType } from '@/lib/mastery/graph'
 import type { MasteryCoveragePublic } from '@/lib/mastery/public-contract'
+import { supportsAdaptiveDiagnosticScope } from '@/lib/diagnostic/scope'
 import {
   isMasteryScopeIntegrityClean,
   parseMasteryScopeIntegrity,
@@ -171,6 +172,11 @@ export async function GET(request: NextRequest) {
 
     const outcomes = (outcomeResult.data ?? []) as OutcomeRow[]
     const outcomeIds = outcomes.map((outcome) => outcome.id)
+    const diagnosticAvailable = scope.diagnosticEnabled && supportsAdaptiveDiagnosticScope({
+      game,
+      examRef: scope.displayExamRef,
+      taxonomyVersion: scope.taxonomyVersion,
+    })
     const [stateResult, diagnosticStateResult] = outcomeIds.length > 0
       ? await Promise.all([
         supabase
@@ -178,7 +184,7 @@ export async function GET(request: NextRequest) {
           .select('outcome_id, attempts, correct_attempts, weighted_earned, weighted_possible, delayed_correct, v2_attempts, difficulty_weighted_earned, difficulty_weighted_possible, timed_attempts, total_time_sec, fast_wrong, hinted_attempts, hint_stage_sum, guess_annotations, careless_annotations, last_answered_at')
           .eq('user_id', user.id)
           .in('outcome_id', outcomeIds),
-        scope.diagnosticEnabled
+        diagnosticAvailable
           ? supabase
             .from('user_diagnostic_outcome_state')
             .select('outcome_id')
@@ -192,7 +198,7 @@ export async function GET(request: NextRequest) {
 
     const coverage: MasteryCoveragePublic = {
       supported: true,
-      diagnosticAvailable: scope.diagnosticEnabled,
+      diagnosticAvailable,
       taxonomyVersion: scope.taxonomyVersion,
       totalQuestions: integrity.total,
       mappedQuestions: integrity.mapped,

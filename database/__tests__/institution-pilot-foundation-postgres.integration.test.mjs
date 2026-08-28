@@ -99,8 +99,12 @@ const institutionScopeAlignmentSql = readFileSync(
   join(migrationsDir, '182_institution_math_scope_registry_alignment.sql'),
   'utf8',
 )
+const institutionTaxonomyConsumersSql = readFileSync(
+  join(migrationsDir, '183_institution_taxonomy_consumer_alignment.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145, 149-160, 167-168 and 182 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -297,7 +301,27 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182 institution pilot real Po
       );
       CREATE TABLE public.verified_attempts(id uuid PRIMARY KEY, user_id uuid);
       CREATE TABLE public.game_sessions(id uuid PRIMARY KEY, user_id uuid);
-      CREATE TABLE public.session_answers(id uuid PRIMARY KEY, session_id uuid);
+      CREATE TABLE public.session_answers(
+        id uuid PRIMARY KEY,
+        session_id uuid,
+        answered_at timestamptz NOT NULL DEFAULT clock_timestamp()
+      );
+      CREATE TABLE public.curriculum_outcomes(
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        code text UNIQUE NOT NULL,
+        game text NOT NULL,
+        exam_ref text,
+        taxonomy_version text,
+        is_active boolean NOT NULL DEFAULT true
+      );
+      CREATE TABLE public.mastery_outcome_evidence(
+        answer_id uuid NOT NULL,
+        attempt_id uuid NOT NULL,
+        user_id uuid NOT NULL,
+        outcome_id uuid NOT NULL,
+        difficulty_weighted_earned numeric NOT NULL DEFAULT 0,
+        difficulty_weighted_possible numeric NOT NULL DEFAULT 0
+      );
       CREATE TABLE public.review_cards(id uuid PRIMARY KEY, user_id uuid);
       CREATE TABLE public.review_logs(id uuid PRIMARY KEY, user_id uuid);
       CREATE TABLE public.user_outcome_state(id uuid PRIMARY KEY);
@@ -445,7 +469,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182 institution pilot real Po
     await client.query(freePilotClosedGateReplaySql)
     await client.query(freePilotClosedGateReplaySql)
     // Migration 178 owns this registry in the full schema. This institution-
-    // focused fixture needs the row type so migration 182 can compile and
+    // focused fixture needs the row type so migrations 182-183 can compile and
     // replay against the real migration-159 wrapper contract.
     await client.query(`CREATE TABLE public.curriculum_scope_releases (
       game text NOT NULL,
@@ -454,8 +478,16 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182 institution pilot real Po
       release_status text NOT NULL,
       PRIMARY KEY(game, display_exam_ref)
     )`)
+    await client.query(`INSERT INTO public.curriculum_scope_releases(
+      game,display_exam_ref,taxonomy_version,release_status
+    ) VALUES('matematik','TYT','ba-tyt-math-v1','released')`)
+    await client.query(`INSERT INTO public.curriculum_outcomes(
+      code,game,exam_ref,taxonomy_version,is_active
+    ) VALUES('MAT-TEST-01','matematik','TYT','ba-tyt-math-v1',true)`)
     await client.query(institutionScopeAlignmentSql)
     await client.query(institutionScopeAlignmentSql)
+    await client.query(institutionTaxonomyConsumersSql)
+    await client.query(institutionTaxonomyConsumersSql)
 
     const alignedDefinitions = (await client.query(`SELECT
       pg_get_functiondef('public.get_institution_student_learning_analysis(uuid,uuid,text,text,text,timestamptz)'::regprocedure) AS guarded,
@@ -515,6 +547,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182 institution pilot real Po
       FROM pg_catalog.pg_proc AS p
       JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public' AND p.proname = ANY($1::text[])
+        AND NOT (p.proname = 'get_institution_classroom_growth_metrics' AND p.pronargs = 4)
       ORDER BY p.proname
     `, [guardedRpcNames])
     expect(guardedRpcPrivileges.rows).toHaveLength(guardedRpcNames.length)
@@ -526,6 +559,14 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182 institution pilot real Po
         public: false,
       })
     }
+    expect((await client.query(`SELECT
+      has_function_privilege('authenticated',
+        'public.get_institution_classroom_growth_metrics(uuid,uuid,timestamptz,text)', 'EXECUTE') AS authenticated,
+      has_function_privilege('service_role',
+        'public.get_institution_classroom_growth_metrics(uuid,uuid,timestamptz,text)', 'EXECUTE') AS service_role,
+      has_function_privilege('anon',
+        'public.get_institution_classroom_growth_metrics(uuid,uuid,timestamptz,text)', 'EXECUTE') AS anon
+    `)).rows[0]).toEqual({ authenticated: false, service_role: true, anon: false })
 
     const serviceOnlyStudentPrivileges = await client.query(`
       SELECT
@@ -1350,6 +1391,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182 institution pilot real Po
       taskType: 'verified_questions',
       title: 'Canary tekrar çalışması',
       reasonCode: 'current_target',
+      outcomeCode: 'MAT-TEST-01',
       durationMinutes: 20,
       targetQuestionCount: 10,
     }])
@@ -1367,6 +1409,10 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182 institution pilot real Po
         randomUUID(),
       ],
     )
+    expect((await client.query(`SELECT taxonomy_version FROM public.institution_study_programs
+      WHERE program_ref=$1`, [freeProgram.programRef])).rows[0]).toEqual({
+      taxonomy_version: 'ba-tyt-math-v1',
+    })
     await authenticatedRpc(
       freePilotManager,
       'public.publish_institution_study_program($1,$2,$3)',

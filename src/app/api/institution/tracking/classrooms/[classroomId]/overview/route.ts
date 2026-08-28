@@ -120,6 +120,7 @@ export async function GET(
       p_user_id: context.userId,
       p_classroom_id: classroom.id,
       p_window_end: windowEnd,
+      p_taxonomy_version: scopeResolution.scope.taxonomyVersion,
     })
     if (growthRpc.error) throw growthRpc.error
     const growthMetrics = institutionGrowthMetricsSchema.safeParse(growthRpc.data)

@@ -3,7 +3,7 @@
 -- Migration 180 repaired the production rows that were known to predate the
 -- TYT Fen taxonomy. This follow-up covers two edge classes without rewriting
 -- that immutable ledger:
---   1. a reviewed/manual primary mapping added after an attempt was marked;
+--   1. reviewed/manual primary or secondary mappings added after an attempt was marked;
 --   2. an attempt completed while migration 179's mappings were uncommitted,
 --      where the mapping timestamp can be earlier than the answer timestamp.
 -- It also makes outcome -> topic category equality both a write-time invariant
@@ -676,7 +676,6 @@ LEFT JOIN public.verified_attempt_question_revisions AS snapshot
  AND snapshot.question_id = answer.question_id
 JOIN public.question_outcomes AS mapping
   ON mapping.question_id = question.id
- AND mapping.is_primary
 JOIN public.curriculum_outcomes AS outcome
   ON outcome.id = mapping.outcome_id
  AND outcome.is_active
@@ -700,18 +699,34 @@ WHERE attempt.game = 'fen'
   AND upper(COALESCE(question.exam_ref, '')) = 'TYT'
   AND question.is_active
   AND outcome.category IS NOT DISTINCT FROM question.category
-  -- A governed mapping replacement must not make one historical answer count
-  -- toward both the superseded and current primary outcome.
+  -- Repair every missing current mapping independently. An existing primary
+  -- must not suppress a missing secondary mapping for the same answer.
   AND NOT EXISTS (
     SELECT 1
     FROM public.mastery_outcome_evidence AS existing
-    JOIN public.curriculum_outcomes AS existing_outcome
-      ON existing_outcome.id = existing.outcome_id
     WHERE existing.answer_id = answer.id
-      AND existing.question_id = answer.question_id
-      AND existing_outcome.game = 'fen'
-      AND upper(COALESCE(existing_outcome.exam_ref, '')) = 'TYT'
-      AND existing_outcome.taxonomy_version = 'ba-tyt-fen-v1'
+      AND existing.outcome_id = mapping.outcome_id
+  )
+  -- A governed primary replacement must not make one historical answer count
+  -- toward both an outcome that is no longer mapped and the current primary.
+  -- Secondary mappings remain independently repairable.
+  AND (
+    NOT mapping.is_primary
+    OR NOT EXISTS (
+      SELECT 1
+      FROM public.mastery_outcome_evidence AS existing
+      JOIN public.curriculum_outcomes AS existing_outcome
+        ON existing_outcome.id = existing.outcome_id
+      LEFT JOIN public.question_outcomes AS current_mapping
+        ON current_mapping.question_id = answer.question_id
+       AND current_mapping.outcome_id = existing.outcome_id
+      WHERE existing.answer_id = answer.id
+        AND existing.question_id = answer.question_id
+        AND existing_outcome.game = 'fen'
+        AND upper(COALESCE(existing_outcome.exam_ref, '')) = 'TYT'
+        AND existing_outcome.taxonomy_version = 'ba-tyt-fen-v1'
+        AND current_mapping.outcome_id IS NULL
+    )
   );
 
 CREATE TEMP TABLE fen_scope_complete_inserted_evidence ON COMMIT DROP AS
@@ -807,7 +822,7 @@ WITH inserted_run AS (
     mapping_at_or_before_answer_rows, mapping_after_answer_rows
   )
   SELECT
-    '181_tyt_fen_complete_primary_mappings_v1',
+    '181_tyt_fen_complete_mappings_v1',
     'fen',
     'TYT',
     'ba-tyt-fen-v1',
@@ -882,7 +897,7 @@ BEGIN
   IF v_runs <> 1 OR NOT EXISTS (
     SELECT 1
     FROM fen_scope_complete_repair_run
-    WHERE repair_key = '181_tyt_fen_complete_primary_mappings_v1'
+    WHERE repair_key = '181_tyt_fen_complete_mappings_v1'
       AND inserted_evidence_rows = v_inserted
   ) THEN
     RAISE EXCEPTION 'TYT Fen complete evidence repair ledger was not persisted'

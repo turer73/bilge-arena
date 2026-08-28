@@ -297,6 +297,28 @@ describe('GET /api/profile/mastery', () => {
     expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
   })
 
+  it('registry bayragi acik olsa bile desteklenmeyen taksonomide tanilama vaat etmez', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValueOnce({
+      data: {
+        game: 'matematik', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-math-v2', mappingMode: 'category_proxy', diagnosticEnabled: true,
+      },
+      error: null,
+    })
+
+    const response = await GET(request() as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.coverage).toMatchObject({
+      supported: true,
+      diagnosticAvailable: false,
+      taxonomyVersion: 'ba-tyt-math-v2',
+    })
+    expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
+  })
+
   it('coverage veya graph butunlugu bozuksa fail-closed 500 doner', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
     mockIntegrityResult.mockReturnValueOnce({

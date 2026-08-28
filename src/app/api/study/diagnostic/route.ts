@@ -15,6 +15,7 @@ import {
   type DiagnosticQuestionInput,
 } from '@/lib/diagnostic/adaptive-policy'
 import { buildDiagnosticSummary, type DiagnosticSummaryOutcomeInput } from '@/lib/diagnostic/summary'
+import { ADAPTIVE_DIAGNOSTIC_SCOPE } from '@/lib/diagnostic/scope'
 import type {
   DiagnosticResponsePublic,
   DiagnosticSessionPublic,
@@ -29,10 +30,10 @@ import {
 const ipLimiter = createRateLimiter('adaptive-diagnostic-ip', 120, 60_000)
 const userLimiter = createRateLimiter('adaptive-diagnostic-user', 60, 60_000)
 
-const PILOT_GAME = 'matematik'
-const PILOT_EXAM_REF = 'TYT'
-const PILOT_TAXONOMY = 'ba-tyt-math-v1'
-const PILOT_OUTCOME_COUNT = 6
+const PILOT_GAME = ADAPTIVE_DIAGNOSTIC_SCOPE.game
+const PILOT_EXAM_REF = ADAPTIVE_DIAGNOSTIC_SCOPE.examRef
+const PILOT_TAXONOMY = ADAPTIVE_DIAGNOSTIC_SCOPE.taxonomyVersion
+const PILOT_OUTCOME_COUNT = ADAPTIVE_DIAGNOSTIC_SCOPE.outcomeCount
 const MAX_CATALOG_QUESTIONS = 500
 const MAX_CATALOG_MAPPINGS = 1_000
 

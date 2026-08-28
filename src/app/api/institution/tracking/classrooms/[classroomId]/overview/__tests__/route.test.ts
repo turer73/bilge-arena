@@ -63,6 +63,11 @@ describe('institution classroom overview route', () => {
     expect(calls.find(([name]) => name === 'get_institution_classroom_published_program_members')?.[1]).toMatchObject({
       p_user_id: USER_ID, p_classroom_id: CLASSROOM_ID, p_window_start: '2026-07-01T00:00:00.000Z',
     })
+    expect(calls.find(([name]) => name === 'get_institution_classroom_growth_metrics')?.[1]).toMatchObject({
+      p_user_id: USER_ID,
+      p_classroom_id: CLASSROOM_ID,
+      p_taxonomy_version: 'ba-tyt-math-v1',
+    })
     expect(mocks.buildOverview).toHaveBeenCalledWith(expect.objectContaining({
       analyses: expect.arrayContaining([expect.objectContaining({ student: { memberRef: refs[0] } })]),
       taxonomyVersion: 'ba-tyt-math-v1',
