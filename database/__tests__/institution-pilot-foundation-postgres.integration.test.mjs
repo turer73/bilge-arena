@@ -476,11 +476,12 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
       display_exam_ref text NOT NULL,
       taxonomy_version text NOT NULL,
       release_status text NOT NULL,
+      diagnostic_enabled boolean NOT NULL DEFAULT false,
       PRIMARY KEY(game, display_exam_ref)
     )`)
     await client.query(`INSERT INTO public.curriculum_scope_releases(
-      game,display_exam_ref,taxonomy_version,release_status
-    ) VALUES('matematik','TYT','ba-tyt-math-v1','released')`)
+      game,display_exam_ref,taxonomy_version,release_status,diagnostic_enabled
+    ) VALUES('matematik','TYT','ba-tyt-math-v1','released',true)`)
     await client.query(`INSERT INTO public.curriculum_outcomes(
       code,game,exam_ref,taxonomy_version,is_active
     ) VALUES('MAT-TEST-01','matematik','TYT','ba-tyt-math-v1',true)`)

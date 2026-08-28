@@ -415,14 +415,16 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       replacementAnswer, manualOutcome, replacementUser, questionIds.get('kimya'),
       replacementSession, replacementAttempt, replacementOldOutcome,
     ])
+    // The live answer writer already materialized the current primary's base
+    // aggregate. Seed only the retired secondary aggregate represented by the
+    // historical revision; inserting the primary again would make the fixture
+    // unlike production and violate the state primary key.
     await client.query(`INSERT INTO public.user_outcome_state(
       user_id,outcome_id,attempts,correct_attempts,weighted_earned,weighted_possible,
       delayed_correct,last_answered_at,v2_attempts,difficulty_weighted_earned,
       difficulty_weighted_possible,timed_attempts,total_time_sec
-    ) VALUES
-      ($1,$2,1,1,1,1,0,clock_timestamp(),1,5,5,1,13),
-      ($1,$3,1,1,0.4,0.4,0,clock_timestamp(),1,2,2,1,13)`, [
-      replacementUser, manualOutcome, replacementOldOutcome,
+    ) VALUES($1,$2,1,1,0.4,0.4,0,clock_timestamp(),1,2,2,1,13)`, [
+      replacementUser, replacementOldOutcome,
     ])
 
     await answerWriterClient.query(
