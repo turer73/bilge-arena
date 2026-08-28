@@ -236,6 +236,7 @@ BEGIN
       'game', v_scope.game,
       'examRef', v_scope.display_exam_ref,
       'taxonomyVersion', v_scope.taxonomy_version,
+      'diagnosticEnabled', v_scope.diagnostic_enabled,
       'modelVersion', 'institution-evidence-v1',
       'windowStart', v_membership.accepted_at,
       'windowEnd', p_window_end

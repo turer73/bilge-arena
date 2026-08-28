@@ -72,6 +72,7 @@ export const institutionStudentAnalysisRpcSchema = z.object({
     game: z.literal('matematik'),
     examRef: z.literal('TYT'),
     taxonomyVersion: institutionTaxonomyVersionSchema,
+    diagnosticEnabled: z.boolean().default(false),
     modelVersion: z.literal('institution-evidence-v1'),
     windowStart: timestampSchema,
     windowEnd: timestampSchema,

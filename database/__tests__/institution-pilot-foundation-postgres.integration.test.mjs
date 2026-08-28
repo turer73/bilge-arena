@@ -1448,13 +1448,37 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
       ),
       '22023',
     )
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.update_institution_study_program_draft($1,$2,$3,$4,$5,$6)',
+        [
+          freePilotManager,
+          freeProgram.programRef,
+          weekStart,
+          30,
+          programItems,
+          randomUUID(),
+        ],
+      ),
+      '22023',
+    )
+    const blockedProgramPublishRequest = randomUUID()
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.publish_institution_study_program($1,$2,$3)',
+        [freePilotManager, freeProgram.programRef, blockedProgramPublishRequest],
+      ),
+      '22023',
+    )
     await client.query(`UPDATE public.curriculum_scope_releases
       SET taxonomy_version='ba-tyt-math-v1'
       WHERE game='matematik' AND display_exam_ref='TYT'`)
     await authenticatedRpc(
       freePilotManager,
       'public.publish_institution_study_program($1,$2,$3)',
-      [freePilotManager, freeProgram.programRef, randomUUID()],
+      [freePilotManager, freeProgram.programRef, blockedProgramPublishRequest],
     )
     expect((await rpc(
       'public.get_my_institution_study_programs($1,$2)',

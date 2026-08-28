@@ -242,6 +242,7 @@ DECLARE
   v_request public.pilot_institution_requests%ROWTYPE;
   v_operational_institution_id uuid;
   v_taxonomy_version text;
+  v_diagnostic_enabled boolean;
   v_hash text;
   v_legacy_hash text;
   v_result jsonb;
@@ -321,8 +322,8 @@ BEGIN
     RETURN v_request.result || jsonb_build_object('replayed', true);
   END IF;
 
-  SELECT scope.taxonomy_version
-  INTO v_taxonomy_version
+  SELECT scope.taxonomy_version, scope.diagnostic_enabled
+  INTO v_taxonomy_version, v_diagnostic_enabled
   FROM public.curriculum_scope_releases AS scope
   WHERE scope.game = 'matematik'
     AND scope.display_exam_ref = 'TYT'
@@ -330,6 +331,16 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'released institution curriculum scope is required'
       USING ERRCODE = 'P0002';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM jsonb_array_elements(p_items) AS item(value)
+    WHERE value->>'taskType' = 'diagnostic'
+  ) AND (
+    v_taxonomy_version IS DISTINCT FROM 'ba-tyt-math-v1'
+    OR NOT COALESCE(v_diagnostic_enabled, false)
+  ) THEN
+    RAISE EXCEPTION 'adaptive diagnostic is unavailable for released taxonomy'
+      USING ERRCODE = '22023';
   END IF;
   IF EXISTS (
     SELECT 1
@@ -399,6 +410,22 @@ BEGIN
   IF v_operational_institution_id IS DISTINCT FROM v_program.institution_id THEN
     RAISE EXCEPTION 'operational institution mismatch' USING ERRCODE = '42501';
   END IF;
+  IF v_program.status = 'draft' AND EXISTS (
+    SELECT 1 FROM jsonb_array_elements(p_items) AS item(value)
+    WHERE value->>'taskType' = 'diagnostic'
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM public.curriculum_scope_releases AS scope
+    WHERE scope.game = 'matematik'
+      AND scope.display_exam_ref = 'TYT'
+      AND scope.taxonomy_version = v_program.taxonomy_version
+      AND scope.taxonomy_version = 'ba-tyt-math-v1'
+      AND scope.release_status = 'released'
+      AND scope.diagnostic_enabled
+  ) THEN
+    RAISE EXCEPTION 'adaptive diagnostic is unavailable for program taxonomy'
+      USING ERRCODE = '22023';
+  END IF;
   IF EXISTS (
     SELECT 1
     FROM jsonb_array_elements(p_items) AS item(value)
@@ -415,6 +442,48 @@ BEGIN
   RETURN public.free_pilot_legacy_program_update(
     p_user_id, p_program_ref, p_week_start, p_daily_minute_limit,
     p_items, p_request_id
+  );
+END;
+$fn$;
+
+CREATE OR REPLACE FUNCTION public.publish_institution_study_program(
+  p_user_id uuid,
+  p_program_ref text,
+  p_request_id uuid
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_program public.institution_study_programs%ROWTYPE;
+  v_operational_institution_id uuid;
+BEGIN
+  v_operational_institution_id := public.institution_pilot_assert_operational_actor(p_user_id);
+  SELECT * INTO v_program
+  FROM public.institution_study_programs
+  WHERE program_ref = p_program_ref AND teacher_id = p_user_id;
+  IF FOUND AND v_operational_institution_id IS DISTINCT FROM v_program.institution_id THEN
+    RAISE EXCEPTION 'operational institution mismatch' USING ERRCODE = '42501';
+  END IF;
+  IF FOUND AND v_program.status = 'draft' AND EXISTS (
+    SELECT 1 FROM public.institution_study_program_items AS item
+    WHERE item.program_id = v_program.id AND item.task_type = 'diagnostic'
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM public.curriculum_scope_releases AS scope
+    WHERE scope.game = 'matematik'
+      AND scope.display_exam_ref = 'TYT'
+      AND scope.taxonomy_version = v_program.taxonomy_version
+      AND scope.taxonomy_version = 'ba-tyt-math-v1'
+      AND scope.release_status = 'released'
+      AND scope.diagnostic_enabled
+  ) THEN
+    RAISE EXCEPTION 'adaptive diagnostic is unavailable for program taxonomy'
+      USING ERRCODE = '22023';
+  END IF;
+  RETURN public.free_pilot_legacy_program_publish(
+    p_user_id, p_program_ref, p_request_id
   );
 END;
 $fn$;
@@ -517,13 +586,15 @@ REVOKE ALL ON FUNCTION
   public.get_institution_classroom_growth_metrics(uuid, uuid, timestamptz, text),
   public.create_institution_study_program_draft(uuid, uuid, text, date, integer, text, jsonb, uuid),
   public.update_institution_study_program_draft(uuid, text, date, integer, jsonb, uuid),
+  public.publish_institution_study_program(uuid, text, uuid),
   public.institution_study_program_review_evidence(uuid)
 FROM PUBLIC, anon, authenticated, service_role;
 
 GRANT EXECUTE ON FUNCTION
   public.get_institution_classroom_growth_metrics(uuid, uuid, timestamptz),
   public.create_institution_study_program_draft(uuid, uuid, text, date, integer, text, jsonb, uuid),
-  public.update_institution_study_program_draft(uuid, text, date, integer, jsonb, uuid)
+  public.update_institution_study_program_draft(uuid, text, date, integer, jsonb, uuid),
+  public.publish_institution_study_program(uuid, text, uuid)
 TO authenticated, service_role;
 
 GRANT EXECUTE ON FUNCTION

@@ -18,6 +18,7 @@ LOCK TABLE
   public.curriculum_scope_releases,
   public.curriculum_nodes,
   public.curriculum_outcomes,
+  public.question_revision_outcomes,
   public.session_answers,
   public.questions,
   public.question_outcomes,
@@ -707,26 +708,35 @@ WHERE attempt.game = 'fen'
     WHERE existing.answer_id = answer.id
       AND existing.outcome_id = mapping.outcome_id
   )
-  -- A governed primary replacement must not make one historical answer count
-  -- toward both an outcome that is no longer mapped and the current primary.
-  -- Secondary mappings remain independently repairable.
-  AND (
-    NOT mapping.is_primary
-    OR NOT EXISTS (
-      SELECT 1
-      FROM public.mastery_outcome_evidence AS existing
-      JOIN public.curriculum_outcomes AS existing_outcome
-        ON existing_outcome.id = existing.outcome_id
-      LEFT JOIN public.question_outcomes AS current_mapping
-        ON current_mapping.question_id = answer.question_id
-       AND current_mapping.outcome_id = existing.outcome_id
-      WHERE existing.answer_id = answer.id
-        AND existing.question_id = answer.question_id
-        AND existing_outcome.game = 'fen'
-        AND upper(COALESCE(existing_outcome.exam_ref, '')) = 'TYT'
-        AND existing_outcome.taxonomy_version = 'ba-tyt-fen-v1'
-        AND current_mapping.outcome_id IS NULL
-    )
+  -- Never make one historical answer count toward both a superseded mapping
+  -- and its replacement. A newly added secondary remains repairable when the
+  -- only stale evidence is conclusively the primary captured by the attempt's
+  -- immutable revision. Legacy attempts without revision lineage fail closed.
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.mastery_outcome_evidence AS existing
+    JOIN public.curriculum_outcomes AS existing_outcome
+      ON existing_outcome.id = existing.outcome_id
+    LEFT JOIN public.question_outcomes AS current_mapping
+      ON current_mapping.question_id = answer.question_id
+     AND current_mapping.outcome_id = existing.outcome_id
+    WHERE existing.answer_id = answer.id
+      AND existing.question_id = answer.question_id
+      AND existing_outcome.game = 'fen'
+      AND upper(COALESCE(existing_outcome.exam_ref, '')) = 'TYT'
+      AND existing_outcome.taxonomy_version = 'ba-tyt-fen-v1'
+      AND current_mapping.outcome_id IS NULL
+      AND (
+        mapping.is_primary
+        OR snapshot.revision_id IS NULL
+        OR NOT EXISTS (
+          SELECT 1
+          FROM public.question_revision_outcomes AS historical_mapping
+          WHERE historical_mapping.revision_id = snapshot.revision_id
+            AND historical_mapping.outcome_id = existing.outcome_id
+            AND historical_mapping.is_primary
+        )
+      )
   );
 
 CREATE TEMP TABLE fen_scope_complete_inserted_evidence ON COMMIT DROP AS

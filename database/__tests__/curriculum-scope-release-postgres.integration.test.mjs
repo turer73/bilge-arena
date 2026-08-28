@@ -62,6 +62,13 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let supersededAnswer
   let secondaryNode
   let secondaryOutcome
+  let replacementUser
+  let replacementAttempt
+  let replacementSession
+  let replacementAnswer
+  let replacementRevision
+  let replacementOldNode
+  let replacementOldOutcome
   let releaseWriterQuestion
   let completionWasBlocked = false
   let answerWriterWasBlocked = false
@@ -143,14 +150,22 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
 
     for (const sql of foundationMigrations) await client.query(sql)
 
-    // Migration 106 owns this table in the full application schema. This
-    // focused fixture needs only the immutable difficulty snapshot consumed by
-    // migration 181, so keep the disposable contract intentionally minimal.
+    // Migration 106 owns these tables in the full application schema. This
+    // focused fixture keeps only the immutable difficulty/revision lineage and
+    // mapping history consumed by migration 181.
     await client.query(`CREATE TABLE public.verified_attempt_question_revisions (
       attempt_id uuid NOT NULL REFERENCES public.verified_attempts(id) ON DELETE RESTRICT,
       question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
+      revision_id uuid,
       difficulty smallint NOT NULL CHECK (difficulty BETWEEN 1 AND 5),
       PRIMARY KEY(attempt_id,question_id)
+    );
+    CREATE TABLE public.question_revision_outcomes (
+      revision_id uuid NOT NULL,
+      outcome_id uuid NOT NULL REFERENCES public.curriculum_outcomes(id) ON DELETE RESTRICT,
+      weight numeric(6,3) NOT NULL CHECK (weight > 0 AND weight <= 1),
+      is_primary boolean NOT NULL DEFAULT false,
+      PRIMARY KEY(revision_id,outcome_id)
     )`)
 
     releaseWriterQuestion = randomUUID()
@@ -345,6 +360,70 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     await client.query(`INSERT INTO public.question_outcomes(
       question_id,outcome_id,weight,is_primary,mapping_source
     ) VALUES($1,$2,0.5,false,'manual')`, [questionIds.get('kimya'), secondaryOutcome])
+
+    // A historical governed secondary S1 replaced by current S2 must not make
+    // the same answer count toward both outcomes. The attempt revision proves
+    // that the stale evidence was secondary rather than the historical primary.
+    replacementUser = randomUUID()
+    replacementAttempt = randomUUID()
+    replacementSession = randomUUID()
+    replacementAnswer = randomUUID()
+    replacementRevision = randomUUID()
+    replacementOldNode = randomUUID()
+    replacementOldOutcome = randomUUID()
+    await client.query(`INSERT INTO public.curriculum_nodes(
+      id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+    ) SELECT $1,'ba-tyt-fen-v1:outcome:kimya-secondary-old','ba-tyt-fen-v1','fen','TYT',
+      'outcome',topic.id,'kimya','Eski kimya ikincil kazanımı',22,false
+      FROM public.curriculum_nodes AS topic
+      WHERE topic.code='ba-tyt-fen-v1:topic:kimya'`, [replacementOldNode])
+    await client.query(`INSERT INTO public.curriculum_outcomes(
+      id,code,game,category,title,description,exam_ref,sort_order,is_active,node_id,taxonomy_version
+    ) VALUES($1,'FEN-KIM-OLD','fen','kimya','Eski kimya ikincil kazanımı',
+      'Superseded secondary fixture','TYT',22,false,$2,'ba-tyt-fen-v1')`, [
+      replacementOldOutcome, replacementOldNode,
+    ])
+    await client.query(`INSERT INTO public.question_revision_outcomes(
+      revision_id,outcome_id,weight,is_primary
+    ) VALUES($1,$2,1,true),($1,$3,0.4,false)`, [
+      replacementRevision, manualOutcome, replacementOldOutcome,
+    ])
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [replacementUser])
+    await client.query(`INSERT INTO public.game_sessions(id,user_id,client_request_id)
+      VALUES($1,$2,$3)`, [replacementSession, replacementUser, randomUUID()])
+    await client.query(`INSERT INTO public.session_answers(
+      id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
+    ) VALUES($1,$2,$3,$4,true,13,false,clock_timestamp()-interval '1 hour')`, [
+      replacementAnswer, replacementSession, replacementUser, questionIds.get('kimya'),
+    ])
+    await client.query(`INSERT INTO public.verified_attempts(
+      id,user_id,game,mode,question_ids,duration_sec,expires_at,completed_at,session_id
+    ) VALUES($1,$2,'fen','classic',$3,180,clock_timestamp()+interval '1 hour',clock_timestamp(),$4)`, [
+      replacementAttempt, replacementUser, [questionIds.get('kimya')], replacementSession,
+    ])
+    await client.query(`INSERT INTO public.verified_attempt_question_revisions(
+      attempt_id,question_id,revision_id,difficulty
+    ) VALUES($1,$2,$3,5)`, [replacementAttempt, questionIds.get('kimya'), replacementRevision])
+    await client.query('INSERT INTO public.mastery_materialized_attempts(attempt_id) VALUES($1)', [replacementAttempt])
+    await client.query(`INSERT INTO public.mastery_outcome_evidence(
+      answer_id,outcome_id,user_id,question_id,session_id,attempt_id,is_correct,
+      mapping_weight,difficulty,difficulty_weighted_earned,difficulty_weighted_possible,
+      time_taken_sec,fast_wrong,max_hint_stage,delayed_correct,base_already_recorded
+    ) VALUES
+      ($1,$2,$3,$4,$5,$6,true,1,5,5,5,13,false,0,false,false),
+      ($1,$7,$3,$4,$5,$6,true,0.4,5,2,2,13,false,0,false,false)`, [
+      replacementAnswer, manualOutcome, replacementUser, questionIds.get('kimya'),
+      replacementSession, replacementAttempt, replacementOldOutcome,
+    ])
+    await client.query(`INSERT INTO public.user_outcome_state(
+      user_id,outcome_id,attempts,correct_attempts,weighted_earned,weighted_possible,
+      delayed_correct,last_answered_at,v2_attempts,difficulty_weighted_earned,
+      difficulty_weighted_possible,timed_attempts,total_time_sec
+    ) VALUES
+      ($1,$2,1,1,1,1,0,clock_timestamp(),1,5,5,1,13),
+      ($1,$3,1,1,0.4,0.4,0,clock_timestamp(),1,2,2,1,13)`, [
+      replacementUser, manualOutcome, replacementOldOutcome,
+    ])
 
     await answerWriterClient.query(
       `UPDATE public.verified_attempts
@@ -807,6 +886,12 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     ])
     expect((await client.query(`SELECT count(*)::integer AS evidence
       FROM public.mastery_outcome_evidence WHERE attempt_id=$1`, [supersededAttempt])).rows[0]).toEqual({ evidence: 1 })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      count(*) FILTER (WHERE outcome_id=$2)::integer AS replacement_evidence
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$1`, [
+      replacementAttempt, secondaryOutcome,
+    ])).rows[0]).toEqual({ evidence: 2, replacement_evidence: 0 })
     const aggregate = (await client.query(`SELECT
       sum(attempts)::integer AS attempts,
       sum(v2_attempts)::integer AS v2_attempts,
