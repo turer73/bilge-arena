@@ -93,6 +93,29 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(within(mathTab).getByText('Mat')).toHaveClass('md:hidden')
     expect(within(mathTab).getByText('Matematik')).toHaveClass('hidden', 'md:inline')
   })
+
+  test('üst çubuk gerçek sınav kapsamı seçicisi ve profil avatarı sunar', async () => {
+    const onExamRefChange = vi.fn()
+    render(
+      <MobileHomeDemo
+        examRef="TYT"
+        onExamRefChange={onExamRefChange}
+        displayName="Sevdi"
+        avatarUrl="https://lh3.googleusercontent.com/avatar.png"
+      />
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
+
+    const profileLink = screen.getByRole('link', { name: 'Sevdi profilini aç' })
+    expect(profileLink).toHaveAttribute('href', '/arena/profil')
+    expect(profileLink.querySelector('img')).toHaveAttribute('src', 'https://lh3.googleusercontent.com/avatar.png')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sınav kapsamını değiştir' }))
+    expect(screen.getByRole('dialog', { name: 'Sınav kapsamı seç' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'AYT Sayısal' }))
+    expect(onExamRefChange).toHaveBeenCalledWith('AYT-SAY')
+    expect(screen.queryByRole('dialog', { name: 'Sınav kapsamı seç' })).not.toBeInTheDocument()
+  })
 })
 
 describe('MobileHomeDemo canlı öğrenme yolu', () => {

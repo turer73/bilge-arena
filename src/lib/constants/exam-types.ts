@@ -21,7 +21,7 @@ export const EXAM_TYPE_SHORT: Record<ExamType, string> = {
 }
 
 /** Sınav türünün kapsadığı exam_ref'ler (oyun examTags eşleşmesi için). */
-const EXAM_REFS: Record<ExamType, string[]> = {
+const EXAM_REFS: Record<ExamType, readonly string[]> = {
   yks: ['TYT', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ', 'YDT'],
   lgs: ['LGS'],
 }
@@ -55,4 +55,9 @@ export function gamesForExamType(examType: ExamType | null | undefined): GameDef
  */
 export function defaultExamRefForType(examType: ExamType | null | undefined): string | null {
   return isExamType(examType) ? DEFAULT_EXAM_REF[examType] : null
+}
+
+/** Profil turu degistiginde sakli kalan exam_ref'i dogrulamak icin izinli kapsam. */
+export function examRefsForType(examType: ExamType): readonly string[] {
+  return EXAM_REFS[examType]
 }

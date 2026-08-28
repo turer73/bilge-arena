@@ -27,6 +27,7 @@ import { getLevelFromXP } from '@/lib/constants/levels'
 import { QuizLimitBanner } from '@/components/premium/quiz-limit-banner'
 import { AdBanner } from '@/components/ads/ad-banner'
 import { BilgeChan } from '@/components/ui/bilge-chan'
+import { MobileLobbyFlow } from './mobile-lobby-flow'
 
 interface LobbyProps {
   game: GameSlug
@@ -142,7 +143,30 @@ export function Lobby({
           <SoundToggle />
         </div>
       </div>
-      <header className="relative overflow-hidden rounded-[24px] p-4 text-white md:col-start-1 md:row-start-2 md:min-h-[166px] md:p-6" style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}cc)`, boxShadow: `0 6px 0 ${gameDef.colorHex}99` }}>
+
+      {personalizedMockCard && (
+        <div data-personalized-mock-mobile-slot className="md:hidden">
+          {personalizedMockCard}
+        </div>
+      )}
+
+      <MobileLobbyFlow
+        game={game}
+        selectedMode={selectedMode}
+        onSelectMode={onSelectMode}
+        selectedCategory={selectedCategory}
+        onSelectCategory={onSelectCategory}
+        selectedDifficulty={selectedDifficulty}
+        onSelectDifficulty={onSelectDifficulty}
+        selectedExamRef={selectedExamRef}
+        onSelectExamRef={onSelectExamRef}
+        onStart={onStart}
+        onLimitReached={onLimitReached}
+        quizLimit={quizLimit}
+        loadError={loadError}
+      />
+
+      <header data-desktop-lobby-hero className="relative hidden overflow-hidden rounded-[24px] p-4 text-white md:col-start-1 md:row-start-2 md:block md:min-h-[166px] md:p-6" style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}cc)`, boxShadow: `0 6px 0 ${gameDef.colorHex}99` }}>
         <div className="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] border-white/10" />
         <div className="relative flex items-center gap-3">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-white/15 ring-2 ring-white/25">
@@ -157,7 +181,7 @@ export function Lobby({
         </div>
       </header>
 
-      <div className="relative min-h-[142px] animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow)] md:col-start-2 md:row-start-2 md:min-h-[166px]" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
+      <div className="relative hidden min-h-[142px] animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow)] md:col-start-2 md:row-start-2 md:block md:min-h-[166px]" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
         <div className="relative z-10 max-w-[66%]">
           <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-accent-text)]">Bilge Çan</p>
           <h2 className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">Turun hazır!</h2>
@@ -176,7 +200,7 @@ export function Lobby({
 
       <section
         aria-labelledby="mode-selection-title"
-        className="animate-fadeUp rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-shadow-accent)] md:col-start-1 md:row-start-3 md:p-4"
+        className="hidden animate-fadeUp rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-shadow-accent)] md:col-start-1 md:row-start-3 md:block md:p-4"
         style={{ animationDelay: '0.25s', animationFillMode: 'both' }}
       >
         <div className="mb-3 flex items-end justify-between gap-3">
@@ -200,7 +224,7 @@ export function Lobby({
       </section>
 
       {!mode.isDeneme && (
-        <section className="animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-shadow)] md:col-start-1 md:row-start-4" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
+        <section className="hidden animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-shadow)] md:col-start-1 md:row-start-4 md:block" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
           <button
             type="button"
             onClick={() => setShowFilters((current) => !current)}
@@ -305,7 +329,7 @@ export function Lobby({
       )}
 
       {mode.isDeneme && denemeConfig && (
-        <section className="animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-shadow)] md:col-start-1 md:row-start-4" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
+        <section className="hidden animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-shadow)] md:col-start-1 md:row-start-4 md:block" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-black text-[var(--app-text)]">Deneme formatı</h2>
             <span className="flex items-center gap-1.5 text-xs font-black text-[var(--app-accent-text)]">
@@ -328,7 +352,7 @@ export function Lobby({
       )}
 
       {quizLimit && (
-        <div className={`animate-fadeUp md:col-start-2 ${personalizedMockCard ? 'md:row-start-5' : 'md:row-start-4'}`} style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+        <div className={`hidden animate-fadeUp md:col-start-2 md:block ${personalizedMockCard ? 'md:row-start-5' : 'md:row-start-4'}`} style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
           <QuizLimitBanner
             remaining={quizLimit.remaining}
             isPremium={quizLimit.isPremium}
@@ -340,7 +364,7 @@ export function Lobby({
       {loadError && (
         <div
           role="alert"
-          className={`animate-fadeUp rounded-xl border px-4 py-3 text-sm font-medium md:col-start-2 ${personalizedMockCard ? 'md:row-start-6' : 'md:row-start-5'}`}
+          className={`hidden animate-fadeUp rounded-xl border px-4 py-3 text-sm font-medium md:col-start-2 md:block ${personalizedMockCard ? 'md:row-start-6' : 'md:row-start-5'}`}
           style={{
             background: 'var(--urgency-bg, var(--app-danger-strong)20)',
             borderColor: 'var(--urgency, var(--app-danger))',
@@ -351,7 +375,7 @@ export function Lobby({
         </div>
       )}
 
-      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 -mx-1 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)]/95 p-2 shadow-[0_5px_0_var(--app-shadow-accent)] backdrop-blur-xl md:static md:col-start-2 md:row-start-3 md:mx-0 md:self-start">
+      <div data-desktop-lobby-start className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 -mx-1 hidden rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)]/95 p-2 shadow-[0_5px_0_var(--app-shadow-accent)] backdrop-blur-xl md:static md:col-start-2 md:row-start-3 md:mx-0 md:block md:self-start">
         <div className="flex items-center justify-between gap-3 px-2 pb-2 text-[11px] font-bold text-[var(--app-text-sub)]">
           <span className="font-black text-[var(--app-text)]">{mode.name}</span>
           <span className="flex items-center gap-1.5">
@@ -380,14 +404,14 @@ export function Lobby({
       {personalizedMockCard && (
         <div
           data-personalized-mock-slot
-          className="animate-fadeUp md:col-start-2 md:row-start-4 md:self-start"
+          className="hidden animate-fadeUp md:col-start-2 md:row-start-4 md:block md:self-start"
           style={{ animationDelay: '0.35s', animationFillMode: 'both' }}
         >
           {personalizedMockCard}
         </div>
       )}
 
-      <AdBanner slot="lobby" className="mx-auto mt-1 md:col-span-2" />
+      <AdBanner slot="lobby" className="mx-auto mt-1 hidden md:col-span-2 md:block" />
     </div>
   )
 }

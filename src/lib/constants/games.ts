@@ -21,7 +21,7 @@ export const GAMES: Record<GameSlug, GameDefinition> = {
     colorHex: '#2563EB',
     icon: 'calculator',
     categories: ['sayilar', 'problemler', 'geometri', 'denklemler', 'fonksiyonlar', 'olasilik'],
-    examTags: ['TYT', 'AYT-SAY', 'LGS'],
+    examTags: ['TYT', 'AYT-SAY', 'AYT-EA', 'LGS'],
   },
   turkce: {
     slug: 'turkce',

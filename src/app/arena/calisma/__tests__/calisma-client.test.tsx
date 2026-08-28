@@ -80,6 +80,7 @@ describe('CalismaClient', () => {
     expect(screen.getByTestId('today-plan-focus')).toBeInTheDocument()
     expect(screen.getByTestId('institution-weekly-program')).toBeInTheDocument()
     expect(screen.getByTestId('mastery-action-card')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Profil sayfasını aç' })).toHaveAttribute('href', '/arena/profil')
   })
 
   test('LGS profilinde stale TYT/WordQuest seçimini güvenli bağlama düşürür', () => {

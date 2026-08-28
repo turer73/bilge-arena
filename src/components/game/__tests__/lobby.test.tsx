@@ -92,6 +92,16 @@ describe('Lobby', () => {
     expect(startButton.compareDocumentPosition(slot as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  it('akıllı deneme girişini mobil akışta da erişilebilir tutar', () => {
+    const { container } = render(
+      <Lobby {...baseProps} personalizedMockCard={<div>Akıllı Deneme</div>} />
+    )
+
+    const mobileSlot = container.querySelector('[data-personalized-mock-mobile-slot]')
+    expect(mobileSlot).toHaveClass('md:hidden')
+    expect(mobileSlot).toHaveTextContent('Akıllı Deneme')
+  })
+
   it('limit dolduğunda premium akışını erişilebilir bırakır', () => {
     const onLimitReached = vi.fn()
     render(

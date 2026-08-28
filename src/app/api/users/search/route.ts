@@ -47,7 +47,10 @@ export async function GET(req: Request) {
     error = legacy.error
   }
 
-  if (error) return NextResponse.json({ users: [] })
+  if (error) {
+    console.error('[User Search API] search_profiles hatasi:', error.code)
+    return NextResponse.json({ error: 'Kullanici aramasi su anda kullanilamiyor' }, { status: 503 })
+  }
 
   return NextResponse.json({ users: data || [] })
 }

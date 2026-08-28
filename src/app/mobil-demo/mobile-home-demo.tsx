@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import {
   BookOpenText,
@@ -23,7 +23,6 @@ import {
   Lock,
   MessageCircle,
   Play,
-  Settings,
   ShoppingBag,
   ShieldCheck,
   Sparkles,
@@ -69,11 +68,14 @@ interface MobileHomeDemoProps {
   examLabel?: 'YKS' | 'LGS'
   /** Canli yoldaki cevaplari TYT/AYT/LGS kapsaminda ayirir. */
   examRef?: string | null
+  /** Canlı üst çubuktaki sınav kapsamı seçimini uygulama durumuna yazar. */
+  onExamRefChange?: (examRef: string) => void
   availableSubjects?: MobileSubjectId[]
   currentStreak?: number
   coinBalance?: number
   totalXP?: number
   displayName?: string
+  avatarUrl?: string | null
   dailyGoal?: { current: number; target: number } | null
   classroomEnabled?: boolean
   institutionEnabled?: boolean
@@ -247,11 +249,13 @@ export function MobileHomeDemo({
   mode = 'demo',
   examLabel = 'YKS',
   examRef = null,
+  onExamRefChange,
   availableSubjects,
   currentStreak = 12,
   coinBalance = 480,
   totalXP = 2300,
   displayName = 'Bilgin',
+  avatarUrl = null,
   dailyGoal = { current: 6, target: 10 },
   classroomEnabled = false,
   institutionEnabled = false,
@@ -259,10 +263,7 @@ export function MobileHomeDemo({
   showBottomNav = true,
   userId = null,
 }: MobileHomeDemoProps = {}) {
-  const visibleSubjects = useMemo(
-    () => SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id)),
-    [availableSubjects],
-  )
+  const visibleSubjects = SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id))
   const [subjectId, setSubjectId] = useState<SubjectId>(visibleSubjects[0]?.id ?? 'matematik')
   // Demo rotasi bir vitrin: pencere hep acik baslar. Canli modda karar
   // efekte birakilir (SSR'da kapali render edilir, hydration uyusmazligi yok).
@@ -270,6 +271,8 @@ export function MobileHomeDemo({
   const coachDialogRef = useRef<HTMLElement | null>(null)
   const coachReturnFocusRef = useRef<HTMLElement | null>(null)
   const [coachMessage, setCoachMessage] = useState(0)
+  const [examPickerOpen, setExamPickerOpen] = useState(false)
+  const [demoExamRef, setDemoExamRef] = useState(examRef)
   const subject = useMemo(() => visibleSubjects.find((item) => item.id === subjectId) ?? visibleSubjects[0] ?? SUBJECTS[0], [subjectId, visibleSubjects])
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
   const gameHref = `/arena/${gameSlug}`
@@ -327,6 +330,17 @@ export function MobileHomeDemo({
   const MessageIcon = message.icon
   const bubbleRadius = '30px 30px 30px 16px'
   const goalRemaining = dailyGoal ? Math.max(0, dailyGoal.target - dailyGoal.current) : null
+  const selectedHeaderExamRef = onExamRefChange ? examRef : demoExamRef
+  const examScopeOptions = examLabel === 'LGS'
+    ? [{ value: 'LGS', label: 'LGS' }]
+    : [
+        { value: 'TYT', label: 'TYT' },
+        { value: 'AYT-SAY', label: 'AYT Sayısal' },
+        { value: 'AYT-EA', label: 'AYT Eşit Ağırlık' },
+        { value: 'AYT-SOZ', label: 'AYT Sözel' },
+        { value: 'YDT', label: 'YDT' },
+      ]
+  const selectedHeaderExamLabel = examScopeOptions.find((option) => option.value === selectedHeaderExamRef)?.label ?? examLabel
   const coachTitle = coachMessage === 0
     ? pathComplete ? `Yol tamam, ${displayName}!` : `Hazırsın, ${displayName}!`
     : coachMessage === 2
@@ -401,27 +415,72 @@ export function MobileHomeDemo({
     }
   }, [coachOpen])
 
-  const openCoach = useCallback(() => {
+  const openCoach = () => {
     setCoachMessage(0)
     setCoachOpen(true)
-  }, [])
+  }
 
   return (
     <div data-arena-home-surface className={`min-h-[100dvh] bg-[var(--app-bg)] pb-28 text-[var(--app-text)] lg:bg-transparent lg:pb-10 ${mode === 'live' ? '-mt-[var(--navbar-h)] lg:mt-0' : ''}`}>
       <style>{`html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } nextjs-portal { display: none !important; }`}</style>
       <header inert={coachOpen} className="sticky top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl">
         <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center justify-between px-3 md:h-16 md:px-5 xl:px-6">
-          <Link href="/arena/profil" aria-label="Sınav türünü değiştir" className="flex min-h-11 items-center gap-1 rounded-xl text-[var(--app-text-sub)]">
-            <ShieldCheck size={24} fill="var(--app-accent-border)" className="text-[var(--app-accent-text)]" strokeWidth={2.5} />
-            <span className="text-xs font-black">{examLabel}</span>
-            <ChevronDown size={14} strokeWidth={3} />
-          </Link>
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Sınav kapsamını değiştir"
+              aria-expanded={examPickerOpen}
+              aria-controls="exam-scope-picker"
+              onClick={() => setExamPickerOpen((current) => !current)}
+              className="flex min-h-11 items-center gap-1 rounded-xl px-1 text-[var(--app-text-sub)] active:bg-[var(--app-hover)]"
+            >
+              <ShieldCheck size={24} fill="var(--app-accent-border)" className="text-[var(--app-accent-text)]" strokeWidth={2.5} />
+              <span className="max-w-[72px] truncate text-xs font-black">{selectedHeaderExamLabel}</span>
+              <ChevronDown size={14} strokeWidth={3} className={examPickerOpen ? 'rotate-180' : ''} />
+            </button>
+            {examPickerOpen && (
+              <div
+                id="exam-scope-picker"
+                role="dialog"
+                aria-label="Sınav kapsamı seç"
+                className="absolute left-0 top-[calc(100%+.4rem)] z-50 w-64 rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_8px_24px_rgba(15,23,42,.2)]"
+              >
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-accent-text)]">{examLabel} kapsamı</p>
+                <p className="mt-1 text-xs font-semibold text-[var(--app-text-sub)]">Çalışmak istediğin sınav bölümünü seç.</p>
+                <div className="mt-3 grid gap-2">
+                  {examScopeOptions.map((option) => {
+                    const active = option.value === selectedHeaderExamRef
+                    return (
+                      <button
+                        type="button"
+                        key={option.value}
+                        aria-pressed={active}
+                        onClick={() => {
+                          if (onExamRefChange) onExamRefChange(option.value)
+                          else setDemoExamRef(option.value)
+                          setExamPickerOpen(false)
+                        }}
+                        className={`flex min-h-11 items-center justify-between rounded-xl border-2 px-3 text-left text-xs font-black ${active ? 'border-[var(--app-accent)] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]' : 'border-[var(--app-border)] text-[var(--app-text)]'}`}
+                      >
+                        {option.label}
+                        {active && <Check size={16} strokeWidth={3.5} aria-hidden="true" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <Resource icon={Flame} value={currentStreak} color="var(--app-warn)" label="Günlük seri" />
             <Resource icon={Gem} value={compactNumber(coinBalance)} color="#06b6d4" label="Altın" />
             <Resource icon={Sparkles} value={compactNumber(totalXP)} color="var(--wisdom-light)" label="Toplam XP" />
           </div>
-          <Link href="/arena/profil" aria-label="Ayarlar" className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--app-text-muted)] active:bg-[var(--app-hover)]"><Settings size={20} strokeWidth={2.5} /></Link>
+          <Link href="/arena/profil" aria-label={`${displayName} profilini aç`} className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-sm font-black text-[var(--app-accent-text)] shadow-[0_2px_0_var(--app-shadow-accent)] active:translate-y-0.5">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            ) : displayName.trim().charAt(0).toLocaleUpperCase('tr-TR') || 'B'}
+          </Link>
         </div>
       </header>
 
