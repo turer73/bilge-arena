@@ -270,17 +270,6 @@ BEGIN
     RAISE EXCEPTION 'active classroom member not found' USING ERRCODE = 'P0002';
   END IF;
 
-  SELECT scope.taxonomy_version
-  INTO v_taxonomy_version
-  FROM public.curriculum_scope_releases AS scope
-  WHERE scope.game = 'matematik'
-    AND scope.display_exam_ref = 'TYT'
-    AND scope.release_status = 'released';
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'released institution curriculum scope is required'
-      USING ERRCODE = 'P0002';
-  END IF;
-
   IF EXISTS (
     SELECT 1 FROM jsonb_array_elements(p_items) WITH ORDINALITY AS item(value, ordinal)
     WHERE jsonb_typeof(value) <> 'object'
@@ -303,6 +292,45 @@ BEGIN
     GROUP BY value->>'scheduledDate'
     HAVING count(*) > 3 OR sum((value->>'durationMinutes')::integer) > p_daily_minute_limit
   ) THEN RAISE EXCEPTION 'institution study program daily limit exceeded' USING ERRCODE = '22023'; END IF;
+  v_legacy_hash := public.institution_pilot_payload_hash(jsonb_build_object(
+    'classroomId', p_classroom_id, 'memberRef', p_member_ref, 'weekStart', p_week_start,
+    'dailyMinuteLimit', p_daily_minute_limit, 'modelVersion', p_model_version, 'items', p_items));
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_user_id::text || ':program-draft:' || p_request_id::text, 0));
+  SELECT * INTO v_request FROM public.pilot_institution_requests
+    WHERE user_id = p_user_id AND operation = 'create_study_program_draft' AND request_id = p_request_id FOR UPDATE;
+  IF FOUND THEN
+    IF v_request.payload_hash = v_legacy_hash THEN
+      RETURN v_request.result || jsonb_build_object('replayed', true);
+    END IF;
+    SELECT * INTO v_program
+    FROM public.institution_study_programs
+    WHERE program_ref = v_request.result->>'programRef'
+      AND teacher_id = p_user_id
+      AND classroom_id = p_classroom_id
+      AND membership_id = v_membership.id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'program draft request payload mismatch' USING ERRCODE = '22023';
+    END IF;
+    v_hash := public.institution_pilot_payload_hash(jsonb_build_object(
+      'classroomId', p_classroom_id, 'memberRef', p_member_ref, 'weekStart', p_week_start,
+      'dailyMinuteLimit', p_daily_minute_limit, 'modelVersion', p_model_version, 'items', p_items,
+      'taxonomyVersion', v_program.taxonomy_version));
+    IF v_request.payload_hash IS DISTINCT FROM v_hash THEN
+      RAISE EXCEPTION 'program draft request payload mismatch' USING ERRCODE = '22023';
+    END IF;
+    RETURN v_request.result || jsonb_build_object('replayed', true);
+  END IF;
+
+  SELECT scope.taxonomy_version
+  INTO v_taxonomy_version
+  FROM public.curriculum_scope_releases AS scope
+  WHERE scope.game = 'matematik'
+    AND scope.display_exam_ref = 'TYT'
+    AND scope.release_status = 'released';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'released institution curriculum scope is required'
+      USING ERRCODE = 'P0002';
+  END IF;
   IF EXISTS (
     SELECT 1
     FROM jsonb_array_elements(p_items) AS item(value)
@@ -317,23 +345,10 @@ BEGIN
           AND outcome.is_active
       )
   ) THEN RAISE EXCEPTION 'institution study program target is outside released taxonomy' USING ERRCODE = '22023'; END IF;
-
-  v_legacy_hash := public.institution_pilot_payload_hash(jsonb_build_object(
-    'classroomId', p_classroom_id, 'memberRef', p_member_ref, 'weekStart', p_week_start,
-    'dailyMinuteLimit', p_daily_minute_limit, 'modelVersion', p_model_version, 'items', p_items));
   v_hash := public.institution_pilot_payload_hash(jsonb_build_object(
     'classroomId', p_classroom_id, 'memberRef', p_member_ref, 'weekStart', p_week_start,
     'dailyMinuteLimit', p_daily_minute_limit, 'modelVersion', p_model_version, 'items', p_items,
     'taxonomyVersion', v_taxonomy_version));
-  PERFORM pg_advisory_xact_lock(hashtextextended(p_user_id::text || ':program-draft:' || p_request_id::text, 0));
-  SELECT * INTO v_request FROM public.pilot_institution_requests
-    WHERE user_id = p_user_id AND operation = 'create_study_program_draft' AND request_id = p_request_id FOR UPDATE;
-  IF FOUND THEN
-    IF v_request.payload_hash NOT IN (v_hash, v_legacy_hash) THEN
-      RAISE EXCEPTION 'program draft request payload mismatch' USING ERRCODE = '22023';
-    END IF;
-    RETURN v_request.result || jsonb_build_object('replayed', true);
-  END IF;
   v_count := jsonb_array_length(p_items);
   INSERT INTO public.institution_study_programs(
     institution_id,classroom_id,membership_id,student_id,teacher_id,week_start,

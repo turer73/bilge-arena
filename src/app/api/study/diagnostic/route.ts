@@ -15,7 +15,11 @@ import {
   type DiagnosticQuestionInput,
 } from '@/lib/diagnostic/adaptive-policy'
 import { buildDiagnosticSummary, type DiagnosticSummaryOutcomeInput } from '@/lib/diagnostic/summary'
-import { ADAPTIVE_DIAGNOSTIC_SCOPE } from '@/lib/diagnostic/scope'
+import {
+  ADAPTIVE_DIAGNOSTIC_SCOPE,
+  supportsAdaptiveDiagnosticScope,
+} from '@/lib/diagnostic/scope'
+import { resolveReleasedMasteryScope } from '@/lib/mastery/scope'
 import type {
   DiagnosticResponsePublic,
   DiagnosticSessionPublic,
@@ -240,6 +244,24 @@ function unsupported(game: string, examRef: string | null): DiagnosticResponsePu
   return { supported: false, game, examRef, session: null, summary: null }
 }
 
+async function isAdaptiveDiagnosticReleased(admin: AdminClient): Promise<boolean> {
+  const resolution = await resolveReleasedMasteryScope(
+    (args) => admin.rpc('resolve_released_curriculum_scope', args),
+    PILOT_GAME,
+    PILOT_EXAM_REF,
+  )
+  if (resolution.error) throw new Error('diagnostic_scope_resolution_failed')
+  const scope = resolution.scope
+  return Boolean(
+    scope?.diagnosticEnabled
+    && supportsAdaptiveDiagnosticScope({
+      game: scope.game,
+      examRef: scope.displayExamRef,
+      taxonomyVersion: scope.taxonomyVersion,
+    }),
+  )
+}
+
 function publicSession(input: {
   id: string
   kind: DiagnosticKind
@@ -454,6 +476,9 @@ export async function GET(request: NextRequest) {
 
   const admin = createServiceRoleClient()
   try {
+    if (!await isAdaptiveDiagnosticReleased(admin)) {
+      return noStoreJson(unsupported(PILOT_GAME, PILOT_EXAM_REF))
+    }
     const [{ data: latest, error: latestError }, summary] = await Promise.all([
       admin
         .from('adaptive_diagnostic_sessions')
@@ -525,6 +550,9 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      if (!await isAdaptiveDiagnosticReleased(admin)) {
+        return noStoreJson(unsupported(PILOT_GAME, PILOT_EXAM_REF))
+      }
       const catalog = await loadCatalog(admin, auth.user.id)
       const sessionId = randomUUID()
       const kind: DiagnosticKind = catalog.priorStates.length === PILOT_OUTCOME_COUNT ? 'recheck' : 'initial'
@@ -578,6 +606,9 @@ export async function POST(request: NextRequest) {
     const body = parsed.data
 
     try {
+      if (!await isAdaptiveDiagnosticReleased(admin)) {
+        return noStoreJson(unsupported(PILOT_GAME, PILOT_EXAM_REF))
+      }
       const session = await loadSession(admin, auth.user.id, body.sessionId)
       if (!session) return noStoreJson({ error: 'Tanilama bulunamadi' }, { status: 404 })
       const [catalog, recordedAnswers] = await Promise.all([

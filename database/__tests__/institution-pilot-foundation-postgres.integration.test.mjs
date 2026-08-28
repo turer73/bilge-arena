@@ -1395,6 +1395,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
       durationMinutes: 20,
       targetQuestionCount: 10,
     }])
+    const freeProgramRequest = randomUUID()
     const freeProgram = await authenticatedRpc(
       freePilotManager,
       'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
@@ -1406,13 +1407,50 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
         30,
         'institution-program-v1',
         programItems,
-        randomUUID(),
+        freeProgramRequest,
       ],
     )
     expect((await client.query(`SELECT taxonomy_version FROM public.institution_study_programs
       WHERE program_ref=$1`, [freeProgram.programRef])).rows[0]).toEqual({
       taxonomy_version: 'ba-tyt-math-v1',
     })
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET taxonomy_version='ba-tyt-math-v2'
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
+    expect(await authenticatedRpc(
+      freePilotManager,
+      'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
+      [
+        freePilotManager,
+        freeClassroomId,
+        membership.rows[0].member_ref,
+        weekStart,
+        30,
+        'institution-program-v1',
+        programItems,
+        freeProgramRequest,
+      ],
+    )).toMatchObject({ programRef: freeProgram.programRef, replayed: true })
+    await expectPgError(
+      () => authenticatedRpc(
+        freePilotManager,
+        'public.create_institution_study_program_draft($1,$2,$3,$4,$5,$6,$7,$8)',
+        [
+          freePilotManager,
+          freeClassroomId,
+          membership.rows[0].member_ref,
+          weekStart,
+          35,
+          'institution-program-v1',
+          programItems,
+          freeProgramRequest,
+        ],
+      ),
+      '22023',
+    )
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET taxonomy_version='ba-tyt-math-v1'
+      WHERE game='matematik' AND display_exam_ref='TYT'`)
     await authenticatedRpc(
       freePilotManager,
       'public.publish_institution_study_program($1,$2,$3)',

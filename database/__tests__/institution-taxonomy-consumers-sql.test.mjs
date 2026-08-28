@@ -20,7 +20,14 @@ describe('institution taxonomy consumer alignment migration', () => {
     expect(sql).toContain('outcome.taxonomy_version = v_taxonomy_version')
     expect(sql).toContain('outcome.taxonomy_version = v_program.taxonomy_version')
     expect(sql).toContain("'taxonomyVersion', v_taxonomy_version")
-    expect(sql).toContain('v_request.payload_hash NOT IN (v_hash, v_legacy_hash)')
+    expect(sql).toContain('v_request.payload_hash = v_legacy_hash')
+    expect(sql).toContain("'taxonomyVersion', v_program.taxonomy_version")
+    const createStart = sql.indexOf('CREATE OR REPLACE FUNCTION public.create_institution_study_program_draft')
+    const replayLookup = sql.indexOf('SELECT * INTO v_request FROM public.pilot_institution_requests', createStart)
+    const releaseLookup = sql.indexOf('SELECT scope.taxonomy_version', createStart)
+    expect(replayLookup).toBeGreaterThan(createStart)
+    expect(releaseLookup).toBeGreaterThan(createStart)
+    expect(replayLookup).toBeLessThan(releaseLookup)
   })
 
   it('reviews a program against its generation taxonomy even after retirement', () => {
