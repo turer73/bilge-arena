@@ -182,7 +182,7 @@ BEGIN
           (child.node_type = 'course' AND (
             child.parent_id IS NOT NULL
             OR child.game IS DISTINCT FROM v_scope.game
-            OR upper(COALESCE(child.exam_ref, '')) <> v_scope.display_exam_ref
+            OR child.exam_ref IS DISTINCT FROM v_scope.display_exam_ref
           ))
           OR (child.node_type <> 'course' AND (
             parent.id IS NULL

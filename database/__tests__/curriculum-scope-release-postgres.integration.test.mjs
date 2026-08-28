@@ -384,8 +384,9 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       difficulty_weighted_possible,timed_attempts,total_time_sec
     ) VALUES($1,$2,1,1,1,1,0,clock_timestamp(),1,4,4,1,11)`, [supersededUser, supersededOutcome])
 
-    // Keep a stale marker uncommitted while 181 starts. Its table locks must
-    // wait for this writer, then the final scan must observe and repair it.
+    // Keep a production-shaped completion transaction in flight while 181
+    // starts. Its locks must drain the answer-first/attempt-second writer
+    // without taking the reverse order and deadlocking it.
     drainUser = randomUUID()
     drainAttempt = randomUUID()
     drainSession = randomUUID()
@@ -393,11 +394,14 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     await client.query('INSERT INTO public.profiles(id) VALUES($1)', [drainUser])
     await client.query(`INSERT INTO public.game_sessions(id,user_id,client_request_id)
       VALUES($1,$2,$3)`, [drainSession, drainUser, randomUUID()])
-    await client.query(`INSERT INTO public.session_answers(
-      id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
-    ) VALUES($1,$2,$3,$4,true,9,false,clock_timestamp())`, [
-      drainAnswer, drainSession, drainUser, questionIds.get('fizik'),
+    await client.query(`INSERT INTO public.verified_attempts(
+      id,user_id,game,mode,question_ids,duration_sec,expires_at
+    ) VALUES($1,$2,'fen','classic',$3,180,clock_timestamp()+interval '1 hour')`, [
+      drainAttempt, drainUser, [questionIds.get('fizik')],
     ])
+    await client.query(`INSERT INTO public.verified_attempt_question_revisions(
+      attempt_id,question_id,difficulty
+    ) VALUES($1,$2,4)`, [drainAttempt, questionIds.get('fizik')])
 
     inFlightClient = new Client({ connectionString: url })
     repairClient = new Client({ connectionString: url })
@@ -405,18 +409,15 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     await repairClient.connect()
     const repairPid = (await repairClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
     await inFlightClient.query('BEGIN')
-    await inFlightClient.query(`INSERT INTO public.verified_attempts(
-      id,user_id,game,mode,question_ids,duration_sec,expires_at,completed_at,session_id
-    ) VALUES($1,$2,'fen','classic',$3,180,clock_timestamp()+interval '1 hour',clock_timestamp(),$4)`, [
-      drainAttempt, drainUser, [questionIds.get('fizik')], drainSession,
+    // Match the production completion order: complete_game_session writes
+    // answers first, then complete_verified_game_session updates the attempt.
+    // The repair must wait on session_answers before locking verified_attempts,
+    // otherwise the two transactions deadlock in opposite lock order.
+    await inFlightClient.query(`INSERT INTO public.session_answers(
+      id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
+    ) VALUES($1,$2,$3,$4,true,9,false,clock_timestamp())`, [
+      drainAnswer, drainSession, drainUser, questionIds.get('fizik'),
     ])
-    await inFlightClient.query(`INSERT INTO public.verified_attempt_question_revisions(
-      attempt_id,question_id,difficulty
-    ) VALUES($1,$2,4)`, [drainAttempt, questionIds.get('fizik')])
-    await inFlightClient.query(
-      'INSERT INTO public.mastery_materialized_attempts(attempt_id) VALUES($1)',
-      [drainAttempt],
-    )
     const repairPromise = repairClient.query(completeRepairMigration)
     let repairSetupError
     try {
@@ -435,6 +436,8 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     } catch (error) {
       repairSetupError = error
     } finally {
+      await inFlightClient.query(`UPDATE public.verified_attempts
+        SET completed_at=clock_timestamp(),session_id=$2 WHERE id=$1`, [drainAttempt, drainSession])
       await inFlightClient.query('COMMIT')
     }
     await repairPromise
@@ -528,6 +531,28 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
         'UPDATE public.curriculum_nodes SET parent_id=$2 WHERE id=$1',
         [outcomeNode.id, outcomeNode.parent_id],
       )
+      await client.query('ALTER TABLE public.curriculum_nodes ENABLE TRIGGER trg_curriculum_node_parent_guard')
+    }
+    expect((await client.query(
+      `SELECT public.curriculum_scope_integrity('fen','TYT','ba-tyt-fen-v1') AS result`,
+    )).rows[0].result).toMatchObject({ nodeOrphan: 0 })
+
+    await client.query('ALTER TABLE public.curriculum_nodes DISABLE TRIGGER trg_curriculum_node_parent_guard')
+    await client.query('ALTER TABLE public.curriculum_outcomes DISABLE TRIGGER trg_curriculum_outcome_node_guard')
+    try {
+      await client.query(`UPDATE public.curriculum_nodes SET exam_ref='tyt'
+        WHERE taxonomy_version='ba-tyt-fen-v1'`)
+      await client.query(`UPDATE public.curriculum_outcomes SET exam_ref='tyt'
+        WHERE taxonomy_version='ba-tyt-fen-v1'`)
+      expect((await client.query(
+        `SELECT public.curriculum_scope_integrity('fen','TYT','ba-tyt-fen-v1') AS result`,
+      )).rows[0].result).toMatchObject({ nodeOrphan: 1 })
+    } finally {
+      await client.query(`UPDATE public.curriculum_nodes SET exam_ref='TYT'
+        WHERE taxonomy_version='ba-tyt-fen-v1'`)
+      await client.query(`UPDATE public.curriculum_outcomes SET exam_ref='TYT'
+        WHERE taxonomy_version='ba-tyt-fen-v1'`)
+      await client.query('ALTER TABLE public.curriculum_outcomes ENABLE TRIGGER trg_curriculum_outcome_node_guard')
       await client.query('ALTER TABLE public.curriculum_nodes ENABLE TRIGGER trg_curriculum_node_parent_guard')
     }
     expect((await client.query(
@@ -679,13 +704,13 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       FROM public.curriculum_scope_evidence_repair_runs
       WHERE repair_key='181_tyt_fen_complete_primary_mappings_v1'
       ORDER BY repaired_at,run_id LIMIT 1`)).rows[0]).toEqual({
-      candidate_attempts: 2,
-      candidate_answers: 2,
-      candidate_evidence_rows: 2,
-      inserted_evidence_rows: 2,
-      affected_users: 2,
+      candidate_attempts: 1,
+      candidate_answers: 1,
+      candidate_evidence_rows: 1,
+      inserted_evidence_rows: 1,
+      affected_users: 1,
       manual_mapping_rows: 1,
-      mapping_at_or_before_answer_rows: 1,
+      mapping_at_or_before_answer_rows: 0,
       mapping_after_answer_rows: 1,
     })
 

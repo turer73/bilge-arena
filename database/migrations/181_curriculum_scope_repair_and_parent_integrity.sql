@@ -20,10 +20,10 @@ LOCK TABLE
   public.curriculum_outcomes,
   public.questions,
   public.question_outcomes,
+  public.session_answers,
   public.verified_attempts,
   public.verified_attempt_question_revisions,
   public.verified_attempt_hint_events,
-  public.session_answers,
   public.review_logs,
   public.review_error_annotations,
   public.mastery_materialized_attempts,
@@ -420,7 +420,7 @@ BEGIN
           (child.node_type = 'course' AND (
             child.parent_id IS NOT NULL
             OR child.game IS DISTINCT FROM v_scope.game
-            OR upper(COALESCE(child.exam_ref, '')) <> v_scope.display_exam_ref
+            OR child.exam_ref IS DISTINCT FROM v_scope.display_exam_ref
           ))
           OR (child.node_type <> 'course' AND (
             parent.id IS NULL
