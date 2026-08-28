@@ -9,8 +9,8 @@ const fenReleaseSql = readFileSync(join(root, '179_release_tyt_fen_mastery_scope
 const fenRepairSql = readFileSync(join(root, '180_backfill_released_tyt_fen_mastery_evidence.sql'), 'utf8')
 const completeRepairSql = readFileSync(join(root, '181_curriculum_scope_repair_and_parent_integrity.sql'), 'utf8')
 const institutionAlignmentSql = readFileSync(join(root, '182_institution_math_scope_registry_alignment.sql'), 'utf8')
-const ydtEnglishReleaseSql = readFileSync(join(root, '185_release_ydt_english_mastery_scope.sql'), 'utf8')
-const ydtEnglishRepairSql = readFileSync(join(root, '186_backfill_released_ydt_english_mastery_evidence.sql'), 'utf8')
+const ydtEnglishReleaseSql = readFileSync(join(root, '187_release_ydt_english_mastery_scope.sql'), 'utf8')
+const ydtEnglishRepairSql = readFileSync(join(root, '188_backfill_released_ydt_english_mastery_evidence.sql'), 'utf8')
 const materializerDefinition = (sql) => sql.slice(
   sql.indexOf('CREATE OR REPLACE FUNCTION public.materialize_verified_attempt_mastery'),
   sql.indexOf('REVOKE ALL ON FUNCTION public.materialize_verified_attempt_mastery'),
@@ -20,7 +20,7 @@ const graphIntegrityDefinition = (sql) => sql.slice(
   sql.indexOf('REVOKE ALL ON FUNCTION public.curriculum_graph_integrity'),
 )
 
-describe('178-186 curriculum scope release migrations', () => {
+describe('178-188 curriculum scope release migrations', () => {
   it('keeps the release registry private and resolves only released scopes', () => {
     expect(registrySql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_releases/)
     expect(registrySql).toMatch(/release_status IN \('draft','validating','released','retired'\)/)
@@ -209,7 +209,7 @@ describe('178-186 curriculum scope release migrations', () => {
     expect(ydtEnglishRepairSql).toMatch(/question_revision_outcomes AS historical_mapping[\s\S]*historical_mapping\.revision_id = snapshot\.revision_id/)
     expect(ydtEnglishRepairSql).toMatch(/ON CONFLICT \(answer_id, outcome_id\) DO NOTHING/)
     expect(ydtEnglishRepairSql).toMatch(/ON CONFLICT \(user_id, outcome_id\) DO UPDATE SET/)
-    expect(ydtEnglishRepairSql).toContain("'186_ydt_english_complete_mappings_v1'")
+    expect(ydtEnglishRepairSql).toContain("'188_ydt_english_complete_mappings_v1'")
     expect(ydtEnglishRepairSql).toMatch(/mapping_at_or_before_answer_rows[\s\S]*mapping_after_answer_rows/)
     expect(ydtEnglishRepairSql).toMatch(/IF NOT v_scope_released THEN[\s\S]*obsolete YDT English v1 repair mutated rows/)
     expect(ydtEnglishRepairSql).toMatch(/v_candidates <> v_inserted[\s\S]*YDT English evidence repair lost rows/)

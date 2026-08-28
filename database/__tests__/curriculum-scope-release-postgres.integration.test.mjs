@@ -1,6 +1,6 @@
 // Opt-in disposable PostgreSQL coverage for 086 -> 091 -> 094 -> 096 -> 097
 // -> 138 -> 178 -> historical verified Fen attempts -> 179 -> 180 -> 181
-// -> historical verified YDT English attempts -> 185 -> 186.
+// -> historical verified YDT English attempts -> 187 -> 188.
 // Requires VERIFIED_ATTEMPTS_TEST_DATABASE_URL=.../bilge_r02_test_* and
 // VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE=1. The dedicated PostgreSQL CI
 // job runs it; the normal local/unit-test command deliberately does not.
@@ -32,11 +32,11 @@ const registryMigration = migration('178_curriculum_scope_release_registry.sql')
 const fenReleaseMigration = migration('179_release_tyt_fen_mastery_scope.sql')
 const fenRepairMigration = migration('180_backfill_released_tyt_fen_mastery_evidence.sql')
 const completeRepairMigration = migration('181_curriculum_scope_repair_and_parent_integrity.sql')
-const ydtEnglishReleaseMigration = migration('185_release_ydt_english_mastery_scope.sql')
-const ydtEnglishRepairMigration = migration('186_backfill_released_ydt_english_mastery_evidence.sql')
+const ydtEnglishReleaseMigration = migration('187_release_ydt_english_mastery_scope.sql')
+const ydtEnglishRepairMigration = migration('188_backfill_released_ydt_english_mastery_evidence.sql')
 const { Client } = pg
 
-describePg('178-186 curriculum scope release real PostgreSQL', () => {
+describePg('178-188 curriculum scope release real PostgreSQL', () => {
   let client
   let releaseClient
   let completionClient
@@ -614,7 +614,7 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
     [ydtEnglishAttempt, ydtEnglishUser])).rows[0]
 
     // A reviewed manual mapping can be added after an old attempt already has
-    // its immutable marker. Migration 185 preserves that ownership, so 186
+    // its immutable marker. Migration 187 preserves that ownership, so 188
     // must repair it even though it is not taxonomy_auto.
     const ydtEnglishManualOutcome = (await client.query(
       "SELECT id FROM public.curriculum_outcomes WHERE code='ENG-VOC-01'",
@@ -625,7 +625,7 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
       questionIds.get('vocabulary'), ydtEnglishManualOutcome,
     ])
 
-    // Start migration 185's transaction before this answer is committed, but
+    // Start migration 187's transaction before this answer is committed, but
     // pause it before table locks/mapping creation. question_outcomes.created_at
     // uses transaction-start NOW(), so the resulting mapping timestamp is at
     // or before the answer even though the mapping itself is created later.
@@ -1228,7 +1228,7 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
       candidate_evidence_rows,inserted_evidence_rows,affected_users,
       manual_mapping_rows,mapping_at_or_before_answer_rows,mapping_after_answer_rows
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='186_ydt_english_complete_mappings_v1'
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'
       ORDER BY repaired_at,run_id LIMIT 1`)).rows[0]).toEqual({
       candidate_attempts: 2,
       candidate_answers: 8,
@@ -1244,7 +1244,7 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
     await client.query(ydtEnglishRepairMigration)
     expect((await client.query(`SELECT candidate_evidence_rows,inserted_evidence_rows
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='186_ydt_english_complete_mappings_v1'
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'
       ORDER BY repaired_at DESC,run_id DESC LIMIT 1`)).rows[0]).toEqual({
       candidate_evidence_rows: 0,
       inserted_evidence_rows: 0,
@@ -1277,7 +1277,7 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
 
     const runsBeforeNoOp = (await client.query(`SELECT count(*)::integer AS count
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='186_ydt_english_complete_mappings_v1'`)).rows[0].count
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'`)).rows[0].count
     await client.query(`UPDATE public.curriculum_scope_releases SET release_status='retired'
       WHERE game='wordquest' AND display_exam_ref='YDT'`)
     await client.query(ydtEnglishReleaseMigration)
@@ -1286,7 +1286,7 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
       WHERE game='wordquest' AND display_exam_ref='YDT'`)).rows[0]).toEqual({ release_status: 'retired' })
     expect((await client.query(`SELECT count(*)::integer AS count
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='186_ydt_english_complete_mappings_v1'`)).rows[0].count).toBe(runsBeforeNoOp)
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'`)).rows[0].count).toBe(runsBeforeNoOp)
 
     await client.query(`UPDATE public.curriculum_scope_releases
       SET release_status='released',taxonomy_version='ba-ydt-eng-v2'
@@ -1299,7 +1299,7 @@ describePg('178-186 curriculum scope release real PostgreSQL', () => {
     })
     expect((await client.query(`SELECT count(*)::integer AS count
       FROM public.curriculum_scope_evidence_repair_runs
-      WHERE repair_key='186_ydt_english_complete_mappings_v1'`)).rows[0].count).toBe(runsBeforeNoOp)
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'`)).rows[0].count).toBe(runsBeforeNoOp)
 
     await client.query(`UPDATE public.curriculum_scope_releases
       SET taxonomy_version='ba-ydt-eng-v1'

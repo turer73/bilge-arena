@@ -1,4 +1,4 @@
--- Migration 185: Release the YDT English mastery scope.
+-- Migration 187: Release the YDT English mastery scope.
 --
 -- Wordquest questions intentionally store a NULL exam_ref while the public
 -- curriculum is displayed as YDT. The release registry keeps those semantics

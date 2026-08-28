@@ -1,6 +1,6 @@
--- Migration 186: Backfill historical verified YDT English mastery evidence.
+-- Migration 188: Backfill historical verified YDT English mastery evidence.
 --
--- Migration 185 creates taxonomy-owned mappings after historical Wordquest
+-- Migration 187 creates taxonomy-owned mappings after historical Wordquest
 -- attempts have already been marked as materialized. Those markers make the
 -- normal materializer correctly return early, so this migration repairs only
 -- the missing pre-release evidence and its additive aggregate contribution.
@@ -139,7 +139,7 @@ WHERE attempt.game = 'wordquest'
   -- visible. Repair every missing current mapping independently: a governed
   -- manual mapping must not be skipped, and question_outcomes.created_at uses
   -- transaction-start NOW(), so it cannot safely order an in-flight answer
-  -- against migration 185.
+  -- against migration 187.
   AND answer.answered_at < release.released_at
   AND NOT EXISTS (
     SELECT 1
@@ -270,7 +270,7 @@ WITH inserted_run AS (
     mapping_at_or_before_answer_rows, mapping_after_answer_rows
   )
   SELECT
-    '186_ydt_english_complete_mappings_v1',
+    '188_ydt_english_complete_mappings_v1',
     'wordquest',
     'YDT',
     'ba-ydt-eng-v1',
@@ -347,7 +347,7 @@ BEGIN
   IF v_runs <> 1 OR NOT EXISTS (
     SELECT 1
     FROM ydt_english_repair_run
-    WHERE repair_key = '186_ydt_english_complete_mappings_v1'
+    WHERE repair_key = '188_ydt_english_complete_mappings_v1'
       AND inserted_evidence_rows = v_inserted
   ) THEN
     RAISE EXCEPTION 'YDT English evidence repair ledger was not persisted'

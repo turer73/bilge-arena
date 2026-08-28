@@ -39,11 +39,18 @@ export default function GameClient() {
     }
   }, [isValidSlug, router])
 
-  // Sinav turune gore soru exam_ref default'u (yks->TYT, lgs->LGS). exam_type
-  // belirlenmemisse dokunma -> oturum-ici secici / 'all' korunur.
+  // Wordquest'in soru bankasi exam_ref=NULL kullanir; onceki dersten kalan
+  // TYT/LGS filtresi İngilizce sorularini bosaltmamali. Mastery display scope'u
+  // ayri olarak YDT'ye normalize edilir (useMasteryMap).
+  // Diger derslerde profil sinav turune gore soru exam_ref default'u kullanilir.
   useEffect(() => {
+    if (!isValidSlug) return
+    if (gameSlug === 'wordquest') {
+      if (selectedExamRef !== null) setExamRef(null)
+      return
+    }
     const validExamRefs = isValidSlug ? GAMES[gameSlug as GameSlug].examTags : []
-    if (isValidSlug && profile?.exam_type && (!selectedExamRef || !validExamRefs.includes(selectedExamRef))) {
+    if (profile?.exam_type && (!selectedExamRef || !validExamRefs.includes(selectedExamRef))) {
       const profileDefault = defaultExamRefForType(profile.exam_type)
       setExamRef(profileDefault && validExamRefs.includes(profileDefault) ? profileDefault : validExamRefs[0] ?? null)
     }
