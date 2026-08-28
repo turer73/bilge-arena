@@ -18,9 +18,9 @@ LOCK TABLE
   public.curriculum_scope_releases,
   public.curriculum_nodes,
   public.curriculum_outcomes,
+  public.session_answers,
   public.questions,
   public.question_outcomes,
-  public.session_answers,
   public.verified_attempts,
   public.verified_attempt_question_revisions,
   public.verified_attempt_hint_events,
@@ -453,21 +453,41 @@ BEGIN
   ),
   outcome_orphan AS (
     SELECT count(*)::integer AS count
-    FROM public.curriculum_outcomes AS outcome
-    LEFT JOIN public.curriculum_nodes AS node ON node.id = outcome.node_id
-    WHERE outcome.is_active
-      AND outcome.game = v_scope.game
-      AND upper(COALESCE(outcome.exam_ref, '')) = v_scope.display_exam_ref
-      AND outcome.taxonomy_version = v_scope.taxonomy_version
-      AND (
-        node.id IS NULL
-        OR NOT node.is_active
-        OR node.node_type <> 'outcome'
-        OR node.game IS DISTINCT FROM outcome.game
-        OR node.exam_ref IS DISTINCT FROM outcome.exam_ref
-        OR node.taxonomy_version IS DISTINCT FROM outcome.taxonomy_version
-        OR node.category IS DISTINCT FROM outcome.category
-      )
+    FROM (
+      SELECT outcome.id::text AS problem_key
+      FROM public.curriculum_outcomes AS outcome
+      LEFT JOIN public.curriculum_nodes AS node ON node.id = outcome.node_id
+      WHERE outcome.is_active
+        AND outcome.game = v_scope.game
+        AND upper(COALESCE(outcome.exam_ref, '')) = v_scope.display_exam_ref
+        AND outcome.taxonomy_version = v_scope.taxonomy_version
+        AND (
+          node.id IS NULL
+          OR NOT node.is_active
+          OR node.node_type <> 'outcome'
+          OR node.game IS DISTINCT FROM outcome.game
+          OR node.exam_ref IS DISTINCT FROM outcome.exam_ref
+          OR node.taxonomy_version IS DISTINCT FROM outcome.taxonomy_version
+          OR node.category IS DISTINCT FROM outcome.category
+        )
+      UNION ALL
+      SELECT node.id::text
+      FROM public.curriculum_nodes AS node
+      LEFT JOIN public.curriculum_outcomes AS outcome
+        ON outcome.node_id = node.id
+       AND outcome.is_active
+       AND outcome.game IS NOT DISTINCT FROM node.game
+       AND outcome.exam_ref IS NOT DISTINCT FROM node.exam_ref
+       AND outcome.taxonomy_version IS NOT DISTINCT FROM node.taxonomy_version
+       AND outcome.category IS NOT DISTINCT FROM node.category
+      WHERE node.is_active
+        AND node.node_type = 'outcome'
+        AND node.game IS NOT DISTINCT FROM v_scope.game
+        AND node.exam_ref IS NOT DISTINCT FROM v_scope.display_exam_ref
+        AND node.taxonomy_version = v_scope.taxonomy_version
+      GROUP BY node.id
+      HAVING count(outcome.id) <> 1
+    ) AS invalid_outcome
   ),
   empty_outcome AS (
     SELECT count(*)::integer AS count
@@ -499,6 +519,50 @@ END $fn$;
 REVOKE ALL ON FUNCTION public.curriculum_scope_integrity(text,text,text)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.curriculum_scope_integrity(text,text,text)
+  TO service_role;
+
+-- Preserve the no-argument institution-reporting contract while following the
+-- currently released Mathematics taxonomy instead of pinning the original v1.
+CREATE OR REPLACE FUNCTION public.curriculum_graph_integrity()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_result jsonb;
+  v_scope public.curriculum_scope_releases%ROWTYPE;
+BEGIN
+  SELECT * INTO v_scope
+  FROM public.curriculum_scope_releases AS scope
+  WHERE scope.game = 'matematik'
+    AND scope.display_exam_ref = 'TYT'
+    AND scope.release_status = 'released';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'released TYT Mathematics curriculum scope is required'
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  v_result := public.curriculum_scope_integrity(
+    v_scope.game,
+    v_scope.display_exam_ref,
+    v_scope.taxonomy_version
+  );
+  RETURN jsonb_build_object(
+    'total', v_result->'total',
+    'mapped', v_result->'mapped',
+    'unmapped', v_result->'unmapped',
+    'scopeMismatch', v_result->'scopeMismatch',
+    'nodeOrphan', v_result->'nodeOrphan',
+    'outcomeOrphan', v_result->'outcomeOrphan'
+  );
+END $fn$;
+
+REVOKE ALL ON FUNCTION public.curriculum_graph_integrity()
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.curriculum_graph_integrity()
   TO service_role;
 
 DO $fn$

@@ -12,6 +12,10 @@ const materializerDefinition = (sql) => sql.slice(
   sql.indexOf('CREATE OR REPLACE FUNCTION public.materialize_verified_attempt_mastery'),
   sql.indexOf('REVOKE ALL ON FUNCTION public.materialize_verified_attempt_mastery'),
 )
+const graphIntegrityDefinition = (sql) => sql.slice(
+  sql.indexOf('CREATE OR REPLACE FUNCTION public.curriculum_graph_integrity'),
+  sql.indexOf('REVOKE ALL ON FUNCTION public.curriculum_graph_integrity'),
+)
 
 describe('178-181 curriculum scope release migrations', () => {
   it('keeps the release registry private and resolves only released scopes', () => {
@@ -49,7 +53,10 @@ describe('178-181 curriculum scope release migrations', () => {
     expect(registrySql).toMatch(/child\.node_type = 'outcome'[\s\S]*parent\.category IS DISTINCT FROM child\.category/)
     expect(registrySql).toMatch(/SELECT '__course_root_count__'[\s\S]*root\.node_type = 'course'[\s\S]*root\.parent_id IS NULL[\s\S]*<> 1/)
     expect(registrySql).toMatch(/child\.node_type = 'course'[\s\S]*child\.exam_ref IS DISTINCT FROM v_scope\.display_exam_ref/)
-    expect(registrySql).toMatch(/CREATE OR REPLACE FUNCTION public\.curriculum_graph_integrity\(\)[\s\S]*curriculum_scope_integrity\('matematik', 'TYT', 'ba-tyt-math-v1'\)/)
+    expect(registrySql).toMatch(/FROM public\.curriculum_nodes AS node[\s\S]*LEFT JOIN public\.curriculum_outcomes AS outcome[\s\S]*GROUP BY node\.id[\s\S]*HAVING count\(outcome\.id\) <> 1/)
+    expect(registrySql).toMatch(/CREATE OR REPLACE FUNCTION public\.curriculum_graph_integrity\(\)[\s\S]*scope\.game = 'matematik'[\s\S]*scope\.release_status = 'released'[\s\S]*v_scope\.taxonomy_version/)
+    expect(graphIntegrityDefinition(registrySql)).toBe(graphIntegrityDefinition(completeRepairSql))
+    expect(graphIntegrityDefinition(registrySql)).not.toContain("curriculum_scope_integrity('matematik', 'TYT', 'ba-tyt-math-v1')")
     expect(registrySql).toMatch(/TYT Mathematics curriculum scope failed registry integrity/)
     expect(registrySql).toMatch(/taxonomy_version = 'ba-tyt-math-v1'[\s\S]*release_status = 'released'[\s\S]*curriculum_scope_integrity\('matematik', 'TYT', 'ba-tyt-math-v1'\)[\s\S]*v_integrity->>'primaryMismatch'[\s\S]*v_integrity->>'emptyOutcome'/)
     expect(registrySql).toMatch(/REVOKE ALL ON FUNCTION public\.curriculum_graph_integrity\(\) FROM PUBLIC, anon, authenticated/)
@@ -66,7 +73,7 @@ describe('178-181 curriculum scope release migrations', () => {
   })
 
   it('releases TYT Fen only after every integrity field is clean', () => {
-    expect(fenReleaseSql).toMatch(/LOCK TABLE[\s\S]*public\.curriculum_scope_releases,[\s\S]*public\.questions,[\s\S]*public\.question_outcomes,[\s\S]*public\.session_answers,[\s\S]*public\.verified_attempts[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+    expect(fenReleaseSql).toMatch(/LOCK TABLE[\s\S]*public\.curriculum_scope_releases,[\s\S]*public\.session_answers,[\s\S]*public\.questions,[\s\S]*public\.question_outcomes,[\s\S]*public\.verified_attempts[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
     expect(fenReleaseSql).toMatch(/CREATE TEMP TABLE fen_scope_release_control[\s\S]*release_status IN \('draft', 'validating', 'released'\)/)
     expect(fenReleaseSql).toMatch(/IF NOT \(SELECT should_apply FROM fen_scope_release_control\) THEN[\s\S]*RETURN/)
     expect(fenReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.materialize_verified_attempt_mastery[\s\S]*mapping\.mapping_source = 'taxonomy_auto'[\s\S]*GREATEST\(mapping\.created_at, scope\.released_at\)/)
@@ -89,7 +96,7 @@ describe('178-181 curriculum scope release migrations', () => {
     expect(fenRepairSql).toMatch(/ALTER TABLE public\.curriculum_scope_evidence_repairs ENABLE ROW LEVEL SECURITY/)
     expect(fenRepairSql).toMatch(/REVOKE ALL ON TABLE public\.curriculum_scope_evidence_repairs[\s\S]*PUBLIC, anon, authenticated, service_role/)
     expect(fenRepairSql).toMatch(/release_status = 'released'[\s\S]*curriculum_scope_integrity\('fen', 'TYT', 'ba-tyt-fen-v1'\)/)
-    expect(fenRepairSql).toMatch(/LOCK TABLE[\s\S]*public\.session_answers,[\s\S]*public\.verified_attempts,[\s\S]*public\.verified_attempt_question_revisions,[\s\S]*public\.review_logs,[\s\S]*public\.review_error_annotations,[\s\S]*public\.user_outcome_state[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+    expect(fenRepairSql).toMatch(/LOCK TABLE[\s\S]*public\.session_answers,[\s\S]*public\.questions,[\s\S]*public\.question_outcomes,[\s\S]*public\.verified_attempts,[\s\S]*public\.verified_attempt_question_revisions,[\s\S]*public\.review_logs,[\s\S]*public\.review_error_annotations,[\s\S]*public\.user_outcome_state[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
     expect(fenRepairSql).toMatch(/attempt\.game = 'fen'/)
     expect(fenRepairSql).toMatch(/mapping\.mapping_source = 'taxonomy_auto'/)
     expect(fenRepairSql).toMatch(/mapping\.created_at > answer\.answered_at/)
@@ -104,7 +111,7 @@ describe('178-181 curriculum scope release migrations', () => {
   })
 
   it('repairs all missing primary Fen evidence and hardens parent-category integrity', () => {
-    expect(completeRepairSql).toMatch(/LOCK TABLE[\s\S]*public\.question_outcomes,[\s\S]*public\.session_answers,[\s\S]*public\.verified_attempts,[\s\S]*public\.verified_attempt_hint_events,[\s\S]*public\.review_logs,[\s\S]*public\.review_error_annotations,[\s\S]*public\.mastery_materialized_attempts,[\s\S]*public\.user_outcome_state[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+    expect(completeRepairSql).toMatch(/LOCK TABLE[\s\S]*public\.session_answers,[\s\S]*public\.questions,[\s\S]*public\.question_outcomes,[\s\S]*public\.verified_attempts,[\s\S]*public\.verified_attempt_hint_events,[\s\S]*public\.review_logs,[\s\S]*public\.review_error_annotations,[\s\S]*public\.mastery_materialized_attempts,[\s\S]*public\.user_outcome_state[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
     expect(completeRepairSql).toMatch(/CREATE OR REPLACE FUNCTION public\.materialize_verified_attempt_mastery[\s\S]*mapping\.mapping_source = 'taxonomy_auto'[\s\S]*GREATEST\(mapping\.created_at, scope\.released_at\)/)
     expect(completeRepairSql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_evidence_repair_runs/)
     expect(completeRepairSql).toMatch(/run_id uuid PRIMARY KEY DEFAULT gen_random_uuid\(\)/)
@@ -130,6 +137,7 @@ describe('178-181 curriculum scope release migrations', () => {
     expect(completeRepairSql).toMatch(/child\.node_type = 'outcome'[\s\S]*parent\.category IS DISTINCT FROM child\.category/)
     expect(completeRepairSql).toMatch(/SELECT '__course_root_count__'[\s\S]*root\.node_type = 'course'[\s\S]*root\.parent_id IS NULL[\s\S]*<> 1/)
     expect(completeRepairSql).toMatch(/child\.node_type = 'course'[\s\S]*child\.exam_ref IS DISTINCT FROM v_scope\.display_exam_ref/)
+    expect(completeRepairSql).toMatch(/FROM public\.curriculum_nodes AS node[\s\S]*LEFT JOIN public\.curriculum_outcomes AS outcome[\s\S]*GROUP BY node\.id[\s\S]*HAVING count\(outcome\.id\) <> 1/)
     expect(completeRepairSql).toMatch(/WHERE id = NEW\.node_id[\s\S]*FOR UPDATE[\s\S]*v_node\.category IS DISTINCT FROM NEW\.category/)
     expect(completeRepairSql).toMatch(/IF NOT v_scope_released THEN[\s\S]*obsolete TYT Fen v1 repair mutated rows/)
     expect(completeRepairSql).toMatch(/v_candidates <> v_inserted[\s\S]*TYT Fen complete evidence repair lost rows/)

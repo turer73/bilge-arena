@@ -410,9 +410,10 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     const repairPid = (await repairClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
     await inFlightClient.query('BEGIN')
     // Match the production completion order: complete_game_session writes
-    // answers first, then complete_verified_game_session updates the attempt.
-    // The repair must wait on session_answers before locking verified_attempts,
-    // otherwise the two transactions deadlock in opposite lock order.
+    // answers, batch_increment_question_stats updates questions, and then
+    // complete_verified_game_session updates the attempt. The repair must wait
+    // on session_answers before locking either later table, otherwise the two
+    // transactions deadlock in opposite lock order.
     await inFlightClient.query(`INSERT INTO public.session_answers(
       id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
     ) VALUES($1,$2,$3,$4,true,9,false,clock_timestamp())`, [
@@ -436,6 +437,8 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     } catch (error) {
       repairSetupError = error
     } finally {
+      await inFlightClient.query(`UPDATE public.questions
+        SET difficulty=difficulty WHERE id=$1`, [questionIds.get('fizik')])
       await inFlightClient.query(`UPDATE public.verified_attempts
         SET completed_at=clock_timestamp(),session_id=$2 WHERE id=$1`, [drainAttempt, drainSession])
       await inFlightClient.query('COMMIT')
@@ -472,6 +475,36 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       { game: 'turkce', display_exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-turkce-v1', release_status: 'draft', diagnostic_enabled: false, has_released_at: false },
       { game: 'wordquest', display_exam_ref: 'YDT', question_exam_ref: null, taxonomy_version: 'ba-ydt-eng-v1', release_status: 'draft', diagnostic_enabled: false, has_released_at: false },
     ])
+  })
+
+  it('keeps the institution integrity wrapper on the released Mathematics taxonomy', async () => {
+    await client.query('BEGIN')
+    try {
+      await client.query('ALTER TABLE public.curriculum_nodes DISABLE TRIGGER trg_curriculum_node_parent_guard')
+      await client.query('ALTER TABLE public.curriculum_outcomes DISABLE TRIGGER trg_curriculum_outcome_node_guard')
+      await client.query(`UPDATE public.curriculum_scope_releases
+        SET taxonomy_version='ba-tyt-math-v2'
+        WHERE game='matematik' AND display_exam_ref='TYT'`)
+      await client.query(`UPDATE public.curriculum_nodes
+        SET taxonomy_version='ba-tyt-math-v2'
+        WHERE taxonomy_version='ba-tyt-math-v1'`)
+      await client.query(`UPDATE public.curriculum_outcomes
+        SET taxonomy_version='ba-tyt-math-v2'
+        WHERE taxonomy_version='ba-tyt-math-v1'`)
+
+      expect((await client.query(
+        'SELECT public.curriculum_graph_integrity() AS result',
+      )).rows[0].result).toEqual({
+        total: 6,
+        mapped: 6,
+        unmapped: 0,
+        scopeMismatch: 0,
+        nodeOrphan: 0,
+        outcomeOrphan: 0,
+      })
+    } finally {
+      await client.query('ROLLBACK')
+    }
   })
 
   it('maps the full Fen bank and passes the generic release invariant', async () => {
@@ -575,6 +608,80 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     expect((await client.query(
       `SELECT public.curriculum_scope_integrity('fen','TYT','ba-tyt-fen-v1') AS result`,
     )).rows[0].result).toMatchObject({ nodeOrphan: 0 })
+  })
+
+  it('requires exactly one active outcome binding for every active outcome leaf', async () => {
+    const topic = (await client.query(`SELECT id,category
+      FROM public.curriculum_nodes
+      WHERE taxonomy_version='ba-tyt-fen-v1'
+        AND node_type='topic'
+        AND category='fizik'
+      LIMIT 1`)).rows[0]
+
+    await client.query('BEGIN')
+    try {
+      await client.query(`INSERT INTO public.curriculum_nodes(
+        id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title
+      ) VALUES($1,$2,'ba-tyt-fen-v1','fen','TYT','outcome',$3,$4,'Unbound outcome leaf')`, [
+        randomUUID(), `FEN-UNBOUND-${randomUUID().slice(0, 8)}`, topic.id, topic.category,
+      ])
+      expect((await client.query(
+        `SELECT public.curriculum_scope_integrity('fen','TYT','ba-tyt-fen-v1') AS result`,
+      )).rows[0].result).toMatchObject({
+        mapped: 4,
+        unmapped: 0,
+        scopeMismatch: 0,
+        nodeOrphan: 0,
+        outcomeOrphan: 1,
+        primaryMismatch: 0,
+        emptyOutcome: 0,
+      })
+    } finally {
+      await client.query('ROLLBACK')
+    }
+
+    const bound = (await client.query(`SELECT
+        outcome.id AS outcome_id,
+        mapping.question_id
+      FROM public.curriculum_outcomes AS outcome
+      JOIN public.question_outcomes AS mapping ON mapping.outcome_id=outcome.id
+      WHERE outcome.taxonomy_version='ba-tyt-fen-v1'
+        AND outcome.category='fizik'
+        AND mapping.is_primary
+      LIMIT 1`)).rows[0]
+    const duplicateOutcome = randomUUID()
+
+    await client.query('BEGIN')
+    try {
+      await client.query(`INSERT INTO public.curriculum_outcomes(
+        id,code,game,category,title,description,exam_ref,sort_order,is_active,node_id,taxonomy_version
+      ) SELECT $1,$2,game,category,title || ' duplicate',description,exam_ref,
+          sort_order + 100,true,node_id,taxonomy_version
+        FROM public.curriculum_outcomes WHERE id=$3`, [
+        duplicateOutcome, `FEN-DUP-${randomUUID().slice(0, 8)}`, bound.outcome_id,
+      ])
+      await client.query(`INSERT INTO public.question_outcomes(
+        question_id,outcome_id,weight,is_primary,mapping_source
+      ) VALUES($1,$2,0.5,false,'manual')`, [bound.question_id, duplicateOutcome])
+
+      expect((await client.query(
+        `SELECT public.curriculum_scope_integrity('fen','TYT','ba-tyt-fen-v1') AS result`,
+      )).rows[0].result).toMatchObject({
+        mapped: 4,
+        unmapped: 0,
+        scopeMismatch: 0,
+        nodeOrphan: 0,
+        outcomeOrphan: 1,
+        primaryMismatch: 0,
+        emptyOutcome: 0,
+      })
+    } finally {
+      await client.query('ROLLBACK')
+    }
+
+    expect((await client.query(
+      `SELECT public.curriculum_scope_integrity('fen','TYT','ba-tyt-fen-v1') AS result`,
+    )).rows[0].result).toMatchObject({ outcomeOrphan: 0 })
   })
 
   it('serializes a concurrent outcome-child insert with its parent category update', async () => {

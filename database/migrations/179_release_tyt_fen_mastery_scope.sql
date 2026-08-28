@@ -177,9 +177,9 @@ LOCK TABLE
   public.curriculum_scope_releases,
   public.curriculum_nodes,
   public.curriculum_outcomes,
+  public.session_answers,
   public.questions,
   public.question_outcomes,
-  public.session_answers,
   public.verified_attempts
 IN SHARE ROW EXCLUSIVE MODE;
 

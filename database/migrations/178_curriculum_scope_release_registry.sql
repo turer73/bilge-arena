@@ -215,21 +215,41 @@ BEGIN
   ),
   outcome_orphan AS (
     SELECT count(*)::integer AS count
-    FROM public.curriculum_outcomes AS outcome
-    LEFT JOIN public.curriculum_nodes AS node ON node.id = outcome.node_id
-    WHERE outcome.is_active
-      AND outcome.game = v_scope.game
-      AND upper(COALESCE(outcome.exam_ref, '')) = v_scope.display_exam_ref
-      AND outcome.taxonomy_version = v_scope.taxonomy_version
-      AND (
-        node.id IS NULL
-        OR NOT node.is_active
-        OR node.node_type <> 'outcome'
-        OR node.game IS DISTINCT FROM outcome.game
-        OR node.exam_ref IS DISTINCT FROM outcome.exam_ref
-        OR node.taxonomy_version IS DISTINCT FROM outcome.taxonomy_version
-        OR node.category IS DISTINCT FROM outcome.category
-      )
+    FROM (
+      SELECT outcome.id::text AS problem_key
+      FROM public.curriculum_outcomes AS outcome
+      LEFT JOIN public.curriculum_nodes AS node ON node.id = outcome.node_id
+      WHERE outcome.is_active
+        AND outcome.game = v_scope.game
+        AND upper(COALESCE(outcome.exam_ref, '')) = v_scope.display_exam_ref
+        AND outcome.taxonomy_version = v_scope.taxonomy_version
+        AND (
+          node.id IS NULL
+          OR NOT node.is_active
+          OR node.node_type <> 'outcome'
+          OR node.game IS DISTINCT FROM outcome.game
+          OR node.exam_ref IS DISTINCT FROM outcome.exam_ref
+          OR node.taxonomy_version IS DISTINCT FROM outcome.taxonomy_version
+          OR node.category IS DISTINCT FROM outcome.category
+        )
+      UNION ALL
+      SELECT node.id::text
+      FROM public.curriculum_nodes AS node
+      LEFT JOIN public.curriculum_outcomes AS outcome
+        ON outcome.node_id = node.id
+       AND outcome.is_active
+       AND outcome.game IS NOT DISTINCT FROM node.game
+       AND outcome.exam_ref IS NOT DISTINCT FROM node.exam_ref
+       AND outcome.taxonomy_version IS NOT DISTINCT FROM node.taxonomy_version
+       AND outcome.category IS NOT DISTINCT FROM node.category
+      WHERE node.is_active
+        AND node.node_type = 'outcome'
+        AND node.game IS NOT DISTINCT FROM v_scope.game
+        AND node.exam_ref IS NOT DISTINCT FROM v_scope.display_exam_ref
+        AND node.taxonomy_version = v_scope.taxonomy_version
+      GROUP BY node.id
+      HAVING count(outcome.id) <> 1
+    ) AS invalid_outcome
   ),
   empty_outcome AS (
     SELECT count(*)::integer AS count
@@ -268,8 +288,24 @@ SET search_path = pg_catalog
 AS $fn$
 DECLARE
   v_result jsonb;
+  v_scope public.curriculum_scope_releases%ROWTYPE;
 BEGIN
-  v_result := public.curriculum_scope_integrity('matematik', 'TYT', 'ba-tyt-math-v1');
+  SELECT * INTO v_scope
+  FROM public.curriculum_scope_releases AS scope
+  WHERE scope.game = 'matematik'
+    AND scope.display_exam_ref = 'TYT'
+    AND scope.release_status = 'released';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'released TYT Mathematics curriculum scope is required'
+      USING ERRCODE = 'P0002';
+  END IF;
+
+  v_result := public.curriculum_scope_integrity(
+    v_scope.game,
+    v_scope.display_exam_ref,
+    v_scope.taxonomy_version
+  );
   RETURN jsonb_build_object(
     'total', v_result->'total',
     'mapped', v_result->'mapped',
