@@ -134,4 +134,12 @@ describe('MobileLobbyFlow', () => {
     fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
     expect(screen.getByText('AYT-EA kapsamı')).toBeInTheDocument()
   })
+
+  it('profil varsayilanina geri donen uygulanamaz tum kapsamlar secenegini sunmaz', () => {
+    render(<FlowHarness />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
+    expect(screen.queryByRole('button', { name: /Tüm kapsamlar/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /TYT/ })).toBeInTheDocument()
+  })
 })

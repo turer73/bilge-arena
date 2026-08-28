@@ -153,7 +153,10 @@ AS $function$
   FROM public.profiles AS p
   WHERE (
     public.immutable_unaccent(p.username) ILIKE public.immutable_unaccent('%' || q || '%')
-    OR public.immutable_unaccent(p.display_name) ILIKE public.immutable_unaccent('%' || q || '%')
+    OR (
+      p.profile_visibility = 'public'
+      AND public.immutable_unaccent(p.display_name) ILIKE public.immutable_unaccent('%' || q || '%')
+    )
   )
     AND (exclude_id IS NULL OR p.id <> exclude_id)
     AND p.deleted_at IS NULL

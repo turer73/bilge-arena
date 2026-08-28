@@ -38,6 +38,7 @@ describe('profile visibility scope SQL', () => {
     expect(sql).toContain('NULL::varchar AS display_name')
     expect(sql).toContain("CASE WHEN p.profile_visibility = 'public' THEN p.total_xp ELSE 0 END")
     expect(sql).toContain("(p.profile_visibility = 'public') AS profile_viewable")
+    expect(sql).toMatch(/p\.profile_visibility\s*=\s*'public'[\s\S]*p\.display_name\) ILIKE/i)
     expect(sql).toContain('AND p.is_discoverable')
   })
 })

@@ -200,10 +200,6 @@ export function MobileLobbyFlow({
 
         {step === 'scope' && (
           <div className="grid grid-cols-2 gap-2.5" role="group" aria-label="Sınav kapsamı">
-            <button type="button" onClick={() => onSelectExamRef(null)} aria-pressed={selectedExamRef === null} className={optionClass(selectedExamRef === null)}>
-              <span className="block text-sm font-black text-[var(--app-text)]">Tüm kapsamlar</span>
-              <span className="mt-1 block text-[10px] font-semibold text-[var(--app-text-sub)]">Karışık ilerle</span>
-            </button>
             {gameDef.examTags.map((examRef) => {
               const active = selectedExamRef === examRef
               return (
