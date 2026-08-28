@@ -203,21 +203,6 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     ) VALUES($1,$2,1,true,'manual')`, [questionIds.get('kimya'), manualOutcome])
     const secondaryNode = randomUUID()
     const secondaryOutcome = randomUUID()
-    await client.query(`INSERT INTO public.curriculum_nodes(
-      id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
-    ) SELECT $1,'ba-tyt-fen-v1:outcome:kimya-secondary','ba-tyt-fen-v1','fen','TYT',
-      'outcome',topic.id,'kimya','Kimyasal ilişki kurma becerisi',20,true
-      FROM public.curriculum_nodes AS topic
-      WHERE topic.code='ba-tyt-fen-v1:topic:kimya'`, [secondaryNode])
-    await client.query(`INSERT INTO public.curriculum_outcomes(
-      id,code,game,category,title,description,exam_ref,sort_order,is_active,node_id,taxonomy_version
-    ) VALUES($1,'FEN-KIM-02','fen','kimya','Kimyasal ilişki kurma becerisi',
-      'Disposable secondary mapping fixture','TYT',21,true,$2,'ba-tyt-fen-v1')`, [
-      secondaryOutcome, secondaryNode,
-    ])
-    await client.query(`INSERT INTO public.question_outcomes(
-      question_id,outcome_id,weight,is_primary,mapping_source
-    ) VALUES($1,$2,0.5,false,'manual')`, [questionIds.get('kimya'), secondaryOutcome])
 
     raceUser = randomUUID()
     raceAttempt = randomUUID()
@@ -339,6 +324,25 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     await releasePromise
     await Promise.all([completionPromise, answerWriterPromise, questionWriterPromise].filter(Boolean))
     if (setupError) throw setupError
+
+    // Richer governed scopes may add a secondary mapping after the category-
+    // proxy release has completed. Migration 181 must repair that mapping even
+    // when the historical answer already has primary evidence.
+    await client.query(`INSERT INTO public.curriculum_nodes(
+      id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+    ) SELECT $1,'ba-tyt-fen-v1:outcome:kimya-secondary','ba-tyt-fen-v1','fen','TYT',
+      'outcome',topic.id,'kimya','Kimyasal ilişki kurma becerisi',20,true
+      FROM public.curriculum_nodes AS topic
+      WHERE topic.code='ba-tyt-fen-v1:topic:kimya'`, [secondaryNode])
+    await client.query(`INSERT INTO public.curriculum_outcomes(
+      id,code,game,category,title,description,exam_ref,sort_order,is_active,node_id,taxonomy_version
+    ) VALUES($1,'FEN-KIM-02','fen','kimya','Kimyasal ilişki kurma becerisi',
+      'Disposable secondary mapping fixture','TYT',21,true,$2,'ba-tyt-fen-v1')`, [
+      secondaryOutcome, secondaryNode,
+    ])
+    await client.query(`INSERT INTO public.question_outcomes(
+      question_id,outcome_id,weight,is_primary,mapping_source
+    ) VALUES($1,$2,0.5,false,'manual')`, [questionIds.get('kimya'), secondaryOutcome])
 
     await answerWriterClient.query(
       `UPDATE public.verified_attempts
