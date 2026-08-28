@@ -28,6 +28,25 @@ ALTER TABLE public.curriculum_scope_evidence_repairs ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.curriculum_scope_evidence_repairs
   FROM PUBLIC, anon, authenticated, service_role;
 
+-- Drain all writers whose snapshots can affect the repair or its rebuilt
+-- aggregates. Replays after a retired/upgraded Fen scope remain no-ops.
+LOCK TABLE
+  public.curriculum_scope_releases,
+  public.curriculum_nodes,
+  public.curriculum_outcomes,
+  public.questions,
+  public.question_outcomes,
+  public.verified_attempts,
+  public.verified_attempt_question_revisions,
+  public.verified_attempt_hint_events,
+  public.session_answers,
+  public.review_logs,
+  public.review_error_annotations,
+  public.mastery_materialized_attempts,
+  public.mastery_outcome_evidence,
+  public.user_outcome_state
+IN SHARE ROW EXCLUSIVE MODE;
+
 DO $fn$
 DECLARE
   v_integrity jsonb;
@@ -40,8 +59,7 @@ BEGIN
       AND taxonomy_version = 'ba-tyt-fen-v1'
       AND release_status = 'released'
   ) THEN
-    RAISE EXCEPTION 'TYT Fen scope must be released before evidence repair'
-      USING ERRCODE = '55000';
+    RETURN;
   END IF;
 
   v_integrity := public.curriculum_scope_integrity('fen', 'TYT', 'ba-tyt-fen-v1');
@@ -69,10 +87,14 @@ SELECT
   attempt.id AS attempt_id,
   answer.is_correct,
   mapping.weight AS mapping_weight,
-  question.difficulty,
-  CASE WHEN answer.is_correct THEN mapping.weight * question.difficulty ELSE 0 END
+  COALESCE(snapshot.difficulty, question.difficulty)::smallint AS difficulty,
+  CASE WHEN answer.is_correct
+    THEN mapping.weight * COALESCE(snapshot.difficulty, question.difficulty)
+    ELSE 0
+  END
     AS difficulty_weighted_earned,
-  mapping.weight * question.difficulty AS difficulty_weighted_possible,
+  mapping.weight * COALESCE(snapshot.difficulty, question.difficulty)
+    AS difficulty_weighted_possible,
   answer.time_taken_sec,
   COALESCE(NOT answer.is_correct AND answer.is_fast, false) AS fast_wrong,
   COALESCE((
@@ -91,10 +113,18 @@ SELECT
   ) AS delayed_correct,
   false AS base_already_recorded
 FROM public.verified_attempts AS attempt
+JOIN public.curriculum_scope_releases AS release
+  ON release.game = 'fen'
+ AND release.display_exam_ref = 'TYT'
+ AND release.taxonomy_version = 'ba-tyt-fen-v1'
+ AND release.release_status = 'released'
 JOIN public.session_answers AS answer
   ON answer.session_id = attempt.session_id
  AND answer.user_id = attempt.user_id
 JOIN public.questions AS question ON question.id = answer.question_id
+LEFT JOIN public.verified_attempt_question_revisions AS snapshot
+  ON snapshot.attempt_id = attempt.id
+ AND snapshot.question_id = answer.question_id
 JOIN public.question_outcomes AS mapping
   ON mapping.question_id = question.id
  AND mapping.mapping_source = 'taxonomy_auto'
@@ -227,15 +257,40 @@ SELECT
   (SELECT count(*)::integer FROM fen_scope_inserted_evidence),
   count(DISTINCT user_id)::integer
 FROM fen_scope_evidence_candidates
+HAVING EXISTS (
+  SELECT 1
+  FROM public.curriculum_scope_releases
+  WHERE game = 'fen'
+    AND display_exam_ref = 'TYT'
+    AND taxonomy_version = 'ba-tyt-fen-v1'
+    AND release_status = 'released'
+)
 ON CONFLICT (game, display_exam_ref, taxonomy_version) DO NOTHING;
 
 DO $fn$
 DECLARE
   v_candidates integer;
   v_inserted integer;
+  v_scope_released boolean;
 BEGIN
   SELECT count(*)::integer INTO v_candidates FROM fen_scope_evidence_candidates;
   SELECT count(*)::integer INTO v_inserted FROM fen_scope_inserted_evidence;
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.curriculum_scope_releases
+    WHERE game = 'fen'
+      AND display_exam_ref = 'TYT'
+      AND taxonomy_version = 'ba-tyt-fen-v1'
+      AND release_status = 'released'
+  ) INTO v_scope_released;
+
+  IF NOT v_scope_released THEN
+    IF v_candidates <> 0 OR v_inserted <> 0 THEN
+      RAISE EXCEPTION 'obsolete TYT Fen v1 legacy repair mutated rows'
+        USING ERRCODE = '23514';
+    END IF;
+    RETURN;
+  END IF;
 
   IF v_candidates <> v_inserted THEN
     RAISE EXCEPTION 'TYT Fen evidence repair lost rows: candidates %, inserted %',

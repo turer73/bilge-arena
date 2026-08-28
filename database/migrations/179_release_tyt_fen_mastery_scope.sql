@@ -174,6 +174,7 @@ REVOKE ALL ON FUNCTION public.materialize_verified_attempt_mastery(uuid)
 -- prevents a stale snapshot from committing an unmapped question or an empty
 -- mastery marker after the proof has started.
 LOCK TABLE
+  public.curriculum_scope_releases,
   public.curriculum_nodes,
   public.curriculum_outcomes,
   public.questions,
@@ -182,10 +183,28 @@ LOCK TABLE
   public.verified_attempts
 IN SHARE ROW EXCLUSIVE MODE;
 
+CREATE TEMP TABLE fen_scope_release_control (
+  should_apply boolean NOT NULL
+) ON COMMIT DROP;
+
+INSERT INTO fen_scope_release_control (should_apply)
+SELECT EXISTS (
+  SELECT 1
+  FROM public.curriculum_scope_releases
+  WHERE game = 'fen'
+    AND display_exam_ref = 'TYT'
+    AND taxonomy_version = 'ba-tyt-fen-v1'
+    AND release_status IN ('draft', 'validating', 'released')
+);
+
 DO $fn$
 DECLARE
   v_updated integer;
 BEGIN
+  IF NOT (SELECT should_apply FROM fen_scope_release_control) THEN
+    RETURN;
+  END IF;
+
   UPDATE public.curriculum_scope_releases
   SET release_status = CASE WHEN release_status = 'released' THEN 'released' ELSE 'validating' END,
       updated_at = clock_timestamp()
@@ -203,6 +222,10 @@ DO $fn$
 DECLARE
   v_question record;
 BEGIN
+  IF NOT (SELECT should_apply FROM fen_scope_release_control) THEN
+    RETURN;
+  END IF;
+
   FOR v_question IN
     SELECT id, game::text AS game, exam_ref::text AS exam_ref,
       category::text AS category, is_active
@@ -226,6 +249,10 @@ DO $fn$
 DECLARE
   v_integrity jsonb;
 BEGIN
+  IF NOT (SELECT should_apply FROM fen_scope_release_control) THEN
+    RETURN;
+  END IF;
+
   v_integrity := public.curriculum_scope_integrity('fen', 'TYT', 'ba-tyt-fen-v1');
   IF v_integrity IS NULL
     OR jsonb_typeof(v_integrity) <> 'object'
@@ -249,10 +276,15 @@ SET release_status = 'released',
 WHERE game = 'fen'
   AND display_exam_ref = 'TYT'
   AND taxonomy_version = 'ba-tyt-fen-v1'
-  AND release_status IN ('validating', 'released');
+  AND release_status IN ('validating', 'released')
+  AND (SELECT should_apply FROM fen_scope_release_control);
 
 DO $fn$
 BEGIN
+  IF NOT (SELECT should_apply FROM fen_scope_release_control) THEN
+    RETURN;
+  END IF;
+
   IF public.resolve_released_curriculum_scope('fen', 'TYT') IS NULL THEN
     RAISE EXCEPTION 'TYT Fen curriculum scope release was not persisted' USING ERRCODE = '55000';
   END IF;

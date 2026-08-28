@@ -22,7 +22,10 @@ LOCK TABLE
   public.question_outcomes,
   public.verified_attempts,
   public.verified_attempt_question_revisions,
+  public.verified_attempt_hint_events,
   public.session_answers,
+  public.review_logs,
+  public.review_error_annotations,
   public.mastery_materialized_attempts,
   public.mastery_outcome_evidence,
   public.user_outcome_state
@@ -407,29 +410,46 @@ BEGIN
   ),
   node_orphan AS (
     SELECT count(*)::integer AS count
-    FROM public.curriculum_nodes AS child
-    LEFT JOIN public.curriculum_nodes AS parent ON parent.id = child.parent_id
-    WHERE child.taxonomy_version = v_scope.taxonomy_version
-      AND child.is_active
-      AND (
-        (child.node_type = 'course' AND child.parent_id IS NOT NULL)
-        OR (child.node_type <> 'course' AND (
-          parent.id IS NULL
-          OR NOT parent.is_active
-          OR parent.game IS DISTINCT FROM child.game
-          OR parent.exam_ref IS DISTINCT FROM child.exam_ref
-          OR parent.taxonomy_version IS DISTINCT FROM child.taxonomy_version
-          OR parent.node_type IS DISTINCT FROM CASE child.node_type
-            WHEN 'unit' THEN 'course'
-            WHEN 'topic' THEN 'unit'
-            WHEN 'outcome' THEN 'topic'
-          END
-          OR (
-            child.node_type = 'outcome'
-            AND parent.category IS DISTINCT FROM child.category
-          )
-        ))
-      )
+    FROM (
+      SELECT child.id::text AS problem_key
+      FROM public.curriculum_nodes AS child
+      LEFT JOIN public.curriculum_nodes AS parent ON parent.id = child.parent_id
+      WHERE child.taxonomy_version = v_scope.taxonomy_version
+        AND child.is_active
+        AND (
+          (child.node_type = 'course' AND (
+            child.parent_id IS NOT NULL
+            OR child.game IS DISTINCT FROM v_scope.game
+            OR upper(COALESCE(child.exam_ref, '')) <> v_scope.display_exam_ref
+          ))
+          OR (child.node_type <> 'course' AND (
+            parent.id IS NULL
+            OR NOT parent.is_active
+            OR parent.game IS DISTINCT FROM child.game
+            OR parent.exam_ref IS DISTINCT FROM child.exam_ref
+            OR parent.taxonomy_version IS DISTINCT FROM child.taxonomy_version
+            OR parent.node_type IS DISTINCT FROM CASE child.node_type
+              WHEN 'unit' THEN 'course'
+              WHEN 'topic' THEN 'unit'
+              WHEN 'outcome' THEN 'topic'
+            END
+            OR (
+              child.node_type = 'outcome'
+              AND parent.category IS DISTINCT FROM child.category
+            )
+          ))
+        )
+      UNION ALL
+      SELECT '__course_root_count__'
+      WHERE (
+        SELECT count(*)
+        FROM public.curriculum_nodes AS root
+        WHERE root.taxonomy_version = v_scope.taxonomy_version
+          AND root.is_active
+          AND root.node_type = 'course'
+          AND root.parent_id IS NULL
+      ) <> 1
+    ) AS invalid_node
   ),
   outcome_orphan AS (
     SELECT count(*)::integer AS count
