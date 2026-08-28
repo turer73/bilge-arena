@@ -880,6 +880,8 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     // The fixture's richer secondary mapping has now proven the repair path.
     // Retire it before later tests replay the category-proxy release, whose
     // contract deliberately requires one active outcome per category.
+    await client.query(`DELETE FROM public.question_outcomes
+      WHERE question_id=$1 AND outcome_id=$2`, [questionIds.get('kimya'), secondaryOutcome])
     await client.query('UPDATE public.curriculum_outcomes SET is_active=false WHERE id=$1', [secondaryOutcome])
     await client.query('UPDATE public.curriculum_nodes SET is_active=false WHERE id=$1', [secondaryNode])
   })
