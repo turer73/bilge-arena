@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const auth = vi.hoisted(() => ({
   user: { id: '11111111-1111-4111-8111-111111111111', email: 'kurum@example.com' },
-  profile: { username: 'kurum-yoneticisi', role: 'user', coin_balance: 0 },
+  profile: { username: 'kurum-yoneticisi', role: 'user', coin_balance: 0, avatar_url: 'https://example.com/avatar.png' },
   signOut: vi.fn(),
 }))
 const mockUsePathname = vi.hoisted(() => vi.fn<() => string>())
@@ -46,6 +46,15 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Navbar institution panel entry', () => {
+  it('uses a settings icon instead of repeating the profile avatar on the Arena home', () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+
+    const accountMenu = screen.getByRole('button', { name: 'Kullanıcı menüsü' })
+    expect(accountMenu.querySelector('[data-arena-account-settings-icon]')).toBeInTheDocument()
+    expect(accountMenu.querySelector('img')).not.toBeInTheDocument()
+  })
+
   it('uses native anchors for public links while a sensitive document is active', async () => {
     mockUsePathname.mockReturnValue('/arena/sinif')
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { usePathname } from 'next/navigation'
-import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap, Building2 } from 'lucide-react'
+import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap, Building2, Settings } from 'lucide-react'
 import { Logo } from './logo'
 import { ThemeToggle } from './theme-toggle'
 import { NotificationBell } from './notification-bell'
@@ -137,7 +137,11 @@ export function Navbar() {
                   aria-label="Kullanıcı menüsü"
                   aria-expanded={dropdownOpen}
                 >
-                  {profile?.avatar_url ? (
+                  {pathname === '/arena' ? (
+                    <span data-arena-account-settings-icon className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--card)] text-[var(--text-sub)]">
+                      <Settings size={19} strokeWidth={2.5} aria-hidden="true" />
+                    </span>
+                  ) : profile?.avatar_url ? (
                     // Plain <img>: avatar SVG (hazır-avatar seti) next/image optimizer'ına takılır
                     <img
                       src={profile.avatar_url}
