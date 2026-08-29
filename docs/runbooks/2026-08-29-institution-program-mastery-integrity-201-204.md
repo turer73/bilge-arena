@@ -57,9 +57,11 @@ baseline and read the authoritative migration ledger in the maintenance window.
    migration/grant lint, type-check, lint and the production webpack build on
    the exact release commit.
 3. Restore an approved pre-187 production/staging dump into a dedicated local
-   PostgreSQL 16 cluster and pass `npm run test:release-chain:rehearsal` as
-   documented in `2026-08-29-exact-release-chain-rehearsal.md`. Separate
-   synthetic fixtures do not replace this exact same-schema gate.
+   PostgreSQL cluster matching the dump's source major and pass
+   `npm run test:release-chain:rehearsal` as documented in
+   `2026-08-29-exact-release-chain-rehearsal.md`. PostgreSQL 16 remains the
+   default; PG17 requires the explicit, header-proven opt-in. Separate synthetic
+   fixtures do not replace this exact same-schema gate.
 4. Merge and deploy the application while every institution flag remains off.
    The Mastery reader has a bounded legacy-column fallback; institution task
    execution remains inaccessible behind the closed flags.
@@ -76,10 +78,9 @@ baseline and read the authoritative migration ledger in the maintenance window.
 Check the migration ledger before doing anything:
 
 ```sql
-SELECT version, name
+SELECT version::text AS version, name::text AS name
 FROM supabase_migrations.schema_migrations
-WHERE version::bigint BETWEEN 187 AND 204
-ORDER BY version::bigint;
+ORDER BY version::text;
 ```
 
 If the project's migration ledger uses timestamp versions, map each exact

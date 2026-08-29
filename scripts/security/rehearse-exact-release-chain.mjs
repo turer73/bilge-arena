@@ -70,12 +70,16 @@ function normalizeHost(hostname) {
 export function validateRehearsalTarget(environment = process.env) {
   const connectionString = environment.BILGE_EXACT_CHAIN_TEST_DATABASE_URL
   const disposable = environment.BILGE_EXACT_CHAIN_TEST_DATABASE_DISPOSABLE
+  const expectedPostgresMajorValue = environment.BILGE_EXACT_CHAIN_EXPECTED_POSTGRES_MAJOR ?? '16'
 
   if (!connectionString) {
     fail('BILGE_EXACT_CHAIN_TEST_DATABASE_URL is required')
   }
   if (disposable !== '1') {
     fail('BILGE_EXACT_CHAIN_TEST_DATABASE_DISPOSABLE=1 is required')
+  }
+  if (!['16', '17'].includes(expectedPostgresMajorValue)) {
+    fail('BILGE_EXACT_CHAIN_EXPECTED_POSTGRES_MAJOR must be 16 or 17')
   }
 
   let parsed
@@ -98,7 +102,11 @@ export function validateRehearsalTarget(environment = process.env) {
     fail('database name must match bilge_exact_chain_test_*')
   }
 
-  return { connectionString, databaseName }
+  return {
+    connectionString,
+    databaseName,
+    expectedPostgresMajor: Number(expectedPostgresMajorValue),
+  }
 }
 
 export function loadReleaseChain(migrationsDirectory = join(repositoryRoot, 'database', 'migrations')) {
@@ -165,17 +173,20 @@ async function assertPre187Ledger(client) {
   }
 }
 
-async function assertPreflight(client, expectedDatabaseName) {
+async function assertPreflight(client, expectedDatabaseName, expectedPostgresMajor) {
   const server = (await client.query(`
     SELECT current_database() AS database_name,
       current_setting('server_version_num')::integer AS server_version_num,
+      current_setting('server_version') AS server_version,
       pg_catalog.pg_is_in_recovery() AS in_recovery
   `)).rows[0]
   if (server.database_name !== expectedDatabaseName) {
     fail('connected database does not match the URL database name')
   }
-  if (server.server_version_num < 160000 || server.server_version_num >= 170000) {
-    fail(`PostgreSQL 16 is required; server_version_num=${server.server_version_num}`)
+  const minimumVersion = expectedPostgresMajor * 10_000
+  if (server.server_version_num < minimumVersion
+    || server.server_version_num >= minimumVersion + 10_000) {
+    fail(`PostgreSQL ${expectedPostgresMajor} is required; server_version_num=${server.server_version_num}`)
   }
   if (server.in_recovery) {
     fail('rehearsal target must not be a recovery/read-replica database')
@@ -241,6 +252,7 @@ async function assertPreflight(client, expectedDatabaseName) {
   }
 
   await assertPre187Ledger(client)
+  return server
 }
 
 export async function assertSocialScopeClosed(client) {
@@ -312,8 +324,17 @@ export async function runRehearsal(environment = process.env) {
 
   try {
     await client.connect()
-    await assertPreflight(client, target.databaseName)
-    emit('preflight_passed', { databaseName: target.databaseName, postgresqlMajor: 16 })
+    const server = await assertPreflight(
+      client,
+      target.databaseName,
+      target.expectedPostgresMajor,
+    )
+    emit('preflight_passed', {
+      databaseName: target.databaseName,
+      postgresqlMajor: target.expectedPostgresMajor,
+      serverVersionNum: server.server_version_num,
+      serverVersion: server.server_version,
+    })
 
     for (const migration of plan) {
       const startedAt = Date.now()

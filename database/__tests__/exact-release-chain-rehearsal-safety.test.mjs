@@ -40,7 +40,22 @@ describe('exact 187-204 release-chain rehearsal safety', () => {
     expect(validateRehearsalTarget({
       BILGE_EXACT_CHAIN_TEST_DATABASE_URL: 'postgres://postgres@127.0.0.1/bilge_exact_chain_test_acceptance',
       BILGE_EXACT_CHAIN_TEST_DATABASE_DISPOSABLE: '1',
-    }).databaseName).toBe('bilge_exact_chain_test_acceptance')
+    })).toMatchObject({
+      databaseName: 'bilge_exact_chain_test_acceptance',
+      expectedPostgresMajor: 16,
+    })
+    expect(validateRehearsalTarget({
+      BILGE_EXACT_CHAIN_TEST_DATABASE_URL: 'postgres://postgres@127.0.0.1/bilge_exact_chain_test_acceptance',
+      BILGE_EXACT_CHAIN_TEST_DATABASE_DISPOSABLE: '1',
+      BILGE_EXACT_CHAIN_EXPECTED_POSTGRES_MAJOR: '17',
+    }).expectedPostgresMajor).toBe(17)
+    for (const invalidMajor of ['15', '18', '', '17.0', ' 17']) {
+      expect(() => validateRehearsalTarget({
+        BILGE_EXACT_CHAIN_TEST_DATABASE_URL: 'postgres://postgres@127.0.0.1/bilge_exact_chain_test_acceptance',
+        BILGE_EXACT_CHAIN_TEST_DATABASE_DISPOSABLE: '1',
+        BILGE_EXACT_CHAIN_EXPECTED_POSTGRES_MAJOR: invalidMajor,
+      })).toThrow('must be 16 or 17')
+    }
   })
 
   it('recognises ordinal and timestamp-ledger migration names without mutating the ledger', () => {
@@ -61,5 +76,6 @@ describe('exact 187-204 release-chain rehearsal safety', () => {
     )
     expect(runnerSource).not.toMatch(/catch\s*\([^)]*\)\s*\{[\s\S]{0,200}\bcontinue\b/)
     expect(runnerSource).toContain('embeddedPostcheckPassed: true')
+    expect(runnerSource).toContain('serverVersionNum: server.server_version_num')
   })
 })
