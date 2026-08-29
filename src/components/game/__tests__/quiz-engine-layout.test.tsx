@@ -187,6 +187,19 @@ vi.mock('next/dynamic', () => ({
 import { QuizEngine } from '../quiz-engine'
 
 describe('QuizEngine yerleşim', () => {
+  test('mobil Hemen başla ekranında günlük plan ve keşif kartlarını gizler', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+
+    try {
+      const { container } = render(<QuizEngine game="matematik" />)
+      expect(container.querySelector('[data-desktop-learning-cards]')).toHaveClass('hidden', 'md:grid')
+    } finally {
+      authStoreValue.user = null
+      quizGame.screen = 'game'
+    }
+  })
+
   test('mobil odak kabuğu ilerleme, süre, can, seri ve çıkış eylemini tek başlıkta toplar', () => {
     render(<QuizEngine game="matematik" />)
 
