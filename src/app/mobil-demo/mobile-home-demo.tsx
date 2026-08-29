@@ -516,7 +516,22 @@ export function MobileHomeDemo({
         </section>
 
         <div data-responsive-arena-grid className="mx-auto grid w-full max-w-[1180px] grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)] md:gap-x-5 md:gap-y-5 md:px-5 md:py-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-x-7 xl:px-6">
-        <section data-today-lesson className="px-4 pt-4 md:col-start-2 md:row-start-1 md:px-0 md:pt-0" aria-labelledby="continue-title">
+        <section data-learning-path-hero className="px-4 pt-4 md:col-start-1 md:row-start-1 md:px-0 md:pt-0">
+          <div className="relative overflow-hidden rounded-[22px] p-4 text-white md:min-h-[168px] md:rounded-[28px] md:p-6" style={{ background: `linear-gradient(135deg, ${subject.color}, ${subject.shadow})`, boxShadow: `0 6px 0 ${subject.shadow}` }}>
+            <div className="pointer-events-none absolute -right-8 -top-14 h-32 w-32 rounded-full border-[22px] border-white/10" />
+            <div className="relative flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/75">{unitLabel}</p>
+                <h1 className="mt-1 text-lg font-black leading-tight md:mt-2 md:text-2xl lg:text-3xl">{subject.label} Yolu</h1>
+                <p className="mt-1 truncate text-[11px] font-semibold text-white/80 md:mt-2 md:text-sm">{subject.description}</p>
+              </div>
+              <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">{completedCount} / {steps.length}</span>
+            </div>
+            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px] md:mt-6 md:h-3"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
+          </div>
+        </section>
+
+        <section data-today-lesson className="order-[-1] px-4 pt-4 md:order-none md:col-start-2 md:row-start-1 md:px-0 md:pt-0" aria-labelledby="continue-title">
           <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] md:h-full md:min-h-[168px]">
             <div className="relative z-10 max-w-[64%]">
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Bugünkü ders</div>
@@ -535,21 +550,6 @@ export function MobileHomeDemo({
             <button onClick={openCoach} className="absolute -bottom-10 -right-1 h-[160px] w-[116px]" aria-label="Bilge Chan koç penceresini aç">
               <Image src="/chan/chan-wave.webp" alt="" width={140} height={192} priority className="h-auto w-[112px] drop-shadow-[0_7px_8px_rgba(31,41,55,.14)]" />
             </button>
-          </div>
-        </section>
-
-        <section data-learning-path-hero className="px-4 pt-4 md:col-start-1 md:row-start-1 md:px-0 md:pt-0">
-          <div className="relative overflow-hidden rounded-[22px] p-4 text-white md:min-h-[168px] md:rounded-[28px] md:p-6" style={{ background: `linear-gradient(135deg, ${subject.color}, ${subject.shadow})`, boxShadow: `0 6px 0 ${subject.shadow}` }}>
-            <div className="pointer-events-none absolute -right-8 -top-14 h-32 w-32 rounded-full border-[22px] border-white/10" />
-            <div className="relative flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/75">{unitLabel}</p>
-                <h1 className="mt-1 text-lg font-black leading-tight md:mt-2 md:text-2xl lg:text-3xl">{subject.label} Yolu</h1>
-                <p className="mt-1 truncate text-[11px] font-semibold text-white/80 md:mt-2 md:text-sm">{subject.description}</p>
-              </div>
-              <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">{completedCount} / {steps.length}</span>
-            </div>
-            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px] md:mt-6 md:h-3"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
           </div>
         </section>
 

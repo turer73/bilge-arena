@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronRight, Play, X } from 'lucide-react'
 import { GAMES, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
 import { MODES, type QuizMode } from '@/lib/constants/modes'
@@ -62,6 +62,15 @@ const SHEET_TITLES: Record<Exclude<OptionSheet, null>, string> = {
   modes: 'Diğer oyun modları',
 }
 
+const SHEET_FOCUSABLE_SELECTOR = [
+  'button:not([disabled])',
+  'a[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
 function optionClass(active: boolean) {
   return `min-h-[64px] rounded-2xl border-2 p-3 text-left transition-transform active:scale-[.98] ${
     active
@@ -73,14 +82,14 @@ function optionClass(active: boolean) {
 interface SettingRowProps {
   label: string
   value: string
-  onClick: () => void
+  onClick: (trigger: HTMLButtonElement) => void
 }
 
 function SettingRow({ label, value, onClick }: SettingRowProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(event) => onClick(event.currentTarget)}
       aria-haspopup="dialog"
       aria-label={`${label} seç: ${value}`}
       className="flex min-h-[54px] w-full items-center gap-3 border-b border-[var(--app-border-soft)] px-3 text-left last:border-b-0 active:bg-[var(--app-hover)]"
@@ -113,6 +122,8 @@ export function MobileLobbyFlow({
   const safeCategory = selectedCategoryIsValid ? selectedCategory : null
   const difficulty = DIFFICULTIES.find((item) => item.value === selectedDifficulty) ?? DIFFICULTIES[0]
   const [sheet, setSheet] = useState<OptionSheet>(null)
+  const sheetDialogRef = useRef<HTMLDivElement>(null)
+  const sheetTriggerRef = useRef<HTMLElement | null>(null)
 
   const startAction = quizLimit && !quizLimit.canPlay ? onLimitReached : onStart
   const scopeLabel = selectedExamRef ? (EXAM_SCOPE_LABELS[selectedExamRef] ?? selectedExamRef) : 'Sınav seç'
@@ -126,16 +137,60 @@ export function MobileLobbyFlow({
   useEffect(() => {
     if (!sheet) return
     const previousOverflow = document.body.style.overflow
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSheet(null)
+    const dialog = sheetDialogRef.current
+    const returnFocusTo = sheetTriggerRef.current
+    const desktopQuery = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(min-width: 768px)')
+      : null
+    const getFocusableElements = () => dialog
+      ? Array.from(dialog.querySelectorAll<HTMLElement>(SHEET_FOCUSABLE_SELECTOR))
+      : []
+    const closeAtDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setSheet(null)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setSheet(null)
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const focusableElements = getFocusableElements()
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements.at(-1)
+      if (!firstElement || !lastElement) {
+        event.preventDefault()
+        dialog?.focus()
+        return
+      }
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      } else if (dialog && !dialog.contains(document.activeElement)) {
+        event.preventDefault()
+        firstElement.focus()
+      }
     }
     document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', closeOnEscape)
+    window.addEventListener('keydown', handleKeyDown)
+    desktopQuery?.addEventListener('change', closeAtDesktop)
+    getFocusableElements()[0]?.focus()
     return () => {
       document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', closeOnEscape)
+      window.removeEventListener('keydown', handleKeyDown)
+      desktopQuery?.removeEventListener('change', closeAtDesktop)
+      if (returnFocusTo?.isConnected) returnFocusTo.focus()
     }
   }, [sheet])
+
+  const openSheet = (nextSheet: Exclude<OptionSheet, null>, trigger: HTMLElement) => {
+    sheetTriggerRef.current = trigger
+    setSheet(nextSheet)
+  }
 
   const selectMode = (nextMode: QuizMode) => {
     onSelectMode(nextMode)
@@ -189,7 +244,7 @@ export function MobileLobbyFlow({
 
       <button
         type="button"
-        onClick={() => setSheet('modes')}
+        onClick={(event) => openSheet('modes', event.currentTarget)}
         aria-haspopup="dialog"
         className={`mt-2 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl text-[11px] font-black ${
           isExtraMode
@@ -203,12 +258,12 @@ export function MobileLobbyFlow({
 
       <div className="mt-3 overflow-hidden rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-bg)]">
         {game !== 'wordquest' && (
-          <SettingRow label="Kapsam" value={scopeLabel} onClick={() => setSheet('scope')} />
+          <SettingRow label="Kapsam" value={scopeLabel} onClick={(trigger) => openSheet('scope', trigger)} />
         )}
         {!mode.isDeneme && (
           <>
-            <SettingRow label="Konu" value={categoryLabel} onClick={() => setSheet('topic')} />
-            <SettingRow label="Seviye" value={difficulty.label} onClick={() => setSheet('difficulty')} />
+            <SettingRow label="Konu" value={categoryLabel} onClick={(trigger) => openSheet('topic', trigger)} />
+            <SettingRow label="Seviye" value={difficulty.label} onClick={(trigger) => openSheet('difficulty', trigger)} />
           </>
         )}
       </div>
@@ -238,9 +293,11 @@ export function MobileLobbyFlow({
             className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px]"
           />
           <div
+            ref={sheetDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="mobile-option-sheet-title"
+            tabIndex={-1}
             className="absolute inset-x-0 bottom-0 max-h-[78dvh] overflow-hidden rounded-t-[28px] border-t-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_-12px_40px_rgba(2,6,23,.28)]"
           >
             <div className="flex items-center gap-3 border-b-2 border-[var(--app-border-soft)] px-4 py-3">

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MobileLobbyFlow } from '../mobile-lobby-flow'
 import { MODES, type QuizMode } from '@/lib/constants/modes'
@@ -136,5 +136,50 @@ describe('MobileLobbyFlow', () => {
     fireEvent.keyDown(window, { key: 'Escape' })
 
     expect(screen.queryByRole('dialog', { name: 'Konu seç' })).not.toBeInTheDocument()
+  })
+
+  it('alt panel açılınca odağı içine alır, Tab döngüsünü sınırlar ve odağı geri verir', () => {
+    render(<FlowHarness />)
+    const trigger = within(screen.getByTestId('mobile-lobby-flow')).getByRole('button', { name: 'Konu seç: Tüm konular' })
+    trigger.focus()
+    fireEvent.click(trigger)
+
+    const dialog = screen.getByRole('dialog', { name: 'Konu seç' })
+    const closeButton = within(dialog).getByRole('button', { name: 'Kapat' })
+    const dialogButtons = within(dialog).getAllByRole('button')
+    const lastButton = dialogButtons.at(-1)
+
+    expect(closeButton).toHaveFocus()
+    lastButton?.focus()
+    fireEvent.keyDown(window, { key: 'Tab' })
+    expect(closeButton).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(trigger).toHaveFocus()
+    expect(document.body.style.overflow).toBe('')
+  })
+
+  it('masaüstü kırılımına geçince görünmeyen paneli kapatır ve scroll kilidini kaldırır', () => {
+    let changeListener: ((event: MediaQueryListEvent) => void) | undefined
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
+      matches: false,
+      addEventListener: (_event: string, listener: (event: MediaQueryListEvent) => void) => { changeListener = listener },
+      removeEventListener: vi.fn(),
+    }))
+
+    try {
+      render(<FlowHarness />)
+      const trigger = within(screen.getByTestId('mobile-lobby-flow')).getByRole('button', { name: 'Seviye seç: Karma' })
+      fireEvent.click(trigger)
+      expect(document.body.style.overflow).toBe('hidden')
+
+      act(() => changeListener?.({ matches: true } as MediaQueryListEvent))
+
+      expect(screen.queryByRole('dialog', { name: 'Zorluk' })).not.toBeInTheDocument()
+      expect(document.body.style.overflow).toBe('')
+      expect(trigger).toHaveFocus()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
