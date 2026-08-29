@@ -3332,8 +3332,8 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
       game: 'matematik', displayExamRef: 'TYT', questionExamRef: 'TYT',
       taxonomyVersion: 'ba-tyt-math-v1',
       categories: [
-        ['sayilar-gate', 2], ['denklemler-gate', 2], ['fonksiyonlar-gate', 2],
-        ['problemler-gate', 2], ['geometri-gate', 1], ['olasilik-gate', 1],
+        ['sayilar_gate', 2], ['denklemler_gate', 2], ['fonksiyonlar_gate', 2],
+        ['problemler_gate', 2], ['geometri_gate', 1], ['olasilik_gate', 1],
       ],
     })
     await seedDiagnosticScope({

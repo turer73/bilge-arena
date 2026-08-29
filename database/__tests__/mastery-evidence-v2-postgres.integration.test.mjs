@@ -217,11 +217,11 @@ describePg('097 mastery evidence v2 real PostgreSQL', () => {
   })
 
   it('counts one evidence unit per Türkiye day from verified completion, not answer time', async () => {
-    const baseDay=(await client.query("SELECT to_char(evidence_day_tr,'YYYY-MM-DD') day FROM public.mastery_outcome_evidence WHERE attempt_id=$1 LIMIT 1",[attempt])).rows[0].day
+    const baseDay=(await client.query("SELECT to_char(evidence_day_tr,'YYYY-MM-DD') AS evidence_day FROM public.mastery_outcome_evidence WHERE attempt_id=$1 LIMIT 1",[attempt])).rows[0].evidence_day
     const completions=[
       `${baseDay}T23:00:00Z`,
-      (await client.query("SELECT ($1::date+1)::text day",[baseDay])).rows[0].day+'T01:00:00Z',
-      (await client.query("SELECT ($1::date+2)::text day",[baseDay])).rows[0].day+'T01:00:00Z',
+      (await client.query("SELECT ($1::date+1)::text AS evidence_day",[baseDay])).rows[0].evidence_day+'T01:00:00Z',
+      (await client.query("SELECT ($1::date+2)::text AS evidence_day",[baseDay])).rows[0].evidence_day+'T01:00:00Z',
     ]
     const inserted=[]
     for (let index=0; index<completions.length; index+=1) {
