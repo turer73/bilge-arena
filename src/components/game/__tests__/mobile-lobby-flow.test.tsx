@@ -41,7 +41,7 @@ describe('MobileLobbyFlow', () => {
     render(<FlowHarness />)
     const flow = within(screen.getByTestId('mobile-lobby-flow'))
 
-    expect(flow.getByRole('heading', { name: '10 soruluk turun hazır' })).toBeInTheDocument()
+    expect(flow.getByRole('heading', { name: 'Hemen başla' })).toBeInTheDocument()
     expect(flow.getByRole('group', { name: 'Başlangıç türü' })).toBeInTheDocument()
     expect(flow.getByRole('button', { name: 'Başla · 10 soru' })).toBeInTheDocument()
     expect(flow.queryByRole('button', { name: /Devam Et/ })).not.toBeInTheDocument()
@@ -69,7 +69,7 @@ describe('MobileLobbyFlow', () => {
     expect(flow.getByRole('button', { name: 'Kapsam seç: AYT Eşit Ağırlık' })).toBeInTheDocument()
 
     fireEvent.click(flow.getByRole('button', { name: 'Seviye seç: Karma' }))
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Seviye seç' })).getByRole('button', { name: /Orta/ }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Zorluk' })).getByRole('button', { name: /Orta/ }))
     expect(flow.getByRole('button', { name: 'Seviye seç: Orta' })).toBeInTheDocument()
   })
 
@@ -79,23 +79,23 @@ describe('MobileLobbyFlow', () => {
 
     fireEvent.click(flow.getByRole('button', { name: 'Deneme: 40 soru' }))
 
-    expect(flow.getByRole('heading', { name: 'Deneme sınavın hazır' })).toBeInTheDocument()
+    expect(flow.getByRole('heading', { name: 'Hemen başla' })).toBeInTheDocument()
     expect(flow.queryByRole('button', { name: /Konu seç:/ })).not.toBeInTheDocument()
     expect(flow.queryByRole('button', { name: /Seviye seç:/ })).not.toBeInTheDocument()
     expect(flow.getByRole('button', { name: 'Denemeyi Başlat · 40 soru' })).toBeInTheDocument()
-    expect(flow.getByText('Tur').parentElement).toHaveTextContent('45 dk')
+    expect(flow.queryByText('Tur')).not.toBeInTheDocument()
   })
 
   it('ileri oyun modlarını ana yüzeyi kalabalıklaştırmadan korur', () => {
     render(<FlowHarness />)
     const flow = within(screen.getByTestId('mobile-lobby-flow'))
 
-    fireEvent.click(flow.getByRole('button', { name: /Blitz, Maraton ve Boss/ }))
+    fireEvent.click(flow.getByRole('button', { name: 'Diğer modlar' }))
     const dialog = screen.getByRole('dialog', { name: 'Diğer oyun modları' })
     fireEvent.click(within(dialog).getByRole('button', { name: /Blitz/ }))
 
-    expect(flow.getByRole('heading', { name: 'Blitz turun hazır' })).toBeInTheDocument()
-    expect(flow.getByRole('button', { name: /Seçili mod: Blitz/ })).toBeInTheDocument()
+    expect(flow.getByRole('heading', { name: 'Hemen başla' })).toBeInTheDocument()
+    expect(flow.getByRole('button', { name: /Seçili: Blitz/ })).toBeInTheDocument()
     expect(flow.getByRole('button', { name: 'Başla · 5 soru' })).toBeInTheDocument()
   })
 

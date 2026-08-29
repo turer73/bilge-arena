@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Check, ChevronRight, Clock3, Play, X } from 'lucide-react'
+import { Check, ChevronRight, Play, X } from 'lucide-react'
 import { GAMES, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
-import { DENEME_CONFIGS, MODES, type QuizMode } from '@/lib/constants/modes'
+import { MODES, type QuizMode } from '@/lib/constants/modes'
 
 interface MobileLobbyFlowProps {
   game: GameSlug
@@ -58,7 +58,7 @@ const PRIMARY_MODE_COPY: Record<string, { label: string; description: string }> 
 const SHEET_TITLES: Record<Exclude<OptionSheet, null>, string> = {
   scope: 'Sınav kapsamını seç',
   topic: 'Konu seç',
-  difficulty: 'Seviye seç',
+  difficulty: 'Zorluk',
   modes: 'Diğer oyun modları',
 }
 
@@ -112,30 +112,12 @@ export function MobileLobbyFlow({
   const selectedCategoryIsValid = selectedCategory === null || gameDef.categories.includes(selectedCategory)
   const safeCategory = selectedCategoryIsValid ? selectedCategory : null
   const difficulty = DIFFICULTIES.find((item) => item.value === selectedDifficulty) ?? DIFFICULTIES[0]
-  const denemeConfig = DENEME_CONFIGS[game]
   const [sheet, setSheet] = useState<OptionSheet>(null)
 
-  const durationMinutes = mode.isDeneme && denemeConfig
-    ? Math.ceil(denemeConfig.totalTime / 60)
-    : mode.timePerQuestion > 0
-      ? Math.max(1, Math.ceil((mode.questionCount * mode.timePerQuestion) / 60))
-      : null
   const startAction = quizLimit && !quizLimit.canPlay ? onLimitReached : onStart
   const scopeLabel = selectedExamRef ? (EXAM_SCOPE_LABELS[selectedExamRef] ?? selectedExamRef) : 'Sınav seç'
   const categoryLabel = safeCategory ? getCategoryLabel(safeCategory) : 'Tüm konular'
   const isExtraMode = EXTRA_MODE_IDS.includes(mode.id as typeof EXTRA_MODE_IDS[number])
-
-  const title = mode.isDeneme
-    ? 'Deneme sınavın hazır'
-    : mode.id === 'practice'
-      ? 'Konu pratiğin hazır'
-      : mode.id === 'classic'
-        ? `${mode.questionCount} soruluk turun hazır`
-        : `${mode.name} turun hazır`
-
-  const description = mode.isDeneme
-    ? 'Kapsamı kontrol et, hazır olduğunda başla.'
-    : 'Varsayılanlarla hemen başla; yalnız istediğin ayarı değiştir.'
 
   useEffect(() => {
     if (!selectedCategoryIsValid) onSelectCategory(null)
@@ -165,12 +147,11 @@ export function MobileLobbyFlow({
       data-mobile-lobby-flow
       data-testid="mobile-lobby-flow"
       aria-labelledby="mobile-flow-title"
-      className="flex min-h-[calc(100dvh-8.75rem)] flex-col rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow)] md:hidden"
+      className="rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow)] md:hidden"
     >
       <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Hızlı başlangıç</p>
-        <h1 id="mobile-flow-title" className="mt-1 text-2xl font-black leading-7 text-[var(--app-text)]">{title}</h1>
-        <p className="mt-1.5 text-sm font-semibold leading-5 text-[var(--app-text-sub)]">{description}</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Oyun</p>
+        <h1 id="mobile-flow-title" className="mt-1 text-xl font-black leading-6 text-[var(--app-text)]">Hemen başla</h1>
       </div>
 
       {loadError && (
@@ -216,7 +197,7 @@ export function MobileLobbyFlow({
             : 'text-[var(--app-text-sub)] active:bg-[var(--app-hover)]'
         }`}
       >
-        {isExtraMode ? `Seçili mod: ${mode.name}` : 'Blitz, Maraton ve Boss'}
+        {isExtraMode ? `Seçili: ${mode.name}` : 'Diğer modlar'}
         <ChevronRight size={15} strokeWidth={2.8} aria-hidden="true" />
       </button>
 
@@ -230,18 +211,9 @@ export function MobileLobbyFlow({
             <SettingRow label="Seviye" value={difficulty.label} onClick={() => setSheet('difficulty')} />
           </>
         )}
-        <div className="flex min-h-[48px] items-center justify-between gap-3 px-3 text-xs">
-          <span className="font-bold text-[var(--app-text-muted)]">Tur</span>
-          <span className="flex items-center gap-1.5 font-black text-[var(--app-text)]">
-            {mode.questionCount} soru
-            <span aria-hidden="true">·</span>
-            <Clock3 size={14} aria-hidden="true" />
-            {durationMinutes ? `${durationMinutes} dk` : 'Zamansız'}
-          </span>
-        </div>
       </div>
 
-      <div className="mt-auto border-t-2 border-[var(--app-border-soft)] pt-4">
+      <div className="mt-4 border-t-2 border-[var(--app-border-soft)] pt-4">
         <button
           type="button"
           onClick={startAction}
@@ -323,7 +295,7 @@ export function MobileLobbyFlow({
               )}
 
               {sheet === 'difficulty' && (
-                <div className="grid gap-2.5" role="group" aria-label="Seviye">
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Seviye">
                   {DIFFICULTIES.map((item) => {
                     const active = item.value === selectedDifficulty
                     return (
@@ -332,7 +304,7 @@ export function MobileLobbyFlow({
                           <span className="text-sm font-black text-[var(--app-text)]">{item.label}</span>
                           {active && <Check size={17} strokeWidth={3.5} className="text-[var(--app-accent-text)]" aria-hidden="true" />}
                         </span>
-                        <span className="mt-1 block text-[10px] font-semibold text-[var(--app-text-sub)]">{item.description}</span>
+                        <span className="sr-only">{item.description}</span>
                       </button>
                     )
                   })}
