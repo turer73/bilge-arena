@@ -38,17 +38,18 @@ describe('GameClient exam scope', () => {
   })
 
   it.each(['TYT', 'LGS'] as const)(
-    'legacy profilde onceki dersin %s filtresini Wordquest soru akisindan temizler',
+    'legacy profilde onceki dersin %s tercihini Wordquest rotasinda korur',
     async (examRef) => {
       gameState.selectedExamRef = examRef
       render(<GameClient />)
 
-      await waitFor(() => expect(gameState.setExamRef).toHaveBeenCalledWith(null))
+      await waitFor(() => expect(gameState.setExamRef).not.toHaveBeenCalled())
+      expect(gameState.selectedExamRef).toBe(examRef)
       expect(routerReplace).not.toHaveBeenCalled()
     },
   )
 
-  it('Wordquest filtresi zaten null ise gereksiz store yazimi yapmaz', async () => {
+  it('Wordquest tercihi zaten null ise gereksiz store yazimi yapmaz', async () => {
     gameState.selectedExamRef = null
     render(<GameClient />)
 

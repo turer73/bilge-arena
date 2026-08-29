@@ -198,6 +198,7 @@ describe('MasteryActionCard', () => {
   })
 
   test('Wordquest mastery YDT etiketini soru filtresine tasimaz', () => {
+    useGameStore.setState({ selectedExamRef: 'TYT' })
     const ydtCoverage = {
       ...supportedCoverage,
       diagnosticAvailable: false,
@@ -215,7 +216,7 @@ describe('MasteryActionCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Kanıt İçin Pratik Yap' }))
     expect(useGameStore.getState()).toMatchObject({
-      selectedGame: 'wordquest', selectedCategory: 'vocabulary', selectedExamRef: null, selectedMode: 'practice',
+      selectedGame: 'wordquest', selectedCategory: 'vocabulary', selectedExamRef: 'TYT', selectedMode: 'practice',
     })
     expect(pushMock).toHaveBeenCalledWith('/arena/wordquest')
   })

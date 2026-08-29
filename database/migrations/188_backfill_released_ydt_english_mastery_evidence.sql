@@ -2,8 +2,8 @@
 --
 -- Migration 187 creates taxonomy-owned mappings after historical Wordquest
 -- attempts have already been marked as materialized. Those markers make the
--- normal materializer correctly return early, so this migration repairs only
--- the missing pre-release evidence and its additive aggregate contribution.
+-- normal materializer correctly returns early, so this migration repairs every
+-- missing current mapping and its additive aggregate contribution.
 
 BEGIN;
 
@@ -135,12 +135,11 @@ WHERE attempt.game = 'wordquest'
   AND NULLIF(upper(btrim(COALESCE(question.exam_ref, ''))), '') IS NULL
   AND question.is_active
   AND outcome.category IS NOT DISTINCT FROM question.category
-  -- This release owns only answers completed before the released scope became
-  -- visible. Repair every missing current mapping independently: a governed
-  -- manual mapping must not be skipped, and question_outcomes.created_at uses
-  -- transaction-start NOW(), so it cannot safely order an in-flight answer
-  -- against migration 187.
-  AND answer.answered_at < release.released_at
+  -- Repair every missing current mapping independently. This includes attempts
+  -- completed after migration 187 but before this repair: their immutable
+  -- marker prevents normal rematerialization when a governed mapping becomes
+  -- visible later. question_outcomes.created_at uses transaction-start NOW(),
+  -- so it also cannot safely order an in-flight answer against migration 187.
   AND NOT EXISTS (
     SELECT 1
     FROM public.mastery_outcome_evidence AS existing

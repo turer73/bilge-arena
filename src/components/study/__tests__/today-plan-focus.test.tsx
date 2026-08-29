@@ -94,6 +94,27 @@ describe('TodayPlanFocus', () => {
     expect(pushMock).toHaveBeenCalledWith('/arena/matematik?start=today-plan')
   })
 
+  test('Wordquest plani null soru kapsami kullanir ve onceki sinav tercihini korur', () => {
+    useGameStore.setState({ selectedExamRef: 'AYT-SAY' })
+    mockedUseTodayPlan.mockReturnValue({
+      plan: { ...mkPlan(15), game: 'wordquest', examRef: null },
+      loading: false,
+    } as never)
+
+    render(<TodayPlanFocus game="wordquest" userId="u1" examRef="YDT" />)
+
+    expect(mockedUseTodayPlan).toHaveBeenCalledWith('wordquest', 'u1', null, undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'Planı Başlat · 15 Soru' }))
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'wordquest',
+      selectedMode: 'practice',
+      selectedCategory: null,
+      selectedDifficulty: null,
+      selectedExamRef: 'AYT-SAY',
+    })
+    expect(pushMock).toHaveBeenCalledWith('/arena/wordquest?start=today-plan')
+  })
+
   test('kısmi planda ana ve mobil CTA yalnız kalan soru sayısını söyler', () => {
     mockedUseTodayPlan.mockReturnValue({ plan: mkPlan(15, ['q0', 'q1', 'q2', 'q3', 'q4']), loading: false } as never)
     render(

@@ -184,7 +184,7 @@ describe('178-188 curriculum scope release migrations', () => {
     expect(ydtEnglishReleaseSql).toMatch(/diagnosticEnabled'[\s\S]*::boolean, true/)
   })
 
-  it('repairs only pre-release verified YDT English evidence and is replay-safe', () => {
+  it('repairs every missing current YDT English mapping and is replay-safe', () => {
     expect(ydtEnglishRepairSql).toMatch(/LOCK TABLE[\s\S]*public\.question_revision_outcomes,[\s\S]*public\.session_answers,[\s\S]*public\.verified_attempts,[\s\S]*public\.verified_attempt_hint_events,[\s\S]*public\.review_logs,[\s\S]*public\.mastery_materialized_attempts,[\s\S]*public\.mastery_outcome_evidence,[\s\S]*public\.curriculum_scope_evidence_repair_runs[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
     expect(ydtEnglishRepairSql).toMatch(/release_status = 'released'[\s\S]*curriculum_scope_integrity\([\s\S]*'wordquest', 'YDT', 'ba-ydt-eng-v1'/)
     expect(ydtEnglishRepairSql).toMatch(/JOIN public\.mastery_materialized_attempts AS marker ON marker\.attempt_id = attempt\.id/)
@@ -201,7 +201,7 @@ describe('178-188 curriculum scope release migrations', () => {
     expect(mappingJoinSql).not.toMatch(/mapping\.is_primary/)
     expect(ydtEnglishRepairSql).toMatch(/attempt\.game = 'wordquest'/)
     expect(ydtEnglishRepairSql).toMatch(/question\.game = 'wordquest'[\s\S]*NULLIF\(upper\(btrim\(COALESCE\(question\.exam_ref, ''\)\)\), ''\) IS NULL/)
-    expect(ydtEnglishRepairSql).toMatch(/answer\.answered_at < release\.released_at/)
+    expect(candidateSql).not.toMatch(/answer\.answered_at\s*<\s*release\.released_at/)
     expect(candidateSql).not.toMatch(/AND\s+mapping\.created_at\s*>\s*answer\.answered_at/)
     expect(ydtEnglishRepairSql).toMatch(/LEFT JOIN public\.verified_attempt_question_revisions AS snapshot[\s\S]*snapshot\.attempt_id = attempt\.id[\s\S]*snapshot\.question_id = answer\.question_id/)
     expect(ydtEnglishRepairSql).toMatch(/COALESCE\(snapshot\.difficulty, question\.difficulty\)/)

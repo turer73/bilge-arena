@@ -87,8 +87,9 @@ describe('HakimiyetClient', () => {
     expect(screen.getByText(/şu an yüklenemedi/i)).toBeInTheDocument()
   })
 
-  it('Wordquest YDT display refini pratik soru filtresinde null yapar', () => {
+  it('Wordquest YDT display refini storea tasimadan onceki sinav tercihini korur', () => {
     authState.user = { id: 'u1' }
+    useGameStore.setState({ selectedExamRef: 'TYT' })
     Object.assign(graphOutcome, { game: 'wordquest', category: 'vocabulary', examRef: 'YDT' })
     mockedUseMasteryMap.mockReturnValue({
       response: { game: 'wordquest' } as never,
@@ -105,7 +106,7 @@ describe('HakimiyetClient', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Grafikten çalış' }))
 
     expect(useGameStore.getState()).toMatchObject({
-      selectedGame: 'wordquest', selectedCategory: 'vocabulary', selectedExamRef: null, selectedMode: 'practice',
+      selectedGame: 'wordquest', selectedCategory: 'vocabulary', selectedExamRef: 'TYT', selectedMode: 'practice',
     })
     expect(pushMock).toHaveBeenCalledWith('/arena/wordquest')
   })

@@ -44,6 +44,8 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
   let questionWriterClient
   let repairClient
   let inFlightClient
+  let ydtMappingWriterClient
+  let ydtRepairClient
   let historicalUser
   let historicalAttempt
   let historicalSession
@@ -84,11 +86,19 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
   let ydtEnglishRaceSession
   let ydtEnglishRaceAnswer
   let preYdtEnglishRaceRelease
+  let ydtEnglishPostReleaseUser
+  let ydtEnglishPostReleaseAttempt
+  let ydtEnglishPostReleaseSession
+  let ydtEnglishPostReleaseAnswer
+  let ydtEnglishPostReleaseNode
+  let ydtEnglishPostReleaseOutcome
+  let preYdtEnglishPostReleaseRepair
   let completionWasBlocked = false
   let answerWriterWasBlocked = false
   let questionWriterWasBlocked = false
   let repairWasBlocked = false
   let ydtReleaseRaceWasBlocked = false
+  let ydtRepairWasBlocked = false
   let preRepair
   let postLegacyRepair
   let preCompleteRepair
@@ -698,14 +708,106 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
     }
     await ydtReleasePromise
     if (ydtRaceSetupError) throw ydtRaceSetupError
-    await client.query(ydtEnglishRepairMigration)
+
+    // A completion after 187 sees the taxonomy-owned primary mapping and writes
+    // its immutable marker plus primary evidence. A governed secondary mapping
+    // added before 188 must still be repaired even though the answer is newer
+    // than the release timestamp and the marker prevents rematerialization.
+    ydtEnglishPostReleaseUser = randomUUID()
+    ydtEnglishPostReleaseAttempt = randomUUID()
+    ydtEnglishPostReleaseSession = randomUUID()
+    ydtEnglishPostReleaseAnswer = randomUUID()
+    ydtEnglishPostReleaseNode = randomUUID()
+    ydtEnglishPostReleaseOutcome = randomUUID()
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [ydtEnglishPostReleaseUser])
+    await client.query(`INSERT INTO public.game_sessions(id,user_id,client_request_id)
+      VALUES($1,$2,$3)`, [ydtEnglishPostReleaseSession, ydtEnglishPostReleaseUser, randomUUID()])
+    await client.query(`INSERT INTO public.verified_attempts(
+      id,user_id,game,mode,question_ids,duration_sec,expires_at
+    ) VALUES($1,$2,'wordquest','classic',$3,180,clock_timestamp()+interval '1 hour')`, [
+      ydtEnglishPostReleaseAttempt, ydtEnglishPostReleaseUser, [questionIds.get('grammar')],
+    ])
+    await client.query(`INSERT INTO public.verified_attempt_question_revisions(
+      attempt_id,question_id,difficulty
+    ) VALUES($1,$2,4)`, [ydtEnglishPostReleaseAttempt, questionIds.get('grammar')])
+    await client.query(`INSERT INTO public.session_answers(
+      id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,answered_at
+    ) VALUES($1,$2,$3,$4,true,8,false,clock_timestamp())`, [
+      ydtEnglishPostReleaseAnswer, ydtEnglishPostReleaseSession,
+      ydtEnglishPostReleaseUser, questionIds.get('grammar'),
+    ])
+    await client.query(`UPDATE public.verified_attempts
+      SET completed_at=clock_timestamp(),session_id=$2 WHERE id=$1`, [
+      ydtEnglishPostReleaseAttempt, ydtEnglishPostReleaseSession,
+    ])
+
+    await client.query(`INSERT INTO public.curriculum_nodes(
+      id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+    ) SELECT $1,'ba-ydt-eng-v1:outcome:grammar-secondary','ba-ydt-eng-v1','wordquest','YDT',
+      'outcome',topic.id,'grammar','Dilbilgisi aktarım becerisi',20,true
+      FROM public.curriculum_nodes AS topic
+      WHERE topic.code='ba-ydt-eng-v1:topic:grammar'`, [ydtEnglishPostReleaseNode])
+    await client.query(`INSERT INTO public.curriculum_outcomes(
+      id,code,game,category,title,description,exam_ref,sort_order,is_active,node_id,taxonomy_version
+    ) VALUES($1,'ENG-GRM-02','wordquest','grammar','Dilbilgisi aktarım becerisi',
+      'Post-release secondary mapping fixture','YDT',21,true,$2,'ba-ydt-eng-v1')`, [
+      ydtEnglishPostReleaseOutcome, ydtEnglishPostReleaseNode,
+    ])
+    preYdtEnglishPostReleaseRepair = (await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS markers,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS attempts,
+      answer.answered_at > release.released_at AS answer_after_release
+      FROM public.session_answers AS answer
+      JOIN public.curriculum_scope_releases AS release
+        ON release.game='wordquest' AND release.display_exam_ref='YDT'
+      WHERE answer.id=$3`, [
+      ydtEnglishPostReleaseAttempt, ydtEnglishPostReleaseUser, ydtEnglishPostReleaseAnswer,
+    ])).rows[0]
+
+    // Hold the new mapping uncommitted before 188 starts. The repair must wait
+    // for that production-shaped writer, then include the committed mapping in
+    // its stable snapshot instead of racing past it.
+    ydtMappingWriterClient = new Client({ connectionString: url })
+    ydtRepairClient = new Client({ connectionString: url })
+    await ydtMappingWriterClient.connect()
+    await ydtRepairClient.connect()
+    await ydtMappingWriterClient.query('BEGIN')
+    await ydtMappingWriterClient.query(`INSERT INTO public.question_outcomes(
+      question_id,outcome_id,weight,is_primary,mapping_source
+    ) VALUES($1,$2,0.5,false,'manual')`, [
+      questionIds.get('grammar'), ydtEnglishPostReleaseOutcome,
+    ])
+    const ydtRepairPid = (await ydtRepairClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
+    const ydtRepairPromise = ydtRepairClient.query(ydtEnglishRepairMigration)
+    let ydtRepairSetupError
+    try {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const activity = (await client.query(
+          `SELECT wait_event_type FROM pg_stat_activity WHERE pid=$1`,
+          [ydtRepairPid],
+        )).rows[0]
+        if (activity?.wait_event_type === 'Lock') {
+          ydtRepairWasBlocked = true
+          break
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      if (!ydtRepairWasBlocked) throw new Error('YDT repair did not drain the in-flight mapping writer')
+    } catch (error) {
+      ydtRepairSetupError = error
+    } finally {
+      await ydtMappingWriterClient.query('COMMIT')
+    }
+    await ydtRepairPromise
+    if (ydtRepairSetupError) throw ydtRepairSetupError
   })
 
   afterAll(async () => {
     await Promise.allSettled([
       client?.end(), releaseClient?.end(), completionClient?.end(), answerWriterClient?.end(),
       questionWriterClient?.end(),
-      repairClient?.end(), inFlightClient?.end(),
+      repairClient?.end(), inFlightClient?.end(), ydtMappingWriterClient?.end(), ydtRepairClient?.end(),
     ])
   })
 
@@ -1143,7 +1245,11 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
   it('releases, repairs, and safely replays the YDT English scope', async () => {
     expect(preYdtEnglishRelease).toEqual({ markers: 1, evidence: 0, attempts: 0 })
     expect(preYdtEnglishRaceRelease).toEqual({ markers: 1, evidence: 0, attempts: 0 })
+    expect(preYdtEnglishPostReleaseRepair).toEqual({
+      markers: 1, evidence: 1, attempts: 1, answer_after_release: true,
+    })
     expect(ydtReleaseRaceWasBlocked).toBe(true)
+    expect(ydtRepairWasBlocked).toBe(true)
 
     const scope = (await client.query(
       `SELECT public.resolve_released_curriculum_scope('wordquest','ydt') AS scope`,
@@ -1177,6 +1283,7 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
       { code: 'ENG-CLZ-01' },
       { code: 'ENG-DLG-01' },
       { code: 'ENG-GRM-01' },
+      { code: 'ENG-GRM-02' },
       { code: 'ENG-PHR-01' },
       { code: 'ENG-RES-01' },
       { code: 'ENG-SEN-01' },
@@ -1193,7 +1300,7 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
       sum(difficulty_weighted_earned)::integer AS earned,
       sum(difficulty_weighted_possible)::integer AS possible
       FROM public.mastery_outcome_evidence WHERE attempt_id=$1`,
-    [ydtEnglishAttempt])).rows[0]).toEqual({ evidence: 7, correct: 4, earned: 11, possible: 18 })
+    [ydtEnglishAttempt])).rows[0]).toEqual({ evidence: 8, correct: 5, earned: 13, possible: 20 })
     expect((await client.query(`SELECT
       sum(attempts)::integer AS attempts,
       sum(correct_attempts)::integer AS correct_attempts,
@@ -1201,17 +1308,18 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
       sum(timed_attempts)::integer AS timed_attempts,
       sum(total_time_sec)::integer AS total_time_sec
       FROM public.user_outcome_state WHERE user_id=$1`, [ydtEnglishUser])).rows[0]).toEqual({
-      attempts: 7,
-      correct_attempts: 4,
-      v2_attempts: 7,
-      timed_attempts: 7,
-      total_time_sec: 105,
+      attempts: 8,
+      correct_attempts: 5,
+      v2_attempts: 8,
+      timed_attempts: 8,
+      total_time_sec: 119,
     })
     expect((await client.query(`SELECT
       count(evidence.*)::integer AS evidence,
       (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
       (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts,
-      bool_and(mapping.created_at <= answer.answered_at) AS mapping_at_or_before_answer
+      count(*) FILTER (WHERE mapping.created_at <= answer.answered_at)::integer AS mapping_at_or_before_answer,
+      count(*) FILTER (WHERE mapping.created_at > answer.answered_at)::integer AS mapping_after_answer
       FROM public.mastery_outcome_evidence AS evidence
       JOIN public.session_answers AS answer ON answer.id=evidence.answer_id
       JOIN public.question_outcomes AS mapping
@@ -1219,26 +1327,49 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
       WHERE evidence.attempt_id=$2`, [
       ydtEnglishRaceUser, ydtEnglishRaceAttempt,
     ])).rows[0]).toEqual({
-      evidence: 1,
-      attempts: 1,
-      v2_attempts: 1,
-      mapping_at_or_before_answer: true,
+      evidence: 2,
+      attempts: 2,
+      v2_attempts: 2,
+      mapping_at_or_before_answer: 1,
+      mapping_after_answer: 1,
     })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts,
+      count(*) FILTER (WHERE outcome_id=$3)::integer AS repaired_secondary
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
+      ydtEnglishPostReleaseUser, ydtEnglishPostReleaseAttempt, ydtEnglishPostReleaseOutcome,
+    ])).rows[0]).toEqual({ evidence: 2, attempts: 2, v2_attempts: 2, repaired_secondary: 1 })
     expect((await client.query(`SELECT candidate_attempts,candidate_answers,
       candidate_evidence_rows,inserted_evidence_rows,affected_users,
       manual_mapping_rows,mapping_at_or_before_answer_rows,mapping_after_answer_rows
       FROM public.curriculum_scope_evidence_repair_runs
       WHERE repair_key='188_ydt_english_complete_mappings_v1'
       ORDER BY repaired_at,run_id LIMIT 1`)).rows[0]).toEqual({
-      candidate_attempts: 2,
-      candidate_answers: 8,
-      candidate_evidence_rows: 8,
-      inserted_evidence_rows: 8,
-      affected_users: 2,
-      manual_mapping_rows: 1,
+      candidate_attempts: 3,
+      candidate_answers: 9,
+      candidate_evidence_rows: 11,
+      inserted_evidence_rows: 11,
+      affected_users: 3,
+      manual_mapping_rows: 4,
       mapping_at_or_before_answer_rows: 1,
-      mapping_after_answer_rows: 7,
+      mapping_after_answer_rows: 10,
     })
+
+    // The secondary outcome has now proven the post-release repair path. Retire
+    // it before replaying the category-proxy release, whose contract requires
+    // one active outcome per category. Persisted evidence/state remain intact.
+    await client.query(`DELETE FROM public.question_outcomes
+      WHERE question_id=$1 AND outcome_id=$2`, [
+      questionIds.get('grammar'), ydtEnglishPostReleaseOutcome,
+    ])
+    await client.query('UPDATE public.curriculum_outcomes SET is_active=false WHERE id=$1', [
+      ydtEnglishPostReleaseOutcome,
+    ])
+    await client.query('UPDATE public.curriculum_nodes SET is_active=false WHERE id=$1', [
+      ydtEnglishPostReleaseNode,
+    ])
 
     await client.query(ydtEnglishReleaseMigration)
     await client.query(ydtEnglishRepairMigration)
@@ -1255,14 +1386,21 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
       (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
       FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
       ydtEnglishUser, ydtEnglishAttempt,
-    ])).rows[0]).toEqual({ evidence: 7, attempts: 7, v2_attempts: 7 })
+    ])).rows[0]).toEqual({ evidence: 8, attempts: 8, v2_attempts: 8 })
     expect((await client.query(`SELECT
       count(*)::integer AS evidence,
       (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
       (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
       FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
       ydtEnglishRaceUser, ydtEnglishRaceAttempt,
-    ])).rows[0]).toEqual({ evidence: 1, attempts: 1, v2_attempts: 1 })
+    ])).rows[0]).toEqual({ evidence: 2, attempts: 2, v2_attempts: 2 })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
+      ydtEnglishPostReleaseUser, ydtEnglishPostReleaseAttempt,
+    ])).rows[0]).toEqual({ evidence: 2, attempts: 2, v2_attempts: 2 })
 
     const futureQuestion = randomUUID()
     await client.query(`INSERT INTO public.questions(id,game,category,exam_ref,is_active)

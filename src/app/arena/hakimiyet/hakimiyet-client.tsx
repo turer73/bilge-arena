@@ -30,7 +30,8 @@ export default function HakimiyetClient() {
     gameStore.setGame(outcome.game as GameSlug)
     gameStore.setCategory(outcome.category)
     // Wordquest'in mastery display ref'i YDT, soru storage ref'i NULL'dir.
-    gameStore.setExamRef(outcome.game === 'wordquest' ? null : outcome.examRef)
+    // Onceki dersin paylasilan sinav tercihini pratik CTA'si silmemeli.
+    if (outcome.game !== 'wordquest') gameStore.setExamRef(outcome.examRef)
     gameStore.setDifficulty(null)
     gameStore.setMode('practice')
     router.push(`/arena/${outcome.game}`)

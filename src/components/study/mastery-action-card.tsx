@@ -86,8 +86,9 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
     gameStore.setGame(nextAction.game as GameSlug)
     gameStore.setCategory(nextAction.category)
     // Mastery Wordquest'i YDT etiketiyle gosterir; soru bankasi ise exam_ref
-    // NULL saklar. Display etiketini quiz filtresine tasima.
-    gameStore.setExamRef(nextAction.game === 'wordquest' ? null : nextAction.examRef)
+    // NULL saklar. Display etiketini quiz filtresine tasima ve onceki dersin
+    // paylasilan sinav tercihini silme.
+    if (nextAction.game !== 'wordquest') gameStore.setExamRef(nextAction.examRef)
     gameStore.setMode('practice')
     router.push(`/arena/${nextAction.game}`)
   }

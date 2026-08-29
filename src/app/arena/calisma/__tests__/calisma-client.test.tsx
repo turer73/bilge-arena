@@ -112,6 +112,36 @@ describe('CalismaClient', () => {
     expect(useGameStore.getState().selectedCategory).toBeNull()
   })
 
+  test('Wordquest gecisi onceki dersin sinav tercihini silmez', () => {
+    useGameStore.setState({
+      selectedGame: 'matematik',
+      selectedCategory: 'problemler',
+      selectedExamRef: 'AYT-SAY',
+    })
+    mockedUseAuthStore.mockReturnValue({
+      user: { id: 'u1' },
+      profile: { exam_type: 'yks' },
+      loading: false,
+    } as never)
+    render(<CalismaClient />)
+
+    fireEvent.click(screen.getByRole('button', { name: /İngilizce/ }))
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'wordquest',
+      selectedCategory: null,
+      selectedExamRef: 'AYT-SAY',
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'YDT' }))
+    expect(useGameStore.getState().selectedExamRef).toBe('AYT-SAY')
+
+    fireEvent.click(screen.getByRole('button', { name: /Matematik/ }))
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'matematik',
+      selectedExamRef: 'AYT-SAY',
+    })
+  })
+
   test('dört eylem düğmesi Ders Çalış tahta modunu doğrudan açar', () => {
     const fetchMock = vi.fn(() => new Promise<Response>(() => undefined))
     vi.stubGlobal('fetch', fetchMock)

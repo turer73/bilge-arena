@@ -97,14 +97,24 @@ const todayPlanValue = vi.hoisted(() => ({
   loading: false,
   markCompleted: vi.fn(),
 }))
-vi.mock('@/lib/hooks/use-today-plan', () => ({ useTodayPlan: () => todayPlanValue }))
+const useTodayPlanArgs = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/hooks/use-today-plan', () => ({
+  useTodayPlan: (...args: unknown[]) => {
+    useTodayPlanArgs(...args)
+    return todayPlanValue
+  },
+}))
 const personalizedMockValue = vi.hoisted(() => ({
   loading: false,
   error: null as string | null,
   generate: vi.fn(),
 }))
+const usePersonalizedMockArgs = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/hooks/use-personalized-mock', () => ({
-  usePersonalizedMock: () => personalizedMockValue,
+  usePersonalizedMock: (...args: unknown[]) => {
+    usePersonalizedMockArgs(...args)
+    return personalizedMockValue
+  },
 }))
 vi.mock('@/lib/hooks/use-mastery-map', () => ({
   useMasteryMap: () => ({ outcomes: [], loading: false, fetchMastery: vi.fn() }),
@@ -145,9 +155,18 @@ vi.mock('../option-button', () => ({
   ),
 }))
 vi.mock('../lobby', () => ({
-  Lobby: ({ onStart, personalizedMockCard }: { onStart: () => void; personalizedMockCard?: React.ReactNode }) => (
+  Lobby: ({
+    onStart,
+    personalizedMockCard,
+    selectedExamRef,
+  }: {
+    onStart: () => void
+    personalizedMockCard?: React.ReactNode
+    selectedExamRef?: string | null
+  }) => (
     <>
       <button data-testid="normal-quiz-start" onClick={onStart} />
+      <span data-testid="lobby-exam-ref">{selectedExamRef ?? 'null'}</span>
       {personalizedMockCard}
     </>
   ),
@@ -348,6 +367,47 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
         examRef: 'TYT',
       })
     } finally {
+      authStoreValue.user = null
+      todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('Wordquest plan ve deneme alt akislarinda null soru kapsami kullanir, store tercihini korur', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    todayPlanValue.plan = {
+      planDate: '2026-07-21',
+      game: 'wordquest',
+      examRef: null,
+      questions: [{ id: 'q-wordquest' }],
+      completedIds: [],
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }
+    gameStoreValue.selectedExamRef = 'AYT-SAY'
+    gameStoreValue.setExamRef.mockClear()
+    useTodayPlanArgs.mockClear()
+    usePersonalizedMockArgs.mockClear()
+    trackLearningEvent.mockClear()
+
+    try {
+      render(<QuizEngine game="wordquest" />)
+
+      expect(useTodayPlanArgs).toHaveBeenLastCalledWith('wordquest', 'u1', null, 'problemler')
+      expect(usePersonalizedMockArgs).toHaveBeenLastCalledWith('wordquest', 'u1', null)
+      expect(screen.getByTestId('lobby-exam-ref')).toHaveTextContent('null')
+
+      fireEvent.click(screen.getByTestId('today-plan-start'))
+      expect(gameStoreValue.setExamRef).not.toHaveBeenCalled()
+      expect(trackLearningEvent).toHaveBeenCalledWith('LearningPlanStarted', {
+        game: 'wordquest',
+        planSize: 1,
+        completedBefore: 0,
+        examRef: null,
+      })
+    } finally {
+      gameStoreValue.selectedExamRef = 'TYT'
       authStoreValue.user = null
       todayPlanValue.plan = null
       quizGame.screen = 'game'

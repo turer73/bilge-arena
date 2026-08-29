@@ -40,7 +40,7 @@ const gameStore = vi.hoisted(() => ({
   selectedMode: 'klasik',
   selectedCategory: null,
   selectedDifficulty: null,
-  selectedExamRef: null,
+  selectedExamRef: null as string | null,
 }))
 vi.mock('@/stores/game-store', () => ({ useGameStore: () => gameStore }))
 
@@ -105,6 +105,9 @@ beforeEach(() => {
   quiz.currentQuestion.mockReturnValue(null)
   quiz.isLastQuestion.mockReturnValue(false)
   gameStore.selectedMode = 'klasik'
+  gameStore.selectedCategory = null
+  gameStore.selectedDifficulty = null
+  gameStore.selectedExamRef = null
   sessionStorage.clear()
   fetchers.fetchQuizQuestions.mockResolvedValue({
     questions: Array.from({ length: 30 }, (_, i) => makeQ(`q${i}`)),
@@ -132,6 +135,18 @@ describe('useQuizGame — handleStart', () => {
     expect(result.current.attemptId).toBeNull()
     expect(result.current.screen).toBe('game')
     expect(timer.start).toHaveBeenCalled()
+  })
+
+  test('Wordquest misafir onizlemesinde stale TYT tercihini soru filtresine tasimaz', async () => {
+    gameStore.selectedExamRef = 'TYT'
+    const { result } = renderHook(() => useQuizGame('wordquest', null))
+
+    await act(() => result.current.handleStart())
+
+    expect(fetchers.fetchPreviewQuestion).toHaveBeenCalledWith('wordquest', expect.objectContaining({
+      examRef: null,
+    }))
+    expect(gameStore.selectedExamRef).toBe('TYT')
   })
 
   test('anasayfa kontrol varyantinda ilk soru gorunumunu ve cevabi olcer', async () => {
@@ -178,6 +193,19 @@ describe('useQuizGame — handleStart', () => {
     expect(result.current.screen).toBe('game')
     expect(result.current.isGuestMode).toBe(false)
     expect(result.current.attemptId).toBe(ATTEMPT_ID)
+  })
+
+  test('Wordquest auth soru isteginde stale TYT tercihini null storage kapsamindan ayirir', async () => {
+    gameStore.selectedExamRef = 'TYT'
+    const { result } = renderHook(() => useQuizGame('wordquest', 'u1'))
+
+    await act(() => result.current.handleStart())
+
+    expect(fetchers.fetchQuizQuestions).toHaveBeenCalledWith(expect.objectContaining({
+      game: 'wordquest',
+      examRef: null,
+    }))
+    expect(gameStore.selectedExamRef).toBe('TYT')
   })
 
   test('auth\'lu + boş sonuç: filtre hatası mesajı + lobby', async () => {

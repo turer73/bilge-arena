@@ -79,19 +79,20 @@ export default function CalismaClient() {
   const handleGameChange = (nextGame: GameSlug) => {
     const nextExamRefs = examRefsForGame(nextGame, profile?.exam_type)
     const nextDefault = defaultExamRefForType(profile?.exam_type)
-    const nextExamRef = examRef && nextExamRefs.includes(examRef)
-      ? examRef
+    const storedExamRef = gameStore.selectedExamRef
+    const nextExamRef = storedExamRef && nextExamRefs.includes(storedExamRef)
+      ? storedExamRef
       : nextDefault && nextExamRefs.includes(nextDefault)
         ? nextDefault
         : nextExamRefs[0] ?? null
 
     gameStore.setGame(nextGame)
     gameStore.setCategory(null)
-    gameStore.setExamRef(nextExamRef)
+    if (nextGame !== 'wordquest') gameStore.setExamRef(nextExamRef)
   }
 
   const handleExamRefChange = (nextExamRef: string) => {
-    gameStore.setExamRef(nextExamRef)
+    if (game !== 'wordquest') gameStore.setExamRef(nextExamRef)
     gameStore.setCategory(null)
   }
 

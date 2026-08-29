@@ -7,6 +7,7 @@ import { useTodayPlan } from '@/lib/hooks/use-today-plan'
 import { TodayPlanCard } from '@/components/game/today-plan-card'
 import { useGameStore } from '@/stores/game-store'
 import { isPaperModeUiEnabled, paperPackCreateHref } from '@/lib/paper-mode/client'
+import { questionExamRefForGame } from '@/lib/constants/exam-types'
 
 interface TodayPlanFocusProps {
   game: GameSlug
@@ -25,13 +26,14 @@ export function TodayPlanFocus({
 }: TodayPlanFocusProps) {
   const router = useRouter()
   const gameStore = useGameStore()
-  const { plan, loading } = useTodayPlan(game, userId, examRef, selectedCategory)
+  const questionExamRef = questionExamRefForGame(game, examRef)
+  const { plan, loading } = useTodayPlan(game, userId, questionExamRef, selectedCategory)
 
   if (!userId) return null
 
   const openGame = () => {
     gameStore.setGame(game)
-    gameStore.setExamRef(examRef ?? null)
+    if (game !== 'wordquest') gameStore.setExamRef(questionExamRef)
     gameStore.setCategory(null)
     router.push(`/arena/${game}`)
   }
@@ -79,7 +81,7 @@ export function TodayPlanFocus({
     gameStore.setMode('practice')
     gameStore.setCategory(null)
     gameStore.setDifficulty(null)
-    gameStore.setExamRef(plan.examRef ?? examRef ?? null)
+    if (game !== 'wordquest') gameStore.setExamRef(plan.examRef ?? questionExamRef)
     router.push(`/arena/${game}?start=today-plan`)
   }
 
@@ -90,7 +92,7 @@ export function TodayPlanFocus({
       onStart={startPlan}
       showStickyMobileAction={showStickyMobileAction}
       paperHref={isPaperModeUiEnabled() && plan
-        ? paperPackCreateHref(game, plan.examRef ?? examRef)
+        ? paperPackCreateHref(game, questionExamRefForGame(game, plan.examRef ?? questionExamRef))
         : null}
     />
   )

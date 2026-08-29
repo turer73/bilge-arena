@@ -39,16 +39,13 @@ export default function GameClient() {
     }
   }, [isValidSlug, router])
 
-  // Wordquest'in soru bankasi exam_ref=NULL kullanir; onceki dersten kalan
-  // TYT/LGS filtresi İngilizce sorularini bosaltmamali. Mastery display scope'u
-  // ayri olarak YDT'ye normalize edilir (useMasteryMap).
+  // Wordquest'in soru bankasi exam_ref=NULL kullanir; bunu soru tuketim
+  // sinirlarinda uygulariz. Paylasilan TYT/LGS/AYT tercihini burada silmek,
+  // kullanici onceki derse dondugunde sinav baglamini kaybettirir.
   // Diger derslerde profil sinav turune gore soru exam_ref default'u kullanilir.
   useEffect(() => {
     if (!isValidSlug) return
-    if (gameSlug === 'wordquest') {
-      if (selectedExamRef !== null) setExamRef(null)
-      return
-    }
+    if (gameSlug === 'wordquest') return
     const validExamRefs = isValidSlug ? GAMES[gameSlug as GameSlug].examTags : []
     if (profile?.exam_type && (!selectedExamRef || !validExamRefs.includes(selectedExamRef))) {
       const profileDefault = defaultExamRefForType(profile.exam_type)
