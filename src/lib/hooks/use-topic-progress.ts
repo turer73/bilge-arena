@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { GAMES, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
+import { getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
 
 /**
  * Mobil ogrenme yolunun veri kaynagi.
  *
- * Yol, oyunun KANONIK kategori listesini (GAMES[game].categories) adim adim
- * gosterir; ilerleme `/api/profile/topic-strengths` proxy'sinden gelir.
+ * Yol, oyunun sinav-kapsamli KANONIK kategori listesini adim adim gosterir;
+ * ilerleme `/api/profile/topic-strengths` proxy'sinden gelir.
  * Ilk surumde adimlar sabit metinlerdi ve canli modda ilerleme her zaman 0/6
  * gorunuyordu -- bu hook o bosllugu kapatir.
  *
@@ -82,7 +82,7 @@ export function useTopicProgress(
   }, [examRef, game, requestKey, userId])
 
   return useMemo(() => {
-    const categories = game ? GAMES[game]?.categories ?? [] : []
+    const categories = game ? getCategoriesForExam(game, examRef) : []
     const rows = requestKey && request.key === requestKey ? request.rows : null
     const byCategory = new Map<string, TopicStrengthRow>()
     for (const row of rows ?? []) {
@@ -110,5 +110,5 @@ export function useTopicProgress(
       loading: Boolean(requestKey && request.key !== requestKey),
       hasProgress: byCategory.size > 0,
     }
-  }, [game, request, requestKey])
+  }, [examRef, game, request, requestKey])
 }

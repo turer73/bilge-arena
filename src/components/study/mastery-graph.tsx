@@ -119,7 +119,11 @@ export function MasteryGraph({ graph, coverage, discovery, outcomes, onPractice 
             <div className="h-full rounded-full bg-[var(--focus)]" style={{ width: `${discovery.journeyPercentage}%` }} />
           </div>
           <p className="mt-2 text-[10px] leading-4 text-[var(--text-sub)]">
-            {discovery.diagnosticCompleted ? 'Başlangıç tahmini hazır. ' : 'Başlangıç tanılaması henüz tamamlanmadı. '}
+            {coverage.diagnosticAvailable
+              ? discovery.diagnosticCompleted
+                ? 'Başlangıç tahmini hazır. '
+                : 'Kısa başlangıç taraması henüz tamamlanmadı. '
+              : 'Başlangıç seviyesi pratik kanıtlarıyla oluşuyor. '}
             {discovery.evidenceCollected}/{discovery.evidenceTarget} doğrulanmış kanıt · {discovery.readyOutcomes}/{discovery.totalOutcomes} kazanım ilk değerlendirmeye hazır. Kanıtı yetersiz alanlar başarısız sayılmaz.
           </p>
         </div>

@@ -6,12 +6,26 @@ import { useGameStore } from '@/stores/game-store'
 
 const useBilgeTahtaEnabled = vi.hoisted(() => vi.fn(() => true))
 const trackBilgeBoardEvent = vi.hoisted(() => vi.fn())
+const todayPlanFocusProps = vi.hoisted(() => vi.fn())
+const masteryActionCardProps = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/bilge-tahta/client', () => ({ useBilgeTahtaEnabled }))
 vi.mock('@/lib/bilge-tahta/analytics', () => ({ trackBilgeBoardEvent }))
 
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: vi.fn(),
+}))
+vi.mock('@/components/study/today-plan-focus', () => ({
+  TodayPlanFocus: (props: unknown) => {
+    todayPlanFocusProps(props)
+    return <div data-testid="today-plan-focus" />
+  },
+}))
+vi.mock('@/components/study/mastery-action-card', () => ({
+  MasteryActionCard: (props: unknown) => {
+    masteryActionCardProps(props)
+    return <div data-testid="mastery-action-card" />
+  },
 }))
 vi.mock('@/components/study/institution-weekly-program-card', () => ({
   InstitutionWeeklyProgramCard: () => <div data-testid="institution-weekly-program" />,
@@ -31,6 +45,8 @@ describe('CalismaClient', () => {
     })
     useBilgeTahtaEnabled.mockReturnValue(true)
     trackBilgeBoardEvent.mockClear()
+    todayPlanFocusProps.mockClear()
+    masteryActionCardProps.mockClear()
   })
 
   afterEach(() => vi.unstubAllGlobals())
@@ -70,8 +86,9 @@ describe('CalismaClient', () => {
     expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
     expect(screen.getByTestId('institution-weekly-program')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/matematik')
-    expect(screen.queryByText("BUGÜNÜN 15'İ")).not.toBeInTheDocument()
-    expect(screen.queryByText(/KEŞİF SEVİYESİ/)).not.toBeInTheDocument()
+    expect(screen.getByTestId('today-plan-focus')).toBeInTheDocument()
+    expect(screen.getByTestId('mastery-action-card')).toBeInTheDocument()
+    expect(document.querySelector('[data-practice-progress]')).toHaveClass('lg:col-start-1', 'lg:row-start-2')
     expect(screen.getByRole('link', { name: 'Profil sayfasını aç' })).toHaveAttribute('href', '/arena/profil')
   })
 
@@ -103,6 +120,44 @@ describe('CalismaClient', () => {
     expect(useGameStore.getState().selectedExamRef).toBe('TYT')
     expect(useGameStore.getState().selectedCategory).toBeNull()
     expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/turkce')
+  })
+
+  test('Wordquest gecisi onceki dersin sinav tercihini silmez', () => {
+    useGameStore.setState({
+      selectedGame: 'matematik',
+      selectedCategory: 'problemler',
+      selectedExamRef: 'AYT-SAY',
+    })
+    mockedUseAuthStore.mockReturnValue({
+      user: { id: 'u1' },
+      profile: { exam_type: 'yks' },
+      loading: false,
+    } as never)
+    render(<CalismaClient />)
+
+    fireEvent.click(screen.getByRole('button', { name: /İngilizce/ }))
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'wordquest',
+      selectedCategory: null,
+      selectedExamRef: 'AYT-SAY',
+    })
+    expect(todayPlanFocusProps).toHaveBeenLastCalledWith(expect.objectContaining({
+      game: 'wordquest',
+      examRef: 'YDT',
+    }))
+    expect(masteryActionCardProps).toHaveBeenLastCalledWith(expect.objectContaining({
+      game: 'wordquest',
+      examRef: 'YDT',
+    }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'YDT' }))
+    expect(useGameStore.getState().selectedExamRef).toBe('AYT-SAY')
+
+    fireEvent.click(screen.getByRole('button', { name: /Matematik/ }))
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'matematik',
+      selectedExamRef: 'AYT-SAY',
+    })
   })
 
   test('dört eylem düğmesi Ders Çalış tahta modunu doğrudan açar', () => {

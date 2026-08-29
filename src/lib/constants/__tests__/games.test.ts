@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { GAMES, CATEGORY_LABELS, GAME_SLUGS, getCategoryLabel } from '../games'
+import {
+  GAMES,
+  CATEGORY_LABELS,
+  GAME_SLUGS,
+  getCategoriesForExam,
+  getCategoryLabel,
+  normalizeCategoryAlias,
+} from '../games'
 
 /**
  * Games sabitleri kontrat testi
@@ -56,5 +63,27 @@ describe('games sabitleri kontratları', () => {
     // bu kategoriye sahip değildi; yeni eklenen sosyoloji kategorisinin sürdürülmesi.
     expect(GAMES.sosyal.categories).toContain('sosyoloji')
     expect(CATEGORY_LABELS.sosyoloji).toBe('Sosyoloji')
+  })
+
+  it('TYT Türkçe kapsamı AYT edebiyat kategorisini sunmaz', () => {
+    expect(getCategoriesForExam('turkce', 'TYT')).toEqual([
+      'paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari',
+    ])
+    expect(getCategoriesForExam('turkce', 'TYT')).not.toContain('edebiyat')
+    expect(getCategoriesForExam('turkce', 'AYT-EA')).toContain('edebiyat')
+    expect(getCategoriesForExam('turkce', 'LGS')).not.toContain('edebiyat')
+  })
+
+  it('LGS Sosyal yalnız kanonik tarih ve din kültürü bankalarını sunar', () => {
+    expect(getCategoriesForExam('sosyal', 'LGS')).toEqual(['tarih', 'din_kulturu'])
+    expect(getCategoriesForExam('sosyal', 'LGS')).not.toContain('cografya')
+    expect(getCategoriesForExam('sosyal', 'LGS')).not.toContain('felsefe')
+    expect(getCategoriesForExam('sosyal', 'LGS')).not.toContain('sosyoloji')
+  })
+
+  it('eski sosyal din aliasini veritabanı filtresinden önce kanonikleştirir', () => {
+    expect(normalizeCategoryAlias('sosyal', 'din')).toBe('din_kulturu')
+    expect(normalizeCategoryAlias('sosyal', 'tarih')).toBe('tarih')
+    expect(normalizeCategoryAlias('turkce', 'din')).toBe('din')
   })
 })

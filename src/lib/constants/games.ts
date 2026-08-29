@@ -69,6 +69,34 @@ export const GAME_LIST = Object.values(GAMES)
 
 export const GAME_SLUGS = Object.keys(GAMES) as GameSlug[]
 
+const EXAM_CATEGORY_OVERRIDES: Partial<Record<GameSlug, Record<string, readonly string[]>>> = {
+  // TYT Türkçe v2 intentionally excludes the AYT literature leaf. Keep the
+  // global game catalogue broad because the same game also serves AYT-EA/SOZ.
+  turkce: {
+    TYT: ['paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari'],
+    LGS: ['paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari'],
+  },
+  // LGS Sosyal yüzeyi kanonikleştirilmiş İnkılap Tarihi ve Din Kültürü
+  // bankalarından oluşur. TYT/AYT felsefe-coğrafya-sosyoloji yapraklarını
+  // LGS filtresinde sunmak boş veya sınav dışı seçim üretir.
+  sosyal: {
+    LGS: ['tarih', 'din_kulturu'],
+  },
+}
+
+/** Return the canonical categories that are valid for one exact exam scope. */
+export function getCategoriesForExam(game: GameSlug, examRef: string | null | undefined): readonly string[] {
+  const normalizedExamRef = examRef?.trim().toUpperCase()
+  if (!normalizedExamRef) return GAMES[game].categories
+  return EXAM_CATEGORY_OVERRIDES[game]?.[normalizedExamRef] ?? GAMES[game].categories
+}
+
+/** Normalize explicit legacy request aliases before they reach database filters. */
+export function normalizeCategoryAlias(game: GameSlug, category: string | null): string | null {
+  if (game === 'sosyal' && category === 'din') return 'din_kulturu'
+  return category
+}
+
 /**
  * DB slug'lari ASCII (URL-safe, stable). Display icin Turkce karakterlerle map.
  * Yeni kategori eklenirse buraya da eklenmeli — yoksa fallback ASCII gosterir.

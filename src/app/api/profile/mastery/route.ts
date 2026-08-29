@@ -7,7 +7,11 @@ import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { buildMasteryMapResponse } from '@/lib/mastery/build-response'
 import type { CurriculumNodeType } from '@/lib/mastery/graph'
 import type { MasteryCoveragePublic } from '@/lib/mastery/public-contract'
-import { supportsAdaptiveDiagnosticScope } from '@/lib/diagnostic/scope'
+import {
+  isMissingDiagnosticResolver,
+  resolveReleasedDiagnosticScope,
+  supportsAdaptiveDiagnosticScope,
+} from '@/lib/diagnostic/scope'
 import {
   isMasteryScopeIntegrityClean,
   parseMasteryScopeIntegrity,
@@ -73,6 +77,19 @@ function noStoreJson(body: unknown, init?: { status?: number }) {
     ...init,
     headers: { 'Cache-Control': 'no-store' },
   })
+}
+
+type ServiceClient = ReturnType<typeof createServiceRoleClient>
+
+async function callServiceRpc(
+  client: ServiceClient,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<{ data: unknown; error: { code?: string } | null }> {
+  return await client.rpc(name as never, args as never) as unknown as {
+    data: unknown
+    error: { code?: string } | null
+  }
 }
 
 /**
@@ -172,12 +189,31 @@ export async function GET(request: NextRequest) {
 
     const outcomes = (outcomeResult.data ?? []) as OutcomeRow[]
     const outcomeIds = outcomes.map((outcome) => outcome.id)
-    const diagnosticAvailable = scope.diagnosticEnabled && supportsAdaptiveDiagnosticScope({
-      game,
-      examRef: scope.displayExamRef,
-      questionExamRef: scope.questionExamRef,
-      taxonomyVersion: scope.taxonomyVersion,
-    })
+    let diagnosticAvailable = false
+    if (scope.diagnosticEnabled) {
+      const diagnosticResolution = await resolveReleasedDiagnosticScope(
+        (args) => callServiceRpc(supabase, 'resolve_released_diagnostic_scope', args),
+        game,
+        scope.displayExamRef,
+      )
+      if (!diagnosticResolution.error) {
+        const diagnosticScope = diagnosticResolution.scope
+        diagnosticAvailable = Boolean(
+          diagnosticScope
+          && diagnosticScope.questionExamRef === scope.questionExamRef
+          && diagnosticScope.taxonomyVersion === scope.taxonomyVersion,
+        )
+      } else if (isMissingDiagnosticResolver(diagnosticResolution.code)) {
+        // Deploy-before-migration compatibility is intentionally bounded to
+        // the legacy Mathematics/TYT contract. New subjects never fall back.
+        diagnosticAvailable = supportsAdaptiveDiagnosticScope({
+          game,
+          examRef: scope.displayExamRef,
+          questionExamRef: scope.questionExamRef,
+          taxonomyVersion: scope.taxonomyVersion,
+        })
+      }
+    }
     const [stateResult, diagnosticStateResult] = outcomeIds.length > 0
       ? await Promise.all([
         supabase

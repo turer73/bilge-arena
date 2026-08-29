@@ -102,6 +102,23 @@ describe('useMasteryMap', () => {
     expect(result.current.outcomes[0]?.code).toBe('MAT-SAY-01')
   })
 
+  it.each([null, 'TYT'] as const)(
+    'wordquest storage scope %s iken YDT mastery display refini kullanir',
+    async (examRef) => {
+      vi.mocked(fetch).mockResolvedValueOnce(response(mastery('wordquest', 'YDT')))
+      const { result } = renderHook(() => useMasteryMap('wordquest', 'u1', examRef))
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/profile/mastery?game=wordquest&exam_ref=YDT',
+        expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }),
+      )
+      expect(result.current.response?.examRef).toBe('YDT')
+      expect(result.current.error).toBe(false)
+    },
+  )
+
   it('kullanici yoksa istek yapmaz ve veriyi bos tutar', async () => {
     const { result } = renderHook(() => useMasteryMap('matematik', null, 'TYT'))
     await waitFor(() => expect(result.current.loading).toBe(false))

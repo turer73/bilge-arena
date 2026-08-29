@@ -31,6 +31,8 @@ export interface DiagnosticAnswerInput {
 export interface DiagnosticPolicyInput {
   kind: DiagnosticKind
   seed: string
+  questionCount: number
+  maxPerOutcome: number
   outcomes: readonly DiagnosticOutcomeInput[]
   questions: readonly DiagnosticQuestionInput[]
   priorStates: readonly DiagnosticPriorStateInput[]
@@ -99,12 +101,20 @@ function validateAndIndex(input: DiagnosticPolicyInput): {
   if (
     (input.kind !== 'initial' && input.kind !== 'recheck')
     || !isNonEmptyString(input.seed)
+    || !Number.isInteger(input.questionCount)
+    || input.questionCount < 1
+    || input.questionCount > 50
+    || !Number.isInteger(input.maxPerOutcome)
+    || input.maxPerOutcome < 1
+    || input.maxPerOutcome > 10
     || !Array.isArray(input.outcomes)
     || input.outcomes.length === 0
+    || input.questionCount < input.outcomes.length
+    || input.questionCount > input.outcomes.length * input.maxPerOutcome
     || !Array.isArray(input.questions)
     || !Array.isArray(input.priorStates)
     || !Array.isArray(input.answers)
-    || input.answers.length > DIAGNOSTIC_MAX_QUESTIONS
+    || input.answers.length > input.questionCount
   ) {
     return null
   }
@@ -172,7 +182,7 @@ function validateAndIndex(input: DiagnosticPolicyInput): {
     }
     answeredQuestionIds.add(answer.questionId)
     const outcomeAnswers = answersByOutcome.get(answer.outcomeId) ?? []
-    if (outcomeAnswers.length >= DIAGNOSTIC_MAX_PER_OUTCOME) return null
+    if (outcomeAnswers.length >= input.maxPerOutcome) return null
     outcomeAnswers.push(answer)
     answersByOutcome.set(answer.outcomeId, outcomeAnswers)
   }
@@ -191,6 +201,7 @@ function rankOutcomes(
   outcomes: readonly DiagnosticOutcomeInput[],
   priorByOutcome: ReadonlyMap<string, DiagnosticPriorStateInput>,
   answersByOutcome: ReadonlyMap<string, readonly DiagnosticAnswerInput[]>,
+  maxPerOutcome: number,
 ): OutcomeCandidate[] {
   const candidates = outcomes.map((outcome) => ({
     ...outcome,
@@ -207,7 +218,7 @@ function rankOutcomes(
   }
 
   return candidates
-    .filter((outcome) => outcome.currentAnswers.length < DIAGNOSTIC_MAX_PER_OUTCOME)
+    .filter((outcome) => outcome.currentAnswers.length < maxPerOutcome)
     .sort((left, right) => (
       weightedAccuracy(left.currentAnswers) - weightedAccuracy(right.currentAnswers)
       || comparePriorScore(left.prior, right.prior)
@@ -234,13 +245,14 @@ export function selectNextDiagnosticQuestion(
   input: DiagnosticPolicyInput,
 ): DiagnosticQuestionSelection | null {
   const indexed = validateAndIndex(input)
-  if (!indexed || input.answers.length >= DIAGNOSTIC_MAX_QUESTIONS) return null
+  if (!indexed || input.answers.length >= input.questionCount) return null
 
   const rankedOutcomes = rankOutcomes(
     input.kind,
     input.outcomes,
     indexed.priorByOutcome,
     indexed.answersByOutcome,
+    input.maxPerOutcome,
   )
 
   for (const outcome of rankedOutcomes) {

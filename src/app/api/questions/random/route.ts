@@ -3,7 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
-import { GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
+import {
+  GAMES,
+  GAME_SLUGS,
+  getCategoriesForExam,
+  normalizeCategoryAlias,
+  type GameSlug,
+} from '@/lib/constants/games'
 import { isValidUuid } from '@/lib/utils/uuid'
 import type { GameMode, Question } from '@/types/database'
 import { parseQuestionRows, toPublicQuestion } from '@/lib/utils/question-public'
@@ -97,11 +103,25 @@ export async function GET(request: NextRequest) {
   const limitRaw = parseInt(searchParams.get('limit') ?? '10', 10)
   const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(1, limitRaw), 100) : 10
 
-  const category = searchParams.get('category') || null
+  const gameSlug = game as GameSlug
+  const category = normalizeCategoryAlias(gameSlug, searchParams.get('category') || null)
   const difficultyRaw = searchParams.get('difficulty')
-  const difficulty = difficultyRaw ? parseInt(difficultyRaw, 10) : null
+  const difficulty = difficultyRaw === null ? null : Number(difficultyRaw)
+  if (difficulty !== null && (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5)) {
+    return NextResponse.json({ error: 'Gecerli zorluk belirtilmedi' }, { status: 400 })
+  }
   const examRefRaw = searchParams.get('examRef')
-  const examRef = examRefRaw && VALID_EXAM_REFS.has(examRefRaw) ? examRefRaw : null
+  if (examRefRaw !== null && !VALID_EXAM_REFS.has(examRefRaw)) {
+    return NextResponse.json({ error: 'Gecerli sinav kapsami belirtilmedi' }, { status: 400 })
+  }
+  const examRef = examRefRaw
+  if (
+    category
+    && GAMES[gameSlug].categories.includes(category)
+    && !getCategoriesForExam(gameSlug, examRef).includes(category)
+  ) {
+    return NextResponse.json({ error: 'Kategori sinav kapsamiyla uyumsuz' }, { status: 400 })
+  }
   const includeReview = searchParams.get('includeReview') === 'true'
 
   // excludeIds: comma-separated UUID listesi, max 50

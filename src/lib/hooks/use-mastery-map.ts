@@ -25,7 +25,12 @@ export function useMasteryMap(
   userId?: string | null,
   examRef?: string | null,
 ) {
-  const normalizedExamRef = examRef?.trim().toUpperCase() || null
+  // Wordquest questions intentionally use a NULL storage exam_ref, while the
+  // released mastery registry exposes the same scope under display ref YDT.
+  // Keep that distinction local to mastery; never write YDT into quiz filters.
+  const normalizedExamRef = game === 'wordquest'
+    ? 'YDT'
+    : (examRef?.trim().toUpperCase() || null)
   const [mastery, setMastery] = useState<MasteryMapResponsePublic | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)

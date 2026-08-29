@@ -60,6 +60,13 @@ describe('Lobby', () => {
     expect(screen.getByRole('button', { name: 'Zor' })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('TYT Türkçe filtresinde AYT edebiyat kategorisini göstermez', () => {
+    render(<Lobby {...baseProps} game="turkce" selectedExamRef="TYT" />)
+
+    expect(screen.queryByRole('button', { name: 'Edebiyat' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paragraf' })).toBeInTheDocument()
+  })
+
   it('ayarlar açıldığında filtre seçimini üst bileşene bildirir', () => {
     const onSelectDifficulty = vi.fn()
     render(<Lobby {...baseProps} onSelectDifficulty={onSelectDifficulty} />)

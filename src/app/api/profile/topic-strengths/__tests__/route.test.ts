@@ -100,6 +100,24 @@ describe('GET /api/profile/topic-strengths', () => {
     expect((await res.json()).examRef).toBe('AYT-SAY')
   })
 
+  it('does not surface a legacy AYT literature strength inside TYT Turkish', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
+    mockAnswersRes.mockResolvedValueOnce({
+      data: [
+        { is_correct: true, questions: { game: 'turkce', category: 'paragraf', exam_ref: 'TYT' } },
+        { is_correct: true, questions: { game: 'turkce', category: 'edebiyat', exam_ref: 'TYT' } },
+      ],
+      error: null,
+    })
+
+    const res = await GET(makeRequest('turkce&exam_ref=TYT') as never)
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).topics).toEqual([
+      expect.objectContaining({ category: 'paragraf' }),
+    ])
+  })
+
   it('returns empty topics when no answers exist', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
     mockAnswersRes.mockResolvedValueOnce({ data: [], error: null })

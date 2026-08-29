@@ -21,6 +21,7 @@ import type { GameMode } from '@/types/database'
 import { recordMockStrategyQuestionOpened } from '@/lib/mock-strategy/client'
 import { trackEvent } from '@/lib/utils/plausible'
 import { ACTIVATION_EXPERIMENT, getActivationExposure } from '@/lib/experiments/activation'
+import { questionExamRefForGame } from '@/lib/constants/exam-types'
 
 // ---------- Hook return tipi ----------
 
@@ -83,6 +84,7 @@ export interface UseQuizGameReturn {
 export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGameReturn {
   const quizStore = useQuizStore()
   const gameStore = useGameStore()
+  const questionExamRef = questionExamRefForGame(game, gameStore.selectedExamRef)
 
   const [screen, setScreen] = useState<'lobby' | 'loading' | 'game' | 'result'>('lobby')
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -242,7 +244,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       const previewQ = await fetchPreviewQuestion(game, {
         category: gameStore.selectedCategory,
         difficulty: gameStore.selectedDifficulty,
-        examRef: gameStore.selectedExamRef,
+        examRef: questionExamRef,
       })
       if (!previewQ) {
         setLoadError('Soru yüklenemedi. Lütfen giriş yapın veya internet bağlantınızı kontrol edin.')
@@ -262,7 +264,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
           props: {
             experiment: ACTIVATION_EXPERIMENT,
             variant: activationVariant,
-            exam: gameStore.selectedExamRef ?? 'all',
+            exam: questionExamRef ?? 'all',
             game,
             position: 1,
           },
@@ -297,7 +299,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         // Deneme'de spaced repetition kapatilir; normal modda server-side
         // auth.uid() ile review questions otomatik gelir (Madde 9 #6).
         includeReview: !isDeneme,
-        examRef: gameStore.selectedExamRef,
+        examRef: questionExamRef,
       })
       let questions = questionSet.questions
       const newAttemptId = questionSet.attemptId
@@ -353,7 +355,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
       setLoadError('Sorular yüklenirken bir hata oluştu. İnternet bağlantınızı kontrol edin.')
       setScreen('lobby')
     }
-  }, [game, mode, quizStore, timer, isDeneme, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, gameStore.selectedExamRef, userId])
+  }, [game, mode, quizStore, timer, isDeneme, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, questionExamRef, userId])
 
   // --- "Bugunun 15'i" plani dogrudan baslat ---
   // handleStart'in basari-dalinin aynasi: fetch/slice yok (sorular caginan
@@ -489,7 +491,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
             const activationProps = {
               experiment: ACTIVATION_EXPERIMENT,
               variant: activationVariant,
-              exam: gameStore.selectedExamRef ?? 'all',
+              exam: questionExamRef ?? 'all',
               game,
               position: current.currentIndex + 1,
             }
@@ -531,7 +533,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
           setScreen('result')
         }
       })
-  }, [quizStore, timer, mode.timePerQuestion, isDeneme, attemptId, strategyTracked, userId, gameStore.selectedExamRef, game])
+  }, [quizStore, timer, mode.timePerQuestion, isDeneme, attemptId, strategyTracked, userId, questionExamRef, game])
 
   // --- Sonraki soru ---
 

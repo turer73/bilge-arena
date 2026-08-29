@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { institutionScopeIdentitySchema } from './scope'
 
 const refSchema = z.string().regex(/^[0-9a-f]{32}$/)
 const timestampSchema = z.string().datetime({ offset: true })
@@ -22,6 +23,10 @@ export const institutionFollowupMetricsSchema = z.object({
     context.addIssue({ code: 'custom', message: 'invalid follow-up metrics' })
   }
 })
+
+export const institutionFollowupMetricsV2Schema = institutionFollowupMetricsSchema.safeExtend({
+  scope: institutionScopeIdentitySchema,
+}).strict()
 
 export const institutionFollowupOpenInputSchema = z.object({
   classroomId: z.string().uuid(),

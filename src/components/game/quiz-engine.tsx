@@ -4,13 +4,13 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useGameStore } from '@/stores/game-store'
 import { useAuthStore } from '@/stores/auth-store'
-import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { GAMES, getCategoriesForExam, type GameSlug } from '@/lib/constants/games'
 import { useQuizGame } from '@/lib/hooks/use-quiz-game'
 import { useSidebarData } from '@/lib/hooks/use-sidebar-data'
 import { submitQuestionReport } from '@/lib/questions/submit-report'
 import { useSessionSaver } from '@/lib/hooks/use-session-saver'
 import { useQuizLimit } from '@/lib/hooks/use-quiz-limit'
-import { defaultExamRefForType } from '@/lib/constants/exam-types'
+import { defaultExamRefForType, questionExamRefForGame } from '@/lib/constants/exam-types'
 import { trackLearningEvent } from '@/lib/analytics/learning-events'
 import { trackEvent } from '@/lib/utils/plausible'
 import { trUpper } from '@/lib/utils/tr-text'
@@ -76,6 +76,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const quizStore = useQuizStore()
   const gameStore = useGameStore()
   const { user, profile } = useAuthStore()
+  const questionExamRef = questionExamRefForGame(game, gameStore.selectedExamRef)
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [verifiedExamAttemptId, setVerifiedExamAttemptId] = useState<string | null>(null)
   // "Bugunun 15'i" plani oynanirken true. Plan, yalnizca dogrulanmis oturum
@@ -86,16 +87,23 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // --- Custom hooks ---
   const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game, user?.id)
-  const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
+  const sidebar = useSidebarData({ userId: user?.id, game, gameDef, examRef: questionExamRef })
   const dailyQuests = useDailyQuests()
   const todayPlan = useTodayPlan(
     game,
     user?.id,
-    gameStore.selectedExamRef,
+    questionExamRef,
     gameStore.selectedCategory,
   )
-  const personalizedMock = usePersonalizedMock(game, user?.id, gameStore.selectedExamRef)
+  const personalizedMock = usePersonalizedMock(game, user?.id, questionExamRef)
   const masteryMap = useMasteryMap(game, user?.id, gameStore.selectedExamRef)
+  const selectExamRef = useCallback((examRef: string | null) => {
+    const validCategories = getCategoriesForExam(game, examRef)
+    if (gameStore.selectedCategory && !validCategories.includes(gameStore.selectedCategory)) {
+      gameStore.setCategory(null)
+    }
+    gameStore.setExamRef(examRef)
+  }, [game, gameStore])
   const autoPauseSessionKey = quiz.attemptId ?? quizStore.questions[0]?.id ?? null
   const autoPauseActive = quiz.screen === 'game' && !quiz.isDeneme && quizStore.state === 'playing'
   const { autoPaused, resume: clearAutoPause } = useGameAutoPause({
@@ -173,6 +181,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
     const remainingQuestions = plan.questions.filter((question) => !completedIds.has(question.id))
     // Tamamlanan planda "Tekrar Çöz" tüm seti; kısmi planda "Devam Et" yalnız kalanı açar.
     const questionsToStart = remainingQuestions.length > 0 ? remainingQuestions : plan.questions
+    const planExamRef = questionExamRefForGame(
+      game,
+      plan.examRef ?? gameStore.selectedExamRef ?? defaultExamRefForType(profile?.exam_type),
+    )
 
     trackEvent('UserQuizStart', {
       props: {
@@ -180,19 +192,19 @@ export function QuizEngine({ game }: QuizEngineProps) {
         mode: 'practice',
         category: 'all',
         difficulty: 'all',
-        exam_ref: plan.examRef ?? gameStore.selectedExamRef ?? defaultExamRefForType(profile?.exam_type) ?? 'all',
+        exam_ref: planExamRef ?? 'all',
       },
     })
     trackLearningEvent('LearningPlanStarted', {
       game,
       planSize: plan.questions.length,
       completedBefore: plan.completedIds.length,
-      examRef: plan.examRef,
+      examRef: planExamRef,
     })
     gameStore.setMode('practice')
     gameStore.setCategory(null)
     gameStore.setDifficulty(null)
-    gameStore.setExamRef(plan.examRef ?? gameStore.selectedExamRef ?? defaultExamRefForType(profile?.exam_type))
+    if (game !== 'wordquest') gameStore.setExamRef(planExamRef)
     planActiveRef.current = true
     setVerifiedExamAttemptId(null)
     quiz.handleStartPlanned(questionsToStart, plan.attemptId)
@@ -299,13 +311,17 @@ export function QuizEngine({ game }: QuizEngineProps) {
               plan={todayPlan.plan}
               loading={todayPlan.loading}
               paperHref={isPaperModeUiEnabled() && todayPlan.plan
-                ? paperPackCreateHref(game, todayPlan.plan.examRef ?? gameStore.selectedExamRef)
+                ? paperPackCreateHref(
+                    game,
+                    questionExamRefForGame(game, todayPlan.plan.examRef ?? questionExamRef),
+                  )
                 : null}
               onStart={startTodayPlan}
             />
             <MasteryMapCard
               outcomes={masteryMap.outcomes}
               discovery={masteryMap.discovery}
+              diagnosticAvailable={masteryMap.coverage?.diagnosticAvailable ?? false}
               loading={masteryMap.loading}
             />
           </div>
@@ -349,7 +365,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
                     source: 'personalized_mock',
                     category: 'all',
                     difficulty: 'all',
-                    exam_ref: plan.examRef ?? 'all',
+                    exam_ref: questionExamRefForGame(game, plan.examRef) ?? 'all',
                     wrong_count: plan.breakdown.wrong,
                     weak_count: plan.breakdown.weak,
                   },
@@ -376,7 +392,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 mode: gameStore.selectedMode,
                 category: gameStore.selectedCategory ?? 'all',
                 difficulty: gameStore.selectedDifficulty ?? 'all',
-                exam_ref: gameStore.selectedExamRef ?? 'all',
+                exam_ref: questionExamRef ?? 'all',
               },
             })
             quiz.handleStart()
@@ -388,8 +404,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
           onSelectCategory={gameStore.setCategory}
           selectedDifficulty={gameStore.selectedDifficulty}
           onSelectDifficulty={gameStore.setDifficulty}
-          selectedExamRef={gameStore.selectedExamRef}
-          onSelectExamRef={gameStore.setExamRef}
+          selectedExamRef={questionExamRef}
+          onSelectExamRef={selectExamRef}
           quizLimit={{
             canPlay: quizLimit.canPlay,
             remaining: quizLimit.remaining,
@@ -548,7 +564,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // Konu gucu: gercek veri varsa onu kullan, yoksa kategorileri %0 goster
   const sidebarTopics = sidebar.topicData.length > 0
     ? sidebar.topicData
-    : gameDef.categories.map((cat) => ({
+    : getCategoriesForExam(game, questionExamRef).map((cat) => ({
         label: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' '),
         percentage: 0,
       }))

@@ -1,7 +1,11 @@
 // Opt-in disposable PostgreSQL coverage for 086 -> 091 -> 094 -> 096 -> 097
-// -> 138 -> 178 -> historical verified Fen attempts -> 179 -> 180 -> 181.
+// -> 138 -> 178 -> historical verified Fen attempts -> 179 -> 180 -> 181
+// -> historical verified YDT English attempts -> 187 -> 188. The Turkish and
+// Social release migrations are applied in a later test, after the draft-scope
+// assertions, so this fixture still proves the pre-release contract.
 // Requires VERIFIED_ATTEMPTS_TEST_DATABASE_URL=.../bilge_r02_test_* and
-// VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE=1. Normal CI does not run it.
+// VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE=1. The dedicated PostgreSQL CI
+// job runs it; the normal local/unit-test command deliberately does not.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -30,9 +34,20 @@ const registryMigration = migration('178_curriculum_scope_release_registry.sql')
 const fenReleaseMigration = migration('179_release_tyt_fen_mastery_scope.sql')
 const fenRepairMigration = migration('180_backfill_released_tyt_fen_mastery_evidence.sql')
 const completeRepairMigration = migration('181_curriculum_scope_repair_and_parent_integrity.sql')
+const ydtEnglishReleaseMigration = migration('187_release_ydt_english_mastery_scope.sql')
+const ydtEnglishRepairMigration = migration('188_backfill_released_ydt_english_mastery_evidence.sql')
+const turkishReleaseMigration = migration('189_release_tyt_turkce_mastery_scope.sql')
+const turkishRepairMigration = migration('190_backfill_released_tyt_turkce_mastery_evidence.sql')
+const socialReleaseMigration = migration('191_release_tyt_sosyal_mastery_scope.sql')
+const socialRepairMigration = migration('192_backfill_released_tyt_sosyal_mastery_evidence.sql')
+const outcomeScopeMigration = migration('164_question_revision_outcome_scope.sql')
+const curriculumOutcomeScopeValidDefinition = outcomeScopeMigration.slice(
+  outcomeScopeMigration.indexOf('CREATE OR REPLACE FUNCTION public.curriculum_outcome_scope_valid'),
+  outcomeScopeMigration.indexOf('CREATE OR REPLACE FUNCTION public.question_revision_outcomes_valid'),
+)
 const { Client } = pg
 
-describePg('178-181 curriculum scope release real PostgreSQL', () => {
+describePg('178-192 curriculum scope release real PostgreSQL', () => {
   let client
   let releaseClient
   let completionClient
@@ -40,6 +55,8 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let questionWriterClient
   let repairClient
   let inFlightClient
+  let ydtMappingWriterClient
+  let ydtRepairClient
   let historicalUser
   let historicalAttempt
   let historicalSession
@@ -70,17 +87,134 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
   let replacementOldNode
   let replacementOldOutcome
   let releaseWriterQuestion
+  let ydtEnglishUser
+  let ydtEnglishAttempt
+  let ydtEnglishSession
+  let ydtEnglishAnswers
+  let ydtEnglishRevisionIds
+  let preYdtEnglishRelease
+  let ydtEnglishRaceUser
+  let ydtEnglishRaceAttempt
+  let ydtEnglishRaceSession
+  let ydtEnglishRaceAnswer
+  let ydtEnglishRaceRevision
+  let preYdtEnglishRaceRelease
+  let ydtEnglishPostReleaseUser
+  let ydtEnglishPostReleaseAttempt
+  let ydtEnglishPostReleaseSession
+  let ydtEnglishPostReleaseAnswer
+  let ydtEnglishPostReleaseRevision
+  let ydtEnglishPostReleaseNode
+  let ydtEnglishPostReleaseOutcome
+  let preYdtEnglishPostReleaseRepair
+  let turkishHistoricalAttempt
+  let socialHistoricalAttempt
+  let turkishCompletionAfterReleaseAttempt
+  let socialCompletionAfterReleaseAttempt
+  const socialPreparer = randomUUID()
+  const socialReviewerOne = randomUUID()
+  const socialReviewerTwo = randomUUID()
+  const socialSecondReligionQuestion = randomUUID()
+  const socialSecondReligionRevision = randomUUID()
   let completionWasBlocked = false
   let answerWriterWasBlocked = false
   let questionWriterWasBlocked = false
   let repairWasBlocked = false
+  let ydtReleaseRaceWasBlocked = false
+  let ydtRepairWasBlocked = false
   let preRepair
   let postLegacyRepair
   let preCompleteRepair
   const mathCategories = ['sayilar', 'denklemler', 'fonksiyonlar', 'problemler', 'geometri', 'olasilik']
   const fenCategories = ['fizik', 'kimya', 'biyoloji']
-  const questionIds = new Map([...mathCategories, ...fenCategories]
+  const turkishCategories = ['paragraf', 'dil_bilgisi', 'yazim_kurallari', 'sozcuk', 'anlam_bilgisi']
+  const socialCategories = ['tarih', 'cografya', 'felsefe', 'sosyoloji', 'din_kulturu']
+  const socialRevisionIds = new Map(socialCategories.map((category) => [category, randomUUID()]))
+  const ydtEnglishCategories = [
+    'vocabulary', 'phrasal_verbs', 'grammar', 'sentence_completion',
+    'cloze_test', 'restatement', 'dialogue',
+  ]
+  const questionIds = new Map([
+    ...mathCategories,
+    ...fenCategories,
+    ...turkishCategories,
+    ...socialCategories,
+    ...ydtEnglishCategories,
+  ]
     .map((category) => [category, randomUUID()]))
+
+  async function seedScopeAttempt(game, categories, complete, provenance = 'valid') {
+    const user = randomUUID()
+    const attempt = randomUUID()
+    const session = randomUUID()
+    const answers = categories.map(() => randomUUID())
+    const revisionIds = categories.map(() => randomUUID())
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [user])
+    await client.query(
+      `INSERT INTO public.game_sessions(id,user_id,client_request_id) VALUES($1,$2,$3)`,
+      [session, user, randomUUID()],
+    )
+    await client.query(
+      `INSERT INTO public.verified_attempts(
+        id,user_id,game,mode,question_ids,duration_sec,expires_at
+      ) VALUES($1,$2,$3,'classic',$4,180,clock_timestamp()+interval '1 hour')`,
+      [attempt, user, game, categories.map((category) => questionIds.get(category))],
+    )
+    for (const [index, category] of categories.entries()) {
+      const questionId = questionIds.get(category)
+      if (provenance !== 'missing') {
+        await client.query(`INSERT INTO public.verified_attempt_question_revisions(
+          attempt_id,question_id,revision_id,game,category,exam_ref,difficulty
+        ) VALUES($1,$2,$3,$4,$5,$6,$7)`, [
+          attempt,
+          questionId,
+          revisionIds[index],
+          provenance === 'game' ? 'fen' : game,
+          provenance === 'category' ? 'drifted' : category,
+          provenance === 'exam' ? 'LGS' : 'TYT',
+          (index % 5) + 1,
+        ])
+      }
+      await client.query(`INSERT INTO public.session_answers(
+        id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,question_revision_id,answered_at
+      ) VALUES($1,$2,$3,$4,$5,$6,false,$7,clock_timestamp()-interval '4 hours')`, [
+        answers[index], session, user, questionId, index % 2 === 0, 12 + index,
+        revisionIds[index],
+      ])
+    }
+    if (complete) {
+      await client.query(`UPDATE public.verified_attempts
+        SET completed_at=clock_timestamp()-interval '3 hours',session_id=$2
+        WHERE id=$1`, [attempt, session])
+    }
+    return { user, attempt, session, answers }
+  }
+
+  async function cleanupScopeAttempt(seed) {
+    await client.query('DELETE FROM public.mastery_outcome_evidence WHERE attempt_id=$1', [seed.attempt])
+    await client.query('DELETE FROM public.mastery_materialized_attempts WHERE attempt_id=$1', [seed.attempt])
+    await client.query('DELETE FROM public.verified_attempt_question_revisions WHERE attempt_id=$1', [seed.attempt])
+    await client.query('DELETE FROM public.review_cards WHERE user_id=$1', [seed.user])
+    await client.query('DELETE FROM public.review_logs WHERE session_id=$1', [seed.session])
+    await client.query('DELETE FROM public.session_answers WHERE session_id=$1', [seed.session])
+    await client.query('DELETE FROM public.verified_attempts WHERE id=$1', [seed.attempt])
+    await client.query('DELETE FROM public.game_sessions WHERE id=$1', [seed.session])
+    await client.query('DELETE FROM public.user_outcome_state WHERE user_id=$1', [seed.user])
+    await client.query('DELETE FROM public.profiles WHERE id=$1', [seed.user])
+  }
+
+  async function deleteScopeAttempt(seed) {
+    await client.query('DELETE FROM public.mastery_outcome_evidence WHERE attempt_id=$1', [seed.attempt])
+    await client.query('DELETE FROM public.user_outcome_state WHERE user_id=$1', [seed.user])
+    await client.query('DELETE FROM public.mastery_materialized_attempts WHERE attempt_id=$1', [seed.attempt])
+    await client.query('DELETE FROM public.review_cards WHERE user_id=$1', [seed.user])
+    await client.query('DELETE FROM public.review_logs WHERE session_id=$1', [seed.session])
+    await client.query('DELETE FROM public.session_answers WHERE session_id=$1', [seed.session])
+    await client.query('DELETE FROM public.verified_attempt_question_revisions WHERE attempt_id=$1', [seed.attempt])
+    await client.query('DELETE FROM public.verified_attempts WHERE id=$1', [seed.attempt])
+    await client.query('DELETE FROM public.game_sessions WHERE id=$1', [seed.session])
+    await client.query('DELETE FROM public.profiles WHERE id=$1', [seed.user])
+  }
 
   beforeAll(async () => {
     client = new Client({ connectionString: url })
@@ -106,7 +240,8 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
         category varchar(30) NOT NULL,
         difficulty smallint NOT NULL DEFAULT 3 CHECK (difficulty BETWEEN 1 AND 5),
         exam_ref varchar(20),
-        is_active boolean NOT NULL DEFAULT true
+        is_active boolean NOT NULL DEFAULT true,
+        published_revision_id uuid
       );
       CREATE TABLE public.game_sessions (
         id uuid PRIMARY KEY,
@@ -120,12 +255,13 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         session_id uuid NOT NULL REFERENCES public.game_sessions(id),
         user_id uuid NOT NULL REFERENCES public.profiles(id),
-        question_id uuid NOT NULL REFERENCES public.questions(id),
-        is_correct boolean NOT NULL,
-        is_skipped boolean,
-        time_taken_sec numeric,
-        is_fast boolean,
-        answered_at timestamptz NOT NULL DEFAULT clock_timestamp()
+      question_id uuid NOT NULL REFERENCES public.questions(id),
+      is_correct boolean NOT NULL,
+      is_skipped boolean,
+      time_taken_sec numeric,
+      is_fast boolean,
+      question_revision_id uuid,
+      answered_at timestamptz NOT NULL DEFAULT clock_timestamp()
       );
     `)
     for (const category of mathCategories) {
@@ -142,13 +278,44 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
         [questionIds.get(category), category],
       )
     }
+    for (const category of turkishCategories) {
+      await client.query(
+        `INSERT INTO public.questions(id,game,category,exam_ref,is_active)
+         VALUES ($1,'turkce',$2,'TYT',true)`,
+        [questionIds.get(category), category],
+      )
+    }
+    for (const category of socialCategories) {
+      await client.query(
+        `INSERT INTO public.questions(id,game,category,exam_ref,is_active)
+         VALUES ($1,'sosyal',$2,'TYT',true)`,
+        [questionIds.get(category), category],
+      )
+    }
+    for (const category of ydtEnglishCategories) {
+      await client.query(
+        `INSERT INTO public.questions(id,game,category,exam_ref,is_active)
+         VALUES ($1,'wordquest',$2,$3,true)`,
+        [
+          questionIds.get(category),
+          category,
+          category === 'dialogue' ? 'YDT' : category === 'restatement' ? '   ' : null,
+        ],
+      )
+    }
     historicalUser = randomUUID()
     historicalAttempt = randomUUID()
     historicalSession = randomUUID()
     historicalAnswers = fenCategories.map(() => randomUUID())
-    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [historicalUser])
+    await client.query('INSERT INTO public.profiles(id) VALUES($1),($2),($3),($4)', [
+      historicalUser, socialPreparer, socialReviewerOne, socialReviewerTwo,
+    ])
 
     for (const sql of foundationMigrations) await client.query(sql)
+    // Migration 187's permanent question_outcomes guard executes this exact
+    // 164 helper during release sync, so the release fixture uses the real
+    // function definition instead of a permissive test stub.
+    await client.query(curriculumOutcomeScopeValidDefinition)
 
     // Migration 106 owns these tables in the full application schema. This
     // focused fixture keeps only the immutable difficulty/revision lineage and
@@ -157,6 +324,9 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       attempt_id uuid NOT NULL REFERENCES public.verified_attempts(id) ON DELETE RESTRICT,
       question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
       revision_id uuid,
+      game varchar(20),
+      category varchar(30),
+      exam_ref varchar(20),
       difficulty smallint NOT NULL CHECK (difficulty BETWEEN 1 AND 5),
       PRIMARY KEY(attempt_id,question_id)
     );
@@ -166,7 +336,69 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       weight numeric(6,3) NOT NULL CHECK (weight > 0 AND weight <= 1),
       is_primary boolean NOT NULL DEFAULT false,
       PRIMARY KEY(revision_id,outcome_id)
+    );
+    CREATE TABLE public.question_content_revisions (
+      id uuid PRIMARY KEY,
+      question_id uuid NOT NULL REFERENCES public.questions(id) ON DELETE RESTRICT,
+      game text NOT NULL,
+      category text,
+      difficulty smallint NOT NULL,
+      exam_ref text,
+      content_sha256 text NOT NULL,
+      change_kind text NOT NULL,
+      status text NOT NULL,
+      prepared_by uuid REFERENCES public.profiles(id) ON DELETE RESTRICT,
+      outcomes_prepared_by uuid REFERENCES public.profiles(id) ON DELETE RESTRICT,
+      published_at timestamptz
+    );
+    CREATE TABLE public.question_revision_sources (
+      revision_id uuid PRIMARY KEY REFERENCES public.question_content_revisions(id) ON DELETE RESTRICT,
+      source_kind text NOT NULL,
+      license_code text NOT NULL,
+      provenance_ref text
+    );
+    CREATE TABLE public.question_revision_approvals (
+      revision_id uuid NOT NULL REFERENCES public.question_content_revisions(id) ON DELETE RESTRICT,
+      stage smallint NOT NULL,
+      reviewer_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+      decision text NOT NULL,
+      decided_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+      PRIMARY KEY(revision_id,stage)
     )`)
+
+    for (const [index, category] of socialCategories.entries()) {
+      const revisionId = socialRevisionIds.get(category)
+      await client.query(`INSERT INTO public.question_content_revisions(
+        id,question_id,game,category,difficulty,exam_ref,content_sha256,
+        change_kind,status,prepared_by,published_at
+      ) VALUES($1,$2,'sosyal',$3,3,'TYT',$4,'create','published',$5,clock_timestamp())`, [
+        revisionId,
+        questionIds.get(category),
+        category,
+        (index + 1).toString(16).padStart(64, '0'),
+        socialPreparer,
+      ])
+      await client.query(`INSERT INTO public.question_revision_sources(
+        revision_id,source_kind,license_code,provenance_ref
+      ) VALUES($1,'original','BA-INTERNAL',$2)`, [revisionId, `reviewed:sosyal:${category}`])
+      await client.query(`INSERT INTO public.question_revision_approvals(
+        revision_id,stage,reviewer_id,decision
+      ) VALUES($1,1,$2,'approved'),($1,2,$3,'approved')`, [
+        revisionId, socialReviewerOne, socialReviewerTwo,
+      ])
+      await client.query(
+        'UPDATE public.questions SET published_revision_id=$2 WHERE id=$1',
+        [questionIds.get(category), revisionId],
+      )
+    }
+
+    // Seed one completed attempt per exact-scope bank while both registries are
+    // still draft. Completion creates the immutable marker but no evidence;
+    // 190/192 must later repair exactly these rows. The completion-after-replay
+    // attempts are created later, after their mappings exist, so this fixture
+    // exercises the live base/evidence path instead of only historical repair.
+    turkishHistoricalAttempt = await seedScopeAttempt('turkce', turkishCategories, true)
+    socialHistoricalAttempt = await seedScopeAttempt('sosyal', socialCategories, true)
 
     releaseWriterQuestion = randomUUID()
     await client.query(`INSERT INTO public.questions(id,game,category,exam_ref,is_active)
@@ -549,13 +781,252 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     }
     await repairPromise
     if (repairSetupError) throw repairSetupError
+
+    // Build a production-shaped historical YDT English attempt while its
+    // registry scope is still draft. Completion creates the immutable marker,
+    // but correctly has no outcome mapping/evidence to materialize yet.
+    ydtEnglishUser = randomUUID()
+    ydtEnglishAttempt = randomUUID()
+    ydtEnglishSession = randomUUID()
+    ydtEnglishAnswers = ydtEnglishCategories.map(() => randomUUID())
+    ydtEnglishRevisionIds = ydtEnglishCategories.map(() => randomUUID())
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [ydtEnglishUser])
+    await client.query(`INSERT INTO public.game_sessions(id,user_id,client_request_id)
+      VALUES($1,$2,$3)`, [ydtEnglishSession, ydtEnglishUser, randomUUID()])
+    await client.query(`INSERT INTO public.verified_attempts(
+      id,user_id,game,mode,question_ids,duration_sec,expires_at
+    ) VALUES($1,$2,'wordquest','classic',$3,180,clock_timestamp()+interval '1 hour')`, [
+      ydtEnglishAttempt,
+      ydtEnglishUser,
+      ydtEnglishCategories.map((category) => questionIds.get(category)),
+    ])
+    for (const [index, category] of ydtEnglishCategories.entries()) {
+      await client.query(`INSERT INTO public.verified_attempt_question_revisions(
+        attempt_id,question_id,revision_id,game,category,exam_ref,difficulty
+      ) VALUES($1,$2,$3,'wordquest',$4,$5,$6)`, [
+        ydtEnglishAttempt,
+        questionIds.get(category),
+        ydtEnglishRevisionIds[index],
+        category,
+        category === 'dialogue' ? 'YDT' : null,
+        (index % 5) + 1,
+      ])
+      await client.query(`INSERT INTO public.session_answers(
+        id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,question_revision_id,answered_at
+      ) VALUES($1,$2,$3,$4,$5,$6,false,$7,clock_timestamp()-interval '4 hours')`, [
+        ydtEnglishAnswers[index], ydtEnglishSession, ydtEnglishUser,
+        questionIds.get(category), index % 2 === 0, 12 + index, ydtEnglishRevisionIds[index],
+      ])
+    }
+    await client.query(`UPDATE public.verified_attempts
+      SET completed_at=clock_timestamp()-interval '3 hours',session_id=$2
+      WHERE id=$1`, [ydtEnglishAttempt, ydtEnglishSession])
+    preYdtEnglishRelease = (await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS markers,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS attempts`,
+    [ydtEnglishAttempt, ydtEnglishUser])).rows[0]
+
+    // A reviewed manual mapping can be added after an old attempt already has
+    // its immutable marker. Migration 187 preserves that ownership, so 188
+    // must repair it even though it is not taxonomy_auto.
+    const ydtEnglishManualOutcome = (await client.query(
+      "SELECT id FROM public.curriculum_outcomes WHERE code='ENG-VOC-01'",
+    )).rows[0].id
+    await client.query(`INSERT INTO public.question_outcomes(
+      question_id,outcome_id,weight,is_primary,mapping_source
+    ) VALUES($1,$2,1,true,'manual')`, [
+      questionIds.get('vocabulary'), ydtEnglishManualOutcome,
+    ])
+
+    // Start migration 187's transaction before this answer is committed, but
+    // pause it before table locks/mapping creation. question_outcomes.created_at
+    // uses transaction-start NOW(), so the resulting mapping timestamp is at
+    // or before the answer even though the mapping itself is created later.
+    ydtEnglishRaceUser = randomUUID()
+    ydtEnglishRaceAttempt = randomUUID()
+    ydtEnglishRaceSession = randomUUID()
+    ydtEnglishRaceAnswer = randomUUID()
+    ydtEnglishRaceRevision = randomUUID()
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [ydtEnglishRaceUser])
+    await client.query(`INSERT INTO public.game_sessions(id,user_id,client_request_id)
+      VALUES($1,$2,$3)`, [ydtEnglishRaceSession, ydtEnglishRaceUser, randomUUID()])
+    await client.query(`INSERT INTO public.verified_attempts(
+      id,user_id,game,mode,question_ids,duration_sec,expires_at
+    ) VALUES($1,$2,'wordquest','classic',$3,180,clock_timestamp()+interval '1 hour')`, [
+      ydtEnglishRaceAttempt, ydtEnglishRaceUser, [questionIds.get('grammar')],
+    ])
+    await client.query(`INSERT INTO public.verified_attempt_question_revisions(
+      attempt_id,question_id,revision_id,game,category,exam_ref,difficulty
+    ) VALUES($1,$2,$3,'wordquest','grammar',NULL,4)`, [
+      ydtEnglishRaceAttempt, questionIds.get('grammar'), ydtEnglishRaceRevision,
+    ])
+
+    // This fixture intentionally omits the large 106/166 content-governance
+    // schema and loads only 164's real scope validator above. Migration 187's
+    // remaining governance function bodies are compiled and exercised by
+    // question-content-governance-postgres.integration.test.mjs; keep this
+    // fixture focused on release locks, mapping, and evidence repair.
+    await Promise.all([
+      client.query('SET check_function_bodies=off'),
+      releaseClient.query('SET check_function_bodies=off'),
+    ])
+    const ydtBarrierKey = 185186
+    await client.query('SELECT pg_advisory_lock($1)', [ydtBarrierKey])
+    const gatedYdtReleaseMigration = ydtEnglishReleaseMigration.replace(
+      'BEGIN;',
+      `BEGIN;
+       SELECT pg_advisory_lock(${ydtBarrierKey});
+       SELECT pg_advisory_unlock(${ydtBarrierKey});`,
+    )
+    const ydtReleasePromise = releaseClient.query(gatedYdtReleaseMigration)
+    let ydtRaceSetupError
+    try {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const activity = (await client.query(
+          `SELECT wait_event_type,wait_event FROM pg_stat_activity WHERE pid=$1`,
+          [releasePid],
+        )).rows[0]
+        if (activity?.wait_event_type === 'Lock' && /advisory/i.test(activity?.wait_event ?? '')) {
+          ydtReleaseRaceWasBlocked = true
+          break
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      if (!ydtReleaseRaceWasBlocked) throw new Error('YDT release did not reach the pre-lock barrier')
+
+      await completionClient.query('BEGIN')
+      try {
+        await completionClient.query(`INSERT INTO public.session_answers(
+          id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,question_revision_id,answered_at
+        ) VALUES($1,$2,$3,$4,true,9,false,$5,clock_timestamp())`, [
+          ydtEnglishRaceAnswer, ydtEnglishRaceSession, ydtEnglishRaceUser,
+          questionIds.get('grammar'), ydtEnglishRaceRevision,
+        ])
+        await completionClient.query(`UPDATE public.verified_attempts
+          SET completed_at=clock_timestamp(),session_id=$2 WHERE id=$1`, [
+          ydtEnglishRaceAttempt, ydtEnglishRaceSession,
+        ])
+        await completionClient.query('COMMIT')
+      } catch (error) {
+        await completionClient.query('ROLLBACK').catch(() => undefined)
+        throw error
+      }
+      preYdtEnglishRaceRelease = (await client.query(`SELECT
+        (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS markers,
+        (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence,
+        (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS attempts`,
+      [ydtEnglishRaceAttempt, ydtEnglishRaceUser])).rows[0]
+    } catch (error) {
+      ydtRaceSetupError = error
+    } finally {
+      await client.query('SELECT pg_advisory_unlock($1)', [ydtBarrierKey])
+    }
+    await ydtReleasePromise
+    if (ydtRaceSetupError) throw ydtRaceSetupError
+
+    // A completion after 187 sees the taxonomy-owned primary mapping and writes
+    // its immutable marker plus primary evidence. A governed secondary mapping
+    // added before 188 must still be repaired even though the answer is newer
+    // than the release timestamp and the marker prevents rematerialization.
+    ydtEnglishPostReleaseUser = randomUUID()
+    ydtEnglishPostReleaseAttempt = randomUUID()
+    ydtEnglishPostReleaseSession = randomUUID()
+    ydtEnglishPostReleaseAnswer = randomUUID()
+    ydtEnglishPostReleaseRevision = randomUUID()
+    ydtEnglishPostReleaseNode = randomUUID()
+    ydtEnglishPostReleaseOutcome = randomUUID()
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [ydtEnglishPostReleaseUser])
+    await client.query(`INSERT INTO public.game_sessions(id,user_id,client_request_id)
+      VALUES($1,$2,$3)`, [ydtEnglishPostReleaseSession, ydtEnglishPostReleaseUser, randomUUID()])
+    await client.query(`INSERT INTO public.verified_attempts(
+      id,user_id,game,mode,question_ids,duration_sec,expires_at
+    ) VALUES($1,$2,'wordquest','classic',$3,180,clock_timestamp()+interval '1 hour')`, [
+      ydtEnglishPostReleaseAttempt, ydtEnglishPostReleaseUser, [questionIds.get('grammar')],
+    ])
+    await client.query(`INSERT INTO public.verified_attempt_question_revisions(
+      attempt_id,question_id,revision_id,game,category,exam_ref,difficulty
+    ) VALUES($1,$2,$3,'wordquest','grammar',NULL,4)`, [
+      ydtEnglishPostReleaseAttempt, questionIds.get('grammar'), ydtEnglishPostReleaseRevision,
+    ])
+    await client.query(`INSERT INTO public.session_answers(
+      id,session_id,user_id,question_id,is_correct,time_taken_sec,is_fast,question_revision_id,answered_at
+    ) VALUES($1,$2,$3,$4,true,8,false,$5,clock_timestamp())`, [
+      ydtEnglishPostReleaseAnswer, ydtEnglishPostReleaseSession,
+      ydtEnglishPostReleaseUser, questionIds.get('grammar'), ydtEnglishPostReleaseRevision,
+    ])
+    await client.query(`UPDATE public.verified_attempts
+      SET completed_at=clock_timestamp(),session_id=$2 WHERE id=$1`, [
+      ydtEnglishPostReleaseAttempt, ydtEnglishPostReleaseSession,
+    ])
+
+    await client.query(`INSERT INTO public.curriculum_nodes(
+      id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+    ) SELECT $1,'ba-ydt-eng-v1:outcome:grammar-secondary','ba-ydt-eng-v1','wordquest','YDT',
+      'outcome',topic.id,'grammar','Dilbilgisi aktarım becerisi',20,true
+      FROM public.curriculum_nodes AS topic
+      WHERE topic.code='ba-ydt-eng-v1:topic:grammar'`, [ydtEnglishPostReleaseNode])
+    await client.query(`INSERT INTO public.curriculum_outcomes(
+      id,code,game,category,title,description,exam_ref,sort_order,is_active,node_id,taxonomy_version
+    ) VALUES($1,'ENG-GRM-02','wordquest','grammar','Dilbilgisi aktarım becerisi',
+      'Post-release secondary mapping fixture','YDT',21,true,$2,'ba-ydt-eng-v1')`, [
+      ydtEnglishPostReleaseOutcome, ydtEnglishPostReleaseNode,
+    ])
+    preYdtEnglishPostReleaseRepair = (await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS markers,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS attempts,
+      answer.answered_at > release.released_at AS answer_after_release
+      FROM public.session_answers AS answer
+      JOIN public.curriculum_scope_releases AS release
+        ON release.game='wordquest' AND release.display_exam_ref='YDT'
+      WHERE answer.id=$3`, [
+      ydtEnglishPostReleaseAttempt, ydtEnglishPostReleaseUser, ydtEnglishPostReleaseAnswer,
+    ])).rows[0]
+
+    // Hold the new mapping uncommitted before 188 starts. The repair must wait
+    // for that production-shaped writer, then include the committed mapping in
+    // its stable snapshot instead of racing past it.
+    ydtMappingWriterClient = new Client({ connectionString: url })
+    ydtRepairClient = new Client({ connectionString: url })
+    await ydtMappingWriterClient.connect()
+    await ydtRepairClient.connect()
+    await ydtMappingWriterClient.query('BEGIN')
+    await ydtMappingWriterClient.query(`INSERT INTO public.question_outcomes(
+      question_id,outcome_id,weight,is_primary,mapping_source
+    ) VALUES($1,$2,0.5,false,'manual')`, [
+      questionIds.get('grammar'), ydtEnglishPostReleaseOutcome,
+    ])
+    const ydtRepairPid = (await ydtRepairClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
+    const ydtRepairPromise = ydtRepairClient.query(ydtEnglishRepairMigration)
+    let ydtRepairSetupError
+    try {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const activity = (await client.query(
+          `SELECT wait_event_type FROM pg_stat_activity WHERE pid=$1`,
+          [ydtRepairPid],
+        )).rows[0]
+        if (activity?.wait_event_type === 'Lock') {
+          ydtRepairWasBlocked = true
+          break
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      if (!ydtRepairWasBlocked) throw new Error('YDT repair did not drain the in-flight mapping writer')
+    } catch (error) {
+      ydtRepairSetupError = error
+    } finally {
+      await ydtMappingWriterClient.query('COMMIT')
+    }
+    await ydtRepairPromise
+    if (ydtRepairSetupError) throw ydtRepairSetupError
   })
 
   afterAll(async () => {
     await Promise.allSettled([
       client?.end(), releaseClient?.end(), completionClient?.end(), answerWriterClient?.end(),
       questionWriterClient?.end(),
-      repairClient?.end(), inFlightClient?.end(),
+      repairClient?.end(), inFlightClient?.end(), ydtMappingWriterClient?.end(), ydtRepairClient?.end(),
     ])
   })
 
@@ -577,7 +1048,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
       { game: 'matematik', display_exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-math-v1', release_status: 'released', diagnostic_enabled: true, has_released_at: true },
       { game: 'sosyal', display_exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-sosyal-v1', release_status: 'draft', diagnostic_enabled: false, has_released_at: false },
       { game: 'turkce', display_exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-turkce-v1', release_status: 'draft', diagnostic_enabled: false, has_released_at: false },
-      { game: 'wordquest', display_exam_ref: 'YDT', question_exam_ref: null, taxonomy_version: 'ba-ydt-eng-v1', release_status: 'draft', diagnostic_enabled: false, has_released_at: false },
+      { game: 'wordquest', display_exam_ref: 'YDT', question_exam_ref: null, taxonomy_version: 'ba-ydt-eng-v1', release_status: 'released', diagnostic_enabled: false, has_released_at: true },
     ])
   })
 
@@ -990,6 +1461,219 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     )).rows[0].scope).toBeNull()
   })
 
+  it('releases, repairs, and safely replays the YDT English scope', async () => {
+    expect(preYdtEnglishRelease).toEqual({ markers: 1, evidence: 0, attempts: 0 })
+    expect(preYdtEnglishRaceRelease).toEqual({ markers: 1, evidence: 0, attempts: 0 })
+    expect(preYdtEnglishPostReleaseRepair).toEqual({
+      markers: 1, evidence: 1, attempts: 1, answer_after_release: true,
+    })
+    expect(ydtReleaseRaceWasBlocked).toBe(true)
+    expect(ydtRepairWasBlocked).toBe(true)
+
+    const scope = (await client.query(
+      `SELECT public.resolve_released_curriculum_scope('wordquest','ydt') AS scope`,
+    )).rows[0].scope
+    expect(scope).toEqual({
+      game: 'wordquest',
+      displayExamRef: 'YDT',
+      questionExamRef: null,
+      taxonomyVersion: 'ba-ydt-eng-v1',
+      mappingMode: 'category_proxy',
+      diagnosticEnabled: false,
+    })
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.questions
+      WHERE game='wordquest' AND exam_ref IS NOT NULL`,
+    )).rows[0]).toEqual({ count: 0 })
+    expect((await client.query(
+      `SELECT public.curriculum_scope_integrity('wordquest','YDT','ba-ydt-eng-v1') AS result`,
+    )).rows[0].result).toEqual({
+      total: 7,
+      mapped: 7,
+      unmapped: 0,
+      scopeMismatch: 0,
+      nodeOrphan: 0,
+      outcomeOrphan: 0,
+      primaryMismatch: 0,
+      emptyOutcome: 0,
+    })
+    expect((await client.query(`SELECT outcome.code
+      FROM public.question_outcomes AS mapping
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      JOIN public.questions AS question ON question.id=mapping.question_id
+      WHERE question.game='wordquest'
+      ORDER BY outcome.code`)).rows).toEqual([
+      { code: 'ENG-CLZ-01' },
+      { code: 'ENG-DLG-01' },
+      { code: 'ENG-GRM-01' },
+      { code: 'ENG-GRM-02' },
+      { code: 'ENG-PHR-01' },
+      { code: 'ENG-RES-01' },
+      { code: 'ENG-SEN-01' },
+      { code: 'ENG-VOC-01' },
+    ])
+    expect((await client.query(`SELECT mapping.mapping_source,mapping.is_primary
+      FROM public.question_outcomes AS mapping
+      WHERE mapping.question_id=$1`, [questionIds.get('vocabulary')])).rows).toEqual([
+      { mapping_source: 'manual', is_primary: true },
+    ])
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      count(*) FILTER (WHERE is_correct)::integer AS correct,
+      sum(difficulty_weighted_earned)::integer AS earned,
+      sum(difficulty_weighted_possible)::integer AS possible
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$1`,
+    [ydtEnglishAttempt])).rows[0]).toEqual({ evidence: 8, correct: 5, earned: 13, possible: 20 })
+    expect((await client.query(`SELECT
+      sum(attempts)::integer AS attempts,
+      sum(correct_attempts)::integer AS correct_attempts,
+      sum(v2_attempts)::integer AS v2_attempts,
+      sum(timed_attempts)::integer AS timed_attempts,
+      sum(total_time_sec)::integer AS total_time_sec
+      FROM public.user_outcome_state WHERE user_id=$1`, [ydtEnglishUser])).rows[0]).toEqual({
+      attempts: 8,
+      correct_attempts: 5,
+      v2_attempts: 8,
+      timed_attempts: 8,
+      total_time_sec: 119,
+    })
+    expect((await client.query(`SELECT
+      count(evidence.*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts,
+      count(*) FILTER (WHERE mapping.created_at <= answer.answered_at)::integer AS mapping_at_or_before_answer,
+      count(*) FILTER (WHERE mapping.created_at > answer.answered_at)::integer AS mapping_after_answer
+      FROM public.mastery_outcome_evidence AS evidence
+      JOIN public.session_answers AS answer ON answer.id=evidence.answer_id
+      JOIN public.question_outcomes AS mapping
+        ON mapping.question_id=evidence.question_id AND mapping.outcome_id=evidence.outcome_id
+      WHERE evidence.attempt_id=$2`, [
+      ydtEnglishRaceUser, ydtEnglishRaceAttempt,
+    ])).rows[0]).toEqual({
+      evidence: 2,
+      attempts: 2,
+      v2_attempts: 2,
+      mapping_at_or_before_answer: 1,
+      mapping_after_answer: 1,
+    })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts,
+      count(*) FILTER (WHERE outcome_id=$3)::integer AS repaired_secondary
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
+      ydtEnglishPostReleaseUser, ydtEnglishPostReleaseAttempt, ydtEnglishPostReleaseOutcome,
+    ])).rows[0]).toEqual({ evidence: 2, attempts: 2, v2_attempts: 2, repaired_secondary: 1 })
+    expect((await client.query(`SELECT candidate_attempts,candidate_answers,
+      candidate_evidence_rows,inserted_evidence_rows,affected_users,
+      manual_mapping_rows,mapping_at_or_before_answer_rows,mapping_after_answer_rows
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'
+      ORDER BY repaired_at,run_id LIMIT 1`)).rows[0]).toEqual({
+      candidate_attempts: 3,
+      candidate_answers: 9,
+      candidate_evidence_rows: 11,
+      inserted_evidence_rows: 11,
+      affected_users: 3,
+      manual_mapping_rows: 4,
+      mapping_at_or_before_answer_rows: 1,
+      mapping_after_answer_rows: 10,
+    })
+
+    // The secondary outcome has now proven the post-release repair path. Retire
+    // it before replaying the category-proxy release, whose contract requires
+    // one active outcome per category. Persisted evidence/state remain intact.
+    await client.query(`DELETE FROM public.question_outcomes
+      WHERE question_id=$1 AND outcome_id=$2`, [
+      questionIds.get('grammar'), ydtEnglishPostReleaseOutcome,
+    ])
+    await client.query('UPDATE public.curriculum_outcomes SET is_active=false WHERE id=$1', [
+      ydtEnglishPostReleaseOutcome,
+    ])
+    await client.query('UPDATE public.curriculum_nodes SET is_active=false WHERE id=$1', [
+      ydtEnglishPostReleaseNode,
+    ])
+
+    await client.query(ydtEnglishReleaseMigration)
+    await client.query(ydtEnglishRepairMigration)
+    expect((await client.query(`SELECT candidate_evidence_rows,inserted_evidence_rows
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'
+      ORDER BY repaired_at DESC,run_id DESC LIMIT 1`)).rows[0]).toEqual({
+      candidate_evidence_rows: 0,
+      inserted_evidence_rows: 0,
+    })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
+      ydtEnglishUser, ydtEnglishAttempt,
+    ])).rows[0]).toEqual({ evidence: 8, attempts: 8, v2_attempts: 8 })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
+      ydtEnglishRaceUser, ydtEnglishRaceAttempt,
+    ])).rows[0]).toEqual({ evidence: 2, attempts: 2, v2_attempts: 2 })
+    expect((await client.query(`SELECT
+      count(*)::integer AS evidence,
+      (SELECT sum(attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS attempts,
+      (SELECT sum(v2_attempts)::integer FROM public.user_outcome_state WHERE user_id=$1) AS v2_attempts
+      FROM public.mastery_outcome_evidence WHERE attempt_id=$2`, [
+      ydtEnglishPostReleaseUser, ydtEnglishPostReleaseAttempt,
+    ])).rows[0]).toEqual({ evidence: 2, attempts: 2, v2_attempts: 2 })
+
+    const futureQuestion = randomUUID()
+    await client.query(`INSERT INTO public.questions(id,game,category,exam_ref,is_active)
+      VALUES($1,'wordquest','vocabulary','YDT',true)`, [futureQuestion])
+    expect((await client.query(
+      'SELECT exam_ref FROM public.questions WHERE id=$1', [futureQuestion],
+    )).rows[0]).toEqual({ exam_ref: null })
+    await client.query(`UPDATE public.questions SET exam_ref='TYT' WHERE id=$1`, [futureQuestion])
+    expect((await client.query(
+      'SELECT exam_ref FROM public.questions WHERE id=$1', [futureQuestion],
+    )).rows[0]).toEqual({ exam_ref: null })
+    expect((await client.query(`SELECT outcome.code
+      FROM public.question_outcomes AS mapping
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      WHERE mapping.question_id=$1`, [futureQuestion])).rows).toEqual([{ code: 'ENG-VOC-01' }])
+    await expect(client.query(
+      `UPDATE public.questions SET category='unknown_ydt_category' WHERE id=$1`, [futureQuestion],
+    )).rejects.toMatchObject({ code: '22023' })
+
+    const runsBeforeNoOp = (await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'`)).rows[0].count
+    await client.query(`UPDATE public.curriculum_scope_releases SET release_status='retired'
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)
+    await client.query(ydtEnglishReleaseMigration)
+    await client.query(ydtEnglishRepairMigration)
+    expect((await client.query(`SELECT release_status FROM public.curriculum_scope_releases
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)).rows[0]).toEqual({ release_status: 'retired' })
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'`)).rows[0].count).toBe(runsBeforeNoOp)
+
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET release_status='released',taxonomy_version='ba-ydt-eng-v2'
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)
+    await client.query(ydtEnglishReleaseMigration)
+    await client.query(ydtEnglishRepairMigration)
+    expect((await client.query(`SELECT release_status,taxonomy_version
+      FROM public.curriculum_scope_releases WHERE game='wordquest' AND display_exam_ref='YDT'`)).rows[0]).toEqual({
+      release_status: 'released', taxonomy_version: 'ba-ydt-eng-v2',
+    })
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key='188_ydt_english_complete_mappings_v1'`)).rows[0].count).toBe(runsBeforeNoOp)
+
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET taxonomy_version='ba-ydt-eng-v1'
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)
+  })
+
   it('maps future released Fen questions, ignores draft scopes, and fails closed on unknown Fen categories', async () => {
     const futureFen = randomUUID()
     const futureTurkish = randomUUID()
@@ -1012,10 +1696,592 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     )).rows[0].category).toBe('fizik')
   })
 
+  it('fails closed on an active TYT literature question without leaving a Turkish v2 cutover trace', async () => {
+    const literatureQuestion = randomUUID()
+    await client.query(`INSERT INTO public.questions(id,game,category,exam_ref,is_active)
+      VALUES($1,'turkce','edebiyat','TYT',true)`, [literatureQuestion])
+    const before = (await client.query(`SELECT
+      (SELECT jsonb_build_object('taxonomy',taxonomy_version,'status',release_status,'releasedAt',released_at)
+       FROM public.curriculum_scope_releases
+       WHERE game='turkce' AND display_exam_ref='TYT') AS registry,
+      (SELECT to_regclass('public.curriculum_scope_release_history') IS NOT NULL) AS has_history,
+      (SELECT count(*)::integer FROM public.curriculum_nodes
+       WHERE taxonomy_version='ba-tyt-turkce-v2') AS v2_nodes,
+      (SELECT count(*)::integer FROM public.curriculum_outcomes
+       WHERE taxonomy_version='ba-tyt-turkce-v2') AS v2_outcomes`)).rows[0]
+
+    try {
+      await expect(client.query(turkishReleaseMigration)).rejects.toMatchObject({ code: '22023' })
+    } finally {
+      await client.query('ROLLBACK')
+    }
+
+    const after = (await client.query(`SELECT
+      (SELECT jsonb_build_object('taxonomy',taxonomy_version,'status',release_status,'releasedAt',released_at)
+       FROM public.curriculum_scope_releases
+       WHERE game='turkce' AND display_exam_ref='TYT') AS registry,
+      (SELECT to_regclass('public.curriculum_scope_release_history') IS NOT NULL) AS has_history,
+      (SELECT count(*)::integer FROM public.curriculum_nodes
+       WHERE taxonomy_version='ba-tyt-turkce-v2') AS v2_nodes,
+      (SELECT count(*)::integer FROM public.curriculum_outcomes
+       WHERE taxonomy_version='ba-tyt-turkce-v2') AS v2_outcomes`)).rows[0]
+    expect(after).toEqual(before)
+    await client.query('DELETE FROM public.questions WHERE id=$1', [literatureQuestion])
+  })
+
+  it('refuses an already released Turkish v1 registry without creating history or v2 graph rows', async () => {
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET release_status='released',released_at=clock_timestamp()
+      WHERE game='turkce' AND display_exam_ref='TYT'
+        AND taxonomy_version='ba-tyt-turkce-v1'`)
+    const before = (await client.query(`SELECT
+      (SELECT jsonb_build_object('taxonomy',taxonomy_version,'status',release_status,'releasedAt',released_at)
+       FROM public.curriculum_scope_releases
+       WHERE game='turkce' AND display_exam_ref='TYT') AS registry,
+      (SELECT to_regclass('public.curriculum_scope_release_history') IS NOT NULL) AS has_history,
+      (SELECT count(*)::integer FROM public.curriculum_nodes
+       WHERE taxonomy_version='ba-tyt-turkce-v2') AS v2_nodes,
+      (SELECT count(*)::integer FROM public.curriculum_outcomes
+       WHERE taxonomy_version='ba-tyt-turkce-v2') AS v2_outcomes`)).rows[0]
+
+    try {
+      await expect(client.query(turkishReleaseMigration)).rejects.toMatchObject({ code: '55000' })
+    } finally {
+      await client.query('ROLLBACK')
+    }
+
+    const after = (await client.query(`SELECT
+      (SELECT jsonb_build_object('taxonomy',taxonomy_version,'status',release_status,'releasedAt',released_at)
+       FROM public.curriculum_scope_releases
+       WHERE game='turkce' AND display_exam_ref='TYT') AS registry,
+      (SELECT to_regclass('public.curriculum_scope_release_history') IS NOT NULL) AS has_history,
+      (SELECT count(*)::integer FROM public.curriculum_nodes
+       WHERE taxonomy_version='ba-tyt-turkce-v2') AS v2_nodes,
+      (SELECT count(*)::integer FROM public.curriculum_outcomes
+       WHERE taxonomy_version='ba-tyt-turkce-v2') AS v2_outcomes`)).rows[0]
+    expect(after).toEqual(before)
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET release_status='draft',released_at=NULL
+      WHERE game='turkce' AND display_exam_ref='TYT'
+        AND taxonomy_version='ba-tyt-turkce-v1'`)
+  })
+
+  it('blocks exact-scope release on missing markers or immutable snapshot drift', async () => {
+    const cases = [
+      { game: 'turkce', category: 'paragraf', provenance: 'missing', migration: turkishReleaseMigration },
+      { game: 'turkce', category: 'paragraf', provenance: 'exam', migration: turkishReleaseMigration },
+    ]
+
+    for (const releaseCase of cases) {
+      const seed = await seedScopeAttempt(
+        releaseCase.game,
+        [releaseCase.category],
+        true,
+        releaseCase.provenance,
+      )
+      try {
+        await expect(client.query(releaseCase.migration)).rejects.toMatchObject({ code: '23514' })
+      } finally {
+        await client.query('ROLLBACK')
+        await cleanupScopeAttempt(seed)
+      }
+      expect((await client.query(`SELECT release_status
+        FROM public.curriculum_scope_releases
+        WHERE game=$1 AND display_exam_ref='TYT'`, [releaseCase.game])).rows[0].release_status).toBe('draft')
+    }
+
+    const markerGap = await seedScopeAttempt('turkce', ['paragraf'], true)
+    await client.query('DELETE FROM public.mastery_materialized_attempts WHERE attempt_id=$1', [markerGap.attempt])
+    try {
+      await expect(client.query(turkishReleaseMigration)).rejects.toMatchObject({ code: '23514' })
+    } finally {
+      await client.query('ROLLBACK')
+      await cleanupScopeAttempt(markerGap)
+    }
+    expect((await client.query(`SELECT release_status
+      FROM public.curriculum_scope_releases
+      WHERE game='turkce' AND display_exam_ref='TYT'`)).rows[0].release_status).toBe('draft')
+  })
+
+  it('keeps Social draft and makes repair a no-op when a required category is empty', async () => {
+    const religionQuestion = questionIds.get('din_kulturu')
+    await client.query('UPDATE public.questions SET is_active=false WHERE id=$1', [religionQuestion])
+    try {
+      await client.query(socialReleaseMigration)
+      await client.query(socialRepairMigration)
+
+      expect((await client.query(`SELECT release_status,diagnostic_enabled,released_at
+        FROM public.curriculum_scope_releases
+        WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0]).toEqual({
+        release_status: 'draft',
+        diagnostic_enabled: false,
+        released_at: null,
+      })
+      expect((await client.query(
+        `SELECT public.resolve_released_curriculum_scope('sosyal','TYT') AS scope`,
+      )).rows[0].scope).toBeNull()
+      expect((await client.query(`SELECT count(*)::integer AS total
+        FROM public.curriculum_scope_evidence_repair_runs
+        WHERE repair_key='192_tyt_sosyal_complete_mappings_v1'`)).rows[0].total).toBe(0)
+    } finally {
+      await client.query('UPDATE public.questions SET is_active=true WHERE id=$1', [religionQuestion])
+    }
+  })
+
+  it('does not let one Din Kulturu row or legacy source metadata open Social', async () => {
+    const mutationSnapshot = async () => (await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.question_outcomes mapping
+       JOIN public.questions question ON question.id=mapping.question_id
+       WHERE question.game='sosyal') AS mappings,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence evidence
+       JOIN public.questions question ON question.id=evidence.question_id
+       WHERE question.game='sosyal') AS evidence,
+      (SELECT count(*)::integer FROM public.curriculum_scope_evidence_repair_runs
+       WHERE repair_key='192_tyt_sosyal_complete_mappings_v1') AS repair_runs`)).rows[0]
+
+    const beforeSingle = await mutationSnapshot()
+    await client.query(socialReleaseMigration)
+    await client.query(socialRepairMigration)
+    expect(await mutationSnapshot()).toEqual(beforeSingle)
+    expect((await client.query(`SELECT release_status,diagnostic_enabled,released_at
+      FROM public.curriculum_scope_releases
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0]).toEqual({
+      release_status: 'draft', diagnostic_enabled: false, released_at: null,
+    })
+    expect((await client.query(`SELECT public.tyt_social_source_policy_integrity(
+      'sosyal','TYT','ba-tyt-sosyal-v1'
+    ) AS evidence`)).rows[0].evidence).toMatchObject({
+      policyVersion: 'social-human-source-v1',
+      minimumDinKulturuQuestions: 2,
+      categoryGap: 1,
+      activeQuestionCount: 5,
+      approvedQuestionCount: 5,
+      sourceReady: false,
+      candidatePolicyReady: false,
+      ready: false,
+    })
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_source_policy_evidence
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0].count).toBe(0)
+
+    await client.query(`INSERT INTO public.questions(
+      id,game,category,difficulty,exam_ref,is_active
+    ) VALUES($1,'sosyal','din_kulturu',3,'TYT',true)`, [
+      socialSecondReligionQuestion,
+    ])
+    await client.query(`INSERT INTO public.question_content_revisions(
+      id,question_id,game,category,difficulty,exam_ref,content_sha256,
+      change_kind,status,prepared_by,published_at
+    ) VALUES($1,$2,'sosyal','din_kulturu',3,'TYT',$3,
+      'legacy_import','published',NULL,clock_timestamp())`, [
+      socialSecondReligionRevision, socialSecondReligionQuestion, 'f'.repeat(64),
+    ])
+    await client.query(`INSERT INTO public.question_revision_sources(
+      revision_id,source_kind,license_code,provenance_ref
+    ) VALUES($1,'original','legacy-import',$2)`, [
+      socialSecondReligionRevision, `legacy:${socialSecondReligionQuestion}`,
+    ])
+    await client.query('UPDATE public.questions SET published_revision_id=$2 WHERE id=$1', [
+      socialSecondReligionQuestion, socialSecondReligionRevision,
+    ])
+
+    const beforeLegacy = await mutationSnapshot()
+    await client.query(socialReleaseMigration)
+    await client.query(socialRepairMigration)
+    expect(await mutationSnapshot()).toEqual(beforeLegacy)
+    expect((await client.query(`SELECT release_status,diagnostic_enabled
+      FROM public.curriculum_scope_releases
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0]).toEqual({
+      release_status: 'draft', diagnostic_enabled: false,
+    })
+    expect((await client.query(`SELECT public.tyt_social_source_policy_integrity(
+      'sosyal','TYT','ba-tyt-sosyal-v1'
+    ) AS evidence`)).rows[0].evidence).toMatchObject({
+      categoryGap: 0,
+      activeQuestionCount: 6,
+      approvedQuestionCount: 5,
+      unapprovedQuestionCount: 1,
+      sourceReady: false,
+      candidatePolicyReady: false,
+      ready: false,
+    })
+
+    // Leave the bank ready for the next release test, but do not publish here:
+    // the next migration execution must independently recompute and persist the
+    // exact manifest rather than trusting fixture state.
+    await client.query(`UPDATE public.question_content_revisions
+      SET change_kind='create',prepared_by=$2
+      WHERE id=$1`, [socialSecondReligionRevision, socialPreparer])
+    await client.query(`UPDATE public.question_revision_sources
+      SET license_code='BA-INTERNAL',provenance_ref='reviewed:sosyal:din-kulturu-2'
+      WHERE revision_id=$1`, [socialSecondReligionRevision])
+    await client.query(`INSERT INTO public.question_revision_approvals(
+      revision_id,stage,reviewer_id,decision
+    ) VALUES($1,1,$2,'approved'),($1,2,$3,'approved')`, [
+      socialSecondReligionRevision, socialReviewerOne, socialReviewerTwo,
+    ])
+    expect((await client.query(`SELECT public.tyt_social_source_policy_integrity(
+      'sosyal','TYT','ba-tyt-sosyal-v1'
+    ) AS evidence`)).rows[0].evidence).toMatchObject({
+      categoryGap: 0,
+      activeQuestionCount: 6,
+      approvedQuestionCount: 6,
+      unapprovedQuestionCount: 0,
+      sourceReady: true,
+      candidatePolicyVersion: null,
+      candidatePolicyReady: false,
+      candidatePolicyReason: 'candidate-exam-category-policy-missing',
+      ready: false,
+    })
+
+    const beforeGovernedBank = await mutationSnapshot()
+    await client.query(socialReleaseMigration)
+    await client.query(socialRepairMigration)
+    expect(await mutationSnapshot()).toEqual(beforeGovernedBank)
+    expect((await client.query(`SELECT release_status,diagnostic_enabled,released_at
+      FROM public.curriculum_scope_releases
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0]).toEqual({
+      release_status: 'draft', diagnostic_enabled: false, released_at: null,
+    })
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_source_policy_evidence
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0].count).toBe(0)
+  })
+
+  it('releases exact TYT Turkish while keeping governed Social hard-draft without candidate policy', async () => {
+    const preRelease = await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS turkish_markers,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS turkish_evidence,
+      (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$2) AS social_markers,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$2) AS social_evidence`, [
+      turkishHistoricalAttempt.attempt, socialHistoricalAttempt.attempt,
+    ])
+    expect(preRelease.rows[0]).toEqual({
+      turkish_markers: 1,
+      turkish_evidence: 0,
+      social_markers: 1,
+      social_evidence: 0,
+    })
+    const v1OutcomeId = (await client.query(`SELECT id FROM public.curriculum_outcomes
+      WHERE code='TUR-PAR-01'`)).rows[0].id
+    await client.query(`INSERT INTO public.mastery_outcome_evidence(
+      answer_id,outcome_id,user_id,question_id,session_id,attempt_id,is_correct,
+      mapping_weight,difficulty,difficulty_weighted_earned,difficulty_weighted_possible,
+      time_taken_sec,fast_wrong,max_hint_stage,delayed_correct,base_already_recorded
+    ) VALUES($1,$2,$3,$4,$5,$6,true,1,1,1,1,12,false,0,false,true)`, [
+      turkishHistoricalAttempt.answers[0], v1OutcomeId, turkishHistoricalAttempt.user,
+      questionIds.get('paragraf'), turkishHistoricalAttempt.session,
+      turkishHistoricalAttempt.attempt,
+    ])
+    await client.query(`INSERT INTO public.user_outcome_state(
+      user_id,outcome_id,attempts,correct_attempts,weighted_earned,weighted_possible,
+      delayed_correct,last_answered_at
+    ) VALUES($1,$2,1,1,1,1,0,clock_timestamp()-interval '4 hours')`, [
+      turkishHistoricalAttempt.user, v1OutcomeId,
+    ])
+    const v1EvidenceBeforeCutover = (await client.query(`SELECT evidence.answer_id,
+      outcome.code,evidence.attempt_id,evidence.is_correct,evidence.mapping_weight,
+      evidence.difficulty,evidence.difficulty_weighted_earned,evidence.difficulty_weighted_possible,
+      state.attempts,state.correct_attempts,state.weighted_earned,state.weighted_possible
+      FROM public.mastery_outcome_evidence AS evidence
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=evidence.outcome_id
+      JOIN public.user_outcome_state AS state
+        ON state.user_id=evidence.user_id AND state.outcome_id=evidence.outcome_id
+      WHERE evidence.answer_id=$1 AND outcome.code='TUR-PAR-01'`, [
+      turkishHistoricalAttempt.answers[0],
+    ])).rows
+    expect(v1EvidenceBeforeCutover).toHaveLength(1)
+    const scopeTotals = Object.fromEntries((await client.query(`SELECT game,count(*)::integer AS total
+      FROM public.questions
+      WHERE game IN ('turkce','sosyal') AND is_active
+      GROUP BY game ORDER BY game`)).rows.map((row) => [row.game, row.total]))
+
+    await client.query(turkishReleaseMigration)
+    await client.query(turkishRepairMigration)
+    await client.query(socialReleaseMigration)
+    await client.query(socialRepairMigration)
+
+    const scopes = (await client.query(`SELECT game,display_exam_ref,question_exam_ref,
+      taxonomy_version,release_status,diagnostic_enabled,(released_at IS NOT NULL) AS has_released_at
+      FROM public.curriculum_scope_releases
+      WHERE game IN ('turkce','sosyal') ORDER BY game`)).rows
+    expect(scopes).toEqual([
+      { game: 'sosyal', display_exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-sosyal-v1', release_status: 'draft', diagnostic_enabled: false, has_released_at: false },
+      { game: 'turkce', display_exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-turkce-v2', release_status: 'released', diagnostic_enabled: false, has_released_at: true },
+    ])
+    expect((await client.query(`SELECT game,display_exam_ref,taxonomy_version,
+      release_status,transition_reason
+      FROM public.curriculum_scope_release_history
+      WHERE game='turkce' AND display_exam_ref='TYT'`)).rows).toEqual([{
+      game: 'turkce',
+      display_exam_ref: 'TYT',
+      taxonomy_version: 'ba-tyt-turkce-v1',
+      release_status: 'draft',
+      transition_reason: '189_tyt_turkce_v2_cutover',
+    }])
+    expect((await client.query(`SELECT evidence.answer_id,outcome.code,evidence.attempt_id,
+      evidence.is_correct,evidence.mapping_weight,evidence.difficulty,
+      evidence.difficulty_weighted_earned,evidence.difficulty_weighted_possible,
+      state.attempts,state.correct_attempts,state.weighted_earned,state.weighted_possible
+      FROM public.mastery_outcome_evidence AS evidence
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=evidence.outcome_id
+      JOIN public.user_outcome_state AS state
+        ON state.user_id=evidence.user_id AND state.outcome_id=evidence.outcome_id
+      WHERE evidence.answer_id=$1 AND outcome.code='TUR-PAR-01'`, [
+      turkishHistoricalAttempt.answers[0],
+    ])).rows).toEqual(v1EvidenceBeforeCutover)
+
+    for (const [game, taxonomyVersion, total] of [
+      ['turkce', 'ba-tyt-turkce-v2', scopeTotals.turkce],
+    ]) {
+      expect((await client.query(
+        `SELECT public.resolve_released_curriculum_scope($1,'TYT') AS scope`, [game],
+      )).rows[0].scope).toEqual({
+        game,
+        displayExamRef: 'TYT',
+        questionExamRef: 'TYT',
+        taxonomyVersion,
+        mappingMode: 'category_proxy',
+        diagnosticEnabled: false,
+      })
+      expect((await client.query(
+        `SELECT public.curriculum_scope_integrity($1,'TYT',$2) AS result`, [game, taxonomyVersion],
+      )).rows[0].result).toEqual({
+        total,
+        mapped: total,
+        unmapped: 0,
+        scopeMismatch: 0,
+        nodeOrphan: 0,
+        outcomeOrphan: 0,
+        primaryMismatch: 0,
+        emptyOutcome: 0,
+      })
+    }
+    expect((await client.query(
+      `SELECT public.resolve_released_curriculum_scope('sosyal','TYT') AS scope`,
+    )).rows[0].scope).toBeNull()
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_source_policy_evidence
+      WHERE game='sosyal' AND display_exam_ref='TYT'
+        AND taxonomy_version='ba-tyt-sosyal-v1'
+        AND source_policy_version='social-human-source-v1'`)).rows[0].count).toBe(0)
+
+    expect((await client.query(`SELECT question.category AS question_category,
+      outcome.category AS outcome_category,
+      outcome.code,mapping.mapping_source,mapping.is_primary
+      FROM public.questions AS question
+      JOIN public.question_outcomes AS mapping ON mapping.question_id=question.id
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      WHERE question.game='turkce' AND question.id = ANY($1::uuid[])
+      ORDER BY question.category, outcome.code`, [turkishCategories.map((category) => questionIds.get(category))])).rows).toEqual([
+      { question_category: 'anlam_bilgisi', outcome_category: 'anlam_bilgisi', code: 'TUR2-ANL-01', mapping_source: 'taxonomy_auto', is_primary: true },
+      { question_category: 'dil_bilgisi', outcome_category: 'dil_bilgisi', code: 'TUR2-DIL-01', mapping_source: 'taxonomy_auto', is_primary: true },
+      { question_category: 'paragraf', outcome_category: 'paragraf', code: 'TUR2-PAR-01', mapping_source: 'taxonomy_auto', is_primary: true },
+      { question_category: 'sozcuk', outcome_category: 'sozcuk', code: 'TUR2-SOZ-01', mapping_source: 'taxonomy_auto', is_primary: true },
+      { question_category: 'yazim_kurallari', outcome_category: 'yazim_kurallari', code: 'TUR2-YAZ-01', mapping_source: 'taxonomy_auto', is_primary: true },
+    ])
+    expect((await client.query(`SELECT question.category,outcome.code,mapping.mapping_source,mapping.is_primary
+      FROM public.questions AS question
+      JOIN public.question_outcomes AS mapping ON mapping.question_id=question.id
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      WHERE question.game='sosyal' ORDER BY question.category`)).rows).toEqual([])
+
+    expect((await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS turkish_evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS turkish_attempts,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$3) AS social_evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$4) AS social_attempts`, [
+      turkishHistoricalAttempt.attempt, turkishHistoricalAttempt.user,
+      socialHistoricalAttempt.attempt, socialHistoricalAttempt.user,
+    ])).rows[0]).toEqual({
+      turkish_evidence: 6,
+      turkish_attempts: 6,
+      social_evidence: 0,
+      social_attempts: 0,
+    })
+    expect((await client.query(`SELECT candidate_attempts,candidate_answers,
+      candidate_evidence_rows,inserted_evidence_rows,affected_users,
+      manual_mapping_rows,mapping_at_or_before_answer_rows,mapping_after_answer_rows
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key IN ('190_tyt_turkce_complete_mappings_v2','192_tyt_sosyal_complete_mappings_v1')
+      ORDER BY repair_key`)).rows).toEqual([
+      { candidate_attempts: 1, candidate_answers: 5, candidate_evidence_rows: 5, inserted_evidence_rows: 5, affected_users: 1, manual_mapping_rows: 0, mapping_at_or_before_answer_rows: 0, mapping_after_answer_rows: 5 },
+    ])
+
+    // Turkish mapping is live, while Social remains deliberately unmapped.
+    // This pair proves that the same answer traffic cannot bypass the hard
+    // candidate-policy gate through the legacy base materializer.
+    turkishCompletionAfterReleaseAttempt = await seedScopeAttempt('turkce', turkishCategories, false)
+    socialCompletionAfterReleaseAttempt = await seedScopeAttempt('sosyal', socialCategories, false)
+    // seedScopeAttempt backdates answers to model historical repair candidates.
+    // These two attempts are intentionally post-release, so their immutable
+    // answer timestamp must also be after the taxonomy-auto mapping timestamp;
+    // otherwise the v2 materializer correctly treats the base row as absent
+    // and the fixture double-counts an impossible chronology.
+    await client.query(`UPDATE public.session_answers SET answered_at=clock_timestamp()
+      WHERE session_id IN ($1,$2)`, [
+      turkishCompletionAfterReleaseAttempt.session,
+      socialCompletionAfterReleaseAttempt.session,
+    ])
+    expect((await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$1) AS turkish_markers,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS turkish_evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS turkish_attempts,
+      (SELECT count(*)::integer FROM public.mastery_materialized_attempts WHERE attempt_id=$3) AS social_markers,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$3) AS social_evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$4) AS social_attempts`, [
+      turkishCompletionAfterReleaseAttempt.attempt, turkishCompletionAfterReleaseAttempt.user,
+      socialCompletionAfterReleaseAttempt.attempt, socialCompletionAfterReleaseAttempt.user,
+    ])).rows[0]).toEqual({
+      turkish_markers: 0,
+      turkish_evidence: 0,
+      turkish_attempts: 5,
+      social_markers: 0,
+      social_evidence: 0,
+      social_attempts: 0,
+    })
+
+    // Replay both migrations while the attempts are incomplete. Turkish adds
+    // evidence on completion; Social must remain evidence-free and its repair
+    // migration must remain a mutation-free no-op.
+    await client.query(turkishReleaseMigration)
+    await client.query(turkishRepairMigration)
+    await client.query(socialReleaseMigration)
+    await client.query(socialRepairMigration)
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_release_history
+      WHERE game='turkce' AND display_exam_ref='TYT'
+        AND taxonomy_version='ba-tyt-turkce-v1'
+        AND transition_reason='189_tyt_turkce_v2_cutover'`)).rows[0].count).toBe(1)
+    await client.query(`UPDATE public.verified_attempts
+      SET completed_at=clock_timestamp(),session_id=$2 WHERE id=$1`, [
+      turkishCompletionAfterReleaseAttempt.attempt, turkishCompletionAfterReleaseAttempt.session,
+    ])
+    await client.query(`UPDATE public.verified_attempts
+      SET completed_at=clock_timestamp(),session_id=$2 WHERE id=$1`, [
+      socialCompletionAfterReleaseAttempt.attempt, socialCompletionAfterReleaseAttempt.session,
+    ])
+
+    const repairRunsBeforeFinalReplay = (await client.query(`SELECT repair_key,count(*)::integer AS count
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key IN ('190_tyt_turkce_complete_mappings_v2','192_tyt_sosyal_complete_mappings_v1')
+      GROUP BY repair_key ORDER BY repair_key`)).rows
+    await client.query(turkishRepairMigration)
+    await client.query(socialRepairMigration)
+    expect((await client.query(`SELECT repair_key,candidate_attempts,candidate_answers,
+      candidate_evidence_rows,inserted_evidence_rows,affected_users
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key IN ('190_tyt_turkce_complete_mappings_v2','192_tyt_sosyal_complete_mappings_v1')
+      ORDER BY repaired_at DESC,run_id DESC LIMIT 2`)).rows).toEqual([
+      { repair_key: '190_tyt_turkce_complete_mappings_v2', candidate_attempts: 0, candidate_answers: 0, candidate_evidence_rows: 0, inserted_evidence_rows: 0, affected_users: 0 },
+      { repair_key: '190_tyt_turkce_complete_mappings_v2', candidate_attempts: 0, candidate_answers: 0, candidate_evidence_rows: 0, inserted_evidence_rows: 0, affected_users: 0 },
+    ])
+    expect((await client.query(`SELECT repair_key,count(*)::integer AS count
+      FROM public.curriculum_scope_evidence_repair_runs
+      WHERE repair_key IN ('190_tyt_turkce_complete_mappings_v2','192_tyt_sosyal_complete_mappings_v1')
+      GROUP BY repair_key ORDER BY repair_key`)).rows).toEqual(repairRunsBeforeFinalReplay.map((row) => ({
+      repair_key: row.repair_key,
+      count: row.count + 1,
+    })))
+    expect((await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$1) AS turkish_evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$2) AS turkish_attempts,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence WHERE attempt_id=$3) AS social_evidence,
+      (SELECT COALESCE(sum(attempts),0)::integer FROM public.user_outcome_state WHERE user_id=$4) AS social_attempts`, [
+      turkishCompletionAfterReleaseAttempt.attempt, turkishCompletionAfterReleaseAttempt.user,
+      socialCompletionAfterReleaseAttempt.attempt, socialCompletionAfterReleaseAttempt.user,
+    ])).rows[0]).toEqual({
+      turkish_evidence: 5,
+      turkish_attempts: 5,
+      social_evidence: 0,
+      social_attempts: 0,
+    })
+  })
+
+  it('enforces append-only Social source-policy evidence without persisting fixture rows', async () => {
+    for (const operation of ['UPDATE', 'DELETE']) {
+      await client.query('BEGIN')
+      try {
+        await client.query(`INSERT INTO public.curriculum_scope_source_policy_evidence(
+          game,display_exam_ref,taxonomy_version,source_policy_version,
+          evidence_sha256,evidence_manifest,approved_question_count,required_category_count
+        ) VALUES('sosyal','TYT','ba-tyt-sosyal-v1','social-human-source-v1',$1,$2::jsonb,6,5)`, [
+          operation === 'UPDATE' ? 'a'.repeat(64) : 'b'.repeat(64),
+          JSON.stringify([{ fixture: operation.toLowerCase() }]),
+        ])
+        if (operation === 'UPDATE') {
+          await expect(client.query(`UPDATE public.curriculum_scope_source_policy_evidence
+            SET approved_question_count=approved_question_count+1
+            WHERE game='sosyal' AND display_exam_ref='TYT'`)).rejects.toMatchObject({ code: '55000' })
+        } else {
+          await expect(client.query(`DELETE FROM public.curriculum_scope_source_policy_evidence
+            WHERE game='sosyal' AND display_exam_ref='TYT'`)).rejects.toMatchObject({ code: '55000' })
+        }
+      } finally {
+        await client.query('ROLLBACK')
+      }
+    }
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_source_policy_evidence
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0].count).toBe(0)
+  })
+
+  it('withdraws a stale released Social row when candidate policy is still absent', async () => {
+    const simulatedHistoricalRelease = new Date('2026-01-15T09:00:00.000Z')
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET release_status='released',diagnostic_enabled=false,released_at=$1
+      WHERE game='sosyal' AND display_exam_ref='TYT'`, [simulatedHistoricalRelease])
+    const releasedBefore = (await client.query(`SELECT released_at
+      FROM public.curriculum_scope_releases
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0].released_at
+    const proofRowsBefore = (await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_source_policy_evidence
+      WHERE game='sosyal' AND display_exam_ref='TYT'
+        AND taxonomy_version='ba-tyt-sosyal-v1'`)).rows[0].count
+    const dataBefore = (await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.question_outcomes mapping
+       JOIN public.questions question ON question.id=mapping.question_id
+       WHERE question.game='sosyal') AS mappings,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence evidence
+       JOIN public.questions question ON question.id=evidence.question_id
+       WHERE question.game='sosyal') AS evidence,
+      (SELECT count(*)::integer FROM public.curriculum_scope_evidence_repair_runs
+       WHERE repair_key='192_tyt_sosyal_complete_mappings_v1') AS repair_runs`)).rows[0]
+
+    await client.query(socialReleaseMigration)
+    await client.query(socialRepairMigration)
+
+    expect((await client.query(`SELECT release_status,diagnostic_enabled,released_at
+      FROM public.curriculum_scope_releases
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0]).toEqual({
+      release_status: 'draft', diagnostic_enabled: false, released_at: releasedBefore,
+    })
+    expect((await client.query(
+      `SELECT public.resolve_released_curriculum_scope('sosyal','TYT') AS scope`,
+    )).rows[0].scope).toBeNull()
+    expect((await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.question_outcomes mapping
+       JOIN public.questions question ON question.id=mapping.question_id
+       WHERE question.game='sosyal') AS mappings,
+      (SELECT count(*)::integer FROM public.mastery_outcome_evidence evidence
+       JOIN public.questions question ON question.id=evidence.question_id
+       WHERE question.game='sosyal') AS evidence,
+      (SELECT count(*)::integer FROM public.curriculum_scope_evidence_repair_runs
+       WHERE repair_key='192_tyt_sosyal_complete_mappings_v1') AS repair_runs`)).rows[0]).toEqual(dataBefore)
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.curriculum_scope_source_policy_evidence
+      WHERE game='sosyal' AND display_exam_ref='TYT'
+        AND taxonomy_version='ba-tyt-sosyal-v1'`)).rows[0].count).toBe(proofRowsBefore)
+  })
+
   it('keeps registry and direct mutation private while exposing count-only service RPCs', async () => {
     const privileges = (await client.query(`SELECT
-      has_table_privilege('authenticated','public.curriculum_scope_releases','SELECT') AS auth_registry,
-      has_table_privilege('service_role','public.curriculum_scope_releases','SELECT') AS service_registry,
+       has_table_privilege('authenticated','public.curriculum_scope_releases','SELECT') AS auth_registry,
+       has_table_privilege('service_role','public.curriculum_scope_releases','SELECT') AS service_registry,
+       has_table_privilege('authenticated','public.curriculum_scope_release_history','SELECT') AS auth_history,
+       has_table_privilege('service_role','public.curriculum_scope_release_history','SELECT') AS service_history,
+       has_table_privilege('authenticated','public.curriculum_scope_release_history','INSERT') AS auth_history_insert,
+       has_table_privilege('service_role','public.curriculum_scope_release_history','INSERT') AS service_history_insert,
       has_table_privilege('authenticated','public.curriculum_scope_evidence_repair_runs','SELECT') AS auth_repair_runs,
       has_table_privilege('service_role','public.curriculum_scope_evidence_repair_runs','SELECT') AS service_repair_runs,
       has_function_privilege('authenticated','public.resolve_released_curriculum_scope(text,text)','EXECUTE') AS auth_resolve,
@@ -1027,6 +2293,10 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     expect(privileges).toEqual({
       auth_registry: false,
       service_registry: false,
+      auth_history: false,
+      service_history: false,
+      auth_history_insert: false,
+      service_history_insert: false,
       auth_repair_runs: false,
       service_repair_runs: false,
       auth_resolve: false,
@@ -1038,6 +2308,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
     })
     await asRole('authenticated', async () => {
       await expect(client.query('SELECT * FROM public.curriculum_scope_releases')).rejects.toMatchObject({ code: '42501' })
+      await expect(client.query('SELECT * FROM public.curriculum_scope_release_history')).rejects.toMatchObject({ code: '42501' })
       await expect(client.query(`SELECT public.resolve_released_curriculum_scope('fen','TYT')`)).rejects.toMatchObject({ code: '42501' })
     })
     await asRole('service_role', async () => {
@@ -1045,6 +2316,7 @@ describePg('178-181 curriculum scope release real PostgreSQL', () => {
         `SELECT public.resolve_released_curriculum_scope('fen','TYT') AS scope`,
       )).rows[0].scope).toMatchObject({ game: 'fen', taxonomyVersion: 'ba-tyt-fen-v1' })
       await expect(client.query('SELECT * FROM public.curriculum_scope_releases')).rejects.toMatchObject({ code: '42501' })
+      await expect(client.query('SELECT * FROM public.curriculum_scope_release_history')).rejects.toMatchObject({ code: '42501' })
       await expect(client.query(
         `SELECT public.sync_taxonomy_auto_question_outcomes(NULL,NULL,NULL,NULL,false)`,
       )).rejects.toMatchObject({ code: '42501' })

@@ -7,6 +7,8 @@ describe('PersonalizedMockCard', () => {
     render(<PersonalizedMockCard loading={false} error={null} onStart={vi.fn()} />)
     expect(screen.getByText('AKILLI DENEME')).toBeInTheDocument()
     expect(screen.getByText('40 SORU')).toBeInTheDocument()
+    expect(screen.getByText(/Başlangıç tanılaması değildir/)).toBeInTheDocument()
+    expect(screen.queryByText(/sınav kapsamın dengelenerek/i)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Akıllı Denemeyi Başlat/i })).toBeEnabled()
   })
 

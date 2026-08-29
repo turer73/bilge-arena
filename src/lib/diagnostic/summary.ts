@@ -31,12 +31,20 @@ function bandForScore(score: number): DiagnosticPublicBand {
   return 'strong'
 }
 
-/** Builds an ID-free summary only when all six pilot outcomes are present. */
+/** Builds an ID-free summary only when the immutable screening scope is complete. */
 export function buildDiagnosticSummary(
   outcomes: readonly DiagnosticSummaryOutcomeInput[],
   states: readonly DiagnosticSummaryStateInput[],
+  limits: { outcomeCount: number; maxPerOutcome: number },
 ): DiagnosticSummaryPublic | null {
-  if (outcomes.length !== 6 || states.length !== 6) return null
+  if (
+    !Number.isInteger(limits.outcomeCount)
+    || limits.outcomeCount < 1
+    || !Number.isInteger(limits.maxPerOutcome)
+    || limits.maxPerOutcome < 1
+    || outcomes.length !== limits.outcomeCount
+    || states.length !== limits.outcomeCount
+  ) return null
   const outcomeIds = new Set<string>()
   for (const outcome of outcomes) {
     if (
@@ -55,7 +63,7 @@ export function buildDiagnosticSummary(
     if (
       !outcomeIds.has(state.outcomeId)
       || stateByOutcome.has(state.outcomeId)
-      || !isFiniteInteger(state.attempts, 1, 2)
+      || !isFiniteInteger(state.attempts, 1, limits.maxPerOutcome)
       || !isFiniteInteger(state.correctAttempts, 0, state.attempts)
       || !Number.isFinite(state.score)
       || state.score < 0

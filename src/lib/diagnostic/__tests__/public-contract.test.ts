@@ -18,6 +18,7 @@ function response() {
     supported: true,
     game: 'matematik',
     examRef: 'TYT',
+    policy: { version: 'adaptive-diagnostic-v3', questionCount: 10, outcomeCount: 6, maxPerOutcome: 2 },
     session: {
       id: '22222222-3333-4444-8555-666666666666',
       kind: 'initial',
@@ -59,11 +60,27 @@ describe('parseDiagnosticResponse', () => {
       supported: true,
       game: 'matematik',
       examRef: 'TYT',
+      policy: { version: 'adaptive-diagnostic-v3', questionCount: 10, outcomeCount: 6, maxPerOutcome: 2 },
       session: null,
       summary: { completedAt: '2026-08-08T12:00:00.000Z', outcomes: Array(6).fill(outcome) },
     })).toBeNull()
     expect(parseDiagnosticResponse({
-      supported: false, game: 'fen', examRef: 'TYT', session: null, summary: null,
+      supported: false, game: 'fen', examRef: 'TYT', policy: null, session: null, summary: null,
+    })).not.toBeNull()
+  })
+
+  it('accepts dynamic scope bounds and multiple outcomes in one subject category', () => {
+    const outcomes = Array.from({ length: 3 }, (_, index) => ({
+      code: `FEN-${index}`, title: `Fen alanı ${index}`, category: 'fizik', attempts: 2,
+      correctAttempts: 1, score: 50, recommendedDifficulty: 3, band: 'developing',
+    }))
+    expect(parseDiagnosticResponse({
+      supported: true,
+      game: 'fen',
+      examRef: 'TYT',
+      policy: { version: 'adaptive-diagnostic-v3', questionCount: 6, outcomeCount: 3, maxPerOutcome: 2 },
+      session: null,
+      summary: { completedAt: '2026-08-08T12:00:00.000Z', outcomes },
     })).not.toBeNull()
   })
 })

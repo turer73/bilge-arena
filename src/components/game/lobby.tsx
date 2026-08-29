@@ -18,7 +18,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react'
-import { GAMES, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
+import { GAMES, getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
 import { MODES, type QuizMode, DENEME_CONFIGS } from '@/lib/constants/modes'
 import { ModeSelector } from './mode-selector'
 import { SoundToggle } from './sound-toggle'
@@ -100,6 +100,7 @@ export function Lobby({
   personalizedMockCard,
 }: LobbyProps) {
   const gameDef = GAMES[game]
+  const categories = getCategoriesForExam(game, selectedExamRef)
   const GameIcon = GAME_ICONS[game]
   const level = getLevelFromXP(userXP)
   const mode = MODES.find((candidate) => candidate.id === selectedMode) || MODES[0]
@@ -283,7 +284,7 @@ export function Lobby({
                   >
                     Tümü
                   </button>
-                  {gameDef.categories.map((category) => {
+                  {categories.map((category) => {
                     const active = selectedCategory === category
                     return (
                       <button

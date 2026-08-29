@@ -37,6 +37,11 @@ import {
   type InstitutionStudentReportList,
   type InstitutionStudentReportMutation,
 } from './student-report'
+import {
+  institutionScopeListSchema,
+  type InstitutionLearningScope,
+  type InstitutionScopeList,
+} from './scope'
 
 export function isInstitutionTrackingUiEnabled(): boolean {
   return process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED === 'true'
@@ -74,13 +79,31 @@ export function fetchInstitutionTrackingDirectory(
   return requestJson('/api/institution/tracking/directory', institutionTrackingDirectorySchema, signal)
 }
 
+export function fetchInstitutionLearningScopes(signal?: AbortSignal): Promise<InstitutionScopeList> {
+  return requestJson('/api/institution/tracking/scopes', institutionScopeListSchema, signal)
+}
+
+type ScopeSelection = Pick<InstitutionLearningScope, 'game' | 'displayExamRef'>
+const LEGACY_MATH_SCOPE: ScopeSelection = { game: 'matematik', displayExamRef: 'TYT' }
+
+function isScopeSelection(value: ScopeSelection | AbortSignal | undefined): value is ScopeSelection {
+  return Boolean(value && 'game' in value && 'displayExamRef' in value)
+}
+
+function scopeQuery(scope: ScopeSelection): string {
+  return new URLSearchParams({ game: scope.game, exam_ref: scope.displayExamRef }).toString()
+}
+
 export function fetchInstitutionStudentLearningAnalysis(
   classroomId: string,
   memberRef: string,
-  signal?: AbortSignal,
+  scopeOrSignal?: ScopeSelection | AbortSignal,
+  suppliedSignal?: AbortSignal,
 ): Promise<InstitutionStudentLearningAnalysis> {
+  const scope = isScopeSelection(scopeOrSignal) ? scopeOrSignal : LEGACY_MATH_SCOPE
+  const signal = isScopeSelection(scopeOrSignal) ? suppliedSignal : scopeOrSignal
   return requestJson(
-    `/api/institution/tracking/classrooms/${encodeURIComponent(classroomId)}/students/${encodeURIComponent(memberRef)}?game=matematik&exam_ref=TYT`,
+    `/api/institution/tracking/classrooms/${encodeURIComponent(classroomId)}/students/${encodeURIComponent(memberRef)}?${scopeQuery(scope)}`,
     institutionStudentLearningAnalysisSchema,
     signal,
   )
@@ -88,10 +111,13 @@ export function fetchInstitutionStudentLearningAnalysis(
 
 export function fetchInstitutionClassroomOverview(
   classroomId: string,
-  signal?: AbortSignal,
+  scopeOrSignal?: ScopeSelection | AbortSignal,
+  suppliedSignal?: AbortSignal,
 ): Promise<InstitutionClassroomOverview> {
+  const scope = isScopeSelection(scopeOrSignal) ? scopeOrSignal : LEGACY_MATH_SCOPE
+  const signal = isScopeSelection(scopeOrSignal) ? suppliedSignal : scopeOrSignal
   return requestJson(
-    `/api/institution/tracking/classrooms/${encodeURIComponent(classroomId)}/overview`,
+    `/api/institution/tracking/classrooms/${encodeURIComponent(classroomId)}/overview?${scopeQuery(scope)}`,
     institutionClassroomOverviewSchema,
     signal,
   )

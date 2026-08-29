@@ -1,4 +1,4 @@
-import { GAME_LIST, type GameDefinition } from './games'
+import { GAME_LIST, type GameDefinition, type GameSlug } from './games'
 
 /**
  * Sınav türü — YKS (üniversite) vs LGS (lise).
@@ -55,6 +55,18 @@ export function gamesForExamType(examType: ExamType | null | undefined): GameDef
  */
 export function defaultExamRefForType(examType: ExamType | null | undefined): string | null {
   return isExamType(examType) ? DEFAULT_EXAM_REF[examType] : null
+}
+
+/**
+ * Soru bankasi kapsami ile kullanicinin paylasilan sinav tercihini ayirir.
+ * Wordquest sorulari exam_ref=NULL saklandigi icin isteklerde filtre gondermez;
+ * diger dersler kullanicinin secimini aynen korur.
+ */
+export function questionExamRefForGame(
+  game: GameSlug,
+  examRef: string | null | undefined,
+): string | null {
+  return game === 'wordquest' ? null : examRef ?? null
 }
 
 /** Profil turu degistiginde sakli kalan exam_ref'i dogrulamak icin izinli kapsam. */

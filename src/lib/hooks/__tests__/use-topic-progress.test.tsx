@@ -85,4 +85,13 @@ describe('useTopicProgress', () => {
       expect.any(Object),
     )
   })
+
+  it('TYT Türkçe yolunda AYT edebiyat adımını oluşturmaz', () => {
+    const { result } = renderHook(() => useTopicProgress('turkce', null, 'TYT'))
+
+    expect(result.current.topics.map((topic) => topic.category)).toEqual([
+      'paragraf', 'dil_bilgisi', 'sozcuk', 'anlam_bilgisi', 'yazim_kurallari',
+    ])
+    expect(result.current.topics.some((topic) => topic.category === 'edebiyat')).toBe(false)
+  })
 })

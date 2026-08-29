@@ -3,7 +3,13 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import { gamesForExamType, defaultExamRefForType, examRefsForType, EXAM_TYPE_LABELS } from '../exam-types'
+import {
+  gamesForExamType,
+  defaultExamRefForType,
+  examRefsForType,
+  questionExamRefForGame,
+  EXAM_TYPE_LABELS,
+} from '../exam-types'
 
 describe('gamesForExamType', () => {
   test('LGS -> İngilizce (YDT-only) HARİÇ; matematik/türkçe/fen/sosyal DAHİL', () => {
@@ -32,6 +38,18 @@ describe('defaultExamRefForType', () => {
   test('null/geçersiz -> null (filtresiz)', () => {
     expect(defaultExamRefForType(null)).toBeNull()
     expect(defaultExamRefForType(undefined)).toBeNull()
+  })
+})
+
+describe('questionExamRefForGame', () => {
+  test('Wordquest soru isteklerinde paylasilan sinav tercihini filtreye tasimaz', () => {
+    expect(questionExamRefForGame('wordquest', 'TYT')).toBeNull()
+    expect(questionExamRefForGame('wordquest', 'YDT')).toBeNull()
+  })
+
+  test('diger derslerde secili sinav kapsamini korur', () => {
+    expect(questionExamRefForGame('matematik', 'AYT-SAY')).toBe('AYT-SAY')
+    expect(questionExamRefForGame('turkce', null)).toBeNull()
   })
 })
 

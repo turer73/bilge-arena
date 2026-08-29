@@ -17,19 +17,27 @@ export default function HakimiyetClient() {
   const gameStore = useGameStore()
 
   const requestedGame = searchParams.get('game')
-  const game: GameSlug = requestedGame && requestedGame in GAMES
+  const requestedGameIsValid = requestedGame !== null
+    && Object.prototype.hasOwnProperty.call(GAMES, requestedGame)
+  const invalidRequestedGame = requestedGame !== null && !requestedGameIsValid
+  const game: GameSlug = requestedGameIsValid
     ? requestedGame as GameSlug
     : gameStore.selectedGame ?? 'matematik'
   const requestedExamRef = searchParams.get('exam_ref')?.trim().toUpperCase() || null
   const examRef = requestedExamRef
     ?? gameStore.selectedExamRef
     ?? defaultExamRefForType(profile?.exam_type)
-  const mastery = useMasteryMap(game, user?.id, examRef)
+  // An explicit invalid game must not trigger a fallback mastery request.
+  // Keep the hook unconditional, but remove the user id so no wrong-scope
+  // graph is fetched while the fail-safe state is rendered below.
+  const mastery = useMasteryMap(game, invalidRequestedGame ? null : user?.id, examRef)
 
   const handlePractice = (outcome: MasteryOutcomePublic) => {
     gameStore.setGame(outcome.game as GameSlug)
     gameStore.setCategory(outcome.category)
-    gameStore.setExamRef(outcome.examRef)
+    // Wordquest'in mastery display ref'i YDT, soru storage ref'i NULL'dir.
+    // Onceki dersin paylasilan sinav tercihini pratik CTA'si silmemeli.
+    if (outcome.game !== 'wordquest') gameStore.setExamRef(outcome.examRef)
     gameStore.setDifficulty(null)
     gameStore.setMode('practice')
     router.push(`/arena/${outcome.game}`)
@@ -49,6 +57,20 @@ export default function HakimiyetClient() {
           Giriş Yap
         </Link>
       </div>
+    )
+  }
+
+  if (invalidRequestedGame) {
+    return (
+      <main className="mx-auto max-w-md px-4 py-16 text-center">
+        <h1 className="text-xl font-bold text-[var(--text)]">Geçersiz harita kapsamı</h1>
+        <p className="mt-2 text-sm text-[var(--text-sub)]">
+          Ders kapsamı tanınamadı. Yayınlanmış bir ders bağlantısı açmayı deneyin.
+        </p>
+        <Link href="/arena/calisma" className="mt-5 inline-flex text-xs font-bold text-[var(--focus)] hover:underline">
+          Çalışmaya dön
+        </Link>
+      </main>
     )
   }
 

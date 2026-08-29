@@ -47,6 +47,10 @@ vi.mock('@/lib/supabase/service-role', () => ({
         mockEq(table, column, value)
         return builder
       })
+      builder.is = vi.fn((column: string, value: unknown) => {
+        mockEq(table, column, value)
+        return builder
+      })
       builder.in = vi.fn(() => builder)
       builder.order = vi.fn(() => builder)
       builder.limit = vi.fn(() => builder)
@@ -124,6 +128,16 @@ const releasedDiagnosticScope = {
   mappingMode: 'category_proxy',
   diagnosticEnabled: true,
 }
+const releasedDiagnosticV3Scope = {
+  game: 'matematik',
+  displayExamRef: 'TYT',
+  questionExamRef: 'TYT',
+  taxonomyVersion: 'ba-tyt-math-v1',
+  policyVersion: 'adaptive-diagnostic-v3',
+  questionCount: 10,
+  outcomeCount: 6,
+  maxPerOutcome: 2,
+}
 
 function snapshotQuestion(index: number) {
   const row = questions[index]
@@ -144,6 +158,9 @@ function session(overrides: Record<string, unknown> = {}) {
   return {
     id: SESSION_ID,
     user_id: USER_ID,
+    game: 'matematik',
+    exam_ref: 'TYT',
+    taxonomy_version: 'ba-tyt-math-v1',
     kind: 'initial',
     status: 'active',
     current_question_id: questionIds[0],
@@ -224,6 +241,10 @@ describe('/api/study/diagnostic', () => {
       data: releasedDiagnosticScope,
       error: null,
     }
+    rpcResults.resolve_released_diagnostic_scope = {
+      data: releasedDiagnosticV3Scope,
+      error: null,
+    }
     rpcResults.start_adaptive_diagnostic = {
       data: {
         sessionId: SESSION_ID,
@@ -236,6 +257,7 @@ describe('/api/study/diagnostic', () => {
       },
       error: null,
     }
+    rpcResults.start_adaptive_diagnostic_v3 = rpcResults.start_adaptive_diagnostic
     rpcResults.get_adaptive_diagnostic_question_v2 = { data: snapshotQuestion(0), error: null }
     rpcResults.record_adaptive_diagnostic_answer_v2 = {
       data: {
@@ -247,6 +269,7 @@ describe('/api/study/diagnostic', () => {
       },
       error: null,
     }
+    rpcResults.record_adaptive_diagnostic_answer_v3 = rpcResults.record_adaptive_diagnostic_answer_v2
   })
 
   it('applies IP, auth, and user rate-limit gates', async () => {
@@ -260,58 +283,152 @@ describe('/api/study/diagnostic', () => {
     expect((await GET(getRequest() as never)).status).toBe(429)
   })
 
-  it('returns unsupported without touching DB for non-pilot scope', async () => {
+  it('returns unsupported when the exact requested scope has no diagnostic release', async () => {
+    rpcResults.resolve_released_diagnostic_scope = { data: null, error: null }
     const response = await GET(getRequest('game=fen&exam_ref=TYT') as never)
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
-      supported: false, game: 'fen', examRef: 'TYT', session: null, summary: null,
+      supported: false, game: 'fen', examRef: 'TYT', policy: null, session: null, summary: null,
     })
     expect(mockFrom).not.toHaveBeenCalled()
-    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockRpc).toHaveBeenCalledWith('resolve_released_diagnostic_scope', {
+      p_game: 'fen', p_display_exam_ref: 'TYT',
+    })
   })
 
-  it('fails closed when the exact diagnostic scope is not released and enabled', async () => {
-    rpcResults.resolve_released_curriculum_scope = {
-      data: { ...releasedDiagnosticScope, diagnosticEnabled: false },
-      error: null,
-    }
+  it('fails closed when the exact diagnostic scope is absent or malformed', async () => {
+    rpcResults.resolve_released_diagnostic_scope = { data: null, error: null }
     const getResponse = await GET(getRequest() as never)
     expect(getResponse.status).toBe(200)
     await expect(getResponse.json()).resolves.toEqual({
-      supported: false, game: 'matematik', examRef: 'TYT', session: null, summary: null,
+      supported: false, game: 'matematik', examRef: 'TYT', policy: null, session: null, summary: null,
     })
     expect(mockFrom).not.toHaveBeenCalled()
 
-    rpcResults.resolve_released_curriculum_scope = {
-      data: { ...releasedDiagnosticScope, questionExamRef: 'LGS' },
-      error: null,
-    }
-    const storageScopeResponse = await GET(getRequest() as never)
-    expect(storageScopeResponse.status).toBe(200)
-    await expect(storageScopeResponse.json()).resolves.toMatchObject({ supported: false })
-
-    rpcResults.resolve_released_curriculum_scope = {
-      data: { ...releasedDiagnosticScope, taxonomyVersion: 'ba-tyt-math-v2' },
+    rpcResults.resolve_released_diagnostic_scope = {
+      data: { ...releasedDiagnosticV3Scope, questionCount: 99 },
       error: null,
     }
     const startResponse = await POST(postRequest({
       action: 'start', game: 'matematik', examRef: 'TYT',
     }) as never)
-    expect(startResponse.status).toBe(200)
-    await expect(startResponse.json()).resolves.toMatchObject({ supported: false })
-    expect(mockRpc).not.toHaveBeenCalledWith('start_adaptive_diagnostic', expect.anything())
+    expect(startResponse.status).toBe(500)
+    expect(mockRpc).not.toHaveBeenCalledWith('start_adaptive_diagnostic_v3', expect.anything())
 
+    rpcResults.resolve_released_diagnostic_scope = {
+      data: { ...releasedDiagnosticV3Scope, taxonomyVersion: 'ba-tyt-math-v2' },
+      error: null,
+    }
     const answerResponse = await POST(postRequest({
       action: 'answer', sessionId: SESSION_ID, questionId: questionIds[0],
       selectedOption: 1, responseTimeMs: 1200, requestId: REQUEST_ID,
     }) as never)
-    expect(answerResponse.status).toBe(200)
-    await expect(answerResponse.json()).resolves.toMatchObject({ supported: false })
-    expect(mockRpc).not.toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.anything())
+    expect(answerResponse.status).toBe(409)
+    expect(mockRpc).not.toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v3', expect.anything())
+  })
+
+  it('uses the legacy Math path only while the v3 resolver is missing', async () => {
+    rpcResults.resolve_released_diagnostic_scope = { data: null, error: { code: 'PGRST202' } }
+    tableSingles.adaptive_diagnostic_sessions = null
+    const response = await POST(postRequest({
+      action: 'start', game: 'matematik', examRef: 'TYT',
+    }) as never)
+    expect(response.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('start_adaptive_diagnostic', expect.objectContaining({
+      p_first_question_id: questionIds[0],
+    }))
+    expect(mockRpc).not.toHaveBeenCalledWith('start_adaptive_diagnostic_v3', expect.anything())
+
+    const fen = await GET(getRequest('game=fen&exam_ref=TYT') as never)
+    expect(fen.status).toBe(200)
+    await expect(fen.json()).resolves.toMatchObject({ supported: false, game: 'fen' })
+  })
+
+  it('records a legacy Math session through v2 while the resolver is missing', async () => {
+    rpcResults.resolve_released_diagnostic_scope = { data: null, error: { code: '42883' } }
+    rpcQueues.get_adaptive_diagnostic_question_v2 = [
+      { data: snapshotQuestion(0), error: null },
+      { data: snapshotQuestion(1), error: null },
+    ]
+    const response = await POST(postRequest({
+      action: 'answer', sessionId: SESSION_ID, questionId: questionIds[0],
+      selectedOption: 1, responseTimeMs: 1200, requestId: REQUEST_ID,
+    }) as never)
+    expect(response.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.objectContaining({
+      p_question_id: questionIds[0], p_next_question_id: questionIds[1],
+    }))
+    expect(mockRpc).not.toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v3', expect.anything())
+  })
+
+  it('starts an exact non-Math scope through the registry-driven v3 contract', async () => {
+    const fenScope = {
+      game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+      taxonomyVersion: 'ba-tyt-fen-v2', policyVersion: 'adaptive-diagnostic-v3',
+      questionCount: 6, outcomeCount: 3, maxPerOutcome: 2,
+    }
+    const fenIndexes = [0, 1, 2, 6, 7, 8]
+    rpcResults.resolve_released_diagnostic_scope = { data: fenScope, error: null }
+    tableLists.curriculum_outcomes = outcomes.slice(0, 3)
+    tableLists.questions = fenIndexes.map((index) => ({ ...questions[index], game: 'fen' }))
+    tableLists.question_outcomes = fenIndexes.map((index) => mappings[index])
+    rpcResults.get_adaptive_diagnostic_question_v2 = {
+      data: { ...snapshotQuestion(0), game: 'fen' }, error: null,
+    }
+    rpcResults.start_adaptive_diagnostic_v3 = {
+      data: {
+        sessionId: SESSION_ID,
+        currentQuestionId: questionIds[0],
+        kind: 'initial',
+        answeredCount: 0,
+        coveredOutcomes: 0,
+        expiresAt: '2099-08-08T12:00:00.000Z',
+        resumed: false,
+      },
+      error: null,
+    }
+
+    const response = await POST(postRequest({ action: 'start', game: 'fen', examRef: 'TYT' }) as never)
+    expect(response.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('start_adaptive_diagnostic_v3', expect.objectContaining({
+      p_game: 'fen', p_display_exam_ref: 'TYT', p_first_question_id: questionIds[0],
+    }))
+    expect(mockEq).toHaveBeenCalledWith('question_outcomes', 'mapping_source', 'taxonomy_auto')
+    await expect(response.json()).resolves.toMatchObject({
+      supported: true,
+      game: 'fen',
+      examRef: 'TYT',
+      policy: { questionCount: 6, outcomeCount: 3, maxPerOutcome: 2 },
+      session: { progress: { total: 6, totalOutcomes: 3 } },
+    })
+  })
+
+  it('keeps display and storage exam refs separate for Wordquest', async () => {
+    rpcResults.resolve_released_diagnostic_scope = {
+      data: {
+        game: 'wordquest', displayExamRef: 'YDT', questionExamRef: null,
+        taxonomyVersion: 'ba-ydt-english-v1', policyVersion: 'adaptive-diagnostic-v3',
+        questionCount: 10, outcomeCount: 6, maxPerOutcome: 2,
+      },
+      error: null,
+    }
+    tableLists.questions = questions.map((row) => ({ ...row, game: 'wordquest', exam_ref: null }))
+    rpcResults.get_adaptive_diagnostic_question_v2 = {
+      data: { ...snapshotQuestion(0), game: 'wordquest' }, error: null,
+    }
+
+    const response = await POST(postRequest({ action: 'start', game: 'wordquest', examRef: 'YDT' }) as never)
+    expect(response.status).toBe(200)
+    expect(mockEq).toHaveBeenCalledWith('questions', 'exam_ref', null)
+    expect(mockRpc).toHaveBeenCalledWith('start_adaptive_diagnostic_v3', expect.objectContaining({
+      p_game: 'wordquest', p_display_exam_ref: 'YDT',
+    }))
+    await expect(response.json()).resolves.toMatchObject({ game: 'wordquest', examRef: 'YDT' })
   })
 
   it('rejects malformed query and strict POST bodies', async () => {
     expect((await GET(getRequest('game=unknown&exam_ref=TYT') as never)).status).toBe(400)
+    expect((await GET(getRequest('game=fen&exam_ref=tyt') as never)).status).toBe(400)
     expect((await POST(postRequest({ action: 'start', game: 'matematik', examRef: 'TYT', extra: true }) as never)).status).toBe(400)
     expect((await POST(postRequest({
       action: 'answer', sessionId: 'bad', questionId: questionIds[0],
@@ -329,6 +446,7 @@ describe('/api/study/diagnostic', () => {
       supported: true,
       game: 'matematik',
       examRef: 'TYT',
+      policy: { version: 'adaptive-diagnostic-v3', questionCount: 10, outcomeCount: 6, maxPerOutcome: 2 },
       session: {
         id: SESSION_ID,
         status: 'active',
@@ -358,7 +476,7 @@ describe('/api/study/diagnostic', () => {
       requestId: REQUEST_ID,
     }) as never)
     expect(response.status).toBe(200)
-    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.objectContaining({
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v3', expect.objectContaining({
       p_question_id: questionIds[0],
       p_selected_option: 1,
       p_next_question_id: questionIds[1],
@@ -386,7 +504,7 @@ describe('/api/study/diagnostic', () => {
       selectedOption: 1, responseTimeMs: 1200, requestId: REQUEST_ID,
     }) as never)
     expect(response.status).toBe(200)
-    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.objectContaining({
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v3', expect.objectContaining({
       p_next_question_id: questionIds[1],
     }))
   })
@@ -413,7 +531,7 @@ describe('/api/study/diagnostic', () => {
       requestId: REQUEST_ID,
     }) as never)
     expect(response.status).toBe(200)
-    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.objectContaining({
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v3', expect.objectContaining({
       p_selected_option: 1,
       p_response_time_ms: 1200,
       p_next_question_id: questionIds[1],
@@ -436,6 +554,42 @@ describe('/api/study/diagnostic', () => {
     }) as never)).status).toBe(400)
   })
 
+  it('accepts the tenth option index when the issued immutable snapshot has ten choices', async () => {
+    const tenOptions = Array.from({ length: 10 }, (_, index) => `Seçenek ${index + 1}`)
+    tableSingles.adaptive_diagnostic_sessions = session({
+      current_question_correct_option: 9,
+      current_question_option_count: 10,
+    })
+    tableSingles.questions = {
+      ...questions[0],
+      content: { ...questions[0].content, options: tenOptions, answer: 9 },
+    }
+    tableLists.questions = [{
+      ...questions[0],
+      content: { ...questions[0].content, options: tenOptions, answer: 9 },
+    }, ...questions.slice(1)]
+    rpcQueues.get_adaptive_diagnostic_question_v2 = [{
+      data: {
+        ...snapshotQuestion(0),
+        content: { question: questions[0].content.question, options: tenOptions },
+      },
+      error: null,
+    }, {
+      data: snapshotQuestion(1),
+      error: null,
+    }]
+
+    const response = await POST(postRequest({
+      action: 'answer', sessionId: SESSION_ID, questionId: questionIds[0],
+      selectedOption: 9, responseTimeMs: 1200, requestId: REQUEST_ID,
+    }) as never)
+
+    expect(response.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v3', expect.objectContaining({
+      p_selected_option: 9,
+    }))
+  })
+
   it('persists expiry as abandoned without grading a question', async () => {
     tableSingles.adaptive_diagnostic_sessions = session({ expires_at: '2000-01-01T00:00:00.000Z' })
     rpcResults.record_adaptive_diagnostic_answer_v2.data = {
@@ -451,7 +605,7 @@ describe('/api/study/diagnostic', () => {
     }) as never)
     expect(response.status).toBe(200)
     expect((await response.json()).session.status).toBe('abandoned')
-    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v2', expect.objectContaining({
+    expect(mockRpc).toHaveBeenCalledWith('record_adaptive_diagnostic_answer_v3', expect.objectContaining({
       p_selected_option: 1,
     }))
   })

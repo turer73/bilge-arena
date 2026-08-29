@@ -103,8 +103,52 @@ const institutionTaxonomyConsumersSql = readFileSync(
   join(migrationsDir, '183_institution_taxonomy_consumer_alignment.sql'),
   'utf8',
 )
+const institutionMultiScopeSql = readFileSync(
+  join(migrationsDir, '194_institution_multi_scope_learning_analysis.sql'),
+  'utf8',
+)
+const adaptiveDiagnosticSql = readFileSync(
+  join(migrationsDir, '098_adaptive_diagnostic.sql'),
+  'utf8',
+)
+const adaptiveDiagnosticEvidenceSql = readFileSync(
+  join(migrationsDir, '140_adaptive_diagnostic_evidence_v2.sql'),
+  'utf8',
+)
+const adaptiveDiagnosticRegistryGateSql = readFileSync(
+  join(migrationsDir, '184_adaptive_diagnostic_registry_write_gate.sql'),
+  'utf8',
+)
+const adaptiveDiagnosticV3Sql = readFileSync(
+  join(migrationsDir, '193_registry_driven_adaptive_diagnostic_v3.sql'),
+  'utf8',
+)
+const fenDiagnosticReleaseSql = readFileSync(
+  join(migrationsDir, '195_release_tyt_fen_diagnostic_scope.sql'),
+  'utf8',
+)
+const fenInstitutionReleaseSql = readFileSync(
+  join(migrationsDir, '196_release_tyt_fen_institution_scope.sql'),
+  'utf8',
+)
+const turkishDiagnosticReleaseSql = readFileSync(
+  join(migrationsDir, '197_release_tyt_turkce_diagnostic_scope.sql'),
+  'utf8',
+)
+const turkishInstitutionReleaseSql = readFileSync(
+  join(migrationsDir, '198_release_tyt_turkce_institution_scope.sql'),
+  'utf8',
+)
+const wordquestDiagnosticReleaseSql = readFileSync(
+  join(migrationsDir, '199_release_ydt_english_diagnostic_scope.sql'),
+  'utf8',
+)
+const wordquestInstitutionReleaseSql = readFileSync(
+  join(migrationsDir, '200_release_ydt_english_institution_scope.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -306,9 +350,25 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
         session_id uuid,
         answered_at timestamptz NOT NULL DEFAULT clock_timestamp()
       );
+      CREATE TABLE public.curriculum_nodes(
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        parent_id uuid,
+        code text UNIQUE NOT NULL,
+        title text NOT NULL,
+        node_type text NOT NULL,
+        is_active boolean NOT NULL DEFAULT true,
+        game text NOT NULL,
+        exam_ref text,
+        taxonomy_version text NOT NULL,
+        category text
+      );
       CREATE TABLE public.curriculum_outcomes(
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         code text UNIQUE NOT NULL,
+        node_id uuid,
+        title text NOT NULL DEFAULT 'Test outcome',
+        category text,
+        sort_order integer NOT NULL DEFAULT 1,
         game text NOT NULL,
         exam_ref text,
         taxonomy_version text,
@@ -319,11 +379,21 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
         attempt_id uuid NOT NULL,
         user_id uuid NOT NULL,
         outcome_id uuid NOT NULL,
+        is_correct boolean NOT NULL DEFAULT false,
+        mapping_weight numeric NOT NULL DEFAULT 1,
+        delayed_correct boolean NOT NULL DEFAULT false,
         difficulty_weighted_earned numeric NOT NULL DEFAULT 0,
-        difficulty_weighted_possible numeric NOT NULL DEFAULT 0
+        difficulty_weighted_possible numeric NOT NULL DEFAULT 0,
+        time_taken_sec integer,
+        fast_wrong boolean NOT NULL DEFAULT false,
+        max_hint_stage integer NOT NULL DEFAULT 0
       );
       CREATE TABLE public.review_cards(id uuid PRIMARY KEY, user_id uuid);
-      CREATE TABLE public.review_logs(id uuid PRIMARY KEY, user_id uuid);
+      CREATE TABLE public.review_logs(id uuid PRIMARY KEY, user_id uuid, answer_id uuid);
+      CREATE TABLE public.review_error_annotations(
+        review_log_id uuid NOT NULL,
+        reason_code text NOT NULL
+      );
       CREATE TABLE public.user_outcome_state(id uuid PRIMARY KEY);
       CREATE TABLE public.xp_log(id uuid PRIMARY KEY);
       CREATE TABLE public.reward_ledger(id uuid PRIMARY KEY);
@@ -500,6 +570,39 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
     expect(alignedDefinitions.projection).toContain('curriculum_scope_releases')
     expect(alignedDefinitions.projection).toContain('v_scope.taxonomy_version')
 
+    // The focused institution fixture does not load migration 178's question
+    // graph. A controllable integrity oracle lets migration 194 prove its own
+    // locking/capability behavior while the curriculum suite covers the real
+    // eight-field implementation.
+    await client.query(`
+      CREATE TABLE public.test_curriculum_scope_integrity(
+        game text NOT NULL,
+        display_exam_ref text NOT NULL,
+        taxonomy_version text NOT NULL,
+        result jsonb NOT NULL,
+        PRIMARY KEY(game, display_exam_ref, taxonomy_version)
+      );
+      INSERT INTO public.test_curriculum_scope_integrity(
+        game, display_exam_ref, taxonomy_version, result
+      ) VALUES(
+        'matematik', 'TYT', 'ba-tyt-math-v1',
+        '{"total":1,"mapped":1,"unmapped":0,"scopeMismatch":0,"nodeOrphan":0,"outcomeOrphan":0,"primaryMismatch":0,"emptyOutcome":0}'::jsonb
+      );
+      CREATE FUNCTION public.curriculum_scope_integrity(
+        p_game text, p_display_exam_ref text, p_taxonomy_version text
+      ) RETURNS jsonb
+      LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog
+      AS $$
+        SELECT proof.result
+        FROM public.test_curriculum_scope_integrity AS proof
+        WHERE proof.game = p_game
+          AND proof.display_exam_ref = p_display_exam_ref
+          AND proof.taxonomy_version = p_taxonomy_version
+      $$;
+    `)
+    await client.query(institutionMultiScopeSql)
+    await client.query(institutionMultiScopeSql)
+
     const legacyRpcPrivileges = await client.query(`
       SELECT
         p.proname,
@@ -648,6 +751,401 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
       ]),
       '22023',
     )
+  })
+
+  it('enforces exact multi-scope institution analysis, tenant isolation and 3-person aggregate privacy', async () => {
+    await client.query('BEGIN')
+    try {
+      async function expectServiceError(query, values, code) {
+        await client.query('SAVEPOINT expected_scope_error')
+        await client.query('SET ROLE service_role')
+        let caught
+        try {
+          await client.query(query, values)
+        } catch (error) {
+          caught = error
+        }
+        await client.query('ROLLBACK TO SAVEPOINT expected_scope_error')
+        await client.query('RESET ROLE')
+        await client.query('RELEASE SAVEPOINT expected_scope_error')
+        expect(caught?.code).toBe(code)
+      }
+      async function expectAuthenticatedScopeError(userId, query, values, code, aal = 'aal2') {
+        await client.query('SAVEPOINT expected_authenticated_scope_error')
+        await client.query('SET ROLE authenticated')
+        await client.query("SELECT set_config('app.uid',$1,false)", [userId])
+        await client.query("SELECT set_config('request.jwt.claims',$1,false)", [
+          JSON.stringify({ sub: userId, aal }),
+        ])
+        let caught
+        try {
+          await client.query(query, values)
+        } catch (error) {
+          caught = error
+        }
+        await client.query('ROLLBACK TO SAVEPOINT expected_authenticated_scope_error')
+        await client.query('RESET ROLE')
+        await client.query("SELECT set_config('app.uid','',false)")
+        await client.query("SELECT set_config('request.jwt.claims','{}',false)")
+        await client.query('RELEASE SAVEPOINT expected_authenticated_scope_error')
+        expect(caught?.code).toBe(code)
+      }
+      async function expectOwnerError(query, values, code) {
+        await client.query('SAVEPOINT expected_owner_scope_error')
+        let caught
+        try {
+          await client.query(query, values)
+        } catch (error) {
+          caught = error
+        }
+        await client.query('ROLLBACK TO SAVEPOINT expected_owner_scope_error')
+        await client.query('RELEASE SAVEPOINT expected_owner_scope_error')
+        expect(caught?.code).toBe(code)
+      }
+
+      const outsider = randomUUID()
+      const students = Array.from({ length: 7 }, () => randomUUID())
+      for (const [index, userId] of [outsider, ...students].entries()) {
+        await client.query(
+          'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
+          [userId, `scope-${index}`, `Scope ${index}`],
+        )
+        await client.query(
+          'INSERT INTO auth.users(id,email,email_confirmed_at) VALUES($1,$2,now())',
+          [userId, `scope-${index}@example.com`],
+        )
+      }
+      const outsideTenant = (await client.query(
+        `INSERT INTO public.pilot_institutions(
+          name,status,student_limit,staff_limit,created_by,pilot_kind
+        ) VALUES('Kapsam Dışı Kurum','active',20,2,$1,'legacy')
+        RETURNING id`,
+        [platformAdmin],
+      )).rows[0].id
+      await client.query(
+        `INSERT INTO public.pilot_institution_memberships(
+          institution_id,user_id,role,status,assigned_by
+        ) VALUES($1,$2,'manager','active',$3)`,
+        [outsideTenant, outsider, platformAdmin],
+      )
+
+      const mathNodes = Array.from({ length: 4 }, () => randomUUID())
+      const fenNodes = Array.from({ length: 4 }, () => randomUUID())
+      await client.query(`
+        INSERT INTO public.curriculum_nodes(
+          id,parent_id,code,title,node_type,game,exam_ref,taxonomy_version,category
+        ) VALUES
+          ($1,NULL,'MAT-C','Matematik','course','matematik','TYT','ba-tyt-math-v1',NULL),
+          ($2,$1,'MAT-U','Matematik Birimi','unit','matematik','TYT','ba-tyt-math-v1',NULL),
+          ($3,$2,'MAT-T','Matematik Konusu','topic','matematik','TYT','ba-tyt-math-v1','temel'),
+          ($4,$3,'MAT-O','Matematik Kazanımı','outcome','matematik','TYT','ba-tyt-math-v1','temel'),
+          ($5,NULL,'FEN-C','Fen','course','fen','TYT','ba-tyt-fen-v1',NULL),
+          ($6,$5,'FEN-U','Fen Birimi','unit','fen','TYT','ba-tyt-fen-v1',NULL),
+          ($7,$6,'FEN-T','Fen Konusu','topic','fen','TYT','ba-tyt-fen-v1','fizik'),
+          ($8,$7,'FEN-O','Fen Kazanımı','outcome','fen','TYT','ba-tyt-fen-v1','fizik')
+      `, [...mathNodes, ...fenNodes])
+      await client.query(
+        `UPDATE public.curriculum_outcomes
+         SET node_id=$1,title='Matematik Kazanımı',category='temel',sort_order=1
+         WHERE code='MAT-TEST-01'`,
+        [mathNodes[3]],
+      )
+      await client.query(
+        `INSERT INTO public.curriculum_outcomes(
+          code,node_id,title,category,sort_order,game,exam_ref,taxonomy_version,is_active
+        ) VALUES('FEN-TEST-01',$1,'Fen Kazanımı','fizik',1,'fen','TYT','ba-tyt-fen-v1',true)`,
+        [fenNodes[3]],
+      )
+      await client.query(`
+        INSERT INTO public.curriculum_scope_releases(
+          game,display_exam_ref,question_exam_ref,taxonomy_version,release_status,diagnostic_enabled
+        ) VALUES
+          ('fen','TYT','TYT','ba-tyt-fen-v1','released',false),
+          ('turkce','TYT','TYT','ba-tyt-turkce-v2','released',false);
+        INSERT INTO public.test_curriculum_scope_integrity(
+          game,display_exam_ref,taxonomy_version,result
+        ) VALUES
+          ('fen','TYT','ba-tyt-fen-v1',
+           '{"total":1,"mapped":1,"unmapped":0,"scopeMismatch":0,"nodeOrphan":0,"outcomeOrphan":0,"primaryMismatch":0,"emptyOutcome":0}'::jsonb),
+          ('turkce','TYT','ba-tyt-turkce-v2',
+           '{"total":1,"mapped":1,"unmapped":0,"scopeMismatch":0,"nodeOrphan":0,"outcomeOrphan":0,"primaryMismatch":0,"emptyOutcome":0}'::jsonb);
+        INSERT INTO public.institution_scope_capabilities(
+          game,display_exam_ref,question_exam_ref,taxonomy_version,
+          capability_status,scope_policy_version,student_analysis_enabled,
+          aggregate_enabled,report_enabled,program_enabled,released_at
+        ) VALUES(
+          'fen','TYT','TYT','ba-tyt-fen-v1','released','institution-scope-v1',
+          true,true,false,false,clock_timestamp()
+        );
+      `)
+
+      const classroom = (await client.query(
+        `INSERT INTO public.teacher_classrooms(teacher_id,name,institution_id)
+         VALUES($1,'Kapsam Sınıfı',$2) RETURNING id`,
+        [managerOne, institutionOne],
+      )).rows[0].id
+      const twoPersonClassroom = (await client.query(
+        `INSERT INTO public.teacher_classrooms(teacher_id,name,institution_id)
+         VALUES($1,'İki Kişilik Sınıf',$2) RETURNING id`,
+        [managerOne, institutionOne],
+      )).rows[0].id
+      const threePersonClassroom = (await client.query(
+        `INSERT INTO public.teacher_classrooms(teacher_id,name,institution_id)
+         VALUES($1,'Üç Kişilik Sınıf',$2) RETURNING id`,
+        [managerOne, institutionOne],
+      )).rows[0].id
+      const outsideClassroom = (await client.query(
+        `INSERT INTO public.teacher_classrooms(teacher_id,name,institution_id)
+         VALUES($1,'Başka Kiracı Sınıfı',$2) RETURNING id`,
+        [outsider, outsideTenant],
+      )).rows[0].id
+
+      const acceptedAt = new Date(Date.now() - 70 * 24 * 60 * 60 * 1000)
+      const primaryMember = (await client.query(
+        `INSERT INTO public.teacher_classroom_memberships(
+          classroom_id,student_id,accepted_at
+        ) VALUES($1,$2,$3) RETURNING member_ref`,
+        [classroom, students[0], acceptedAt],
+      )).rows[0].member_ref
+      const fenOnlyMember = (await client.query(
+        `INSERT INTO public.teacher_classroom_memberships(
+          classroom_id,student_id,accepted_at
+        ) VALUES($1,$2,$3) RETURNING id,member_ref`,
+        [classroom, students[6], acceptedAt],
+      )).rows[0]
+      for (const studentId of students.slice(1, 3)) {
+        await client.query(
+          `INSERT INTO public.teacher_classroom_memberships(
+            classroom_id,student_id,accepted_at
+          ) VALUES($1,$2,$3)`,
+          [twoPersonClassroom, studentId, acceptedAt],
+        )
+      }
+      for (const studentId of students.slice(3, 6)) {
+        await client.query(
+          `INSERT INTO public.teacher_classroom_memberships(
+            classroom_id,student_id,accepted_at
+          ) VALUES($1,$2,$3)`,
+          [threePersonClassroom, studentId, acceptedAt],
+        )
+      }
+
+      const listed = await rpc('public.list_released_institution_scopes()')
+      expect(listed).toEqual([
+        expect.objectContaining({
+          game: 'fen',
+          displayExamRef: 'TYT',
+          taxonomyVersion: 'ba-tyt-fen-v1',
+          scopePolicyVersion: 'institution-scope-v1',
+        }),
+        expect.objectContaining({
+          game: 'matematik',
+          displayExamRef: 'TYT',
+          taxonomyVersion: 'ba-tyt-math-v1',
+          scopePolicyVersion: 'institution-scope-v1',
+        }),
+      ])
+
+      const windowEnd = new Date()
+      const math = await rpc(
+        'public.get_institution_student_learning_analysis_v2($1,$2,$3,$4,$5,$6)',
+        [managerOne, classroom, primaryMember, 'matematik', 'TYT', windowEnd],
+      )
+      const fen = await rpc(
+        'public.get_institution_student_learning_analysis_v2($1,$2,$3,$4,$5,$6)',
+        [managerOne, classroom, primaryMember, 'fen', 'TYT', windowEnd],
+      )
+      expect(math.scope).toMatchObject({
+        game: 'matematik',
+        examRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-math-v1',
+        institutionReportingEnabled: true,
+        modelVersion: 'institution-evidence-v2',
+      })
+      expect(math.outcomes.map((outcome) => outcome.code)).toEqual(['MAT-TEST-01'])
+      expect(fen.scope).toMatchObject({
+        game: 'fen',
+        examRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v1',
+        scopePolicyVersion: 'institution-scope-v1',
+      })
+      expect(fen.outcomes.map((outcome) => outcome.code)).toEqual(['FEN-TEST-01'])
+
+      expect(await authenticatedRpc(
+        managerOne,
+        'public.list_released_institution_scopes()',
+      )).toHaveLength(2)
+      await expectAuthenticatedScopeError(
+        managerOne,
+        'SELECT public.list_released_institution_scopes()',
+        [],
+        '42501',
+        'aal1',
+      )
+
+      await expectServiceError(
+        'SELECT public.resolve_released_institution_scope($1,$2)',
+        ['fen', 'tyt'],
+        '22023',
+      )
+      await expectServiceError(
+        'SELECT public.resolve_released_institution_scope($1,$2)',
+        ['turkce', 'TYT'],
+        'P0002',
+      )
+      await expectServiceError(
+        'SELECT public.get_institution_student_learning_analysis_v2($1,$2,$3,$4,$5,$6)',
+        [managerOne, outsideClassroom, primaryMember, 'matematik', 'TYT', windowEnd],
+        '42501',
+      )
+
+      await client.query(
+        `UPDATE public.test_curriculum_scope_integrity
+         SET result=jsonb_set(result,'{unmapped}','1'::jsonb)
+         WHERE game='fen' AND display_exam_ref='TYT'`,
+      )
+
+      await expectOwnerError(
+        `UPDATE public.institution_scope_capabilities
+         SET taxonomy_version='ba-tyt-fen-v2'
+         WHERE game='fen' AND display_exam_ref='TYT'`,
+        [],
+        '23514',
+      )
+      await expectOwnerError(
+        `UPDATE public.institution_scope_capabilities
+         SET capability_status='validating'
+         WHERE game='fen' AND display_exam_ref='TYT'`,
+        [],
+        '23514',
+      )
+      await client.query(
+        `UPDATE public.test_curriculum_scope_integrity
+         SET result=jsonb_set(result,'{unmapped}','0'::jsonb)
+         WHERE game='fen' AND display_exam_ref='TYT'`,
+      )
+
+      const followupWindowStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      const followupOpenedAt = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000)
+      await client.query(
+        `INSERT INTO public.institution_student_followups(
+          institution_id,classroom_id,membership_id,student_id,teacher_id,
+          reason_code,opened_at,game,display_exam_ref,question_exam_ref,
+          taxonomy_version,scope_policy_version
+        )
+        SELECT $1,$2,membership.id,membership.student_id,$3,
+          'support_needed',$4,'matematik','TYT','TYT',
+          'ba-tyt-math-v1','institution-scope-v1'
+        FROM public.teacher_classroom_memberships AS membership
+        WHERE membership.classroom_id=$2 AND membership.member_ref=$5`,
+        [institutionOne, classroom, managerOne, followupOpenedAt, primaryMember],
+      )
+      await client.query(
+        `INSERT INTO public.institution_student_followups(
+          institution_id,classroom_id,membership_id,student_id,teacher_id,
+          reason_code,opened_at,game,display_exam_ref,question_exam_ref,
+          taxonomy_version,scope_policy_version
+        ) VALUES(
+          $1,$2,$3,$4,$5,'inactivity',$6,'fen','TYT','TYT',
+          'ba-tyt-fen-v1','institution-scope-v1'
+        )`,
+        [
+          institutionOne, classroom, fenOnlyMember.id, students[6], managerOne,
+          followupOpenedAt,
+        ],
+      )
+      const mathFollowup = await rpc(
+        'public.get_institution_classroom_followup_metrics_v2($1,$2,$3,$4,$5,$6)',
+        [managerOne, classroom, 'matematik', 'TYT', followupWindowStart, windowEnd],
+      )
+      const fenFollowup = await rpc(
+        'public.get_institution_classroom_followup_metrics_v2($1,$2,$3,$4,$5,$6)',
+        [managerOne, classroom, 'fen', 'TYT', followupWindowStart, windowEnd],
+      )
+      expect(mathFollowup).toMatchObject({
+        scope: {
+          game: 'matematik', examRef: 'TYT', taxonomyVersion: 'ba-tyt-math-v1',
+        },
+        followedMemberRefs: [primaryMember],
+      })
+      expect(fenFollowup).toMatchObject({
+        scope: { game: 'fen', examRef: 'TYT', taxonomyVersion: 'ba-tyt-fen-v1' },
+        followedMemberRefs: [fenOnlyMember.member_ref],
+      })
+      expect(mathFollowup.scope).not.toHaveProperty('displayExamRef')
+      expect(fenFollowup.scope).not.toHaveProperty('displayExamRef')
+      const fenProgramCoverage = await rpc(
+        'public.get_institution_classroom_published_program_members_v2($1,$2,$3,$4,$5,$6)',
+        [managerOne, classroom, 'fen', 'TYT', followupWindowStart, windowEnd],
+      )
+      expect(fenProgramCoverage).toEqual({
+        scope: {
+          game: 'fen',
+          examRef: 'TYT',
+          questionExamRef: 'TYT',
+          taxonomyVersion: 'ba-tyt-fen-v1',
+          scopePolicyVersion: 'institution-scope-v1',
+        },
+        memberRefs: [],
+      })
+      await client.query(
+        `UPDATE public.test_curriculum_scope_integrity
+         SET result=jsonb_set(result,'{unmapped}','1'::jsonb)
+         WHERE game='fen' AND display_exam_ref='TYT'`,
+      )
+      await expectServiceError(
+        'SELECT public.resolve_released_institution_scope($1,$2)',
+        ['fen', 'TYT'],
+        '23514',
+      )
+      await client.query(
+        `UPDATE public.test_curriculum_scope_integrity
+         SET result=jsonb_set(result,'{unmapped}','0'::jsonb)
+         WHERE game='fen' AND display_exam_ref='TYT'`,
+      )
+
+      const suppressed = await rpc(
+        'public.get_institution_classroom_growth_metrics_v2($1,$2,$3,$4,$5)',
+        [managerOne, twoPersonClassroom, 'matematik', 'TYT', windowEnd],
+      )
+      expect(suppressed).toMatchObject({
+        supported: false,
+        reason: 'insufficient_group',
+        modelVersion: 'institution-growth-v2',
+      })
+      expect(suppressed).not.toHaveProperty('eligibleStudentCount')
+      expect(suppressed).not.toHaveProperty('positiveGrowthStudentCount')
+      expect(suppressed).not.toHaveProperty('excludedInsufficientCount')
+
+      const supported = await rpc(
+        'public.get_institution_classroom_growth_metrics_v2($1,$2,$3,$4,$5)',
+        [managerOne, threePersonClassroom, 'matematik', 'TYT', windowEnd],
+      )
+      expect(supported).toMatchObject({
+        supported: true,
+        eligibleStudentCount: 0,
+        positiveGrowthStudentCount: 0,
+        excludedInsufficientCount: 3,
+      })
+
+      const privileges = (await client.query(`SELECT
+        has_function_privilege('authenticated',
+          'public.get_institution_student_learning_analysis_v2(uuid,uuid,text,text,text,timestamptz)',
+          'EXECUTE') AS authenticated,
+        has_function_privilege('service_role',
+          'public.get_institution_student_learning_analysis_v2(uuid,uuid,text,text,text,timestamptz)',
+          'EXECUTE') AS service_role,
+        has_function_privilege('anon',
+          'public.list_released_institution_scopes()',
+          'EXECUTE') AS anon
+      `)).rows[0]
+      expect(privileges).toEqual({ authenticated: true, service_role: true, anon: false })
+    } finally {
+      await client.query('ROLLBACK')
+      await client.query('RESET ROLE')
+      await client.query("SELECT set_config('app.uid','',false)")
+      await client.query("SELECT set_config('request.jwt.claims','{}',false)")
+    }
   })
 
   it('provisions only a bounded JWT/AAL2 invitation-free pilot with one immutable audit event', async () => {
@@ -1824,7 +2322,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
       ]),
       '55000',
     )
-  })
+  }, 30_000)
 
   it('lists tenants for platform admins without exposing the directory to managers', async () => {
     await expectPgError(
@@ -2673,4 +3171,509 @@ suite('112-127, 131-135, 145, 149-160, 167-168 and 182-183 institution pilot rea
       expect.objectContaining({ id: institutionTwo, status: 'archived' }),
     ]))
   })
+
+  it('releases 195-200 in order, replays safely, and rejects malformed proof rows', async () => {
+    await client.query(`
+      ALTER TABLE public.questions
+        ADD COLUMN IF NOT EXISTS subcategory text,
+        ADD COLUMN IF NOT EXISTS level_tag text,
+        ADD COLUMN IF NOT EXISTS exam_ref text,
+        ADD COLUMN IF NOT EXISTS base_points smallint DEFAULT 30,
+        ADD COLUMN IF NOT EXISTS published_revision_id uuid;
+      ALTER TABLE public.verified_attempts
+        ADD COLUMN IF NOT EXISTS game text,
+        ADD COLUMN IF NOT EXISTS completed_at timestamptz,
+        ADD COLUMN IF NOT EXISTS session_id uuid,
+        ADD COLUMN IF NOT EXISTS question_ids uuid[];
+      ALTER TABLE public.session_answers
+        ADD COLUMN IF NOT EXISTS user_id uuid,
+        ADD COLUMN IF NOT EXISTS question_id uuid,
+        ADD COLUMN IF NOT EXISTS is_correct boolean,
+        ADD COLUMN IF NOT EXISTS is_skipped boolean,
+        ADD COLUMN IF NOT EXISTS question_revision_id uuid;
+      ALTER TABLE public.curriculum_scope_releases
+        ADD COLUMN IF NOT EXISTS mapping_mode text NOT NULL DEFAULT 'category_proxy',
+        ADD COLUMN IF NOT EXISTS released_at timestamptz,
+        ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+        ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT clock_timestamp();
+
+      CREATE TABLE public.question_content_revisions(
+        id uuid PRIMARY KEY,
+        question_id uuid NOT NULL REFERENCES public.questions(id),
+        status text NOT NULL,
+        game text NOT NULL,
+        category text NOT NULL,
+        subcategory text,
+        topic text,
+        difficulty smallint NOT NULL,
+        level_tag text,
+        exam_ref text,
+        content jsonb NOT NULL,
+        content_sha256 text NOT NULL
+      );
+      CREATE TABLE public.question_outcomes(
+        question_id uuid NOT NULL REFERENCES public.questions(id),
+        outcome_id uuid NOT NULL REFERENCES public.curriculum_outcomes(id),
+        weight numeric(6,3) NOT NULL DEFAULT 1,
+        is_primary boolean NOT NULL DEFAULT false,
+        mapping_source text NOT NULL DEFAULT 'manual',
+        created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+        PRIMARY KEY(question_id,outcome_id)
+      );
+      CREATE TABLE public.verified_attempt_question_revisions(
+        attempt_id uuid NOT NULL,
+        question_id uuid NOT NULL,
+        revision_id uuid,
+        game text,
+        category text,
+        exam_ref text,
+        difficulty smallint,
+        PRIMARY KEY(attempt_id,question_id)
+      );
+      CREATE TABLE public.mastery_materialized_attempts(
+        attempt_id uuid PRIMARY KEY
+      );
+
+      UPDATE public.curriculum_scope_releases
+      SET mapping_mode='category_proxy', released_at=clock_timestamp(),
+          updated_at=clock_timestamp()
+      WHERE game='matematik' AND display_exam_ref='TYT';
+      INSERT INTO public.curriculum_scope_releases(
+        game,display_exam_ref,question_exam_ref,taxonomy_version,
+        release_status,mapping_mode,diagnostic_enabled,released_at
+      ) VALUES
+        ('fen','TYT','TYT','ba-tyt-fen-v1','released','category_proxy',false,clock_timestamp()),
+        ('turkce','TYT','TYT','ba-tyt-turkce-v2','released','category_proxy',false,clock_timestamp()),
+        ('wordquest','YDT',NULL,'ba-ydt-eng-v1','released','split_scope',false,clock_timestamp()),
+        ('sosyal','TYT','TYT','ba-tyt-sosyal-v1','draft','category_proxy',false,NULL);
+      INSERT INTO public.test_curriculum_scope_integrity(
+        game,display_exam_ref,taxonomy_version,result
+      ) VALUES
+        ('fen','TYT','ba-tyt-fen-v1',
+          '{"total":10,"mapped":10,"unmapped":0,"scopeMismatch":0,"nodeOrphan":0,"outcomeOrphan":0,"primaryMismatch":0,"emptyOutcome":0}'::jsonb),
+        ('turkce','TYT','ba-tyt-turkce-v2',
+          '{"total":10,"mapped":10,"unmapped":0,"scopeMismatch":0,"nodeOrphan":0,"outcomeOrphan":0,"primaryMismatch":0,"emptyOutcome":0}'::jsonb),
+        ('wordquest','YDT','ba-ydt-eng-v1',
+          '{"total":14,"mapped":14,"unmapped":0,"scopeMismatch":0,"nodeOrphan":0,"outcomeOrphan":0,"primaryMismatch":0,"emptyOutcome":0}'::jsonb),
+        ('sosyal','TYT','ba-tyt-sosyal-v1',
+          '{"total":0,"mapped":0,"unmapped":0,"scopeMismatch":0,"nodeOrphan":0,"outcomeOrphan":0,"primaryMismatch":0,"emptyOutcome":1}'::jsonb);
+    `)
+
+    async function seedDiagnosticScope({
+      game, displayExamRef, questionExamRef, taxonomyVersion, categories,
+    }) {
+      for (const [categoryIndex, categorySpec] of categories.entries()) {
+        const [category, candidateCount] = categorySpec
+        const nodeId = randomUUID()
+        const outcomeId = randomUUID()
+        await client.query(`INSERT INTO public.curriculum_nodes(
+          id,parent_id,code,title,node_type,is_active,game,exam_ref,taxonomy_version,category
+        ) VALUES($1,NULL,$2,$3,'outcome',true,$4,$5,$6,$7)`, [
+          nodeId,
+          `gate-${game}-${displayExamRef}-${category}`,
+          `${game} ${category}`,
+          game,
+          displayExamRef,
+          taxonomyVersion,
+          category,
+        ])
+        await client.query(`INSERT INTO public.curriculum_outcomes(
+          id,code,node_id,title,category,sort_order,game,exam_ref,taxonomy_version,is_active
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,true)`, [
+          outcomeId,
+          `GATE-${game.toUpperCase()}-${categoryIndex + 1}`,
+          nodeId,
+          `${game} ${category}`,
+          category,
+          categoryIndex + 1,
+          game,
+          displayExamRef,
+          taxonomyVersion,
+        ])
+        for (let questionIndex = 0; questionIndex < candidateCount; questionIndex += 1) {
+          const questionId = randomUUID()
+          const revisionId = randomUUID()
+          const content = {
+            question: `${game} ${category} ${questionIndex + 1}`,
+            options: ['A', 'B', 'C', 'D'],
+            answer: 1,
+          }
+          const contentHash = randomUUID().replaceAll('-', '').repeat(2)
+          const difficulty = (questionIndex % 5) + 1
+          await client.query(`INSERT INTO public.questions(
+            id,game,category,difficulty,content,is_active,exam_ref,base_points
+          ) VALUES($1,$2,$3,$4,$5::jsonb,true,$6,30)`, [
+            questionId, game, category, difficulty, JSON.stringify(content), questionExamRef,
+          ])
+          await client.query(`INSERT INTO public.question_content_revisions(
+            id,question_id,status,game,category,difficulty,exam_ref,content,content_sha256
+          ) VALUES($1,$2,'published',$3,$4,$5,$6,$7::jsonb,$8)`, [
+            revisionId, questionId, game, category, difficulty, questionExamRef,
+            JSON.stringify(content), contentHash,
+          ])
+          await client.query(
+            'UPDATE public.questions SET published_revision_id=$1 WHERE id=$2',
+            [revisionId, questionId],
+          )
+          await client.query(`INSERT INTO public.question_outcomes(
+            question_id,outcome_id,weight,is_primary,mapping_source
+          ) VALUES($1,$2,1,true,'taxonomy_auto')`, [questionId, outcomeId])
+        }
+      }
+    }
+
+    await seedDiagnosticScope({
+      game: 'matematik', displayExamRef: 'TYT', questionExamRef: 'TYT',
+      taxonomyVersion: 'ba-tyt-math-v1',
+      categories: [
+        ['sayilar-gate', 2], ['denklemler-gate', 2], ['fonksiyonlar-gate', 2],
+        ['problemler-gate', 2], ['geometri-gate', 1], ['olasilik-gate', 1],
+      ],
+    })
+    await seedDiagnosticScope({
+      game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+      taxonomyVersion: 'ba-tyt-fen-v1',
+      categories: [['fizik', 4], ['kimya', 4], ['biyoloji', 2]],
+    })
+    await seedDiagnosticScope({
+      game: 'turkce', displayExamRef: 'TYT', questionExamRef: 'TYT',
+      taxonomyVersion: 'ba-tyt-turkce-v2',
+      categories: [
+        ['paragraf', 2], ['dil_bilgisi', 2], ['sozcuk', 2],
+        ['anlam_bilgisi', 2], ['yazim_kurallari', 2],
+      ],
+    })
+    await seedDiagnosticScope({
+      game: 'wordquest', displayExamRef: 'YDT', questionExamRef: null,
+      taxonomyVersion: 'ba-ydt-eng-v1',
+      categories: [
+        ['vocabulary', 2], ['phrasal_verbs', 2], ['grammar', 2],
+        ['sentence_completion', 2], ['cloze_test', 2], ['restatement', 2],
+        ['dialogue', 2],
+      ],
+    })
+
+    await client.query(adaptiveDiagnosticSql)
+    await client.query(adaptiveDiagnosticEvidenceSql)
+    await client.query(adaptiveDiagnosticRegistryGateSql)
+    await client.query(adaptiveDiagnosticV3Sql)
+
+    async function expectMigrationRollback(setupSql, migrationSql) {
+      await client.query('BEGIN')
+      let caught
+      try {
+        await client.query(setupSql)
+        await client.query(migrationSql)
+      } catch (error) {
+        caught = error
+      } finally {
+        await client.query('ROLLBACK')
+      }
+      expect(caught?.code).toBe('23514')
+    }
+
+    async function proofTimestamp(table, keyColumn, keyValue) {
+      return (await client.query(
+        `SELECT released_at::text,updated_at::text FROM public.${table} WHERE ${keyColumn}=$1`,
+        [keyValue],
+      )).rows[0]
+    }
+
+    const applied = []
+    await expectMigrationRollback(`INSERT INTO public.adaptive_diagnostic_blueprints(
+      blueprint_version,game,display_exam_ref,question_exam_ref,taxonomy_version,
+      policy_version,question_count,outcome_count,max_per_outcome,
+      candidate_gate_version,requires_revision_snapshot,capability_status,released_at
+    ) VALUES('ba-tyt-fen-diagnostic-v1','fen','TYT','TYT','ba-tyt-fen-v1',
+      'adaptive-screening-v1',10,3,4,'exact-single-outcome-v1',true,
+      'validating',clock_timestamp())`, fenDiagnosticReleaseSql)
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.adaptive_diagnostic_blueprints
+      WHERE blueprint_version='ba-tyt-fen-diagnostic-v1'`)).rows[0].count).toBe(0)
+    expect((await client.query(`SELECT diagnostic_enabled FROM public.curriculum_scope_releases
+      WHERE game='fen' AND display_exam_ref='TYT'`)).rows[0].diagnostic_enabled).toBe(false)
+
+    await client.query(fenDiagnosticReleaseSql)
+    applied.push(195)
+    const fenDiagnosticProof = await proofTimestamp(
+      'adaptive_diagnostic_blueprints', 'blueprint_version', 'ba-tyt-fen-diagnostic-v1',
+    )
+    await client.query(fenDiagnosticReleaseSql)
+    expect(await proofTimestamp(
+      'adaptive_diagnostic_blueprints', 'blueprint_version', 'ba-tyt-fen-diagnostic-v1',
+    )).toEqual(fenDiagnosticProof)
+    await client.query(`UPDATE public.curriculum_scope_releases SET diagnostic_enabled=false
+      WHERE game='fen' AND display_exam_ref='TYT'`)
+    await client.query(fenDiagnosticReleaseSql)
+    expect((await client.query(
+      "SELECT public.resolve_released_diagnostic_scope('fen','TYT') AS scope",
+    )).rows[0].scope).toBeNull()
+    await client.query(`UPDATE public.curriculum_scope_releases SET diagnostic_enabled=true
+      WHERE game='fen' AND display_exam_ref='TYT'`)
+
+    await expectMigrationRollback(`INSERT INTO public.institution_scope_capabilities(
+      game,display_exam_ref,question_exam_ref,taxonomy_version,capability_status,
+      scope_policy_version,student_analysis_enabled,aggregate_enabled,
+      report_enabled,program_enabled,released_at
+    ) VALUES('fen','TYT','TYT','ba-tyt-fen-v1','validating',
+      'institution-scope-v1',true,true,false,false,clock_timestamp())`, fenInstitutionReleaseSql)
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.institution_scope_capabilities
+      WHERE game='fen' AND display_exam_ref='TYT'`)).rows[0].count).toBe(0)
+    await client.query(fenInstitutionReleaseSql)
+    applied.push(196)
+    const fenInstitutionProof = await proofTimestamp(
+      'institution_scope_capabilities', 'game', 'fen',
+    )
+    await client.query(fenInstitutionReleaseSql)
+    expect(await proofTimestamp(
+      'institution_scope_capabilities', 'game', 'fen',
+    )).toEqual(fenInstitutionProof)
+
+    await expectMigrationRollback(`INSERT INTO public.adaptive_diagnostic_blueprints(
+      blueprint_version,game,display_exam_ref,question_exam_ref,taxonomy_version,
+      policy_version,question_count,outcome_count,max_per_outcome,
+      candidate_gate_version,requires_revision_snapshot,capability_status,released_at
+    ) VALUES('ba-tyt-turkce-diagnostic-v1','turkce','TYT','TYT','ba-tyt-turkce-v2',
+      'adaptive-screening-v1',10,5,2,'exact-single-outcome-v1',true,
+      'validating',clock_timestamp())`, turkishDiagnosticReleaseSql)
+    await client.query(turkishDiagnosticReleaseSql)
+    applied.push(197)
+    const turkishDiagnosticProof = await proofTimestamp(
+      'adaptive_diagnostic_blueprints', 'blueprint_version', 'ba-tyt-turkce-diagnostic-v1',
+    )
+    await client.query(turkishDiagnosticReleaseSql)
+    expect(await proofTimestamp(
+      'adaptive_diagnostic_blueprints', 'blueprint_version', 'ba-tyt-turkce-diagnostic-v1',
+    )).toEqual(turkishDiagnosticProof)
+    await client.query(`UPDATE public.curriculum_scope_releases SET diagnostic_enabled=false
+      WHERE game='turkce' AND display_exam_ref='TYT'`)
+    await client.query(turkishDiagnosticReleaseSql)
+    expect((await client.query(
+      "SELECT public.resolve_released_diagnostic_scope('turkce','TYT') AS scope",
+    )).rows[0].scope).toBeNull()
+    await client.query(`UPDATE public.curriculum_scope_releases SET diagnostic_enabled=true
+      WHERE game='turkce' AND display_exam_ref='TYT'`)
+
+    await expectMigrationRollback(`INSERT INTO public.institution_scope_capabilities(
+      game,display_exam_ref,question_exam_ref,taxonomy_version,capability_status,
+      scope_policy_version,student_analysis_enabled,aggregate_enabled,
+      report_enabled,program_enabled,released_at
+    ) VALUES('turkce','TYT','TYT','ba-tyt-turkce-v2','validating',
+      'institution-scope-v1',true,true,false,false,clock_timestamp())`, turkishInstitutionReleaseSql)
+    await client.query(turkishInstitutionReleaseSql)
+    applied.push(198)
+    const turkishInstitutionProof = await proofTimestamp(
+      'institution_scope_capabilities', 'game', 'turkce',
+    )
+    await client.query(turkishInstitutionReleaseSql)
+    expect(await proofTimestamp(
+      'institution_scope_capabilities', 'game', 'turkce',
+    )).toEqual(turkishInstitutionProof)
+
+    await expectMigrationRollback(`INSERT INTO public.adaptive_diagnostic_blueprints(
+      blueprint_version,game,display_exam_ref,question_exam_ref,taxonomy_version,
+      policy_version,question_count,outcome_count,max_per_outcome,
+      candidate_gate_version,requires_revision_snapshot,capability_status,released_at
+    ) VALUES('ba-ydt-eng-diagnostic-v1','wordquest','YDT',NULL,'ba-ydt-eng-v1',
+      'adaptive-screening-v1',10,7,2,'exact-single-outcome-v1',true,
+      'validating',clock_timestamp())`, wordquestDiagnosticReleaseSql)
+    await client.query(wordquestDiagnosticReleaseSql)
+    applied.push(199)
+    const wordquestDiagnosticProof = await proofTimestamp(
+      'adaptive_diagnostic_blueprints', 'blueprint_version', 'ba-ydt-eng-diagnostic-v1',
+    )
+    await client.query(wordquestDiagnosticReleaseSql)
+    expect(await proofTimestamp(
+      'adaptive_diagnostic_blueprints', 'blueprint_version', 'ba-ydt-eng-diagnostic-v1',
+    )).toEqual(wordquestDiagnosticProof)
+    await client.query(`UPDATE public.curriculum_scope_releases SET diagnostic_enabled=false
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)
+    await client.query(wordquestDiagnosticReleaseSql)
+    expect((await client.query(
+      "SELECT public.resolve_released_diagnostic_scope('wordquest','YDT') AS scope",
+    )).rows[0].scope).toBeNull()
+    await client.query(`UPDATE public.curriculum_scope_releases SET diagnostic_enabled=true
+      WHERE game='wordquest' AND display_exam_ref='YDT'`)
+
+    await expectMigrationRollback(`INSERT INTO public.institution_scope_capabilities(
+      game,display_exam_ref,question_exam_ref,taxonomy_version,capability_status,
+      scope_policy_version,student_analysis_enabled,aggregate_enabled,
+      report_enabled,program_enabled,released_at
+    ) VALUES('wordquest','YDT',NULL,'ba-ydt-eng-v1','validating',
+      'institution-scope-v1',true,true,false,false,clock_timestamp())`, wordquestInstitutionReleaseSql)
+    await client.query(wordquestInstitutionReleaseSql)
+    applied.push(200)
+    const wordquestInstitutionProof = await proofTimestamp(
+      'institution_scope_capabilities', 'game', 'wordquest',
+    )
+    await client.query(wordquestInstitutionReleaseSql)
+    expect(await proofTimestamp(
+      'institution_scope_capabilities', 'game', 'wordquest',
+    )).toEqual(wordquestInstitutionProof)
+    expect(applied).toEqual([195, 196, 197, 198, 199, 200])
+
+    // A deliberate emergency disable is an operator-owned forward state. A
+    // full release-chain replay must revalidate immutable proof, keep every
+    // released timestamp stable, and never switch diagnostics back on. The
+    // already-released institution aggregate remains readable, but reports
+    // the live diagnosticEnabled=false snapshot.
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET diagnostic_enabled=false
+      WHERE (game,display_exam_ref) IN (('fen','TYT'),('turkce','TYT'),('wordquest','YDT'))`)
+    for (const migrationSql of [
+      fenDiagnosticReleaseSql,
+      fenInstitutionReleaseSql,
+      turkishDiagnosticReleaseSql,
+      turkishInstitutionReleaseSql,
+      wordquestDiagnosticReleaseSql,
+      wordquestInstitutionReleaseSql,
+    ]) await client.query(migrationSql)
+    expect((await client.query(`SELECT game,diagnostic_enabled
+      FROM public.curriculum_scope_releases
+      WHERE game IN ('fen','turkce','wordquest') ORDER BY game`)).rows).toEqual([
+      { game: 'fen', diagnostic_enabled: false },
+      { game: 'turkce', diagnostic_enabled: false },
+      { game: 'wordquest', diagnostic_enabled: false },
+    ])
+    for (const [game, examRef, diagnosticProof, institutionProof] of [
+      ['fen', 'TYT', fenDiagnosticProof, fenInstitutionProof],
+      ['turkce', 'TYT', turkishDiagnosticProof, turkishInstitutionProof],
+      ['wordquest', 'YDT', wordquestDiagnosticProof, wordquestInstitutionProof],
+    ]) {
+      expect((await client.query(
+        'SELECT public.resolve_released_diagnostic_scope($1,$2) AS scope',
+        [game, examRef],
+      )).rows[0].scope).toBeNull()
+      expect((await client.query(
+        'SELECT public.resolve_released_institution_scope($1,$2) AS scope',
+        [game, examRef],
+      )).rows[0].scope.diagnosticEnabled).toBe(false)
+      expect(await proofTimestamp(
+        'adaptive_diagnostic_blueprints', 'blueprint_version',
+        `ba-${game === 'wordquest' ? 'ydt-eng' : `tyt-${game}`}-diagnostic-v1`,
+      )).toEqual(diagnosticProof)
+      expect(await proofTimestamp(
+        'institution_scope_capabilities', 'game', game,
+      )).toEqual(institutionProof)
+    }
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET diagnostic_enabled=true
+      WHERE (game,display_exam_ref) IN (('fen','TYT'),('turkce','TYT'),('wordquest','YDT'))`)
+
+    const diagnosticScopes = {}
+    const institutionScopes = {}
+    for (const [game, examRef] of [['fen', 'TYT'], ['turkce', 'TYT'], ['wordquest', 'YDT']]) {
+      diagnosticScopes[game] = (await client.query(
+        'SELECT public.resolve_released_diagnostic_scope($1,$2) AS scope',
+        [game, examRef],
+      )).rows[0].scope
+      institutionScopes[game] = (await client.query(
+        'SELECT public.resolve_released_institution_scope($1,$2) AS scope',
+        [game, examRef],
+      )).rows[0].scope
+    }
+    expect(diagnosticScopes).toEqual({
+      fen: {
+        game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v1', policyVersion: 'adaptive-screening-v1',
+        questionCount: 10, outcomeCount: 3, maxPerOutcome: 4,
+      },
+      turkce: {
+        game: 'turkce', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-turkce-v2', policyVersion: 'adaptive-screening-v1',
+        questionCount: 10, outcomeCount: 5, maxPerOutcome: 2,
+      },
+      wordquest: {
+        game: 'wordquest', displayExamRef: 'YDT', questionExamRef: null,
+        taxonomyVersion: 'ba-ydt-eng-v1', policyVersion: 'adaptive-screening-v1',
+        questionCount: 10, outcomeCount: 7, maxPerOutcome: 2,
+      },
+    })
+    expect(institutionScopes).toEqual({
+      fen: {
+        game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v1', scopePolicyVersion: 'institution-scope-v1',
+        diagnosticEnabled: true,
+      },
+      turkce: {
+        game: 'turkce', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-turkce-v2', scopePolicyVersion: 'institution-scope-v1',
+        diagnosticEnabled: true,
+      },
+      wordquest: {
+        game: 'wordquest', displayExamRef: 'YDT', questionExamRef: null,
+        taxonomyVersion: 'ba-ydt-eng-v1', scopePolicyVersion: 'institution-scope-v1',
+        diagnosticEnabled: true,
+      },
+    })
+
+    expect((await client.query(`SELECT game,student_analysis_enabled,aggregate_enabled,
+      report_enabled,program_enabled,capability_status
+      FROM public.institution_scope_capabilities
+      WHERE game IN ('fen','turkce','wordquest') ORDER BY game`)).rows).toEqual([
+      { game: 'fen', student_analysis_enabled: true, aggregate_enabled: true, report_enabled: false, program_enabled: false, capability_status: 'released' },
+      { game: 'turkce', student_analysis_enabled: true, aggregate_enabled: true, report_enabled: false, program_enabled: false, capability_status: 'released' },
+      { game: 'wordquest', student_analysis_enabled: true, aggregate_enabled: true, report_enabled: false, program_enabled: false, capability_status: 'released' },
+    ])
+    for (const [game, examRef] of [['fen', 'TYT'], ['turkce', 'TYT'], ['wordquest', 'YDT']]) {
+      await expectPgError(
+        () => client.query(
+          "SELECT public.institution_scope_capability_snapshot($1,$2,'report')",
+          [game, examRef],
+        ),
+        'P0002',
+      )
+      await expectPgError(
+        () => client.query(
+          "SELECT public.institution_scope_capability_snapshot($1,$2,'program')",
+          [game, examRef],
+        ),
+        'P0002',
+      )
+    }
+
+    // Reuse the already-provisioned tenant: migration 168 deliberately keeps
+    // the global provisioning gate closed, which must not be weakened merely
+    // to exercise a read-only multi-scope RPC.
+    const scopeManager = managerOne
+    const scopeClassroom = (await client.query(`INSERT INTO public.teacher_classrooms(
+      teacher_id,name,institution_id
+    ) VALUES($1,'Release Gate Classroom',$2) RETURNING id`, [
+      scopeManager, institutionOne,
+    ])).rows[0].id
+    const windowEnd = new Date()
+    const windowStart = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000)
+    for (const [game, examRef, taxonomyVersion, questionExamRef] of [
+      ['fen', 'TYT', 'ba-tyt-fen-v1', 'TYT'],
+      ['turkce', 'TYT', 'ba-tyt-turkce-v2', 'TYT'],
+      ['wordquest', 'YDT', 'ba-ydt-eng-v1', null],
+    ]) {
+      expect(await authenticatedRpc(
+        scopeManager,
+        'public.get_institution_classroom_published_program_members_v2($1,$2,$3,$4,$5,$6)',
+        [scopeManager, scopeClassroom, game, examRef, windowStart, windowEnd],
+      )).toEqual({
+        scope: {
+          game, examRef, questionExamRef, taxonomyVersion,
+          scopePolicyVersion: 'institution-scope-v1',
+        },
+        memberRefs: [],
+      })
+    }
+
+    expect((await client.query(`SELECT release_status,diagnostic_enabled,released_at
+      FROM public.curriculum_scope_releases
+      WHERE game='sosyal' AND display_exam_ref='TYT'`)).rows[0]).toEqual({
+      release_status: 'draft', diagnostic_enabled: false, released_at: null,
+    })
+    expect((await client.query(`SELECT
+      (SELECT count(*)::integer FROM public.adaptive_diagnostic_blueprints WHERE game='sosyal') AS diagnostic,
+      (SELECT count(*)::integer FROM public.institution_scope_capabilities WHERE game='sosyal') AS institution`)).rows[0]).toEqual({
+      diagnostic: 0, institution: 0,
+    })
+    expect((await client.query(
+      "SELECT public.resolve_released_diagnostic_scope('sosyal','TYT') AS scope",
+    )).rows[0].scope).toBeNull()
+  }, 120_000)
 })

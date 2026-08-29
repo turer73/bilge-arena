@@ -164,7 +164,10 @@ describe('MasteryActionCard', () => {
     render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
 
     expect(screen.getByText('KEŞİF SEVİYESİ 1/3')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Keşif Turunu Başlat' })).toHaveAttribute('href', '/arena/tani')
+    expect(screen.getByRole('link', { name: 'Keşif Turunu Başlat' })).toHaveAttribute(
+      'href',
+      '/arena/tani?game=matematik&exam_ref=TYT',
+    )
     expect(screen.queryByText(/zayıf/i)).not.toBeInTheDocument()
   })
 
@@ -195,6 +198,30 @@ describe('MasteryActionCard', () => {
     })
     expect(pushMock).toHaveBeenCalledWith('/arena/fen')
     expect(screen.queryByRole('link', { name: 'Keşif Turunu Başlat' })).not.toBeInTheDocument()
+  })
+
+  test('Wordquest mastery YDT etiketini soru filtresine tasimaz', () => {
+    useGameStore.setState({ selectedExamRef: 'TYT' })
+    const ydtCoverage = {
+      ...supportedCoverage,
+      diagnosticAvailable: false,
+      taxonomyVersion: 'ba-ydt-eng-v1',
+    }
+    mockedUseMasteryMap.mockReturnValue(hookResult({
+      response: { coverage: ydtCoverage },
+      coverage: ydtCoverage,
+      outcomes: [mkOutcome({
+        code: 'ENG-VOC-01', game: 'wordquest', category: 'vocabulary', examRef: 'YDT',
+        title: 'Kelime bilgisi', status: 'insufficient', attempts: 0, score: 0,
+      })],
+    }) as never)
+    render(<MasteryActionCard game="wordquest" userId="u1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kanıt İçin Pratik Yap' }))
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'wordquest', selectedCategory: 'vocabulary', selectedExamRef: 'TYT', selectedMode: 'practice',
+    })
+    expect(pushMock).toHaveBeenCalledWith('/arena/wordquest')
   })
 
   test('kanıt evresinde en az denenmiş kazanımı sıraya alır', () => {

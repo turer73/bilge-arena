@@ -65,7 +65,10 @@ describe('TodayPlanFocus', () => {
     render(<TodayPlanFocus game="matematik" userId="u1" examRef="TYT" />)
 
     expect(screen.getByText(/hazır plan bulunamadı/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /10 soruluk kısa tanılama/i })).toHaveAttribute('href', '/arena/tani')
+    expect(screen.getByRole('link', { name: /10 soruluk kısa başlangıç taraması/i })).toHaveAttribute(
+      'href',
+      '/arena/tani?game=matematik&exam_ref=TYT',
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Derse Başla' }))
     expect(pushMock).toHaveBeenCalledWith('/arena/matematik')
   })
@@ -92,6 +95,27 @@ describe('TodayPlanFocus', () => {
     expect(state.selectedDifficulty).toBeNull()
     expect(state.selectedExamRef).toBe('TYT')
     expect(pushMock).toHaveBeenCalledWith('/arena/matematik?start=today-plan')
+  })
+
+  test('Wordquest plani null soru kapsami kullanir ve onceki sinav tercihini korur', () => {
+    useGameStore.setState({ selectedExamRef: 'AYT-SAY' })
+    mockedUseTodayPlan.mockReturnValue({
+      plan: { ...mkPlan(15), game: 'wordquest', examRef: null },
+      loading: false,
+    } as never)
+
+    render(<TodayPlanFocus game="wordquest" userId="u1" examRef="YDT" />)
+
+    expect(mockedUseTodayPlan).toHaveBeenCalledWith('wordquest', 'u1', null, undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'Planı Başlat · 15 Soru' }))
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'wordquest',
+      selectedMode: 'practice',
+      selectedCategory: null,
+      selectedDifficulty: null,
+      selectedExamRef: 'AYT-SAY',
+    })
+    expect(pushMock).toHaveBeenCalledWith('/arena/wordquest?start=today-plan')
   })
 
   test('kısmi planda ana ve mobil CTA yalnız kalan soru sayısını söyler', () => {

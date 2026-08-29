@@ -584,7 +584,7 @@ console.log(`✓ fen template: ${VERIFIED_FEN.length} verified örnek (fizik: 4,
 // SOSYAL BİLİMLER
 writeFileSync(`${TPL_DIR}/sosyal_tyt_examples.json`, JSON.stringify({
   description: 'ÖSYM TYT Sosyal Bilimler geçmiş sınav soruları — sosyal game AI generation few-shot şablonları',
-  usage: 'tarih/coğrafya/felsefe/sosyoloji soru generation prompt\'larında örnek olarak kullan',
+  usage: 'Yalnız tarih/felsefe için doğrulanmış few-shot; diğer Sosyal kategorilerinde kapsam kanıtı sayma',
   exam: 'TYT Sosyal Bilimler',
   generated: now,
   question_format: {
@@ -592,8 +592,10 @@ writeFileSync(`${TPL_DIR}/sosyal_tyt_examples.json`, JSON.stringify({
     question: 'Soru cümlesi',
     options: ['5 uzun metin seçenek — genellikle "Bu parçadan hangisine ulaşılabilir/ulaşılamaz?" formatı'],
     answer: '0-indexed doğru cevap indeksi',
-    category: 'tarih|cografya|felsefe|sosyoloji|din',
+    category: 'tarih|cografya|felsefe|sosyoloji|din_kulturu',
   },
+  verified_example_categories: ['tarih', 'felsefe'],
+  missing_verified_example_categories: ['cografya', 'sosyoloji', 'din_kulturu'],
   examples: VERIFIED_SOSYAL,
 }, null, 2), 'utf8')
 console.log(`✓ sosyal template: ${VERIFIED_SOSYAL.length} verified örnek (tarih: 5, felsefe: 3)`)
@@ -642,7 +644,12 @@ writeFileSync(`${TPL_DIR}/overview.json`, JSON.stringify({
   templates: {
     matematik: { file: 'templates/matematik_tyt_examples.json', count: VERIFIED_MATEMATIK.length, categories: ['sayilar', 'istatistik', 'problemler'] },
     fen: { file: 'templates/fen_tyt_examples.json', count: VERIFIED_FEN.length, categories: ['fizik', 'biyoloji'] },
-    sosyal: { file: 'templates/sosyal_tyt_examples.json', count: VERIFIED_SOSYAL.length, categories: ['tarih', 'felsefe'] },
+    sosyal: {
+      file: 'templates/sosyal_tyt_examples.json',
+      count: VERIFIED_SOSYAL.length,
+      verified_example_categories: ['tarih', 'felsefe'],
+      missing_verified_example_categories: ['cografya', 'sosyoloji', 'din_kulturu'],
+    },
     turkce: { file: 'templates/turkce_tyt_examples.json', count: VERIFIED_TURKCE.length, categories: ['anlam_bilgisi', 'dil_bilgisi'] },
     wordquest: { file: 'templates/wordquest_ydt_examples.json', count: VERIFIED_WORDQUEST.length, categories: ['fill_in_blank', 'sentence_completion'] },
   },
@@ -650,7 +657,7 @@ writeFileSync(`${TPL_DIR}/overview.json`, JSON.stringify({
     format: 'JSON.stringify(examples.slice(0, 3)) ile few-shot ekle',
     matematik: 'Her kategoriden 2-3 örnek seç, sayısal opsiyon formatını taklit et',
     fen: 'Roman numeral ve ilişki formatı örneklerini birlikte kullan',
-    sosyal: 'Tarih için belge/olay analizi, felsefe için düşünce metni formatı',
+    sosyal: 'Yalnız tarih/felsefe verified few-shot; eksik kategorileri bu template ile tamamlanmış sayma',
     turkce: 'Anlam için uzun pasaj, dil bilgisi için kısa cümle örnekleri',
     wordquest: 'fill_in_blank örneklerini İngilizce fill-in için kullan',
   },

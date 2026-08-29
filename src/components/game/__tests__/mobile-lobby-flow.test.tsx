@@ -128,6 +128,30 @@ describe('MobileLobbyFlow', () => {
     expect(within(screen.getByTestId('mobile-lobby-flow')).getByRole('button', { name: 'Konu seç: Tüm konular' })).toBeInTheDocument()
   })
 
+  it('TYT Türkçe kapsamında AYT edebiyat seçimini temizler ve gizler', () => {
+    const onSelectCategory = vi.fn()
+    render(
+      <MobileLobbyFlow
+        game="turkce"
+        selectedMode="classic"
+        onSelectMode={vi.fn()}
+        selectedCategory="edebiyat"
+        onSelectCategory={onSelectCategory}
+        selectedDifficulty={null}
+        onSelectDifficulty={vi.fn()}
+        selectedExamRef="TYT"
+        onSelectExamRef={vi.fn()}
+        onStart={vi.fn()}
+      />
+    )
+
+    expect(onSelectCategory).toHaveBeenCalledWith(null)
+    const flow = within(screen.getByTestId('mobile-lobby-flow'))
+    fireEvent.click(flow.getByRole('button', { name: 'Konu seç: Tüm konular' }))
+    const dialog = screen.getByRole('dialog', { name: 'Konu seç' })
+    expect(within(dialog).queryByRole('button', { name: /Edebiyat/ })).not.toBeInTheDocument()
+  })
+
   it('alt paneli Escape ile kapatır', () => {
     render(<FlowHarness />)
     const flow = within(screen.getByTestId('mobile-lobby-flow'))

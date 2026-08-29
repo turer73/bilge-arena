@@ -80,12 +80,19 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
   const mapParams = new URLSearchParams({ game })
   if (examRef) mapParams.set('exam_ref', examRef)
   const mapHref = `/arena/hakimiyet?${mapParams}`
+  const diagnosticParams = new URLSearchParams({ game })
+  const diagnosticExamRef = outcomes[0]?.examRef ?? examRef
+  if (diagnosticExamRef) diagnosticParams.set('exam_ref', diagnosticExamRef)
+  const diagnosticHref = `/arena/tani?${diagnosticParams}`
 
   const handlePractice = () => {
     if (!nextAction) return
     gameStore.setGame(nextAction.game as GameSlug)
     gameStore.setCategory(nextAction.category)
-    gameStore.setExamRef(nextAction.examRef)
+    // Mastery Wordquest'i YDT etiketiyle gosterir; soru bankasi ise exam_ref
+    // NULL saklar. Display etiketini quiz filtresine tasima ve onceki dersin
+    // paylasilan sinav tercihini silme.
+    if (nextAction.game !== 'wordquest') gameStore.setExamRef(nextAction.examRef)
     gameStore.setMode('practice')
     router.push(`/arena/${nextAction.game}`)
   }
@@ -104,12 +111,12 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
           <h2 className="text-base font-black text-[var(--app-text)]">Nereden başlayacağını birlikte bulalım</h2>
           <p className="mt-2 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
             {coverage.diagnosticAvailable
-              ? '8 dakikalık tanılama çekirdek kazanımlar için düşük güvenli bir başlangıç tahmini üretir. Kalıcı hâkimiyet kararı yalnız doğrulanmış pratik kanıtlarıyla açılır.'
+              ? 'Kısa başlangıç taraması çekirdek kazanımlar için düşük güvenli bir ilk tahmin üretir. Kalıcı hâkimiyet kararı yalnız doğrulanmış pratik kanıtlarıyla açılır.'
               : 'Kısa pratiklerde verdiğin doğrulanmış cevaplarla başlangıç rotan oluşur. Yeterli kanıt olmadan güçlü veya zayıf etiketi göstermeyiz.'}
           </p>
           {coverage.diagnosticAvailable ? (
             <Link
-              href="/arena/tani"
+              href={diagnosticHref}
               className="mt-4 flex min-h-12 w-full items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
             >
               Keşif Turunu Başlat

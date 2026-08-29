@@ -5,6 +5,10 @@ import { useMasteryMap } from '@/lib/hooks/use-mastery-map'
 import { useGameStore } from '@/stores/game-store'
 
 const pushMock = vi.fn()
+let searchParams = new URLSearchParams('game=matematik&exam_ref=TYT')
+const graphOutcome = vi.hoisted(() => ({
+  game: 'matematik', category: 'sayilar', examRef: 'TYT',
+}))
 const authState = vi.hoisted(() => ({
   user: null as null | { id: string },
   profile: null as null | { exam_type: string },
@@ -13,13 +17,13 @@ const authState = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
-  useSearchParams: () => new URLSearchParams('game=matematik&exam_ref=TYT'),
+  useSearchParams: () => searchParams,
 }))
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => authState }))
 vi.mock('@/lib/hooks/use-mastery-map', () => ({ useMasteryMap: vi.fn() }))
 vi.mock('@/components/study/mastery-graph', () => ({
   MasteryGraph: ({ onPractice }: { onPractice: (outcome: unknown) => void }) => (
-    <button onClick={() => onPractice({ game: 'matematik', category: 'sayilar', examRef: 'TYT' })}>
+    <button onClick={() => onPractice(graphOutcome)}>
       Grafikten çalış
     </button>
   ),
@@ -30,10 +34,12 @@ const mockedUseMasteryMap = vi.mocked(useMasteryMap)
 describe('HakimiyetClient', () => {
   beforeEach(() => {
     pushMock.mockClear()
+    searchParams = new URLSearchParams('game=matematik&exam_ref=TYT')
     authState.user = null
     authState.profile = null
     authState.loading = false
     mockedUseMasteryMap.mockReset()
+    Object.assign(graphOutcome, { game: 'matematik', category: 'sayilar', examRef: 'TYT' })
     mockedUseMasteryMap.mockReturnValue({
       response: null,
       discovery: null,
@@ -81,5 +87,52 @@ describe('HakimiyetClient', () => {
     authState.user = { id: 'u1' }
     render(<HakimiyetClient />)
     expect(screen.getByText(/şu an yüklenemedi/i)).toBeInTheDocument()
+  })
+
+  it('explicit invalid game querysi sessizce store veya Math haritasina dusmez', () => {
+    authState.user = { id: 'u1' }
+    useGameStore.setState({ selectedGame: 'wordquest' })
+    searchParams = new URLSearchParams('game=not-a-game&exam_ref=TYT')
+
+    render(<HakimiyetClient />)
+
+    expect(screen.getByRole('heading', { name: 'Geçersiz harita kapsamı' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Çalışmaya dön' })).toHaveAttribute('href', '/arena/calisma')
+    expect(screen.queryByRole('button', { name: 'Grafikten çalış' })).not.toBeInTheDocument()
+    expect(mockedUseMasteryMap).toHaveBeenCalledWith('wordquest', null, 'TYT')
+  })
+
+  it('game querysi yoksa mevcut store/default kapsam davranisini korur', () => {
+    authState.user = { id: 'u1' }
+    useGameStore.setState({ selectedGame: 'fen', selectedExamRef: 'TYT' })
+    searchParams = new URLSearchParams()
+
+    render(<HakimiyetClient />)
+
+    expect(mockedUseMasteryMap).toHaveBeenCalledWith('fen', 'u1', 'TYT')
+  })
+
+  it('Wordquest YDT display refini storea tasimadan onceki sinav tercihini korur', () => {
+    authState.user = { id: 'u1' }
+    useGameStore.setState({ selectedExamRef: 'TYT' })
+    Object.assign(graphOutcome, { game: 'wordquest', category: 'vocabulary', examRef: 'YDT' })
+    mockedUseMasteryMap.mockReturnValue({
+      response: { game: 'wordquest' } as never,
+      discovery: null,
+      graph: { code: 'course' } as never,
+      outcomes: [],
+      coverage: { supported: true, diagnosticAvailable: false, taxonomyVersion: 'ba-ydt-eng-v1', totalQuestions: 1, mappedQuestions: 1, percentage: 100 },
+      loading: false,
+      error: false,
+      fetchMastery: vi.fn(),
+    })
+
+    render(<HakimiyetClient />)
+    fireEvent.click(screen.getByRole('button', { name: 'Grafikten çalış' }))
+
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'wordquest', selectedCategory: 'vocabulary', selectedExamRef: 'TYT', selectedMode: 'practice',
+    })
+    expect(pushMock).toHaveBeenCalledWith('/arena/wordquest')
   })
 })

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { GAMES, type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
+import { GAMES, getCategoriesForExam, type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
 import { defaultExamRefForType } from '@/lib/constants/exam-types'
@@ -39,11 +39,15 @@ export default function GameClient() {
     }
   }, [isValidSlug, router])
 
-  // Sinav turune gore soru exam_ref default'u (yks->TYT, lgs->LGS). exam_type
-  // belirlenmemisse dokunma -> oturum-ici secici / 'all' korunur.
+  // Wordquest'in soru bankasi exam_ref=NULL kullanir; bunu soru tuketim
+  // sinirlarinda uygulariz. Paylasilan TYT/LGS/AYT tercihini burada silmek,
+  // kullanici onceki derse dondugunde sinav baglamini kaybettirir.
+  // Diger derslerde profil sinav turune gore soru exam_ref default'u kullanilir.
   useEffect(() => {
+    if (!isValidSlug) return
+    if (gameSlug === 'wordquest') return
     const validExamRefs = isValidSlug ? GAMES[gameSlug as GameSlug].examTags : []
-    if (isValidSlug && profile?.exam_type && (!selectedExamRef || !validExamRefs.includes(selectedExamRef))) {
+    if (profile?.exam_type && (!selectedExamRef || !validExamRefs.includes(selectedExamRef))) {
       const profileDefault = defaultExamRefForType(profile.exam_type)
       setExamRef(profileDefault && validExamRefs.includes(profileDefault) ? profileDefault : validExamRefs[0] ?? null)
     }
@@ -56,7 +60,7 @@ export default function GameClient() {
   useEffect(() => {
     if (!isValidSlug) return
     const requested = searchParams.get('category')
-    if (!requested || !GAMES[gameSlug as GameSlug].categories.includes(requested)) {
+    if (!requested || !getCategoriesForExam(gameSlug as GameSlug, selectedExamRef).includes(requested)) {
       if (categoryFromQueryRef.current) {
         categoryFromQueryRef.current = false
         setCategory(null)
@@ -65,7 +69,7 @@ export default function GameClient() {
     }
     categoryFromQueryRef.current = true
     setCategory(requested)
-  }, [gameSlug, isValidSlug, searchParams, setCategory])
+  }, [gameSlug, isValidSlug, searchParams, selectedExamRef, setCategory])
 
   if (!isValidSlug) return null
 
