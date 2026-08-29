@@ -13,12 +13,6 @@ vi.mock('@/lib/bilge-tahta/analytics', () => ({ trackBilgeBoardEvent }))
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: vi.fn(),
 }))
-vi.mock('@/components/study/today-plan-focus', () => ({
-  TodayPlanFocus: () => <div data-testid="today-plan-focus" />,
-}))
-vi.mock('@/components/study/mastery-action-card', () => ({
-  MasteryActionCard: () => <div data-testid="mastery-action-card" />,
-}))
 vi.mock('@/components/study/institution-weekly-program-card', () => ({
   InstitutionWeeklyProgramCard: () => <div data-testid="institution-weekly-program" />,
 }))
@@ -44,7 +38,7 @@ describe('CalismaClient', () => {
   test('loading durumunda erişilebilir yükleme durumu gösterir', () => {
     mockedUseAuthStore.mockReturnValue({ user: null, profile: null, loading: true } as never)
     render(<CalismaClient />)
-    expect(screen.getByRole('status')).toHaveTextContent('Çalışma planın hazırlanıyor')
+    expect(screen.getByRole('status')).toHaveTextContent('Çalışma ekranın hazırlanıyor')
   })
 
   test('giriş yoksa kişisel hub yerine giriş CTA gösterir', () => {
@@ -52,10 +46,9 @@ describe('CalismaClient', () => {
     render(<CalismaClient />)
     expect(screen.getByText('Giriş Yapman Gerekiyor')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Giriş Yap' })).toHaveAttribute('href', '/giris')
-    expect(screen.queryByTestId('today-plan-focus')).not.toBeInTheDocument()
   })
 
-  test('YKS kullanıcısında görünür ders/sınav bağlamı ve tek plan odağı render edilir', () => {
+  test('YKS kullanıcısında sade ders/sınav seçimi ve görünür devam eylemi render edilir', () => {
     mockedUseAuthStore.mockReturnValue({
       user: { id: 'u1' },
       profile: { exam_type: 'yks' },
@@ -65,11 +58,9 @@ describe('CalismaClient', () => {
 
     expect(document.querySelector('[data-practice-screen]')).toHaveClass('overflow-x-clip', 'min-w-0', 'touch-pan-y')
     expect(document.querySelector('[data-practice-overview]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_420px]')
-    expect(document.querySelector('[data-practice-main-column]')).toHaveClass('contents', 'lg:block')
-    expect(document.querySelector('[data-practice-side-column]')).toHaveClass('contents', 'lg:block', 'lg:sticky')
-    expect(document.querySelector('[data-practice-focus]')).toHaveClass('lg:min-h-[154px]', 'self-start')
-    expect(document.querySelector('[data-practice-focus]')).not.toHaveClass('lg:h-full')
-    expect(screen.getByRole('heading', { name: 'Küçük bir adım seç, hemen başla.' })).toBeInTheDocument()
+    expect(document.querySelector('[data-practice-focus]')).toHaveClass('hidden', 'lg:block', 'min-h-[154px]', 'self-start')
+    expect(document.querySelector('[data-practice-start]')).toHaveClass('lg:sticky')
+    expect(screen.getByRole('heading', { name: 'Ne çalışmak istersin?' })).toBeInTheDocument()
     const gameGrid = document.querySelector('[data-study-game-grid]')
     expect(gameGrid).toHaveClass('grid', 'grid-cols-2', 'min-w-0', 'lg:grid-cols-2')
     expect(gameGrid).not.toHaveClass('overflow-x-auto')
@@ -77,9 +68,10 @@ describe('CalismaClient', () => {
     expect(screen.getByRole('button', { name: /Matematik/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'TYT' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
-    expect(screen.getByTestId('today-plan-focus')).toBeInTheDocument()
     expect(screen.getByTestId('institution-weekly-program')).toBeInTheDocument()
-    expect(screen.getByTestId('mastery-action-card')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/matematik')
+    expect(screen.queryByText("BUGÜNÜN 15'İ")).not.toBeInTheDocument()
+    expect(screen.queryByText(/KEŞİF SEVİYESİ/)).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Profil sayfasını aç' })).toHaveAttribute('href', '/arena/profil')
   })
 
@@ -110,6 +102,7 @@ describe('CalismaClient', () => {
     expect(useGameStore.getState().selectedGame).toBe('turkce')
     expect(useGameStore.getState().selectedExamRef).toBe('TYT')
     expect(useGameStore.getState().selectedCategory).toBeNull()
+    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/turkce')
   })
 
   test('Wordquest gecisi onceki dersin sinav tercihini silmez', () => {
