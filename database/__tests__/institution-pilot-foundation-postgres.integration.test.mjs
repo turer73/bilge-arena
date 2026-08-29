@@ -3701,8 +3701,9 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
     const legacyOutcomes = (await client.query(`SELECT code,title
       FROM public.curriculum_outcomes
       WHERE game='matematik' AND exam_ref='TYT' AND taxonomy_version='ba-tyt-math-v1'
-        AND is_active AND category IS NOT NULL
-      ORDER BY sort_order,code LIMIT 3`)).rows
+        AND is_active
+        AND code IN ('GATE-MATEMATIK-1','GATE-MATEMATIK-2','GATE-MATEMATIK-3')
+      ORDER BY code`)).rows
     expect(legacyOutcomes).toHaveLength(3)
     const legacyWeekStart = (await client.query(
       "SELECT date_trunc('week',clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date AS value",
@@ -3807,9 +3808,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
     const outcome = (await client.query(`SELECT id,code,category
       FROM public.curriculum_outcomes
       WHERE game='matematik' AND exam_ref='TYT' AND taxonomy_version='ba-tyt-math-v1'
-        AND category IS NOT NULL
-      ORDER BY sort_order,code
-      LIMIT 1`)).rows[0]
+        AND is_active AND code='GATE-MATEMATIK-1'`)).rows[0]
     expect(outcome).toEqual(expect.objectContaining({ code: expect.any(String), category: expect.any(String) }))
     const weekStart = (await client.query(
       "SELECT date_trunc('week',clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date AS value",
