@@ -57,7 +57,7 @@ export function MasteryMapCard({ outcomes, discovery, diagnosticAvailable, loadi
               ? 'Kısa başlangıç taraması yalnız ilk yönü gösterir; başarı ya da eksik hükmü vermez.'
               : estimateStage
                 ? 'Kısa pratiklerdeki doğrulanmış cevapların ilk yönü gösterir; yeterli kanıt olmadan başarı ya da eksik hükmü verilmez.'
-              : `${discovery.evidenceCollected}/${discovery.evidenceTarget} doğrulanmış kanıt toplandı; ${discovery.readyOutcomes}/${discovery.totalOutcomes} kazanım ilk değerlendirmeye hazır.`}
+              : `${discovery.evidenceCollected}/${discovery.evidenceTarget} farklı gün kanıtı toplandı; ${discovery.readyOutcomes}/${discovery.totalOutcomes} kazanım ilk değerlendirmeye hazır.`}
           </p>
           <div
             className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]"
@@ -102,7 +102,7 @@ export function MasteryMapCard({ outcomes, discovery, diagnosticAvailable, loadi
         <div className="mb-1 flex items-start justify-between gap-3">
           <p className="text-xs font-bold text-[var(--text)]">{outcome.title}</p>
           <span className="shrink-0 text-xs font-extrabold text-[var(--growth)]">
-            {outcome.status === 'insufficient' ? `${outcome.attempts}/3 kanıt` : `%${outcome.score}`}
+            {outcome.status === 'insufficient' ? `${outcome.verifiedEvidenceDays}/3 gün` : `%${outcome.score}`}
           </span>
         </div>
         <p className="mb-2 text-[10px] leading-relaxed text-[var(--text-sub)]">

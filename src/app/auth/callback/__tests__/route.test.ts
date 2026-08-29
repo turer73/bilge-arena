@@ -7,20 +7,31 @@ const {
   mockCookieGetAll,
   mockSignOut,
   mockServiceClient,
+  mockProfileSelect,
   mockHasCurrentLegalConsent,
   mockLegalConsentIntentMatchesCookie,
   mockRecordLegalConsentIntent,
-} = vi.hoisted(() => ({
-  mockExchangeCodeForSession: vi.fn(),
-  mockClaimActivationReward: vi.fn(),
-  mockCookieGet: vi.fn(),
-  mockCookieGetAll: vi.fn(),
-  mockSignOut: vi.fn(),
-  mockServiceClient: {},
-  mockHasCurrentLegalConsent: vi.fn(),
-  mockLegalConsentIntentMatchesCookie: vi.fn(),
-  mockRecordLegalConsentIntent: vi.fn(),
-}))
+} = vi.hoisted(() => {
+  const mockProfileSelect = vi.fn()
+  return {
+    mockExchangeCodeForSession: vi.fn(),
+    mockClaimActivationReward: vi.fn(),
+    mockCookieGet: vi.fn(),
+    mockCookieGetAll: vi.fn(),
+    mockSignOut: vi.fn(),
+    mockServiceClient: {
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ maybeSingle: mockProfileSelect })),
+        })),
+      })),
+    },
+    mockProfileSelect,
+    mockHasCurrentLegalConsent: vi.fn(),
+    mockLegalConsentIntentMatchesCookie: vi.fn(),
+    mockRecordLegalConsentIntent: vi.fn(),
+  }
+})
 
 vi.mock('next/headers', () => ({
   cookies: vi.fn(async () => ({
@@ -72,7 +83,23 @@ describe('GET /auth/callback activation reward', () => {
       data: { session: { user: { id: 'user-1' } } },
       error: null,
     })
+    mockProfileSelect.mockResolvedValue({ data: { deleted_at: null }, error: null })
     mockClaimActivationReward.mockResolvedValue({ xpAwarded: 100, alreadyProcessed: false })
+  })
+
+  it('globally revokes a tombstoned OAuth account before consent or reward work', async () => {
+    mockProfileSelect.mockResolvedValue({
+      data: { deleted_at: '2026-08-29T10:00:00.000Z' },
+      error: null,
+    })
+
+    const response = await GET(new Request('http://localhost/auth/callback?code=oauth-code'))
+
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'global' })
+    expect(mockHasCurrentLegalConsent).not.toHaveBeenCalled()
+    expect(mockClaimActivationReward).not.toHaveBeenCalled()
+    expect(response.headers.get('location')).toBe('http://localhost/giris?deleted=1')
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
   })
 
   it('claims the signed guest reward before redirect and exposes only the bounded XP notice', async () => {

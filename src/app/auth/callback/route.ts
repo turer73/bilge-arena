@@ -62,6 +62,34 @@ export async function GET(request: Request) {
 
     if (!error && data.session?.user) {
       const admin = createServiceRoleClient()
+      // A deleted profile must not be resurrected by a fresh OAuth exchange.
+      // Check before legal-consent/reward work and globally revoke the newly
+      // issued session when the profile is tombstoned or unexpectedly absent.
+      const { data: accountProfile, error: accountProfileError } = await admin
+        .from('profiles')
+        .select('deleted_at')
+        .eq('id', data.session.user.id)
+        .maybeSingle()
+      if (accountProfileError || !accountProfile || accountProfile.deleted_at != null) {
+        const { error: signOutError } = await supabase.auth.signOut({ scope: 'global' })
+        if (signOutError) {
+          console.error('[AuthCallback] pasif hesap oturumu global kapatılamadı:', signOutError.message)
+        }
+        const denied = NextResponse.redirect(
+          `${origin}/giris?${accountProfileError || !accountProfile ? 'error=account_unavailable' : 'deleted=1'}`,
+        )
+        denied.headers.set('Cache-Control', 'private, no-store')
+        clearLegalConsentIntentCookie(denied)
+        for (const cookie of cookieStore.getAll()) {
+          if (
+            /^sb-.*-auth-token(?:\.\d+)?$/.test(cookie.name)
+            || cookie.name.includes('code-verifier')
+          ) {
+            denied.cookies.delete(cookie.name)
+          }
+        }
+        return denied
+      }
       let legalConsentReady = false
       try {
         legalConsentReady = legalConsentToken

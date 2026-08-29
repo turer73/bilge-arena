@@ -187,7 +187,7 @@ vi.mock('../today-plan-card', () => ({
 vi.mock('../personalized-mock-card', () => ({
   PersonalizedMockCard: ({ onStart }: { onStart: () => void }) => <button data-testid="personalized-mock-start" onClick={onStart} />,
 }))
-vi.mock('../mastery-map-card', () => ({ MasteryMapCard: () => null }))
+vi.mock('../mastery-map-card', () => ({ MasteryMapCard: () => <div data-testid="mastery-map-card" /> }))
 vi.mock('../topics-panel', () => ({ TopicsPanel: () => <div data-testid="topics-band" /> }))
 vi.mock('../life-lost-overlay', () => ({ LifeLostOverlay: () => null }))
 vi.mock('@/components/ui/bilge-chan', () => ({ BilgeChan: () => null }))
@@ -229,13 +229,15 @@ describe('QuizEngine yerleşim', () => {
     }
   })
 
-  test('mobil Hemen başla ekranında günlük plan ve keşif kartlarını gizler', () => {
+  test('mobil Hemen başla ekranında Keşif kartını görünür, günlük planı masaüstüne özel tutar', () => {
     quizGame.screen = 'lobby'
     authStoreValue.user = { id: 'u1' }
 
     try {
       const { container } = render(<QuizEngine game="matematik" />)
       expect(container.querySelector('[data-desktop-learning-cards]')).toHaveClass('hidden', 'md:grid')
+      expect(container.querySelector('[data-mobile-mastery-map-card]')).toHaveClass('md:hidden')
+      expect(container.querySelector('[data-mobile-mastery-map-card] [data-testid="mastery-map-card"]')).toBeInTheDocument()
     } finally {
       authStoreValue.user = null
       quizGame.screen = 'game'

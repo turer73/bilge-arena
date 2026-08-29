@@ -16,6 +16,7 @@ const OUTCOME = {
   weightedEarned: 4,
   weightedPossible: 5,
   delayedCorrect: 1,
+  verifiedEvidenceDays: 3,
   accuracy: 80,
   rawAccuracy: 80,
   difficultyAccuracy: 80,

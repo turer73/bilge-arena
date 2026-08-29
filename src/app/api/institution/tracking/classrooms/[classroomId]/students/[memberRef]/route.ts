@@ -8,6 +8,7 @@ import { isInstitutionTrackingEnabled } from '@/lib/institution-tracking/server-
 import {
   buildInstitutionStudentLearningAnalysis,
   completeLegacyInstitutionAnalysisScope,
+  withInstitutionDiagnosticSources,
 } from '@/lib/institution-tracking/student-analysis'
 import { GAME_SLUGS, type GameSlug } from '@/lib/constants/games'
 import { resolveInstitutionLearningScope } from '@/lib/institution-tracking/scope'
@@ -16,6 +17,10 @@ const paramsSchema = z.object({
   classroomId: z.string().uuid(),
   memberRef: z.string().regex(/^[0-9a-f]{32}$/),
 }).strict()
+
+function isAppFirstDiagnosticRpcUnavailable(error: { code?: string } | null) {
+  return error?.code === 'PGRST202' || error?.code === '42883'
+}
 
 export async function GET(
   request: Request,
@@ -84,10 +89,31 @@ export async function GET(
     )
   }
 
+  const diagnosticRpc = await context.admin.rpc(
+    'get_institution_student_diagnostic_sources',
+    {
+      p_user_id: context.userId,
+      p_classroom_id: params.data.classroomId,
+      p_member_ref: params.data.memberRef,
+      p_game: game,
+      p_display_exam_ref: examRef,
+      p_window_end: windowEnd,
+    },
+  )
+  if (diagnosticRpc.error && !isAppFirstDiagnosticRpcUnavailable(diagnosticRpc.error)) {
+    return institutionPilotNoStoreJson(
+      { error: 'Öğrenci tanılama kanıtı alınamadı' },
+      { status: institutionPilotRpcStatus(diagnosticRpc.error.code) },
+    )
+  }
+
   const result = buildInstitutionStudentLearningAnalysis(
-    scopeResolution.legacy
-      ? completeLegacyInstitutionAnalysisScope(data, scopeResolution.scope)
-      : data,
+    withInstitutionDiagnosticSources(
+      scopeResolution.legacy
+        ? completeLegacyInstitutionAnalysisScope(data, scopeResolution.scope)
+        : data,
+      diagnosticRpc.error ? { sources: [] } : diagnosticRpc.data,
+    ),
   )
   if (result && (
     result.scope.game !== scopeResolution.scope.game

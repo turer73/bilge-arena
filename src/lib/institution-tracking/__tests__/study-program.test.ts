@@ -6,6 +6,15 @@ const assessment = (
   status: 'insufficient' | 'developing' | 'mastered',
   score: number | null,
   evidenceCount: number,
+  diagnosticSources: Array<{
+    outcomeCode: string
+    completedSessionId: string
+    completedAt: string
+    attempts: number
+    correctAttempts: number
+    score: number
+    taxonomyVersion: string
+  }> = [],
 ) => ({
   code,
   nodeCode: `ba-tyt-math-v1:outcome:${code.toLowerCase()}`,
@@ -37,6 +46,7 @@ const assessment = (
     hintRate: 0,
     fastWrongRate: 0,
     components: { accuracy: score ?? 0, delayedRetrieval: 0, independence: 100, selfRegulation: 100 },
+    diagnosticSources,
   },
 })
 
@@ -81,8 +91,17 @@ describe('institution weekly study program generator', () => {
     expect(result?.status).toBe('draft')
     expect(result?.items.map((item) => item.outcomeCode)).toEqual(['MAT-02', 'MAT-01', 'MAT-03', 'MAT-04'])
     expect(result?.items.map((item) => item.taskType)).toEqual([
-      'verified_questions', 'verified_questions', 'diagnostic', 'fsrs_review',
+      'verified_questions', 'verified_questions', 'diagnostic', 'verified_questions',
     ])
+    expect(result?.items.find((item) => item.outcomeCode === 'MAT-04')).toEqual(expect.objectContaining({
+      taskType: 'verified_questions',
+      reasonCode: 'current_target',
+      title: 'Kazanım MAT-04: doğrulanmış pekiştirme çalışması',
+    }))
+    expect(result?.items
+      .filter((item) => item.taskType === 'verified_questions' || item.taskType === 'diagnostic')
+      .every((item) => item.targetQuestionCount !== null && item.targetQuestionCount <= 10)).toBe(true)
+    expect(result?.items.some((item) => item.taskType === 'fsrs_review')).toBe(false)
     expect(result?.items.every((item, index) => item.position === index + 1)).toBe(true)
   })
 
@@ -121,6 +140,41 @@ describe('institution weekly study program generator', () => {
       expect.objectContaining({
         taskType: 'verified_questions', reasonCode: 'current_target', outcomeCode: 'MAT-V2-01',
       }),
+    ])
+  })
+
+  it('does not prescribe a repeated diagnostic after a verified diagnostic source exists', () => {
+    const outcome = assessment('MAT-01', 'insufficient', null, 1, [{
+      outcomeCode: 'MAT-01',
+      completedSessionId: '22222222-2222-4222-8222-222222222222',
+      completedAt: '2026-08-12T09:00:00.000Z',
+      attempts: 2,
+      correctAttempts: 1,
+      score: 50,
+      taxonomyVersion: 'ba-tyt-math-v1',
+    }])
+    const result = generateInstitutionStudyProgramDraft(analysis([outcome]), {
+      weekStart: '2026-08-17', dailyMinuteLimit: 25, generatedAt: '2026-08-14T00:00:00.000Z',
+    })
+    expect(result?.items).toEqual([
+      expect.objectContaining({
+        taskType: 'verified_questions', reasonCode: 'current_target', outcomeCode: 'MAT-01',
+      }),
+    ])
+  })
+
+  it('assigns at most one full-scope diagnostic per weekly program', () => {
+    const result = generateInstitutionStudyProgramDraft(analysis([
+      assessment('MAT-01', 'insufficient', null, 2),
+      assessment('MAT-02', 'insufficient', null, 1),
+      assessment('MAT-03', 'insufficient', null, 0),
+    ]), {
+      weekStart: '2026-08-17', dailyMinuteLimit: 25, generatedAt: '2026-08-14T00:00:00.000Z',
+    })
+
+    expect(result?.items.filter((item) => item.taskType === 'diagnostic')).toHaveLength(1)
+    expect(result?.items.map((item) => item.taskType)).toEqual([
+      'diagnostic', 'verified_questions', 'verified_questions',
     ])
   })
 

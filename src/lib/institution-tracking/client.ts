@@ -1,6 +1,7 @@
 'use client'
 
 import type { z } from 'zod'
+import type { GameSlug } from '@/lib/constants/games'
 import {
   institutionTrackingDirectorySchema,
   type InstitutionTrackingDirectory,
@@ -124,7 +125,8 @@ export function fetchInstitutionClassroomOverview(
 }
 
 export function createInstitutionStudyProgramDraft(input: {
-  classroomId: string; memberRef: string; weekStart: string; dailyMinuteLimit: number
+  classroomId: string; memberRef: string; game: GameSlug; examRef: string
+  weekStart: string; dailyMinuteLimit: number
 }): Promise<InstitutionStudyProgramDraftResponse> {
   return postJson('/api/institution/tracking/programs/draft', {
     ...input, requestId: crypto.randomUUID(),
@@ -191,9 +193,11 @@ export async function resolveInstitutionStudentFollowup(
 export function fetchInstitutionStudentProgramHistory(
   classroomId: string,
   memberRef: string,
+  game: GameSlug,
+  examRef: string,
   signal?: AbortSignal,
 ): Promise<InstitutionStudentProgramHistory> {
-  const query = new URLSearchParams({ classroomId, memberRef })
+  const query = new URLSearchParams({ classroomId, memberRef, game, exam_ref: examRef })
   return requestJson(`/api/institution/tracking/programs/history?${query}`, institutionStudentProgramHistorySchema, signal)
 }
 
@@ -218,17 +222,22 @@ export function reviewInstitutionStudyProgram(
 export function fetchInstitutionStudentReports(
   classroomId: string,
   memberRef: string,
+  scope: ScopeSelection,
   signal?: AbortSignal,
 ): Promise<InstitutionStudentReportList> {
-  const query = new URLSearchParams({ classroomId, memberRef })
+  const query = new URLSearchParams({
+    classroomId, memberRef, game: scope.game, exam_ref: scope.displayExamRef,
+  })
   return requestJson(`/api/institution/tracking/reports?${query}`, institutionStudentReportListSchema, signal)
 }
 
 export function createInstitutionStudentReport(
   classroomId: string,
   memberRef: string,
+  scope: ScopeSelection,
 ): Promise<InstitutionStudentReportMutation> {
   return postJson('/api/institution/tracking/reports', {
-    classroomId, memberRef, requestId: crypto.randomUUID(),
+    classroomId, memberRef, game: scope.game, examRef: scope.displayExamRef,
+    requestId: crypto.randomUUID(),
   }, institutionStudentReportMutationSchema)
 }

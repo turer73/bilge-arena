@@ -18,6 +18,7 @@ const outcome: MasteryOutcomePublic = {
   code: 'MAT-SAY-01', nodeCode: 'L1', path: ['TYT Matematik', 'Sayılar ve Cebir', 'Sayılar', 'Sayılar ve işlem becerisi'],
   title: 'Sayılar ve işlem becerisi', description: null, game: 'matematik', category: 'sayilar', examRef: 'TYT',
   attempts: 5, correctAttempts: 3, weightedEarned: 3, weightedPossible: 5, delayedCorrect: 1,
+  verifiedEvidenceDays: 3,
   accuracy: 60, rawAccuracy: 60, difficultyAccuracy: 58, averageTimeSec: 31.2,
   fastWrongRate: 20, hintRate: 20, averageHintStage: 1, guessRisk: 0, carelessRisk: 20,
   evidenceCompleteness: 100, score: 68, status: 'developing', modelVersion: 'evidence-v2',
@@ -38,6 +39,7 @@ describe('MasteryGraph', () => {
     expect(screen.getByText('Sayılar ve Cebir')).toBeInTheDocument()
     expect(screen.getByText('Zorluk doğruluğu %58')).toBeInTheDocument()
     expect(screen.getByText('Gecikmeli doğru 1')).toBeInTheDocument()
+    expect(screen.getByText('Aktif soru bankası eşlemesi: %100')).toBeInTheDocument()
     expect(screen.getByText(/resmî müfredat kodu değildir/i)).toBeInTheDocument()
   })
 
@@ -72,12 +74,14 @@ describe('MasteryGraph', () => {
       graph={graph}
       coverage={{ supported: true, diagnosticAvailable: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 120, mappedQuestions: 120, percentage: 100 }}
       discovery={{ level: 2, stage: 'evidence', diagnosticCompleted: true, evidenceCollected: 1, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 50 }}
-      outcomes={[{ ...outcome, attempts: 1, correctAttempts: 0, status: 'insufficient', difficultyAccuracy: 0, fastWrongRate: 0 }]}
+      outcomes={[{ ...outcome, attempts: 1, correctAttempts: 0, verifiedEvidenceDays: 1, evidenceCompleteness: 33, status: 'insufficient', difficultyAccuracy: 0, fastWrongRate: 0 }]}
     />)
 
-    expect(screen.getByText(/Hüküm yok: 1\/3 doğrulanmış kanıt/i)).toBeInTheDocument()
+    expect(screen.getByText(/Hüküm yok: 1\/3 farklı gün kanıtı/i)).toBeInTheDocument()
     expect(screen.queryByText('Zorluk doğruluğu %0')).not.toBeInTheDocument()
     expect(screen.getByText('KEŞİF SEVİYESİ 2/3')).toBeInTheDocument()
+    expect(screen.getAllByText(/1\/3 farklı gün kanıtı/i)).toHaveLength(2)
+    expect(screen.getByText(/aynı gün içindeki birden fazla doğrulanmış cevap.*tek gün sayılır/i)).toBeInTheDocument()
   })
 
   it('tanilama olmayan kapsamda eksik tanilama iddiasi yerine pratik kanitini aciklar', () => {
@@ -85,7 +89,7 @@ describe('MasteryGraph', () => {
       graph={graph}
       coverage={{ supported: true, diagnosticAvailable: false, taxonomyVersion: 'ba-tyt-turkce-v1', totalQuestions: 120, mappedQuestions: 120, percentage: 100 }}
       discovery={{ level: 1, stage: 'estimate', diagnosticCompleted: false, evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 0 }}
-      outcomes={[{ ...outcome, game: 'turkce', category: 'paragraf', attempts: 0, correctAttempts: 0, status: 'insufficient' }]}
+      outcomes={[{ ...outcome, game: 'turkce', category: 'paragraf', attempts: 0, correctAttempts: 0, verifiedEvidenceDays: 0, status: 'insufficient' }]}
     />)
 
     expect(screen.getByText(/başlangıç seviyesi pratik kanıtlarıyla oluşuyor/i)).toBeInTheDocument()

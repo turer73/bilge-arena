@@ -59,6 +59,20 @@ const rawOutcomeSchema = z.object({
   }
 })
 
+const diagnosticSourceSchema = z.object({
+  outcomeCode: z.string().trim().min(1).max(120),
+  completedSessionId: z.string().uuid(),
+  completedAt: timestampSchema,
+  attempts: countSchema,
+  correctAttempts: countSchema,
+  score: z.number().min(0).max(100),
+  taxonomyVersion: institutionTaxonomyVersionSchema,
+}).strict().superRefine((value, context) => {
+  if (value.correctAttempts > value.attempts || value.attempts === 0) {
+    context.addIssue({ code: 'custom', message: 'diagnostic source bounds mismatch' })
+  }
+})
+
 export const institutionStudentAnalysisRpcSchema = z.object({
   classroom: z.object({
     id: z.string().uuid(),
@@ -88,6 +102,7 @@ export const institutionStudentAnalysisRpcSchema = z.object({
     percentage: z.literal(100),
   }).strict(),
   outcomes: z.array(rawOutcomeSchema).max(1_000),
+  diagnosticSources: z.array(diagnosticSourceSchema).max(1_000).default([]),
 }).strict().superRefine((value, context) => {
   if (value.student.joinedAt !== value.scope.windowStart
     || Date.parse(value.scope.windowStart) >= Date.parse(value.scope.windowEnd)
@@ -100,6 +115,14 @@ export const institutionStudentAnalysisRpcSchema = z.object({
         || Date.parse(outcome.lastEvidenceAt!) >= Date.parse(value.scope.windowEnd))
     ))) {
     context.addIssue({ code: 'custom', message: 'student analysis response mismatch' })
+  }
+  if (value.diagnosticSources.some((source) => (
+    !value.outcomes.some((outcome) => outcome.code === source.outcomeCode)
+    || source.taxonomyVersion !== value.scope.taxonomyVersion
+    || Date.parse(source.completedAt) < Date.parse(value.scope.windowStart)
+    || Date.parse(source.completedAt) >= Date.parse(value.scope.windowEnd)
+  ))) {
+    context.addIssue({ code: 'custom', message: 'diagnostic source scope mismatch' })
   }
 })
 
@@ -116,6 +139,10 @@ const evidenceDetailsSchema = z.object({
     independence: z.number().min(0).max(100),
     selfRegulation: z.number().min(0).max(100),
   }).strict(),
+  // Existing stored reports and synthetic consumers predate the separate
+  // diagnostic signal. Treat absence as no diagnostic, never as malformed
+  // mastery evidence; live RPC payloads are still validated strictly above.
+  diagnosticSources: z.array(diagnosticSourceSchema).default([]),
 }).strict()
 
 export const institutionStudentLearningAnalysisSchema = z.object({
@@ -224,6 +251,9 @@ export function buildInstitutionStudentLearningAnalysis(value: unknown) {
         hintRate: summarized.hintRate,
         fastWrongRate: summarized.fastWrongRate,
         components: summarized.components,
+        diagnosticSources: parsed.data.diagnosticSources.filter(
+          (source) => source.outcomeCode === outcome.code,
+        ),
       },
     }
   })
@@ -247,6 +277,26 @@ export function buildInstitutionStudentLearningAnalysis(value: unknown) {
   }
   const validated = institutionStudentLearningAnalysisSchema.safeParse(response)
   return validated.success ? validated.data : null
+}
+
+/**
+ * The diagnostic source is authorized by a separate RPC. Keep it separate
+ * from ordinary practice evidence, then require it to satisfy the same exact
+ * classroom-window, taxonomy and outcome checks as the core payload.
+ */
+export function withInstitutionDiagnosticSources(
+  analysis: unknown,
+  diagnosticResponse: unknown,
+): unknown {
+  if (!analysis || typeof analysis !== 'object' || Array.isArray(analysis)) return analysis
+  if (!diagnosticResponse || typeof diagnosticResponse !== 'object' || Array.isArray(diagnosticResponse)) {
+    return { ...(analysis as Record<string, unknown>), diagnosticSources: null }
+  }
+  const parsed = z.array(diagnosticSourceSchema).max(1_000).safeParse(
+    (diagnosticResponse as Record<string, unknown>).sources,
+  )
+  if (!parsed.success) return { ...(analysis as Record<string, unknown>), diagnosticSources: null }
+  return { ...(analysis as Record<string, unknown>), diagnosticSources: parsed.data }
 }
 
 /**

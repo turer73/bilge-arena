@@ -19,6 +19,7 @@ const RESPONSE = {
     code: 'MAT-SAY-01', nodeCode: 'L1', path: ['TYT Matematik', 'Sayılar', 'Temel sayılar', 'İşlem'],
     title: 'İşlem', description: null, game: 'matematik', category: 'sayilar', examRef: 'TYT',
     attempts: 5, correctAttempts: 4, weightedEarned: 4, weightedPossible: 5, delayedCorrect: 1,
+    verifiedEvidenceDays: 3,
     accuracy: 80, rawAccuracy: 80, difficultyAccuracy: 80, averageTimeSec: 30,
     fastWrongRate: 0, hintRate: 0, averageHintStage: null, guessRisk: 0, carelessRisk: 0,
     evidenceCompleteness: 100, score: 89, status: 'mastered', modelVersion: 'evidence-v2',
@@ -66,6 +67,39 @@ describe('parseMasteryMapResponse', () => {
     expect(parseMasteryMapResponse({
       ...RESPONSE,
       discovery: { ...RESPONSE.discovery, stage: 'estimate', level: 1 },
+    })).toBeNull()
+  })
+
+  it('cevap sayısı yüksek olsa da tek doğrulanmış Türkiye gününü tek kanıt kabul eder', () => {
+    const prematureResponse = {
+      ...RESPONSE,
+      discovery: {
+        ...RESPONSE.discovery,
+        level: 2,
+        stage: 'evidence',
+        evidenceCollected: 1,
+        readyOutcomes: 0,
+        journeyPercentage: 50,
+      },
+      outcomes: [{ ...RESPONSE.outcomes[0], verifiedEvidenceDays: 1 }],
+    }
+    expect(parseMasteryMapResponse(prematureResponse)).toBeNull()
+
+    const sameDayResponse = {
+      ...prematureResponse,
+      outcomes: [{
+        ...RESPONSE.outcomes[0],
+        verifiedEvidenceDays: 1,
+        evidenceCompleteness: 33,
+        score: 0,
+        status: 'insufficient',
+        components: { accuracy: 0, delayedRetrieval: 0, independence: 0, selfRegulation: 0 },
+      }],
+    }
+    expect(parseMasteryMapResponse(sameDayResponse)).toEqual(sameDayResponse)
+    expect(parseMasteryMapResponse({
+      ...sameDayResponse,
+      discovery: RESPONSE.discovery,
     })).toBeNull()
   })
 

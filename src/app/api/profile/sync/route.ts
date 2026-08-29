@@ -69,6 +69,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Profil bulunamadi' }, { status: 404 })
   }
 
+  if (profile.deleted_at != null) {
+    return NextResponse.json(
+      { error: 'Hesap artık aktif değil', code: 'account_deleted' },
+      { status: 410, headers: { 'Cache-Control': 'private, no-store' } },
+    )
+  }
+
   // 5) Google metadata oku (server-side auth.user'dan)
   const meta = user.user_metadata ?? {}
   const googleName = (meta.full_name || meta.name) as string | null | undefined

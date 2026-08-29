@@ -213,6 +213,7 @@ describe('TaniClient', () => {
     render(<TaniClient />)
     expect(screen.getByText(/KEŞİF ADIMI TAMAM/)).toBeInTheDocument()
     expect(screen.getByText(/Keşif Seviyesi 2/)).toBeInTheDocument()
+    expect(screen.getByText(/aynı oturumdaki birden fazla cevap tek gün kanıtı sayılır/i)).toBeInTheDocument()
     expect(screen.getByText('Kazanım özeti')).toBeInTheDocument()
     expect(screen.getAllByRole('article')).toHaveLength(6)
     await user.click(screen.getByRole('button', { name: /Önce Sayılar çalış/i }))

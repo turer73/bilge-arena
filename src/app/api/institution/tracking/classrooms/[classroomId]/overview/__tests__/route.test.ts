@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ enabled: vi.fn(), context: vi.fn(), rpc: vi.fn(), buildStudent: vi.fn(), buildOverview: vi.fn() }))
 vi.mock('@/lib/institution-tracking/server-security', () => ({ isInstitutionTrackingEnabled: mocks.enabled }))
 vi.mock('@/lib/institution-pilot/route-context', () => ({ requireInstitutionPilotRouteContext: mocks.context }))
-vi.mock('@/lib/institution-tracking/student-analysis', () => ({ buildInstitutionStudentLearningAnalysis: mocks.buildStudent }))
+vi.mock('@/lib/institution-tracking/student-analysis', () => ({
+  buildInstitutionStudentLearningAnalysis: mocks.buildStudent,
+  completeLegacyInstitutionAnalysisScope: vi.fn((value) => value),
+}))
 vi.mock('@/lib/institution-tracking/classroom-overview', () => ({ buildInstitutionClassroomOverview: mocks.buildOverview }))
 
 import { GET } from '../route'
