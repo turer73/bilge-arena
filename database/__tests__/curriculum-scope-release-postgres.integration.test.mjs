@@ -34,6 +34,11 @@ const fenRepairMigration = migration('180_backfill_released_tyt_fen_mastery_evid
 const completeRepairMigration = migration('181_curriculum_scope_repair_and_parent_integrity.sql')
 const ydtEnglishReleaseMigration = migration('187_release_ydt_english_mastery_scope.sql')
 const ydtEnglishRepairMigration = migration('188_backfill_released_ydt_english_mastery_evidence.sql')
+const outcomeScopeMigration = migration('164_question_revision_outcome_scope.sql')
+const curriculumOutcomeScopeValidDefinition = outcomeScopeMigration.slice(
+  outcomeScopeMigration.indexOf('CREATE OR REPLACE FUNCTION public.curriculum_outcome_scope_valid'),
+  outcomeScopeMigration.indexOf('CREATE OR REPLACE FUNCTION public.question_revision_outcomes_valid'),
+)
 const { Client } = pg
 
 describePg('178-188 curriculum scope release real PostgreSQL', () => {
@@ -174,8 +179,12 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
     for (const category of ydtEnglishCategories) {
       await client.query(
         `INSERT INTO public.questions(id,game,category,exam_ref,is_active)
-         VALUES ($1,'wordquest',$2,NULL,true)`,
-        [questionIds.get(category), category],
+         VALUES ($1,'wordquest',$2,$3,true)`,
+        [
+          questionIds.get(category),
+          category,
+          category === 'dialogue' ? 'YDT' : category === 'restatement' ? '   ' : null,
+        ],
       )
     }
     historicalUser = randomUUID()
@@ -185,6 +194,10 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
     await client.query('INSERT INTO public.profiles(id) VALUES($1)', [historicalUser])
 
     for (const sql of foundationMigrations) await client.query(sql)
+    // Migration 187's permanent question_outcomes guard executes this exact
+    // 164 helper during release sync, so the release fixture uses the real
+    // function definition instead of a permissive test stub.
+    await client.query(curriculumOutcomeScopeValidDefinition)
 
     // Migration 106 owns these tables in the full application schema. This
     // focused fixture keeps only the immutable difficulty/revision lineage and
@@ -655,6 +668,15 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
       attempt_id,question_id,difficulty
     ) VALUES($1,$2,4)`, [ydtEnglishRaceAttempt, questionIds.get('grammar')])
 
+    // This fixture intentionally omits the large 106/166 content-governance
+    // schema and loads only 164's real scope validator above. Migration 187's
+    // remaining governance function bodies are compiled and exercised by
+    // question-content-governance-postgres.integration.test.mjs; keep this
+    // fixture focused on release locks, mapping, and evidence repair.
+    await Promise.all([
+      client.query('SET check_function_bodies=off'),
+      releaseClient.query('SET check_function_bodies=off'),
+    ])
     const ydtBarrierKey = 185186
     await client.query('SELECT pg_advisory_lock($1)', [ydtBarrierKey])
     const gatedYdtReleaseMigration = ydtEnglishReleaseMigration.replace(
@@ -1262,6 +1284,10 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
       mappingMode: 'category_proxy',
       diagnosticEnabled: false,
     })
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.questions
+      WHERE game='wordquest' AND exam_ref IS NOT NULL`,
+    )).rows[0]).toEqual({ count: 0 })
     expect((await client.query(
       `SELECT public.curriculum_scope_integrity('wordquest','YDT','ba-ydt-eng-v1') AS result`,
     )).rows[0].result).toEqual({
@@ -1404,7 +1430,14 @@ describePg('178-188 curriculum scope release real PostgreSQL', () => {
 
     const futureQuestion = randomUUID()
     await client.query(`INSERT INTO public.questions(id,game,category,exam_ref,is_active)
-      VALUES($1,'wordquest','vocabulary','',true)`, [futureQuestion])
+      VALUES($1,'wordquest','vocabulary','YDT',true)`, [futureQuestion])
+    expect((await client.query(
+      'SELECT exam_ref FROM public.questions WHERE id=$1', [futureQuestion],
+    )).rows[0]).toEqual({ exam_ref: null })
+    await client.query(`UPDATE public.questions SET exam_ref='TYT' WHERE id=$1`, [futureQuestion])
+    expect((await client.query(
+      'SELECT exam_ref FROM public.questions WHERE id=$1', [futureQuestion],
+    )).rows[0]).toEqual({ exam_ref: null })
     expect((await client.query(`SELECT outcome.code
       FROM public.question_outcomes AS mapping
       JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id

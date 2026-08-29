@@ -7,6 +7,8 @@ import { useGameStore } from '@/stores/game-store'
 import { defaultExamRefForType, gamesForExamType } from '@/lib/constants/exam-types'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { BilgeChan } from '@/components/ui/bilge-chan'
+import { TodayPlanFocus } from '@/components/study/today-plan-focus'
+import { MasteryActionCard } from '@/components/study/mastery-action-card'
 import { StudyContextSelector } from '@/components/study/study-context-selector'
 import { StudyAssistantLauncher } from '@/components/study/study-assistant-launcher'
 import { InstitutionWeeklyProgramCard } from '@/components/study/institution-weekly-program-card'
@@ -165,12 +167,23 @@ export default function CalismaClient() {
             />
           </div>
 
-          <div className="min-w-0 lg:col-start-2">
-            <StudyAssistantLauncher game={game} examRef={examRef} />
-          </div>
-
-          <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+          <section
+            data-practice-progress
+            aria-label="Günlük plan ve öğrenme ilerlemesi"
+            className="min-w-0 space-y-4 lg:col-start-1 lg:row-start-2"
+          >
+            <TodayPlanFocus
+              game={game}
+              userId={user.id}
+              examRef={examRef}
+              selectedCategory={null}
+            />
+            <MasteryActionCard game={game} userId={user.id} examRef={examRef} />
             <InstitutionWeeklyProgramCard />
+          </section>
+
+          <div className="min-w-0 lg:col-start-2 lg:row-start-2">
+            <StudyAssistantLauncher game={game} examRef={examRef} />
           </div>
         </main>
       </div>

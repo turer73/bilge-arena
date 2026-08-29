@@ -167,10 +167,36 @@ describe('178-188 curriculum scope release migrations', () => {
   })
 
   it('releases the NULL-exam-ref YDT English bank only after a complete proof', () => {
+    expect(ydtEnglishReleaseSql).toMatch(/SET LOCAL lock_timeout = '10s'/)
+    expect(ydtEnglishReleaseSql).toMatch(/SET LOCAL statement_timeout = '120s'/)
     expect(ydtEnglishReleaseSql).toMatch(/LOCK TABLE[\s\S]*public\.curriculum_scope_releases,[\s\S]*public\.session_answers,[\s\S]*public\.questions,[\s\S]*public\.question_outcomes,[\s\S]*public\.verified_attempts[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
     expect(ydtEnglishReleaseSql).toMatch(/CREATE TEMP TABLE ydt_english_scope_release_control[\s\S]*question_exam_ref IS NULL[\s\S]*release_status IN \('draft', 'validating', 'released'\)/)
     expect(ydtEnglishReleaseSql).toMatch(/IF NOT \(SELECT should_apply FROM ydt_english_scope_release_control\) THEN[\s\S]*RETURN/)
-    expect(ydtEnglishReleaseSql).toMatch(/WHERE game = 'wordquest'[\s\S]*NULLIF\(upper\(btrim\(COALESCE\(exam_ref, ''\)\)\), ''\) IS NULL[\s\S]*is_active/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.tg_normalize_wordquest_question_exam_ref\(\)[\s\S]*NEW\.exam_ref := NULL/)
+    const normalizeTriggerSql = ydtEnglishReleaseSql.slice(
+      ydtEnglishReleaseSql.indexOf('CREATE OR REPLACE FUNCTION public.tg_normalize_wordquest_question_exam_ref'),
+      ydtEnglishReleaseSql.indexOf('DROP TRIGGER IF EXISTS trg_00_normalize_wordquest_question_exam_ref'),
+    )
+    expect(normalizeTriggerSql).toMatch(/IF NEW\.game::text = 'wordquest' THEN[\s\S]*NEW\.exam_ref := NULL/)
+    expect(normalizeTriggerSql).not.toMatch(/NULLIF|btrim|COALESCE/)
+    expect(ydtEnglishReleaseSql).toMatch(/BEFORE INSERT OR UPDATE OF game, exam_ref ON public\.questions/)
+    expect(ydtEnglishReleaseSql).toMatch(/to_regprocedure\('public\.content_governance_authorize_question_write\(uuid,text\)'\)[\s\S]*WHERE game = 'wordquest'[\s\S]*exam_ref IS NOT NULL[\s\S]*SET exam_ref = NULL[\s\S]*content_governance_clear_question_write/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.resolve_question_curriculum_validation_scope\([\s\S]*scope\.release_status::text[\s\S]*scope\.display_exam_ref IS DISTINCT FROM normalized\.question_exam_ref[\s\S]*SELECT normalized\.question_exam_ref, NULL::text, NULL::text[\s\S]*WHERE NOT EXISTS \(SELECT 1 FROM split_scope\)/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.question_outcome_scope_valid\([\s\S]*curriculum_outcome_scope_valid\([\s\S]*scope\.display_exam_ref[\s\S]*outcome\.taxonomy_version IS NOT DISTINCT FROM scope\.taxonomy_version[\s\S]*scope\.release_status IS NULL[\s\S]*scope\.release_status IN \('validating','released'\)/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.question_active_outcome_mapping_valid\([\s\S]*question_outcome_scope_valid\([\s\S]*mapping\.question_id,mapping\.outcome_id/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.tg_question_outcome_split_scope_row_guard\(\)[\s\S]*scope\.taxonomy_version[\s\S]*v_release_status IN \('validating','released'\)[\s\S]*question_outcome_scope_valid\(NEW\.question_id, NEW\.outcome_id\)[\s\S]*ERRCODE = '22023'/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE TRIGGER trg_question_outcomes_split_scope_row_guard[\s\S]*BEFORE INSERT OR UPDATE OF question_id, outcome_id/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.assert_split_question_outcome_integrity\([\s\S]*scope\.taxonomy_version[\s\S]*v_release_status IN \('validating','released'\)[\s\S]*question_active_outcome_mapping_valid\(p_question_id\)[\s\S]*ERRCODE = '22023'/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE CONSTRAINT TRIGGER trg_questions_split_scope_integrity[\s\S]*AFTER INSERT OR UPDATE OF game, category, exam_ref, is_active[\s\S]*DEFERRABLE INITIALLY DEFERRED/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE CONSTRAINT TRIGGER trg_question_outcomes_split_scope_integrity[\s\S]*AFTER INSERT OR UPDATE OR DELETE[\s\S]*DEFERRABLE INITIALLY DEFERRED/)
+    expect(ydtEnglishReleaseSql).toMatch(/REVOKE ALL ON FUNCTION public\.assert_split_question_outcome_integrity\(uuid\),[\s\S]*public\.tg_assert_split_question_outcome_integrity\(\),[\s\S]*public\.tg_question_outcome_split_scope_row_guard\(\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role/)
+    expect(ydtEnglishReleaseSql).toMatch(/tgdeferrable[\s\S]*tginitdeferred[\s\S]*v_split_trigger_count<>2[\s\S]*trg_question_outcomes_split_scope_row_guard[\s\S]*NOT tgdeferrable[\s\S]*v_split_row_trigger_count<>1/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.get_question_outcome_coverage\([\s\S]*scope\.display_exam_ref AS exam_ref[\s\S]*revision\.exam_ref IS NOT DISTINCT FROM question\.question_exam_ref[\s\S]*revision\.exam_ref IS NOT DISTINCT FROM question\.exam_ref/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.question_outcome_mapping_candidate_snapshot\(\)[\s\S]*scope\.display_exam_ref AS scope_exam_ref[\s\S]*scope\.release_status AS scope_release_status[\s\S]*revision\.exam_ref IS NOT DISTINCT FROM question\.exam_ref[\s\S]*revision\.exam_ref IS NOT DISTINCT FROM scope\.display_exam_ref[\s\S]*scope\.release_status IS NULL[\s\S]*scope\.release_status IN \('validating','released'\)/)
+    expect(ydtEnglishReleaseSql).toMatch(/CREATE OR REPLACE FUNCTION public\.publish_question_content_revision\([\s\S]*INSERT INTO public\.question_outcomes[\s\S]*scope\.taxonomy_version IS NOT NULL[\s\S]*scope\.release_status NOT IN \('validating','released'\)[\s\S]*NOT public\.question_active_outcome_mapping_valid\(r\.question_id\)[\s\S]*published mapping is outside the active split curriculum scope/)
+    expect(ydtEnglishReleaseSql).toMatch(/REVOKE ALL ON FUNCTION public\.resolve_question_curriculum_validation_scope\(text,text\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role/)
+    expect(ydtEnglishReleaseSql).toMatch(/REVOKE ALL ON FUNCTION public\.question_outcome_mapping_candidate_snapshot\(\),[\s\S]*publish_question_content_revision\(uuid,uuid,uuid\)[\s\S]*GRANT EXECUTE ON FUNCTION public\.get_question_outcome_coverage\(uuid\),[\s\S]*TO service_role/)
+    expect(ydtEnglishReleaseSql).toMatch(/WHERE game = 'wordquest'[\s\S]*exam_ref IS NULL[\s\S]*is_active/)
     expect(ydtEnglishReleaseSql).toMatch(/sync_taxonomy_auto_question_outcomes\([\s\S]*v_question\.exam_ref/)
     expect(ydtEnglishReleaseSql).toMatch(/curriculum_scope_integrity\([\s\S]*'wordquest', 'YDT', 'ba-ydt-eng-v1'/)
     for (const field of [
