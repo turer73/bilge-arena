@@ -38,6 +38,7 @@
     "test:institution-pilot:pg": "vitest run --config vitest.database.config.ts database/__tests__/institution-pilot-foundation-postgres.integration.test.mjs",
     "test:session-coin-scale:pg": "vitest run --config vitest.database.config.ts database/__tests__/session-coin-scale-postgres.integration.test.mjs",
     "test:db:watch": "vitest --config vitest.database.config.ts",
+    "council": "node scripts/run-model-council.mjs",
     "audit:calibrate": "node database/run-question-audit.mjs",
     "audit:benchmark": "node database/run-question-benchmark.mjs",
     "seed:wordquest": "node database/seed.js",
