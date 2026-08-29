@@ -558,8 +558,11 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
       game,display_exam_ref,question_exam_ref,taxonomy_version,release_status,diagnostic_enabled
     ) VALUES('matematik','TYT','TYT','ba-tyt-math-v1','released',true)`)
     await client.query(`INSERT INTO public.curriculum_outcomes(
-      code,game,exam_ref,taxonomy_version,is_active
-    ) VALUES('MAT-TEST-01','matematik','TYT','ba-tyt-math-v1',true)`)
+      code,title,category,sort_order,game,exam_ref,taxonomy_version,is_active
+    ) VALUES(
+      'MAT-TEST-01','Matematik Kazanımı','temel',1,
+      'matematik','TYT','ba-tyt-math-v1',true
+    )`)
     await client.query(institutionScopeAlignmentSql)
     await client.query(institutionScopeAlignmentSql)
     await client.query(institutionTaxonomyConsumersSql)
@@ -3785,8 +3788,8 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
     // Give the second learner a genuine, operational but distinct tenant.
     // Knowing a program_ref must not cross that tenant/student boundary.
     const otherInstitution = (await client.query(`INSERT INTO public.pilot_institutions(
-      name,status,created_by
-    ) VALUES('Execution Foreign Tenant','active',$1) RETURNING id`, [platformAdmin])).rows[0].id
+      name,status,created_by,pilot_kind
+    ) VALUES('Execution Foreign Tenant','active',$1,'legacy') RETURNING id`, [platformAdmin])).rows[0].id
     await client.query(`INSERT INTO public.pilot_institution_memberships(
       institution_id,user_id,role,assigned_by
     ) VALUES($1,$2,'manager',$3)`, [otherInstitution, otherManager, platformAdmin])
@@ -3811,7 +3814,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
         AND is_active AND code='GATE-MATEMATIK-1'`)).rows[0]
     expect(outcome).toEqual(expect.objectContaining({ code: expect.any(String), category: expect.any(String) }))
     const weekStart = (await client.query(
-      "SELECT date_trunc('week',clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date AS value",
+      "SELECT to_char(date_trunc('week',clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date,'YYYY-MM-DD') AS value",
     )).rows[0].value
     const today = (await client.query(
       "SELECT (clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date AS value",

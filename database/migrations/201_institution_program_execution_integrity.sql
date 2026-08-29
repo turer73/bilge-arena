@@ -823,31 +823,33 @@ CREATE TRIGGER institution_program_diagnostic_completion
 CREATE OR REPLACE FUNCTION public.institution_study_program_review_ready(
   p_program_id uuid,p_review_day date
 ) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $fn$
-  SELECT p_review_day IS NOT NULL
-    AND p_review_day>=program.week_start+14
-    AND program.status IN ('published','completed')
-    AND membership.accepted_at<(
-      (program.week_start+14)::timestamp AT TIME ZONE 'Europe/Istanbul'
-    )
-    AND EXISTS (
-      SELECT 1 FROM public.institution_study_program_item_executions execution
-      JOIN public.institution_study_program_items item
-        ON item.program_id=execution.program_id AND item.position=execution.position
-      WHERE execution.program_id=program.id AND execution.status='completed'
-        AND item.status='completed'
-    )
-  FROM public.institution_study_programs program
-  JOIN public.teacher_classroom_memberships membership
-    ON membership.id=program.membership_id AND membership.classroom_id=program.classroom_id
-    AND membership.student_id=program.student_id AND membership.status='active'
-  JOIN public.teacher_classrooms classroom
-    ON classroom.id=program.classroom_id AND classroom.institution_id=program.institution_id
-    AND classroom.status='active'
-  JOIN public.pilot_institutions institution
-    ON institution.id=program.institution_id AND public.institution_pilot_is_operational(institution.id)
-  JOIN public.profiles profile ON profile.id=program.student_id AND profile.deleted_at IS NULL
-  WHERE program.id=p_program_id
-    AND NOT public.teacher_classroom_is_blocked(classroom.teacher_id,program.student_id)
+  SELECT COALESCE((
+    SELECT p_review_day IS NOT NULL
+      AND p_review_day>=program.week_start+14
+      AND program.status IN ('published','completed')
+      AND membership.accepted_at<(
+        (program.week_start+14)::timestamp AT TIME ZONE 'Europe/Istanbul'
+      )
+      AND EXISTS (
+        SELECT 1 FROM public.institution_study_program_item_executions execution
+        JOIN public.institution_study_program_items item
+          ON item.program_id=execution.program_id AND item.position=execution.position
+        WHERE execution.program_id=program.id AND execution.status='completed'
+          AND item.status='completed'
+      )
+    FROM public.institution_study_programs program
+    JOIN public.teacher_classroom_memberships membership
+      ON membership.id=program.membership_id AND membership.classroom_id=program.classroom_id
+      AND membership.student_id=program.student_id AND membership.status='active'
+    JOIN public.teacher_classrooms classroom
+      ON classroom.id=program.classroom_id AND classroom.institution_id=program.institution_id
+      AND classroom.status='active'
+    JOIN public.pilot_institutions institution
+      ON institution.id=program.institution_id AND public.institution_pilot_is_operational(institution.id)
+    JOIN public.profiles profile ON profile.id=program.student_id AND profile.deleted_at IS NULL
+    WHERE program.id=p_program_id
+      AND NOT public.teacher_classroom_is_blocked(classroom.teacher_id,program.student_id)
+  ),false)
 $fn$;
 
 -- Teacher review is explicitly descriptive: only executed items are targets,
