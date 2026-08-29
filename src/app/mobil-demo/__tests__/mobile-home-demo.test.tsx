@@ -94,6 +94,17 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(within(mathTab).getByText('Matematik')).toHaveClass('hidden', 'md:inline')
   })
 
+  test('mobilde bugünkü ders ve Devam Et eylemini öğrenme yolu özetinden önce sunar', () => {
+    const { container } = render(<MobileHomeDemo />)
+    const todayLesson = container.querySelector('[data-today-lesson]')
+    const learningPathHero = container.querySelector('[data-learning-path-hero]')
+
+    expect(todayLesson).toBeInTheDocument()
+    expect(learningPathHero).toBeInTheDocument()
+    expect((todayLesson as Element).compareDocumentPosition(learningPathHero as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(todayLesson as HTMLElement).getByRole('link', { name: /DEVAM ET/ })).toBeInTheDocument()
+  })
+
   test('üst çubuk gerçek sınav kapsamı seçicisi ve profil avatarı sunar', async () => {
     const onExamRefChange = vi.fn()
     render(

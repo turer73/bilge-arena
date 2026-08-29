@@ -1,14 +1,21 @@
 import { useState } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MobileLobbyFlow } from '../mobile-lobby-flow'
 import { MODES, type QuizMode } from '@/lib/constants/modes'
 
-function FlowHarness({ initialCategory = null, initialDifficulty = null }: {
+function FlowHarness({
+  initialCategory = null,
+  initialDifficulty = null,
+  initialMode = 'classic',
+  onStart = vi.fn(),
+}: {
   initialCategory?: string | null
   initialDifficulty?: number | null
+  initialMode?: string
+  onStart?: () => void
 }) {
-  const [mode, setMode] = useState<QuizMode>(MODES[0])
+  const [mode, setMode] = useState<QuizMode>(MODES.find((item) => item.id === initialMode) ?? MODES[0])
   const [category, setCategory] = useState<string | null>(initialCategory)
   const [difficulty, setDifficulty] = useState<number | null>(initialDifficulty)
   const [examRef, setExamRef] = useState<string | null>('TYT')
@@ -24,47 +31,83 @@ function FlowHarness({ initialCategory = null, initialDifficulty = null }: {
       onSelectDifficulty={setDifficulty}
       selectedExamRef={examRef}
       onSelectExamRef={setExamRef}
-      onStart={vi.fn()}
+      onStart={onStart}
     />
   )
 }
 
 describe('MobileLobbyFlow', () => {
-  it('serbest başlangıcı sayfa kaydırmalı form yerine dört kararlı adıma böler', () => {
+  it('adım sihirbazı yerine tek ekran ve tek ana CTA gösterir', () => {
     render(<FlowHarness />)
+    const flow = within(screen.getByTestId('mobile-lobby-flow'))
 
-    expect(screen.getByRole('heading', { name: 'Nasıl oynamak istersin?' })).toBeInTheDocument()
-    expect(screen.getByLabelText('1 / 5 adım')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Hangi sınava hazırlanıyorsun?' })).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Neye odaklanalım?' })).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /Problemler/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Hangi seviyede başlayalım?' })).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /Orta/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Turun hazır' })).toBeInTheDocument()
-    expect(screen.getByText('Problemler')).toBeInTheDocument()
-    expect(screen.getByText('Orta')).toBeInTheDocument()
+    expect(flow.getByRole('heading', { name: '10 soruluk turun hazır' })).toBeInTheDocument()
+    expect(flow.getByRole('group', { name: 'Başlangıç türü' })).toBeInTheDocument()
+    expect(flow.getByRole('button', { name: 'Başla · 10 soru' })).toBeInTheDocument()
+    expect(flow.queryByRole('button', { name: /Devam Et/ })).not.toBeInTheDocument()
+    expect(flow.queryByText(/\/ 4 adım/)).not.toBeInTheDocument()
   })
 
-  it('derin bağlantıdan bilinen konuyu yeniden sormaz', () => {
-    render(<FlowHarness initialCategory="sayilar" />)
+  it('konuyu sayfayı uzatmadan tek seçimlik alt panelde değiştirir', () => {
+    render(<FlowHarness />)
+    const flow = within(screen.getByTestId('mobile-lobby-flow'))
 
-    expect(screen.getByLabelText('1 / 4 adım')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Hangi sınava hazırlanıyorsun?' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Hangi seviyede başlayalım?' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Neye odaklanalım?' })).not.toBeInTheDocument()
+    fireEvent.click(flow.getByRole('button', { name: 'Konu seç: Tüm konular' }))
+    const dialog = screen.getByRole('dialog', { name: 'Konu seç' })
+    fireEvent.click(within(dialog).getByRole('button', { name: /Problemler/ }))
+
+    expect(screen.queryByRole('dialog', { name: 'Konu seç' })).not.toBeInTheDocument()
+    expect(flow.getByRole('button', { name: 'Konu seç: Problemler' })).toBeInTheDocument()
   })
 
-  it('baska dersten kalan gecersiz konuyu temizleyip konu adimini yeniden gosterir', () => {
+  it('sınav kapsamını ve seviyeyi bağımsız alt panellerden seçer', () => {
+    render(<FlowHarness />)
+    const flow = within(screen.getByTestId('mobile-lobby-flow'))
+
+    fireEvent.click(flow.getByRole('button', { name: 'Kapsam seç: TYT' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Sınav kapsamını seç' })).getByRole('button', { name: /AYT Eşit Ağırlık/ }))
+    expect(flow.getByRole('button', { name: 'Kapsam seç: AYT Eşit Ağırlık' })).toBeInTheDocument()
+
+    fireEvent.click(flow.getByRole('button', { name: 'Seviye seç: Karma' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Seviye seç' })).getByRole('button', { name: /Orta/ }))
+    expect(flow.getByRole('button', { name: 'Seviye seç: Orta' })).toBeInTheDocument()
+  })
+
+  it('denemede gereksiz konu ve seviye ayarlarını kaldırır', () => {
+    render(<FlowHarness />)
+    const flow = within(screen.getByTestId('mobile-lobby-flow'))
+
+    fireEvent.click(flow.getByRole('button', { name: 'Deneme: 40 soru' }))
+
+    expect(flow.getByRole('heading', { name: 'Deneme sınavın hazır' })).toBeInTheDocument()
+    expect(flow.queryByRole('button', { name: /Konu seç:/ })).not.toBeInTheDocument()
+    expect(flow.queryByRole('button', { name: /Seviye seç:/ })).not.toBeInTheDocument()
+    expect(flow.getByRole('button', { name: 'Denemeyi Başlat · 40 soru' })).toBeInTheDocument()
+    expect(flow.getByText('Tur').parentElement).toHaveTextContent('45 dk')
+  })
+
+  it('ileri oyun modlarını ana yüzeyi kalabalıklaştırmadan korur', () => {
+    render(<FlowHarness />)
+    const flow = within(screen.getByTestId('mobile-lobby-flow'))
+
+    fireEvent.click(flow.getByRole('button', { name: /Blitz, Maraton ve Boss/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Diğer oyun modları' })
+    fireEvent.click(within(dialog).getByRole('button', { name: /Blitz/ }))
+
+    expect(flow.getByRole('heading', { name: 'Blitz turun hazır' })).toBeInTheDocument()
+    expect(flow.getByRole('button', { name: /Seçili mod: Blitz/ })).toBeInTheDocument()
+    expect(flow.getByRole('button', { name: 'Başla · 5 soru' })).toBeInTheDocument()
+  })
+
+  it('tek ana CTA oyunu doğrudan başlatır', () => {
+    const onStart = vi.fn()
+    render(<FlowHarness onStart={onStart} />)
+
+    fireEvent.click(within(screen.getByTestId('mobile-lobby-flow')).getByRole('button', { name: 'Başla · 10 soru' }))
+    expect(onStart).toHaveBeenCalledOnce()
+  })
+
+  it('başka dersten kalan geçersiz konuyu temizler', () => {
     const onSelectCategory = vi.fn()
     render(
       <MobileLobbyFlow
@@ -82,64 +125,16 @@ describe('MobileLobbyFlow', () => {
     )
 
     expect(onSelectCategory).toHaveBeenCalledWith(null)
-    expect(screen.getByLabelText('1 / 4 adım')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Hangi sınava hazırlanıyorsun?' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Neye odaklanalım?' })).toBeInTheDocument()
+    expect(within(screen.getByTestId('mobile-lobby-flow')).getByRole('button', { name: 'Konu seç: Tüm konular' })).toBeInTheDocument()
   })
 
-  it('deneme seçilince gereksiz konu ve zorluk adımlarını atlar', () => {
+  it('alt paneli Escape ile kapatır', () => {
     render(<FlowHarness />)
+    const flow = within(screen.getByTestId('mobile-lobby-flow'))
 
-    fireEvent.click(screen.getByRole('button', { name: /Deneme Sınavı/ }))
-    expect(screen.getByLabelText('1 / 3 adım')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Hangi sınava hazırlanıyorsun?' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByRole('heading', { name: 'Turun hazır' })).toBeInTheDocument()
-    expect(screen.getByText('Deneme Sınavı')).toBeInTheDocument()
-    expect(screen.getByText(/45 dk/)).toBeInTheDocument()
-  })
+    fireEvent.click(flow.getByRole('button', { name: 'Konu seç: Tüm konular' }))
+    fireEvent.keyDown(window, { key: 'Escape' })
 
-  it('özet ekranındaki tek ana CTA oyunu başlatır', () => {
-    const onStart = vi.fn()
-    render(
-      <MobileLobbyFlow
-        game="fen"
-        selectedMode="classic"
-        onSelectMode={vi.fn()}
-        selectedCategory="fizik"
-        onSelectCategory={vi.fn()}
-        selectedDifficulty={2}
-        onSelectDifficulty={vi.fn()}
-        selectedExamRef="TYT"
-        onSelectExamRef={vi.fn()}
-        onStart={onStart}
-      />
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Turu Başlat' }))
-    expect(onStart).toHaveBeenCalledOnce()
-  })
-
-  it('mobil kullanicinin oyun icinde sinav kapsamını degistirmesine izin verir', () => {
-    render(<FlowHarness initialCategory="sayilar" initialDifficulty={2} />)
-
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    fireEvent.click(screen.getByRole('button', { name: /AYT Eşit Ağırlık/ }))
-    expect(screen.getByRole('button', { name: /AYT Eşit Ağırlık/ })).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.getByText('AYT-EA kapsamı')).toBeInTheDocument()
-  })
-
-  it('profil varsayilanina geri donen uygulanamaz tum kapsamlar secenegini sunmaz', () => {
-    render(<FlowHarness />)
-
-    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
-    expect(screen.queryByRole('button', { name: /Tüm kapsamlar/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /TYT/ })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Konu seç' })).not.toBeInTheDocument()
   })
 })
