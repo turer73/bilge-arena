@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bilgearena.com/schemas/question-audit-review.schema.json",
+  "title": "Bilge Arena blind expert question review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reviewerRef", "role", "labels"],
+  "properties": {
+    "schemaVersion": { "const": "question-audit-review@1" },
+    "reviewerRef": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+    "role": { "enum": ["reviewer", "adjudicator"] },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["questionId", "contentSha256", "flawCodes"],
+        "properties": {
+          "questionId": { "type": "string", "minLength": 1 },
+          "contentSha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+          "flawCodes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "question-audit-gold.schema.json#/$defs/flawCode" }
+          }
+        }
+      }
+    }
+  }
+}

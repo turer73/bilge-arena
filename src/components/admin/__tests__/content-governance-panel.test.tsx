@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ContentGovernancePanel } from '../content-governance-panel'
 
@@ -10,10 +10,29 @@ const QUESTION = '33333333-3333-4333-8333-333333333333'
 const INCIDENT = '44444444-4444-4444-8444-444444444444'
 let incidentCreated = false
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((next) => { resolve = next })
+  return { promise, resolve }
+}
+
 const detail = () => ({ revision: {
   revisionId: OLD, questionId: QUESTION, revisionNo: 1, status: 'superseded', summary: 'Hatalı anahtar',
-  content: { question: 'Eski soru', options: ['A', 'B'], answer: 1 }, metadata: { game: 'matematik', category: 'Temel', difficulty: 2 },
-  source: { title: 'İç kaynak', licenseCode: 'INTERNAL' }, outcomes: [], approvals: [], psychometrics: [],
+  content: { question: 'Eski soru', options: ['A', 'B'], answer: 1 }, metadata: { game: 'matematik', category: 'Temel', examRef: 'TYT', difficulty: 2 },
+  source: { title: 'İç kaynak', licenseCode: 'INTERNAL' }, outcomes: [{
+    outcomeId: '55555555-5555-4555-8555-555555555555', weight: 1, primary: true,
+    code: 'MAT-TEMEL-01', title: 'Temel matematik akıl yürütme', examRef: 'TYT',
+    taxonomyVersion: 'ba-tyt-math-v1', scopeValid: true,
+    path: [
+      { code: 'MAT', title: 'Matematik', nodeType: 'course' },
+      { code: 'MAT-U1', title: 'Temel', nodeType: 'unit' },
+      { code: 'MAT-T1', title: 'Sayılar', nodeType: 'topic' },
+      { code: 'MAT-O1', title: 'Akıl yürütme', nodeType: 'outcome' },
+    ],
+  }], approvals: [],
+  psychometrics: [{ windowStart: '2026-07-01T00:00:00.000Z', windowEnd: '2026-08-01T00:00:00.000Z', sampleN: 40, correctN: 24, omittedN: 5, pCorrect: 0.6, wilsonLow: 0.45, wilsonHigh: 0.73, discrimination: 0.31, medianResponseTimeSec: 18, fastResponseRate: 0.1, eligibilityPolicy: 'verified-v2', materializedAt: '2026-08-01T01:00:00.000Z' }],
+  optionStatistics: [{ optionIndex: 0, selectedN: 16, selectedRate: 0.4, correctOption: false, discrimination: -0.2, eligibilityPolicy: 'verified-v2' }, { optionIndex: 1, selectedN: 24, selectedRate: 0.6, correctOption: true, discrimination: 0.31, eligibilityPolicy: 'verified-v2' }],
+  appealSignals: { openCount: 3, verifiedOpenCount: 2, byReason: { wrong_key: 3 } },
   validation: {
     policyVersion: 'question-quality@1', verdict: 'NEEDS_REVIEW',
     findings: [{ code: 'AMBIGUOUS_WORDING', evidence: 'İki farklı okuma farklı seçeneklere götürüyor.' }],
@@ -44,6 +63,11 @@ describe('ContentGovernancePanel', () => {
     expect(await screen.findByText(/İnsan incelemesi gerekli · question-quality@1/)).toBeInTheDocument()
     expect(screen.getByText('AMBIGUOUS_WORDING')).toBeInTheDocument()
     expect(screen.getByText(/İki farklı okuma/)).toBeInTheDocument()
+    expect(screen.getByText(/3 açık · 2 doğrulanmış kanıtlı/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Seçenek ve çeldirici istatistikleri')).toHaveTextContent('A) 16 seçim')
+    expect(screen.getByText(/matematik \/ Temel \/ TYT/i)).toBeInTheDocument()
+    expect(screen.getByLabelText('Kazanım eşleme kanıtları')).toHaveTextContent('MAT-TEMEL-01 — Temel matematik akıl yürütme')
+    expect(screen.getByLabelText('Kazanım eşleme kanıtları')).toHaveTextContent('MAT: Matematik › MAT-U1: Temel')
   })
 
   it('creates a correction preview against the current published revision and can apply it', async () => {
@@ -69,5 +93,69 @@ describe('ContentGovernancePanel', () => {
       expect(new Date(body.windowEnd).getTime() - new Date(body.windowStart).getTime()).toBe(30 * 24 * 60 * 60 * 1000)
       expect(body).not.toHaveProperty('userId')
     })
+  })
+
+  it('keeps the latest revision visible when an earlier detail request resolves last', async () => {
+    const first = deferred<{ ok: boolean; status: number; json: () => Promise<unknown> }>()
+    const second = deferred<{ ok: boolean; status: number; json: () => Promise<unknown> }>()
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/admin/content-quality?limit=50') return Promise.resolve({
+        ok: true, status: 200, json: () => Promise.resolve({ items: [
+          { revisionId: OLD, questionId: QUESTION, status: 'published', createdAt: '2026-08-09T10:00:00.000Z' },
+          { revisionId: CURRENT, questionId: QUESTION, status: 'published', createdAt: '2026-08-09T11:00:00.000Z' },
+        ], nextCursor: null }),
+      })
+      if (url.includes(`revisionId=${OLD}`)) return first.promise
+      if (url.includes(`revisionId=${CURRENT}`)) return second.promise
+      return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: 'unexpected' }) })
+    })
+
+    render(<ContentGovernancePanel />)
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(OLD) }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(CURRENT) }))
+
+    await act(async () => second.resolve({ ok: true, status: 200, json: () => Promise.resolve({ revision: {
+      revisionId: CURRENT, questionId: QUESTION, revisionNo: 2, status: 'published',
+      content: { question: 'Son seçilen revizyon' }, metadata: { game: 'matematik', category: 'Temel', difficulty: 2 },
+      source: {}, outcomes: [], approvals: [],
+    } }) }))
+    expect(await screen.findByText('Son seçilen revizyon')).toBeInTheDocument()
+
+    await act(async () => first.resolve({ ok: true, status: 200, json: () => Promise.resolve({ revision: {
+      revisionId: OLD, questionId: QUESTION, revisionNo: 1, status: 'published',
+      content: { question: 'Eski ve geciken revizyon' }, metadata: { game: 'matematik', category: 'Temel', difficulty: 2 },
+      source: {}, outcomes: [], approvals: [],
+    } }) }))
+    await waitFor(() => expect(screen.queryByText('Eski ve geciken revizyon')).not.toBeInTheDocument())
+    expect(screen.getByText('Son seçilen revizyon')).toBeInTheDocument()
+  })
+
+  it('requests only general outcomes for a mapping-pending general revision', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/admin/content-quality?limit=50') return Promise.resolve({
+        ok: true, status: 200, json: () => Promise.resolve({ items: [
+          { revisionId: OLD, questionId: QUESTION, status: 'draft', createdAt: '2026-08-09T10:00:00.000Z' },
+        ], nextCursor: null }),
+      })
+      if (url.includes(`revisionId=${OLD}`)) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ revision: {
+        revisionId: OLD, questionId: QUESTION, revisionNo: 2, status: 'draft',
+        content: { question: 'Genel kapsamlı taslak' }, metadata: { game: 'fen', category: 'fizik', difficulty: 2 },
+        source: {}, outcomes: [], approvals: [],
+      } }) })
+      if (url.startsWith('/api/admin/content-quality/outcomes?')) return Promise.resolve({
+        ok: true, status: 200, json: () => Promise.resolve({ outcomes: [] }),
+      })
+      return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: 'unexpected' }) })
+    })
+
+    render(<ContentGovernancePanel />)
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(OLD) }))
+    await screen.findByText(/Bu kapsam için aktif katalog kazanımı yok/)
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/outcomes\?.*scope=general/),
+      expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }),
+    )
   })
 })

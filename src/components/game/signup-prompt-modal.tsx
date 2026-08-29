@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { trackEvent } from '@/lib/utils/plausible'
 import { validateEmail, getEmailErrorMessage } from '@/lib/utils/email'
+import { safeAuthNext } from '@/lib/auth/safe-next'
+import { beginLegalConsentIntent } from '@/lib/consent'
 
 interface SignupPromptModalProps {
   level: 1 | 2 | 3
@@ -53,6 +55,11 @@ type MagicLinkState =
 
 const COOLDOWN_MS = 60_000 // Supabase server-side limit ile senkron
 
+function currentSignupReturnPath(): string {
+  if (typeof window === 'undefined') return '/arena'
+  return safeAuthNext(`${window.location.pathname}${window.location.search}${window.location.hash}`)
+}
+
 export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: SignupPromptModalProps) {
   const { signInWithGoogle, signInWithMagicLink } = useAuth()
   const tracked = useRef(false)
@@ -61,6 +68,9 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
 
   const [ml, setMl] = useState<MagicLinkState>({ status: 'hidden' })
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0)
+  const [legalConsentAccepted, setLegalConsentAccepted] = useState(false)
+  const [legalConsentError, setLegalConsentError] = useState<string | null>(null)
+  const [creatingConsentIntent, setCreatingConsentIntent] = useState(false)
 
   // Gosterildigi an event fire
   useEffect(() => {
@@ -99,9 +109,25 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
 
   if (!open) return null
 
+  const createLegalConsentIntent = async (): Promise<string | null> => {
+    if (!legalConsentAccepted) return null
+    setLegalConsentError(null)
+    setCreatingConsentIntent(true)
+    try {
+      return await beginLegalConsentIntent()
+    } catch {
+      setLegalConsentError('Onay kaydı hazırlanamadı. Lütfen tekrar dene.')
+      return null
+    } finally {
+      setCreatingConsentIntent(false)
+    }
+  }
+
   const handlePrimary = async () => {
+    const legalConsentToken = await createLegalConsentIntent()
+    if (!legalConsentToken) return
     trackEvent('PromptCtaClicked', { props: { level, outcome: 'signup' } })
-    await signInWithGoogle()
+    await signInWithGoogle(currentSignupReturnPath(), { legalConsentToken })
   }
 
   const handleSecondary = () => {
@@ -136,10 +162,17 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
       return
     }
 
+    const legalConsentToken = await createLegalConsentIntent()
+    if (!legalConsentToken) return
+
     trackEvent('MagicLinkRequested', { props: { level } })
     setMl({ status: 'sending', email: validation.normalized })
 
-    const result = await signInWithMagicLink(validation.normalized)
+    const result = await signInWithMagicLink(
+      validation.normalized,
+      currentSignupReturnPath(),
+      { legalConsentToken },
+    )
     if (result.ok) {
       trackEvent('MagicLinkSent', { props: { level } })
       setMl({
@@ -155,8 +188,14 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
 
   const handleResend = async () => {
     if (ml.status !== 'sent' || cooldownRemaining > 0) return
+    const legalConsentToken = await createLegalConsentIntent()
+    if (!legalConsentToken) return
     setMl({ status: 'sending', email: ml.email })
-    const result = await signInWithMagicLink(ml.email)
+    const result = await signInWithMagicLink(
+      ml.email,
+      currentSignupReturnPath(),
+      { legalConsentToken },
+    )
     if (result.ok) {
       trackEvent('MagicLinkSent', { props: { level, resend: true } })
       setMl({
@@ -218,10 +257,27 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
           {config.message}
         </p>
 
+        <label className="mb-4 flex cursor-pointer items-start gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-left">
+          <input
+            type="checkbox"
+            checked={legalConsentAccepted}
+            onChange={(event) => setLegalConsentAccepted(event.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--focus)]"
+          />
+          <span className="text-xs leading-5 text-[var(--text-sub)]">
+            <a href="/kullanim-kosullari" target="_blank" rel="noreferrer" className="font-medium text-[var(--focus)] underline underline-offset-2">Kullanım Koşullarını</a>
+            {' '}kabul ediyorum ve{' '}
+            <a href="/kvkk" target="_blank" rel="noreferrer" className="font-medium text-[var(--focus)] underline underline-offset-2">KVKK Aydınlatma Metni</a>
+            {' '}kapsamında bilgilendirildim.
+          </span>
+        </label>
+        {legalConsentError && <p className="mb-4 text-xs text-[var(--urgency-text)]" role="alert">{legalConsentError}</p>}
+
         {/* Ana butonlar */}
         <div className={`flex ${isHardWall ? 'flex-col' : 'flex-col sm:flex-row'} gap-2`}>
           <button
             onClick={handlePrimary}
+            disabled={!legalConsentAccepted || creatingConsentIntent}
             className={`btn-primary ${isHardWall ? 'animate-pulse' : ''} flex flex-1 items-center justify-center gap-2 rounded-[10px] py-3 font-display text-sm font-bold tracking-wider`}
           >
             <GoogleIcon />
@@ -283,6 +339,7 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
               )}
               <button
                 type="submit"
+                disabled={!legalConsentAccepted || creatingConsentIntent}
                 className="btn-primary mt-1 w-full rounded-[10px] py-2.5 text-sm font-bold"
               >
                 Giris Linki Gonder
@@ -311,7 +368,7 @@ export function SignupPromptModal({ level, open, onDismiss, onExitToLobby }: Sig
               <button
                 type="button"
                 onClick={handleResend}
-                disabled={cooldownRemaining > 0}
+                disabled={cooldownRemaining > 0 || !legalConsentAccepted || creatingConsentIntent}
                 className="text-center text-xs text-[var(--text-sub)] transition-colors enabled:hover:text-[var(--focus)] enabled:hover:underline disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {cooldownRemaining > 0

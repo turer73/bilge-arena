@@ -93,15 +93,6 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Admin paneli — Cloudflare cache'lememeli
-        source: '/admin/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
-          { key: 'CDN-Cache-Control', value: 'no-store' },
-          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
-        ],
-      },
-      {
         // Admin API — PWA service worker ve CDN cache'lemesin (canli sayilar)
         source: '/api/admin/:path*',
         headers: [
@@ -145,31 +136,48 @@ const nextConfig = {
         ],
       },
       {
-        // Öğretmen sınıfları özel üye/ödev verisi taşır. Bu daha özel ve daha
-        // geç kural, global CSP'deki analytics/reklam sağlayıcılarını çıkarır.
+        // Öğretmen sınıfları özel üye/ödev verisi taşır. Nonce tabanli CSP
+        // src/proxy.ts tarafindan istek basina uretilir; burada yalniz cache ve
+        // referrer siniri tutulur.
         source: '/arena/sinif/:path*',
         headers: [
           { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
           { key: 'CDN-Cache-Control', value: 'no-store' },
           { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
           { key: 'Referrer-Policy', value: 'no-referrer' },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
-              "font-src 'self'",
-              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co",
-              "media-src 'self' blob: data: https://*.supabase.co",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com",
-              "frame-src 'self'",
-              "worker-src 'self' blob:",
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; '),
-          },
+        ],
+      },
+      {
+        // Kurum calisma alani reklam/analitik document boundary'sinin arkasinda
+        // calisir. Istek-bazli nonce CSP src/proxy.ts tarafindan uygulanir.
+        source: '/arena/kurum/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      },
+      {
+        // Hesap guvenligi parola/MFA islemleri tasir ve telemetry-policy'de
+        // hassas sayilir; kurum yuzeyleriyle ayni reklamsiz document boundary.
+        source: '/hesap/guvenlik/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      },
+      {
+        // Admin yuzeyinde reklam/analitik yoktur. Istek-bazli nonce CSP
+        // src/proxy.ts tarafindan uygulanir.
+        source: '/admin/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-cache, no-store, must-revalidate' },
+          { key: 'CDN-Cache-Control', value: 'no-store' },
+          { key: 'Cloudflare-CDN-Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
         ],
       },
       {

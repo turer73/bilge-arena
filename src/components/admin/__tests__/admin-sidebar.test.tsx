@@ -11,7 +11,7 @@ const mockUsePathname = vi.hoisted(() => vi.fn<() => string>(() => '/admin'))
 vi.mock('next/navigation', () => ({ usePathname: mockUsePathname }))
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} data-next-link="true" {...props}>{children}</a>
   ),
 }))
 vi.mock('@/components/layout/logo', () => ({ Logo: () => <div data-testid="logo" /> }))
@@ -31,6 +31,13 @@ beforeEach(() => {
 })
 
 describe('AdminSidebar (mobil drawer)', () => {
+  test('admin ici link Next kalirken public site cikisi native anchor olur', async () => {
+    render(<AdminSidebar />)
+    await waitFor(() => expect(screen.getByText('Dashboard')).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /Dashboard/ })).toHaveAttribute('data-next-link', 'true')
+    expect(screen.getByRole('link', { name: /Siteye Dön/ })).not.toHaveAttribute('data-next-link')
+  })
+
   test('izinli nav + hamburger render; varsayilan kapali (off-canvas), lg+ sabit', async () => {
     render(<AdminSidebar />)
     expect(screen.getByRole('button', { name: /menüyü aç/i })).toBeInTheDocument()

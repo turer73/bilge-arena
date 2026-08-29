@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { isPublicLeaderboardPrivacyReady } from '@/lib/leaderboard/privacy'
 
 // Anon erisilebilir endpoint, IP bazli rate limit (pentest sertlestirme)
 const limiter = createRateLimiter('leaderboard-landing', 60, 60_000)
@@ -10,7 +11,6 @@ interface LandingLeader {
   rank: number
   username: string
   total_xp: number
-  current_streak: number
 }
 
 /**
@@ -24,7 +24,8 @@ interface LandingLeader {
  * `deleted_at` sutununa erisemez (column-level GRANT yok). Filter atmak
  * icin RLS bypass gerek.
  *
- * Cache: 5 dakika edge (frequently visited landing page).
+ * Cache: no-store. Liderlik gorunurlugu geri alinabilir bir onay oldugu icin
+ * opt-out sonrasi eski kisi verisi edge veya tarayici cache'inde kalmamalidir.
  * Rate limit: 60 req/dk per IP (anon erisim icin).
  */
 export async function GET(request: NextRequest) {
@@ -40,9 +41,17 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceRoleClient()
 
+  if (!(await isPublicLeaderboardPrivacyReady(supabase))) {
+    return NextResponse.json(
+      { leaders: [], privacyReady: false },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, display_name, total_xp, current_streak')
+    .select('username, total_xp')
+    .eq('leaderboard_opt_in', true)
     .order('total_xp', { ascending: false })
     .gt('total_xp', 0)
     .is('deleted_at', null)
@@ -55,17 +64,16 @@ export async function GET(request: NextRequest) {
 
   const leaders: LandingLeader[] = (data ?? []).map((p, i) => ({
     rank: i + 1,
-    username: p.username || p.display_name || `Oyuncu ${i + 1}`,
+    username: p.username || `Oyuncu ${i + 1}`,
     total_xp: p.total_xp || 0,
-    current_streak: p.current_streak || 0,
   }))
 
-  // Edge cache 5 dk (s-maxage), browser cache yok
+  // Geri alinabilir onay nedeniyle ortak veya tarayici cache'i kullanma.
   return NextResponse.json(
-    { leaders },
+    { leaders, privacyReady: true },
     {
       headers: {
-        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+        'Cache-Control': 'no-store',
       },
     },
   )

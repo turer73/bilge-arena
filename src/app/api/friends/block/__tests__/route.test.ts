@@ -13,11 +13,18 @@ vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mockGetUser },
     rpc: (...args: unknown[]) => mockRpc(...args),
+  })),
+}))
+
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => ({
     from: vi.fn(() => ({
       delete: vi.fn(() => ({
         eq: vi.fn(() => ({
           eq: vi.fn(() => ({
-            eq: vi.fn(() => mockUnblockDelete()),
+            eq: vi.fn(() => ({
+              select: vi.fn(() => ({ maybeSingle: mockUnblockDelete })),
+            })),
           })),
         })),
       })),
@@ -110,9 +117,16 @@ describe('DELETE /api/friends/block (unblock)', () => {
 
   it('unblocks on success', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
-    mockUnblockDelete.mockResolvedValue({ error: null })
+    mockUnblockDelete.mockResolvedValue({ data: { id: 'b1' }, error: null })
     const res = await DELETE(makeRequest({ targetId: VALID_UUID }))
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ status: 'unblocked' })
+  })
+
+  it('returns 404 when block does not exist', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockUnblockDelete.mockResolvedValue({ data: null, error: null })
+    const res = await DELETE(makeRequest({ targetId: VALID_UUID }))
+    expect(res.status).toBe(404)
   })
 })

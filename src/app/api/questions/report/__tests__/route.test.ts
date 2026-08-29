@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ─── Mock setup ──────────────────────────────────
 
-const { mockGetUser, mockMaybeSingle, mockInsert, mockRlCheck, mockContentRpc, mockCreateServiceRoleClient } = vi.hoisted(() => ({
+const { mockGetUser, mockMaybeSingle, mockInsert, mockRlCheck, mockContentRpc, mockCreateServiceRoleClient, mockGetFirstQuestionAttempt } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockMaybeSingle: vi.fn(),
   mockInsert: vi.fn(),
   mockRlCheck: vi.fn(),
   mockContentRpc: vi.fn(),
   mockCreateServiceRoleClient: vi.fn(),
+  mockGetFirstQuestionAttempt: vi.fn(),
 }))
 
 // User-scoped client: auth + error_reports dedup-select + insert (ayni `from`).
@@ -38,6 +39,10 @@ vi.mock('@/lib/content-governance/route-context', () => ({
   contentRpc: mockContentRpc,
 }))
 
+vi.mock('@/lib/questions/attempt-store', () => ({
+  getFirstQuestionAttempt: mockGetFirstQuestionAttempt,
+}))
+
 import { POST } from '../route'
 
 // ─── Helpers ─────────────────────────────────────
@@ -63,6 +68,7 @@ describe('POST /api/questions/report', () => {
     mockMaybeSingle.mockReturnValue({ data: null })
     mockInsert.mockReturnValue({ error: null })
     mockCreateServiceRoleClient.mockReturnValue({})
+    mockGetFirstQuestionAttempt.mockResolvedValue(2)
     mockContentRpc.mockResolvedValue({
       data: { appealId: '22222222-2222-4222-8222-222222222222', status: 'submitted', replayed: false },
       error: null,
@@ -96,14 +102,14 @@ describe('POST /api/questions/report', () => {
     mockMaybeSingle.mockReturnValue({ data: { id: 'existing' } })
     const res = await POST(makeRequest({ questionId: QID, report_type: 'typo' }))
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ status: 'already_reported' })
+    expect(await res.json()).toEqual({ status: 'already_reported', rewardEligible: true })
     expect(mockInsert).not.toHaveBeenCalled()
   })
 
   it('returns 201 and inserts the report with the session user_id', async () => {
     const res = await POST(makeRequest({ questionId: QID, report_type: 'wrong_answer', description: ' kotu ' }))
     expect(res.status).toBe(201)
-    expect(await res.json()).toEqual({ status: 'reported' })
+    expect(await res.json()).toEqual({ status: 'reported', rewardEligible: true })
     expect(mockInsert).toHaveBeenCalledWith({
       user_id: USER.id,
       question_id: QID,
@@ -115,26 +121,70 @@ describe('POST /api/questions/report', () => {
   it('routes the legacy endpoint into the owner-bound appeal RPC when server governance is enabled', async () => {
     vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
     const requestId = '33333333-3333-4333-8333-333333333333'
-    const res = await POST(makeRequest({ questionId: QID, report_type: 'wrong_answer', description: ' Anahtar yanlis. ', requestId }))
+    const attemptId = '44444444-4444-4444-8444-444444444444'
+    const res = await POST(makeRequest({ questionId: QID, attemptId, report_type: 'wrong_answer', description: 'Anahtar yanlis; secenek iki dogru.', proposed_answer_index: 1, confidence: 90, requestId }))
     expect(res.status).toBe(201)
-    expect(await res.json()).toEqual({ status: 'reported' })
-    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal', {
+    expect(await res.json()).toEqual({ status: 'reported', rewardEligible: false })
+    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal_v2', {
       p_user_id: USER.id,
       p_question_id: QID,
       p_session_answer_id: null,
+      p_attempt_id: attemptId,
       p_reason: 'wrong_key',
-      p_description: 'Anahtar yanlis.',
+      p_description: 'Anahtar yanlis; secenek iki dogru.',
       p_request_id: requestId,
     })
+    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_quality_claim', expect.objectContaining({
+      p_appeal_id: '22222222-2222-4222-8222-222222222222',
+      p_solved_answer_index: 2,
+      p_verdict: 'flawed',
+      p_proposed_answer_index: 1,
+      p_confidence: 90,
+      p_request_id: requestId,
+      p_independence_key: expect.stringMatching(/^[0-9a-f]{64}$/),
+    }))
     expect(mockInsert).not.toHaveBeenCalled()
   })
 
-  it('treats an already-open governed appeal as an idempotent legacy report', async () => {
+  it('rejects an academic claim when the server has no first-answer evidence', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
+    mockGetFirstQuestionAttempt.mockResolvedValue(null)
+    const res = await POST(makeRequest({
+      questionId: QID,
+      attemptId: '44444444-4444-4444-8444-444444444444',
+      report_type: 'wrong_answer',
+      description: 'Anahtar bağımsız çözüm sonucuyla uyuşmuyor.',
+      proposed_answer_index: 1,
+      confidence: 90,
+    }))
+    expect(res.status).toBe(409)
+    expect(mockContentRpc).not.toHaveBeenCalled()
+  })
+
+  it('forwards the verified attempt reference to governed evidence binding', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
+    const attemptId = '44444444-4444-4444-8444-444444444444'
+    const res = await POST(makeRequest({
+      questionId: QID,
+      attemptId,
+      report_type: 'unclear',
+      description: 'Soru metni bu haliyle birden fazla yoruma acik.',
+      correction_text: 'Kosul daha acik yazilmali.',
+      confidence: 80,
+      requestId: '33333333-3333-4333-8333-333333333333',
+    }))
+    expect(res.status).toBe(201)
+    expect(mockContentRpc).toHaveBeenCalledWith(expect.anything(), 'submit_question_appeal_v2', expect.objectContaining({
+      p_attempt_id: attemptId,
+    }))
+  })
+
+  it('does not mask an arbitrary governed unique violation as an idempotent report', async () => {
     vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true')
     mockContentRpc.mockResolvedValue({ data: null, error: { code: '23505' } })
-    const res = await POST(makeRequest({ questionId: QID, report_type: 'unclear' }))
-    expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ status: 'already_reported' })
+    const res = await POST(makeRequest({ questionId: QID, attemptId: '44444444-4444-4444-8444-444444444444', report_type: 'unclear', description: 'Soru metni birden fazla yoruma acik.', correction_text: 'Kosul daha acik yazilmali.', confidence: 80 }))
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({ error: 'Rapor gonderilemedi' })
     expect(mockInsert).not.toHaveBeenCalled()
   })
 
@@ -142,6 +192,13 @@ describe('POST /api/questions/report', () => {
     mockInsert.mockReturnValue({ error: { code: '23503', message: 'fk' } })
     const res = await POST(makeRequest({ questionId: QID, report_type: 'other' }))
     expect(res.status).toBe(400)
+  })
+
+  it('does not turn an arbitrary legacy unique violation into a reward-eligible success', async () => {
+    mockInsert.mockReturnValue({ error: { code: '23505', message: 'unrelated unique violation' } })
+    const res = await POST(makeRequest({ questionId: QID, report_type: 'other' }))
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({ error: 'Rapor gonderilemedi' })
   })
 
   it('returns GENERIC 500 (no PG leak) on other insert errors', async () => {

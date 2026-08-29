@@ -3,6 +3,7 @@ import {
   fetchInstitutionStudentLearningAnalysis,
   fetchInstitutionTrackingDirectory,
   fetchInstitutionClassroomOverview,
+  fetchInstitutionLearningScopes,
   InstitutionTrackingClientError,
   createInstitutionStudyProgramDraft,
   publishInstitutionStudyProgram,
@@ -39,9 +40,31 @@ describe('institution tracking client', () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ invalid: true }), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
     await expect(fetchInstitutionClassroomOverview('class/id')).rejects.toMatchObject({ status: 500 })
-    expect(fetchMock).toHaveBeenCalledWith('/api/institution/tracking/classrooms/class%2Fid/overview', {
+    expect(fetchMock).toHaveBeenCalledWith('/api/institution/tracking/classrooms/class%2Fid/overview?game=matematik&exam_ref=TYT', {
       cache: 'no-store', signal: undefined,
     })
+  })
+
+  it('loads only strict released scopes and carries an explicit scope to reads', async () => {
+    const scope = {
+      game: 'fen' as const,
+      displayExamRef: 'TYT',
+      questionExamRef: 'TYT',
+      taxonomyVersion: 'ba-tyt-fen-v1',
+      scopePolicyVersion: 'institution-scope-v1',
+      diagnosticEnabled: false,
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ scopes: [scope] }))
+      .mockResolvedValueOnce(Response.json({ invalid: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchInstitutionLearningScopes()).resolves.toEqual({ scopes: [scope] })
+    await expect(fetchInstitutionClassroomOverview('class/id', scope)).rejects.toMatchObject({ status: 500 })
+    expect(fetchMock).toHaveBeenNthCalledWith(2,
+      '/api/institution/tracking/classrooms/class%2Fid/overview?game=fen&exam_ref=TYT',
+      { cache: 'no-store', signal: undefined },
+    )
   })
 
   it('preserves only the HTTP status in client errors', async () => {

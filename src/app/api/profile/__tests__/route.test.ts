@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockGetUser, mockProfileSelect, mockPlatformAdmin, mockProfileUpdate } = vi.hoisted(() => ({
+const { mockGetUser, mockProfileSelect, mockPlatformAdmin, mockProfileUpdate, mockProfileUpdateSelect } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockProfileSelect: vi.fn(),
   mockPlatformAdmin: vi.fn(),
   mockProfileUpdate: vi.fn(),
+  mockProfileUpdateSelect: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -25,7 +26,10 @@ vi.mock('@/lib/supabase/service-role', () => ({
           // PATCH: .update(x).eq('id', y).select(...).single()
           update: vi.fn(() => ({
             eq: vi.fn(() => ({
-              select: vi.fn(() => ({ single: mockProfileUpdate })),
+              select: vi.fn((columns: string) => {
+                mockProfileUpdateSelect(columns)
+                return { single: mockProfileUpdate }
+              }),
             })),
           })),
         }
@@ -158,6 +162,7 @@ describe('PATCH /api/profile', () => {
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.display_name).toBe('Ali')
+    expect(mockProfileUpdateSelect).toHaveBeenCalledWith(expect.not.stringContaining('profile_visibility'))
   })
 
   it('returns 500 on db error', async () => {
@@ -181,6 +186,42 @@ describe('PATCH /api/profile', () => {
   it('rejects non-boolean is_discoverable', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     const res = await PATCH(makePatch({ is_discoverable: 'yes' }) as never)
+    expect(res.status).toBe(400)
+  })
+
+  it('accepts private/friends/public profile visibility', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockProfileUpdate.mockResolvedValue({
+      data: { id: 'u1' },
+      error: null,
+    })
+
+    const res = await PATCH(makePatch({ profile_visibility: 'friends' }) as never)
+    expect(res.status).toBe(200)
+    expect((await res.json()).profile_visibility).toBe('friends')
+  })
+
+  it('rejects an unknown profile visibility value', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await PATCH(makePatch({ profile_visibility: 'classroom' }) as never)
+    expect(res.status).toBe(400)
+  })
+
+  it('accepts a boolean public leaderboard opt-in', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockProfileUpdate.mockResolvedValue({
+      data: { id: 'u1', leaderboard_opt_in: true },
+      error: null,
+    })
+
+    const res = await PATCH(makePatch({ leaderboard_opt_in: true }) as never)
+    expect(res.status).toBe(200)
+    expect((await res.json()).leaderboard_opt_in).toBe(true)
+  })
+
+  it('rejects a non-boolean public leaderboard preference', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await PATCH(makePatch({ leaderboard_opt_in: 'yes' }) as never)
     expect(res.status).toBe(400)
   })
 })

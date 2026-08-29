@@ -16,6 +16,14 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      insert: (...args: unknown[]) => mockInsert(...args),
+    })),
+  })),
+}))
+
 vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: vi.fn(() => ({ check: mockRateLimitCheck })),
 }))

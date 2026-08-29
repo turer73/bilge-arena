@@ -16,7 +16,7 @@ interface AnswerDiagnosticInput {
 }
 
 export function useAdaptiveDiagnostic(
-  game: GameSlug,
+  game: GameSlug | null,
   userId?: string | null,
   examRef?: string | null,
 ) {
@@ -30,13 +30,13 @@ export function useAdaptiveDiagnostic(
 
   const accept = useCallback((value: unknown) => {
     const parsed = parseDiagnosticResponse(value)
-    if (!parsed || parsed.game !== game || parsed.examRef !== normalizedExamRef) return null
+    if (!game || !parsed || parsed.game !== game || parsed.examRef !== normalizedExamRef) return null
     return parsed
   }, [game, normalizedExamRef])
 
   const refresh = useCallback(async () => {
     loadRef.current?.abort()
-    if (!userId) {
+    if (!userId || !game || !normalizedExamRef) {
       setResponse(null)
       setLoading(false)
       setError(null)
@@ -106,11 +106,11 @@ export function useAdaptiveDiagnostic(
     }
   }, [accept, userId])
 
-  const start = useCallback(() => post({
-    action: 'start',
-    game,
-    examRef: normalizedExamRef,
-  }), [game, normalizedExamRef, post])
+  const start = useCallback(() => (
+    game && normalizedExamRef
+      ? post({ action: 'start', game, examRef: normalizedExamRef })
+      : Promise.resolve(false)
+  ), [game, normalizedExamRef, post])
 
   const answer = useCallback((input: AnswerDiagnosticInput) => post({
     action: 'answer',

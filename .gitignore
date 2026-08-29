@@ -78,6 +78,9 @@ database/question-audit-*.json
 # her seyi birebir tasir; lokal kalir.
 model-council-run.json
 model-council-*.json
+
+# İnsan uzman etiketleri ve held-out gold set repo dışında tutulur.
+/secure/
 .env*.local
 
 # Lokal denetim/dogrulama artiklari (ekran goruntuleri, handoff, audit run ciktilari)

@@ -113,4 +113,28 @@ describe('InstitutionStaffManager', () => {
     const [, init] = vi.mocked(fetch).mock.calls[0]
     expect(JSON.parse(String(init?.body))).toEqual({ enabled: false, requestId: expect.any(String) })
   })
+
+  it('transfers management only after explicit confirmation and stops further writes', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const onChanged = vi.fn().mockResolvedValue(undefined)
+    const user = userEvent.setup()
+    render(<InstitutionStaffManager members={members} roles={roles} onChanged={onChanged} />)
+
+    await user.click(screen.getByRole('button', { name: /Kurum yöneticiliğini Öğretmen Bir/i }))
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('yönetimi erişiminiz sona erecek'))
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+      '/api/institution/staff/manager-transfer',
+      expect.objectContaining({ method: 'POST' }),
+    ))
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(init?.body))).toEqual({
+      newManagerMemberRef: TEACHER_REF,
+      requestId: expect.any(String),
+    })
+    expect(String(init?.body)).not.toContain('institutionId')
+    expect(onChanged).not.toHaveBeenCalled()
+    expect(await screen.findByRole('status')).toHaveTextContent('yönetim erişiminiz sona erdi')
+    expect(screen.getByRole('button', { name: 'Öğretmen ekle' })).toBeDisabled()
+    confirm.mockRestore()
+  })
 })

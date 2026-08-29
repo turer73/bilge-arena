@@ -2,12 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ checkPermission: vi.fn(), logAdminAction: vi.fn(), rpc: vi.fn() }))
 vi.mock('@/lib/institution-pilot/server-security', () => ({ isInstitutionPilotEnabled: () => true }))
-vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie' })) }))
+vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({ marker: 'cookie', rpc: mocks.rpc })) }))
 vi.mock('@/lib/supabase/admin', () => ({
   checkPermission: mocks.checkPermission,
   logAdminAction: mocks.logAdminAction,
 }))
-vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: () => ({ rpc: mocks.rpc }) }))
 
 import { GET } from '../route'
 
@@ -42,7 +41,7 @@ describe('admin institution support directory route', () => {
     expect(mocks.rpc).toHaveBeenCalledWith('get_institution_support_directory', {
       p_admin_user_id: ADMIN_ID, p_institution_id: INSTITUTION_ID,
     })
-    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    expect(mocks.logAdminAction).toHaveBeenCalledWith(expect.objectContaining({
       action: 'view_institution_support_directory', targetId: INSTITUTION_ID,
     }))
   })

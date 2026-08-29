@@ -4,6 +4,9 @@ import {
   chatRequestSchema,
   commentContentSchema,
   errorReportSchema,
+  qualityClaimSubmitSchema,
+  qualityMissionAnswerLockSchema,
+  qualityMissionSubmitSchema,
   reviewErrorReasonSchema,
   profileUpdateSchema,
   sessionSubmitSchema,
@@ -134,6 +137,63 @@ describe('errorReportSchema', () => {
       const result = errorReportSchema.safeParse({ report_type: type })
       expect(result.success).toBe(true)
     })
+  })
+})
+
+describe('qualityClaimSubmitSchema', () => {
+  const questionId = 'aaaaaaaa-0000-4000-8000-000000000001'
+  const attemptId = 'bbbbbbbb-0000-4000-8000-000000000002'
+
+  it('requires answered evidence and structured academic claim fields', () => {
+    expect(qualityClaimSubmitSchema.safeParse({ questionId, report_type: 'wrong_answer' }).success).toBe(false)
+    expect(qualityClaimSubmitSchema.safeParse({
+      questionId, attemptId, report_type: 'wrong_answer',
+      description: 'Anahtar ve çözüm birbirini tutmuyor.', proposed_answer_index: 1, confidence: 90,
+    }).success).toBe(true)
+  })
+
+  it('keeps typo and offensive reports lightweight', () => {
+    expect(qualityClaimSubmitSchema.safeParse({ questionId, report_type: 'typo' }).success).toBe(true)
+    expect(qualityClaimSubmitSchema.safeParse({ questionId, report_type: 'offensive' }).success).toBe(true)
+  })
+})
+
+describe('qualityMissionSubmitSchema', () => {
+  const base = {
+    missionId: 'aaaaaaaa-0000-4000-8000-000000000001',
+    selectedAnswerIndex: 2,
+    verdict: 'clean' as const,
+    confidence: 75,
+    requestId: 'bbbbbbbb-0000-4000-8000-000000000002',
+  }
+
+  it('requires the independently locked answer', () => {
+    expect(qualityMissionSubmitSchema.safeParse(base).success).toBe(true)
+    const { selectedAnswerIndex: _selectedAnswerIndex, ...missingAnswer } = base
+    expect(qualityMissionSubmitSchema.safeParse(missingAnswer).success).toBe(false)
+    expect(qualityMissionSubmitSchema.safeParse({ ...base, selectedAnswerIndex: 5 }).success).toBe(false)
+  })
+
+  it('keeps the solved answer distinct from a proposed correction', () => {
+    expect(qualityMissionSubmitSchema.safeParse({
+      ...base,
+      selectedAnswerIndex: 1,
+      verdict: 'flawed',
+      reasonCode: 'wrong_key',
+      proposedAnswerIndex: 3,
+      explanation: 'Anahtar, bağımsız çözümümle uyuşmuyor.',
+    }).success).toBe(true)
+  })
+})
+
+describe('qualityMissionAnswerLockSchema', () => {
+  const missionId = 'aaaaaaaa-0000-4000-8000-000000000001'
+  const requestId = 'bbbbbbbb-0000-4000-8000-000000000002'
+
+  it('accepts only a bounded revision option index', () => {
+    expect(qualityMissionAnswerLockSchema.safeParse({ missionId, selectedAnswerIndex: 0, requestId }).success).toBe(true)
+    expect(qualityMissionAnswerLockSchema.safeParse({ missionId, selectedAnswerIndex: -1, requestId }).success).toBe(false)
+    expect(qualityMissionAnswerLockSchema.safeParse({ missionId, selectedAnswerIndex: 5, requestId }).success).toBe(false)
   })
 })
 

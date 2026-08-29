@@ -1,184 +1,94 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { NextRequest } from 'next/server'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { NextRequest, NextResponse } from 'next/server'
 
-// ─── Mocks ──────────────────────────────────────────
-
-const mockCheckPermission = vi.fn()
-
-vi.mock('@/lib/supabase/admin', () => ({
-  checkPermission: (...args: unknown[]) => mockCheckPermission(...args),
+const { mockCheckPermission, mockRpc, mockRateLimit } = vi.hoisted(() => ({
+  mockCheckPermission: vi.fn(), mockRpc: vi.fn(), mockRateLimit: vi.fn(),
 }))
+vi.mock('@/lib/supabase/admin', () => ({ checkPermission: mockCheckPermission }))
+vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn(async () => ({})) }))
+vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: () => ({ rpc: mockRpc }) }))
+vi.mock('@/lib/utils/admin-rate-limit', () => ({ checkAdminMutationRl: mockRateLimit }))
 
-const mockProfileSingle = vi.fn()
-const mockRoleSingle = vi.fn()
-const mockInsert = vi.fn()
-const mockDelete = vi.fn()
+import { DELETE, POST } from '../route'
 
-vi.mock('@/lib/supabase/server', () => ({
-  // Mig 049 prereq: cookieClient sadece auth + checkPermission icin
-  createClient: vi.fn(async () => ({
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'admin-1' } } }) },
-  })),
-}))
-
-vi.mock('@/lib/supabase/service-role', () => ({
-  // Data ops (profiles, roles, user_roles, admin_logs) artik service-role'da
-  createServiceRoleClient: () => ({
-    from: vi.fn((table: string) => {
-      if (table === 'profiles') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({ single: mockProfileSingle })),
-          })),
-        }
-      }
-      if (table === 'roles') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({ single: mockRoleSingle })),
-          })),
-        }
-      }
-      if (table === 'user_roles') {
-        return {
-          insert: mockInsert,
-          delete: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: mockDelete,
-            })),
-          })),
-        }
-      }
-      return { insert: vi.fn().mockResolvedValue({ error: null }) }
-    }),
-  }),
-}))
-
-vi.mock('@/lib/utils/rate-limit', () => ({
-  createRateLimiter: () => ({
-    check: vi.fn().mockResolvedValue({ success: true }),
-  }),
-}))
-
-import { POST, DELETE } from '../route'
-
-// ─── Constants ─────────────────────────────────────
-
-const U1 = '10000000-0000-4000-8000-000000000001'
-const R1 = '20000000-0000-4000-8000-000000000001'
+const USER_ID = '10000000-0000-4000-8000-000000000001'
+const ROLE_ID = '20000000-0000-4000-8000-000000000001'
 const ADMIN_ID = '30000000-0000-4000-8000-000000000001'
-
-// ─── Helpers ────────────────────────────────────────
+const REQUEST_ID = '40000000-0000-4000-8000-000000000001'
+const validBody = { userId: USER_ID, roleId: ROLE_ID, requestId: REQUEST_ID }
 
 function makeRequest(body: Record<string, unknown>, method = 'POST') {
   return new NextRequest('http://localhost/api/admin/roles/assign', {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   })
 }
 
-// ─── Tests ──────────────────────────────────────────
-
 describe('POST /api/admin/roles/assign', () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it('returns 403 if no admin permission', async () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRateLimit.mockResolvedValue(null)
+    mockRpc.mockResolvedValue({ data: { success: true }, error: null })
+  })
+  it('returns 403 before calling the privileged RPC without permission', async () => {
     mockCheckPermission.mockResolvedValue(null)
-    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
-    expect(res.status).toBe(403)
+    expect((await POST(makeRequest(validBody))).status).toBe(403)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
-
-  it('returns 400 if userId missing', async () => {
+  it('returns the shared mutation rate-limit response', async () => {
     mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
-    const res = await POST(makeRequest({ roleId: R1 }))
-    expect(res.status).toBe(400)
+    mockRateLimit.mockResolvedValue(NextResponse.json({ error: 'Çok fazla istek' }, { status: 429 }))
+    expect((await POST(makeRequest(validBody))).status).toBe(429)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
-
-  it('returns 400 if roleId missing', async () => {
+  it('requires user, role and UUID request ids', async () => {
     mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
-    const res = await POST(makeRequest({ userId: U1 }))
-    expect(res.status).toBe(400)
+    expect((await POST(makeRequest({ roleId: ROLE_ID, requestId: REQUEST_ID }))).status).toBe(400)
+    expect((await POST(makeRequest({ userId: USER_ID, roleId: ROLE_ID }))).status).toBe(400)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
-
-  it('returns 404 if user not found', async () => {
+  it('maps not found and duplicate assignment errors', async () => {
     mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
-    mockProfileSingle.mockResolvedValue({ data: null, error: null })
-    mockRoleSingle.mockResolvedValue({ data: { id: R1, slug: 'editor', name: 'Editor' }, error: null })
-
-    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
-    expect(res.status).toBe(404)
-    const json = await res.json()
-    expect(json.error).toContain('Kullan')
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: 'P0002' } })
+    expect((await POST(makeRequest(validBody))).status).toBe(404)
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: '23505' } })
+    expect((await POST(makeRequest(validBody))).status).toBe(409)
   })
-
-  it('returns 404 if role not found', async () => {
+  it('calls the atomic assignment RPC', async () => {
     mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
-    mockProfileSingle.mockResolvedValue({ data: { id: U1, username: 'test' }, error: null })
-    mockRoleSingle.mockResolvedValue({ data: null, error: null })
-
-    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
-    expect(res.status).toBe(404)
-    const json = await res.json()
-    expect(json.error).toContain('Rol')
-  })
-
-  it('returns 409 if role already assigned (duplicate key)', async () => {
-    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
-    mockProfileSingle.mockResolvedValue({ data: { id: U1, username: 'test' }, error: null })
-    mockRoleSingle.mockResolvedValue({ data: { id: R1, slug: 'editor', name: 'Editor' }, error: null })
-    mockInsert.mockResolvedValue({ error: { code: '23505', message: 'duplicate' } })
-
-    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
-    expect(res.status).toBe(409)
-  })
-
-  it('assigns role successfully', async () => {
-    mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
-    mockProfileSingle.mockResolvedValue({ data: { id: U1, username: 'test' }, error: null })
-    mockRoleSingle.mockResolvedValue({ data: { id: R1, slug: 'editor', name: 'Editor' }, error: null })
-    mockInsert.mockResolvedValue({ error: null })
-
-    const res = await POST(makeRequest({ userId: U1, roleId: R1 }))
-    expect(res.status).toBe(200)
-    const json = await res.json()
-    expect(json.success).toBe(true)
+    expect((await POST(makeRequest(validBody))).status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('admin_assign_role', {
+      p_actor_id: ADMIN_ID, p_user_id: USER_ID, p_role_id: ROLE_ID, p_request_id: REQUEST_ID,
+    })
   })
 })
 
 describe('DELETE /api/admin/roles/assign', () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it('returns 403 if no admin permission', async () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockRateLimit.mockResolvedValue(null)
+    mockRpc.mockResolvedValue({ data: { success: true }, error: null })
+  })
+  it('returns 403 before calling the privileged RPC without permission', async () => {
     mockCheckPermission.mockResolvedValue(null)
-    const res = await DELETE(makeRequest({ userId: U1, roleId: R1 }, 'DELETE'))
-    expect(res.status).toBe(403)
+    expect((await DELETE(makeRequest(validBody, 'DELETE'))).status).toBe(403)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
-
-  it('returns 400 if userId or roleId missing', async () => {
+  it('rejects an incomplete payload', async () => {
     mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
-    const res = await DELETE(makeRequest({ userId: U1 }, 'DELETE'))
-    expect(res.status).toBe(400)
+    expect((await DELETE(makeRequest({ userId: USER_ID }, 'DELETE'))).status).toBe(400)
   })
-
-  it('blocks self-removal of super_admin role', async () => {
+  it('maps self-super-admin and last-manager guards', async () => {
     mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
-    mockRoleSingle.mockResolvedValue({ data: { slug: 'super_admin' }, error: null })
-
-    const res = await DELETE(makeRequest({ userId: ADMIN_ID, roleId: R1 }, 'DELETE'))
-    expect(res.status).toBe(400)
-    const json = await res.json()
-    expect(json.error).toContain('Admin')
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: '22023' } })
+    expect((await DELETE(makeRequest(validBody, 'DELETE'))).status).toBe(400)
+    mockRpc.mockResolvedValueOnce({ data: null, error: { code: '23514' } })
+    expect((await DELETE(makeRequest(validBody, 'DELETE'))).status).toBe(409)
   })
-
-  it('removes role successfully', async () => {
+  it('calls the atomic revoke RPC', async () => {
     mockCheckPermission.mockResolvedValue({ id: ADMIN_ID })
-    mockRoleSingle.mockResolvedValue({ data: { slug: 'editor' }, error: null })
-    mockDelete.mockResolvedValue({ error: null })
-
-    const res = await DELETE(makeRequest({ userId: U1, roleId: R1 }, 'DELETE'))
-    expect(res.status).toBe(200)
-    const json = await res.json()
-    expect(json.success).toBe(true)
+    expect((await DELETE(makeRequest(validBody, 'DELETE'))).status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('admin_revoke_role', {
+      p_actor_id: ADMIN_ID, p_user_id: USER_ID, p_role_id: ROLE_ID, p_request_id: REQUEST_ID,
+    })
   })
 })

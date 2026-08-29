@@ -24,6 +24,8 @@ import {
 } from '@/lib/institution-pilot/role-contract'
 import { InstitutionPanelNav } from './institution-panel-nav'
 import { InstitutionStaffManager } from './institution-staff-manager'
+import { InstitutionAuditTrail } from './institution-audit-trail'
+import { InstitutionCapacityCard } from './institution-capacity-card'
 import { SupportAccessPanel } from './support-access-panel'
 
 type Role = InstitutionRoleDirectory['roles'][number]
@@ -189,11 +191,15 @@ export function InstitutionRoleManager() {
         </div>
       ) : directory ? (
         <>
+          <InstitutionCapacityCard />
+
           <InstitutionStaffManager
             members={directory.members}
             roles={directory.roles}
             onChanged={load}
           />
+
+          <InstitutionAuditTrail />
 
           <section className="rounded-2xl border border-white/10 bg-[var(--surface)] p-4 sm:p-5" aria-labelledby="create-role-title">
             <div className="flex items-center gap-2">

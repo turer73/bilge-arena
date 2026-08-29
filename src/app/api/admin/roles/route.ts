@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { checkPermission } from '@/lib/supabase/admin'
-import { createRateLimiter } from '@/lib/utils/rate-limit'
-import { getClientIp } from '@/lib/utils/client-ip'
-
-const adminRolesLimiter = createRateLimiter('admin-roles', 20, 60_000)
+import { checkAdminMutationRl } from '@/lib/utils/admin-rate-limit'
+import { roleCreateSchema } from '@/lib/validations/schemas'
+import { adminRbacErrorResponse, callAdminRbacRpc } from '@/lib/admin-rbac/mutations'
 
 /**
  * GET /api/admin/roles
@@ -65,61 +64,30 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const ip = getClientIp(request.headers)
-    const rl = await adminRolesLimiter.check(ip)
-    if (!rl.success) {
-      return NextResponse.json({ error: 'Çok fazla istek' }, { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } })
-    }
-
     const supabase = await createClient()
     const admin = await checkPermission(supabase, 'admin.roles.manage')
     if (!admin) return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 403 })
 
-    const body = await request.json()
-    const { name, slug, description, permissions } = body
+    const rlRes = await checkAdminMutationRl(admin.id)
+    if (rlRes) return rlRes
 
-    if (!name || !slug) {
-      return NextResponse.json({ error: 'İsim ve slug zorunlu' }, { status: 400 })
+    const body = await request.json().catch(() => null)
+    const parsed = roleCreateSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Geçersiz rol bilgisi' }, { status: 400 })
     }
+    const { name, slug, description, permissions, requestId } = parsed.data
 
-    // Slug format kontrolü
-    if (!/^[a-z0-9_]+$/.test(slug)) {
-      return NextResponse.json({ error: 'Slug sadece küçük harf, rakam ve alt çizgi içerebilir' }, { status: 400 })
-    }
-
-    // Rol oluştur
     const svc = createServiceRoleClient()
-    const { data: role, error } = await svc
-      .from('roles')
-      .insert({ name, slug, description: description || null, is_system: false })
-      .select()
-      .single()
-
-    if (error) {
-      if (error.code === '23505') {
-        return NextResponse.json({ error: 'Bu slug zaten kullanılıyor' }, { status: 409 })
-      }
-      throw error
-    }
-
-    // İzinleri ekle
-    if (permissions && Array.isArray(permissions) && permissions.length > 0) {
-      const permRows = permissions.map((p: string) => ({
-        role_id: role.id,
-        permission: p,
-      }))
-      await svc.from('role_permissions').insert(permRows)
-    }
-
-    // Admin log
-    await svc.from('admin_logs').insert({
-      admin_id: admin.id,
-      action: 'create_role',
-      target_type: 'role',
-      target_id: role.id,
-      details: { name, slug, permissions },
+    const { data, error } = await callAdminRbacRpc(svc, 'admin_create_role', {
+      p_actor_id: admin.id,
+      p_request_id: requestId,
+      p_payload: { name, slug, description: description ?? null, permissions },
     })
+    if (error) return adminRbacErrorResponse(error)
 
+    const role = (data as { role?: unknown } | null)?.role
+    if (!role) return NextResponse.json({ error: 'Rol işlemi tamamlanamadı' }, { status: 500 })
     return NextResponse.json({ role }, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 })

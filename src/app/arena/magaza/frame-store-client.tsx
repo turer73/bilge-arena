@@ -128,7 +128,7 @@ export function FrameStoreClient() {
       </div>
 
       {/* Katalog grid'i */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {visible.map((frm) => {
           const isOwned = owned.has(frm.id) || frm.coinCost === undefined
           return (

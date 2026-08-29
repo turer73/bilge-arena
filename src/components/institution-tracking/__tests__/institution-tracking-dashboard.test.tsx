@@ -5,6 +5,7 @@ vi.mock('next/navigation', () => ({ usePathname: () => '/arena/kurum' }))
 
 const mocks = vi.hoisted(() => ({
   enabled: vi.fn(),
+  scopes: vi.fn(),
   directory: vi.fn(),
   analysis: vi.fn(),
   overview: vi.fn(),
@@ -24,6 +25,7 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock('@/lib/institution-tracking/client', () => ({
   isInstitutionTrackingUiEnabled: mocks.enabled,
+  fetchInstitutionLearningScopes: mocks.scopes,
   fetchInstitutionTrackingDirectory: mocks.directory,
   fetchInstitutionStudentLearningAnalysis: mocks.analysis,
   fetchInstitutionClassroomOverview: mocks.overview,
@@ -52,6 +54,22 @@ import { InstitutionTrackingDashboard } from '../institution-tracking-dashboard'
 const CLASSROOM_ID = '22222222-2222-4222-8222-222222222222'
 const MEMBER_ONE = 'a'.repeat(32)
 const MEMBER_TWO = 'b'.repeat(32)
+const MATH_SCOPE = {
+  game: 'matematik' as const,
+  displayExamRef: 'TYT' as const,
+  questionExamRef: 'TYT' as const,
+  taxonomyVersion: 'ba-tyt-math-v1' as const,
+  scopePolicyVersion: 'institution-scope-v1' as const,
+  diagnosticEnabled: true,
+}
+const SCIENCE_SCOPE = {
+  game: 'fen' as const,
+  displayExamRef: 'TYT' as const,
+  questionExamRef: 'TYT' as const,
+  taxonomyVersion: 'ba-tyt-fen-v1' as const,
+  scopePolicyVersion: 'institution-scope-v1' as const,
+  diagnosticEnabled: false,
+}
 const directory = {
   institution: { name: 'Bilge Pilot Kursu Çok Uzun Kurum Adı', status: 'pilot' as const },
   membership: { role: 'manager' as const },
@@ -74,7 +92,7 @@ const indicator = (value: number | null, numerator = 0, denominator = 0) => ({
 })
 const classroomOverview = {
   classroom: { id: CLASSROOM_ID, name: directory.classrooms[0].name, teacherAlias: 'Öğretmen Bir', activeStudentCount: 5 },
-  scope: { game: 'matematik' as const, examRef: 'TYT' as const, taxonomyVersion: 'ba-tyt-math-v1' as const, modelVersion: 'institution-classroom-overview-v1' as const, windowStart: '2026-08-01T00:00:00.000Z', windowEnd: '2026-08-14T00:00:00.000Z', minimumGroupSize: 3 as const },
+  scope: { game: 'matematik' as const, examRef: 'TYT' as const, questionExamRef: 'TYT' as const, taxonomyVersion: 'ba-tyt-math-v1' as const, scopePolicyVersion: 'institution-scope-v1' as const, modelVersion: 'institution-classroom-overview-v2' as const, windowStart: '2026-08-01T00:00:00.000Z', windowEnd: '2026-08-14T00:00:00.000Z', minimumGroupSize: 3 as const },
   summary: { activeStudentCount: 5, studentsWithDecisionSafeEvidence: 4, studentsNeedingSupport: 3, studentsWithoutDecisionSafeEvidence: 1, eligibleStudentOutcomeCount: 4, developingStudentOutcomeCount: 3, masteredStudentOutcomeCount: 1 },
   priorityOutcomes: [{ code: 'MAT-SAY-01', title: 'Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı', studentCount: 3, evidenceCount: 18, averageScore: 49.5 }],
   teacherIndicators: { modelVersion: 'institution-teacher-indicators-v2', windowStart: '2026-08-01T00:00:00.000Z', windowEnd: '2026-08-14T00:00:00.000Z', dimensions: { studentGrowth: indicator(null), followUpDiscipline: indicator(null), programManagement: indicator(66.7, 2, 3), interventionResponsiveness: indicator(null), dataReliability: indicator(80, 4, 5) } },
@@ -87,8 +105,12 @@ function analysis(memberRef = MEMBER_ONE, alias = 'Öğrenci Bir Çok Uzun Ad') 
     scope: {
       game: 'matematik' as const,
       examRef: 'TYT' as const,
+      questionExamRef: 'TYT' as const,
       taxonomyVersion: 'ba-tyt-math-v1' as const,
-      modelVersion: 'institution-evidence-v1' as const,
+      diagnosticEnabled: true,
+      institutionReportingEnabled: true as const,
+      scopePolicyVersion: 'institution-scope-v1' as const,
+      modelVersion: 'institution-evidence-v2' as const,
       windowStart: '2026-08-01T09:00:00.000Z',
       windowEnd: '2026-08-13T12:00:00.000Z',
     },
@@ -139,6 +161,7 @@ function analysis(memberRef = MEMBER_ONE, alias = 'Öğrenci Bir Çok Uzun Ad') 
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.enabled.mockReturnValue(true)
+  mocks.scopes.mockResolvedValue({ scopes: [MATH_SCOPE] })
   mocks.directory.mockResolvedValue(directory)
   mocks.overview.mockResolvedValue(classroomOverview)
   mocks.analysis.mockImplementation(async (_classroomId: string, memberRef: string) => (
@@ -172,12 +195,33 @@ describe('InstitutionTrackingDashboard', () => {
     render(<InstitutionTrackingDashboard />)
     expect(await screen.findByText(directory.institution.name)).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Bugünkü akademik görünüm' })).toBeInTheDocument()
-    expect(screen.getByText('Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı')).toBeInTheDocument()
+    expect(await screen.findByText('Toplu analiz için en az 3 aktif öğrenci gerekir.')).toBeInTheDocument()
+    expect(screen.queryByText('Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı')).not.toBeInTheDocument()
     expect(screen.getByText('Tek puan ve sıralama yoktur')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Öğretmen takip göstergeleri' })).toBeInTheDocument()
     expect(screen.getByText('Kurum yöneticisi görünümü')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Öğrenci Bir Çok Uzun Ad' })).not.toBeInTheDocument()
+    expect(mocks.overview).not.toHaveBeenCalled()
     expect(mocks.analysis).not.toHaveBeenCalled()
+  })
+
+  it('loads aggregate evidence at the three-student privacy boundary', async () => {
+    mocks.directory.mockResolvedValue({
+      ...directory,
+      classrooms: [{
+        ...directory.classrooms[0],
+        activeStudentCount: 3,
+        students: [
+          ...directory.classrooms[0].students,
+          { memberRef: 'c'.repeat(32), alias: 'Öğrenci Üç', joinedAt: '2026-08-03T09:00:00.000Z' },
+        ],
+      }],
+    })
+
+    render(<InstitutionTrackingDashboard />)
+
+    expect(await screen.findByText('Sayı Kümeleri ve Çok Uzun Ortak Sınıf İhtiyacı')).toBeInTheDocument()
+    expect(mocks.overview).toHaveBeenCalledWith(CLASSROOM_ID, MATH_SCOPE, expect.any(AbortSignal))
   })
 
   it('explains the privacy threshold while keeping the valid selected-student analysis', async () => {
@@ -279,15 +323,56 @@ describe('InstitutionTrackingDashboard', () => {
     await waitFor(() => expect(mocks.analysis).toHaveBeenLastCalledWith(
       CLASSROOM_ID,
       MEMBER_TWO,
+      MATH_SCOPE,
       expect.any(AbortSignal),
     ))
     expect(await screen.findByRole('heading', { name: 'Öğrenci İki' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Öğrenci İki/i })).toHaveAttribute(
       'href',
-      `/arena/kurum/sinif/${CLASSROOM_ID}?ogrenci=${MEMBER_TWO}`,
+      `/arena/kurum/sinif/${CLASSROOM_ID}?ogrenci=${MEMBER_TWO}&game=matematik&exam_ref=TYT`,
     )
     expect(container.textContent).not.toContain(CLASSROOM_ID)
     expect(container.textContent).not.toContain(MEMBER_TWO)
+  })
+
+  it('changes classroom evidence only through a released exact scope', async () => {
+    mocks.scopes.mockResolvedValue({ scopes: [MATH_SCOPE, SCIENCE_SCOPE] })
+    mocks.directory.mockResolvedValue({
+      ...directory,
+      classrooms: [{ ...directory.classrooms[0], canManagePrograms: true }],
+    })
+    mocks.analysis.mockImplementation(async (
+      _classroomId: string,
+      memberRef: string,
+      scope: typeof MATH_SCOPE | typeof SCIENCE_SCOPE,
+    ) => {
+      const base = memberRef === MEMBER_TWO ? analysis(MEMBER_TWO, 'Öğrenci İki') : analysis()
+      return scope.game === 'fen' ? {
+        ...base,
+        scope: {
+          ...base.scope,
+          game: 'fen' as const,
+          taxonomyVersion: 'ba-tyt-fen-v1' as const,
+          diagnosticEnabled: false,
+        },
+      } : base
+    })
+    const user = userEvent.setup()
+    render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} />)
+
+    const selector = await screen.findByLabelText('Öğrenme analizi kapsamı')
+    await screen.findByText(/TYT · Matematik · ba-tyt-math-v1/)
+    expect(screen.getByRole('button', { name: 'Taslak oluştur' })).toBeInTheDocument()
+    await user.selectOptions(selector, 'fen:TYT')
+
+    await waitFor(() => expect(mocks.analysis).toHaveBeenLastCalledWith(
+      CLASSROOM_ID,
+      MEMBER_ONE,
+      SCIENCE_SCOPE,
+      expect.any(AbortSignal),
+    ))
+    expect(await screen.findByText(/TYT · Fen Bilimleri · ba-tyt-fen-v1/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Taslak oluştur' })).not.toBeInTheDocument()
   })
 
   it('links each institution classroom to its own workspace', async () => {
@@ -295,8 +380,39 @@ describe('InstitutionTrackingDashboard', () => {
 
     expect(await screen.findByRole('link', { name: /Sınıf çalışma alanına git/i })).toHaveAttribute(
       'href',
-      `/arena/kurum/sinif/${CLASSROOM_ID}`,
+      `/arena/kurum/sinif/${CLASSROOM_ID}?game=matematik&exam_ref=TYT`,
     )
+  })
+
+  it('honors an exact initial scope and preserves it through classroom, student, and overview links', async () => {
+    mocks.scopes.mockResolvedValue({ scopes: [MATH_SCOPE, SCIENCE_SCOPE] })
+
+    render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} initialScope={{ game: 'fen', displayExamRef: 'TYT' }} />)
+
+    await waitFor(() => expect(mocks.analysis).toHaveBeenLastCalledWith(
+      CLASSROOM_ID,
+      MEMBER_ONE,
+      SCIENCE_SCOPE,
+      expect.any(AbortSignal),
+    ))
+    expect(screen.getByRole('link', { name: /Öğrenci İki/i })).toHaveAttribute(
+      'href',
+      `/arena/kurum/sinif/${CLASSROOM_ID}?ogrenci=${MEMBER_TWO}&game=fen&exam_ref=TYT`,
+    )
+    expect(screen.getByRole('link', { name: 'Genel bakış' })).toHaveAttribute(
+      'href',
+      '/arena/kurum?game=fen&exam_ref=TYT',
+    )
+  })
+
+  it('fails safe when an allowlisted deep-link scope is absent from released scopes', async () => {
+    render(<InstitutionTrackingDashboard initialClassroomId={CLASSROOM_ID} initialScope={{ game: 'fen', displayExamRef: 'TYT' }} />)
+
+    expect(await screen.findByRole('alert', { name: '' })).toHaveTextContent('İstenen analiz kapsamı yayımlanmamış.')
+    expect(screen.getByRole('heading', { name: 'İstenen analiz kapsamı yayımlanmamış' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Öğrenme analizi kapsamı')).not.toBeInTheDocument()
+    expect(mocks.overview).not.toHaveBeenCalled()
+    expect(mocks.analysis).not.toHaveBeenCalled()
   })
 
   it('renders the dedicated classroom workspace and offers invites only to its owner', async () => {
@@ -310,7 +426,10 @@ describe('InstitutionTrackingDashboard', () => {
 
     expect(await screen.findByText('Sınıf Çalışma Alanı')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: directory.classrooms[0].name })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Genel bakış' })).toHaveAttribute('href', '/arena/kurum')
+    expect(screen.getByRole('link', { name: 'Genel bakış' })).toHaveAttribute(
+      'href',
+      '/arena/kurum?game=matematik&exam_ref=TYT',
+    )
     expect(screen.queryByRole('button', { name: 'Sınıf oluştur' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Öğretmen Takibi' })).not.toBeInTheDocument()
     const outcomeHeading = await screen.findByRole('heading', { name: 'Kazanım analizi' })

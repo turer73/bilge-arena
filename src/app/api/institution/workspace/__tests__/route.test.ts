@@ -18,6 +18,7 @@ const workspace = {
     name: 'Bilge Pilot Kursu',
     status: 'pilot',
     studentLimit: 200,
+    studentCount: 0,
     staffLimit: 6,
     staffCount: 1,
     createdAt: '2026-08-13T10:00:00.000Z',

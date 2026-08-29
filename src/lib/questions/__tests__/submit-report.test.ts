@@ -10,9 +10,9 @@ const DATA = { type: 'wrong_answer', description: 'yanlis' }
 describe('submitQuestionReport (Codex PR#242 P1: res.ok bazlı sonuç)', () => {
   beforeEach(() => { vi.clearAllMocks(); vi.unstubAllEnvs() })
 
-  it('200 → { ok: true }', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 201 })
-    expect(await submitQuestionReport('q1', DATA)).toEqual({ ok: true })
+  it('200 → sunucunun ödül uygunluğunu taşır', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 201, json: async () => ({ rewardEligible: false }) })
+    expect(await submitQuestionReport('q1', DATA)).toEqual({ ok: true, rewardEligible: false })
   })
 
   it('401 (guest) → { ok:false, giriş mesajı } — sahte başarı YOK', async () => {
@@ -42,25 +42,52 @@ describe('submitQuestionReport (Codex PR#242 P1: res.ok bazlı sonuç)', () => {
   })
 
   it('doğru endpoint + body gönderir', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 201 })
+    fetchMock.mockResolvedValue({ ok: true, status: 201, json: async () => ({ rewardEligible: true }) })
     await submitQuestionReport('q-42', DATA)
     expect(fetchMock).toHaveBeenCalledWith('/api/questions/report', expect.objectContaining({ method: 'POST' }))
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
     expect(body).toEqual({
-      questionId: 'q-42', report_type: 'wrong_answer', description: 'yanlis',
+      questionId: 'q-42', attemptId: null, report_type: 'wrong_answer', description: 'yanlis',
       requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
     })
   })
 
-  it('itiraz pilotunda legacy raporu owner-bound appeal istegine cevirir', async () => {
-    vi.stubEnv('NEXT_PUBLIC_CONTENT_APPEALS_ENABLED', 'true')
-    fetchMock.mockResolvedValue({ ok: true, status: 201 })
-    await submitQuestionReport('11111111-1111-4111-8111-111111111111', { type: 'wrong_answer', description: 'Anahtar yanlis.' })
-    expect(fetchMock).toHaveBeenCalledWith('/api/questions/appeals', expect.objectContaining({ method: 'POST' }))
+  it('structured quality claim alanlarini sunucuya tasir', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 201, json: async () => ({ rewardEligible: false }) })
+    await submitQuestionReport('q-42', {
+      type: 'wrong_answer', description: 'Anahtar ve çözüm birbirini tutmuyor.',
+      proposedAnswerIndex: 1, correctionText: 'İkinci seçenek doğru olmalı.', confidence: 90,
+    }, { attemptId: '33333333-3333-4333-8333-333333333333' })
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
     expect(body).toEqual(expect.objectContaining({
-      questionId: '11111111-1111-4111-8111-111111111111', sessionAnswerId: null,
-      reason: 'wrong_key', explanation: 'Anahtar yanlis.', requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      proposed_answer_index: 1,
+      correction_text: 'İkinci seçenek doğru olmalı.',
+      confidence: 90,
     }))
+  })
+
+  it('tarayıcı bayrağından bağımsız tek sunucu yazma yolunu kullanır', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTENT_APPEALS_ENABLED', 'true')
+    fetchMock.mockResolvedValue({ ok: true, status: 201, json: async () => ({ rewardEligible: false }) })
+    await submitQuestionReport('11111111-1111-4111-8111-111111111111', { type: 'wrong_answer', description: 'Anahtar yanlis.' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/questions/report', expect.objectContaining({ method: 'POST' }))
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body).toEqual(expect.objectContaining({
+      questionId: '11111111-1111-4111-8111-111111111111', attemptId: null,
+      report_type: 'wrong_answer', description: 'Anahtar yanlis.', requestId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+    }))
+  })
+
+  it('aktif doğrulanmış deneme kimliğini revizyon kanıtı için taşır', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTENT_APPEALS_ENABLED', 'true')
+    fetchMock.mockResolvedValue({ ok: true, status: 201, json: async () => ({ rewardEligible: false }) })
+    const attemptId = '33333333-3333-4333-8333-333333333333'
+    await submitQuestionReport(
+      '11111111-1111-4111-8111-111111111111',
+      DATA,
+      { attemptId },
+    )
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body.attemptId).toBe(attemptId)
   })
 })

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { Lobby } from '../lobby'
 
@@ -24,6 +24,17 @@ const baseProps = {
 }
 
 describe('Lobby', () => {
+  it('mobil tek sütun, tablet ve bilgisayarda iki sütunlu oyun kabuğu kullanır', () => {
+    const { container } = render(<Lobby {...baseProps} />)
+    const shell = container.querySelector('[data-responsive-game-lobby]')
+
+    expect(shell).toHaveClass('grid-cols-1')
+    expect(shell).toHaveClass('md:grid-cols-[minmax(0,1fr)_300px]')
+    expect(shell).toHaveClass('lg:grid-cols-[minmax(0,1fr)_340px]')
+    expect(shell).toHaveClass('max-w-[1180px]')
+    expect(shell).toHaveClass('bg-[var(--app-bg)]', 'lg:bg-transparent')
+  })
+
   it('varsayılan filtreleri özetler ve ayrıntıları kapalı tutar', () => {
     render(<Lobby {...baseProps} />)
 
@@ -49,6 +60,13 @@ describe('Lobby', () => {
     expect(screen.getByRole('button', { name: 'Zor' })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('TYT Türkçe filtresinde AYT edebiyat kategorisini göstermez', () => {
+    render(<Lobby {...baseProps} game="turkce" selectedExamRef="TYT" />)
+
+    expect(screen.queryByRole('button', { name: 'Edebiyat' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paragraf' })).toBeInTheDocument()
+  })
+
   it('ayarlar açıldığında filtre seçimini üst bileşene bildirir', () => {
     const onSelectDifficulty = vi.fn()
     render(<Lobby {...baseProps} onSelectDifficulty={onSelectDifficulty} />)
@@ -68,6 +86,31 @@ describe('Lobby', () => {
     expect(onStart).toHaveBeenCalledOnce()
   })
 
+  it('akıllı denemeyi klasik başlat alanının altında sağ sütuna yerleştirir', () => {
+    const { container } = render(
+      <Lobby {...baseProps} personalizedMockCard={<div>Akıllı Deneme</div>} />
+    )
+
+    const startButton = screen.getByRole('button', { name: /Klasik Başlat/ })
+    const slot = container.querySelector('[data-personalized-mock-slot]')
+
+    expect(slot).toHaveClass('md:col-start-2', 'md:row-start-4')
+    expect(slot).toHaveTextContent('Akıllı Deneme')
+    expect(startButton.compareDocumentPosition(slot as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('akıllı denemeyi mobilde ana başlangıç akışının altında ikincil tutar', () => {
+    const { container } = render(
+      <Lobby {...baseProps} personalizedMockCard={<div>Akıllı Deneme</div>} />
+    )
+
+    const flow = container.querySelector('[data-mobile-lobby-flow]')
+    const mobileSlot = container.querySelector('[data-personalized-mock-mobile-slot]')
+    expect(mobileSlot).toHaveClass('md:hidden')
+    expect(mobileSlot).toHaveTextContent('Akıllı Deneme')
+    expect((flow as Element).compareDocumentPosition(mobileSlot as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('limit dolduğunda premium akışını erişilebilir bırakır', () => {
     const onLimitReached = vi.fn()
     render(
@@ -78,7 +121,7 @@ describe('Lobby', () => {
       />
     )
 
-    const limitButton = screen.getByRole('button', { name: /Limit doldu/ })
+    const limitButton = within(screen.getByTestId('mobile-lobby-flow')).getByRole('button', { name: /Limit doldu/ })
     expect(limitButton).toBeEnabled()
     fireEvent.click(limitButton)
     expect(onLimitReached).toHaveBeenCalledOnce()

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Palette, Pencil, ShoppingBag } from 'lucide-react'
+import { Palette, Pencil, RotateCcw, ShoppingBag, UserPlus } from 'lucide-react'
 
 interface ProfileActionsProps {
   onEdit: () => void
@@ -12,7 +12,15 @@ const actionClass =
 
 export function ProfileActions({ onEdit }: ProfileActionsProps) {
   return (
-    <div role="group" aria-label="Profil işlemleri" className="grid grid-cols-3 gap-2 border-t border-[var(--border)] pt-3">
+    <div role="group" aria-label="Profil işlemleri" className="grid grid-cols-2 gap-2 border-t border-[var(--border)] pt-3 sm:grid-cols-5">
+      <Link href="/arena/yanlislarim" className={actionClass}>
+        <RotateCcw aria-hidden size={17} strokeWidth={2.2} />
+        <span>Yanlışlarım</span>
+      </Link>
+      <Link href="/arena/arkadaslar" className={actionClass}>
+        <UserPlus aria-hidden size={17} strokeWidth={2.2} />
+        <span>Arkadaşlar</span>
+      </Link>
       <Link href="/arena/magaza" className={actionClass}>
         <ShoppingBag aria-hidden size={17} strokeWidth={2.2} />
         <span>Mağaza</span>

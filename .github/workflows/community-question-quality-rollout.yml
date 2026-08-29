@@ -1,0 +1,44 @@
+name: Community question quality production rollout
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Inspect is read-only; apply runs migrations 146 and 147
+        required: true
+        default: inspect
+        type: choice
+        options: [inspect, apply]
+      confirmation:
+        description: Type APPLY_COMMUNITY_QUALITY when action is apply
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: community-question-quality-production-rollout
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Validate production confirmation
+        if: inputs.action == 'apply' && inputs.confirmation != 'APPLY_COMMUNITY_QUALITY'
+        run: |
+          echo '::error::Apply requires exact confirmation APPLY_COMMUNITY_QUALITY'
+          exit 1
+      - name: Inspect or apply community quality migrations
+        run: >-
+          node database/deploy-community-question-quality.mjs
+          ${{ inputs.action == 'apply' && '--apply --confirm-production' || '' }}

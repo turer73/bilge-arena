@@ -1,5 +1,5 @@
 /**
- * İnsan-adjudikasyonlu altın küme karşısında denetim hattını ölçer.
+ * Bağımsız kanıtlı hibrit altın küme karşısında denetim hattını ölçer.
  *
  * Bu dosya soru bankasını değil, LLM hakemini değerlendirir. Modelin mevcut
  * cevap anahtarıyla mutabakatı bir altın standart değildir: banka ve model aynı
@@ -17,9 +17,14 @@ export interface GoldLabel {
   contentSha256: string
   /** Nihai insan bulguları. Boş dizi = bilinen kusur sınıflarından temiz. */
   flawCodes: FlawCode[]
-  /** En az iki bağımsız uzman veya anlaşmazlık halinde adjudikatör. */
+  evidenceClass: 'deterministic_gold' | 'official_source_gold' | 'curator_adjudicated'
+  /** Kanıt gövdesini açmadan bütünlüğünü bağlayan 64-hex referans. */
+  proofRef: string
+  /** Curator sınıfında 2/3; biçimsel ve resmî kanıtta 0. */
   reviewerCount: number
-  adjudication: 'consensus' | 'adjudicated'
+  adjudication: 'deterministic' | 'official_source' | 'consensus' | 'adjudicated'
+  /** Kimlik taşımayan, 64 hex karakterli farklı uzman referansları. */
+  reviewerRefs: string[]
 }
 
 export interface BinaryMetrics {
@@ -222,21 +227,51 @@ export function assertPromotionEvidence(
   }
 }
 
-function validateLabels(labels: readonly GoldLabel[]): void {
+export function validateGoldLabels(labels: readonly GoldLabel[]): void {
   if (!Array.isArray(labels)) throw new Error('gold etiket kok nesnesi dizi olmali')
   const seen = new Set<string>()
+  const seenQuestions = new Set<string>()
   for (const label of labels) {
-    if (!label || typeof label !== 'object' || typeof label.questionId !== 'string' || !Array.isArray(label.flawCodes)) {
+    if (!label || typeof label !== 'object' || typeof label.questionId !== 'string' || !label.questionId.trim() || !Array.isArray(label.flawCodes)) {
       throw new Error('gecersiz gold etiket yapisi')
     }
     if (typeof label.contentSha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(label.contentSha256)) throw new Error(`gecersiz gold content hash: ${label.questionId}`)
-    if (!Number.isInteger(label.reviewerCount) || label.reviewerCount < 2) throw new Error(`gold etiket en az iki reviewer ister: ${label.questionId}`)
-    if (label.adjudication !== 'consensus' && label.adjudication !== 'adjudicated') {
+    if (!['deterministic_gold','official_source_gold','curator_adjudicated'].includes(label.evidenceClass)) {
+      throw new Error(`gold kanit sinifi gecersiz: ${label.questionId}`)
+    }
+    if (typeof label.proofRef !== 'string' || !/^[a-f0-9]{64}$/i.test(label.proofRef)) {
+      throw new Error(`gold proofRef gecersiz: ${label.questionId}`)
+    }
+    if (!Number.isInteger(label.reviewerCount) || label.reviewerCount < 0) throw new Error(`gold reviewer sayisi gecersiz: ${label.questionId}`)
+    if (
+      !Array.isArray(label.reviewerRefs)
+      || label.reviewerRefs.length !== label.reviewerCount
+      || new Set(label.reviewerRefs.map((ref: unknown) => typeof ref === 'string' ? ref.toLowerCase() : ref)).size !== label.reviewerRefs.length
+      || label.reviewerRefs.some((ref: unknown) => typeof ref !== 'string' || !/^[a-f0-9]{64}$/i.test(ref))
+    ) throw new Error(`gold etiket farkli ve anonim reviewer referanslari ister: ${label.questionId}`)
+    if (!['deterministic','official_source','consensus','adjudicated'].includes(label.adjudication)) {
       throw new Error(`gold adjudikasyon tamamlanmamis: ${label.questionId}`)
     }
-    const key = `${label.questionId}:${label.contentSha256}`
+    if (label.evidenceClass==='deterministic_gold' && (label.adjudication!=='deterministic' || label.reviewerCount!==0 || label.reviewerRefs.length!==0)) {
+      throw new Error(`deterministic gold insan reviewer tasiyamaz: ${label.questionId}`)
+    }
+    if (label.evidenceClass==='official_source_gold' && (label.adjudication!=='official_source' || label.reviewerCount!==0 || label.reviewerRefs.length!==0)) {
+      throw new Error(`official source gold insan reviewer tasiyamaz: ${label.questionId}`)
+    }
+    if (label.evidenceClass==='curator_adjudicated' && label.adjudication === 'consensus' && label.reviewerCount !== 2) {
+      throw new Error(`gold consensus tam iki reviewer ister: ${label.questionId}`)
+    }
+    if (label.evidenceClass==='curator_adjudicated' && label.adjudication === 'adjudicated' && label.reviewerCount !== 3) {
+      throw new Error(`gold adjudikasyon tam uc reviewer ister: ${label.questionId}`)
+    }
+    if (label.evidenceClass==='curator_adjudicated' && !['consensus','adjudicated'].includes(label.adjudication)) {
+      throw new Error(`curator gold insan adjudikasyonu ister: ${label.questionId}`)
+    }
+    const key = `${label.questionId}:${label.contentSha256.toLowerCase()}`
     if (seen.has(key)) throw new Error(`yinelenen gold etiket: ${key}`)
     seen.add(key)
+    if (seenQuestions.has(label.questionId)) throw new Error(`gold sette ayni soru birden fazla revizyonla yinelenemez: ${label.questionId}`)
+    seenQuestions.add(label.questionId)
     if (new Set(label.flawCodes).size !== label.flawCodes.length) throw new Error(`yinelenen gold kusur kodu: ${label.questionId}`)
     for (const code of label.flawCodes) {
       if (!FLAW_CODES.includes(code)) throw new Error(`bilinmeyen gold kusur kodu: ${String(code)}`)
@@ -254,13 +289,13 @@ export function evaluateBenchmark(
   transportFailureRate: number,
   policy: PromotionPolicy = DEFAULT_PROMOTION_POLICY,
 ): BenchmarkReport {
-  validateLabels(labels)
+  validateGoldLabels(labels)
   if (!Number.isFinite(transportFailureRate) || transportFailureRate < 0 || transportFailureRate > 1) {
     throw new Error('transport failure rate 0 ile 1 arasinda olmali')
   }
-  const itemByKey = new Map(items.map((item) => [`${item.questionId}:${item.contentSha256}`, item]))
+  const itemByKey = new Map(items.map((item) => [`${item.questionId}:${item.contentSha256.toLowerCase()}`, item]))
   const matched: Pair[] = labels.flatMap((label) => {
-    const item = itemByKey.get(`${label.questionId}:${label.contentSha256}`)
+    const item = itemByKey.get(`${label.questionId}:${label.contentSha256.toLowerCase()}`)
     return item ? [{ label, item }] : []
   })
   const evaluated = matched.filter(({ item }) => !isInconclusive(item.verdict))

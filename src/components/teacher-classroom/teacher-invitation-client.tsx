@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
+import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, LockKeyhole, RefreshCw, ShieldCheck, UserPlus } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'

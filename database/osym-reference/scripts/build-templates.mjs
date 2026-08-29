@@ -268,9 +268,11 @@ console.log(`✓ wordquest template: ${VERIFIED_WORDQUEST.length} verified + RC 
 // ─── Sosyal Template ──────────────────────────────────────────────────────────
 const sosyalTemplate = {
   description: 'ÖSYM TYT Sosyal Bilimler geçmiş sınav soruları — sosyal game AI generation few-shot şablonları',
-  usage: 'tarih/coğrafya/felsefe/sosyoloji soru generation prompt\'larında örnek olarak kullan',
+  usage: 'Yalnız tarih/felsefe için doğrulanmış few-shot; diğer Sosyal kategorilerinde kapsam kanıtı sayma',
   exam: 'TYT Sosyal Bilimler',
   examples: VERIFIED_SOSYAL,
+  verified_example_categories: ['tarih', 'felsefe'],
+  missing_verified_example_categories: ['cografya', 'sosyoloji', 'din_kulturu'],
   tyt_raw_sections: [2018, 2019, 2021].map(y => sectionSummary(`${EXT_DIR}/tyt_${y}.json`)).filter(Boolean).map(s => ({
     year: s.year,
     answer_key: s.answerKey.sosyal,

@@ -7,6 +7,25 @@ type UserAchievements = PublicSchema['Tables']['user_achievements']
 type CurriculumOutcomes = PublicSchema['Tables']['curriculum_outcomes']
 type QuestionOutcomes = PublicSchema['Tables']['question_outcomes']
 type UserOutcomeState = PublicSchema['Tables']['user_outcome_state']
+type Profiles = PublicSchema['Tables']['profiles']
+
+// Migration 177 is intentionally app-first. Keep the deploy-compatible shape
+// here until the production schema is migrated and generated types are synced.
+type ProfilesWithPrivacyPreferences = {
+  Row: Profiles['Row'] & {
+    leaderboard_opt_in: boolean
+    profile_visibility: 'private' | 'friends' | 'public'
+  }
+  Insert: Profiles['Insert'] & {
+    leaderboard_opt_in?: boolean
+    profile_visibility?: 'private' | 'friends' | 'public'
+  }
+  Update: Profiles['Update'] & {
+    leaderboard_opt_in?: boolean
+    profile_visibility?: 'private' | 'friends' | 'public'
+  }
+  Relationships: Profiles['Relationships']
+}
 
 type CompleteGameSessionArgs = Omit<
   CompleteGameSession['Args'],
@@ -230,6 +249,14 @@ type AdaptiveDiagnosticSessionsRow = {
   kind: 'initial' | 'recheck'
   status: 'active' | 'completed' | 'abandoned'
   current_question_id: string | null
+  current_question_revision_id: string | null
+  current_question_content_sha256: string | null
+  current_question_correct_option: number | null
+  current_question_option_count: number | null
+  current_question_base_points: number | null
+  current_question_outcome_id: string | null
+  current_question_difficulty: number | null
+  current_question_issued_at: string | null
   answered_count: number
   covered_outcomes: number
   started_at: string
@@ -254,6 +281,12 @@ type AdaptiveDiagnosticAnswersRow = {
   covered_outcomes_after: number
   status_after: 'active' | 'completed' | 'abandoned'
   created_at: string
+  selected_option: number | null
+  question_revision_id: string | null
+  question_content_sha256: string | null
+  server_response_time_ms: number | null
+  response_time_source: string
+  evidence_kind: string
 }
 
 type UserDiagnosticOutcomeStateRow = {
@@ -304,8 +337,9 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
   public: Omit<PublicSchema, 'Functions' | 'Tables'> & {
     Tables: Omit<
       PublicSchema['Tables'],
-      'user_achievements' | 'curriculum_outcomes' | 'question_outcomes' | 'user_outcome_state'
+      'profiles' | 'user_achievements' | 'curriculum_outcomes' | 'question_outcomes' | 'user_outcome_state'
     > & {
+      profiles: ProfilesWithPrivacyPreferences
       user_achievements: UserAchievementsWithSource
       curriculum_nodes: {
         Row: CurriculumNodesRow
@@ -408,6 +442,32 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       complete_game_session: Omit<CompleteGameSession, 'Args'> & {
         Args: CompleteGameSessionArgs
       }
+      // Migration 158. Canli tip uretimi migration uygulandiktan sonra bu
+      // elle tutulan sozlesmeyle yeniden uzlastirilacak.
+      provision_free_pilot_institution: {
+        Args: {
+          p_user_id: string
+          p_name: string
+          p_manager_user_id: string
+          p_approval_ref: string
+          p_student_limit: number
+          p_staff_limit: number
+          p_trial_days: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      // Migration 169. Generated types are refreshed after the production
+      // schema promotion; until then routes use this explicit RPC contract.
+      mutate_admin_homepage: {
+        Args: {
+          p_user_id: string
+          p_request_id: string
+          p_operation: string
+          p_payload: Json
+        }
+        Returns: Json
+      }
       // Migration 128. Uretilen tiplere ancak canliya uygulandiktan sonra
       // girecegi icin sozlesme burada elle tutuluyor.
       award_error_report_reward: {
@@ -489,6 +549,21 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: never
         Returns: Json
       }
+      curriculum_scope_integrity: {
+        Args: {
+          p_game: string
+          p_display_exam_ref: string
+          p_taxonomy_version: string
+        }
+        Returns: Json
+      }
+      resolve_released_curriculum_scope: {
+        Args: {
+          p_game: string
+          p_display_exam_ref: string
+        }
+        Returns: Json
+      }
       record_verified_hint_event: {
         Args: {
           p_attempt_id: string
@@ -561,6 +636,27 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
+      // Migration 194. Exact released institution scope contracts remain in
+      // this deploy-compatible overlay until production types are regenerated.
+      resolve_released_institution_scope: {
+        Args: { p_game: string; p_display_exam_ref: string }
+        Returns: Json
+      }
+      list_released_institution_scopes: {
+        Args: never
+        Returns: Json
+      }
+      get_institution_student_learning_analysis_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_display_exam_ref: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
       get_institution_tracking_directory: {
         Args: { p_user_id: string }
         Returns: Json
@@ -590,6 +686,34 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       // Migration 135. Yonetici uyeligine ayni tenant icinde ogretmen sistem rolu ekler.
       set_my_institution_manager_teacher_role: {
         Args: { p_user_id: string; p_enabled: boolean; p_request_id: string }
+        Returns: Json
+      }
+      // Migration 145. Kurum yoneticisi ayni tenant'taki aktif bir ogretmene devreder.
+      transfer_my_pilot_institution_manager: {
+        Args: { p_user_id: string; p_new_manager_member_ref: string; p_request_id: string }
+        Returns: Json
+      }
+      get_my_institution_operation_events: {
+        Args: { p_user_id: string; p_limit?: number }
+        Returns: Json
+      }
+      // Migrations 151-152. Generated types are refreshed after production schema promotion.
+      set_pilot_institution_status: {
+        Args: {
+          p_user_id: string
+          p_institution_id: string
+          p_status: string
+          p_reason: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      prune_institution_request_ledgers: {
+        Args: { p_cutoff: string }
+        Returns: Json
+      }
+      export_account_data: {
+        Args: { p_user_id: string }
         Returns: Json
       }
       update_my_institution_role: {
@@ -632,12 +756,38 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_week_start: string; p_daily_minute_limit: number; p_model_version: string; p_items: Json; p_request_id: string }
         Returns: Json
       }
+      create_institution_study_program_draft_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_display_exam_ref: string
+          p_week_start: string
+          p_daily_minute_limit: number
+          p_model_version: string
+          p_items: Json
+          p_request_id: string
+        }
+        Returns: Json
+      }
       publish_institution_study_program: {
         Args: { p_user_id: string; p_program_ref: string; p_request_id: string }
         Returns: Json
       }
       get_institution_classroom_published_program_members: {
         Args: { p_user_id: string; p_classroom_id: string; p_window_start: string; p_window_end: string }
+        Returns: Json
+      }
+      get_institution_classroom_published_program_members_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_game: string
+          p_display_exam_ref: string
+          p_window_start: string
+          p_window_end: string
+        }
         Returns: Json
       }
       update_institution_study_program_draft: {
@@ -660,12 +810,33 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_classroom_id: string; p_window_start: string; p_window_end: string }
         Returns: Json
       }
+      get_institution_classroom_followup_metrics_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_game: string
+          p_display_exam_ref: string
+          p_window_start: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
       get_institution_student_followups: {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string }
         Returns: Json
       }
       get_institution_classroom_growth_metrics: {
         Args: { p_user_id: string; p_classroom_id: string; p_window_end: string }
+        Returns: Json
+      }
+      get_institution_classroom_growth_metrics_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_game: string
+          p_display_exam_ref: string
+          p_window_end: string
+        }
         Returns: Json
       }
       get_institution_student_program_history: {
@@ -682,6 +853,18 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       }
       create_institution_student_report: {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_snapshot: Json; p_request_id: string }
+        Returns: Json
+      }
+      create_institution_student_report_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_display_exam_ref: string
+          p_snapshot: Json
+          p_request_id: string
+        }
         Returns: Json
       }
       get_institution_student_reports: {

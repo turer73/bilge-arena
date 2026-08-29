@@ -117,6 +117,7 @@ const REPORT_ID = '11111111-1111-4111-8111-111111111111'
 describe('GET /api/admin/reports', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    delete process.env.CONTENT_GOVERNANCE_ENABLED
     mockRangeResult.mockReturnValue({ data: [], count: 0, error: null })
   })
 
@@ -147,6 +148,17 @@ describe('GET /api/admin/reports', () => {
       page: 1,
       limit: 20,
     })
+  })
+
+  it('redirects authorized admins to the governed queue after cutover', async () => {
+    mockCheckPermission.mockResolvedValue(ADMIN)
+    process.env.CONTENT_GOVERNANCE_ENABLED = 'true'
+    const res = await GET(makeGetRequest())
+    expect(res.status).toBe(409)
+    expect(await res.json()).toMatchObject({
+      code: 'CONTENT_GOVERNANCE_REQUIRED', redirect: '/admin/soru-kalite',
+    })
+    expect(mockRange).not.toHaveBeenCalled()
   })
 
   it('applies .eq("status", "pending") when ?status=pending', async () => {
@@ -212,6 +224,7 @@ describe('GET /api/admin/reports', () => {
 describe('PATCH /api/admin/reports', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    delete process.env.CONTENT_GOVERNANCE_ENABLED
     mockUpdateResult.mockReturnValue({ error: null })
     // Varsayilan: odul verildi, raporlayan belli.
     mockRpc.mockResolvedValue({
@@ -258,6 +271,16 @@ describe('PATCH /api/admin/reports', () => {
     const json = await res.json()
     expect(json).toMatchObject({ success: true })
     expect(mockUpdateEq).toHaveBeenCalledWith('id', REPORT_ID)
+  })
+
+  it('blocks the legacy decision path after governance cutover', async () => {
+    mockCheckPermission.mockResolvedValue(ADMIN)
+    process.env.CONTENT_GOVERNANCE_ENABLED = 'true'
+    const res = await PATCH(makePatchRequest({ reportId: REPORT_ID, status: 'resolved' }))
+    expect(res.status).toBe(409)
+    expect(await res.json()).toMatchObject({ code: 'CONTENT_GOVERNANCE_REQUIRED' })
+    expect(mockUpdate).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
   it('adds resolved_by = admin.id when status === "resolved"', async () => {
@@ -326,6 +349,7 @@ describe('PATCH /api/admin/reports', () => {
 describe('PATCH /api/admin/reports — kabul edilen rapor ödülü', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    delete process.env.CONTENT_GOVERNANCE_ENABLED
     mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
     mockUpdateResult.mockReturnValue({ error: null })
     mockRpc.mockResolvedValue({

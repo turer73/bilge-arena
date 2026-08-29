@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const mockUsePathname = vi.hoisted(() => vi.fn<() => string>())
@@ -65,9 +65,80 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(screen.getByRole('heading', { name: 'Paragrafın Yapısı' })).toBeVisible()
     expect(screen.getByRole('link', { name: /DEVAM ET/ })).toHaveAttribute('href', '/arena/turkce')
   })
+
+  test('tablet ve masaüstü koç penceresinde tüm oyunlar seçilebilir', async () => {
+    render(<MobileHomeDemo />)
+
+    const dialog = await screen.findByRole('dialog')
+    const subjectPicker = within(dialog).getByLabelText('Bilge Chan ders seçimi')
+    expect(subjectPicker).toHaveClass('hidden', 'md:flex')
+
+    fireEvent.click(within(subjectPicker).getByRole('button', { name: 'Fen Bilimleri rotasını seç' }))
+    expect(screen.getByText(/Atomun Yapısı için 10 soruluk kısa dersin hazır/)).toBeVisible()
+
+    fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
+    fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
+    expect(screen.getByRole('link', { name: /Başla/ })).toHaveAttribute('href', '/arena/fen')
+  })
+
+  test('üst ders sekmeleri masaüstünde ortalanır, mobil kısa adları korunur', () => {
+    const { container } = render(<MobileHomeDemo />)
+    const surface = container.querySelector('[data-arena-home-surface]')
+    const tabs = container.querySelector('[data-subject-tabs]')
+
+    expect(surface).toHaveClass('bg-[var(--app-bg)]', 'lg:bg-transparent')
+    expect(tabs).toHaveClass('md:justify-center')
+    const mathTab = within(tabs as HTMLElement).getByRole('button', { name: 'Mat' })
+    expect(mathTab).toHaveAttribute('title', 'Matematik')
+    expect(within(mathTab).getByText('Mat')).toHaveClass('md:hidden')
+    expect(within(mathTab).getByText('Matematik')).toHaveClass('hidden', 'md:inline')
+  })
+
+  test('mobilde bugünkü dersi görsel olarak öne alırken ana başlığı semantik olarak önce tutar', () => {
+    const { container } = render(<MobileHomeDemo />)
+    const todayLesson = container.querySelector('[data-today-lesson]')
+    const learningPathHero = container.querySelector('[data-learning-path-hero]')
+
+    expect(todayLesson).toBeInTheDocument()
+    expect(learningPathHero).toBeInTheDocument()
+    expect((learningPathHero as Element).compareDocumentPosition(todayLesson as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(todayLesson).toHaveClass('order-[-1]', 'md:order-none')
+    expect(within(todayLesson as HTMLElement).getByRole('link', { name: /DEVAM ET/ })).toBeInTheDocument()
+  })
+
+  test('üst çubuk gerçek sınav kapsamı seçicisi ve profil avatarı sunar', async () => {
+    const onExamRefChange = vi.fn()
+    render(
+      <MobileHomeDemo
+        examRef="TYT"
+        onExamRefChange={onExamRefChange}
+        displayName="Sevdi"
+        avatarUrl="https://lh3.googleusercontent.com/avatar.png"
+      />
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
+
+    const profileLink = screen.getByRole('link', { name: 'Sevdi profilini aç' })
+    expect(profileLink).toHaveAttribute('href', '/arena/profil')
+    expect(profileLink.querySelector('img')).toHaveAttribute('src', 'https://lh3.googleusercontent.com/avatar.png')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sınav kapsamını değiştir' }))
+    expect(screen.getByRole('dialog', { name: 'Sınav kapsamı seç' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'AYT Sayısal' }))
+    expect(onExamRefChange).toHaveBeenCalledWith('AYT-SAY')
+    expect(screen.queryByRole('dialog', { name: 'Sınav kapsamı seç' })).not.toBeInTheDocument()
+  })
 })
 
 describe('MobileHomeDemo canlı öğrenme yolu', () => {
+  test('kalite görevlerini yalnız ayrı yayın kapısı açıkken gösterir', () => {
+    const { rerender } = render(<MobileHomeDemo mode="live" />)
+    expect(screen.queryByRole('link', { name: /Kalite görevleri/i })).not.toBeInTheDocument()
+
+    rerender(<MobileHomeDemo mode="live" communityQualityEnabled />)
+    expect(screen.getByRole('link', { name: /Kalite görevleri/i })).toHaveAttribute('href', '/arena/kalite-gorevleri')
+  })
+
   const strengths = [
     { label: 'Sayılar', percentage: 90, category: 'sayilar', total: 12 },
     { label: 'Problemler', percentage: 30, category: 'problemler', total: 9 },
@@ -148,7 +219,7 @@ describe('MobileHomeDemo koç penceresi davranışı', () => {
     render(<MobileHomeDemo mode="live" userId="user-1" />)
 
     const dialog = await screen.findByRole('dialog')
-    expect(dialog.contains(document.activeElement)).toBe(true)
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true))
     expect(document.querySelector('main')).toHaveAttribute('inert')
   })
 

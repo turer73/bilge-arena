@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "question-audit-review@1",
+  "reviewerRef": "1111111111111111111111111111111111111111111111111111111111111111",
+  "role": "reviewer",
+  "labels": [
+    { "questionId": "clean-question", "contentSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "flawCodes": [] },
+    { "questionId": "wrong-key-question", "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "flawCodes": [] }
+  ]
+}

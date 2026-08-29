@@ -14,7 +14,7 @@ vi.mock('next/navigation', () => ({ usePathname: mockUsePathname }))
 // next/link → düz <a> (jsdom'da app-router context gerektirmesin)
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} data-next-link="true" {...props}>{children}</a>
   ),
 }))
 
@@ -42,12 +42,15 @@ describe('BottomNav', () => {
     expect(linkFor('Profil')).toHaveAttribute('href', '/arena/profil')
   })
 
-  test('masaustunde gizli (md:hidden)', () => {
+  test('bilgisayarda gizli, tablet ve mobilde görünür (lg:hidden)', () => {
     render(<BottomNav />)
     const nav = screen.getByRole('navigation', { name: /mobil gezinme/i })
-    expect(nav.className).toContain('md:hidden')
+    expect(nav.className).toContain('lg:hidden')
     expect(nav.style.minHeight).toBe('calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))')
     expect(linkFor('Öğren').className).toContain('min-h-12')
+    expect(nav.className).toContain('overflow-x-clip')
+    expect(nav.querySelector('[data-bottom-nav-inner]')).toHaveClass('min-w-0', 'max-w-[440px]')
+    for (const tab of TABS) expect(linkFor(tab)).toHaveClass('min-w-0', 'flex-1')
   })
 
   test('activeOverride="learn" → sadece Öğren aria-current', () => {
@@ -77,6 +80,12 @@ describe('BottomNav', () => {
     mockUsePathname.mockReturnValue('/oda/kod')
     render(<BottomNav />)
     expect(linkFor('Arena')).toHaveAttribute('aria-current', 'page')
+  })
+
+  test('hassas dokumanda tum public sekmeleri native anchor olarak render eder', () => {
+    mockUsePathname.mockReturnValue('/arena/sinif')
+    render(<BottomNav />)
+    for (const tab of TABS) expect(linkFor(tab)).not.toHaveAttribute('data-next-link')
   })
 
   test('activeOverride usePathname\'i ezer', () => {

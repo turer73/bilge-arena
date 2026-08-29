@@ -164,7 +164,7 @@ export function StoreClient() {
       </div>
 
       {/* Katalog grid'i */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
         {visible.map((bg) => {
           const isOwned = owned.has(bg.id) || bg.coinCost === undefined
           return (

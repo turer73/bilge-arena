@@ -39,11 +39,13 @@ function mastery(game = 'matematik', examRef: string | null = 'TYT') {
     examRef,
     coverage: {
       supported: true,
+      diagnosticAvailable: true,
       taxonomyVersion: 'ba-tyt-math-v1',
       totalQuestions: 10,
       mappedQuestions: 10,
       percentage: 100,
     },
+    discovery: { level: 3, stage: 'ready', diagnosticCompleted: true, evidenceCollected: 3, evidenceTarget: 3, readyOutcomes: 1, totalOutcomes: 1, journeyPercentage: 100 },
     graph: {
       code: 'course',
       title: 'TYT Matematik',
@@ -95,14 +97,34 @@ describe('useMasteryMap', () => {
     )
     expect(result.current.graph?.nodeType).toBe('course')
     expect(result.current.coverage.percentage).toBe(100)
+    expect(result.current.discovery?.stage).toBe('ready')
+    expect(result.current.error).toBe(false)
     expect(result.current.outcomes[0]?.code).toBe('MAT-SAY-01')
   })
+
+  it.each([null, 'TYT'] as const)(
+    'wordquest storage scope %s iken YDT mastery display refini kullanir',
+    async (examRef) => {
+      vi.mocked(fetch).mockResolvedValueOnce(response(mastery('wordquest', 'YDT')))
+      const { result } = renderHook(() => useMasteryMap('wordquest', 'u1', examRef))
+
+      await waitFor(() => expect(result.current.loading).toBe(false))
+
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/profile/mastery?game=wordquest&exam_ref=YDT',
+        expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }),
+      )
+      expect(result.current.response?.examRef).toBe('YDT')
+      expect(result.current.error).toBe(false)
+    },
+  )
 
   it('kullanici yoksa istek yapmaz ve veriyi bos tutar', async () => {
     const { result } = renderHook(() => useMasteryMap('matematik', null, 'TYT'))
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(fetch).not.toHaveBeenCalled()
     expect(result.current.response).toBeNull()
+    expect(result.current.error).toBe(false)
     expect(result.current.outcomes).toEqual([])
   })
 
@@ -117,6 +139,7 @@ describe('useMasteryMap', () => {
     )
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.response).toBeNull()
+    expect(result.current.error).toBe(true)
 
     rerender({ game: 'turkce' as never })
     await waitFor(() => expect(result.current.loading).toBe(false))

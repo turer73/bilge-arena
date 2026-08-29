@@ -11,6 +11,7 @@ import { ProgressChart } from '@/components/profile/progress-chart'
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
 import { NotificationSettings } from '@/components/profile/notification-settings'
 import { DiscoverabilitySettings } from '@/components/profile/discoverability-settings'
+import { LeaderboardVisibilitySettings } from '@/components/profile/leaderboard-visibility-settings'
 import { ReferralCard } from '@/components/profile/referral-card'
 import { EditProfileModal } from '@/components/profile/edit-profile-modal'
 import { getLevelFromXP } from '@/lib/constants/levels'
@@ -103,7 +104,7 @@ export default function ProfilClient() {
   // Yukleniyor
   if (loading) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-[440px] md:max-w-[560px] items-center justify-center bg-[var(--app-bg)]">
+      <div data-profile-screen className="mx-auto flex min-h-dvh w-full max-w-[440px] items-center justify-center bg-[var(--app-bg)] md:max-w-[760px] lg:max-w-[1180px]">
         <ProfileShellStyle />
         <div className="h-10 w-10 animate-spin rounded-full border-[4px] border-[var(--app-accent-border)] border-t-[var(--app-accent)]" />
       </div>
@@ -113,14 +114,14 @@ export default function ProfilClient() {
   // Giris yapilmamis
   if (!user || !profile) {
     return (
-      <div className="mx-auto min-h-dvh w-full max-w-[440px] md:max-w-[560px] bg-[var(--app-bg)] px-4 py-5 text-center text-[var(--app-accent-ink)]">
+      <div data-profile-screen className="mx-auto min-h-dvh w-full max-w-[440px] bg-[var(--app-bg)] px-4 py-5 text-center text-[var(--app-accent-ink)] md:max-w-[760px] md:px-5 lg:max-w-[1180px] lg:px-6 lg:py-8">
         <ProfileShellStyle />
         <div className="mb-5 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)]">
           <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-xl font-black text-[var(--app-accent-text)]">‹</Link>
           <span className="font-display text-base font-black">Profil</span>
           <span className="h-11 w-11" />
         </div>
-        <div className="rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] px-6 py-8 shadow-[0_6px_0_var(--app-shadow-accent)]">
+        <div className="mx-auto max-w-[560px] rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] px-6 py-8 shadow-[0_6px_0_var(--app-shadow-accent)]">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--app-accent-tint)] text-4xl">🔒</div>
           <h1 className="mb-2 text-xl font-black">Profilin seni bekliyor</h1>
           <p className="mb-6 text-sm font-semibold leading-relaxed text-[var(--app-text-sub)]">
@@ -210,8 +211,32 @@ export default function ProfilClient() {
     month: 'long',
   })
 
+  const renderTopicProgress = () => (
+    <ComponentErrorBoundary label="Konu İlerlemesi" variant="inline">
+      <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+        <ProfileSectionTitle>
+          KONU İLERLEMESİ
+          {statsLoading && (
+            <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-[var(--focus)]" />
+          )}
+        </ProfileSectionTitle>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          {gameProgressData.map(({ game, categories, totalAnswered, accuracy: gameAcc }) => (
+            <ProgressChart
+              key={game}
+              game={game}
+              categories={categories}
+              totalAnswered={totalAnswered}
+              accuracy={gameAcc}
+            />
+          ))}
+        </div>
+      </div>
+    </ComponentErrorBoundary>
+  )
+
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-[440px] md:max-w-[560px] bg-[var(--app-bg)] px-4 pb-28 pt-4 text-[var(--app-accent-ink)]">
+    <div data-profile-screen className="mx-auto min-h-dvh w-full max-w-[440px] bg-[var(--app-bg)] px-4 pb-28 pt-4 text-[var(--app-accent-ink)] md:max-w-[760px] md:px-5 md:pt-5 lg:max-w-[1180px] lg:px-6 lg:pb-10 lg:pt-8">
       <ProfileShellStyle />
       <div className="mb-4 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)]">
         <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-xl font-black text-[var(--app-accent-text)]">‹</Link>
@@ -395,6 +420,9 @@ export default function ProfilClient() {
         </div>
       )}
 
+      <div data-profile-layout className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
+        <section data-profile-main-column className="min-w-0">
+
       {/* Istatistikler */}
       <ComponentErrorBoundary label="İstatistikler" variant="inline">
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
@@ -491,6 +519,15 @@ export default function ProfilClient() {
         </div>
       )}
 
+      {/* Masaustunde sol sutun kendi akisinda devam eder; sag sutunun boyu bosluk olusturmaz. */}
+      <section data-profile-topic-desktop className="hidden min-w-0 lg:block">
+        {renderTopicProgress()}
+      </section>
+
+        </section>
+
+        <aside data-profile-sidebar className="min-w-0 lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
+
       {/* Rozetler */}
       <ComponentErrorBoundary label="Rozetler" variant="inline">
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
@@ -509,31 +546,19 @@ export default function ProfilClient() {
 
       {/* Gizlilik — opt-in keşif */}
       <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-        <DiscoverabilitySettings />
+        <div className="grid gap-3">
+          <DiscoverabilitySettings />
+          <LeaderboardVisibilitySettings />
+        </div>
       </div>
 
+        </aside>
+
       {/* Konu ilerleme */}
-      <ComponentErrorBoundary label="Konu İlerlemesi" variant="inline">
-        <div className="animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
-          <ProfileSectionTitle>
-            KONU İLERLEMESİ
-            {statsLoading && (
-              <span className="ml-2 inline-block h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-[var(--focus)]" />
-            )}
-          </ProfileSectionTitle>
-          <div className="grid gap-3">
-            {gameProgressData.map(({ game, categories, totalAnswered, accuracy: gameAcc }) => (
-              <ProgressChart
-                key={game}
-                game={game}
-                categories={categories}
-                totalAnswered={totalAnswered}
-                accuracy={gameAcc}
-              />
-            ))}
-          </div>
-        </div>
-      </ComponentErrorBoundary>
+        <section data-profile-topic-mobile className="min-w-0 lg:hidden">
+          {renderTopicProgress()}
+        </section>
+      </div>
     </div>
   )
 }
@@ -551,8 +576,8 @@ function ProfileSectionTitle({ children }: { children: ReactNode }) {
 function ProfileShellStyle() {
   return (
     <style jsx global>{`
-      /* Uygulama kabugu YALNIZ mobilde: masaustunde global navigasyon kalir. */
-      @media (max-width: 767px) {
+      /* Mobil ve tablette uygulama kabugu; bilgisayarda global navigasyon. */
+      @media (max-width: 1023px) {
         body.mobile-profile-active [data-app-navbar] {
           display: none !important;
         }

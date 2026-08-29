@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { FEATURES } from '@/lib/constants/premium'
+import { isSensitiveWorkspacePath } from '@/lib/privacy/telemetry-policy'
 import { useAuthStore } from '@/stores/auth-store'
 
 type AdSlot = 'lobby' | 'result' | 'sidebar'
@@ -40,9 +42,11 @@ const SLOT_IDS: Record<AdSlot, string | undefined> = {
 export function AdBanner({ slot, className = '' }: AdBannerProps) {
   const { profile } = useAuthStore()
   const pushed = useRef(false)
+  const pathname = usePathname()
+  const isSensitiveWorkspace = isSensitiveWorkspacePath(pathname)
 
   useEffect(() => {
-    if (!ADSENSE_ID || pushed.current) return
+    if (isSensitiveWorkspace || !ADSENSE_ID || pushed.current) return
 
     try {
       const w = window as Window & { adsbygoogle?: Record<string, unknown>[] }
@@ -52,9 +56,10 @@ export function AdBanner({ slot, className = '' }: AdBannerProps) {
     } catch {
       // AdSense not loaded yet
     }
-  }, [])
+  }, [isSensitiveWorkspace])
 
   // Feature kapali veya premium kullanici — reklam gosterme
+  if (isSensitiveWorkspace) return null
   if (!FEATURES.ADS) return null
   if (profile?.is_premium) return null
 

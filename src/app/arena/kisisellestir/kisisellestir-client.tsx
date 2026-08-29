@@ -67,6 +67,11 @@ const AREAS: { id: Area; label: string; icon: string; hint: string }[] = [
  */
 export function KisisellestirClient() {
   const { user, profile, setProfile, loading } = useAuthStore()
+
+  useEffect(() => {
+    document.body.classList.add('mobile-studio-active')
+    return () => document.body.classList.remove('mobile-studio-active')
+  }, [])
   const [area, setArea] = useState<Area>('avatar')
 
   const [cardBgId, setCardBgId] = useState('none')
@@ -337,14 +342,16 @@ export function KisisellestirClient() {
   // ── Yükleniyor / giriş kontrolü ──
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
+      <div data-studio-screen className="flex min-h-dvh items-center justify-center bg-[var(--app-bg)]">
+        <StudioShellStyle />
         <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-[var(--focus)]" />
       </div>
     )
   }
   if (!user || !profile) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
+      <div data-studio-screen className="mx-auto min-h-dvh max-w-md bg-[var(--app-bg)] px-4 py-16 text-center">
+        <StudioShellStyle />
         <div className="mb-4 text-5xl">🎨</div>
         <h1 className="mb-2 text-xl font-bold">Giriş Yapmanız Gerekiyor</h1>
         <p className="mb-6 text-sm text-[var(--text-sub)]">
@@ -365,13 +372,15 @@ export function KisisellestirClient() {
   const activeAreaDef = AREAS.find((a) => a.id === area)!
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div data-studio-screen className="mx-auto min-h-dvh w-full max-w-[1180px] bg-[var(--app-bg)] px-4 pb-28 pt-4 md:px-5 md:pt-5 lg:px-6 lg:pb-10 lg:pt-8">
+      <StudioShellStyle />
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow-accent)] md:p-5">
         <div>
-          <h1 className="font-display text-2xl font-black text-[var(--text)]">🎨 Kişiselleştirme Stüdyosu</h1>
-          <p className="mt-1 text-sm text-[var(--text-sub)]">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Profilini tasarla</p>
+          <h1 className="font-display text-2xl font-black text-[var(--app-text)]">🎨 Kişiselleştirme Stüdyosu</h1>
+          <p className="mt-1 text-sm font-semibold text-[var(--app-text-sub)]">
             Sahip olduğun kozmetikleri profiline uygula. Yeni kozmetikler için{' '}
-            <Link href="/arena/magaza" className="font-bold text-[var(--focus)] hover:underline">
+            <Link href="/arena/magaza" className="font-black text-[var(--app-accent-text)] hover:underline">
               Mağaza
             </Link>
             &apos;ya uğra.
@@ -379,15 +388,15 @@ export function KisisellestirClient() {
         </div>
         <Link
           href="/arena/profil"
-          className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-bold text-[var(--text-sub)] transition-colors hover:border-[var(--focus)] hover:text-[var(--focus)]"
+          className="flex min-h-11 items-center rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2 text-xs font-black text-[var(--app-text-sub)] shadow-[0_3px_0_var(--app-border)] transition-colors hover:border-[var(--app-accent)] hover:text-[var(--app-accent-text)]"
         >
           ← Profilim
         </Link>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-[minmax(280px,360px)_1fr]">
+      <div data-studio-layout className="grid min-w-0 gap-5 md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
         {/* Canlı önizleme — masaüstünde yapışkan */}
-        <div className="md:sticky md:top-20 md:self-start">
+        <div className="min-w-0 md:sticky md:top-4 md:self-start lg:top-[calc(var(--navbar-h)+1.5rem)]">
           <StudioPreview
             zemin={zeminItem}
             card={cardItem}
@@ -405,7 +414,7 @@ export function KisisellestirClient() {
         </div>
 
         {/* Alan seçimi + ilgili kozmetik grid'i */}
-        <div>
+        <div className="min-w-0">
           {/* Alan sekmeleri */}
           <div className="flex flex-wrap gap-2">
             {AREAS.map((a) => (
@@ -794,6 +803,22 @@ function BackgroundGrid({
 function lockLabel(coinCost: number, balance: number): string {
   const missing = coinCost - balance
   return missing > 0 ? `🔒 🪙${missing} daha` : `🔓 🪙${coinCost}`
+}
+
+function StudioShellStyle() {
+  return (
+    <style jsx global>{`
+      @media (max-width: 1023px) {
+        body.mobile-studio-active [data-app-navbar] {
+          display: none !important;
+        }
+        body.mobile-studio-active [data-arena-main] {
+          background: var(--app-bg) !important;
+          padding: 0 !important;
+        }
+      }
+    `}</style>
+  )
 }
 
 /* ── Mağaza yönlendirme kartı ── */

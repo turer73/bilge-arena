@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { GameSlug } from '@/lib/constants/games'
+import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { useMasteryMap, type MasteryOutcome } from '@/lib/hooks/use-mastery-map'
 import { useGameStore } from '@/stores/game-store'
 
@@ -19,9 +19,53 @@ function byLowestReliableScore(a: MasteryOutcome, b: MasteryOutcome) {
 export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardProps) {
   const router = useRouter()
   const gameStore = useGameStore()
-  const { outcomes, loading } = useMasteryMap(game, userId, examRef)
+  const {
+    response,
+    outcomes,
+    discovery,
+    coverage,
+    loading,
+    error,
+    fetchMastery,
+  } = useMasteryMap(game, userId, examRef)
 
-  if (!userId || loading || outcomes.length === 0) return null
+  if (!userId || loading) return null
+
+  if (error || (coverage.supported && outcomes.length === 0)) {
+    return (
+      <article className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
+        <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-text-muted)]">KEŞİF SEVİYESİ</p>
+        <h2 className="mt-1 text-sm font-black text-[var(--app-text)]">Kanıt haritası şu anda yüklenemedi</h2>
+        <p className="mt-1 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
+          Serbest pratiğe devam edebilirsin; bu durum puanını veya ilerlemeni etkilemez.
+        </p>
+        <button
+          type="button"
+          onClick={() => void fetchMastery()}
+          className="mt-3 min-h-11 rounded-xl border-2 border-[var(--app-border)] px-4 text-xs font-black text-[var(--app-text)]"
+        >
+          Tekrar Dene
+        </button>
+      </article>
+    )
+  }
+
+  if (response && !coverage.supported) {
+    return (
+      <article className="rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
+        <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">KEŞİF SEVİYESİ HAZIRLANIYOR</p>
+        <h2 className="mt-1 text-sm font-black text-[var(--app-text)]">{GAMES[game].name} kanıt haritası doğrulanıyor</h2>
+        <p className="mt-1 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
+          Bu ders ve sınav kapsamı tam eşleşmeden seviye göstermiyoruz. Serbest pratik güvenle kullanılabilir.
+        </p>
+        <Link href={`/arena/${game}`} className="mt-2 inline-flex min-h-11 items-center text-xs font-black text-[var(--app-accent-text)] hover:underline">
+          Serbest pratikle devam et
+        </Link>
+      </article>
+    )
+  }
+
+  if (!response || outcomes.length === 0) return null
 
   const strongCount = outcomes.filter((outcome) => outcome.status === 'mastered').length
   const developing = outcomes
@@ -29,13 +73,70 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
     .sort(byLowestReliableScore)
   const collectingEvidence = outcomes
     .filter((outcome) => outcome.status === 'insufficient')
-    .sort((a, b) => b.attempts - a.attempts || a.title.localeCompare(b.title, 'tr'))
+    .sort((a, b) => a.attempts - b.attempts || a.title.localeCompare(b.title, 'tr'))
   // Yeterli kanıtı olan gelişen kazanım önce gelir. Kanıtı yetersiz konu “zayıf” diye sunulmaz.
   const nextAction = developing[0] ?? collectingEvidence[0]
 
   const mapParams = new URLSearchParams({ game })
   if (examRef) mapParams.set('exam_ref', examRef)
   const mapHref = `/arena/hakimiyet?${mapParams}`
+  const diagnosticParams = new URLSearchParams({ game })
+  const diagnosticExamRef = outcomes[0]?.examRef ?? examRef
+  if (diagnosticExamRef) diagnosticParams.set('exam_ref', diagnosticExamRef)
+  const diagnosticHref = `/arena/tani?${diagnosticParams}`
+
+  const handlePractice = () => {
+    if (!nextAction) return
+    gameStore.setGame(nextAction.game as GameSlug)
+    gameStore.setCategory(nextAction.category)
+    // Mastery Wordquest'i YDT etiketiyle gosterir; soru bankasi ise exam_ref
+    // NULL saklar. Display etiketini quiz filtresine tasima ve onceki dersin
+    // paylasilan sinav tercihini silme.
+    if (nextAction.game !== 'wordquest') gameStore.setExamRef(nextAction.examRef)
+    gameStore.setMode('practice')
+    router.push(`/arena/${nextAction.game}`)
+  }
+
+  if (discovery?.stage === 'estimate' && nextAction) {
+    return (
+      <article
+        className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-shadow-accent)]"
+        style={{ animationDelay: '0.34s', animationFillMode: 'both' }}
+      >
+        <div className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-accent-tint)] px-4 py-3">
+          <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">KEŞİF SEVİYESİ 1/3</p>
+          <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">Henüz not vermiyoruz; başlangıç yönünü arıyoruz.</p>
+        </div>
+        <div className="p-4 md:p-5">
+          <h2 className="text-base font-black text-[var(--app-text)]">Nereden başlayacağını birlikte bulalım</h2>
+          <p className="mt-2 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
+            {coverage.diagnosticAvailable
+              ? 'Kısa başlangıç taraması çekirdek kazanımlar için düşük güvenli bir ilk tahmin üretir. Kalıcı hâkimiyet kararı yalnız doğrulanmış pratik kanıtlarıyla açılır.'
+              : 'Kısa pratiklerde verdiğin doğrulanmış cevaplarla başlangıç rotan oluşur. Yeterli kanıt olmadan güçlü veya zayıf etiketi göstermeyiz.'}
+          </p>
+          {coverage.diagnosticAvailable ? (
+            <Link
+              href={diagnosticHref}
+              className="mt-4 flex min-h-12 w-full items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
+            >
+              Keşif Turunu Başlat
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={handlePractice}
+              className="mt-4 min-h-12 w-full rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
+            >
+              Keşif Pratiğini Başlat
+            </button>
+          )}
+          <Link href={mapHref} className="mt-2 flex min-h-11 items-center justify-center text-xs font-black text-[var(--app-text-sub)] hover:text-[var(--app-accent-text)] hover:underline">
+            Boş kanıt haritasını gör
+          </Link>
+        </div>
+      </article>
+    )
+  }
 
   if (!nextAction) {
     return (
@@ -57,14 +158,6 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
   const statusLabel = needsEvidence ? 'KANIT TOPLA' : 'GELİŞİYOR'
   const progress = needsEvidence ? nextAction.evidenceCompleteness : nextAction.score
 
-  const handlePractice = () => {
-    gameStore.setGame(nextAction.game as GameSlug)
-    gameStore.setCategory(nextAction.category)
-    gameStore.setExamRef(nextAction.examRef)
-    gameStore.setMode('practice')
-    router.push(`/arena/${nextAction.game}`)
-  }
-
   return (
     <article
       className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-border)]"
@@ -72,8 +165,14 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
     >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card-sunken)] px-4 py-3">
         <div>
-          <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">SIRADAKİ EN İYİ ADIM</p>
-          <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">Planından sonra buna odaklan</p>
+          <p className="text-[10px] font-black tracking-[0.16em] text-[var(--app-accent-text)]">
+            {discovery?.stage === 'evidence' ? 'KEŞİF SEVİYESİ 2/3' : 'SIRADAKİ EN İYİ ADIM'}
+          </p>
+          <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">
+            {discovery?.stage === 'evidence'
+              ? `${discovery.evidenceCollected}/${discovery.evidenceTarget} doğrulanmış kanıt · ${discovery.readyOutcomes}/${discovery.totalOutcomes} kazanım hazır`
+              : 'Planından sonra buna odaklan'}
+          </p>
         </div>
         <div className="flex gap-1.5" aria-label="Kazanım durumları">
           {strongCount > 0 && (

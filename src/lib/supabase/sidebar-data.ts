@@ -20,7 +20,6 @@ export interface TopicStrength {
 
 interface ApiSidebarLeader {
   rank: number
-  user_id: string | null
   name: string
   avatar_url: string | null
   xp_earned: number
@@ -40,14 +39,11 @@ interface ApiSidebarResponse {
  * proxy uzerinden gecer. Service-role client server-side, edge cache
  * 60s, IP rate limit 60 req/dk.
  */
-export async function fetchSidebarLeaderboard(
-  currentUserId?: string
-): Promise<{ players: SidebarPlayer[]; myRank: number }> {
+export async function fetchSidebarLeaderboard(): Promise<{ players: SidebarPlayer[]; myRank: number }> {
   try {
-    const url = currentUserId
-      ? `/api/leaderboard/sidebar?currentUserId=${encodeURIComponent(currentUserId)}`
-      : '/api/leaderboard/sidebar'
-    const res = await fetch(url)
+    // Viewer identity is bound to the authenticated cookie by the route.
+    // Never place account identifiers in a caller-controlled query string.
+    const res = await fetch('/api/leaderboard/sidebar')
     if (!res.ok) return { players: [], myRank: 0 }
     const json = (await res.json()) as ApiSidebarResponse
     const apiPlayers = json.players ?? []
@@ -89,9 +85,12 @@ interface ApiTopicStrengthsResponse {
 export async function fetchTopicStrengths(
   _userId: string,
   game: GameSlug,
+  examRef?: string | null,
 ): Promise<TopicStrength[]> {
   try {
-    const res = await fetch(`/api/profile/topic-strengths?game=${encodeURIComponent(game)}`)
+    const params = new URLSearchParams({ game })
+    if (examRef) params.set('exam_ref', examRef)
+    const res = await fetch(`/api/profile/topic-strengths?${params.toString()}`)
     if (!res.ok) return []
     const json = (await res.json()) as ApiTopicStrengthsResponse
     return json.topics ?? []

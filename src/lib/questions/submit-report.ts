@@ -2,43 +2,41 @@
 // çıkarıldı (test-edilebilir + tek-sorumluluk). #379 + Codex PR#242 P1: çağıran
 // sonucu AWAIT eder; {ok:false} dönerse modal HATA gösterir (sahte başarı yok).
 
-export type ReportSubmitResult = { ok: true } | { ok: false; error: string }
-
-const APPEAL_REASONS: Record<string, 'wrong_key' | 'ambiguous' | 'invalid_content' | 'other'> = {
-  wrong_answer: 'wrong_key',
-  unclear: 'ambiguous',
-  typo: 'invalid_content',
-  offensive: 'invalid_content',
-  duplicate: 'other',
-  other: 'other',
-}
+export type ReportSubmitResult =
+  | { ok: true; rewardEligible: boolean }
+  | { ok: false; error: string }
 
 export async function submitQuestionReport(
   questionId: string,
-  data: { type: string; description: string },
+  data: {
+    type: string
+    description: string
+    proposedAnswerIndex?: number
+    correctionText?: string
+    confidence?: number
+  },
+  context: { attemptId?: string | null } = {},
 ): Promise<ReportSubmitResult> {
   try {
-    const appealsEnabled = process.env.NEXT_PUBLIC_CONTENT_APPEALS_ENABLED === 'true'
     const requestId = crypto.randomUUID()
-    const res = await fetch(appealsEnabled ? '/api/questions/appeals' : '/api/questions/report', {
+    const res = await fetch('/api/questions/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(appealsEnabled
-        ? {
-            questionId,
-            sessionAnswerId: null,
-            reason: APPEAL_REASONS[data.type] ?? 'other',
-            explanation: data.description,
-            requestId,
-          }
-        : {
-            questionId,
-            report_type: data.type,
-            description: data.description,
-            requestId,
-          }),
+      body: JSON.stringify({
+        questionId,
+        attemptId: context.attemptId ?? null,
+        report_type: data.type,
+        description: data.description,
+        ...(data.proposedAnswerIndex !== undefined ? { proposed_answer_index: data.proposedAnswerIndex } : {}),
+        ...(data.correctionText?.trim() ? { correction_text: data.correctionText.trim() } : {}),
+        ...(data.confidence !== undefined ? { confidence: data.confidence } : {}),
+        requestId,
+      }),
     })
-    if (res.ok) return { ok: true }
+    if (res.ok) {
+      const payload = await res.json().catch(() => null) as { rewardEligible?: unknown } | null
+      return { ok: true, rewardEligible: payload?.rewardEligible === true }
+    }
     if (res.status === 401) return { ok: false, error: 'Rapor göndermek için giriş yapmalısın.' }
     if (res.status === 429) return { ok: false, error: 'Çok fazla rapor. Biraz sonra tekrar dene.' }
     return { ok: false, error: 'Rapor gönderilemedi. Tekrar dene.' }

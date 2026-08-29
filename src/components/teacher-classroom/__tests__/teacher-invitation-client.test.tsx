@@ -17,7 +17,10 @@ vi.mock('@/lib/teacher-classroom/client', async () => ({
   previewTeacherClassroomInvitation: clientMocks.preview,
   acceptTeacherClassroomInvitation: clientMocks.accept,
 }))
-vi.mock('next/navigation', () => ({ useRouter: () => router }))
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/arena/sinif/davet',
+  useRouter: () => router,
+}))
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: React.ComponentProps<'a'>) => (
     <a href={String(href)} {...props}>{children}</a>

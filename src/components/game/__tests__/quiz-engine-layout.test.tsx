@@ -97,14 +97,24 @@ const todayPlanValue = vi.hoisted(() => ({
   loading: false,
   markCompleted: vi.fn(),
 }))
-vi.mock('@/lib/hooks/use-today-plan', () => ({ useTodayPlan: () => todayPlanValue }))
+const useTodayPlanArgs = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/hooks/use-today-plan', () => ({
+  useTodayPlan: (...args: unknown[]) => {
+    useTodayPlanArgs(...args)
+    return todayPlanValue
+  },
+}))
 const personalizedMockValue = vi.hoisted(() => ({
   loading: false,
   error: null as string | null,
   generate: vi.fn(),
 }))
+const usePersonalizedMockArgs = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/hooks/use-personalized-mock', () => ({
-  usePersonalizedMock: () => personalizedMockValue,
+  usePersonalizedMock: (...args: unknown[]) => {
+    usePersonalizedMockArgs(...args)
+    return personalizedMockValue
+  },
 }))
 vi.mock('@/lib/hooks/use-mastery-map', () => ({
   useMasteryMap: () => ({ outcomes: [], loading: false, fetchMastery: vi.fn() }),
@@ -145,7 +155,24 @@ vi.mock('../option-button', () => ({
   ),
 }))
 vi.mock('../lobby', () => ({
-  Lobby: ({ onStart }: { onStart: () => void }) => <button data-testid="normal-quiz-start" onClick={onStart} />,
+  Lobby: ({
+    onStart,
+    personalizedMockCard,
+    selectedExamRef,
+    onSelectExamRef,
+  }: {
+    onStart: () => void
+    personalizedMockCard?: React.ReactNode
+    selectedExamRef?: string | null
+    onSelectExamRef: (examRef: string | null) => void
+  }) => (
+    <>
+      <button data-testid="normal-quiz-start" onClick={onStart} />
+      <button data-testid="select-tyt" onClick={() => onSelectExamRef('TYT')} />
+      <span data-testid="lobby-exam-ref">{selectedExamRef ?? 'null'}</span>
+      {personalizedMockCard}
+    </>
+  ),
 }))
 vi.mock('../timer', () => ({ Timer: () => null }))
 vi.mock('../deneme-timer', () => ({ DenemeTimer: () => null }))
@@ -182,6 +209,39 @@ vi.mock('next/dynamic', () => ({
 import { QuizEngine } from '../quiz-engine'
 
 describe('QuizEngine yerleşim', () => {
+  test('sınav değişince yeni kapsamda geçersiz kalan kategoriyi temizler', () => {
+    quizGame.screen = 'lobby'
+    gameStoreValue.selectedExamRef = 'AYT-SOZ'
+    gameStoreValue.selectedCategory = 'edebiyat'
+    gameStoreValue.setCategory.mockClear()
+    gameStoreValue.setExamRef.mockClear()
+
+    try {
+      render(<QuizEngine game="turkce" />)
+      fireEvent.click(screen.getByTestId('select-tyt'))
+
+      expect(gameStoreValue.setCategory).toHaveBeenCalledWith(null)
+      expect(gameStoreValue.setExamRef).toHaveBeenCalledWith('TYT')
+    } finally {
+      gameStoreValue.selectedExamRef = 'TYT'
+      gameStoreValue.selectedCategory = 'problemler'
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('mobil Hemen başla ekranında günlük plan ve keşif kartlarını gizler', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+
+    try {
+      const { container } = render(<QuizEngine game="matematik" />)
+      expect(container.querySelector('[data-desktop-learning-cards]')).toHaveClass('hidden', 'md:grid')
+    } finally {
+      authStoreValue.user = null
+      quizGame.screen = 'game'
+    }
+  })
+
   test('mobil odak kabuğu ilerleme, süre, can, seri ve çıkış eylemini tek başlıkta toplar', () => {
     render(<QuizEngine game="matematik" />)
 
@@ -194,7 +254,7 @@ describe('QuizEngine yerleşim', () => {
     expect(screen.getByLabelText('10 oturum XP')).toBeInTheDocument()
   })
 
-  test('uygulama kabugu CSS yalnizca mobil genislige uygulanir (masaustunde navbar kalir)', () => {
+  test('uygulama kabugu CSS mobil ve tablette uygulanir (bilgisayarda navbar kalir)', () => {
     const { container } = render(<QuizEngine game="matematik" />)
 
     const shellStyle = Array.from(container.querySelectorAll('style'))
@@ -202,9 +262,9 @@ describe('QuizEngine yerleşim', () => {
       .find((text) => text.includes('mobile-quiz-active'))
 
     expect(shellStyle).toBeDefined()
-    expect(shellStyle).toContain('@media (max-width: 767px)')
+    expect(shellStyle).toContain('@media (max-width: 1023px)')
     // Medya sorgusu, navbar'i gizleyen kuraldan ONCE gelmeli
-    expect(shellStyle!.indexOf('@media (max-width: 767px)'))
+    expect(shellStyle!.indexOf('@media (max-width: 1023px)'))
       .toBeLessThan(shellStyle!.indexOf('[data-app-navbar]'))
   })
 
@@ -213,6 +273,17 @@ describe('QuizEngine yerleşim', () => {
     // Ikinci (gizli) BilgeChanCompanion her soruda remount olup
     // /api/assistance-policy istegini bosa tekrarliyordu.
     expect(screen.getAllByTestId('chan-companion')).toHaveLength(1)
+  })
+
+  test('aktif oyun tablette genisler, bilgisayarda soru ve yardim paneline ayrilir', () => {
+    const { container } = render(<QuizEngine game="matematik" />)
+    const shell = container.querySelector('[data-responsive-quiz-shell]')
+    const companionAside = screen.getByTestId('chan-companion').closest('aside')
+    const topicsAside = screen.getByTestId('topics-band').closest('aside')
+
+    expect(shell).toHaveClass('md:max-w-[720px]', 'lg:max-w-[1120px]')
+    expect(companionAside).toHaveClass('lg:col-start-2', 'lg:row-start-1')
+    expect(topicsAside).toHaveClass('lg:col-start-2', 'lg:row-start-2')
   })
 
   test('answered: açıklama paneli soru kartının ÜSTÜNDE', () => {
@@ -259,7 +330,7 @@ describe('QuizEngine yerleşim', () => {
     expect(quizGame.setShowReportModal).toHaveBeenCalledWith(false)
   })
 
-  test('Konu Gücü bandı şıklardan sonra (tam genişlik alt bant korunur)', () => {
+  test('Konu Gücü DOM sırasında şıklardan sonra kalır', () => {
     render(<QuizEngine game="matematik" />)
     const band = screen.getByTestId('topics-band')
     const lastOption = screen.getByTestId('option-3')
@@ -332,6 +403,47 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
         examRef: 'TYT',
       })
     } finally {
+      authStoreValue.user = null
+      todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('Wordquest plan ve deneme alt akislarinda null soru kapsami kullanir, store tercihini korur', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    todayPlanValue.plan = {
+      planDate: '2026-07-21',
+      game: 'wordquest',
+      examRef: null,
+      questions: [{ id: 'q-wordquest' }],
+      completedIds: [],
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }
+    gameStoreValue.selectedExamRef = 'AYT-SAY'
+    gameStoreValue.setExamRef.mockClear()
+    useTodayPlanArgs.mockClear()
+    usePersonalizedMockArgs.mockClear()
+    trackLearningEvent.mockClear()
+
+    try {
+      render(<QuizEngine game="wordquest" />)
+
+      expect(useTodayPlanArgs).toHaveBeenLastCalledWith('wordquest', 'u1', null, 'problemler')
+      expect(usePersonalizedMockArgs).toHaveBeenLastCalledWith('wordquest', 'u1', null)
+      expect(screen.getByTestId('lobby-exam-ref')).toHaveTextContent('null')
+
+      fireEvent.click(screen.getByTestId('today-plan-start'))
+      expect(gameStoreValue.setExamRef).not.toHaveBeenCalled()
+      expect(trackLearningEvent).toHaveBeenCalledWith('LearningPlanStarted', {
+        game: 'wordquest',
+        planSize: 1,
+        completedBefore: 0,
+        examRef: null,
+      })
+    } finally {
+      gameStoreValue.selectedExamRef = 'TYT'
       authStoreValue.user = null
       todayPlanValue.plan = null
       quizGame.screen = 'game'

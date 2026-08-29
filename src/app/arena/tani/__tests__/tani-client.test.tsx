@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 
 const {
   mockRouterPush,
+  mockUseSearchParams,
   mockUseAuthStore,
   mockUseGameStore,
   mockUseDiagnostic,
@@ -17,6 +18,7 @@ const {
   mockRefresh,
 } = vi.hoisted(() => ({
   mockRouterPush: vi.fn(),
+  mockUseSearchParams: vi.fn(() => new URLSearchParams()),
   mockUseAuthStore: vi.fn(),
   mockUseGameStore: vi.fn(),
   mockUseDiagnostic: vi.fn(),
@@ -30,7 +32,10 @@ const {
   mockRefresh: vi.fn(async () => true),
 }))
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockRouterPush }) }))
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockRouterPush }),
+  useSearchParams: mockUseSearchParams,
+}))
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: mockUseAuthStore }))
 vi.mock('@/stores/game-store', () => ({ useGameStore: mockUseGameStore }))
 vi.mock('@/lib/hooks/use-adaptive-diagnostic', () => ({ useAdaptiveDiagnostic: mockUseDiagnostic }))
@@ -74,6 +79,7 @@ function diagnostic(overrides: Record<string, unknown> = {}) {
     supported: true,
     game: 'matematik',
     examRef: 'TYT',
+    policy: { version: 'adaptive-diagnostic-v3', questionCount: 10, outcomeCount: 6, maxPerOutcome: 2 },
     session: null,
     summary: null,
   }
@@ -96,6 +102,7 @@ describe('TaniClient', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseAuthStore.mockReturnValue({ user: { id: 'u1' }, loading: false })
+    mockUseSearchParams.mockReturnValue(new URLSearchParams())
     mockUseGameStore.mockReturnValue({
       setGame: mockSetGame,
       setCategory: mockSetCategory,
@@ -117,9 +124,27 @@ describe('TaniClient', () => {
     const user = userEvent.setup()
     render(<TaniClient />)
     expect(screen.getByText(/10 SORU/)).toBeInTheDocument()
-    expect(screen.getByText(/ödül ve sıralamayı etkilemez/i)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Tanılamayı başlat/i }))
+    expect(screen.getByText(/ödül ya da sıralamayı etkilemez/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Kısa taramayı başlat/i }))
     expect(mockStart).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses an exact query-param scope and never falls back on a partial request', () => {
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('game=fen&exam_ref=TYT'))
+    mockUseDiagnostic.mockReturnValue(diagnostic({
+      supported: false,
+      response: { supported: false, game: 'fen', examRef: 'TYT', policy: null, session: null, summary: null },
+    }))
+    const { rerender } = render(<TaniClient />)
+    expect(mockUseDiagnostic).toHaveBeenCalledWith('fen', 'u1', 'TYT')
+    expect(screen.getByText(/TYT FEN BİLİMLERİ/)).toBeInTheDocument()
+    expect(screen.getByText(/henüz yayınlanmadı/i)).toBeInTheDocument()
+
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('game=fen'))
+    rerender(<TaniClient />)
+    expect(mockUseDiagnostic).toHaveBeenLastCalledWith(null, 'u1', undefined)
+    expect(screen.getByText('Geçersiz tarama kapsamı')).toBeInTheDocument()
+    expect(screen.queryByText(/TYT MATEMATİK/)).not.toBeInTheDocument()
   })
 
   it('renders one accessible question and submits only the selected option', async () => {
@@ -140,7 +165,7 @@ describe('TaniClient', () => {
     }))
     render(<TaniClient />)
 
-    expect(screen.getByRole('progressbar', { name: 'Tanılama ilerlemesi' })).toHaveAttribute('aria-valuenow', '0')
+    expect(screen.getByRole('progressbar', { name: 'Kısa tarama ilerlemesi' })).toHaveAttribute('aria-valuenow', '0')
     expect(screen.getByRole('group', { name: '2 + 2 kaçtır?' })).toBeInTheDocument()
     const submit = screen.getByRole('button', { name: /Cevabı kaydet/i })
     expect(submit).toBeDisabled()
@@ -186,6 +211,8 @@ describe('TaniClient', () => {
     }
     mockUseDiagnostic.mockReturnValue(diagnostic({ session, summary }))
     render(<TaniClient />)
+    expect(screen.getByText(/KEŞİF ADIMI TAMAM/)).toBeInTheDocument()
+    expect(screen.getByText(/Keşif Seviyesi 2/)).toBeInTheDocument()
     expect(screen.getByText('Kazanım özeti')).toBeInTheDocument()
     expect(screen.getAllByRole('article')).toHaveLength(6)
     await user.click(screen.getByRole('button', { name: /Önce Sayılar çalış/i }))
@@ -195,6 +222,47 @@ describe('TaniClient', () => {
     expect(mockSetDifficulty).toHaveBeenCalledWith(2)
     expect(mockSetMode).toHaveBeenCalledWith('practice')
     expect(mockRouterPush).toHaveBeenCalledWith('/arena/matematik')
+  })
+
+  it('renders and routes a released non-Math screening without Math fallback', async () => {
+    const user = userEvent.setup()
+    const fenOutcomes = [
+      { code: 'FEN-FIZ', title: 'Fizik', category: 'fizik', attempts: 2, correctAttempts: 0, score: 20, recommendedDifficulty: 2, band: 'foundation' },
+      { code: 'FEN-KIM', title: 'Kimya', category: 'kimya', attempts: 2, correctAttempts: 1, score: 55, recommendedDifficulty: 3, band: 'developing' },
+      { code: 'FEN-BIY', title: 'Biyoloji', category: 'biyoloji', attempts: 2, correctAttempts: 2, score: 80, recommendedDifficulty: 4, band: 'strong' },
+    ]
+    const summary = { completedAt: '2026-08-08T12:00:00.000Z', outcomes: fenOutcomes }
+    const session = {
+      id: SESSION_ID,
+      kind: 'initial',
+      status: 'completed',
+      expiresAt: '2099-08-08T12:00:00.000Z',
+      progress: { answered: 6, total: 6, coveredOutcomes: 3, totalOutcomes: 3 },
+      question: null,
+    }
+    mockUseSearchParams.mockReturnValue(new URLSearchParams('game=fen&exam_ref=TYT'))
+    mockUseDiagnostic.mockReturnValue(diagnostic({
+      response: {
+        supported: true,
+        game: 'fen',
+        examRef: 'TYT',
+        policy: { version: 'adaptive-diagnostic-v3', questionCount: 6, outcomeCount: 3, maxPerOutcome: 2 },
+        session,
+        summary,
+      },
+      session,
+      summary,
+    }))
+    render(<TaniClient />)
+    expect(screen.getByRole('link', { name: 'Hâkimiyet haritası' })).toHaveAttribute(
+      'href',
+      '/arena/hakimiyet?game=fen&exam_ref=TYT',
+    )
+    await user.click(screen.getByRole('button', { name: /Önce Fizik çalış/i }))
+    expect(mockSetGame).toHaveBeenCalledWith('fen')
+    expect(mockSetCategory).toHaveBeenCalledWith('fizik')
+    expect(mockSetExamRef).toHaveBeenCalledWith('TYT')
+    expect(mockRouterPush).toHaveBeenCalledWith('/arena/fen')
   })
 
   it('labels expired sessions and retries a failed load', async () => {

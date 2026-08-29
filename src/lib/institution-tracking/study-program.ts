@@ -7,6 +7,7 @@ import {
   institutionStudentLearningAnalysisSchema,
   type InstitutionStudentLearningAnalysis,
 } from './student-analysis'
+import { supportsAdaptiveDiagnosticScope } from '@/lib/diagnostic/scope'
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const timestampSchema = z.string().datetime({ offset: true })
@@ -83,7 +84,7 @@ type Candidate = {
   title: string
   score: number | null
   evidenceCount: number
-  kind: 'weak' | 'diagnostic' | 'review'
+  kind: 'weak' | 'diagnostic' | 'baseline' | 'review'
 }
 
 function addDays(date: string, days: number): string {
@@ -93,6 +94,12 @@ function addDays(date: string, days: number): string {
 }
 
 function candidates(analysis: InstitutionStudentLearningAnalysis): Candidate[] {
+  const diagnosticSupported = analysis.scope.diagnosticEnabled && supportsAdaptiveDiagnosticScope({
+    game: analysis.scope.game,
+    examRef: analysis.scope.examRef,
+    questionExamRef: analysis.scope.questionExamRef,
+    taxonomyVersion: analysis.scope.taxonomyVersion,
+  })
   const weak = analysis.outcomes
     .filter((outcome) => outcome.assessment.status === 'developing')
     .map((outcome) => ({
@@ -113,7 +120,7 @@ function candidates(analysis: InstitutionStudentLearningAnalysis): Candidate[] {
       title: outcome.title,
       score: null,
       evidenceCount: outcome.assessment.evidence.evidenceCount,
-      kind: 'diagnostic' as const,
+      kind: diagnosticSupported ? 'diagnostic' as const : 'baseline' as const,
     }))
     .sort((left, right) => right.evidenceCount - left.evidenceCount
       || left.outcomeCode.localeCompare(right.outcomeCode, 'tr'))
@@ -159,6 +166,18 @@ function itemFor(candidate: Candidate, position: number, scheduledDate: string) 
       targetQuestionCount: 10,
     }
   }
+  if (candidate.kind === 'baseline') {
+    return {
+      position,
+      scheduledDate,
+      taskType: 'verified_questions' as const,
+      title: `${candidate.title}: başlangıç soru çalışması`,
+      reasonCode: 'current_target' as const,
+      outcomeCode: candidate.outcomeCode,
+      durationMinutes: 20,
+      targetQuestionCount: 10,
+    }
+  }
   return {
     position,
     scheduledDate,
@@ -184,7 +203,7 @@ export function generateInstitutionStudyProgramDraft(
 
   const dailyMinutes = new Map<number, number>()
   const items = selected.flatMap((candidate) => {
-    const duration = candidate.kind === 'weak' ? 25 : candidate.kind === 'diagnostic' ? 20 : 15
+    const duration = candidate.kind === 'weak' ? 25 : candidate.kind === 'review' ? 15 : 20
     for (let day = 0; day < 7; day += 1) {
       const used = dailyMinutes.get(day) ?? 0
       if (used + duration <= input.data.dailyMinuteLimit) {

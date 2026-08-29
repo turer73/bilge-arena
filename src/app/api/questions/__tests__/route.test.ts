@@ -11,21 +11,23 @@ const {
   mockIssueVerifiedAttempt,
   mockServiceClient,
 } = vi.hoisted(() => {
+  const mockRpc = vi.fn()
   const mockUpdateEq = vi.fn()
   const mockFrom = vi.fn(() => ({
     update: vi.fn(() => ({ eq: mockUpdateEq })),
     insert: vi.fn().mockResolvedValue({ error: null }),
   }))
+  const mockServiceClient = { role: 'service', rpc: mockRpc }
 
   return {
     mockGetUser: vi.fn(),
     mockCheckAdmin: vi.fn(),
-    mockRpc: vi.fn(),
+    mockRpc,
     mockFrom,
     mockUpdateEq,
     mockAdminMutationRl: vi.fn(),
     mockIssueVerifiedAttempt: vi.fn(),
-    mockServiceClient: { role: 'service' },
+    mockServiceClient,
   }
 })
 
@@ -369,10 +371,16 @@ describe('PATCH /api/questions', () => {
     expect(mockUpdateEq).not.toHaveBeenCalled()
   })
 
-  it('keeps the pre-migration legacy write path only while governance is disabled', async () => {
+  it('stays fail-closed even when the application governance flag is disabled', async () => {
     mockCheckAdmin.mockResolvedValue({ id: 'admin-1' })
     const res = await PATCH(makePatch({ questionId: VALID_QID, updates: { is_active: false } }))
-    expect(res.status).toBe(200)
-    expect(mockUpdateEq).toHaveBeenCalledWith('id', VALID_QID)
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: 'Dogrudan soru guncellemesi kapatildi. Revizyon veya karantina akislarini kullanin.',
+      code: 'CONTENT_GOVERNANCE_REQUIRED',
+      questionId: VALID_QID,
+    })
+    expect(mockFrom).not.toHaveBeenCalled()
+    expect(mockUpdateEq).not.toHaveBeenCalled()
   })
 })

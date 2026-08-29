@@ -2,12 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockGetUser = vi.fn()
 const mockRpc = vi.fn()
+const mockLegacyRpc = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
     auth: { getUser: mockGetUser },
-    rpc: mockRpc,
+    rpc: mockLegacyRpc,
   })),
+}))
+
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => ({ rpc: mockRpc })),
 }))
 
 import { GET } from '../route'
@@ -84,5 +89,15 @@ describe('GET /api/users/search', () => {
       'search_profiles',
       expect.objectContaining({ exclude_id: 'user-current' }),
     )
+  })
+
+  it('service ve rollout fallback hatasini bos sonuc gibi gizlemez', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: null, error: { code: '42501' } })
+    mockLegacyRpc.mockResolvedValue({ data: null, error: { code: '42501' } })
+
+    const res = await GET(makeRequest('test'))
+    expect(res.status).toBe(503)
+    expect((await res.json()).error).toContain('kullanilamiyor')
   })
 })

@@ -13,6 +13,7 @@ export type MasteryOutcome = MasteryOutcomePublic
 
 const EMPTY_COVERAGE: MasteryCoveragePublic = {
   supported: false,
+  diagnosticAvailable: false,
   taxonomyVersion: null,
   totalQuestions: 0,
   mappedQuestions: 0,
@@ -24,9 +25,15 @@ export function useMasteryMap(
   userId?: string | null,
   examRef?: string | null,
 ) {
-  const normalizedExamRef = examRef?.trim().toUpperCase() || null
+  // Wordquest questions intentionally use a NULL storage exam_ref, while the
+  // released mastery registry exposes the same scope under display ref YDT.
+  // Keep that distinction local to mastery; never write YDT into quiz filters.
+  const normalizedExamRef = game === 'wordquest'
+    ? 'YDT'
+    : (examRef?.trim().toUpperCase() || null)
   const [mastery, setMastery] = useState<MasteryMapResponsePublic | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
   const requestRef = useRef<AbortController | null>(null)
 
   const fetchMastery = useCallback(async () => {
@@ -34,12 +41,14 @@ export function useMasteryMap(
     if (!userId) {
       setMastery(null)
       setLoading(false)
+      setError(false)
       return
     }
 
     const controller = new AbortController()
     requestRef.current = controller
     setMastery(null)
+    setError(false)
     setLoading(true)
     try {
       const params = new URLSearchParams({ game })
@@ -51,12 +60,14 @@ export function useMasteryMap(
       if (requestRef.current !== controller || controller.signal.aborted) return
       if (!response.ok) {
         setMastery(null)
+        setError(true)
         return
       }
       const parsed = parseMasteryMapResponse(await response.json())
       if (requestRef.current !== controller || controller.signal.aborted) return
       if (!parsed || parsed.game !== game || parsed.examRef !== normalizedExamRef) {
         setMastery(null)
+        setError(true)
         return
       }
       setMastery(parsed)
@@ -64,7 +75,10 @@ export function useMasteryMap(
       if (
         requestRef.current === controller
         && (error as { name?: string } | null)?.name !== 'AbortError'
-      ) setMastery(null)
+      ) {
+        setMastery(null)
+        setError(true)
+      }
     } finally {
       if (requestRef.current === controller) setLoading(false)
     }
@@ -77,10 +91,12 @@ export function useMasteryMap(
 
   return {
     response: mastery,
+    discovery: mastery?.discovery ?? null,
     outcomes: mastery?.outcomes ?? [],
     graph: mastery?.graph ?? null,
     coverage: mastery?.coverage ?? EMPTY_COVERAGE,
     loading,
+    error,
     fetchMastery,
   }
 }

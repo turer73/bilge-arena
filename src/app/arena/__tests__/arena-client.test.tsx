@@ -1,22 +1,21 @@
 /**
- * Bilge Arena: ArenaClient (mobil home) testleri
+ * ArenaClient tek duyarlı öğrenme yolu kabuğu sözleşmesi.
  *
- * Kapsam: anon (login CTA) vs giris-yapilmis (XP bar + gunluk gorevler),
- *   sonraki-seviye / maks-seviye dali, mini siralama fetch + render (avatar img),
- *   Arena CTA, oyun grid'i.
+ * Aynı içerik mobil, tablet ve masaüstünde render edilir; ekran genişliği
+ * yalnız yerleşimi değiştirir, veri ve eylem modelini değiştirmez.
  */
 
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 
-// auth-store + useDailyQuests hoisted mock state (test basina degisir)
-const mockAuth = vi.hoisted(() => ({ value: { user: null as { id: string } | null, profile: null as Record<string, unknown> | null } }))
+const mockAuth = vi.hoisted(() => ({
+  value: { user: null as { id: string } | null, profile: null as Record<string, unknown> | null },
+}))
 const mockQuestState = vi.hoisted(() => ({ value: [] as unknown[] }))
-const mockClaim = vi.hoisted(() => vi.fn())
 
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => mockAuth.value }))
 vi.mock('@/lib/hooks/use-daily-quests', () => ({
-  useDailyQuests: () => ({ quests: mockQuestState.value, claimXP: mockClaim }),
+  useDailyQuests: () => ({ quests: mockQuestState.value, claimXP: vi.fn() }),
 }))
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -25,136 +24,41 @@ vi.mock('next/link', () => ({
 }))
 
 import ArenaClient from '../arena-client'
+import { useGameStore } from '@/stores/game-store'
 
 const UUID = '11111111-1111-4111-8111-111111111111'
-
-function mockLeaderboardFetch(players: unknown[], myRank = 0) {
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: () => Promise.resolve({ players, myRank }),
-  }) as unknown as typeof fetch
-}
 
 beforeEach(() => {
   vi.clearAllMocks()
   mockAuth.value = { user: null, profile: null }
   mockQuestState.value = []
-  mockLeaderboardFetch([]) // varsayilan: bos siralama
+  useGameStore.setState({ selectedExamRef: null })
+  localStorage.clear()
+  localStorage.setItem('ba-coach-seen:guest', new Date().toDateString())
+  localStorage.setItem(`ba-coach-seen:${UUID}`, new Date().toDateString())
+  global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.includes('/api/institution/workspace')) return { ok: false, json: async () => ({}) } as Response
+    if (url.includes('/api/profile/topic-strengths')) return { ok: true, json: async () => ({ topics: [] }) } as Response
+    return { ok: false, json: async () => ({}) } as Response
+  }) as typeof fetch
 })
 
-describe('ArenaClient (mobil home)', () => {
-  test('öğretmen sınıfı bağlantısını yalnız açık UI flag ile gösterir', () => {
-    const previous = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
-    try {
-      delete process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
-      const { unmount } = render(<ArenaClient />)
-      expect(screen.queryByRole('link', { name: /Sınıflarım/i })).not.toBeInTheDocument()
-      unmount()
+describe('ArenaClient duyarlı öğrenme ekranı', () => {
+  test('ekran genişliğinden bağımsız olarak öğrenme yolu ve konu derin bağlantılarını render eder', () => {
+    const { container } = render(<ArenaClient />)
 
-      process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED = 'true'
-      render(<ArenaClient />)
-      expect(screen.getByRole('link', { name: /Sınıflarım/i })).toHaveAttribute('href', '/arena/sinif')
-    } finally {
-      if (previous === undefined) delete process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
-      else process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED = previous
-    }
+    expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Öğrenme yolu' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sayılar dersini aç' }))
+      .toHaveAttribute('href', '/arena/matematik?category=sayilar')
+    expect(screen.getByRole('link', { name: /Mağaza/ })).toHaveAttribute('href', '/arena/magaza')
+
+    const responsiveGrid = container.querySelector('[data-responsive-arena-grid]')
+    expect(responsiveGrid).toHaveClass('md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)]')
   })
 
-  test('anon: login CTA + oyun grid + Arena CTA; XP bar/gorev YOK', async () => {
-    render(<ArenaClient />)
-    expect(screen.getByText(/ilerlemeyi kaydet/i)).toBeInTheDocument()
-    expect(screen.getByText('Matematik')).toBeInTheDocument()
-    expect(screen.getByText(/Arena.?da yarış/i)).toBeInTheDocument()
-    const subjectGrid = screen.getByTestId('game-select-grid')
-    const exploreGrid = screen.getByTestId('arena-explore-grid')
-    expect(subjectGrid.compareDocumentPosition(exploreGrid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    // XP bar (Sv.) ve gorev gosterilmemeli
-    expect(screen.queryByText(/^Sv\./)).not.toBeInTheDocument()
-  })
-
-  test('giris: XP bar (Sv.2) + sonraki seviyeye kalan XP + gunluk gorev', () => {
-    mockAuth.value = {
-      user: { id: UUID },
-      profile: { total_xp: 2340, current_streak: 12, username: 'arenaci', avatar_url: null, coin_balance: 0 },
-    }
-    mockQuestState.value = [{
-      id: 'q1', current_value: 3, is_completed: false, xp_claimed: false,
-      quest: { title: '5 soru çöz', icon: '🎯', target_value: 5, quest_type: 'correct_answers', xp_reward: 50 },
-    }]
-    render(<ArenaClient />)
-    expect(screen.getByText('arenaci')).toBeInTheDocument()
-    // total_xp 2340 -> Cirak (Sv.2), sonraki Savasci (5000) -> 2.660 XP kaldi
-    expect(screen.getByText('Sv.2')).toBeInTheDocument()
-    expect(screen.getByText(/2\.660 XP/)).toBeInTheDocument()
-    // gunluk gorev render (label ikon ile ayni span'de: "🎯 5 soru çöz")
-    expect(screen.getByText(/5 soru çöz/)).toBeInTheDocument()
-    expect(screen.getByText('GÜNLÜK GÖREV')).toBeInTheDocument()
-  })
-
-  test('exam_type=lgs -> oyun listesi filtreli (İngilizce/YDT gizli, Matematik var)', () => {
-    mockAuth.value = {
-      user: { id: UUID },
-      profile: { total_xp: 100, current_streak: 0, username: 'lgsci', avatar_url: null, exam_type: 'lgs' },
-    }
-    render(<ArenaClient />)
-    expect(screen.getByText('Matematik')).toBeInTheDocument()
-    expect(screen.getByText('Türkçe')).toBeInTheDocument()
-    // İngilizce (wordquest, examTags=['YDT']) LGS'de gosterilmemeli
-    expect(screen.queryByText('İngilizce')).not.toBeInTheDocument()
-  })
-
-  test('exam_type=yks -> tüm dersler (İngilizce dahil)', () => {
-    mockAuth.value = {
-      user: { id: UUID },
-      profile: { total_xp: 100, current_streak: 0, username: 'yksci', avatar_url: null, exam_type: 'yks' },
-    }
-    render(<ArenaClient />)
-    expect(screen.getByText('Matematik')).toBeInTheDocument()
-    expect(screen.getByText('İngilizce')).toBeInTheDocument()
-  })
-
-  test('maks seviye (Efsane): "Maksimum seviye" rozeti, sonraki-seviye metni yok', () => {
-    mockAuth.value = {
-      user: { id: UUID },
-      profile: { total_xp: 60000, current_streak: 3, display_name: 'Efsane', avatar_url: null },
-    }
-    render(<ArenaClient />)
-    expect(screen.getByText(/Maksimum seviye/i)).toBeInTheDocument()
-    expect(screen.queryByText(/XP kaldı/i)).not.toBeInTheDocument()
-  })
-
-  test('mini siralama: fetch sonrasi oyuncular + gercek avatar (img)', async () => {
-    mockAuth.value = { user: { id: UUID }, profile: { total_xp: 2340, current_streak: 1, username: 'Sen', avatar_url: null } }
-    mockLeaderboardFetch([
-      { rank: 1, name: 'zeynep', avatar_url: 'https://cdn.x/a.png', xp_earned: 9820, is_me: false },
-      { rank: 2, name: 'Sen', avatar_url: null, xp_earned: 2340, is_me: true },
-    ], 2)
-    render(<ArenaClient />)
-    await waitFor(() => expect(screen.getByText('HAFTALIK SIRA')).toBeInTheDocument())
-    expect(screen.getByText('zeynep')).toBeInTheDocument()
-    // avatar_url olan satir <img> render etmeli
-    const img = document.querySelector('img[src="https://cdn.x/a.png"]')
-    expect(img).not.toBeNull()
-    // leaderboard fetch currentUserId ile cagrildi
-    expect(vi.mocked(fetch)).toHaveBeenCalledWith(expect.stringContaining(`currentUserId=${UUID}`))
-  })
-
-  test('mobil: öğrenme yolu gerçek profil ve günlük soru hedefini kullanır', async () => {
-    const originalMatchMedia = window.matchMedia
-    const previousClassroomFlag = process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
-    const previousInstitutionFlag = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
-    process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED = 'true'
-    process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query === '(max-width: 767px)',
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }))
+  test('profil kaynaklarını ve günlük soru hedefini aynı kabuğa aktarır', () => {
     mockAuth.value = {
       user: { id: UUID },
       profile: {
@@ -162,33 +66,101 @@ describe('ArenaClient (mobil home)', () => {
         current_streak: 12,
         coin_balance: 480,
         username: 'arenaci',
-        avatar_url: null,
-        exam_type: 'lgs',
+        exam_type: 'yks',
       },
     }
     mockQuestState.value = [{
       id: 'q1', current_value: 3, is_completed: false, xp_claimed: false,
-      quest: { title: '5 soru çöz', icon: '🎯', target_value: 5, quest_type: 'correct_answers', xp_reward: 50 },
+      quest: { title: '5 soru çöz', target_value: 5, quest_type: 'correct_answers', xp_reward: 50 },
     }]
 
-    const { unmount } = render(<ArenaClient />)
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Matematik Yolu' })).toBeVisible())
+    render(<ArenaClient />)
 
-    expect(screen.getByLabelText('Günlük seri: 12')).toBeVisible()
-    expect(screen.getByLabelText('Altın: 480')).toBeVisible()
-    expect(screen.getByText('3 / 5 soru')).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Hazırsın, arenaci!' })).toBeVisible()
-    expect(screen.queryByRole('button', { name: 'İngilizce' })).not.toBeInTheDocument()
-    expect(screen.queryByText('GÜNLÜK GÖREV')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Mağaza/ })).toHaveAttribute('href', '/arena/magaza')
-    expect(screen.getByRole('link', { name: /Sınıflarım/ })).toHaveAttribute('href', '/arena/sinif')
-    expect(await screen.findByRole('link', { name: /Kurum paneli/ })).toHaveAttribute('href', '/arena/kurum')
+    expect(screen.getByLabelText('Günlük seri: 12')).toBeInTheDocument()
+    expect(screen.getByLabelText('Altın: 480')).toBeInTheDocument()
+    expect(screen.getByText('3 / 5 soru')).toBeInTheDocument()
+  })
 
-    unmount()
-    window.matchMedia = originalMatchMedia
-    if (previousClassroomFlag === undefined) delete process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED
-    else process.env.NEXT_PUBLIC_TEACHER_CLASSROOM_ENABLED = previousClassroomFlag
-    if (previousInstitutionFlag === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
-    else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previousInstitutionFlag
+  test('LGS profilinde yalnız uygun dersleri gösterir', () => {
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'lgsci', exam_type: 'lgs' },
+    }
+
+    render(<ArenaClient />)
+
+    expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Türkçe' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'YDT' })).not.toBeInTheDocument()
+  })
+
+  test('YKS profilinde İngilizce dahil tüm dersleri gösterir', () => {
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'yksci', exam_type: 'yks' },
+    }
+
+    render(<ArenaClient />)
+    expect(screen.getByRole('button', { name: 'YDT' })).toBeInTheDocument()
+  })
+
+  test('profil turu degisince onceki sinavin gecersiz kapsamını varsayilana dondurur', async () => {
+    useGameStore.setState({ selectedExamRef: 'LGS' })
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'yksci', exam_type: 'yks' },
+    }
+
+    render(<ArenaClient />)
+
+    expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+    await waitFor(() => expect(useGameStore.getState().selectedExamRef).toBe('TYT'))
+  })
+
+  test('sinav turu belirlenmemis eski profilde secili kapsami korur', async () => {
+    useGameStore.setState({ selectedExamRef: 'LGS' })
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'legacy', exam_type: null },
+    }
+
+    render(<ArenaClient />)
+
+    expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+    await waitFor(() => expect(useGameStore.getState().selectedExamRef).toBe('LGS'))
+  })
+
+  test('AYT esit agirlik kapsaminda matematigi gosterir', () => {
+    useGameStore.setState({ selectedExamRef: 'AYT-EA' })
+    mockAuth.value = {
+      user: { id: UUID },
+      profile: { total_xp: 100, current_streak: 0, username: 'eaci', exam_type: 'yks' },
+    }
+
+    render(<ArenaClient />)
+    expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+  })
+
+  test('kurum alanını yalnız etkin bayrak ve yetkili çalışma alanı yanıtıyla gösterir', async () => {
+    const previous = process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+    process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = 'true'
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/institution/workspace')) return { ok: true, json: async () => ({}) } as Response
+      return { ok: true, json: async () => ({ topics: [] }) } as Response
+    }) as typeof fetch
+
+    try {
+      render(<ArenaClient />)
+      expect(await screen.findByRole('link', { name: /Kurum paneli/ }))
+        .toHaveAttribute('href', '/arena/kurum')
+      await waitFor(() => expect(fetch).toHaveBeenCalledWith(
+        '/api/institution/workspace',
+        expect.objectContaining({ cache: 'no-store' }),
+      ))
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
+      else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous
+    }
   })
 })

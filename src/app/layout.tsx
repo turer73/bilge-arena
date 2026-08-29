@@ -1,4 +1,3 @@
-import Script from 'next/script'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import dynamic from 'next/dynamic'
@@ -9,9 +8,7 @@ import { SWRegister } from '@/components/layout/sw-register'
 import { PWAInstallPrompt } from '@/components/layout/pwa-install-prompt'
 import { OfflineIndicator } from '@/components/layout/offline-indicator'
 import { GlobalBackground } from '@/components/layout/global-background'
-import { GoogleAnalytics } from '@/components/analytics/google-analytics'
-import { TEACHER_INVITE_BOOTSTRAP_SCRIPT } from '@/lib/teacher-classroom/invite-bootstrap'
-import { ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT } from '@/lib/experiments/activation'
+import { PrivacySafeThirdPartyScripts } from '@/components/analytics/privacy-safe-third-party-scripts'
 import './globals.css'
 
 /* ─── Lokal fontlar (next/font/local) — build artik Google Fonts agina BAGIMLI DEGIL.
@@ -71,54 +68,6 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
-
-const jsonLd = [
-  {
-    '@context': 'https://schema.org',
-    '@type': 'WebApplication',
-    name: 'Bilge Arena',
-    description: 'Oyunlaştırılmış YKS, LGS ve AYT hazırlık platformu. Matematik, Türkçe, Fen, Sosyal ve İngilizce sorularıyla öğren, kazan, yüksel!',
-    url: siteUrl,
-    applicationCategory: 'EducationalApplication',
-    operatingSystem: 'Web',
-    offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: 'TRY',
-    },
-    inLanguage: 'tr',
-    // aggregateRating KALDIRILDI: sitede gorunur puanlama mekanizmasi yok;
-    // dogrulanamayan rating markup'i Google manuel-aksiyon sebebi
-    author: { '@type': 'Organization', name: 'Bilge Arena' },
-  },
-  {
-    '@context': 'https://schema.org',
-    '@type': 'EducationalOrganization',
-    name: 'Bilge Arena',
-    url: siteUrl,
-    logo: `${siteUrl}/logo-horizontal.png`,
-    description: 'YKS, LGS ve AYT\'ye hazırlanan öğrenciler için oyunlaştırılmış öğrenme platformu.',
-    contactPoint: {
-      '@type': 'ContactPoint',
-      email: 'iletisim@bilgearena.com',
-      contactType: 'customer service',
-      availableLanguage: 'Turkish',
-    },
-    hasOfferCatalog: {
-      '@type': 'OfferCatalog',
-      name: 'YKS · LGS · AYT Hazırlık Oyunları',
-      itemListElement: [
-        { '@type': 'Course', name: 'Matematik', description: 'TYT · AYT-SAY · LGS Matematik soruları — sayılar, geometri, türev, integral', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
-        { '@type': 'Course', name: 'Türkçe & Edebiyat', description: 'TYT · AYT-EA · LGS Türkçe soruları — paragraf, dil bilgisi, edebiyat', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
-        { '@type': 'Course', name: 'Fen Bilimleri', description: 'TYT · AYT-SAY · LGS Fen Bilimleri soruları — fizik, kimya, biyoloji', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
-        { '@type': 'Course', name: 'Sosyal Bilimler', description: 'TYT · LGS Sosyal Bilimler soruları — tarih, coğrafya, felsefe', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
-        { '@type': 'Course', name: 'İngilizce (WordQuest)', description: 'YDT İngilizce soruları — vocabulary, grammar, reading', provider: { '@type': 'Organization', name: 'Bilge Arena' } },
-      ],
-    },
-  },
-]
-
 export default function RootLayout({
   children,
 }: {
@@ -132,27 +81,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Ana sayfa A/B varyantini boyamadan once sabitle; flicker/CLS olusmasin. */}
-        <script
-          id="activation-experiment-bootstrap"
-          dangerouslySetInnerHTML={{ __html: ACTIVATION_EXPERIMENT_BOOTSTRAP_SCRIPT }}
-        />
-        {/* Davet fragmentini analytics betiklerinden önce first-party belleğe al ve URL'den sil. */}
-        <script
-          id="teacher-invite-bootstrap"
-          dangerouslySetInnerHTML={{ __html: TEACHER_INVITE_BOOTSTRAP_SCRIPT }}
-        />
         {/* Preconnect — Supabase API + Storage (fontlar artik lokal; Google Fonts CDN gerekmiyor) */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL!} />
-        {/* Plausible Analytics — SSR-rendered so the domain-verify crawler (static HTML fetch) can detect it */}
-        <script defer data-domain="bilgearena.com" src="https://analytics.panola.app/js/script.js" />
       </head>
       <body className="min-h-screen bg-[var(--bg)] font-body text-[var(--text)] antialiased">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
         <OfflineIndicator />
         <GlobalBackground />
         {children}
@@ -160,16 +93,7 @@ export default function RootLayout({
         <CookieBanner />
         <SWRegister />
         <PWAInstallPrompt />
-        <GoogleAnalytics />
-        {process.env.NEXT_PUBLIC_ADSENSE_ID && (
-          <Script
-            {...{
-              src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_ID}`,
-              strategy: 'afterInteractive' as const,
-              crossOrigin: 'anonymous',
-            }}
-          />
-        )}
+        <PrivacySafeThirdPartyScripts />
       </body>
     </html>
   )

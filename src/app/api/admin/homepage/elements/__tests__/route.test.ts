@@ -1,23 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockCheckPermission, mockSelectResult, mockInsertSingle } = vi.hoisted(() => ({
+const { mockCheckPermission, mockSelectResult, mockRpc, mockCookieFrom } = vi.hoisted(() => ({
   mockCheckPermission: vi.fn(),
   mockSelectResult: vi.fn(),
-  mockInsertSingle: vi.fn(),
+  mockRpc: vi.fn(),
+  mockCookieFrom: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
-    from: vi.fn(() => ({
+    from: mockCookieFrom.mockImplementation(() => ({
       select: vi.fn(() => ({
         order: vi.fn(() => {
-          const chain = {
+          const promise = mockSelectResult()
+          return Object.assign(promise as unknown as object, {
             eq: vi.fn(() => mockSelectResult()),
-          }
-          // Also await-able for .order().then(...)
-          const p = mockSelectResult()
-          return Object.assign(p as unknown as object, chain)
+          })
         }),
       })),
     })),
@@ -25,13 +24,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 vi.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: () => ({
-    from: vi.fn(() => ({
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({ single: mockInsertSingle })),
-      })),
-    })),
-  }),
+  createServiceRoleClient: () => ({ rpc: mockRpc }),
 }))
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -39,6 +32,8 @@ vi.mock('@/lib/supabase/admin', () => ({
 }))
 
 import { GET, POST } from '../route'
+
+const REQUEST_ID = '60000000-0000-4000-8000-000000000001'
 
 function makePost(body: Record<string, unknown>) {
   return new NextRequest('http://localhost/api/admin/homepage/elements', {
@@ -66,8 +61,7 @@ describe('GET /api/admin/homepage/elements', () => {
 
     const res = await GET(new NextRequest('http://localhost/api/admin/homepage/elements'))
     expect(res.status).toBe(200)
-    const json = await res.json()
-    expect(json.elements).toHaveLength(1)
+    expect((await res.json()).elements).toHaveLength(1)
   })
 })
 
@@ -76,32 +70,71 @@ describe('POST /api/admin/homepage/elements', () => {
 
   it('returns 403 if no permission', async () => {
     mockCheckPermission.mockResolvedValue(null)
-    const res = await POST(makePost({ section_key: 'hero', element_type: 'text' }))
+    const res = await POST(makePost({
+      requestId: REQUEST_ID,
+      section_key: 'hero',
+      element_type: 'slogan',
+    }))
     expect(res.status).toBe(403)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('returns 400 if section_key missing', async () => {
+  it('requires a UUID request id', async () => {
     mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    const res = await POST(makePost({ element_type: 'text' }))
+    const res = await POST(makePost({ section_key: 'hero', element_type: 'slogan' }))
     expect(res.status).toBe(400)
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('returns 400 if element_type missing', async () => {
+  it('creates through the service-only governed RPC with normalized defaults', async () => {
     mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    const res = await POST(makePost({ section_key: 'hero' }))
-    expect(res.status).toBe(400)
-  })
-
-  it('creates element successfully', async () => {
-    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    mockInsertSingle.mockResolvedValue({
-      data: { id: 'new-1', section_key: 'hero', element_type: 'text' },
+    const element = {
+      id: '60000000-0000-4000-8000-000000000002',
+      section_key: 'hero',
+      element_type: 'slogan',
+    }
+    mockRpc.mockResolvedValue({
+      data: { success: true, element, replayed: false },
       error: null,
     })
 
-    const res = await POST(makePost({ section_key: 'hero', element_type: 'text', content: 'Hello' }))
+    const res = await POST(makePost({
+      requestId: REQUEST_ID,
+      section_key: 'hero',
+      element_type: 'slogan',
+      content: 'Hello',
+    }))
+
     expect(res.status).toBe(200)
-    const json = await res.json()
-    expect(json.element.id).toBe('new-1')
+    expect(await res.json()).toEqual({ element, replayed: false })
+    expect(mockRpc).toHaveBeenCalledWith('mutate_admin_homepage', {
+      p_user_id: 'admin-1',
+      p_request_id: REQUEST_ID,
+      p_operation: 'element_create',
+      p_payload: {
+        sectionKey: 'hero',
+        elementType: 'slogan',
+        content: 'Hello',
+        imageUrl: null,
+        altText: '',
+        placement: 'below',
+        alignment: 'center',
+        size: 'md',
+        styles: {},
+      },
+    })
+  })
+
+  it('fails closed on RPC error and never writes an audit row separately', async () => {
+    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'DB failure' } })
+
+    const res = await POST(makePost({
+      requestId: REQUEST_ID,
+      section_key: 'hero',
+      element_type: 'slogan',
+    }))
+    expect(res.status).toBe(500)
+    expect(mockRpc).toHaveBeenCalledTimes(1)
   })
 })

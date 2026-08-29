@@ -1,0 +1,42 @@
+name: Community question quality verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Maximum jobs per evidence role
+        required: false
+        default: '10'
+  schedule:
+    - cron: '17,47 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: community-question-quality
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: vars.COMMUNITY_QUALITY_WORKER_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Verify queued revision-bound claims
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          QUESTION_QUALITY_WORKER_ACTOR_ID: ${{ secrets.QUESTION_QUALITY_WORKER_ACTOR_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          QUESTION_QUALITY_MODEL_A: ${{ vars.QUESTION_QUALITY_MODEL_A }}
+          QUESTION_QUALITY_MODEL_B: ${{ vars.QUESTION_QUALITY_MODEL_B }}
+          QUESTION_QUALITY_RESEARCH_MODEL: ${{ vars.QUESTION_QUALITY_RESEARCH_MODEL }}
+        run: npm run quality:community-verify -- --confirm --limit ${{ inputs.limit || '10' }}

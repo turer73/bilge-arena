@@ -128,12 +128,18 @@ export type Database = {
           difficulty: number
           id: string
           is_correct: boolean
+          evidence_kind: string
           next_question_id: string | null
           outcome_id: string
           question_id: string
+          question_content_sha256: string | null
+          question_revision_id: string | null
           request_id: string
           response_time_ms: number
+          response_time_source: string
+          selected_option: number | null
           sequence: number
+          server_response_time_ms: number | null
           session_id: string
           status_after: string
           user_id: string
@@ -144,12 +150,18 @@ export type Database = {
           difficulty: number
           id?: string
           is_correct: boolean
+          evidence_kind?: string
           next_question_id?: string | null
           outcome_id: string
           question_id: string
+          question_content_sha256?: string | null
+          question_revision_id?: string | null
           request_id: string
           response_time_ms: number
+          response_time_source?: string
+          selected_option?: number | null
           sequence: number
+          server_response_time_ms?: number | null
           session_id: string
           status_after: string
           user_id: string
@@ -160,12 +172,18 @@ export type Database = {
           difficulty?: number
           id?: string
           is_correct?: boolean
+          evidence_kind?: string
           next_question_id?: string | null
           outcome_id?: string
           question_id?: string
+          question_content_sha256?: string | null
+          question_revision_id?: string | null
           request_id?: string
           response_time_ms?: number
+          response_time_source?: string
+          selected_option?: number | null
           sequence?: number
+          server_response_time_ms?: number | null
           session_id?: string
           status_after?: string
           user_id?: string
@@ -215,6 +233,14 @@ export type Database = {
           covered_outcomes: number
           created_at: string
           current_question_id: string | null
+          current_question_base_points: number | null
+          current_question_content_sha256: string | null
+          current_question_correct_option: number | null
+          current_question_difficulty: number | null
+          current_question_issued_at: string | null
+          current_question_option_count: number | null
+          current_question_outcome_id: string | null
+          current_question_revision_id: string | null
           exam_ref: string
           expires_at: string
           game: string
@@ -232,6 +258,14 @@ export type Database = {
           covered_outcomes?: number
           created_at?: string
           current_question_id?: string | null
+          current_question_base_points?: number | null
+          current_question_content_sha256?: string | null
+          current_question_correct_option?: number | null
+          current_question_difficulty?: number | null
+          current_question_issued_at?: string | null
+          current_question_option_count?: number | null
+          current_question_outcome_id?: string | null
+          current_question_revision_id?: string | null
           exam_ref: string
           expires_at: string
           game: string
@@ -249,6 +283,14 @@ export type Database = {
           covered_outcomes?: number
           created_at?: string
           current_question_id?: string | null
+          current_question_base_points?: number | null
+          current_question_content_sha256?: string | null
+          current_question_correct_option?: number | null
+          current_question_difficulty?: number | null
+          current_question_issued_at?: string | null
+          current_question_option_count?: number | null
+          current_question_outcome_id?: string | null
+          current_question_revision_id?: string | null
           exam_ref?: string
           expires_at?: string
           game?: string
@@ -261,6 +303,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "adaptive_diagnostic_sessions_current_question_outcome_id_fkey"
+            columns: ["current_question_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_outcomes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "adaptive_diagnostic_sessions_current_question_id_fkey"
             columns: ["current_question_id"]
@@ -642,18 +691,21 @@ export type Database = {
       content_governance_runtime: {
         Row: {
           enforce_direct_mutation: boolean
+          legacy_report_intake_enabled: boolean
           singleton: boolean
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           enforce_direct_mutation?: boolean
+          legacy_report_intake_enabled?: boolean
           singleton?: boolean
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           enforce_direct_mutation?: boolean
+          legacy_report_intake_enabled?: boolean
           singleton?: boolean
           updated_at?: string
           updated_by?: string | null
@@ -2668,6 +2720,7 @@ export type Database = {
           owned_frames: string[]
           owned_nameplates: string[]
           preferred_theme: string | null
+          profile_visibility: "friends" | "private" | "public"
           premium_until: string | null
           referral_code: string | null
           referred_by: string | null
@@ -2709,6 +2762,7 @@ export type Database = {
           owned_frames?: string[]
           owned_nameplates?: string[]
           preferred_theme?: string | null
+          profile_visibility?: "friends" | "private" | "public"
           premium_until?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -2750,6 +2804,7 @@ export type Database = {
           owned_frames?: string[]
           owned_nameplates?: string[]
           preferred_theme?: string | null
+          profile_visibility?: "friends" | "private" | "public"
           premium_until?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -2957,6 +3012,7 @@ export type Database = {
           id: string
           is_boss: boolean
           level_tag: string | null
+          outcomes_prepared_by: string | null
           prepared_at: string
           prepared_by: string | null
           published_at: string | null
@@ -2979,6 +3035,7 @@ export type Database = {
           id?: string
           is_boss?: boolean
           level_tag?: string | null
+          outcomes_prepared_by?: string | null
           prepared_at?: string
           prepared_by?: string | null
           published_at?: string | null
@@ -3001,6 +3058,7 @@ export type Database = {
           id?: string
           is_boss?: boolean
           level_tag?: string | null
+          outcomes_prepared_by?: string | null
           prepared_at?: string
           prepared_by?: string | null
           published_at?: string | null
@@ -3016,6 +3074,13 @@ export type Database = {
             columns: ["base_revision_id"]
             isOneToOne: false
             referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_content_revisions_outcomes_prepared_by_fkey"
+            columns: ["outcomes_prepared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -6242,6 +6307,10 @@ export type Database = {
         Args: { p_request_id: string; p_role_ref: string; p_user_id: string }
         Returns: Json
       }
+      finalize_legacy_question_appeal_transition: {
+        Args: { p_appeal_id: string; p_coins: number; p_user_id: string }
+        Returns: Json
+      }
       finalize_verified_exam_attempt: {
         Args: { p_attempt_id: string; p_request_id: string; p_user_id: string }
         Returns: Json
@@ -6400,7 +6469,7 @@ export type Database = {
       }
       get_my_weekly_team_boss: { Args: { p_user_id: string }; Returns: Json }
       get_public_profile: {
-        Args: { p_username: string }
+        Args: { p_username: string; p_viewer_id?: string | null }
         Returns: {
           avatar_url: string
           correct_answers: number
@@ -6410,6 +6479,7 @@ export type Database = {
           level: number
           level_name: string
           longest_streak: number
+          relationship_status: string | null
           selected_avatar_decorations: string[]
           selected_nameplate: string
           total_questions: number
@@ -6430,6 +6500,19 @@ export type Database = {
         }
         Returns: Json
       }
+      get_question_appeal_queue_v2: {
+        Args: {
+          p_cursor: string
+          p_limit: number
+          p_status: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_question_quality_appeal_counts: {
+        Args: { p_limit: number; p_user_id: string }
+        Returns: Json
+      }
       get_question_content_governance_queue: {
         Args: {
           p_cursor: string
@@ -6437,6 +6520,10 @@ export type Database = {
           p_status: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      get_question_outcome_coverage: {
+        Args: { p_user_id: string }
         Returns: Json
       }
       get_question_content_revision: {
@@ -6479,6 +6566,7 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
       }
+      legacy_error_report_intake_enabled: { Args: never; Returns: boolean }
       increment_question_stats: {
         Args: { answered_inc?: number; correct_inc?: number; q_id: string }
         Returns: undefined
@@ -6690,6 +6778,22 @@ export type Database = {
         }
         Returns: Json
       }
+      record_adaptive_diagnostic_answer_v2: {
+        Args: {
+          p_next_question_id: string
+          p_question_id: string
+          p_request_id: string
+          p_response_time_ms: number
+          p_selected_option: number
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_adaptive_diagnostic_question_v2: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: Json
+      }
       record_verified_exam_exposure: {
         Args: {
           p_attempt_id: string
@@ -6799,6 +6903,7 @@ export type Database = {
           avatar_url: string
           display_name: string
           id: string
+          profile_viewable: boolean
           total_xp: number
           username: string
         }[]
@@ -6820,6 +6925,10 @@ export type Database = {
           total_xp: number
           username: string
         }[]
+      }
+      request_friendship: {
+        Args: { p_requester: string; p_target: string }
+        Returns: string
       }
       search_questions: {
         Args: {
@@ -6891,6 +7000,15 @@ export type Database = {
       }
       set_content_governance_enforcement: {
         Args: { p_enforced: boolean; p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
+      set_question_revision_outcomes: {
+        Args: {
+          p_outcomes: Json
+          p_request_id: string
+          p_revision_id: string
+          p_user_id: string
+        }
         Returns: Json
       }
       set_my_institution_manager_teacher_role: {

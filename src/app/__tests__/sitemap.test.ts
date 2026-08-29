@@ -30,6 +30,13 @@ describe('sitemap', () => {
 
   it('mevcut temel sayfalar korunur (regresyon)', () => {
     expect(urls.some((u) => u.endsWith('/arena'))).toBe(true)
+    expect(urls.some((u) => u.endsWith('/hakkinda'))).toBe(true)
+    expect(urls.some((u) => u.endsWith('/nasil-calisir'))).toBe(true)
+    expect(urls.some((u) => u.endsWith('/iletisim'))).toBe(true)
     expect(urls.some((u) => /\/$|bilgearena\.com$/.test(u))).toBe(true)
+  })
+
+  it('noindex giris sayfasini arama motorlarina gondermez', () => {
+    expect(urls.some((u) => u.endsWith('/giris'))).toBe(false)
   })
 })

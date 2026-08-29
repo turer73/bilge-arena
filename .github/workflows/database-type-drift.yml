@@ -17,7 +17,6 @@ jobs:
     name: Compare production schema
     runs-on: ubuntu-latest
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: lvnmzdowhfzmpkueurih
     steps:
       - uses: actions/checkout@v6
@@ -30,7 +29,13 @@ jobs:
       - run: npm ci
 
       - name: Generate types from production schema
-        run: npm run db:types
+        env:
+          # Keep the credential out of checkout, setup and dependency lifecycle
+          # processes. The small Node wrapper passes it only to the pinned CLI;
+          # invoking Node directly also prevents npm pre/post hook exposure.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_TOKEN_EXPIRES_AT: ${{ vars.SUPABASE_TOKEN_EXPIRES_AT }}
+        run: node scripts/sync-database-types.mjs
 
       - name: Compare generated types with checked-in schema
         id: compare

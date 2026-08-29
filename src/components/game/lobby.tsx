@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   BookOpenText,
@@ -18,7 +18,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react'
-import { GAMES, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
+import { GAMES, getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
 import { MODES, type QuizMode, DENEME_CONFIGS } from '@/lib/constants/modes'
 import { ModeSelector } from './mode-selector'
 import { SoundToggle } from './sound-toggle'
@@ -27,6 +27,7 @@ import { getLevelFromXP } from '@/lib/constants/levels'
 import { QuizLimitBanner } from '@/components/premium/quiz-limit-banner'
 import { AdBanner } from '@/components/ads/ad-banner'
 import { BilgeChan } from '@/components/ui/bilge-chan'
+import { MobileLobbyFlow } from './mobile-lobby-flow'
 
 interface LobbyProps {
   game: GameSlug
@@ -49,6 +50,7 @@ interface LobbyProps {
     isGuest: boolean
   }
   loadError?: string | null
+  personalizedMockCard?: ReactNode
 }
 
 const DIFFICULTY_OPTIONS = [
@@ -95,8 +97,10 @@ export function Lobby({
   onSelectExamRef,
   quizLimit,
   loadError,
+  personalizedMockCard,
 }: LobbyProps) {
   const gameDef = GAMES[game]
+  const categories = getCategoriesForExam(game, selectedExamRef)
   const GameIcon = GAME_ICONS[game]
   const level = getLevelFromXP(userXP)
   const mode = MODES.find((candidate) => candidate.id === selectedMode) || MODES[0]
@@ -123,8 +127,8 @@ export function Lobby({
     }`
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-var(--navbar-h))] max-w-[520px] animate-scaleIn flex-col gap-3 bg-[var(--app-bg)] p-3 pb-28 text-[var(--app-text)] md:my-6 md:min-h-0 md:gap-4 md:rounded-[32px] md:border-2 md:border-[var(--app-border)] md:p-5 md:pb-6 md:shadow-[0_8px_0_var(--app-shadow)]">
-      <div className="-mx-3 -mt-3 flex h-14 items-center gap-1 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-2">
+    <div data-responsive-game-lobby className="mx-auto grid min-h-[100dvh] w-full max-w-[1180px] animate-scaleIn grid-cols-1 gap-3 bg-[var(--app-bg)] p-3 pb-28 text-[var(--app-text)] md:grid-cols-[minmax(0,1fr)_300px] md:gap-5 md:p-5 lg:min-h-[calc(100dvh-var(--navbar-h))] lg:grid-cols-[minmax(0,1fr)_340px] lg:bg-transparent lg:pb-6 xl:px-6">
+      <div className="-mx-3 -mt-3 flex h-14 items-center gap-1 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-2 md:col-span-2 md:mx-0 md:mt-0 md:rounded-[22px] md:border-2 md:border-[var(--app-border)] md:px-3 md:shadow-[0_4px_0_var(--app-shadow)]">
         <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--app-text-sub)] active:bg-[var(--app-hover)]">
           <ChevronLeft size={23} strokeWidth={3} aria-hidden="true" />
         </Link>
@@ -140,7 +144,30 @@ export function Lobby({
           <SoundToggle />
         </div>
       </div>
-      <header className="relative overflow-hidden rounded-[24px] p-4 text-white" style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}cc)`, boxShadow: `0 6px 0 ${gameDef.colorHex}99` }}>
+
+      <MobileLobbyFlow
+        game={game}
+        selectedMode={selectedMode}
+        onSelectMode={onSelectMode}
+        selectedCategory={selectedCategory}
+        onSelectCategory={onSelectCategory}
+        selectedDifficulty={selectedDifficulty}
+        onSelectDifficulty={onSelectDifficulty}
+        selectedExamRef={selectedExamRef}
+        onSelectExamRef={onSelectExamRef}
+        onStart={onStart}
+        onLimitReached={onLimitReached}
+        quizLimit={quizLimit}
+        loadError={loadError}
+      />
+
+      {personalizedMockCard && (
+        <div data-personalized-mock-mobile-slot className="md:hidden">
+          {personalizedMockCard}
+        </div>
+      )}
+
+      <header data-desktop-lobby-hero className="relative hidden overflow-hidden rounded-[24px] p-4 text-white md:col-start-1 md:row-start-2 md:block md:min-h-[166px] md:p-6" style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}cc)`, boxShadow: `0 6px 0 ${gameDef.colorHex}99` }}>
         <div className="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] border-white/10" />
         <div className="relative flex items-center gap-3">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-white/15 ring-2 ring-white/25">
@@ -148,14 +175,14 @@ export function Lobby({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/75">{gameDef.name} yolu</p>
-            <h1 className="mt-0.5 text-2xl font-black leading-tight">{mode.name} turu</h1>
+            <h1 className="mt-0.5 text-2xl font-black leading-tight md:text-3xl">{mode.name} turu</h1>
             <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-4 text-white/80">{gameDef.description}</p>
           </div>
           <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-[10px] font-black">{durationMinutes ? `${durationMinutes} dk` : 'Zamansız'}</span>
         </div>
       </header>
 
-      <div className="relative min-h-[142px] animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow)]" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
+      <div className="relative hidden min-h-[142px] animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow)] md:col-start-2 md:row-start-2 md:block md:min-h-[166px]" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
         <div className="relative z-10 max-w-[66%]">
           <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-accent-text)]">Bilge Çan</p>
           <h2 className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">Turun hazır!</h2>
@@ -174,7 +201,7 @@ export function Lobby({
 
       <section
         aria-labelledby="mode-selection-title"
-        className="animate-fadeUp rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-shadow-accent)] md:p-4"
+        className="hidden animate-fadeUp rounded-[22px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 shadow-[0_5px_0_var(--app-shadow-accent)] md:col-start-1 md:row-start-3 md:block md:p-4"
         style={{ animationDelay: '0.25s', animationFillMode: 'both' }}
       >
         <div className="mb-3 flex items-end justify-between gap-3">
@@ -198,7 +225,7 @@ export function Lobby({
       </section>
 
       {!mode.isDeneme && (
-        <section className="animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-shadow)]" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
+        <section className="hidden animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-shadow)] md:col-start-1 md:row-start-4 md:block" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
           <button
             type="button"
             onClick={() => setShowFilters((current) => !current)}
@@ -257,7 +284,7 @@ export function Lobby({
                   >
                     Tümü
                   </button>
-                  {gameDef.categories.map((category) => {
+                  {categories.map((category) => {
                     const active = selectedCategory === category
                     return (
                       <button
@@ -303,7 +330,7 @@ export function Lobby({
       )}
 
       {mode.isDeneme && denemeConfig && (
-        <section className="animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-shadow)]" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
+        <section className="hidden animate-fadeUp rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-shadow)] md:col-start-1 md:row-start-4 md:block" style={{ animationDelay: '0.35s', animationFillMode: 'both' }}>
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-black text-[var(--app-text)]">Deneme formatı</h2>
             <span className="flex items-center gap-1.5 text-xs font-black text-[var(--app-accent-text)]">
@@ -326,7 +353,7 @@ export function Lobby({
       )}
 
       {quizLimit && (
-        <div className="animate-fadeUp" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+        <div className={`hidden animate-fadeUp md:col-start-2 md:block ${personalizedMockCard ? 'md:row-start-5' : 'md:row-start-4'}`} style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
           <QuizLimitBanner
             remaining={quizLimit.remaining}
             isPremium={quizLimit.isPremium}
@@ -338,7 +365,7 @@ export function Lobby({
       {loadError && (
         <div
           role="alert"
-          className="animate-fadeUp rounded-xl border px-4 py-3 text-sm font-medium"
+          className={`hidden animate-fadeUp rounded-xl border px-4 py-3 text-sm font-medium md:col-start-2 md:block ${personalizedMockCard ? 'md:row-start-6' : 'md:row-start-5'}`}
           style={{
             background: 'var(--urgency-bg, var(--app-danger-strong)20)',
             borderColor: 'var(--urgency, var(--app-danger))',
@@ -349,7 +376,7 @@ export function Lobby({
         </div>
       )}
 
-      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 -mx-1 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)]/95 p-2 shadow-[0_5px_0_var(--app-shadow-accent)] backdrop-blur-xl md:static md:mx-0">
+      <div data-desktop-lobby-start className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 -mx-1 hidden rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)]/95 p-2 shadow-[0_5px_0_var(--app-shadow-accent)] backdrop-blur-xl md:static md:col-start-2 md:row-start-3 md:mx-0 md:block md:self-start">
         <div className="flex items-center justify-between gap-3 px-2 pb-2 text-[11px] font-bold text-[var(--app-text-sub)]">
           <span className="font-black text-[var(--app-text)]">{mode.name}</span>
           <span className="flex items-center gap-1.5">
@@ -375,7 +402,17 @@ export function Lobby({
         </button>
       </div>
 
-      <AdBanner slot="lobby" className="mx-auto mt-1" />
+      {personalizedMockCard && (
+        <div
+          data-personalized-mock-slot
+          className="hidden animate-fadeUp md:col-start-2 md:row-start-4 md:block md:self-start"
+          style={{ animationDelay: '0.35s', animationFillMode: 'both' }}
+        >
+          {personalizedMockCard}
+        </div>
+      )}
+
+      <AdBanner slot="lobby" className="mx-auto mt-1 hidden md:col-span-2 md:block" />
     </div>
   )
 }

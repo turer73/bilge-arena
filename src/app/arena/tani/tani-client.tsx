@@ -2,12 +2,14 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, BrainCircuit, RefreshCw, Target } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
 import { useAdaptiveDiagnostic } from '@/lib/hooks/use-adaptive-diagnostic'
 import type { DiagnosticOutcomeSummaryPublic } from '@/lib/diagnostic/public-contract'
+import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { parseDiagnosticPageScope } from '@/lib/diagnostic/scope'
 
 interface PendingAnswer {
   sessionId: string
@@ -31,10 +33,16 @@ const BAND_STYLES = {
 
 function IntroCard({
   hasSummary,
+  questionCount,
+  outcomeCount,
+  subjectName,
   submitting,
   onStart,
 }: {
   hasSummary: boolean
+  questionCount: number
+  outcomeCount: number
+  subjectName: string
   submitting: boolean
   onStart: () => void
 }) {
@@ -46,14 +54,14 @@ function IntroCard({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">
-            10 SORU · YAKLAŞIK 8 DAKİKA
+            {questionCount} SORU · YAKLAŞIK {Math.max(3, Math.round(questionCount * 0.8))} DAKİKA
           </p>
           <h2 className="mt-1 text-lg font-bold text-[var(--text)]">
-            {hasSummary ? 'Kazanımlarını yeniden yokla' : 'Nereden başlayacağını birlikte bulalım'}
+            {hasSummary ? 'Başlangıç tahminini yeniden yokla' : 'Nereden başlayacağını birlikte bulalım'}
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">
-            Altı TYT Matematik kazanımını kısa bir turda ölçeriz. Sorular yanıtına göre bir kademe
-            kolaylaşabilir veya zorlaşabilir; sonuç ödül ve sıralamayı etkilemez.
+            {outcomeCount} {subjectName} kazanım alanını kısa bir taramayla yoklarız. Sorular yanıtına göre bir kademe
+            kolaylaşabilir veya zorlaşabilir; bu bir hâkimiyet ölçümü değildir ve sonuç ödül ya da sıralamayı etkilemez.
           </p>
           <button
             type="button"
@@ -61,7 +69,7 @@ function IntroCard({
             disabled={submitting}
             className="btn-primary mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? 'Hazırlanıyor...' : hasSummary ? 'Yeniden tanıla' : 'Tanılamayı başlat'}
+            {submitting ? 'Hazırlanıyor...' : hasSummary ? 'Yeniden tara' : 'Kısa taramayı başlat'}
             {!submitting && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
           </button>
         </div>
@@ -72,9 +80,13 @@ function IntroCard({
 
 function SummaryCard({
   outcomes,
+  game,
+  examRef,
   onPractice,
 }: {
   outcomes: DiagnosticOutcomeSummaryPublic[]
+  game: GameSlug
+  examRef: string
   onPractice: (outcome: DiagnosticOutcomeSummaryPublic) => void
 }) {
   const weakest = [...outcomes].sort((left, right) => (
@@ -85,15 +97,15 @@ function SummaryCard({
     <section aria-labelledby="diagnostic-summary-title" className="space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">BAŞLANGIÇ TAHMİNİ</p>
+          <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">KEŞİF ADIMI TAMAM · BAŞLANGIÇ TAHMİNİ</p>
           <h2 id="diagnostic-summary-title" className="mt-1 text-lg font-bold text-[var(--text)]">Kazanım özeti</h2>
         </div>
-        <Link href="/arena/hakimiyet?game=matematik&exam_ref=TYT" className="text-xs font-bold text-[var(--focus)] hover:underline">
+        <Link href={`/arena/hakimiyet?${new URLSearchParams({ game, exam_ref: examRef })}`} className="text-xs font-bold text-[var(--focus)] hover:underline">
           Hâkimiyet haritası
         </Link>
       </div>
       <p className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-xs leading-5 text-[var(--text-sub)]">
-        Bu sonuç yalnız kısa tanılama tahminidir. Kalıcı hâkimiyet, farklı günlerdeki doğrulanmış tekrarlarla oluşur.
+        Bu sonuç yalnız kısa başlangıç taraması tahminidir. Keşif Seviyesi 2, farklı günlerdeki doğrulanmış pratik kanıtlarıyla ilerler; kalıcı hâkimiyet bu kanıtlarla oluşur.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         {outcomes.map((outcome) => (
@@ -132,9 +144,14 @@ function SummaryCard({
 
 export default function TaniClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuthStore()
   const gameStore = useGameStore()
-  const diagnostic = useAdaptiveDiagnostic('matematik', user?.id, 'TYT')
+  const requestedScope = parseDiagnosticPageScope(
+    searchParams.get('game'),
+    searchParams.get('exam_ref'),
+  )
+  const diagnostic = useAdaptiveDiagnostic(requestedScope?.game ?? null, user?.id, requestedScope?.examRef)
   const [selection, setSelection] = useState<{ questionKey: string; option: number } | null>(null)
   const questionTiming = useRef<{ questionKey: string; startedAt: number } | null>(null)
   const pendingAnswer = useRef<PendingAnswer | null>(null)
@@ -156,9 +173,9 @@ export default function TaniClient() {
     : 0
   const showIntro = !session || session.status !== 'active'
   const statusNote = useMemo(() => {
-    if (session?.status === 'expired') return 'Önceki tanılama süresi doldu. Yeni ve temiz bir tur başlatabilirsin.'
+    if (session?.status === 'expired') return 'Önceki kısa taramanın süresi doldu. Yeni ve temiz bir tur başlatabilirsin.'
     if (session?.status === 'abandoned') return 'Önceki tur tamamlanamadı. Son kayıtlı kazanım özetin korunuyor.'
-    if (session?.status === 'completed') return 'Tanılama tamamlandı. Sonuç aşağıda; istersen yeniden ölçebilirsin.'
+    if (session?.status === 'completed') return 'Kısa tarama tamamlandı. Başlangıç tahmini aşağıda; istersen yeniden yoklayabilirsin.'
     return null
   }, [session?.status])
 
@@ -185,12 +202,13 @@ export default function TaniClient() {
   }
 
   const handlePractice = (outcome: DiagnosticOutcomeSummaryPublic) => {
-    gameStore.setGame('matematik')
+    if (!requestedScope) return
+    gameStore.setGame(requestedScope.game)
     gameStore.setCategory(outcome.category)
-    gameStore.setExamRef('TYT')
+    if (requestedScope.game !== 'wordquest') gameStore.setExamRef(requestedScope.examRef)
     gameStore.setDifficulty(outcome.recommendedDifficulty)
     gameStore.setMode('practice')
-    router.push('/arena/matematik')
+    router.push(`/arena/${requestedScope.game}`)
   }
 
   if (authLoading) {
@@ -202,36 +220,52 @@ export default function TaniClient() {
       <div className="mx-auto max-w-md px-4 py-16 text-center">
         <div className="mb-4 text-5xl" aria-hidden="true">🔒</div>
         <h1 className="mb-2 text-xl font-bold">Giriş Yapmanız Gerekiyor</h1>
-        <p className="mb-6 text-sm text-[var(--text-sub)]">Tanılama sonucu yalnızca kendi öğrenme kaydına eklenir.</p>
+        <p className="mb-6 text-sm text-[var(--text-sub)]">Kısa tarama sonucu yalnızca kendi öğrenme kaydına eklenir.</p>
         <Link href="/giris" className="btn-primary inline-block rounded-xl px-8 py-3 text-sm font-bold">Giriş Yap</Link>
       </div>
     )
   }
 
+  if (!requestedScope) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-16 text-center">
+        <h1 className="text-xl font-bold text-[var(--text)]">Geçersiz tarama kapsamı</h1>
+        <p className="mt-2 text-sm text-[var(--text-sub)]">
+          Ders ve sınav kapsamı birlikte, yayınlandığı biçimde belirtilmelidir.
+        </p>
+        <Link href="/arena/calisma" className="mt-5 inline-flex text-sm font-bold text-[var(--focus)] hover:underline">
+          Çalışmaya dön
+        </Link>
+      </main>
+    )
+  }
+
+  const subjectName = `${requestedScope.examRef} ${GAMES[requestedScope.game].name}`
+
   return (
     <main className="mx-auto max-w-3xl space-y-5 px-4 py-6 md:px-6 md:py-8">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">TYT MATEMATİK · İÇ TAKSONOMİ</p>
-          <h1 className="mt-1 text-xl font-bold text-[var(--text)]">Kısa Kazanım Tanılaması</h1>
+          <p className="text-[10px] font-extrabold tracking-[0.16em] text-[var(--text-sub)]">{subjectName.toLocaleUpperCase('tr-TR')} · İÇ TAKSONOMİ</p>
+          <h1 className="mt-1 text-xl font-bold text-[var(--text)]">Kısa Başlangıç Taraması</h1>
         </div>
         <Link href="/arena/calisma" className="text-xs font-bold text-[var(--focus)] hover:underline">Çalışmaya dön</Link>
       </header>
 
       {diagnostic.loading ? (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-10 text-center text-sm text-[var(--text-sub)]">
-          Tanılama durumun yükleniyor...
+          Kısa tarama durumun yükleniyor...
         </div>
       ) : diagnostic.error === 'load' || !diagnostic.response ? (
         <div className="rounded-2xl border border-[var(--danger)]/30 bg-[var(--danger)]/5 p-5 text-sm text-[var(--text)]">
-          <p>Tanılama şu an yüklenemedi.</p>
+          <p>Kısa tarama şu an yüklenemedi.</p>
           <button type="button" onClick={() => void diagnostic.refresh()} className="mt-3 inline-flex items-center gap-2 font-bold text-[var(--focus)]">
             <RefreshCw className="h-4 w-4" aria-hidden="true" /> Yeniden dene
           </button>
         </div>
       ) : !diagnostic.supported ? (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-6 text-sm text-[var(--text-sub)]">
-          Kısa tanılama şu anda yalnız TYT Matematik pilotunda kullanılabilir.
+          Bu ders ve sınav kapsamında kısa başlangıç taraması henüz yayınlanmadı.
         </div>
       ) : (
         <>
@@ -244,6 +278,9 @@ export default function TaniClient() {
           {showIntro && (
             <IntroCard
               hasSummary={Boolean(diagnostic.summary)}
+              questionCount={diagnostic.response.policy?.questionCount ?? 0}
+              outcomeCount={diagnostic.response.policy?.outcomeCount ?? 0}
+              subjectName={subjectName}
               submitting={diagnostic.submitting}
               onStart={() => void diagnostic.start()}
             />
@@ -258,7 +295,7 @@ export default function TaniClient() {
                 </div>
                 <div
                   role="progressbar"
-                  aria-label="Tanılama ilerlemesi"
+                  aria-label="Kısa tarama ilerlemesi"
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={progressPercent}
@@ -316,13 +353,18 @@ export default function TaniClient() {
                 {!diagnostic.submitting && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
               </button>
               <p className="mt-3 text-center text-[10px] leading-4 text-[var(--text-sub)]">
-                Doğru cevap ve çözüm tanılama sırasında gösterilmez; böylece sonraki soru ölçümü etkilenmez.
+                Doğru cevap ve çözüm kısa tarama sırasında gösterilmez; böylece sonraki soru seçimi etkilenmez.
               </p>
             </section>
           )}
 
           {diagnostic.summary && (
-            <SummaryCard outcomes={diagnostic.summary.outcomes} onPractice={handlePractice} />
+            <SummaryCard
+              outcomes={diagnostic.summary.outcomes}
+              game={requestedScope.game}
+              examRef={requestedScope.examRef}
+              onPractice={handlePractice}
+            />
           )}
         </>
       )}

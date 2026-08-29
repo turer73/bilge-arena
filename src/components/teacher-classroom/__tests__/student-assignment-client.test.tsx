@@ -12,6 +12,7 @@ const authState = vi.hoisted(() => ({
 }))
 
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => authState.value }))
+vi.mock('next/navigation', () => ({ usePathname: () => '/arena/sinif' }))
 vi.mock('@/lib/teacher-classroom/client', async () => ({
   ...(await vi.importActual<typeof import('@/lib/teacher-classroom/client')>('@/lib/teacher-classroom/client')),
   fetchStudentTeacherAssignment: clientMocks.fetchAssignment,

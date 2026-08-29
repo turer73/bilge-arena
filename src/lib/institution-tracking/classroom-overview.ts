@@ -1,5 +1,8 @@
 import { z } from 'zod'
-import { institutionStudentLearningAnalysisSchema } from './student-analysis'
+import {
+  institutionStudentLearningAnalysisSchema,
+  institutionTaxonomyVersionSchema,
+} from './student-analysis'
 import { buildTeacherIndicatorSet } from './teacher-indicators'
 import { teacherIndicatorSetSchema } from './contracts'
 import { institutionFollowupMetricsSchema } from './followup'
@@ -17,6 +20,7 @@ const inputSchema = z.object({
   }).strict(),
   windowStart: timestampSchema,
   windowEnd: timestampSchema,
+  taxonomyVersion: institutionTaxonomyVersionSchema,
   analyses: z.array(institutionStudentLearningAnalysisSchema).max(40),
   publishedProgramMemberRefs: z.array(memberRefSchema).max(40),
   followupMetrics: institutionFollowupMetricsSchema,
@@ -31,6 +35,18 @@ const inputSchema = z.object({
   }
   if (value.analyses.some((analysis) => analysis.classroom.id !== value.classroom.id)) {
     context.addIssue({ code: 'custom', message: 'cross-classroom analysis rejected' })
+  }
+  if (value.analyses.some((analysis) => analysis.scope.taxonomyVersion !== value.taxonomyVersion)) {
+    context.addIssue({ code: 'custom', message: 'mixed curriculum taxonomy rejected' })
+  }
+  const firstScope = value.analyses[0]?.scope
+  if (!firstScope || value.analyses.some((analysis) => (
+    analysis.scope.game !== firstScope.game
+    || analysis.scope.examRef !== firstScope.examRef
+    || analysis.scope.questionExamRef !== firstScope.questionExamRef
+    || analysis.scope.scopePolicyVersion !== firstScope.scopePolicyVersion
+  ))) {
+    context.addIssue({ code: 'custom', message: 'mixed institution learning scope rejected' })
   }
   if (new Set(value.publishedProgramMemberRefs).size !== value.publishedProgramMemberRefs.length
     || value.publishedProgramMemberRefs.some((ref) => !refs.includes(ref))) {
@@ -49,10 +65,12 @@ const countSchema = z.number().int().nonnegative()
 export const institutionClassroomOverviewSchema = z.object({
   classroom: inputSchema.shape.classroom,
   scope: z.object({
-    game: z.literal('matematik'),
-    examRef: z.literal('TYT'),
-    taxonomyVersion: z.literal('ba-tyt-math-v1'),
-    modelVersion: z.literal('institution-classroom-overview-v1'),
+    game: z.enum(['wordquest', 'matematik', 'turkce', 'fen', 'sosyal']),
+    examRef: z.string().regex(/^[A-Z0-9-]{2,10}$/),
+    questionExamRef: z.string().regex(/^[A-Z0-9-]{2,10}$/).nullable().default(null),
+    taxonomyVersion: institutionTaxonomyVersionSchema,
+    scopePolicyVersion: z.string().regex(/^institution-scope-v[0-9]+$/).default('institution-scope-v1'),
+    modelVersion: z.enum(['institution-classroom-overview-v1', 'institution-classroom-overview-v2']),
     windowStart: timestampSchema,
     windowEnd: timestampSchema,
     minimumGroupSize: z.literal(3),
@@ -87,6 +105,8 @@ export function buildInstitutionClassroomOverview(value: unknown) {
   const parsed = inputSchema.safeParse(value)
   if (!parsed.success) return null
   const analyses = parsed.data.analyses
+  const firstScope = analyses[0]?.scope
+  if (!firstScope) return null
   const studentsWithEvidence = analyses.filter((analysis) => analysis.summary.assessedOutcomeCount > 0)
   const studentsNeedingSupport = analyses.filter((analysis) => analysis.summary.developingOutcomeCount > 0)
   const eligibleStudentOutcomeCount = analyses.reduce((sum, analysis) => sum + analysis.summary.assessedOutcomeCount, 0)
@@ -136,10 +156,12 @@ export function buildInstitutionClassroomOverview(value: unknown) {
   const result = {
     classroom: parsed.data.classroom,
     scope: {
-      game: 'matematik' as const,
-      examRef: 'TYT' as const,
-      taxonomyVersion: 'ba-tyt-math-v1' as const,
-      modelVersion: 'institution-classroom-overview-v1' as const,
+      game: firstScope.game,
+      examRef: firstScope.examRef,
+      questionExamRef: firstScope.questionExamRef,
+      taxonomyVersion: parsed.data.taxonomyVersion,
+      scopePolicyVersion: firstScope.scopePolicyVersion,
+      modelVersion: 'institution-classroom-overview-v2' as const,
       windowStart: parsed.data.windowStart,
       windowEnd: parsed.data.windowEnd,
       minimumGroupSize: 3 as const,

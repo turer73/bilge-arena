@@ -57,22 +57,63 @@ describe('teacher invitation head bootstrap', () => {
     expect(result.location.hash).toBe('')
   })
 
-  it('keeps the bootstrap before Plausible and applies the analytics-free private CSP last', () => {
+  it('keeps the bootstrap before third-party scripts and routes private pages through nonce CSP', () => {
     const root = process.cwd()
     const layout = fs.readFileSync(path.join(root, 'src/app/layout.tsx'), 'utf8')
+    const thirdPartyScripts = fs.readFileSync(
+      path.join(root, 'src/components/analytics/privacy-safe-third-party-scripts.tsx'),
+      'utf8',
+    )
+    const inviteLayout = fs.readFileSync(
+      path.join(root, 'src/app/arena/sinif/davet/layout.tsx'),
+      'utf8',
+    )
+    const homepage = fs.readFileSync(path.join(root, 'src/app/page.tsx'), 'utf8')
     const config = fs.readFileSync(path.join(root, 'next.config.mjs'), 'utf8')
-    const bootstrapIndex = layout.indexOf('id="teacher-invite-bootstrap"')
-    const plausibleIndex = layout.indexOf('src="https://analytics.panola.app/js/script.js"')
-    const globalHeadersIndex = config.indexOf("source: '/(.*)'")
+    const proxy = fs.readFileSync(path.join(root, 'src/proxy.ts'), 'utf8')
+    const csp = fs.readFileSync(path.join(root, 'src/lib/security/csp.ts'), 'utf8')
+    const childrenIndex = layout.indexOf('{children}')
+    const thirdPartyMountIndex = layout.indexOf('<PrivacySafeThirdPartyScripts />')
     const privateHeadersIndex = config.indexOf("source: '/arena/sinif/:path*'")
-    const privateBlockEnd = config.indexOf('// Statik asset', privateHeadersIndex)
-    const privateBlock = config.slice(privateHeadersIndex, privateBlockEnd)
+    const nextSourceIndex = config.indexOf('source:', privateHeadersIndex + 1)
+    const privateBlock = config.slice(privateHeadersIndex, nextSourceIndex)
 
-    expect(bootstrapIndex).toBeGreaterThan(-1)
-    expect(bootstrapIndex).toBeLessThan(plausibleIndex)
-    expect(privateHeadersIndex).toBeGreaterThan(globalHeadersIndex)
-    expect(privateBlock).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'")
-    expect(privateBlock).not.toMatch(/analytics\.panola|googletagmanager|googlesyndication|sentry/i)
+    expect(childrenIndex).toBeGreaterThan(-1)
+    expect(childrenIndex).toBeLessThan(thirdPartyMountIndex)
+    expect(layout).not.toContain('id="teacher-invite-bootstrap"')
+    expect(layout).not.toContain('id="activation-experiment-bootstrap"')
+    expect(inviteLayout).toContain('id="teacher-invite-bootstrap"')
+    expect(inviteLayout).toContain("(await headers()).get('x-nonce')")
+    expect(inviteLayout).toContain('nonce={nonce}')
+    expect(homepage).toContain('id="activation-experiment-bootstrap"')
+    expect(homepage).toContain('type="application/ld+json"')
+    expect(thirdPartyScripts).toContain('https://analytics.panola.app/js/script.js')
+    expect(thirdPartyScripts).toContain('isSensitiveWorkspacePath(pathname)')
     expect(privateBlock).toContain("{ key: 'Referrer-Policy', value: 'no-referrer' }")
+    expect(privateBlock).not.toContain("key: 'Content-Security-Policy'")
+    expect(proxy).toContain('isSensitiveWorkspacePath(pathname)')
+    expect(proxy).toContain("requestHeaders.set('x-nonce', nonce)")
+    expect(csp).toContain("'strict-dynamic'")
+    expect(csp).not.toMatch(/analytics\.panola|googletagmanager|googlesyndication|plausible/i)
+  })
+
+  /**
+   * Public monetized pages retain the AdSense-compatible policy. Private
+   * documents are dynamically rendered and receive a per-request nonce.
+   */
+  it('forces dynamic rendering for every private nonce boundary', () => {
+    const root = process.cwd()
+    const privateLayouts = [
+      'src/app/admin/layout.tsx',
+      'src/app/arena/sinif/layout.tsx',
+      'src/app/arena/kurum/layout.tsx',
+      'src/app/hesap/guvenlik/layout.tsx',
+    ]
+
+    for (const relativePath of privateLayouts) {
+      const privateLayout = fs.readFileSync(path.join(root, relativePath), 'utf8')
+      expect(privateLayout, relativePath).toContain("from 'next/server'")
+      expect(privateLayout, relativePath).toContain('await connection()')
+    }
   })
 })

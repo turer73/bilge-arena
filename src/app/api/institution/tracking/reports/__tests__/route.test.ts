@@ -3,7 +3,7 @@ const mocks=vi.hoisted(()=>({enabled:vi.fn(),context:vi.fn(),rpc:vi.fn(),analysi
 vi.mock('@/lib/institution-tracking/server-security',()=>({isInstitutionTrackingEnabled:mocks.enabled}))
 vi.mock('@/lib/institution-pilot/route-context',()=>({requireInstitutionPilotRouteContext:mocks.context}))
 vi.mock('@/lib/teacher-classroom/rate-limits',()=>({teacherClassroomWriteLimiter:{kind:'write'}}))
-vi.mock('@/lib/institution-tracking/student-analysis',()=>({buildInstitutionStudentLearningAnalysis:mocks.analysis}))
+vi.mock('@/lib/institution-tracking/student-analysis',async(importOriginal)=>{const actual=await importOriginal<typeof import('@/lib/institution-tracking/student-analysis')>();return{...actual,buildInstitutionStudentLearningAnalysis:mocks.analysis}})
 vi.mock('@/lib/institution-tracking/student-report',async(importOriginal)=>{const actual=await importOriginal<typeof import('@/lib/institution-tracking/student-report')>();return{...actual,buildInstitutionStudentReportSnapshot:mocks.snapshot}})
 import {GET,POST} from '../route'
 const USER_ID='11111111-1111-4111-8111-111111111111',CLASSROOM_ID='22222222-2222-4222-8222-222222222222',MEMBER_REF='a'.repeat(32),REQUEST_ID='33333333-3333-4333-8333-333333333333'

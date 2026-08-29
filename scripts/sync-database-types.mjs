@@ -4,8 +4,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PROJECT_ID = process.env.SUPABASE_PROJECT_ID || 'lvnmzdowhfzmpkueurih'
-const CLI_VERSION = '2.109.1'
 const CHECK_ONLY = process.argv.includes('--check')
+const TOKEN_EXPIRY_WARNING_DAYS = 14
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const projectDir = path.resolve(scriptDir, '..')
@@ -22,11 +22,36 @@ if (!process.env.SUPABASE_ACCESS_TOKEN) {
   process.exit(1)
 }
 
-const useLocalCli = existsSync(localCli)
-const command = useLocalCli ? localCli : process.platform === 'win32' ? 'npx.cmd' : 'npx'
-const commandArgs = useLocalCli
-  ? ['gen', 'types', 'typescript']
-  : ['--yes', `supabase@${CLI_VERSION}`, 'gen', 'types', 'typescript']
+const tokenExpiresAt = process.env.SUPABASE_TOKEN_EXPIRES_AT?.trim()
+if (!tokenExpiresAt) {
+  console.warn(
+    'SUPABASE_TOKEN_EXPIRES_AT is not set; configure the repository variable so rotation can be planned.'
+  )
+} else {
+  const expiryMs = Date.parse(tokenExpiresAt)
+  if (!Number.isFinite(expiryMs)) {
+    console.error('SUPABASE_TOKEN_EXPIRES_AT must be an ISO-8601 timestamp.')
+    process.exit(1)
+  }
+
+  const nowMs = Date.now()
+  const remainingDays = Math.ceil((expiryMs - nowMs) / 86_400_000)
+  if (expiryMs <= nowMs) {
+    console.error('Supabase schema-read token is expired; rotate SUPABASE_ACCESS_TOKEN.')
+    process.exit(1)
+  }
+  if (remainingDays <= TOKEN_EXPIRY_WARNING_DAYS) {
+    console.warn(`Supabase schema-read token expires in ${remainingDays} day(s); rotate it now.`)
+  }
+}
+
+if (!existsSync(localCli)) {
+  console.error('Pinned Supabase CLI is missing. Run npm ci before generating database types.')
+  process.exit(1)
+}
+
+const command = localCli
+const commandArgs = ['gen', 'types', 'typescript']
 
 commandArgs.push('--project-id', PROJECT_ID, '--schema', 'public')
 
@@ -38,7 +63,18 @@ const result = spawnSync(command, commandArgs, {
 })
 
 if (result.error || result.status !== 0) {
-  console.error(result.stderr?.trim() || result.error?.message || 'Supabase CLI failed.')
+  const stderr = result.stderr?.trim() || ''
+  if (/unauthorized|invalid.*token|access token.*expired/i.test(stderr)) {
+    console.error(
+      'Supabase rejected the schema-read token. Rotate the GitHub SUPABASE_ACCESS_TOKEN secret.'
+    )
+  } else if (/forbidden|permission denied|insufficient.*permission/i.test(stderr)) {
+    console.error(
+      'Supabase accepted the token but it cannot read the production schema. Check its project scope and database-read permission.'
+    )
+  } else {
+    console.error(stderr || result.error?.message || 'Supabase CLI failed.')
+  }
   process.exit(result.status || 1)
 }
 

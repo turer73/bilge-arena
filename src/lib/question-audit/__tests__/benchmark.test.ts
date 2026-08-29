@@ -47,8 +47,11 @@ function label(id: string, flawCodes: GoldLabel['flawCodes']): GoldLabel {
     questionId: id,
     contentSha256: id.repeat(64).slice(0, 64),
     flawCodes,
+    evidenceClass: 'curator_adjudicated',
+    proofRef: 'f'.repeat(64),
     reviewerCount: 2,
     adjudication: 'consensus',
+    reviewerRefs: ['a'.repeat(64), 'b'.repeat(64)],
   }
 }
 
@@ -131,9 +134,35 @@ describe('insan-altin benchmark', () => {
     expect(report.promotion.passed).toBe(false)
   })
 
+  it('hex hash buyuk-kucuk harf farkini revizyon farki saymaz', () => {
+    const gold = { ...label('a', []), contentSha256: 'A'.repeat(64) }
+    const report = evaluateBenchmark([gold], [item('a', 'APPROVED')], 0, { ...permissive, minLabels: 1, minPositiveLabels: 0 })
+    expect(report).toMatchObject({ matchedCount: 1, evaluatedCount: 1, coverage: 1 })
+  })
+
   it('tek-reviewer etiketi altin standart diye kabul etmez', () => {
-    const bad = { ...label('a', []), reviewerCount: 1 }
-    expect(() => evaluateBenchmark([bad], [item('a', 'APPROVED')], 0, permissive)).toThrow('en az iki reviewer')
+    const bad = { ...label('a', []), reviewerCount: 1, reviewerRefs: ['a'.repeat(64)] }
+    expect(() => evaluateBenchmark([bad], [item('a', 'APPROVED')], 0, permissive)).toThrow('consensus tam iki reviewer')
+  })
+
+  it('yinelenen anonim reviewer referansini bagimsiz uzman saymaz', () => {
+    const bad = { ...label('a', []), reviewerRefs: ['a'.repeat(64), 'A'.repeat(64)] }
+    expect(() => evaluateBenchmark([bad], [item('a', 'APPROVED')], 0, permissive)).toThrow('farkli ve anonim')
+  })
+
+  it('adjudicated etikette tam iki reviewer ve bir adjudicator ister', () => {
+    const bad = {
+      ...label('a', []),
+      reviewerCount: 4,
+      adjudication: 'adjudicated' as const,
+      reviewerRefs: ['a', 'b', 'c', 'd'].map((ref) => ref.repeat(64)),
+    }
+    expect(() => evaluateBenchmark([bad], [item('a', 'APPROVED')], 0, permissive)).toThrow('tam uc reviewer')
+  })
+
+  it('ayni sorunun iki revizyonuyla orneklem sayisini sisirmeyi reddeder', () => {
+    const second = { ...label('a', []), contentSha256: 'f'.repeat(64) }
+    expect(() => evaluateBenchmark([label('a', []), second], [item('a', 'APPROVED')], 0, permissive)).toThrow('birden fazla revizyon')
   })
 
   it('varsayilan kapida kucuk sentetik orneklemi terfi ettirmez', () => {

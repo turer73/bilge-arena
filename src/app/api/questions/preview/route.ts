@@ -2,7 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
-import { GAME_SLUGS } from '@/lib/constants/games'
+import {
+  GAMES,
+  GAME_SLUGS,
+  getCategoriesForExam,
+  normalizeCategoryAlias,
+  type GameSlug,
+} from '@/lib/constants/games'
 import { parseQuestionRows, toPublicQuestion } from '@/lib/utils/question-public'
 import {
   ACTIVATION_REWARD_COOKIE,
@@ -50,11 +56,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Geçerli oyun belirtilmedi' }, { status: 400 })
   }
 
-  const category = searchParams.get('category') || null
+  const gameSlug = game as GameSlug
+  const category = normalizeCategoryAlias(gameSlug, searchParams.get('category') || null)
   const difficultyRaw = searchParams.get('difficulty')
-  const difficulty = difficultyRaw ? parseInt(difficultyRaw, 10) : null
+  const difficulty = difficultyRaw === null ? null : Number(difficultyRaw)
+  if (difficulty !== null && (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5)) {
+    return NextResponse.json({ error: 'Gecerli zorluk belirtilmedi' }, { status: 400 })
+  }
   const examRefRaw = searchParams.get('examRef')
-  const examRef = examRefRaw && VALID_EXAM_REFS.has(examRefRaw) ? examRefRaw : null
+  if (examRefRaw !== null && !VALID_EXAM_REFS.has(examRefRaw)) {
+    return NextResponse.json({ error: 'Gecerli sinav kapsami belirtilmedi' }, { status: 400 })
+  }
+  const examRef = examRefRaw
+  if (
+    category
+    && GAMES[gameSlug].categories.includes(category)
+    && !getCategoriesForExam(gameSlug, examRef).includes(category)
+  ) {
+    return NextResponse.json({ error: 'Kategori sinav kapsamiyla uyumsuz' }, { status: 400 })
+  }
   const activationRequested = searchParams.get('activation') === '1'
 
   if (activationRequested && process.env.ACTIVATION_EXPERIMENT_ENABLED !== 'true') {

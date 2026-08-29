@@ -1,4 +1,5 @@
 import { CURRICULUM_NODE_TYPES, type PublicCurriculumNode } from './graph'
+import type { MasteryDiscoveryPublic } from './discovery'
 import type { MasteryStatus } from './status'
 
 export interface MasteryOutcomePublic {
@@ -39,6 +40,7 @@ export interface MasteryOutcomePublic {
 
 export interface MasteryCoveragePublic {
   supported: boolean
+  diagnosticAvailable: boolean
   taxonomyVersion: string | null
   totalQuestions: number
   mappedQuestions: number
@@ -49,6 +51,7 @@ export interface MasteryMapResponsePublic {
   game: string
   examRef: string | null
   coverage: MasteryCoveragePublic
+  discovery: MasteryDiscoveryPublic | null
   graph: PublicCurriculumNode | null
   outcomes: MasteryOutcomePublic[]
 }
@@ -156,13 +159,14 @@ function validOutcome(value: unknown): value is MasteryOutcomePublic {
 
 export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePublic | null {
   if (!isRecord(value)) return null
-  if (!hasOnlyKeys(value, ['game', 'examRef', 'coverage', 'graph', 'outcomes'])) return null
+  if (!hasOnlyKeys(value, ['game', 'examRef', 'coverage', 'discovery', 'graph', 'outcomes'])) return null
   if (
     typeof value.game !== 'string'
     || (value.examRef !== null && typeof value.examRef !== 'string')
     || !isRecord(value.coverage)
-    || !hasOnlyKeys(value.coverage, ['supported', 'taxonomyVersion', 'totalQuestions', 'mappedQuestions', 'percentage'])
+    || !hasOnlyKeys(value.coverage, ['supported', 'diagnosticAvailable', 'taxonomyVersion', 'totalQuestions', 'mappedQuestions', 'percentage'])
     || typeof value.coverage.supported !== 'boolean'
+    || typeof value.coverage.diagnosticAvailable !== 'boolean'
     || (value.coverage.taxonomyVersion !== null && typeof value.coverage.taxonomyVersion !== 'string')
     || typeof value.coverage.totalQuestions !== 'number'
     || typeof value.coverage.mappedQuestions !== 'number'
@@ -184,8 +188,10 @@ export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePubli
   if (!value.coverage.supported) {
     if (
       value.coverage.taxonomyVersion !== null
+      || value.coverage.diagnosticAvailable
       || value.coverage.totalQuestions !== 0
       || value.coverage.mappedQuestions !== 0
+      || value.discovery !== null
       || value.graph !== null
       || value.outcomes.length !== 0
     ) return null
@@ -196,7 +202,22 @@ export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePubli
     typeof value.coverage.taxonomyVersion !== 'string'
     || !value.coverage.taxonomyVersion
     || value.coverage.mappedQuestions !== value.coverage.totalQuestions
+    || !isRecord(value.discovery)
     || value.graph === null
+  ) return null
+
+  const discovery = value.discovery
+  if (
+    !hasOnlyKeys(discovery, [
+      'level', 'stage', 'diagnosticCompleted', 'evidenceCollected', 'evidenceTarget',
+      'readyOutcomes', 'totalOutcomes', 'journeyPercentage',
+    ])
+    || ![1, 2, 3].includes(Number(discovery.level))
+    || !['estimate', 'evidence', 'ready'].includes(String(discovery.stage))
+    || typeof discovery.diagnosticCompleted !== 'boolean'
+    || !['evidenceCollected', 'evidenceTarget', 'readyOutcomes', 'totalOutcomes', 'journeyPercentage']
+      .every((field) => Number.isInteger(discovery[field]) && Number(discovery[field]) >= 0)
+    || Number(discovery.journeyPercentage) > 100
   ) return null
 
   const leaves = new Map<string, { nodeCode: string; path: string[] }>()
@@ -211,6 +232,31 @@ export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePubli
     }
   }
   if (seenOutcomes.size !== leaves.size) return null
+
+  const expectedEvidence = (value.outcomes as MasteryOutcomePublic[])
+    .reduce((sum, outcome) => sum + Math.min(3, outcome.attempts), 0)
+  const expectedReady = (value.outcomes as MasteryOutcomePublic[])
+    .filter((outcome) => outcome.status !== 'insufficient').length
+  const expectedStage = expectedReady === value.outcomes.length
+    ? 'ready'
+    : discovery.diagnosticCompleted || expectedEvidence > 0
+      ? 'evidence'
+      : 'estimate'
+  const expectedLevel = expectedStage === 'ready' ? 3 : expectedStage === 'evidence' ? 2 : 1
+  const expectedJourney = expectedStage === 'ready'
+    ? 100
+    : discovery.diagnosticCompleted
+      ? Math.min(99, 25 + Math.round((expectedEvidence / (value.outcomes.length * 3)) * 75))
+      : Math.min(99, Math.round((expectedEvidence / (value.outcomes.length * 3)) * 100))
+  if (
+    discovery.totalOutcomes !== value.outcomes.length
+    || discovery.evidenceTarget !== value.outcomes.length * 3
+    || discovery.evidenceCollected !== expectedEvidence
+    || discovery.readyOutcomes !== expectedReady
+    || discovery.stage !== expectedStage
+    || discovery.level !== expectedLevel
+    || discovery.journeyPercentage !== expectedJourney
+  ) return null
 
   return value as unknown as MasteryMapResponsePublic
 }

@@ -23,7 +23,7 @@ export async function generateMetadata({
   if (!a) return {}
   const ogImage = `${siteUrl}/og?title=${encodeURIComponent(a.title)}&subtitle=${encodeURIComponent(a.description.slice(0, 80))}`
   return {
-    title: `${a.title} | Bilge Arena Rehber`,
+    title: { absolute: a.seoTitle ?? `${a.title} | Bilge Arena Rehber` },
     description: a.description,
     alternates: { canonical: `${siteUrl}/rehber/${slug}` },
     openGraph: {
@@ -63,9 +63,14 @@ export default async function RehberArticlePage({
       inLanguage: 'tr',
       datePublished: a.updated,
       dateModified: a.updated,
-      author: { '@type': 'Organization', name: 'Bilge Arena' },
+      author: {
+        '@type': 'Organization',
+        name: 'Bilge Arena İçerik Ekibi',
+        url: `${siteUrl}/hakkinda#icerik-sorumlulugu`,
+      },
       publisher: { '@type': 'Organization', name: 'Bilge Arena', url: siteUrl },
       mainEntityOfPage: `${siteUrl}/rehber/${slug}`,
+      citation: a.sources?.map((source) => source.url),
     },
     {
       '@context': 'https://schema.org',
@@ -98,9 +103,27 @@ export default async function RehberArticlePage({
         <div className="mb-3 flex items-center gap-2 text-[11px] font-bold text-[var(--focus)]">
           <span className="rounded-md bg-[var(--focus-bg)] px-2 py-0.5">{a.category}</span>
           <span className="text-[var(--text-muted)]">{a.readingMinutes} dk okuma</span>
+          <span className="text-[var(--text-muted)]">
+            Güncellendi: {new Intl.DateTimeFormat('tr-TR').format(new Date(`${a.updated}T00:00:00Z`))}
+          </span>
         </div>
         <h1 className="text-3xl font-bold leading-tight tracking-tight">{a.title}</h1>
         <p className="mt-3 text-base text-[var(--text-sub)]">{a.description}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
+          <span>Hazırlayan</span>
+          <Link
+            href="/hakkinda#icerik-sorumlulugu"
+            className="font-semibold text-[var(--text-sub)] hover:text-[var(--focus)] hover:underline"
+          >
+            Bilge Arena İçerik Ekibi
+          </Link>
+          {a.sources && a.sources.length > 0 && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>Birincil kaynaklarla doğrulandı</span>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Govde */}
@@ -117,6 +140,32 @@ export default async function RehberArticlePage({
           )
         )}
       </div>
+
+      {a.sources && a.sources.length > 0 && (
+        <aside className="mt-10 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
+          <h2 className="text-base font-bold">
+            {a.sourceNote ? 'Kaynaklar ve yöntem notu' : 'Kaynaklar ve güncellik'}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--text-sub)]">
+            {a.sourceNote
+              ?? 'Sınav yapısı ve tarihler için birincil kaynaklar kullanılmıştır. Kurallar değişebileceği için başvuru yapacağın yılın güncel ÖSYM kılavuzunu ayrıca kontrol et.'}
+          </p>
+          <ul className="mt-3 space-y-2 text-sm">
+            {a.sources.map((source) => (
+              <li key={source.url}>
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[var(--focus)] hover:underline"
+                >
+                  {source.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )}
 
       {/* CTA */}
       <div className="mt-10 rounded-2xl border border-[var(--focus)]/20 bg-[var(--focus-bg)] p-6 text-center">

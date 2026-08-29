@@ -3,14 +3,27 @@
     "questionId": "clean-question",
     "contentSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "flawCodes": [],
+    "evidenceClass": "curator_adjudicated",
+    "proofRef": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "reviewerCount": 2,
-    "adjudication": "consensus"
+    "adjudication": "consensus",
+    "reviewerRefs": [
+      "1111111111111111111111111111111111111111111111111111111111111111",
+      "2222222222222222222222222222222222222222222222222222222222222222"
+    ]
   },
   {
     "questionId": "wrong-key-question",
     "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "flawCodes": ["WRONG_KEY_SUSPECTED"],
+    "evidenceClass": "curator_adjudicated",
+    "proofRef": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "reviewerCount": 3,
-    "adjudication": "adjudicated"
+    "adjudication": "adjudicated",
+    "reviewerRefs": [
+      "1111111111111111111111111111111111111111111111111111111111111111",
+      "2222222222222222222222222222222222222222222222222222222222222222",
+      "3333333333333333333333333333333333333333333333333333333333333333"
+    ]
   }
 ]

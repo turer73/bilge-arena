@@ -194,6 +194,36 @@ Bu soruların hiçbirine cevap vermeyen özellik çekirdek yol haritasına alın
 
 ## 8. İlk ücretli pilot MVP'si
 
+### 8.0 Ücretli pilot öncesi platform kontrollü sistem canary'si
+
+Ürün, güvenlik ve kurum operasyonunu gerçek kullanımda düşük riskle ölçmek için
+ticari pilottan ayrı bir **ücretsiz mühendislik canary'si** yürütülebilir. Bu
+canary herkese açık deneme veya satış kampanyası değildir; ödeme isteğini,
+yenilemeyi ya da fiyatı doğruladığı ileri sürülemez.
+
+| Alan | Ücretsiz canary sınırı |
+|---|---|
+| Kabul | Yalnız platform yöneticisinin AAL2 oturumuyla, uygunluğu önceden doğrulanmış mevcut hesaba |
+| Süre | 14, 30 veya en fazla 60 günlük yazılı değerlendirme penceresi |
+| Kurum | Aynı anda ilk aşamada 1 küçük dershane, 1 şube |
+| Öğrenci | En fazla 40 davetli öğrenci |
+| Personel | 1 kurum yöneticisi ve en fazla 1 öğretmen |
+| Ücret | Sistem canary'si boyunca 0 TL; özel geliştirme ve ticari taahhüt yok |
+| Teknik kapı | Uygulama bayrağı ve DB `free_provisioning` kontrolü birlikte açık; DB `commercial_provisioning` ve ücretli onboarding kapalı |
+| Denetim bağı | Kişisel veri içermeyen zorunlu harici onay/pilot dosyası referansı |
+| Bitiş | Süre dolunca tenant erişimi DB'de fail-closed; platform yöneticisi kurumu auditli biçimde askıya alır |
+
+Canary başlamadan kurum sorumlusu, kapsam/süre, aydınlatma-DPA, veri
+saklama/imha ve destek kanalı yazılıdır; immutable provision olayına yalnız bu
+dosyanın kişisel veri içermeyen referansı bağlanır. Öğrenciler normal Bilge Arena hesabı
+oluşturur; kurum veya sınıf yetkisi kayıt sırasında otomatik verilmez. Kuruma
+katılım yalnız süreli ve kullanım sınırlı sınıf davetiyle gerçekleşir.
+
+Canary'de davet ve hesap aktivasyonu, ilk doğrulanmış çalışma, haftalık aktif
+gün, görev yayınlama/tamamlama, yönetici özet kullanımı, destek süresi, kota
+reddi ile güvenlik/mahremiyet olayları ölçülür. Bu kohort, aşağıdaki ücretli
+pilotun ticari dönüşüm metriklerinden ayrı raporlanır.
+
 ### 8.1 Pilotun amacı
 
 Pilotun amacı çok sayıda özellik göstermek değil, aşağıdaki ticari varsayımı kanıtlamaktır:
@@ -357,7 +387,7 @@ Fiyata dahil:
 
 - %50 sözleşme ve pilot takvimi onayında;
 - %50 üretim erişimi açıldığında;
-- ücretsiz pilot yapılmaz;
+- ticari pilot ücretsiz yapılmaz; 8.0'daki dar mühendislik canary'si ticari pilot sayılmaz;
 - müşteri kaynaklı gecikme pilot takvimini uzatmaz;
 - güvenlik veya ürün kaynaklı ciddi engelde kullanılmayan dönem telafi edilir.
 
@@ -443,11 +473,12 @@ Bilge Arena Kurumsal'ın ürünü kurs işletmesini yönetmek değildir. Ürün�
 
 İlk doğrulama sırası:
 
-1. Tek YKS/TYT kurumunda dar kapsamlı, ücretli ve ölçümlü pilot.
-2. Öğrenci aktivasyonu ve dört haftalık tekrar kullanım kanıtı.
-3. Öğretmen takip davranışı ve yönetici rapor kullanımı.
-4. Yıllık lisansa gerçek dönüşüm.
-5. Ancak bundan sonra LGS, çok şube, entegrasyon ve daha geniş kurumsal paketler.
+1. Tek küçük dershanede, en fazla 40 öğrenci ve 2 personelle davetli ücretsiz sistem canary'si.
+2. Canary güvenlik/operasyon kapılarını geçerse tek YKS/TYT kurumunda dar kapsamlı, ücretli ve ölçümlü pilot.
+3. Öğrenci aktivasyonu ve dört haftalık tekrar kullanım kanıtı.
+4. Öğretmen takip davranışı ve yönetici rapor kullanımı.
+5. Yıllık lisansa gerçek dönüşüm.
+6. Ancak bundan sonra LGS, çok şube, entegrasyon ve daha geniş kurumsal paketler.
 
 Başarı ölçütü özellik sayısı değil; kurumun “öğrencilerimiz gerçekten daha düzenli çalışıyor ve bunu yönetebiliyoruz” diyerek lisansını yenilemesidir.
 

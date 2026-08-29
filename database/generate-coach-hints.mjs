@@ -13,7 +13,7 @@
  *     --model deepseek-chat
  */
 
-import { appendFileSync, existsSync, readFileSync } from 'node:fs'
+import { appendFileSync, closeSync, existsSync, openSync, readFileSync } from 'node:fs'
 import {
   STAGING_SCHEMA,
   VALIDATOR_VERSION,
@@ -78,6 +78,15 @@ function readJsonl(path) {
   return text.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line))
 }
 
+function readJsonlIfExists(path) {
+  try {
+    return readJsonl(path)
+  } catch (error) {
+    if (error?.code === 'ENOENT') return []
+    throw error
+  }
+}
+
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
@@ -111,9 +120,6 @@ async function main() {
   for (const path of [args.manifest, args.source]) {
     if (!existsSync(path)) usage(`Required input does not exist: ${path}`)
   }
-  if (existsSync(args.output) && !args.resume && !args.dryRun) {
-    usage(`Refusing to overwrite ${args.output}; use --resume or choose a new staging path`)
-  }
   if (!args.dryRun && !process.env.DEEPSEEK_API_KEY) {
     usage('DEEPSEEK_API_KEY must be injected by the external narrow executor')
   }
@@ -130,52 +136,61 @@ async function main() {
     sourceByRevision.set(item.revisionId, source)
   }
 
-  const completed = new Set()
-  if (existsSync(args.output)) {
-    for (const record of readJsonl(args.output)) {
+  const outputFd = args.dryRun
+    ? null
+    : openSync(args.output, args.resume ? 'a+' : 'wx+', 0o600)
+  try {
+    const existingRecords = args.dryRun
+      ? readJsonlIfExists(args.output)
+      : args.resume
+        ? readJsonl(outputFd)
+        : []
+    const completed = new Set()
+    for (const record of existingRecords) {
       validateStagingRecord(record, manifest, sourceByRevision)
       if (completed.has(record.revisionId)) throw new Error('staging output repeats a revision')
       completed.add(record.revisionId)
     }
-  }
 
-  process.stdout.write(`Manifest ${manifest.manifestSha256}; immutable rows ${sourceByRevision.size}; already staged ${completed.size}.\n`)
-  if (args.dryRun) {
-    process.stdout.write('Dry run passed. No model call or file write occurred.\n')
-    return
-  }
-
-  let failed = 0
-  for (let index = 0; index < manifest.items.length; index += 1) {
-    const item = manifest.items[index]
-    if (completed.has(item.revisionId)) continue
-    const source = sourceByRevision.get(item.revisionId)
-    try {
-      const raw = await generate(buildCoachPrompt(source.content, source.outcomeTitle), process.env.DEEPSEEK_API_KEY, args.model)
-      const coach = parseCoachResponse(raw, source.content)
-      const record = {
-        schemaVersion: STAGING_SCHEMA,
-        manifestSha256: manifest.manifestSha256,
-        questionId: item.questionId,
-        revisionId: item.revisionId,
-        contentSha256: item.contentSha256,
-        model: args.model,
-        generatedAt: new Date().toISOString(),
-        rawResponseSha256: sha256Hex(raw),
-        validatorVersion: VALIDATOR_VERSION,
-        coach,
-      }
-      appendFileSync(args.output, `${JSON.stringify(record)}\n`, 'utf8')
-      process.stdout.write(`[${index + 1}/${manifest.items.length}] staged and validated\n`)
-    } catch (error) {
-      failed += 1
-      process.stderr.write(`[${index + 1}/${manifest.items.length}] failed: ${error.message}\n`)
+    process.stdout.write(`Manifest ${manifest.manifestSha256}; immutable rows ${sourceByRevision.size}; already staged ${completed.size}.\n`)
+    if (args.dryRun) {
+      process.stdout.write('Dry run passed. No model call or file write occurred.\n')
+      return
     }
-    await sleep(300)
-  }
 
-  process.stdout.write(`Staging finished: ${manifest.items.length - completed.size - failed} new, ${completed.size} resumed, ${failed} failed.\n`)
-  if (failed > 0) process.exitCode = 1
+    let failed = 0
+    for (let index = 0; index < manifest.items.length; index += 1) {
+      const item = manifest.items[index]
+      if (completed.has(item.revisionId)) continue
+      const source = sourceByRevision.get(item.revisionId)
+      try {
+        const raw = await generate(buildCoachPrompt(source.content, source.outcomeTitle), process.env.DEEPSEEK_API_KEY, args.model)
+        const coach = parseCoachResponse(raw, source.content)
+        const record = {
+          schemaVersion: STAGING_SCHEMA,
+          manifestSha256: manifest.manifestSha256,
+          questionId: item.questionId,
+          revisionId: item.revisionId,
+          contentSha256: item.contentSha256,
+          model: args.model,
+          generatedAt: new Date().toISOString(),
+          rawResponseSha256: sha256Hex(raw),
+          validatorVersion: VALIDATOR_VERSION,
+          coach,
+        }
+        appendFileSync(outputFd, `${JSON.stringify(record)}\n`, 'utf8')
+        process.stdout.write(`[${index + 1}/${manifest.items.length}] staged and validated\n`)
+      } catch (error) {
+        failed += 1
+        process.stderr.write(`[${index + 1}/${manifest.items.length}] failed: ${error.message}\n`)
+      }
+      await sleep(300)
+    }
+    process.stdout.write(`Staging finished: ${manifest.items.length - completed.size - failed} new, ${completed.size} resumed, ${failed} failed.\n`)
+    if (failed > 0) process.exitCode = 1
+  } finally {
+    if (outputFd !== null) closeSync(outputFd)
+  }
 }
 
 main().catch((error) => {

@@ -2,7 +2,8 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import {
   BookOpenText,
   Building2,
@@ -22,7 +23,6 @@ import {
   Lock,
   MessageCircle,
   Play,
-  Settings,
   ShoppingBag,
   ShieldCheck,
   Sparkles,
@@ -68,14 +68,18 @@ interface MobileHomeDemoProps {
   examLabel?: 'YKS' | 'LGS'
   /** Canli yoldaki cevaplari TYT/AYT/LGS kapsaminda ayirir. */
   examRef?: string | null
+  /** Canlı üst çubuktaki sınav kapsamı seçimini uygulama durumuna yazar. */
+  onExamRefChange?: (examRef: string) => void
   availableSubjects?: MobileSubjectId[]
   currentStreak?: number
   coinBalance?: number
   totalXP?: number
   displayName?: string
+  avatarUrl?: string | null
   dailyGoal?: { current: number; target: number } | null
   classroomEnabled?: boolean
   institutionEnabled?: boolean
+  communityQualityEnabled?: boolean
   showBottomNav?: boolean
   /** Canli modda gercek ilerlemeyi cekmek icin; demo modunda gerekmez. */
   userId?: string | null
@@ -211,7 +215,7 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
       onClick={(event) => {
         if (locked) event.preventDefault()
       }}
-      className="group relative z-10 flex min-h-16 items-center gap-2 rounded-[18px] border-2 bg-[var(--app-card)] p-2 outline-none transition-transform active:translate-y-1 focus-visible:ring-4 focus-visible:ring-[var(--app-accent)]"
+      className="group relative z-10 flex min-h-16 items-center gap-2 rounded-[18px] border-2 bg-[var(--app-card)] p-2 outline-none transition-transform hover:-translate-y-0.5 active:translate-y-1 focus-visible:ring-4 focus-visible:ring-[var(--app-accent)] md:min-h-[76px] md:gap-3 md:p-3"
       style={{
         gridColumn: snakeColumn(step.index),
         gridRow: Math.floor(step.index / 2) + 1,
@@ -221,7 +225,7 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
       }}
     >
       <span
-        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white"
+        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white md:h-11 md:w-11"
         style={{ background: locked ? 'var(--app-disabled)' : subject.color }}
       >
         <Icon aria-hidden="true" size={21} fill={current || exam ? 'currentColor' : 'none'} strokeWidth={3} />
@@ -231,7 +235,7 @@ function PathStep({ step, subject }: { step: PathStepModel; subject: Subject }) 
         <span className="block text-[9px] font-black uppercase tracking-[0.08em]" style={{ color: current ? subject.color : done ? 'var(--app-success)' : 'var(--app-text-muted)' }}>
           {current ? 'Sıradaki' : done ? 'Tamamlandı' : exam ? 'Ünite sonu' : `${step.index + 1}. ders`}
         </span>
-        <span className={`mt-0.5 block text-[11px] font-extrabold leading-[13px] ${locked ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text)]'}`}>{step.label}</span>
+        <span className={`mt-0.5 block text-[11px] font-extrabold leading-[13px] md:text-xs md:leading-4 ${locked ? 'text-[var(--app-text-muted)]' : 'text-[var(--app-text)]'}`}>{step.label}</span>
       </span>
     </Link>
   )
@@ -245,21 +249,21 @@ export function MobileHomeDemo({
   mode = 'demo',
   examLabel = 'YKS',
   examRef = null,
+  onExamRefChange,
   availableSubjects,
   currentStreak = 12,
   coinBalance = 480,
   totalXP = 2300,
   displayName = 'Bilgin',
+  avatarUrl = null,
   dailyGoal = { current: 6, target: 10 },
   classroomEnabled = false,
   institutionEnabled = false,
+  communityQualityEnabled = false,
   showBottomNav = true,
   userId = null,
 }: MobileHomeDemoProps = {}) {
-  const visibleSubjects = useMemo(
-    () => SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id)),
-    [availableSubjects],
-  )
+  const visibleSubjects = SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id))
   const [subjectId, setSubjectId] = useState<SubjectId>(visibleSubjects[0]?.id ?? 'matematik')
   // Demo rotasi bir vitrin: pencere hep acik baslar. Canli modda karar
   // efekte birakilir (SSR'da kapali render edilir, hydration uyusmazligi yok).
@@ -267,6 +271,8 @@ export function MobileHomeDemo({
   const coachDialogRef = useRef<HTMLElement | null>(null)
   const coachReturnFocusRef = useRef<HTMLElement | null>(null)
   const [coachMessage, setCoachMessage] = useState(0)
+  const [examPickerOpen, setExamPickerOpen] = useState(false)
+  const [demoExamRef, setDemoExamRef] = useState(examRef)
   const subject = useMemo(() => visibleSubjects.find((item) => item.id === subjectId) ?? visibleSubjects[0] ?? SUBJECTS[0], [subjectId, visibleSubjects])
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
   const gameHref = `/arena/${gameSlug}`
@@ -324,6 +330,17 @@ export function MobileHomeDemo({
   const MessageIcon = message.icon
   const bubbleRadius = '30px 30px 30px 16px'
   const goalRemaining = dailyGoal ? Math.max(0, dailyGoal.target - dailyGoal.current) : null
+  const selectedHeaderExamRef = onExamRefChange ? examRef : demoExamRef
+  const examScopeOptions = examLabel === 'LGS'
+    ? [{ value: 'LGS', label: 'LGS' }]
+    : [
+        { value: 'TYT', label: 'TYT' },
+        { value: 'AYT-SAY', label: 'AYT Sayısal' },
+        { value: 'AYT-EA', label: 'AYT Eşit Ağırlık' },
+        { value: 'AYT-SOZ', label: 'AYT Sözel' },
+        { value: 'YDT', label: 'YDT' },
+      ]
+  const selectedHeaderExamLabel = examScopeOptions.find((option) => option.value === selectedHeaderExamRef)?.label ?? examLabel
   const coachTitle = coachMessage === 0
     ? pathComplete ? `Yol tamam, ${displayName}!` : `Hazırsın, ${displayName}!`
     : coachMessage === 2
@@ -398,33 +415,81 @@ export function MobileHomeDemo({
     }
   }, [coachOpen])
 
-  const openCoach = useCallback(() => {
+  const openCoach = () => {
     setCoachMessage(0)
     setCoachOpen(true)
-  }, [])
+  }
 
   return (
-    <div className={`min-h-[100dvh] bg-[var(--app-bg)] pb-28 text-[var(--app-text)] md:mx-auto md:max-w-[440px] md:border-x md:border-[var(--app-border)] ${mode === 'live' ? '-mt-[var(--navbar-h)]' : ''}`}>
+    <div data-arena-home-surface className={`min-h-[100dvh] bg-[var(--app-bg)] pb-28 text-[var(--app-text)] lg:bg-transparent lg:pb-10 ${mode === 'live' ? '-mt-[var(--navbar-h)] lg:mt-0' : ''}`}>
       <style>{`html { scrollbar-width: none; } html::-webkit-scrollbar { display: none; } nextjs-portal { display: none !important; }`}</style>
       <header inert={coachOpen} className="sticky top-0 z-30 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)]/95 backdrop-blur-xl">
-        <div className="flex h-14 items-center justify-between px-3">
-          <Link href="/arena/profil" aria-label="Sınav türünü değiştir" className="flex min-h-11 items-center gap-1 rounded-xl text-[var(--app-text-sub)]">
-            <ShieldCheck size={24} fill="var(--app-accent-border)" className="text-[var(--app-accent-text)]" strokeWidth={2.5} />
-            <span className="text-xs font-black">{examLabel}</span>
-            <ChevronDown size={14} strokeWidth={3} />
-          </Link>
+        <div className="mx-auto flex h-14 w-full max-w-[1180px] items-center justify-between px-3 md:h-16 md:px-5 xl:px-6">
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Sınav kapsamını değiştir"
+              aria-expanded={examPickerOpen}
+              aria-controls="exam-scope-picker"
+              onClick={() => setExamPickerOpen((current) => !current)}
+              className="flex min-h-11 items-center gap-1 rounded-xl px-1 text-[var(--app-text-sub)] active:bg-[var(--app-hover)]"
+            >
+              <ShieldCheck size={24} fill="var(--app-accent-border)" className="text-[var(--app-accent-text)]" strokeWidth={2.5} />
+              <span className="max-w-[72px] truncate text-xs font-black">{selectedHeaderExamLabel}</span>
+              <ChevronDown size={14} strokeWidth={3} className={examPickerOpen ? 'rotate-180' : ''} />
+            </button>
+            {examPickerOpen && (
+              <div
+                id="exam-scope-picker"
+                role="dialog"
+                aria-label="Sınav kapsamı seç"
+                className="absolute left-0 top-[calc(100%+.4rem)] z-50 w-64 rounded-[20px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_8px_24px_rgba(15,23,42,.2)]"
+              >
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-accent-text)]">{examLabel} kapsamı</p>
+                <p className="mt-1 text-xs font-semibold text-[var(--app-text-sub)]">Çalışmak istediğin sınav bölümünü seç.</p>
+                <div className="mt-3 grid gap-2">
+                  {examScopeOptions.map((option) => {
+                    const active = option.value === selectedHeaderExamRef
+                    return (
+                      <button
+                        type="button"
+                        key={option.value}
+                        aria-pressed={active}
+                        onClick={() => {
+                          if (onExamRefChange) onExamRefChange(option.value)
+                          else setDemoExamRef(option.value)
+                          setExamPickerOpen(false)
+                        }}
+                        className={`flex min-h-11 items-center justify-between rounded-xl border-2 px-3 text-left text-xs font-black ${active ? 'border-[var(--app-accent)] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]' : 'border-[var(--app-border)] text-[var(--app-text)]'}`}
+                      >
+                        {option.label}
+                        {active && <Check size={16} strokeWidth={3.5} aria-hidden="true" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <Resource icon={Flame} value={currentStreak} color="var(--app-warn)" label="Günlük seri" />
             <Resource icon={Gem} value={compactNumber(coinBalance)} color="#06b6d4" label="Altın" />
             <Resource icon={Sparkles} value={compactNumber(totalXP)} color="var(--wisdom-light)" label="Toplam XP" />
           </div>
-          <Link href="/arena/profil" aria-label="Ayarlar" className="flex h-11 w-11 items-center justify-center rounded-xl text-[var(--app-text-muted)] active:bg-[var(--app-hover)]"><Settings size={20} strokeWidth={2.5} /></Link>
+          <Link href="/arena/profil" aria-label={`${displayName} profilini aç`} className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-sm font-black text-[var(--app-accent-text)] shadow-[0_2px_0_var(--app-shadow-accent)] active:translate-y-0.5">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            ) : displayName.trim().charAt(0).toLocaleUpperCase('tr-TR') || 'B'}
+          </Link>
         </div>
       </header>
 
       <main inert={coachOpen}>
         <section aria-label="Ders seçimi" className="border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-3 py-2.5">
-          <div className="scrollbar-none flex snap-x gap-2 overflow-x-auto pb-1">
+          <div
+            data-subject-tabs
+            className="scrollbar-none mx-auto flex max-w-[1180px] snap-x gap-2 overflow-x-auto pb-1 md:flex-wrap md:justify-center md:gap-3 md:overflow-visible md:px-2 md:py-1"
+          >
             {visibleSubjects.map((item) => {
               const Icon = item.icon
               const active = item.id === subject.id
@@ -432,37 +497,42 @@ export function MobileHomeDemo({
                 <button
                   key={item.id}
                   onClick={() => setSubjectId(item.id)}
+                  aria-label={item.shortLabel}
+                  title={item.label}
                   aria-pressed={active}
-                  className="flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-2xl border-2 px-3 text-xs font-extrabold active:scale-95"
+                  className="flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-2xl border-2 px-3 text-xs font-extrabold transition-transform hover:-translate-y-0.5 active:scale-95 md:min-h-12 md:px-4 md:text-sm"
                   style={{
                     color: active ? item.color : 'var(--app-text-muted)', borderColor: active ? item.color : 'var(--app-border)',
-                    background: active ? `${item.color}10` : '#fff', boxShadow: active ? `0 3px 0 ${item.color}35` : '0 3px 0 var(--app-border)',
+                    background: active ? `${item.color}10` : 'var(--app-card)', boxShadow: active ? `0 3px 0 ${item.color}35` : '0 3px 0 var(--app-border)',
                   }}
                 >
-                  <Icon size={18} strokeWidth={2.7} />{item.shortLabel}
+                  <Icon size={18} strokeWidth={2.7} />
+                  <span className="md:hidden">{item.shortLabel}</span>
+                  <span className="hidden md:inline">{item.label}</span>
                 </button>
               )
             })}
           </div>
         </section>
 
-        <section className="px-4 pt-4">
-          <div className="relative overflow-hidden rounded-[22px] p-4 text-white" style={{ background: `linear-gradient(135deg, ${subject.color}, ${subject.shadow})`, boxShadow: `0 6px 0 ${subject.shadow}` }}>
+        <div data-responsive-arena-grid className="mx-auto grid w-full max-w-[1180px] grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)] md:gap-x-5 md:gap-y-5 md:px-5 md:py-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-x-7 xl:px-6">
+        <section data-learning-path-hero className="px-4 pt-4 md:col-start-1 md:row-start-1 md:px-0 md:pt-0">
+          <div className="relative overflow-hidden rounded-[22px] p-4 text-white md:min-h-[168px] md:rounded-[28px] md:p-6" style={{ background: `linear-gradient(135deg, ${subject.color}, ${subject.shadow})`, boxShadow: `0 6px 0 ${subject.shadow}` }}>
             <div className="pointer-events-none absolute -right-8 -top-14 h-32 w-32 rounded-full border-[22px] border-white/10" />
             <div className="relative flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/75">{unitLabel}</p>
-                <h1 className="mt-1 text-lg font-black leading-tight">{subject.label} Yolu</h1>
-                <p className="mt-1 truncate text-[11px] font-semibold text-white/80">{subject.description}</p>
+                <h1 className="mt-1 text-lg font-black leading-tight md:mt-2 md:text-2xl lg:text-3xl">{subject.label} Yolu</h1>
+                <p className="mt-1 truncate text-[11px] font-semibold text-white/80 md:mt-2 md:text-sm">{subject.description}</p>
               </div>
               <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">{completedCount} / {steps.length}</span>
             </div>
-            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px]"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
+            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px] md:mt-6 md:h-3"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
           </div>
         </section>
 
-        <section className="px-4 pt-4" aria-labelledby="continue-title">
-          <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)]">
+        <section data-today-lesson className="order-[-1] px-4 pt-4 md:order-none md:col-start-2 md:row-start-1 md:px-0 md:pt-0" aria-labelledby="continue-title">
+          <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] md:h-full md:min-h-[168px]">
             <div className="relative z-10 max-w-[64%]">
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Bugünkü ders</div>
               <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{pathComplete ? 'Yol tamamlandı' : currentStep?.label ?? subject.label}</h2>
@@ -483,16 +553,16 @@ export function MobileHomeDemo({
           </div>
         </section>
 
-        <section aria-label={`${subject.label} öğrenme yolu`} className="relative mx-4 mt-4 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-2.5 shadow-[0_5px_0_var(--app-border)]">
-          <div className="mb-2 flex items-center justify-between">
+        <section aria-label={`${subject.label} öğrenme yolu`} className="relative mx-4 mt-4 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card-sunken)] p-2.5 shadow-[0_5px_0_var(--app-border)] md:col-start-1 md:row-start-2 md:row-span-2 md:mx-0 md:mt-0 md:rounded-[28px] md:p-5">
+          <div className="mb-2 flex items-center justify-between md:mb-4">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Ünite planı</div>
-              <h2 className="text-[15px] font-black">Öğrenme yolu</h2>
+              <h2 className="text-[15px] font-black md:text-xl">Öğrenme yolu</h2>
             </div>
             <div className="rounded-xl bg-[var(--app-card)] px-2.5 py-1.5 text-[10px] font-black text-[var(--app-text-sub)] shadow-[0_2px_0_var(--app-shadow)]">{completedCount} / {steps.length}</div>
           </div>
           <div
-            className="relative grid grid-cols-2 gap-x-8 gap-y-1.5"
+            className="relative grid grid-cols-2 gap-x-8 gap-y-1.5 md:gap-x-12 md:gap-y-3"
             style={{ gridTemplateRows: `repeat(${Math.ceil(stepCount / 2)}, minmax(0, 1fr))` }}
           >
             <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -502,7 +572,7 @@ export function MobileHomeDemo({
           </div>
         </section>
 
-        <section aria-labelledby="mobile-tools-title" className="mx-4 mt-4">
+        <section aria-labelledby="mobile-tools-title" className={`mx-4 mt-4 md:col-start-2 md:mx-0 md:mt-0 ${dailyGoal ? 'md:row-start-3' : 'md:row-start-2'}`}>
           <div className="mb-2 flex items-end justify-between">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--app-accent-text)]">Bilge Arena</div>
@@ -510,28 +580,35 @@ export function MobileHomeDemo({
             </div>
             <span className="text-[10px] font-bold text-[var(--app-text-muted)]">Tüm işlevler</span>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-1">
             <Link href="/arena/magaza" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[var(--app-warn-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-warn-border)] active:translate-y-0.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><ShoppingBag size={19} strokeWidth={2.7} /></span>
               <span><span className="block text-xs font-black">Mağaza</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Altınlarını kullan</span></span>
             </Link>
             {classroomEnabled && (
-              <Link href="/arena/sinif" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-success-border)] active:translate-y-0.5">
+              <DocumentBoundaryLink href="/arena/sinif" className="flex min-h-[92px] flex-col justify-between rounded-[20px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-success-border)] active:translate-y-0.5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-[13px] bg-[var(--app-success-tint)] text-[var(--app-success)]"><GraduationCap size={20} strokeWidth={2.7} /></span>
                 <span><span className="block text-xs font-black">Sınıflarım</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Ödev, davet, öğretmen</span></span>
-              </Link>
+              </DocumentBoundaryLink>
             )}
             {institutionEnabled && (
-              <Link href="/arena/kurum" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-accent-border)] active:translate-y-0.5">
+              <DocumentBoundaryLink href="/arena/kurum" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-accent-border)] active:translate-y-0.5 md:col-span-1">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><Building2 size={22} strokeWidth={2.7} /></span>
                 <span className="min-w-0 flex-1"><span className="block text-xs font-black">Kurum paneli</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Sınıf, rol ve rapor akışları</span></span>
+                <ChevronRight size={18} className="text-[var(--app-text-muted)]" strokeWidth={3} />
+              </DocumentBoundaryLink>
+            )}
+            {communityQualityEnabled && (
+              <Link href="/arena/kalite-gorevleri" className="col-span-2 flex min-h-[78px] items-center gap-3 rounded-[20px] border-2 border-[var(--app-success-border)] bg-[var(--app-card)] p-3 text-[var(--app-text)] shadow-[0_4px_0_var(--app-success-border)] active:translate-y-0.5 md:col-span-1">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-[var(--app-success-tint)] text-[var(--app-success)]"><ShieldCheck size={22} strokeWidth={2.7} /></span>
+                <span className="min-w-0 flex-1"><span className="block text-xs font-black">Kalite görevleri</span><span className="mt-0.5 block text-[10px] font-semibold text-[var(--app-text-sub)]">Soruları çöz, hataları doğrula</span></span>
                 <ChevronRight size={18} className="text-[var(--app-text-muted)]" strokeWidth={3} />
               </Link>
             )}
           </div>
         </section>
 
-        {dailyGoal && <section className="mx-4 mb-7 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-border)]">
+        {dailyGoal && <section className="mx-4 mb-7 rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-border)] md:col-start-2 md:row-start-2 md:mx-0 md:mb-0">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--app-warn-tint)] text-[var(--app-warn)]"><Flame size={24} fill="currentColor" strokeWidth={2.6} /></div>
             <div className="min-w-0 flex-1">
@@ -540,13 +617,14 @@ export function MobileHomeDemo({
             </div>
           </div>
         </section>}
+        </div>
       </main>
 
       {showBottomNav && <div inert={coachOpen}><BottomNav activeOverride="learn" appearance="learning" /></div>}
 
       {coachOpen && (
         <div
-          className="fixed inset-y-0 left-1/2 z-[150] flex w-full max-w-[440px] -translate-x-1/2 items-center bg-[var(--app-overlay)] px-3 py-16 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[150] flex w-full items-center bg-[var(--app-overlay)] px-3 py-16 backdrop-blur-[2px]"
           onMouseDown={(event) => {
             if (event.currentTarget === event.target) setCoachOpen(false)
           }}
@@ -557,16 +635,16 @@ export function MobileHomeDemo({
             aria-modal="true"
             aria-labelledby="coach-dialog-title"
             aria-describedby="coach-dialog-description"
-            className="relative min-h-[400px] w-full"
+            className="relative mx-auto min-h-[400px] w-full max-w-[440px] md:min-h-[430px] md:max-w-[600px]"
           >
             <div className="absolute bottom-0 -left-1 z-20 w-[126px]">
               <div className="absolute left-1 top-1 rotate-[-2deg] rounded-lg border-2 border-white bg-[var(--app-accent)] px-2 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_12px_rgba(37,99,235,.28)]">Bilge Chan</div>
               <Image src="/chan/chan-wave.webp" alt="Bilge Arena öğrenme koçu Chan" width={150} height={206} className="mt-7 h-auto w-[126px] drop-shadow-[0_10px_10px_rgba(15,23,42,.22)]" />
             </div>
 
-            <div className="absolute right-0 top-7 z-10 w-[calc(100%-64px)] max-w-[306px]">
+            <div className="absolute right-0 top-7 z-10 w-[calc(100%-64px)] max-w-[306px] md:max-w-[470px]">
               <div
-                className="relative z-10 min-h-[302px] border-2 border-[var(--app-text)] bg-[var(--app-card)] px-5 pb-4 pt-5 text-[var(--app-text)]"
+                className="relative z-10 min-h-[302px] border-2 border-[var(--app-text)] bg-[var(--app-card)] px-5 pb-4 pt-5 text-[var(--app-text)] md:min-h-[350px]"
                 style={{ borderRadius: bubbleRadius, boxShadow: '6px 8px 0 rgba(15,23,42,.16), 0 18px 42px rgba(15,23,42,.20)' }}
               >
                 <span aria-hidden="true" className="absolute -left-[34px] bottom-[112px] h-10 w-10 bg-[var(--app-text)]" style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 52%)' }} />
@@ -586,6 +664,38 @@ export function MobileHomeDemo({
                     <MessageIcon size={20} strokeWidth={2.8} />
                   </span>
                   <span className="text-[10px] font-black uppercase tracking-[0.13em]" style={{ color: message.color }}>{message.eyebrow}</span>
+                </div>
+
+                <div
+                  data-desktop-coach-subjects
+                  aria-label="Bilge Chan ders seçimi"
+                  className="mb-4 hidden items-center gap-1.5 overflow-x-auto border-b-2 border-[var(--app-border-soft)] pb-4 md:flex"
+                >
+                  {visibleSubjects.map((item) => {
+                    const Icon = item.icon
+                    const active = item.id === subject.id
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setSubjectId(item.id)
+                          setCoachMessage(0)
+                        }}
+                        aria-label={`${item.label} rotasını seç`}
+                        aria-pressed={active}
+                        className="flex min-h-10 shrink-0 items-center gap-1 rounded-xl border-2 px-2 text-[10px] font-black transition-transform hover:-translate-y-0.5 active:scale-95"
+                        style={{
+                          color: active ? item.color : 'var(--app-text-muted)',
+                          borderColor: active ? item.color : 'var(--app-border)',
+                          background: active ? `${item.color}10` : 'var(--app-card)',
+                        }}
+                      >
+                        <Icon size={14} strokeWidth={2.8} />
+                        {item.shortLabel}
+                      </button>
+                    )
+                  })}
                 </div>
 
                 <h2 id="coach-dialog-title" className="max-w-[220px] text-xl font-black leading-7 tracking-[-0.02em]">{coachTitle}</h2>

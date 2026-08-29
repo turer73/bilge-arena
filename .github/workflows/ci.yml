@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+
 concurrency:
   # master: HER commit'e BENZERSIZ grup (sha) -> hic kuyruga girmez, hic iptal olmaz;
   #         her merge tam dogrulanir. PR/branch: ref-bazli grup + cancel-in-progress
@@ -67,6 +70,9 @@ jobs:
 
       - run: npm run lint
 
+      - name: Check migration idempotency and SECURITY DEFINER grants
+        run: npm run lint:migrations && npm run lint:migration-grants
+
   type-check:
     name: 🔒 Type Check
     runs-on: ubuntu-latest
@@ -102,7 +108,7 @@ jobs:
         run: npm run test:db
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
         with:
           files: ./coverage/lcov.info
           flags: frontend
@@ -129,6 +135,10 @@ jobs:
     env:
       INSTITUTION_PILOT_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_inst_test_ci
       INSTITUTION_PILOT_TEST_DATABASE_DISPOSABLE: '1'
+      TEACHER_CLASSROOM_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_r42_test_ci
+      TEACHER_CLASSROOM_TEST_DATABASE_DISPOSABLE: '1'
+      LEADERBOARD_PRIVACY_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_inst_test_ci
+      LEADERBOARD_PRIVACY_TEST_DATABASE_DISPOSABLE: '1'
     steps:
       - uses: actions/checkout@v6
 
@@ -139,13 +149,73 @@ jobs:
 
       - run: npm ci
 
+      - name: Create isolated teacher privacy database
+        run: >-
+          node -e "const { Client } = require('pg');
+          (async () => { const client = new Client({ connectionString:
+          'postgres://postgres:postgres@localhost:5432/postgres' });
+          await client.connect(); await client.query('CREATE DATABASE bilge_r42_test_ci');
+          await client.end(); })().catch((error) => { console.error(error); process.exit(1); });"
+
       - name: Run tenant-boundary acceptance tests
         run: npm run test:institution-pilot:pg
+
+      - name: Run teacher classroom privacy acceptance tests
+        run: npm run test:teacher-classroom:pg
+
+      - name: Run public leaderboard privacy acceptance tests
+        run: npm run test:leaderboard-privacy:pg
+
+  question-quality-postgres:
+    name: 🧭 Question quality PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bilge_r43_test_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bilge_r43_test_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      CONTENT_GOVERNANCE_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_r43_test_ci
+      CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE: '1'
+      VERIFIED_ATTEMPTS_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/bilge_r02_test_ci
+      VERIFIED_ATTEMPTS_TEST_DATABASE_DISPOSABLE: '1'
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Create isolated diagnostic database
+        run: >-
+          node -e "const { Client } = require('pg');
+          (async () => { const client = new Client({ connectionString:
+          'postgres://postgres:postgres@localhost:5432/postgres' });
+          await client.connect(); await client.query('CREATE DATABASE bilge_r02_test_ci');
+          await client.end(); })().catch((error) => { console.error(error); process.exit(1); });"
+
+      - name: Run revision-bound diagnostic and governance acceptance tests
+        run: npm run test:question-quality:pg
+
+      - name: Run curriculum scope release acceptance test
+        run: npm run test:curriculum-scope:pg
 
   build:
     name: 🏗️ Build
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test, institution-pilot-postgres]
+    needs: [lint, type-check, test, institution-pilot-postgres, question-quality-postgres]
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

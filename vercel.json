@@ -1,5 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "env": {
+    "CONTENT_GOVERNANCE_ENABLED": "true"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_CONTENT_APPEALS_ENABLED": "true"
+    }
+  },
   "regions": [
     "fra1"
   ],
@@ -26,6 +34,14 @@
     {
       "path": "/api/cron/honeypot-check",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-learning-leagues",
+      "schedule": "5 0 * * 1"
+    },
+    {
+      "path": "/api/cron/institution-request-ledger-retention",
+      "schedule": "20 1 * * *"
     }
   ]
 }

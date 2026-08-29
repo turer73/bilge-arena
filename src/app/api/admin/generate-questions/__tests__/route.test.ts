@@ -13,9 +13,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
  */
 
 // ── Hoisted mock fns ─────────────────────────────────
-const { mockCheckPermission, mockInsertCapture } = vi.hoisted(() => ({
+const { mockCheckPermission, mockInsertCapture, mockGovernedCreate, mockScope } = vi.hoisted(() => ({
   mockCheckPermission: vi.fn(),
+  // Legacy INSERT payload assertions are retained as a projection of the
+  // governed RPC payload; no mock exposes questions.insert anymore.
   mockInsertCapture: vi.fn(),
+  mockGovernedCreate: vi.fn(),
+  mockScope: { game: 'matematik', category: 'sayilar' },
 }))
 
 // ── supabase chain helper ───────────────────────────
@@ -38,14 +42,45 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      insert: (payload: unknown) => {
-        mockInsertCapture(payload)
-        return {
-          select: vi.fn(() => Promise.resolve({ data: [{ id: 'new-1' }], error: null })),
-        }
-      },
-    })),
+    from: vi.fn((table: string) => {
+      if (table === 'curriculum_outcomes') {
+        const chain: Record<string, unknown> = {}
+        chain.select = vi.fn(() => chain)
+        chain.eq = vi.fn(() => chain)
+        chain.maybeSingle = vi.fn(async () => ({ data: {
+          id: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', game: mockScope.game, category: mockScope.category,
+          exam_ref: null, is_active: true, node_id: 'node-outcome', taxonomy_version: 'test-v1',
+        }, error: null }))
+        return chain
+      }
+      if (table === 'curriculum_nodes') {
+        const nodes = [
+          { id: 'node-outcome', code: 'OUT', title: 'Kazanım', game: mockScope.game, category: mockScope.category, exam_ref: null, parent_id: 'node-topic', node_type: 'outcome', taxonomy_version: 'test-v1', is_active: true },
+          { id: 'node-topic', code: 'TOP', title: 'Konu', game: mockScope.game, category: mockScope.category, exam_ref: null, parent_id: 'node-unit', node_type: 'topic', taxonomy_version: 'test-v1', is_active: true },
+          { id: 'node-unit', code: 'UNIT', title: 'Ünite', game: mockScope.game, category: null, exam_ref: null, parent_id: 'node-course', node_type: 'unit', taxonomy_version: 'test-v1', is_active: true },
+          { id: 'node-course', code: 'COURSE', title: 'Ders', game: mockScope.game, category: null, exam_ref: null, parent_id: null, node_type: 'course', taxonomy_version: 'test-v1', is_active: true },
+        ]
+        const chain: Record<string, unknown> = {}
+        chain.select = vi.fn(() => chain)
+        chain.in = vi.fn(async (_column: string, ids: string[]) => ({ data: nodes.filter((node) => ids.includes(node.id)), error: null }))
+        return chain
+      }
+      return makeAwaitableChain({ data: [], error: null })
+    }),
+    rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+      mockGovernedCreate(name, args)
+      if (name !== 'create_governed_question') return { data: null, error: null }
+      const payload = args.p_payload as { metadata: { game: string; category: string; topic?: string | null; difficulty: number; levelTag?: string | null }; content: Record<string, unknown>; source: { title: string } }
+      const projected = {
+        game: payload.metadata.game, category: payload.metadata.category, topic: payload.metadata.topic ?? null,
+        difficulty: payload.metadata.difficulty, level_tag: payload.metadata.levelTag ?? null, content: payload.content,
+      }
+      mockInsertCapture(payload.source.title.includes('AI destekli') ? [projected] : projected)
+      return { data: {
+        questionId: '99999999-9999-4999-8999-999999999999',
+        revisionId: '88888888-8888-4888-8888-888888888888', revisionNo: 1, status: 'draft', replayed: false,
+      }, error: null }
+    }),
   })),
 }))
 
@@ -56,6 +91,9 @@ vi.mock('@/lib/supabase/admin', () => ({
 // Rate limiter — testlerde bypass (gercek davranis ayri unit test'te dogrulanir)
 vi.mock('@/lib/utils/rate-limit', () => ({
   createRateLimiter: () => ({ check: async () => ({ success: true }) }),
+}))
+vi.mock('@/lib/utils/admin-rate-limit', () => ({
+  checkAdminMutationRl: async () => null,
 }))
 
 // ── Gemini fetch mock helper ────────────────────────
@@ -85,21 +123,30 @@ const VALID_AI_QUESTION = {
   topic: 'Synonyms',
 }
 
+const OUTCOME_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+const REQUEST_ID = '11111111-2222-4333-8444-555555555555'
+
 function makePostBody(body: Record<string, unknown>) {
+  mockScope.game = String(body.game ?? mockScope.game)
+  mockScope.category = String(body.category ?? mockScope.category)
   return new Request('http://localhost/api/admin/generate-questions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ outcomeId: OUTCOME_ID, requestId: REQUEST_ID, ...body }),
   })
 }
 
 function makePutBody(body: Record<string, unknown>) {
+  mockScope.game = String(body.game ?? mockScope.game)
+  mockScope.category = String(body.category ?? mockScope.category)
   return new Request('http://localhost/api/admin/generate-questions', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ outcomeId: OUTCOME_ID, requestId: REQUEST_ID, ...body }),
   })
 }
+
+beforeEach(() => vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'true'))
 
 describe('POST /api/admin/generate-questions — level_tag passthrough', () => {
   beforeEach(() => {
@@ -128,6 +175,13 @@ describe('POST /api/admin/generate-questions — level_tag passthrough', () => {
     const payload = mockInsertCapture.mock.calls[0][0] as Array<Record<string, unknown>>
     expect(payload).toHaveLength(1)
     expect(payload[0].level_tag).toBe('A2')
+    expect(mockGovernedCreate).toHaveBeenCalledWith('create_governed_question', expect.objectContaining({
+      p_user_id: 'admin-1', p_request_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      p_payload: expect.objectContaining({
+        outcomes: [{ outcomeId: OUTCOME_ID, weight: 1, primary: true }],
+        source: expect.objectContaining({ kind: 'original', licenseCode: 'INTERNAL' }),
+      }),
+    }))
   })
 
   it('wordquest: level_tag verilmediginde default B2 atanir (legacy seed davranisi)', async () => {
@@ -510,25 +564,9 @@ describe('PUT /api/admin/generate-questions — manuel level_tag', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
-    // PUT manuel insert .select().single() doner — tek satir
-    vi.doMock('@/lib/supabase/service-role', () => ({
-      createServiceRoleClient: vi.fn(() => ({
-        from: vi.fn(() => ({
-          insert: (payload: unknown) => {
-            mockInsertCapture(payload)
-            return {
-              select: vi.fn(() => ({
-                single: vi.fn(() => Promise.resolve({ data: { id: 'manual-1' }, error: null })),
-              })),
-            }
-          },
-        })),
-      })),
-    }))
   })
 
   it('wordquest manuel ekleme: level_tag DB payload\'ina yansir', async () => {
-    vi.resetModules()
     const { PUT } = await import('../route')
     const res = await PUT(makePutBody({
       game: 'wordquest',
@@ -545,11 +583,13 @@ describe('PUT /api/admin/generate-questions — manuel level_tag', () => {
     expect(mockInsertCapture).toHaveBeenCalledOnce()
     const payload = mockInsertCapture.mock.calls[0][0] as Record<string, unknown>
     expect(payload.level_tag).toBe('B1')
+    expect(mockGovernedCreate).toHaveBeenCalledWith('create_governed_question', expect.objectContaining({
+      p_payload: expect.objectContaining({ metadata: expect.objectContaining({ levelTag: 'B1' }) }),
+    }))
   })
 
   // 2026-04-26 (Codex P2 fix): PUT manuel ekleme yolunda da ayni cross-game guard.
   it('matematik manuel ekleme: client level_tag A1 gonderse bile DB payload NULL olur (cross-game guard)', async () => {
-    vi.resetModules()
     const { PUT } = await import('../route')
     const res = await PUT(makePutBody({
       game: 'matematik',
@@ -567,5 +607,35 @@ describe('PUT /api/admin/generate-questions — manuel level_tag', () => {
     const payload = mockInsertCapture.mock.calls[0][0] as Record<string, unknown>
     // Server otoritatif: non-wordquest'e level_tag yazilmamali
     expect(payload.level_tag).toBeNull()
+  })
+})
+
+describe('governance fail-closed', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockCheckPermission.mockResolvedValue({ id: 'admin-1' })
+  })
+
+  it('POST Gemini veya governed RPC öncesi 503 döner', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'false')
+    const fetchMock = vi.fn()
+    global.fetch = fetchMock as unknown as typeof fetch
+    const { POST } = await import('../route')
+    const res = await POST(makePostBody({ game: 'matematik', category: 'sayilar', difficulty: 2, count: 1 }))
+    expect(res.status).toBe(503)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(mockGovernedCreate).not.toHaveBeenCalled()
+  })
+
+  it('PUT governed RPC öncesi 503 döner', async () => {
+    vi.stubEnv('CONTENT_GOVERNANCE_ENABLED', 'false')
+    const { PUT } = await import('../route')
+    const res = await PUT(makePutBody({
+      game: 'matematik', category: 'sayilar', difficulty: 2,
+      question: 'Bir TYT matematik sorusu burada nedir?',
+      options: ['1', '2', '3', '4', '5'], answer: 0, solution: 'Bu sorunun cevabı temel aritmetik mantığı ile bulunur.',
+    }))
+    expect(res.status).toBe(503)
+    expect(mockGovernedCreate).not.toHaveBeenCalled()
   })
 })

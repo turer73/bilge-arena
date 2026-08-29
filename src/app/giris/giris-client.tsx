@@ -7,33 +7,48 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { Logo } from '@/components/layout/logo'
 import { Button } from '@/components/ui/button'
 import { Building2, Zap } from 'lucide-react'
-import { logConsent } from '@/lib/consent'
+import { beginLegalConsentIntent } from '@/lib/consent'
 import { safeAuthNext } from '@/lib/auth/safe-next'
 
-export default function GirisClient() {
+export default function GirisClient({
+  initialConsentError = null,
+}: {
+  initialConsentError?: string | null
+}) {
   const router = useRouter()
   const { signInWithGoogle } = useAuth()
   const [accepted, setAccepted] = useState(false)
+  const [consentError, setConsentError] = useState<string | null>(initialConsentError)
+  const [creatingConsentIntent, setCreatingConsentIntent] = useState(false)
 
   const handleGoogleLogin = async (
-    nextOverride?: string,
+    fallbackNext = '/arena',
     forceAccountSelection = false,
   ) => {
-    const requestedNext = typeof window === 'undefined'
-      ? '/arena'
-      : safeAuthNext(new URLSearchParams(window.location.search).get('next'))
-    // Once giris yap, sonra consent logla
-    const next = nextOverride ?? requestedNext
-    if (forceAccountSelection) {
-      await signInWithGoogle(next, { forceAccountSelection: true })
-    } else {
-      await signInWithGoogle(next)
+    const searchParams = typeof window === 'undefined'
+      ? null
+      : new URLSearchParams(window.location.search)
+    // `next` yeni ve kanonik parametredir. Eski uygulama yuzeylerinden veya
+    // paylasilmis baglantilardan gelen `redirect` de guvenli relative-path
+    // denetiminden gecirilerek geriye donuk uyumluluk icin kabul edilir.
+    const rawNext = searchParams?.get('next') ?? searchParams?.get('redirect')
+    const requestedNext = safeAuthNext(rawNext ?? fallbackNext)
+    setConsentError(null)
+    setCreatingConsentIntent(true)
+    let legalConsentToken: string
+    try {
+      legalConsentToken = await beginLegalConsentIntent()
+    } catch {
+      setConsentError('Onay kaydı hazırlanamadı. Lütfen tekrar dene.')
+      return
+    } finally {
+      setCreatingConsentIntent(false)
     }
-    // Not: signInWithGoogle redirect yapar, bu satir sadece popup modunda calisir.
-    // Consent log'u auth callback'te de yakalanabilir ama
-    // burada da fire-and-forget olarak cagiralim.
-    logConsent('terms', { accepted: true })
-    logConsent('kvkk', { accepted: true })
+
+    await signInWithGoogle(requestedNext, {
+      ...(forceAccountSelection ? { forceAccountSelection: true } : {}),
+      legalConsentToken,
+    })
   }
 
   return (
@@ -68,7 +83,7 @@ export default function GirisClient() {
             <Link href="/kvkk" target="_blank" className="font-medium text-[var(--focus)] underline underline-offset-2">
               KVKK Aydınlatma Metni
             </Link>
-            {' '}kapsamında kişisel verilerimin işlenmesine onay veriyorum.
+            {' '}kapsamında bilgilendirildim.
           </span>
         </label>
 
@@ -77,8 +92,8 @@ export default function GirisClient() {
           variant="primary"
           size="lg"
           className="w-full"
-          disabled={!accepted}
-          onClick={() => void handleGoogleLogin()}
+          disabled={!accepted || creatingConsentIntent}
+          onClick={() => void handleGoogleLogin('/arena')}
         >
           <svg viewBox="0 0 24 24" width={18} height={18} className="mr-1">
             <path
@@ -105,7 +120,7 @@ export default function GirisClient() {
           variant="ghost"
           size="md"
           className="mt-3 w-full border border-[var(--border)]"
-          disabled={!accepted}
+          disabled={!accepted || creatingConsentIntent}
           onClick={() => void handleGoogleLogin('/arena/kurum', true)}
         >
           <Building2 size={16} />
@@ -126,6 +141,11 @@ export default function GirisClient() {
         {!accepted && (
           <p className="mt-4 text-xs text-[var(--text-muted)]">
             Giriş yapmak için yukarıdaki koşulları kabul etmeniz gerekir.
+          </p>
+        )}
+        {consentError && (
+          <p className="mt-4 text-xs text-[var(--urgency-text)]" role="alert">
+            {consentError}
           </p>
         )}
       </div>

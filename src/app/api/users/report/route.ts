@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { reportUserSchema } from '@/lib/validations/schemas'
 
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Kendinizi sikayet edemezsiniz' }, { status: 400 })
   }
 
-  const { error } = await supabase.from('user_reports').insert({
+  const { error } = await createServiceRoleClient().from('user_reports').insert({
     reporter_id: user.id,
     reported_user_id: reportedUserId,
     report_type: reportType,

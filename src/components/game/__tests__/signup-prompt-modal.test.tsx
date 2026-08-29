@@ -5,6 +5,7 @@ import { SignupPromptModal } from '../signup-prompt-modal'
 const signInWithGoogleMock = vi.fn()
 const signInWithMagicLinkMock = vi.fn()
 const trackEventMock = vi.fn()
+const beginLegalConsentIntentMock = vi.fn()
 
 vi.mock('@/lib/hooks/use-auth', () => ({
   useAuth: () => ({
@@ -21,11 +22,22 @@ vi.mock('@/lib/utils/plausible', () => ({
   trackEvent: (...args: unknown[]) => trackEventMock(...args),
 }))
 
+vi.mock('@/lib/consent', () => ({
+  beginLegalConsentIntent: () => beginLegalConsentIntentMock(),
+}))
+
+function acceptLegalTerms() {
+  fireEvent.click(screen.getByRole('checkbox'))
+}
+
 describe('SignupPromptModal', () => {
   beforeEach(() => {
     signInWithGoogleMock.mockClear()
     signInWithMagicLinkMock.mockClear()
     trackEventMock.mockClear()
+    beginLegalConsentIntentMock.mockReset()
+    beginLegalConsentIntentMock.mockResolvedValue('legal-intent-token')
+    window.history.replaceState({}, '', '/arena/matematik?source=guest')
   })
 
   it('open=false iken render etmez', () => {
@@ -66,11 +78,17 @@ describe('SignupPromptModal', () => {
     expect(trackEventMock).toHaveBeenCalledWith('PromptShown', { props: { level: 1 } })
   })
 
-  it('Primary CTA: signup event + signInWithGoogle cagrilir', async () => {
+  it('Primary CTA: onaydan sonra intent token ile signInWithGoogle cagrilir', async () => {
     render(<SignupPromptModal level={2} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+    expect(screen.getByText('Google ile Kaydet').closest('button')).toBeDisabled()
+    acceptLegalTerms()
     fireEvent.click(screen.getByText('Google ile Kaydet'))
+    await act(async () => {})
     expect(trackEventMock).toHaveBeenCalledWith('PromptCtaClicked', { props: { level: 2, outcome: 'signup' } })
-    expect(signInWithGoogleMock).toHaveBeenCalled()
+    expect(signInWithGoogleMock).toHaveBeenCalledWith(
+      '/arena/matematik?source=guest',
+      { legalConsentToken: 'legal-intent-token' },
+    )
   })
 
   it('Level 1 secondary button: onDismiss cagrilir, dismissed event fire', () => {
@@ -135,6 +153,7 @@ describe('SignupPromptModal', () => {
     it('gecersiz email submit: validation hatasi goster, signInWithMagicLink CAGRILMAZ', async () => {
       render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
       fireEvent.click(screen.getByText(/Email ile giris yap/))
+      acceptLegalTerms()
       const input = screen.getByLabelText('Email adresin') as HTMLInputElement
       fireEvent.change(input, { target: { value: 'bozuk' } })
       fireEvent.click(screen.getByText('Giris Linki Gonder'))
@@ -147,19 +166,25 @@ describe('SignupPromptModal', () => {
       signInWithMagicLinkMock.mockResolvedValue({ ok: true })
       render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
       fireEvent.click(screen.getByText(/Email ile giris yap/))
+      acceptLegalTerms()
       const input = screen.getByLabelText('Email adresin')
       fireEvent.change(input, { target: { value: 'test@example.com' } })
       await act(async () => {
         fireEvent.click(screen.getByText('Giris Linki Gonder'))
       })
       expect(trackEventMock).toHaveBeenCalledWith('MagicLinkRequested', { props: { level: 1 } })
-      expect(signInWithMagicLinkMock).toHaveBeenCalledWith('test@example.com')
+      expect(signInWithMagicLinkMock).toHaveBeenCalledWith(
+        'test@example.com',
+        '/arena/matematik?source=guest',
+        { legalConsentToken: 'legal-intent-token' },
+      )
     })
 
     it('basarili gonderim: MagicLinkSent event + success UI', async () => {
       signInWithMagicLinkMock.mockResolvedValue({ ok: true })
       render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
       fireEvent.click(screen.getByText(/Email ile giris yap/))
+      acceptLegalTerms()
       fireEvent.change(screen.getByLabelText('Email adresin'), { target: { value: 'test@example.com' } })
       await act(async () => {
         fireEvent.click(screen.getByText('Giris Linki Gonder'))
@@ -173,6 +198,7 @@ describe('SignupPromptModal', () => {
       signInWithMagicLinkMock.mockResolvedValue({ ok: false, error: 'SMTP down' })
       render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
       fireEvent.click(screen.getByText(/Email ile giris yap/))
+      acceptLegalTerms()
       fireEvent.change(screen.getByLabelText('Email adresin'), { target: { value: 'test@example.com' } })
       await act(async () => {
         fireEvent.click(screen.getByText('Giris Linki Gonder'))
@@ -188,6 +214,7 @@ describe('SignupPromptModal', () => {
       signInWithMagicLinkMock.mockResolvedValue({ ok: false, error: 'Email rate limit exceeded' })
       render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
       fireEvent.click(screen.getByText(/Email ile giris yap/))
+      acceptLegalTerms()
       fireEvent.change(screen.getByLabelText('Email adresin'), { target: { value: 'test@example.com' } })
       await act(async () => {
         fireEvent.click(screen.getByText('Giris Linki Gonder'))
@@ -199,5 +226,15 @@ describe('SignupPromptModal', () => {
       render(<SignupPromptModal level={3} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
       expect(screen.getByText(/Email ile giris yap/)).toBeInTheDocument()
     })
+  })
+
+  it('onay niyeti olusturulamazsa kayit akisini baslatmaz', async () => {
+    beginLegalConsentIntentMock.mockRejectedValueOnce(new Error('unavailable'))
+    render(<SignupPromptModal level={1} open={true} onDismiss={vi.fn()} onExitToLobby={vi.fn()} />)
+    acceptLegalTerms()
+    fireEvent.click(screen.getByText('Google ile Devam Et'))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Onay kaydı hazırlanamadı')
+    expect(signInWithGoogleMock).not.toHaveBeenCalled()
   })
 })

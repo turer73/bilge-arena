@@ -30,21 +30,23 @@ export async function GET() {
 }
 
 // ─── Setting Validasyon Kuralları ──────────────────────
-const SETTING_VALIDATORS: Record<string, (v: unknown) => string | null> = {
-  maintenance_mode: (v) => typeof v === 'boolean' ? null : 'Boolean olmalı',
-  registration_enabled: (v) => typeof v === 'boolean' ? null : 'Boolean olmalı',
-  daily_quest_count: (v) => {
-    const n = Number(v)
+function validateSetting(key: string, value: unknown): string | null {
+  if (key === 'maintenance_mode' || key === 'registration_enabled') {
+    return typeof value === 'boolean' ? null : 'Boolean olmalı'
+  }
+  if (key === 'daily_quest_count') {
+    const n = Number(value)
     return Number.isInteger(n) && n >= 1 && n <= 10 ? null : '1-10 arası tam sayı olmalı'
-  },
-  max_chat_messages_guest: (v) => {
-    const n = Number(v)
+  }
+  if (key === 'max_chat_messages_guest') {
+    const n = Number(value)
     return Number.isInteger(n) && n >= 0 && n <= 100 ? null : '0-100 arası tam sayı olmalı'
-  },
-  max_chat_messages_user: (v) => {
-    const n = Number(v)
+  }
+  if (key === 'max_chat_messages_user') {
+    const n = Number(value)
     return Number.isInteger(n) && n >= 1 && n <= 500 ? null : '1-500 arası tam sayı olmalı'
-  },
+  }
+  return 'Bilinmeyen ayar'
 }
 
 export async function PATCH(request: NextRequest) {
@@ -65,11 +67,13 @@ export async function PATCH(request: NextRequest) {
   }
 
   // Validasyon — bilinmeyen key'leri reddet
-  const validator = SETTING_VALIDATORS[key]
-  if (!validator) {
+  if (typeof key !== 'string') {
+    return NextResponse.json({ error: 'Geçersiz ayar anahtarı' }, { status: 400 })
+  }
+  const err = validateSetting(key, value)
+  if (err === 'Bilinmeyen ayar') {
     return NextResponse.json({ error: `Bilinmeyen ayar: ${key}` }, { status: 400 })
   }
-  const err = validator(value)
   if (err) {
     return NextResponse.json({ error: `Geçersiz değer: ${err}` }, { status: 400 })
   }

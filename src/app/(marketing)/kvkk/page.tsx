@@ -15,7 +15,7 @@ export default function KVKKPage() {
       <p className="mb-2 text-sm text-[var(--text-sub)]">
         6698 Sayılı Kişisel Verilerin Korunması Kanunu Kapsamında
       </p>
-      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 17 Mayıs 2026</p>
+      <p className="mb-10 text-sm text-[var(--text-sub)]">Son güncelleme: 24 Ağustos 2026</p>
 
       <div className="space-y-8 text-sm leading-relaxed text-[var(--text-muted)]">
         <section>
@@ -161,17 +161,25 @@ export default function KVKKPage() {
             hukuka aykırı olarak başkaları tarafından elde edildiğini tespit ettiğimizde:
           </p>
           <ul className="ml-4 mt-2 list-disc space-y-1">
-            <li>İlgili kişilere ve Kişisel Verileri Koruma Kurulu&apos;na 72 saat içinde bildirim yapılır</li>
+            <li>Kişisel Verileri Koruma Kurulu&apos;na en geç 72 saat içinde bildirim yapılır</li>
+            <li>Etkilenen ilgili kişilere makul olan en kısa süre içinde bilgi verilir</li>
             <li>İhlalin kapsamı, etkilenen veri türleri ve alınan önlemler şeffaf biçimde paylaşılır</li>
             <li>İhlalin tekrarlanmaması için teknik ve idari önlemler güncellenir</li>
           </ul>
           <p className="mt-3 text-sm">
-            Bu kapsamda raporlanması gereken bir veri ihlali bulunmamaktadır.
-            Sistem güvenliği düzenli olarak iç penetrasyon testleri ile değerlendirilmekte
-            ve tespit edilen bulgular kullanıcıya aktarılmadan kapatılmaktadır. KVKK
-            md. 12/5 kapsamında bildirim yükümlülüğü doğuracak bir olay yaşanması
-            halinde bu sayfa güncellenecek ve etkilenen kullanıcılara doğrudan
-            e-posta ile bilgi verilecektir. Sorularınız için{' '}
+            16 Mayıs 2026 tarihli güvenlik çalışması, Bilge Arena ile çalışan ve güvenlik
+            testi için yetkilendirilmiş ekip tarafından yürütülen kontrollü bir iç
+            penetrasyon testidir. Testte tespit edilen profil erişim kontrolü bulgusu
+            kapatılmış; doğrudan istemci-veritabanı erişimi kaldırılmış ve ilgili
+            yetkiler daraltılmıştır. Mevcut olay kayıtlarında kişisel verilerin yetkisiz
+            üçüncü kişiler tarafından elde edildiğine veya dışarıya aktarıldığına ilişkin
+            bir bulgu bulunmadığından bu çalışma KVKK md. 12/5 kapsamında dış veri
+            ihlali olarak sınıflandırılmamıştır.
+          </p>
+          <p className="mt-3 text-sm">
+            Sistem güvenliği düzenli iç penetrasyon testleriyle değerlendirilmektedir.
+            Bildirim yükümlülüğü doğuran bir olay yaşanması halinde bu sayfa güncellenecek
+            ve etkilenen kullanıcılara doğrudan e-posta ile bilgi verilecektir. Sorularınız için{' '}
             <strong>destek@bilgearena.com</strong>.
           </p>
         </section>

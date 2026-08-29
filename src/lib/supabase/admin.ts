@@ -1,7 +1,9 @@
 import { createClient } from './server'
+import { createServiceRoleClient } from './service-role'
 import { getClientIp } from '@/lib/utils/client-ip'
 import type { Role } from '@/types/database'
 import type { User } from '@supabase/supabase-js'
+import { getAal2Status, permissionRequiresAal2 } from '@/lib/auth/aal2'
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
@@ -16,6 +18,11 @@ export async function checkPermission(
 ): Promise<User | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+
+  if (permissionRequiresAal2(requiredPermission)) {
+    const aal = await getAal2Status(supabase)
+    if (!aal.isAal2) return null
+  }
 
   const { data } = await supabase
     .from('role_permissions')
@@ -86,7 +93,6 @@ export async function getUserRoles(
  * Tüm admin operasyonlarında tutarlı log formatı sağlar.
  */
 export async function logAdminAction(
-  supabase: SupabaseClient,
   opts: {
     adminId: string
     action: string
@@ -105,7 +111,11 @@ export async function logAdminAction(
   const ip = opts.request ? getClientIp(opts.request.headers) : null
   const userAgent = opts.request?.headers.get('user-agent')?.slice(0, 256) || null
 
-  return supabase.from('admin_logs').insert({
+  // admin_logs is deliberately not writable by browser JWTs. Keeping client
+  // construction inside this helper prevents a future route from accidentally
+  // reintroducing a cookie-client write that either bypasses governance or
+  // starts failing after the route-only ACL migration.
+  return createServiceRoleClient().from('admin_logs').insert({
     admin_id: opts.adminId,
     action: opts.action,
     target_type: opts.targetType,

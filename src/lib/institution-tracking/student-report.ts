@@ -1,5 +1,5 @@
 import {z} from 'zod'
-import {institutionStudentLearningAnalysisSchema} from './student-analysis'
+import {institutionStudentLearningAnalysisSchema,institutionTaxonomyVersionSchema} from './student-analysis'
 
 const timestampSchema=z.string().datetime({offset:true})
 const reportRefSchema=z.string().regex(/^[0-9a-f]{32}$/)
@@ -12,7 +12,7 @@ export const institutionStudentReportSnapshotSchema=z.object({
   classroomName:z.string().trim().min(2).max(60),
   teacherAlias:z.string().trim().min(1).max(80),
   studentAlias:z.string().trim().min(1).max(80),
-  scope:z.object({game:z.literal('matematik'),examRef:z.literal('TYT'),taxonomyVersion:z.literal('ba-tyt-math-v1')}).strict(),
+  scope:z.object({game:z.literal('matematik'),examRef:z.literal('TYT'),taxonomyVersion:institutionTaxonomyVersionSchema}).strict(),
   summary:z.object({outcomeCount:countSchema,assessedOutcomeCount:countSchema,insufficientOutcomeCount:countSchema,developingOutcomeCount:countSchema,masteredOutcomeCount:countSchema}).strict(),
   outcomes:z.array(z.object({
     title:z.string().trim().min(1).max(200),path:z.array(z.string().trim().min(1).max(160)).min(1).max(4),
@@ -50,7 +50,7 @@ export function buildInstitutionStudentReportSnapshot(
     generatedAt:analysis.data.scope.windowEnd,periodStart:analysis.data.scope.windowStart,periodEnd:analysis.data.scope.windowEnd,
     institutionName:metadata.data.institutionName,classroomName:analysis.data.classroom.name,
     teacherAlias:metadata.data.teacherAlias,studentAlias:analysis.data.student.alias,
-    scope:{game:'matematik' as const,examRef:'TYT' as const,taxonomyVersion:'ba-tyt-math-v1' as const},
+    scope:{game:'matematik' as const,examRef:'TYT' as const,taxonomyVersion:analysis.data.scope.taxonomyVersion},
     summary:analysis.data.summary,
     outcomes:analysis.data.outcomes.map((outcome)=>({
       title:outcome.title,path:outcome.path,status:outcome.assessment.status,score:outcome.assessment.score,

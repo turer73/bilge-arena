@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   signInWithGoogle: vi.fn(),
   trackEvent: vi.fn(),
   playSound: vi.fn(),
+  beginLegalConsentIntent: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase/questions', () => ({
@@ -38,6 +39,10 @@ vi.mock('@/lib/utils/sounds', () => ({
   playSound: (...args: unknown[]) => mocks.playSound(...args),
 }))
 
+vi.mock('@/lib/consent', () => ({
+  beginLegalConsentIntent: () => mocks.beginLegalConsentIntent(),
+}))
+
 function makeQuestion(index: number): PublicQuestion {
   return {
     id: `00000000-0000-4000-8000-00000000000${index}`,
@@ -65,6 +70,7 @@ describe('ActivationMicroQuiz', () => {
       correctOption: selectedOption,
       solution: 'Kısa çözüm.',
     }))
+    mocks.beginLegalConsentIntent.mockResolvedValue('legal-intent-token')
   })
 
   it('sinav hedefini ve ilk soru gorunumunu olcer', async () => {
@@ -105,7 +111,7 @@ describe('ActivationMicroQuiz', () => {
     })
   })
 
-  it('misafir devam CTA’sinda Google girisini baslatir', async () => {
+  it('misafir devam CTA’sinda onaydan sonra Google girisini intent token ile baslatir', async () => {
     render(<ActivationMicroQuiz />)
     fireEvent.click(screen.getByRole('button', { name: /LGS: Ortaokul hedefim/i }))
 
@@ -118,11 +124,37 @@ describe('ActivationMicroQuiz', () => {
       }))
     }
 
-    fireEvent.click(await screen.findByRole('button', { name: /Google ile ücretsiz devam et/i }))
+    const continueButton = await screen.findByRole('button', { name: /Google ile ücretsiz devam et/i })
+    expect(continueButton).toBeDisabled()
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(continueButton)
     await waitFor(() => expect(mocks.signInWithGoogle).toHaveBeenCalledTimes(1))
-    expect(mocks.signInWithGoogle).toHaveBeenCalledWith('/arena/turkce')
+    expect(mocks.signInWithGoogle).toHaveBeenCalledWith(
+      '/arena/turkce',
+      { legalConsentToken: 'legal-intent-token' },
+    )
     expect(mocks.trackEvent).toHaveBeenCalledWith('ActivationSaveStarted', {
       props: expect.objectContaining({ exam: 'LGS', variant: 'micro' }),
     })
+  })
+
+  it('onay niyeti basarisizsa Google girisini baslatmaz', async () => {
+    mocks.beginLegalConsentIntent.mockRejectedValueOnce(new Error('unavailable'))
+    render(<ActivationMicroQuiz />)
+    fireEvent.click(screen.getByRole('button', { name: /LGS: Ortaokul hedefim/i }))
+
+    for (let position = 1; position <= 3; position++) {
+      await screen.findByText(`Deneme sorusu ${position}`)
+      fireEvent.click(screen.getAllByRole('button', { name: /seçeneği:/i })[0])
+      await screen.findByText(/Harika! \+50 XP/i)
+      fireEvent.click(screen.getByRole('button', {
+        name: position === 3 ? /Sonucumu gör/i : /Sıradaki soru/i,
+      }))
+    }
+
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(await screen.findByRole('button', { name: /Google ile ücretsiz devam et/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Onay kaydı hazırlanamadı')
+    expect(mocks.signInWithGoogle).not.toHaveBeenCalled()
   })
 })

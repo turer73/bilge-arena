@@ -56,12 +56,70 @@ const REPORT_TYPES = [
 export const errorReportSchema = z.object({
   report_type: z.enum(REPORT_TYPES),
   description: z.string().trim().max(1000).optional().default(''),
+  // Community quality claims are optional at the legacy boundary. The
+  // governed route applies the stricter academic-claim schema below.
+  proposed_answer_index: z.number().int().min(0).max(4).optional(),
+  correction_text: z.string().trim().max(1000).optional(),
+  confidence: z.number().int().min(0).max(100).optional(),
 })
 
 // In-app "soru hatali" bildirimi (#379): modal report'una questionId eklenir.
 export const errorReportSubmitSchema = errorReportSchema.extend({
   questionId: z.string().uuid(),
+  attemptId: z.string().uuid().nullable().optional(),
   requestId: z.string().uuid().optional(),
+})
+
+/**
+ * Governed community-quality claim. Academic claims must be bound to an
+ * issued attempt (the quiz has already been answered) and carry enough
+ * structured evidence for later weighted consensus. Legacy report types keep
+ * their old, deliberately lightweight contract.
+ */
+export const qualityClaimSubmitSchema = errorReportSubmitSchema.superRefine((value, ctx) => {
+  if (!['wrong_answer', 'unclear'].includes(value.report_type)) return
+  if (!value.attemptId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['attemptId'], message: 'Cevaplanmis soru kaniti gerekli' })
+  }
+  if ((value.description ?? '').trim().length < 20) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['description'], message: 'Gerekce en az 20 karakter olmali' })
+  }
+  if (value.proposed_answer_index === undefined && !(value.correction_text ?? '').trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['correction_text'], message: 'Onerilen cevap veya duzeltme gerekli' })
+  }
+  if (value.confidence === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['confidence'], message: 'Guven duzeyi gerekli' })
+  }
+})
+
+export const qualityMissionAnswerLockSchema = z.object({
+  missionId: z.string().uuid(),
+  selectedAnswerIndex: z.number().int().min(0).max(4),
+  requestId: z.string().uuid(),
+})
+
+export const qualityMissionSubmitSchema = z.object({
+  missionId: z.string().uuid(),
+  selectedAnswerIndex: z.number().int().min(0).max(4),
+  verdict: z.enum(['clean', 'flawed']),
+  reasonCode: z.enum(['wrong_key', 'ambiguous', 'invalid_content', 'outcome_mismatch', 'other']).nullable().optional(),
+  proposedAnswerIndex: z.number().int().min(0).max(4).nullable().optional(),
+  correctionText: z.string().trim().max(1000).nullable().optional(),
+  explanation: z.string().trim().max(2000).default(''),
+  confidence: z.number().int().min(0).max(100),
+  requestId: z.string().uuid(),
+}).superRefine((value, ctx) => {
+  if (value.verdict === 'clean') {
+    if (value.reasonCode || value.proposedAnswerIndex != null || value.correctionText) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Temiz karari duzeltme tasiyamaz' })
+    }
+    return
+  }
+  if (!value.reasonCode) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['reasonCode'], message: 'Hata turu gerekli' })
+  if (value.explanation.length < 20) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['explanation'], message: 'Gerekce en az 20 karakter olmali' })
+  if (value.proposedAnswerIndex == null && !value.correctionText) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['correctionText'], message: 'Onerilen cevap veya duzeltme gerekli' })
+  }
 })
 
 // Yanlis Defteri hata nedeni: serbest metin yok, yalniz dusuk kardinalli katalog.
@@ -97,6 +155,8 @@ export const profileUpdateSchema = z.object({
   onboarding_completed: z.literal(true).optional(),
   preferred_theme: z.enum(['dark', 'light', 'okyanus', 'orman', 'gunbatimi', 'mor-gece']).optional(),
   is_discoverable: z.boolean().optional(),
+  profile_visibility: z.enum(['private', 'friends', 'public']).optional(),
+  leaderboard_opt_in: z.boolean().optional(),
 }).refine(data => Object.keys(data).length > 0, {
   message: 'Guncellenecek alan yok',
 })
@@ -214,7 +274,8 @@ export const questClaimSchema = z.object({
 export const roleAssignSchema = z.object({
   userId: z.string().uuid(),
   roleId: z.string().uuid(),
-})
+  requestId: z.string().uuid(),
+}).strict()
 
 // ============================================================
 // Log (client error reporting)
@@ -254,60 +315,114 @@ export const reportUpdateSchema = z.object({
 // Admin: homepage editor
 // ============================================================
 
+export const homepageSectionKeySchema = z.enum([
+  'hero',
+  'stats',
+  'games',
+  'how_it_works',
+  'cta',
+  'leaderboard',
+  'footer',
+])
+
+const homepageRequestIdSchema = z.string().uuid()
+const homepageImageUrlSchema = z.string().url().max(500).refine(
+  value => /^https?:\/\//i.test(value),
+  { message: 'Görsel URL http veya https olmalıdır' },
+)
+
 export const homepageElementCreateSchema = z.object({
-  section_key: z.string().min(1).max(100),
-  element_type: z.string().min(1).max(50),
-  content: z.unknown().nullish(),
-  image_url: z.string().url().max(500).nullish(),
+  requestId: homepageRequestIdSchema,
+  section_key: homepageSectionKeySchema,
+  element_type: z.enum(['logo', 'slogan', 'banner']),
+  content: z.string().max(10000).nullish(),
+  image_url: homepageImageUrlSchema.nullish(),
   alt_text: z.string().max(200).nullish(),
-  placement: z.string().max(50).nullish(),
-  alignment: z.string().max(50).nullish(),
-  size: z.string().max(50).nullish(),
+  placement: z.enum(['above', 'below', 'inline']).nullish(),
+  alignment: z.enum(['left', 'center', 'right']).nullish(),
+  size: z.enum(['xs', 'sm', 'md', 'lg', 'xl']).nullish(),
   styles: z.record(z.string(), z.unknown()).nullish(),
-})
+}).strict()
 
 // NOT: nullish() yalnizca DB'de gercekten NULL kabul eden sutunlarda.
 // alt_text/placement/alignment/size/styles migration 017'de NOT NULL DEFAULT'lu;
 // bunlara null gecirmek zod'dan geciyor ama PostgREST'te patlıyordu (23502).
 export const homepageElementUpdateSchema = z.object({
-  content: z.string().nullish(),
-  image_url: z.string().url().max(500).nullish(),
+  requestId: homepageRequestIdSchema,
+  content: z.string().max(10000).nullish(),
+  image_url: homepageImageUrlSchema.nullish(),
   alt_text: z.string().max(200).optional(),
-  placement: z.string().max(50).optional(),
-  alignment: z.string().max(50).optional(),
-  size: z.string().max(50).optional(),
+  placement: z.enum(['above', 'below', 'inline']).optional(),
+  alignment: z.enum(['left', 'center', 'right']).optional(),
+  size: z.enum(['xs', 'sm', 'md', 'lg', 'xl']).optional(),
   styles: z.record(z.string(), z.unknown()).optional(),
   sort_order: z.number().int().min(0).max(10000).optional(),
   is_published: z.boolean().optional(),
-}).refine(data => Object.keys(data).length > 0, {
+}).strict().refine(data => Object.keys(data).some(key => key !== 'requestId'), {
   message: 'Guncellenecek alan yok',
 })
 
 export const homepageReorderSchema = z.object({
-  section_key: z.string().min(1).max(100),
+  requestId: homepageRequestIdSchema,
+  section_key: homepageSectionKeySchema,
   ordered_ids: z.array(z.string().uuid()).min(1).max(100),
+}).strict().refine(data => new Set(data.ordered_ids).size === data.ordered_ids.length, {
+  message: 'Tekrarlanan öğe kimliği var',
 })
 
 export const homepagePublishSchema = z.object({
+  requestId: homepageRequestIdSchema,
   action: z.enum(['publish', 'unpublish']),
-  section_keys: z.array(z.string().max(100)).optional(),
-  element_ids: z.array(z.string().uuid()).optional(),
+  // Iki liste de yoksa scope=all'dir. Herhangi bir liste verildiyse bos olamaz
+  // ve RPC scope=selection uygular; boylece sessiz no-op semantigi kalmaz.
+  section_keys: z.array(homepageSectionKeySchema).min(1).max(7).optional(),
+  element_ids: z.array(z.string().uuid()).min(1).max(100).optional(),
+}).strict().refine(data => (
+  (!data.section_keys || new Set(data.section_keys).size === data.section_keys.length)
+  && (!data.element_ids || new Set(data.element_ids).size === data.element_ids.length)
+), {
+  message: 'Tekrarlanan yayın hedefi var',
 })
 
 export const homepageSectionUpdateSchema = z.object({
+  requestId: homepageRequestIdSchema,
   config: z.record(z.string(), z.unknown()),
-})
+}).strict()
+
+export const homepageElementDeleteSchema = z.object({
+  requestId: homepageRequestIdSchema,
+}).strict()
 
 // ============================================================
 // Admin: role update
 // ============================================================
 
+export const roleCreateSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  slug: z.string().regex(/^[a-z0-9_]{1,80}$/),
+  description: z.string().trim().max(500).nullish(),
+  permissions: z.array(
+    z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,3}$/).max(100),
+  ).max(100).default([]),
+  requestId: z.string().uuid(),
+}).strict().refine(data => new Set(data.permissions).size === data.permissions.length, {
+  message: 'Tekrarlanan izin var',
+})
+
 export const roleUpdateSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
-  description: z.string().trim().max(500).optional(),
-  permissions: z.array(z.string().max(100)).max(100).optional(),
-}).refine(data => Object.keys(data).length > 0, {
+  description: z.string().trim().max(500).nullable().optional(),
+  permissions: z.array(
+    z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,3}$/).max(100),
+  ).max(100).optional(),
+  requestId: z.string().uuid(),
+}).strict().refine(data => data.name !== undefined
+  || data.description !== undefined
+  || data.permissions !== undefined, {
   message: 'Guncellenecek alan yok',
+}).refine(data => !data.permissions
+  || new Set(data.permissions).size === data.permissions.length, {
+  message: 'Tekrarlanan izin var',
 })
 
 // ============================================================

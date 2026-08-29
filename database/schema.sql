@@ -560,14 +560,25 @@ CREATE POLICY "profiles_select_all"  ON profiles FOR SELECT USING (TRUE);
 CREATE POLICY "profiles_update_own"  ON profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "profiles_insert_own"  ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Oturumlar: sadece kendi oturumları
-CREATE POLICY "sessions_own"         ON game_sessions        FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "answers_own"          ON session_answers      FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "badges_own"           ON user_badges          FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "topic_own"            ON user_topic_progress  FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "daily_own"            ON user_daily_quests    FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "xp_own"               ON xp_log               FOR ALL USING (auth.uid() = user_id);
-CREATE POLICY "qhist_own"            ON user_question_history FOR ALL USING (auth.uid() = user_id);
+-- Kullaniciya ait durum salt okunur; oturum, odul, ilerleme ve rozet yazmalari
+-- yalnız dogrulanmis server transaction'larindan gelir.
+CREATE POLICY "sessions_own"         ON game_sessions         FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "answers_own"          ON session_answers       FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "badges_own"           ON user_badges           FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "topic_own"            ON user_topic_progress   FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "daily_own"            ON user_daily_quests     FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "xp_own"               ON xp_log                FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "qhist_own"            ON user_question_history FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON
+  game_sessions, session_answers, user_badges, user_topic_progress,
+  user_daily_quests, xp_log, user_question_history
+FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON
+  game_sessions, session_answers, user_badges, user_topic_progress,
+  user_daily_quests, xp_log, user_question_history
+TO service_role;
+GRANT INSERT ON user_daily_quests TO service_role;
 
 -- Sorular: herkes okuyabilir, sadece admin yazabilir
 ALTER TABLE questions             ENABLE ROW LEVEL SECURITY;
@@ -576,8 +587,8 @@ CREATE POLICY "questions_select_all" ON questions FOR SELECT USING (is_active = 
 -- Liderboard: herkes görebilir
 ALTER TABLE leaderboard_weekly    ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "lb_select_all"        ON leaderboard_weekly FOR SELECT USING (TRUE);
-CREATE POLICY "lb_own"               ON leaderboard_weekly FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "lb_own_update"        ON leaderboard_weekly FOR UPDATE USING (auth.uid() = user_id);
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON leaderboard_weekly
+  FROM PUBLIC, anon, authenticated, service_role;
 
 -- Rozetler ve görevler: herkes okuyabilir
 ALTER TABLE badges                ENABLE ROW LEVEL SECURITY;

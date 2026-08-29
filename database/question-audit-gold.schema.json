@@ -2,33 +2,84 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bilgearena.com/schemas/question-audit-gold.schema.json",
   "title": "Bilge Arena human-adjudicated question audit gold labels",
+  "$defs": {
+    "flawCode": {
+      "enum": [
+        "WRONG_KEY_SUSPECTED",
+        "NO_CORRECT_OPTION",
+        "MULTIPLE_CORRECT",
+        "MISSING_PREMISE",
+        "AMBIGUOUS_WORDING",
+        "STEM_MISSING_TOKEN",
+        "SOLUTION_CONTRADICTS_ANSWER",
+        "INCOMPLETE_SOLUTION",
+        "LOGICAL_FALLACY"
+      ]
+    }
+  },
   "type": "array",
   "items": {
     "type": "object",
     "additionalProperties": false,
-    "required": ["questionId", "contentSha256", "flawCodes", "reviewerCount", "adjudication"],
+    "required": ["questionId", "contentSha256", "flawCodes", "evidenceClass", "proofRef", "reviewerCount", "adjudication", "reviewerRefs"],
     "properties": {
       "questionId": { "type": "string", "minLength": 1 },
       "contentSha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
       "flawCodes": {
         "type": "array",
         "uniqueItems": true,
-        "items": {
-          "enum": [
-            "WRONG_KEY_SUSPECTED",
-            "NO_CORRECT_OPTION",
-            "MULTIPLE_CORRECT",
-            "MISSING_PREMISE",
-            "AMBIGUOUS_WORDING",
-            "STEM_MISSING_TOKEN",
-            "SOLUTION_CONTRADICTS_ANSWER",
-            "INCOMPLETE_SOLUTION",
-            "LOGICAL_FALLACY"
-          ]
+        "items": { "$ref": "#/$defs/flawCode" }
+      },
+      "evidenceClass": { "enum": ["deterministic_gold", "official_source_gold", "curator_adjudicated"] },
+      "proofRef": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+      "reviewerCount": { "type": "integer", "minimum": 0 },
+      "adjudication": { "enum": ["deterministic", "official_source", "consensus", "adjudicated"] },
+      "reviewerRefs": {
+        "type": "array",
+        "minItems": 0,
+        "uniqueItems": true,
+        "items": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+      }
+    },
+    "allOf": [
+      {
+        "if": { "properties": { "evidenceClass": { "const": "deterministic_gold" } } },
+        "then": {
+          "properties": {
+            "reviewerCount": { "const": 0 },
+            "adjudication": { "const": "deterministic" },
+            "reviewerRefs": { "maxItems": 0 }
+          }
         }
       },
-      "reviewerCount": { "type": "integer", "minimum": 2 },
-      "adjudication": { "enum": ["consensus", "adjudicated"] }
-    }
+      {
+        "if": { "properties": { "evidenceClass": { "const": "official_source_gold" } } },
+        "then": {
+          "properties": {
+            "reviewerCount": { "const": 0 },
+            "adjudication": { "const": "official_source" },
+            "reviewerRefs": { "maxItems": 0 }
+          }
+        }
+      },
+      {
+        "if": { "properties": { "evidenceClass": { "const": "curator_adjudicated" }, "adjudication": { "const": "consensus" } }, "required": ["evidenceClass", "adjudication"] },
+        "then": {
+          "properties": {
+            "reviewerCount": { "const": 2 },
+            "reviewerRefs": { "minItems": 2, "maxItems": 2 }
+          }
+        }
+      },
+      {
+        "if": { "properties": { "evidenceClass": { "const": "curator_adjudicated" }, "adjudication": { "const": "adjudicated" } }, "required": ["evidenceClass", "adjudication"] },
+        "then": {
+          "properties": {
+            "reviewerCount": { "const": 3 },
+            "reviewerRefs": { "minItems": 3, "maxItems": 3 }
+          }
+        }
+      }
+    ]
   }
 }

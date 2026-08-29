@@ -22,7 +22,7 @@ export default function PlayerLayout({
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       {/* Mobilde gerçek alt-nav tokenı kadar içerik ve odak kaydırma boşluğu bırak. */}
-      <main className="mx-auto max-w-3xl scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] px-4 pt-8 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] md:scroll-pb-0 md:pb-8">
+      <main className="mx-auto max-w-3xl scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] px-4 pt-8 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] lg:scroll-pb-0 lg:pb-8">
         {children}
       </main>
       <BottomNav />

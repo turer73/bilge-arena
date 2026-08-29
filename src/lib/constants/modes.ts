@@ -49,7 +49,7 @@ export const MODES: QuizMode[] = [
   {
     id: 'deneme',
     name: 'Deneme Sınavı',
-    description: 'TYT formatında deneme',
+    description: '40 soruluk ders denemesi',
     questionCount: 40,
     timePerQuestion: 0,
     icon: '📋',

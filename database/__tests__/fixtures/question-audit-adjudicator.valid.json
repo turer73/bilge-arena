@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "question-audit-review@1",
+  "reviewerRef": "3333333333333333333333333333333333333333333333333333333333333333",
+  "role": "adjudicator",
+  "labels": [
+    { "questionId": "wrong-key-question", "contentSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "flawCodes": ["WRONG_KEY_SUSPECTED"] }
+  ]
+}

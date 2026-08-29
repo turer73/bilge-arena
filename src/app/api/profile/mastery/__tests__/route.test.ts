@@ -7,6 +7,9 @@ const {
   mockNodeResult,
   mockOutcomeResult,
   mockStateResult,
+  mockDiagnosticResult,
+  mockDiagnosticScopeResult,
+  mockScopeResult,
   mockIntegrityResult,
   mockFrom,
   mockRpc,
@@ -19,6 +22,9 @@ const {
   mockNodeResult: vi.fn(),
   mockOutcomeResult: vi.fn(),
   mockStateResult: vi.fn(),
+  mockDiagnosticResult: vi.fn(),
+  mockDiagnosticScopeResult: vi.fn(),
+  mockScopeResult: vi.fn(),
   mockIntegrityResult: vi.fn(),
   mockFrom: vi.fn(),
   mockRpc: vi.fn(),
@@ -43,7 +49,9 @@ vi.mock('@/lib/supabase/service-role', () => ({
         ? mockNodeResult
         : table === 'curriculum_outcomes'
           ? mockOutcomeResult
-          : mockStateResult
+          : table === 'user_diagnostic_outcome_state'
+            ? mockDiagnosticResult
+            : mockStateResult
       const builder: Record<string, unknown> = {}
       builder.select = vi.fn((columns: string) => {
         mockSelect(table, columns)
@@ -60,7 +68,12 @@ vi.mock('@/lib/supabase/service-role', () => ({
       )
       return builder
     }),
-    rpc: mockRpc.mockImplementation(() => Promise.resolve(mockIntegrityResult())),
+    rpc: mockRpc.mockImplementation((name: string) => {
+      if (name === 'resolve_released_curriculum_scope') return Promise.resolve(mockScopeResult())
+      if (name === 'resolve_released_diagnostic_scope') return Promise.resolve(mockDiagnosticScopeResult())
+      if (name === 'curriculum_scope_integrity') return Promise.resolve(mockIntegrityResult())
+      throw new Error(`unexpected rpc: ${name}`)
+    }),
   })),
 }))
 
@@ -91,6 +104,19 @@ const OUTCOMES = [{
   exam_ref: 'TYT',
 }]
 
+const FEN_NODES = NODES.map((node, index) => ({
+  ...node,
+  code: ['fen-course', 'fen-unit', 'fen-topic', 'fen-leaf'][index],
+  title: ['TYT Fen Bilimleri', 'Fizik', 'Fizik', 'Fiziksel akıl yürütme'][index],
+}))
+const FEN_OUTCOMES = [{
+  ...OUTCOMES[0],
+  code: 'FEN-FIZ-01',
+  game: 'fen',
+  category: 'fizik',
+  title: 'Fiziksel akıl yürütme becerisi',
+}]
+
 function request(query = 'game=matematik&exam_ref=TYT') {
   return new Request(`http://localhost/api/profile/mastery?${query}`, {
     headers: { 'x-forwarded-for': '1.2.3.4' },
@@ -106,8 +132,31 @@ describe('GET /api/profile/mastery', () => {
     mockNodeResult.mockReturnValue({ data: NODES, error: null })
     mockOutcomeResult.mockReturnValue({ data: OUTCOMES, error: null })
     mockStateResult.mockReturnValue({ data: [], error: null })
+    mockDiagnosticResult.mockReturnValue({ data: [], error: null })
+    mockDiagnosticScopeResult.mockReturnValue({
+      data: {
+        game: 'matematik', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-math-v1', policyVersion: 'adaptive-screening-v1',
+        questionCount: 10, outcomeCount: 6, maxPerOutcome: 2,
+      },
+      error: null,
+    })
+    mockScopeResult.mockReturnValue({
+      data: {
+        game: 'matematik',
+        displayExamRef: 'TYT',
+        questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-math-v1',
+        mappingMode: 'category_proxy',
+        diagnosticEnabled: true,
+      },
+      error: null,
+    })
     mockIntegrityResult.mockReturnValue({
-      data: { total: 1, mapped: 1, unmapped: 0, scopeMismatch: 0, nodeOrphan: 0, outcomeOrphan: 0 },
+      data: {
+        total: 1, mapped: 1, unmapped: 0, scopeMismatch: 0,
+        nodeOrphan: 0, outcomeOrphan: 0, primaryMismatch: 0, emptyOutcome: 0,
+      },
       error: null,
     })
   })
@@ -123,8 +172,9 @@ describe('GET /api/profile/mastery', () => {
     expect((await GET(request('game=matematik&exam_ref=%3Cscript%3E') as never)).status).toBe(400)
   })
 
-  it('pilot disi scope icin sorgu yapmadan acik unsupported doner', async () => {
+  it('release edilmemis scope icin veri sorgusu yapmadan acik unsupported doner', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValueOnce({ data: null, error: null })
     const response = await GET(request('game=fen&exam_ref=TYT') as never)
     expect(response.status).toBe(200)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
@@ -133,16 +183,21 @@ describe('GET /api/profile/mastery', () => {
       examRef: 'TYT',
       coverage: {
         supported: false,
+        diagnosticAvailable: false,
         taxonomyVersion: null,
         totalQuestions: 0,
         mappedQuestions: 0,
         percentage: 0,
       },
+      discovery: null,
       graph: null,
       outcomes: [],
     })
     expect(mockFrom).not.toHaveBeenCalled()
-    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledWith('resolve_released_curriculum_scope', {
+      p_game: 'fen', p_display_exam_ref: 'TYT',
+    })
   })
 
   it('ham kanittan UUIDsiz, aciklanabilir dort seviyeli harita uretir', async () => {
@@ -169,12 +224,14 @@ describe('GET /api/profile/mastery', () => {
       }],
       error: null,
     })
+    mockDiagnosticResult.mockReturnValue({ data: [{ outcome_id: OUTCOME_ID }], error: null })
 
     const response = await GET(request() as never)
     const body = await response.json()
     expect(response.status).toBe(200)
     expect(body.coverage).toEqual({
       supported: true,
+      diagnosticAvailable: true,
       taxonomyVersion: 'ba-tyt-math-v1',
       totalQuestions: 1,
       mappedQuestions: 1,
@@ -184,6 +241,16 @@ describe('GET /api/profile/mastery', () => {
       code: 'course',
       nodeType: 'course',
       children: [{ children: [{ children: [{ outcomeCode: 'MAT-SAY-01' }] }] }],
+    })
+    expect(body.discovery).toEqual({
+      level: 3,
+      stage: 'ready',
+      diagnosticCompleted: true,
+      evidenceCollected: 3,
+      evidenceTarget: 3,
+      readyOutcomes: 1,
+      totalOutcomes: 1,
+      journeyPercentage: 100,
     })
     expect(body.outcomes[0]).toMatchObject({
       code: 'MAT-SAY-01',
@@ -208,18 +275,162 @@ describe('GET /api/profile/mastery', () => {
     expect(mockEq).toHaveBeenCalledWith('curriculum_outcomes', 'exam_ref', 'TYT')
     expect(mockEq).toHaveBeenCalledWith('curriculum_nodes', 'taxonomy_version', 'ba-tyt-math-v1')
     expect(mockEq).toHaveBeenCalledWith('curriculum_outcomes', 'taxonomy_version', 'ba-tyt-math-v1')
+    expect(mockEq).toHaveBeenCalledWith('user_diagnostic_outcome_state', 'user_id', USER_ID)
+  })
+
+  it('released TYT Fen scopeunu registry taksonomisiyle acar ve matematik tanilamasini calistirmaz', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValueOnce({
+      data: {
+        game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v1', mappingMode: 'category_proxy', diagnosticEnabled: false,
+      },
+      error: null,
+    })
+    mockNodeResult.mockReturnValueOnce({ data: FEN_NODES, error: null })
+    mockOutcomeResult.mockReturnValueOnce({ data: FEN_OUTCOMES, error: null })
+
+    const response = await GET(request('game=fen&exam_ref=TYT') as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      game: 'fen', examRef: 'TYT',
+      coverage: {
+        supported: true, diagnosticAvailable: false,
+        taxonomyVersion: 'ba-tyt-fen-v1', percentage: 100,
+      },
+      discovery: { level: 1, stage: 'estimate', diagnosticCompleted: false },
+      outcomes: [{ code: 'FEN-FIZ-01', game: 'fen', category: 'fizik' }],
+    })
+    expect(mockEq).toHaveBeenCalledWith('curriculum_nodes', 'taxonomy_version', 'ba-tyt-fen-v1')
+    expect(mockEq).toHaveBeenCalledWith('curriculum_outcomes', 'taxonomy_version', 'ba-tyt-fen-v1')
+    expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
+  })
+
+  it('V3 resolver exact Fen blueprintini yayinladiginda on soruluk baslangic taramasini acar', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValueOnce({
+      data: {
+        game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v1', mappingMode: 'category_proxy', diagnosticEnabled: true,
+      },
+      error: null,
+    })
+    mockDiagnosticScopeResult.mockReturnValueOnce({
+      data: {
+        game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v1', policyVersion: 'adaptive-screening-v1',
+        questionCount: 10, outcomeCount: 3, maxPerOutcome: 4,
+      },
+      error: null,
+    })
+    mockNodeResult.mockReturnValueOnce({ data: FEN_NODES, error: null })
+    mockOutcomeResult.mockReturnValueOnce({ data: FEN_OUTCOMES, error: null })
+
+    const response = await GET(request('game=fen&exam_ref=TYT') as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.coverage).toMatchObject({
+      supported: true,
+      diagnosticAvailable: true,
+      taxonomyVersion: 'ba-tyt-fen-v1',
+    })
+    expect(mockRpc).toHaveBeenCalledWith('resolve_released_diagnostic_scope', {
+      p_game: 'fen', p_display_exam_ref: 'TYT',
+    })
+    expect(mockFrom).toHaveBeenCalledWith('user_diagnostic_outcome_state')
+  })
+
+  it('V3 diagnostic kapsam curriculum taxonomy ile uyusmazsa CTAyi fail-closed kapatir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValueOnce({
+      data: {
+        game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v1', mappingMode: 'category_proxy', diagnosticEnabled: true,
+      },
+      error: null,
+    })
+    mockDiagnosticScopeResult.mockReturnValueOnce({
+      data: {
+        game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v2', policyVersion: 'adaptive-screening-v1',
+        questionCount: 10, outcomeCount: 3, maxPerOutcome: 4,
+      },
+      error: null,
+    })
+    mockNodeResult.mockReturnValueOnce({ data: FEN_NODES, error: null })
+    mockOutcomeResult.mockReturnValueOnce({ data: FEN_OUTCOMES, error: null })
+
+    const response = await GET(request('game=fen&exam_ref=TYT') as never)
+    expect(response.status).toBe(200)
+    expect((await response.json()).coverage.diagnosticAvailable).toBe(false)
+    expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
+  })
+
+  it('migration oncesi eksik V3 resolver fallbackini yalniz legacy Matematik icin kullanir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockDiagnosticScopeResult.mockReturnValueOnce({ data: null, error: { code: 'PGRST202' } })
+
+    const response = await GET(request() as never)
+    expect(response.status).toBe(200)
+    expect((await response.json()).coverage.diagnosticAvailable).toBe(true)
+
+    mockScopeResult.mockReturnValueOnce({
+      data: {
+        game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v1', mappingMode: 'category_proxy', diagnosticEnabled: true,
+      },
+      error: null,
+    })
+    mockDiagnosticScopeResult.mockReturnValueOnce({ data: null, error: { code: 'PGRST202' } })
+    mockNodeResult.mockReturnValueOnce({ data: FEN_NODES, error: null })
+    mockOutcomeResult.mockReturnValueOnce({ data: FEN_OUTCOMES, error: null })
+
+    const fenResponse = await GET(request('game=fen&exam_ref=TYT') as never)
+    expect(fenResponse.status).toBe(200)
+    expect((await fenResponse.json()).coverage.diagnosticAvailable).toBe(false)
+  })
+
+  it('registry bayragi acik olsa bile desteklenmeyen taksonomide tanilama vaat etmez', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValueOnce({
+      data: {
+        game: 'matematik', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-math-v2', mappingMode: 'category_proxy', diagnosticEnabled: true,
+      },
+      error: null,
+    })
+
+    const response = await GET(request() as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.coverage).toMatchObject({
+      supported: true,
+      diagnosticAvailable: false,
+      taxonomyVersion: 'ba-tyt-math-v2',
+    })
+    expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
   })
 
   it('coverage veya graph butunlugu bozuksa fail-closed 500 doner', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
     mockIntegrityResult.mockReturnValueOnce({
-      data: { total: 2, mapped: 1, unmapped: 1, scopeMismatch: 1, nodeOrphan: 0, outcomeOrphan: 0 },
+      data: {
+        total: 2, mapped: 1, unmapped: 1, scopeMismatch: 1,
+        nodeOrphan: 0, outcomeOrphan: 0, primaryMismatch: 0, emptyOutcome: 0,
+      },
       error: null,
     })
     expect((await GET(request() as never)).status).toBe(500)
 
     mockIntegrityResult.mockReturnValue({
-      data: { total: 1, mapped: 1, unmapped: 0, scopeMismatch: 0, nodeOrphan: 0, outcomeOrphan: 0 },
+      data: {
+        total: 1, mapped: 1, unmapped: 0, scopeMismatch: 0,
+        nodeOrphan: 0, outcomeOrphan: 0, primaryMismatch: 0, emptyOutcome: 0,
+      },
       error: null,
     })
     mockNodeResult.mockReturnValueOnce({ data: NODES.slice(1), error: null })
@@ -261,5 +472,6 @@ describe('GET /api/profile/mastery', () => {
     await GET(request() as never)
     const selections = mockSelect.mock.calls.map((call) => String(call[1])).join(' ')
     expect(selections).not.toMatch(/selected_option|content|answer_id|session_id|attempt_id/)
+    expect(mockSelect).toHaveBeenCalledWith('user_diagnostic_outcome_state', 'outcome_id')
   })
 })

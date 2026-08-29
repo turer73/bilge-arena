@@ -33,9 +33,14 @@ export async function POST(request: Request) {
     p_request_id: body.data.requestId,
   })
   if (error) {
+    const status = teacherInviteRpcStatus(error.code)
     return teacherClassroomNoStoreJson(
-      { error: 'Davet kabul edilemedi' },
-      { status: teacherInviteRpcStatus(error.code) },
+      {
+        error: error.code === '23514'
+          ? 'Sınıf veya kurum öğrenci kapasitesi dolu'
+          : 'Davet kabul edilemedi',
+      },
+      { status },
     )
   }
   const result = teacherInvitationAcceptResultSchema.safeParse(data)

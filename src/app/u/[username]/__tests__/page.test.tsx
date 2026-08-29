@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
-const { mockRpc, mockNotFound } = vi.hoisted(() => ({
+const { mockRpc, mockNotFound, mockGetUser } = vi.hoisted(() => ({
   mockRpc: vi.fn(),
+  mockGetUser: vi.fn(),
   mockNotFound: vi.fn(() => {
     throw new Error('NEXT_NOT_FOUND')
   }),
@@ -10,6 +11,9 @@ const { mockRpc, mockNotFound } = vi.hoisted(() => ({
 
 vi.mock('@/lib/supabase/service-role', () => ({
   createServiceRoleClient: () => ({ rpc: mockRpc }),
+}))
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(async () => ({ auth: { getUser: mockGetUser } })),
 }))
 vi.mock('next/navigation', () => ({ notFound: mockNotFound }))
 
@@ -32,7 +36,10 @@ const SAFE_PROFILE = {
 }
 
 describe('PublicProfilePage /u/[username]', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+  })
 
   it('discoverable kullanici icin profili render eder (username + dogruluk)', async () => {
     mockRpc.mockResolvedValue({ data: [SAFE_PROFILE] })
@@ -43,6 +50,24 @@ describe('PublicProfilePage /u/[username]', () => {
     expect(container.textContent).toContain('1.500') // tr-TR XP
     // PII sizmamali (display_name RPC'de yok zaten)
     expect(container.textContent).not.toContain('@')
+    expect(mockRpc).toHaveBeenCalledWith('get_public_profile', {
+      p_username: 'ali',
+      p_viewer_id: null,
+    })
+  })
+
+  it('oturumdaki izleyiciyi friends-only yetki kontrolune aktarir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'viewer-1' } } })
+    mockRpc.mockResolvedValue({ data: [{ ...SAFE_PROFILE, relationship_status: 'accepted' }], error: null })
+
+    const jsx = await PublicProfilePage({ params: Promise.resolve({ username: 'ali' }) })
+    const { container } = render(jsx)
+
+    expect(container.textContent).toContain('Arkadaşsınız')
+    expect(mockRpc).toHaveBeenCalledWith('get_public_profile', {
+      p_username: 'ali',
+      p_viewer_id: 'viewer-1',
+    })
   })
 
   it('profil yok / discoverable degil -> notFound', async () => {

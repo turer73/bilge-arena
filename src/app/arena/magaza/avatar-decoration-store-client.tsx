@@ -157,7 +157,7 @@ export function AvatarDecorationStoreClient() {
       </div>
 
       {/* Katalog grid'i */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {AVATAR_DECORATIONS.map((d) => {
           const wearable = canWear(d.id)
           const isWorn = worn.includes(d.id)

@@ -1,9 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import type { MasteryOutcome } from '@/lib/hooks/use-mastery-map'
+import type { MasteryDiscoveryPublic } from '@/lib/mastery/discovery'
 
 interface MasteryMapCardProps {
   outcomes: MasteryOutcome[]
+  discovery: MasteryDiscoveryPublic | null
+  diagnosticAvailable: boolean
   loading: boolean
 }
 
@@ -14,8 +18,71 @@ const STATUS_LABEL = {
 } as const
 
 /** Lobi özeti; ayrıntılı kanıt ağacı ayrı hâkimiyet ekranında gösterilir. */
-export function MasteryMapCard({ outcomes, loading }: MasteryMapCardProps) {
+export function MasteryMapCard({ outcomes, discovery, diagnosticAvailable, loading }: MasteryMapCardProps) {
   if (loading || outcomes.length === 0) return null
+
+  const mapParams = new URLSearchParams({ game: outcomes[0].game })
+  if (outcomes[0].examRef) mapParams.set('exam_ref', outcomes[0].examRef)
+  const mapHref = `/arena/hakimiyet?${mapParams}`
+  const diagnosticParams = new URLSearchParams({ game: outcomes[0].game })
+  if (outcomes[0].examRef) diagnosticParams.set('exam_ref', outcomes[0].examRef)
+  const diagnosticHref = `/arena/tani?${diagnosticParams}`
+  const practiceParams = new URLSearchParams({ category: outcomes[0].category })
+  if (outcomes[0].examRef) practiceParams.set('exam_ref', outcomes[0].examRef)
+  const practiceHref = `/arena/${outcomes[0].game}?${practiceParams}`
+
+  if (discovery && discovery.stage !== 'ready') {
+    const estimateStage = discovery.stage === 'estimate'
+    const diagnosticEstimate = estimateStage && diagnosticAvailable
+    return (
+      <article className="animate-fadeUp overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)]" style={{ animationDelay: '0.34s', animationFillMode: 'both' }}>
+        <div className="flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2">
+          <span className="text-[9px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
+            KEŞİF SEVİYESİ {discovery.level}/3
+          </span>
+          <span className="text-[10px] font-bold text-[var(--focus)]">
+            %{discovery.journeyPercentage}
+          </span>
+        </div>
+        <div className="px-3 py-3">
+          <h2 className="text-xs font-bold text-[var(--text)]">
+            {diagnosticEstimate
+              ? 'Başlangıç tahminini birlikte çıkaralım'
+              : estimateStage
+                ? 'Pratik kanıtlarınla başlangıç rotanı oluşturalım'
+                : 'Kanıt ağın netleşiyor'}
+          </h2>
+          <p className="mt-1 text-[10px] leading-relaxed text-[var(--text-sub)]">
+            {diagnosticEstimate
+              ? 'Kısa başlangıç taraması yalnız ilk yönü gösterir; başarı ya da eksik hükmü vermez.'
+              : estimateStage
+                ? 'Kısa pratiklerdeki doğrulanmış cevapların ilk yönü gösterir; yeterli kanıt olmadan başarı ya da eksik hükmü verilmez.'
+              : `${discovery.evidenceCollected}/${discovery.evidenceTarget} doğrulanmış kanıt toplandı; ${discovery.readyOutcomes}/${discovery.totalOutcomes} kazanım ilk değerlendirmeye hazır.`}
+          </p>
+          <div
+            className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--border)]"
+            role="progressbar"
+            aria-label="Keşif ilerlemesi"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={discovery.journeyPercentage}
+          >
+            <div className="h-full rounded-full bg-[var(--focus)] transition-[width] duration-500" style={{ width: `${discovery.journeyPercentage}%` }} />
+          </div>
+          <Link
+            href={diagnosticEstimate ? diagnosticHref : estimateStage ? practiceHref : mapHref}
+            className="mt-2 inline-flex min-h-10 items-center text-[10px] font-extrabold text-[var(--focus)] hover:underline"
+          >
+            {diagnosticEstimate
+              ? '8 dakikalık keşif turunu başlat'
+              : estimateStage
+                ? 'Keşif pratiğine geç'
+                : 'Kanıt ağını aç'}
+          </Link>
+        </div>
+      </article>
+    )
+  }
 
   const outcome = outcomes[0]
   const progress = outcome.status === 'insufficient' ? outcome.evidenceCompleteness : outcome.score
