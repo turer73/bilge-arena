@@ -197,6 +197,29 @@ describe('MasteryActionCard', () => {
     expect(screen.queryByRole('link', { name: 'Keşif Turunu Başlat' })).not.toBeInTheDocument()
   })
 
+  test('Wordquest mastery YDT etiketini soru filtresine tasimaz', () => {
+    const ydtCoverage = {
+      ...supportedCoverage,
+      diagnosticAvailable: false,
+      taxonomyVersion: 'ba-ydt-eng-v1',
+    }
+    mockedUseMasteryMap.mockReturnValue(hookResult({
+      response: { coverage: ydtCoverage },
+      coverage: ydtCoverage,
+      outcomes: [mkOutcome({
+        code: 'ENG-VOC-01', game: 'wordquest', category: 'vocabulary', examRef: 'YDT',
+        title: 'Kelime bilgisi', status: 'insufficient', attempts: 0, score: 0,
+      })],
+    }) as never)
+    render(<MasteryActionCard game="wordquest" userId="u1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kanıt İçin Pratik Yap' }))
+    expect(useGameStore.getState()).toMatchObject({
+      selectedGame: 'wordquest', selectedCategory: 'vocabulary', selectedExamRef: null, selectedMode: 'practice',
+    })
+    expect(pushMock).toHaveBeenCalledWith('/arena/wordquest')
+  })
+
   test('kanıt evresinde en az denenmiş kazanımı sıraya alır', () => {
     mockedUseMasteryMap.mockReturnValue(hookResult({
       outcomes: [

@@ -29,7 +29,8 @@ export default function HakimiyetClient() {
   const handlePractice = (outcome: MasteryOutcomePublic) => {
     gameStore.setGame(outcome.game as GameSlug)
     gameStore.setCategory(outcome.category)
-    gameStore.setExamRef(outcome.examRef)
+    // Wordquest'in mastery display ref'i YDT, soru storage ref'i NULL'dir.
+    gameStore.setExamRef(outcome.game === 'wordquest' ? null : outcome.examRef)
     gameStore.setDifficulty(null)
     gameStore.setMode('practice')
     router.push(`/arena/${outcome.game}`)
