@@ -3,7 +3,7 @@ import CalismaClient from './calisma-client'
 
 export const metadata: Metadata = {
   title: 'Ders Çalışma Ortamı',
-  description: 'Bugünün 15\'i, kazanım haritan ve Bilge Asistan tek ekranda — odaklı ders çalışma hub\'ı.',
+  description: 'Dersini ve sınav kapsamını seç, çalışma turunu sade bir akışla başlat.',
   robots: { index: false, follow: true },
 }
 

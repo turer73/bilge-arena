@@ -294,7 +294,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           }
         `}</style>
         {user && (
-          <div className="mx-auto grid w-full max-w-[720px] gap-3 px-4 pt-4 md:grid-cols-2 md:px-5 lg:max-w-[1180px] lg:px-6 lg:pt-6">
+          <div data-desktop-learning-cards className="mx-auto hidden w-full max-w-[720px] gap-3 px-4 pt-4 md:grid md:grid-cols-2 md:px-5 lg:max-w-[1180px] lg:px-6 lg:pt-6">
             <TodayPlanCard
               plan={todayPlan.plan}
               loading={todayPlan.loading}
