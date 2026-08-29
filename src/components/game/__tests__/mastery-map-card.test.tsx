@@ -36,14 +36,14 @@ const outcome: MasteryOutcome = {
 
 describe('MasteryMapCard', () => {
   it('bos ve yuklenen durumda sessizce gizlenir', () => {
-    const { container, rerender } = render(<MasteryMapCard outcomes={[]} discovery={null} loading={false} />)
+    const { container, rerender } = render(<MasteryMapCard outcomes={[]} discovery={null} diagnosticAvailable={false} loading={false} />)
     expect(container).toBeEmptyDOMElement()
-    rerender(<MasteryMapCard outcomes={[outcome]} discovery={null} loading />)
+    rerender(<MasteryMapCard outcomes={[outcome]} discovery={null} diagnosticAvailable loading />)
     expect(container).toBeEmptyDOMElement()
   })
 
   it('ham kaniti, durumu ve pilot uyarisi birlikte gosterir', () => {
-    render(<MasteryMapCard outcomes={[outcome]} discovery={null} loading={false} />)
+    render(<MasteryMapCard outcomes={[outcome]} discovery={null} diagnosticAvailable loading={false} />)
     expect(screen.getByText('Ustalaştın')).toBeInTheDocument()
     expect(screen.getByText('%84')).toBeInTheDocument()
     expect(screen.getByText('4/5 doğru')).toBeInTheDocument()
@@ -63,7 +63,7 @@ describe('MasteryMapCard', () => {
       evidenceCompleteness: 40,
       score: 100,
       status: 'insufficient',
-    }]} discovery={null} loading={false} />)
+    }]} discovery={null} diagnosticAvailable loading={false} />)
     expect(screen.getByText('2/3 kanıt')).toBeInTheDocument()
     expect(screen.queryByText('%100')).not.toBeInTheDocument()
   })
@@ -72,10 +72,38 @@ describe('MasteryMapCard', () => {
     render(<MasteryMapCard
       outcomes={[{ ...outcome, attempts: 0, correctAttempts: 0, delayedCorrect: 0, status: 'insufficient' }]}
       discovery={{ level: 1, stage: 'estimate', diagnosticCompleted: false, evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 0 }}
+      diagnosticAvailable
       loading={false}
     />)
     expect(screen.getByText('KEŞİF SEVİYESİ 1/3')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /keşif turunu başlat/i })).toHaveAttribute('href', '/arena/tani')
+    expect(screen.getByRole('link', { name: /keşif turunu başlat/i })).toHaveAttribute(
+      'href',
+      '/arena/tani?game=matematik&exam_ref=TYT',
+    )
     expect(screen.queryByText('%84')).not.toBeInTheDocument()
+  })
+
+  it('tanilama desteklenmeyen derste matematik turu yerine kapsamli pratige yonlendirir', () => {
+    render(<MasteryMapCard
+      outcomes={[{
+        ...outcome,
+        game: 'turkce',
+        category: 'paragraf',
+        examRef: 'TYT',
+        attempts: 0,
+        correctAttempts: 0,
+        delayedCorrect: 0,
+        status: 'insufficient',
+      }]}
+      discovery={{ level: 1, stage: 'estimate', diagnosticCompleted: false, evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 0 }}
+      diagnosticAvailable={false}
+      loading={false}
+    />)
+    expect(screen.getByText(/pratik kanıtlarınla başlangıç rotanı/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /keşif pratiğine geç/i })).toHaveAttribute(
+      'href',
+      '/arena/turkce?category=paragraf&exam_ref=TYT',
+    )
+    expect(screen.queryByRole('link', { name: /8 dakikalık/i })).not.toBeInTheDocument()
   })
 })

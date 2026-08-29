@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowRight, School, ShieldCheck, TrendingUp, Users } fro
 
 import type { InstitutionClassroomOverview } from '@/lib/institution-tracking/classroom-overview'
 import type { InstitutionTrackingDirectory } from '@/lib/institution-tracking/directory'
+import type { InstitutionLearningScope } from '@/lib/institution-tracking/scope'
 import {
   TEACHER_GROWTH_MIN_ELIGIBLE_STUDENTS,
   TEACHER_GROWTH_MIN_WINDOW_DAYS,
@@ -25,11 +26,13 @@ export function InstitutionOverviewPanel({
   overviews,
   loading,
   onOpenClassroom,
+  selectedScope,
 }: {
   directory: InstitutionTrackingDirectory
   overviews: OverviewMap
   loading: boolean
   onOpenClassroom?: (classroomId: string) => void
+  selectedScope?: InstitutionLearningScope | null
 }) {
   const analyzableClassrooms = directory.classrooms.filter((classroom) => classroom.canAnalyze !== false)
   const pending = loading || (analyzableClassrooms.length > 0 && Object.keys(overviews).length === 0)
@@ -95,6 +98,8 @@ export function InstitutionOverviewPanel({
                 <div className="mt-4 min-h-20 rounded-lg border border-white/10 bg-black/5 p-3 text-xs leading-5">
                   {restricted ? (
                     <p className="text-sky-100">Bu rolde sınıf dizini görünür; ayrıntılı öğrenme analizi sınırlıdır.</p>
+                  ) : belowThreshold ? (
+                    <p className="text-amber-100">Toplu analiz için en az 3 aktif öğrenci gerekir.</p>
                   ) : overview ? (
                     <div className="space-y-1">
                       <p><strong>{overview.summary.studentsNeedingSupport}</strong> öğrenci destek odağında</p>
@@ -103,8 +108,6 @@ export function InstitutionOverviewPanel({
                     </div>
                   ) : pending ? (
                     <p className="text-[var(--text-sub)]">Sınıf özeti doğrulanıyor…</p>
-                  ) : belowThreshold ? (
-                    <p className="text-amber-100">Toplu analiz için en az 3 aktif öğrenci gerekir.</p>
                   ) : (
                     <p className="text-amber-100">Sınıf özeti eksiksiz doğrulanamadı.</p>
                   )}
@@ -120,7 +123,7 @@ export function InstitutionOverviewPanel({
                   </button>
                 ) : (
                   <Link
-                    href={`/arena/kurum/sinif/${classroom.id}`}
+                    href={buildClassroomHref(classroom.id, selectedScope)}
                     className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-3 text-sm font-black hover:bg-white/5"
                   >
                     Sınıf çalışma alanına git <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -183,6 +186,11 @@ export function InstitutionOverviewPanel({
       )}
     </div>
   )
+}
+
+function buildClassroomHref(classroomId: string, scope?: InstitutionLearningScope | null): string {
+  if (!scope) return `/arena/kurum/sinif/${classroomId}`
+  return `/arena/kurum/sinif/${classroomId}?game=${encodeURIComponent(scope.game)}&exam_ref=${encodeURIComponent(scope.displayExamRef)}`
 }
 
 function OverviewMetric({

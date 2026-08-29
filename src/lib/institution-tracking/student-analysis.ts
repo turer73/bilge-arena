@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { summarizeMasteryEvidenceV2 } from '@/lib/mastery/evidence-v2'
 import { studentOutcomeAssessmentSchema } from './contracts'
+import type { InstitutionLearningScope } from './scope'
 
 const timestampSchema = z.string().datetime({ offset: true })
 const countSchema = z.number().int().nonnegative()
@@ -69,12 +70,14 @@ export const institutionStudentAnalysisRpcSchema = z.object({
     joinedAt: timestampSchema,
   }).strict(),
   scope: z.object({
-    game: z.literal('matematik'),
-    examRef: z.literal('TYT'),
+    game: z.enum(['wordquest', 'matematik', 'turkce', 'fen', 'sosyal']),
+    examRef: z.string().regex(/^[A-Z0-9-]{2,10}$/),
     questionExamRef: z.string().regex(/^[A-Z0-9-]{2,10}$/).nullable().default(null),
     taxonomyVersion: institutionTaxonomyVersionSchema,
     diagnosticEnabled: z.boolean().default(false),
-    modelVersion: z.literal('institution-evidence-v1'),
+    institutionReportingEnabled: z.literal(true).default(true),
+    scopePolicyVersion: z.string().regex(/^institution-scope-v[0-9]+$/).default('institution-scope-v1'),
+    modelVersion: z.enum(['institution-evidence-v1', 'institution-evidence-v2']),
     windowStart: timestampSchema,
     windowEnd: timestampSchema,
   }).strict(),
@@ -244,6 +247,38 @@ export function buildInstitutionStudentLearningAnalysis(value: unknown) {
   }
   const validated = institutionStudentLearningAnalysisSchema.safeParse(response)
   return validated.success ? validated.data : null
+}
+
+/**
+ * The deploy-before-migration Math RPC predates the explicit institution
+ * capability fields. Fill only those new fields after first proving that the
+ * legacy payload names the exact released scope; this is not a generic
+ * coercion path for another subject.
+ */
+export function completeLegacyInstitutionAnalysisScope(
+  value: unknown,
+  releasedScope: InstitutionLearningScope,
+): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value
+  const raw = value as Record<string, unknown>
+  if (!raw.scope || typeof raw.scope !== 'object' || Array.isArray(raw.scope)) return value
+  const scope = raw.scope as Record<string, unknown>
+  if (
+    scope.game !== releasedScope.game
+    || scope.examRef !== releasedScope.displayExamRef
+    || scope.taxonomyVersion !== releasedScope.taxonomyVersion
+  ) return value
+  return {
+    ...raw,
+    scope: {
+      ...scope,
+      questionExamRef: releasedScope.questionExamRef,
+      diagnosticEnabled: releasedScope.diagnosticEnabled,
+      institutionReportingEnabled: true,
+      scopePolicyVersion: releasedScope.scopePolicyVersion,
+      modelVersion: 'institution-evidence-v1',
+    },
+  }
 }
 
 export type InstitutionStudentLearningAnalysis = z.infer<typeof institutionStudentLearningAnalysisSchema>

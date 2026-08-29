@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
-import { GAME_SLUGS, GAMES, type GameSlug } from '@/lib/constants/games'
+import { GAME_SLUGS, getCategoriesForExam, type GameSlug } from '@/lib/constants/games'
 import { isValidUuid } from '@/lib/utils/uuid'
 import { trDayString } from '@/lib/utils/tr-date'
 import { fetchDueQuestions } from '@/lib/review/due-questions'
@@ -32,7 +32,8 @@ const VALID_GAMES = new Set(GAME_SLUGS)
 const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ', 'YDT'])
 const BASE_QUESTION_LIMIT = 300
 const OUTCOME_LIMIT = 200
-const OUTCOME_MAPPING_LIMIT = 1_000
+const OUTCOME_MAPPING_QUESTION_CHUNK = 75
+const OUTCOME_MAPPING_PAGE_SIZE = 500
 const RECENT_QUESTION_LIMIT = 50
 
 function noStoreJson(body: unknown, init?: { status?: number }) {
@@ -40,6 +41,33 @@ function noStoreJson(body: unknown, init?: { status?: number }) {
     ...init,
     headers: { 'Cache-Control': 'no-store' },
   })
+}
+
+async function fetchOutcomeMappingsForQuestions(
+  admin: ReturnType<typeof createServiceRoleClient>,
+  questionIds: string[],
+) {
+  const rows: Array<{ question_id: string; outcome_id: string }> = []
+  for (let offset = 0; offset < questionIds.length; offset += OUTCOME_MAPPING_QUESTION_CHUNK) {
+    const chunk = questionIds.slice(offset, offset + OUTCOME_MAPPING_QUESTION_CHUNK)
+    for (let pageStart = 0; ; pageStart += OUTCOME_MAPPING_PAGE_SIZE) {
+      // range() is inclusive. Fixed-size pages avoid PostgREST's server row cap
+      // without inventing a per-question mapping cardinality that the DB does
+      // not enforce.
+      const { data, error } = await admin
+        .from('question_outcomes')
+        .select('question_id,outcome_id')
+        .in('question_id', chunk)
+        .order('question_id', { ascending: true })
+        .order('outcome_id', { ascending: true })
+        .range(pageStart, pageStart + OUTCOME_MAPPING_PAGE_SIZE - 1)
+      if (error) throw error
+      const page = data ?? []
+      rows.push(...page)
+      if (page.length < OUTCOME_MAPPING_PAGE_SIZE) break
+    }
+  }
+  return rows
 }
 /** `.in()` does not preserve the immutable snapshot order, so restore it. */
 async function fetchQuestionsInOrder(
@@ -144,9 +172,6 @@ export async function GET(request: NextRequest) {
     return noStoreJson({ error: 'Gecersiz sinav referansi' }, { status: 400 })
   }
   const choiceCategory = searchParams.get('choice_category')
-  if (choiceCategory && !GAMES[game].categories.some((category) => category === choiceCategory)) {
-    return noStoreJson({ error: 'Gecersiz secim kategorisi' }, { status: 400 })
-  }
 
   const admin = createServiceRoleClient()
   const planDate = trDayString()
@@ -171,6 +196,9 @@ export async function GET(request: NextRequest) {
   const examRef = game === 'wordquest'
     ? null
     : (requestedExamRef ?? defaultExamRefForType(examType))
+  if (choiceCategory && !getCategoriesForExam(game, examRef).includes(choiceCategory)) {
+    return noStoreJson({ error: 'Gecersiz secim kategorisi' }, { status: 400 })
+  }
 
   let lookupQuery = admin
     .from('daily_plan')
@@ -306,7 +334,7 @@ export async function GET(request: NextRequest) {
     sortOrder: row.sort_order,
   }))
   const outcomeIds = outcomes.map((outcome) => outcome.id)
-  const baseQuestionIds = new Set(baseQuestions.map((question) => question.id))
+  const outcomeIdSet = new Set(outcomeIds)
 
   let outcomeStates: Array<{
     outcomeId: string
@@ -327,11 +355,15 @@ export async function GET(request: NextRequest) {
         .eq('user_id', user.id)
         .in('outcome_id', outcomeIds)
         .limit(OUTCOME_LIMIT),
-      admin
-        .from('question_outcomes')
-        .select('question_id,outcome_id')
-        .in('outcome_id', outcomeIds)
-        .limit(OUTCOME_MAPPING_LIMIT),
+      fetchOutcomeMappingsForQuestions(
+        admin,
+        baseQuestions.map((question) => question.id),
+      )
+        .then((data) => ({ data, error: null as { code?: string } | null }))
+        .catch((error: unknown) => ({
+          data: null,
+          error: error as { code?: string },
+        })),
     ])
     if (stateResult.error || mappingResult.error) {
       console.error(
@@ -350,7 +382,7 @@ export async function GET(request: NextRequest) {
       lastAnsweredAt: row.last_answered_at,
     }))
     mappings = (mappingResult.data ?? [])
-      .filter((row) => baseQuestionIds.has(row.question_id))
+      .filter((row) => outcomeIdSet.has(row.outcome_id))
       .map((row) => ({ questionId: row.question_id, outcomeId: row.outcome_id }))
   }
 

@@ -11,6 +11,10 @@ const completeRepairSql = readFileSync(join(root, '181_curriculum_scope_repair_a
 const institutionAlignmentSql = readFileSync(join(root, '182_institution_math_scope_registry_alignment.sql'), 'utf8')
 const ydtEnglishReleaseSql = readFileSync(join(root, '187_release_ydt_english_mastery_scope.sql'), 'utf8')
 const ydtEnglishRepairSql = readFileSync(join(root, '188_backfill_released_ydt_english_mastery_evidence.sql'), 'utf8')
+const tytTurkishReleaseSql = readFileSync(join(root, '189_release_tyt_turkce_mastery_scope.sql'), 'utf8')
+const tytTurkishRepairSql = readFileSync(join(root, '190_backfill_released_tyt_turkce_mastery_evidence.sql'), 'utf8')
+const tytSocialReleaseSql = readFileSync(join(root, '191_release_tyt_sosyal_mastery_scope.sql'), 'utf8')
+const tytSocialRepairSql = readFileSync(join(root, '192_backfill_released_tyt_sosyal_mastery_evidence.sql'), 'utf8')
 const materializerDefinition = (sql) => sql.slice(
   sql.indexOf('CREATE OR REPLACE FUNCTION public.materialize_verified_attempt_mastery'),
   sql.indexOf('REVOKE ALL ON FUNCTION public.materialize_verified_attempt_mastery'),
@@ -20,7 +24,7 @@ const graphIntegrityDefinition = (sql) => sql.slice(
   sql.indexOf('REVOKE ALL ON FUNCTION public.curriculum_graph_integrity'),
 )
 
-describe('178-188 curriculum scope release migrations', () => {
+describe('178-192 curriculum scope release migrations', () => {
   it('keeps the release registry private and resolves only released scopes', () => {
     expect(registrySql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_releases/)
     expect(registrySql).toMatch(/release_status IN \('draft','validating','released','retired'\)/)
@@ -211,6 +215,8 @@ describe('178-188 curriculum scope release migrations', () => {
   })
 
   it('repairs every missing current YDT English mapping and is replay-safe', () => {
+    expect(ydtEnglishRepairSql).toMatch(/SET LOCAL lock_timeout = '10s'/)
+    expect(ydtEnglishRepairSql).toMatch(/SET LOCAL statement_timeout = '120s'/)
     expect(ydtEnglishRepairSql).toMatch(/LOCK TABLE[\s\S]*public\.question_revision_outcomes,[\s\S]*public\.session_answers,[\s\S]*public\.verified_attempts,[\s\S]*public\.verified_attempt_hint_events,[\s\S]*public\.review_logs,[\s\S]*public\.mastery_materialized_attempts,[\s\S]*public\.mastery_outcome_evidence,[\s\S]*public\.curriculum_scope_evidence_repair_runs[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
     expect(ydtEnglishRepairSql).toMatch(/release_status = 'released'[\s\S]*curriculum_scope_integrity\([\s\S]*'wordquest', 'YDT', 'ba-ydt-eng-v1'/)
     expect(ydtEnglishRepairSql).toMatch(/JOIN public\.mastery_materialized_attempts AS marker ON marker\.attempt_id = attempt\.id/)
@@ -229,8 +235,8 @@ describe('178-188 curriculum scope release migrations', () => {
     expect(ydtEnglishRepairSql).toMatch(/question\.game = 'wordquest'[\s\S]*NULLIF\(upper\(btrim\(COALESCE\(question\.exam_ref, ''\)\)\), ''\) IS NULL/)
     expect(candidateSql).not.toMatch(/answer\.answered_at\s*<\s*release\.released_at/)
     expect(candidateSql).not.toMatch(/AND\s+mapping\.created_at\s*>\s*answer\.answered_at/)
-    expect(ydtEnglishRepairSql).toMatch(/LEFT JOIN public\.verified_attempt_question_revisions AS snapshot[\s\S]*snapshot\.attempt_id = attempt\.id[\s\S]*snapshot\.question_id = answer\.question_id/)
-    expect(ydtEnglishRepairSql).toMatch(/COALESCE\(snapshot\.difficulty, question\.difficulty\)/)
+    expect(ydtEnglishRepairSql).toMatch(/JOIN public\.verified_attempt_question_revisions AS snapshot[\s\S]*snapshot\.attempt_id = attempt\.id[\s\S]*snapshot\.question_id = answer\.question_id[\s\S]*snapshot\.revision_id = answer\.question_revision_id[\s\S]*snapshot\.game = 'wordquest'/)
+    expect(ydtEnglishRepairSql).toMatch(/snapshot\.difficulty::smallint[\s\S]*mapping\.weight \* snapshot\.difficulty/)
     expect(ydtEnglishRepairSql).toMatch(/NOT EXISTS \([\s\S]*mastery_outcome_evidence AS existing[\s\S]*existing\.answer_id = answer\.id[\s\S]*existing\.outcome_id = mapping\.outcome_id/)
     expect(ydtEnglishRepairSql).toMatch(/question_revision_outcomes AS historical_mapping[\s\S]*historical_mapping\.revision_id = snapshot\.revision_id/)
     expect(ydtEnglishRepairSql).toMatch(/ON CONFLICT \(answer_id, outcome_id\) DO NOTHING/)
@@ -239,5 +245,279 @@ describe('178-188 curriculum scope release migrations', () => {
     expect(ydtEnglishRepairSql).toMatch(/mapping_at_or_before_answer_rows[\s\S]*mapping_after_answer_rows/)
     expect(ydtEnglishRepairSql).toMatch(/IF NOT v_scope_released THEN[\s\S]*obsolete YDT English v1 repair mutated rows/)
     expect(ydtEnglishRepairSql).toMatch(/v_candidates <> v_inserted[\s\S]*YDT English evidence repair lost rows/)
+  })
+
+  it('does not re-run the YDT taxonomy sync when a released scope migration is replayed', () => {
+    const controlSql = ydtEnglishReleaseSql.slice(
+      ydtEnglishReleaseSql.indexOf('CREATE TEMP TABLE ydt_english_scope_release_control'),
+      ydtEnglishReleaseSql.indexOf('DO $fn$\nDECLARE\n  v_question record;'),
+    )
+    const syncStart = ydtEnglishReleaseSql.indexOf('DO $fn$\nDECLARE\n  v_question record;')
+    const syncEnd = ydtEnglishReleaseSql.indexOf('DO $fn$\nDECLARE\n  v_integrity jsonb;', syncStart)
+    const syncSql = ydtEnglishReleaseSql.slice(syncStart, syncEnd)
+    const canonicalizationStart = ydtEnglishReleaseSql.indexOf('DO $fn$\nDECLARE\n  v_question_id uuid;')
+    const canonicalizationEnd = ydtEnglishReleaseSql.indexOf('DO $fn$\nDECLARE\n  v_updated integer;', canonicalizationStart)
+    const canonicalizationSql = ydtEnglishReleaseSql.slice(canonicalizationStart, canonicalizationEnd)
+    const validatingStart = canonicalizationEnd
+    const validatingEnd = syncStart
+    const validatingSql = ydtEnglishReleaseSql.slice(validatingStart, validatingEnd)
+    const integrityStart = syncEnd
+    const finalReleaseStart = ydtEnglishReleaseSql.indexOf('UPDATE public.curriculum_scope_releases\nSET release_status = \'released\'', integrityStart)
+    const integritySql = ydtEnglishReleaseSql.slice(integrityStart, finalReleaseStart)
+    const finalReleaseEnd = ydtEnglishReleaseSql.indexOf('DO $fn$\nDECLARE\n  v_scope jsonb;', finalReleaseStart)
+    const finalReleaseSql = ydtEnglishReleaseSql.slice(finalReleaseStart, finalReleaseEnd)
+    const postcheckSql = ydtEnglishReleaseSql.slice(finalReleaseEnd)
+
+    expect(controlSql).toMatch(/should_apply boolean NOT NULL/)
+    expect(controlSql).toMatch(/should_sync boolean NOT NULL/)
+    expect(controlSql).toMatch(/release_status IN \('draft', 'validating', 'released'\)/)
+    expect(controlSql).toMatch(/release_status IN \('draft', 'validating'\)/)
+    expect(canonicalizationSql).toMatch(/IF NOT \(SELECT should_sync FROM ydt_english_scope_release_control\) THEN[\s\S]*RETURN/)
+    expect(validatingSql).toMatch(/IF NOT \(SELECT should_sync FROM ydt_english_scope_release_control\) THEN[\s\S]*RETURN/)
+    expect(syncSql).toMatch(/IF NOT \(SELECT should_sync FROM ydt_english_scope_release_control\) THEN[\s\S]*RETURN/)
+    expect(syncSql).toMatch(/sync_taxonomy_auto_question_outcomes/)
+    expect(integritySql).toMatch(/IF NOT \(SELECT should_apply FROM ydt_english_scope_release_control\) THEN[\s\S]*RETURN/)
+    expect(finalReleaseSql).toMatch(/AND \(SELECT should_sync FROM ydt_english_scope_release_control\)/)
+    expect(postcheckSql).toMatch(/IF NOT \(SELECT should_apply FROM ydt_english_scope_release_control\) THEN[\s\S]*RETURN/)
+  })
+
+  it('fails closed before release when historical mastery provenance is incomplete', () => {
+    for (const { sql, game, examRef, nextBlock } of [
+      {
+        sql: ydtEnglishReleaseSql,
+        game: "'wordquest'",
+        examRef: "(?:NULLIF\\(upper\\(btrim\\(COALESCE\\(snapshot\\.exam_ref, ''\\)\\)\\), ''\\) IS NULL[\\s\\S]*upper\\(btrim\\(snapshot\\.exam_ref\\)\\) = 'YDT')",
+        nextBlock: 'DO $fn$\nDECLARE\n  v_updated integer;',
+      },
+      {
+        sql: tytTurkishReleaseSql,
+        game: 'target.game',
+        examRef: 'upper\\(btrim\\(COALESCE\\(snapshot\\.exam_ref, \'\'\\)\\)\\) IS DISTINCT FROM target.question_exam_ref',
+        nextBlock: 'DO $fn$\nDECLARE\n  v_expected integer;',
+      },
+      {
+        sql: tytSocialReleaseSql,
+        game: 'target.game',
+        examRef: 'upper\\(btrim\\(COALESCE\\(snapshot\\.exam_ref, \'\'\\)\\)\\) IS DISTINCT FROM target.question_exam_ref',
+        nextBlock: 'DO $fn$\nDECLARE\n  v_expected integer;',
+      },
+    ]) {
+      const start = sql.indexOf('DO $fn$\nDECLARE\n  v_marker_gap integer;')
+      const provenanceSql = sql.slice(start, sql.indexOf(nextBlock, start))
+      expect(provenanceSql).toMatch(/v_marker_gap integer;[\s\S]*v_snapshot_gap integer/)
+      expect(provenanceSql).toMatch(/NOT EXISTS \([\s\S]*mastery_materialized_attempts AS marker[\s\S]*marker\.attempt_id = attempt\.id/)
+      expect(provenanceSql).toMatch(/JOIN public\.mastery_materialized_attempts AS marker[\s\S]*marker\.attempt_id = attempt\.id/)
+      expect(provenanceSql).toMatch(/LEFT JOIN public\.verified_attempt_question_revisions AS snapshot[\s\S]*snapshot\.attempt_id = attempt\.id[\s\S]*snapshot\.question_id = answer\.question_id/)
+      expect(provenanceSql).toMatch(/snapshot\.question_id IS NULL[\s\S]*answer\.question_revision_id IS NULL[\s\S]*snapshot\.revision_id IS DISTINCT FROM answer\.question_revision_id/)
+      expect(provenanceSql).toMatch(new RegExp(`snapshot\\.game IS DISTINCT FROM ${game}`))
+      expect(provenanceSql).toMatch(new RegExp(examRef))
+      expect(provenanceSql).toMatch(/snapshot\.category IS DISTINCT FROM question\.category::text/)
+      expect(provenanceSql).toMatch(/IF v_marker_gap <> 0 OR v_snapshot_gap <> 0 THEN[\s\S]*RAISE EXCEPTION[\s\S]*provenance/)
+    }
+  })
+
+  it('releases TYT Turkish and Social through a guarded cutover only', () => {
+    for (const { sql, game, taxonomy, releaseGate } of [
+      { sql: tytTurkishReleaseSql, game: 'turkce', taxonomy: 'ba-tyt-turkce-v2', releaseGate: 'should_apply' },
+      { sql: tytSocialReleaseSql, game: 'sosyal', taxonomy: 'ba-tyt-sosyal-v1', releaseGate: 'should_release' },
+    ]) {
+      expect(sql).toMatch(/SET LOCAL lock_timeout = '10s'/)
+      expect(sql).toMatch(/SET LOCAL statement_timeout = '120s'/)
+      expect(sql).toMatch(/LOCK TABLE[\s\S]*public\.question_revision_outcomes,[\s\S]*public\.verified_attempt_question_revisions,[\s\S]*public\.mastery_outcome_evidence,[\s\S]*public\.user_outcome_state[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+      expect(sql).toMatch(/CREATE OR REPLACE FUNCTION public\.resolve_question_curriculum_validation_scope\([\s\S]*registered_scope[\s\S]*scope\.question_exam_ref IS NOT DISTINCT FROM normalized\.question_exam_ref/)
+      expect(sql).toMatch(/question outcome is outside the active registered curriculum scope/)
+      expect(sql).toMatch(/active registered-scope question mapping is invalid or unreleased/)
+      expect(sql).toMatch(new RegExp(`\\('${game}','TYT','TYT','${taxonomy}'\\)`))
+      expect(sql).toMatch(/CREATE TEMP TABLE tyt_humanities_scope_release_control[\s\S]*should_apply boolean NOT NULL,[\s\S]*should_sync boolean NOT NULL/)
+      expect(sql).toMatch(/release_status IN \('draft','validating','released'\)/)
+      expect(sql).toMatch(/release_status IN \('draft','validating'\)/)
+      expect(sql).toMatch(/sync_taxonomy_auto_question_outcomes[\s\S]*v_question\.exam_ref/)
+      expect(sql).toMatch(/(?:ON|WHERE) target\.should_sync/)
+      expect(sql).toMatch(/diagnostic_enabled = false/)
+      expect(sql).toMatch(/curriculum_scope_integrity\([\s\S]*v_target\.game, v_target\.display_exam_ref, v_target\.taxonomy_version/)
+      for (const field of [
+        'unmapped', 'scopeMismatch', 'nodeOrphan', 'outcomeOrphan',
+        'primaryMismatch', 'emptyOutcome',
+      ]) expect(sql).toMatch(new RegExp(`v_integrity->>'${field}'`))
+      expect(sql).toMatch(/COALESCE\(\(v_integrity->>'total'\)::integer, 0\) <= 0/)
+      expect(sql).toMatch(/SET release_status = 'released'[\s\S]*resolve_released_curriculum_scope/)
+      expect(sql).toMatch(/registered validation scope postcheck failed/)
+      expect(sql).toMatch(/registered-scope deferred integrity triggers are not enabled/)
+      expect(sql).toMatch(/registered-scope immediate mapping guard is not enabled/)
+
+      const transitionStart = sql.indexOf('DO $fn$\nDECLARE\n  v_expected integer;')
+      const syncStart = sql.indexOf('DO $fn$\nDECLARE\n  v_question record;', transitionStart)
+      const transitionSql = sql.slice(transitionStart, syncStart)
+      const integrityStart = sql.indexOf('DO $fn$\nDECLARE\n  v_target record;\n  v_integrity jsonb;', syncStart)
+      const syncSql = sql.slice(syncStart, integrityStart)
+      const finalReleaseStart = sql.indexOf('UPDATE public.curriculum_scope_releases AS scope\nSET release_status = \'released\'', integrityStart)
+      const integritySql = sql.slice(integrityStart, finalReleaseStart)
+      const postcheckStart = sql.indexOf('DO $fn$\nDECLARE\n  v_target record;\n  v_scope jsonb;', finalReleaseStart)
+      const finalReleaseSql = sql.slice(finalReleaseStart, postcheckStart)
+      const postcheckSql = sql.slice(postcheckStart)
+
+      expect(transitionSql).toMatch(/WHERE should_sync[\s\S]*WHERE target\.should_sync/)
+      expect(syncSql).toMatch(/ON target\.should_sync[\s\S]*sync_taxonomy_auto_question_outcomes/)
+      expect(integritySql).toMatch(new RegExp(`WHERE ${releaseGate}[\\s\\S]*curriculum_scope_integrity`))
+      expect(finalReleaseSql).toMatch(/WHERE target\.should_sync/)
+      expect(postcheckSql).toMatch(new RegExp(`WHERE ${releaseGate}[\\s\\S]*resolve_released_curriculum_scope`))
+    }
+  })
+
+  it('keeps incomplete TYT Social draft while allowing the migration chain to continue', () => {
+    expect(tytSocialReleaseSql).toMatch(/should_sync boolean NOT NULL,[\s\S]*should_release boolean NOT NULL/)
+    for (const category of ['tarih', 'cografya', 'felsefe', 'sosyoloji', 'din_kulturu']) {
+      expect(tytSocialReleaseSql).toContain(`('${category}')`)
+    }
+    expect(tytSocialReleaseSql).toMatch(/NOT EXISTS \([\s\S]*public\.questions AS question[\s\S]*question\.is_active[\s\S]*question\.category::text = required\.category/)
+    expect(tytSocialReleaseSql).toMatch(/scope\.release_status IN \('draft','validating'\)[\s\S]*readiness\.has_required_categories/)
+    expect(tytSocialReleaseSql).toMatch(/WHERE should_release[\s\S]*curriculum_scope_integrity/)
+    expect(tytSocialReleaseSql).toMatch(/target\.should_apply[\s\S]*NOT target\.should_release[\s\S]*incomplete TYT Social scope was not kept fail-closed/)
+    expect(tytSocialRepairSql).not.toContain('TYT Social evidence repair requires a released v1 scope')
+    expect(tytSocialRepairSql).toMatch(/WHERE scope\.release_status = 'released'/)
+  })
+
+  it('requires append-only human source-policy proof and fails closed on replay drift', () => {
+    expect(tytSocialReleaseSql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_source_policy_evidence/)
+    expect(tytSocialReleaseSql).toMatch(/evidence_sha256 text NOT NULL[\s\S]*evidence_manifest jsonb NOT NULL/)
+    expect(tytSocialReleaseSql).toMatch(/BEFORE UPDATE OR DELETE ON public\.curriculum_scope_source_policy_evidence/)
+    expect(tytSocialReleaseSql).toMatch(/curriculum scope source-policy evidence is append-only/)
+    expect(tytSocialReleaseSql).toMatch(/REVOKE ALL ON TABLE public\.curriculum_scope_source_policy_evidence[\s\S]*PUBLIC, anon, authenticated, service_role/)
+
+    const policyStart = tytSocialReleaseSql.indexOf(
+      'CREATE OR REPLACE FUNCTION public.tyt_social_source_policy_integrity',
+    )
+    const policyEnd = tytSocialReleaseSql.indexOf(
+      'REVOKE ALL ON FUNCTION public.tyt_social_source_policy_integrity',
+      policyStart,
+    )
+    const policySql = tytSocialReleaseSql.slice(policyStart, policyEnd)
+    expect(policySql).toContain("('din_kulturu',2)")
+    expect(policySql).toMatch(/question\.published_revision_id[\s\S]*revision\.status = 'published'/)
+    expect(policySql).toMatch(/revision\.change_kind <> 'legacy_import'/)
+    expect(policySql).toMatch(/source\.provenance_ref[\s\S]*NOT LIKE 'legacy:%'/)
+    expect(policySql).toMatch(/stage_one\.decision = 'approved'[\s\S]*stage_two\.decision = 'approved'/)
+    expect(policySql).toMatch(/stage_one\.reviewer_id IS DISTINCT FROM stage_two\.reviewer_id/)
+    expect(policySql).toMatch(/approved_questions = active_questions/)
+    expect(policySql).toMatch(/'policyVersion','social-human-source-v1'/)
+    expect(policySql).toMatch(/extensions\.digest\(manifest\.evidence_manifest::text, 'sha256'\)/)
+    expect(policySql).toMatch(/'sourceReady',[\s\S]*summary\.required_categories_ready/)
+    expect(policySql).toMatch(/'candidatePolicyVersion',NULL/)
+    expect(policySql).toMatch(/'candidatePolicyReady',false/)
+    expect(policySql).toContain("'candidatePolicyReason','candidate-exam-category-policy-missing'")
+    expect(policySql).toMatch(/'ready',false/)
+    expect(tytSocialReleaseSql).not.toMatch(/candidatePolicyReady',true/)
+
+    expect(tytSocialReleaseSql).toMatch(/source_policy_ready boolean NOT NULL/)
+    expect(tytSocialReleaseSql).toMatch(/readiness\.has_required_categories[\s\S]*source_policy\.is_ready/)
+    expect(tytSocialReleaseSql).toMatch(/INSERT INTO public\.curriculum_scope_source_policy_evidence[\s\S]*ON CONFLICT/)
+    const sourceLedgerInsert = tytSocialReleaseSql.slice(
+      tytSocialReleaseSql.indexOf('INSERT INTO public.curriculum_scope_source_policy_evidence'),
+      tytSocialReleaseSql.indexOf('DO $fn$', tytSocialReleaseSql.indexOf('INSERT INTO public.curriculum_scope_source_policy_evidence')),
+    )
+    expect(sourceLedgerInsert).toMatch(/WHERE target\.source_policy_ready/)
+    expect(sourceLedgerInsert).not.toMatch(/sourceReady/)
+    expect(tytSocialReleaseSql).toMatch(/SET release_status = 'draft',[\s\S]*diagnostic_enabled = false[\s\S]*NOT target\.should_release/)
+    expect(tytSocialReleaseSql).not.toMatch(/SET release_status = 'draft',[\s\S]{0,120}released_at = NULL/)
+    expect(tytSocialReleaseSql).toMatch(/scope\.released_at IS DISTINCT FROM target\.prior_released_at/)
+
+    const repairTargetSql = tytSocialRepairSql.slice(
+      tytSocialRepairSql.indexOf('CREATE TEMP TABLE tyt_humanities_repair_targets'),
+      tytSocialRepairSql.indexOf('DO $fn$', tytSocialRepairSql.indexOf('CREATE TEMP TABLE tyt_humanities_repair_targets')),
+    )
+    expect(repairTargetSql).toMatch(/tyt_social_source_policy_integrity/)
+    expect(repairTargetSql).toMatch(/source_policy\.evidence->>'ready'/)
+    expect(repairTargetSql).toMatch(/curriculum_scope_source_policy_evidence AS recorded/)
+    expect(repairTargetSql).toMatch(/recorded\.evidence_sha256 = source_policy\.evidence->>'evidenceSha256'/)
+  })
+
+  it('backfills only missing current Turkish and Social mappings additively with a replay ledger', () => {
+    for (const { sql, game, taxonomy, repairKey } of [
+      { sql: tytTurkishRepairSql, game: 'turkce', taxonomy: 'ba-tyt-turkce-v2', repairKey: '190_tyt_turkce_complete_mappings_v2' },
+      { sql: tytSocialRepairSql, game: 'sosyal', taxonomy: 'ba-tyt-sosyal-v1', repairKey: '192_tyt_sosyal_complete_mappings_v1' },
+    ]) {
+      expect(sql).toMatch(/SET LOCAL lock_timeout = '10s'/)
+      expect(sql).toMatch(/SET LOCAL statement_timeout = '120s'/)
+      expect(sql).toMatch(/LOCK TABLE[\s\S]*public\.question_revision_outcomes,[\s\S]*public\.verified_attempt_question_revisions,[\s\S]*public\.mastery_materialized_attempts,[\s\S]*public\.mastery_outcome_evidence,[\s\S]*public\.curriculum_scope_evidence_repair_runs[\s\S]*IN SHARE ROW EXCLUSIVE MODE/)
+      expect(sql).toMatch(new RegExp(`\\('${game}','TYT','TYT','${taxonomy}'\\)`))
+      expect(sql).toContain(`'${repairKey}'`)
+      expect(sql).toMatch(/WHERE scope\.release_status = 'released'/)
+      if (game === 'turkce') {
+        expect(sql).toMatch(/release_status NOT IN \('released','retired'\)/)
+      } else {
+        expect(sql).not.toContain('TYT Social evidence repair requires a released v1 scope')
+      }
+      expect(sql).toMatch(/curriculum_scope_integrity\([\s\S]*v_target\.game, v_target\.display_exam_ref, v_target\.taxonomy_version/)
+      expect(sql).toMatch(/JOIN public\.mastery_materialized_attempts AS marker\s+ON marker\.attempt_id = attempt\.id/)
+      const candidateSql = sql.slice(
+        sql.indexOf('CREATE TEMP TABLE tyt_humanities_evidence_candidates'),
+        sql.indexOf('CREATE TEMP TABLE tyt_humanities_inserted_evidence'),
+      )
+      const mappingJoinSql = candidateSql.slice(
+        candidateSql.indexOf('JOIN public.question_outcomes AS mapping'),
+        candidateSql.indexOf('JOIN public.curriculum_outcomes AS outcome'),
+      )
+      expect(mappingJoinSql).toMatch(/ON mapping\.question_id = question\.id/)
+      expect(mappingJoinSql).not.toMatch(/mapping\.mapping_source|mapping\.is_primary/)
+      expect(candidateSql).not.toMatch(/answer\.answered_at\s*<\s*release\.released_at/)
+      expect(candidateSql).not.toMatch(/AND\s+mapping\.created_at\s*>\s*answer\.answered_at/)
+      expect(candidateSql).toMatch(/NOT EXISTS \([\s\S]*mastery_outcome_evidence AS existing[\s\S]*existing\.answer_id = answer\.id[\s\S]*existing\.outcome_id = mapping\.outcome_id/)
+      expect(candidateSql).toMatch(/question_revision_outcomes AS historical_mapping[\s\S]*historical_mapping\.revision_id = snapshot\.revision_id/)
+      expect(sql).toMatch(/ON CONFLICT \(answer_id, outcome_id\) DO NOTHING/)
+      expect(sql).toMatch(/ON CONFLICT \(user_id, outcome_id\) DO UPDATE SET[\s\S]*attempts = public\.user_outcome_state\.attempts \+ EXCLUDED\.attempts/)
+      expect(sql).toMatch(/mapping_at_or_before_answer_rows[\s\S]*mapping_after_answer_rows/)
+      expect(sql).toMatch(/v_candidates <> v_inserted[\s\S]*evidence repair lost rows/)
+      expect(sql).toMatch(/evidence repair left missing rows/)
+      expect(sql).toMatch(/repair_key = v_target\.repair_key[\s\S]*inserted_evidence_rows = v_inserted/)
+      expect(sql).toMatch(/v_target_count = 0[\s\S]*obsolete TYT (?:Turkish|Social) v[12] repair mutated rows/)
+    }
+  })
+
+  it('versions TYT Turkish without importing the AYT literature leaf', () => {
+    expect(tytTurkishReleaseSql).toMatch(/released TYT Turkish v1 cannot be rewritten as v2/)
+    expect(tytTurkishReleaseSql).toMatch(/SET taxonomy_version = 'ba-tyt-turkce-v2'[\s\S]*taxonomy_version = 'ba-tyt-turkce-v1'/)
+    expect(tytTurkishReleaseSql).toContain("'ba-tyt-turkce-v2:course'")
+    expect(tytTurkishReleaseSql).toContain("'TUR2-PAR-01'")
+    expect(tytTurkishReleaseSql).toContain("'TUR2-ANL-01'")
+    expect(tytTurkishReleaseSql).not.toContain("'TUR2-EDB-01'")
+    expect(tytTurkishReleaseSql).not.toContain("'ba-tyt-turkce-v2:topic:edebiyat'")
+    expect(tytTurkishRepairSql).toContain("'190_tyt_turkce_complete_mappings_v2'")
+    expect(tytTurkishReleaseSql).toMatch(/CREATE TABLE IF NOT EXISTS public\.curriculum_scope_release_history/)
+    expect(tytTurkishReleaseSql).toContain("'189_tyt_turkce_v2_cutover'")
+    expect(tytTurkishReleaseSql).toMatch(/REVOKE ALL ON TABLE public\.curriculum_scope_release_history[\s\S]*FROM PUBLIC, anon, authenticated, service_role/)
+  })
+
+  it('repairs only immutable marker-backed snapshots and never falls back to mutable question metadata', () => {
+    for (const { sql, game, examGate } of [
+      {
+        sql: ydtEnglishRepairSql,
+        game: "'wordquest'",
+        examGate: "NULLIF\\(upper\\(btrim\\(COALESCE\\(snapshot\\.exam_ref, ''\\)\\)\\), ''\\) IS NULL[\\s\\S]*upper\\(btrim\\(snapshot\\.exam_ref\\)\\) = 'YDT'",
+      },
+      {
+        sql: tytTurkishRepairSql,
+        game: 'target.game',
+        examGate: 'upper\\(btrim\\(COALESCE\\(snapshot\\.exam_ref, \'\'\\)\\)\\) = target.question_exam_ref',
+      },
+      {
+        sql: tytSocialRepairSql,
+        game: 'target.game',
+        examGate: 'upper\\(btrim\\(COALESCE\\(snapshot\\.exam_ref, \'\'\\)\\)\\) = target.question_exam_ref',
+      },
+    ]) {
+      const provenanceStart = sql.indexOf('DO $fn$\nDECLARE\n  v_marker_gap integer;')
+      const candidateStart = sql.indexOf('CREATE TEMP TABLE', provenanceStart)
+      const provenanceSql = sql.slice(provenanceStart, candidateStart)
+      const candidateEnd = sql.indexOf('CREATE TEMP TABLE', candidateStart + 1)
+      const candidateSql = sql.slice(candidateStart, candidateEnd)
+      expect(provenanceSql).toMatch(/v_marker_gap integer;[\s\S]*v_snapshot_gap integer[\s\S]*RAISE EXCEPTION[\s\S]*provenance/)
+      expect(candidateSql).toMatch(/JOIN public\.mastery_materialized_attempts AS marker\s+ON marker\.attempt_id = attempt\.id/)
+      expect(candidateSql).toMatch(/JOIN public\.verified_attempt_question_revisions AS snapshot[\s\S]*snapshot\.attempt_id = attempt\.id[\s\S]*snapshot\.question_id = answer\.question_id[\s\S]*snapshot\.revision_id = answer\.question_revision_id/)
+      expect(candidateSql).toMatch(new RegExp(`snapshot\\.game = ${game}`))
+      expect(candidateSql).toMatch(new RegExp(examGate))
+      expect(candidateSql).toMatch(/snapshot\.category IS NOT DISTINCT FROM question\.category::text/)
+      expect(candidateSql).toMatch(/snapshot\.difficulty::smallint[\s\S]*mapping\.weight \* snapshot\.difficulty/)
+      expect(candidateSql).not.toMatch(/LEFT JOIN public\.verified_attempt_question_revisions AS snapshot|COALESCE\(snapshot\.difficulty, question\.difficulty\)/)
+    }
   })
 })

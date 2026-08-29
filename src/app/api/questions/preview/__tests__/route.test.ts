@@ -65,6 +65,45 @@ describe('GET /api/questions/preview exam scope', () => {
     else process.env.ACTIVATION_EXPERIMENT_ENABLED = oldActivationFlag
   })
 
+  it('rejects an AYT literature category inside exact TYT Turkish scope', async () => {
+    const response = await GET(makeRequest({
+      game: 'turkce', category: 'edebiyat', examRef: 'TYT',
+    }) as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Kategori sinav kapsamiyla uyumsuz' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it.each(['tyt', 'UNKNOWN', ''])('rejects an invalid explicit exam scope: %s', async (examRef) => {
+    const response = await GET(makeRequest({ game: 'fen', examRef }) as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Gecerli sinav kapsami belirtilmedi' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it.each(['0', '6', '2.5', '2foo', ''])('rejects an invalid explicit difficulty: %s', async (difficulty) => {
+    const response = await GET(makeRequest({ game: 'fen', difficulty }) as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Gecerli zorluk belirtilmedi' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('normalizes the legacy social din alias before database filtering', async () => {
+    mockRpc.mockResolvedValueOnce({ data: [], error: null })
+
+    await GET(makeRequest({ game: 'sosyal', category: 'din', examRef: 'TYT' }) as never)
+
+    expect(mockRpc).toHaveBeenCalledWith('select_random_questions', {
+      p_game: 'sosyal',
+      p_limit: 3,
+      p_category: 'din_kulturu',
+      p_exam_ref: 'TYT',
+    })
+  })
+
   it('preserves TYT and biyoloji while relaxing only difficulty', async () => {
     mockRpc
       .mockResolvedValueOnce({ data: [], error: null })

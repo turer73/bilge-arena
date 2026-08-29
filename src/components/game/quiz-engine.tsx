@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuizStore } from '@/stores/quiz-store'
 import { useGameStore } from '@/stores/game-store'
 import { useAuthStore } from '@/stores/auth-store'
-import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { GAMES, getCategoriesForExam, type GameSlug } from '@/lib/constants/games'
 import { useQuizGame } from '@/lib/hooks/use-quiz-game'
 import { useSidebarData } from '@/lib/hooks/use-sidebar-data'
 import { submitQuestionReport } from '@/lib/questions/submit-report'
@@ -87,7 +87,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // --- Custom hooks ---
   const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game, user?.id)
-  const sidebar = useSidebarData({ userId: user?.id, game, gameDef })
+  const sidebar = useSidebarData({ userId: user?.id, game, gameDef, examRef: questionExamRef })
   const dailyQuests = useDailyQuests()
   const todayPlan = useTodayPlan(
     game,
@@ -97,6 +97,13 @@ export function QuizEngine({ game }: QuizEngineProps) {
   )
   const personalizedMock = usePersonalizedMock(game, user?.id, questionExamRef)
   const masteryMap = useMasteryMap(game, user?.id, gameStore.selectedExamRef)
+  const selectExamRef = useCallback((examRef: string | null) => {
+    const validCategories = getCategoriesForExam(game, examRef)
+    if (gameStore.selectedCategory && !validCategories.includes(gameStore.selectedCategory)) {
+      gameStore.setCategory(null)
+    }
+    gameStore.setExamRef(examRef)
+  }, [game, gameStore])
   const autoPauseSessionKey = quiz.attemptId ?? quizStore.questions[0]?.id ?? null
   const autoPauseActive = quiz.screen === 'game' && !quiz.isDeneme && quizStore.state === 'playing'
   const { autoPaused, resume: clearAutoPause } = useGameAutoPause({
@@ -314,6 +321,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
             <MasteryMapCard
               outcomes={masteryMap.outcomes}
               discovery={masteryMap.discovery}
+              diagnosticAvailable={masteryMap.coverage?.diagnosticAvailable ?? false}
               loading={masteryMap.loading}
             />
           </div>
@@ -397,7 +405,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
           selectedDifficulty={gameStore.selectedDifficulty}
           onSelectDifficulty={gameStore.setDifficulty}
           selectedExamRef={questionExamRef}
-          onSelectExamRef={gameStore.setExamRef}
+          onSelectExamRef={selectExamRef}
           quizLimit={{
             canPlay: quizLimit.canPlay,
             remaining: quizLimit.remaining,
@@ -556,7 +564,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // Konu gucu: gercek veri varsa onu kullan, yoksa kategorileri %0 goster
   const sidebarTopics = sidebar.topicData.length > 0
     ? sidebar.topicData
-    : gameDef.categories.map((cat) => ({
+    : getCategoriesForExam(game, questionExamRef).map((cat) => ({
         label: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' '),
         percentage: 0,
       }))

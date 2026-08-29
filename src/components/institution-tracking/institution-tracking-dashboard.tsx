@@ -26,6 +26,7 @@ import { TR_TIME_ZONE } from '@/lib/utils/tr-date'
 import {
   fetchInstitutionStudentLearningAnalysis,
   fetchInstitutionClassroomOverview,
+  fetchInstitutionLearningScopes,
   fetchInstitutionTrackingDirectory,
   createInstitutionStudyProgramDraft,
   publishInstitutionStudyProgram,
@@ -33,6 +34,8 @@ import {
   InstitutionTrackingClientError,
   isInstitutionTrackingUiEnabled,
 } from '@/lib/institution-tracking/client'
+import type { InstitutionLearningScope } from '@/lib/institution-tracking/scope'
+import { GAMES } from '@/lib/constants/games'
 import type { InstitutionTrackingDirectory } from '@/lib/institution-tracking/directory'
 import type { InstitutionStudentLearningAnalysis } from '@/lib/institution-tracking/student-analysis'
 import type { InstitutionStudyProgramDraftResponse } from '@/lib/institution-tracking/study-program'
@@ -47,6 +50,7 @@ import { InstitutionPanelNav } from './institution-panel-nav'
 import { InstitutionStudentInviteDialog } from './institution-student-invite-dialog'
 import { EvidenceDistributionChart, PercentBar } from './analytics-charts'
 import { InstitutionOverviewPanel } from './institution-overview-panel'
+import type { InstitutionInitialScope } from '@/app/arena/kurum/scope-query'
 
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
@@ -90,13 +94,20 @@ function DashboardSkeleton() {
 export function InstitutionTrackingDashboard({
   initialClassroomId,
   initialMemberRef,
+  initialScope,
 }: {
   initialClassroomId?: string
   initialMemberRef?: string
+  initialScope?: InstitutionInitialScope
 } = {}) {
   const enabled = isInstitutionTrackingUiEnabled()
   const classroomPage = Boolean(initialClassroomId)
   const [directory, setDirectory] = useState<InstitutionTrackingDirectory | null>(null)
+  const [learningScopes, setLearningScopes] = useState<InstitutionLearningScope[]>([])
+  const [selectedScopeKey, setSelectedScopeKey] = useState<string | null>(null)
+  const [scopeLoading, setScopeLoading] = useState(enabled)
+  const [scopeError, setScopeError] = useState(false)
+  const [requestedScopeUnavailable, setRequestedScopeUnavailable] = useState(false)
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null)
   const [selectedMemberRef, setSelectedMemberRef] = useState<string | null>(null)
   const [analysis, setAnalysis] = useState<InstitutionStudentLearningAnalysis | null>(null)
@@ -113,6 +124,42 @@ export function InstitutionTrackingDashboard({
   const [classroomAnnouncement, setClassroomAnnouncement] = useState<string | null>(null)
   const [studentInviteOpen, setStudentInviteOpen] = useState(false)
   const classroomCreatorButtonRef = useRef<HTMLButtonElement | null>(null)
+  const initialScopeKey = initialScope ? `${initialScope.game}:${initialScope.displayExamRef}` : null
+
+  useEffect(() => {
+    if (!enabled) return
+    const controller = new AbortController()
+    queueMicrotask(async () => {
+      setScopeLoading(true)
+      setScopeError(false)
+      setRequestedScopeUnavailable(false)
+      try {
+        const next = await fetchInstitutionLearningScopes(controller.signal)
+        if (controller.signal.aborted) return
+        setLearningScopes(next.scopes)
+        const available = new Set(next.scopes.map((scope) => `${scope.game}:${scope.displayExamRef}`))
+        if (initialScopeKey && !available.has(initialScopeKey)) {
+          setRequestedScopeUnavailable(true)
+          setSelectedScopeKey(null)
+        } else {
+          setSelectedScopeKey((current) => (
+            initialScopeKey
+              ?? (current && available.has(current)
+                ? current
+                : next.scopes[0] ? `${next.scopes[0].game}:${next.scopes[0].displayExamRef}` : null)
+          ))
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setLearningScopes([])
+        setSelectedScopeKey(null)
+        setScopeError(true)
+      } finally {
+        if (!controller.signal.aborted) setScopeLoading(false)
+      }
+    })
+    return () => controller.abort()
+  }, [enabled, initialScopeKey, refreshKey])
 
   useEffect(() => {
     if (!enabled) return
@@ -141,6 +188,9 @@ export function InstitutionTrackingDashboard({
   const selectedClassroom = useMemo(() => directory?.classrooms.find(
     (classroom) => classroom.id === selectedClassroomId,
   ) ?? null, [directory, selectedClassroomId])
+  const selectedLearningScope = useMemo(() => learningScopes.find(
+    (scope) => `${scope.game}:${scope.displayExamRef}` === selectedScopeKey,
+  ) ?? null, [learningScopes, selectedScopeKey])
   const canAnalyzeSelectedClassroom = selectedClassroom?.canAnalyze !== false
   const canInviteStudents = classroomPage && selectedClassroom?.canManagePrograms === true
 
@@ -164,18 +214,25 @@ export function InstitutionTrackingDashboard({
   }, [initialMemberRef, selectedClassroom])
 
   useEffect(() => {
-    if (classroomPage || !directory || directory.classrooms.length === 0) {
+    if (classroomPage || !directory || !selectedLearningScope || directory.classrooms.length === 0) {
       setInstitutionOverviews({})
       setInstitutionOverviewsLoading(false)
       return
     }
     const controller = new AbortController()
+    setInstitutionOverviews({})
     queueMicrotask(async () => {
       setInstitutionOverviewsLoading(true)
-      const analyzable = directory.classrooms.filter((classroom) => classroom.canAnalyze !== false)
+      const analyzable = directory.classrooms.filter((classroom) => (
+        classroom.canAnalyze !== false && classroom.activeStudentCount >= 3
+      ))
       const entries = await Promise.all(analyzable.map(async (classroom) => {
         try {
-          const overview = await fetchInstitutionClassroomOverview(classroom.id, controller.signal)
+          const overview = await fetchInstitutionClassroomOverview(
+            classroom.id,
+            selectedLearningScope,
+            controller.signal,
+          )
           return [classroom.id, overview] as const
         } catch (error) {
           if (error instanceof DOMException && error.name === 'AbortError') return null
@@ -188,20 +245,25 @@ export function InstitutionTrackingDashboard({
       }
     })
     return () => controller.abort()
-  }, [classroomPage, directory, refreshKey])
+  }, [classroomPage, directory, refreshKey, selectedLearningScope])
 
   useEffect(() => {
-    if (!classroomPage || !selectedClassroomId || !canAnalyzeSelectedClassroom) {
+    if (!classroomPage || !selectedClassroomId || !selectedLearningScope || !canAnalyzeSelectedClassroom) {
       setClassroomOverview(null)
       setClassroomOverviewError(false)
       return
     }
     const controller = new AbortController()
+    setClassroomOverview(null)
     queueMicrotask(async () => {
       setClassroomOverviewLoading(true)
       setClassroomOverviewError(false)
       try {
-        const next = await fetchInstitutionClassroomOverview(selectedClassroomId, controller.signal)
+        const next = await fetchInstitutionClassroomOverview(
+          selectedClassroomId,
+          selectedLearningScope,
+          controller.signal,
+        )
         if (!controller.signal.aborted) setClassroomOverview(next)
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') return
@@ -214,20 +276,23 @@ export function InstitutionTrackingDashboard({
       }
     })
     return () => controller.abort()
-  }, [canAnalyzeSelectedClassroom, classroomPage, selectedClassroomId, refreshKey])
+  }, [canAnalyzeSelectedClassroom, classroomPage, selectedClassroomId, refreshKey, selectedLearningScope])
 
   useEffect(() => {
-    if (!classroomPage || !selectedClassroomId || !selectedMemberRef || !canAnalyzeSelectedClassroom) {
+    if (!classroomPage || !selectedClassroomId || !selectedMemberRef || !selectedLearningScope || !canAnalyzeSelectedClassroom) {
       setAnalysis(null)
+      setAnalysisLoading(false)
       return
     }
     const controller = new AbortController()
+    setAnalysis(null)
     queueMicrotask(async () => {
       setAnalysisLoading(true)
       try {
         const next = await fetchInstitutionStudentLearningAnalysis(
           selectedClassroomId,
           selectedMemberRef,
+          selectedLearningScope,
           controller.signal,
         )
         if (!controller.signal.aborted) {
@@ -243,7 +308,7 @@ export function InstitutionTrackingDashboard({
       }
     })
     return () => controller.abort()
-  }, [canAnalyzeSelectedClassroom, classroomPage, selectedClassroomId, selectedMemberRef, refreshKey])
+  }, [canAnalyzeSelectedClassroom, classroomPage, selectedClassroomId, selectedMemberRef, refreshKey, selectedLearningScope])
 
   function closeClassroomCreator() {
     setClassroomCreatorOpen(false)
@@ -334,7 +399,9 @@ export function InstitutionTrackingDashboard({
             {classroomPage ? (
               <>
                 <Link
-                  href="/arena/kurum"
+                  href={selectedLearningScope
+                    ? `/arena/kurum?game=${encodeURIComponent(selectedLearningScope.game)}&exam_ref=${encodeURIComponent(selectedLearningScope.displayExamRef)}`
+                    : '/arena/kurum'}
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 px-3 text-xs font-black hover:bg-white/5"
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Genel bakış
@@ -369,6 +436,40 @@ export function InstitutionTrackingDashboard({
               <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Doğrulanmış kanıt
             </div>
           </div>
+        </div>
+        <div className="mt-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <label htmlFor="institution-learning-scope" className="text-xs font-black uppercase tracking-[0.12em] text-[var(--text-sub)]">
+              Öğrenme analizi kapsamı
+            </label>
+            <p className="mt-1 text-[11px] leading-4 text-[var(--text-sub)]">
+              Yalnız veri bütünlüğü ve kurum raporlama kapısı doğrulanan dersler listelenir.
+            </p>
+          </div>
+          {requestedScopeUnavailable ? (
+            <span role="alert" className="text-xs font-bold text-amber-200">
+              İstenen analiz kapsamı yayımlanmamış.
+            </span>
+          ) : scopeLoading ? (
+            <span className="text-xs font-bold text-[var(--text-sub)]">Kapsamlar doğrulanıyor…</span>
+          ) : learningScopes.length > 0 ? (
+            <select
+              id="institution-learning-scope"
+              value={selectedScopeKey ?? ''}
+              onChange={(event) => setSelectedScopeKey(event.target.value)}
+              className="min-h-11 rounded-xl border border-white/15 bg-[var(--surface)] px-3 text-sm font-bold"
+            >
+              {learningScopes.map((scope) => (
+                <option key={`${scope.game}:${scope.displayExamRef}`} value={`${scope.game}:${scope.displayExamRef}`}>
+                  {scope.displayExamRef} · {GAMES[scope.game].name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span role={scopeError ? 'alert' : 'status'} className="text-xs font-bold text-amber-200">
+              Doğrulanmış kurum analiz kapsamı bulunamadı.
+            </span>
+          )}
         </div>
       </header>
 
@@ -418,10 +519,11 @@ export function InstitutionTrackingDashboard({
           )}
         </section>
       ) : !classroomPage ? (
-        <InstitutionOverviewPanel
-          directory={directory}
-          overviews={institutionOverviews}
-          loading={institutionOverviewsLoading}
+          <InstitutionOverviewPanel
+            directory={directory}
+            overviews={institutionOverviews}
+            loading={institutionOverviewsLoading}
+            selectedScope={selectedLearningScope}
         />
       ) : (
         <div className="grid min-w-0 gap-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
@@ -442,7 +544,7 @@ export function InstitutionTrackingDashboard({
                       return (
                         <Link
                           key={student.memberRef}
-                          href={`/arena/kurum/sinif/${selectedClassroom.id}?ogrenci=${student.memberRef}`}
+                          href={buildClassroomHref(selectedClassroom.id, selectedLearningScope, student.memberRef)}
                           aria-current={selected ? 'true' : undefined}
                           className={`flex min-w-[13rem] items-center justify-between gap-2 rounded-xl border px-3 py-3 text-left lg:min-w-0 ${selected
                             ? 'border-[var(--primary)] bg-[var(--primary)]/10'
@@ -486,7 +588,23 @@ export function InstitutionTrackingDashboard({
                 Sınıf özeti eksiksiz doğrulanamadığı için gösterilmiyor. Öğrenci analizi ayrı olarak kullanılabilir.
               </section>
             ) : null}
-            {!canAnalyzeSelectedClassroom ? null : !selectedMemberRef ? (
+            {!canAnalyzeSelectedClassroom ? null : requestedScopeUnavailable ? (
+              <section className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-6 text-center">
+                <AlertTriangle className="mx-auto h-8 w-8 text-amber-300" aria-hidden="true" />
+                <h2 className="mt-3 text-lg font-black">İstenen analiz kapsamı yayımlanmamış</h2>
+                <p className="mt-2 text-sm text-[var(--text-sub)]">
+                  Bu bağlantıdaki ders kapsamı artık kurum analizi için doğrulanmış yayımlar arasında değil.
+                </p>
+              </section>
+            ) : !selectedLearningScope ? (
+              <section className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-6 text-center">
+                <AlertTriangle className="mx-auto h-8 w-8 text-amber-300" aria-hidden="true" />
+                <h2 className="mt-3 text-lg font-black">Doğrulanmış analiz kapsamı yok</h2>
+                <p className="mt-2 text-sm text-[var(--text-sub)]">
+                  Veri bütünlüğü ve kurum raporlama kapısı geçmeyen dersler öğrenci analizi olarak açılmaz.
+                </p>
+              </section>
+            ) : !selectedMemberRef ? (
               <section className="rounded-2xl border border-dashed border-white/15 bg-[var(--surface)] p-8 text-center">
                 <Users className="mx-auto h-9 w-9 text-[var(--text-sub)]" aria-hidden="true" />
                 <p className="mt-3 text-sm text-[var(--text-sub)]">Analiz için aktif bir öğrenci seçin.</p>
@@ -514,7 +632,9 @@ export function InstitutionTrackingDashboard({
               <AnalysisPanel
                 analysis={analysis}
                 classroomId={selectedClassroomId!}
-                canManagePrograms={selectedClassroom?.canManagePrograms === true}
+                canManagePrograms={selectedClassroom?.canManagePrograms === true
+                  && selectedLearningScope.game === 'matematik'
+                  && selectedLearningScope.displayExamRef === 'TYT'}
                 onFollowupChanged={() => setRefreshKey((value) => value + 1)}
               />
             )}
@@ -523,6 +643,21 @@ export function InstitutionTrackingDashboard({
       )}
     </div>
   )
+}
+
+function buildClassroomHref(
+  classroomId: string,
+  scope: InstitutionLearningScope | null,
+  memberRef?: string,
+): string {
+  const params = new URLSearchParams()
+  if (memberRef) params.set('ogrenci', memberRef)
+  if (scope) {
+    params.set('game', scope.game)
+    params.set('exam_ref', scope.displayExamRef)
+  }
+  const query = params.toString()
+  return `/arena/kurum/sinif/${classroomId}${query ? `?${query}` : ''}`
 }
 
 function AnalysisPanel({
@@ -619,7 +754,9 @@ function AnalysisPanel({
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--primary)]">Öğrenci durum tespiti</p>
             <h2 className="mt-1 truncate text-xl font-black sm:text-2xl">{analysis.student.alias}</h2>
-            <p className="mt-1 text-sm text-[var(--text-sub)]">TYT Matematik · {analysis.scope.taxonomyVersion}</p>
+            <p className="mt-1 text-sm text-[var(--text-sub)]">
+              {analysis.scope.examRef} · {GAMES[analysis.scope.game].name} · {analysis.scope.taxonomyVersion}
+            </p>
           </div>
           <div className="text-xs text-[var(--text-sub)] sm:text-right">
             <span className="block">Kanıt başlangıcı</span>

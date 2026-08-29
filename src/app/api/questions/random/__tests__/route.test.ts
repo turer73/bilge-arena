@@ -178,6 +178,51 @@ describe('GET /api/questions/random', () => {
     expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
   })
 
+  it('rejects an AYT literature category inside exact TYT Turkish scope', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+
+    const res = await GET(makeRequest({
+      game: 'turkce', category: 'edebiyat', examRef: 'TYT',
+    }) as never)
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: 'Kategori sinav kapsamiyla uyumsuz' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it.each(['tyt', 'UNKNOWN', ''])('rejects an invalid explicit exam scope: %s', async (examRef) => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+
+    const res = await GET(makeRequest({ game: 'matematik', examRef }) as never)
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: 'Gecerli sinav kapsami belirtilmedi' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it.each(['0', '6', '2.5', '2foo', ''])('rejects an invalid explicit difficulty: %s', async (difficulty) => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+
+    const res = await GET(makeRequest({ game: 'matematik', difficulty }) as never)
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: 'Gecerli zorluk belirtilmedi' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('normalizes the legacy social din alias before database filtering', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [], error: null })
+
+    await GET(makeRequest({ game: 'sosyal', category: 'din', examRef: 'TYT' }) as never)
+
+    expect(mockRpc).toHaveBeenCalledWith('select_random_questions', expect.objectContaining({
+      p_game: 'sosyal',
+      p_category: 'din_kulturu',
+      p_exam_ref: 'TYT',
+    }))
+  })
+
   it('calls select_random_questions RPC with correct args', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValue({ data: [], error: null })

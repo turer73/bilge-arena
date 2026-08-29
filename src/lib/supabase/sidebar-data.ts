@@ -85,9 +85,12 @@ interface ApiTopicStrengthsResponse {
 export async function fetchTopicStrengths(
   _userId: string,
   game: GameSlug,
+  examRef?: string | null,
 ): Promise<TopicStrength[]> {
   try {
-    const res = await fetch(`/api/profile/topic-strengths?game=${encodeURIComponent(game)}`)
+    const params = new URLSearchParams({ game })
+    if (examRef) params.set('exam_ref', examRef)
+    const res = await fetch(`/api/profile/topic-strengths?${params.toString()}`)
     if (!res.ok) return []
     const json = (await res.json()) as ApiTopicStrengthsResponse
     return json.topics ?? []

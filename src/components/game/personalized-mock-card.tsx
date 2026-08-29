@@ -21,7 +21,7 @@ export function PersonalizedMockCard({ loading, error, onStart }: PersonalizedMo
 
       <div className="px-3 py-3">
         <p className="mb-3 text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">
-          Açık yanlışların, zayıf konuların ve sınav kapsamın dengelenerek sana özel hazırlanır.
+          Açık yanlışların ve yeterli kanıt bulunan zayıf konuların önce seçilir; kalan sorular bu dersin aktif havuzundan tamamlanır. Başlangıç tanılaması değildir.
         </p>
         <button
           type="button"

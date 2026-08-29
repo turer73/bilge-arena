@@ -19,6 +19,7 @@ function payload(game = 'matematik', examRef: string | null = 'TYT') {
     supported: true,
     game,
     examRef,
+    policy: { version: 'adaptive-diagnostic-v3', questionCount: 10, outcomeCount: 6, maxPerOutcome: 2 },
     session: {
       id: '22222222-3333-4444-8555-666666666666',
       kind: 'initial',
@@ -111,6 +112,7 @@ describe('useAdaptiveDiagnostic', () => {
           supported: false,
           game: 'fen',
           examRef: 'TYT',
+          policy: null,
           session: null,
           summary: null,
         }))

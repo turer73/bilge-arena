@@ -636,6 +636,27 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
+      // Migration 194. Exact released institution scope contracts remain in
+      // this deploy-compatible overlay until production types are regenerated.
+      resolve_released_institution_scope: {
+        Args: { p_game: string; p_display_exam_ref: string }
+        Returns: Json
+      }
+      list_released_institution_scopes: {
+        Args: never
+        Returns: Json
+      }
+      get_institution_student_learning_analysis_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_display_exam_ref: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
       get_institution_tracking_directory: {
         Args: { p_user_id: string }
         Returns: Json
@@ -735,12 +756,38 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_week_start: string; p_daily_minute_limit: number; p_model_version: string; p_items: Json; p_request_id: string }
         Returns: Json
       }
+      create_institution_study_program_draft_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_display_exam_ref: string
+          p_week_start: string
+          p_daily_minute_limit: number
+          p_model_version: string
+          p_items: Json
+          p_request_id: string
+        }
+        Returns: Json
+      }
       publish_institution_study_program: {
         Args: { p_user_id: string; p_program_ref: string; p_request_id: string }
         Returns: Json
       }
       get_institution_classroom_published_program_members: {
         Args: { p_user_id: string; p_classroom_id: string; p_window_start: string; p_window_end: string }
+        Returns: Json
+      }
+      get_institution_classroom_published_program_members_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_game: string
+          p_display_exam_ref: string
+          p_window_start: string
+          p_window_end: string
+        }
         Returns: Json
       }
       update_institution_study_program_draft: {
@@ -763,12 +810,33 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_classroom_id: string; p_window_start: string; p_window_end: string }
         Returns: Json
       }
+      get_institution_classroom_followup_metrics_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_game: string
+          p_display_exam_ref: string
+          p_window_start: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
       get_institution_student_followups: {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string }
         Returns: Json
       }
       get_institution_classroom_growth_metrics: {
         Args: { p_user_id: string; p_classroom_id: string; p_window_end: string }
+        Returns: Json
+      }
+      get_institution_classroom_growth_metrics_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_game: string
+          p_display_exam_ref: string
+          p_window_end: string
+        }
         Returns: Json
       }
       get_institution_student_program_history: {
@@ -785,6 +853,18 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       }
       create_institution_student_report: {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_snapshot: Json; p_request_id: string }
+        Returns: Json
+      }
+      create_institution_student_report_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_display_exam_ref: string
+          p_snapshot: Json
+          p_request_id: string
+        }
         Returns: Json
       }
       get_institution_student_reports: {

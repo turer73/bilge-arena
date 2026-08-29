@@ -79,4 +79,16 @@ describe('MasteryGraph', () => {
     expect(screen.queryByText('Zorluk doğruluğu %0')).not.toBeInTheDocument()
     expect(screen.getByText('KEŞİF SEVİYESİ 2/3')).toBeInTheDocument()
   })
+
+  it('tanilama olmayan kapsamda eksik tanilama iddiasi yerine pratik kanitini aciklar', () => {
+    render(<MasteryGraph
+      graph={graph}
+      coverage={{ supported: true, diagnosticAvailable: false, taxonomyVersion: 'ba-tyt-turkce-v1', totalQuestions: 120, mappedQuestions: 120, percentage: 100 }}
+      discovery={{ level: 1, stage: 'estimate', diagnosticCompleted: false, evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 0 }}
+      outcomes={[{ ...outcome, game: 'turkce', category: 'paragraf', attempts: 0, correctAttempts: 0, status: 'insufficient' }]}
+    />)
+
+    expect(screen.getByText(/başlangıç seviyesi pratik kanıtlarıyla oluşuyor/i)).toBeInTheDocument()
+    expect(screen.queryByText(/tanılaması henüz tamamlanmadı/i)).not.toBeInTheDocument()
+  })
 })

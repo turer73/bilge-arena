@@ -647,12 +647,102 @@ AS $fn$
   FROM classified
 $fn$;
 
+-- Preserve the identity and created_at of an unchanged taxonomy-auto mapping.
+-- The mastery materializer uses mapping.created_at to distinguish counters that
+-- the base answer trigger already recorded, so delete/reinsert churn can turn a
+-- harmless replay or metadata update into a duplicate counter increment.
+CREATE OR REPLACE FUNCTION public.sync_taxonomy_auto_question_outcomes(
+  p_question_id uuid,
+  p_game text,
+  p_exam_ref text,
+  p_category text,
+  p_is_active boolean
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_scope public.curriculum_scope_releases%ROWTYPE;
+  v_outcome_id uuid;
+  v_outcome_count integer;
+BEGIN
+  IF NOT COALESCE(p_is_active, false) THEN
+    DELETE FROM public.question_outcomes
+    WHERE question_id = p_question_id AND mapping_source = 'taxonomy_auto';
+    RETURN;
+  END IF;
+
+  SELECT * INTO v_scope
+  FROM public.curriculum_scope_releases AS scope
+  WHERE scope.game = lower(btrim(p_game))
+    AND scope.question_exam_ref IS NOT DISTINCT FROM
+      NULLIF(upper(btrim(COALESCE(p_exam_ref, ''))), '')
+    AND scope.release_status IN ('validating', 'released');
+
+  IF NOT FOUND THEN
+    DELETE FROM public.question_outcomes
+    WHERE question_id = p_question_id AND mapping_source = 'taxonomy_auto';
+    RETURN;
+  END IF;
+
+  SELECT min(outcome.id::text)::uuid, count(*)::integer
+  INTO v_outcome_id, v_outcome_count
+  FROM public.curriculum_outcomes AS outcome
+  JOIN public.curriculum_nodes AS node ON node.id = outcome.node_id
+  WHERE outcome.is_active
+    AND node.is_active
+    AND node.node_type = 'outcome'
+    AND outcome.game = v_scope.game
+    AND upper(COALESCE(outcome.exam_ref, '')) = v_scope.display_exam_ref
+    AND outcome.taxonomy_version = v_scope.taxonomy_version
+    AND outcome.category = lower(btrim(p_category))
+    AND node.game IS NOT DISTINCT FROM outcome.game
+    AND node.exam_ref IS NOT DISTINCT FROM outcome.exam_ref
+    AND node.taxonomy_version IS NOT DISTINCT FROM outcome.taxonomy_version
+    AND node.category IS NOT DISTINCT FROM outcome.category;
+
+  IF v_outcome_count <> 1 OR v_outcome_id IS NULL THEN
+    RAISE EXCEPTION 'released curriculum category is not uniquely mapped: %/%/%',
+      v_scope.game, v_scope.display_exam_ref, p_category USING ERRCODE = '22023';
+  END IF;
+
+  DELETE FROM public.question_outcomes
+  WHERE question_id = p_question_id
+    AND mapping_source = 'taxonomy_auto'
+    AND outcome_id <> v_outcome_id;
+
+  INSERT INTO public.question_outcomes (
+    question_id, outcome_id, weight, is_primary, mapping_source
+  )
+  SELECT p_question_id, v_outcome_id, 1,
+    NOT EXISTS (
+      SELECT 1 FROM public.question_outcomes AS existing
+      WHERE existing.question_id = p_question_id
+        AND existing.is_primary
+        AND existing.outcome_id <> v_outcome_id
+    ),
+    'taxonomy_auto'
+  ON CONFLICT (question_id, outcome_id) DO UPDATE
+  SET weight = EXCLUDED.weight,
+      is_primary = EXCLUDED.is_primary
+  WHERE public.question_outcomes.mapping_source = 'taxonomy_auto'
+    AND (
+      public.question_outcomes.weight IS DISTINCT FROM EXCLUDED.weight
+      OR public.question_outcomes.is_primary IS DISTINCT FROM EXCLUDED.is_primary
+    );
+END $fn$;
+
+REVOKE ALL ON FUNCTION public.sync_taxonomy_auto_question_outcomes(uuid,text,text,text,boolean)
+  FROM PUBLIC, anon, authenticated, service_role;
+
 CREATE TEMP TABLE ydt_english_scope_release_control (
-  should_apply boolean NOT NULL
+  should_apply boolean NOT NULL,
+  should_sync boolean NOT NULL
 ) ON COMMIT DROP;
 
 -- Replays must preserve an operator retirement or a later taxonomy version.
-INSERT INTO ydt_english_scope_release_control (should_apply)
+INSERT INTO ydt_english_scope_release_control (should_apply, should_sync)
 SELECT EXISTS (
   SELECT 1
   FROM public.curriculum_scope_releases
@@ -661,6 +751,14 @@ SELECT EXISTS (
     AND question_exam_ref IS NULL
     AND taxonomy_version = 'ba-ydt-eng-v1'
     AND release_status IN ('draft', 'validating', 'released')
+), EXISTS (
+  SELECT 1
+  FROM public.curriculum_scope_releases
+  WHERE game = 'wordquest'
+    AND display_exam_ref = 'YDT'
+    AND question_exam_ref IS NULL
+    AND taxonomy_version = 'ba-ydt-eng-v1'
+    AND release_status IN ('draft', 'validating')
 );
 
 -- Repair every legacy non-NULL Wordquest scope before proving the release. Full
@@ -674,7 +772,7 @@ DECLARE
     to_regprocedure('public.content_governance_authorize_question_write(uuid,text)') IS NOT NULL
     AND to_regprocedure('public.content_governance_clear_question_write(uuid)') IS NOT NULL;
 BEGIN
-  IF NOT (SELECT should_apply FROM ydt_english_scope_release_control) THEN
+  IF NOT (SELECT should_sync FROM ydt_english_scope_release_control) THEN
     RETURN;
   END IF;
 
@@ -711,11 +809,81 @@ BEGIN
   END IF;
 END $fn$;
 
+-- The release and its historical repair are one logical gate even though they
+-- use consecutive migrations. Refuse to expose YDT mastery when completed
+-- answers cannot be attributed to an immutable question revision.
+DO $fn$
+DECLARE
+  v_marker_gap integer;
+  v_snapshot_gap integer;
+BEGIN
+  IF NOT (SELECT should_sync FROM ydt_english_scope_release_control) THEN
+    RETURN;
+  END IF;
+
+  SELECT count(DISTINCT attempt.id)::integer INTO v_marker_gap
+  FROM public.verified_attempts AS attempt
+  JOIN public.session_answers AS answer
+    ON answer.session_id = attempt.session_id
+   AND answer.user_id = attempt.user_id
+  JOIN public.questions AS question
+    ON question.id = answer.question_id
+   AND question.game = 'wordquest'
+   AND NULLIF(upper(btrim(COALESCE(question.exam_ref, ''))), '') IS NULL
+   AND question.is_active
+  WHERE attempt.game = 'wordquest'
+    AND attempt.completed_at IS NOT NULL
+    AND attempt.session_id IS NOT NULL
+    AND answer.question_id = ANY(attempt.question_ids)
+    AND NOT COALESCE(answer.is_skipped, false)
+    AND NOT EXISTS (
+      SELECT 1 FROM public.mastery_materialized_attempts AS marker
+      WHERE marker.attempt_id = attempt.id
+    );
+
+  SELECT count(*)::integer INTO v_snapshot_gap
+  FROM public.verified_attempts AS attempt
+  JOIN public.mastery_materialized_attempts AS marker
+    ON marker.attempt_id = attempt.id
+  JOIN public.session_answers AS answer
+    ON answer.session_id = attempt.session_id
+   AND answer.user_id = attempt.user_id
+  JOIN public.questions AS question
+    ON question.id = answer.question_id
+   AND question.game = 'wordquest'
+   AND NULLIF(upper(btrim(COALESCE(question.exam_ref, ''))), '') IS NULL
+   AND question.is_active
+  LEFT JOIN public.verified_attempt_question_revisions AS snapshot
+    ON snapshot.attempt_id = attempt.id
+   AND snapshot.question_id = answer.question_id
+  WHERE attempt.game = 'wordquest'
+    AND attempt.completed_at IS NOT NULL
+    AND attempt.session_id IS NOT NULL
+    AND answer.question_id = ANY(attempt.question_ids)
+    AND NOT COALESCE(answer.is_skipped, false)
+    AND (
+      snapshot.question_id IS NULL
+      OR answer.question_revision_id IS NULL
+      OR snapshot.revision_id IS DISTINCT FROM answer.question_revision_id
+      OR snapshot.game IS DISTINCT FROM 'wordquest'
+      OR NOT (
+        NULLIF(upper(btrim(COALESCE(snapshot.exam_ref, ''))), '') IS NULL
+        OR upper(btrim(snapshot.exam_ref)) = 'YDT'
+      )
+      OR snapshot.category IS DISTINCT FROM question.category::text
+    );
+
+  IF v_marker_gap <> 0 OR v_snapshot_gap <> 0 THEN
+    RAISE EXCEPTION 'YDT English release blocked by historical mastery provenance: marker gaps %, snapshot gaps %',
+      v_marker_gap, v_snapshot_gap USING ERRCODE = '23514';
+  END IF;
+END $fn$;
+
 DO $fn$
 DECLARE
   v_updated integer;
 BEGIN
-  IF NOT (SELECT should_apply FROM ydt_english_scope_release_control) THEN
+  IF NOT (SELECT should_sync FROM ydt_english_scope_release_control) THEN
     RETURN;
   END IF;
 
@@ -738,7 +906,7 @@ DO $fn$
 DECLARE
   v_question record;
 BEGIN
-  IF NOT (SELECT should_apply FROM ydt_english_scope_release_control) THEN
+  IF NOT (SELECT should_sync FROM ydt_english_scope_release_control) THEN
     RETURN;
   END IF;
 
@@ -796,7 +964,7 @@ WHERE game = 'wordquest'
   AND question_exam_ref IS NULL
   AND taxonomy_version = 'ba-ydt-eng-v1'
   AND release_status IN ('validating', 'released')
-  AND (SELECT should_apply FROM ydt_english_scope_release_control);
+  AND (SELECT should_sync FROM ydt_english_scope_release_control);
 
 DO $fn$
 DECLARE

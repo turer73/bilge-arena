@@ -22,6 +22,8 @@ function input(overrides: Partial<DiagnosticPolicyInput> = {}): DiagnosticPolicy
   return {
     kind: 'initial',
     seed: 'session-a',
+    questionCount: DIAGNOSTIC_MAX_QUESTIONS,
+    maxPerOutcome: DIAGNOSTIC_MAX_PER_OUTCOME,
     outcomes,
     questions,
     priorStates: [],
@@ -138,8 +140,12 @@ describe('selectNextDiagnosticQuestion', () => {
       { id: 'q-a', outcomeId: 'o1', difficulty: 2 },
       { id: 'q-b', outcomeId: 'o1', difficulty: 4 },
     ]
-    const first = selectNextDiagnosticQuestion(input({ outcomes: outcomes.slice(0, 1), questions: tiedQuestions }))
-    const again = selectNextDiagnosticQuestion(input({ outcomes: outcomes.slice(0, 1), questions: tiedQuestions }))
+    const first = selectNextDiagnosticQuestion(input({
+      questionCount: 2, outcomes: outcomes.slice(0, 1), questions: tiedQuestions,
+    }))
+    const again = selectNextDiagnosticQuestion(input({
+      questionCount: 2, outcomes: outcomes.slice(0, 1), questions: tiedQuestions,
+    }))
     expect(again).toEqual(first)
     expect(first).not.toBeNull()
     if (!first) throw new Error('selection unexpectedly missing')
@@ -147,6 +153,7 @@ describe('selectNextDiagnosticQuestion', () => {
     if (!chosen) throw new Error('selected fixture missing')
     const remaining = selectNextDiagnosticQuestion(input({
       outcomes: outcomes.slice(0, 1),
+      questionCount: 2,
       questions: tiedQuestions,
       answers: [{ ...chosen, questionId: chosen.id, isCorrect: true }],
     }))
@@ -160,6 +167,7 @@ describe('selectNextDiagnosticQuestion', () => {
     ]
     expect(selectNextDiagnosticQuestion(input({
       outcomes: outcomes.slice(0, 2),
+      questionCount: 4,
       questions: limitedQuestions,
       answers: [{ questionId: 'o1-only', outcomeId: 'o1', difficulty: 3, isCorrect: false }],
     }))).toMatchObject({ outcomeId: 'o2', questionId: 'o2-only' })
@@ -172,6 +180,22 @@ describe('selectNextDiagnosticQuestion', () => {
     ]
     expect(recorded).toHaveLength(10)
     expect(selectNextDiagnosticQuestion(input({ answers: recorded }))).toBeNull()
+  })
+
+  it('honors registry-provided question and per-outcome bounds', () => {
+    const scopedOutcomes = outcomes.slice(0, 3)
+    const scopedQuestions = questions.filter((question) => scopedOutcomes.some((outcome) => outcome.id === question.outcomeId))
+    const recorded = scopedOutcomes.flatMap((outcome) => [
+      answer(`${outcome.id}-d3`, true),
+      answer(`${outcome.id}-d4`, false),
+    ])
+    expect(selectNextDiagnosticQuestion(input({
+      questionCount: 6,
+      maxPerOutcome: 2,
+      outcomes: scopedOutcomes,
+      questions: scopedQuestions,
+      answers: recorded,
+    }))).toBeNull()
   })
 
   it.each([

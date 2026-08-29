@@ -5,6 +5,7 @@ import { useMasteryMap } from '@/lib/hooks/use-mastery-map'
 import { useGameStore } from '@/stores/game-store'
 
 const pushMock = vi.fn()
+let searchParams = new URLSearchParams('game=matematik&exam_ref=TYT')
 const graphOutcome = vi.hoisted(() => ({
   game: 'matematik', category: 'sayilar', examRef: 'TYT',
 }))
@@ -16,7 +17,7 @@ const authState = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
-  useSearchParams: () => new URLSearchParams('game=matematik&exam_ref=TYT'),
+  useSearchParams: () => searchParams,
 }))
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => authState }))
 vi.mock('@/lib/hooks/use-mastery-map', () => ({ useMasteryMap: vi.fn() }))
@@ -33,6 +34,7 @@ const mockedUseMasteryMap = vi.mocked(useMasteryMap)
 describe('HakimiyetClient', () => {
   beforeEach(() => {
     pushMock.mockClear()
+    searchParams = new URLSearchParams('game=matematik&exam_ref=TYT')
     authState.user = null
     authState.profile = null
     authState.loading = false
@@ -85,6 +87,29 @@ describe('HakimiyetClient', () => {
     authState.user = { id: 'u1' }
     render(<HakimiyetClient />)
     expect(screen.getByText(/şu an yüklenemedi/i)).toBeInTheDocument()
+  })
+
+  it('explicit invalid game querysi sessizce store veya Math haritasina dusmez', () => {
+    authState.user = { id: 'u1' }
+    useGameStore.setState({ selectedGame: 'wordquest' })
+    searchParams = new URLSearchParams('game=not-a-game&exam_ref=TYT')
+
+    render(<HakimiyetClient />)
+
+    expect(screen.getByRole('heading', { name: 'Geçersiz harita kapsamı' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Çalışmaya dön' })).toHaveAttribute('href', '/arena/calisma')
+    expect(screen.queryByRole('button', { name: 'Grafikten çalış' })).not.toBeInTheDocument()
+    expect(mockedUseMasteryMap).toHaveBeenCalledWith('wordquest', null, 'TYT')
+  })
+
+  it('game querysi yoksa mevcut store/default kapsam davranisini korur', () => {
+    authState.user = { id: 'u1' }
+    useGameStore.setState({ selectedGame: 'fen', selectedExamRef: 'TYT' })
+    searchParams = new URLSearchParams()
+
+    render(<HakimiyetClient />)
+
+    expect(mockedUseMasteryMap).toHaveBeenCalledWith('fen', 'u1', 'TYT')
   })
 
   it('Wordquest YDT display refini storea tasimadan onceki sinav tercihini korur', () => {

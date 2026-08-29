@@ -164,7 +164,10 @@ describe('MasteryActionCard', () => {
     render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
 
     expect(screen.getByText('KEŞİF SEVİYESİ 1/3')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Keşif Turunu Başlat' })).toHaveAttribute('href', '/arena/tani')
+    expect(screen.getByRole('link', { name: 'Keşif Turunu Başlat' })).toHaveAttribute(
+      'href',
+      '/arena/tani?game=matematik&exam_ref=TYT',
+    )
     expect(screen.queryByText(/zayıf/i)).not.toBeInTheDocument()
   })
 

@@ -64,10 +64,10 @@ export function TodayPlanFocus({
           </button>
           {showDiagnostic && (
             <Link
-              href="/arena/tani"
+              href="/arena/tani?game=matematik&exam_ref=TYT"
               className="mx-auto mt-2 flex min-h-11 w-fit items-center px-3 text-xs font-black text-[var(--app-accent-text)] hover:underline"
             >
-              Önce 10 soruluk kısa tanılama yap
+              Önce 10 soruluk kısa başlangıç taraması yap
             </Link>
           )}
         </div>

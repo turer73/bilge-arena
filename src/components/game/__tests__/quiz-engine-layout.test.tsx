@@ -159,13 +159,16 @@ vi.mock('../lobby', () => ({
     onStart,
     personalizedMockCard,
     selectedExamRef,
+    onSelectExamRef,
   }: {
     onStart: () => void
     personalizedMockCard?: React.ReactNode
     selectedExamRef?: string | null
+    onSelectExamRef: (examRef: string | null) => void
   }) => (
     <>
       <button data-testid="normal-quiz-start" onClick={onStart} />
+      <button data-testid="select-tyt" onClick={() => onSelectExamRef('TYT')} />
       <span data-testid="lobby-exam-ref">{selectedExamRef ?? 'null'}</span>
       {personalizedMockCard}
     </>
@@ -206,6 +209,26 @@ vi.mock('next/dynamic', () => ({
 import { QuizEngine } from '../quiz-engine'
 
 describe('QuizEngine yerleşim', () => {
+  test('sınav değişince yeni kapsamda geçersiz kalan kategoriyi temizler', () => {
+    quizGame.screen = 'lobby'
+    gameStoreValue.selectedExamRef = 'AYT-SOZ'
+    gameStoreValue.selectedCategory = 'edebiyat'
+    gameStoreValue.setCategory.mockClear()
+    gameStoreValue.setExamRef.mockClear()
+
+    try {
+      render(<QuizEngine game="turkce" />)
+      fireEvent.click(screen.getByTestId('select-tyt'))
+
+      expect(gameStoreValue.setCategory).toHaveBeenCalledWith(null)
+      expect(gameStoreValue.setExamRef).toHaveBeenCalledWith('TYT')
+    } finally {
+      gameStoreValue.selectedExamRef = 'TYT'
+      gameStoreValue.selectedCategory = 'problemler'
+      quizGame.screen = 'game'
+    }
+  })
+
   test('mobil Hemen başla ekranında günlük plan ve keşif kartlarını gizler', () => {
     quizGame.screen = 'lobby'
     authStoreValue.user = { id: 'u1' }

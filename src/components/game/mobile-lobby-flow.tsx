@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronRight, Play, X } from 'lucide-react'
-import { GAMES, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
+import { GAMES, getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
 import { MODES, type QuizMode } from '@/lib/constants/modes'
 
 interface MobileLobbyFlowProps {
@@ -117,8 +117,9 @@ export function MobileLobbyFlow({
   quizLimit,
 }: MobileLobbyFlowProps) {
   const gameDef = GAMES[game]
+  const categories = getCategoriesForExam(game, selectedExamRef)
   const mode = MODES.find((candidate) => candidate.id === selectedMode) ?? MODES[0]
-  const selectedCategoryIsValid = selectedCategory === null || gameDef.categories.includes(selectedCategory)
+  const selectedCategoryIsValid = selectedCategory === null || categories.includes(selectedCategory)
   const safeCategory = selectedCategoryIsValid ? selectedCategory : null
   const difficulty = DIFFICULTIES.find((item) => item.value === selectedDifficulty) ?? DIFFICULTIES[0]
   const [sheet, setSheet] = useState<OptionSheet>(null)
@@ -339,7 +340,7 @@ export function MobileLobbyFlow({
                     <span className="block text-sm font-black text-[var(--app-text)]">Tüm konular</span>
                     <span className="mt-1 block text-[10px] font-semibold text-[var(--app-text-sub)]">Karışık ve dengeli</span>
                   </button>
-                  {gameDef.categories.map((category) => {
+                  {categories.map((category) => {
                     const active = safeCategory === category
                     return (
                       <button type="button" key={category} onClick={() => { onSelectCategory(category); setSheet(null) }} aria-pressed={active} className={optionClass(active)}>

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { GAMES, type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
+import { GAMES, getCategoriesForExam, type GameSlug, GAME_SLUGS } from '@/lib/constants/games'
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
 import { defaultExamRefForType } from '@/lib/constants/exam-types'
@@ -60,7 +60,7 @@ export default function GameClient() {
   useEffect(() => {
     if (!isValidSlug) return
     const requested = searchParams.get('category')
-    if (!requested || !GAMES[gameSlug as GameSlug].categories.includes(requested)) {
+    if (!requested || !getCategoriesForExam(gameSlug as GameSlug, selectedExamRef).includes(requested)) {
       if (categoryFromQueryRef.current) {
         categoryFromQueryRef.current = false
         setCategory(null)
@@ -69,7 +69,7 @@ export default function GameClient() {
     }
     categoryFromQueryRef.current = true
     setCategory(requested)
-  }, [gameSlug, isValidSlug, searchParams, setCategory])
+  }, [gameSlug, isValidSlug, searchParams, selectedExamRef, setCategory])
 
   if (!isValidSlug) return null
 

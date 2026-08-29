@@ -67,8 +67,10 @@ const overview: InstitutionClassroomOverview = {
   scope: {
     game: 'matematik',
     examRef: 'TYT',
+    questionExamRef: 'TYT',
     taxonomyVersion: 'ba-tyt-math-v1',
-    modelVersion: 'institution-classroom-overview-v1',
+    scopePolicyVersion: 'institution-scope-v1',
+    modelVersion: 'institution-classroom-overview-v2',
     windowStart: '2026-07-17T00:00:00.000Z',
     windowEnd: '2026-08-14T00:00:00.000Z',
     minimumGroupSize: 3,

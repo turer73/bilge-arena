@@ -7,6 +7,9 @@
 
 BEGIN;
 
+SET LOCAL lock_timeout = '10s';
+SET LOCAL statement_timeout = '120s';
+
 -- Keep every writer used by the evidence calculation behind one stable proof.
 LOCK TABLE
   public.curriculum_scope_releases,
@@ -59,6 +62,80 @@ BEGIN
   END IF;
 END $fn$;
 
+DO $fn$
+DECLARE
+  v_marker_gap integer;
+  v_snapshot_gap integer;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.curriculum_scope_releases
+    WHERE game = 'wordquest'
+      AND display_exam_ref = 'YDT'
+      AND question_exam_ref IS NULL
+      AND taxonomy_version = 'ba-ydt-eng-v1'
+      AND release_status = 'released'
+  ) THEN
+    RETURN;
+  END IF;
+
+  SELECT count(DISTINCT attempt.id)::integer INTO v_marker_gap
+  FROM public.verified_attempts AS attempt
+  JOIN public.session_answers AS answer
+    ON answer.session_id = attempt.session_id
+   AND answer.user_id = attempt.user_id
+  JOIN public.questions AS question
+    ON question.id = answer.question_id
+   AND question.game = 'wordquest'
+   AND NULLIF(upper(btrim(COALESCE(question.exam_ref, ''))), '') IS NULL
+   AND question.is_active
+  WHERE attempt.game = 'wordquest'
+    AND attempt.completed_at IS NOT NULL
+    AND attempt.session_id IS NOT NULL
+    AND answer.question_id = ANY(attempt.question_ids)
+    AND NOT COALESCE(answer.is_skipped, false)
+    AND NOT EXISTS (
+      SELECT 1 FROM public.mastery_materialized_attempts AS marker
+      WHERE marker.attempt_id = attempt.id
+    );
+
+  SELECT count(*)::integer INTO v_snapshot_gap
+  FROM public.verified_attempts AS attempt
+  JOIN public.mastery_materialized_attempts AS marker
+    ON marker.attempt_id = attempt.id
+  JOIN public.session_answers AS answer
+    ON answer.session_id = attempt.session_id
+   AND answer.user_id = attempt.user_id
+  JOIN public.questions AS question
+    ON question.id = answer.question_id
+   AND question.game = 'wordquest'
+   AND NULLIF(upper(btrim(COALESCE(question.exam_ref, ''))), '') IS NULL
+   AND question.is_active
+  LEFT JOIN public.verified_attempt_question_revisions AS snapshot
+    ON snapshot.attempt_id = attempt.id
+   AND snapshot.question_id = answer.question_id
+  WHERE attempt.game = 'wordquest'
+    AND attempt.completed_at IS NOT NULL
+    AND attempt.session_id IS NOT NULL
+    AND answer.question_id = ANY(attempt.question_ids)
+    AND NOT COALESCE(answer.is_skipped, false)
+    AND (
+      snapshot.question_id IS NULL
+      OR answer.question_revision_id IS NULL
+      OR snapshot.revision_id IS DISTINCT FROM answer.question_revision_id
+      OR snapshot.game IS DISTINCT FROM 'wordquest'
+      OR NOT (
+        NULLIF(upper(btrim(COALESCE(snapshot.exam_ref, ''))), '') IS NULL
+        OR upper(btrim(snapshot.exam_ref)) = 'YDT'
+      )
+      OR snapshot.category IS DISTINCT FROM question.category::text
+    );
+
+  IF v_marker_gap <> 0 OR v_snapshot_gap <> 0 THEN
+    RAISE EXCEPTION 'YDT English evidence repair provenance is incomplete: marker gaps %, snapshot gaps %',
+      v_marker_gap, v_snapshot_gap USING ERRCODE = '23514';
+  END IF;
+END $fn$;
+
 CREATE TEMP TABLE ydt_english_evidence_candidates ON COMMIT DROP AS
 SELECT
   answer.id AS answer_id,
@@ -71,12 +148,12 @@ SELECT
   mapping.weight AS mapping_weight,
   mapping.mapping_source,
   mapping.created_at > answer.answered_at AS mapping_after_answer,
-  COALESCE(snapshot.difficulty, question.difficulty)::smallint AS difficulty,
+  snapshot.difficulty::smallint AS difficulty,
   CASE WHEN answer.is_correct
-    THEN mapping.weight * COALESCE(snapshot.difficulty, question.difficulty)
+    THEN mapping.weight * snapshot.difficulty
     ELSE 0
   END AS difficulty_weighted_earned,
-  mapping.weight * COALESCE(snapshot.difficulty, question.difficulty)
+  mapping.weight * snapshot.difficulty
     AS difficulty_weighted_possible,
   answer.time_taken_sec,
   COALESCE(NOT answer.is_correct AND answer.is_fast, false) AS fast_wrong,
@@ -107,9 +184,16 @@ JOIN public.session_answers AS answer
   ON answer.session_id = attempt.session_id
  AND answer.user_id = attempt.user_id
 JOIN public.questions AS question ON question.id = answer.question_id
-LEFT JOIN public.verified_attempt_question_revisions AS snapshot
+JOIN public.verified_attempt_question_revisions AS snapshot
   ON snapshot.attempt_id = attempt.id
  AND snapshot.question_id = answer.question_id
+ AND snapshot.revision_id = answer.question_revision_id
+ AND snapshot.game = 'wordquest'
+ AND (
+   NULLIF(upper(btrim(COALESCE(snapshot.exam_ref, ''))), '') IS NULL
+   OR upper(btrim(snapshot.exam_ref)) = 'YDT'
+ )
+ AND snapshot.category IS NOT DISTINCT FROM question.category::text
 JOIN public.question_outcomes AS mapping
   ON mapping.question_id = question.id
 JOIN public.curriculum_outcomes AS outcome

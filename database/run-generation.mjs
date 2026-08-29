@@ -133,6 +133,12 @@ const TOPIC_MAP = {
       'Din ve Toplum', 'Eğitim ve Toplum',
       'Toplumsal Tabakalaşma', 'Toplumsal Hareketlilik',
     ],
+    din_kulturu: [
+      'Bilgi ve İnanç', 'Din ve İslam', 'İslam ve İbadet', 'Ahlak ve Değerler',
+      'Allah-İnsan İlişkisi', 'Hz. Muhammed', 'Vahiy ve Akıl',
+      'Din, Kültür ve Medeniyet', 'Kader İnancı', 'Zekât ve Sadaka',
+      'Din ve Hayat', 'Kur’an-ı Kerim ve Özellikleri',
+    ],
   },
   wordquest: {
     vocabulary: ['Synonyms', 'Antonyms', 'Contextual Meaning', 'Word Families', 'Collocations'],
@@ -152,6 +158,7 @@ const CATEGORY_LABELS = {
   anlam_bilgisi: 'Anlam Bilgisi', yazim_kurallari: 'Yazım Kuralları',
   fizik: 'Fizik', kimya: 'Kimya', biyoloji: 'Biyoloji',
   tarih: 'Tarih', cografya: 'Coğrafya', felsefe: 'Felsefe ve Mantık', sosyoloji: 'Sosyoloji',
+  din_kulturu: 'Din Kültürü ve Ahlak Bilgisi',
   vocabulary: 'İngilizce Kelime Bilgisi', grammar: 'İngilizce Dilbilgisi',
   cloze_test: 'İngilizce Boşluk Doldurma', dialogue: 'İngilizce Diyalog',
   restatement: 'İngilizce Yeniden İfade', sentence_completion: 'İngilizce Cümle Tamamlama',

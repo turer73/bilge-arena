@@ -17,10 +17,11 @@ const states = outcomes.map((outcome, index) => ({
   recommendedDifficulty: (index % 5) + 1,
   lastDiagnosedAt: `2026-08-08T10:00:0${index}.000Z`,
 }))
+const limits = { outcomeCount: 6, maxPerOutcome: 2 }
 
 describe('buildDiagnosticSummary', () => {
   it('returns six ordered ID-free outcome summaries and score bands', () => {
-    const result = buildDiagnosticSummary([...outcomes].reverse(), states)
+    const result = buildDiagnosticSummary([...outcomes].reverse(), states, limits)
     expect(result).toEqual({
       completedAt: '2026-08-08T10:00:05.000Z',
       outcomes: expect.arrayContaining([
@@ -35,16 +36,29 @@ describe('buildDiagnosticSummary', () => {
   })
 
   it('fails closed for incomplete, duplicate, orphan, or invalid evidence', () => {
-    expect(buildDiagnosticSummary(outcomes.slice(0, 5), states.slice(0, 5))).toBeNull()
-    expect(buildDiagnosticSummary(outcomes, [...states.slice(0, 5), states[0]])).toBeNull()
+    expect(buildDiagnosticSummary(outcomes.slice(0, 5), states.slice(0, 5), limits)).toBeNull()
+    expect(buildDiagnosticSummary(outcomes, [...states.slice(0, 5), states[0]], limits)).toBeNull()
     expect(buildDiagnosticSummary(outcomes, states.map((state, index) => (
       index === 0 ? { ...state, outcomeId: 'orphan' } : state
-    )))).toBeNull()
+    )), limits)).toBeNull()
     expect(buildDiagnosticSummary(outcomes, states.map((state, index) => (
       index === 0 ? { ...state, score: Number.NaN } : state
-    )))).toBeNull()
+    )), limits)).toBeNull()
     expect(buildDiagnosticSummary(outcomes, states.map((state, index) => (
       index === 0 ? { ...state, recommendedDifficulty: 6 } : state
-    )))).toBeNull()
+    )), limits)).toBeNull()
+  })
+
+  it('uses registry-provided outcome and per-outcome bounds', () => {
+    expect(buildDiagnosticSummary(
+      outcomes.slice(0, 3),
+      states.slice(0, 3),
+      { outcomeCount: 3, maxPerOutcome: 2 },
+    )?.outcomes).toHaveLength(3)
+    expect(buildDiagnosticSummary(
+      outcomes.slice(0, 3),
+      states.slice(0, 3),
+      { outcomeCount: 4, maxPerOutcome: 2 },
+    )).toBeNull()
   })
 })

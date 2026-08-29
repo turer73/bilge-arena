@@ -1,4 +1,4 @@
-// Opt-in disposable PostgreSQL coverage for 086 -> 096 -> 098.
+// Opt-in disposable PostgreSQL coverage for 086 -> 096 -> 098 -> 140 -> 178 -> 184 -> 193.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import pg from 'pg'
 import { readFileSync } from 'node:fs'
@@ -16,7 +16,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations')
 const read = (name) => readFileSync(join(root, name), 'utf8')
 const { Client } = pg
 
-describePg('098 adaptive diagnostic real PostgreSQL', () => {
+describePg('adaptive diagnostic real PostgreSQL', () => {
   let client
   let secondClient
   const user = randomUUID()
@@ -72,6 +72,8 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
       CREATE TABLE public.question_content_revisions(
         id uuid PRIMARY KEY,
         question_id uuid NOT NULL REFERENCES public.questions(id),
+        revision_no integer NOT NULL DEFAULT 1 CHECK(revision_no >= 1),
+        base_revision_id uuid REFERENCES public.question_content_revisions(id),
         status text NOT NULL,
         game text NOT NULL,
         category text NOT NULL,
@@ -79,8 +81,17 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
         topic text,
         difficulty smallint NOT NULL,
         level_tag text,
+        exam_ref text,
+        is_boss boolean NOT NULL DEFAULT false,
         content jsonb NOT NULL,
-        content_sha256 text NOT NULL
+        content_sha256 text NOT NULL,
+        change_kind text NOT NULL DEFAULT 'legacy_import',
+        change_summary text NOT NULL DEFAULT 'disposable integration fixture',
+        prepared_by uuid REFERENCES public.profiles(id),
+        prepared_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+        published_at timestamptz,
+        outcomes_prepared_by uuid REFERENCES public.profiles(id),
+        UNIQUE(question_id, revision_no)
       );
       CREATE TABLE public.session_answers(
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -120,11 +131,11 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
         FROM public.questions question
       ), inserted AS (
         INSERT INTO public.question_content_revisions(
-          id,question_id,status,game,category,subcategory,topic,difficulty,level_tag,content,content_sha256
+          id,question_id,status,game,category,subcategory,topic,difficulty,level_tag,exam_ref,content,content_sha256
         )
         SELECT gen_random_uuid(),question.id,'published',question.game,question.category,
           question.subcategory,question.topic,question.difficulty,question.level_tag,
-          payload.content,encode(extensions.digest(payload.content::text,'sha256'),'hex')
+          question.exam_ref,payload.content,encode(extensions.digest(payload.content::text,'sha256'),'hex')
         FROM public.questions question JOIN payload ON payload.question_id=question.id
         RETURNING id,question_id,content
       )
@@ -137,19 +148,25 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
       [migrationLegacyUser, migrationLegacySession, questions.sayilar.base],
     )
     await client.query(read('140_adaptive_diagnostic_evidence_v2.sql'))
-    await client.query(`CREATE TABLE public.curriculum_scope_releases (
-      game text NOT NULL,
-      display_exam_ref text NOT NULL,
-      question_exam_ref text,
-      taxonomy_version text NOT NULL,
-      release_status text NOT NULL,
-      diagnostic_enabled boolean NOT NULL DEFAULT false,
-      PRIMARY KEY(game, display_exam_ref)
-    )`)
-    await client.query(`INSERT INTO public.curriculum_scope_releases(
-      game,display_exam_ref,question_exam_ref,taxonomy_version,release_status,diagnostic_enabled
-    ) VALUES('matematik','TYT','TYT','ba-tyt-math-v1','released',true)`)
+    await client.query(read('178_curriculum_scope_release_registry.sql'))
+    // Migration 086 predates mapping provenance and seeded the two legacy
+    // `sayilar` rows as manual. This fixture's V3 precondition represents the
+    // reviewed category-proxy normalization already required before a
+    // diagnostic release; migration 193 must still reject any later manual row.
+    await client.query(`UPDATE public.question_outcomes AS mapping
+      SET mapping_source='taxonomy_auto'
+      FROM public.questions AS question, public.curriculum_outcomes AS outcome
+      WHERE mapping.question_id=question.id
+        AND mapping.outcome_id=outcome.id
+        AND mapping.mapping_source='manual'
+        AND question.game='matematik'
+        AND question.exam_ref='TYT'
+        AND outcome.game='matematik'
+        AND outcome.exam_ref='TYT'
+        AND outcome.taxonomy_version='ba-tyt-math-v1'
+        AND outcome.category=question.category`)
     await client.query(read('184_adaptive_diagnostic_registry_write_gate.sql'))
+    await client.query(read('193_registry_driven_adaptive_diagnostic_v3.sql'))
   })
 
   afterAll(async () => {
@@ -171,6 +188,16 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
       'SELECT public.start_adaptive_diagnostic($1,$2,$3) result',
       [userId, sessionId, firstQuestionId],
     )).rows[0].result
+  }
+
+  async function insertExpiredMathSession(userId, sessionId, firstQuestionId) {
+    await client.query(`INSERT INTO public.adaptive_diagnostic_sessions(
+      id,user_id,game,exam_ref,taxonomy_version,kind,status,current_question_id,
+      answered_count,covered_outcomes,started_at,expires_at
+    ) VALUES(
+      $1,$2,'matematik','TYT','ba-tyt-math-v1','initial','active',$3,
+      0,0,clock_timestamp()-interval '2 hours',clock_timestamp()-interval '1 hour'
+    )`, [sessionId, userId, firstQuestionId])
   }
 
   async function record(connection, { userId = user, sessionId = mainSession, questionId, correct, requestId, nextQuestionId }) {
@@ -254,6 +281,214 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
     })).rejects.toMatchObject({ code:'22023' })
   })
 
+  it('uses dynamic blueprint counts and rejects cross-scope questions in v3', async () => {
+    const fenUser = randomUUID()
+    const fenSession = randomUUID()
+    const fenCategories = ['fizik', 'kimya', 'biyoloji']
+    const fenQuestions = Object.fromEntries(fenCategories.map((category) => [category, [randomUUID(), randomUUID()]]))
+    const manualPrimaryQuestionId = randomUUID()
+    const courseId = randomUUID()
+    let transactionOpen = false
+    try {
+      await client.query('BEGIN')
+      transactionOpen = true
+      await client.query('INSERT INTO public.profiles(id) VALUES($1)', [fenUser])
+      await client.query(`INSERT INTO public.curriculum_nodes(
+        id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+      ) VALUES($1,'test-fen-v1:course','ba-tyt-fen-v1','fen','TYT','course',NULL,NULL,'Fen',1,true)`, [courseId])
+
+      for (const [index, category] of fenCategories.entries()) {
+        const unitId = randomUUID()
+        const topicId = randomUUID()
+        const nodeId = randomUUID()
+        const outcomeId = randomUUID()
+        await client.query(`INSERT INTO public.curriculum_nodes(
+          id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+        ) VALUES($1,$2,'ba-tyt-fen-v1','fen','TYT','unit',$3,NULL,$4,$5,true)`, [
+          unitId, `test-fen-v1:unit:${category}`, courseId, category, index + 1,
+        ])
+        await client.query(`INSERT INTO public.curriculum_nodes(
+          id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+        ) VALUES($1,$2,'ba-tyt-fen-v1','fen','TYT','topic',$3,$4,$5,$6,true)`, [
+          topicId, `test-fen-v1:topic:${category}`, unitId, category, category, index + 1,
+        ])
+        await client.query(`INSERT INTO public.curriculum_nodes(
+          id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+        ) VALUES($1,$2,'ba-tyt-fen-v1','fen','TYT','outcome',$3,$4,$5,$6,true)`, [
+          nodeId, `test-fen-v1:outcome:${category}`, topicId, category, category, index + 1,
+        ])
+        await client.query(`INSERT INTO public.curriculum_outcomes(
+          id,code,game,category,title,exam_ref,sort_order,is_active,node_id,taxonomy_version
+        ) VALUES($1,$2,'fen',$3,$4,'TYT',$5,true,$6,'ba-tyt-fen-v1')`, [
+          outcomeId, `TST-FEN-${category.toUpperCase()}`, category, category, index + 1, nodeId,
+        ])
+
+        for (const [questionIndex, questionId] of fenQuestions[category].entries()) {
+          const revisionId = randomUUID()
+          const content = { question: `${category} ${questionIndex + 1}`, options: ['A', 'B', 'C', 'D'], answer: 1 }
+          await client.query(`INSERT INTO public.questions(
+            id,game,category,difficulty,exam_ref,is_active
+          ) VALUES($1,'fen',$2,$3,'TYT',true)`, [questionId, category, questionIndex + 2])
+          await client.query(`INSERT INTO public.question_content_revisions(
+        id,question_id,status,game,category,difficulty,exam_ref,content,content_sha256
+      ) VALUES($1,$2,'published','fen',$3,$4,'TYT',$5::jsonb,
+        encode(extensions.digest(($5::jsonb)::text,'sha256'),'hex'))`, [
+            revisionId, questionId, category, questionIndex + 2, JSON.stringify(content),
+          ])
+          await client.query('UPDATE public.questions SET published_revision_id=$1,content=$2::jsonb WHERE id=$3', [
+            revisionId, JSON.stringify(content), questionId,
+          ])
+          await client.query(`INSERT INTO public.question_outcomes(
+            question_id,outcome_id,weight,is_primary,mapping_source
+          ) VALUES($1,$2,1,true,'taxonomy_auto')`, [questionId, outcomeId])
+        }
+      }
+
+      // A manual-primary row in the same exact scope must never become a
+      // diagnostic candidate merely because it has a valid category mapping.
+      const manualRevisionId = randomUUID()
+      const manualContent = { question: 'manual-only candidate', options: ['A', 'B', 'C', 'D'], answer: 1 }
+      const fizikOutcomeId = (await client.query(
+        `SELECT id FROM public.curriculum_outcomes
+         WHERE game='fen' AND exam_ref='TYT' AND taxonomy_version='ba-tyt-fen-v1'
+           AND category='fizik' AND is_active
+         LIMIT 1`,
+      )).rows[0].id
+      await client.query(`INSERT INTO public.questions(
+        id,game,category,difficulty,exam_ref,is_active
+      ) VALUES($1,'fen','fizik',3,'TYT',true)`, [manualPrimaryQuestionId])
+      await client.query(`INSERT INTO public.question_content_revisions(
+        id,question_id,status,game,category,difficulty,exam_ref,content,content_sha256
+      ) VALUES($1,$2,'published','fen','fizik',3,'TYT',$3::jsonb,
+        encode(extensions.digest(($3::jsonb)::text,'sha256'),'hex'))`, [
+        manualRevisionId, manualPrimaryQuestionId, JSON.stringify(manualContent),
+      ])
+      await client.query('UPDATE public.questions SET published_revision_id=$1,content=$2::jsonb WHERE id=$3', [
+        manualRevisionId, JSON.stringify(manualContent), manualPrimaryQuestionId,
+      ])
+      await client.query(`INSERT INTO public.question_outcomes(
+        question_id,outcome_id,weight,is_primary,mapping_source
+      ) VALUES($1,$2,1,true,'manual')`, [manualPrimaryQuestionId, fizikOutcomeId])
+
+      await client.query(`UPDATE public.curriculum_scope_releases
+        SET release_status='released',diagnostic_enabled=true,released_at=clock_timestamp()
+        WHERE game='fen' AND display_exam_ref='TYT'`)
+      await client.query(`INSERT INTO public.adaptive_diagnostic_blueprints(
+        blueprint_version,game,display_exam_ref,question_exam_ref,taxonomy_version,
+        policy_version,question_count,outcome_count,max_per_outcome,
+        capability_status,released_at
+      ) VALUES(
+        'ba-tyt-fen-diagnostic-v1','fen','TYT','TYT','ba-tyt-fen-v1',
+        'adaptive-screening-v2',5,3,2,'released',clock_timestamp()
+      )`)
+
+      expect((await client.query(
+        "SELECT public.resolve_released_diagnostic_scope('FEN','tyt') result",
+      )).rows[0].result).toEqual({
+        game: 'fen', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-fen-v1', policyVersion: 'adaptive-screening-v2',
+        questionCount: 5, outcomeCount: 3, maxPerOutcome: 2,
+      })
+      expect((await client.query(
+        `SELECT * FROM public.resolve_adaptive_diagnostic_question_v3(
+          $1,'fen','TYT','TYT','ba-tyt-fen-v1'
+        )`,
+        [manualPrimaryQuestionId],
+      )).rows).toHaveLength(0)
+      await client.query('SAVEPOINT manual_primary_start')
+      await expect(client.query(
+        "SELECT public.start_adaptive_diagnostic_v3($1,$2,'fen','TYT',$3)",
+        [fenUser, randomUUID(), manualPrimaryQuestionId],
+      )).rejects.toMatchObject({ code: '22023' })
+      await client.query('ROLLBACK TO SAVEPOINT manual_primary_start')
+
+      await client.query('SAVEPOINT immutable_blueprint')
+      await expect(client.query(`UPDATE public.adaptive_diagnostic_blueprints
+        SET question_count=4 WHERE blueprint_version='ba-tyt-fen-diagnostic-v1'`))
+        .rejects.toMatchObject({ code: '42501' })
+      await client.query('ROLLBACK TO SAVEPOINT immutable_blueprint')
+
+      await client.query('SAVEPOINT insufficient_capacity')
+      await client.query('UPDATE public.questions SET is_active=false WHERE id=ANY($1::uuid[])', [
+        [fenQuestions.fizik[1], fenQuestions.kimya[1]],
+      ])
+      expect((await client.query(
+        "SELECT public.resolve_released_diagnostic_scope('fen','TYT') result",
+      )).rows[0].result).toBeNull()
+      await expect(client.query(
+        "SELECT public.start_adaptive_diagnostic_v3($1,$2,'fen','TYT',$3)",
+        [fenUser, fenSession, fenQuestions.fizik[0]],
+      )).rejects.toMatchObject({ code: '23514' })
+      await client.query('ROLLBACK TO SAVEPOINT insufficient_capacity')
+
+      await client.query('SAVEPOINT wrong_scope_start')
+      await expect(client.query(
+        "SELECT public.start_adaptive_diagnostic_v3($1,$2,'fen','TYT',$3)",
+        [fenUser, fenSession, questions.sayilar.base],
+      )).rejects.toMatchObject({ code: '22023' })
+      await client.query('ROLLBACK TO SAVEPOINT wrong_scope_start')
+
+      const started = (await client.query(
+        "SELECT public.start_adaptive_diagnostic_v3($1,$2,'fen','TYT',$3) result",
+        [fenUser, fenSession, fenQuestions.fizik[0]],
+      )).rows[0].result
+      expect(started).toMatchObject({
+        sessionId: fenSession, questionCount: 5, outcomeCount: 3, maxPerOutcome: 2, resumed: false,
+      })
+      expect((await client.query(`SELECT game,exam_ref,question_exam_ref,taxonomy_version,
+        policy_version,question_count,outcome_count,max_per_outcome
+        FROM public.adaptive_diagnostic_sessions WHERE id=$1`, [fenSession])).rows[0]).toEqual({
+        game: 'fen', exam_ref: 'TYT', question_exam_ref: 'TYT', taxonomy_version: 'ba-tyt-fen-v1',
+        policy_version: 'adaptive-screening-v2', question_count: 5, outcome_count: 3, max_per_outcome: 2,
+      })
+
+      await client.query('SAVEPOINT immutable_session')
+      await expect(client.query(`UPDATE public.adaptive_diagnostic_sessions
+        SET question_count=4 WHERE id=$1`, [fenSession])).rejects.toMatchObject({ code: '42501' })
+      await client.query('ROLLBACK TO SAVEPOINT immutable_session')
+
+      await client.query('SAVEPOINT wrong_scope_next')
+      await expect(client.query(
+        'SELECT public.record_adaptive_diagnostic_answer_v3($1,$2,$3,1::smallint,1200,$4,$5)',
+        [fenUser, fenSession, fenQuestions.fizik[0], randomUUID(), questions.denklemler.base],
+      )).rejects.toMatchObject({ code: '22023' })
+      await client.query('ROLLBACK TO SAVEPOINT wrong_scope_next')
+
+      await client.query('SAVEPOINT manual_primary_next')
+      await expect(client.query(
+        'SELECT public.record_adaptive_diagnostic_answer_v3($1,$2,$3,1::smallint,1200,$4,$5)',
+        [fenUser, fenSession, fenQuestions.fizik[0], randomUUID(), manualPrimaryQuestionId],
+      )).rejects.toMatchObject({ code: '22023' })
+      await client.query('ROLLBACK TO SAVEPOINT manual_primary_next')
+
+      const steps = [
+        [fenQuestions.fizik[0], fenQuestions.kimya[0]],
+        [fenQuestions.kimya[0], fenQuestions.biyoloji[0]],
+        [fenQuestions.biyoloji[0], fenQuestions.fizik[1]],
+        [fenQuestions.fizik[1], fenQuestions.kimya[1]],
+        [fenQuestions.kimya[1], null],
+      ]
+      let result
+      for (const [questionId, nextQuestionId] of steps) {
+        result = (await client.query(
+          'SELECT public.record_adaptive_diagnostic_answer_v3($1,$2,$3,1::smallint,1200,$4,$5) result',
+          [fenUser, fenSession, questionId, randomUUID(), nextQuestionId],
+        )).rows[0].result
+      }
+      expect(result).toMatchObject({ status: 'completed', answeredCount: 5, coveredOutcomes: 3 })
+      expect((await client.query(`SELECT status,answered_count,outcome_count,question_count
+        FROM public.adaptive_diagnostic_sessions WHERE id=$1`, [fenSession])).rows[0]).toEqual({
+        status: 'completed', answered_count: 5, outcome_count: 3, question_count: 5,
+      })
+      expect((await client.query(
+        'SELECT count(*)::int AS state_count FROM public.user_diagnostic_outcome_state WHERE user_id=$1',
+        [fenUser],
+      )).rows[0]).toEqual({ state_count: 3 })
+    } finally {
+      if (transactionOpen) await client.query('ROLLBACK')
+    }
+  })
+
   it('abandons only pre-v2 active sessions and remains safe to re-run', async () => {
     expect((await client.query(
       'SELECT status,current_question_id,current_question_revision_id FROM public.adaptive_diagnostic_sessions WHERE id=$1',
@@ -269,13 +504,9 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
 
   it('abandons an expired v2 session before inserting answer evidence', async () => {
     const sessionId = randomUUID()
-    const started = await start(v2ExpiryUser, sessionId, questions.sayilar.base)
-    await client.query(`UPDATE public.adaptive_diagnostic_sessions
-      SET started_at=clock_timestamp()-interval '2 hours',
-          expires_at=clock_timestamp()-interval '1 hour'
-      WHERE id=$1`, [sessionId])
+    await insertExpiredMathSession(v2ExpiryUser, sessionId, questions.sayilar.base)
     expect(await recordV2(client, {
-      userId:v2ExpiryUser,sessionId,questionId:started.currentQuestionId,selectedOption:1,
+      userId:v2ExpiryUser,sessionId,questionId:questions.sayilar.base,selectedOption:1,
       requestId:randomUUID(),nextQuestionId:questions.denklemler.base,
     })).toEqual(expect.objectContaining({ status:'abandoned', answeredCount:0, coveredOutcomes:0 }))
     expect((await client.query(
@@ -519,10 +750,7 @@ describePg('098 adaptive diagnostic real PostgreSQL', () => {
     )).rows[0].count).toBe('6')
 
     const expiring = randomUUID()
-    await start(expiringUser, expiring, questions.sayilar.base)
-    await client.query(`UPDATE public.adaptive_diagnostic_sessions
-      SET started_at=clock_timestamp()-interval '2 hours',expires_at=clock_timestamp()-interval '1 hour'
-      WHERE id=$1`, [expiring])
+    await insertExpiredMathSession(expiringUser, expiring, questions.sayilar.base)
     expect(await record(client, {
       userId: expiringUser,
       sessionId: expiring,

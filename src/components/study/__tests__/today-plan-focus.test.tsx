@@ -65,7 +65,10 @@ describe('TodayPlanFocus', () => {
     render(<TodayPlanFocus game="matematik" userId="u1" examRef="TYT" />)
 
     expect(screen.getByText(/hazır plan bulunamadı/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /10 soruluk kısa tanılama/i })).toHaveAttribute('href', '/arena/tani')
+    expect(screen.getByRole('link', { name: /10 soruluk kısa başlangıç taraması/i })).toHaveAttribute(
+      'href',
+      '/arena/tani?game=matematik&exam_ref=TYT',
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Derse Başla' }))
     expect(pushMock).toHaveBeenCalledWith('/arena/matematik')
   })

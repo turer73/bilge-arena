@@ -1,4 +1,5 @@
 import type { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { getCategoriesForExam, type GameSlug } from '@/lib/constants/games'
 
 interface AnswerWithQuestion {
   is_correct: boolean
@@ -30,7 +31,7 @@ export interface TopicStrength {
 export async function computeTopicStrengths(
   admin: ReturnType<typeof createServiceRoleClient>,
   userId: string,
-  game: string,
+  game: GameSlug,
   examRef?: string | null,
 ): Promise<TopicStrength[]> {
   let query = admin
@@ -46,10 +47,12 @@ export async function computeTopicStrengths(
   if (error) throw error
   if (!data || data.length === 0) return []
 
+  const validCategories = examRef ? new Set(getCategoriesForExam(game, examRef)) : null
   const catMap = new Map<string, { total: number; correct: number }>()
   for (const row of data) {
     const q = row.questions
     if (!q?.category) continue
+    if (validCategories && !validCategories.has(q.category)) continue
     if (!catMap.has(q.category)) catMap.set(q.category, { total: 0, correct: 0 })
     const stat = catMap.get(q.category)!
     stat.total++

@@ -228,7 +228,7 @@ const SECTIONS = [
     start: '2021-TYT/Sosyal Bilimler SOSYAL BİLİMLER TESTİ',
     end: 'SOSYAL BİLİMLER TESTİ BİTTİ',
     total: 25,
-    subcategories: { 1: 'tarih', 6: 'cografya', 11: 'felsefe', 16: 'din' },
+    subcategories: { 1: 'tarih', 6: 'cografya', 11: 'felsefe', 16: 'din_kulturu' },
   },
   {
     key: 'matematik',

@@ -17,7 +17,7 @@ const {
       const call = { methods: [] as Array<{ name: string; args: unknown[] }> }
       calls.push(call)
       const chain: Record<string, unknown> = {}
-      for (const name of ['select', 'eq', 'is', 'in', 'order', 'limit']) {
+      for (const name of ['select', 'eq', 'is', 'in', 'order', 'limit', 'range']) {
         chain[name] = vi.fn((...args: unknown[]) => {
           call.methods.push({ name, args })
           return chain
@@ -233,6 +233,7 @@ describe('GET /api/study/today', () => {
     expect((await GET(makeGetRequest({ game: 'gecersiz' }) as never)).status).toBe(400)
     expect((await GET(makeGetRequest({ game: 'matematik', exam_ref: 'LGS_OR_1_1' }) as never)).status).toBe(400)
     expect((await GET(makeGetRequest({ game: 'matematik', choice_category: 'fizik' }) as never)).status).toBe(400)
+    expect((await GET(makeGetRequest({ game: 'turkce', exam_ref: 'TYT', choice_category: 'edebiyat' }) as never)).status).toBe(400)
   })
 
   it('mevcut V2 snapshotini sirali item metadatasi ve guvenli sorularla dondurur', async () => {
@@ -367,6 +368,57 @@ describe('GET /api/study/today', () => {
       mode: 'practice',
       questionIds: expect.any(Array),
     }))
+    const mappingCall = tableMocks.question_outcomes.calls[0]
+    expect(mappingCall.methods).toContainEqual({ name: 'in', args: ['question_id', allQuestions.map((question) => question.id)] })
+    expect(mappingCall.methods).toContainEqual({ name: 'range', args: [0, 499] })
+  })
+
+  it('DB tarafinda olmayan soru basina bes mapping siniri uydurmaz', async () => {
+    tableMocks.daily_plan.push({ data: null })
+    const question = makeQuestionRow(uid(50))
+    const outcomes = Array.from({ length: 6 }, (_, index) => ({
+      id: uid(750 + index), code: `MAT-${index}`, category: 'sayilar', sort_order: index,
+    }))
+    tableMocks.questions.push({ data: [question] })
+    tableMocks.curriculum_outcomes.push({ data: outcomes })
+    tableMocks.user_question_history.push({ data: [] })
+    tableMocks.user_outcome_state.push({ data: [] })
+    tableMocks.question_outcomes.push({ data: outcomes.map((outcome) => ({
+      question_id: question.id,
+      outcome_id: outcome.id,
+    })) })
+    tableMocks.questions.push({ data: [question] })
+    installCreateRpcSuccess()
+
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(200)
+    expect(tableMocks.question_outcomes.calls).toHaveLength(1)
+  })
+
+  it('PostgREST sayfa sinirinda mapping satirlarini eksiksiz sayfalar', async () => {
+    tableMocks.daily_plan.push({ data: null })
+    const question = makeQuestionRow(uid(60))
+    const outcomes = Array.from({ length: 501 }, (_, index) => ({
+      id: uid(780 + index), code: `MAT-B-${index}`, category: 'sayilar', sort_order: index,
+    }))
+    const mappings = outcomes.map((outcome) => ({
+      question_id: question.id,
+      outcome_id: outcome.id,
+    }))
+    tableMocks.questions.push({ data: [question] })
+    tableMocks.curriculum_outcomes.push({ data: outcomes })
+    tableMocks.user_question_history.push({ data: [] })
+    tableMocks.user_outcome_state.push({ data: [] })
+    tableMocks.question_outcomes.push({ data: mappings.slice(0, 500) })
+    tableMocks.question_outcomes.push({ data: mappings.slice(500) })
+    tableMocks.questions.push({ data: [question] })
+    installCreateRpcSuccess()
+
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(200)
+    expect(tableMocks.question_outcomes.calls).toHaveLength(2)
+    expect(tableMocks.question_outcomes.calls[0].methods).toContainEqual({ name: 'range', args: [0, 499] })
+    expect(tableMocks.question_outcomes.calls[1].methods).toContainEqual({ name: 'range', args: [500, 999] })
   })
 
   it('eksik ogrenme kovalarini belgeli fresh fallback ile deterministik doldurur', async () => {
