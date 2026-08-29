@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { Lobby } from '../lobby'
 
@@ -92,14 +92,16 @@ describe('Lobby', () => {
     expect(startButton.compareDocumentPosition(slot as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('akıllı deneme girişini mobil akışta da erişilebilir tutar', () => {
+  it('akıllı denemeyi mobilde ana başlangıç akışının altında ikincil tutar', () => {
     const { container } = render(
       <Lobby {...baseProps} personalizedMockCard={<div>Akıllı Deneme</div>} />
     )
 
+    const flow = container.querySelector('[data-mobile-lobby-flow]')
     const mobileSlot = container.querySelector('[data-personalized-mock-mobile-slot]')
     expect(mobileSlot).toHaveClass('md:hidden')
     expect(mobileSlot).toHaveTextContent('Akıllı Deneme')
+    expect((flow as Element).compareDocumentPosition(mobileSlot as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('limit dolduğunda premium akışını erişilebilir bırakır', () => {
@@ -112,7 +114,7 @@ describe('Lobby', () => {
       />
     )
 
-    const limitButton = screen.getByRole('button', { name: /Limit doldu/ })
+    const limitButton = within(screen.getByTestId('mobile-lobby-flow')).getByRole('button', { name: /Limit doldu/ })
     expect(limitButton).toBeEnabled()
     fireEvent.click(limitButton)
     expect(onLimitReached).toHaveBeenCalledOnce()

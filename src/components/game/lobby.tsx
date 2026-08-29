@@ -144,12 +144,6 @@ export function Lobby({
         </div>
       </div>
 
-      {personalizedMockCard && (
-        <div data-personalized-mock-mobile-slot className="md:hidden">
-          {personalizedMockCard}
-        </div>
-      )}
-
       <MobileLobbyFlow
         game={game}
         selectedMode={selectedMode}
@@ -165,6 +159,12 @@ export function Lobby({
         quizLimit={quizLimit}
         loadError={loadError}
       />
+
+      {personalizedMockCard && (
+        <div data-personalized-mock-mobile-slot className="md:hidden">
+          {personalizedMockCard}
+        </div>
+      )}
 
       <header data-desktop-lobby-hero className="relative hidden overflow-hidden rounded-[24px] p-4 text-white md:col-start-1 md:row-start-2 md:block md:min-h-[166px] md:p-6" style={{ background: `linear-gradient(135deg, ${gameDef.colorHex}, ${gameDef.colorHex}cc)`, boxShadow: `0 6px 0 ${gameDef.colorHex}99` }}>
         <div className="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full border-[22px] border-white/10" />
