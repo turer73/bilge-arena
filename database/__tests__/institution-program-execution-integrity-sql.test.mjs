@@ -109,6 +109,7 @@ describe('institution program execution integrity migration', () => {
     expect(sql).toContain("migration 201 postcheck failed: private execution table grant leaked")
     expect(sql).toContain("migration 201 postcheck failed: student program RPC ACL mismatch")
     expect(sql).toContain("migration 201 postcheck failed: diagnostic source RPC ACL mismatch")
+    expect(sql).toContain("migration 201 postcheck failed: server-only program RPC ACL mismatch")
     expect(sql).toContain("migration 201 postcheck failed: completion/reconciliation trigger mismatch")
     expect(sql).toContain("migration 201 postcheck failed: duplicate published diagnostics remain")
   })
@@ -207,6 +208,18 @@ describe('institution program execution integrity migration', () => {
     expect(sql).toContain('CREATE OR REPLACE FUNCTION public.preview_institution_study_program_review')
     expect(sql).toContain("'program review requires a mature completed execution'")
     expect(sql).toContain('CREATE OR REPLACE FUNCTION public.review_institution_study_program')
+    const serverOnlyAcl = sql.slice(
+      sql.indexOf('REVOKE ALL ON FUNCTION public.institution_program_reconciliation_immutable'),
+      sql.indexOf('-- Migration-local release gate'),
+    )
+    for (const identity of [
+      'public.get_institution_student_program_history_v2(uuid,uuid,text,text,text)',
+      'public.preview_institution_study_program_review(uuid,text)',
+      'public.review_institution_study_program(uuid,text,text,text,uuid)',
+    ]) {
+      expect(serverOnlyAcl).toContain(identity)
+    }
+    expect(serverOnlyAcl).toMatch(/FROM PUBLIC,anon,authenticated,service_role;[\s\S]*TO service_role;/)
     expect(sql).toContain('v_has_replay')
     expect(sql).toContain("set_config('TimeZone','Europe/Istanbul',true)")
     expect(sql).not.toContain('current_date')
