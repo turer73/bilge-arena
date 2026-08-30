@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  enabled: vi.fn(), context: vi.fn(), rpc: vi.fn(), analysis: vi.fn(), snapshot: vi.fn(),
+  enabled: vi.fn(), context: vi.fn(), service: vi.fn(), rpc: vi.fn(), serviceRpc: vi.fn(), analysis: vi.fn(), snapshot: vi.fn(),
 }))
 vi.mock('@/lib/institution-tracking/server-security', () => ({ isInstitutionTrackingEnabled: mocks.enabled }))
 vi.mock('@/lib/institution-pilot/route-context', () => ({ requireInstitutionPilotRouteContext: mocks.context }))
+vi.mock('@/lib/supabase/service-role', () => ({ createServiceRoleClient: mocks.service }))
 vi.mock('@/lib/teacher-classroom/rate-limits', () => ({ teacherClassroomWriteLimiter: { kind: 'write' } }))
 vi.mock('@/lib/institution-tracking/student-analysis', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/institution-tracking/student-analysis')>()
@@ -57,6 +58,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.enabled.mockReturnValue(true)
   mocks.context.mockResolvedValue({ ok: true, userId: USER_ID, admin: { rpc: mocks.rpc } })
+  mocks.service.mockReturnValue({ rpc: mocks.serviceRpc })
   mocks.analysis.mockReturnValue(analysis)
   mocks.snapshot.mockReturnValue(snapshot)
   mocks.rpc.mockImplementation(async (name: string) => {
@@ -66,7 +68,11 @@ beforeEach(() => {
     if (name === 'create_institution_student_report_v2') return {
       data: { reportRef: REPORT_REF, scope: fenIdentity, snapshot, createdAt: '2026-08-14T10:01:00.000Z', replayed: false }, error: null,
     }
+    return { data: null, error: { code: 'P0002' } }
+  })
+  mocks.serviceRpc.mockImplementation(async (name: string) => {
     if (name === 'get_institution_student_reports_v2') return { data: { scope: fenIdentity, reports: [] }, error: null }
+    if (name === 'get_institution_student_reports') return { data: { reports: [] }, error: null }
     return { data: null, error: { code: 'P0002' } }
   })
 })
@@ -92,15 +98,15 @@ describe('institution student reports route', () => {
       `http://localhost/api/institution/tracking/reports?classroomId=${CLASSROOM_ID}&memberRef=${MEMBER_REF}&game=fen&exam_ref=TYT`,
     ))
     expect(response.status).toBe(200)
-    expect(mocks.rpc).toHaveBeenCalledWith('get_institution_student_reports_v2', {
+    expect(mocks.serviceRpc).toHaveBeenCalledWith('get_institution_student_reports_v2', {
       p_user_id: USER_ID, p_classroom_id: CLASSROOM_ID, p_member_ref: MEMBER_REF,
       p_game: 'fen', p_display_exam_ref: 'TYT',
     })
+    expect(mocks.rpc).not.toHaveBeenCalledWith('get_institution_student_reports_v2', expect.anything())
   })
 
   it('fails closed when a report response belongs to another taxonomy scope', async () => {
-    mocks.rpc.mockImplementation(async (name: string) => {
-      if (name === 'resolve_released_institution_scope') return { data: fenScope, error: null }
+    mocks.serviceRpc.mockImplementation(async (name: string) => {
       if (name === 'get_institution_student_reports_v2') return {
         data: {
           scope: fenIdentity,
@@ -120,8 +126,7 @@ describe('institution student reports route', () => {
   })
 
   it('requires the immutable v2 scope envelope even when report history is empty', async () => {
-    mocks.rpc.mockImplementation(async (name: string) => {
-      if (name === 'resolve_released_institution_scope') return { data: fenScope, error: null }
+    mocks.serviceRpc.mockImplementation(async (name: string) => {
       if (name === 'get_institution_student_reports_v2') return { data: { reports: [] }, error: null }
       return { data: null, error: { code: 'P0002' } }
     })
@@ -139,15 +144,23 @@ describe('institution student reports route', () => {
     mocks.rpc.mockImplementation(async (name: string) => {
       if (name === 'resolve_released_institution_scope') return { data: null, error: { code: 'PGRST202' } }
       if (name === 'resolve_released_curriculum_scope') return { data: mathReleased, error: null }
-      if (name === 'get_institution_student_reports') return { data: { reports: [] }, error: null }
       return { data: null, error: { code: 'P0002' } }
     })
     const response = await GET(new Request(
       `http://localhost/api/institution/tracking/reports?classroomId=${CLASSROOM_ID}&memberRef=${MEMBER_REF}&game=matematik&exam_ref=TYT`,
     ))
     expect(response.status).toBe(200)
-    expect(mocks.rpc).toHaveBeenCalledWith('get_institution_student_reports', {
+    expect(mocks.serviceRpc).toHaveBeenCalledWith('get_institution_student_reports', {
       p_user_id: USER_ID, p_classroom_id: CLASSROOM_ID, p_member_ref: MEMBER_REF,
     })
+  })
+
+  it('fails closed when the server-only report client is unavailable', async () => {
+    mocks.service.mockImplementationOnce(() => { throw new Error('missing service key') })
+    const response = await GET(new Request(
+      `http://localhost/api/institution/tracking/reports?classroomId=${CLASSROOM_ID}&memberRef=${MEMBER_REF}&game=fen&exam_ref=TYT`,
+    ))
+    expect(response.status).toBe(503)
+    expect(mocks.serviceRpc).not.toHaveBeenCalled()
   })
 })

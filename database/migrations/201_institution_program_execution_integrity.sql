@@ -144,15 +144,17 @@ END;
 $fn$;
 
 -- The application reads report history through its AAL2/rate-limited server
--- route.  Migration 194 also granted the forward RPC to authenticated for its
--- deploy-before-migration compatibility window; close that direct Data API
--- path now that the server route is the sole supported consumer.
-REVOKE ALL ON FUNCTION public.get_institution_student_reports_v2(
-  uuid, uuid, text, text, text
-) FROM PUBLIC, anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_institution_student_reports_v2(
-  uuid, uuid, text, text, text
-) TO service_role;
+-- route.  Migration 194 also granted the forward and Math/TYT compatibility
+-- RPCs to authenticated for its deploy-before-migration window; close both
+-- direct Data API paths now that the server route is the sole consumer.
+REVOKE ALL ON FUNCTION
+  public.get_institution_student_reports_v2(uuid, uuid, text, text, text),
+  public.get_institution_student_reports(uuid, uuid, text)
+FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION
+  public.get_institution_student_reports_v2(uuid, uuid, text, text, text),
+  public.get_institution_student_reports(uuid, uuid, text)
+TO service_role;
 
 -- Freeze publication/item edits for the reconciliation snapshot.  Without
 -- this lock, an older application instance could publish another duplicate
@@ -1292,8 +1294,8 @@ BEGIN
 END;
 $fn$;
 
-REVOKE ALL ON FUNCTION public.institution_program_reconciliation_immutable(),public.assert_institution_program_startable(uuid),public.enforce_institution_program_startable(),public.institution_program_execution_immutable_fields(),public.institution_study_program_review_ready(uuid,date),public.institution_program_start_target(text,text,text,text,text),public.start_my_institution_study_program_item(uuid,text,smallint,uuid),public.complete_institution_program_item_from_verified_attempt(),public.complete_institution_program_item_from_diagnostic(),public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz),public.get_my_institution_study_programs(uuid,date) FROM PUBLIC,anon,authenticated,service_role;
-GRANT EXECUTE ON FUNCTION public.start_my_institution_study_program_item(uuid,text,smallint,uuid),public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz),public.get_my_institution_study_programs(uuid,date),public.get_institution_student_program_history_v2(uuid,uuid,text,text,text),public.preview_institution_study_program_review(uuid,text),public.review_institution_study_program(uuid,text,text,text,uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.institution_program_reconciliation_immutable(),public.assert_institution_program_startable(uuid),public.enforce_institution_program_startable(),public.institution_program_execution_immutable_fields(),public.institution_study_program_review_ready(uuid,date),public.institution_program_start_target(text,text,text,text,text),public.start_my_institution_study_program_item(uuid,text,smallint,uuid),public.complete_institution_program_item_from_verified_attempt(),public.complete_institution_program_item_from_diagnostic(),public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz),public.get_my_institution_study_programs(uuid,date),public.get_institution_student_program_history_v2(uuid,uuid,text,text,text),public.get_institution_student_program_history(uuid,uuid,text),public.preview_institution_study_program_review(uuid,text),public.review_institution_study_program(uuid,text,text,text,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.start_my_institution_study_program_item(uuid,text,smallint,uuid),public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz),public.get_my_institution_study_programs(uuid,date),public.get_institution_student_program_history_v2(uuid,uuid,text,text,text),public.get_institution_student_program_history(uuid,uuid,text),public.preview_institution_study_program_review(uuid,text),public.review_institution_study_program(uuid,text,text,text,uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz) TO authenticated;
 
 -- Migration-local release gate.  A privilege or trigger regression must abort
@@ -1364,6 +1366,32 @@ BEGIN
       'anon','public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz)','EXECUTE'
     ) THEN
     RAISE EXCEPTION 'migration 201 postcheck failed: diagnostic source RPC ACL mismatch'
+      USING ERRCODE='23514';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM (VALUES
+      ('public.get_institution_student_reports(uuid,uuid,text)'::text),
+      ('public.get_institution_student_program_history_v2(uuid,uuid,text,text,text)'::text),
+      ('public.get_institution_student_program_history(uuid,uuid,text)'::text),
+      ('public.preview_institution_study_program_review(uuid,text)'::text),
+      ('public.review_institution_study_program(uuid,text,text,text,uuid)'::text)
+    ) AS server_only_rpc(identity)
+    WHERE NOT pg_catalog.has_function_privilege(
+        'service_role',server_only_rpc.identity,'EXECUTE'
+      )
+      OR pg_catalog.has_function_privilege(
+        'public',server_only_rpc.identity,'EXECUTE'
+      )
+      OR pg_catalog.has_function_privilege(
+        'anon',server_only_rpc.identity,'EXECUTE'
+      )
+      OR pg_catalog.has_function_privilege(
+        'authenticated',server_only_rpc.identity,'EXECUTE'
+      )
+  ) THEN
+    RAISE EXCEPTION 'migration 201 postcheck failed: server-only program/report RPC ACL mismatch'
       USING ERRCODE='23514';
   END IF;
 
