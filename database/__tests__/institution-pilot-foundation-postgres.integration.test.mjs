@@ -376,7 +376,8 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
         game text NOT NULL,
         exam_ref text,
         taxonomy_version text,
-        is_active boolean NOT NULL DEFAULT true
+        is_active boolean NOT NULL DEFAULT true,
+        created_at timestamptz NOT NULL DEFAULT now()
       );
       CREATE TABLE public.mastery_outcome_evidence(
         answer_id uuid NOT NULL,
@@ -3272,9 +3273,15 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
       game, displayExamRef, questionExamRef, taxonomyVersion, categories,
     }) {
       for (const [categoryIndex, categorySpec] of categories.entries()) {
-        const [category, candidateCount] = categorySpec
+        const [
+          category,
+          candidateCount,
+          outcomeCode = `GATE-${game.toUpperCase()}-${categoryIndex + 1}`,
+          mappingSource = 'taxonomy_auto',
+          reuseExistingOutcome = false,
+        ] = categorySpec
         const nodeId = randomUUID()
-        const outcomeId = randomUUID()
+        let outcomeId
         await client.query(`INSERT INTO public.curriculum_nodes(
           id,parent_id,code,title,node_type,is_active,game,exam_ref,taxonomy_version,category
         ) VALUES($1,NULL,$2,$3,'outcome',true,$4,$5,$6,$7)`, [
@@ -3286,19 +3293,35 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
           taxonomyVersion,
           category,
         ])
-        await client.query(`INSERT INTO public.curriculum_outcomes(
-          id,code,node_id,title,category,sort_order,game,exam_ref,taxonomy_version,is_active
-        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,true)`, [
-          outcomeId,
-          `GATE-${game.toUpperCase()}-${categoryIndex + 1}`,
-          nodeId,
-          `${game} ${category}`,
-          category,
-          categoryIndex + 1,
-          game,
-          displayExamRef,
-          taxonomyVersion,
-        ])
+        if (reuseExistingOutcome) {
+          const existingOutcome = (await client.query(`UPDATE public.curriculum_outcomes
+            SET category=$2,sort_order=$3,node_id=$7
+            WHERE code=$1
+              AND game=$4
+              AND exam_ref=$5
+              AND taxonomy_version=$6
+            RETURNING id`, [
+            outcomeCode, category, categoryIndex + 1,
+            game, displayExamRef, taxonomyVersion, nodeId,
+          ])).rows
+          expect(existingOutcome).toHaveLength(1)
+          outcomeId = existingOutcome[0].id
+        } else {
+          outcomeId = randomUUID()
+          await client.query(`INSERT INTO public.curriculum_outcomes(
+            id,code,node_id,title,category,sort_order,game,exam_ref,taxonomy_version,is_active
+          ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,true)`, [
+            outcomeId,
+            outcomeCode,
+            nodeId,
+            `${game} ${category}`,
+            category,
+            categoryIndex + 1,
+            game,
+            displayExamRef,
+            taxonomyVersion,
+          ])
+        }
         for (let questionIndex = 0; questionIndex < candidateCount; questionIndex += 1) {
           const questionId = randomUUID()
           const revisionId = randomUUID()
@@ -3325,17 +3348,41 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
             [revisionId, questionId],
           )
           await client.query(`INSERT INTO public.question_outcomes(
-            question_id,outcome_id,weight,is_primary,mapping_source
-          ) VALUES($1,$2,1,true,'taxonomy_auto')`, [questionId, outcomeId])
+            question_id,outcome_id,weight,is_primary,mapping_source,created_at
+          ) SELECT $1,outcome.id,1,true,$3,
+              CASE WHEN $3='manual' THEN outcome.created_at ELSE clock_timestamp() END
+            FROM public.curriculum_outcomes AS outcome
+            WHERE outcome.id=$2`, [questionId, outcomeId, mappingSource])
         }
       }
+    }
+
+    async function mathLegacyProvenance() {
+      return (await client.query(`SELECT
+        count(*)::integer AS mapping_count,
+        count(*) FILTER (WHERE mapping.mapping_source='manual')::integer AS manual_count,
+        count(*) FILTER (WHERE mapping.mapping_source='taxonomy_auto')::integer AS auto_count,
+        bool_and(mapping.is_primary) AS all_primary,
+        bool_and(mapping.weight=1) AS all_unit_weight,
+        bool_and(mapping.created_at=outcome.created_at) AS timestamps_bound,
+        (SELECT count(*)::integer
+         FROM public.curriculum_outcomes AS scope_outcome
+         WHERE scope_outcome.game='matematik'
+           AND scope_outcome.exam_ref='TYT'
+           AND scope_outcome.taxonomy_version='ba-tyt-math-v1'
+           AND scope_outcome.is_active) AS scope_outcome_count
+      FROM public.question_outcomes AS mapping
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      WHERE outcome.code='MAT-SAY-01'`)).rows[0]
     }
 
     await seedDiagnosticScope({
       game: 'matematik', displayExamRef: 'TYT', questionExamRef: 'TYT',
       taxonomyVersion: 'ba-tyt-math-v1',
       categories: [
-        ['sayilar_gate', 2], ['denklemler_gate', 2], ['fonksiyonlar_gate', 2],
+        ['sayilar', 2, 'MAT-SAY-01', 'manual'],
+        ['denklemler_gate', 2, 'MAT-TEST-01', 'taxonomy_auto', true],
+        ['fonksiyonlar_gate', 2],
         ['problemler_gate', 2], ['geometri_gate', 1], ['olasilik_gate', 1],
       ],
     })
@@ -3362,10 +3409,29 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
       ],
     })
 
+    expect(await mathLegacyProvenance()).toEqual({
+      mapping_count: 2,
+      manual_count: 2,
+      auto_count: 0,
+      all_primary: true,
+      all_unit_weight: true,
+      timestamps_bound: true,
+      scope_outcome_count: 6,
+    })
+
     await client.query(adaptiveDiagnosticSql)
     await client.query(adaptiveDiagnosticEvidenceSql)
     await client.query(adaptiveDiagnosticRegistryGateSql)
     await client.query(adaptiveDiagnosticV3Sql)
+    expect(await mathLegacyProvenance()).toEqual({
+      mapping_count: 2,
+      manual_count: 0,
+      auto_count: 2,
+      all_primary: true,
+      all_unit_weight: true,
+      timestamps_bound: true,
+      scope_outcome_count: 6,
+    })
 
     async function expectMigrationRollback(setupSql, migrationSql) {
       await client.query('BEGIN')
@@ -3705,7 +3771,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
       FROM public.curriculum_outcomes
       WHERE game='matematik' AND exam_ref='TYT' AND taxonomy_version='ba-tyt-math-v1'
         AND is_active
-        AND code IN ('GATE-MATEMATIK-1','GATE-MATEMATIK-2','GATE-MATEMATIK-3')
+        AND code IN ('MAT-SAY-01','MAT-TEST-01','GATE-MATEMATIK-3')
       ORDER BY code`)).rows
     expect(legacyOutcomes).toHaveLength(3)
     const legacyWeekStart = (await client.query(
@@ -3811,7 +3877,7 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
     const outcome = (await client.query(`SELECT id,code,category
       FROM public.curriculum_outcomes
       WHERE game='matematik' AND exam_ref='TYT' AND taxonomy_version='ba-tyt-math-v1'
-        AND is_active AND code='GATE-MATEMATIK-1'`)).rows[0]
+        AND is_active AND code='MAT-SAY-01'`)).rows[0]
     expect(outcome).toEqual(expect.objectContaining({ code: expect.any(String), category: expect.any(String) }))
     const weekStart = (await client.query(
       "SELECT to_char(date_trunc('week',clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date,'YYYY-MM-DD') AS value",
