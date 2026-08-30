@@ -4,6 +4,7 @@ import {institutionPilotNoStoreJson,institutionPilotRpcStatus} from '@/lib/insti
 import {institutionStudentProgramHistorySchema} from '@/lib/institution-tracking/program-review'
 import {isInstitutionStudyProgramEnabled,isInstitutionTrackingEnabled} from '@/lib/institution-tracking/server-security'
 import {GAME_SLUGS} from '@/lib/constants/games'
+import {createServiceRoleClient} from '@/lib/supabase/service-role'
 
 const querySchema=z.object({
   classroomId:z.string().uuid(),
@@ -31,14 +32,17 @@ export async function GET(request:Request){
     game:url.searchParams.get('game'),examRef:url.searchParams.get('exam_ref'),
   })
   if(!query.success)return institutionPilotNoStoreJson({error:'Geçersiz program geçmişi kapsamı'},{status:400})
-  const current=await context.admin.rpc('get_institution_student_program_history_v2',{
+  let admin:ReturnType<typeof createServiceRoleClient>
+  try{admin=createServiceRoleClient()}
+  catch{return institutionPilotNoStoreJson({error:'Kurum programı yapılandırılmadı'},{status:503})}
+  const current=await admin.rpc('get_institution_student_program_history_v2',{
     p_user_id:context.userId,p_classroom_id:query.data.classroomId,p_member_ref:query.data.memberRef,
     p_game:query.data.game,p_display_exam_ref:query.data.examRef,
   })
   let data:unknown=current.data
   if(current.error&&isAppFirstHistoryRpcUnavailable(current.error)
     &&query.data.game==='matematik'&&query.data.examRef==='TYT'){
-    const legacy=await context.admin.rpc('get_institution_student_program_history',{
+    const legacy=await admin.rpc('get_institution_student_program_history',{
       p_user_id:context.userId,p_classroom_id:query.data.classroomId,p_member_ref:query.data.memberRef,
     })
     if(legacy.error)return institutionPilotNoStoreJson({error:'Program geçmişi alınamadı'},{status:institutionPilotRpcStatus(legacy.error.code)})

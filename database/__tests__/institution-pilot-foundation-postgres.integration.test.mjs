@@ -4037,6 +4037,40 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
       authenticated_reports: false, service_reports: true,
       public_table: false, authenticated_table: false, service_table: false,
     })
+    const serverOnlyRpcAcl = (await client.query(`
+      WITH target(identity) AS (VALUES
+        ('public.get_institution_student_reports_v2(uuid,uuid,text,text,text)'::text),
+        ('public.get_institution_student_reports(uuid,uuid,text)'::text),
+        ('public.get_institution_student_program_history_v2(uuid,uuid,text,text,text)'::text),
+        ('public.get_institution_student_program_history(uuid,uuid,text)'::text),
+        ('public.preview_institution_study_program_review(uuid,text)'::text),
+        ('public.review_institution_study_program(uuid,text,text,text,uuid)'::text)
+      )
+      SELECT identity,
+        has_function_privilege('public',identity,'EXECUTE') AS public_execute,
+        has_function_privilege('anon',identity,'EXECUTE') AS anon_execute,
+        has_function_privilege('authenticated',identity,'EXECUTE') AS authenticated_execute,
+        has_function_privilege('service_role',identity,'EXECUTE') AS service_execute
+      FROM target ORDER BY identity
+    `)).rows
+    expect(serverOnlyRpcAcl).toHaveLength(6)
+    expect(serverOnlyRpcAcl).toEqual(serverOnlyRpcAcl.map((row) => ({
+      identity: row.identity,
+      public_execute: false,
+      anon_execute: false,
+      authenticated_execute: false,
+      service_execute: true,
+    })))
+    for (const [identity, args] of [
+      ['public.get_institution_student_reports_v2($1,$2,$3,$4,$5)', [managerOne, classroom, membership.member_ref, 'matematik', 'TYT']],
+      ['public.get_institution_student_reports($1,$2,$3)', [managerOne, classroom, membership.member_ref]],
+      ['public.get_institution_student_program_history_v2($1,$2,$3,$4,$5)', [managerOne, classroom, membership.member_ref, 'matematik', 'TYT']],
+      ['public.get_institution_student_program_history($1,$2,$3)', [managerOne, classroom, membership.member_ref]],
+      ['public.preview_institution_study_program_review($1,$2)', [managerOne, program.program_ref]],
+      ['public.review_institution_study_program($1,$2,$3,$4,$5)', [managerOne, program.program_ref, 'partial', null, randomUUID()]],
+    ]) {
+      await expectPgError(() => authenticatedRpc(managerOne, identity, args), '42501')
+    }
     expect(await authenticatedRpc(
       managerOne,
       `public.get_institution_student_diagnostic_sources(

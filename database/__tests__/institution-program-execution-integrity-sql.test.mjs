@@ -109,6 +109,7 @@ describe('institution program execution integrity migration', () => {
     expect(sql).toContain("migration 201 postcheck failed: private execution table grant leaked")
     expect(sql).toContain("migration 201 postcheck failed: student program RPC ACL mismatch")
     expect(sql).toContain("migration 201 postcheck failed: diagnostic source RPC ACL mismatch")
+    expect(sql).toContain("migration 201 postcheck failed: server-only program/report RPC ACL mismatch")
     expect(sql).toContain("migration 201 postcheck failed: completion/reconciliation trigger mismatch")
     expect(sql).toContain("migration 201 postcheck failed: duplicate published diagnostics remain")
   })
@@ -181,8 +182,8 @@ describe('institution program execution integrity migration', () => {
     )
     expect(reportHistory).toContain('JOIN public.profiles AS profile')
     expect(reportHistory).toContain('profile.id = membership.student_id AND profile.deleted_at IS NULL')
-    expect(reportHistory).toMatch(/REVOKE ALL ON FUNCTION public\.get_institution_student_reports_v2\([\s\S]*FROM PUBLIC, anon, authenticated, service_role/)
-    expect(reportHistory).toMatch(/GRANT EXECUTE ON FUNCTION public\.get_institution_student_reports_v2\([\s\S]*TO service_role/)
+    expect(reportHistory).toMatch(/REVOKE ALL ON FUNCTION[\s\S]*public\.get_institution_student_reports_v2\([\s\S]*public\.get_institution_student_reports\(uuid, uuid, text\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role/)
+    expect(reportHistory).toMatch(/GRANT EXECUTE ON FUNCTION[\s\S]*public\.get_institution_student_reports_v2\([\s\S]*public\.get_institution_student_reports\(uuid, uuid, text\)[\s\S]*TO service_role/)
     expect(sql).toContain('migration 201 postcheck failed: tombstoned report reader boundary mismatch')
     expect(sql).toContain('user_diagnostic_outcome_state')
     expect(sql).toContain("v_staff_role='teacher' AND v_classroom.teacher_id<>p_user_id")
@@ -207,6 +208,25 @@ describe('institution program execution integrity migration', () => {
     expect(sql).toContain('CREATE OR REPLACE FUNCTION public.preview_institution_study_program_review')
     expect(sql).toContain("'program review requires a mature completed execution'")
     expect(sql).toContain('CREATE OR REPLACE FUNCTION public.review_institution_study_program')
+    const serverOnlyAcl = sql.slice(
+      sql.indexOf('REVOKE ALL ON FUNCTION public.institution_program_reconciliation_immutable'),
+      sql.indexOf('-- Migration-local release gate'),
+    )
+    const serverOnlyRevoke = serverOnlyAcl.slice(
+      0,
+      serverOnlyAcl.indexOf('FROM PUBLIC,anon,authenticated,service_role;'),
+    )
+    const serverOnlyGrant = serverOnlyAcl.slice(serverOnlyAcl.indexOf('GRANT EXECUTE ON FUNCTION'))
+    for (const identity of [
+      'public.get_institution_student_program_history_v2(uuid,uuid,text,text,text)',
+      'public.get_institution_student_program_history(uuid,uuid,text)',
+      'public.preview_institution_study_program_review(uuid,text)',
+      'public.review_institution_study_program(uuid,text,text,text,uuid)',
+    ]) {
+      expect(serverOnlyRevoke).toContain(identity)
+      expect(serverOnlyGrant).toContain(identity)
+    }
+    expect(serverOnlyAcl).toMatch(/FROM PUBLIC,anon,authenticated,service_role;[\s\S]*TO service_role;/)
     expect(sql).toContain('v_has_replay')
     expect(sql).toContain("set_config('TimeZone','Europe/Istanbul',true)")
     expect(sql).not.toContain('current_date')
