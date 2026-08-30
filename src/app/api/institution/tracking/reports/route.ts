@@ -8,6 +8,7 @@ import {buildInstitutionStudentReportSnapshot,institutionStudentReportInputSchem
 import {teacherClassroomWriteLimiter} from '@/lib/teacher-classroom/rate-limits'
 import {GAME_SLUGS,type GameSlug} from '@/lib/constants/games'
 import {isExactInstitutionScopeIdentity,resolveInstitutionLearningScope,type InstitutionLearningScope} from '@/lib/institution-tracking/scope'
+import {createServiceRoleClient} from '@/lib/supabase/service-role'
 
 const querySchema=z.object({
   classroomId:z.string().uuid(),memberRef:z.string().regex(/^[0-9a-f]{32}$/),
@@ -46,10 +47,13 @@ export async function GET(request:Request){
     {error:'Rapor kapsamı henüz yayımlanmadı'},
     {status:scopeResolution.error&&scopeResolution.code?institutionPilotRpcStatus(scopeResolution.code):409},
   )
+  let admin:ReturnType<typeof createServiceRoleClient>
+  try{admin=createServiceRoleClient()}
+  catch{return institutionPilotNoStoreJson({error:'Kurum raporu yapılandırılmadı'},{status:503})}
   const args={p_user_id:context.userId,p_classroom_id:query.data.classroomId,p_member_ref:query.data.memberRef}
   const {data,error}=scopeResolution.legacy
-    ?await context.admin.rpc('get_institution_student_reports',args)
-    :await context.admin.rpc('get_institution_student_reports_v2',{
+    ?await admin.rpc('get_institution_student_reports',args)
+    :await admin.rpc('get_institution_student_reports_v2',{
       ...args,p_game:query.data.game,p_display_exam_ref:query.data.examRef,
     })
   if(error)return institutionPilotNoStoreJson({error:'Öğrenci raporları alınamadı'},{status:institutionPilotRpcStatus(error.code)})
