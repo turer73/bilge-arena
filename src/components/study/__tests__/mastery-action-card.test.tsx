@@ -52,6 +52,7 @@ function mkOutcome(overrides: Partial<MasteryOutcome> = {}): MasteryOutcome {
     weightedEarned: 3,
     weightedPossible: 6,
     delayedCorrect: 0,
+    verifiedEvidenceDays: 3,
     accuracy: 50,
     rawAccuracy: 50,
     difficultyAccuracy: 50,
@@ -123,7 +124,7 @@ describe('MasteryActionCard', () => {
   test('güvenilir developing kazanımı insufficient kanıttan önce next-best seçer', () => {
     mockedUseMasteryMap.mockReturnValue(hookResult({
       outcomes: [
-        mkOutcome({ code: 'KANIT', title: 'Yeni konu', status: 'insufficient', attempts: 2, evidenceCompleteness: 66 }),
+        mkOutcome({ code: 'KANIT', title: 'Yeni konu', status: 'insufficient', attempts: 2, verifiedEvidenceDays: 1, evidenceCompleteness: 33 }),
         mkOutcome({ code: 'GELISEN', title: 'Gelişen konu', status: 'developing', score: 32 }),
       ],
     }) as never)
@@ -136,11 +137,12 @@ describe('MasteryActionCard', () => {
 
   test('yalnız insufficient varsa zayıf demeden kanıt toplama aksiyonu verir', () => {
     mockedUseMasteryMap.mockReturnValue(hookResult({
-      outcomes: [mkOutcome({ status: 'insufficient', attempts: 1, evidenceCompleteness: 34 })],
+      outcomes: [mkOutcome({ status: 'insufficient', attempts: 1, verifiedEvidenceDays: 1, evidenceCompleteness: 33 })],
     }) as never)
     render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
 
     expect(screen.getByText('KANIT TOPLA')).toBeInTheDocument()
+    expect(screen.getByText('1/3 gün')).toBeInTheDocument()
     expect(screen.queryByText(/zayıf/i)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Kanıt İçin Pratik Yap' }))
 
@@ -154,7 +156,7 @@ describe('MasteryActionCard', () => {
 
   test('ilk kullanımda skor yerine keşif turuna yönlendirir', () => {
     mockedUseMasteryMap.mockReturnValue(hookResult({
-      outcomes: [mkOutcome({ status: 'insufficient', attempts: 0, score: 0 })],
+      outcomes: [mkOutcome({ status: 'insufficient', attempts: 0, verifiedEvidenceDays: 0, score: 0 })],
       discovery: {
         level: 1, stage: 'estimate', diagnosticCompleted: false,
         evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0,
@@ -182,7 +184,7 @@ describe('MasteryActionCard', () => {
       coverage: fenCoverage,
       outcomes: [mkOutcome({
         code: 'FEN-FIZ-01', game: 'fen', category: 'fizik', examRef: 'TYT',
-        title: 'Fiziksel akıl yürütme', status: 'insufficient', attempts: 0, score: 0,
+        title: 'Fiziksel akıl yürütme', status: 'insufficient', attempts: 0, verifiedEvidenceDays: 0, score: 0,
       })],
       discovery: {
         level: 1, stage: 'estimate', diagnosticCompleted: false,
@@ -212,7 +214,7 @@ describe('MasteryActionCard', () => {
       coverage: ydtCoverage,
       outcomes: [mkOutcome({
         code: 'ENG-VOC-01', game: 'wordquest', category: 'vocabulary', examRef: 'YDT',
-        title: 'Kelime bilgisi', status: 'insufficient', attempts: 0, score: 0,
+        title: 'Kelime bilgisi', status: 'insufficient', attempts: 0, verifiedEvidenceDays: 0, score: 0,
       })],
     }) as never)
     render(<MasteryActionCard game="wordquest" userId="u1" />)
@@ -224,11 +226,11 @@ describe('MasteryActionCard', () => {
     expect(pushMock).toHaveBeenCalledWith('/arena/wordquest')
   })
 
-  test('kanıt evresinde en az denenmiş kazanımı sıraya alır', () => {
+  test('kanıt evresinde en az farklı gün kanıtı olan kazanımı sıraya alır', () => {
     mockedUseMasteryMap.mockReturnValue(hookResult({
       outcomes: [
-        mkOutcome({ code: 'IKI', title: 'İki kez denendi', status: 'insufficient', attempts: 2 }),
-        mkOutcome({ code: 'SIFIR', title: 'Henüz denenmedi', status: 'insufficient', attempts: 0 }),
+        mkOutcome({ code: 'IKI', title: 'İki gün kanıtı', status: 'insufficient', attempts: 2, verifiedEvidenceDays: 2 }),
+        mkOutcome({ code: 'SIFIR', title: 'Henüz gün kanıtı yok', status: 'insufficient', attempts: 5, verifiedEvidenceDays: 0 }),
       ],
       discovery: {
         level: 2, stage: 'evidence', diagnosticCompleted: true,
@@ -239,7 +241,7 @@ describe('MasteryActionCard', () => {
     render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" />)
 
     expect(screen.getByText('KEŞİF SEVİYESİ 2/3')).toBeInTheDocument()
-    expect(screen.getByText('Henüz denenmedi')).toBeInTheDocument()
-    expect(screen.queryByText('İki kez denendi')).not.toBeInTheDocument()
+    expect(screen.getByText('Henüz gün kanıtı yok')).toBeInTheDocument()
+    expect(screen.queryByText('İki gün kanıtı')).not.toBeInTheDocument()
   })
 })

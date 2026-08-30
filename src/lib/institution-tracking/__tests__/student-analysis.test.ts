@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildInstitutionStudentLearningAnalysis,
   institutionStudentLearningAnalysisSchema,
+  withInstitutionDiagnosticSources,
 } from '../student-analysis'
 
 const base = {
@@ -146,5 +147,13 @@ describe('institution student learning analysis', () => {
       ...upgraded,
       scope: { ...upgraded.scope, taxonomyVersion: 'math-v2' },
     })).toBeNull()
+  })
+
+  it('fails closed when the separately-authorized diagnostic source response is malformed', () => {
+    const merged = withInstitutionDiagnosticSources(base, { sources: [{ outcomeCode: 'MAT-SAY-01' }] })
+    expect(buildInstitutionStudentLearningAnalysis(merged)).toBeNull()
+    expect(buildInstitutionStudentLearningAnalysis(
+      withInstitutionDiagnosticSources(base, { sources: [] }),
+    )).not.toBeNull()
   })
 })

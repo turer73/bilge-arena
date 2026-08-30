@@ -44,7 +44,7 @@ function OutcomeLeaf({
           </p>
         </div>
         <span className="shrink-0 text-xs font-extrabold text-[var(--growth)]">
-          {outcome.status === 'insufficient' ? `${outcome.attempts}/3` : `%${outcome.score}`}
+          {outcome.status === 'insufficient' ? `${outcome.verifiedEvidenceDays}/3 gün` : `%${outcome.score}`}
         </span>
       </div>
 
@@ -57,7 +57,7 @@ function OutcomeLeaf({
 
       {outcome.status === 'insufficient' ? (
         <p className="rounded-lg bg-[var(--bg-secondary)] px-2.5 py-2 text-[9px] leading-4 text-[var(--text-sub)]">
-          Hüküm yok: {outcome.attempts}/3 doğrulanmış kanıt toplandı. Doğruluk ve risk metrikleri ilk değerlendirme hazır olduğunda açılır.
+          Hüküm yok: {outcome.verifiedEvidenceDays}/3 farklı gün kanıtı toplandı. Aynı gün içindeki cevaplar tek gün sayılır; doğruluk ve risk metrikleri ilk değerlendirme hazır olduğunda açılır.
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[9px] text-[var(--text-sub)]">
@@ -124,7 +124,7 @@ export function MasteryGraph({ graph, coverage, discovery, outcomes, onPractice 
                 ? 'Başlangıç tahmini hazır. '
                 : 'Kısa başlangıç taraması henüz tamamlanmadı. '
               : 'Başlangıç seviyesi pratik kanıtlarıyla oluşuyor. '}
-            {discovery.evidenceCollected}/{discovery.evidenceTarget} doğrulanmış kanıt · {discovery.readyOutcomes}/{discovery.totalOutcomes} kazanım ilk değerlendirmeye hazır. Kanıtı yetersiz alanlar başarısız sayılmaz.
+            {discovery.evidenceCollected}/{discovery.evidenceTarget} farklı gün kanıtı · {discovery.readyOutcomes}/{discovery.totalOutcomes} kazanım ilk değerlendirmeye hazır. Aynı gün içindeki birden fazla doğrulanmış cevap burada tek gün sayılır; kanıtı yetersiz alanlar başarısız sayılmaz.
           </p>
         </div>
       )}
@@ -138,8 +138,11 @@ export function MasteryGraph({ graph, coverage, discovery, outcomes, onPractice 
               {graph.title}
             </h2>
           </div>
-          <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-bold text-[var(--growth)]">
-            %{coverage.percentage} kapsam
+          <span
+            aria-label={`Aktif soru bankası eşlemesi: %${coverage.percentage}`}
+            className="rounded-full bg-[var(--bg-secondary)] px-2 py-1 text-right text-[10px] font-bold text-[var(--growth)]"
+          >
+            Aktif soru bankası eşlemesi: %{coverage.percentage}
           </span>
         </div>
         <p className="mt-2 text-[10px] leading-relaxed text-[var(--text-sub)]">

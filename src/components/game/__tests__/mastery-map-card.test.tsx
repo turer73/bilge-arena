@@ -17,6 +17,7 @@ const outcome: MasteryOutcome = {
   weightedEarned: 4,
   weightedPossible: 5,
   delayedCorrect: 1,
+  verifiedEvidenceDays: 3,
   accuracy: 80,
   rawAccuracy: 80,
   difficultyAccuracy: 82,
@@ -57,6 +58,7 @@ describe('MasteryMapCard', () => {
       attempts: 2,
       correctAttempts: 2,
       delayedCorrect: 0,
+      verifiedEvidenceDays: 2,
       accuracy: 100,
       rawAccuracy: 100,
       difficultyAccuracy: 100,
@@ -64,13 +66,13 @@ describe('MasteryMapCard', () => {
       score: 100,
       status: 'insufficient',
     }]} discovery={null} diagnosticAvailable loading={false} />)
-    expect(screen.getByText('2/3 kanıt')).toBeInTheDocument()
+    expect(screen.getByText('2/3 gün')).toBeInTheDocument()
     expect(screen.queryByText('%100')).not.toBeInTheDocument()
   })
 
   it('ilk günde sahte skor yerine keşif seviyesini ve tanılama aksiyonunu gösterir', () => {
     render(<MasteryMapCard
-      outcomes={[{ ...outcome, attempts: 0, correctAttempts: 0, delayedCorrect: 0, status: 'insufficient' }]}
+      outcomes={[{ ...outcome, attempts: 0, correctAttempts: 0, delayedCorrect: 0, verifiedEvidenceDays: 0, status: 'insufficient' }]}
       discovery={{ level: 1, stage: 'estimate', diagnosticCompleted: false, evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 0 }}
       diagnosticAvailable
       loading={false}
@@ -93,6 +95,7 @@ describe('MasteryMapCard', () => {
         attempts: 0,
         correctAttempts: 0,
         delayedCorrect: 0,
+        verifiedEvidenceDays: 0,
         status: 'insufficient',
       }]}
       discovery={{ level: 1, stage: 'estimate', diagnosticCompleted: false, evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 0 }}
@@ -105,5 +108,15 @@ describe('MasteryMapCard', () => {
       '/arena/turkce?category=paragraf&exam_ref=TYT',
     )
     expect(screen.queryByRole('link', { name: /8 dakikalık/i })).not.toBeInTheDocument()
+  })
+
+  it('keşif ilerlemesini yanıt değil farklı gün kanıtı olarak açıklar', () => {
+    render(<MasteryMapCard
+      outcomes={[{ ...outcome, attempts: 4, verifiedEvidenceDays: 2, status: 'insufficient' }]}
+      discovery={{ level: 2, stage: 'evidence', diagnosticCompleted: true, evidenceCollected: 2, evidenceTarget: 3, readyOutcomes: 0, totalOutcomes: 1, journeyPercentage: 83 }}
+      diagnosticAvailable
+      loading={false}
+    />)
+    expect(screen.getByText(/2\/3 farklı gün kanıtı toplandı/i)).toBeInTheDocument()
   })
 })

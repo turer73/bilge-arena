@@ -16,6 +16,7 @@ export interface MasteryOutcomePublic {
   weightedEarned: number
   weightedPossible: number
   delayedCorrect: number
+  verifiedEvidenceDays: number
   accuracy: number
   rawAccuracy: number
   difficultyAccuracy: number
@@ -103,6 +104,7 @@ function validOutcome(value: unknown): value is MasteryOutcomePublic {
   if (!hasOnlyKeys(value, [
     'code', 'nodeCode', 'path', 'title', 'description', 'game', 'category', 'examRef',
     'attempts', 'correctAttempts', 'weightedEarned', 'weightedPossible', 'delayedCorrect',
+    'verifiedEvidenceDays',
     'accuracy', 'rawAccuracy', 'difficultyAccuracy', 'averageTimeSec', 'fastWrongRate',
     'hintRate', 'averageHintStage', 'guessRisk', 'carelessRisk', 'evidenceCompleteness',
     'score', 'status', 'modelVersion', 'components', 'lastAnsweredAt',
@@ -119,6 +121,7 @@ function validOutcome(value: unknown): value is MasteryOutcomePublic {
   if (!['legacy-v1', 'evidence-v2'].includes(String(value.modelVersion))) return false
   const countFields = [
     'attempts', 'correctAttempts', 'weightedEarned', 'weightedPossible', 'delayedCorrect',
+    'verifiedEvidenceDays',
   ]
   if (countFields.some((field) => typeof value[field] !== 'number' || !Number.isFinite(value[field] as number) || Number(value[field]) < 0)) {
     return false
@@ -126,14 +129,17 @@ function validOutcome(value: unknown): value is MasteryOutcomePublic {
   const attempts = Number(value.attempts)
   const correctAttempts = Number(value.correctAttempts)
   const delayedCorrect = Number(value.delayedCorrect)
+  const verifiedEvidenceDays = Number(value.verifiedEvidenceDays)
   const weightedEarned = Number(value.weightedEarned)
   const weightedPossible = Number(value.weightedPossible)
   if (
     !Number.isInteger(attempts)
     || !Number.isInteger(correctAttempts)
     || !Number.isInteger(delayedCorrect)
+    || !Number.isInteger(verifiedEvidenceDays)
     || correctAttempts > attempts
     || delayedCorrect > correctAttempts
+    || verifiedEvidenceDays > attempts
     || weightedEarned > weightedPossible
   ) return false
   const percentFields = [
@@ -152,6 +158,13 @@ function validOutcome(value: unknown): value is MasteryOutcomePublic {
   if (!isRecord(components) || !hasOnlyKeys(components, ['accuracy', 'delayedRetrieval', 'independence', 'selfRegulation'])) return false
   if (!['accuracy', 'delayedRetrieval', 'independence', 'selfRegulation']
     .every((field) => finitePercent(components[field]))) return false
+  if (verifiedEvidenceDays < 3 && (
+    value.status !== 'insufficient'
+    || value.evidenceCompleteness !== Math.round((verifiedEvidenceDays / 3) * 100)
+    || value.score !== 0
+    || Object.values(components).some((component) => Number(component) !== 0)
+  )) return false
+  if (verifiedEvidenceDays >= 3 && value.status === 'insufficient') return false
   return value.score === Object.values(components)
     .map(Number)
     .reduce((sum: number, component) => sum + component, 0)
@@ -234,9 +247,9 @@ export function parseMasteryMapResponse(value: unknown): MasteryMapResponsePubli
   if (seenOutcomes.size !== leaves.size) return null
 
   const expectedEvidence = (value.outcomes as MasteryOutcomePublic[])
-    .reduce((sum, outcome) => sum + Math.min(3, outcome.attempts), 0)
+    .reduce((sum, outcome) => sum + Math.min(3, outcome.verifiedEvidenceDays), 0)
   const expectedReady = (value.outcomes as MasteryOutcomePublic[])
-    .filter((outcome) => outcome.status !== 'insufficient').length
+    .filter((outcome) => outcome.verifiedEvidenceDays >= 3).length
   const expectedStage = expectedReady === value.outcomes.length
     ? 'ready'
     : discovery.diagnosticCompleted || expectedEvidence > 0

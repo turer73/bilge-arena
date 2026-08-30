@@ -118,4 +118,31 @@ describe('GirisClient institution flow', () => {
     render(<GirisClient initialConsentError="Giriş onayı doğrulanamadı veya süresi doldu." />)
     expect(screen.getByRole('alert')).toHaveTextContent('Giriş onayı doğrulanamadı')
   })
+
+  it('silinmis profil icin farkli hesap secimini zorunlu tutar', async () => {
+    render(<GirisClient initialAccountNotice={{
+      kind: 'deleted',
+      message: 'Bu hesabın uygulama profili kapatılmıştır.',
+    }} />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('uygulama profili kapatılmıştır')
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'Google ile Giriş Yap' }))
+
+    await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledWith(
+      '/arena',
+      { forceAccountSelection: true, legalConsentToken: 'legal-intent-token' },
+    ))
+  })
+
+  it('hesap durumu dogrulanamazsa yeni OAuth girisini fail-closed durdurur', () => {
+    render(<GirisClient initialAccountNotice={{
+      kind: 'unavailable',
+      message: 'Hesap durumu şu anda doğrulanamıyor.',
+    }} />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Hesap durumu şu anda doğrulanamıyor')
+    expect(screen.getByRole('button', { name: 'Google ile Giriş Yap' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Kurum Hesabıyla Giriş' })).toBeDisabled()
+  })
 })

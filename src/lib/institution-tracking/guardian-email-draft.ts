@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { institutionStudentLearningAnalysisSchema } from './student-analysis'
+import { institutionStudentReportScopeLabel } from './student-report'
 
 export const guardianEmailDraftSchema = z.object({
   subject: z.string().trim().min(5).max(160),
@@ -17,10 +18,11 @@ export function buildGuardianStatusEmailDraft(value: unknown) {
   const strong = analysis.outcomes.filter((item) => item.assessment.status === 'mastered').slice(0, 3).map((item) => item.title)
   const developing = analysis.outcomes.filter((item) => item.assessment.status === 'developing').slice(0, 3).map((item) => item.title)
   const insufficientCount = analysis.summary.insufficientOutcomeCount
+  const scopeLabel = institutionStudentReportScopeLabel(analysis.scope)
   const body = [
     'Merhaba,',
     '',
-    `${analysis.student.alias} için TYT Matematik çalışma durumuna ilişkin kısa bilgilendirme aşağıdadır.`,
+    `${analysis.student.alias} için ${scopeLabel} çalışma durumuna ilişkin kısa bilgilendirme aşağıdadır.`,
     '',
     'Güçlü kanıt görülen kazanımlar:',
     list(strong, 'Bu dönemde henüz güçlü karar vermek için yeterli tekrarlı kanıt oluşmadı.'),
@@ -37,7 +39,7 @@ export function buildGuardianStatusEmailDraft(value: unknown) {
     'İyi çalışmalar.',
   ].join('\n')
   const result = {
-    subject: `${analysis.student.alias} – TYT Matematik çalışma durumu`,
+    subject: `${analysis.student.alias} – ${scopeLabel} çalışma durumu`,
     body,
   }
   const validated = guardianEmailDraftSchema.safeParse(result)

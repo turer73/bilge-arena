@@ -6,6 +6,50 @@ type FetchLike = typeof fetch
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+/**
+ * Tombstoned profiles must not be able to continue using an already issued
+ * Auth session. This check intentionally fails closed: a missing service key,
+ * REST error, malformed response, or missing profile is not an active account.
+ * Keep it REST-based because proxy runs before route handlers and must not
+ * depend on a server-only Supabase client runtime.
+ */
+export type UserProfileAccessState = 'active' | 'deleted' | 'unavailable'
+
+export async function getUserProfileAccessStateViaRest({
+  supabaseUrl,
+  serviceKey,
+  userId,
+  fetchImpl = fetch,
+}: {
+  supabaseUrl: string
+  serviceKey: string
+  userId: string
+  fetchImpl?: FetchLike
+}): Promise<UserProfileAccessState> {
+  if (!supabaseUrl || !serviceKey || !userId || !uuidPattern.test(userId)) return 'unavailable'
+
+  try {
+    const profileUrl = new URL(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/profiles`)
+    profileUrl.searchParams.set('id', `eq.${userId}`)
+    profileUrl.searchParams.set('select', 'id,deleted_at')
+    profileUrl.searchParams.set('limit', '1')
+    const response = await fetchImpl(profileUrl, {
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+      cache: 'no-store',
+    })
+    if (!response.ok) return 'unavailable'
+    const rows = await response.json() as unknown
+    if (!Array.isArray(rows) || rows.length !== 1) return 'unavailable'
+    const row = rows[0] as { id?: unknown; deleted_at?: unknown }
+    if (row.id !== userId || !Object.prototype.hasOwnProperty.call(row, 'deleted_at')) {
+      return 'unavailable'
+    }
+    return row.deleted_at === null ? 'active' : 'deleted'
+  } catch {
+    return 'unavailable'
+  }
+}
+
 export async function userHasAnyPlatformPermission(
   client: ServiceRoleClient,
   userId: string,

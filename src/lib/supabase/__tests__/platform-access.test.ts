@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  getUserProfileAccessStateViaRest,
   userHasAnyPlatformPermission,
   userHasAnyPlatformPermissionViaRest,
   userHasPlatformAdminAccess,
@@ -95,6 +96,52 @@ describe('platform access boundary', () => {
       permissions: ['admin.dashboard.view'],
       fetchImpl,
     })).toBe(false)
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+  })
+
+  it('REST account guard accepts only an exact active profile row', async () => {
+    const userId = '22222222-2222-4222-8222-222222222222'
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify([{ id: userId, deleted_at: null }]), { status: 200 }),
+    )
+
+    expect(await getUserProfileAccessStateViaRest({
+      supabaseUrl: 'https://example.supabase.co/', serviceKey: 'service-key', userId, fetchImpl,
+    })).toBe('active')
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('/rest/v1/profiles?id=eq.')
+    expect(String(fetchImpl.mock.calls[0][0])).toContain('select=id%2Cdeleted_at')
+    expect(fetchImpl.mock.calls[0][1]).toMatchObject({ cache: 'no-store' })
+  })
+
+  it('REST account guard distinguishes a tombstone from operational uncertainty', async () => {
+    const deletedRow = { id: '22222222-2222-4222-8222-222222222222', deleted_at: '2026-08-29T10:00:00Z' }
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(JSON.stringify([deletedRow]), { status: 200 }))
+    expect(await getUserProfileAccessStateViaRest({
+      supabaseUrl: 'https://example.supabase.co', serviceKey: 'service-key',
+      userId: '22222222-2222-4222-8222-222222222222', fetchImpl,
+    })).toBe('deleted')
+  })
+
+  it.each([
+    [null],
+    [{ id: '33333333-3333-4333-8333-333333333333', deleted_at: null }],
+  ])('REST account guard treats missing or mismatched rows as unavailable', async (row) => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(JSON.stringify(row ? [row] : []), { status: 200 }))
+    expect(await getUserProfileAccessStateViaRest({
+      supabaseUrl: 'https://example.supabase.co', serviceKey: 'service-key',
+      userId: '22222222-2222-4222-8222-222222222222', fetchImpl,
+    })).toBe('unavailable')
+  })
+
+  it('REST account guard fails closed on service errors and invalid identities', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response('unavailable', { status: 503 }))
+    expect(await getUserProfileAccessStateViaRest({
+      supabaseUrl: 'https://example.supabase.co', serviceKey: 'service-key',
+      userId: '22222222-2222-4222-8222-222222222222', fetchImpl,
+    })).toBe('unavailable')
+    expect(await getUserProfileAccessStateViaRest({
+      supabaseUrl: 'https://example.supabase.co', serviceKey: 'service-key', userId: 'not-a-uuid', fetchImpl,
+    })).toBe('unavailable')
     expect(fetchImpl).toHaveBeenCalledTimes(1)
   })
 })

@@ -12,8 +12,13 @@ import { safeAuthNext } from '@/lib/auth/safe-next'
 
 export default function GirisClient({
   initialConsentError = null,
+  initialAccountNotice = null,
 }: {
   initialConsentError?: string | null
+  initialAccountNotice?: {
+    kind: 'deleted' | 'unavailable'
+    message: string
+  } | null
 }) {
   const router = useRouter()
   const { signInWithGoogle } = useAuth()
@@ -46,7 +51,9 @@ export default function GirisClient({
     }
 
     await signInWithGoogle(requestedNext, {
-      ...(forceAccountSelection ? { forceAccountSelection: true } : {}),
+      ...(forceAccountSelection || initialAccountNotice?.kind === 'deleted'
+        ? { forceAccountSelection: true }
+        : {}),
       legalConsentToken,
     })
   }
@@ -62,6 +69,15 @@ export default function GirisClient({
         <p className="mb-8 text-sm text-[var(--text-sub)]">
           Google hesabinla hemen basla, ilerlemenin kaydedilsin.
         </p>
+
+        {initialAccountNotice && (
+          <p
+            className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left text-xs leading-5 text-[var(--urgency-text)]"
+            role="alert"
+          >
+            {initialAccountNotice.message}
+          </p>
+        )}
 
         {/* Onay checkbox'u */}
         <label className="mb-6 flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left transition-colors hover:border-[var(--focus)]/50">
@@ -92,7 +108,7 @@ export default function GirisClient({
           variant="primary"
           size="lg"
           className="w-full"
-          disabled={!accepted || creatingConsentIntent}
+          disabled={!accepted || creatingConsentIntent || initialAccountNotice?.kind === 'unavailable'}
           onClick={() => void handleGoogleLogin('/arena')}
         >
           <svg viewBox="0 0 24 24" width={18} height={18} className="mr-1">
@@ -120,7 +136,7 @@ export default function GirisClient({
           variant="ghost"
           size="md"
           className="mt-3 w-full border border-[var(--border)]"
-          disabled={!accepted || creatingConsentIntent}
+          disabled={!accepted || creatingConsentIntent || initialAccountNotice?.kind === 'unavailable'}
           onClick={() => void handleGoogleLogin('/arena/kurum', true)}
         >
           <Building2 size={16} />
@@ -138,7 +154,7 @@ export default function GirisClient({
           </Button>
         </div>
 
-        {!accepted && (
+        {!accepted && initialAccountNotice?.kind !== 'unavailable' && (
           <p className="mt-4 text-xs text-[var(--text-muted)]">
             Giriş yapmak için yukarıdaki koşulları kabul etmeniz gerekir.
           </p>

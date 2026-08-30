@@ -16,21 +16,26 @@ export interface MasteryDiscoveryPublic {
 /**
  * Cold-start ilerlemesini başarı tahminiyle karıştırmadan oyunlaştırır.
  * Tanılama yalnız başlangıç tahminidir; kalıcı harita için her kazanımda
- * üç doğrulanmış kanıt gerekir.
+ * üç ayrı Europe/Istanbul takvim gününe yayılan doğrulanmış kanıt gerekir.
  */
 export function buildMasteryDiscovery(
-  outcomes: MasteryOutcomePublic[],
+  outcomes: Pick<MasteryOutcomePublic, 'verifiedEvidenceDays'>[],
   diagnosticCompleted: boolean,
 ): MasteryDiscoveryPublic | null {
   if (outcomes.length === 0) return null
 
   const totalOutcomes = outcomes.length
   const evidenceTarget = totalOutcomes * 3
-  const evidenceCollected = outcomes.reduce(
-    (sum, outcome) => sum + Math.min(3, Math.max(0, outcome.attempts)),
+  const evidenceDays = outcomes.map((outcome) => (
+    Number.isSafeInteger(outcome.verifiedEvidenceDays) && outcome.verifiedEvidenceDays >= 0
+      ? outcome.verifiedEvidenceDays
+      : 0
+  ))
+  const evidenceCollected = evidenceDays.reduce(
+    (sum, days) => sum + Math.min(3, days),
     0,
   )
-  const readyOutcomes = outcomes.filter((outcome) => outcome.status !== 'insufficient').length
+  const readyOutcomes = evidenceDays.filter((days) => days >= 3).length
   const ready = readyOutcomes === totalOutcomes
   const stage: MasteryDiscoveryStage = ready
     ? 'ready'

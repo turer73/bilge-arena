@@ -220,6 +220,7 @@ describe('GET /api/profile/mastery', () => {
         hint_stage_sum: '2.000',
         guess_annotations: 0,
         careless_annotations: 0,
+        verified_evidence_days: 3,
         last_answered_at: '2026-07-22T08:00:00Z',
       }],
       error: null,
@@ -261,6 +262,7 @@ describe('GET /api/profile/mastery', () => {
       averageTimeSec: 15,
       modelVersion: 'evidence-v2',
       status: 'mastered',
+      verifiedEvidenceDays: 3,
     })
     const serialized = JSON.stringify(body)
     expect(serialized).not.toContain(USER_ID)
@@ -276,6 +278,100 @@ describe('GET /api/profile/mastery', () => {
     expect(mockEq).toHaveBeenCalledWith('curriculum_nodes', 'taxonomy_version', 'ba-tyt-math-v1')
     expect(mockEq).toHaveBeenCalledWith('curriculum_outcomes', 'taxonomy_version', 'ba-tyt-math-v1')
     expect(mockEq).toHaveBeenCalledWith('user_diagnostic_outcome_state', 'user_id', USER_ID)
+  })
+
+  it('aynı gündeki çoklu cevaplarla Keşif seviyesini hazır göstermez', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockStateResult.mockReturnValue({
+      data: [{
+        outcome_id: OUTCOME_ID,
+        attempts: 5,
+        correct_attempts: 5,
+        weighted_earned: '5.000',
+        weighted_possible: '5.000',
+        delayed_correct: 0,
+        v2_attempts: 5,
+        difficulty_weighted_earned: '15.000',
+        difficulty_weighted_possible: '15.000',
+        timed_attempts: 5,
+        total_time_sec: '75.000',
+        fast_wrong: 0,
+        hinted_attempts: 0,
+        hint_stage_sum: '0.000',
+        guess_annotations: 0,
+        careless_annotations: 0,
+        verified_evidence_days: 1,
+        last_answered_at: '2026-07-22T08:00:00Z',
+      }],
+      error: null,
+    })
+    mockDiagnosticResult.mockReturnValue({ data: [{ outcome_id: OUTCOME_ID }], error: null })
+
+    const response = await GET(request() as never)
+    const body = await response.json()
+    expect(response.status).toBe(200)
+    expect(body.discovery).toMatchObject({
+      level: 2,
+      stage: 'evidence',
+      evidenceCollected: 1,
+      readyOutcomes: 0,
+    })
+    expect(body.outcomes[0]).toMatchObject({ attempts: 5, verifiedEvidenceDays: 1 })
+  })
+
+  it('migration 202 öncesinde eksik gün kolonunu sıfır kanıtla fail-closed okur', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockStateResult
+      .mockReturnValueOnce({ data: null, error: { code: '42703' } })
+      .mockReturnValueOnce({
+        data: [{
+          outcome_id: OUTCOME_ID,
+          attempts: 5,
+          correct_attempts: 5,
+          weighted_earned: '5.000',
+          weighted_possible: '5.000',
+          delayed_correct: 0,
+          v2_attempts: 5,
+          difficulty_weighted_earned: '15.000',
+          difficulty_weighted_possible: '15.000',
+          timed_attempts: 5,
+          total_time_sec: '75.000',
+          fast_wrong: 0,
+          hinted_attempts: 0,
+          hint_stage_sum: '0.000',
+          guess_annotations: 0,
+          careless_annotations: 0,
+          last_answered_at: '2026-07-22T08:00:00Z',
+        }],
+        error: null,
+      })
+    mockDiagnosticResult.mockReturnValue({ data: [{ outcome_id: OUTCOME_ID }], error: null })
+
+    const response = await GET(request() as never)
+    const body = await response.json()
+    expect(response.status).toBe(200)
+    expect(body.outcomes[0]).toMatchObject({ attempts: 5, verifiedEvidenceDays: 0 })
+    expect(body.discovery).toMatchObject({
+      level: 2,
+      stage: 'evidence',
+      evidenceCollected: 0,
+      readyOutcomes: 0,
+    })
+    const stateSelections = mockSelect.mock.calls
+      .filter(([table]) => table === 'user_outcome_state')
+      .map(([, columns]) => String(columns))
+    expect(stateSelections).toHaveLength(2)
+    expect(stateSelections[0]).toContain('verified_evidence_days')
+    expect(stateSelections[1]).not.toContain('verified_evidence_days')
+  })
+
+  it('eksik kolon dışındaki state hatalarını fallback ile yutmaz', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockStateResult.mockReturnValue({ data: null, error: { code: '42501' } })
+
+    const response = await GET(request() as never)
+    expect(response.status).toBe(500)
+    expect(mockSelect.mock.calls.filter(([table]) => table === 'user_outcome_state')).toHaveLength(1)
   })
 
   it('released TYT Fen scopeunu registry taksonomisiyle acar ve matematik tanilamasini calistirmaz', async () => {
@@ -472,6 +568,10 @@ describe('GET /api/profile/mastery', () => {
     await GET(request() as never)
     const selections = mockSelect.mock.calls.map((call) => String(call[1])).join(' ')
     expect(selections).not.toMatch(/selected_option|content|answer_id|session_id|attempt_id/)
+    expect(mockSelect).toHaveBeenCalledWith(
+      'user_outcome_state',
+      expect.stringContaining('verified_evidence_days'),
+    )
     expect(mockSelect).toHaveBeenCalledWith('user_diagnostic_outcome_state', 'outcome_id')
   })
 })

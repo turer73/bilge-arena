@@ -64,6 +64,173 @@ ALTER TABLE public.adaptive_diagnostic_blueprints ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.adaptive_diagnostic_blueprints
   FROM PUBLIC,anon,authenticated,service_role;
 
+-- Migration 086 created MAT-SAY-01 and its then-active question mappings in
+-- one transaction, before mapping_source existed.  Migration 096 therefore
+-- preserved that deterministic category-proxy seed as `manual`.  V3 requires
+-- reviewed taxonomy provenance, so normalize only that original seed batch:
+-- its mapping and outcome timestamps are identical, its mapping is the sole
+-- primary mapping, and every question/outcome/node scope field must match.
+--
+-- The blueprint-existence guard is part of the provenance boundary.  A replay
+-- after release must never relabel a genuinely manual mapping added later.
+DO $fn$
+DECLARE
+  v_blueprint_exists boolean;
+  v_outcome_id uuid;
+  v_outcome_created_at timestamptz;
+  v_legacy_manual_count integer;
+  v_legacy_auto_count integer;
+  v_unsafe_manual_count integer;
+  v_expected_legacy_count integer;
+  v_updated_count integer;
+BEGIN
+  LOCK TABLE public.adaptive_diagnostic_blueprints IN SHARE ROW EXCLUSIVE MODE;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.adaptive_diagnostic_blueprints
+    WHERE blueprint_version='ba-tyt-math-diagnostic-v1'
+  ) INTO v_blueprint_exists;
+
+  -- Keep the reviewed snapshot stable until the migration commits.
+  LOCK TABLE public.question_outcomes IN SHARE ROW EXCLUSIVE MODE;
+  LOCK TABLE public.questions IN SHARE MODE;
+  LOCK TABLE public.curriculum_outcomes IN SHARE MODE;
+  LOCK TABLE public.curriculum_nodes IN SHARE MODE;
+
+  SELECT outcome.id,outcome.created_at
+  INTO v_outcome_id,v_outcome_created_at
+  FROM public.curriculum_outcomes AS outcome
+  JOIN public.curriculum_nodes AS node ON node.id=outcome.node_id
+  WHERE outcome.code='MAT-SAY-01'
+    AND outcome.is_active
+    AND outcome.game='matematik'
+    AND outcome.exam_ref='TYT'
+    AND outcome.category='sayilar'
+    AND outcome.taxonomy_version='ba-tyt-math-v1'
+    AND node.is_active
+    AND node.node_type='outcome'
+    AND node.game IS NOT DISTINCT FROM outcome.game
+    AND node.exam_ref IS NOT DISTINCT FROM outcome.exam_ref
+    AND node.category IS NOT DISTINCT FROM outcome.category
+    AND node.taxonomy_version IS NOT DISTINCT FROM outcome.taxonomy_version;
+  IF v_outcome_id IS NULL THEN
+    RAISE EXCEPTION 'MAT-SAY-01 legacy provenance target is missing or invalid'
+      USING ERRCODE='55000';
+  END IF;
+
+  WITH classified AS (
+    SELECT mapping.mapping_source,
+      COALESCE(mapping.created_at=v_outcome_created_at
+        AND mapping.weight=1
+        AND mapping.is_primary
+        AND question.game='matematik'
+        AND upper(btrim(COALESCE(question.exam_ref,'')))='TYT'
+        AND question.category='sayilar'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM public.question_outcomes AS other_mapping
+          WHERE other_mapping.question_id=mapping.question_id
+            AND other_mapping.outcome_id<>mapping.outcome_id
+        ),false) AS is_exact_legacy_seed
+    FROM public.question_outcomes AS mapping
+    JOIN public.questions AS question ON question.id=mapping.question_id
+    WHERE mapping.outcome_id=v_outcome_id
+  )
+  SELECT
+    count(*) FILTER (
+      WHERE mapping_source='manual' AND is_exact_legacy_seed
+    )::integer,
+    count(*) FILTER (
+      WHERE mapping_source='taxonomy_auto' AND is_exact_legacy_seed
+    )::integer,
+    count(*) FILTER (
+      WHERE mapping_source='manual' AND NOT is_exact_legacy_seed
+    )::integer
+  INTO v_legacy_manual_count,v_legacy_auto_count,v_unsafe_manual_count
+  FROM classified;
+
+  IF v_unsafe_manual_count<>0 THEN
+    RAISE EXCEPTION 'MAT-SAY-01 contains non-legacy manual mappings; provenance review required'
+      USING ERRCODE='23514';
+  END IF;
+  IF v_legacy_manual_count>0 AND v_legacy_auto_count>0 THEN
+    RAISE EXCEPTION 'MAT-SAY-01 legacy provenance is partially normalized'
+      USING ERRCODE='23514';
+  END IF;
+
+  v_expected_legacy_count:=v_legacy_manual_count+v_legacy_auto_count;
+  IF v_expected_legacy_count=0 THEN
+    RAISE EXCEPTION 'MAT-SAY-01 legacy provenance batch is missing'
+      USING ERRCODE='55000';
+  END IF;
+
+  v_updated_count:=0;
+  IF v_blueprint_exists THEN
+    IF v_legacy_manual_count<>0 THEN
+      RAISE EXCEPTION 'released MAT-SAY-01 legacy provenance drifted to manual'
+        USING ERRCODE='23514';
+    END IF;
+  ELSE
+    UPDATE public.question_outcomes AS mapping
+    SET mapping_source='taxonomy_auto'
+    FROM public.questions AS question
+    WHERE mapping.question_id=question.id
+      AND mapping.outcome_id=v_outcome_id
+      AND mapping.mapping_source='manual'
+      AND mapping.created_at=v_outcome_created_at
+      AND mapping.weight=1
+      AND mapping.is_primary
+      AND question.game='matematik'
+      AND upper(btrim(COALESCE(question.exam_ref,'')))='TYT'
+      AND question.category='sayilar'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM public.question_outcomes AS other_mapping
+        WHERE other_mapping.question_id=mapping.question_id
+          AND other_mapping.outcome_id<>mapping.outcome_id
+      );
+    GET DIAGNOSTICS v_updated_count=ROW_COUNT;
+
+    IF v_updated_count<>v_legacy_manual_count THEN
+      RAISE EXCEPTION 'MAT-SAY-01 legacy provenance update count drifted: expected %, updated %',
+        v_legacy_manual_count,v_updated_count
+        USING ERRCODE='23514';
+    END IF;
+  END IF;
+
+  IF v_blueprint_exists AND v_updated_count<>0 THEN
+    RAISE EXCEPTION 'released MAT-SAY-01 provenance must never be rewritten'
+      USING ERRCODE='23514';
+  END IF;
+
+  SELECT
+    count(*) FILTER (WHERE mapping.mapping_source='manual')::integer,
+    count(*) FILTER (WHERE mapping.mapping_source='taxonomy_auto')::integer
+  INTO v_legacy_manual_count,v_legacy_auto_count
+  FROM public.question_outcomes AS mapping
+  JOIN public.questions AS question ON question.id=mapping.question_id
+  WHERE mapping.outcome_id=v_outcome_id
+    AND mapping.created_at=v_outcome_created_at
+    AND mapping.weight=1
+    AND mapping.is_primary
+    AND question.game='matematik'
+    AND upper(btrim(COALESCE(question.exam_ref,'')))='TYT'
+    AND question.category='sayilar'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.question_outcomes AS other_mapping
+      WHERE other_mapping.question_id=mapping.question_id
+        AND other_mapping.outcome_id<>mapping.outcome_id
+    );
+
+  IF v_legacy_manual_count<>0 OR v_legacy_auto_count<>v_expected_legacy_count THEN
+    RAISE EXCEPTION 'MAT-SAY-01 legacy provenance normalization postcheck failed'
+      USING ERRCODE='23514';
+  END IF;
+END
+$fn$;
+
 CREATE OR REPLACE FUNCTION public.tg_adaptive_diagnostic_blueprint_immutable()
 RETURNS trigger
 LANGUAGE plpgsql

@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockGetUser, mockGetAal, mockPermissionViaRest, mockCookieRefresh } = vi.hoisted(() => ({
+const { mockGetUser, mockGetAal, mockPermissionViaRest, mockProfileAccessViaRest, mockCookieRefresh } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockGetAal: vi.fn(),
   mockPermissionViaRest: vi.fn(),
+  mockProfileAccessViaRest: vi.fn(),
   mockCookieRefresh: { enabled: false },
 }))
 
@@ -26,6 +27,7 @@ vi.mock('@supabase/ssr', () => ({
 
 vi.mock('@/lib/supabase/platform-access', () => ({
   userHasAnyPlatformPermissionViaRest: mockPermissionViaRest,
+  getUserProfileAccessStateViaRest: mockProfileAccessViaRest,
 }))
 
 import { proxy } from '@/proxy'
@@ -39,6 +41,7 @@ describe('admin proxy permission boundary', () => {
     vi.clearAllMocks()
     mockCookieRefresh.enabled = false
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key'
+    mockProfileAccessViaRest.mockResolvedValue('active')
     mockGetAal.mockResolvedValue({ data: { currentLevel: 'aal2', nextLevel: 'aal2' }, error: null })
   })
 
@@ -113,6 +116,61 @@ describe('admin proxy permission boundary', () => {
       'https://bilgearena.com/hesap/guvenlik?next=%2Fadmin%2Fkurumlar',
     )
     expect(mockPermissionViaRest).not.toHaveBeenCalled()
+  })
+
+  it('redirects a tombstoned account before AAL2 or permission checks', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: '11111111-1111-4111-8111-111111111111' } } })
+    mockProfileAccessViaRest.mockResolvedValue('deleted')
+
+    const response = await proxy(request('/admin/kurumlar'))
+    expect(response.headers.get('location')).toBe('https://bilgearena.com/giris?deleted=1')
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(mockGetAal).not.toHaveBeenCalled()
+    expect(mockPermissionViaRest).not.toHaveBeenCalled()
+  })
+
+  it('returns no-store 410 for tombstoned API requests, except account deletion', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: '11111111-1111-4111-8111-111111111111' } } })
+    mockProfileAccessViaRest.mockResolvedValue('deleted')
+
+    const response = await proxy(request('/api/profile'))
+    expect(response.status).toBe(410)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(await response.json()).toMatchObject({ code: 'account_deleted' })
+    expect(mockGetAal).not.toHaveBeenCalled()
+
+    mockProfileAccessViaRest.mockClear()
+    const deletionResponse = await proxy(request('/api/account/delete'))
+    expect(deletionResponse.headers.get('x-middleware-next')).toBe('1')
+    expect(mockProfileAccessViaRest).not.toHaveBeenCalled()
+  })
+
+  it('renders login once and clears a tombstoned auth cookie instead of redirect looping', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: '11111111-1111-4111-8111-111111111111' } } })
+    mockProfileAccessViaRest.mockResolvedValue('deleted')
+    const deletedRequest = new NextRequest('https://bilgearena.com/giris?deleted=1', {
+      headers: { cookie: 'sb-project-auth-token=stale' },
+    })
+
+    const response = await proxy(deletedRequest)
+    expect(response.headers.get('location')).toBeNull()
+    expect(response.headers.get('x-middleware-next')).toBe('1')
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(response.cookies.get('sb-project-auth-token')?.value).toBe('')
+  })
+
+  it('does not label an operational profile-check failure as account deletion', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: '11111111-1111-4111-8111-111111111111' } } })
+    mockProfileAccessViaRest.mockResolvedValue('unavailable')
+
+    const apiResponse = await proxy(request('/api/profile'))
+    expect(apiResponse.status).toBe(503)
+    expect(await apiResponse.json()).toMatchObject({ code: 'account_access_unavailable' })
+
+    const pageResponse = await proxy(request('/arena'))
+    expect(pageResponse.headers.get('location')).toBe(
+      'https://bilgearena.com/giris?error=account_unavailable',
+    )
   })
 
   it('preserves refreshed auth cookies on an AAL1 redirect response', async () => {

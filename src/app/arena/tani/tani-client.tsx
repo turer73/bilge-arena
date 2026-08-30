@@ -105,7 +105,7 @@ function SummaryCard({
         </Link>
       </div>
       <p className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-xs leading-5 text-[var(--text-sub)]">
-        Bu sonuç yalnız kısa başlangıç taraması tahminidir. Keşif Seviyesi 2, farklı günlerdeki doğrulanmış pratik kanıtlarıyla ilerler; kalıcı hâkimiyet bu kanıtlarla oluşur.
+        Bu sonuç yalnız kısa başlangıç taraması tahminidir. Keşif Seviyesi 2, ayrı takvim günlerinde tamamlanan doğrulanmış pratiklerle ilerler; aynı oturumdaki birden fazla cevap tek gün kanıtı sayılır.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         {outcomes.map((outcome) => (
