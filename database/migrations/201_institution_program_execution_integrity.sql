@@ -8,6 +8,25 @@
 
 BEGIN;
 
+-- Canonicalize timestamptz JSON serialization used by the adjudicated state
+-- hash. The approved R3 evidence was computed in UTC.
+SET LOCAL TIME ZONE 'UTC';
+SET LOCAL DateStyle TO 'ISO, YMD';
+
+-- Drain completion writers before taking the shared advisory lock. Without
+-- this order, a concurrent UPDATE could hold a source-table lock, enter its
+-- trigger and wait for the advisory lock while this migration waited to
+-- replace that trigger. SHARE blocks new INSERT/UPDATE/DELETE writers but
+-- leaves ordinary reads available for the short migration transaction.
+LOCK TABLE public.verified_attempts,public.adaptive_diagnostic_sessions
+IN SHARE MODE;
+-- A rerun then drains starts installed by an earlier successful application.
+-- The three execution writers below acquire the same transaction lock before
+-- touching program state.
+SELECT pg_catalog.pg_advisory_xact_lock(
+  pg_catalog.hashtextextended('institution-program-execution-integrity-v201',201)
+);
+
 ALTER TABLE public.institution_operation_events
   DROP CONSTRAINT IF EXISTS institution_operation_events_event_type_check;
 ALTER TABLE public.institution_operation_events
@@ -188,10 +207,10 @@ REVOKE ALL ON TABLE public.institution_study_program_item_executions
   FROM PUBLIC,anon,authenticated,service_role;
 
 -- Older generators could publish several outcome-labelled cards that all
--- launch the same full-scope diagnostic.  Preserve the first card and migrate
--- only later pending cards to outcome-bound baseline practice.  This is a
--- system reconciliation, not a teacher action, so it has its own immutable
--- provenance ledger instead of impersonating the teacher in operation_events.
+-- launch the same full-scope diagnostic. A separately adjudicated legacy v1
+-- card also exceeds the verifiable session capacity. These are system
+-- reconciliations, not teacher actions, so they have an immutable provenance
+-- ledger instead of impersonating the teacher in operation_events.
 CREATE TABLE IF NOT EXISTS public.institution_program_item_reconciliations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id uuid NOT NULL REFERENCES public.institution_study_programs(id) ON DELETE RESTRICT,
@@ -200,7 +219,7 @@ CREATE TABLE IF NOT EXISTS public.institution_program_item_reconciliations (
   student_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   origin text NOT NULL CHECK (origin='system_migration'),
   migration_id text NOT NULL CHECK (migration_id='201'),
-  reason text NOT NULL CHECK (reason='duplicate_full_scope_diagnostic_to_verified_baseline'),
+  reason text NOT NULL,
   original_snapshot jsonb NOT NULL CHECK (jsonb_typeof(original_snapshot)='object'),
   reconciled_snapshot jsonb NOT NULL CHECK (jsonb_typeof(reconciled_snapshot)='object'),
   reconciled_at timestamptz NOT NULL DEFAULT clock_timestamp(),
@@ -208,6 +227,14 @@ CREATE TABLE IF NOT EXISTS public.institution_program_item_reconciliations (
   FOREIGN KEY (program_id,position)
     REFERENCES public.institution_study_program_items(program_id,position) ON DELETE RESTRICT
 );
+-- Keep replays from inheriting an older one-value implicit CHECK definition.
+ALTER TABLE public.institution_program_item_reconciliations
+  DROP CONSTRAINT IF EXISTS institution_program_item_reconciliations_reason_check;
+ALTER TABLE public.institution_program_item_reconciliations
+  ADD CONSTRAINT institution_program_item_reconciliations_reason_check CHECK (reason IN (
+    'operator_approved_legacy_target_to_session_capacity',
+    'duplicate_full_scope_diagnostic_to_verified_baseline'
+  ));
 ALTER TABLE public.institution_program_item_reconciliations ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.institution_program_item_reconciliations
   FROM PUBLIC,anon,authenticated,service_role;
@@ -223,6 +250,108 @@ DROP TRIGGER IF EXISTS institution_program_reconciliation_immutable
 CREATE TRIGGER institution_program_reconciliation_immutable
   BEFORE UPDATE OR DELETE ON public.institution_program_item_reconciliations
   FOR EACH ROW EXECUTE FUNCTION public.institution_program_reconciliation_immutable();
+
+DO $fn$
+DECLARE
+  v_candidate record;
+  v_original jsonb;
+  v_reconciled jsonb;
+BEGIN
+  -- The schema historically allowed teachers to choose 1..50, so the visible
+  -- v1/weak/25-minute/15-question shape is not proof of generator origin.
+  -- Reconcile only the single operator-adjudicated row observed in the fresh
+  -- clone after 187..200 and immediately before 201. Both its opaque program
+  -- reference and complete canonical state are compared by SHA-256; any drift
+  -- or any other 11..50 target is left untouched and the final startability
+  -- gate aborts fail-closed.
+  FOR v_candidate IN
+    WITH approved(program_ref_sha256,original_state_sha256) AS (VALUES (
+      'ffed1af63072eec0fdb12f58038fc651883888ce2ca237a66df7c7ab17cc98a0'::text,
+      '031fc94f59021c77137164f793e35a6b1f596e3387158bb88d70777856a17b60'::text
+    ))
+    SELECT program.id AS program_id,program.institution_id,program.student_id,
+      program.game,program.display_exam_ref,program.taxonomy_version,program.model_version,
+      program.question_exam_ref,program.scope_policy_version,
+      item.position,item.scheduled_date,item.task_type,item.title,item.reason_code,
+      item.outcome_code,item.duration_minutes,item.target_question_count,item.status,
+      approved.program_ref_sha256,approved.original_state_sha256
+    FROM public.institution_study_programs AS program
+    JOIN public.institution_study_program_items AS item ON item.program_id=program.id
+    JOIN approved ON approved.program_ref_sha256=pg_catalog.encode(
+      extensions.digest(pg_catalog.convert_to(program.program_ref,'UTF8'),'sha256'),'hex'
+    ) AND approved.original_state_sha256=pg_catalog.encode(extensions.digest(
+      pg_catalog.convert_to(jsonb_build_array(
+        program.id,program.program_ref,program.institution_id,program.classroom_id,
+        program.membership_id,program.student_id,program.teacher_id,program.week_start,
+        program.status,program.daily_minute_limit,program.model_version,program.item_count,
+        program.created_at,program.reviewed_at,program.published_at,program.completed_at,
+        program.archived_at,program.taxonomy_version,program.game,program.display_exam_ref,
+        program.question_exam_ref,program.scope_policy_version,item.program_id,item.position,
+        item.scheduled_date,item.task_type,item.title,item.reason_code,item.outcome_code,
+        item.duration_minutes,item.target_question_count,item.status,item.completed_at
+      )::text,'UTF8'),'sha256'),'hex'
+    )
+    WHERE program.status='published' AND program.model_version='institution-program-v1'
+      AND item.status='pending' AND item.task_type='verified_questions'
+      AND item.reason_code='weak_outcome' AND item.duration_minutes=25
+      AND item.target_question_count=15
+    ORDER BY program.id,item.position
+  LOOP
+    IF EXISTS (
+      SELECT 1 FROM public.institution_study_program_item_executions AS execution
+      WHERE execution.program_id=v_candidate.program_id
+        AND execution.position=v_candidate.position
+    ) THEN
+      RAISE EXCEPTION 'operator-approved target reconciliation has an existing execution'
+        USING ERRCODE='23514';
+    END IF;
+    v_original:=jsonb_build_object(
+      'scheduledDate',v_candidate.scheduled_date,'taskType',v_candidate.task_type,
+      'title',v_candidate.title,'reasonCode',v_candidate.reason_code,
+      'outcomeCode',v_candidate.outcome_code,'durationMinutes',v_candidate.duration_minutes,
+      'targetQuestionCount',v_candidate.target_question_count,'status',v_candidate.status,
+      'modelVersion',v_candidate.model_version,
+      'scope',jsonb_build_object('game',v_candidate.game,'examRef',v_candidate.display_exam_ref,
+        'questionExamRef',v_candidate.question_exam_ref,
+        'taxonomyVersion',v_candidate.taxonomy_version,
+        'scopePolicyVersion',v_candidate.scope_policy_version),
+      'adjudication',jsonb_build_object('programRefSha256',v_candidate.program_ref_sha256,
+        'originalStateSha256',v_candidate.original_state_sha256)
+    );
+    v_reconciled:=jsonb_build_object(
+      'scheduledDate',v_candidate.scheduled_date,'taskType',v_candidate.task_type,
+      'title',v_candidate.title,'reasonCode',v_candidate.reason_code,
+      'outcomeCode',v_candidate.outcome_code,'durationMinutes',v_candidate.duration_minutes,
+      'targetQuestionCount',10,'status',v_candidate.status,
+      'modelVersion',v_candidate.model_version,
+      'scope',jsonb_build_object('game',v_candidate.game,'examRef',v_candidate.display_exam_ref,
+        'questionExamRef',v_candidate.question_exam_ref,
+        'taxonomyVersion',v_candidate.taxonomy_version,
+        'scopePolicyVersion',v_candidate.scope_policy_version),
+      'adjudication',jsonb_build_object('programRefSha256',v_candidate.program_ref_sha256,
+        'originalStateSha256',v_candidate.original_state_sha256)
+    );
+    INSERT INTO public.institution_program_item_reconciliations(
+      program_id,position,institution_id,student_id,origin,migration_id,reason,
+      original_snapshot,reconciled_snapshot
+    ) VALUES (
+      v_candidate.program_id,v_candidate.position,v_candidate.institution_id,v_candidate.student_id,
+      'system_migration','201','operator_approved_legacy_target_to_session_capacity',
+      v_original,v_reconciled
+    );
+    UPDATE public.institution_study_program_items AS item
+    SET target_question_count=10
+    WHERE item.program_id=v_candidate.program_id AND item.position=v_candidate.position
+      AND item.status='pending' AND item.task_type='verified_questions'
+      AND item.reason_code='weak_outcome' AND item.duration_minutes=25
+      AND item.target_question_count=15;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'operator-approved target reconciliation lost its locked source row'
+        USING ERRCODE='40001';
+    END IF;
+  END LOOP;
+END
+$fn$;
 
 DO $fn$
 DECLARE
@@ -586,6 +715,9 @@ DECLARE
   v_target jsonb;
   v_today date := (pg_catalog.clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date;
 BEGIN
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('institution-program-execution-integrity-v201',201)
+  );
   IF p_user_id IS NULL OR p_request_id IS NULL OR p_program_ref !~ '^[0-9a-f]{32}$'
     OR p_position NOT BETWEEN 1 AND 21 THEN
     RAISE EXCEPTION 'invalid institution program item start' USING ERRCODE='22023';
@@ -706,6 +838,9 @@ DECLARE
   v_item public.institution_study_program_items%ROWTYPE;
 BEGIN
   IF NEW.completed_at IS NULL OR OLD.completed_at IS NOT NULL OR NEW.session_id IS NULL OR NEW.mode<>'practice' THEN RETURN NEW; END IF;
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('institution-program-execution-integrity-v201',201)
+  );
   SELECT execution.* INTO v_execution
   FROM public.institution_study_program_item_executions AS execution
   JOIN public.institution_study_programs AS program ON program.id=execution.program_id
@@ -760,6 +895,9 @@ DECLARE
   v_program public.institution_study_programs%ROWTYPE;
 BEGIN
   IF NEW.status<>'completed' OR OLD.status='completed' OR NEW.completed_at IS NULL THEN RETURN NEW; END IF;
+  PERFORM pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('institution-program-execution-integrity-v201',201)
+  );
   SELECT execution.* INTO v_execution
   FROM public.institution_study_program_item_executions AS execution
   JOIN public.institution_study_programs AS program ON program.id=execution.program_id
