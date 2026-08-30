@@ -8,6 +8,7 @@ import {
   type InstitutionStudentLearningAnalysis,
 } from './student-analysis'
 import { supportsAdaptiveDiagnosticScope } from '@/lib/diagnostic/scope'
+import { GAME_SLUGS } from '@/lib/constants/games'
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const timestampSchema = z.string().datetime({ offset: true })
@@ -29,6 +30,8 @@ export const institutionStudyProgramGenerationInputSchema = z.object({
 export const institutionStudyProgramDraftInputSchema = z.object({
   classroomId: z.string().uuid(),
   memberRef: z.string().regex(/^[0-9a-f]{32}$/),
+  game: z.enum(GAME_SLUGS),
+  examRef: z.string().regex(/^[A-Z0-9-]{2,10}$/),
   weekStart: dateSchema,
   dailyMinuteLimit: z.number().int().min(20).max(120),
   requestId: z.string().uuid(),
@@ -113,17 +116,30 @@ function candidates(analysis: InstitutionStudentLearningAnalysis): Candidate[] {
       || right.evidenceCount - left.evidenceCount
       || left.outcomeCode.localeCompare(right.outcomeCode, 'tr'))
 
-  const diagnostic = analysis.outcomes
+  const diagnosticOutcomes = analysis.outcomes
     .filter((outcome) => outcome.assessment.status === 'insufficient')
-    .map((outcome) => ({
+    .sort((left, right) => right.assessment.evidence.evidenceCount
+      - left.assessment.evidence.evidenceCount
+      || left.code.localeCompare(right.code, 'tr'))
+  let diagnosticAssigned = false
+  const diagnostic = diagnosticOutcomes.map((outcome) => {
+    const shouldAssignDiagnostic = diagnosticSupported
+      && outcome.details.diagnosticSources.length === 0
+      && !diagnosticAssigned
+    if (shouldAssignDiagnostic) diagnosticAssigned = true
+    return {
       outcomeCode: outcome.code,
       title: outcome.title,
       score: null,
       evidenceCount: outcome.assessment.evidence.evidenceCount,
-      kind: diagnosticSupported ? 'diagnostic' as const : 'baseline' as const,
-    }))
-    .sort((left, right) => right.evidenceCount - left.evidenceCount
-      || left.outcomeCode.localeCompare(right.outcomeCode, 'tr'))
+      // A completed short diagnostic is a separate baseline signal, never a
+      // mastery score. It samples the full released scope, so one weekly
+      // diagnostic is enough; remaining gaps become verified practice work.
+      kind: shouldAssignDiagnostic
+        ? 'diagnostic' as const
+        : 'baseline' as const,
+    }
+  })
 
   const review = analysis.outcomes
     .filter((outcome) => outcome.assessment.status === 'mastered')
@@ -151,7 +167,7 @@ function itemFor(candidate: Candidate, position: number, scheduledDate: string) 
       reasonCode: 'weak_outcome' as const,
       outcomeCode: candidate.outcomeCode,
       durationMinutes: 25,
-      targetQuestionCount: 15,
+      targetQuestionCount: 10,
     }
   }
   if (candidate.kind === 'diagnostic') {
@@ -181,9 +197,12 @@ function itemFor(candidate: Candidate, position: number, scheduledDate: string) 
   return {
     position,
     scheduledDate,
-    taskType: 'fsrs_review' as const,
-    title: `${candidate.title}: kalıcılık tekrarı`,
-    reasonCode: 'due_review' as const,
+    // A mastered outcome still benefits from reinforcement, but the product
+    // has no immutable due/FSRS snapshot bound to an institution assignment.
+    // Keep the task honest and completable through verified practice evidence.
+    taskType: 'verified_questions' as const,
+    title: `${candidate.title}: doğrulanmış pekiştirme çalışması`,
+    reasonCode: 'current_target' as const,
     outcomeCode: candidate.outcomeCode,
     durationMinutes: 15,
     targetQuestionCount: 10,

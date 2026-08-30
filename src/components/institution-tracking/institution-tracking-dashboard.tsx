@@ -688,7 +688,9 @@ function AnalysisPanel({
     setProgramBusy(true); setProgramError(null)
     try {
       setProgram(await createInstitutionStudyProgramDraft({
-        classroomId, memberRef: analysis.student.memberRef, weekStart: nextMonday(), dailyMinuteLimit: 45,
+        classroomId, memberRef: analysis.student.memberRef,
+        game: analysis.scope.game, examRef: analysis.scope.examRef,
+        weekStart: nextMonday(), dailyMinuteLimit: 45,
       }))
       setProgramDirty(false)
     } catch (error) {
@@ -831,11 +833,22 @@ function AnalysisPanel({
       )}
 
       {canManagePrograms && (
-        <ProgramReviewPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
+        <ProgramReviewPanel
+          classroomId={classroomId}
+          memberRef={analysis.student.memberRef}
+          game={analysis.scope.game}
+          examRef={analysis.scope.examRef}
+        />
       )}
 
       {canManagePrograms && (
-        <StudentReportPanel classroomId={classroomId} memberRef={analysis.student.memberRef} />
+        <StudentReportPanel
+          key={`${analysis.student.memberRef}:${analysis.scope.game}:${analysis.scope.examRef}:${analysis.scope.taxonomyVersion}`}
+          classroomId={classroomId}
+          memberRef={analysis.student.memberRef}
+          game={analysis.scope.game}
+          examRef={analysis.scope.examRef}
+        />
       )}
 
       {canManagePrograms && guardianEmailDraft && (
@@ -861,12 +874,16 @@ function OutcomeAnalysisPanel({ analysis }: { analysis: InstitutionStudentLearni
             <h3 className="text-lg font-black">Kazanım analizi</h3>
             <p className="mt-1 text-xs text-[var(--text-sub)]">Her skorun paydası, güveni ve son kanıt tarihi görünür.</p>
           </div>
-          <span className="shrink-0 rounded-lg bg-white/5 px-2 py-1 text-xs font-bold">{analysis.coverage.percentage}% kapsam</span>
+          <span className="shrink-0 rounded-lg bg-white/5 px-2 py-1 text-xs font-bold">Aktif soru bankası eşlemesi: %{analysis.coverage.percentage}</span>
         </div>
 
         <div className="mt-4 space-y-3">
           {analysis.outcomes.map((outcome) => {
             const status = statusCopy[outcome.assessment.status]
+            const latestDiagnostic = outcome.details.diagnosticSources.reduce(
+              (latest, source) => !latest || source.completedAt > latest.completedAt ? source : latest,
+              null as (typeof outcome.details.diagnosticSources)[number] | null,
+            )
             return (
               <article key={outcome.code} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.025] p-3 sm:p-4">
                 <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -902,6 +919,13 @@ function OutcomeAnalysisPanel({ analysis }: { analysis: InstitutionStudentLearni
                     <strong>{formatDate(outcome.assessment.evidence.lastEvidenceAt)}</strong>
                   </div>
                 </div>
+                {latestDiagnostic && (
+                  <p className="mt-3 rounded-lg border border-sky-400/15 bg-sky-400/5 p-2 text-xs leading-5 text-[var(--text-sub)]">
+                    <strong className="text-[var(--text)]">Kısa Keşif tanılaması:</strong>{' '}
+                    {latestDiagnostic.correctAttempts}/{latestDiagnostic.attempts} doğru · %{latestDiagnostic.score} · {formatDate(latestDiagnostic.completedAt)}.
+                    Bu yalnız başlangıç yönü sağlayan ayrı bir sinyaldir; hâkimiyet skoru değildir.
+                  </p>
+                )}
               </article>
             )
           })}

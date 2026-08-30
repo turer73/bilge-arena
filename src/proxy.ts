@@ -6,7 +6,10 @@ import {
   INSTITUTION_PILOT_ENTRY_PERMISSION,
   PLATFORM_ADMIN_ENTRY_PERMISSIONS,
 } from '@/lib/admin/platform-permissions'
-import { userHasAnyPlatformPermissionViaRest } from '@/lib/supabase/platform-access'
+import {
+  getUserProfileAccessStateViaRest,
+  userHasAnyPlatformPermissionViaRest,
+} from '@/lib/supabase/platform-access'
 import { safeMfaReturnPath } from '@/lib/auth/aal2'
 import { isSensitiveWorkspacePath } from '@/lib/privacy/telemetry-policy'
 import {
@@ -21,6 +24,17 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placehol
 function preserveRefreshedCookies(source: NextResponse, target: NextResponse): NextResponse {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie)
   return target
+}
+
+function clearSupabaseAuthCookies(request: NextRequest, response: NextResponse): NextResponse {
+  const authCookie = (name: string) => /^sb-.*-(?:auth-token|access-token)(?:\.\d+)?$/.test(name)
+    || name.includes('code-verifier')
+  const names = new Set([
+    ...request.cookies.getAll().map((cookie) => cookie.name),
+    ...response.cookies.getAll().map((cookie) => cookie.name),
+  ])
+  for (const name of names) if (authCookie(name)) response.cookies.delete(name)
+  return response
 }
 
 export async function proxy(request: NextRequest) {
@@ -89,6 +103,44 @@ export async function proxy(request: NextRequest) {
 
   // Oturumu yenile + kullanici bilgisini al (tek cagri)
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Soft-deleted (tombstoned) accounts cannot continue through an existing
+  // Auth cookie. The account-delete endpoint is the one intentional exception
+  // so a retried deletion request can finish its own cleanup; auth callback is
+  // also exempt because it performs the post-exchange tombstone check itself.
+  const isAccountDeleteApi = pathname === '/api/account/delete'
+  const isAuthCallback = pathname.startsWith('/auth/callback')
+  if (user && !isAccountDeleteApi && !isAuthCallback) {
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const accountState = await getUserProfileAccessStateViaRest({
+      supabaseUrl: SUPABASE_URL,
+      serviceKey,
+      userId: user.id,
+    })
+    if (accountState !== 'active') {
+      const deleted = accountState === 'deleted'
+      const isLoginPage = pathname === '/giris'
+      if (pathname.startsWith('/api/')) {
+        const denied = preserveRefreshedCookies(response, NextResponse.json(
+          deleted
+            ? { error: 'Hesap artık aktif değil', code: 'account_deleted' }
+            : { error: 'Hesap durumu doğrulanamıyor', code: 'account_access_unavailable' },
+          { status: deleted ? 410 : 503, headers: { 'Cache-Control': 'private, no-store' } },
+        ))
+        return deleted ? clearSupabaseAuthCookies(request, denied) : denied
+      }
+      if (isLoginPage) {
+        response.headers.set('Cache-Control', 'private, no-store')
+        return deleted ? clearSupabaseAuthCookies(request, response) : response
+      }
+      const loginUrl = new URL('/giris', request.url)
+      loginUrl.searchParams.set(deleted ? 'deleted' : 'error', deleted ? '1' : 'account_unavailable')
+      const redirect = NextResponse.redirect(loginUrl)
+      redirect.headers.set('Cache-Control', 'private, no-store')
+      const denied = preserveRefreshedCookies(response, redirect)
+      return deleted ? clearSupabaseAuthCookies(request, denied) : denied
+    }
+  }
 
   const isAdminSurface = pathname === '/admin' || pathname.startsWith('/admin/')
   const isAdminApi = pathname === '/api/admin' || pathname.startsWith('/api/admin/')

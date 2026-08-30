@@ -8,6 +8,7 @@ type CurriculumOutcomes = PublicSchema['Tables']['curriculum_outcomes']
 type QuestionOutcomes = PublicSchema['Tables']['question_outcomes']
 type UserOutcomeState = PublicSchema['Tables']['user_outcome_state']
 type Profiles = PublicSchema['Tables']['profiles']
+type InstitutionStudyPrograms = PublicSchema['Tables']['institution_study_programs']
 
 // Migration 177 is intentionally app-first. Keep the deploy-compatible shape
 // here until the production schema is migrated and generated types are synced.
@@ -222,6 +223,7 @@ type QuestionOutcomesWithSource = {
 
 type UserOutcomeStateV2Columns = {
   v2_attempts: number
+  verified_evidence_days: number
   difficulty_weighted_earned: number
   difficulty_weighted_possible: number
   timed_attempts: number
@@ -238,6 +240,34 @@ type UserOutcomeStateV2 = {
   Insert: UserOutcomeState['Insert'] & Partial<UserOutcomeStateV2Columns>
   Update: UserOutcomeState['Update'] & Partial<UserOutcomeStateV2Columns>
   Relationships: UserOutcomeState['Relationships']
+}
+
+// Migrations 183-194 add immutable curriculum and exam scope snapshots to
+// institution programs. Keep the client contract truthful while the checked
+// in generated file catches up with the production schema.
+type InstitutionStudyProgramsWithScope = {
+  Row: InstitutionStudyPrograms['Row'] & {
+    game: string
+    display_exam_ref: string
+    question_exam_ref: string | null
+    taxonomy_version: string
+    scope_policy_version: string
+  }
+  Insert: InstitutionStudyPrograms['Insert'] & {
+    game?: string
+    display_exam_ref?: string
+    question_exam_ref?: string | null
+    taxonomy_version?: string
+    scope_policy_version?: string
+  }
+  Update: InstitutionStudyPrograms['Update'] & {
+    game?: string
+    display_exam_ref?: string
+    question_exam_ref?: string | null
+    taxonomy_version?: string
+    scope_policy_version?: string
+  }
+  Relationships: InstitutionStudyPrograms['Relationships']
 }
 
 type AdaptiveDiagnosticSessionsRow = {
@@ -337,7 +367,7 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
   public: Omit<PublicSchema, 'Functions' | 'Tables'> & {
     Tables: Omit<
       PublicSchema['Tables'],
-      'profiles' | 'user_achievements' | 'curriculum_outcomes' | 'question_outcomes' | 'user_outcome_state'
+      'profiles' | 'user_achievements' | 'curriculum_outcomes' | 'question_outcomes' | 'user_outcome_state' | 'institution_study_programs'
     > & {
       profiles: ProfilesWithPrivacyPreferences
       user_achievements: UserAchievementsWithSource
@@ -350,6 +380,7 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       curriculum_outcomes: CurriculumOutcomesWithGraph
       question_outcomes: QuestionOutcomesWithSource
       user_outcome_state: UserOutcomeStateV2
+      institution_study_programs: InstitutionStudyProgramsWithScope
       verified_attempts: {
         Row: VerifiedAttemptsRow
         Insert: VerifiedAttemptsInsert
@@ -798,6 +829,33 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_as_of_date: string }
         Returns: Json
       }
+      // Migration 201. These app-first RPC contracts are removed from this
+      // overlay after production types are regenerated from the promoted schema.
+      start_my_institution_study_program_item: {
+        Args: { p_user_id: string; p_program_ref: string; p_position: number; p_request_id: string }
+        Returns: Json
+      }
+      get_institution_student_diagnostic_sources: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_display_exam_ref: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
+      get_institution_student_program_history_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_display_exam_ref: string
+        }
+        Returns: Json
+      }
       open_institution_student_followup: {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_reason_code: string; p_note: string | null; p_request_id: string }
         Returns: Json
@@ -826,7 +884,7 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Returns: Json
       }
       get_institution_classroom_growth_metrics: {
-        Args: { p_user_id: string; p_classroom_id: string; p_window_end: string }
+        Args: { p_user_id: string; p_classroom_id: string; p_window_end: string; p_taxonomy_version: string }
         Returns: Json
       }
       get_institution_classroom_growth_metrics_v2: {
@@ -869,6 +927,16 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
       }
       get_institution_student_reports: {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string }
+        Returns: Json
+      }
+      get_institution_student_reports_v2: {
+        Args: {
+          p_user_id: string
+          p_classroom_id: string
+          p_member_ref: string
+          p_game: string
+          p_display_exam_ref: string
+        }
         Returns: Json
       }
       issue_verified_exam_attempt: {

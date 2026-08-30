@@ -147,8 +147,12 @@ const wordquestInstitutionReleaseSql = readFileSync(
   join(migrationsDir, '200_release_ydt_english_institution_scope.sql'),
   'utf8',
 )
+const institutionProgramExecutionIntegritySql = readFileSync(
+  join(migrationsDir, '201_institution_program_execution_integrity.sql'),
+  'utf8',
+)
 
-suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution pilot real PostgreSQL acceptance', () => {
+suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution pilot real PostgreSQL acceptance', () => {
   let client
   let platformAdmin
   let managerOne
@@ -372,7 +376,8 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution 
         game text NOT NULL,
         exam_ref text,
         taxonomy_version text,
-        is_active boolean NOT NULL DEFAULT true
+        is_active boolean NOT NULL DEFAULT true,
+        created_at timestamptz NOT NULL DEFAULT now()
       );
       CREATE TABLE public.mastery_outcome_evidence(
         answer_id uuid NOT NULL,
@@ -554,8 +559,11 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution 
       game,display_exam_ref,question_exam_ref,taxonomy_version,release_status,diagnostic_enabled
     ) VALUES('matematik','TYT','TYT','ba-tyt-math-v1','released',true)`)
     await client.query(`INSERT INTO public.curriculum_outcomes(
-      code,game,exam_ref,taxonomy_version,is_active
-    ) VALUES('MAT-TEST-01','matematik','TYT','ba-tyt-math-v1',true)`)
+      code,title,category,sort_order,game,exam_ref,taxonomy_version,is_active
+    ) VALUES(
+      'MAT-TEST-01','Matematik Kazanımı','temel',1,
+      'matematik','TYT','ba-tyt-math-v1',true
+    )`)
     await client.query(institutionScopeAlignmentSql)
     await client.query(institutionScopeAlignmentSql)
     await client.query(institutionTaxonomyConsumersSql)
@@ -3182,6 +3190,8 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution 
         ADD COLUMN IF NOT EXISTS published_revision_id uuid;
       ALTER TABLE public.verified_attempts
         ADD COLUMN IF NOT EXISTS game text,
+        ADD COLUMN IF NOT EXISTS mode text,
+        ADD COLUMN IF NOT EXISTS started_at timestamptz NOT NULL DEFAULT clock_timestamp(),
         ADD COLUMN IF NOT EXISTS completed_at timestamptz,
         ADD COLUMN IF NOT EXISTS session_id uuid,
         ADD COLUMN IF NOT EXISTS question_ids uuid[];
@@ -3263,9 +3273,15 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution 
       game, displayExamRef, questionExamRef, taxonomyVersion, categories,
     }) {
       for (const [categoryIndex, categorySpec] of categories.entries()) {
-        const [category, candidateCount] = categorySpec
+        const [
+          category,
+          candidateCount,
+          outcomeCode = `GATE-${game.toUpperCase()}-${categoryIndex + 1}`,
+          mappingSource = 'taxonomy_auto',
+          reuseExistingOutcome = false,
+        ] = categorySpec
         const nodeId = randomUUID()
-        const outcomeId = randomUUID()
+        let outcomeId
         await client.query(`INSERT INTO public.curriculum_nodes(
           id,parent_id,code,title,node_type,is_active,game,exam_ref,taxonomy_version,category
         ) VALUES($1,NULL,$2,$3,'outcome',true,$4,$5,$6,$7)`, [
@@ -3277,19 +3293,35 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution 
           taxonomyVersion,
           category,
         ])
-        await client.query(`INSERT INTO public.curriculum_outcomes(
-          id,code,node_id,title,category,sort_order,game,exam_ref,taxonomy_version,is_active
-        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,true)`, [
-          outcomeId,
-          `GATE-${game.toUpperCase()}-${categoryIndex + 1}`,
-          nodeId,
-          `${game} ${category}`,
-          category,
-          categoryIndex + 1,
-          game,
-          displayExamRef,
-          taxonomyVersion,
-        ])
+        if (reuseExistingOutcome) {
+          const existingOutcome = (await client.query(`UPDATE public.curriculum_outcomes
+            SET category=$2,sort_order=$3,node_id=$7
+            WHERE code=$1
+              AND game=$4
+              AND exam_ref=$5
+              AND taxonomy_version=$6
+            RETURNING id`, [
+            outcomeCode, category, categoryIndex + 1,
+            game, displayExamRef, taxonomyVersion, nodeId,
+          ])).rows
+          expect(existingOutcome).toHaveLength(1)
+          outcomeId = existingOutcome[0].id
+        } else {
+          outcomeId = randomUUID()
+          await client.query(`INSERT INTO public.curriculum_outcomes(
+            id,code,node_id,title,category,sort_order,game,exam_ref,taxonomy_version,is_active
+          ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,true)`, [
+            outcomeId,
+            outcomeCode,
+            nodeId,
+            `${game} ${category}`,
+            category,
+            categoryIndex + 1,
+            game,
+            displayExamRef,
+            taxonomyVersion,
+          ])
+        }
         for (let questionIndex = 0; questionIndex < candidateCount; questionIndex += 1) {
           const questionId = randomUUID()
           const revisionId = randomUUID()
@@ -3316,18 +3348,42 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution 
             [revisionId, questionId],
           )
           await client.query(`INSERT INTO public.question_outcomes(
-            question_id,outcome_id,weight,is_primary,mapping_source
-          ) VALUES($1,$2,1,true,'taxonomy_auto')`, [questionId, outcomeId])
+            question_id,outcome_id,weight,is_primary,mapping_source,created_at
+          ) SELECT $1,outcome.id,1,true,$3,
+              CASE WHEN $3='manual' THEN outcome.created_at ELSE clock_timestamp() END
+            FROM public.curriculum_outcomes AS outcome
+            WHERE outcome.id=$2`, [questionId, outcomeId, mappingSource])
         }
       }
+    }
+
+    async function mathLegacyProvenance() {
+      return (await client.query(`SELECT
+        count(*)::integer AS mapping_count,
+        count(*) FILTER (WHERE mapping.mapping_source='manual')::integer AS manual_count,
+        count(*) FILTER (WHERE mapping.mapping_source='taxonomy_auto')::integer AS auto_count,
+        bool_and(mapping.is_primary) AS all_primary,
+        bool_and(mapping.weight=1) AS all_unit_weight,
+        bool_and(mapping.created_at=outcome.created_at) AS timestamps_bound,
+        (SELECT count(*)::integer
+         FROM public.curriculum_outcomes AS scope_outcome
+         WHERE scope_outcome.game='matematik'
+           AND scope_outcome.exam_ref='TYT'
+           AND scope_outcome.taxonomy_version='ba-tyt-math-v1'
+           AND scope_outcome.is_active) AS scope_outcome_count
+      FROM public.question_outcomes AS mapping
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      WHERE outcome.code='MAT-SAY-01'`)).rows[0]
     }
 
     await seedDiagnosticScope({
       game: 'matematik', displayExamRef: 'TYT', questionExamRef: 'TYT',
       taxonomyVersion: 'ba-tyt-math-v1',
       categories: [
-        ['sayilar-gate', 2], ['denklemler-gate', 2], ['fonksiyonlar-gate', 2],
-        ['problemler-gate', 2], ['geometri-gate', 1], ['olasilik-gate', 1],
+        ['sayilar', 2, 'MAT-SAY-01', 'manual'],
+        ['denklemler_gate', 2, 'MAT-TEST-01', 'taxonomy_auto', true],
+        ['fonksiyonlar_gate', 2],
+        ['problemler_gate', 2], ['geometri_gate', 1], ['olasilik_gate', 1],
       ],
     })
     await seedDiagnosticScope({
@@ -3353,10 +3409,29 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution 
       ],
     })
 
+    expect(await mathLegacyProvenance()).toEqual({
+      mapping_count: 2,
+      manual_count: 2,
+      auto_count: 0,
+      all_primary: true,
+      all_unit_weight: true,
+      timestamps_bound: true,
+      scope_outcome_count: 6,
+    })
+
     await client.query(adaptiveDiagnosticSql)
     await client.query(adaptiveDiagnosticEvidenceSql)
     await client.query(adaptiveDiagnosticRegistryGateSql)
     await client.query(adaptiveDiagnosticV3Sql)
+    expect(await mathLegacyProvenance()).toEqual({
+      mapping_count: 2,
+      manual_count: 0,
+      auto_count: 2,
+      all_primary: true,
+      all_unit_weight: true,
+      timestamps_bound: true,
+      scope_outcome_count: 6,
+    })
 
     async function expectMigrationRollback(setupSql, migrationSql) {
       await client.query('BEGIN')
@@ -3675,5 +3750,641 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-200 institution 
     expect((await client.query(
       "SELECT public.resolve_released_diagnostic_scope('sosyal','TYT') AS scope",
     )).rows[0].scope).toBeNull()
+  }, 120_000)
+
+  it('binds institution program execution to verified work, diagnostics, and a mature Istanbul review gate', async () => {
+    // The 195-200 test above establishes the disposable question/revision and
+    // diagnostic chain on which 201 depends.  Compile 201 only after that
+    // real chain exists, rather than validating its trigger bodies as text.
+    const legacyStudent = randomUUID()
+    await client.query(
+      'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
+      [legacyStudent, 'legacy-diagnostic-student', 'legacy-diagnostic-student'],
+    )
+    const legacyClassroom = (await client.query(`INSERT INTO public.teacher_classrooms(
+      teacher_id,name,institution_id
+    ) VALUES($1,'Legacy Diagnostic Classroom',$2) RETURNING id`, [managerOne, institutionOne])).rows[0].id
+    const legacyMembership = (await client.query(`INSERT INTO public.teacher_classroom_memberships(
+      classroom_id,student_id
+    ) VALUES($1,$2) RETURNING id`, [legacyClassroom, legacyStudent])).rows[0].id
+    const legacyOutcomes = (await client.query(`SELECT code,title
+      FROM public.curriculum_outcomes
+      WHERE game='matematik' AND exam_ref='TYT' AND taxonomy_version='ba-tyt-math-v1'
+        AND is_active
+        AND code IN ('MAT-SAY-01','MAT-TEST-01','GATE-MATEMATIK-3')
+      ORDER BY code`)).rows
+    expect(legacyOutcomes).toHaveLength(3)
+    const legacyWeekStart = (await client.query(
+      "SELECT date_trunc('week',clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date AS value",
+    )).rows[0].value
+    const legacyProgram = (await client.query(`INSERT INTO public.institution_study_programs(
+      institution_id,classroom_id,membership_id,student_id,teacher_id,week_start,status,
+      daily_minute_limit,model_version,item_count,reviewed_at,published_at,
+      game,display_exam_ref,question_exam_ref,taxonomy_version,scope_policy_version
+    ) VALUES($1,$2,$3,$4,$5,$6,'published',30,'institution-program-v1',3,
+      clock_timestamp(),clock_timestamp(),'matematik','TYT','TYT','ba-tyt-math-v1','institution-scope-v1'
+    ) RETURNING id`, [
+      institutionOne, legacyClassroom, legacyMembership, legacyStudent, managerOne, legacyWeekStart,
+    ])).rows[0]
+    for (let index = 0; index < legacyOutcomes.length; index += 1) {
+      await client.query(`INSERT INTO public.institution_study_program_items(
+        program_id,position,scheduled_date,task_type,title,reason_code,outcome_code,
+        duration_minutes,target_question_count
+      ) VALUES($1,$2,$3,'diagnostic',$4,'diagnostic_gap',$5,20,10)`, [
+        legacyProgram.id, index + 1, legacyWeekStart,
+        `${legacyOutcomes[index].title}: kısa durum tespiti`, legacyOutcomes[index].code,
+      ])
+    }
+    await client.query(institutionProgramExecutionIntegritySql)
+    await client.query(institutionProgramExecutionIntegritySql)
+
+    expect((await client.query(`SELECT position,task_type,reason_code
+      FROM public.institution_study_program_items WHERE program_id=$1 ORDER BY position`, [
+      legacyProgram.id,
+    ])).rows).toEqual([
+      { position: 1, task_type: 'diagnostic', reason_code: 'diagnostic_gap' },
+      { position: 2, task_type: 'verified_questions', reason_code: 'current_target' },
+      { position: 3, task_type: 'verified_questions', reason_code: 'current_target' },
+    ])
+    const reconciliation = (await client.query(`SELECT position,origin,migration_id,reason,
+      original_snapshot->>'taskType' AS original_task,
+      reconciled_snapshot->>'taskType' AS reconciled_task
+      FROM public.institution_program_item_reconciliations
+      WHERE program_id=$1 ORDER BY position`, [legacyProgram.id])).rows
+    expect(reconciliation).toEqual([
+      {
+        position: 2, origin: 'system_migration', migration_id: '201',
+        reason: 'duplicate_full_scope_diagnostic_to_verified_baseline',
+        original_task: 'diagnostic', reconciled_task: 'verified_questions',
+      },
+      {
+        position: 3, origin: 'system_migration', migration_id: '201',
+        reason: 'duplicate_full_scope_diagnostic_to_verified_baseline',
+        original_task: 'diagnostic', reconciled_task: 'verified_questions',
+      },
+    ])
+    expect((await client.query(`SELECT
+      has_table_privilege('public','public.institution_program_item_reconciliations','SELECT') AS public_read,
+      has_table_privilege('authenticated','public.institution_program_item_reconciliations','SELECT') AS authenticated_read,
+      has_table_privilege('service_role','public.institution_program_item_reconciliations','SELECT') AS service_read`)).rows[0]).toEqual({
+      public_read: false, authenticated_read: false, service_read: false,
+    })
+    await expectPgError(
+      () => client.query(`UPDATE public.institution_program_item_reconciliations
+        SET reconciled_snapshot=reconciled_snapshot WHERE program_id=$1`, [legacyProgram.id]),
+      '42501',
+    )
+
+    const student = randomUUID()
+    const otherStudent = randomUUID()
+    const otherManager = randomUUID()
+    for (const [id, name] of [
+      [student, 'execution-student'], [otherStudent, 'execution-other'], [otherManager, 'execution-manager'],
+    ]) {
+      await client.query(
+        'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
+        [id, name, name],
+      )
+      await client.query(
+        'INSERT INTO auth.users(id,email,email_confirmed_at) VALUES($1,$2,clock_timestamp())',
+        [id, `${name}@example.com`],
+      )
+    }
+
+    // Give the second learner a genuine, operational but distinct tenant.
+    // Knowing a program_ref must not cross that tenant/student boundary.
+    const otherInstitution = (await client.query(`INSERT INTO public.pilot_institutions(
+      name,status,created_by,pilot_kind
+    ) VALUES('Execution Foreign Tenant','active',$1,'legacy') RETURNING id`, [platformAdmin])).rows[0].id
+    await client.query(`INSERT INTO public.pilot_institution_memberships(
+      institution_id,user_id,role,assigned_by
+    ) VALUES($1,$2,'manager',$3)`, [otherInstitution, otherManager, platformAdmin])
+    const otherClassroom = (await client.query(`INSERT INTO public.teacher_classrooms(
+      teacher_id,name,institution_id
+    ) VALUES($1,'Foreign Execution Classroom',$2) RETURNING id`, [otherManager, otherInstitution])).rows[0].id
+    const otherMembership = (await client.query(`INSERT INTO public.teacher_classroom_memberships(
+      classroom_id,student_id
+    ) VALUES($1,$2) RETURNING id,member_ref`, [otherClassroom, otherStudent])).rows[0]
+
+    const classroom = (await client.query(`INSERT INTO public.teacher_classrooms(
+      teacher_id,name,institution_id
+    ) VALUES($1,'Execution Integrity Classroom',$2) RETURNING id`, [
+      managerOne, institutionOne,
+    ])).rows[0].id
+    const membership = (await client.query(`INSERT INTO public.teacher_classroom_memberships(
+      classroom_id,student_id
+    ) VALUES($1,$2) RETURNING id,member_ref,accepted_at`, [classroom, student])).rows[0]
+    const outcome = (await client.query(`SELECT id,code,category
+      FROM public.curriculum_outcomes
+      WHERE game='matematik' AND exam_ref='TYT' AND taxonomy_version='ba-tyt-math-v1'
+        AND is_active AND code='MAT-SAY-01'`)).rows[0]
+    expect(outcome).toEqual(expect.objectContaining({ code: expect.any(String), category: expect.any(String) }))
+    const weekStart = (await client.query(
+      "SELECT to_char(date_trunc('week',clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date,'YYYY-MM-DD') AS value",
+    )).rows[0].value
+    const today = (await client.query(
+      "SELECT (clock_timestamp() AT TIME ZONE 'Europe/Istanbul')::date AS value",
+    )).rows[0].value
+    const directBypassWeek = (await client.query(
+      'SELECT ($1::date + 7)::text AS value', [weekStart],
+    )).rows[0].value
+    const directBypassItems = JSON.stringify([{
+      position: 1,
+      scheduledDate: directBypassWeek,
+      taskType: 'paper_pack',
+      title: 'Baslatilamayan eski RPC gorevi',
+      reasonCode: 'challenge',
+      durationMinutes: 20,
+      targetQuestionCount: 40,
+    }])
+    const directBypassDraft = await authenticatedRpc(
+      managerOne,
+      'public.create_institution_study_program_draft_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+      [
+        managerOne, classroom, membership.member_ref, 'matematik', 'TYT',
+        directBypassWeek, 30, 'institution-program-v1', directBypassItems, randomUUID(),
+      ],
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        managerOne,
+        'public.publish_institution_study_program($1,$2,$3)',
+        [managerOne, directBypassDraft.programRef, randomUUID()],
+      ),
+      '23514',
+    )
+    expect((await client.query(`SELECT status FROM public.institution_study_programs
+      WHERE program_ref=$1`, [directBypassDraft.programRef])).rows[0]).toEqual({ status: 'draft' })
+
+    let program
+    await client.query('BEGIN')
+    try {
+      program = (await client.query(`INSERT INTO public.institution_study_programs(
+        institution_id,classroom_id,membership_id,student_id,teacher_id,week_start,status,
+        daily_minute_limit,model_version,item_count,
+        game,display_exam_ref,question_exam_ref,taxonomy_version,scope_policy_version
+      ) VALUES($1,$2,$3,$4,$5,$6,'draft',30,'institution-program-v1',3,
+        'matematik','TYT','TYT','ba-tyt-math-v1','institution-scope-v1'
+      ) RETURNING id,program_ref`, [
+        institutionOne, classroom, membership.id, student, managerOne, weekStart,
+      ])).rows[0]
+      await client.query(`INSERT INTO public.institution_study_program_items(
+        program_id,position,scheduled_date,task_type,title,reason_code,outcome_code,
+        duration_minutes,target_question_count
+      ) VALUES
+        ($1,1,$2::date + 1,'verified_questions','Yarin acilacak pratik','weak_outcome',$3,20,10),
+        ($1,2,$2,'verified_questions','On soruluk pratik','weak_outcome',$3,20,10),
+        ($1,3,$2,'diagnostic','On soruluk kesif','diagnostic_gap',$3,20,10)`, [
+        program.id, today, outcome.code,
+      ])
+      await client.query(`UPDATE public.institution_study_programs
+        SET status='published',reviewed_at=clock_timestamp(),published_at=clock_timestamp()
+        WHERE id=$1`, [program.id])
+      await client.query('COMMIT')
+    } catch (programError) {
+      await client.query('ROLLBACK')
+      throw programError
+    }
+
+    const retiredCapabilityItems = JSON.stringify([{
+      position: 1,
+      scheduledDate: weekStart,
+      taskType: 'verified_questions',
+      title: 'Yayin yetkisi emeklilik yarisi',
+      reasonCode: 'weak_outcome',
+      outcomeCode: outcome.code,
+      durationMinutes: 20,
+      targetQuestionCount: 10,
+    }])
+    const retiredCapabilityDraft = await authenticatedRpc(
+      otherManager,
+      'public.create_institution_study_program_draft_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+      [
+        otherManager, otherClassroom, otherMembership.member_ref, 'matematik', 'TYT',
+        weekStart, 30, 'institution-program-v1', retiredCapabilityItems, randomUUID(),
+      ],
+    )
+    const retiredStartRequest = randomUUID()
+    await client.query('BEGIN')
+    try {
+      await client.query(`UPDATE public.institution_scope_capabilities
+        SET capability_status='retired'
+        WHERE game='matematik' AND display_exam_ref='TYT'`)
+
+      await client.query('SAVEPOINT retired_program_publish')
+      await client.query('SELECT public.publish_institution_study_program($1,$2,$3)', [
+        otherManager, retiredCapabilityDraft.programRef, randomUUID(),
+      ])
+      await expectPgError(
+        () => client.query('SET CONSTRAINTS institution_program_startable_contract IMMEDIATE'),
+        'P0002',
+      )
+      await client.query('ROLLBACK TO SAVEPOINT retired_program_publish')
+
+      await client.query('SAVEPOINT retired_program_start')
+      await expectPgError(
+        () => client.query(
+          'SELECT public.start_my_institution_study_program_item($1,$2,$3,$4)',
+          [student, program.program_ref, 2, retiredStartRequest],
+        ),
+        'P0002',
+      )
+      await client.query('ROLLBACK TO SAVEPOINT retired_program_start')
+    } finally {
+      await client.query('ROLLBACK')
+    }
+    expect((await client.query(`SELECT status FROM public.institution_study_programs
+      WHERE program_ref=$1`, [retiredCapabilityDraft.programRef])).rows[0]).toEqual({ status: 'draft' })
+    expect((await client.query(`SELECT count(*)::integer AS count
+      FROM public.institution_study_program_item_executions
+      WHERE request_id=$1`, [retiredStartRequest])).rows[0]).toEqual({ count: 0 })
+
+    // The student-facing RPC is server-only.  The execution table itself is
+    // private too; public and authenticated callers have neither route.
+    const acl = (await client.query(`SELECT
+      has_function_privilege('public',
+        'public.start_my_institution_study_program_item(uuid,text,smallint,uuid)', 'EXECUTE') AS public_start,
+      has_function_privilege('anon',
+        'public.start_my_institution_study_program_item(uuid,text,smallint,uuid)', 'EXECUTE') AS anon_start,
+      has_function_privilege('authenticated',
+        'public.start_my_institution_study_program_item(uuid,text,smallint,uuid)', 'EXECUTE') AS authenticated_start,
+      has_function_privilege('service_role',
+        'public.start_my_institution_study_program_item(uuid,text,smallint,uuid)', 'EXECUTE') AS service_start,
+      has_function_privilege('public',
+        'public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz)', 'EXECUTE') AS public_diagnostic,
+      has_function_privilege('anon',
+        'public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz)', 'EXECUTE') AS anon_diagnostic,
+      has_function_privilege('authenticated',
+        'public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz)', 'EXECUTE') AS authenticated_diagnostic,
+      has_function_privilege('service_role',
+        'public.get_institution_student_diagnostic_sources(uuid,uuid,text,text,text,timestamptz)', 'EXECUTE') AS service_diagnostic,
+      has_function_privilege('public',
+        'public.get_institution_student_reports_v2(uuid,uuid,text,text,text)', 'EXECUTE') AS public_reports,
+      has_function_privilege('anon',
+        'public.get_institution_student_reports_v2(uuid,uuid,text,text,text)', 'EXECUTE') AS anon_reports,
+      has_function_privilege('authenticated',
+        'public.get_institution_student_reports_v2(uuid,uuid,text,text,text)', 'EXECUTE') AS authenticated_reports,
+      has_function_privilege('service_role',
+        'public.get_institution_student_reports_v2(uuid,uuid,text,text,text)', 'EXECUTE') AS service_reports,
+      has_table_privilege('public','public.institution_study_program_item_executions','SELECT') AS public_table,
+      has_table_privilege('authenticated','public.institution_study_program_item_executions','SELECT') AS authenticated_table,
+      has_table_privilege('service_role','public.institution_study_program_item_executions','SELECT') AS service_table`)).rows[0]
+    expect(acl).toEqual({
+      public_start: false, anon_start: false, authenticated_start: false, service_start: true,
+      public_diagnostic: false, anon_diagnostic: false,
+      authenticated_diagnostic: true, service_diagnostic: true,
+      public_reports: false, anon_reports: false,
+      authenticated_reports: false, service_reports: true,
+      public_table: false, authenticated_table: false, service_table: false,
+    })
+    expect(await authenticatedRpc(
+      managerOne,
+      `public.get_institution_student_diagnostic_sources(
+        $1,$2,$3,$4,$5,clock_timestamp()+interval '1 second'
+      )`,
+      [managerOne, classroom, membership.member_ref, 'matematik', 'TYT'],
+    )).toEqual({ sources: [] })
+    await expectPgError(
+      () => authenticatedRpc(
+        managerOne,
+        `public.get_institution_student_diagnostic_sources(
+          $1,$2,$3,$4,$5,clock_timestamp()+interval '1 second'
+        )`,
+        [managerOne, classroom, membership.member_ref, 'matematik', 'TYT'],
+        'aal1',
+      ),
+      '42501',
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        otherManager,
+        `public.get_institution_student_diagnostic_sources(
+          $1,$2,$3,$4,$5,clock_timestamp()+interval '1 second'
+        )`,
+        [otherManager, classroom, membership.member_ref, 'matematik', 'TYT'],
+      ),
+      '42501',
+    )
+    await expectPgError(
+      () => authenticatedRpc(
+        student,
+        'public.start_my_institution_study_program_item($1,$2,$3,$4)',
+        [student, program.program_ref, 2, randomUUID()],
+      ),
+      '42501',
+    )
+
+    await expectPgError(
+      () => rpc('public.start_my_institution_study_program_item($1,$2,$3,$4)', [
+        student, program.program_ref, 1, randomUUID(),
+      ]),
+      '22023',
+    )
+    await expectPgError(
+      () => rpc('public.start_my_institution_study_program_item($1,$2,$3,$4)', [
+        otherStudent, program.program_ref, 2, randomUUID(),
+      ]),
+      'P0002',
+    )
+
+    const seedPracticeAttempt = async (attemptId, sessionId, startedAtSql = 'clock_timestamp()') => {
+      await client.query('INSERT INTO public.game_sessions(id,user_id) VALUES($1,$2)', [sessionId, student])
+      await client.query(`INSERT INTO public.verified_attempts(id,user_id,game,mode,started_at)
+        VALUES($1,$2,'matematik','practice',${startedAtSql})`, [attemptId, student])
+      for (let index = 0; index < 10; index += 1) {
+        const answerId = randomUUID()
+        await client.query(`INSERT INTO public.session_answers(
+          id,session_id,user_id,question_id,is_correct,is_skipped
+        ) VALUES($1,$2,$3,$4,true,false)`, [answerId, sessionId, student, randomUUID()])
+        await client.query(`INSERT INTO public.mastery_outcome_evidence(
+          answer_id,attempt_id,user_id,outcome_id,is_correct,mapping_weight,
+          difficulty_weighted_earned,difficulty_weighted_possible,max_hint_stage
+        ) VALUES($1,$2,$3,$4,true,1,1,1,0)`, [answerId, attemptId, student, outcome.id])
+      }
+    }
+    const preStartSessionId = randomUUID()
+    const preStartAttemptId = randomUUID()
+    await seedPracticeAttempt(
+      preStartAttemptId, preStartSessionId, "clock_timestamp()-interval '1 minute'",
+    )
+
+    const practiceRequest = randomUUID()
+    const startedPractice = await rpc('public.start_my_institution_study_program_item($1,$2,$3,$4)', [
+      student, program.program_ref, 2, practiceRequest,
+    ])
+    expect(startedPractice).toMatchObject({ status: 'started', replayed: false })
+    expect(startedPractice.startTarget).toMatchObject({ kind: 'practice', requiredMode: 'practice' })
+    expect(startedPractice.startTarget.href).toContain('mode=practice')
+    expect(await rpc('public.start_my_institution_study_program_item($1,$2,$3,$4)', [
+      student, program.program_ref, 2, practiceRequest,
+    ])).toMatchObject({ status: 'started', replayed: true })
+    await expectPgError(
+      () => rpc('public.start_my_institution_study_program_item($1,$2,$3,$4)', [
+        student, program.program_ref, 3, randomUUID(),
+      ]),
+      '23505',
+    )
+
+    await client.query(`UPDATE public.verified_attempts
+      SET session_id=$2,completed_at=clock_timestamp() WHERE id=$1`, [preStartAttemptId, preStartSessionId])
+    expect((await client.query(`SELECT execution.status,
+        execution.verified_attempt_id IS NOT NULL AS bound,
+        attempt.started_at<execution.started_at AS source_predates_execution
+      FROM public.institution_study_program_item_executions execution
+      JOIN public.verified_attempts attempt ON attempt.id=$2
+      WHERE execution.program_id=$1 AND execution.position=2`, [
+      program.id, preStartAttemptId,
+    ])).rows[0]).toEqual({
+      status: 'started', bound: false, source_predates_execution: true,
+    })
+
+    const sessionId = randomUUID()
+    const attemptId = randomUUID()
+    await seedPracticeAttempt(attemptId, sessionId)
+    await client.query(`UPDATE public.verified_attempts
+      SET session_id=$2,completed_at=clock_timestamp() WHERE id=$1`, [attemptId, sessionId])
+    expect((await client.query(`SELECT status,verified_attempt_id IS NOT NULL AS bound
+      FROM public.institution_study_program_item_executions
+      WHERE program_id=$1 AND position=2`, [program.id])).rows[0]).toEqual({
+      status: 'completed', bound: true,
+    })
+    expect((await client.query(`SELECT status FROM public.institution_study_program_items
+      WHERE program_id=$1 AND position=2`, [program.id])).rows[0]).toEqual({ status: 'completed' })
+
+    const diagnosticQuestions = (await client.query(`SELECT DISTINCT ON (mapping.outcome_id)
+      question.id,mapping.outcome_id
+      FROM public.questions AS question
+      JOIN public.question_outcomes AS mapping
+        ON mapping.question_id=question.id AND mapping.is_primary
+      JOIN public.curriculum_outcomes AS mapped_outcome
+        ON mapped_outcome.id=mapping.outcome_id
+      WHERE question.game='matematik' AND question.exam_ref='TYT' AND question.is_active
+        AND mapped_outcome.game='matematik' AND mapped_outcome.exam_ref='TYT'
+        AND mapped_outcome.taxonomy_version='ba-tyt-math-v1'
+      ORDER BY mapping.outcome_id,question.id`)).rows
+    const diagnosticCandidates = (await client.query(`SELECT question.id,mapping.outcome_id
+      FROM public.questions AS question
+      JOIN public.question_outcomes AS mapping
+        ON mapping.question_id=question.id AND mapping.is_primary
+      JOIN public.curriculum_outcomes AS mapped_outcome
+        ON mapped_outcome.id=mapping.outcome_id
+      WHERE question.game='matematik' AND question.exam_ref='TYT' AND question.is_active
+        AND mapped_outcome.game='matematik' AND mapped_outcome.exam_ref='TYT'
+        AND mapped_outcome.taxonomy_version='ba-tyt-math-v1'
+      ORDER BY mapping.outcome_id,question.id`)).rows
+    const firstPerOutcome = diagnosticQuestions.map((row) => row.id)
+    const remaining = diagnosticCandidates
+      .filter((row) => !firstPerOutcome.includes(row.id))
+      .map((row) => row.id)
+    const diagnosticPlan = [...firstPerOutcome, ...remaining].slice(0, 10)
+    expect(diagnosticPlan).toHaveLength(10)
+
+    const finishDiagnosticSession = async (sessionId, firstQuestionId) => {
+      let currentQuestionId = firstQuestionId
+      for (let index = 0; index < 10; index += 1) {
+        const nextQuestionId = index === 9 ? null : diagnosticPlan[index + 1]
+        const recorded = await rpc('public.record_adaptive_diagnostic_answer_v3($1,$2,$3,$4,$5,$6,$7)', [
+          student, sessionId, currentQuestionId, 0, 100, randomUUID(), nextQuestionId,
+        ])
+        if (index < 9) currentQuestionId = recorded.nextQuestionId
+        else expect(recorded.status).toBe('completed')
+      }
+    }
+
+    const preStartDiagnosticId = randomUUID()
+    const preStartDiagnostic = await rpc('public.start_adaptive_diagnostic_v3($1,$2,$3,$4,$5)', [
+      student, preStartDiagnosticId, 'matematik', 'TYT', diagnosticPlan[0],
+    ])
+    expect(preStartDiagnostic).toMatchObject({
+      sessionId: preStartDiagnosticId, resumed: false, questionCount: 10,
+    })
+
+    const startedDiagnostic = await rpc('public.start_my_institution_study_program_item($1,$2,$3,$4)', [
+      student, program.program_ref, 3, randomUUID(),
+    ])
+    expect(startedDiagnostic).toMatchObject({ status: 'started', replayed: false })
+    expect(startedDiagnostic.startTarget).toMatchObject({ kind: 'diagnostic', requiredMode: 'diagnostic' })
+
+    await finishDiagnosticSession(preStartDiagnosticId, preStartDiagnostic.currentQuestionId)
+    expect((await client.query(`SELECT execution.status,
+        execution.diagnostic_session_id IS NOT NULL AS bound,
+        session.started_at<execution.started_at AS source_predates_execution
+      FROM public.institution_study_program_item_executions execution
+      JOIN public.adaptive_diagnostic_sessions session ON session.id=$2
+      WHERE execution.program_id=$1 AND execution.position=3`, [
+      program.id, preStartDiagnosticId,
+    ])).rows[0]).toEqual({
+      status: 'started', bound: false, source_predates_execution: true,
+    })
+
+    const diagnosticSessionId = randomUUID()
+    const startedSession = await rpc('public.start_adaptive_diagnostic_v3($1,$2,$3,$4,$5)', [
+      student, diagnosticSessionId, 'matematik', 'TYT', diagnosticPlan[0],
+    ])
+    expect(startedSession).toMatchObject({ sessionId: diagnosticSessionId, resumed: false, questionCount: 10 })
+    await finishDiagnosticSession(diagnosticSessionId, startedSession.currentQuestionId)
+    expect((await client.query(`SELECT status,diagnostic_session_id IS NOT NULL AS bound
+      FROM public.institution_study_program_item_executions
+      WHERE program_id=$1 AND position=3`, [program.id])).rows[0]).toEqual({
+      status: 'completed', bound: true,
+    })
+    expect((await client.query(`SELECT status FROM public.institution_study_program_items
+      WHERE program_id=$1 AND position=3`, [program.id])).rows[0]).toEqual({ status: 'completed' })
+
+    // Publication age alone is intentionally insufficient.  The same program
+    // becomes eligible only after an executed item exists and the Istanbul
+    // calendar reaches weekStart + 14 days.
+    expect((await client.query(`SELECT
+      public.institution_study_program_review_ready($1,$2::date) AS before_maturity,
+      public.institution_study_program_review_ready($1,$3::date) AS at_maturity`, [
+      program.id,
+      (await client.query('SELECT ($1::date + 13)::text AS value', [weekStart])).rows[0].value,
+      (await client.query('SELECT ($1::date + 14)::text AS value', [weekStart])).rows[0].value,
+    ])).rows[0]).toEqual({ before_maturity: false, at_maturity: true })
+    const completionEvents = (await client.query(`SELECT count(*)::int AS count
+      FROM public.institution_operation_events
+      WHERE source='program_execution' AND target_ref=$1
+        AND event_type IN ('study_program_item_started','study_program_item_completed')`, [program.program_ref])).rows[0]
+    expect(completionEvents.count).toBe(4)
+
+    // Evidence visible to an institution begins no earlier than the exact
+    // classroom acceptance instant, even when the nominal baseline reaches
+    // two weeks farther back.
+    expect((await client.query(`SELECT
+      (public.institution_study_program_review_evidence($1)->>'baselineWindowStart')::timestamptz
+        = membership.accepted_at AS baseline_clamped,
+      (public.institution_study_program_review_evidence($1)->>'currentWindowStart')::timestamptz
+        >= membership.accepted_at AS current_clamped
+      FROM public.teacher_classroom_memberships membership WHERE membership.id=$2`, [
+      program.id, membership.id,
+    ])).rows[0]).toEqual({ baseline_clamped: true, current_clamped: true })
+
+    // A soft-deleted learner may still have an auth session and an active
+    // membership.  Neither replay nor a late attempt completion may use that
+    // stale lifecycle state to advance an institution-owned task.
+    const deletedStudent = randomUUID()
+    await client.query(
+      'INSERT INTO public.profiles(id,username,display_name) VALUES($1,$2,$3)',
+      [deletedStudent, 'execution-deleted', 'execution-deleted'],
+    )
+    await client.query(
+      'INSERT INTO auth.users(id,email,email_confirmed_at) VALUES($1,$2,clock_timestamp())',
+      [deletedStudent, 'execution-deleted@example.com'],
+    )
+    const deletedMembership = (await client.query(`INSERT INTO public.teacher_classroom_memberships(
+      classroom_id,student_id
+    ) VALUES($1,$2) RETURNING id,member_ref`, [classroom, deletedStudent])).rows[0]
+    let deletedProgram
+    await client.query('BEGIN')
+    try {
+      deletedProgram = (await client.query(`INSERT INTO public.institution_study_programs(
+        institution_id,classroom_id,membership_id,student_id,teacher_id,week_start,status,
+        daily_minute_limit,model_version,item_count,
+        game,display_exam_ref,question_exam_ref,taxonomy_version,scope_policy_version
+      ) VALUES($1,$2,$3,$4,$5,$6,'draft',30,'institution-program-v1',1,
+        'matematik','TYT','TYT','ba-tyt-math-v1','institution-scope-v1'
+      ) RETURNING id,program_ref`, [
+        institutionOne, classroom, deletedMembership.id, deletedStudent, managerOne, weekStart,
+      ])).rows[0]
+      await client.query(`INSERT INTO public.institution_study_program_items(
+        program_id,position,scheduled_date,task_type,title,reason_code,outcome_code,
+        duration_minutes,target_question_count
+      ) VALUES($1,1,$2,'verified_questions','Silinmis profil yarisi','weak_outcome',$3,20,10)`, [
+        deletedProgram.id, today, outcome.code,
+      ])
+      await client.query(`UPDATE public.institution_study_programs
+        SET status='published',reviewed_at=clock_timestamp(),published_at=clock_timestamp()
+        WHERE id=$1`, [deletedProgram.id])
+      await client.query('COMMIT')
+    } catch (deletedProgramError) {
+      await client.query('ROLLBACK')
+      throw deletedProgramError
+    }
+    await client.query(`INSERT INTO public.institution_student_reports(
+      institution_id,classroom_id,membership_id,student_id,teacher_id,
+      model_version,period_start,period_end,snapshot,
+      game,display_exam_ref,question_exam_ref,taxonomy_version,scope_policy_version
+    ) VALUES($1,$2,$3,$4,$5,'institution-student-report-v1',
+      clock_timestamp()-interval '1 day',clock_timestamp(),$6::jsonb,
+      'matematik','TYT','TYT','ba-tyt-math-v1','institution-scope-v1')`, [
+      institutionOne, classroom, deletedMembership.id, deletedStudent, managerOne,
+      JSON.stringify({
+        modelVersion: 'institution-student-report-v1',
+        scope: {
+          game: 'matematik', examRef: 'TYT', questionExamRef: 'TYT',
+          taxonomyVersion: 'ba-tyt-math-v1', scopePolicyVersion: 'institution-scope-v1',
+        },
+      }),
+    ])
+    expect((await rpc(
+      'public.get_institution_student_reports_v2($1,$2,$3,$4,$5)',
+      [managerOne, classroom, deletedMembership.member_ref, 'matematik', 'TYT'],
+    )).reports).toHaveLength(1)
+    const deletedRequest = randomUUID()
+    expect(await rpc('public.start_my_institution_study_program_item($1,$2,$3,$4)', [
+      deletedStudent, deletedProgram.program_ref, 1, deletedRequest,
+    ])).toMatchObject({ status: 'started', replayed: false })
+    const deletedSessionId = randomUUID()
+    const deletedAttemptId = randomUUID()
+    await client.query('INSERT INTO public.game_sessions(id,user_id) VALUES($1,$2)', [
+      deletedSessionId, deletedStudent,
+    ])
+    await client.query(`INSERT INTO public.verified_attempts(id,user_id,game,mode)
+      VALUES($1,$2,'matematik','practice')`, [deletedAttemptId, deletedStudent])
+    for (let index = 0; index < 10; index += 1) {
+      const answerId = randomUUID()
+      await client.query(`INSERT INTO public.session_answers(
+        id,session_id,user_id,question_id,is_correct,is_skipped
+      ) VALUES($1,$2,$3,$4,true,false)`, [
+        answerId, deletedSessionId, deletedStudent, randomUUID(),
+      ])
+      await client.query(`INSERT INTO public.mastery_outcome_evidence(
+        answer_id,attempt_id,user_id,outcome_id,is_correct,mapping_weight,
+        difficulty_weighted_earned,difficulty_weighted_possible,max_hint_stage
+      ) VALUES($1,$2,$3,$4,true,1,1,1,0)`, [
+        answerId, deletedAttemptId, deletedStudent, outcome.id,
+      ])
+    }
+    await client.query('UPDATE public.profiles SET deleted_at=clock_timestamp() WHERE id=$1', [deletedStudent])
+    await expectPgError(
+      () => rpc('public.get_institution_student_reports_v2($1,$2,$3,$4,$5)', [
+        managerOne, classroom, deletedMembership.member_ref, 'matematik', 'TYT',
+      ]),
+      'P0002',
+    )
+    await client.query(`UPDATE public.verified_attempts
+      SET session_id=$2,completed_at=clock_timestamp() WHERE id=$1`, [deletedAttemptId, deletedSessionId])
+    expect((await client.query(`SELECT execution.status,item.status AS item_status
+      FROM public.institution_study_program_item_executions execution
+      JOIN public.institution_study_program_items item
+        ON item.program_id=execution.program_id AND item.position=execution.position
+      WHERE execution.program_id=$1 AND execution.position=1`, [deletedProgram.id])).rows[0]).toEqual({
+      status: 'started', item_status: 'pending',
+    })
+    expect((await rpc('public.get_my_institution_study_programs($1,$2)', [
+      deletedStudent, today,
+    ])).programs).toEqual([])
+    await expectPgError(
+      () => rpc('public.start_my_institution_study_program_item($1,$2,$3,$4)', [
+        deletedStudent, deletedProgram.program_ref, 1, deletedRequest,
+      ]),
+      'P0002',
+    )
+
+    // Withdrawing the original membership immediately removes review access;
+    // a published historical program is not an authorization grant.
+    await client.query(`UPDATE public.teacher_classroom_memberships
+      SET status='withdrawn',ended_at=clock_timestamp() WHERE id=$1`, [membership.id])
+    expect((await client.query(`SELECT
+      public.institution_study_program_review_ready($1,$2::date) AS ready`, [
+      program.id,
+      (await client.query('SELECT ($1::date + 14)::text AS value', [weekStart])).rows[0].value,
+    ])).rows[0]).toEqual({ ready: false })
+    await expectPgError(
+      () => rpc('public.preview_institution_study_program_review($1,$2)', [
+        managerOne, program.program_ref,
+      ]),
+      'P0002',
+    )
   }, 120_000)
 })

@@ -44,7 +44,19 @@ describe('POST /api/account/delete', () => {
     const json = await res.json()
     expect(json.message).toContain('anonimleştirildi')
     expect(mockRpc).toHaveBeenCalledWith('soft_delete_user', { p_user_id: 'u1' })
-    expect(mockSignOut).toHaveBeenCalled()
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'global' })
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
+  })
+
+  it('reports cleanup ambiguity when global signOut fails', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ error: null })
+    mockSignOut.mockResolvedValue({ error: { message: 'revoke failed' } })
+
+    const res = await POST()
+    expect(res.status).toBe(503)
+    expect(await res.json()).toMatchObject({ error: expect.stringContaining('oturum tamamen kapatılamadı') })
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
   })
 
   it('returns 500 if RPC fails', async () => {

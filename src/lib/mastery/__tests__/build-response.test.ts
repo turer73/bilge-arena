@@ -23,14 +23,15 @@ describe('buildMasteryMapResponse', () => {
         outcomeId: 'outcome-id', attempts: 5, correctAttempts: 4, weightedEarned: 4, weightedPossible: 5,
         delayedCorrect: 1, v2Attempts: 5, difficultyWeightedEarned: 12, difficultyWeightedPossible: 15,
         timedAttempts: 5, totalTimeSec: 150, fastWrong: 0, hintedAttempts: 0, hintStageSum: 0,
-        guessAnnotations: 0, carelessAnnotations: 0, lastAnsweredAt: '2026-08-08T10:00:00Z',
+        guessAnnotations: 0, carelessAnnotations: 0, verifiedEvidenceDays: 3,
+        lastAnsweredAt: '2026-08-08T10:00:00Z',
       }],
     })
 
     expect(response?.outcomes[0]).toMatchObject({
       code: 'MAT-SAY-01', nodeCode: 'O',
       path: ['TYT Matematik', 'Sayılar ve Cebir', 'Sayılar', 'İşlem becerisi'],
-      status: 'mastered', score: 89,
+      status: 'mastered', score: 89, verifiedEvidenceDays: 3,
     })
     expect(response?.discovery).toMatchObject({ level: 3, stage: 'ready', diagnosticCompleted: true })
     expect(JSON.stringify(response)).not.toContain('outcome-id')
@@ -84,6 +85,45 @@ describe('buildMasteryMapResponse', () => {
       readyOutcomes: 0,
       totalOutcomes: 1,
       journeyPercentage: 0,
+    })
+  })
+
+  it('aynı Türkiye günündeki çok sayıda cevabı tek keşif kanıtı sayar', () => {
+    const response = buildMasteryMapResponse({
+      game: 'matematik', examRef: 'TYT',
+      coverage: { supported: true, diagnosticAvailable: true, taxonomyVersion: 'ba-tyt-math-v1', totalQuestions: 10, mappedQuestions: 10, percentage: 100 },
+      nodes, outcomes, diagnosticOutcomeIds: ['outcome-id'],
+      states: [{
+        outcomeId: 'outcome-id', attempts: 5, correctAttempts: 5, weightedEarned: 5, weightedPossible: 5,
+        delayedCorrect: 0, v2Attempts: 5, difficultyWeightedEarned: 15, difficultyWeightedPossible: 15,
+        timedAttempts: 5, totalTimeSec: 100, fastWrong: 0, hintedAttempts: 0, hintStageSum: 0,
+        guessAnnotations: 0, carelessAnnotations: 0, verifiedEvidenceDays: 1,
+        lastAnsweredAt: '2026-08-08T10:00:00Z',
+      }],
+    })
+
+    expect(response?.outcomes[0]).toMatchObject({
+      attempts: 5,
+      status: 'insufficient',
+      verifiedEvidenceDays: 1,
+      evidenceCompleteness: 33,
+      score: 0,
+      components: {
+        accuracy: 0,
+        delayedRetrieval: 0,
+        independence: 0,
+        selfRegulation: 0,
+      },
+    })
+    expect(response?.discovery).toEqual({
+      level: 2,
+      stage: 'evidence',
+      diagnosticCompleted: true,
+      evidenceCollected: 1,
+      evidenceTarget: 3,
+      readyOutcomes: 0,
+      totalOutcomes: 1,
+      journeyPercentage: 50,
     })
   })
 

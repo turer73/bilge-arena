@@ -2,20 +2,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
 
 const routeState = vi.hoisted(() => ({ game: 'wordquest' }))
+const searchState = vi.hoisted(() => ({ query: '' }))
 const routerReplace = vi.hoisted(() => vi.fn())
 const authState = vi.hoisted(() => ({
   profile: null as { exam_type: string | null } | null,
 }))
 const gameState = vi.hoisted(() => ({
   selectedExamRef: 'TYT' as string | null,
+  selectedMode: 'classic',
   setExamRef: vi.fn(),
+  setMode: vi.fn(),
   setCategory: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ game: routeState.game }),
   useRouter: () => ({ replace: routerReplace }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(searchState.query),
 }))
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => authState }))
 vi.mock('@/stores/game-store', () => ({
@@ -30,9 +33,12 @@ import GameClient from '../[game]/game-client'
 describe('GameClient exam scope', () => {
   beforeEach(() => {
     routeState.game = 'wordquest'
+    searchState.query = ''
     authState.profile = null
     gameState.selectedExamRef = 'TYT'
+    gameState.selectedMode = 'classic'
     gameState.setExamRef.mockReset()
+    gameState.setMode.mockReset()
     gameState.setCategory.mockReset()
     routerReplace.mockReset()
   })
@@ -61,5 +67,56 @@ describe('GameClient exam scope', () => {
     render(<GameClient />)
 
     await waitFor(() => expect(gameState.setExamRef).not.toHaveBeenCalled())
+  })
+
+  it('URL exam_ref degerini oyun kapsaminda normalize edip store a uygular', async () => {
+    routeState.game = 'matematik'
+    searchState.query = 'exam_ref=ayt-ea'
+    gameState.selectedExamRef = 'TYT'
+
+    render(<GameClient />)
+
+    await waitFor(() => expect(gameState.setExamRef).toHaveBeenCalledWith('AYT-EA'))
+  })
+
+  it('kategori query sini URL deki sinav baglamiyla ayni renderda dogrular', async () => {
+    routeState.game = 'turkce'
+    searchState.query = 'exam_ref=ayt-soz&category=edebiyat'
+    gameState.selectedExamRef = 'TYT'
+
+    render(<GameClient />)
+
+    await waitFor(() => expect(gameState.setExamRef).toHaveBeenCalledWith('AYT-SOZ'))
+    expect(gameState.setCategory).toHaveBeenCalledWith('edebiyat')
+  })
+
+  it('gecersiz URL exam_ref degerini kullanmaz ve profil defaultuna duser', async () => {
+    routeState.game = 'fen'
+    searchState.query = 'exam_ref=bilinmeyen'
+    authState.profile = { exam_type: 'lgs' }
+    gameState.selectedExamRef = 'AYT-EA'
+
+    render(<GameClient />)
+
+    await waitFor(() => expect(gameState.setExamRef).toHaveBeenCalledWith('LGS'))
+    expect(gameState.setExamRef).not.toHaveBeenCalledWith('BILINMEYEN')
+  })
+
+  it('kurum practice mode query sini dar allowlist ile store a uygular', async () => {
+    routeState.game = 'matematik'
+    searchState.query = 'exam_ref=TYT&category=sayilar&mode=PRACTICE'
+
+    render(<GameClient />)
+
+    await waitFor(() => expect(gameState.setMode).toHaveBeenCalledWith('practice'))
+  })
+
+  it('allowlist disindaki mode query sini store a yazmaz', async () => {
+    routeState.game = 'matematik'
+    searchState.query = 'exam_ref=TYT&mode=deneme'
+
+    render(<GameClient />)
+
+    await waitFor(() => expect(gameState.setMode).not.toHaveBeenCalled())
   })
 })

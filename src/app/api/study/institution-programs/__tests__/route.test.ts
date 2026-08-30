@@ -6,7 +6,7 @@ vi.mock('@/lib/supabase/service-role',()=>({createServiceRoleClient:mocks.servic
 vi.mock('@/lib/teacher-classroom/rate-limits',()=>({teacherClassroomReadLimiter:{},checkTeacherClassroomRateLimit:mocks.rate}))
 import { GET } from '../route'
 const USER='11111111-1111-4111-8111-111111111111'
-const data={asOfDate:'2026-08-14',programs:[{classroomName:'TYT A Sınıfı',teacherAlias:'Öğretmen Bir',weekStart:'2026-08-10',dailyMinuteLimit:45,modelVersion:'institution-program-v1',publishedAt:'2026-08-10T08:00:00.000Z',items:[{position:1,scheduledDate:'2026-08-14',taskType:'diagnostic',title:'Temel kavramlar durum tespiti',reasonCode:'diagnostic_gap',outcomeCode:'MAT-01',durationMinutes:20,targetQuestionCount:10,status:'pending'}]}]}
+const data={asOfDate:'2026-08-14',programs:[{programRef:'a'.repeat(32),classroomName:'TYT A Sınıfı',teacherAlias:'Öğretmen Bir',weekStart:'2026-08-10',dailyMinuteLimit:45,modelVersion:'institution-program-v1',publishedAt:'2026-08-10T08:00:00.000Z',items:[{position:1,scheduledDate:'2026-08-14',taskType:'diagnostic',title:'Temel kavramlar durum tespiti',reasonCode:'diagnostic_gap',outcomeCode:'MAT-01',durationMinutes:20,targetQuestionCount:10,status:'pending',canStart:true}]}]}
 beforeEach(()=>{vi.clearAllMocks();mocks.tracking.mockReturnValue(true);mocks.program.mockReturnValue(true);mocks.cookie.mockResolvedValue({auth:{getUser:vi.fn().mockResolvedValue({data:{user:{id:USER}}})}});mocks.service.mockReturnValue({rpc:mocks.rpc});mocks.rate.mockResolvedValue({success:true});mocks.rpc.mockResolvedValue({data,error:null})})
 
 describe('student institution programs route',()=>{
@@ -24,6 +24,11 @@ describe('student institution programs route',()=>{
     mocks.cookie.mockResolvedValueOnce({auth:{getUser:vi.fn().mockResolvedValue({data:{user:null}})}})
     expect((await GET(new Request('http://localhost/api/study/institution-programs'))).status).toBe(401)
     mocks.rpc.mockResolvedValueOnce({data:{...data,userId:USER},error:null})
+    expect((await GET(new Request('http://localhost/api/study/institution-programs'))).status).toBe(500)
+  })
+  it('fails closed when a private RPC marks an unlaunchable item as startable',async()=>{
+    const invalid={...data,programs:[{...data.programs[0],items:[{...data.programs[0].items[0],targetQuestionCount:11}]}]}
+    mocks.rpc.mockResolvedValueOnce({data:invalid,error:null})
     expect((await GET(new Request('http://localhost/api/study/institution-programs'))).status).toBe(500)
   })
 })

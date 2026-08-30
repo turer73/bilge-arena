@@ -73,7 +73,9 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
     .sort(byLowestReliableScore)
   const collectingEvidence = outcomes
     .filter((outcome) => outcome.status === 'insufficient')
-    .sort((a, b) => a.attempts - b.attempts || a.title.localeCompare(b.title, 'tr'))
+    .sort((a, b) => a.verifiedEvidenceDays - b.verifiedEvidenceDays
+      || a.attempts - b.attempts
+      || a.title.localeCompare(b.title, 'tr'))
   // Yeterli kanıtı olan gelişen kazanım önce gelir. Kanıtı yetersiz konu “zayıf” diye sunulmaz.
   const nextAction = developing[0] ?? collectingEvidence[0]
 
@@ -170,7 +172,7 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
           </p>
           <p className="mt-0.5 text-[10px] font-semibold text-[var(--app-text-sub)]">
             {discovery?.stage === 'evidence'
-              ? `${discovery.evidenceCollected}/${discovery.evidenceTarget} doğrulanmış kanıt · ${discovery.readyOutcomes}/${discovery.totalOutcomes} kazanım hazır`
+              ? `${discovery.evidenceCollected}/${discovery.evidenceTarget} farklı gün kanıtı · ${discovery.readyOutcomes}/${discovery.totalOutcomes} kazanım hazır`
               : 'Planından sonra buna odaklan'}
           </p>
         </div>
@@ -197,13 +199,13 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
             <h2 className="mt-1 text-sm font-black text-[var(--app-text)] md:text-base">{nextAction.title}</h2>
           </div>
           <span className="shrink-0 text-sm font-extrabold text-[var(--focus-text)]">
-            {needsEvidence ? `${nextAction.attempts}/3` : `%${nextAction.score}`}
+            {needsEvidence ? `${nextAction.verifiedEvidenceDays}/3 gün` : `%${nextAction.score}`}
           </span>
         </div>
 
         <p className="mt-2 text-xs font-semibold leading-relaxed text-[var(--app-text-sub)]">
           {needsEvidence
-            ? 'Bu kazanım hakkında güvenilir bir yönlendirme için birkaç cevap daha gerekiyor.'
+            ? 'Bu kazanım hakkında ilk yönlendirmeyi açmak için farklı günlerde pratik kanıtı gerekiyor.'
             : 'Kısa bir pratik, bu kazanımı güçlü seviyeye yaklaştıracak.'}
         </p>
 

@@ -6,6 +6,8 @@ import {
   fetchInstitutionLearningScopes,
   InstitutionTrackingClientError,
   createInstitutionStudyProgramDraft,
+  createInstitutionStudentReport,
+  fetchInstitutionStudentReports,
   publishInstitutionStudyProgram,
   updateInstitutionStudyProgramDraft,
 } from '../client'
@@ -89,10 +91,26 @@ describe('institution tracking client', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(draftResponse), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify(published), { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
-    await createInstitutionStudyProgramDraft({ classroomId: 'c', memberRef: 'm', weekStart: '2026-08-17', dailyMinuteLimit: 45 })
+    await createInstitutionStudyProgramDraft({ classroomId: 'c', memberRef: 'm', game: 'fen', examRef: 'TYT', weekStart: '2026-08-17', dailyMinuteLimit: 45 })
     await publishInstitutionStudyProgram('a'.repeat(32))
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ requestId: '11111111-1111-4111-8111-111111111111' })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ game: 'fen', examRef: 'TYT', requestId: '11111111-1111-4111-8111-111111111111' })
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ requestId: '22222222-2222-4222-8222-222222222222' })
+  })
+
+  it('carries the exact subject scope through report reads and writes', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => '44444444-4444-4444-8444-444444444444' })
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ reports: [] }))
+      .mockResolvedValueOnce(Response.json({ invalid: true }))
+    vi.stubGlobal('fetch', fetchMock)
+    const scope = { game: 'fen' as const, displayExamRef: 'TYT' }
+    await expect(fetchInstitutionStudentReports('class/id', 'member ref', scope)).resolves.toEqual({ reports: [] })
+    await expect(createInstitutionStudentReport('class/id', 'member ref', scope)).rejects.toMatchObject({ status: 500 })
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/institution/tracking/reports?classroomId=class%2Fid&memberRef=member+ref&game=fen&exam_ref=TYT')
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+      classroomId: 'class/id', memberRef: 'member ref', game: 'fen', examRef: 'TYT',
+      requestId: '44444444-4444-4444-8444-444444444444',
+    })
   })
 
   it('patches a teacher-edited draft with a fresh idempotency id', async () => {

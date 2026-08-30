@@ -75,6 +75,23 @@ describe('POST /api/profile/sync', () => {
     expect(res.status).toBe(404)
   })
 
+  it('blocks a tombstoned profile without syncing metadata', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'u1', user_metadata: { full_name: 'Yeni ad' } } },
+    })
+    mockProfileSelect.mockResolvedValue({
+      data: { id: 'u1', display_name: 'Anonim', avatar_url: null, deleted_at: '2026-08-29T10:00:00.000Z' },
+      error: null,
+    })
+
+    const res = await POST(makePost() as never)
+    expect(res.status).toBe(410)
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(await res.json()).toMatchObject({ code: 'account_deleted' })
+    expect(mockProfileUpdate).not.toHaveBeenCalled()
+    expect(mockPlatformAdmin).not.toHaveBeenCalled()
+  })
+
   it('returns updated=false when google metadata matches existing profile', async () => {
     mockGetUser.mockResolvedValue({
       data: {

@@ -18,6 +18,17 @@ describe('guardian status email draft',()=>{
     expect(serialized).not.toContain(analysis.student.memberRef);expect(serialized).not.toContain(analysis.classroom.id)
     expect(serialized).not.toContain('MAT-01');expect(serialized).not.toMatch(/kesin|başarısızdır|garanti/i)
   })
+  it('uses the exact selected subject instead of hard-coding Mathematics',()=>{
+    const fenAnalysis={
+      ...analysis,
+      scope:{...analysis.scope,game:'fen',questionExamRef:'TYT',taxonomyVersion:'ba-tyt-fen-v1',diagnosticEnabled:false,institutionReportingEnabled:true,scopePolicyVersion:'institution-scope-v1',modelVersion:'institution-evidence-v2'},
+      outcomes:analysis.outcomes.map((item)=>({...item,path:['TYT Fen Bilimleri','Fizik','Temel',item.title],assessment:{...item.assessment,evidence:{...item.assessment.evidence,taxonomyVersion:'ba-tyt-fen-v1',modelVersion:'institution-evidence-v2'}}})),
+    }
+    const result=buildGuardianStatusEmailDraft(fenAnalysis)
+    expect(result?.subject).toBe('Öğrenci Bir – TYT Fen Bilimleri çalışma durumu')
+    expect(result?.body).toContain('TYT Fen Bilimleri çalışma durumuna')
+    expect(result?.body).not.toContain('TYT Matematik çalışma durumuna')
+  })
   it('rejects malformed or identifier-enriched analysis',()=>{
     expect(buildGuardianStatusEmailDraft({...analysis,userId:'hidden'})).toBeNull()
   })

@@ -96,7 +96,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     gameStore.selectedCategory,
   )
   const personalizedMock = usePersonalizedMock(game, user?.id, questionExamRef)
-  const masteryMap = useMasteryMap(game, user?.id, gameStore.selectedExamRef)
+  const masteryMap = useMasteryMap(game, user?.id, questionExamRef)
   const selectExamRef = useCallback((examRef: string | null) => {
     const validCategories = getCategoriesForExam(game, examRef)
     if (gameStore.selectedCategory && !validCategories.includes(gameStore.selectedCategory)) {
@@ -318,6 +318,16 @@ export function QuizEngine({ game }: QuizEngineProps) {
                 : null}
               onStart={startTodayPlan}
             />
+            <MasteryMapCard
+              outcomes={masteryMap.outcomes}
+              discovery={masteryMap.discovery}
+              diagnosticAvailable={masteryMap.coverage?.diagnosticAvailable ?? false}
+              loading={masteryMap.loading}
+            />
+          </div>
+        )}
+        {user && (
+          <div data-mobile-mastery-map-card className="mx-auto w-full max-w-[720px] px-3 pt-3 md:hidden">
             <MasteryMapCard
               outcomes={masteryMap.outcomes}
               discovery={masteryMap.discovery}

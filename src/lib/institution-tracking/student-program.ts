@@ -12,9 +12,23 @@ const itemSchema = z.object({
   durationMinutes: z.number().int().min(5).max(60),
   targetQuestionCount: z.number().int().min(1).max(50).nullable(),
   status: z.enum(['pending', 'completed', 'skipped']),
-}).strict()
+  canStart: z.boolean().default(false),
+}).strict().superRefine((value, context) => {
+  if (!value.canStart) return
+  if (
+    !['verified_questions', 'diagnostic'].includes(value.taskType)
+    || value.outcomeCode === null
+    || value.targetQuestionCount === null
+    || value.targetQuestionCount > 10
+  ) {
+    context.addIssue({ code: 'custom', message: 'startable institution item contract mismatch' })
+  }
+})
 
 const programSchema = z.object({
+  // App-first compatibility: the pre-201 reader has no opaque reference, so
+  // it remains displayable but cannot start any execution-bound item.
+  programRef: z.string().regex(/^[0-9a-f]{32}$/).nullable().optional().default(null),
   classroomName: z.string().trim().min(2).max(60),
   teacherAlias: z.string().trim().min(1).max(80),
   weekStart: dateSchema,

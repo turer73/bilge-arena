@@ -33,7 +33,20 @@ export async function POST() {
   }
 
   // Supabase oturumunu sonlandir
-  await supabase.auth.signOut()
+  const { error: signOutError } = await supabase.auth.signOut({ scope: 'global' })
+  if (signOutError) {
+    // Soft-delete succeeded, but do not claim the browser session was cleaned
+    // up when global revocation failed. The response remains no-store so the
+    // caller can retry the cleanup without caching an ambiguous result.
+    console.error('[Account Delete] global signOut hatasi:', signOutError.message)
+    return NextResponse.json(
+      { error: 'Hesap silindi ancak oturum tamamen kapatılamadı; lütfen tekrar deneyin.' },
+      { status: 503, headers: { 'Cache-Control': 'private, no-store' } },
+    )
+  }
 
-  return NextResponse.json({ message: 'Silme talebiniz alındı ve hesabınız anonimleştirildi.' })
+  return NextResponse.json(
+    { message: 'Silme talebiniz alındı ve hesabınız anonimleştirildi.' },
+    { headers: { 'Cache-Control': 'private, no-store' } },
+  )
 }

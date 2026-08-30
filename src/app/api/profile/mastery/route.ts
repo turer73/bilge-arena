@@ -58,8 +58,14 @@ interface StateRow {
   hint_stage_sum: number | string
   guess_annotations: number
   careless_annotations: number
+  verified_evidence_days: number
   last_answered_at: string | null
 }
+
+type LegacyStateRow = Omit<StateRow, 'verified_evidence_days'>
+
+const MASTERY_STATE_COLUMNS = 'outcome_id, attempts, correct_attempts, weighted_earned, weighted_possible, delayed_correct, v2_attempts, difficulty_weighted_earned, difficulty_weighted_possible, timed_attempts, total_time_sec, fast_wrong, hinted_attempts, hint_stage_sum, guess_annotations, careless_annotations, verified_evidence_days, last_answered_at'
+const LEGACY_MASTERY_STATE_COLUMNS = 'outcome_id, attempts, correct_attempts, weighted_earned, weighted_possible, delayed_correct, v2_attempts, difficulty_weighted_earned, difficulty_weighted_possible, timed_attempts, total_time_sec, fast_wrong, hinted_attempts, hint_stage_sum, guess_annotations, careless_annotations, last_answered_at'
 
 function unsupportedCoverage(): MasteryCoveragePublic {
   return {
@@ -80,6 +86,47 @@ function noStoreJson(body: unknown, init?: { status?: number }) {
 }
 
 type ServiceClient = ReturnType<typeof createServiceRoleClient>
+
+interface StateQueryResult {
+  data: StateRow[] | null
+  error: { code?: string } | null
+}
+
+function isMissingVerifiedEvidenceDays(error: { code?: string } | null): boolean {
+  return error?.code === '42703' || error?.code === 'PGRST204'
+}
+
+async function readMasteryStates(
+  client: ServiceClient,
+  userId: string,
+  outcomeIds: string[],
+): Promise<StateQueryResult> {
+  const current = await client
+    .from('user_outcome_state')
+    .select(MASTERY_STATE_COLUMNS)
+    .eq('user_id', userId)
+    .in('outcome_id', outcomeIds) as unknown as StateQueryResult
+  if (!current.error || !isMissingVerifiedEvidenceDays(current.error)) return current
+
+  // App-first deploy compatibility: an old schema can still return the map,
+  // but legacy rows earn zero distinct-day progress until migration 202 exists.
+  const legacy = await client
+    .from('user_outcome_state')
+    .select(LEGACY_MASTERY_STATE_COLUMNS)
+    .eq('user_id', userId)
+    .in('outcome_id', outcomeIds) as unknown as {
+      data: LegacyStateRow[] | null
+      error: { code?: string } | null
+    }
+  if (legacy.error) return { data: null, error: legacy.error }
+  return {
+    data: (legacy.data ?? []).map((state) => ({
+      ...state,
+      verified_evidence_days: 0,
+    })),
+    error: null,
+  }
+}
 
 async function callServiceRpc(
   client: ServiceClient,
@@ -216,11 +263,7 @@ export async function GET(request: NextRequest) {
     }
     const [stateResult, diagnosticStateResult] = outcomeIds.length > 0
       ? await Promise.all([
-        supabase
-          .from('user_outcome_state')
-          .select('outcome_id, attempts, correct_attempts, weighted_earned, weighted_possible, delayed_correct, v2_attempts, difficulty_weighted_earned, difficulty_weighted_possible, timed_attempts, total_time_sec, fast_wrong, hinted_attempts, hint_stage_sum, guess_annotations, careless_annotations, last_answered_at')
-          .eq('user_id', user.id)
-          .in('outcome_id', outcomeIds),
+        readMasteryStates(supabase, user.id, outcomeIds),
         diagnosticAvailable
           ? supabase
             .from('user_diagnostic_outcome_state')
@@ -280,6 +323,7 @@ export async function GET(request: NextRequest) {
         hintStageSum: Number(state.hint_stage_sum),
         guessAnnotations: Number(state.guess_annotations),
         carelessAnnotations: Number(state.careless_annotations),
+        verifiedEvidenceDays: Number(state.verified_evidence_days),
         lastAnsweredAt: state.last_answered_at,
       })),
       diagnosticOutcomeIds: ((diagnosticStateResult.data ?? []) as Array<{ outcome_id: string }>)

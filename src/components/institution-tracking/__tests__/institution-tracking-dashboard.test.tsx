@@ -153,6 +153,15 @@ function analysis(memberRef = MEMBER_ONE, alias = 'Öğrenci Bir Çok Uzun Ad') 
         hintRate: 0,
         fastWrongRate: 0,
         components: { accuracy: 55, delayedRetrieval: 0, independence: 15, selfRegulation: 10 },
+        diagnosticSources: [{
+          outcomeCode: 'MAT-SAY-01',
+          completedSessionId: '22222222-2222-4222-8222-222222222222',
+          completedAt: '2026-08-12T09:00:00.000Z',
+          attempts: 2,
+          correctAttempts: 1,
+          score: 50,
+          taxonomyVersion: 'ba-tyt-math-v1',
+        }],
       },
     }],
   }
@@ -433,6 +442,8 @@ describe('InstitutionTrackingDashboard', () => {
     expect(screen.queryByRole('button', { name: 'Sınıf oluştur' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Öğretmen Takibi' })).not.toBeInTheDocument()
     const outcomeHeading = await screen.findByRole('heading', { name: 'Kazanım analizi' })
+    expect(screen.getByText('Aktif soru bankası eşlemesi: %100')).toBeInTheDocument()
+    expect(screen.getByText(/Bu yalnız başlangıç yönü sağlayan ayrı bir sinyaldir/)).toHaveTextContent('hâkimiyet skoru değildir')
     const followupHeading = screen.getByRole('heading', { name: 'Öğrenci destek takibi' })
     const programHeading = screen.getByRole('heading', { name: 'Haftalık çalışma programı' })
     const resultsHeading = screen.getByRole('heading', { name: 'Program sonuçları' })
@@ -443,6 +454,9 @@ describe('InstitutionTrackingDashboard', () => {
     expect(programHeading.compareDocumentPosition(resultsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(resultsHeading.compareDocumentPosition(reportHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(reportHeading.compareDocumentPosition(guardianHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await waitFor(() => expect(mocks.fetchReports).toHaveBeenCalledWith(
+      CLASSROOM_ID, MEMBER_ONE, { game: 'matematik', displayExamRef: 'TYT' }, expect.any(AbortSignal),
+    ))
     await user.click(screen.getByRole('button', { name: 'Öğrenci ekle' }))
     expect(screen.getByRole('dialog', { name: directory.classrooms[0].name })).toBeInTheDocument()
   })

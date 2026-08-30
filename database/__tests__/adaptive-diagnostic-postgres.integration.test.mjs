@@ -27,6 +27,7 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
   const registryReplayUser = randomUUID()
   const registryStartUser = randomUUID()
   const registryLockUser = randomUUID()
+  const outOfScopeManualQuestion = randomUUID()
   const categories = ['sayilar', 'denklemler', 'fonksiyonlar', 'problemler', 'geometri', 'olasilik']
   const questions = Object.fromEntries(categories.map((category) => [category, {
     base: randomUUID(),
@@ -35,6 +36,8 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
   const mainSession = randomUUID()
   const migrationLegacySession = randomUUID()
   const v2EvidenceSession = randomUUID()
+  let legacyMathSeedCountBeforeV3 = 0
+  let mathMappingDistributionBeforeV3 = []
 
   beforeAll(async () => {
     client = new Client({ connectionString: url })
@@ -117,9 +120,17 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
       )
     }
     await client.query(`INSERT INTO public.questions(id,game,category,difficulty,exam_ref,is_active) VALUES ${values.join(',')}`, parameters)
+    await client.query(`INSERT INTO public.questions(
+      id,game,category,difficulty,exam_ref,is_active
+    ) VALUES($1,'turkce','denklemler',2,'TYT',false)`, [outOfScopeManualQuestion])
     for (const migration of ['086_outcome_mastery_pilot.sql', '096_curriculum_graph_v1.sql', '098_adaptive_diagnostic.sql']) {
       await client.query(read(migration))
     }
+    await client.query(`INSERT INTO public.question_outcomes(
+      question_id,outcome_id,weight,is_primary,mapping_source
+    ) SELECT $1,outcome.id,1,false,'manual'
+      FROM public.curriculum_outcomes AS outcome
+      WHERE outcome.code='MAT-DEN-01'`, [outOfScopeManualQuestion])
     await client.query(`
       WITH payload AS (
         SELECT question.id AS question_id,
@@ -149,22 +160,41 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
     )
     await client.query(read('140_adaptive_diagnostic_evidence_v2.sql'))
     await client.query(read('178_curriculum_scope_release_registry.sql'))
-    // Migration 086 predates mapping provenance and seeded the two legacy
-    // `sayilar` rows as manual. This fixture's V3 precondition represents the
-    // reviewed category-proxy normalization already required before a
-    // diagnostic release; migration 193 must still reject any later manual row.
-    await client.query(`UPDATE public.question_outcomes AS mapping
-      SET mapping_source='taxonomy_auto'
-      FROM public.questions AS question, public.curriculum_outcomes AS outcome
+    // Keep the real pre-193 state: migration 086 predates mapping provenance,
+    // so its deterministic `sayilar` seed is still manual here. Migration 193
+    // must own and prove the bounded normalization instead of the fixture
+    // hiding it with an out-of-band UPDATE.
+    legacyMathSeedCountBeforeV3 = (await client.query(`SELECT count(*)::integer AS count
+      FROM public.question_outcomes AS mapping
+      JOIN public.questions AS question ON question.id=mapping.question_id
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
       WHERE mapping.question_id=question.id
         AND mapping.outcome_id=outcome.id
         AND mapping.mapping_source='manual'
+        AND mapping.created_at=outcome.created_at
+        AND mapping.weight=1
+        AND mapping.is_primary
         AND question.game='matematik'
+        AND question.exam_ref='TYT'
+        AND question.category='sayilar'
+        AND outcome.game='matematik'
+        AND outcome.exam_ref='TYT'
+        AND outcome.taxonomy_version='ba-tyt-math-v1'
+        AND outcome.code='MAT-SAY-01'
+        AND outcome.category=question.category`)).rows[0].count
+    mathMappingDistributionBeforeV3 = (await client.query(`SELECT
+      outcome.category,mapping.mapping_source,count(*)::integer AS count
+      FROM public.question_outcomes AS mapping
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      JOIN public.questions AS question ON question.id=mapping.question_id
+      WHERE question.game='matematik'
         AND question.exam_ref='TYT'
         AND outcome.game='matematik'
         AND outcome.exam_ref='TYT'
         AND outcome.taxonomy_version='ba-tyt-math-v1'
-        AND outcome.category=question.category`)
+        AND mapping.is_primary
+      GROUP BY outcome.category,mapping.mapping_source
+      ORDER BY outcome.category,mapping.mapping_source`)).rows
     await client.query(read('184_adaptive_diagnostic_registry_write_gate.sql'))
     await client.query(read('193_registry_driven_adaptive_diagnostic_v3.sql'))
   })
@@ -215,6 +245,94 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
       [userId, sessionId, questionId, selectedOption, responseTimeMs, requestId, nextQuestionId],
     )).rows[0].result
   }
+
+  it('normalizes only the bounded 086 mathematics seed and rejects later manual provenance at runtime', async () => {
+    expect(legacyMathSeedCountBeforeV3).toBe(2)
+    expect(mathMappingDistributionBeforeV3).toEqual([
+      { category:'denklemler', mapping_source:'taxonomy_auto', count:2 },
+      { category:'fonksiyonlar', mapping_source:'taxonomy_auto', count:2 },
+      { category:'geometri', mapping_source:'taxonomy_auto', count:2 },
+      { category:'olasilik', mapping_source:'taxonomy_auto', count:2 },
+      { category:'problemler', mapping_source:'taxonomy_auto', count:2 },
+      { category:'sayilar', mapping_source:'manual', count:2 },
+    ])
+
+    const normalized = await client.query(`SELECT
+      outcome.category,mapping.mapping_source,count(*)::integer AS count
+      FROM public.question_outcomes AS mapping
+      JOIN public.curriculum_outcomes AS outcome ON outcome.id=mapping.outcome_id
+      JOIN public.questions AS question ON question.id=mapping.question_id
+      WHERE question.game='matematik'
+        AND question.exam_ref='TYT'
+        AND outcome.game='matematik'
+        AND outcome.exam_ref='TYT'
+        AND outcome.taxonomy_version='ba-tyt-math-v1'
+        AND mapping.is_primary
+      GROUP BY outcome.category,mapping.mapping_source
+      ORDER BY outcome.category,mapping.mapping_source`)
+    expect(normalized.rows).toEqual(categories.slice().sort().map((category) => ({
+      category, mapping_source:'taxonomy_auto', count:2,
+    })))
+    expect((await client.query(`SELECT mapping_source,is_primary
+      FROM public.question_outcomes
+      WHERE question_id=$1`, [outOfScopeManualQuestion])).rows).toEqual([
+      { mapping_source:'manual', is_primary:false },
+    ])
+
+    try {
+      await client.query(`UPDATE public.question_outcomes
+        SET mapping_source='manual'
+        WHERE question_id=$1`, [questions.sayilar.follow])
+      expect((await client.query(`SELECT *
+        FROM public.resolve_adaptive_diagnostic_question_v3($1,'matematik','TYT','TYT','ba-tyt-math-v1')`,
+      [questions.sayilar.follow])).rows).toEqual([])
+      await expect(client.query(read('193_registry_driven_adaptive_diagnostic_v3.sql')))
+        .rejects.toMatchObject({ code:'23514' })
+      await client.query('ROLLBACK')
+      expect((await client.query(`SELECT mapping_source
+        FROM public.question_outcomes
+        WHERE question_id=$1`, [questions.sayilar.follow])).rows[0].mapping_source).toBe('manual')
+    } finally {
+      await client.query('ROLLBACK')
+      await client.query(`UPDATE public.question_outcomes
+        SET mapping_source='taxonomy_auto'
+        WHERE question_id=$1`, [questions.sayilar.follow])
+    }
+  })
+
+  it('rejects a non-legacy MAT-SAY-01 manual mapping without relabeling it', async () => {
+    const inserted = await client.query(`INSERT INTO public.question_outcomes(
+      question_id,outcome_id,weight,is_primary,mapping_source
+    ) SELECT $1,outcome.id,1,false,'manual'
+      FROM public.curriculum_outcomes AS outcome
+      WHERE outcome.code='MAT-SAY-01'
+      RETURNING outcome_id`, [outOfScopeManualQuestion])
+    expect(inserted.rowCount).toBe(1)
+    const outcomeId = inserted.rows[0].outcome_id
+    let migrationTransactionNeedsRollback = false
+
+    try {
+      migrationTransactionNeedsRollback = true
+      await expect(client.query(read('193_registry_driven_adaptive_diagnostic_v3.sql')))
+        .rejects.toMatchObject({
+          code:'23514',
+          message:expect.stringContaining('non-legacy manual mappings'),
+        })
+      await client.query('ROLLBACK')
+      migrationTransactionNeedsRollback = false
+
+      expect((await client.query(`SELECT mapping_source,is_primary
+        FROM public.question_outcomes
+        WHERE question_id=$1 AND outcome_id=$2`,
+      [outOfScopeManualQuestion,outcomeId])).rows).toEqual([
+        { mapping_source:'manual', is_primary:false },
+      ])
+    } finally {
+      if (migrationTransactionNeedsRollback) await client.query('ROLLBACK')
+      await client.query(`DELETE FROM public.question_outcomes
+        WHERE question_id=$1 AND outcome_id=$2`, [outOfScopeManualQuestion,outcomeId])
+    }
+  })
 
   it('requires ten candidates, starts once, and resumes the locked active session', async () => {
     for (const category of categories.slice(3)) {
