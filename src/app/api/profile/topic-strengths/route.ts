@@ -81,6 +81,23 @@ export async function GET(request: NextRequest) {
   if (examRefRaw && !GAMES[game].examTags.includes(examRefRaw)) {
     return NextResponse.json({ error: 'Gecersiz sinav kapsami' }, { status: 400 })
   }
+  if (game === 'sosyal' && examRefRaw === null) {
+    return NextResponse.json(
+      { error: 'Sosyal icin exact sinav kapsami belirtilmelidir' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  // The legacy aggregate has no TYT Social candidate-policy dimension and can
+  // mix religion/alternate-philosophy evidence across selections. Until the
+  // branch-aware mastery projection is released, returning no strength claim
+  // is safer than showing an incorrect zero or a superseded score.
+  if (game === 'sosyal' && examRefRaw === 'TYT') {
+    return NextResponse.json(
+      { topics: [], game, examRef: examRefRaw, available: false },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
 
   // 5-6. Service-role query + aggregation — extract edilmis paylasilan helper
   // (src/lib/review/topic-strengths.ts, /api/study/today plan-uretimi de

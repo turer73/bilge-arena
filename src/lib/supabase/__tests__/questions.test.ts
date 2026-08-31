@@ -67,6 +67,109 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
     expect(lastUrl).toContain('mode=deneme')
   })
 
+  it('resmî bölüm retry anahtarını değiştirmeden güvenli POST gövdesi ve header ile taşır', async () => {
+    const requestId = '40000000-0000-4000-8000-000000000001'
+    await fetchQuizQuestions({
+      game: 'sosyal',
+      examRef: 'TYT',
+      mode: 'deneme',
+      limit: 20,
+      includeReview: false,
+      requestId,
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/questions/tyt-social-section',
+      {
+        cache: 'no-store',
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': requestId,
+        },
+        body: JSON.stringify({ requestId }),
+      },
+    )
+  })
+
+  it.each([
+    [409, 'TYT_SOCIAL_REQUEST_CONFLICT'],
+    [410, 'TYT_SOCIAL_REQUEST_EXPIRED'],
+  ])('reddedilen resmî bölüm anahtarının yenilenmesi gerektiğini bildirir: %s', async (status, code) => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ code }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+    await expect(fetchQuizQuestions({
+      game: 'sosyal',
+      examRef: 'TYT',
+      mode: 'deneme',
+      limit: 20,
+      includeReview: false,
+      requestId: '40000000-0000-4000-8000-000000000001',
+    })).resolves.toEqual({
+      questions: [],
+      attemptId: null,
+      expiresAt: null,
+      refreshRequestId: true,
+    })
+  })
+
+  it('kurulum gerekli yanıtında tekrar kullanılabilir idempotency anahtarını korur', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      code: 'TYT_SOCIAL_POLICY_REQUIRED',
+    }), { status: 409, headers: { 'Content-Type': 'application/json' } }))
+
+    await expect(fetchQuizQuestions({
+      game: 'sosyal',
+      examRef: 'TYT',
+      mode: 'deneme',
+      limit: 20,
+      includeReview: false,
+      requestId: '40000000-0000-4000-8000-000000000001',
+    })).resolves.toEqual({
+      questions: [],
+      attemptId: null,
+      expiresAt: null,
+    })
+  })
+
+  it('resmî bölümün besteci tarafından belirlenen soru sırasını korur', async () => {
+    const result = await fetchQuizQuestions({
+      game: 'sosyal',
+      examRef: 'TYT',
+      mode: 'deneme',
+      limit: 20,
+      includeReview: false,
+      requestId: '40000000-0000-4000-8000-000000000001',
+    })
+
+    expect(result.questions.map(question => question.id)).toEqual(
+      Array.from({ length: 20 }, (_, index) => `q-${index}`),
+    )
+  })
+
+  it('stale kategori, zorluk, review ve cooldown filtreleri resmî bölümü generic GET yoluna düşürmez', async () => {
+    const requestId = '40000000-0000-4000-8000-000000000001'
+
+    await fetchQuizQuestions({
+      game: 'sosyal',
+      examRef: 'TYT',
+      mode: 'deneme',
+      limit: 20,
+      category: 'tarih',
+      difficulty: 4,
+      includeReview: true,
+      excludeIds: ['12345678-1234-1234-1234-123456789012'],
+      requestId,
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/questions/tyt-social-section', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ requestId }),
+    }))
+  })
+
   it('category query parametre olarak gecer', async () => {
     await fetchQuizQuestions({ game: 'matematik', limit: 10, category: 'cebir' })
     expect(lastUrl).toContain('category=cebir')

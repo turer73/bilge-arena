@@ -52,6 +52,19 @@ const normalSnapshotSchema = z.object({
   items: z.array(verifiedQuestionSnapshotSchema).min(1).max(100),
 }).strict()
 
+const officialTytSocialSectionTicketSchema = z.object({
+  attemptId: z.string().uuid(),
+  expiresAt: z.string().datetime({ offset: true }),
+  policyVersion: z.literal('tyt-social-2026-v1'),
+  variant: z.enum(['questions_16_20', 'questions_21_25']),
+  artifactKind: z.literal('official_section'),
+  snapshot: z.object({
+    items: z.array(verifiedQuestionSnapshotSchema).length(20),
+  }).strict(),
+  replayed: z.boolean(),
+  composerVersion: z.literal('tyt-social-official-section-v1'),
+}).strict()
+
 const examSnapshotSchema = z.object({
   items: z.array(verifiedExamQuestionSnapshotSchema).length(40),
 }).strict()
@@ -71,6 +84,13 @@ export interface VerifiedExamAttemptTicket extends VerifiedAttemptTicket {
   blueprintVersion: string
   readonly questionSnapshots: readonly VerifiedExamQuestionSnapshot[]
 }
+
+export type TytSocialOfficialSectionIssueFailure =
+  | 'tyt_social_section_setup_required'
+  | 'tyt_social_section_conflict'
+  | 'tyt_social_section_expired'
+  | 'tyt_social_section_unavailable'
+  | 'tyt_social_section_issue_failed'
 
 function withPrivateSnapshots<T extends object, S extends VerifiedQuestionSnapshot>(
   value: T,
@@ -140,6 +160,96 @@ export function getVerifiedAttemptDurationSec(game: GameSlug, mode: GameMode): n
   return Math.min(7200, clamped)
 }
 
+/**
+ * Service-only candidate filter for TYT Social. The branch choice is never
+ * returned to callers or logs; only the permitted subset, in input order.
+ */
+export async function filterTytSocialQuestionIds(
+  admin: SupabaseClient<Database>,
+  userId: string,
+  questionIds: readonly string[],
+): Promise<string[]> {
+  const deduped = Array.from(new Set(questionIds))
+  if (deduped.length === 0) return []
+  if (deduped.length > 1000) throw new Error('tyt_social_candidate_filter_failed')
+  const { data, error } = await admin.rpc('filter_tyt_social_question_candidates', {
+    p_user_id: userId,
+    p_question_ids: deduped,
+  })
+  if (error) throw new Error('tyt_social_candidate_filter_failed')
+  const parsed = z.object({
+    policyVersion: z.string().min(1).max(80),
+    allowedQuestionIds: z.array(z.string().uuid()).max(1000),
+  }).strict().safeParse(data)
+  if (!parsed.success) throw new Error('tyt_social_candidate_filter_failed')
+  const inputIds = new Set(deduped)
+  if (
+    new Set(parsed.data.allowedQuestionIds).size !== parsed.data.allowedQuestionIds.length
+    || parsed.data.allowedQuestionIds.some(id => !inputIds.has(id))
+  ) throw new Error('tyt_social_candidate_filter_failed')
+  return parsed.data.allowedQuestionIds
+}
+
+/**
+ * Service-only official TYT Social section composition. The private branch,
+ * answer keys and provenance stay on the server; callers receive snapshots as
+ * a non-enumerable property and must project them with toPublicVerifiedQuestions.
+ */
+export async function issueVerifiedTytSocialOfficialSection(
+  admin: SupabaseClient<Database>,
+  input: { userId: string; requestId: string },
+): Promise<VerifiedAttemptTicket> {
+  const durationSec = getVerifiedAttemptDurationSec('sosyal', 'deneme')
+  let result: { data: unknown; error: { code?: string; message?: string } | null }
+  try {
+    result = await admin.rpc('compose_and_issue_verified_tyt_social_section_attempt', {
+      p_user_id: input.userId,
+      p_duration_sec: durationSec,
+      p_request_id: input.requestId,
+    })
+  } catch {
+    throw new Error('tyt_social_section_unavailable')
+  }
+  if (result.error) {
+    const code = result.error.code ?? ''
+    const message = result.error.message ?? ''
+    if (code === 'P0002' && message === 'TYT Social policy selection required') {
+      throw new Error('tyt_social_section_setup_required')
+    }
+    if (code === '22023' && message === 'TYT Social official-section replay payload differs') {
+      throw new Error('tyt_social_section_conflict')
+    }
+    if (
+      INFRA_ERROR_CODES.has(code)
+      || ['P0002', '22023', '23505', '23514', '42501', '55000'].includes(code)
+    ) {
+      throw new Error('tyt_social_section_unavailable')
+    }
+    throw new Error('tyt_social_section_issue_failed')
+  }
+
+  const parsed = officialTytSocialSectionTicketSchema.safeParse(result.data)
+  if (!parsed.success) throw new Error('tyt_social_section_issue_failed')
+  if (Date.parse(parsed.data.expiresAt) <= Date.now()) {
+    throw new Error('tyt_social_section_expired')
+  }
+  const snapshots = parsed.data.snapshot.items
+  const questionIds = new Set(snapshots.map((snapshot) => snapshot.questionId))
+  if (
+    questionIds.size !== 20
+    || snapshots.some((snapshot, index) => (
+      snapshot.position !== index + 1
+      || snapshot.metadata.game !== 'sosyal'
+      || snapshot.metadata.examRef !== 'TYT'
+    ))
+  ) throw new Error('tyt_social_section_issue_failed')
+
+  return withPrivateSnapshots(
+    { attemptId: parsed.data.attemptId, expiresAt: parsed.data.expiresAt },
+    snapshots,
+  )
+}
+
 export async function issueVerifiedAttempt(
   admin: SupabaseClient<Database>,
   input: {
@@ -147,21 +257,46 @@ export async function issueVerifiedAttempt(
     game: GameSlug
     mode: GameMode
     questionIds: string[]
+    examRef?: string | null
+    requestId?: string
+    sourcePlanId?: string
   }
 ): Promise<VerifiedAttemptTicket> {
+  // A TYT Social deneme is an official 20-question, policy-snapshotted
+  // section. The generic practice issuer must never mint that artifact.
+  if (input.game === 'sosyal' && input.examRef === 'TYT' && input.mode === 'deneme') {
+    throw new Error('verified_attempt_issue_failed')
+  }
   const dedupedIds = Array.from(new Set(input.questionIds))
   if (dedupedIds.length === 0 || dedupedIds.length > 100) {
     throw new Error('verified_attempt_issue_failed')
   }
   const durationSec = getVerifiedAttemptDurationSec(input.game, input.mode)
   try {
-    const { data, error } = await admin.rpc('issue_verified_attempt', {
-      p_user_id: input.userId,
-      p_game: input.game,
-      p_mode: input.mode,
-      p_question_ids: dedupedIds,
-      p_duration_sec: durationSec,
-    })
+    const isTytSocial = input.game === 'sosyal' && input.examRef === 'TYT'
+    const { data, error } = isTytSocial && input.sourcePlanId
+      ? await admin.rpc('issue_verified_tyt_social_plan_attempt', {
+          p_user_id: input.userId,
+          p_plan_id: input.sourcePlanId,
+          p_mode: input.mode,
+          p_duration_sec: durationSec,
+          p_request_id: input.requestId ?? crypto.randomUUID(),
+        })
+      : isTytSocial
+        ? await admin.rpc('issue_verified_tyt_social_attempt', {
+            p_user_id: input.userId,
+            p_mode: input.mode,
+            p_question_ids: dedupedIds,
+            p_duration_sec: durationSec,
+            p_request_id: input.requestId ?? crypto.randomUUID(),
+          })
+        : await admin.rpc('issue_verified_attempt', {
+            p_user_id: input.userId,
+            p_game: input.game,
+            p_mode: input.mode,
+            p_question_ids: dedupedIds,
+            p_duration_sec: durationSec,
+          })
     if (error) {
       throw new Error('verified_attempt_issue_failed')
     }
@@ -169,6 +304,10 @@ export async function issueVerifiedAttempt(
       attemptId: z.string().uuid(),
       expiresAt: z.string().datetime({ offset: true }),
       snapshot: normalSnapshotSchema,
+      policyVersion: z.string().optional(),
+      variant: z.enum(['questions_16_20', 'questions_21_25']).optional(),
+      artifactKind: z.enum(['practice', 'daily_plan', 'smart_mock', 'official_section']).optional(),
+      replayed: z.boolean().optional(),
     }).strict()
     const parsed = ticketSchema.safeParse(data)
     if (!parsed.success) {
@@ -210,21 +349,31 @@ export async function issueVerifiedExamAttempt(
     || durationSec <= input.plannedDurationSec
   ) throw new Error('verified_exam_attempt_issue_failed')
 
-  const { data, error } = await admin.rpc('issue_verified_exam_attempt', {
-    p_user_id: input.userId,
-    p_game: input.game,
-    // PostgreSQL uses NULL as a first-class unscoped exam identity.
-    p_exam_ref: input.examRef as string,
-    p_blueprint_version: input.blueprintVersion,
-    p_items: input.items.map((item, position) => ({
-      position,
-      questionId: item.questionId,
-      sourceBucket: item.sourceBucket,
-    })),
-    p_duration_sec: durationSec,
-    p_planned_duration_sec: input.plannedDurationSec,
-    p_request_id: input.requestId,
-  })
+  const rpcItems = input.items.map((item, position) => ({
+    position,
+    questionId: item.questionId,
+    sourceBucket: item.sourceBucket,
+  }))
+  const { data, error } = input.game === 'sosyal' && input.examRef === 'TYT'
+    ? await admin.rpc('issue_verified_tyt_social_exam_attempt', {
+        p_user_id: input.userId,
+        p_blueprint_version: input.blueprintVersion,
+        p_items: rpcItems,
+        p_duration_sec: durationSec,
+        p_planned_duration_sec: input.plannedDurationSec,
+        p_request_id: input.requestId,
+      })
+    : await admin.rpc('issue_verified_exam_attempt', {
+        p_user_id: input.userId,
+        p_game: input.game,
+        // PostgreSQL uses NULL as a first-class unscoped exam identity.
+        p_exam_ref: input.examRef as string,
+        p_blueprint_version: input.blueprintVersion,
+        p_items: rpcItems,
+        p_duration_sec: durationSec,
+        p_planned_duration_sec: input.plannedDurationSec,
+        p_request_id: input.requestId,
+      })
   if (error) throw new Error('verified_exam_attempt_issue_failed')
   const parsed = z.object({
     attemptId: z.string().uuid(),

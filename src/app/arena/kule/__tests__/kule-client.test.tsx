@@ -81,4 +81,25 @@ describe('KuleClient grading', () => {
     expect(await screen.findByText(/10 puan/)).toBeInTheDocument()
     expect(grader.gradeQuestion).toHaveBeenCalledTimes(2)
   })
+
+  it('TYT Sosyal için exact exam kapsamı taşır ve policy seçimine yönlendirir', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'policy required' }),
+    })))
+    render(<KuleClient />)
+
+    fireEvent.click((await screen.findByText('Sosyal Bilimler')).closest('button')!)
+
+    expect(await screen.findByText(/Önce Çalış sayfasında TYT Sosyal/)).toBeInTheDocument()
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('examRef=TYT'),
+      { cache: 'no-store' },
+    )
+    expect(screen.getByRole('link', { name: 'Çalış sayfasına git' })).toHaveAttribute(
+      'href',
+      '/arena/calisma',
+    )
+  })
 })

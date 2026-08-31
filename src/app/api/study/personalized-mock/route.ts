@@ -15,6 +15,7 @@ import {
 import { selectPersonalizedMock } from '@/lib/study/personalized-mock'
 import type { Question } from '@/types/database'
 import {
+  filterTytSocialQuestionIds,
   issueVerifiedAttempt,
   issueVerifiedExamAttempt,
   toPublicVerifiedQuestions,
@@ -154,12 +155,32 @@ export async function GET(request: NextRequest) {
     if (question) questionsById.set(question.id, question)
   }
 
+  let eligibleHistory = historyResult.data ?? []
+  if (game === 'sosyal' && examRef === 'TYT') {
+    try {
+      const allowedIds = new Set(await filterTytSocialQuestionIds(
+        admin,
+        user.id,
+        [...questionsById.keys()],
+      ))
+      for (const questionId of questionsById.keys()) {
+        if (!allowedIds.has(questionId)) questionsById.delete(questionId)
+      }
+      eligibleHistory = eligibleHistory.filter(row => allowedIds.has(row.question_id))
+    } catch {
+      return NextResponse.json(
+        { error: 'TYT Sosyal cevaplama düzeni seçilmelidir' },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+  }
+
   const generatedFor = trDayString()
   const composition = selectPersonalizedMock({
     game,
     seed: `${user.id}:${game}:${examRef ?? 'all'}:${generatedFor}`,
     candidates: Array.from(questionsById.values()).map(({ id, category }) => ({ id, category })),
-    history: (historyResult.data ?? []).map((row) => ({
+    history: eligibleHistory.map((row) => ({
       questionId: row.question_id,
       category: row.questions?.category ?? '',
       isCorrect: row.is_correct,
@@ -193,8 +214,9 @@ export async function GET(request: NextRequest) {
     const strategyEnabled = process.env.MOCK_STRATEGY_ENABLED === 'true'
       && process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED === 'true'
       && game !== 'wordquest'
+    const requiresPolicySnapshot = game === 'sosyal' && examRef === 'TYT'
     const requestIdHeader = request.headers.get('x-idempotency-key')
-    const ticket = strategyEnabled
+    const ticket = strategyEnabled || requiresPolicySnapshot
       ? await issueVerifiedExamAttempt(admin, {
           userId: user.id,
           game,
@@ -211,10 +233,16 @@ export async function GET(request: NextRequest) {
           game,
           mode: 'deneme',
           questionIds: questions.map(question => question.id),
+          examRef,
+          requestId: requestIdHeader && isValidUuid(requestIdHeader)
+            ? requestIdHeader
+            : crypto.randomUUID(),
         })
     attemptId = ticket.attemptId
     expiresAt = ticket.expiresAt
-    strategyEligible = 'strategyEligible' in ticket && ticket.strategyEligible === true
+    strategyEligible = strategyEnabled
+      && 'strategyEligible' in ticket
+      && ticket.strategyEligible === true
     const verifiedQuestions = toPublicVerifiedQuestions(ticket.questionSnapshots)
     if (
       verifiedQuestions.length !== questions.length

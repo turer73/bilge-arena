@@ -1,3 +1,5 @@
+import type { GameSlug } from './games'
+
 export interface QuizMode {
   id: string
   name: string
@@ -69,6 +71,30 @@ export const DEFAULT_MODE = MODES[0]
 
 export function getModeById(id: string): QuizMode {
   return MODES.find(m => m.id === id) || DEFAULT_MODE
+}
+
+export function getModesForContext(
+  game: GameSlug,
+  examRef: string | null,
+): QuizMode[] {
+  return MODES.map((mode) => (
+    game === 'sosyal' && examRef === 'TYT' && mode.id === 'deneme'
+      ? {
+          ...mode,
+          description: '20 soruluk TYT Sosyal bölümü',
+          questionCount: 20,
+        }
+      : mode
+  ))
+}
+
+export function getModeByIdForContext(
+  id: string,
+  game: GameSlug,
+  examRef: string | null,
+): QuizMode {
+  const modes = getModesForContext(game, examRef)
+  return modes.find((mode) => mode.id === id) ?? modes[0]
 }
 
 // ──────────────────────────────────────────

@@ -19,7 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { GAMES, getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
-import { MODES, type QuizMode, DENEME_CONFIGS } from '@/lib/constants/modes'
+import { getModesForContext, type QuizMode, DENEME_CONFIGS } from '@/lib/constants/modes'
 import { ModeSelector } from './mode-selector'
 import { SoundToggle } from './sound-toggle'
 import { XPBar } from './xp-bar'
@@ -34,6 +34,10 @@ interface LobbyProps {
   selectedMode: string
   onSelectMode: (mode: QuizMode) => void
   onStart: () => void
+  startBlocked?: boolean
+  startBlockedLabel?: string
+  startHref?: string
+  startLabel?: string
   onLimitReached?: () => void
   userXP?: number
   userStreak?: number
@@ -86,6 +90,10 @@ export function Lobby({
   selectedMode,
   onSelectMode,
   onStart,
+  startBlocked = false,
+  startBlockedLabel = 'Başlatılamıyor',
+  startHref,
+  startLabel,
   onLimitReached,
   userXP = 0,
   userStreak = 0,
@@ -100,16 +108,18 @@ export function Lobby({
   personalizedMockCard,
 }: LobbyProps) {
   const gameDef = GAMES[game]
-  const categories = getCategoriesForExam(game, selectedExamRef)
+  const effectiveExamRef = game === 'sosyal' ? selectedExamRef ?? 'TYT' : selectedExamRef
+  const categories = getCategoriesForExam(game, effectiveExamRef)
+  const contextModes = getModesForContext(game, effectiveExamRef)
   const GameIcon = GAME_ICONS[game]
   const level = getLevelFromXP(userXP)
-  const mode = MODES.find((candidate) => candidate.id === selectedMode) || MODES[0]
+  const mode = contextModes.find((candidate) => candidate.id === selectedMode) || contextModes[0]
   const [showAllModes, setShowAllModes] = useState(!PRIMARY_MODE_IDS.has(selectedMode))
   const [showFilters, setShowFilters] = useState(
     selectedCategory !== null || selectedDifficulty !== null || selectedExamRef !== null
   )
 
-  const examLabel = EXAM_REF_OPTIONS.find((option) => option.value === selectedExamRef)?.label ?? 'Tümü'
+  const examLabel = EXAM_REF_OPTIONS.find((option) => option.value === effectiveExamRef)?.label ?? 'Tümü'
   const difficultyLabel = DIFFICULTY_OPTIONS.find((option) => option.value === selectedDifficulty)?.label ?? 'Tümü'
   const categoryLabel = selectedCategory ? getCategoryLabel(selectedCategory) : 'Tüm konular'
   const denemeConfig = DENEME_CONFIGS[game]
@@ -156,6 +166,10 @@ export function Lobby({
         selectedExamRef={selectedExamRef}
         onSelectExamRef={onSelectExamRef}
         onStart={onStart}
+        startBlocked={startBlocked}
+        startBlockedLabel={startBlockedLabel}
+        startHref={startHref}
+        startLabel={startLabel}
         onLimitReached={onLimitReached}
         quizLimit={quizLimit}
         loadError={loadError}
@@ -217,6 +231,7 @@ export function Lobby({
           </span>
         </div>
         <ModeSelector
+          modes={contextModes}
           selectedMode={selectedMode}
           onSelect={onSelectMode}
           showAll={showAllModes}
@@ -251,8 +266,12 @@ export function Lobby({
                     Sınav
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {EXAM_REF_OPTIONS.map((option) => {
-                      const active = selectedExamRef === option.value
+                    {EXAM_REF_OPTIONS.filter((option) => (
+                      option.value === null
+                        ? game !== 'sosyal'
+                        : gameDef.examTags.includes(option.value)
+                    )).map((option) => {
+                      const active = effectiveExamRef === option.value
                       return (
                         <button
                           type="button"
@@ -339,15 +358,29 @@ export function Lobby({
             </span>
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {Object.entries(denemeConfig.questionDistribution).map(([category, count]) => (
+            {(game === 'sosyal' && effectiveExamRef === 'TYT'
+              ? [
+                  ['Tarih', 5],
+                  ['Coğrafya', 5],
+                  ['Felsefe grubu', 5],
+                  ['Seçtiğin cevaplama grubu', 5],
+                ] as const
+              : Object.entries(denemeConfig.questionDistribution)
+            ).map(([category, count]) => (
               <div key={category} className="flex min-h-10 items-center justify-between rounded-xl bg-[var(--app-bg)] px-3 text-xs">
-                <span className="text-[var(--app-text-sub)]">{getCategoryLabel(category)}</span>
+                <span className="text-[var(--app-text-sub)]">
+                  {game === 'sosyal' && effectiveExamRef === 'TYT'
+                    ? category
+                    : getCategoryLabel(category)}
+                </span>
                 <span className="font-bold text-[var(--app-text)]">{count} soru</span>
               </div>
             ))}
           </div>
           <p className="mt-3 border-t border-[var(--app-border)] pt-3 text-xs leading-relaxed text-[var(--app-text-sub)]">
-            TYT formatında · Net hesabı: Doğru − (Yanlış / 4)
+            {game === 'sosyal' && effectiveExamRef === 'TYT'
+              ? '20 soruluk TYT Sosyal bölüm yapısı · Net hesabı: Doğru − (Yanlış / 4)'
+              : 'Ders kapsamlı çalışma denemesi · Net hesabı: Doğru − (Yanlış / 4)'}
           </p>
         </section>
       )}
@@ -384,22 +417,37 @@ export function Lobby({
             {durationMinutes ? `Yaklaşık ${durationMinutes} dk` : 'Zamansız'}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={quizLimit && !quizLimit.canPlay ? onLimitReached : onStart}
-          disabled={Boolean(quizLimit && !quizLimit.canPlay && !onLimitReached)}
-          className={`flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black tracking-wide transition-all active:translate-y-1 active:shadow-none md:text-base ${
-            quizLimit && !quizLimit.canPlay
-              ? onLimitReached
-                ? 'border border-[var(--reward-border)] bg-[var(--reward-bg)] text-[var(--reward-text)] hover:bg-[color-mix(in_srgb,var(--reward)_18%,var(--card-bg))]'
-                : 'cursor-not-allowed bg-[var(--surface)] text-[var(--text-muted)] opacity-60'
-              : 'bg-[var(--app-accent)] text-white shadow-[0_5px_0_var(--app-accent-strong)] hover:bg-[var(--app-accent-strong)]'
-          }`}
-        >
-          {quizLimit && !quizLimit.canPlay
-            ? 'Limit doldu · Premium’a geç'
-            : <><Play size={18} fill="currentColor" aria-hidden="true" />{mode.name} Başlat · {mode.questionCount} Soru</>}
-        </button>
+        {startHref && !startBlocked ? (
+          <Link
+            href={startHref}
+            className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 py-3 text-sm font-black tracking-wide text-white shadow-[0_5px_0_var(--app-accent-strong)] transition-all hover:bg-[var(--app-accent-strong)] active:translate-y-1 active:shadow-none md:text-base"
+          >
+            <Play size={18} fill="currentColor" aria-hidden="true" />
+            {startLabel ?? 'Giriş yaparak başla'}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={startBlocked ? undefined : quizLimit && !quizLimit.canPlay ? onLimitReached : onStart}
+            disabled={startBlocked || Boolean(quizLimit && !quizLimit.canPlay && !onLimitReached)}
+            className={`flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-black tracking-wide transition-all active:translate-y-1 active:shadow-none md:text-base ${
+              startBlocked
+                ? 'cursor-not-allowed bg-[var(--surface)] text-[var(--text-muted)] opacity-60'
+                : quizLimit && !quizLimit.canPlay
+                ? onLimitReached
+                  ? 'border border-[var(--reward-border)] bg-[var(--reward-bg)] text-[var(--reward-text)] hover:bg-[color-mix(in_srgb,var(--reward)_18%,var(--card-bg))]'
+                  : 'cursor-not-allowed bg-[var(--surface)] text-[var(--text-muted)] opacity-60'
+                : 'bg-[var(--app-accent)] text-white shadow-[0_5px_0_var(--app-accent-strong)] hover:bg-[var(--app-accent-strong)]'
+            }`}
+          >
+            {startBlocked
+              ? startBlockedLabel
+              : startLabel
+                ?? (quizLimit && !quizLimit.canPlay
+                  ? 'Limit doldu · Premium’a geç'
+                  : <><Play size={18} fill="currentColor" aria-hidden="true" />{mode.name} Başlat · {mode.questionCount} Soru</>)}
+          </button>
+        )}
       </div>
 
       {personalizedMockCard && (

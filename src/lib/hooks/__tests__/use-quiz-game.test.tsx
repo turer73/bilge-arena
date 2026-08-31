@@ -38,8 +38,8 @@ vi.mock('@/stores/quiz-store', () => ({
 
 const gameStore = vi.hoisted(() => ({
   selectedMode: 'klasik',
-  selectedCategory: null,
-  selectedDifficulty: null,
+  selectedCategory: null as string | null,
+  selectedDifficulty: null as number | null,
   selectedExamRef: null as string | null,
 }))
 vi.mock('@/stores/game-store', () => ({ useGameStore: () => gameStore }))
@@ -228,6 +228,58 @@ describe('useQuizGame — handleStart', () => {
 
     expect(result.current.screen).toBe('lobby')
     expect(result.current.loadError).toContain('hata oluştu')
+  })
+
+  test('TYT Sosyal resmî bölüm anahtarını yerel başlangıç tamamlanana kadar korur ve reload retryda kullanır', async () => {
+    gameStore.selectedMode = 'deneme'
+    gameStore.selectedExamRef = 'TYT'
+    gameStore.selectedCategory = 'stale-category'
+    gameStore.selectedDifficulty = 4
+    fetchers.fetchQuizQuestions.mockResolvedValue({
+      questions: Array.from({ length: 20 }, (_, index) => makeQ(`social-${index}`)),
+      attemptId: ATTEMPT_ID,
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    })
+    quiz.startQuiz.mockImplementationOnce(() => { throw new Error('local start failed') })
+
+    const first = renderHook(() => useQuizGame('sosyal', 'u1'))
+    await act(() => first.result.current.handleStart())
+    const firstRequestId = fetchers.fetchQuizQuestions.mock.calls[0][0].requestId as string
+    expect(fetchers.fetchQuizQuestions).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      game: 'sosyal',
+      examRef: 'TYT',
+      mode: 'deneme',
+      category: null,
+      difficulty: null,
+    }))
+    expect(firstRequestId).toMatch(/^[0-9a-f-]{36}$/)
+    expect(sessionStorage.getItem('bilge-arena:tyt-social-official-request:u1')).toBe(firstRequestId)
+    first.unmount()
+
+    const second = renderHook(() => useQuizGame('sosyal', 'u1'))
+    await act(() => second.result.current.handleStart())
+    expect(fetchers.fetchQuizQuestions.mock.calls[1][0].requestId).toBe(firstRequestId)
+    expect(quiz.startQuiz).toHaveBeenLastCalledWith(expect.arrayContaining([
+      expect.objectContaining({ id: 'social-0' }),
+    ]))
+    expect(sessionStorage.getItem('bilge-arena:tyt-social-official-request:u1')).toBeNull()
+  })
+
+  test('TYT Sosyal conflict veya expiry sinyalinde saklanan anahtarı bırakır', async () => {
+    gameStore.selectedMode = 'deneme'
+    gameStore.selectedExamRef = 'TYT'
+    fetchers.fetchQuizQuestions.mockResolvedValue({
+      questions: [],
+      attemptId: null,
+      expiresAt: null,
+      refreshRequestId: true,
+    })
+
+    const { result } = renderHook(() => useQuizGame('sosyal', 'u1'))
+    await act(() => result.current.handleStart())
+
+    expect(sessionStorage.getItem('bilge-arena:tyt-social-official-request:u1')).toBeNull()
+    expect(quiz.startQuiz).not.toHaveBeenCalled()
   })
 })
 

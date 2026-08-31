@@ -12,6 +12,8 @@ import { MasteryActionCard } from '@/components/study/mastery-action-card'
 import { StudyContextSelector } from '@/components/study/study-context-selector'
 import { StudyAssistantLauncher } from '@/components/study/study-assistant-launcher'
 import { InstitutionWeeklyProgramCard } from '@/components/study/institution-weekly-program-card'
+import { TytSocialExamPolicyCardView } from '@/components/study/tyt-social-exam-policy-card'
+import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
 import { ArrowRight, BookOpenCheck, Clock3, Sparkles } from 'lucide-react'
 
 const MOBILE_APP_SHELL_STYLE = '@media (max-width: 1023px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }'
@@ -45,6 +47,13 @@ export default function CalismaClient() {
     : profileDefaultExamRef && examRefs.includes(profileDefaultExamRef)
       ? profileDefaultExamRef
       : examRefs[0] ?? null
+  const tytSocialPolicy = useTytSocialExamPolicy({ game, examRef })
+  const tytSocialStartBlocked = Boolean(
+    user
+    && game === 'sosyal'
+    && examRef === 'TYT'
+    && tytSocialPolicy.status !== 'active',
+  )
 
   if (loading) {
     return (
@@ -95,6 +104,10 @@ export default function CalismaClient() {
     if (game !== 'wordquest') gameStore.setExamRef(nextExamRef)
     gameStore.setCategory(null)
   }
+
+  const practiceParams = new URLSearchParams()
+  if (game !== 'wordquest' && examRef) practiceParams.set('exam_ref', examRef)
+  const practiceHref = `/arena/${game}${practiceParams.size > 0 ? `?${practiceParams}` : ''}`
 
   return (
     <div data-practice-screen className="min-h-[100dvh] w-full min-w-0 touch-pan-y overflow-x-clip bg-[var(--app-bg)] pb-24 text-[var(--app-text)] lg:bg-transparent lg:pb-10">
@@ -154,17 +167,42 @@ export default function CalismaClient() {
                   <p className="mb-3 text-[11px] font-semibold leading-4 text-[var(--app-text-sub)]">
                     Sonraki adımda oyun biçimi, konu ve zorluk seçilir.
                   </p>
-                  <Link
-                    data-practice-continue
-                    href={`/arena/${game}`}
-                    className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
-                  >
-                    Devam et
-                    <ArrowRight size={18} strokeWidth={3} aria-hidden="true" />
-                  </Link>
+                  {tytSocialStartBlocked ? (
+                    <div aria-live="polite">
+                      <p id="tyt-social-start-gate" className="mb-2 text-xs font-bold text-[var(--app-text-sub)]">
+                        {tytSocialPolicy.status === 'loading'
+                          ? 'TYT Sosyal cevaplama düzeni yükleniyor…'
+                          : tytSocialPolicy.status === 'error'
+                            ? 'Cevaplama düzeni okunamadı. Karttan yeniden dene.'
+                            : 'Devam etmek için TYT Sosyal cevaplama düzenini seç.'}
+                      </p>
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        aria-describedby="tyt-social-start-gate"
+                        data-practice-continue
+                        className="flex min-h-[54px] w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-[var(--app-disabled)] px-4 text-sm font-black text-[var(--app-text-muted)] opacity-80"
+                      >
+                        TYT Sosyal seçimi gerekli
+                      </button>
+                    </div>
+                  ) : (
+                    <Link
+                      data-practice-continue
+                      href={practiceHref}
+                      className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
+                    >
+                      Devam et
+                      <ArrowRight size={18} strokeWidth={3} aria-hidden="true" />
+                    </Link>
+                  )}
                 </div>
               )}
             />
+            <div className="mt-4">
+              <TytSocialExamPolicyCardView policy={tytSocialPolicy} />
+            </div>
           </div>
 
           <section

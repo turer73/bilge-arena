@@ -118,6 +118,34 @@ describe('GET /api/profile/topic-strengths', () => {
     ])
   })
 
+  it('does not read or publish the legacy aggregate for policy-scoped TYT Social', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
+
+    const res = await GET(makeRequest('sosyal&exam_ref=TYT') as never)
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({
+      topics: [],
+      game: 'sosyal',
+      examRef: 'TYT',
+      available: false,
+    })
+    expect(mockAnswersRes).not.toHaveBeenCalled()
+  })
+
+  it('requires an exact exam scope for Social before reading the legacy aggregate', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
+
+    const res = await GET(makeRequest('sosyal') as never)
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error: 'Sosyal icin exact sinav kapsami belirtilmelidir',
+    })
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
+    expect(mockAnswersRes).not.toHaveBeenCalled()
+  })
+
   it('returns empty topics when no answers exist', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
     mockAnswersRes.mockResolvedValueOnce({ data: [], error: null })

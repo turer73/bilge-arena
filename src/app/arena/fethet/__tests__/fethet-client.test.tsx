@@ -8,7 +8,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { FethetClient } from '../fethet-client'
 
 const grader = vi.hoisted(() => ({ gradeQuestion: vi.fn() }))
+const auth = vi.hoisted(() => ({ value: { user: { id: 'user-1' } } }))
 vi.mock('@/lib/questions/grade-question', () => ({ gradeQuestion: grader.gradeQuestion }))
+vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => auth.value }))
+vi.mock('@/lib/hooks/use-tyt-social-exam-policy', () => ({
+  useTytSocialExamPolicy: () => ({
+    eligible: true,
+    status: 'active',
+    loading: false,
+    saving: false,
+    error: null,
+    policyVersion: 'tyt-social-2026-v1',
+    selectionEffectiveAt: '2026-08-31T08:00:00+00:00',
+    variantCode: 'questions_16_20',
+    saveSelection: vi.fn(),
+    retry: vi.fn(),
+  }),
+}))
 
 const ATTEMPT_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 
@@ -67,6 +83,7 @@ describe('FethetClient — wordquest (İngilizce) akışı', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.restoreAllMocks()
+    auth.value = { user: { id: 'user-1' } }
     grader.gradeQuestion.mockImplementation(async (_questionId: string, selectedOption: number) => ({
       isCorrect: selectedOption === 0,
       correctOption: 0,
@@ -124,5 +141,59 @@ describe('FethetClient — wordquest (İngilizce) akışı', () => {
     await waitFor(() => {
       expect(screen.getByText('Başarısız')).toBeInTheDocument()
     })
+  })
+
+  it('TYT Sosyal için policy-aware random yüzeyini kullanır ve seçim gereksinimini açıklar', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'policy required' }),
+    })))
+    render(<FethetClient />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Tarih/ }))
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/questions/random?'),
+        { cache: 'no-store' },
+      )
+    })
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('examRef=TYT'),
+      { cache: 'no-store' },
+    )
+    expect(await screen.findByText(/Önce Çalış sayfasında TYT Sosyal/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Çalış sayfasına git' })).toHaveAttribute(
+      'href',
+      '/arena/calisma',
+    )
+  })
+
+  it('TYT Sosyal fetih ilerlemesini kullanıcı ve seçim olayına göre ayırır', async () => {
+    localStorage.setItem(
+      'bilge-arena-fethet-v2:social:user-2:tyt-social-2026-v1:2026-08-31T08:00:00+00:00:questions_16_20',
+      JSON.stringify(['sosyal-tarih']),
+    )
+    render(<FethetClient />)
+    const tarih = await screen.findByRole('button', { name: /Tarih/ })
+    expect(tarih).not.toBeDisabled()
+    expect(screen.queryByText('1/')).not.toBeInTheDocument()
+  })
+
+  it('diğer derslerin fetih ilerlemesini de kullanıcıya bağlar ve legacy Sosyal girdisini reddeder', async () => {
+    localStorage.setItem(
+      'bilge-arena-fethet-v2:user:user-2',
+      JSON.stringify(['matematik-sayilar']),
+    )
+    localStorage.setItem(
+      'bilge-arena-fethet-v2:user:user-1',
+      JSON.stringify(['sosyal-tarih']),
+    )
+
+    render(<FethetClient />)
+
+    expect(await screen.findByRole('button', { name: /Sayılar/ })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /Tarih/ })).not.toBeDisabled()
   })
 })

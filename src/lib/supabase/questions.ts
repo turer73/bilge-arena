@@ -18,6 +18,8 @@ interface FetchQuestionsOptions {
   includeReview?: boolean
   /** Dogrulanmis deneme biletine baglanacak oyun modu */
   mode?: GameMode
+  /** Mutation-capable issuance retries use one stable client request id. */
+  requestId?: string
 }
 
 interface RandomQuestionsResponse {
@@ -31,6 +33,7 @@ export interface VerifiedQuestionSet {
   questions: PublicQuestion[]
   attemptId: string | null
   expiresAt: string | null
+  refreshRequestId?: boolean
 }
 
 /** Fisher-Yates shuffle (in-place) */
@@ -61,6 +64,7 @@ export async function fetchQuizQuestions({
   examRef,
   includeReview = true,
   mode = 'classic',
+  requestId,
 }: FetchQuestionsOptions): Promise<VerifiedQuestionSet> {
   const emptyResult: VerifiedQuestionSet = {
     questions: [],
@@ -71,27 +75,64 @@ export async function fetchQuizQuestions({
 
   if (!isOnline) return emptyResult
 
+  // A 20-question TYT Social deneme is always the governed official section.
+  // Persisted UI filters from another game/scope must not downgrade it to the
+  // generic random GET path or alter its 5/5/5/5 composition.
+  const isOfficialTytSocialSection = game === 'sosyal'
+    && examRef === 'TYT'
+    && mode === 'deneme'
+    && limit === 20
+  const effectiveCategory = isOfficialTytSocialSection ? null : category
+  const effectiveDifficulty = isOfficialTytSocialSection ? null : difficulty
+  const effectiveIncludeReview = isOfficialTytSocialSection ? false : includeReview
+
   const params = new URLSearchParams({
     game,
     limit: String(limit),
     mode,
   })
-  if (category) params.set('category', category)
-  if (difficulty != null) params.set('difficulty', String(difficulty))
+  if (effectiveCategory) params.set('category', effectiveCategory)
+  if (effectiveDifficulty != null) params.set('difficulty', String(effectiveDifficulty))
   if (examRef) params.set('examRef', examRef)
-  if (includeReview) params.set('includeReview', 'true')
+  if (effectiveIncludeReview) params.set('includeReview', 'true')
 
-  const safeExcludeIds = filterValidUuids(excludeIds, 50)
+  const safeExcludeIds = isOfficialTytSocialSection ? [] : filterValidUuids(excludeIds, 50)
   if (safeExcludeIds.length > 0) {
     params.set('excludeIds', safeExcludeIds.join(','))
   }
 
   let response: RandomQuestionsResponse | null = null
   try {
-    const res = await fetch(`/api/questions/random?${params.toString()}`, {
-      cache: 'no-store',
-    })
-    if (res.ok) response = (await res.json()) as RandomQuestionsResponse
+    if (isOfficialTytSocialSection && (!requestId || !isValidUuid(requestId))) {
+      return emptyResult
+    }
+    const requestInit: RequestInit = isOfficialTytSocialSection
+      ? {
+          method: 'POST',
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Idempotency-Key': requestId!,
+          },
+          body: JSON.stringify({ requestId }),
+        }
+      : { cache: 'no-store' }
+    const endpoint = isOfficialTytSocialSection
+      ? '/api/questions/tyt-social-section'
+      : `/api/questions/random?${params.toString()}`
+    const res = await fetch(endpoint, requestInit)
+    if (!res.ok) {
+      if (isOfficialTytSocialSection) {
+        const errorBody = await res.json().catch(() => null) as { code?: unknown } | null
+        if (
+          errorBody?.code === 'TYT_SOCIAL_REQUEST_CONFLICT'
+          || errorBody?.code === 'TYT_SOCIAL_REQUEST_EXPIRED'
+        ) return { ...emptyResult, refreshRequestId: true }
+      }
+      return emptyResult
+    }
+    response = (await res.json()) as RandomQuestionsResponse
   } catch (err) {
     console.warn('[fetchQuizQuestions] API hata:', err)
   }
@@ -113,6 +154,14 @@ export async function fetchQuizQuestions({
   }
 
   cacheQuestions(questions).catch(() => {})
+
+  // The governed composer owns the exact 5/5/5/5 official-section order.
+  // Preserve it verbatim so deterministic replay and position snapshots remain
+  // aligned; only the options inside each question may be shuffled later.
+  if (isOfficialTytSocialSection) {
+    if (questions.length !== 20 || reviewQuestions.length !== 0) return emptyResult
+    return { questions: [...questions], attemptId, expiresAt }
+  }
 
   if (reviewQuestions.length > 0) {
     const reviewCount = Math.max(1, Math.floor(limit * 0.3))

@@ -63,6 +63,21 @@ export async function GET(request: NextRequest) {
   const isAdmin = await checkAdmin(supabase)
   const adminProjection = !!isAdmin && searchParams.get('admin_view') === '1'
 
+  // TYT Sosyal aday secimi question-level exam-role snapshot'i gerektirir.
+  // `search_questions` sinav kapsamini veya aday politikasini baglamadigi icin
+  // bu legacy aktif-liste yuzeyinden bilet kesmek, 206'nin snapshot sinirini
+  // ya 500'e dusurur ya da ileride yanlis dala ait kaniti karistirir. Oyun
+  // istemcileri examRef=TYT tasiyan policy-aware random route'u kullanmalidir.
+  if (user && !adminProjection && game === 'sosyal' && active === 'true') {
+    return NextResponse.json(
+      {
+        error: 'TYT Sosyal icin sinav kapsamli calisma akisini kullanin',
+        code: 'TYT_SOCIAL_POLICY_ROUTE_REQUIRED',
+      },
+      { status: 409, headers: { 'Cache-Control': 'private, no-store' } },
+    )
+  }
+
   // Accent-insensitive arama: "cozum" -> "çözüm" (migration 026 RPC)
   // total_count pencere fonksiyonu ile RPC icinden geliyor.
   const activeFilter = active === 'true' ? true : active === 'false' ? false : null

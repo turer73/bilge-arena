@@ -60,6 +60,10 @@ export default function GameClient() {
     }
     if (gameSlug === 'wordquest') return
     const validExamRefs = GAMES[gameSlug as GameSlug].examTags
+    if (gameSlug === 'sosyal' && !selectedExamRef) {
+      setExamRef('TYT')
+      return
+    }
     if (profile?.exam_type && (!selectedExamRef || !validExamRefs.includes(selectedExamRef))) {
       const profileDefault = defaultExamRefForType(profile.exam_type)
       setExamRef(profileDefault && validExamRefs.includes(profileDefault) ? profileDefault : validExamRefs[0] ?? null)
@@ -95,5 +99,11 @@ export default function GameClient() {
 
   if (!isValidSlug) return null
 
-  return <QuizEngine game={gameSlug as GameSlug} />
+  const engineExamRef = gameSlug === 'wordquest' ? null : queryExamRef ?? selectedExamRef
+  return (
+    <QuizEngine
+      key={`${gameSlug}:${engineExamRef ?? ''}`}
+      game={gameSlug as GameSlug}
+    />
+  )
 }

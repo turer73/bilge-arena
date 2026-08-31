@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 const routeState = vi.hoisted(() => ({ game: 'wordquest' }))
 const searchState = vi.hoisted(() => ({ query: '' }))
@@ -25,7 +25,9 @@ vi.mock('@/stores/game-store', () => ({
   useGameStore: (selector: (state: typeof gameState) => unknown) => selector(gameState),
 }))
 vi.mock('next/dynamic', () => ({
-  default: () => ({ game }: { game: string }) => <div data-testid="quiz-engine">{game}</div>,
+  default: () => ({ game }: { game: string }) => (
+    <input data-testid="quiz-engine" defaultValue={game} />
+  ),
 }))
 
 import GameClient from '../[game]/game-client'
@@ -118,5 +120,19 @@ describe('GameClient exam scope', () => {
     render(<GameClient />)
 
     await waitFor(() => expect(gameState.setMode).not.toHaveBeenCalled())
+  })
+
+  it('ders rotası değişince quiz engine kapsamını yeniden mount eder', () => {
+    routeState.game = 'matematik'
+    const { rerender } = render(<GameClient />)
+    const previousEngine = screen.getByTestId('quiz-engine')
+    fireEvent.change(previousEngine, { target: { value: 'eski-aktif-oyun' } })
+
+    routeState.game = 'turkce'
+    rerender(<GameClient />)
+
+    const nextEngine = screen.getByTestId('quiz-engine')
+    expect(nextEngine).not.toBe(previousEngine)
+    expect(nextEngine).toHaveValue('turkce')
   })
 })

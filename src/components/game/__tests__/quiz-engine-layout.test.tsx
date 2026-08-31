@@ -157,17 +157,34 @@ vi.mock('../option-button', () => ({
 vi.mock('../lobby', () => ({
   Lobby: ({
     onStart,
+    startBlocked,
+    startBlockedLabel,
+    startHref,
+    startLabel,
     personalizedMockCard,
     selectedExamRef,
     onSelectExamRef,
   }: {
     onStart: () => void
+    startBlocked?: boolean
+    startBlockedLabel?: string
+    startHref?: string
+    startLabel?: string
     personalizedMockCard?: React.ReactNode
     selectedExamRef?: string | null
     onSelectExamRef: (examRef: string | null) => void
   }) => (
     <>
-      <button data-testid="normal-quiz-start" onClick={onStart} />
+      {startHref ? (
+        <a data-testid="normal-quiz-start" href={startHref}>{startLabel ?? 'Giriş yaparak başla'}</a>
+      ) : (
+        <button
+          data-testid="normal-quiz-start"
+          onClick={onStart}
+          disabled={startBlocked}
+          aria-label={startBlockedLabel ?? 'Başlat'}
+        />
+      )}
       <button data-testid="select-tyt" onClick={() => onSelectExamRef('TYT')} />
       <span data-testid="lobby-exam-ref">{selectedExamRef ?? 'null'}</span>
       {personalizedMockCard}
@@ -709,6 +726,108 @@ describe('QuizEngine — Akıllı Deneme başlangıcı', () => {
     } finally {
       strategyClient.enabled = false
       authStoreValue.user = null
+      quizGame.screen = 'game'
+    }
+  })
+})
+
+describe('QuizEngine — TYT Sosyal cevaplama düzeni', () => {
+  test('misafiri çalışan bir quiz vaat etmek yerine girişe yönlendirir', () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = null
+    gameStoreValue.selectedExamRef = 'TYT'
+    quizGame.handleStart.mockClear()
+
+    try {
+      render(<QuizEngine game="sosyal" />)
+      const startLink = screen.getByTestId('normal-quiz-start')
+      expect(startLink).toHaveAccessibleName('Giriş yaparak başla')
+      expect(startLink).toHaveAttribute(
+        'href',
+        '/giris?redirect=%2Farena%2Fsosyal%3Fexam_ref%3DTYT',
+      )
+      expect(quizGame.handleStart).not.toHaveBeenCalled()
+    } finally {
+      gameStoreValue.selectedExamRef = 'TYT'
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('resmî bölüm kapsamına stale filtreleri taşımadan girer ve session metadata filtresiz kalır', async () => {
+    quizGame.screen = 'lobby'
+    quizGame.isDeneme = true
+    authStoreValue.user = { id: 'u1' }
+    gameStoreValue.selectedMode = 'deneme'
+    gameStoreValue.selectedExamRef = 'TYT'
+    gameStoreValue.selectedCategory = 'stale-category'
+    gameStoreValue.selectedDifficulty = 4
+    gameStoreValue.setCategory.mockClear()
+    gameStoreValue.setDifficulty.mockClear()
+    useSessionSaverMock.mockClear()
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'active',
+        policyVersion: 'tyt-social-2026-v1',
+        variant: 'questions_16_20',
+        effectiveAt: '2026-08-31T08:00:00+00:00',
+        appliesTo: 'new_artifacts_only',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    try {
+      render(<QuizEngine game="sosyal" />)
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+      expect(gameStoreValue.setCategory).toHaveBeenCalledWith(null)
+      expect(gameStoreValue.setDifficulty).toHaveBeenCalledWith(null)
+      expect(useSessionSaverMock).toHaveBeenLastCalledWith(expect.objectContaining({
+        game: 'sosyal',
+        selectedMode: 'deneme',
+        selectedCategory: null,
+        selectedDifficulty: null,
+      }))
+    } finally {
+      vi.unstubAllGlobals()
+      quizGame.isDeneme = false
+      authStoreValue.user = null
+      gameStoreValue.selectedMode = 'klasik'
+      gameStoreValue.selectedExamRef = 'TYT'
+      gameStoreValue.selectedCategory = 'problemler'
+      gameStoreValue.selectedDifficulty = 3
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('setup_required iken normal Social başlangıcını fail-closed engeller', async () => {
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    gameStoreValue.selectedExamRef = 'TYT'
+    quizGame.handleStart.mockClear()
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'setup_required',
+        policyVersion: 'tyt-social-2026-v1',
+        rulesSha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        appliesTo: 'new_artifacts_only',
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    try {
+      render(<QuizEngine game="sosyal" />)
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+      const startButton = screen.getByTestId('normal-quiz-start')
+      expect(startButton).toBeDisabled()
+      expect(startButton).toHaveAccessibleName('Cevaplama düzenini seç')
+      fireEvent.click(startButton)
+      expect(quizGame.handleStart).not.toHaveBeenCalled()
+      expect(screen.getByText('TYT Sosyal cevaplama düzeni')).toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+      authStoreValue.user = null
+      gameStoreValue.selectedExamRef = 'TYT'
       quizGame.screen = 'game'
     }
   })

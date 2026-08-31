@@ -160,6 +160,24 @@ describe('GET /api/questions', () => {
     })
   })
 
+  it('fails closed for TYT Social on the legacy active-list surface', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockCheckAdmin.mockResolvedValue(null)
+
+    const res = await GET(makeGet(
+      'http://localhost/api/questions?game=sosyal&category=tarih&active=true&limit=3',
+    ))
+
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({
+      error: 'TYT Sosyal icin sinav kapsamli calisma akisini kullanin',
+      code: 'TYT_SOCIAL_POLICY_ROUTE_REQUIRED',
+    })
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
   it('fails closed when active-list attempt issuance fails', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockCheckAdmin.mockResolvedValue(null)

@@ -17,6 +17,7 @@ import { isValidUuid } from '@/lib/utils/uuid'
 import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
 import { createGovernedQuestionDraft, deriveGovernedQuestionRequestId } from '@/lib/content-governance/question-drafts'
 import { contentGovernanceRpcStatus } from '@/lib/content-governance/server-contract'
+import { GAME_SLUGS, normalizeCategoryForExam, type GameSlug } from '@/lib/constants/games'
 
 const GEMINI_MODEL = 'gemini-2.5-pro'
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
@@ -216,10 +217,15 @@ export async function POST(req: Request) {
     )
   }
 
-  const { game, category, difficulty, count = 5, topic, level_tag, outcomeId, requestId } = await req.json()
+  const { game: rawGame, category: rawCategory, difficulty, count = 5, topic, level_tag, outcomeId, requestId } = await req.json()
 
-  if (!game || !category || !difficulty) {
+  if (!rawGame || !rawCategory || !difficulty || !GAME_SLUGS.includes(rawGame as GameSlug)) {
     return NextResponse.json({ error: 'game, category, difficulty gerekli' }, { status: 400 })
+  }
+  const game = rawGame as GameSlug
+  const category = normalizeCategoryForExam(game, null, rawCategory)
+  if (!category) {
+    return NextResponse.json({ error: 'Gecersiz kategori' }, { status: 400 })
   }
   if (!isValidUuid(outcomeId) || !isValidUuid(requestId)) {
     return NextResponse.json({ error: 'Yönetişim modunda kazanım ve requestId gereklidir' }, { status: 400 })
@@ -492,7 +498,7 @@ Soru sayisi: ${count}${fewShotText}`
 
 /**
  * PUT /api/admin/generate-questions — Manuel soru ekleme
- * Body: { game, category, topic?, difficulty, question, options, answer, solution }
+ * Body: { game, category, topic?, difficulty, question, options, answer, solution, provenanceRef }
  */
 export async function PUT(req: Request) {
   const supabase = await createClient()
@@ -509,13 +515,26 @@ export async function PUT(req: Request) {
   if (rlRes) return rlRes
 
   const body = await req.json()
-  const { game, category, topic, difficulty, question, options, answer, solution, level_tag, outcomeId, requestId } = body
+  const {
+    game: rawGame,
+    category: rawCategory,
+    topic,
+    difficulty,
+    question,
+    options,
+    answer,
+    solution,
+    level_tag,
+    outcomeId,
+    requestId,
+    provenanceRef,
+  } = body
 
   // Dogrulama
   const { z } = await import('zod')
   const schema = z.object({
-    game: z.string().min(1),
-    category: z.string().min(1),
+    game: z.enum(GAME_SLUGS as [GameSlug, ...GameSlug[]]),
+    category: z.string().trim().min(1),
     topic: z.string().optional(),
     difficulty: z.number().int().min(1).max(5),
     question: z.string().min(10).max(2000),
@@ -527,11 +546,30 @@ export async function PUT(req: Request) {
     level_tag: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).optional(),
     outcomeId: z.string().uuid().optional(),
     requestId: z.string().uuid().optional(),
+    provenanceRef: z.string().trim().min(3).max(500),
   })
 
-  const result = schema.safeParse({ game, category, topic, difficulty, question, options, answer, solution, level_tag, outcomeId, requestId })
+  const result = schema.safeParse({
+    game: rawGame,
+    category: rawCategory,
+    topic,
+    difficulty,
+    question,
+    options,
+    answer,
+    solution,
+    level_tag,
+    outcomeId,
+    requestId,
+    provenanceRef,
+  })
   if (!result.success) {
     return NextResponse.json({ error: 'Gecersiz veri', details: result.error.flatten() }, { status: 400 })
+  }
+  const game = result.data.game
+  const category = normalizeCategoryForExam(game, null, result.data.category)
+  if (!category) {
+    return NextResponse.json({ error: 'Gecersiz kategori' }, { status: 400 })
   }
   const contentValidationError = validateGeneratedQuestionContent(result.data, { game, tdkGuard })
   if (contentValidationError) {
@@ -554,7 +592,12 @@ export async function PUT(req: Request) {
     content: { question, options, answer, solution },
     metadata: { game, category, topic: topic || null, difficulty, levelTag: effectiveLevelTag },
     outcomeId: result.data.outcomeId,
-    source: { kind: 'original', title: 'Bilge Arena editör taslağı', licenseCode: 'INTERNAL' },
+    source: {
+      kind: 'original',
+      title: 'Bilge Arena editör taslağı',
+      licenseCode: 'INTERNAL',
+      provenanceRef: result.data.provenanceRef,
+    },
     summary: 'Editör tarafından kalite incelemesi için taslak oluşturuldu.',
   })
   const inserted = created.data ? { id: created.data.questionId } : null

@@ -150,16 +150,32 @@ export function KuleClient() {
     dispatch({ type: 'SET_LOADING', loading: true })
     const diff = getDifficulty(floor)
     try {
+      const makeQuestionUrl = (difficulty?: number) => {
+        const params = new URLSearchParams({ game, limit: '1', mode: 'classic' })
+        if (difficulty !== undefined) params.set('difficulty', String(difficulty))
+        if (game === 'sosyal') params.set('examRef', 'TYT')
+        return `/api/questions/random?${params.toString()}`
+      }
       // 1. deneme: zorluk filtreli
-      let res = await fetch(`/api/questions/random?game=${game}&difficulty=${diff}&limit=1&mode=classic`)
-      if (!res.ok) throw new Error('Soru alınamadı')
+      let res = await fetch(makeQuestionUrl(diff), { cache: 'no-store' })
+      if (!res.ok) {
+        if (game === 'sosyal' && res.status === 409) {
+          throw new Error('Önce Çalış sayfasında TYT Sosyal cevaplama düzenini seçmelisin.')
+        }
+        throw new Error('Soru alınamadı')
+      }
       let data = await res.json() as RandomQuestionResponse
       let qs: PublicQuestion[] = data.questions ?? []
 
       // 2. deneme: zorluk filtresi olmadan (o zorlukta soru yoksa)
       if (qs.length === 0) {
-        res = await fetch(`/api/questions/random?game=${game}&limit=1&mode=classic`)
-        if (!res.ok) throw new Error('Soru alınamadı')
+        res = await fetch(makeQuestionUrl(), { cache: 'no-store' })
+        if (!res.ok) {
+          if (game === 'sosyal' && res.status === 409) {
+            throw new Error('Önce Çalış sayfasında TYT Sosyal cevaplama düzenini seçmelisin.')
+          }
+          throw new Error('Soru alınamadı')
+        }
         data = await res.json() as RandomQuestionResponse
         qs = data.questions ?? []
       }
@@ -395,6 +411,14 @@ export function KuleClient() {
           >
             Tekrar Dene
           </button>
+          {state.game === 'sosyal' && (
+            <Link
+              href="/arena/calisma"
+              className="text-xs font-bold text-[var(--focus)] underline underline-offset-2"
+            >
+              Çalış sayfasına git
+            </Link>
+          )}
         </div>
       )}
 

@@ -5,6 +5,7 @@ const {
   mockGetUser,
   mockRpc,
   mockFetchDue,
+  mockFilterTytSocialQuestionIds,
   mockIssueVerifiedAttempt,
   tableMocks,
 } = vi.hoisted(() => {
@@ -58,6 +59,7 @@ const {
     mockGetUser: vi.fn(),
     mockRpc: vi.fn(),
     mockFetchDue: vi.fn(),
+    mockFilterTytSocialQuestionIds: vi.fn(),
     mockIssueVerifiedAttempt: vi.fn(),
     tableMocks: {
       profiles: makeTableMock({ data: { exam_type: null }, error: null }),
@@ -92,6 +94,7 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 
 vi.mock('@/lib/review/due-questions', () => ({ fetchDueQuestions: mockFetchDue }))
 vi.mock('@/lib/verified-attempts', () => ({
+  filterTytSocialQuestionIds: mockFilterTytSocialQuestionIds,
   issueVerifiedAttempt: mockIssueVerifiedAttempt,
   toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
 }))
@@ -206,6 +209,11 @@ beforeEach(() => {
   for (const mock of Object.values(tableMocks)) mock.reset()
   mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
   mockFetchDue.mockResolvedValue([])
+  mockFilterTytSocialQuestionIds.mockImplementation(async (
+    _admin: unknown,
+    _userId: string,
+    ids: string[],
+  ) => ids)
   mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
     attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     expiresAt: '2099-01-01T00:00:00.000Z',
@@ -293,6 +301,86 @@ describe('GET /api/study/today', () => {
       sourceType: 'legacy',
       completed: true,
     })])
+  })
+
+  it('mevcut TYT Sosyal planını güncel seçimle yeniden filtrelemeden donmuş plan olayıyla başlatır', async () => {
+    const planId = uid(805)
+    const questionIds = [uid(20), uid(21)]
+    tableMocks.daily_plan.push({
+      data: {
+        id: planId,
+        plan_date: '2026-08-08',
+        exam_ref: 'TYT',
+        question_ids: questionIds,
+        completed_ids: [],
+      },
+    })
+    tableMocks.daily_plan_items.push({ data: [] })
+    tableMocks.questions.push({
+      data: questionIds.map(id => makeQuestionRow(id, { game: 'sosyal', category: 'tarih' })),
+    })
+
+    const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT' }) as never)
+
+    expect(response.status).toBe(200)
+    expect(mockFilterTytSocialQuestionIds).not.toHaveBeenCalled()
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        userId: U1,
+        game: 'sosyal',
+        examRef: 'TYT',
+        sourcePlanId: planId,
+        questionIds,
+      }),
+    )
+  })
+
+  it('yeni TYT Sosyal planını seçim politikasına göre filtreleyip özel snapshot RPC ile oluşturur', async () => {
+    tableMocks.daily_plan.push({ data: null })
+    const questions = Array.from({ length: 15 }, (_, index) => makeQuestionRow(
+      uid(30 + index),
+      { game: 'sosyal', category: index < 5 ? 'tarih' : index < 10 ? 'cografya' : 'felsefe' },
+    ))
+    tableMocks.questions.push({ data: questions })
+    tableMocks.user_question_history.push({ data: [] })
+    tableMocks.questions.push({ data: questions })
+    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+      if (name === 'resolve_released_curriculum_scope') return { data: null, error: null }
+      if (name !== 'create_tyt_social_daily_plan_v2') throw new Error(`unexpected RPC: ${name}`)
+      const items = args.p_items as Array<Record<string, unknown>>
+      return {
+        data: {
+          planId: uid(806),
+          game: 'sosyal',
+          planDate: args.p_plan_date,
+          examRef: 'TYT',
+          questionIds: items.map(item => item.question_id),
+          completedIds: [],
+          items: items.map(item => ({
+            questionId: item.question_id,
+            position: item.position,
+            slotType: item.slot_type,
+            sourceType: item.source_type,
+            completed: false,
+          })),
+        },
+        error: null,
+      }
+    })
+
+    const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT' }) as never)
+
+    expect(response.status).toBe(200)
+    expect(mockFilterTytSocialQuestionIds).toHaveBeenCalledWith(
+      expect.anything(), U1, questions.map(question => question.id),
+    )
+    expect(mockRpc.mock.calls.some(([name]) => name === 'create_daily_plan_v2')).toBe(false)
+    expect(mockRpc.mock.calls.some(([name]) => name === 'create_tyt_social_daily_plan_v2')).toBe(true)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ game: 'sosyal', examRef: 'TYT', sourcePlanId: uid(806) }),
+    )
   })
 
   it('yeni plani 5/5/3/1/1 olarak atomik RPC ile olusturur', async () => {

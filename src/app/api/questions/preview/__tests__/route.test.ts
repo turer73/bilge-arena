@@ -75,6 +75,23 @@ describe('GET /api/questions/preview exam scope', () => {
     expect(mockRpc).not.toHaveBeenCalled()
   })
 
+  it('rejects an unknown category instead of dropping the database filter', async () => {
+    const response = await GET(makeRequest({ game: 'sosyal', category: 'bilinmeyen', examRef: 'TYT' }) as never)
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Gecerli kategori belirtilmedi' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects Social without an exact exam scope before database work', async () => {
+    const response = await GET(makeRequest({ game: 'sosyal' }) as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Sosyal icin exact sinav kapsami belirtilmelidir',
+    })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
   it.each(['tyt', 'UNKNOWN', ''])('rejects an invalid explicit exam scope: %s', async (examRef) => {
     const response = await GET(makeRequest({ game: 'fen', examRef }) as never)
 
@@ -91,17 +108,14 @@ describe('GET /api/questions/preview exam scope', () => {
     expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('normalizes the legacy social din alias before database filtering', async () => {
-    mockRpc.mockResolvedValueOnce({ data: [], error: null })
+  it('keeps guest TYT Social preview closed until a common-role projection exists', async () => {
+    const response = await GET(makeRequest({ game: 'sosyal', category: 'din', examRef: 'TYT' }) as never)
 
-    await GET(makeRequest({ game: 'sosyal', category: 'din', examRef: 'TYT' }) as never)
-
-    expect(mockRpc).toHaveBeenCalledWith('select_random_questions', {
-      p_game: 'sosyal',
-      p_limit: 3,
-      p_category: 'din_kulturu',
-      p_exam_ref: 'TYT',
+    expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toEqual({
+      error: 'TYT Sosyal misafir onizlemesi hazirlaniyor',
     })
+    expect(mockRpc).not.toHaveBeenCalled()
   })
 
   it('preserves TYT and biyoloji while relaxing only difficulty', async () => {

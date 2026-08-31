@@ -29,6 +29,10 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
     fetchMastery,
   } = useMasteryMap(game, userId, examRef)
 
+  const freePracticeParams = new URLSearchParams()
+  if (game !== 'wordquest' && examRef) freePracticeParams.set('exam_ref', examRef)
+  const freePracticeHref = `/arena/${game}${freePracticeParams.size > 0 ? `?${freePracticeParams}` : ''}`
+
   if (!userId || loading) return null
 
   if (error || (coverage.supported && outcomes.length === 0)) {
@@ -58,7 +62,7 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
         <p className="mt-1 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
           Bu ders ve sınav kapsamı tam eşleşmeden seviye göstermiyoruz. Serbest pratik güvenle kullanılabilir.
         </p>
-        <Link href={`/arena/${game}`} className="mt-2 inline-flex min-h-11 items-center text-xs font-black text-[var(--app-accent-text)] hover:underline">
+        <Link href={freePracticeHref} className="mt-2 inline-flex min-h-11 items-center text-xs font-black text-[var(--app-accent-text)] hover:underline">
           Serbest pratikle devam et
         </Link>
       </article>

@@ -85,7 +85,7 @@ describe('CalismaClient', () => {
     expect(screen.getByRole('button', { name: 'TYT' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
     expect(screen.getByTestId('institution-weekly-program')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/matematik')
+    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/matematik?exam_ref=TYT')
     expect(screen.getByTestId('today-plan-focus')).toBeInTheDocument()
     expect(screen.getByTestId('mastery-action-card')).toBeInTheDocument()
     expect(document.querySelector('[data-practice-progress]')).toHaveClass('lg:col-start-1', 'lg:row-start-2')
@@ -106,6 +106,29 @@ describe('CalismaClient', () => {
     expect(screen.getByRole('button', { name: 'LGS' })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  test('TYT Sosyal setup_required iken çalışma devam eylemini fail-closed kapatır', async () => {
+    useGameStore.setState({ selectedGame: 'sosyal', selectedExamRef: 'TYT' })
+    mockedUseAuthStore.mockReturnValue({
+      user: { id: 'u1' },
+      profile: { exam_type: 'yks' },
+      loading: false,
+    } as never)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 'setup_required',
+        policyVersion: 'tyt-social-2026-v1',
+        rulesSha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        appliesTo: 'new_artifacts_only',
+      }),
+    }))
+
+    render(<CalismaClient />)
+    await waitFor(() => expect(screen.getByText('TYT Sosyal cevaplama düzeni')).toBeInTheDocument())
+    expect(screen.queryByRole('link', { name: 'Devam et' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'TYT Sosyal seçimi gerekli' })).toBeDisabled()
+  })
+
   test('ders değişimi stale kategori temizler ve geçerli sınavı korur', () => {
     useGameStore.setState({ selectedCategory: 'problemler', selectedExamRef: 'TYT' })
     mockedUseAuthStore.mockReturnValue({
@@ -119,7 +142,7 @@ describe('CalismaClient', () => {
     expect(useGameStore.getState().selectedGame).toBe('turkce')
     expect(useGameStore.getState().selectedExamRef).toBe('TYT')
     expect(useGameStore.getState().selectedCategory).toBeNull()
-    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/turkce')
+    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/turkce?exam_ref=TYT')
   })
 
   test('Wordquest gecisi onceki dersin sinav tercihini silmez', () => {
