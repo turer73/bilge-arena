@@ -57,6 +57,20 @@ describe('205 TYT Social candidate-policy foundation SQL', () => {
     expect(foundation).toContain('v_capability_manifest_sha256')
     expect(foundation).toContain('pg_get_functiondef')
     expect(foundation).toContain('pg_get_triggerdef')
+    expect(foundation).toContain(
+      'CREATE OR REPLACE FUNCTION public.tyt_social_snapshot_boundary_manifest_sha256()',
+    )
+    expect(foundation).toMatch(
+      /tyt_social_snapshot_boundary_manifest_sha256\(\)[\s\S]+SECURITY DEFINER[\s\S]+SET search_path = pg_catalog/,
+    )
+    expect(foundation.match(/pg_catalog\.pg_get_triggerdef\([^,]+,false\)/g)).toHaveLength(5)
+    expect(foundation).toContain(
+      'v_capability_manifest_sha256:=\n    public.tyt_social_snapshot_boundary_manifest_sha256();',
+    )
+    expect(foundation).toContain('public.tyt_social_snapshot_boundary_manifest_sha256(),')
+    expect(foundation).not.toMatch(
+      /GRANT EXECUTE ON FUNCTION[^;]+tyt_social_snapshot_boundary_manifest_sha256/s,
+    )
     expect(foundation).toContain("'semanticAggregateCheck','passed'")
     expect(foundation).toContain("EXECUTE 'SELECT public.tyt_social_snapshot_boundary_integrity()'")
     expect(foundation).not.toMatch(
@@ -108,6 +122,12 @@ describe('206 TYT Social issuance boundary SQL', () => {
     expect(boundary).toContain('tyt_social_snapshot_boundary_integrity()')
     expect(boundary).toContain("'semanticAggregateCheck','passed'")
     expect(boundary).toContain('v_manifest_sha256')
+    expect(boundary).toContain(
+      'v_manifest_sha256:=public.tyt_social_snapshot_boundary_manifest_sha256();',
+    )
+    expect(boundary).not.toContain('pg_get_triggerdef')
+    expect(boundary).toContain("'manifestFormatVersion',1")
+    expect(boundary).toContain("'postgresMajor',v_postgres_major")
     expect(boundary).toContain('migration 206 must leave TYT Social fail-closed in validating state')
   })
 

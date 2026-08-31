@@ -215,26 +215,7 @@ BEGIN
      AND v_completion_trigger_oid IS NOT NULL
      AND v_evidence_trigger_oid IS NOT NULL
      AND v_release_guard_trigger_oid IS NOT NULL THEN
-    SELECT encode(extensions.digest(jsonb_build_object(
-      'contextReader', pg_catalog.pg_get_functiondef(v_context_oid),
-      'masteryStateReader', pg_catalog.pg_get_functiondef(v_reader_oid),
-      'masteryEvidenceGuard', pg_catalog.pg_get_functiondef(to_regprocedure(
-        'public.tg_require_tyt_social_mastery_snapshot()'
-      )),
-      'releaseGuard', pg_catalog.pg_get_functiondef(to_regprocedure(
-        'public.tg_guard_tyt_social_mastery_scope_release()'
-      )),
-      'completionConstraint', pg_catalog.pg_get_triggerdef(
-        v_completion_trigger_oid, true
-      ),
-      'masteryEvidenceConstraint', pg_catalog.pg_get_triggerdef(
-        v_evidence_trigger_oid, true
-      ),
-      'releaseConstraint', pg_catalog.pg_get_triggerdef(
-        v_release_guard_trigger_oid, true
-      )
-    )::text, 'sha256'), 'hex')
-    INTO v_manifest_sha256;
+    v_manifest_sha256:=public.tyt_social_mastery_reader_manifest_sha256();
 
     v_capability_ready := EXISTS (
       SELECT 1
@@ -252,7 +233,9 @@ BEGIN
           'masteryEvidenceConstraint',
             'aab_require_tyt_social_mastery_snapshot',
           'releaseConstraint',
-            'trg_guard_tyt_social_mastery_scope_release'
+            'trg_guard_tyt_social_mastery_scope_release',
+          'manifestFormatVersion',1,
+          'postgresMajor',current_setting('server_version_num')::integer/10000
         )
     );
   END IF;
@@ -778,6 +761,85 @@ ON public.curriculum_scope_releases
 FOR EACH ROW
 EXECUTE FUNCTION public.tg_guard_tyt_social_mastery_scope_release();
 
+-- Canonical reader-boundary fingerprint.  Trigger deparsing is caller
+-- search_path-sensitive, so capability writers and readers share this one
+-- hardened helper and fail closed when any required object is absent.
+CREATE OR REPLACE FUNCTION public.tyt_social_mastery_reader_manifest_sha256()
+RETURNS text
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_context_oid oid;
+  v_reader_oid oid;
+  v_completion_trigger_oid oid;
+  v_evidence_trigger_oid oid;
+  v_release_guard_trigger_oid oid;
+  v_manifest jsonb;
+BEGIN
+  v_context_oid:=pg_catalog.to_regprocedure(
+    'public.resolve_tyt_social_mastery_read_context(uuid)'
+  );
+  v_reader_oid:=pg_catalog.to_regprocedure(
+    'public.read_tyt_social_mastery_outcome_state(uuid)'
+  );
+  IF v_context_oid IS NULL OR v_reader_oid IS NULL
+    OR pg_catalog.to_regprocedure('extensions.digest(text,text)') IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.tg_require_tyt_social_mastery_snapshot()'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.tg_guard_tyt_social_mastery_scope_release()'
+    ) IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT trigger_row.oid INTO v_completion_trigger_oid
+  FROM pg_catalog.pg_trigger AS trigger_row
+  WHERE trigger_row.tgrelid=pg_catalog.to_regclass('public.verified_attempts')
+    AND trigger_row.tgname='trg_tyt_social_attempt_snapshot_on_completion'
+    AND NOT trigger_row.tgisinternal AND trigger_row.tgenabled<>'D'
+    AND trigger_row.tgdeferrable AND trigger_row.tginitdeferred;
+  SELECT trigger_row.oid INTO v_evidence_trigger_oid
+  FROM pg_catalog.pg_trigger AS trigger_row
+  WHERE trigger_row.tgrelid=pg_catalog.to_regclass('public.mastery_outcome_evidence')
+    AND trigger_row.tgname='aab_require_tyt_social_mastery_snapshot'
+    AND NOT trigger_row.tgisinternal AND trigger_row.tgenabled<>'D';
+  SELECT trigger_row.oid INTO v_release_guard_trigger_oid
+  FROM pg_catalog.pg_trigger AS trigger_row
+  WHERE trigger_row.tgrelid=pg_catalog.to_regclass('public.curriculum_scope_releases')
+    AND trigger_row.tgname='trg_guard_tyt_social_mastery_scope_release'
+    AND NOT trigger_row.tgisinternal AND trigger_row.tgenabled<>'D';
+  IF v_completion_trigger_oid IS NULL OR v_evidence_trigger_oid IS NULL
+    OR v_release_guard_trigger_oid IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  v_manifest:=pg_catalog.jsonb_build_object(
+    'contextReader',pg_catalog.pg_get_functiondef(v_context_oid),
+    'masteryStateReader',pg_catalog.pg_get_functiondef(v_reader_oid),
+    'masteryEvidenceGuard',pg_catalog.pg_get_functiondef(
+      pg_catalog.to_regprocedure('public.tg_require_tyt_social_mastery_snapshot()')
+    ),
+    'releaseGuard',pg_catalog.pg_get_functiondef(
+      pg_catalog.to_regprocedure('public.tg_guard_tyt_social_mastery_scope_release()')
+    ),
+    'completionConstraint',pg_catalog.pg_get_triggerdef(
+      v_completion_trigger_oid,false
+    ),
+    'masteryEvidenceConstraint',pg_catalog.pg_get_triggerdef(
+      v_evidence_trigger_oid,false
+    ),
+    'releaseConstraint',pg_catalog.pg_get_triggerdef(
+      v_release_guard_trigger_oid,false
+    )
+  );
+  RETURN pg_catalog.encode(extensions.digest(v_manifest::text,'sha256'),'hex');
+END
+$fn$;
+
 COMMENT ON FUNCTION public.resolve_tyt_social_mastery_read_context(uuid) IS
   'Service-only current-policy/current-selection Social mastery context. It exposes neutral range and allowed categories, never selection reasons.';
 COMMENT ON FUNCTION public.read_tyt_social_mastery_outcome_state(uuid) IS
@@ -786,6 +848,7 @@ COMMENT ON FUNCTION public.read_tyt_social_mastery_outcome_state(uuid) IS
 REVOKE ALL ON FUNCTION
   public.tg_require_tyt_social_mastery_snapshot(),
   public.tg_guard_tyt_social_mastery_scope_release(),
+  public.tyt_social_mastery_reader_manifest_sha256(),
   public.tyt_social_mastery_reader_integrity(),
   public.resolve_tyt_social_mastery_read_context(uuid),
   public.read_tyt_social_mastery_outcome_state(uuid)
@@ -799,57 +862,15 @@ TO service_role;
 
 DO $fn$
 DECLARE
-  v_context_oid oid;
-  v_reader_oid oid;
-  v_completion_trigger_oid oid;
-  v_evidence_trigger_oid oid;
-  v_release_guard_trigger_oid oid;
   v_manifest_sha256 text;
+  v_postgres_major integer;
 BEGIN
-  SELECT procedure_row.oid INTO STRICT v_context_oid
-  FROM pg_catalog.pg_proc AS procedure_row
-  WHERE procedure_row.oid =
-    'public.resolve_tyt_social_mastery_read_context(uuid)'::regprocedure;
-  SELECT procedure_row.oid INTO STRICT v_reader_oid
-  FROM pg_catalog.pg_proc AS procedure_row
-  WHERE procedure_row.oid =
-    'public.read_tyt_social_mastery_outcome_state(uuid)'::regprocedure;
-  SELECT trigger_row.oid INTO STRICT v_completion_trigger_oid
-  FROM pg_catalog.pg_trigger AS trigger_row
-  WHERE trigger_row.tgrelid = 'public.verified_attempts'::regclass
-    AND trigger_row.tgname = 'trg_tyt_social_attempt_snapshot_on_completion'
-    AND NOT trigger_row.tgisinternal;
-  SELECT trigger_row.oid INTO STRICT v_evidence_trigger_oid
-  FROM pg_catalog.pg_trigger AS trigger_row
-  WHERE trigger_row.tgrelid = 'public.mastery_outcome_evidence'::regclass
-    AND trigger_row.tgname = 'aab_require_tyt_social_mastery_snapshot'
-    AND NOT trigger_row.tgisinternal;
-  SELECT trigger_row.oid INTO STRICT v_release_guard_trigger_oid
-  FROM pg_catalog.pg_trigger AS trigger_row
-  WHERE trigger_row.tgrelid = 'public.curriculum_scope_releases'::regclass
-    AND trigger_row.tgname = 'trg_guard_tyt_social_mastery_scope_release'
-    AND NOT trigger_row.tgisinternal;
-
-  SELECT encode(extensions.digest(jsonb_build_object(
-    'contextReader', pg_catalog.pg_get_functiondef(v_context_oid),
-    'masteryStateReader', pg_catalog.pg_get_functiondef(v_reader_oid),
-    'masteryEvidenceGuard', pg_catalog.pg_get_functiondef(to_regprocedure(
-      'public.tg_require_tyt_social_mastery_snapshot()'
-    )),
-    'releaseGuard', pg_catalog.pg_get_functiondef(to_regprocedure(
-      'public.tg_guard_tyt_social_mastery_scope_release()'
-    )),
-    'completionConstraint', pg_catalog.pg_get_triggerdef(
-      v_completion_trigger_oid, true
-    ),
-    'masteryEvidenceConstraint', pg_catalog.pg_get_triggerdef(
-      v_evidence_trigger_oid, true
-    ),
-    'releaseConstraint', pg_catalog.pg_get_triggerdef(
-      v_release_guard_trigger_oid, true
-    )
-  )::text, 'sha256'), 'hex')
-  INTO v_manifest_sha256;
+  v_manifest_sha256:=public.tyt_social_mastery_reader_manifest_sha256();
+  IF v_manifest_sha256 IS NULL THEN
+    RAISE EXCEPTION 'TYT Social mastery reader manifest is incomplete'
+      USING ERRCODE='23514';
+  END IF;
+  v_postgres_major:=current_setting('server_version_num')::integer/10000;
 
   INSERT INTO public.tyt_social_policy_capabilities (
     policy_version, capability, capability_version, manifest_sha256, evidence
@@ -867,7 +888,9 @@ BEGIN
       'masteryEvidenceConstraint',
         'aab_require_tyt_social_mastery_snapshot',
       'releaseConstraint',
-        'trg_guard_tyt_social_mastery_scope_release'
+        'trg_guard_tyt_social_mastery_scope_release',
+      'manifestFormatVersion',1,
+      'postgresMajor',v_postgres_major
     )
   ) ON CONFLICT (policy_version, capability, capability_version) DO NOTHING;
 
@@ -887,7 +910,9 @@ BEGIN
         'masteryEvidenceConstraint',
           'aab_require_tyt_social_mastery_snapshot',
         'releaseConstraint',
-          'trg_guard_tyt_social_mastery_scope_release'
+          'trg_guard_tyt_social_mastery_scope_release',
+        'manifestFormatVersion',1,
+        'postgresMajor',v_postgres_major
       )
   ) THEN
     RAISE EXCEPTION 'TYT Social mastery reader capability drifted'

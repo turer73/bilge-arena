@@ -838,6 +838,169 @@ AFTER INSERT ON public.question_revision_exam_roles
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION public.tg_assert_tyt_social_exam_role_approval();
 
+-- Canonical snapshot-boundary fingerprint.  pg_get_triggerdef output is
+-- search_path-sensitive even with pretty-print disabled, so every writer and
+-- reader must cross this single hardened deparse boundary.
+CREATE OR REPLACE FUNCTION public.tyt_social_snapshot_boundary_manifest_sha256()
+RETURNS text
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_attempt_relation_oid oid;
+  v_plan_relation_oid oid;
+  v_review_relation_oid oid;
+  v_attempt_trigger_oid oid;
+  v_plan_trigger_oid oid;
+  v_attempt_parent_guard_oid oid;
+  v_plan_parent_guard_oid oid;
+  v_review_provenance_trigger_oid oid;
+  v_manifest jsonb;
+BEGIN
+  v_attempt_relation_oid:=pg_catalog.to_regclass('public.verified_attempts');
+  v_plan_relation_oid:=pg_catalog.to_regclass('public.daily_plan');
+  v_review_relation_oid:=pg_catalog.to_regclass('public.question_revision_exam_roles');
+
+  IF v_attempt_relation_oid IS NULL OR v_plan_relation_oid IS NULL
+    OR v_review_relation_oid IS NULL
+    OR pg_catalog.to_regprocedure(
+      'extensions.digest(text,text)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_attempt(uuid,text,uuid[],integer,uuid)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.create_tyt_social_daily_plan_v2(uuid,date,jsonb)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_attempt_with_event(uuid,text,uuid[],integer,uuid,text,uuid,text,uuid)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_plan_attempt(uuid,uuid,text,integer,uuid)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_exam_attempt(uuid,text,jsonb,integer,integer,uuid)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.filter_tyt_social_question_candidates(uuid,uuid[])'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.assert_tyt_social_attempt_snapshot_integrity(uuid)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.assert_tyt_social_plan_snapshot_integrity(uuid)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.tyt_social_snapshot_boundary_integrity()'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.tg_guard_tyt_social_attempt_parent_update()'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.tg_guard_tyt_social_plan_parent_update()'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.assert_tyt_social_exam_role_approval(text,uuid)'
+    ) IS NULL
+    OR pg_catalog.to_regprocedure(
+      'public.tg_assert_tyt_social_exam_role_approval()'
+    ) IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT trigger.oid INTO v_attempt_trigger_oid
+  FROM pg_catalog.pg_trigger AS trigger
+  WHERE trigger.tgrelid=v_attempt_relation_oid
+    AND trigger.tgname='trg_tyt_social_attempt_snapshot_integrity'
+    AND NOT trigger.tgisinternal AND trigger.tgenabled<>'D'
+    AND trigger.tgdeferrable AND trigger.tginitdeferred;
+  SELECT trigger.oid INTO v_plan_trigger_oid
+  FROM pg_catalog.pg_trigger AS trigger
+  WHERE trigger.tgrelid=v_plan_relation_oid
+    AND trigger.tgname='trg_tyt_social_plan_snapshot_integrity'
+    AND NOT trigger.tgisinternal AND trigger.tgenabled<>'D'
+    AND trigger.tgdeferrable AND trigger.tginitdeferred;
+  SELECT trigger.oid INTO v_attempt_parent_guard_oid
+  FROM pg_catalog.pg_trigger AS trigger
+  WHERE trigger.tgrelid=v_attempt_relation_oid
+    AND trigger.tgname='trg_guard_tyt_social_attempt_parent_update'
+    AND NOT trigger.tgisinternal AND trigger.tgenabled<>'D';
+  SELECT trigger.oid INTO v_plan_parent_guard_oid
+  FROM pg_catalog.pg_trigger AS trigger
+  WHERE trigger.tgrelid=v_plan_relation_oid
+    AND trigger.tgname='trg_guard_tyt_social_plan_parent_update'
+    AND NOT trigger.tgisinternal AND trigger.tgenabled<>'D';
+  SELECT trigger.oid INTO v_review_provenance_trigger_oid
+  FROM pg_catalog.pg_trigger AS trigger
+  WHERE trigger.tgrelid=v_review_relation_oid
+    AND trigger.tgname='trg_tyt_social_exam_role_approval'
+    AND NOT trigger.tgisinternal AND trigger.tgenabled<>'D'
+    AND trigger.tgdeferrable AND trigger.tginitdeferred;
+
+  IF v_attempt_trigger_oid IS NULL OR v_plan_trigger_oid IS NULL
+    OR v_attempt_parent_guard_oid IS NULL OR v_plan_parent_guard_oid IS NULL
+    OR v_review_provenance_trigger_oid IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  v_manifest:=pg_catalog.jsonb_build_object(
+    'attemptIssuer',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_attempt(uuid,text,uuid[],integer,uuid)'
+    )),
+    'planIssuer',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.create_tyt_social_daily_plan_v2(uuid,date,jsonb)'
+    )),
+    'attemptCore',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_attempt_with_event(uuid,text,uuid[],integer,uuid,text,uuid,text,uuid)'
+    )),
+    'officialSectionIssuer',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)'
+    )),
+    'planAttemptIssuer',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_plan_attempt(uuid,uuid,text,integer,uuid)'
+    )),
+    'smartMockIssuer',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.issue_verified_tyt_social_exam_attempt(uuid,text,jsonb,integer,integer,uuid)'
+    )),
+    'candidateFilter',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.filter_tyt_social_question_candidates(uuid,uuid[])'
+    )),
+    'attemptAssertion',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.assert_tyt_social_attempt_snapshot_integrity(uuid)'
+    )),
+    'planAssertion',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.assert_tyt_social_plan_snapshot_integrity(uuid)'
+    )),
+    'aggregateAssertion',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.tyt_social_snapshot_boundary_integrity()'
+    )),
+    'attemptParentGuardFunction',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.tg_guard_tyt_social_attempt_parent_update()'
+    )),
+    'planParentGuardFunction',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.tg_guard_tyt_social_plan_parent_update()'
+    )),
+    'reviewApprovalAssertion',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.assert_tyt_social_exam_role_approval(text,uuid)'
+    )),
+    'reviewApprovalTriggerFunction',pg_catalog.pg_get_functiondef(pg_catalog.to_regprocedure(
+      'public.tg_assert_tyt_social_exam_role_approval()'
+    )),
+    'attemptTrigger',pg_catalog.pg_get_triggerdef(v_attempt_trigger_oid,false),
+    'planTrigger',pg_catalog.pg_get_triggerdef(v_plan_trigger_oid,false),
+    'attemptParentGuard',pg_catalog.pg_get_triggerdef(v_attempt_parent_guard_oid,false),
+    'planParentGuard',pg_catalog.pg_get_triggerdef(v_plan_parent_guard_oid,false),
+    'reviewApprovalTrigger',pg_catalog.pg_get_triggerdef(v_review_provenance_trigger_oid,false)
+  );
+  RETURN pg_catalog.encode(extensions.digest(v_manifest::text,'sha256'),'hex');
+END
+$fn$;
+
 CREATE OR REPLACE FUNCTION public.tyt_social_candidate_policy_integrity()
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -853,10 +1016,6 @@ DECLARE
   v_invalid_approval_provenance integer;
   v_role_counts jsonb;
   v_snapshot_boundary_ready boolean;
-  v_attempt_trigger_oid oid;
-  v_plan_trigger_oid oid;
-  v_attempt_parent_guard_oid oid;
-  v_plan_parent_guard_oid oid;
   v_capability_manifest_sha256 text;
   v_runtime_integrity jsonb;
   v_review_provenance_trigger_ready boolean;
@@ -928,91 +1087,9 @@ BEGIN
       AND revision.status='published'
     GROUP BY role.exam_role
   ) AS counts ON counts.exam_role=required.role;
-  SELECT trigger.oid INTO v_attempt_trigger_oid
-  FROM pg_trigger AS trigger
-  WHERE trigger.tgrelid='public.verified_attempts'::regclass
-    AND trigger.tgname='trg_tyt_social_attempt_snapshot_integrity'
-    AND NOT trigger.tgisinternal AND trigger.tgenabled<>'D'
-    AND trigger.tgdeferrable AND trigger.tginitdeferred;
-  SELECT trigger.oid INTO v_plan_trigger_oid
-  FROM pg_trigger AS trigger
-  WHERE trigger.tgrelid='public.daily_plan'::regclass
-    AND trigger.tgname='trg_tyt_social_plan_snapshot_integrity'
-    AND NOT trigger.tgisinternal AND trigger.tgenabled<>'D'
-    AND trigger.tgdeferrable AND trigger.tginitdeferred;
-  SELECT trigger.oid INTO v_attempt_parent_guard_oid
-  FROM pg_trigger AS trigger
-  WHERE trigger.tgrelid='public.verified_attempts'::regclass
-    AND trigger.tgname='trg_guard_tyt_social_attempt_parent_update'
-    AND NOT trigger.tgisinternal AND trigger.tgenabled<>'D';
-  SELECT trigger.oid INTO v_plan_parent_guard_oid
-  FROM pg_trigger AS trigger
-  WHERE trigger.tgrelid='public.daily_plan'::regclass
-    AND trigger.tgname='trg_guard_tyt_social_plan_parent_update'
-    AND NOT trigger.tgisinternal AND trigger.tgenabled<>'D';
-  IF v_attempt_trigger_oid IS NOT NULL AND v_plan_trigger_oid IS NOT NULL
-    AND v_attempt_parent_guard_oid IS NOT NULL
-    AND v_plan_parent_guard_oid IS NOT NULL
-    AND v_review_provenance_trigger_oid IS NOT NULL
-    AND to_regprocedure('public.issue_verified_tyt_social_attempt(uuid,text,uuid[],integer,uuid)') IS NOT NULL
-    AND to_regprocedure('public.create_tyt_social_daily_plan_v2(uuid,date,jsonb)') IS NOT NULL
-    AND to_regprocedure('public.assert_tyt_social_attempt_snapshot_integrity(uuid)') IS NOT NULL
-    AND to_regprocedure('public.assert_tyt_social_plan_snapshot_integrity(uuid)') IS NOT NULL
-    AND to_regprocedure('public.tyt_social_snapshot_boundary_integrity()') IS NOT NULL
-    AND to_regprocedure('public.issue_verified_tyt_social_attempt_with_event(uuid,text,uuid[],integer,uuid,text,uuid,text,uuid)') IS NOT NULL
-    AND to_regprocedure('public.issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)') IS NOT NULL
-    AND to_regprocedure('public.issue_verified_tyt_social_plan_attempt(uuid,uuid,text,integer,uuid)') IS NOT NULL
-    AND to_regprocedure('public.issue_verified_tyt_social_exam_attempt(uuid,text,jsonb,integer,integer,uuid)') IS NOT NULL
-    AND to_regprocedure('public.filter_tyt_social_question_candidates(uuid,uuid[])') IS NOT NULL THEN
-    SELECT encode(extensions.digest(jsonb_build_object(
-      'attemptIssuer',pg_get_functiondef(to_regprocedure(
-        'public.issue_verified_tyt_social_attempt(uuid,text,uuid[],integer,uuid)'
-      )),
-      'planIssuer',pg_get_functiondef(to_regprocedure(
-        'public.create_tyt_social_daily_plan_v2(uuid,date,jsonb)'
-      )),
-      'attemptCore',pg_get_functiondef(to_regprocedure(
-        'public.issue_verified_tyt_social_attempt_with_event(uuid,text,uuid[],integer,uuid,text,uuid,text,uuid)'
-      )),
-      'officialSectionIssuer',pg_get_functiondef(to_regprocedure(
-        'public.issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)'
-      )),
-      'planAttemptIssuer',pg_get_functiondef(to_regprocedure(
-        'public.issue_verified_tyt_social_plan_attempt(uuid,uuid,text,integer,uuid)'
-      )),
-      'smartMockIssuer',pg_get_functiondef(to_regprocedure(
-        'public.issue_verified_tyt_social_exam_attempt(uuid,text,jsonb,integer,integer,uuid)'
-      )),
-      'candidateFilter',pg_get_functiondef(to_regprocedure(
-        'public.filter_tyt_social_question_candidates(uuid,uuid[])'
-      )),
-      'attemptAssertion',pg_get_functiondef(to_regprocedure(
-        'public.assert_tyt_social_attempt_snapshot_integrity(uuid)'
-      )),
-      'planAssertion',pg_get_functiondef(to_regprocedure(
-        'public.assert_tyt_social_plan_snapshot_integrity(uuid)'
-      )),
-      'aggregateAssertion',pg_get_functiondef(to_regprocedure(
-        'public.tyt_social_snapshot_boundary_integrity()'
-      )),
-      'attemptParentGuardFunction',pg_get_functiondef(to_regprocedure(
-        'public.tg_guard_tyt_social_attempt_parent_update()'
-      )),
-      'planParentGuardFunction',pg_get_functiondef(to_regprocedure(
-        'public.tg_guard_tyt_social_plan_parent_update()'
-      )),
-      'reviewApprovalAssertion',pg_get_functiondef(to_regprocedure(
-        'public.assert_tyt_social_exam_role_approval(text,uuid)'
-      )),
-      'reviewApprovalTriggerFunction',pg_get_functiondef(to_regprocedure(
-        'public.tg_assert_tyt_social_exam_role_approval()'
-      )),
-      'attemptTrigger',pg_get_triggerdef(v_attempt_trigger_oid,true),
-      'planTrigger',pg_get_triggerdef(v_plan_trigger_oid,true),
-      'attemptParentGuard',pg_get_triggerdef(v_attempt_parent_guard_oid,true),
-      'planParentGuard',pg_get_triggerdef(v_plan_parent_guard_oid,true),
-      'reviewApprovalTrigger',pg_get_triggerdef(v_review_provenance_trigger_oid,true)
-    )::text,'sha256'),'hex') INTO v_capability_manifest_sha256;
+  v_capability_manifest_sha256:=
+    public.tyt_social_snapshot_boundary_manifest_sha256();
+  IF v_capability_manifest_sha256 IS NOT NULL THEN
     EXECUTE 'SELECT public.tyt_social_snapshot_boundary_integrity()'
       INTO v_runtime_integrity;
   END IF;
@@ -1027,7 +1104,9 @@ BEGIN
         'attemptConstraintTrigger','trg_tyt_social_attempt_snapshot_integrity',
         'planConstraintTrigger','trg_tyt_social_plan_snapshot_integrity',
         'attemptParentGuard','trg_guard_tyt_social_attempt_parent_update',
-        'planParentGuard','trg_guard_tyt_social_plan_parent_update'
+        'planParentGuard','trg_guard_tyt_social_plan_parent_update',
+        'manifestFormatVersion',1,
+        'postgresMajor',current_setting('server_version_num')::integer/10000
       )
   ) AND COALESCE((v_runtime_integrity->>'ready')::boolean,false);
   RETURN jsonb_build_object(
@@ -1110,6 +1189,7 @@ REVOKE ALL ON FUNCTION public.tg_exam_candidate_policy_version_guard(),
   public.review_tyt_social_exam_role(uuid,uuid,smallint,text,text,uuid),
   public.assert_tyt_social_exam_role_approval(text,uuid),
   public.tg_assert_tyt_social_exam_role_approval(),
+  public.tyt_social_snapshot_boundary_manifest_sha256(),
   public.tyt_social_candidate_policy_integrity(),
   public.tyt_social_combined_release_integrity()
 FROM PUBLIC, anon, authenticated, service_role;

@@ -435,16 +435,8 @@ BEGIN
      AND v_issuer_oid IS NOT NULL
      AND v_release_guard_oid IS NOT NULL
      AND v_release_trigger_oid IS NOT NULL THEN
-    SELECT encode(extensions.digest(jsonb_build_object(
-      'composer', pg_catalog.pg_get_functiondef(v_composer_oid),
-      'validatedIssuer', pg_catalog.pg_get_functiondef(v_issuer_oid),
-      'releaseGuard', pg_catalog.pg_get_functiondef(v_release_guard_oid),
-      'releaseConstraint', pg_catalog.pg_get_triggerdef(
-        v_release_trigger_oid,
-        true
-      )
-    )::text, 'sha256'), 'hex')
-    INTO v_manifest_sha256;
+    v_manifest_sha256:=
+      public.tyt_social_official_section_composer_manifest_sha256();
 
     v_capability_ready := EXISTS (
       SELECT 1
@@ -458,7 +450,9 @@ BEGIN
           'deterministicByRequestId', true,
           'directIssuerServiceRoleExecute', false,
           'releaseConstraint',
-            'trg_guard_tyt_social_official_section_release'
+            'trg_guard_tyt_social_official_section_release',
+          'manifestFormatVersion',1,
+          'postgresMajor',current_setting('server_version_num')::integer/10000
         )
     );
   END IF;
@@ -523,10 +517,59 @@ ON public.curriculum_scope_releases
 FOR EACH ROW
 EXECUTE FUNCTION public.tg_guard_tyt_social_official_section_release();
 
+-- Canonical composer fingerprint; all capability writers/readers cross the
+-- same hardened deparse context and missing objects fail closed.
+CREATE OR REPLACE FUNCTION public.tyt_social_official_section_composer_manifest_sha256()
+RETURNS text
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  v_composer_oid oid;
+  v_issuer_oid oid;
+  v_release_guard_oid oid;
+  v_release_trigger_oid oid;
+  v_manifest jsonb;
+BEGIN
+  v_composer_oid:=pg_catalog.to_regprocedure(
+    'public.compose_and_issue_verified_tyt_social_section_attempt(uuid,integer,uuid)'
+  );
+  v_issuer_oid:=pg_catalog.to_regprocedure(
+    'public.issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)'
+  );
+  v_release_guard_oid:=pg_catalog.to_regprocedure(
+    'public.tg_guard_tyt_social_official_section_release()'
+  );
+  IF v_composer_oid IS NULL OR v_issuer_oid IS NULL
+    OR v_release_guard_oid IS NULL
+    OR pg_catalog.to_regprocedure('extensions.digest(text,text)') IS NULL THEN
+    RETURN NULL;
+  END IF;
+  SELECT trigger_row.oid INTO v_release_trigger_oid
+  FROM pg_catalog.pg_trigger AS trigger_row
+  WHERE trigger_row.tgrelid=pg_catalog.to_regclass('public.curriculum_scope_releases')
+    AND trigger_row.tgname='trg_guard_tyt_social_official_section_release'
+    AND NOT trigger_row.tgisinternal AND trigger_row.tgenabled<>'D';
+  IF v_release_trigger_oid IS NULL THEN
+    RETURN NULL;
+  END IF;
+  v_manifest:=pg_catalog.jsonb_build_object(
+    'composer',pg_catalog.pg_get_functiondef(v_composer_oid),
+    'validatedIssuer',pg_catalog.pg_get_functiondef(v_issuer_oid),
+    'releaseGuard',pg_catalog.pg_get_functiondef(v_release_guard_oid),
+    'releaseConstraint',pg_catalog.pg_get_triggerdef(v_release_trigger_oid,false)
+  );
+  RETURN pg_catalog.encode(extensions.digest(v_manifest::text,'sha256'),'hex');
+END
+$fn$;
+
 -- The arbitrary-array official issuer becomes an internal implementation
 -- detail.  Service code receives only the deterministic composer entry point.
 REVOKE ALL ON FUNCTION
   public.compose_and_issue_verified_tyt_social_section_attempt(uuid,integer,uuid),
+  public.tyt_social_official_section_composer_manifest_sha256(),
   public.tyt_social_official_section_composer_integrity(),
   public.tg_guard_tyt_social_official_section_release(),
   public.issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)
@@ -539,40 +582,16 @@ TO service_role;
 
 DO $capability$
 DECLARE
-  v_composer_oid oid;
-  v_issuer_oid oid;
-  v_release_guard_oid oid;
-  v_release_trigger_oid oid;
   v_manifest_sha256 text;
+  v_postgres_major integer;
 BEGIN
-  SELECT procedure_row.oid INTO STRICT v_composer_oid
-  FROM pg_catalog.pg_proc AS procedure_row
-  WHERE procedure_row.oid =
-    'public.compose_and_issue_verified_tyt_social_section_attempt(uuid,integer,uuid)'::regprocedure;
-  SELECT procedure_row.oid INTO STRICT v_issuer_oid
-  FROM pg_catalog.pg_proc AS procedure_row
-  WHERE procedure_row.oid =
-    'public.issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)'::regprocedure;
-  SELECT procedure_row.oid INTO STRICT v_release_guard_oid
-  FROM pg_catalog.pg_proc AS procedure_row
-  WHERE procedure_row.oid =
-    'public.tg_guard_tyt_social_official_section_release()'::regprocedure;
-  SELECT trigger_row.oid INTO STRICT v_release_trigger_oid
-  FROM pg_catalog.pg_trigger AS trigger_row
-  WHERE trigger_row.tgrelid = 'public.curriculum_scope_releases'::regclass
-    AND trigger_row.tgname = 'trg_guard_tyt_social_official_section_release'
-    AND NOT trigger_row.tgisinternal;
-
-  SELECT encode(extensions.digest(jsonb_build_object(
-    'composer', pg_catalog.pg_get_functiondef(v_composer_oid),
-    'validatedIssuer', pg_catalog.pg_get_functiondef(v_issuer_oid),
-    'releaseGuard', pg_catalog.pg_get_functiondef(v_release_guard_oid),
-    'releaseConstraint', pg_catalog.pg_get_triggerdef(
-      v_release_trigger_oid,
-      true
-    )
-  )::text, 'sha256'), 'hex')
-  INTO v_manifest_sha256;
+  v_manifest_sha256:=
+    public.tyt_social_official_section_composer_manifest_sha256();
+  IF v_manifest_sha256 IS NULL THEN
+    RAISE EXCEPTION 'TYT Social official-section composer manifest is incomplete'
+      USING ERRCODE='23514';
+  END IF;
+  v_postgres_major:=current_setting('server_version_num')::integer/10000;
 
   INSERT INTO public.tyt_social_policy_capabilities (
     policy_version,
@@ -590,7 +609,9 @@ BEGIN
       'deterministicByRequestId', true,
       'directIssuerServiceRoleExecute', false,
       'releaseConstraint',
-        'trg_guard_tyt_social_official_section_release'
+        'trg_guard_tyt_social_official_section_release',
+      'manifestFormatVersion',1,
+      'postgresMajor',v_postgres_major
     )
   ) ON CONFLICT (policy_version, capability, capability_version) DO NOTHING;
 
@@ -606,7 +627,9 @@ BEGIN
         'deterministicByRequestId', true,
         'directIssuerServiceRoleExecute', false,
         'releaseConstraint',
-          'trg_guard_tyt_social_official_section_release'
+          'trg_guard_tyt_social_official_section_release',
+        'manifestFormatVersion',1,
+        'postgresMajor',v_postgres_major
       )
   ) THEN
     RAISE EXCEPTION 'TYT Social official-section composer capability drifted'

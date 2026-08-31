@@ -11,6 +11,15 @@ const reader = sql.slice(
   sql.indexOf('COMMENT ON FUNCTION public.resolve_tyt_social_mastery_read_context'),
 )
 
+const manifestHelper = sql.slice(
+  sql.indexOf(
+    'CREATE OR REPLACE FUNCTION public.tyt_social_mastery_reader_manifest_sha256',
+  ),
+  sql.indexOf(
+    'COMMENT ON FUNCTION public.resolve_tyt_social_mastery_read_context',
+  ),
+)
+
 describe('208 TYT Social mastery reader boundary SQL', () => {
   it('rechecks the candidate snapshot when an old open attempt completes', () => {
     expect(sql).toContain('trg_tyt_social_attempt_snapshot_on_completion')
@@ -72,11 +81,31 @@ describe('208 TYT Social mastery reader boundary SQL', () => {
 
   it('records a manifest-bound service-only reader capability', () => {
     expect(sql).toContain("'mastery_reader_v1'")
-    expect(sql).toContain('pg_catalog.pg_get_functiondef(v_context_oid)')
-    expect(sql).toContain('pg_catalog.pg_get_functiondef(v_reader_oid)')
-    expect(sql).toContain("'public.tg_require_tyt_social_mastery_snapshot()'")
-    expect(sql).toContain('pg_catalog.pg_get_triggerdef(')
+    expect(manifestHelper).toContain('LANGUAGE plpgsql\nSTABLE\nSECURITY DEFINER')
+    expect(manifestHelper).toContain('SET search_path = pg_catalog')
+    expect(manifestHelper).toContain('pg_catalog.pg_get_functiondef(v_context_oid)')
+    expect(manifestHelper).toContain('pg_catalog.pg_get_functiondef(v_reader_oid)')
+    expect(manifestHelper).toContain(
+      "'public.tg_require_tyt_social_mastery_snapshot()'",
+    )
+    expect(manifestHelper.match(/pg_catalog\.pg_get_triggerdef\(/g)).toHaveLength(3)
+    expect(sql.match(/pg_catalog\.pg_get_triggerdef\(/g)).toHaveLength(3)
+    expect(sql).toContain(
+      'v_manifest_sha256:=public.tyt_social_mastery_reader_manifest_sha256()',
+    )
     expect(sql).toContain("'semanticReaderCheck', 'passed'")
+    expect(sql).toContain("'manifestFormatVersion',1")
+    expect(sql).toContain("'postgresMajor'")
+    expect(sql).toMatch(
+      /REVOKE ALL ON FUNCTION[\s\S]*public\.tyt_social_mastery_reader_manifest_sha256\(\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role;/,
+    )
+    const serviceGrant = sql.slice(
+      sql.indexOf('GRANT EXECUTE ON FUNCTION\n  public.tyt_social_mastery_reader_integrity()'),
+      sql.indexOf('DO $fn$\nDECLARE\n  v_manifest_sha256 text;'),
+    )
+    expect(serviceGrant).not.toContain(
+      'tyt_social_mastery_reader_manifest_sha256',
+    )
     expect(sql).toContain('FROM PUBLIC, anon, authenticated, service_role;')
     expect(sql).toContain('TO service_role;')
   })

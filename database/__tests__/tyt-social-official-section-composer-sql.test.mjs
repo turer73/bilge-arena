@@ -23,6 +23,13 @@ const grants = migration.slice(
   migration.indexOf('DO $capability$'),
 )
 
+const manifestHelper = migration.slice(
+  migration.indexOf(
+    'CREATE OR REPLACE FUNCTION public.tyt_social_official_section_composer_manifest_sha256',
+  ),
+  migration.indexOf('-- The arbitrary-array official issuer'),
+)
+
 describe('209 TYT Social official-section composer SQL', () => {
   it('composes an exact 5+5+5+5 section from current policy and selection', () => {
     expect(composer).toContain(
@@ -101,12 +108,19 @@ describe('209 TYT Social official-section composer SQL', () => {
 
   it('binds the composer, validated issuer and release trigger to an immutable capability manifest', () => {
     expect(migration).toContain("'official_section_composer_v1'")
-    expect(migration).toContain("'composer', pg_catalog.pg_get_functiondef")
-    expect(migration).toContain(
-      "'validatedIssuer', pg_catalog.pg_get_functiondef",
+    expect(manifestHelper).toContain('LANGUAGE plpgsql\nSTABLE\nSECURITY DEFINER')
+    expect(manifestHelper).toContain('SET search_path = pg_catalog')
+    expect(manifestHelper).toContain("'composer',pg_catalog.pg_get_functiondef")
+    expect(manifestHelper).toContain(
+      "'validatedIssuer',pg_catalog.pg_get_functiondef",
     )
+    expect(manifestHelper).toContain(
+      "'releaseConstraint',pg_catalog.pg_get_triggerdef",
+    )
+    expect(manifestHelper.match(/pg_catalog\.pg_get_triggerdef\(/g)).toHaveLength(1)
+    expect(migration.match(/pg_catalog\.pg_get_triggerdef\(/g)).toHaveLength(1)
     expect(migration).toContain(
-      "'releaseConstraint', pg_catalog.pg_get_triggerdef",
+      'public.tyt_social_official_section_composer_manifest_sha256()',
     )
     expect(migration).toContain("'semanticComposerCheck', 'passed'")
     expect(migration).toContain("'deterministicByRequestId', true")
@@ -115,6 +129,8 @@ describe('209 TYT Social official-section composer SQL', () => {
     )
     expect(migration).toContain("'officialSectionComposerReady'")
     expect(migration).toContain("'officialSectionComposer'")
+    expect(migration).toContain("'manifestFormatVersion',1")
+    expect(migration).toContain("'postgresMajor'")
   })
 
   it('exposes only the deterministic entry point to service_role', () => {
@@ -135,6 +151,9 @@ describe('209 TYT Social official-section composer SQL', () => {
     )
     expect(serviceGrant).not.toContain(
       'issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)',
+    )
+    expect(serviceGrant).not.toContain(
+      'tyt_social_official_section_composer_manifest_sha256',
     )
     expect(serviceGrant).not.toContain('TO authenticated;')
   })

@@ -1156,12 +1156,8 @@ $fn$;
 DO $fn$
 DECLARE
   v_integrity jsonb;
-  v_attempt_trigger_oid oid;
-  v_plan_trigger_oid oid;
-  v_attempt_parent_guard_oid oid;
-  v_plan_parent_guard_oid oid;
-  v_review_provenance_trigger_oid oid;
   v_manifest_sha256 text;
+  v_postgres_major integer;
 BEGIN
   v_integrity:=public.tyt_social_snapshot_boundary_integrity();
   IF v_integrity IS NULL OR jsonb_typeof(v_integrity)<>'object'
@@ -1169,80 +1165,12 @@ BEGIN
     RAISE EXCEPTION 'TYT Social snapshot boundary postcheck failed: %',v_integrity
       USING ERRCODE='23514';
   END IF;
-  SELECT trigger.oid INTO STRICT v_attempt_trigger_oid
-  FROM pg_trigger AS trigger
-  WHERE trigger.tgrelid='public.verified_attempts'::regclass
-    AND trigger.tgname='trg_tyt_social_attempt_snapshot_integrity'
-    AND NOT trigger.tgisinternal;
-  SELECT trigger.oid INTO STRICT v_plan_trigger_oid
-  FROM pg_trigger AS trigger
-  WHERE trigger.tgrelid='public.daily_plan'::regclass
-    AND trigger.tgname='trg_tyt_social_plan_snapshot_integrity'
-    AND NOT trigger.tgisinternal;
-  SELECT trigger.oid INTO STRICT v_attempt_parent_guard_oid
-  FROM pg_trigger AS trigger
-  WHERE trigger.tgrelid='public.verified_attempts'::regclass
-    AND trigger.tgname='trg_guard_tyt_social_attempt_parent_update'
-    AND NOT trigger.tgisinternal;
-  SELECT trigger.oid INTO STRICT v_plan_parent_guard_oid
-  FROM pg_trigger AS trigger
-  WHERE trigger.tgrelid='public.daily_plan'::regclass
-    AND trigger.tgname='trg_guard_tyt_social_plan_parent_update'
-    AND NOT trigger.tgisinternal;
-  SELECT trigger.oid INTO STRICT v_review_provenance_trigger_oid
-  FROM pg_trigger AS trigger
-  WHERE trigger.tgrelid='public.question_revision_exam_roles'::regclass
-    AND trigger.tgname='trg_tyt_social_exam_role_approval'
-    AND NOT trigger.tgisinternal;
-  SELECT encode(extensions.digest(jsonb_build_object(
-    'attemptIssuer',pg_get_functiondef(to_regprocedure(
-      'public.issue_verified_tyt_social_attempt(uuid,text,uuid[],integer,uuid)'
-    )),
-    'planIssuer',pg_get_functiondef(to_regprocedure(
-      'public.create_tyt_social_daily_plan_v2(uuid,date,jsonb)'
-    )),
-    'attemptCore',pg_get_functiondef(to_regprocedure(
-      'public.issue_verified_tyt_social_attempt_with_event(uuid,text,uuid[],integer,uuid,text,uuid,text,uuid)'
-    )),
-    'officialSectionIssuer',pg_get_functiondef(to_regprocedure(
-      'public.issue_verified_tyt_social_section_attempt(uuid,uuid[],integer,uuid)'
-    )),
-    'planAttemptIssuer',pg_get_functiondef(to_regprocedure(
-      'public.issue_verified_tyt_social_plan_attempt(uuid,uuid,text,integer,uuid)'
-    )),
-    'smartMockIssuer',pg_get_functiondef(to_regprocedure(
-      'public.issue_verified_tyt_social_exam_attempt(uuid,text,jsonb,integer,integer,uuid)'
-    )),
-    'candidateFilter',pg_get_functiondef(to_regprocedure(
-      'public.filter_tyt_social_question_candidates(uuid,uuid[])'
-    )),
-    'attemptAssertion',pg_get_functiondef(to_regprocedure(
-      'public.assert_tyt_social_attempt_snapshot_integrity(uuid)'
-    )),
-    'planAssertion',pg_get_functiondef(to_regprocedure(
-      'public.assert_tyt_social_plan_snapshot_integrity(uuid)'
-    )),
-    'aggregateAssertion',pg_get_functiondef(to_regprocedure(
-      'public.tyt_social_snapshot_boundary_integrity()'
-    )),
-    'attemptParentGuardFunction',pg_get_functiondef(to_regprocedure(
-      'public.tg_guard_tyt_social_attempt_parent_update()'
-    )),
-    'planParentGuardFunction',pg_get_functiondef(to_regprocedure(
-      'public.tg_guard_tyt_social_plan_parent_update()'
-    )),
-    'reviewApprovalAssertion',pg_get_functiondef(to_regprocedure(
-      'public.assert_tyt_social_exam_role_approval(text,uuid)'
-    )),
-    'reviewApprovalTriggerFunction',pg_get_functiondef(to_regprocedure(
-      'public.tg_assert_tyt_social_exam_role_approval()'
-    )),
-    'attemptTrigger',pg_get_triggerdef(v_attempt_trigger_oid,true),
-    'planTrigger',pg_get_triggerdef(v_plan_trigger_oid,true),
-    'attemptParentGuard',pg_get_triggerdef(v_attempt_parent_guard_oid,true),
-    'planParentGuard',pg_get_triggerdef(v_plan_parent_guard_oid,true),
-    'reviewApprovalTrigger',pg_get_triggerdef(v_review_provenance_trigger_oid,true)
-  )::text,'sha256'),'hex') INTO v_manifest_sha256;
+  v_manifest_sha256:=public.tyt_social_snapshot_boundary_manifest_sha256();
+  IF v_manifest_sha256 IS NULL THEN
+    RAISE EXCEPTION 'TYT Social snapshot manifest is incomplete'
+      USING ERRCODE='23514';
+  END IF;
+  v_postgres_major:=current_setting('server_version_num')::integer/10000;
 
   INSERT INTO public.tyt_social_policy_capabilities(
     policy_version,capability,capability_version,manifest_sha256,evidence
@@ -1254,6 +1182,8 @@ BEGIN
       'planConstraintTrigger','trg_tyt_social_plan_snapshot_integrity',
       'attemptParentGuard','trg_guard_tyt_social_attempt_parent_update',
       'planParentGuard','trg_guard_tyt_social_plan_parent_update',
+      'manifestFormatVersion',1,
+      'postgresMajor',v_postgres_major,
       'integrity',v_integrity
     )
   ) ON CONFLICT (policy_version,capability,capability_version) DO NOTHING;
@@ -1262,7 +1192,11 @@ BEGIN
     WHERE policy_version='tyt-social-2026-v1'
       AND capability='snapshot_boundary_v1' AND capability_version=1
       AND manifest_sha256=v_manifest_sha256
-      AND evidence->>'semanticAggregateCheck'='passed'
+      AND evidence @> jsonb_build_object(
+        'semanticAggregateCheck','passed',
+        'manifestFormatVersion',1,
+        'postgresMajor',v_postgres_major
+      )
   ) THEN
     RAISE EXCEPTION 'TYT Social snapshot capability drifted' USING ERRCODE='23514';
   END IF;
