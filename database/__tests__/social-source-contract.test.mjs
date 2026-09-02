@@ -6,6 +6,7 @@ import { classifyTytSocialQuestion } from '../osym-reference/lib/tyt-social-exam
 
 const databaseRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 const parserSql = readFileSync(join(databaseRoot, 'osym-reference', 'scripts', 'parse-stirling.mjs'), 'utf8')
+const genericParserSql = readFileSync(join(databaseRoot, 'osym-reference', 'scripts', 'parse-tyt.mjs'), 'utf8')
 const generatorSql = readFileSync(join(databaseRoot, 'run-generation.mjs'), 'utf8')
 const templateSql = readFileSync(join(databaseRoot, 'osym-reference', 'scripts', 'build-all-templates.mjs'), 'utf8')
 const legacyTemplateSql = readFileSync(join(databaseRoot, 'osym-reference', 'scripts', 'build-templates.mjs'), 'utf8')
@@ -22,7 +23,26 @@ describe('TYT Social source contracts', () => {
     expect(classifyTytSocialQuestion(0)).toBeNull()
     expect(classifyTytSocialQuestion(26)).toBeNull()
     expect(parserSql).toContain('classifyTytSocialQuestion')
+    expect(genericParserSql).toContain('classifyTytSocialQuestion')
+    expect(genericParserSql).toContain('question.exam_role = classification.examRole')
+    expect(genericParserSql).toContain('question.subcategory = classification.category')
     expect(parserSql).not.toMatch(/16:\s*'din'/)
+    expect(genericParserSql).not.toMatch(/16:\s*'din'/)
+  })
+
+  it('classifies every official 25-position Social booklet without gaps or aliases', () => {
+    const classified = Array.from({ length: 25 }, (_, index) =>
+      classifyTytSocialQuestion(index + 1))
+    expect(classified.every(Boolean)).toBe(true)
+    expect(classified.map((entry) => entry?.examRole)).toEqual([
+      ...Array(5).fill('common_history'),
+      ...Array(5).fill('common_geography'),
+      ...Array(5).fill('common_philosophy'),
+      ...Array(5).fill('standard_religion'),
+      ...Array(5).fill('alternate_philosophy'),
+    ])
+    expect(classified.filter((entry) => entry?.category === 'din_kulturu')).toHaveLength(5)
+    expect(classified.some((entry) => entry?.category === 'din')).toBe(false)
   })
 
   it('keeps CLI and admin generation coverage aligned for din_kulturu', () => {

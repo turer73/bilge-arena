@@ -2,12 +2,20 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { checkPermission } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { getAal2Status } from '@/lib/auth/aal2'
-import { checkContentGovernanceRateLimit, contentGovernanceWriteLimiter } from '@/lib/content-governance/rate-limits'
+import {
+  checkContentGovernanceRateLimit,
+  contentGovernanceWriteLimiter,
+  type ContentGovernanceLimiter,
+} from '@/lib/content-governance/rate-limits'
 import { contentNoStoreJson } from '@/lib/content-governance/server-contract'
 import { contentGovernanceEnabled } from '@/lib/content-governance/server-security'
 import type { Database } from '@/types/database.client'
 
-export type TytSocialExamRolePermission = 'content.prepare' | 'content.review.stage1' | 'content.review.stage2'
+export type TytSocialExamRolePermission =
+  | 'content.prepare'
+  | 'content.review.stage1'
+  | 'content.review.stage2'
+  | 'content.publish'
 export type TytSocialExamRoleContext = {
   ok: true
   userId: string
@@ -17,7 +25,8 @@ export type TytSocialExamRoleFailure = { ok: false; response: Response }
 
 export async function requireTytSocialExamRoleContext(
   request: Request,
-  permission: TytSocialExamRolePermission,
+  permission: TytSocialExamRolePermission | readonly TytSocialExamRolePermission[],
+  limiter: ContentGovernanceLimiter = contentGovernanceWriteLimiter,
 ): Promise<TytSocialExamRoleContext | TytSocialExamRoleFailure> {
   if (!contentGovernanceEnabled()) {
     return { ok: false, response: contentNoStoreJson({ error: 'İçerik kalitesi pilotu etkin değil' }, { status: 503 }) }
@@ -29,7 +38,7 @@ export async function requireTytSocialExamRoleContext(
     const { data: { user }, error } = await client.auth.getUser()
     if (error || !user) return { ok: false, response: contentNoStoreJson({ error: 'Yetkisiz' }, { status: 401 }) }
 
-    const limited = await checkContentGovernanceRateLimit(contentGovernanceWriteLimiter, user.id, request.headers)
+    const limited = await checkContentGovernanceRateLimit(limiter, user.id, request.headers)
     if (!limited.success) {
       return {
         ok: false,
@@ -42,7 +51,9 @@ export async function requireTytSocialExamRoleContext(
 
     const aal2 = await getAal2Status(client)
     if (!aal2.isAal2) return { ok: false, response: contentNoStoreJson({ error: 'AAL2 gerekli' }, { status: 403 }) }
-    if (!await checkPermission(client, permission)) {
+    const permissions = Array.isArray(permission) ? permission : [permission]
+    const granted = await Promise.all(permissions.map((entry) => checkPermission(client, entry)))
+    if (!granted.some(Boolean)) {
       return { ok: false, response: contentNoStoreJson({ error: 'Yetkiniz yok' }, { status: 403 }) }
     }
     return { ok: true, userId: user.id, client }
@@ -53,7 +64,11 @@ export async function requireTytSocialExamRoleContext(
 
 export async function tytSocialExamRoleRpc(
   client: SupabaseClient<Database>,
-  name: 'prepare_tyt_social_exam_role' | 'review_tyt_social_exam_role',
+  name:
+    | 'prepare_tyt_social_exam_role'
+    | 'review_tyt_social_exam_role'
+    | 'get_tyt_social_release_operations'
+    | 'release_tyt_social_mastery_scope',
   args: Record<string, unknown>,
 ) {
   const rpc = client.rpc.bind(client) as unknown as (

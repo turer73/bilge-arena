@@ -46,6 +46,47 @@ describe('R4.3 content governance routes', () => {
     expect((await createRevision(post('/api/admin/content-quality/revisions', { questionId: ID, baseRevisionId: null, payload: {}, requestId: REQUEST }))).status).toBe(200)
     expect(mocks.rpc).toHaveBeenCalledWith(context.admin, 'create_question_content_revision', expect.objectContaining({ p_user_id: USER, p_question_id: ID, p_request_id: REQUEST }))
   })
+  it('rejects legacy provenance for TYT Sosyal revisions at the API boundary', async () => {
+    const payload = {
+      metadata: { game: 'sosyal', category: 'tarih', difficulty: 2, examRef: 'TYT' },
+      source: { kind: 'original', title: 'Legacy', licenseCode: 'INTERNAL', provenanceRef: 'legacy:question-1' },
+    }
+    expect((await createRevision(post('/api/admin/content-quality/revisions', {
+      questionId: ID, baseRevisionId: ID, payload, requestId: REQUEST,
+    }))).status).toBe(400)
+    expect(mocks.rpc).not.toHaveBeenCalled()
+
+    expect((await createRevision(post('/api/admin/content-quality/revisions', {
+      questionId: ID, baseRevisionId: ID,
+      payload: { ...payload, source: { ...payload.source, provenanceRef: 'osym:tyt:2026:sosyal:q1' } },
+      requestId: REQUEST,
+    }))).status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith(context.admin, 'create_question_content_revision', expect.objectContaining({
+      p_user_id: USER, p_question_id: ID, p_request_id: REQUEST,
+    }))
+
+    mocks.rpc.mockClear()
+    expect((await createRevision(post('/api/admin/content-quality/revisions', {
+      questionId: ID, baseRevisionId: ID,
+      payload: { ...payload, metadata: { ...payload.metadata, examRef: 'LGS' } },
+      requestId: REQUEST,
+    }))).status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledOnce()
+  })
+  it('rejects malformed or credential-bearing source URLs at the API boundary', async () => {
+    const base = {
+      metadata: { game: 'matematik', category: 'problem', difficulty: 2, examRef: 'TYT' },
+      source: { kind: 'original', title: 'Kaynak', licenseCode: 'INTERNAL' },
+    }
+    for (const url of ['https://', 'https://user:secret@example.com/source']) {
+      const response = await createRevision(post('/api/admin/content-quality/revisions', {
+        questionId: ID, baseRevisionId: ID,
+        payload: { ...base, source: { ...base.source, url } }, requestId: REQUEST,
+      }))
+      expect(response.status).toBe(400)
+    }
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
   it('binds review permission to the submitted stage and never trusts a route actor', async () => {
     const response = await review(post(`/api/admin/content-quality/revisions/${ID}/review`, { stage: 2, decision: 'approved', rationale: 'Pedagojik olarak uygun.', requestId: REQUEST }), { params: Promise.resolve({ revisionId: ID }) })
     expect(response.status).toBe(200)
