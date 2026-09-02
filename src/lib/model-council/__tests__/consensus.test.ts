@@ -27,6 +27,7 @@ function msg(round: number, id: string, stance: Stance, extra: Partial<CouncilMe
       inputTokens: null,
       outputTokens: null,
       finishReason: 'STOP',
+      attempts: 1,
     },
     createdAt: '2026-08-29T00:00:00.000Z',
   }
@@ -46,6 +47,7 @@ function failure(round: number, id: string): CouncilFailure {
       inputTokens: null,
       outputTokens: null,
       finishReason: null,
+      attempts: 1,
     },
     createdAt: '2026-08-29T00:00:00.000Z',
   }

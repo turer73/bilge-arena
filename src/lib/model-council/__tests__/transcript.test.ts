@@ -38,6 +38,7 @@ function msg(
       inputTokens: 10,
       outputTokens: 5,
       finishReason: 'STOP',
+      attempts: 1,
     },
     createdAt: '2026-08-29T00:00:00.000Z',
   }

@@ -162,9 +162,13 @@ garantisi** Zod'dur (`schemas.ts`).
 ## Maliyet ve guvenlik frenleri
 
 - **`--confirm` olmadan sifir cagri.** Dry-run plani ve tavani basar, cikar.
-- **`maxTotalCalls`** kosu basina mutlak tavan. `maxRounds * katilimci` bir tavan
-  verir ama tekrar denemeler bunu uc katina cikarabilir; bu sayac gercek
-  cagrilari sayar ve asildiginda tur denenmez.
+- **`maxTotalCalls`** kosu basina mutlak tavan — **tur degil, gercek saglayici
+  cagrisi sayar.** Ayrim onemli: `maxAttempts` geregi tek bir tur birden fazla
+  cagri harcayabilir, dolayisiyla tur saymak tavani gercek kullanimin
+  `1/maxAttempts`'i kadarina indirirdi. Sayac `run-turn.ts`'e verilen
+  `reserveCall` kancasindan her cagridan once artar ve tavan dolunca sonraki
+  cagri hic yapilmaz — tavan kesindir. Her turun kac cagri harcadigi
+  telemetride (`attempts`) durur.
 - **Erken durus.** Uzlasilinca kalan turlar harcanmaz (`stopWhenConverged`).
 - **Paylasilan hiz kapisi.** `gateFor(providerId)` state'i `question-audit` ile
   ORTAK: iki alt sistem ayni anahtari kullandiginda kota tek yerden sayilir.

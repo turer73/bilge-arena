@@ -97,6 +97,14 @@ export interface TurnTelemetry {
   inputTokens: number | null
   outputTokens: number | null
   finishReason: string | null
+  /**
+   * Bu turda YAPILAN gercek saglayici cagrisi sayisi (tekrar denemeler dahil).
+   *
+   * Tur basina 1 DEGILDIR: `maxAttempts` geregi bir tur birden fazla cagri
+   * harcayabilir. Kosu butcesi (`maxTotalCalls`) bu sayilarin toplamiyla
+   * karsilastirilir — tur sayisiyla degil.
+   */
+  attempts: number
 }
 
 export type TurnErrorKind =

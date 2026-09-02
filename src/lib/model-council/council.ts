@@ -64,12 +64,18 @@ export interface CouncilConfig {
   /** Tutanak penceresi — bkz. transcript.ts RenderOptions riski. */
   render: RenderOptions
   /**
-   * KOSU BASINA MUTLAK CAGRI TAVANI.
+   * KOSU BASINA MUTLAK SAGLAYICI-CAGRISI TAVANI.
    *
    * Modeller arasi bir donguyu butcesiz baslatmak, en pahali kaza bicimidir:
-   * `maxRounds * katilimci` zaten bir tavan verir ama tekrar denemeler
-   * (`maxAttempts`) bunu 3 katina cikarabilir. Bu sayac gercek cagrilari
-   * sayar ve asildiginda tur DENENMEZ.
+   * `maxRounds * katilimci` bir tavan verir ama tekrar denemeler
+   * (`maxAttempts`) gercek cagri sayisini bunun katlarina cikarabilir.
+   *
+   * TUR DEGIL, CAGRI SAYILIR: sayac `run-turn.ts`'e verilen `reserveCall`
+   * kancasindan, HER gercek saglayici cagrisindan once artar — tekrar
+   * denemeler dahil. Tavan dolunca sonraki cagri hic yapilmaz, o yuzden
+   * tavan kesindir. (Onceki hal tur basina 1 sayiyordu; tavan gercek
+   * kullanimin ~1/maxAttempts'i kadarini sinirliyordu — Vercel review botu
+   * PR #459'da yakaladi.)
    */
   maxTotalCalls: number
   /** Uzlasma saglaninca kalan turlari atla. */
@@ -192,8 +198,10 @@ export async function runCouncil(
 
     for (const participant of turnOrder(participants, round)) {
       if (totalCalls >= config.maxTotalCalls) {
-        // Butce doldu: bu tur DENENMEZ. Kayda gecer ki rapor "neden 2 turda
-        // durdu" sorusunu cevaplayabilsin.
+        // Butce doldu: prompt bile kurulmadan atlanir. Tavani asil uygulayan
+        // yer `reserveCall` (tekrar denemeleri de kapsar); buradaki erken
+        // cikis yalnizca bos is yapmamak icin. Kayda gecer ki rapor "neden 2
+        // turda durdu" sorusunu cevaplayabilsin.
         transcript.failures.push({
           id: messageId(round, participant.id),
           round,
@@ -211,6 +219,7 @@ export async function runCouncil(
             inputTokens: null,
             outputTokens: null,
             finishReason: null,
+            attempts: 0,
           },
           createdAt: now().toISOString(),
         })
@@ -232,7 +241,6 @@ export async function runCouncil(
         topicContext: clampedTopic.context,
       })
 
-      totalCalls++
       const outcome = await runTurn({
         provider: participant.provider,
         promptVersion: PROMPT_VERSION.councilTurn,
@@ -247,6 +255,14 @@ export async function runCouncil(
         timeoutMs: config.timeoutMs,
         maxAttempts: config.maxAttempts,
         sleep: deps.sleep,
+        // Sayacin TEK artis noktasi. Tekrar denemeler runTurn'un icinde
+        // oldugu icin butce de orada uygulanmali; disarida saymak turu
+        // sayardi, cagriyi degil.
+        reserveCall: () => {
+          if (totalCalls >= config.maxTotalCalls) return false
+          totalCalls++
+          return true
+        },
       })
 
       inputTokens += outcome.telemetry.inputTokens ?? 0

@@ -251,6 +251,46 @@ describe('butce tavani', () => {
     expect(budgetFailures.length).toBeGreaterThan(0)
     expect(budgetFailures[0].error.message).toContain('cagri tavani')
   })
+
+  /**
+   * REGRESYON (Vercel review botu, PR #459): sayac tur basina 1 artiyordu,
+   * oysa `maxAttempts` yuzunden bir tur birden fazla GERCEK cagri harciyor.
+   * Tavan boylece gercek kullanimin ~1/maxAttempts'ini sinirliyordu.
+   */
+  it('tekrar denemeler butceden DUSER — tavan tur degil cagri sayar', async () => {
+    // Her tur ilk iki denemede patlar, ucuncude tutar: tur basina 3 cagri.
+    const flaky = (id: string) =>
+      scriptedProvider(id, [
+        new ProviderHttpError(503, 'down'),
+        new ProviderHttpError(503, 'down'),
+        { stance: 'agree' },
+      ])
+    const codex = flaky('codex')
+    const claude = flaky('claude')
+
+    const run = await runCouncil(
+      topic,
+      [participant('codex', codex), participant('claude', claude)],
+      cfg({ maxRounds: 3, maxAttempts: 3, maxTotalCalls: 4, stopWhenConverged: false }),
+      fixedDeps,
+    )
+
+    // Tavan 4: gercek cagri sayisi 4'u ASMAZ. (Eski hal: 2 tur x 3 deneme = 6.)
+    expect(run.totalCalls).toBe(4)
+    expect(codex.seen.length + claude.seen.length).toBe(4)
+  })
+
+  it('telemetri turun kac gercek cagri harcadigini tasir', async () => {
+    const codex = scriptedProvider('codex', [new ProviderHttpError(503, 'down'), { stance: 'agree' }])
+    const run = await runCouncil(
+      topic,
+      [participant('codex', codex)],
+      cfg({ maxRounds: 1, maxAttempts: 3 }),
+      fixedDeps,
+    )
+    expect(run.transcript.messages[0].telemetry.attempts).toBe(2)
+    expect(run.totalCalls).toBe(2)
+  })
 })
 
 describe('saglayici yetenegine gore istek sekillenir', () => {

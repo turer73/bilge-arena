@@ -149,6 +149,72 @@ describe('hicbir ariza POZISYONA donusmez', () => {
   })
 })
 
+describe('butce kancasi (reserveCall)', () => {
+  it('her GERCEK cagridan once sorulur — tekrar denemeler dahil', async () => {
+    const p = fakeProvider([new ProviderHttpError(503, 'down'), new ProviderHttpError(503, 'down'), good])
+    let reserved = 0
+    const out = await runTurn({
+      provider: p,
+      promptVersion: 'v',
+      request,
+      maxAttempts: 3,
+      sleep: noSleep,
+      reserveCall: () => {
+        reserved++
+        return true
+      },
+    })
+    expect(out.status).toBe('ok')
+    // Uc gercek cagri yapildi; kanca ucunde de soruldu (tur basina 1 DEGIL).
+    expect(p.calls).toBe(3)
+    expect(reserved).toBe(3)
+    expect(out.telemetry.attempts).toBe(3)
+  })
+
+  it('tavan tur ORTASINDA dolarsa kalan denemeler YAPILMAZ', async () => {
+    const p = fakeProvider([new ProviderHttpError(503, 'down')])
+    let budget = 2
+    const out = await runTurn({
+      provider: p,
+      promptVersion: 'v',
+      request,
+      maxAttempts: 5,
+      sleep: noSleep,
+      reserveCall: () => (budget > 0 ? (budget--, true) : false),
+    })
+    expect(out.status).toBe('failed')
+    if (out.status !== 'failed') return
+    expect(out.error.kind).toBe('budget')
+    // maxAttempts 5 olsa da butce 2'de kesti.
+    expect(p.calls).toBe(2)
+    expect(out.telemetry.attempts).toBe(2)
+  })
+
+  it('ilk denemede reddedilirse hic cagri yapilmaz', async () => {
+    const p = fakeProvider([good])
+    const out = await runTurn({
+      provider: p,
+      promptVersion: 'v',
+      request,
+      sleep: noSleep,
+      reserveCall: () => false,
+    })
+    expect(out.status).toBe('failed')
+    if (out.status !== 'failed') return
+    expect(out.error.kind).toBe('budget')
+    expect(out.error.retryable).toBe(false)
+    expect(p.calls).toBe(0)
+    expect(out.telemetry.attempts).toBe(0)
+  })
+
+  it('kanca verilmezse davranis degismez', async () => {
+    const p = fakeProvider([good])
+    const out = await runTurn({ provider: p, promptVersion: 'v', request, sleep: noSleep })
+    expect(out.status).toBe('ok')
+    expect(out.telemetry.attempts).toBe(1)
+  })
+})
+
 describe('extractJsonObject', () => {
   it('duz JSON ayristirir', () => {
     expect(extractJsonObject('{"a":1}')).toEqual({ a: 1 })

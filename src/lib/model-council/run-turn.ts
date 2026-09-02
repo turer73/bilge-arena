@@ -23,6 +23,17 @@ export interface RunTurnOptions {
   backoffBaseMs?: number
   /** Test icin: gercek beklemeyi atla. */
   sleep?: (ms: number) => Promise<void>
+  /**
+   * Her GERCEK saglayici cagrisindan ONCE cagrilir; `false` donerse cagri
+   * YAPILMAZ ve tur `budget` hatasiyla biter.
+   *
+   * NEDEN BURADA, CAGIRANDA DEGIL: tekrar denemeler bu fonksiyonun ICINDE
+   * olur. Butce yalnizca `runTurn` cagrilmadan once kontrol edilseydi, tavan
+   * tur sayisini sinirlardi ama gercek cagri sayisini sinirlamazdi — bir tur
+   * `maxAttempts` kadar cagri harcayabildigi icin gercek kullanim tavanin
+   * katlarina cikardi. Kanca burada oldugu icin tavan KESIN.
+   */
+  reserveCall?: () => boolean
 }
 
 const DEFAULTS = { maxAttempts: 3, timeoutMs: 90_000, backoffBaseMs: 500 }
@@ -80,6 +91,8 @@ export async function runTurn(opts: RunTurnOptions): Promise<TurnOutcome> {
   let lastFinish: string | null = null
   let lastInput: number | null = null
   let lastOutput: number | null = null
+  /** Yapilan GERCEK saglayici cagrisi sayisi — butce muhasebesinin dayanagi. */
+  let attempts = 0
 
   const telemetry = (): TurnTelemetry => ({
     providerId: opts.provider.id,
@@ -89,6 +102,7 @@ export async function runTurn(opts: RunTurnOptions): Promise<TurnOutcome> {
     inputTokens: lastInput,
     outputTokens: lastOutput,
     finishReason: lastFinish,
+    attempts,
   })
 
   /**
@@ -150,11 +164,19 @@ export async function runTurn(opts: RunTurnOptions): Promise<TurnOutcome> {
   }
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    // Butce once sorulur: tavan dolduysa ne backoff beklenir ne hiz kapisina
+    // girilir. Ilk denemede reddedilirse tur hic cagri harcamadan biter.
+    if (opts.reserveCall && !opts.reserveCall()) {
+      lastError = err('budget', 'kosu cagri tavani doldu', false)
+      break
+    }
+
     if (attempt > 1) {
       await sleep(backoffBaseMs * 2 ** (attempt - 2))
     }
     await gateFor(opts.provider.id).wait(opts.provider.minIntervalMs)
 
+    attempts++
     const result = await attemptOnce()
     if (result.ok) return { status: 'ok', data: result.data, telemetry: telemetry(), raw: result.raw }
 

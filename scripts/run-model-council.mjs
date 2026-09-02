@@ -129,8 +129,11 @@ try {
   console.log(`Konu             : ${topic.title}`)
   console.log(`Katilimci        : ${participants.map((p) => `${p.displayName} (${p.provider.modelId})`).join(', ') || '-'}`)
   console.log(`Tur              : ${config.maxRounds}`)
-  console.log(`Cagri tavani     : ${config.maxTotalCalls}`)
-  console.log(`Tahmini cagri    : ${participants.length * config.maxRounds} (tekrar denemeler haric)`)
+  console.log(`Cagri tavani     : ${config.maxTotalCalls} (gercek saglayici cagrisi, tekrar denemeler DAHIL)`)
+  console.log(
+    `Tahmini cagri    : ${participants.length * config.maxRounds}` +
+      ` (hatasiz kosuda; her tekrar deneme +1, en kotu ihtimalle x${config.maxAttempts})`,
+  )
   if (topic.context) console.log(`Baglam           : ${topic.context.length} karakter`)
 
   // ANAHTARSIZ KATILIMCI SESSIZCE DUSURULMEZ: aksi halde kullanici "Codex ve
@@ -174,7 +177,7 @@ try {
   console.log(`Durum            : ${run.outcome.kind}`)
   console.log(`Gerekce          : ${run.outcome.rationale}`)
   console.log(`Tur              : ${run.roundsRun}/${config.maxRounds}`)
-  console.log(`Cagri            : ${run.totalCalls}`)
+  console.log(`Cagri            : ${run.totalCalls}/${config.maxTotalCalls} (tekrar denemeler dahil)`)
   console.log(`Token            : in=${run.inputTokens} out=${run.outputTokens}`)
   console.log(`Basarisiz tur    : ${run.transcript.failures.length}`)
   if (run.outcome.openQuestions.length > 0) {
