@@ -3,11 +3,12 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const PROJECT_ID = process.env.SUPABASE_PROJECT_ID || 'lvnmzdowhfzmpkueurih'
-const CHECK_ONLY = process.argv.includes('--check')
+const DEFAULT_PROJECT_ID = 'lvnmzdowhfzmpkueurih'
 const TOKEN_EXPIRY_WARNING_DAYS = 14
+const STRICT_UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+const scriptPath = fileURLToPath(import.meta.url)
+const scriptDir = path.dirname(scriptPath)
 const projectDir = path.resolve(scriptDir, '..')
 const outputPath = path.join(projectDir, 'src', 'types', 'database.generated.ts')
 const localCli = path.join(
@@ -17,102 +18,147 @@ const localCli = path.join(
   process.platform === 'win32' ? 'supabase.cmd' : 'supabase'
 )
 
-if (!process.env.SUPABASE_ACCESS_TOKEN) {
-  console.error('SUPABASE_ACCESS_TOKEN is required to read the remote schema.')
-  process.exit(1)
-}
+export function validateSupabaseTokenExpiry(rawValue, nowMs = Date.now()) {
+  const tokenExpiresAt = rawValue?.trim()
+  if (!tokenExpiresAt) {
+    throw new Error(
+      'SUPABASE_TOKEN_EXPIRES_AT is required and must match the scoped schema-read token expiry.'
+    )
+  }
 
-const tokenExpiresAt = process.env.SUPABASE_TOKEN_EXPIRES_AT?.trim()
-if (!tokenExpiresAt) {
-  console.warn(
-    'SUPABASE_TOKEN_EXPIRES_AT is not set; configure the repository variable so rotation can be planned.'
-  )
-} else {
+  if (!STRICT_UTC_TIMESTAMP.test(tokenExpiresAt)) {
+    throw new Error(
+      'SUPABASE_TOKEN_EXPIRES_AT must be a strict UTC ISO-8601 timestamp (for example 2026-12-04T00:00:00Z).'
+    )
+  }
+
   const expiryMs = Date.parse(tokenExpiresAt)
-  if (!Number.isFinite(expiryMs)) {
-    console.error('SUPABASE_TOKEN_EXPIRES_AT must be an ISO-8601 timestamp.')
-    process.exit(1)
+  const canonicalInput = tokenExpiresAt.includes('.')
+    ? tokenExpiresAt
+    : tokenExpiresAt.replace(/Z$/, '.000Z')
+
+  if (!Number.isFinite(expiryMs) || new Date(expiryMs).toISOString() !== canonicalInput) {
+    throw new Error('SUPABASE_TOKEN_EXPIRES_AT is not a real calendar timestamp.')
   }
 
-  const nowMs = Date.now()
-  const remainingDays = Math.ceil((expiryMs - nowMs) / 86_400_000)
+  if (!Number.isFinite(nowMs)) {
+    throw new Error('Current time is invalid.')
+  }
+
   if (expiryMs <= nowMs) {
-    console.error('Supabase schema-read token is expired; rotate SUPABASE_ACCESS_TOKEN.')
-    process.exit(1)
+    throw new Error('Supabase schema-read token is expired; rotate SUPABASE_ACCESS_TOKEN.')
   }
-  if (remainingDays <= TOKEN_EXPIRY_WARNING_DAYS) {
-    console.warn(`Supabase schema-read token expires in ${remainingDays} day(s); rotate it now.`)
+
+  const remainingDays = Math.ceil((expiryMs - nowMs) / 86_400_000)
+  return {
+    expiresAt: tokenExpiresAt,
+    expiryMs,
+    remainingDays,
+    shouldWarn: remainingDays <= TOKEN_EXPIRY_WARNING_DAYS,
   }
 }
 
-if (!existsSync(localCli)) {
-  console.error('Pinned Supabase CLI is missing. Run npm ci before generating database types.')
-  process.exit(1)
-}
+export function main({
+  env = process.env,
+  argv = process.argv.slice(2),
+  nowMs = Date.now(),
+} = {}) {
+  const accessToken = env.SUPABASE_ACCESS_TOKEN?.trim()
+  if (!accessToken) {
+    console.error('SUPABASE_ACCESS_TOKEN is required to read the remote schema.')
+    return 1
+  }
 
-const command = localCli
-const commandArgs = ['gen', 'types', 'typescript']
+  let expiry
+  try {
+    expiry = validateSupabaseTokenExpiry(env.SUPABASE_TOKEN_EXPIRES_AT, nowMs)
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error))
+    return 1
+  }
 
-commandArgs.push('--project-id', PROJECT_ID, '--schema', 'public')
-
-const result = spawnSync(command, commandArgs, {
-  cwd: projectDir,
-  encoding: 'utf8',
-  env: process.env,
-  maxBuffer: 10 * 1024 * 1024,
-})
-
-if (result.error || result.status !== 0) {
-  const stderr = result.stderr?.trim() || ''
-  if (/unauthorized|invalid.*token|access token.*expired/i.test(stderr)) {
-    console.error(
-      'Supabase rejected the schema-read token. Rotate the GitHub SUPABASE_ACCESS_TOKEN secret.'
+  if (expiry.shouldWarn) {
+    console.warn(
+      `Supabase schema-read token expires in ${expiry.remainingDays} day(s); rotate it now.`
     )
-  } else if (/forbidden|permission denied|insufficient.*permission/i.test(stderr)) {
-    console.error(
-      'Supabase accepted the token but it cannot read the production schema. Check its project scope and database-read permission.'
-    )
+  }
+
+  if (!existsSync(localCli)) {
+    console.error('Pinned Supabase CLI is missing. Run npm ci before generating database types.')
+    return 1
+  }
+
+  const projectId = env.SUPABASE_PROJECT_ID?.trim() || DEFAULT_PROJECT_ID
+  const result = spawnSync(
+    localCli,
+    ['gen', 'types', 'typescript', '--project-id', projectId, '--schema', 'public'],
+    {
+      cwd: projectDir,
+      encoding: 'utf8',
+      env: { ...env, SUPABASE_ACCESS_TOKEN: accessToken },
+      maxBuffer: 10 * 1024 * 1024,
+    }
+  )
+
+  if (result.error || result.status !== 0) {
+    const stderr = result.stderr?.trim() || ''
+    if (/unauthorized|invalid.*token|access token.*expired/i.test(stderr)) {
+      console.error(
+        'Supabase rejected the schema-read token. Rotate the GitHub SUPABASE_ACCESS_TOKEN secret.'
+      )
+    } else if (/forbidden|permission denied|insufficient.*permission/i.test(stderr)) {
+      console.error(
+        'Supabase accepted the token but it cannot read the production schema. Check its project scope and database-read permission.'
+      )
+    } else {
+      console.error(stderr || result.error?.message || 'Supabase CLI failed.')
+    }
+    return result.status || 1
+  }
+
+  const generated = result.stdout.replace(/\r\n/g, '\n').trimEnd() + '\n'
+  const requiredMarkers = [
+    'export type Json',
+    'export type Database',
+    'user_achievements',
+    'multiplayer_wins',
+    'award_badges',
+  ]
+
+  for (const marker of requiredMarkers) {
+    if (!generated.includes(marker)) {
+      console.error(`Generated database types are missing required marker: ${marker}`)
+      return 1
+    }
+  }
+
+  if (!generated.startsWith('export type Json')) {
+    console.error('Generated output is not a valid Supabase TypeScript definition.')
+    return 1
+  }
+
+  if (argv.includes('--check')) {
+    if (!existsSync(outputPath)) {
+      console.error('src/types/database.generated.ts is missing. Run npm run db:types.')
+      return 1
+    }
+
+    const committed = readFileSync(outputPath, 'utf8').replace(/\r\n/g, '\n')
+    if (committed !== generated) {
+      console.error('Database type drift detected. Run npm run db:types and commit the result.')
+      return 1
+    }
+
+    console.log('Database types match the production public schema.')
   } else {
-    console.error(stderr || result.error?.message || 'Supabase CLI failed.')
+    writeFileSync(outputPath, generated, 'utf8')
+    console.log('Updated src/types/database.generated.ts from the production public schema.')
   }
-  process.exit(result.status || 1)
+
+  return 0
 }
 
-const generated = result.stdout.replace(/\r\n/g, '\n').trimEnd() + '\n'
-const requiredMarkers = [
-  'export type Json',
-  'export type Database',
-  'user_achievements',
-  'multiplayer_wins',
-  'award_badges',
-]
-
-for (const marker of requiredMarkers) {
-  if (!generated.includes(marker)) {
-    console.error(`Generated database types are missing required marker: ${marker}`)
-    process.exit(1)
-  }
-}
-
-if (!generated.startsWith('export type Json')) {
-  console.error('Generated output is not a valid Supabase TypeScript definition.')
-  process.exit(1)
-}
-
-if (CHECK_ONLY) {
-  if (!existsSync(outputPath)) {
-    console.error('src/types/database.generated.ts is missing. Run npm run db:types.')
-    process.exit(1)
-  }
-
-  const committed = readFileSync(outputPath, 'utf8').replace(/\r\n/g, '\n')
-  if (committed !== generated) {
-    console.error('Database type drift detected. Run npm run db:types and commit the result.')
-    process.exit(1)
-  }
-
-  console.log('Database types match the production public schema.')
-} else {
-  writeFileSync(outputPath, generated, 'utf8')
-  console.log('Updated src/types/database.generated.ts from the production public schema.')
+const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : ''
+if (invokedPath === path.resolve(scriptPath)) {
+  process.exitCode = main()
 }
