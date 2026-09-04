@@ -214,6 +214,10 @@ async function persistDecision(decision) {
 
 const server = await createServer({
   root,
+  // `@/` alias'i UYGULAMAYLA AYNI sekilde cozulmeli — koprunun varlik sebebi
+  // bu. provider.ts artik ortak tasima cekirdegini `@/lib/llm/transport-core`
+  // uzerinden aliyor; alias olmadan bu kopru "module not found" verir.
+  resolve: { alias: { '@': join(root, 'src') } },
   server: { middlewareMode: true },
   appType: 'custom',
   logLevel: 'error',
