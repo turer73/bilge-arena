@@ -32,10 +32,10 @@ async function fetchVisibleProfile(username: string, viewerId: string | null): P
   // username basit guard (RPC zaten lower-match + parametreli; injection yok)
   if (!username || username.length > 40) return null
   const svc = createServiceRoleClient()
-  let { data, error } = await svc.rpc('get_public_profile', {
-    p_username: username,
-    p_viewer_id: viewerId,
-  })
+  const viewerArgs = viewerId
+    ? { p_username: username, p_viewer_id: viewerId }
+    : { p_username: username }
+  let { data, error } = await svc.rpc('get_public_profile', viewerArgs)
 
   // App-first rollout: migration 185 uygulanana kadar eski public-only RPC ile
   // sadece daha once paylasilabilir olan profiller calismaya devam eder.
