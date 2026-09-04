@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -126,13 +126,13 @@ export type Database = {
           covered_outcomes_after: number
           created_at: string
           difficulty: number
+          evidence_kind: string
           id: string
           is_correct: boolean
-          evidence_kind: string
           next_question_id: string | null
           outcome_id: string
-          question_id: string
           question_content_sha256: string | null
+          question_id: string
           question_revision_id: string | null
           request_id: string
           response_time_ms: number
@@ -148,13 +148,13 @@ export type Database = {
           covered_outcomes_after: number
           created_at?: string
           difficulty: number
+          evidence_kind?: string
           id?: string
           is_correct: boolean
-          evidence_kind?: string
           next_question_id?: string | null
           outcome_id: string
-          question_id: string
           question_content_sha256?: string | null
+          question_id: string
           question_revision_id?: string | null
           request_id: string
           response_time_ms: number
@@ -170,13 +170,13 @@ export type Database = {
           covered_outcomes_after?: number
           created_at?: string
           difficulty?: number
+          evidence_kind?: string
           id?: string
           is_correct?: boolean
-          evidence_kind?: string
           next_question_id?: string | null
           outcome_id?: string
-          question_id?: string
           question_content_sha256?: string | null
+          question_id?: string
           question_revision_id?: string | null
           request_id?: string
           response_time_ms?: number
@@ -211,6 +211,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "adaptive_diagnostic_answers_question_revision_id_fkey"
+            columns: ["question_revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "adaptive_diagnostic_answers_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
@@ -226,26 +233,94 @@ export type Database = {
           },
         ]
       }
+      adaptive_diagnostic_blueprints: {
+        Row: {
+          blueprint_version: string
+          candidate_gate_version: string
+          capability_status: string
+          created_at: string
+          display_exam_ref: string
+          game: string
+          max_per_outcome: number
+          outcome_count: number
+          policy_version: string
+          question_count: number
+          question_exam_ref: string | null
+          released_at: string | null
+          requires_revision_snapshot: boolean
+          taxonomy_version: string
+          updated_at: string
+        }
+        Insert: {
+          blueprint_version: string
+          candidate_gate_version?: string
+          capability_status?: string
+          created_at?: string
+          display_exam_ref: string
+          game: string
+          max_per_outcome: number
+          outcome_count: number
+          policy_version: string
+          question_count: number
+          question_exam_ref?: string | null
+          released_at?: string | null
+          requires_revision_snapshot?: boolean
+          taxonomy_version: string
+          updated_at?: string
+        }
+        Update: {
+          blueprint_version?: string
+          candidate_gate_version?: string
+          capability_status?: string
+          created_at?: string
+          display_exam_ref?: string
+          game?: string
+          max_per_outcome?: number
+          outcome_count?: number
+          policy_version?: string
+          question_count?: number
+          question_exam_ref?: string | null
+          released_at?: string | null
+          requires_revision_snapshot?: boolean
+          taxonomy_version?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adaptive_diagnostic_blueprint_scope_fkey"
+            columns: ["game", "display_exam_ref"]
+            isOneToOne: false
+            referencedRelation: "curriculum_scope_releases"
+            referencedColumns: ["game", "display_exam_ref"]
+          },
+        ]
+      }
       adaptive_diagnostic_sessions: {
         Row: {
           answered_count: number
           completed_at: string | null
           covered_outcomes: number
           created_at: string
-          current_question_id: string | null
           current_question_base_points: number | null
           current_question_content_sha256: string | null
           current_question_correct_option: number | null
           current_question_difficulty: number | null
+          current_question_id: string | null
           current_question_issued_at: string | null
           current_question_option_count: number | null
           current_question_outcome_id: string | null
           current_question_revision_id: string | null
+          diagnostic_blueprint_version: string
           exam_ref: string
           expires_at: string
           game: string
           id: string
           kind: string
+          max_per_outcome: number
+          outcome_count: number
+          policy_version: string
+          question_count: number
+          question_exam_ref: string | null
           started_at: string
           status: string
           taxonomy_version: string
@@ -257,20 +332,26 @@ export type Database = {
           completed_at?: string | null
           covered_outcomes?: number
           created_at?: string
-          current_question_id?: string | null
           current_question_base_points?: number | null
           current_question_content_sha256?: string | null
           current_question_correct_option?: number | null
           current_question_difficulty?: number | null
+          current_question_id?: string | null
           current_question_issued_at?: string | null
           current_question_option_count?: number | null
           current_question_outcome_id?: string | null
           current_question_revision_id?: string | null
+          diagnostic_blueprint_version?: string
           exam_ref: string
           expires_at: string
           game: string
           id: string
           kind: string
+          max_per_outcome?: number
+          outcome_count?: number
+          policy_version?: string
+          question_count?: number
+          question_exam_ref?: string | null
           started_at?: string
           status: string
           taxonomy_version: string
@@ -282,20 +363,26 @@ export type Database = {
           completed_at?: string | null
           covered_outcomes?: number
           created_at?: string
-          current_question_id?: string | null
           current_question_base_points?: number | null
           current_question_content_sha256?: string | null
           current_question_correct_option?: number | null
           current_question_difficulty?: number | null
+          current_question_id?: string | null
           current_question_issued_at?: string | null
           current_question_option_count?: number | null
           current_question_outcome_id?: string | null
           current_question_revision_id?: string | null
+          diagnostic_blueprint_version?: string
           exam_ref?: string
           expires_at?: string
           game?: string
           id?: string
           kind?: string
+          max_per_outcome?: number
+          outcome_count?: number
+          policy_version?: string
+          question_count?: number
+          question_exam_ref?: string | null
           started_at?: string
           status?: string
           taxonomy_version?: string
@@ -304,6 +391,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "adaptive_diagnostic_session_blueprint_fkey"
+            columns: ["diagnostic_blueprint_version"]
+            isOneToOne: false
+            referencedRelation: "adaptive_diagnostic_blueprints"
+            referencedColumns: ["blueprint_version"]
+          },
+          {
+            foreignKeyName: "adaptive_diagnostic_sessions_current_question_id_fkey"
+            columns: ["current_question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "adaptive_diagnostic_sessions_current_question_outcome_id_fkey"
             columns: ["current_question_outcome_id"]
             isOneToOne: false
@@ -311,10 +412,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "adaptive_diagnostic_sessions_current_question_id_fkey"
-            columns: ["current_question_id"]
+            foreignKeyName: "adaptive_diagnostic_sessions_current_question_revision_id_fkey"
+            columns: ["current_question_revision_id"]
             isOneToOne: false
-            referencedRelation: "questions"
+            referencedRelation: "question_content_revisions"
             referencedColumns: ["id"]
           },
           {
@@ -353,6 +454,33 @@ export type Database = {
           id?: string
           target_id?: string | null
           target_type?: string
+        }
+        Relationships: []
+      }
+      admin_rbac_mutation_requests: {
+        Row: {
+          actor_id: string
+          created_at: string
+          operation: string
+          payload_hash: string
+          request_id: string
+          result: Json
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          operation: string
+          payload_hash: string
+          request_id: string
+          result: Json
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          operation?: string
+          payload_hash?: string
+          request_id?: string
+          result?: Json
         }
         Relationships: []
       }
@@ -720,6 +848,30 @@ export type Database = {
           },
         ]
       }
+      content_governance_write_context: {
+        Row: {
+          backend_pid: number
+          created_at: string
+          operation: string
+          question_id: string
+          transaction_id: number
+        }
+        Insert: {
+          backend_pid: number
+          created_at?: string
+          operation: string
+          question_id: string
+          transaction_id: number
+        }
+        Update: {
+          backend_pid?: number
+          created_at?: string
+          operation?: string
+          question_id?: string
+          transaction_id?: number
+        }
+        Relationships: []
+      }
       controlled_experiment_assignments: {
         Row: {
           bucket: number
@@ -1000,6 +1152,216 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      curriculum_scope_evidence_repair_runs: {
+        Row: {
+          affected_users: number
+          candidate_answers: number
+          candidate_attempts: number
+          candidate_evidence_rows: number
+          display_exam_ref: string
+          game: string
+          inserted_evidence_rows: number
+          manual_mapping_rows: number
+          mapping_after_answer_rows: number
+          mapping_at_or_before_answer_rows: number
+          repair_key: string
+          repaired_at: string
+          run_id: string
+          taxonomy_version: string
+        }
+        Insert: {
+          affected_users: number
+          candidate_answers: number
+          candidate_attempts: number
+          candidate_evidence_rows: number
+          display_exam_ref: string
+          game: string
+          inserted_evidence_rows: number
+          manual_mapping_rows: number
+          mapping_after_answer_rows: number
+          mapping_at_or_before_answer_rows: number
+          repair_key: string
+          repaired_at?: string
+          run_id?: string
+          taxonomy_version: string
+        }
+        Update: {
+          affected_users?: number
+          candidate_answers?: number
+          candidate_attempts?: number
+          candidate_evidence_rows?: number
+          display_exam_ref?: string
+          game?: string
+          inserted_evidence_rows?: number
+          manual_mapping_rows?: number
+          mapping_after_answer_rows?: number
+          mapping_at_or_before_answer_rows?: number
+          repair_key?: string
+          repaired_at?: string
+          run_id?: string
+          taxonomy_version?: string
+        }
+        Relationships: []
+      }
+      curriculum_scope_evidence_repairs: {
+        Row: {
+          affected_users: number
+          candidate_answers: number
+          candidate_attempts: number
+          candidate_evidence_rows: number
+          display_exam_ref: string
+          game: string
+          inserted_evidence_rows: number
+          repaired_at: string
+          taxonomy_version: string
+        }
+        Insert: {
+          affected_users: number
+          candidate_answers: number
+          candidate_attempts: number
+          candidate_evidence_rows: number
+          display_exam_ref: string
+          game: string
+          inserted_evidence_rows: number
+          repaired_at?: string
+          taxonomy_version: string
+        }
+        Update: {
+          affected_users?: number
+          candidate_answers?: number
+          candidate_attempts?: number
+          candidate_evidence_rows?: number
+          display_exam_ref?: string
+          game?: string
+          inserted_evidence_rows?: number
+          repaired_at?: string
+          taxonomy_version?: string
+        }
+        Relationships: []
+      }
+      curriculum_scope_release_history: {
+        Row: {
+          captured_at: string
+          diagnostic_enabled: boolean
+          display_exam_ref: string
+          game: string
+          history_id: number
+          mapping_mode: string
+          question_exam_ref: string | null
+          release_status: string
+          released_at: string | null
+          source_created_at: string
+          source_updated_at: string
+          taxonomy_version: string
+          transition_reason: string
+        }
+        Insert: {
+          captured_at?: string
+          diagnostic_enabled: boolean
+          display_exam_ref: string
+          game: string
+          history_id?: never
+          mapping_mode: string
+          question_exam_ref?: string | null
+          release_status: string
+          released_at?: string | null
+          source_created_at: string
+          source_updated_at: string
+          taxonomy_version: string
+          transition_reason: string
+        }
+        Update: {
+          captured_at?: string
+          diagnostic_enabled?: boolean
+          display_exam_ref?: string
+          game?: string
+          history_id?: never
+          mapping_mode?: string
+          question_exam_ref?: string | null
+          release_status?: string
+          released_at?: string | null
+          source_created_at?: string
+          source_updated_at?: string
+          taxonomy_version?: string
+          transition_reason?: string
+        }
+        Relationships: []
+      }
+      curriculum_scope_releases: {
+        Row: {
+          created_at: string
+          diagnostic_enabled: boolean
+          display_exam_ref: string
+          game: string
+          mapping_mode: string
+          question_exam_ref: string | null
+          release_status: string
+          released_at: string | null
+          taxonomy_version: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          diagnostic_enabled?: boolean
+          display_exam_ref: string
+          game: string
+          mapping_mode?: string
+          question_exam_ref?: string | null
+          release_status?: string
+          released_at?: string | null
+          taxonomy_version: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          diagnostic_enabled?: boolean
+          display_exam_ref?: string
+          game?: string
+          mapping_mode?: string
+          question_exam_ref?: string | null
+          release_status?: string
+          released_at?: string | null
+          taxonomy_version?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      curriculum_scope_source_policy_evidence: {
+        Row: {
+          approved_question_count: number
+          display_exam_ref: string
+          evidence_manifest: Json
+          evidence_sha256: string
+          game: string
+          recorded_at: string
+          required_category_count: number
+          source_policy_version: string
+          taxonomy_version: string
+        }
+        Insert: {
+          approved_question_count: number
+          display_exam_ref: string
+          evidence_manifest: Json
+          evidence_sha256: string
+          game: string
+          recorded_at?: string
+          required_category_count: number
+          source_policy_version: string
+          taxonomy_version: string
+        }
+        Update: {
+          approved_question_count?: number
+          display_exam_ref?: string
+          evidence_manifest?: Json
+          evidence_sha256?: string
+          game?: string
+          recorded_at?: string
+          required_category_count?: number
+          source_policy_version?: string
+          taxonomy_version?: string
+        }
+        Relationships: []
       }
       daily_plan: {
         Row: {
@@ -1319,6 +1681,33 @@ export type Database = {
           },
         ]
       }
+      homepage_admin_mutation_requests: {
+        Row: {
+          actor_id: string
+          created_at: string
+          operation: string
+          payload_hash: string
+          request_id: string
+          result: Json
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          operation: string
+          payload_hash: string
+          request_id: string
+          result: Json
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          operation?: string
+          payload_hash?: string
+          request_id?: string
+          result?: Json
+        }
+        Relationships: []
+      }
       homepage_elements: {
         Row: {
           alignment: string
@@ -1406,6 +1795,90 @@ export type Database = {
         }
         Relationships: []
       }
+      institution_free_pilot_readiness_attestations: {
+        Row: {
+          account_readiness_ref: string
+          accountable_owner_ref: string
+          backup_restore_ref: string
+          created_at: string
+          credential_rotation_ref: string
+          database_actor: string
+          institution_dpa_ref: string
+          legal_approval_ref: string
+          readiness_ref: string
+          retention_decision_ref: string
+          tenant_ab_evidence_ref: string
+          valid_until: string
+          vendor_register_ref: string
+        }
+        Insert: {
+          account_readiness_ref: string
+          accountable_owner_ref: string
+          backup_restore_ref: string
+          created_at?: string
+          credential_rotation_ref: string
+          database_actor?: string
+          institution_dpa_ref: string
+          legal_approval_ref: string
+          readiness_ref: string
+          retention_decision_ref: string
+          tenant_ab_evidence_ref: string
+          valid_until: string
+          vendor_register_ref: string
+        }
+        Update: {
+          account_readiness_ref?: string
+          accountable_owner_ref?: string
+          backup_restore_ref?: string
+          created_at?: string
+          credential_rotation_ref?: string
+          database_actor?: string
+          institution_dpa_ref?: string
+          legal_approval_ref?: string
+          readiness_ref?: string
+          retention_decision_ref?: string
+          tenant_ab_evidence_ref?: string
+          valid_until?: string
+          vendor_register_ref?: string
+        }
+        Relationships: []
+      }
+      institution_free_pilot_readiness_consumptions: {
+        Row: {
+          consumed_at: string
+          database_actor: string
+          institution_id: string
+          readiness_ref: string
+        }
+        Insert: {
+          consumed_at?: string
+          database_actor?: string
+          institution_id: string
+          readiness_ref: string
+        }
+        Update: {
+          consumed_at?: string
+          database_actor?: string
+          institution_id?: string
+          readiness_ref?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_free_pilot_readiness_consumptio_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: true
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_free_pilot_readiness_consumption_readiness_ref_fkey"
+            columns: ["readiness_ref"]
+            isOneToOne: true
+            referencedRelation: "institution_free_pilot_readiness_attestations"
+            referencedColumns: ["readiness_ref"]
+          },
+        ]
+      }
       institution_membership_roles: {
         Row: {
           assigned_at: string
@@ -1452,6 +1925,70 @@ export type Database = {
           },
         ]
       }
+      institution_operation_events: {
+        Row: {
+          actor_user_id: string
+          classroom_id: string | null
+          created_at: string
+          event_ref: string
+          event_type: string
+          id: string
+          institution_id: string
+          metadata: Json
+          request_id: string
+          source: string
+          target_ref: string | null
+        }
+        Insert: {
+          actor_user_id: string
+          classroom_id?: string | null
+          created_at?: string
+          event_ref?: string
+          event_type: string
+          id?: string
+          institution_id: string
+          metadata?: Json
+          request_id: string
+          source: string
+          target_ref?: string | null
+        }
+        Update: {
+          actor_user_id?: string
+          classroom_id?: string | null
+          created_at?: string
+          event_ref?: string
+          event_type?: string
+          id?: string
+          institution_id?: string
+          metadata?: Json
+          request_id?: string
+          source?: string
+          target_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_operation_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_operation_events_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "teacher_classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_operation_events_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institution_permission_catalog: {
         Row: {
           delegable: boolean
@@ -1470,6 +2007,154 @@ export type Database = {
           description?: string
           label?: string
           permission?: string
+        }
+        Relationships: []
+      }
+      institution_pilot_control_events: {
+        Row: {
+          change_reference: string
+          changed_at: string
+          control_key: string
+          database_actor: string
+          enabled: boolean
+          id: string
+          previous_enabled: boolean
+          readiness_ref: string | null
+        }
+        Insert: {
+          change_reference: string
+          changed_at?: string
+          control_key: string
+          database_actor: string
+          enabled: boolean
+          id?: string
+          previous_enabled: boolean
+          readiness_ref?: string | null
+        }
+        Update: {
+          change_reference?: string
+          changed_at?: string
+          control_key?: string
+          database_actor?: string
+          enabled?: boolean
+          id?: string
+          previous_enabled?: boolean
+          readiness_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_pilot_control_events_readiness_ref_fkey"
+            columns: ["readiness_ref"]
+            isOneToOne: false
+            referencedRelation: "institution_free_pilot_readiness_attestations"
+            referencedColumns: ["readiness_ref"]
+          },
+        ]
+      }
+      institution_pilot_controls: {
+        Row: {
+          control_key: string
+          enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          control_key: string
+          enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          control_key?: string
+          enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      institution_program_item_reconciliations: {
+        Row: {
+          id: string
+          institution_id: string
+          migration_id: string
+          origin: string
+          original_snapshot: Json
+          position: number
+          program_id: string
+          reason: string
+          reconciled_at: string
+          reconciled_snapshot: Json
+          student_id: string
+        }
+        Insert: {
+          id?: string
+          institution_id: string
+          migration_id: string
+          origin: string
+          original_snapshot: Json
+          position: number
+          program_id: string
+          reason: string
+          reconciled_at?: string
+          reconciled_snapshot: Json
+          student_id: string
+        }
+        Update: {
+          id?: string
+          institution_id?: string
+          migration_id?: string
+          origin?: string
+          original_snapshot?: Json
+          position?: number
+          program_id?: string
+          reason?: string
+          reconciled_at?: string
+          reconciled_snapshot?: Json
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_program_item_reconciliatio_program_id_position_fkey"
+            columns: ["program_id", "position"]
+            isOneToOne: false
+            referencedRelation: "institution_study_program_items"
+            referencedColumns: ["program_id", "position"]
+          },
+          {
+            foreignKeyName: "institution_program_item_reconciliations_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_program_item_reconciliations_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "institution_study_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_program_item_reconciliations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institution_request_tombstones: {
+        Row: {
+          pruned_at: string
+          request_key: string
+          source: string
+        }
+        Insert: {
+          pruned_at?: string
+          request_key: string
+          source: string
+        }
+        Update: {
+          pruned_at?: string
+          request_key?: string
+          source?: string
         }
         Relationships: []
       }
@@ -1563,47 +2248,118 @@ export type Database = {
           },
         ]
       }
+      institution_scope_capabilities: {
+        Row: {
+          aggregate_enabled: boolean
+          capability_status: string
+          created_at: string
+          display_exam_ref: string
+          game: string
+          program_enabled: boolean
+          question_exam_ref: string | null
+          released_at: string | null
+          report_enabled: boolean
+          scope_policy_version: string
+          student_analysis_enabled: boolean
+          taxonomy_version: string
+          updated_at: string
+        }
+        Insert: {
+          aggregate_enabled?: boolean
+          capability_status?: string
+          created_at?: string
+          display_exam_ref: string
+          game: string
+          program_enabled?: boolean
+          question_exam_ref?: string | null
+          released_at?: string | null
+          report_enabled?: boolean
+          scope_policy_version: string
+          student_analysis_enabled?: boolean
+          taxonomy_version: string
+          updated_at?: string
+        }
+        Update: {
+          aggregate_enabled?: boolean
+          capability_status?: string
+          created_at?: string
+          display_exam_ref?: string
+          game?: string
+          program_enabled?: boolean
+          question_exam_ref?: string | null
+          released_at?: string | null
+          report_enabled?: boolean
+          scope_policy_version?: string
+          student_analysis_enabled?: boolean
+          taxonomy_version?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_scope_capabilities_game_display_exam_ref_fkey"
+            columns: ["game", "display_exam_ref"]
+            isOneToOne: true
+            referencedRelation: "curriculum_scope_releases"
+            referencedColumns: ["game", "display_exam_ref"]
+          },
+        ]
+      }
       institution_student_followups: {
         Row: {
           classroom_id: string
+          display_exam_ref: string
           followup_ref: string
+          game: string
           id: string
           institution_id: string
           membership_id: string
           note: string | null
           opened_at: string
+          question_exam_ref: string | null
           reason_code: string
           resolved_at: string | null
+          scope_policy_version: string
           status: string
           student_id: string
+          taxonomy_version: string
           teacher_id: string
         }
         Insert: {
           classroom_id: string
+          display_exam_ref?: string
           followup_ref?: string
+          game?: string
           id?: string
           institution_id: string
           membership_id: string
           note?: string | null
           opened_at?: string
+          question_exam_ref?: string | null
           reason_code: string
           resolved_at?: string | null
+          scope_policy_version?: string
           status?: string
           student_id: string
+          taxonomy_version?: string
           teacher_id: string
         }
         Update: {
           classroom_id?: string
+          display_exam_ref?: string
           followup_ref?: string
+          game?: string
           id?: string
           institution_id?: string
           membership_id?: string
           note?: string | null
           opened_at?: string
+          question_exam_ref?: string | null
           reason_code?: string
           resolved_at?: string | null
+          scope_policy_version?: string
           status?: string
           student_id?: string
+          taxonomy_version?: string
           teacher_id?: string
         }
         Relationships: [
@@ -1655,43 +2411,58 @@ export type Database = {
         Row: {
           classroom_id: string
           created_at: string
+          display_exam_ref: string
+          game: string
           id: string
           institution_id: string
           membership_id: string
           model_version: string
           period_end: string
           period_start: string
+          question_exam_ref: string | null
           report_ref: string
+          scope_policy_version: string
           snapshot: Json
           student_id: string
+          taxonomy_version: string
           teacher_id: string
         }
         Insert: {
           classroom_id: string
           created_at?: string
+          display_exam_ref: string
+          game: string
           id?: string
           institution_id: string
           membership_id: string
           model_version: string
           period_end: string
           period_start: string
+          question_exam_ref?: string | null
           report_ref?: string
+          scope_policy_version: string
           snapshot: Json
           student_id: string
+          taxonomy_version: string
           teacher_id: string
         }
         Update: {
           classroom_id?: string
           created_at?: string
+          display_exam_ref?: string
+          game?: string
           id?: string
           institution_id?: string
           membership_id?: string
           model_version?: string
           period_end?: string
           period_start?: string
+          question_exam_ref?: string | null
           report_ref?: string
+          scope_policy_version?: string
           snapshot?: Json
           student_id?: string
+          taxonomy_version?: string
           teacher_id?: string
         }
         Relationships: [
@@ -1733,6 +2504,102 @@ export type Database = {
           {
             foreignKeyName: "institution_student_reports_teacher_id_fkey"
             columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institution_study_program_item_executions: {
+        Row: {
+          completed_at: string | null
+          diagnostic_session_id: string | null
+          display_exam_ref: string
+          expired_at: string | null
+          expires_at: string
+          game: string
+          id: string
+          position: number
+          program_id: string
+          question_exam_ref: string | null
+          request_id: string
+          started_at: string
+          status: string
+          student_id: string
+          task_type: string
+          taxonomy_version: string
+          verified_attempt_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          diagnostic_session_id?: string | null
+          display_exam_ref: string
+          expired_at?: string | null
+          expires_at?: string
+          game: string
+          id?: string
+          position: number
+          program_id: string
+          question_exam_ref?: string | null
+          request_id: string
+          started_at?: string
+          status?: string
+          student_id: string
+          task_type: string
+          taxonomy_version: string
+          verified_attempt_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          diagnostic_session_id?: string | null
+          display_exam_ref?: string
+          expired_at?: string | null
+          expires_at?: string
+          game?: string
+          id?: string
+          position?: number
+          program_id?: string
+          question_exam_ref?: string | null
+          request_id?: string
+          started_at?: string
+          status?: string
+          student_id?: string
+          task_type?: string
+          taxonomy_version?: string
+          verified_attempt_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_program_execution_item_fkey"
+            columns: ["program_id", "position"]
+            isOneToOne: false
+            referencedRelation: "institution_study_program_items"
+            referencedColumns: ["program_id", "position"]
+          },
+          {
+            foreignKeyName: "institution_study_program_item_execu_diagnostic_session_id_fkey"
+            columns: ["diagnostic_session_id"]
+            isOneToOne: true
+            referencedRelation: "adaptive_diagnostic_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_program_item_executi_verified_attempt_id_fkey"
+            columns: ["verified_attempt_id"]
+            isOneToOne: true
+            referencedRelation: "verified_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_program_item_executions_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "institution_study_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_study_program_item_executions_student_id_fkey"
+            columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1887,6 +2754,8 @@ export type Database = {
           completed_at: string | null
           created_at: string
           daily_minute_limit: number
+          display_exam_ref: string
+          game: string
           id: string
           institution_id: string
           item_count: number
@@ -1894,9 +2763,12 @@ export type Database = {
           model_version: string
           program_ref: string
           published_at: string | null
+          question_exam_ref: string | null
           reviewed_at: string | null
+          scope_policy_version: string
           status: string
           student_id: string
+          taxonomy_version: string
           teacher_id: string
           week_start: string
         }
@@ -1906,6 +2778,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           daily_minute_limit: number
+          display_exam_ref: string
+          game: string
           id?: string
           institution_id: string
           item_count: number
@@ -1913,9 +2787,12 @@ export type Database = {
           model_version: string
           program_ref?: string
           published_at?: string | null
+          question_exam_ref?: string | null
           reviewed_at?: string | null
+          scope_policy_version: string
           status?: string
           student_id: string
+          taxonomy_version: string
           teacher_id: string
           week_start: string
         }
@@ -1925,6 +2802,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           daily_minute_limit?: number
+          display_exam_ref?: string
+          game?: string
           id?: string
           institution_id?: string
           item_count?: number
@@ -1932,9 +2811,12 @@ export type Database = {
           model_version?: string
           program_ref?: string
           published_at?: string | null
+          question_exam_ref?: string | null
           reviewed_at?: string | null
+          scope_policy_version?: string
           status?: string
           student_id?: string
+          taxonomy_version?: string
           teacher_id?: string
           week_start?: string
         }
@@ -2044,6 +2926,38 @@ export type Database = {
           },
         ]
       }
+      leaderboard_visibility_events: {
+        Row: {
+          changed_at: string
+          id: number
+          new_visible: boolean
+          previous_visible: boolean
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          id?: number
+          new_visible: boolean
+          previous_visible: boolean
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          id?: number
+          new_visible?: boolean
+          previous_visible?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_visibility_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leaderboard_weekly: {
         Row: {
           accuracy_pct: number | null
@@ -2121,6 +3035,7 @@ export type Database = {
           difficulty: number
           difficulty_weighted_earned: number
           difficulty_weighted_possible: number
+          evidence_day_tr: string | null
           fast_wrong: boolean
           is_correct: boolean
           mapping_weight: number
@@ -2130,6 +3045,7 @@ export type Database = {
           session_id: string
           time_taken_sec: number | null
           user_id: string
+          verified_completed_at: string
         }
         Insert: {
           answer_id: string
@@ -2140,6 +3056,7 @@ export type Database = {
           difficulty: number
           difficulty_weighted_earned: number
           difficulty_weighted_possible: number
+          evidence_day_tr?: string | null
           fast_wrong?: boolean
           is_correct: boolean
           mapping_weight: number
@@ -2149,6 +3066,7 @@ export type Database = {
           session_id: string
           time_taken_sec?: number | null
           user_id: string
+          verified_completed_at: string
         }
         Update: {
           answer_id?: string
@@ -2159,6 +3077,7 @@ export type Database = {
           difficulty?: number
           difficulty_weighted_earned?: number
           difficulty_weighted_possible?: number
+          evidence_day_tr?: string | null
           fast_wrong?: boolean
           is_correct?: boolean
           mapping_weight?: number
@@ -2168,6 +3087,7 @@ export type Database = {
           session_id?: string
           time_taken_sec?: number | null
           user_id?: string
+          verified_completed_at?: string
         }
         Relationships: [
           {
@@ -2207,6 +3127,75 @@ export type Database = {
           },
           {
             foreignKeyName: "mastery_outcome_evidence_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mastery_outcome_evidence_days: {
+        Row: {
+          evidence_day_tr: string
+          first_answer_id: string
+          first_attempt_id: string
+          first_question_id: string
+          first_verified_completed_at: string
+          outcome_id: string
+          recorded_at: string
+          user_id: string
+        }
+        Insert: {
+          evidence_day_tr: string
+          first_answer_id: string
+          first_attempt_id: string
+          first_question_id: string
+          first_verified_completed_at: string
+          outcome_id: string
+          recorded_at?: string
+          user_id: string
+        }
+        Update: {
+          evidence_day_tr?: string
+          first_answer_id?: string
+          first_attempt_id?: string
+          first_question_id?: string
+          first_verified_completed_at?: string
+          outcome_id?: string
+          recorded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mastery_outcome_evidence_days_first_attempt_id_fkey"
+            columns: ["first_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "verified_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mastery_outcome_evidence_days_first_question_id_fkey"
+            columns: ["first_question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mastery_outcome_evidence_days_outcome_id_fkey"
+            columns: ["outcome_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_outcomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mastery_outcome_evidence_days_source_fkey"
+            columns: ["first_answer_id", "outcome_id"]
+            isOneToOne: false
+            referencedRelation: "mastery_outcome_evidence"
+            referencedColumns: ["answer_id", "outcome_id"]
+          },
+          {
+            foreignKeyName: "mastery_outcome_evidence_days_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2616,31 +3605,40 @@ export type Database = {
       }
       pilot_institutions: {
         Row: {
+          approval_ref: string | null
           archived_at: string | null
           created_at: string
           created_by: string
           id: string
           name: string
+          pilot_kind: string
+          review_due_at: string | null
           staff_limit: number
           status: string
           student_limit: number
         }
         Insert: {
+          approval_ref?: string | null
           archived_at?: string | null
           created_at?: string
           created_by: string
           id?: string
           name: string
+          pilot_kind?: string
+          review_due_at?: string | null
           staff_limit?: number
           status?: string
           student_limit?: number
         }
         Update: {
+          approval_ref?: string | null
           archived_at?: string | null
           created_at?: string
           created_by?: string
           id?: string
           name?: string
+          pilot_kind?: string
+          review_due_at?: string | null
           staff_limit?: number
           status?: string
           student_limit?: number
@@ -2707,6 +3705,7 @@ export type Database = {
           is_discoverable: boolean
           is_premium: boolean | null
           last_played_at: string | null
+          leaderboard_opt_in: boolean
           level: number | null
           level_name: string | null
           longest_streak: number | null
@@ -2720,8 +3719,8 @@ export type Database = {
           owned_frames: string[]
           owned_nameplates: string[]
           preferred_theme: string | null
-          profile_visibility: "friends" | "private" | "public"
           premium_until: string | null
+          profile_visibility: string
           referral_code: string | null
           referred_by: string | null
           role: string | null
@@ -2749,6 +3748,7 @@ export type Database = {
           is_discoverable?: boolean
           is_premium?: boolean | null
           last_played_at?: string | null
+          leaderboard_opt_in?: boolean
           level?: number | null
           level_name?: string | null
           longest_streak?: number | null
@@ -2762,8 +3762,8 @@ export type Database = {
           owned_frames?: string[]
           owned_nameplates?: string[]
           preferred_theme?: string | null
-          profile_visibility?: "friends" | "private" | "public"
           premium_until?: string | null
+          profile_visibility?: string
           referral_code?: string | null
           referred_by?: string | null
           role?: string | null
@@ -2791,6 +3791,7 @@ export type Database = {
           is_discoverable?: boolean
           is_premium?: boolean | null
           last_played_at?: string | null
+          leaderboard_opt_in?: boolean
           level?: number | null
           level_name?: string | null
           longest_streak?: number | null
@@ -2804,8 +3805,8 @@ export type Database = {
           owned_frames?: string[]
           owned_nameplates?: string[]
           preferred_theme?: string | null
-          profile_visibility?: "friends" | "private" | "public"
           premium_until?: string | null
+          profile_visibility?: string
           referral_code?: string | null
           referred_by?: string | null
           role?: string | null
@@ -2822,6 +3823,44 @@ export type Database = {
           {
             foreignKeyName: "profiles_referred_by_fkey"
             columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_ledger: {
+        Row: {
+          category: string
+          cost: number | null
+          id: string
+          item_id: string
+          purchased_at: string | null
+          recorded_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          cost?: number | null
+          id?: string
+          item_id: string
+          purchased_at?: string | null
+          recorded_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          cost?: number | null
+          id?: string
+          item_id?: string
+          purchased_at?: string | null
+          recorded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_ledger_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2912,7 +3951,9 @@ export type Database = {
         Row: {
           ack_due_at: string
           acknowledged_at: string | null
+          attempt_id: string | null
           description: string
+          evidence_kind: string
           id: string
           legacy_error_report_id: string | null
           question_id: string
@@ -2929,7 +3970,9 @@ export type Database = {
         Insert: {
           ack_due_at?: string
           acknowledged_at?: string | null
+          attempt_id?: string | null
           description: string
+          evidence_kind: string
           id?: string
           legacy_error_report_id?: string | null
           question_id: string
@@ -2946,7 +3989,9 @@ export type Database = {
         Update: {
           ack_due_at?: string
           acknowledged_at?: string | null
+          attempt_id?: string | null
           description?: string
+          evidence_kind?: string
           id?: string
           legacy_error_report_id?: string | null
           question_id?: string
@@ -2961,6 +4006,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "question_appeals_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "verified_attempts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "question_appeals_legacy_error_report_id_fkey"
             columns: ["legacy_error_report_id"]
@@ -3304,6 +4356,176 @@ export type Database = {
           },
         ]
       }
+      question_outcome_mapping_candidate_events: {
+        Row: {
+          actor_id: string
+          candidate_id: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          question_id: string
+          request_id: string
+        }
+        Insert: {
+          actor_id: string
+          candidate_id: string
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          question_id: string
+          request_id: string
+        }
+        Update: {
+          actor_id?: string
+          candidate_id?: string
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          question_id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_outcome_mapping_candidate_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_outcome_mapping_candidate_events_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "question_outcome_mapping_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_outcome_mapping_candidate_events_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_outcome_mapping_candidates: {
+        Row: {
+          base_revision_id: string
+          candidate_count: number
+          candidate_kind: string
+          candidate_set_sha256: string
+          content_sha256: string
+          evidence_sha256: string
+          generated_at: string
+          generated_by: string
+          id: string
+          proposed_outcome_id: string | null
+          question_id: string
+          resolution_rationale: string | null
+          resolution_revision_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          scope_category: string
+          scope_exam_ref: string | null
+          scope_game: string
+          status: string
+          strategy_version: string
+          updated_at: string
+        }
+        Insert: {
+          base_revision_id: string
+          candidate_count: number
+          candidate_kind: string
+          candidate_set_sha256: string
+          content_sha256: string
+          evidence_sha256: string
+          generated_at?: string
+          generated_by: string
+          id?: string
+          proposed_outcome_id?: string | null
+          question_id: string
+          resolution_rationale?: string | null
+          resolution_revision_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          scope_category: string
+          scope_exam_ref?: string | null
+          scope_game: string
+          status?: string
+          strategy_version: string
+          updated_at?: string
+        }
+        Update: {
+          base_revision_id?: string
+          candidate_count?: number
+          candidate_kind?: string
+          candidate_set_sha256?: string
+          content_sha256?: string
+          evidence_sha256?: string
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          proposed_outcome_id?: string | null
+          question_id?: string
+          resolution_rationale?: string | null
+          resolution_revision_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          scope_category?: string
+          scope_exam_ref?: string | null
+          scope_game?: string
+          status?: string
+          strategy_version?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_outcome_mapping_candidates_base_revision_id_fkey"
+            columns: ["base_revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_outcome_mapping_candidates_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_outcome_mapping_candidates_proposed_outcome_id_fkey"
+            columns: ["proposed_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_outcomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_outcome_mapping_candidates_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_outcome_mapping_candidates_resolution_revision_id_fkey"
+            columns: ["resolution_revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_outcome_mapping_candidates_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_outcomes: {
         Row: {
           created_at: string
@@ -3342,6 +4564,651 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_quality_case_proofs: {
+        Row: {
+          case_id: string
+          created_at: string
+          created_by: string
+          direction: string
+          evidence: Json
+          id: string
+          inputs_sha256: string
+          proof_kind: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          created_by: string
+          direction: string
+          evidence: Json
+          id?: string
+          inputs_sha256: string
+          proof_kind: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          created_by?: string
+          direction?: string
+          evidence?: Json
+          id?: string
+          inputs_sha256?: string
+          proof_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_quality_case_proofs_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "question_quality_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_case_proofs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_quality_cases: {
+        Row: {
+          content_sha256: string
+          id: string
+          independent_cluster_count: number
+          independent_user_count: number
+          leading_correction_fingerprint: string | null
+          leading_reason_code: string | null
+          opened_at: string
+          posterior_defect_probability: number | null
+          question_id: string
+          resolved_at: string | null
+          revision_id: string
+          state: string
+          trusted_agreement_count: number
+          updated_at: string
+        }
+        Insert: {
+          content_sha256: string
+          id?: string
+          independent_cluster_count?: number
+          independent_user_count?: number
+          leading_correction_fingerprint?: string | null
+          leading_reason_code?: string | null
+          opened_at?: string
+          posterior_defect_probability?: number | null
+          question_id: string
+          resolved_at?: string | null
+          revision_id: string
+          state?: string
+          trusted_agreement_count?: number
+          updated_at?: string
+        }
+        Update: {
+          content_sha256?: string
+          id?: string
+          independent_cluster_count?: number
+          independent_user_count?: number
+          leading_correction_fingerprint?: string | null
+          leading_reason_code?: string | null
+          opened_at?: string
+          posterior_defect_probability?: number | null
+          question_id?: string
+          resolved_at?: string | null
+          revision_id?: string
+          state?: string
+          trusted_agreement_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_quality_cases_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_cases_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: true
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_quality_claims: {
+        Row: {
+          case_id: string | null
+          confidence: number
+          correction_fingerprint: string | null
+          correction_text: string | null
+          created_at: string
+          explanation: string
+          id: string
+          independence_key: string
+          mission_id: string
+          proposed_answer_index: number | null
+          reason_code: string | null
+          revision_id: string
+          solved_answer_index: number | null
+          user_id: string
+          verdict: string
+        }
+        Insert: {
+          case_id?: string | null
+          confidence: number
+          correction_fingerprint?: string | null
+          correction_text?: string | null
+          created_at?: string
+          explanation: string
+          id?: string
+          independence_key: string
+          mission_id: string
+          proposed_answer_index?: number | null
+          reason_code?: string | null
+          revision_id: string
+          solved_answer_index?: number | null
+          user_id: string
+          verdict: string
+        }
+        Update: {
+          case_id?: string | null
+          confidence?: number
+          correction_fingerprint?: string | null
+          correction_text?: string | null
+          created_at?: string
+          explanation?: string
+          id?: string
+          independence_key?: string
+          mission_id?: string
+          proposed_answer_index?: number | null
+          reason_code?: string | null
+          revision_id?: string
+          solved_answer_index?: number | null
+          user_id?: string
+          verdict?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_quality_claims_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "question_quality_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_claims_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: true
+            referencedRelation: "question_quality_missions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_claims_mission_id_user_id_revision_id_ind_fkey"
+            columns: [
+              "mission_id",
+              "user_id",
+              "revision_id",
+              "independence_key",
+            ]
+            isOneToOne: false
+            referencedRelation: "question_quality_missions"
+            referencedColumns: [
+              "id",
+              "user_id",
+              "revision_id",
+              "independence_key",
+            ]
+          },
+          {
+            foreignKeyName: "question_quality_claims_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_claims_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_quality_consensus_decisions: {
+        Row: {
+          actor_id: string
+          case_id: string
+          created_at: string
+          decision: string
+          external_proof_kind: string
+          id: string
+          independent_cluster_count: number
+          independent_user_count: number
+          inputs_sha256: string
+          leading_correction_fingerprint: string | null
+          leading_reason_code: string | null
+          policy_version: string
+          posterior_defect_probability: number
+          rationale: string
+          trusted_agreement_count: number
+        }
+        Insert: {
+          actor_id: string
+          case_id: string
+          created_at?: string
+          decision: string
+          external_proof_kind?: string
+          id?: string
+          independent_cluster_count: number
+          independent_user_count: number
+          inputs_sha256: string
+          leading_correction_fingerprint?: string | null
+          leading_reason_code?: string | null
+          policy_version: string
+          posterior_defect_probability: number
+          rationale: string
+          trusted_agreement_count: number
+        }
+        Update: {
+          actor_id?: string
+          case_id?: string
+          created_at?: string
+          decision?: string
+          external_proof_kind?: string
+          id?: string
+          independent_cluster_count?: number
+          independent_user_count?: number
+          inputs_sha256?: string
+          leading_correction_fingerprint?: string | null
+          leading_reason_code?: string | null
+          policy_version?: string
+          posterior_defect_probability?: number
+          rationale?: string
+          trusted_agreement_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_quality_consensus_decisions_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_consensus_decisions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "question_quality_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_quality_consensus_queue: {
+        Row: {
+          attempts: number
+          case_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          dirty_at: string
+        }
+        Insert: {
+          attempts?: number
+          case_id: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          dirty_at?: string
+        }
+        Update: {
+          attempts?: number
+          case_id?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          dirty_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_quality_consensus_queue_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: true
+            referencedRelation: "question_quality_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_consensus_queue_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_quality_controls: {
+        Row: {
+          active: boolean
+          content_sha256: string
+          created_at: string
+          created_by: string
+          expected_answer_index: number
+          expected_correction_fingerprint: string | null
+          expected_reason_code: string | null
+          expected_verdict: string
+          id: string
+          proof_evidence: Json
+          proof_kind: string
+          question_id: string
+          revision_id: string
+        }
+        Insert: {
+          active?: boolean
+          content_sha256: string
+          created_at?: string
+          created_by: string
+          expected_answer_index: number
+          expected_correction_fingerprint?: string | null
+          expected_reason_code?: string | null
+          expected_verdict: string
+          id?: string
+          proof_evidence?: Json
+          proof_kind: string
+          question_id: string
+          revision_id: string
+        }
+        Update: {
+          active?: boolean
+          content_sha256?: string
+          created_at?: string
+          created_by?: string
+          expected_answer_index?: number
+          expected_correction_fingerprint?: string | null
+          expected_reason_code?: string | null
+          expected_verdict?: string
+          id?: string
+          proof_evidence?: Json
+          proof_kind?: string
+          question_id?: string
+          revision_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_quality_controls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_controls_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_controls_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: true
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_quality_missions: {
+        Row: {
+          appeal_id: string | null
+          assigned_at: string
+          case_id: string | null
+          content_sha256: string
+          control_id: string | null
+          expires_at: string
+          id: string
+          independence_key: string
+          locked_answer_index: number | null
+          locked_at: string | null
+          question_id: string
+          revision_id: string
+          source: string
+          status: string
+          submitted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          appeal_id?: string | null
+          assigned_at?: string
+          case_id?: string | null
+          content_sha256: string
+          control_id?: string | null
+          expires_at?: string
+          id?: string
+          independence_key: string
+          locked_answer_index?: number | null
+          locked_at?: string | null
+          question_id: string
+          revision_id: string
+          source: string
+          status?: string
+          submitted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          appeal_id?: string | null
+          assigned_at?: string
+          case_id?: string | null
+          content_sha256?: string
+          control_id?: string | null
+          expires_at?: string
+          id?: string
+          independence_key?: string
+          locked_answer_index?: number | null
+          locked_at?: string | null
+          question_id?: string
+          revision_id?: string
+          source?: string
+          status?: string
+          submitted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_quality_missions_appeal_id_fkey"
+            columns: ["appeal_id"]
+            isOneToOne: true
+            referencedRelation: "question_appeals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_missions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "question_quality_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_missions_case_id_question_id_revision_id__fkey"
+            columns: ["case_id", "question_id", "revision_id", "content_sha256"]
+            isOneToOne: false
+            referencedRelation: "question_quality_cases"
+            referencedColumns: [
+              "id",
+              "question_id",
+              "revision_id",
+              "content_sha256",
+            ]
+          },
+          {
+            foreignKeyName: "question_quality_missions_control_id_fkey"
+            columns: ["control_id"]
+            isOneToOne: false
+            referencedRelation: "question_quality_controls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_missions_control_id_question_id_revision__fkey"
+            columns: [
+              "control_id",
+              "question_id",
+              "revision_id",
+              "content_sha256",
+            ]
+            isOneToOne: false
+            referencedRelation: "question_quality_controls"
+            referencedColumns: [
+              "id",
+              "question_id",
+              "revision_id",
+              "content_sha256",
+            ]
+          },
+          {
+            foreignKeyName: "question_quality_missions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_missions_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_quality_missions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_quality_verifications: {
+        Row: {
+          attempts: number
+          case_id: string
+          completed_at: string | null
+          direction: string | null
+          evidence: Json
+          finding_codes: Json
+          id: string
+          input_sha256: string | null
+          last_error: string | null
+          model_id: string | null
+          predicted_answer_index: number | null
+          prompt_version: string | null
+          provider_id: string | null
+          role: string
+          sources: Json
+          started_at: string | null
+          status: string
+          strength: number | null
+        }
+        Insert: {
+          attempts?: number
+          case_id: string
+          completed_at?: string | null
+          direction?: string | null
+          evidence?: Json
+          finding_codes?: Json
+          id?: string
+          input_sha256?: string | null
+          last_error?: string | null
+          model_id?: string | null
+          predicted_answer_index?: number | null
+          prompt_version?: string | null
+          provider_id?: string | null
+          role: string
+          sources?: Json
+          started_at?: string | null
+          status?: string
+          strength?: number | null
+        }
+        Update: {
+          attempts?: number
+          case_id?: string
+          completed_at?: string | null
+          direction?: string | null
+          evidence?: Json
+          finding_codes?: Json
+          id?: string
+          input_sha256?: string | null
+          last_error?: string | null
+          model_id?: string | null
+          predicted_answer_index?: number | null
+          prompt_version?: string | null
+          provider_id?: string | null
+          role?: string
+          sources?: Json
+          started_at?: string | null
+          status?: string
+          strength?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_quality_verifications_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "question_quality_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_quality_worker_profiles: {
+        Row: {
+          clean_controls: number
+          clean_controls_correct: number
+          correction_checks: number
+          correction_checks_correct: number
+          domain: string
+          flawed_controls: number
+          flawed_controls_correct: number
+          last_resolved_at: string | null
+          resolved_total: number
+          trust_state: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clean_controls?: number
+          clean_controls_correct?: number
+          correction_checks?: number
+          correction_checks_correct?: number
+          domain: string
+          flawed_controls?: number
+          flawed_controls_correct?: number
+          last_resolved_at?: string | null
+          resolved_total?: number
+          trust_state?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clean_controls?: number
+          clean_controls_correct?: number
+          correction_checks?: number
+          correction_checks_correct?: number
+          domain?: string
+          flawed_controls?: number
+          flawed_controls_correct?: number
+          last_resolved_at?: string | null
+          resolved_total?: number
+          trust_state?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_quality_worker_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3932,6 +5799,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "question_content_revisions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_published_revision_question_fkey"
+            columns: ["published_revision_id", "id"]
+            isOneToOne: false
+            referencedRelation: "question_content_revisions"
+            referencedColumns: ["id", "question_id"]
           },
         ]
       }
@@ -5041,6 +6915,7 @@ export type Database = {
           updated_at: string
           user_id: string
           v2_attempts: number
+          verified_evidence_days: number
           weighted_earned: number
           weighted_possible: number
         }
@@ -5062,6 +6937,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           v2_attempts?: number
+          verified_evidence_days?: number
           weighted_earned?: number
           weighted_possible?: number
         }
@@ -5083,6 +6959,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           v2_attempts?: number
+          verified_evidence_days?: number
           weighted_earned?: number
           weighted_possible?: number
         }
@@ -6069,6 +7946,14 @@ export type Database = {
         }
         Returns: Json
       }
+      adaptive_diagnostic_scope_integrity: {
+        Args: {
+          p_blueprint_version: string
+          p_display_exam_ref: string
+          p_game: string
+        }
+        Returns: Json
+      }
       add_my_institution_teacher_by_email: {
         Args: {
           p_request_id: string
@@ -6083,6 +7968,58 @@ export type Database = {
           p_request_id: string
           p_teacher_user_id: string
           p_user_id: string
+        }
+        Returns: Json
+      }
+      admin_assign_role: {
+        Args: {
+          p_actor_id: string
+          p_request_id: string
+          p_role_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      admin_create_role: {
+        Args: { p_actor_id: string; p_payload: Json; p_request_id: string }
+        Returns: Json
+      }
+      admin_delete_role: {
+        Args: { p_actor_id: string; p_request_id: string; p_role_id: string }
+        Returns: Json
+      }
+      admin_rbac_lock_request: {
+        Args: { p_actor_id: string; p_operation: string; p_request_id: string }
+        Returns: undefined
+      }
+      admin_rbac_payload_hash: { Args: { p_payload: Json }; Returns: string }
+      admin_rbac_permissions_valid: {
+        Args: { p_permissions: Json }
+        Returns: boolean
+      }
+      admin_rbac_require_actor_permission: {
+        Args: { p_actor_id: string }
+        Returns: undefined
+      }
+      admin_rbac_require_service_actor: {
+        Args: { p_actor_id: string }
+        Returns: undefined
+      }
+      admin_revoke_role: {
+        Args: {
+          p_actor_id: string
+          p_request_id: string
+          p_role_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      admin_update_role: {
+        Args: {
+          p_actor_id: string
+          p_payload: Json
+          p_request_id: string
+          p_role_id: string
         }
         Returns: Json
       }
@@ -6116,6 +8053,14 @@ export type Database = {
       apply_review_answer: { Args: { p_answer_id: string }; Returns: undefined }
       apply_verified_session_rewards: {
         Args: { p_attempt_id: string; p_session_id: string }
+        Returns: undefined
+      }
+      assert_institution_program_startable: {
+        Args: { p_program_id: string }
+        Returns: undefined
+      }
+      assert_split_question_outcome_integrity: {
+        Args: { p_question_id: string }
         Returns: undefined
       }
       award_badges: {
@@ -6165,6 +8110,14 @@ export type Database = {
         Args: { p_user_id: string; p_user_quest_id: string }
         Returns: Json
       }
+      claim_question_quality_consensus_job: {
+        Args: { p_actor_id: string }
+        Returns: Json
+      }
+      claim_question_quality_verification: {
+        Args: { p_actor_id: string; p_role: string }
+        Returns: Json
+      }
       complete_daily_plan_items: {
         Args: { p_plan_id: string; p_question_ids: string[]; p_user_id: string }
         Returns: Json
@@ -6188,6 +8141,25 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_question_quality_verification: {
+        Args: {
+          p_actor_id: string
+          p_direction: string
+          p_error: string
+          p_evidence: Json
+          p_finding_codes: Json
+          p_input_sha256: string
+          p_model_id: string
+          p_predicted_answer_index: number
+          p_prompt_version: string
+          p_provider_id: string
+          p_sources: Json
+          p_status: string
+          p_strength: number
+          p_verification_id: string
+        }
+        Returns: Json
+      }
       complete_verified_game_session: {
         Args: {
           p_answers: Json
@@ -6208,6 +8180,18 @@ export type Database = {
         }
         Returns: Json
       }
+      compute_question_quality_consensus: {
+        Args: { p_case_id: string }
+        Returns: Json
+      }
+      content_governance_authorize_question_write: {
+        Args: { p_operation: string; p_question_id: string }
+        Returns: undefined
+      }
+      content_governance_clear_question_write: {
+        Args: { p_question_id: string }
+        Returns: undefined
+      }
       content_governance_has_permission: {
         Args: { p_permission: string; p_user_id: string }
         Returns: boolean
@@ -6217,7 +8201,15 @@ export type Database = {
         Args: { p_operation: string; p_request_id: string; p_user_id: string }
         Returns: undefined
       }
+      content_governance_validate_outcomes_payload: {
+        Args: { p_outcomes: Json }
+        Returns: boolean
+      }
       content_governance_validate_payload: {
+        Args: { p_payload: Json }
+        Returns: boolean
+      }
+      content_governance_validate_revision_payload: {
         Args: { p_payload: Json }
         Returns: boolean
       }
@@ -6245,10 +8237,37 @@ export type Database = {
         }
         Returns: Json
       }
+      create_institution_student_report_v2: {
+        Args: {
+          p_classroom_id: string
+          p_display_exam_ref: string
+          p_game: string
+          p_member_ref: string
+          p_request_id: string
+          p_snapshot: Json
+          p_user_id: string
+        }
+        Returns: Json
+      }
       create_institution_study_program_draft: {
         Args: {
           p_classroom_id: string
           p_daily_minute_limit: number
+          p_items: Json
+          p_member_ref: string
+          p_model_version: string
+          p_request_id: string
+          p_user_id: string
+          p_week_start: string
+        }
+        Returns: Json
+      }
+      create_institution_study_program_draft_v2: {
+        Args: {
+          p_classroom_id: string
+          p_daily_minute_limit: number
+          p_display_exam_ref: string
+          p_game: string
           p_items: Json
           p_member_ref: string
           p_model_version: string
@@ -6303,10 +8322,36 @@ export type Database = {
         Returns: Json
       }
       curriculum_graph_integrity: { Args: never; Returns: Json }
+      curriculum_outcome_scope_valid: {
+        Args: {
+          p_category: string
+          p_exam_ref: string
+          p_game: string
+          p_outcome_id: string
+        }
+        Returns: boolean
+      }
+      curriculum_scope_integrity: {
+        Args: {
+          p_display_exam_ref: string
+          p_game: string
+          p_taxonomy_version: string
+        }
+        Returns: Json
+      }
       delete_my_institution_role: {
         Args: { p_request_id: string; p_role_ref: string; p_user_id: string }
         Returns: Json
       }
+      enforce_active_profile_data_api_request: {
+        Args: never
+        Returns: undefined
+      }
+      enqueue_question_outcome_mapping_candidates: {
+        Args: { p_actor_user_id: string; p_request_id: string }
+        Returns: Json
+      }
+      export_account_data: { Args: { p_user_id: string }; Returns: Json }
       finalize_legacy_question_appeal_transition: {
         Args: { p_appeal_id: string; p_coins: number; p_user_id: string }
         Returns: Json
@@ -6317,6 +8362,128 @@ export type Database = {
       }
       form_weekly_learning_leagues: {
         Args: { p_request_id: string; p_week_start: string }
+        Returns: Json
+      }
+      free_pilot_legacy_assignment_submit: {
+        Args: {
+          p_answers: Json
+          p_assignment_id: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_exam_mode: {
+        Args: {
+          p_classroom_id: string
+          p_institution_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_followup_metrics: {
+        Args: {
+          p_classroom_id: string
+          p_user_id: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_followup_resolve: {
+        Args: {
+          p_followup_ref: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_growth_metrics: {
+        Args: {
+          p_classroom_id: string
+          p_user_id: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_invite_accept: {
+        Args: {
+          p_consent_version: string
+          p_notice_version: string
+          p_request_id: string
+          p_token_digest: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_learning_analysis: {
+        Args: {
+          p_classroom_id: string
+          p_exam_ref: string
+          p_game: string
+          p_member_ref: string
+          p_user_id: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_manager_transfer: {
+        Args: {
+          p_new_manager_member_ref: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_program_members: {
+        Args: {
+          p_classroom_id: string
+          p_user_id: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_program_publish: {
+        Args: { p_program_ref: string; p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
+      free_pilot_legacy_program_review: {
+        Args: {
+          p_note: string
+          p_program_ref: string
+          p_request_id: string
+          p_teacher_result: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_program_update: {
+        Args: {
+          p_daily_minute_limit: number
+          p_items: Json
+          p_program_ref: string
+          p_request_id: string
+          p_user_id: string
+          p_week_start: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_support_grant: {
+        Args: {
+          p_duration_minutes: number
+          p_reason: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      free_pilot_legacy_support_read: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      free_pilot_legacy_tracking_directory: {
+        Args: { p_user_id: string }
         Returns: Json
       }
       fsrs_review_transition: {
@@ -6333,6 +8500,14 @@ export type Database = {
         }
         Returns: Json
       }
+      get_adaptive_diagnostic_question_v2: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: Json
+      }
+      get_adaptive_diagnostic_question_v3: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: Json
+      }
       get_content_governance_enforcement: {
         Args: { p_user_id: string }
         Returns: Json
@@ -6346,9 +8521,40 @@ export type Database = {
         }
         Returns: Json
       }
-      get_institution_classroom_growth_metrics: {
+      get_institution_classroom_followup_metrics_v2: {
         Args: {
           p_classroom_id: string
+          p_display_exam_ref: string
+          p_game: string
+          p_user_id: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: Json
+      }
+      get_institution_classroom_growth_metrics:
+        | {
+            Args: {
+              p_classroom_id: string
+              p_user_id: string
+              p_window_end: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_classroom_id: string
+              p_taxonomy_version: string
+              p_user_id: string
+              p_window_end: string
+            }
+            Returns: Json
+          }
+      get_institution_classroom_growth_metrics_v2: {
+        Args: {
+          p_classroom_id: string
+          p_display_exam_ref: string
+          p_game: string
           p_user_id: string
           p_window_end: string
         }
@@ -6360,6 +8566,28 @@ export type Database = {
           p_user_id: string
           p_window_end: string
           p_window_start: string
+        }
+        Returns: Json
+      }
+      get_institution_classroom_published_program_members_v2: {
+        Args: {
+          p_classroom_id: string
+          p_display_exam_ref: string
+          p_game: string
+          p_user_id: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: Json
+      }
+      get_institution_student_diagnostic_sources: {
+        Args: {
+          p_classroom_id: string
+          p_display_exam_ref: string
+          p_game: string
+          p_member_ref: string
+          p_user_id: string
+          p_window_end: string
         }
         Returns: Json
       }
@@ -6382,6 +8610,17 @@ export type Database = {
         }
         Returns: Json
       }
+      get_institution_student_learning_analysis_v2: {
+        Args: {
+          p_classroom_id: string
+          p_display_exam_ref: string
+          p_game: string
+          p_member_ref: string
+          p_user_id: string
+          p_window_end: string
+        }
+        Returns: Json
+      }
       get_institution_student_program_history: {
         Args: {
           p_classroom_id: string
@@ -6390,9 +8629,29 @@ export type Database = {
         }
         Returns: Json
       }
+      get_institution_student_program_history_v2: {
+        Args: {
+          p_classroom_id: string
+          p_display_exam_ref: string
+          p_game: string
+          p_member_ref: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_institution_student_reports: {
         Args: {
           p_classroom_id: string
+          p_member_ref: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_institution_student_reports_v2: {
+        Args: {
+          p_classroom_id: string
+          p_display_exam_ref: string
+          p_game: string
           p_member_ref: string
           p_user_id: string
         }
@@ -6421,6 +8680,10 @@ export type Database = {
           p_institution_id: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      get_my_institution_operation_events: {
+        Args: { p_limit?: number; p_user_id: string }
         Returns: Json
       }
       get_my_institution_role_directory: {
@@ -6468,8 +8731,16 @@ export type Database = {
         Returns: Json
       }
       get_my_weekly_team_boss: { Args: { p_user_id: string }; Returns: Json }
+      get_next_question_quality_mission: {
+        Args: {
+          p_independence_key: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_public_profile: {
-        Args: { p_username: string; p_viewer_id?: string | null }
+        Args: { p_username: string; p_viewer_id?: string }
         Returns: {
           avatar_url: string
           correct_answers: number
@@ -6479,7 +8750,7 @@ export type Database = {
           level: number
           level_name: string
           longest_streak: number
-          relationship_status: string | null
+          relationship_status: string
           selected_avatar_decorations: string[]
           selected_nameplate: string
           total_questions: number
@@ -6509,10 +8780,6 @@ export type Database = {
         }
         Returns: Json
       }
-      get_question_quality_appeal_counts: {
-        Args: { p_limit: number; p_user_id: string }
-        Returns: Json
-      }
       get_question_content_governance_queue: {
         Args: {
           p_cursor: string
@@ -6522,12 +8789,24 @@ export type Database = {
         }
         Returns: Json
       }
+      get_question_content_revision: {
+        Args: { p_revision_id: string; p_user_id: string }
+        Returns: Json
+      }
       get_question_outcome_coverage: {
         Args: { p_user_id: string }
         Returns: Json
       }
-      get_question_content_revision: {
-        Args: { p_revision_id: string; p_user_id: string }
+      get_question_outcome_mapping_candidate_summary: {
+        Args: { p_actor_user_id: string }
+        Returns: Json
+      }
+      get_question_quality_appeal_counts: {
+        Args: { p_limit: number; p_user_id: string }
+        Returns: Json
+      }
+      get_question_quality_case_evidence: {
+        Args: { p_actor_id: string; p_case_id: string }
         Returns: Json
       }
       get_verified_attempt_question_snapshots: {
@@ -6566,7 +8845,6 @@ export type Database = {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
       }
-      legacy_error_report_intake_enabled: { Args: never; Returns: boolean }
       increment_question_stats: {
         Args: { answered_inc?: number; correct_inc?: number; q_id: string }
         Returns: undefined
@@ -6592,8 +8870,16 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: string
       }
+      institution_pilot_assert_operational_actor: {
+        Args: { p_user_id: string }
+        Returns: string
+      }
       institution_pilot_has_role: {
         Args: { p_institution_id: string; p_roles: string[]; p_user_id: string }
+        Returns: boolean
+      }
+      institution_pilot_is_operational: {
+        Args: { p_institution_id: string }
         Returns: boolean
       }
       institution_pilot_is_platform_admin: {
@@ -6604,9 +8890,39 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: string
       }
+      institution_program_start_target: {
+        Args: {
+          p_exam_ref: string
+          p_game: string
+          p_outcome_code: string
+          p_task_type: string
+          p_taxonomy_version: string
+        }
+        Returns: Json
+      }
+      institution_rpc_actor_has_aal2: {
+        Args: { p_actor_user_id: string }
+        Returns: boolean
+      }
+      institution_scope_capability_snapshot: {
+        Args: {
+          p_display_exam_ref: string
+          p_game: string
+          p_required_capability: string
+        }
+        Returns: Json
+      }
+      institution_scope_integrity_is_clean: {
+        Args: { p_integrity: Json }
+        Returns: boolean
+      }
       institution_study_program_review_evidence: {
         Args: { p_program_id: string }
         Returns: Json
+      }
+      institution_study_program_review_ready: {
+        Args: { p_program_id: string; p_review_day: string }
+        Returns: boolean
       }
       institution_support_has_access: {
         Args: { p_admin_user_id: string; p_institution_id: string }
@@ -6651,7 +8967,32 @@ export type Database = {
         }
         Returns: Json
       }
+      legacy_error_report_intake_enabled: { Args: never; Returns: boolean }
       list_pilot_institutions: { Args: { p_user_id: string }; Returns: Json }
+      list_question_outcome_mapping_candidates: {
+        Args: {
+          p_actor_user_id: string
+          p_candidate_kind: string
+          p_limit: number
+          p_offset: number
+          p_status: string
+        }
+        Returns: Json
+      }
+      list_released_institution_scopes: { Args: never; Returns: Json }
+      lock_question_quality_mission_answer: {
+        Args: {
+          p_mission_id: string
+          p_request_id: string
+          p_selected_answer_index: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      lock_question_revision_outcome_scope: {
+        Args: { p_revision_id: string }
+        Returns: undefined
+      }
       materialize_question_revision_psychometrics: {
         Args: {
           p_request_id: string
@@ -6666,6 +9007,15 @@ export type Database = {
         Args: { p_attempt_id: string }
         Returns: undefined
       }
+      mutate_admin_homepage: {
+        Args: {
+          p_operation: string
+          p_payload: Json
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       open_institution_student_followup: {
         Args: {
           p_classroom_id: string
@@ -6677,12 +9027,29 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_expired_account_retention: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       preview_institution_study_program_review: {
         Args: { p_program_ref: string; p_user_id: string }
         Returns: Json
       }
       preview_teacher_classroom_invite: {
         Args: { p_token_digest: string; p_user_id: string }
+        Returns: Json
+      }
+      provision_free_pilot_institution: {
+        Args: {
+          p_approval_ref: string
+          p_manager_user_id: string
+          p_name: string
+          p_request_id: string
+          p_staff_limit: number
+          p_student_limit: number
+          p_trial_days: number
+          p_user_id: string
+        }
         Returns: Json
       }
       provision_pilot_institution: {
@@ -6692,6 +9059,10 @@ export type Database = {
           p_request_id: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      prune_institution_request_ledgers: {
+        Args: { p_cutoff: string }
         Returns: Json
       }
       publish_institution_study_program: {
@@ -6758,8 +9129,48 @@ export type Database = {
         }
         Returns: Json
       }
+      question_active_outcome_mapping_valid: {
+        Args: { p_question_id: string }
+        Returns: boolean
+      }
       question_content_basic_guard: {
         Args: { p_content: Json; p_game: string }
+        Returns: boolean
+      }
+      question_outcome_mapping_actor_has_aal2: {
+        Args: { p_actor_user_id: string }
+        Returns: boolean
+      }
+      question_outcome_mapping_candidate_snapshot: {
+        Args: never
+        Returns: {
+          base_revision_id: string
+          candidate_count: number
+          candidate_kind: string
+          candidate_set_sha256: string
+          content_sha256: string
+          evidence_sha256: string
+          proposed_outcome_id: string
+          question_id: string
+          scope_category: string
+          scope_exam_ref: string
+          scope_game: string
+        }[]
+      }
+      question_outcome_scope_valid: {
+        Args: { p_outcome_id: string; p_question_id: string }
+        Returns: boolean
+      }
+      question_quality_correction_fingerprint: {
+        Args: {
+          p_correction_text: string
+          p_proposed_answer_index: number
+          p_reason_code: string
+        }
+        Returns: string
+      }
+      question_revision_outcomes_valid: {
+        Args: { p_revision_id: string }
         Returns: boolean
       }
       rebuild_review_card: {
@@ -6790,8 +9201,36 @@ export type Database = {
         }
         Returns: Json
       }
-      get_adaptive_diagnostic_question_v2: {
-        Args: { p_session_id: string; p_user_id: string }
+      record_adaptive_diagnostic_answer_v3: {
+        Args: {
+          p_next_question_id: string
+          p_question_id: string
+          p_request_id: string
+          p_response_time_ms: number
+          p_selected_option: number
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      record_question_quality_consensus: {
+        Args: {
+          p_actor_id: string
+          p_case_id: string
+          p_policy_version: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      record_question_quality_external_proof: {
+        Args: {
+          p_actor_id: string
+          p_case_id: string
+          p_direction: string
+          p_evidence: Json
+          p_proof_kind: string
+          p_request_id: string
+        }
         Returns: Json
       }
       record_verified_exam_exposure: {
@@ -6824,6 +9263,15 @@ export type Database = {
         }
         Returns: Json
       }
+      reject_question_outcome_mapping_candidate: {
+        Args: {
+          p_actor_user_id: string
+          p_candidate_id: string
+          p_rationale: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       remove_pilot_institution_teacher: {
         Args: {
           p_institution_id: string
@@ -6842,8 +9290,56 @@ export type Database = {
         }
         Returns: Json
       }
+      request_friendship: {
+        Args: { p_requester: string; p_target: string }
+        Returns: string
+      }
+      require_released_adaptive_diagnostic_blueprint: {
+        Args: {
+          p_blueprint_version?: string
+          p_display_exam_ref: string
+          p_game: string
+          p_verify_integrity?: boolean
+        }
+        Returns: {
+          blueprint_version: string
+          candidate_gate_version: string
+          capability_status: string
+          created_at: string
+          display_exam_ref: string
+          game: string
+          max_per_outcome: number
+          outcome_count: number
+          policy_version: string
+          question_count: number
+          question_exam_ref: string | null
+          released_at: string | null
+          requires_revision_snapshot: boolean
+          taxonomy_version: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "adaptive_diagnostic_blueprints"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resolve_adaptive_diagnostic_question: {
         Args: { p_question_id: string }
+        Returns: {
+          difficulty: number
+          outcome_id: string
+        }[]
+      }
+      resolve_adaptive_diagnostic_question_v3: {
+        Args: {
+          p_display_exam_ref: string
+          p_game: string
+          p_question_exam_ref: string
+          p_question_id: string
+          p_taxonomy_version: string
+        }
         Returns: {
           difficulty: number
           outcome_id: string
@@ -6866,6 +9362,26 @@ export type Database = {
           p_status: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      resolve_question_curriculum_validation_scope: {
+        Args: { p_game: string; p_question_exam_ref: string }
+        Returns: {
+          display_exam_ref: string
+          release_status: string
+          taxonomy_version: string
+        }[]
+      }
+      resolve_released_curriculum_scope: {
+        Args: { p_display_exam_ref: string; p_game: string }
+        Returns: Json
+      }
+      resolve_released_diagnostic_scope: {
+        Args: { p_display_exam_ref: string; p_game: string }
+        Returns: Json
+      }
+      resolve_released_institution_scope: {
+        Args: { p_display_exam_ref: string; p_game: string }
         Returns: Json
       }
       review_institution_study_program: {
@@ -6925,10 +9441,6 @@ export type Database = {
           total_xp: number
           username: string
         }[]
-      }
-      request_friendship: {
-        Args: { p_requester: string; p_target: string }
-        Returns: string
       }
       search_questions: {
         Args: {
@@ -7002,15 +9514,6 @@ export type Database = {
         Args: { p_enforced: boolean; p_request_id: string; p_user_id: string }
         Returns: Json
       }
-      set_question_revision_outcomes: {
-        Args: {
-          p_outcomes: Json
-          p_request_id: string
-          p_revision_id: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
       set_my_institution_manager_teacher_role: {
         Args: { p_enabled: boolean; p_request_id: string; p_user_id: string }
         Returns: Json
@@ -7021,6 +9524,25 @@ export type Database = {
           p_member_ref: string
           p_request_id: string
           p_role_ref: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      set_pilot_institution_status: {
+        Args: {
+          p_institution_id: string
+          p_reason: string
+          p_request_id: string
+          p_status: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      set_question_revision_outcomes: {
+        Args: {
+          p_outcomes: Json
+          p_request_id: string
+          p_revision_id: string
           p_user_id: string
         }
         Returns: Json
@@ -7057,8 +9579,6 @@ export type Database = {
         Args: { p_opted_in: boolean; p_request_id: string; p_user_id: string }
         Returns: Json
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       soft_delete_user: { Args: { p_user_id: string }; Returns: undefined }
       spend_coins: {
         Args: { p_amount: number; p_user_id: string }
@@ -7068,6 +9588,25 @@ export type Database = {
         Args: {
           p_first_question_id: string
           p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      start_adaptive_diagnostic_v3: {
+        Args: {
+          p_display_exam_ref: string
+          p_first_question_id: string
+          p_game: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      start_my_institution_study_program_item: {
+        Args: {
+          p_position: number
+          p_program_ref: string
+          p_request_id: string
           p_user_id: string
         }
         Returns: Json
@@ -7083,6 +9622,21 @@ export type Database = {
       }
       start_verified_exam_attempt: {
         Args: { p_attempt_id: string; p_request_id: string; p_user_id: string }
+        Returns: Json
+      }
+      submit_assigned_question_quality_mission: {
+        Args: {
+          p_confidence: number
+          p_correction_text: string
+          p_explanation: string
+          p_mission_id: string
+          p_proposed_answer_index: number
+          p_reason_code: string
+          p_request_id: string
+          p_selected_answer_index: number
+          p_user_id: string
+          p_verdict: string
+        }
         Returns: Json
       }
       submit_challenge_answer: {
@@ -7106,6 +9660,34 @@ export type Database = {
           p_request_id: string
           p_session_answer_id: string
           p_user_id: string
+        }
+        Returns: Json
+      }
+      submit_question_appeal_v2: {
+        Args: {
+          p_attempt_id: string
+          p_description: string
+          p_question_id: string
+          p_reason: string
+          p_request_id: string
+          p_session_answer_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      submit_question_quality_claim: {
+        Args: {
+          p_appeal_id: string
+          p_confidence: number
+          p_correction_text: string
+          p_explanation: string
+          p_independence_key: string
+          p_proposed_answer_index: number
+          p_reason_code: string
+          p_request_id: string
+          p_solved_answer_index: number
+          p_user_id: string
+          p_verdict: string
         }
         Returns: Json
       }
@@ -7145,7 +9727,32 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: string
       }
-      unaccent: { Args: { "": string }; Returns: string }
+      transfer_my_pilot_institution_manager: {
+        Args: {
+          p_new_manager_member_ref: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      transfer_question_outcome_mapping_candidate: {
+        Args: {
+          p_actor_user_id: string
+          p_candidate_id: string
+          p_rationale: string
+          p_request_id: string
+          p_revision_id: string
+        }
+        Returns: Json
+      }
+      tyt_social_source_policy_integrity: {
+        Args: {
+          p_display_exam_ref: string
+          p_game: string
+          p_taxonomy_version: string
+        }
+        Returns: Json
+      }
       update_institution_study_program_draft: {
         Args: {
           p_daily_minute_limit: number
@@ -7232,12 +9839,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7261,11 +9868,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7286,11 +9893,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7311,11 +9918,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7328,11 +9935,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

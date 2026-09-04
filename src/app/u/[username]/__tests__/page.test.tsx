@@ -52,7 +52,6 @@ describe('PublicProfilePage /u/[username]', () => {
     expect(container.textContent).not.toContain('@')
     expect(mockRpc).toHaveBeenCalledWith('get_public_profile', {
       p_username: 'ali',
-      p_viewer_id: null,
     })
   })
 

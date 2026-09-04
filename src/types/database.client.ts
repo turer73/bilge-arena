@@ -9,9 +9,10 @@ type QuestionOutcomes = PublicSchema['Tables']['question_outcomes']
 type UserOutcomeState = PublicSchema['Tables']['user_outcome_state']
 type Profiles = PublicSchema['Tables']['profiles']
 type InstitutionStudyPrograms = PublicSchema['Tables']['institution_study_programs']
+type AdaptiveDiagnosticSessions = PublicSchema['Tables']['adaptive_diagnostic_sessions']
 
-// Migration 177 is intentionally app-first. Keep the deploy-compatible shape
-// here until the production schema is migrated and generated types are synced.
+// The production column is text constrained by SQL. Keep the client-facing
+// application contract narrowed to the three supported visibility values.
 type ProfilesWithPrivacyPreferences = {
   Row: Profiles['Row'] & {
     leaderboard_opt_in: boolean
@@ -242,9 +243,8 @@ type UserOutcomeStateV2 = {
   Relationships: UserOutcomeState['Relationships']
 }
 
-// Migrations 183-194 add immutable curriculum and exam scope snapshots to
-// institution programs. Keep the client contract truthful while the checked
-// in generated file catches up with the production schema.
+// Keep the immutable institution scope fields explicit in the client contract.
+// The generated production type remains the source for every other field.
 type InstitutionStudyProgramsWithScope = {
   Row: InstitutionStudyPrograms['Row'] & {
     game: string
@@ -270,30 +270,20 @@ type InstitutionStudyProgramsWithScope = {
   Relationships: InstitutionStudyPrograms['Relationships']
 }
 
-type AdaptiveDiagnosticSessionsRow = {
-  id: string
-  user_id: string
-  game: 'matematik'
-  exam_ref: 'TYT'
-  taxonomy_version: 'ba-tyt-math-v1'
-  kind: 'initial' | 'recheck'
-  status: 'active' | 'completed' | 'abandoned'
-  current_question_id: string | null
-  current_question_revision_id: string | null
-  current_question_content_sha256: string | null
-  current_question_correct_option: number | null
-  current_question_option_count: number | null
-  current_question_base_points: number | null
-  current_question_outcome_id: string | null
-  current_question_difficulty: number | null
-  current_question_issued_at: string | null
-  answered_count: number
-  covered_outcomes: number
-  started_at: string
-  expires_at: string
-  completed_at: string | null
-  created_at: string
-  updated_at: string
+type AdaptiveDiagnosticSessionsWithDomain = {
+  Row: Omit<AdaptiveDiagnosticSessions['Row'], 'kind' | 'status'> & {
+    kind: 'initial' | 'recheck'
+    status: 'active' | 'completed' | 'abandoned'
+  }
+  Insert: Omit<AdaptiveDiagnosticSessions['Insert'], 'kind' | 'status'> & {
+    kind: 'initial' | 'recheck'
+    status: 'active' | 'completed' | 'abandoned'
+  }
+  Update: Omit<AdaptiveDiagnosticSessions['Update'], 'kind' | 'status'> & {
+    kind?: 'initial' | 'recheck'
+    status?: 'active' | 'completed' | 'abandoned'
+  }
+  Relationships: AdaptiveDiagnosticSessions['Relationships']
 }
 
 type AdaptiveDiagnosticAnswersRow = {
@@ -417,15 +407,7 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Update: Partial<DailyPlanItemsInsert>
         Relationships: []
       }
-      adaptive_diagnostic_sessions: {
-        Row: AdaptiveDiagnosticSessionsRow
-        Insert: Partial<AdaptiveDiagnosticSessionsRow> & Pick<
-          AdaptiveDiagnosticSessionsRow,
-          'id' | 'user_id' | 'game' | 'exam_ref' | 'taxonomy_version' | 'kind' | 'status' | 'expires_at'
-        >
-        Update: Partial<AdaptiveDiagnosticSessionsRow>
-        Relationships: []
-      }
+      adaptive_diagnostic_sessions: AdaptiveDiagnosticSessionsWithDomain
       adaptive_diagnostic_answers: {
         Row: AdaptiveDiagnosticAnswersRow
         Insert: Partial<AdaptiveDiagnosticAnswersRow> & Pick<
