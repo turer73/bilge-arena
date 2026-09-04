@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Lobby } from '../lobby'
 
 vi.mock('../streak-badge', () => ({ StreakBadge: () => <div data-testid="streak" /> }))
@@ -24,6 +24,14 @@ const baseProps = {
 }
 
 describe('Lobby', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('mobil tek sütun, tablet ve bilgisayarda iki sütunlu oyun kabuğu kullanır', () => {
     const { container } = render(<Lobby {...baseProps} />)
     const shell = container.querySelector('[data-responsive-game-lobby]')
@@ -92,6 +100,21 @@ describe('Lobby', () => {
     expect(screen.getByText(/20 soruluk TYT Sosyal bölüm yapısı/)).toBeInTheDocument()
     expect(screen.queryByText(/TYT formatında/)).not.toBeInTheDocument()
     expect(screen.getByText('Seçtiğin cevaplama grubu')).toBeInTheDocument()
+  })
+
+  it('learner rollout kapalıyken Sosyal legacy deneme kapsamını korur', () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    render(
+      <Lobby
+        {...baseProps}
+        game="sosyal"
+        selectedExamRef="TYT"
+        selectedMode="deneme"
+      />,
+    )
+
+    expect(screen.getByText(/Ders kapsamlı çalışma denemesi/)).toBeInTheDocument()
+    expect(screen.queryByText(/20 soruluk TYT Sosyal bölüm yapısı/)).not.toBeInTheDocument()
   })
 
   it('ayarlar açıldığında filtre seçimini üst bileşene bildirir', () => {

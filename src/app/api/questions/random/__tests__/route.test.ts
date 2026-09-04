@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
 
 // Esnek, sirali-kuyruklu query-builder mock: her .from(table) cagrisi kuyruktaki
@@ -135,8 +135,12 @@ function makeRequest(params: Record<string, string> = {}, idempotencyKey?: strin
 }
 
 describe('GET /api/questions/random', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     sessionAnswersMock.reset()
     questionsMock.reset()
     mockFilterTytSocialQuestionIds.mockImplementation(async (
@@ -236,6 +240,22 @@ describe('GET /api/questions/random', () => {
     })
     expect(mockRpc).not.toHaveBeenCalled()
     expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('keeps the legacy optional Social scope when the learner rollout is disabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'false')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [], error: null })
+
+    const res = await GET(makeRequest({ game: 'sosyal' }) as never)
+
+    expect(res.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('select_random_questions', expect.objectContaining({
+      p_game: 'sosyal',
+      p_limit: 20,
+    }))
+    expect(mockFilterTytSocialQuestionIds).not.toHaveBeenCalled()
   })
 
   it.each(['tyt', 'UNKNOWN', ''])('rejects an invalid explicit exam scope: %s', async (examRef) => {

@@ -53,6 +53,8 @@ function validInput(questionIds = [QUESTION_ONE]) {
 
 describe('verified attempts helper', () => {
   beforeEach(() => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     vi.useFakeTimers()
     vi.setSystemTime(new Date(NOW))
     rpc.mockReset()
@@ -60,6 +62,7 @@ describe('verified attempts helper', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllEnvs()
   })
 
   it('uses server-authoritative durations for every mode family', () => {
@@ -147,6 +150,33 @@ describe('verified attempts helper', () => {
       p_duration_sec: 7200,
       p_request_id: requestId,
     })
+  })
+
+  it('falls back to the generic issuer while the learner rollout is disabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'false')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    rpc.mockResolvedValue({
+      data: {
+        attemptId: ATTEMPT_ID,
+        expiresAt: FUTURE,
+        snapshot: { items: [normalSnapshotItem(QUESTION_ONE, 1, 'sosyal')] },
+      },
+      error: null,
+    })
+
+    await issueVerifiedAttempt(admin, {
+      userId: '30000000-0000-4000-8000-000000000001',
+      game: 'sosyal',
+      mode: 'practice',
+      questionIds: [QUESTION_ONE],
+      examRef: 'TYT',
+    })
+
+    expect(rpc).toHaveBeenCalledWith('issue_verified_attempt', expect.objectContaining({
+      p_game: 'sosyal',
+      p_mode: 'practice',
+    }))
+    expect(rpc).not.toHaveBeenCalledWith('issue_verified_tyt_social_attempt', expect.anything())
   })
 
   it('does not let the generic issuer mint a TYT Social official section', async () => {

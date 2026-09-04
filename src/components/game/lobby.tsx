@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { GAMES, getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
 import { getModesForContext, type QuizMode, DENEME_CONFIGS } from '@/lib/constants/modes'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import { ModeSelector } from './mode-selector'
 import { SoundToggle } from './sound-toggle'
 import { XPBar } from './xp-bar'
@@ -108,9 +109,11 @@ export function Lobby({
   personalizedMockCard,
 }: LobbyProps) {
   const gameDef = GAMES[game]
-  const effectiveExamRef = game === 'sosyal' ? selectedExamRef ?? 'TYT' : selectedExamRef
+  const effectiveExamRef = game === 'sosyal' && isTytSocialV2ClientEnabled()
+    ? selectedExamRef ?? 'TYT'
+    : selectedExamRef
   const categories = getCategoriesForExam(game, effectiveExamRef)
-  const contextModes = getModesForContext(game, effectiveExamRef)
+  const contextModes = getModesForContext(game, effectiveExamRef, isTytSocialV2ClientEnabled())
   const GameIcon = GAME_ICONS[game]
   const level = getLevelFromXP(userXP)
   const mode = contextModes.find((candidate) => candidate.id === selectedMode) || contextModes[0]
@@ -358,7 +361,7 @@ export function Lobby({
             </span>
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {(game === 'sosyal' && effectiveExamRef === 'TYT'
+            {(isTytSocialV2ClientEnabled() && game === 'sosyal' && effectiveExamRef === 'TYT'
               ? [
                   ['Tarih', 5],
                   ['Coğrafya', 5],
@@ -369,7 +372,7 @@ export function Lobby({
             ).map(([category, count]) => (
               <div key={category} className="flex min-h-10 items-center justify-between rounded-xl bg-[var(--app-bg)] px-3 text-xs">
                 <span className="text-[var(--app-text-sub)]">
-                  {game === 'sosyal' && effectiveExamRef === 'TYT'
+                  {isTytSocialV2ClientEnabled() && game === 'sosyal' && effectiveExamRef === 'TYT'
                     ? category
                     : getCategoryLabel(category)}
                 </span>
@@ -378,7 +381,7 @@ export function Lobby({
             ))}
           </div>
           <p className="mt-3 border-t border-[var(--app-border)] pt-3 text-xs leading-relaxed text-[var(--app-text-sub)]">
-            {game === 'sosyal' && effectiveExamRef === 'TYT'
+            {isTytSocialV2ClientEnabled() && game === 'sosyal' && effectiveExamRef === 'TYT'
               ? '20 soruluk TYT Sosyal bölüm yapısı · Net hesabı: Doğru − (Yanlış / 4)'
               : 'Ders kapsamlı çalışma denemesi · Net hesabı: Doğru − (Yanlış / 4)'}
           </p>

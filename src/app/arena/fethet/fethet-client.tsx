@@ -11,6 +11,7 @@ import type { PublicQuestion } from '@/lib/utils/question-public'
 import { isValidUuid } from '@/lib/utils/uuid'
 import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
 import { getTytSocialAllowedCategories } from '@/lib/exam-policy/tyt-social-contract'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import { useAuthStore } from '@/stores/auth-store'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,7 +33,8 @@ interface ActiveQuiz {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'bilge-arena-fethet-v2'
+const LEGACY_STORAGE_KEY = 'bilge-arena-fethet-v1'
+const V2_STORAGE_KEY = 'bilge-arena-fethet-v2'
 const QUESTIONS_PER_CATEGORY = 3
 const PASS_THRESHOLD = 2   // Kaç doğru = fethedildi
 
@@ -92,6 +94,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
   const color = gameConfig?.colorHex ?? 'var(--focus)'
 
   useEffect(() => {
+    const governedSocial = isTytSocialV2ClientEnabled() && game === 'sosyal'
     setLoading(true)
     setError(null)
     setAttemptId(null)
@@ -100,7 +103,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
       category,
       limit: String(QUESTIONS_PER_CATEGORY),
     })
-    const endpoint = game === 'sosyal'
+    const endpoint = governedSocial
       ? (() => {
           params.set('mode', 'classic')
           params.set('examRef', 'TYT')
@@ -114,7 +117,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
     fetch(endpoint, { cache: 'no-store' })
       .then((r) => {
         if (r.ok) return r.json()
-        if (r.status === 409 && game === 'sosyal') {
+        if (r.status === 409 && governedSocial) {
           throw new Error('Önce Çalış sayfasında TYT Sosyal cevaplama düzenini seçmelisin.')
         }
         throw new Error('Soru alınamadı')
@@ -135,7 +138,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
             return { ...q, content: shuffled.content, optionMap: shuffled.map }
           })
         if (qs.length < QUESTIONS_PER_CATEGORY) {
-          setError(game === 'sosyal'
+          setError(governedSocial
             ? 'Bu kategori seçtiğin TYT Sosyal cevaplama düzeninde güvenilir bir fetih turu için yeterli soruya sahip değil.'
             : 'Bu kategori için güvenilir bir fetih turuna yetecek soru yok.')
         } else {
@@ -372,9 +375,14 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
 
 export function FethetClient() {
   const { user } = useAuthStore()
+  const learnerV2Enabled = isTytSocialV2ClientEnabled()
   const socialPolicy = useTytSocialExamPolicy({ game: 'sosyal', examRef: 'TYT' })
-  const generalStorageKey = `${STORAGE_KEY}:${user?.id ? `user:${user.id}` : 'guest'}`
+  const governedSocial = learnerV2Enabled && socialPolicy.eligible
+  const generalStorageKey = learnerV2Enabled
+    ? `${V2_STORAGE_KEY}:${user?.id ? `user:${user.id}` : 'guest'}`
+    : LEGACY_STORAGE_KEY
   const socialPolicyKey = socialPolicy.status === 'active'
+    && governedSocial
     && user?.id
     && socialPolicy.policyVersion
     && socialPolicy.selectionEffectiveAt
@@ -382,16 +390,16 @@ export function FethetClient() {
     ? `${user.id}:${socialPolicy.policyVersion}:${socialPolicy.selectionEffectiveAt}:${socialPolicy.variantCode}`
     : null
   const socialStorageKey = socialPolicyKey
-    ? `${STORAGE_KEY}:social:${socialPolicyKey}`
+    ? `${V2_STORAGE_KEY}:social:${socialPolicyKey}`
     : null
-  const socialCategories = socialPolicy.status === 'active'
+  const socialCategories = governedSocial && socialPolicy.status === 'active'
     && socialPolicy.policyVersion
     && socialPolicy.variantCode
     ? getTytSocialAllowedCategories(socialPolicy.policyVersion, socialPolicy.variantCode)
     : []
   const categoriesByGame = new Map(GAME_LIST.map((game) => [
     game.slug,
-    game.slug === 'sosyal' ? socialCategories : game.categories,
+    game.slug === 'sosyal' && governedSocial ? socialCategories : game.categories,
   ]))
   const allCategories = GAME_LIST.flatMap((game) => (
     (categoriesByGame.get(game.slug) ?? []).map((category) => `${game.slug}-${category}`)
@@ -403,9 +411,9 @@ export function FethetClient() {
   useEffect(() => {
     const allowed = new Set(allCategories)
     const stored = new Set([
-      ...[...loadConquered(generalStorageKey)].filter(
-        (category) => !category.startsWith('sosyal-'),
-      ),
+      ...(governedSocial
+        ? [...loadConquered(generalStorageKey)].filter((category) => !category.startsWith('sosyal-'))
+        : loadConquered(generalStorageKey)),
       ...(socialStorageKey ? loadConquered(socialStorageKey) : []),
     ])
     setConquered(new Set(
@@ -422,9 +430,9 @@ export function FethetClient() {
       setConquered((prev) => {
         const next = new Set(prev)
         next.add(`${active.game}-${active.category}`)
-        saveConquered(generalStorageKey, new Set(
-          [...next].filter((category) => !category.startsWith('sosyal-')),
-        ))
+        saveConquered(generalStorageKey, governedSocial
+          ? new Set([...next].filter((category) => !category.startsWith('sosyal-')))
+          : next)
         if (socialStorageKey) {
           saveConquered(socialStorageKey, new Set(
             [...next].filter((category) => category.startsWith('sosyal-')),
@@ -433,7 +441,7 @@ export function FethetClient() {
         return next
       })
     }
-  }, [active, generalStorageKey, socialStorageKey])
+  }, [active, generalStorageKey, governedSocial, socialStorageKey])
 
   const handleClose = useCallback(() => {
     setActive(null)
@@ -442,7 +450,8 @@ export function FethetClient() {
   const conqueredCount = conquered.size
   const totalCount = allCategories.length
   const progress = totalCount > 0 ? (conqueredCount / totalCount) * 100 : 0
-  const allDone = socialPolicy.status === 'active' && conqueredCount >= totalCount
+  const allDone = (governedSocial ? socialPolicy.status === 'active' : true)
+    && conqueredCount >= totalCount
 
   const handleReset = () => {
     if (!confirm('Tüm ilerlemeniz sıfırlanacak. Emin misiniz?')) return
@@ -531,7 +540,7 @@ export function FethetClient() {
 
               {/* Kategori kartları */}
               <div className="flex flex-wrap gap-2">
-                {slug === 'sosyal' && socialPolicy.status !== 'active' && (
+                {slug === 'sosyal' && governedSocial && socialPolicy.status !== 'active' && (
                   <div className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3 text-xs text-[var(--text-sub)]">
                     <p className="font-semibold">
                       {socialPolicy.loading

@@ -4,6 +4,7 @@ import type { GameMode, GameType } from '@/types/database'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { cacheQuestions } from '@/lib/utils/question-cache'
 import { filterValidUuids, isValidUuid } from '@/lib/utils/uuid'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 interface FetchQuestionsOptions {
   game: GameType
@@ -78,7 +79,7 @@ export async function fetchQuizQuestions({
   // A 20-question TYT Social deneme is always the governed official section.
   // Persisted UI filters from another game/scope must not downgrade it to the
   // generic random GET path or alter its 5/5/5/5 composition.
-  const isOfficialTytSocialSection = game === 'sosyal'
+  const isOfficialTytSocialSection = isTytSocialV2ClientEnabled() && game === 'sosyal'
     && examRef === 'TYT'
     && mode === 'deneme'
     && limit === 20

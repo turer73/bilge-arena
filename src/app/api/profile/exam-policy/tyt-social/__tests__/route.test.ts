@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const { getUser, rpc, check } = vi.hoisted(() => ({
   getUser: vi.fn(),
@@ -43,10 +43,31 @@ function request(method = 'GET', body?: unknown, idempotencyKey?: string | null)
 }
 
 describe('TYT Social exam-policy route', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
     check.mockResolvedValue({ success: true })
+  })
+
+  test('returns 503 and no-store while the server learner rollout is disabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'false')
+    const response = await GET(request() as never)
+    expect(response.status).toBe(503)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(getUser).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  test('fails closed when only one rollout flag is enabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    const response = await GET(request() as never)
+    expect(response.status).toBe(503)
+    expect(rpc).not.toHaveBeenCalled()
   })
 
   test('GET uses the authenticated cookie client and returns private no-store data', async () => {

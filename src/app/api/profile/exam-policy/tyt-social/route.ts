@@ -9,6 +9,7 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { createRateLimiter, type RateLimitResult } from '@/lib/utils/rate-limit'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 const ipLimiter = createRateLimiter('tyt-social-exam-policy-ip', 30, 60_000)
 const userLimiter = createRateLimiter('tyt-social-exam-policy-user', 12, 60_000)
@@ -65,6 +66,9 @@ function rpcFailureStatus(error: { code?: string; message?: string }): 400 | 401
 }
 
 export async function GET(request: NextRequest) {
+  if (!isTytSocialV2LearnerEnabled()) {
+    return noStoreJson({ error: 'TYT Sosyal V2 akışı henüz etkin değil' }, 503)
+  }
   try {
     const authorized = await authorizeAndRateLimit(request)
     if ('response' in authorized) return authorized.response
@@ -82,6 +86,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  if (!isTytSocialV2LearnerEnabled()) {
+    return noStoreJson({ error: 'TYT Sosyal V2 akışı henüz etkin değil' }, 503)
+  }
   let raw: unknown
   try {
     raw = await request.json()

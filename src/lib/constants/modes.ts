@@ -76,9 +76,10 @@ export function getModeById(id: string): QuizMode {
 export function getModesForContext(
   game: GameSlug,
   examRef: string | null,
+  tytSocialV2Enabled = false,
 ): QuizMode[] {
   return MODES.map((mode) => (
-    game === 'sosyal' && examRef === 'TYT' && mode.id === 'deneme'
+    tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT' && mode.id === 'deneme'
       ? {
           ...mode,
           description: '20 soruluk TYT Sosyal bölümü',
@@ -92,8 +93,9 @@ export function getModeByIdForContext(
   id: string,
   game: GameSlug,
   examRef: string | null,
+  tytSocialV2Enabled = false,
 ): QuizMode {
-  const modes = getModesForContext(game, examRef)
+  const modes = getModesForContext(game, examRef, tytSocialV2Enabled)
   return modes.find((mode) => mode.id === id) ?? modes[0]
 }
 

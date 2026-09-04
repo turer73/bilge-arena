@@ -4,7 +4,7 @@
  * Wordquest prompts use `sentence`; grading is always delegated to the server.
  */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { FethetClient } from '../fethet-client'
 
 const grader = vi.hoisted(() => ({ gradeQuestion: vi.fn() }))
@@ -81,6 +81,7 @@ async function openVocabularyQuiz() {
 
 describe('FethetClient — wordquest (İngilizce) akışı', () => {
   beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     localStorage.clear()
     vi.restoreAllMocks()
     auth.value = { user: { id: 'user-1' } }
@@ -89,6 +90,10 @@ describe('FethetClient — wordquest (İngilizce) akışı', () => {
       correctOption: 0,
       solution: null,
     }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it('wordquest sentence alanını soru metni olarak basar (fix öncesi boştu)', async () => {
@@ -168,6 +173,23 @@ describe('FethetClient — wordquest (İngilizce) akışı', () => {
       'href',
       '/arena/calisma',
     )
+  })
+
+  it('learner rollout kapalıyken Sosyal legacy questions akışını kullanır', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    mockFetchWith(WQ_QUESTIONS)
+    render(<FethetClient />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Tarih/ }))
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/questions?'),
+        { cache: 'no-store' },
+      )
+    })
+    expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/api/questions/random?'), expect.anything())
+    expect(localStorage.getItem('bilge-arena-fethet-v1')).toBeNull()
   })
 
   it('TYT Sosyal fetih ilerlemesini kullanıcı ve seçim olayına göre ayırır', async () => {

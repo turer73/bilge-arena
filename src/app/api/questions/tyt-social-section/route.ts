@@ -9,6 +9,7 @@ import {
   issueVerifiedTytSocialOfficialSection,
   toPublicVerifiedQuestions,
 } from '@/lib/verified-attempts'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 const requestSchema = z.object({ requestId: z.uuid() }).strict()
 const ipLimiter = createRateLimiter('tyt-social-section-ip', 30, 60_000)
@@ -40,6 +41,9 @@ function rateLimitFailure(result: RateLimitResult) {
  * Origin/CSRF guard applies. The actor always comes from the verified cookie.
  */
 export async function POST(request: NextRequest) {
+  if (!isTytSocialV2LearnerEnabled()) {
+    return noStoreJson({ error: 'TYT Sosyal V2 akışı henüz etkin değil' }, 503)
+  }
   const ipLimit = await ipLimiter.check(getClientIp(request.headers))
   if (!ipLimit.success) return rateLimitFailure(ipLimit)
 

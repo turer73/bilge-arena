@@ -4,7 +4,7 @@ import { getModeByIdForContext, getModesForContext } from '../modes'
 
 describe('context-aware quiz modes', () => {
   it('models TYT Social deneme as the exact 20-question section', () => {
-    const mode = getModeByIdForContext('deneme', 'sosyal', 'TYT')
+    const mode = getModeByIdForContext('deneme', 'sosyal', 'TYT', true)
 
     expect(mode).toMatchObject({
       id: 'deneme',
@@ -16,6 +16,11 @@ describe('context-aware quiz modes', () => {
   it('does not change other games or Social outside TYT', () => {
     expect(getModeByIdForContext('deneme', 'matematik', 'TYT').questionCount).toBe(40)
     expect(getModeByIdForContext('deneme', 'sosyal', 'AYT-SOZ').questionCount).toBe(40)
+    expect(getModesForContext('sosyal', 'TYT', true)).toHaveLength(6)
+  })
+
+  it('keeps Social legacy modes when the learner rollout is disabled', () => {
+    expect(getModeByIdForContext('deneme', 'sosyal', 'TYT').questionCount).toBe(40)
     expect(getModesForContext('sosyal', 'TYT')).toHaveLength(6)
   })
 })

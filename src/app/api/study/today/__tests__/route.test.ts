@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
 
 const {
@@ -233,6 +233,10 @@ beforeEach(() => {
   installDefaultRpc()
 })
 
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
 describe('GET /api/study/today', () => {
   it('auth ve parametre sinirlarini uygular', async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: null } })
@@ -337,6 +341,8 @@ describe('GET /api/study/today', () => {
   })
 
   it('yeni TYT Sosyal planını seçim politikasına göre filtreleyip özel snapshot RPC ile oluşturur', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
     tableMocks.daily_plan.push({ data: null })
     const questions = Array.from({ length: 15 }, (_, index) => makeQuestionRow(
       uid(30 + index),

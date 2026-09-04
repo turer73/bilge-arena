@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
@@ -316,7 +317,9 @@ export async function GET(request: NextRequest) {
       return noStoreJson({ game, examRef, coverage: unsupportedCoverage(), discovery: null, graph: null, outcomes: [] })
     }
 
-    const isTytSocialScope = game === 'sosyal' && examRef === 'TYT'
+    const isTytSocialScope = isTytSocialV2LearnerEnabled()
+      && game === 'sosyal'
+      && examRef === 'TYT'
     let tytSocialContext: ActiveTytSocialMasteryContext | null = null
     if (isTytSocialScope) {
       const contextResult = await callServiceRpc(

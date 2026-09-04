@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 const routeState = vi.hoisted(() => ({ game: 'wordquest' }))
@@ -6,6 +6,7 @@ const searchState = vi.hoisted(() => ({ query: '' }))
 const routerReplace = vi.hoisted(() => vi.fn())
 const authState = vi.hoisted(() => ({
   profile: null as { exam_type: string | null } | null,
+  loading: false,
 }))
 const gameState = vi.hoisted(() => ({
   selectedExamRef: 'TYT' as string | null,
@@ -34,15 +35,21 @@ import GameClient from '../[game]/game-client'
 
 describe('GameClient exam scope', () => {
   beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
     routeState.game = 'wordquest'
     searchState.query = ''
     authState.profile = null
+    authState.loading = false
     gameState.selectedExamRef = 'TYT'
     gameState.selectedMode = 'classic'
     gameState.setExamRef.mockReset()
     gameState.setMode.mockReset()
     gameState.setCategory.mockReset()
     routerReplace.mockReset()
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it.each(['TYT', 'LGS'] as const)(
@@ -102,6 +109,46 @@ describe('GameClient exam scope', () => {
 
     await waitFor(() => expect(gameState.setExamRef).toHaveBeenCalledWith('LGS'))
     expect(gameState.setExamRef).not.toHaveBeenCalledWith('BILINMEYEN')
+  })
+
+  it('learner rollout kapalıyken LGS Social rotası profili TYTye zorlamaz', async () => {
+    routeState.game = 'sosyal'
+    authState.profile = { exam_type: 'lgs' }
+    gameState.selectedExamRef = null
+
+    render(<GameClient />)
+
+    await waitFor(() => expect(gameState.setExamRef).toHaveBeenCalledWith('LGS'))
+    expect(gameState.setExamRef).not.toHaveBeenCalledWith('TYT')
+  })
+
+  it('learner rollout açıkken bile LGS profili TYT yerine LGS varsayılanını korur', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+    routeState.game = 'sosyal'
+    authState.profile = { exam_type: 'lgs' }
+    gameState.selectedExamRef = null
+
+    render(<GameClient />)
+
+    await waitFor(() => expect(gameState.setExamRef).toHaveBeenCalledWith('LGS'))
+    expect(gameState.setExamRef).not.toHaveBeenCalledWith('TYT')
+  })
+
+  it('profil yüklenmeden TYT fallback yazmaz ve sonradan gelen LGS kapsamını korur', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+    routeState.game = 'sosyal'
+    authState.loading = true
+    gameState.selectedExamRef = null
+
+    const { rerender } = render(<GameClient />)
+    await waitFor(() => expect(gameState.setExamRef).not.toHaveBeenCalled())
+
+    authState.profile = { exam_type: 'lgs' }
+    authState.loading = false
+    rerender(<GameClient />)
+
+    await waitFor(() => expect(gameState.setExamRef).toHaveBeenCalledWith('LGS'))
+    expect(gameState.setExamRef).not.toHaveBeenCalledWith('TYT')
   })
 
   it('kurum practice mode query sini dar allowlist ile store a uygular', async () => {

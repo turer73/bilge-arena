@@ -1,4 +1,5 @@
 import 'server-only'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { DENEME_CONFIGS, getModeById } from '@/lib/constants/modes'
@@ -264,7 +265,10 @@ export async function issueVerifiedAttempt(
 ): Promise<VerifiedAttemptTicket> {
   // A TYT Social deneme is an official 20-question, policy-snapshotted
   // section. The generic practice issuer must never mint that artifact.
-  if (input.game === 'sosyal' && input.examRef === 'TYT' && input.mode === 'deneme') {
+  const isGovernedTytSocial = isTytSocialV2LearnerEnabled()
+    && input.game === 'sosyal'
+    && input.examRef === 'TYT'
+  if (isGovernedTytSocial && input.mode === 'deneme') {
     throw new Error('verified_attempt_issue_failed')
   }
   const dedupedIds = Array.from(new Set(input.questionIds))
@@ -273,7 +277,7 @@ export async function issueVerifiedAttempt(
   }
   const durationSec = getVerifiedAttemptDurationSec(input.game, input.mode)
   try {
-    const isTytSocial = input.game === 'sosyal' && input.examRef === 'TYT'
+    const isTytSocial = isGovernedTytSocial
     const { data, error } = isTytSocial && input.sourcePlanId
       ? await admin.rpc('issue_verified_tyt_social_plan_attempt', {
           p_user_id: input.userId,
@@ -354,7 +358,10 @@ export async function issueVerifiedExamAttempt(
     questionId: item.questionId,
     sourceBucket: item.sourceBucket,
   }))
-  const { data, error } = input.game === 'sosyal' && input.examRef === 'TYT'
+  const isGovernedTytSocial = isTytSocialV2LearnerEnabled()
+    && input.game === 'sosyal'
+    && input.examRef === 'TYT'
+  const { data, error } = isGovernedTytSocial
     ? await admin.rpc('issue_verified_tyt_social_exam_attempt', {
         p_user_id: input.userId,
         p_blueprint_version: input.blueprintVersion,

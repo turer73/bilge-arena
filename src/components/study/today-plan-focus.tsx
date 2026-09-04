@@ -8,6 +8,7 @@ import { TodayPlanCard } from '@/components/game/today-plan-card'
 import { useGameStore } from '@/stores/game-store'
 import { isPaperModeUiEnabled, paperPackCreateHref } from '@/lib/paper-mode/client'
 import { questionExamRefForGame } from '@/lib/constants/exam-types'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 interface TodayPlanFocusProps {
   game: GameSlug
@@ -26,7 +27,7 @@ export function TodayPlanFocus({
 }: TodayPlanFocusProps) {
   const router = useRouter()
   const gameStore = useGameStore()
-  const questionExamRef = questionExamRefForGame(game, examRef)
+  const questionExamRef = questionExamRefForGame(game, examRef, isTytSocialV2ClientEnabled())
   const { plan, loading } = useTodayPlan(game, userId, questionExamRef, selectedCategory)
 
   if (!userId) return null
@@ -92,7 +93,7 @@ export function TodayPlanFocus({
       onStart={startPlan}
       showStickyMobileAction={showStickyMobileAction}
       paperHref={isPaperModeUiEnabled() && plan
-        ? paperPackCreateHref(game, questionExamRefForGame(game, plan.examRef ?? questionExamRef))
+        ? paperPackCreateHref(game, questionExamRefForGame(game, plan.examRef ?? questionExamRef, isTytSocialV2ClientEnabled()))
         : null}
     />
   )

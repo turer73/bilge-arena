@@ -35,6 +35,7 @@ import {
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
 import { GAMES } from '@/lib/constants/games'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 export const COACH_SEEN_STORAGE_KEY = 'ba-coach-seen'
 
@@ -288,7 +289,8 @@ export function MobileHomeDemo({
   // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
   // yok; sabit ornek icerik gosterilir.
   const progress = useTopicProgress(mode === 'live' ? gameSlug : null, userId, progressExamRef)
-  const isSocialTytProgressPreparing = mode === 'live'
+  const isSocialTytProgressPreparing = isTytSocialV2ClientEnabled()
+    && mode === 'live'
     && gameSlug === 'sosyal'
     && progressExamRef === 'TYT'
     && progress.available !== true

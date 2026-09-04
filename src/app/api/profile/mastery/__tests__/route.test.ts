@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   mockGetUser,
@@ -168,8 +168,12 @@ function request(query = 'game=matematik&exam_ref=TYT') {
 }
 
 describe('GET /api/profile/mastery', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     mockGetUser.mockResolvedValue({ data: { user: null } })
     mockIpCheck.mockResolvedValue({ success: true, retryAfter: 0 })
     mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })

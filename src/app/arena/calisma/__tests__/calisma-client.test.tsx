@@ -35,6 +35,7 @@ const mockedUseAuthStore = vi.mocked(useAuthStore)
 
 describe('CalismaClient', () => {
   beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     mockedUseAuthStore.mockReset()
     useGameStore.setState({
       selectedGame: null,
@@ -49,7 +50,10 @@ describe('CalismaClient', () => {
     masteryActionCardProps.mockClear()
   })
 
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
 
   test('loading durumunda erişilebilir yükleme durumu gösterir', () => {
     mockedUseAuthStore.mockReturnValue({ user: null, profile: null, loading: true } as never)

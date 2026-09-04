@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const {
@@ -63,6 +63,10 @@ vi.mock('@/lib/utils/admin-rate-limit', () => ({
 }))
 
 import { GET, PATCH } from '../route'
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 const VALID_QID = '40000000-0000-4000-8000-000000000001'
 
@@ -161,6 +165,8 @@ describe('GET /api/questions', () => {
   })
 
   it('fails closed for TYT Social on the legacy active-list surface', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockCheckAdmin.mockResolvedValue(null)
 

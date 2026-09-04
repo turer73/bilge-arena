@@ -155,6 +155,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
   test('canlı modda adımlar gerçek müfredattan gelir ve ilerleme sayılır', async () => {
@@ -184,6 +185,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
   })
 
   test('TYT Sosyal ilerlemesi unavailable iken demo adım ve hazır ders iddiası göstermez', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,
       json: async () => ({

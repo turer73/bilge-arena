@@ -31,6 +31,7 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
   let lastUrl = ''
 
   beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     lastUrl = ''
     fetchMock = vi.fn(async (url: string) => {
       lastUrl = url
@@ -50,6 +51,7 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
     vi.restoreAllMocks()
   })
 
@@ -90,6 +92,23 @@ describe('fetchQuizQuestions — Madde 9 #6 API proxy', () => {
         body: JSON.stringify({ requestId }),
       },
     )
+  })
+
+  it('istemci rollout kapalıyken aynı Social deneme isteğini legacy GET yoluna bırakır', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    await fetchQuizQuestions({
+      game: 'sosyal',
+      examRef: 'TYT',
+      mode: 'deneme',
+      limit: 20,
+      includeReview: false,
+      requestId: '40000000-0000-4000-8000-000000000001',
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/questions/random?'),
+      expect.objectContaining({ cache: 'no-store' }),
+    )
+    expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('method', 'POST')
   })
 
   it.each([

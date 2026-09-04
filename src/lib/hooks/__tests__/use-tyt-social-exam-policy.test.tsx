@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const auth = vi.hoisted(() => ({ value: { user: { id: 'user-1' } } }))
 vi.mock('@/stores/auth-store', () => ({ useAuthStore: () => auth.value }))
@@ -18,10 +18,25 @@ const active = {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
   auth.value = { user: { id: 'user-1' } }
 })
 
 describe('useTytSocialExamPolicy', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+  })
+
+  test('does not fetch when the client rollout flag is disabled', () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const { result } = renderHook(() => useTytSocialExamPolicy({ game: 'sosyal', examRef: 'TYT' }))
+    expect(result.current.eligible).toBe(false)
+    expect(result.current.status).toBe('inactive')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   test('only fetches for an authenticated sosyal/TYT context', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => policy })
     vi.stubGlobal('fetch', fetchMock)

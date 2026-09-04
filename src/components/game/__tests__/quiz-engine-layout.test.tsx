@@ -5,7 +5,7 @@
  */
 
 import { StrictMode } from 'react'
-import { describe, test, expect, vi } from 'vitest'
+import { afterEach, beforeEach, describe, test, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
 // --- Stores ---
@@ -226,6 +226,9 @@ vi.mock('next/dynamic', () => ({
 import { QuizEngine } from '../quiz-engine'
 
 describe('QuizEngine yerleşim', () => {
+  beforeEach(() => vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true'))
+  afterEach(() => vi.unstubAllEnvs())
+
   test('sınav değişince yeni kapsamda geçersiz kalan kategoriyi temizler', () => {
     quizGame.screen = 'lobby'
     gameStoreValue.selectedExamRef = 'AYT-SOZ'
@@ -732,6 +735,9 @@ describe('QuizEngine — Akıllı Deneme başlangıcı', () => {
 })
 
 describe('QuizEngine — TYT Sosyal cevaplama düzeni', () => {
+  beforeEach(() => vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true'))
+  afterEach(() => vi.unstubAllEnvs())
+
   test('misafiri çalışan bir quiz vaat etmek yerine girişe yönlendirir', () => {
     quizGame.screen = 'lobby'
     authStoreValue.user = null

@@ -52,6 +52,7 @@ export default function CalismaClient() {
     user
     && game === 'sosyal'
     && examRef === 'TYT'
+    && tytSocialPolicy.eligible
     && tytSocialPolicy.status !== 'active',
   )
 

@@ -7,6 +7,7 @@ import {
   type GetTytSocialPolicyResponse,
   type TytSocialPolicyVariant,
 } from '@/lib/exam-policy/tyt-social-contract'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 export const TYT_SOCIAL_POLICY_ENDPOINT = '/api/profile/exam-policy/tyt-social'
@@ -66,7 +67,13 @@ export function useTytSocialExamPolicy(
   const { user } = useAuthStore()
   const game = options.game ?? null
   const examRef = options.examRef ?? null
-  const eligible = Boolean(user && options.enabled !== false && game === 'sosyal' && examRef === 'TYT')
+  const eligible = Boolean(
+    isTytSocialV2ClientEnabled()
+    && user
+    && options.enabled !== false
+    && game === 'sosyal'
+    && examRef === 'TYT',
+  )
 
   const [status, setStatus] = useState<TytSocialPolicyStatus>(eligible ? 'loading' : 'inactive')
   const [policyVersion, setPolicyVersion] = useState<string | null>(null)

@@ -22,6 +22,7 @@ import {
 } from '@/lib/verified-attempts'
 import { isValidUuid } from '@/lib/utils/uuid'
 import { DENEME_CONFIGS } from '@/lib/constants/modes'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 const ipLimiter = createRateLimiter('personalized-mock-ip', 60, 60_000)
 const userLimiter = createRateLimiter('personalized-mock-user', 10, 60_000)
@@ -50,6 +51,7 @@ interface HistoryRow {
  * yazmaz. Başlatılan soru dizisi istemcide sabit kalır.
  */
 export async function GET(request: NextRequest) {
+  const tytSocialV2Enabled = isTytSocialV2LearnerEnabled()
   const ip = getClientIp(request.headers)
   const ipRl = await ipLimiter.check(ip)
   if (!ipRl.success) {
@@ -156,7 +158,7 @@ export async function GET(request: NextRequest) {
   }
 
   let eligibleHistory = historyResult.data ?? []
-  if (game === 'sosyal' && examRef === 'TYT') {
+  if (tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT') {
     try {
       const allowedIds = new Set(await filterTytSocialQuestionIds(
         admin,
@@ -214,7 +216,7 @@ export async function GET(request: NextRequest) {
     const strategyEnabled = process.env.MOCK_STRATEGY_ENABLED === 'true'
       && process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED === 'true'
       && game !== 'wordquest'
-    const requiresPolicySnapshot = game === 'sosyal' && examRef === 'TYT'
+    const requiresPolicySnapshot = tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT'
     const requestIdHeader = request.headers.get('x-idempotency-key')
     const ticket = strategyEnabled || requiresPolicySnapshot
       ? await issueVerifiedExamAttempt(admin, {

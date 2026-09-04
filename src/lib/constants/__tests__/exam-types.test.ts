@@ -53,8 +53,12 @@ describe('questionExamRefForGame', () => {
   })
 
   test('Sosyal filtresiz birakilamaz; null kapsam TYT olarak fail-closed tamamlanir', () => {
-    expect(questionExamRefForGame('sosyal', null)).toBe('TYT')
+    expect(questionExamRefForGame('sosyal', null, true)).toBe('TYT')
     expect(questionExamRefForGame('sosyal', 'LGS')).toBe('LGS')
+  })
+
+  test('learner rollout kapalıyken Social null kapsamı legacy filtresiz akışı korur', () => {
+    expect(questionExamRefForGame('sosyal', null, false)).toBeNull()
   })
 })
 

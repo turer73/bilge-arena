@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   getUser,
@@ -81,8 +81,12 @@ function request(
 }
 
 describe('POST /api/questions/tyt-social-section', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     check.mockResolvedValue({ success: true })
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
     createServiceRoleClient.mockReturnValue(admin)
@@ -94,6 +98,25 @@ describe('POST /api/questions/tyt-social-section', () => {
       snapshot: { items: privateSnapshots },
     })
     toPublicVerifiedQuestions.mockReturnValue(publicQuestions)
+  })
+
+  it('returns 503 and no-store while the server learner rollout is disabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'false')
+    const response = await POST(request() as never)
+    expect(response.status).toBe(503)
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store')
+    expect(check).not.toHaveBeenCalled()
+    expect(getUser).not.toHaveBeenCalled()
+    expect(issueOfficialSection).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when only one rollout flag is enabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    const response = await POST(request() as never)
+    expect(response.status).toBe(503)
+    expect(check).not.toHaveBeenCalled()
+    expect(issueOfficialSection).not.toHaveBeenCalled()
   })
 
   it('rejects malformed input and header/body idempotency mismatch before auth', async () => {

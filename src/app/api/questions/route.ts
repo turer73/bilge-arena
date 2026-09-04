@@ -10,6 +10,7 @@ import { getClientIp } from '@/lib/utils/client-ip'
 import { parsePublicQuestionContent } from '@/lib/utils/question-public'
 import type { Database, TablesUpdate } from '@/types/database.generated'
 import { issueVerifiedAttempt, toPublicVerifiedQuestions } from '@/lib/verified-attempts'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 const questionsLimiter = createRateLimiter('questions', 120, 60_000) // anon: IP bazli (50 öğrenci × ~2 req/dk)
 const questionsAuthLimiter = createRateLimiter('questions-auth', 240, 60_000) // authed: user-id bazli (daha yüksek ama sınırsız değil)
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
   // bu legacy aktif-liste yuzeyinden bilet kesmek, 206'nin snapshot sinirini
   // ya 500'e dusurur ya da ileride yanlis dala ait kaniti karistirir. Oyun
   // istemcileri examRef=TYT tasiyan policy-aware random route'u kullanmalidir.
-  if (user && !adminProjection && game === 'sosyal' && active === 'true') {
+  if (isTytSocialV2LearnerEnabled() && user && !adminProjection && game === 'sosyal' && active === 'true') {
     return NextResponse.json(
       {
         error: 'TYT Sosyal icin sinav kapsamli calisma akisini kullanin',

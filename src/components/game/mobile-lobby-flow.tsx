@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Check, ChevronRight, Play, X } from 'lucide-react'
 import { GAMES, getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
 import { getModesForContext, type QuizMode } from '@/lib/constants/modes'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 interface MobileLobbyFlowProps {
   game: GameSlug
@@ -127,7 +128,14 @@ export function MobileLobbyFlow({
 }: MobileLobbyFlowProps) {
   const gameDef = GAMES[game]
   const categories = getCategoriesForExam(game, selectedExamRef)
-  const modes = getModesForContext(game, game === 'sosyal' ? selectedExamRef ?? 'TYT' : selectedExamRef)
+  const effectiveExamRef = game === 'sosyal' && isTytSocialV2ClientEnabled()
+    ? selectedExamRef ?? 'TYT'
+    : selectedExamRef
+  const modes = getModesForContext(
+    game,
+    effectiveExamRef,
+    isTytSocialV2ClientEnabled(),
+  )
   const mode = modes.find((candidate) => candidate.id === selectedMode) ?? modes[0]
   const selectedCategoryIsValid = selectedCategory === null || categories.includes(selectedCategory)
   const safeCategory = selectedCategoryIsValid ? selectedCategory : null
@@ -141,7 +149,7 @@ export function MobileLobbyFlow({
     : quizLimit && !quizLimit.canPlay
       ? onLimitReached
       : onStart
-  const scopeLabel = selectedExamRef ? (EXAM_SCOPE_LABELS[selectedExamRef] ?? selectedExamRef) : 'Sınav seç'
+  const scopeLabel = effectiveExamRef ? (EXAM_SCOPE_LABELS[effectiveExamRef] ?? effectiveExamRef) : 'Sınav seç'
   const categoryLabel = safeCategory ? getCategoryLabel(safeCategory) : 'Tüm konular'
   const isExtraMode = EXTRA_MODE_IDS.includes(mode.id as typeof EXTRA_MODE_IDS[number])
 

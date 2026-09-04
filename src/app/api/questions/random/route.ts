@@ -20,6 +20,7 @@ import {
   issueVerifiedAttempt,
   toPublicVerifiedQuestions,
 } from '@/lib/verified-attempts'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 // Cift kalkan rate limit (Madde 9 pattern):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -65,6 +66,7 @@ const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ'])
  * Rate limit: IP 120/dk + user 60/dk
  */
 export async function GET(request: NextRequest) {
+  const tytSocialV2Enabled = isTytSocialV2LearnerEnabled()
   // 1) IP rate limit
   const ip = getClientIp(request.headers)
   const ipRl = await ipLimiter.check(ip)
@@ -119,7 +121,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Gecerli sinav kapsami belirtilmedi' }, { status: 400 })
   }
   const examRef = examRefRaw
-  if (gameSlug === 'sosyal' && examRef === null) {
+  // Pre-V2 Social keeps the legacy optional exam scope. The exact-scope
+  // contract is enforced only while the governed learner rollout is active.
+  if (tytSocialV2Enabled && gameSlug === 'sosyal' && examRef === null) {
     return NextResponse.json(
       { error: 'Sosyal icin exact sinav kapsami belirtilmelidir' },
       { status: 400, headers: { 'Cache-Control': 'no-store' } },
@@ -148,6 +152,7 @@ export async function GET(request: NextRequest) {
   const isOfficialTytSocialSection = gameSlug === 'sosyal'
     && examRef === 'TYT'
     && mode === 'deneme'
+    && tytSocialV2Enabled
 
   if (isOfficialTytSocialSection) {
     return NextResponse.json(
@@ -248,7 +253,7 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (game === 'sosyal' && examRef === 'TYT') {
+  if (tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT') {
     try {
       const candidateIds = [...new Set([
         ...questions.map(question => question.id),

@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
 
 const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }))
@@ -57,7 +57,13 @@ function makeRequest(params: Record<string, string>) {
 describe('GET /api/questions/preview exam scope', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     process.env.ACTIVATION_EXPERIMENT_ENABLED = 'true'
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   afterAll(() => {
@@ -116,6 +122,22 @@ describe('GET /api/questions/preview exam scope', () => {
       error: 'TYT Sosyal misafir onizlemesi hazirlaniyor',
     })
     expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('keeps the legacy Social preview path when the learner rollout is disabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'false')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    mockRpc.mockResolvedValue({
+      data: [makeQuestionRow('legacy-social', { game: 'sosyal', category: 'tarih', exam_ref: null })],
+      error: null,
+    })
+
+    const response = await GET(makeRequest({ game: 'sosyal' }) as never)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({
+      question: expect.objectContaining({ id: 'legacy-social' }),
+    }))
   })
 
   it('preserves TYT and biyoloji while relaxing only difficulty', async () => {

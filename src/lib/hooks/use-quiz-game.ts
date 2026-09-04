@@ -22,6 +22,7 @@ import { recordMockStrategyQuestionOpened } from '@/lib/mock-strategy/client'
 import { trackEvent } from '@/lib/utils/plausible'
 import { ACTIVATION_EXPERIMENT, getActivationExposure } from '@/lib/experiments/activation'
 import { questionExamRefForGame } from '@/lib/constants/exam-types'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import { isValidUuid } from '@/lib/utils/uuid'
 
 const OFFICIAL_SECTION_REQUEST_STORAGE_PREFIX = 'bilge-arena:tyt-social-official-request:'
@@ -109,7 +110,11 @@ export interface UseQuizGameReturn {
 export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGameReturn {
   const quizStore = useQuizStore()
   const gameStore = useGameStore()
-  const questionExamRef = questionExamRefForGame(game, gameStore.selectedExamRef)
+  const questionExamRef = questionExamRefForGame(
+    game,
+    gameStore.selectedExamRef,
+    isTytSocialV2ClientEnabled(),
+  )
 
   const [screen, setScreen] = useState<'lobby' | 'loading' | 'game' | 'result'>('lobby')
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -122,9 +127,14 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [strategyTracked, setStrategyTracked] = useState(false)
 
-  const mode = getModeByIdForContext(gameStore.selectedMode, game, questionExamRef)
+  const mode = getModeByIdForContext(
+    gameStore.selectedMode,
+    game,
+    questionExamRef,
+    isTytSocialV2ClientEnabled(),
+  )
   const isDeneme = mode.isDeneme === true
-  const isExactTytSocialSection = game === 'sosyal'
+  const isExactTytSocialSection = isTytSocialV2ClientEnabled() && game === 'sosyal'
     && questionExamRef === 'TYT'
     && isDeneme
   const denemeConfig = isDeneme ? DENEME_CONFIGS[game] : null

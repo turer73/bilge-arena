@@ -6,7 +6,7 @@
  * elapsed/genel-süre ayrıntıları kendi bileşen testlerinde (dürüst kapsam notu).
  */
 
-import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, test, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 
@@ -95,6 +95,7 @@ const makeQ = (id: string): PublicQuestion =>
   }) as PublicQuestion
 
 beforeEach(() => {
+  vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
   vi.clearAllMocks()
   quiz.state = 'idle'
   quiz.streak = 0
@@ -122,6 +123,8 @@ beforeEach(() => {
   }))
   strategyTelemetry.questionOpened.mockResolvedValue(true)
 })
+
+afterEach(() => vi.unstubAllEnvs())
 
 describe('useQuizGame — handleStart', () => {
   test('misafir (userId yok): preview sorusuyla 1-soruluk oyun + timer başlar', async () => {

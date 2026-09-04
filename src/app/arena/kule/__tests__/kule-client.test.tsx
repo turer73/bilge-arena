@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { KuleClient } from '../kule-client'
 
 const grader = vi.hoisted(() => ({ gradeQuestion: vi.fn() }))
@@ -38,6 +38,7 @@ async function startGame() {
 
 describe('KuleClient grading', () => {
   beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     vi.restoreAllMocks()
     vi.clearAllMocks()
     mockQuestionFetch()
@@ -46,6 +47,10 @@ describe('KuleClient grading', () => {
       correctOption: 0,
       solution: 'Sunucu çözümü',
     })
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it('grades the canonical option once and uses the server result for feedback', async () => {
@@ -100,6 +105,20 @@ describe('KuleClient grading', () => {
     expect(screen.getByRole('link', { name: 'Çalış sayfasına git' })).toHaveAttribute(
       'href',
       '/arena/calisma',
+    )
+  })
+
+  it('learner rollout kapalıyken Sosyal legacy random akışını kullanır', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    mockQuestionFetch()
+    render(<KuleClient />)
+
+    fireEvent.click((await screen.findByText('Sosyal Bilimler')).closest('button')!)
+    await screen.findByText(QUESTION.content.question)
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.not.stringContaining('examRef=TYT'),
+      { cache: 'no-store' },
     )
   })
 })

@@ -28,6 +28,7 @@ import {
   parseMasteryScopeIntegrity,
   resolveReleasedMasteryScope,
 } from '@/lib/mastery/scope'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 const ipLimiter = createRateLimiter('study-today-ip', 120, 60_000)
 const userLimiter = createRateLimiter('study-today-user', 60, 60_000)
@@ -149,6 +150,7 @@ async function respondWithTicket(
 
 /** GET /api/study/today?game=<slug>&exam_ref=<ref>&choice_category=<slug> */
 export async function GET(request: NextRequest) {
+  const tytSocialV2Enabled = isTytSocialV2LearnerEnabled()
   const ipRl = await ipLimiter.check(getClientIp(request.headers))
   if (!ipRl.success) {
     return NextResponse.json(
@@ -336,7 +338,7 @@ export async function GET(request: NextRequest) {
 
   let dueQuestions = dueResult.data ?? []
   let baseQuestions = parseQuestionRows(baseResult.data)
-  if (game === 'sosyal' && examRef === 'TYT') {
+  if (tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT') {
     try {
       const allowedIds = new Set(await filterTytSocialQuestionIds(admin, user.id, [
         ...dueQuestions.map(question => question.id),
@@ -436,7 +438,7 @@ export async function GET(request: NextRequest) {
     source_type: item.sourceType,
     source_ref: item.sourceRef,
   }))
-  const { data: rpcData, error: createError } = game === 'sosyal' && examRef === 'TYT'
+  const { data: rpcData, error: createError } = tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT'
     ? await admin.rpc('create_tyt_social_daily_plan_v2', {
         p_user_id: user.id,
         p_plan_date: planDate,
