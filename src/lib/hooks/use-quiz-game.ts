@@ -6,7 +6,7 @@ import { useGameStore } from '@/stores/game-store'
 import { useChatStore } from '@/stores/chat-store'
 import { useTimer } from '@/lib/hooks/use-timer'
 import { calculateXP } from '@/lib/utils/xp'
-import { getModeById, DENEME_CONFIGS, type DenemeConfig } from '@/lib/constants/modes'
+import { getModeByIdForContext, DENEME_CONFIGS, type DenemeConfig } from '@/lib/constants/modes'
 import type { GameSlug } from '@/lib/constants/games'
 import { fetchQuizQuestions, fetchPreviewQuestion } from '@/lib/supabase/questions'
 import { getAdaptiveDifficulty } from '@/lib/supabase/adaptive-difficulty'
@@ -22,6 +22,32 @@ import { recordMockStrategyQuestionOpened } from '@/lib/mock-strategy/client'
 import { trackEvent } from '@/lib/utils/plausible'
 import { ACTIVATION_EXPERIMENT, getActivationExposure } from '@/lib/experiments/activation'
 import { questionExamRefForGame } from '@/lib/constants/exam-types'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
+import { isValidUuid } from '@/lib/utils/uuid'
+
+const OFFICIAL_SECTION_REQUEST_STORAGE_PREFIX = 'bilge-arena:tyt-social-official-request:'
+
+function readOfficialSectionRequestId(userId: string): string | null {
+  try {
+    const key = `${OFFICIAL_SECTION_REQUEST_STORAGE_PREFIX}${userId}`
+    const stored = sessionStorage.getItem(key)
+    if (stored && isValidUuid(stored)) return stored
+    if (stored) sessionStorage.removeItem(key)
+  } catch {}
+  return null
+}
+
+function persistOfficialSectionRequestId(userId: string, requestId: string) {
+  try {
+    sessionStorage.setItem(`${OFFICIAL_SECTION_REQUEST_STORAGE_PREFIX}${userId}`, requestId)
+  } catch {}
+}
+
+function clearOfficialSectionRequestId(userId: string) {
+  try {
+    sessionStorage.removeItem(`${OFFICIAL_SECTION_REQUEST_STORAGE_PREFIX}${userId}`)
+  } catch {}
+}
 
 // ---------- Hook return tipi ----------
 
@@ -38,7 +64,7 @@ export interface UseQuizGameReturn {
   strategyTracked: boolean
 
   // Mode bilgileri
-  mode: ReturnType<typeof getModeById>
+  mode: ReturnType<typeof getModeByIdForContext>
   isDeneme: boolean
   denemeConfig: DenemeConfig | null
   elapsed: ReturnType<typeof useElapsedTime>
@@ -84,7 +110,11 @@ export interface UseQuizGameReturn {
 export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGameReturn {
   const quizStore = useQuizStore()
   const gameStore = useGameStore()
-  const questionExamRef = questionExamRefForGame(game, gameStore.selectedExamRef)
+  const questionExamRef = questionExamRefForGame(
+    game,
+    gameStore.selectedExamRef,
+    isTytSocialV2ClientEnabled(),
+  )
 
   const [screen, setScreen] = useState<'lobby' | 'loading' | 'game' | 'result'>('lobby')
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -97,8 +127,16 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const [strategyTracked, setStrategyTracked] = useState(false)
 
-  const mode = getModeById(gameStore.selectedMode)
+  const mode = getModeByIdForContext(
+    gameStore.selectedMode,
+    game,
+    questionExamRef,
+    isTytSocialV2ClientEnabled(),
+  )
   const isDeneme = mode.isDeneme === true
+  const isExactTytSocialSection = isTytSocialV2ClientEnabled() && game === 'sosyal'
+    && questionExamRef === 'TYT'
+    && isDeneme
   const denemeConfig = isDeneme ? DENEME_CONFIGS[game] : null
   const elapsed = useElapsedTime()
 
@@ -110,6 +148,8 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
   const denemeTimeUpPendingRef = useRef(false)
   const openedEventIdsRef = useRef<Map<number, string>>(new Map())
   const answerEventIdsRef = useRef<Map<number, string>>(new Map())
+  const officialSectionRequestIdRef = useRef<string | null>(null)
+  const officialSectionRequestOwnerRef = useRef<string | null>(null)
 
   useEffect(() => () => gradeRequestRef.current?.abort(), [])
 
@@ -213,7 +253,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     }
     quizStore.completeQuiz()
     setScreen('result')
-  }, [quizStore])
+  }, [quizStore, setScreen])
 
   // --- Can bitti: oyunu bitir ---
 
@@ -290,24 +330,54 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         }
       }
 
+      if (isExactTytSocialSection && officialSectionRequestOwnerRef.current !== (userId ?? null)) {
+        officialSectionRequestIdRef.current = null
+        officialSectionRequestOwnerRef.current = userId ?? null
+      }
+      const officialSectionRequestId = isExactTytSocialSection
+        ? officialSectionRequestIdRef.current
+          ?? (userId ? readOfficialSectionRequestId(userId) : null)
+          ?? crypto.randomUUID()
+        : undefined
+      if (isExactTytSocialSection && !officialSectionRequestIdRef.current) {
+        officialSectionRequestIdRef.current = officialSectionRequestId ?? null
+        if (userId && officialSectionRequestId) {
+          persistOfficialSectionRequestId(userId, officialSectionRequestId)
+        }
+      }
       const questionSet = await fetchQuizQuestions({
         game,
-        limit: isDeneme ? mode.questionCount * 2 : mode.questionCount * 3,
-        category: gameStore.selectedCategory,
-        difficulty,
+        limit: isExactTytSocialSection
+          ? 20
+          : isDeneme
+            ? mode.questionCount * 2
+            : mode.questionCount * 3,
+        category: isExactTytSocialSection ? null : gameStore.selectedCategory,
+        difficulty: isExactTytSocialSection ? null : difficulty,
         mode: mode.id as GameMode,
         // Deneme'de spaced repetition kapatilir; normal modda server-side
         // auth.uid() ile review questions otomatik gelir (Madde 9 #6).
         includeReview: !isDeneme,
         examRef: questionExamRef,
+        requestId: officialSectionRequestId,
       })
       let questions = questionSet.questions
       const newAttemptId = questionSet.attemptId
 
       // Soru bulunamadıysa lobby'e geri dön — demo gösterme
-      if (questions.length === 0 || !newAttemptId) {
+      if (
+        questions.length === 0
+        || !newAttemptId
+        || (isExactTytSocialSection && questions.length !== 20)
+      ) {
+        if (questionSet.refreshRequestId) {
+          officialSectionRequestIdRef.current = null
+          if (userId) clearOfficialSectionRequestId(userId)
+        }
         console.warn('[QuizGame] Soru bulunamadı — seçili filtrelerle soru yok')
-        setLoadError('Bu filtrelerle soru bulunamadı. Farklı bir konu veya zorluk seçin.')
+        setLoadError(isExactTytSocialSection
+          ? '20 soruluk TYT Sosyal bölümü henüz güvenli biçimde hazırlanamadı.'
+          : 'Bu filtrelerle soru bulunamadı. Farklı bir konu veya zorluk seçin.')
         setScreen('lobby')
         return
       }
@@ -323,7 +393,10 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         return { ...q, content: shuffled.content }
       })
 
-      if (isDeneme && denemeConfig) {
+      if (isExactTytSocialSection) {
+        quizStore.startQuiz(questions)
+        elapsed.reset()
+      } else if (isDeneme && denemeConfig) {
         // Deneme: kategori dagilimina gore sorulari sec
         const distributed: PublicQuestion[] = []
         for (const [cat, count] of Object.entries(denemeConfig.questionDistribution)) {
@@ -350,12 +423,16 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         timer.reset(mode.timePerQuestion)
         timer.start()
       }
+      if (isExactTytSocialSection) {
+        officialSectionRequestIdRef.current = null
+        if (userId) clearOfficialSectionRequestId(userId)
+      }
     } catch (err) {
       console.error('[QuizGame] Soru yükleme hatası:', err)
       setLoadError('Sorular yüklenirken bir hata oluştu. İnternet bağlantınızı kontrol edin.')
       setScreen('lobby')
     }
-  }, [game, mode, quizStore, timer, isDeneme, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, questionExamRef, userId])
+  }, [game, mode, quizStore, timer, isDeneme, isExactTytSocialSection, denemeConfig, elapsed, gameStore.selectedCategory, gameStore.selectedDifficulty, questionExamRef, userId, setAttemptId, setStrategyTracked, setScreen, setLoadError, setIsGuestMode])
 
   // --- "Bugunun 15'i" plani dogrudan baslat ---
   // handleStart'in basari-dalinin aynasi: fetch/slice yok (sorular caginan
@@ -391,7 +468,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     timer.reset(0)
     questionStartedAtRef.current = Date.now()
     setScreen('game')
-  }, [quizStore, timer])
+  }, [quizStore, timer, setAttemptId, setStrategyTracked, setIsGuestMode, setLoadError, setScreen])
 
   // --- Hazır Akıllı Deneme setini doğrudan başlat ---
   // `setMode('deneme')` ile aynı event içinde çağrılabileceği için bu callback
@@ -426,7 +503,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     setLoadError(null)
     questionStartedAtRef.current = Date.now()
     setScreen('game')
-  }, [elapsed, quizStore, timer])
+  }, [elapsed, quizStore, timer, setAttemptId, setStrategyTracked, setIsGuestMode, setLoadError, setScreen])
 
   // --- Cevap ver ---
 
@@ -533,7 +610,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
           setScreen('result')
         }
       })
-  }, [quizStore, timer, mode.timePerQuestion, isDeneme, attemptId, strategyTracked, userId, questionExamRef, game])
+  }, [quizStore, timer, mode.timePerQuestion, isDeneme, attemptId, strategyTracked, userId, questionExamRef, game, setShowBurst, setShowXPPopup, setShowLifeLost, setScreen])
 
   // --- Sonraki soru ---
 
@@ -555,7 +632,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         timer.start()
       }
     }
-  }, [quizStore, timer, mode.timePerQuestion, isDeneme])
+  }, [quizStore, timer, mode.timePerQuestion, isDeneme, setShowComments, setShowReportModal, setHelpPaused, setScreen])
 
   // --- Yeniden baslat ---
 
@@ -573,7 +650,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
     setHelpPaused(false)
     helpWasPausedRef.current = false
     setScreen('lobby')
-  }, [quizStore])
+  }, [quizStore, setAttemptId, setStrategyTracked, setIsGuestMode, setHelpPaused, setScreen])
 
   // --- Secenek durumu ---
 

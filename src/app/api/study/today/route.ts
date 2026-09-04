@@ -9,7 +9,11 @@ import { trDayString } from '@/lib/utils/tr-date'
 import { fetchDueQuestions } from '@/lib/review/due-questions'
 import { parseQuestionRows, toPublicQuestion, type PublicQuestion } from '@/lib/utils/question-public'
 import { defaultExamRefForType, type ExamType } from '@/lib/constants/exam-types'
-import { issueVerifiedAttempt, toPublicVerifiedQuestions } from '@/lib/verified-attempts'
+import {
+  filterTytSocialQuestionIds,
+  issueVerifiedAttempt,
+  toPublicVerifiedQuestions,
+} from '@/lib/verified-attempts'
 import { buildPlanCandidates } from '@/lib/study/plan-candidates'
 import { composePlanV2 } from '@/lib/study/compose-plan-v2'
 import {
@@ -24,6 +28,7 @@ import {
   parseMasteryScopeIntegrity,
   resolveReleasedMasteryScope,
 } from '@/lib/mastery/scope'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 const ipLimiter = createRateLimiter('study-today-ip', 120, 60_000)
 const userLimiter = createRateLimiter('study-today-user', 60, 60_000)
@@ -93,6 +98,7 @@ async function respondWithTicket(
   questions: PublicQuestion[],
   completedIds: string[],
   items: TodayPlanItem[],
+  planId?: string,
 ) {
   const returnedIds = new Set(questions.map((question) => question.id))
   const safeCompletedIds = completedIds.filter((id) => returnedIds.has(id))
@@ -117,6 +123,9 @@ async function respondWithTicket(
       game,
       mode: 'practice',
       questionIds: questions.map((question) => question.id),
+      examRef,
+      sourcePlanId: planId,
+      requestId: crypto.randomUUID(),
     })
     const verifiedQuestions = toPublicVerifiedQuestions(ticket.questionSnapshots)
     if (
@@ -141,6 +150,7 @@ async function respondWithTicket(
 
 /** GET /api/study/today?game=<slug>&exam_ref=<ref>&choice_category=<slug> */
 export async function GET(request: NextRequest) {
+  const tytSocialV2Enabled = isTytSocialV2LearnerEnabled()
   const ipRl = await ipLimiter.check(getClientIp(request.headers))
   if (!ipRl.success) {
     return NextResponse.json(
@@ -243,6 +253,7 @@ export async function GET(request: NextRequest) {
         questions,
         completedIds,
         items,
+        existing.id,
       )
     } catch (error) {
       console.error('[/api/study/today] snapshot question query failed:', (error as { code?: string })?.code)
@@ -325,8 +336,23 @@ export async function GET(request: NextRequest) {
     return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
   }
 
-  const dueQuestions = dueResult.data ?? []
-  const baseQuestions = parseQuestionRows(baseResult.data)
+  let dueQuestions = dueResult.data ?? []
+  let baseQuestions = parseQuestionRows(baseResult.data)
+  if (tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT') {
+    try {
+      const allowedIds = new Set(await filterTytSocialQuestionIds(admin, user.id, [
+        ...dueQuestions.map(question => question.id),
+        ...baseQuestions.map(question => question.id),
+      ]))
+      dueQuestions = dueQuestions.filter(question => allowedIds.has(question.id))
+      baseQuestions = baseQuestions.filter(question => allowedIds.has(question.id))
+    } catch {
+      return noStoreJson(
+        { error: 'TYT Sosyal cevaplama düzeni seçilmelidir' },
+        { status: 409 },
+      )
+    }
+  }
   const outcomes = (outcomeResult.data ?? []).map((row) => ({
     id: row.id,
     code: row.code,
@@ -412,14 +438,20 @@ export async function GET(request: NextRequest) {
     source_type: item.sourceType,
     source_ref: item.sourceRef,
   }))
-  const { data: rpcData, error: createError } = await admin.rpc('create_daily_plan_v2', {
-    p_user_id: user.id,
-    p_game: game,
-    p_plan_date: planDate,
-    // The SQL contract uses NULL for games without an exam scope.
-    p_exam_ref: examRef as string,
-    p_items: rpcItems as Json,
-  })
+  const { data: rpcData, error: createError } = tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT'
+    ? await admin.rpc('create_tyt_social_daily_plan_v2', {
+        p_user_id: user.id,
+        p_plan_date: planDate,
+        p_items: rpcItems as Json,
+      })
+    : await admin.rpc('create_daily_plan_v2', {
+        p_user_id: user.id,
+        p_game: game,
+        p_plan_date: planDate,
+        // The SQL contract uses NULL for games without an exam scope.
+        p_exam_ref: examRef as string,
+        p_items: rpcItems as Json,
+      })
   if (createError) {
     console.error('[/api/study/today] atomic plan create failed:', createError.code)
     return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
@@ -452,6 +484,7 @@ export async function GET(request: NextRequest) {
       questions,
       completedIds,
       items,
+      snapshot.planId,
     )
   } catch (error) {
     console.error('[/api/study/today] created question query failed:', (error as { code?: string })?.code)

@@ -102,7 +102,7 @@ describe('MasteryActionCard', () => {
     }) as never)
     render(<MasteryActionCard game="turkce" userId="u1" examRef="TYT" />)
     expect(screen.getByText('KEŞİF SEVİYESİ HAZIRLANIYOR')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Serbest pratikle devam et' })).toHaveAttribute('href', '/arena/turkce')
+    expect(screen.getByRole('link', { name: 'Serbest pratikle devam et' })).toHaveAttribute('href', '/arena/turkce?exam_ref=TYT')
   })
 
   test('yukleme hatasinda tekrar deneme sunar', () => {

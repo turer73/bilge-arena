@@ -1,9 +1,14 @@
 import bundleAnalyzer from '@next/bundle-analyzer'
 import { withSentryConfig } from '@sentry/nextjs'
+import { assertTytSocialRolloutEnv } from './scripts/security/validate-tyt-social-rollout-env.mjs'
 // next-pwa kaldirildi: Next 16 ile sw.js dispatcher'i uretmiyordu (workbox/
 // swe-worker uretti ama master sw.js yok) → /sw.js HTML fallback → workbox
 // install fail → PWA broken (Codex P1 PR #108). Manuel public/sw.js
 // yazildi (build_id-bagimsiz, vanilla SW API + offline fallback).
+
+// NEXT_PUBLIC bayragi build-time'da donar. Client/server ayrik bir rollout
+// uretilmesini daha deploy edilmeden reddet.
+assertTytSocialRolloutEnv(process.env)
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',

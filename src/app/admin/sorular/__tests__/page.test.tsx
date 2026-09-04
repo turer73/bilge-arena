@@ -148,7 +148,7 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
         revisionId: REVISION_ID,
         metadata: { game: 'sosyal', category: 'tarih', difficulty: 2, isBoss: false },
         content: { question: 'Tarih sorusu', options: ['A', 'B'], answer: 0 },
-        source: { kind: 'original', title: 'İç kaynak', licenseCode: 'INTERNAL' }, outcomes: [],
+        source: { kind: 'original', title: 'İç kaynak', licenseCode: 'INTERNAL', provenanceRef: 'editorial:tyt-social-test' }, outcomes: [],
       } })
       if (url.startsWith('/api/admin/content-quality/outcomes?')) return json({ outcomes: [] })
       if (url === '/api/admin/content-quality/revisions' && init?.method === 'POST') {
@@ -251,5 +251,69 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
     await user.click(screen.getByRole('button', { name: 'Taslak Oluştur' }))
     expect(await screen.findByText(/birden fazla kazanım var/i)).toBeInTheDocument()
     expect(posted).toHaveLength(0)
+  })
+
+  it('requires an explicit legacy rights attestation and submits the edited source fields', async () => {
+    const posted: Array<Record<string, unknown>> = []
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.startsWith('/api/questions?')) return json({ questions: [{
+        id: QUESTION_ID, game: 'sosyal', category: 'tarih', subcategory: null, topic: null,
+        difficulty: 2, level_tag: null, is_active: true, is_boss: false, source: 'legacy',
+        exam_ref: 'TYT', times_answered: 0, times_correct: 0, base_points: 20,
+        content: { question: 'Tarih sorusu', options: ['A', 'B'], answer: 0 },
+      }], total: 1 })
+      if (url.startsWith(`/api/admin/content-quality?questionId=${QUESTION_ID}`)) return json({ revision: {
+        revisionId: REVISION_ID, changeKind: 'legacy_import',
+        metadata: { game: 'sosyal', category: 'tarih', difficulty: 2, examRef: 'TYT', isBoss: false },
+        content: { question: 'Tarih sorusu', options: ['A', 'B'], answer: 0 },
+        source: {
+          kind: 'original', title: 'Legacy kaynak', url: 'https://example.com/old', licenseCode: 'INTERNAL',
+          licenseUrl: 'https://example.com/old-license', attribution: 'Eski atıf', provenanceRef: 'legacy:question-1',
+        }, outcomes: [],
+      } })
+      if (url.startsWith('/api/admin/content-quality/outcomes?')) return json({ outcomes: [] })
+      if (url === '/api/admin/content-quality/revisions' && init?.method === 'POST') {
+        posted.push(JSON.parse(String(init.body)))
+        return json({ revisionId: REVISION_ID, status: 'draft', mappingRequired: true, replayed: false })
+      }
+      return json({ error: 'unexpected request' }, 500)
+    }))
+    const user = userEvent.setup()
+    render(<AdminQuestionsPage />)
+    await user.click(await screen.findByRole('button', { name: 'Duzenle' }))
+
+    expect(screen.getByLabelText('Kaynak başlığı')).toHaveValue('Legacy kaynak')
+    expect(screen.getByLabelText('Kaynak URL')).toHaveValue('https://example.com/old')
+    expect(screen.getByLabelText('Lisans kodu')).toHaveValue('INTERNAL')
+    expect(screen.getByLabelText('Lisans URL')).toHaveValue('https://example.com/old-license')
+    expect(screen.getByLabelText('Atıf')).toHaveValue('Eski atıf')
+    expect(screen.getByLabelText('Provenance referansı')).toHaveValue('legacy:question-1')
+
+    const acknowledgement = screen.getByRole('checkbox', { name: /kaynak ve kullanım hakkını doğruladım/i })
+    await user.click(acknowledgement)
+    expect(acknowledgement).toBeChecked()
+    await user.type(screen.getByLabelText('Kaynak başlığı'), ' (doğrulandı)')
+    expect(acknowledgement).not.toBeChecked()
+    await user.clear(screen.getByLabelText('Kaynak URL'))
+    await user.type(screen.getByLabelText('Kaynak URL'), 'https://osym.gov.tr/tyt-sosyal')
+    await user.clear(screen.getByLabelText('Lisans URL'))
+    await user.type(screen.getByLabelText('Lisans URL'), 'https://osym.gov.tr/kullanim')
+    await user.clear(screen.getByLabelText('Atıf'))
+    await user.type(screen.getByLabelText('Atıf'), 'ÖSYM resmî sınav dokümanı')
+    await user.clear(screen.getByLabelText('Provenance referansı'))
+    await user.type(screen.getByLabelText('Provenance referansı'), 'osym:tyt:2026:sosyal:q1')
+    await user.click(acknowledgement)
+
+    await user.click(await screen.findByRole('button', { name: 'Kazanım Bekleyen Taslağı Kaydet' }))
+    await waitFor(() => expect(posted).toHaveLength(1))
+    expect(posted[0]).toMatchObject({ payload: {
+      source: {
+        kind: 'original', title: 'Legacy kaynak (doğrulandı)', url: 'https://osym.gov.tr/tyt-sosyal',
+        licenseCode: 'INTERNAL', licenseUrl: 'https://osym.gov.tr/kullanim',
+        attribution: 'ÖSYM resmî sınav dokümanı', provenanceRef: 'osym:tyt:2026:sosyal:q1',
+      },
+      summary: expect.stringContaining('Kaynak ve kullanım hakkı insan tarafından doğrulandı.'),
+    } })
   })
 })

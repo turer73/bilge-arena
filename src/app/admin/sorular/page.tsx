@@ -8,10 +8,69 @@ import { stripRichText } from '@/lib/utils/rich-text'
 
 interface GovernanceRevisionDetail {
   revisionId: string
+  changeKind?: string
   metadata: Record<string, unknown>
   content: Record<string, unknown>
   source: Record<string, unknown>
   outcomes: Array<{ outcomeId: string; weight: number; primary: boolean }>
+}
+
+type SourceKind = 'original' | 'licensed' | 'public_domain' | 'user_generated' | 'official_exam'
+interface EditSource {
+  kind: SourceKind
+  title: string
+  url: string
+  licenseCode: string
+  licenseUrl: string
+  attribution: string
+  provenanceRef: string
+}
+
+const EMPTY_SOURCE: EditSource = {
+  kind: 'original', title: '', url: '', licenseCode: '', licenseUrl: '', attribution: '', provenanceRef: '',
+}
+
+function editSourceFromDetail(source: Record<string, unknown> | null | undefined): EditSource {
+  const kind = source?.kind
+  return {
+    kind: kind === 'licensed' || kind === 'public_domain' || kind === 'user_generated' || kind === 'official_exam'
+      ? kind
+      : 'original',
+    title: typeof source?.title === 'string' ? source.title : '',
+    url: typeof source?.url === 'string' ? source.url : '',
+    licenseCode: typeof source?.licenseCode === 'string' ? source.licenseCode : '',
+    licenseUrl: typeof source?.licenseUrl === 'string' ? source.licenseUrl : '',
+    attribution: typeof source?.attribution === 'string' ? source.attribution : '',
+    provenanceRef: typeof source?.provenanceRef === 'string' ? source.provenanceRef : '',
+  }
+}
+
+function sourcePayload(source: EditSource) {
+  return {
+    kind: source.kind,
+    title: source.title.trim(),
+    ...(source.url.trim() ? { url: source.url.trim() } : {}),
+    licenseCode: source.licenseCode.trim(),
+    ...(source.licenseUrl.trim() ? { licenseUrl: source.licenseUrl.trim() } : {}),
+    ...(source.attribution.trim() ? { attribution: source.attribution.trim() } : {}),
+    ...(source.provenanceRef.trim() ? { provenanceRef: source.provenanceRef.trim() } : {}),
+  }
+}
+
+function isHttpsUrl(value: string) {
+  if (!value.trim()) return true
+  try {
+    const parsed = new URL(value.trim())
+    return parsed.protocol === 'https:' && !parsed.username && !parsed.password && Boolean(parsed.hostname)
+  } catch {
+    return false
+  }
+}
+
+function isLegacySourceDetail(detail: GovernanceRevisionDetail | null) {
+  if (!detail) return false
+  const provenance = typeof detail.source?.provenanceRef === 'string' ? detail.source.provenanceRef.trim() : ''
+  return detail.changeKind === 'legacy_import' || /^legacy:/i.test(provenance)
 }
 
 interface OutcomeOption {
@@ -40,6 +99,8 @@ export default function AdminQuestionsPage() {
   const [editCategory, setEditCategory] = useState('')
   const [saving, setSaving] = useState(false)
   const [governanceDetail, setGovernanceDetail] = useState<GovernanceRevisionDetail | null>(null)
+  const [editSource, setEditSource] = useState<EditSource>(EMPTY_SOURCE)
+  const [sourceRightsAcknowledged, setSourceRightsAcknowledged] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [editOutcomeOptions, setEditOutcomeOptions] = useState<OutcomeOption[]>([])
   const [editOutcomeId, setEditOutcomeId] = useState('')
@@ -173,6 +234,8 @@ export default function AdminQuestionsPage() {
     editRequestRef.current = controller
     setNotice('')
     setGovernanceDetail(null)
+    setEditSource(EMPTY_SOURCE)
+    setSourceRightsAcknowledged(false)
     setEditOutcomeOptions([])
     setEditOutcomeId('')
     setOutcomeCatalogState('idle')
@@ -202,6 +265,11 @@ export default function AdminQuestionsPage() {
         }
         setOutcomesLoading(true)
         setGovernanceDetail(detail)
+        setEditSource(editSourceFromDetail(detail.source))
+        // Legacy provenance can only be upgraded through an explicit human
+        // rights/source attestation.  The checkbox is intentionally reset on
+        // every open, so an earlier question cannot carry approval forward.
+        setSourceRightsAcknowledged(false)
         setEditOutcomeId(detail?.outcomes.find((outcome) => outcome.primary)?.outcomeId ?? '')
       } else {
         setEditQ(null)
@@ -233,6 +301,26 @@ export default function AdminQuestionsPage() {
       return
     }
     const selectedOutcome = editOutcomeOptions.find((outcome) => outcome.id === editOutcomeId)
+    const source = sourcePayload(editSource)
+    const isTytSocial = governanceDetail.metadata.game === 'sosyal'
+      && String(governanceDetail.metadata.examRef ?? '').toUpperCase() === 'TYT'
+    const legacyUpgrade = isLegacySourceDetail(governanceDetail)
+    if (!source.title || !source.licenseCode) {
+      setNotice('Kaynak başlığı ve lisans kodu zorunludur.')
+      return
+    }
+    if (!isHttpsUrl(editSource.url) || !isHttpsUrl(editSource.licenseUrl)) {
+      setNotice('Kaynak ve lisans URL adresleri https:// ile başlamalıdır.')
+      return
+    }
+    if (legacyUpgrade && !sourceRightsAcknowledged) {
+      setNotice('Legacy kaynak için “kaynak ve kullanım hakkını doğruladım” onayı zorunludur.')
+      return
+    }
+    if (isTytSocial && (!source.provenanceRef || /^legacy:/i.test(source.provenanceRef))) {
+      setNotice('TYT Sosyal sorularında legacy olmayan provenanceRef zorunludur.')
+      return
+    }
     if (outcomeCatalogState !== 'ready') {
       setNotice('Kazanım kataloğu doğrulanmadan taslak oluşturulamaz.')
       return
@@ -311,11 +399,14 @@ export default function AdminQuestionsPage() {
               ...(selectedOutcome ? { examRef: selectedOutcome.examRef } : {}),
             },
             outcomes: revisionOutcomes,
-            source: governanceDetail.source,
+            source,
             changeKind: 'edit',
-            summary: scopeChanged
-              ? `Soru yönetimi ekranından içerik düzenleme taslağı oluşturuldu. ${scopeChangeSummary}.`
-              : 'Soru yönetimi ekranından içerik düzenleme taslağı oluşturuldu.',
+            summary: [
+              scopeChanged
+                ? `Soru yönetimi ekranından içerik düzenleme taslağı oluşturuldu. ${scopeChangeSummary}.`
+                : 'Soru yönetimi ekranından içerik düzenleme taslağı oluşturuldu.',
+              legacyUpgrade ? 'Kaynak ve kullanım hakkı insan tarafından doğrulandı.' : null,
+            ].filter(Boolean).join(' '),
           },
         }),
       })
@@ -610,6 +701,71 @@ export default function AdminQuestionsPage() {
                 />
               </div>
             </div>
+
+            {governanceDetail && (
+              <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+                <h3 className="mb-2 text-[11px] font-bold text-[var(--text-sub)]">Kaynak ve kullanım hakkı</h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                    Kaynak türü
+                    <select
+                      aria-label="Kaynak türü"
+                      value={editSource.kind}
+                      onChange={(event) => {
+                        setEditSource((current) => ({ ...current, kind: event.target.value as SourceKind }))
+                        setSourceRightsAcknowledged(false)
+                      }}
+                      className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none"
+                    >
+                      <option value="original">Özgün içerik</option>
+                      <option value="licensed">Lisanslı</option>
+                      <option value="public_domain">Kamu malı</option>
+                      <option value="user_generated">Kullanıcı üretimi</option>
+                      <option value="official_exam">Resmî sınav</option>
+                    </select>
+                  </label>
+                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                    Kaynak başlığı
+                    <input aria-label="Kaynak başlığı" value={editSource.title} onChange={(event) => { setEditSource((current) => ({ ...current, title: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
+                  </label>
+                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                    Kaynak URL (https)
+                    <input aria-label="Kaynak URL" type="url" value={editSource.url} onChange={(event) => { setEditSource((current) => ({ ...current, url: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
+                  </label>
+                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                    Lisans kodu
+                    <input aria-label="Lisans kodu" value={editSource.licenseCode} onChange={(event) => { setEditSource((current) => ({ ...current, licenseCode: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
+                  </label>
+                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                    Lisans URL (https)
+                    <input aria-label="Lisans URL" type="url" value={editSource.licenseUrl} onChange={(event) => { setEditSource((current) => ({ ...current, licenseUrl: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
+                  </label>
+                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                    Provenance referansı
+                    <input aria-label="Provenance referansı" value={editSource.provenanceRef} onChange={(event) => { setEditSource((current) => ({ ...current, provenanceRef: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
+                  </label>
+                </div>
+                <label className="mt-2 block text-[10px] font-bold text-[var(--text-sub)]">
+                  Atıf
+                  <textarea aria-label="Atıf" rows={2} value={editSource.attribution} onChange={(event) => { setEditSource((current) => ({ ...current, attribution: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
+                </label>
+                {isLegacySourceDetail(governanceDetail) && (
+                  <label className="mt-3 flex items-start gap-2 rounded-md border border-[var(--reward-border)] bg-[var(--reward-bg)] p-2 text-[10px] font-bold text-[var(--text)]">
+                    <input
+                      type="checkbox"
+                      checked={sourceRightsAcknowledged}
+                      onChange={(event) => setSourceRightsAcknowledged(event.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0"
+                    />
+                    <span>Kaynak ve kullanım hakkını doğruladım. Bu onay kaynak alanlarından biri değiştiğinde sıfırlanır.</span>
+                  </label>
+                )}
+                {governanceDetail.metadata.game === 'sosyal'
+                  && String(governanceDetail.metadata.examRef ?? '').toUpperCase() === 'TYT' && (
+                  <p className="mt-2 text-[10px] text-[var(--text-sub)]">TYT Sosyal kapsamı için legacy olmayan bir provenance referansı zorunludur.</p>
+                )}
+              </div>
+            )}
 
             {governanceDetail && (
               <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">

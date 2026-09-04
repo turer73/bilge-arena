@@ -5,6 +5,7 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { computeTopicStrengths } from '@/lib/review/topic-strengths'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 // Cift kalkan rate limit (auth-only endpoint icin sidebar'dan dusuk esikler):
 //   1. IP limit (her hit'te ONCE): 120 req/dk
@@ -80,6 +81,23 @@ export async function GET(request: NextRequest) {
   const examRefRaw = searchParams.get('exam_ref')?.trim().toUpperCase() || null
   if (examRefRaw && !GAMES[game].examTags.includes(examRefRaw)) {
     return NextResponse.json({ error: 'Gecersiz sinav kapsami' }, { status: 400 })
+  }
+  if (isTytSocialV2LearnerEnabled() && game === 'sosyal' && examRefRaw === null) {
+    return NextResponse.json(
+      { error: 'Sosyal icin exact sinav kapsami belirtilmelidir' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  // The legacy aggregate has no TYT Social candidate-policy dimension and can
+  // mix religion/alternate-philosophy evidence across selections. Until the
+  // branch-aware mastery projection is released, returning no strength claim
+  // is safer than showing an incorrect zero or a superseded score.
+  if (isTytSocialV2LearnerEnabled() && game === 'sosyal' && examRefRaw === 'TYT') {
+    return NextResponse.json(
+      { topics: [], game, examRef: examRefRaw, available: false },
+      { headers: { 'Cache-Control': 'no-store' } },
+    )
   }
 
   // 5-6. Service-role query + aggregation — extract edilmis paylasilan helper

@@ -10,7 +10,37 @@ export const contentPermission = z.enum([
 
 export const revisionCreateInputSchema = z.object({
   questionId: uuid, baseRevisionId: uuid.nullable(), payload: z.record(z.string(), z.unknown()), requestId: uuid,
-}).strict()
+}).strict().superRefine((value, ctx) => {
+  const payload = value.payload as Record<string, unknown>
+  const metadata = payload.metadata
+  const source = payload.source
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata) || !source || typeof source !== 'object' || Array.isArray(source)) return
+  const game = (metadata as Record<string, unknown>).game
+  const examRef = (metadata as Record<string, unknown>).examRef
+  const sourceRecord = source as Record<string, unknown>
+  const provenanceRef = sourceRecord.provenanceRef
+  for (const field of ['url', 'licenseUrl'] as const) {
+    const candidate = sourceRecord[field]
+    if (candidate === undefined) continue
+    let valid = false
+    if (typeof candidate === 'string') {
+      try {
+        const parsed = new URL(candidate)
+        valid = parsed.protocol === 'https:' && !parsed.username && !parsed.password && Boolean(parsed.hostname)
+      } catch {}
+    }
+    if (!valid) {
+      ctx.addIssue({ code: 'custom', path: ['payload', 'source', field], message: `${field} must be a credential-free HTTPS URL` })
+    }
+  }
+  // TYT Sosyal must never be upgraded by carrying forward a legacy marker.
+  // This is enforced at the route boundary as well as in the editor so a
+  // forged client cannot submit the old provenance through this endpoint.
+  if (game === 'sosyal' && typeof examRef === 'string' && examRef.trim().toUpperCase() === 'TYT'
+    && (typeof provenanceRef !== 'string' || !provenanceRef.trim() || /^legacy:/i.test(provenanceRef.trim()))) {
+    ctx.addIssue({ code: 'custom', path: ['payload', 'source', 'provenanceRef'], message: 'TYT Sosyal provenanceRef must be non-legacy' })
+  }
+})
 export const revisionReviewInputSchema = z.object({
   stage: z.union([z.literal(1), z.literal(2)]), decision: z.enum(['approved', 'rejected']),
   rationale: text(500), requestId: uuid,

@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
 
 const { mockRpc } = vi.hoisted(() => ({ mockRpc: vi.fn() }))
@@ -57,7 +57,13 @@ function makeRequest(params: Record<string, string>) {
 describe('GET /api/questions/preview exam scope', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     process.env.ACTIVATION_EXPERIMENT_ENABLED = 'true'
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   afterAll(() => {
@@ -72,6 +78,23 @@ describe('GET /api/questions/preview exam scope', () => {
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: 'Kategori sinav kapsamiyla uyumsuz' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unknown category instead of dropping the database filter', async () => {
+    const response = await GET(makeRequest({ game: 'sosyal', category: 'bilinmeyen', examRef: 'TYT' }) as never)
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Gecerli kategori belirtilmedi' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects Social without an exact exam scope before database work', async () => {
+    const response = await GET(makeRequest({ game: 'sosyal' }) as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Sosyal icin exact sinav kapsami belirtilmelidir',
+    })
     expect(mockRpc).not.toHaveBeenCalled()
   })
 
@@ -91,17 +114,30 @@ describe('GET /api/questions/preview exam scope', () => {
     expect(mockRpc).not.toHaveBeenCalled()
   })
 
-  it('normalizes the legacy social din alias before database filtering', async () => {
-    mockRpc.mockResolvedValueOnce({ data: [], error: null })
+  it('keeps guest TYT Social preview closed until a common-role projection exists', async () => {
+    const response = await GET(makeRequest({ game: 'sosyal', category: 'din', examRef: 'TYT' }) as never)
 
-    await GET(makeRequest({ game: 'sosyal', category: 'din', examRef: 'TYT' }) as never)
-
-    expect(mockRpc).toHaveBeenCalledWith('select_random_questions', {
-      p_game: 'sosyal',
-      p_limit: 3,
-      p_category: 'din_kulturu',
-      p_exam_ref: 'TYT',
+    expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toEqual({
+      error: 'TYT Sosyal misafir onizlemesi hazirlaniyor',
     })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('keeps the legacy Social preview path when the learner rollout is disabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'false')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    mockRpc.mockResolvedValue({
+      data: [makeQuestionRow('legacy-social', { game: 'sosyal', category: 'tarih', exam_ref: null })],
+      error: null,
+    })
+
+    const response = await GET(makeRequest({ game: 'sosyal' }) as never)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({
+      question: expect.objectContaining({ id: 'legacy-social' }),
+    }))
   })
 
   it('preserves TYT and biyoloji while relaxing only difficulty', async () => {

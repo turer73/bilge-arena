@@ -63,6 +63,7 @@ describe('useTopicProgress', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.topics).toHaveLength(6)
+    expect(result.current.available).toBeNull()
     expect(result.current.hasProgress).toBe(false)
   })
 
@@ -84,6 +85,22 @@ describe('useTopicProgress', () => {
       '/api/profile/topic-strengths?game=matematik&exam_ref=AYT-SAY',
       expect.any(Object),
     )
+  })
+
+  it('available false kapsaminda kanonik yuzde sifir adimlari uretmez', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        topics: [], game: 'sosyal', examRef: 'TYT', available: false,
+      }),
+    })))
+    const { result } = renderHook(() => useTopicProgress('sosyal', 'user-1', 'TYT'))
+
+    await waitFor(() => expect(result.current.available).toBe(false))
+    expect(result.current.topics).toEqual([])
+    expect(result.current.currentIndex).toBe(-1)
+    expect(result.current.completedCount).toBe(0)
+    expect(result.current.hasProgress).toBe(false)
   })
 
   it('TYT Türkçe yolunda AYT edebiyat adımını oluşturmaz', () => {

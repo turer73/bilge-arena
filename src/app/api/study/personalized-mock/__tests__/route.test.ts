@@ -6,9 +6,18 @@ const mocks = vi.hoisted(() => {
   const ipCheck = vi.fn()
   const userCheck = vi.fn()
   const from = vi.fn()
+  const filterTytSocialQuestionIds = vi.fn()
   const issueVerifiedAttempt = vi.fn()
   const issueVerifiedExamAttempt = vi.fn()
-  return { getUser, ipCheck, userCheck, from, issueVerifiedAttempt, issueVerifiedExamAttempt }
+  return {
+    getUser,
+    ipCheck,
+    userCheck,
+    from,
+    filterTytSocialQuestionIds,
+    issueVerifiedAttempt,
+    issueVerifiedExamAttempt,
+  }
 })
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -26,6 +35,7 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 }))
 
 vi.mock('@/lib/verified-attempts', () => ({
+  filterTytSocialQuestionIds: mocks.filterTytSocialQuestionIds,
   issueVerifiedAttempt: mocks.issueVerifiedAttempt,
   issueVerifiedExamAttempt: mocks.issueVerifiedExamAttempt,
   toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
@@ -48,7 +58,11 @@ function query(result: QueryResult) {
   return chain
 }
 
-function question(id: string, category = 'sayilar') {
+function question(
+  id: string,
+  category = 'sayilar',
+  overrides: Record<string, unknown> = {},
+) {
   return {
     id,
     external_id: null,
@@ -68,6 +82,7 @@ function question(id: string, category = 'sayilar') {
     exam_ref: 'TYT',
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
+    ...overrides,
   }
 }
 
@@ -75,6 +90,8 @@ const U1 = '11111111-1111-4111-8111-111111111111'
 const REQUEST_ID = '22222222-2222-4222-8222-222222222222'
 const oldStrategyFlag = process.env.MOCK_STRATEGY_ENABLED
 const oldStrategyUiFlag = process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED
+const oldTytSocialFlag = process.env.TYT_SOCIAL_V2_LEARNER_ENABLED
+const oldTytSocialUiFlag = process.env.NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED
 
 function request(queryString = 'game=matematik&exam_ref=TYT', withRequestId = false) {
   return new Request(`http://localhost/api/study/personalized-mock?${queryString}`, {
@@ -86,9 +103,16 @@ beforeEach(() => {
   vi.clearAllMocks()
   delete process.env.MOCK_STRATEGY_ENABLED
   delete process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED
+  delete process.env.TYT_SOCIAL_V2_LEARNER_ENABLED
+  delete process.env.NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED
   mocks.ipCheck.mockResolvedValue({ success: true })
   mocks.userCheck.mockResolvedValue({ success: true })
   mocks.getUser.mockResolvedValue({ data: { user: { id: U1 } } })
+  mocks.filterTytSocialQuestionIds.mockImplementation(async (
+    _admin: unknown,
+    _userId: string,
+    ids: string[],
+  ) => ids)
   const projected = (id: string, game: string) => ({
     id,
     game,
@@ -129,6 +153,10 @@ afterAll(() => {
   else process.env.MOCK_STRATEGY_ENABLED = oldStrategyFlag
   if (oldStrategyUiFlag === undefined) delete process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED
   else process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED = oldStrategyUiFlag
+  if (oldTytSocialFlag === undefined) delete process.env.TYT_SOCIAL_V2_LEARNER_ENABLED
+  else process.env.TYT_SOCIAL_V2_LEARNER_ENABLED = oldTytSocialFlag
+  if (oldTytSocialUiFlag === undefined) delete process.env.NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED
+  else process.env.NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED = oldTytSocialUiFlag
 })
 
 describe('GET /api/study/personalized-mock', () => {
@@ -202,12 +230,14 @@ describe('GET /api/study/personalized-mock', () => {
     })
     expect(mocks.issueVerifiedAttempt).toHaveBeenCalledWith(
       expect.anything(),
-      {
+      expect.objectContaining({
         userId: U1,
         game: 'matematik',
         mode: 'deneme',
         questionIds: body.questions.map((item: { id: string }) => item.id),
-      },
+        examRef: 'TYT',
+        requestId: expect.any(String),
+      }),
     )
     expect(body.questions[0]).not.toHaveProperty('source')
     expect(body.questions[0]).not.toHaveProperty('times_answered')
@@ -219,6 +249,70 @@ describe('GET /api/study/personalized-mock', () => {
     expect(response.status).toBe(422)
     expect(body).toMatchObject({ available: 1 })
     expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('TYT Sosyal havuzunu seçim politikasına göre filtreleyip policy-aware bilet üretir', async () => {
+    process.env.TYT_SOCIAL_V2_LEARNER_ENABLED = 'true'
+    process.env.NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED = 'true'
+    const profileQuery = query({ data: { exam_type: 'yks' }, error: null })
+    const pool = Array.from({ length: 45 }, (_, index) => question(
+      `s${index}`,
+      index < 15 ? 'tarih' : index < 30 ? 'cografya' : 'felsefe',
+      { game: 'sosyal' },
+    ))
+    const questionQuery = query({ data: pool, error: null })
+    const historyQuery = query({ data: [], error: null })
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profileQuery
+      if (table === 'questions') return questionQuery
+      if (table === 'session_answers') return historyQuery
+      throw new Error(`unexpected table: ${table}`)
+    })
+    mocks.filterTytSocialQuestionIds.mockResolvedValue(pool.slice(0, 40).map(item => item.id))
+
+    const response = await GET(request('game=sosyal&exam_ref=TYT'))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.questions).toHaveLength(40)
+    expect(mocks.filterTytSocialQuestionIds).toHaveBeenCalledWith(
+      expect.anything(),
+      U1,
+      pool.map(item => item.id),
+    )
+    expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mocks.issueVerifiedExamAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        game: 'sosyal',
+        examRef: 'TYT',
+        items: expect.arrayContaining([expect.objectContaining({ questionId: expect.any(String) })]),
+      }),
+    )
+    expect(body.strategyEligible).toBe(false)
+    expect(body).not.toHaveProperty('blueprintVersion')
+  })
+
+  it('TYT Sosyal seçim politikası çözülemezse soru döndürmeden kapanır', async () => {
+    process.env.TYT_SOCIAL_V2_LEARNER_ENABLED = 'true'
+    process.env.NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED = 'true'
+    const profileQuery = query({ data: { exam_type: 'yks' }, error: null })
+    const pool = Array.from({ length: 40 }, (_, index) => question(`s${index}`, 'tarih', { game: 'sosyal' }))
+    const questionQuery = query({ data: pool, error: null })
+    const historyQuery = query({ data: [], error: null })
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'profiles') return profileQuery
+      if (table === 'questions') return questionQuery
+      if (table === 'session_answers') return historyQuery
+      throw new Error(`unexpected table: ${table}`)
+    })
+    mocks.filterTytSocialQuestionIds.mockRejectedValue(new Error('private detail'))
+
+    const response = await GET(request('game=sosyal&exam_ref=TYT'))
+
+    expect(response.status).toBe(409)
+    expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mocks.issueVerifiedExamAttempt).not.toHaveBeenCalled()
   })
 
   it('server flag açıkken ordered source snapshot ile atomic verified exam üretir', async () => {

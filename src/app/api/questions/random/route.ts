@@ -15,7 +15,12 @@ import type { GameMode, Question } from '@/types/database'
 import { parseQuestionRows, toPublicQuestion } from '@/lib/utils/question-public'
 import { fetchDueQuestions } from '@/lib/review/due-questions'
 import { getFsrsReviewRollout } from '@/lib/review/fsrs-rollout'
-import { issueVerifiedAttempt, toPublicVerifiedQuestions } from '@/lib/verified-attempts'
+import {
+  filterTytSocialQuestionIds,
+  issueVerifiedAttempt,
+  toPublicVerifiedQuestions,
+} from '@/lib/verified-attempts'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 // Cift kalkan rate limit (Madde 9 pattern):
 //   - IP limit her hit'te ONCE (auth.getUser quota'sini koru)
@@ -61,6 +66,7 @@ const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ'])
  * Rate limit: IP 120/dk + user 60/dk
  */
 export async function GET(request: NextRequest) {
+  const tytSocialV2Enabled = isTytSocialV2LearnerEnabled()
   // 1) IP rate limit
   const ip = getClientIp(request.headers)
   const ipRl = await ipLimiter.check(ip)
@@ -104,7 +110,7 @@ export async function GET(request: NextRequest) {
   const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(1, limitRaw), 100) : 10
 
   const gameSlug = game as GameSlug
-  const category = normalizeCategoryAlias(gameSlug, searchParams.get('category') || null)
+  const categoryRaw = searchParams.get('category')
   const difficultyRaw = searchParams.get('difficulty')
   const difficulty = difficultyRaw === null ? null : Number(difficultyRaw)
   if (difficulty !== null && (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5)) {
@@ -115,11 +121,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Gecerli sinav kapsami belirtilmedi' }, { status: 400 })
   }
   const examRef = examRefRaw
-  if (
-    category
-    && GAMES[gameSlug].categories.includes(category)
-    && !getCategoriesForExam(gameSlug, examRef).includes(category)
-  ) {
+  // Pre-V2 Social keeps the legacy optional exam scope. The exact-scope
+  // contract is enforced only while the governed learner rollout is active.
+  if (tytSocialV2Enabled && gameSlug === 'sosyal' && examRef === null) {
+    return NextResponse.json(
+      { error: 'Sosyal icin exact sinav kapsami belirtilmelidir' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+  if (examRef && !GAMES[gameSlug].examTags.includes(examRef as never)) {
+    return NextResponse.json({ error: 'Sinav kapsami oyunla uyumsuz' }, { status: 400 })
+  }
+  const category = normalizeCategoryAlias(gameSlug, categoryRaw)
+  if (categoryRaw !== null && (!category || !GAMES[gameSlug].categories.includes(category))) {
+    return NextResponse.json({ error: 'Gecerli kategori belirtilmedi' }, { status: 400 })
+  }
+  if (category && !getCategoriesForExam(gameSlug, examRef).includes(category)) {
     return NextResponse.json({ error: 'Kategori sinav kapsamiyla uyumsuz' }, { status: 400 })
   }
   const includeReview = searchParams.get('includeReview') === 'true'
@@ -132,10 +149,23 @@ export async function GET(request: NextRequest) {
     .filter(id => isValidUuid(id))
     .slice(0, 50)
 
+  const isOfficialTytSocialSection = gameSlug === 'sosyal'
+    && examRef === 'TYT'
+    && mode === 'deneme'
+    && tytSocialV2Enabled
+
+  if (isOfficialTytSocialSection) {
+    return NextResponse.json(
+      { error: 'TYT Sosyal resmî bölümü yalnız güvenli başlatma ucundan açılabilir' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+
+  const admin = createServiceRoleClient()
+
   // Review icin %30 ekstra cek
   const fetchLimit = Math.min(limit * 2, 50)
 
-  const admin = createServiceRoleClient()
   const fsrsRollout = getFsrsReviewRollout(user.id)
 
   // Klipper review B2: cooldown server-of-truth. Eski client-side kod
@@ -223,6 +253,23 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  if (tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT') {
+    try {
+      const candidateIds = [...new Set([
+        ...questions.map(question => question.id),
+        ...reviewQuestions.map(question => question.id),
+      ])]
+      const allowedIds = new Set(await filterTytSocialQuestionIds(admin, user.id, candidateIds))
+      questions.splice(0, questions.length, ...questions.filter(question => allowedIds.has(question.id)))
+      reviewQuestions = reviewQuestions.filter(question => allowedIds.has(question.id))
+    } catch {
+      return NextResponse.json(
+        { error: 'TYT Sosyal cevaplama düzeni seçilmelidir' },
+        { status: 409, headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+  }
+
   // Whitelist: RPC tam DB satiri donduruyor; telemetri/ic alanlar sizmasin.
   let publicQuestions = questions.map(toPublicQuestion)
   let publicReviewQuestions = reviewQuestions.map(toPublicQuestion)
@@ -239,6 +286,11 @@ export async function GET(request: NextRequest) {
         game: game as GameSlug,
         mode,
         questionIds: issuedQuestionIds,
+        examRef,
+        requestId: (() => {
+          const value = request.headers.get('x-idempotency-key')
+          return value && isValidUuid(value) ? value : crypto.randomUUID()
+        })(),
       })
       attemptId = attempt.attemptId
       expiresAt = attempt.expiresAt

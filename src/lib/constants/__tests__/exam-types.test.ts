@@ -51,6 +51,15 @@ describe('questionExamRefForGame', () => {
     expect(questionExamRefForGame('matematik', 'AYT-SAY')).toBe('AYT-SAY')
     expect(questionExamRefForGame('turkce', null)).toBeNull()
   })
+
+  test('Sosyal filtresiz birakilamaz; null kapsam TYT olarak fail-closed tamamlanir', () => {
+    expect(questionExamRefForGame('sosyal', null, true)).toBe('TYT')
+    expect(questionExamRefForGame('sosyal', 'LGS')).toBe('LGS')
+  })
+
+  test('learner rollout kapalıyken Social null kapsamı legacy filtresiz akışı korur', () => {
+    expect(questionExamRefForGame('sosyal', null, false)).toBeNull()
+  })
 })
 
 test('etiketler tanımlı', () => {

@@ -25,6 +25,8 @@ import { useDailyQuests } from '@/lib/hooks/use-daily-quests'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
 import { usePersonalizedMock } from '@/lib/hooks/use-personalized-mock'
 import { useMasteryMap } from '@/lib/hooks/use-mastery-map'
+import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 import { Lobby } from './lobby'
 import { DenemeTimer } from './deneme-timer'
@@ -51,6 +53,7 @@ const DenemeResult = dynamic(
 import { TodayPlanCard } from './today-plan-card'
 import { PersonalizedMockCard } from './personalized-mock-card'
 import { MasteryMapCard } from './mastery-map-card'
+import { TytSocialExamPolicyCardView } from '@/components/study/tyt-social-exam-policy-card'
 import { TopicsPanel } from './topics-panel'
 import { LifeLostOverlay } from './life-lost-overlay'
 import { PremiumGateModal } from '@/components/premium/premium-gate-modal'
@@ -76,7 +79,21 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const quizStore = useQuizStore()
   const gameStore = useGameStore()
   const { user, profile } = useAuthStore()
-  const questionExamRef = questionExamRefForGame(game, gameStore.selectedExamRef)
+  const tytSocialV2Enabled = isTytSocialV2ClientEnabled()
+  const questionExamRef = questionExamRefForGame(game, gameStore.selectedExamRef, tytSocialV2Enabled)
+  const tytSocialPolicy = useTytSocialExamPolicy({ game, examRef: questionExamRef })
+  const tytSocialStartBlocked = Boolean(
+    user
+    && game === 'sosyal'
+    && questionExamRef === 'TYT'
+    && tytSocialPolicy.eligible
+    && tytSocialPolicy.status !== 'active',
+  )
+  const tytSocialGuestLoginRequired = tytSocialV2Enabled
+    && !user && game === 'sosyal' && questionExamRef === 'TYT'
+  const tytSocialGuestLoginHref = tytSocialGuestLoginRequired
+    ? `/giris?redirect=${encodeURIComponent('/arena/sosyal?exam_ref=TYT')}`
+    : undefined
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [verifiedExamAttemptId, setVerifiedExamAttemptId] = useState<string | null>(null)
   // "Bugunun 15'i" plani oynanirken true. Plan, yalnizca dogrulanmis oturum
@@ -87,6 +104,9 @@ export function QuizEngine({ game }: QuizEngineProps) {
   // --- Custom hooks ---
   const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game, user?.id)
+  const isExactTytSocialSection = tytSocialV2Enabled && game === 'sosyal'
+    && questionExamRef === 'TYT'
+    && quiz.isDeneme
   const sidebar = useSidebarData({ userId: user?.id, game, gameDef, examRef: questionExamRef })
   const dailyQuests = useDailyQuests()
   const todayPlan = useTodayPlan(
@@ -98,12 +118,28 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const personalizedMock = usePersonalizedMock(game, user?.id, questionExamRef)
   const masteryMap = useMasteryMap(game, user?.id, questionExamRef)
   const selectExamRef = useCallback((examRef: string | null) => {
-    const validCategories = getCategoriesForExam(game, examRef)
+    const nextExamRef = game === 'sosyal' && tytSocialV2Enabled ? examRef ?? 'TYT' : examRef
+    const validCategories = getCategoriesForExam(game, nextExamRef)
     if (gameStore.selectedCategory && !validCategories.includes(gameStore.selectedCategory)) {
       gameStore.setCategory(null)
     }
-    gameStore.setExamRef(examRef)
-  }, [game, gameStore])
+    gameStore.setExamRef(nextExamRef)
+  }, [game, gameStore, tytSocialV2Enabled])
+  const selectedCategoryForScope = gameStore.selectedCategory
+  const selectedDifficultyForScope = gameStore.selectedDifficulty
+  const setCategoryForScope = gameStore.setCategory
+  const setDifficultyForScope = gameStore.setDifficulty
+  useEffect(() => {
+    if (!isExactTytSocialSection) return
+    if (selectedCategoryForScope !== null) setCategoryForScope(null)
+    if (selectedDifficultyForScope !== null) setDifficultyForScope(null)
+  }, [
+    isExactTytSocialSection,
+    selectedCategoryForScope,
+    selectedDifficultyForScope,
+    setCategoryForScope,
+    setDifficultyForScope,
+  ])
   const autoPauseSessionKey = quiz.attemptId ?? quizStore.questions[0]?.id ?? null
   const autoPauseActive = quiz.screen === 'game' && !quiz.isDeneme && quizStore.state === 'playing'
   const { autoPaused, resume: clearAutoPause } = useGameAutoPause({
@@ -123,8 +159,8 @@ export function QuizEngine({ game }: QuizEngineProps) {
     attemptId: quiz.attemptId,
     game,
     selectedMode: gameStore.selectedMode,
-    selectedCategory: gameStore.selectedCategory,
-    selectedDifficulty: gameStore.selectedDifficulty,
+    selectedCategory: isExactTytSocialSection ? null : gameStore.selectedCategory,
+    selectedDifficulty: isExactTytSocialSection ? null : gameStore.selectedDifficulty,
     onSessionSaved: (result) => {
       dailyQuests.updateProgress(result)
       void masteryMap.fetchMastery()
@@ -169,6 +205,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
   })
 
   const startTodayPlan = useCallback(() => {
+    if (tytSocialStartBlocked) {
+      toast.error('TYT Sosyal seçimini tamamla', 'Çalışma turunu başlatmadan önce cevaplama düzenini seçmelisin.')
+      return false
+    }
     if (personalizedMock.loading) return false
     const plan = todayPlan.plan
     if (!plan || plan.questions.length === 0) return false
@@ -184,6 +224,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     const planExamRef = questionExamRefForGame(
       game,
       plan.examRef ?? gameStore.selectedExamRef ?? defaultExamRefForType(profile?.exam_type),
+      tytSocialV2Enabled,
     )
 
     trackEvent('UserQuizStart', {
@@ -216,8 +257,21 @@ export function QuizEngine({ game }: QuizEngineProps) {
     profile?.exam_type,
     quiz,
     quizLimit.canPlay,
+    tytSocialV2Enabled,
     todayPlan.plan,
+    tytSocialStartBlocked,
   ])
+
+  const handleTytSocialStartBlocked = useCallback(() => {
+    if (!tytSocialStartBlocked) return false
+    toast.error(
+      tytSocialPolicy.status === 'loading' ? 'TYT Sosyal seçimi yükleniyor' : 'TYT Sosyal seçimini tamamla',
+      tytSocialPolicy.status === 'loading'
+        ? 'Cevaplama düzeni okunana kadar başlayamazsın.'
+        : 'Çalışmaya başlamadan önce cevaplama düzenini seçmelisin.',
+    )
+    return true
+  }, [tytSocialPolicy.status, tytSocialStartBlocked])
 
   // Ders Çalış CTA'sından gelen tek-kullanımlık niyeti, doğrulanmış plan bileti
   // yüklendikten sonra mevcut güvenli başlatma yoluna bağla. URL hemen temizlenir;
@@ -313,7 +367,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
               paperHref={isPaperModeUiEnabled() && todayPlan.plan
                 ? paperPackCreateHref(
                     game,
-                    questionExamRefForGame(game, todayPlan.plan.examRef ?? questionExamRef),
+                    questionExamRefForGame(game, todayPlan.plan.examRef ?? questionExamRef, tytSocialV2Enabled),
                   )
                 : null}
               onStart={startTodayPlan}
@@ -336,15 +390,23 @@ export function QuizEngine({ game }: QuizEngineProps) {
             />
           </div>
         )}
+        {user && <div className="mx-auto w-full max-w-[720px] px-3 pt-3 md:px-5 lg:max-w-[1180px] lg:px-6"><TytSocialExamPolicyCardView policy={tytSocialPolicy} /></div>}
         <Lobby
           game={game}
           selectedMode={gameStore.selectedMode}
-          onSelectMode={(m) => gameStore.setMode(m.id)}
+          onSelectMode={(m) => {
+            gameStore.setMode(m.id)
+            if (tytSocialV2Enabled && game === 'sosyal' && questionExamRef === 'TYT' && m.id === 'deneme') {
+              gameStore.setCategory(null)
+              gameStore.setDifficulty(null)
+            }
+          }}
           personalizedMockCard={user ? (
             <PersonalizedMockCard
               loading={personalizedMock.loading}
               error={personalizedMock.error}
               onStart={async () => {
+                if (handleTytSocialStartBlocked()) return
                 if (!quizLimit.canPlay) {
                   setShowPremiumModal(true)
                   return
@@ -375,7 +437,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
                     source: 'personalized_mock',
                     category: 'all',
                     difficulty: 'all',
-                    exam_ref: questionExamRefForGame(game, plan.examRef) ?? 'all',
+                    exam_ref: questionExamRefForGame(game, plan.examRef, tytSocialV2Enabled) ?? 'all',
                     wrong_count: plan.breakdown.wrong,
                     weak_count: plan.breakdown.weak,
                   },
@@ -394,19 +456,26 @@ export function QuizEngine({ game }: QuizEngineProps) {
             />
           ) : null}
           onStart={() => {
+            if (handleTytSocialStartBlocked()) return
             if (personalizedMock.loading) return
             setVerifiedExamAttemptId(null)
             trackEvent(user ? 'UserQuizStart' : 'GuestQuizStart', {
               props: {
                 game,
                 mode: gameStore.selectedMode,
-                category: gameStore.selectedCategory ?? 'all',
-                difficulty: gameStore.selectedDifficulty ?? 'all',
+                category: isExactTytSocialSection ? 'all' : gameStore.selectedCategory ?? 'all',
+                difficulty: isExactTytSocialSection ? 'all' : gameStore.selectedDifficulty ?? 'all',
                 exam_ref: questionExamRef ?? 'all',
               },
             })
             quiz.handleStart()
           }}
+          startBlocked={tytSocialStartBlocked}
+          startBlockedLabel={tytSocialPolicy.status === 'loading'
+            ? 'Cevaplama düzeni yükleniyor'
+            : 'Cevaplama düzenini seç'}
+          startHref={tytSocialGuestLoginHref}
+          startLabel={tytSocialGuestLoginRequired ? 'Giriş yaparak başla' : undefined}
           onLimitReached={() => setShowPremiumModal(true)}
           userXP={userXP}
           userStreak={userStreak}
@@ -572,12 +641,15 @@ export function QuizEngine({ game }: QuizEngineProps) {
 
 
   // Konu gucu: gercek veri varsa onu kullan, yoksa kategorileri %0 goster
-  const sidebarTopics = sidebar.topicData.length > 0
-    ? sidebar.topicData
-    : getCategoriesForExam(game, questionExamRef).map((cat) => ({
-        label: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' '),
-        percentage: 0,
-      }))
+  const hasBranchAwareTopicStrengths = !(tytSocialV2Enabled && game === 'sosyal' && questionExamRef === 'TYT')
+  const sidebarTopics = !hasBranchAwareTopicStrengths
+    ? []
+    : sidebar.topicData.length > 0
+      ? sidebar.topicData
+      : getCategoriesForExam(game, questionExamRef).map((cat) => ({
+          label: cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' '),
+          percentage: 0,
+        }))
 
   return (
     <>
@@ -810,7 +882,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
       </div>
 
         {/* Konu gucu mobilde sorularin altinda, bilgisayarda sag panelde. */}
-        {!quiz.isDeneme && (
+        {!quiz.isDeneme && hasBranchAwareTopicStrengths && (
           <aside className="order-last lg:col-start-2 lg:row-start-2">
           <ComponentErrorBoundary label="Konu Gücü" variant="inline">
             <TopicsPanel topics={sidebarTopics} />

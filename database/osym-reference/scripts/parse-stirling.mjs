@@ -15,6 +15,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { classifyTytSocialQuestion } from '../lib/tyt-social-exam-roles.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const EXTRACTED = resolve(__dir, '..', 'extracted')
@@ -228,7 +229,10 @@ const SECTIONS = [
     start: '2021-TYT/Sosyal Bilimler SOSYAL BİLİMLER TESTİ',
     end: 'SOSYAL BİLİMLER TESTİ BİTTİ',
     total: 25,
-    subcategories: { 1: 'tarih', 6: 'cografya', 11: 'felsefe', 16: 'din_kulturu' },
+    // The last ten questions are two alternative booklet branches. Questions
+    // 21-25 are additional Philosophy, not Religion; classification below
+    // records the booklet role without corrupting the learning category.
+    subcategories: null,
   },
   {
     key: 'matematik',
@@ -270,6 +274,13 @@ for (const sec of SECTIONS) {
 
   // Subcategory etiketle
   for (const q of questions) {
+    if (sec.key === 'sosyal') {
+      const classification = classifyTytSocialQuestion(q.num)
+      if (!classification) throw new Error(`TYT Social question number out of contract: ${q.num}`)
+      q.subcategory = classification.category
+      q.exam_role = classification.examRole
+      continue
+    }
     if (typeof sec.subcategories === 'object' && !Array.isArray(sec.subcategories)) {
       const subKeys = Object.keys(sec.subcategories).map(Number).sort((a, b) => b - a)
       for (const startQ of subKeys) {

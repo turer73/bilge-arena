@@ -5,6 +5,7 @@ import { MODES, type QuizMode } from '@/lib/constants/modes'
 import { cn } from '@/lib/utils/cn'
 
 interface ModeSelectorProps {
+  modes?: readonly QuizMode[]
   selectedMode: string
   onSelect: (mode: QuizMode) => void
   showAll: boolean
@@ -14,21 +15,22 @@ interface ModeSelectorProps {
 const PRIMARY_MODE_IDS = new Set(['classic', 'deneme', 'practice'])
 
 export function ModeSelector({
+  modes = MODES,
   selectedMode,
   onSelect,
   showAll,
   onShowAllChange,
 }: ModeSelectorProps) {
-  const primaryModes = MODES.filter((mode) => PRIMARY_MODE_IDS.has(mode.id))
-  const selectedSecondary = MODES.find(
+  const primaryModes = modes.filter((mode) => PRIMARY_MODE_IDS.has(mode.id))
+  const selectedSecondary = modes.find(
     (mode) => mode.id === selectedMode && !PRIMARY_MODE_IDS.has(mode.id)
   )
   const visibleModes = showAll
-    ? MODES
+    ? modes
     : selectedSecondary
       ? [...primaryModes, selectedSecondary]
       : primaryModes
-  const activeMode = MODES.find((mode) => mode.id === selectedMode) ?? MODES[0]
+  const activeMode = modes.find((mode) => mode.id === selectedMode) ?? modes[0]
 
   return (
     <div>

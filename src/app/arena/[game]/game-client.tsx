@@ -7,6 +7,7 @@ import { GAMES, getCategoriesForExam, type GameSlug, GAME_SLUGS } from '@/lib/co
 import { useAuthStore } from '@/stores/auth-store'
 import { useGameStore } from '@/stores/game-store'
 import { defaultExamRefForType } from '@/lib/constants/exam-types'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 // Quiz engine lazy-load — agir bileseni ayri chunk'a taşı (~40KB+ JS azalma)
 const QuizEngine = dynamic(
@@ -24,7 +25,7 @@ export default function GameClient() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { profile } = useAuthStore()
+  const { profile, loading: authLoading } = useAuthStore()
   const setExamRef = useGameStore((s) => s.setExamRef)
   const selectedExamRef = useGameStore((s) => s.selectedExamRef)
   const setMode = useGameStore((s) => s.setMode)
@@ -63,8 +64,15 @@ export default function GameClient() {
     if (profile?.exam_type && (!selectedExamRef || !validExamRefs.includes(selectedExamRef))) {
       const profileDefault = defaultExamRefForType(profile.exam_type)
       setExamRef(profileDefault && validExamRefs.includes(profileDefault) ? profileDefault : validExamRefs[0] ?? null)
+      return
     }
-  }, [gameSlug, isValidSlug, profile?.exam_type, queryExamRef, selectedExamRef, setExamRef])
+    // Kimlik/profil yüklenirken TYT fallback'i yazmak, LGS profilinin biraz
+    // sonra gelmesine rağmen store'da geçerli görünen TYT seçimini kilitler.
+    if (authLoading) return
+    if (isTytSocialV2ClientEnabled() && gameSlug === 'sosyal' && !selectedExamRef) {
+      setExamRef('TYT')
+    }
+  }, [authLoading, gameSlug, isValidSlug, profile?.exam_type, queryExamRef, selectedExamRef, setExamRef])
 
   // Kurum programi yalnız server-verified practice oturumuyla kapanabilir.
   // URL'den genel bir mode secici acmiyoruz: allowlist yalniz bu dar, zamansiz
@@ -95,5 +103,11 @@ export default function GameClient() {
 
   if (!isValidSlug) return null
 
-  return <QuizEngine game={gameSlug as GameSlug} />
+  const engineExamRef = gameSlug === 'wordquest' ? null : queryExamRef ?? selectedExamRef
+  return (
+    <QuizEngine
+      key={`${gameSlug}:${engineExamRef ?? ''}`}
+      game={gameSlug as GameSlug}
+    />
+  )
 }

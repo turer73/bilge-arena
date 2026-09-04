@@ -20,6 +20,7 @@ import {
   GUEST_GRADING_COOKIE,
   GUEST_GRADING_TTL_SECONDS,
 } from '@/lib/questions/guest-grading-session'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 
 // Misafir önizlemesi için kısıtlı IP rate limit: 20/saat
 const ipLimiter = createRateLimiter('questions-preview-ip', 20, 3_600_000)
@@ -41,6 +42,7 @@ const VALID_EXAM_REFS = new Set(['TYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SOZ'])
  * - IP rate limit: 20/saat
  */
 export async function GET(request: NextRequest) {
+  const tytSocialV2Enabled = isTytSocialV2LearnerEnabled()
   const ip = getClientIp(request.headers)
   const ipRl = await ipLimiter.check(ip)
   if (!ipRl.success) {
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
   }
 
   const gameSlug = game as GameSlug
-  const category = normalizeCategoryAlias(gameSlug, searchParams.get('category') || null)
+  const categoryRaw = searchParams.get('category')
   const difficultyRaw = searchParams.get('difficulty')
   const difficulty = difficultyRaw === null ? null : Number(difficultyRaw)
   if (difficulty !== null && (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5)) {
@@ -68,12 +70,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Gecerli sinav kapsami belirtilmedi' }, { status: 400 })
   }
   const examRef = examRefRaw
-  if (
-    category
-    && GAMES[gameSlug].categories.includes(category)
-    && !getCategoriesForExam(gameSlug, examRef).includes(category)
-  ) {
+  if (tytSocialV2Enabled && gameSlug === 'sosyal' && examRef === null) {
+    return NextResponse.json(
+      { error: 'Sosyal icin exact sinav kapsami belirtilmelidir' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
+    )
+  }
+  const category = normalizeCategoryAlias(gameSlug, categoryRaw)
+  if (categoryRaw !== null && (!category || !GAMES[gameSlug].categories.includes(category))) {
+    return NextResponse.json({ error: 'Gecerli kategori belirtilmedi' }, { status: 400 })
+  }
+  if (category && !getCategoriesForExam(gameSlug, examRef).includes(category)) {
     return NextResponse.json({ error: 'Kategori sinav kapsamiyla uyumsuz' }, { status: 400 })
+  }
+
+  // Misafir oturumunda aday dalı yoktur. Social/TYT'de yalnız exam_ref filtresi
+  // uygulamak 16-20 Din ile 21-25 ilave Felsefe satırlarını karıştırabilir.
+  // Onaylı common-role projeksiyonu yayınlanana kadar yanlış dal sorusu
+  // göstermek yerine bu tek yüzeyi kapalı tut.
+  if (tytSocialV2Enabled && gameSlug === 'sosyal' && examRef === 'TYT') {
+    return NextResponse.json(
+      { error: 'TYT Sosyal misafir onizlemesi hazirlaniyor' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    )
   }
   const activationRequested = searchParams.get('activation') === '1'
 

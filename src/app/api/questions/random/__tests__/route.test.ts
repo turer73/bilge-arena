@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
 
 // Esnek, sirali-kuyruklu query-builder mock: her .from(table) cagrisi kuyruktaki
@@ -12,7 +12,9 @@ const {
   mockGetUser,
   mockRpc,
   mockHistory,
+  mockFilterTytSocialQuestionIds,
   mockIssueVerifiedAttempt,
+  mockIssueVerifiedTytSocialOfficialSection,
   sessionAnswersMock,
   questionsMock,
   otherTableMock,
@@ -38,6 +40,8 @@ const {
     mockGetUser: vi.fn(),
     mockRpc: vi.fn(),
     mockIssueVerifiedAttempt: vi.fn(),
+    mockIssueVerifiedTytSocialOfficialSection: vi.fn(),
+    mockFilterTytSocialQuestionIds: vi.fn(),
     // Klipper review B2: user_question_history server-side cooldown read
     mockHistory: vi.fn(async (): Promise<{ data: Array<{ question_id: string }>; error: null }> => ({
       data: [],
@@ -84,7 +88,9 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 }))
 
 vi.mock('@/lib/verified-attempts', () => ({
+  filterTytSocialQuestionIds: mockFilterTytSocialQuestionIds,
   issueVerifiedAttempt: mockIssueVerifiedAttempt,
+  issueVerifiedTytSocialOfficialSection: mockIssueVerifiedTytSocialOfficialSection,
   toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
 }))
 
@@ -119,19 +125,29 @@ function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): Ques
   }
 }
 
-function makeRequest(params: Record<string, string> = {}) {
+function makeRequest(params: Record<string, string> = {}, idempotencyKey?: string) {
   const url = new URL('http://localhost/api/questions/random')
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
   const headers = new Headers()
   headers.set('x-forwarded-for', '1.2.3.4')
+  if (idempotencyKey) headers.set('x-idempotency-key', idempotencyKey)
   return new Request(url.toString(), { headers })
 }
 
 describe('GET /api/questions/random', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     sessionAnswersMock.reset()
     questionsMock.reset()
+    mockFilterTytSocialQuestionIds.mockImplementation(async (
+      _admin: unknown,
+      _userId: string,
+      ids: string[],
+    ) => ids)
     mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
       attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       expiresAt: '2026-08-08T14:00:00.000Z',
@@ -147,6 +163,21 @@ describe('GET /api/questions/random', () => {
         content: { question: `Soru ${id}`, options: ['A', 'B', 'C', 'D'] },
       })),
     }))
+    mockIssueVerifiedTytSocialOfficialSection.mockResolvedValue({
+      attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      expiresAt: '2026-08-08T14:00:00.000Z',
+      questionSnapshots: Array.from({ length: 20 }, (_, index) => ({
+        id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+        game: 'sosyal',
+        category: 'tarih',
+        subcategory: null,
+        topic: null,
+        difficulty: 2,
+        level_tag: null,
+        base_points: 20,
+        content: { question: `Soru ${index + 1}`, options: ['A', 'B', 'C', 'D'] },
+      })),
+    })
   })
 
   it('returns 401 if not authenticated', async () => {
@@ -190,6 +221,43 @@ describe('GET /api/questions/random', () => {
     expect(mockRpc).not.toHaveBeenCalled()
   })
 
+  it('rejects an unknown category instead of dropping the database filter', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const res = await GET(makeRequest({ game: 'sosyal', category: 'bilinmeyen', examRef: 'TYT' }) as never)
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: 'Gecerli kategori belirtilmedi' })
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects Social without an exact exam scope before database work', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+
+    const res = await GET(makeRequest({ game: 'sosyal' }) as never)
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error: 'Sosyal icin exact sinav kapsami belirtilmelidir',
+    })
+    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('keeps the legacy optional Social scope when the learner rollout is disabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'false')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: [], error: null })
+
+    const res = await GET(makeRequest({ game: 'sosyal' }) as never)
+
+    expect(res.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('select_random_questions', expect.objectContaining({
+      p_game: 'sosyal',
+      p_limit: 20,
+    }))
+    expect(mockFilterTytSocialQuestionIds).not.toHaveBeenCalled()
+  })
+
   it.each(['tyt', 'UNKNOWN', ''])('rejects an invalid explicit exam scope: %s', async (examRef) => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
 
@@ -223,16 +291,99 @@ describe('GET /api/questions/random', () => {
     }))
   })
 
+  it('filters TYT Social main and review pools before issuing the policy-aware ticket', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: [
+        makeQuestionRow('common', { game: 'sosyal', category: 'tarih', exam_ref: 'TYT' }),
+        makeQuestionRow('forbidden', { game: 'sosyal', category: 'din_kulturu', exam_ref: 'TYT' }),
+      ],
+      error: null,
+    })
+    mockFilterTytSocialQuestionIds.mockResolvedValue(['common'])
+
+    const response = await GET(makeRequest({ game: 'sosyal', examRef: 'TYT' }) as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.questions.map((question: { id: string }) => question.id)).toEqual(['common'])
+    expect(mockFilterTytSocialQuestionIds).toHaveBeenCalledWith(
+      expect.anything(),
+      'u1',
+      ['common', 'forbidden'],
+    )
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        game: 'sosyal',
+        examRef: 'TYT',
+        questionIds: ['common'],
+        requestId: expect.any(String),
+      }),
+    )
+  })
+
+  it('fails closed before ticket issuance when TYT Social policy resolution fails', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: [makeQuestionRow('q1', { game: 'sosyal', category: 'tarih', exam_ref: 'TYT' })],
+      error: null,
+    })
+    mockFilterTytSocialQuestionIds.mockRejectedValue(new Error('private detail'))
+
+    const response = await GET(makeRequest({ game: 'sosyal', examRef: 'TYT' }) as never)
+
+    expect(response.status).toBe(409)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+    await expect(response.json()).resolves.toEqual({
+      error: 'TYT Sosyal cevaplama düzeni seçilmelidir',
+    })
+  })
+
+  it('rejects state-changing TYT Social official-section issuance on GET before database work', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const requestId = '40000000-0000-4000-8000-000000000001'
+
+    const response = await GET(makeRequest({
+      game: 'sosyal', examRef: 'TYT', mode: 'deneme', limit: '20',
+    }, requestId) as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'TYT Sosyal resmî bölümü yalnız güvenli başlatma ucundan açılabilir',
+    })
+    expect(mockIssueVerifiedTytSocialOfficialSection).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockFilterTytSocialQuestionIds).not.toHaveBeenCalled()
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mockHistory).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [{ mode: 'deneme', limit: '20' }, undefined],
+    [{ mode: 'deneme', limit: '10' }, '40000000-0000-4000-8000-000000000001'],
+    [{ mode: 'deneme', limit: '20', includeReview: 'true' }, '40000000-0000-4000-8000-000000000001'],
+    [{ mode: 'deneme', limit: '20', category: 'tarih' }, '40000000-0000-4000-8000-000000000001'],
+  ])('rejects an official section with an incomplete exact request contract', async (extra, key) => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const response = await GET(makeRequest({
+      game: 'sosyal', examRef: 'TYT', ...extra,
+    }, key) as never)
+    expect(response.status).toBe(400)
+    expect(mockIssueVerifiedTytSocialOfficialSection).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
   it('calls select_random_questions RPC with correct args', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValue({ data: [], error: null })
 
-    await GET(makeRequest({ game: 'matematik', limit: '10', category: 'cebir', difficulty: '3', examRef: 'TYT' }) as never)
+    await GET(makeRequest({ game: 'matematik', limit: '10', category: 'sayilar', difficulty: '3', examRef: 'TYT' }) as never)
 
     expect(mockRpc).toHaveBeenCalledWith('select_random_questions', expect.objectContaining({
       p_game: 'matematik',
       p_limit: 20, // limit*2 cap 50
-      p_category: 'cebir',
+      p_category: 'sayilar',
       p_difficulty: 3,
       p_exam_ref: 'TYT',
     }))
@@ -274,12 +425,14 @@ describe('GET /api/questions/random', () => {
     })
     expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
       expect.anything(),
-      {
+      expect.objectContaining({
         userId: 'u1',
         game: 'matematik',
         mode: 'classic',
         questionIds: ['q1', 'q2'],
-      },
+        examRef: null,
+        requestId: expect.any(String),
+      }),
     )
   })
 

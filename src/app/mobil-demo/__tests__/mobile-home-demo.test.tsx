@@ -155,6 +155,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
   test('canlı modda adımlar gerçek müfredattan gelir ve ilerleme sayılır', async () => {
@@ -181,6 +182,36 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     // Sıradaki konu = tamamlanmamis ilk konu (problemler)
     expect(screen.getByRole('link', { name: /DEVAM ET/ }))
       .toHaveAttribute('href', '/arena/matematik?category=problemler')
+  })
+
+  test('TYT Sosyal ilerlemesi unavailable iken demo adım ve hazır ders iddiası göstermez', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        topics: [], game: 'sosyal', examRef: 'TYT', available: false,
+      }),
+    })))
+
+    render(
+      <MobileHomeDemo
+        mode="live"
+        userId="user-1"
+        examRef="TYT"
+        availableSubjects={['sosyal']}
+      />,
+    )
+
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: 'Sosyal öğrenme yolu hazırlanıyor' })).toBeVisible()
+    expect(dialog).not.toHaveTextContent('10 soruluk kısa dersin hazır')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Koç penceresini kapat' }))
+
+    expect(await screen.findByText('TYT Sosyal adımları hazırlanıyor')).toBeVisible()
+    expect(screen.queryByText('Tarih Bilimine Giriş')).not.toBeInTheDocument()
+    expect(screen.queryByText('Mini Ünite Sınavı')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /DEVAM ET/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('10 soru')).not.toBeInTheDocument()
   })
 })
 

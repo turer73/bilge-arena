@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.client'
 import {
+  filterTytSocialQuestionIds,
   getVerifiedAttemptDurationSec,
   issueVerifiedAttempt,
   issueVerifiedExamAttempt,
+  issueVerifiedTytSocialOfficialSection,
   readVerifiedAttemptQuestionSnapshots,
 } from '../verified-attempts'
 
@@ -18,7 +20,11 @@ const rpc = vi.fn()
 const admin = { rpc } as unknown as SupabaseClient<Database>
 const HASH = 'a'.repeat(64)
 
-function normalSnapshotItem(questionId: string, position: number) {
+function normalSnapshotItem(
+  questionId: string,
+  position: number,
+  game: 'matematik' | 'sosyal' = 'matematik',
+) {
   return {
     position,
     questionId,
@@ -26,7 +32,13 @@ function normalSnapshotItem(questionId: string, position: number) {
     contentSha256: HASH,
     content: { question: `${position}. soru`, options: ['A', 'B'], answer: 1, solution: 'Gizli çözüm' },
     correctOption: 1,
-    metadata: { game: 'matematik', category: 'cebir', difficulty: 2, basePoints: 20 },
+    metadata: {
+      game,
+      category: game === 'sosyal' ? 'tarih' : 'cebir',
+      difficulty: 2,
+      ...(game === 'sosyal' ? { examRef: 'TYT' } : {}),
+      basePoints: 20,
+    },
   }
 }
 
@@ -41,6 +53,8 @@ function validInput(questionIds = [QUESTION_ONE]) {
 
 describe('verified attempts helper', () => {
   beforeEach(() => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     vi.useFakeTimers()
     vi.setSystemTime(new Date(NOW))
     rpc.mockReset()
@@ -48,6 +62,7 @@ describe('verified attempts helper', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllEnvs()
   })
 
   it('uses server-authoritative durations for every mode family', () => {
@@ -84,6 +99,185 @@ describe('verified attempts helper', () => {
     expect(result.questionSnapshots[0].content.answer).toBe(1)
     expect({ ...result }).not.toHaveProperty('questionSnapshots')
     expect(JSON.stringify(result)).not.toContain('Gizli çözüm')
+  })
+
+  it('routes TYT Social practice and frozen daily-plan attempts to the policy-aware RPCs', async () => {
+    rpc.mockResolvedValue({
+      data: {
+        attemptId: ATTEMPT_ID,
+        expiresAt: FUTURE,
+        policyVersion: 'tyt-social-2026-v1',
+        variant: 'questions_16_20',
+        artifactKind: 'practice',
+        replayed: false,
+        snapshot: { items: [normalSnapshotItem(QUESTION_ONE, 1, 'sosyal')] },
+      },
+      error: null,
+    })
+    const requestId = '40000000-0000-4000-8000-000000000001'
+
+    await issueVerifiedAttempt(admin, {
+      userId: '30000000-0000-4000-8000-000000000001',
+      game: 'sosyal',
+      mode: 'practice',
+      questionIds: [QUESTION_ONE],
+      examRef: 'TYT',
+      requestId,
+    })
+
+    expect(rpc).toHaveBeenLastCalledWith('issue_verified_tyt_social_attempt', {
+      p_user_id: '30000000-0000-4000-8000-000000000001',
+      p_mode: 'practice',
+      p_question_ids: [QUESTION_ONE],
+      p_duration_sec: 7200,
+      p_request_id: requestId,
+    })
+
+    rpc.mockClear()
+    await issueVerifiedAttempt(admin, {
+      userId: '30000000-0000-4000-8000-000000000001',
+      game: 'sosyal',
+      mode: 'practice',
+      questionIds: [QUESTION_ONE],
+      examRef: 'TYT',
+      sourcePlanId: '60000000-0000-4000-8000-000000000001',
+      requestId,
+    })
+    expect(rpc).toHaveBeenLastCalledWith('issue_verified_tyt_social_plan_attempt', {
+      p_user_id: '30000000-0000-4000-8000-000000000001',
+      p_plan_id: '60000000-0000-4000-8000-000000000001',
+      p_mode: 'practice',
+      p_duration_sec: 7200,
+      p_request_id: requestId,
+    })
+  })
+
+  it('falls back to the generic issuer while the learner rollout is disabled', async () => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'false')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    rpc.mockResolvedValue({
+      data: {
+        attemptId: ATTEMPT_ID,
+        expiresAt: FUTURE,
+        snapshot: { items: [normalSnapshotItem(QUESTION_ONE, 1, 'sosyal')] },
+      },
+      error: null,
+    })
+
+    await issueVerifiedAttempt(admin, {
+      userId: '30000000-0000-4000-8000-000000000001',
+      game: 'sosyal',
+      mode: 'practice',
+      questionIds: [QUESTION_ONE],
+      examRef: 'TYT',
+    })
+
+    expect(rpc).toHaveBeenCalledWith('issue_verified_attempt', expect.objectContaining({
+      p_game: 'sosyal',
+      p_mode: 'practice',
+    }))
+    expect(rpc).not.toHaveBeenCalledWith('issue_verified_tyt_social_attempt', expect.anything())
+  })
+
+  it('does not let the generic issuer mint a TYT Social official section', async () => {
+    await expect(issueVerifiedAttempt(admin, {
+      userId: '30000000-0000-4000-8000-000000000001',
+      game: 'sosyal',
+      mode: 'deneme',
+      questionIds: [QUESTION_ONE],
+      examRef: 'TYT',
+      requestId: '40000000-0000-4000-8000-000000000001',
+    })).rejects.toThrow('verified_attempt_issue_failed')
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('issues an exact official TYT Social section only through the composer', async () => {
+    const items = Array.from({ length: 20 }, (_, index) => normalSnapshotItem(
+      `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      index + 1,
+      'sosyal',
+    ))
+    rpc.mockResolvedValue({
+      data: {
+        attemptId: ATTEMPT_ID,
+        expiresAt: FUTURE,
+        policyVersion: 'tyt-social-2026-v1',
+        variant: 'questions_16_20',
+        artifactKind: 'official_section',
+        snapshot: { items },
+        replayed: false,
+        composerVersion: 'tyt-social-official-section-v1',
+      },
+      error: null,
+    })
+    const requestId = '40000000-0000-4000-8000-000000000001'
+
+    const result = await issueVerifiedTytSocialOfficialSection(admin, {
+      userId: '30000000-0000-4000-8000-000000000001',
+      requestId,
+    })
+
+    expect(rpc).toHaveBeenCalledWith(
+      'compose_and_issue_verified_tyt_social_section_attempt',
+      {
+        p_user_id: '30000000-0000-4000-8000-000000000001',
+        p_duration_sec: 1800,
+        p_request_id: requestId,
+      },
+    )
+    expect(result).toEqual({ attemptId: ATTEMPT_ID, expiresAt: FUTURE })
+    expect(result.questionSnapshots).toHaveLength(20)
+    expect({ ...result }).not.toHaveProperty('questionSnapshots')
+    expect(JSON.stringify(result)).not.toContain('questions_16_20')
+  })
+
+  it.each([
+    ['P0002', 'TYT Social policy selection required', 'tyt_social_section_setup_required'],
+    ['P0002', 'private branch detail', 'tyt_social_section_unavailable'],
+    ['22023', 'TYT Social official-section replay payload differs', 'tyt_social_section_conflict'],
+    ['22023', 'invalid TYT Social official-section composition request', 'tyt_social_section_unavailable'],
+    ['23505', 'private unique detail', 'tyt_social_section_unavailable'],
+    ['42501', 'private permission detail', 'tyt_social_section_unavailable'],
+    ['55000', 'private branch detail', 'tyt_social_section_unavailable'],
+    ['23514', 'private branch detail', 'tyt_social_section_unavailable'],
+    ['PGRST202', 'private branch detail', 'tyt_social_section_unavailable'],
+    ['XX999', 'private branch detail', 'tyt_social_section_issue_failed'],
+  ])('maps official section SQLSTATE %s without leaking DB detail', async (code, message, expected) => {
+    rpc.mockResolvedValue({ data: null, error: { code, message } })
+    await expect(issueVerifiedTytSocialOfficialSection(admin, {
+      userId: '30000000-0000-4000-8000-000000000001',
+      requestId: '40000000-0000-4000-8000-000000000001',
+    })).rejects.toThrow(expected)
+  })
+
+  it('validates the service-only TYT Social candidate filter response', async () => {
+    rpc.mockResolvedValue({
+      data: {
+        policyVersion: 'tyt-social-2026-v1',
+        allowedQuestionIds: [QUESTION_TWO, QUESTION_ONE],
+      },
+      error: null,
+    })
+
+    await expect(filterTytSocialQuestionIds(
+      admin,
+      '30000000-0000-4000-8000-000000000001',
+      [QUESTION_ONE, QUESTION_TWO],
+    )).resolves.toEqual([QUESTION_TWO, QUESTION_ONE])
+    expect(rpc).toHaveBeenCalledWith('filter_tyt_social_question_candidates', {
+      p_user_id: '30000000-0000-4000-8000-000000000001',
+      p_question_ids: [QUESTION_ONE, QUESTION_TWO],
+    })
+
+    rpc.mockResolvedValue({
+      data: { policyVersion: 'tyt-social-2026-v1', allowedQuestionIds: [QUESTION_ONE, QUESTION_ONE] },
+      error: null,
+    })
+    await expect(filterTytSocialQuestionIds(
+      admin,
+      '30000000-0000-4000-8000-000000000001',
+      [QUESTION_ONE],
+    )).rejects.toThrow('tyt_social_candidate_filter_failed')
   })
 
   it('issues an atomic verified exam with ordered source provenance', async () => {
@@ -142,6 +336,50 @@ describe('verified attempts helper', () => {
     })
     expect(result.questionSnapshots).toHaveLength(40)
     expect({ ...result }).not.toHaveProperty('questionSnapshots')
+  })
+
+  it('routes a TYT Social smart mock to the policy-aware exam issuer', async () => {
+    const items = Array.from({ length: 40 }, (_, index) => ({
+      questionId: `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      sourceBucket: 'coverage' as const,
+    }))
+    rpc.mockResolvedValue({
+      data: {
+        attemptId: ATTEMPT_ID,
+        expiresAt: FUTURE,
+        plannedDurationSec: 1500,
+        status: 'issued',
+        replayed: false,
+        snapshot: {
+          items: items.map((item, index) => ({
+            ...normalSnapshotItem(item.questionId, index + 1, 'sosyal'),
+            position: index,
+            sourceBucket: item.sourceBucket,
+          })),
+        },
+      },
+      error: null,
+    })
+
+    await issueVerifiedExamAttempt(admin, {
+      userId: '30000000-0000-4000-8000-000000000001',
+      game: 'sosyal',
+      examRef: 'TYT',
+      blueprintVersion: 'personalized-mock-v1',
+      items,
+      plannedDurationSec: 1500,
+      requestId: '40000000-0000-4000-8000-000000000001',
+    })
+
+    expect(rpc).toHaveBeenCalledWith(
+      'issue_verified_tyt_social_exam_attempt',
+      expect.objectContaining({
+        p_user_id: '30000000-0000-4000-8000-000000000001',
+        p_blueprint_version: 'personalized-mock-v1',
+        p_duration_sec: 1800,
+        p_planned_duration_sec: 1500,
+      }),
+    )
   })
 
   it('rejects duplicate exam items and a planned duration outside the verified TTL', async () => {

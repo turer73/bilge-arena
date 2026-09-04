@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
   mockAnswersRes,
@@ -54,7 +54,11 @@ function makeRequest(game = 'matematik', ip = '1.2.3.4') {
 }
 
 describe('GET /api/profile/topic-strengths', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     vi.clearAllMocks()
     mockGetUser.mockResolvedValue({ data: { user: null } })
     mockIpCheck.mockResolvedValue({ success: true, retryAfter: 0 })
@@ -116,6 +120,34 @@ describe('GET /api/profile/topic-strengths', () => {
     expect((await res.json()).topics).toEqual([
       expect.objectContaining({ category: 'paragraf' }),
     ])
+  })
+
+  it('does not read or publish the legacy aggregate for policy-scoped TYT Social', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
+
+    const res = await GET(makeRequest('sosyal&exam_ref=TYT') as never)
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({
+      topics: [],
+      game: 'sosyal',
+      examRef: 'TYT',
+      available: false,
+    })
+    expect(mockAnswersRes).not.toHaveBeenCalled()
+  })
+
+  it('requires an exact exam scope for Social before reading the legacy aggregate', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: VALID_UUID } } })
+
+    const res = await GET(makeRequest('sosyal') as never)
+
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({
+      error: 'Sosyal icin exact sinav kapsami belirtilmelidir',
+    })
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
+    expect(mockAnswersRes).not.toHaveBeenCalled()
   })
 
   it('returns empty topics when no answers exist', async () => {

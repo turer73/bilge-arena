@@ -9,11 +9,19 @@ function FlowHarness({
   initialDifficulty = null,
   initialMode = 'classic',
   onStart = vi.fn(),
+  startBlocked = false,
+  startBlockedLabel,
+  startHref,
+  startLabel,
 }: {
   initialCategory?: string | null
   initialDifficulty?: number | null
   initialMode?: string
   onStart?: () => void
+  startBlocked?: boolean
+  startBlockedLabel?: string
+  startHref?: string
+  startLabel?: string
 }) {
   const [mode, setMode] = useState<QuizMode>(MODES.find((item) => item.id === initialMode) ?? MODES[0])
   const [category, setCategory] = useState<string | null>(initialCategory)
@@ -32,6 +40,10 @@ function FlowHarness({
       selectedExamRef={examRef}
       onSelectExamRef={setExamRef}
       onStart={onStart}
+      startBlocked={startBlocked}
+      startBlockedLabel={startBlockedLabel}
+      startHref={startHref}
+      startLabel={startLabel}
     />
   )
 }
@@ -105,6 +117,36 @@ describe('MobileLobbyFlow', () => {
 
     fireEvent.click(within(screen.getByTestId('mobile-lobby-flow')).getByRole('button', { name: 'Başla · 10 soru' }))
     expect(onStart).toHaveBeenCalledOnce()
+  })
+
+  it('politika beklenirken ana CTA durumunu açıklar ve tıklamayı engeller', () => {
+    const onStart = vi.fn()
+    render(
+      <FlowHarness
+        onStart={onStart}
+        startBlocked
+        startBlockedLabel="Cevaplama düzeni yükleniyor"
+      />,
+    )
+
+    const button = within(screen.getByTestId('mobile-lobby-flow'))
+      .getByRole('button', { name: 'Cevaplama düzeni yükleniyor' })
+    expect(button).toBeDisabled()
+    fireEvent.click(button)
+    expect(onStart).not.toHaveBeenCalled()
+  })
+
+  it('misafire hata üreten başlangıç yerine giriş bağlantısı gösterir', () => {
+    render(
+      <FlowHarness
+        startHref="/giris?redirect=%2Farena%2Fsosyal%3Fexam_ref%3DTYT"
+        startLabel="Giriş yaparak başla"
+      />,
+    )
+
+    expect(within(screen.getByTestId('mobile-lobby-flow'))
+      .getByRole('link', { name: 'Giriş yaparak başla' }))
+      .toHaveAttribute('href', '/giris?redirect=%2Farena%2Fsosyal%3Fexam_ref%3DTYT')
   })
 
   it('başka dersten kalan geçersiz konuyu temizler', () => {

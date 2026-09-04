@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Check, ChevronRight, Play, X } from 'lucide-react'
 import { GAMES, getCategoriesForExam, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
-import { MODES, type QuizMode } from '@/lib/constants/modes'
+import { getModesForContext, type QuizMode } from '@/lib/constants/modes'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 interface MobileLobbyFlowProps {
   game: GameSlug
@@ -17,6 +19,10 @@ interface MobileLobbyFlowProps {
   onSelectExamRef: (examRef: string | null) => void
   loadError?: string | null
   onStart: () => void
+  startBlocked?: boolean
+  startBlockedLabel?: string
+  startHref?: string
+  startLabel?: string
   onLimitReached?: () => void
   quizLimit?: {
     canPlay: boolean
@@ -113,12 +119,24 @@ export function MobileLobbyFlow({
   onSelectExamRef,
   loadError,
   onStart,
+  startBlocked = false,
+  startBlockedLabel = 'Başlatılamıyor',
+  startHref,
+  startLabel,
   onLimitReached,
   quizLimit,
 }: MobileLobbyFlowProps) {
   const gameDef = GAMES[game]
   const categories = getCategoriesForExam(game, selectedExamRef)
-  const mode = MODES.find((candidate) => candidate.id === selectedMode) ?? MODES[0]
+  const effectiveExamRef = game === 'sosyal' && isTytSocialV2ClientEnabled()
+    ? selectedExamRef ?? 'TYT'
+    : selectedExamRef
+  const modes = getModesForContext(
+    game,
+    effectiveExamRef,
+    isTytSocialV2ClientEnabled(),
+  )
+  const mode = modes.find((candidate) => candidate.id === selectedMode) ?? modes[0]
   const selectedCategoryIsValid = selectedCategory === null || categories.includes(selectedCategory)
   const safeCategory = selectedCategoryIsValid ? selectedCategory : null
   const difficulty = DIFFICULTIES.find((item) => item.value === selectedDifficulty) ?? DIFFICULTIES[0]
@@ -126,8 +144,12 @@ export function MobileLobbyFlow({
   const sheetDialogRef = useRef<HTMLDivElement>(null)
   const sheetTriggerRef = useRef<HTMLElement | null>(null)
 
-  const startAction = quizLimit && !quizLimit.canPlay ? onLimitReached : onStart
-  const scopeLabel = selectedExamRef ? (EXAM_SCOPE_LABELS[selectedExamRef] ?? selectedExamRef) : 'Sınav seç'
+  const startAction = startBlocked
+    ? undefined
+    : quizLimit && !quizLimit.canPlay
+      ? onLimitReached
+      : onStart
+  const scopeLabel = effectiveExamRef ? (EXAM_SCOPE_LABELS[effectiveExamRef] ?? effectiveExamRef) : 'Sınav seç'
   const categoryLabel = safeCategory ? getCategoryLabel(safeCategory) : 'Tüm konular'
   const isExtraMode = EXTRA_MODE_IDS.includes(mode.id as typeof EXTRA_MODE_IDS[number])
 
@@ -218,16 +240,17 @@ export function MobileLobbyFlow({
 
       <div className="mt-4 grid grid-cols-3 gap-2" role="group" aria-label="Başlangıç türü">
         {PRIMARY_MODE_IDS.map((modeId) => {
-          const item = MODES.find((candidate) => candidate.id === modeId)
+          const item = modes.find((candidate) => candidate.id === modeId)
           if (!item) return null
           const active = item.id === selectedMode
           const copy = PRIMARY_MODE_COPY[item.id]
+          const description = item.isDeneme ? `${item.questionCount} soru` : copy.description
           return (
             <button
               type="button"
               key={item.id}
               onClick={() => onSelectMode(item)}
-              aria-label={`${copy.label}: ${copy.description}`}
+              aria-label={`${copy.label}: ${description}`}
               aria-pressed={active}
               className={`relative min-h-[68px] rounded-2xl border-2 px-2 py-2.5 text-center transition-transform active:scale-[.98] ${
                 active
@@ -237,7 +260,7 @@ export function MobileLobbyFlow({
             >
               {active && <Check size={15} strokeWidth={3.5} className="absolute right-1.5 top-1.5 text-[var(--app-accent-text)]" aria-hidden="true" />}
               <span className="block text-sm font-black text-[var(--app-text)]">{copy.label}</span>
-              <span className="mt-0.5 block text-[10px] font-bold text-[var(--app-text-muted)]">{copy.description}</span>
+              <span className="mt-0.5 block text-[10px] font-bold text-[var(--app-text-muted)]">{description}</span>
             </button>
           )
         })}
@@ -270,19 +293,32 @@ export function MobileLobbyFlow({
       </div>
 
       <div className="mt-4 border-t-2 border-[var(--app-border-soft)] pt-4">
-        <button
-          type="button"
-          onClick={startAction}
-          disabled={!startAction}
-          className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Play size={18} fill="currentColor" aria-hidden="true" />
-          {quizLimit && !quizLimit.canPlay
-            ? 'Limit doldu · Premium’a geç'
-            : mode.isDeneme
-              ? `Denemeyi Başlat · ${mode.questionCount} soru`
-              : `Başla · ${mode.questionCount} soru`}
-        </button>
+        {startHref && !startBlocked ? (
+          <Link
+            href={startHref}
+            className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
+          >
+            <Play size={18} fill="currentColor" aria-hidden="true" />
+            {startLabel ?? 'Giriş yaparak başla'}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={startAction}
+            disabled={!startAction}
+            className="flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Play size={18} fill="currentColor" aria-hidden="true" />
+            {startBlocked
+              ? startBlockedLabel
+              : startLabel
+                ?? (quizLimit && !quizLimit.canPlay
+                  ? 'Limit doldu · Premium’a geç'
+                  : mode.isDeneme
+                    ? `Denemeyi Başlat · ${mode.questionCount} soru`
+                    : `Başla · ${mode.questionCount} soru`)}
+          </button>
+        )}
       </div>
 
       {sheet && (
@@ -372,7 +408,7 @@ export function MobileLobbyFlow({
               {sheet === 'modes' && (
                 <div className="grid gap-2.5" role="group" aria-label="Diğer oyun modları">
                   {EXTRA_MODE_IDS.map((modeId) => {
-                    const item = MODES.find((candidate) => candidate.id === modeId)
+                    const item = modes.find((candidate) => candidate.id === modeId)
                     if (!item) return null
                     const active = item.id === selectedMode
                     return (

@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { OSYM_PDFS } from './urls.mjs'
+import { classifyTytSocialQuestion } from '../lib/tyt-social-exam-roles.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const PDF_DIR = resolve(__dir, '..', 'pdfs')
@@ -268,6 +269,19 @@ for (const pdf of targets) {
     const sectionText = extractSectionText(text, def.start, def.end)
     const answers = answerKey[def.key] || []
     const parsed = parseSection(sectionText, answers)
+    if (def.key === 'sosyal') {
+      for (const question of parsed.questions) {
+        const classification = classifyTytSocialQuestion(question.num)
+        if (!classification) {
+          throw new Error(`TYT Social question number out of contract: ${question.num}`)
+        }
+        // Position provides a review candidate, never a content approval.
+        // Keep the content category independent from the candidate-dependent
+        // official-booklet role.
+        question.subcategory = classification.category
+        question.exam_role = classification.examRole
+      }
+    }
     output.sections[def.key] = parsed
     console.log(`  ${def.key}: ${answers.length} cevap, ${parsed.parsed} parse, ${parsed.textComplete} text-complete`)
   }

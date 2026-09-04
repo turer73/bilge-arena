@@ -6,6 +6,7 @@ import {
   getCategoriesForExam,
   getCategoryLabel,
   normalizeCategoryAlias,
+  normalizeCategoryForExam,
 } from '../games'
 
 /**
@@ -83,7 +84,15 @@ describe('games sabitleri kontratları', () => {
 
   it('eski sosyal din aliasini veritabanı filtresinden önce kanonikleştirir', () => {
     expect(normalizeCategoryAlias('sosyal', 'din')).toBe('din_kulturu')
+    expect(normalizeCategoryAlias('sosyal', ' DIN ')).toBe('din_kulturu')
     expect(normalizeCategoryAlias('sosyal', 'tarih')).toBe('tarih')
     expect(normalizeCategoryAlias('turkce', 'din')).toBe('din')
+  })
+
+  it('bilinmeyen veya sınav dışı kategoriyle filtreyi sessizce genişletmez', () => {
+    expect(normalizeCategoryForExam('sosyal', 'TYT', 'din')).toBe('din_kulturu')
+    expect(normalizeCategoryForExam('sosyal', 'LGS', 'cografya')).toBeNull()
+    expect(normalizeCategoryForExam('sosyal', 'TYT', 'bilinmeyen')).toBeNull()
+    expect(normalizeCategoryForExam('turkce', 'TYT', 'edebiyat')).toBeNull()
   })
 })

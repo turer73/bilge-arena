@@ -497,6 +497,43 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         }
         Returns: Json
       }
+      // Migrations 205-206. TYT Social issuance is policy-aware and remains
+      // service-role only; the user's branch choice is never returned to the
+      // public question APIs.
+      filter_tyt_social_question_candidates: {
+        Args: { p_user_id: string; p_question_ids: string[] }
+        Returns: Json
+      }
+      issue_verified_tyt_social_attempt: {
+        Args: {
+          p_user_id: string
+          p_mode: string
+          p_question_ids: string[]
+          p_duration_sec: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_plan_attempt: {
+        Args: {
+          p_user_id: string
+          p_plan_id: string
+          p_mode: string
+          p_duration_sec: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      // Migration 209. The caller supplies no question ids; the database
+      // composes the governed 5/5/5/5 official section atomically.
+      compose_and_issue_verified_tyt_social_section_attempt: {
+        Args: {
+          p_user_id: string
+          p_duration_sec: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
       complete_verified_game_session: {
         Args: {
           p_attempt_id: string
@@ -546,6 +583,14 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
           p_game: string
           p_plan_date: string
           p_exam_ref: string | null
+          p_items: Json
+        }
+        Returns: Json
+      }
+      create_tyt_social_daily_plan_v2: {
+        Args: {
+          p_user_id: string
+          p_plan_date: string
           p_items: Json
         }
         Returns: Json
@@ -891,6 +936,16 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_program_ref: string; p_teacher_result: string; p_note: string | null; p_request_id: string }
         Returns: Json
       }
+      // Migration 205. Owner-bound policy RPCs use auth.uid() and must be
+      // invoked through the cookie client, never a service-role client.
+      get_my_tyt_social_exam_policy: {
+        Args: Record<string, never>
+        Returns: Json
+      }
+      set_my_tyt_social_exam_policy: {
+        Args: { p_variant: string; p_notice_version: string; p_request_id: string }
+        Returns: Json
+      }
       create_institution_student_report: {
         Args: { p_user_id: string; p_classroom_id: string; p_member_ref: string; p_snapshot: Json; p_request_id: string }
         Returns: Json
@@ -926,6 +981,17 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
           p_user_id: string
           p_game: string
           p_exam_ref: string | null
+          p_blueprint_version: string
+          p_items: Json
+          p_duration_sec: number
+          p_planned_duration_sec: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_exam_attempt: {
+        Args: {
+          p_user_id: string
           p_blueprint_version: string
           p_items: Json
           p_duration_sec: number

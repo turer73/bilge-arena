@@ -132,7 +132,12 @@ function makePostBody(body: Record<string, unknown>) {
   return new Request('http://localhost/api/admin/generate-questions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ outcomeId: OUTCOME_ID, requestId: REQUEST_ID, ...body }),
+    body: JSON.stringify({
+      outcomeId: OUTCOME_ID,
+      requestId: REQUEST_ID,
+      provenanceRef: 'editor-brief:test-fixture',
+      ...body,
+    }),
   })
 }
 
@@ -142,7 +147,12 @@ function makePutBody(body: Record<string, unknown>) {
   return new Request('http://localhost/api/admin/generate-questions', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ outcomeId: OUTCOME_ID, requestId: REQUEST_ID, ...body }),
+    body: JSON.stringify({
+      outcomeId: OUTCOME_ID,
+      requestId: REQUEST_ID,
+      provenanceRef: 'editor-brief:test-fixture',
+      ...body,
+    }),
   })
 }
 
@@ -607,6 +617,19 @@ describe('PUT /api/admin/generate-questions — manuel level_tag', () => {
     const payload = mockInsertCapture.mock.calls[0][0] as Record<string, unknown>
     // Server otoritatif: non-wordquest'e level_tag yazilmamali
     expect(payload.level_tag).toBeNull()
+  })
+
+  it('kaynak/provenans referansı olmadan yönetişim taslağı oluşturmaz', async () => {
+    const { PUT } = await import('../route')
+    const res = await PUT(makePutBody({
+      game: 'sosyal', category: 'tarih', difficulty: 2,
+      question: 'TYT tarih sorusu için yeterince uzun bir metin nedir?',
+      options: ['1', '2', '3', '4', '5'], answer: 0,
+      solution: 'Doğru seçenek tarihsel bağlam incelenerek bulunur.',
+      provenanceRef: '',
+    }))
+    expect(res.status).toBe(400)
+    expect(mockGovernedCreate).not.toHaveBeenCalled()
   })
 })
 

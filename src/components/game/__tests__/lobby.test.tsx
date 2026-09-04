@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Lobby } from '../lobby'
 
 vi.mock('../streak-badge', () => ({ StreakBadge: () => <div data-testid="streak" /> }))
@@ -24,6 +24,14 @@ const baseProps = {
 }
 
 describe('Lobby', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('mobil tek sütun, tablet ve bilgisayarda iki sütunlu oyun kabuğu kullanır', () => {
     const { container } = render(<Lobby {...baseProps} />)
     const shell = container.querySelector('[data-responsive-game-lobby]')
@@ -67,6 +75,48 @@ describe('Lobby', () => {
     expect(screen.getByRole('button', { name: 'Paragraf' })).toBeInTheDocument()
   })
 
+  it('Sosyal sınav kapsamını filtresiz bıraktırmaz ve TYTyi güvenli varsayılan gösterir', () => {
+    render(<Lobby {...baseProps} game="sosyal" selectedExamRef={null} />)
+
+    const filters = screen.getByRole('button', { name: /Soru ayarları/ })
+    expect(filters).toHaveTextContent('TYT (Lise)')
+    fireEvent.click(filters)
+    const examGroup = screen.getByRole('group', { name: 'Sınav' })
+    expect(within(examGroup).queryByRole('button', { name: 'Tümü' })).not.toBeInTheDocument()
+    expect(within(examGroup).getByRole('button', { name: 'TYT (Lise)' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('TYT Sosyal denemesini 20 soruluk exact bölüm olarak anlatır', () => {
+    render(
+      <Lobby
+        {...baseProps}
+        game="sosyal"
+        selectedExamRef="TYT"
+        selectedMode="deneme"
+      />,
+    )
+
+    expect(screen.getAllByText(/20 soru/).length).toBeGreaterThan(0)
+    expect(screen.getByText(/20 soruluk TYT Sosyal bölüm yapısı/)).toBeInTheDocument()
+    expect(screen.queryByText(/TYT formatında/)).not.toBeInTheDocument()
+    expect(screen.getByText('Seçtiğin cevaplama grubu')).toBeInTheDocument()
+  })
+
+  it('learner rollout kapalıyken Sosyal legacy deneme kapsamını korur', () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'false')
+    render(
+      <Lobby
+        {...baseProps}
+        game="sosyal"
+        selectedExamRef="TYT"
+        selectedMode="deneme"
+      />,
+    )
+
+    expect(screen.getByText(/Ders kapsamlı çalışma denemesi/)).toBeInTheDocument()
+    expect(screen.queryByText(/20 soruluk TYT Sosyal bölüm yapısı/)).not.toBeInTheDocument()
+  })
+
   it('ayarlar açıldığında filtre seçimini üst bileşene bildirir', () => {
     const onSelectDifficulty = vi.fn()
     render(<Lobby {...baseProps} onSelectDifficulty={onSelectDifficulty} />)
@@ -84,6 +134,41 @@ describe('Lobby', () => {
     fireEvent.click(screen.getByRole('button', { name: /Klasik Başlat/ }))
 
     expect(onStart).toHaveBeenCalledOnce()
+  })
+
+  it('politika hazır değilken masaüstü ve mobil başlangıç eylemlerini görünür biçimde devre dışı bırakır', () => {
+    const onStart = vi.fn()
+    render(
+      <Lobby
+        {...baseProps}
+        onStart={onStart}
+        startBlocked
+        startBlockedLabel="Cevaplama düzenini seç"
+      />,
+    )
+
+    const buttons = screen.getAllByRole('button', { name: 'Cevaplama düzenini seç' })
+    expect(buttons).toHaveLength(2)
+    buttons.forEach(button => expect(button).toBeDisabled())
+    buttons.forEach(button => fireEvent.click(button))
+    expect(onStart).not.toHaveBeenCalled()
+  })
+
+  it('misafir başlangıcını masaüstü ve mobilde aynı güvenli giriş adresine bağlar', () => {
+    render(
+      <Lobby
+        {...baseProps}
+        startHref="/giris?redirect=%2Farena%2Fsosyal%3Fexam_ref%3DTYT"
+        startLabel="Giriş yaparak başla"
+      />,
+    )
+
+    const links = screen.getAllByRole('link', { name: 'Giriş yaparak başla' })
+    expect(links).toHaveLength(2)
+    links.forEach(link => expect(link).toHaveAttribute(
+      'href',
+      '/giris?redirect=%2Farena%2Fsosyal%3Fexam_ref%3DTYT',
+    ))
   })
 
   it('akıllı denemeyi klasik başlat alanının altında sağ sütuna yerleştirir', () => {

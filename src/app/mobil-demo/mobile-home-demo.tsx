@@ -35,6 +35,7 @@ import {
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
 import { GAMES } from '@/lib/constants/games'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 export const COACH_SEEN_STORAGE_KEY = 'ba-coach-seen'
 
@@ -288,9 +289,17 @@ export function MobileHomeDemo({
   // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
   // yok; sabit ornek icerik gosterilir.
   const progress = useTopicProgress(mode === 'live' ? gameSlug : null, userId, progressExamRef)
-  const isLivePath = mode === 'live' && progress.topics.length > 0
+  const isSocialTytProgressPreparing = isTytSocialV2ClientEnabled()
+    && mode === 'live'
+    && gameSlug === 'sosyal'
+    && progressExamRef === 'TYT'
+    && progress.available !== true
+  const isLivePath = mode === 'live'
+    && !isSocialTytProgressPreparing
+    && progress.topics.length > 0
 
   const steps: PathStepModel[] = useMemo(() => {
+    if (isSocialTytProgressPreparing) return []
     if (isLivePath) {
       return progress.topics.map((topic, index) => ({
         key: `${gameSlug}-${topic.category}`,
@@ -316,16 +325,18 @@ export function MobileHomeDemo({
       exam: index === subject.topics.length - 1,
       locked: index > demoCurrent,
     }))
-  }, [gameHref, gameSlug, isLivePath, progress.currentIndex, progress.topics, subject.id, subject.topics])
+  }, [gameHref, gameSlug, isLivePath, isSocialTytProgressPreparing, progress.currentIndex, progress.topics, subject.id, subject.topics])
 
   const completedCount = steps.filter((step) => step.done).length
   const stepCount = Math.max(1, steps.length)
   const pathComplete = isLivePath && steps.length > 0 && completedCount === steps.length
   const currentStep = steps.find((step) => step.current) ?? (pathComplete ? steps.at(-1) : steps[0])
   const primaryHref = pathComplete ? gameHref : currentStep?.href ?? gameHref
-  const unitLabel = isLivePath
-    ? `${progressExamRef ?? examLabel} ${subject.label} · ${steps.length} konu`
-    : subject.unit
+  const unitLabel = isSocialTytProgressPreparing
+    ? 'TYT Sosyal · hazırlanıyor'
+    : isLivePath
+      ? `${progressExamRef ?? examLabel} ${subject.label} · ${steps.length} konu`
+      : subject.unit
   const message = COACH_MESSAGES[coachMessage]
   const MessageIcon = message.icon
   const bubbleRadius = '30px 30px 30px 16px'
@@ -341,22 +352,26 @@ export function MobileHomeDemo({
         { value: 'YDT', label: 'YDT' },
       ]
   const selectedHeaderExamLabel = examScopeOptions.find((option) => option.value === selectedHeaderExamRef)?.label ?? examLabel
-  const coachTitle = coachMessage === 0
-    ? pathComplete ? `Yol tamam, ${displayName}!` : `Hazırsın, ${displayName}!`
-    : coachMessage === 2
-      ? goalRemaining === null
-        ? 'Bugünkü rotayı tamamla!'
-        : goalRemaining > 0
-          ? `Yalnızca ${goalRemaining} soru kaldı!`
-          : 'Günlük hedef tamam!'
-      : message.title
-  const coachBody = coachMessage === 0
-    ? pathComplete
-      ? `${subject.label} yolundaki tüm konuları tamamladın. Bilgini korumak için karışık tekrar yapabilirsin.`
-      : `${currentStep?.label ?? subject.label} için 10 soruluk kısa dersin hazır. Yaklaşık 4 dakikada tamamlayabilirsin.`
-    : coachMessage === 1
-      ? 'Önce soru kökündeki ipucunu yakala. Bildiklerini küçük adımlara bölmek sana zaman kazandırır.'
-      : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
+  const coachTitle = isSocialTytProgressPreparing
+    ? 'Sosyal öğrenme yolu hazırlanıyor'
+    : coachMessage === 0
+      ? pathComplete ? `Yol tamam, ${displayName}!` : `Hazırsın, ${displayName}!`
+      : coachMessage === 2
+        ? goalRemaining === null
+          ? 'Bugünkü rotayı tamamla!'
+          : goalRemaining > 0
+            ? `Yalnızca ${goalRemaining} soru kaldı!`
+            : 'Günlük hedef tamam!'
+        : message.title
+  const coachBody = isSocialTytProgressPreparing
+    ? 'Cevaplama düzenine bağlı güvenilir ilerleme hazır olduğunda konu adımların burada açılacak.'
+    : coachMessage === 0
+      ? pathComplete
+        ? `${subject.label} yolundaki tüm konuları tamamladın. Bilgini korumak için karışık tekrar yapabilirsin.`
+        : `${currentStep?.label ?? subject.label} için 10 soruluk kısa dersin hazır. Yaklaşık 4 dakikada tamamlayabilirsin.`
+      : coachMessage === 1
+        ? 'Önce soru kökündeki ipucunu yakala. Bildiklerini küçük adımlara bölmek sana zaman kazandırır.'
+        : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
 
   useEffect(() => {
     if (mode !== 'live' || coachSeenToday(userId)) return
@@ -525,24 +540,44 @@ export function MobileHomeDemo({
                 <h1 className="mt-1 text-lg font-black leading-tight md:mt-2 md:text-2xl lg:text-3xl">{subject.label} Yolu</h1>
                 <p className="mt-1 truncate text-[11px] font-semibold text-white/80 md:mt-2 md:text-sm">{subject.description}</p>
               </div>
-              <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">{completedCount} / {steps.length}</span>
+              <span className="shrink-0 rounded-xl bg-black/15 px-2.5 py-1.5 text-xs font-black">
+                {isSocialTytProgressPreparing ? 'Hazırlanıyor' : `${completedCount} / ${steps.length}`}
+              </span>
             </div>
-            <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px] md:mt-6 md:h-3"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
+            {isSocialTytProgressPreparing ? (
+              <p className="relative mt-3 text-xs font-semibold leading-5 text-white/85" role="status">
+                Güvenilir TYT Sosyal ilerleme verisi hazır olduğunda yolun burada açılacak.
+              </p>
+            ) : (
+              <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-black/15 p-[2px] md:mt-6 md:h-3"><div className="h-full rounded-full bg-[var(--app-card)]" style={{ width: `${(completedCount / stepCount) * 100}%` }} /></div>
+            )}
           </div>
         </section>
 
         <section data-today-lesson className="order-[-1] px-4 pt-4 md:order-none md:col-start-2 md:row-start-1 md:px-0 md:pt-0" aria-labelledby="continue-title">
           <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] md:h-full md:min-h-[168px]">
             <div className="relative z-10 max-w-[64%]">
-              <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Bugünkü ders</div>
-              <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{pathComplete ? 'Yol tamamlandı' : currentStep?.label ?? subject.label}</h2>
-              <div className="mt-2 flex items-center gap-3 text-[11px] font-bold text-[var(--app-text-sub)]">
-                <span className="flex items-center gap-1"><BookOpenText size={14} />10 soru</span>
-                <span className="flex items-center gap-1"><Clock3 size={14} />4 dk</span>
-              </div>
-              <Link href={primaryHref} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-white active:translate-y-1" style={{ background: subject.color, boxShadow: `0 5px 0 ${subject.shadow}` }}>
-                <Play size={17} fill="currentColor" /> {pathComplete ? 'TEKRAR ET' : 'DEVAM ET'}
-              </Link>
+              {isSocialTytProgressPreparing ? (
+                <div role="status">
+                  <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>İlerleme durumu</div>
+                  <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">Öğrenme yolu hazırlanıyor</h2>
+                  <p className="mt-2 text-[11px] font-semibold leading-5 text-[var(--app-text-sub)]">
+                    Hazır olmayan bir ders veya başarı bilgisi göstermiyoruz.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Bugünkü ders</div>
+                  <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{pathComplete ? 'Yol tamamlandı' : currentStep?.label ?? subject.label}</h2>
+                  <div className="mt-2 flex items-center gap-3 text-[11px] font-bold text-[var(--app-text-sub)]">
+                    <span className="flex items-center gap-1"><BookOpenText size={14} />10 soru</span>
+                    <span className="flex items-center gap-1"><Clock3 size={14} />4 dk</span>
+                  </div>
+                  <Link href={primaryHref} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-white active:translate-y-1" style={{ background: subject.color, boxShadow: `0 5px 0 ${subject.shadow}` }}>
+                    <Play size={17} fill="currentColor" /> {pathComplete ? 'TEKRAR ET' : 'DEVAM ET'}
+                  </Link>
+                </>
+              )}
             </div>
             <button onClick={openCoach} className="absolute right-3 top-3 z-10 flex min-h-8 items-center gap-1 rounded-xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-2 py-1 text-[10px] font-extrabold text-[var(--app-text-sub)] shadow-[0_3px_0_var(--app-border)] active:translate-y-0.5" aria-label="Bilge Chan mesajlarını aç">
               <MessageCircle size={13} fill="var(--app-accent-border)" className="text-[var(--app-accent-text)]" /> Hazırsın!
@@ -559,17 +594,28 @@ export function MobileHomeDemo({
               <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Ünite planı</div>
               <h2 className="text-[15px] font-black md:text-xl">Öğrenme yolu</h2>
             </div>
-            <div className="rounded-xl bg-[var(--app-card)] px-2.5 py-1.5 text-[10px] font-black text-[var(--app-text-sub)] shadow-[0_2px_0_var(--app-shadow)]">{completedCount} / {steps.length}</div>
+            <div className="rounded-xl bg-[var(--app-card)] px-2.5 py-1.5 text-[10px] font-black text-[var(--app-text-sub)] shadow-[0_2px_0_var(--app-shadow)]">
+              {isSocialTytProgressPreparing ? 'Hazırlanıyor' : `${completedCount} / ${steps.length}`}
+            </div>
           </div>
-          <div
-            className="relative grid grid-cols-2 gap-x-8 gap-y-1.5 md:gap-x-12 md:gap-y-3"
-            style={{ gridTemplateRows: `repeat(${Math.ceil(stepCount / 2)}, minmax(0, 1fr))` }}
-          >
-            <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path d={snakePath(stepCount)} fill="none" stroke="var(--app-shadow)" strokeWidth="1.8" strokeDasharray="2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {steps.map((step) => <PathStep key={step.key} step={step} subject={subject} />)}
-          </div>
+          {isSocialTytProgressPreparing ? (
+            <div className="rounded-2xl border-2 border-dashed border-[var(--app-border)] bg-[var(--app-card)] px-4 py-6 text-center" role="status">
+              <p className="text-sm font-black text-[var(--app-text)]">TYT Sosyal adımları hazırlanıyor</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-[var(--app-text-sub)]">
+                Karar-guvenli ilerleme yayımlanana kadar tahmini veya boş adım göstermiyoruz.
+              </p>
+            </div>
+          ) : (
+            <div
+              className="relative grid grid-cols-2 gap-x-8 gap-y-1.5 md:gap-x-12 md:gap-y-3"
+              style={{ gridTemplateRows: `repeat(${Math.ceil(stepCount / 2)}, minmax(0, 1fr))` }}
+            >
+              <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path d={snakePath(stepCount)} fill="none" stroke="var(--app-shadow)" strokeWidth="1.8" strokeDasharray="2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {steps.map((step) => <PathStep key={step.key} step={step} subject={subject} />)}
+            </div>
+          )}
         </section>
 
         <section aria-labelledby="mobile-tools-title" className={`mx-4 mt-4 md:col-start-2 md:mx-0 md:mt-0 ${dailyGoal ? 'md:row-start-3' : 'md:row-start-2'}`}>
@@ -735,7 +781,11 @@ export function MobileHomeDemo({
                     ))}
                   </div>
 
-                  {coachMessage < COACH_MESSAGES.length - 1 ? (
+                  {isSocialTytProgressPreparing && coachMessage === COACH_MESSAGES.length - 1 ? (
+                    <span className="flex min-h-10 items-center rounded-xl border-2 border-[var(--app-border)] px-3 text-[10px] font-black text-[var(--app-text-sub)]" role="status">
+                      Hazırlanıyor
+                    </span>
+                  ) : coachMessage < COACH_MESSAGES.length - 1 ? (
                     <button
                       type="button"
                       onClick={() => setCoachMessage((current) => Math.min(COACH_MESSAGES.length - 1, current + 1))}

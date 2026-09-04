@@ -65,8 +65,12 @@ export function defaultExamRefForType(examType: ExamType | null | undefined): st
 export function questionExamRefForGame(
   game: GameSlug,
   examRef: string | null | undefined,
+  tytSocialV2Enabled = false,
 ): string | null {
-  return game === 'wordquest' ? null : examRef ?? null
+  if (game === 'wordquest') return null
+  // Social question roles are exact-exam contracts. A null scope would mix
+  // TYT candidate branches with LGS/AYT rows and bypass the TYT policy gate.
+  return game === 'sosyal' && tytSocialV2Enabled ? examRef ?? 'TYT' : examRef ?? null
 }
 
 /** Profil turu degistiginde sakli kalan exam_ref'i dogrulamak icin izinli kapsam. */

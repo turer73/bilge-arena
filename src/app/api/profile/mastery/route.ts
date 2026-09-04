@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { isTytSocialV2LearnerEnabled } from '@/lib/feature-flags/tyt-social-v2-server'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
@@ -60,6 +61,122 @@ interface StateRow {
   careless_annotations: number
   verified_evidence_days: number
   last_answered_at: string | null
+}
+
+const TYT_SOCIAL_CATEGORIES = [
+  'tarih',
+  'cografya',
+  'felsefe',
+  'sosyoloji',
+  'din_kulturu',
+] as const
+type TytSocialCategory = (typeof TYT_SOCIAL_CATEGORIES)[number]
+
+interface ActiveTytSocialMasteryContext {
+  policyVersion: string
+  taxonomyVersion: 'ba-tyt-sosyal-v1'
+  variant: 'questions_16_20' | 'questions_21_25'
+  selectionEventId: string
+  selectionEffectiveAt: string
+  allowedCategories: TytSocialCategory[]
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
+  const keys = Object.keys(value)
+  return keys.length === expected.length && keys.every((key) => expected.includes(key))
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+function parseActiveTytSocialMasteryContext(
+  value: unknown,
+): ActiveTytSocialMasteryContext | null {
+  if (!isRecord(value) || !hasOnlyKeys(value, [
+    'status',
+    'available',
+    'reason',
+    'policyVersion',
+    'taxonomyVersion',
+    'variant',
+    'selectionEventId',
+    'selectionEffectiveAt',
+    'allowedCategories',
+    'rebuildRequired',
+    'legacyAggregateUsed',
+  ])) return null
+  if (
+    value.status !== 'active'
+    || value.available !== true
+    || value.reason !== null
+    || typeof value.policyVersion !== 'string'
+    || !/^tyt-social-[0-9]{4}-v[0-9]+$/.test(value.policyVersion)
+    || value.taxonomyVersion !== 'ba-tyt-sosyal-v1'
+    || (value.variant !== 'questions_16_20' && value.variant !== 'questions_21_25')
+    || !isUuid(value.selectionEventId)
+    || typeof value.selectionEffectiveAt !== 'string'
+    || !Number.isFinite(Date.parse(value.selectionEffectiveAt))
+    || value.rebuildRequired !== false
+    || value.legacyAggregateUsed !== false
+    || !Array.isArray(value.allowedCategories)
+  ) return null
+
+  const allowedCategories = value.allowedCategories
+  if (
+    allowedCategories.some((category) => (
+      typeof category !== 'string'
+      || !TYT_SOCIAL_CATEGORIES.includes(category as TytSocialCategory)
+    ))
+    || new Set(allowedCategories).size !== allowedCategories.length
+  ) return null
+
+  const expected = value.variant === 'questions_16_20'
+    ? new Set<TytSocialCategory>(TYT_SOCIAL_CATEGORIES)
+    : new Set<TytSocialCategory>(['tarih', 'cografya', 'felsefe', 'sosyoloji'])
+  if (
+    allowedCategories.length !== expected.size
+    || allowedCategories.some((category) => !expected.has(category as TytSocialCategory))
+  ) return null
+
+  return {
+    policyVersion: value.policyVersion,
+    taxonomyVersion: value.taxonomyVersion,
+    variant: value.variant,
+    selectionEventId: value.selectionEventId,
+    selectionEffectiveAt: value.selectionEffectiveAt,
+    allowedCategories: allowedCategories as TytSocialCategory[],
+  }
+}
+
+function pruneCurriculumRowsForCategories(
+  nodes: NodeRow[],
+  outcomes: OutcomeRow[],
+  allowedCategories: readonly TytSocialCategory[],
+): { nodes: NodeRow[]; outcomes: OutcomeRow[] } {
+  const allowed = new Set<string>(allowedCategories)
+  const filteredOutcomes = outcomes.filter((outcome) => allowed.has(outcome.category))
+  const nodeById = new Map(nodes.map((node) => [node.id, node]))
+  const includedNodeIds = new Set(filteredOutcomes.map((outcome) => outcome.node_id).filter(Boolean) as string[])
+  for (const outcomeNodeId of [...includedNodeIds]) {
+    let current = nodeById.get(outcomeNodeId)
+    const visited = new Set<string>()
+    while (current?.parent_id) {
+      if (visited.has(current.id)) break
+      visited.add(current.id)
+      includedNodeIds.add(current.parent_id)
+      current = nodeById.get(current.parent_id)
+    }
+  }
+  return {
+    nodes: nodes.filter((node) => includedNodeIds.has(node.id)),
+    outcomes: filteredOutcomes,
+  }
 }
 
 type LegacyStateRow = Omit<StateRow, 'verified_evidence_days'>
@@ -200,6 +317,36 @@ export async function GET(request: NextRequest) {
       return noStoreJson({ game, examRef, coverage: unsupportedCoverage(), discovery: null, graph: null, outcomes: [] })
     }
 
+    const isTytSocialScope = isTytSocialV2LearnerEnabled()
+      && game === 'sosyal'
+      && examRef === 'TYT'
+    let tytSocialContext: ActiveTytSocialMasteryContext | null = null
+    if (isTytSocialScope) {
+      const contextResult = await callServiceRpc(
+        supabase,
+        'resolve_tyt_social_mastery_read_context',
+        { p_user_id: user.id },
+      )
+      tytSocialContext = contextResult.error
+        ? null
+        : parseActiveTytSocialMasteryContext(contextResult.data)
+      if (
+        !tytSocialContext
+        || scope.displayExamRef !== 'TYT'
+        || scope.questionExamRef !== 'TYT'
+        || tytSocialContext.taxonomyVersion !== scope.taxonomyVersion
+      ) {
+        return noStoreJson({
+          game,
+          examRef,
+          coverage: unsupportedCoverage(),
+          discovery: null,
+          graph: null,
+          outcomes: [],
+        })
+      }
+    }
+
     const nodeRequest = supabase
       .from('curriculum_nodes')
       .select('id, code, node_type, title, parent_id, sort_order')
@@ -234,7 +381,17 @@ export async function GET(request: NextRequest) {
     const integrity = parseMasteryScopeIntegrity(integrityResult.data)
     if (!isMasteryScopeIntegrityClean(integrity)) throw new Error('curriculum_integrity_failed')
 
-    const outcomes = (outcomeResult.data ?? []) as OutcomeRow[]
+    const scopedRows = tytSocialContext
+      ? pruneCurriculumRowsForCategories(
+        (nodeResult.data ?? []) as NodeRow[],
+        (outcomeResult.data ?? []) as OutcomeRow[],
+        tytSocialContext.allowedCategories,
+      )
+      : {
+        nodes: (nodeResult.data ?? []) as NodeRow[],
+        outcomes: (outcomeResult.data ?? []) as OutcomeRow[],
+      }
+    const outcomes = scopedRows.outcomes
     const outcomeIds = outcomes.map((outcome) => outcome.id)
     let diagnosticAvailable = false
     if (scope.diagnosticEnabled) {
@@ -263,7 +420,18 @@ export async function GET(request: NextRequest) {
     }
     const [stateResult, diagnosticStateResult] = outcomeIds.length > 0
       ? await Promise.all([
-        readMasteryStates(supabase, user.id, outcomeIds),
+        tytSocialContext
+          ? callServiceRpc(
+            supabase,
+            'read_tyt_social_mastery_outcome_state',
+            { p_user_id: user.id },
+          ).then((result): StateQueryResult => ({
+            data: !result.error && Array.isArray(result.data)
+              ? result.data as StateRow[]
+              : null,
+            error: result.error ?? (Array.isArray(result.data) ? null : { code: 'PGRST102' }),
+          }))
+          : readMasteryStates(supabase, user.id, outcomeIds),
         diagnosticAvailable
           ? supabase
             .from('user_diagnostic_outcome_state')
@@ -288,7 +456,7 @@ export async function GET(request: NextRequest) {
       game,
       examRef,
       coverage,
-      nodes: ((nodeResult.data ?? []) as NodeRow[]).map((node) => ({
+      nodes: scopedRows.nodes.map((node) => ({
         id: node.id,
         code: node.code,
         nodeType: node.node_type as CurriculumNodeType,

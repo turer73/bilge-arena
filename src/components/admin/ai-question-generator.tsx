@@ -44,6 +44,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
   const [manualOpts, setManualOpts] = useState(['', '', '', '', ''])
   const [manualAnswer, setManualAnswer] = useState(0)
   const [manualSolution, setManualSolution] = useState('')
+  const [manualProvenanceRef, setManualProvenanceRef] = useState('')
   const [manualSaving, setManualSaving] = useState(false)
 
   const gameDef = GAMES[game]
@@ -113,6 +114,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
     if (!manualQ || manualQ.length < 10) { toast.error('Soru en az 10 karakter olmalı'); return }
     if (manualOpts.some(o => !o.trim())) { toast.error('Tüm seçenekleri doldurun'); return }
     if (!manualSolution || manualSolution.length < 5) { toast.error('Çözüm en az 5 karakter olmalı'); return }
+    if (manualProvenanceRef.trim().length < 3) { toast.error('Kaynak/provenans referansı gerekli'); return }
 
     setManualSaving(true)
     try {
@@ -126,6 +128,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
           options: manualOpts,
           answer: manualAnswer,
           solution: manualSolution,
+          provenanceRef: manualProvenanceRef.trim(),
           ...(game === 'wordquest' ? { level_tag: levelTag } : {}),
           ...(governanceMode ? { outcomeId, requestId: crypto.randomUUID() } : {}),
         }),
@@ -138,6 +141,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
         setManualOpts(['', '', '', '', ''])
         setManualAnswer(0)
         setManualSolution('')
+        setManualProvenanceRef('')
         onGenerated?.()
       } else {
         toast.error(data.error || 'Kayıt başarısız')
@@ -407,9 +411,23 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                 />
               </div>
 
+              <div>
+                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]" htmlFor="manual-question-provenance">KAYNAK / PROVENANS REFERANSI</label>
+                <input
+                  id="manual-question-provenance"
+                  type="text"
+                  value={manualProvenanceRef}
+                  onChange={(event) => setManualProvenanceRef(event.target.value)}
+                  placeholder="Örn. editor-brief:2026-08-31-sosyal-01"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
+                  maxLength={500}
+                />
+                <p className="mt-1 text-[10px] text-[var(--text-sub)]">Sorunun hangi editör briefi, doküman veya doğrulanabilir üretim kaydından geldiğini yazın.</p>
+              </div>
+
               <button
                 onClick={handleManualSave}
-                disabled={manualSaving || !category || !manualQ || (governanceMode && !outcomeId)}
+                disabled={manualSaving || !category || !manualQ || manualProvenanceRef.trim().length < 3 || (governanceMode && !outcomeId)}
                 className="rounded-lg bg-[var(--growth)] px-6 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 {manualSaving ? 'Kaydediliyor...' : (governanceMode ? 'Taslak Oluştur' : 'Kaydet (Aktif)')}

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { GAMES, GAME_LIST, getCategoryLabel } from '@/lib/constants/games'
 import type { GameSlug } from '@/lib/constants/games'
@@ -8,6 +9,10 @@ import { shufflePublicOptionsWithMap } from '@/lib/utils/question'
 import { gradeQuestion } from '@/lib/questions/grade-question'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { isValidUuid } from '@/lib/utils/uuid'
+import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
+import { getTytSocialAllowedCategories } from '@/lib/exam-policy/tyt-social-contract'
+import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
+import { useAuthStore } from '@/stores/auth-store'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,7 +33,8 @@ interface ActiveQuiz {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'bilge-arena-fethet-v1'
+const LEGACY_STORAGE_KEY = 'bilge-arena-fethet-v1'
+const V2_STORAGE_KEY = 'bilge-arena-fethet-v2'
 const QUESTIONS_PER_CATEGORY = 3
 const PASS_THRESHOLD = 2   // Kaç doğru = fethedildi
 
@@ -40,25 +46,21 @@ const GAME_EMOJI: Record<string, string> = {
   wordquest: '🌐',
 }
 
-const ALL_CATEGORIES = GAME_LIST.flatMap((g) =>
-  g.categories.map((c) => `${g.slug}-${c}`)
-)
-
 // ─── localStorage helpers ─────────────────────────────────────────────────────
 
-function loadConquered(): Set<string> {
+function loadConquered(storageKey: string): Set<string> {
   if (typeof window === 'undefined') return new Set()
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(storageKey)
     return new Set(raw ? (JSON.parse(raw) as string[]) : [])
   } catch {
     return new Set()
   }
 }
 
-function saveConquered(s: Set<string>): void {
+function saveConquered(storageKey: string, s: Set<string>): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...s]))
+    localStorage.setItem(storageKey, JSON.stringify([...s]))
   } catch {}
 }
 
@@ -92,13 +94,34 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
   const color = gameConfig?.colorHex ?? 'var(--focus)'
 
   useEffect(() => {
+    const governedSocial = isTytSocialV2ClientEnabled() && game === 'sosyal'
     setLoading(true)
     setError(null)
     setAttemptId(null)
-    fetch(
-      `/api/questions?game=${game}&category=${category}&limit=${QUESTIONS_PER_CATEGORY}&active=true`
-    )
-      .then((r) => r.ok ? r.json() : Promise.reject(new Error('Soru alınamadı')))
+    const params = new URLSearchParams({
+      game,
+      category,
+      limit: String(QUESTIONS_PER_CATEGORY),
+    })
+    const endpoint = governedSocial
+      ? (() => {
+          params.set('mode', 'classic')
+          params.set('examRef', 'TYT')
+          return `/api/questions/random?${params.toString()}`
+        })()
+      : (() => {
+          params.set('active', 'true')
+          return `/api/questions?${params.toString()}`
+        })()
+
+    fetch(endpoint, { cache: 'no-store' })
+      .then((r) => {
+        if (r.ok) return r.json()
+        if (r.status === 409 && governedSocial) {
+          throw new Error('Önce Çalış sayfasında TYT Sosyal cevaplama düzenini seçmelisin.')
+        }
+        throw new Error('Soru alınamadı')
+      })
       .then((data: QuestionListResponse) => {
         const nextAttemptId = isValidUuid(data.attemptId)
           && typeof data.expiresAt === 'string'
@@ -114,8 +137,10 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
             const shuffled = shufflePublicOptionsWithMap(q.content)
             return { ...q, content: shuffled.content, optionMap: shuffled.map }
           })
-        if (qs.length === 0) {
-          setError('Bu kategori için henüz soru eklenmemiş.')
+        if (qs.length < QUESTIONS_PER_CATEGORY) {
+          setError(governedSocial
+            ? 'Bu kategori seçtiğin TYT Sosyal cevaplama düzeninde güvenilir bir fetih turu için yeterli soruya sahip değil.'
+            : 'Bu kategori için güvenilir bir fetih turuna yetecek soru yok.')
         } else {
           setQuestions(qs)
         }
@@ -216,6 +241,14 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
             <button onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm">
               Kapat
             </button>
+            {game === 'sosyal' && (
+              <Link
+                href="/arena/calisma"
+                className="text-xs font-bold text-[var(--focus)] underline underline-offset-2"
+              >
+                Çalış sayfasına git
+              </Link>
+            )}
           </div>
         )}
 
@@ -341,14 +374,55 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
 // ─── Ana Bileşen ──────────────────────────────────────────────────────────────
 
 export function FethetClient() {
+  const { user } = useAuthStore()
+  const learnerV2Enabled = isTytSocialV2ClientEnabled()
+  const socialPolicy = useTytSocialExamPolicy({ game: 'sosyal', examRef: 'TYT' })
+  const governedSocial = learnerV2Enabled && socialPolicy.eligible
+  const generalStorageKey = learnerV2Enabled
+    ? `${V2_STORAGE_KEY}:${user?.id ? `user:${user.id}` : 'guest'}`
+    : LEGACY_STORAGE_KEY
+  const socialPolicyKey = socialPolicy.status === 'active'
+    && governedSocial
+    && user?.id
+    && socialPolicy.policyVersion
+    && socialPolicy.selectionEffectiveAt
+    && socialPolicy.variantCode
+    ? `${user.id}:${socialPolicy.policyVersion}:${socialPolicy.selectionEffectiveAt}:${socialPolicy.variantCode}`
+    : null
+  const socialStorageKey = socialPolicyKey
+    ? `${V2_STORAGE_KEY}:social:${socialPolicyKey}`
+    : null
+  const socialCategories = governedSocial && socialPolicy.status === 'active'
+    && socialPolicy.policyVersion
+    && socialPolicy.variantCode
+    ? getTytSocialAllowedCategories(socialPolicy.policyVersion, socialPolicy.variantCode)
+    : []
+  const categoriesByGame = new Map(GAME_LIST.map((game) => [
+    game.slug,
+    game.slug === 'sosyal' && governedSocial ? socialCategories : game.categories,
+  ]))
+  const allCategories = GAME_LIST.flatMap((game) => (
+    (categoriesByGame.get(game.slug) ?? []).map((category) => `${game.slug}-${category}`)
+  ))
   const [conquered, setConquered] = useState<Set<string>>(new Set())
   const [active, setActive] = useState<ActiveQuiz | null>(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setConquered(loadConquered())
+    const allowed = new Set(allCategories)
+    const stored = new Set([
+      ...(governedSocial
+        ? [...loadConquered(generalStorageKey)].filter((category) => !category.startsWith('sosyal-'))
+        : loadConquered(generalStorageKey)),
+      ...(socialStorageKey ? loadConquered(socialStorageKey) : []),
+    ])
+    setConquered(new Set(
+      [...stored].filter((category) => allowed.has(category)),
+    ))
     setMounted(true)
-  }, [])
+  // allCategories is deterministically derived from the policy key.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generalStorageKey, socialStorageKey])
 
   const handleResult = useCallback((pass: boolean) => {
     if (!active) return
@@ -356,26 +430,35 @@ export function FethetClient() {
       setConquered((prev) => {
         const next = new Set(prev)
         next.add(`${active.game}-${active.category}`)
-        saveConquered(next)
+        saveConquered(generalStorageKey, governedSocial
+          ? new Set([...next].filter((category) => !category.startsWith('sosyal-')))
+          : next)
+        if (socialStorageKey) {
+          saveConquered(socialStorageKey, new Set(
+            [...next].filter((category) => category.startsWith('sosyal-')),
+          ))
+        }
         return next
       })
     }
-  }, [active])
+  }, [active, generalStorageKey, governedSocial, socialStorageKey])
 
   const handleClose = useCallback(() => {
     setActive(null)
   }, [])
 
   const conqueredCount = conquered.size
-  const totalCount = ALL_CATEGORIES.length
+  const totalCount = allCategories.length
   const progress = totalCount > 0 ? (conqueredCount / totalCount) * 100 : 0
-  const allDone = conqueredCount >= totalCount
+  const allDone = (governedSocial ? socialPolicy.status === 'active' : true)
+    && conqueredCount >= totalCount
 
   const handleReset = () => {
     if (!confirm('Tüm ilerlemeniz sıfırlanacak. Emin misiniz?')) return
     const empty = new Set<string>()
     setConquered(empty)
-    saveConquered(empty)
+    saveConquered(generalStorageKey, empty)
+    if (socialStorageKey) saveConquered(socialStorageKey, empty)
   }
 
   return (
@@ -421,7 +504,8 @@ export function FethetClient() {
       <div className="space-y-6">
         {GAME_LIST.map((game) => {
           const slug = game.slug as GameSlug
-          const gameConquered = game.categories.filter(
+          const visibleCategories = categoriesByGame.get(game.slug) ?? []
+          const gameConquered = visibleCategories.filter(
             (c) => conquered.has(`${slug}-${c}`)
           ).length
 
@@ -441,22 +525,39 @@ export function FethetClient() {
                   className="rounded-full px-2 py-0.5 text-[9px] font-bold"
                   style={{
                     background:
-                      gameConquered === game.categories.length
+                      visibleCategories.length > 0 && gameConquered === visibleCategories.length
                         ? 'var(--growth-bg)'
                         : 'var(--bg-secondary)',
                     color:
-                      gameConquered === game.categories.length
+                      visibleCategories.length > 0 && gameConquered === visibleCategories.length
                         ? 'var(--growth)'
                         : 'var(--text-muted)',
                   }}
                 >
-                  {gameConquered}/{game.categories.length}
+                  {gameConquered}/{visibleCategories.length}
                 </span>
               </div>
 
               {/* Kategori kartları */}
               <div className="flex flex-wrap gap-2">
-                {game.categories.map((cat) => {
+                {slug === 'sosyal' && governedSocial && socialPolicy.status !== 'active' && (
+                  <div className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3 text-xs text-[var(--text-sub)]">
+                    <p className="font-semibold">
+                      {socialPolicy.loading
+                        ? 'TYT Sosyal cevaplama düzenin kontrol ediliyor…'
+                        : 'Sosyal fetih haritası, cevaplama düzenini seçtikten sonra açılır.'}
+                    </p>
+                    {!socialPolicy.loading && (
+                      <Link
+                        href="/arena/calisma"
+                        className="mt-2 inline-block font-bold text-[var(--focus)] underline underline-offset-2"
+                      >
+                        Çalış sayfasında düzeni seç
+                      </Link>
+                    )}
+                  </div>
+                )}
+                {visibleCategories.map((cat) => {
                   const key = `${slug}-${cat}`
                   const isConquered = mounted && conquered.has(key)
                   const isActive = active?.game === slug && active?.category === cat

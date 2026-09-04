@@ -40,6 +40,8 @@ export interface TopicProgressState {
   currentIndex: number
   completedCount: number
   loading: boolean
+  /** API bu kapsam icin karar-guvenli ilerleme yayinliyor mu? */
+  available: boolean | null
   /** Ilerleme gercek veriden mi geldi (misafir/hata durumunda false). */
   hasProgress: boolean
 }
@@ -47,6 +49,7 @@ export interface TopicProgressState {
 interface TopicRequestState {
   key: string | null
   rows: TopicStrengthRow[] | null
+  available: boolean | null
 }
 
 export function useTopicProgress(
@@ -55,7 +58,11 @@ export function useTopicProgress(
   examRef?: string | null,
 ): TopicProgressState {
   const requestKey = game && userId ? `${game}:${userId}:${examRef ?? 'all'}` : null
-  const [request, setRequest] = useState<TopicRequestState>({ key: null, rows: null })
+  const [request, setRequest] = useState<TopicRequestState>({
+    key: null,
+    rows: null,
+    available: null,
+  })
 
   useEffect(() => {
     if (!game || !userId || !requestKey) return
@@ -67,23 +74,37 @@ export function useTopicProgress(
       cache: 'no-store',
       signal: controller.signal,
     })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((body: { topics?: TopicStrengthRow[] } | null) => {
+      .then((response) => {
+        if (!response.ok) throw new Error('topic progress unavailable')
+        return response.json().catch(() => null)
+      })
+      .then((body: { topics?: TopicStrengthRow[]; available?: boolean } | null) => {
         if (controller.signal.aborted) return
-        setRequest({ key: requestKey, rows: Array.isArray(body?.topics) ? body.topics : [] })
+        const available = body === null ? null : body.available !== false
+        setRequest({
+          key: requestKey,
+          rows: body !== null && available === true && Array.isArray(body.topics)
+            ? body.topics
+            : [],
+          available,
+        })
       })
       .catch(() => {
         // Ilerleme opsiyonel: hata halinde yol "hic baslanmadi" olarak cizilir.
         if (controller.signal.aborted) return
-        setRequest({ key: requestKey, rows: null })
+        setRequest({ key: requestKey, rows: null, available: null })
       })
 
     return () => controller.abort()
   }, [examRef, game, requestKey, userId])
 
   return useMemo(() => {
-    const categories = game ? getCategoriesForExam(game, examRef) : []
-    const rows = requestKey && request.key === requestKey ? request.rows : null
+    const currentRequest = requestKey && request.key === requestKey ? request : null
+    const available = requestKey ? currentRequest?.available ?? null : null
+    const categories = available === false
+      ? []
+      : game ? getCategoriesForExam(game, examRef) : []
+    const rows = currentRequest?.rows ?? null
     const byCategory = new Map<string, TopicStrengthRow>()
     for (const row of rows ?? []) {
       if (typeof row?.category === 'string') byCategory.set(row.category, row)
@@ -108,6 +129,7 @@ export function useTopicProgress(
       currentIndex: firstUnfinished,
       completedCount: topics.filter((topic) => topic.completed).length,
       loading: Boolean(requestKey && request.key !== requestKey),
+      available,
       hasProgress: byCategory.size > 0,
     }
   }, [examRef, game, request, requestKey])

@@ -6,6 +6,7 @@ import { stripRichText } from '@/lib/utils/rich-text'
 import { ContentGovernancePanel } from '@/components/admin/content-governance-panel'
 import { ValidationVerdictPanel } from '@/components/admin/validation-verdict-panel'
 import { ContentAppealsPanel } from '@/components/admin/content-appeals-panel'
+import { TytSocialReleaseOperationsPanel } from '@/components/admin/tyt-social-release-operations-panel'
 
 // #378 Tier 2: gercek cevap verisinden dusuk-basarili ("production drift")
 // sorulari + bekleyen kullanici raporlarini tek triage kuyrugunda gosterir.
@@ -111,6 +112,7 @@ export default function AdminQuestionQualityPage() {
       </div>
 
       <ValidationVerdictPanel />
+      <TytSocialReleaseOperationsPanel />
       <ContentGovernancePanel />
       <ContentAppealsPanel />
 

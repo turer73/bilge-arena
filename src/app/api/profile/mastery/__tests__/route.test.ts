@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   mockGetUser,
@@ -11,6 +11,8 @@ const {
   mockDiagnosticScopeResult,
   mockScopeResult,
   mockIntegrityResult,
+  mockSocialContextResult,
+  mockSocialStateResult,
   mockFrom,
   mockRpc,
   mockEq,
@@ -26,6 +28,8 @@ const {
   mockDiagnosticScopeResult: vi.fn(),
   mockScopeResult: vi.fn(),
   mockIntegrityResult: vi.fn(),
+  mockSocialContextResult: vi.fn(),
+  mockSocialStateResult: vi.fn(),
   mockFrom: vi.fn(),
   mockRpc: vi.fn(),
   mockEq: vi.fn(),
@@ -72,6 +76,8 @@ vi.mock('@/lib/supabase/service-role', () => ({
       if (name === 'resolve_released_curriculum_scope') return Promise.resolve(mockScopeResult())
       if (name === 'resolve_released_diagnostic_scope') return Promise.resolve(mockDiagnosticScopeResult())
       if (name === 'curriculum_scope_integrity') return Promise.resolve(mockIntegrityResult())
+      if (name === 'resolve_tyt_social_mastery_read_context') return Promise.resolve(mockSocialContextResult())
+      if (name === 'read_tyt_social_mastery_outcome_state') return Promise.resolve(mockSocialStateResult())
       throw new Error(`unexpected rpc: ${name}`)
     }),
   })),
@@ -85,6 +91,14 @@ const COURSE_ID = '10000000-0000-4000-8000-000000000001'
 const UNIT_ID = '10000000-0000-4000-8000-000000000002'
 const TOPIC_ID = '10000000-0000-4000-8000-000000000003'
 const LEAF_ID = '10000000-0000-4000-8000-000000000004'
+const SOCIAL_PHILOSOPHY_OUTCOME_ID = '20000000-0000-4000-8000-000000000001'
+const SOCIAL_RELIGION_OUTCOME_ID = '20000000-0000-4000-8000-000000000002'
+const SOCIAL_COURSE_ID = '20000000-0000-4000-8000-000000000003'
+const SOCIAL_UNIT_ID = '20000000-0000-4000-8000-000000000004'
+const SOCIAL_TOPIC_ID = '20000000-0000-4000-8000-000000000005'
+const SOCIAL_PHILOSOPHY_LEAF_ID = '20000000-0000-4000-8000-000000000006'
+const SOCIAL_RELIGION_LEAF_ID = '20000000-0000-4000-8000-000000000007'
+const SOCIAL_EVENT_ID = '20000000-0000-4000-8000-000000000008'
 
 const NODES = [
   { id: COURSE_ID, code: 'course', node_type: 'course', title: 'TYT Matematik', parent_id: null, sort_order: 1 },
@@ -117,6 +131,36 @@ const FEN_OUTCOMES = [{
   title: 'Fiziksel akıl yürütme becerisi',
 }]
 
+const SOCIAL_NODES = [
+  { id: SOCIAL_COURSE_ID, code: 'social-course', node_type: 'course', title: 'TYT Sosyal', parent_id: null, sort_order: 1 },
+  { id: SOCIAL_UNIT_ID, code: 'social-unit', node_type: 'unit', title: 'Sosyal Bilimler', parent_id: SOCIAL_COURSE_ID, sort_order: 1 },
+  { id: SOCIAL_TOPIC_ID, code: 'social-topic', node_type: 'topic', title: 'Felsefe ve Din', parent_id: SOCIAL_UNIT_ID, sort_order: 1 },
+  { id: SOCIAL_PHILOSOPHY_LEAF_ID, code: 'social-philosophy-leaf', node_type: 'outcome', title: 'Felsefi düşünme', parent_id: SOCIAL_TOPIC_ID, sort_order: 1 },
+  { id: SOCIAL_RELIGION_LEAF_ID, code: 'social-religion-leaf', node_type: 'outcome', title: 'Din kültürü', parent_id: SOCIAL_TOPIC_ID, sort_order: 2 },
+]
+const SOCIAL_OUTCOMES = [
+  {
+    id: SOCIAL_PHILOSOPHY_OUTCOME_ID,
+    node_id: SOCIAL_PHILOSOPHY_LEAF_ID,
+    code: 'SOS-FEL-01',
+    game: 'sosyal',
+    category: 'felsefe',
+    title: 'Felsefi düşünme becerisi',
+    description: 'Bilge Arena iç öğrenme grafiği',
+    exam_ref: 'TYT',
+  },
+  {
+    id: SOCIAL_RELIGION_OUTCOME_ID,
+    node_id: SOCIAL_RELIGION_LEAF_ID,
+    code: 'SOS-DIN-01',
+    game: 'sosyal',
+    category: 'din_kulturu',
+    title: 'Din kültürü bilgisi',
+    description: 'Bilge Arena iç öğrenme grafiği',
+    exam_ref: 'TYT',
+  },
+]
+
 function request(query = 'game=matematik&exam_ref=TYT') {
   return new Request(`http://localhost/api/profile/mastery?${query}`, {
     headers: { 'x-forwarded-for': '1.2.3.4' },
@@ -124,8 +168,12 @@ function request(query = 'game=matematik&exam_ref=TYT') {
 }
 
 describe('GET /api/profile/mastery', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     mockGetUser.mockResolvedValue({ data: { user: null } })
     mockIpCheck.mockResolvedValue({ success: true, retryAfter: 0 })
     mockUserCheck.mockResolvedValue({ success: true, retryAfter: 0 })
@@ -159,6 +207,23 @@ describe('GET /api/profile/mastery', () => {
       },
       error: null,
     })
+    mockSocialContextResult.mockReturnValue({
+      data: {
+        status: 'active',
+        available: true,
+        reason: null,
+        policyVersion: 'tyt-social-2026-v1',
+        taxonomyVersion: 'ba-tyt-sosyal-v1',
+        variant: 'questions_16_20',
+        selectionEventId: SOCIAL_EVENT_ID,
+        selectionEffectiveAt: '2026-08-31T08:00:00.000Z',
+        allowedCategories: ['cografya', 'din_kulturu', 'felsefe', 'sosyoloji', 'tarih'],
+        rebuildRequired: false,
+        legacyAggregateUsed: false,
+      },
+      error: null,
+    })
+    mockSocialStateResult.mockReturnValue({ data: [], error: null })
   })
 
   it('auth yoksa 401 doner', async () => {
@@ -402,6 +467,120 @@ describe('GET /api/profile/mastery', () => {
     expect(mockEq).toHaveBeenCalledWith('curriculum_nodes', 'taxonomy_version', 'ba-tyt-fen-v1')
     expect(mockEq).toHaveBeenCalledWith('curriculum_outcomes', 'taxonomy_version', 'ba-tyt-fen-v1')
     expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
+  })
+
+  it('TYT Sosyal alternatif varyantinda Din outcomeunu budar ve genel aggregatei okumaz', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValue({
+      data: {
+        game: 'sosyal', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-sosyal-v1', mappingMode: 'category_proxy',
+        diagnosticEnabled: false,
+      },
+      error: null,
+    })
+    mockNodeResult.mockReturnValue({ data: SOCIAL_NODES, error: null })
+    mockOutcomeResult.mockReturnValue({ data: SOCIAL_OUTCOMES, error: null })
+    mockIntegrityResult.mockReturnValue({
+      data: {
+        total: 2, mapped: 2, unmapped: 0, scopeMismatch: 0,
+        nodeOrphan: 0, outcomeOrphan: 0, primaryMismatch: 0, emptyOutcome: 0,
+      },
+      error: null,
+    })
+    mockSocialContextResult.mockReturnValue({
+      data: {
+        status: 'active', available: true, reason: null,
+        policyVersion: 'tyt-social-2026-v1',
+        taxonomyVersion: 'ba-tyt-sosyal-v1',
+        variant: 'questions_21_25',
+        selectionEventId: SOCIAL_EVENT_ID,
+        selectionEffectiveAt: '2026-08-31T08:00:00.000Z',
+        allowedCategories: ['cografya', 'felsefe', 'sosyoloji', 'tarih'],
+        rebuildRequired: false, legacyAggregateUsed: false,
+      },
+      error: null,
+    })
+    mockSocialStateResult.mockReturnValue({
+      data: [{
+        outcome_id: SOCIAL_PHILOSOPHY_OUTCOME_ID,
+        attempts: 1, correct_attempts: 1,
+        weighted_earned: '1.000', weighted_possible: '1.000', delayed_correct: 0,
+        v2_attempts: 1, difficulty_weighted_earned: '2.000',
+        difficulty_weighted_possible: '2.000', timed_attempts: 1,
+        total_time_sec: '20.000', fast_wrong: 0, hinted_attempts: 0,
+        hint_stage_sum: 0, guess_annotations: 0, careless_annotations: 0,
+        verified_evidence_days: 1, last_answered_at: '2026-08-31T08:30:00.000Z',
+      }],
+      error: null,
+    })
+
+    const response = await GET(request('game=sosyal&exam_ref=TYT') as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.coverage).toMatchObject({
+      supported: true, diagnosticAvailable: false,
+      taxonomyVersion: 'ba-tyt-sosyal-v1',
+    })
+    expect(body.outcomes).toHaveLength(1)
+    expect(body.outcomes[0]).toMatchObject({ code: 'SOS-FEL-01', category: 'felsefe' })
+    expect(JSON.stringify(body)).not.toContain('SOS-DIN-01')
+    expect(JSON.stringify(body)).not.toContain('questions_21_25')
+    expect(JSON.stringify(body)).not.toContain(SOCIAL_EVENT_ID)
+    expect(mockRpc).toHaveBeenCalledWith('resolve_tyt_social_mastery_read_context', {
+      p_user_id: USER_ID,
+    })
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', {
+      p_user_id: USER_ID,
+    })
+    expect(mockFrom).not.toHaveBeenCalledWith('user_outcome_state')
+    expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
+  })
+
+  it('TYT Sosyal setup ve unavailable contextlerinde ayrinti sizdirmadan fail-closed kalir', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+    mockScopeResult.mockReturnValue({
+      data: {
+        game: 'sosyal', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-sosyal-v1', mappingMode: 'category_proxy',
+        diagnosticEnabled: false,
+      },
+      error: null,
+    })
+    mockSocialContextResult
+      .mockReturnValueOnce({
+        data: {
+          status: 'setup_required', available: false, reason: 'selection-required',
+          policyVersion: 'tyt-social-2026-v1', taxonomyVersion: 'ba-tyt-sosyal-v1',
+          variant: null, selectionEventId: null, selectionEffectiveAt: null,
+          allowedCategories: [], rebuildRequired: false, legacyAggregateUsed: false,
+        },
+        error: null,
+      })
+      .mockReturnValueOnce({ data: null, error: { code: 'PGRST202' } })
+
+    for (let index = 0; index < 2; index += 1) {
+      const response = await GET(request('game=sosyal&exam_ref=TYT') as never)
+      const body = await response.json()
+      expect(response.status).toBe(200)
+      expect(body).toEqual({
+        game: 'sosyal', examRef: 'TYT',
+        coverage: {
+          supported: false, diagnosticAvailable: false, taxonomyVersion: null,
+          totalQuestions: 0, mappedQuestions: 0, percentage: 0,
+        },
+        discovery: null, graph: null, outcomes: [],
+      })
+      const serialized = JSON.stringify(body)
+      expect(serialized).not.toContain('selection-required')
+      expect(serialized).not.toContain('questions_')
+      expect(serialized).not.toContain(SOCIAL_EVENT_ID)
+    }
+    expect(mockFrom).not.toHaveBeenCalled()
+    expect(mockRpc.mock.calls.filter(([name]) => (
+      name === 'read_tyt_social_mastery_outcome_state'
+    ))).toHaveLength(0)
   })
 
   it('V3 resolver exact Fen blueprintini yayinladiginda on soruluk baslangic taramasini acar', async () => {

@@ -93,8 +93,24 @@ export function getCategoriesForExam(game: GameSlug, examRef: string | null | un
 
 /** Normalize explicit legacy request aliases before they reach database filters. */
 export function normalizeCategoryAlias(game: GameSlug, category: string | null): string | null {
-  if (game === 'sosyal' && category === 'din') return 'din_kulturu'
-  return category
+  const normalized = category?.trim().toLowerCase() || null
+  if (game === 'sosyal' && normalized === 'din') return 'din_kulturu'
+  return normalized
+}
+
+/**
+ * Canonicalize and validate one explicit category inside its exact exam scope.
+ * Returning null for an invalid supplied value lets callers reject it before a
+ * missing filter accidentally broadens a database query.
+ */
+export function normalizeCategoryForExam(
+  game: GameSlug,
+  examRef: string | null | undefined,
+  category: string | null,
+): string | null {
+  const normalized = normalizeCategoryAlias(game, category)
+  if (!normalized) return null
+  return getCategoriesForExam(game, examRef).includes(normalized) ? normalized : null
 }
 
 /**
