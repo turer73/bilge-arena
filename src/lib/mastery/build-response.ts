@@ -3,7 +3,7 @@ import {
   indexPublicCurriculumLeaves,
   type CurriculumNodeInput,
 } from './graph'
-import { summarizeMasteryEvidenceV2 } from './evidence-v2'
+import { summarizeLearningStatus } from './learning-status'
 import { buildMasteryDiscovery } from './discovery'
 import type { MasteryCoveragePublic, MasteryMapResponsePublic } from './public-contract'
 
@@ -76,8 +76,7 @@ export function buildMasteryMapResponse({
     const state = stateByOutcome.get(outcome.id)
     const weightedEarned = Number(state?.weightedEarned ?? 0)
     const weightedPossible = Number(state?.weightedPossible ?? 0)
-    const verifiedEvidenceDaysRaw = Number(state?.verifiedEvidenceDays ?? 0)
-    const summary = summarizeMasteryEvidenceV2({
+    const publicSummary = summarizeLearningStatus({
       attempts: Number(state?.attempts ?? 0),
       correctAttempts: Number(state?.correctAttempts ?? 0),
       weightedEarned,
@@ -93,31 +92,8 @@ export function buildMasteryMapResponse({
       hintStageSum: Number(state?.hintStageSum ?? 0),
       guessAnnotations: Number(state?.guessAnnotations ?? 0),
       carelessAnnotations: Number(state?.carelessAnnotations ?? 0),
+      verifiedEvidenceDays: Number(state?.verifiedEvidenceDays ?? 0),
     })
-    const verifiedEvidenceDays = Number.isSafeInteger(verifiedEvidenceDaysRaw)
-      && verifiedEvidenceDaysRaw >= 0
-      && verifiedEvidenceDaysRaw <= summary.attempts
-      ? verifiedEvidenceDaysRaw
-      : 0
-    // A burst of answers on one day does not satisfy the product's minimum
-    // distinct-day gate. Keep factual counters, but do not publish a level or
-    // score before three Europe/Istanbul calendar days. This gate alone is not
-    // a claim of psychometric reliability or a minimum elapsed-time interval.
-    const hasMinimumDaySpread = verifiedEvidenceDays >= 3
-    const publicSummary = hasMinimumDaySpread
-      ? summary
-      : {
-          ...summary,
-          evidenceCompleteness: Math.round((verifiedEvidenceDays / 3) * 100),
-          score: 0,
-          status: 'insufficient' as const,
-          components: {
-            accuracy: 0,
-            delayedRetrieval: 0,
-            independence: 0,
-            selfRegulation: 0,
-          },
-        }
     return {
       sortOrder: leaf.order,
       value: {
@@ -133,7 +109,6 @@ export function buildMasteryMapResponse({
         weightedEarned: Math.max(0, Number.isFinite(weightedEarned) ? weightedEarned : 0),
         weightedPossible: Math.max(0, Number.isFinite(weightedPossible) ? weightedPossible : 0),
         accuracy: publicSummary.rawAccuracy,
-        verifiedEvidenceDays,
         lastAnsweredAt: state?.lastAnsweredAt ?? null,
       },
     }

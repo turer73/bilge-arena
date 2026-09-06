@@ -48,6 +48,9 @@ const institutionProgramReviewRecordBaseSchema=z.object({
 
 export const institutionProgramReviewMutationSchema=institutionProgramReviewRecordBaseSchema.extend({
   replayed:z.boolean(),
+  // Optional only for a rolling deployment / historical idempotency response.
+  // Absence must never be interpreted as proof that all tasks are complete.
+  programStatus:z.enum(['published','completed']).optional(),
 }).strict()
 
 export const institutionProgramReviewInputSchema=z.object({
@@ -66,7 +69,7 @@ const institutionStudentProgramHistoryItemSchema=z.object({
     reviewEligible:z.boolean(),
     review:institutionProgramReviewRecordBaseSchema.nullable(),
   }).strict().superRefine((value,context)=>{
-    if((value.status==='completed')!==Boolean(value.review)){
+    if(value.status==='completed' && !value.review){
       context.addIssue({code:'custom',message:'program review history mismatch'})
     }
   })

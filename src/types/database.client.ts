@@ -504,6 +504,18 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
         Args: { p_user_id: string; p_question_ids: string[] }
         Returns: Json
       }
+      // Migration 208: service-only, selection-bound read contracts. These
+      // must not be replaced with the legacy user_outcome_state aggregate.
+      resolve_tyt_social_mastery_read_context: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      read_tyt_social_mastery_outcome_state: {
+        Args: { p_user_id: string }
+        Returns: Array<UserOutcomeStateV2Columns & Pick<UserOutcomeState['Row'],
+          'outcome_id' | 'attempts' | 'correct_attempts' | 'weighted_earned'
+          | 'weighted_possible' | 'delayed_correct' | 'last_answered_at'>>
+      }
       issue_verified_tyt_social_attempt: {
         Args: {
           p_user_id: string

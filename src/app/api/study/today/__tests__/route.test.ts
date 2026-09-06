@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
+import type { MasteryStateRow } from '@/lib/mastery/state-row'
 
 const {
   mockGetUser,
@@ -204,6 +205,98 @@ function installCreateRpcSuccess() {
   })
 }
 
+function makeMasteryState(outcomeId: string, overrides: Partial<MasteryStateRow> = {}): MasteryStateRow {
+  return {
+    outcome_id: outcomeId, attempts: 5, correct_attempts: 4,
+    weighted_earned: '4.000', weighted_possible: '5.000', delayed_correct: 1,
+    v2_attempts: 5, difficulty_weighted_earned: '12.000', difficulty_weighted_possible: '15.000',
+    timed_attempts: 5, total_time_sec: '150.000', fast_wrong: 0, hinted_attempts: 0,
+    hint_stage_sum: '0.000', guess_annotations: 0, careless_annotations: 0,
+    verified_evidence_days: 3, last_answered_at: '2026-08-31T09:00:00.000Z',
+    ...overrides,
+  }
+}
+
+const SOCIAL_PHILOSOPHY_OUTCOME = uid(950)
+const SOCIAL_RELIGION_OUTCOME = uid(951)
+const SOCIAL_SELECTION_EVENT = uid(952)
+
+function socialContext(overrides: Record<string, unknown> = {}) {
+  return {
+    status: 'active', available: true, reason: null,
+    policyVersion: 'tyt-social-2026-v1', taxonomyVersion: 'ba-tyt-sosyal-v1',
+    variant: 'questions_21_25', selectionEventId: SOCIAL_SELECTION_EVENT,
+    selectionEffectiveAt: '2026-08-31T08:00:00.000Z',
+    allowedCategories: ['tarih', 'cografya', 'felsefe', 'sosyoloji'],
+    rebuildRequired: false, legacyAggregateUsed: false,
+    ...overrides,
+  }
+}
+
+function installScopedSocialFixture(options: {
+  contextResult?: { data: unknown; error: unknown }
+  stateResult?: { data: unknown; error: unknown }
+} = {}) {
+  vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+  vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
+  const philosophyQuestions = [uid(960), uid(961), uid(962)].map(id => makeQuestionRow(id, {
+    game: 'sosyal', category: 'felsefe', difficulty: 3,
+  }))
+  const religionQuestion = makeQuestionRow(uid(963), { game: 'sosyal', category: 'din_kulturu', difficulty: 3 })
+  tableMocks.questions.push({ data: [...philosophyQuestions, religionQuestion] })
+  tableMocks.questions.push({ data: philosophyQuestions })
+  tableMocks.curriculum_outcomes.push({ data: [
+    { id: SOCIAL_PHILOSOPHY_OUTCOME, code: 'SOS-FEL-PRIVATE-REF', category: 'felsefe', sort_order: 1 },
+    { id: SOCIAL_RELIGION_OUTCOME, code: 'SOS-DIN-PRIVATE-REF', category: 'din_kulturu', sort_order: 2 },
+  ] })
+  tableMocks.question_outcomes.push({ data: [
+    ...philosophyQuestions.map(question => ({ question_id: question.id, outcome_id: SOCIAL_PHILOSOPHY_OUTCOME })),
+    { question_id: religionQuestion.id, outcome_id: SOCIAL_RELIGION_OUTCOME },
+  ] })
+  mockFilterTytSocialQuestionIds.mockResolvedValue(philosophyQuestions.map(question => question.id))
+  const defaultState = makeMasteryState(SOCIAL_PHILOSOPHY_OUTCOME, {
+    correct_attempts: 2, weighted_earned: '2', delayed_correct: 0,
+    difficulty_weighted_earned: '6',
+  })
+  mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+    if (name === 'resolve_released_curriculum_scope') return {
+      data: {
+        game: 'sosyal', displayExamRef: 'TYT', questionExamRef: 'TYT',
+        taxonomyVersion: 'ba-tyt-sosyal-v1', mappingMode: 'category_proxy', diagnosticEnabled: false,
+      },
+      error: null,
+    }
+    if (name === 'curriculum_scope_integrity') return cleanScopeIntegrity()
+    if (name === 'resolve_tyt_social_mastery_read_context') {
+      return options.contextResult ?? { data: socialContext(), error: null }
+    }
+    if (name === 'read_tyt_social_mastery_outcome_state') {
+      return options.stateResult ?? { data: [defaultState], error: null }
+    }
+    if (name !== 'create_tyt_social_daily_plan_v2') throw new Error(`unexpected RPC: ${name}`)
+    const items = args.p_items as Array<Record<string, unknown>>
+    return {
+      data: {
+        planId: uid(964), game: 'sosyal', planDate: args.p_plan_date, examRef: 'TYT',
+        questionIds: items.map(item => item.question_id), completedIds: [],
+        items: items.map(item => ({
+          questionId: item.question_id, position: item.position, slotType: item.slot_type,
+          sourceType: item.source_type, sourceRef: item.source_ref, completed: false,
+        })),
+      },
+      error: null,
+    }
+  })
+  return { philosophyQuestions, religionQuestion }
+}
+
+function assertNoPlanIssuance() {
+  expect(mockRpc.mock.calls.some(([name]) => (
+    name === 'create_daily_plan_v2' || name === 'create_tyt_social_daily_plan_v2'
+  ))).toBe(false)
+  expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   for (const mock of Object.values(tableMocks)) mock.reset()
@@ -308,6 +401,8 @@ describe('GET /api/study/today', () => {
   })
 
   it('mevcut TYT Sosyal planını güncel seçimle yeniden filtrelemeden donmuş plan olayıyla başlatır', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+    vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
     const planId = uid(805)
     const questionIds = [uid(20), uid(21)]
     tableMocks.daily_plan.push({
@@ -328,6 +423,8 @@ describe('GET /api/study/today', () => {
 
     expect(response.status).toBe(200)
     expect(mockFilterTytSocialQuestionIds).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
+    expect(tableMocks.user_outcome_state.calls).toHaveLength(0)
     expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
@@ -676,6 +773,162 @@ describe('GET /api/study/today', () => {
     expect(response.status).toBe(500)
     expect(await response.json()).toEqual({ error: 'Plan baslatilamadi' })
     expect(response.headers.get('Cache-Control')).toBe('no-store')
+  })
+})
+
+describe('GET /api/study/today ortak V2 kanit siniri', () => {
+  it.each([
+    { label: 'bir gun', state: { verified_evidence_days: 1 } },
+    { label: 'iki gun', state: { verified_evidence_days: 2 } },
+    { label: 'derin ipucu', state: { hinted_attempts: 5, hint_stage_sum: '20' } },
+  ])('V1 mastered olsa da $label kanitini weak_outcome havuzundan dusurmez', async ({ state }) => {
+    const outcomeId = uid(970)
+    const question = makeQuestionRow(uid(971), { difficulty: 3 })
+    tableMocks.questions.push({ data: [question] })
+    tableMocks.questions.push({ data: [question] })
+    tableMocks.curriculum_outcomes.push({ data: [
+      { id: outcomeId, code: 'MAT-EVIDENCE', category: 'sayilar', sort_order: 1 },
+    ] })
+    tableMocks.user_outcome_state.push({ data: [makeMasteryState(outcomeId, state)] })
+    tableMocks.question_outcomes.push({ data: [{ question_id: question.id, outcome_id: outcomeId }] })
+    installCreateRpcSuccess()
+
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+
+    expect(response.status).toBe(200)
+    const createCall = mockRpc.mock.calls.find(([name]) => name === 'create_daily_plan_v2')
+    expect(createCall?.[1].p_items).toEqual([
+      expect.objectContaining({ question_id: question.id, source_type: 'weak_outcome', source_ref: 'MAT-EVIDENCE' }),
+    ])
+    const stateCall = tableMocks.user_outcome_state.calls[0]
+    expect(stateCall.methods).toContainEqual({ name: 'eq', args: ['user_id', U1] })
+    expect(stateCall.methods).toContainEqual({ name: 'in', args: ['outcome_id', [outcomeId]] })
+    expect(stateCall.methods).toContainEqual({ name: 'limit', args: [200] })
+    const columns = String(stateCall.methods.find(method => method.name === 'select')?.args[0]).split(',').map(column => column.trim())
+    expect(columns).toEqual([
+      'outcome_id', 'attempts', 'correct_attempts', 'weighted_earned', 'weighted_possible',
+      'delayed_correct', 'v2_attempts', 'difficulty_weighted_earned', 'difficulty_weighted_possible',
+      'timed_attempts', 'total_time_sec', 'fast_wrong', 'hinted_attempts', 'hint_stage_sum',
+      'guess_annotations', 'careless_annotations', 'verified_evidence_days', 'last_answered_at',
+    ])
+    expect(tableMocks.curriculum_outcomes.calls[0].methods).toEqual(expect.arrayContaining([
+      { name: 'eq', args: ['game', 'matematik'] },
+      { name: 'eq', args: ['exam_ref', 'TYT'] },
+      { name: 'eq', args: ['taxonomy_version', 'ba-tyt-math-v1'] },
+    ]))
+  })
+
+  it('guclu V2 kazanimi ham dogruluk dusuk diye weak/current olarak etiketlemez', async () => {
+    const outcomeId = uid(975)
+    const question = makeQuestionRow(uid(976), { difficulty: 3 })
+    tableMocks.questions.push({ data: [question] })
+    tableMocks.questions.push({ data: [question] })
+    tableMocks.curriculum_outcomes.push({ data: [
+      { id: outcomeId, code: 'MAT-MASTERED', category: 'sayilar', sort_order: 1 },
+    ] })
+    tableMocks.user_outcome_state.push({ data: [makeMasteryState(outcomeId, {
+      correct_attempts: 3, weighted_earned: '3', difficulty_weighted_earned: '15', difficulty_weighted_possible: '17',
+    })] })
+    tableMocks.question_outcomes.push({ data: [{ question_id: question.id, outcome_id: outcomeId }] })
+    installCreateRpcSuccess()
+
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+
+    expect(response.status).toBe(200)
+    expect(mockRpc.mock.calls.find(([name]) => name === 'create_daily_plan_v2')?.[1].p_items).toEqual([
+      expect.objectContaining({ question_id: question.id, source_type: 'fresh' }),
+    ])
+  })
+
+  it('Social alternatif kapsamda yalniz scoped kaniti okur, Din hedefini ve ozel baglami sizdirmaz', async () => {
+    const { philosophyQuestions, religionQuestion } = installScopedSocialFixture({
+      stateResult: { data: [
+        makeMasteryState(SOCIAL_PHILOSOPHY_OUTCOME, { hinted_attempts: 5, hint_stage_sum: '20' }),
+        makeMasteryState(SOCIAL_RELIGION_OUTCOME, { weighted_earned: '0', correct_attempts: 0, delayed_correct: 0 }),
+      ], error: null },
+    })
+
+    const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT', user_id: uid(999) }) as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(mockRpc).toHaveBeenCalledWith('resolve_tyt_social_mastery_read_context', { p_user_id: U1 })
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', { p_user_id: U1 })
+    expect(tableMocks.user_outcome_state.calls).toHaveLength(0)
+    const createCall = mockRpc.mock.calls.find(([name]) => name === 'create_tyt_social_daily_plan_v2')
+    expect(createCall?.[1].p_user_id).toBe(U1)
+    const items = createCall?.[1].p_items as Array<Record<string, unknown>>
+    expect(items).toHaveLength(3)
+    expect(items.every(item => item.source_type === 'weak_outcome' && item.source_ref === 'SOS-FEL-PRIVATE-REF')).toBe(true)
+    expect(items.map(item => item.question_id).sort()).toEqual(philosophyQuestions.map(question => question.id).sort())
+    const serialized = JSON.stringify(body)
+    for (const forbidden of [
+      'questions_21_25', SOCIAL_SELECTION_EVENT, SOCIAL_PHILOSOPHY_OUTCOME, SOCIAL_RELIGION_OUTCOME,
+      'SOS-FEL-PRIVATE-REF', 'SOS-DIN-PRIVATE-REF', religionQuestion.id, 'sourceRef', 'source_ref',
+      'weighted_earned', 'verified_evidence_days', 'answer', 'solution', 'gizli',
+    ]) expect(serialized).not.toContain(forbidden)
+    expect(mockRpc.mock.calls.some(([name]) => name === 'create_daily_plan_v2')).toBe(false)
+  })
+
+  it.each([
+    { label: 'setup required', result: { data: socialContext({ status: 'setup_required', available: false, reason: 'selection-required' }), error: null } },
+    { label: 'taxonomy drift', result: { data: socialContext({ taxonomyVersion: 'ba-tyt-sosyal-v2' }), error: null } },
+    { label: 'legacy aggregate', result: { data: socialContext({ legacyAggregateUsed: true }), error: null } },
+    { label: 'rebuild required', result: { data: socialContext({ rebuildRequired: true }), error: null } },
+    { label: 'unexpected key', result: { data: socialContext({ private_reason: 'secret-database-detail' }), error: null } },
+    { label: 'invalid category set', result: { data: socialContext({ allowedCategories: ['felsefe', 'din_kulturu'] }), error: null } },
+    { label: 'null context', result: { data: null, error: null } },
+    { label: 'context RPC error', result: { data: null, error: { code: 'PGRST202', message: 'secret-database-detail' } } },
+  ])('Social context $label iken state okumadan ve plan yazmadan durur', async ({ result }) => {
+    installScopedSocialFixture({ contextResult: result })
+
+    const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT' }) as never)
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(await response.json()).toEqual({ error: 'Plan olusturulamadi' })
+    expect(tableMocks.user_outcome_state.calls).toHaveLength(0)
+    expect(mockRpc.mock.calls.some(([name]) => name === 'read_tyt_social_mastery_outcome_state')).toBe(false)
+    assertNoPlanIssuance()
+  })
+
+  it.each([
+    { label: 'RPC error', result: { data: null, error: { code: '08006', message: 'secret-database-detail' } } },
+    { label: 'non-array', result: { data: { secret: 'secret-database-detail' }, error: null } },
+    { label: 'null result', result: { data: null, error: null } },
+    { label: 'null row', result: { data: [null], error: null } },
+    { label: 'missing numeric field', result: { data: [{ ...makeMasteryState(SOCIAL_PHILOSOPHY_OUTCOME), v2_attempts: undefined }], error: null } },
+    { label: 'null numeric field', result: { data: [{ ...makeMasteryState(SOCIAL_PHILOSOPHY_OUTCOME), verified_evidence_days: null }], error: null } },
+    { label: 'blank numeric string', result: { data: [{ ...makeMasteryState(SOCIAL_PHILOSOPHY_OUTCOME), weighted_earned: ' ' }], error: null } },
+    { label: 'NaN numeric string', result: { data: [{ ...makeMasteryState(SOCIAL_PHILOSOPHY_OUTCOME), weighted_earned: 'NaN' }], error: null } },
+    { label: 'negative numeric', result: { data: [{ ...makeMasteryState(SOCIAL_PHILOSOPHY_OUTCOME), attempts: -1 }], error: null } },
+  ])('Social scoped state $label iken legacy veriye dusmez veya kismi plan vermez', async ({ result }) => {
+    installScopedSocialFixture({ stateResult: result })
+
+    const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT' }) as never)
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(await response.json()).toEqual({ error: 'Plan olusturulamadi' })
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', { p_user_id: U1 })
+    expect(tableMocks.user_outcome_state.calls).toHaveLength(0)
+    assertNoPlanIssuance()
+  })
+
+  it('genel outcome state DB hatasini sifir kanit gibi kabul edip plan yazmaz', async () => {
+    const outcomeId = uid(980)
+    tableMocks.questions.push({ data: [makeQuestionRow(uid(981))] })
+    tableMocks.curriculum_outcomes.push({ data: [
+      { id: outcomeId, code: 'MAT-FAIL', category: 'sayilar', sort_order: 1 },
+    ] })
+    tableMocks.user_outcome_state.push({ data: null, error: { code: '42501', message: 'secret-database-detail' } })
+
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Plan olusturulamadi' })
+    assertNoPlanIssuance()
   })
 })
 

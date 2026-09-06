@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { registerInstitutionProgramCompletionTests } from './institution-program-completion-postgres-cases.mjs'
 
 const url = process.env.INSTITUTION_PILOT_TEST_DATABASE_URL
 const parsedUrl = url ? new URL(url) : null
@@ -4421,4 +4422,9 @@ suite('112-127, 131-135, 145, 149-160, 167-168, 182-184 and 193-201 institution 
       'P0002',
     )
   }, 120_000)
+
+  registerInstitutionProgramCompletionTests(
+    () => ({client,platformAdmin,managerOne,managerTwo,institutionOne,rpc,authenticatedRpc,expectPgError,url}),
+    () => readFileSync(join(migrationsDir,'211_institution_program_completion_integrity.sql'),'utf8'),
+  )
 })

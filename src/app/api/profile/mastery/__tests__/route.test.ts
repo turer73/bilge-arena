@@ -161,6 +161,36 @@ const SOCIAL_OUTCOMES = [
   },
 ]
 
+const COMPLETE_SOCIAL_STATE = {
+  outcome_id: SOCIAL_PHILOSOPHY_OUTCOME_ID,
+  attempts: 5, correct_attempts: 4,
+  weighted_earned: '4.000', weighted_possible: '5.000', delayed_correct: 1,
+  v2_attempts: 5, difficulty_weighted_earned: '12.000', difficulty_weighted_possible: '15.000',
+  timed_attempts: 5, total_time_sec: '150.000', fast_wrong: 0, hinted_attempts: 0,
+  hint_stage_sum: 0, guess_annotations: 0, careless_annotations: 0,
+  verified_evidence_days: 3, last_answered_at: '2026-08-31T08:30:00.000Z',
+}
+
+function installReleasedSocialScope() {
+  mockGetUser.mockResolvedValue({ data: { user: { id: USER_ID } } })
+  mockScopeResult.mockReturnValue({
+    data: {
+      game: 'sosyal', displayExamRef: 'TYT', questionExamRef: 'TYT',
+      taxonomyVersion: 'ba-tyt-sosyal-v1', mappingMode: 'category_proxy', diagnosticEnabled: false,
+    },
+    error: null,
+  })
+  mockNodeResult.mockReturnValue({ data: SOCIAL_NODES, error: null })
+  mockOutcomeResult.mockReturnValue({ data: SOCIAL_OUTCOMES, error: null })
+  mockIntegrityResult.mockReturnValue({
+    data: {
+      total: 2, mapped: 2, unmapped: 0, scopeMismatch: 0,
+      nodeOrphan: 0, outcomeOrphan: 0, primaryMismatch: 0, emptyOutcome: 0,
+    },
+    error: null,
+  })
+}
+
 function request(query = 'game=matematik&exam_ref=TYT') {
   return new Request(`http://localhost/api/profile/mastery?${query}`, {
     headers: { 'x-forwarded-for': '1.2.3.4' },
@@ -536,6 +566,60 @@ describe('GET /api/profile/mastery', () => {
     })
     expect(mockFrom).not.toHaveBeenCalledWith('user_outcome_state')
     expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
+  })
+
+  it.each([
+    { label: 'RPC error', result: { data: null, error: { code: '08006', message: 'secret-scoped-error' } } },
+    { label: 'non-array result', result: { data: { state: COMPLETE_SOCIAL_STATE }, error: null } },
+    { label: 'null result', result: { data: null, error: null } },
+    { label: 'null row', result: { data: [null], error: null } },
+    { label: 'string row', result: { data: ['secret-scoped-row'], error: null } },
+    { label: 'array row', result: { data: [[]], error: null } },
+    { label: 'missing V2 count', result: { data: [{ ...COMPLETE_SOCIAL_STATE, v2_attempts: undefined }], error: null } },
+    { label: 'missing day count', result: { data: [{ ...COMPLETE_SOCIAL_STATE, verified_evidence_days: undefined }], error: null } },
+    { label: 'null numeric', result: { data: [{ ...COMPLETE_SOCIAL_STATE, weighted_earned: null }], error: null } },
+    { label: 'boolean numeric', result: { data: [{ ...COMPLETE_SOCIAL_STATE, attempts: true }], error: null } },
+    { label: 'blank numeric', result: { data: [{ ...COMPLETE_SOCIAL_STATE, weighted_earned: '  ' }], error: null } },
+    { label: 'NaN numeric', result: { data: [{ ...COMPLETE_SOCIAL_STATE, difficulty_weighted_earned: 'NaN' }], error: null } },
+    { label: 'infinite numeric', result: { data: [{ ...COMPLETE_SOCIAL_STATE, timed_attempts: Number.POSITIVE_INFINITY }], error: null } },
+    { label: 'negative numeric', result: { data: [{ ...COMPLETE_SOCIAL_STATE, hinted_attempts: -1 }], error: null } },
+    { label: 'missing outcome', result: { data: [{ ...COMPLETE_SOCIAL_STATE, outcome_id: undefined }], error: null } },
+    { label: 'invalid timestamp', result: { data: [{ ...COMPLETE_SOCIAL_STATE, last_answered_at: 'not-a-date' }], error: null } },
+    { label: 'partially malformed batch', result: { data: [COMPLETE_SOCIAL_STATE, null], error: null } },
+  ])('TYT Sosyal scoped state $label iken legacy mastery uretmeden fail-closed 500 doner', async ({ result }) => {
+    installReleasedSocialScope()
+    mockSocialStateResult.mockReturnValue(result)
+    // A seemingly strong generic aggregate must never rescue invalid scoped evidence.
+    mockStateResult.mockReturnValue({ data: [COMPLETE_SOCIAL_STATE], error: null })
+
+    const response = await GET(request('game=sosyal&exam_ref=TYT') as never)
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(await response.json()).toEqual({ error: 'Sorgu basarisiz' })
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', { p_user_id: USER_ID })
+    expect(mockFrom).not.toHaveBeenCalledWith('user_outcome_state')
+    expect(mockFrom).not.toHaveBeenCalledWith('user_diagnostic_outcome_state')
+    expect(mockStateResult).not.toHaveBeenCalled()
+  })
+
+  it('TYT Sosyal bos scoped kanit dizisini hata veya legacy aggregate yerine sifir kanit sayar', async () => {
+    installReleasedSocialScope()
+    mockSocialStateResult.mockReturnValue({ data: [], error: null })
+    mockStateResult.mockReturnValue({ data: [COMPLETE_SOCIAL_STATE], error: null })
+
+    const response = await GET(request('game=sosyal&exam_ref=TYT') as never)
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(body.outcomes).toHaveLength(2)
+    expect(body.outcomes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'SOS-FEL-01', status: 'insufficient', attempts: 0, score: 0, verifiedEvidenceDays: 0 }),
+      expect.objectContaining({ code: 'SOS-DIN-01', status: 'insufficient', attempts: 0, score: 0, verifiedEvidenceDays: 0 }),
+    ]))
+    expect(mockFrom).not.toHaveBeenCalledWith('user_outcome_state')
+    expect(mockStateResult).not.toHaveBeenCalled()
   })
 
   it('TYT Sosyal setup ve unavailable contextlerinde ayrinti sizdirmadan fail-closed kalir', async () => {

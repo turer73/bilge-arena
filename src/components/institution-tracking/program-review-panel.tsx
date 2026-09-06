@@ -55,7 +55,7 @@ export function ProgramReviewPanel({ classroomId, memberRef, game, examRef }: { 
     try {
       const review = await reviewInstitutionStudyProgram(previewRef, { teacherResult, note: note.trim() || null })
       setHistory((current) => current ? ({ ...current, programs: current.programs.map((program) => program.programRef === previewRef
-        ? { ...program, status: 'completed' as const, reviewEligible: true, review: {
+        ? { ...program, status: review.programStatus ?? program.status, reviewEligible: true, review: {
           reviewRef: review.reviewRef, teacherResult: review.teacherResult,
           systemSuggestion: review.systemSuggestion, evidence: review.evidence,
           note: review.note, reviewedAt: review.reviewedAt,
@@ -75,7 +75,7 @@ export function ProgramReviewPanel({ classroomId, memberRef, game, examRef }: { 
         {history?.programs.map((program) => (
           <article key={program.programRef} className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div><p className="text-sm font-black">{program.weekStart} haftası</p><p className="mt-1 text-xs text-[var(--text-sub)]">{program.itemCount} görev · {program.review ? 'Değerlendirildi' : program.reviewEligible ? 'Kanıt penceresi hazır' : 'Kanıt penceresi olgunlaşıyor'}</p></div>
+              <div><p className="text-sm font-black">{program.weekStart} haftası</p><p className="mt-1 text-xs text-[var(--text-sub)]">{program.itemCount} görev · {program.status === 'completed' ? 'Tüm görevler tamamlandı · Değerlendirildi' : program.review ? 'Değerlendirildi · Görevlerin tamamı henüz doğrulanmadı' : program.reviewEligible ? 'Kanıt penceresi hazır' : 'Kanıt penceresi olgunlaşıyor'}</p></div>
               {!program.review && program.reviewEligible && <button type="button" disabled={busy} onClick={() => openPreview(program.programRef)} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold disabled:opacity-50 sm:w-auto"><ClipboardCheck className="h-4 w-4" /> Kanıtı incele</button>}
             </div>
             {program.review && <div className="mt-3 rounded-lg bg-emerald-400/5 p-3 text-sm"><strong>{teacherResultCopy[program.review.teacherResult]}</strong><span className="ml-2 text-xs text-[var(--text-sub)]">Sistem gözlemi: {suggestionCopy[program.review.systemSuggestion]}</span>{program.review.note && <p className="mt-2 break-words">{program.review.note}</p>}</div>}
