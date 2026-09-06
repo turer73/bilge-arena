@@ -11,6 +11,9 @@ import { questionExamRefForGame } from '@/lib/constants/exam-types'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import { useTytSocialExamPolicy, type TytSocialExamPolicyState } from '@/lib/hooks/use-tyt-social-exam-policy'
 import { TytSocialExamPolicyCardView } from './tyt-social-exam-policy-card'
+import {
+  TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE,
+} from '@/lib/study/today-plan-contract'
 
 interface TodayPlanFocusProps {
   game: GameSlug
@@ -71,14 +74,15 @@ function TodayPlanContent({
   const router = useRouter()
   const gameStore = useGameStore()
   const questionExamRef = questionExamRefForGame(game, examRef, isTytSocialV2ClientEnabled())
-  const { plan, loading, fetchPlan } = useTodayPlan(game, userId, questionExamRef, selectedCategory)
+  const { plan, loading, unavailableReason, unavailableExamRef, fetchPlan } = useTodayPlan(game, userId, questionExamRef, selectedCategory)
+  const recoveryExamRef = unavailableExamRef ?? questionExamRef
 
   const openGame = () => {
     gameStore.setGame(game)
-    if (game !== 'wordquest') gameStore.setExamRef(questionExamRef)
+    if (game !== 'wordquest') gameStore.setExamRef(recoveryExamRef)
     gameStore.setCategory(null)
     const params = new URLSearchParams()
-    if (questionExamRef) params.set('exam_ref', questionExamRef)
+    if (recoveryExamRef) params.set('exam_ref', recoveryExamRef)
     router.push(`/arena/${game}${params.size ? `?${params}` : ''}`)
   }
 
@@ -95,9 +99,13 @@ function TodayPlanContent({
           </span>
         </div>
         <div className="px-4 py-6 text-center">
-          <p className="text-sm font-black text-[var(--app-text)]">Bu bağlam için hazır plan bulunamadı</p>
+          <p className="text-sm font-black text-[var(--app-text)]">
+            {unavailableReason ? 'Bugünkü plan şu anda başlatılamıyor' : 'Bu bağlam için hazır plan bulunamadı'}
+          </p>
           <p className="mx-auto mt-1 max-w-sm text-xs font-semibold leading-relaxed text-[var(--app-text-sub)]">
-            Bu ders ve sınav için günlük plan şu anda kullanılamıyor. Yeniden deneyebilir veya konunu kendin seçebilirsin.
+            {unavailableReason
+              ? TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE
+              : 'Bu ders ve sınav için günlük plan şu anda kullanılamıyor. Yeniden deneyebilir veya konunu kendin seçebilirsin.'}
           </p>
           <button
             type="button"
@@ -106,13 +114,15 @@ function TodayPlanContent({
           >
             Konumu kendim seçeyim
           </button>
-          <button
-            type="button"
-            onClick={() => void fetchPlan()}
-            className="mx-auto mt-2 block min-h-11 px-3 text-xs font-black text-[var(--app-accent-text)] hover:underline"
-          >
-            Planı yeniden dene
-          </button>
+          {!unavailableReason && (
+            <button
+              type="button"
+              onClick={() => void fetchPlan()}
+              className="mx-auto mt-2 block min-h-11 px-3 text-xs font-black text-[var(--app-accent-text)] hover:underline"
+            >
+              Planı yeniden dene
+            </button>
+          )}
           {showDiagnostic && (
             <Link
               href="/arena/tani?game=matematik&exam_ref=TYT"

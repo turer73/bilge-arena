@@ -95,6 +95,7 @@ const todayPlanValue = vi.hoisted(() => ({
     expiresAt: string
   },
   loading: false,
+  unavailableReason: null as string | null,
   markCompleted: vi.fn(),
 }))
 const useTodayPlanArgs = vi.hoisted(() => vi.fn())
@@ -573,6 +574,35 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
       window.history.replaceState({}, '', '/')
       todayPlanValue.loading = false
       todayPlanValue.plan = null
+      authStoreValue.user = null
+      quizGame.screen = 'game'
+    }
+  })
+
+  test('kullanılamayan plan doğrudan başlangıç niyetini tüketir ve quiz başlatmaz', async () => {
+    window.history.replaceState({}, '', '/arena/matematik?start=today-plan&exam_ref=LGS')
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    gameStoreValue.selectedExamRef = 'LGS'
+    todayPlanValue.loading = false
+    todayPlanValue.plan = null
+    todayPlanValue.unavailableReason = 'daily_plan_content_unavailable'
+    quizGame.handleStartPlanned.mockClear()
+    quizGame.handleStart.mockClear()
+
+    try {
+      const { rerender } = render(<StrictMode><QuizEngine game="matematik" /></StrictMode>)
+      await waitFor(() => expect(window.location.search).toBe('?exam_ref=LGS'))
+      expect(quizGame.handleStartPlanned).not.toHaveBeenCalled()
+      expect(quizGame.handleStart).not.toHaveBeenCalled()
+      expect(screen.getByRole('status')).toHaveTextContent(/Planındaki bir soru şu anda kullanılamıyor/i)
+      rerender(<StrictMode><QuizEngine game="matematik" /></StrictMode>)
+      expect(quizGame.handleStartPlanned).not.toHaveBeenCalled()
+      expect(todayPlanValue.markCompleted).not.toHaveBeenCalled()
+    } finally {
+      window.history.replaceState({}, '', '/')
+      todayPlanValue.unavailableReason = null
+      gameStoreValue.selectedExamRef = 'TYT'
       authStoreValue.user = null
       quizGame.screen = 'game'
     }

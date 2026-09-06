@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 
 import { useTodayPlan } from '../use-today-plan'
+import { TODAY_PLAN_CONTENT_UNAVAILABLE } from '@/lib/study/today-plan-contract'
 
 const PLAN = {
   planDate: '2026-07-21',
@@ -21,8 +22,13 @@ const PLAN = {
   expiresAt: '2099-01-01T00:00:00.000Z',
 }
 
-function response(body: unknown, ok = true) {
-  return { ok, json: vi.fn(async () => body) } as unknown as Response
+const UNAVAILABLE = {
+  code: TODAY_PLAN_CONTENT_UNAVAILABLE, error: 'Private backend details must not be exposed',
+  game: 'matematik', examRef: 'TYT', recovery: 'manual_practice',
+}
+
+function response(body: unknown, ok = true, status = ok ? 200 : 500) {
+  return { ok, status, json: vi.fn(async () => body) } as unknown as Response
 }
 
 interface TodayPlanHookProps {
@@ -232,5 +238,99 @@ describe('useTodayPlan', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(result.current.plan?.questions).toEqual([])
+  })
+
+  it('typed 409 content-unavailable response exposes recovery state without retrying', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({
+      code: TODAY_PLAN_CONTENT_UNAVAILABLE,
+      error: 'Plan unavailable',
+      game: 'matematik',
+      examRef: 'TYT',
+      recovery: 'manual_practice',
+    }, false, 409))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', 'TYT'))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.plan).toBeNull()
+    expect(result.current.unavailableReason).toBe(TODAY_PLAN_CONTENT_UNAVAILABLE)
+    expect(result.current.unavailableExamRef).toBe('TYT')
+    expect(fetch).toHaveBeenCalledOnce()
+  })
+
+  it('typed 409 accepts a profile-resolved exam when the request omitted exam_ref', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({
+      code: TODAY_PLAN_CONTENT_UNAVAILABLE,
+      error: 'Plan unavailable',
+      game: 'matematik',
+      examRef: 'TYT',
+      recovery: 'manual_practice',
+    }, false, 409))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', null))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.unavailableReason).toBe(TODAY_PLAN_CONTENT_UNAVAILABLE)
+    expect(result.current.unavailableExamRef).toBe('TYT')
+  })
+
+  it.each([
+    ['wrong status', UNAVAILABLE, 500],
+    ['wrong code', { ...UNAVAILABLE, code: 'unknown' }, 409],
+    ['wrong game', { ...UNAVAILABLE, game: 'fen' }, 409],
+    ['wrong exam', { ...UNAVAILABLE, examRef: 'LGS' }, 409],
+    ['missing exam', { ...UNAVAILABLE, examRef: undefined }, 409],
+    ['wrong recovery', { ...UNAVAILABLE, recovery: 'restart_plan' }, 409],
+    ['malformed error', { ...UNAVAILABLE, error: {} }, 409],
+  ] as const)('does not accept %s as confirmed unavailable content', async (_name, body, status) => {
+    vi.mocked(fetch).mockResolvedValueOnce(response(body, false, status))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', 'TYT'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan).toBeNull()
+    expect(result.current.unavailableReason).toBeNull()
+    expect(result.current.unavailableExamRef).toBeNull()
+    expect(fetch).toHaveBeenCalledOnce()
+  })
+
+  it.each(CONTEXT_CHANGES)('clears unavailable state immediately on $context change', async ({ initial, next }) => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response(UNAVAILABLE, false, 409))
+      .mockResolvedValueOnce(response({ ...PLAN, examRef: next.examRef }))
+    const { result, rerender } = renderHook(
+      ({ userId, examRef, selectedCategory }: TodayPlanHookProps) => useTodayPlan('matematik', userId, examRef, selectedCategory),
+      { initialProps: initial },
+    )
+    await waitFor(() => expect(result.current.unavailableReason).toBe(TODAY_PLAN_CONTENT_UNAVAILABLE))
+    rerender(next)
+    expect(result.current.unavailableReason).toBeNull()
+    expect(result.current.unavailableExamRef).toBeNull()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan).not.toBeNull()
+  })
+
+  it('ignores stale 409 JSON resolved after a new user has a valid plan', async () => {
+    let finishOldJson!: (value: unknown) => void
+    const oldJson = vi.fn(() => new Promise(resolve => { finishOldJson = resolve }))
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({ ok: false, status: 409, json: oldJson } as unknown as Response)
+      .mockResolvedValueOnce(response(PLAN))
+    const { result, rerender } = renderHook(({ userId }) => useTodayPlan('matematik', userId, 'TYT'), {
+      initialProps: { userId: 'u1' },
+    })
+    await waitFor(() => expect(oldJson).toHaveBeenCalledOnce())
+    rerender({ userId: 'u2' })
+    await waitFor(() => expect(result.current.plan).not.toBeNull())
+    await act(async () => { finishOldJson(UNAVAILABLE) })
+    expect(result.current.unavailableReason).toBeNull()
+    expect(result.current.unavailableExamRef).toBeNull()
+    expect(result.current.plan?.game).toBe('matematik')
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('Wordquest rejects a non-null unavailable exam scope', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...UNAVAILABLE, game: 'wordquest', examRef: 'YDT' }, false, 409))
+    const { result } = renderHook(() => useTodayPlan('wordquest', 'u1', null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.unavailableReason).toBeNull()
   })
 })

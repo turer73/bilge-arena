@@ -307,6 +307,7 @@ beforeEach(() => {
     _userId: string,
     ids: string[],
   ) => ids)
+  mockIssueVerifiedAttempt.mockReset()
   mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
     attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     expiresAt: '2099-01-01T00:00:00.000Z',
@@ -331,6 +332,155 @@ afterEach(() => {
 })
 
 describe('GET /api/study/today', () => {
+  function installSavedPlan(legacy = false) {
+    const questionIds = [uid(1), uid(2)]
+    tableMocks.daily_plan.push({ data: {
+      id: uid(800), game: 'matematik', plan_date: '2026-08-08', exam_ref: 'TYT',
+      question_ids: questionIds, completed_ids: [questionIds[0]],
+    } })
+    tableMocks.daily_plan_items.push({ data: legacy ? [] : questionIds.map((id, index) => ({
+      question_id: id, position: index + 1, slot_type: 'due', source_type: 'due',
+      completed_at: index === 0 ? '2026-08-08T10:00:00Z' : null,
+    })) })
+    return questionIds
+  }
+
+  it.each([false, true])('quarantined saved plan returns no partial ticket or progress (legacy=%s)', async (legacy) => {
+    const ids = installSavedPlan(legacy)
+    tableMocks.questions.push({ data: [makeQuestionRow(ids[0]), makeQuestionRow(ids[1], { is_active: false })] })
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(409)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(await response.json()).toEqual({
+      code: 'daily_plan_content_unavailable',
+      error: expect.any(String), game: 'matematik', examRef: 'TYT', recovery: 'manual_practice',
+    })
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
+    expect(mockFetchDue).not.toHaveBeenCalled()
+    expect(tableMocks.daily_plan.updateCalls).toEqual([])
+    expect(tableMocks.daily_plan_items.updateCalls).toEqual([])
+    expect(tableMocks.questions.updateCalls).toEqual([])
+  })
+
+  it.each([
+    ['missing', (ids: string[]) => [makeQuestionRow(ids[0])]],
+    ['null active', (ids: string[]) => ids.map(id => makeQuestionRow(id, { is_active: null }))],
+    ['game drift', (ids: string[]) => ids.map(id => makeQuestionRow(id, { game: 'fen' }))],
+    ['exam drift', (ids: string[]) => ids.map(id => makeQuestionRow(id, { exam_ref: 'LGS' }))],
+    ['null exam drift', (ids: string[]) => ids.map(id => makeQuestionRow(id, { exam_ref: null }))],
+    ['malformed content', (ids: string[]) => ids.map(id => makeQuestionRow(id, { content: {} }))],
+    ['duplicate rows', (ids: string[]) => [makeQuestionRow(ids[0]), makeQuestionRow(ids[0])]],
+    ['unexpected id', (ids: string[]) => [makeQuestionRow(ids[0]), makeQuestionRow(uid(3))]],
+  ] as const)('rejects %s without shortening or replacing the snapshot', async (_name, rows) => {
+    const ids = installSavedPlan()
+    tableMocks.questions.push({ data: rows(ids) })
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(409)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('restores exact order after a successful complete eligibility read', async () => {
+    const ids = installSavedPlan()
+    tableMocks.questions.push({ data: [...ids].reverse().map(id => makeQuestionRow(id)) })
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(200)
+    expect((await response.json()).questions.map((question: { id: string }) => question.id)).toEqual(ids)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ questionIds: ids }))
+  })
+
+  it('reproduces the 15-slot LGS plan with 14 active and 1 quarantined without mutating evidence', async () => {
+    const ids = Array.from({ length: 15 }, (_, i) => uid(i + 1))
+    tableMocks.profiles.push({ data: { exam_type: 'lgs' } })
+    tableMocks.daily_plan.push({ data: {
+      id: uid(800), game: 'matematik', plan_date: '2026-08-08', exam_ref: 'LGS',
+      question_ids: ids, completed_ids: ids.slice(0, 14),
+    } })
+    tableMocks.questions.push({ data: ids.map((id, i) => makeQuestionRow(id, { exam_ref: 'LGS', is_active: i !== 14 })) })
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'LGS' }) as never)
+    expect(response.status).toBe(409)
+    const body = await response.json()
+    expect(body.examRef).toBe('LGS')
+    expect(body).not.toHaveProperty('completedIds')
+    expect(body).not.toHaveProperty('questions')
+    expect(body).not.toHaveProperty('items')
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mockRpc).not.toHaveBeenCalled()
+    expect(Object.values(tableMocks).flatMap(mock => mock.updateCalls)).toEqual([])
+  })
+
+  it.each([null, 'YDT'])('Wordquest snapshot requires exact NULL question scope, received %s', async (rowExamRef) => {
+    const ids = [uid(1)]
+    tableMocks.daily_plan.push({ data: {
+      id: uid(800), game: 'wordquest', plan_date: '2026-08-08', exam_ref: null,
+      question_ids: ids, completed_ids: [],
+    } })
+    tableMocks.questions.push({ data: ids.map(id => makeQuestionRow(id, { game: 'wordquest', exam_ref: rowExamRef })) })
+    const response = await GET(makeGetRequest({ game: 'wordquest' }) as never)
+    expect(response.status).toBe(rowExamRef === null ? 200 : 409)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(rowExamRef === null ? 1 : 0)
+  })
+
+  it('keeps malformed duplicate plan IDs as integrity failure, never a smaller eligible plan', async () => {
+    tableMocks.daily_plan.push({ data: {
+      id: uid(800), game: 'matematik', plan_date: '2026-08-08', exam_ref: 'TYT',
+      question_ids: [uid(1), uid(1)], completed_ids: [],
+    } })
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(500)
+    expect(tableMocks.questions.calls).toHaveLength(0)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('classifies quarantine between eligibility and issuance using exactly one re-read', async () => {
+    const ids = installSavedPlan()
+    tableMocks.questions.push({ data: ids.map(id => makeQuestionRow(id)) })
+    tableMocks.questions.push({ data: ids.map(id => makeQuestionRow(id, { is_active: false })) })
+    mockIssueVerifiedAttempt.mockRejectedValueOnce(new Error('verified_attempt_issue_failed'))
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(409)
+    expect(await response.json()).not.toHaveProperty('attemptId')
+    expect(tableMocks.questions.calls).toHaveLength(2)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(1)
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it.each(['intact', 'read error'])('does not mask issuance infrastructure failure when re-read is %s', async (result) => {
+    const ids = installSavedPlan()
+    tableMocks.questions.push({ data: ids.map(id => makeQuestionRow(id)) })
+    tableMocks.questions.push(result === 'intact'
+      ? { data: ids.map(id => makeQuestionRow(id)) }
+      : { data: null, error: { code: '08006' } })
+    mockIssueVerifiedAttempt.mockRejectedValueOnce(new Error('verified_attempt_issue_failed'))
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(500)
+    expect(await response.json()).not.toHaveProperty('code')
+    expect(tableMocks.questions.calls).toHaveLength(2)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps an initial question read failure as 500, not known content drift', async () => {
+    installSavedPlan()
+    tableMocks.questions.push({ data: null, error: { code: '08006' } })
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(500)
+    expect(tableMocks.questions.calls).toHaveLength(1)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('rejects an atomically created snapshot that became quarantined before issuance', async () => {
+    const rows = [uid(1), uid(2)].map(id => makeQuestionRow(id))
+    tableMocks.questions.push({ data: rows })
+    tableMocks.questions.push({ data: rows.map(row => ({ ...row, is_active: false })) })
+    installCreateRpcSuccess()
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(409)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mockRpc.mock.calls.filter(call => call[0] === 'create_daily_plan_v2')).toHaveLength(1)
+    expect(tableMocks.daily_plan.updateCalls).toEqual([])
+  })
+
   it('auth ve parametre sinirlarini uygular', async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: null } })
     expect((await GET(makeGetRequest({ game: 'matematik' }) as never)).status).toBe(401)
@@ -360,7 +510,7 @@ describe('GET /api/study/today', () => {
     })
     tableMocks.questions.push({ data: questionIds.map((id) => makeQuestionRow(id)) })
 
-    const response = await GET(makeGetRequest({ game: 'matematik' }) as never)
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
     const body = await response.json()
 
     expect(response.status).toBe(200)
@@ -390,7 +540,7 @@ describe('GET /api/study/today', () => {
     tableMocks.daily_plan_items.push({ data: [] })
     tableMocks.questions.push({ data: [makeQuestionRow(questionId)] })
 
-    const body = await (await GET(makeGetRequest({ game: 'matematik' }) as never)).json()
+    const body = await (await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)).json()
 
     expect(body.items).toEqual([expect.objectContaining({
       questionId,
@@ -768,8 +918,10 @@ describe('GET /api/study/today', () => {
     tableMocks.daily_plan_items.push({ data: [] })
     tableMocks.questions.push({ data: [question] })
     mockIssueVerifiedAttempt.mockRejectedValueOnce(new Error('secret database detail'))
+    // Failed issuance with a still-eligible snapshot is infrastructure failure.
+    tableMocks.questions.push({ data: [question] })
 
-    const response = await GET(makeGetRequest({ game: 'matematik' }) as never)
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
     expect(response.status).toBe(500)
     expect(await response.json()).toEqual({ error: 'Plan baslatilamadi' })
     expect(response.headers.get('Cache-Control')).toBe('no-store')

@@ -60,6 +60,7 @@ import { PremiumGateModal } from '@/components/premium/premium-gate-modal'
 import { AdBanner } from '@/components/ads/ad-banner'
 import dynamic from 'next/dynamic'
 import { ComponentErrorBoundary } from '@/components/ui/error-boundary'
+import { TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE } from '@/lib/study/today-plan-contract'
 
 const CommentSection = dynamic(
   () => import('@/components/social/comment-section').then(m => ({ default: m.CommentSection })),
@@ -297,6 +298,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
       `${url.pathname}${url.search}${url.hash}`,
     )
 
+    if (todayPlan.unavailableReason) {
+      toast.error('Bugünkü plan şu anda başlatılamıyor', TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE)
+      return
+    }
     if (!todayPlan.plan || todayPlan.plan.questions.length === 0) {
       toast.error('Bugünün planı yüklenemedi. Ders lobisinden tekrar deneyebilirsin.')
       return
@@ -310,6 +315,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     quiz.screen,
     startTodayPlan,
     todayPlan.loading,
+    todayPlan.unavailableReason,
     todayPlan.plan,
     tytSocialStartBlocked,
   ])
@@ -381,6 +387,15 @@ export function QuizEngine({ game }: QuizEngineProps) {
               loading={masteryMap.loading}
             />
           </div>
+        )}
+        {user && todayPlan.unavailableReason && (
+          <p
+            role="status"
+            data-today-plan-unavailable
+            className="mx-auto w-full max-w-[720px] px-3 pt-3 text-sm font-semibold text-[var(--app-text-sub)] md:px-5 lg:max-w-[1180px] lg:px-6"
+          >
+            {TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE}
+          </p>
         )}
         {user && (
           <div data-mobile-mastery-map-card className="mx-auto w-full max-w-[720px] px-3 pt-3 md:hidden">
