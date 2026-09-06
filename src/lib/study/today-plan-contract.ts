@@ -1,5 +1,8 @@
 import { isValidUuid } from '@/lib/utils/uuid'
 
+export const TODAY_PLAN_CONTENT_UNAVAILABLE = 'daily_plan_content_unavailable' as const
+export const TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE = 'Planındaki bir soru şu anda kullanılamıyor. Kayıtlı planın değiştirilmedi; konunu seçerek çalışmaya devam edebilirsin.'
+
 export const DAILY_PLAN_SLOT_TYPES = [
   'due',
   'weak_outcome',

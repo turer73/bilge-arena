@@ -4,6 +4,7 @@ import { TodayPlanFocus } from '../today-plan-focus'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
 import { useGameStore } from '@/stores/game-store'
 import type { TytSocialExamPolicyState } from '@/lib/hooks/use-tyt-social-exam-policy'
+import { TODAY_PLAN_CONTENT_UNAVAILABLE, TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE } from '@/lib/study/today-plan-contract'
 
 const policyHook = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/hooks/use-tyt-social-exam-policy', () => ({ useTytSocialExamPolicy: policyHook }))
@@ -168,6 +169,36 @@ describe('TodayPlanFocus', () => {
     expect(fetchPlanMock).toHaveBeenCalledOnce()
     expect(screen.queryByText(/BUGÜNÜN 15/)).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /başlangıç taraması/i })).not.toBeInTheDocument()
+  })
+
+  test('kalite incelemesi nedeniyle kullanılamayan planı değiştirmeden aynı sınavda manuel çalışmaya yönlendirir', () => {
+    mockedUseTodayPlan.mockReturnValue({
+      plan: null,
+      loading: false,
+      unavailableReason: TODAY_PLAN_CONTENT_UNAVAILABLE,
+      fetchPlan: fetchPlanMock,
+    } as never)
+    render(<TodayPlanFocus game="matematik" userId="u1" examRef="TYT" />)
+
+    expect(screen.getByText('Bugünkü plan şu anda başlatılamıyor')).toBeInTheDocument()
+    expect(screen.getByText(TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Planı yeniden dene' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Konumu kendim seçeyim' }))
+    expect(pushMock).toHaveBeenCalledWith('/arena/matematik?exam_ref=TYT')
+    expect(screen.queryByText(/BUGÜNÜN 15/)).not.toBeInTheDocument()
+  })
+
+  test('manuel çalışma profile göre çözülen LGS kapsamını korur ve plan başlatmaz', () => {
+    mockedUseTodayPlan.mockReturnValue({
+      plan: null, loading: false, unavailableReason: TODAY_PLAN_CONTENT_UNAVAILABLE,
+      unavailableExamRef: 'LGS', fetchPlan: fetchPlanMock,
+    } as never)
+    render(<TodayPlanFocus game="matematik" userId="u1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Konumu kendim seçeyim' }))
+    expect(pushMock).toHaveBeenCalledWith('/arena/matematik?exam_ref=LGS')
+    expect(useGameStore.getState().selectedExamRef).toBe('LGS')
+    expect(fetchPlanMock).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: /Planı Başlat/ })).not.toBeInTheDocument()
   })
 
   test('beklerken süresi dolan biletle başlamaz; yeni plan ister', () => {

@@ -22,6 +22,8 @@ import { composePlanV2 } from '@/lib/study/compose-plan-v2'
 import {
   normalizeTodayPlanItems,
   parseDailyPlanRpcSnapshot,
+  TODAY_PLAN_CONTENT_UNAVAILABLE,
+  TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE,
   type TodayPlanItem,
 } from '@/lib/study/today-plan-contract'
 import type { Question } from '@/types/database'
@@ -81,15 +83,34 @@ async function fetchOutcomeMappingsForQuestions(
 async function fetchQuestionsInOrder(
   admin: ReturnType<typeof createServiceRoleClient>,
   ids: string[],
-): Promise<PublicQuestion[]> {
+  game: GameSlug,
+  examRef: string | null,
+): Promise<PublicQuestion[] | null> {
   if (ids.length === 0) return []
   const { data, error } = await admin.from('questions').select('*').in('id', ids)
   if (error) throw error
+  // A saved plan is immutable evidence, not a pool to silently shorten/refill.
+  // Check raw state: the domain parser historically defaults NULL active=true.
+  if (!data || data.length !== ids.length || data.some((row) => (
+    row.is_active !== true || row.game !== game || row.exam_ref !== examRef
+  ))) return null
   const byId = new Map(parseQuestionRows(data).map((question) => [question.id, question]))
+  if (byId.size !== ids.length || ids.some((id) => !byId.has(id))) return null
   return ids
     .map((id) => byId.get(id))
     .filter((question): question is Question => !!question)
     .map(toPublicQuestion)
+}
+
+function unavailablePlan(game: GameSlug, examRef: string | null) {
+  // No question IDs, partial progress, content, or attempt ticket on conflict.
+  return noStoreJson({
+    code: TODAY_PLAN_CONTENT_UNAVAILABLE,
+    error: TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE,
+    game,
+    examRef,
+    recovery: 'manual_practice',
+  }, { status: 409 })
 }
 
 async function respondWithTicket(
@@ -146,6 +167,16 @@ async function respondWithTicket(
       expiresAt: ticket.expiresAt,
     })
   } catch {
+    // Quarantine may occur after the first read. The DB issuer remains the
+    // authority. Re-read once to classify known content drift, never retry
+    // issuance or rewrite the immutable plan. Infrastructure failures stay 500.
+    try {
+      if (await fetchQuestionsInOrder(admin, questions.map((question) => question.id), game, examRef) === null) {
+        return unavailablePlan(game, examRef)
+      }
+    } catch {
+      // A failed read is unknown state, not proof of content unavailability.
+    }
     console.error('[/api/study/today] verified attempt issuance failed')
     return noStoreJson({ error: 'Plan baslatilamadi' }, { status: 500 })
   }
@@ -246,7 +277,8 @@ export async function GET(request: NextRequest) {
       ? items.filter((item) => item.completed).map((item) => item.questionId)
       : legacyCompletedIds
     try {
-      const questions = await fetchQuestionsInOrder(admin, questionIds)
+      const questions = await fetchQuestionsInOrder(admin, questionIds, game, examRef)
+      if (questions === null) return unavailablePlan(game, examRef)
       return respondWithTicket(
         admin,
         user.id,
@@ -478,7 +510,8 @@ export async function GET(request: NextRequest) {
     : snapshot.completedIds
 
   try {
-    const questions = await fetchQuestionsInOrder(admin, snapshot.questionIds)
+    const questions = await fetchQuestionsInOrder(admin, snapshot.questionIds, game, examRef)
+    if (questions === null) return unavailablePlan(game, examRef)
     return respondWithTicket(
       admin,
       user.id,

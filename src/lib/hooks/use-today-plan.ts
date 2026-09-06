@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { GAMES, getCategoriesForExam, type GameSlug } from '@/lib/constants/games'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { isValidUuid } from '@/lib/utils/uuid'
-import type { TodayPlanItem } from '@/lib/study/today-plan-contract'
+import {
+  TODAY_PLAN_CONTENT_UNAVAILABLE,
+  type TodayPlanItem,
+} from '@/lib/study/today-plan-contract'
 
 // /api/study/today cevap anahtarı/çözüm içermeyen PublicQuestion[] döner.
 // Notlandırma seçimden sonra /api/questions/grade üzerinden yapılır.
@@ -32,6 +35,34 @@ interface TodayPlanResponse {
   expiresAt: string | null
 }
 
+interface TodayPlanUnavailableResponse {
+  code: typeof TODAY_PLAN_CONTENT_UNAVAILABLE
+  error: string
+  game: string
+  examRef: string | null
+  recovery: 'manual_practice'
+}
+
+function isTodayPlanUnavailableResponse(
+  value: unknown,
+  game: GameSlug,
+  examRef: string | null | undefined,
+): value is TodayPlanUnavailableResponse {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const body = value as Partial<TodayPlanUnavailableResponse>
+  const validExamRef = game === 'wordquest'
+    ? body.examRef === null
+    : examRef
+      ? body.examRef === examRef && typeof body.examRef === 'string' && GAMES[game].examTags.includes(body.examRef)
+      : body.examRef === null
+        || (typeof body.examRef === 'string' && GAMES[game].examTags.includes(body.examRef))
+  return body.code === TODAY_PLAN_CONTENT_UNAVAILABLE
+    && body.game === game
+    && validExamRef
+    && body.recovery === 'manual_practice'
+    && typeof body.error === 'string'
+}
+
 /**
  * "Bugunun 15'i" gunluk plan client hook'u -- use-daily-quests.ts paritesi.
  * Lobby'de gosterilecek karma plani ceker, tamamlanan sorulari isaretler.
@@ -43,6 +74,8 @@ export function useTodayPlan(
   selectedCategory?: string | null,
 ) {
   const [plan, setPlan] = useState<TodayPlan | null>(null)
+  const [unavailableReason, setUnavailableReason] = useState<typeof TODAY_PLAN_CONTENT_UNAVAILABLE | null>(null)
+  const [unavailableExamRef, setUnavailableExamRef] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [settledContextKey, setSettledContextKey] = useState<string | null>(null)
   const requestRef = useRef<AbortController | null>(null)
@@ -52,6 +85,8 @@ export function useTodayPlan(
     requestRef.current?.abort()
     if (!userId) {
       setPlan(null)
+      setUnavailableReason(null)
+      setUnavailableExamRef(null)
       setSettledContextKey(contextKey)
       setLoading(false)
       return
@@ -60,6 +95,8 @@ export function useTodayPlan(
     requestRef.current = controller
     // game/user/exam degisiminde onceki snapshot yeni baglamda gosterilmesin.
     setPlan(null)
+    setUnavailableReason(null)
+    setUnavailableExamRef(null)
     setLoading(true)
     try {
       const params = new URLSearchParams({ game })
@@ -72,7 +109,20 @@ export function useTodayPlan(
         signal: controller.signal,
       })
       if (!res.ok) {
-        if (!controller.signal.aborted) setPlan(null)
+        if (!controller.signal.aborted) {
+          setPlan(null)
+          if (res.status === 409) {
+            const body = await res.json().catch(() => null)
+            if (
+              !controller.signal.aborted
+              && requestRef.current === controller
+              && isTodayPlanUnavailableResponse(body, game, examRef)
+            ) {
+              setUnavailableReason(body.code)
+              setUnavailableExamRef(body.examRef)
+            }
+          }
+        }
         return
       }
       const data = (await res.json()) as TodayPlanResponse
@@ -112,11 +162,17 @@ export function useTodayPlan(
             && Date.parse(data.expiresAt) > Date.now()
           )
         )
-      if (!controller.signal.aborted) setPlan(validResponse ? data : null)
+      if (!controller.signal.aborted) {
+        setUnavailableReason(null)
+        setUnavailableExamRef(null)
+        setPlan(validResponse ? data : null)
+      }
     } catch (error) {
       // Sessiz hata -- gunluk plan opsiyonel bir yuzey, quiz akisini bloklamaz.
       if ((error as { name?: string } | null)?.name !== 'AbortError' && !controller.signal.aborted) {
         setPlan(null)
+        setUnavailableReason(null)
+        setUnavailableExamRef(null)
       }
     } finally {
       if (requestRef.current === controller) {
@@ -183,5 +239,17 @@ export function useTodayPlan(
   const completedCount = visiblePlan?.completedIds.length ?? 0
   const total = visiblePlan?.questions.length ?? 0
 
-  return { plan: visiblePlan, loading: visibleLoading, completedCount, total, fetchPlan, markCompleted }
+  const visibleUnavailableReason = settledContextKey === contextKey ? unavailableReason : null
+  const visibleUnavailableExamRef = settledContextKey === contextKey ? unavailableExamRef : null
+
+  return {
+    plan: visiblePlan,
+    loading: visibleLoading,
+    unavailableReason: visibleUnavailableReason,
+    unavailableExamRef: visibleUnavailableExamRef,
+    completedCount,
+    total,
+    fetchPlan,
+    markCompleted,
+  }
 }
