@@ -26,7 +26,7 @@ const curriculumScopeRegistryMigration = readFileSync(join(dirname(fileURLToPath
 const ydtEnglishReleaseMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '187_release_ydt_english_mastery_scope.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
-  let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision; let candidateQuestion; let candidateOutcome; let candidateLegacyRevision; let ydtQuestion; let ydtLegacyNullQuestion; let ydtOutcome; let ydtWrongOutcome; let ydtLegacyRevision; let ydtLegacyNullRevision
+  let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision; let candidateQuestion; let candidateOutcome; let candidateLegacyRevision; let ydtQuestion; let ydtLegacyNullQuestion; let ydtOutcome; let ydtWrongOutcome; let ydtLegacyRevision; let ydtLegacyNullRevision; let parityQuestions
   const rpc = async (call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub','',false),set_config('request.jwt.claims',$1,false)",[JSON.stringify({ role:'service_role' })]); await client.query('SET ROLE service_role'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
   const userRpc = async (userId, aal, call, values = []) => { await client.query("SELECT set_config('request.jwt.claim.sub',$1,false),set_config('request.jwt.claims',$2,false)",[userId,JSON.stringify({ sub:userId,role:'authenticated',aal })]); await client.query('SET ROLE authenticated'); try { return (await client.query(`SELECT ${call} AS result`, values)).rows[0].result } finally { await client.query('RESET ROLE') } }
   const concurrentReplay = async (call, values = []) => {
@@ -104,9 +104,21 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
       ydtQuestion,{ question:'legacy YDT',options:['A','B'],answer:0 },
       ydtLegacyNullQuestion,{ question:'legacy null YDT',options:['A','B'],answer:0 },
     ])
+    parityQuestions = Array.from({ length: 8 }, randomUUID)
+    await client.query(`INSERT INTO public.questions(id,game,category,difficulty,content)
+      SELECT source.id,'matematik','Temel',source.difficulty,$3::jsonb
+      FROM unnest($1::uuid[],$2::smallint[]) AS source(id,difficulty)`, [
+      parityQuestions,
+      [4,4,4,4,4,3,3,1],
+      JSON.stringify({ question:'canonical parity',options:['A','B'],answer:0 }),
+    ])
     await client.query(`INSERT INTO public.question_outcomes(question_id,outcome_id,weight,is_primary)
       VALUES($1,$2,1,true),($3,$4,1,true)`, [
       registryMathQuestion,registryMathOutcome,ydtQuestion,ydtOutcome,
+    ])
+    await client.query(`INSERT INTO public.question_outcomes(question_id,outcome_id,weight,is_primary)
+      SELECT question_id,$2,1,true FROM unnest($1::uuid[]) AS source(question_id)`, [
+      parityQuestions,outcome,
     ])
     await client.query("INSERT INTO public.error_reports(id,user_id,question_id,report_type,description,status,created_at) VALUES($1,$2,$3,'typo','Eski yazım bildirimi','pending','2026-07-01T10:00:00Z')",[randomUUID(),legacyLearner,question])
     await client.query(migration)
@@ -336,6 +348,45 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     const incident = await rpc('public.create_question_error_incident($1,$2,$3,$4,$5,$6)',[publisher,question,published,newer,'wrong_key',randomUUID()])
     expect(incident).toEqual(expect.objectContaining({ eligibleCount:1, manualRequiredCount:1 }))
     const before = await client.query('SELECT is_correct FROM public.session_answers WHERE id=$1',[answer]); const applyRequest = randomUUID(); const applied = await rpc('public.apply_question_result_corrections($1,$2,$3)',[publisher,incident.incidentId,applyRequest]); expect(applied).toEqual(expect.objectContaining({ changedCount:1, manualRequiredCount:1 })); const replay = await rpc('public.apply_question_result_corrections($1,$2,$3)',[publisher,incident.incidentId,applyRequest]); expect(replay).toEqual(expect.objectContaining({ changedCount:1, replayed:true })); expect((await client.query('SELECT is_correct FROM public.session_answers WHERE id=$1',[answer])).rows).toEqual(before.rows); expect((await rpc('public.get_my_question_result_corrections($1)',[learner])).corrections).toHaveLength(1); expect((await client.query('SELECT count(*)::int AS n FROM public.question_result_corrections WHERE incident_id=$1',[incident.incidentId])).rows[0].n).toBe(1)
+  })
+  it('accepts canonical integer 360 XP completion and rolls back the old 251/109 split', async () => {
+    const score = { total: 360, base: 252, bonus: 108 }
+    const expectedPoints = [50,50,50,50,50,30,30,10]
+    for (const [total, expectedBase] of [[90,63],[170,119],[180,126],[330,231],[340,238],[350,245],[360,252]]) {
+      const row = (await client.query('SELECT floor($1::numeric * 7 / 10)::int AS base_xp, $1::int-floor($1::numeric * 7 / 10)::int AS bonus_xp', [total])).rows[0]
+      expect(row).toEqual({ base_xp:expectedBase, bonus_xp:total - expectedBase })
+    }
+    const insertAttempt = async (attempt) => {
+      await client.query('INSERT INTO public.verified_attempts(id,user_id,game,mode,question_ids) VALUES($1,$2,$3,$4,$5)', [attempt, learner, 'matematik', 'practice', parityQuestions])
+    }
+    const insertCompletion = async (session, points) => {
+      await client.query("INSERT INTO public.game_sessions(id,user_id,status,total_questions,correct_count,wrong_count,base_xp,bonus_xp,total_xp,completed_at) VALUES($1,$2,'completed',8,8,0,$3,$4,$5,clock_timestamp())", [session, learner, points.base, points.bonus, points.total])
+      for (const [position, questionId] of parityQuestions.entries()) {
+        await client.query('INSERT INTO public.session_answers(id,session_id,user_id,question_id,question_order,selected_option,is_correct,xp_earned) VALUES($1,$2,$3,$4,$5,0,true,$6)', [randomUUID(), session, learner, questionId, position, expectedPoints[position] + (position >= 4 ? 10 : 0)])
+      }
+    }
+
+    const attempt = randomUUID(); const session = randomUUID()
+    await insertAttempt(attempt)
+    const snapshot = await rpc('public.get_verified_attempt_question_snapshots($1,$2,$3)', [attempt, learner, true])
+    expect(snapshot.items.map((item) => item.metadata.basePoints)).toEqual(expectedPoints)
+    await insertCompletion(session, score)
+    await client.query('UPDATE public.verified_attempts SET session_id=$1,completed_at=clock_timestamp() WHERE id=$2', [session, attempt])
+    expect((await client.query('SELECT base_xp,bonus_xp,total_xp FROM public.game_sessions WHERE id=$1', [session])).rows[0]).toEqual({ base_xp:252, bonus_xp:108, total_xp:360 })
+    expect((await client.query('SELECT count(*)::int AS n FROM public.session_answers WHERE session_id=$1 AND question_revision_id IS NOT NULL', [session])).rows[0].n).toBe(8)
+
+    const rejectedAttempt = randomUUID(); const rejectedSession = randomUUID()
+    await client.query('BEGIN')
+    try {
+      await insertAttempt(rejectedAttempt)
+      await insertCompletion(rejectedSession, { total:360, base:251, bonus:109 })
+      await err(() => client.query('UPDATE public.verified_attempts SET session_id=$1,completed_at=clock_timestamp() WHERE id=$2', [rejectedSession, rejectedAttempt]), '22023')
+    } finally {
+      await client.query('ROLLBACK')
+    }
+    expect((await client.query('SELECT count(*)::int AS n FROM public.verified_attempts WHERE id=$1', [rejectedAttempt])).rows[0].n).toBe(0)
+    expect((await client.query('SELECT count(*)::int AS n FROM public.game_sessions WHERE id=$1', [rejectedSession])).rows[0].n).toBe(0)
+    expect((await client.query('SELECT count(*)::int AS n FROM public.session_answers WHERE session_id=$1', [rejectedSession])).rows[0].n).toBe(0)
   })
   it('keeps appeals owner-scoped, SLA-idempotent, and new governance tables private', async () => {
     const appeal = await rpc('public.submit_question_appeal($1,$2,$3,$4,$5,$6)',[learner,question,null,'ambiguous','',randomUUID()]); expect(appeal.status).toBe('submitted'); const privateAppeals = await rpc('public.get_my_question_appeals($1)',[learner]); expect(privateAppeals.appeals[0]).toEqual(expect.objectContaining({ status:'submitted', publicMessage:'Your appeal was received.' })); expect(JSON.stringify(privateAppeals)).not.toMatch(/appealId|questionId|reason|internal/i)

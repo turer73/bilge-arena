@@ -34,7 +34,7 @@ export interface SavedGameSession {
  * Oyun oturumunu server-side API uzerinden kaydeder.
  * XP hesaplamasi artik server tarafinda yapilir (client-side XP manipulasyonunu onler).
  *
- * Hata durumunda null dondurur, client tarafinda hata gosterilmez.
+ * Hata/gecersiz cevap durumunda null dondurur; cagiran bunu saved saymamali.
  */
 export async function saveGameSession({
   attemptId,
@@ -79,6 +79,7 @@ export async function saveGameSession({
     const data = await res.json()
     if (
       typeof data.sessionId !== 'string'
+      || data.sessionId.trim().length === 0
       || !Number.isInteger(data.totalXP)
       || data.totalXP < 0
       || !Number.isInteger(data.correctCount)

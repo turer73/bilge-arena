@@ -196,7 +196,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         const shuffleMap = shuffleMapRef.current.get(question.id)
         const correctOption = shuffleMap ? shuffleMap.indexOf(grade.correctOption) : grade.correctOption
         if (correctOption < 0) throw new Error('invalid_grade_mapping')
-        const xpResult = calculateXP(question.difficulty, 0, current.streak)
+        const xpResult = calculateXP(question.difficulty, 0, current.streak, question.base_points)
         current.answerQuestion(-1, false, mode.timePerQuestion, xpResult, -1, correctOption, grade.solution)
       })
       .catch((error) => {
@@ -204,7 +204,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
           console.error('[QuizGame] Süre sonu notlandırma hatası:', error)
           const current = useQuizStore.getState()
           if (current.state === 'playing' && current.currentQuestion()?.id === question.id) {
-            const xpResult = calculateXP(question.difficulty, 0, current.streak)
+            const xpResult = calculateXP(question.difficulty, 0, current.streak, question.base_points)
             current.answerQuestion(-1, false, mode.timePerQuestion, xpResult, -1, -1, null)
           }
           toast.error('Süre doldu', 'Çözüm şu anda alınamadı; soru boş bırakıldı.')
@@ -551,7 +551,7 @@ export function useQuizGame(game: GameSlug, userId?: string | null): UseQuizGame
         if (correctOption < 0) throw new Error('invalid_grade_mapping')
 
         const newStreak = grade.isCorrect ? current.streak + 1 : 0
-        const xpResult = calculateXP(question.difficulty, timeRemaining, newStreak)
+        const xpResult = calculateXP(question.difficulty, timeRemaining, newStreak, question.base_points)
         current.answerQuestion(
           optionIndex,
           grade.isCorrect,

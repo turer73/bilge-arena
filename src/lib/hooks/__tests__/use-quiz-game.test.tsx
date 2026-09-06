@@ -360,6 +360,18 @@ describe('useQuizGame — handleAnswer', () => {
     expect(result.current.showXPPopup).toBe(true)
   })
 
+  test('provisional XP follows issued base_points and not a second difficulty lookup', async () => {
+    quiz.streak = 4
+    quiz.currentQuestion.mockReturnValue({ ...makeQ('q1'), difficulty: 2, base_points: 50 })
+    const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
+    await act(async () => result.current.handleAnswer(2))
+    expect(quiz.answerQuestion).toHaveBeenCalledWith(
+      2, true, expect.any(Number),
+      { base: 50, timeBonus: 0, streakBonus: 10, total: 60, hasBonus: true },
+      2, 2, 'Çözüm',
+    )
+  })
+
   test('3+ seri doğru: streak sesi', async () => {
     quiz.streak = 2 // bu cevapla 3 olur
     const { result } = renderHook(() => useQuizGame('matematik', 'u1'))
