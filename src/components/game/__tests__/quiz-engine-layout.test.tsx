@@ -220,8 +220,9 @@ vi.mock('@/components/ui/error-boundary', () => ({
 // Dynamic bileşenler null; AMA onClose alan (ErrorReportModal) bir kapat-butonu
 // render etsin → modal kapatma akışı test edilebilir.
 vi.mock('next/dynamic', () => ({
-  default: () => (props: { onClose?: () => void }) =>
-    props?.onClose ? <button data-testid="report-close" onClick={props.onClose} /> : null,
+  default: () => (props: { onClose?: () => void; saveStatus?: string }) =>
+    props?.saveStatus ? <output data-testid="saved-result-props">{JSON.stringify(props)}</output>
+      : props?.onClose ? <button data-testid="report-close" onClick={props.onClose} /> : null,
 }))
 
 import { QuizEngine } from '../quiz-engine'
@@ -229,6 +230,27 @@ import { QuizEngine } from '../quiz-engine'
 describe('QuizEngine yerleşim', () => {
   beforeEach(() => vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true'))
   afterEach(() => vi.unstubAllEnvs())
+
+  test('result wires save status and canonical score values from the saver, never local XP', () => {
+    quizGame.screen = 'result'
+    useSessionSaverMock.mockReturnValue({ saveStatus: 'pending', savedSession: null })
+    try {
+      const { rerender } = render(<QuizEngine game="matematik" />)
+      expect(JSON.parse(screen.getByTestId('saved-result-props').textContent!)).toEqual({
+        coinsEarned: null, saveStatus: 'pending', savedTotalXP: null, savedCorrectCount: null, savedWrongCount: null,
+      })
+      useSessionSaverMock.mockReturnValue({
+        saveStatus: 'saved', savedSession: { totalXP: 360, correctCount: 14, wrongCount: 1, coinsEarned: 0 },
+      })
+      rerender(<QuizEngine game="matematik" />)
+      expect(JSON.parse(screen.getByTestId('saved-result-props').textContent!)).toEqual({
+        coinsEarned: 0, saveStatus: 'saved', savedTotalXP: 360, savedCorrectCount: 14, savedWrongCount: 1,
+      })
+    } finally {
+      quizGame.screen = 'game'
+      useSessionSaverMock.mockReset()
+    }
+  })
 
   test('sınav değişince yeni kapsamda geçersiz kalan kategoriyi temizler', () => {
     quizGame.screen = 'lobby'

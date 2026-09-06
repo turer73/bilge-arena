@@ -639,6 +639,10 @@ export function QuizEngine({ game }: QuizEngineProps) {
           onRestart={quiz.handleRestart}
           onExit={quiz.handleRestart}
           coinsEarned={sessionSaver.savedSession?.coinsEarned ?? null}
+          saveStatus={sessionSaver.saveStatus}
+          savedTotalXP={sessionSaver.savedSession?.totalXP ?? null}
+          savedCorrectCount={sessionSaver.savedSession?.correctCount ?? null}
+          savedWrongCount={sessionSaver.savedSession?.wrongCount ?? null}
         />
         <ComponentErrorBoundary label="Reklam" variant="minimal">
           <div className="mx-auto max-w-[728px] px-4 pb-6">

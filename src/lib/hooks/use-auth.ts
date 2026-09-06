@@ -67,9 +67,12 @@ function applyRole(profile: Profile, isAdmin: boolean): Profile {
  * Hook disinda da cagirilabilir (ornegin session save sonrasi).
  * DB trigger'lari XP/level/streak guncelledikten sonra cagrilmali.
  */
-export async function refreshProfile(): Promise<void> {
+export async function refreshProfile(canApply?: () => boolean): Promise<void> {
+  if (canApply && !canApply()) return
   const data = await fetchProfileFromApi()
-  if (!data) return
+  // A session saver can leave its account/attempt while this request is in
+  // flight. Check before writing the global store, not only after returning.
+  if (!data || (canApply && !canApply())) return
   useAuthStore.getState().setProfile(applyRole(data.profile, data.isAdmin))
 }
 

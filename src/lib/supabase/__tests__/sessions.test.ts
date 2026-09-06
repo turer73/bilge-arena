@@ -162,6 +162,21 @@ describe('saveGameSession', () => {
     expect(result).toBeNull()
   })
 
+  it.each(['', '   '])('empty session acknowledgement %j never counts as saved', async (sessionId) => {
+    mockFetchSuccess(sessionId)
+    expect(await saveGameSession(baseParams)).toBeNull()
+  })
+
+  it.each([
+    { totalXP: -1 }, { totalXP: 0.5 }, { totalXP: '360' },
+    { correctCount: -1 }, { wrongCount: '1' },
+  ])('invalid canonical result %j never counts as saved', async (invalid) => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({
+      sessionId: 'session-123', totalXP: 360, correctCount: 14, wrongCount: 1, ...invalid,
+    }) })
+    expect(await saveGameSession(baseParams)).toBeNull()
+  })
+
   it('fetch reject olursa null dondurmeli', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'))
     const result = await saveGameSession(baseParams)

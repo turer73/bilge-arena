@@ -18,16 +18,20 @@ export interface XPResult {
 
 /**
  * XP hesaplama:
- * - Base: zorluga gore (10/20/30/50)
+ * - Base: issued question base_points; legacy fallback 10/20/30/50/50
+ * - Client display is provisional; only verified completion persists XP
  * - Time bonus: server-side soru zamanlayicisi gelene kadar kapali
  * - Streak bonus: >= 5 seri dogru ise +10
  */
 export function calculateXP(
   difficulty: Difficulty,
   _remainingSeconds: number,
-  currentStreak: number
+  currentStreak: number,
+  basePoints?: number,
 ): XPResult {
-  const base = BASE_XP[difficulty] || 20
+  const base = basePoints !== undefined && Number.isSafeInteger(basePoints) && basePoints >= 0
+    ? basePoints
+    : BASE_XP[difficulty] || 20
   // Remaining time is client-observed and therefore cannot safely affect XP.
   const timeBonus = 0
   const streakBonus = currentStreak >= 5 ? 10 : 0

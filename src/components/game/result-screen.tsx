@@ -10,6 +10,7 @@ import { trackEvent } from '@/lib/utils/plausible'
 import { SignupPromptModal } from './signup-prompt-modal'
 import { useGuestSession, computePromptLevel } from '@/lib/hooks/use-guest-session'
 import { BilgeChan } from '@/components/ui/bilge-chan'
+import type { SessionSaveStatus } from '@/lib/hooks/use-session-saver'
 
 interface ResultScreenProps {
   onRestart: () => void
@@ -18,20 +19,59 @@ interface ResultScreenProps {
    * sonuc ekrani acildiktan SONRA tamamlandigi icin ilk render'da null gelir ve
    * rozet o an gizlidir. null = bilinmiyor/misafir, 0 = gunluk tavan dolu. */
   coinsEarned?: number | null
+  saveStatus?: SessionSaveStatus
+  savedTotalXP?: number | null
+  savedCorrectCount?: number | null
+  savedWrongCount?: number | null
 }
 
-export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultScreenProps) {
+export function ResultScreen({
+  onRestart,
+  onExit,
+  coinsEarned = null,
+  saveStatus = 'not_applicable',
+  savedTotalXP = null,
+  savedCorrectCount = null,
+  savedWrongCount = null,
+}: ResultScreenProps) {
   const { score, questions, answers, xpEarned, maxStreak, lives, livesEnabled } = useQuizStore()
   const { user } = useAuthStore()
   const { incrementQuizCount } = useGuestSession()
   const [prompt, setPrompt] = useState<{ open: boolean; level: 1 | 2 | 3 }>({ open: false, level: 1 })
   const totalQuestions = questions.length
-  const answeredCount = answers.length
-  const pct = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0
-  const rank = calculateRank(score, answeredCount)
+  const localAnsweredCount = answers.length
+  const useCanonicalResult = saveStatus === 'saved'
+    && Number.isInteger(savedCorrectCount)
+    && Number.isInteger(savedWrongCount)
+  const displayedCorrectCount = useCanonicalResult ? savedCorrectCount! : score
+  const displayedAnsweredCount = useCanonicalResult
+    ? savedCorrectCount! + savedWrongCount!
+    : localAnsweredCount
+  const pct = displayedAnsweredCount > 0 ? Math.round((displayedCorrectCount / displayedAnsweredCount) * 100) : 0
+  const rank = calculateRank(displayedCorrectCount, displayedAnsweredCount)
   const config = RANK_CONFIG[rank]
   const gameOver = livesEnabled && lives === 0
   const isGuest = !user
+  const displayedXP = saveStatus === 'saved' && savedTotalXP !== null
+    ? savedTotalXP
+    : xpEarned
+  const xpLabel = saveStatus === 'saved'
+    ? 'XP KAZANCI'
+    : saveStatus === 'pending' || isGuest
+      ? 'XP TAHMİNİ'
+      : 'XP DOĞRULANMADI'
+  const displayedXPValue = saveStatus === 'failed' || (saveStatus === 'not_applicable' && !isGuest)
+    ? '—'
+    : String(displayedXP)
+  const saveMessage = saveStatus === 'saved'
+    ? 'Harika iş! İlerlemen kaydedildi.'
+    : saveStatus === 'pending'
+      ? 'Sonuçların güvenli biçimde kaydediliyor…'
+      : saveStatus === 'failed'
+        ? 'Sonuçlarının kaydı doğrulanamadı. XP ve altın kazanımın henüz doğrulanmadı.'
+        : isGuest
+          ? 'Bu tur giriş yapılmadan oynandı.'
+          : 'Bu turun doğrulanmış kaydı yok; ilerlemen kaydedilmedi.'
 
   // Analytics: bu ekran render olunca quiz tamamlandi demek
   // useRef guard: React 19 double-mount'a karsi tek sefer gonder
@@ -44,14 +84,14 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
       props: {
         rank,
         pct,
-        correct: score,
-        total: answeredCount,
-        xp: xpEarned,
+        correct: displayedCorrectCount,
+        total: displayedAnsweredCount,
+        xp: displayedXP,
         gameOver,
         maxStreak,
       },
     })
-  }, [isGuest, rank, pct, score, answeredCount, xpEarned, gameOver, maxStreak])
+  }, [isGuest, rank, pct, displayedCorrectCount, displayedAnsweredCount, displayedXP, gameOver, maxStreak])
 
   // Guest signup prompt escalation (Gun 2)
   const promptInitialized = useRef(false)
@@ -68,9 +108,9 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
   }, [isGuest, incrementQuizCount])
 
   const stats = [
-    { label: 'DOĞRU', value: `${score}/${answeredCount}`, color: 'var(--app-success)', tint: 'var(--app-success-tint)' },
+    { label: 'DOĞRU', value: `${displayedCorrectCount}/${displayedAnsweredCount}`, color: 'var(--app-success)', tint: 'var(--app-success-tint)' },
     { label: 'BAŞARI', value: `%${pct}`, color: config.color, tint: 'var(--app-accent-tint)' },
-    { label: 'XP KAZANCI', value: String(xpEarned), color: 'var(--app-warn)', tint: 'var(--app-warn-tint)' },
+    { label: xpLabel, value: displayedXPValue, color: 'var(--app-warn)', tint: 'var(--app-warn-tint)' },
   ]
 
   return (
@@ -80,7 +120,7 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
         <div className="animate-fadeUp rounded-2xl border-2 border-[var(--app-danger-border)] bg-[var(--app-danger-tint)] px-5 py-3 text-center shadow-[0_4px_0_var(--app-danger-border)]">
           <div className="text-base font-black text-[var(--app-danger)]">💔 Canlar bitti</div>
           <div className="mt-1 text-xs font-semibold text-[var(--app-text-sub)]">
-            {answeredCount}/{totalQuestions} soru cevaplanabildi
+              {localAnsweredCount}/{totalQuestions} soru cevaplanabildi
           </div>
         </div>
       )}
@@ -98,7 +138,14 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
           </div>
           <div className="mt-2 text-xl font-black leading-tight">{config.message}</div>
           <p className="mt-2 text-xs font-semibold leading-relaxed text-[var(--app-accent-border)]">
-            {gameOver ? 'Bir sonraki turda daha güçlü döneceğiz.' : 'Harika iş! İlerlemen kaydedildi.'}
+            {gameOver ? 'Bir sonraki turda daha güçlü döneceğiz.' : null}
+          </p>
+          <p
+            role={saveStatus === 'failed' ? 'alert' : undefined}
+            aria-live={saveStatus === 'failed' ? 'assertive' : 'polite'}
+            className="mt-2 text-xs font-semibold leading-relaxed text-[var(--app-accent-border)]"
+          >
+            {saveMessage}
           </p>
         </div>
         <BilgeChan
@@ -121,7 +168,7 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
             }}
           >
             <div className="font-display text-xl font-black" style={{ color: s.color }}>
-              {s.value}
+              {s.label === 'XP KAZANCI' ? displayedXP : s.value}
             </div>
             <div className="mt-1 text-[9px] font-extrabold tracking-wider text-[var(--app-text-sub)]">
               {s.label}
@@ -133,7 +180,7 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
       {/* Kazanilan altin — oturum kaydi tamamlaninca gorunur. Altin XP'den ayri
           bir para birimi: XP seviye ilerlemesi, altin magaza alimi. Kullanici
           kazandigini burada gormezse magazaya yonelmiyor. */}
-      {coinsEarned !== null && (
+      {saveStatus === 'saved' && coinsEarned !== null && (
         <div
           className="rounded-2xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-4 py-3 text-center shadow-[0_4px_0_var(--app-warn-border)] animate-fadeUp"
           style={{ animationDelay: '0.6s', animationFillMode: 'both' }}
@@ -167,7 +214,14 @@ export function ResultScreen({ onRestart, onExit, coinsEarned = null }: ResultSc
 
       {/* Sosyal medya paylasim */}
       <div className="rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-3 shadow-[0_4px_0_var(--app-border)] animate-fadeUp" style={{ animationDelay: '0.55s', animationFillMode: 'both' }}>
-        <ShareButtons rank={rank} score={score} total={totalQuestions} xp={xpEarned} />
+        {(saveStatus === 'saved' || isGuest) && (
+          <ShareButtons
+            rank={rank}
+            score={displayedCorrectCount}
+            total={displayedAnsweredCount}
+            xp={saveStatus === 'saved' && savedTotalXP !== null ? savedTotalXP : xpEarned}
+          />
+        )}
       </div>
 
       {/* Butonlar */}

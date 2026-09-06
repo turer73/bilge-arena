@@ -229,6 +229,79 @@ describe('POST /api/sessions', () => {
     expect(json.sessionId).toBe('session-1')
   })
 
+  it.each([
+    { total: 90, base: 63, points: [20, 20, 20, 30] },
+    { total: 170, base: 119, points: [50, 50, 50, 20] },
+    { total: 180, base: 126, points: [50, 50, 50, 30] },
+    { total: 330, base: 231, points: [50, 50, 50, 50, 50, 30, 20] },
+    { total: 340, base: 238, points: [50, 50, 50, 50, 50, 50, 10] },
+    { total: 350, base: 245, points: [50, 50, 50, 50, 50, 50, 20] },
+    { total: 360, base: 252, points: [50, 50, 50, 50, 50, 50, 30] },
+  ])('sends exact PostgreSQL base/bonus parity for $total XP', async ({ total, base, points }) => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const snapshots = points.map((basePoints, index) => ({
+      position: index + 1,
+      questionId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      correctOption: 1,
+      metadata: { game: 'matematik', category: 'cebir', difficulty: basePoints === 50 ? 4 : basePoints / 10, basePoints },
+    }))
+    mockReadSnapshots.mockResolvedValue(snapshots)
+    mockGetFirstAttempt.mockResolvedValue(1)
+    const res = await POST(makeRequest({
+      ...validBody,
+      answers: snapshots.map(snapshot => ({ questionId: snapshot.questionId, selectedOption: 1, isCorrect: true, timeTaken: 5 })).reverse(),
+    }))
+    expect(res.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('complete_verified_game_session', expect.objectContaining({
+      p_total_xp: total, p_base_xp: base, p_bonus_xp: total - base,
+      p_answers: snapshots.map((snapshot, index) => expect.objectContaining({
+        question_id: snapshot.questionId,
+        question_order: index,
+        xp_earned: snapshot.metadata.basePoints + (index >= 4 ? 10 : 0),
+      })),
+    }))
+  })
+
+  it('regresses the 15-question Turkish practice: 14 correct, max streak 12, 360 XP = 252 + 108', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    const snapshots = Array.from({ length: 15 }, (_, index) => ({
+      position: index + 1,
+      questionId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      correctOption: 1,
+      metadata: { game: 'turkce', category: 'anlam', examRef: 'LGS', difficulty: 2, basePoints: 20 },
+    }))
+    mockReadSnapshots.mockResolvedValue(snapshots)
+    mockGetFirstAttempt.mockImplementation(async (_actor: string, id: string) => id === snapshots[2].questionId ? 0 : 1)
+    const res = await POST(makeRequest({
+      ...validBody, game: 'turkce', mode: 'practice',
+      // Client correctness is deliberately untrusted; the first grade wins.
+      answers: snapshots.map(s => ({ questionId: s.questionId, selectedOption: 1, isCorrect: true, timeTaken: 8 })),
+    }))
+    expect(res.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('complete_verified_game_session', expect.objectContaining({
+      p_total_xp: 360, p_base_xp: 252, p_bonus_xp: 108, p_correct_count: 14, p_wrong_count: 1,
+      p_answers: snapshots.map((s, index) => expect.objectContaining({
+        question_id: s.questionId, xp_earned: index === 2 ? 0 : index >= 7 ? 30 : 20,
+      })),
+    }))
+  })
+
+  it('uses the immutable basePoints field rather than reconstructing a difficulty price', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    // An explicit authority sentinel: future snapshot pricing cannot silently
+    // fall back to a second lookup table in this route.
+    mockReadSnapshots.mockResolvedValue([{
+      position: 1, questionId: Q1, correctOption: 1,
+      metadata: { game: 'matematik', category: 'cebir', difficulty: 2, basePoints: 30 },
+    }])
+    const res = await POST(makeRequest({ ...validBody, answers: [validBody.answers[0]] }))
+    expect(res.status).toBe(200)
+    expect(mockRpc).toHaveBeenCalledWith('complete_verified_game_session', expect.objectContaining({
+      p_total_xp: 30, p_base_xp: 21, p_bonus_xp: 9,
+      p_answers: [expect.objectContaining({ xp_earned: 30 })],
+    }))
+  })
+
   it('session payload ilk grade seçimini değiştiremez', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockGetFirstAttempt.mockResolvedValue(0)
@@ -272,6 +345,17 @@ describe('POST /api/sessions', () => {
 
     const res = await POST(makeRequest(validBody))
     expect(res.status).toBe(500)
+  })
+
+  it('does not acknowledge or read rewards when the immutable-score guard rejects with 22023', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'private score diagnostic' } })
+    const res = await POST(makeRequest(validBody))
+    expect(res.status).toBe(500)
+    expect(await res.json()).toEqual({ error: 'Oturum kaydedilemedi' })
+    expect(mockCoinLedgerMaybeSingle).not.toHaveBeenCalled()
+    expect(mockAchievementSourceEq).not.toHaveBeenCalled()
+    expect(mockRpc).toHaveBeenCalledOnce()
   })
 
   it('returns 400 if clientRequestId eksik veya gecersiz UUID', async () => {

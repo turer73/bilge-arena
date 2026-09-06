@@ -12,8 +12,6 @@ import { readVerifiedAttemptQuestionSnapshots } from '@/lib/verified-attempts'
 // Replay korumasi: kullanici basina dk'da max 3 oturum
 const sessionLimiter = createRateLimiter('session-submit', 3, 60_000)
 
-// XP hesaplama — client'a guvenmeden server-side recalculate
-const BASE_XP: Record<number, number> = { 1: 10, 2: 20, 3: 30, 4: 50, 5: 50 }
 const completeSessionResultSchema = z.object({
   sessionId: z.string().min(1),
   totalXP: z.number().int().nonnegative(),
@@ -23,14 +21,15 @@ const completeSessionResultSchema = z.object({
 })
 
 function serverCalculateXP(
-  difficulty: number,
+  basePoints: number,
   currentStreak: number,
 ): number {
-  const base = BASE_XP[difficulty] || 20
   const streakBonus = currentStreak >= 5 ? 10 : 0
   // Per-question duration comes from the client and remains useful analytics,
   // but must never influence rewards until server-side timing exists.
-  return base + streakBonus
+  // The DB completion trigger uses the issued revision's base_points, not a
+  // separate difficulty table or the client's estimate (migration 106).
+  return basePoints + streakBonus
 }
 
 // POST: Oyun oturumunu kaydet (server-side XP hesaplama)
@@ -179,7 +178,7 @@ export async function POST(request: Request) {
       if (streak > maxStreak) maxStreak = streak
       correctCount++
       xpEarned = serverCalculateXP(
-        snapshot.metadata.difficulty,
+        snapshot.metadata.basePoints,
         streak,
       )
       totalXP += xpEarned
@@ -204,7 +203,9 @@ export async function POST(request: Request) {
   }).filter((a): a is NonNullable<typeof a> => a !== null)
 
   const avgTime = answers.length > 0 ? totalTime / answers.length : 0
-  const baseXP = Math.floor(totalXP * 0.7)
+  // Integer arithmetic matches PostgreSQL floor(total_xp::numeric * 0.7).
+  // Multiplying by 0.7 first makes e.g. 360 become 251.99999999999997.
+  const baseXP = Math.floor((totalXP * 7) / 10)
   const bonusXP = totalXP - baseXP
 
   // 1-5b. Atomik oturum-tamamlama (migration 081, konu#6 Faz-1 karari): session+answers+

@@ -3,6 +3,17 @@ import { calculateXP, calculateRank } from '../xp'
 import type { Difficulty } from '@/types/database'
 
 describe('calculateXP', () => {
+  it('difficulty 4 fallback preserves the verified snapshot 50 point base', () => {
+    expect(calculateXP(4, 0, 0).total).toBe(50)
+  })
+
+  it.each([0, 17, 40])('uses issued base_points=%i instead of a difficulty lookup', (basePoints) => {
+    expect(calculateXP(2, 99, 4, basePoints)).toEqual({
+      base: basePoints, timeBonus: 0, streakBonus: 0, total: basePoints, hasBonus: false,
+    })
+    expect(calculateXP(2, 0, 5, basePoints).total).toBe(basePoints + 10)
+  })
+
   it('zorluk 1 icin base XP 10 verir', () => {
     const result = calculateXP(1 as Difficulty, 0, 0)
     expect(result.base).toBe(10)
