@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { FiveModelReviewReport } from './five-model-review-report'
 
 interface QueueItem { revisionId: string; questionId: string; status: string; createdAt: string }
 interface RevisionDetail {
@@ -257,6 +258,7 @@ export function ContentGovernancePanel() {
                   <h3 className="mt-1 text-sm font-bold">{detail.content?.question ?? 'Soru metni yok'}</h3>
                   {detail.summary && <p className="mt-1 text-xs text-[var(--text-sub)]">{detail.summary}</p>}
                 </div>
+                <FiveModelReviewReport revisionId={detail.revisionId} />
                 <ol className="space-y-1 text-xs">
                   {(detail.content?.options ?? []).map((option, index) => <li key={index} className={index === detail.content?.answer ? 'font-bold text-[var(--growth)]' : ''}>{String.fromCharCode(65 + index)}) {option}</li>)}
                 </ol>
