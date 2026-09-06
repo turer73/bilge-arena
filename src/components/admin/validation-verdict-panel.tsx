@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { FiveModelReviewReport } from './five-model-review-report'
 
 /**
  * Otomatik dogrulama verdict'ine gore soru listesi.
@@ -161,6 +162,7 @@ export function ValidationVerdictPanel() {
                       <p className="mt-0.5 text-[var(--text-sub)]">{f.evidence}</p>
                     </div>
                   ))}
+                  <FiveModelReviewReport questionId={item.questionId} />
                 </div>
               )}
             </li>

@@ -282,6 +282,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
       || quiz.screen !== 'lobby'
       || todayPlan.loading
       || personalizedMock.loading
+      || tytSocialStartBlocked
       || typeof window === 'undefined'
     ) return
 
@@ -310,6 +311,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     startTodayPlan,
     todayPlan.loading,
     todayPlan.plan,
+    tytSocialStartBlocked,
   ])
 
   // Lobiye donulunce plan-aktif bayragini sifirla (handleRestart'in TUM

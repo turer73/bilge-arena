@@ -6,7 +6,7 @@
  */
 
 import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 const mockAuth = vi.hoisted(() => ({
   value: { user: null as { id: string } | null, profile: null as Record<string, unknown> | null },
@@ -34,8 +34,6 @@ beforeEach(() => {
   mockQuestState.value = []
   useGameStore.setState({ selectedExamRef: null })
   localStorage.clear()
-  localStorage.setItem('ba-coach-seen:guest', new Date().toDateString())
-  localStorage.setItem(`ba-coach-seen:${UUID}`, new Date().toDateString())
   global.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
     if (url.includes('/api/institution/workspace')) return { ok: false, json: async () => ({}) } as Response
@@ -58,7 +56,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
     expect(responsiveGrid).toHaveClass('md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)]')
   })
 
-  test('profil kaynaklarını ve günlük soru hedefini aynı kabuğa aktarır', () => {
+  test('profil kaynaklarını ve günlük soru hedefini aynı kabuğa aktarır', async () => {
     mockAuth.value = {
       user: { id: UUID },
       profile: {
@@ -74,33 +72,33 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
       quest: { title: '5 soru çöz', target_value: 5, quest_type: 'correct_answers', xp_reward: 50 },
     }]
 
-    render(<ArenaClient />)
+    await act(async () => { render(<ArenaClient />) })
 
     expect(screen.getByLabelText('Günlük seri: 12')).toBeInTheDocument()
     expect(screen.getByLabelText('Altın: 480')).toBeInTheDocument()
     expect(screen.getByText('3 / 5 soru')).toBeInTheDocument()
   })
 
-  test('LGS profilinde yalnız uygun dersleri gösterir', () => {
+  test('LGS profilinde yalnız uygun dersleri gösterir', async () => {
     mockAuth.value = {
       user: { id: UUID },
       profile: { total_xp: 100, current_streak: 0, username: 'lgsci', exam_type: 'lgs' },
     }
 
-    render(<ArenaClient />)
+    await act(async () => { render(<ArenaClient />) })
 
     expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Türkçe' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'YDT' })).not.toBeInTheDocument()
   })
 
-  test('YKS profilinde İngilizce dahil tüm dersleri gösterir', () => {
+  test('YKS profilinde İngilizce dahil tüm dersleri gösterir', async () => {
     mockAuth.value = {
       user: { id: UUID },
       profile: { total_xp: 100, current_streak: 0, username: 'yksci', exam_type: 'yks' },
     }
 
-    render(<ArenaClient />)
+    await act(async () => { render(<ArenaClient />) })
     expect(screen.getByRole('button', { name: 'YDT' })).toBeInTheDocument()
   })
 
@@ -130,14 +128,14 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
     await waitFor(() => expect(useGameStore.getState().selectedExamRef).toBe('LGS'))
   })
 
-  test('AYT esit agirlik kapsaminda matematigi gosterir', () => {
+  test('AYT esit agirlik kapsaminda matematigi gosterir', async () => {
     useGameStore.setState({ selectedExamRef: 'AYT-EA' })
     mockAuth.value = {
       user: { id: UUID },
       profile: { total_xp: 100, current_streak: 0, username: 'eaci', exam_type: 'yks' },
     }
 
-    render(<ArenaClient />)
+    await act(async () => { render(<ArenaClient />) })
     expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
   })
 
@@ -162,5 +160,44 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
       if (previous === undefined) delete process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED
       else process.env.NEXT_PUBLIC_INSTITUTION_TRACKING_ENABLED = previous
     }
+  })
+
+  test('ana plan gerçek API bağlamıyla yüklenir; ders/sınav değişince önceki plan görünmez', async () => {
+    mockAuth.value = { user: { id: UUID }, profile: { exam_type: 'yks' } }
+    const requests: string[] = []
+    global.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (!url.startsWith('/api/study/today')) return { ok: true, json: async () => ({ topics: [] }) } as Response
+      requests.push(url)
+      const params = new URL(url, 'http://localhost').searchParams
+      const game = params.get('game')
+      const examRef = params.get('exam_ref')
+      const count = game === 'matematik' ? 15 : examRef === 'TYT' ? 12 : 8
+      return { ok: true, json: async () => ({
+        planDate: '2026-09-06', game, examRef,
+        questions: Array.from({ length: count }, (_, i) => ({ id: `${game}-${i}` })),
+        completedIds: [],
+        items: Array.from({ length: count }, (_, i) => ({ questionId: `${game}-${i}`, position: i,
+          slotType: 'current_target', sourceType: 'question', sourceLabel: 'Yeni konu', completed: false })),
+        attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', expiresAt: '2099-01-01T00:00:00Z',
+      }) } as Response
+    }) as typeof fetch
+    render(<ArenaClient />)
+    expect(await screen.findByRole('button', { name: 'Planı Başlat · 15 Soru' })).toBeInTheDocument()
+    const primaryEntry = document.querySelector('[data-today-plan-primary]')!
+    const secondaryGrid = document.querySelector('[data-responsive-arena-grid]')!
+    expect(primaryEntry.compareDocumentPosition(secondaryGrid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Türkçe' }))
+    expect(screen.queryByRole('button', { name: 'Planı Başlat · 15 Soru' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Planı Başlat · 12 Soru' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sınav kapsamını değiştir' }))
+    fireEvent.click(screen.getByRole('button', { name: 'AYT Eşit Ağırlık' }))
+    expect(screen.queryByRole('button', { name: 'Planı Başlat · 12 Soru' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Planı Başlat · 8 Soru' })).toBeInTheDocument()
+    expect(requests).toEqual([
+      '/api/study/today?game=matematik&exam_ref=TYT',
+      '/api/study/today?game=turkce&exam_ref=TYT',
+      '/api/study/today?game=turkce&exam_ref=AYT-EA',
+    ])
   })
 })

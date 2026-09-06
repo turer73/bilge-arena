@@ -837,4 +837,70 @@ describe('QuizEngine — TYT Sosyal cevaplama düzeni', () => {
       quizGame.screen = 'game'
     }
   })
+
+  test('TYT Sosyal doğrudan plan niyetini politika aktif olana kadar korur', async () => {
+    window.history.replaceState({}, '', '/arena/sosyal?start=today-plan&exam_ref=TYT')
+    quizGame.screen = 'lobby'
+    authStoreValue.user = { id: 'u1' }
+    gameStoreValue.selectedExamRef = 'TYT'
+    todayPlanValue.plan = {
+      planDate: '2026-09-06',
+      game: 'sosyal',
+      examRef: 'TYT',
+      questions: [{ id: 'q-social-plan' }],
+      completedIds: [],
+      attemptId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }
+    quizGame.handleStartPlanned.mockClear()
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            status: 'active',
+            policyVersion: 'tyt-social-2026-v1',
+            variant: 'questions_16_20',
+            effectiveAt: '2026-09-06T08:00:00+00:00',
+            appliesTo: 'new_artifacts_only',
+            replayed: false,
+          }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          status: 'setup_required',
+          policyVersion: 'tyt-social-2026-v1',
+          rulesSha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          appliesTo: 'new_artifacts_only',
+        }),
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    try {
+      render(<QuizEngine game="sosyal" />)
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+      expect(quizGame.handleStartPlanned).not.toHaveBeenCalled()
+      expect(window.location.search).toBe('?start=today-plan&exam_ref=TYT')
+
+      fireEvent.click(screen.getByLabelText('16–20 Din Kültürü ve Ahlak Bilgisi soruları'))
+      fireEvent.click(screen.getByRole('button', { name: 'Seçimi kaydet' }))
+
+      await waitFor(() => expect(quizGame.handleStartPlanned).toHaveBeenCalledOnce())
+      expect(window.location.search).toBe('?exam_ref=TYT')
+      expect(quizGame.handleStartPlanned).toHaveBeenCalledWith(
+        [{ id: 'q-social-plan' }],
+        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      )
+    } finally {
+      vi.unstubAllGlobals()
+      window.history.replaceState({}, '', '/')
+      authStoreValue.user = null
+      gameStoreValue.selectedExamRef = 'TYT'
+      todayPlanValue.plan = null
+      quizGame.screen = 'game'
+    }
+  })
 })

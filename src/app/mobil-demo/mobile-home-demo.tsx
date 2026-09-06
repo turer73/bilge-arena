@@ -12,7 +12,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clock3,
   Flame,
   FlaskConical,
   Gem,
@@ -33,33 +32,10 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { BottomNav } from '@/components/layout/bottom-nav'
+import { TodayPlanFocus } from '@/components/study/today-plan-focus'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
 import { GAMES } from '@/lib/constants/games'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
-
-export const COACH_SEEN_STORAGE_KEY = 'ba-coach-seen'
-
-export function coachSeenStorageKey(userId?: string | null) {
-  return `${COACH_SEEN_STORAGE_KEY}:${userId ?? 'guest'}`
-}
-
-/** Koc penceresi gunde bir kez karsilar; ayni gun tekrar acilmaz. */
-function coachSeenToday(userId?: string | null) {
-  try {
-    return window.localStorage.getItem(coachSeenStorageKey(userId)) === new Date().toDateString()
-  } catch {
-    // localStorage kapaliysa (gizli sekme/kisitli tarayici) koc gosterilir.
-    return false
-  }
-}
-
-function markCoachSeen(userId?: string | null) {
-  try {
-    window.localStorage.setItem(coachSeenStorageKey(userId), new Date().toDateString())
-  } catch {
-    // sessiz gec: kayit edilemezse en fazla bir kez daha gosterilir
-  }
-}
 
 export type MobileSubjectId = 'matematik' | 'turkce' | 'fen' | 'sosyal' | 'ingilizce'
 type SubjectId = MobileSubjectId
@@ -135,7 +111,7 @@ const COACH_MESSAGES = [
   {
     eyebrow: 'Bugünkü rota',
     title: 'Hazırsın, Bilgin!',
-    body: 'Bölme ve Bölünebilme için 10 soruluk kısa dersin hazır. Yaklaşık 4 dakikada tamamlayabilirsin.',
+    body: 'Bölme ve Bölünebilme için çalışma rotan hazır.',
     icon: Sparkles,
     color: 'var(--app-accent-text)',
     tint: 'var(--app-accent-tint)',
@@ -266,8 +242,8 @@ export function MobileHomeDemo({
 }: MobileHomeDemoProps = {}) {
   const visibleSubjects = SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id))
   const [subjectId, setSubjectId] = useState<SubjectId>(visibleSubjects[0]?.id ?? 'matematik')
-  // Demo rotasi bir vitrin: pencere hep acik baslar. Canli modda karar
-  // efekte birakilir (SSR'da kapali render edilir, hydration uyusmazligi yok).
+  // Demo rotasi bir vitrin: pencere acik baslar. Canli ana giriste planin
+  // birincil eylemini kapatmamak icin koç yalniz kullanici istegiyle acilir.
   const [coachOpen, setCoachOpen] = useState(mode === 'demo')
   const coachDialogRef = useRef<HTMLElement | null>(null)
   const coachReturnFocusRef = useRef<HTMLElement | null>(null)
@@ -368,20 +344,10 @@ export function MobileHomeDemo({
     : coachMessage === 0
       ? pathComplete
         ? `${subject.label} yolundaki tüm konuları tamamladın. Bilgini korumak için karışık tekrar yapabilirsin.`
-        : `${currentStep?.label ?? subject.label} için 10 soruluk kısa dersin hazır. Yaklaşık 4 dakikada tamamlayabilirsin.`
+        : `${currentStep?.label ?? subject.label} için çalışma rotan hazır.`
       : coachMessage === 1
         ? 'Önce soru kökündeki ipucunu yakala. Bildiklerini küçük adımlara bölmek sana zaman kazandırır.'
         : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
-
-  useEffect(() => {
-    if (mode !== 'live' || coachSeenToday(userId)) return
-    markCoachSeen(userId)
-    let cancelled = false
-    queueMicrotask(() => {
-      if (!cancelled) setCoachOpen(true)
-    })
-    return () => { cancelled = true }
-  }, [mode, userId])
 
   useEffect(() => {
     if (!coachOpen) return
@@ -530,6 +496,19 @@ export function MobileHomeDemo({
           </div>
         </section>
 
+        {mode === 'live' && userId && (
+          <div className="mx-auto w-full max-w-[1180px] px-4 pt-4 md:px-5 md:pt-5 xl:px-6">
+            <section data-today-plan-primary aria-label="Günlük çalışma planı">
+              <TodayPlanFocus
+                game={gameSlug}
+                userId={userId}
+                examRef={progressExamRef}
+                selectedCategory={null}
+                showStickyMobileAction={false}
+              />
+            </section>
+          </div>
+        )}
         <div data-responsive-arena-grid className="mx-auto grid w-full max-w-[1180px] grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(300px,.65fr)] md:gap-x-5 md:gap-y-5 md:px-5 md:py-5 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-x-7 xl:px-6">
         <section data-learning-path-hero className="px-4 pt-4 md:col-start-1 md:row-start-1 md:px-0 md:pt-0">
           <div className="relative overflow-hidden rounded-[22px] p-4 text-white md:min-h-[168px] md:rounded-[28px] md:p-6" style={{ background: `linear-gradient(135deg, ${subject.color}, ${subject.shadow})`, boxShadow: `0 6px 0 ${subject.shadow}` }}>
@@ -554,7 +533,7 @@ export function MobileHomeDemo({
           </div>
         </section>
 
-        <section data-today-lesson className="order-[-1] px-4 pt-4 md:order-none md:col-start-2 md:row-start-1 md:px-0 md:pt-0" aria-labelledby="continue-title">
+        <section data-self-choice-lesson className="px-4 pt-4 md:col-start-2 md:row-start-1 md:px-0 md:pt-0" aria-labelledby="continue-title">
           <div className="relative min-h-[180px] overflow-hidden rounded-[24px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-border)] md:h-full md:min-h-[168px]">
             <div className="relative z-10 max-w-[64%]">
               {isSocialTytProgressPreparing ? (
@@ -567,14 +546,11 @@ export function MobileHomeDemo({
                 </div>
               ) : (
                 <>
-                  <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Bugünkü ders</div>
-                  <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{pathComplete ? 'Yol tamamlandı' : currentStep?.label ?? subject.label}</h2>
-                  <div className="mt-2 flex items-center gap-3 text-[11px] font-bold text-[var(--app-text-sub)]">
-                    <span className="flex items-center gap-1"><BookOpenText size={14} />10 soru</span>
-                    <span className="flex items-center gap-1"><Clock3 size={14} />4 dk</span>
-                  </div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: subject.color }}>Kendi seçimin</div>
+                  <h2 id="continue-title" className="mt-1 text-lg font-black leading-6 text-[var(--app-text)]">{pathComplete ? 'Karışık tekrar' : currentStep?.label ?? subject.label}</h2>
+                  <p className="mt-2 text-[11px] font-bold leading-5 text-[var(--app-text-sub)]">İstersen bu konudan bağımsız çalış.</p>
                   <Link href={primaryHref} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black text-white active:translate-y-1" style={{ background: subject.color, boxShadow: `0 5px 0 ${subject.shadow}` }}>
-                    <Play size={17} fill="currentColor" /> {pathComplete ? 'TEKRAR ET' : 'DEVAM ET'}
+                    <Play size={17} fill="currentColor" /> {pathComplete ? 'KARIŞIK TEKRAR' : 'KONUYA GİT'}
                   </Link>
                 </>
               )}

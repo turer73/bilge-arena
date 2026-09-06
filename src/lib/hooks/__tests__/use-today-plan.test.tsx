@@ -63,7 +63,7 @@ describe('useTodayPlan', () => {
   })
 
   it('exam_ref parametresini gonderir ve ayni oyunun planini kabul eder', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(response(PLAN))
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...PLAN, examRef: 'LGS' }))
 
     const { result } = renderHook(() => useTodayPlan('matematik', 'u1', 'LGS'))
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -73,6 +73,42 @@ describe('useTodayPlan', () => {
       expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }),
     )
     expect(result.current.plan?.game).toBe('matematik')
+    expect(result.current.plan?.examRef).toBe('LGS')
+  })
+
+  it.each(['TYT', null, 'bogus'])('explicit LGS request rejects returned exam %s', async (examRef) => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...PLAN, examRef }))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', 'LGS'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan).toBeNull()
+  })
+
+  it.each(['YDT', 'bogus', undefined])('profile-resolved math rejects invalid exam %s', async (examRef) => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...PLAN, examRef }))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan).toBeNull()
+  })
+
+  it.each(['TYT', 'LGS', null])('omitted exam accepts valid server resolution %s', async (examRef) => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...PLAN, examRef }))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan?.examRef).toBe(examRef)
+  })
+
+  it('Wordquest only accepts null question exam scope', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...PLAN, game: 'wordquest', examRef: 'YDT' }))
+    const { result } = renderHook(() => useTodayPlan('wordquest', 'u1', null))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan).toBeNull()
+  })
+
+  it('matching but unsupported explicit game/exam pair is rejected', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ ...PLAN, examRef: 'YDT' }))
+    const { result } = renderHook(() => useTodayPlan('matematik', 'u1', 'YDT'))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.plan).toBeNull()
   })
 
   it('gecerli secili kategoriyi ogrenci secimi baglami olarak gonderir', async () => {

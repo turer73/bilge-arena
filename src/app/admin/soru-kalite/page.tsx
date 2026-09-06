@@ -106,8 +106,8 @@ export default function AdminQuestionQualityPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Soru Kalitesi</h1>
         <p className="text-sm text-[var(--text-sub)]">
-          Dusuk basarili (production drift) sorular + bekleyen raporlar. Yanlis
-          isaretlenmis cevap veya anlasilmaz soru tespiti icin.
+          Soru kanıtları, beş modelin ayrı çözüm raporları ve insan incelemesi.
+          Model sonuçları yayın onayı değildir; mevcut inceleme ve yayın kuralları korunur.
         </p>
       </div>
 

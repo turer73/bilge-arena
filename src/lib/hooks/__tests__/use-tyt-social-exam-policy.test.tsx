@@ -119,4 +119,48 @@ describe('useTytSocialExamPolicy', () => {
     expect(result.current.variantCode).toBeNull()
     expect(result.current.selectionEffectiveAt).toBeNull()
   })
+
+  test('account switch hides an active selection in the first render', async () => {
+    const activeGet = { status: active.status, policyVersion: active.policyVersion, variant: active.variant, effectiveAt: active.effectiveAt, appliesTo: active.appliesTo }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => activeGet })
+      .mockImplementationOnce(() => new Promise(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+    const observed: string[] = []
+    const { result, rerender } = renderHook(() => {
+      const state = useTytSocialExamPolicy({ game: 'sosyal', examRef: 'TYT' })
+      observed.push(`${auth.value.user.id}:${state.status}:${state.variantCode}`)
+      return state
+    })
+    await waitFor(() => expect(result.current.status).toBe('active'))
+    auth.value = { user: { id: 'user-2' } }
+    rerender()
+    expect(observed.filter((value) => value.startsWith('user-2:'))).not.toContain('user-2:active:questions_21_25')
+    expect(result.current.status).toBe('loading')
+    expect(result.current.variantCode).toBeNull()
+    expect(result.current.policyVersion).toBeNull()
+    expect(result.current.selectionEffectiveAt).toBeNull()
+  })
+
+  test('late PUT JSON from an old account cannot replace the next account selection', async () => {
+    let resolveJson!: (value: unknown) => void
+    const putJson = new Promise((resolve) => { resolveJson = resolve })
+    vi.stubGlobal('crypto', { randomUUID: vi.fn(() => 'request-1') })
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => policy })
+      .mockResolvedValueOnce({ ok: true, json: () => putJson })
+      .mockResolvedValueOnce({ ok: true, json: async () => policy })
+    vi.stubGlobal('fetch', fetchMock)
+    const { result, rerender } = renderHook(() => useTytSocialExamPolicy({ game: 'sosyal', examRef: 'TYT' }))
+    await waitFor(() => expect(result.current.status).toBe('setup_required'))
+    let saving!: Promise<boolean>
+    act(() => { saving = result.current.saveSelection('questions_21_25') })
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    auth.value = { user: { id: 'user-2' } }
+    rerender()
+    await waitFor(() => expect(result.current.status).toBe('setup_required'))
+    await act(async () => { resolveJson(active); await saving })
+    expect(result.current.status).toBe('setup_required')
+    expect(result.current.variantCode).toBeNull()
+  })
 })

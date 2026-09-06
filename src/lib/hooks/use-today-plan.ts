@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { GAMES, type GameSlug } from '@/lib/constants/games'
+import { GAMES, getCategoriesForExam, type GameSlug } from '@/lib/constants/games'
 import type { PublicQuestion } from '@/lib/utils/question-public'
 import { isValidUuid } from '@/lib/utils/uuid'
 import type { TodayPlanItem } from '@/lib/study/today-plan-contract'
@@ -64,7 +64,7 @@ export function useTodayPlan(
     try {
       const params = new URLSearchParams({ game })
       if (examRef) params.set('exam_ref', examRef)
-      if (selectedCategory && GAMES[game].categories.some((category) => category === selectedCategory)) {
+      if (selectedCategory && getCategoriesForExam(game, examRef).includes(selectedCategory)) {
         params.set('choice_category', selectedCategory)
       }
       const res = await fetch(`/api/study/today?${params}`, {
@@ -89,7 +89,15 @@ export function useTodayPlan(
           && typeof item.sourceLabel === 'string'
           && typeof item.completed === 'boolean'
         ))
+      // Explicit exam selection is part of the plan identity. Only an omitted
+      // selection may be resolved from the profile; Wordquest is always NULL.
+      const validExamRef = game === 'wordquest'
+        ? data.examRef === null
+        : examRef
+          ? data.examRef === examRef && GAMES[game].examTags.includes(data.examRef)
+          : data.examRef === null || GAMES[game].examTags.includes(data.examRef)
       const validResponse = data.game === game
+        && validExamRef
         && Array.isArray(data.questions)
         && Array.isArray(data.completedIds)
         && validItems
