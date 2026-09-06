@@ -39,5 +39,18 @@ describe('ProgramReviewPanel',()=>{
     expect(await screen.findByText('Kısmi olumlu değişim gözlendi')).toBeInTheDocument()
     expect(container.textContent).not.toContain(PROGRAM_REF)
     expect(container.textContent).not.toContain(CLASSROOM_ID)
+    expect(screen.getByText(/Görevlerin tamamı henüz doğrulanmadı/)).toBeInTheDocument()
+    expect(screen.queryByText(/Tüm görevler tamamlandı/)).not.toBeInTheDocument()
+  })
+
+  it.each(['published','completed'] as const)('uses the authoritative %s completion state',async(programStatus)=>{
+    mocks.review.mockResolvedValue({...await mocks.review(),programStatus})
+    const user=userEvent.setup()
+    render(<ProgramReviewPanel classroomId={CLASSROOM_ID} memberRef={MEMBER_REF} game="matematik" examRef="TYT"/>)
+    await user.click(await screen.findByRole('button',{name:'Kanıtı incele'}))
+    await user.click(screen.getByRole('button',{name:'Değerlendirmeyi kaydet'}))
+    expect(await screen.findByText(programStatus==='completed'
+      ? /Tüm görevler tamamlandı/
+      : /Görevlerin tamamı henüz doğrulanmadı/)).toBeInTheDocument()
   })
 })

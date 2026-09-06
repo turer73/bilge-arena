@@ -1,4 +1,5 @@
-import { summarizeMastery } from '@/lib/mastery/status'
+import { summarizeLearningStatus, type LearningStatusInput } from '@/lib/mastery/learning-status'
+import type { MasteryStatus } from '@/lib/mastery/status'
 
 export interface PlanOutcomeDefinition {
   id: string
@@ -7,17 +8,13 @@ export interface PlanOutcomeDefinition {
   sortOrder: number
 }
 
-export interface PlanOutcomeState {
+export interface PlanOutcomeState extends LearningStatusInput {
   outcomeId: string
-  attempts: number
-  correctAttempts: number
-  weightedEarned: number
-  weightedPossible: number
-  delayedCorrect: number
   lastAnsweredAt: string | null
 }
 
 export interface RankedPlanOutcome extends PlanOutcomeDefinition {
+  status: MasteryStatus
   accuracy: number
   attempts: number
   delayedCorrect: number
@@ -31,16 +28,28 @@ function combine(
   const stateByOutcome = new Map(states.map((state) => [state.outcomeId, state]))
   return outcomes.map((outcome) => {
     const state = stateByOutcome.get(outcome.id)
-    const summary = summarizeMastery({
+    const summary = summarizeLearningStatus({
       attempts: state?.attempts ?? 0,
       correctAttempts: state?.correctAttempts ?? 0,
       weightedEarned: state?.weightedEarned ?? 0,
       weightedPossible: state?.weightedPossible ?? 0,
       delayedCorrect: state?.delayedCorrect ?? 0,
+      v2Attempts: state?.v2Attempts ?? 0,
+      difficultyWeightedEarned: state?.difficultyWeightedEarned ?? 0,
+      difficultyWeightedPossible: state?.difficultyWeightedPossible ?? 0,
+      timedAttempts: state?.timedAttempts ?? 0,
+      totalTimeSec: state?.totalTimeSec ?? 0,
+      fastWrong: state?.fastWrong ?? 0,
+      hintedAttempts: state?.hintedAttempts ?? 0,
+      hintStageSum: state?.hintStageSum ?? 0,
+      guessAnnotations: state?.guessAnnotations ?? 0,
+      carelessAnnotations: state?.carelessAnnotations ?? 0,
+      verifiedEvidenceDays: state?.verifiedEvidenceDays ?? 0,
     })
     return {
       ...outcome,
-      accuracy: summary.accuracy,
+      accuracy: summary.rawAccuracy,
+      status: summary.status,
       attempts: summary.attempts,
       delayedCorrect: summary.delayedCorrect,
       lastAnsweredAt: state?.lastAnsweredAt ?? null,
@@ -56,7 +65,7 @@ export function rankWeakOutcomes(
   return combine(outcomes, states)
     .filter((outcome) => {
       if (outcome.attempts < 3) return false
-      return !(outcome.attempts >= 5 && outcome.accuracy >= 80 && outcome.delayedCorrect >= 1)
+      return outcome.status !== 'mastered'
     })
     .sort((left, right) => (
       left.accuracy - right.accuracy
@@ -73,9 +82,7 @@ export function rankCurrentOutcomes(
   selectedCategory: string | null,
 ): RankedPlanOutcome[] {
   return combine(outcomes, states)
-    .filter((outcome) => !(
-      outcome.attempts >= 5 && outcome.accuracy >= 80 && outcome.delayedCorrect >= 1
-    ))
+    .filter((outcome) => outcome.status !== 'mastered')
     .sort((left, right) => {
       const leftSelected = selectedCategory !== null && left.category === selectedCategory ? 0 : 1
       const rightSelected = selectedCategory !== null && right.category === selectedCategory ? 0 : 1

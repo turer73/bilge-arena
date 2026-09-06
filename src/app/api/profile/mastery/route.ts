@@ -6,6 +6,12 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { buildMasteryMapResponse } from '@/lib/mastery/build-response'
+import { isCompleteMasteryStateRow, MASTERY_STATE_COLUMNS, toMasteryStateInput, type MasteryStateRow as StateRow } from '@/lib/mastery/state-row'
+import {
+  parseActiveTytSocialMasteryContext,
+  type ActiveTytSocialMasteryContext,
+  type TytSocialCategory,
+} from '@/lib/mastery/tyt-social-context'
 import type { CurriculumNodeType } from '@/lib/mastery/graph'
 import type { MasteryCoveragePublic } from '@/lib/mastery/public-contract'
 import {
@@ -42,118 +48,6 @@ interface OutcomeRow {
   exam_ref: string | null
 }
 
-interface StateRow {
-  outcome_id: string
-  attempts: number
-  correct_attempts: number
-  weighted_earned: number | string
-  weighted_possible: number | string
-  delayed_correct: number
-  v2_attempts: number
-  difficulty_weighted_earned: number | string
-  difficulty_weighted_possible: number | string
-  timed_attempts: number
-  total_time_sec: number | string
-  fast_wrong: number
-  hinted_attempts: number
-  hint_stage_sum: number | string
-  guess_annotations: number
-  careless_annotations: number
-  verified_evidence_days: number
-  last_answered_at: string | null
-}
-
-const TYT_SOCIAL_CATEGORIES = [
-  'tarih',
-  'cografya',
-  'felsefe',
-  'sosyoloji',
-  'din_kulturu',
-] as const
-type TytSocialCategory = (typeof TYT_SOCIAL_CATEGORIES)[number]
-
-interface ActiveTytSocialMasteryContext {
-  policyVersion: string
-  taxonomyVersion: 'ba-tyt-sosyal-v1'
-  variant: 'questions_16_20' | 'questions_21_25'
-  selectionEventId: string
-  selectionEffectiveAt: string
-  allowedCategories: TytSocialCategory[]
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function hasOnlyKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
-  const keys = Object.keys(value)
-  return keys.length === expected.length && keys.every((key) => expected.includes(key))
-}
-
-function isUuid(value: unknown): value is string {
-  return typeof value === 'string'
-    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
-}
-
-function parseActiveTytSocialMasteryContext(
-  value: unknown,
-): ActiveTytSocialMasteryContext | null {
-  if (!isRecord(value) || !hasOnlyKeys(value, [
-    'status',
-    'available',
-    'reason',
-    'policyVersion',
-    'taxonomyVersion',
-    'variant',
-    'selectionEventId',
-    'selectionEffectiveAt',
-    'allowedCategories',
-    'rebuildRequired',
-    'legacyAggregateUsed',
-  ])) return null
-  if (
-    value.status !== 'active'
-    || value.available !== true
-    || value.reason !== null
-    || typeof value.policyVersion !== 'string'
-    || !/^tyt-social-[0-9]{4}-v[0-9]+$/.test(value.policyVersion)
-    || value.taxonomyVersion !== 'ba-tyt-sosyal-v1'
-    || (value.variant !== 'questions_16_20' && value.variant !== 'questions_21_25')
-    || !isUuid(value.selectionEventId)
-    || typeof value.selectionEffectiveAt !== 'string'
-    || !Number.isFinite(Date.parse(value.selectionEffectiveAt))
-    || value.rebuildRequired !== false
-    || value.legacyAggregateUsed !== false
-    || !Array.isArray(value.allowedCategories)
-  ) return null
-
-  const allowedCategories = value.allowedCategories
-  if (
-    allowedCategories.some((category) => (
-      typeof category !== 'string'
-      || !TYT_SOCIAL_CATEGORIES.includes(category as TytSocialCategory)
-    ))
-    || new Set(allowedCategories).size !== allowedCategories.length
-  ) return null
-
-  const expected = value.variant === 'questions_16_20'
-    ? new Set<TytSocialCategory>(TYT_SOCIAL_CATEGORIES)
-    : new Set<TytSocialCategory>(['tarih', 'cografya', 'felsefe', 'sosyoloji'])
-  if (
-    allowedCategories.length !== expected.size
-    || allowedCategories.some((category) => !expected.has(category as TytSocialCategory))
-  ) return null
-
-  return {
-    policyVersion: value.policyVersion,
-    taxonomyVersion: value.taxonomyVersion,
-    variant: value.variant,
-    selectionEventId: value.selectionEventId,
-    selectionEffectiveAt: value.selectionEffectiveAt,
-    allowedCategories: allowedCategories as TytSocialCategory[],
-  }
-}
-
 function pruneCurriculumRowsForCategories(
   nodes: NodeRow[],
   outcomes: OutcomeRow[],
@@ -181,7 +75,6 @@ function pruneCurriculumRowsForCategories(
 
 type LegacyStateRow = Omit<StateRow, 'verified_evidence_days'>
 
-const MASTERY_STATE_COLUMNS = 'outcome_id, attempts, correct_attempts, weighted_earned, weighted_possible, delayed_correct, v2_attempts, difficulty_weighted_earned, difficulty_weighted_possible, timed_attempts, total_time_sec, fast_wrong, hinted_attempts, hint_stage_sum, guess_annotations, careless_annotations, verified_evidence_days, last_answered_at'
 const LEGACY_MASTERY_STATE_COLUMNS = 'outcome_id, attempts, correct_attempts, weighted_earned, weighted_possible, delayed_correct, v2_attempts, difficulty_weighted_earned, difficulty_weighted_possible, timed_attempts, total_time_sec, fast_wrong, hinted_attempts, hint_stage_sum, guess_annotations, careless_annotations, last_answered_at'
 
 function unsupportedCoverage(): MasteryCoveragePublic {
@@ -425,12 +318,13 @@ export async function GET(request: NextRequest) {
             supabase,
             'read_tyt_social_mastery_outcome_state',
             { p_user_id: user.id },
-          ).then((result): StateQueryResult => ({
-            data: !result.error && Array.isArray(result.data)
-              ? result.data as StateRow[]
-              : null,
-            error: result.error ?? (Array.isArray(result.data) ? null : { code: 'PGRST102' }),
-          }))
+          ).then((result): StateQueryResult => {
+            const valid = Array.isArray(result.data) && result.data.every(isCompleteMasteryStateRow)
+            return {
+              data: !result.error && valid ? result.data as StateRow[] : null,
+              error: result.error ?? (valid ? null : { code: 'PGRST102' }),
+            }
+          })
           : readMasteryStates(supabase, user.id, outcomeIds),
         diagnosticAvailable
           ? supabase
@@ -474,26 +368,7 @@ export async function GET(request: NextRequest) {
         category: outcome.category,
         examRef: outcome.exam_ref,
       })),
-      states: ((stateResult.data ?? []) as StateRow[]).map((state) => ({
-        outcomeId: state.outcome_id,
-        attempts: Number(state.attempts),
-        correctAttempts: Number(state.correct_attempts),
-        weightedEarned: Number(state.weighted_earned),
-        weightedPossible: Number(state.weighted_possible),
-        delayedCorrect: Number(state.delayed_correct),
-        v2Attempts: Number(state.v2_attempts),
-        difficultyWeightedEarned: Number(state.difficulty_weighted_earned),
-        difficultyWeightedPossible: Number(state.difficulty_weighted_possible),
-        timedAttempts: Number(state.timed_attempts),
-        totalTimeSec: Number(state.total_time_sec),
-        fastWrong: Number(state.fast_wrong),
-        hintedAttempts: Number(state.hinted_attempts),
-        hintStageSum: Number(state.hint_stage_sum),
-        guessAnnotations: Number(state.guess_annotations),
-        carelessAnnotations: Number(state.careless_annotations),
-        verifiedEvidenceDays: Number(state.verified_evidence_days),
-        lastAnsweredAt: state.last_answered_at,
-      })),
+      states: ((stateResult.data ?? []) as StateRow[]).map(toMasteryStateInput),
       diagnosticOutcomeIds: ((diagnosticStateResult.data ?? []) as Array<{ outcome_id: string }>)
         .map((state) => state.outcome_id),
     })

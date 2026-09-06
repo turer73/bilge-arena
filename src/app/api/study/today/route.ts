@@ -15,6 +15,9 @@ import {
   toPublicVerifiedQuestions,
 } from '@/lib/verified-attempts'
 import { buildPlanCandidates } from '@/lib/study/plan-candidates'
+import type { PlanOutcomeState } from '@/lib/study/outcome-targets'
+import { MASTERY_STATE_COLUMNS, toMasteryStateInput, isCompleteMasteryStateRow, type MasteryStateRow } from '@/lib/mastery/state-row'
+import { parseActiveTytSocialMasteryContext } from '@/lib/mastery/tyt-social-context'
 import { composePlanV2 } from '@/lib/study/compose-plan-v2'
 import {
   normalizeTodayPlanItems,
@@ -353,34 +356,40 @@ export async function GET(request: NextRequest) {
       )
     }
   }
-  const outcomes = (outcomeResult.data ?? []).map((row) => ({
-    id: row.id,
-    code: row.code,
-    category: row.category,
-    sortOrder: row.sort_order,
-  }))
+  const isScopedSocial = tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT'
+  let allowedOutcomeCategories: Set<string> | null = null
+  if (isScopedSocial && masteryScope) {
+    const contextResult = await admin.rpc('resolve_tyt_social_mastery_read_context', { p_user_id: user.id })
+    const context = contextResult.error ? null : parseActiveTytSocialMasteryContext(contextResult.data)
+    if (!context || context.taxonomyVersion !== masteryScope.taxonomyVersion) {
+      return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 503 })
+    }
+    allowedOutcomeCategories = new Set(context.allowedCategories)
+  }
+  const outcomes = (outcomeResult.data ?? [])
+    .filter((row) => !allowedOutcomeCategories || allowedOutcomeCategories.has(row.category))
+    .map((row) => ({
+      id: row.id,
+      code: row.code,
+      category: row.category,
+      sortOrder: row.sort_order,
+    }))
   const outcomeIds = outcomes.map((outcome) => outcome.id)
   const outcomeIdSet = new Set(outcomeIds)
 
-  let outcomeStates: Array<{
-    outcomeId: string
-    attempts: number
-    correctAttempts: number
-    weightedEarned: number
-    weightedPossible: number
-    delayedCorrect: number
-    lastAnsweredAt: string | null
-  }> = []
+  let outcomeStates: PlanOutcomeState[] = []
   let mappings: Array<{ questionId: string; outcomeId: string }> = []
 
   if (outcomeIds.length > 0) {
     const [stateResult, mappingResult] = await Promise.all([
-      admin
-        .from('user_outcome_state')
-        .select('outcome_id,attempts,correct_attempts,weighted_earned,weighted_possible,delayed_correct,last_answered_at')
-        .eq('user_id', user.id)
-        .in('outcome_id', outcomeIds)
-        .limit(OUTCOME_LIMIT),
+      isScopedSocial
+        ? admin.rpc('read_tyt_social_mastery_outcome_state', { p_user_id: user.id })
+        : admin
+          .from('user_outcome_state')
+          .select(MASTERY_STATE_COLUMNS)
+          .eq('user_id', user.id)
+          .in('outcome_id', outcomeIds)
+          .limit(OUTCOME_LIMIT),
       fetchOutcomeMappingsForQuestions(
         admin,
         baseQuestions.map((question) => question.id),
@@ -391,22 +400,17 @@ export async function GET(request: NextRequest) {
           error: error as { code?: string },
         })),
     ])
-    if (stateResult.error || mappingResult.error) {
+    if (stateResult.error || mappingResult.error || !Array.isArray(stateResult.data)
+      || (isScopedSocial && !stateResult.data.every(isCompleteMasteryStateRow))) {
       console.error(
         '[/api/study/today] outcome evidence query failed:',
         (stateResult.error ?? mappingResult.error)?.code,
       )
       return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
     }
-    outcomeStates = (stateResult.data ?? []).map((row) => ({
-      outcomeId: row.outcome_id,
-      attempts: row.attempts,
-      correctAttempts: row.correct_attempts,
-      weightedEarned: row.weighted_earned,
-      weightedPossible: row.weighted_possible,
-      delayedCorrect: row.delayed_correct,
-      lastAnsweredAt: row.last_answered_at,
-    }))
+    outcomeStates = (stateResult.data as MasteryStateRow[])
+      .filter((row) => outcomeIdSet.has(row.outcome_id))
+      .map(toMasteryStateInput)
     mappings = (mappingResult.data ?? [])
       .filter((row) => outcomeIdSet.has(row.outcome_id))
       .map((row) => ({ questionId: row.question_id, outcomeId: row.outcome_id }))

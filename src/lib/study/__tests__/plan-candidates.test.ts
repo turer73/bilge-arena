@@ -25,7 +25,10 @@ describe('buildPlanCandidates', () => {
       baseQuestions: base,
       outcomes,
       outcomeStates: [
-        { outcomeId: 'o-weak', attempts: 5, correctAttempts: 1, weightedEarned: 1, weightedPossible: 5, delayedCorrect: 0, lastAnsweredAt: '2026-08-01T00:00:00Z' },
+        { outcomeId: 'o-weak', attempts: 5, correctAttempts: 1, weightedEarned: 1, weightedPossible: 5, delayedCorrect: 0, lastAnsweredAt: '2026-08-01T00:00:00Z',
+          v2Attempts: 0, difficultyWeightedEarned: 0, difficultyWeightedPossible: 0,
+          timedAttempts: 0, totalTimeSec: 0, fastWrong: 0, hintedAttempts: 0,
+          hintStageSum: 0, guessAnnotations: 0, carelessAnnotations: 0, verifiedEvidenceDays: 3 },
       ],
       mappings: [
         { questionId: 'q1', outcomeId: 'o-weak' },
