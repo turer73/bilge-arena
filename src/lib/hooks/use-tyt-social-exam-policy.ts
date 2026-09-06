@@ -82,6 +82,8 @@ export function useTytSocialExamPolicy(
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [retryNonce, setRetryNonce] = useState(0)
+  const [settledScope, setSettledScope] = useState<string | null>(null)
+  const currentScope = `${user?.id ?? ''}:${game}:${examRef}:${eligible}`
   const requestRef = useRef<AbortController | null>(null)
   const sequenceRef = useRef(0)
   const scopeRef = useRef<string | null>(null)
@@ -130,6 +132,7 @@ export function useTytSocialExamPolicy(
       .then((next) => {
         if (controller.signal.aborted || sequenceRef.current !== sequence) return
         setStatus(next.status)
+        setSettledScope(currentScope)
         setPolicyVersion(next.policyVersion)
         setSelectionEffectiveAt(next.status === 'active' ? next.effectiveAt : null)
         setVariantCode(next.status === 'active' ? next.variant : null)
@@ -141,6 +144,7 @@ export function useTytSocialExamPolicy(
       .catch((caught: unknown) => {
         if (controller.signal.aborted || sequenceRef.current !== sequence || isAbortError(caught)) return
         setStatus('error')
+        setSettledScope(currentScope)
         setPolicyVersion(null)
         setSelectionEffectiveAt(null)
         setVariantCode(null)
@@ -151,10 +155,10 @@ export function useTytSocialExamPolicy(
       controller.abort()
       if (requestRef.current === controller) requestRef.current = null
     }
-  }, [eligible, retryNonce, user?.id, game, examRef])
+  }, [eligible, retryNonce, user?.id, game, examRef, currentScope])
 
   const saveSelection = useCallback(async (nextVariant: TytSocialVariant): Promise<boolean> => {
-    if (!eligible || saving || !isVariant(nextVariant)) return false
+    if (!eligible || settledScope !== currentScope || saving || !isVariant(nextVariant)) return false
 
     const operationSequence = sequenceRef.current
     const pending = pendingRequestRef.current
@@ -179,6 +183,7 @@ export function useTytSocialExamPolicy(
       if (operationSequence !== sequenceRef.current || !eligible) return false
       if (!response.ok) throw new Error('policy save failed')
       const parsed = setTytSocialPolicyResponseSchema.safeParse(await response.json().catch(() => null))
+      if (operationSequence !== sequenceRef.current) return false
       if (!parsed.success) {
         throw new Error('policy save response invalid')
       }
@@ -189,6 +194,7 @@ export function useTytSocialExamPolicy(
       pendingRequestRef.current = null
       return true
     } catch (caught: unknown) {
+      if (operationSequence !== sequenceRef.current) return false
       if (!isAbortError(caught)) {
         // A failed PUT does not invalidate a previously read server choice;
         // retain that usable state so the same request id can be retried.
@@ -197,22 +203,26 @@ export function useTytSocialExamPolicy(
       }
       return false
     } finally {
-      setSaving(false)
+      if (operationSequence === sequenceRef.current) setSaving(false)
     }
-  }, [eligible, saving, status])
+  }, [eligible, saving, status, settledScope, currentScope])
 
   const retry = useCallback(() => setRetryNonce((value) => value + 1), [])
 
+  // A parent may pass this state to a plan entry in the same render as an
+  // account/exam change. Effects have not run yet: never expose old eligibility.
+  const scopeReady = settledScope === currentScope
+  const visibleStatus = !eligible ? 'inactive' : scopeReady ? status : 'loading'
   return useMemo(() => ({
     eligible,
-    status,
-    loading: status === 'loading',
-    saving,
-    error,
-    policyVersion,
-    selectionEffectiveAt,
-    variantCode,
+    status: visibleStatus,
+    loading: visibleStatus === 'loading',
+    saving: scopeReady && saving,
+    error: scopeReady ? error : null,
+    policyVersion: scopeReady ? policyVersion : null,
+    selectionEffectiveAt: scopeReady ? selectionEffectiveAt : null,
+    variantCode: scopeReady ? variantCode : null,
     saveSelection,
     retry,
-  }), [eligible, status, saving, error, policyVersion, selectionEffectiveAt, variantCode, saveSelection, retry])
+  }), [eligible, visibleStatus, scopeReady, saving, error, policyVersion, selectionEffectiveAt, variantCode, saveSelection, retry])
 }

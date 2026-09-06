@@ -1,8 +1,12 @@
-import { afterAll, describe, test, expect, beforeEach, vi } from 'vitest'
+import { afterAll, afterEach, describe, test, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TodayPlanFocus } from '../today-plan-focus'
 import { useTodayPlan } from '@/lib/hooks/use-today-plan'
 import { useGameStore } from '@/stores/game-store'
+import type { TytSocialExamPolicyState } from '@/lib/hooks/use-tyt-social-exam-policy'
+
+const policyHook = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/hooks/use-tyt-social-exam-policy', () => ({ useTytSocialExamPolicy: policyHook }))
 
 const pushMock = vi.fn()
 vi.mock('next/navigation', () => ({
@@ -14,6 +18,12 @@ vi.mock('@/lib/hooks/use-today-plan', () => ({
 
 const mockedUseTodayPlan = vi.mocked(useTodayPlan)
 const oldPaperFlag = process.env.NEXT_PUBLIC_PAPER_MODE_ENABLED
+const fetchPlanMock = vi.fn()
+const activePolicy: TytSocialExamPolicyState = {
+  eligible: true, status: 'active', loading: false, saving: false, error: null,
+  policyVersion: 'tyt-social-2026-v1', selectionEffectiveAt: '2026-09-06T10:00:00Z',
+  variantCode: 'questions_16_20', saveSelection: vi.fn(), retry: vi.fn(),
+}
 
 function mkPlan(questionCount: number, completedIds: string[] = []) {
   return {
@@ -39,6 +49,8 @@ describe('TodayPlanFocus', () => {
   beforeEach(() => {
     pushMock.mockClear()
     mockedUseTodayPlan.mockReset()
+    fetchPlanMock.mockReset()
+    policyHook.mockReturnValue(activePolicy)
     delete process.env.NEXT_PUBLIC_PAPER_MODE_ENABLED
     useGameStore.setState({
       selectedGame: null,
@@ -47,6 +59,11 @@ describe('TodayPlanFocus', () => {
       selectedDifficulty: 3,
       selectedExamRef: null,
     })
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
   })
 
   afterAll(() => {
@@ -58,6 +75,7 @@ describe('TodayPlanFocus', () => {
     mockedUseTodayPlan.mockReturnValue({ plan: null, loading: false } as never)
     const { container } = render(<TodayPlanFocus game="matematik" userId={null} />)
     expect(container.innerHTML).toBe('')
+    expect(mockedUseTodayPlan).not.toHaveBeenCalled()
   })
 
   test('plan boşsa tek fallback CTA ve yalnız TYT Matematikte tanılama gösterir', () => {
@@ -69,8 +87,8 @@ describe('TodayPlanFocus', () => {
       'href',
       '/arena/tani?game=matematik&exam_ref=TYT',
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Derse Başla' }))
-    expect(pushMock).toHaveBeenCalledWith('/arena/matematik')
+    fireEvent.click(screen.getByRole('button', { name: 'Konumu kendim seçeyim' }))
+    expect(pushMock).toHaveBeenCalledWith('/arena/matematik?exam_ref=TYT')
   })
 
   test('15 olmayan planda dürüst başlık, süre ve karışım gösterir', () => {
@@ -94,7 +112,7 @@ describe('TodayPlanFocus', () => {
     expect(state.selectedCategory).toBeNull()
     expect(state.selectedDifficulty).toBeNull()
     expect(state.selectedExamRef).toBe('TYT')
-    expect(pushMock).toHaveBeenCalledWith('/arena/matematik?start=today-plan')
+    expect(pushMock).toHaveBeenCalledWith('/arena/matematik?start=today-plan&exam_ref=TYT')
   })
 
   test('Wordquest plani null soru kapsami kullanir ve onceki sinav tercihini korur', () => {
@@ -141,5 +159,54 @@ describe('TodayPlanFocus', () => {
       'href',
       '/arena/kagit?game=matematik&examRef=TYT',
     )
+  })
+
+  test('eksik plan yeniden denenebilir ve öğrenme başarısı iddia etmez', () => {
+    mockedUseTodayPlan.mockReturnValue({ plan: null, loading: false, fetchPlan: fetchPlanMock } as never)
+    render(<TodayPlanFocus game="fen" userId="u1" examRef="LGS" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Planı yeniden dene' }))
+    expect(fetchPlanMock).toHaveBeenCalledOnce()
+    expect(screen.queryByText(/BUGÜNÜN 15/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /başlangıç taraması/i })).not.toBeInTheDocument()
+  })
+
+  test('beklerken süresi dolan biletle başlamaz; yeni plan ister', () => {
+    const plan = { ...mkPlan(15), expiresAt: new Date(Date.now() + 1000).toISOString() }
+    mockedUseTodayPlan.mockReturnValue({ plan, loading: false, fetchPlan: fetchPlanMock } as never)
+    render(<TodayPlanFocus game="matematik" userId="u1" examRef="TYT" />)
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse(plan.expiresAt) + 1)
+    fireEvent.click(screen.getByRole('button', { name: 'Planı Başlat · 15 Soru' }))
+    expect(pushMock).not.toHaveBeenCalled()
+    expect(fetchPlanMock).toHaveBeenCalledOnce()
+  })
+
+  test.each(['loading', 'setup_required', 'error', 'inactive'] as const)('Social %s iken plan istemez veya başlatmaz', (status) => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+    policyHook.mockReturnValue({ ...activePolicy, status, loading: status === 'loading', eligible: status !== 'inactive' })
+    render(<TodayPlanFocus game="sosyal" userId="u1" examRef="TYT" />)
+    expect(mockedUseTodayPlan).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: /Planı Başlat|Konumu kendim/ })).not.toBeInTheDocument()
+  })
+
+  test('Social kaydı sırasında önceki planı gizler, kayıt sonrası planı yeniden bağlar', () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+    mockedUseTodayPlan.mockReturnValue({ plan: { ...mkPlan(15), game: 'sosyal' }, loading: false } as never)
+    const { rerender } = render(<TodayPlanFocus game="sosyal" userId="u1" examRef="TYT" />)
+    expect(screen.getByRole('button', { name: 'Planı Başlat · 15 Soru' })).toBeInTheDocument()
+    policyHook.mockReturnValue({ ...activePolicy, saving: true })
+    rerender(<TodayPlanFocus game="sosyal" userId="u1" examRef="TYT" />)
+    expect(screen.queryByRole('button', { name: /Planı Başlat/ })).not.toBeInTheDocument()
+    policyHook.mockReturnValue({ ...activePolicy, variantCode: 'questions_21_25', selectionEffectiveAt: '2026-09-06T11:00:00Z' })
+    rerender(<TodayPlanFocus game="sosyal" userId="u1" examRef="TYT" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Planı Başlat · 15 Soru' }))
+    expect(pushMock).toHaveBeenCalledWith('/arena/sosyal?start=today-plan&exam_ref=TYT')
+  })
+
+  test('çalışma sayfasının Social politika okuması ve kartını çoğaltmaz', () => {
+    vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
+    mockedUseTodayPlan.mockReturnValue({ plan: { ...mkPlan(15), game: 'sosyal' }, loading: false } as never)
+    render(<TodayPlanFocus game="sosyal" userId="u1" examRef="TYT" tytSocialPolicy={activePolicy} />)
+    expect(policyHook).toHaveBeenCalledWith({ game: 'sosyal', examRef: 'TYT', enabled: false })
+    expect(screen.queryByRole('heading', { name: 'TYT Sosyal cevaplama düzeni' })).not.toBeInTheDocument()
   })
 })

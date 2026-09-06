@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const mockUsePathname = vi.hoisted(() => vi.fn<() => string>())
+const mockTodayPlanFocus = vi.hoisted(() => vi.fn())
 
 vi.mock('next/navigation', () => ({ usePathname: mockUsePathname }))
 vi.mock('next/link', () => ({
@@ -14,8 +15,14 @@ vi.mock('next/image', () => ({
     <img alt={alt ?? ''} {...props} />
   ),
 }))
+vi.mock('@/components/study/today-plan-focus', () => ({
+  TodayPlanFocus: (props: { game: string; userId: string; examRef: string | null; selectedCategory: null; showStickyMobileAction: boolean }) => {
+    mockTodayPlanFocus(props)
+    return <div data-today-plan-focus>{`${props.game}:${props.examRef ?? 'none'}`}</div>
+  },
+}))
 
-import { coachSeenStorageKey, MobileHomeDemo } from '../mobile-home-demo'
+import { MobileHomeDemo } from '../mobile-home-demo'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -63,7 +70,7 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
 
     expect(screen.getByRole('heading', { name: 'Türkçe Yolu' })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Paragrafın Yapısı' })).toBeVisible()
-    expect(screen.getByRole('link', { name: /DEVAM ET/ })).toHaveAttribute('href', '/arena/turkce')
+    expect(screen.getByRole('link', { name: /KONUYA GİT/ })).toHaveAttribute('href', '/arena/turkce')
   })
 
   test('tablet ve masaüstü koç penceresinde tüm oyunlar seçilebilir', async () => {
@@ -74,7 +81,7 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(subjectPicker).toHaveClass('hidden', 'md:flex')
 
     fireEvent.click(within(subjectPicker).getByRole('button', { name: 'Fen Bilimleri rotasını seç' }))
-    expect(screen.getByText(/Atomun Yapısı için 10 soruluk kısa dersin hazır/)).toBeVisible()
+    expect(screen.getByText(/Atomun Yapısı için çalışma rotan hazır/)).toBeVisible()
 
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
     fireEvent.click(screen.getByRole('button', { name: 'İleri' }))
@@ -94,16 +101,16 @@ describe('MobileHomeDemo Bilge Chan koç balonu', () => {
     expect(within(mathTab).getByText('Matematik')).toHaveClass('hidden', 'md:inline')
   })
 
-  test('mobilde bugünkü dersi görsel olarak öne alırken ana başlığı semantik olarak önce tutar', () => {
+  test('demo modunda plan API yüzeyi olmadan ders seçimini korur', () => {
     const { container } = render(<MobileHomeDemo />)
-    const todayLesson = container.querySelector('[data-today-lesson]')
+    const selfChoice = container.querySelector('[data-self-choice-lesson]')
     const learningPathHero = container.querySelector('[data-learning-path-hero]')
 
-    expect(todayLesson).toBeInTheDocument()
+    expect(container.querySelector('[data-today-plan-primary]')).not.toBeInTheDocument()
+    expect(mockTodayPlanFocus).not.toHaveBeenCalled()
+    expect(selfChoice).toBeInTheDocument()
     expect(learningPathHero).toBeInTheDocument()
-    expect((learningPathHero as Element).compareDocumentPosition(todayLesson as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(todayLesson).toHaveClass('order-[-1]', 'md:order-none')
-    expect(within(todayLesson as HTMLElement).getByRole('link', { name: /DEVAM ET/ })).toBeInTheDocument()
+    expect(within(selfChoice as HTMLElement).getByRole('link', { name: /KONUYA GİT/ })).toBeInTheDocument()
   })
 
   test('üst çubuk gerçek sınav kapsamı seçicisi ve profil avatarı sunar', async () => {
@@ -160,7 +167,6 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
 
   test('canlı modda adımlar gerçek müfredattan gelir ve ilerleme sayılır', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
 
     // Sabit "Ünite 3" metni yerine gercek konu adlari
     expect(await screen.findByRole('link', { name: 'Sayılar dersini aç' })).toBeVisible()
@@ -173,15 +179,46 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
 
   test('adımlar ilgili konuya derin bağlantı verir ve kilitli değildir', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
 
     const step = await screen.findByRole('link', { name: 'Olasılık dersini aç' })
     expect(step).toHaveAttribute('href', '/arena/matematik?category=olasilik')
     expect(step).not.toHaveAttribute('aria-disabled')
 
     // Sıradaki konu = tamamlanmamis ilk konu (problemler)
-    expect(screen.getByRole('link', { name: /DEVAM ET/ }))
+    expect(screen.getByRole('link', { name: /KONUYA GİT/ }))
       .toHaveAttribute('href', '/arena/matematik?category=problemler')
+  })
+
+  test('kimlik doğrulanmış canlı girişte Bugünün 15’i ilk DOM ve görsel akıştır', async () => {
+    const { container } = render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['matematik']} examRef="TYT" />)
+    const primary = container.querySelector('[data-today-plan-primary]')
+    const path = container.querySelector('[data-learning-path-hero]')
+    const selfChoice = container.querySelector('[data-self-choice-lesson]')
+
+    await screen.findByRole('link', { name: 'Sayılar dersini aç' })
+    expect(primary).toBeInTheDocument()
+    expect(primary?.parentElement).toHaveClass('max-w-[1180px]', 'px-4', 'md:px-5')
+    expect((primary as Element).compareDocumentPosition(path as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect((primary as Element).compareDocumentPosition(selfChoice as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(mockTodayPlanFocus).toHaveBeenLastCalledWith(expect.objectContaining({
+      game: 'matematik', userId: 'user-1', examRef: 'TYT', selectedCategory: null, showStickyMobileAction: false,
+    }))
+  })
+
+  test('canlı plan seçili dersin Wordquest oyununu ve sınav kapsamını taşır', async () => {
+    render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['ingilizce']} examRef="YDT" />)
+
+    await waitFor(() => expect(mockTodayPlanFocus).toHaveBeenCalled())
+    expect(mockTodayPlanFocus).toHaveBeenLastCalledWith(expect.objectContaining({
+      game: 'wordquest', userId: 'user-1', examRef: 'YDT', selectedCategory: null, showStickyMobileAction: false,
+    }))
+  })
+
+  test('misafir canlı giriş plan isteği oluşturmaz', () => {
+    const { container } = render(<MobileHomeDemo mode="live" userId={null} availableSubjects={['matematik']} examRef="TYT" />)
+
+    expect(container.querySelector('[data-today-plan-primary]')).not.toBeInTheDocument()
+    expect(mockTodayPlanFocus).not.toHaveBeenCalled()
   })
 
   test('TYT Sosyal ilerlemesi unavailable iken demo adım ve hazır ders iddiası göstermez', async () => {
@@ -202,6 +239,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
       />,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByRole('heading', { name: 'Sosyal öğrenme yolu hazırlanıyor' })).toBeVisible()
     expect(dialog).not.toHaveTextContent('10 soruluk kısa dersin hazır')
@@ -227,19 +265,8 @@ describe('MobileHomeDemo koç penceresi davranışı', () => {
     vi.unstubAllGlobals()
   })
 
-  test('canlı modda günde bir kez karşılar, aynı gün tekrar açılmaz', async () => {
-    const first = render(<MobileHomeDemo mode="live" userId="user-1" />)
-    expect(await screen.findByRole('dialog')).toBeVisible()
-    expect(window.localStorage.getItem(coachSeenStorageKey('user-1'))).toBe(new Date().toDateString())
-    first.unmount()
-
-    render(<MobileHomeDemo mode="live" userId="user-1" />)
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  })
-
-  test('otomatik açılmadığında Chan düğmesinden elle açılabilir', () => {
-    window.localStorage.setItem(coachSeenStorageKey('user-1'), new Date().toDateString())
-    render(<MobileHomeDemo mode="live" userId="user-1" />)
+  test('canlı modda otomatik açılmaz; Chan düğmesinden elle açılabilir', async () => {
+    await act(async () => { render(<MobileHomeDemo mode="live" userId="user-1" />) })
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
@@ -248,6 +275,7 @@ describe('MobileHomeDemo koç penceresi davranışı', () => {
 
   test('açılınca odak pencereye taşınır ve arka plan inert olur', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
 
     const dialog = await screen.findByRole('dialog')
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true))
@@ -256,15 +284,19 @@ describe('MobileHomeDemo koç penceresi davranışı', () => {
 
   test('kapanınca arka plandaki inert kalkar', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Bilge Chan mesajlarını aç' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Koç penceresini kapat' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(document.querySelector('main')).not.toHaveAttribute('inert')
   })
 
-  test('günlük koç kaydı kullanıcılar arasında paylaşılmaz', async () => {
-    window.localStorage.setItem(coachSeenStorageKey('user-1'), new Date().toDateString())
-    render(<MobileHomeDemo mode="live" userId="user-2" />)
+  test('demo koçu açık başlar, canlı koç ise başlangıçta kapalıdır', async () => {
+    const demo = render(<MobileHomeDemo />)
     expect(await screen.findByRole('dialog')).toBeVisible()
+    demo.unmount()
+
+    await act(async () => { render(<MobileHomeDemo mode="live" userId="user-2" />) })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

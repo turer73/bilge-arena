@@ -216,6 +216,7 @@ export default function CalismaClient() {
               userId={user.id}
               examRef={examRef}
               selectedCategory={null}
+              tytSocialPolicy={tytSocialPolicy}
             />
             <MasteryActionCard game={game} userId={user.id} examRef={examRef} />
             <InstitutionWeeklyProgramCard />
