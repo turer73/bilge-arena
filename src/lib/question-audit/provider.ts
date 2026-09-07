@@ -12,7 +12,18 @@
  * kodda gorunur olmali — sessiz varsayim degil.
  */
 
+import { ProviderHttpError, gateFor, type LlmRawResponse } from '@/lib/llm/transport-core'
 import type { GeminiSchema } from './response-shapes'
+
+/**
+ * Hata tipi ve hiz kapisi `@/lib/llm/transport-core`'a tasindi: ayni saglayici
+ * anahtarini `model-council` de kullaniyor ve kapi state'i PAYLASILMAK zorunda
+ * (iki bagimsiz kapi = min-interval'in iki kati hizda istek). Buradan yeniden
+ * disa aktarilir; `from './provider'` yazan mevcut cagri yerleri ve
+ * `instanceof ProviderHttpError` kontrolleri degismeden calisir.
+ */
+export { ProviderHttpError, gateFor }
+export type { LlmRawResponse }
 
 export interface ProviderCapabilities {
   /** Yanit semasini API duzeyinde dayatabiliyor mu? */
@@ -30,13 +41,6 @@ export interface LlmRequest {
   schema: GeminiSchema
 }
 
-export interface LlmRawResponse {
-  text: string | null
-  finishReason: string | null
-  inputTokens: number | null
-  outputTokens: number | null
-}
-
 export interface LlmProvider {
   readonly id: string
   readonly modelId: string
@@ -44,51 +48,6 @@ export interface LlmProvider {
   /** Ardisik iki cagri arasi minimum bekleme (rate-limit tavani icin). */
   readonly minIntervalMs: number
   call(req: LlmRequest, signal: AbortSignal): Promise<LlmRawResponse>
-}
-
-export class ProviderHttpError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message)
-    this.name = 'ProviderHttpError'
-  }
-  /** 429 ve 5xx gecici; 4xx (401/400) tekrar denemekle duzelmez. */
-  get retryable(): boolean {
-    return this.status === 429 || this.status >= 500
-  }
-}
-
-/**
- * Global slot rezervasyonu.
- *
- * database/llm-client.mjs'deki NIM kapisinin ayni fikri: her cagri bir sonraki
- * slotu ileri iter, boylece es zamanli worker'lar min-interval'e serilestirilir.
- * Onemli sonuc: rate-limitli bir provider'da `Promise.all` ile uc ajani paralel
- * cagirmak HIZ KAZANDIRMAZ — kapi onlari zaten siraya dizer. Paralellik burada
- * bir mimari sabit degil, provider'a bagli bir optimizasyondur.
- */
-class RateGate {
-  private nextSlot = 0
-  async wait(minIntervalMs: number): Promise<void> {
-    if (minIntervalMs <= 0) return
-    const now = Date.now()
-    const slot = Math.max(now, this.nextSlot + minIntervalMs)
-    this.nextSlot = slot
-    const delay = slot - now
-    if (delay > 0) await new Promise((r) => setTimeout(r, delay))
-  }
-}
-
-const gates = new Map<string, RateGate>()
-export function gateFor(providerId: string): RateGate {
-  let g = gates.get(providerId)
-  if (!g) {
-    g = new RateGate()
-    gates.set(providerId, g)
-  }
-  return g
 }
 
 // ── Gemini ─────────────────────────────────────────────────────────────────

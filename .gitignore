@@ -73,6 +73,12 @@ database/_*.log
 # bankasi bilerek git gecmisinden temizlenmisti, geri sizmamali.
 # Kosucunun varsayilan ciktisi da bu desene girer (runner.ts `out`).
 database/question-audit-*.json
+# Modeller arasi tartisma kosu tutanaklari (scripts/run-model-council.mjs `--out`).
+# Tutanak `--context-file` ile verilen kaynagi ve modellerin uzerinde konustugu
+# her seyi birebir tasir; lokal kalir.
+model-council-run.json
+model-council-*.json
+
 # İnsan uzman etiketleri ve held-out gold set repo dışında tutulur.
 /secure/
 .env*.local

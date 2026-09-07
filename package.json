@@ -46,6 +46,7 @@
     "test:teacher-classroom:pg": "vitest run --config vitest.database.config.ts database/__tests__/teacher-classroom-privacy-postgres.integration.test.mjs",
     "test:session-coin-scale:pg": "vitest run --config vitest.database.config.ts database/__tests__/session-coin-scale-postgres.integration.test.mjs",
     "test:db:watch": "vitest --config vitest.database.config.ts",
+    "council": "node scripts/run-model-council.mjs",
     "audit:calibrate": "node database/run-question-audit.mjs",
     "audit:benchmark": "node database/run-question-benchmark.mjs",
     "audit:build-gold": "node database/build-question-audit-gold-set.mjs",

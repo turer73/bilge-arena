@@ -33,7 +33,14 @@ if (typeof calibration.reliability?.failureRate !== 'number') {
   throw new Error('kalibrasyon raporu reliability.failureRate icermiyor')
 }
 
-const server = await createServer({ root: resolve('.'), server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' })
+// `@/` alias'i uygulamayla ayni sekilde cozulmeli (bkz. run-question-audit.mjs).
+const server = await createServer({
+  root: resolve('.'),
+  resolve: { alias: { '@': resolve('./src') } },
+  server: { middlewareMode: true },
+  appType: 'custom',
+  logLevel: 'error',
+})
 try {
   const mod = await server.ssrLoadModule('/src/lib/question-audit/benchmark.ts')
   const benchmark = mod.evaluateBenchmark(labels, calibration.items, calibration.reliability.failureRate)
