@@ -92,6 +92,14 @@ describe('MasteryActionCard', () => {
     expect(container.innerHTML).toBe('')
   })
 
+  test('passes the current Social choice epoch to the mastery reader', () => {
+    mockedUseMasteryMap.mockReturnValue(hookResult({ loading: true }) as never)
+    const { rerender } = render(<MasteryActionCard game="sosyal" userId="u1" examRef="TYT" policyEpoch="A" />)
+    expect(mockedUseMasteryMap).toHaveBeenLastCalledWith('sosyal', 'u1', 'TYT', 'A')
+    rerender(<MasteryActionCard game="sosyal" userId="u1" examRef="TYT" policyEpoch="B" />)
+    expect(mockedUseMasteryMap).toHaveBeenLastCalledWith('sosyal', 'u1', 'TYT', 'B')
+  })
+
   test('release edilmemis kapsamda sessizce kaybolmak yerine hazirlaniyor durumunu gosterir', () => {
     const coverage = {
       supported: false, diagnosticAvailable: false, taxonomyVersion: null,
