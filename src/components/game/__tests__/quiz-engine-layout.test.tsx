@@ -475,7 +475,7 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
     try {
       render(<QuizEngine game="wordquest" />)
 
-      expect(useTodayPlanArgs).toHaveBeenLastCalledWith('wordquest', 'u1', null, 'problemler')
+      expect(useTodayPlanArgs).toHaveBeenLastCalledWith('wordquest', 'u1', null, 'problemler', null)
       expect(usePersonalizedMockArgs).toHaveBeenLastCalledWith('wordquest', 'u1', null)
       expect(screen.getByTestId('lobby-exam-ref')).toHaveTextContent('null')
 
@@ -882,6 +882,7 @@ describe('QuizEngine — TYT Sosyal cevaplama düzeni', () => {
       fireEvent.click(startButton)
       expect(quizGame.handleStart).not.toHaveBeenCalled()
       expect(screen.getByText('TYT Sosyal cevaplama düzeni')).toBeInTheDocument()
+      expect(useTodayPlanArgs).toHaveBeenLastCalledWith('sosyal', undefined, 'TYT', 'problemler', null)
     } finally {
       vi.unstubAllGlobals()
       authStoreValue.user = null

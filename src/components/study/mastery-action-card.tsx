@@ -10,13 +10,14 @@ interface MasteryActionCardProps {
   game: GameSlug
   userId?: string | null
   examRef?: string | null
+  policyEpoch?: string | null
 }
 
 function byLowestReliableScore(a: MasteryOutcome, b: MasteryOutcome) {
   return a.score - b.score || b.attempts - a.attempts
 }
 
-export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardProps) {
+export function MasteryActionCard({ game, userId, examRef, policyEpoch }: MasteryActionCardProps) {
   const router = useRouter()
   const gameStore = useGameStore()
   const {
@@ -27,7 +28,7 @@ export function MasteryActionCard({ game, userId, examRef }: MasteryActionCardPr
     loading,
     error,
     fetchMastery,
-  } = useMasteryMap(game, userId, examRef)
+  } = useMasteryMap(game, userId, examRef, policyEpoch)
 
   const freePracticeParams = new URLSearchParams()
   if (game !== 'wordquest' && examRef) freePracticeParams.set('exam_ref', examRef)

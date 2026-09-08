@@ -91,6 +91,81 @@ describe('useTytSocialExamPolicy', () => {
     expect(result.current.selectionEffectiveAt).toBe('2026-08-31T08:00:00+00:00')
   })
 
+  test('fails closed after an uncertain PUT even when an old active choice existed', async () => {
+    const oldActive = {
+      status: active.status, policyVersion: active.policyVersion,
+      variant: 'questions_16_20' as const, effectiveAt: active.effectiveAt,
+      appliesTo: active.appliesTo,
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => oldActive })
+      .mockRejectedValueOnce(new Error('network timeout'))
+      .mockResolvedValueOnce({ ok: true, json: async () => oldActive })
+      .mockResolvedValueOnce({ ok: true, json: async () => active })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('crypto', { randomUUID: vi.fn(() => 'request-uncertain') })
+
+    const { result } = renderHook(() => useTytSocialExamPolicy({ game: 'sosyal', examRef: 'TYT' }))
+    await waitFor(() => expect(result.current.status).toBe('active'))
+    await act(async () => { await result.current.saveSelection('questions_21_25') })
+    expect(result.current.status).toBe('error')
+    expect(result.current.variantCode).toBeNull()
+    expect(result.current.loading).toBe(false)
+
+    act(() => result.current.retry())
+    await waitFor(() => expect(result.current.status).toBe('active'))
+    await act(async () => { await result.current.saveSelection('questions_21_25') })
+    expect(result.current.status).toBe('active')
+    expect(result.current.variantCode).toBe('questions_21_25')
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body as string).requestId).toBe('request-uncertain')
+    expect(JSON.parse(fetchMock.mock.calls[3][1].body as string).requestId).toBe('request-uncertain')
+  })
+
+  test('exposes loading while PUT is pending so quiz starts remain blocked', async () => {
+    let resolvePut!: (value: Response) => void
+    const put = new Promise<Response>((resolve) => { resolvePut = resolve })
+    const activeResponse = {
+      status: active.status, policyVersion: active.policyVersion,
+      variant: active.variant, effectiveAt: active.effectiveAt, appliesTo: active.appliesTo,
+      replayed: false,
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        status: 'setup_required', policyVersion: policy.policyVersion,
+        rulesSha256: policy.rulesSha256, appliesTo: policy.appliesTo,
+      }) })
+      .mockReturnValueOnce(put)
+    vi.stubGlobal('fetch', fetchMock)
+    const { result } = renderHook(() => useTytSocialExamPolicy({ game: 'sosyal', examRef: 'TYT' }))
+    await waitFor(() => expect(result.current.status).toBe('setup_required'))
+    let saving!: Promise<boolean>
+    act(() => { saving = result.current.saveSelection('questions_21_25') })
+    await waitFor(() => expect(result.current.saving).toBe(true))
+    expect(result.current.status).toBe('loading')
+    resolvePut({ ok: true, json: async () => activeResponse } as Response)
+    await act(async () => { await saving })
+    expect(result.current.status).toBe('active')
+  })
+
+  test('fails closed when PUT rejects with AbortError', async () => {
+    const activeGet = {
+      status: active.status, policyVersion: active.policyVersion, variant: active.variant,
+      effectiveAt: active.effectiveAt, appliesTo: active.appliesTo,
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => activeGet })
+      .mockRejectedValueOnce(new DOMException('response interrupted', 'AbortError'))
+    vi.stubGlobal('fetch', fetchMock)
+    const { result } = renderHook(() => useTytSocialExamPolicy({ game: 'sosyal', examRef: 'TYT' }))
+    await waitFor(() => expect(result.current.status).toBe('active'))
+
+    await act(async () => { await result.current.saveSelection('questions_21_25') })
+
+    expect(result.current.status).toBe('error')
+    expect(result.current.variantCode).toBeNull()
+    expect(result.current.saving).toBe(false)
+  })
+
   test('ignores stale response after context changes', async () => {
     let resolveFirst!: (value: Response) => void
     const first = new Promise<Response>((resolve) => { resolveFirst = resolve })
@@ -162,5 +237,35 @@ describe('useTytSocialExamPolicy', () => {
     await act(async () => { resolveJson(active); await saving })
     expect(result.current.status).toBe('setup_required')
     expect(result.current.variantCode).toBeNull()
+  })
+
+  test('does not let an older A response overwrite the latest A after A-B-A account changes', async () => {
+    let resolveFirst!: (value: Response) => void
+    const first = new Promise<Response>((resolve) => { resolveFirst = resolve })
+    const activeForB = {
+      status: active.status, policyVersion: active.policyVersion,
+      variant: 'questions_16_20' as const, effectiveAt: active.effectiveAt,
+      appliesTo: active.appliesTo,
+    }
+    const activeForA = {
+      status: active.status, policyVersion: active.policyVersion,
+      variant: 'questions_21_25' as const, effectiveAt: active.effectiveAt,
+      appliesTo: active.appliesTo,
+    }
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(first)
+      .mockResolvedValueOnce({ ok: true, json: async () => activeForB })
+      .mockResolvedValueOnce({ ok: true, json: async () => activeForA })
+    vi.stubGlobal('fetch', fetchMock)
+    const { result, rerender } = renderHook(() => useTytSocialExamPolicy({ game: 'sosyal', examRef: 'TYT' }))
+    auth.value = { user: { id: 'user-2' } }
+    rerender()
+    await waitFor(() => expect(result.current.variantCode).toBe('questions_16_20'))
+    auth.value = { user: { id: 'user-1' } }
+    rerender()
+    await waitFor(() => expect(result.current.variantCode).toBe('questions_21_25'))
+    resolveFirst({ ok: true, json: async () => ({ ...active, variant: 'questions_16_20' }) } as Response)
+    await Promise.resolve()
+    expect(result.current.variantCode).toBe('questions_21_25')
   })
 })

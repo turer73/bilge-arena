@@ -131,6 +131,9 @@ describe('CalismaClient', () => {
     await waitFor(() => expect(screen.getByText('TYT Sosyal cevaplama düzeni')).toBeInTheDocument())
     expect(screen.queryByRole('link', { name: 'Devam et' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'TYT Sosyal seçimi gerekli' })).toBeDisabled()
+    expect(masteryActionCardProps).toHaveBeenLastCalledWith(expect.objectContaining({
+      game: 'sosyal', userId: undefined, examRef: 'TYT', policyEpoch: null,
+    }))
   })
 
   test('ders değişimi stale kategori temizler ve geçerli sınavı korur', () => {

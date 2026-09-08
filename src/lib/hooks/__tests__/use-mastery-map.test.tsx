@@ -168,6 +168,21 @@ describe('useMasteryMap', () => {
     expect(result.current.response?.game).toBe('fen')
   })
 
+  it('policy epoch değişince eski mastery haritasını tutmadan yeniden yükler', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response(mastery()))
+      .mockResolvedValueOnce(response(mastery()))
+    const { result, rerender } = renderHook(
+      ({ policyEpoch }) => useMasteryMap('matematik', 'u1', 'TYT', policyEpoch),
+      { initialProps: { policyEpoch: 'policy-v1:epoch-a:questions_16_20' } },
+    )
+    await waitFor(() => expect(result.current.response).not.toBeNull())
+    rerender({ policyEpoch: 'policy-v1:epoch-b:questions_21_25' })
+    expect(result.current.response).toBeNull()
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(result.current.response).not.toBeNull())
+  })
+
   it('basarisiz yanitta onceki baglam verisini ekranda tutmaz', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(response(mastery()))

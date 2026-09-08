@@ -6,12 +6,12 @@ import { createRateLimiter } from '@/lib/utils/rate-limit'
 import { getClientIp } from '@/lib/utils/client-ip'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { buildMasteryMapResponse } from '@/lib/mastery/build-response'
-import { isCompleteMasteryStateRow, MASTERY_STATE_COLUMNS, toMasteryStateInput, type MasteryStateRow as StateRow } from '@/lib/mastery/state-row'
+import { MASTERY_STATE_COLUMNS, toMasteryStateInput, type MasteryStateRow as StateRow } from '@/lib/mastery/state-row'
 import {
-  parseActiveTytSocialMasteryContext,
   type ActiveTytSocialMasteryContext,
   type TytSocialCategory,
 } from '@/lib/mastery/tyt-social-context'
+import { readTytSocialLearningSnapshot } from '@/lib/verified-attempts'
 import type { CurriculumNodeType } from '@/lib/mastery/graph'
 import type { MasteryCoveragePublic } from '@/lib/mastery/public-contract'
 import {
@@ -214,15 +214,11 @@ export async function GET(request: NextRequest) {
       && game === 'sosyal'
       && examRef === 'TYT'
     let tytSocialContext: ActiveTytSocialMasteryContext | null = null
+    let tytSocialStates: StateRow[] | null = null
     if (isTytSocialScope) {
-      const contextResult = await callServiceRpc(
-        supabase,
-        'resolve_tyt_social_mastery_read_context',
-        { p_user_id: user.id },
-      )
-      tytSocialContext = contextResult.error
-        ? null
-        : parseActiveTytSocialMasteryContext(contextResult.data)
+      const snapshot = await readTytSocialLearningSnapshot(supabase, user.id)
+      tytSocialContext = snapshot.status === 'active' ? snapshot.context : null
+      tytSocialStates = snapshot.status === 'active' ? snapshot.states : null
       if (
         !tytSocialContext
         || scope.displayExamRef !== 'TYT'
@@ -314,17 +310,7 @@ export async function GET(request: NextRequest) {
     const [stateResult, diagnosticStateResult] = outcomeIds.length > 0
       ? await Promise.all([
         tytSocialContext
-          ? callServiceRpc(
-            supabase,
-            'read_tyt_social_mastery_outcome_state',
-            { p_user_id: user.id },
-          ).then((result): StateQueryResult => {
-            const valid = Array.isArray(result.data) && result.data.every(isCompleteMasteryStateRow)
-            return {
-              data: !result.error && valid ? result.data as StateRow[] : null,
-              error: result.error ?? (valid ? null : { code: 'PGRST102' }),
-            }
-          })
+          ? Promise.resolve({ data: tytSocialStates, error: null } satisfies StateQueryResult)
           : readMasteryStates(supabase, user.id, outcomeIds),
         diagnosticAvailable
           ? supabase

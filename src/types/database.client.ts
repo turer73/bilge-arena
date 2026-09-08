@@ -516,6 +516,48 @@ export type Database = Omit<GeneratedDatabase, 'public'> & {
           'outcome_id' | 'attempts' | 'correct_attempts' | 'weighted_earned'
           | 'weighted_possible' | 'delayed_correct' | 'last_answered_at'>>
       }
+      // Migration 212: one statement-level learning snapshot and epoch-bound
+      // writers. These remain service-role only and are intentionally explicit
+      // until the production schema-generated type is refreshed.
+      read_tyt_social_learning_snapshot: {
+        Args: { p_user_id: string; p_question_ids?: string[] }
+        Returns: Json
+      }
+      create_tyt_social_daily_plan_for_epoch: {
+        Args: {
+          p_user_id: string
+          p_plan_date: string
+          p_items: Json
+          p_expected_policy_version: string
+          p_expected_selection_event_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_attempt_for_epoch: {
+        Args: {
+          p_user_id: string
+          p_mode: string
+          p_question_ids: string[]
+          p_duration_sec: number
+          p_request_id: string
+          p_expected_policy_version: string
+          p_expected_selection_event_id: string
+        }
+        Returns: Json
+      }
+      issue_verified_tyt_social_exam_attempt_for_epoch: {
+        Args: {
+          p_user_id: string
+          p_blueprint_version: string
+          p_items: Json
+          p_duration_sec: number
+          p_planned_duration_sec: number
+          p_request_id: string
+          p_expected_policy_version: string
+          p_expected_selection_event_id: string
+        }
+        Returns: Json
+      }
       issue_verified_tyt_social_attempt: {
         Args: {
           p_user_id: string
