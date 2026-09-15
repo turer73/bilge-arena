@@ -83,6 +83,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const tytSocialV2Enabled = isTytSocialV2ClientEnabled()
   const questionExamRef = questionExamRefForGame(game, gameStore.selectedExamRef, tytSocialV2Enabled)
   const tytSocialPolicy = useTytSocialExamPolicy({ game, examRef: questionExamRef })
+  const tytSocialPolicyEpoch = tytSocialPolicy.selectionEpoch
   const tytSocialStartBlocked = Boolean(
     user
     && game === 'sosyal'
@@ -103,6 +104,9 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const directPlanStartConsumedRef = useRef(false)
 
   // --- Custom hooks ---
+  // Do not create/read learning artifacts while a choice is unsettled. A null
+  // epoch alone invalidates the cache but would still start a new request.
+  const learningUserId = tytSocialStartBlocked ? undefined : user?.id
   const quizLimit = useQuizLimit()
   const quiz = useQuizGame(game, user?.id)
   const isExactTytSocialSection = tytSocialV2Enabled && game === 'sosyal'
@@ -112,12 +116,13 @@ export function QuizEngine({ game }: QuizEngineProps) {
   const dailyQuests = useDailyQuests()
   const todayPlan = useTodayPlan(
     game,
-    user?.id,
+    learningUserId,
     questionExamRef,
     gameStore.selectedCategory,
+    tytSocialPolicyEpoch,
   )
   const personalizedMock = usePersonalizedMock(game, user?.id, questionExamRef)
-  const masteryMap = useMasteryMap(game, user?.id, questionExamRef)
+  const masteryMap = useMasteryMap(game, learningUserId, questionExamRef, tytSocialPolicyEpoch)
   const selectExamRef = useCallback((examRef: string | null) => {
     const nextExamRef = game === 'sosyal' && tytSocialV2Enabled ? examRef ?? 'TYT' : examRef
     const validCategories = getCategoriesForExam(game, nextExamRef)

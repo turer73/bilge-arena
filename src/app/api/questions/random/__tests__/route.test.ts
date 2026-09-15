@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import type { QuestionRow } from '@/lib/utils/question-public'
+import type { TytSocialLearningSnapshot } from '@/lib/verified-attempts'
 
 // Esnek, sirali-kuyruklu query-builder mock: her .from(table) cagrisi kuyruktaki
 // bir sonraki { data, error } sonucunu doner; her chain-metodu ayni objeyi
@@ -12,7 +13,7 @@ const {
   mockGetUser,
   mockRpc,
   mockHistory,
-  mockFilterTytSocialQuestionIds,
+  mockReadTytSocialLearningSnapshot,
   mockIssueVerifiedAttempt,
   mockIssueVerifiedTytSocialOfficialSection,
   sessionAnswersMock,
@@ -41,7 +42,7 @@ const {
     mockRpc: vi.fn(),
     mockIssueVerifiedAttempt: vi.fn(),
     mockIssueVerifiedTytSocialOfficialSection: vi.fn(),
-    mockFilterTytSocialQuestionIds: vi.fn(),
+    mockReadTytSocialLearningSnapshot: vi.fn(),
     // Klipper review B2: user_question_history server-side cooldown read
     mockHistory: vi.fn(async (): Promise<{ data: Array<{ question_id: string }>; error: null }> => ({
       data: [],
@@ -87,8 +88,9 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   })),
 }))
 
-vi.mock('@/lib/verified-attempts', () => ({
-  filterTytSocialQuestionIds: mockFilterTytSocialQuestionIds,
+vi.mock('@/lib/verified-attempts', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/verified-attempts')>(),
+  readTytSocialLearningSnapshot: mockReadTytSocialLearningSnapshot,
   issueVerifiedAttempt: mockIssueVerifiedAttempt,
   issueVerifiedTytSocialOfficialSection: mockIssueVerifiedTytSocialOfficialSection,
   toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
@@ -99,6 +101,26 @@ vi.mock('@/lib/review/fsrs-rollout', () => ({
 }))
 
 import { GET } from '../route'
+
+const TYT_SOCIAL_EPOCH = {
+  policyVersion: 'tyt-social-2026-v1',
+  selectionEventId: '30000000-0000-4000-8000-000000000001',
+}
+
+function activeSocialSnapshot(allowedQuestionIds: string[]): TytSocialLearningSnapshot {
+  return {
+    status: 'active',
+    context: {
+      ...TYT_SOCIAL_EPOCH,
+      taxonomyVersion: 'ba-tyt-sosyal-v1',
+      variant: 'questions_21_25',
+      selectionEffectiveAt: '2026-09-08T00:00:00.000Z',
+      allowedCategories: ['tarih', 'cografya', 'felsefe', 'sosyoloji'],
+    },
+    states: [],
+    allowedQuestionIds,
+  }
+}
 
 function makeQuestionRow(id: string, overrides: Partial<QuestionRow> = {}): QuestionRow {
   return {
@@ -143,11 +165,11 @@ describe('GET /api/questions/random', () => {
     vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
     sessionAnswersMock.reset()
     questionsMock.reset()
-    mockFilterTytSocialQuestionIds.mockImplementation(async (
+    mockReadTytSocialLearningSnapshot.mockImplementation(async (
       _admin: unknown,
       _userId: string,
       ids: string[],
-    ) => ids)
+    ) => activeSocialSnapshot(ids))
     mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
       attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       expiresAt: '2026-08-08T14:00:00.000Z',
@@ -255,7 +277,7 @@ describe('GET /api/questions/random', () => {
       p_game: 'sosyal',
       p_limit: 20,
     }))
-    expect(mockFilterTytSocialQuestionIds).not.toHaveBeenCalled()
+    expect(mockReadTytSocialLearningSnapshot).not.toHaveBeenCalled()
   })
 
   it.each(['tyt', 'UNKNOWN', ''])('rejects an invalid explicit exam scope: %s', async (examRef) => {
@@ -300,44 +322,123 @@ describe('GET /api/questions/random', () => {
       ],
       error: null,
     })
-    mockFilterTytSocialQuestionIds.mockResolvedValue(['common'])
+    sessionAnswersMock.push({ data: [{ question_id: 'review' }, { question_id: 'forbidden-review' }], error: null })
+    sessionAnswersMock.push({ data: [], error: null })
+    questionsMock.push({
+      data: [
+        makeQuestionRow('review', { game: 'sosyal', category: 'felsefe', exam_ref: 'TYT' }),
+        makeQuestionRow('forbidden-review', { game: 'sosyal', category: 'din_kulturu', exam_ref: 'TYT' }),
+      ],
+      error: null,
+    })
+    mockReadTytSocialLearningSnapshot.mockResolvedValue(activeSocialSnapshot(['common', 'review']))
 
-    const response = await GET(makeRequest({ game: 'sosyal', examRef: 'TYT' }) as never)
+    const response = await GET(makeRequest({ game: 'sosyal', examRef: 'TYT', includeReview: 'true' }) as never)
     const body = await response.json()
 
     expect(response.status).toBe(200)
     expect(body.questions.map((question: { id: string }) => question.id)).toEqual(['common'])
-    expect(mockFilterTytSocialQuestionIds).toHaveBeenCalledWith(
+    expect(body.reviewQuestions.map((question: { id: string }) => question.id)).toEqual(['review'])
+    expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledWith(
       expect.anything(),
       'u1',
-      ['common', 'forbidden'],
+      ['common', 'forbidden', 'review', 'forbidden-review'],
     )
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(1)
     expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         game: 'sosyal',
         examRef: 'TYT',
-        questionIds: ['common'],
+        questionIds: ['common', 'review'],
+        tytSocialEpoch: TYT_SOCIAL_EPOCH,
         requestId: expect.any(String),
       }),
     )
   })
 
-  it('fails closed before ticket issuance when TYT Social policy resolution fails', async () => {
+  it.each([
+    ['setup_required', 409, 'TYT Sosyal cevaplama düzeni seçilmelidir'],
+    ['unavailable', 503, 'TYT Sosyal çalışma kapsamı kullanılamıyor'],
+  ] as const)('does not issue a ticket when the TYT Social snapshot is %s', async (status, httpStatus, error) => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     mockRpc.mockResolvedValue({
       data: [makeQuestionRow('q1', { game: 'sosyal', category: 'tarih', exam_ref: 'TYT' })],
       error: null,
     })
-    mockFilterTytSocialQuestionIds.mockRejectedValue(new Error('private detail'))
+    mockReadTytSocialLearningSnapshot.mockResolvedValue({
+      status, context: null, states: [], allowedQuestionIds: [],
+    })
+
+    const response = await GET(makeRequest({ game: 'sosyal', examRef: 'TYT' }) as never)
+
+    expect(response.status).toBe(httpStatus)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+    await expect(response.json()).resolves.toEqual({ error })
+  })
+
+  it('returns a sanitized 500 without issuing a ticket when the snapshot read throws', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: [makeQuestionRow('q1', { game: 'sosyal', category: 'tarih', exam_ref: 'TYT' })],
+      error: null,
+    })
+    mockReadTytSocialLearningSnapshot.mockRejectedValueOnce(new Error('private detail'))
+
+    const response = await GET(makeRequest({ game: 'sosyal', examRef: 'TYT' }) as never)
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+    await expect(response.json()).resolves.toEqual({ error: 'TYT Sosyal çalışma kapsamı okunamadı' })
+  })
+
+  it('returns only a sanitized 409 without retrying when the selection epoch changes during issuance', async () => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: [makeQuestionRow('q1', { game: 'sosyal', category: 'tarih', exam_ref: 'TYT' })],
+      error: null,
+    })
+    mockIssueVerifiedAttempt.mockRejectedValueOnce(new Error('tyt_social_selection_epoch_changed'))
 
     const response = await GET(makeRequest({ game: 'sosyal', examRef: 'TYT' }) as never)
 
     expect(response.status).toBe(409)
-    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
     await expect(response.json()).resolves.toEqual({
-      error: 'TYT Sosyal cevaplama düzeni seçilmelidir',
+      error: 'TYT Sosyal cevaplama düzeni değişti. Yeniden deneyin.',
     })
+    expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mockRpc).toHaveBeenCalledTimes(1)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(1)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      tytSocialEpoch: TYT_SOCIAL_EPOCH,
+    }))
+    expect(mockIssueVerifiedTytSocialOfficialSection).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { label: 'an error with extra private detail', failure: new Error('tyt_social_selection_epoch_changed: private detail') },
+    { label: 'a plain object', failure: { message: 'tyt_social_selection_epoch_changed' } },
+  ])('does not treat $label as a normalized epoch conflict', async ({ failure }) => {
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
+    mockRpc.mockResolvedValue({
+      data: [makeQuestionRow('q1', { game: 'sosyal', category: 'tarih', exam_ref: 'TYT' })],
+      error: null,
+    })
+    mockIssueVerifiedAttempt.mockRejectedValueOnce(failure)
+
+    const response = await GET(makeRequest({ game: 'sosyal', examRef: 'TYT' }) as never)
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toEqual({ error: 'Deneme baslatilamadi' })
+    expect(mockReadTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mockIssueVerifiedAttempt).toHaveBeenCalledTimes(1)
+    expect(mockIssueVerifiedTytSocialOfficialSection).not.toHaveBeenCalled()
   })
 
   it('rejects state-changing TYT Social official-section issuance on GET before database work', async () => {
@@ -354,7 +455,7 @@ describe('GET /api/questions/random', () => {
     })
     expect(mockIssueVerifiedTytSocialOfficialSection).not.toHaveBeenCalled()
     expect(mockRpc).not.toHaveBeenCalled()
-    expect(mockFilterTytSocialQuestionIds).not.toHaveBeenCalled()
+    expect(mockReadTytSocialLearningSnapshot).not.toHaveBeenCalled()
     expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
     expect(mockHistory).not.toHaveBeenCalled()
   })

@@ -1,12 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NextRequest } from 'next/server'
+import type { TytSocialLearningSnapshot } from '@/lib/verified-attempts'
 
 const mocks = vi.hoisted(() => {
   const getUser = vi.fn()
   const ipCheck = vi.fn()
   const userCheck = vi.fn()
   const from = vi.fn()
-  const filterTytSocialQuestionIds = vi.fn()
+  const readTytSocialLearningSnapshot = vi.fn()
   const issueVerifiedAttempt = vi.fn()
   const issueVerifiedExamAttempt = vi.fn()
   return {
@@ -14,7 +15,7 @@ const mocks = vi.hoisted(() => {
     ipCheck,
     userCheck,
     from,
-    filterTytSocialQuestionIds,
+    readTytSocialLearningSnapshot,
     issueVerifiedAttempt,
     issueVerifiedExamAttempt,
   }
@@ -34,8 +35,9 @@ vi.mock('@/lib/utils/rate-limit', () => ({
   })),
 }))
 
-vi.mock('@/lib/verified-attempts', () => ({
-  filterTytSocialQuestionIds: mocks.filterTytSocialQuestionIds,
+vi.mock('@/lib/verified-attempts', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/verified-attempts')>(),
+  readTytSocialLearningSnapshot: mocks.readTytSocialLearningSnapshot,
   issueVerifiedAttempt: mocks.issueVerifiedAttempt,
   issueVerifiedExamAttempt: mocks.issueVerifiedExamAttempt,
   toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
@@ -88,6 +90,56 @@ function question(
 
 const U1 = '11111111-1111-4111-8111-111111111111'
 const REQUEST_ID = '22222222-2222-4222-8222-222222222222'
+const TYT_SOCIAL_EPOCH = {
+  policyVersion: 'tyt-social-2026-v1',
+  selectionEventId: '30000000-0000-4000-8000-000000000001',
+}
+
+function activeSocialSnapshot(allowedQuestionIds: string[]): TytSocialLearningSnapshot {
+  return {
+    status: 'active',
+    context: {
+      ...TYT_SOCIAL_EPOCH,
+      taxonomyVersion: 'ba-tyt-sosyal-v1',
+      variant: 'questions_21_25',
+      selectionEffectiveAt: '2026-09-08T00:00:00.000Z',
+      allowedCategories: ['tarih', 'cografya', 'felsefe', 'sosyoloji'],
+    },
+    states: [],
+    allowedQuestionIds,
+  }
+}
+
+function setupSocialPool() {
+  process.env.TYT_SOCIAL_V2_LEARNER_ENABLED = 'true'
+  process.env.NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED = 'true'
+  const profileQuery = query({ data: { exam_type: 'yks' }, error: null })
+  const pool = Array.from({ length: 45 }, (_, index) => question(
+    `s${index}`,
+    index < 15 ? 'tarih' : index < 30 ? 'cografya' : 'felsefe',
+    { game: 'sosyal' },
+  ))
+  const questionQuery = query({ data: pool, error: null })
+  const historyQuery = query({
+    data: [{
+      question_id: 'forbidden-history',
+      is_correct: false,
+      is_skipped: false,
+      answered_at: '2026-09-07T10:00:00.000Z',
+      questions: question('forbidden-history', 'din_kulturu', { game: 'sosyal' }),
+    }],
+    error: null,
+  })
+  mocks.from.mockImplementation((table: string) => {
+    if (table === 'profiles') return profileQuery
+    if (table === 'questions') return questionQuery
+    if (table === 'session_answers') return historyQuery
+    throw new Error(`unexpected table: ${table}`)
+  })
+  mocks.readTytSocialLearningSnapshot.mockResolvedValue(activeSocialSnapshot(pool.slice(0, 40).map(item => item.id)))
+  return pool
+}
+
 const oldStrategyFlag = process.env.MOCK_STRATEGY_ENABLED
 const oldStrategyUiFlag = process.env.NEXT_PUBLIC_MOCK_STRATEGY_ENABLED
 const oldTytSocialFlag = process.env.TYT_SOCIAL_V2_LEARNER_ENABLED
@@ -108,11 +160,11 @@ beforeEach(() => {
   mocks.ipCheck.mockResolvedValue({ success: true })
   mocks.userCheck.mockResolvedValue({ success: true })
   mocks.getUser.mockResolvedValue({ data: { user: { id: U1 } } })
-  mocks.filterTytSocialQuestionIds.mockImplementation(async (
+  mocks.readTytSocialLearningSnapshot.mockImplementation(async (
     _admin: unknown,
     _userId: string,
     ids: string[],
-  ) => ids)
+  ) => activeSocialSnapshot(ids))
   const projected = (id: string, game: string) => ({
     id,
     game,
@@ -252,40 +304,30 @@ describe('GET /api/study/personalized-mock', () => {
   })
 
   it('TYT Sosyal havuzunu seçim politikasına göre filtreleyip policy-aware bilet üretir', async () => {
-    process.env.TYT_SOCIAL_V2_LEARNER_ENABLED = 'true'
-    process.env.NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED = 'true'
-    const profileQuery = query({ data: { exam_type: 'yks' }, error: null })
-    const pool = Array.from({ length: 45 }, (_, index) => question(
-      `s${index}`,
-      index < 15 ? 'tarih' : index < 30 ? 'cografya' : 'felsefe',
-      { game: 'sosyal' },
-    ))
-    const questionQuery = query({ data: pool, error: null })
-    const historyQuery = query({ data: [], error: null })
-    mocks.from.mockImplementation((table: string) => {
-      if (table === 'profiles') return profileQuery
-      if (table === 'questions') return questionQuery
-      if (table === 'session_answers') return historyQuery
-      throw new Error(`unexpected table: ${table}`)
-    })
-    mocks.filterTytSocialQuestionIds.mockResolvedValue(pool.slice(0, 40).map(item => item.id))
+    const pool = setupSocialPool()
 
     const response = await GET(request('game=sosyal&exam_ref=TYT'))
     const body = await response.json()
 
     expect(response.status).toBe(200)
     expect(body.questions).toHaveLength(40)
-    expect(mocks.filterTytSocialQuestionIds).toHaveBeenCalledWith(
+    expect(body.breakdown.wrong).toBe(0)
+    expect(body.questions.map((item: { id: string }) => item.id).sort())
+      .toEqual(pool.slice(0, 40).map(item => item.id).sort())
+    expect(mocks.readTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mocks.readTytSocialLearningSnapshot).toHaveBeenCalledWith(
       expect.anything(),
       U1,
-      pool.map(item => item.id),
+      [...pool.map(item => item.id), 'forbidden-history'],
     )
     expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mocks.issueVerifiedExamAttempt).toHaveBeenCalledTimes(1)
     expect(mocks.issueVerifiedExamAttempt).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         game: 'sosyal',
         examRef: 'TYT',
+        tytSocialEpoch: TYT_SOCIAL_EPOCH,
         items: expect.arrayContaining([expect.objectContaining({ questionId: expect.any(String) })]),
       }),
     )
@@ -293,26 +335,74 @@ describe('GET /api/study/personalized-mock', () => {
     expect(body).not.toHaveProperty('blueprintVersion')
   })
 
-  it('TYT Sosyal seçim politikası çözülemezse soru döndürmeden kapanır', async () => {
-    process.env.TYT_SOCIAL_V2_LEARNER_ENABLED = 'true'
-    process.env.NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED = 'true'
-    const profileQuery = query({ data: { exam_type: 'yks' }, error: null })
-    const pool = Array.from({ length: 40 }, (_, index) => question(`s${index}`, 'tarih', { game: 'sosyal' }))
-    const questionQuery = query({ data: pool, error: null })
-    const historyQuery = query({ data: [], error: null })
-    mocks.from.mockImplementation((table: string) => {
-      if (table === 'profiles') return profileQuery
-      if (table === 'questions') return questionQuery
-      if (table === 'session_answers') return historyQuery
-      throw new Error(`unexpected table: ${table}`)
+  it.each([
+    ['setup_required', 409, 'TYT Sosyal cevaplama düzeni seçilmelidir'],
+    ['unavailable', 503, 'TYT Sosyal çalışma kapsamı kullanılamıyor'],
+  ] as const)('TYT Sosyal snapshot %s ise soru veya bilet üretmez', async (status, httpStatus, error) => {
+    setupSocialPool()
+    mocks.readTytSocialLearningSnapshot.mockResolvedValue({
+      status, context: null, states: [], allowedQuestionIds: [],
     })
-    mocks.filterTytSocialQuestionIds.mockRejectedValue(new Error('private detail'))
 
     const response = await GET(request('game=sosyal&exam_ref=TYT'))
 
-    expect(response.status).toBe(409)
+    expect(response.status).toBe(httpStatus)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    await expect(response.json()).resolves.toEqual({ error })
+    expect(mocks.readTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
     expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
     expect(mocks.issueVerifiedExamAttempt).not.toHaveBeenCalled()
+  })
+
+  it('TYT Sosyal snapshot okuma hatasında özel ayrıntıları göstermeden 500 döner', async () => {
+    setupSocialPool()
+    mocks.readTytSocialLearningSnapshot.mockRejectedValueOnce(new Error('private detail'))
+
+    const response = await GET(request('game=sosyal&exam_ref=TYT'))
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    await expect(response.json()).resolves.toEqual({ error: 'TYT Sosyal çalışma kapsamı okunamadı' })
+    expect(mocks.readTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
+    expect(mocks.issueVerifiedExamAttempt).not.toHaveBeenCalled()
+  })
+
+  it('bilet üretiminde epoch değişirse yeniden denemeden yalnız güvenli 409 yanıtı verir', async () => {
+    setupSocialPool()
+    mocks.issueVerifiedExamAttempt.mockRejectedValueOnce(new Error('tyt_social_selection_epoch_changed'))
+
+    const response = await GET(request('game=sosyal&exam_ref=TYT', true))
+
+    expect(response.status).toBe(409)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    await expect(response.json()).resolves.toEqual({
+      error: 'TYT Sosyal cevaplama düzeni değişti. Yeniden deneyin.',
+    })
+    expect(mocks.readTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mocks.issueVerifiedExamAttempt).toHaveBeenCalledTimes(1)
+    expect(mocks.issueVerifiedExamAttempt).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      tytSocialEpoch: TYT_SOCIAL_EPOCH,
+      requestId: REQUEST_ID,
+    }))
+    expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { label: 'ek özel ayrıntılı Error', failure: new Error('tyt_social_selection_epoch_changed: private detail') },
+    { label: 'düz nesne', failure: { message: 'tyt_social_selection_epoch_changed' } },
+  ])('$label normalize edilmiş epoch çatışması sayılmaz ve genel bilete düşmez', async ({ failure }) => {
+    setupSocialPool()
+    mocks.issueVerifiedExamAttempt.mockRejectedValueOnce(failure)
+
+    const response = await GET(request('game=sosyal&exam_ref=TYT'))
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    await expect(response.json()).resolves.toEqual({ error: 'Deneme baslatilamadi' })
+    expect(mocks.readTytSocialLearningSnapshot).toHaveBeenCalledTimes(1)
+    expect(mocks.issueVerifiedExamAttempt).toHaveBeenCalledTimes(1)
+    expect(mocks.issueVerifiedAttempt).not.toHaveBeenCalled()
   })
 
   it('server flag açıkken ordered source snapshot ile atomic verified exam üretir', async () => {

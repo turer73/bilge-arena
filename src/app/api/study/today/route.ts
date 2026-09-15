@@ -10,14 +10,15 @@ import { fetchDueQuestions } from '@/lib/review/due-questions'
 import { parseQuestionRows, toPublicQuestion, type PublicQuestion } from '@/lib/utils/question-public'
 import { defaultExamRefForType, type ExamType } from '@/lib/constants/exam-types'
 import {
-  filterTytSocialQuestionIds,
+  isTytSocialEpochRpcConflict,
   issueVerifiedAttempt,
+  readTytSocialLearningSnapshot,
   toPublicVerifiedQuestions,
+  type TytSocialLearningEpoch,
 } from '@/lib/verified-attempts'
 import { buildPlanCandidates } from '@/lib/study/plan-candidates'
 import type { PlanOutcomeState } from '@/lib/study/outcome-targets'
-import { MASTERY_STATE_COLUMNS, toMasteryStateInput, isCompleteMasteryStateRow, type MasteryStateRow } from '@/lib/mastery/state-row'
-import { parseActiveTytSocialMasteryContext } from '@/lib/mastery/tyt-social-context'
+import { MASTERY_STATE_COLUMNS, toMasteryStateInput, type MasteryStateRow } from '@/lib/mastery/state-row'
 import { composePlanV2 } from '@/lib/study/compose-plan-v2'
 import {
   normalizeTodayPlanItems,
@@ -373,30 +374,39 @@ export async function GET(request: NextRequest) {
 
   let dueQuestions = dueResult.data ?? []
   let baseQuestions = parseQuestionRows(baseResult.data)
-  if (tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT') {
+  const isScopedSocial = tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT'
+  let tytSocialStates: MasteryStateRow[] | null = null
+  let tytSocialEpoch: TytSocialLearningEpoch | null = null
+  let allowedOutcomeCategories: Set<string> | null = null
+  if (isScopedSocial) {
     try {
-      const allowedIds = new Set(await filterTytSocialQuestionIds(admin, user.id, [
+      const selection = await readTytSocialLearningSnapshot(admin, user.id, [
         ...dueQuestions.map(question => question.id),
         ...baseQuestions.map(question => question.id),
-      ]))
+      ])
+      if (selection.status !== 'active') {
+        return noStoreJson(
+          { error: selection.status === 'setup_required'
+            ? 'TYT Sosyal cevaplama düzeni seçilmelidir'
+            : 'Plan olusturulamadi' },
+          { status: selection.status === 'setup_required' ? 409 : 503 },
+        )
+      }
+      if (masteryScope && selection.context.taxonomyVersion !== masteryScope.taxonomyVersion) {
+        return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 503 })
+      }
+      const allowedIds = new Set(selection.allowedQuestionIds)
       dueQuestions = dueQuestions.filter(question => allowedIds.has(question.id))
       baseQuestions = baseQuestions.filter(question => allowedIds.has(question.id))
+      tytSocialStates = selection.states
+      tytSocialEpoch = {
+        policyVersion: selection.context.policyVersion,
+        selectionEventId: selection.context.selectionEventId,
+      }
+      if (masteryScope) allowedOutcomeCategories = new Set(selection.context.allowedCategories)
     } catch {
-      return noStoreJson(
-        { error: 'TYT Sosyal cevaplama düzeni seçilmelidir' },
-        { status: 409 },
-      )
+      return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
     }
-  }
-  const isScopedSocial = tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT'
-  let allowedOutcomeCategories: Set<string> | null = null
-  if (isScopedSocial && masteryScope) {
-    const contextResult = await admin.rpc('resolve_tyt_social_mastery_read_context', { p_user_id: user.id })
-    const context = contextResult.error ? null : parseActiveTytSocialMasteryContext(contextResult.data)
-    if (!context || context.taxonomyVersion !== masteryScope.taxonomyVersion) {
-      return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 503 })
-    }
-    allowedOutcomeCategories = new Set(context.allowedCategories)
   }
   const outcomes = (outcomeResult.data ?? [])
     .filter((row) => !allowedOutcomeCategories || allowedOutcomeCategories.has(row.category))
@@ -415,7 +425,7 @@ export async function GET(request: NextRequest) {
   if (outcomeIds.length > 0) {
     const [stateResult, mappingResult] = await Promise.all([
       isScopedSocial
-        ? admin.rpc('read_tyt_social_mastery_outcome_state', { p_user_id: user.id })
+        ? Promise.resolve({ data: tytSocialStates, error: null })
         : admin
           .from('user_outcome_state')
           .select(MASTERY_STATE_COLUMNS)
@@ -432,8 +442,7 @@ export async function GET(request: NextRequest) {
           error: error as { code?: string },
         })),
     ])
-    if (stateResult.error || mappingResult.error || !Array.isArray(stateResult.data)
-      || (isScopedSocial && !stateResult.data.every(isCompleteMasteryStateRow))) {
+    if (stateResult.error || mappingResult.error || !Array.isArray(stateResult.data)) {
       console.error(
         '[/api/study/today] outcome evidence query failed:',
         (stateResult.error ?? mappingResult.error)?.code,
@@ -466,7 +475,6 @@ export async function GET(request: NextRequest) {
   if (draft.length === 0) {
     return respondWithTicket(admin, user.id, game, planDate, examRef, [], [], [])
   }
-
   const rpcItems = draft.map((item) => ({
     position: item.position,
     question_id: item.questionId,
@@ -474,13 +482,21 @@ export async function GET(request: NextRequest) {
     source_type: item.sourceType,
     source_ref: item.sourceRef,
   }))
-  const { data: rpcData, error: createError } = tytSocialV2Enabled && game === 'sosyal' && examRef === 'TYT'
-    ? await admin.rpc('create_tyt_social_daily_plan_v2', {
+  let createResult: Awaited<ReturnType<typeof admin.rpc>>
+  try {
+    if (isScopedSocial) {
+      if (!tytSocialEpoch) {
+        return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+      }
+      createResult = await admin.rpc('create_tyt_social_daily_plan_for_epoch', {
         p_user_id: user.id,
         p_plan_date: planDate,
         p_items: rpcItems as Json,
+        p_expected_policy_version: tytSocialEpoch.policyVersion,
+        p_expected_selection_event_id: tytSocialEpoch.selectionEventId,
       })
-    : await admin.rpc('create_daily_plan_v2', {
+    } else {
+      createResult = await admin.rpc('create_daily_plan_v2', {
         p_user_id: user.id,
         p_game: game,
         p_plan_date: planDate,
@@ -488,7 +504,18 @@ export async function GET(request: NextRequest) {
         p_exam_ref: examRef as string,
         p_items: rpcItems as Json,
       })
+    }
+  } catch {
+    return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
+  }
+  const { data: rpcData, error: createError } = createResult
   if (createError) {
+    if (isScopedSocial && isTytSocialEpochRpcConflict(createError)) {
+      return noStoreJson(
+        { error: 'TYT Sosyal cevaplama düzeni değişti. Yeniden deneyin.' },
+        { status: 409 },
+      )
+    }
     console.error('[/api/study/today] atomic plan create failed:', createError.code)
     return noStoreJson({ error: 'Plan olusturulamadi' }, { status: 500 })
   }
