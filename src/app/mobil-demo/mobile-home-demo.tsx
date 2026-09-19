@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import {
   BookOpenText,
@@ -261,7 +261,7 @@ export function MobileHomeDemo({
   const [examPickerOpen, setExamPickerOpen] = useState(false)
   const [demoExamRef, setDemoExamRef] = useState(examRef)
   const activeSubjectId = wideStudy && desktopSubject ? desktopSubject : subjectId
-  const subject = useMemo(() => visibleSubjects.find((item) => item.id === activeSubjectId) ?? visibleSubjects[0] ?? SUBJECTS[0], [activeSubjectId, visibleSubjects])
+  const subject = visibleSubjects.find((item) => item.id === activeSubjectId) ?? visibleSubjects[0] ?? SUBJECTS[0]
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
   const gameHref = `/arena/${gameSlug}`
   const progressExamRef = examRef && GAMES[gameSlug].examTags.includes(examRef)
@@ -285,7 +285,7 @@ export function MobileHomeDemo({
     && !isSocialTytProgressPreparing
     && progress.topics.length > 0
 
-  const steps: PathStepModel[] = useMemo(() => {
+  const steps: PathStepModel[] = (() => {
     if (isSocialTytProgressPreparing) return []
     if (isLivePath) {
       return progress.topics.map((topic, index) => ({
@@ -312,7 +312,7 @@ export function MobileHomeDemo({
       exam: index === subject.topics.length - 1,
       locked: index > demoCurrent,
     }))
-  }, [gameHref, gameSlug, isLivePath, isSocialTytProgressPreparing, progress.currentIndex, progress.topics, subject.id, subject.topics])
+  })()
 
   const completedCount = steps.filter((step) => step.done).length
   const stepCount = Math.max(1, steps.length)
