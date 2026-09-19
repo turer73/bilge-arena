@@ -19,7 +19,9 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
   const { profile } = useAuthStore()
   const [displayName, setDisplayName] = useState(profile?.username || profile?.display_name || '')
   const [city, setCity] = useState(profile?.city || '')
-  const [grade, setGrade] = useState(profile?.grade || '')
+  // Select degeri tarayicida her zaman string'tir; API/DB ise 9-13 arasi
+  // sayi bekler (13 = mezun). State'i string tutup PATCH sinirinda sayiya cevir.
+  const [grade, setGrade] = useState<string>(profile?.grade ? String(profile.grade) : '')
   const [examType, setExamType] = useState<'yks' | 'lgs' | ''>(profile?.exam_type ?? '')
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState(false)
@@ -91,7 +93,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
         body: JSON.stringify({
           username: displayName.trim(),
           city: city.trim() || undefined,
-          grade: grade || undefined,
+          grade: grade ? Number(grade) : undefined,
           exam_type: examType || undefined,
         }),
       })
@@ -225,6 +227,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
           <div>
             <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SINIF</label>
             <select
+              aria-label="Sınıf"
               value={grade}
               onChange={(e) => setGrade(e.target.value)}
               className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
@@ -234,7 +237,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
               <option value="10">10. Sınıf</option>
               <option value="11">11. Sınıf</option>
               <option value="12">12. Sınıf</option>
-              <option value="mezun">Mezun</option>
+              <option value="13">Mezun</option>
             </select>
           </div>
 
@@ -242,6 +245,7 @@ export function EditProfileModal({ open, onClose }: EditProfileModalProps) {
           <div>
             <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SINAV TÜRÜ</label>
             <select
+              aria-label="Sınav türü"
               value={examType}
               onChange={(e) => setExamType(e.target.value as 'yks' | 'lgs' | '')}
               className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
