@@ -87,4 +87,27 @@ describe('FriendsClient', () => {
     expect(screen.queryByRole('link', { name: 'kapali' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'acik' })).toHaveAttribute('href', '/u/acik')
   })
+
+  it('mobil sirayi koruyup tablet ve masaustunde iki sutunlu yerlesime gecer', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => emptyFriends,
+    } as Response)
+
+    const { container } = render(<FriendsClient />)
+    await screen.findByText('Henüz arkadaşın yok. Yukarıdaki arama ile kullanıcı bul!')
+
+    const screenRoot = container.querySelector('[data-friends-screen]')
+    const layout = container.querySelector('[data-friends-layout]')
+    const sidebar = container.querySelector('[data-friends-sidebar]')
+    const main = container.querySelector('[data-friends-main]')
+
+    expect(screenRoot).toHaveClass('max-w-xl', 'md:max-w-[1120px]')
+    expect(layout).toHaveClass('md:grid', 'md:grid-cols-[minmax(0,1fr)_300px]')
+    expect(sidebar).toHaveClass('contents', 'md:col-start-2', 'md:block')
+    expect(main).toHaveClass('contents', 'md:col-start-1', 'md:block')
+    expect(sidebar).not.toBeNull()
+    expect(main).not.toBeNull()
+    expect(sidebar!.compareDocumentPosition(main!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })

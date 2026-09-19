@@ -16,7 +16,7 @@ vi.mock('next/link', () => ({
 }))
 vi.mock('@/lib/hooks/use-auth', () => ({ useAuth: () => auth }))
 vi.mock('../logo', () => ({ Logo: () => <span>Bilge Arena</span> }))
-vi.mock('../theme-toggle', () => ({ ThemeToggle: () => null }))
+vi.mock('../theme-toggle', () => ({ ThemeToggle: () => <button>Tema seç</button> }))
 vi.mock('../notification-bell', () => ({ NotificationBell: () => null }))
 
 import { Navbar } from '../navbar'
@@ -46,6 +46,20 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Navbar institution panel entry', () => {
+  it.each(['/arena', '/arena/kisisellestir', '/oda', '/oda/ABC123'])('hides the wide theme trigger on %s without unmounting preference synchronization', (route) => {
+    mockUsePathname.mockReturnValue(route)
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+    expect(screen.getByRole('button', {name:'Tema seç'}).closest('[data-navbar-theme]')).toHaveClass('md:hidden')
+  })
+
+  it('keeps the existing theme trigger on other pages', () => {
+    mockUsePathname.mockReturnValue('/arena/matematik')
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+    expect(screen.getByRole('button', {name:'Tema seç'}).closest('[data-navbar-theme]')).not.toHaveClass('md:hidden')
+  })
+
   it('uses a settings icon instead of repeating the profile avatar on the Arena home', () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
     render(<Navbar />)

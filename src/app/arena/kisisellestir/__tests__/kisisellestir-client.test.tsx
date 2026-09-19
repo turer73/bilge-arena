@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 
 const auth = vi.hoisted(() => ({
   value: {
@@ -81,6 +81,31 @@ beforeEach(() => {
 })
 
 describe('KisisellestirClient', () => {
+  test('renk teması bölümü masaüstü/tablet için eklenir; mobil stüdyo düzeni korunur', () => {
+    render(<KisisellestirClient />)
+    const themes = screen.getByRole('group', {name:'Renk teması'})
+    expect(themes.parentElement).toHaveClass('hidden', 'md:block')
+    expect(within(themes).getAllByRole('radio')).toHaveLength(6)
+    expect(screen.getByRole('button', {name:'🧑 Avatar'})).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('misafir rengi bu tarayıcıya kaydeder; zemin, profil ve giriş korumaları değişmez', () => {
+    auth.value.user = null
+    auth.value.profile = null
+    localStorage.setItem('bilge-arena-zemin-v1', 'sis-vadisi')
+    localStorage.setItem('bilge-arena-profile-background-v1', 'gece-mavisi')
+    render(<KisisellestirClient />)
+    const themes = screen.getByRole('group', {name:'Renk teması'})
+    fireEvent.click(within(themes).getByRole('radio', {name:'Renk teması: Kadim Orman'}))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'orman')
+    expect(localStorage.getItem('bilge-theme')).toBe('orman')
+    expect(localStorage.getItem('bilge-arena-zemin-v1')).toBe('sis-vadisi')
+    expect(localStorage.getItem('bilge-arena-profile-background-v1')).toBe('gece-mavisi')
+    expect(screen.queryByRole('button', {name:'🧑 Avatar'})).not.toBeInTheDocument()
+    expect(screen.getByRole('link', {name:'Giriş Yap'})).toHaveAttribute('href', '/giris?redirect=/arena/kisisellestir')
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/profile')).toBe(false)
+  })
+
   test('başlık + alan sekmeleri render olur, varsayılan alan avatar', () => {
     const { container } = render(<KisisellestirClient />)
     expect(screen.getByText('🎨 Kişiselleştirme Stüdyosu')).toBeInTheDocument()
@@ -144,7 +169,7 @@ describe('KisisellestirClient', () => {
     window.addEventListener('zemin-changed', zeminSpy)
     render(<KisisellestirClient />)
     fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
-    fireEvent.click(screen.getByLabelText('Gece Mavisi'))
+    fireEvent.click(screen.getByRole('button', {name:'Gece Mavisi'}))
 
     expect(localStorage.getItem('bilge-arena-zemin-v1')).toBe('gece-mavisi')
     // kart anahtarı DOKUNULMAMIŞ olmalı (ayrışma)
@@ -158,7 +183,7 @@ describe('KisisellestirClient', () => {
     window.addEventListener('bg-changed', bgSpy)
     render(<KisisellestirClient />)
     fireEvent.click(screen.getByRole('button', { name: /Profil Kartı/ }))
-    fireEvent.click(screen.getByLabelText('Gece Mavisi'))
+    fireEvent.click(screen.getByRole('button', {name:'Gece Mavisi'}))
 
     expect(localStorage.getItem('bilge-arena-profile-background-v1')).toBe('gece-mavisi')
     expect(localStorage.getItem('bilge-arena-zemin-v1')).toBeNull()

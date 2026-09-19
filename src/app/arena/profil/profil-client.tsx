@@ -26,6 +26,7 @@ import { ProfileFrameRing, FrameDot } from '@/components/profile/profile-frame-r
 import { AvatarDecoration } from '@/components/profile/avatar-decoration'
 import { ContentQualityStatus } from '@/components/profile/content-quality-status'
 import { ProfileActions } from '@/components/profile/profile-actions'
+import { DesktopProfileContext } from '@/components/profile/desktop-profile-context'
 import Link from 'next/link'
 
 // Mod isimleri
@@ -411,6 +412,12 @@ export default function ProfilClient() {
         )}
       </div>
 
+      <DesktopProfileContext
+        examType={profile.exam_type}
+        profileVisibility={profile.profile_visibility}
+        onEditProfile={() => setEditOpen(true)}
+      />
+
       <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />
 
       {/* Streak milestone banner (7 / 30 / 100 gün) */}
@@ -545,7 +552,7 @@ export default function ProfilClient() {
       <ContentQualityStatus />
 
       {/* Gizlilik — opt-in keşif */}
-      <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+      <div id="profile-privacy" className="mb-6 scroll-mt-24 animate-fadeUp" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
         <div className="grid gap-3">
           <DiscoverabilitySettings />
           <LeaderboardVisibilitySettings />

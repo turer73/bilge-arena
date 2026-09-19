@@ -29,8 +29,12 @@ import { QuizLimitBanner } from '@/components/premium/quiz-limit-banner'
 import { AdBanner } from '@/components/ads/ad-banner'
 import { BilgeChan } from '@/components/ui/bilge-chan'
 import { MobileLobbyFlow } from './mobile-lobby-flow'
+import dynamic from 'next/dynamic'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
 
-interface LobbyProps {
+const DesktopGameLobby = dynamic(() => import('@/components/academy/desktop-game-lobby').then(module => module.DesktopGameLobby))
+
+export interface LobbyProps {
   game: GameSlug
   selectedMode: string
   onSelectMode: (mode: QuizMode) => void
@@ -86,7 +90,12 @@ const GAME_ICONS: Record<GameSlug, LucideIcon> = {
   wordquest: Languages,
 }
 
-export function Lobby({
+export function Lobby(props: LobbyProps) {
+  const wide = useWideStudy()
+  return wide ? <DesktopGameLobby {...props} /> : <LegacyLobby {...props} />
+}
+
+function LegacyLobby({
   game,
   selectedMode,
   onSelectMode,

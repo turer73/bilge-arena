@@ -32,6 +32,7 @@ const oldBossFlag = process.env.NEXT_PUBLIC_SOCIAL_TEAM_BOSS_ENABLED
 
 describe('SiralamaClient social league gate', () => {
   beforeEach(() => {
+    localStorage.removeItem('bilge-guide-character-v1')
     delete process.env.NEXT_PUBLIC_SOCIAL_TEAM_BOSS_ENABLED
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
       players: [], myRank: 0, source: 'empty',
@@ -59,12 +60,16 @@ describe('SiralamaClient social league gate', () => {
     expect(screen.getByRole('heading', { name: /Haftalık sıralamada yerini al/ })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Sıralama dönemi' })).toBeInTheDocument()
     expect(document.querySelector('[data-ranking-screen]')).toHaveClass('pb-24', 'lg:pb-10')
-    expect(document.querySelector('[data-ranking-overview]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_320px]', 'lg:items-start')
-    expect(document.querySelector('[data-ranking-hero]')).toHaveClass('min-h-[176px]', 'lg:min-h-[156px]')
-    expect(document.querySelector('[data-ranking-status]')).toHaveClass('min-h-[156px]')
-    expect(document.querySelector('[data-ranking-layout]')).toHaveClass('lg:grid-cols-[minmax(0,1fr)_320px]')
+    expect(document.querySelector('[data-ranking-overview]')).toHaveClass('md:grid-cols-[minmax(0,1fr)_280px]', 'lg:grid-cols-[minmax(0,1fr)_320px]')
+    expect(document.querySelector('[data-ranking-hero]')).toHaveClass('min-h-[176px]', 'md:min-h-[190px]')
+    expect(document.querySelector('[data-ranking-status]')).toHaveClass('hidden', 'md:flex', 'min-h-[190px]')
+    expect(document.querySelector('[data-ranking-layout]')).toHaveClass('md:grid-cols-[minmax(0,1fr)_280px]', 'lg:grid-cols-[minmax(0,1fr)_320px]')
+    expect(document.querySelector('[data-ranking-landscape]')).toHaveAttribute('src', '/academy/academy-landscape.png')
+    expect(screen.getByAltText('Kadın Bilge, lig rehberin')).toHaveAttribute('src', '/academy/bilge/female/kararli.png')
     expect(document.querySelector('style')?.textContent).toContain('max-width: 1023px')
     await waitFor(() => expect(screen.queryByText(/Henüz açık sıralamaya katılan/)).toBeInTheDocument())
+    expect(document.querySelector('[data-ranking-empty-art]')).toHaveAttribute('src', '/academy/daily-plan-trophy-v1.png')
+    expect(screen.getByRole('link', { name: 'İlk XP’ni kazan' })).toHaveAttribute('href', '/arena')
     expect(screen.getByRole('switch', { name: 'Açık sıralamaya katılım' })).not.toBeChecked()
     expect(fetch).toHaveBeenCalledWith('/api/leaderboard/full')
   })
@@ -97,6 +102,15 @@ describe('SiralamaClient social league gate', () => {
     render(<SiralamaClient />)
     expect(screen.getByLabelText('Yakın Rakip Ligi fixture')).toBeInTheDocument()
     expect(screen.getByLabelText('Takım Bossu fixture')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText(/Henüz açık sıralamaya katılan/)).toBeInTheDocument())
+  })
+
+  it('uses the selected male Bilge in the desktop league hero', async () => {
+    localStorage.setItem('bilge-guide-character-v1', 'male')
+
+    render(<SiralamaClient />)
+
+    expect(screen.getByAltText('Erkek Bilge, lig rehberin')).toHaveAttribute('src', '/academy/bilge/male/kararli.png')
     await waitFor(() => expect(screen.queryByText(/Henüz açık sıralamaya katılan/)).toBeInTheDocument())
   })
 })

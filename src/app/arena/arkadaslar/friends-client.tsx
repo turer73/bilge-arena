@@ -268,8 +268,11 @@ export default function FriendsClient() {
   ])
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-6">
-      <h1 className="mb-6 text-xl font-bold">Arkadaşlar</h1>
+    <div data-friends-screen className="mx-auto max-w-xl px-4 py-6 md:max-w-[1120px] md:px-6 md:py-8">
+      <h1 className="mb-6 text-xl font-bold md:mb-1 md:text-2xl">Arkadaşlar</h1>
+      <p className="mb-6 hidden max-w-2xl text-sm leading-6 text-[var(--text-sub)] md:block">
+        Çalışma arkadaşlarını bul, gelen istekleri yönet ve birlikte çözmek istediğin kişiye meydan oku.
+      </p>
 
       {loadError && (
         <div role="alert" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[var(--urgency)] bg-[var(--urgency)]/10 p-3 text-xs font-semibold text-[var(--urgency)]">
@@ -278,8 +281,21 @@ export default function FriendsClient() {
         </div>
       )}
 
+      <div
+        data-friends-layout
+        className="md:grid md:grid-cols-[minmax(0,1fr)_300px] md:items-start md:gap-6 lg:grid-cols-[minmax(0,1fr)_340px]"
+      >
+        <aside
+          data-friends-sidebar
+          className="contents md:col-start-2 md:row-start-1 md:block md:space-y-5"
+          aria-label="Arkadaş arama ve istekler"
+        >
       {/* Arama */}
-      <div className="mb-6">
+      <div className="mb-6 md:mb-0 md:rounded-2xl md:border md:border-[var(--border)] md:bg-[var(--card)] md:p-5">
+        <div className="mb-3 hidden md:block">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--focus)]">Yeni bağlantı</p>
+          <h2 className="mt-1 text-base font-bold">Arkadaş bul</h2>
+        </div>
         <input
           type="text"
           value={searchQuery}
@@ -323,7 +339,7 @@ export default function FriendsClient() {
 
       {/* Gelen istekler */}
       {pendingReceived.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6 md:mb-0 md:rounded-2xl md:border md:border-[var(--border)] md:bg-[var(--card)] md:p-5">
           <h2 className="mb-2 text-xs font-bold tracking-wider text-[var(--reward)]">
             GELEN İSTEKLER ({pendingReceived.length})
           </h2>
@@ -364,7 +380,7 @@ export default function FriendsClient() {
 
       {/* Gonderilen istekler */}
       {pendingSent.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6 md:mb-0 md:rounded-2xl md:border md:border-[var(--border)] md:bg-[var(--card)] md:p-5">
           <h2 className="mb-2 text-xs font-bold tracking-wider text-[var(--text-sub)]">
             GÖNDERİLEN İSTEKLER ({pendingSent.length})
           </h2>
@@ -386,13 +402,22 @@ export default function FriendsClient() {
           </div>
         </div>
       )}
+        </aside>
 
+        <section
+          data-friends-main
+          className="contents md:col-start-1 md:row-start-1 md:block md:rounded-2xl md:border md:border-[var(--border)] md:bg-[var(--card)] md:p-5"
+          aria-labelledby="friends-list-title"
+        >
       {/* Arkadaslar */}
-      <h2 className="mb-2 text-xs font-bold tracking-wider text-[var(--text-sub)]">
+      <h2 id="friends-list-title" className="mb-2 text-xs font-bold tracking-wider text-[var(--text-sub)] md:text-sm md:text-[var(--text)]">
         ARKADAŞLAR ({friends.length})
       </h2>
+      <p className="mb-4 hidden text-xs leading-5 text-[var(--text-sub)] md:block">
+        Arkadaşlarının ilerlemesini gör veya kısa bir ders düellosu başlat.
+      </p>
       {friends.length === 0 ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center md:bg-[var(--surface)]/55 md:py-14">
           <div className="mb-2 text-3xl">👥</div>
           <p className="text-sm text-[var(--muted)]">Henüz arkadaşın yok. Yukarıdaki arama ile kullanıcı bul!</p>
         </div>
@@ -481,10 +506,12 @@ export default function FriendsClient() {
           ))}
         </div>
       )}
+        </section>
+      </div>
 
       {/* Engellenenler */}
       {blocked.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-6 md:rounded-2xl md:border md:border-[var(--border)] md:bg-[var(--card)] md:p-5">
           <h2 className="mb-2 text-xs font-bold tracking-wider text-[var(--text-sub)]">
             ENGELLENENLER ({blocked.length})
           </h2>

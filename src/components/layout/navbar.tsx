@@ -5,6 +5,7 @@ import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boun
 import { usePathname } from 'next/navigation'
 import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap, Building2, Settings } from 'lucide-react'
 import { Logo } from './logo'
+import { AcademyLogo } from '@/components/academy/academy-logo'
 import { ThemeToggle } from './theme-toggle'
 import { NotificationBell } from './notification-bell'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ export function Navbar() {
   const [institutionPanelVisible, setInstitutionPanelVisible] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
+  const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname.startsWith('/oda')
   const { user, profile, signOut } = useAuth()
   const userId = user?.id
 
@@ -85,16 +87,17 @@ export function Navbar() {
           : 'bg-transparent backdrop-blur-none border-transparent'
       }`}
     >
-      <div className="mx-auto flex h-[var(--navbar-h)] max-w-[1200px] items-center justify-between px-6 lg:px-8">
+      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between px-6 lg:px-8 ${academyArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
         {/* Logo */}
-        <Logo size={36} />
+        {academyArea ? <AcademyLogo /> : <Logo size={36} />}
 
         {/* Desktop nav links */}
-        <div className="hidden items-center gap-1 md:flex">
+        <div className={`hidden items-center gap-1 ${academyArea ? 'xl:flex' : 'md:flex'}`}>
           {NAV_LINKS.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
+              aria-current={pathname === href ? 'page' : undefined}
               className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors hover:bg-[var(--card)] hover:text-[var(--text)] ${
                 pathname === href
                   ? 'text-[var(--focus)]'
@@ -108,7 +111,9 @@ export function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <ThemeToggle />
+          <div data-navbar-theme className={academyArea ? 'md:hidden' : undefined}>
+            <ThemeToggle />
+          </div>
 
           {user ? (
             <>
@@ -137,7 +142,7 @@ export function Navbar() {
                   aria-label="Kullanıcı menüsü"
                   aria-expanded={dropdownOpen}
                 >
-                  {pathname === '/arena' ? (
+                  {academyArea ? (
                     <span data-arena-account-settings-icon className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--card)] text-[var(--text-sub)]">
                       <Settings size={19} strokeWidth={2.5} aria-hidden="true" />
                     </span>
@@ -288,7 +293,7 @@ export function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] md:hidden"
+            className={`flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] ${academyArea ? 'xl:hidden' : 'md:hidden'}`}
             aria-label={mobileOpen ? 'Menüyü kapat' : 'Menüyü aç'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
@@ -300,7 +305,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div id="mobile-navigation" key="mobile-menu" className="animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl md:hidden">
+        <div id="mobile-navigation" key="mobile-menu" className={`animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl ${academyArea ? 'xl:hidden' : 'md:hidden'}`}>
           <div className="flex flex-col gap-1 px-6 py-4">
             {NAV_LINKS.map(({ href, label }) => (
               <Link

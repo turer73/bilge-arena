@@ -41,6 +41,9 @@ import { AVATAR_GROUPS, avatarMinLevel } from '@/lib/constants/avatars'
 import { StudioPreview } from './studio-preview'
 import { useCosmeticPurchase, type CosmeticCategory } from '@/lib/hooks/use-cosmetic-purchase'
 import { CosmeticPurchaseDialog } from '@/components/profile/cosmetic-purchase-dialog'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
+import { AcademyTabletNav } from '@/components/academy/academy-tablet-nav'
+import { BilgePersonalization } from '@/components/academy/bilge-personalization'
 
 type Area = 'avatar' | 'zemin' | 'kart' | 'panel' | 'cerceve' | 'rozet' | 'sus'
 
@@ -350,10 +353,21 @@ export function KisisellestirClient() {
   }
   if (!user || !profile) {
     return (
-      <div data-studio-screen className="mx-auto min-h-dvh max-w-md bg-[var(--app-bg)] px-4 py-16 text-center">
+      <div data-studio-screen className="mx-auto min-h-dvh max-w-md bg-[var(--app-bg)] px-4 py-16 text-center md:max-w-[1180px] md:pt-0">
         <StudioShellStyle />
+        <AcademyTabletNav active="personalize" />
+        <div className="mb-8 hidden md:block">
+          <h1 className="mb-5 pt-6 text-left text-2xl font-extrabold">Kişiselleştir</h1>
+          <div className="mx-auto grid max-w-[900px] gap-5 text-left">
+          <ThemeToggle variant="panel" />
+          <BilgePersonalization />
+          </div>
+          <p className="mt-3 text-sm text-[var(--app-text-sub)]">Renk temasını giriş yapmadan seçebilirsin. Seçimin bu tarayıcıda saklanır.</p>
+          <Link href="/arena/calisma" className="mt-3 inline-block text-sm font-semibold text-[var(--app-accent-text)]">← Ders Çalış’a dön</Link>
+        </div>
         <div className="mb-4 text-5xl">🎨</div>
-        <h1 className="mb-2 text-xl font-bold">Giriş Yapmanız Gerekiyor</h1>
+        <h1 className="mb-2 text-xl font-bold md:hidden">Giriş Yapmanız Gerekiyor</h1>
+        <h2 className="mb-2 hidden text-xl font-bold md:block">Profilini de kişiselleştir</h2>
         <p className="mb-6 text-sm text-[var(--text-sub)]">
           Profilini kişiselleştirmek için giriş yap.
         </p>
@@ -374,6 +388,7 @@ export function KisisellestirClient() {
   return (
     <div data-studio-screen className="mx-auto min-h-dvh w-full max-w-[1180px] bg-[var(--app-bg)] px-4 pb-28 pt-4 md:px-5 md:pt-5 lg:px-6 lg:pb-10 lg:pt-8">
       <StudioShellStyle />
+      <AcademyTabletNav active="personalize" />
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-4 shadow-[0_5px_0_var(--app-shadow-accent)] md:p-5">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]">Profilini tasarla</p>
@@ -394,6 +409,7 @@ export function KisisellestirClient() {
         </Link>
       </div>
 
+      <div className="mb-5 hidden space-y-5 md:block"><ThemeToggle variant="panel" /><BilgePersonalization /></div>
       <div data-studio-layout className="grid min-w-0 gap-5 md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
         {/* Canlı önizleme — masaüstünde yapışkan */}
         <div className="min-w-0 md:sticky md:top-4 md:self-start lg:top-[calc(var(--navbar-h)+1.5rem)]">
