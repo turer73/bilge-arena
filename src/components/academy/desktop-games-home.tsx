@@ -56,7 +56,7 @@ export function DesktopGamesHome() {
       <header className={styles.sectionHeader}><h2>Oyun modları</h2><span className={styles.secondary}>Kendi rekoruna meydan oku</span></header>
       <div className={styles.modeGrid}>{modes.map(mode => <article key={mode.href} className={styles.modeCard} data-tone={mode.tone}>
         <div className={styles.modeArt} aria-hidden="true">
-          <Image src={mode.image} alt="" fill sizes={modeImageSizes} />
+          <Image src={mode.image} alt="" fill loading="eager" sizes={modeImageSizes} />
         </div>
         <div className={styles.modeCopy}><p className={styles.eyebrow}>{mode.subtitle}</p><h3>{mode.title}</h3><p>{mode.description}</p><small>{mode.detail}</small></div>
         {loading && mode.auth ? <span role="status" className={styles.modeAction}>Hesabın kontrol ediliyor…</span> : <Link className={styles.modeAction} href={mode.auth && !user ? `/giris?next=${encodeURIComponent(mode.href)}` : mode.href} aria-label={`${mode.title}${mode.auth && !user ? ' için giriş yap' : ' modunu aç'}`}>{mode.auth && !user ? 'Giriş yap ve oyna' : 'Modu aç'}<ChevronRight size={18} /></Link>}
@@ -84,7 +84,7 @@ export function DesktopGamesHome() {
           onBlur={() => releaseSubject(game.slug)}
         >
           <span className={styles.subjectGameArt} aria-hidden="true">
-            <Image src={SUBJECT_ART[game.slug]} alt="" fill sizes="(min-width: 1440px) 322px, (min-width: 1051px) 25vw, 50vw" />
+            <Image src={SUBJECT_ART[game.slug]} alt="" fill loading={game.slug === 'matematik' ? 'eager' : 'lazy'} sizes="(min-width: 1440px) 322px, (min-width: 1051px) 25vw, 50vw" />
           </span>
           <span className={styles.subjectGameScope}>{EXAM_LABELS[examRef]}</span>
           <span className={styles.subjectGameCopy}><strong>{game.name}</strong></span>

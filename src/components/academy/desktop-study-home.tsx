@@ -94,7 +94,7 @@ export function DesktopStudyHome(props: DesktopStudyHomeProps) {
           {mode === 'live' && <TytSocialExamPolicyCardView policy={policy} />}
           {!guest && <DesktopDailyPlan key={`${mode}:${props.userId}:${props.game}:${props.examRef}`} mode={mode} game={props.game} examRef={props.examRef} userId={props.userId} tytSocialPolicy={policy} />}
           <section className={styles.hero} aria-labelledby="academy-path-title">
-            <Image className={styles.heroArt} src="/academy/academy-landscape.png" alt="" fill sizes="(min-width: 1400px) 890px, 67vw" />
+            <Image className={styles.heroArt} src="/academy/academy-landscape.png" alt="" fill loading="eager" sizes="(min-width: 1400px) 890px, 67vw" />
             <div className={styles.heroShade} />
             <div className={styles.heroCopy}>
               <p className={styles.eyebrow}>{scopeLabel} {subject.label}{ready ? ' · ' + total + ' konu' : ''}</p>
