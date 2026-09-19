@@ -48,7 +48,7 @@ export default async function Page({
       ? await fetchPublicRooms(session?.access_token ?? null, {
           category: params.cat,
         })
-      : []
+      : { status: 'success' as const, rooms: [] }
 
   return (
     <>
@@ -144,7 +144,7 @@ export default async function Page({
 
         {tab === 'public' ? (
           <PublicRoomList
-            rooms={publicRooms}
+            result={publicRooms}
             selectedCategory={params.cat ?? ''}
           />
         ) : myRooms.length === 0 ? (

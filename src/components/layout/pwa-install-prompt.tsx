@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { getCookieConsent } from '@/lib/consent'
+import { useBottomNavOffset } from './overlay-bottom-offset'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -28,12 +30,16 @@ export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
+  const bottomNavOffset = useBottomNavOffset()
   // Bu oturumda banner zaten gösterildi/kapatıldı mı. beforeinstallprompt bazı Android
   // Chrome sürümlerinde install-kriteri değişince TEKRAR fırlar; eski handler bunu
   // dismiss'e bakmadan yeniden gösteriyordu → kullanıcı kapatsa bile banner geri geliyor
   // ("10 sn'de 10 kez"). handledRef + her seferinde localStorage dismiss re-check ile
   // banner oturumda en fazla 1 kez açılır ve kapatıldıktan sonra bir daha açılmaz.
   const handledRef = useRef(false)
+  const consentBlockedRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
     // Standalone mode (zaten install edilmiş) — hiç gösterme
@@ -41,6 +47,10 @@ export function PWAInstallPrompt() {
       window.matchMedia('(display-mode: standalone)').matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true
     if (standalone) return
+
+    // Consent banner önceliklidir. Event yakalanabilir, fakat prompt karar
+    // verilene kadar gösterilmez.
+    consentBlockedRef.current = !getCookieConsent()
 
     // 7 gün dismiss tracking — her gösterim denemesinde TEKRAR kontrol edilir (re-fire).
     const isDismissed = () => {
@@ -69,33 +79,109 @@ export function PWAInstallPrompt() {
     // Banner'ı oturumda en fazla 1 kez aç; zaten gösterildiyse (handledRef) ya da
     // arada kapatıldıysa (localStorage) AÇMA. beforeinstallprompt'un tekrar fırlaması
     // veya gecikmiş timer bu guard'a takılır → döngü kırılır.
-    let timer: ReturnType<typeof setTimeout> | undefined
     const showOnce = () => {
-      if (handledRef.current || isDismissed()) return
+      timerRef.current = undefined
+      if (consentBlockedRef.current || handledRef.current || isDismissed()) return
+      const banner = document.querySelector<HTMLElement>('[data-cookie-banner]')
+      if (banner && banner.getClientRects().length > 0) return
       handledRef.current = true
       setVisible(true)
     }
 
+    const scheduleShow = (delay: number) => {
+      if (timerRef.current || consentBlockedRef.current || handledRef.current || isDismissed()) return
+      timerRef.current = setTimeout(showOnce, delay)
+    }
+
+    let rafId: number | undefined
+    let rafFrames = 0
+    let cancelled = false
+    const waitForConsentUiToExit = () => {
+      if (cancelled) return
+      if (!getCookieConsent()) return
+      const banner = document.querySelector<HTMLElement>('[data-cookie-banner]')
+      if (banner) {
+        const style = window.getComputedStyle(banner)
+        if (banner.getClientRects().length > 0
+          && style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && style.opacity !== '0') {
+          if (rafFrames++ < 60) {
+            rafId = window.requestAnimationFrame(waitForConsentUiToExit)
+            return
+          }
+          // Animasyon beklenmedik şekilde takılırsa PWA sonsuza kadar kilitlenmesin.
+          rafFrames = 0
+        } else {
+          rafFrames = 0
+          if (rafId !== undefined) rafId = undefined
+        }
+      }
+      if (ios) scheduleShow(5000)
+      else if (deferredPromptRef.current) scheduleShow(3000)
+    }
+
+    const consentStateHandler = (event: Event) => {
+      const open = (event as CustomEvent<{ open?: boolean }>).detail?.open === true
+      if (open) {
+        consentBlockedRef.current = true
+        setVisible(false)
+        if (timerRef.current) {
+          clearTimeout(timerRef.current)
+          timerRef.current = undefined
+        }
+        if (rafId !== undefined) {
+          window.cancelAnimationFrame(rafId)
+          rafId = undefined
+        }
+        rafFrames = 0
+        return
+      }
+      // CookieBanner'ın ilk hidden render'ı bir karar değildir.
+      if (!getCookieConsent()) return
+      consentBlockedRef.current = false
+      // AnimatePresence çıkışındaki DOM elemanı birkaç frame daha kalabilir;
+      // görünür consent UI bitmeden PWA'yı öne alma.
+      waitForConsentUiToExit()
+    }
+    window.addEventListener('cookie-banner-state', consentStateHandler)
+
     if (ios) {
       // iOS: 5sn delay sonra banner göster (kullanıcı sayfayı yüklesin)
-      timer = setTimeout(showOnce, 5000)
-      return () => { if (timer) clearTimeout(timer) }
+      if (!consentBlockedRef.current) scheduleShow(5000)
+      return () => {
+        cancelled = true
+        window.removeEventListener('cookie-banner-state', consentStateHandler)
+        if (timerRef.current) {
+          clearTimeout(timerRef.current)
+          timerRef.current = undefined
+        }
+        if (rafId !== undefined) window.cancelAnimationFrame(rafId)
+      }
     }
 
     // Android/Desktop: beforeinstallprompt event listener
     const handler = (e: Event) => {
       e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
+      const installEvent = e as BeforeInstallPromptEvent
+      deferredPromptRef.current = installEvent
+      setDeferredPrompt(installEvent)
       // Tekrar-fırlatma koruması: zaten gösterildi/kapatıldı ya da timer beklemedeyse
       // YENİ timer kurma (aksi halde her re-fire banner'ı yeniden açıyordu).
-      if (handledRef.current || isDismissed() || timer) return
+      if (handledRef.current || isDismissed() || timerRef.current) return
       // 3sn bekle, kullanıcı sayfayı görsün
-      timer = setTimeout(showOnce, 3000)
+      if (!consentBlockedRef.current) scheduleShow(3000)
     }
     window.addEventListener('beforeinstallprompt', handler)
     return () => {
+      cancelled = true
       window.removeEventListener('beforeinstallprompt', handler)
-      if (timer) clearTimeout(timer)
+      window.removeEventListener('cookie-banner-state', consentStateHandler)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = undefined
+      }
+      if (rafId !== undefined) window.cancelAnimationFrame(rafId)
     }
   }, [])
 
@@ -106,6 +192,7 @@ export function PWAInstallPrompt() {
     await deferredPrompt.prompt()
     await deferredPrompt.userChoice
     setDeferredPrompt(null)
+    deferredPromptRef.current = null
     // Kabul VEYA red — her iki halde de 7 gün tekrar sorma. Eski kod red'de
     // (outcome:'dismissed') banner'ı açık bırakıp dismiss yazmıyordu → yeniden açılma.
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
@@ -115,6 +202,7 @@ export function PWAInstallPrompt() {
     handledRef.current = true
     setVisible(false)
     setDeferredPrompt(null)
+    deferredPromptRef.current = null
     localStorage.setItem(DISMISS_KEY, String(Date.now()))
   }, [])
 
@@ -124,7 +212,8 @@ export function PWAInstallPrompt() {
     <div
       role="dialog"
       aria-label="Uygulama yükleme önerisi"
-      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md animate-slide-up rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-xl"
+      style={{ bottom: `calc(${bottomNavOffset ? `${bottomNavOffset}px` : 'env(safe-area-inset-bottom, 0px)'} + 1rem)` }}
+      className="fixed left-4 right-4 z-50 mx-auto max-w-md animate-slide-up rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-xl"
     >
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--focus)]">

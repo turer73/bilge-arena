@@ -208,16 +208,18 @@ describe('fetchPublicRooms (Sprint 2A Task 3)', () => {
         },
       ]),
     )
-    const rooms = await fetchPublicRooms('jwt')
-    expect(rooms).toHaveLength(1)
-    expect(rooms[0].code).toBe('PUBA12')
+    const result = await fetchPublicRooms('jwt')
+    expect(result).toEqual(expect.objectContaining({ status: 'success' }))
+    if (result.status !== 'success') throw new Error('expected successful list')
+    expect(result.rooms).toHaveLength(1)
+    expect(result.rooms[0].code).toBe('PUBA12')
     // Codex P1 v2: member_count direkt kolon (denormalized)
-    expect(rooms[0].member_count).toBe(2)
+    expect(result.rooms[0].member_count).toBe(2)
   })
 
   test('18) anonim user (jwt=null) -> Authorization header gonderilmez', async () => {
     mockFetch.mockReturnValue(ok([]))
-    await fetchPublicRooms(null)
+    expect(await fetchPublicRooms(null)).toEqual({ status: 'success', rooms: [] })
     const callArgs = mockFetch.mock.calls[0]
     const opts = callArgs[1] as RequestInit
     const headers = opts.headers as Record<string, string>
@@ -245,10 +247,10 @@ describe('fetchPublicRooms (Sprint 2A Task 3)', () => {
     expect(url).toMatch(/category=eq\.matematik/)
   })
 
-  test('21) network reject -> [] (Codex P3 #3: console.error log)', async () => {
+  test('21) network reject -> error (Codex P3 #3: console.error log)', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockFetch.mockRejectedValue(new Error('ECONNREFUSED'))
-    expect(await fetchPublicRooms('jwt')).toEqual([])
+    expect(await fetchPublicRooms('jwt')).toEqual({ status: 'error' })
     // Silent failure DEGIL — observability icin console.error log
     expect(errorSpy).toHaveBeenCalledWith(
       '[fetchPublicRooms] fetch failed',
@@ -257,7 +259,7 @@ describe('fetchPublicRooms (Sprint 2A Task 3)', () => {
     errorSpy.mockRestore()
   })
 
-  test('22) non-OK 403 -> [] + console.error (Codex P3 #3 observability)', async () => {
+  test('22) non-OK 403 -> error + console.error (Codex P3 #3 observability)', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockFetch.mockReturnValue({
       ok: false,
@@ -265,11 +267,30 @@ describe('fetchPublicRooms (Sprint 2A Task 3)', () => {
       statusText: 'Forbidden',
       json: () => Promise.resolve([]),
     })
-    expect(await fetchPublicRooms(null)).toEqual([])
+    expect(await fetchPublicRooms(null)).toEqual({ status: 'error' })
     expect(errorSpy).toHaveBeenCalledWith(
       '[fetchPublicRooms] non-OK response',
       403,
       'Forbidden',
+    )
+    errorSpy.mockRestore()
+  })
+
+  test('23) malformed JSON -> error', async () => {
+    mockFetch.mockReturnValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.reject(new Error('parse error')),
+    })
+    expect(await fetchPublicRooms(null)).toEqual({ status: 'error' })
+  })
+
+  test('24) valid JSON but non-array body -> error', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockFetch.mockReturnValue(ok({ message: 'unexpected response' }))
+    expect(await fetchPublicRooms(null)).toEqual({ status: 'error' })
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[fetchPublicRooms] invalid response body',
     )
     errorSpy.mockRestore()
   })

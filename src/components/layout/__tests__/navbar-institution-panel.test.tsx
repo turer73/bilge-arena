@@ -8,7 +8,9 @@ const auth = vi.hoisted(() => ({
   signOut: vi.fn(),
 }))
 const mockUsePathname = vi.hoisted(() => vi.fn<() => string>())
+const mockUseWideStudy = vi.hoisted(() => vi.fn<() => boolean>())
 vi.mock('next/navigation', () => ({ usePathname: mockUsePathname }))
+vi.mock('@/lib/hooks/use-wide-study', () => ({ useWideStudy: mockUseWideStudy }))
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
     <a href={href} data-next-link="true" {...props}>{children}</a>
@@ -41,23 +43,36 @@ const workspace = {
 
 beforeEach(() => {
   mockUsePathname.mockReturnValue('/arena')
+  mockUseWideStudy.mockReturnValue(true)
   vi.stubGlobal('fetch', vi.fn())
 })
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Navbar institution panel entry', () => {
-  it.each(['/arena', '/arena/kisisellestir', '/oda', '/oda/ABC123'])('hides the wide theme trigger on %s without unmounting preference synchronization', (route) => {
+  it.each(['/arena', '/arena/calisma', '/arena/kisisellestir', '/oda', '/oda/ABC123', '/arena/matematik', '/arena/turkce', '/arena/fen', '/arena/sosyal', '/arena/wordquest', '/arena/profil', '/arena/siralama', '/arena/arkadaslar'])('keeps the academy header on %s without unmounting theme synchronization', (route) => {
     mockUsePathname.mockReturnValue(route)
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
     render(<Navbar />)
     expect(screen.getByRole('button', {name:'Tema seç'}).closest('[data-navbar-theme]')).toHaveClass('md:hidden')
+    expect(screen.getByRole('link', { name: 'Bilge Arena ana sayfa' }).querySelector('img')).toHaveAttribute('src', '/academy/brand-crest-orbit.png')
   })
 
-  it('keeps the existing theme trigger on other pages', () => {
-    mockUsePathname.mockReturnValue('/arena/matematik')
+  it.each(['/hakkinda', '/arena/kurum', '/arena/sinif', '/odak'])('keeps the existing header on unrelated route %s', (route) => {
+    mockUsePathname.mockReturnValue(route)
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
     render(<Navbar />)
     expect(screen.getByRole('button', {name:'Tema seç'}).closest('[data-navbar-theme]')).not.toHaveClass('md:hidden')
+    expect(screen.getByText('Bilge Arena')).toBeInTheDocument()
+  })
+
+  it.each(['/arena/matematik', '/arena/profil', '/arena/siralama', '/arena/arkadaslar'])('preserves the mobile header on %s', (route) => {
+    mockUsePathname.mockReturnValue(route)
+    mockUseWideStudy.mockReturnValue(false)
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+    expect(screen.getByRole('button', {name:'Tema seç'}).closest('[data-navbar-theme]')).not.toHaveClass('md:hidden')
+    expect(screen.getByText('Bilge Arena')).toBeInTheDocument()
+    expect(screen.getByRole('button', {name:'Kullanıcı menüsü'}).querySelector('img')).toHaveAttribute('src', auth.profile.avatar_url)
   })
 
   it('uses a settings icon instead of repeating the profile avatar on the Arena home', () => {

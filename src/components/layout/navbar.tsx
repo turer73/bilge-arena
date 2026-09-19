@@ -12,6 +12,17 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { institutionPilotWorkspaceSchema } from '@/lib/institution-pilot/server-contract'
 import { trUpper } from '@/lib/utils/tr-text'
+import { GAME_SLUGS } from '@/lib/constants/games'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
+
+// These routes already render the wide academy UI. Keep the existing mobile
+// header and the separate institution/classroom surfaces unchanged.
+const WIDE_ACADEMY_ROUTES = new Set([
+  ...GAME_SLUGS.map(game => `/arena/${game}`),
+  '/arena/profil',
+  '/arena/siralama',
+  '/arena/arkadaslar',
+])
 
 const NAV_LINKS = [
   { href: '/', label: 'Ana Sayfa' },
@@ -30,7 +41,8 @@ export function Navbar() {
   const [institutionPanelVisible, setInstitutionPanelVisible] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
-  const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname.startsWith('/oda')
+  const wide = useWideStudy()
+  const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || (wide && WIDE_ACADEMY_ROUTES.has(pathname))
   const { user, profile, signOut } = useAuth()
   const userId = user?.id
 

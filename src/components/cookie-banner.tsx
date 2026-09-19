@@ -5,12 +5,21 @@ import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boun
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, BarChart3, ChevronDown, ChevronUp } from 'lucide-react'
 import { getCookieConsent, setCookieConsent } from '@/lib/consent'
+import { useBottomNavOffset } from '@/components/layout/overlay-bottom-offset'
 
 type View = 'hidden' | 'banner' | 'settings'
 
 export function CookieBanner() {
   const [view, setView] = useState<View>('hidden')
   const [analyticsOn, setAnalyticsOn] = useState(true)
+  const bottomNavOffset = useBottomNavOffset()
+
+  // PWA yükleme önerisi çerez tercihinden önce görünmemeli.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('cookie-banner-state', {
+      detail: { open: view !== 'hidden' },
+    }))
+  }, [view])
 
   // Ilk yuklemede: onceki consent yoksa banner goster
   useEffect(() => {
@@ -51,11 +60,13 @@ export function CookieBanner() {
     <AnimatePresence>
       {view !== 'hidden' && (
         <motion.div
+          data-cookie-banner
           initial={{ y: '100%' }}
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--card-bg)] shadow-lg backdrop-blur-sm"
+          style={{ bottom: bottomNavOffset ? `${bottomNavOffset}px` : 'env(safe-area-inset-bottom, 0px)' }}
+          className="fixed left-0 right-0 z-50 border-t border-[var(--border)] bg-[var(--card-bg)] shadow-lg backdrop-blur-sm"
         >
           <div className="mx-auto max-w-[1200px] px-4 py-4 sm:px-6">
             {/* ── Ana banner ── */}
