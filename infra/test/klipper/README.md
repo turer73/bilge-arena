@@ -33,6 +33,7 @@ services. After successful bootstrap:
 docker compose -f compose.yaml -f compose.game.yaml up -d auth auth-rest
 docker compose exec -T app node infra/test/klipper/auth-smoke.mjs --game-schema
 docker compose exec -T app node infra/test/klipper/game-smoke.mjs
+docker compose exec -T app node infra/test/klipper/room-smoke.mjs --game-schema
 ```
 
 Use **both Compose files for future `up` operations**, or Auth/REST would revert

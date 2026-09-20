@@ -8,6 +8,7 @@ import {createSyntheticSessions} from './synthetic-sessions.mjs'
 
 const roomsUrl = process.env.BILGE_ARENA_RPC_URL
 const expectedRoomsUrl = 'http://rooms-rest:3000'
+const gameSchema = process.argv.includes('--game-schema')
 const expectedOptionValues = new Map([
   [1, '2'], [2, '4'], [3, '5'], [4, '7'], [5, '3'],
   [6, '8'], [7, '0'], [8, '4'], [9, '8'], [10, '5'],
@@ -80,7 +81,7 @@ async function currentRound(token, roomId, index) {
 
 async function main() {
   assert(roomsUrl === expectedRoomsUrl, `BILGE_ARENA_RPC_URL must equal ${expectedRoomsUrl}`)
-  const sessions = await createSyntheticSessions()
+  const sessions = await createSyntheticSessions({gameSchema})
   assert(Array.isArray(sessions) && sessions.length === 3, 'expected exactly three memory-only sessions')
   for (const session of sessions) {
     assert(typeof session?.access_token === 'string' && session.access_token.length > 20, 'invalid synthetic access token')
