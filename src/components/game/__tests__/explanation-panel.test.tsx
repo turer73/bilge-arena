@@ -43,26 +43,48 @@ function renderPanel(over: Partial<Parameters<typeof ExplanationPanel>[0]> = {})
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn()
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+    configurable: true,
+    value: function(this: HTMLDialogElement) { this.setAttribute('open', '') },
+  })
 })
 
 describe('ExplanationPanel', () => {
   test('doğru cevap: mesaj + çözüm + Sonraki Soru', () => {
     const { onNext } = renderPanel()
-    expect(screen.getByText(/✓ Doğru! Mükemmel/)).toBeInTheDocument()
+    expect(screen.getByText('Doğru! Mükemmel')).toBeInTheDocument()
     expect(screen.getByText(/Çözüm açıklaması\./)).toBeInTheDocument()
-    const next = screen.getByRole('button', { name: 'Sonraki Soru →' })
+    const next = screen.getByRole('button', { name: 'Sonraki Soru' })
     fireEvent.click(next)
     expect(onNext).toHaveBeenCalledOnce()
   })
 
   test('yanlış cevap: doğru şık harfi ve metni gösterilir', () => {
     renderPanel({ isCorrect: false, selectedOption: 0 })
-    expect(screen.getByText(/✗ Yanlış\. Doğru: C\) c/)).toBeInTheDocument()
+    expect(screen.getByText('Yanlış. Doğru cevap: C) c')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hata bildir' })).not.toBeInTheDocument()
   })
 
   test('son soruda buton "Sonucu Gor"', () => {
     renderPanel({ isLastQuestion: true })
-    expect(screen.getByRole('button', { name: 'Sonucu Gor →' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sonucu Gör' })).toBeInTheDocument()
+  })
+
+  test('ayrıntılı çözüm penceresi soru, verilen cevap, doğru cevap ve çözümü gösterir', () => {
+    renderPanel({ isCorrect: false, selectedOption: 0 })
+    expect(screen.queryByRole('dialog', { name: 'Ayrıntılı çözüm' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Ayrıntılı Çözüm' }))
+    const dialog = screen.getByRole('dialog', { name: 'Ayrıntılı çözüm' })
+    expect(dialog).toHaveAttribute('open')
+    expect(dialog).toHaveAttribute('data-mobile-sheet', 'true')
+    expect(dialog).toHaveTextContent('Senin cevabın')
+    expect(dialog).toHaveTextContent('A) a')
+    expect(dialog).toHaveTextContent('Doğru cevap')
+    expect(dialog).toHaveTextContent('C) c')
+    expect(dialog).toHaveTextContent('Çözümün mantığı')
+    expect(dialog).toHaveTextContent('Çözüm açıklaması.')
+    fireEvent.click(screen.getByRole('button', { name: 'Kapat' }))
+    expect(screen.queryByRole('dialog', { name: 'Ayrıntılı çözüm' })).not.toBeInTheDocument()
   })
 
   test('mount: panel kendini görünür kaydırır (scrollIntoView)', () => {

@@ -1,0 +1,129 @@
+name: bilge-arena-academy-test
+x-service: &service
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: {max-size: '5m', max-file: '2'}
+services:
+  auth-db:
+    <<: *service
+    image: postgres:17-alpine
+    mem_limit: 768m
+    environment:
+      POSTGRES_DB: academy_auth_test
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      REST_DB_PASSWORD: ${REST_DB_PASSWORD}
+    volumes:
+      - auth-data:/var/lib/postgresql/data
+      - ./db-init.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d academy_auth_test']
+      interval: 5s
+      retries: 20
+  rooms-db:
+    <<: *service
+    image: postgres:17-alpine
+    mem_limit: 768m
+    command: ['postgres', '-c', 'wal_level=logical']
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - rooms-data:/var/lib/postgresql/data
+      - ../../..:/source:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      retries: 20
+  auth:
+    <<: *service
+    image: supabase/gotrue:v2.196.0
+    mem_limit: 384m
+    depends_on:
+      auth-db: {condition: service_healthy}
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${TEST_ORIGIN}/auth/v1
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://auth_admin:${AUTH_DB_PASSWORD}@auth-db:5432/academy_auth_test
+      GOTRUE_SITE_URL: ${TEST_ORIGIN}
+      GOTRUE_URI_ALLOW_LIST: ${TEST_ORIGIN}/**
+      GOTRUE_DISABLE_SIGNUP: 'true'
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: 'true'
+      GOTRUE_MAILER_AUTOCONFIRM: 'false'
+      GOTRUE_SMTP_HOST: mailpit
+      GOTRUE_SMTP_PORT: 1025
+      GOTRUE_SMTP_ADMIN_EMAIL: noreply@academy.test
+      GOTRUE_SMTP_SENDER_NAME: Bilge Arena Test
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+  auth-rest:
+    <<: *service
+    image: postgrest/postgrest:v14.17
+    mem_limit: 256m
+    depends_on:
+      auth-db: {condition: service_healthy}
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${REST_DB_PASSWORD}@auth-db:5432/academy_auth_test
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_JWT_AUD: authenticated
+  rooms-rest:
+    <<: *service
+    image: postgrest/postgrest:v12.2.3
+    mem_limit: 256m
+    depends_on:
+      rooms-db: {condition: service_healthy}
+    environment:
+      PGRST_DB_URI: postgres://bilge_arena_authenticator:${ROOM_AUTH_PASSWORD}@rooms-db:5432/bilge_arena_dev
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_JWT_AUD: authenticated
+  mailpit:
+    <<: *service
+    image: axllent/mailpit:v1.27.8
+    mem_limit: 128m
+    ports: ['127.0.0.1:55325:8025']
+    environment:
+      MP_MAX_MESSAGES: 50
+  app:
+    <<: *service
+    image: node:22-bookworm-slim
+    user: '1000:1000'
+    working_dir: /app
+    mem_limit: 5g
+    cpus: 3
+    command: ['sh', '-ec', 'if [ ! -d node_modules/next ]; then npm ci --ignore-scripts --no-audit --no-fund; fi; node infra/test/klipper/local-origin-proxy.mjs & node infra/test/klipper/test-entry.mjs & exec node node_modules/next/dist/bin/next dev --hostname 0.0.0.0 --port 3000']
+    environment:
+      NODE_ENV: development
+      BILGE_ISOLATED_TEST: 'true'
+      NEXT_TELEMETRY_DISABLED: 1
+      HUSKY: 0
+      NEXT_PUBLIC_SITE_URL: ${TEST_ORIGIN}
+      NEXT_PUBLIC_SUPABASE_URL: ${TEST_ORIGIN}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      BILGE_ARENA_RPC_URL: http://rooms-rest:3000
+      LEGAL_CONSENT_SECRET: ${CONSENT_SECRET}
+      NODE_OPTIONS: --max-old-space-size=4096
+    volumes:
+      - ../../..:/app
+  gateway:
+    <<: *service
+    image: nginx:1.28-alpine
+    mem_limit: 128m
+    ports:
+      - '127.0.0.1:3137:8080'
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+volumes:
+  auth-data:
+  rooms-data:

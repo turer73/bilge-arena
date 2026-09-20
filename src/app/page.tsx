@@ -6,6 +6,7 @@ import { HeroSection } from '@/components/landing/hero-section'
 import { StatsBar } from '@/components/landing/stats-bar'
 import { GamesSection } from '@/components/landing/games-section'
 import { SectionWrapper } from '@/components/landing/section-wrapper'
+import { HomeSurface } from '@/components/landing/home-surface'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import type {
   HomepageAlignment,
@@ -197,6 +198,7 @@ export default async function Home() {
       />
       <Navbar />
       <main>
+        <HomeSurface sections={sections} elements={elements} gameCounts={gameCounts}>
         <SectionWrapper section="hero" elements={elements}>
           <HeroSection config={sections.hero} />
         </SectionWrapper>
@@ -222,9 +224,10 @@ export default async function Home() {
             <CTASection config={sections.cta} />
           </SectionWrapper>
         </div>
+        </HomeSurface>
       </main>
       <SectionWrapper section="footer" elements={elements}>
-        <Footer config={sections.footer} />
+        <Footer config={sections.footer} academyDesktop />
       </SectionWrapper>
     </>
   )

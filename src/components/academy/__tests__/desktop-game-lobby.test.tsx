@@ -19,6 +19,16 @@ beforeEach(() => { localStorage.clear(); vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_E
 afterEach(() => { vi.unstubAllEnvs(); window.history.replaceState(null, '', '/') })
 
 describe('Wide game preparation', () => {
+  it('places the optional daily-plan shortcut below the main start action, not in the header', () => {
+    const { container, rerender } = render(<DesktopGameLobby {...makeProps()} dailyPlanAction={<button>Günlük planın</button>} />)
+    const summary = screen.getByRole('complementary', { name: 'Tur özeti' })
+    const shortcut = within(summary).getByRole('button', { name: 'Günlük planın' })
+    const start = within(summary).getByRole('button', { name: 'Başlat · 10 soru' })
+    expect(start.compareDocumentPosition(shortcut) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(container.querySelector('header')!).queryByRole('button', { name: 'Günlük planın' })).not.toBeInTheDocument()
+    rerender(<DesktopGameLobby {...makeProps()} />)
+    expect(screen.queryByRole('button', { name: 'Günlük planın' })).not.toBeInTheDocument()
+  })
   it('has one start action, a summary and no mobile or XP level panel', () => {
     const props = makeProps()
     const {container}=render(<DesktopGameLobby {...props} />)

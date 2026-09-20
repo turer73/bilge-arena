@@ -60,6 +60,8 @@ export interface LobbyProps {
   }
   loadError?: string | null
   personalizedMockCard?: ReactNode
+  /** Optional wide-screen shortcut; mobile keeps its existing study entry. */
+  dailyPlanAction?: ReactNode
 }
 
 const DIFFICULTY_OPTIONS = [

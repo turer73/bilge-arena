@@ -1,0 +1,4 @@
+.env
+*.log
+test-sessions.json
+browser-*.json

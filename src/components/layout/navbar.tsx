@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import type { CSSProperties } from 'react'
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { usePathname } from 'next/navigation'
 import { Zap, Menu, X, User, LogOut, Trophy, Shield, Users, Swords, Palette, ShoppingBag, BookX, GraduationCap, Building2, Settings } from 'lucide-react'
@@ -18,7 +19,10 @@ import { useWideStudy } from '@/lib/hooks/use-wide-study'
 // These routes already render the wide academy UI. Keep the existing mobile
 // header and the separate institution/classroom surfaces unchanged.
 const WIDE_ACADEMY_ROUTES = new Set([
+  '/',
   ...GAME_SLUGS.map(game => `/arena/${game}`),
+  '/arena/kule',
+  '/arena/fethet',
   '/arena/profil',
   '/arena/siralama',
   '/arena/arkadaslar',
@@ -43,6 +47,22 @@ export function Navbar() {
   const pathname = usePathname()
   const wide = useWideStudy()
   const academyArea = pathname === '/arena' || pathname === '/arena/calisma' || pathname === '/arena/kisisellestir' || pathname === '/oda' || pathname.startsWith('/oda/') || (wide && WIDE_ACADEMY_ROUTES.has(pathname))
+  const academyMarketingRoute = pathname === '/nasil-calisir' || pathname === '/hakkinda'
+  const academyMarketingArea = wide && academyMarketingRoute
+  const academyVisualArea = academyArea || academyMarketingArea
+  const academyMarketingStyle = academyMarketingArea
+    ? ({
+        '--app-text': '#f6f8ff',
+        '--app-text-sub': '#9eafd0',
+        '--text': '#f6f8ff',
+        '--text-sub': '#bdc9e2',
+        '--text-muted': '#8fa0c0',
+        '--surface': '#091329',
+        '--card': 'rgba(22, 38, 76, 0.76)',
+        '--card-bg': 'rgba(22, 38, 76, 0.76)',
+        '--border': 'rgba(126, 157, 222, 0.24)',
+      } as CSSProperties)
+    : undefined
   const { user, profile, signOut } = useAuth()
   const userId = user?.id
 
@@ -93,27 +113,35 @@ export function Navbar() {
   return (
     <nav
       data-app-navbar
+      data-academy-marketing-navbar={academyMarketingArea ? '' : undefined}
+      style={academyMarketingStyle}
       className={`fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,border-color,box-shadow] duration-500 ${pathname === '/arena' ? 'max-lg:hidden' : ''} ${
-        scrolled || mobileOpen
+        academyMarketingArea
+          ? 'border-b border-white/10 bg-[#050b1b]/92 shadow-[0_14px_42px_rgba(0,0,0,0.22)] backdrop-blur-xl'
+          : scrolled || mobileOpen
           ? 'border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-xl shadow-sm'
           : 'bg-transparent backdrop-blur-none border-transparent'
       }`}
     >
-      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between px-6 lg:px-8 ${academyArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
+      <div className={`mx-auto flex h-[var(--navbar-h)] items-center justify-between px-6 lg:px-8 ${academyVisualArea ? 'max-w-[1440px]' : 'max-w-[1200px]'}`}>
         {/* Logo */}
-        {academyArea ? <AcademyLogo /> : <Logo size={36} />}
+        {academyVisualArea ? <AcademyLogo /> : <Logo size={36} />}
 
         {/* Desktop nav links */}
-        <div className={`hidden items-center gap-1 ${academyArea ? 'xl:flex' : 'md:flex'}`}>
+        <div className={`hidden items-center gap-0.5 ${academyMarketingRoute ? 'min-[1180px]:flex' : academyArea ? 'xl:flex' : 'md:flex'}`}>
           {NAV_LINKS.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
               aria-current={pathname === href ? 'page' : undefined}
-              className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors hover:bg-[var(--card)] hover:text-[var(--text)] ${
-                pathname === href
-                  ? 'text-[var(--focus)]'
-                  : 'text-[var(--text-sub)]'
+              className={`rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors ${
+                academyMarketingArea
+                  ? pathname === href
+                    ? 'bg-blue-500/15 text-blue-300'
+                    : 'text-slate-300 hover:bg-white/[0.07] hover:text-white'
+                  : pathname === href
+                    ? 'text-[var(--focus)]'
+                    : 'text-[var(--text-sub)] hover:bg-[var(--card)] hover:text-[var(--text)]'
               }`}
             >
               {label}
@@ -123,7 +151,7 @@ export function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <div data-navbar-theme className={academyArea ? 'md:hidden' : undefined}>
+          <div data-navbar-theme className={academyVisualArea ? 'md:hidden' : undefined}>
             <ThemeToggle />
           </div>
 
@@ -154,7 +182,7 @@ export function Navbar() {
                   aria-label="Kullanıcı menüsü"
                   aria-expanded={dropdownOpen}
                 >
-                  {academyArea ? (
+                  {academyVisualArea ? (
                     <span data-arena-account-settings-icon className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--card)] text-[var(--text-sub)]">
                       <Settings size={19} strokeWidth={2.5} aria-hidden="true" />
                     </span>
@@ -305,7 +333,7 @@ export function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className={`flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] ${academyArea ? 'xl:hidden' : 'md:hidden'}`}
+            className={`flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] ${academyMarketingRoute ? 'min-[1180px]:hidden' : academyArea ? 'xl:hidden' : 'md:hidden'}`}
             aria-label={mobileOpen ? 'Menüyü kapat' : 'Menüyü aç'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation"
@@ -317,7 +345,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div id="mobile-navigation" key="mobile-menu" className={`animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl ${academyArea ? 'xl:hidden' : 'md:hidden'}`}>
+        <div id="mobile-navigation" key="mobile-menu" className={`animate-slideDown border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-xl ${academyMarketingRoute ? 'min-[1180px]:hidden' : academyArea ? 'xl:hidden' : 'md:hidden'}`}>
           <div className="flex flex-col gap-1 px-6 py-4">
             {NAV_LINKS.map(({ href, label }) => (
               <Link

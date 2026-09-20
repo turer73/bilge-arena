@@ -48,11 +48,22 @@ describe('QuestionCard', () => {
 
   test('onReport verilince "Bildir" butonu render + tıklanınca çağrılır', () => {
     const onReport = vi.fn()
-    render(
+    const { container } = render(
       <QuestionCard question={makeQ({})} currentIndex={0} totalQuestions={10} onReport={onReport} />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Soruyu raporla' }))
+    const reportButton = screen.getByRole('button', { name: 'Soruyu raporla' })
+    expect(reportButton.querySelector('svg')).toBeInTheDocument()
+    expect(container.textContent).not.toContain('🐛')
+    fireEvent.click(reportButton)
     expect(onReport).toHaveBeenCalledTimes(1)
+  })
+
+  test('ders emojisi yerine oyuna ait çizgi ikonunu gösterir', () => {
+    const { container } = render(
+      <QuestionCard question={makeQ({})} currentIndex={0} totalQuestions={10} />,
+    )
+    expect(container.querySelector('[data-question-subject-icon="fen"] svg')).toBeInTheDocument()
+    expect(container.textContent).not.toContain('🔬')
   })
 
   test('onReport yoksa "Bildir" butonu render edilmez', () => {

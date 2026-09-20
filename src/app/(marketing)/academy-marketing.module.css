@@ -1,0 +1,481 @@
+.page {
+  --academy-ink: #f7f9ff;
+  --academy-muted: #b9c7e7;
+  --academy-line: rgba(137, 170, 255, 0.24);
+  background:
+    radial-gradient(circle at 8% 8%, color-mix(in srgb, var(--focus) 8%, transparent), transparent 26rem),
+    var(--bg);
+}
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.heroBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+}
+
+.heroBackdrop img {
+  object-fit: cover;
+  object-position: center 48%;
+  filter: saturate(0.92) contrast(1.06);
+  transform: scale(1.01);
+}
+
+.hero::before {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  content: '';
+  background:
+    linear-gradient(90deg, rgba(4, 10, 28, 0.98) 0%, rgba(7, 16, 42, 0.91) 48%, rgba(5, 11, 28, 0.7) 100%),
+    linear-gradient(180deg, rgba(7, 13, 31, 0.2), rgba(5, 11, 27, 0.88));
+}
+
+.hero::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: '';
+  background:
+    radial-gradient(circle at 88% 20%, rgba(67, 124, 255, 0.26), transparent 24rem),
+    radial-gradient(circle at 16% 90%, rgba(132, 92, 246, 0.18), transparent 28rem);
+  pointer-events: none;
+}
+
+.heroGrid {
+  position: relative;
+}
+
+.heroCopy {
+  color: var(--academy-ink);
+}
+
+.breadcrumb {
+  color: #aab9da;
+}
+
+.breadcrumb a:hover {
+  color: #fff;
+}
+
+.eyebrow {
+  border-color: rgba(118, 157, 255, 0.38);
+  background: rgba(39, 83, 176, 0.24);
+  color: #b8d0ff;
+  backdrop-filter: blur(12px);
+}
+
+.heroTitle {
+  max-width: 760px;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: clamp(2.65rem, 5vw, 4.65rem);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+
+.heroTitle span {
+  color: #71a7ff;
+}
+
+.heroDescription {
+  color: var(--academy-muted);
+}
+
+.heroNote {
+  color: #9caed1;
+}
+
+.glassCard {
+  border: 1px solid var(--academy-line);
+  background: linear-gradient(145deg, rgba(15, 29, 64, 0.92), rgba(7, 16, 39, 0.8));
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  color: var(--academy-ink);
+}
+
+.glassCard :global(.text-\[var\(--text\)\]) {
+  color: var(--academy-ink);
+}
+
+.flowRow {
+  border-color: rgba(129, 159, 222, 0.2);
+  background: rgba(5, 13, 32, 0.68);
+}
+
+.guideChip {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border: 1px solid rgba(123, 161, 255, 0.22);
+  border-radius: 16px;
+  background: rgba(4, 11, 29, 0.62);
+}
+
+.guideAvatar {
+  width: 58px;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid rgba(111, 162, 255, 0.48);
+  border-radius: 15px;
+  background: rgba(33, 68, 145, 0.38);
+}
+
+.guideAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 18%;
+}
+
+.guideChip strong {
+  display: block;
+  color: #f8faff;
+  font-size: 0.9rem;
+}
+
+.guideChip span {
+  display: block;
+  margin-top: 3px;
+  color: #aebddd;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.pathSection {
+  padding: 36px 24px 0;
+}
+
+.pathShell {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.pathHeading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.pathHeading p:first-child {
+  color: var(--focus-light);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.pathHeading h2 {
+  margin-top: 7px;
+  font-size: clamp(1.7rem, 3vw, 2.45rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+
+.pathHeading > p:last-child {
+  max-width: 430px;
+  color: var(--text-sub);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.pathGrid {
+  display: grid;
+  gap: 18px;
+}
+
+.pathCard {
+  position: relative;
+  display: grid;
+  min-height: 252px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: #07142f;
+  color: #fff;
+  box-shadow: 0 18px 55px rgba(5, 12, 30, 0.16);
+}
+
+.pathArt {
+  position: absolute;
+  inset: 0;
+}
+
+.pathArt img {
+  object-fit: cover;
+  transition: transform 420ms ease;
+}
+
+.pathCard:hover .pathArt img {
+  transform: scale(1.035);
+}
+
+.pathCard::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(90deg, rgba(4, 11, 29, 0.98) 0%, rgba(7, 18, 46, 0.9) 47%, rgba(7, 18, 46, 0.12) 100%);
+}
+
+.pathCard[data-path='study']::after {
+  background: linear-gradient(90deg, rgba(4, 13, 35, 0.98) 0%, rgba(7, 26, 61, 0.86) 48%, rgba(7, 22, 52, 0.1) 100%);
+}
+
+.pathContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 64%;
+  padding: 30px;
+}
+
+.pathContent > span:first-child {
+  color: #7ed9ff;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.pathContent h3 {
+  margin-top: 8px;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.pathContent p {
+  margin-top: 8px;
+  color: #c1ccea;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.pathLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 14px;
+  border: 1px solid rgba(130, 173, 255, 0.36);
+  border-radius: 12px;
+  background: rgba(44, 100, 226, 0.34);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.pathLink:hover {
+  background: rgba(57, 119, 255, 0.54);
+  transform: translateY(-1px);
+}
+
+.brandCard {
+  padding: 26px;
+  text-align: center;
+}
+
+.brandCrest {
+  position: relative;
+  width: 118px;
+  height: 118px;
+  margin: 0 auto;
+  filter: drop-shadow(0 16px 32px rgba(39, 110, 255, 0.32));
+}
+
+.brandCrest img {
+  object-fit: contain;
+}
+
+.companions {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid rgba(124, 157, 225, 0.2);
+  border-radius: 17px;
+  background: rgba(5, 13, 32, 0.62);
+}
+
+.companion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #cbd6f0;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.companion:last-child {
+  flex-direction: row-reverse;
+}
+
+.companionAvatar {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(108, 160, 255, 0.48);
+  border-radius: 50%;
+  background: #102857;
+}
+
+.companionAvatar img {
+  object-fit: cover;
+  object-position: center 16%;
+}
+
+.companionDivider {
+  width: 1px;
+  height: 34px;
+  background: rgba(137, 170, 232, 0.22);
+}
+
+.statsGrid > div {
+  border-color: rgba(124, 157, 225, 0.2);
+  background: rgba(5, 13, 32, 0.58);
+}
+
+@media (min-width: 768px) {
+  .hero {
+    max-width: 1360px;
+    min-height: 540px;
+    margin: 20px auto 0;
+    border: 1px solid rgba(115, 151, 232, 0.2);
+    border-radius: 28px;
+    padding-top: 64px;
+    padding-bottom: 64px;
+    box-shadow: 0 30px 90px rgba(5, 12, 30, 0.19);
+  }
+
+  .heroGrid {
+    min-height: 410px;
+  }
+
+  .pathGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page > section:not(.hero):not(.pathSection) > div {
+    border-radius: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .heroGrid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .heroBackdrop,
+  .hero::before,
+  .hero::after {
+    display: none;
+  }
+
+  .heroCopy {
+    color: var(--text);
+  }
+
+  .breadcrumb {
+    color: var(--text-muted);
+  }
+
+  .heroTitle {
+    font-family: var(--font-display), serif;
+    font-size: 2.5rem;
+    letter-spacing: -0.035em;
+  }
+
+  .heroTitle span {
+    color: var(--focus-light);
+  }
+
+  .heroDescription {
+    color: var(--text-sub);
+  }
+
+  .heroNote {
+    color: var(--text-muted);
+  }
+
+  .glassCard {
+    border-color: var(--border);
+    background: var(--surface);
+    color: var(--text);
+    backdrop-filter: none;
+  }
+
+  .flowRow {
+    border-color: var(--border);
+    background: var(--card);
+  }
+
+  .guideChip {
+    border-color: var(--border);
+    background: var(--card);
+  }
+
+  .guideChip strong {
+    color: var(--text);
+  }
+
+  .guideChip span {
+    color: var(--text-sub);
+  }
+
+  .pathHeading {
+    display: block;
+  }
+
+  .pathHeading > p:last-child {
+    margin-top: 10px;
+  }
+
+  .pathContent {
+    max-width: 76%;
+    padding: 24px;
+  }
+
+  .brandCard {
+    border-color: var(--border);
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .companions,
+  .statsGrid > div {
+    border-color: var(--border);
+    background: var(--card);
+  }
+
+  .companion {
+    color: var(--text-sub);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pathArt img,
+  .pathLink {
+    transition: none;
+  }
+}

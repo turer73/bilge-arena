@@ -1,7 +1,33 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState, useCallback, useRef } from 'react'
+import type { CSSProperties } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpenText,
+  Calculator,
+  Check,
+  ChevronRight,
+  CircleHelp,
+  Flag,
+  FlaskConical,
+  Globe2,
+  Languages,
+  Layers3,
+  LockKeyhole,
+  LoaderCircle,
+  Map as MapIcon,
+  RotateCcw,
+  ShieldCheck,
+  Swords,
+  Target,
+  Trophy,
+  X,
+} from 'lucide-react'
 import { GAMES, GAME_LIST, getCategoryLabel } from '@/lib/constants/games'
 import type { GameSlug } from '@/lib/constants/games'
 import { renderRichText } from '@/lib/utils/rich-text'
@@ -13,6 +39,7 @@ import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
 import { getTytSocialAllowedCategories } from '@/lib/exam-policy/tyt-social-contract'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 import { useAuthStore } from '@/stores/auth-store'
+import styles from './fethet.module.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,12 +65,66 @@ const V2_STORAGE_KEY = 'bilge-arena-fethet-v2'
 const QUESTIONS_PER_CATEGORY = 3
 const PASS_THRESHOLD = 2   // Kaç doğru = fethedildi
 
-const GAME_EMOJI: Record<string, string> = {
-  matematik: '🧮',
-  turkce: '📝',
-  fen: '🔬',
-  sosyal: '🌍',
-  wordquest: '🌐',
+const MATHEMATICS_NUMBERS_PREVIEW: PublicQuestion[] = [
+  {
+    id: 'preview-matematik-sayilar-1',
+    game: 'matematik',
+    category: 'sayilar',
+    subcategory: 'temel-kavramlar',
+    topic: 'Sayı kümeleri',
+    difficulty: 1,
+    level_tag: 'TYT',
+    base_points: 10,
+    content: {
+      type: 'multiple_choice',
+      question: 'Üç basamaklı en küçük pozitif tam sayı ile iki basamaklı en büyük pozitif tam sayının farkı kaçtır?',
+      options: ['1', '9', '10', '11', '99'],
+    },
+  },
+  {
+    id: 'preview-matematik-sayilar-2',
+    game: 'matematik',
+    category: 'sayilar',
+    subcategory: 'tam-sayilar',
+    topic: 'Tam sayılar',
+    difficulty: 2,
+    level_tag: 'TYT',
+    base_points: 20,
+    content: {
+      type: 'multiple_choice',
+      question: '-4 ile 7 arasındaki tam sayıların toplamı kaçtır?',
+      options: ['18', '11', '7', '22', '28'],
+    },
+  },
+  {
+    id: 'preview-matematik-sayilar-3',
+    game: 'matematik',
+    category: 'sayilar',
+    subcategory: 'birinci-dereceden-denklemler',
+    topic: 'Sayı problemleri',
+    difficulty: 2,
+    level_tag: 'TYT',
+    base_points: 20,
+    content: {
+      type: 'multiple_choice',
+      question: 'Bir sayının 3 katının 5 fazlası 26 ise bu sayı kaçtır?',
+      options: ['7', '6', '8', '9', '10'],
+    },
+  },
+]
+
+const PREVIEW_SOLUTIONS: Record<string, string> = {
+  'preview-matematik-sayilar-1': 'Üç basamaklı en küçük sayı 100, iki basamaklı en büyük sayı 99 olduğundan fark 1 olur.',
+  'preview-matematik-sayilar-2': '-4 ile 4 arasındaki sayılar birbirini götürür; geriye 5 + 6 + 7 = 18 kalır.',
+  'preview-matematik-sayilar-3': '3x + 5 = 26 denkleminden 3x = 21 ve x = 7 bulunur.',
+}
+
+const GAME_PRESENTATION: Record<GameSlug, { icon: LucideIcon; image: string; note: string }> = {
+  matematik: { icon: Calculator, image: '/academy/subjects/matematik-magic-v1.png', note: 'Sayıların bölgesi' },
+  turkce: { icon: BookOpenText, image: '/academy/subjects/turkce-magic-v1.png', note: 'Dilin bölgesi' },
+  fen: { icon: FlaskConical, image: '/academy/subjects/fen-magic-v1.png', note: 'Keşfin bölgesi' },
+  sosyal: { icon: Globe2, image: '/academy/subjects/sosyal-magic-v1.png', note: 'Dünyanın bölgesi' },
+  wordquest: { icon: Languages, image: '/academy/modes/wordquest-v1.png', note: 'İngilizcenin bölgesi' },
 }
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
@@ -92,12 +173,29 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
 
   const gameConfig = GAMES[game]
   const color = gameConfig?.colorHex ?? 'var(--focus)'
+  const presentation = GAME_PRESENTATION[game]
+  const GameIcon = presentation.icon
+  const isDesignPreview = process.env.NODE_ENV === 'development'
+    && typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('preview') === 'quiz'
+    && game === 'matematik'
+    && category === 'sayilar'
 
   useEffect(() => {
     const governedSocial = isTytSocialV2ClientEnabled() && game === 'sosyal'
     setLoading(true)
     setError(null)
     setAttemptId(null)
+
+    if (isDesignPreview) {
+      setQuestions(MATHEMATICS_NUMBERS_PREVIEW.map((question) => {
+        const shuffled = shufflePublicOptionsWithMap(question.content)
+        return { ...question, content: shuffled.content, optionMap: shuffled.map }
+      }))
+      setLoading(false)
+      return
+    }
+
     const params = new URLSearchParams({
       game,
       category,
@@ -147,7 +245,7 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [game, category])
+  }, [game, category, isDesignPreview])
 
   const question = questions[idx]
   const totalQ = questions.length
@@ -162,6 +260,17 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
     setGrading(true)
     setGradeError(null)
     try {
+      if (isDesignPreview) {
+        const displayCorrectOption = question.optionMap.indexOf(0)
+        if (displayCorrectOption < 0) throw new Error('invalid_preview_question')
+
+        setCorrectOption(displayCorrectOption)
+        setSolution(PREVIEW_SOLUTIONS[question.id] ?? null)
+        if (canonicalIndex === 0) setCorrectCount((count) => count + 1)
+        setRevealed(true)
+        return
+      }
+
       const grade = await gradeQuestion(question.id, canonicalIndex, attemptId)
       const displayCorrectOption = question.optionMap.indexOf(grade.correctOption)
       if (displayCorrectOption < 0) throw new Error('invalid_grade_response')
@@ -197,125 +306,164 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
     }
   }
 
-  // Overlay backdrop
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-    >
-      <div
-        className="relative w-full max-w-lg rounded-2xl border bg-[var(--card-bg)] p-5 shadow-2xl md:p-7"
-        style={{ borderColor: `${color}40` }}
+    <div className={styles.modalBackdrop}>
+      <section
+        className={styles.quizModal}
+        style={{ '--subject': color } as CSSProperties}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fetih-soru-baslik"
       >
-        {/* Kapat */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-[var(--text-muted)] transition-colors hover:text-[var(--text-sub)]"
+          className={styles.modalClose}
           aria-label="Kapat"
         >
-          ✕
+          <X size={19} aria-hidden="true" />
         </button>
 
-        {/* Başlık */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{GAME_EMOJI[game] || '📋'}</span>
-            <span className="text-xs font-extrabold tracking-widest text-[var(--text-muted)] uppercase">
-              {gameConfig?.name} · {getCategoryLabel(category)}
+        <header className={styles.quizHeader}>
+          <div className={styles.quizHeaderArt} aria-hidden="true">
+            <Image
+              src={presentation.image}
+              alt=""
+              fill
+              sizes="660px"
+            />
+          </div>
+          <span className={styles.quizSubjectIcon}>
+            <GameIcon size={22} aria-hidden="true" />
+          </span>
+          <div className={styles.quizHeadingCopy}>
+            <span className={styles.modalEyebrow}>
+              {isDesignPreview ? 'Tasarım önizlemesi' : '3 soruluk fetih mücadelesi'}
             </span>
-          </div>
-        </div>
-
-        {/* Yükleniyor */}
-        {loading && (
-          <div className="flex h-40 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-[var(--focus)]" />
-          </div>
-        )}
-
-        {/* Hata */}
-        {!loading && error && (
-          <div className="flex h-40 flex-col items-center justify-center gap-3 text-center">
-            <span className="text-3xl">😕</span>
-            <p className="text-sm text-[var(--text-sub)]">{error}</p>
-            <button onClick={onClose} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm">
-              Kapat
-            </button>
-            {game === 'sosyal' && (
-              <Link
-                href="/arena/calisma"
-                className="text-xs font-bold text-[var(--focus)] underline underline-offset-2"
-              >
-                Çalış sayfasına git
-              </Link>
-            )}
-          </div>
-        )}
-
-        {/* Quiz tamamlandı */}
-        {!loading && !error && done && (
-          <div className="flex flex-col items-center gap-4 py-6 text-center">
-            <span className="text-5xl">{passed ? '🏆' : '😅'}</span>
-            <h2 className="text-xl font-black" style={{ color: passed ? color : 'var(--urgency)' }}>
-              {passed ? 'Fethedildi!' : 'Başarısız'}
+            <h2 id="fetih-soru-baslik">
+              {getCategoryLabel(category)} Geçidi
             </h2>
-            <p className="text-sm text-[var(--text-sub)]">
+            <span className={styles.quizSubjectLine}>{gameConfig?.name} bölgesi · 3 soruluk fetih</span>
+          </div>
+          {!loading && !error && (
+            <span className={styles.quizCounter}>
+              {done ? `${correctCount}/${totalQ}` : `${Math.min(idx + 1, totalQ)}/${totalQ}`}
+            </span>
+          )}
+        </header>
+
+        {loading && (
+          <div className={styles.loadingState} role="status">
+            <LoaderCircle size={34} aria-hidden="true" />
+            <p>Bu bölgenin soruları hazırlanıyor…</p>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className={styles.errorState}>
+            <div className={styles.errorVisual} aria-hidden="true">
+              <Image
+                src="/academy/modes/conquest-locked-region-v1.png"
+                alt=""
+                fill
+                sizes="(max-width: 640px) 340px, 620px"
+              />
+              <span className={styles.errorVisualSeal}>
+                <LockKeyhole size={22} />
+              </span>
+              <div className={styles.errorVisualCaption}>
+                <span>Keşfedilmemiş bölge</span>
+                <strong>Geçit şimdilik kapalı</strong>
+              </div>
+            </div>
+            <div className={styles.errorCopy}>
+              <span className={styles.stateIcon}><CircleHelp size={25} aria-hidden="true" /></span>
+              <div>
+                <h3>Bu bölge henüz hazır değil</h3>
+                <p>{error}</p>
+              </div>
+            </div>
+            <div className={styles.modalActions}>
+              <button onClick={onClose} className={styles.secondaryAction}>Haritaya dön</button>
+              {game === 'sosyal' && (
+                <Link href="/arena/calisma" className={styles.primaryAction}>
+                  Çalış sayfasına git <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && done && (
+          <div className={styles.resultState} data-passed={passed ? 'true' : 'false'}>
+            <span className={styles.resultIcon}>
+              {passed ? <Trophy size={34} aria-hidden="true" /> : <RotateCcw size={32} aria-hidden="true" />}
+            </span>
+            <span className={styles.modalEyebrow}>{correctCount}/{totalQ} doğru cevap</span>
+            <h3>{passed ? 'Fethedildi!' : 'Başarısız'}</h3>
+            <p>
               {passed
                 ? `${getCategoryLabel(category)} kategorisi artık senindir!`
                 : 'Tekrar deneyebilirsin. Biraz daha pratik yap!'}
             </p>
             <button
               onClick={onClose}
-              className="mt-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white"
-              style={{ background: passed ? color : 'var(--urgency)' }}
+              className={styles.primaryAction}
             >
-              {passed ? 'Haritaya Dön' : 'Tekrar Dene'}
+              {passed ? 'Haritaya dön' : 'Yeniden hazırlan'} <ArrowRight size={16} aria-hidden="true" />
             </button>
           </div>
         )}
 
-        {/* Aktif quiz */}
         {!loading && !error && !done && question && (
-          <>
-            {/* İlerleme */}
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex-1 overflow-hidden rounded-full bg-[var(--bg-secondary)] h-1.5">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${(idx / totalQ) * 100}%`, background: color }}
-                />
-              </div>
-              <span className="shrink-0 text-[10px] font-bold text-[var(--text-muted)]">
-                {idx + 1}/{totalQ}
-              </span>
+          <div className={styles.quizBody}>
+            <div className={styles.quizRoute} aria-label={`Fetih rotası: ${idx + 1}/${totalQ}`}>
+              {Array.from({ length: totalQ }, (_, step) => {
+                const routeState = step < idx ? 'complete' : step === idx ? 'active' : 'locked'
+                const routeLabels = ['Giriş', 'Geçit', 'Mühür']
+
+                return (
+                  <span
+                    key={step}
+                    className={styles.routeStep}
+                    data-state={routeState}
+                    aria-current={step === idx ? 'step' : undefined}
+                  >
+                    <span className={styles.routeMarker}>
+                      {routeState === 'complete'
+                        ? <Check size={15} aria-hidden="true" />
+                        : routeState === 'active'
+                          ? <Flag size={15} aria-hidden="true" />
+                          : step + 1}
+                    </span>
+                    <small>{routeLabels[step] ?? `${step + 1}. durak`}</small>
+                  </span>
+                )
+              })}
+            </div>
+            <div className={styles.quizRouteGoal}>
+              <span><Target size={15} aria-hidden="true" /> {PASS_THRESHOLD} doğru cevapla bölgeyi aç</span>
+              <strong>{idx + 1}. durak</strong>
             </div>
 
-            {/* Soru */}
-            <p className="mb-5 text-sm font-semibold leading-relaxed md:text-base">
-              {renderRichText(question.content.question || question.content.sentence || '')}
-            </p>
+            <div className={styles.quizQuestionCard}>
+              <span className={styles.questionKicker}><MapIcon size={15} aria-hidden="true" /> Bölge sorusu</span>
+              <p className={styles.quizQuestion}>
+                {renderRichText(question.content.question || question.content.sentence || '')}
+              </p>
+            </div>
 
-            {/* Şıklar */}
-            <div className="space-y-2">
+            <div className={styles.quizOptions}>
               {question.content.options.map((opt, i) => {
-                let bg = 'var(--bg-secondary)'
-                let border = 'var(--border)'
-                let textColor = 'var(--text)'
+                let optionState = 'idle'
 
                 if (revealed) {
                   if (i === correctOption) {
-                    bg = 'var(--growth-bg)'
-                    border = 'var(--growth-border)'
-                    textColor = 'var(--growth)'
+                    optionState = 'correct'
                   } else if (i === selected && i !== correctOption) {
-                    bg = 'var(--urgency-bg, rgba(239,68,68,0.1))'
-                    border = 'var(--urgency-border, rgba(239,68,68,0.3))'
-                    textColor = 'var(--urgency)'
+                    optionState = 'wrong'
                   }
                 } else if (selected === i) {
-                  bg = 'var(--focus-bg)'
-                  border = 'var(--focus-border)'
-                  textColor = 'var(--focus)'
+                  optionState = 'selected'
                 }
 
                 const label = ['A', 'B', 'C', 'D', 'E'][i] ?? String(i + 1)
@@ -325,48 +473,48 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
                     key={i}
                     onClick={() => handleSelect(i)}
                     disabled={revealed || grading}
-                    className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all duration-150 disabled:cursor-default"
-                    style={{ background: bg, borderColor: border, color: textColor }}
+                    className={styles.quizOption}
+                    data-state={optionState}
                   >
-                    <span
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black"
-                      style={{ background: `${border}`, color: textColor }}
-                    >
-                      {label}
-                    </span>
+                    <span className={styles.optionMarker}>{label}</span>
                     <span>{renderRichText(opt)}</span>
+                    {optionState === 'correct' && <Check size={17} aria-hidden="true" />}
+                    {optionState === 'wrong' && <X size={17} aria-hidden="true" />}
+                    {(optionState === 'idle' || optionState === 'selected') && (
+                      <ChevronRight className={styles.optionChevron} size={16} aria-hidden="true" />
+                    )}
                   </button>
                 )
               })}
             </div>
 
-            {/* İleri butonu (cevap sonrası) */}
             {grading && (
-              <p className="mt-3 text-center text-xs text-[var(--text-sub)]">Kontrol ediliyor...</p>
+              <p className={styles.gradeStatus} role="status">
+                <LoaderCircle size={15} aria-hidden="true" /> Kontrol ediliyor…
+              </p>
             )}
             {gradeError && (
-              <p className="mt-3 text-center text-xs text-[var(--urgency)]">{gradeError}</p>
+              <p className={styles.gradeError} role="alert">{gradeError}</p>
+            )}
+
+            {revealed && solution && (
+              <div className={styles.solutionBox}>
+                <BookOpenText size={18} aria-hidden="true" />
+                <p>{solution}</p>
+              </div>
             )}
 
             {revealed && (
               <button
                 onClick={handleNext}
-                className="mt-4 w-full rounded-xl py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
-                style={{ background: color }}
+                className={styles.nextAction}
               >
                 {idx + 1 < totalQ ? 'Sonraki Soru →' : 'Sonucu Gör'}
               </button>
             )}
-
-            {/* Çözüm açıklaması */}
-            {revealed && solution && (
-              <p className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[10px] text-[var(--text-sub)]">
-                💡 {solution}
-              </p>
-            )}
-          </>
+          </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }
@@ -462,169 +610,168 @@ export function FethetClient() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 md:py-8 xl:max-w-4xl">
-
-      {/* ── Başlık ── */}
-      <div className="mb-6 text-center">
-        <h1 className="font-display text-2xl font-black md:text-3xl xl:text-4xl">
-          ⚔️{' '}
-          <span className="bg-gradient-to-r from-[var(--focus)] to-[var(--reward)] bg-clip-text text-transparent">
-            Bil ve Fethet
-          </span>
-        </h1>
-        <p className="mt-1.5 text-xs text-[var(--text-sub)] md:text-sm">
-          Her kategoriyi {QUESTIONS_PER_CATEGORY} soruyla fethederek tüm bilgi haritasını ele geçir
-        </p>
-      </div>
-
-      {/* ── İlerleme ── */}
-      <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-bold text-[var(--text-sub)]">
-            {allDone ? '🎉 Tüm harita fethedildi!' : `${conqueredCount}/${totalCount} kategori fethedildi`}
-          </span>
-          <span className="text-[10px] font-bold" style={{ color: 'var(--focus)' }}>
-            %{Math.round(progress)}
-          </span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-[var(--bg-secondary)]">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${progress}%`,
-              background: allDone
-                ? 'var(--reward)'
-                : 'linear-gradient(to right, var(--focus), var(--wisdom))',
-            }}
-          />
-        </div>
-      </div>
-
-      {/* ── Oyun bölümleri ── */}
-      <div className="space-y-6">
-        {GAME_LIST.map((game) => {
-          const slug = game.slug as GameSlug
-          const visibleCategories = categoriesByGame.get(game.slug) ?? []
-          const gameConquered = visibleCategories.filter(
-            (c) => conquered.has(`${slug}-${c}`)
-          ).length
-
-          return (
-            <div key={slug}>
-              {/* Oyun başlığı */}
-              <div className="mb-2.5 flex items-center gap-2">
-                <span className="text-base leading-none">{GAME_EMOJI[slug] || '📋'}</span>
-                <span
-                  className="text-sm font-extrabold"
-                  style={{ color: game.colorHex }}
-                >
-                  {game.name}
-                </span>
-                <div className="flex-1 border-t border-dashed border-[var(--border)]" />
-                <span
-                  className="rounded-full px-2 py-0.5 text-[9px] font-bold"
-                  style={{
-                    background:
-                      visibleCategories.length > 0 && gameConquered === visibleCategories.length
-                        ? 'var(--growth-bg)'
-                        : 'var(--bg-secondary)',
-                    color:
-                      visibleCategories.length > 0 && gameConquered === visibleCategories.length
-                        ? 'var(--growth)'
-                        : 'var(--text-muted)',
-                  }}
-                >
-                  {gameConquered}/{visibleCategories.length}
-                </span>
-              </div>
-
-              {/* Kategori kartları */}
-              <div className="flex flex-wrap gap-2">
-                {slug === 'sosyal' && governedSocial && socialPolicy.status !== 'active' && (
-                  <div className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-3 text-xs text-[var(--text-sub)]">
-                    <p className="font-semibold">
-                      {socialPolicy.loading
-                        ? 'TYT Sosyal cevaplama düzenin kontrol ediliyor…'
-                        : 'Sosyal fetih haritası, cevaplama düzenini seçtikten sonra açılır.'}
-                    </p>
-                    {!socialPolicy.loading && (
-                      <Link
-                        href="/arena/calisma"
-                        className="mt-2 inline-block font-bold text-[var(--focus)] underline underline-offset-2"
-                      >
-                        Çalış sayfasında düzeni seç
-                      </Link>
-                    )}
-                  </div>
-                )}
-                {visibleCategories.map((cat) => {
-                  const key = `${slug}-${cat}`
-                  const isConquered = mounted && conquered.has(key)
-                  const isActive = active?.game === slug && active?.category === cat
-
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        if (isConquered) return
-                        setActive({ game: slug, category: cat })
-                      }}
-                      disabled={isConquered}
-                      className={`relative flex flex-col items-center gap-1 rounded-xl border px-3 py-2.5 text-center text-[11px] font-bold transition-all duration-200 ${
-                        isConquered
-                          ? 'cursor-default'
-                          : 'hover:-translate-y-0.5 hover:shadow-md active:scale-95'
-                      } ${isActive ? 'ring-2' : ''}`}
-                      style={{
-                        background: isConquered
-                          ? `color-mix(in srgb, ${game.colorHex} 12%, transparent)`
-                          : 'var(--card-bg)',
-                        borderColor: isConquered
-                          ? `color-mix(in srgb, ${game.colorHex} 40%, transparent)`
-                          : 'var(--border)',
-                        color: isConquered ? game.colorHex : 'var(--text-sub)',
-                        minWidth: '90px',
-                      }}
-                    >
-                      {isConquered ? (
-                        <span className="text-base leading-none">⚑</span>
-                      ) : (
-                        <span className="text-base leading-none opacity-50">🏁</span>
-                      )}
-                      <span className="leading-tight">{getCategoryLabel(cat)}</span>
-                      {!isConquered && (
-                        <span
-                          className="mt-0.5 rounded-md px-1.5 py-0.5 text-[8px] font-extrabold"
-                          style={{
-                            background: `color-mix(in srgb, ${game.colorHex} 15%, transparent)`,
-                            color: game.colorHex,
-                          }}
-                        >
-                          Fethet
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
+    <div className={styles.root}>
+      <main className={styles.shell}>
+        <section className={styles.hero} aria-labelledby="fethet-baslik">
+          <div className={styles.heroArt} aria-hidden="true">
+            <Image
+              src="/academy/modes/conquest-janissary-v2.png"
+              alt=""
+              fill
+              sizes="(min-width: 1240px) 1184px, 100vw"
+              preload
+            />
+          </div>
+          <div className={styles.heroContent}>
+            <div className={styles.heroCopy}>
+              <Link href="/arena" className={styles.backLink}>
+                <ArrowLeft size={15} aria-hidden="true" /> Oyunlara dön
+              </Link>
+              <span className={styles.eyebrow}><Swords size={15} aria-hidden="true" /> Konu konu fetih</span>
+              <h1 id="fethet-baslik">Bilgini haritaya işle, her konuyu fethet.</h1>
+              <p>
+                Her bölgede üç soruyla mücadele et. En az iki doğruyla bayrağını dik,
+                bilgi haritanı adım adım tamamla.
+              </p>
+              <div className={styles.heroStats} aria-label="Bil ve Fethet kuralları">
+                <div><Target size={18} aria-hidden="true" /><span><strong>{QUESTIONS_PER_CATEGORY} soru</strong><small>Her bölgede</small></span></div>
+                <div><ShieldCheck size={18} aria-hidden="true" /><span><strong>{PASS_THRESHOLD} doğru</strong><small>Fetih için</small></span></div>
+                <div><Layers3 size={18} aria-hidden="true" /><span><strong>{totalCount} bölge</strong><small>Tüm haritada</small></span></div>
               </div>
             </div>
-          )
-        })}
-      </div>
 
-      {/* ── Sıfırla ── */}
-      {mounted && conqueredCount > 0 && (
-        <div className="mt-8 text-center">
-          <button
-            onClick={handleReset}
-            className="text-[10px] text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--urgency)] transition-colors"
-          >
-            İlerlemeyi sıfırla
-          </button>
-        </div>
-      )}
+            <aside className={styles.heroProgress} aria-label="Genel fetih ilerlemesi">
+              <span className={styles.progressKicker}>Harita ilerlemen</span>
+              <div
+                className={styles.progressDial}
+                style={{ '--progress': `${progress * 3.6}deg` } as CSSProperties}
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={totalCount}
+                aria-valuenow={conqueredCount}
+              >
+                <span><strong>{conqueredCount}</strong><small>/{totalCount}</small></span>
+              </div>
+              <strong>{allDone ? 'Harita tamamlandı' : 'Sıradaki bölgeyi seç'}</strong>
+              <p>%{Math.round(progress)} fethedildi</p>
+            </aside>
+          </div>
+        </section>
 
-      {/* ── Quiz Modal ── */}
+        <section className={styles.mapSection} aria-labelledby="bilgi-haritasi-baslik">
+          <header className={styles.mapHeader}>
+            <div>
+              <span className={styles.eyebrow}><MapIcon size={15} aria-hidden="true" /> Bilgi haritan</span>
+              <h2 id="bilgi-haritasi-baslik">Mücadele bölgeni seç</h2>
+              <p>Ders bölgelerinden bir konu seç; üç soruluk fetih turu hemen başlasın.</p>
+            </div>
+            <div className={styles.mapSummary}>
+              <strong>{conqueredCount}/{totalCount}</strong>
+              <span>bölge açıldı</span>
+            </div>
+          </header>
+
+          <div className={styles.overallProgress} aria-hidden="true">
+            <span style={{ width: `${progress}%` }} />
+          </div>
+
+          {allDone && (
+            <div className={styles.completeBanner}>
+              <Trophy size={24} aria-hidden="true" />
+              <div><strong>Tüm bilgi haritası senin!</strong><span>Her bölgeyi başarıyla fethettin.</span></div>
+            </div>
+          )}
+
+          <div className={styles.regionGrid}>
+            {GAME_LIST.map((game) => {
+              const slug = game.slug as GameSlug
+              const visibleCategories = categoriesByGame.get(game.slug) ?? []
+              const gameConquered = visibleCategories.filter((category) => conquered.has(`${slug}-${category}`)).length
+              const presentation = GAME_PRESENTATION[slug]
+              const RegionIcon = presentation.icon
+              const gameComplete = visibleCategories.length > 0 && gameConquered === visibleCategories.length
+
+              return (
+                <article
+                  key={slug}
+                  className={styles.regionCard}
+                  data-complete={gameComplete ? 'true' : 'false'}
+                  style={{ '--subject': game.colorHex } as CSSProperties}
+                >
+                  <div className={styles.regionVisual}>
+                    <Image
+                      src={presentation.image}
+                      alt=""
+                      fill
+                      sizes="(min-width: 980px) 560px, 100vw"
+                    />
+                    <div className={styles.regionHeading}>
+                      <span className={styles.regionIcon}><RegionIcon size={20} aria-hidden="true" /></span>
+                      <div><small>{presentation.note}</small><h3>{game.name}</h3></div>
+                      <span className={styles.regionCount}>{gameConquered}/{visibleCategories.length}</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.categoryGrid}>
+                    {slug === 'sosyal' && governedSocial && socialPolicy.status !== 'active' && (
+                      <div className={styles.policyNotice}>
+                        <ShieldCheck size={19} aria-hidden="true" />
+                        <div>
+                          <p>
+                            {socialPolicy.loading
+                              ? 'TYT Sosyal cevaplama düzenin kontrol ediliyor…'
+                              : 'Sosyal fetih haritası, cevaplama düzenini seçtikten sonra açılır.'}
+                          </p>
+                          {!socialPolicy.loading && <Link href="/arena/calisma">Çalış sayfasında düzeni seç</Link>}
+                        </div>
+                      </div>
+                    )}
+
+                    {visibleCategories.map((cat) => {
+                      const key = `${slug}-${cat}`
+                      const isConquered = mounted && conquered.has(key)
+                      const isActive = active?.game === slug && active?.category === cat
+                      const categoryLabel = getCategoryLabel(cat)
+
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            if (isConquered) return
+                            setActive({ game: slug, category: cat })
+                          }}
+                          disabled={isConquered}
+                          className={styles.categoryButton}
+                          data-conquered={isConquered ? 'true' : 'false'}
+                          data-active={isActive ? 'true' : 'false'}
+                          aria-label={`${categoryLabel}, ${isConquered ? 'fethedildi' : 'fethet'}`}
+                        >
+                          <span className={styles.categoryMarker}>
+                            {isConquered ? <Check size={17} aria-hidden="true" /> : <Flag size={17} aria-hidden="true" />}
+                          </span>
+                          <span className={styles.categoryCopy}>
+                            <strong>{categoryLabel}</strong>
+                            <small>{isConquered ? 'Fethedildi' : '3 soruluk mücadele'}</small>
+                          </span>
+                          {!isConquered && <ChevronRight size={17} aria-hidden="true" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+
+          {mounted && conqueredCount > 0 && (
+            <button onClick={handleReset} className={styles.resetButton}>
+              <RotateCcw size={14} aria-hidden="true" /> İlerlemeyi sıfırla
+            </button>
+          )}
+        </section>
+      </main>
+
       {active && (
         <QuizModal
           game={active.game}

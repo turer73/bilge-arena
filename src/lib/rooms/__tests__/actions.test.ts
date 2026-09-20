@@ -106,8 +106,31 @@ describe('createRoomAction', () => {
     expect(mockCallRpc).toHaveBeenCalledWith(
       'jwt',
       'create_room',
-      expect.objectContaining({ title: 'Paragraf Yarismasi', mode: 'sync' }),
+      {
+        p_title: 'Paragraf Yarismasi',
+        p_category: 'paragraf',
+        p_difficulty: 3,
+        p_question_count: 10,
+        p_max_players: 6,
+        p_per_question_seconds: 20,
+        p_mode: 'sync',
+        p_auto_advance_seconds: 5,
+        p_is_public: false,
+      },
     )
+    const createBody = mockCallRpc.mock.calls[0][2]
+    expect(Object.keys(createBody).sort()).toEqual([
+      'p_auto_advance_seconds',
+      'p_category',
+      'p_difficulty',
+      'p_is_public',
+      'p_max_players',
+      'p_mode',
+      'p_per_question_seconds',
+      'p_question_count',
+      'p_title',
+    ])
+    expect(createBody).not.toHaveProperty('host_id')
     expect(mockRevalidatePath).toHaveBeenCalledWith('/oda')
     expect(mockRedirect).toHaveBeenCalledWith('/oda/BIL2GE')
   })
@@ -159,13 +182,13 @@ describe('createRoomAction', () => {
       'jwt',
       'create_room',
       expect.objectContaining({
-        difficulty: 2,
-        question_count: 10,
-        max_players: 8,
-        per_question_seconds: 20,
-        mode: 'sync',
+        p_difficulty: 2,
+        p_question_count: 10,
+        p_max_players: 8,
+        p_per_question_seconds: 20,
+        p_mode: 'sync',
         // Sprint 2A Task 1: auto_advance_seconds default 5
-        auto_advance_seconds: 5,
+        p_auto_advance_seconds: 5,
       }),
     )
   })
@@ -180,7 +203,7 @@ describe('createRoomAction', () => {
     expect(mockCallRpc).toHaveBeenCalledWith(
       'jwt',
       'create_room',
-      expect.objectContaining({ auto_advance_seconds: 5 }),
+      expect.objectContaining({ p_auto_advance_seconds: 5 }),
     )
   })
 
@@ -193,7 +216,7 @@ describe('createRoomAction', () => {
     expect(mockCallRpc).toHaveBeenCalledWith(
       'jwt',
       'create_room',
-      expect.objectContaining({ auto_advance_seconds: 0 }),
+      expect.objectContaining({ p_auto_advance_seconds: 0 }),
     )
   })
 
@@ -207,7 +230,7 @@ describe('createRoomAction', () => {
     expect(mockCallRpc).toHaveBeenCalledWith(
       'jwt',
       'create_room',
-      expect.objectContaining({ is_public: true }),
+      expect.objectContaining({ p_is_public: true }),
     )
   })
 
@@ -219,7 +242,7 @@ describe('createRoomAction', () => {
     expect(mockCallRpc).toHaveBeenCalledWith(
       'jwt',
       'create_room',
-      expect.objectContaining({ is_public: false }),
+      expect.objectContaining({ p_is_public: false }),
     )
   })
 

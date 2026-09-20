@@ -121,7 +121,12 @@ export function DesktopGameLobby(props: LobbyProps) {
   return <div className={styles.root} data-responsive-game-lobby data-desktop-game-lobby style={{ '--game-color': gameDef.colorHex } as CSSProperties}>
     <ThemeToggle variant="sync-only" />
     <header className={styles.header}>
-      <div className={styles.headerCopy}><Link className={styles.back} href="/arena"><ChevronLeft size={17} aria-hidden="true" /> Oyunlara dön</Link><p className={styles.eyebrow}>OYUN HAZIRLIĞI</p><h1>{gameDef.name} turunu kur</h1><p>Oyun biçimini seç, istersen soruları özelleştir. Hazır olduğunda başla.</p></div>
+      <div className={styles.headerCopy}>
+        <div className={styles.headerNavigation}>
+          <Link className={styles.back} href="/arena"><ChevronLeft size={17} aria-hidden="true" /> Oyunlara dön</Link>
+        </div>
+        <p className={styles.eyebrow}>OYUN HAZIRLIĞI</p><h1>{gameDef.name} turunu kur</h1><p>Oyun biçimini seç, istersen soruları özelleştir. Hazır olduğunda başla.</p>
+      </div>
       <div className={styles.headerTools}>
         <div className={styles.guide} data-lobby-guide>
           <Image src={bilgeImage(character, guide.expression)} alt={character === 'male' ? 'Erkek Bilge' : 'Kadın Bilge'} width={68} height={68} sizes="68px" />
@@ -173,7 +178,7 @@ export function DesktopGameLobby(props: LobbyProps) {
         </section>
         {personalizedMockCard && <details className={styles.alternative}><summary>Sana özel bir deneme mi arıyorsun?</summary><div data-personalized-mock-slot>{personalizedMockCard}</div></details>}
       </div>
-      <aside className={styles.sidebar} aria-label="Tur özeti">
+      <aside className={`${styles.sidebar} ${props.dailyPlanAction ? styles.sidebarWithPlan : ''}`} aria-label="Tur özeti">
         <section className={styles.summary}>
           <div className={styles.art} aria-hidden="true"><Image src={ART[game]} alt="" fill sizes="(min-width: 1051px) 320px, 280px" /></div>
           <div className={styles.summaryContent}>
@@ -184,6 +189,7 @@ export function DesktopGameLobby(props: LobbyProps) {
             {loadError && <p role="alert" className={styles.error}>{loadError}</p>}
             <div data-desktop-lobby-start>{startHref && !startDisabled ? <Link className={styles.start} href={startHref}><Play size={18} aria-hidden="true" />{startLabel ?? 'Giriş yaparak başla'}</Link> : <button className={styles.start} type="button" disabled={startDisabled} onClick={handleStart}>{!startDisabled && <Play size={18} aria-hidden="true" />}{actionLabel}</button>}</div>
             {startBlocked && <p role="status" className={styles.help}>Başlamak için gerekli ayarı tamamla: {startBlockedLabel}.</p>}
+            {props.dailyPlanAction && <div className={styles.dailyPlanAction} data-lobby-daily-plan-slot>{props.dailyPlanAction}</div>}
           </div>
         </section>
         {quizLimit && <QuizLimitBanner remaining={quizLimit.remaining} isPremium={quizLimit.isPremium} isGuest={quizLimit.isGuest} />}
