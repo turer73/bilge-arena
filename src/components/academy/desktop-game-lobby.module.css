@@ -26,3 +26,47 @@
 @media(hover:hover) and (prefers-reduced-motion:no-preference){.modes button.modeWithArt:hover{transform:translateY(-2px)}.modeWithArt:hover .modeArt img{transform:scale(1.045)}}
 @media(prefers-reduced-motion:no-preference){.modes button,.start{transition:transform .15s ease,background .15s ease,box-shadow .15s ease}.modeArt img{transition:transform .25s ease,filter .2s ease}.modes button:active,.start:active:not(:disabled){transform:translateY(2px)}}
 @media(prefers-reduced-motion:reduce){.root *{animation:none!important;transition:none!important;scroll-behavior:auto}}
+
+/* WordQuest: the shared lobby becomes a magical language quest without changing its data flow. */
+.root[data-game='wordquest']{--app-bg:#040916;--app-card:#0d1b35;--app-card-sunken:#08142a;--app-hover:#122545;--app-border:#2a4169;--app-border-soft:#203655;--app-shadow:rgba(0,0,0,.5);--app-shadow-accent:#173b72;--app-text:#f4f8ff;--app-text-sub:#b7c5dc;--app-text-muted:#8294b1;--app-disabled:#41516d;--app-accent:#3b82f6;--app-accent-strong:#2258bd;--app-accent-text:#70ddff;--app-accent-ink:#dceeff;--app-accent-tint:rgba(55,116,221,.2);--app-accent-border:rgba(92,158,247,.32);--app-success:#5ee3a7;--app-success-solid:#22c55e;--app-success-strong:#16884a;--app-success-ink:#a7f3d0;--app-success-tint:rgba(22,163,74,.18);--app-success-border:rgba(74,222,128,.38);--app-warn:#f8c85d;--app-warn-strong:#d99020;--app-warn-ink:#fde7a7;--app-warn-tint:rgba(180,112,20,.18);--app-warn-border:rgba(251,191,36,.38);--app-danger:#ff8094;--app-danger-strong:#e11d48;--app-danger-ink:#fecdd3;--app-danger-tint:rgba(159,18,57,.24);--app-danger-border:rgba(251,113,133,.42);position:relative;isolation:isolate;min-height:calc(100dvh - var(--navbar-h,72px));color-scheme:dark}
+.root[data-game='wordquest']::before{position:fixed;z-index:-3;inset:var(--navbar-h,72px) 0 0;content:'';background:radial-gradient(circle at 12% 8%,rgba(69,116,238,.18),transparent 28rem),radial-gradient(circle at 90% 72%,rgba(63,205,238,.11),transparent 32rem),#040916;pointer-events:none}
+.srOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.wordQuestHeaderArt{position:absolute;z-index:-1;inset:0 0 0 auto;width:61%;overflow:hidden;pointer-events:none}
+.wordQuestHeaderArt img{object-fit:cover;object-position:center;filter:saturate(1.08) brightness(.72);animation:wordQuestDrift 15s ease-in-out infinite alternate}
+.wordQuestHeaderArt::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#07152c 1%,rgba(7,21,44,.86) 18%,rgba(7,21,44,.22) 72%,rgba(7,21,44,.5)),linear-gradient(0deg,rgba(5,14,31,.72),transparent 58%)}
+.root[data-game='wordquest'] .wordQuestHeader{min-height:190px;padding:24px 26px;color:#f4f8ff;border-color:#365ea0;background:#07152c;box-shadow:inset 0 1px 0 rgba(123,205,255,.22),0 14px 34px rgba(5,18,43,.14)}
+.root[data-game='wordquest'] .wordQuestHeader::before{z-index:0;right:34%;top:-65px;width:250px;height:250px;background:radial-gradient(circle,rgba(86,215,255,.2),transparent 67%)}
+.root[data-game='wordquest'] .wordQuestHeader .headerCopy{position:relative;z-index:2;max-width:56%}
+.root[data-game='wordquest'] .wordQuestHeader h1{max-width:560px;color:#fff;font-size:clamp(1.9rem,3vw,2.55rem);text-shadow:0 3px 24px rgba(0,0,0,.4)}
+.root[data-game='wordquest'] .wordQuestHeader .headerCopy>p:not(.eyebrow){max-width:570px;color:#c9d8ee}
+.root[data-game='wordquest'] .wordQuestHeader .back,.root[data-game='wordquest'] .wordQuestHeader .eyebrow{color:#72e6ff}
+.root[data-game='wordquest'] .wordQuestHeader .headerTools{position:relative;z-index:3;align-self:flex-end;padding:10px 12px;border:1px solid rgba(138,193,255,.22);border-radius:16px;background:rgba(4,15,34,.68);backdrop-filter:blur(12px)}
+.root[data-game='wordquest'] .wordQuestHeader .guide span{color:#72e6ff}
+.root[data-game='wordquest'] .wordQuestHeader .guide p{color:#d1dded}
+.root[data-game='wordquest'] .wordQuestHeader .guide img{border-color:rgba(103,218,255,.48);background:#0b1e3a;box-shadow:0 0 28px rgba(68,203,255,.2)}
+.root[data-game='wordquest'] .panel{border-color:color-mix(in srgb,#547ed1 42%,var(--app-border));background:linear-gradient(145deg,color-mix(in srgb,#315eb8 7%,var(--app-card)),var(--app-card) 58%);box-shadow:inset 0 1px 0 color-mix(in srgb,#8bdfff 15%,transparent)}
+.root[data-game='wordquest'] .step{color:#79e3ff;background:linear-gradient(145deg,#12335d,#292653);box-shadow:inset 0 0 0 1px rgba(105,192,255,.26)}
+.wordQuestTasks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0 18px}
+.wordQuestTasks button{position:relative;display:flex;align-items:center;gap:10px;min-width:0;min-height:72px;padding:10px;border:1px solid color-mix(in srgb,#5278c8 36%,var(--app-border));border-radius:14px;background:linear-gradient(145deg,color-mix(in srgb,#3b82f6 5%,var(--app-card-sunken)),var(--app-card-sunken));color:var(--app-text);text-align:left;overflow:hidden}
+.wordQuestTasks button::after{content:'';position:absolute;right:-24px;bottom:-28px;width:68px;height:68px;border:1px solid rgba(74,158,255,.18);border-radius:50%;box-shadow:0 0 24px rgba(92,225,255,.08)}
+.wordQuestTasks button[aria-pressed='true']{border-color:#4389f8;background:linear-gradient(145deg,color-mix(in srgb,#3b82f6 18%,var(--app-card)),color-mix(in srgb,#7058db 10%,var(--app-card)));box-shadow:0 0 0 1px rgba(91,185,255,.2),0 8px 22px rgba(31,89,183,.12)}
+.wordQuestTasks button>span:last-child{display:flex;min-width:0;flex-direction:column;gap:2px}
+.wordQuestTasks strong{overflow:hidden;font-size:.76rem;font-weight:800;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+.wordQuestTasks small{overflow:hidden;color:var(--app-text-sub);font-size:.625rem;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
+.wordQuestRune{position:relative;z-index:1;display:grid;width:34px;height:34px;flex:0 0 34px;place-items:center;border:1px solid rgba(82,154,255,.28);border-radius:11px;background:linear-gradient(145deg,#e5f7ff,#e8e6ff);color:#2557bc;font-family:Georgia,'Times New Roman',serif;font-size:.85rem;font-weight:800;box-shadow:0 4px 12px rgba(40,96,184,.12)}
+.wordQuestTasks button[aria-pressed='true'] .wordQuestRune{border-color:rgba(74,125,255,.5);background:linear-gradient(145deg,#d9f7ff,#dcd8ff);color:#243c9e}
+.wordQuestFields{grid-template-columns:minmax(190px,280px)}
+.wordQuestSummary{color:#eff7ff;border-color:#31578e;background:linear-gradient(165deg,#0c2344,#08162e 62%,#0a1230);box-shadow:0 16px 34px rgba(4,18,43,.15)}
+.wordQuestSummary .art{height:186px;background:#071326}
+.wordQuestSummary .art img{object-fit:cover;object-position:center;filter:saturate(1.08) brightness(.88)}
+.wordQuestSummary .art::after{background:linear-gradient(0deg,#0c2344 1%,rgba(9,29,58,.15) 64%,rgba(3,10,24,.12))}
+.wordQuestSummary .eyebrow{color:#67ddff}
+.wordQuestSummary h2,.wordQuestSummary .stats dd{color:#f7fbff}
+.wordQuestSummary .stats dt,.wordQuestSummary .selection,.wordQuestSummary .help{color:#b8c9df}
+.wordQuestSummary .selection{border-color:rgba(146,187,239,.2)}
+.wordQuestSummary .start{border-bottom-color:#2158c4;background:linear-gradient(100deg,#2f74eb,#6555d9);box-shadow:0 8px 22px rgba(30,92,214,.24)}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){.wordQuestTasks button:hover{transform:translateY(-2px);border-color:#4d92f5;box-shadow:0 9px 20px rgba(34,98,190,.12)}.wordQuestTasks button:hover .wordQuestRune{transform:rotate(-3deg) scale(1.04)}}
+@media(prefers-reduced-motion:no-preference){.wordQuestTasks button,.wordQuestRune{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}}
+@keyframes wordQuestDrift{from{transform:scale(1.02) translate3d(-1%,0,0)}to{transform:scale(1.08) translate3d(1.5%,-1%,0)}}
+@media(min-width:768px) and (max-width:1050px){.root[data-game='wordquest'] .wordQuestHeader{min-height:178px;padding:20px}.root[data-game='wordquest'] .wordQuestHeader .headerCopy{max-width:62%}.root[data-game='wordquest'] .wordQuestHeader h1{font-size:1.8rem}.root[data-game='wordquest'] .wordQuestHeader .headerTools{padding:8px}.wordQuestHeaderArt{width:55%}.wordQuestTasks{grid-template-columns:repeat(2,minmax(0,1fr))}.wordQuestTasks button{min-height:66px}.wordQuestSummary .art{height:156px}}
+@media(min-width:768px) and (max-width:850px){.root[data-game='wordquest'] .wordQuestHeader .headerCopy{max-width:72%}.root[data-game='wordquest'] .wordQuestHeader .headerTools{align-self:center}.wordQuestHeaderArt{width:48%}}

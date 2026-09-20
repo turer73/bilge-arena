@@ -139,3 +139,136 @@
 @media (min-width: 768px) and (prefers-reduced-motion: reduce) {
   .root *, .result * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* WordQuest keeps the quiz mechanics intact while carrying the magical-book identity into play. */
+.root[data-game='wordquest'] {
+  --quiz-header-background: linear-gradient(115deg, #173f91 0%, #4b4fbd 56%, #166b91 100%);
+  background:
+    radial-gradient(circle at 8% 4%, rgba(81, 202, 255, .12), transparent 28%),
+    radial-gradient(circle at 92% 18%, rgba(124, 92, 241, .1), transparent 26%),
+    var(--app-bg);
+}
+.root[data-game='wordquest'] .header {
+  --quiz-header-background: linear-gradient(115deg, #173f91 0%, #4b4fbd 56%, #166b91 100%);
+  border-color: color-mix(in srgb, #5b9cf8 54%, var(--app-border));
+  overflow: hidden;
+}
+.root[data-game='wordquest'] .header::after {
+  content: 'A   B   C';
+  position: absolute;
+  right: 76px;
+  top: -13px;
+  color: rgba(255, 255, 255, .1);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 58px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1;
+  pointer-events: none;
+  transform: rotate(-4deg);
+}
+.root[data-game='wordquest'] [data-quiz-question] {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: color-mix(in srgb, #4f8dec 46%, var(--app-border));
+  background: linear-gradient(145deg, color-mix(in srgb, #3b82f6 7%, var(--app-card)), color-mix(in srgb, #6b5ce7 5%, var(--app-card)));
+  box-shadow: 0 14px 38px rgba(30, 79, 162, .12);
+}
+.root[data-game='wordquest'] [data-quiz-question]::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  right: -70px;
+  top: -80px;
+  width: 210px;
+  height: 210px;
+  border: 1px solid rgba(88, 190, 255, .14);
+  border-radius: 50%;
+  box-shadow: 0 0 70px rgba(93, 122, 240, .1), inset 0 0 35px rgba(91, 214, 255, .08);
+}
+.root[data-game='wordquest'] [data-quiz-question-meta] { border-color: color-mix(in srgb, #5798f0 28%, var(--app-border)); }
+.root[data-game='wordquest'] [data-quiz-question-number] { color: #2f74dd; }
+.root[data-game='wordquest'] [data-quiz-option] {
+  border-color: color-mix(in srgb, #4e83d8 30%, var(--app-border));
+  background: color-mix(in srgb, #315fbd 4%, var(--app-card-sunken));
+}
+.root[data-game='wordquest'] [data-quiz-option] > span:first-child {
+  border-color: color-mix(in srgb, #4b92ec 46%, var(--app-border));
+  background: linear-gradient(145deg, color-mix(in srgb, #57cfee 14%, var(--app-card)), color-mix(in srgb, #6756db 10%, var(--app-card)));
+  color: #2867c9;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+@media (hover: hover) {
+  .root[data-game='wordquest'] [data-quiz-option='idle']:hover {
+    border-color: #4c91ef;
+    background: color-mix(in srgb, #3b82f6 10%, var(--app-card));
+    box-shadow: 0 8px 22px rgba(32, 99, 195, .1);
+  }
+}
+
+.wordQuestTheme,
+.root[data-game='wordquest'] {
+  --app-bg: #040916;
+  --app-card: #0d1b35;
+  --app-card-sunken: #08142a;
+  --app-hover: #122545;
+  --app-border: #2a4169;
+  --app-border-soft: #203655;
+  --app-shadow: rgba(0, 0, 0, .5);
+  --app-shadow-accent: #173b72;
+  --app-text: #f4f8ff;
+  --app-text-sub: #b7c5dc;
+  --app-text-muted: #8294b1;
+  --app-disabled: #41516d;
+  --app-accent: #3b82f6;
+  --app-accent-strong: #2258bd;
+  --app-accent-text: #70ddff;
+  --app-accent-ink: #dceeff;
+  --app-accent-tint: rgba(55, 116, 221, .2);
+  --app-accent-border: rgba(92, 158, 247, .32);
+  --app-success: #5ee3a7;
+  --app-success-solid: #22c55e;
+  --app-success-strong: #16884a;
+  --app-success-ink: #a7f3d0;
+  --app-success-tint: rgba(22, 163, 74, .18);
+  --app-success-border: rgba(74, 222, 128, .38);
+  --app-warn: #f8c85d;
+  --app-warn-strong: #d99020;
+  --app-warn-ink: #fde7a7;
+  --app-warn-tint: rgba(180, 112, 20, .18);
+  --app-warn-border: rgba(251, 191, 36, .38);
+  --app-danger: #ff8094;
+  --app-danger-strong: #e11d48;
+  --app-danger-ink: #fecdd3;
+  --app-danger-tint: rgba(159, 18, 57, .24);
+  --app-danger-border: rgba(251, 113, 133, .42);
+  color-scheme: dark;
+}
+.wordQuestTheme {
+  min-height: 100dvh;
+  color: var(--app-text);
+  background:
+    radial-gradient(circle at 10% 6%, rgba(69, 116, 238, .18), transparent 28rem),
+    radial-gradient(circle at 90% 74%, rgba(63, 205, 238, .1), transparent 32rem),
+    var(--app-bg);
+}
+.root[data-game='wordquest'] {
+  color: var(--app-text);
+  background:
+    radial-gradient(circle at 8% 4%, rgba(81, 202, 255, .12), transparent 28%),
+    radial-gradient(circle at 92% 18%, rgba(124, 92, 241, .1), transparent 26%),
+    var(--app-bg);
+}
+.root[data-game='wordquest'] [data-quiz-feedback] {
+  backdrop-filter: blur(14px);
+}
+.root[data-game='wordquest'] [data-quiz-feedback='wrong'] {
+  background: linear-gradient(145deg, rgba(91, 20, 42, .9), rgba(40, 13, 32, .92));
+}
+.root[data-game='wordquest'] [data-quiz-feedback='correct'] {
+  background: linear-gradient(145deg, rgba(13, 76, 58, .9), rgba(8, 42, 39, .92));
+}
+.root[data-game='wordquest'] [data-quiz-solution-summary] {
+  color: #f4f8ff;
+}

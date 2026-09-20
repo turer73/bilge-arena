@@ -594,7 +594,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
       return (
         <>
           {resultShellStyle}
-          <div className="mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] p-4 text-center text-[var(--app-text)] animate-scaleIn md:max-w-[680px]">
+          <div data-game={game} className={`mx-auto flex min-h-[100dvh] max-w-[440px] flex-col justify-center gap-4 bg-[var(--app-bg)] p-4 text-center text-[var(--app-text)] animate-scaleIn md:max-w-[680px] ${game === 'wordquest' ? quizStyles.wordQuestTheme : ''}`}>
             <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[var(--app-accent)] to-[var(--app-accent-strong)] p-5 pb-7 text-white shadow-[0_7px_0_var(--app-accent-strong)]">
               <div className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[24px] border-white/10" />
               <BilgeChan pose="wave" height={148} priority className="mx-auto drop-shadow-[0_8px_10px_rgba(15,23,42,.18)]" />
@@ -634,34 +634,38 @@ export function QuizEngine({ game }: QuizEngineProps) {
       return (
         <>
           {resultShellStyle}
-          <DenemeResult
-            gameName={gameDef.name}
-            totalTime={quiz.denemeConfig.totalTime}
-            elapsedTime={quiz.elapsed.getElapsed()}
-            strategyAnalysis={strategyResult.result?.analysis ?? null}
-            onRestart={quiz.handleRestart}
-            onExit={quiz.handleRestart}
-          />
+          <div data-game={game} className={game === 'wordquest' ? quizStyles.wordQuestTheme : undefined}>
+            <DenemeResult
+              gameName={gameDef.name}
+              totalTime={quiz.denemeConfig.totalTime}
+              elapsedTime={quiz.elapsed.getElapsed()}
+              strategyAnalysis={strategyResult.result?.analysis ?? null}
+              onRestart={quiz.handleRestart}
+              onExit={quiz.handleRestart}
+            />
+          </div>
         </>
       )
     }
     return (
       <>
         {resultShellStyle}
-        <ResultScreen
-          onRestart={quiz.handleRestart}
-          onExit={quiz.handleRestart}
-          coinsEarned={sessionSaver.savedSession?.coinsEarned ?? null}
-          saveStatus={sessionSaver.saveStatus}
-          savedTotalXP={sessionSaver.savedSession?.totalXP ?? null}
-          savedCorrectCount={sessionSaver.savedSession?.correctCount ?? null}
-          savedWrongCount={sessionSaver.savedSession?.wrongCount ?? null}
-        />
-        <ComponentErrorBoundary label="Reklam" variant="minimal">
-          <div className="mx-auto max-w-[728px] px-4 pb-6">
-            <AdBanner slot="result" />
-          </div>
-        </ComponentErrorBoundary>
+        <div data-game={game} className={game === 'wordquest' ? quizStyles.wordQuestTheme : undefined}>
+          <ResultScreen
+            onRestart={quiz.handleRestart}
+            onExit={quiz.handleRestart}
+            coinsEarned={sessionSaver.savedSession?.coinsEarned ?? null}
+            saveStatus={sessionSaver.saveStatus}
+            savedTotalXP={sessionSaver.savedSession?.totalXP ?? null}
+            savedCorrectCount={sessionSaver.savedSession?.correctCount ?? null}
+            savedWrongCount={sessionSaver.savedSession?.wrongCount ?? null}
+          />
+          <ComponentErrorBoundary label="Reklam" variant="minimal">
+            <div className="mx-auto max-w-[728px] px-4 pb-6">
+              <AdBanner slot="result" />
+            </div>
+          </ComponentErrorBoundary>
+        </div>
       </>
     )
   }
@@ -705,7 +709,7 @@ export function QuizEngine({ game }: QuizEngineProps) {
     {/* Can kaybi kirmizi flash */}
     {quiz.showLifeLost && <LifeLostOverlay />}
 
-    <div data-responsive-quiz-shell data-quiz-design="academy" style={{ '--quiz-color': gameDef.colorHex } as CSSProperties} className={`${quizStyles.root} relative mx-auto min-h-[100dvh] w-full max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:max-w-[720px] md:p-5 lg:my-6 lg:min-h-0 lg:max-w-[1120px] lg:rounded-[32px] lg:border-2 lg:border-[var(--app-border)] lg:shadow-[0_8px_0_var(--app-shadow)] ${autoPaused ? 'game-auto-paused' : ''}`}>
+    <div data-responsive-quiz-shell data-quiz-design="academy" data-game={game} style={{ '--quiz-color': gameDef.colorHex } as CSSProperties} className={`${quizStyles.root} relative mx-auto min-h-[100dvh] w-full max-w-[440px] bg-[var(--app-bg)] p-3 text-[var(--app-text)] md:max-w-[720px] md:p-5 lg:my-6 lg:min-h-0 lg:max-w-[1120px] lg:rounded-[32px] lg:border-2 lg:border-[var(--app-border)] lg:shadow-[0_8px_0_var(--app-shadow)] ${autoPaused ? 'game-auto-paused' : ''}`}>
       {autoPaused && (
         <div className="fixed inset-0 z-[180] flex items-center justify-center bg-[var(--app-overlay)] px-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="auto-pause-title">
           <section className="w-full max-w-sm rounded-[26px] border-2 border-[var(--app-border)] bg-[var(--app-card)] p-5 text-center shadow-[0_8px_0_rgba(15,23,42,.18)]">

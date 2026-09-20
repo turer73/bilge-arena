@@ -111,9 +111,15 @@ describe('Wide game preparation', () => {
     expect(screen.getByRole('button',{name:'Başlat · 10 soru'})).toBeDisabled()
   })
   it('does not introduce an exam filter into WordQuest', () => {
-    render(<DesktopGameLobby {...makeProps()} game="wordquest" selectedExamRef={null} />)
+    const props=makeProps()
+    const {container}=render(<DesktopGameLobby {...props} game="wordquest" selectedExamRef={null} />)
     expect(screen.queryByLabelText('Sınav kapsamı')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Konu')).toBeInTheDocument()
+    expect(container.querySelector('[data-desktop-game-lobby]')).toHaveAttribute('data-game','wordquest')
+    expect(screen.getByRole('heading',{name:'Büyülü kelime yolculuğunu kur'})).toBeInTheDocument()
+    expect(screen.getByRole('group',{name:'WordQuest görev alanı'})).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button',{name:'Vocabulary · Kelime hazinesi'}))
+    expect(props.onSelectCategory).toHaveBeenCalledWith('vocabulary')
   })
   it('updates an entry URL with the new scope and drops an out-of-scope topic without dropping unrelated params', () => {
     window.history.replaceState(null,'','/arena/turkce?exam_ref=AYT-SOZ&category=edebiyat&source=practice#settings')

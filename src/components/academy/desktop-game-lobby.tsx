@@ -39,6 +39,16 @@ const GAME_GUIDANCE: Record<GameSlug, string> = {
   wordquest: 'Kelimeyi tek başına değil, bağlamın içinde yakala.',
 }
 
+const WORDQUEST_TASKS: Readonly<Record<string, { rune: string; hint: string }>> = {
+  vocabulary: { rune: 'V', hint: 'Kelime hazinesi' },
+  grammar: { rune: 'G', hint: 'Dil yapıları' },
+  cloze_test: { rune: 'C', hint: 'Boşluğu tamamla' },
+  dialogue: { rune: 'D', hint: 'Konuşma akışı' },
+  restatement: { rune: 'R', hint: 'Aynı anlamı bul' },
+  sentence_completion: { rune: 'S', hint: 'Cümleyi tamamla' },
+  phrasal_verbs: { rune: 'P', hint: 'Fiil kalıpları' },
+}
+
 const MODE_GUIDANCE: Readonly<Record<string, { expression: BilgeExpression; message: string }>> = {
   blitz: { expression: 'kararli', message: 'Hızlı ol; ama sorunun ne istediğini görmeden işaretleme.' },
   marathon: { expression: 'destekleyici', message: 'Ritmini koru. Uzun turu küçük adımlarla tamamlayacağız.' },
@@ -67,6 +77,7 @@ export function DesktopGameLobby(props: LobbyProps) {
   }, [searchParams, onSelectMode])
   const { character } = useBilgeCharacter()
   const gameDef = GAMES[game]
+  const isWordQuest = game === 'wordquest'
   const socialV2 = isTytSocialV2ClientEnabled()
   const examRef = game === 'sosyal' && socialV2 ? selectedExamRef ?? 'TYT' : selectedExamRef
   const modes = getModesForContext(game, examRef, socialV2)
@@ -118,14 +129,17 @@ export function DesktopGameLobby(props: LobbyProps) {
     onSelectMode(value)
   }
 
-  return <div className={styles.root} data-responsive-game-lobby data-desktop-game-lobby style={{ '--game-color': gameDef.colorHex } as CSSProperties}>
+  return <div className={styles.root} data-game={game} data-responsive-game-lobby data-desktop-game-lobby style={{ '--game-color': gameDef.colorHex } as CSSProperties}>
     <ThemeToggle variant="sync-only" />
-    <header className={styles.header}>
+    <header className={`${styles.header} ${isWordQuest ? styles.wordQuestHeader : ''}`}>
+      {isWordQuest && <div className={styles.wordQuestHeaderArt} aria-hidden="true"><Image src={ART.wordquest} alt="" fill priority sizes="(min-width: 1051px) 620px, 48vw" /></div>}
       <div className={styles.headerCopy}>
         <div className={styles.headerNavigation}>
           <Link className={styles.back} href="/arena"><ChevronLeft size={17} aria-hidden="true" /> Oyunlara dön</Link>
         </div>
-        <p className={styles.eyebrow}>OYUN HAZIRLIĞI</p><h1>{gameDef.name} turunu kur</h1><p>Oyun biçimini seç, istersen soruları özelleştir. Hazır olduğunda başla.</p>
+        <p className={styles.eyebrow}>{isWordQuest ? 'WORDQUEST · YDT İNGİLİZCE' : 'OYUN HAZIRLIĞI'}</p>
+        <h1>{isWordQuest ? 'Büyülü kelime yolculuğunu kur' : `${gameDef.name} turunu kur`}</h1>
+        <p>{isWordQuest ? 'Kelimeleri bağlam içinde keşfet, dil bilgisi görevlerini tamamla ve her turda İngilizceni güçlendir.' : 'Oyun biçimini seç, istersen soruları özelleştir. Hazır olduğunda başla.'}</p>
       </div>
       <div className={styles.headerTools}>
         <div className={styles.guide} data-lobby-guide>
@@ -138,7 +152,7 @@ export function DesktopGameLobby(props: LobbyProps) {
     <div className={styles.columns}>
       <div className={styles.main}>
         <section className={styles.panel} aria-labelledby="desktop-mode-title">
-          <h2 id="desktop-mode-title"><span className={styles.step}>1</span> Nasıl oynamak istersin?</h2>
+          <h2 id="desktop-mode-title"><span className={styles.step}>1</span> {isWordQuest ? 'Macera ritmini seç' : 'Nasıl oynamak istersin?'}</h2>
           <div className={styles.modes} role="group" aria-label="Oyun biçimi">
             {visibleModes.map(item => {
               const modeArt = MODE_ART[item.id]
@@ -156,17 +170,34 @@ export function DesktopGameLobby(props: LobbyProps) {
           <button className={styles.more} type="button" aria-expanded={expandedModes} onClick={() => setExpandedModes(value => !value)}>{expandedModes ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}{expandedModes ? 'Daha az mod göster' : 'Blitz, Maraton ve Boss'}</button>
         </section>
         <section className={styles.panel} aria-labelledby="desktop-settings-title">
-          <h2 id="desktop-settings-title"><span className={styles.step}>2</span> Soru ayarları <SlidersHorizontal size={17} aria-hidden="true" /></h2>
-          <p className={styles.help}>Mevcut seçimlerle başlayabilir veya aşağıdan değiştirebilirsin.</p>
-          <div className={styles.fields}>
+          <h2 id="desktop-settings-title"><span className={styles.step}>2</span> {isWordQuest ? 'Görev rotanı belirle' : 'Soru ayarları'} <SlidersHorizontal size={17} aria-hidden="true" /></h2>
+          <p className={styles.help}>{isWordQuest ? 'Bir görev alanı seç veya tüm bölümleri aynı turda karıştır.' : 'Mevcut seçimlerle başlayabilir veya aşağıdan değiştirebilirsin.'}</p>
+          {isWordQuest && <div className={styles.wordQuestTasks} role="group" aria-label="WordQuest görev alanı">
+            <button type="button" aria-label="Tüm görevler · Karışık macera" aria-pressed={selectedCategory === null} onClick={() => selectTopic(null)}>
+              <span className={styles.wordQuestRune} aria-hidden="true">Aa</span>
+              <span><strong>Tüm görevler</strong><small>Karışık macera</small></span>
+            </button>
+            {categories.map(category => {
+              const task = WORDQUEST_TASKS[category] ?? { rune: category.slice(0, 1).toUpperCase(), hint: 'İngilizce görevi' }
+              return <button type="button" key={category} aria-label={`${getCategoryLabel(category)} · ${task.hint}`} aria-pressed={selectedCategory === category} onClick={() => selectTopic(category)}>
+                <span className={styles.wordQuestRune} aria-hidden="true">{task.rune}</span>
+                <span><strong>{getCategoryLabel(category)}</strong><small>{task.hint}</small></span>
+              </button>
+            })}
+          </div>}
+          {isWordQuest && <label className={styles.srOnly}>Konu<select aria-label="Konu" value={categoryIsValid ? selectedCategory ?? '' : '__unavailable__'} onChange={event => selectTopic(event.target.value || null)}>
+            {!categoryIsValid && <option value="__unavailable__" disabled>Geçerli bir konu seç</option>}
+            <option value="">Tüm konular</option>{categories.map(category => <option key={category} value={category}>{getCategoryLabel(category)}</option>)}
+          </select></label>}
+          <div className={`${styles.fields} ${isWordQuest ? styles.wordQuestFields : ''}`}>
             {game !== 'wordquest' && <label>Sınav kapsamı<select aria-label="Sınav kapsamı" value={examRef ?? ''} onChange={event => selectScope(event.target.value || null)}>
               {game !== 'sosyal' && <option value="">Tüm sınavlar</option>}
               {gameDef.examTags.map(ref => <option key={ref} value={ref}>{EXAMS[ref] ?? ref}</option>)}
             </select></label>}
-            <label>Konu<select aria-label="Konu" disabled={Boolean(exactSocial)} value={categoryIsValid ? selectedCategory ?? '' : '__unavailable__'} onChange={event => selectTopic(event.target.value || null)}>
+            {!isWordQuest && <label>Konu<select aria-label="Konu" disabled={Boolean(exactSocial)} value={categoryIsValid ? selectedCategory ?? '' : '__unavailable__'} onChange={event => selectTopic(event.target.value || null)}>
               {!categoryIsValid && <option value="__unavailable__" disabled>Geçerli bir konu seç</option>}
               <option value="">Tüm konular</option>{categories.map(category => <option key={category} value={category}>{getCategoryLabel(category)}</option>)}
-            </select></label>
+            </select></label>}
             <label>Zorluk<select aria-label="Zorluk" disabled={Boolean(exactSocial)} value={selectedDifficulty ?? 0} onChange={event => onSelectDifficulty(Number(event.target.value) || null)}>{DIFFICULTIES.map((label, index) => <option value={index} key={label}>{label}</option>)}</select></label>
           </div>
           {!categoryIsValid && <p role="alert" className={styles.error}>Önceki konu bu sınavda yok. Devam etmek için konu seçimini güncelle.</p>}
@@ -179,10 +210,10 @@ export function DesktopGameLobby(props: LobbyProps) {
         {personalizedMockCard && <details className={styles.alternative}><summary>Sana özel bir deneme mi arıyorsun?</summary><div data-personalized-mock-slot>{personalizedMockCard}</div></details>}
       </div>
       <aside className={`${styles.sidebar} ${props.dailyPlanAction ? styles.sidebarWithPlan : ''}`} aria-label="Tur özeti">
-        <section className={styles.summary}>
+        <section className={`${styles.summary} ${isWordQuest ? styles.wordQuestSummary : ''}`}>
           <div className={styles.art} aria-hidden="true"><Image src={ART[game]} alt="" fill sizes="(min-width: 1051px) 320px, 280px" /></div>
           <div className={styles.summaryContent}>
-            <p className={styles.eyebrow}>{preview ? 'MİSAFİR ÖNİZLEMESİ' : 'BU TURDA'}</p><h2>{mode.name}</h2>
+            <p className={styles.eyebrow}>{preview ? 'MİSAFİR ÖNİZLEMESİ' : isWordQuest ? 'GÖREV ÖZETİ' : 'BU TURDA'}</p><h2>{mode.name}</h2>
             <dl className={styles.stats}><div><dt>Soru</dt><dd>{preview ? 1 : mode.questionCount}</dd></div><div><dt>Süre</dt><dd>{timeLabel}</dd></div><div><dt>Can</dt><dd>{mode.lives ?? 'Sınırsız'}</dd></div></dl>
             <p className={styles.selection}>{game === 'wordquest' ? 'İngilizce' : examRef ? EXAMS[examRef] ?? examRef : 'Tüm sınavlar'} · {exactSocial ? 'Sabit bölüm' : categoryLabel} · {exactSocial ? 'Standart dağılım' : DIFFICULTIES[selectedDifficulty ?? 0]}</p>
             {preview && <p className={styles.help}>Giriş yapmadan 1 soruyu deneyebilirsin. Tam tur ve ilerleme kaydı için hesabına giriş yap.</p>}
