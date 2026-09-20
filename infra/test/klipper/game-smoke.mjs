@@ -1,13 +1,13 @@
-// Run INSIDE the dedicated test app, after auth-smoke.mjs --game-schema.
-// Real Next API calls with private synthetic cookies. Never prints tokens.
+// Run INSIDE the dedicated test app.
+// Real Next API calls with memory-only synthetic cookies. Never prints tokens.
 import assert from 'node:assert/strict'
-import {readFileSync} from 'node:fs'
 import {randomUUID} from 'node:crypto'
+import {createSyntheticSessions} from './synthetic-sessions.mjs'
 const origin='http://localhost:3137'
 assert.equal(process.env.BILGE_ISOLATED_TEST,'true')
 assert.equal(process.env.NEXT_PUBLIC_SUPABASE_URL,origin)
 assert.equal(process.env.BILGE_ARENA_RPC_URL,'http://rooms-rest:3000')
-const sessions=JSON.parse(readFileSync(new URL('test-sessions.json',import.meta.url),'utf8'))
+const sessions=await createSyntheticSessions({gameSchema:true})
 assert.equal(sessions.length,3)
 const cookies=sessions.map(s=>s.cookies.map(c=>`${c.name}=${encodeURIComponent(c.value)}`).join('; '))
 async function api(path,user=0,body,expected=200) {

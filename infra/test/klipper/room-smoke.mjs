@@ -2,13 +2,12 @@
 /**
  * Real, synthetic-only PostgREST smoke for the synchronous Oda lifecycle.
  * Run inside the Node 22 app container. It intentionally never logs tokens,
- * response bodies, emails, or the source session fixture.
+ * response bodies, emails, or session credentials.
  */
-import { readFile } from 'node:fs/promises'
+import {createSyntheticSessions} from './synthetic-sessions.mjs'
 
 const roomsUrl = process.env.BILGE_ARENA_RPC_URL
 const expectedRoomsUrl = 'http://rooms-rest:3000'
-const sessionFile = new URL('./test-sessions.json', import.meta.url)
 const expectedOptionValues = new Map([
   [1, '2'], [2, '4'], [3, '5'], [4, '7'], [5, '3'],
   [6, '8'], [7, '0'], [8, '4'], [9, '8'], [10, '5'],
@@ -81,8 +80,8 @@ async function currentRound(token, roomId, index) {
 
 async function main() {
   assert(roomsUrl === expectedRoomsUrl, `BILGE_ARENA_RPC_URL must equal ${expectedRoomsUrl}`)
-  const sessions = JSON.parse(await readFile(sessionFile, 'utf8'))
-  assert(Array.isArray(sessions) && sessions.length === 3, 'test-sessions.json must contain exactly three sessions')
+  const sessions = await createSyntheticSessions()
+  assert(Array.isArray(sessions) && sessions.length === 3, 'expected exactly three memory-only sessions')
   for (const session of sessions) {
     assert(typeof session?.access_token === 'string' && session.access_token.length > 20, 'invalid synthetic access token')
     assert(typeof session?.user?.id === 'string' && session.user.id.length > 20, 'invalid synthetic user id')

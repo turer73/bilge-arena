@@ -105,8 +105,11 @@ Other categories, 15-question presets and async mode are not seeded/tested.
 - Gateway only binds host `127.0.0.1:3137`; Mailpit UI only `127.0.0.1:55325`.
 - Databases, GoTrue admin and room REST have no host/public ports.
 - No production secrets, database rows, Google OAuth or SMTP relay are used.
-- New credentials live only in server-side `.env` (0600); session fixture is
-  `test-sessions.json` (0600). Never print, commit or distribute either.
+- New credentials live only in server-side `.env` (0600). Compose injects only
+  the required values into the isolated app container.
+- Synthetic access tokens and cookies remain in process memory. Current smoke
+  scripts do not read or write `test-sessions.json`; its ignore entry is retained
+  only as a cleanup guard for older deployments.
 - Signup is disabled; account entry is restricted to three pre-created users,
   exact localhost origin and a same-site CSRF-protected POST.
 - The original Auth fixture is minimal; the current gameplay upgrade described

@@ -2,12 +2,12 @@
 // Reachable only through the SSH-only gateway; uses real GoTrue password auth.
 import http from 'node:http'
 import {randomBytes, timingSafeEqual} from 'node:crypto'
-import {readFileSync} from 'node:fs'
 import {createServerClient} from '@supabase/ssr'
 const origin='http://localhost:3137'
 if(process.env.BILGE_ISOLATED_TEST!=='true' || process.env.NODE_ENV!=='development' || process.env.NEXT_PUBLIC_SUPABASE_URL!==origin) throw new Error('Isolated development stack required')
-const env=Object.fromEntries(readFileSync(new URL('.env',import.meta.url),'utf8').trim().split('\n').map(line=>{const p=line.indexOf('=');return [line.slice(0,p),line.slice(p+1)]}))
-if(env.TEST_ORIGIN!==origin) throw new Error('Unexpected test origin')
+const anonKey=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const testPassword=process.env.TEST_USER_PASSWORD
+if(!anonKey || !testPassword) throw new Error('Isolated test credentials are unavailable')
 const names=['host','player1','player2']
 const cookiePairs=header=>(header||'').split(';').flatMap(v=>{const p=v.indexOf('=');return p<0?[]:[{name:v.slice(0,p).trim(),value:decodeURIComponent(v.slice(p+1))}]})
 const serialize=({name,value,options={}})=>`${name}=${encodeURIComponent(value)}; Path=${options.path||'/'}; SameSite=Lax${options.maxAge!==undefined?`; Max-Age=${options.maxAge}`:''}${options.httpOnly?'; HttpOnly':''}`
@@ -34,9 +34,9 @@ http.createServer(async(req,res)=>{
     const actual=form.get('nonce')||''
     if(!expected || expected.length!==actual.length || !timingSafeEqual(Buffer.from(expected),Buffer.from(actual)) || !names.includes(form.get('account'))) {res.writeHead(403);return res.end('Forbidden: test form expired')}
     let outputCookies=[]
-    const client=createServerClient(origin,env.ANON_KEY,{cookies:{getAll:()=>cookies,setAll:values=>{outputCookies.push(...values)}}})
-    const {error}=await client.auth.signInWithPassword({email:`academy-${form.get('account')}@example.test`,password:env.TEST_USER_PASSWORD})
-    if(error){res.writeHead(503);return res.end('Test hesabi hazir degil. auth-smoke.mjs calistirilmali.')}
+    const client=createServerClient(origin,anonKey,{cookies:{getAll:()=>cookies,setAll:values=>{outputCookies.push(...values)}}})
+    const {error}=await client.auth.signInWithPassword({email:`academy-${form.get('account')}@example.test`,password:testPassword})
+    if(error){res.writeHead(503);return res.end('Test hesabi kullanilamiyor.')}
     res.setHeader('Set-Cookie',[...outputCookies.map(serialize),'ba_test_csrf=; Path=/__test/login; HttpOnly; SameSite=Strict; Max-Age=0'])
     res.writeHead(303,{Location:'/arena/matematik?exam_ref=TYT'})
     return res.end()
