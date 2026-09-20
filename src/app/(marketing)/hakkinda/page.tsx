@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { TrackedCtaLink } from '@/components/marketing/tracked-cta-link'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
+import styles from '../academy-marketing.module.css'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -209,36 +210,38 @@ const jsonLd = {
 
 export default function HakkindaPage() {
   return (
-    <div className="overflow-hidden">
+    <div className={`${styles.page} overflow-hidden`} data-academy-marketing="about">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <section className="relative border-b border-[var(--border)] px-6 py-16 sm:py-20 lg:px-8 lg:py-24">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-70"
-          style={{
-            background:
-              'radial-gradient(circle at 78% 18%, var(--reward-bg), transparent 30%), radial-gradient(circle at 16% 78%, var(--focus-bg), transparent 34%)',
-          }}
-        />
-        <div className="relative mx-auto grid max-w-[1200px] items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <nav aria-label="Sayfa yolu" className="mb-7 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+      <section className={`${styles.hero} relative border-b border-[var(--border)] px-6 py-16 sm:py-20 lg:px-8 lg:py-24`}>
+        <div className={styles.heroBackdrop} aria-hidden="true">
+          <Image
+            src="/academy/academy-landscape.png"
+            alt=""
+            fill
+            sizes="(min-width: 1440px) 1360px, 100vw"
+            priority
+          />
+        </div>
+        <div className={`${styles.heroGrid} relative mx-auto grid max-w-[1200px] items-center gap-12`}>
+          <div className={styles.heroCopy}>
+            <nav aria-label="Sayfa yolu" className={`${styles.breadcrumb} mb-7 flex items-center gap-2 text-xs`}>
               <Link href="/" className="transition-colors hover:text-[var(--focus-light)]">Ana Sayfa</Link>
               <ChevronRight size={13} aria-hidden="true" />
               <span aria-current="page">Hakkımızda</span>
             </nav>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--reward-border)] bg-[var(--reward-bg)] px-3 py-1.5 text-xs font-bold text-[var(--reward-light)]">
+            <div className={`${styles.eyebrow} mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold`}>
               <Sparkles size={14} aria-hidden="true" />
               Bilge Arena’yı tanı
             </div>
-            <h1 className="font-display text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className={`${styles.heroTitle} font-black`}>
               Çalışmayı bir yük değil,
               <span className="mt-2 block text-[var(--focus-light)]">ilerleme hissi yapan arena.</span>
             </h1>
-            <p className="mt-6 max-w-[690px] text-base leading-8 text-[var(--text-sub)] sm:text-lg">
+            <p className={`${styles.heroDescription} mt-6 max-w-[690px] text-base leading-8 sm:text-lg`}>
               Bilge Arena; nitelikli soruyu, öğrencinin kazanım kanıtını ve öğretmenin
               müdahalesini aynı öğrenme döngüsünde buluşturan Türkiye odaklı bir eğitim
               teknolojisi projesidir. Oyunlaştırma görünen yüzüdür; soru kalitesi,
@@ -252,15 +255,30 @@ export default function HakkindaPage() {
 
           <div className="relative mx-auto flex w-full max-w-[460px] items-center justify-center">
             <div className="absolute h-72 w-72 rounded-full bg-[var(--focus-bg)] blur-3xl" />
-            <div className="relative w-full rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-2xl sm:p-10">
-              <div className="mx-auto flex h-36 w-36 items-center justify-center rounded-full border border-[var(--focus-border)] bg-[var(--card)] shadow-[0_0_50px_var(--focus-bg)]">
-                <Image src="/logo/icon-512-transparent.png" alt="Bilge Arena logosu" width={144} height={144} priority className="h-28 w-28 object-contain" />
+            <div className={`${styles.brandCard} ${styles.glassCard} relative w-full rounded-[28px]`}>
+              <div className={styles.brandCrest}>
+                <Image src="/academy/brand-crest-orbit.png" alt="Bilge Arena logosu" fill sizes="118px" />
               </div>
-              <div className="mt-7 text-center">
-                <p className="font-display text-2xl font-black">Bilge Arena</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">Öğren · Kazan · Yüksel</p>
+              <div className="mt-4 text-center">
+                <p className="text-2xl font-black tracking-tight">Bilge Arena</p>
+                <p className="mt-1 text-sm leading-6 text-[#aebddd]">Öğren · Kazan · Yüksel</p>
               </div>
-              <div className="mt-7 grid grid-cols-2 gap-3">
+              <div className={styles.companions} aria-label="Bilge rehberleri">
+                <div className={styles.companion}>
+                  <span className={styles.companionAvatar}>
+                    <Image src="/academy/bilge/female/destekleyici.png" alt="Kadın Bilge rehber" fill sizes="46px" />
+                  </span>
+                  <span>Kadın Bilge</span>
+                </div>
+                <span className={styles.companionDivider} aria-hidden="true" />
+                <div className={styles.companion}>
+                  <span className={styles.companionAvatar}>
+                    <Image src="/academy/bilge/male/destekleyici.png" alt="Erkek Bilge rehber" fill sizes="46px" />
+                  </span>
+                  <span>Erkek Bilge</span>
+                </div>
+              </div>
+              <div className={`${styles.statsGrid} mt-4 grid grid-cols-2 gap-3`}>
                 {[
                   ['5', 'ders alanı'],
                   ['4', 'sınav kapsamı'],

@@ -52,6 +52,15 @@ describe('Lobby', () => {
     expect(filters).toHaveTextContent('Tümü · Tüm konular · Tümü')
   })
 
+  it('WordQuest mobil lobisini tema seçiminden bağımsız koyu tutar', () => {
+    const { container } = render(<Lobby {...baseProps} game="wordquest" />)
+    const shell = container.querySelector('[data-responsive-game-lobby]')
+
+    expect(shell).toHaveAttribute('data-game', 'wordquest')
+    expect(shell).toHaveStyle('--app-bg: #040916')
+    expect(shell).toHaveStyle('color-scheme: dark')
+  })
+
   it('önceden seçilmiş filtre varsa ayrıntıları açık getirir', () => {
     render(
       <Lobby

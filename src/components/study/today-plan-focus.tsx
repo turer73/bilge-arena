@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import type { ReactNode } from 'react'
 import type { GameSlug } from '@/lib/constants/games'
-import { useTodayPlan } from '@/lib/hooks/use-today-plan'
+import { useTodayPlan, type TodayPlan } from '@/lib/hooks/use-today-plan'
 import { TodayPlanCard } from '@/components/game/today-plan-card'
 import { useGameStore } from '@/stores/game-store'
 import { isPaperModeUiEnabled, paperPackCreateHref } from '@/lib/paper-mode/client'
@@ -15,6 +16,12 @@ import {
   TODAY_PLAN_CONTENT_UNAVAILABLE_MESSAGE,
 } from '@/lib/study/today-plan-contract'
 
+export interface TodayPlanFocusView {
+  plan: TodayPlan | null
+  loading: boolean
+  content: ReactNode
+}
+
 interface TodayPlanFocusProps {
   game: GameSlug
   userId?: string | null
@@ -23,6 +30,8 @@ interface TodayPlanFocusProps {
   showStickyMobileAction?: boolean
   /** Reuse the study page's policy read and form instead of fetching twice. */
   tytSocialPolicy?: TytSocialExamPolicyState
+  /** Optional desktop presentation; shares this instance's plan and start safeguards. */
+  render?: (view: TodayPlanFocusView) => ReactNode
 }
 
 export function TodayPlanFocus(props: TodayPlanFocusProps) {
@@ -47,21 +56,30 @@ function SocialTodayPlanFocus(props: TodayPlanFocusProps) {
   const ready = policy.eligible && policy.status === 'active' && !policy.loading && !policy.saving
   const selectionKey = `${policy.policyVersion}:${policy.selectionEffectiveAt}:${policy.variantCode}`
 
-  return (
-    <div className="space-y-3">
+  const renderView = (view: TodayPlanFocusView) => {
+    const content = <div className="space-y-3">
       {!props.tytSocialPolicy && <TytSocialExamPolicyCardView policy={policy} />}
-      {ready ? (
-        // A newly saved selection gets a fresh read; never reuse another branch's plan.
-        <TodayPlanContent key={selectionKey} {...props} />
-      ) : (
+      {view.content}
+    </div>
+    return props.render ? props.render({ ...view, content }) : content
+  }
+
+  if (ready) {
+    // A newly saved selection gets a fresh read; never reuse another branch's plan.
+    return <TodayPlanContent key={selectionKey} {...props} render={renderView} />
+  }
+
+  return renderView({
+    plan: null,
+    loading: policy.loading || policy.saving,
+    content: (
         <p role="status" className="rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 text-sm font-semibold text-[var(--app-text-sub)]">
           {policy.loading || policy.saving
             ? 'Cevaplama düzeni doğrulanırken günlük plan bekliyor.'
             : 'Günlük plan için TYT Sosyal cevaplama düzenini karttan doğrula.'}
         </p>
-      )}
-    </div>
-  )
+    ),
+  })
 }
 
 function TodayPlanContent({
@@ -70,12 +88,14 @@ function TodayPlanContent({
   examRef,
   selectedCategory,
   showStickyMobileAction = false,
+  render,
 }: TodayPlanFocusProps) {
   const router = useRouter()
   const gameStore = useGameStore()
   const questionExamRef = questionExamRefForGame(game, examRef, isTytSocialV2ClientEnabled())
   const { plan, loading, unavailableReason, unavailableExamRef, fetchPlan } = useTodayPlan(game, userId, questionExamRef, selectedCategory)
   const recoveryExamRef = unavailableExamRef ?? questionExamRef
+  const renderView = (content: ReactNode) => render ? render({ plan, loading, content }) : content
 
   const openGame = () => {
     gameStore.setGame(game)
@@ -88,7 +108,7 @@ function TodayPlanContent({
 
   if (!loading && (!plan || plan.questions.length === 0)) {
     const showDiagnostic = game === 'matematik' && examRef === 'TYT'
-    return (
+    return renderView(
       <div
         className="animate-fadeUp overflow-hidden rounded-[22px] border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_5px_0_var(--app-border)]"
         style={{ animationDelay: '0.28s', animationFillMode: 'both' }}
@@ -152,7 +172,7 @@ function TodayPlanContent({
     router.push(`/arena/${game}?${params}`)
   }
 
-  return (
+  return renderView(
     <TodayPlanCard
       plan={plan}
       loading={loading}

@@ -45,9 +45,11 @@ describe('PublicProfilePage /u/[username]', () => {
     mockRpc.mockResolvedValue({ data: [SAFE_PROFILE] })
     const jsx = await PublicProfilePage({ params: Promise.resolve({ username: 'ali' }) })
     const { container } = render(jsx)
+    expect(container.querySelector('[data-public-profile-screen]')).toHaveClass('max-w-md', 'md:max-w-[900px]')
     expect(container.textContent).toContain('ali')
     expect(container.textContent).toContain('%80') // 80/100
     expect(container.textContent).toContain('1.500') // tr-TR XP
+    expect(container.textContent).toContain('Yalnız kullanıcının paylaşmayı seçtiği oyun istatistikleri gösterilir.')
     // PII sizmamali (display_name RPC'de yok zaten)
     expect(container.textContent).not.toContain('@')
     expect(mockRpc).toHaveBeenCalledWith('get_public_profile', {

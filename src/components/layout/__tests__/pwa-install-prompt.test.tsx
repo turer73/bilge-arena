@@ -49,6 +49,12 @@ function setStandalone(standalone: boolean) {
 beforeEach(() => {
   vi.useFakeTimers()
   localStorage.clear()
+  localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+    essential: true,
+    analytics: false,
+    version: 1,
+    date: new Date().toISOString(),
+  }))
   setStandalone(false)
   // Default: non-iPadOS platform (Linux desktop), maxTouchPoints=0
   setPlatform('Linux x86_64', 0)
@@ -210,5 +216,47 @@ describe('PWAInstallPrompt', () => {
       vi.advanceTimersByTime(5_000)
     })
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  test('10) consent kararı yokken bekler; reddedilince install önerisi çalışır', () => {
+    setUA(ANDROID_UA)
+    localStorage.removeItem('bilge-arena-cookie-consent')
+    render(<PWAInstallPrompt />)
+
+    const event = new Event('beforeinstallprompt')
+    Object.assign(event, { prompt: vi.fn(), userChoice: Promise.resolve({ outcome: 'dismissed' }) })
+    act(() => {
+      window.dispatchEvent(event)
+      vi.advanceTimersByTime(10_000)
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    localStorage.setItem('bilge-arena-cookie-consent', JSON.stringify({
+      essential: true, analytics: false, version: 1, date: new Date().toISOString(),
+    }))
+    act(() => {
+      window.dispatchEvent(new CustomEvent('cookie-banner-state', { detail: { open: false } }))
+      vi.advanceTimersByTime(3_000)
+    })
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  test('11) tercihler yeniden açılınca PWA gizlenir ve dismiss state değişmez', () => {
+    setUA(ANDROID_UA)
+    render(<PWAInstallPrompt />)
+    const event = new Event('beforeinstallprompt')
+    Object.assign(event, { prompt: vi.fn(), userChoice: Promise.resolve({ outcome: 'dismissed' }) })
+    act(() => {
+      window.dispatchEvent(event)
+      vi.advanceTimersByTime(3_000)
+    })
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(localStorage.getItem('pwa-install-dismissed')).toBeNull()
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('cookie-banner-state', { detail: { open: true } }))
+    })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(localStorage.getItem('pwa-install-dismissed')).toBeNull()
   })
 })

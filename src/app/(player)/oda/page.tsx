@@ -8,6 +8,7 @@ import { TabNav } from '@/components/oda/TabNav'
 import { PublicRoomList } from '@/components/oda/PublicRoomList'
 import { QuickPlayPanel } from '@/components/oda/QuickPlayPanel'
 import { ArenaModeCards } from '@/components/oda/ArenaModeCards'
+import { RoomAcademyHero } from '@/components/oda/RoomAcademyHero'
 import { ArrowRight, KeyRound, Plus, UsersRound } from 'lucide-react'
 
 /**
@@ -47,11 +48,11 @@ export default async function Page({
       ? await fetchPublicRooms(session?.access_token ?? null, {
           category: params.cat,
         })
-      : []
+      : { status: 'success' as const, rooms: [] }
 
   return (
     <>
-      <header className="mb-5">
+      <header className="mb-5 md:hidden">
         <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--focus-text)]">
           ODA MODU
         </p>
@@ -64,7 +65,14 @@ export default async function Page({
         </p>
       </header>
 
-      <ArenaModeCards />
+      <RoomAcademyHero />
+
+      <div data-room-dashboard className="md:grid md:grid-cols-[minmax(0,1fr)_300px] md:items-start md:gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+      <aside data-room-modes className="contents md:col-start-2 md:row-start-1 md:block md:sticky md:top-6 lg:top-[calc(var(--navbar-h)+1.5rem)]">
+        <ArenaModeCards compact />
+      </aside>
+
+      <div data-room-main-column className="contents md:col-start-1 md:row-start-1 md:block">
 
       <section aria-labelledby="room-entry-title" className="mb-8">
         <h2 id="room-entry-title" className="sr-only">
@@ -136,7 +144,7 @@ export default async function Page({
 
         {tab === 'public' ? (
           <PublicRoomList
-            rooms={publicRooms}
+            result={publicRooms}
             selectedCategory={params.cat ?? ''}
           />
         ) : myRooms.length === 0 ? (
@@ -149,6 +157,8 @@ export default async function Page({
           </div>
         )}
       </section>
+      </div>
+      </div>
     </>
   )
 }

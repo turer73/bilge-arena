@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import Link from 'next/link'
 import {
   BookOpenText,
@@ -29,8 +29,12 @@ import { QuizLimitBanner } from '@/components/premium/quiz-limit-banner'
 import { AdBanner } from '@/components/ads/ad-banner'
 import { BilgeChan } from '@/components/ui/bilge-chan'
 import { MobileLobbyFlow } from './mobile-lobby-flow'
+import dynamic from 'next/dynamic'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
 
-interface LobbyProps {
+const DesktopGameLobby = dynamic(() => import('@/components/academy/desktop-game-lobby').then(module => module.DesktopGameLobby))
+
+export interface LobbyProps {
   game: GameSlug
   selectedMode: string
   onSelectMode: (mode: QuizMode) => void
@@ -56,6 +60,8 @@ interface LobbyProps {
   }
   loadError?: string | null
   personalizedMockCard?: ReactNode
+  /** Optional wide-screen shortcut; mobile keeps its existing study entry. */
+  dailyPlanAction?: ReactNode
 }
 
 const DIFFICULTY_OPTIONS = [
@@ -86,7 +92,12 @@ const GAME_ICONS: Record<GameSlug, LucideIcon> = {
   wordquest: Languages,
 }
 
-export function Lobby({
+export function Lobby(props: LobbyProps) {
+  const wide = useWideStudy()
+  return wide ? <DesktopGameLobby {...props} /> : <LegacyLobby {...props} />
+}
+
+function LegacyLobby({
   game,
   selectedMode,
   onSelectMode,
@@ -117,6 +128,46 @@ export function Lobby({
   const GameIcon = GAME_ICONS[game]
   const level = getLevelFromXP(userXP)
   const mode = contextModes.find((candidate) => candidate.id === selectedMode) || contextModes[0]
+  const wordQuestDarkStyle = game === 'wordquest'
+    ? ({
+        '--app-bg': '#040916',
+        '--app-card': '#0d1b35',
+        '--app-card-sunken': '#08142a',
+        '--app-hover': '#122545',
+        '--app-border': '#2a4169',
+        '--app-border-soft': '#203655',
+        '--app-shadow': 'rgba(0, 0, 0, 0.5)',
+        '--app-shadow-accent': '#173b72',
+        '--app-text': '#f4f8ff',
+        '--app-text-sub': '#b7c5dc',
+        '--app-text-muted': '#8294b1',
+        '--app-disabled': '#41516d',
+        '--app-accent': '#3b82f6',
+        '--app-accent-strong': '#2258bd',
+        '--app-accent-text': '#70ddff',
+        '--app-accent-ink': '#dceeff',
+        '--app-accent-tint': 'rgba(55, 116, 221, 0.2)',
+        '--app-accent-border': 'rgba(92, 158, 247, 0.32)',
+        '--app-success': '#5ee3a7',
+        '--app-success-solid': '#22c55e',
+        '--app-success-strong': '#16884a',
+        '--app-success-ink': '#a7f3d0',
+        '--app-success-tint': 'rgba(22, 163, 74, 0.18)',
+        '--app-success-border': 'rgba(74, 222, 128, 0.38)',
+        '--app-warn': '#f8c85d',
+        '--app-warn-strong': '#d99020',
+        '--app-warn-ink': '#fde7a7',
+        '--app-warn-tint': 'rgba(180, 112, 20, 0.18)',
+        '--app-warn-border': 'rgba(251, 191, 36, 0.38)',
+        '--app-danger': '#ff8094',
+        '--app-danger-strong': '#e11d48',
+        '--app-danger-ink': '#fecdd3',
+        '--app-danger-tint': 'rgba(159, 18, 57, 0.24)',
+        '--app-danger-border': 'rgba(251, 113, 133, 0.42)',
+        colorScheme: 'dark',
+        background: 'radial-gradient(circle at 12% 8%, rgba(69, 116, 238, 0.18), transparent 28rem), radial-gradient(circle at 90% 72%, rgba(63, 205, 238, 0.11), transparent 32rem), #040916',
+      } as CSSProperties)
+    : undefined
   const [showAllModes, setShowAllModes] = useState(!PRIMARY_MODE_IDS.has(selectedMode))
   const [showFilters, setShowFilters] = useState(
     selectedCategory !== null || selectedDifficulty !== null || selectedExamRef !== null
@@ -140,7 +191,7 @@ export function Lobby({
     }`
 
   return (
-    <div data-responsive-game-lobby className="mx-auto grid min-h-[100dvh] w-full max-w-[1180px] animate-scaleIn grid-cols-1 gap-3 bg-[var(--app-bg)] p-3 pb-28 text-[var(--app-text)] md:grid-cols-[minmax(0,1fr)_300px] md:gap-5 md:p-5 lg:min-h-[calc(100dvh-var(--navbar-h))] lg:grid-cols-[minmax(0,1fr)_340px] lg:bg-transparent lg:pb-6 xl:px-6">
+    <div data-responsive-game-lobby data-game={game} style={wordQuestDarkStyle} className="mx-auto grid min-h-[100dvh] w-full max-w-[1180px] animate-scaleIn grid-cols-1 gap-3 bg-[var(--app-bg)] p-3 pb-28 text-[var(--app-text)] md:grid-cols-[minmax(0,1fr)_300px] md:gap-5 md:p-5 lg:min-h-[calc(100dvh-var(--navbar-h))] lg:grid-cols-[minmax(0,1fr)_340px] lg:bg-transparent lg:pb-6 xl:px-6">
       <div className="-mx-3 -mt-3 flex h-14 items-center gap-1 border-b-2 border-[var(--app-border-soft)] bg-[var(--app-card)] px-2 md:col-span-2 md:mx-0 md:mt-0 md:rounded-[22px] md:border-2 md:border-[var(--app-border)] md:px-3 md:shadow-[0_4px_0_var(--app-shadow)]">
         <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--app-text-sub)] active:bg-[var(--app-hover)]">
           <ChevronLeft size={23} strokeWidth={3} aria-hidden="true" />

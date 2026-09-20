@@ -1,0 +1,45 @@
+.shortcut {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
+  gap: 4px 12px;
+  width: 100%;
+  max-width: 100%;
+  min-height: 132px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--app-warn-ink) 46%, var(--app-border));
+  border-radius: 15px;
+  background: linear-gradient(115deg, var(--app-warn-tint), var(--app-card));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--app-warn-ink) 12%, transparent), 0 4px 14px color-mix(in srgb, var(--app-warn-ink) 12%, transparent);
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.trophy {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  background: radial-gradient(circle, color-mix(in srgb, var(--app-warn-ink) 18%, transparent), transparent 72%);
+}
+
+.trophy img { width: 80px; height: 80px; object-fit: contain; }
+.copy { display: grid; grid-column: 2; gap: 3px; min-width: 0; }
+.copy strong { font-size: 1rem; font-weight: 800; line-height: 1.3; }
+.copy > span { color: var(--app-text-sub); font-size: .75rem; line-height: 1.4; }
+.action { display: flex; grid-column: 2; align-items: center; gap: 4px; color: var(--app-warn-ink); font-size: .75rem; font-weight: 750; white-space: nowrap; }
+.shortcut:focus-visible { outline: 3px solid var(--app-accent); outline-offset: 4px; }
+
+@media (hover: hover) {
+  .shortcut:hover { border-color: var(--app-warn-ink); box-shadow: 0 5px 20px color-mix(in srgb, var(--app-warn-ink) 21%, transparent); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .shortcut { transition: border-color .15s ease, box-shadow .15s ease; }
+}
+@media (max-width: 1050px) {
+  .shortcut { column-gap: 8px; padding: 10px; }
+}

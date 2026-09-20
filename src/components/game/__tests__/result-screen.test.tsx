@@ -4,6 +4,8 @@
 
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+const viewport = vi.hoisted(() => ({ wide: false }))
+vi.mock('@/lib/hooks/use-wide-study', () => ({ useWideStudy: () => viewport.wide }))
 
 const quiz = vi.hoisted(() => ({
   value: {
@@ -34,6 +36,8 @@ vi.mock('@/lib/utils/plausible', () => ({ trackEvent: vi.fn() }))
 import { ResultScreen } from '../result-screen'
 
 beforeEach(() => {
+  viewport.wide = false
+  localStorage.removeItem('bilge-guide-character-v1')
   vi.clearAllMocks()
   quiz.value = {
     score: 8, questions: Array.from({ length: 10 }, () => ({})), answers: Array.from({ length: 10 }, () => ({})),
@@ -42,6 +46,17 @@ beforeEach(() => {
 })
 
 describe('ResultScreen', () => {
+  test('geniş sonuç ekranı seçilmiş Bilge ile doğrulanmış sonuçları korur', () => {
+    viewport.wide = true
+    localStorage.setItem('bilge-guide-character-v1', 'male')
+    render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedCorrectCount={3} savedWrongCount={2} savedTotalXP={27} />)
+    expect(screen.getByAltText('Erkek Bilge').getAttribute('src')).toContain('kutlayan')
+    expect(screen.getByText('3/5')).toBeInTheDocument()
+    expect(screen.getByText('27')).toBeInTheDocument()
+    expect(screen.getByText('Harika iş! İlerlemen kaydedildi.')).toBeInTheDocument()
+    expect(screen.queryByAltText('Bilge Chan zafer işareti yapıyor')).not.toBeInTheDocument()
+  })
+
   test('8/10 + %80 + 190 XP + en yüksek seri 5 gösterir', () => {
     render(<ResultScreen onRestart={vi.fn()} onExit={vi.fn()} saveStatus="saved" savedTotalXP={190} />)
     expect(screen.getByText('8/10')).toBeInTheDocument()

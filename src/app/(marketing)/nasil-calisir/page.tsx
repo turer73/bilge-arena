@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import {
   ArrowRight,
@@ -21,6 +22,7 @@ import {
 import { TrackedCtaLink } from '@/components/marketing/tracked-cta-link'
 import { GAME_LIST } from '@/lib/constants/games'
 import { OG_DEFAULTS } from '@/lib/seo/og-defaults'
+import styles from '../academy-marketing.module.css'
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://bilgearena.com').trim()
 
@@ -228,36 +230,38 @@ const jsonLd = {
 
 export default function NasilCalisirPage() {
   return (
-    <div className="overflow-hidden">
+    <div className={`${styles.page} overflow-hidden`} data-academy-marketing="how">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <section className="relative border-b border-[var(--border)] px-6 py-16 sm:py-20 lg:px-8 lg:py-24">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-60"
-          style={{
-            background:
-              'radial-gradient(circle at 18% 10%, var(--focus-bg), transparent 34%), radial-gradient(circle at 82% 76%, var(--wisdom-bg), transparent 30%)',
-          }}
-        />
-        <div className="relative mx-auto grid max-w-[1200px] items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
-          <div>
-            <nav aria-label="Sayfa yolu" className="mb-7 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+      <section className={`${styles.hero} relative border-b border-[var(--border)] px-6 py-16 sm:py-20 lg:px-8 lg:py-24`}>
+        <div className={styles.heroBackdrop} aria-hidden="true">
+          <Image
+            src="/academy/academy-landscape.png"
+            alt=""
+            fill
+            sizes="(min-width: 1440px) 1360px, 100vw"
+            priority
+          />
+        </div>
+        <div className={`${styles.heroGrid} relative mx-auto grid max-w-[1200px] items-center gap-12`}>
+          <div className={styles.heroCopy}>
+            <nav aria-label="Sayfa yolu" className={`${styles.breadcrumb} mb-7 flex items-center gap-2 text-xs`}>
               <Link href="/" className="transition-colors hover:text-[var(--focus-light)]">Ana Sayfa</Link>
               <ChevronRight size={13} aria-hidden="true" />
               <span aria-current="page">Nasıl Çalışır</span>
             </nav>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-1.5 text-xs font-bold text-[var(--focus-light)]">
+            <div className={`${styles.eyebrow} mb-5 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold`}>
               <Sparkles size={14} aria-hidden="true" />
               Soru pratiği, adım adım
             </div>
-            <h1 className="font-display text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className={`${styles.heroTitle} font-black`}>
               Çalışma hedefini seç.
               <span className="mt-2 block text-[var(--focus-light)]">Pratiğe hemen başla.</span>
             </h1>
-            <p className="mt-6 max-w-[650px] text-base leading-8 text-[var(--text-sub)] sm:text-lg">
+            <p className={`${styles.heroDescription} mt-6 max-w-[650px] text-base leading-8 sm:text-lg`}>
               Bilge Arena; TYT, AYT, LGS ve YDT için soru çözmeyi kısa oturumlar,
               anında geri bildirim ve oyun öğeleriyle daha takip edilebilir hale getirir.
               Başlamak için önce dersini, sonra çalışma biçimini seçersin.
@@ -271,7 +275,7 @@ export default function NasilCalisirPage() {
                 Ders kapsamlarını incele
               </TrackedCtaLink>
             </div>
-            <p className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+            <p className={`${styles.heroNote} mt-4 flex items-center gap-2 text-xs`}>
               <Check size={14} className="text-[var(--growth-light)]" aria-hidden="true" />
               Kredi kartı gerekmez · Misafir önizlemesi vardır · Başarı garantisi verilmez
             </p>
@@ -279,7 +283,21 @@ export default function NasilCalisirPage() {
 
           <div className="relative mx-auto w-full max-w-[520px]">
             <div className="absolute -inset-6 rounded-[40px] bg-[var(--focus-bg)] blur-3xl" />
-            <div className="relative rounded-[28px] border border-[var(--focus-border)] bg-[var(--surface)] p-5 shadow-2xl sm:p-7">
+            <div className={`${styles.glassCard} relative rounded-[28px] p-5 sm:p-7`}>
+              <div className={styles.guideChip}>
+                <div className={styles.guideAvatar}>
+                  <Image
+                    src="/academy/bilge/female/destekleyici.png"
+                    alt="Bilge rehber"
+                    width={116}
+                    height={116}
+                  />
+                </div>
+                <div>
+                  <strong>Bilge yanında</strong>
+                  <span>Yolun dört adımda net. Hazırsan birlikte başlayalım.</span>
+                </div>
+              </div>
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--focus-light)]">Örnek akış</p>
@@ -291,7 +309,7 @@ export default function NasilCalisirPage() {
               </div>
               <div className="space-y-3">
                 {SAMPLE_FLOW.map(([label, value, Icon]) => (
-                  <div key={label} className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+                  <div key={label} className={`${styles.flowRow} flex items-center gap-3 rounded-xl border p-4`}>
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--focus-bg)] text-[var(--focus-light)]">
                       <Icon size={17} aria-hidden="true" />
                     </div>
@@ -304,6 +322,59 @@ export default function NasilCalisirPage() {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.pathSection} aria-labelledby="yolunu-sec-baslik">
+        <div className={styles.pathShell}>
+          <div className={styles.pathHeading}>
+            <div>
+              <p>Bugün nasıl ilerlemek istersin?</p>
+              <h2 id="yolunu-sec-baslik">İki yol, tek hedef</h2>
+            </div>
+            <p>
+              Oyunlar hızlı ve rekabetçi turlar içindir. Ders Çalış ise günlük plan,
+              konu sırası ve pekiştirme akışını bir arada tutar.
+            </p>
+          </div>
+          <div className={styles.pathGrid}>
+            <article className={styles.pathCard} data-path="game">
+              <div className={styles.pathArt} aria-hidden="true">
+                <Image
+                  src="/academy/lobby-modes/classic-v1.webp"
+                  alt=""
+                  fill
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                />
+              </div>
+              <div className={styles.pathContent}>
+                <span>Rekabet ve tempo</span>
+                <h3>Oyunlar</h3>
+                <p>Modunu seç, kısa bir tur kur ve kendi rekoruna meydan oku.</p>
+                <Link href="/arena" className={styles.pathLink}>
+                  Oyun modlarını gör <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </div>
+            </article>
+            <article className={styles.pathCard} data-path="study">
+              <div className={styles.pathArt} aria-hidden="true">
+                <Image
+                  src="/academy/academy-landscape.png"
+                  alt=""
+                  fill
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                />
+              </div>
+              <div className={styles.pathContent}>
+                <span>Plan ve süreklilik</span>
+                <h3>Ders Çalış</h3>
+                <p>Günlük planını, konu yolunu ve tekrarlarını tek akışta ilerlet.</p>
+                <Link href="/arena/calisma" className={styles.pathLink}>
+                  Çalışma yolunu aç <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+              </div>
+            </article>
           </div>
         </div>
       </section>

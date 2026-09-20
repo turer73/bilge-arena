@@ -1,0 +1,62 @@
+{
+  "date": "2026-09-14",
+  "method": "built-in image_gen; one generation per asset; no CLI/API fallback",
+  "processing": "Generated PNG originals were preserved under the recorded Codex paths. Project assets were center-cropped and optimized with sharp to 960x420 WebP quality 84. The images are decorative and contain no product rules or assessment evidence.",
+  "reference_note": "Local subject-art and existing mode-art references could not be read by the built-in generator because their Windows paths were rejected before generation. The same established art direction was therefore described in each prompt; no reference image was used.",
+  "assets": [
+    {
+      "slug": "classic",
+      "file": "public/academy/lobby-modes/classic-v1.webp",
+      "width": 960,
+      "height": 420,
+      "sha256": "24edd4da25e22ad6a43ba045c9e4f6f9ce18364d798df69f9e95354cdacc350f",
+      "source": "C:/Users/sevdi/.codex/generated_images/01a03aa7-0e5c-7b80-99d4-7d63a086637b/exec-7e5e610f-17f4-452a-93e3-3411f05745b7.png",
+      "prompt": "Use case: stylized-concept\nAsset type: compact desktop/tablet game mode card background for Bilge Arena\nPrimary request: create the Klasik mode scene, a balanced magical training duel represented by two elegant crossed practice swords above a circular glowing academy arena sigil.\nScene/backdrop: dark fantasy academy training hall, distant arches and subtle floating particles, no people.\nStyle/medium: premium cinematic fantasy game UI illustration, stylized realism, magical academy atmosphere, polished game concept art, readable at thumbnail size.\nComposition/framing: very wide compact banner, central focal object, strong simple silhouette, generous dark edges for UI overlay, safe crop across wide cards.\nLighting/mood: calm confident blue and cyan glow, controlled contrast, disciplined rather than violent.\nColor palette: midnight navy, royal blue, cyan highlights, tiny restrained silver accents.\nConstraints: no text, no letters, no numbers, no logo, no crown, no watermark, no border, no UI controls, no gore, no identifiable trademark; one clear focal scene; suitable behind white HTML text."
+    },
+    {
+      "slug": "blitz",
+      "file": "public/academy/lobby-modes/blitz-v1.webp",
+      "width": 960,
+      "height": 420,
+      "sha256": "19b9c99f18aa386f481b495f0a74f363515264e7ead5ec340f80d86698228855",
+      "source": "C:/Users/sevdi/.codex/generated_images/01a03aa7-0e5c-7b80-99d4-7d63a086637b/exec-d4ab3a1c-a364-44af-b5fb-74e00e69d808.png",
+      "prompt": "Use case: stylized-concept\nAsset type: compact desktop/tablet game mode card background for Bilge Arena\nPrimary request: create the Blitz mode scene, extreme quick-thinking represented by one powerful electric-blue lightning bolt striking a small floating brass time crystal above a circular speed sigil; a few short energy trails imply a very fast five-question burst.\nScene/backdrop: dark fantasy academy challenge chamber with distant arches, no people.\nStyle/medium: premium cinematic fantasy game UI illustration, stylized realism, crisp and readable at thumbnail size, consistent with dark magical academy game art.\nComposition/framing: very wide compact banner, one central focal cluster, simple silhouette, dark edges and quiet lower area for HTML copy, safe crop across wide cards.\nLighting/mood: urgent and energetic but clean, playful and suitable for teenagers.\nColor palette: midnight navy, vivid electric blue, cyan-white lightning, restrained warm brass accents.\nConstraints: no text, no letters, no numbers, no logo, no crown, no watermark, no border, no UI controls, no people, no gore, no weapons, no identifiable trademark; do not imply scoring or rewards; suitable behind white HTML text."
+    },
+    {
+      "slug": "marathon",
+      "file": "public/academy/lobby-modes/marathon-v1.webp",
+      "width": 960,
+      "height": 420,
+      "sha256": "b279f9af5d558cadfba12e88e7f4a2bdfc576b02820d3141506d02db2c5f3520",
+      "source": "C:/Users/sevdi/.codex/generated_images/01a03aa7-0e5c-7b80-99d4-7d63a086637b/exec-8645a6b1-ac31-4a65-b277-cad62f401c91.png",
+      "prompt": "Use case: stylized-concept\nAsset type: compact desktop/tablet game mode card background for Bilge Arena\nPrimary request: create the Maraton mode scene, sustained endurance represented by one long luminous blue-gold academy path winding through multiple elegant stone arches toward a distant sunrise-lit tower; a few evenly spaced glowing checkpoint lanterns show steady progression.\nScene/backdrop: expansive magical academy mountainside route before dawn, no people.\nStyle/medium: premium cinematic fantasy game UI illustration, stylized realism, crisp and readable at thumbnail size, consistent with dark magical academy game art.\nComposition/framing: very wide compact banner, strong winding path leading from foreground to a clear distant focal point, restrained detail, dark edges and quiet lower area for HTML copy, safe crop across wide cards.\nLighting/mood: determined, patient, uplifting; long journey rather than speed.\nColor palette: midnight navy and deep indigo, cool blue path glow, restrained amber sunrise and checkpoint lights.\nConstraints: no text, no letters, no numbers, no logo, no crown, no watermark, no border, no UI controls, no people or runners, no race finish ribbon, no identifiable trademark; do not imply scoring or rewards; suitable behind white HTML text."
+    },
+    {
+      "slug": "boss",
+      "file": "public/academy/lobby-modes/boss-v1.webp",
+      "width": 960,
+      "height": 420,
+      "sha256": "fca600cbb3b77e4eeb0343ee088b16bf2f81061245a0a11de939912a3342d426",
+      "source": "C:/Users/sevdi/.codex/generated_images/01a03aa7-0e5c-7b80-99d4-7d63a086637b/exec-fbbaae27-be62-49cb-a4f0-d14f49ad4a7c.png",
+      "prompt": "Use case: stylized-concept\nAsset type: compact desktop/tablet game mode card background for Bilge Arena\nPrimary request: create the Boss mode scene, a high-stakes final challenge represented by one monumental ancient academy guardian statue awakening behind a glowing circular trial gate; the guardian is imposing but dignified, not attacking.\nScene/backdrop: vast dark magical academy vault with stone arches and light mist, no players or people.\nStyle/medium: premium cinematic fantasy game UI illustration, stylized realism, crisp iconic silhouette readable at thumbnail size, consistent with dark magical academy game art.\nComposition/framing: very wide compact banner, guardian head and shoulders centered in the upper-middle behind the gate, uncluttered dark edges and quiet lower area for HTML copy, safe crop across wide cards.\nLighting/mood: tense and triumphant, challenging but age-appropriate, never horror.\nColor palette: midnight navy and deep violet, controlled crimson-magenta eye and gate accents, restrained silver and amber stone highlights.\nConstraints: no combat, no weapon, no health bar, no raid, no team battle, no score, no reward, no question difficulty claim; no text, no letters, no numbers, no logo, no crown, no watermark, no border, no UI controls, no gore, no demonic religious symbols, no identifiable trademark; suitable behind white HTML text."
+    },
+    {
+      "slug": "deneme",
+      "file": "public/academy/lobby-modes/deneme-v1.webp",
+      "width": 960,
+      "height": 420,
+      "sha256": "08b940706a37cf4c16f001e5b947ecbd85f1552d56bdbb33b4481d85d3d36325",
+      "source": "C:/Users/sevdi/.codex/generated_images/01a03aa7-0e5c-7b80-99d4-7d63a086637b/exec-9d9ad7cc-d054-41ff-bead-741085bd28bc.png",
+      "prompt": "Use case: stylized-concept\nAsset type: compact desktop/tablet game mode card background for Bilge Arena, visually consistent with a premium dark magical academy game interface\nPrimary request: create the Deneme Sınavı mode scene, an elegant timed assessment represented by an ornate glowing hourglass beside a neatly arranged blank exam parchment and a magical circular clock dial.\nScene/backdrop: quiet grand academy study chamber at night, deep arches and shelves softly out of focus, no people.\nStyle/medium: premium cinematic fantasy game UI illustration, stylized realism, polished game concept art, readable at thumbnail size.\nComposition/framing: very wide compact banner, central grouped focal objects, strong simple silhouette, generous dark edges for UI overlay, safe crop across wide cards.\nLighting/mood: focused, serious but inviting, warm amber-gold light balanced with subtle violet-blue ambient light.\nColor palette: midnight navy, muted violet, amber gold highlights, restrained ivory parchment.\nConstraints: blank parchment only; no text, no letters, no numbers, no logo, no crown, no watermark, no border, no UI controls, no identifiable trademark; one clear focal scene; suitable behind white HTML text."
+    },
+    {
+      "slug": "practice",
+      "file": "public/academy/lobby-modes/practice-v1.webp",
+      "width": 960,
+      "height": 420,
+      "sha256": "2a53896f152ce008c6a03f76e85d42e5bcecddccb615fc45239350380f2dbf1e",
+      "source": "C:/Users/sevdi/.codex/generated_images/01a03aa7-0e5c-7b80-99d4-7d63a086637b/exec-f55fb2c4-1c67-4061-b951-f43b0e61c48d.png",
+      "prompt": "Use case: stylized-concept\nAsset type: compact desktop/tablet game mode card background for Bilge Arena, visually consistent with a premium dark magical academy game interface\nPrimary request: create the Pratik mode scene, repeated learning represented by an open blank practice book releasing small teal runes toward three softly glowing training targets and a simple magical quill.\nScene/backdrop: cozy academy practice alcove with dark shelves and subtle stone arches, no people.\nStyle/medium: premium cinematic fantasy game UI illustration, stylized realism, polished game concept art, readable at thumbnail size.\nComposition/framing: very wide compact banner, central open book and compact target silhouettes, generous dark edges for UI overlay, safe crop across wide cards.\nLighting/mood: encouraging, exploratory, low-pressure practice; gentle teal and emerald magic with controlled contrast.\nColor palette: midnight navy, deep teal, emerald and cyan highlights, restrained pale parchment.\nConstraints: pages must be blank; abstract runes must not resemble readable letters or numbers; no text, no letters, no numbers, no logo, no crown, no watermark, no border, no UI controls, no identifiable trademark; one clear focal scene; suitable behind white HTML text."
+    }
+  ]
+}

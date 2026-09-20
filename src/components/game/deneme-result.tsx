@@ -12,6 +12,9 @@ import { useGuestSession, computePromptLevel } from '@/lib/hooks/use-guest-sessi
 import type { MockStrategyAnalysis } from '@/lib/mock-strategy/analysis'
 import { MockStrategyPanel } from './mock-strategy-panel'
 import { BilgeChan } from '@/components/ui/bilge-chan'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
+import { AcademyQuizPortrait } from './academy-quiz-portrait'
+import styles from './academy-quiz.module.css'
 
 interface DenemeResultProps {
   gameName: string
@@ -37,6 +40,7 @@ export function DenemeResult({
   onRestart,
   onExit,
 }: DenemeResultProps) {
+  const wide = useWideStudy()
   const { score, questions, xpEarned, answers } = useQuizStore()
   const { user } = useAuthStore()
   const { incrementQuizCount } = useGuestSession()
@@ -126,8 +130,8 @@ export function DenemeResult({
   const formatCategory = (cat: string) => getCategoryLabel(cat)
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-4 bg-[var(--app-bg)] px-4 py-5 text-[var(--app-accent-ink)] md:max-w-[760px]">
-      <div className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-strong)] bg-gradient-to-br from-[var(--app-accent)] via-[var(--app-accent-strong)] to-[var(--app-accent-strong)] p-5 text-white shadow-[0_6px_0_var(--app-accent-strong)] animate-fadeUp">
+    <div className={`${styles.result} mx-auto flex min-h-dvh w-full max-w-[440px] flex-col gap-4 bg-[var(--app-bg)] px-4 py-5 text-[var(--app-accent-ink)] md:max-w-[760px]`}>
+      <div data-quiz-result-hero className="relative min-h-[210px] overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-strong)] bg-gradient-to-br from-[var(--app-accent)] via-[var(--app-accent-strong)] to-[var(--app-accent-strong)] p-5 text-white shadow-[0_6px_0_var(--app-accent-strong)] animate-fadeUp">
         <div className="relative z-10 max-w-[60%]">
           <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/75">
             Deneme sonucu
@@ -135,13 +139,14 @@ export function DenemeResult({
           <h1 className="mt-1 font-display text-lg font-black leading-tight">{gameName}</h1>
           <div
             className="mt-2 font-display text-[68px] font-black leading-none"
+            data-quiz-rank
             style={{ color: 'var(--app-warn-border)', textShadow: '0 3px 0 rgba(120,53,15,.35)' }}
           >
             {rank}
           </div>
           <p className="mt-1 text-xs font-bold text-[var(--app-accent-border)]">{config.message}</p>
         </div>
-        <BilgeChan pose={pct >= 50 ? 'victory' : 'tutor'} height={166} className="absolute -bottom-2 -right-2 z-10" />
+        {wide ? <AcademyQuizPortrait expression={pct >= 50 ? 'kutlayan' : 'destekleyici'} /> : <BilgeChan pose={pct >= 50 ? 'victory' : 'tutor'} height={166} className="absolute -bottom-2 -right-2 z-10" />}
         <div aria-hidden className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
       </div>
 

@@ -19,7 +19,7 @@ export default async function Page() {
   if (!user) redirect('/giris?redirect=/oda/kod')
 
   return (
-    <>
+    <div data-room-join-screen className="mx-auto max-w-2xl">
       <header className="mb-6">
         <Link
           href="/oda"
@@ -42,6 +42,6 @@ export default async function Page() {
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-sm sm:p-6">
         <JoinRoomForm />
       </div>
-    </>
+    </div>
   )
 }
