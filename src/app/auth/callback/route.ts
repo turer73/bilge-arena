@@ -15,8 +15,10 @@ import {
   recordLegalConsentIntent,
 } from '@/lib/legal-consent/server'
 import { getClientIp } from '@/lib/utils/client-ip'
+import { resolveAcademyServerSupabaseOrigin } from '@/lib/auth/isolated-test'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const SUPABASE_SERVER_URL = resolveAcademyServerSupabaseOrigin(SUPABASE_URL)
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
 
 function clearLegalConsentIntentCookie(response: NextResponse) {
@@ -42,7 +44,7 @@ export async function GET(request: Request) {
   if (code) {
     const cookieStore = await cookies()
     const supabase = createServerClient<Database>(
-      SUPABASE_URL,
+      SUPABASE_SERVER_URL,
       SUPABASE_ANON_KEY,
       {
         cookies: {

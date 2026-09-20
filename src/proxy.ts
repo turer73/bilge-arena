@@ -15,6 +15,7 @@ import {
   ISOLATED_TEST_ORIGIN,
   isIsolatedAcademyPreviewBridge,
   isIsolatedAcademyTest,
+  resolveAcademyServerSupabaseOrigin,
 } from '@/lib/auth/isolated-test'
 import { isSensitiveWorkspacePath } from '@/lib/privacy/telemetry-policy'
 import {
@@ -24,6 +25,7 @@ import {
 } from '@/lib/security/csp'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const SUPABASE_SERVER_URL = resolveAcademyServerSupabaseOrigin(SUPABASE_URL)
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
 
 function preserveRefreshedCookies(source: NextResponse, target: NextResponse): NextResponse {
@@ -94,7 +96,7 @@ export async function proxy(request: NextRequest) {
   if (sensitiveCsp) response.headers.set(SENSITIVE_CSP_HEADER, sensitiveCsp)
 
   const supabase = createServerClient<Database>(
-    SUPABASE_URL,
+    SUPABASE_SERVER_URL,
     SUPABASE_ANON_KEY,
     {
       cookies: {
@@ -125,7 +127,7 @@ export async function proxy(request: NextRequest) {
   if (user && !isAccountDeleteApi && !isAuthCallback && !isIsolatedAcademyTest()) {
     const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const accountState = await getUserProfileAccessStateViaRest({
-      supabaseUrl: SUPABASE_URL,
+      supabaseUrl: SUPABASE_SERVER_URL,
       serviceKey,
       userId: user.id,
     })
@@ -200,7 +202,7 @@ export async function proxy(request: NextRequest) {
     const serviceKey =
       process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     const hasAdminAccess = await userHasAnyPlatformPermissionViaRest({
-      supabaseUrl: SUPABASE_URL,
+      supabaseUrl: SUPABASE_SERVER_URL,
       serviceKey,
       userId: user.id,
       permissions: PLATFORM_ADMIN_ENTRY_PERMISSIONS,
@@ -208,7 +210,7 @@ export async function proxy(request: NextRequest) {
 
     if (!hasAdminAccess) {
       const hasInstitutionAccess = await userHasAnyPlatformPermissionViaRest({
-        supabaseUrl: SUPABASE_URL,
+        supabaseUrl: SUPABASE_SERVER_URL,
         serviceKey,
         userId: user.id,
         permissions: [INSTITUTION_PILOT_ENTRY_PERMISSION],

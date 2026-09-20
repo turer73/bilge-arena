@@ -23,3 +23,12 @@ export function isIsolatedAcademyPreviewBridge(): boolean {
   return isIsolatedAcademyTest()
     && process.env.BILGE_ACADEMY_PREVIEW_BRIDGE === 'true'
 }
+
+/**
+ * Tarayici 3141 uzerinden ayni-origin rewrite kullanirken, server-side Supabase
+ * istemcileri dogrudan 3137 upstream'ine gitmelidir. Aksi halde proxy'nin
+ * auth.getUser() cagrisi yeniden 3141 proxy'sine girerek sonsuz dongu kurar.
+ */
+export function resolveAcademyServerSupabaseOrigin(configuredOrigin: string): string {
+  return isIsolatedAcademyPreviewBridge() ? ISOLATED_TEST_ORIGIN : configuredOrigin
+}
