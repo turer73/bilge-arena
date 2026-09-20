@@ -339,7 +339,7 @@
 .gameShell {
   position: relative;
   z-index: 1;
-  max-width: 760px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 26px 24px 64px;
 }
@@ -370,6 +370,339 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--subject) 18%, rgba(9, 19, 41, 0.8));
   color: #fff;
+}
+
+.gameArena {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 18px;
+}
+
+.challengeColumn {
+  min-width: 0;
+}
+
+.towerProgress {
+  position: sticky;
+  top: calc(var(--navbar-h) + 18px);
+  align-self: stretch;
+  min-height: 0;
+  container-name: tower-progress;
+  container-type: size;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid rgba(125, 158, 226, 0.3);
+  border-radius: 24px;
+  background: #07112a;
+  box-shadow: 0 22px 52px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.towerProgress::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: '';
+  background:
+    linear-gradient(180deg, rgba(3, 10, 27, 0.2), rgba(4, 13, 33, 0.48) 48%, rgba(3, 10, 26, 0.76)),
+    radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--subject) 14%, transparent), transparent 15rem);
+  pointer-events: none;
+}
+
+.towerProgress::after {
+  position: absolute;
+  inset: -12%;
+  z-index: 1;
+  content: '';
+  background:
+    radial-gradient(circle, rgba(164, 202, 255, 0.62) 0 1px, transparent 2px) 14px 18px / 82px 118px,
+    radial-gradient(circle, rgba(244, 199, 94, 0.5) 0 1px, transparent 2px) 52px 76px / 126px 164px;
+  opacity: 0.42;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: towerMotes 13s linear infinite;
+}
+
+.towerBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.towerBackdrop img {
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(1.05) brightness(0.74) contrast(1.08);
+  transform: scale(1.025);
+  will-change: transform, filter;
+  animation: towerBackdropDrift 12s ease-in-out infinite alternate;
+}
+
+.towerStack {
+  position: absolute;
+  top: clamp(52px, 20cqh, 78px);
+  right: 16%;
+  bottom: clamp(60px, 18cqh, 72px);
+  left: 16%;
+  z-index: 2;
+  display: grid;
+  width: auto;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+  align-items: stretch;
+  margin: 0;
+  padding: 10px 7px;
+  border: 1px solid rgba(218, 229, 255, 0.18);
+  border-radius: 34px;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(211, 222, 246, 0.18), rgba(151, 174, 221, 0.1)),
+    rgba(7, 18, 43, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 28px rgba(7, 18, 43, 0.18),
+    0 18px 42px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px) saturate(1.08);
+  animation: towerGlassBreath 5.5s ease-in-out infinite;
+}
+
+.towerStack::after {
+  position: absolute;
+  inset: -45% -120%;
+  z-index: 0;
+  content: '';
+  background: linear-gradient(105deg, transparent 43%, rgba(225, 236, 255, 0.2) 50%, transparent 57%);
+  pointer-events: none;
+  animation: towerGlassSweep 7s ease-in-out infinite;
+}
+
+.towerFloor {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: #dce5f7;
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.98),
+    0 0 18px rgba(2, 8, 22, 0.92);
+  transition: opacity 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.towerFloor[data-state='locked'] {
+  opacity: 0.62;
+}
+
+.towerFloor[data-state='complete'] {
+  color: #80e6bf;
+}
+
+.towerFloor[data-state='active'] {
+  z-index: 2;
+  color: #fff;
+  animation: activeFloorPulse 2.8s ease-in-out infinite;
+}
+
+.floorCopy,
+.floorCopy strong,
+.floorCopy small {
+  display: block;
+  min-width: 0;
+}
+
+.floorCopy {
+  text-align: center;
+  animation: towerFloorReveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.towerFloor:nth-child(2) .floorCopy {
+  animation-delay: 45ms;
+}
+
+.towerFloor:nth-child(3) .floorCopy {
+  animation-delay: 90ms;
+}
+
+.towerFloor:nth-child(4) .floorCopy {
+  animation-delay: 135ms;
+}
+
+.towerFloor:nth-child(5) .floorCopy {
+  animation-delay: 180ms;
+}
+
+.towerFloor:nth-child(6) .floorCopy {
+  animation-delay: 225ms;
+}
+
+.towerFloor:nth-child(7) .floorCopy {
+  animation-delay: 270ms;
+}
+
+.floorCopy strong {
+  color: inherit;
+  font-size: clamp(0.72rem, 3.7cqh, 1.12rem);
+  font-weight: 950;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+}
+
+.floorCopy small {
+  width: max-content;
+  margin: 4px auto 0;
+  padding: 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--subject) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--subject) 16%, rgba(4, 13, 33, 0.58));
+  color: #fff;
+  font-size: clamp(0.45rem, 1.7cqh, 0.54rem);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.towerFloor[data-state='active'] .floorCopy strong {
+  font-size: clamp(0.8rem, 4cqh, 1.22rem);
+}
+
+.towerRule {
+  position: absolute;
+  bottom: 11px;
+  left: 50%;
+  z-index: 2;
+  width: 88%;
+  margin: 0;
+  padding: 13px 8px 4px;
+  text-align: center;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.92);
+  transform: translateX(-50%);
+}
+
+.towerRule::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 82%;
+  height: 1px;
+  content: '';
+  background: linear-gradient(90deg, transparent, rgba(155, 184, 241, 0.62), transparent);
+  transform: translateX(-50%);
+}
+
+.towerRule span,
+.towerRule strong {
+  display: block;
+}
+
+.towerRule span {
+  color: #f3c55e;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  animation: towerRuleGlow 3.8s ease-in-out infinite;
+}
+
+.towerRule strong {
+  margin-top: 6px;
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+@keyframes towerBackdropDrift {
+  from {
+    filter: saturate(1.02) brightness(0.72) contrast(1.08);
+    transform: translate3d(0, 4px, 0) scale(1.035);
+  }
+
+  to {
+    filter: saturate(1.08) brightness(0.8) contrast(1.06);
+    transform: translate3d(0, -8px, 0) scale(1.075);
+  }
+}
+
+@keyframes towerMotes {
+  from {
+    transform: translate3d(0, 7%, 0);
+  }
+
+  to {
+    transform: translate3d(0, -11%, 0);
+  }
+}
+
+@keyframes towerGlassSweep {
+  0%,
+  24% {
+    transform: translate3d(-24%, 0, 0) rotate(7deg);
+  }
+
+  52%,
+  100% {
+    transform: translate3d(25%, 0, 0) rotate(7deg);
+  }
+}
+
+@keyframes towerGlassBreath {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 0 28px rgba(7, 18, 43, 0.18),
+      0 18px 42px rgba(0, 0, 0, 0.2);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 0 34px rgba(93, 135, 223, 0.16),
+      0 20px 48px rgba(15, 52, 126, 0.24);
+  }
+}
+
+@keyframes activeFloorPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--subject) 52%, transparent));
+    transform: scale(1.04);
+  }
+
+  50% {
+    filter: drop-shadow(0 0 19px color-mix(in srgb, var(--subject) 82%, transparent));
+    transform: scale(1.08);
+  }
+}
+
+@keyframes towerFloorReveal {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes towerRuleGlow {
+  0%,
+  100% {
+    color: #e9ba50;
+    text-shadow: 0 0 0 rgba(243, 197, 94, 0);
+  }
+
+  50% {
+    color: #ffda7a;
+    text-shadow: 0 0 13px rgba(243, 197, 94, 0.44);
+  }
 }
 
 .hud {
@@ -632,6 +965,65 @@
     padding: 18px 14px 48px;
   }
 
+  .gameArena {
+    grid-template-columns: 1fr;
+  }
+
+  .towerProgress {
+    position: relative;
+    top: auto;
+    min-height: 188px;
+    container-type: normal;
+    padding: 13px;
+  }
+
+  .towerBackdrop img {
+    object-position: center 42%;
+  }
+
+  .towerStack {
+    position: relative;
+    inset: auto;
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: none;
+    margin: 62px auto 2px;
+    padding: 10px 4px;
+    border-radius: 22px;
+  }
+
+  .towerFloor {
+    display: grid;
+    width: 100%;
+    min-height: 48px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 6px 3px;
+  }
+
+  .floorCopy {
+    text-align: center;
+  }
+
+  .floorCopy strong {
+    font-size: 0.62rem;
+  }
+
+  .floorCopy small {
+    display: none;
+  }
+
+  .towerRule {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 12px;
+    transform: none;
+  }
+
   .hud {
     padding: 12px;
   }
@@ -645,7 +1037,15 @@
   .subjectCard,
   .subjectArt img,
   .backLink,
-  .backButton {
+  .backButton,
+  .towerBackdrop img,
+  .towerProgress::after,
+  .towerStack,
+  .towerStack::after,
+  .towerFloor[data-state='active'],
+  .floorCopy,
+  .towerRule span {
+    animation: none;
     transition: none;
   }
 }

@@ -435,6 +435,8 @@ export function KuleClient() {
   const liveArr = Array.from({ length: MAX_LIVES }, (_, i) => i < state.lives)
   const activePresentation = state.game ? GAME_PRESENTATION[state.game] : null
   const ActiveIcon = activePresentation?.icon ?? Shield
+  const towerStart = Math.max(1, state.floor - 2)
+  const towerFloors = Array.from({ length: 7 }, (_, index) => towerStart + 6 - index)
 
   return (
     <div className={styles.root} style={{ '--subject': color } as CSSProperties}>
@@ -475,125 +477,170 @@ export function KuleClient() {
           </div>
         </div>
 
-      {/* Yükleniyor */}
-      {state.loading && (
-        <div className={styles.loading}>
-          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-[var(--focus)]" />
-        </div>
-      )}
+        <div className={styles.gameArena}>
+          <aside className={styles.towerProgress} aria-label="Kule katları">
+            <div className={styles.towerBackdrop} aria-hidden="true">
+              <Image
+                src="/academy/modes/tower-portrait-v2.png"
+                alt=""
+                fill
+                sizes="(max-width: 640px) 100vw, 270px"
+                priority
+              />
+            </div>
 
-      {/* Hata */}
-      {!state.loading && state.error && (
-        <div className={styles.errorState}>
-          <Shield size={30} className="text-[#7eacff]" aria-hidden="true" />
-          <p className="text-sm text-[#b7c4df]">{state.error}</p>
-          <button
-            onClick={() => fetchQuestion(state.game!, state.floor)}
-            className={styles.secondaryButton}
-            style={{ paddingInline: 18 }}
-          >
-            Tekrar Dene
-          </button>
-          {state.game === 'sosyal' && (
-            <Link
-              href="/arena/calisma"
-              className="text-xs font-bold text-[var(--focus)] underline underline-offset-2"
-            >
-              Çalış sayfasına git
-            </Link>
-          )}
-        </div>
-      )}
+            <div className={styles.towerStack}>
+              {towerFloors.map((floorNumber) => {
+                const floorState = floorNumber === state.floor
+                  ? 'active'
+                  : floorNumber < state.floor
+                    ? 'complete'
+                    : 'locked'
 
-      {/* Soru */}
-      {!state.loading && !state.error && state.question && (
-        <div className={styles.gamePanel}>
-          <p className={styles.questionLabel}>Kule sorusu · Kat {state.floor}</p>
-          <p className={styles.questionText}>
-            {renderRichText(state.question.content.question || state.question.content.sentence || '')}
-          </p>
-
-          <div className={styles.options}>
-            {state.question.content.options.map((opt, i) => {
-              const answered = state.selected !== null
-              const isCorrect = i === state.correctOption
-              const isSelected = i === state.selected
-
-              let bg = 'var(--bg-secondary)'
-              let borderColor = 'var(--border)'
-              let textColor = 'var(--text)'
-
-              if (answered) {
-                if (isCorrect) {
-                  bg = 'var(--growth-bg)'
-                  borderColor = 'var(--growth-border)'
-                  textColor = 'var(--growth)'
-                } else if (isSelected) {
-                  bg = 'color-mix(in srgb, var(--urgency) 10%, transparent)'
-                  borderColor = 'color-mix(in srgb, var(--urgency) 30%, transparent)'
-                  textColor = 'var(--urgency)'
-                }
-              }
-
-              const label = ['A', 'B', 'C', 'D', 'E'][i] ?? String(i + 1)
-
-              return (
-                <button
-                  key={i}
-                  onClick={() => void handleAnswer(i)}
-                  disabled={answered || state.grading}
-                  className={`${styles.option} flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all duration-150 disabled:cursor-default`}
-                  style={{ background: bg, borderColor, color: textColor }}
-                  data-state={answered ? (isCorrect ? 'correct' : isSelected ? 'wrong' : 'answered') : 'idle'}
-                >
-                  <span
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black"
-                    style={{ background: borderColor, color: textColor }}
+                return (
+                  <div
+                    key={floorNumber}
+                    className={styles.towerFloor}
+                    data-state={floorState}
+                    aria-current={floorState === 'active' ? 'step' : undefined}
+                    aria-label={floorNumber + '. Kat, ' + (floorState === 'complete' ? 'geçildi' : floorState === 'active' ? 'buradasın' : 'kilitli')}
                   >
-                    {answered && isCorrect ? '✓' : answered && isSelected ? '✕' : label}
-                  </span>
-                  <span>{renderRichText(opt)}</span>
-                </button>
-              )
-            })}
-          </div>
+                    <span className={styles.floorCopy}>
+                      <strong>{floorNumber}. Kat</strong>
+                      {floorState === 'active' && <small>Buradasın</small>}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
 
-          {/* Geri bildirim sonrası devam */}
-          {state.grading && (
-            <p className="mt-3 text-center text-xs text-[var(--text-sub)]">Kontrol ediliyor...</p>
-          )}
-          {state.gradeError && (
-            <p className="mt-3 text-center text-xs text-[var(--urgency)]">{state.gradeError}</p>
-          )}
+            <div className={styles.towerRule}>
+              <span>Yükseliş kuralı</span>
+              <strong>Her doğru cevapta bir kat</strong>
+            </div>
+          </aside>
 
-          {state.phase === 'feedback' && (
-            <>
-              <div
-                className={`${styles.feedback} border p-3 text-center text-sm font-bold ${
-                  state.lastCorrect ? 'border-[var(--growth-border)] bg-[var(--growth-bg)] text-[var(--growth)]' : 'border-[color-mix(in_srgb,var(--urgency)_30%,transparent)] bg-[color-mix(in_srgb,var(--urgency)_10%,transparent)] text-[var(--urgency)]'
-                }`}
-              >
-                {state.lastCorrect
-                  ? `✓ Doğru! +${SCORE_PER_FLOOR} puan`
-                  : `✕ Yanlış! ${state.lives} can kaldı`}
+          <div className={styles.challengeColumn}>
+            {/* Yükleniyor */}
+            {state.loading && (
+              <div className={styles.loading}>
+                <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-[var(--border)] border-t-[var(--focus)]" />
               </div>
-              {state.solution && (
-                <p className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[10px] text-[var(--text-sub)]">
-                  💡 {state.solution}
-                </p>
-              )}
-              <button
-                onClick={() => dispatch({ type: 'NEXT_FLOOR' })}
-                className={`${styles.nextButton} mt-3 w-full text-sm text-white`}
-                style={{ background: color }}
-              >
-                Sonraki Kat ↑
-              </button>
-            </>
-          )}
-        </div>
-      )}
+            )}
 
+            {/* Hata */}
+            {!state.loading && state.error && (
+              <div className={styles.errorState}>
+                <Shield size={30} className="text-[#7eacff]" aria-hidden="true" />
+                <p className="text-sm text-[#b7c4df]">{state.error}</p>
+                <button
+                  onClick={() => fetchQuestion(state.game!, state.floor)}
+                  className={styles.secondaryButton}
+                  style={{ paddingInline: 18 }}
+                >
+                  Tekrar Dene
+                </button>
+                {state.game === 'sosyal' && (
+                  <Link
+                    href="/arena/calisma"
+                    className="text-xs font-bold text-[var(--focus)] underline underline-offset-2"
+                  >
+                    Çalış sayfasına git
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {/* Soru */}
+            {!state.loading && !state.error && state.question && (
+              <div className={styles.gamePanel}>
+                <p className={styles.questionLabel}>Kule sorusu · Kat {state.floor}</p>
+                <p className={styles.questionText}>
+                  {renderRichText(state.question.content.question || state.question.content.sentence || '')}
+                </p>
+
+                <div className={styles.options}>
+                  {state.question.content.options.map((opt, i) => {
+                    const answered = state.selected !== null
+                    const isCorrect = i === state.correctOption
+                    const isSelected = i === state.selected
+
+                    let bg = 'var(--bg-secondary)'
+                    let borderColor = 'var(--border)'
+                    let textColor = 'var(--text)'
+
+                    if (answered) {
+                      if (isCorrect) {
+                        bg = 'var(--growth-bg)'
+                        borderColor = 'var(--growth-border)'
+                        textColor = 'var(--growth)'
+                      } else if (isSelected) {
+                        bg = 'color-mix(in srgb, var(--urgency) 10%, transparent)'
+                        borderColor = 'color-mix(in srgb, var(--urgency) 30%, transparent)'
+                        textColor = 'var(--urgency)'
+                      }
+                    }
+
+                    const label = ['A', 'B', 'C', 'D', 'E'][i] ?? String(i + 1)
+
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => void handleAnswer(i)}
+                        disabled={answered || state.grading}
+                        className={`${styles.option} flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all duration-150 disabled:cursor-default`}
+                        style={{ background: bg, borderColor, color: textColor }}
+                        data-state={answered ? (isCorrect ? 'correct' : isSelected ? 'wrong' : 'answered') : 'idle'}
+                      >
+                        <span
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black"
+                          style={{ background: borderColor, color: textColor }}
+                        >
+                          {answered && isCorrect ? '✓' : answered && isSelected ? '✕' : label}
+                        </span>
+                        <span>{renderRichText(opt)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Geri bildirim sonrası devam */}
+                {state.grading && (
+                  <p className="mt-3 text-center text-xs text-[var(--text-sub)]">Kontrol ediliyor...</p>
+                )}
+                {state.gradeError && (
+                  <p className="mt-3 text-center text-xs text-[var(--urgency)]">{state.gradeError}</p>
+                )}
+
+                {state.phase === 'feedback' && (
+                  <>
+                    <div
+                      className={`${styles.feedback} border p-3 text-center text-sm font-bold ${
+                        state.lastCorrect ? 'border-[var(--growth-border)] bg-[var(--growth-bg)] text-[var(--growth)]' : 'border-[color-mix(in_srgb,var(--urgency)_30%,transparent)] bg-[color-mix(in_srgb,var(--urgency)_10%,transparent)] text-[var(--urgency)]'
+                      }`}
+                    >
+                      {state.lastCorrect
+                        ? `✓ Doğru! +${SCORE_PER_FLOOR} puan`
+                        : `✕ Yanlış! ${state.lives} can kaldı`}
+                    </div>
+                    {state.solution && (
+                      <p className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[10px] text-[var(--text-sub)]">
+                        💡 {state.solution}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => dispatch({ type: 'NEXT_FLOOR' })}
+                      className={`${styles.nextButton} mt-3 w-full text-sm text-white`}
+                      style={{ background: color }}
+                    >
+                      Sonraki Kat ↑
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
