@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   wide: false,
-  activationEnabled: false,
   setCharacter: vi.fn(),
   character: 'female' as 'female' | 'male',
   auth: { user: null as unknown, loading: false },
@@ -21,11 +20,6 @@ vi.mock('@/components/privacy/document-boundary-link', () => ({
   ),
 }))
 vi.mock('@/lib/hooks/use-wide-study', () => ({ useWideStudy: () => mocks.wide }))
-vi.mock('@/lib/experiments/activation', () => ({
-  get ACTIVATION_EXPERIMENT_ENABLED() {
-    return mocks.activationEnabled
-  },
-}))
 vi.mock('@/lib/bilge/use-bilge-character', () => ({
   useBilgeCharacter: () => ({ character: mocks.character, setCharacter: mocks.setCharacter, persisted: true }),
 }))
@@ -44,7 +38,6 @@ import { HomeSurface } from '../home-surface'
 const baseProps = { sections: {}, elements: [], gameCounts: {} }
 beforeEach(() => {
   mocks.wide = false
-  mocks.activationEnabled = false
   mocks.character = 'female'
   mocks.auth = { user: null, loading: false }
   mocks.setCharacter.mockReset()
@@ -131,11 +124,10 @@ describe('HomeSurface', () => {
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
   })
 
-  it('aktivasyon deneyi açıkken wide ekranda eski children ağacını korur', () => {
+  it('wide ekranda yeni anasayfayı gösterir', () => {
     mocks.wide = true
-    mocks.activationEnabled = true
     render(<HomeSurface {...baseProps}><div data-testid="legacy-home">deney eski ağaç</div></HomeSurface>)
-    expect(screen.getByTestId('legacy-home')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('legacy-home')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
   })
 })
