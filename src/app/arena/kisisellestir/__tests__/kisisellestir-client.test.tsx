@@ -84,9 +84,9 @@ describe('KisisellestirClient', () => {
   test('renk teması bölümü masaüstü/tablet için eklenir; mobil stüdyo düzeni korunur', () => {
     render(<KisisellestirClient />)
     const themes = screen.getByRole('group', {name:'Renk teması'})
-    expect(themes.parentElement).toHaveClass('hidden', 'md:block')
+    expect(themes.parentElement).toHaveClass('hidden', 'md:grid', 'md:grid-cols-2')
     expect(within(themes).getAllByRole('radio')).toHaveLength(6)
-    expect(screen.getByRole('button', {name:'🧑 Avatar'})).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', {name:'Avatar'})).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('misafir rengi bu tarayıcıya kaydeder; zemin, profil ve giriş korumaları değişmez', () => {
@@ -101,14 +101,14 @@ describe('KisisellestirClient', () => {
     expect(localStorage.getItem('bilge-theme')).toBe('orman')
     expect(localStorage.getItem('bilge-arena-zemin-v1')).toBe('sis-vadisi')
     expect(localStorage.getItem('bilge-arena-profile-background-v1')).toBe('gece-mavisi')
-    expect(screen.queryByRole('button', {name:'🧑 Avatar'})).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', {name:'Avatar'})).not.toBeInTheDocument()
     expect(screen.getByRole('link', {name:'Giriş Yap'})).toHaveAttribute('href', '/giris?redirect=/arena/kisisellestir')
     expect(fetchMock.mock.calls.some(([url]) => url === '/api/profile')).toBe(false)
   })
 
   test('başlık + alan sekmeleri render olur, varsayılan alan avatar', () => {
     const { container } = render(<KisisellestirClient />)
-    expect(screen.getByText('🎨 Kişiselleştirme Stüdyosu')).toBeInTheDocument()
+    expect(screen.getByText('Kişiselleştirme Stüdyosu')).toBeInTheDocument()
     const page = container.querySelector('[data-studio-screen]')
     const layout = container.querySelector('[data-studio-layout]')
     expect(page).toHaveClass('max-w-[1180px]', 'md:px-5', 'lg:px-6')
@@ -116,8 +116,8 @@ describe('KisisellestirClient', () => {
     expect(layout).toHaveClass('lg:grid-cols-[360px_minmax(0,1fr)]')
     // Avatar artık ilk + varsayılan alan (en sık aranan kişiselleştirme — kullanıcı
     // "Kişiselleştir"e tıklayınca avatar seçici hemen önünde olsun).
-    expect(screen.getByRole('button', { name: '🧑 Avatar' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: '🌅 Zemin' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Avatar' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Zemin' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('avatar alanı (varsayılan): hazır avatar seçimi preset API POST eder + profil günceller', async () => {
@@ -168,7 +168,7 @@ describe('KisisellestirClient', () => {
     const zeminSpy = vi.fn()
     window.addEventListener('zemin-changed', zeminSpy)
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     fireEvent.click(screen.getByRole('button', {name:'Gece Mavisi'}))
 
     expect(localStorage.getItem('bilge-arena-zemin-v1')).toBe('gece-mavisi')
@@ -239,7 +239,7 @@ describe('KisisellestirClient', () => {
   test('sahip olunmayan ücretli tema GÖRÜNÜR; bakiye yetiyorsa satın alınabilir', () => {
     // Bakiye 5000, Nebula 400 → kilitli ama alınabilir: tıklanabilir olmalı
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     const nebula = screen.getByLabelText('Nebula')
     expect(nebula).toBeInTheDocument()
     expect(nebula).not.toBeDisabled()
@@ -248,7 +248,7 @@ describe('KisisellestirClient', () => {
   test('bakiye yetmiyorsa kilitli ürün seçilemez (disabled)', () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), coin_balance: 10 }
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     expect(screen.getByLabelText('Nebula')).toBeDisabled()
   })
 
@@ -262,7 +262,7 @@ describe('KisisellestirClient', () => {
       }),
     })
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     fireEvent.click(screen.getByLabelText('Nebula'))
 
     // Onay modalı açıldı
@@ -278,14 +278,14 @@ describe('KisisellestirClient', () => {
   test('bakiye yetiyorsa kilit-açık fiyat etiketi gösterilir', () => {
     // Bakiye 5000 → 400'lük temalar alınabilir (birden fazla tema aynı fiyatta)
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     expect(screen.getAllByText('🔓 🪙400').length).toBeGreaterThan(0)
   })
 
   test('bakiye yetmiyorsa "ne kadar eksik" yazar', () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), coin_balance: 150 }
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     // 400 - 150 = 250 daha gerekiyor
     expect(screen.getAllByText('🔒 🪙250 daha').length).toBeGreaterThan(0)
   })
@@ -310,7 +310,7 @@ describe('KisisellestirClient', () => {
   test('personel bypass: admin tüm ücretli temaları seçebilir', () => {
     auth.value.profile = { ...(auth.value.profile as Record<string, unknown>), role: 'admin' }
     render(<KisisellestirClient />)
-    fireEvent.click(screen.getByRole('button', { name: '🌅 Zemin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Zemin' }))
     const nebula = screen.getByLabelText('Nebula')
     expect(nebula).toBeInTheDocument()
     expect(nebula).not.toBeDisabled()

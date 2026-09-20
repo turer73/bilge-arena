@@ -26,6 +26,7 @@ const WIDE_ACADEMY_ROUTES = new Set([
   '/arena/profil',
   '/arena/siralama',
   '/arena/arkadaslar',
+  '/arena/magaza',
 ])
 
 const NAV_LINKS = [
