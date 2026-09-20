@@ -26,6 +26,7 @@ const WIDE_ACADEMY_ROUTES = new Set([
   '/arena/profil',
   '/arena/siralama',
   '/arena/arkadaslar',
+  '/arena/yanlislarim',
   '/arena/magaza',
 ])
 
@@ -51,6 +52,13 @@ export function Navbar() {
   const academyMarketingRoute = pathname === '/nasil-calisir' || pathname === '/hakkinda'
   const academyMarketingArea = wide && academyMarketingRoute
   const academyVisualArea = academyArea || academyMarketingArea
+  const activeNavHref = pathname === '/arena/calisma'
+    ? '/arena/calisma'
+    : pathname === '/arena/siralama'
+      ? '/arena/siralama'
+      : pathname === '/arena' || pathname.startsWith('/arena/')
+        ? '/arena'
+        : pathname
   const academyMarketingStyle = academyMarketingArea
     ? ({
         '--app-text': '#f6f8ff',
@@ -134,13 +142,13 @@ export function Navbar() {
             <Link
               key={href}
               href={href}
-              aria-current={pathname === href ? 'page' : undefined}
+              aria-current={activeNavHref === href ? 'page' : undefined}
               className={`rounded-lg px-3 py-2 text-[13px] font-semibold transition-colors ${
                 academyMarketingArea
                   ? pathname === href
                     ? 'bg-blue-500/15 text-blue-300'
                     : 'text-slate-300 hover:bg-white/[0.07] hover:text-white'
-                  : pathname === href
+                  : activeNavHref === href
                     ? 'text-[var(--focus)]'
                     : 'text-[var(--text-sub)] hover:bg-[var(--card)] hover:text-[var(--text)]'
               }`}
@@ -353,7 +361,7 @@ export function Navbar() {
                 key={href}
                 href={href}
                 className={`rounded-lg px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--card)] ${
-                  pathname === href
+                  activeNavHref === href
                     ? 'text-[var(--focus)] bg-[var(--focus-bg)]'
                     : 'text-[var(--text-sub)]'
                 }`}

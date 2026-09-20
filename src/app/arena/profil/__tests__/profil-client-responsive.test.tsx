@@ -64,12 +64,18 @@ describe('ProfilClient responsive kabuk', () => {
     const desktopTopics = container.querySelector('[data-profile-topic-desktop]')
     const sidebar = container.querySelector('[data-profile-sidebar]')
     const mobileTopics = container.querySelector('[data-profile-topic-mobile]')
+    const localHeader = container.querySelector('[data-profile-local-header]')
+    const hero = container.querySelector('[data-profile-hero]')
 
     expect(layout).toHaveClass('lg:grid-cols-[minmax(0,1fr)_360px]')
+    expect(localHeader).toHaveClass('lg:hidden')
+    expect(hero).toHaveClass('md:p-6')
     expect(desktopTopics).toHaveClass('hidden', 'lg:block')
     expect(mobileTopics).toHaveClass('lg:hidden')
     expect(mainColumn?.contains(desktopTopics)).toBe(true)
-    expect(sidebar?.nextElementSibling).toBe(mobileTopics)
+    expect(mainColumn?.contains(mobileTopics)).toBe(true)
+    expect(sidebar).toHaveClass('lg:col-start-2', 'lg:row-start-1')
+    expect(container.querySelector('[data-profile-actions]')).toHaveClass('grid-cols-5')
   })
 
   test('tablet ve masaustunde hedef, Bilge ve gorunurlugu profil avatarindan ayirir', () => {

@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { ArrowLeft, Coins, Flame, Frame, Gamepad2, LockKeyhole, Sparkles, Target } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { XPBar } from '@/components/game/xp-bar'
 import { StreakBadge, StreakMilestoneBanner } from '@/components/game/streak-badge'
@@ -27,7 +30,6 @@ import { AvatarDecoration } from '@/components/profile/avatar-decoration'
 import { ContentQualityStatus } from '@/components/profile/content-quality-status'
 import { ProfileActions } from '@/components/profile/profile-actions'
 import { DesktopProfileContext } from '@/components/profile/desktop-profile-context'
-import Link from 'next/link'
 
 // Mod isimleri
 const MODE_LABELS: Record<string, string> = {
@@ -115,15 +117,15 @@ export default function ProfilClient() {
   // Giris yapilmamis
   if (!user || !profile) {
     return (
-      <div data-profile-screen className="mx-auto min-h-dvh w-full max-w-[440px] bg-[var(--app-bg)] px-4 py-5 text-center text-[var(--app-accent-ink)] md:max-w-[760px] md:px-5 lg:max-w-[1180px] lg:px-6 lg:py-8">
+      <div data-profile-screen className="mx-auto min-h-dvh w-full max-w-[440px] bg-[var(--app-bg)] px-4 py-5 text-center text-[var(--app-text)] md:max-w-[760px] md:px-5 lg:max-w-[1180px] lg:px-6 lg:py-8">
         <ProfileShellStyle />
-        <div className="mb-5 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)]">
-          <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-xl font-black text-[var(--app-accent-text)]">‹</Link>
+        <div data-profile-local-header className="mb-5 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)] lg:hidden">
+          <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><ArrowLeft size={19} aria-hidden="true" /></Link>
           <span className="font-display text-base font-black">Profil</span>
           <span className="h-11 w-11" />
         </div>
         <div className="mx-auto max-w-[560px] rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] px-6 py-8 shadow-[0_6px_0_var(--app-shadow-accent)]">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--app-accent-tint)] text-4xl">🔒</div>
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><LockKeyhole size={34} strokeWidth={2.2} aria-hidden="true" /></div>
           <h1 className="mb-2 text-xl font-black">Profilin seni bekliyor</h1>
           <p className="mb-6 text-sm font-semibold leading-relaxed text-[var(--app-text-sub)]">
             İlerlemeni, serini ve kazandığın rozetleri görmek için giriş yap.
@@ -169,10 +171,10 @@ export default function ProfilClient() {
   // (docs/plans/2026-08-16-kozmetik-ekonomi-yol-haritasi.md, İP-2).
 
   const mainStats = [
-    { label: 'ALTIN', value: coinBalance, icon: '🪙', color: 'var(--app-warn)' },
-    { label: 'OYUN', value: totalSessions, icon: '🎮', color: 'var(--app-accent-text)' },
-    { label: 'BAŞARI', value: `%${accuracy}`, icon: '🎯', color: 'var(--app-success)' },
-    { label: 'EN İYİ SERİ', value: longestStreak, icon: '🔥', color: 'var(--app-warn-ink)' },
+    { label: 'ALTIN', value: coinBalance, icon: <Coins size={20} />, color: 'var(--app-warn)' },
+    { label: 'TAMAMLANAN TUR', value: totalSessions, icon: <Gamepad2 size={20} />, color: 'var(--app-accent-text)' },
+    { label: 'DOĞRU ORANI', value: `%${accuracy}`, icon: <Target size={20} />, color: 'var(--app-success)' },
+    { label: 'EN İYİ SERİ', value: longestStreak, icon: <Flame size={20} />, color: 'var(--app-warn-ink)' },
   ]
 
   // Kategori ilerleme verisini hazirla (gercek veya bos)
@@ -237,50 +239,61 @@ export default function ProfilClient() {
   )
 
   return (
-    <div data-profile-screen className="mx-auto min-h-dvh w-full max-w-[440px] bg-[var(--app-bg)] px-4 pb-28 pt-4 text-[var(--app-accent-ink)] md:max-w-[760px] md:px-5 md:pt-5 lg:max-w-[1180px] lg:px-6 lg:pb-10 lg:pt-8">
+    <div data-profile-screen className="mx-auto min-h-dvh w-full max-w-[440px] bg-[var(--app-bg)] px-4 pb-28 pt-4 text-[var(--app-text)] md:max-w-[760px] md:px-5 md:pt-5 lg:max-w-[1180px] lg:px-6 lg:pb-10 lg:pt-8">
       <ProfileShellStyle />
-      <div className="mb-4 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)]">
-        <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-xl font-black text-[var(--app-accent-text)]">‹</Link>
+      <div data-profile-local-header className="mb-4 flex items-center justify-between rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] px-3 py-2.5 shadow-[0_4px_0_var(--app-border)] lg:hidden">
+        <Link href="/arena" aria-label="Arenaya dön" className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] text-[var(--app-accent-text)]"><ArrowLeft size={19} aria-hidden="true" /></Link>
         <div className="text-center">
           <div className="font-display text-base font-black">Profil</div>
           <div className="text-[10px] font-bold text-[var(--app-text-sub)]">Öğrenme yolculuğun</div>
         </div>
-        <Link href="/arena/magaza" aria-label="Mağazaya git" className="flex h-11 min-w-11 items-center justify-center rounded-xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-2 text-xs font-black text-[var(--app-warn-ink)]">🪙 {coinBalance}</Link>
+        <Link href="/arena/magaza" aria-label="Mağazaya git" className="flex h-11 min-w-11 items-center justify-center gap-1 rounded-xl border-2 border-[var(--app-warn-border)] bg-[var(--app-warn-tint)] px-2 text-xs font-black text-[var(--app-warn-ink)]"><Coins size={15} aria-hidden="true" /> {coinBalance}</Link>
       </div>
       {/* Profil basligi — magazadan secilen arka planla (none=standart kart) */}
       <div
         data-testid="profil-header-card"
-        className={`relative isolate mb-5 animate-fadeUp overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-shadow-accent)] ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
+        data-profile-hero
+        className={`relative isolate mb-3 animate-fadeUp overflow-hidden rounded-[28px] border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] p-4 shadow-[0_6px_0_var(--app-shadow-accent)] md:p-6 ${isCssBg ? (activeBackground.animClass ?? '') : ''}`}
         style={isCssBg ? { background: activeBackground.css } : undefined}
       >
+        {activeBackground.id === 'none' && (
+          <Image
+            src="/academy/academy-landscape.png"
+            alt=""
+            fill
+            priority
+            sizes="(min-width: 1024px) 1132px, 100vw"
+            className="pointer-events-none -z-20 object-cover object-center opacity-35"
+          />
+        )}
         <CardBackgroundLayer
           background={activeBackground}
           videoUrl={activeBgVideoUrl}
           reducedMotion={reducedMotion}
         />
-        {activeBackground.id !== 'none' && (
-          <div
-            aria-hidden
-            data-testid="profil-background-scrim"
-            className="pointer-events-none absolute inset-0 -z-[5] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--card-bg)_94%,transparent),color-mix(in_srgb,var(--card-bg)_76%,transparent))]"
-          />
-        )}
-        <div className="relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3 md:gap-x-4">
+        <div
+          aria-hidden
+          data-testid="profil-background-scrim"
+          className="pointer-events-none absolute inset-0 -z-[5] bg-[linear-gradient(105deg,color-mix(in_srgb,var(--app-card)_98%,transparent)_0%,color-mix(in_srgb,var(--app-card)_88%,transparent)_54%,color-mix(in_srgb,var(--app-card)_50%,transparent)_100%)]"
+        />
+        <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 -z-[4] h-64 w-64 rounded-full border-[44px] border-[var(--app-accent)]/10" />
+        <div className="relative z-10 flex flex-col gap-4 md:gap-5">
 
           {/* Avatar + Çerçeve */}
-          <div className="relative flex-shrink-0">
-            <AvatarDecoration decorationIds={decorationIds} size={52}>
-              <ProfileFrameRing frame={activeFrame} size={52}>
+          <div className="flex min-w-0 items-center gap-4 md:gap-6">
+            <div className="relative flex-shrink-0">
+            <AvatarDecoration decorationIds={decorationIds} size={88}>
+              <ProfileFrameRing frame={activeFrame} size={88}>
                 {profile.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt={displayName}
-                    className="h-[52px] w-[52px] rounded-full object-cover"
+                    className="h-[88px] w-[88px] rounded-full object-cover"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
                   <div
-                    className="flex h-[52px] w-[52px] items-center justify-center rounded-full text-2xl"
+                    className="flex h-[88px] w-[88px] items-center justify-center rounded-full text-3xl"
                     style={{ background: 'linear-gradient(135deg, var(--focus-bg), var(--focus))' }}
                   >
                     {level.badge}
@@ -295,33 +308,35 @@ export default function ProfilClient() {
               title="Çerçeve seç"
               aria-label="Profil çerçevesini değiştir"
               aria-expanded={framePickerOpen}
-              className="absolute -bottom-3 -right-3 flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+              className="absolute -bottom-2 -right-2 flex h-11 w-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] text-xs shadow-sm transition-colors hover:border-[var(--app-accent)] hover:text-[var(--app-accent-text)]">
-                🖼
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--app-accent-border)] bg-[var(--app-card)] text-[var(--app-accent-text)] shadow-sm transition-colors hover:border-[var(--app-accent)]">
+                <Frame size={15} aria-hidden="true" />
               </span>
             </button>
           </div>
 
-          <div className="min-w-0 self-center">
-            <h1 className="truncate text-base font-bold sm:text-lg md:text-xl xl:text-2xl">
+          <div className="min-w-0 flex-1 self-center">
+            <p className="mb-1 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-[var(--app-accent-text)]"><Sparkles size={13} aria-hidden="true" /> Arena profilin</p>
+            <h1 className="truncate text-xl font-black sm:text-2xl md:text-3xl">
               <Nameplate nameplateId={profile.selected_nameplate}>{displayName}</Nameplate>
             </h1>
-            <p className="mt-0.5 truncate text-[11px] font-semibold text-[var(--app-text-sub)] sm:text-xs">
+            <p className="mt-1 truncate text-xs font-bold text-[var(--app-text-sub)] sm:text-sm">
               {level.badge} {level.name}
             </p>
-            <p className="truncate text-[10px] text-[var(--app-text-sub)] sm:text-[11px]">
+            <p className="mt-0.5 truncate text-[10px] font-semibold text-[var(--app-text-muted)] sm:text-[11px]">
               {memberSince}&apos;dan beri üye
             </p>
           </div>
 
-          <div className="justify-self-end">
+          <div className="ml-auto shrink-0 self-start">
             <StreakBadge streak={currentStreak} />
+          </div>
           </div>
 
           <div
             data-testid="profile-xp-summary"
-            className="col-span-3 rounded-2xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] p-3"
+            className="rounded-2xl border-2 border-[var(--app-accent-border)] bg-[var(--app-accent-tint)] p-3.5 md:p-4"
           >
             <div className="mb-2 flex items-center justify-between gap-3">
               <span className="text-[10px] font-extrabold tracking-[0.12em] text-[var(--app-text-sub)]">
@@ -336,10 +351,6 @@ export default function ProfilClient() {
               level={level.level}
               max={level.maxXP === Infinity ? 50000 : level.maxXP - level.minXP + 1}
             />
-          </div>
-
-          <div className="col-span-3">
-            <ProfileActions onEdit={() => setEditOpen(true)} />
           </div>
         </div>
 
@@ -412,6 +423,10 @@ export default function ProfilClient() {
         )}
       </div>
 
+      <div className="mb-5 animate-fadeUp" style={{ animationDelay: '0.04s', animationFillMode: 'both' }}>
+        <ProfileActions onEdit={() => setEditOpen(true)} />
+      </div>
+
       <DesktopProfileContext
         examType={profile.exam_type}
         profileVisibility={profile.profile_visibility}
@@ -472,6 +487,14 @@ export default function ProfilClient() {
         </div>
       )}
 
+      {/* Öğrenme profili, geçmiş oyun ve koleksiyonlardan önce gelir. */}
+      <section data-profile-topic-desktop className="mb-6 hidden min-w-0 lg:block">
+        {renderTopicProgress()}
+      </section>
+      <section data-profile-topic-mobile className="mb-6 min-w-0 lg:hidden">
+        {renderTopicProgress()}
+      </section>
+
       {/* Son oyunlar */}
       {stats && stats.recentGames.length > 0 && (
         <div className="mb-6 animate-fadeUp" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
@@ -526,14 +549,9 @@ export default function ProfilClient() {
         </div>
       )}
 
-      {/* Masaustunde sol sutun kendi akisinda devam eder; sag sutunun boyu bosluk olusturmaz. */}
-      <section data-profile-topic-desktop className="hidden min-w-0 lg:block">
-        {renderTopicProgress()}
-      </section>
-
         </section>
 
-        <aside data-profile-sidebar className="min-w-0 lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
+        <aside data-profile-sidebar className="min-w-0 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
 
       {/* Rozetler */}
       <ComponentErrorBoundary label="Rozetler" variant="inline">
@@ -560,11 +578,6 @@ export default function ProfilClient() {
       </div>
 
         </aside>
-
-      {/* Konu ilerleme */}
-        <section data-profile-topic-mobile className="min-w-0 lg:hidden">
-          {renderTopicProgress()}
-        </section>
       </div>
     </div>
   )

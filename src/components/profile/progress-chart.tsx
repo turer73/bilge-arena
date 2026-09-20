@@ -19,8 +19,8 @@ export function ProgressChart({ game, categories, totalAnswered = 0, accuracy = 
   const hasData = totalAnswered > 0
 
   return (
-    <div className="rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] p-4 shadow-[0_4px_0_var(--app-border)]">
-      <div className="mb-3 flex items-center justify-between">
+    <div className={`rounded-2xl border-2 border-[var(--app-border)] bg-[var(--app-card)] shadow-[0_4px_0_var(--app-border)] ${hasData ? 'p-4' : 'p-3'}`}>
+      <div className={`flex items-center justify-between gap-3 ${hasData ? 'mb-3' : ''}`}>
         <div className="flex items-center gap-2">
           <span
             className="rounded-md px-2 py-0.5 text-[10px] font-bold"
@@ -49,13 +49,10 @@ export function ProgressChart({ game, categories, totalAnswered = 0, accuracy = 
             </span>
           </div>
         )}
+        {!hasData && <span className="text-[9px] font-bold text-[var(--app-text-muted)]">Henüz başlanmadı</span>}
       </div>
 
-      {!hasData ? (
-        <div className="py-3 text-center text-[10px] font-semibold text-[var(--app-text-sub)]">
-          Henüz soru çözülmedi
-        </div>
-      ) : (
+      {hasData ? (
         <div className="flex flex-col gap-2.5">
           {categories.map((cat) => {
             const color = cat.percentage >= 70
@@ -80,7 +77,7 @@ export function ProgressChart({ game, categories, totalAnswered = 0, accuracy = 
             )
           })}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

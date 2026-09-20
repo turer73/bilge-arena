@@ -416,102 +416,125 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
 
         {!loading && !error && !done && question && (
           <div className={styles.quizBody}>
-            <div className={styles.quizRoute} aria-label={`Fetih rotası: ${idx + 1}/${totalQ}`}>
-              {Array.from({ length: totalQ }, (_, step) => {
-                const routeState = step < idx ? 'complete' : step === idx ? 'active' : 'locked'
-                const routeLabels = ['Giriş', 'Geçit', 'Mühür']
-
-                return (
-                  <span
-                    key={step}
-                    className={styles.routeStep}
-                    data-state={routeState}
-                    aria-current={step === idx ? 'step' : undefined}
-                  >
-                    <span className={styles.routeMarker}>
-                      {routeState === 'complete'
-                        ? <Check size={15} aria-hidden="true" />
-                        : routeState === 'active'
-                          ? <Flag size={15} aria-hidden="true" />
-                          : step + 1}
-                    </span>
-                    <small>{routeLabels[step] ?? `${step + 1}. durak`}</small>
-                  </span>
-                )
-              })}
-            </div>
-            <div className={styles.quizRouteGoal}>
-              <span><Target size={15} aria-hidden="true" /> {PASS_THRESHOLD} doğru cevapla bölgeyi aç</span>
-              <strong>{idx + 1}. durak</strong>
-            </div>
-
-            <div className={styles.quizQuestionCard}>
-              <span className={styles.questionKicker}><MapIcon size={15} aria-hidden="true" /> Bölge sorusu</span>
-              <p className={styles.quizQuestion}>
-                {renderRichText(question.content.question || question.content.sentence || '')}
-              </p>
-            </div>
-
-            <div className={styles.quizOptions}>
-              {question.content.options.map((opt, i) => {
-                let optionState = 'idle'
-
-                if (revealed) {
-                  if (i === correctOption) {
-                    optionState = 'correct'
-                  } else if (i === selected && i !== correctOption) {
-                    optionState = 'wrong'
-                  }
-                } else if (selected === i) {
-                  optionState = 'selected'
-                }
-
-                const label = ['A', 'B', 'C', 'D', 'E'][i] ?? String(i + 1)
-
-                return (
-                  <button
-                    key={i}
-                    onClick={() => handleSelect(i)}
-                    disabled={revealed || grading}
-                    className={styles.quizOption}
-                    data-state={optionState}
-                  >
-                    <span className={styles.optionMarker}>{label}</span>
-                    <span>{renderRichText(opt)}</span>
-                    {optionState === 'correct' && <Check size={17} aria-hidden="true" />}
-                    {optionState === 'wrong' && <X size={17} aria-hidden="true" />}
-                    {(optionState === 'idle' || optionState === 'selected') && (
-                      <ChevronRight className={styles.optionChevron} size={16} aria-hidden="true" />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-
-            {grading && (
-              <p className={styles.gradeStatus} role="status">
-                <LoaderCircle size={15} aria-hidden="true" /> Kontrol ediliyor…
-              </p>
-            )}
-            {gradeError && (
-              <p className={styles.gradeError} role="alert">{gradeError}</p>
-            )}
-
-            {revealed && solution && (
-              <div className={styles.solutionBox}>
-                <BookOpenText size={18} aria-hidden="true" />
-                <p>{solution}</p>
-              </div>
-            )}
-
-            {revealed && (
-              <button
-                onClick={handleNext}
-                className={styles.nextAction}
+            <div className={styles.quizArena}>
+              <aside
+                className={styles.conquestBoard}
+                aria-label={`${getCategoryLabel(category)} fetih haritası`}
               >
-                {idx + 1 < totalQ ? 'Sonraki Soru →' : 'Sonucu Gör'}
-              </button>
-            )}
+                <Image
+                  src="/academy/modes/conquest-janissary-v2.png"
+                  alt=""
+                  fill
+                  sizes="(max-width: 760px) 100vw, 290px"
+                />
+                <div className={styles.conquestBoardContent}>
+                  <span className={styles.conquestKicker}><Swords size={14} aria-hidden="true" /> Sefer rotası</span>
+                  <strong>{getCategoryLabel(category)} Geçidi</strong>
+                  <div className={styles.quizRoute} aria-label={`Fetih rotası: ${idx + 1}/${totalQ}`}>
+                    {Array.from({ length: totalQ }, (_, step) => {
+                      const routeState = step < idx ? 'complete' : step === idx ? 'active' : 'locked'
+                      const routeLabels = ['Giriş', 'Geçit', 'Mühür']
+
+                      return (
+                        <span
+                          key={step}
+                          className={styles.routeStep}
+                          data-state={routeState}
+                          aria-current={step === idx ? 'step' : undefined}
+                        >
+                          <span className={styles.routeMarker}>
+                            {routeState === 'complete'
+                              ? <Check size={15} aria-hidden="true" />
+                              : routeState === 'active'
+                                ? <Flag size={15} aria-hidden="true" />
+                                : step + 1}
+                          </span>
+                          <small>{routeLabels[step] ?? `${step + 1}. durak`}</small>
+                        </span>
+                      )
+                    })}
+                  </div>
+                  <p className={styles.conquestBrief}>
+                    <Flag size={15} aria-hidden="true" /> Son durakta bilgi bayrağını dik.
+                  </p>
+                </div>
+              </aside>
+
+              <div className={styles.quizChallenge}>
+                <div className={styles.quizRouteGoal}>
+                  <span><Target size={15} aria-hidden="true" /> {PASS_THRESHOLD} doğru cevapla bölgeyi aç</span>
+                  <strong>{idx + 1}. durak</strong>
+                </div>
+
+                <div className={styles.quizQuestionCard}>
+                  <span className={styles.questionKicker}><MapIcon size={15} aria-hidden="true" /> Bölge sorusu</span>
+                  <p className={styles.quizQuestion}>
+                    {renderRichText(question.content.question || question.content.sentence || '')}
+                  </p>
+                </div>
+
+                <div className={styles.quizOptions}>
+                  {question.content.options.map((opt, i) => {
+                    let optionState = 'idle'
+
+                    if (revealed) {
+                      if (i === correctOption) {
+                        optionState = 'correct'
+                      } else if (i === selected && i !== correctOption) {
+                        optionState = 'wrong'
+                      }
+                    } else if (selected === i) {
+                      optionState = 'selected'
+                    }
+
+                    const label = ['A', 'B', 'C', 'D', 'E'][i] ?? String(i + 1)
+
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleSelect(i)}
+                        disabled={revealed || grading}
+                        className={styles.quizOption}
+                        data-state={optionState}
+                      >
+                        <span className={styles.optionMarker}>{label}</span>
+                        <span>{renderRichText(opt)}</span>
+                        {optionState === 'correct' && <Check size={17} aria-hidden="true" />}
+                        {optionState === 'wrong' && <X size={17} aria-hidden="true" />}
+                        {(optionState === 'idle' || optionState === 'selected') && (
+                          <ChevronRight className={styles.optionChevron} size={16} aria-hidden="true" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {grading && (
+                  <p className={styles.gradeStatus} role="status">
+                    <LoaderCircle size={15} aria-hidden="true" /> Kontrol ediliyor…
+                  </p>
+                )}
+                {gradeError && (
+                  <p className={styles.gradeError} role="alert">{gradeError}</p>
+                )}
+
+                {revealed && solution && (
+                  <div className={styles.solutionBox}>
+                    <BookOpenText size={18} aria-hidden="true" />
+                    <p>{solution}</p>
+                  </div>
+                )}
+
+                {revealed && (
+                  <button
+                    onClick={handleNext}
+                    className={styles.nextAction}
+                  >
+                    {idx + 1 < totalQ ? 'Sonraki Soru →' : 'Sonucu Gör'}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </section>
