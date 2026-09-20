@@ -14,6 +14,15 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })
 
+// 3141 yalniz yeni arayuz onizlemesidir; kimlik ve sentetik veri 3137'deki
+// izole Klipper yigini tarafindan saglanir. Uretimde ve 3137'nin kendisinde
+// bu kaynak, rewrite ve CSP istisnalari tamamen yoktur.
+const isolatedPreviewBridge = process.env.NODE_ENV === 'development'
+  && process.env.BILGE_ISOLATED_TEST === 'true'
+  && process.env.NEXT_PUBLIC_SUPABASE_URL === 'http://localhost:3141'
+  && process.env.BILGE_ACADEMY_PREVIEW_BRIDGE === 'true'
+const isolatedHttpSource = isolatedPreviewBridge ? ' http://localhost:3137' : ''
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // `output: 'standalone'` SADECE Docker self-host (Dockerfile) icin gerekli.
@@ -60,9 +69,19 @@ const nextConfig = {
 
   // ads.txt rewrite — Next.js standalone doesn't serve public/*.txt reliably
   async rewrites() {
-    return [
-      { source: '/ads.txt', destination: '/api/ads-txt' },
-    ]
+    return {
+      // beforeFiles zorunlu: yerel src/app/api rotalari ancak bu asamada
+      // sentetik 3137 backend'ine yonlendirilmeden once atlanabilir.
+      beforeFiles: isolatedPreviewBridge
+        ? [
+            { source: '/api/:path*', destination: 'http://localhost:3137/api/:path*' },
+            { source: '/auth/v1/:path*', destination: 'http://localhost:3137/auth/v1/:path*' },
+            { source: '/rest/v1/:path*', destination: 'http://localhost:3137/rest/v1/:path*' },
+          ]
+        : [],
+      afterFiles: [{ source: '/ads.txt', destination: '/api/ads-txt' }],
+      fallback: [],
+    }
   },
 
   /**
@@ -126,11 +145,11 @@ const nextConfig = {
               // NOT: *.googleusercontent.com — Google OAuth avatar'lari lh3/lh4/lh5/lh6 gibi
               // farkli CDN edge'lerden gelebiliyor (geo-load balancing). Tek subdomain listelemek
               // bazi kullanicilarin avatarini bloklar. Wildcard hepsini karsilar, hepsi Google owned.
-              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co https://*.googlesyndication.com https://pagead2.googlesyndication.com https://www.google.com https://www.google.com.tr https://tpc.googlesyndication.com https://www.googletagmanager.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
+              `img-src 'self' data: blob: https://*.googleusercontent.com https://*.supabase.co https://*.googlesyndication.com https://pagead2.googlesyndication.com https://www.google.com https://www.google.com.tr https://tpc.googlesyndication.com https://www.googletagmanager.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google${isolatedHttpSource}`,
               // media-src: video temalar (background_assets) Supabase Storage'tan mp4/webm
               // ile gelir. Ayarlanmazsa default-src 'self' bloklar → videolar oynamaz.
-              "media-src 'self' blob: data: https://*.supabase.co",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com https://www.google-analytics.com https://www.googletagmanager.com https://plausible.io https://analytics.panola.app https://generativelanguage.googleapis.com https://*.ingest.de.sentry.io https://*.googlesyndication.com https://pagead2.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.googleusercontent.com",
+              `media-src 'self' blob: data: https://*.supabase.co${isolatedHttpSource}`,
+              `connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://ws-dev.bilgearena.com https://ws-dev.bilgearena.com https://www.google-analytics.com https://www.googletagmanager.com https://plausible.io https://analytics.panola.app https://generativelanguage.googleapis.com https://*.ingest.de.sentry.io https://*.googlesyndication.com https://pagead2.googlesyndication.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://static.cloudflareinsights.com https://cloudflareinsights.com https://*.googleusercontent.com${isolatedHttpSource}`,
               "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google",
               "frame-ancestors 'none'",
               "base-uri 'self'",
