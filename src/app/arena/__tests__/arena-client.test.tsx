@@ -79,7 +79,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
     expect(screen.getByText('3 / 5 soru')).toBeInTheDocument()
   })
 
-  test('LGS profilinde yalnız uygun dersleri gösterir', async () => {
+  test('LGS profilinde uygun derslerle birlikte sınavdan bağımsız WordQuest girişini gösterir', async () => {
     mockAuth.value = {
       user: { id: UUID },
       profile: { total_xp: 100, current_streak: 0, username: 'lgsci', exam_type: 'lgs' },
@@ -89,17 +89,20 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Türkçe' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'YDT' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'İng.' }))
+    expect(screen.getByRole('heading', { name: 'İngilizce Yolu' })).toBeInTheDocument()
+    expect(screen.queryByText(/YDT İngilizce/)).not.toBeInTheDocument()
   })
 
-  test('YKS profilinde İngilizce dahil tüm dersleri gösterir', async () => {
+  test('YKS profilinde TYT kapsamı seçiliyken de sınavdan bağımsız İngilizceyi gösterir', async () => {
+    useGameStore.setState({ selectedExamRef: 'TYT' })
     mockAuth.value = {
       user: { id: UUID },
       profile: { total_xp: 100, current_streak: 0, username: 'yksci', exam_type: 'yks' },
     }
 
     await act(async () => { render(<ArenaClient />) })
-    expect(screen.getByRole('button', { name: 'YDT' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'İng.' })).toBeInTheDocument()
   })
 
   test('profil turu degisince onceki sinavin gecersiz kapsamını varsayilana dondurur', async () => {
@@ -137,6 +140,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     await act(async () => { render(<ArenaClient />) })
     expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'İng.' })).toBeInTheDocument()
   })
 
   test('kurum alanını yalnız etkin bayrak ve yetkili çalışma alanı yanıtıyla gösterir', async () => {

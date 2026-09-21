@@ -116,6 +116,8 @@ describe('Wide game preparation', () => {
     expect(screen.queryByLabelText('Sınav kapsamı')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Konu')).toBeInTheDocument()
     expect(container.querySelector('[data-desktop-game-lobby]')).toHaveAttribute('data-game','wordquest')
+    expect(screen.getByText('WORDQUEST · İNGİLİZCE')).toBeInTheDocument()
+    expect(screen.queryByText(/YDT İNGİLİZCE/)).not.toBeInTheDocument()
     expect(screen.getByRole('heading',{name:'Büyülü kelime yolculuğunu kur'})).toBeInTheDocument()
     expect(screen.getByRole('group',{name:'WordQuest görev alanı'})).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button',{name:'Vocabulary · Kelime hazinesi'}))

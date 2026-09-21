@@ -58,9 +58,15 @@ export function StudyHomeClient({ renderStudyTools }: { renderStudyTools?: (game
   }, [institutionEnabled, user?.id])
 
   const availableSubjects = useMemo(
-    () => gamesForExamType(profile?.exam_type)
-      .filter((game) => !effectiveExamRef || game.examTags.includes(effectiveExamRef))
-      .map((game) => (game.slug === 'wordquest' ? 'ingilizce' : game.slug) as MobileSubjectId),
+    () => {
+      const subjects = gamesForExamType(profile?.exam_type)
+        .filter((game) => !effectiveExamRef || game.examTags.includes(effectiveExamRef))
+        .map((game) => (game.slug === 'wordquest' ? 'ingilizce' : game.slug) as MobileSubjectId)
+      // WordQuest is a standalone English game, not an exam-scoped lesson.
+      // Keep it discoverable regardless of the profile or retained exam scope.
+      if (!subjects.includes('ingilizce')) subjects.push('ingilizce')
+      return subjects
+    },
     [effectiveExamRef, profile?.exam_type],
   )
   const questionGoal = quests.find((quest) => quest.quest?.quest_type === 'correct_answers')

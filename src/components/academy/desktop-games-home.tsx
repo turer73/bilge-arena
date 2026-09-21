@@ -36,13 +36,11 @@ export function DesktopGamesHome() {
   const modes = [
     { title: 'Kule Modu', subtitle: 'ADIM ADIM ZORLAŞAN MÜCADELE', description: '3 canınla yüksel. Her katta biraz daha zor bir soruyla karşılaş.', href: '/arena/kule', image: '/academy/modes/tower-v1.png', tone: 'tower', detail: '3 can · Artan zorluk', auth: true },
     { title: 'Bil ve Fethet', subtitle: 'KONU KONU FETİH', description: 'Kategorilerdeki soruları çöz, bilgi haritanda yeni alanlar aç.', href: '/arena/fethet', image: '/academy/modes/conquest-janissary-v2.png', tone: 'conquest', detail: 'Kategori haritası · Soru mücadeleleri', auth: true },
-    ...(examType === 'lgs' ? [] : [{ title: 'WordQuest', subtitle: 'İNGİLİZCE KELİME OYUNU', description: 'Kelime, dil bilgisi ve okuma sorularıyla İngilizceni geliştir.', href: '/arena/wordquest', image: '/academy/modes/wordquest-v1.png', tone: 'words', detail: 'Kelime ve dil · YDT', auth: false }]),
+    { title: 'WordQuest', subtitle: 'İNGİLİZCE KELİME OYUNU', description: 'Kelime, dil bilgisi ve okuma sorularıyla İngilizceni geliştir.', href: '/arena/wordquest', image: '/academy/modes/wordquest-v1.png', tone: 'words', detail: 'Kelime ve dil · İngilizce', auth: false },
   ]
   // Cover crops the panorama on narrow cards; size for its full rendered width,
   // not just the visible card, so the fixed-height tablet artwork stays sharp.
-  const modeImageSizes = modes.length === 2
-    ? '(min-width: 1440px) 730px, (min-width: 900px) calc(54vw - 42px), 420px'
-    : '(min-width: 1440px) 480px, (min-width: 1280px) calc(36vw - 36px), 420px'
+  const modeImageSizes = '(min-width: 1440px) 480px, (min-width: 1280px) calc(36vw - 36px), 420px'
   return <div data-academy-desktop data-academy-games className={`${styles.root} ${styles.liveRoot}`}>
     <ThemeToggle variant="sync-only" />
     <AcademyTabletNav active="games" />

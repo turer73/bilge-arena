@@ -106,8 +106,8 @@ const SUBJECTS: Subject[] = [
     topics: ['Tarih Bilimine Giriş', 'İlk Uygarlıklar', 'Harita Bilgisi', 'İklim Bilgisi', 'Felsefenin Konusu', 'Mini Ünite Sınavı'],
   },
   {
-    id: 'ingilizce', label: 'İngilizce', shortLabel: 'YDT', icon: Languages,
-    color: '#06b6d4', shadow: '#0891b2', unit: 'YDT İngilizce · Ünite 4',
+    id: 'ingilizce', label: 'İngilizce', shortLabel: 'İng.', icon: Languages,
+    color: '#06b6d4', shadow: '#0891b2', unit: 'İngilizce · Ünite 4',
     description: 'Kelime hazneni her gün biraz büyüt',
     topics: ['Daily Vocabulary', 'Phrasal Verbs', 'Tenses', 'Cloze Test', 'Reading Skills', 'Mini Ünite Sınavı'],
   },
@@ -264,14 +264,15 @@ export function MobileHomeDemo({
   const subject = visibleSubjects.find((item) => item.id === activeSubjectId) ?? visibleSubjects[0] ?? SUBJECTS[0]
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
   const gameHref = `/arena/${gameSlug}`
-  const progressExamRef = examRef && GAMES[gameSlug].examTags.includes(examRef)
-    ? examRef
-    : examLabel === 'LGS'
-      ? 'LGS'
-      : GAMES[gameSlug].examTags.includes('TYT')
-        ? 'TYT'
-        : GAMES[gameSlug].examTags[0] ?? null
-
+  const progressExamRef = gameSlug === 'wordquest'
+    ? null
+    : examRef && GAMES[gameSlug].examTags.includes(examRef)
+      ? examRef
+      : examLabel === 'LGS'
+        ? 'LGS'
+        : GAMES[gameSlug].examTags.includes('TYT')
+          ? 'TYT'
+          : GAMES[gameSlug].examTags[0] ?? null
   // Canli modda yol, oyunun kanonik kategori listesi + kullanicinin gercek
   // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
   // yok; sabit ornek icerik gosterilir.
@@ -319,7 +320,9 @@ export function MobileHomeDemo({
   const pathComplete = isLivePath && steps.length > 0 && completedCount === steps.length
   const currentStep = steps.find((step) => step.current) ?? (pathComplete ? steps.at(-1) : steps[0])
   const primaryHref = pathComplete ? gameHref : currentStep?.href ?? gameHref
-  const unitLabel = isSocialTytProgressPreparing
+  const unitLabel = gameSlug === 'wordquest'
+    ? `İngilizce · ${steps.length} konu`
+    : isSocialTytProgressPreparing
     ? 'TYT Sosyal · hazırlanıyor'
     : isLivePath
       ? `${progressExamRef ?? examLabel} ${subject.label} · ${steps.length} konu`
