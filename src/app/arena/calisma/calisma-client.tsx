@@ -22,6 +22,7 @@ import { DesktopStudyTools } from '@/components/academy/desktop-study-tools'
 const MOBILE_APP_SHELL_STYLE = '@media (max-width: 1023px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }'
 
 function examRefsForGame(game: GameSlug, examType: string | null | undefined): string[] {
+  if (game === 'wordquest') return []
   const refs = [...GAMES[game].examTags]
   if (examType === 'lgs') return refs.filter((ref) => ref === 'LGS')
   if (examType === 'yks') return refs.filter((ref) => ref !== 'LGS')
@@ -41,7 +42,12 @@ function LegacyCalismaClient() {
   const gameStore = useGameStore()
 
   const availableGames = useMemo(
-    () => gamesForExamType(profile?.exam_type),
+    () => {
+      const games = gamesForExamType(profile?.exam_type)
+      return profile?.exam_type === 'lgs' && !games.some((item) => item.slug === 'wordquest')
+        ? [...games, GAMES.wordquest]
+        : games
+    },
     [profile?.exam_type],
   )
   const fallbackGame = availableGames.find((item) => item.slug === 'matematik') ?? availableGames[0]

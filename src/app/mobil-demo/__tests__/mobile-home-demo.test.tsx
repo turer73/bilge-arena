@@ -214,6 +214,28 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     }))
   })
 
+  test('WordQuest planını kapsamdan bağımsız, masaüstü tanı aracını YDT gösterim kapsamında tutar', async () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })))
+    const renderStudyTools = vi.fn(() => null)
+
+    render(
+      <MobileHomeDemo
+        mode="live"
+        userId="user-1"
+        desktopSubject="ingilizce"
+        availableSubjects={['ingilizce']}
+        examRef="LGS"
+        renderStudyTools={renderStudyTools}
+      />,
+    )
+
+    await waitFor(() => expect(renderStudyTools).toHaveBeenCalledWith('wordquest', 'YDT'))
+  })
+
   test('misafir canlı giriş plan isteği oluşturmaz', () => {
     const { container } = render(<MobileHomeDemo mode="live" userId={null} availableSubjects={['matematik']} examRef="TYT" />)
 

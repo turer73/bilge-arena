@@ -273,6 +273,9 @@ export function MobileHomeDemo({
         : GAMES[gameSlug].examTags.includes('TYT')
           ? 'TYT'
           : GAMES[gameSlug].examTags[0] ?? null
+  const studyToolsExamRef = gameSlug === 'wordquest'
+    ? GAMES.wordquest.examTags[0] ?? null
+    : progressExamRef
 
   // Canli modda yol, oyunun kanonik kategori listesi + kullanicinin gercek
   // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
@@ -432,7 +435,7 @@ export function MobileHomeDemo({
       displayName={displayName} avatarUrl={avatarUrl} userId={userId} currentStreak={currentStreak}
       classroomEnabled={classroomEnabled} institutionEnabled={institutionEnabled}
       communityQualityEnabled={communityQualityEnabled}
-      studyTools={renderStudyTools?.(gameSlug, progressExamRef)}
+      studyTools={renderStudyTools?.(gameSlug, studyToolsExamRef)}
     />
   }
 
