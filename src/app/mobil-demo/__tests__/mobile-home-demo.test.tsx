@@ -214,7 +214,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     }))
   })
 
-  test('WordQuest planını kapsamdan bağımsız, masaüstü tanı aracını YDT gösterim kapsamında tutar', async () => {
+  test('WordQuest çalışma araçlarına kullanıcı bağlamını sınavdan bağımsız taşır', async () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({
       matches: true,
       addEventListener: vi.fn(),
@@ -233,7 +233,7 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
       />,
     )
 
-    await waitFor(() => expect(renderStudyTools).toHaveBeenCalledWith('wordquest', 'YDT'))
+    await waitFor(() => expect(renderStudyTools).toHaveBeenCalledWith('wordquest', null))
   })
 
   test('misafir canlı giriş plan isteği oluşturmaz', () => {

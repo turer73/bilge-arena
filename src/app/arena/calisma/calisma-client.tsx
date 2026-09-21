@@ -32,7 +32,13 @@ function examRefsForGame(game: GameSlug, examType: string | null | undefined): s
 export default function CalismaClient() {
   const wide = useWideStudy()
   return wide
-    ? <StudyHomeClient renderStudyTools={(game, examRef) => <DesktopStudyTools game={game} examRef={examRef} />} />
+    ? <StudyHomeClient renderStudyTools={(game, examRef) => (
+        <DesktopStudyTools
+          game={game}
+          examRef={examRef}
+          diagnosticExamRef={game === 'wordquest' ? GAMES.wordquest.examTags[0] ?? null : examRef}
+        />
+      )} />
     : <LegacyCalismaClient />
 }
 

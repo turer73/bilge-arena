@@ -40,3 +40,12 @@ it('preserves mastery, policy, institution and assistant tools in the selected c
   rerender(<DesktopStudyTools game="fen" examRef="AYT-SAY" />)
   expect(mocks.assistant).toHaveBeenLastCalledWith({game:'fen',examRef:'AYT-SAY'})
 })
+it('keeps WordQuest user-facing context neutral while scoping mastery diagnostics to YDT',()=>{
+  mocks.auth.user={id:'student'}
+  render(<DesktopStudyTools game="wordquest" examRef={null} diagnosticExamRef="YDT" />)
+  expect(screen.getByText('Serbest · İngilizce')).toBeInTheDocument()
+  expect(mocks.mastery).toHaveBeenLastCalledWith({
+    game:'wordquest',examRef:'YDT',userId:'student',diagnosticPresentation:'explained',
+  })
+  expect(mocks.assistant).toHaveBeenLastCalledWith({game:'wordquest',examRef:null})
+})
