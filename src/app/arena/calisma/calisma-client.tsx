@@ -50,7 +50,7 @@ function LegacyCalismaClient() {
   const availableGames = useMemo(
     () => {
       const games = gamesForExamType(profile?.exam_type)
-      return profile?.exam_type === 'lgs' && !games.some((item) => item.slug === 'wordquest')
+      return !games.some((item) => item.slug === 'wordquest')
         ? [...games, GAMES.wordquest]
         : games
     },

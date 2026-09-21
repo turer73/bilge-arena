@@ -94,7 +94,8 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
     expect(screen.queryByText(/YDT İngilizce/)).not.toBeInTheDocument()
   })
 
-  test('YKS profilinde İngilizce dahil tüm dersleri gösterir', async () => {
+  test('YKS profilinde TYT kapsamı seçiliyken de sınavdan bağımsız İngilizceyi gösterir', async () => {
+    useGameStore.setState({ selectedExamRef: 'TYT' })
     mockAuth.value = {
       user: { id: UUID },
       profile: { total_xp: 100, current_streak: 0, username: 'yksci', exam_type: 'yks' },
@@ -139,6 +140,7 @@ describe('ArenaClient duyarlı öğrenme ekranı', () => {
 
     await act(async () => { render(<ArenaClient />) })
     expect(screen.getByRole('button', { name: 'Mat' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'İng.' })).toBeInTheDocument()
   })
 
   test('kurum alanını yalnız etkin bayrak ve yetkili çalışma alanı yanıtıyla gösterir', async () => {

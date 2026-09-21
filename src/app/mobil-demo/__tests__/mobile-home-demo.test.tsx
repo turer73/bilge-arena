@@ -234,6 +234,9 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     )
 
     await waitFor(() => expect(renderStudyTools).toHaveBeenCalledWith('wordquest', null))
+    const hero = (await screen.findByRole('heading', { name: 'İngilizce Yolu' })).closest('section')
+    expect(within(hero as HTMLElement).getByText(/^İngilizce · \d+ konu$/)).toBeVisible()
+    expect(within(hero as HTMLElement).queryByText('LGS İngilizce')).not.toBeInTheDocument()
   })
 
   test('misafir canlı giriş plan isteği oluşturmaz', () => {

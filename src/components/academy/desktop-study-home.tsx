@@ -65,7 +65,9 @@ export function DesktopStudyHome(props: DesktopStudyHomeProps) {
   const completed = ready ? steps.filter(step => step.done).length : 0
   const total = steps.length
   const current = ready ? props.currentLabel : subject.label
-  const scopeLabel = props.examOptions.find(option => option.value === props.selectedExamRef)?.label ?? props.examRef
+  const scopeLabel = props.examRef
+    ? props.examOptions.find(option => option.value === props.selectedExamRef)?.label ?? props.examRef
+    : null
   const dailyPercentage = props.dailyGoal ? Math.max(0, Math.min(100, props.dailyGoal.current / Math.max(1, props.dailyGoal.target) * 100)) : 0
 
   return (
@@ -97,7 +99,7 @@ export function DesktopStudyHome(props: DesktopStudyHomeProps) {
             <Image className={styles.heroArt} src="/academy/academy-landscape.png" alt="" fill loading="eager" sizes="(min-width: 1400px) 890px, 67vw" />
             <div className={styles.heroShade} />
             <div className={styles.heroCopy}>
-              <p className={styles.eyebrow}>{scopeLabel} {subject.label}{ready ? ' · ' + total + ' konu' : ''}</p>
+              <p className={styles.eyebrow}>{scopeLabel ? scopeLabel + ' ' : ''}{subject.label}{ready ? ' · ' + total + ' konu' : ''}</p>
               <h1 id="academy-path-title">{subject.label} Yolu</h1>
               <p>{subject.description}.<br />Her adımda biraz daha ileri.</p>
               <div className={styles.heroActions}>

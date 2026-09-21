@@ -63,8 +63,8 @@ export function StudyHomeClient({ renderStudyTools }: { renderStudyTools?: (game
         .filter((game) => !effectiveExamRef || game.examTags.includes(effectiveExamRef))
         .map((game) => (game.slug === 'wordquest' ? 'ingilizce' : game.slug) as MobileSubjectId)
       // WordQuest is a standalone English game, not an exam-scoped lesson.
-      // Keep it discoverable for LGS players just as it is on the desktop hub.
-      if (profile?.exam_type === 'lgs' && !subjects.includes('ingilizce')) subjects.push('ingilizce')
+      // Keep it discoverable regardless of the profile or retained exam scope.
+      if (!subjects.includes('ingilizce')) subjects.push('ingilizce')
       return subjects
     },
     [effectiveExamRef, profile?.exam_type],
