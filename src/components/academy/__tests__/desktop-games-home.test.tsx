@@ -94,13 +94,14 @@ describe('Desktop games discovery',()=>{
     expect(screen.getAllByRole('status')).toHaveLength(2)
     expect(screen.queryByRole('link',{name:/Kule Modu/})).not.toBeInTheDocument()
   })
-  it('preserves exam scope in subject links, without presenting YDT as LGS content',()=>{
+  it('preserves LGS subject scope while keeping the exam-independent WordQuest mode discoverable',()=>{
     auth.profile={exam_type:'lgs'};useGameStore.setState({selectedExamRef:'AYT-SAY'})
     const {rerender}=render(<DesktopGamesHome />)
-    expect(screen.queryByRole('heading',{name:'WordQuest'})).not.toBeInTheDocument()
+    expect(screen.getByRole('heading',{name:'WordQuest'})).toBeInTheDocument()
+    expect(screen.getByRole('link',{name:'WordQuest modunu aç'})).toHaveAttribute('href','/arena/wordquest')
     const modeImages=screen.getByRole('region',{name:'Oyun modları'}).querySelectorAll('article img')
-    expect(modeImages).toHaveLength(2)
-    for(const image of modeImages) expect(image).toHaveAttribute('sizes',expect.stringContaining('54vw'))
+    expect(modeImages).toHaveLength(3)
+    for(const image of modeImages) expect(image).toHaveAttribute('sizes',expect.stringContaining('36vw'))
     expect(screen.getByRole('combobox')).toHaveValue('LGS')
     expect(within(screen.getByRole('region',{name:'Ders oyunları'})).getByRole('link',{name:/Matematik/})).toHaveAttribute('href','/arena/matematik?exam_ref=LGS')
     auth.profile={exam_type:'yks'};rerender(<DesktopGamesHome />)
