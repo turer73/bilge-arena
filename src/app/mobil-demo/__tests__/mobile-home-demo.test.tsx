@@ -205,12 +205,12 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     }))
   })
 
-  test('canlı plan seçili dersin Wordquest oyununu ve sınav kapsamını taşır', async () => {
+  test('canlı plan WordQuest oyununu sınav kapsamından bağımsız taşır', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['ingilizce']} examRef="YDT" />)
 
     await waitFor(() => expect(mockTodayPlanFocus).toHaveBeenCalled())
     expect(mockTodayPlanFocus).toHaveBeenLastCalledWith(expect.objectContaining({
-      game: 'wordquest', userId: 'user-1', examRef: 'YDT', selectedCategory: null, showStickyMobileAction: false,
+      game: 'wordquest', userId: 'user-1', examRef: null, selectedCategory: null, showStickyMobileAction: false,
     }))
   })
 

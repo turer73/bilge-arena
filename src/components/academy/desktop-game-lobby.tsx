@@ -137,7 +137,7 @@ export function DesktopGameLobby(props: LobbyProps) {
         <div className={styles.headerNavigation}>
           <Link className={styles.back} href="/arena"><ChevronLeft size={17} aria-hidden="true" /> Oyunlara dön</Link>
         </div>
-        <p className={styles.eyebrow}>{isWordQuest ? 'WORDQUEST · YDT İNGİLİZCE' : 'OYUN HAZIRLIĞI'}</p>
+        <p className={styles.eyebrow}>{isWordQuest ? 'WORDQUEST · İNGİLİZCE' : 'OYUN HAZIRLIĞI'}</p>
         <h1>{isWordQuest ? 'Büyülü kelime yolculuğunu kur' : `${gameDef.name} turunu kur`}</h1>
         <p>{isWordQuest ? 'Kelimeleri bağlam içinde keşfet, dil bilgisi görevlerini tamamla ve her turda İngilizceni güçlendir.' : 'Oyun biçimini seç, istersen soruları özelleştir. Hazır olduğunda başla.'}</p>
       </div>
