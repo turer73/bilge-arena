@@ -7,6 +7,7 @@ import { StatsBar } from '@/components/landing/stats-bar'
 import { GamesSection } from '@/components/landing/games-section'
 import { SectionWrapper } from '@/components/landing/section-wrapper'
 import { HomeSurface } from '@/components/landing/home-surface'
+import { FeaturedLearningResources } from '@/components/landing/featured-learning-resources'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import type {
   HomepageAlignment,
@@ -184,6 +185,7 @@ export default async function Home() {
     getHomepageContent(),
     getGameCounts(),
   ])
+  const featuredResources = <FeaturedLearningResources />
 
   return (
     <>
@@ -198,7 +200,7 @@ export default async function Home() {
       />
       <Navbar />
       <main>
-        <HomeSurface sections={sections} elements={elements} gameCounts={gameCounts}>
+        <HomeSurface sections={sections} elements={elements} gameCounts={gameCounts} featuredResources={featuredResources}>
         <SectionWrapper section="hero" elements={elements}>
           <HeroSection config={sections.hero} />
         </SectionWrapper>
@@ -219,6 +221,7 @@ export default async function Home() {
             <LeaderboardPreview config={sections.leaderboard} />
           </SectionWrapper>
         </div>
+        {featuredResources}
         <div className="cv-auto">
           <SectionWrapper section="cta" elements={elements}>
             <CTASection config={sections.cta} />

@@ -25,6 +25,14 @@ const FOOTER_LINKS = [
     ],
   },
   {
+    title: 'Kaynaklar',
+    links: [
+      { label: 'Sınav Rehberi', href: '/rehber' },
+      { label: 'Çözümlü Sorular', href: '/cozumlu-soru' },
+      { label: 'Konular', href: '/konular' },
+    ],
+  },
+  {
     title: 'Yasal',
     links: [
       { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
@@ -49,7 +57,7 @@ export function Footer({ config, academyDesktop = false }: FooterProps = {}) {
     <footer className="border-t border-[var(--border)] bg-[var(--surface)]">
       <div className="mx-auto max-w-[1200px] px-6 pb-8 pt-16 lg:px-8">
         {/* Grid */}
-        <div className="mb-12 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-12 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {/* Brand */}
           <div>
             {academyDesktop ? <><div className="md:hidden"><Logo size={36} /></div><div className="hidden md:block"><AcademyLogo /></div></> : <Logo size={36} />}
