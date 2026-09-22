@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import Link from 'next/link'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -129,5 +130,11 @@ describe('HomeSurface', () => {
     render(<HomeSurface {...baseProps}><div data-testid="legacy-home">deney eski ağaç</div></HomeSurface>)
     expect(screen.queryByTestId('legacy-home')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+  })
+
+  it('wide ekranda sunucu kaynaklarını görünür tutar', () => {
+    mocks.wide = true
+    render(<HomeSurface {...baseProps} featuredResources={<Link href="/rehber">Rehbere git</Link>}><div>mobil içerik</div></HomeSurface>)
+    expect(screen.getByRole('link', { name: 'Rehbere git' })).toHaveAttribute('href', '/rehber')
   })
 })
