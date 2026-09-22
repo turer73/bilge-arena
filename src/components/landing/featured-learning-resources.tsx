@@ -1,20 +1,7 @@
 import Link from 'next/link'
-import { REHBER_ARTICLES } from '@/lib/content/rehber'
-import { COZUMLU_SORU_LIST } from '@/lib/content/cozumlu-soru'
-
-const featured = [
-  { kind: 'Rehber', slug: 'verimli-calisma-yontemleri', prefix: '/rehber', items: REHBER_ARTICLES },
-  { kind: 'Rehber', slug: 'deneme-sinavi-analizi', prefix: '/rehber', items: REHBER_ARTICLES },
-  { kind: 'Çözümlü soru', slug: 'tyt-matematik-iki-basamakli-sayi-rakamlari', prefix: '/cozumlu-soru', items: COZUMLU_SORU_LIST },
-  { kind: 'Çözümlü soru', slug: 'tyt-turkce-paragraf-ana-dusunce', prefix: '/cozumlu-soru', items: COZUMLU_SORU_LIST },
-] as const
+import { FEATURED_LEARNING_RESOURCES } from '@/lib/content/featured-learning-resources'
 
 export function FeaturedLearningResources() {
-  const resources = featured.flatMap(({ kind, slug, prefix, items }) => {
-    const item = items.find((entry) => entry.slug === slug)
-    return item ? [{ kind, href: `${prefix}/${slug}`, title: item.title, description: item.description }] : []
-  })
-
   return (
     <section className="mx-auto w-full max-w-[1200px] px-6 py-14 lg:px-8" aria-labelledby="featured-learning-title">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -28,7 +15,7 @@ export function FeaturedLearningResources() {
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {resources.map((resource) => (
+        {FEATURED_LEARNING_RESOURCES.map((resource) => (
           <article key={resource.href} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
             <p className="mb-3 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">{resource.kind}</p>
             <h3 className="mb-2 text-lg font-bold leading-snug text-[var(--text)]">
