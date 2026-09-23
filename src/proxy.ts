@@ -26,7 +26,10 @@ import {
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_SERVER_URL = resolveAcademyServerSupabaseOrigin(SUPABASE_URL)
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  || 'placeholder-anon-key'
 
 function preserveRefreshedCookies(source: NextResponse, target: NextResponse): NextResponse {
   for (const cookie of source.cookies.getAll()) target.cookies.set(cookie)

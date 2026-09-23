@@ -19,7 +19,10 @@ import { resolveAcademyServerSupabaseOrigin } from '@/lib/auth/isolated-test'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const SUPABASE_SERVER_URL = resolveAcademyServerSupabaseOrigin(SUPABASE_URL)
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  || 'placeholder-anon-key'
 
 function clearLegalConsentIntentCookie(response: NextResponse) {
   // Cookie path must match the path used by /api/consent/intent. A bare

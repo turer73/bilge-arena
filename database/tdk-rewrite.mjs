@@ -19,9 +19,9 @@ if (existsSync(envPath)) {
 }
 const GEMINI_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!GEMINI_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('GEMINI_API_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY gerekli')
+  console.error('GEMINI_API_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_KEY (veya legacy SUPABASE_SERVICE_ROLE_KEY) gerekli')
   process.exit(1)
 }
 
@@ -74,7 +74,7 @@ async function patchDB(id, newContent) {
     method: 'PATCH',
     headers: {
       apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
+      ...(SUPABASE_KEY.startsWith('sb_secret_') ? {} : { Authorization: `Bearer ${SUPABASE_KEY}` }),
       'Content-Type': 'application/json; charset=utf-8'
     },
     body: JSON.stringify({ content: newContent })
