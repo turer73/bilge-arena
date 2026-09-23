@@ -1,8 +1,9 @@
 'use client'
 
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { DocumentBoundaryLink } from '@/components/privacy/document-boundary-link'
 import {
   BookOpenText,
@@ -33,14 +34,19 @@ import {
 } from 'lucide-react'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { TodayPlanFocus } from '@/components/study/today-plan-focus'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
 import { useTopicProgress } from '@/lib/hooks/use-topic-progress'
-import { GAMES } from '@/lib/constants/games'
+import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { isTytSocialV2ClientEnabled } from '@/lib/feature-flags/tyt-social-v2-client'
 
 export type MobileSubjectId = 'matematik' | 'turkce' | 'fen' | 'sosyal' | 'ingilizce'
+const DesktopStudyHome = dynamic(() => import('@/components/academy/desktop-study-home').then(module => module.DesktopStudyHome))
 type SubjectId = MobileSubjectId
 
 interface MobileHomeDemoProps {
+  desktopSubject?: MobileSubjectId
+  onDesktopSubjectChange?: (subject: MobileSubjectId) => void
+  renderStudyTools?: (game: GameSlug, examRef: string | null) => ReactNode
   mode?: 'demo' | 'live'
   examLabel?: 'YKS' | 'LGS'
   /** Canli yoldaki cevaplari TYT/AYT/LGS kapsaminda ayirir. */
@@ -100,8 +106,8 @@ const SUBJECTS: Subject[] = [
     topics: ['Tarih Bilimine Giriş', 'İlk Uygarlıklar', 'Harita Bilgisi', 'İklim Bilgisi', 'Felsefenin Konusu', 'Mini Ünite Sınavı'],
   },
   {
-    id: 'ingilizce', label: 'İngilizce', shortLabel: 'YDT', icon: Languages,
-    color: '#06b6d4', shadow: '#0891b2', unit: 'YDT İngilizce · Ünite 4',
+    id: 'ingilizce', label: 'İngilizce', shortLabel: 'İng.', icon: Languages,
+    color: '#06b6d4', shadow: '#0891b2', unit: 'İngilizce · Ünite 4',
     description: 'Kelime hazneni her gün biraz büyüt',
     topics: ['Daily Vocabulary', 'Phrasal Verbs', 'Tenses', 'Cloze Test', 'Reading Skills', 'Mini Ünite Sınavı'],
   },
@@ -223,6 +229,9 @@ function compactNumber(value: number) {
 }
 
 export function MobileHomeDemo({
+  desktopSubject,
+  onDesktopSubjectChange,
+  renderStudyTools,
   mode = 'demo',
   examLabel = 'YKS',
   examRef = null,
@@ -240,6 +249,7 @@ export function MobileHomeDemo({
   showBottomNav = true,
   userId = null,
 }: MobileHomeDemoProps = {}) {
+  const wideStudy = useWideStudy()
   const visibleSubjects = SUBJECTS.filter((item) => !availableSubjects || availableSubjects.includes(item.id))
   const [subjectId, setSubjectId] = useState<SubjectId>(visibleSubjects[0]?.id ?? 'matematik')
   // Demo rotasi bir vitrin: pencere acik baslar. Canli ana giriste planin
@@ -250,17 +260,19 @@ export function MobileHomeDemo({
   const [coachMessage, setCoachMessage] = useState(0)
   const [examPickerOpen, setExamPickerOpen] = useState(false)
   const [demoExamRef, setDemoExamRef] = useState(examRef)
-  const subject = useMemo(() => visibleSubjects.find((item) => item.id === subjectId) ?? visibleSubjects[0] ?? SUBJECTS[0], [subjectId, visibleSubjects])
+  const activeSubjectId = wideStudy && desktopSubject ? desktopSubject : subjectId
+  const subject = visibleSubjects.find((item) => item.id === activeSubjectId) ?? visibleSubjects[0] ?? SUBJECTS[0]
   const gameSlug = subject.id === 'ingilizce' ? 'wordquest' : subject.id
   const gameHref = `/arena/${gameSlug}`
-  const progressExamRef = examRef && GAMES[gameSlug].examTags.includes(examRef)
-    ? examRef
-    : examLabel === 'LGS'
-      ? 'LGS'
-      : GAMES[gameSlug].examTags.includes('TYT')
-        ? 'TYT'
-        : GAMES[gameSlug].examTags[0] ?? null
-
+  const progressExamRef = gameSlug === 'wordquest'
+    ? null
+    : examRef && GAMES[gameSlug].examTags.includes(examRef)
+      ? examRef
+      : examLabel === 'LGS'
+        ? 'LGS'
+        : GAMES[gameSlug].examTags.includes('TYT')
+          ? 'TYT'
+          : GAMES[gameSlug].examTags[0] ?? null
   // Canli modda yol, oyunun kanonik kategori listesi + kullanicinin gercek
   // konu basarisi uzerine kurulur. Demo modunda (rota /mobil-demo) backend
   // yok; sabit ornek icerik gosterilir.
@@ -274,7 +286,7 @@ export function MobileHomeDemo({
     && !isSocialTytProgressPreparing
     && progress.topics.length > 0
 
-  const steps: PathStepModel[] = useMemo(() => {
+  const steps: PathStepModel[] = (() => {
     if (isSocialTytProgressPreparing) return []
     if (isLivePath) {
       return progress.topics.map((topic, index) => ({
@@ -301,14 +313,16 @@ export function MobileHomeDemo({
       exam: index === subject.topics.length - 1,
       locked: index > demoCurrent,
     }))
-  }, [gameHref, gameSlug, isLivePath, isSocialTytProgressPreparing, progress.currentIndex, progress.topics, subject.id, subject.topics])
+  })()
 
   const completedCount = steps.filter((step) => step.done).length
   const stepCount = Math.max(1, steps.length)
   const pathComplete = isLivePath && steps.length > 0 && completedCount === steps.length
   const currentStep = steps.find((step) => step.current) ?? (pathComplete ? steps.at(-1) : steps[0])
   const primaryHref = pathComplete ? gameHref : currentStep?.href ?? gameHref
-  const unitLabel = isSocialTytProgressPreparing
+  const unitLabel = gameSlug === 'wordquest'
+    ? `İngilizce · ${steps.length} konu`
+    : isSocialTytProgressPreparing
     ? 'TYT Sosyal · hazırlanıyor'
     : isLivePath
       ? `${progressExamRef ?? examLabel} ${subject.label} · ${steps.length} konu`
@@ -350,7 +364,7 @@ export function MobileHomeDemo({
         : 'Bu dersi tamamladığında günlük rotanda ilerleyip serini korumaya yaklaşacaksın.'
 
   useEffect(() => {
-    if (!coachOpen) return
+    if (!coachOpen || wideStudy) return
 
     const previousOverflow = document.body.style.overflow
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -394,11 +408,31 @@ export function MobileHomeDemo({
       // Odak, pencereyi acan ogeye geri doner (WCAG 2.4.3).
       coachReturnFocusRef.current?.focus?.()
     }
-  }, [coachOpen])
+  }, [coachOpen, wideStudy])
 
   const openCoach = () => {
     setCoachMessage(0)
     setCoachOpen(true)
+  }
+
+  if (wideStudy) {
+    const progressStatus = mode === 'demo' ? 'ready'
+      : !userId ? 'guest'
+        : progress.loading ? 'loading'
+          : isSocialTytProgressPreparing || progress.available === false ? 'preparing'
+            : progress.available === null ? 'unavailable' : 'ready'
+    return <DesktopStudyHome
+      mode={mode} subjects={visibleSubjects} subject={subject} onSubjectChange={onDesktopSubjectChange ?? setSubjectId}
+      examOptions={examScopeOptions} examRef={progressExamRef} selectedExamRef={selectedHeaderExamRef}
+      onExamChange={onExamRefChange ?? setDemoExamRef} game={gameSlug}
+      steps={mode === 'demo' || isLivePath ? steps : []}
+      primaryHref={primaryHref} currentLabel={currentStep?.label ?? subject.label}
+      pathComplete={pathComplete} progressStatus={progressStatus} dailyGoal={dailyGoal}
+      displayName={displayName} avatarUrl={avatarUrl} userId={userId} currentStreak={currentStreak}
+      classroomEnabled={classroomEnabled} institutionEnabled={institutionEnabled}
+      communityQualityEnabled={communityQualityEnabled}
+      studyTools={renderStudyTools?.(gameSlug, progressExamRef)}
+    />
   }
 
   return (

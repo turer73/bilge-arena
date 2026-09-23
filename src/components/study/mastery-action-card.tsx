@@ -2,24 +2,34 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { GAMES, type GameSlug } from '@/lib/constants/games'
 import { useMasteryMap, type MasteryOutcome } from '@/lib/hooks/use-mastery-map'
 import { useGameStore } from '@/stores/game-store'
+import { DiagnosticExplainerDialog } from './diagnostic-explainer-dialog'
 
 interface MasteryActionCardProps {
   game: GameSlug
   userId?: string | null
   examRef?: string | null
   policyEpoch?: string | null
+  diagnosticPresentation?: 'direct' | 'explained'
 }
 
 function byLowestReliableScore(a: MasteryOutcome, b: MasteryOutcome) {
   return a.score - b.score || b.attempts - a.attempts
 }
 
-export function MasteryActionCard({ game, userId, examRef, policyEpoch }: MasteryActionCardProps) {
+export function MasteryActionCard({
+  game,
+  userId,
+  examRef,
+  policyEpoch,
+  diagnosticPresentation = 'direct',
+}: MasteryActionCardProps) {
   const router = useRouter()
   const gameStore = useGameStore()
+  const [diagnosticOpen, setDiagnosticOpen] = useState(false)
   const {
     response,
     outcomes,
@@ -121,7 +131,25 @@ export function MasteryActionCard({ game, userId, examRef, policyEpoch }: Master
               ? 'Kısa başlangıç taraması çekirdek kazanımlar için düşük güvenli bir ilk tahmin üretir. Kalıcı hâkimiyet kararı yalnız doğrulanmış pratik kanıtlarıyla açılır.'
               : 'Kısa pratiklerde verdiğin doğrulanmış cevaplarla başlangıç rotan oluşur. Yeterli kanıt olmadan güçlü veya zayıf etiketi göstermeyiz.'}
           </p>
-          {coverage.diagnosticAvailable ? (
+          {coverage.diagnosticAvailable ? diagnosticPresentation === 'explained' && diagnosticExamRef ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setDiagnosticOpen(true)}
+                className="mt-4 min-h-12 w-full rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"
+              >
+                Seviyeni ölç
+              </button>
+              {diagnosticOpen ? (
+                <DiagnosticExplainerDialog
+                  game={game}
+                  examRef={diagnosticExamRef}
+                  userId={userId}
+                  onClose={() => setDiagnosticOpen(false)}
+                />
+              ) : null}
+            </>
+          ) : (
             <Link
               href={diagnosticHref}
               className="mt-4 flex min-h-12 w-full items-center justify-center rounded-2xl bg-[var(--app-accent)] px-4 text-sm font-black text-white shadow-[0_5px_0_var(--app-accent-strong)] active:translate-y-1 active:shadow-none"

@@ -23,14 +23,14 @@ const MODES = [
 ] as const
 
 /** Arena sekmesindeki tek oyunculu, kalıcı oyun modları. */
-export function ArenaModeCards() {
+export function ArenaModeCards({ compact = false }: { compact?: boolean }) {
   return (
-    <section aria-labelledby="solo-arena-title" className="mb-8">
+    <section aria-labelledby="solo-arena-title" className={`mb-8 ${compact ? 'md:mb-0' : ''}`}>
       <div className="mb-3">
         <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--text-muted)]">TEK BAŞINA OYNA</p>
         <h2 id="solo-arena-title" className="mt-1 text-lg font-extrabold">Arena modları</h2>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div data-room-mode-grid className={`grid gap-3 ${compact ? '' : 'sm:grid-cols-2'}`}>
         {MODES.map(({ href, title, description, badge, Icon, tint, color }) => (
           <Link
             key={href}

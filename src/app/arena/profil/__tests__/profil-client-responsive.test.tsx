@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const auth = vi.hoisted(() => ({
@@ -51,6 +51,9 @@ describe('ProfilClient responsive kabuk', () => {
         owned_frames: ['none'],
         selected_avatar_decorations: [],
         owned_cosmetic_badges: [],
+        exam_type: 'yks',
+        grade: 12,
+        profile_visibility: 'friends',
       },
       loading: false,
     }
@@ -61,11 +64,52 @@ describe('ProfilClient responsive kabuk', () => {
     const desktopTopics = container.querySelector('[data-profile-topic-desktop]')
     const sidebar = container.querySelector('[data-profile-sidebar]')
     const mobileTopics = container.querySelector('[data-profile-topic-mobile]')
+    const localHeader = container.querySelector('[data-profile-local-header]')
+    const hero = container.querySelector('[data-profile-hero]')
 
     expect(layout).toHaveClass('lg:grid-cols-[minmax(0,1fr)_360px]')
+    expect(localHeader).toHaveClass('lg:hidden')
+    expect(hero).toHaveClass('md:p-6')
     expect(desktopTopics).toHaveClass('hidden', 'lg:block')
     expect(mobileTopics).toHaveClass('lg:hidden')
     expect(mainColumn?.contains(desktopTopics)).toBe(true)
-    expect(sidebar?.nextElementSibling).toBe(mobileTopics)
+    expect(mainColumn?.contains(mobileTopics)).toBe(true)
+    expect(sidebar).toHaveClass('lg:col-start-2', 'lg:row-start-1')
+    expect(container.querySelector('[data-profile-actions]')).toHaveClass('grid-cols-5')
+  })
+
+  test('tablet ve masaustunde hedef, Bilge ve gorunurlugu profil avatarindan ayirir', () => {
+    auth.value = {
+      user: { id: 'user-1' },
+      profile: {
+        username: 'Arenaci',
+        created_at: '2026-01-01T00:00:00.000Z',
+        total_xp: 120,
+        current_streak: 1,
+        longest_streak: 2,
+        coin_balance: 10,
+        owned_frames: ['none'],
+        selected_avatar_decorations: [],
+        owned_cosmetic_badges: [],
+        exam_type: 'lgs',
+        grade: null,
+        profile_visibility: 'friends',
+      },
+      loading: false,
+    }
+
+    const { container } = render(<ProfilClient />)
+    const context = container.querySelector('[data-desktop-profile-context]')
+
+    expect(context).toHaveClass('hidden', 'md:grid', 'md:grid-cols-3')
+    expect(screen.getByRole('heading', { name: 'LGS · Lise hazırlık' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Kadın Bilge' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Arkadaşlarım' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Rehberi seç/ })).toHaveAttribute('href', '/arena/kisisellestir')
+    expect(screen.getByRole('link', { name: /Görünürlüğü düzenle/ })).toHaveAttribute('href', '#profile-privacy')
+    expect(container.querySelector('#profile-privacy')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Hedefi düzenle/ }))
+    expect(screen.getByRole('heading', { name: 'Profili Düzenle' })).toBeInTheDocument()
   })
 })

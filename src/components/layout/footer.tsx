@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Logo } from './logo'
 import { CookiePrefsButton } from './cookie-prefs-button'
+import { AcademyLogo } from '@/components/academy/academy-logo'
 
 const FOOTER_LINKS = [
   {
@@ -24,6 +25,14 @@ const FOOTER_LINKS = [
     ],
   },
   {
+    title: 'Kaynaklar',
+    links: [
+      { label: 'Sınav Rehberi', href: '/rehber' },
+      { label: 'Çözümlü Sorular', href: '/cozumlu-soru' },
+      { label: 'Konular', href: '/konular' },
+    ],
+  },
+  {
     title: 'Yasal',
     links: [
       { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
@@ -38,19 +47,20 @@ const FOOTER_LINKS = [
 
 interface FooterProps {
   config?: Record<string, unknown>
+  academyDesktop?: boolean
 }
 
-export function Footer({ config }: FooterProps = {}) {
+export function Footer({ config, academyDesktop = false }: FooterProps = {}) {
   const brandDescription = (config?.brand_description as string) || "YKS, LGS ve AYT'ye hazırlanan öğrenciler için oyun tabanlı ücretsiz alıştırma platformu."
   const copyright = (config?.copyright as string) || '\u00A9 2026 Bilge Arena. Tüm hakları saklıdır.'
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--surface)]">
       <div className="mx-auto max-w-[1200px] px-6 pb-8 pt-16 lg:px-8">
         {/* Grid */}
-        <div className="mb-12 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-12 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {/* Brand */}
           <div>
-            <Logo size={36} />
+            {academyDesktop ? <><div className="md:hidden"><Logo size={36} /></div><div className="hidden md:block"><AcademyLogo /></div></> : <Logo size={36} />}
             <p className="mt-4 max-w-[280px] text-sm leading-relaxed text-[var(--text-muted)]">
               {brandDescription}
             </p>

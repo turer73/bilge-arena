@@ -205,13 +205,38 @@ describe('MobileHomeDemo canlı öğrenme yolu', () => {
     }))
   })
 
-  test('canlı plan seçili dersin Wordquest oyununu ve sınav kapsamını taşır', async () => {
+  test('canlı plan WordQuest oyununu sınav kapsamından bağımsız taşır', async () => {
     render(<MobileHomeDemo mode="live" userId="user-1" availableSubjects={['ingilizce']} examRef="YDT" />)
 
     await waitFor(() => expect(mockTodayPlanFocus).toHaveBeenCalled())
     expect(mockTodayPlanFocus).toHaveBeenLastCalledWith(expect.objectContaining({
-      game: 'wordquest', userId: 'user-1', examRef: 'YDT', selectedCategory: null, showStickyMobileAction: false,
+      game: 'wordquest', userId: 'user-1', examRef: null, selectedCategory: null, showStickyMobileAction: false,
     }))
+  })
+
+  test('WordQuest çalışma araçlarına kullanıcı bağlamını sınavdan bağımsız taşır', async () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })))
+    const renderStudyTools = vi.fn(() => null)
+
+    render(
+      <MobileHomeDemo
+        mode="live"
+        userId="user-1"
+        desktopSubject="ingilizce"
+        availableSubjects={['ingilizce']}
+        examRef="LGS"
+        renderStudyTools={renderStudyTools}
+      />,
+    )
+
+    await waitFor(() => expect(renderStudyTools).toHaveBeenCalledWith('wordquest', null))
+    const hero = (await screen.findByRole('heading', { name: 'İngilizce Yolu' })).closest('section')
+    expect(within(hero as HTMLElement).getByText(/^İngilizce · \d+ konu$/)).toBeVisible()
+    expect(within(hero as HTMLElement).queryByText('LGS İngilizce')).not.toBeInTheDocument()
   })
 
   test('misafir canlı giriş plan isteği oluşturmaz', () => {

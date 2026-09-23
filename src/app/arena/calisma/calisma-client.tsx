@@ -15,10 +15,14 @@ import { InstitutionWeeklyProgramCard } from '@/components/study/institution-wee
 import { TytSocialExamPolicyCardView } from '@/components/study/tyt-social-exam-policy-card'
 import { useTytSocialExamPolicy } from '@/lib/hooks/use-tyt-social-exam-policy'
 import { ArrowRight, BookOpenCheck, Clock3, Sparkles } from 'lucide-react'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
+import { StudyHomeClient } from '../arena-client'
+import { DesktopStudyTools } from '@/components/academy/desktop-study-tools'
 
 const MOBILE_APP_SHELL_STYLE = '@media (max-width: 1023px) { [data-app-navbar] { display: none !important; } [data-arena-main] { padding-top: 0 !important; } }'
 
 function examRefsForGame(game: GameSlug, examType: string | null | undefined): string[] {
+  if (game === 'wordquest') return []
   const refs = [...GAMES[game].examTags]
   if (examType === 'lgs') return refs.filter((ref) => ref === 'LGS')
   if (examType === 'yks') return refs.filter((ref) => ref !== 'LGS')
@@ -26,11 +30,30 @@ function examRefsForGame(game: GameSlug, examType: string | null | undefined): s
 }
 
 export default function CalismaClient() {
+  const wide = useWideStudy()
+  return wide
+    ? <StudyHomeClient renderStudyTools={(game, examRef) => (
+        <DesktopStudyTools
+          game={game}
+          examRef={examRef}
+          diagnosticExamRef={game === 'wordquest' ? GAMES.wordquest.examTags[0] ?? null : examRef}
+        />
+      )} />
+    : <LegacyCalismaClient />
+}
+
+/** Keep the established mobile setup and its policy gates unchanged. */
+function LegacyCalismaClient() {
   const { user, profile, loading } = useAuthStore()
   const gameStore = useGameStore()
 
   const availableGames = useMemo(
-    () => gamesForExamType(profile?.exam_type),
+    () => {
+      const games = gamesForExamType(profile?.exam_type)
+      return !games.some((item) => item.slug === 'wordquest')
+        ? [...games, GAMES.wordquest]
+        : games
+    },
     [profile?.exam_type],
   )
   const fallbackGame = availableGames.find((item) => item.slug === 'matematik') ?? availableGames[0]

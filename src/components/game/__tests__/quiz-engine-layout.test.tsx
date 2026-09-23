@@ -8,6 +8,20 @@ import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, test, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
+beforeEach(() => {
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+    configurable: true,
+    value: function(this: HTMLDialogElement) { this.setAttribute('open', '') },
+  })
+})
+afterEach(() => vi.restoreAllMocks())
+
+function startDailyPlan() {
+  fireEvent.click(screen.getByRole('button', { name: 'Günlük planın' }))
+  fireEvent.click(screen.getByTestId('today-plan-start'))
+}
+
 // --- Stores ---
 const quizStoreValue: Record<string, unknown> = {
   state: 'answered',
@@ -163,6 +177,7 @@ vi.mock('../lobby', () => ({
     startHref,
     startLabel,
     personalizedMockCard,
+    dailyPlanAction,
     selectedExamRef,
     onSelectExamRef,
   }: {
@@ -172,6 +187,7 @@ vi.mock('../lobby', () => ({
     startHref?: string
     startLabel?: string
     personalizedMockCard?: React.ReactNode
+    dailyPlanAction?: React.ReactNode
     selectedExamRef?: string | null
     onSelectExamRef: (examRef: string | null) => void
   }) => (
@@ -189,6 +205,7 @@ vi.mock('../lobby', () => ({
       <button data-testid="select-tyt" onClick={() => onSelectExamRef('TYT')} />
       <span data-testid="lobby-exam-ref">{selectedExamRef ?? 'null'}</span>
       {personalizedMockCard}
+      {dailyPlanAction}
     </>
   ),
 }))
@@ -228,6 +245,23 @@ vi.mock('next/dynamic', () => ({
 import { QuizEngine } from '../quiz-engine'
 
 describe('QuizEngine yerleşim', () => {
+  test('yeni soruda kaydırmayı sıfırlar, cevap geri bildiriminde yerini korur', () => {
+    const initialState = quizStoreValue.state
+    const { rerender } = render(<QuizEngine game="matematik" />)
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'instant' })
+    vi.mocked(window.scrollTo).mockClear()
+    try {
+      quizStoreValue.state = 'playing'
+      rerender(<QuizEngine game="matematik" />)
+      expect(window.scrollTo).not.toHaveBeenCalled()
+      quizStoreValue.currentIndex = 1
+      rerender(<QuizEngine game="matematik" />)
+      expect(window.scrollTo).toHaveBeenCalledTimes(1)
+    } finally {
+      quizStoreValue.currentIndex = 0
+      quizStoreValue.state = initialState
+    }
+  })
   beforeEach(() => vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true'))
   afterEach(() => vi.unstubAllEnvs())
 
@@ -272,13 +306,15 @@ describe('QuizEngine yerleşim', () => {
     }
   })
 
-  test('mobil Hemen başla ekranında Keşif kartını görünür, günlük planı masaüstüne özel tutar', () => {
+  test('büyük günlük plan kartını üstten kaldırır, mobil Keşif kartını korur', () => {
     quizGame.screen = 'lobby'
     authStoreValue.user = { id: 'u1' }
 
     try {
       const { container } = render(<QuizEngine game="matematik" />)
-      expect(container.querySelector('[data-desktop-learning-cards]')).toHaveClass('hidden', 'md:grid')
+      expect(container.querySelector('[data-desktop-learning-cards]')).toBeNull()
+      expect(screen.queryByTestId('today-plan-start')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Günlük planın' })).toHaveAttribute('aria-haspopup', 'dialog')
       expect(container.querySelector('[data-mobile-mastery-map-card]')).toHaveClass('md:hidden')
       expect(container.querySelector('[data-mobile-mastery-map-card] [data-testid="mastery-map-card"]')).toBeInTheDocument()
     } finally {
@@ -401,9 +437,10 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
 
     try {
       render(<QuizEngine game="matematik" />)
-      fireEvent.click(screen.getByTestId('today-plan-start'))
+      startDailyPlan()
       expect(quizGame.handleStartPlanned).not.toHaveBeenCalled()
       expect(screen.getByTestId('premium-modal')).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     } finally {
       quizLimitValue.canPlay = true
       authStoreValue.user = null
@@ -433,7 +470,7 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
 
     try {
       render(<QuizEngine game="matematik" />)
-      fireEvent.click(screen.getByTestId('today-plan-start'))
+      startDailyPlan()
       expect(gameStoreValue.setMode).toHaveBeenCalledWith('practice')
       expect(gameStoreValue.setCategory).toHaveBeenCalledWith(null)
       expect(gameStoreValue.setDifficulty).toHaveBeenCalledWith(null)
@@ -479,7 +516,7 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
       expect(usePersonalizedMockArgs).toHaveBeenLastCalledWith('wordquest', 'u1', null)
       expect(screen.getByTestId('lobby-exam-ref')).toHaveTextContent('null')
 
-      fireEvent.click(screen.getByTestId('today-plan-start'))
+      startDailyPlan()
       expect(gameStoreValue.setExamRef).not.toHaveBeenCalled()
       expect(trackLearningEvent).toHaveBeenCalledWith('LearningPlanStarted', {
         game: 'wordquest',
@@ -512,7 +549,7 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
 
     try {
       render(<QuizEngine game="matematik" />)
-      fireEvent.click(screen.getByTestId('today-plan-start'))
+      startDailyPlan()
       expect(quizGame.handleStartPlanned).toHaveBeenCalledWith(
         [{ id: 'q-left-1' }, { id: 'q-left-2' }],
         'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -648,7 +685,7 @@ describe("QuizEngine — Bugünün Planı başlangıcı", () => {
 
     try {
       render(<QuizEngine game="matematik" />)
-      fireEvent.click(screen.getByTestId('today-plan-start'))
+      startDailyPlan()
 
       expect(todayPlanValue.markCompleted).not.toHaveBeenCalled()
 

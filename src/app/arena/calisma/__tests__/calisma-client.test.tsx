@@ -96,7 +96,7 @@ describe('CalismaClient', () => {
     expect(screen.getByRole('link', { name: 'Profil sayfasını aç' })).toHaveAttribute('href', '/arena/profil')
   })
 
-  test('LGS profilinde stale TYT/WordQuest seçimini güvenli bağlama düşürür', () => {
+  test('LGS profilinde WordQuest görünür kalır ve sınavdan bağımsız açılır', () => {
     useGameStore.setState({ selectedGame: 'wordquest', selectedExamRef: 'TYT' })
     mockedUseAuthStore.mockReturnValue({
       user: { id: 'u1' },
@@ -105,9 +105,12 @@ describe('CalismaClient', () => {
     } as never)
     render(<CalismaClient />)
 
-    expect(screen.queryByRole('button', { name: /İngilizce/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Matematik/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'LGS' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /İngilizce/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('button', { name: 'LGS' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'YDT' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Devam et' })).toHaveAttribute('href', '/arena/wordquest')
+    expect(todayPlanFocusProps).toHaveBeenLastCalledWith(expect.objectContaining({ game: 'wordquest', examRef: null }))
+    expect(masteryActionCardProps).toHaveBeenLastCalledWith(expect.objectContaining({ game: 'wordquest', examRef: null }))
   })
 
   test('TYT Sosyal setup_required iken çalışma devam eylemini fail-closed kapatır', async () => {
@@ -173,15 +176,13 @@ describe('CalismaClient', () => {
     })
     expect(todayPlanFocusProps).toHaveBeenLastCalledWith(expect.objectContaining({
       game: 'wordquest',
-      examRef: 'YDT',
+      examRef: null,
     }))
     expect(masteryActionCardProps).toHaveBeenLastCalledWith(expect.objectContaining({
       game: 'wordquest',
-      examRef: 'YDT',
+      examRef: null,
     }))
-
-    fireEvent.click(screen.getByRole('button', { name: 'YDT' }))
-    expect(useGameStore.getState().selectedExamRef).toBe('AYT-SAY')
+    expect(screen.queryByRole('button', { name: 'YDT' })).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /Matematik/ }))
     expect(useGameStore.getState()).toMatchObject({

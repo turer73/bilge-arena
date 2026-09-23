@@ -14,6 +14,9 @@ import { useBilgeTahtaEnabled } from '@/lib/bilge-tahta/client'
 import { canUseHelper, useAssistancePolicy } from '@/lib/assistance-policy/client'
 import type { BilgeTahtaLesson, BilgeTahtaStage } from '@/lib/bilge-tahta/contract'
 import { trackBilgeBoardEvent } from '@/lib/bilge-tahta/analytics'
+import { useWideStudy } from '@/lib/hooks/use-wide-study'
+import { AcademyQuizPortrait } from './academy-quiz-portrait'
+import styles from './academy-quiz.module.css'
 
 function Typewriter({ text, speed = 18 }: { text: string; speed?: number }) {
   const [shown, setShown] = useState('')
@@ -40,6 +43,7 @@ interface BilgeChanCompanionProps {
   priority?: boolean
   onHelpToggle?: (open: boolean) => void
   className?: string
+  appearance?: 'legacy' | 'academy'
 }
 
 type GuidanceStage = 'hint1' | 'hint2' | 'hint3'
@@ -85,7 +89,10 @@ export function BilgeChanCompanion({
   priority = false,
   onHelpToggle,
   className,
+  appearance = 'legacy',
 }: BilgeChanCompanionProps) {
+  const wide = useWideStudy()
+  const academy = appearance === 'academy' && wide
   const [phase, setPhase] = useState<Phase>('intro')
   const [helpMsg, setHelpMsg] = useState('')
   const [sourceLabel, setSourceLabel] = useState<string | null>(null)
@@ -327,8 +334,9 @@ export function BilgeChanCompanion({
   }
 
   return (
-    <div className={`flex ${compact ? 'relative min-h-[88px] flex-row items-end gap-1 px-1 pt-2' : 'flex-col items-center'} ${className ?? ''}`}>
-      {compact && (
+    <div className={`${academy ? styles.coach : ''} flex ${compact ? 'relative min-h-[88px] flex-row items-end gap-1 px-1 pt-2' : 'flex-col items-center'} ${className ?? ''}`}>
+      {academy && <p className={styles.coachTitle}>BİLGE YANINDA</p>}
+      {compact && !academy && (
         <span className="absolute left-[68px] top-0 z-10 -rotate-2 rounded-lg border-2 border-white bg-[var(--app-accent)] px-2 py-1 text-[8px] font-black uppercase tracking-[0.08em] text-white shadow-[0_3px_8px_rgba(37,99,235,.24)]">
           Bilge Çan
         </span>
@@ -336,6 +344,7 @@ export function BilgeChanCompanion({
       {message && (
         <div
           aria-live="polite"
+          data-quiz-coach-message
           className={`relative ${compact ? 'order-2 mb-1 rounded-[24px_24px_24px_12px] border-2 border-[var(--app-border)] bg-[var(--app-card)] text-[var(--app-text)] shadow-[0_4px_0_var(--app-shadow)]' : 'mb-2 rounded-2xl border border-[var(--focus-border)] bg-[var(--card)] text-[var(--text)] shadow-md'} w-full ${bubbleWidth} px-3 py-2.5 text-xs font-semibold leading-relaxed`}
         >
           <Typewriter key={message} text={message} />
@@ -479,7 +488,9 @@ export function BilgeChanCompanion({
           )}
         </div>
       )}
-      {compact ? (
+      {academy ? (
+        <AcademyQuizPortrait expression={quizState === 'answered' ? (lastIsCorrect ? 'neseli' : 'destekleyici') : phase === 'intro' ? 'odaklanmis' : 'dusunen'} />
+      ) : compact ? (
         <div
           data-testid="chan-waist-crop"
           className="relative order-1 h-[88px] w-[72px] shrink-0 overflow-hidden"

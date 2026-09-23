@@ -11,6 +11,9 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/hooks/use-mastery-map', () => ({
   useMasteryMap: vi.fn(),
 }))
+vi.mock('../diagnostic-explainer-dialog', () => ({
+  DiagnosticExplainerDialog: ({ examRef }: { examRef: string }) => <div role="dialog">{examRef} ölçüm açıklaması</div>,
+}))
 
 const mockedUseMasteryMap = vi.mocked(useMasteryMap)
 const fetchMasteryMock = vi.fn()
@@ -179,6 +182,23 @@ describe('MasteryActionCard', () => {
       '/arena/tani?game=matematik&exam_ref=TYT',
     )
     expect(screen.queryByText(/zayıf/i)).not.toBeInTheDocument()
+  })
+
+  test('masaüstü sunumunda doğrudan başlatmak yerine ölçümü açıklar', () => {
+    mockedUseMasteryMap.mockReturnValue(hookResult({
+      outcomes: [mkOutcome({ status: 'insufficient', attempts: 0, verifiedEvidenceDays: 0, score: 0 })],
+      discovery: {
+        level: 1, stage: 'estimate', diagnosticCompleted: false,
+        evidenceCollected: 0, evidenceTarget: 3, readyOutcomes: 0,
+        totalOutcomes: 1, journeyPercentage: 0,
+      },
+    }) as never)
+
+    render(<MasteryActionCard game="matematik" userId="u1" examRef="TYT" diagnosticPresentation="explained" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Seviyeni ölç' }))
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('TYT ölçüm açıklaması')
+    expect(screen.queryByRole('link', { name: 'Keşif Turunu Başlat' })).not.toBeInTheDocument()
   })
 
   test('tanilamasi olmayan released derste dogrudan kanit pratigine baslar', () => {

@@ -8,7 +8,9 @@ const auth = vi.hoisted(() => ({
   signOut: vi.fn(),
 }))
 const mockUsePathname = vi.hoisted(() => vi.fn<() => string>())
+const mockUseWideStudy = vi.hoisted(() => vi.fn<() => boolean>())
 vi.mock('next/navigation', () => ({ usePathname: mockUsePathname }))
+vi.mock('@/lib/hooks/use-wide-study', () => ({ useWideStudy: mockUseWideStudy }))
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
     <a href={href} data-next-link="true" {...props}>{children}</a>
@@ -16,7 +18,7 @@ vi.mock('next/link', () => ({
 }))
 vi.mock('@/lib/hooks/use-auth', () => ({ useAuth: () => auth }))
 vi.mock('../logo', () => ({ Logo: () => <span>Bilge Arena</span> }))
-vi.mock('../theme-toggle', () => ({ ThemeToggle: () => null }))
+vi.mock('../theme-toggle', () => ({ ThemeToggle: () => <button>Tema seç</button> }))
 vi.mock('../notification-bell', () => ({ NotificationBell: () => null }))
 
 import { Navbar } from '../navbar'
@@ -41,11 +43,38 @@ const workspace = {
 
 beforeEach(() => {
   mockUsePathname.mockReturnValue('/arena')
+  mockUseWideStudy.mockReturnValue(true)
   vi.stubGlobal('fetch', vi.fn())
 })
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Navbar institution panel entry', () => {
+  it.each(['/', '/arena', '/arena/calisma', '/arena/kisisellestir', '/arena/magaza', '/oda', '/oda/ABC123', '/arena/matematik', '/arena/turkce', '/arena/fen', '/arena/sosyal', '/arena/wordquest', '/arena/kule', '/arena/fethet', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/nasil-calisir', '/hakkinda'])('keeps the academy header on %s without unmounting theme synchronization', (route) => {
+    mockUsePathname.mockReturnValue(route)
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+    expect(screen.getByRole('button', {name:'Tema seç'}).closest('[data-navbar-theme]')).toHaveClass('md:hidden')
+    expect(screen.getByRole('link', { name: 'Bilge Arena ana sayfa' }).querySelector('img')).toHaveAttribute('src', '/academy/brand-crest-orbit.png')
+  })
+
+  it.each(['/iletisim', '/arena/kurum', '/arena/sinif', '/odak'])('keeps the existing header on unrelated route %s', (route) => {
+    mockUsePathname.mockReturnValue(route)
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+    expect(screen.getByRole('button', {name:'Tema seç'}).closest('[data-navbar-theme]')).not.toHaveClass('md:hidden')
+    expect(screen.getByText('Bilge Arena')).toBeInTheDocument()
+  })
+
+  it.each(['/', '/arena/matematik', '/arena/profil', '/arena/siralama', '/arena/arkadaslar', '/arena/yanlislarim', '/arena/magaza', '/nasil-calisir', '/hakkinda'])('preserves the mobile header on %s', (route) => {
+    mockUsePathname.mockReturnValue(route)
+    mockUseWideStudy.mockReturnValue(false)
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+    expect(screen.getByRole('button', {name:'Tema seç'}).closest('[data-navbar-theme]')).not.toHaveClass('md:hidden')
+    expect(screen.getByText('Bilge Arena')).toBeInTheDocument()
+    expect(screen.getByRole('button', {name:'Kullanıcı menüsü'}).querySelector('img')).toHaveAttribute('src', auth.profile.avatar_url)
+  })
+
   it('uses a settings icon instead of repeating the profile avatar on the Arena home', () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
     render(<Navbar />)
@@ -53,6 +82,14 @@ describe('Navbar institution panel entry', () => {
     const accountMenu = screen.getByRole('button', { name: 'Kullanıcı menüsü' })
     expect(accountMenu.querySelector('[data-arena-account-settings-icon]')).toBeInTheDocument()
     expect(accountMenu.querySelector('img')).not.toBeInTheDocument()
+  })
+
+  it('marks Oyunlar as the active top-level area on Yanlışlarım', () => {
+    mockUsePathname.mockReturnValue('/arena/yanlislarim')
+    vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 403 }))
+    render(<Navbar />)
+
+    expect(screen.getAllByRole('link', { name: 'Oyunlar' }).some((link) => link.getAttribute('aria-current') === 'page')).toBe(true)
   })
 
   it('uses native anchors for public links while a sensitive document is active', async () => {

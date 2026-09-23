@@ -1,4 +1,6 @@
 import { BottomNav } from '@/components/layout/bottom-nav'
+import { Navbar } from '@/components/layout/navbar'
+import { AcademyTabletNav } from '@/components/academy/academy-tablet-nav'
 
 /**
  * Bilge Arena Oda: (player) route group layout
@@ -20,9 +22,13 @@ export default function PlayerLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
+    <div data-room-shell className="min-h-screen bg-[var(--bg)] md:bg-transparent">
+      <div className="hidden lg:block">
+        <Navbar />
+      </div>
       {/* Mobilde gerçek alt-nav tokenı kadar içerik ve odak kaydırma boşluğu bırak. */}
-      <main className="mx-auto max-w-3xl scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] px-4 pt-8 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] lg:scroll-pb-0 lg:pb-8">
+      <main data-player-main className="mx-auto max-w-3xl scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] px-4 pt-8 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] md:max-w-[1180px] md:px-5 md:pt-0 lg:scroll-pb-0 lg:px-6 lg:pt-[calc(var(--navbar-h)+2rem)] lg:pb-8">
+        <AcademyTabletNav active="rooms" />
         {children}
       </main>
       <BottomNav />
