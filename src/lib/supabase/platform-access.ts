@@ -6,6 +6,13 @@ type FetchLike = typeof fetch
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+function serviceRestHeaders(serviceKey: string): Record<string, string> {
+  // Modern API keys are opaque, not JWTs. The gateway maps a secret key on
+  // apikey to service_role; sending it as Bearer makes JWT verification fail.
+  if (serviceKey.startsWith('sb_secret_')) return { apikey: serviceKey }
+  return { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }
+}
+
 /**
  * Tombstoned profiles must not be able to continue using an already issued
  * Auth session. This check intentionally fails closed: a missing service key,
@@ -34,7 +41,7 @@ export async function getUserProfileAccessStateViaRest({
     profileUrl.searchParams.set('select', 'id,deleted_at')
     profileUrl.searchParams.set('limit', '1')
     const response = await fetchImpl(profileUrl, {
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+      headers: serviceRestHeaders(serviceKey),
       cache: 'no-store',
     })
     if (!response.ok) return 'unavailable'
@@ -96,7 +103,7 @@ export async function userHasAnyPlatformPermissionViaRest({
 }): Promise<boolean> {
   if (!supabaseUrl || !serviceKey || !userId || permissions.length === 0) return false
 
-  const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }
+  const headers = serviceRestHeaders(serviceKey)
 
   try {
     const assignmentsUrl = new URL(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/user_roles`)
