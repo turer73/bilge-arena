@@ -164,6 +164,7 @@ export default function AdminInstitutionsPage() {
         <div className="flex items-center gap-2 text-sm font-black text-[var(--focus)]"><Building2 className="h-5 w-5" /> Kurum yönetimi</div>
         <h1 className="mt-2 text-2xl font-black sm:text-3xl">Kurumlar</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">Kurum onboarding akışını seçin. Ücretsiz sistem pilotunda öğrenciler normal Bilge Arena hesaplarıyla, süreli sınıf daveti üzerinden katılır.</p>
+        <a href="/documents/bilge-arena-kurum-paketleri-v1.pdf" target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-[var(--border)] px-3 text-xs font-black text-[var(--focus)]">Kurum paketleri PDF</a>
       </header>
 
       <form onSubmit={createInstitution} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5">

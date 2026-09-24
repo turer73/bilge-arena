@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   limiter: vi.fn(),
   freePilotEnabled: vi.fn(),
   pilotEnabled: vi.fn(),
+  getUserById: vi.fn(),
+  sendEmail: vi.fn(),
 }))
 
 vi.mock('@/lib/institution-pilot/server-security', () => ({
@@ -16,6 +18,10 @@ vi.mock('@/lib/institution-pilot/server-security', () => ({
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({ marker: 'cookie', rpc: mocks.rpc })),
 }))
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: () => ({ auth: { admin: { getUserById: mocks.getUserById } } }),
+}))
+vi.mock('@/lib/email/send', () => ({ sendEmail: mocks.sendEmail }))
 vi.mock('@/lib/supabase/admin', () => ({
   checkPermission: mocks.checkPermission,
   logAdminAction: mocks.logAdminAction,
@@ -75,6 +81,8 @@ beforeEach(() => {
   mocks.limiter.mockResolvedValue({ success: true })
   mocks.rpc.mockResolvedValue({ data: result, error: null })
   mocks.logAdminAction.mockResolvedValue({ error: null })
+  mocks.getUserById.mockResolvedValue({ data: { user: { email: 'manager@example.com', email_confirmed_at: CREATED_AT, user_metadata: { display_name: 'Kurum Yöneticisi' } } }, error: null })
+  mocks.sendEmail.mockResolvedValue({ ok: true, id: 'email-1' })
 })
 
 describe('admin invitation-only free institution pilot route', () => {
@@ -130,7 +138,13 @@ describe('admin invitation-only free institution pilot route', () => {
     const response = await POST(post({ ...input, name: ` ${input.name} ` }))
 
     expect(response.status).toBe(201)
-    expect(await response.json()).toEqual(result)
+    expect(await response.json()).toEqual({ ...result, documentDelivery: { sent: true, version: '1.0' } })
+    expect(mocks.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'manager@example.com',
+      template: 'institution_pilot_package_v1',
+      idempotencyKey: 'institution-pilot-package-' + REQUEST_ID,
+      attachments: [expect.objectContaining({ filename: 'bilge-arena-kurum-paketleri-v1.pdf' })],
+    }))
     expect(mocks.rpc).toHaveBeenCalledWith('provision_free_pilot_institution', {
       p_user_id: ADMIN.id,
       p_name: input.name,
@@ -152,6 +166,24 @@ describe('admin invitation-only free institution pilot route', () => {
     }))
     expect(response.headers.get('Cache-Control')).toBe('private, no-store')
     expect(response.headers.get('Referrer-Policy')).toBe('no-referrer')
+  })
+
+  it('does not create the institution when mandatory document delivery fails', async () => {
+    mocks.sendEmail.mockResolvedValue({ ok: false, error: 'SMTP down' })
+    const response = await POST(post(input))
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({
+      error: 'Kurum belgesi e-posta ile gönderilemedi; kurum oluşturulmadı',
+    })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects a manager without a confirmed email before delivery or RPC', async () => {
+    mocks.getUserById.mockResolvedValue({ data: { user: { email: 'manager@example.com', email_confirmed_at: null } }, error: null })
+    const response = await POST(post(input))
+    expect(response.status).toBe(422)
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('fails closed when the distributed limiter backend is unavailable', async () => {

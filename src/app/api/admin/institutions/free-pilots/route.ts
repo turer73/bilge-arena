@@ -1,6 +1,9 @@
 import type { NextRequest } from 'next/server'
 import { checkPermission, logAdminAction } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { sendEmail } from '@/lib/email/send'
+import { institutionPilotPackageEmail } from '@/lib/email/templates/institution-pilot-package'
 import { createRateLimiter } from '@/lib/utils/rate-limit'
 import {
   provisionFreePilotInputSchema,
@@ -59,6 +62,43 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const serviceClient = createServiceRoleClient()
+  const { data: managerResult, error: managerError } = await serviceClient.auth.admin.getUserById(
+    input.data.managerUserId,
+  )
+  const managerEmail = managerResult.user?.email
+  if (managerError || !managerEmail || !managerResult.user.email_confirmed_at) {
+    return institutionPilotNoStoreJson(
+      { error: 'Doğrulanmış kurum yöneticisi e-postası bulunamadı' },
+      { status: 422 },
+    )
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bilgearena.com'
+  const documentUrl = baseUrl + '/documents/bilge-arena-kurum-paketleri-v1.pdf'
+  const email = institutionPilotPackageEmail({
+    institutionName: input.data.name,
+    managerName: String(managerResult.user.user_metadata?.display_name || managerEmail),
+    packageName: input.data.trialDays > 30 ? 'Paket 2 - Gelişim Pilotu' : 'Paket 1 - Başlangıç Pilotu',
+    documentUrl,
+  })
+  const delivery = await sendEmail({
+    to: managerEmail,
+    subject: email.subject,
+    html: email.html,
+    template: 'institution_pilot_package_v1',
+    userId: input.data.managerUserId,
+    idempotencyKey: 'institution-pilot-package-' + input.data.requestId,
+    attachments: [{ filename: 'bilge-arena-kurum-paketleri-v1.pdf', path: documentUrl }],
+  })
+  if (!delivery.ok) {
+    console.error('[Institution Free Pilot] zorunlu belge e-postası gönderilemedi:', delivery.error)
+    return institutionPilotNoStoreJson(
+      { error: 'Kurum belgesi e-posta ile gönderilemedi; kurum oluşturulmadı' },
+      { status: 503 },
+    )
+  }
+
   const { data, error } = await supabase.rpc('provision_free_pilot_institution', {
     p_user_id: admin.id,
     p_name: input.data.name,
@@ -95,6 +135,8 @@ export async function POST(request: NextRequest) {
       studentLimit: parsed.data.institution.studentLimit,
       staffLimit: parsed.data.institution.staffLimit,
       reviewDueAt: parsed.data.institution.reviewDueAt,
+      documentEmailId: delivery.id ?? null,
+      documentVersion: '1.0',
     },
     request,
   })
@@ -105,5 +147,8 @@ export async function POST(request: NextRequest) {
     console.error('[Institution Free Pilot] ikincil admin günlüğü yazılamadı:', auditError.message)
   }
 
-  return institutionPilotNoStoreJson(parsed.data, { status: 201 })
+  return institutionPilotNoStoreJson({
+    ...parsed.data,
+    documentDelivery: { sent: true, version: '1.0' },
+  }, { status: 201 })
 }
