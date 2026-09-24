@@ -42,10 +42,10 @@ describe('BottomNav', () => {
     expect(linkFor('Profil')).toHaveAttribute('href', '/arena/profil')
   })
 
-  test('bilgisayarda gizli, tablet ve mobilde görünür (lg:hidden)', () => {
+  test('tablette ve bilgisayarda gizli, telefonda görünür (md:hidden)', () => {
     render(<BottomNav />)
     const nav = screen.getByRole('navigation', { name: /mobil gezinme/i })
-    expect(nav.className).toContain('lg:hidden')
+    expect(nav.className).toContain('md:hidden')
     expect(nav.style.minHeight).toBe('calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))')
     expect(linkFor('Öğren').className).toContain('min-h-12')
     expect(nav.className).toContain('overflow-x-clip')

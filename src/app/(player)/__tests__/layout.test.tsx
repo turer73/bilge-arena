@@ -37,6 +37,7 @@ describe('(player) layout', () => {
     expect(container.querySelector('[data-room-shell]')).toHaveClass('md:bg-transparent')
     expect(container.querySelector('[data-player-main]')).toHaveClass('md:max-w-[1180px]', 'lg:pt-[calc(var(--navbar-h)+2rem)]')
     expect(screen.getByTestId('desktop-navbar')).toBeInTheDocument()
+    expect(container.querySelector('[data-player-main]')).toHaveClass('md:scroll-pb-0', 'md:pb-8')
     expect(screen.getByTestId('tablet-navbar')).toHaveAttribute('data-active', 'rooms')
   })
 })

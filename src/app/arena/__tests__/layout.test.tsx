@@ -19,6 +19,8 @@ describe('ArenaLayout', () => {
 
     expect(main?.className).toContain('pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))]')
     expect(main?.className).toContain('scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))]')
+    expect(main?.className).toContain('md:scroll-pb-0')
+    expect(main?.className).toContain('md:pb-0')
     expect(main?.className).toContain('overflow-x-clip')
     expect(main?.className).toContain('min-w-0')
   })

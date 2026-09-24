@@ -27,7 +27,7 @@ export default function PlayerLayout({
         <Navbar />
       </div>
       {/* Mobilde gerçek alt-nav tokenı kadar içerik ve odak kaydırma boşluğu bırak. */}
-      <main data-player-main className="mx-auto max-w-3xl scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] px-4 pt-8 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] md:max-w-[1180px] md:px-5 md:pt-0 lg:scroll-pb-0 lg:px-6 lg:pt-[calc(var(--navbar-h)+2rem)] lg:pb-8">
+      <main data-player-main className="mx-auto max-w-3xl scroll-pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] px-4 pt-8 pb-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] md:max-w-[1180px] md:scroll-pb-0 md:px-5 md:pt-0 md:pb-8 lg:px-6 lg:pt-[calc(var(--navbar-h)+2rem)]">
         <AcademyTabletNav active="rooms" />
         {children}
       </main>

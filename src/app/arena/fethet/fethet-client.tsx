@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -306,7 +307,14 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
     }
   }
 
-  return (
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [])
+
+
+  return createPortal(
     <div className={styles.modalBackdrop}>
       <section
         className={styles.quizModal}
@@ -538,7 +546,8 @@ function QuizModal({ game, category, onClose, onResult }: QuizModalProps) {
           </div>
         )}
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

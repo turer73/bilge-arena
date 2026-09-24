@@ -1303,6 +1303,22 @@
 }
 
 @media (max-width: 760px) {
+  .modalBackdrop {
+    display: block;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: calc(10px + env(safe-area-inset-top)) 10px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .quizModal {
+    max-height: none;
+    overflow: visible;
+    margin-inline: auto;
+  }
+
   .regionGrid {
     grid-template-columns: 1fr;
   }
@@ -1472,13 +1488,9 @@
   }
 
   .quizModal {
-    max-height: calc(100vh - 20px);
     border-radius: 20px;
   }
 
-  .modalBackdrop {
-    padding: 10px;
-  }
 
   .quizHeader {
     grid-template-columns: 42px 1fr;

@@ -96,6 +96,17 @@ describe('FethetClient — wordquest (İngilizce) akışı', () => {
     vi.unstubAllEnvs()
   })
 
+  it('soru panelini body katmaninda acar ve arka plan kaydirmasini geri yukler', async () => {
+    const previousOverflow = document.body.style.overflow
+    mockFetchWith(WQ_QUESTIONS)
+    await openVocabularyQuiz()
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.parentElement?.parentElement).toBe(document.body)
+    expect(document.body.style.overflow).toBe('hidden')
+    fireEvent.click(screen.getByRole('button', { name: 'Kapat' }))
+    expect(document.body.style.overflow).toBe(previousOverflow)
+  })
+
   it('wordquest sentence alanını soru metni olarak basar (fix öncesi boştu)', async () => {
     mockFetchWith(WQ_QUESTIONS)
     await openVocabularyQuiz()
