@@ -15,6 +15,10 @@ import {
   isInstitutionOnboardingEnabled,
   isInstitutionPilotEnabled,
 } from '@/lib/institution-pilot/server-security'
+import {
+  isInstitutionStudyProgramEnabled,
+  isInstitutionTrackingEnabled,
+} from '@/lib/institution-tracking/server-security'
 
 const provisionLimiter = createRateLimiter('admin-institution-provision', 5, 60_000)
 const statusLimiter = createRateLimiter('admin-institution-status', 20, 60_000)
@@ -68,6 +72,8 @@ export async function GET() {
     provisioning: {
       invitationFreePilotEnabled:
         isInstitutionFreePilotEnabled()
+        && isInstitutionTrackingEnabled()
+        && isInstitutionStudyProgramEnabled()
         && databaseControls?.freePilotProvisioningEnabled === true,
       commercialOnboardingEnabled:
         isInstitutionOnboardingEnabled()

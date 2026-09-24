@@ -73,6 +73,42 @@ export async function POST(request: NextRequest) {
   }
 
   const serviceClient = createServiceRoleClient()
+  const rpcArgs = {
+    p_user_id: admin.id,
+    p_name: input.data.name,
+    p_manager_user_id: input.data.managerUserId,
+    p_approval_ref: input.data.approvalReference,
+    p_student_limit: input.data.studentLimit,
+    p_staff_limit: input.data.staffLimit,
+    p_trial_days: input.data.trialDays,
+    p_request_id: input.data.requestId,
+  }
+  const existingRequest = await serviceClient.from('pilot_institution_requests')
+    .select('request_id')
+    .eq('user_id', admin.id)
+    .eq('operation', 'provision_free_pilot')
+    .eq('request_id', input.data.requestId)
+    .maybeSingle()
+  if (existingRequest.error) {
+    return institutionPilotNoStoreJson({ error: 'Pilot tekrar kaydı doğrulanamadı' }, { status: 503 })
+  }
+  if (existingRequest.data) {
+    const replay = await supabase.rpc('provision_free_pilot_institution', rpcArgs)
+    if (replay.error) {
+      return institutionPilotNoStoreJson(
+        { error: 'Ücretsiz kurum pilotu tekrar sonucu alınamadı' },
+        { status: institutionPilotRpcStatus(replay.error.code) },
+      )
+    }
+    const parsedReplay = provisionFreePilotResultSchema.safeParse(replay.data)
+    if (!parsedReplay.success) {
+      return institutionPilotNoStoreJson({ error: 'Ücretsiz kurum pilotu tekrar sonucu doğrulanamadı' }, { status: 500 })
+    }
+    return institutionPilotNoStoreJson({
+      ...parsedReplay.data,
+      documentDelivery: { sent: true, version: '1.0' },
+    })
+  }
   const { data: managerResult, error: managerError } = await serviceClient.auth.admin.getUserById(
     input.data.managerUserId,
   )
@@ -124,16 +160,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { data, error } = await supabase.rpc('provision_free_pilot_institution', {
-    p_user_id: admin.id,
-    p_name: input.data.name,
-    p_manager_user_id: input.data.managerUserId,
-    p_approval_ref: input.data.approvalReference,
-    p_student_limit: input.data.studentLimit,
-    p_staff_limit: input.data.staffLimit,
-    p_trial_days: input.data.trialDays,
-    p_request_id: input.data.requestId,
-  })
+  const { data, error } = await supabase.rpc('provision_free_pilot_institution', rpcArgs)
   if (error) {
     return institutionPilotNoStoreJson(
       { error: 'Ücretsiz kurum pilotu oluşturulamadı' },

@@ -170,6 +170,24 @@ describe('admin invitation-only free institution pilot route', () => {
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
+  it('lets a committed request id reach the authoritative replay before eligibility checks', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      const result = table === 'pilot_institution_requests'
+        ? { data: { request_id: REQUEST_ID }, error: null }
+        : { data: null, error: null }
+      const chain: Record<string, unknown> = {}
+      for (const method of ['select', 'eq', 'in', 'limit']) chain[method] = vi.fn(() => chain)
+      chain.maybeSingle = vi.fn(async () => result)
+      return chain
+    })
+    mocks.rpc.mockResolvedValue({ data: { ...result, replayed: true }, error: null })
+    const response = await POST(post(input))
+    expect(response.status).toBe(200)
+    expect((await response.json()).replayed).toBe(true)
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+    expect(mocks.getUserById).not.toHaveBeenCalled()
+  })
+
   it('rejects malformed JSON before RPC execution', async () => {
     const request = new Request('http://localhost/api/admin/institutions/free-pilots', {
       method: 'POST',

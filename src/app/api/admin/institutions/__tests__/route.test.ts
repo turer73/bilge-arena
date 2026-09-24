@@ -7,6 +7,12 @@ const mocks = vi.hoisted(() => ({
   limiter: vi.fn(),
   onboardingEnabled: vi.fn(),
   freePilotEnabled: vi.fn(),
+  trackingEnabled: vi.fn(),
+  studyProgramEnabled: vi.fn(),
+}))
+vi.mock('@/lib/institution-tracking/server-security', () => ({
+  isInstitutionTrackingEnabled: mocks.trackingEnabled,
+  isInstitutionStudyProgramEnabled: mocks.studyProgramEnabled,
 }))
 
 vi.mock('@/lib/institution-pilot/server-security', () => ({
@@ -51,6 +57,8 @@ beforeEach(() => {
   mocks.logAdminAction.mockResolvedValue({ error: null })
   mocks.onboardingEnabled.mockReturnValue(true)
   mocks.freePilotEnabled.mockReturnValue(false)
+  mocks.trackingEnabled.mockReturnValue(true)
+  mocks.studyProgramEnabled.mockReturnValue(true)
 })
 
 describe('admin institution routes', () => {
@@ -123,6 +131,17 @@ describe('admin institution routes', () => {
       institutions: [],
       provisioning: { invitationFreePilotEnabled: false, commercialOnboardingEnabled: false },
     })
+  })
+
+  it('keeps free-pilot provisioning disabled while promised feature gates are closed', async () => {
+    mocks.freePilotEnabled.mockReturnValue(true)
+    mocks.trackingEnabled.mockReturnValue(false)
+    mocks.rpc.mockResolvedValue({
+      data: { institutions: [], databaseControls: { freePilotProvisioningEnabled: true } },
+      error: null,
+    })
+    const response = await GET()
+    expect((await response.json()).provisioning.invitationFreePilotEnabled).toBe(false)
   })
 
   it('exposes commercial onboarding only when both app and database controls are open', async () => {
