@@ -17,6 +17,10 @@ import {
   isInstitutionFreePilotEnabled,
   isInstitutionPilotEnabled,
 } from '@/lib/institution-pilot/server-security'
+import {
+  isInstitutionStudyProgramEnabled,
+  isInstitutionTrackingEnabled,
+} from '@/lib/institution-tracking/server-security'
 
 const provisionLimiter = createRateLimiter('admin-institution-free-pilot', 5, 60_000)
 
@@ -37,6 +41,12 @@ export async function POST(request: NextRequest) {
   }
   if (!isInstitutionPilotEnabled()) {
     return institutionPilotNoStoreJson({ error: 'Kurum pilotu yapılandırılmadı' }, { status: 503 })
+  }
+  if (!isInstitutionTrackingEnabled() || !isInstitutionStudyProgramEnabled()) {
+    return institutionPilotNoStoreJson(
+      { error: 'Kurum takip ve çalışma programı özellikleri kullanıma hazır değil' },
+      { status: 503 },
+    )
   }
 
   const supabase = await createClient()
@@ -74,12 +84,27 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://bilgearena.com'
+  const [control, openPilot, activeMembership] = await Promise.all([
+    serviceClient.from('institution_pilot_controls')
+      .select('enabled').eq('control_key', 'free_provisioning').maybeSingle(),
+    serviceClient.from('pilot_institutions')
+      .select('id').eq('pilot_kind', 'invitation_free').in('status', ['pilot', 'active']).limit(1).maybeSingle(),
+    serviceClient.from('pilot_institution_memberships')
+      .select('institution_id').eq('user_id', input.data.managerUserId).eq('status', 'active').limit(1).maybeSingle(),
+  ])
+  if (control.error || control.data?.enabled !== true || openPilot.error || openPilot.data || activeMembership.error || activeMembership.data) {
+    return institutionPilotNoStoreJson(
+      { error: 'Ücretsiz kurum pilotu için veritabanı uygunluk koşulları sağlanmıyor' },
+      { status: control.error || openPilot.error || activeMembership.error ? 503 : 409 },
+    )
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://bilgearena.com'
   const documentUrl = baseUrl + '/documents/bilge-arena-kurum-paketleri-v1.pdf'
   const email = institutionPilotPackageEmail({
     institutionName: input.data.name,
     managerName: String(managerResult.user.user_metadata?.display_name || managerEmail),
-    packageName: input.data.trialDays > 30 ? 'Paket 2 - Gelişim Pilotu' : 'Paket 1 - Başlangıç Pilotu',
+    packageName: input.data.trialDays === 60 ? 'Paket 2 - Gelişim Pilotu' : 'Paket 1 - Başlangıç Pilotu',
     documentUrl,
   })
   const delivery = await sendEmail({
