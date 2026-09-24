@@ -67,17 +67,18 @@ export async function POST(request: NextRequest) {
   const input = provisionFreePilotInputSchema.safeParse(body)
   if (!input.success) {
     return institutionPilotNoStoreJson(
-      { error: 'Kurum, yönetici, süre veya kapasite sınırı geçersiz' },
+      { error: 'Kurum, yönetici, paket onayı, süre veya kapasite sınırı geçersiz' },
       { status: 400 },
     )
   }
+  const approvalReference = `PILOT-${input.data.requestId.toUpperCase()}`
 
   const serviceClient = createServiceRoleClient()
   const rpcArgs = {
     p_user_id: admin.id,
     p_name: input.data.name,
     p_manager_user_id: input.data.managerUserId,
-    p_approval_ref: input.data.approvalReference,
+    p_approval_ref: approvalReference,
     p_student_limit: input.data.studentLimit,
     p_staff_limit: input.data.staffLimit,
     p_trial_days: input.data.trialDays,
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
     targetId: parsed.data.institution.id,
     details: {
       name: parsed.data.institution.name,
-      approvalReference: parsed.data.institution.approvalReference,
+      approvalReference,
       studentLimit: parsed.data.institution.studentLimit,
       staffLimit: parsed.data.institution.staffLimit,
       reviewDueAt: parsed.data.institution.reviewDueAt,

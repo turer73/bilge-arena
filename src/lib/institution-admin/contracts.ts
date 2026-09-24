@@ -12,10 +12,7 @@ export const provisionInstitutionInputSchema = z.object({
 export const provisionFreePilotInputSchema = z.object({
   name: z.string().trim().min(2).max(120),
   managerUserId: uuidSchema,
-  approvalReference: z.string()
-    .trim()
-    .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{5,63}$/)
-    .transform((value) => value.toUpperCase()),
+  packageAccepted: z.literal(true),
   studentLimit: z.number().int().min(1).max(40),
   staffLimit: z.number().int().min(1).max(2),
   trialDays: z.number().int().min(14).max(60),
