@@ -1,6 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { findingLabel } from '@/lib/question-audit/presentation'
+import { AdminRecordId } from './admin-record-id'
 import { FiveModelReviewReport } from './five-model-review-report'
 
 /**
@@ -53,6 +56,8 @@ export function ValidationVerdictPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [open, setOpen] = useState<string | null>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
@@ -80,6 +85,40 @@ export function ValidationVerdictPanel() {
     return () => ctrl.abort()
   }, [load])
 
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    const previousFocus = document.activeElement as HTMLElement | null
+    document.body.style.overflow = 'hidden'
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(null)
+        return
+      }
+      if (event.key !== 'Tab' || !dialogRef.current) return
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    closeButtonRef.current?.focus()
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+      previousFocus?.focus()
+    }
+  }, [open])
+
+  const selectedItem = items.find((item) => item.questionId === open)
+
   return (
     <section aria-labelledby="dogrulama-basligi" className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
       <h2 id="dogrulama-basligi" className="text-sm font-bold">Otomatik doğrulama</h2>
@@ -90,7 +129,7 @@ export function ValidationVerdictPanel() {
           Sonuç
           <select
             value={verdict}
-            onChange={(e) => { setVerdict(e.target.value as Verdict); setOffset(0) }}
+            onChange={(e) => { setOpen(null); setVerdict(e.target.value as Verdict); setOffset(0) }}
             className="min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
           >
             {(Object.keys(VERDICT_LABEL) as Verdict[]).map((v) => (
@@ -103,7 +142,7 @@ export function ValidationVerdictPanel() {
           Durum
           <select
             value={activeOnly}
-            onChange={(e) => { setActiveOnly(e.target.value as 'all' | 'true' | 'false'); setOffset(0) }}
+            onChange={(e) => { setOpen(null); setActiveOnly(e.target.value as 'all' | 'true' | 'false'); setOffset(0) }}
             className="min-h-[44px] rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
           >
             <option value="all">Hepsi</option>
@@ -130,7 +169,7 @@ export function ValidationVerdictPanel() {
         <>
           <ul className="mt-3 space-y-2">
             {items.map((item) => (
-            <li key={item.questionId} className="rounded-lg border border-[var(--border)] p-3 text-xs">
+            <li key={item.questionId} className="rounded-lg border border-[var(--border)] p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-bold">{item.category ?? '—'}</span>
                 <span className="text-[var(--text-sub)]">{item.game ?? '—'}</span>
@@ -141,30 +180,18 @@ export function ValidationVerdictPanel() {
                   <span className="text-[var(--text-sub)]">mutabakat %{Math.round(item.blindAgreementRatio * 100)}</span>
                 )}
                 {item.findingCodes.map((code, i) => (
-                  <span key={`${code}-${i}`} className="rounded-full border border-[var(--border)] px-2 py-0.5">{code}</span>
+                  <span key={`${code}-${i}`} className="rounded-lg border border-[var(--border)] px-2 py-1"><span>{findingLabel(code)}</span><code className="ml-2 text-xs text-[var(--text-sub)]">{code}</code></span>
                 ))}
                 <button
                   type="button"
-                  onClick={() => setOpen(open === item.questionId ? null : item.questionId)}
-                  aria-expanded={open === item.questionId}
+                  onClick={() => setOpen(item.questionId)}
+                  aria-haspopup="dialog"
                   className="ml-auto min-h-[44px] rounded-lg border border-[var(--border)] px-3 py-2 hover:border-[var(--focus)]"
                 >
-                  {open === item.questionId ? 'Kanıtı gizle' : 'Kanıtı göster'}
+                  Kanıtı göster
                 </button>
               </div>
 
-              {open === item.questionId && (
-                <div className="mt-2 space-y-2 border-t border-[var(--border)] pt-2">
-                  <p className="text-[var(--text-sub)]">{item.rationale}</p>
-                  {item.findings.map((f, i) => (
-                    <div key={`${f.code}-${i}`}>
-                      <p className="font-bold">{f.code}</p>
-                      <p className="mt-0.5 text-[var(--text-sub)]">{f.evidence}</p>
-                    </div>
-                  ))}
-                  <FiveModelReviewReport questionId={item.questionId} />
-                </div>
-              )}
             </li>
             ))}
           </ul>
@@ -172,7 +199,7 @@ export function ValidationVerdictPanel() {
             <button
               type="button"
               disabled={loading || offset === 0}
-              onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
+              onClick={() => { setOpen(null); setOffset((current) => Math.max(0, current - PAGE_SIZE)) }}
               className="min-h-[44px] rounded-lg border border-[var(--border)] px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               Önceki
@@ -180,13 +207,37 @@ export function ValidationVerdictPanel() {
             <button
               type="button"
               disabled={loading || offset + items.length >= total}
-              onClick={() => setOffset((current) => current + PAGE_SIZE)}
+              onClick={() => { setOpen(null); setOffset((current) => current + PAGE_SIZE) }}
               className="min-h-[44px] rounded-lg border border-[var(--border)] px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               Sonraki
             </button>
           </nav>
         </>
+      )}
+      {selectedItem && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(null) }}>
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="validation-evidence-title" className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 id="validation-evidence-title" className="text-xl font-bold">Soru kanıtı</h3>
+                <AdminRecordId label="Soru" id={selectedItem.questionId} />
+              </div>
+              <button ref={closeButtonRef} type="button" onClick={() => setOpen(null)} className="min-h-11 rounded-lg border border-[var(--border)] px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[var(--focus)]">Kapat</button>
+            </div>
+            <p className="mt-4 text-sm text-[var(--text-sub)]">{selectedItem.rationale}</p>
+            <div className="mt-4 space-y-3">
+              {selectedItem.findings.map((finding, index) => (
+                <div key={`${finding.code}-${index}`} className="rounded-lg bg-[var(--surface)] p-3">
+                  <p className="text-sm font-bold">{findingLabel(finding.code)}</p>
+                  <code className="text-xs text-[var(--text-sub)]">{finding.code}</code>
+                  <p className="mt-2 text-sm text-[var(--text-sub)]">{finding.evidence}</p>
+                </div>
+              ))}
+            </div>
+            <FiveModelReviewReport questionId={selectedItem.questionId} />
+          </div>
+        </div>, document.body,
       )}
     </section>
   )

@@ -36,7 +36,7 @@ describe('ContentAppealsPanel', () => {
     fireEvent.click(await screen.findByText('İki seçenek de doğru görünüyor.'))
     expect(await screen.findByText('2 + 2 kaçtır?')).toBeInTheDocument()
     expect(screen.getByText(/Öğrencinin seçimi: 1\. seçenek/)).toBeInTheDocument()
-    expect(screen.getByText(/LLM doğrulaması: APPROVED/)).toBeInTheDocument()
+    expect(screen.getByText(/LLM doğrulaması: Otomatik kontrol geçti/)).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Yeni durum'), { target: { value: 'investigating' } })
     fireEvent.change(screen.getByLabelText('Öğrenciye mesaj'), { target: { value: 'Kanıtlar inceleniyor.' } })
     fireEvent.change(screen.getByLabelText(/İç not/), { target: { value: 'İkinci göz gerekli.' } })

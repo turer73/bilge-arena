@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { ArrowRight, BookOpen, CircleAlert, CircleCheck, ClipboardList, Gamepad2, Settings2, Users, type LucideIcon } from 'lucide-react'
 
 interface AdminStats {
   totalUsers: number
@@ -18,13 +19,13 @@ const DEFAULT_STATS: AdminStats = {
   pendingReports: 0,
 }
 
-function buildStatCards(stats: AdminStats) {
+function buildStatCards(stats: AdminStats): Array<{ label: string; value: number; Icon: LucideIcon; color: string }> {
   return [
-    { label: 'Toplam Kullanici', value: stats.totalUsers, icon: '👥', color: 'var(--focus)' },
-    { label: 'Toplam Oturum', value: stats.totalSessions, icon: '🎮', color: 'var(--reward)' },
-    { label: 'Toplam Cevap', value: stats.totalAnswers, icon: '✅', color: 'var(--growth)' },
-    { label: 'Soru Sayisi', value: stats.totalQuestions, icon: '📝', color: 'var(--focus)' },
-    { label: 'Bekleyen Rapor', value: stats.pendingReports, icon: '🐛', color: 'var(--urgency)' },
+    { label: 'Toplam kullanıcı', value: stats.totalUsers, Icon: Users, color: 'var(--focus)' },
+    { label: 'Toplam oturum', value: stats.totalSessions, Icon: Gamepad2, color: 'var(--reward)' },
+    { label: 'Toplam cevap', value: stats.totalAnswers, Icon: CircleCheck, color: 'var(--growth)' },
+    { label: 'Soru sayısı', value: stats.totalQuestions, Icon: BookOpen, color: 'var(--focus)' },
+    { label: 'Bekleyen rapor', value: stats.pendingReports, Icon: CircleAlert, color: 'var(--urgency)' },
   ]
 }
 
@@ -54,8 +55,8 @@ export default function AdminDashboard() {
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-[var(--text-sub)]">Bilge Arena yonetim paneli</p>
+        <h1 className="text-2xl font-bold">Yönetim paneli</h1>
+        <p className="text-sm text-[var(--text-sub)]">İçerik, kullanıcı ve kalite işlemlerine genel bakış.</p>
       </div>
 
       {error && (
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
             className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xl">{stat.icon}</span>
+              <stat.Icon aria-hidden="true" className="h-5 w-5" style={{ color: stat.color }} />
             </div>
             <div className="mt-2 font-display text-2xl font-black" style={{ color: stat.color }}>
               {loading ? (
@@ -81,7 +82,7 @@ export default function AdminDashboard() {
                 stat.value.toLocaleString()
               )}
             </div>
-            <div className="mt-1 text-[10px] font-bold tracking-wider text-[var(--text-sub)]">
+            <div className="mt-1 text-xs font-semibold text-[var(--text-sub)]">
               {stat.label}
             </div>
           </div>
@@ -92,20 +93,20 @@ export default function AdminDashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Hizli erisim */}
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5">
-          <h3 className="mb-4 text-[10px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
-            HIZLI OZET
+          <h3 className="mb-4 text-xs font-bold tracking-wide text-[var(--text-sub)]">
+            HIZLI ÖZET
           </h3>
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between rounded-lg bg-[var(--surface)] px-4 py-3">
-              <span className="text-xs">Toplam Soru</span>
+              <span className="text-sm">Toplam soru</span>
               <span className="font-bold text-[var(--focus)]">{stats.totalQuestions.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-[var(--surface)] px-4 py-3">
-              <span className="text-xs">Toplam Oturum</span>
+              <span className="text-sm">Toplam oturum</span>
               <span className="font-bold text-[var(--reward)]">{stats.totalSessions.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-[var(--surface)] px-4 py-3">
-              <span className="text-xs">Bekleyen Rapor</span>
+              <span className="text-sm">Bekleyen rapor</span>
               <span className={`font-bold ${stats.pendingReports > 0 ? 'text-[var(--urgency)]' : 'text-[var(--growth)]'}`}>
                 {stats.pendingReports}
               </span>
@@ -115,27 +116,27 @@ export default function AdminDashboard() {
 
         {/* Hizli linkler */}
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5">
-          <h3 className="mb-4 text-[10px] font-extrabold tracking-[0.18em] text-[var(--text-sub)]">
-            HIZLI ERISIM
+          <h3 className="mb-4 text-xs font-bold tracking-wide text-[var(--text-sub)]">
+            HIZLI ERİŞİM
           </h3>
           <div className="flex flex-col gap-2">
             {[
-              { label: 'Soru Yonetimi', href: '/admin/sorular', icon: '📝', desc: 'Sorulari goruntule ve duzenle' },
-              { label: 'Kullanicilar', href: '/admin/kullanicilar', icon: '👥', desc: 'Kullanici listesi ve yonetimi' },
-              { label: 'Soru Kalitesi', href: '/admin/soru-kalite', icon: '🐛', desc: 'Raporlari ve kalite kanitlarini incele' },
-              { label: 'Site Ayarlari', href: '/admin/ayarlar', icon: '⚙️', desc: 'Platform yapilandirmasi' },
+              { label: 'Soru yönetimi', href: '/admin/sorular', Icon: ClipboardList, desc: 'Soruları görüntüle ve düzenle' },
+              { label: 'Kullanıcılar', href: '/admin/kullanicilar', Icon: Users, desc: 'Kullanıcı listesi ve yönetimi' },
+              { label: 'Soru Kalitesi', href: '/admin/soru-kalite', Icon: CircleAlert, desc: 'Raporları ve kalite kanıtlarını incele' },
+              { label: 'Site ayarları', href: '/admin/ayarlar', Icon: Settings2, desc: 'Platform yapılandırması' },
             ].map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 className="flex items-center gap-3 rounded-lg bg-[var(--surface)] px-4 py-3 transition-colors hover:bg-[var(--card)]"
               >
-                <span className="text-lg">{link.icon}</span>
+                <link.Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--focus)]" />
                 <div className="flex-1">
-                  <div className="text-xs font-bold">{link.label}</div>
-                  <div className="text-[10px] text-[var(--text-sub)]">{link.desc}</div>
+                  <div className="text-sm font-bold">{link.label}</div>
+                  <div className="text-xs text-[var(--text-sub)]">{link.desc}</div>
                 </div>
-                <span className="text-[10px] text-[var(--text-sub)]">→</span>
+                <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[var(--text-sub)]" />
               </a>
             ))}
           </div>

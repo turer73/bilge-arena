@@ -61,6 +61,7 @@ describe('ContentGovernancePanel', () => {
     render(<ContentGovernancePanel />)
     fireEvent.click(await screen.findByText('Eski revizyon'))
     expect(await screen.findByText(/İnsan incelemesi gerekli · question-quality@1/)).toBeInTheDocument()
+    expect(screen.getByText('Birden fazla yorumlanabilen ifade')).toBeInTheDocument()
     expect(screen.getByText('AMBIGUOUS_WORDING')).toBeInTheDocument()
     expect(screen.getByText(/İki farklı okuma/)).toBeInTheDocument()
     expect(screen.getByText(/3 açık · 2 doğrulanmış kanıtlı/)).toBeInTheDocument()
@@ -79,7 +80,7 @@ describe('ContentGovernancePanel', () => {
       expect(JSON.parse((call?.[1] as RequestInit).body as string)).toMatchObject({ questionId: QUESTION, revisionId: OLD, correctedRevisionId: CURRENT, errorType: 'wrong_key' })
       expect((call?.[1] as RequestInit).body).not.toMatch(/userId|actorId/)
     })
-    fireEvent.click(await screen.findByText('Append-only düzeltmeleri uygula'))
+    fireEvent.click(await screen.findByText('Sonuç düzeltmelerini uygula'))
     await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => String(url).includes(`/incidents/${INCIDENT}/apply`) && init?.method === 'POST')).toBe(true))
   })
 
@@ -112,8 +113,8 @@ describe('ContentGovernancePanel', () => {
     })
 
     render(<ContentGovernancePanel />)
-    fireEvent.click(await screen.findByRole('button', { name: new RegExp(OLD) }))
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(CURRENT) }))
+    fireEvent.click(await screen.findByRole('button', { name: /11111111…1111/ }))
+    fireEvent.click(screen.getByRole('button', { name: /22222222…2222/ }))
 
     await act(async () => second.resolve({ ok: true, status: 200, json: () => Promise.resolve({ revision: {
       revisionId: CURRENT, questionId: QUESTION, revisionNo: 2, status: 'published',
@@ -151,7 +152,7 @@ describe('ContentGovernancePanel', () => {
     })
 
     render(<ContentGovernancePanel />)
-    fireEvent.click(await screen.findByRole('button', { name: new RegExp(OLD) }))
+    fireEvent.click(await screen.findByRole('button', { name: /11111111…1111/ }))
     await screen.findByText(/Bu kapsam için aktif katalog kazanımı yok/)
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringMatching(/\/outcomes\?.*scope=general/),

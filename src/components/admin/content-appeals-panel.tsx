@@ -1,6 +1,8 @@
 'use client'
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { verdictLabel } from '@/lib/question-audit/presentation'
+import { AdminRecordId } from './admin-record-id'
 
 type AppealStatus = 'submitted' | 'acknowledged' | 'investigating' | 'resolved' | 'rejected' | 'withdrawn'
 type AppealAction = 'acknowledged' | 'investigating' | 'resolved' | 'rejected'
@@ -152,8 +154,8 @@ export function ContentAppealsPanel() {
             {items.map((item) => <button key={item.appealId} onClick={() => void open(item)} className="min-h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-left focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
               <span className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold"><span>{reasonLabel[item.reasonCode]}</span><span>{statusLabel[item.status]}</span></span>
               <span className="mt-1 block text-xs text-[var(--text-sub)]">{item.description || 'Açıklama eklenmedi.'}</span>
-              <span className="mt-2 block text-[10px] text-[var(--text-sub)]">{evidenceLabel(item)} · çözüm {new Date(item.resolveDueAt).toLocaleString('tr-TR')}</span>
-              {item.slaBreachedAt && <span className="mt-1 block text-[10px] font-bold text-[var(--urgency)]">SLA aşıldı</span>}
+              <span className="mt-2 block text-xs text-[var(--text-sub)]">{evidenceLabel(item)} · çözüm {new Date(item.resolveDueAt).toLocaleString('tr-TR')}</span>
+              {item.slaBreachedAt && <span className="mt-1 block text-xs font-bold text-[var(--urgency)]">SLA aşıldı</span>}
             </button>)}
             {items.length === 0 && <p className="rounded-lg border border-dashed border-[var(--border)] p-5 text-center text-xs text-[var(--text-sub)]">Bu filtrede itiraz yok.</p>}
           </div>
@@ -161,10 +163,9 @@ export function ContentAppealsPanel() {
             {!active ? <p className="text-xs text-[var(--text-sub)]">İncelemek ve karar kaydetmek için bir itiraz seçin.</p> : (
               <form onSubmit={submit} className="space-y-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-[var(--text-sub)]">{reasonLabel[active.reasonCode]} · {statusLabel[active.status]}</p>
+                  <p className="text-xs font-bold uppercase text-[var(--text-sub)]">{reasonLabel[active.reasonCode]} · {statusLabel[active.status]}</p>
                   <p className="mt-1 break-words text-sm">{active.description || 'Açıklama eklenmedi.'}</p>
-                  <p className="mt-1 break-all font-mono text-[10px] text-[var(--text-sub)]">Soru: {active.questionId}</p>
-                  <p className="mt-1 break-all font-mono text-[10px] text-[var(--text-sub)]">Revizyon: {active.revisionId ?? 'kanıtsız eski kayıt'}</p>
+                  <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2"><AdminRecordId label="Soru" id={active.questionId} /><AdminRecordId label="Revizyon" id={active.revisionId} /></div>
                   {active.selectedOption !== undefined && active.selectedOption !== null && <p className="mt-1 text-xs text-[var(--text-sub)]">Öğrencinin seçimi: {active.selectedOption + 1}. seçenek</p>}
                 </div>
                 {evidenceLoading && <p className="rounded-lg border border-[var(--border)] p-3 text-xs text-[var(--text-sub)]">Revizyon kanıtı yükleniyor…</p>}
@@ -173,8 +174,8 @@ export function ContentAppealsPanel() {
                   {Array.isArray(evidence.content?.options) && <ol className="space-y-1 text-xs text-[var(--text-sub)]">
                     {evidence.content.options.map((option, index) => <li key={index} className={evidence.content?.answer === index ? 'font-bold text-[var(--growth)]' : ''}>{index + 1}. {typeof option === 'string' ? option : 'Geçersiz seçenek'}{evidence.content?.answer === index ? ' · cevap anahtarı' : ''}</li>)}
                   </ol>}
-                  <p className="text-[10px] text-[var(--text-sub)]">LLM doğrulaması: {evidence.validation?.verdict ?? 'yok'} · açık sinyal: {evidence.appealSignals?.openCount ?? 0} ({evidence.appealSignals?.verifiedOpenCount ?? 0} doğrulanmış)</p>
-                  {evidence.psychometrics?.[0] && <p className="text-[10px] text-[var(--text-sub)]">Psikometri: n={evidence.psychometrics[0].sampleN}, p={evidence.psychometrics[0].pCorrect ?? '—'}, Wilson {evidence.psychometrics[0].wilsonLow ?? '—'}–{evidence.psychometrics[0].wilsonHigh ?? '—'} · {evidence.psychometrics[0].eligibilityPolicy ?? 'eski politika'}</p>}
+                  <p className="text-xs text-[var(--text-sub)]">LLM doğrulaması: {evidence.validation?.verdict ? verdictLabel(evidence.validation.verdict) : 'yok'} · açık sinyal: {evidence.appealSignals?.openCount ?? 0} ({evidence.appealSignals?.verifiedOpenCount ?? 0} doğrulanmış)</p>
+                  {evidence.psychometrics?.[0] && <p className="text-xs text-[var(--text-sub)]">Psikometri: n={evidence.psychometrics[0].sampleN}, p={evidence.psychometrics[0].pCorrect ?? '—'}, Wilson {evidence.psychometrics[0].wilsonLow ?? '—'}–{evidence.psychometrics[0].wilsonHigh ?? '—'} · {evidence.psychometrics[0].eligibilityPolicy ?? 'eski politika'}</p>}
                 </div>}
                 <label className="block text-xs font-bold">Yeni durum<select value={action} onChange={(event) => setAction(event.target.value as AppealAction)} className="mt-1 min-h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3"><option value="acknowledged">Alındı</option><option value="investigating">İnceleniyor</option><option value="resolved">Çözüldü</option><option value="rejected">Reddedildi</option></select></label>
                 <label className="block text-xs font-bold">Öğrenciye mesaj<textarea required maxLength={1000} value={publicMessage} onChange={(event) => setPublicMessage(event.target.value)} className="mt-1 min-h-24 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 font-normal" /></label>

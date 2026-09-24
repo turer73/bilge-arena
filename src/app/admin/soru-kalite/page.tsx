@@ -119,7 +119,7 @@ export default function AdminQuestionQualityPage() {
       {mutationError && <p role="alert" className="mb-4 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-3 py-2 text-xs text-[var(--urgency)]">{mutationError}</p>}
 
       {/* Filtreler */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="sticky top-14 z-20 mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card-bg)]/95 p-3 shadow-sm backdrop-blur lg:top-0">
         <label className="flex items-center gap-2 text-xs text-[var(--text-sub)]">
           Min. oynanma
           <select
@@ -148,7 +148,7 @@ export default function AdminQuestionQualityPage() {
       </div>
 
       {capped && (
-        <div className="mb-3 rounded-lg border border-[var(--reward-border)] bg-[var(--reward-bg)] px-3 py-2 text-[11px] text-[var(--reward)]">
+        <div className="mb-3 rounded-lg border border-[var(--reward-border)] bg-[var(--reward-bg)] px-3 py-2 text-xs text-[var(--reward)]">
           Aday havuzu 500 ile sinirli (en cok oynanan oncelikli). Daha az oynanan
           drift sorular kapsam disi kalmis olabilir — esikleri daraltarak inceleyin.
         </div>
@@ -163,7 +163,7 @@ export default function AdminQuestionQualityPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-xs">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--surface)]">
                   <th className="px-4 py-3 font-bold text-[var(--text-sub)]">Soru</th>
@@ -179,14 +179,14 @@ export default function AdminQuestionQualityPage() {
                   <tr key={q.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] transition-colors">
                     <td className="max-w-[320px] truncate px-4 py-3">
                       <div className="font-medium">{stripRichText(q.question_text)}</div>
-                      <div className="mt-0.5 text-[10px] text-[var(--text-sub)]">
+                      <div className="mt-0.5 text-xs text-[var(--text-sub)]">
                         {q.category}{q.subcategory ? ` / ${q.subcategory}` : ''}
                       </div>
                     </td>
                     <td className="px-3 py-3">
                       {GAMES[q.game as keyof typeof GAMES] && (
                         <span
-                          className="rounded-md px-2 py-0.5 text-[10px] font-bold"
+                          className="rounded-md px-2 py-0.5 text-xs font-bold"
                           style={{
                             backgroundColor: `color-mix(in srgb, ${GAMES[q.game as keyof typeof GAMES].colorHex} 12%, transparent)`,
                             color: GAMES[q.game as keyof typeof GAMES].colorHex,
@@ -204,7 +204,7 @@ export default function AdminQuestionQualityPage() {
                     </td>
                     <td className="px-3 py-3 text-center">
                       {q.pending_reports > 0 ? (
-                        <span className="rounded-full bg-[var(--urgency-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--urgency)]">
+                        <span className="rounded-full bg-[var(--urgency-bg)] px-2 py-0.5 text-xs font-bold text-[var(--urgency)]">
                           {q.pending_reports} 🐛
                         </span>
                       ) : (
@@ -212,17 +212,18 @@ export default function AdminQuestionQualityPage() {
                       )}
                     </td>
                     <td className="px-3 py-3 text-center">
-                      <button
-                        onClick={() => toggleActive(q.id, q.is_active)}
-                        className={`min-h-11 rounded-full px-3 py-1 text-[10px] font-bold transition-colors ${
-                          q.is_active
-                            ? 'bg-[var(--growth-bg)] text-[var(--growth)]'
-                            : 'bg-[var(--surface)] text-[var(--text-sub)]'
-                        }`}
-                        title={q.is_active ? 'Pasiflestir' : 'Aktiflestir'}
-                      >
-                        {q.is_active ? 'Aktif' : 'Pasif'}
-                      </button>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${q.is_active ? 'bg-[var(--growth-bg)] text-[var(--growth)]' : 'bg-[var(--surface)] text-[var(--text-sub)]'}`}>
+                          {q.is_active ? 'Yayında' : 'Pasif'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleActive(q.id, q.is_active)}
+                          className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-1 text-xs font-bold text-[var(--focus)] transition-colors hover:bg-[var(--surface)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
+                        >
+                          {q.is_active ? 'Pasife al' : 'Aktifleştir'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

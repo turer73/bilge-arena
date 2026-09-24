@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { FiveModelReviewReport } from './five-model-review-report'
+import { AdminRecordId, shortAdminId } from './admin-record-id'
+import { findingLabel } from '@/lib/question-audit/presentation'
 
 interface QueueItem { revisionId: string; questionId: string; status: string; createdAt: string }
 interface RevisionDetail {
@@ -51,6 +53,13 @@ const statusLabel: Record<string, string> = {
 const validationLabel: Record<string, string> = {
   APPROVED: 'Otomatik kontrol geçti', REJECTED: 'Yayın engeli',
   NEEDS_REVIEW: 'İnsan incelemesi gerekli', INCONCLUSIVE: 'Kontrol tekrarlanmalı',
+}
+
+const incidentTypeLabel: Record<string, string> = {
+  wrong_key: 'Yanlış cevap anahtarı',
+  ambiguous: 'Belirsiz soru',
+  invalid_content: 'Geçersiz içerik',
+  outcome_mismatch: 'Kazanım uyumsuzluğu',
 }
 
 export function ContentGovernancePanel() {
@@ -244,8 +253,8 @@ export function ContentGovernancePanel() {
             {items.map((item) => (
               <button key={item.revisionId} onClick={() => void openRevision(item.revisionId)} className="min-h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-left focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
                 <span className="block text-xs font-bold">{statusLabel[item.status] ?? item.status}</span>
-                <span className="mt-1 block truncate font-mono text-[10px] text-[var(--text-sub)]">{item.revisionId}</span>
-                <span className="mt-1 block text-[10px] text-[var(--text-sub)]">{new Date(item.createdAt).toLocaleString('tr-TR')}</span>
+                <span className="mt-1 block truncate font-mono text-xs text-[var(--text-sub)]" title={item.revisionId}>{shortAdminId(item.revisionId)}</span>
+                <span className="mt-1 block text-xs text-[var(--text-sub)]">{new Date(item.createdAt).toLocaleString('tr-TR')}</span>
               </button>
             ))}
             {items.length === 0 && <p className="rounded-lg border border-dashed border-[var(--border)] p-5 text-center text-xs text-[var(--text-sub)]">Bekleyen revizyon yok.</p>}
@@ -254,7 +263,9 @@ export function ContentGovernancePanel() {
             {!detail ? <p className="text-xs text-[var(--text-sub)]">Kanıtları ve karar geçmişini görmek için bir revizyon seçin.</p> : (
               <div className="space-y-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-sub)]">Revizyon {detail.revisionNo} · {statusLabel[detail.status] ?? detail.status}</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-sub)]">Revizyon {detail.revisionNo} · {statusLabel[detail.status] ?? detail.status}</p>
+                  <AdminRecordId label="Revizyon" id={detail.revisionId} />
+                  <AdminRecordId label="Soru" id={detail.questionId} />
                   <h3 className="mt-1 text-sm font-bold">{detail.content?.question ?? 'Soru metni yok'}</h3>
                   {detail.summary && <p className="mt-1 text-xs text-[var(--text-sub)]">{detail.summary}</p>}
                 </div>
@@ -305,16 +316,17 @@ export function ContentGovernancePanel() {
                 {detail.validation && detail.validation.findings.length > 0 && <div className="space-y-2 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] p-3" aria-label="Otomatik doğrulama kanıtları">
                   <p className="text-xs font-bold">Otomatik doğrulama kanıtları</p>
                   {detail.validation.findings.map((finding, index) => <div key={`${finding.code}-${index}`} className="text-xs">
-                    <p className="font-bold">{finding.code}</p>
+                    <p className="font-bold">{findingLabel(finding.code)}</p>
+                    <p className="font-mono text-[var(--text-sub)]">{finding.code}</p>
                     <p className="mt-1 text-[var(--text-sub)]">{finding.evidence}</p>
                   </div>)}
                 </div>}
                 {(detail.incidents?.length ?? 0) > 0 && <div className="space-y-2 rounded-lg border border-[var(--border)] p-3" aria-label="Sonuç düzeltme etkileri">
                   <p className="text-xs font-bold">Sonuç düzeltme etkileri</p>
                   {detail.incidents?.map((incident) => <div key={incident.incidentId} className="rounded-lg bg-[var(--surface)] p-3 text-xs">
-                    <p className="font-bold">{incident.errorType} · {incident.status}</p>
+                    <p className="font-bold">{incidentTypeLabel[incident.errorType]} · {incident.status === 'open' ? 'Açık' : 'Kapalı'}</p>
                     <p className="mt-1 text-[var(--text-sub)]">Uygun {incident.eligibleCount} · düzeltildi {incident.changedCount} · manuel inceleme {incident.manualRequiredCount}</p>
-                    {incident.status === 'open' && incident.errorType === 'wrong_key' && <button disabled={busy} onClick={() => void applyIncident(incident.incidentId)} className="mt-2 min-h-11 rounded-lg bg-[var(--urgency)] px-4 text-xs font-bold text-white disabled:opacity-50">Append-only düzeltmeleri uygula</button>}
+                    {incident.status === 'open' && incident.errorType === 'wrong_key' && <button disabled={busy} onClick={() => void applyIncident(incident.incidentId)} className="mt-2 min-h-11 rounded-lg bg-[var(--urgency)] px-4 text-xs font-bold text-white disabled:opacity-50">Sonuç düzeltmelerini uygula</button>}
                   </div>)}
                 </div>}
                 {detail.status === 'superseded' && <div className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] p-3">

@@ -78,8 +78,9 @@ describe('AdminQuestionQualityPage', () => {
   it('soru durumunu PATCH /api/questions ile degistirir (hizli pasiflestir)', async () => {
     render(<AdminQuestionQualityPage />)
     await screen.findByText('Kotu soru bir')
-    // q1 aktif → "Aktif" butonu; tikla → is_active:false PATCH
-    fireEvent.click(screen.getByRole('button', { name: 'Aktif' }))
+    // Yayın durumu ayrı gösterilir; eylem pasife alma niyetini açıkça belirtir.
+    expect(screen.getByText('Yayında')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Pasife al' }))
     await waitFor(() => {
       const call = fetchMock.mock.calls.find((c) => c[0] === '/api/questions')
       expect(call).toBeTruthy()
@@ -99,7 +100,7 @@ describe('AdminQuestionQualityPage', () => {
     })
     render(<AdminQuestionQualityPage />)
     await screen.findByText('Kotu soru bir')
-    fireEvent.click(screen.getByRole('button', { name: 'Aktif' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Pasife al' }))
     await waitFor(() => expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/quarantine'))).toBe(true))
     expect(fetchMock.mock.calls.some((call) => call[0] === '/api/questions')).toBe(false)
   })

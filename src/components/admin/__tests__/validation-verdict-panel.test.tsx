@@ -52,4 +52,23 @@ describe('ValidationVerdictPanel', () => {
     expect(screen.getByText(/51-51 \/ 75 soru/)).toBeInTheDocument()
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('offset=50'))).toBe(true))
   })
+
+  it('bulguyu Türkçe gösterir ve kanıt penceresini Escape ile kapatır', async () => {
+    render(<ValidationVerdictPanel />)
+    expect(await screen.findByText('İlk sayfa')).toBeInTheDocument()
+    expect(screen.getByText('Birden fazla yorumlanabilen ifade')).toBeInTheDocument()
+
+    const trigger = screen.getByRole('button', { name: 'Kanıtı göster' })
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = screen.getByRole('dialog', { name: 'Soru kanıtı' })
+    expect(dialog).toHaveTextContent('İki okuma var.')
+    expect(document.body.style.overflow).toBe('hidden')
+    expect(screen.getByRole('button', { name: 'Kapat' })).toHaveFocus()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(document.body.style.overflow).toBe('')
+    expect(trigger).toHaveFocus()
+  })
 })
