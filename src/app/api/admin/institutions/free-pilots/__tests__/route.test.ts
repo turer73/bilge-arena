@@ -7,15 +7,28 @@ const mocks = vi.hoisted(() => ({
   limiter: vi.fn(),
   freePilotEnabled: vi.fn(),
   pilotEnabled: vi.fn(),
+  trackingEnabled: vi.fn(),
+  studyProgramEnabled: vi.fn(),
+  getUserById: vi.fn(),
+  from: vi.fn(),
+  sendEmail: vi.fn(),
 }))
 
 vi.mock('@/lib/institution-pilot/server-security', () => ({
   isInstitutionFreePilotEnabled: mocks.freePilotEnabled,
   isInstitutionPilotEnabled: mocks.pilotEnabled,
 }))
+vi.mock('@/lib/institution-tracking/server-security', () => ({
+  isInstitutionTrackingEnabled: mocks.trackingEnabled,
+  isInstitutionStudyProgramEnabled: mocks.studyProgramEnabled,
+}))
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({ marker: 'cookie', rpc: mocks.rpc })),
 }))
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: () => ({ auth: { admin: { getUserById: mocks.getUserById } }, from: mocks.from }),
+}))
+vi.mock('@/lib/email/send', () => ({ sendEmail: mocks.sendEmail }))
 vi.mock('@/lib/supabase/admin', () => ({
   checkPermission: mocks.checkPermission,
   logAdminAction: mocks.logAdminAction,
@@ -71,10 +84,23 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.freePilotEnabled.mockReturnValue(true)
   mocks.pilotEnabled.mockReturnValue(true)
+  mocks.trackingEnabled.mockReturnValue(true)
+  mocks.studyProgramEnabled.mockReturnValue(true)
   mocks.checkPermission.mockResolvedValue(ADMIN)
   mocks.limiter.mockResolvedValue({ success: true })
   mocks.rpc.mockResolvedValue({ data: result, error: null })
   mocks.logAdminAction.mockResolvedValue({ error: null })
+  mocks.getUserById.mockResolvedValue({ data: { user: { email: 'manager@example.com', email_confirmed_at: CREATED_AT, user_metadata: { display_name: 'Kurum Yöneticisi' } } }, error: null })
+  mocks.sendEmail.mockResolvedValue({ ok: true, id: 'email-1' })
+  mocks.from.mockImplementation((table: string) => {
+    const result = table === 'institution_pilot_controls'
+      ? { data: { enabled: true }, error: null }
+      : { data: null, error: null }
+    const chain: Record<string, unknown> = {}
+    for (const method of ['select', 'eq', 'in', 'limit']) chain[method] = vi.fn(() => chain)
+    chain.maybeSingle = vi.fn(async () => result)
+    return chain
+  })
 })
 
 describe('admin invitation-only free institution pilot route', () => {
@@ -100,6 +126,12 @@ describe('admin invitation-only free institution pilot route', () => {
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
+  it('requires tracking and study-program rollout gates before authentication', async () => {
+    mocks.trackingEnabled.mockReturnValue(false)
+    expect((await POST(post(input))).status).toBe(503)
+    expect(mocks.checkPermission).not.toHaveBeenCalled()
+  })
+
   it('rejects excessive quotas, duration and unknown fields before RPC execution', async () => {
     const response = await POST(post({
       ...input,
@@ -111,6 +143,49 @@ describe('admin invitation-only free institution pilot route', () => {
 
     expect(response.status).toBe(400)
     expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects package terms that differ from the published document', async () => {
+    expect((await POST(post({ ...input, trialDays: 14 }))).status).toBe(400)
+    expect((await POST(post({ ...input, trialDays: 30, studentLimit: 31 }))).status).toBe(400)
+    expect((await POST(post({ ...input, staffLimit: 1 }))).status).toBe(400)
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+  })
+
+  it('checks database eligibility before sending the document', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      const result = table === 'pilot_institutions'
+        ? { data: { id: INSTITUTION_ID }, error: null }
+        : table === 'institution_pilot_controls'
+          ? { data: { enabled: true }, error: null }
+          : { data: null, error: null }
+      const chain: Record<string, unknown> = {}
+      for (const method of ['select', 'eq', 'in', 'limit']) chain[method] = vi.fn(() => chain)
+      chain.maybeSingle = vi.fn(async () => result)
+      return chain
+    })
+    const response = await POST(post(input))
+    expect(response.status).toBe(409)
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('lets a committed request id reach the authoritative replay before eligibility checks', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      const result = table === 'pilot_institution_requests'
+        ? { data: { request_id: REQUEST_ID }, error: null }
+        : { data: null, error: null }
+      const chain: Record<string, unknown> = {}
+      for (const method of ['select', 'eq', 'in', 'limit']) chain[method] = vi.fn(() => chain)
+      chain.maybeSingle = vi.fn(async () => result)
+      return chain
+    })
+    mocks.rpc.mockResolvedValue({ data: { ...result, replayed: true }, error: null })
+    const response = await POST(post(input))
+    expect(response.status).toBe(200)
+    expect((await response.json()).replayed).toBe(true)
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+    expect(mocks.getUserById).not.toHaveBeenCalled()
   })
 
   it('rejects malformed JSON before RPC execution', async () => {
@@ -130,7 +205,13 @@ describe('admin invitation-only free institution pilot route', () => {
     const response = await POST(post({ ...input, name: ` ${input.name} ` }))
 
     expect(response.status).toBe(201)
-    expect(await response.json()).toEqual(result)
+    expect(await response.json()).toEqual({ ...result, documentDelivery: { sent: true, version: '1.0' } })
+    expect(mocks.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'manager@example.com',
+      template: 'institution_pilot_package_v1',
+      idempotencyKey: 'institution-pilot-package-' + REQUEST_ID,
+      attachments: [expect.objectContaining({ filename: 'bilge-arena-kurum-paketleri-v1.pdf' })],
+    }))
     expect(mocks.rpc).toHaveBeenCalledWith('provision_free_pilot_institution', {
       p_user_id: ADMIN.id,
       p_name: input.name,
@@ -152,6 +233,24 @@ describe('admin invitation-only free institution pilot route', () => {
     }))
     expect(response.headers.get('Cache-Control')).toBe('private, no-store')
     expect(response.headers.get('Referrer-Policy')).toBe('no-referrer')
+  })
+
+  it('does not create the institution when mandatory document delivery fails', async () => {
+    mocks.sendEmail.mockResolvedValue({ ok: false, error: 'SMTP down' })
+    const response = await POST(post(input))
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({
+      error: 'Kurum belgesi e-posta ile gönderilemedi; kurum oluşturulmadı',
+    })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects a manager without a confirmed email before delivery or RPC', async () => {
+    mocks.getUserById.mockResolvedValue({ data: { user: { email: 'manager@example.com', email_confirmed_at: null } }, error: null })
+    const response = await POST(post(input))
+    expect(response.status).toBe(422)
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('fails closed when the distributed limiter backend is unavailable', async () => {

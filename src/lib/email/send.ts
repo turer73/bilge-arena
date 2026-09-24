@@ -27,6 +27,8 @@ export interface SendEmailParams {
   replyTo?: string
   /** Tag user_id for audit (kullanim olcumu) */
   userId?: string
+  idempotencyKey?: string
+  attachments?: Array<{ filename: string; path: string }>
 }
 
 /**
@@ -47,7 +49,10 @@ export async function sendEmail(params: SendEmailParams): Promise<{ ok: boolean;
       html: params.html,
       replyTo: params.replyTo,
       tags: [{ name: 'template', value: params.template }],
-    })
+      attachments: params.attachments,
+    }, params.idempotencyKey ? {
+      headers: { 'Idempotency-Key': params.idempotencyKey },
+    } : undefined)
 
     if (result.error) {
       return { ok: false, error: result.error.message }

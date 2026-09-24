@@ -164,6 +164,7 @@ export default function AdminInstitutionsPage() {
         <div className="flex items-center gap-2 text-sm font-black text-[var(--focus)]"><Building2 className="h-5 w-5" /> Kurum yönetimi</div>
         <h1 className="mt-2 text-2xl font-black sm:text-3xl">Kurumlar</h1>
         <p className="mt-2 text-sm leading-6 text-[var(--text-sub)]">Kurum onboarding akışını seçin. Ücretsiz sistem pilotunda öğrenciler normal Bilge Arena hesaplarıyla, süreli sınıf daveti üzerinden katılır.</p>
+        <a href="/documents/bilge-arena-kurum-paketleri-v1.pdf" target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-[var(--border)] px-3 text-xs font-black text-[var(--focus)]">Kurum paketleri PDF</a>
       </header>
 
       <form onSubmit={createInstitution} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5">
@@ -194,25 +195,23 @@ export default function AdminInstitutionsPage() {
             <span className="mt-1 block text-[10px] font-medium">Sözleşme/KVKK içeriğini değil, harici dosyanın kişisel veri içermeyen referansını yazın.</span>
           </label>}
           {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Öğrenci üst sınırı
-            <input type="number" value={studentLimit} onChange={(event) => setStudentLimit(Number(event.target.value))} min={1} max={40} required className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
-            <span className="mt-1 block text-[10px] font-medium">Davetli pilotta en fazla 40 aktif öğrenci.</span>
+            <input type="number" value={studentLimit} onChange={(event) => setStudentLimit(Number(event.target.value))} min={1} max={trialDays === 30 ? 30 : 40} required className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
+            <span className="mt-1 block text-[10px] font-medium">30 günlük pakette en fazla 30, 60 günlük pakette en fazla 40 öğrenci.</span>
           </label>}
           {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Toplam personel sınırı
             <select value={staffLimit} onChange={(event) => setStaffLimit(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
-              <option value={1}>1 yönetici</option>
               <option value={2}>1 yönetici + 1 öğretmen</option>
             </select>
           </label>}
           {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Değerlendirme süresi
             <select value={trialDays} onChange={(event) => setTrialDays(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
-              <option value={14}>14 gün</option>
               <option value={30}>30 gün</option>
               <option value={60}>60 gün</option>
             </select>
           </label>}
         </fieldset>
         {manager && <p className="mt-3 text-xs font-semibold text-emerald-300">Yönetici seçildi: {manager.display_name || manager.username}</p>}
-        <button disabled={!canProvision || saving || !manager || name.trim().length < 2 || (activeProvisioningMode === 'free' && (approvalReference.length < 6 || studentLimit < 1 || studentLimit > 40))} className="mt-4 min-h-11 w-full rounded-xl bg-[var(--focus)] px-4 text-sm font-black text-white disabled:opacity-50 sm:w-auto">{saving ? 'Oluşturuluyor…' : !canProvision ? 'Kurum oluşturma kapalı' : activeProvisioningMode === 'free' ? 'Ücretsiz pilotu oluştur' : 'Ücretli onboarding başlat'}</button>
+        <button disabled={!canProvision || saving || !manager || name.trim().length < 2 || (activeProvisioningMode === 'free' && (approvalReference.length < 6 || studentLimit < 1 || studentLimit > (trialDays === 30 ? 30 : 40) || staffLimit !== 2))} className="mt-4 min-h-11 w-full rounded-xl bg-[var(--focus)] px-4 text-sm font-black text-white disabled:opacity-50 sm:w-auto">{saving ? 'Oluşturuluyor…' : !canProvision ? 'Kurum oluşturma kapalı' : activeProvisioningMode === 'free' ? 'Ücretsiz pilotu oluştur' : 'Ücretli onboarding başlat'}</button>
       </form>
 
       {notice && <p role="status" className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3 text-sm font-semibold text-emerald-200">{notice}</p>}
