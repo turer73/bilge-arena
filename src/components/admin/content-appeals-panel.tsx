@@ -132,7 +132,7 @@ export function ContentAppealsPanel() {
   if (enabled === false) return null
   return (
     <section className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4" aria-labelledby="appeals-title">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="sticky top-14 z-20 flex flex-wrap items-end justify-between gap-3 rounded-lg bg-[var(--card-bg)]/95 py-2 backdrop-blur lg:top-0">
         <div>
           <h2 id="appeals-title" className="text-lg font-black">Soru İtirazları</h2>
           <p className="mt-1 text-xs text-[var(--text-sub)]">Öğrenci kimliği gösterilmez; soru kanıtı, SLA ve karar geçmişi üzerinden inceleme yapılır.</p>
@@ -156,6 +156,7 @@ export function ContentAppealsPanel() {
               <span className="mt-1 block text-xs text-[var(--text-sub)]">{item.description || 'Açıklama eklenmedi.'}</span>
               <span className="mt-2 block text-xs text-[var(--text-sub)]">{evidenceLabel(item)} · çözüm {new Date(item.resolveDueAt).toLocaleString('tr-TR')}</span>
               {item.slaBreachedAt && <span className="mt-1 block text-xs font-bold text-[var(--urgency)]">SLA aşıldı</span>}
+              <span className="mt-2 block text-xs font-bold text-[var(--focus)]">Kanıt göster →</span>
             </button>)}
             {items.length === 0 && <p className="rounded-lg border border-dashed border-[var(--border)] p-5 text-center text-xs text-[var(--text-sub)]">Bu filtrede itiraz yok.</p>}
           </div>

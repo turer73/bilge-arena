@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { AdminRecordId, shortAdminId } from './admin-record-id'
 import type {
   ExamRole,
   ExamRoleOperations,
@@ -27,6 +28,20 @@ const roleLabels: Record<ExamRole, string> = {
   common_philosophy: 'Ortak Felsefe',
   standard_religion: 'Din Kültürü',
   alternate_philosophy: 'İlave Felsefe',
+}
+
+function isLegacyImport(value: string | null | undefined): boolean {
+  return value?.replaceAll('_', '-').toLowerCase() === 'legacy-import'
+}
+
+function sourceTitleLabel(value: string | null): string {
+  if (isLegacyImport(value)) return 'Eski aktarımdan gelen kaynak'
+  return value ?? 'Kaynak yok'
+}
+
+function licenseLabel(value: string | null): string {
+  if (isLegacyImport(value)) return 'Lisans kanıtı bekleniyor'
+  return value ?? 'Lisans bilgisi yok'
 }
 
 const stateOptions = Object.entries(workflowLabels) as Array<[ExamRoleWorkflowState, string]>
@@ -222,7 +237,7 @@ export function TytSocialReleaseOperationsPanel() {
         {notice && <p className="rounded-lg border border-[var(--growth-border)] bg-[var(--growth-bg)] px-3 py-2 text-xs text-[var(--growth)]">{notice}</p>}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-end gap-2">
+      <div className="sticky top-14 z-20 mt-4 flex flex-wrap items-end gap-2 rounded-lg border border-[var(--border)] bg-[var(--card-bg)]/95 p-3 backdrop-blur lg:top-0">
         <label className="text-xs font-bold">İş adımı
           <select
             value={filter}
@@ -240,16 +255,16 @@ export function TytSocialReleaseOperationsPanel() {
         {loading ? (
           <p className="p-4 text-xs text-[var(--text-sub)]">Yayın kanıtı yükleniyor…</p>
         ) : operations?.items.length ? (
-          <table className="w-full min-w-[760px] text-left text-xs">
+          <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-[var(--surface)] text-[var(--text-sub)]">
               <tr><th className="px-3 py-2">Soru / revizyon</th><th className="px-3 py-2">Alan</th><th className="px-3 py-2">Kaynak</th><th className="px-3 py-2">Durum</th><th className="px-3 py-2">İşlem</th></tr>
             </thead>
             <tbody>
               {operations.items.map((item) => (
                 <tr key={item.questionId} className="border-t border-[var(--border)]">
-                  <td className="px-3 py-2 font-mono text-[11px]">{item.questionId}<br />{item.revisionId ?? 'revizyon yok'}</td>
+                  <td className="px-3 py-2 font-mono text-xs"><span title={item.questionId}>Soru {shortAdminId(item.questionId)}</span><br /><span title={item.revisionId ?? undefined}>Revizyon {item.revisionId ? shortAdminId(item.revisionId) : 'yok'}</span></td>
                   <td className="px-3 py-2">{item.category} · zorluk {item.difficulty}<br />{item.outcomeCount} kazanım</td>
-                  <td className="px-3 py-2">{item.sourceTitle ?? 'Kaynak yok'}<br /><span className="text-[var(--text-sub)]">{item.licenseCode ?? 'lisans yok'}</span></td>
+                  <td className="px-3 py-2"><span title={item.sourceTitle ?? undefined}>{sourceTitleLabel(item.sourceTitle)}</span><br /><span title={item.licenseCode ?? undefined} className="text-[var(--text-sub)]">{licenseLabel(item.licenseCode)}</span></td>
                   <td className="px-3 py-2">{workflowLabels[item.workflowState]}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => choose(item)} className="min-h-11 rounded-lg border border-[var(--focus)] px-3 font-bold text-[var(--focus)]">İncele</button>
@@ -272,7 +287,7 @@ export function TytSocialReleaseOperationsPanel() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-bold">{workflowLabels[selected.workflowState]}</p>
-              <p className="mt-1 font-mono text-[11px] text-[var(--text-sub)]">{selected.revisionId ?? selected.questionId}</p>
+              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2"><AdminRecordId label="Soru" id={selected.questionId} /><AdminRecordId label="Revizyon" id={selected.revisionId} /></div>
             </div>
             <button type="button" onClick={() => setSelected(null)} className="min-h-11 rounded-lg border border-[var(--border)] px-3 text-xs font-bold">Kapat</button>
           </div>

@@ -2,20 +2,22 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { ErrorReport, ReportType, ReportStatus } from '@/types/database'
+import { CircleHelp, CircleX, Copy, FileText, Pencil, ShieldAlert, type LucideIcon } from 'lucide-react'
+import { AdminRecordId } from '@/components/admin/admin-record-id'
 
-const REPORT_TYPE_LABELS: Record<ReportType, { label: string; icon: string }> = {
-  wrong_answer: { label: 'Yanlis cevap', icon: '❌' },
-  typo: { label: 'Yazim hatasi', icon: '✏️' },
-  unclear: { label: 'Anlasilmiyor', icon: '❓' },
-  duplicate: { label: 'Tekrar', icon: '♻️' },
-  offensive: { label: 'Uygunsuz', icon: '🚫' },
-  other: { label: 'Diger', icon: '📝' },
+const REPORT_TYPE_LABELS: Record<ReportType, { label: string; Icon: LucideIcon }> = {
+  wrong_answer: { label: 'Yanlış cevap', Icon: CircleX },
+  typo: { label: 'Yazım hatası', Icon: Pencil },
+  unclear: { label: 'Anlaşılmıyor', Icon: CircleHelp },
+  duplicate: { label: 'Tekrar', Icon: Copy },
+  offensive: { label: 'Uygunsuz', Icon: ShieldAlert },
+  other: { label: 'Diğer', Icon: FileText },
 }
 
 const STATUS_CONFIG: Record<ReportStatus, { label: string; color: string; bg: string }> = {
   pending: { label: 'Bekliyor', color: 'var(--reward)', bg: 'var(--reward-bg)' },
-  reviewed: { label: 'Incelendi', color: 'var(--focus)', bg: 'var(--focus-bg)' },
-  resolved: { label: 'Cozuldu', color: 'var(--growth)', bg: 'var(--growth-bg)' },
+  reviewed: { label: 'İncelendi', color: 'var(--focus)', bg: 'var(--focus-bg)' },
+  resolved: { label: 'Çözüldü', color: 'var(--growth)', bg: 'var(--growth-bg)' },
   rejected: { label: 'Reddedildi', color: 'var(--text-sub)', bg: 'var(--surface)' },
 }
 
@@ -90,27 +92,27 @@ export default function AdminReportsPage() {
     <div className="mx-auto max-w-5xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Hata Raporlari</h1>
+          <h1 className="text-2xl font-bold">Hata raporları</h1>
           <p className="text-sm text-[var(--text-sub)]">
-            {pendingCount > 0 ? `${pendingCount} bekleyen rapor` : 'Tum raporlar incelendi'}
+            {pendingCount > 0 ? `${pendingCount} bekleyen rapor` : 'Tüm raporlar incelendi'}
           </p>
         </div>
       </div>
 
       {/* Filtreler */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="sticky top-14 z-20 mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)]/95 p-3 backdrop-blur lg:top-0">
         {(['all', 'pending', 'reviewed', 'resolved', 'rejected'] as const).map((status) => (
           <button
             key={status}
             onClick={() => setFilterStatus(status)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+            className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition-colors ${
               filterStatus === status
                 ? 'bg-[var(--focus)] text-white'
                 : 'bg-[var(--surface)] text-[var(--text-sub)] hover:bg-[var(--card)]'
             }`}
           >
             {status === 'all'
-              ? `Tumu (${total})`
+              ? `Tümü (${total})`
               : STATUS_CONFIG[status].label}
           </button>
         ))}
@@ -136,27 +138,30 @@ export default function AdminReportsPage() {
                 className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] transition-all"
               >
                 <button
+                  type="button"
+                  aria-expanded={isExpanded}
+                  aria-controls={`report-detail-${report.id}`}
                   onClick={() => {
                     setExpandedId(isExpanded ? null : report.id)
                     setAdminNoteInput('')
                   }}
                   className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--surface)]"
                 >
-                  <span className="text-lg">{typeInfo.icon}</span>
+                  <typeInfo.Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${report.report_type === 'offensive' ? 'text-[var(--urgency)]' : 'text-[var(--focus)]'}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold">{typeInfo.label}</span>
                     </div>
-                    <div className="mt-0.5 text-[11px] text-[var(--text-sub)] truncate">
-                      {report.description || 'Aciklama yok'}
+                    <div className="mt-0.5 text-xs text-[var(--text-sub)] truncate">
+                      {report.description || 'Açıklama yok'}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[var(--text-sub)]">
+                    <span className="text-xs text-[var(--text-sub)]">
                       {new Date(report.created_at).toLocaleDateString('tr-TR')}
                     </span>
                     <span
-                      className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                      className="rounded-full px-2 py-0.5 text-xs font-bold"
                       style={{ backgroundColor: statusInfo.bg, color: statusInfo.color }}
                     >
                       {statusInfo.label}
@@ -168,10 +173,11 @@ export default function AdminReportsPage() {
                 </button>
 
                 {isExpanded && (
-                  <div className="border-t border-[var(--border)] px-4 py-4">
+                  <div id={`report-detail-${report.id}`} className="border-t border-[var(--border)] px-4 py-4">
                     <div className="mb-3 rounded-lg bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-sub)]">
-                      {report.description || 'Aciklama yok'}
+                      {report.description || 'Açıklama yok'}
                     </div>
+                    <div className="mb-3 flex flex-wrap gap-x-5 gap-y-2"><AdminRecordId label="Rapor" id={report.id} /><AdminRecordId label="Soru" id={report.question_id} /></div>
 
                     {report.admin_note && (
                       <div className="mb-3 rounded-lg border border-[var(--focus-border)] bg-[var(--focus-bg)] px-3 py-2 text-xs text-[var(--focus)]">
@@ -191,24 +197,24 @@ export default function AdminReportsPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => updateStatus(report.id, 'resolved')}
-                        className="rounded-lg bg-[var(--growth)] px-3 py-1.5 text-[10px] font-bold text-white transition-opacity hover:opacity-90"
+                        className="min-h-11 rounded-lg bg-[var(--growth)] px-3 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
                       >
-                        Coz
+                        Çözüldü olarak işaretle
                       </button>
                       <button
                         onClick={() => updateStatus(report.id, 'rejected')}
-                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)]"
+                        className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-bold text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)]"
                       >
-                        Reddet
+                        Yanlış alarm (reddet)
                       </button>
                       <button
                         onClick={() => updateStatus(report.id, 'reviewed')}
-                        className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
+                        className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
                       >
-                        Incelendi
+                        İncelemeye al
                       </button>
                     </div>
                   </div>
@@ -219,7 +225,7 @@ export default function AdminReportsPage() {
 
           {reports.length === 0 && (
             <div className="py-12 text-center text-sm text-[var(--text-sub)]">
-              Sonuc bulunamadi
+              Sonuç bulunamadı
             </div>
           )}
         </div>

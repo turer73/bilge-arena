@@ -90,7 +90,7 @@ function SortableRow({
       </div>
 
       {/* Yerleşim rozeti */}
-      <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--focus-bg)] text-[var(--focus)] border border-[var(--focus-border)] shrink-0">
+      <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--focus-bg)] text-[var(--focus)] border border-[var(--focus-border)] shrink-0">
         {PLACEMENT_LABELS[element.placement] || element.placement}
       </span>
 

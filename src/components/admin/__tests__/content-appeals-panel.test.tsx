@@ -33,6 +33,7 @@ describe('ContentAppealsPanel', () => {
   it('shows privacy-scoped evidence and sends a server-actor resolution payload', async () => {
     render(<ContentAppealsPanel />)
     expect(await screen.findByText(/Doğrulanmış soru sunumu kanıtı/)).toBeInTheDocument()
+    expect(screen.getByText('Kanıt göster →')).toBeInTheDocument()
     fireEvent.click(await screen.findByText('İki seçenek de doğru görünüyor.'))
     expect(await screen.findByText('2 + 2 kaçtır?')).toBeInTheDocument()
     expect(screen.getByText(/Öğrencinin seçimi: 1\. seçenek/)).toBeInTheDocument()

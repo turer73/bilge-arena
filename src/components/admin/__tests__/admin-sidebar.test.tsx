@@ -35,7 +35,7 @@ describe('AdminSidebar (mobil drawer)', () => {
     render(<AdminSidebar />)
     await waitFor(() => expect(screen.getByText('Dashboard')).toBeInTheDocument())
     expect(screen.getByRole('link', { name: /Dashboard/ })).toHaveAttribute('data-next-link', 'true')
-    expect(screen.getByRole('link', { name: /Siteye Dön/ })).not.toHaveAttribute('data-next-link')
+    expect(screen.getByRole('link', { name: /Siteye dön/ })).not.toHaveAttribute('data-next-link')
   })
 
   test('izinli nav + hamburger render; varsayilan kapali (off-canvas), lg+ sabit', async () => {

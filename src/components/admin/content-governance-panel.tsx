@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { CircleAlert } from 'lucide-react'
 import { FiveModelReviewReport } from './five-model-review-report'
 import { AdminRecordId, shortAdminId } from './admin-record-id'
 import { findingLabel } from '@/lib/question-audit/presentation'
@@ -316,7 +317,7 @@ export function ContentGovernancePanel() {
                 {detail.validation && detail.validation.findings.length > 0 && <div className="space-y-2 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] p-3" aria-label="Otomatik doğrulama kanıtları">
                   <p className="text-xs font-bold">Otomatik doğrulama kanıtları</p>
                   {detail.validation.findings.map((finding, index) => <div key={`${finding.code}-${index}`} className="text-xs">
-                    <p className="font-bold">{findingLabel(finding.code)}</p>
+                    <p className="flex items-center gap-2 font-bold"><CircleAlert aria-hidden="true" className="h-4 w-4 text-[var(--reward)]" />{findingLabel(finding.code)}</p>
                     <p className="font-mono text-[var(--text-sub)]">{finding.code}</p>
                     <p className="mt-1 text-[var(--text-sub)]">{finding.evidence}</p>
                   </div>)}
@@ -331,11 +332,11 @@ export function ContentGovernancePanel() {
                 </div>}
                 {detail.status === 'superseded' && <div className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] p-3">
                   <label className="text-xs font-bold">Kanıtlı hata türü<select value={incidentType} onChange={(event) => setIncidentType(event.target.value as typeof incidentType)} className="ml-2 min-h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3"><option value="wrong_key">Yanlış anahtar</option><option value="ambiguous">Belirsiz</option><option value="invalid_content">Geçersiz içerik</option><option value="outcome_mismatch">Kazanım uyumsuzluğu</option></select></label>
-                  <button disabled={busy} onClick={() => void createIncident()} className="min-h-11 rounded-lg bg-[var(--urgency)] px-4 text-xs font-bold text-white disabled:opacity-50">Etki önizlemesi oluştur</button>
+                  <button disabled={busy} onClick={() => void createIncident()} className="min-h-11 rounded-lg border border-[var(--border)] px-4 text-xs font-bold text-[var(--focus)] hover:bg-[var(--surface)] disabled:opacity-50">Etki önizlemesi oluştur</button>
                 </div>}
                 <div className="flex flex-wrap gap-2">
-                  {detail.status === 'draft' && <><button disabled={busy} onClick={() => void review(1, 'approved')} className="min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">1. aşama onayla</button><button disabled={busy} onClick={() => void review(1, 'rejected')} className="min-h-11 rounded-lg border border-[var(--urgency)] px-4 text-xs font-bold text-[var(--urgency)]">Reddet</button></>}
-                  {detail.status === 'stage1_approved' && <><button disabled={busy || (detail.outcomes?.length ?? 0) === 0 || detail.outcomes?.some((outcome) => outcome.scopeValid === false)} onClick={() => void review(2, 'approved')} className="min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">2. aşama onayla</button><button disabled={busy} onClick={() => void review(2, 'rejected')} className="min-h-11 rounded-lg border border-[var(--urgency)] px-4 text-xs font-bold text-[var(--urgency)]">Reddet</button></>}
+                  {detail.status === 'draft' && <><button disabled={busy} onClick={() => void review(1, 'approved')} className="min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">1. aşama onayla</button><button disabled={busy} onClick={() => void review(1, 'rejected')} className="min-h-11 rounded-lg border border-[var(--border)] px-4 text-xs font-bold text-[var(--text)]">Reddet</button></>}
+                  {detail.status === 'stage1_approved' && <><button disabled={busy || (detail.outcomes?.length ?? 0) === 0 || detail.outcomes?.some((outcome) => outcome.scopeValid === false)} onClick={() => void review(2, 'approved')} className="min-h-11 rounded-lg bg-[var(--focus)] px-4 text-xs font-bold text-white disabled:opacity-50">2. aşama onayla</button><button disabled={busy} onClick={() => void review(2, 'rejected')} className="min-h-11 rounded-lg border border-[var(--border)] px-4 text-xs font-bold text-[var(--text)]">Reddet</button></>}
                   {detail.status === 'stage2_approved' && <button disabled={busy} onClick={() => void post(`/api/admin/content-quality/revisions/${detail.revisionId}/publish`, { requestId: crypto.randomUUID() })} className="min-h-11 rounded-lg bg-[var(--growth)] px-4 text-xs font-bold text-white disabled:opacity-50">Yayınla</button>}
                   <button disabled={busy} onClick={() => void refreshPsychometrics()} className="min-h-11 rounded-lg border border-[var(--focus)] px-4 text-xs font-bold text-[var(--focus)] disabled:opacity-50">Psikometriyi yenile</button>
                   <button onClick={() => setDetail(null)} className="min-h-11 rounded-lg border border-[var(--border)] px-4 text-xs font-bold">Kapat</button>

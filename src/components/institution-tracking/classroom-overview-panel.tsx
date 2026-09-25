@@ -86,5 +86,5 @@ function Metric({ label, value, icon, tone = 'primary', total }: {
 }) {
   const tones = { primary: 'text-[var(--primary)]', amber: 'text-amber-300', muted: 'text-[var(--text-sub)]' }
   const ratio = total > 0 ? Math.round((value / total) * 100) : 0
-  return <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.025] p-3"><span className={`block [&>svg]:h-4 [&>svg]:w-4 ${tones[tone]}`}>{icon}</span><div className="mt-2 flex items-end justify-between gap-1"><strong className="text-xl font-black leading-none">{value}</strong><span className="text-[10px] font-bold text-[var(--text-sub)]">%{ratio}</span></div><span className="mt-1 block truncate text-[11px] text-[var(--text-sub)]">{label}</span></div>
+  return <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.025] p-3"><span className={`block [&>svg]:h-4 [&>svg]:w-4 ${tones[tone]}`}>{icon}</span><div className="mt-2 flex items-end justify-between gap-1"><strong className="text-xl font-black leading-none">{value}</strong><span className="text-xs font-bold text-[var(--text-sub)]">%{ratio}</span></div><span className="mt-1 block truncate text-xs text-[var(--text-sub)]">{label}</span></div>
 }

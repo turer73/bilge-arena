@@ -113,7 +113,7 @@ export function FiveModelReviewReport({ questionId, revisionId }: Props) {
       {!loading && !error && !report && <p className="mt-3 text-xs text-[var(--text-sub)]">Bu seçim için kayıtlı rapor bulunamadı; eksik rapor tamamlanmış sayılmaz.</p>}
       {report && (
         <>
-          <div className="mt-3 min-w-0 rounded-lg border border-[var(--border)] p-2 text-[11px] text-[var(--text-sub)]">
+          <div className="mt-3 min-w-0 rounded-lg border border-[var(--border)] p-2 text-xs text-[var(--text-sub)]">
             <p className="font-bold text-[var(--text)]">Kanıt bağlamı</p>
             <p className="mt-1 break-words">{report.questionText}</p>
             <p className="mt-1 break-all">Soru: {report.questionId} · Revizyon: {report.revisionId}</p>
@@ -134,7 +134,7 @@ export function FiveModelReviewReport({ questionId, revisionId }: Props) {
                   <h4 className="font-bold">{SLOT_LABEL[model.slot] ?? model.label ?? model.slot}</h4>
                   <span className="rounded-full border border-[var(--border)] px-2 py-0.5">{statusLabel(model.status)}</span>
                 </div>
-                <dl className="mt-2 grid min-w-0 gap-1 text-[11px] text-[var(--text-sub)]">
+                <dl className="mt-2 grid min-w-0 gap-1 text-xs text-[var(--text-sub)]">
                   <div><dt className="inline font-bold">Model:</dt> <dd className="inline break-all">{model.modelId ?? 'Kayıt yok'}</dd></div>
                   <div><dt className="inline font-bold">Zaman:</dt> <dd className="inline">{model.executedAt ? new Date(model.executedAt).toLocaleString('tr-TR') : 'Kayıt yok'}</dd></div>
                   {model.summary && <div><dt className="inline font-bold">Özet:</dt> <dd className="inline break-words">{model.summary}</dd></div>}

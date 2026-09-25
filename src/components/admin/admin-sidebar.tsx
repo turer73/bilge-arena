@@ -3,30 +3,30 @@
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Menu, X } from 'lucide-react'
+import { ArrowLeft, Award, BookOpen, Building2, CircleAlert, Flag, House, Image, Inbox, KeyRound, LayoutDashboard, Menu, ScrollText, Settings2, Users, X, type LucideIcon } from 'lucide-react'
 import { Logo } from '@/components/layout/logo'
 
 interface NavItem {
   href: string
   label: string
-  icon: string
+  Icon: LucideIcon
   permission: string | readonly string[]
 }
 
 const ADMIN_NAV: NavItem[] = [
-  { href: '/admin', label: 'Dashboard', icon: '📊', permission: 'admin.dashboard.view' },
-  { href: '/admin/anasayfa-editor', label: 'Anasayfa', icon: '🏠', permission: 'admin.homepage.view' },
-  { href: '/admin/sorular', label: 'Sorular', icon: '📝', permission: ['admin.questions.view', 'content.prepare'] },
-  { href: '/admin/gonderiler', label: 'Gönderiler', icon: '📥', permission: ['admin.questions.view', 'content.prepare'] },
-  { href: '/admin/soru-kalite', label: 'Soru Kalitesi', icon: '📉', permission: ['admin.questions.view', 'content.prepare', 'content.review.stage1', 'content.review.stage2', 'content.publish', 'content.appeals.manage', 'content.corrections.apply', 'content.psychometrics.refresh'] },
-  { href: '/admin/arka-planlar', label: 'Arka Planlar', icon: '🎬', permission: 'admin.backgrounds.view' },
-  { href: '/admin/rozetler', label: 'Rozetler', icon: '🏅', permission: 'admin.badges.view' },
-  { href: '/admin/kullanicilar', label: 'Kullanıcılar', icon: '👥', permission: 'admin.users.view' },
-  { href: '/admin/kurumlar', label: 'Kurumlar', icon: '🏫', permission: 'institution.pilots.manage' },
-  { href: '/admin/raporlar', label: 'Raporlar', icon: '🐛', permission: 'admin.reports.view' },
-  { href: '/admin/loglar', label: 'Loglar', icon: '📜', permission: 'admin.logs.view' },
-  { href: '/admin/ayarlar', label: 'Ayarlar', icon: '⚙️', permission: 'admin.settings.view' },
-  { href: '/admin/roller', label: 'Roller', icon: '🔐', permission: 'admin.roles.view' },
+  { href: '/admin', label: 'Dashboard', Icon: LayoutDashboard, permission: 'admin.dashboard.view' },
+  { href: '/admin/anasayfa-editor', label: 'Anasayfa', Icon: House, permission: 'admin.homepage.view' },
+  { href: '/admin/sorular', label: 'Sorular', Icon: BookOpen, permission: ['admin.questions.view', 'content.prepare'] },
+  { href: '/admin/gonderiler', label: 'Gönderiler', Icon: Inbox, permission: ['admin.questions.view', 'content.prepare'] },
+  { href: '/admin/soru-kalite', label: 'Soru Kalitesi', Icon: CircleAlert, permission: ['admin.questions.view', 'content.prepare', 'content.review.stage1', 'content.review.stage2', 'content.publish', 'content.appeals.manage', 'content.corrections.apply', 'content.psychometrics.refresh'] },
+  { href: '/admin/arka-planlar', label: 'Arka Planlar', Icon: Image, permission: 'admin.backgrounds.view' },
+  { href: '/admin/rozetler', label: 'Rozetler', Icon: Award, permission: 'admin.badges.view' },
+  { href: '/admin/kullanicilar', label: 'Kullanıcılar', Icon: Users, permission: 'admin.users.view' },
+  { href: '/admin/kurumlar', label: 'Kurumlar', Icon: Building2, permission: 'institution.pilots.manage' },
+  { href: '/admin/raporlar', label: 'Raporlar', Icon: Flag, permission: 'admin.reports.view' },
+  { href: '/admin/loglar', label: 'Loglar', Icon: ScrollText, permission: 'admin.logs.view' },
+  { href: '/admin/ayarlar', label: 'Ayarlar', Icon: Settings2, permission: 'admin.settings.view' },
+  { href: '/admin/roller', label: 'Roller', Icon: KeyRound, permission: 'admin.roles.view' },
 ]
 
 export function AdminSidebar() {
@@ -80,7 +80,7 @@ export function AdminSidebar() {
         onClick={() => setOpen(true)}
         aria-label="Menüyü aç"
         aria-expanded={open}
-        className="fixed left-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-sm transition-colors hover:bg-[var(--card)] lg:hidden"
+        className="fixed left-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-sm transition-colors hover:bg-[var(--card)] lg:hidden"
       >
         <Menu size={20} />
       </button>
@@ -103,26 +103,27 @@ export function AdminSidebar() {
         {/* Logo + (mobilde) kapat butonu */}
         <div className="flex h-[72px] items-center gap-2 border-b border-[var(--border)] px-5">
           <Logo size={28} />
-          <span className="rounded-md bg-[var(--urgency)] px-1.5 py-0.5 text-[9px] font-bold text-white">
+          <span className="rounded-md bg-[var(--focus-bg)] px-2 py-1 text-xs font-bold text-[var(--focus)]">
             ADMIN
           </span>
           <button
             type="button"
             onClick={() => setOpen(false)}
             aria-label="Menüyü kapat"
-            className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)] lg:hidden"
+            className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)] lg:hidden"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Nav links */}
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-          {visibleNav.map(({ href, label, icon }) => {
+        <nav aria-label="Yönetim bölümleri" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+          {visibleNav.map(({ href, label, Icon }) => {
             const isActive = pathname === href || (href !== '/admin' && pathname.startsWith(href))
             return (
               <Link
                 key={href}
+                aria-current={isActive ? 'page' : undefined}
                 href={href}
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
@@ -130,7 +131,7 @@ export function AdminSidebar() {
                     : 'text-[var(--text-sub)] hover:bg-[var(--card)] hover:text-[var(--text)]'
                 }`}
               >
-                <span className="text-base">{icon}</span>
+                <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
                 {label}
               </Link>
             )
@@ -140,7 +141,7 @@ export function AdminSidebar() {
         {/* Alt: rol bilgisi + siteye dön */}
         <div className="border-t border-[var(--border)] px-3 py-3">
           {roleName && (
-            <div className="mb-2 px-3 text-[10px] font-medium uppercase tracking-wider text-[var(--text-sub)]">
+            <div className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-[var(--text-sub)]">
               {roleName}
             </div>
           )}
@@ -148,7 +149,7 @@ export function AdminSidebar() {
             href="/arena"
             className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-[var(--text-sub)] transition-colors hover:bg-[var(--card)] hover:text-[var(--text)]"
           >
-            ← Siteye Dön
+            <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Siteye dön
           </Link>
         </div>
       </aside>

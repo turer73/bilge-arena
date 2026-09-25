@@ -42,7 +42,7 @@ describe('SubmissionsPage', () => {
     await waitFor(() => expect(screen.getByText('Faiz sorusu?')).toBeInTheDocument())
     expect(screen.getByText(/b\) b ✓/i)).toBeInTheDocument()
     expect(screen.getByText(/Ali/)).toBeInTheDocument()
-    expect(screen.getByText(/📌 Çünkü\./)).toBeInTheDocument()
+    expect(screen.getByText(/Çözüm: Çünkü\./)).toBeInTheDocument()
   })
 
   test('onayla: PATCH approve + kart listeden düşer', async () => {

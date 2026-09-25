@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { Inbox } from 'lucide-react'
 import { getCategoryLabel, GAMES, type GameSlug } from '@/lib/constants/games'
 
 interface Submission {
@@ -100,7 +101,7 @@ export default function SubmissionsPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <h1 className="font-display text-xl font-black text-[var(--text)]">📥 Soru Gönderimleri</h1>
+      <h1 className="flex items-center gap-2 font-display text-xl font-black text-[var(--text)]"><Inbox aria-hidden="true" className="h-5 w-5" /> Soru gönderimleri</h1>
       <p className="mt-1 text-sm text-[var(--text-sub)]">
         {governanceMode
           ? <>Onaylanan gönderi bir kazanıma bağlanarak <strong>yönetişim taslağına</strong> alınır; iki bağımsız kontrolden önce yayınlanmaz.</>
@@ -117,13 +118,13 @@ export default function SubmissionsPage() {
         <p className="mt-6 text-sm text-[var(--text-sub)]">Yükleniyor…</p>
       ) : submissions.length === 0 ? (
         <p className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-6 text-center text-sm text-[var(--text-sub)]">
-          Bekleyen gönderim yok 🎉
+          Bekleyen gönderim yok.
         </p>
       ) : (
         <div className="mt-4 flex flex-col gap-3">
           {submissions.map((s) => (
             <div key={s.id} className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-4">
-              <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-sub)]">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-sub)]">
                 <span className="rounded bg-[var(--surface)] px-2 py-0.5 font-bold">{GAMES[s.game]?.name ?? s.game}</span>
                 <span>{getCategoryLabel(s.category)}</span>
                 <span>Zorluk {s.difficulty}</span>
@@ -145,7 +146,7 @@ export default function SubmissionsPage() {
                 ))}
               </ol>
               {s.content.solution && (
-                <p className="mt-2 text-xs text-[var(--text-sub)]">📌 {s.content.solution}</p>
+                <p className="mt-2 text-xs text-[var(--text-sub)]">Çözüm: {s.content.solution}</p>
               )}
 
               {governanceMode && (
@@ -175,7 +176,7 @@ export default function SubmissionsPage() {
                 <button
                   onClick={() => review(s.id, 'reject')}
                   disabled={busyId === s.id}
-                  className="min-h-11 rounded-lg bg-[var(--urgency)] px-4 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+                  className="min-h-11 rounded-lg border border-[var(--border)] px-4 py-1.5 text-xs font-bold text-[var(--text)] disabled:opacity-60"
                 >
                   Reddet
                 </button>

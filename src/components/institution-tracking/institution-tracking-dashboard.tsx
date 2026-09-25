@@ -52,6 +52,14 @@ import { EvidenceDistributionChart, PercentBar } from './analytics-charts'
 import { InstitutionOverviewPanel } from './institution-overview-panel'
 import type { InstitutionInitialScope } from '@/app/arena/kurum/scope-query'
 
+const programReasonLabel: Record<string, string> = {
+  weak_outcome: 'Geliştirilmesi gereken kazanım',
+  due_review: 'Tekrar zamanı',
+  diagnostic_gap: 'Tanılama eksiği',
+  current_target: 'Güncel hedef',
+  challenge: 'Zorluk çalışması',
+}
+
 const statusCopy = {
   insufficient: { label: 'Kanıt yetersiz', className: 'border-amber-400/30 bg-amber-400/10 text-amber-200' },
   developing: { label: 'Gelişiyor', className: 'border-sky-400/30 bg-sky-400/10 text-sky-200' },
@@ -442,7 +450,7 @@ export function InstitutionTrackingDashboard({
             <label htmlFor="institution-learning-scope" className="text-xs font-black uppercase tracking-[0.12em] text-[var(--text-sub)]">
               Öğrenme analizi kapsamı
             </label>
-            <p className="mt-1 text-[11px] leading-4 text-[var(--text-sub)]">
+            <p className="mt-1 text-xs leading-4 text-[var(--text-sub)]">
               Yalnız veri bütünlüğü ve kurum raporlama kapısı doğrulanan dersler listelenir.
             </p>
           </div>
@@ -824,7 +832,7 @@ function AnalysisPanel({
                 <span className={`rounded-lg px-2 py-1 font-black ${program.program.status === 'published' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200'}`}>{program.program.status === 'published' ? 'Yayınlandı' : programDirty ? 'Kaydedilmemiş değişiklik' : 'Taslak'}</span>
               </div>
               <ol className="space-y-2">
-                {program.draft.items.map((item) => <li key={item.position} className="grid gap-2 rounded-xl border border-white/10 p-3 text-sm sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center"><span className="text-xs text-[var(--text-sub)]">{item.scheduledDate}</span><span className="min-w-0 break-words font-bold">{item.title}<small className="mt-1 block font-normal text-[var(--text-sub)]">{item.reasonCode} · {item.targetQuestionCount ?? 0} soru</small></span><span className="flex items-center gap-2 sm:justify-end"><span className="text-xs font-bold text-[var(--primary)]">{item.durationMinutes} dk</span>{program.program.status === 'draft' && <button type="button" disabled={programBusy || program.draft.items.length <= 1} onClick={() => removeProgramItem(item.position)} aria-label={`${item.title} görevini çıkar`} className="institution-program-screen-only inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/20 text-red-200 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>}</span></li>)}
+                {program.draft.items.map((item) => <li key={item.position} className="grid gap-2 rounded-xl border border-white/10 p-3 text-sm sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:items-center"><span className="text-xs text-[var(--text-sub)]">{item.scheduledDate}</span><span className="min-w-0 break-words font-bold">{item.title}<small className="mt-1 block font-normal text-[var(--text-sub)]">{programReasonLabel[item.reasonCode] ?? item.reasonCode} · {item.targetQuestionCount ?? 0} soru</small></span><span className="flex items-center gap-2 sm:justify-end"><span className="text-xs font-bold text-[var(--primary)]">{item.durationMinutes} dk</span>{program.program.status === 'draft' && <button type="button" disabled={programBusy || program.draft.items.length <= 1} onClick={() => removeProgramItem(item.position)} aria-label={`${item.title} görevini çıkar`} className="institution-program-screen-only inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/15 text-[var(--text-sub)] hover:bg-white/5 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>}</span></li>)}
               </ol>
               {program.program.status === 'draft' && <div className="institution-program-screen-only flex flex-col gap-2 sm:flex-row"><button type="button" disabled={programBusy || !programDirty} onClick={saveProgram} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold disabled:opacity-40"><Save className="h-4 w-4" /> Değişiklikleri kaydet</button><button type="button" disabled={programBusy || programDirty} onClick={publishProgram} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold disabled:opacity-60"><Send className="h-4 w-4" /> {programDirty ? 'Önce değişiklikleri kaydet' : programBusy ? 'Yayınlanıyor…' : 'İnceledim, yayınla'}</button></div>}
             </div>
@@ -965,9 +973,9 @@ function SummaryCard({
       <div className={`[&>svg]:h-4 [&>svg]:w-4 ${tones[tone]}`} aria-hidden="true">{icon}</div>
       <div className="mt-2 flex items-end justify-between gap-2">
         <strong className="block text-xl font-black leading-none">{value}</strong>
-        <span className="text-[10px] font-bold text-[var(--text-sub)]">%{ratio}</span>
+        <span className="text-xs font-bold text-[var(--text-sub)]">%{ratio}</span>
       </div>
-      <span className="mt-0.5 block truncate text-[11px] text-[var(--text-sub)] sm:text-xs">{label}</span>
+      <span className="mt-0.5 block truncate text-xs text-[var(--text-sub)] sm:text-xs">{label}</span>
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
         <div className={`h-full rounded-full ${bars[tone]}`} style={{ width: `${ratio}%` }} />
       </div>

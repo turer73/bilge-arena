@@ -54,7 +54,7 @@ export function EvidenceDistributionChart({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
           <strong className="text-3xl font-black leading-none">{centerValue}</strong>
-          <span className="mt-1 max-w-20 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-sub)]">{centerLabel}</span>
+          <span className="mt-1 max-w-20 text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-sub)]">{centerLabel}</span>
         </div>
       </div>
 

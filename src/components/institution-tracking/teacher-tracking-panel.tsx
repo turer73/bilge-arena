@@ -54,7 +54,7 @@ export function TeacherTrackingPanel({
           <h2 className="mt-1 text-xl font-black sm:text-2xl">Öğretmen Takibi</h2>
           <p className="mt-1 truncate text-sm text-[var(--text-sub)]">{teacherAlias} · {classroomName}</p>
         </div>
-        <span className="w-fit rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-bold text-[var(--text-sub)]">
+        <span className="w-fit rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-[var(--text-sub)]">
           Tek puan ve sıralama yoktur
         </span>
       </div>
@@ -71,7 +71,7 @@ export function TeacherTrackingPanel({
           <p className="mt-3 text-xs leading-5 text-[var(--text-sub)]">
             {growth.value === null ? growthExplanation(indicators) : evidenceText(growth)}
           </p>
-          <p className="mt-2 text-[11px] leading-5 text-[var(--text-sub)]">
+          <p className="mt-2 text-xs leading-5 text-[var(--text-sub)]">
             Sonuç, başlangıç seviyesi düzeltilmiş öğrenci gelişim kanıtıdır; öğretmenin tek başına başarısı olarak yorumlanmaz.
           </p>
         </article>
@@ -93,12 +93,12 @@ export function TeacherTrackingPanel({
                     <strong className={`text-lg font-black ${indicator.value === null ? 'text-amber-200' : 'text-emerald-200'}`}>
                       {indicator.value === null ? 'Veri yetersiz' : `%${indicator.value}`}
                     </strong>
-                    <span className="text-[10px] text-[var(--text-sub)]">{indicator.eligibleStudentCount} uygun</span>
+                    <span className="text-xs text-[var(--text-sub)]">{indicator.eligibleStudentCount} uygun</span>
                   </div>
                   <div className="mt-2">
                     <PercentBar value={indicator.value} tone={indicator.value === null ? 'amber' : 'emerald'} label={label} />
                   </div>
-                  <p className="mt-2 text-[11px] leading-4 text-[var(--text-sub)]">
+                  <p className="mt-2 text-xs leading-4 text-[var(--text-sub)]">
                     {evidence ? `${evidence.numerator}/${evidence.denominator} gözlem` : 'Kaynak henüz oluşmadı'}
                     {indicator.value === null ? ` · en az ${TEACHER_PROCESS_MIN_OBSERVATIONS} uygun gözlem gerekir` : ''}
                   </p>
@@ -109,7 +109,7 @@ export function TeacherTrackingPanel({
         </div>
       </div>
 
-      <p className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-[11px] leading-5 text-[var(--text-sub)]">
+      <p className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-xs leading-5 text-[var(--text-sub)]">
         Bu göstergeler karar desteğidir; neden–sonuç iddiası, öğretmen sıralaması veya otomatik performans kararı üretmez.
       </p>
     </section>

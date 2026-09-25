@@ -178,7 +178,7 @@ export function InstitutionStaffManager({
               <div key={member.memberRef} className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2">
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-bold">{member.alias}</span>
-                  <span className="text-[11px] text-[var(--text-sub)]">
+                  <span className="text-xs text-[var(--text-sub)]">
                     {member.membershipRole === 'manager'
                       ? managerTeaching ? 'Kurum yöneticisi · Öğretmen' : 'Kurum yöneticisi'
                       : 'Öğretmen'}

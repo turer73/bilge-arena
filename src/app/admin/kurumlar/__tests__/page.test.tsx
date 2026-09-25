@@ -38,7 +38,7 @@ describe('admin institution free-pilot page', () => {
 
     render(<AdminInstitutionsPage />)
     expect(await screen.findByText('Henüz kurum oluşturulmadı.')).toBeInTheDocument()
-    expect(screen.getByText(/genel kurum kaydı veya ücretli onboarding değildir/i)).toBeInTheDocument()
+    expect(screen.getByText(/genel kurum kaydı veya ücretli kurum kaydı değildir/i)).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
       target: { value: 'Bilge Küçük Dershane' },
@@ -151,7 +151,7 @@ describe('admin institution free-pilot page', () => {
 
     render(<AdminInstitutionsPage />)
 
-    expect(await screen.findByText(/ücretsiz pilot ve ücretli kurum onboarding akışları şu anda kapalı/i)).toBeInTheDocument()
+    expect(await screen.findByText(/ücretsiz pilot ve ücretli kurum kaydı akışları şu anda kapalı/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Kurum oluşturma kapalı' })).toBeDisabled()
     expect(screen.getByLabelText(/Kurum adı/i)).toBeDisabled()
     expect(screen.getByLabelText(/İlk kurum yöneticisi/i)).toBeDisabled()
@@ -184,9 +184,9 @@ describe('admin institution free-pilot page', () => {
 
     render(<AdminInstitutionsPage />)
 
-    expect(await screen.findByText('erişim kapalı')).toBeInTheDocument()
-    expect(screen.getByText(/tenant erişimi kapalıdır/i)).toBeInTheDocument()
-    expect(screen.getByText(/kurum desteği ve tenant erişimi kapalı/i)).toBeInTheDocument()
+    expect(await screen.findByText('Erişim kapalı')).toBeInTheDocument()
+    expect(screen.getByText(/kurum erişimi kapalıdır/i)).toBeInTheDocument()
+    expect(screen.getByText(/kurum desteği ve kurum erişimi kapalı/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Aktifleştir' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /destek görünümünü aç/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Askıya al' })).toBeInTheDocument()
@@ -213,12 +213,12 @@ describe('admin institution free-pilot page', () => {
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('66666666-6666-4666-8666-666666666666')
 
     render(<AdminInstitutionsPage />)
-    expect(await screen.findByText('Ücretli kurum onboarding')).toBeInTheDocument()
+    expect(await screen.findByText('Ücretli kurum kaydı')).toBeInTheDocument()
     expect(screen.queryByLabelText(/Onay \/ pilot dosyası referansı/i)).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText(/Kurum adı/i), { target: { value: 'Ticari Dershane' } })
     fireEvent.change(screen.getByLabelText(/İlk kurum yöneticisi/i), { target: { value: 'Kurum' } })
     fireEvent.click(await screen.findByRole('option', { name: /Kurum Yöneticisi/i }))
-    const submit = screen.getByRole('button', { name: 'Ücretli onboarding başlat' })
+    const submit = screen.getByRole('button', { name: 'Ücretli kurum kaydı başlat' })
     fireEvent.click(submit)
     expect(await screen.findByRole('alert')).toHaveTextContent(/tekrar deneyin/i)
     fireEvent.click(submit)
@@ -258,12 +258,12 @@ describe('admin institution free-pilot page', () => {
       .mockReturnValueOnce('88888888-8888-4888-8888-888888888888')
 
     render(<AdminInstitutionsPage />)
-    expect(await screen.findByRole('radio', { name: 'Ücretli onboarding' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('radio', { name: 'Ücretli onboarding' }))
+    expect(await screen.findByRole('radio', { name: 'Ücretli kurum kaydı' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('radio', { name: 'Ücretli kurum kaydı' }))
     fireEvent.change(screen.getByLabelText(/Kurum adı/i), { target: { value: 'Ticari Dershane' } })
     fireEvent.change(screen.getByLabelText(/İlk kurum yöneticisi/i), { target: { value: 'Kurum' } })
     fireEvent.click(await screen.findByRole('option', { name: /Kurum Yöneticisi/i }))
-    fireEvent.click(screen.getByRole('button', { name: 'Ücretli onboarding başlat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ücretli kurum kaydı başlat' }))
     await waitFor(() => expect(fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/admin/institutions' && init?.method === 'POST')).toHaveLength(1))
 
     fireEvent.click(screen.getByRole('radio', { name: 'Ücretsiz pilot' }))

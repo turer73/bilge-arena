@@ -1,17 +1,23 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { Crown, Eye, Pencil, Shield, ShieldCheck, type LucideIcon } from 'lucide-react'
 import type { Profile, Role } from '@/types/database'
 
 interface UserWithRoles extends Profile {
   assigned_roles?: { role_id: string; role_slug: string; role_name: string }[]
 }
 
-const SLUG_ICONS: Record<string, string> = {
-  super_admin: '👑',
-  editor: '✏️',
-  moderator: '🛡️',
-  viewer: '👁️',
+const SLUG_ICONS: Record<string, LucideIcon> = {
+  super_admin: Crown,
+  editor: Pencil,
+  moderator: ShieldCheck,
+  viewer: Eye,
+}
+
+function RoleMark({ slug }: { slug: string }) {
+  const Icon = SLUG_ICONS[slug] ?? Shield
+  return <Icon aria-hidden="true" className="inline h-4 w-4 shrink-0" />
 }
 
 export default function AdminUsersPage() {
@@ -198,7 +204,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Filtreler */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="sticky top-14 z-20 mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card-bg)]/95 p-3 backdrop-blur lg:top-0">
         <input
           type="text"
           value={search}
@@ -209,7 +215,7 @@ export default function AdminUsersPage() {
         <span className="text-xs text-[var(--text-sub)]">{users.length} sonuç</span>
         <button
           onClick={() => { setCreateModalOpen(true); setCreateError(null); setCreateSuccess(null) }}
-          className="ml-auto rounded-lg bg-[var(--focus)] px-3 py-2 text-xs font-bold text-white transition-colors hover:opacity-90"
+          className="ml-auto min-h-11 rounded-lg bg-[var(--focus)] px-3 py-2 text-xs font-bold text-white transition-colors hover:opacity-90"
         >
           + Kullanıcı Ekle
         </button>
@@ -257,7 +263,7 @@ export default function AdminUsersPage() {
                       )}
                       <div className="min-w-0">
                         <div className="font-medium truncate">{u.display_name || u.username || 'İsimsiz'}</div>
-                        <div className="text-[10px] text-[var(--text-sub)] truncate">@{u.username || '—'}</div>
+                        <div className="text-xs text-[var(--text-sub)] truncate">@{u.username || '—'}</div>
                       </div>
                     </div>
                   </td>
@@ -267,17 +273,17 @@ export default function AdminUsersPage() {
                         u.assigned_roles.map((r) => (
                           <span
                             key={r.role_id}
-                            className="inline-flex items-center gap-0.5 rounded-full bg-[var(--reward-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--reward)]"
+                            className="inline-flex items-center gap-0.5 rounded-full bg-[var(--reward-bg)] px-2 py-0.5 text-xs font-bold text-[var(--reward)]"
                           >
-                            {SLUG_ICONS[r.role_slug] || '🔹'} {r.role_name}
+                            <RoleMark slug={r.role_slug} /> {r.role_name}
                           </span>
                         ))
                       ) : u.role === 'admin' ? (
-                        <span className="rounded-full bg-[var(--reward-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--reward)]">
-                          👑 Admin (eski)
+                        <span className="rounded-full bg-[var(--reward-bg)] px-2 py-0.5 text-xs font-bold text-[var(--reward)]">
+                          <RoleMark slug="super_admin" /> Admin (eski)
                         </span>
                       ) : (
-                        <span className="rounded-full bg-[var(--surface)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-sub)]">
+                        <span className="rounded-full bg-[var(--surface)] px-2 py-0.5 text-xs font-bold text-[var(--text-sub)]">
                           Kullanıcı
                         </span>
                       )}
@@ -296,10 +302,10 @@ export default function AdminUsersPage() {
                     <div className="flex items-center justify-center">
                       <button
                         onClick={() => openRoleModal(u)}
-                        className="rounded-lg bg-[var(--focus-bg)] px-2.5 py-1.5 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-border)]"
+                        className="min-h-11 rounded-lg bg-[var(--focus-bg)] px-3 py-2 text-xs font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-border)]"
                         title="Rol Yönet"
                       >
-                        🔐 Rol Ata
+                        Rol ata
                       </button>
                     </div>
                   </td>
@@ -322,7 +328,7 @@ export default function AdminUsersPage() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[var(--surface)] disabled:opacity-40"
+            className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[var(--surface)] disabled:opacity-40"
           >
             ← Önceki
           </button>
@@ -332,7 +338,7 @@ export default function AdminUsersPage() {
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[var(--surface)] disabled:opacity-40"
+            className="min-h-11 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[var(--surface)] disabled:opacity-40"
           >
             Sonraki →
           </button>
@@ -353,7 +359,8 @@ export default function AdminUsersPage() {
               </div>
               <button
                 onClick={() => setRoleModalUser(null)}
-                className="rounded-lg p-1.5 text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text)]"
+                aria-label="Rol yönetimi penceresini kapat"
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text)]"
               >
                 ✕
               </button>
@@ -370,12 +377,12 @@ export default function AdminUsersPage() {
                       className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
                     >
                       <span className="flex items-center gap-2 text-sm font-medium">
-                        {SLUG_ICONS[r.role_slug] || '🔹'} {r.role_name}
+                        <RoleMark slug={r.role_slug} /> {r.role_name}
                       </span>
                       <button
                         onClick={() => handleRemoveRole(roleModalUser.id, r.role_id)}
                         disabled={roleModalLoading}
-                        className="rounded px-2 py-0.5 text-[10px] font-bold text-[var(--urgency)] transition-colors hover:bg-[var(--urgency-bg)] disabled:opacity-40"
+                        className="min-h-11 rounded px-3 py-2 text-xs font-bold text-[var(--urgency)] transition-colors hover:bg-[var(--urgency-bg)] disabled:opacity-40"
                       >
                         {roleModalLoading ? '...' : 'Kaldır'}
                       </button>
@@ -398,14 +405,14 @@ export default function AdminUsersPage() {
                       key={role.id}
                       onClick={() => handleAssignRole(roleModalUser.id, role.id)}
                       disabled={roleModalLoading}
-                      className="flex items-center justify-between rounded-lg border border-dashed border-[var(--border)] px-3 py-2.5 text-left transition-colors hover:border-[var(--focus)] hover:bg-[var(--focus-bg)] disabled:opacity-40"
+                      className="flex min-h-11 items-center justify-between rounded-lg border border-dashed border-[var(--border)] px-3 py-2.5 text-left transition-colors hover:border-[var(--focus)] hover:bg-[var(--focus-bg)] disabled:opacity-40"
                     >
                       <div>
                         <span className="flex items-center gap-2 text-sm font-medium">
-                          {SLUG_ICONS[role.slug as string] || '🔹'} {role.name}
+                          <RoleMark slug={role.slug as string} /> {role.name}
                         </span>
                         {role.description && (
-                          <p className="mt-0.5 text-[10px] text-[var(--text-sub)]">{role.description}</p>
+                          <p className="mt-0.5 text-xs text-[var(--text-sub)]">{role.description}</p>
                         )}
                       </div>
                       <span className="text-xs font-bold text-[var(--focus)]">
@@ -431,7 +438,8 @@ export default function AdminUsersPage() {
               <h3 className="text-lg font-bold">Kullanıcı Ekle</h3>
               <button
                 onClick={() => setCreateModalOpen(false)}
-                className="rounded-lg p-1.5 text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text)]"
+                aria-label="Kullanıcı oluşturma penceresini kapat"
+                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[var(--text-sub)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text)]"
               >
                 ✕
               </button>

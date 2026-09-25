@@ -109,6 +109,43 @@ export default function AdminQuestionsPage() {
   const editRequestRef = useRef<AbortController | null>(null)
   const [notice, setNotice] = useState('')
 
+  const editDialogRef = useRef<HTMLDivElement>(null)
+  const editCloseRef = useRef<HTMLButtonElement>(null)
+  const editReturnFocusRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!editQ) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    editCloseRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setEditQ(null)
+        return
+      }
+      if (event.key !== 'Tab' || !editDialogRef.current) return
+      const focusable = Array.from(editDialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ))
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+      editReturnFocusRef.current?.focus()
+    }
+  }, [editQ])
+
   const fetchQuestions = useCallback(async () => {
     setLoading(true)
     try {
@@ -239,6 +276,7 @@ export default function AdminQuestionsPage() {
     setEditOutcomeOptions([])
     setEditOutcomeId('')
     setOutcomeCatalogState('idle')
+    editReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setEditQ(q)
     setEditContent({
       question: q.content.question || q.content.sentence || '',
@@ -314,11 +352,11 @@ export default function AdminQuestionsPage() {
       return
     }
     if (legacyUpgrade && !sourceRightsAcknowledged) {
-      setNotice('Legacy kaynak için “kaynak ve kullanım hakkını doğruladım” onayı zorunludur.')
+      setNotice('Eski aktarımdan gelen kaynak için “kaynak ve kullanım hakkını doğruladım” onayı zorunludur.')
       return
     }
     if (isTytSocial && (!source.provenanceRef || /^legacy:/i.test(source.provenanceRef))) {
-      setNotice('TYT Sosyal sorularında legacy olmayan provenanceRef zorunludur.')
+      setNotice('TYT Sosyal sorularında eski aktarım dışında doğrulanabilir bir kaynak izleme referansı zorunludur.')
       return
     }
     if (outcomeCatalogState !== 'ready') {
@@ -442,7 +480,7 @@ export default function AdminQuestionsPage() {
     <div className="mx-auto max-w-5xl">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Soru Yonetimi</h1>
+          <h1 className="text-2xl font-bold">Soru Yönetimi</h1>
           {/* `total` filtreli sonuc sayisidir (search_questions total_count),
               bankanin tamami degil. "kayitli" etiketi filtre aciktayken
               yaniltiyordu: "Pasif" secildiginde 4409 soruluk bankada "64 soru
@@ -467,7 +505,7 @@ export default function AdminQuestionsPage() {
       {notice && <p role="status" className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-sub)]">{notice}</p>}
 
       {/* Filtreler */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="sticky top-14 z-20 mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card-bg)]/95 p-3 shadow-sm backdrop-blur lg:top-0">
         <input
           type="text"
           value={searchInput}
@@ -481,7 +519,7 @@ export default function AdminQuestionsPage() {
           onChange={(e) => { setFilterGame(e.target.value as GameSlug | 'all'); setPage(1) }}
           className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
         >
-          <option value="all">Tum Oyunlar</option>
+          <option value="all">Tüm oyunlar</option>
           {GAME_SLUGS.map((slug) => (
             <option key={slug} value={slug}>{GAMES[slug].name}</option>
           ))}
@@ -492,7 +530,7 @@ export default function AdminQuestionsPage() {
           onChange={(e) => { setFilterActive(e.target.value as 'all' | 'active' | 'inactive'); setPage(1) }}
           className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
         >
-          <option value="all">Tum Durum</option>
+          <option value="all">Tüm durumlar</option>
           <option value="active">Aktif</option>
           <option value="inactive">Pasif</option>
         </select>
@@ -510,7 +548,7 @@ export default function AdminQuestionsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-xs">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface)]">
                 <th className="px-4 py-3 font-bold text-[var(--text-sub)]">Soru</th>
@@ -527,14 +565,14 @@ export default function AdminQuestionsPage() {
                 <tr key={q.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] transition-colors">
                   <td className="max-w-[300px] truncate px-4 py-3">
                     <div className="font-medium">{stripRichText(q.content.question)}</div>
-                    <div className="mt-0.5 text-[10px] text-[var(--text-sub)]">
+                    <div className="mt-0.5 text-xs text-[var(--text-sub)]">
                       {q.category}{q.subcategory ? ` / ${q.subcategory}` : ''}
                     </div>
                   </td>
                   <td className="px-3 py-3">
                     {GAMES[q.game] && (
                       <span
-                        className="rounded-md px-2 py-0.5 text-[10px] font-bold"
+                        className="rounded-md px-2 py-0.5 text-xs font-bold"
                         style={{
                           backgroundColor: `color-mix(in srgb, ${GAMES[q.game].colorHex} 12%, transparent)`,
                           color: GAMES[q.game].colorHex,
@@ -564,23 +602,21 @@ export default function AdminQuestionsPage() {
                     })()}
                   </td>
                   <td className="px-3 py-3 text-center">
-                    <button
-                      onClick={() => toggleActive(q.id)}
-                      className={`min-h-11 rounded-full px-3 py-1 text-[10px] font-bold transition-colors ${
-                        q.is_active
-                          ? 'bg-[var(--growth-bg)] text-[var(--growth)]'
-                          : 'bg-[var(--surface)] text-[var(--text-sub)]'
-                      }`}
-                    >
-                      {q.is_active ? 'Aktif' : 'Pasif'}
-                    </button>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${q.is_active ? 'bg-[var(--growth-bg)] text-[var(--growth)]' : 'bg-[var(--surface)] text-[var(--text-sub)]'}`}>
+                        {q.is_active ? 'Yayında' : 'Pasif'}
+                      </span>
+                      {q.is_active ? (
+                        <button type="button" onClick={() => toggleActive(q.id)} className="min-h-11 rounded-lg border border-[var(--border)] px-3 text-xs font-bold text-[var(--focus)] hover:bg-[var(--surface)] focus-visible:outline-2 focus-visible:outline-[var(--focus)]">Pasife al</button>
+                      ) : <span className="max-w-28 text-xs text-[var(--text-sub)]">Yayın için onay gerekir</span>}
+                    </div>
                   </td>
                   <td className="px-2 py-3">
                     <button
                       onClick={() => void openEdit(q)}
-                      className="min-h-11 rounded-lg px-2 py-1 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
+                      className="min-h-11 rounded-lg px-2 py-1 text-xs font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)]"
                     >
-                      Duzenle
+                      Düzenle
                     </button>
                   </td>
                 </tr>
@@ -623,17 +659,18 @@ export default function AdminQuestionsPage() {
       {/* Edit Modal */}
       {editQ && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6 shadow-2xl">
+          <div ref={editDialogRef} role="dialog" aria-modal="true" aria-labelledby="admin-question-edit-title" className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Soru Duzenle</h2>
-              <button onClick={() => setEditQ(null)} className="text-lg text-[var(--text-sub)] hover:text-[var(--text)]">
+              <h2 id="admin-question-edit-title" className="text-lg font-bold">Soru Düzenle</h2>
+              <button ref={editCloseRef} type="button" aria-label="Düzenleme penceresini kapat" onClick={() => setEditQ(null)} className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-lg text-[var(--text-sub)] hover:bg-[var(--surface)] hover:text-[var(--text)]">
                 ✕
               </button>
             </div>
 
             {/* Soru metni */}
-            <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Soru</label>
+            <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">Soru</label>
             <textarea
+              aria-label="Soru metni"
               value={editContent.question}
               onChange={(e) => setEditContent(c => ({ ...c, question: e.target.value }))}
               rows={3}
@@ -641,13 +678,15 @@ export default function AdminQuestionsPage() {
             />
 
             {/* Secenekler */}
-            <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Secenekler</label>
+            <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">Seçenekler</label>
             {editContent.options.map((opt, i) => (
               <div key={i} className="mb-1.5 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setEditContent(c => ({ ...c, answer: i }))}
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                  aria-label={`${'ABCDE'[i]} seçeneğini doğru cevap olarak işaretle`}
+                  aria-pressed={editContent.answer === i}
+                  className={`flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                     editContent.answer === i
                       ? 'bg-[var(--growth)] text-white'
                       : 'border border-[var(--border)] text-[var(--text-sub)]'
@@ -663,14 +702,16 @@ export default function AdminQuestionsPage() {
                     newOpts[i] = e.target.value
                     setEditContent(c => ({ ...c, options: newOpts }))
                   }}
-                  className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs focus:border-[var(--focus)] focus:outline-none"
+                  aria-label={`${'ABCDE'[i]} seçeneği metni`}
+                  className="min-h-11 min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs focus:border-[var(--focus)] focus:outline-none"
                 />
               </div>
             ))}
 
             {/* Cozum */}
-            <label className="mb-1 mt-3 block text-[11px] font-bold text-[var(--text-sub)]">Cozum (opsiyonel)</label>
+            <label className="mb-1 mt-3 block text-xs font-bold text-[var(--text-sub)]">Çözüm (isteğe bağlı)</label>
             <textarea
+              aria-label="Çözüm"
               value={editContent.solution}
               onChange={(e) => setEditContent(c => ({ ...c, solution: e.target.value }))}
               rows={2}
@@ -680,7 +721,7 @@ export default function AdminQuestionsPage() {
             {/* Zorluk + Kategori */}
             <div className="mb-4 flex gap-3">
               <div className="flex-1">
-                <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Zorluk</label>
+                <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">Zorluk</label>
                 <select
                   value={editDifficulty}
                   onChange={(e) => setEditDifficulty(Number(e.target.value) as Difficulty)}
@@ -692,7 +733,7 @@ export default function AdminQuestionsPage() {
                 </select>
               </div>
               <div className="flex-1">
-                <label htmlFor="edit-category" className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]">Kategori</label>
+                <label htmlFor="edit-category" className="mb-1 block text-xs font-bold text-[var(--text-sub)]">Kategori</label>
                 <input
                   id="edit-category"
                   value={editCategory}
@@ -704,9 +745,9 @@ export default function AdminQuestionsPage() {
 
             {governanceDetail && (
               <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
-                <h3 className="mb-2 text-[11px] font-bold text-[var(--text-sub)]">Kaynak ve kullanım hakkı</h3>
+                <h3 className="mb-2 text-xs font-bold text-[var(--text-sub)]">Kaynak ve kullanım hakkı</h3>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                  <label className="text-xs font-bold text-[var(--text-sub)]">
                     Kaynak türü
                     <select
                       aria-label="Kaynak türü"
@@ -724,33 +765,33 @@ export default function AdminQuestionsPage() {
                       <option value="official_exam">Resmî sınav</option>
                     </select>
                   </label>
-                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                  <label className="text-xs font-bold text-[var(--text-sub)]">
                     Kaynak başlığı
                     <input aria-label="Kaynak başlığı" value={editSource.title} onChange={(event) => { setEditSource((current) => ({ ...current, title: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
                   </label>
-                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                  <label className="text-xs font-bold text-[var(--text-sub)]">
                     Kaynak URL (https)
                     <input aria-label="Kaynak URL" type="url" value={editSource.url} onChange={(event) => { setEditSource((current) => ({ ...current, url: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
                   </label>
-                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                  <label className="text-xs font-bold text-[var(--text-sub)]">
                     Lisans kodu
                     <input aria-label="Lisans kodu" value={editSource.licenseCode} onChange={(event) => { setEditSource((current) => ({ ...current, licenseCode: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
                   </label>
-                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
+                  <label className="text-xs font-bold text-[var(--text-sub)]">
                     Lisans URL (https)
                     <input aria-label="Lisans URL" type="url" value={editSource.licenseUrl} onChange={(event) => { setEditSource((current) => ({ ...current, licenseUrl: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
                   </label>
-                  <label className="text-[10px] font-bold text-[var(--text-sub)]">
-                    Provenance referansı
-                    <input aria-label="Provenance referansı" value={editSource.provenanceRef} onChange={(event) => { setEditSource((current) => ({ ...current, provenanceRef: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
+                  <label className="text-xs font-bold text-[var(--text-sub)]">
+                    Kaynak izleme referansı
+                    <input aria-label="Kaynak izleme referansı" value={editSource.provenanceRef} onChange={(event) => { setEditSource((current) => ({ ...current, provenanceRef: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
                   </label>
                 </div>
-                <label className="mt-2 block text-[10px] font-bold text-[var(--text-sub)]">
+                <label className="mt-2 block text-xs font-bold text-[var(--text-sub)]">
                   Atıf
                   <textarea aria-label="Atıf" rows={2} value={editSource.attribution} onChange={(event) => { setEditSource((current) => ({ ...current, attribution: event.target.value })); setSourceRightsAcknowledged(false) }} className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs font-normal focus:border-[var(--focus)] focus:outline-none" />
                 </label>
                 {isLegacySourceDetail(governanceDetail) && (
-                  <label className="mt-3 flex items-start gap-2 rounded-md border border-[var(--reward-border)] bg-[var(--reward-bg)] p-2 text-[10px] font-bold text-[var(--text)]">
+                  <label className="mt-3 flex items-start gap-2 rounded-md border border-[var(--reward-border)] bg-[var(--reward-bg)] p-2 text-xs font-bold text-[var(--text)]">
                     <input
                       type="checkbox"
                       checked={sourceRightsAcknowledged}
@@ -762,14 +803,14 @@ export default function AdminQuestionsPage() {
                 )}
                 {governanceDetail.metadata.game === 'sosyal'
                   && String(governanceDetail.metadata.examRef ?? '').toUpperCase() === 'TYT' && (
-                  <p className="mt-2 text-[10px] text-[var(--text-sub)]">TYT Sosyal kapsamı için legacy olmayan bir provenance referansı zorunludur.</p>
+                  <p className="mt-2 text-xs text-[var(--text-sub)]">TYT Sosyal kapsamı için eski aktarım dışında doğrulanabilir bir kaynak izleme referansı zorunludur.</p>
                 )}
               </div>
             )}
 
             {governanceDetail && (
               <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
-                <label className="mb-1 block text-[11px] font-bold text-[var(--text-sub)]" htmlFor="edit-primary-outcome">
+                <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]" htmlFor="edit-primary-outcome">
                   Birincil kazanım
                 </label>
                 <select
@@ -787,17 +828,17 @@ export default function AdminQuestionsPage() {
                   ))}
                 </select>
                 {outcomesLoading ? (
-                  <p className="mt-1 text-[10px] text-[var(--text-sub)]">Kapsam doğrulanıyor…</p>
+                  <p className="mt-1 text-xs text-[var(--text-sub)]">Kapsam doğrulanıyor…</p>
                 ) : outcomeCatalogState === 'failed' ? (
-                  <p className="mt-1 text-[10px] text-[var(--urgency)]">
+                  <p className="mt-1 text-xs text-[var(--urgency)]">
                     Katalog doğrulanamadı; güvenlik gereği taslak oluşturulamaz.
                   </p>
                 ) : editOutcomeOptions.length === 0 ? (
-                  <p className="mt-1 text-[10px] text-[var(--urgency)]">
+                  <p className="mt-1 text-xs text-[var(--urgency)]">
                     Bu kapsam için aktif kazanım yok. Düzeltme taslak olarak saklanabilir; kazanım eklenene kadar 2. aşama ve yayın kapalı kalır.
                   </p>
                 ) : (
-                  <p className="mt-1 text-[10px] text-[var(--text-sub)]">
+                  <p className="mt-1 text-xs text-[var(--text-sub)]">
                     Seçim insan onayıdır; kategori adı kazanım kanıtı olarak otomatik atanmaz.
                   </p>
                 )}
@@ -815,7 +856,7 @@ export default function AdminQuestionsPage() {
                     selected && selected.examRef !== priorExam ? `sınav ${priorExam ?? 'genel'} → ${selected.examRef ?? 'genel'}` : null,
                   ].filter(Boolean)
                   return changes.length > 0 ? (
-                    <p role="status" className="mt-2 rounded-md border border-[var(--reward-border)] bg-[var(--reward-bg)] p-2 text-[10px] font-bold">
+                    <p role="status" className="mt-2 rounded-md border border-[var(--reward-border)] bg-[var(--reward-bg)] p-2 text-xs font-bold">
                       Kapsam değişikliği: {changes.join('; ')}. Bu değişiklik revizyon özetinde bağımsız inceleyiciye gösterilecek.
                     </p>
                   ) : null

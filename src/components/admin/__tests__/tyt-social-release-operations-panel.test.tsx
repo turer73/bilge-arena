@@ -142,3 +142,18 @@ describe('TytSocialReleaseOperationsPanel', () => {
     expect(screen.queryByRole('button', { name: 'TYT Sosyal kapsamını yayınla' })).not.toBeInTheDocument()
   })
 })
+
+describe('TytSocialReleaseOperationsPanel source labels', () => {
+  it('shows legacy placeholders as review work rather than raw import codes', async () => {
+    const data = operations()
+    data.items[0].sourceTitle = 'legacy-import'
+    data.items[0].licenseCode = 'legacy-import'
+    fetchMock.mockImplementation((input: RequestInfo | URL) =>
+      Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(String(input).startsWith('/api/admin/content-quality/tyt-social/exam-role?') ? data : { replayed: false }) }),
+    )
+    render(<TytSocialReleaseOperationsPanel />)
+    expect(await screen.findByText('Eski aktarımdan gelen kaynak')).toBeInTheDocument()
+    expect(screen.getByText('Lisans kanıtı bekleniyor')).toBeInTheDocument()
+    expect(screen.queryByText('legacy-import')).not.toBeInTheDocument()
+  })
+})

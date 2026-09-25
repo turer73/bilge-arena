@@ -113,7 +113,7 @@ export function InstitutionClassroomCreatePanel({
           <h2 id="institution-create-classroom-title" className="mt-1 text-lg font-black">Yeni sınıf oluştur</h2>
           <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Sınıf kurumda açılır ve seçtiğiniz aktif öğretmene atanır.</p>
         </div>
-        <button type="button" onClick={onCancel} aria-label="Sınıf oluşturmayı kapat" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 text-[var(--text-sub)] hover:bg-white/5">
+        <button type="button" onClick={onCancel} aria-label="Sınıf oluşturmayı kapat" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 text-[var(--text-sub)] hover:bg-white/5">
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
@@ -128,7 +128,7 @@ export function InstitutionClassroomCreatePanel({
           <div>
             <strong className="block">Aktif kurum öğretmeni bulunamadı</strong>
             <p className="mt-1 text-[var(--text-sub)]">Sınıf açmadan önce kuruma bir öğretmen ekleyin veya kurum yöneticisi için öğretmenlik rolünü açın.</p>
-            <Link href="/arena/kurum/roller" className="mt-2 inline-flex min-h-10 items-center rounded-lg font-black text-amber-200 underline decoration-amber-300/50 underline-offset-4 hover:text-amber-100">
+            <Link href="/arena/kurum/roller" className="mt-2 inline-flex min-h-11 items-center rounded-lg font-black text-amber-200 underline decoration-amber-300/50 underline-offset-4 hover:text-amber-100">
               Öğretmen ve rol yönetimine git
             </Link>
           </div>

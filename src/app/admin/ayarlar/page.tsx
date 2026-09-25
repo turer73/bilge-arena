@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { MessageSquare, Target, UserPlus, Wrench, type LucideIcon } from 'lucide-react'
 
 interface SettingDef {
   key: string
@@ -8,15 +9,15 @@ interface SettingDef {
   description: string
   type: 'toggle' | 'number'
   defaultValue: boolean | number
-  icon: string
+  Icon: LucideIcon
 }
 
 const SETTING_DEFS: SettingDef[] = [
-  { key: 'maintenance_mode', label: 'Bakım Modu', description: 'Siteyi geçici olarak kapatır', type: 'toggle', defaultValue: false, icon: '🔧' },
-  { key: 'registration_enabled', label: 'Kayıt Açık', description: 'Yeni kullanıcı kaydı yapılabilir', type: 'toggle', defaultValue: true, icon: '📝' },
-  { key: 'daily_quest_count', label: 'Günlük Görev Sayısı', description: 'Her gün kaç görev verilecek', type: 'number', defaultValue: 3, icon: '🎯' },
-  { key: 'max_chat_messages_guest', label: 'Misafir Sohbet Limiti', description: 'Misafirlerin günlük sohbet mesaj limiti', type: 'number', defaultValue: 5, icon: '💬' },
-  { key: 'max_chat_messages_user', label: 'Kullanıcı Sohbet Limiti', description: 'Kayıtlı kullanıcıların günlük sohbet mesaj limiti', type: 'number', defaultValue: 20, icon: '💬' },
+  { key: 'maintenance_mode', label: 'Bakım modu', description: 'Siteyi geçici olarak kapatır', type: 'toggle', defaultValue: false, Icon: Wrench },
+  { key: 'registration_enabled', label: 'Kayıt açık', description: 'Yeni kullanıcı kaydı yapılabilir', type: 'toggle', defaultValue: true, Icon: UserPlus },
+  { key: 'daily_quest_count', label: 'Günlük görev sayısı', description: 'Her gün kaç görev verilecek', type: 'number', defaultValue: 3, Icon: Target },
+  { key: 'max_chat_messages_guest', label: 'Misafir sohbet limiti', description: 'Misafirlerin günlük sohbet mesaj limiti', type: 'number', defaultValue: 5, Icon: MessageSquare },
+  { key: 'max_chat_messages_user', label: 'Kullanıcı sohbet limiti', description: 'Kayıtlı kullanıcıların günlük sohbet mesaj limiti', type: 'number', defaultValue: 20, Icon: MessageSquare },
 ]
 
 export default function AdminSettingsPage() {
@@ -117,34 +118,34 @@ export default function AdminSettingsPage() {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">{setting.icon}</span>
+                  <setting.Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--focus)]" />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold">{setting.label}</span>
                       {isSaving && (
-                        <span className="text-[10px] text-[var(--text-sub)]">kaydediliyor…</span>
+                        <span className="text-xs text-[var(--text-sub)]">kaydediliyor…</span>
                       )}
                       {justSaved && (
-                        <span className="text-[10px] font-bold text-[var(--growth)]">✓</span>
+                        <span className="text-xs font-bold text-[var(--growth)]">✓</span>
                       )}
                     </div>
-                    <div className="text-[11px] text-[var(--text-sub)]">{setting.description}</div>
+                    <div className="text-xs text-[var(--text-sub)]">{setting.description}</div>
                   </div>
                 </div>
 
                 {setting.type === 'toggle' ? (
                   <button
+                    type="button"
+                    role="switch"
+                    aria-checked={Boolean(val)}
+                    aria-label={setting.label}
                     onClick={() => updateSetting(setting.key, !val)}
                     disabled={isSaving}
-                    className={`relative h-6 w-11 rounded-full transition-colors disabled:opacity-60 ${
-                      val ? 'bg-[var(--focus)]' : 'bg-[var(--border)]'
-                    }`}
+                    className="flex min-h-11 min-w-11 items-center rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)] disabled:opacity-60"
                   >
-                    <div
-                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        val ? 'translate-x-[22px]' : 'translate-x-0.5'
-                      }`}
-                    />
+                    <span aria-hidden="true" className={`relative h-6 w-11 rounded-full transition-colors ${val ? 'bg-[var(--focus)]' : 'bg-[var(--border)]'}`}>
+                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${val ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                    </span>
                   </button>
                 ) : (
                   <input
@@ -172,7 +173,7 @@ export default function AdminSettingsPage() {
         )}
       </div>
 
-      <div className="mt-4 text-center text-[11px] text-[var(--text-sub)]">
+      <div className="mt-4 text-center text-xs text-[var(--text-sub)]">
         Değişiklikler otomatik olarak kaydedilir
       </div>
     </div>

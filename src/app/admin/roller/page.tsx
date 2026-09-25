@@ -322,18 +322,18 @@ export default function AdminRolesPage() {
 
                   {/* Description */}
                   {role.description && (
-                    <div className="mt-1 text-[11px] leading-snug text-[var(--text-sub)] line-clamp-2">
+                    <div className="mt-1 text-xs leading-snug text-[var(--text-sub)] line-clamp-2">
                       {role.description}
                     </div>
                   )}
 
                   {/* Badges */}
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-full bg-[var(--surface)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-sub)]">
+                    <span className="rounded-full bg-[var(--surface)] px-2 py-0.5 text-xs font-bold text-[var(--text-sub)]">
                       {role.user_count} kullanici
                     </span>
                     {role.is_system && (
-                      <span className="rounded-full bg-[var(--wisdom)]/15 px-2 py-0.5 text-[10px] font-bold text-[var(--wisdom)]">
+                      <span className="rounded-full bg-[var(--wisdom)]/15 px-2 py-0.5 text-xs font-bold text-[var(--wisdom)]">
                         Sistem
                       </span>
                     )}
@@ -365,13 +365,13 @@ export default function AdminRolesPage() {
                   <span className="text-lg">{getIcon(selectedRole.slug)}</span>
                   <h2 className="font-display text-base font-bold">{selectedRole.name}</h2>
                   {selectedRole.is_system && (
-                    <span className="rounded-full bg-[var(--wisdom)]/15 px-2 py-0.5 text-[10px] font-bold text-[var(--wisdom)]">
+                    <span className="rounded-full bg-[var(--wisdom)]/15 px-2 py-0.5 text-xs font-bold text-[var(--wisdom)]">
                       Sistem Rolu
                     </span>
                   )}
                 </div>
                 {hasChanges && (
-                  <span className="text-[10px] font-bold text-[var(--reward)]">Kaydedilmemis degisiklikler</span>
+                  <span className="text-xs font-bold text-[var(--reward)]">Kaydedilmemis degisiklikler</span>
                 )}
               </div>
 
@@ -395,7 +395,7 @@ export default function AdminRolesPage() {
                             className="h-3.5 w-3.5 rounded border-[var(--border)] accent-[var(--focus)]"
                           />
                           <span className="select-none">{perm.label}</span>
-                          <span className="hidden text-[10px] text-[var(--text-sub)] sm:inline">
+                          <span className="hidden text-xs text-[var(--text-sub)] sm:inline">
                             {perm.key.split('.').pop()}
                           </span>
                         </label>
@@ -423,7 +423,7 @@ export default function AdminRolesPage() {
             <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--card)]">
               <div className="border-b border-[var(--border)] px-5 py-3">
                 <h3 className="text-sm font-bold">Kullanici Ata</h3>
-                <p className="text-[11px] text-[var(--text-sub)]">
+                <p className="text-xs text-[var(--text-sub)]">
                   {selectedRole.name} rolune kullanici ekleyin veya kaldirin.
                 </p>
               </div>
@@ -473,14 +473,14 @@ export default function AdminRolesPage() {
                                 {user.display_name || user.username || 'Isimsiz'}
                               </div>
                               {user.username && (
-                                <div className="truncate text-[10px] text-[var(--text-sub)]">@{user.username}</div>
+                                <div className="truncate text-xs text-[var(--text-sub)]">@{user.username}</div>
                               )}
                             </div>
                           </div>
                           <button
                             onClick={() => assignUser(user.id)}
                             disabled={alreadyAssigned || assignLoading === user.id}
-                            className="shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)] disabled:opacity-40"
+                            className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold text-[var(--focus)] transition-colors hover:bg-[var(--focus-bg)] disabled:opacity-40"
                           >
                             {assignLoading === user.id ? '...' : alreadyAssigned ? 'Atandi' : '+ Ata'}
                           </button>
@@ -493,7 +493,7 @@ export default function AdminRolesPage() {
                 {/* Assigned users */}
                 {assignedUsers.length > 0 && (
                   <div>
-                    <div className="mb-2 text-[11px] font-bold text-[var(--text-sub)] uppercase tracking-wider">
+                    <div className="mb-2 text-xs font-bold text-[var(--text-sub)] uppercase tracking-wider">
                       Atanmis Kullanicilar
                     </div>
                     <div className="space-y-1">
@@ -522,7 +522,7 @@ export default function AdminRolesPage() {
                           <button
                             onClick={() => removeUser(user.id)}
                             disabled={assignLoading === user.id}
-                            className="shrink-0 rounded-lg px-2.5 py-1 text-[10px] font-bold text-[var(--urgency)] transition-colors hover:bg-[var(--urgency)]/10 disabled:opacity-40"
+                            className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold text-[var(--urgency)] transition-colors hover:bg-[var(--urgency)]/10 disabled:opacity-40"
                           >
                             {assignLoading === user.id ? '...' : 'Kaldir'}
                           </button>
@@ -534,7 +534,7 @@ export default function AdminRolesPage() {
 
                 {/* Empty state for assigned */}
                 {assignedUsers.length === 0 && !searchLoading && userResults.length === 0 && (
-                  <p className="py-2 text-center text-[11px] text-[var(--text-sub)]">
+                  <p className="py-2 text-center text-xs text-[var(--text-sub)]">
                     Kullanici aramak icin yukariya yazmaya baslayin.
                   </p>
                 )}

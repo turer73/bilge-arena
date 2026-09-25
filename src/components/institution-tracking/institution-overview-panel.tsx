@@ -143,7 +143,7 @@ export function InstitutionOverviewPanel({
               <h2 id="teacher-overview-title" className="mt-1 text-xl font-black sm:text-2xl">Öğretmen takip göstergeleri</h2>
               <p className="mt-1 text-xs leading-5 text-[var(--text-sub)]">Gelişim ve öğretmenin kontrolündeki süreç kayıtları ayrı gösterilir.</p>
             </div>
-            <span className="w-fit rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-bold text-[var(--text-sub)]">Tek puan ve sıralama yoktur</span>
+            <span className="w-fit rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-[var(--text-sub)]">Tek puan ve sıralama yoktur</span>
           </div>
 
           <div className="mt-4 grid gap-3 xl:grid-cols-2">
@@ -164,12 +164,12 @@ export function InstitutionOverviewPanel({
                       <div>
                         <div className="flex items-center justify-between gap-3 text-xs"><span>Öğrenci gelişimi</span><strong>{indicators.dimensions.studentGrowth.value === null ? 'Henüz değerlendirilemez' : `%${indicators.dimensions.studentGrowth.value}`}</strong></div>
                         <div className="mt-2"><PercentBar value={indicators.dimensions.studentGrowth.value} tone={indicators.dimensions.studentGrowth.value === null ? 'amber' : 'emerald'} label={`${classroom.teacherAlias} öğrenci gelişimi`} /></div>
-                        {indicators.dimensions.studentGrowth.value === null && <p className="mt-2 text-[11px] leading-4 text-[var(--text-sub)]">En az {TEACHER_GROWTH_MIN_ELIGIBLE_STUDENTS} uygun öğrenci ve {TEACHER_GROWTH_MIN_WINDOW_DAYS / 7} haftalık karşılaştırmalı kanıt gerekir.</p>}
+                        {indicators.dimensions.studentGrowth.value === null && <p className="mt-2 text-xs leading-4 text-[var(--text-sub)]">En az {TEACHER_GROWTH_MIN_ELIGIBLE_STUDENTS} uygun öğrenci ve {TEACHER_GROWTH_MIN_WINDOW_DAYS / 7} haftalık karşılaştırmalı kanıt gerekir.</p>}
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         {Object.entries(processLabels).map(([key, label]) => {
                           const item = indicators.dimensions[key as keyof typeof processLabels]
-                          return <div key={key} className="rounded-lg border border-white/10 bg-white/[0.025] p-2"><span className="block truncate text-[10px] text-[var(--text-sub)]">{label}</span><strong className="mt-1 block text-sm">{item.value === null ? 'Veri yetersiz' : `%${item.value}`}</strong>{item.value === null && <span className="mt-1 block text-[9px] text-[var(--text-sub)]">En az {TEACHER_PROCESS_MIN_OBSERVATIONS} gözlem</span>}</div>
+                          return <div key={key} className="rounded-lg border border-white/10 bg-white/[0.025] p-2"><span className="block truncate text-xs text-[var(--text-sub)]">{label}</span><strong className="mt-1 block text-sm">{item.value === null ? 'Veri yetersiz' : `%${item.value}`}</strong>{item.value === null && <span className="mt-1 block text-xs text-[var(--text-sub)]">En az {TEACHER_PROCESS_MIN_OBSERVATIONS} gözlem</span>}</div>
                         })}
                       </div>
                     </div>
@@ -179,7 +179,7 @@ export function InstitutionOverviewPanel({
             })}
           </div>
 
-          <p className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-[11px] leading-5 text-[var(--text-sub)]">
+          <p className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2 text-xs leading-5 text-[var(--text-sub)]">
             Göstergeler karar desteğidir; öğretmen sıralaması, tek performans puanı veya otomatik insan kaynakları kararı üretmez.
           </p>
         </section>

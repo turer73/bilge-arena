@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { CircleAlert } from 'lucide-react'
 import { GAMES } from '@/lib/constants/games'
 import { stripRichText } from '@/lib/utils/rich-text'
 import { ContentGovernancePanel } from '@/components/admin/content-governance-panel'
@@ -98,9 +99,6 @@ export default function AdminQuestionQualityPage() {
     }
   }
 
-  const rateColor = (pct: number) =>
-    pct >= 50 ? 'var(--reward)' : pct >= 35 ? 'var(--urgency)' : '#DC2626'
-
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-6">
@@ -111,10 +109,29 @@ export default function AdminQuestionQualityPage() {
         </p>
       </div>
 
-      <ValidationVerdictPanel />
-      <TytSocialReleaseOperationsPanel />
-      <ContentGovernancePanel />
-      <ContentAppealsPanel />
+      <nav aria-label="Soru kalitesi iş akışları" className="mb-6 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        {[
+          { href: '#quality-appeals', title: 'Öğrenci itirazları', detail: 'Bildirim ve yanıt' },
+          { href: '#quality-validation', title: 'Otomatik bulgular', detail: 'Kanıtları incele' },
+          { href: '#quality-governance', title: 'İçerik kararları', detail: 'Revizyon ve onay' },
+          { href: '#quality-release', title: 'TYT Sosyal', detail: 'Yayın kanıtı' },
+          { href: '#quality-drift', title: 'Performans sinyali', detail: 'Düşük başarı' },
+        ].map((workflow) => (
+          <a key={workflow.href} href={workflow.href} className="flex min-h-16 flex-col justify-center rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-4 py-3 text-sm transition-colors hover:border-[var(--focus)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
+            <span className="font-bold">{workflow.title}</span>
+            <span className="text-xs text-[var(--text-sub)]">{workflow.detail}</span>
+          </a>
+        ))}
+      </nav>
+
+      <div id="quality-appeals" className="scroll-mt-20"><ContentAppealsPanel /></div>
+      <div id="quality-validation" className="scroll-mt-20"><ValidationVerdictPanel /></div>
+      <div id="quality-governance" className="scroll-mt-20"><ContentGovernancePanel /></div>
+      <div id="quality-release" className="scroll-mt-20"><TytSocialReleaseOperationsPanel /></div>
+
+      <section id="quality-drift" aria-labelledby="quality-drift-title" className="scroll-mt-20">
+        <h2 id="quality-drift-title" className="mb-1 text-lg font-bold">Performans sinyali</h2>
+        <p className="mb-4 text-sm text-[var(--text-sub)]">Düşük başarı tek başına kusur kanıtı değildir; soruyu ve itirazları birlikte inceleyin.</p>
 
       {mutationError && <p role="alert" className="mb-4 rounded-lg border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-3 py-2 text-xs text-[var(--urgency)]">{mutationError}</p>}
 
@@ -198,14 +215,14 @@ export default function AdminQuestionQualityPage() {
                     </td>
                     <td className="px-3 py-3 text-right font-mono">{q.times_answered}</td>
                     <td className="px-3 py-3 text-right">
-                      <span className="font-bold" style={{ color: rateColor(q.success_rate) }}>
+                      <span className="font-bold text-[var(--text)]" aria-label={`Başarı oranı yüzde ${q.success_rate}; ${q.times_answered} yanıt`}>
                         %{q.success_rate}
                       </span>
                     </td>
                     <td className="px-3 py-3 text-center">
                       {q.pending_reports > 0 ? (
                         <span className="rounded-full bg-[var(--urgency-bg)] px-2 py-0.5 text-xs font-bold text-[var(--urgency)]">
-                          {q.pending_reports} 🐛
+                          <span aria-label={`${q.pending_reports} açık rapor`} className="inline-flex items-center gap-1"><CircleAlert aria-hidden="true" className="h-4 w-4" />{q.pending_reports}</span>
                         </span>
                       ) : (
                         <span className="text-[var(--text-sub)]">—</span>
@@ -238,6 +255,7 @@ export default function AdminQuestionQualityPage() {
           </div>
         )}
       </div>
+      </section>
     </div>
   )
 }

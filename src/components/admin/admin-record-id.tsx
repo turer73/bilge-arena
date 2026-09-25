@@ -27,7 +27,7 @@ export function AdminRecordId({ label, id }: { label: string; id: string | null 
         type="button"
         onClick={() => void copy()}
         aria-label={`${label} kimliğini kopyala`}
-        className="min-h-9 rounded-lg border border-[var(--border)] px-2 font-semibold text-[var(--focus)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+        className="min-h-11 rounded-lg border border-[var(--border)] px-2 font-semibold text-[var(--focus)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
       >
         {copiedId === id ? 'Kopyalandı' : 'Kopyala'}
       </button>

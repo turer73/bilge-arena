@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { BookOpen, CircleCheck, CircleX, ClipboardList, Flag, Settings2, Users, type LucideIcon } from 'lucide-react'
+import { AdminRecordId, shortAdminId } from '@/components/admin/admin-record-id'
 
 interface LogEntry {
   id: string
@@ -13,16 +15,18 @@ interface LogEntry {
   created_at: string
 }
 
-const ACTION_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
-  update_question: { label: 'Soru guncelle', icon: '📝', color: 'var(--focus)' },
-  update_user_role: { label: 'Rol degistir', icon: '👥', color: 'var(--wisdom)' },
-  update_report: { label: 'Rapor guncelle', icon: '🐛', color: 'var(--reward)' },
-  update_setting: { label: 'Ayar degistir', icon: '⚙️', color: 'var(--growth)' },
-  resolve_report: { label: 'Rapor coz', icon: '✅', color: 'var(--growth)' },
-  reject_report: { label: 'Rapor reddet', icon: '❌', color: 'var(--urgency)' },
+const ACTION_CONFIG: Record<string, { label: string; Icon: LucideIcon; color: string }> = {
+  update_question: { label: 'Soru güncellendi', Icon: BookOpen, color: 'var(--focus)' },
+  update_user_role: { label: 'Rol değiştirildi', Icon: Users, color: 'var(--wisdom)' },
+  update_report: { label: 'Rapor güncellendi', Icon: Flag, color: 'var(--reward)' },
+  update_setting: { label: 'Ayar değiştirildi', Icon: Settings2, color: 'var(--growth)' },
+  resolve_report: { label: 'Rapor çözüldü', Icon: CircleCheck, color: 'var(--growth)' },
+  reject_report: { label: 'Rapor reddedildi', Icon: CircleX, color: 'var(--text-sub)' },
 }
 
-const fallbackAction = { label: 'Islem', icon: '📋', color: 'var(--text-sub)' }
+const fallbackAction = { label: 'İşlem', Icon: ClipboardList, color: 'var(--text-sub)' }
+
+const targetLabels: Record<string, string> = { question: 'Soru', report: 'Rapor', setting: 'Ayar', user: 'Kullanıcı', background_asset: 'Arka plan', cosmetic_badge: 'Rozet', question_submission: 'Soru gönderimi' }
 
 export default function AdminLogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([])
@@ -59,27 +63,27 @@ export default function AdminLogsPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Admin Loglari</h1>
+        <h1 className="text-2xl font-bold">Yönetim kayıtları</h1>
         <p className="text-sm text-[var(--text-sub)]">
-          Tum admin islemlerinin kaydi — {total} islem
+          Tüm yönetim işlemlerinin kaydı — {total} işlem
         </p>
       </div>
 
       {/* Filtreler */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="sticky top-14 z-20 mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card-bg)]/95 p-3 backdrop-blur lg:top-0">
         {['all', 'update_question', 'update_user_role', 'update_report', 'update_setting'].map((action) => {
           const cfg = action === 'all' ? null : (ACTION_CONFIG[action] || fallbackAction)
           return (
             <button
               key={action}
               onClick={() => { setFilterAction(action); setPage(1) }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+              className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition-colors ${
                 filterAction === action
                   ? 'bg-[var(--focus)] text-white'
                   : 'bg-[var(--surface)] text-[var(--text-sub)] hover:bg-[var(--card)]'
               }`}
             >
-              {action === 'all' ? `Tumu` : `${cfg?.icon} ${cfg?.label}`}
+              {action === 'all' ? `Tümü` : <span className="inline-flex items-center gap-2">{cfg && <cfg.Icon aria-hidden="true" className="h-4 w-4" />}{cfg?.label}</span>}
             </button>
           )
         })}
@@ -104,26 +108,29 @@ export default function AdminLogsPage() {
                 className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)] transition-all"
               >
                 <button
+                  type="button"
+                  aria-expanded={isExpanded}
+                  aria-controls={`log-detail-${log.id}`}
                   onClick={() => setExpandedId(isExpanded ? null : log.id)}
                   className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--surface)]"
                 >
-                  <span className="text-base">{cfg.icon}</span>
+                  <cfg.Icon aria-hidden="true" className="h-5 w-5 shrink-0" style={{ color: cfg.color }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold" style={{ color: cfg.color }}>
                         {cfg.label}
                       </span>
                       {log.target_id && (
-                        <span className="truncate text-[10px] font-mono text-[var(--text-sub)]">
-                          {log.target_id.length > 20 ? log.target_id.slice(0, 8) + '...' : log.target_id}
+                        <span className="truncate text-xs font-mono text-[var(--text-sub)]">
+                          {shortAdminId(log.target_id)}
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 text-[11px] text-[var(--text-sub)]">
-                      {log.admin_name} — {log.target_type}
+                    <div className="mt-0.5 text-xs text-[var(--text-sub)]">
+                      {log.admin_name} — {targetLabels[log.target_type] ?? 'Diğer'} <code className="ml-1 font-mono">({log.target_type})</code>
                     </div>
                   </div>
-                  <span className="text-[10px] text-[var(--text-sub)] whitespace-nowrap">
+                  <span className="text-xs text-[var(--text-sub)] whitespace-nowrap">
                     {new Date(log.created_at).toLocaleString('tr-TR', {
                       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
                     })}
@@ -133,11 +140,12 @@ export default function AdminLogsPage() {
                   </span>
                 </button>
 
-                {isExpanded && log.details && (
-                  <div className="border-t border-[var(--border)] px-4 py-3">
-                    <pre className="overflow-x-auto rounded-lg bg-[var(--surface)] p-3 text-[11px] font-mono text-[var(--text-sub)]">
+                {isExpanded && (
+                  <div id={`log-detail-${log.id}`} className="border-t border-[var(--border)] px-4 py-3">
+                    <div className="mb-3 flex flex-wrap gap-x-5 gap-y-2"><AdminRecordId label="Kayıt" id={log.id} /><AdminRecordId label="Hedef" id={log.target_id} /></div>
+                    {log.details && <pre className="overflow-x-auto rounded-lg bg-[var(--surface)] p-3 text-xs font-mono text-[var(--text-sub)]">
                       {JSON.stringify(log.details, null, 2)}
-                    </pre>
+                    </pre>}
                   </div>
                 )}
               </div>
@@ -146,7 +154,7 @@ export default function AdminLogsPage() {
 
           {logs.length === 0 && (
             <div className="py-12 text-center text-sm text-[var(--text-sub)]">
-              Log bulunamadi
+              Kayıt bulunamadı
             </div>
           )}
         </div>

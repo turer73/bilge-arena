@@ -47,7 +47,10 @@ describe('AdminQuestionQualityPage', () => {
     expect(await screen.findByText('Kotu soru bir')).toBeInTheDocument()
     expect(screen.getByText('Soru iki')).toBeInTheDocument()
     expect(screen.getByText('%20')).toBeInTheDocument() // q1 success_rate
-    expect(screen.getByText('2 🐛')).toBeInTheDocument() // q1 pending_reports rozeti
+    expect(screen.getByLabelText('Başarı oranı yüzde 20; 100 yanıt')).toHaveClass('text-[var(--text)]')
+    expect(screen.getByLabelText('2 açık rapor')).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Soru kalitesi iş akışları' })).toHaveTextContent('Öğrenci itirazları')
+    expect(screen.getByRole('region', { name: 'Performans sinyali' })).toBeInTheDocument()
   })
 
   it('capped=true iken aday-havuzu uyarisini gosterir', async () => {

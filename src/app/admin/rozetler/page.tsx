@@ -199,7 +199,7 @@ export default function CosmeticBadgesAdminPage() {
               className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-normal text-[var(--text)]"
             />
             {!slugValid && form.slug.length > 0 && (
-              <span className="text-[10px] text-[var(--urgency)]">küçük harf, rakam, tire (2-40)</span>
+              <span className="text-xs text-[var(--urgency)]">küçük harf, rakam, tire (2-40)</span>
             )}
           </label>
           <label className="flex flex-col gap-1 text-xs font-bold text-[var(--text-sub)]">
@@ -309,9 +309,9 @@ export default function CosmeticBadgesAdminPage() {
                 )}
                 <div className="min-w-[120px] flex-1">
                   <p className="text-sm font-bold text-[var(--text)]">
-                    {it.name} <span className="text-[11px] font-normal text-[var(--text-sub)]">/{it.slug}</span>
+                    {it.name} <span className="text-xs font-normal text-[var(--text-sub)]">/{it.slug}</span>
                   </p>
-                  <p className="text-[11px] text-[var(--text-sub)]">
+                  <p className="text-xs text-[var(--text-sub)]">
                     🪙 {it.coin_cost} · {it.rarity}
                     {it.is_published ? (
                       <span className="ml-1 font-bold text-[var(--growth)]">· yayında</span>

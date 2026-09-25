@@ -251,7 +251,7 @@ export function InstitutionRoleManager() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="break-words text-base font-black">{role.name}</h3>
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-black ${role.system ? 'bg-sky-400/10 text-sky-200' : 'bg-violet-400/10 text-violet-200'}`}>{role.system ? 'Sistem rolü' : 'Özel rol'}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-black ${role.system ? 'bg-sky-400/10 text-sky-200' : 'bg-violet-400/10 text-violet-200'}`}>{role.system ? 'Sistem rolü' : 'Özel rol'}</span>
                       </div>
                       <p className="mt-2 text-xs leading-5 text-[var(--text-sub)]">{role.description}</p>
                     </div>
@@ -265,7 +265,7 @@ export function InstitutionRoleManager() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {role.permissions.map((permission) => {
                       const item = directory.permissions.find((candidate) => candidate.permission === permission)
-                      return <span key={permission} className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] font-bold text-[var(--text-sub)]">{item?.label ?? permission}</span>
+                      return <span key={permission} className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-xs font-bold text-[var(--text-sub)]">{item?.label ?? permission}</span>
                     })}
                   </div>
                   <div className="mt-4 border-t border-white/10 pt-4">
@@ -283,7 +283,7 @@ export function InstitutionRoleManager() {
                           const key = `assignment:${role.roleRef}:${member.memberRef}`
                           return (
                             <label key={member.memberRef} className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2">
-                              <span className="min-w-0"><span className="block truncate text-sm font-bold">{member.alias}</span><span className="text-[11px] text-[var(--text-sub)]">{member.membershipRole === 'manager' ? 'Kurum yöneticisi' : 'Öğretmen'}</span></span>
+                              <span className="min-w-0"><span className="block truncate text-sm font-bold">{member.alias}</span><span className="text-xs text-[var(--text-sub)]">{member.membershipRole === 'manager' ? 'Kurum yöneticisi' : 'Öğretmen'}</span></span>
                               {savingKey === key ? <Loader2 className="h-4 w-4 animate-spin" /> : <input type="checkbox" checked={assigned} disabled={savingKey !== null} onChange={(event) => void toggleAssignment(role, member.memberRef, event.target.checked)} className="h-4 w-4 shrink-0 accent-[var(--primary)]" />}
                             </label>
                           )

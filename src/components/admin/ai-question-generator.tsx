@@ -187,7 +187,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
           {/* Ortak filtreler */}
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
             <div>
-              <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">OYUN</label>
+              <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">OYUN</label>
               <select
                 value={game}
                 onChange={(e) => { setGame(e.target.value as GameSlug); setCategory(''); setTopic('') }}
@@ -200,7 +200,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
             </div>
 
             <div>
-              <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">KATEGORİ</label>
+              <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">KATEGORİ</label>
               <select
                 value={category}
                 onChange={(e) => { setCategory(e.target.value); setTopic('') }}
@@ -214,7 +214,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
             </div>
 
             <div>
-              <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">KONU</label>
+              <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">KONU</label>
               <select
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
@@ -238,7 +238,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
             </div>
 
             <div>
-              <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">ZORLUK</label>
+              <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">ZORLUK</label>
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(Number(e.target.value))}
@@ -259,7 +259,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
           {game === 'wordquest' && (
             <div className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
               <div>
-                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">CEFR SEVİYESİ</label>
+                <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">CEFR SEVİYESİ</label>
                 <select
                   value={levelTag}
                   onChange={(e) => setLevelTag(e.target.value as typeof levelTag)}
@@ -278,7 +278,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
 
           {governanceMode && (
             <div className="mt-3 max-w-2xl">
-              <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]" htmlFor="content-primary-outcome">BİRİNCİL KAZANIM</label>
+              <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]" htmlFor="content-primary-outcome">BİRİNCİL KAZANIM</label>
               <select
                 id="content-primary-outcome"
                 value={outcomeId}
@@ -288,7 +288,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                 <option value="">Kazanım seçin…</option>
                 {outcomes.map((outcome) => <option key={outcome.id} value={outcome.id}>{outcome.code} — {outcome.title}</option>)}
               </select>
-              {outcomes.length === 0 && <p className="mt-1 text-[10px] text-[var(--urgency)]">Bu kapsamda aktif kazanım bulunamadı; taslak oluşturulamaz.</p>}
+              {outcomes.length === 0 && <p className="mt-1 text-xs text-[var(--urgency)]">Bu kapsamda aktif kazanım bulunamadı; taslak oluşturulamaz.</p>}
             </div>
           )}
 
@@ -297,7 +297,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
             <>
               <div className="mt-3 flex items-center gap-3">
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">ADET</label>
+                  <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">ADET</label>
                   <select
                     value={count}
                     onChange={(e) => setCount(Number(e.target.value))}
@@ -318,7 +318,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                 </button>
               </div>
 
-              <p className="mt-2 text-[10px] text-[var(--text-sub)]">
+              <p className="mt-2 text-xs text-[var(--text-sub)]">
                 {governanceMode ? 'Üretilenler taslak olur; iki bağımsız onaydan önce yayınlanmaz.' : 'Üretilenler pasif olarak kaydedilir. Soru listesinden aktif hale getirin.'}
               </p>
 
@@ -331,7 +331,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-xs font-medium">{i + 1}. {q.question}</p>
                         {q.topic && (
-                          <span className="shrink-0 rounded bg-[var(--surface)] px-1.5 py-0.5 text-[9px] text-[var(--text-sub)]">
+                          <span className="shrink-0 rounded bg-[var(--surface)] px-1.5 py-0.5 text-xs text-[var(--text-sub)]">
                             {q.topic}
                           </span>
                         )}
@@ -340,14 +340,14 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                         {q.options.map((opt, j) => (
                           <p
                             key={j}
-                            className={`text-[11px] ${j === q.answer ? 'font-bold text-[var(--growth)]' : 'text-[var(--text-sub)]'}`}
+                            className={`text-xs ${j === q.answer ? 'font-bold text-[var(--growth)]' : 'text-[var(--text-sub)]'}`}
                           >
                             {String.fromCharCode(65 + j)}) {opt} {j === q.answer && '✓'}
                           </p>
                         ))}
                       </div>
                       {q.solution && (
-                        <p className="mt-1 text-[10px] text-[var(--text-sub)]">Çözüm: {q.solution}</p>
+                        <p className="mt-1 text-xs text-[var(--text-sub)]">Çözüm: {q.solution}</p>
                       )}
                     </div>
                   ))}
@@ -360,7 +360,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
           {tab === 'manual' && (
             <div className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">SORU METNİ</label>
+                <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">SORU METNİ</label>
                 <textarea
                   value={manualQ}
                   onChange={(e) => setManualQ(e.target.value)}
@@ -371,7 +371,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
               </div>
 
               <div className="space-y-2">
-                <label className="block text-[10px] font-bold text-[var(--text-sub)]">SEÇENEKLER (doğru olanı tıklayın)</label>
+                <label className="block text-xs font-bold text-[var(--text-sub)]">SEÇENEKLER (doğru olanı tıklayın)</label>
                 {manualOpts.map((opt, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <button
@@ -401,7 +401,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
               </div>
 
               <div>
-                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]">ÇÖZÜM AÇIKLAMASI</label>
+                <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]">ÇÖZÜM AÇIKLAMASI</label>
                 <textarea
                   value={manualSolution}
                   onChange={(e) => setManualSolution(e.target.value)}
@@ -412,7 +412,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
               </div>
 
               <div>
-                <label className="mb-1 block text-[10px] font-bold text-[var(--text-sub)]" htmlFor="manual-question-provenance">KAYNAK / PROVENANS REFERANSI</label>
+                <label className="mb-1 block text-xs font-bold text-[var(--text-sub)]" htmlFor="manual-question-provenance">KAYNAK / PROVENANS REFERANSI</label>
                 <input
                   id="manual-question-provenance"
                   type="text"
@@ -422,7 +422,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
                   className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs"
                   maxLength={500}
                 />
-                <p className="mt-1 text-[10px] text-[var(--text-sub)]">Sorunun hangi editör briefi, doküman veya doğrulanabilir üretim kaydından geldiğini yazın.</p>
+                <p className="mt-1 text-xs text-[var(--text-sub)]">Sorunun hangi editör briefi, doküman veya doğrulanabilir üretim kaydından geldiğini yazın.</p>
               </div>
 
               <button
@@ -432,7 +432,7 @@ export function AIQuestionGenerator({ onGenerated }: { onGenerated?: () => void 
               >
                 {manualSaving ? 'Kaydediliyor...' : (governanceMode ? 'Taslak Oluştur' : 'Kaydet (Aktif)')}
               </button>
-              <p className="text-[10px] text-[var(--text-sub)]">
+              <p className="text-xs text-[var(--text-sub)]">
                 {governanceMode ? 'Manuel soru da iki bağımsız kontrolden geçmeden yayınlanmaz.' : 'Manuel eklenen sorular doğrudan aktif olarak kaydedilir.'}
               </p>
             </div>

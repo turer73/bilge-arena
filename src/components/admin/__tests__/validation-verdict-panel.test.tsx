@@ -45,6 +45,7 @@ describe('ValidationVerdictPanel', () => {
 
     expect(await screen.findByText('İlk sayfa')).toBeInTheDocument()
     expect(screen.getByText(/1-1 \/ 75 soru/)).toBeInTheDocument()
+    expect(screen.getByText(/Denetim kuralı sürüm 2/)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Sonraki' }))
 
@@ -58,12 +59,14 @@ describe('ValidationVerdictPanel', () => {
     expect(await screen.findByText('İlk sayfa')).toBeInTheDocument()
     expect(screen.getByText('Birden fazla yorumlanabilen ifade')).toBeInTheDocument()
 
+    expect(screen.queryByText('AMBIGUOUS_WORDING')).not.toBeInTheDocument()
     const trigger = screen.getByRole('button', { name: 'Kanıtı göster' })
     trigger.focus()
     fireEvent.click(trigger)
     const dialog = screen.getByRole('dialog', { name: 'Soru kanıtı' })
     expect(dialog).toHaveTextContent('İki okuma var.')
     expect(document.body.style.overflow).toBe('hidden')
+    expect(dialog).toHaveTextContent('AMBIGUOUS_WORDING')
     expect(screen.getByRole('button', { name: 'Kapat' })).toHaveFocus()
 
     fireEvent.keyDown(window, { key: 'Escape' })

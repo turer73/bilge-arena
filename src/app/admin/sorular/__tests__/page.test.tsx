@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('@/components/admin/ai-question-generator', () => ({ AIQuestionGenerator: () => null }))
@@ -107,7 +107,7 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
     const user = userEvent.setup()
 
     render(<AdminQuestionsPage />)
-    await user.click(await screen.findByRole('button', { name: 'Duzenle' }))
+    await user.click(await screen.findByRole('button', { name: 'Düzenle' }))
 
     const outcome = await screen.findByRole('combobox', { name: 'Birincil kazanım' })
     const save = screen.getByRole('button', { name: 'Taslak Oluştur' })
@@ -159,7 +159,7 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
     }))
     const user = userEvent.setup()
     render(<AdminQuestionsPage />)
-    await user.click(await screen.findByRole('button', { name: 'Duzenle' }))
+    await user.click(await screen.findByRole('button', { name: 'Düzenle' }))
     const save = await screen.findByRole('button', { name: 'Kazanım Bekleyen Taslağı Kaydet' })
     expect(save).toBeEnabled()
     await user.click(save)
@@ -202,7 +202,7 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
     }))
     const user = userEvent.setup()
     render(<AdminQuestionsPage />)
-    await user.click(await screen.findByRole('button', { name: 'Duzenle' }))
+    await user.click(await screen.findByRole('button', { name: 'Düzenle' }))
     const categoryInput = screen.getByRole('textbox', { name: 'Kategori' })
     await user.clear(categoryInput)
     await user.type(categoryInput, 'kimya')
@@ -224,7 +224,7 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
     vi.stubGlobal('fetch', multiOutcomeFetch(posted))
     const user = userEvent.setup()
     render(<AdminQuestionsPage />)
-    await user.click(await screen.findByRole('button', { name: 'Duzenle' }))
+    await user.click(await screen.findByRole('button', { name: 'Düzenle' }))
     const outcomeSelect = await screen.findByRole('combobox', { name: 'Birincil kazanım' })
     await screen.findByRole('option', { name: /FEN-2/ })
     await user.selectOptions(outcomeSelect, SECOND_OUTCOME_ID)
@@ -244,7 +244,7 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
     vi.stubGlobal('fetch', multiOutcomeFetch(posted))
     const user = userEvent.setup()
     render(<AdminQuestionsPage />)
-    await user.click(await screen.findByRole('button', { name: 'Duzenle' }))
+    await user.click(await screen.findByRole('button', { name: 'Düzenle' }))
     const outcomeSelect = await screen.findByRole('combobox', { name: 'Birincil kazanım' })
     await screen.findByRole('option', { name: /FEN-3/ })
     await user.selectOptions(outcomeSelect, NEW_OUTCOME_ID)
@@ -281,14 +281,14 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
     }))
     const user = userEvent.setup()
     render(<AdminQuestionsPage />)
-    await user.click(await screen.findByRole('button', { name: 'Duzenle' }))
+    await user.click(await screen.findByRole('button', { name: 'Düzenle' }))
 
     expect(screen.getByLabelText('Kaynak başlığı')).toHaveValue('Legacy kaynak')
     expect(screen.getByLabelText('Kaynak URL')).toHaveValue('https://example.com/old')
     expect(screen.getByLabelText('Lisans kodu')).toHaveValue('INTERNAL')
     expect(screen.getByLabelText('Lisans URL')).toHaveValue('https://example.com/old-license')
     expect(screen.getByLabelText('Atıf')).toHaveValue('Eski atıf')
-    expect(screen.getByLabelText('Provenance referansı')).toHaveValue('legacy:question-1')
+    expect(screen.getByLabelText('Kaynak izleme referansı')).toHaveValue('legacy:question-1')
 
     const acknowledgement = screen.getByRole('checkbox', { name: /kaynak ve kullanım hakkını doğruladım/i })
     await user.click(acknowledgement)
@@ -301,8 +301,8 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
     await user.type(screen.getByLabelText('Lisans URL'), 'https://osym.gov.tr/kullanim')
     await user.clear(screen.getByLabelText('Atıf'))
     await user.type(screen.getByLabelText('Atıf'), 'ÖSYM resmî sınav dokümanı')
-    await user.clear(screen.getByLabelText('Provenance referansı'))
-    await user.type(screen.getByLabelText('Provenance referansı'), 'osym:tyt:2026:sosyal:q1')
+    await user.clear(screen.getByLabelText('Kaynak izleme referansı'))
+    await user.type(screen.getByLabelText('Kaynak izleme referansı'), 'osym:tyt:2026:sosyal:q1')
     await user.click(acknowledgement)
 
     await user.click(await screen.findByRole('button', { name: 'Kazanım Bekleyen Taslağı Kaydet' }))
@@ -315,5 +315,26 @@ describe('AdminQuestionsPage legacy outcome repair', () => {
       },
       summary: expect.stringContaining('Kaynak ve kullanım hakkı insan tarafından doğrulandı.'),
     } })
+  })
+})
+
+describe('AdminQuestionsPage edit dialog accessibility', () => {
+  it('traps keyboard focus and returns it to the edit action on Escape', async () => {
+    vi.stubGlobal('fetch', multiOutcomeFetch([]))
+    const user = userEvent.setup()
+    render(<AdminQuestionsPage />)
+    const trigger = await screen.findByRole('button', { name: 'Düzenle' })
+    await user.click(trigger)
+    const dialog = screen.getByRole('dialog', { name: 'Soru Düzenle' })
+    const close = within(dialog).getByRole('button', { name: 'Düzenleme penceresini kapat' })
+    expect(close).toHaveFocus()
+    await user.keyboard('{Shift>}{Tab}{/Shift}')
+    const focusable = dialog.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')
+    expect(focusable[focusable.length - 1]).toHaveFocus()
+    await user.keyboard('{Tab}')
+    expect(close).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Soru Düzenle' })).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 })

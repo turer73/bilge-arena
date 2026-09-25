@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { CircleAlert } from 'lucide-react'
 import { findingLabel } from '@/lib/question-audit/presentation'
+import { GAMES, getCategoryLabel, type GameSlug } from '@/lib/constants/games'
 import { AdminRecordId } from './admin-record-id'
 import { FiveModelReviewReport } from './five-model-review-report'
 
@@ -117,6 +119,7 @@ export function ValidationVerdictPanel() {
     }
   }, [open])
 
+  const policyNumber = policyVersion.match(/@(\d+)$/)?.[1]
   const selectedItem = items.find((item) => item.questionId === open)
 
   return (
@@ -153,7 +156,7 @@ export function ValidationVerdictPanel() {
 
         <span className="text-xs text-[var(--text-sub)]">
           {loading ? 'Yükleniyor…' : items.length > 0 ? `${offset + 1}-${offset + items.length} / ${total} soru` : `${total} soru`}
-          {policyVersion && ` · ${policyVersion}`}
+          {policyVersion && <span title={policyVersion}> · {policyNumber ? `Denetim kuralı sürüm ${policyNumber}` : 'Denetim kuralı'}</span>}
         </span>
       </div>
 
@@ -171,8 +174,8 @@ export function ValidationVerdictPanel() {
             {items.map((item) => (
             <li key={item.questionId} className="rounded-lg border border-[var(--border)] p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-bold">{item.category ?? '—'}</span>
-                <span className="text-[var(--text-sub)]">{item.game ?? '—'}</span>
+                <span className="font-bold">{item.category ? getCategoryLabel(item.category) : '—'}</span>
+                <span className="text-[var(--text-sub)]">{item.game ? GAMES[item.game as GameSlug]?.name ?? item.game : '—'}</span>
                 {item.isActive === false && (
                   <span className="rounded-full border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-2 py-0.5 text-[var(--urgency)]">pasif</span>
                 )}
@@ -180,7 +183,7 @@ export function ValidationVerdictPanel() {
                   <span className="text-[var(--text-sub)]">mutabakat %{Math.round(item.blindAgreementRatio * 100)}</span>
                 )}
                 {item.findingCodes.map((code, i) => (
-                  <span key={`${code}-${i}`} className="rounded-lg border border-[var(--border)] px-2 py-1"><span>{findingLabel(code)}</span><code className="ml-2 text-xs text-[var(--text-sub)]">{code}</code></span>
+                  <span key={`${code}-${i}`} title={`Bulgu kodu: ${code}`} className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-2 py-1"><CircleAlert aria-hidden="true" className="h-4 w-4 text-[var(--reward)]" /><span>{findingLabel(code)}</span></span>
                 ))}
                 <button
                   type="button"
@@ -229,7 +232,7 @@ export function ValidationVerdictPanel() {
             <div className="mt-4 space-y-3">
               {selectedItem.findings.map((finding, index) => (
                 <div key={`${finding.code}-${index}`} className="rounded-lg bg-[var(--surface)] p-3">
-                  <p className="text-sm font-bold">{findingLabel(finding.code)}</p>
+                  <p className="flex items-center gap-2 text-sm font-bold"><CircleAlert aria-hidden="true" className="h-4 w-4 text-[var(--reward)]" />{findingLabel(finding.code)}</p>
                   <code className="text-xs text-[var(--text-sub)]">{finding.code}</code>
                   <p className="mt-2 text-sm text-[var(--text-sub)]">{finding.evidence}</p>
                 </div>
