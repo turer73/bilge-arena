@@ -24,6 +24,8 @@ export interface TytSocialExamPolicyState {
   policyVersion: string | null
   selectionEffectiveAt: string | null
   variantCode: TytSocialVariant | null
+  /** Stable client invalidation key for artifacts created under this choice. */
+  selectionEpoch: string | null
   /** Saves the selected range. A failed/uncertain save keeps its request id for retry. */
   saveSelection: (variantCode: TytSocialVariant) => Promise<boolean>
   retry: () => void
@@ -57,7 +59,8 @@ function isAbortError(error: unknown): boolean {
  * The server remains the source of truth. Until a valid response arrives, this
  * hook exposes no usable selection (fail-closed), and ineligible contexts never
  * issue a request. A request id is retained after an uncertain PUT so a retry
- * is an idempotent replay of the same user action.
+ * is an idempotent replay of the same user action; until an authoritative GET
+ * succeeds, the choice remains fail-closed because the PUT may have committed.
  */
 export function useTytSocialExamPolicy(
   input: HookInput = {},
@@ -113,6 +116,7 @@ export function useTytSocialExamPolicy(
     const controller = new AbortController()
     requestRef.current = controller
     setStatus('loading')
+    setSaving(false)
     setPolicyVersion(null)
     setSelectionEffectiveAt(null)
     setVariantCode(null)
@@ -193,36 +197,54 @@ export function useTytSocialExamPolicy(
       setVariantCode(parsed.data.variant)
       pendingRequestRef.current = null
       return true
-    } catch (caught: unknown) {
+    } catch {
       if (operationSequence !== sequenceRef.current) return false
-      if (!isAbortError(caught)) {
-        // A failed PUT does not invalidate a previously read server choice;
-        // retain that usable state so the same request id can be retried.
-        if (status !== 'active' && status !== 'setup_required') setStatus('error')
-        setError('TYT Sosyal cevaplama düzeni kaydedilemedi.')
-      }
+      // A failed/uncertain PUT may already have committed server-side. Do
+      // not keep the previous choice usable, including an AbortError: this
+      // PUT has no client abort controller and the server may have committed
+      // before the response was interrupted. Fail closed until the
+      // authoritative GET retry resolves. The request id remains retained
+      // so the same user intent can still be replayed idempotently.
+      setStatus('error')
+      setPolicyVersion(null)
+      setSelectionEffectiveAt(null)
+      setVariantCode(null)
+      setError('TYT Sosyal cevaplama düzeni kaydedilemedi.')
       return false
     } finally {
       if (operationSequence === sequenceRef.current) setSaving(false)
     }
-  }, [eligible, saving, status, settledScope, currentScope])
+  }, [eligible, saving, settledScope, currentScope])
 
   const retry = useCallback(() => setRetryNonce((value) => value + 1), [])
 
   // A parent may pass this state to a plan entry in the same render as an
   // account/exam change. Effects have not run yet: never expose old eligibility.
   const scopeReady = settledScope === currentScope
-  const visibleStatus = !eligible ? 'inactive' : scopeReady ? status : 'loading'
+  // While a PUT is in flight the previous active choice may already be stale
+  // (the server can commit before the response is observed). All consumers
+  // therefore see a loading gate until the write settles authoritatively.
+  const visibleStatus = !eligible ? 'inactive' : scopeReady && !saving ? status : 'loading'
+  const visiblePolicyVersion = scopeReady ? policyVersion : null
+  const visibleSelectionEffectiveAt = scopeReady ? selectionEffectiveAt : null
+  const visibleVariantCode = scopeReady ? variantCode : null
+  const selectionEpoch = visibleStatus === 'active'
+    && visiblePolicyVersion
+    && visibleSelectionEffectiveAt
+    && visibleVariantCode
+    ? `${visiblePolicyVersion}:${visibleSelectionEffectiveAt}:${visibleVariantCode}`
+    : null
   return useMemo(() => ({
     eligible,
     status: visibleStatus,
     loading: visibleStatus === 'loading',
     saving: scopeReady && saving,
     error: scopeReady ? error : null,
-    policyVersion: scopeReady ? policyVersion : null,
-    selectionEffectiveAt: scopeReady ? selectionEffectiveAt : null,
-    variantCode: scopeReady ? variantCode : null,
+    policyVersion: visiblePolicyVersion,
+    selectionEffectiveAt: visibleSelectionEffectiveAt,
+    variantCode: visibleVariantCode,
+    selectionEpoch,
     saveSelection,
     retry,
-  }), [eligible, visibleStatus, scopeReady, saving, error, policyVersion, selectionEffectiveAt, variantCode, saveSelection, retry])
+  }), [eligible, visibleStatus, scopeReady, saving, error, visiblePolicyVersion, visibleSelectionEffectiveAt, visibleVariantCode, selectionEpoch, saveSelection, retry])
 }

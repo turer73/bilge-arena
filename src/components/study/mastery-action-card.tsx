@@ -12,6 +12,7 @@ interface MasteryActionCardProps {
   game: GameSlug
   userId?: string | null
   examRef?: string | null
+  policyEpoch?: string | null
   diagnosticPresentation?: 'direct' | 'explained'
 }
 
@@ -23,6 +24,7 @@ export function MasteryActionCard({
   game,
   userId,
   examRef,
+  policyEpoch,
   diagnosticPresentation = 'direct',
 }: MasteryActionCardProps) {
   const router = useRouter()
@@ -36,7 +38,7 @@ export function MasteryActionCard({
     loading,
     error,
     fetchMastery,
-  } = useMasteryMap(game, userId, examRef)
+  } = useMasteryMap(game, userId, examRef, policyEpoch)
 
   const freePracticeParams = new URLSearchParams()
   if (game !== 'wordquest' && examRef) freePracticeParams.set('exam_ref', examRef)

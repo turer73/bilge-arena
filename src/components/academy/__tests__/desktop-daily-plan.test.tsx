@@ -73,8 +73,8 @@ describe('Desktop daily plan summary', () => {
     expect(push).toHaveBeenCalledWith('/arena/matematik?start=today-plan&exam_ref=TYT')
   })
 
-  it('shrinks completed plans and counts only questions belonging to this plan', async () => {
-    fetchMock.mockResolvedValue({ok:true,json:async()=>({...plan(12,12),completedIds:[...plan(12,12).completedIds,'unrelated']})})
+  it('shrinks completed plans and counts all questions belonging to this plan', async () => {
+    fetchMock.mockResolvedValue({ok:true,json:async()=>plan(12,12)})
     render(<DesktopDailyPlan {...props} />)
     const title=await screen.findByRole('heading',{name:'Bugünkü planını tamamladın'})
     expect(title.closest('section')).toHaveAttribute('data-complete','true')
@@ -88,6 +88,14 @@ describe('Desktop daily plan summary', () => {
     expect(trophy).toHaveAttribute('src','/academy/daily-plan-trophy-v1.png')
     expect(trophy).toHaveAttribute('sizes','56px')
     expect(trophy?.parentElement?.querySelector('svg')).not.toBeNull()
+  })
+
+  it('does not claim completion when the plan response includes an unrelated question', async () => {
+    fetchMock.mockResolvedValue({ok:true,json:async()=>({...plan(12,12),completedIds:[...plan(12,12).completedIds,'unrelated']})})
+    render(<DesktopDailyPlan {...props} />)
+    await screen.findByRole('heading',{name:'Planına şu an ulaşılamıyor'})
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(screen.queryByText('Bugünkü planını tamamladın')).not.toBeInTheDocument()
   })
 
   it('shows partial progress only in the ring with matching accessible values', async () => {

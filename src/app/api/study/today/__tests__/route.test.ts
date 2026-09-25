@@ -6,7 +6,6 @@ const {
   mockGetUser,
   mockRpc,
   mockFetchDue,
-  mockFilterTytSocialQuestionIds,
   mockIssueVerifiedAttempt,
   tableMocks,
 } = vi.hoisted(() => {
@@ -60,7 +59,6 @@ const {
     mockGetUser: vi.fn(),
     mockRpc: vi.fn(),
     mockFetchDue: vi.fn(),
-    mockFilterTytSocialQuestionIds: vi.fn(),
     mockIssueVerifiedAttempt: vi.fn(),
     tableMocks: {
       profiles: makeTableMock({ data: { exam_type: null }, error: null }),
@@ -94,8 +92,8 @@ vi.mock('@/lib/utils/rate-limit', () => ({
 }))
 
 vi.mock('@/lib/review/due-questions', () => ({ fetchDueQuestions: mockFetchDue }))
-vi.mock('@/lib/verified-attempts', () => ({
-  filterTytSocialQuestionIds: mockFilterTytSocialQuestionIds,
+vi.mock('@/lib/verified-attempts', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/verified-attempts')>(),
   issueVerifiedAttempt: mockIssueVerifiedAttempt,
   toPublicVerifiedQuestions: (snapshots: unknown[]) => snapshots,
 }))
@@ -236,6 +234,8 @@ function socialContext(overrides: Record<string, unknown> = {}) {
 function installScopedSocialFixture(options: {
   contextResult?: { data: unknown; error: unknown }
   stateResult?: { data: unknown; error: unknown }
+  createError?: { code: string; message: string }
+  createReject?: boolean
 } = {}) {
   vi.stubEnv('NEXT_PUBLIC_TYT_SOCIAL_V2_ENABLED', 'true')
   vi.stubEnv('TYT_SOCIAL_V2_LEARNER_ENABLED', 'true')
@@ -253,7 +253,6 @@ function installScopedSocialFixture(options: {
     ...philosophyQuestions.map(question => ({ question_id: question.id, outcome_id: SOCIAL_PHILOSOPHY_OUTCOME })),
     { question_id: religionQuestion.id, outcome_id: SOCIAL_RELIGION_OUTCOME },
   ] })
-  mockFilterTytSocialQuestionIds.mockResolvedValue(philosophyQuestions.map(question => question.id))
   const defaultState = makeMasteryState(SOCIAL_PHILOSOPHY_OUTCOME, {
     correct_attempts: 2, weighted_earned: '2', delayed_correct: 0,
     difficulty_weighted_earned: '6',
@@ -267,13 +266,20 @@ function installScopedSocialFixture(options: {
       error: null,
     }
     if (name === 'curriculum_scope_integrity') return cleanScopeIntegrity()
-    if (name === 'resolve_tyt_social_mastery_read_context') {
-      return options.contextResult ?? { data: socialContext(), error: null }
+    if (name === 'read_tyt_social_learning_snapshot') {
+      const context = options.contextResult ?? { data: socialContext(), error: null }
+      const states = options.stateResult ?? { data: [defaultState], error: null }
+      if (context.error) return context
+      if (states.error) return states
+      return {
+        data: { context: context.data, states: states.data,
+          allowedQuestionIds: philosophyQuestions.map(question => question.id) },
+        error: null,
+      }
     }
-    if (name === 'read_tyt_social_mastery_outcome_state') {
-      return options.stateResult ?? { data: [defaultState], error: null }
-    }
-    if (name !== 'create_tyt_social_daily_plan_v2') throw new Error(`unexpected RPC: ${name}`)
+    if (name !== 'create_tyt_social_daily_plan_for_epoch') throw new Error(`unexpected RPC: ${name}`)
+    if (options.createReject) throw new Error('private connection detail')
+    if (options.createError) return { data: null, error: options.createError }
     const items = args.p_items as Array<Record<string, unknown>>
     return {
       data: {
@@ -292,7 +298,7 @@ function installScopedSocialFixture(options: {
 
 function assertNoPlanIssuance() {
   expect(mockRpc.mock.calls.some(([name]) => (
-    name === 'create_daily_plan_v2' || name === 'create_tyt_social_daily_plan_v2'
+    name === 'create_daily_plan_v2' || name === 'create_tyt_social_daily_plan_for_epoch'
   ))).toBe(false)
   expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
 }
@@ -302,11 +308,6 @@ beforeEach(() => {
   for (const mock of Object.values(tableMocks)) mock.reset()
   mockGetUser.mockResolvedValue({ data: { user: { id: U1 } } })
   mockFetchDue.mockResolvedValue([])
-  mockFilterTytSocialQuestionIds.mockImplementation(async (
-    _admin: unknown,
-    _userId: string,
-    ids: string[],
-  ) => ids)
   mockIssueVerifiedAttempt.mockReset()
   mockIssueVerifiedAttempt.mockImplementation(async (_admin: unknown, input: { game: string; questionIds: string[] }) => ({
     attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -572,7 +573,6 @@ describe('GET /api/study/today', () => {
     const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT' }) as never)
 
     expect(response.status).toBe(200)
-    expect(mockFilterTytSocialQuestionIds).not.toHaveBeenCalled()
     expect(mockRpc).not.toHaveBeenCalled()
     expect(tableMocks.user_outcome_state.calls).toHaveLength(0)
     expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
@@ -600,7 +600,11 @@ describe('GET /api/study/today', () => {
     tableMocks.questions.push({ data: questions })
     mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
       if (name === 'resolve_released_curriculum_scope') return { data: null, error: null }
-      if (name !== 'create_tyt_social_daily_plan_v2') throw new Error(`unexpected RPC: ${name}`)
+      if (name === 'read_tyt_social_learning_snapshot') return {
+        data: { context: socialContext(), states: [], allowedQuestionIds: questions.map(question => question.id) },
+        error: null,
+      }
+      if (name !== 'create_tyt_social_daily_plan_for_epoch') throw new Error(`unexpected RPC: ${name}`)
       const items = args.p_items as Array<Record<string, unknown>>
       return {
         data: {
@@ -625,11 +629,14 @@ describe('GET /api/study/today', () => {
     const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT' }) as never)
 
     expect(response.status).toBe(200)
-    expect(mockFilterTytSocialQuestionIds).toHaveBeenCalledWith(
-      expect.anything(), U1, questions.map(question => question.id),
-    )
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_learning_snapshot', {
+      p_user_id: U1, p_question_ids: questions.map(question => question.id),
+    })
     expect(mockRpc.mock.calls.some(([name]) => name === 'create_daily_plan_v2')).toBe(false)
-    expect(mockRpc.mock.calls.some(([name]) => name === 'create_tyt_social_daily_plan_v2')).toBe(true)
+    expect(mockRpc).toHaveBeenCalledWith('create_tyt_social_daily_plan_for_epoch', expect.objectContaining({
+      p_expected_policy_version: 'tyt-social-2026-v1',
+      p_expected_selection_event_id: SOCIAL_SELECTION_EVENT,
+    }))
     expect(mockIssueVerifiedAttempt).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ game: 'sosyal', examRef: 'TYT', sourcePlanId: uid(806) }),
@@ -1005,11 +1012,15 @@ describe('GET /api/study/today ortak V2 kanit siniri', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
-    expect(mockRpc).toHaveBeenCalledWith('resolve_tyt_social_mastery_read_context', { p_user_id: U1 })
-    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', { p_user_id: U1 })
+    expect(mockRpc.mock.calls.filter(([name]) => name === 'read_tyt_social_learning_snapshot')).toHaveLength(1)
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_learning_snapshot', {
+      p_user_id: U1, p_question_ids: [...philosophyQuestions.map(question => question.id), religionQuestion.id],
+    })
     expect(tableMocks.user_outcome_state.calls).toHaveLength(0)
-    const createCall = mockRpc.mock.calls.find(([name]) => name === 'create_tyt_social_daily_plan_v2')
+    const createCall = mockRpc.mock.calls.find(([name]) => name === 'create_tyt_social_daily_plan_for_epoch')
     expect(createCall?.[1].p_user_id).toBe(U1)
+    expect(createCall?.[1].p_expected_policy_version).toBe('tyt-social-2026-v1')
+    expect(createCall?.[1].p_expected_selection_event_id).toBe(SOCIAL_SELECTION_EVENT)
     const items = createCall?.[1].p_items as Array<Record<string, unknown>>
     expect(items).toHaveLength(3)
     expect(items.every(item => item.source_type === 'weak_outcome' && item.source_ref === 'SOS-FEL-PRIVATE-REF')).toBe(true)
@@ -1037,12 +1048,56 @@ describe('GET /api/study/today ortak V2 kanit siniri', () => {
 
     const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT' }) as never)
 
-    expect(response.status).toBe(503)
+    expect(response.status).toBe(500)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
     expect(await response.json()).toEqual({ error: 'Plan olusturulamadi' })
     expect(tableMocks.user_outcome_state.calls).toHaveLength(0)
     expect(mockRpc.mock.calls.some(([name]) => name === 'read_tyt_social_mastery_outcome_state')).toBe(false)
     assertNoPlanIssuance()
+  })
+
+  it.each([
+    { error: { code: '40001', message: 'TYT Social selection epoch changed' }, status: 409 },
+    { error: { code: '40001', message: 'could not serialize private detail' }, status: 500 },
+    { error: { code: 'PGRST202', message: 'private missing function' }, status: 500 },
+  ])('Social writer $error.code durumunda veriyi gizler ve yeniden yazmaz', async ({ error, status }) => {
+    installScopedSocialFixture({ createError: error })
+    const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(status)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(await response.json()).toEqual({ error: status === 409
+      ? 'TYT Sosyal cevaplama düzeni değişti. Yeniden deneyin.' : 'Plan olusturulamadi' })
+    expect(mockRpc.mock.calls.filter(([name]) => name === 'read_tyt_social_learning_snapshot')).toHaveLength(1)
+    expect(mockRpc.mock.calls.filter(([name]) => name === 'create_tyt_social_daily_plan_for_epoch')).toHaveLength(1)
+    expect(mockRpc.mock.calls.some(([name]) => name === 'create_daily_plan_v2' || name === 'create_tyt_social_daily_plan_v2')).toBe(false)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('Social writer transport hatasini no-store 500 ile kapatir ve tekrar denemez', async () => {
+    installScopedSocialFixture({ createReject: true })
+    const response = await GET(makeGetRequest({ game: 'sosyal', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(500)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(await response.json()).toEqual({ error: 'Plan olusturulamadi' })
+    expect(mockRpc.mock.calls.filter(([name]) => name === 'create_tyt_social_daily_plan_for_epoch')).toHaveLength(1)
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
+  })
+
+  it('genel plan serialization hatasini Social tercih degisikligi olarak etiketlemez', async () => {
+    tableMocks.questions.push({ data: [makeQuestionRow(uid(981))] })
+    installCreateRpcSuccess()
+    const original = mockRpc.getMockImplementation()!
+    mockRpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+      if (name === 'create_daily_plan_v2') return {
+        data: null, error: { code: '40001', message: 'TYT Social selection epoch changed' },
+      }
+      return original(name, args)
+    })
+    const response = await GET(makeGetRequest({ game: 'matematik', exam_ref: 'TYT' }) as never)
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Plan olusturulamadi' })
+    expect(mockRpc).toHaveBeenCalledWith('create_daily_plan_v2', expect.anything())
+    expect(mockIssueVerifiedAttempt).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -1063,7 +1118,7 @@ describe('GET /api/study/today ortak V2 kanit siniri', () => {
     expect(response.status).toBe(500)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
     expect(await response.json()).toEqual({ error: 'Plan olusturulamadi' })
-    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_mastery_outcome_state', { p_user_id: U1 })
+    expect(mockRpc).toHaveBeenCalledWith('read_tyt_social_learning_snapshot', expect.objectContaining({ p_user_id: U1 }))
     expect(tableMocks.user_outcome_state.calls).toHaveLength(0)
     assertNoPlanIssuance()
   })

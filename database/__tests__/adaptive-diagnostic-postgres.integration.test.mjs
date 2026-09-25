@@ -1,4 +1,4 @@
-// Opt-in disposable PostgreSQL coverage for 086 -> 096 -> 098 -> 140 -> 178 -> 184 -> 193.
+// Opt-in disposable PostgreSQL coverage for 086 -> 096 -> 098 -> 140 -> 178 -> 184 -> 193 -> 213.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import pg from 'pg'
 import { readFileSync } from 'node:fs'
@@ -23,6 +23,7 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
   const other = randomUUID()
   const expiringUser = randomUUID()
   const migrationLegacyUser = randomUUID()
+  const migrationReplayUser = randomUUID()
   const v2ExpiryUser = randomUUID()
   const registryReplayUser = randomUUID()
   const registryStartUser = randomUUID()
@@ -35,9 +36,13 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
   }]))
   const mainSession = randomUUID()
   const migrationLegacySession = randomUUID()
+  const migrationReplaySession = randomUUID()
   const v2EvidenceSession = randomUUID()
   let legacyMathSeedCountBeforeV3 = 0
   let mathMappingDistributionBeforeV3 = []
+  let v2ReplayBefore
+  let v2ReplayAfter
+  let snapshotDefinitionV3
 
   beforeAll(async () => {
     client = new Client({ connectionString: url })
@@ -105,9 +110,9 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
         answered_at timestamptz NOT NULL DEFAULT clock_timestamp()
       );
     `)
-    await client.query('INSERT INTO public.profiles(id) VALUES($1),($2),($3),($4),($5),($6),($7),($8)', [
+    await client.query('INSERT INTO public.profiles(id) VALUES($1),($2),($3),($4),($5),($6),($7),($8),($9)', [
       user, other, expiringUser, migrationLegacyUser, v2ExpiryUser,
-      registryReplayUser, registryStartUser, registryLockUser,
+      registryReplayUser, registryStartUser, registryLockUser, migrationReplayUser,
     ])
     const values = []
     const parameters = []
@@ -159,6 +164,23 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
       [migrationLegacyUser, migrationLegacySession, questions.sayilar.base],
     )
     await client.query(read('140_adaptive_diagnostic_evidence_v2.sql'))
+    await client.query('SELECT public.start_adaptive_diagnostic($1,$2,$3)', [
+      migrationReplayUser, migrationReplaySession, questions.sayilar.base,
+    ])
+    await client.query(
+      'SELECT public.record_adaptive_diagnostic_answer_v2($1,$2,$3,1::smallint,1200,$4,$5)',
+      [migrationReplayUser, migrationReplaySession, questions.sayilar.base, randomUUID(), questions.denklemler.base],
+    )
+    const replaySnapshot = async () => (await client.query(
+      'SELECT to_jsonb(session) AS value FROM public.adaptive_diagnostic_sessions session WHERE id=$1',
+      [migrationReplaySession],
+    )).rows[0].value
+    v2ReplayBefore = await replaySnapshot()
+    // Exercise 140 replay in its historical phase, before 193 replaces its
+    // Math-only snapshot/get/record functions. Replaying 140 inside a later
+    // test would silently downgrade the real v3 boundary for the whole suite.
+    await client.query(read('140_adaptive_diagnostic_evidence_v2.sql'))
+    v2ReplayAfter = await replaySnapshot()
     await client.query(read('178_curriculum_scope_release_registry.sql'))
     // Keep the real pre-193 state: migration 086 predates mapping provenance,
     // so its deterministic `sayilar` seed is still manual here. Migration 193
@@ -197,6 +219,9 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
       ORDER BY outcome.category,mapping.mapping_source`)).rows
     await client.query(read('184_adaptive_diagnostic_registry_write_gate.sql'))
     await client.query(read('193_registry_driven_adaptive_diagnostic_v3.sql'))
+    snapshotDefinitionV3 = (await client.query(
+      "SELECT pg_get_functiondef('public.tg_adaptive_diagnostic_question_snapshot()'::regprocedure) AS definition",
+    )).rows[0].definition
   })
 
   afterAll(async () => {
@@ -244,6 +269,73 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
       'SELECT public.record_adaptive_diagnostic_answer_v2($1,$2,$3,$4,$5,$6,$7) result',
       [userId, sessionId, questionId, selectedOption, responseTimeMs, requestId, nextQuestionId],
     )).rows[0].result
+  }
+
+  async function seedCoverageScope({ userId, game, displayExamRef, questionExamRef, taxonomyVersion,
+    blueprintVersion, questionCount, scopeCategories, questionIds }) {
+    const courseId = randomUUID()
+    const prefix = `test-coverage-${game}-v1`
+    await client.query('INSERT INTO public.profiles(id) VALUES($1)', [userId])
+    await client.query(`INSERT INTO public.curriculum_nodes(
+      id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+    ) VALUES($1,$2,$3,$4,$5,'course',NULL,NULL,$4,1,true)`, [
+      courseId, `${prefix}:course`, taxonomyVersion, game, displayExamRef,
+    ])
+    for (const [index, category] of scopeCategories.entries()) {
+      const unitId = randomUUID()
+      const topicId = randomUUID()
+      const nodeId = randomUUID()
+      const outcomeId = randomUUID()
+      for (const [id, type, parentId, nodeCategory] of [
+        [unitId, 'unit', courseId, null],
+        [topicId, 'topic', unitId, category],
+        [nodeId, 'outcome', topicId, category],
+      ]) {
+        await client.query(`INSERT INTO public.curriculum_nodes(
+          id,code,taxonomy_version,game,exam_ref,node_type,parent_id,category,title,sort_order,is_active
+        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true)`, [
+          id, `${prefix}:${type}:${category}`, taxonomyVersion, game, displayExamRef,
+          type, parentId, nodeCategory, category, index + 1,
+        ])
+      }
+      await client.query(`INSERT INTO public.curriculum_outcomes(
+        id,code,game,category,title,exam_ref,sort_order,is_active,node_id,taxonomy_version
+      ) VALUES($1,$2,$3,$4,$4,$5,$6,true,$7,$8)`, [
+        outcomeId, `TST-COV-${game.toUpperCase()}-${index + 1}`,
+        game, category, displayExamRef, index + 1, nodeId, taxonomyVersion,
+      ])
+      for (const [questionIndex, questionId] of questionIds[index].entries()) {
+        const revisionId = randomUUID()
+        const content = JSON.stringify({ question: `${category} ${questionIndex + 1}`, options: ['A', 'B', 'C', 'D'], answer: 1 })
+        await client.query(`INSERT INTO public.questions(
+          id,game,category,difficulty,exam_ref,is_active
+        ) VALUES($1,$2,$3,$4,$5,true)`, [questionId, game, category, questionIndex + 2, questionExamRef])
+        await client.query(`INSERT INTO public.question_content_revisions(
+          id,question_id,status,game,category,difficulty,exam_ref,content,content_sha256
+        ) VALUES($1,$2,'published',$3,$4,$5,$6,$7::jsonb,
+          encode(extensions.digest(($7::jsonb)::text,'sha256'),'hex'))`, [
+          revisionId, questionId, game, category, questionIndex + 2, displayExamRef, content,
+        ])
+        await client.query('UPDATE public.questions SET published_revision_id=$1,content=$2::jsonb WHERE id=$3', [
+          revisionId, content, questionId,
+        ])
+        await client.query(`INSERT INTO public.question_outcomes(
+          question_id,outcome_id,weight,is_primary,mapping_source
+        ) VALUES($1,$2,1,true,'taxonomy_auto')`, [questionId, outcomeId])
+      }
+    }
+    // The registry remains draft while fixtures are built, avoiding the
+    // released-scope automapper racing these explicit reviewed mappings.
+    await client.query(`UPDATE public.curriculum_scope_releases
+      SET release_status='released',diagnostic_enabled=true,released_at=clock_timestamp()
+      WHERE game=$1 AND display_exam_ref=$2`, [game, displayExamRef])
+    await client.query(`INSERT INTO public.adaptive_diagnostic_blueprints(
+      blueprint_version,game,display_exam_ref,question_exam_ref,taxonomy_version,
+      policy_version,question_count,outcome_count,max_per_outcome,capability_status,released_at
+    ) VALUES($1,$2,$3,$4,$5,'adaptive-screening-v1',$6,$7,2,'released',clock_timestamp())`, [
+      blueprintVersion, game, displayExamRef, questionExamRef, taxonomyVersion,
+      questionCount, scopeCategories.length,
+    ])
   }
 
   it('normalizes only the bounded 086 mathematics seed and rejects later manual provenance at runtime', async () => {
@@ -613,7 +705,15 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
       [migrationLegacySession],
     )).rows[0]).toEqual({ status:'abandoned', current_question_id:null, current_question_revision_id:null })
 
-    await client.query(read('140_adaptive_diagnostic_evidence_v2.sql'))
+    expect(v2ReplayBefore).toMatchObject({
+      status: 'active', current_question_id: questions.denklemler.base, answered_count: 1,
+    })
+    expect(v2ReplayBefore.current_question_revision_id).not.toBeNull()
+    expect(v2ReplayAfter).toEqual(v2ReplayBefore)
+    expect((await client.query(
+      "SELECT pg_get_functiondef('public.tg_adaptive_diagnostic_question_snapshot()'::regprocedure) AS definition",
+    )).rows[0].definition).toBe(snapshotDefinitionV3)
+    expect(snapshotDefinitionV3).toContain('public.resolve_adaptive_diagnostic_question_v3(')
     expect((await client.query(
       'SELECT status,current_question_id,current_question_revision_id IS NOT NULL AS revision_bound FROM public.adaptive_diagnostic_sessions WHERE id=$1',
       [v2EvidenceSession],
@@ -919,5 +1019,354 @@ describePg('adaptive diagnostic real PostgreSQL', () => {
         VALUES($1,$2,'matematik','TYT','ba-tyt-math-v1','initial','active',$3,clock_timestamp()+interval '1 hour')`,
       [randomUUID(), other, questions.sayilar.base])).rejects.toMatchObject({ code: '42501' })
     })
+  })
+
+  it.each([
+    ['a different legacy expression', 'legacy constraint drift', `
+      ALTER TABLE public.adaptive_diagnostic_sessions
+        DROP CONSTRAINT adaptive_diagnostic_sessions_check,
+        ADD CONSTRAINT adaptive_diagnostic_sessions_check CHECK (covered_outcomes>=0);
+    `],
+    ['a missing dynamic replacement', 'required constraint missing', `
+      ALTER TABLE public.adaptive_diagnostic_sessions
+        DROP CONSTRAINT adaptive_diagnostic_session_dynamic_counter_check;
+    `],
+    ['a weakened dynamic replacement', 'required constraint drift', `
+      ALTER TABLE public.adaptive_diagnostic_sessions
+        DROP CONSTRAINT adaptive_diagnostic_session_dynamic_counter_check,
+        ADD CONSTRAINT adaptive_diagnostic_session_dynamic_counter_check CHECK (covered_outcomes>=0);
+    `],
+    ['an unvalidated dynamic replacement', 'required constraint drift', `
+      ALTER TABLE public.adaptive_diagnostic_sessions
+        DROP CONSTRAINT adaptive_diagnostic_session_dynamic_counter_check,
+        ADD CONSTRAINT adaptive_diagnostic_session_dynamic_counter_check CHECK (
+          question_count BETWEEN 1 AND 50 AND outcome_count BETWEEN 1 AND 50
+          AND max_per_outcome BETWEEN 1 AND 10 AND question_count>=outcome_count
+          AND question_count<=outcome_count*max_per_outcome
+          AND answered_count BETWEEN 0 AND question_count
+          AND covered_outcomes BETWEEN 0 AND outcome_count AND covered_outcomes<=answered_count
+        ) NOT VALID;
+    `],
+    ['a reconstructed legacy constraint', 'renamed legacy constraint drift', `
+      ALTER TABLE public.adaptive_diagnostic_sessions
+        DROP CONSTRAINT adaptive_diagnostic_sessions_check,
+        ADD CONSTRAINT diagnostic_legacy_coverage_renamed CHECK (
+          covered_outcomes>=0 AND covered_outcomes<=6 AND covered_outcomes<=answered_count
+        );
+    `],
+    ['a real renamed legacy constraint', 'renamed legacy constraint drift', `
+      ALTER TABLE public.adaptive_diagnostic_sessions
+        RENAME CONSTRAINT adaptive_diagnostic_sessions_check
+        TO diagnostic_legacy_coverage_renamed;
+    `],
+    ['a wrong required trigger event', 'required trigger drift', `
+      DROP TRIGGER trg_adaptive_diagnostic_question_snapshot
+        ON public.adaptive_diagnostic_sessions;
+      CREATE TRIGGER trg_adaptive_diagnostic_question_snapshot
+        BEFORE UPDATE OF current_question_id ON public.adaptive_diagnostic_sessions
+        FOR EACH ROW EXECUTE FUNCTION public.tg_adaptive_diagnostic_question_snapshot();
+    `],
+    ['row-level security disabled', 'table topology or RLS drift', `
+      ALTER TABLE public.adaptive_diagnostic_sessions DISABLE ROW LEVEL SECURITY;
+    `],
+  ])('refuses migration 213 with %s and rolls back its guard transaction', async (_label, guardMessage, driftSql) => {
+    const constraints = () => client.query(`SELECT conname,convalidated,pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint
+      WHERE conrelid='public.adaptive_diagnostic_sessions'::regclass AND contype='c'
+      ORDER BY conname`)
+    const before = (await constraints()).rows
+    try {
+      await client.query('BEGIN')
+      await client.query(driftSql)
+      // The real migration owns BEGIN/COMMIT. A failed guard leaves this
+      // transaction aborted, so the finally ROLLBACK also restores the drift.
+      await expect(client.query(read('213_adaptive_diagnostic_legacy_coverage_constraint.sql')))
+        .rejects.toMatchObject({ code: '23514', message: `diagnostic coverage repair: ${guardMessage}` })
+    } finally {
+      await client.query('ROLLBACK')
+    }
+    expect((await constraints()).rows).toEqual(before)
+  })
+
+  it('times out on a concurrent session lock before migration 213 can mutate the target', async () => {
+    await secondClient.query('BEGIN')
+    await secondClient.query(
+      'LOCK TABLE ONLY public.adaptive_diagnostic_sessions IN ACCESS SHARE MODE',
+    )
+    try {
+      await expect(client.query(read('213_adaptive_diagnostic_legacy_coverage_constraint.sql')))
+        .rejects.toMatchObject({ code: '55P03' })
+    } finally {
+      await secondClient.query('ROLLBACK')
+      await client.query('ROLLBACK')
+    }
+    expect((await client.query(`SELECT count(*)::int AS count FROM pg_constraint
+      WHERE conrelid='public.adaptive_diagnostic_sessions'::regclass
+        AND conname='adaptive_diagnostic_sessions_check'`)).rows[0].count).toBe(1)
+  }, 15000)
+
+  it('repairs the real legacy six-outcome boundary and completes an immutable ten-question YDT session', async () => {
+    expect((await client.query(
+      "SELECT pg_get_functiondef('public.tg_adaptive_diagnostic_question_snapshot()'::regprocedure) AS definition",
+    )).rows[0].definition).toBe(snapshotDefinitionV3)
+    const ydtUser = randomUUID()
+    const ydtSession = randomUUID()
+    const ydtCategories = [
+      'vocabulary', 'phrasal_verbs', 'grammar', 'sentence_completion',
+      'cloze_test', 'restatement', 'dialogue',
+    ]
+    const ydtQuestions = ydtCategories.map(() => [randomUUID(), randomUUID()])
+    const sequence = [
+      ...ydtQuestions.map(([first]) => first),
+      ...ydtQuestions.slice(0, 3).map(([, confirmation]) => confirmation),
+    ]
+    const requestIds = sequence.map(() => randomUUID())
+    const recordYdt = (index) => asRole('service_role', async () => (
+      await client.query(
+        'SELECT public.record_adaptive_diagnostic_answer_v3($1,$2,$3,1::smallint,1200,$4,$5) result',
+        [ydtUser, ydtSession, sequence[index], requestIds[index], sequence[index + 1] ?? null],
+      )
+    ).rows[0].result)
+    const evidence = async () => ({
+      session: (await client.query(
+        'SELECT to_jsonb(session) AS value FROM public.adaptive_diagnostic_sessions session WHERE id=$1',
+        [ydtSession],
+      )).rows[0].value,
+      answers: (await client.query(
+        'SELECT to_jsonb(answer) AS value FROM public.adaptive_diagnostic_answers answer WHERE session_id=$1 ORDER BY sequence',
+        [ydtSession],
+      )).rows.map((row) => row.value),
+    })
+    const constraints = async () => (await client.query(`SELECT conrelid::regclass::text AS relation,
+      conname,convalidated,pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint
+      WHERE conrelid IN (
+        'public.adaptive_diagnostic_sessions'::regclass,
+        'public.adaptive_diagnostic_answers'::regclass,
+        'public.user_diagnostic_outcome_state'::regclass
+      ) AND contype='c' ORDER BY relation,conname`)).rows
+    const securityBoundary = async () => ({
+      tables: (await client.query(`SELECT relname,relrowsecurity,relacl::text AS acl
+        FROM pg_class WHERE oid IN (
+          'public.adaptive_diagnostic_sessions'::regclass,
+          'public.adaptive_diagnostic_answers'::regclass,
+          'public.user_diagnostic_outcome_state'::regclass,
+          'public.adaptive_diagnostic_blueprints'::regclass
+        ) ORDER BY relname`)).rows,
+      triggers: (await client.query(`SELECT tgrelid::regclass::text AS relation,tgname,tgenabled,
+        pg_get_triggerdef(oid) AS definition FROM pg_trigger
+        WHERE NOT tgisinternal AND tgrelid IN (
+          'public.adaptive_diagnostic_sessions'::regclass,
+          'public.adaptive_diagnostic_answers'::regclass
+        ) ORDER BY relation,tgname`)).rows,
+      functions: (await client.query(`SELECT oid::regprocedure::text AS signature,proacl::text AS acl,
+        pg_get_functiondef(oid) AS definition FROM pg_proc
+        WHERE pronamespace='public'::regnamespace AND proname IN (
+          'start_adaptive_diagnostic_v3','record_adaptive_diagnostic_answer_v3',
+          'get_adaptive_diagnostic_question_v3','require_released_adaptive_diagnostic_blueprint',
+          'tg_adaptive_diagnostic_question_snapshot','tg_require_adaptive_diagnostic_release',
+          'tg_adaptive_diagnostic_session_scope_immutable'
+        ) ORDER BY signature`)).rows,
+    })
+
+    // Do not rename or recreate this constraint in the fixture: its actual
+    // PostgreSQL-generated 098 name is the regression missed by migration 193.
+    const constraintsBefore = await constraints()
+    const legacy = constraintsBefore.filter((constraint) => (
+      constraint.relation === 'adaptive_diagnostic_sessions'
+      && constraint.conname === 'adaptive_diagnostic_sessions_check'
+    ))
+    expect(legacy).toHaveLength(1)
+    expect(legacy[0]).toMatchObject({ convalidated: true })
+    expect(legacy[0].definition.replace(/[\s()]/g, ''))
+      .toBe('CHECKcovered_outcomes>=0ANDcovered_outcomes<=6ANDcovered_outcomes<=answered_count')
+    expect(constraintsBefore.some((constraint) => (
+      constraint.conname === 'adaptive_diagnostic_sessions_covered_outcomes_check'
+    ))).toBe(false)
+
+    try {
+      await client.query('BEGIN')
+      await seedCoverageScope({
+        userId: ydtUser, game: 'wordquest', displayExamRef: 'YDT', questionExamRef: null,
+        taxonomyVersion: 'ba-ydt-eng-v1', blueprintVersion: 'ba-ydt-eng-diagnostic-v1',
+        questionCount: 10, scopeCategories: ydtCategories, questionIds: ydtQuestions,
+      })
+      await client.query('COMMIT')
+    } finally {
+      await client.query('ROLLBACK')
+    }
+
+    expect((await client.query(
+      "SELECT public.resolve_released_diagnostic_scope('wordquest','YDT') result",
+    )).rows[0].result).toEqual({
+      game: 'wordquest', displayExamRef: 'YDT', questionExamRef: null,
+      taxonomyVersion: 'ba-ydt-eng-v1', policyVersion: 'adaptive-screening-v1',
+      questionCount: 10, outcomeCount: 7, maxPerOutcome: 2,
+    })
+    expect((await client.query(
+      "SELECT public.adaptive_diagnostic_scope_integrity('wordquest','YDT','ba-ydt-eng-diagnostic-v1') result",
+    )).rows[0].result).toMatchObject({
+      clean: true, outcomeCount: 7, eligibleQuestionCount: 14, candidateCapacity: 14,
+    })
+    expect((await asRole('service_role', () => client.query(
+      "SELECT public.start_adaptive_diagnostic_v3($1,$2,'wordquest','YDT',$3) result",
+      [ydtUser, ydtSession, sequence[0]],
+    ))).rows[0].result).toMatchObject({ answeredCount: 0, coveredOutcomes: 0, resumed: false })
+    for (let index = 0; index < 6; index += 1) {
+      expect(await recordYdt(index)).toMatchObject({
+        status: 'active', answeredCount: index + 1, coveredOutcomes: index + 1,
+      })
+    }
+    const beforeFailure = await evidence()
+    expect(beforeFailure.session).toMatchObject({
+      status: 'active', answered_count: 6, covered_outcomes: 6,
+      current_question_id: sequence[6], question_count: 10, outcome_count: 7,
+    })
+    expect(beforeFailure.answers).toHaveLength(6)
+    await expect(recordYdt(6)).rejects.toMatchObject({
+      code: '23514', constraint: 'adaptive_diagnostic_sessions_check',
+      table: 'adaptive_diagnostic_sessions',
+    })
+    // The answer INSERT precedes the failing session UPDATE in the RPC. Both
+    // must roll back, including all current immutable question snapshot fields.
+    expect(await evidence()).toEqual(beforeFailure)
+    expect((await client.query(
+      'SELECT count(*)::int AS count FROM public.user_diagnostic_outcome_state WHERE user_id=$1',
+      [ydtUser],
+    )).rows[0].count).toBe(0)
+
+    const securityBefore = await securityBoundary()
+    const policyBefore = (await client.query(`SELECT to_jsonb(blueprint) AS blueprint,to_jsonb(scope) AS scope
+      FROM public.adaptive_diagnostic_blueprints blueprint
+      JOIN public.curriculum_scope_releases scope USING(game,display_exam_ref)
+      WHERE blueprint.blueprint_version='ba-ydt-eng-diagnostic-v1'`)).rows
+    await client.query(read('213_adaptive_diagnostic_legacy_coverage_constraint.sql'))
+    const afterMigrationConstraints = await constraints()
+    expect(afterMigrationConstraints).toEqual(constraintsBefore.filter((constraint) => constraint !== legacy[0]))
+    expect(await evidence()).toEqual(beforeFailure)
+    expect(await securityBoundary()).toEqual(securityBefore)
+    expect((await client.query(`SELECT to_jsonb(blueprint) AS blueprint,to_jsonb(scope) AS scope
+      FROM public.adaptive_diagnostic_blueprints blueprint
+      JOIN public.curriculum_scope_releases scope USING(game,display_exam_ref)
+      WHERE blueprint.blueprint_version='ba-ydt-eng-diagnostic-v1'`)).rows).toEqual(policyBefore)
+    await client.query(read('213_adaptive_diagnostic_legacy_coverage_constraint.sql'))
+    expect(await constraints()).toEqual(afterMigrationConstraints)
+    expect(await evidence()).toEqual(beforeFailure)
+    expect(await securityBoundary()).toEqual(securityBefore)
+    expect((await client.query(`SELECT to_jsonb(blueprint) AS blueprint,to_jsonb(scope) AS scope
+      FROM public.adaptive_diagnostic_blueprints blueprint
+      JOIN public.curriculum_scope_releases scope USING(game,display_exam_ref)
+      WHERE blueprint.blueprint_version='ba-ydt-eng-diagnostic-v1'`)).rows).toEqual(policyBefore)
+
+    for (const [answered, covered] of [[-1, 0], [0, -1], [11, 7], [8, 8], [6, 7]]) {
+      await expect(client.query(`UPDATE public.adaptive_diagnostic_sessions
+        SET answered_count=$2,covered_outcomes=$3 WHERE id=$1`, [ydtSession, answered, covered]))
+        .rejects.toMatchObject({ code: '23514', constraint: 'adaptive_diagnostic_session_dynamic_counter_check' })
+    }
+    await expect(client.query(`UPDATE public.adaptive_diagnostic_sessions
+      SET status='completed',current_question_id=NULL,completed_at=clock_timestamp() WHERE id=$1`, [ydtSession]))
+      .rejects.toMatchObject({ code: '23514', constraint: 'adaptive_diagnostic_session_state_check' })
+    expect(await evidence()).toEqual(beforeFailure)
+
+    // Reuse exactly the rejected request, without manually advancing counters
+    // or fabricating evidence. The seventh distinct outcome now crosses 6 -> 7.
+    expect(await recordYdt(6)).toMatchObject({
+      alreadyProcessed: false, status: 'active', answeredCount: 7, coveredOutcomes: 7,
+    })
+    const afterSeventh = await evidence()
+    expect(afterSeventh.answers).toHaveLength(7)
+    expect(await recordYdt(6)).toMatchObject({
+      alreadyProcessed: true, status: 'active', answeredCount: 7, coveredOutcomes: 7,
+    })
+    expect(await evidence()).toEqual(afterSeventh)
+    for (let index = 7; index < sequence.length; index += 1) {
+      expect(await recordYdt(index)).toMatchObject({
+        status: index === 9 ? 'completed' : 'active', answeredCount: index + 1, coveredOutcomes: 7,
+      })
+    }
+    const completed = await evidence()
+    expect(completed.session).toMatchObject({
+      status: 'completed', answered_count: 10, covered_outcomes: 7,
+      current_question_id: null, current_question_revision_id: null,
+    })
+    expect(completed.session.completed_at).not.toBeNull()
+    expect(completed.answers).toHaveLength(10)
+    const states = (await client.query(`SELECT outcome.category,state.attempts,state.correct_attempts,
+      state.score,state.completed_session_id FROM public.user_diagnostic_outcome_state state
+      JOIN public.curriculum_outcomes outcome ON outcome.id=state.outcome_id
+      WHERE state.user_id=$1 ORDER BY outcome.sort_order`, [ydtUser])).rows
+    expect(states).toEqual(ydtCategories.map((category, index) => ({
+      category, attempts: index < 3 ? 2 : 1, correct_attempts: index < 3 ? 2 : 1,
+      score: '100.00', completed_session_id: ydtSession,
+    })))
+    expect(await recordYdt(9)).toMatchObject({
+      alreadyProcessed: true, status: 'completed', answeredCount: 10, coveredOutcomes: 7,
+    })
+    expect(await evidence()).toEqual(completed)
+    expect((await client.query(`SELECT outcome.category,state.attempts,state.correct_attempts,
+      state.score,state.completed_session_id FROM public.user_diagnostic_outcome_state state
+      JOIN public.curriculum_outcomes outcome ON outcome.id=state.outcome_id
+      WHERE state.user_id=$1 ORDER BY outcome.sort_order`, [ydtUser])).rows).toEqual(states)
+  })
+
+  it.each([
+    ['matematik', 10, 6],
+    ['fen', 5, 3],
+  ])('still completes %s through normal v3 RPCs after migration 213', async (game, questionCount, outcomeCount) => {
+    const postRepairUser = randomUUID()
+    const postRepairSession = randomUUID()
+    const scopeCategories = game === 'matematik' ? categories : ['fizik', 'kimya', 'biyoloji']
+    const scopeQuestions = game === 'matematik'
+      ? categories.map((category) => [questions[category].base, questions[category].follow])
+      : scopeCategories.map(() => [randomUUID(), randomUUID()])
+    const sequence = [
+      ...scopeQuestions.map(([first]) => first),
+      ...scopeQuestions.slice(0, questionCount - outcomeCount).map(([, confirmation]) => confirmation),
+    ]
+    expect((await client.query(`SELECT count(*)::int AS count FROM pg_constraint
+      WHERE conrelid='public.adaptive_diagnostic_sessions'::regclass
+        AND conname='adaptive_diagnostic_sessions_check'`)).rows[0].count).toBe(0)
+    try {
+      await client.query('BEGIN')
+      if (game === 'matematik') {
+        await client.query('INSERT INTO public.profiles(id) VALUES($1)', [postRepairUser])
+      } else {
+        await seedCoverageScope({
+          userId: postRepairUser, game, displayExamRef: 'TYT', questionExamRef: 'TYT',
+          taxonomyVersion: 'ba-tyt-fen-v1', blueprintVersion: 'ba-tyt-fen-diagnostic-v1',
+          questionCount, scopeCategories, questionIds: scopeQuestions,
+        })
+      }
+      const started = (await asRole('service_role', () => client.query(
+        "SELECT public.start_adaptive_diagnostic_v3($1,$2,$3,'TYT',$4) result",
+        [postRepairUser, postRepairSession, game, sequence[0]],
+      ))).rows[0].result
+      expect(started).toMatchObject({ questionCount, outcomeCount, answeredCount: 0, resumed: false })
+      for (const [index, questionId] of sequence.entries()) {
+        const result = (await asRole('service_role', () => client.query(
+          'SELECT public.record_adaptive_diagnostic_answer_v3($1,$2,$3,1::smallint,1200,$4,$5) result',
+          [postRepairUser, postRepairSession, questionId, randomUUID(), sequence[index + 1] ?? null],
+        ))).rows[0].result
+        expect(result).toMatchObject({
+          status: index + 1 === questionCount ? 'completed' : 'active',
+          answeredCount: index + 1, coveredOutcomes: Math.min(index + 1, outcomeCount),
+        })
+      }
+      expect((await client.query(`SELECT status,answered_count,covered_outcomes,
+        current_question_id,completed_at IS NOT NULL AS completed
+        FROM public.adaptive_diagnostic_sessions WHERE id=$1`, [postRepairSession])).rows[0]).toEqual({
+        status: 'completed', answered_count: questionCount, covered_outcomes: outcomeCount,
+        current_question_id: null, completed: true,
+      })
+      expect((await client.query(`SELECT count(*)::int AS outcomes,sum(attempts)::int AS attempts,
+        max(attempts)::int AS max_attempts FROM public.user_diagnostic_outcome_state WHERE user_id=$1`,
+      [postRepairUser])).rows[0]).toEqual({ outcomes: outcomeCount, attempts: questionCount, max_attempts: 2 })
+    } finally {
+      await client.query('ROLLBACK')
+    }
+    expect((await client.query(
+      'SELECT count(*)::int AS count FROM public.adaptive_diagnostic_sessions WHERE id=$1',
+      [postRepairSession],
+    )).rows[0].count).toBe(0)
   })
 })

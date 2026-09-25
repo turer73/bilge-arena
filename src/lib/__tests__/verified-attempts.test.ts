@@ -7,6 +7,7 @@ import {
   issueVerifiedAttempt,
   issueVerifiedExamAttempt,
   issueVerifiedTytSocialOfficialSection,
+  readTytSocialLearningSnapshot,
   readVerifiedAttemptQuestionSnapshots,
 } from '../verified-attempts'
 
@@ -15,6 +16,11 @@ const QUESTION_ONE = '20000000-0000-4000-8000-000000000001'
 const QUESTION_TWO = '20000000-0000-4000-8000-000000000002'
 const NOW = '2026-08-08T09:00:00.000Z'
 const FUTURE = '2026-08-08T10:00:00.000Z'
+const SOCIAL_EVENT_ID = '70000000-0000-4000-8000-000000000001'
+const SOCIAL_EPOCH = {
+  policyVersion: 'tyt-social-2026-v1',
+  selectionEventId: SOCIAL_EVENT_ID,
+}
 
 const rpc = vi.fn()
 const admin = { rpc } as unknown as SupabaseClient<Database>
@@ -48,6 +54,90 @@ function validInput(questionIds = [QUESTION_ONE]) {
     game: 'matematik' as const,
     mode: 'practice' as const,
     questionIds,
+  }
+}
+
+function activeSocialLearningSnapshot(allowedQuestionIds: string[], states: unknown[] = []) {
+  return {
+    context: {
+      status: 'active',
+      available: true,
+      reason: null,
+      policyVersion: SOCIAL_EPOCH.policyVersion,
+      taxonomyVersion: 'ba-tyt-sosyal-v1',
+      variant: 'questions_16_20',
+      selectionEventId: SOCIAL_EPOCH.selectionEventId,
+      selectionEffectiveAt: '2026-08-08T08:00:00.000Z',
+      allowedCategories: ['cografya', 'din_kulturu', 'felsefe', 'sosyoloji', 'tarih'],
+      rebuildRequired: false,
+      legacyAggregateUsed: false,
+    },
+    states,
+    allowedQuestionIds,
+  }
+}
+
+function inactiveSocialLearningSnapshot() {
+  return {
+    context: {
+      status: 'setup_required', available: false, reason: 'selection-required',
+      policyVersion: SOCIAL_EPOCH.policyVersion, taxonomyVersion: 'ba-tyt-sosyal-v1',
+      variant: null, selectionEventId: null, selectionEffectiveAt: null,
+      allowedCategories: [], rebuildRequired: false, legacyAggregateUsed: false,
+    },
+    states: [], allowedQuestionIds: [],
+  }
+}
+
+function socialMasteryState() {
+  return {
+    outcome_id: '80000000-0000-4000-8000-000000000001',
+    attempts: 2, correct_attempts: 1, weighted_earned: '1.5', weighted_possible: '3',
+    delayed_correct: 0, v2_attempts: 2,
+    difficulty_weighted_earned: '1.5', difficulty_weighted_possible: '3',
+    timed_attempts: 2, total_time_sec: '45', fast_wrong: 0,
+    hinted_attempts: 0, hint_stage_sum: '0', guess_annotations: 0,
+    careless_annotations: 0, verified_evidence_days: 1, last_answered_at: NOW,
+  }
+}
+
+function socialIssuance(
+  kind: 'practice' | 'exam',
+  tytSocialEpoch?: typeof SOCIAL_EPOCH,
+  game: 'sosyal' | 'matematik' = 'sosyal',
+) {
+  const items = Array.from({ length: kind === 'exam' ? 40 : 1 }, (_, index) => ({
+    questionId: `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    sourceBucket: 'coverage' as const,
+  }))
+  const input = {
+    ...validInput(items.map(item => item.questionId)),
+    game, examRef: 'TYT', requestId: '40000000-0000-4000-8000-000000000001',
+    tytSocialEpoch,
+  }
+  const response = {
+    attemptId: ATTEMPT_ID,
+    expiresAt: FUTURE,
+    ...(kind === 'exam' ? { plannedDurationSec: 1500, status: 'issued', replayed: false } : {}),
+    snapshot: {
+      items: items.map((item, index) => ({
+        ...normalSnapshotItem(item.questionId, index + 1, game),
+        ...(kind === 'exam' ? { position: index, sourceBucket: item.sourceBucket } : {}),
+      })),
+    },
+  }
+  return {
+    questionIds: input.questionIds,
+    writer: kind === 'exam'
+      ? 'issue_verified_tyt_social_exam_attempt_for_epoch'
+      : 'issue_verified_tyt_social_attempt_for_epoch',
+    failure: kind === 'exam' ? 'verified_exam_attempt_issue_failed' : 'verified_attempt_issue_failed',
+    response,
+    issue: () => kind === 'exam'
+      ? issueVerifiedExamAttempt(admin, {
+        ...input, items, blueprintVersion: 'personalized-mock-v1', plannedDurationSec: 1500,
+      })
+      : issueVerifiedAttempt(admin, input),
   }
 }
 
@@ -123,15 +213,19 @@ describe('verified attempts helper', () => {
       questionIds: [QUESTION_ONE],
       examRef: 'TYT',
       requestId,
+      tytSocialEpoch: SOCIAL_EPOCH,
     })
 
-    expect(rpc).toHaveBeenLastCalledWith('issue_verified_tyt_social_attempt', {
+    expect(rpc).toHaveBeenLastCalledWith('issue_verified_tyt_social_attempt_for_epoch', {
       p_user_id: '30000000-0000-4000-8000-000000000001',
       p_mode: 'practice',
       p_question_ids: [QUESTION_ONE],
       p_duration_sec: 7200,
       p_request_id: requestId,
+      p_expected_policy_version: SOCIAL_EPOCH.policyVersion,
+      p_expected_selection_event_id: SOCIAL_EPOCH.selectionEventId,
     })
+    expect(rpc).toHaveBeenCalledTimes(1)
 
     rpc.mockClear()
     await issueVerifiedAttempt(admin, {
@@ -150,6 +244,7 @@ describe('verified attempts helper', () => {
       p_duration_sec: 7200,
       p_request_id: requestId,
     })
+    expect(rpc).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to the generic issuer while the learner rollout is disabled', async () => {
@@ -225,6 +320,7 @@ describe('verified attempts helper', () => {
         p_request_id: requestId,
       },
     )
+    expect(rpc).toHaveBeenCalledTimes(1)
     expect(result).toEqual({ attemptId: ATTEMPT_ID, expiresAt: FUTURE })
     expect(result.questionSnapshots).toHaveLength(20)
     expect({ ...result }).not.toHaveProperty('questionSnapshots')
@@ -241,6 +337,7 @@ describe('verified attempts helper', () => {
     ['55000', 'private branch detail', 'tyt_social_section_unavailable'],
     ['23514', 'private branch detail', 'tyt_social_section_unavailable'],
     ['PGRST202', 'private branch detail', 'tyt_social_section_unavailable'],
+    ['40001', 'TYT Social selection epoch changed', 'tyt_social_section_unavailable'],
     ['XX999', 'private branch detail', 'tyt_social_section_issue_failed'],
   ])('maps official section SQLSTATE %s without leaking DB detail', async (code, message, expected) => {
     rpc.mockResolvedValue({ data: null, error: { code, message } })
@@ -250,12 +347,9 @@ describe('verified attempts helper', () => {
     })).rejects.toThrow(expected)
   })
 
-  it('validates the service-only TYT Social candidate filter response', async () => {
+  it('validates the service-only TYT Social combined learning snapshot', async () => {
     rpc.mockResolvedValue({
-      data: {
-        policyVersion: 'tyt-social-2026-v1',
-        allowedQuestionIds: [QUESTION_TWO, QUESTION_ONE],
-      },
+      data: activeSocialLearningSnapshot([QUESTION_TWO, QUESTION_ONE]),
       error: null,
     })
 
@@ -264,13 +358,13 @@ describe('verified attempts helper', () => {
       '30000000-0000-4000-8000-000000000001',
       [QUESTION_ONE, QUESTION_TWO],
     )).resolves.toEqual([QUESTION_TWO, QUESTION_ONE])
-    expect(rpc).toHaveBeenCalledWith('filter_tyt_social_question_candidates', {
+    expect(rpc).toHaveBeenCalledWith('read_tyt_social_learning_snapshot', {
       p_user_id: '30000000-0000-4000-8000-000000000001',
       p_question_ids: [QUESTION_ONE, QUESTION_TWO],
     })
 
     rpc.mockResolvedValue({
-      data: { policyVersion: 'tyt-social-2026-v1', allowedQuestionIds: [QUESTION_ONE, QUESTION_ONE] },
+      data: activeSocialLearningSnapshot([QUESTION_ONE, QUESTION_ONE]),
       error: null,
     })
     await expect(filterTytSocialQuestionIds(
@@ -278,6 +372,186 @@ describe('verified attempts helper', () => {
       '30000000-0000-4000-8000-000000000001',
       [QUESTION_ONE],
     )).rejects.toThrow('tyt_social_candidate_filter_failed')
+  })
+
+  it('keeps an inactive learning snapshot empty and explicit', async () => {
+    rpc.mockResolvedValue({
+      data: inactiveSocialLearningSnapshot(),
+      error: null,
+    })
+    await expect(readTytSocialLearningSnapshot(
+      admin,
+      '30000000-0000-4000-8000-000000000001',
+      [QUESTION_ONE],
+    )).resolves.toEqual({
+      status: 'setup_required', context: null, states: [], allowedQuestionIds: [],
+    })
+  })
+
+  it.each([
+    ['no evidence', []],
+    ['scoped evidence', [socialMasteryState()]],
+  ])('accepts active empty eligibility with %s while retaining the exact epoch', async (_label, states) => {
+    rpc.mockResolvedValue({ data: activeSocialLearningSnapshot([], states), error: null })
+
+    await expect(readTytSocialLearningSnapshot(
+      admin, validInput().userId, [QUESTION_ONE, QUESTION_ONE],
+    )).resolves.toMatchObject({
+      status: 'active', context: SOCIAL_EPOCH, states, allowedQuestionIds: [],
+    })
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('read_tyt_social_learning_snapshot', {
+      p_user_id: validInput().userId, p_question_ids: [QUESTION_ONE],
+    })
+  })
+
+  it.each([
+    ['missing payload', null],
+    ['unknown envelope key', { ...activeSocialLearningSnapshot([]), unexpected: true }],
+    ['unknown context key', {
+      ...activeSocialLearningSnapshot([]),
+      context: { ...activeSocialLearningSnapshot([]).context, unexpected: true },
+    }],
+    ['malformed active context with empty data', {
+      ...activeSocialLearningSnapshot([]),
+      context: { ...activeSocialLearningSnapshot([]).context, selectionEventId: null },
+    }],
+    ['malformed inactive context with empty data', {
+      ...inactiveSocialLearningSnapshot(),
+      context: { ...inactiveSocialLearningSnapshot().context, variant: 'questions_16_20' },
+    }],
+    ['inactive context with contradictory availability', {
+      ...inactiveSocialLearningSnapshot(),
+      context: { ...inactiveSocialLearningSnapshot().context, available: true },
+    }],
+    ['inactive context with evidence', {
+      ...inactiveSocialLearningSnapshot(), states: [socialMasteryState()],
+    }],
+    ['inactive context with candidates', {
+      ...inactiveSocialLearningSnapshot(), allowedQuestionIds: [QUESTION_ONE],
+    }],
+    ['duplicate candidate IDs', activeSocialLearningSnapshot([QUESTION_ONE, QUESTION_ONE])],
+    ['candidate outside the requested IDs', activeSocialLearningSnapshot([QUESTION_TWO])],
+    ['duplicate outcome states', activeSocialLearningSnapshot([], [socialMasteryState(), socialMasteryState()])],
+    ['invalid outcome UUID', activeSocialLearningSnapshot([], [{ ...socialMasteryState(), outcome_id: 'invalid' }])],
+    ['incomplete state', activeSocialLearningSnapshot([], [{ outcome_id: socialMasteryState().outcome_id }])],
+    ['invalid state metric', activeSocialLearningSnapshot([], [{ ...socialMasteryState(), attempts: -1 }])],
+    ['unknown state key', activeSocialLearningSnapshot([], [{ ...socialMasteryState(), unexpected: true }])],
+  ])('fails closed for %s in the combined learning snapshot', async (_label, data) => {
+    rpc.mockResolvedValue({ data, error: null })
+    await expect(readTytSocialLearningSnapshot(admin, validInput().userId, [QUESTION_ONE]))
+      .rejects.toMatchObject({ message: 'tyt_social_learning_snapshot_failed' })
+    expect(rpc).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['PGRST202', '40001'])('normalizes combined-reader error %s without another RPC', async (code) => {
+    rpc.mockResolvedValue({ data: null, error: { code, message: 'TYT Social selection epoch changed' } })
+    await expect(readTytSocialLearningSnapshot(admin, validInput().userId, [QUESTION_ONE]))
+      .rejects.toMatchObject({ message: 'tyt_social_learning_snapshot_failed' })
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('read_tyt_social_learning_snapshot', {
+      p_user_id: validInput().userId, p_question_ids: [QUESTION_ONE],
+    })
+  })
+
+  it('normalizes a rejected combined-reader promise', async () => {
+    rpc.mockRejectedValue(new Error('private transport detail'))
+    await expect(readTytSocialLearningSnapshot(admin, validInput().userId, [QUESTION_ONE]))
+      .rejects.toMatchObject({ message: 'tyt_social_learning_snapshot_failed' })
+  })
+
+  describe.each(['practice', 'exam'] as const)('TYT Social %s epoch issuance', (kind) => {
+    it('reads one combined snapshot and binds the following write to its event UUID', async () => {
+      const issuance = socialIssuance(kind)
+      const selected = activeSocialLearningSnapshot(issuance.questionIds)
+      selected.context.selectionEventId = '70000000-0000-4000-8000-000000000002'
+      rpc.mockResolvedValueOnce({ data: selected, error: null })
+        .mockResolvedValueOnce({ data: issuance.response, error: null })
+
+      await expect(issuance.issue()).resolves.toMatchObject({ attemptId: ATTEMPT_ID })
+      expect(rpc).toHaveBeenCalledTimes(2)
+      expect(rpc).toHaveBeenNthCalledWith(1, 'read_tyt_social_learning_snapshot', {
+        p_user_id: validInput().userId, p_question_ids: issuance.questionIds,
+      })
+      expect(rpc).toHaveBeenNthCalledWith(2, issuance.writer, expect.objectContaining({
+        p_expected_policy_version: selected.context.policyVersion,
+        p_expected_selection_event_id: selected.context.selectionEventId,
+      }))
+    })
+
+    it('preserves a supplied event through an ABA selection change and returns the epoch conflict', async () => {
+      const issuance = socialIssuance(kind, SOCIAL_EPOCH)
+      // A -> B -> A has the same variant but a new event. Re-reading it would
+      // incorrectly authorize questions selected using the original A event.
+      rpc.mockImplementation(async (name: string) => name === issuance.writer
+        ? { data: null, error: { code: '40001', message: 'TYT Social selection epoch changed' } }
+        : {
+          data: {
+            ...activeSocialLearningSnapshot(issuance.questionIds),
+            context: {
+              ...activeSocialLearningSnapshot([]).context,
+              selectionEventId: '70000000-0000-4000-8000-000000000003',
+            },
+          },
+          error: null,
+        })
+
+      await expect(issuance.issue()).rejects.toMatchObject({ message: 'tyt_social_selection_epoch_changed' })
+      expect(rpc).toHaveBeenCalledExactlyOnceWith(issuance.writer, expect.objectContaining({
+        p_expected_policy_version: SOCIAL_EPOCH.policyVersion,
+        p_expected_selection_event_id: SOCIAL_EPOCH.selectionEventId,
+      }))
+      expect(rpc.mock.calls[0][1]).not.toHaveProperty('p_expected_variant')
+    })
+
+    it('fails closed when the combined reader is missing without trying a legacy issuer', async () => {
+      const issuance = socialIssuance(kind)
+      rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'private missing RPC detail' } })
+      await expect(issuance.issue()).rejects.toMatchObject({ message: issuance.failure })
+      expect(rpc).toHaveBeenCalledExactlyOnceWith('read_tyt_social_learning_snapshot', {
+        p_user_id: validInput().userId, p_question_ids: issuance.questionIds,
+      })
+    })
+
+    it('does not write when an active snapshot rejects the requested candidates', async () => {
+      const issuance = socialIssuance(kind)
+      rpc.mockResolvedValue({ data: activeSocialLearningSnapshot([]), error: null })
+      await expect(issuance.issue()).rejects.toMatchObject({ message: issuance.failure })
+      expect(rpc).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+      ['40001', 'could not serialize access due to concurrent update'],
+      ['40001', 'TYT Social selection epoch changed: private detail'],
+      ['P0001', 'TYT Social selection epoch changed'],
+    ])('keeps unrelated SQLSTATE/message %s / %s generic', async (code, message) => {
+      const issuance = socialIssuance(kind, SOCIAL_EPOCH)
+      rpc.mockResolvedValue({ data: null, error: { code, message } })
+      await expect(issuance.issue()).rejects.toMatchObject({ message: issuance.failure })
+      expect(rpc).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not classify a generic issuer serialization failure as an epoch conflict', async () => {
+      const issuance = socialIssuance(kind, SOCIAL_EPOCH, 'matematik')
+      rpc.mockResolvedValue({ data: null, error: { code: '40001', message: 'TYT Social selection epoch changed' } })
+      await expect(issuance.issue()).rejects.toMatchObject({ message: issuance.failure })
+      expect(rpc.mock.calls.map(call => call[0])).toEqual([
+        kind === 'exam' ? 'issue_verified_exam_attempt' : 'issue_verified_attempt',
+      ])
+    })
+
+    it('normalizes a rejected epoch-writer promise', async () => {
+      const issuance = socialIssuance(kind, SOCIAL_EPOCH)
+      rpc.mockRejectedValue(new Error('private transport detail'))
+      await expect(issuance.issue()).rejects.toMatchObject({ message: issuance.failure })
+    })
+  })
+
+  it('keeps frozen-plan serialization failures generic without reading the current epoch', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: '40001', message: 'TYT Social selection epoch changed' } })
+    await expect(issueVerifiedAttempt(admin, {
+      ...validInput(), game: 'sosyal', examRef: 'TYT', tytSocialEpoch: SOCIAL_EPOCH,
+      sourcePlanId: '60000000-0000-4000-8000-000000000001',
+    })).rejects.toMatchObject({ message: 'verified_attempt_issue_failed' })
+    expect(rpc.mock.calls.map(call => call[0])).toEqual(['issue_verified_tyt_social_plan_attempt'])
   })
 
   it('issues an atomic verified exam with ordered source provenance', async () => {
@@ -369,15 +643,18 @@ describe('verified attempts helper', () => {
       items,
       plannedDurationSec: 1500,
       requestId: '40000000-0000-4000-8000-000000000001',
+      tytSocialEpoch: SOCIAL_EPOCH,
     })
 
     expect(rpc).toHaveBeenCalledWith(
-      'issue_verified_tyt_social_exam_attempt',
+      'issue_verified_tyt_social_exam_attempt_for_epoch',
       expect.objectContaining({
         p_user_id: '30000000-0000-4000-8000-000000000001',
         p_blueprint_version: 'personalized-mock-v1',
         p_duration_sec: 1800,
         p_planned_duration_sec: 1500,
+        p_expected_policy_version: SOCIAL_EPOCH.policyVersion,
+        p_expected_selection_event_id: SOCIAL_EPOCH.selectionEventId,
       }),
     )
   })

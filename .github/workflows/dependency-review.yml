@@ -1,25 +1,34 @@
 name: Dependency Review
 
 on:
+  push:
+    branches: [master]
   pull_request:
     branches: [master]
+  schedule:
+    - cron: '43 3 * * 1'
 
 permissions:
   contents: read
 
 concurrency:
   group: dependency-review-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
   dependency-review:
+    # Legacy check context required by master ruleset 21302881. Scanner: npm audit, not dependency-review-action.
     name: Dependency review
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
-      - name: Reject newly introduced vulnerable dependencies
-        uses: actions/dependency-review-action@v4
         with:
-          fail-on-severity: high
-          fail-on-scopes: runtime, development, unknown
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: Validate the lockfile without running package scripts
+        run: npm ci --ignore-scripts --no-audit
+      - name: Reject high and critical npm advisories (including dev dependencies)
+        run: npm audit --audit-level=high --include=dev

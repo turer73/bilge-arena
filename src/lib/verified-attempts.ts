@@ -8,6 +8,15 @@ import type { Database } from '@/types/database.client'
 import type { GameMode } from '@/types/database'
 import type { PersonalizedMockItem } from '@/lib/study/personalized-mock'
 import {
+  parseActiveTytSocialMasteryContext,
+  type ActiveTytSocialMasteryContext,
+} from '@/lib/mastery/tyt-social-context'
+import {
+  isCompleteMasteryStateRow,
+  MASTERY_STATE_COLUMNS,
+  type MasteryStateRow,
+} from '@/lib/mastery/state-row'
+import {
   parseQuestionContent,
   toPublicQuestionContent,
   type PublicQuestion,
@@ -93,6 +102,66 @@ export type TytSocialOfficialSectionIssueFailure =
   | 'tyt_social_section_unavailable'
   | 'tyt_social_section_issue_failed'
 
+export const TYT_SOCIAL_SELECTION_EPOCH_CHANGED = 'tyt_social_selection_epoch_changed'
+
+export interface TytSocialLearningEpoch {
+  policyVersion: string
+  selectionEventId: string
+}
+
+export type TytSocialLearningSnapshot = {
+  status: 'active'
+  context: ActiveTytSocialMasteryContext
+  states: MasteryStateRow[]
+  allowedQuestionIds: string[]
+} | {
+  status: 'setup_required' | 'unavailable'
+  context: null
+  states: []
+  allowedQuestionIds: []
+}
+
+const tytSocialLearningContextEnvelopeSchema = z.object({
+  status: z.enum(['active', 'setup_required', 'unavailable']),
+  available: z.boolean(),
+  reason: z.enum([
+    'selection-required',
+    'released-policy-missing',
+    'mastery-scope-not-released',
+  ]).nullable(),
+  policyVersion: z.string().nullable(),
+  taxonomyVersion: z.string().nullable(),
+  variant: z.enum(['questions_16_20', 'questions_21_25']).nullable(),
+  selectionEventId: z.string().uuid().nullable(),
+  selectionEffectiveAt: z.string().datetime({ offset: true }).nullable(),
+  allowedCategories: z.array(z.string()).max(5),
+  rebuildRequired: z.boolean(),
+  legacyAggregateUsed: z.literal(false),
+}).strict()
+
+const tytSocialLearningSnapshotEnvelopeSchema = z.object({
+  context: tytSocialLearningContextEnvelopeSchema,
+  states: z.array(z.unknown()),
+  allowedQuestionIds: z.array(z.string().uuid()).max(1000),
+}).strict()
+
+const tytSocialMasteryStateKeys = new Set(MASTERY_STATE_COLUMNS.split(',').map(key => key.trim()))
+
+function isSelectionEpoch(value: unknown): value is TytSocialLearningEpoch {
+  return z.object({
+    policyVersion: z.string().regex(/^tyt-social-[0-9]{4}-v[0-9]+$/),
+    selectionEventId: z.string().uuid(),
+  }).strict().safeParse(value).success
+}
+
+export function isTytSocialSelectionEpochChanged(error: unknown): boolean {
+  return error instanceof Error && error.message === TYT_SOCIAL_SELECTION_EPOCH_CHANGED
+}
+
+export function isTytSocialEpochRpcConflict(error: { code?: string; message?: string } | null): boolean {
+  return error?.code === '40001' && error.message === 'TYT Social selection epoch changed'
+}
+
 function withPrivateSnapshots<T extends object, S extends VerifiedQuestionSnapshot>(
   value: T,
   snapshots: readonly S[],
@@ -162,33 +231,133 @@ export function getVerifiedAttemptDurationSec(game: GameSlug, mode: GameMode): n
 }
 
 /**
- * Service-only candidate filter for TYT Social. The branch choice is never
- * returned to callers or logs; only the permitted subset, in input order.
+ * One service-only statement snapshot for TYT Social context, evidence and
+ * candidate eligibility. The policy branch stays server-only and every caller
+ * can bind a later write to the exact immutable selection event it observed.
  */
+export async function readTytSocialLearningSnapshot(
+  admin: SupabaseClient<Database>,
+  userId: string,
+  questionIds: readonly string[] = [],
+): Promise<TytSocialLearningSnapshot> {
+  const deduped = Array.from(new Set(questionIds))
+  if (
+    deduped.length > 1000
+    || !z.string().uuid().safeParse(userId).success
+    || deduped.some(id => !z.string().uuid().safeParse(id).success)
+  ) throw new Error('tyt_social_learning_snapshot_failed')
+
+  let result: { data: unknown; error: { code?: string } | null }
+  try {
+    result = await admin.rpc('read_tyt_social_learning_snapshot', {
+      p_user_id: userId,
+      p_question_ids: deduped,
+    })
+  } catch {
+    throw new Error('tyt_social_learning_snapshot_failed')
+  }
+  if (result.error) throw new Error('tyt_social_learning_snapshot_failed')
+
+  const parsed = tytSocialLearningSnapshotEnvelopeSchema.safeParse(result.data)
+  if (!parsed.success) throw new Error('tyt_social_learning_snapshot_failed')
+  const inputIds = new Set(deduped)
+  if (
+    new Set(parsed.data.allowedQuestionIds).size !== parsed.data.allowedQuestionIds.length
+    || parsed.data.allowedQuestionIds.some(id => !inputIds.has(id))
+  ) throw new Error('tyt_social_learning_snapshot_failed')
+
+  const activeContext = parseActiveTytSocialMasteryContext(parsed.data.context)
+  if (activeContext) {
+    if (!parsed.data.states.every(isCompleteMasteryStateRow)
+      || parsed.data.states.some(row => Object.keys(row as MasteryStateRow)
+        .some(key => !tytSocialMasteryStateKeys.has(key)))
+      || parsed.data.states.some(row => !z.string().uuid().safeParse((row as MasteryStateRow).outcome_id).success)
+      || new Set(parsed.data.states.map(row => (row as MasteryStateRow).outcome_id)).size !== parsed.data.states.length) {
+      throw new Error('tyt_social_learning_snapshot_failed')
+    }
+    return {
+      status: 'active',
+      context: activeContext,
+      states: parsed.data.states as MasteryStateRow[],
+      allowedQuestionIds: parsed.data.allowedQuestionIds,
+    }
+  }
+
+  const context = parsed.data.context
+  const inactiveStatusMatches = context.reason === 'mastery-scope-not-released'
+    ? context.status === 'unavailable' && context.rebuildRequired
+      && parseActiveTytSocialMasteryContext({
+        ...context, status: 'active', available: true, reason: null, rebuildRequired: false,
+      }) !== null
+    : context.status === 'setup_required'
+      && context.variant === null && context.selectionEventId === null
+      && context.selectionEffectiveAt === null && context.allowedCategories.length === 0
+      && (context.reason === 'released-policy-missing'
+        ? context.policyVersion === null && context.taxonomyVersion === null && context.rebuildRequired
+        : context.reason === 'selection-required'
+          && typeof context.policyVersion === 'string'
+          && /^tyt-social-[0-9]{4}-v[0-9]+$/.test(context.policyVersion)
+          && context.taxonomyVersion === 'ba-tyt-sosyal-v1')
+  if (
+    context.available || !inactiveStatusMatches
+    || parsed.data.states.length > 0 || parsed.data.allowedQuestionIds.length > 0
+  ) {
+    throw new Error('tyt_social_learning_snapshot_failed')
+  }
+  return {
+    status: parsed.data.context.reason === 'selection-required'
+      ? 'setup_required'
+      : 'unavailable',
+    context: null,
+    states: [],
+    allowedQuestionIds: [],
+  }
+}
+
+/** Backward-compatible narrow projection; new write flows retain the epoch. */
 export async function filterTytSocialQuestionIds(
   admin: SupabaseClient<Database>,
   userId: string,
   questionIds: readonly string[],
 ): Promise<string[]> {
-  const deduped = Array.from(new Set(questionIds))
-  if (deduped.length === 0) return []
-  if (deduped.length > 1000) throw new Error('tyt_social_candidate_filter_failed')
-  const { data, error } = await admin.rpc('filter_tyt_social_question_candidates', {
-    p_user_id: userId,
-    p_question_ids: deduped,
-  })
-  if (error) throw new Error('tyt_social_candidate_filter_failed')
-  const parsed = z.object({
-    policyVersion: z.string().min(1).max(80),
-    allowedQuestionIds: z.array(z.string().uuid()).max(1000),
-  }).strict().safeParse(data)
-  if (!parsed.success) throw new Error('tyt_social_candidate_filter_failed')
-  const inputIds = new Set(deduped)
+  try {
+    const snapshot = await readTytSocialLearningSnapshot(admin, userId, questionIds)
+    if (snapshot.status !== 'active') throw new Error('tyt_social_candidate_filter_failed')
+    return snapshot.allowedQuestionIds
+  } catch {
+    throw new Error('tyt_social_candidate_filter_failed')
+  }
+}
+
+async function resolveTytSocialEpochForQuestions(
+  admin: SupabaseClient<Database>,
+  userId: string,
+  questionIds: readonly string[],
+  supplied: TytSocialLearningEpoch | undefined,
+): Promise<TytSocialLearningEpoch> {
+  if (supplied) {
+    if (!isSelectionEpoch(supplied)) throw new Error('verified_attempt_issue_failed')
+    return supplied
+  }
+  const snapshot = await readTytSocialLearningSnapshot(admin, userId, questionIds)
   if (
-    new Set(parsed.data.allowedQuestionIds).size !== parsed.data.allowedQuestionIds.length
-    || parsed.data.allowedQuestionIds.some(id => !inputIds.has(id))
-  ) throw new Error('tyt_social_candidate_filter_failed')
-  return parsed.data.allowedQuestionIds
+    snapshot.status !== 'active'
+    || snapshot.allowedQuestionIds.length !== questionIds.length
+    || snapshot.allowedQuestionIds.some((id, index) => id !== questionIds[index])
+  ) throw new Error('verified_attempt_issue_failed')
+  return {
+    policyVersion: snapshot.context.policyVersion,
+    selectionEventId: snapshot.context.selectionEventId,
+  }
+}
+
+function throwNormalizedAttemptRpcError(
+  error: { code?: string; message?: string } | null,
+  fallback: 'verified_attempt_issue_failed' | 'verified_exam_attempt_issue_failed',
+  epochBound: boolean,
+): never {
+  if (epochBound && isTytSocialEpochRpcConflict(error)) throw new Error(TYT_SOCIAL_SELECTION_EPOCH_CHANGED)
+  throw new Error(fallback)
 }
 
 /**
@@ -261,6 +430,7 @@ export async function issueVerifiedAttempt(
     examRef?: string | null
     requestId?: string
     sourcePlanId?: string
+    tytSocialEpoch?: TytSocialLearningEpoch
   }
 ): Promise<VerifiedAttemptTicket> {
   // A TYT Social deneme is an official 20-question, policy-snapshotted
@@ -278,6 +448,14 @@ export async function issueVerifiedAttempt(
   const durationSec = getVerifiedAttemptDurationSec(input.game, input.mode)
   try {
     const isTytSocial = isGovernedTytSocial
+    const epoch = isTytSocial && !input.sourcePlanId
+      ? await resolveTytSocialEpochForQuestions(
+        admin,
+        input.userId,
+        dedupedIds,
+        input.tytSocialEpoch,
+      )
+      : null
     const { data, error } = isTytSocial && input.sourcePlanId
       ? await admin.rpc('issue_verified_tyt_social_plan_attempt', {
           p_user_id: input.userId,
@@ -287,12 +465,14 @@ export async function issueVerifiedAttempt(
           p_request_id: input.requestId ?? crypto.randomUUID(),
         })
       : isTytSocial
-        ? await admin.rpc('issue_verified_tyt_social_attempt', {
+        ? await admin.rpc('issue_verified_tyt_social_attempt_for_epoch', {
             p_user_id: input.userId,
             p_mode: input.mode,
             p_question_ids: dedupedIds,
             p_duration_sec: durationSec,
             p_request_id: input.requestId ?? crypto.randomUUID(),
+            p_expected_policy_version: epoch!.policyVersion,
+            p_expected_selection_event_id: epoch!.selectionEventId,
           })
         : await admin.rpc('issue_verified_attempt', {
             p_user_id: input.userId,
@@ -301,9 +481,7 @@ export async function issueVerifiedAttempt(
             p_question_ids: dedupedIds,
             p_duration_sec: durationSec,
           })
-    if (error) {
-      throw new Error('verified_attempt_issue_failed')
-    }
+    if (error) throwNormalizedAttemptRpcError(error, 'verified_attempt_issue_failed', epoch !== null)
     const ticketSchema = z.object({
       attemptId: z.string().uuid(),
       expiresAt: z.string().datetime({ offset: true }),
@@ -327,7 +505,8 @@ export async function issueVerifiedAttempt(
       { attemptId: parsed.data.attemptId, expiresAt: parsed.data.expiresAt },
       parsed.data.snapshot.items,
     )
-  } catch {
+  } catch (error) {
+    if (isTytSocialSelectionEpochChanged(error)) throw error
     throw new Error('verified_attempt_issue_failed')
   }
 }
@@ -342,6 +521,7 @@ export async function issueVerifiedExamAttempt(
     items: PersonalizedMockItem[]
     plannedDurationSec: number
     requestId: string
+    tytSocialEpoch?: TytSocialLearningEpoch
   },
 ): Promise<VerifiedExamAttemptTicket> {
   const durationSec = getVerifiedAttemptDurationSec(input.game, 'deneme')
@@ -361,16 +541,28 @@ export async function issueVerifiedExamAttempt(
   const isGovernedTytSocial = isTytSocialV2LearnerEnabled()
     && input.game === 'sosyal'
     && input.examRef === 'TYT'
-  const { data, error } = isGovernedTytSocial
-    ? await admin.rpc('issue_verified_tyt_social_exam_attempt', {
+  let result: { data: unknown; error: { code?: string; message?: string } | null }
+  try {
+    const epoch = isGovernedTytSocial
+      ? await resolveTytSocialEpochForQuestions(
+        admin,
+        input.userId,
+        input.items.map(item => item.questionId),
+        input.tytSocialEpoch,
+      )
+      : null
+    result = isGovernedTytSocial
+      ? await admin.rpc('issue_verified_tyt_social_exam_attempt_for_epoch', {
         p_user_id: input.userId,
         p_blueprint_version: input.blueprintVersion,
         p_items: rpcItems,
         p_duration_sec: durationSec,
         p_planned_duration_sec: input.plannedDurationSec,
         p_request_id: input.requestId,
+        p_expected_policy_version: epoch!.policyVersion,
+        p_expected_selection_event_id: epoch!.selectionEventId,
       })
-    : await admin.rpc('issue_verified_exam_attempt', {
+      : await admin.rpc('issue_verified_exam_attempt', {
         p_user_id: input.userId,
         p_game: input.game,
         // PostgreSQL uses NULL as a first-class unscoped exam identity.
@@ -381,7 +573,12 @@ export async function issueVerifiedExamAttempt(
         p_planned_duration_sec: input.plannedDurationSec,
         p_request_id: input.requestId,
       })
-  if (error) throw new Error('verified_exam_attempt_issue_failed')
+  } catch (error) {
+    if (isTytSocialSelectionEpochChanged(error)) throw error
+    throw new Error('verified_exam_attempt_issue_failed')
+  }
+  if (result.error) throwNormalizedAttemptRpcError(result.error, 'verified_exam_attempt_issue_failed', isGovernedTytSocial)
+  const { data } = result
   const parsed = z.object({
     attemptId: z.string().uuid(),
     expiresAt: z.string().datetime({ offset: true }),

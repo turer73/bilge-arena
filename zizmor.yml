@@ -1,0 +1,8 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Existing first-party GitHub Actions use release tags. Keep this explicit.
+        "actions/*": ref-pin
+        # Third-party actions must be pinned to immutable commits.
+        "*": hash-pin

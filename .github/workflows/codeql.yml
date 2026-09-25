@@ -1,4 +1,4 @@
-name: CodeQL
+name: Private Security Scans
 
 on:
   push:
@@ -10,32 +10,40 @@ on:
 
 permissions:
   contents: read
-  packages: read
-  security-events: write
 
 concurrency:
-  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  group: private-security-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-  analyze:
-    name: CodeQL (${{ matrix.language }})
+  actions:
+    # Legacy check context required by master ruleset 21302881. Scanner: zizmor, not CodeQL.
+    name: CodeQL (actions)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [actions, javascript-typescript]
     steps:
       - uses: actions/checkout@v6
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
         with:
-          languages: ${{ matrix.language }}
-          build-mode: none
-          queries: security-extended
-
-      - name: Analyze
-        uses: github/codeql-action/analyze@v4
+          persist-credentials: false
+      - uses: actions/setup-python@v6
         with:
-          category: /language:${{ matrix.language }}
+          python-version: '3.12'
+      - name: Install pinned workflow scanner
+        run: python -m pip install --disable-pip-version-check --no-input zizmor==1.30.1
+      - name: Reject high-severity GitHub Actions findings
+        run: zizmor --config zizmor.yml --offline --strict-collection --min-severity=high --collect=workflows .
+
+  javascript-typescript:
+    # Legacy check context required by master ruleset 21302881. Scanner: Semgrep CE, not CodeQL.
+    name: CodeQL (javascript-typescript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned source scanner
+        run: python -m pip install --disable-pip-version-check --no-input semgrep==1.163.0
+      - name: Reject source security findings and scan errors
+        run: semgrep scan --config p/security-audit --metrics=off --strict --error src
