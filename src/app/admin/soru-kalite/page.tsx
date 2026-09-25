@@ -142,7 +142,7 @@ export default function AdminQuestionQualityPage() {
           <select
             value={minAnswered}
             onChange={(e) => setMinAnswered(Number(e.target.value))}
-            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
+            className="min-h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
           >
             {MIN_ANSWERED_OPTIONS.map((n) => (
               <option key={n} value={n}>{n}+</option>
@@ -154,7 +154,7 @@ export default function AdminQuestionQualityPage() {
           <select
             value={maxRate}
             onChange={(e) => setMaxRate(Number(e.target.value))}
-            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
+            className="min-h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs focus:border-[var(--focus)] focus:outline-none"
           >
             {MAX_RATE_OPTIONS.map((n) => (
               <option key={n} value={n}>%{n}</option>
@@ -194,8 +194,8 @@ export default function AdminQuestionQualityPage() {
               <tbody>
                 {items.map((q) => (
                   <tr key={q.id} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] transition-colors">
-                    <td className="max-w-[320px] truncate px-4 py-3">
-                      <div className="font-medium">{stripRichText(q.question_text)}</div>
+                    <td className="max-w-[320px] px-4 py-3 align-top">
+                      <div className="whitespace-normal break-words font-medium">{stripRichText(q.question_text)}</div>
                       <div className="mt-0.5 text-xs text-[var(--text-sub)]">
                         {q.category}{q.subcategory ? ` / ${q.subcategory}` : ''}
                       </div>
@@ -251,7 +251,7 @@ export default function AdminQuestionQualityPage() {
 
         {!loading && items.length === 0 && (
           <div className="py-12 text-center text-sm text-[var(--text-sub)]">
-            Bu esiklerde drift soru yok — kalite iyi gorunuyor.
+            Bu filtrelerle eşleşen soru yok. Eşikleri değiştirerek yeniden deneyin.
           </div>
         )}
       </div>

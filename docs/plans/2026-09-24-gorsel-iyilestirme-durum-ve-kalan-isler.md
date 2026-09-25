@@ -1,6 +1,6 @@
 # Bilge Arena görsel iyileştirme: durum ve kalan işler
 
-Tarih: 24 Eylül 2026. Kaynak: kullanıcının 17 bölümlük “Bilge Arena Görsel İyileştirme Yolu” planı. Bu belge uygulama ve doğrulama takibidir; canlıya alınmış veya öğrenme etkisi kanıtlanmış bir sonuç beyanı değildir.
+Tarih: 24–25 Eylül 2026. Kaynak: kullanıcının 17 bölümlük “Bilge Arena Görsel İyileştirme Yolu” planı. Bu belge uygulama ve doğrulama takibidir; canlıya alınmış veya öğrenme etkisi kanıtlanmış bir sonuç beyanı değildir.
 
 ## Durum ilkesi
 
@@ -17,7 +17,9 @@ Mevcut adayda: teknik kimlikleri kısaltma/kopyalama, Türkçe durum ve bulgu et
 
 24 Eylül yerel doğrulama: Son değişikliklerden sonra 485 test dosyası ve 4.346 test, tip denetimi, üretim derlemesi ve `git diff --check` geçti; lint 0 hata ve 21 uyarı verdi. Soru düzenleme penceresinin klavye odağı/Escape akışı regresyon testiyle doğrulandı.
 
-Kullanıcının dört yönetici ekranı görüntüsü `bilgearena.com` canlı sitesinden alındı. Canlıda ham bulgu kodları, tam UUID'ler ve eski itiraz görünümü hâlâ mevcut. Bunlar aday dalın görsel kabulü değildir. Adayda teknik kodlar varsayılan listede Türkçe etiketlerle sunuluyor; tam kod/kimlik kanıt ayrıntısında veya kopyalamada korunuyor. Canlı TYT Sosyal göstergesi `0/1316` eksik kanıt gösteriyor; bu gerçek yayın hazırlığı eksikliğidir, görsel düzeltmeyle kapanmaz. Yerel adayda `.env.local` ve yetkili yönetici oturumu bulunmadığından oturum açılmış masaüstü/tablet önizlemesi yapılamadı. Bu nedenle başlık tamamlanmış sayılmıyor; kullanıcı onayıyla aday dalı yalnız önizleme için commit edilip push edilebilir. PR, merge ve canlı dağıtım ayrı karardır.
+24 Eylül'deki dört yönetici ekranı görüntüsü `bilgearena.com` canlı sitesinden alındı. Canlıda ham bulgu kodları, tam UUID'ler ve eski itiraz görünümü vardı; aday dalın görsel kabulü değildi. TYT Sosyal göstergesi `0/1316` eksik kanıt gösteriyor; bu gerçek yayın hazırlığı eksikliği görsel düzenlemeyle kapanmaz. Yerel yetkili önizleme kurulamadı. Kullanıcı onayıyla `b6ed7945` yalnız aday dalına push edildi; PR, merge ve canlı dağıtım yapılmadı.
+
+25 Eylül'de `b6ed7945` Vercel önizlemesi başarılı oldu ve kullanıcının paylaştığı beş yetkili ekran kesiti incelendi. İtiraz kanıt bağlantıları, Türkçe bulgu etiketleri ve kısaltılmış kimlikler adayda görünür. Kesitlerin tam viewport ölçüsü bilinmediğinden masaüstü/tablet ve klavye/kontrast kabulü yapılmış sayılmaz. Görülen üç kusur aday kodda düzeltildi: boşluklu “Legacy import” etiketi, performans tablosunda kesilen soru metni ve Yönetişim ayrıntı alanının gereksiz uzaması. Ayrıca filtrelerin dokunma yüksekliği artırıldı ve boş sonuç metnindeki kanıtsız “kalite iyi” iddiası çıkarıldı. Son değişikliklerden sonra 485 dosya / 4.346 test, tip denetimi, ilgili lint ve üretim derlemesi geçti; ilk derleme dosya izni yüzünden durdu, yetkili tekrarında geçti. Bu yeni düzeltmelerin dağıtılmış önizlemesi ve tam görsel kabulü henüz yapılmadı.
 
 Kapanış ölçütleri:
 
@@ -26,7 +28,7 @@ Kapanış ölçütleri:
 - [ ] Görünür teknik kodların Türkçe karşılığını, tam kimliğe erişimi ve kopyalama davranışını kontrol et.
 - [x] İlgili testler, tam test paketi, tip denetimi, lint ve üretim derlemesini **son değişikliklerden sonra** yeniden çalıştır.
 - [ ] Aday dalı güncel `origin/master` ile karşılaştır; yeni değişiklikleri ve kullanıcıya ait kirli dosyaları koru.
-- [ ] Kapsam ve commit SHA açıkça kaydedildikten sonra yalnız aday dalını push et. PR/merge/deploy ayrı karardır.
+- [x] İlk aday commit'i `b6ed7945` yalnız aday dalına push edildi. Sonraki görsel düzeltmelerin push ve kabulü ayrıca izlenir; PR/merge/canlı dağıtım ayrı karardır.
 
 ### 2. P0 — öğrenci odağı ve ortak görsel dil
 

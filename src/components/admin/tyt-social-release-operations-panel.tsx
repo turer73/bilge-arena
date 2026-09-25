@@ -31,7 +31,7 @@ const roleLabels: Record<ExamRole, string> = {
 }
 
 function isLegacyImport(value: string | null | undefined): boolean {
-  return value?.replaceAll('_', '-').toLowerCase() === 'legacy-import'
+  return value?.trim().replace(/[\s_]+/g, '-').toLowerCase() === 'legacy-import'
 }
 
 function sourceTitleLabel(value: string | null): string {

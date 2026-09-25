@@ -45,6 +45,7 @@ describe('AdminQuestionQualityPage', () => {
   it('API dan gelen drift sorularini + basari/rapor degerlerini render eder', async () => {
     render(<AdminQuestionQualityPage />)
     expect(await screen.findByText('Kotu soru bir')).toBeInTheDocument()
+    expect(screen.getByText('Kotu soru bir')).toHaveClass('break-words')
     expect(screen.getByText('Soru iki')).toBeInTheDocument()
     expect(screen.getByText('%20')).toBeInTheDocument() // q1 success_rate
     expect(screen.getByLabelText('Başarı oranı yüzde 20; 100 yanıt')).toHaveClass('text-[var(--text)]')
@@ -62,7 +63,7 @@ describe('AdminQuestionQualityPage', () => {
   it('drift soru yoksa bos durum mesaji gosterir', async () => {
     mockQuality({ ...SAMPLE, questions: [] })
     render(<AdminQuestionQualityPage />)
-    expect(await screen.findByText(/drift soru yok/)).toBeInTheDocument()
+    expect(await screen.findByText(/Bu filtrelerle eşleşen soru yok/)).toBeInTheDocument()
   })
 
   it('maxRate filtresi degisince yeni esikle yeniden fetch eder', async () => {

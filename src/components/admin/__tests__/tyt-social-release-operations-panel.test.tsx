@@ -146,8 +146,8 @@ describe('TytSocialReleaseOperationsPanel', () => {
 describe('TytSocialReleaseOperationsPanel source labels', () => {
   it('shows legacy placeholders as review work rather than raw import codes', async () => {
     const data = operations()
-    data.items[0].sourceTitle = 'legacy-import'
-    data.items[0].licenseCode = 'legacy-import'
+    data.items[0].sourceTitle = 'Legacy import'
+    data.items[0].licenseCode = 'legacy_import'
     fetchMock.mockImplementation((input: RequestInfo | URL) =>
       Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(String(input).startsWith('/api/admin/content-quality/tyt-social/exam-role?') ? data : { replayed: false }) }),
     )

@@ -260,7 +260,7 @@ export function ContentGovernancePanel() {
             ))}
             {items.length === 0 && <p className="rounded-lg border border-dashed border-[var(--border)] p-5 text-center text-xs text-[var(--text-sub)]">Bekleyen revizyon yok.</p>}
           </div>
-          <div className="min-w-0 rounded-lg border border-[var(--border)] p-4">
+          <div className="min-w-0 self-start rounded-lg border border-[var(--border)] p-4">
             {!detail ? <p className="text-xs text-[var(--text-sub)]">Kanıtları ve karar geçmişini görmek için bir revizyon seçin.</p> : (
               <div className="space-y-4">
                 <div>
