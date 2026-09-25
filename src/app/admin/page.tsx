@@ -34,7 +34,7 @@ const WORKFLOWS: Array<{ title: string; description: string; links: DashboardLin
     { label: 'Soru yönetimi', description: 'Soru bankası ve düzenleme', href: '/admin/sorular', Icon: BookOpen, permissions: ['admin.questions.view', 'content.prepare'], required: ['admin.dashboard.view'] },
     { label: 'Soru Kalitesi', description: 'İtiraz, bulgu ve içerik kararları', href: '/admin/soru-kalite', Icon: ShieldCheck, permissions: ['admin.questions.view', 'content.prepare', 'content.review.stage1', 'content.review.stage2', 'content.publish', 'content.appeals.manage', 'content.corrections.apply', 'content.psychometrics.refresh'] },
     { label: 'Gönderiler', description: 'Topluluktan gelen sorular', href: '/admin/gonderiler', Icon: Inbox, permissions: ['admin.questions.view'] },
-    { label: 'Raporlar', description: 'Bekleyen hata bildirimleri', href: '/admin/raporlar', Icon: Flag, permissions: ['admin.reports.view'], required: ['admin.questions.view'] },
+    { label: 'Raporlar', description: 'Bekleyen hata bildirimleri', href: '/admin/raporlar', Icon: Flag, permissions: ['admin.reports.view'] },
   ] },
   { title: 'Kullanıcı ve platform', description: 'Erişimleri, kurumları ve site öğelerini yönetme.', links: [
     { label: 'Kullanıcılar', description: 'Hesaplar ve roller', href: '/admin/kullanicilar', Icon: Users, permissions: ['admin.users.view'] },
@@ -50,7 +50,13 @@ const WORKFLOWS: Array<{ title: string; description: string; links: DashboardLin
   ] },
 ]
 
-function canAccess(link: DashboardLink, permissions: readonly string[]) {
+function canOpenReports(permissions: readonly string[], legacyReportsAvailable: boolean) {
+  return permissions.includes('admin.reports.view')
+    && (permissions.includes('admin.questions.view') || legacyReportsAvailable)
+}
+
+function canAccess(link: DashboardLink, permissions: readonly string[], legacyReportsAvailable: boolean) {
+  if (link.href === '/admin/raporlar') return canOpenReports(permissions, legacyReportsAvailable)
   return link.permissions.some((permission) => permissions.includes(permission))
     && (link.required ?? []).every((permission) => permissions.includes(permission))
 }
@@ -68,6 +74,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [permissions, setPermissions] = useState<string[] | null>(null)
+  const [legacyReportsAvailable, setLegacyReportsAvailable] = useState<boolean | null>(null)
 
   useEffect(() => {
     let active = true
@@ -89,11 +96,18 @@ export default function AdminDashboard() {
         const res = await fetch('/api/admin/me/permissions', { cache: 'no-store' })
         if (!res.ok) throw new Error('Permissions request failed')
         const data: unknown = await res.json()
-        if (active) setPermissions(
-          data && typeof data === 'object' && 'permissions' in data && Array.isArray(data.permissions)
-            ? data.permissions.filter((permission: unknown): permission is string => typeof permission === 'string')
-            : [],
-        )
+        const allowed = data && typeof data === 'object' && 'permissions' in data && Array.isArray(data.permissions)
+          ? data.permissions.filter((permission: unknown): permission is string => typeof permission === 'string')
+          : []
+        if (active) setPermissions(allowed)
+        if (allowed.includes('admin.reports.view') && !allowed.includes('admin.questions.view')) {
+          try {
+            const reportResponse = await fetch('/api/admin/reports?page=1', { cache: 'no-store' })
+            if (active) setLegacyReportsAvailable(reportResponse.ok)
+          } catch {
+            if (active) setLegacyReportsAvailable(false)
+          }
+        }
       } catch {
         if (active) setPermissions([])
       }
@@ -136,7 +150,7 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      {stats && stats.pendingReports > 0 && permissions?.includes('admin.reports.view') && permissions.includes('admin.questions.view') && (
+      {stats && stats.pendingReports > 0 && permissions && canOpenReports(permissions, legacyReportsAvailable === true) && (
         <Link href="/admin/raporlar" className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-4 py-3 text-sm transition-colors hover:bg-[var(--card-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
           <span><strong>{stats.pendingReports.toLocaleString('tr-TR')} bekleyen rapor</strong><span className="ml-2 text-[var(--text-sub)]">Bildirimleri incele</span></span>
           <ArrowUpRight aria-hidden="true" className="h-5 w-5 shrink-0" />
@@ -148,12 +162,12 @@ export default function AdminDashboard() {
           <h2 id="workflows-title" className="text-lg font-bold">Yönetim alanları</h2>
           <p className="text-sm text-[var(--text-sub)]">Yetkiniz olan alanlardan işinize devam edin.</p>
         </div>
-        {permissions === null ? (
+        {permissions === null || (permissions.includes('admin.reports.view') && !permissions.includes('admin.questions.view') && legacyReportsAvailable === null) ? (
           <p role="status" className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]">Yönetim alanları yükleniyor…</p>
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {WORKFLOWS.map((group) => {
-              const links = group.links.filter((link) => canAccess(link, permissions))
+              const links = group.links.filter((link) => canAccess(link, permissions, legacyReportsAvailable === true))
               if (links.length === 0) return null
               return (
                 <div key={group.title} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5">
@@ -171,7 +185,7 @@ export default function AdminDashboard() {
                 </div>
               )
             })}
-            {WORKFLOWS.every((group) => group.links.every((link) => !canAccess(link, permissions))) && (
+            {WORKFLOWS.every((group) => group.links.every((link) => !canAccess(link, permissions, legacyReportsAvailable === true))) && (
               <p className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]">Bu panoda açılabilir iş akışı yok.</p>
             )}
           </div>

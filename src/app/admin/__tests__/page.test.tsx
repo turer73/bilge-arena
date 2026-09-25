@@ -55,12 +55,24 @@ describe('AdminDashboard', () => {
   it('does not link report-only moderators to an inaccessible governed queue', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 409 })
       return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.reports.view'] }) })
     })
     render(<AdminDashboard />)
     expect(await screen.findByText('Bu panoda açılabilir iş akışı yok.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Raporlar/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /3 bekleyen rapor/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps the report queue available to moderators when governance is disabled', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: true })
+      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.reports.view'] }) })
+    })
+    render(<AdminDashboard />)
+    expect(await screen.findByRole('link', { name: /Raporlar/ })).toHaveAttribute('href', '/admin/raporlar')
+    expect(screen.getByRole('link', { name: /3 bekleyen rapor/ })).toHaveAttribute('href', '/admin/raporlar')
   })
 
   it('shows authorized areas omitted from the former quick links', async () => {
