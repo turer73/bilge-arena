@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   limiter: vi.fn(),
   onboardingEnabled: vi.fn(),
   freePilotEnabled: vi.fn(),
+  pilotEnabled: vi.fn(),
   trackingEnabled: vi.fn(),
   studyProgramEnabled: vi.fn(),
   demoEnabled: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock('@/lib/institution-tracking/server-security', () => ({
 }))
 
 vi.mock('@/lib/institution-pilot/server-security', () => ({
-  isInstitutionPilotEnabled: () => true,
+  isInstitutionPilotEnabled: mocks.pilotEnabled,
   isInstitutionOnboardingEnabled: mocks.onboardingEnabled,
   isInstitutionFreePilotEnabled: mocks.freePilotEnabled,
 }))
@@ -61,6 +62,7 @@ beforeEach(() => {
   mocks.logAdminAction.mockResolvedValue({ error: null })
   mocks.onboardingEnabled.mockReturnValue(true)
   mocks.freePilotEnabled.mockReturnValue(false)
+  mocks.pilotEnabled.mockReturnValue(true)
   mocks.trackingEnabled.mockReturnValue(true)
   mocks.studyProgramEnabled.mockReturnValue(true)
   mocks.demoEnabled.mockReturnValue(false)
@@ -100,6 +102,24 @@ describe('admin institution routes', () => {
       provisioning: { invitationFreePilotEnabled: false, commercialOnboardingEnabled: false, demoEnabled: false },
     })
     expect(mocks.rpc).toHaveBeenCalledWith('list_pilot_institutions', { p_user_id: ADMIN.id })
+  })
+
+  it('exposes the standalone demo to authorized admins while the pilot platform is closed', async () => {
+    mocks.pilotEnabled.mockReturnValue(false)
+    mocks.demoEnabled.mockReturnValue(true)
+
+    const response = await GET()
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      institutions: [],
+      provisioning: {
+        invitationFreePilotEnabled: false,
+        commercialOnboardingEnabled: false,
+        demoEnabled: true,
+      },
+    })
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('exposes only the dedicated free-pilot capability to the protected admin UI', async () => {
