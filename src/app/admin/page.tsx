@@ -52,7 +52,7 @@ const WORKFLOWS: Array<{ title: string; description: string; links: DashboardLin
 
 function canOpenReports(permissions: readonly string[], legacyReportsAvailable: boolean) {
   return permissions.includes('admin.reports.view')
-    && (permissions.includes('admin.questions.view') || legacyReportsAvailable)
+    && (permissions.includes('admin.questions.view') || permissions.includes('content.appeals.manage') || legacyReportsAvailable)
 }
 
 function canAccess(link: DashboardLink, permissions: readonly string[], legacyReportsAvailable: boolean) {
@@ -119,6 +119,7 @@ export default function AdminDashboard() {
 
   const reportProbePending = permissions?.includes('admin.reports.view')
     && !permissions.includes('admin.questions.view')
+    && !permissions.includes('content.appeals.manage')
     && legacyReportsAvailable === null
 
   return (

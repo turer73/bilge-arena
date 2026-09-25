@@ -79,6 +79,18 @@ describe('AdminDashboard', () => {
     expect(screen.queryByRole('link', { name: /Raporlar/ })).not.toBeInTheDocument()
   })
 
+  it('links appeal moderators to the governed report queue', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 409 })
+      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.reports.view', 'content.appeals.manage'] }) })
+    })
+    render(<AdminDashboard />)
+    expect(await screen.findByRole('link', { name: /Raporlar/ })).toHaveAttribute('href', '/admin/raporlar')
+    expect(screen.getByRole('link', { name: /Soru Kalitesi/ })).toHaveAttribute('href', '/admin/soru-kalite')
+    expect(screen.queryByRole('link', { name: /3 bekleyen rapor/ })).not.toBeInTheDocument()
+  })
+
   it('keeps the report queue available to moderators when governance is disabled', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
