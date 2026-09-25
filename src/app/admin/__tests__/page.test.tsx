@@ -52,13 +52,45 @@ describe('AdminDashboard', () => {
     expect(screen.queryByRole('link', { name: /bekleyen rapor/ })).not.toBeInTheDocument()
   })
 
+  it('does not link report-only moderators to an inaccessible governed queue', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.reports.view'] }) })
+    })
+    render(<AdminDashboard />)
+    expect(await screen.findByText('Bu panoda açılabilir iş akışı yok.')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Raporlar/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /3 bekleyen rapor/ })).not.toBeInTheDocument()
+  })
+
+  it('shows authorized areas omitted from the former quick links', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.homepage.view'] }) })
+    })
+    render(<AdminDashboard />)
+    expect(await screen.findByRole('link', { name: /Anasayfa/ })).toHaveAttribute('href', '/admin/anasayfa-editor')
+    expect(screen.queryByText('Bu panoda açılabilir iş akışı yok.')).not.toBeInTheDocument()
+  })
+
+  it('hides question management without its data permission and submissions without question view', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['content.prepare'] }) })
+    })
+    render(<AdminDashboard />)
+    expect(await screen.findByRole('link', { name: /Soru Kalitesi/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Soru yönetimi/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Gönderiler/ })).not.toBeInTheDocument()
+  })
+
   it('does not show unauthorized workflow links if permissions are unavailable', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
       return Promise.reject(new Error('Permissions unavailable'))
     })
     render(<AdminDashboard />)
-    await waitFor(() => expect(screen.getByText('Erişilebilir yönetim alanı bulunamadı.')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Bu panoda açılabilir iş akışı yok.')).toBeInTheDocument())
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 })

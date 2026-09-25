@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
-import { ArrowUpRight, BookOpen, Building2, CircleAlert, CircleCheck, Flag, Gamepad2, Image, Inbox, Settings2, ShieldCheck, Users, type LucideIcon } from 'lucide-react'
+import { ArrowUpRight, Award, BookOpen, Building2, CircleAlert, CircleCheck, Flag, Gamepad2, House, Image, Inbox, KeyRound, ScrollText, Settings2, ShieldCheck, Users, type LucideIcon } from 'lucide-react'
 
 interface AdminStats {
   totalUsers: number
@@ -20,12 +20,21 @@ const STAT_CARDS: Array<{ key: keyof AdminStats; label: string; Icon: LucideIcon
   { key: 'pendingReports', label: 'Bekleyen rapor', Icon: CircleAlert, tone: 'text-[var(--text)]' },
 ]
 
-const WORKFLOWS = [
+interface DashboardLink {
+  label: string
+  description: string
+  href: string
+  Icon: LucideIcon
+  permissions: readonly string[]
+  required?: readonly string[]
+}
+
+const WORKFLOWS: Array<{ title: string; description: string; links: DashboardLink[] }> = [
   { title: 'İçerik ve kalite', description: 'Soruları hazırlama, kanıtları ve bildirimleri inceleme.', links: [
-    { label: 'Soru yönetimi', description: 'Soru bankası ve düzenleme', href: '/admin/sorular', Icon: BookOpen, permissions: ['admin.questions.view', 'content.prepare'] },
+    { label: 'Soru yönetimi', description: 'Soru bankası ve düzenleme', href: '/admin/sorular', Icon: BookOpen, permissions: ['admin.questions.view', 'content.prepare'], required: ['admin.dashboard.view'] },
     { label: 'Soru Kalitesi', description: 'İtiraz, bulgu ve içerik kararları', href: '/admin/soru-kalite', Icon: ShieldCheck, permissions: ['admin.questions.view', 'content.prepare', 'content.review.stage1', 'content.review.stage2', 'content.publish', 'content.appeals.manage', 'content.corrections.apply', 'content.psychometrics.refresh'] },
-    { label: 'Gönderiler', description: 'Topluluktan gelen sorular', href: '/admin/gonderiler', Icon: Inbox, permissions: ['admin.questions.view', 'content.prepare'] },
-    { label: 'Raporlar', description: 'Bekleyen hata bildirimleri', href: '/admin/raporlar', Icon: Flag, permissions: ['admin.reports.view'] },
+    { label: 'Gönderiler', description: 'Topluluktan gelen sorular', href: '/admin/gonderiler', Icon: Inbox, permissions: ['admin.questions.view'] },
+    { label: 'Raporlar', description: 'Bekleyen hata bildirimleri', href: '/admin/raporlar', Icon: Flag, permissions: ['admin.reports.view'], required: ['admin.questions.view'] },
   ] },
   { title: 'Kullanıcı ve platform', description: 'Erişimleri, kurumları ve site öğelerini yönetme.', links: [
     { label: 'Kullanıcılar', description: 'Hesaplar ve roller', href: '/admin/kullanicilar', Icon: Users, permissions: ['admin.users.view'] },
@@ -33,7 +42,18 @@ const WORKFLOWS = [
     { label: 'Arka Planlar', description: 'Görsel varlıklar', href: '/admin/arka-planlar', Icon: Image, permissions: ['admin.backgrounds.view'] },
     { label: 'Site ayarları', description: 'Platform yapılandırması', href: '/admin/ayarlar', Icon: Settings2, permissions: ['admin.settings.view'] },
   ] },
+  { title: 'Görünüm ve denetim', description: 'Ana sayfa, ödüller ve yönetim kayıtları.', links: [
+    { label: 'Anasayfa', description: 'Ana sayfa içeriği', href: '/admin/anasayfa-editor', Icon: House, permissions: ['admin.homepage.view'] },
+    { label: 'Rozetler', description: 'Ödül görünümü', href: '/admin/rozetler', Icon: Award, permissions: ['admin.badges.view'] },
+    { label: 'Loglar', description: 'İşlem kayıtları', href: '/admin/loglar', Icon: ScrollText, permissions: ['admin.logs.view'] },
+    { label: 'Roller', description: 'Yönetici yetkileri', href: '/admin/roller', Icon: KeyRound, permissions: ['admin.roles.view'] },
+  ] },
 ]
+
+function canAccess(link: DashboardLink, permissions: readonly string[]) {
+  return link.permissions.some((permission) => permissions.includes(permission))
+    && (link.required ?? []).every((permission) => permissions.includes(permission))
+}
 
 function isAdminStats(value: unknown): value is AdminStats {
   if (!value || typeof value !== 'object') return false
@@ -116,7 +136,7 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      {stats && stats.pendingReports > 0 && permissions?.includes('admin.reports.view') && (
+      {stats && stats.pendingReports > 0 && permissions?.includes('admin.reports.view') && permissions.includes('admin.questions.view') && (
         <Link href="/admin/raporlar" className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-4 py-3 text-sm transition-colors hover:bg-[var(--card-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
           <span><strong>{stats.pendingReports.toLocaleString('tr-TR')} bekleyen rapor</strong><span className="ml-2 text-[var(--text-sub)]">Bildirimleri incele</span></span>
           <ArrowUpRight aria-hidden="true" className="h-5 w-5 shrink-0" />
@@ -133,7 +153,7 @@ export default function AdminDashboard() {
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {WORKFLOWS.map((group) => {
-              const links = group.links.filter((link) => link.permissions.some((permission) => permissions.includes(permission)))
+              const links = group.links.filter((link) => canAccess(link, permissions))
               if (links.length === 0) return null
               return (
                 <div key={group.title} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5">
@@ -151,8 +171,8 @@ export default function AdminDashboard() {
                 </div>
               )
             })}
-            {WORKFLOWS.every((group) => group.links.every((link) => !link.permissions.some((permission) => permissions.includes(permission)))) && (
-              <p className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]">Erişilebilir yönetim alanı bulunamadı.</p>
+            {WORKFLOWS.every((group) => group.links.every((link) => !canAccess(link, permissions))) && (
+              <p className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]">Bu panoda açılabilir iş akışı yok.</p>
             )}
           </div>
         )}
