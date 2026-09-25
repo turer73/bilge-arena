@@ -28,7 +28,7 @@ export default function AdminInstitutionsPage() {
   const [search, setSearch] = useState('')
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [manager, setManager] = useState<Candidate | null>(null)
-  const [approvalReference, setApprovalReference] = useState('')
+  const [packageAccepted, setPackageAccepted] = useState(false)
   const [studentLimit, setStudentLimit] = useState(30)
   const [staffLimit, setStaffLimit] = useState(2)
   const [trialDays, setTrialDays] = useState(30)
@@ -41,6 +41,7 @@ export default function AdminInstitutionsPage() {
   const provisionInFlightRef = useRef(false)
   const freePilotEnabled = directory.provisioning?.invitationFreePilotEnabled === true
   const commercialOnboardingEnabled = directory.provisioning?.commercialOnboardingEnabled === true
+  const demoEnabled = directory.provisioning?.demoEnabled === true
   const canProvision = freePilotEnabled || commercialOnboardingEnabled
   const activeProvisioningMode: ProvisioningMode = freePilotEnabled
     ? commercialOnboardingEnabled ? provisioningMode : 'free'
@@ -82,7 +83,7 @@ export default function AdminInstitutionsPage() {
     setNotice(null)
     try {
       const payload = activeProvisioningMode === 'free'
-        ? { name, managerUserId: manager.id, approvalReference, studentLimit, staffLimit, trialDays }
+        ? { name, managerUserId: manager.id, packageAccepted, studentLimit, staffLimit, trialDays }
         : { name, managerUserId: manager.id }
       const payloadKey = JSON.stringify(payload)
       const attemptRef = activeProvisioningMode === 'free'
@@ -110,7 +111,7 @@ export default function AdminInstitutionsPage() {
       setName('')
       setSearch('')
       setManager(null)
-      setApprovalReference('')
+      setPackageAccepted(false)
       setCandidates([])
       await load()
       setNotice(activeProvisioningMode === 'free'
@@ -167,13 +168,19 @@ export default function AdminInstitutionsPage() {
         <a href="/documents/bilge-arena-kurum-paketleri-v1.pdf" target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-[var(--border)] px-3 text-xs font-black text-[var(--focus)]">Kurum paketleri PDF</a>
       </header>
 
+      {demoEnabled && <section className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4 sm:p-5">
+        <h2 className="font-black text-emerald-200">Hızlı iç test</h2>
+        <p className="mt-2 text-xs leading-5 text-[var(--text-sub)]">Sözleşme veya yeni kurum kaydı gerekmez. Demo akışını açın; gerçek öğrenci, veli veya kurum verisi kullanmayın.</p>
+        <Link href="/arena/kurum/demo" className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 text-sm font-black text-emerald-200">Demo akışını aç</Link>
+      </section>}
+
       <form onSubmit={createInstitution} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-black"><Plus className="h-4 w-4" /> {activeProvisioningMode === 'free' ? 'Platform kontrollü ücretsiz pilot' : 'Ücretli kurum onboarding'}</h2>
         <p className={`mt-2 rounded-xl border p-3 text-xs font-semibold leading-5 ${canProvision ? 'border-amber-400/25 bg-amber-400/10 text-amber-100' : 'border-white/10 bg-[var(--surface)] text-[var(--text-sub)]'}`}>
           {!canProvision
             ? 'Ücretsiz pilot ve ücretli kurum onboarding akışları şu anda kapalı. Mevcut kurumları ve yaşam döngüsü işlemlerini yönetmeye devam edebilirsiniz.'
             : activeProvisioningMode === 'free'
-              ? 'Bu akış genel kurum kaydı veya ücretli onboarding değildir. Yalnız sözleşme/KVKK ön koşulları ve sorumlusu doğrulanmış, mevcut hesabı bulunan kurum yöneticileri için kullanın.'
+              ? 'Gerçek bir dershane pilotu için kurum adı, yönetici, paket ve kısa pilot onayı yeterlidir. Teknik güvenlik kontrolleri Bilge Arena tarafından arka planda yönetilir.'
               : 'Bu akış ticari kurum onboarding içindir. Ücretsiz pilot sınırları ve onay referansı bu akışta kullanılmaz.'}
         </p>
         {freePilotEnabled && commercialOnboardingEnabled && <fieldset className="mt-4 flex flex-wrap gap-4" aria-label="Kurum oluşturma akışı">
@@ -182,36 +189,33 @@ export default function AdminInstitutionsPage() {
         </fieldset>}
         <fieldset disabled={!canProvision || saving} className="mt-4 grid gap-4 disabled:opacity-60 lg:grid-cols-2">
           <label className="text-xs font-bold text-[var(--text-sub)]">Kurum adı
-            <input value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} required placeholder="Örn. Bilge Eğitim Merkezi" className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
+            <input value={name} onChange={(event) => { setName(event.target.value); setPackageAccepted(false) }} minLength={2} maxLength={120} required placeholder="Örn. Bilge Eğitim Merkezi" className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
           </label>
           <div className="relative">
             <label className="text-xs font-bold text-[var(--text-sub)]">İlk kurum yöneticisi
-              <span className="relative mt-1 block"><Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-[var(--text-sub)]" /><input role="combobox" aria-autocomplete="list" aria-expanded={!manager && candidates.length > 0} aria-controls="institution-manager-candidates" value={search} onChange={(event) => { setSearch(event.target.value); setManager(null) }} placeholder="İsim veya kullanıcı adı ara" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-9 pr-3 text-sm text-[var(--text)]" /></span>
+              <span className="relative mt-1 block"><Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-[var(--text-sub)]" /><input role="combobox" aria-autocomplete="list" aria-expanded={!manager && candidates.length > 0} aria-controls="institution-manager-candidates" value={search} onChange={(event) => { setSearch(event.target.value); setManager(null); setPackageAccepted(false) }} placeholder="İsim veya kullanıcı adı ara" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-9 pr-3 text-sm text-[var(--text)]" /></span>
             </label>
-            {!manager && candidates.length > 0 && <div id="institution-manager-candidates" role="listbox" className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-xl">{candidates.map((candidate) => <button key={candidate.id} type="button" role="option" aria-selected="false" onClick={() => { setManager(candidate); setSearch(candidate.display_name || candidate.username || 'Seçili kullanıcı'); setCandidates([]) }} className="block min-h-11 w-full rounded-lg px-3 text-left text-sm hover:bg-[var(--card-bg)]"><span className="font-bold">{candidate.display_name || candidate.username || 'İsimsiz kullanıcı'}</span><span className="ml-2 text-xs text-[var(--text-sub)]">@{candidate.username || '—'}</span></button>)}</div>}
+            {!manager && candidates.length > 0 && <div id="institution-manager-candidates" role="listbox" className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-xl">{candidates.map((candidate) => <button key={candidate.id} type="button" role="option" aria-selected="false" onClick={() => { setManager(candidate); setSearch(candidate.display_name || candidate.username || 'Seçili kullanıcı'); setCandidates([]); setPackageAccepted(false) }} className="block min-h-11 w-full rounded-lg px-3 text-left text-sm hover:bg-[var(--card-bg)]"><span className="font-bold">{candidate.display_name || candidate.username || 'İsimsiz kullanıcı'}</span><span className="ml-2 text-xs text-[var(--text-sub)]">@{candidate.username || '—'}</span></button>)}</div>}
           </div>
-          {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Onay / pilot dosyası referansı
-            <input value={approvalReference} onChange={(event) => setApprovalReference(event.target.value.toUpperCase())} minLength={6} maxLength={64} required pattern="[A-Z0-9][A-Z0-9._/-]{5,63}" placeholder="Örn. PILOT-2026-001" className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm uppercase text-[var(--text)]" />
-            <span className="mt-1 block text-[10px] font-medium">Sözleşme/KVKK içeriğini değil, harici dosyanın kişisel veri içermeyen referansını yazın.</span>
-          </label>}
           {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Öğrenci üst sınırı
-            <input type="number" value={studentLimit} onChange={(event) => setStudentLimit(Number(event.target.value))} min={1} max={trialDays === 30 ? 30 : 40} required className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
+            <input type="number" value={studentLimit} onChange={(event) => { setStudentLimit(Number(event.target.value)); setPackageAccepted(false) }} min={1} max={trialDays === 30 ? 30 : 40} required className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
             <span className="mt-1 block text-[10px] font-medium">30 günlük pakette en fazla 30, 60 günlük pakette en fazla 40 öğrenci.</span>
           </label>}
           {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Toplam personel sınırı
-            <select value={staffLimit} onChange={(event) => setStaffLimit(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
+            <select value={staffLimit} onChange={(event) => { setStaffLimit(Number(event.target.value)); setPackageAccepted(false) }} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
               <option value={2}>1 yönetici + 1 öğretmen</option>
             </select>
           </label>}
           {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Değerlendirme süresi
-            <select value={trialDays} onChange={(event) => setTrialDays(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
+            <select value={trialDays} onChange={(event) => { setTrialDays(Number(event.target.value)); setPackageAccepted(false) }} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
               <option value={30}>30 gün</option>
               <option value={60}>60 gün</option>
             </select>
           </label>}
         </fieldset>
+        {activeProvisioningMode === 'free' && <label className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-xs font-semibold leading-5"><input type="checkbox" checked={packageAccepted} onChange={(event) => setPackageAccepted(event.target.checked)} disabled={!canProvision || saving} className="mt-1 h-4 w-4" /><span>Kurum yetkilisiyle pilot kapsamı görüşüldü. Paket PDF belgesinin yöneticiye e-posta ile gönderileceğini ve pilot koşullarının kabul edildiğini onaylıyorum.</span></label>}
         {manager && <p className="mt-3 text-xs font-semibold text-emerald-300">Yönetici seçildi: {manager.display_name || manager.username}</p>}
-        <button disabled={!canProvision || saving || !manager || name.trim().length < 2 || (activeProvisioningMode === 'free' && (approvalReference.length < 6 || studentLimit < 1 || studentLimit > (trialDays === 30 ? 30 : 40) || staffLimit !== 2))} className="mt-4 min-h-11 w-full rounded-xl bg-[var(--focus)] px-4 text-sm font-black text-white disabled:opacity-50 sm:w-auto">{saving ? 'Oluşturuluyor…' : !canProvision ? 'Kurum oluşturma kapalı' : activeProvisioningMode === 'free' ? 'Ücretsiz pilotu oluştur' : 'Ücretli onboarding başlat'}</button>
+        <button disabled={!canProvision || saving || !manager || name.trim().length < 2 || (activeProvisioningMode === 'free' && (!packageAccepted || studentLimit < 1 || studentLimit > (trialDays === 30 ? 30 : 40) || staffLimit !== 2))} className="mt-4 min-h-11 w-full rounded-xl bg-[var(--focus)] px-4 text-sm font-black text-white disabled:opacity-50 sm:w-auto">{saving ? 'Oluşturuluyor…' : !canProvision ? 'Kurum oluşturma kapalı' : activeProvisioningMode === 'free' ? 'Ücretsiz pilotu oluştur' : 'Ücretli onboarding başlat'}</button>
       </form>
 
       {notice && <p role="status" className="rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3 text-sm font-semibold text-emerald-200">{notice}</p>}

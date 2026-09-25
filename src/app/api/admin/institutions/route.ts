@@ -19,6 +19,7 @@ import {
   isInstitutionStudyProgramEnabled,
   isInstitutionTrackingEnabled,
 } from '@/lib/institution-tracking/server-security'
+import { isInstitutionDemoEnabled } from '@/lib/institution-tracking/demo'
 
 const provisionLimiter = createRateLimiter('admin-institution-provision', 5, 60_000)
 const statusLimiter = createRateLimiter('admin-institution-status', 20, 60_000)
@@ -57,6 +58,19 @@ async function requireInstitutionAdmin(): Promise<InstitutionAdminContext> {
 }
 
 export async function GET() {
+  if (!isInstitutionPilotEnabled() && isInstitutionDemoEnabled()) {
+    const supabase = await createClient()
+    const admin = await checkPermission(supabase, 'institution.pilots.manage')
+    if (!admin) return noStore({ error: 'Yetkisiz erişim' }, 403)
+    return noStore({
+      institutions: [],
+      provisioning: {
+        invitationFreePilotEnabled: false,
+        commercialOnboardingEnabled: false,
+        demoEnabled: isInstitutionDemoEnabled(),
+      },
+    })
+  }
   const context = await requireInstitutionAdmin()
   if (!context.ok) return context.response
 
@@ -78,6 +92,7 @@ export async function GET() {
       commercialOnboardingEnabled:
         isInstitutionOnboardingEnabled()
         && databaseControls?.commercialProvisioningEnabled === true,
+      demoEnabled: isInstitutionDemoEnabled(),
     },
   })
 }

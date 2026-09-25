@@ -67,24 +67,15 @@ export async function POST(request: NextRequest) {
   const input = provisionFreePilotInputSchema.safeParse(body)
   if (!input.success) {
     return institutionPilotNoStoreJson(
-      { error: 'Kurum, yönetici, süre veya kapasite sınırı geçersiz' },
+      { error: 'Kurum, yönetici, paket onayı, süre veya kapasite sınırı geçersiz' },
       { status: 400 },
     )
   }
+  const generatedApprovalReference = `PILOT-${input.data.requestId.toUpperCase()}`
 
   const serviceClient = createServiceRoleClient()
-  const rpcArgs = {
-    p_user_id: admin.id,
-    p_name: input.data.name,
-    p_manager_user_id: input.data.managerUserId,
-    p_approval_ref: input.data.approvalReference,
-    p_student_limit: input.data.studentLimit,
-    p_staff_limit: input.data.staffLimit,
-    p_trial_days: input.data.trialDays,
-    p_request_id: input.data.requestId,
-  }
   const existingRequest = await serviceClient.from('pilot_institution_requests')
-    .select('request_id')
+    .select('request_id, result')
     .eq('user_id', admin.id)
     .eq('operation', 'provision_free_pilot')
     .eq('request_id', input.data.requestId)
@@ -92,7 +83,29 @@ export async function POST(request: NextRequest) {
   if (existingRequest.error) {
     return institutionPilotNoStoreJson({ error: 'Pilot tekrar kaydı doğrulanamadı' }, { status: 503 })
   }
+  const existingResult = existingRequest.data
+    ? provisionFreePilotResultSchema.safeParse(existingRequest.data.result)
+    : null
+  const approvalReference = existingResult?.success
+    ? existingResult.data.institution.approvalReference
+    : generatedApprovalReference
+  const rpcArgs = {
+    p_user_id: admin.id,
+    p_name: input.data.name,
+    p_manager_user_id: input.data.managerUserId,
+    p_approval_ref: approvalReference,
+    p_student_limit: input.data.studentLimit,
+    p_staff_limit: input.data.staffLimit,
+    p_trial_days: input.data.trialDays,
+    p_request_id: input.data.requestId,
+  }
   if (existingRequest.data) {
+    if (!existingResult?.success) {
+      return institutionPilotNoStoreJson(
+        { error: 'Pilot tekrar kaydı doğrulanamadı' },
+        { status: 500 },
+      )
+    }
     const replay = await supabase.rpc('provision_free_pilot_institution', rpcArgs)
     if (replay.error) {
       return institutionPilotNoStoreJson(
@@ -183,7 +196,7 @@ export async function POST(request: NextRequest) {
     targetId: parsed.data.institution.id,
     details: {
       name: parsed.data.institution.name,
-      approvalReference: parsed.data.institution.approvalReference,
+      approvalReference,
       studentLimit: parsed.data.institution.studentLimit,
       staffLimit: parsed.data.institution.staffLimit,
       reviewDueAt: parsed.data.institution.reviewDueAt,

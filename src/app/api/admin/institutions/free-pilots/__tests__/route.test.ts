@@ -43,6 +43,7 @@ const ADMIN = { id: '11111111-1111-4111-8111-111111111111' }
 const MANAGER_ID = '22222222-2222-4222-8222-222222222222'
 const INSTITUTION_ID = '33333333-3333-4333-8333-333333333333'
 const REQUEST_ID = '44444444-4444-4444-8444-444444444444'
+const APPROVAL_REFERENCE = `PILOT-${REQUEST_ID.toUpperCase()}`
 const CREATED_AT = '2026-08-25T10:00:00.000Z'
 const REVIEW_DUE_AT = '2026-09-24T10:00:00.000Z'
 
@@ -57,7 +58,7 @@ function post(body: unknown) {
 const input = {
   name: 'Bilge Eğitim Merkezi',
   managerUserId: MANAGER_ID,
-  approvalReference: 'PILOT-2026-001',
+  packageAccepted: true,
   studentLimit: 30,
   staffLimit: 2,
   trialDays: 30,
@@ -72,7 +73,7 @@ const result = {
     studentLimit: 30,
     staffLimit: 2,
     pilotKind: 'invitation_free',
-    approvalReference: input.approvalReference,
+    approvalReference: APPROVAL_REFERENCE,
     reviewDueAt: REVIEW_DUE_AT,
     createdAt: CREATED_AT,
   },
@@ -146,6 +147,7 @@ describe('admin invitation-only free institution pilot route', () => {
   })
 
   it('rejects package terms that differ from the published document', async () => {
+    expect((await POST(post({ ...input, packageAccepted: false }))).status).toBe(400)
     expect((await POST(post({ ...input, trialDays: 14 }))).status).toBe(400)
     expect((await POST(post({ ...input, trialDays: 30, studentLimit: 31 }))).status).toBe(400)
     expect((await POST(post({ ...input, staffLimit: 1 }))).status).toBe(400)
@@ -171,19 +173,28 @@ describe('admin invitation-only free institution pilot route', () => {
   })
 
   it('lets a committed request id reach the authoritative replay before eligibility checks', async () => {
+    const legacyApprovalReference = 'PILOT-2026-LEGACY'
+    const storedResult = {
+      ...result,
+      institution: { ...result.institution, approvalReference: legacyApprovalReference },
+    }
     mocks.from.mockImplementation((table: string) => {
       const result = table === 'pilot_institution_requests'
-        ? { data: { request_id: REQUEST_ID }, error: null }
+        ? { data: { request_id: REQUEST_ID, result: storedResult }, error: null }
         : { data: null, error: null }
       const chain: Record<string, unknown> = {}
       for (const method of ['select', 'eq', 'in', 'limit']) chain[method] = vi.fn(() => chain)
       chain.maybeSingle = vi.fn(async () => result)
       return chain
     })
-    mocks.rpc.mockResolvedValue({ data: { ...result, replayed: true }, error: null })
-    const response = await POST(post(input))
+    mocks.rpc.mockResolvedValue({ data: { ...storedResult, replayed: true }, error: null })
+    const response = await POST(post({ ...input, approvalReference: legacyApprovalReference }))
     expect(response.status).toBe(200)
     expect((await response.json()).replayed).toBe(true)
+    expect(mocks.rpc).toHaveBeenCalledWith(
+      'provision_free_pilot_institution',
+      expect.objectContaining({ p_approval_ref: legacyApprovalReference }),
+    )
     expect(mocks.sendEmail).not.toHaveBeenCalled()
     expect(mocks.getUserById).not.toHaveBeenCalled()
   })
@@ -216,7 +227,7 @@ describe('admin invitation-only free institution pilot route', () => {
       p_user_id: ADMIN.id,
       p_name: input.name,
       p_manager_user_id: MANAGER_ID,
-      p_approval_ref: input.approvalReference,
+      p_approval_ref: APPROVAL_REFERENCE,
       p_student_limit: 30,
       p_staff_limit: 2,
       p_trial_days: 30,
@@ -226,7 +237,7 @@ describe('admin invitation-only free institution pilot route', () => {
       action: 'provision_free_institution_pilot',
       targetId: INSTITUTION_ID,
       details: expect.objectContaining({
-        approvalReference: input.approvalReference,
+        approvalReference: APPROVAL_REFERENCE,
         studentLimit: 30,
         staffLimit: 2,
       }),
