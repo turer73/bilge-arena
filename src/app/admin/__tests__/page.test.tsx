@@ -56,7 +56,7 @@ describe('AdminDashboard', () => {
   it('does not link report-only moderators to an inaccessible governed queue', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
-      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 409 })
+      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 409, json: async () => ({ code: 'CONTENT_GOVERNANCE_REQUIRED' }) })
       return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.reports.view'] }) })
     })
     render(<AdminDashboard />)
@@ -82,13 +82,25 @@ describe('AdminDashboard', () => {
   it('links appeal moderators to the governed report queue', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
-      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 409 })
+      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 409, json: async () => ({ code: 'CONTENT_GOVERNANCE_REQUIRED' }) })
       return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.reports.view', 'content.appeals.manage'] }) })
     })
     render(<AdminDashboard />)
     expect(await screen.findByRole('link', { name: /Raporlar/ })).toHaveAttribute('href', '/admin/raporlar')
     expect(screen.getByRole('link', { name: /Soru Kalitesi/ })).toHaveAttribute('href', '/admin/soru-kalite')
     expect(screen.queryByRole('link', { name: /3 bekleyen rapor/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps the report link after a transient probe failure without showing an unverified count', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 500 })
+      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.reports.view'] }) })
+    })
+    render(<AdminDashboard />)
+    expect(await screen.findByRole('link', { name: /Raporlar/ })).toHaveAttribute('href', '/admin/raporlar')
+    expect(screen.queryByRole('link', { name: /3 bekleyen rapor/ })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Platform özeti' })).queryByText('3')).not.toBeInTheDocument()
   })
 
   it('keeps the report queue available to moderators when governance is disabled', async () => {
@@ -105,7 +117,7 @@ describe('AdminDashboard', () => {
   it('does not use legacy report counts as a governed-queue alert', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
-      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 409 })
+      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 409, json: async () => ({ code: 'CONTENT_GOVERNANCE_REQUIRED' }) })
       return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.dashboard.view', 'admin.questions.view', 'admin.reports.view'] }) })
     })
     render(<AdminDashboard />)

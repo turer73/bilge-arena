@@ -50,13 +50,15 @@ const WORKFLOWS: Array<{ title: string; description: string; links: DashboardLin
   ] },
 ]
 
-function canOpenReports(permissions: readonly string[], legacyReportsAvailable: boolean) {
+type ReportQueueState = 'legacy' | 'governed' | 'error' | null
+
+function canOpenReports(permissions: readonly string[], reportQueueState: ReportQueueState) {
   return permissions.includes('admin.reports.view')
-    && (permissions.includes('admin.questions.view') || permissions.includes('content.appeals.manage') || legacyReportsAvailable)
+    && (permissions.includes('admin.questions.view') || permissions.includes('content.appeals.manage') || reportQueueState === 'legacy' || reportQueueState === 'error')
 }
 
-function canAccess(link: DashboardLink, permissions: readonly string[], legacyReportsAvailable: boolean) {
-  if (link.href === '/admin/raporlar') return canOpenReports(permissions, legacyReportsAvailable)
+function canAccess(link: DashboardLink, permissions: readonly string[], reportQueueState: ReportQueueState) {
+  if (link.href === '/admin/raporlar') return canOpenReports(permissions, reportQueueState)
   return link.permissions.some((permission) => permissions.includes(permission))
     && (link.required ?? []).every((permission) => permissions.includes(permission))
 }
@@ -74,7 +76,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [permissions, setPermissions] = useState<string[] | null>(null)
-  const [legacyReportsAvailable, setLegacyReportsAvailable] = useState<boolean | null>(null)
+  const [reportQueueState, setReportQueueState] = useState<ReportQueueState>(null)
 
   useEffect(() => {
     let active = true
@@ -103,9 +105,14 @@ export default function AdminDashboard() {
         if (allowed.includes('admin.reports.view')) {
           try {
             const reportResponse = await fetch('/api/admin/reports?page=1', { cache: 'no-store' })
-            if (active) setLegacyReportsAvailable(reportResponse.ok)
+            const queueState: ReportQueueState = reportResponse.ok
+              ? 'legacy'
+              : reportResponse.status === 409 && (await reportResponse.json().catch(() => null))?.code === 'CONTENT_GOVERNANCE_REQUIRED'
+                ? 'governed'
+                : 'error'
+            if (active) setReportQueueState(queueState)
           } catch {
-            if (active) setLegacyReportsAvailable(false)
+            if (active) setReportQueueState('error')
           }
         }
       } catch {
@@ -120,7 +127,7 @@ export default function AdminDashboard() {
   const reportProbePending = permissions?.includes('admin.reports.view')
     && !permissions.includes('admin.questions.view')
     && !permissions.includes('content.appeals.manage')
-    && legacyReportsAvailable === null
+    && reportQueueState === null
 
   return (
     <div className="mx-auto max-w-7xl space-y-7 pb-8 text-[var(--text)]">
@@ -146,20 +153,20 @@ export default function AdminDashboard() {
                 <span className="text-sm font-semibold text-[var(--text-sub)]">{label}</span>
                 <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${tone}`} />
               </div>
-              <div className="mt-5 font-display text-2xl font-black tabular-nums sm:text-3xl" aria-label={loading || (key === 'pendingReports' && permissions?.includes('admin.reports.view') && legacyReportsAvailable === null) ? `${label} yükleniyor` : undefined}>
-                {loading || (key === 'pendingReports' && permissions?.includes('admin.reports.view') && legacyReportsAvailable === null)
+              <div className="mt-5 font-display text-2xl font-black tabular-nums sm:text-3xl" aria-label={loading || (key === 'pendingReports' && permissions?.includes('admin.reports.view') && reportQueueState === null) ? `${label} yükleniyor` : undefined}>
+                {loading || (key === 'pendingReports' && permissions?.includes('admin.reports.view') && reportQueueState === null)
                   ? <span aria-hidden="true" className="block h-9 w-20 animate-pulse rounded bg-[var(--surface)]" />
-                  : stats && (key !== 'pendingReports' || legacyReportsAvailable === true)
+                  : stats && (key !== 'pendingReports' || reportQueueState === 'legacy')
                     ? stats[key].toLocaleString('tr-TR')
                     : '—'}
               </div>
-              {key === 'pendingReports' && !loading && stats && <p className="mt-1 text-xs text-[var(--text-sub)]">{legacyReportsAvailable === true ? (stats.pendingReports > 0 ? 'Eski kuyrukta inceleme gerekiyor' : 'Eski kuyrukta bekleyen yok') : 'Rapor sayısı burada doğrulanamadı'}</p>}
+              {key === 'pendingReports' && !loading && stats && <p className="mt-1 text-xs text-[var(--text-sub)]">{reportQueueState === 'legacy' ? (stats.pendingReports > 0 ? 'Eski kuyrukta inceleme gerekiyor' : 'Eski kuyrukta bekleyen yok') : 'Rapor sayısı burada doğrulanamadı'}</p>}
             </div>
           ))}
         </div>
       </section>
 
-      {stats && stats.pendingReports > 0 && permissions?.includes('admin.reports.view') && legacyReportsAvailable === true && (
+      {stats && stats.pendingReports > 0 && permissions?.includes('admin.reports.view') && reportQueueState === 'legacy' && (
         <Link href="/admin/raporlar" className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-4 py-3 text-sm transition-colors hover:bg-[var(--card-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
           <span><strong>{stats.pendingReports.toLocaleString('tr-TR')} bekleyen rapor</strong><span className="ml-2 text-[var(--text-sub)]">Bildirimleri incele</span></span>
           <ArrowUpRight aria-hidden="true" className="h-5 w-5 shrink-0" />
@@ -176,7 +183,7 @@ export default function AdminDashboard() {
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {WORKFLOWS.map((group) => {
-              const links = group.links.filter((link) => canAccess(link, permissions, legacyReportsAvailable === true))
+              const links = group.links.filter((link) => canAccess(link, permissions, reportQueueState))
               if (links.length === 0) return null
               return (
                 <div key={group.title} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5">
@@ -197,7 +204,7 @@ export default function AdminDashboard() {
             {reportProbePending && (
               <p role="status" className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]">Rapor alanı doğrulanıyor…</p>
             )}
-            {!reportProbePending && WORKFLOWS.every((group) => group.links.every((link) => !canAccess(link, permissions, legacyReportsAvailable === true))) && (
+            {!reportProbePending && WORKFLOWS.every((group) => group.links.every((link) => !canAccess(link, permissions, reportQueueState))) && (
               <p className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]">Bu panoda açılabilir iş akışı yok.</p>
             )}
           </div>
