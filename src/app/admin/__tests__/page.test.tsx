@@ -18,6 +18,7 @@ beforeEach(() => {
   fetchMock.mockImplementation((input: RequestInfo | URL) => {
     const url = String(input)
     if (url === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+    if (url.startsWith('/api/admin/reports')) return Promise.resolve({ ok: true })
     if (url === '/api/admin/me/permissions') return Promise.resolve({
       ok: true,
       json: async () => ({ permissions: ['admin.dashboard.view', 'admin.questions.view', 'admin.reports.view'] }),
@@ -62,6 +63,7 @@ describe('AdminDashboard', () => {
     expect(await screen.findByText('Bu panoda açılabilir iş akışı yok.')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Raporlar/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /3 bekleyen rapor/ })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Platform özeti' })).queryByText('3')).not.toBeInTheDocument()
   })
 
   it('keeps the report queue available to moderators when governance is disabled', async () => {
@@ -73,6 +75,19 @@ describe('AdminDashboard', () => {
     render(<AdminDashboard />)
     expect(await screen.findByRole('link', { name: /Raporlar/ })).toHaveAttribute('href', '/admin/raporlar')
     expect(screen.getByRole('link', { name: /3 bekleyen rapor/ })).toHaveAttribute('href', '/admin/raporlar')
+  })
+
+  it('does not use legacy report counts as a governed-queue alert', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+      if (String(input).startsWith('/api/admin/reports')) return Promise.resolve({ ok: false, status: 409 })
+      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.dashboard.view', 'admin.questions.view', 'admin.reports.view'] }) })
+    })
+    render(<AdminDashboard />)
+    expect(await screen.findByText('Kalite kuyruğu ayrı incelenir')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Soru Kalitesi/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /3 bekleyen rapor/ })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Platform özeti' })).queryByText('3')).not.toBeInTheDocument()
   })
 
   it('shows authorized areas omitted from the former quick links', async () => {

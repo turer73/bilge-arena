@@ -100,7 +100,7 @@ export default function AdminDashboard() {
           ? data.permissions.filter((permission: unknown): permission is string => typeof permission === 'string')
           : []
         if (active) setPermissions(allowed)
-        if (allowed.includes('admin.reports.view') && !allowed.includes('admin.questions.view')) {
+        if (allowed.includes('admin.reports.view')) {
           try {
             const reportResponse = await fetch('/api/admin/reports?page=1', { cache: 'no-store' })
             if (active) setLegacyReportsAvailable(reportResponse.ok)
@@ -141,16 +141,20 @@ export default function AdminDashboard() {
                 <span className="text-sm font-semibold text-[var(--text-sub)]">{label}</span>
                 <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${tone}`} />
               </div>
-              <div className="mt-5 font-display text-2xl font-black tabular-nums sm:text-3xl" aria-label={loading ? `${label} yükleniyor` : undefined}>
-                {loading ? <span aria-hidden="true" className="block h-9 w-20 animate-pulse rounded bg-[var(--surface)]" /> : stats ? stats[key].toLocaleString('tr-TR') : '—'}
+              <div className="mt-5 font-display text-2xl font-black tabular-nums sm:text-3xl" aria-label={loading || (key === 'pendingReports' && permissions?.includes('admin.reports.view') && legacyReportsAvailable === null) ? `${label} yükleniyor` : undefined}>
+                {loading || (key === 'pendingReports' && permissions?.includes('admin.reports.view') && legacyReportsAvailable === null)
+                  ? <span aria-hidden="true" className="block h-9 w-20 animate-pulse rounded bg-[var(--surface)]" />
+                  : stats && (key !== 'pendingReports' || legacyReportsAvailable === true)
+                    ? stats[key].toLocaleString('tr-TR')
+                    : '—'}
               </div>
-              {key === 'pendingReports' && !loading && stats && <p className="mt-1 text-xs text-[var(--text-sub)]">{stats.pendingReports > 0 ? 'İnceleme gerekiyor' : 'Bekleyen bildirim yok'}</p>}
+              {key === 'pendingReports' && !loading && stats && <p className="mt-1 text-xs text-[var(--text-sub)]">{legacyReportsAvailable === true ? (stats.pendingReports > 0 ? 'Eski kuyrukta inceleme gerekiyor' : 'Eski kuyrukta bekleyen yok') : 'Kalite kuyruğu ayrı incelenir'}</p>}
             </div>
           ))}
         </div>
       </section>
 
-      {stats && stats.pendingReports > 0 && permissions && canOpenReports(permissions, legacyReportsAvailable === true) && (
+      {stats && stats.pendingReports > 0 && permissions?.includes('admin.reports.view') && legacyReportsAvailable === true && (
         <Link href="/admin/raporlar" className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[var(--urgency-border)] bg-[var(--urgency-bg)] px-4 py-3 text-sm transition-colors hover:bg-[var(--card-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]">
           <span><strong>{stats.pendingReports.toLocaleString('tr-TR')} bekleyen rapor</strong><span className="ml-2 text-[var(--text-sub)]">Bildirimleri incele</span></span>
           <ArrowUpRight aria-hidden="true" className="h-5 w-5 shrink-0" />
