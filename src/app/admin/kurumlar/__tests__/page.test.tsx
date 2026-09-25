@@ -49,7 +49,16 @@ describe('admin institution free-pilot page', () => {
     })
     const candidate = await screen.findByRole('option', { name: /Kurum Yöneticisi/i })
     fireEvent.click(candidate)
-    fireEvent.click(screen.getByLabelText(/pilot kapsamı görüşüldü/i))
+    const acceptance = screen.getByLabelText(/pilot kapsamı görüşüldü/i)
+    fireEvent.click(acceptance)
+    fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
+      target: { value: 'Değişen Kurum' },
+    })
+    expect(acceptance).not.toBeChecked()
+    fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
+      target: { value: 'Bilge Küçük Dershane' },
+    })
+    fireEvent.click(acceptance)
     fireEvent.click(screen.getByRole('button', { name: 'Ücretsiz pilotu oluştur' }))
 
     await waitFor(() => {
@@ -127,6 +136,7 @@ describe('admin institution free-pilot page', () => {
     fireEvent.change(screen.getByLabelText(/Kurum adı/i), {
       target: { value: 'Değişen Dershane' },
     })
+    fireEvent.click(screen.getByLabelText(/pilot kapsamı görüşüldü/i))
     fireEvent.click(submit)
     expect(await screen.findByRole('status')).toHaveTextContent(/Değişen Dershane ücretsiz pilotu/i)
 

@@ -122,6 +122,17 @@ describe('admin institution routes', () => {
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
+  it('keeps the configuration error when both the pilot platform and demo are closed', async () => {
+    mocks.pilotEnabled.mockReturnValue(false)
+    mocks.demoEnabled.mockReturnValue(false)
+
+    const response = await GET()
+
+    expect(response.status).toBe(503)
+    expect(await response.json()).toEqual({ error: 'Kurum pilotu yapılandırılmadı' })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
   it('exposes only the dedicated free-pilot capability to the protected admin UI', async () => {
     mocks.freePilotEnabled.mockReturnValue(true)
     mocks.rpc.mockResolvedValue({

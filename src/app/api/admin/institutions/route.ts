@@ -58,7 +58,7 @@ async function requireInstitutionAdmin(): Promise<InstitutionAdminContext> {
 }
 
 export async function GET() {
-  if (!isInstitutionPilotEnabled()) {
+  if (!isInstitutionPilotEnabled() && isInstitutionDemoEnabled()) {
     const supabase = await createClient()
     const admin = await checkPermission(supabase, 'institution.pilots.manage')
     if (!admin) return noStore({ error: 'Yetkisiz erişim' }, 403)

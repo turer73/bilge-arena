@@ -189,25 +189,25 @@ export default function AdminInstitutionsPage() {
         </fieldset>}
         <fieldset disabled={!canProvision || saving} className="mt-4 grid gap-4 disabled:opacity-60 lg:grid-cols-2">
           <label className="text-xs font-bold text-[var(--text-sub)]">Kurum adı
-            <input value={name} onChange={(event) => setName(event.target.value)} minLength={2} maxLength={120} required placeholder="Örn. Bilge Eğitim Merkezi" className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
+            <input value={name} onChange={(event) => { setName(event.target.value); setPackageAccepted(false) }} minLength={2} maxLength={120} required placeholder="Örn. Bilge Eğitim Merkezi" className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
           </label>
           <div className="relative">
             <label className="text-xs font-bold text-[var(--text-sub)]">İlk kurum yöneticisi
-              <span className="relative mt-1 block"><Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-[var(--text-sub)]" /><input role="combobox" aria-autocomplete="list" aria-expanded={!manager && candidates.length > 0} aria-controls="institution-manager-candidates" value={search} onChange={(event) => { setSearch(event.target.value); setManager(null) }} placeholder="İsim veya kullanıcı adı ara" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-9 pr-3 text-sm text-[var(--text)]" /></span>
+              <span className="relative mt-1 block"><Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-[var(--text-sub)]" /><input role="combobox" aria-autocomplete="list" aria-expanded={!manager && candidates.length > 0} aria-controls="institution-manager-candidates" value={search} onChange={(event) => { setSearch(event.target.value); setManager(null); setPackageAccepted(false) }} placeholder="İsim veya kullanıcı adı ara" className="min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-9 pr-3 text-sm text-[var(--text)]" /></span>
             </label>
-            {!manager && candidates.length > 0 && <div id="institution-manager-candidates" role="listbox" className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-xl">{candidates.map((candidate) => <button key={candidate.id} type="button" role="option" aria-selected="false" onClick={() => { setManager(candidate); setSearch(candidate.display_name || candidate.username || 'Seçili kullanıcı'); setCandidates([]) }} className="block min-h-11 w-full rounded-lg px-3 text-left text-sm hover:bg-[var(--card-bg)]"><span className="font-bold">{candidate.display_name || candidate.username || 'İsimsiz kullanıcı'}</span><span className="ml-2 text-xs text-[var(--text-sub)]">@{candidate.username || '—'}</span></button>)}</div>}
+            {!manager && candidates.length > 0 && <div id="institution-manager-candidates" role="listbox" className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-xl">{candidates.map((candidate) => <button key={candidate.id} type="button" role="option" aria-selected="false" onClick={() => { setManager(candidate); setSearch(candidate.display_name || candidate.username || 'Seçili kullanıcı'); setCandidates([]); setPackageAccepted(false) }} className="block min-h-11 w-full rounded-lg px-3 text-left text-sm hover:bg-[var(--card-bg)]"><span className="font-bold">{candidate.display_name || candidate.username || 'İsimsiz kullanıcı'}</span><span className="ml-2 text-xs text-[var(--text-sub)]">@{candidate.username || '—'}</span></button>)}</div>}
           </div>
           {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Öğrenci üst sınırı
-            <input type="number" value={studentLimit} onChange={(event) => setStudentLimit(Number(event.target.value))} min={1} max={trialDays === 30 ? 30 : 40} required className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
+            <input type="number" value={studentLimit} onChange={(event) => { setStudentLimit(Number(event.target.value)); setPackageAccepted(false) }} min={1} max={trialDays === 30 ? 30 : 40} required className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]" />
             <span className="mt-1 block text-[10px] font-medium">30 günlük pakette en fazla 30, 60 günlük pakette en fazla 40 öğrenci.</span>
           </label>}
           {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Toplam personel sınırı
-            <select value={staffLimit} onChange={(event) => setStaffLimit(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
+            <select value={staffLimit} onChange={(event) => { setStaffLimit(Number(event.target.value)); setPackageAccepted(false) }} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
               <option value={2}>1 yönetici + 1 öğretmen</option>
             </select>
           </label>}
           {activeProvisioningMode === 'free' && <label className="text-xs font-bold text-[var(--text-sub)]">Değerlendirme süresi
-            <select value={trialDays} onChange={(event) => setTrialDays(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
+            <select value={trialDays} onChange={(event) => { setTrialDays(Number(event.target.value)); setPackageAccepted(false) }} className="mt-1 min-h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--text)]">
               <option value={30}>30 gün</option>
               <option value={60}>60 gün</option>
             </select>
