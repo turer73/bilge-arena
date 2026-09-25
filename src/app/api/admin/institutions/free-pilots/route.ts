@@ -71,9 +71,24 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     )
   }
-  const approvalReference = `PILOT-${input.data.requestId.toUpperCase()}`
+  const generatedApprovalReference = `PILOT-${input.data.requestId.toUpperCase()}`
 
   const serviceClient = createServiceRoleClient()
+  const existingRequest = await serviceClient.from('pilot_institution_requests')
+    .select('request_id, result')
+    .eq('user_id', admin.id)
+    .eq('operation', 'provision_free_pilot')
+    .eq('request_id', input.data.requestId)
+    .maybeSingle()
+  if (existingRequest.error) {
+    return institutionPilotNoStoreJson({ error: 'Pilot tekrar kaydı doğrulanamadı' }, { status: 503 })
+  }
+  const existingResult = existingRequest.data
+    ? provisionFreePilotResultSchema.safeParse(existingRequest.data.result)
+    : null
+  const approvalReference = existingResult?.success
+    ? existingResult.data.institution.approvalReference
+    : generatedApprovalReference
   const rpcArgs = {
     p_user_id: admin.id,
     p_name: input.data.name,
@@ -84,16 +99,13 @@ export async function POST(request: NextRequest) {
     p_trial_days: input.data.trialDays,
     p_request_id: input.data.requestId,
   }
-  const existingRequest = await serviceClient.from('pilot_institution_requests')
-    .select('request_id')
-    .eq('user_id', admin.id)
-    .eq('operation', 'provision_free_pilot')
-    .eq('request_id', input.data.requestId)
-    .maybeSingle()
-  if (existingRequest.error) {
-    return institutionPilotNoStoreJson({ error: 'Pilot tekrar kaydı doğrulanamadı' }, { status: 503 })
-  }
   if (existingRequest.data) {
+    if (!existingResult?.success) {
+      return institutionPilotNoStoreJson(
+        { error: 'Pilot tekrar kaydı doğrulanamadı' },
+        { status: 500 },
+      )
+    }
     const replay = await supabase.rpc('provision_free_pilot_institution', rpcArgs)
     if (replay.error) {
       return institutionPilotNoStoreJson(

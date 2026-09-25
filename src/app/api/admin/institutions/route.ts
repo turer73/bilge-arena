@@ -19,6 +19,7 @@ import {
   isInstitutionStudyProgramEnabled,
   isInstitutionTrackingEnabled,
 } from '@/lib/institution-tracking/server-security'
+import { isInstitutionDemoEnabled } from '@/lib/institution-tracking/demo'
 
 const provisionLimiter = createRateLimiter('admin-institution-provision', 5, 60_000)
 const statusLimiter = createRateLimiter('admin-institution-status', 20, 60_000)
@@ -78,6 +79,7 @@ export async function GET() {
       commercialOnboardingEnabled:
         isInstitutionOnboardingEnabled()
         && databaseControls?.commercialProvisioningEnabled === true,
+      demoEnabled: isInstitutionDemoEnabled(),
     },
   })
 }

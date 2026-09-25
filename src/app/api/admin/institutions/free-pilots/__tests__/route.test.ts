@@ -173,19 +173,28 @@ describe('admin invitation-only free institution pilot route', () => {
   })
 
   it('lets a committed request id reach the authoritative replay before eligibility checks', async () => {
+    const legacyApprovalReference = 'PILOT-2026-LEGACY'
+    const storedResult = {
+      ...result,
+      institution: { ...result.institution, approvalReference: legacyApprovalReference },
+    }
     mocks.from.mockImplementation((table: string) => {
       const result = table === 'pilot_institution_requests'
-        ? { data: { request_id: REQUEST_ID }, error: null }
+        ? { data: { request_id: REQUEST_ID, result: storedResult }, error: null }
         : { data: null, error: null }
       const chain: Record<string, unknown> = {}
       for (const method of ['select', 'eq', 'in', 'limit']) chain[method] = vi.fn(() => chain)
       chain.maybeSingle = vi.fn(async () => result)
       return chain
     })
-    mocks.rpc.mockResolvedValue({ data: { ...result, replayed: true }, error: null })
-    const response = await POST(post(input))
+    mocks.rpc.mockResolvedValue({ data: { ...storedResult, replayed: true }, error: null })
+    const response = await POST(post({ ...input, approvalReference: legacyApprovalReference }))
     expect(response.status).toBe(200)
     expect((await response.json()).replayed).toBe(true)
+    expect(mocks.rpc).toHaveBeenCalledWith(
+      'provision_free_pilot_institution',
+      expect.objectContaining({ p_approval_ref: legacyApprovalReference }),
+    )
     expect(mocks.sendEmail).not.toHaveBeenCalled()
     expect(mocks.getUserById).not.toHaveBeenCalled()
   })

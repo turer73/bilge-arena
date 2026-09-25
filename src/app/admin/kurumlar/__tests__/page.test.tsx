@@ -26,7 +26,7 @@ describe('admin institution free-pilot page', () => {
       if (url === '/api/admin/institutions') {
         return Response.json({
           institutions: [],
-          provisioning: { invitationFreePilotEnabled: true },
+          provisioning: { invitationFreePilotEnabled: true, demoEnabled: true },
         })
       }
       throw new Error(`Unexpected request: ${url}`)
@@ -152,6 +152,7 @@ describe('admin institution free-pilot page', () => {
     expect(screen.getByRole('button', { name: 'Kurum oluşturma kapalı' })).toBeDisabled()
     expect(screen.getByLabelText(/Kurum adı/i)).toBeDisabled()
     expect(screen.getByLabelText(/İlk kurum yöneticisi/i)).toBeDisabled()
+    expect(screen.queryByRole('link', { name: 'Demo akışını aç' })).not.toBeInTheDocument()
   })
 
   it('shows expired free pilots as access-closed and prevents reactivation', async () => {

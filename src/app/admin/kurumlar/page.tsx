@@ -41,6 +41,7 @@ export default function AdminInstitutionsPage() {
   const provisionInFlightRef = useRef(false)
   const freePilotEnabled = directory.provisioning?.invitationFreePilotEnabled === true
   const commercialOnboardingEnabled = directory.provisioning?.commercialOnboardingEnabled === true
+  const demoEnabled = directory.provisioning?.demoEnabled === true
   const canProvision = freePilotEnabled || commercialOnboardingEnabled
   const activeProvisioningMode: ProvisioningMode = freePilotEnabled
     ? commercialOnboardingEnabled ? provisioningMode : 'free'
@@ -167,11 +168,11 @@ export default function AdminInstitutionsPage() {
         <a href="/documents/bilge-arena-kurum-paketleri-v1.pdf" target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-[var(--border)] px-3 text-xs font-black text-[var(--focus)]">Kurum paketleri PDF</a>
       </header>
 
-      <section className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4 sm:p-5">
+      {demoEnabled && <section className="rounded-2xl border border-emerald-400/20 bg-emerald-400/5 p-4 sm:p-5">
         <h2 className="font-black text-emerald-200">Hızlı iç test</h2>
         <p className="mt-2 text-xs leading-5 text-[var(--text-sub)]">Sözleşme veya yeni kurum kaydı gerekmez. Demo akışını açın; gerçek öğrenci, veli veya kurum verisi kullanmayın.</p>
         <Link href="/arena/kurum/demo" className="mt-3 inline-flex min-h-11 items-center rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 text-sm font-black text-emerald-200">Demo akışını aç</Link>
-      </section>
+      </section>}
 
       <form onSubmit={createInstitution} className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] p-4 sm:p-5">
         <h2 className="flex items-center gap-2 font-black"><Plus className="h-4 w-4" /> {activeProvisioningMode === 'free' ? 'Platform kontrollü ücretsiz pilot' : 'Ücretli kurum onboarding'}</h2>
