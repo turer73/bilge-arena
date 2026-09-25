@@ -117,6 +117,10 @@ export default function AdminDashboard() {
     return () => { active = false }
   }, [])
 
+  const reportProbePending = permissions?.includes('admin.reports.view')
+    && !permissions.includes('admin.questions.view')
+    && legacyReportsAvailable === null
+
   return (
     <div className="mx-auto max-w-7xl space-y-7 pb-8 text-[var(--text)]">
       <header className="rounded-2xl border border-[var(--border)] bg-[var(--card-bg)] px-5 py-6 sm:px-7 sm:py-7">
@@ -148,7 +152,7 @@ export default function AdminDashboard() {
                     ? stats[key].toLocaleString('tr-TR')
                     : '—'}
               </div>
-              {key === 'pendingReports' && !loading && stats && <p className="mt-1 text-xs text-[var(--text-sub)]">{legacyReportsAvailable === true ? (stats.pendingReports > 0 ? 'Eski kuyrukta inceleme gerekiyor' : 'Eski kuyrukta bekleyen yok') : 'Kalite kuyruğu ayrı incelenir'}</p>}
+              {key === 'pendingReports' && !loading && stats && <p className="mt-1 text-xs text-[var(--text-sub)]">{legacyReportsAvailable === true ? (stats.pendingReports > 0 ? 'Eski kuyrukta inceleme gerekiyor' : 'Eski kuyrukta bekleyen yok') : 'Rapor sayısı burada doğrulanamadı'}</p>}
             </div>
           ))}
         </div>
@@ -166,7 +170,7 @@ export default function AdminDashboard() {
           <h2 id="workflows-title" className="text-lg font-bold">Yönetim alanları</h2>
           <p className="text-sm text-[var(--text-sub)]">Yetkiniz olan alanlardan işinize devam edin.</p>
         </div>
-        {permissions === null || (permissions.includes('admin.reports.view') && !permissions.includes('admin.questions.view') && legacyReportsAvailable === null) ? (
+        {permissions === null ? (
           <p role="status" className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]">Yönetim alanları yükleniyor…</p>
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
@@ -189,7 +193,10 @@ export default function AdminDashboard() {
                 </div>
               )
             })}
-            {WORKFLOWS.every((group) => group.links.every((link) => !canAccess(link, permissions, legacyReportsAvailable === true))) && (
+            {reportProbePending && (
+              <p role="status" className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]">Rapor alanı doğrulanıyor…</p>
+            )}
+            {!reportProbePending && WORKFLOWS.every((group) => group.links.every((link) => !canAccess(link, permissions, legacyReportsAvailable === true))) && (
               <p className="rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-5 text-sm text-[var(--text-sub)]">Bu panoda açılabilir iş akışı yok.</p>
             )}
           </div>

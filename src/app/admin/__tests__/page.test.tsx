@@ -66,6 +66,19 @@ describe('AdminDashboard', () => {
     expect(within(screen.getByRole('region', { name: 'Platform özeti' })).queryByText('3')).not.toBeInTheDocument()
   })
 
+  it('shows other authorized areas while the report queue check is pending', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
+      if (String(input).startsWith('/api/admin/reports')) return new Promise(() => {})
+      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.reports.view', 'admin.users.view'] }) })
+    })
+    render(<AdminDashboard />)
+    expect(await screen.findByRole('link', { name: /Kullanıcılar/ })).toHaveAttribute('href', '/admin/kullanicilar')
+    expect(screen.getByRole('status')).toHaveTextContent('Rapor alanı doğrulanıyor')
+    expect(screen.queryByText('Yönetim alanları yükleniyor…')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Raporlar/ })).not.toBeInTheDocument()
+  })
+
   it('keeps the report queue available to moderators when governance is disabled', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
@@ -84,7 +97,7 @@ describe('AdminDashboard', () => {
       return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.dashboard.view', 'admin.questions.view', 'admin.reports.view'] }) })
     })
     render(<AdminDashboard />)
-    expect(await screen.findByText('Kalite kuyruğu ayrı incelenir')).toBeInTheDocument()
+    expect(await screen.findByText('Rapor sayısı burada doğrulanamadı')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Soru Kalitesi/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /3 bekleyen rapor/ })).not.toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: 'Platform özeti' })).queryByText('3')).not.toBeInTheDocument()
