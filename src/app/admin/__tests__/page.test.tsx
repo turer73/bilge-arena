@@ -127,13 +127,14 @@ describe('AdminDashboard', () => {
     expect(within(screen.getByRole('region', { name: 'Platform özeti' })).queryByText('3')).not.toBeInTheDocument()
   })
 
-  it('shows authorized areas omitted from the former quick links', async () => {
+  it('does not offer the removed homepage editor to otherwise authorized admins', async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       if (String(input) === '/api/admin/stats') return Promise.resolve({ ok: true, json: async () => stats })
-      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.homepage.view'] }) })
+      return Promise.resolve({ ok: true, json: async () => ({ permissions: ['admin.homepage.view', 'admin.logs.view'] }) })
     })
     render(<AdminDashboard />)
-    expect(await screen.findByRole('link', { name: /Anasayfa/ })).toHaveAttribute('href', '/admin/anasayfa-editor')
+    expect(await screen.findByRole('link', { name: /Loglar/ })).toHaveAttribute('href', '/admin/loglar')
+    expect(screen.queryByRole('link', { name: /Anasayfa/ })).not.toBeInTheDocument()
     expect(screen.queryByText('Bu panoda açılabilir iş akışı yok.')).not.toBeInTheDocument()
   })
 

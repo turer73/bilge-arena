@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { DocumentBoundaryLink as Link } from '@/components/privacy/document-boundary-link'
-import { ArrowUpRight, Award, BookOpen, Building2, CircleAlert, CircleCheck, Flag, Gamepad2, House, Image, Inbox, KeyRound, ScrollText, Settings2, ShieldCheck, Users, type LucideIcon } from 'lucide-react'
+import { ArrowUpRight, Award, BookOpen, Building2, CircleAlert, CircleCheck, Flag, Gamepad2, Image, Inbox, KeyRound, ScrollText, Settings2, ShieldCheck, Users, type LucideIcon } from 'lucide-react'
 
 interface AdminStats {
   totalUsers: number
@@ -42,8 +42,7 @@ const WORKFLOWS: Array<{ title: string; description: string; links: DashboardLin
     { label: 'Arka Planlar', description: 'Görsel varlıklar', href: '/admin/arka-planlar', Icon: Image, permissions: ['admin.backgrounds.view'] },
     { label: 'Site ayarları', description: 'Platform yapılandırması', href: '/admin/ayarlar', Icon: Settings2, permissions: ['admin.settings.view'] },
   ] },
-  { title: 'Görünüm ve denetim', description: 'Ana sayfa, ödüller ve yönetim kayıtları.', links: [
-    { label: 'Anasayfa', description: 'Ana sayfa içeriği', href: '/admin/anasayfa-editor', Icon: House, permissions: ['admin.homepage.view'] },
+  { title: 'Görünüm ve denetim', description: 'Ödüller ve yönetim kayıtları.', links: [
     { label: 'Rozetler', description: 'Ödül görünümü', href: '/admin/rozetler', Icon: Award, permissions: ['admin.badges.view'] },
     { label: 'Loglar', description: 'İşlem kayıtları', href: '/admin/loglar', Icon: ScrollText, permissions: ['admin.logs.view'] },
     { label: 'Roller', description: 'Yönetici yetkileri', href: '/admin/roller', Icon: KeyRound, permissions: ['admin.roles.view'] },
