@@ -59,6 +59,9 @@ describe('mid_sentence_capital', () => {
   it('yakalamaz: Ingilizce icerik (locale en)', () => {
     expect(findMidSentenceCapitals('I met John near the Thames last Summer.', { locale: 'en' })).toEqual([])
   })
+  it('yakalamaz: iki harfli bilimsel semboller, genotip ve sabitler (Mn, Zn, Cu, Aa, Kc)', () => {
+    expect(words('Kc sabiti Mn ve Zn ile Cu arasında; Aa genotipi ve Kp değeri.')).toEqual([])
+  })
 })
 
 describe('figure_reference_without_media', () => {
@@ -71,6 +74,15 @@ describe('figure_reference_without_media', () => {
   })
   it('yakalamaz: "tablo" sozcugu baska anlamda ("Tablo" ozel ad degil, ama "masa" da yakalanmaz)', () => {
     expect(findMissingFigureReference({ question: 'Periyodik cetvelin ilk grubu nedir?' })).toEqual([])
+  })
+  it('yakalamaz: "şekilde" = "biçimde" ve konu adi olarak ciplak isim (Codex #523)', () => {
+    expect(findMissingFigureReference({ question: 'Öğrenciler aynı sayıda olacak şekilde gruplara ayrılacaktır.' })).toEqual([])
+    expect(findMissingFigureReference({ question: 'Grafik okuma becerisi nedir? Harita ölçeği ne işe yarar?' })).toEqual([])
+  })
+  it('yakalar: gosterici gorsel gondermeleri (yukarıdaki tabloda, grafikte verilen, Şekil 1)', () => {
+    expect(findMissingFigureReference({ question: 'Yukarıdaki tabloda verilen değerlere göre' })[0]).toEqual({ field: 'question', term: 'Yukarıdaki tabloda' })
+    expect(findMissingFigureReference({ question: 'Grafikte verilen hız-zaman ilişkisi' })).toHaveLength(1)
+    expect(findMissingFigureReference({ question: 'Şekil 1 incelendiğinde' })).toHaveLength(1)
   })
 })
 
@@ -95,13 +107,18 @@ describe('superscript_loss', () => {
   it('yakalar: aritmetik baglamda harf+rakam (Pilot 2 Q4)', () => {
     expect(findSuperscriptLoss('x2+y2+z2=14 ve x+y+z=6').map((h) => h.token)).toEqual(['x2', 'y2', 'z2'])
   })
-  it('yakalamaz: kimyasal formul ve indis (fen/wordquest icin kural atlanir; ayrica H2O aritmetik baglamda degil)', () => {
+  it('yakalamaz: kimyasal formul ve indis (kimya/wordquest icin kural atlanir; ayrica H2O aritmetik baglamda degil)', () => {
     expect(findSuperscriptLoss('H2O ve CO2 molekülleri', { skip: true })).toEqual([])
     expect(findSuperscriptLoss('H2O ve CO2 molekülleri')).toEqual([])
   })
-  it('scanQuestion fen ve wordquest icin kurali atlar', () => {
-    expect(rules({ game: 'fen', content: { question: 'x2+y2=1 çemberi', options: ['a', 'b', 'c'], answer: 0 } })).not.toContain('superscript_loss')
+  it('scanQuestion yalniz kimya ve wordquest icin kurali atlar; fizik ve biyoloji taranir (Codex #523)', () => {
+    expect(rules({ game: 'fen', category: 'kimya', content: { question: '2H2 + O2 = 2H2O tepkimesi', options: ['a', 'b', 'c'], answer: 0 } })).not.toContain('superscript_loss')
+    expect(rules({ game: 'fen', category: 'fizik', content: { question: 'x2+y2=1 çemberi', options: ['a', 'b', 'c'], answer: 0 } })).toContain('superscript_loss')
     expect(rules({ game: 'matematik', content: { question: 'x2+y2=1 çemberi', options: ['a', 'b', 'c'], answer: 0 } })).toContain('superscript_loss')
+  })
+  it('siklardaki ust indis kaybi da taranir (Codex #523)', () => {
+    const findings = scanQuestion({ game: 'matematik', category: 'Cebir', content: { question: 'Çemberin denklemi hangisidir?', options: ['x2+y2=1', 'x+y=1', 'xy=1'], answer: 0 } }).findings
+    expect(findings).toEqual(expect.arrayContaining([expect.objectContaining({ rule: 'superscript_loss', field: 'options[0]' })]))
   })
 })
 

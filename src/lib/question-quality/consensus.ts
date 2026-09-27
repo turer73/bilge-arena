@@ -165,18 +165,17 @@ export function evaluateCommunityConsensus(
   const ungatedDecision = decide(posterior, posterior)
   let decision = decide(Math.min(posterior, posteriorWithoutModel), Math.max(posterior, posteriorWithoutModel))
   let modelGate: ModelGate | null = null
-  if (decision !== ungatedDecision) {
-    const acted = (value: ConsensusDecision) => value === 'quarantine' || value === 'confirmed'
-    if (input.previousState === 'confirmed' && ungatedDecision === 'confirmed') {
-      decision = 'confirmed'
-      modelGate = 'retained_existing_action'
-    } else if ((input.previousState === 'quarantined' || input.previousState === 'confirmed')
-      && acted(ungatedDecision) && !acted(decision)) {
-      decision = 'quarantine'
-      modelGate = 'retained_existing_action'
-    } else {
-      modelGate = 'held_for_human_review'
-    }
+  if (decision !== ungatedDecision) modelGate = 'held_for_human_review'
+  // An action already taken is never reversed automatically, whatever lowered
+  // the posterior: the gate, contrary model evidence or lost reporter trust.
+  // Keyed on the previous state alone, so a human-only quarantine followed by
+  // a supports_clean verification (both rules now 'suspected') is retained too.
+  if (input.previousState === 'confirmed' && decision !== 'confirmed') {
+    decision = 'confirmed'
+    modelGate = 'retained_existing_action'
+  } else if (input.previousState === 'quarantined' && decision !== 'quarantine' && decision !== 'confirmed') {
+    decision = 'quarantine'
+    modelGate = 'retained_existing_action'
   }
 
   const parts = leadingKey.split(':')

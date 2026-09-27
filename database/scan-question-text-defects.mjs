@@ -116,7 +116,9 @@ export function findMidSentenceCapitals(text, { locale = 'tr' } = {}) {
   if (!text) return []
   const s = String(text)
   const out = []
-  const re = /(?<![\p{L}\p{N}'’])([A-ZÇĞİÖŞÜ][a-zçğıöşü]+)(?![\p{L}])/gu
+  // En az uc harf: iki harfli buyuk-kucuk tokenlar element sembolu (Mn, Zn,
+  // Cu), genotip (Aa) veya sabit (Kc, Kp) olup fen sorularinda yaygindir.
+  const re = /(?<![\p{L}\p{N}'’])([A-ZÇĞİÖŞÜ][a-zçğıöşü]{2,})(?![\p{L}])/gu
   for (const m of s.matchAll(re)) {
     const word = m[1]
     const before = s.slice(0, m.index)
@@ -139,7 +141,21 @@ export function findMidSentenceCapitals(text, { locale = 'tr' } = {}) {
 // QuestionContent tipinde gorsel alani YOK (src/types/database.ts). Dolayisiyla
 // kokte sekle/grafige/tabloya gonderme varsa soru cevaplanamaz durumdadir.
 // Pilot 1 Q21 tam olarak buydu (3 kor cozucu + adversarial inconclusive).
-const FIGURE_RE = /(?<![\p{L}])(şekil|sekil|şekildeki|sekildeki|şekilde|grafik|grafikteki|grafiğe|tablo|tabloda|tablodaki|tabloya|resim|resimde|görsel|gorsel|diyagram|diyagramda|haritada|harita|ok yönünde|ok yonunde|yukarıdaki devre|devre şeması|devre semasi|çizim|cizim|figür|figure|diagram|chart|picture|image below|shown below|in the figure|in the table)(?![\p{L}])/iu
+// Yalniz GOSTERICI gorsel gondermeleri: "sekildeki", "yukaridaki tabloda",
+// "grafikte verilen". Ciplak isim ("sekilde" = "bicimde", "grafik nedir?")
+// konu anlatimidir, gorsel gondermesi degil; ERROR uretmemeli.
+const FIGURE_NOUN = '(?:şekil|sekil|grafik|tablo|resim|görsel|gorsel|diyagram|harita|çizim|cizim|figür|figur|devre)'
+const FIGURE_RE = new RegExp(
+  '(?<![\\p{L}])(?:'
+  + FIGURE_NOUN + '(?:deki|daki|teki|taki)'                                      // şekildeki, tablodaki, grafikteki
+  + '|(?:yukarıdaki|yukaridaki|aşağıdaki|asagidaki|verilen|yandaki)\\s+' + FIGURE_NOUN + '[\\p{L}]*' // yukarıdaki şekilde
+  + '|' + FIGURE_NOUN + '(?:de|da|te|ta)\\s+(?:gösterilen|gosterilen|verilen|görülen|gorulen)'   // şekilde gösterilen
+  + '|şekil\\s*\\d|sekil\\s*\\d|tablo\\s*\\d|grafik\\s*\\d'                          // Şekil 1, Tablo 2
+  + '|ok yönünde|ok yonunde|devre şeması|devre semasi'
+  + '|in the (?:figure|table|diagram|chart|picture) (?:below|above)|shown below|image below|figure \\d)'
+  + '(?![\\p{L}])',
+  'iu',
+)
 
 export function findMissingFigureReference(content) {
   const fields = ['question', 'passage', 'context', 'sentence']
@@ -148,7 +164,7 @@ export function findMissingFigureReference(content) {
     const v = content?.[f]
     if (typeof v !== 'string') continue
     const m = v.match(FIGURE_RE)
-    if (m) hits.push({ field: f, term: m[1] })
+    if (m) hits.push({ field: f, term: m[0] })
   }
   const hasMedia = ['image', 'imageUrl', 'image_url', 'media', 'figure', 'svg', 'diagram', 'assets']
     .some((k) => content && content[k] != null && content[k] !== '')
@@ -213,7 +229,9 @@ export function scanQuestion(row) {
   const content = row.content ?? {}
   const game = String(row.game ?? '')
   const isEnglish = game === 'wordquest'
-  const isScience = game === 'fen'
+  // Yalniz kimyada (O2 + H2 -> H2O gibi tepkimeler) ust indis kurali atlanir;
+  // fizik ve biyoloji x2+y2 gibi matematiksel ifade tasiyabilir.
+  const isChemistry = String(row.category ?? '').toLocaleLowerCase('tr') === 'kimya'
   const textFields = ['question', 'passage', 'context', 'sentence', 'solution', 'explanation', 'hint']
   const findings = []
 
@@ -229,7 +247,7 @@ export function scanQuestion(row) {
     }
     const caps = findMidSentenceCapitals(v, { locale: isEnglish ? 'en' : 'tr' })
     if (caps.length) findings.push({ rule: 'mid_sentence_capital', field: f, severity: 'warn', detail: caps.map((c) => c.word) })
-    const sup = findSuperscriptLoss(v, { skip: isScience || isEnglish })
+    const sup = findSuperscriptLoss(v, { skip: isChemistry || isEnglish })
     if (sup.length) findings.push({ rule: 'superscript_loss', field: f, severity: 'warn', detail: sup.map((s) => s.token) })
   }
   if (Array.isArray(content.options)) {
@@ -239,6 +257,8 @@ export function scanQuestion(row) {
         const loss = findAsciiDiacriticLoss(o)
         if (loss.length) findings.push({ rule: 'ascii_diacritic_loss', field: `options[${i}]`, severity: 'error', detail: loss })
       }
+      const sup = findSuperscriptLoss(o, { skip: isChemistry || isEnglish })
+      if (sup.length) findings.push({ rule: 'superscript_loss', field: `options[${i}]`, severity: 'warn', detail: sup.map((s) => s.token) })
     })
   }
   const fig = findMissingFigureReference(content)
