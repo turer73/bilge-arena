@@ -24,6 +24,8 @@ const searchAdminAal2Migration = readFileSync(join(dirname(fileURLToPath(import.
 const outcomeCandidatesMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '166_question_outcome_mapping_candidates.sql'), 'utf8')
 const curriculumScopeRegistryMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '178_curriculum_scope_release_registry.sql'), 'utf8')
 const ydtEnglishReleaseMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '187_release_ydt_english_mastery_scope.sql'), 'utf8')
+const modelFreePosteriorMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '212_question_quality_model_free_posterior.sql'), 'utf8')
+const modelGateMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '213_question_quality_model_gate.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
   let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision; let candidateQuestion; let candidateOutcome; let candidateLegacyRevision; let ydtQuestion; let ydtLegacyNullQuestion; let ydtOutcome; let ydtWrongOutcome; let ydtLegacyRevision; let ydtLegacyNullRevision; let parityQuestions
@@ -139,6 +141,8 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(outcomeCandidatesMigration)
     await client.query(curriculumScopeRegistryMigration)
     await client.query(ydtEnglishReleaseMigration)
+    await client.query(modelFreePosteriorMigration)
+    await client.query(modelGateMigration)
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
     candidateLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[candidateQuestion])).rows[0].published_revision_id
     ydtLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[ydtQuestion])).rows[0].published_revision_id
@@ -498,17 +502,20 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect(consensus).toEqual(expect.objectContaining({
       decision:'quarantine',independentUserCount:5,independentClusterCount:5,trustedAgreementCount:5,
       leadingReasonCode:'wrong_key',inputsSha256:expect.stringMatching(/^[0-9a-f]{64}$/),
+      policyVersion:'community-quality@2',ungatedDecision:'quarantine',modelGate:null,
     }))
     const quarantine = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@1',randomUUID()])
-    expect(quarantine).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
+    // A not-yet-redeployed worker still sends @1; the server records the rule it applied.
+    expect(quarantine).toEqual(expect.objectContaining({ state:'quarantined',policyVersion:'community-quality@2',replayed:false }))
+    expect((await client.query('SELECT DISTINCT policy_version FROM public.question_quality_consensus_decisions WHERE case_id=$1',[qualityCase])).rows).toEqual([{ policy_version:'community-quality@2' }])
     expect((await client.query('SELECT is_active FROM public.questions WHERE id=$1',[question])).rows[0].is_active).toBe(false)
     expect((await client.query('SELECT count(*)::int AS n FROM public.question_quality_consensus_queue WHERE case_id=$1',[qualityCase])).rows[0].n).toBe(0)
 
     await rpc('public.record_question_quality_external_proof($1,$2,$3,$4,$5::jsonb,$6)',[publisher,qualityCase,'deterministic','supports_flaw',JSON.stringify({ rule:'independent arithmetic proof',version:1 }),randomUUID()])
     const confirmRequest = randomUUID()
-    const confirmed = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@1',confirmRequest])
+    const confirmed = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@2',confirmRequest])
     expect(confirmed).toEqual(expect.objectContaining({ state:'confirmed',replayed:false }))
-    expect(await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@1',confirmRequest])).toEqual(expect.objectContaining({ state:'confirmed',replayed:true }))
+    expect(await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,qualityCase,'community-quality@2',confirmRequest])).toEqual(expect.objectContaining({ state:'confirmed',replayed:true }))
     expect((await client.query("SELECT count(*)::int AS n,sum(amount)::int AS total FROM public.reward_ledger WHERE source_type='question_quality_claim' AND metadata->>'caseId'=$1",[qualityCase])).rows[0]).toEqual({ n:6,total:240 })
     expect((await client.query('SELECT coins FROM public.profiles WHERE id=$1',[voters[0]])).rows[0].coins).toBe(200)
 
@@ -923,5 +930,49 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(outcomeScopeMigration)
     expect((await client.query("SELECT convalidated FROM pg_constraint WHERE conrelid='public.questions'::regclass AND conname='questions_published_revision_question_fkey'")).rows[0]).toEqual({ convalidated:true })
     expect((await client.query("SELECT has_function_privilege('authenticated','public.set_question_revision_outcomes(uuid,uuid,jsonb,uuid)','EXECUTE') AS client_exec,has_function_privilege('service_role','public.set_question_revision_outcomes(uuid,uuid,jsonb,uuid)','EXECUTE') AS server_exec")).rows[0]).toEqual({ client_exec:false,server_exec:true })
+  })
+  it('never lets the capped model term carry a case across an automatic threshold', async () => {
+    const target = (await client.query(`SELECT q.id AS question_id,r.id AS revision_id,r.content_sha256,r.game
+      FROM public.questions q JOIN public.question_content_revisions r ON r.id=q.published_revision_id
+      WHERE q.is_active AND NOT EXISTS (SELECT 1 FROM public.question_quality_cases c WHERE c.revision_id=r.id)
+      ORDER BY q.id LIMIT 1`)).rows[0]
+    expect(target).toBeDefined()
+    const gatedCase = (await client.query('INSERT INTO public.question_quality_cases(question_id,revision_id,content_sha256) VALUES($1,$2,$3) RETURNING id',[target.question_id,target.revision_id,target.content_sha256])).rows[0].id
+    const reporters = Array.from({ length: 5 }, () => randomUUID())
+    await client.query('INSERT INTO public.profiles SELECT unnest($1::uuid[])',[reporters])
+    for (const [index, reporter] of reporters.entries()) {
+      // Trusted but only moderately calibrated: ~6.7 human log-odds for five
+      // reporters, below the 0.98 quarantine threshold without the model term.
+      await client.query(`INSERT INTO public.question_quality_worker_profiles(user_id,domain,resolved_total,flawed_controls,flawed_controls_correct,clean_controls,clean_controls_correct,correction_checks,correction_checks_correct,trust_state) VALUES($1,$2,40,10,9,10,10,10,9,'trusted')`,[reporter,target.game])
+      const independenceKey = (index + 101).toString(16).padStart(64,'0')
+      const mission = (await client.query(`INSERT INTO public.question_quality_missions(user_id,case_id,question_id,revision_id,content_sha256,source,status,independence_key,locked_answer_index,locked_at,submitted_at)
+        VALUES($1,$2,$3,$4,$5,'assigned_review','submitted',$6,1,clock_timestamp(),clock_timestamp()) RETURNING id`,[reporter,gatedCase,target.question_id,target.revision_id,target.content_sha256,independenceKey])).rows[0].id
+      await client.query(`INSERT INTO public.question_quality_claims(mission_id,case_id,user_id,revision_id,solved_answer_index,verdict,reason_code,proposed_answer_index,correction_fingerprint,explanation,confidence,independence_key)
+        VALUES($1,$2,$3,$4,1,'flawed','wrong_key',1,$5,'Bağımsız çözüm işaretli anahtarla uyuşmuyor.',90,$6)`,[mission,gatedCase,reporter,target.revision_id,'c'.repeat(64),independenceKey])
+    }
+    await client.query(`INSERT INTO public.question_quality_verifications(case_id,role,status,direction,strength) VALUES($1,'model_a','ok','supports_flaw',1)`,[gatedCase])
+
+    const gated = (await client.query('SELECT public.compute_question_quality_consensus($1) AS result',[gatedCase])).rows[0].result
+    expect(gated).toEqual(expect.objectContaining({
+      policyVersion:'community-quality@2',ungatedDecision:'quarantine',decision:'suspected',modelGate:'held_for_human_review',
+      independentUserCount:5,independentClusterCount:5,trustedAgreementCount:5,
+    }))
+    expect(Number(gated.posterior)).toBeGreaterThanOrEqual(0.98)
+    expect(Number(gated.posteriorWithoutModel)).toBeLessThan(0.98)
+
+    const held = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,gatedCase,'community-quality@2',randomUUID()])
+    expect(held).toEqual(expect.objectContaining({ state:'suspected',policyVersion:'community-quality@2',replayed:false }))
+    expect((await client.query('SELECT is_active FROM public.questions WHERE id=$1',[target.question_id])).rows[0].is_active).toBe(true)
+    expect((await client.query("SELECT count(*)::int AS n FROM public.question_governance_events WHERE question_id=$1 AND event_type='quarantined'",[target.question_id])).rows[0].n).toBe(0)
+
+    // A case already quarantined under community-quality@1 is never lifted by
+    // the gate alone, and recording it must not raise the regression error.
+    await client.query("UPDATE public.question_quality_cases SET state='quarantined' WHERE id=$1",[gatedCase])
+    const retained = (await client.query('SELECT public.compute_question_quality_consensus($1) AS result',[gatedCase])).rows[0].result
+    expect(retained).toEqual(expect.objectContaining({ decision:'quarantine',ungatedDecision:'quarantine',modelGate:'retained_existing_action' }))
+    const recorded = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,gatedCase,'community-quality@2',randomUUID()])
+    expect(recorded).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
+    expect((await client.query('SELECT rationale FROM public.question_quality_consensus_decisions WHERE case_id=$1 ORDER BY created_at DESC LIMIT 1',[gatedCase])).rows[0].rationale)
+      .toContain('"modelGate": "retained_existing_action"')
   })
 })

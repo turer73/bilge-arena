@@ -90,3 +90,84 @@ describe('community quality consensus', () => {
     expect(profile.specificity).toBeGreaterThan(profile.sensitivity)
   })
 })
+
+describe('community-quality@2 model gate', () => {
+  // 0.82 reliability puts five trusted reporters at ~6.22 human log-odds:
+  // below the quarantine threshold alone (0.911), above it with the full
+  // +2.2 model term (0.989). The model term is then the only reason to act.
+  const borderline = { sensitivity: 0.82, specificity: 0.82, correctionAccuracy: 0.82, trusted: true }
+  const borderlineClaims = () => [1, 2, 3, 4, 5].map((i) => claim(i, { reliability: borderline }))
+  const modelSupportsFlaw = [{ direction: 'supports_flaw' as const, strength: 1 }]
+
+  it('withholds a quarantine the model term alone would have carried', () => {
+    const result = evaluateCommunityConsensus({ claims: borderlineClaims(), modelEvidence: modelSupportsFlaw })
+    expect(result.posteriorDefectProbability).toBeGreaterThanOrEqual(0.98)
+    expect(result.posteriorWithoutModel).toBeLessThan(0.98)
+    expect(result.ungatedDecision).toBe('quarantine')
+    expect(result.decision).toBe('suspected')
+    expect(result.modelGate).toBe('held_for_human_review')
+  })
+
+  it('never lifts a quarantine already taken under the ungated rule', () => {
+    const result = evaluateCommunityConsensus({
+      claims: borderlineClaims(), modelEvidence: modelSupportsFlaw, previousState: 'quarantined',
+    })
+    expect(result.decision).toBe('quarantine')
+    expect(result.modelGate).toBe('retained_existing_action')
+  })
+
+  it('never reopens a confirmation already taken under the ungated rule', () => {
+    // With +4.6 external proof, ~2.96 human log-odds confirms only with the
+    // model term (0.997) and falls short without it (0.975).
+    const proofBorderline = { sensitivity: 0.75, specificity: 0.75, correctionAccuracy: 0.75, trusted: true }
+    const input = {
+      claims: [1, 2, 3].map((i) => claim(i, { reliability: proofBorderline }))
+        .concat([4, 5].map((i) => claim(i, { reliability: newWorker }))),
+      modelEvidence: modelSupportsFlaw,
+      externalProof: 'deterministic' as const,
+      externalProofDirection: 'supports_flaw' as const,
+    }
+    const fresh = evaluateCommunityConsensus(input)
+    expect(fresh.ungatedDecision).toBe('confirmed')
+    expect(fresh.decision).toBe('suspected')
+    expect(fresh.modelGate).toBe('held_for_human_review')
+    const retained = evaluateCommunityConsensus({ ...input, previousState: 'confirmed' })
+    expect(retained.decision).toBe('confirmed')
+    expect(retained.modelGate).toBe('retained_existing_action')
+  })
+
+  it('withholds a rejection the model term alone would have carried', () => {
+    const weakClean = { sensitivity: 0.6, specificity: 0.6, correctionAccuracy: 0.6, trusted: true }
+    const weakFlaw = { sensitivity: 0.75, specificity: 0.75, correctionAccuracy: 0.75, trusted: true }
+    const result = evaluateCommunityConsensus({
+      claims: [
+        ...[1, 2, 3].map((i) => claim(i, { verdict: 'clean', reasonCode: null, correctionFingerprint: null, reliability: weakClean })),
+        ...[4, 5].map((i) => claim(i, { reliability: weakFlaw })),
+      ],
+      modelEvidence: [{ direction: 'supports_clean', strength: 1 }],
+    })
+    expect(result.posteriorDefectProbability).toBeLessThanOrEqual(0.02)
+    expect(result.posteriorWithoutModel).toBeGreaterThan(0.02)
+    expect(result.ungatedDecision).toBe('rejected')
+    expect(result.decision).toBe('collecting')
+    expect(result.modelGate).toBe('held_for_human_review')
+  })
+
+  it('still lets a contrary model verdict withhold a human-only quarantine', () => {
+    const strong = { sensitivity: 0.87, specificity: 0.87, correctionAccuracy: 0.87, trusted: true }
+    const result = evaluateCommunityConsensus({
+      claims: [1, 2, 3, 4, 5].map((i) => claim(i, { reliability: strong })),
+      modelEvidence: [{ direction: 'supports_clean', strength: 1 }],
+    })
+    expect(result.posteriorWithoutModel).toBeGreaterThanOrEqual(0.98)
+    expect(result.decision).toBe('suspected')
+  })
+
+  it('leaves human-only decisions untouched and unlabelled', () => {
+    const result = evaluateCommunityConsensus({ claims: [1, 2, 3, 4, 5].map((i) => claim(i)) })
+    expect(result.decision).toBe('quarantine')
+    expect(result.ungatedDecision).toBe('quarantine')
+    expect(result.modelGate).toBeNull()
+    expect(result.posteriorWithoutModel).toBe(result.posteriorDefectProbability)
+  })
+})

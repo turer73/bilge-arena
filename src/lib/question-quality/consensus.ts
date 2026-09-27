@@ -4,6 +4,9 @@ export type QualityVerdict = 'clean' | 'flawed'
 export type EvidenceDirection = 'supports_clean' | 'supports_flaw' | 'inconclusive'
 export type ExternalProof = 'none' | 'deterministic' | 'official_source' | 'curator'
 export type ConsensusDecision = 'collecting' | 'suspected' | 'quarantine' | 'confirmed' | 'rejected' | 'inconclusive'
+export type QualityCaseState = 'collecting' | 'suspected' | 'quarantined' | 'confirmed' | 'rejected' | 'inconclusive'
+/** Why the decision differs from the community-quality@1 rule, if it does. */
+export type ModelGate = 'held_for_human_review' | 'retained_existing_action'
 
 export interface WorkerReliability {
   sensitivity: number
@@ -32,11 +35,18 @@ export interface ConsensusInput {
   optionStatisticEvidence?: AuxiliaryEvidence | null
   externalProof?: ExternalProof
   externalProofDirection?: EvidenceDirection
+  /** Current case state; the gate never reverses an action already taken. */
+  previousState?: QualityCaseState
 }
 
 export interface ConsensusResult {
   decision: ConsensusDecision
   posteriorDefectProbability: number
+  /** Posterior from human and external-proof evidence only, without the capped auxiliary terms. */
+  posteriorWithoutModel: number
+  /** The decision the ungated community-quality@1 rule would have taken. */
+  ungatedDecision: ConsensusDecision
+  modelGate: ModelGate | null
   independentUserCount: number
   independentClusterCount: number
   trustedAgreementCount: number
@@ -108,6 +118,7 @@ export function evaluateCommunityConsensus(
 
   let logOdds = logit(policy.priorDefectProbability)
   for (const claim of claims) logOdds += humanLogLikelihood(claim, policy)
+  const humanLogOdds = logOdds
 
   const modelContribution = clamp(
     (input.modelEvidence ?? []).reduce((total, evidence) => total + auxiliaryLogLikelihood(evidence), 0),
@@ -121,11 +132,13 @@ export function evaluateCommunityConsensus(
     policy.maxOptionStatisticContributionLogOdds,
   )
 
-  if (input.externalProof && input.externalProof !== 'none'
-    && input.externalProofDirection && input.externalProofDirection !== 'inconclusive') {
-    logOdds += input.externalProofDirection === 'supports_flaw' ? 4.6 : -4.6
-  }
+  const proofContribution = input.externalProof && input.externalProof !== 'none'
+    && input.externalProofDirection && input.externalProofDirection !== 'inconclusive'
+    ? (input.externalProofDirection === 'supports_flaw' ? 4.6 : -4.6)
+    : 0
+  logOdds += proofContribution
   const posterior = logistic(logOdds)
+  const posteriorWithoutModel = logistic(humanLogOdds + proofContribution)
   const humanFloorMet = claims.length >= policy.minIndependentUsers
     && independentClusters.size >= policy.minIndependentUsers
     && leadingIndependenceKeys.size >= policy.minTrustedAgreement
@@ -136,30 +149,50 @@ export function evaluateCommunityConsensus(
     && input.externalProof !== undefined
     && input.externalProofDirection === 'supports_flaw'
 
-  let decision: ConsensusDecision = 'collecting'
-  if (humanFloorMet && leadingFlaw && exactCorrection && posterior >= policy.confirmPosterior && proofSupportsFlaw) {
-    decision = 'confirmed'
-  } else if (humanFloorMet && leadingFlaw && exactCorrection && posterior >= policy.quarantinePosterior) {
-    decision = 'quarantine'
-  } else if (humanFloorMet && leadingFlaw) {
-    decision = 'suspected'
-  } else if (humanFloorMet && !leadingFlaw && posterior <= policy.rejectPosterior) {
-    decision = 'rejected'
-  } else if (claims.length >= policy.maxIndependentUsers) {
-    decision = 'inconclusive'
+  const decide = (flawPosterior: number, cleanPosterior: number): ConsensusDecision => {
+    if (humanFloorMet && leadingFlaw && exactCorrection && flawPosterior >= policy.confirmPosterior && proofSupportsFlaw) {
+      return 'confirmed'
+    }
+    if (humanFloorMet && leadingFlaw && exactCorrection && flawPosterior >= policy.quarantinePosterior) return 'quarantine'
+    if (humanFloorMet && leadingFlaw) return 'suspected'
+    if (humanFloorMet && !leadingFlaw && cleanPosterior <= policy.rejectPosterior) return 'rejected'
+    if (claims.length >= policy.maxIndependentUsers) return 'inconclusive'
+    return 'collecting'
+  }
+
+  // community-quality@2: an automatic action must hold both with and without
+  // the auxiliary terms. They can still withhold an action, never cause one.
+  const ungatedDecision = decide(posterior, posterior)
+  let decision = decide(Math.min(posterior, posteriorWithoutModel), Math.max(posterior, posteriorWithoutModel))
+  let modelGate: ModelGate | null = null
+  if (decision !== ungatedDecision) {
+    const acted = (value: ConsensusDecision) => value === 'quarantine' || value === 'confirmed'
+    if (input.previousState === 'confirmed' && ungatedDecision === 'confirmed') {
+      decision = 'confirmed'
+      modelGate = 'retained_existing_action'
+    } else if ((input.previousState === 'quarantined' || input.previousState === 'confirmed')
+      && acted(ungatedDecision) && !acted(decision)) {
+      decision = 'quarantine'
+      modelGate = 'retained_existing_action'
+    } else {
+      modelGate = 'held_for_human_review'
+    }
   }
 
   const parts = leadingKey.split(':')
   return {
     decision,
     posteriorDefectProbability: posterior,
+    posteriorWithoutModel,
+    ungatedDecision,
+    modelGate,
     independentUserCount: claims.length,
     independentClusterCount: independentClusters.size,
     trustedAgreementCount,
     leadingReasonCode: leadingFlaw ? (parts[1] ?? null) : null,
     leadingCorrectionFingerprint: leadingFlaw ? (parts.slice(2).join(':') || null) : null,
     needsMore: Math.max(0, policy.minIndependentUsers - Math.min(claims.length, independentClusters.size)),
-    rationale: `policy=${policy.minIndependentUsers}/${policy.minTrustedAgreement}; users=${claims.length}; clusters=${independentClusters.size}; trusted=${trustedAgreementCount}; posterior=${posterior.toFixed(6)}; leading=${leadingKey}`,
+    rationale: `policy=${policy.minIndependentUsers}/${policy.minTrustedAgreement}; users=${claims.length}; clusters=${independentClusters.size}; trusted=${trustedAgreementCount}; posterior=${posterior.toFixed(6)}; withoutModel=${posteriorWithoutModel.toFixed(6)}; gate=${modelGate ?? 'none'}; leading=${leadingKey}`,
   }
 }
 
