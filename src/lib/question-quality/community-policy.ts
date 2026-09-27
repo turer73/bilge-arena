@@ -1,4 +1,4 @@
-export const COMMUNITY_QUALITY_POLICY_VERSION = 'community-quality@1'
+export const COMMUNITY_QUALITY_POLICY_VERSION = 'community-quality@2'
 
 export const COMMUNITY_QUALITY_POLICY = {
   minIndependentUsers: 5,

@@ -15,6 +15,7 @@
     "db:types": "node scripts/sync-database-types.mjs",
     "db:types:check": "node scripts/sync-database-types.mjs --check",
     "validate:questions": "node database/validate-question-bank.mjs",
+    "scan:question-text": "node database/scan-question-text-defects.mjs",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
