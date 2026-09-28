@@ -110,7 +110,9 @@ const KNOWN_PROPER = new Set([
   'newton', 'einstein', 'darwin', 'mendel', 'durkheim', 'weber', 'marx', 'platon', 'aristoteles', 'sokrates', 'descartes', 'kant',
   'allah', 'tanrı', 'kur', 'kuran', 'incil', 'tevrat', 'hz', 'peygamber',
 ])
-const SENTENCE_START = /(^|[.!?:…"“”'‘’(\[\n]\s*|\b(?:I{1,3}|IV|V)\.\s+)$/
+// Ok isaretleri (→, ⇒, ->, =>) uretilmis matematik sorularinda veri/soru
+// ayiricidir; sonrasi cumle basi sayilir (Codex #525).
+const SENTENCE_START = /(^|[.!?:…"“”'‘’(\[\n→⇒➜↔]\s*|(?:->|=>)\s*|\b(?:I{1,3}|IV|V)\.\s+)$/
 // Iki harfli bilimsel tokenlar: element sembolleri (Mn, Zn, Cu) ve denge/asitlik
 // sabitleri (Kc, Kp, Ka) fen sorularinda yaygindir; cagiran scientific=true
 // verirse yalniz BUNLAR kuraldan cikar. "Az", "Bu", "Ne" gibi iki harfli Turkce
@@ -120,7 +122,12 @@ const SENTENCE_START = /(^|[.!?:…"“”'‘’(\[\n]\s*|\b(?:I{1,3}|IV|V)\.\s
 const ELEMENT_SYMBOLS = new Set(('He Li Be Ne Na Mg Al Si Cl Ar Ca Sc Ti Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te Xe '
   + 'Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa Np Pu Am Cm Bk Cf Es Fm Md No Lr '
   + 'Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og').split(' '))
-const SCIENCE_CONSTANTS = new Set(['Kc', 'Kp', 'Ka', 'Kb', 'Kw', 'Ks', 'Ksp', 'Kd', 'Hz', 'Pa', 'Wb', 'Gy', 'Sv', 'Bq', 'Da'])
+const SCIENCE_CONSTANTS = new Set(['Kc', 'Kp', 'Ka', 'Kb', 'Kw', 'Ks', 'Ksp', 'Kd', 'Kf', 'Kh', 'Ki', 'Ek', 'Ep', 'Em', 'Fs', 'Fn', 'Fk', 'Hz', 'Pa', 'Wb', 'Gy', 'Sv', 'Bq', 'Da'])
+// Fen metninde iki harfli buyuk+kucuk token (Kf, Ek, Fs, Vo, Tf...) sayisiz sembol
+// olabilir; liste tutulamaz (Codex #525: Kf). scientific=true iken yalniz bilinen
+// iki harfli TURKCE sozcukler kuralda kalir; element sembolleri (Ne, Al, At)
+// once kontrol edildigi icin fen icinde onlar da muaftir.
+const TURKISH_TWO_LETTER = new Set(['az', 'bu', 'şu', 'ne', 've', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü', 'ya', 'iş', 'ev', 'el', 'su', 'üç', 'on', 'al', 'ad', 'at', 'ok', 'öz', 'uç', 'aç', 'et', 'ay', 'ün', 'il', 'iç', 'ot', 'öl', 'en', 'ha', 'ah', 'ey', 'öp', 'ak', 'ağ', 'ek'])
 const GENOTYPE_RE = /^([A-Z])([a-z])$/
 
 export function findMidSentenceCapitals(text, { locale = 'tr', scientific = false } = {}) {
@@ -134,7 +141,7 @@ export function findMidSentenceCapitals(text, { locale = 'tr', scientific = fals
     if (SENTENCE_START.test(before)) continue
     const genotype = GENOTYPE_RE.exec(word)
     if (genotype && genotype[2] === genotype[1].toLowerCase()) continue
-    if (scientific && (ELEMENT_SYMBOLS.has(word) || SCIENCE_CONSTANTS.has(word))) continue
+    if (scientific && (ELEMENT_SYMBOLS.has(word) || SCIENCE_CONSTANTS.has(word) || (word.length === 2 && !TURKISH_TWO_LETTER.has(word.toLocaleLowerCase(locale))))) continue
     const lower = word.toLocaleLowerCase(locale)
     if (KNOWN_PROPER.has(lower)) continue
     // Cok kelimeli ozel ad: "İstanbul Boğazı", "Pasifik Okyanusu", "Türkiye
@@ -161,10 +168,14 @@ export function findMidSentenceCapitals(text, { locale = 'tr', scientific = fals
 // yoksa "grafige gore" ve "sekle gore" kacar (Codex #524).
 const FIGURE_STEM = '(?:şekil|şekl|sekil|sekl|grafik|grafiğ|grafig|tablo|resim|resm|görsel|gorsel|diyagram|harita|çizim|cizim|figür|figur|devre)'
 const DEMONSTRATIVE = '(?:yukarıdaki|yukaridaki|aşağıdaki|asagidaki|verilen|yandaki)'
+// Gosterici dalda "resm" govdesi YOK: "asagidaki resmi/resmî kurum" (= official)
+// gorsel degildir; keyfi harf kuyrugu yerine gercek cekim ekleri (Codex #525).
+const DEMONSTRATIVE_STEM = '(?:şekil|şekl|sekil|sekl|grafik|grafiğ|grafig|tablo|resim|görsel|gorsel|diyagram|harita|çizim|cizim|figür|figur|devre)'
+const CASE_SUFFIX = '(?:ler|lar)?(?:deki|daki|teki|taki|den|dan|ten|tan|de|da|te|ta|nin|nın|nun|nün|in|ın|un|ün|ye|ya|yi|yı|yu|yü|e|a|i|ı|u|ü)?'
 const FIGURE_RE = new RegExp(
   '(?<![\\p{L}])(?:'
   + FIGURE_STEM + '(?:deki|daki|teki|taki)'                                      // şekildeki, tablodaki, grafikteki
-  + '|' + DEMONSTRATIVE + '\\s+' + FIGURE_STEM + '[\\p{L}]*'                    // yukarıdaki şekilde, aşağıdaki grafiğe
+  + '|' + DEMONSTRATIVE + '\\s+' + DEMONSTRATIVE_STEM + CASE_SUFFIX              // yukarıdaki şekilde, aşağıdaki grafiğe, aşağıdaki resimlerden
   + '|' + FIGURE_STEM + '(?:de|da|te|ta)\\s+(?:gösterilen|gosterilen|verilen|görülen|gorulen)'   // şekilde gösterilen
   + '|' + FIGURE_STEM + '(?:ye|ya|e|a)\\s+(?:göre|gore|bakıldığında|bakildiginda|bakılırsa|bakilirsa|bakınız|bakiniz|bakarak)' // şekle göre, grafiğe göre, tabloya göre
   + '|' + FIGURE_STEM + '(?:yı|yi|yu|yü|ı|i|u|ü)\\s+incele[\\p{L}]*'           // grafiği inceleyiniz, tabloyu incelediğinizde
@@ -231,20 +242,22 @@ export function findAnswerCues(content) {
 }
 
 // ── Kural 5: Ust indis / matematik dizgi kaybi ───────────────────────────────
-// "x2+y2+z2=14" (x²+y²+z²). Notasyon ayrimi (Codex #524): kimyasal formul ve
-// fizik indisi BUYUK harfle baslar (O2, H2O, F2 = m a, V1), ust indis kaybi ise
-// kucuk harfli degisken + rakam (x2, r2, v2) olarak gorunur. Bu yuzden yalniz
-// kucuk harf + [2-9] VE aritmetik komsuluk (+, -, =, *, /, kapanis parantezi
-// veya metin sonu) aranir; ayni harfin "1" indisli esi metinde varsa
-// (x1 + x2, Vieta) bunlar indis sayilir ve atlanir. Kategori kapisi yoktur:
-// kimya, fizik ve biyoloji ayni kuralla taranir; wordquest icin cagiran skip gecer.
-const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([a-z])([2-9])(?=\s*[+\-=*/)]|\s*$)/gu
+// "x2+y2+z2=14" (x²+y²+z²), "A2+B2=C2". Notasyon ayrimi (Codex #524/#525):
+// kimyasal formul TEK HARFLI ELEMENT sembolu + rakamdir (O2, H2, N2) ve fizik
+// indisi de cogunlukla bu harflerle yazilir (F2 = m a, V1); bunlar atlanir.
+// Diger harf + [2-9] (x2, r2, A2, X2) aritmetik komsulukta (+, -, =, *, /,
+// kapanis parantezi veya metin sonu) ust indis kaybi sayilir; ayni harfin "1"
+// indisli esi metinde varsa (x1 + x2, E1/E2) indistir ve atlanir. Kategori
+// kapisi yoktur; wordquest icin cagiran skip gecer.
+const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([A-Za-z])([2-9])(?=\s*[+\-=*/)]|\s*$)/gu
+const SINGLE_LETTER_ELEMENTS = new Set(['H', 'B', 'C', 'N', 'O', 'F', 'P', 'S', 'K', 'V', 'Y', 'I', 'W', 'U'])
 
 export function findSuperscriptLoss(text, { skip = false } = {}) {
   if (skip || !text) return []
   const s = String(text)
   const out = []
   for (const m of s.matchAll(SUPERSCRIPT_LOSS_RE)) {
+    if (SINGLE_LETTER_ELEMENTS.has(m[1])) continue
     const indexed = new RegExp('(?<![\\p{L}\\p{N}])' + m[1] + '1(?![\\p{N}])', 'u')
     if (indexed.test(s)) continue
     out.push({ token: m[0], index: m.index })

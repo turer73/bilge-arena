@@ -170,3 +170,34 @@ describe('scanRevisions', () => {
     expect(JSON.stringify(row)).toBe(before)
   })
 })
+
+describe('Codex #525 follow-ups', () => {
+  const words = (s, o) => findMidSentenceCapitals(s, o).map((c) => c.word)
+  it('figure: "asagidaki resmi/resmî kurum" gorsel degildir; resim cekimleri yakalanir', () => {
+    expect(findMissingFigureReference({ question: 'Aşağıdaki resmî kurumlardan hangisi yasama organıdır?' })).toEqual([])
+    expect(findMissingFigureReference({ question: 'Aşağıdaki resmi kurumlardan hangisi yasama organıdır?' })).toEqual([])
+    expect(findMissingFigureReference({ question: 'Aşağıdaki resimde hangi dönem görülür?' })).toHaveLength(1)
+    expect(findMissingFigureReference({ question: 'Aşağıdaki resimlerden hangisi Selçuklu dönemine aittir?' })).toHaveLength(1)
+    expect(findMissingFigureReference({ question: 'Yukarıdaki tabloya göre' })).toHaveLength(1)
+    expect(findMissingFigureReference({ question: 'Resme bakıldığında hangi dönem anlaşılır?' })).toHaveLength(1)
+  })
+  it('superscript: buyuk harfli degisken yakalanir (A2+B2=C2, X2+Y2=1), tek harfli element ve indis atlanir', () => {
+    expect(findSuperscriptLoss('A2+B2=C2 ise').map((h) => h.token)).toContain('A2')
+    expect(findSuperscriptLoss('X2+Y2=1 çemberi').map((h) => h.token)).toEqual(['X2'])
+    expect(findSuperscriptLoss('Hücrede O2 + glikoz tepkimesi')).toEqual([])
+    expect(findSuperscriptLoss('F2 = m a ise F2 kaç N olur?')).toEqual([])
+    expect(findSuperscriptLoss('E2 = E1 + W ise')).toEqual([])
+    expect(findSuperscriptLoss('x2+y2+z2=14').map((h) => h.token)).toEqual(['x2', 'y2', 'z2'])
+  })
+  it('capital: fen icinde Kf, Ek gibi iki harfli semboller muaf; Turkce iki harfli sozcuk yine yakalanir; fen disinda Kf yakalanir', () => {
+    expect(rules({ game: 'fen', category: 'kimya', content: { question: 'Donma noktası alçalması ΔTf = Kf · m ile bulunur; Kf sabiti nedir?', options: ['a', 'b', 'c'], answer: 0 } })).not.toContain('mid_sentence_capital')
+    expect(rules({ game: 'fen', category: 'fizik', content: { question: 'Cismin kinetik enerjisi Ek = 1/2 m v² olduğuna göre Ek kaç J?', options: ['a', 'b', 'c'], answer: 0 } })).not.toContain('mid_sentence_capital')
+    expect(words('Bir elektron Bu yörüngede Ne kadar kalır?', { scientific: true })).toEqual(['Bu'])
+    expect(words('Bu tepkimenin Kf değeri nedir?')).toEqual(['Kf'])
+  })
+  it('capital: ok isaretinden sonraki sozcuk cumle basidir', () => {
+    expect(words('Veriler: 3, 5, 7, 5 → Bu veri setinin modu kaçtır?')).toEqual([])
+    expect(words('f(x) -> Bu fonksiyon artandır. g => Şu da azalandır.')).toEqual([])
+    expect(words('Veriler → Bu veri Ve şu')).toEqual(['Ve'])
+  })
+})
