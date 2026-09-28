@@ -224,12 +224,12 @@ describe('Codex #527 follow-ups', () => {
     expect(fig('Yukarıdaki resmi yapan sanatçı kimdir?')).toEqual(['Yukarıdaki resmi'])
     expect(fig('Yukarıdaki resmi gördüğünüzde ne düşünürsünüz?')).toEqual(['Yukarıdaki resmi'])
   })
-  it('capital: fen icinde muafiyet yalniz ASCII sembol bicimi icindir; Turkce harfli (İp, İz, Ön, Üç) ve listeli ASCII (Ev, An) sozcukler yakalanir; Er element sembolu olarak muaf kalir, Kf/Fs/Vo muaf', () => {
+  it('capital: fen icinde muafiyet yalniz ASCII sembol bicimi icindir; Turkce harfli (İp, İz, Ön, Üç) ve listeli ASCII (Ev, Az) sozcukler yakalanir; Er element sembolu olarak muaf kalir, Kf/Fs/Vo muaf', () => {
     expect(words('Cisim bir İp ile gösterilir.', { scientific: true })).toEqual(['İp'])
     expect(words('Cisim bir İz bırakır.', { scientific: true })).toEqual(['İz'])
     expect(words('Bu cisim Ön tarafa gider.', { scientific: true })).toEqual(['Ön'])
     expect(words('Bu deneyde Üç kap kullanılır.', { scientific: true })).toEqual(['Üç'])
-    expect(words('Cisim bir Ev büyüklüğünde ve bir An için durur.', { scientific: true })).toEqual(['Ev', 'An'])
+    expect(words('Cisim bir Ev büyüklüğünde ve bir Az daha gider.', { scientific: true })).toEqual(['Ev', 'Az'])
     expect(words('Tepkimenin Kf değeri, kuvvet Fs ve hız Vo verilmiştir.', { scientific: true })).toEqual([])
     expect(words('Cisim bir İp ile gösterilir.', { scientific: false })).toEqual(['İp'])
   })
@@ -243,5 +243,33 @@ describe('Codex #527 follow-ups', () => {
     expect(sup('A2 = B2 + C2 ise')).toContain('A2')
     expect(sup('x2 = 9 ise x kaçtır?')).toEqual(['x2'])
     expect(sup('E1 = 5 J ve E2 = 10 J ise')).toEqual([])
+  })
+})
+
+describe('Codex #529 follow-ups', () => {
+  const words = (s, o) => findMidSentenceCapitals(s, o).map((c) => c.word)
+  const fig = (q) => findMissingFigureReference({ question: q }).map((f) => f.term)
+  const sup = (t) => findSuperscriptLoss(t).map((h) => h.token)
+  it('superscript: parantezli buyuk harfli komsu da aritmetik komsudur (A2 + (D2), (A2) + (B2))', () => {
+    expect(sup('A2 + (D2) = 9')).toEqual(['A2', 'D2'])
+    expect(sup('(A2) + (B2) = C2')).toContain('A2')
+    expect(sup('A2 + D2 = 9')).toEqual(['A2', 'D2'])
+    expect(sup('f(A2) = 3')).toEqual([])
+    expect(sup('E2 = (10 J)')).toEqual([])
+  })
+  it('figure: "resmi" sonrasi fiil ekleri dort unlu uyumuyla eslesir (görünce, gördüğünde, yaptığında); "resmi görev" yine sifattir', () => {
+    expect(fig('Aşağıdaki resmi görünce ne düşünürsünüz?')).toEqual(['Aşağıdaki resmi'])
+    expect(fig('Yukarıdaki resmi gördüğünde ne hissedersin?')).toEqual(['Yukarıdaki resmi'])
+    expect(fig('Yukarıdaki resmi yaptığında kaç yaşındaydı?')).toEqual(['Yukarıdaki resmi'])
+    expect(fig('Aşağıdaki resmi kullanınca ne olur?')).toEqual(['Aşağıdaki resmi'])
+    expect(fig('Aşağıdaki resmi gordugunuzde ne dusunursunuz?')).toEqual(['Aşağıdaki resmi'])
+    expect(fig('Aşağıdaki resmi görev alanı hangisidir?')).toEqual([])
+    expect(fig('Aşağıdaki resmi görüş bildiren kurum hangisidir?')).toEqual([])
+  })
+  it('capital: duzlesmis indis bicimiyle cakisan ASCII sozcukler (Us, Un, Ur, Ut) fen icinde sembol sayilir; fen disinda yakalanir', () => {
+    expect(words('Devrede ölçülen Us gerilimi nedir?', { scientific: true })).toEqual([])
+    expect(words('Kaynağın Un ve Ur değerleri verilmiştir.', { scientific: true })).toEqual([])
+    expect(words('Devrede ölçülen Us gerilimi nedir?', { scientific: false })).toEqual(['Us'])
+    expect(words('Cisim bir Ev büyüklüğündedir.', { scientific: true })).toEqual(['Ev'])
   })
 })

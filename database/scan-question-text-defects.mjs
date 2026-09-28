@@ -127,15 +127,13 @@ const SCIENCE_CONSTANTS = new Set(['Kc', 'Kp', 'Ka', 'Kb', 'Kw', 'Ks', 'Ksp', 'K
 // olabilir; liste tutulamaz (Codex #525: Kf). scientific=true iken muafiyet
 // yalniz SEMBOL BICIMLI tokenlar icindir: ASCII buyuk + ASCII kucuk harf. Turkce
 // harf iceren token (İp, İz, Ön, Üç, Şu) hicbir sembol olamaz, kuralda kalir
-// (Codex #527). ASCII iki harfli Turkce sozcukler (Az, Bu, Ev, An, Er) listeyle
-// kuralda tutulur; element sembolleri (Ne, Al, At) once kontrol edildigi icin
-// fen icinde onlar muaftir.
+// (Codex #527). Liste BILEREK kisadir: yalniz soru metninde sik gecen ASCII
+// iki harfli Turkce sozcukler (Az, Bu, Ev, Ne, Ve). Duzlesmis indis bicimiyle
+// cakisan sozcukler (Us, Un, Ur, Ut = U_s besleme gerilimi gibi) listeye
+// ALINMAZ; fen icinde sembol sayilip muaf kalir (Codex #529). Element
+// sembolleri (Ne, Al, At) once kontrol edildigi icin fen icinde onlar muaftir.
 const SYMBOL_SHAPE = /^[A-Z][a-z]$/
-const TURKISH_TWO_LETTER = new Set([
-  'az', 'bu', 'şu', 'ne', 've', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü', 'ya', 'iş', 'ev', 'el', 'su', 'üç', 'on', 'al', 'ad', 'at', 'ok', 'öz',
-  'uç', 'aç', 'et', 'ay', 'ün', 'il', 'iç', 'ot', 'öl', 'en', 'ha', 'ah', 'ey', 'öp', 'ak', 'ağ', 'ek',
-  'an', 'ar', 'as', 'be', 'em', 'er', 'ez', 'he', 'hu', 'im', 'in', 'ip', 'ir', 'is', 'it', 'iz', 'la', 'of', 'oh', 'ol', 'oy', 'ta', 'te', 'ti', 'tu', 'un', 'ur', 'us', 'ut', 'uz', 'ye', 'yo',
-])
+const TURKISH_TWO_LETTER = new Set(['az', 'bu', 'şu', 'ne', 've', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü', 'ya', 'iş', 'ev', 'el', 'su', 'üç', 'on', 'al', 'ad', 'at', 'ok', 'öz', 'uç', 'aç', 'et', 'ay', 'ün', 'il', 'iç', 'ot', 'öl', 'en', 'ha', 'ah', 'ey', 'öp', 'ak', 'ağ', 'ek'])
 const GENOTYPE_RE = /^([A-Z])([a-z])$/
 
 export function findMidSentenceCapitals(text, { locale = 'tr', scientific = false } = {}) {
@@ -187,8 +185,13 @@ const CASE_SUFFIX = '(?:ler|lar)?(?:deki|daki|teki|taki|den|dan|ten|tan|de|da|te
 // "resmi"den sonra gelen sozcuk TAM fiil bicimi (inceleyiniz, kullanarak, yapan,
 // gördüğünüzde) veya soru sozcugu olmali; ciplak govde yetmez, yoksa "resmî
 // görev/açıklama/kimlik/inceleme" gibi sifat tamlamalari yakalanir.
-const RESIM_ACC_NEXT = '(?:(?:incele|kullan|bak|gör|gor|yorumla|betimle|açıkla|acikla|anlat|tanımla|tanimla|değerlendir|degerlendir|yap|çiz|ciz)'
-  + 'y?(?:ınız|iniz|unuz|ünüz|ın|in|un|ün|arak|erek|ıp|ip|up|üp|an|en|ınca|ince|dığınızda|diğinizde|diginizde|düğünüzde|dugunuzde|mış|miş|muş|müş|dı|di|du|dü|tı|ti|tu|tü)'
+// Fiil ekleri dort unlu uyumuyla (ı/i/u/ü, a/e) yazilir; tek tek listelemek
+// "görünce" (unca/ünce) gibi bicimleri kacirdi (Codex #529). ASCII yazim
+// (gordugunuzde) icin g'li kollar da vardir.
+const VERB_SUFFIX = 'y?(?:[ıiuü]n[ıiuü]z|[ıiuü]n|[ae]r[ae]k|[ıiuü]p|[ae]n|[ıiuü]nc[ae]'
+  + '|[dt](?:[ıiuü]ğ[ıiuü]n[ıiuü]zd[ae]|[iu]g[iu]n[iu]zd[ae]|[ıiuü]ğ[ıiuü]nd[ae]|[iu]g[iu]nd[ae])'
+  + '|m[ıiuü]ş|m[iu]s|[dt][ıiuü])'
+const RESIM_ACC_NEXT = '(?:(?:incele|kullan|bak|gör|gor|yorumla|betimle|açıkla|acikla|anlat|tanımla|tanimla|değerlendir|degerlendir|yap|çiz|ciz)' + VERB_SUFFIX
   + '|dikkate|hangi|hangisi|kim|kimin|kime|kimdir|ne|nedir|neyi|neden|nerede|nereden|nasıl|nasil|kaç|kac)(?![\\p{L}])'
 const RESIM_DROPPED_VOWEL = 'resm(?:in(?:de|den|i|e)?|e|iyle|i(?=\\s+' + RESIM_ACC_NEXT + '))'
 const FIGURE_RE = new RegExp(
@@ -273,8 +276,9 @@ export function findAnswerCues(content) {
 // bakmaz. Kategori kapisi yoktur; wordquest icin cagiran skip gecer.
 const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([A-Za-z])([2-9])(?=\s*[+\-=*/)]|\s*$)/gu
 const SINGLE_LETTER_ELEMENTS = new Set(['H', 'B', 'C', 'N', 'O', 'F', 'P', 'S', 'K', 'V', 'Y', 'I', 'W', 'U'])
-const LETTER_DIGIT_BEFORE = /(?<![\p{L}\p{N}])[A-Za-z][2-9]\s*[+\-=*/]\s*$/u
-const LETTER_DIGIT_AFTER = /^\s*[+\-=*/]\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
+// Komsu harf+rakam parantez icinde de olabilir: A2 + (D2), (A2) + (B2) (Codex #529).
+const LETTER_DIGIT_BEFORE = /(?<![\p{L}\p{N}])[A-Za-z][2-9]\s*\)?\s*[+\-=*/]\s*\(?\s*$/u
+const LETTER_DIGIT_AFTER = /^\s*\)?\s*[+\-=*/]\s*\(?\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
 
 export function findSuperscriptLoss(text, { skip = false } = {}) {
   if (skip || !text) return []
