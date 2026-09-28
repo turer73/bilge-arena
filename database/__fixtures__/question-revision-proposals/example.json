@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "question-revision-proposals@1",
+  "batch": {
+    "title": "Ornek paket: uc degisiklik turu",
+    "sourceRef": "database/__fixtures__/question-revision-proposals/example.json (test verisi; gercek soru degil)"
+  },
+  "proposals": [
+    {
+      "ref": "EX-EDIT",
+      "questionId": "11111111-1111-4111-8111-111111111111",
+      "finding": { "code": "ASCII_DIACRITIC_LOSS", "severity": "P1", "summary": "Kokte Turkce karakter kaybi: 'asagidakilerden' ve 'dogru'." },
+      "evidence": ["scan:question-text ascii_diacritic_loss @question"],
+      "changeKind": "edit",
+      "patch": { "question": "Aşağıdakilerden hangisi doğru yazılmıştır?" },
+      "rationale": "Yalniz yazim; anahtar ve secenekler degismiyor."
+    },
+    {
+      "ref": "EX-KEY",
+      "questionId": "22222222-2222-4222-8222-222222222222",
+      "finding": { "code": "WRONG_KEY", "severity": "P0", "summary": "Cozum 2. secenegi gerekcelendiriyor, anahtar 0." },
+      "evidence": ["pilot: 3/3 kor cozucu secenek 2", "solution_checker: solutionConcludesIndex=2"],
+      "changeKind": "correct_answer",
+      "patch": { "answer": 2 },
+      "rationale": "Cozum metni ile anahtar celisiyor; cozum dogru, anahtar yanlis."
+    },
+    {
+      "ref": "EX-RETIRE",
+      "questionId": "33333333-3333-4333-8333-333333333333",
+      "finding": { "code": "MISSING_FIGURE", "severity": "P0", "summary": "Kok 'sekildeki devre' diyor, icerikte gorsel alani yok." },
+      "evidence": ["scan:question-text figure_reference_without_media @question", "pilot: 3 kor cozucu + adversarial inconclusive"],
+      "changeKind": "retire",
+      "patch": {},
+      "rationale": "Gorsel olmadan cevaplanamaz; gorsel eklenene kadar pasife alinmali."
+    }
+  ]
+}

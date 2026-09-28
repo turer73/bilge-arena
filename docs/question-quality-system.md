@@ -58,3 +58,35 @@ INSERT/UPDATE/DELETE yetkisi yoktur; bu betikler servis anahtariyla fail-closed
 olur. Yeni otomasyonlar yonetimli taslak RPC'sini kullanmalidir. Acil bakim
 gerekiyorsa API anahtari bir "break glass" yolu degildir: owner yetkili,
 incelemeli ve kayitli bir SQL migration'i gerekir.
+
+## Pilot bulgularindan taslak revizyon
+
+Antigravity pilotlari ve `npm run scan:question-text` yalniz ADAY uretir. Aday,
+migration ile ya da `questions` tablosuna dogrudan yazilarak canliya alinamaz:
+`trg_question_content_direct_mutation_guard` (106/142) icerik ve `is_active`
+degisikligini 42501 ile reddeder ve migration dosyalari icerik tasimaz.
+Hicbir LLM ciktisi (kor cozucu, oneri metni) tek basina yayin, ret veya
+karantina otoritesi degildir.
+
+Yol:
+
+1. Oneri dosyasi (`question-revision-proposals@1`; ornek ve 16 soruluk iskelet
+   `database/__fixtures__/question-revision-proposals/` altinda). Her oge:
+   soru kimligi, bulgu (kod/onem/ozet), kanit, `changeKind`
+   (`edit` | `correct_answer` | `retire`), yalniz icerik alanlarini tasiyan
+   `patch` ve gerekce. Zorluk, kategori ve kazanim `patch` ile degismez.
+2. `npm run revision:drafts -- --proposals <dosya>`: kuru calisma. Her soru icin
+   yayimli revizyon, kazanim eslemesi ve kaynak kaydi okunur; 106
+   `content_governance_validate_payload` sozlesmesine uyan payload kurulur;
+   onerilen icerik deterministik taramadan ERROR alirsa oge bloklanir. Cikti:
+   `payloads.json`, `review-sheet.md` (once/sonra tablosu) ve `report.json`,
+   varsayilan olarak `secure/revision-drafts/<paket>/`. DB'ye yazilmaz.
+   DB yoksa `--rows <dis aktarim>` ile cevrimdisi onizleme alinir.
+3. `--apply --user-id <hazirlayan>`: yalniz "ready" ogeler icin
+   `create_question_content_revision` cagrilir; sonuc TASLAKTIR. Istek kimligi
+   soru + payload'dan turetilir, yeniden calistirma taslak cogaltmaz; taban
+   revizyon bayatsa RPC reddeder (`22023`).
+4. Iki insan onayi: stage 1 ve stage 2, hazirlayandan ve birbirinden farkli
+   kisiler (`review_question_content_revision`); ardindan
+   `publish_question_content_revision`. Pasife alma yalniz `retire`
+   taslaginin yayimidir.

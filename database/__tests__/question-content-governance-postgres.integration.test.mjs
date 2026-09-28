@@ -989,4 +989,31 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect(stillQuarantined).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
     expect((await client.query('SELECT is_active FROM public.questions WHERE id=$1',[target.question_id])).rows[0].is_active).toBe(true)
   })
+  it('prepare-question-revision-drafts: kurulan payload RPC tarafindan yalniz TASLAK olarak kabul edilir; replay cogaltmaz; bayat taban reddedilir; retire soruyu pasife almaz', async () => {
+    const { buildRevisionPayload, currentFromRows, draftRequestId, validatePayloadShape } = await import('../prepare-question-revision-drafts.mjs')
+    const q = (await client.query('SELECT id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,is_active,content,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
+    expect(q.published_revision_id).toBeTruthy()
+    const rev = (await client.query('SELECT id,content FROM public.question_content_revisions WHERE id=$1',[q.published_revision_id])).rows[0]
+    const outcomes = (await client.query('SELECT outcome_id,weight,is_primary FROM public.question_outcomes WHERE question_id=$1',[question])).rows
+    const source = (await client.query('SELECT * FROM public.question_revision_sources WHERE revision_id=$1',[rev.id])).rows[0] ?? null
+    const current = currentFromRows({ question: q, revision: rev, outcomes, source })
+    expect(current.baseRevisionId).toBe(q.published_revision_id)
+    const base = { ref:'P4-Q10', questionId: question, finding:{ code:'STEM_MISSING_TOKEN', severity:'P1', summary:'kok ile anahtar uyumsuz' }, evidence:['pilot 4'], rationale:'insan onayina taslak', ...(current.outcomes.length ? {} : { outcomes:[{ outcomeId: outcome, weight: 1, primary: true }] }) }
+    const edit = buildRevisionPayload({ current, proposal: { ...base, changeKind:'edit', patch:{ question: `${current.content.question} (taslak duzeltme)` } } })
+    expect(edit.errors).toEqual([]); expect(validatePayloadShape(edit.payload)).toEqual([])
+    const before = (await client.query('SELECT content,is_active,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
+    const requestId = draftRequestId(question, edit.payload)
+    const draft = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,current.baseRevisionId,JSON.stringify(edit.payload),requestId])
+    expect(draft).toEqual(expect.objectContaining({ questionId: question, status:'draft', replayed:false }))
+    const replay = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,current.baseRevisionId,JSON.stringify(edit.payload),requestId])
+    expect(replay).toEqual(expect.objectContaining({ revisionId: draft.revisionId, replayed:true }))
+    expect((await client.query('SELECT status,change_kind,base_revision_id,content FROM public.question_content_revisions WHERE id=$1',[draft.revisionId])).rows[0]).toEqual({ status:'draft', change_kind:'edit', base_revision_id: current.baseRevisionId, content: edit.payload.content })
+    await err(() => rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,legacyRevision,JSON.stringify(edit.payload),randomUUID()]), '22023')
+    const retire = buildRevisionPayload({ current, proposal: { ...base, ref:'P1-Q21', changeKind:'retire', patch:{} } })
+    expect(retire.errors).toEqual([])
+    const retireDraft = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,current.baseRevisionId,JSON.stringify(retire.payload),draftRequestId(question, retire.payload)])
+    expect((await client.query('SELECT status,change_kind FROM public.question_content_revisions WHERE id=$1',[retireDraft.revisionId])).rows[0]).toEqual({ status:'draft', change_kind:'retire' })
+    const after = (await client.query('SELECT content,is_active,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
+    expect(after).toEqual(before)
+  })
 })
