@@ -124,10 +124,18 @@ const ELEMENT_SYMBOLS = new Set(('He Li Be Ne Na Mg Al Si Cl Ar Ca Sc Ti Cr Mn F
   + 'Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og').split(' '))
 const SCIENCE_CONSTANTS = new Set(['Kc', 'Kp', 'Ka', 'Kb', 'Kw', 'Ks', 'Ksp', 'Kd', 'Kf', 'Kh', 'Ki', 'Ek', 'Ep', 'Em', 'Fs', 'Fn', 'Fk', 'Hz', 'Pa', 'Wb', 'Gy', 'Sv', 'Bq', 'Da'])
 // Fen metninde iki harfli buyuk+kucuk token (Kf, Ek, Fs, Vo, Tf...) sayisiz sembol
-// olabilir; liste tutulamaz (Codex #525: Kf). scientific=true iken yalniz bilinen
-// iki harfli TURKCE sozcukler kuralda kalir; element sembolleri (Ne, Al, At)
-// once kontrol edildigi icin fen icinde onlar da muaftir.
-const TURKISH_TWO_LETTER = new Set(['az', 'bu', 'şu', 'ne', 've', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü', 'ya', 'iş', 'ev', 'el', 'su', 'üç', 'on', 'al', 'ad', 'at', 'ok', 'öz', 'uç', 'aç', 'et', 'ay', 'ün', 'il', 'iç', 'ot', 'öl', 'en', 'ha', 'ah', 'ey', 'öp', 'ak', 'ağ', 'ek'])
+// olabilir; liste tutulamaz (Codex #525: Kf). scientific=true iken muafiyet
+// yalniz SEMBOL BICIMLI tokenlar icindir: ASCII buyuk + ASCII kucuk harf. Turkce
+// harf iceren token (İp, İz, Ön, Üç, Şu) hicbir sembol olamaz, kuralda kalir
+// (Codex #527). ASCII iki harfli Turkce sozcukler (Az, Bu, Ev, An, Er) listeyle
+// kuralda tutulur; element sembolleri (Ne, Al, At) once kontrol edildigi icin
+// fen icinde onlar muaftir.
+const SYMBOL_SHAPE = /^[A-Z][a-z]$/
+const TURKISH_TWO_LETTER = new Set([
+  'az', 'bu', 'şu', 'ne', 've', 'da', 'de', 'ki', 'mi', 'mı', 'mu', 'mü', 'ya', 'iş', 'ev', 'el', 'su', 'üç', 'on', 'al', 'ad', 'at', 'ok', 'öz',
+  'uç', 'aç', 'et', 'ay', 'ün', 'il', 'iç', 'ot', 'öl', 'en', 'ha', 'ah', 'ey', 'öp', 'ak', 'ağ', 'ek',
+  'an', 'ar', 'as', 'be', 'em', 'er', 'ez', 'he', 'hu', 'im', 'in', 'ip', 'ir', 'is', 'it', 'iz', 'la', 'of', 'oh', 'ol', 'oy', 'ta', 'te', 'ti', 'tu', 'un', 'ur', 'us', 'ut', 'uz', 'ye', 'yo',
+])
 const GENOTYPE_RE = /^([A-Z])([a-z])$/
 
 export function findMidSentenceCapitals(text, { locale = 'tr', scientific = false } = {}) {
@@ -141,7 +149,7 @@ export function findMidSentenceCapitals(text, { locale = 'tr', scientific = fals
     if (SENTENCE_START.test(before)) continue
     const genotype = GENOTYPE_RE.exec(word)
     if (genotype && genotype[2] === genotype[1].toLowerCase()) continue
-    if (scientific && (ELEMENT_SYMBOLS.has(word) || SCIENCE_CONSTANTS.has(word) || (word.length === 2 && !TURKISH_TWO_LETTER.has(word.toLocaleLowerCase(locale))))) continue
+    if (scientific && (ELEMENT_SYMBOLS.has(word) || SCIENCE_CONSTANTS.has(word) || (SYMBOL_SHAPE.test(word) && !TURKISH_TWO_LETTER.has(word.toLocaleLowerCase(locale))))) continue
     const lower = word.toLocaleLowerCase(locale)
     if (KNOWN_PROPER.has(lower)) continue
     // Cok kelimeli ozel ad: "İstanbul Boğazı", "Pasifik Okyanusu", "Türkiye
@@ -168,14 +176,25 @@ export function findMidSentenceCapitals(text, { locale = 'tr', scientific = fals
 // yoksa "grafige gore" ve "sekle gore" kacar (Codex #524).
 const FIGURE_STEM = '(?:şekil|şekl|sekil|sekl|grafik|grafiğ|grafig|tablo|resim|resm|görsel|gorsel|diyagram|harita|çizim|cizim|figür|figur|devre)'
 const DEMONSTRATIVE = '(?:yukarıdaki|yukaridaki|aşağıdaki|asagidaki|verilen|yandaki)'
-// Gosterici dalda "resm" govdesi YOK: "asagidaki resmi/resmî kurum" (= official)
-// gorsel degildir; keyfi harf kuyrugu yerine gercek cekim ekleri (Codex #525).
+// Gosterici dalda "resm" govdesi genel CASE_SUFFIX ile DEGIL, ayri ele alinir:
+// "asagidaki resmi/resmî kurum" (= official) gorsel degildir (Codex #525), ama
+// unlu dusmeli cekimler gercek gorsel gondermesidir (Codex #527): "resmin
+// konusu", "resme ait", "resmi kullanarak". "resmi" iki anlamli oldugundan
+// yalniz bir fiil/soru sozcugu izliyorsa belirtme hali (resim+i) sayilir; isim
+// izliyorsa sifattir (resmî kurum/belge/dil) ve yakalanmaz.
 const DEMONSTRATIVE_STEM = '(?:şekil|şekl|sekil|sekl|grafik|grafiğ|grafig|tablo|resim|görsel|gorsel|diyagram|harita|çizim|cizim|figür|figur|devre)'
 const CASE_SUFFIX = '(?:ler|lar)?(?:deki|daki|teki|taki|den|dan|ten|tan|de|da|te|ta|nin|nın|nun|nün|in|ın|un|ün|ye|ya|yi|yı|yu|yü|e|a|i|ı|u|ü)?'
+// "resmi"den sonra gelen sozcuk TAM fiil bicimi (inceleyiniz, kullanarak, yapan,
+// gördüğünüzde) veya soru sozcugu olmali; ciplak govde yetmez, yoksa "resmî
+// görev/açıklama/kimlik/inceleme" gibi sifat tamlamalari yakalanir.
+const RESIM_ACC_NEXT = '(?:(?:incele|kullan|bak|gör|gor|yorumla|betimle|açıkla|acikla|anlat|tanımla|tanimla|değerlendir|degerlendir|yap|çiz|ciz)'
+  + 'y?(?:ınız|iniz|unuz|ünüz|ın|in|un|ün|arak|erek|ıp|ip|up|üp|an|en|ınca|ince|dığınızda|diğinizde|diginizde|düğünüzde|dugunuzde|mış|miş|muş|müş|dı|di|du|dü|tı|ti|tu|tü)'
+  + '|dikkate|hangi|hangisi|kim|kimin|kime|kimdir|ne|nedir|neyi|neden|nerede|nereden|nasıl|nasil|kaç|kac)(?![\\p{L}])'
+const RESIM_DROPPED_VOWEL = 'resm(?:in(?:de|den|i|e)?|e|iyle|i(?=\\s+' + RESIM_ACC_NEXT + '))'
 const FIGURE_RE = new RegExp(
   '(?<![\\p{L}])(?:'
   + FIGURE_STEM + '(?:deki|daki|teki|taki)'                                      // şekildeki, tablodaki, grafikteki
-  + '|' + DEMONSTRATIVE + '\\s+' + DEMONSTRATIVE_STEM + CASE_SUFFIX              // yukarıdaki şekilde, aşağıdaki grafiğe, aşağıdaki resimlerden
+  + '|' + DEMONSTRATIVE + '\\s+(?:' + DEMONSTRATIVE_STEM + CASE_SUFFIX + '|' + RESIM_DROPPED_VOWEL + ')'   // yukarıdaki şekilde, aşağıdaki grafiğe, aşağıdaki resimlerden, aşağıdaki resmin
   + '|' + FIGURE_STEM + '(?:de|da|te|ta)\\s+(?:gösterilen|gosterilen|verilen|görülen|gorulen)'   // şekilde gösterilen
   + '|' + FIGURE_STEM + '(?:ye|ya|e|a)\\s+(?:göre|gore|bakıldığında|bakildiginda|bakılırsa|bakilirsa|bakınız|bakiniz|bakarak)' // şekle göre, grafiğe göre, tabloya göre
   + '|' + FIGURE_STEM + '(?:yı|yi|yu|yü|ı|i|u|ü)\\s+incele[\\p{L}]*'           // grafiği inceleyiniz, tabloyu incelediğinizde
@@ -247,10 +266,15 @@ export function findAnswerCues(content) {
 // indisi de cogunlukla bu harflerle yazilir (F2 = m a, V1); bunlar atlanir.
 // Diger harf + [2-9] (x2, r2, A2, X2) aritmetik komsulukta (+, -, =, *, /,
 // kapanis parantezi veya metin sonu) ust indis kaybi sayilir; ayni harfin "1"
-// indisli esi metinde varsa (x1 + x2, E1/E2) indistir ve atlanir. Kategori
-// kapisi yoktur; wordquest icin cagiran skip gecer.
+// indisli esi metinde varsa (x1 + x2, E1/E2) indistir ve atlanir. BUYUK harf
+// fizikte tek basina nicelik indisidir (E2 = 10 J, Q2 = 4 C, R2 = 10 Ω: ikinci
+// enerji/yuk/direnc; Codex #527); yalniz aritmetik komsusu da harf+rakam ise
+// (A2+B2=C2, X2+Y2=1) ust indis sayilir. Kucuk harf (x2 = 9) komsu sartina
+// bakmaz. Kategori kapisi yoktur; wordquest icin cagiran skip gecer.
 const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([A-Za-z])([2-9])(?=\s*[+\-=*/)]|\s*$)/gu
 const SINGLE_LETTER_ELEMENTS = new Set(['H', 'B', 'C', 'N', 'O', 'F', 'P', 'S', 'K', 'V', 'Y', 'I', 'W', 'U'])
+const LETTER_DIGIT_BEFORE = /(?<![\p{L}\p{N}])[A-Za-z][2-9]\s*[+\-=*/]\s*$/u
+const LETTER_DIGIT_AFTER = /^\s*[+\-=*/]\s*[A-Za-z][2-9](?![\p{L}\p{N}])/u
 
 export function findSuperscriptLoss(text, { skip = false } = {}) {
   if (skip || !text) return []
@@ -260,6 +284,11 @@ export function findSuperscriptLoss(text, { skip = false } = {}) {
     if (SINGLE_LETTER_ELEMENTS.has(m[1])) continue
     const indexed = new RegExp('(?<![\\p{L}\\p{N}])' + m[1] + '1(?![\\p{N}])', 'u')
     if (indexed.test(s)) continue
+    if (/[A-Z]/.test(m[1])) {
+      const before = s.slice(0, m.index)
+      const after = s.slice(m.index + m[0].length)
+      if (!LETTER_DIGIT_BEFORE.test(before) && !LETTER_DIGIT_AFTER.test(after)) continue
+    }
     out.push({ token: m[0], index: m.index })
   }
   return out
