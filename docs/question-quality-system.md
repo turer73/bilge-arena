@@ -81,7 +81,9 @@ Yol:
    (`question_revision_sources` service_role'a kapalidir, 136 yalniz revizyon
    tablosuna sutun bazli SELECT verir); 106 + 110 (`coach`)
    `content_governance_validate_payload` sozlesmesine uyan payload kurulur;
-   `coach` nesnesi aynen tasinir ve patch ile degistirilemez; onerilen icerik
+   `coach` nesnesi aynen tasinir ve patch ile degistirilemez; coach'lu soruda
+   cevap indeksi veya secenek metni (yazim duzeltmesi disinda) degisemez,
+   once insan coach revizyonu yapar; onerilen icerik
    deterministik taramadan ERROR alirsa oge bloklanir. Cikti:
    `payloads.json`, `review-sheet.md` (once/sonra tablosu) ve `report.json`,
    varsayilan olarak `secure/revision-drafts/<paket>/`. DB'ye yazilmaz.
