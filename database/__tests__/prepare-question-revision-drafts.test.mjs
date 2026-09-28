@@ -105,9 +105,16 @@ describe('coach, kazanim ve kimlik kurallari (Codex #526)', () => {
     expect(buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { options: ['kitab', 'kitap', 'defter', 'kitapp'] } }) }).errors.some(blocked)).toBe(true)
     // sira degisikligi de bloklanir (aciklama indeksle eslesir)
     expect(buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { options: ['kitap', 'kitab', 'kıtap', 'kitapp'], answer: 0 } , changeKind: 'correct_answer' }) }).errors.some(blocked)).toBe(true)
-    // yalniz yazim: diakritik, buyuk/kucuk harf, bosluk, noktalama
-    const spelling = buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { options: ['Kitab', 'kitap ', 'kıtap.', 'kitapp'] } }) })
+    // yalniz yazim: diakritik, buyuk/kucuk harf, bosluk, tirnak bicimi
+    const spelling = buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { options: ['Kitab', 'kitap ', 'kıtap', 'kitapp'] } }) })
     expect(spelling.errors).toEqual([]); expect(spelling.payload.content.coach).toEqual(coach)
+    const apostrophe = buildRevisionPayload({ current: { ...coached(), content: { ...coached().content, options: ["Türkiye'nin", 'kitap', 'kıtap', 'kitapp'] } }, proposal: proposal({ patch: { options: ['Türkiye’nin', 'kitap', 'kıtap', 'kitapp'] } }) })
+    expect(apostrophe.errors).toEqual([])
+    // isaret, ondalik ayraci, kesir, yuzde ve noktalama anlam tasir: yazim sayilmaz (Codex #530)
+    const numeric = () => ({ ...coached(), content: { ...coached().content, options: ['-10', '1,5', '1/2', '%50'] } })
+    for (const options of [['10', '1,5', '1/2', '%50'], ['-10', '15', '1/2', '%50'], ['-10', '1,5', '12', '%50'], ['-10', '1,5', '1/2', '50']])
+      expect(buildRevisionPayload({ current: numeric(), proposal: proposal({ patch: { options } }) }).errors.some(blocked)).toBe(true)
+    expect(buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { options: ['kitab', 'kitap', 'kıtap.', 'kitapp'] } }) }).errors.some(blocked)).toBe(true)
     const diacritic = buildRevisionPayload({ current: { ...coached(), content: { ...coached().content, options: ['Turkiye', 'kitap', 'isik', 'Istanbul'] } }, proposal: proposal({ patch: { options: ['Türkiye', 'kitap', 'ışık', 'İstanbul'] } }) })
     expect(diacritic.errors).toEqual([])
     // coach yoksa secenek degisikligi serbest

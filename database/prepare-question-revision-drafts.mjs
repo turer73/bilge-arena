@@ -53,7 +53,8 @@ export const PROPOSALS_SCHEMA = 'question-revision-proposals@1'
 // coach.misconceptions secenek BASINA aciklamadir: cevap indeksi degisirse null
 // konumu kayar, secenek metni anlamca degisirse aciklama eski secenegi anlatir.
 // Ikisi de coach'lu soruda bloklanir; yalniz yazim duzeltmesi (diakritik, buyuk/
-// kucuk harf, bosluk, noktalama) secenekte gecer (Codex #528).
+// kucuk harf, bosluk, tirnak bicimi) secenekte gecer (Codex #528); isaret ve
+// noktalama korunur (Codex #530).
 export const CONTENT_KEYS = ['question', 'options', 'answer', 'solution', 'explanation', 'hint', 'sentence', 'passage', 'context', 'type', 'coach']
 export const PATCH_KEYS = CONTENT_KEYS.filter((k) => k !== 'coach')
 const COACH_KEYS = ['hint1', 'hint2', 'miniExample', 'misconceptions']
@@ -79,9 +80,13 @@ export function canonicalize(value) {
 const canon = (v) => JSON.stringify(canonicalize(v))
 export const sameContent = (a, b) => canon(a) === canon(b)
 // Yazim esdegerligi: Turkce kucuk harf, diakritik kaldirma (Türkiye ~ Turkiye,
-// ışık ~ isik), harf/rakam disi karakterleri atma. Sira ve sayi korunur;
-// anlam degisikligi (kitap -> defter, 10 -> 100) esdeger DEGILDIR.
-const foldSpelling = (x) => String(x ?? '').toLocaleLowerCase('tr').normalize('NFD').replace(/\p{M}+/gu, '').replace(/ı/g, 'i').replace(/[^\p{L}\p{N}]+/gu, '')
+// ışık ~ isik), tirnak/kesme isareti bicimlerini tekle indirme (’ ~ '),
+// bosluk dizilerini tek bosluga indirme. BASKA hicbir karakter atilmaz:
+// isaret, ondalik ayraci, kesir, yuzde ve operatorler anlam tasir (-10 vs 10,
+// 1,5 vs 15, 1/2 vs 12; Codex #530). Sira ve sayi korunur; anlam degisikligi
+// (kitap -> defter, 10 -> 100) esdeger DEGILDIR.
+const foldSpelling = (x) => String(x ?? '').toLocaleLowerCase('tr').normalize('NFD').replace(/\p{M}+/gu, '').replace(/ı/g, 'i')
+  .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'").replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"').replace(/\s+/gu, ' ').trim()
 export const sameSpelling = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => foldSpelling(x) === foldSpelling(b[i]))
 
 /** Ayni soru + ayni payload her zaman ayni istek kimligini uretir: RPC'nin
@@ -231,7 +236,7 @@ export function buildRevisionPayload({ current, proposal }) {
   // Secenek metni degisince secenek basina yanilgi aciklamasi eski secenegi
   // anlatir; yalniz yazim duzeltmesi gecer (Codex #528).
   const optionsChanged = Array.isArray(patch.options) && !sameContent(patch.options, before.options)
-  if (optionsChanged && before.coach && !sameSpelling(patch.options, before.options)) errors.push('secenekler degisince coach.misconceptions (secenek basina aciklama) eski secenekleri anlatir; yalniz yazim duzeltmesi (diakritik/bosluk/noktalama) gecer, anlam veya sira degisikliginde once coach revizyonu insan tarafindan')
+  if (optionsChanged && before.coach && !sameSpelling(patch.options, before.options)) errors.push('secenekler degisince coach.misconceptions (secenek basina aciklama) eski secenekleri anlatir; yalniz yazim duzeltmesi (diakritik, buyuk/kucuk harf, bosluk, tirnak bicimi) gecer; isaret/ondalik/noktalama dahil anlam veya sira degisikliginde once coach revizyonu insan tarafindan')
   if (before.coach) notes.push('coach nesnesi yayimli revizyondan aynen tasindi')
 
   const metadata = pick(current.metadata ?? {}, METADATA_KEYS)
