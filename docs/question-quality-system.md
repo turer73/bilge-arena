@@ -75,14 +75,18 @@ Yol:
    soru kimligi, bulgu (kod/onem/ozet), kanit, `changeKind`
    (`edit` | `correct_answer` | `retire`), yalniz icerik alanlarini tasiyan
    `patch` ve gerekce. Zorluk, kategori ve kazanim `patch` ile degismez.
-2. `npm run revision:drafts -- --proposals <dosya>`: kuru calisma. Her soru icin
-   yayimli revizyon, kazanim eslemesi ve kaynak kaydi okunur; 106
+2. `npm run revision:drafts -- --proposals <dosya> --user-id <hazirlayan>`: kuru
+   calisma. Her soru icin yayimli revizyon, kaynak kaydi ve kazanim eslemesi
+   `get_question_content_revision` RPC'si ile hazirlayan kimligiyle okunur
+   (`question_revision_sources` service_role'a kapalidir, 136 yalniz revizyon
+   tablosuna sutun bazli SELECT verir); 106 + 110 (`coach`)
    `content_governance_validate_payload` sozlesmesine uyan payload kurulur;
-   onerilen icerik deterministik taramadan ERROR alirsa oge bloklanir. Cikti:
+   `coach` nesnesi aynen tasinir ve patch ile degistirilemez; onerilen icerik
+   deterministik taramadan ERROR alirsa oge bloklanir. Cikti:
    `payloads.json`, `review-sheet.md` (once/sonra tablosu) ve `report.json`,
    varsayilan olarak `secure/revision-drafts/<paket>/`. DB'ye yazilmaz.
    DB yoksa `--rows <dis aktarim>` ile cevrimdisi onizleme alinir.
-3. `--apply --user-id <hazirlayan>`: yalniz "ready" ogeler icin
+3. `--apply`: yalniz "ready" ogeler icin
    `create_question_content_revision` cagrilir; sonuc TASLAKTIR. Istek kimligi
    soru + payload'dan turetilir, yeniden calistirma taslak cogaltmaz; taban
    revizyon bayatsa RPC reddeder (`22023`).

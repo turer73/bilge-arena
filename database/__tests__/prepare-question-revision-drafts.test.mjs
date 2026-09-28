@@ -14,7 +14,8 @@ import {
   PROPOSALS_SCHEMA,
   buildBatch,
   buildRevisionPayload,
-  currentFromRows,
+  currentFromRevisionDetail,
+  dbLookupIds,
   diffContent,
   draftRequestId,
   parseProposals,
@@ -82,6 +83,51 @@ describe('buildRevisionPayload', () => {
   })
 })
 
+describe('coach, kazanim ve kimlik kurallari (Codex #526)', () => {
+  const coach = { hint1: 'ipucu 1', hint2: 'ipucu 2', miniExample: 'ornek', misconceptions: ['a', null, 'c', 'd'] }
+  const coached = () => ({ ...current(), content: { ...current().content, coach } })
+  it('coach yayimli revizyondan aynen tasinir, patch ile degistirilemez, diff satiri uretmez', () => {
+    const r = buildRevisionPayload({ current: coached(), proposal: proposal() })
+    expect(r.errors).toEqual([]); expect(r.payload.content.coach).toEqual(coach); expect(r.notes).toContain('coach nesnesi yayimli revizyondan aynen tasindi')
+    expect(diffContent(r.before, r.after)).toEqual([{ field: 'question', before: 'Asagidakilerden hangisi dogru yazilmistir?', after: 'Aşağıdakilerden hangisi doğru yazılmıştır?' }])
+    expect(buildRevisionPayload({ current: coached(), proposal: proposal({ patch: { question: 'x', coach: { hint1: 'y' } } }) }).errors).toContain('patch.coach: izinli icerik alani degil')
+    expect(validateProposal(proposal({ patch: { coach: {} } }))).toContain('proposals[0].patch.coach: izinli icerik alani degil')
+  })
+  it('coach varken cevap anahtari degisemez (misconceptions null konumu kayar): insan coach revizyonu once', () => {
+    const r = buildRevisionPayload({ current: coached(), proposal: proposal({ changeKind: 'correct_answer', patch: { answer: 2 } }) })
+    expect(r.errors.some((e) => e.startsWith('cevap anahtari degisince coach.misconceptions'))).toBe(true)
+    expect(r.errors).toContain('content.coach.misconceptions[1]: 1-1000 karakter')
+    expect(r.errors).toContain('content.coach.misconceptions[2]: dogru secenek icin null olmali')
+  })
+  it('coach sekli 110 sozlesmesine gore dogrulanir', () => {
+    const p = buildRevisionPayload({ current: coached(), proposal: proposal() }).payload
+    expect(validatePayloadShape({ ...p, content: { ...p.content, coach: { hint1: 'a' } } })).toContain('content.coach: anahtarlar hint1,hint2,miniExample,misconceptions olmali')
+    expect(validatePayloadShape({ ...p, content: { ...p.content, coach: { ...coach, misconceptions: ['a', null] } } })).toContain('content.coach.misconceptions: secenek sayisi kadar oge')
+    expect(validatePayloadShape({ ...p, content: { ...p.content, coach: { ...coach, hint1: '' } } })).toContain('content.coach.hint1: 1-700 karakter')
+  })
+  it('mevcut icerikte sozlesme disi alan varsa oge bloklanir (sessizce dusurulmez)', () => {
+    const r = buildRevisionPayload({ current: { ...current(), content: { ...current().content, imageUrl: 'https://x/y.png' } }, proposal: proposal() })
+    expect(r.errors.some((e) => e.startsWith('mevcut icerikte sozlesme disi alan: imageUrl'))).toBe(true)
+  })
+  it('proposal.outcomes yalniz eslemesi olmayan soruda kabul edilir; varsa hata', () => {
+    const over = { outcomes: [{ outcomeId: OUTCOME, weight: 1, primary: true }] }
+    expect(buildRevisionPayload({ current: current(), proposal: proposal(over) }).errors).toContain('soru zaten kazanim eslemesine sahip; proposal.outcomes yalniz eslemesi olmayan sorular icin (kazanim degisikligi bu paketin kapsami disinda)')
+    const r = buildRevisionPayload({ current: { ...current(), outcomes: [] }, proposal: proposal(over) })
+    expect(r.errors).toEqual([]); expect(r.notes).toContain('kazanim eslemesi oneriden alindi (soruda esleme yoktu)')
+  })
+  it('kazanimlar outcomeId sirasina gore kurulur: satir sirasi istek kimligini degistirmez', () => {
+    const o1 = { outcomeId: OUTCOME, weight: 0.5, primary: true }; const o2 = { outcomeId: 'ffffffff-ffff-4fff-8fff-ffffffffffff', weight: 0.5, primary: false }
+    const a = buildRevisionPayload({ current: { ...current(), outcomes: [o1, o2] }, proposal: proposal() }).payload
+    const b = buildRevisionPayload({ current: { ...current(), outcomes: [o2, o1] }, proposal: proposal() }).payload
+    expect(a.outcomes).toEqual([o1, o2]); expect(draftRequestId(Q, a)).toBe(draftRequestId(Q, b))
+  })
+  it('buyuk harfli uuid oneri kucuk harfli DB anahtarini bulur; istek kimligi kucuk harfle hesaplanir', () => {
+    const items = buildBatch({ proposals: [proposal({ questionId: Q.toUpperCase() })], currentById: new Map([[Q, current()]]) })
+    expect(items[0].status).toBe('ready'); expect(items[0].questionId).toBe(Q)
+    expect(draftRequestId(Q.toUpperCase(), items[0].payload)).toBe(items[0].requestId)
+  })
+})
+
 describe('validatePayloadShape (106 aynasi)', () => {
   const good = () => buildRevisionPayload({ current: current(), proposal: proposal() }).payload
   it('gecerli payload hatasiz', () => { expect(validatePayloadShape(good())).toEqual([]) })
@@ -142,17 +188,27 @@ describe('parseProposals / validateProposal', () => {
 })
 
 describe('currentFromRows / snapshotFromExport', () => {
-  it('DB satirlarini tek nesneye ceker; icerik yayimli revizyondan, taban published_revision_id', () => {
-    const c = currentFromRows({
-      question: { id: Q, game: 'fen', category: 'fizik', subcategory: null, topic: null, difficulty: 3, level_tag: null, exam_ref: null, is_boss: false, is_active: true, content: { question: 'eski' }, published_revision_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' },
-      revision: { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', content: { question: 'yayimli', options: ['a', 'b'], answer: 0 } },
-      outcomes: [{ outcome_id: OUTCOME, weight: '1', is_primary: true }],
-      source: { source_kind: 'official_exam', source_title: 'OSYM 2023', source_url: null, license_code: 'OSYM', license_url: null, attribution: null, provenance_ref: 'osym:2023' },
+  it('get_question_content_revision ciktisini tek nesneye ceker; icerik/kaynak/kazanim RPC detayindan, taban published_revision_id, kimlikler kucuk harf', () => {
+    const c = currentFromRevisionDetail({
+      question: { id: Q.toUpperCase(), game: 'fen', category: 'fizik', subcategory: null, topic: null, difficulty: 3, level_tag: null, exam_ref: null, is_boss: false, is_active: true, content: { question: 'eski' }, published_revision_id: 'BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB' },
+      detail: { revision: { revisionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', content: { question: 'yayimli', options: ['a', 'b'], answer: 0 }, source: { kind: 'official_exam', title: 'OSYM 2023', licenseCode: 'OSYM', provenanceRef: 'osym:2023' }, outcomes: [{ outcomeId: 'FFFFFFFF-FFFF-4FFF-8FFF-FFFFFFFFFFFF', weight: 0.5, primary: false }, { outcomeId: OUTCOME, weight: 1, primary: true }] } },
+      fallbackOutcomes: [{ outcome_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', weight: '1', is_primary: true }],
     })
-    expect(c.content.question).toBe('yayimli'); expect(c.baseRevisionId).toBe('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
-    expect(c.outcomes).toEqual([{ outcomeId: OUTCOME, weight: 1, primary: true }])
+    expect(c.questionId).toBe(Q); expect(c.content.question).toBe('yayimli'); expect(c.baseRevisionId).toBe('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')
+    expect(c.outcomes).toEqual([{ outcomeId: OUTCOME, weight: 1, primary: true }, { outcomeId: 'ffffffff-ffff-4fff-8fff-ffffffffffff', weight: 0.5, primary: false }])
     expect(c.source).toEqual({ kind: 'official_exam', title: 'OSYM 2023', licenseCode: 'OSYM', provenanceRef: 'osym:2023' })
     expect(buildRevisionPayload({ current: c, proposal: proposal({ patch: { question: 'yeni' } }) }).errors).toEqual([])
+  })
+  it('revizyon eslemesi bossa (legacy) question_outcomes satirlarina duser; kaynak yoksa null', () => {
+    const c = currentFromRevisionDetail({
+      question: { id: Q, game: 'turkce', category: 'Yazım', difficulty: 2, is_active: true, published_revision_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' },
+      detail: { revision: { revisionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', content: current().content, source: {}, outcomes: [] } },
+      fallbackOutcomes: [{ outcome_id: OUTCOME, weight: '1', is_primary: true }],
+    })
+    expect(c.outcomes).toEqual([{ outcomeId: OUTCOME, weight: 1, primary: true }]); expect(c.source).toBeNull()
+  })
+  it('dbLookupIds: iskelet ogeleri ve uuid olmayan degerler DB sorgusuna gitmez (Codex #526)', () => {
+    expect(dbLookupIds([proposal(), { ref: 'S', status: 'needs_patch', questionId: 'TODO', finding: { summary: 's' } }, proposal({ questionId: Q.toUpperCase() })])).toEqual([Q])
   })
   it('Antigravity [{code,row}] dis aktarimini okur', () => {
     const m = snapshotFromExport([{ code: 'P4-Q10', row: { id: Q, game: 'turkce', content: { question: 'q', options: ['a', 'b'], answer: 0 } } }])
@@ -178,6 +234,7 @@ describe('buildBatch / renderReviewSheet', () => {
     expect(md).toContain('| question | Asagidakilerden hangisi dogru yazilmistir? | Aşağıdakilerden hangisi doğru yazılmıştır? |')
     expect(md).toMatch(/iki bagimsiz insan onayi/)
     expect(md).toContain('soru bulunamadi')
+    expect(md).toContain(`- Kazanim eslemesi (degismez): ${OUTCOME} (w 1, primary)`)
   })
   it('inceleme sayfasi hucrelerinde ters bolu, boru ve satir sonu kacirilir (CodeQL)', () => {
     const c = { ...current(), content: { ...current().content, question: 'a\\b | c\nd' } }

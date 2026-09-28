@@ -10,6 +10,7 @@ if (url && process.env.CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE !== '1') thro
 if (url && !/^bilge_r43_test_[a-z0-9_]+$/i.test(new URL(url).pathname.slice(1))) throw new Error('Refusing non-disposable content-governance database')
 const suite = url && process.env.CONTENT_GOVERNANCE_TEST_DATABASE_DISPOSABLE === '1' ? describe : describe.skip
 const migration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '106_question_content_governance.sql'), 'utf8')
+const coachContractMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '110_coach_curated_content_contract.sql'), 'utf8')
 const validationPipelineMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '136_question_validation_pipeline.sql'), 'utf8')
 const appealEvidenceMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '139_question_appeal_evidence_v2.sql'), 'utf8')
 const writeContextMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '142_question_governance_write_context.sql'), 'utf8')
@@ -125,6 +126,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     ])
     await client.query("INSERT INTO public.error_reports(id,user_id,question_id,report_type,description,status,created_at) VALUES($1,$2,$3,'typo','Eski yazım bildirimi','pending','2026-07-01T10:00:00Z')",[randomUUID(),legacyLearner,question])
     await client.query(migration)
+    await client.query(coachContractMigration)
     await client.query(validationPipelineMigration)
     await client.query(psychometricsV2Migration)
     await client.query(psychometricsV3Migration)
@@ -989,18 +991,28 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect(stillQuarantined).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
     expect((await client.query('SELECT is_active FROM public.questions WHERE id=$1',[target.question_id])).rows[0].is_active).toBe(true)
   })
-  it('prepare-question-revision-drafts: kurulan payload RPC tarafindan yalniz TASLAK olarak kabul edilir; replay cogaltmaz; bayat taban reddedilir; retire soruyu pasife almaz', async () => {
-    const { buildRevisionPayload, currentFromRows, draftRequestId, validatePayloadShape } = await import('../prepare-question-revision-drafts.mjs')
+  it('prepare-question-revision-drafts: kaynak kaydi yalniz RPC ile okunur (question_revision_sources service_role\'a kapali); kurulan payload (coach dahil) yalniz TASLAK olur; replay cogaltmaz; bayat taban reddedilir; retire soruyu pasife almaz', async () => {
+    const { buildRevisionPayload, currentFromRevisionDetail, draftRequestId, validatePayloadShape } = await import('../prepare-question-revision-drafts.mjs')
+    // Codex #526 P1: 106 REVOKE ALL; 136 yalniz question_content_revisions icin sutun bazli
+    // SELECT geri verir, question_revision_sources service_role'a kapali kalir (42501).
+    // Kaynak kaydi ancak get_question_content_revision RPC'siyle okunur.
+    await client.query('SET ROLE service_role')
+    await err(() => client.query('SELECT revision_id FROM public.question_revision_sources LIMIT 1'), '42501')
+    await client.query('RESET ROLE')
     const q = (await client.query('SELECT id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,is_active,content,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
     expect(q.published_revision_id).toBeTruthy()
-    const rev = (await client.query('SELECT id,content FROM public.question_content_revisions WHERE id=$1',[q.published_revision_id])).rows[0]
-    const outcomes = (await client.query('SELECT outcome_id,weight,is_primary FROM public.question_outcomes WHERE question_id=$1',[question])).rows
-    const source = (await client.query('SELECT * FROM public.question_revision_sources WHERE revision_id=$1',[rev.id])).rows[0] ?? null
-    const current = currentFromRows({ question: q, revision: rev, outcomes, source })
-    expect(current.baseRevisionId).toBe(q.published_revision_id)
-    const base = { ref:'P4-Q10', questionId: question, finding:{ code:'STEM_MISSING_TOKEN', severity:'P1', summary:'kok ile anahtar uyumsuz' }, evidence:['pilot 4'], rationale:'insan onayina taslak', ...(current.outcomes.length ? {} : { outcomes:[{ outcomeId: outcome, weight: 1, primary: true }] }) }
-    const edit = buildRevisionPayload({ current, proposal: { ...base, changeKind:'edit', patch:{ question: `${current.content.question} (taslak duzeltme)` } } })
-    expect(edit.errors).toEqual([]); expect(validatePayloadShape(edit.payload)).toEqual([])
+    const detail = await rpc('public.get_question_content_revision($1,$2)',[author,q.published_revision_id])
+    expect(detail.revision).toEqual(expect.objectContaining({ revisionId: q.published_revision_id, status:'published' }))
+    const fallbackOutcomes = (await client.query('SELECT outcome_id,weight,is_primary FROM public.question_outcomes WHERE question_id=$1',[question])).rows
+    const current = currentFromRevisionDetail({ question: q, detail, fallbackOutcomes })
+    expect(current.baseRevisionId).toBe(q.published_revision_id); expect(current.outcomes.length).toBeGreaterThan(0); expect(current.source).toEqual(expect.objectContaining({ kind:'original' }))
+    const base = { ref:'P4-Q10', questionId: question.toUpperCase(), finding:{ code:'STEM_MISSING_TOKEN', severity:'P1', summary:'kok ile anahtar uyumsuz' }, evidence:['pilot 4'], rationale:'insan onayina taslak' }
+    // 110 coach sozlesmesi: yayimli icerikte coach varmis gibi tasinir; RPC dogrulayicisi kabul etmeli
+    const options = current.content.options
+    const coach = { hint1:'Once tanimi hatirla.', hint2:'Secenekleri tek tek dene.', miniExample:'2 + 2 = 4', misconceptions: options.map((_, i) => (i === current.content.answer ? null : `Secenek ${i} yaygin yanilgi`)) }
+    const coached = { ...current, content: { ...current.content, coach } }
+    const edit = buildRevisionPayload({ current: coached, proposal: { ...base, changeKind:'edit', patch:{ question: `${current.content.question} (taslak duzeltme)` } } })
+    expect(edit.errors).toEqual([]); expect(validatePayloadShape(edit.payload)).toEqual([]); expect(edit.payload.content.coach).toEqual(coach)
     const before = (await client.query('SELECT content,is_active,published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0]
     const requestId = draftRequestId(question, edit.payload)
     const draft = await rpc('public.create_question_content_revision($1,$2,$3,$4::jsonb,$5)',[author,question,current.baseRevisionId,JSON.stringify(edit.payload),requestId])
