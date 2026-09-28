@@ -111,18 +111,30 @@ const KNOWN_PROPER = new Set([
   'allah', 'tanrı', 'kur', 'kuran', 'incil', 'tevrat', 'hz', 'peygamber',
 ])
 const SENTENCE_START = /(^|[.!?:…"“”'‘’(\[\n]\s*|\b(?:I{1,3}|IV|V)\.\s+)$/
+// Iki harfli bilimsel tokenlar: element sembolleri (Mn, Zn, Cu) ve denge/asitlik
+// sabitleri (Kc, Kp, Ka) fen sorularinda yaygindir; cagiran scientific=true
+// verirse yalniz BUNLAR kuraldan cikar. "Az", "Bu", "Ne" gibi iki harfli Turkce
+// sozcukler kuralda kalir (Codex #524: {2,} kurali iki harfli her sozcuk icin
+// kapatiyordu). Genotip (Aa, Bb, Rr: ayni harfin buyuk+kucuk hali) hicbir
+// Turkce sozcuk olmadigi icin her yerde disarida.
+const ELEMENT_SYMBOLS = new Set(('He Li Be Ne Na Mg Al Si Cl Ar Ca Sc Ti Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te Xe '
+  + 'Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa Np Pu Am Cm Bk Cf Es Fm Md No Lr '
+  + 'Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og').split(' '))
+const SCIENCE_CONSTANTS = new Set(['Kc', 'Kp', 'Ka', 'Kb', 'Kw', 'Ks', 'Ksp', 'Kd', 'Hz', 'Pa', 'Wb', 'Gy', 'Sv', 'Bq', 'Da'])
+const GENOTYPE_RE = /^([A-Z])([a-z])$/
 
-export function findMidSentenceCapitals(text, { locale = 'tr' } = {}) {
+export function findMidSentenceCapitals(text, { locale = 'tr', scientific = false } = {}) {
   if (!text) return []
   const s = String(text)
   const out = []
-  // En az uc harf: iki harfli buyuk-kucuk tokenlar element sembolu (Mn, Zn,
-  // Cu), genotip (Aa) veya sabit (Kc, Kp) olup fen sorularinda yaygindir.
-  const re = /(?<![\p{L}\p{N}'’])([A-ZÇĞİÖŞÜ][a-zçğıöşü]{2,})(?![\p{L}])/gu
+  const re = /(?<![\p{L}\p{N}'’])([A-ZÇĞİÖŞÜ][a-zçğıöşü]+)(?![\p{L}])/gu
   for (const m of s.matchAll(re)) {
     const word = m[1]
     const before = s.slice(0, m.index)
     if (SENTENCE_START.test(before)) continue
+    const genotype = GENOTYPE_RE.exec(word)
+    if (genotype && genotype[2] === genotype[1].toLowerCase()) continue
+    if (scientific && (ELEMENT_SYMBOLS.has(word) || SCIENCE_CONSTANTS.has(word))) continue
     const lower = word.toLocaleLowerCase(locale)
     if (KNOWN_PROPER.has(lower)) continue
     // Cok kelimeli ozel ad: "İstanbul Boğazı", "Pasifik Okyanusu", "Türkiye
@@ -142,14 +154,21 @@ export function findMidSentenceCapitals(text, { locale = 'tr' } = {}) {
 // kokte sekle/grafige/tabloya gonderme varsa soru cevaplanamaz durumdadir.
 // Pilot 1 Q21 tam olarak buydu (3 kor cozucu + adversarial inconclusive).
 // Yalniz GOSTERICI gorsel gondermeleri: "sekildeki", "yukaridaki tabloda",
-// "grafikte verilen". Ciplak isim ("sekilde" = "bicimde", "grafik nedir?")
-// konu anlatimidir, gorsel gondermesi degil; ERROR uretmemeli.
-const FIGURE_NOUN = '(?:şekil|sekil|grafik|tablo|resim|görsel|gorsel|diyagram|harita|çizim|cizim|figür|figur|devre)'
+// "grafikte verilen", "sekle gore", "grafigi inceleyiniz". Ciplak isim
+// ("sekilde" = "bicimde", "grafik nedir?") konu anlatimidir, gorsel gondermesi
+// degil; ERROR uretmemeli. Turkce cekimde govde degisir (sekil -> sekl-e,
+// grafik -> grafig-e, resim -> resm-e); govdeler cekimli halleriyle listelenir,
+// yoksa "grafige gore" ve "sekle gore" kacar (Codex #524).
+const FIGURE_STEM = '(?:şekil|şekl|sekil|sekl|grafik|grafiğ|grafig|tablo|resim|resm|görsel|gorsel|diyagram|harita|çizim|cizim|figür|figur|devre)'
+const DEMONSTRATIVE = '(?:yukarıdaki|yukaridaki|aşağıdaki|asagidaki|verilen|yandaki)'
 const FIGURE_RE = new RegExp(
   '(?<![\\p{L}])(?:'
-  + FIGURE_NOUN + '(?:deki|daki|teki|taki)'                                      // şekildeki, tablodaki, grafikteki
-  + '|(?:yukarıdaki|yukaridaki|aşağıdaki|asagidaki|verilen|yandaki)\\s+' + FIGURE_NOUN + '[\\p{L}]*' // yukarıdaki şekilde
-  + '|' + FIGURE_NOUN + '(?:de|da|te|ta)\\s+(?:gösterilen|gosterilen|verilen|görülen|gorulen)'   // şekilde gösterilen
+  + FIGURE_STEM + '(?:deki|daki|teki|taki)'                                      // şekildeki, tablodaki, grafikteki
+  + '|' + DEMONSTRATIVE + '\\s+' + FIGURE_STEM + '[\\p{L}]*'                    // yukarıdaki şekilde, aşağıdaki grafiğe
+  + '|' + FIGURE_STEM + '(?:de|da|te|ta)\\s+(?:gösterilen|gosterilen|verilen|görülen|gorulen)'   // şekilde gösterilen
+  + '|' + FIGURE_STEM + '(?:ye|ya|e|a)\\s+(?:göre|gore|bakıldığında|bakildiginda|bakılırsa|bakilirsa|bakınız|bakiniz|bakarak)' // şekle göre, grafiğe göre, tabloya göre
+  + '|' + FIGURE_STEM + '(?:yı|yi|yu|yü|ı|i|u|ü)\\s+incele[\\p{L}]*'           // grafiği inceleyiniz, tabloyu incelediğinizde
+  + '|' + FIGURE_STEM + '(?:den|dan|ten|tan)\\s+(?:yararlan[\\p{L}]*|hareketle)' // tablodan yararlanarak, grafikten hareketle
   + '|şekil\\s*\\d|sekil\\s*\\d|tablo\\s*\\d|grafik\\s*\\d'                          // Şekil 1, Tablo 2
   + '|ok yönünde|ok yonunde|devre şeması|devre semasi'
   + '|in the (?:figure|table|diagram|chart|picture) (?:below|above)|shown below|image below|figure \\d)'
@@ -212,15 +231,24 @@ export function findAnswerCues(content) {
 }
 
 // ── Kural 5: Ust indis / matematik dizgi kaybi ───────────────────────────────
-// "x2+y2+z2=14" (x²+y²+z²), "10 3" (10³). Yalniz harf+rakam bitisik VE aritmetik
-// baglam (+, -, =, ^ komsulugu) varsa; "H2O", "CO2" gibi formuller ve "x1, x2"
-// indisleri FP olacagi icin fen/kimya kategorisinde uygulanmaz, cagiran gecer.
-const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([a-zA-Z])([2-9])(?=\s*[+\-=*/)]|\s*$)/gu
+// "x2+y2+z2=14" (x²+y²+z²). Notasyon ayrimi (Codex #524): kimyasal formul ve
+// fizik indisi BUYUK harfle baslar (O2, H2O, F2 = m a, V1), ust indis kaybi ise
+// kucuk harfli degisken + rakam (x2, r2, v2) olarak gorunur. Bu yuzden yalniz
+// kucuk harf + [2-9] VE aritmetik komsuluk (+, -, =, *, /, kapanis parantezi
+// veya metin sonu) aranir; ayni harfin "1" indisli esi metinde varsa
+// (x1 + x2, Vieta) bunlar indis sayilir ve atlanir. Kategori kapisi yoktur:
+// kimya, fizik ve biyoloji ayni kuralla taranir; wordquest icin cagiran skip gecer.
+const SUPERSCRIPT_LOSS_RE = /(?<![\p{L}\p{N}])([a-z])([2-9])(?=\s*[+\-=*/)]|\s*$)/gu
 
 export function findSuperscriptLoss(text, { skip = false } = {}) {
   if (skip || !text) return []
+  const s = String(text)
   const out = []
-  for (const m of String(text).matchAll(SUPERSCRIPT_LOSS_RE)) out.push({ token: m[0], index: m.index })
+  for (const m of s.matchAll(SUPERSCRIPT_LOSS_RE)) {
+    const indexed = new RegExp('(?<![\\p{L}\\p{N}])' + m[1] + '1(?![\\p{N}])', 'u')
+    if (indexed.test(s)) continue
+    out.push({ token: m[0], index: m.index })
+  }
   return out
 }
 
@@ -229,9 +257,9 @@ export function scanQuestion(row) {
   const content = row.content ?? {}
   const game = String(row.game ?? '')
   const isEnglish = game === 'wordquest'
-  // Yalniz kimyada (O2 + H2 -> H2O gibi tepkimeler) ust indis kurali atlanir;
-  // fizik ve biyoloji x2+y2 gibi matematiksel ifade tasiyabilir.
-  const isChemistry = String(row.category ?? '').toLocaleLowerCase('tr') === 'kimya'
+  // Fen sorularinda iki harfli element sembolu ve sabitler (Mn, Kc) buyuk harf
+  // kuralindan muaf; ust indis kurali kategoriye bakmaz, notasyona bakar.
+  const isScience = game === 'fen'
   const textFields = ['question', 'passage', 'context', 'sentence', 'solution', 'explanation', 'hint']
   const findings = []
 
@@ -245,9 +273,9 @@ export function scanQuestion(row) {
         findings.push({ rule: 'no_turkish_letters', field: f, severity: 'warn', detail: { length: v.length } })
       }
     }
-    const caps = findMidSentenceCapitals(v, { locale: isEnglish ? 'en' : 'tr' })
+    const caps = findMidSentenceCapitals(v, { locale: isEnglish ? 'en' : 'tr', scientific: isScience })
     if (caps.length) findings.push({ rule: 'mid_sentence_capital', field: f, severity: 'warn', detail: caps.map((c) => c.word) })
-    const sup = findSuperscriptLoss(v, { skip: isChemistry || isEnglish })
+    const sup = findSuperscriptLoss(v, { skip: isEnglish })
     if (sup.length) findings.push({ rule: 'superscript_loss', field: f, severity: 'warn', detail: sup.map((s) => s.token) })
   }
   if (Array.isArray(content.options)) {
@@ -257,7 +285,7 @@ export function scanQuestion(row) {
         const loss = findAsciiDiacriticLoss(o)
         if (loss.length) findings.push({ rule: 'ascii_diacritic_loss', field: `options[${i}]`, severity: 'error', detail: loss })
       }
-      const sup = findSuperscriptLoss(o, { skip: isChemistry || isEnglish })
+      const sup = findSuperscriptLoss(o, { skip: isEnglish })
       if (sup.length) findings.push({ rule: 'superscript_loss', field: `options[${i}]`, severity: 'warn', detail: sup.map((s) => s.token) })
     })
   }
