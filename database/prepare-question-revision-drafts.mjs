@@ -12,13 +12,18 @@
  * zaten reddeder).
  *
  * Bu betik oneri dosyasini (question-revision-proposals@1) alir, her soru icin
- * mevcut yayimli revizyonu, kazanim eslemesini ve kaynak kaydini okur, RPC'nin
- * `content_governance_validate_payload` sozlesmesine uyan payload'i kurar,
- * deterministik taramadan gecirir ve:
+ * mevcut yayimli revizyonu, kazanim eslemesini ve kaynak kaydini
+ * `get_question_content_revision` RPC'si ile okur (106 REVOKE ALL; 136 yalniz
+ * question_content_revisions icin sutun bazli SELECT verir, question_revision_sources
+ * service_role'a kapali kalir; tam ve yetkili okuma yolu bu RPC'dir), RPC'nin
+ * `content_governance_validate_payload` sozlesmesine (106 + 110 `coach`) uyan
+ * payload'i kurar, deterministik taramadan gecirir ve:
  *   - varsayilan (kuru calisma): payload'lari, inceleme sayfasini ve raporu
  *     out-dir'e yazar; DB'ye DOKUNMAZ.
- *   - --apply --user-id <hazirlayan>: yalniz "ready" ogeler icin taslak acar.
+ *   - --apply: yalniz "ready" ogeler icin taslak acar.
  *     Inceleme, yayin, karantina ve is_active bu betigin yetkisinde DEGILDIR.
+ * Cevrimici her iki modda --user-id (content.prepare yetkili hazirlayan) gerekir;
+ * RPC okumasi da bu kimlikle yapilir.
  *
  * YETKI SINIRI: Hicbir LLM ciktisi (pilot cozucusu, oneri metni) tek basina
  * yayin, ret veya karantina otoritesi degildir. Bu betik yalniz taslak acar;
@@ -26,9 +31,9 @@
  * inceleyemez, stage 1 ve stage 2 ayni kisi olamaz).
  *
  * Kullanim:
- *   npm run revision:drafts -- --proposals secure/revision-proposals.json
+ *   npm run revision:drafts -- --proposals secure/revision-proposals.json --user-id <uuid>
  *   npm run revision:drafts -- --proposals ... --rows secure/16-flawed-questions.json   # DB yoksa cevrimdisi onizleme
- *   npm run revision:drafts -- --proposals ... --apply --user-id <uuid>                 # taslaklari ac
+ *   npm run revision:drafts -- --proposals ... --user-id <uuid> --apply                 # taslaklari ac
  * Secenekler: --env .env.local  --out-dir secure/revision-drafts/<batch>
  *
  * Oneri dosyasi: database/__fixtures__/question-revision-proposals/ altindaki
@@ -42,7 +47,12 @@ import { fileURLToPath } from 'node:url'
 import { scanQuestion } from './scan-question-text-defects.mjs'
 
 export const PROPOSALS_SCHEMA = 'question-revision-proposals@1'
-export const CONTENT_KEYS = ['question', 'options', 'answer', 'solution', 'explanation', 'hint', 'sentence', 'passage', 'context', 'type']
+// Payload'da tasinabilen icerik alanlari (106 + 110 `coach`). `coach` (kurate
+// edilmis ipucu/yanilgi nesnesi) yayimli revizyondan AYNEN tasinir; patch ile
+// degistirilemez, aksi halde yayin kurate icerigi sessizce silerdi (Codex #526).
+export const CONTENT_KEYS = ['question', 'options', 'answer', 'solution', 'explanation', 'hint', 'sentence', 'passage', 'context', 'type', 'coach']
+export const PATCH_KEYS = CONTENT_KEYS.filter((k) => k !== 'coach')
+const COACH_KEYS = ['hint1', 'hint2', 'miniExample', 'misconceptions']
 export const METADATA_KEYS = ['game', 'category', 'subcategory', 'topic', 'difficulty', 'levelTag', 'examRef', 'isBoss']
 export const SOURCE_KEYS = ['kind', 'title', 'url', 'licenseCode', 'licenseUrl', 'attribution', 'provenanceRef']
 export const CHANGE_KINDS = ['edit', 'correct_answer', 'retire']
@@ -54,6 +64,9 @@ const WEIGHT_RE = /^(0([.][0-9]{1,3})?|1([.]0{1,3})?)$/
 const DEFAULT_SOURCE = { kind: 'original', title: 'Bilge Arena soru bankasi', licenseCode: 'INTERNAL' }
 
 // ── Yardimcilar ──────────────────────────────────────────────────────────────
+/** UUID'ler her yerde kucuk harfli anahtar olarak kullanilir: PostgreSQL kucuk
+ * harf dondurur, oneri dosyasi buyuk harf tasiyabilir (Codex #526). */
+export const uid = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : v ?? null)
 export function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize)
   if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map((k) => [k, canonicalize(value[k])]))
@@ -63,9 +76,11 @@ const canon = (v) => JSON.stringify(canonicalize(v))
 export const sameContent = (a, b) => canon(a) === canon(b)
 
 /** Ayni soru + ayni payload her zaman ayni istek kimligini uretir: RPC'nin
- * content_governance_requests dedup'u ile yeniden calistirma taslagi cogaltmaz. */
+ * content_governance_requests dedup'u ile yeniden calistirma taslagi cogaltmaz.
+ * Kazanimlar payload kurulurken outcomeId'ye gore siralanir; DB satir sirasi
+ * kimligi degistirmez. */
 export function draftRequestId(questionId, payload) {
-  const h = createHash('sha256').update(`question-revision-draft:${questionId}:${canon(payload)}`).digest('hex')
+  const h = createHash('sha256').update(`question-revision-draft:${uid(questionId)}:${canon(payload)}`).digest('hex')
   const v = '4' + h.slice(13, 16)
   const variant = ((parseInt(h[16], 16) & 0x3) | 0x8).toString(16)
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${v}-${variant}${h.slice(17, 20)}-${h.slice(20, 32)}`
@@ -76,6 +91,7 @@ function pick(obj, keys) {
   for (const k of keys) if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== '') out[k] = obj[k]
   return out
 }
+const sortOutcomes = (arr) => [...arr].sort((a, b) => (a.outcomeId < b.outcomeId ? -1 : a.outcomeId > b.outcomeId ? 1 : 0))
 
 // ── Oneri dosyasi ────────────────────────────────────────────────────────────
 export function validateProposal(p, index = 0) {
@@ -100,7 +116,7 @@ export function validateProposal(p, index = 0) {
   if (!CHANGE_KINDS.includes(p.changeKind)) errors.push(`${at}.changeKind: ${CHANGE_KINDS.join('|')}`)
   if (!p.patch || typeof p.patch !== 'object' || Array.isArray(p.patch)) errors.push(`${at}.patch: nesne`)
   else {
-    for (const k of Object.keys(p.patch)) if (!CONTENT_KEYS.includes(k)) errors.push(`${at}.patch.${k}: izinli icerik alani degil`)
+    for (const k of Object.keys(p.patch)) if (!PATCH_KEYS.includes(k)) errors.push(`${at}.patch.${k}: izinli icerik alani degil`)
     if (p.changeKind === 'retire' && Object.keys(p.patch).length) errors.push(`${at}: retire icin patch bos olmali`)
     if (p.changeKind !== 'retire' && !Object.keys(p.patch).length) errors.push(`${at}: ${p.changeKind} icin patch bos olamaz`)
   }
@@ -123,28 +139,43 @@ export function parseProposals(raw) {
   proposals.forEach((p, i) => {
     if (refs.has(p?.ref)) errors.push(`proposals[${i}].ref tekrar: ${p.ref}`); refs.add(p?.ref)
     if (p?.status === 'needs_patch') return // iskelet ogesi: questionId henuz yok
-    if (qids.has(p?.questionId)) errors.push(`proposals[${i}].questionId tekrar: ${p.questionId} (ilk: ${qids.get(p.questionId)})`); qids.set(p?.questionId, p?.ref)
+    const id = uid(p?.questionId)
+    if (qids.has(id)) errors.push(`proposals[${i}].questionId tekrar: ${p.questionId} (ilk: ${qids.get(id)})`); qids.set(id, p?.ref)
   })
   return { batch, proposals, errors }
 }
 
-// ── Mevcut durum: DB satirlarindan tek nesne ─────────────────────────────────
-/** question: questions satiri; revision: yayimli question_content_revisions satiri;
- * outcomes: question_outcomes satirlari; source: question_revision_sources satiri. */
-export function currentFromRows({ question, revision, outcomes = [], source = null }) {
+/** DB'ye gidecek soru kimlikleri: iskelet (needs_patch) ogeleri ve uuid olmayan
+ * degerler disarida kalir; aksi halde uuid tipli sorgu "TODO" ile patlar (Codex #526). */
+export function dbLookupIds(proposals) {
+  return [...new Set(proposals.filter((p) => p?.status !== 'needs_patch').map((p) => uid(p?.questionId)).filter((id) => typeof id === 'string' && UUID_RE.test(id)))]
+}
+
+// ── Mevcut durum ─────────────────────────────────────────────────────────────
+/** question: questions satiri (PostgREST; service_role SELECT yetkisi var).
+ * detail: get_question_content_revision(p_user_id, published_revision_id) ciktisi;
+ * question_revision_sources 106 ile service_role'a kapalidir (136 yalniz
+ * revizyon tablosuna sutun bazli SELECT verir); kaynak + kazanim + icerik
+ * birlikte yalniz bu RPC'den gelir.
+ * fallbackOutcomes: question_outcomes satirlari (legacy revizyonlarda revizyon
+ * eslemesi bos olabilir). */
+export function currentFromRevisionDetail({ question, detail, fallbackOutcomes = [] }) {
   if (!question) return null
-  const content = revision?.content ?? question.content ?? null
+  const r = detail?.revision ?? null
+  const raw = Array.isArray(r?.outcomes) && r.outcomes.length
+    ? r.outcomes
+    : fallbackOutcomes.map((o) => ({ outcomeId: o.outcome_id ?? o.outcomeId, weight: o.weight, primary: (o.is_primary ?? o.primary) === true }))
   return {
-    questionId: question.id,
-    baseRevisionId: question.published_revision_id ?? revision?.id ?? null,
+    questionId: uid(question.id),
+    baseRevisionId: uid(question.published_revision_id ?? r?.revisionId ?? null),
     isActive: question.is_active !== false,
-    content,
+    content: r?.content ?? question.content ?? null,
     metadata: {
       game: question.game, category: question.category, subcategory: question.subcategory ?? undefined, topic: question.topic ?? undefined,
       difficulty: question.difficulty, levelTag: question.level_tag ?? undefined, examRef: question.exam_ref ?? undefined, isBoss: question.is_boss ?? undefined,
     },
-    outcomes: outcomes.map((o) => ({ outcomeId: o.outcome_id, weight: Number(o.weight), primary: o.is_primary === true })),
-    source: source ? pick({ kind: source.source_kind, title: source.source_title, url: source.source_url, licenseCode: source.license_code, licenseUrl: source.license_url, attribution: source.attribution, provenanceRef: source.provenance_ref }, SOURCE_KEYS) : null,
+    outcomes: sortOutcomes(raw.map((o) => ({ outcomeId: uid(o.outcomeId), weight: Number(o.weight), primary: o.primary === true }))),
+    source: r?.source && typeof r.source === 'object' && Object.keys(r.source).length ? pick(r.source, SOURCE_KEYS) : null,
   }
 }
 
@@ -157,7 +188,7 @@ export function snapshotFromExport(raw) {
     const row = item?.row && typeof item.row === 'object' ? item.row : item
     const id = row?.id ?? row?.questionId ?? row?.question_id
     if (!id) continue
-    out.set(String(id), { ref: item?.code ?? null, questionId: String(id), content: row.content ?? null, game: row.game ?? null, category: row.category ?? null, publishedRevisionId: row.published_revision_id ?? row.revision_id ?? null })
+    out.set(uid(String(id)), { ref: item?.code ?? null, questionId: uid(String(id)), content: row.content ?? null, game: row.game ?? null, category: row.category ?? null, publishedRevisionId: uid(row.published_revision_id ?? row.revision_id ?? null) })
   }
   return out
 }
@@ -170,14 +201,16 @@ export function buildSummary(proposal) {
 }
 
 export function buildRevisionPayload({ current, proposal }) {
-  const errors = []
-  if (!current) return { payload: null, errors: ['mevcut yayimli revizyon bulunamadi'] }
+  const errors = []; const notes = []
+  if (!current) return { payload: null, errors: ['mevcut yayimli revizyon bulunamadi'], notes }
   if (!current.content || typeof current.content !== 'object') errors.push('mevcut icerik yok')
+  const foreign = Object.keys(current.content ?? {}).filter((k) => !CONTENT_KEYS.includes(k))
+  if (foreign.length) errors.push(`mevcut icerikte sozlesme disi alan: ${foreign.join(', ')} (payload'da tasinamaz, yayinda kaybolurdu; once insan incelesin)`)
   const before = pick(current.content ?? {}, CONTENT_KEYS)
   const patch = proposal.patch ?? {}
   const content = { ...before }
   for (const k of Object.keys(patch)) {
-    if (!CONTENT_KEYS.includes(k)) { errors.push(`patch.${k}: izinli icerik alani degil`); continue }
+    if (!PATCH_KEYS.includes(k)) { errors.push(`patch.${k}: izinli icerik alani degil`); continue }
     content[k] = patch[k]
   }
   const answerChanged = Number.isInteger(patch.answer) && patch.answer !== before.answer
@@ -185,18 +218,27 @@ export function buildRevisionPayload({ current, proposal }) {
   if (proposal.changeKind === 'edit' && answerChanged) errors.push('cevap anahtari degisiyor: changeKind correct_answer olmali')
   if (proposal.changeKind === 'correct_answer' && !answerChanged) errors.push('correct_answer icin patch.answer mevcut cevaptan farkli olmali')
   if (proposal.changeKind !== 'retire' && sameContent(content, before)) errors.push('patch mevcut icerigi degistirmiyor')
+  if (answerChanged && before.coach) errors.push('cevap anahtari degisince coach.misconceptions (dogru secenek null) yeniden kurate edilmeli; patch coach degistiremez, once coach revizyonu insan tarafindan')
+  if (before.coach) notes.push('coach nesnesi yayimli revizyondan aynen tasindi')
 
   const metadata = pick(current.metadata ?? {}, METADATA_KEYS)
-  const outcomes = (proposal.outcomes ?? current.outcomes ?? []).map((o) => ({ outcomeId: o.outcomeId, weight: o.weight, primary: o.primary === true }))
+  let outcomes = (current.outcomes ?? []).map((o) => ({ outcomeId: uid(o.outcomeId), weight: o.weight, primary: o.primary === true }))
+  if (Array.isArray(proposal.outcomes)) {
+    // Kazanim degisikligi icerik paketinin kapsami disinda: yalniz eslemesi
+    // olmayan (legacy) sorularda oneri esleme verebilir (Codex #526).
+    if (outcomes.length) errors.push('soru zaten kazanim eslemesine sahip; proposal.outcomes yalniz eslemesi olmayan sorular icin (kazanim degisikligi bu paketin kapsami disinda)')
+    else { outcomes = proposal.outcomes.map((o) => ({ outcomeId: uid(o.outcomeId), weight: o.weight, primary: o.primary === true })); notes.push('kazanim eslemesi oneriden alindi (soruda esleme yoktu)') }
+  }
   if (!outcomes.length) errors.push('kazanim eslemesi yok: proposal.outcomes ile en az bir outcomeId verin')
+  outcomes = sortOutcomes(outcomes)
   const source = pick(current.source ?? DEFAULT_SOURCE, SOURCE_KEYS)
   const payload = { changeKind: proposal.changeKind, content, metadata, outcomes, source, summary: buildSummary(proposal) }
   errors.push(...validatePayloadShape(payload))
-  return { payload, errors, before, after: content }
+  return { payload, errors, notes, before, after: content }
 }
 
-/** content_governance_validate_payload (migration 106) aynasi; RPC'ye gitmeden
- * once anlasilir hata verir. RPC yine de son sozu soyler. */
+/** content_governance_validate_payload (106 + 110 coach) aynasi; RPC'ye
+ * gitmeden once anlasilir hata verir. RPC yine de son sozu soyler. */
 export function validatePayloadShape(p) {
   const e = []
   const keys = Object.keys(p ?? {}).sort()
@@ -209,6 +251,19 @@ export function validatePayloadShape(p) {
   if (!Array.isArray(c.options) || c.options.length < 2 || c.options.length > 5) e.push('content.options: 2-5 secenek')
   else if (c.options.some((x) => typeof x !== 'string' || x.length > 10000)) e.push('content.options: her secenek <=10000 karakterlik string')
   if (!Number.isInteger(c.answer) || c.answer < 0 || c.answer > 4 || (Array.isArray(c.options) && c.answer >= c.options.length)) e.push('content.answer: 0-4 ve secenek sayisindan kucuk tamsayi')
+  if (c.coach !== undefined) {
+    const co = c.coach
+    if (!co || typeof co !== 'object' || Array.isArray(co) || Object.keys(co).sort().join(',') !== [...COACH_KEYS].sort().join(',')) e.push('content.coach: anahtarlar hint1,hint2,miniExample,misconceptions olmali')
+    else {
+      for (const k of ['hint1', 'hint2', 'miniExample']) if (typeof co[k] !== 'string' || co[k].trim().length < 1 || co[k].trim().length > 700) e.push(`content.coach.${k}: 1-700 karakter`)
+      const n = Array.isArray(c.options) ? c.options.length : -1
+      if (!Array.isArray(co.misconceptions) || co.misconceptions.length !== n) e.push('content.coach.misconceptions: secenek sayisi kadar oge')
+      else co.misconceptions.forEach((x, i) => {
+        if (i === c.answer) { if (x !== null) e.push(`content.coach.misconceptions[${i}]: dogru secenek icin null olmali`) }
+        else if (typeof x !== 'string' || x.trim().length < 1 || x.trim().length > 1000) e.push(`content.coach.misconceptions[${i}]: 1-1000 karakter`)
+      })
+    }
+  }
   if (!GAMES.includes(m.game)) e.push(`metadata.game: ${GAMES.join('|')}`)
   if (typeof m.category !== 'string' || !(m.category.trim().length >= 1 && m.category.trim().length <= 120)) e.push('metadata.category: 1-120 karakter')
   if (!Number.isInteger(m.difficulty) || m.difficulty < 1 || m.difficulty > 5) e.push('metadata.difficulty: 1-5')
@@ -259,17 +314,18 @@ export function diffContent(before, after) {
 }
 
 // ── Paket: ogeleri kur ───────────────────────────────────────────────────────
-/** currentById: Map<questionId, current>; offline=true ise kazanim/kaynak eksikligi
- * blok degil "pending_db" notudur (DB'den tamamlanacak). */
+/** currentById: Map<questionId (kucuk harf), current>; offline=true ise
+ * kazanim/kaynak eksigi blok degil "pending_db" notudur ve oge "preview" kalir. */
 export function buildBatch({ proposals, currentById, offline = false }) {
   return proposals.map((proposal) => {
-    const current = currentById.get(proposal.questionId) ?? null
-    const item = { ref: proposal.ref, questionId: proposal.questionId, changeKind: proposal.changeKind, finding: proposal.finding, evidence: proposal.evidence, rationale: proposal.rationale, status: 'ready', reasons: [], notes: [], diff: [], payload: null, baseRevisionId: current?.baseRevisionId ?? null, requestId: null }
-    if (proposal.status === 'needs_patch') { item.status = 'needs_patch'; item.reasons.push('oneri henuz doldurulmadi (status: needs_patch)'); return item }
+    const qid = uid(proposal.questionId)
+    const current = currentById.get(qid) ?? null
+    const item = { ref: proposal.ref, questionId: qid, changeKind: proposal.changeKind, finding: proposal.finding, evidence: proposal.evidence, rationale: proposal.rationale, status: 'ready', reasons: [], notes: [], diff: [], payload: null, baseRevisionId: current?.baseRevisionId ?? null, requestId: null }
+    if (proposal.status === 'needs_patch') { item.status = 'needs_patch'; item.questionId = proposal.questionId ?? null; item.reasons.push('oneri henuz doldurulmadi (status: needs_patch)'); return item }
     if (!current) { item.status = 'blocked'; item.reasons.push('soru bulunamadi (DB veya --rows)'); return item }
     if (current.isActive === false && proposal.changeKind !== 'retire') item.notes.push('soru zaten pasif')
     const built = buildRevisionPayload({ current, proposal })
-    item.payload = built.payload; item.diff = diffContent(built.before, built.after)
+    item.payload = built.payload; item.diff = diffContent(built.before, built.after); item.notes.push(...built.notes)
     let errors = built.errors
     if (offline) {
       // kazanim/kaynak DB'den gelecek; cevrimdisi bunlari not olarak ayir
@@ -283,7 +339,7 @@ export function buildBatch({ proposals, currentById, offline = false }) {
     errors.push(...gate.blocking.map((b) => `tarama ERROR: ${b}`))
     if (errors.length) { item.status = 'blocked'; item.reasons.push(...errors) }
     else if (offline) item.status = 'preview' // kazanim/kaynak/taban DB'den gelmeden uygulanamaz
-    else item.requestId = draftRequestId(proposal.questionId, built.payload)
+    else item.requestId = draftRequestId(qid, built.payload)
     return item
   })
 }
@@ -306,6 +362,7 @@ export function renderReviewSheet({ batch, items, mode = 'dry-run' }) {
     lines.push(`- Bulgu: ${it.finding.severity} ${it.finding.code}: ${it.finding.summary}`)
     lines.push(`- Degisiklik turu: ${it.changeKind}`)
     if (it.baseRevisionId) lines.push(`- Taban revizyon: ${it.baseRevisionId}`)
+    if (it.payload?.outcomes?.length) lines.push(`- Kazanim eslemesi (degismez): ${it.payload.outcomes.map((o) => `${o.outcomeId} (w ${o.weight}${o.primary ? ', primary' : ''})`).join('; ')}`)
     if (it.evidence?.length) lines.push(`- Kanit: ${it.evidence.join('; ')}`)
     lines.push(`- Gerekce: ${it.rationale}`)
     if (it.reasons.length) { lines.push('- Engeller:'); for (const r of it.reasons) lines.push(`  - ${r}`) }
@@ -338,17 +395,23 @@ async function all(db, table, columns, apply) {
     if (!data || data.length < 1000) return rows
   }
 }
-export async function loadCurrentFromDb(db, questionIds) {
-  const ids = [...new Set(questionIds)]
-  const questions = await all(db, 'questions', 'id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,is_active,content,published_revision_id', (q) => q.in('id', ids))
-  const revIds = questions.map((q) => q.published_revision_id).filter(Boolean)
-  const revisions = revIds.length ? await all(db, 'question_content_revisions', 'id,question_id,content,status', (q) => q.in('id', revIds)) : []
-  const outcomes = await all(db, 'question_outcomes', 'question_id,outcome_id,weight,is_primary', (q) => q.in('question_id', ids))
-  const sources = revIds.length ? await all(db, 'question_revision_sources', 'revision_id,source_kind,source_title,source_url,license_code,license_url,attribution,provenance_ref', (q) => q.in('revision_id', revIds)) : []
+/** questions ve question_outcomes PostgREST ile (service_role SELECT), yayimli
+ * revizyon + kaynak get_question_content_revision RPC'si ile (hazirlayan kimligi
+ * content.prepare veya inceleme yetkisi tasimali). */
+export async function loadCurrentFromDb(db, questionIds, userId) {
+  const ids = [...new Set(questionIds.map(uid).filter((id) => typeof id === 'string' && UUID_RE.test(id)))]
   const byId = new Map()
+  if (!ids.length) return byId
+  const questions = await all(db, 'questions', 'id,game,category,subcategory,topic,difficulty,level_tag,exam_ref,is_boss,is_active,content,published_revision_id', (q) => q.in('id', ids))
+  const outcomes = await all(db, 'question_outcomes', 'question_id,outcome_id,weight,is_primary', (q) => q.in('question_id', ids))
   for (const q of questions) {
-    const revision = revisions.find((r) => r.id === q.published_revision_id) ?? null
-    byId.set(q.id, currentFromRows({ question: q, revision, outcomes: outcomes.filter((o) => o.question_id === q.id), source: sources.find((s) => s.revision_id === q.published_revision_id) ?? null }))
+    let detail = null
+    if (q.published_revision_id) {
+      const { data, error } = await db.rpc('get_question_content_revision', { p_user_id: userId, p_revision_id: q.published_revision_id })
+      if (error) throw new Error(`get_question_content_revision(${q.published_revision_id}): ${error.code ?? ''} ${error.message ?? ''}`.trim())
+      detail = data
+    }
+    byId.set(uid(q.id), currentFromRevisionDetail({ question: q, detail, fallbackOutcomes: outcomes.filter((o) => uid(o.question_id) === uid(q.id)) }))
   }
   return byId
 }
@@ -357,11 +420,10 @@ const isMain = process.argv[1] && fileURLToPath(import.meta.url) === resolve(pro
 if (isMain) {
   const argv = process.argv.slice(2)
   const opt = (name) => { const i = argv.indexOf(name); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : null }
-  const proposalsPath = opt('--proposals'); const rowsPath = opt('--rows'); const apply = argv.includes('--apply'); const userId = opt('--user-id')
+  const proposalsPath = opt('--proposals'); const rowsPath = opt('--rows'); const apply = argv.includes('--apply'); const userId = uid(opt('--user-id'))
   if (!proposalsPath) { console.error('--proposals <dosya> zorunlu'); process.exit(2) }
   const { batch, proposals, errors } = parseProposals(JSON.parse(readFileSync(proposalsPath, 'utf8')))
   if (errors.length) { console.error('Oneri dosyasi gecersiz:\n  ' + errors.join('\n  ')); process.exit(2) }
-  if (apply && (!userId || !UUID_RE.test(userId))) { console.error('--apply icin --user-id <hazirlayan uuid> zorunlu'); process.exit(2) }
   const env = { ...loadEnv(resolve(opt('--env') ?? '.env.local')), ...process.env }
   const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL; const key = env.SUPABASE_SERVICE_ROLE_KEY
   const slug = String(batch.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'batch'
@@ -371,15 +433,17 @@ if (isMain) {
   let currentById; let offline = false; let db = null; let snapshot = null
   if (rowsPath) snapshot = snapshotFromExport(JSON.parse(readFileSync(rowsPath, 'utf8')))
   if (url && key) {
+    if (!userId || !UUID_RE.test(userId)) { console.error('Cevrimici modda --user-id <hazirlayan uuid> zorunlu (get_question_content_revision bu kimlikle okur)'); process.exit(2) }
     const { createClient } = await import('@supabase/supabase-js')
     db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
-    currentById = await loadCurrentFromDb(db, proposals.map((p) => p.questionId))
+    currentById = await loadCurrentFromDb(db, dbLookupIds(proposals), userId)
   } else if (snapshot) {
     offline = true
     currentById = new Map()
     for (const p of proposals) {
-      const s = snapshot.get(p.questionId)
-      if (s) currentById.set(p.questionId, { questionId: p.questionId, baseRevisionId: s.publishedRevisionId, isActive: true, content: s.content, metadata: { game: s.game, category: s.category, difficulty: 3 }, outcomes: [], source: null })
+      if (p.status === 'needs_patch') continue
+      const s = snapshot.get(uid(p.questionId))
+      if (s) currentById.set(uid(p.questionId), { questionId: uid(p.questionId), baseRevisionId: s.publishedRevisionId, isActive: true, content: s.content, metadata: { game: s.game, category: s.category, difficulty: 3 }, outcomes: [], source: null })
     }
     if (apply) { console.error('--apply icin DB baglantisi gerekir (.env.local)'); process.exit(2) }
   } else { console.error('DB (.env.local) ya da --rows <dis aktarim> gerekir'); process.exit(2) }
