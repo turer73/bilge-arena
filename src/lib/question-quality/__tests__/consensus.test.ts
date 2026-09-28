@@ -163,6 +163,36 @@ describe('community-quality@2 model gate', () => {
     expect(result.decision).toBe('suspected')
   })
 
+  it('retains a human-only quarantine when contrary model evidence lowers both rules (Codex #523 P1)', () => {
+    // Five strong reporters quarantine on their own (posterior without model >= 0.98).
+    // A later supports_clean verification pulls the full posterior below 0.98, so
+    // the ungated rule AND the gated rule both say 'suspected'. The case must not
+    // be lifted automatically, and the caller must not have to catch a regression.
+    const strong = { sensitivity: 0.87, specificity: 0.87, correctionAccuracy: 0.87, trusted: true }
+    const result = evaluateCommunityConsensus({
+      claims: [1, 2, 3, 4, 5].map((i) => claim(i, { reliability: strong })),
+      modelEvidence: [{ direction: 'supports_clean', strength: 1 }],
+      previousState: 'quarantined',
+    })
+    expect(result.posteriorWithoutModel).toBeGreaterThanOrEqual(0.98)
+    expect(result.ungatedDecision).toBe('suspected')
+    expect(result.decision).toBe('quarantine')
+    expect(result.modelGate).toBe('retained_existing_action')
+  })
+
+  it('keeps a confirmed case confirmed even when the ungated rule no longer confirms it', () => {
+    // Confirmation needs external proof; with the proof gone the ungated rule
+    // drops to quarantine or lower. Confirmed is terminal for automation.
+    const result = evaluateCommunityConsensus({
+      claims: [1, 2, 3, 4, 5].map((i) => claim(i)),
+      externalProof: 'none',
+      previousState: 'confirmed',
+    })
+    expect(result.ungatedDecision).not.toBe('confirmed')
+    expect(result.decision).toBe('confirmed')
+    expect(result.modelGate).toBe('retained_existing_action')
+  })
+
   it('leaves human-only decisions untouched and unlabelled', () => {
     const result = evaluateCommunityConsensus({ claims: [1, 2, 3, 4, 5].map((i) => claim(i)) })
     expect(result.decision).toBe('quarantine')

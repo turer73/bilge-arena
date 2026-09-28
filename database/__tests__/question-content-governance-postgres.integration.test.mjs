@@ -26,6 +26,7 @@ const curriculumScopeRegistryMigration = readFileSync(join(dirname(fileURLToPath
 const ydtEnglishReleaseMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '187_release_ydt_english_mastery_scope.sql'), 'utf8')
 const modelFreePosteriorMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '212_question_quality_model_free_posterior.sql'), 'utf8')
 const modelGateMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '213_question_quality_model_gate.sql'), 'utf8')
+const modelGateRetentionMigration = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations', '214_question_quality_model_gate_retention.sql'), 'utf8')
 
 suite('106 content governance disposable PostgreSQL acceptance', () => {
   let client; let author; let reviewer1; let reviewer2; let publisher; let learner; let legacyLearner; let question; let outcome; let outcome2; let outcomeCourse; let outcomeUnit; let outcomeTopic; let outcomeNode; let legacyRevision; let candidateQuestion; let candidateOutcome; let candidateLegacyRevision; let ydtQuestion; let ydtLegacyNullQuestion; let ydtOutcome; let ydtWrongOutcome; let ydtLegacyRevision; let ydtLegacyNullRevision; let parityQuestions
@@ -143,6 +144,7 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     await client.query(ydtEnglishReleaseMigration)
     await client.query(modelFreePosteriorMigration)
     await client.query(modelGateMigration)
+    await client.query(modelGateRetentionMigration)
     legacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[question])).rows[0].published_revision_id
     candidateLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[candidateQuestion])).rows[0].published_revision_id
     ydtLegacyRevision = (await client.query('SELECT published_revision_id FROM public.questions WHERE id=$1',[ydtQuestion])).rows[0].published_revision_id
@@ -974,5 +976,17 @@ suite('106 content governance disposable PostgreSQL acceptance', () => {
     expect(recorded).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
     expect((await client.query('SELECT rationale FROM public.question_quality_consensus_decisions WHERE case_id=$1 ORDER BY created_at DESC LIMIT 1',[gatedCase])).rows[0].rationale)
       .toContain('"modelGate": "retained_existing_action"')
+
+    // Codex #523 P1: contrary model evidence on a quarantined case lowers BOTH
+    // rules to 'suspected'. 213 skipped retention there and record raised
+    // 'cannot regress automatically' from the worker's uncaught call.
+    await client.query(`INSERT INTO public.question_quality_verifications(case_id,role,status,direction,strength) VALUES($1,'model_b','ok','supports_clean',1)`,[gatedCase])
+    const contrary = (await client.query('SELECT public.compute_question_quality_consensus($1) AS result',[gatedCase])).rows[0].result
+    expect(contrary).toEqual(expect.objectContaining({ ungatedDecision:'suspected',decision:'quarantine',modelGate:'retained_existing_action' }))
+    expect(Number(contrary.posterior)).toBeLessThan(0.98)
+    expect(Number(contrary.posteriorWithoutModel)).toBeLessThan(0.98)
+    const stillQuarantined = await rpc('public.record_question_quality_consensus($1,$2,$3,$4)',[publisher,gatedCase,'community-quality@2',randomUUID()])
+    expect(stillQuarantined).toEqual(expect.objectContaining({ state:'quarantined',replayed:false }))
+    expect((await client.query('SELECT is_active FROM public.questions WHERE id=$1',[target.question_id])).rows[0].is_active).toBe(true)
   })
 })
